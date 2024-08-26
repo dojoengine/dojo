@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1724641770467,
+  "lastUpdate": 1724697250204,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -17185,6 +17185,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3901730,
             "range": "± 140863",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "419d1cfdbbd1fe276e57a6f2bebc8811d65bf6e4",
+          "message": "feat(katana): pool validation (#2344)\n\nadd a validator for validating incoming transaction on the rpc level. the validation will happen right before the transaction is added to the pool, and its result will determine whether the tx will get added to the pool or not.\r\n\r\nbefore this all txs regardless of their validity are added to the pool. the validation will happen asynchronously where txs will get validated the same time as it is being executed. this happen later in the execution stage of the pipeline which is detached from the rpc side, at this point the rpc has already finished its request and has no context of the tx validity (hence what it means by asyncly).\r\n\r\nthis doesn't follow the same behaviour as mainnet, which would invalidate the txs on the rpc level. meaning if your tx, eg has invalid signatures, the sequencer would return the validation error as the response in the same `add_*_transaction` request you used to send the invalid tx.\r\n\r\nthis change also requires some changes on the blockifier side. added the necessary changes in a new branch [**blockifier:cairo-2.7-new**](https://github.com/dojoengine/blockifier/tree/cairo-2.7-new)",
+          "timestamp": "2024-08-27T01:41:29+08:00",
+          "tree_id": "56b4c8e02f3b0e511ffcfe23b4d165f420f78747",
+          "url": "https://github.com/dojoengine/dojo/commit/419d1cfdbbd1fe276e57a6f2bebc8811d65bf6e4"
+        },
+        "date": 1724697249302,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17676389,
+            "range": "± 224787",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3810388,
+            "range": "± 137308",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 4091834054,
+            "range": "± 798015585",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4663748,
+            "range": "± 465180",
             "unit": "ns/iter"
           }
         ]
