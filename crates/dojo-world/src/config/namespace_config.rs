@@ -75,8 +75,10 @@ impl NamespaceConfig {
                 .and_then(|m| m.get(namespace))
                 .unwrap_or(&self.default)
                 .to_string()
-        } else {
+        } else if self.default.len() > 0 {
             self.default.clone()
+        } else {
+            tag_or_namespace.into()
         }
     }
 
