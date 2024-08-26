@@ -42,7 +42,7 @@ tokio.workspace = true
 torii-core.workspace = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-libp2p = { git = "https://github.com/libp2p/rust-libp2p", features = [ "ed25519", "gossipsub", "identify", "macros", "ping", "tcp", "wasm-bindgen", "websocket" ], rev = "f0cbd4fb0cef8d1ae2298901eab95acb5f104ea3" }
+libp2p = { git = "https://github.com/libp2p/rust-libp2p", features = [ "ed25519", "gossipsub", "identify", "macros", "ping", "tcp", "wasm-bindgen", "noise", "yamux" ], rev = "f0cbd4fb0cef8d1ae2298901eab95acb5f104ea3" }
 libp2p-webrtc-websys = { git = "https://github.com/libp2p/rust-libp2p", rev = "f0cbd4fb0cef8d1ae2298901eab95acb5f104ea3" }
 libp2p-websocket-websys = { git = "https://github.com/libp2p/rust-libp2p", rev = "f0cbd4fb0cef8d1ae2298901eab95acb5f104ea3" }
 tracing-wasm = "0.2.1"

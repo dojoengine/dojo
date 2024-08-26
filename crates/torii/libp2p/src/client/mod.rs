@@ -8,8 +8,11 @@ use futures::{select, StreamExt};
 use libp2p::gossipsub::{self, IdentTopic, MessageId};
 use libp2p::swarm::{NetworkBehaviour, Swarm, SwarmEvent};
 use libp2p::{identify, identity, ping, Multiaddr, PeerId};
+#[cfg(target_arch = "wasm32")]
+use libp2p::core::{upgrade::Version, Transport};
 #[cfg(not(target_arch = "wasm32"))]
-use libp2p::{noise, tcp, yamux};
+use libp2p::tcp;
+use libp2p::{noise, yamux};
 use tracing::info;
 
 pub mod events;
@@ -107,14 +110,13 @@ impl RelayClient {
             .with_other_transport(|key| {
                 libp2p_webrtc_websys::Transport::new(libp2p_webrtc_websys::Config::new(&key))
             })
-            .with_other_transport(|key| {
-                libp2p_websocket_websys::Transport::default()
-                    .upgrade(libp2p::core::upgrade::Version::V1)
-                    .authenticate(noise::Config::new(&local_key).unwrap())
-                    .multiplex(yamux::Config::default())
-                    .boxed()
-            })
             .expect("Failed to create WebRTC transport")
+            .with_other_transport(|key| {
+                libp2p_websocket_websys::Transport::default().upgrade(Version::V1).authenticate(noise::Config::new(&key).unwrap())
+                .multiplex(yamux::Config::default())
+                .boxed()
+            })
+            .expect("Failed to create WebSocket transport")
             .with_behaviour(|key| {
                 let gossipsub_config: gossipsub::Config = gossipsub::ConfigBuilder::default()
                     .heartbeat_interval(Duration::from_secs(
