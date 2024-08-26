@@ -228,40 +228,42 @@ async fn estimate_fee() -> Result<()> {
     Ok(())
 }
 
-#[tokio::test(flavor = "multi_thread")]
-async fn rapid_transactions_submissions() -> Result<()> {
-    let sequencer = TestSequencer::start(
-        SequencerConfig { block_time: Some(2000), ..Default::default() },
-        get_default_test_starknet_config(),
-    )
-    .await;
+#[rstest::rstest]
+#[tokio::test]
+async fn rapid_transactions_submissions(
+    #[values(None, Some(1000))] block_time: Option<u64>,
+) -> Result<()> {
+    // setup test sequencer with the given configuration
+    let starknet_config = get_default_test_starknet_config();
+    let mut sequencer_config = SequencerConfig::default();
+    sequencer_config.block_time = block_time;
 
+    let sequencer = TestSequencer::start(sequencer_config, starknet_config).await;
+    let provider = sequencer.provider();
     let account = sequencer.account();
-    let provider = account.provider();
 
-    const ITERATION: usize = 10;
-    let mut txs = IndexSet::with_capacity(ITERATION);
+    // setup test contract to interact with.
+    abigen_legacy!(Contract, "crates/katana/rpc/rpc/tests/test_data/erc20.json");
+    let contract = Contract::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), &account);
 
-    for _ in 0..ITERATION {
-        let call = Call {
-            to: DEFAULT_FEE_TOKEN_ADDRESS.into(),
-            selector: selector!("transfer"),
-            calldata: vec![
-                felt!("0x100"), // recipient address
-                Felt::ONE,      // amount (low)
-                Felt::ZERO,     // amount (high)
-            ],
-        };
+    // function call params
+    let recipient = Felt::ONE;
+    let amount = Uint256 { low: Felt::ONE, high: Felt::ZERO };
 
-        let result = account.execute_v1(vec![call]).send().await?;
-        txs.insert(result.transaction_hash);
+    const N: usize = 10;
+    let mut txs = IndexSet::with_capacity(N);
+
+    for _ in 0..N {
+        let res = contract.transfer(&recipient, &amount).send().await?;
+        txs.insert(res.transaction_hash);
     }
 
-    // optimisitcally wait for 10 seconds for all the txs to be mined
-    tokio::time::sleep(Duration::from_secs(5)).await;
+    // Wait only for the last transaction to be accepted
+    let last_tx = txs.last().unwrap();
+    dojo_utils::TransactionWaiter::new(*last_tx, &provider).await?;
 
     // we should've submitted ITERATION transactions
-    assert_eq!(txs.len(), ITERATION);
+    assert_eq!(txs.len(), N);
 
     // check the status of each txs
     for hash in txs {
@@ -270,18 +272,23 @@ async fn rapid_transactions_submissions() -> Result<()> {
         assert_eq!(receipt.receipt.finality_status(), &TransactionFinalityStatus::AcceptedOnL2);
     }
 
+    let nonce = account.get_nonce().await?;
+    assert_eq!(nonce, Felt::from(N), "Nonce should be incremented by {N} time");
+
     Ok(())
 }
 
 #[rstest::rstest]
-#[case::instant_mining(None)]
-#[case::interval_mining(Some(3000))]
 #[tokio::test]
-async fn send_tx_invalid_txs(#[case] block_time: Option<u64>) -> Result<()> {
-    // the default testing config is in no-fee mode. so we need to enable fees.
+async fn send_txs_with_insufficient_fee(
+    #[values(true, false)] disable_fee: bool,
+    #[values(None, Some(1000))] block_time: Option<u64>,
+) -> Result<()> {
+    // setup test sequencer with the given configuration
     let mut starknet_config = get_default_test_starknet_config();
-    starknet_config.disable_fee = false;
-    let sequencer_config = SequencerConfig { block_time, ..Default::default() };
+    starknet_config.disable_fee = disable_fee;
+    let mut sequencer_config = SequencerConfig::default();
+    sequencer_config.block_time = block_time;
 
     let sequencer = TestSequencer::start(sequencer_config, starknet_config).await;
 
@@ -296,28 +303,63 @@ async fn send_tx_invalid_txs(#[case] block_time: Option<u64>) -> Result<()> {
     // initial sender's account nonce. use to assert how the txs validity change the account nonce.
     let initial_nonce = sequencer.account().get_nonce().await?;
 
-    ///////////////////////////////////////////////////////////////////
-
+    // -----------------------------------------------------------------------
     //  transaction with low max fee (underpriced).
 
-    let err = contract.transfer(&recipient, &amount).max_fee(Felt::TWO).send().await.unwrap_err();
+    let result = contract.transfer(&recipient, &amount).max_fee(Felt::TWO).send().await;
+
+    if disable_fee {
+        // even in no fee mode, setting the max fee (which translates to the tx run resources) lower
+        // than the amount required to run the account validation is still invalid.
+        assert!(result.is_err());
+    } else {
+        assert!(result.is_err());
+    }
 
     let nonce = sequencer.account().get_nonce().await?;
     assert_eq!(initial_nonce, nonce, "Nonce shouldn't change after invalid tx");
 
-    ///////////////////////////////////////////////////////////////////
-
+    // -----------------------------------------------------------------------
     //  transaction with insufficient balance.
 
     let fee = Felt::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE + 1);
-    let err = contract.transfer(&recipient, &amount).max_fee(fee).send().await.unwrap_err();
+    let res = contract.transfer(&recipient, &amount).max_fee(fee).send().await;
 
-    let nonce = sequencer.account().get_nonce().await?;
-    assert_eq!(initial_nonce, nonce, "Nonce shouldn't change after invalid tx");
+    if disable_fee {
+        // in no fee mode, account balance is ignored. as long as the max fee (aka resources) is
+        // enough to at least run the account validation, the tx should be accepted.
+        let res = res.unwrap();
 
-    ///////////////////////////////////////////////////////////////////
+        // Wait for the transaction to be accepted
+        dojo_utils::TransactionWaiter::new(res.transaction_hash, &sequencer.provider()).await?;
 
-    //  transaction with invalid signatures.
+        // nonce should be incremented by 1 after a valid tx.
+        let nonce = sequencer.account().get_nonce().await?;
+        assert_eq!(initial_nonce + 1, nonce);
+    } else {
+        let err = res.unwrap_err();
+
+        // nonce shouldn't change for an invalid tx.
+        let nonce = sequencer.account().get_nonce().await?;
+        assert_eq!(initial_nonce, nonce);
+    }
+
+    Ok(())
+}
+
+#[rstest::rstest]
+#[tokio::test]
+async fn send_txs_with_invalid_signature(
+    #[values(true, false)] disable_validate: bool,
+    #[values(None, Some(1000))] block_time: Option<u64>,
+) -> Result<()> {
+    // setup test sequencer with the given configuration
+    let mut starknet_config = get_default_test_starknet_config();
+    starknet_config.disable_validate = disable_validate;
+    let mut sequencer_config = SequencerConfig::default();
+    sequencer_config.block_time = block_time;
+
+    let sequencer = TestSequencer::start(sequencer_config, starknet_config).await;
 
     // starknet-rs doesn't provide a way to manually set the signatures so instead we create an
     // account with random signer to simulate invalid signatures.
@@ -330,72 +372,39 @@ async fn send_tx_invalid_txs(#[case] block_time: Option<u64>) -> Result<()> {
         ExecutionEncoding::New,
     );
 
-    let err = Contract::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), account)
-        .transfer(&recipient, &amount)
-        .max_fee(felt!("0x1111111111"))
-        .send()
-        .await
-        .unwrap_err();
-
-    let nonce = sequencer.account().get_nonce().await?;
-    assert_eq!(initial_nonce, nonce, "Nonce shouldn't change after invalid tx");
-
-    ///////////////////////////////////////////////////////////////////
-
-    Ok(())
-}
-
-#[rstest::rstest]
-#[case::instant_mining(None)]
-#[case::interval_mining(Some(3000))]
-#[tokio::test]
-async fn send_insufficient_fee_txs_in_no_fee_mode(#[case] block_time: Option<u64>) -> Result<()> {
-    // the default testing config is in no-fee mode.
-    let starknet_config = get_default_test_starknet_config();
-    let sequencer_config = SequencerConfig { block_time, ..Default::default() };
-
-    let sequencer = TestSequencer::start(sequencer_config, starknet_config).await;
-
     // setup test contract to interact with.
     abigen_legacy!(Contract, "crates/katana/rpc/rpc/tests/test_data/erc20.json");
-    let contract = Contract::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), sequencer.account());
+    let contract = Contract::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), &account);
 
     // function call params
     let recipient = Felt::ONE;
     let amount = Uint256 { low: Felt::ONE, high: Felt::ZERO };
 
     // initial sender's account nonce. use to assert how the txs validity change the account nonce.
-    let initial_nonce = sequencer.account().get_nonce().await?;
+    let initial_nonce = account.get_nonce().await?;
 
-    ///////////////////////////////////////////////////////////////////
+    // -----------------------------------------------------------------------
+    //  transaction with invalid signatures.
 
-    // transaction with low max fee (underpriced).
+    // we set the max fee manually here to skip fee estimation. we want to test the pool validator.
+    let res = contract.transfer(&recipient, &amount).max_fee(felt!("0x1111111111")).send().await;
 
-    // even in no fee mode, setting the max fee (which translates to the tx run resources) lower
-    // than the amount required to run the account validation is still invalid.
+    if disable_validate {
+        let res = res.unwrap();
 
-    let err = contract.transfer(&recipient, &amount).max_fee(Felt::TWO).send().await.unwrap_err();
+        // Wait for the transaction to be accepted
+        dojo_utils::TransactionWaiter::new(res.transaction_hash, &sequencer.provider()).await?;
 
-    let nonce = sequencer.account().get_nonce().await?;
-    assert_eq!(initial_nonce, nonce, "Nonce shouldn't change after invalid tx");
+        // nonce should be incremented by 1 after a valid tx.
+        let nonce = sequencer.account().get_nonce().await?;
+        assert_eq!(initial_nonce + 1, nonce);
+    } else {
+        let res = res.unwrap_err();
 
-    ///////////////////////////////////////////////////////////////////
-
-    // transaction with insufficient balance.
-
-    // in no fee mode, account balance is ignored. as long as the max fee (aka resources) is enough
-    // to at least run the account validation, the tx should be accepted.
-
-    let fee = Felt::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE + 1);
-    let res = contract.transfer(&recipient, &amount).max_fee(fee).send().await?;
-
-    // Wait for the transaction to be accepted
-    dojo_utils::TransactionWaiter::new(res.transaction_hash, &sequencer.provider()).await?;
-
-    let nonce = sequencer.account().get_nonce().await?;
-    assert_eq!(initial_nonce + 1, nonce, "Increase by 1");
-
-    ///////////////////////////////////////////////////////////////////
+        // nonce shouldn't change for an invalid tx.
+        let nonce = sequencer.account().get_nonce().await?;
+        assert_eq!(initial_nonce, nonce);
+    }
 
     Ok(())
 }
