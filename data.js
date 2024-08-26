@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1724554347647,
+  "lastUpdate": 1724641770467,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -17137,6 +17137,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3990705,
             "range": "± 114678",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f9606d883d441c405d1ed5a357017ad0e360e037",
+          "message": "fix(dojo-core): adjust ACL to restore governance without relaxing permissions (#2341)\n\n* fix: ensure ACLs are restrictive with possible governance\r\n\r\n* fix: fix tests\r\n\r\n* fix: fix tests\r\n\r\n* fix: adjust diagnostic error for dojo init",
+          "timestamp": "2024-08-25T20:51:02-06:00",
+          "tree_id": "285f4550075f189b226fa260cf50c86d4198df21",
+          "url": "https://github.com/dojoengine/dojo/commit/f9606d883d441c405d1ed5a357017ad0e360e037"
+        },
+        "date": 1724641769526,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17420953,
+            "range": "± 212396",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3748399,
+            "range": "± 103718",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3608287551,
+            "range": "± 787025395",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3901730,
+            "range": "± 140863",
             "unit": "ns/iter"
           }
         ]
