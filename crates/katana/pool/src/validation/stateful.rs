@@ -4,6 +4,10 @@ use katana_executor::implementation::blockifier::blockifier::blockifier::statefu
     StatefulValidator as BlockifierValidator, StatefulValidatorError,
 };
 use katana_executor::implementation::blockifier::blockifier::state::cached_state::CachedState;
+use katana_executor::implementation::blockifier::blockifier::state::errors::StateError;
+use katana_executor::implementation::blockifier::blockifier::transaction::errors::{
+    TransactionExecutionError, TransactionFeeError, TransactionPreValidationError,
+};
 use katana_executor::implementation::blockifier::blockifier::transaction::transaction_execution::Transaction;
 use katana_executor::implementation::blockifier::utils::{
     block_context_from_envs, to_blk_address, to_executor_tx,
@@ -15,7 +19,7 @@ use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash};
 use katana_provider::traits::state::StateProvider;
 use parking_lot::Mutex;
 
-use super::{Error, ValidationOutcome, ValidationResult, Validator};
+use super::{Error, InvalidTransactionError, ValidationOutcome, ValidationResult, Validator};
 use crate::tx::PoolTransaction;
 
 #[derive(Clone)]
@@ -43,7 +47,8 @@ impl TxValidator {
         *self.validator.lock() = updated;
     }
 
-    // NOTE: If you check the get_nonce method of StatefulValidator in blockifier, under the hood it
+    // NOTE:
+    // If you check the get_nonce method of StatefulValidator in blockifier, under the hood it
     // unwraps the Option to get the state of the TransactionExecutor struct. StatefulValidator
     // guaranteees that the state will always be present so it is safe to uwnrap. However, this
     // safety is not guaranteed by TransactionExecutor itself.
@@ -127,5 +132,49 @@ impl Validator for TxValidator {
             self.execution_flags.skip_validate || skip_validate,
             self.execution_flags.skip_fee_transfer,
         )
+    }
+}
+
+impl From<StatefulValidatorError> for InvalidTransactionError {
+    fn from(value: StatefulValidatorError) -> Self {
+        match value {
+            StatefulValidatorError::StateError(err) => match err {
+                _ => panic!("Unhandled StateError: {:?}", err),
+            },
+
+            StatefulValidatorError::TransactionExecutionError(err) => match err {
+                TransactionExecutionError::ValidateTransactionError { .. } => {
+                    Self::InvalidSignature { error }
+                }
+
+                _ => panic!("Unhandled TransactionExecutionError: {:?}", err),
+            },
+
+            StatefulValidatorError::TransactionPreValidationError(err) => match err {
+                TransactionPreValidationError::InvalidNonce {
+                    address,
+                    account_nonce,
+                    incoming_tx_nonce,
+                } => Self::InvalidNonce { address, account_nonce, tx_nonce: incoming_tx_nonce },
+
+                TransactionPreValidationError::TransactionFeeError(fee_err) => match fee_err {
+                    TransactionFeeError::MaxFeeExceedsBalance { max_fee, balance } => {
+                        Self::InsufficientBalance { max_fee, balance }
+                    }
+
+                    TransactionFeeError::MaxFeeTooLow { min_fee, max_fee } => {
+                        Self::InsufficientMaxFee { max_fee, min_fee }
+                    }
+
+                    _ => panic!("Unhandled TransactionFeeError: {:?}", fee_err),
+                },
+
+                _ => panic!("Unhandled TransactionPreValidationError: {:?}", err),
+            },
+
+            StatefulValidatorError::TransactionExecutorError(err) => {
+                panic!("Unhandled TransactionExecutorError: {:?}", err)
+            }
+        }
     }
 }

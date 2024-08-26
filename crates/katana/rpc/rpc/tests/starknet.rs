@@ -21,7 +21,7 @@ use starknet::core::types::{
     TransactionReceipt,
 };
 use starknet::core::utils::{get_contract_address, get_selector_from_name};
-use starknet::macros::{felt, selector};
+use starknet::macros::felt;
 use starknet::providers::Provider;
 use starknet::signers::{LocalWallet, SigningKey};
 
@@ -328,10 +328,8 @@ async fn send_txs_with_insufficient_fee(
     if disable_fee {
         // in no fee mode, account balance is ignored. as long as the max fee (aka resources) is
         // enough to at least run the account validation, the tx should be accepted.
-        let res = res.unwrap();
-
         // Wait for the transaction to be accepted
-        dojo_utils::TransactionWaiter::new(res.transaction_hash, &sequencer.provider()).await?;
+        dojo_utils::TransactionWaiter::new(res?.transaction_hash, &sequencer.provider()).await?;
 
         // nonce should be incremented by 1 after a valid tx.
         let nonce = sequencer.account().get_nonce().await?;
@@ -390,10 +388,8 @@ async fn send_txs_with_invalid_signature(
     let res = contract.transfer(&recipient, &amount).max_fee(felt!("0x1111111111")).send().await;
 
     if disable_validate {
-        let res = res.unwrap();
-
         // Wait for the transaction to be accepted
-        dojo_utils::TransactionWaiter::new(res.transaction_hash, &sequencer.provider()).await?;
+        dojo_utils::TransactionWaiter::new(res?.transaction_hash, &sequencer.provider()).await?;
 
         // nonce should be incremented by 1 after a valid tx.
         let nonce = sequencer.account().get_nonce().await?;

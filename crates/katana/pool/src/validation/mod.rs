@@ -1,7 +1,11 @@
 pub mod stateful;
 
 use katana_executor::ExecutionError;
-use katana_primitives::transaction::TxHash;
+use katana_primitives::{
+    contract::{ContractAddress, Nonce},
+    transaction::TxHash,
+    FieldElement,
+};
 
 use crate::tx::PoolTransaction;
 
@@ -17,25 +21,19 @@ pub struct Error {
 #[derive(Debug, thiserror::Error)]
 pub enum InvalidTransactionError {
     #[error("account has insufficient funds to cover the tx fee")]
-    InsufficientFunds {},
+    InsufficientBalance { max_fee: u128, balance: FieldElement },
 
     #[error("the specified tx max fee is insufficient")]
-    InsufficientMaxFee {},
+    InsufficientMaxFee { min_fee: u128, max_fee: u128 },
 
     #[error("invalid signature")]
     InvalidSignature { error: ExecutionError },
 
     #[error("sender is not an account")]
-    NonAccount,
+    NonAccount { address: ContractAddress },
 
     #[error("nonce mismatch")]
-    InvalidNonce,
-
-    #[error("max l1 gas amount too low")]
-    MaxL1GasAmountTooLow,
-
-    #[error("placeholder")]
-    MaxL1GasPriceTooLow,
+    InvalidNonce { address: ContractAddress, tx_nonce: Nonce, account_nonce: Nonce },
 }
 
 pub type ValidationResult<T> = Result<ValidationOutcome<T>, Error>;
