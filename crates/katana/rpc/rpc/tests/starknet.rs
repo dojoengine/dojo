@@ -202,10 +202,8 @@ async fn estimate_fee() -> Result<()> {
 
     // send a valid transaction first to increment the nonce (so that we can test nonce < current
     // nonce later)
-    let result = contract.transfer(&recipient, &amount).send().await?;
-
-    // wait until the tx is included in a block
-    dojo_utils::TransactionWaiter::new(result.transaction_hash, &provider).await?;
+    let res = contract.transfer(&recipient, &amount).send().await?;
+    dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await?;
 
     // estimate fee with current nonce (the expected nonce)
     let nonce = provider.get_nonce(BlockId::Tag(BlockTag::Pending), account.address()).await?;
@@ -401,6 +399,74 @@ async fn send_txs_with_invalid_signature(
         let nonce = sequencer.account().get_nonce().await?;
         assert_eq!(initial_nonce, nonce);
     }
+
+    Ok(())
+}
+
+#[rstest::rstest]
+#[tokio::test]
+async fn send_txs_with_invalid_nonces(
+    #[values(None, Some(1000))] block_time: Option<u64>,
+) -> Result<()> {
+    // setup test sequencer with the given configuration
+    let starknet_config = get_default_test_starknet_config();
+    let mut sequencer_config = SequencerConfig::default();
+    sequencer_config.block_time = block_time;
+
+    let sequencer = TestSequencer::start(sequencer_config, starknet_config).await;
+    let provider = sequencer.provider();
+    let account = sequencer.account();
+
+    // setup test contract to interact with.
+    abigen_legacy!(Contract, "crates/katana/rpc/rpc/tests/test_data/erc20.json");
+    let contract = Contract::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), &account);
+
+    // function call params
+    let recipient = Felt::ONE;
+    let amount = Uint256 { low: Felt::ONE, high: Felt::ZERO };
+
+    // send a valid transaction first to increment the nonce (so that we can test nonce < current
+    // nonce later)
+    let res = contract.transfer(&recipient, &amount).send().await?;
+    dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await?;
+
+    // initial sender's account nonce. use to assert how the txs validity change the account nonce.
+    let initial_nonce = account.get_nonce().await?;
+
+    // -----------------------------------------------------------------------
+    //  transaction with nonce < account nonce.
+
+    let old_nonce = initial_nonce - Felt::ONE;
+    let err = contract.transfer(&recipient, &amount).nonce(old_nonce).send().await.unwrap_err();
+
+    let nonce = account.get_nonce().await?;
+    assert_eq!(nonce, initial_nonce);
+
+    // -----------------------------------------------------------------------
+    //  transaction with nonce = account nonce.
+
+    let current_nonce = initial_nonce + Felt::ONE;
+    let res = contract.transfer(&recipient, &amount).nonce(current_nonce).send().await?;
+    dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await?;
+
+    let nonce = account.get_nonce().await?;
+    assert_eq!(nonce, current_nonce + 1);
+
+    // -----------------------------------------------------------------------
+    //  transaction with nonce >= account nonce.
+
+    // tx with nonce > account nonce should be considered as valid BUT not to be executed
+    // immediately and should be kept around in the pool until the nonce is reached. however,
+    // katana doesn't support this feature yet so the current behaviour is to accepts the valid
+    // tx with nonce > account nonce and execute it immediately. as such we should assert that
+    // the tx is accepted but failed.
+
+    let unused_nonce = felt!("0x100");
+    let res = contract.transfer(&recipient, &amount).nonce(unused_nonce).send().await?;
+    dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await?;
+
+    let nonce = account.get_nonce().await?;
+    assert_eq!(nonce, current_nonce + 1);
 
     Ok(())
 }
