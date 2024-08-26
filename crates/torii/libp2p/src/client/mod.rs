@@ -72,7 +72,7 @@ impl RelayClient {
                     )
                     .expect("Gossipsub behaviour is invalid"),
                     identify: identify::Behaviour::new(identify::Config::new(
-                        "/torii-client/0.0.1".to_string(),
+                        format!("/torii-client/{}", env!("CARGO_PKG_VERSION")),
                         key.public(),
                     )),
                     ping: ping::Behaviour::new(ping::Config::default()),
@@ -106,6 +106,13 @@ impl RelayClient {
             .with_wasm_bindgen()
             .with_other_transport(|key| {
                 libp2p_webrtc_websys::Transport::new(libp2p_webrtc_websys::Config::new(&key))
+            })
+            .with_other_transport(|key| {
+                libp2p_websocket_websys::Transport::default()
+                 .upgrade(libp2p::core::upgrade::Version::V1)
+                 .authenticate(noise::Config::new(&local_key).unwrap())
+                 .multiplex(yamux::Config::default())
+                 .boxed()
             })
             .expect("Failed to create WebRTC transport")
             .with_behaviour(|key| {

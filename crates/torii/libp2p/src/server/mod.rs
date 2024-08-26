@@ -129,7 +129,7 @@ impl<P: Provider + Sync> Relay<P> {
                     relay: relay::Behaviour::new(key.public().to_peer_id(), Default::default()),
                     ping: ping::Behaviour::new(ping::Config::new()),
                     identify: identify::Behaviour::new(identify::Config::new(
-                        "/torii-relay/0.0.1".to_string(),
+                        format!("/torii-relay/{}", env!("CARGO_PKG_VERSION")),
                         key.public(),
                     )),
                     gossipsub: gossipsub::Behaviour::new(
