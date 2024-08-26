@@ -5,14 +5,13 @@ use futures::channel::mpsc::{UnboundedReceiver, UnboundedSender};
 use futures::channel::oneshot;
 use futures::lock::Mutex;
 use futures::{select, StreamExt};
-use libp2p::gossipsub::{self, IdentTopic, MessageId};
-use libp2p::swarm::{NetworkBehaviour, Swarm, SwarmEvent};
-use libp2p::{identify, identity, ping, Multiaddr, PeerId};
 #[cfg(target_arch = "wasm32")]
 use libp2p::core::{upgrade::Version, Transport};
+use libp2p::gossipsub::{self, IdentTopic, MessageId};
+use libp2p::swarm::{NetworkBehaviour, Swarm, SwarmEvent};
 #[cfg(not(target_arch = "wasm32"))]
 use libp2p::tcp;
-use libp2p::{noise, yamux};
+use libp2p::{identify, identity, noise, ping, yamux, Multiaddr, PeerId};
 use tracing::info;
 
 pub mod events;
@@ -112,9 +111,11 @@ impl RelayClient {
             })
             .expect("Failed to create WebRTC transport")
             .with_other_transport(|key| {
-                libp2p_websocket_websys::Transport::default().upgrade(Version::V1).authenticate(noise::Config::new(&key).unwrap())
-                .multiplex(yamux::Config::default())
-                .boxed()
+                libp2p_websocket_websys::Transport::default()
+                    .upgrade(Version::V1)
+                    .authenticate(noise::Config::new(&key).unwrap())
+                    .multiplex(yamux::Config::default())
+                    .boxed()
             })
             .expect("Failed to create WebSocket transport")
             .with_behaviour(|key| {
