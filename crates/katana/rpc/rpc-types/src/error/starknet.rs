@@ -48,8 +48,11 @@ pub enum StarknetApiError {
     InvalidContractClass,
     #[error("Class already declared")]
     ClassAlreadyDeclared,
+    // TEMP: adding a reason field temporarily to match what's being returned by the gateway. the
+    // gateway includes the information regarding the expected and actual nonce in the error
+    // message. but this doesn't break compatibility with the spec.
     #[error("Invalid transaction nonce")]
-    InvalidTransactionNonce,
+    InvalidTransactionNonce { reason: String },
     #[error("Max fee is smaller than the minimal transaction cost (validation plus fee transfer)")]
     InsufficientMaxFee,
     #[error("Account balance is smaller than the transaction's max_fee")]
@@ -100,7 +103,7 @@ impl StarknetApiError {
             StarknetApiError::TransactionExecutionError { .. } => 41,
             StarknetApiError::InvalidContractClass => 50,
             StarknetApiError::ClassAlreadyDeclared => 51,
-            StarknetApiError::InvalidTransactionNonce => 52,
+            StarknetApiError::InvalidTransactionNonce { .. } => 52,
             StarknetApiError::InsufficientMaxFee => 53,
             StarknetApiError::InsufficientAccountBalance => 54,
             StarknetApiError::ValidationFailure { .. } => 55,
@@ -126,7 +129,8 @@ impl StarknetApiError {
             | StarknetApiError::UnexpectedError { .. }
             | StarknetApiError::TransactionExecutionError { .. } => Some(serde_json::json!(self)),
 
-            StarknetApiError::ValidationFailure { reason } => {
+            StarknetApiError::InvalidTransactionNonce { reason }
+            | StarknetApiError::ValidationFailure { reason } => {
                 Some(Value::String(reason.to_string()))
             }
 
@@ -179,8 +183,10 @@ impl From<Box<InvalidTransactionError>> for StarknetApiError {
         match error.as_ref() {
             InvalidTransactionError::InsufficientFunds { .. } => Self::InsufficientAccountBalance,
             InvalidTransactionError::InsufficientMaxFee { .. } => Self::InsufficientMaxFee,
-            InvalidTransactionError::InvalidNonce { .. } => Self::InvalidTransactionNonce,
             InvalidTransactionError::NonAccount { .. } => Self::NonAccount,
+            InvalidTransactionError::InvalidNonce { .. } => {
+                Self::InvalidTransactionNonce { reason: error.to_string() }
+            }
             InvalidTransactionError::ValidationFailure { error, .. } => {
                 Self::ValidationFailure { reason: error.to_string() }
             }
@@ -209,7 +215,6 @@ mod tests {
     #[case(StarknetApiError::PageSizeTooBig, 31, "Requested page size is too big")]
     #[case(StarknetApiError::FailedToReceiveTxn, 1, "Failed to write transaction")]
     #[case(StarknetApiError::InvalidMessageSelector, 21, "Invalid message selector")]
-    #[case(StarknetApiError::InvalidTransactionNonce, 52, "Invalid transaction nonce")]
     #[case(StarknetApiError::NonAccount, 58, "Sender address in not an account contract")]
     #[case(StarknetApiError::InvalidTxnIndex, 27, "Invalid transaction index in a block")]
     #[case(StarknetApiError::ProofLimitExceeded, 10000, "Too many storage keys requested")]
@@ -271,6 +276,14 @@ mod tests {
         json!({
             "reason": "Unexpected error reason".to_string()
         }),
+    )]
+    #[case(
+    	StarknetApiError::InvalidTransactionNonce {
+     		reason: "Wrong nonce".to_string()
+      	},
+     	52,
+      	"Invalid transaction nonce",
+       	Value::String("Wrong nonce".to_string())
     )]
     #[case(
     	StarknetApiError::ValidationFailure {
