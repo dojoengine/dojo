@@ -130,7 +130,7 @@ impl RelayClient {
                     )
                     .expect("Gossipsub behaviour is invalid"),
                     identify: identify::Behaviour::new(identify::Config::new(
-                        "/torii-client/0.0.1".to_string(),
+                        format!("/torii-client/{}", env!("CARGO_PKG_VERSION")),
                         key.public(),
                     )),
                     ping: ping::Behaviour::new(ping::Config::default()),
