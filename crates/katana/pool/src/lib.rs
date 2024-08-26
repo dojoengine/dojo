@@ -8,7 +8,6 @@ pub mod validation;
 use std::sync::Arc;
 
 use futures::channel::mpsc::Receiver;
-use katana_executor::ExecutionError;
 use katana_primitives::transaction::{ExecutableTxWithHash, TxHash};
 use ordering::{FiFo, PoolOrd};
 use pool::Pool;
@@ -24,7 +23,7 @@ pub type PoolResult<T> = Result<T, PoolError>;
 #[derive(Debug, thiserror::Error)]
 pub enum PoolError {
     #[error("Invalid transaction: {0}")]
-    InvalidTransaction(#[from] InvalidTransactionError),
+    InvalidTransaction(Box<InvalidTransactionError>),
     #[error("Internal error: {0}")]
     Internal(Box<dyn std::error::Error>),
 }

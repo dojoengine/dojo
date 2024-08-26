@@ -1,16 +1,15 @@
 use std::sync::Arc;
 
 use katana_executor::implementation::blockifier::blockifier::blockifier::stateful_validator::{
-    StatefulValidator as BlockifierValidator, StatefulValidatorError,
+    StatefulValidator, StatefulValidatorError,
 };
 use katana_executor::implementation::blockifier::blockifier::state::cached_state::CachedState;
-use katana_executor::implementation::blockifier::blockifier::state::errors::StateError;
 use katana_executor::implementation::blockifier::blockifier::transaction::errors::{
     TransactionExecutionError, TransactionFeeError, TransactionPreValidationError,
 };
 use katana_executor::implementation::blockifier::blockifier::transaction::transaction_execution::Transaction;
 use katana_executor::implementation::blockifier::utils::{
-    block_context_from_envs, to_blk_address, to_executor_tx,
+    block_context_from_envs, to_address, to_blk_address, to_executor_tx,
 };
 use katana_executor::{SimulationFlag, StateProviderDb};
 use katana_primitives::contract::{ContractAddress, Nonce};
@@ -22,6 +21,7 @@ use parking_lot::Mutex;
 use super::{Error, InvalidTransactionError, ValidationOutcome, ValidationResult, Validator};
 use crate::tx::PoolTransaction;
 
+#[allow(missing_debug_implementations)]
 #[derive(Clone)]
 pub struct TxValidator {
     cfg_env: CfgEnv,
@@ -59,12 +59,13 @@ impl TxValidator {
     }
 }
 
-pub struct StatefulValidatorAdapter {
-    inner: BlockifierValidator<StateProviderDb<'static>>,
+#[allow(missing_debug_implementations)]
+struct StatefulValidatorAdapter {
+    inner: StatefulValidator<StateProviderDb<'static>>,
 }
 
 impl StatefulValidatorAdapter {
-    pub fn new(
+    fn new(
         state: Box<dyn StateProvider>,
         block_env: &BlockEnv,
         cfg_env: &CfgEnv,
@@ -77,10 +78,10 @@ impl StatefulValidatorAdapter {
         state: Box<dyn StateProvider>,
         block_env: &BlockEnv,
         cfg_env: &CfgEnv,
-    ) -> BlockifierValidator<StateProviderDb<'static>> {
+    ) -> StatefulValidator<StateProviderDb<'static>> {
         let state = CachedState::new(StateProviderDb::new(state));
-        let block_context = block_context_from_envs(&block_env, &cfg_env);
-        BlockifierValidator::create(state, block_context)
+        let block_context = block_context_from_envs(block_env, cfg_env);
+        StatefulValidator::create(state, block_context)
     }
 
     /// Used only in the [`Validator::validate`] trait
@@ -92,10 +93,25 @@ impl StatefulValidatorAdapter {
     ) -> ValidationResult<ExecutableTxWithHash> {
         match to_executor_tx(tx.clone()) {
             Transaction::AccountTransaction(blockifier_tx) => {
+                // Check if the transaction nonce is higher than the current account nonce,
+                // if yes, dont't run its validation logic but tag it as dependent
+                let account = to_blk_address(tx.sender());
+                let account_nonce = self.inner.get_nonce(account).expect("state err");
+
+                if tx.nonce() > account_nonce.0 {
+                    return Ok(ValidationOutcome::Dependent {
+                        current_nonce: account_nonce.0,
+                        tx_nonce: tx.nonce(),
+                        tx,
+                    });
+                }
+
                 match self.inner.perform_validations(blockifier_tx, skip_validate, skip_fee_check) {
                     Ok(()) => Ok(ValidationOutcome::Valid(tx)),
-                    // TODO: implement from<statefulvalidatorerror> for invalidtransactionerror
-                    Err(e) => Err(Error { hash: tx.hash, error: Box::new(e) }),
+                    Err(e) => match map_invalid_tx_err(e) {
+                        Ok(error) => Ok(ValidationOutcome::Invalid { tx, error }),
+                        Err(error) => Err(Error { hash: tx.hash, error }),
+                    },
                 }
             }
 
@@ -135,46 +151,56 @@ impl Validator for TxValidator {
     }
 }
 
-impl From<StatefulValidatorError> for InvalidTransactionError {
-    fn from(value: StatefulValidatorError) -> Self {
-        match value {
-            StatefulValidatorError::StateError(err) => match err {
-                _ => panic!("Unhandled StateError: {:?}", err),
-            },
+fn map_invalid_tx_err(
+    err: StatefulValidatorError,
+) -> Result<InvalidTransactionError, Box<dyn std::error::Error>> {
+    match err {
+        StatefulValidatorError::TransactionExecutionError(err) => match err {
+            e @ TransactionExecutionError::ValidateTransactionError {
+                storage_address,
+                class_hash,
+                ..
+            } => {
+                let address = to_address(storage_address);
+                let class_hash = class_hash.0;
+                let error = e.to_string();
+                Ok(InvalidTransactionError::ValidationFailure { address, class_hash, error })
+            }
 
-            StatefulValidatorError::TransactionExecutionError(err) => match err {
-                TransactionExecutionError::ValidateTransactionError { .. } => {
-                    Self::InvalidSignature { error }
+            _ => Err(Box::new(err)),
+        },
+
+        StatefulValidatorError::TransactionPreValidationError(err) => match err {
+            TransactionPreValidationError::InvalidNonce {
+                address,
+                account_nonce,
+                incoming_tx_nonce,
+            } => {
+                let address = to_address(address);
+                let current_nonce = account_nonce.0;
+                let tx_nonce = incoming_tx_nonce.0;
+                Ok(InvalidTransactionError::InvalidNonce { address, current_nonce, tx_nonce })
+            }
+
+            TransactionPreValidationError::TransactionFeeError(err) => match err {
+                TransactionFeeError::MaxFeeExceedsBalance { max_fee, balance } => {
+                    let max_fee = max_fee.0;
+                    let balance = balance.into();
+                    Ok(InvalidTransactionError::InsufficientFunds { max_fee, balance })
                 }
 
-                _ => panic!("Unhandled TransactionExecutionError: {:?}", err),
+                TransactionFeeError::MaxFeeTooLow { min_fee, max_fee } => {
+                    let max_fee = max_fee.0;
+                    let min_fee = min_fee.0;
+                    Ok(InvalidTransactionError::InsufficientMaxFee { max_fee, min_fee })
+                }
+
+                _ => Err(Box::new(err)),
             },
 
-            StatefulValidatorError::TransactionPreValidationError(err) => match err {
-                TransactionPreValidationError::InvalidNonce {
-                    address,
-                    account_nonce,
-                    incoming_tx_nonce,
-                } => Self::InvalidNonce { address, account_nonce, tx_nonce: incoming_tx_nonce },
+            _ => Err(Box::new(err)),
+        },
 
-                TransactionPreValidationError::TransactionFeeError(fee_err) => match fee_err {
-                    TransactionFeeError::MaxFeeExceedsBalance { max_fee, balance } => {
-                        Self::InsufficientBalance { max_fee, balance }
-                    }
-
-                    TransactionFeeError::MaxFeeTooLow { min_fee, max_fee } => {
-                        Self::InsufficientMaxFee { max_fee, min_fee }
-                    }
-
-                    _ => panic!("Unhandled TransactionFeeError: {:?}", fee_err),
-                },
-
-                _ => panic!("Unhandled TransactionPreValidationError: {:?}", err),
-            },
-
-            StatefulValidatorError::TransactionExecutorError(err) => {
-                panic!("Unhandled TransactionExecutorError: {:?}", err)
-            }
-        }
+        _ => Err(Box::new(err)),
     }
 }

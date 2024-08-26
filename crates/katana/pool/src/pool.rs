@@ -1,3 +1,4 @@
+use core::fmt;
 use std::sync::Arc;
 use std::vec::IntoIter;
 
@@ -8,7 +9,7 @@ use tracing::{error, info, warn};
 
 use crate::ordering::PoolOrd;
 use crate::tx::{PendingTx, PoolTransaction, TxId};
-use crate::validation::{ValidationOutcome, Validator};
+use crate::validation::{InvalidTransactionError, ValidationOutcome, Validator};
 use crate::{PoolError, PoolResult, TransactionPool};
 
 #[derive(Debug)]
@@ -84,7 +85,7 @@ where
 
 impl<T, V, O> TransactionPool for Pool<T, V, O>
 where
-    T: PoolTransaction,
+    T: PoolTransaction + fmt::Debug,
     V: Validator<Transaction = T>,
     O: PoolOrd<Transaction = T>,
 {
@@ -115,7 +116,18 @@ where
 
                     ValidationOutcome::Invalid { tx, error } => {
                         warn!(hash = format!("{:#x}", tx.hash()), "Invalid transaction.");
-                        Err(error.into())
+                        Err(PoolError::InvalidTransaction(Box::new(error)))
+                    }
+
+                    // return as error for now but ideally we should kept the tx in a separate
+                    // queue and revalidate it when the parent tx is added to the pool
+                    ValidationOutcome::Dependent { tx, tx_nonce, current_nonce } => {
+                        let err = InvalidTransactionError::InvalidNonce {
+                            address: tx.sender(),
+                            current_nonce,
+                            tx_nonce,
+                        };
+                        Err(PoolError::InvalidTransaction(Box::new(err)))
                     }
                 }
             }
@@ -196,16 +208,13 @@ where
 #[cfg(test)]
 pub(crate) mod test_utils {
 
-    use katana_executor::ExecutionError;
     use katana_primitives::contract::{ContractAddress, Nonce};
     use katana_primitives::FieldElement;
     use rand::Rng;
 
     use super::*;
     use crate::tx::PoolTransaction;
-    use crate::validation::{
-        InvalidTransactionError, ValidationOutcome, ValidationResult, Validator,
-    };
+    use crate::validation::{ValidationOutcome, ValidationResult, Validator};
 
     fn random_bytes<const SIZE: usize>() -> [u8; SIZE] {
         let mut bytes = [0u8; SIZE];
@@ -293,8 +302,11 @@ pub(crate) mod test_utils {
         fn validate(&self, tx: Self::Transaction) -> ValidationResult<Self::Transaction> {
             if tx.tip() < self.threshold {
                 return ValidationResult::Ok(ValidationOutcome::Invalid {
+                    error: InvalidTransactionError::InsufficientFunds {
+                        balance: FieldElement::ONE,
+                        max_fee: tx.max_fee(),
+                    },
                     tx,
-                    error: InvalidTransactionError::InsufficientFunds {},
                 });
             }
 
@@ -441,6 +453,11 @@ mod tests {
 
                 ValidationOutcome::Invalid { tx, .. } => {
                     acc.1.push(tx);
+                    acc
+                }
+
+                ValidationOutcome::Dependent { tx, .. } => {
+                    acc.0.push(tx);
                     acc
                 }
             });

@@ -143,7 +143,6 @@ impl<EF: ExecutorFactory> BlockProducer<EF> {
 
                 let latest_num = provider.latest_number()?;
                 let block_env = provider.block_env_at(latest_num.into())?.expect("latest");
-                let cfg = pd.backend.executor_factory.cfg();
 
                 self.validator.update(state, &block_env)
             }
@@ -153,7 +152,6 @@ impl<EF: ExecutorFactory> BlockProducer<EF> {
 
                 let state = pending_state.state();
                 let block_env = pending_state.block_env();
-                let cfg = pd.backend.executor_factory.cfg();
 
                 self.validator.update(state, &block_env)
             }

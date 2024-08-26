@@ -1,5 +1,5 @@
 // Re-export the blockifier crate.
-pub extern crate blockifier;
+pub use blockifier;
 
 mod error;
 mod state;

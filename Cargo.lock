@@ -1859,7 +1859,7 @@ dependencies = [
 [[package]]
 name = "blockifier"
 version = "0.8.0-dev.2"
-source = "git+https://github.com/dojoengine/blockifier?branch=cairo-2.7-new#eaebc7c46e09cf73029ad4755f35e1d43a9bec22"
+source = "git+https://github.com/dojoengine/blockifier?branch=cairo-2.7-new#42b2b5e28fd47bdfa0d807109360c41a92edafe4"
 dependencies = [
  "anyhow",
  "ark-ec",
@@ -8041,6 +8041,7 @@ dependencies = [
  "katana-cairo",
  "katana-core",
  "katana-executor",
+ "katana-pool",
  "katana-primitives",
  "katana-provider",
  "num-traits 0.2.19",

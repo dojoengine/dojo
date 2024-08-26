@@ -24,8 +24,6 @@ use katana_core::service::{NodeService, TransactionMiner};
 use katana_executor::implementation::blockifier::BlockifierFactory;
 use katana_executor::{ExecutorFactory, SimulationFlag};
 use katana_pool::ordering::FiFo;
-use katana_pool::validation::stateful::StatefulValidatorAdapter;
-use katana_pool::validation::NoopValidator;
 use katana_pool::{TransactionPool, TxPool};
 use katana_primitives::block::FinalityStatus;
 use katana_primitives::env::{CfgEnv, FeeTokenAddressses};

@@ -73,9 +73,9 @@ impl<T, O: PoolOrd> Clone for PendingTx<T, O> {
     fn clone(&self) -> Self {
         Self {
             id: self.id.clone(),
+            added_at: self.added_at,
             tx: Arc::clone(&self.tx),
             priority: self.priority.clone(),
-            added_at: self.added_at.clone(),
         }
     }
 }
