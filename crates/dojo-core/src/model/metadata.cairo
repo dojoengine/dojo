@@ -52,13 +52,13 @@ pub impl ResourceMetadataModel of Model<ResourceMetadata> {
         ResourceMetadataTrait::from_values(*keys.at(0), ref values)
     }
 
-    fn set(self: @ResourceMetadata, world: IWorldDispatcher,) {
+    fn set_model(self: @ResourceMetadata, world: IWorldDispatcher,) {
         IWorldDispatcherTrait::set_entity(
             world, Self::selector(), ModelIndex::Keys(self.keys()), self.values(), Self::layout()
         );
     }
 
-    fn delete(self: @ResourceMetadata, world: IWorldDispatcher,) {
+    fn delete_model(self: @ResourceMetadata, world: IWorldDispatcher,) {
         world.delete_entity(Self::selector(), ModelIndex::Keys(self.keys()), Self::layout());
     }
 

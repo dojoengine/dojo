@@ -92,7 +92,7 @@ impl InlineMacroExprPlugin for DeleteMacro {
             builder.add_str(&format!(
                 "
                 let __delete_model_instance__ = {};
-                dojo::model::Model::delete(@__delete_model_instance__, {});
+                dojo::model::Model::delete_model(@__delete_model_instance__, {});
                 ",
                 entity,
                 world.as_syntax_node().get_text(db),
