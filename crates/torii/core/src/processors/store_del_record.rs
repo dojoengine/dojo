@@ -46,7 +46,7 @@ where
         event_id: &str,
         event: &Event,
     ) -> Result<(), Error> {
-        let selector = event.data[MODEL_INDEX];
+        let selector = event.keys[MODEL_INDEX];
 
         let model = db.model(selector).await?;
 
@@ -56,7 +56,7 @@ where
             "Store delete record."
         );
 
-        let entity_id = event.data[ENTITY_ID_INDEX];
+        let entity_id = event.keys[ENTITY_ID_INDEX];
         let entity = model.schema;
 
         db.delete_entity(entity_id, entity, event_id, block_timestamp).await?;

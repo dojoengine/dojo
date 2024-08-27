@@ -47,7 +47,7 @@ where
         event_id: &str,
         event: &Event,
     ) -> Result<(), Error> {
-        let selector = event.data[MODEL_INDEX];
+        let selector = event.keys[MODEL_INDEX];
 
         let model = db.model(selector).await?;
 
@@ -59,16 +59,13 @@ where
 
         let keys_start = NUM_KEYS_INDEX + 1;
         let keys_end: usize =
-            keys_start + event.data[NUM_KEYS_INDEX].to_usize().context("invalid usize")?;
-        let keys = event.data[keys_start..keys_end].to_vec();
+            keys_start + event.keys[NUM_KEYS_INDEX].to_usize().context("invalid usize")?;
+        let keys = event.keys[keys_start..keys_end].to_vec();
 
-        // keys_end is already the length of the values array.
 
-        let values_start = keys_end + 1;
-        let values_end: usize =
-            values_start + event.data[keys_end].to_usize().context("invalid usize")?;
+        // Skip the length to only get the values as they will be deserialized.
+        let values = event.data[1..].to_vec();
 
-        let values = event.data[values_start..values_end].to_vec();
         let mut keys_and_unpacked = [keys, values].concat();
 
         let mut entity = model.schema;

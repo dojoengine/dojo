@@ -2,7 +2,6 @@ use anyhow::{Context, Error, Result};
 use async_trait::async_trait;
 use dojo_world::contracts::naming;
 use dojo_world::contracts::world::WorldContractReader;
-use num_traits::ToPrimitive;
 use starknet::core::types::{Event, TransactionReceiptWithBlockInfo};
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
@@ -51,9 +50,9 @@ where
         event_id: &str,
         event: &Event,
     ) -> Result<(), Error> {
-        let selector = event.data[MODEL_INDEX];
-        let entity_id = event.data[ENTITY_ID_INDEX];
-        let member_selector = event.data[MEMBER_INDEX];
+        let selector = event.keys[MODEL_INDEX];
+        let entity_id = event.keys[ENTITY_ID_INDEX];
+        let member_selector = event.keys[MEMBER_INDEX];
 
         let model = db.model(selector).await?;
         let schema = model.schema;
@@ -78,12 +77,8 @@ where
             "Store update member.",
         );
 
-        let values_start = MEMBER_INDEX + 1;
-        let values_end: usize =
-            values_start + event.data[values_start].to_usize().context("invalid usize")?;
-
         // Skip the length to only get the values as they will be deserialized.
-        let mut values = event.data[values_start + 1..=values_end].to_vec();
+        let mut values = event.data[1..].to_vec();
 
         let tag = naming::get_tag(&model.namespace, &model.name);
 

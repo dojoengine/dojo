@@ -57,8 +57,8 @@ where
         _event_id: &str,
         event: &Event,
     ) -> Result<(), Error> {
-        let resource = &event.data[0];
-        let uri_str = ByteArray::cairo_deserialize(&event.data, 1)?.to_string()?;
+        let resource = &event.keys[0];
+        let uri_str = ByteArray::cairo_deserialize(&event.data, 0)?.to_string()?;
         info!(
             target: LOG_TARGET,
             resource = %format!("{:#x}", resource),
