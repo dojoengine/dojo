@@ -310,7 +310,7 @@ fn test_register_namespace() {
     let namespace = "namespace";
     let hash = bytearray_hash(@namespace);
 
-    world.register_namespace(namespace);
+    world.register_namespace(namespace.clone());
 
     assert(world.is_owner(hash, bob), 'namespace not registered');
 
