@@ -633,7 +633,7 @@ fn build_model_registered_event(values: Vec<Felt>, namespace: &str, model: &str)
 }
 
 fn build_deploy_event(values: Vec<Felt>, class_hash: Felt, ns: &str, name: &str) -> EmittedEvent {
-    let mut keys = vec![class_hash];
+    let mut keys = vec![selector!("ContractDeployed"), class_hash];
     keys.extend(serialize_bytearray(ns).iter());
     keys.extend(serialize_bytearray(name).iter());
 

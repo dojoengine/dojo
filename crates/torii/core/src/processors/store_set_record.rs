@@ -47,9 +47,10 @@ where
         event_id: &str,
         event: &Event,
     ) -> Result<(), Error> {
-        let selector = event.keys[MODEL_INDEX];
+        // Event selector is the first key.
+        let model_selector = event.keys[MODEL_INDEX];
 
-        let model = db.model(selector).await?;
+        let model = db.model(model_selector).await?;
 
         info!(
             target: LOG_TARGET,
@@ -57,15 +58,10 @@ where
             "Store set record.",
         );
 
-        let keys_start = NUM_KEYS_INDEX + 1;
-        let keys_end: usize =
-            keys_start + event.keys[NUM_KEYS_INDEX].to_usize().context("invalid usize")?;
-        let keys = event.keys[keys_start..keys_end].to_vec();
+        // Skip the length to only get the keys as they will be deserialized.
+        let keys = event.keys[NUM_KEYS_INDEX + 1..].to_vec();
 
-        // Skip the length to only get the values as they will be deserialized.
-        let values = event.data[1..].to_vec();
-
-        let mut keys_and_unpacked = [keys, values].concat();
+        let mut keys_and_unpacked = [keys, event.data.to_vec()].concat();
 
         let mut entity = model.schema;
         entity.deserialize(&mut keys_and_unpacked)?;

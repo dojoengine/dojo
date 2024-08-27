@@ -765,19 +765,9 @@ abigen!(
     "kind": "struct",
     "members": [
       {
-        "name": "salt",
-        "type": "core::felt252",
-        "kind": "data"
-      },
-      {
         "name": "class_hash",
         "type": "core::starknet::class_hash::ClassHash",
         "kind": "key"
-      },
-      {
-        "name": "address",
-        "type": "core::starknet::contract_address::ContractAddress",
-        "kind": "data"
       },
       {
         "name": "namespace",
@@ -788,6 +778,16 @@ abigen!(
         "name": "name",
         "type": "core::byte_array::ByteArray",
         "kind": "key"
+      },
+      {
+        "name": "salt",
+        "type": "core::felt252",
+        "kind": "data"
+      },
+      {
+        "name": "address",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
       }
     ]
   },

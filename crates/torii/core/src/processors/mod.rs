@@ -15,8 +15,8 @@ pub mod store_transaction;
 pub mod store_update_member;
 pub mod store_update_record;
 
-const MODEL_INDEX: usize = 0;
-const NUM_KEYS_INDEX: usize = 1;
+const MODEL_INDEX: usize = 1;
+const NUM_KEYS_INDEX: usize = 2;
 const ENTITY_ID_INDEX: usize = 1;
 
 #[async_trait]

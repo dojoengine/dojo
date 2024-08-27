@@ -655,6 +655,9 @@ fn parse_contracts_events(
             let mut data = event.data.into_iter();
             let mut keys = event.keys.into_iter();
 
+            // Skip the event selector.
+            let _ = keys.next().expect("Keys must contains at least the event selector");
+
             let _ = data.next().expect("salt is missing from event");
             let address = data.next().expect("address is missing from event");
 

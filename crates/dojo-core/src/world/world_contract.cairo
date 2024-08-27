@@ -180,14 +180,14 @@ pub mod world {
 
     #[derive(Drop, starknet::Event, Debug, PartialEq)]
     pub struct ContractDeployed {
-        pub salt: felt252,
         #[key]
         pub class_hash: ClassHash,
-        pub address: ContractAddress,
         #[key]
         pub namespace: ByteArray,
         #[key]
-        pub name: ByteArray
+        pub name: ByteArray,
+        pub salt: felt252,
+        pub address: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event, Debug, PartialEq)]
