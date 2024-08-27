@@ -253,7 +253,7 @@ async fn rapid_transactions_submissions(
     let initial_nonce =
         provider.get_nonce(BlockId::Tag(BlockTag::Pending), sequencer.account().address()).await?;
 
-    const N: usize = 20;
+    const N: usize = 100;
     let nonce = Arc::new(Mutex::new(initial_nonce));
     let txs = Arc::new(Mutex::new(IndexSet::with_capacity(N)));
 

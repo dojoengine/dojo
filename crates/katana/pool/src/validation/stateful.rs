@@ -14,7 +14,6 @@ use katana_executor::implementation::blockifier::utils::{
 use katana_executor::{SimulationFlag, StateProviderDb};
 use katana_primitives::contract::{ContractAddress, Nonce};
 use katana_primitives::env::{BlockEnv, CfgEnv};
-use katana_primitives::receipt::DeployAccountTxReceipt;
 use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash};
 use katana_provider::traits::state::StateProvider;
 use parking_lot::Mutex;

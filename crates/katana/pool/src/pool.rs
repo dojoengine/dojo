@@ -109,8 +109,6 @@ where
 
                         // insert the tx in the pool
                         self.inner.transactions.write().push(tx);
-                        println!("Transaction added to the pool");
-
                         self.notify_listener(hash);
 
                         Ok(hash)
