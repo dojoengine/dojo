@@ -109,19 +109,22 @@ where
 
                         // insert the tx in the pool
                         self.inner.transactions.write().push(tx);
+                        println!("Transaction added to the pool");
+
                         self.notify_listener(hash);
 
                         Ok(hash)
                     }
 
-                    ValidationOutcome::Invalid { tx, error } => {
-                        warn!(hash = format!("{:#x}", tx.hash()), "Invalid transaction.");
+                    ValidationOutcome::Invalid { error, .. } => {
+                        warn!(hash = format!("{hash:#x}"), "Invalid transaction.");
                         Err(PoolError::InvalidTransaction(Box::new(error)))
                     }
 
                     // return as error for now but ideally we should kept the tx in a separate
                     // queue and revalidate it when the parent tx is added to the pool
                     ValidationOutcome::Dependent { tx, tx_nonce, current_nonce } => {
+                        info!(hash = format!("{hash:#x}"), "Dependent transaction.");
                         let err = InvalidTransactionError::InvalidNonce {
                             address: tx.sender(),
                             current_nonce,

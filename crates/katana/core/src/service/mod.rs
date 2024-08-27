@@ -4,6 +4,7 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll};
+use std::time::Duration;
 
 use futures::channel::mpsc::Receiver;
 use futures::stream::{Fuse, Stream, StreamExt};
@@ -101,7 +102,7 @@ impl<EF: ExecutorFactory> Future for NodeService<EF> {
                         metrics.l1_gas_processed_total.increment(gas_used as u64);
                         metrics.cairo_steps_processed_total.increment(steps_used as u64);
 
-                        pin.block_producer.update_validator().expect("failed to update validator");
+                        // pin.block_producer.update_validator().expect("failed to update validator");
                     }
 
                     Err(err) => {
@@ -109,6 +110,8 @@ impl<EF: ExecutorFactory> Future for NodeService<EF> {
                     }
                 }
             }
+
+            std::thread::sleep(Duration::from_millis(1000));
 
             if let Poll::Ready(pool_txs) = pin.miner.poll(&pin.pool, cx) {
                 // miner returned a set of transaction that we feed to the producer

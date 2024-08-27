@@ -13,6 +13,7 @@ use anyhow::Result;
 use katana_core::backend::Backend;
 use katana_core::service::block_producer::{BlockProducer, BlockProducerMode, PendingExecutor};
 use katana_executor::{ExecutionResult, ExecutorFactory};
+use katana_pool::validation::stateful::TxValidator;
 use katana_pool::TxPool;
 use katana_primitives::block::{
     BlockHash, BlockHashOrNumber, BlockIdOrTag, BlockNumber, BlockTag, FinalityStatus,
@@ -53,6 +54,7 @@ impl<EF: ExecutorFactory> Clone for StarknetApi<EF> {
 }
 
 struct Inner<EF: ExecutorFactory> {
+    validator: TxValidator,
     pool: TxPool,
     backend: Arc<Backend<EF>>,
     block_producer: Arc<BlockProducer<EF>>,
@@ -64,11 +66,12 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         backend: Arc<Backend<EF>>,
         pool: TxPool,
         block_producer: Arc<BlockProducer<EF>>,
+        validator: TxValidator,
     ) -> Self {
         let blocking_task_pool =
             BlockingTaskPool::new().expect("failed to create blocking task pool");
 
-        let inner = Inner { pool, backend, block_producer, blocking_task_pool };
+        let inner = Inner { pool, backend, block_producer, blocking_task_pool, validator };
 
         Self { inner: Arc::new(inner) }
     }
@@ -296,8 +299,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
             // TODO: this is a temporary solution, we should have a better way to handle this.
             // perhaps a pending/pool state provider that implements all the state provider traits.
             if let BlockIdOrTag::Tag(BlockTag::Pending) = block_id {
-                let validator = this.inner.block_producer.validator();
-                let pool_nonce = validator.get_nonce(contract_address);
+                let pool_nonce = this.inner.validator.get_nonce(contract_address);
                 return Ok(pool_nonce);
             }
 
