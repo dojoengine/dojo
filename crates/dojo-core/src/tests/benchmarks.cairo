@@ -492,7 +492,7 @@ fn test_benchmark_set_entity() {
     gas.end("World::SetEntity::ComplexModel");
 
     let gas = GasCounterTrait::start();
-    simple_entity_packed.set1(world);
+    simple_entity_packed.set(world);
     gas.end("Model::Set::SimplePacked");
 
     let gas = GasCounterTrait::start();
