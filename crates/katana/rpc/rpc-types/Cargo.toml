@@ -9,6 +9,7 @@ version.workspace = true
 [dependencies]
 katana-cairo.workspace = true
 katana-core.workspace = true
+katana-pool.workspace = true
 katana-executor.workspace = true
 katana-primitives.workspace = true
 katana-provider.workspace = true

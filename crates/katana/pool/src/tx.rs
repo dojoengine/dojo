@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::time::Instant;
 
 use katana_primitives::contract::{ContractAddress, Nonce};
 use katana_primitives::transaction::{
@@ -56,11 +57,12 @@ pub struct PendingTx<T, O: PoolOrd> {
     pub id: TxId,
     pub tx: Arc<T>,
     pub priority: O::PriorityValue,
+    pub added_at: std::time::Instant,
 }
 
 impl<T, O: PoolOrd> PendingTx<T, O> {
     pub fn new(id: TxId, tx: T, priority: O::PriorityValue) -> Self {
-        Self { id, tx: Arc::new(tx), priority }
+        Self { id, tx: Arc::new(tx), priority, added_at: Instant::now() }
     }
 }
 
@@ -69,7 +71,12 @@ impl<T, O: PoolOrd> PendingTx<T, O> {
 
 impl<T, O: PoolOrd> Clone for PendingTx<T, O> {
     fn clone(&self) -> Self {
-        Self { id: self.id.clone(), tx: Arc::clone(&self.tx), priority: self.priority.clone() }
+        Self {
+            id: self.id.clone(),
+            added_at: self.added_at,
+            tx: Arc::clone(&self.tx),
+            priority: self.priority.clone(),
+        }
     }
 }
 

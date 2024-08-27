@@ -131,7 +131,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
 
     /// Returns the pending state if the sequencer is running in _interval_ mode. Otherwise `None`.
     fn pending_executor(&self) -> Option<PendingExecutor> {
-        match &*self.inner.block_producer.inner.read() {
+        match &*self.inner.block_producer.producer.read() {
             BlockProducerMode::Instant(_) => None,
             BlockProducerMode::Interval(producer) => Some(producer.executor()),
         }
@@ -291,6 +291,16 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         contract_address: ContractAddress,
     ) -> Result<Nonce, StarknetApiError> {
         self.on_io_blocking_task(move |this| {
+            // read from the pool state if pending block
+            //
+            // TODO: this is a temporary solution, we should have a better way to handle this.
+            // perhaps a pending/pool state provider that implements all the state provider traits.
+            if let BlockIdOrTag::Tag(BlockTag::Pending) = block_id {
+                let validator = this.inner.block_producer.validator();
+                let pool_nonce = validator.get_nonce(contract_address);
+                return Ok(pool_nonce);
+            }
+
             let state = this.state(&block_id)?;
             let nonce = state.nonce(contract_address)?.ok_or(StarknetApiError::ContractNotFound)?;
             Ok(nonce)

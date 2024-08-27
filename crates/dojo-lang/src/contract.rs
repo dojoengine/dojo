@@ -130,17 +130,21 @@ impl DojoContract {
                 let node = RewriteNode::interpolate_patched(
                     "
                     #[starknet::interface]
-                    trait IDojoInit<ContractState> {
+                    pub trait IDojoInit<ContractState> {
                         fn $init_name$(self: @ContractState);
                     }
 
                     #[abi(embed_v0)]
-                    impl IDojoInitImpl of IDojoInit<ContractState> {
+                    pub impl IDojoInitImpl of IDojoInit<ContractState> {
                         fn $init_name$(self: @ContractState) {
-                            assert(starknet::get_caller_address() == \
-                     self.world().contract_address, 'Only world can init');
-                            assert(self.world().is_owner(self.selector(), \
-                     starknet::get_tx_info().account_contract_address), 'Only owner can init');
+                            if starknet::get_caller_address() != self.world().contract_address {
+                                core::panics::panic_with_byte_array(
+                                    @format!(\"Only the world can init contract `{}`, but caller \
+                     is `{:?}`\",
+                                    self.tag(),
+                                    starknet::get_caller_address(),
+                                ));
+                            }
                         }
                     }
                 ",
@@ -294,26 +298,26 @@ impl DojoContract {
 
         let trait_node = RewriteNode::interpolate_patched(
             "#[starknet::interface]
-            trait IDojoInit<ContractState> {
-                fn dojo_init($params_str$);
+            pub trait IDojoInit<ContractState> {
+                fn $init_name$($params_str$);
             }
             ",
-            &UnorderedHashMap::from([(
-                "params_str".to_string(),
-                RewriteNode::Text(params_str.clone()),
-            )]),
+            &UnorderedHashMap::from([
+                ("init_name".to_string(), RewriteNode::Text(DOJO_INIT_FN.to_string())),
+                ("params_str".to_string(), RewriteNode::Text(params_str.clone())),
+            ]),
         );
 
         let impl_node = RewriteNode::Text(
             "
             #[abi(embed_v0)]
-            impl IDojoInitImpl of IDojoInit<ContractState> {
+            pub impl IDojoInitImpl of IDojoInit<ContractState> {
             "
             .to_string(),
         );
 
         let declaration_node = RewriteNode::Mapped {
-            node: Box::new(RewriteNode::Text(format!("fn dojo_init({}) {{", params_str))),
+            node: Box::new(RewriteNode::Text(format!("fn {}({}) {{", DOJO_INIT_FN, params_str))),
             origin: fn_ast.declaration(db).as_syntax_node().span_without_trivia(db),
         };
 
@@ -324,8 +328,9 @@ impl DojoContract {
         };
 
         let assert_world_caller_node = RewriteNode::Text(
-            "assert(starknet::get_caller_address() == self.world().contract_address, 'Only world \
-             can init');"
+            "if starknet::get_caller_address() != self.world().contract_address { \
+             core::panics::panic_with_byte_array(@format!(\"Only the world can init contract \
+             `{}`, but caller is `{:?}`\", self.tag(), starknet::get_caller_address())); }"
                 .to_string(),
         );
 

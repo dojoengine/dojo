@@ -7,7 +7,9 @@ use std::ops::DerefMut;
 use anyhow::{anyhow, Context, Result};
 use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_defs::db::DefsGroup;
-use cairo_lang_defs::ids::{ModuleId, ModuleItemId, TopLevelLanguageElementId};
+use cairo_lang_defs::ids::{
+    ModuleId, ModuleItemId, NamedLanguageElementId, TopLevelLanguageElementId,
+};
 use cairo_lang_filesystem::db::FilesGroup;
 use cairo_lang_filesystem::ids::{CrateId, CrateLongId};
 use cairo_lang_formatter::format_string;
@@ -15,6 +17,7 @@ use cairo_lang_semantic::db::SemanticGroup;
 use cairo_lang_starknet::compile::compile_prepared_db;
 use cairo_lang_starknet::contract::{find_contracts, ContractDeclaration};
 use cairo_lang_starknet_classes::abi;
+use cairo_lang_starknet_classes::allowed_libfuncs::{AllowedLibfuncsError, ListSelector};
 use cairo_lang_starknet_classes::contract_class::ContractClass;
 use cairo_lang_utils::UpcastMut;
 use camino::Utf8PathBuf;
@@ -127,12 +130,35 @@ impl Compiler for DojoCompiler {
         };
 
         let mut compiled_classes: HashMap<String, (Felt, ContractClass)> = HashMap::new();
+        let list_selector = ListSelector::default();
 
         for (decl, class) in zip(contracts, classes) {
+            let contract_name = decl.submodule_id.name(db.upcast_mut());
+
             // note that the qualified path is in snake case while
             // the `full_path()` method of StructId uses the original struct name case.
             // (see in `get_dojo_model_artifacts`)
             let qualified_path = decl.module_id().full_path(db.upcast_mut());
+
+            match class.validate_version_compatible(list_selector.clone()) {
+                Ok(()) => {}
+                Err(AllowedLibfuncsError::UnsupportedLibfunc {
+                    invalid_libfunc,
+                    allowed_libfuncs_list_name: _,
+                }) => {
+                    let diagnostic = format! {r#"
+                        Contract `{contract_name}` ({qualified_path}) includes `{invalid_libfunc}` function that is not allowed in the default libfuncs for public Starknet networks (mainnet, sepolia).
+                        It will work on Katana, but don't forget to remove it before deploying on a public Starknet network.
+                    "#};
+
+                    ws.config().ui().warn(diagnostic);
+                }
+                Err(e) => {
+                    return Err(e).with_context(|| {
+                        format!("Failed to check allowed libfuncs for contract: {}", contract_name)
+                    });
+                }
+            }
 
             let class_hash = compute_class_hash_of_contract_class(&class).with_context(|| {
                 format!("problem computing class hash for contract `{}`", qualified_path.clone())
