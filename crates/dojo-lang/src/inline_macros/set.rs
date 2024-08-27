@@ -106,7 +106,7 @@ impl InlineMacroExprPlugin for SetMacro {
             builder.add_str(&format!(
                 "
                 let __set_model_instance__ = {};
-                dojo::model::Model::set(@__set_model_instance__, {});
+                dojo::model::Model::set_model(@__set_model_instance__, {});
                 ",
                 entity,
                 world.as_syntax_node().get_text(db),

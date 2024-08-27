@@ -332,6 +332,14 @@ pub impl $type_name$EntityStoreImpl of $type_name$EntityStore {
         $type_name$ModelEntityImpl::get(world, entity_id)
     }
 
+    fn update(self: @$type_name$Entity, world: dojo::world::IWorldDispatcher) {
+        dojo::model::ModelEntity::<$type_name$Entity>::update_entity(self, world);
+    }
+
+    fn delete(self: @$type_name$Entity, world: dojo::world::IWorldDispatcher) {
+        dojo::model::ModelEntity::<$type_name$Entity>::delete_entity(self, world);
+    }
+
     $entity_field_accessors$
 }
 
@@ -366,6 +374,14 @@ pub impl $type_name$StoreImpl of $type_name$Store {
         $serialized_param_keys$
 
         dojo::model::Model::<$type_name$>::get(world, serialized.span())
+    }
+
+    fn set(self: @$type_name$, world: dojo::world::IWorldDispatcher) {
+        dojo::model::Model::<$type_name$>::set_model(self, world);
+    }
+
+    fn delete(self: @$type_name$, world: dojo::world::IWorldDispatcher) {
+        dojo::model::Model::<$type_name$>::delete_model(self, world);
     }
 
     $field_accessors$
@@ -406,7 +422,7 @@ pub impl $type_name$ModelEntityImpl of dojo::model::ModelEntity<$type_name$Entit
         Self::from_values(entity_id, ref values)
     }
 
-    fn update(self: @$type_name$Entity, world: dojo::world::IWorldDispatcher) {
+    fn update_entity(self: @$type_name$Entity, world: dojo::world::IWorldDispatcher) {
         dojo::world::IWorldDispatcherTrait::set_entity(
             world,
             dojo::model::Model::<$type_name$>::selector(),
@@ -416,7 +432,7 @@ pub impl $type_name$ModelEntityImpl of dojo::model::ModelEntity<$type_name$Entit
         );
     }
 
-    fn delete(self: @$type_name$Entity, world: dojo::world::IWorldDispatcher) {
+    fn delete_entity(self: @$type_name$Entity, world: dojo::world::IWorldDispatcher) {
         dojo::world::IWorldDispatcherTrait::delete_entity(
             world,
             dojo::model::Model::<$type_name$>::selector(),
@@ -507,7 +523,7 @@ pub impl $type_name$ModelImpl of dojo::model::Model<$type_name$> {
         $type_name$Store::from_values(ref _keys, ref values)
     }
 
-   fn set(
+   fn set_model(
         self: @$type_name$,
         world: dojo::world::IWorldDispatcher
     ) {
@@ -520,7 +536,7 @@ pub impl $type_name$ModelImpl of dojo::model::Model<$type_name$> {
         );
     }
 
-    fn delete(
+    fn delete_model(
         self: @$type_name$,
         world: dojo::world::IWorldDispatcher
     ) {

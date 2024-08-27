@@ -17,9 +17,12 @@ pub trait ModelEntity<T> {
     fn id(self: @T) -> felt252;
     fn values(self: @T) -> Span<felt252>;
     fn from_values(entity_id: felt252, ref values: Span<felt252>) -> T;
+    // Get is always used with the trait path, which results in no ambiguity for the compiler.
     fn get(world: IWorldDispatcher, entity_id: felt252) -> T;
-    fn update(self: @T, world: IWorldDispatcher);
-    fn delete(self: @T, world: IWorldDispatcher);
+    // Update and delete can be used directly on the entity, which results in ambiguity.
+    // Therefore, they are implemented with the `update_entity` and `delete_entity` names.
+    fn update_entity(self: @T, world: IWorldDispatcher);
+    fn delete_entity(self: @T, world: IWorldDispatcher);
     fn get_member(
         world: IWorldDispatcher, entity_id: felt252, member_id: felt252,
     ) -> Span<felt252>;
@@ -27,11 +30,15 @@ pub trait ModelEntity<T> {
 }
 
 pub trait Model<T> {
+    // Get is always used with the trait path, which results in no ambiguity for the compiler.
     fn get(world: IWorldDispatcher, keys: Span<felt252>) -> T;
     // Note: `get` is implemented with a generated trait because it takes
     // the list of model keys as separated parameters.
-    fn set(self: @T, world: IWorldDispatcher);
-    fn delete(self: @T, world: IWorldDispatcher);
+
+    // Set and delete can be used directly on the entity, which results in ambiguity.
+    // Therefore, they are implemented with the `set_model` and `delete_model` names.
+    fn set_model(self: @T, world: IWorldDispatcher);
+    fn delete_model(self: @T, world: IWorldDispatcher);
 
     fn get_member(
         world: IWorldDispatcher, keys: Span<felt252>, member_id: felt252,
