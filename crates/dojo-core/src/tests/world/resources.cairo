@@ -317,9 +317,7 @@ fn test_register_namespace() {
     let expected_event = NamespaceRegistered { namespace, hash };
     assert_eq!(
         starknet::testing::pop_log(world.contract_address),
-        Option::Some(
-            Event::NamespaceRegistered(Event::NamespaceRegistered(NamespaceRegistered))
-        )
+        Option::Some(Event::NamespaceRegistered(Event::NamespaceRegistered(NamespaceRegistered)))
     );
 }
 

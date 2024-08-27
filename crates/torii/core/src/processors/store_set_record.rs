@@ -62,7 +62,6 @@ where
             keys_start + event.keys[NUM_KEYS_INDEX].to_usize().context("invalid usize")?;
         let keys = event.keys[keys_start..keys_end].to_vec();
 
-
         // Skip the length to only get the values as they will be deserialized.
         let values = event.data[1..].to_vec();
 
