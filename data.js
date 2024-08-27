@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1724700205044,
+  "lastUpdate": 1724736620757,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -17281,6 +17281,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3951707,
             "range": "± 38665",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e1a349b2c4b1a836156e769a46f8fe3c87ae553f",
+          "message": "fix: ensure models generated Store trait exposes set/update/delete (#2348)\n\n* fix: ensure the store traits are exposing high level functions for get/set/update\r\n\r\n* fix: fix tests\r\n\r\n* fix: fix test by using explicit store trait",
+          "timestamp": "2024-08-26T23:11:38-06:00",
+          "tree_id": "180938f0199536eb3b0badf65db86c98553f9fd1",
+          "url": "https://github.com/dojoengine/dojo/commit/e1a349b2c4b1a836156e769a46f8fe3c87ae553f"
+        },
+        "date": 1724736619263,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17325565,
+            "range": "± 235148",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3749846,
+            "range": "± 72396",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3615307414,
+            "range": "± 793862423",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3914270,
+            "range": "± 64120",
             "unit": "ns/iter"
           }
         ]
