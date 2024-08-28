@@ -88,6 +88,7 @@ pub struct CacheDb<Db> {
     pub(crate) transaction_hashes: HashMap<TxNumber, TxHash>,
     pub(crate) transaction_numbers: HashMap<TxHash, TxNumber>,
     pub(crate) transaction_block: HashMap<TxNumber, BlockNumber>,
+    pub(crate) messaging_info: HashMap<u64, BlockNumber>,
 }
 
 impl<Db> CacheStateDb<Db> {
@@ -120,6 +121,7 @@ impl<Db> CacheDb<Db> {
             transactions_executions: Vec::new(),
             latest_block_hash: Default::default(),
             latest_block_number: Default::default(),
+            messaging_info: Default::default(),
         }
     }
 }

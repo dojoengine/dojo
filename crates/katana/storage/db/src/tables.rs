@@ -44,7 +44,7 @@ pub enum TableType {
     DupSort,
 }
 
-pub const NUM_TABLES: usize = 23;
+pub const NUM_TABLES: usize = 24;
 
 /// Macro to declare `libmdbx` tables.
 #[macro_export]
@@ -167,7 +167,8 @@ define_tables_enum! {[
     (NonceChangeHistory, TableType::DupSort),
     (ClassChangeHistory, TableType::DupSort),
     (StorageChangeHistory, TableType::DupSort),
-    (StorageChangeSet, TableType::Table)
+    (StorageChangeSet, TableType::Table),
+    (MessagingInfo, TableType::Table)
 ]}
 
 tables! {
@@ -223,8 +224,10 @@ tables! {
     /// storage change set
     StorageChangeSet: (ContractStorageKey) => BlockList,
     /// Account storage change set
-    StorageChangeHistory: (BlockNumber, ContractStorageKey) => ContractStorageEntry
+    StorageChangeHistory: (BlockNumber, ContractStorageKey) => ContractStorageEntry,
 
+    /// Stores the block number related to messaging service
+    MessagingInfo: (u64) => BlockNumber
 }
 
 #[cfg(test)]
@@ -258,6 +261,7 @@ mod tests {
         assert_eq!(Tables::ALL[20].name(), ClassChangeHistory::NAME);
         assert_eq!(Tables::ALL[21].name(), StorageChangeHistory::NAME);
         assert_eq!(Tables::ALL[22].name(), StorageChangeSet::NAME);
+        assert_eq!(Tables::ALL[23].name(), MessagingInfo::NAME);
 
         assert_eq!(Tables::Headers.table_type(), TableType::Table);
         assert_eq!(Tables::BlockHashes.table_type(), TableType::Table);
@@ -282,6 +286,7 @@ mod tests {
         assert_eq!(Tables::ClassChangeHistory.table_type(), TableType::DupSort);
         assert_eq!(Tables::StorageChangeHistory.table_type(), TableType::DupSort);
         assert_eq!(Tables::StorageChangeSet.table_type(), TableType::Table);
+        assert_eq!(Tables::MessagingInfo.table_type(), TableType::Table);
     }
 
     use katana_primitives::block::{BlockHash, BlockNumber, FinalityStatus, Header};

@@ -36,14 +36,15 @@ use crate::traits::block::{
     HeaderProvider,
 };
 use crate::traits::env::BlockEnvProvider;
+use crate::traits::messaging::MessagingProvider;
 use crate::traits::state::{StateFactoryProvider, StateProvider, StateRootProvider};
 use crate::traits::state_update::StateUpdateProvider;
 use crate::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionStatusProvider, TransactionTraceProvider,
     TransactionsProviderExt,
 };
+use crate::traits::messaging::{SEND_FROM_BLOCK_KEY, GATHER_FROM_BLOCK_KEY};
 use crate::ProviderResult;
-
 /// A provider implementation that uses a persistent database as the backend.
 // TODO: remove the default generic type
 #[derive(Debug)]
@@ -760,6 +761,37 @@ impl<Db: Database> BlockWriter for DbProvider<Db> {
 
             Ok(())
         })?
+    }
+}
+
+impl MessagingProvider for DbProvider {
+
+    fn get_send_from_block(&self) -> ProviderResult<Option<BlockNumber>> {
+         let db_tx = self.0.tx()?;
+         let block_num = db_tx.get::<tables::MessagingInfo>(SEND_FROM_BLOCK_KEY)?;
+         db_tx.commit()?;
+         Ok(block_num)
+    }
+
+    fn set_send_from_block(&self, send_from_block: BlockNumber) -> ProviderResult<()> {
+         self.0.update(|db_tx| {
+             db_tx.put::<tables::MessagingInfo>(SEND_FROM_BLOCK_KEY, send_from_block)?;
+             Ok(())
+         })?
+    }
+
+    fn get_gather_from_block(&self) -> ProviderResult<Option<BlockNumber>> {
+         let db_tx = self.0.tx()?;
+         let block_num = db_tx.get::<tables::MessagingInfo>(GATHER_FROM_BLOCK_KEY)?;
+         db_tx.commit()?;
+         Ok(block_num)
+    }
+
+    fn set_gather_from_block(&self, gather_from_block: BlockNumber) -> ProviderResult<()> {
+         self.0.update(|db_tx| {
+             db_tx.put::<tables::MessagingInfo>(GATHER_FROM_BLOCK_KEY, gather_from_block)?;
+             Ok(())
+         })?
     }
 }
 

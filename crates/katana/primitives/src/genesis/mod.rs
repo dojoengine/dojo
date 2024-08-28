@@ -105,6 +105,8 @@ pub struct Genesis {
     pub universal_deployer: Option<UniversalDeployerConfig>,
     /// The genesis contract allocations.
     pub allocations: BTreeMap<ContractAddress, GenesisAllocation>,
+    /// The block on settlement chain from where Katana will start fetching messages.
+    pub gather_from_block: BlockNumber,
 }
 
 impl Genesis {
@@ -309,6 +311,7 @@ impl Default for Genesis {
             allocations: BTreeMap::new(),
             fee_token,
             universal_deployer: Some(universal_deployer),
+            gather_from_block: 0,
         }
     }
 }

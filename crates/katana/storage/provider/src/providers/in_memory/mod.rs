@@ -26,12 +26,14 @@ use crate::traits::block::{
 };
 use crate::traits::contract::ContractClassWriter;
 use crate::traits::env::BlockEnvProvider;
+use crate::traits::messaging::MessagingProvider;
 use crate::traits::state::{StateFactoryProvider, StateProvider, StateRootProvider, StateWriter};
 use crate::traits::state_update::StateUpdateProvider;
 use crate::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionStatusProvider, TransactionTraceProvider,
     TransactionsProviderExt,
 };
+use crate::traits::messaging::{SEND_FROM_BLOCK_KEY, GATHER_FROM_BLOCK_KEY};
 use crate::ProviderResult;
 
 #[derive(Debug)]
@@ -573,5 +575,25 @@ impl BlockEnvProvider for InMemoryProvider {
             l1_gas_prices: header.gas_prices,
             sequencer_address: header.sequencer_address,
         }))
+    }
+}
+
+impl MessagingProvider for InMemoryProvider {
+    fn get_send_from_block(&self) -> ProviderResult<Option<BlockNumber>> {
+        Ok(self.storage.read().messaging_info.get(&SEND_FROM_BLOCK_KEY).cloned())
+    }
+
+    fn set_send_from_block(&self, send_from_block: BlockNumber) -> ProviderResult<()> {
+        self.storage.write().messaging_info.insert(SEND_FROM_BLOCK_KEY, send_from_block);
+        Ok(())
+    }
+
+    fn get_gather_from_block(&self) -> ProviderResult<Option<BlockNumber>> {
+        Ok(self.storage.read().messaging_info.get(&GATHER_FROM_BLOCK_KEY).cloned())
+    }
+
+    fn set_gather_from_block(&self, gather_from_block: BlockNumber) -> ProviderResult<()> {
+        self.storage.write().messaging_info.insert(GATHER_FROM_BLOCK_KEY, gather_from_block);
+        Ok(())
     }
 }

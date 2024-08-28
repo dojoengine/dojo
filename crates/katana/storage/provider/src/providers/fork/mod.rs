@@ -30,6 +30,7 @@ use crate::traits::block::{
 };
 use crate::traits::contract::ContractClassWriter;
 use crate::traits::env::BlockEnvProvider;
+use crate::traits::messaging::MessagingProvider;
 use crate::traits::state::{StateFactoryProvider, StateProvider, StateRootProvider, StateWriter};
 use crate::traits::state_update::StateUpdateProvider;
 use crate::traits::transaction::{
@@ -459,6 +460,7 @@ impl StateFactoryProvider for ForkedProvider {
     }
 }
 
+
 impl BlockWriter for ForkedProvider {
     fn insert_block_with_states_and_receipts(
         &self,
@@ -579,5 +581,24 @@ impl BlockEnvProvider for ForkedProvider {
             l1_gas_prices: header.gas_prices,
             sequencer_address: header.sequencer_address,
         }))
+    }
+}
+
+impl MessagingProvider for ForkedProvider {
+
+    fn get_send_from_block(&self) -> ProviderResult<Option<BlockNumber>> {
+        Ok(None)
+    }
+
+    fn set_send_from_block(&self, _send_from_block: BlockNumber) -> ProviderResult<()> {
+        Ok(())
+    }
+
+    fn get_gather_from_block(&self) -> ProviderResult<Option<BlockNumber>> {
+        Ok(None)
+    }
+
+    fn set_gather_from_block(&self, _gather_from_block: BlockNumber) -> ProviderResult<()> {
+        Ok(())
     }
 }
