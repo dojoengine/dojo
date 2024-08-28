@@ -121,7 +121,7 @@ impl StatefulValidatorAdapter {
 
                 match self.inner.perform_validations(
                     blockifier_tx,
-                    { if skip_validate { Some(Default::default()) } else { None } },
+                    if skip_validate { Some(Default::default()) } else { None },
                     skip_fee_check,
                 ) {
                     Ok(()) => Ok(ValidationOutcome::Valid(tx)),
