@@ -81,7 +81,8 @@ pub async fn get_contract_address_from_reader<P: Provider + Sync + Send>(
 /// * `transaction_result` - Result of the transaction to handle.
 /// * `wait_for_tx` - Wait for the transaction to be mined.
 /// * `show_receipt` - If the receipt of the transaction should be displayed on stdout.
-/// * `debug_with_walnut` - If the link to debug the transaction with Walnut should be displayed on stdout.
+/// * `debug_with_walnut` - If the link to debug the transaction with Walnut should be displayed on
+///   stdout.
 pub async fn handle_transaction_result<P>(
     ui: &Ui,
     provider: P,

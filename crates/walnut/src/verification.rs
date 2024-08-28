@@ -1,12 +1,15 @@
+use std::ffi::OsStr;
+use std::path::PathBuf;
+
 use anyhow::{anyhow, Context, Result};
 use console::{pad_str, Alignment, Style, StyledObject};
-use dojo_world::{metadata::get_default_namespace_from_ws, migration::strategy::MigrationStrategy};
+use dojo_world::metadata::get_default_namespace_from_ws;
+use dojo_world::migration::strategy::MigrationStrategy;
 use futures::future::join_all;
 use reqwest::StatusCode;
 use scarb::core::Workspace;
 use serde::Serialize;
 use serde_json::Value;
-use std::{ffi::OsStr, path::PathBuf};
 use walkdir::WalkDir;
 
 pub async fn walnut_verify_migration_strategy(
