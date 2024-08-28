@@ -1,5 +1,6 @@
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
+use std::io::Read;
 use std::net::Ipv4Addr;
 use std::path::Path;
 use std::str::FromStr;
@@ -13,10 +14,13 @@ use futures::StreamExt;
 use indexmap::IndexMap;
 use libp2p::core::multiaddr::Protocol;
 use libp2p::core::muxing::StreamMuxerBox;
+use libp2p::core::upgrade::Version;
 use libp2p::core::Multiaddr;
 use libp2p::gossipsub::{self, IdentTopic};
 use libp2p::swarm::{NetworkBehaviour, SwarmEvent};
-use libp2p::{identify, identity, noise, ping, relay, tcp, yamux, PeerId, Swarm, Transport};
+use libp2p::{
+    dns, identify, identity, noise, ping, relay, tcp, websocket, yamux, PeerId, Swarm, Transport,
+};
 use libp2p_webrtc as webrtc;
 use rand::thread_rng;
 use starknet::core::types::{BlockId, BlockTag, Felt, FunctionCall};
@@ -61,6 +65,7 @@ impl<P: Provider + Sync> Relay<P> {
         provider: P,
         port: u16,
         port_webrtc: u16,
+        port_websocket: u16,
         local_key_path: Option<String>,
         cert_path: Option<String>,
     ) -> Result<Self, Error> {
@@ -85,10 +90,32 @@ impl<P: Provider + Sync> Relay<P> {
             .with_tcp(tcp::Config::default(), noise::Config::new, yamux::Config::default)?
             .with_quic()
             .with_other_transport(|key| {
-                Ok(webrtc::tokio::Transport::new(key.clone(), cert)
-                    .map(|(peer_id, conn), _| (peer_id, StreamMuxerBox::new(conn))))
+                webrtc::tokio::Transport::new(key.clone(), cert)
+                    .map(|(peer_id, conn), _| (peer_id, StreamMuxerBox::new(conn)))
             })
             .expect("Failed to create WebRTC transport")
+            .with_other_transport(|key| {
+                let mut transport = websocket::WsConfig::new(
+                    dns::tokio::Transport::system(tcp::tokio::Transport::new(
+                        tcp::Config::default(),
+                    ))
+                    .unwrap(),
+                );
+
+                let rcgen_cert =
+                    rcgen::generate_simple_self_signed(vec!["localhost".to_string()]).unwrap();
+                let priv_key = websocket::tls::PrivateKey::new(rcgen_cert.key_pair.serialize_der());
+                let bytes: Result<Vec<_>, _> = rcgen_cert.cert.der().bytes().collect();
+                let cert = websocket::tls::Certificate::new(bytes.unwrap());
+                transport
+                    .set_tls_config(websocket::tls::Config::new(priv_key, vec![cert]).unwrap());
+
+                transport
+                    .upgrade(Version::V1)
+                    .authenticate(noise::Config::new(key).unwrap())
+                    .multiplex(yamux::Config::default())
+            })
+            .expect("Failed to create WebSocket transport")
             .with_behaviour(|key| {
                 // Hash messages by their content. No two messages of the same content will be
                 // propagated.
@@ -109,7 +136,7 @@ impl<P: Provider + Sync> Relay<P> {
                     relay: relay::Behaviour::new(key.public().to_peer_id(), Default::default()),
                     ping: ping::Behaviour::new(ping::Config::new()),
                     identify: identify::Behaviour::new(identify::Config::new(
-                        "/torii-relay/0.0.1".to_string(),
+                        format!("/torii-relay/{}", env!("CARGO_PKG_VERSION")),
                         key.public(),
                     )),
                     gossipsub: gossipsub::Behaviour::new(
@@ -140,6 +167,12 @@ impl<P: Provider + Sync> Relay<P> {
             .with(Protocol::Udp(port_webrtc))
             .with(Protocol::WebRTCDirect);
         swarm.listen_on(listen_addr_webrtc.clone())?;
+
+        // WSS
+        let listen_addr_wss = Multiaddr::from(Ipv4Addr::UNSPECIFIED)
+            .with(Protocol::Tcp(port_websocket))
+            .with(Protocol::Wss("/".to_string().into()));
+        swarm.listen_on(listen_addr_wss.clone())?;
 
         // Clients will send their messages to the "message" topic
         // with a room name as the message data.
@@ -380,11 +413,13 @@ impl<P: Provider + Sync> Relay<P> {
                             );
                         }
                         ServerEvent::Identify(identify::Event::Received {
+                            connection_id,
                             info: identify::Info { observed_addr, .. },
                             peer_id,
                         }) => {
                             info!(
                                 target: LOG_TARGET,
+                                connection_id = %connection_id,
                                 peer_id = %peer_id,
                                 observed_addr = %observed_addr,
                                 "Received identify event."

@@ -6,7 +6,7 @@ use anyhow::{anyhow, bail, Context, Result};
 use cainome::cairo_serde::ByteArray;
 use camino::Utf8PathBuf;
 use dojo_utils::{TransactionExt, TransactionWaiter, TxnConfig};
-use dojo_world::contracts::abi::world;
+use dojo_world::contracts::abi::world::{self, Resource};
 use dojo_world::contracts::naming::{
     self, compute_selector_from_tag, get_name_from_tag, get_namespace_from_tag,
 };
@@ -443,17 +443,33 @@ where
     A: ConnectedAccount + Send + Sync,
     <A as ConnectedAccount>::Provider: Send,
 {
-    ui.print_header(format!("# Namespaces ({})", namespaces.len()));
-
     let world = WorldContract::new(world_address, migrator);
+
+    // We need to check if the namespace is not already registered.
+    let mut registered_namespaces = vec![];
+
+    for namespace in namespaces {
+        let namespace_selector = naming::compute_bytearray_hash(namespace);
+
+        if let Resource::Namespace = world.resource(&namespace_selector).call().await? {
+            registered_namespaces.push(namespace);
+        }
+    }
 
     let calls = namespaces
         .iter()
+        .filter(|ns| !registered_namespaces.contains(ns))
         .map(|ns| {
             ui.print(italic_message(&ns).to_string());
             world.register_namespace_getcall(&ByteArray::from_string(ns).unwrap())
         })
         .collect::<Vec<_>>();
+
+    if calls.is_empty() {
+        return Ok(());
+    }
+
+    ui.print_header(format!("# Namespaces ({})", namespaces.len() - registered_namespaces.len()));
 
     let InvokeTransactionResult { transaction_hash } =
         world.account.execute_v1(calls).send_with_cfg(txn_config).await.map_err(|e| {
@@ -490,6 +506,7 @@ where
     ui.print_header(format!("# Models ({})", models.len()));
 
     let mut declare_output = vec![];
+    let mut declared_models_tags = vec![];
 
     for (i, m) in models.iter().enumerate() {
         let tag = &m.diff.tag;
@@ -508,6 +525,7 @@ where
             }
             Err(MigrationError::ClassAlreadyDeclared) => {
                 ui.print_sub("Already declared");
+                declared_models_tags.push(m.diff.tag.clone());
             }
             Err(MigrationError::ArtifactError(e)) => {
                 return Err(handle_artifact_error(ui, models[i].artifact_path(), e));
@@ -525,6 +543,7 @@ where
 
     let calls = models
         .iter()
+        .filter(|m| !declared_models_tags.contains(&m.diff.tag))
         .map(|c| {
             registered_models.push(c.diff.tag.clone());
             world.register_model_getcall(&c.diff.local_class_hash.into())
@@ -596,6 +615,8 @@ where
 
     let all_results = futures::future::join_all(futures).await;
 
+    let mut declared_models_tags = vec![];
+
     for results in all_results {
         for (index, tag, result) in results {
             ui.print(italic_message(&tag).to_string());
@@ -611,6 +632,7 @@ where
                 }
                 Err(MigrationError::ClassAlreadyDeclared) => {
                     ui.print_sub("Already declared");
+                    declared_models_tags.push(tag.clone());
                 }
                 Err(MigrationError::ArtifactError(e)) => {
                     return Err(handle_artifact_error(ui, models[index].artifact_path(), e));
@@ -627,6 +649,7 @@ where
 
     let calls = models
         .iter()
+        .filter(|m| !declared_models_tags.contains(&m.diff.tag))
         .map(|c| {
             registered_models.push(c.diff.tag.clone());
             world.register_model_getcall(&c.diff.local_class_hash.into())

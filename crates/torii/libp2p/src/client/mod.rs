@@ -5,11 +5,13 @@ use futures::channel::mpsc::{UnboundedReceiver, UnboundedSender};
 use futures::channel::oneshot;
 use futures::lock::Mutex;
 use futures::{select, StreamExt};
+#[cfg(target_arch = "wasm32")]
+use libp2p::core::{upgrade::Version, Transport};
 use libp2p::gossipsub::{self, IdentTopic, MessageId};
 use libp2p::swarm::{NetworkBehaviour, Swarm, SwarmEvent};
-use libp2p::{identify, identity, ping, Multiaddr, PeerId};
 #[cfg(not(target_arch = "wasm32"))]
-use libp2p::{noise, tcp, yamux};
+use libp2p::tcp;
+use libp2p::{identify, identity, noise, ping, yamux, Multiaddr, PeerId};
 use tracing::info;
 
 pub mod events;
@@ -72,7 +74,7 @@ impl RelayClient {
                     )
                     .expect("Gossipsub behaviour is invalid"),
                     identify: identify::Behaviour::new(identify::Config::new(
-                        "/torii-client/0.0.1".to_string(),
+                        format!("/torii-client/{}", env!("CARGO_PKG_VERSION")),
                         key.public(),
                     )),
                     ping: ping::Behaviour::new(ping::Config::default()),
@@ -108,6 +110,14 @@ impl RelayClient {
                 libp2p_webrtc_websys::Transport::new(libp2p_webrtc_websys::Config::new(&key))
             })
             .expect("Failed to create WebRTC transport")
+            .with_other_transport(|key| {
+                libp2p_websocket_websys::Transport::default()
+                    .upgrade(Version::V1)
+                    .authenticate(noise::Config::new(&key).unwrap())
+                    .multiplex(yamux::Config::default())
+                    .boxed()
+            })
+            .expect("Failed to create WebSocket transport")
             .with_behaviour(|key| {
                 let gossipsub_config: gossipsub::Config = gossipsub::ConfigBuilder::default()
                     .heartbeat_interval(Duration::from_secs(
@@ -123,7 +133,7 @@ impl RelayClient {
                     )
                     .expect("Gossipsub behaviour is invalid"),
                     identify: identify::Behaviour::new(identify::Config::new(
-                        "/torii-client/0.0.1".to_string(),
+                        format!("/torii-client/{}", env!("CARGO_PKG_VERSION")),
                         key.public(),
                     )),
                     ping: ping::Behaviour::new(ping::Config::default()),
