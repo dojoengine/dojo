@@ -4,17 +4,17 @@ use std::time::Duration;
 
 use anyhow::Result;
 use dojo_world::contracts::world::WorldContractReader;
+use hashlink::LinkedHashMap;
 use starknet::core::types::{
-    BlockId, BlockTag, Event, EventFilter, Felt, MaybePendingBlockWithTxHashes,
-    MaybePendingBlockWithTxs, ReceiptBlock, Transaction, TransactionReceipt,
-    TransactionReceiptWithBlockInfo,
+    BlockId, BlockTag, EmittedEvent, Event, EventFilter, Felt, MaybePendingBlockWithTxHashes,
+    MaybePendingBlockWithTxs, ReceiptBlock, TransactionReceipt, TransactionReceiptWithBlockInfo,
 };
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
 use tokio::sync::broadcast::Sender;
 use tokio::sync::mpsc::Sender as BoundedSender;
 use tokio::time::sleep;
-use tracing::{error, info, trace, warn};
+use tracing::{debug, error, info, trace, warn};
 
 use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
 use crate::sql::Sql;
@@ -32,7 +32,7 @@ impl<P: Provider + Sync> Default for Processors<P> {
     }
 }
 
-pub(crate) const LOG_TARGET: &str = "tori_core::engine";
+pub(crate) const LOG_TARGET: &str = "torii_core::engine";
 
 #[derive(Debug)]
 pub struct EngineConfig {
@@ -138,6 +138,7 @@ impl<P: Provider + Sync> Engine<P> {
         if from < latest_block_number {
             // if `from` == 0, then the block may or may not be processed yet.
             let from = if from == 0 { from } else { from + 1 };
+            info!(target: LOG_TARGET, from = %from, to = %latest_block_number, "Syncing range.");
             pending_block_tx = self.sync_range(from, latest_block_number, pending_block_tx).await?;
         } else if self.config.index_pending {
             pending_block_tx = self.sync_pending(latest_block_number + 1, pending_block_tx).await?;
@@ -173,9 +174,9 @@ impl<P: Provider + Sync> Engine<P> {
             }
 
             match self
-                .process_transaction_and_receipt(
+                .process_transaction_with_receipt(
                     *transaction.transaction_hash(),
-                    &transaction,
+                    // &transaction,
                     block_number,
                     block.timestamp,
                 )
@@ -239,9 +240,11 @@ impl<P: Provider + Sync> Engine<P> {
         let mut events_pages = vec![get_events(None).await?];
 
         while let Some(token) = &events_pages.last().unwrap().continuation_token {
+            debug!(target: LOG_TARGET, "Fetching events page with continuation token: {}", &token);
             events_pages.push(get_events(Some(token.clone())).await?);
         }
 
+        info!(target: LOG_TARGET, "Total events pages fetched: {}", &events_pages.len());
         // Transactions & blocks to process
         let mut last_block = 0_u64;
         let mut blocks = BTreeMap::new();
@@ -249,8 +252,9 @@ impl<P: Provider + Sync> Engine<P> {
         // Flatten events pages and events according to the pending block cursor
         // to array of (block_number, transaction_hash)
         let mut pending_block_tx_cursor = pending_block_tx;
-        let mut transactions = vec![];
+        let mut transactions = LinkedHashMap::new();
         for events_page in &events_pages {
+            debug!("Processing events page with events: {}", &events_page.events.len());
             for event in &events_page.events {
                 let block_number = match event.block_number {
                     Some(block_number) => block_number,
@@ -303,26 +307,26 @@ impl<P: Provider + Sync> Engine<P> {
                     }
                 }
 
-                if let Some((_, last_tx_hash)) = transactions.last() {
-                    // Dedup transactions
-                    // As me might have multiple events for the same transaction
-                    if *last_tx_hash == event.transaction_hash {
-                        continue;
-                    }
-                }
-                transactions.push((block_number, event.transaction_hash));
+                transactions
+                    .entry((block_number, event.transaction_hash))
+                    .or_insert(vec![])
+                    .push(event);
             }
         }
 
+        debug!("Transactions: {}", &transactions.len());
+        debug!("Blocks: {}", &blocks.len());
         // Process all transactions
         let mut last_block = 0;
-        for (block_number, transaction_hash) in transactions {
+        for ((block_number, transaction_hash), events) in transactions {
+            debug!("Processing transaction hash: {:#x}", transaction_hash);
             // Process transaction
-            let transaction = self.provider.get_transaction_by_hash(transaction_hash).await?;
+            // let transaction = self.provider.get_transaction_by_hash(transaction_hash).await?;
 
-            self.process_transaction_and_receipt(
+            self.process_transaction_with_events(
                 transaction_hash,
-                &transaction,
+                // &transaction,
+                events.as_slice(),
                 block_number,
                 blocks[&block_number],
             )
@@ -359,16 +363,58 @@ impl<P: Provider + Sync> Engine<P> {
         }
     }
 
-    // Process a transaction and its receipt.
-    // Returns whether the transaction has a world event.
-    async fn process_transaction_and_receipt(
+    async fn process_transaction_with_events(
         &mut self,
         transaction_hash: Felt,
-        transaction: &Transaction,
+        // transaction: &Transaction,
+        events: &[&EmittedEvent],
+        block_number: u64,
+        block_timestamp: u64,
+    ) -> Result<()> {
+        for (event_idx, event) in events.iter().enumerate() {
+            let event_id =
+                format!("{:#064x}:{:#x}:{:#04x}", block_number, transaction_hash, event_idx);
+
+            let event = Event {
+                from_address: event.from_address,
+                keys: event.keys.clone(),
+                data: event.data.clone(),
+            };
+            Self::process_event(
+                self,
+                block_number,
+                block_timestamp,
+                &event_id,
+                &event,
+                transaction_hash,
+            )
+            .await?;
+        }
+
+        // Commented out this transaction processor because it requires an RPC call for each
+        // transaction which is slowing down the sync process by alot.
+        // Self::process_transaction(
+        //     self,
+        //     block_number,
+        //     block_timestamp,
+        //     transaction_hash,
+        //     transaction,
+        // )
+        // .await?;
+
+        Ok(())
+    }
+    // Process a transaction and events from its receipt.
+    // Returns whether the transaction has a world event.
+    async fn process_transaction_with_receipt(
+        &mut self,
+        transaction_hash: Felt,
+        // transaction: &Transaction,
         block_number: u64,
         block_timestamp: u64,
     ) -> Result<bool> {
         let receipt = self.provider.get_transaction_receipt(transaction_hash).await?;
+
         let events = match &receipt.receipt {
             TransactionReceipt::Invoke(receipt) => Some(&receipt.events),
             TransactionReceipt::L1Handler(receipt) => Some(&receipt.events),
@@ -390,24 +436,23 @@ impl<P: Provider + Sync> Engine<P> {
                     self,
                     block_number,
                     block_timestamp,
-                    &receipt,
                     &event_id,
                     event,
+                    transaction_hash,
                 )
                 .await?;
             }
 
-            if world_event {
-                Self::process_transaction(
-                    self,
-                    block_number,
-                    block_timestamp,
-                    &receipt,
-                    transaction_hash,
-                    transaction,
-                )
-                .await?;
-            }
+            // if world_event {
+            //     Self::process_transaction(
+            //         self,
+            //         block_number,
+            //         block_timestamp,
+            //         transaction_hash,
+            //         transaction,
+            //     )
+            //     .await?;
+            // }
         }
 
         Ok(world_event)
@@ -424,45 +469,38 @@ impl<P: Provider + Sync> Engine<P> {
         Ok(())
     }
 
-    async fn process_transaction(
-        &mut self,
-        block_number: u64,
-        block_timestamp: u64,
-        transaction_receipt: &TransactionReceiptWithBlockInfo,
-        transaction_hash: Felt,
-        transaction: &Transaction,
-    ) -> Result<()> {
-        for processor in &self.processors.transaction {
-            processor
-                .process(
-                    &mut self.db,
-                    self.provider.as_ref(),
-                    block_number,
-                    block_timestamp,
-                    transaction_receipt,
-                    transaction_hash,
-                    transaction,
-                )
-                .await?
-        }
+    // async fn process_transaction(
+    //     &mut self,
+    //     block_number: u64,
+    //     block_timestamp: u64,
+    //     transaction_hash: Felt,
+    //     transaction: &Transaction,
+    // ) -> Result<()> {
+    //     for processor in &self.processors.transaction {
+    //         processor
+    //             .process(
+    //                 &mut self.db,
+    //                 self.provider.as_ref(),
+    //                 block_number,
+    //                 block_timestamp,
+    //                 transaction_hash,
+    //                 transaction,
+    //             )
+    //             .await?
+    //     }
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 
     async fn process_event(
         &mut self,
         block_number: u64,
         block_timestamp: u64,
-        transaction_receipt: &TransactionReceiptWithBlockInfo,
         event_id: &str,
         event: &Event,
+        transaction_hash: Felt,
     ) -> Result<()> {
-        self.db.store_event(
-            event_id,
-            event,
-            *transaction_receipt.receipt.transaction_hash(),
-            block_timestamp,
-        );
+        self.db.store_event(event_id, event, transaction_hash, block_timestamp);
         let mut unprocessed = true;
         for processor in &self.processors.event {
             // If the processor has no event_key, means it's a catch-all processor.
@@ -478,7 +516,6 @@ impl<P: Provider + Sync> Engine<P> {
                         &mut self.db,
                         block_number,
                         block_timestamp,
-                        transaction_receipt,
                         event_id,
                         event,
                     )
