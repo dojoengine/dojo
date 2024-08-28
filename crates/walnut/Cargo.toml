@@ -15,5 +15,7 @@ scarb-ui.workspace = true
 scarb.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+starknet.workspace = true
 url.workspace = true
+urlencoding = "2.1.3"
 walkdir.workspace = true

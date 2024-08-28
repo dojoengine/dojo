@@ -12961,7 +12961,6 @@ dependencies = [
  "toml 0.8.15",
  "tracing",
  "url",
- "urlencoding",
  "walnut",
 ]
 
@@ -15323,7 +15322,9 @@ dependencies = [
  "scarb-ui",
  "serde",
  "serde_json",
+ "starknet 0.11.0",
  "url",
+ "urlencoding",
  "walkdir",
 ]
 

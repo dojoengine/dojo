@@ -9,7 +9,7 @@ use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{BlockId, BlockTag, ExecutionResult, Felt, InvokeTransactionResult};
 use starknet::providers::Provider;
 use url::Url;
-use urlencoding::encode;
+use walnut::transaction::walnut_debug_transaction;
 
 use crate::migration::ui::MigrationUi;
 
@@ -115,20 +115,9 @@ where
 
             if debug_with_walnut {
                 if let Some(rpc_url) = rpc_url {
-                    if rpc_url.host_str() != Some("localhost")
-                        && rpc_url.host_str() != Some("127.0.0.1")
-                    {
-                        let encoded_rpc_url = encode(rpc_url.as_str());
-                        ui.print_sub(format!(
-                            "Debug transaction with Walnut: https://app.walnut.dev/transactions?rpcUrl={}&txHash={:#066x}",
-                            encoded_rpc_url,
-                            transaction_result.transaction_hash
-                        ));
-                    } else {
-                        ui.print_sub("Debugging transactions with Walnut is only supported on hosted networks");
-                    }
+                    walnut_debug_transaction(ui, rpc_url, &transaction_result.transaction_hash);
                 } else {
-                    ui.print_sub("Unable to debug transaction with Walnut: no RPC URL provided");
+                    ui.print("Unable to debug transaction with Walnut: no RPC URL provided");
                 }
             }
         }
