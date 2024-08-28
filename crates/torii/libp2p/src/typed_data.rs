@@ -885,7 +885,7 @@ impl TypedData {
             "model".to_string(),
             vec![Field::SimpleType(SimpleField {
                 name: "model".to_string(),
-                r#type: "string".to_string(),
+                r#type: "shortstring".to_string(),
             })],
         );
         types.insert(model.name.clone(), fields);
