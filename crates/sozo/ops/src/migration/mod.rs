@@ -19,6 +19,7 @@ use starknet::providers::{AnyProvider, JsonRpcClient, Provider};
 use starknet::signers::{LocalWallet, SigningKey};
 use starknet_crypto::poseidon_hash_single;
 use url::Url;
+use walnut::verification::walnut_verify_migration_strategy;
 
 mod auto_auth;
 mod migrate;
@@ -127,6 +128,7 @@ pub async fn migrate<A>(
     dry_run: bool,
     txn_config: TxnConfig,
     skip_manifests: Option<Vec<String>>,
+    verify_with_walnut: bool,
 ) -> Result<Option<MigrationOutput>>
 where
     A: ConnectedAccount + Sync + Send + 'static,
@@ -294,7 +296,7 @@ where
 
             // Run dojo inits now that everything is actually deployed and permissioned.
             let mut init_calls = vec![];
-            for c in strategy.contracts {
+            for c in &strategy.contracts {
                 let was_upgraded = migration_output
                     .contracts
                     .iter()
@@ -340,6 +342,10 @@ where
             } else {
                 ui.print_sub("No contracts to initialize");
             }
+        }
+
+        if verify_with_walnut {
+            walnut_verify_migration_strategy(ws, rpc_url.clone(), &strategy).await?;
         }
 
         if let Some(migration_output) = &migration_output {
