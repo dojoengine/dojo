@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1724864136118,
+  "lastUpdate": 1724877421886,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -17617,6 +17617,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3878065,
             "range": "± 46678",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tarrencev@users.noreply.github.com",
+            "name": "Tarrence van As",
+            "username": "tarrencev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "02e42be2f31114d9136a52e4fa2d35533a7b3bd7",
+          "message": "Update devcontainer image: v1.0.0-alpha.8 (#2356)\n\n* Update devcontainer image: v1.0.0-alpha.8\r\n\r\n* fix: fix clippy\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-08-28T14:16:46-06:00",
+          "tree_id": "4281856912057eb9ad8ebf998aeb790f51ded55c",
+          "url": "https://github.com/dojoengine/dojo/commit/02e42be2f31114d9136a52e4fa2d35533a7b3bd7"
+        },
+        "date": 1724877420344,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17646490,
+            "range": "± 176132",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3921325,
+            "range": "± 130564",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3733227757,
+            "range": "± 825448466",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4471499,
+            "range": "± 508581",
             "unit": "ns/iter"
           }
         ]
