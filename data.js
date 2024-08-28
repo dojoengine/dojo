@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1724856739376,
+  "lastUpdate": 1724863029548,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -17473,6 +17473,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3870447,
             "range": "± 35916",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "76dae5ebf84990c0a379055e9508a76b78841b55",
+          "message": "hotfix(katana): make sure validator state is synced with block producer (#2353)\n\n* wip\r\n\r\n* wip\r\n\r\n* wip\r\n\r\n* fix blockifier patch\r\n\r\n* fix\r\n\r\n* clippy\r\n\r\n* fix\r\n\r\n* fmt\r\n\r\n* fmt\r\n\r\n* fix",
+          "timestamp": "2024-08-28T10:17:40-06:00",
+          "tree_id": "6b266ec21b0da9aeea2e8d4ba334b43f092cb264",
+          "url": "https://github.com/dojoengine/dojo/commit/76dae5ebf84990c0a379055e9508a76b78841b55"
+        },
+        "date": 1724863028456,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17727915,
+            "range": "± 284046",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3770016,
+            "range": "± 86453",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3937658359,
+            "range": "± 768416285",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3880326,
+            "range": "± 40824",
             "unit": "ns/iter"
           }
         ]
