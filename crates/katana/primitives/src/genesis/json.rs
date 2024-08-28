@@ -1041,6 +1041,7 @@ mod tests {
         let expected_genesis = Genesis {
             classes: expected_classes,
             number: 0,
+            gather_from_block: 0,
             fee_token: expected_fee_token,
             allocations: expected_allocations,
             timestamp: 5123512314u64,
@@ -1181,6 +1182,7 @@ mod tests {
             classes,
             allocations,
             number: 0,
+            gather_from_block: 0,
             timestamp: 5123512314u64,
             state_root: felt!("0x99"),
             parent_hash: felt!("0x999"),

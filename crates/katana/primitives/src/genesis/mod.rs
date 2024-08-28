@@ -428,6 +428,7 @@ mod tests {
             fee_token: fee_token.clone(),
             allocations: BTreeMap::from(allocations.clone()),
             number: 0,
+            gather_from_block: 0,
             timestamp: 5123512314u64,
             state_root: felt!("0x99"),
             parent_hash: felt!("0x999"),
