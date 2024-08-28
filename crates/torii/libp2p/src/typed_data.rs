@@ -152,7 +152,11 @@ pub fn encode_type(name: &str, types: &IndexMap<String, Vec<Field>>) -> Result<S
                             &simple_field.r#type[1..simple_field.r#type.len() - 1]
                                 .split(',')
                                 .map(|t| {
-                                    if !t.is_empty() { format!("\"{}\"", t) } else { t.to_string() }
+                                    if !t.is_empty() {
+                                        format!("\"{}\"", t)
+                                    } else {
+                                        t.to_string()
+                                    }
                                 })
                                 .collect::<Vec<String>>()
                                 .join(",");
@@ -876,6 +880,14 @@ impl TypedData {
         }
 
         values.insert("model".to_string(), PrimitiveType::String(model.name.clone()));
+
+        types.insert(
+            "model".to_string(),
+            vec![Field::SimpleType(SimpleField {
+                name: "model".to_string(),
+                r#type: "string".to_string(),
+            })],
+        );
         types.insert(model.name.clone(), fields);
 
         Ok(Self::new(types, model.name.as_str(), domain, values))
