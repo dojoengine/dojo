@@ -254,6 +254,19 @@ impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
                 info!(target: LOG_TARGET, block_number = %outcome.block_number, "Force mined block.");
                 self.executor =
                     self.create_new_executor_for_next_block().expect("fail to create executor");
+
+                // update pool validator state here ---------
+
+                let provider = self.backend.blockchain.provider();
+                let state = self.executor.0.read().state();
+                let num = provider.latest_number().unwrap();
+                let block_env = provider.block_env_at(num.into()).unwrap().unwrap();
+
+                self.validator.update(state, &block_env);
+
+                // -------------------------------------------
+
+                unsafe { self.permit.raw().unlock() };
             }
             Err(e) => {
                 error!(target: LOG_TARGET, error = %e, "On force mine.");

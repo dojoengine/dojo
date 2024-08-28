@@ -119,11 +119,7 @@ impl StatefulValidatorAdapter {
                     });
                 }
 
-                match self.inner.perform_validations(
-                    blockifier_tx,
-                    if skip_validate { Some(Default::default()) } else { None },
-                    skip_fee_check,
-                ) {
+                match self.inner.perform_validations(blockifier_tx, skip_validate, skip_fee_check) {
                     Ok(()) => Ok(ValidationOutcome::Valid(tx)),
                     Err(e) => match map_invalid_tx_err(e) {
                         Ok(error) => Ok(ValidationOutcome::Invalid { tx, error }),
