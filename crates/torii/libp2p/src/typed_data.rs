@@ -152,11 +152,7 @@ pub fn encode_type(name: &str, types: &IndexMap<String, Vec<Field>>) -> Result<S
                             &simple_field.r#type[1..simple_field.r#type.len() - 1]
                                 .split(',')
                                 .map(|t| {
-                                    if !t.is_empty() {
-                                        format!("\"{}\"", t)
-                                    } else {
-                                        t.to_string()
-                                    }
+                                    if !t.is_empty() { format!("\"{}\"", t) } else { t.to_string() }
                                 })
                                 .collect::<Vec<String>>()
                                 .join(",");
@@ -870,26 +866,15 @@ impl TypedData {
         );
 
         let mut values = IndexMap::new();
-        let mut model_values = IndexMap::new();
 
         let mut fields = Vec::new();
         for member in model.children.iter() {
             let field = map_ty_type(&mut types, &member.name, member.ty.clone());
             fields.push(field);
 
-            model_values.insert(member.name.clone(), map_ty_to_primitive(&member.ty)?);
+            values.insert(member.name.clone(), map_ty_to_primitive(&member.ty)?);
         }
 
-        values.insert("model".to_string(), PrimitiveType::String(model.name.clone()));
-        values.insert(model.name.clone(), PrimitiveType::Object(model_values));
-
-        types.insert(
-            "model".to_string(),
-            vec![Field::SimpleType(SimpleField {
-                name: "model".to_string(),
-                r#type: "shortstring".to_string(),
-            })],
-        );
         types.insert(model.name.clone(), fields);
 
         Ok(Self::new(types, model.name.as_str(), domain, values))
