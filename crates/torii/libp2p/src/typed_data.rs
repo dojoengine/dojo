@@ -875,6 +875,7 @@ impl TypedData {
             values.insert(member.name.clone(), map_ty_to_primitive(&member.ty)?);
         }
 
+        values.insert("model".to_string(), PrimitiveType::String(model.name.clone()));
         types.insert(model.name.clone(), fields);
 
         Ok(Self::new(types, model.name.as_str(), domain, values))
