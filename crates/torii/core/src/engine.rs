@@ -372,8 +372,6 @@ impl<P: Provider + Sync> Engine<P> {
         block_number: u64,
         block_timestamp: u64,
     ) -> Result<()> {
-        let events = events;
-
         for (event_idx, event) in events.iter().enumerate() {
             let event_id =
                 format!("{:#064x}:{:#x}:{:#04x}", block_number, transaction_hash, event_idx);
