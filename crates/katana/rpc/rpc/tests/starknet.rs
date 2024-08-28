@@ -232,7 +232,7 @@ async fn estimate_fee() -> Result<()> {
 
 #[rstest::rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn rapid_transactions_submissions(
+async fn concurrent_transactions_submissions(
     #[values(None, Some(1000))] block_time: Option<u64>,
 ) -> Result<()> {
     // setup test sequencer with the given configuration

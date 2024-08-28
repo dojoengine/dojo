@@ -545,7 +545,6 @@ impl<EF: ExecutorFactory> InstantBlockProducer<EF> {
         trace!(target: LOG_TARGET, "Creating new block.");
 
         let transactions = transactions.into_iter().flatten().collect::<Vec<_>>();
-        println!("Executing {} transactions", transactions.len());
 
         let provider = backend.blockchain.provider();
 
