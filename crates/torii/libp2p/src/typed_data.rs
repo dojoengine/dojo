@@ -870,16 +870,18 @@ impl TypedData {
         );
 
         let mut values = IndexMap::new();
+        let mut model_values = IndexMap::new();
 
         let mut fields = Vec::new();
         for member in model.children.iter() {
             let field = map_ty_type(&mut types, &member.name, member.ty.clone());
             fields.push(field);
 
-            values.insert(member.name.clone(), map_ty_to_primitive(&member.ty)?);
+            model_values.insert(member.name.clone(), map_ty_to_primitive(&member.ty)?);
         }
 
         values.insert("model".to_string(), PrimitiveType::String(model.name.clone()));
+        values.insert(model.name.clone(), PrimitiveType::Object(model_values));
 
         types.insert(
             "model".to_string(),
