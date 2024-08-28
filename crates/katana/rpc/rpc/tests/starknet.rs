@@ -27,6 +27,7 @@ use starknet::core::utils::{get_contract_address, get_selector_from_name};
 use starknet::macros::felt;
 use starknet::providers::{Provider, ProviderError};
 use starknet::signers::{LocalWallet, SigningKey};
+use tokio::sync::Mutex;
 
 mod common;
 
@@ -230,8 +231,8 @@ async fn estimate_fee() -> Result<()> {
 }
 
 #[rstest::rstest]
-#[tokio::test]
-async fn rapid_transactions_submissions(
+#[tokio::test(flavor = "multi_thread")]
+async fn concurrent_transactions_submissions(
     #[values(None, Some(1000))] block_time: Option<u64>,
 ) -> Result<()> {
     // setup test sequencer with the given configuration
@@ -240,25 +241,48 @@ async fn rapid_transactions_submissions(
 
     let sequencer = TestSequencer::start(sequencer_config, starknet_config).await;
     let provider = sequencer.provider();
-    let account = sequencer.account();
+    let account = Arc::new(sequencer.account());
 
     // setup test contract to interact with.
     abigen_legacy!(Contract, "crates/katana/rpc/rpc/tests/test_data/erc20.json");
-    let contract = Contract::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), &account);
 
     // function call params
     let recipient = Felt::ONE;
     let amount = Uint256 { low: Felt::ONE, high: Felt::ZERO };
 
-    const N: usize = 10;
-    let mut txs = IndexSet::with_capacity(N);
+    let initial_nonce =
+        provider.get_nonce(BlockId::Tag(BlockTag::Pending), sequencer.account().address()).await?;
+
+    const N: usize = 100;
+    let nonce = Arc::new(Mutex::new(initial_nonce));
+    let txs = Arc::new(Mutex::new(IndexSet::with_capacity(N)));
+
+    let mut handles = Vec::with_capacity(N);
 
     for _ in 0..N {
-        let res = contract.transfer(&recipient, &amount).send().await?;
-        txs.insert(res.transaction_hash);
+        let txs = txs.clone();
+        let nonce = nonce.clone();
+        let amount = amount.clone();
+        let account = account.clone();
+
+        let handle = tokio::spawn(async move {
+            let mut nonce = nonce.lock().await;
+            let contract = Contract::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), account);
+            let res = contract.transfer(&recipient, &amount).nonce(*nonce).send().await.unwrap();
+            txs.lock().await.insert(res.transaction_hash);
+            *nonce += Felt::ONE;
+        });
+
+        handles.push(handle);
+    }
+
+    // wait for all txs to be submitted
+    for handle in handles {
+        handle.await?;
     }
 
     // Wait only for the last transaction to be accepted
+    let txs = txs.lock().await;
     let last_tx = txs.last().unwrap();
     dojo_utils::TransactionWaiter::new(*last_tx, &provider).await?;
 
@@ -266,7 +290,7 @@ async fn rapid_transactions_submissions(
     assert_eq!(txs.len(), N);
 
     // check the status of each txs
-    for hash in txs {
+    for hash in txs.iter() {
         let receipt = provider.get_transaction_receipt(hash).await?;
         assert_eq!(receipt.receipt.execution_result(), &ExecutionResult::Succeeded);
         assert_eq!(receipt.receipt.finality_status(), &TransactionFinalityStatus::AcceptedOnL2);

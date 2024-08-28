@@ -24,9 +24,14 @@ use crate::tx::PoolTransaction;
 #[allow(missing_debug_implementations)]
 #[derive(Clone)]
 pub struct TxValidator {
+    inner: Arc<Inner>,
+}
+
+struct Inner {
     cfg_env: CfgEnv,
     execution_flags: SimulationFlag,
-    validator: Arc<Mutex<StatefulValidatorAdapter>>,
+    validator: Mutex<StatefulValidatorAdapter>,
+    permit: Arc<Mutex<()>>,
 }
 
 impl TxValidator {
@@ -35,16 +40,28 @@ impl TxValidator {
         execution_flags: SimulationFlag,
         cfg_env: CfgEnv,
         block_env: &BlockEnv,
+        permit: Arc<Mutex<()>>,
     ) -> Self {
-        let inner = StatefulValidatorAdapter::new(state, block_env, &cfg_env);
-        Self { cfg_env, execution_flags, validator: Arc::new(Mutex::new(inner)) }
+        let validator = StatefulValidatorAdapter::new(state, block_env, &cfg_env);
+        Self {
+            inner: Arc::new(Inner {
+                permit,
+                cfg_env,
+                execution_flags,
+                validator: Mutex::new(validator),
+            }),
+        }
     }
 
     /// Reset the state of the validator with the given params. This method is used to update the
     /// validator's state with a new state and block env after a block is mined.
-    pub fn update(&self, state: Box<dyn StateProvider>, block_env: &BlockEnv) {
-        let updated = StatefulValidatorAdapter::new(state, block_env, &self.cfg_env);
-        *self.validator.lock() = updated;
+    pub fn update(&self, new_state: Box<dyn StateProvider>, block_env: &BlockEnv) {
+        let mut validator = self.inner.validator.lock();
+
+        let mut state = validator.inner.tx_executor.block_state.take().unwrap();
+        state.state = StateProviderDb::new(new_state);
+
+        *validator = StatefulValidatorAdapter::new_inner(state, block_env, &self.inner.cfg_env);
     }
 
     // NOTE:
@@ -54,7 +71,7 @@ impl TxValidator {
     // safety is not guaranteed by TransactionExecutor itself.
     pub fn get_nonce(&self, address: ContractAddress) -> Nonce {
         let address = to_blk_address(address);
-        let nonce = self.validator.lock().inner.get_nonce(address).expect("state err");
+        let nonce = self.inner.validator.lock().inner.get_nonce(address).expect("state err");
         nonce.0
     }
 }
@@ -65,23 +82,19 @@ struct StatefulValidatorAdapter {
 }
 
 impl StatefulValidatorAdapter {
-    fn new(
-        state: Box<dyn StateProvider>,
-        block_env: &BlockEnv,
-        cfg_env: &CfgEnv,
-    ) -> StatefulValidatorAdapter {
-        let inner = Self::new_inner(state, block_env, cfg_env);
-        Self { inner }
+    fn new(state: Box<dyn StateProvider>, block_env: &BlockEnv, cfg_env: &CfgEnv) -> Self {
+        let state = CachedState::new(StateProviderDb::new(state));
+        Self::new_inner(state, block_env, cfg_env)
     }
 
     fn new_inner(
-        state: Box<dyn StateProvider>,
+        state: CachedState<StateProviderDb<'static>>,
         block_env: &BlockEnv,
         cfg_env: &CfgEnv,
-    ) -> StatefulValidator<StateProviderDb<'static>> {
-        let state = CachedState::new(StateProviderDb::new(state));
+    ) -> Self {
         let block_context = block_context_from_envs(block_env, cfg_env);
-        StatefulValidator::create(state, block_context)
+        let inner = StatefulValidator::create(state, block_context, Default::default());
+        Self { inner }
     }
 
     /// Used only in the [`Validator::validate`] trait
@@ -125,7 +138,8 @@ impl Validator for TxValidator {
     type Transaction = ExecutableTxWithHash;
 
     fn validate(&self, tx: Self::Transaction) -> ValidationResult<Self::Transaction> {
-        let this = &mut *self.validator.lock();
+        let _permit = self.inner.permit.lock();
+        let this = &mut *self.inner.validator.lock();
 
         // Check if validation of an invoke transaction should be skipped due to deploy_account not
         // being proccessed yet. This feature is used to improve UX for users sending
@@ -145,8 +159,8 @@ impl Validator for TxValidator {
         StatefulValidatorAdapter::validate(
             this,
             tx,
-            self.execution_flags.skip_validate || skip_validate,
-            self.execution_flags.skip_fee_transfer,
+            self.inner.execution_flags.skip_validate || skip_validate,
+            self.inner.execution_flags.skip_fee_transfer,
         )
     }
 }
