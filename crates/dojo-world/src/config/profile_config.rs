@@ -11,6 +11,7 @@ use super::migration_config::MigrationConfig;
 use super::namespace_config::NamespaceConfig;
 use super::world_config::WorldConfig;
 
+#[allow(clippy::too_long_first_doc_paragraph)]
 /// Profile configuration that is used to configure the world and the environment.
 /// This [`ProfileConfig`] is expected to be loaded from a TOML file that is located
 /// next to the `Scarb.toml` file, named with the profile name.

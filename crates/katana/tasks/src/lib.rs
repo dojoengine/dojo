@@ -89,6 +89,7 @@ impl<T> Future for BlockingTaskHandle<T> {
     }
 }
 
+#[allow(clippy::too_long_first_doc_paragraph)]
 /// A thread-pool for spawning blocking tasks . This is a simple wrapper around *rayon*'s
 /// thread-pool. This is mainly for executing expensive CPU-bound tasks. For spawing blocking
 /// IO-bound tasks, use [TokioTaskSpawner::spawn_blocking] instead.

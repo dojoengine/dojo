@@ -668,6 +668,7 @@ pub fn deep_print_ty(root: &Ty) {
     }
 }
 
+#[allow(clippy::too_long_first_doc_paragraph)]
 /// Checks if the tag is a valid tag, if not, return the default namespace. This allows
 /// sozo model commands to be run even without a Scarb.toml file in the current directory
 /// if a valid tag is provided.
