@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1724877421886,
+  "lastUpdate": 1724881503650,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -17665,6 +17665,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4471499,
             "range": "± 508581",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cf1d044b91a5524d4e5a7c98aa527d057f038a94",
+          "message": "chore(torii): less noise in logs (#2358)\n\n* chore(torii): less noise in logs\r\n\r\n* chore: debug logs",
+          "timestamp": "2024-08-28T15:25:31-06:00",
+          "tree_id": "1f4e524d5133461d9e2762156de17b2f1512fe1e",
+          "url": "https://github.com/dojoengine/dojo/commit/cf1d044b91a5524d4e5a7c98aa527d057f038a94"
+        },
+        "date": 1724881502785,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17661834,
+            "range": "± 422585",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3747190,
+            "range": "± 40134",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3805379115,
+            "range": "± 773364440",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3880827,
+            "range": "± 60999",
             "unit": "ns/iter"
           }
         ]
