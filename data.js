@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1724855291606,
+  "lastUpdate": 1724855391561,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -17377,6 +17377,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4376878,
             "range": "± 487153",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "961b8c05cd91a57179644c8d9fbd2ae93ee1efad",
+          "message": "fix: emit trace for unprocessed event only once (#2352)",
+          "timestamp": "2024-08-28T08:10:53-06:00",
+          "tree_id": "e88d2f8391aa1fcb04ce1956cdc2c6db1aace555",
+          "url": "https://github.com/dojoengine/dojo/commit/961b8c05cd91a57179644c8d9fbd2ae93ee1efad"
+        },
+        "date": 1724855390662,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17588024,
+            "range": "± 287046",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3778116,
+            "range": "± 145284",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3827285573,
+            "range": "± 771945965",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3918499,
+            "range": "± 112077",
             "unit": "ns/iter"
           }
         ]
