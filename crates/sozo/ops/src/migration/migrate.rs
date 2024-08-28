@@ -449,7 +449,7 @@ where
     let mut registered_namespaces = vec![];
 
     for namespace in namespaces {
-        let namespace_selector = naming::compute_bytearray_hash(&namespace);
+        let namespace_selector = naming::compute_bytearray_hash(namespace);
 
         if let Resource::Namespace = world.resource(&namespace_selector).call().await? {
             registered_namespaces.push(namespace);
