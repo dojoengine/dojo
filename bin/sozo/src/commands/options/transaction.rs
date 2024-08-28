@@ -39,9 +39,8 @@ pub struct TransactionOptions {
     pub receipt: bool,
 
     #[arg(long)]
-    #[arg(
-        help = "If --wait is set, the link to debug the transaction with Walnut is displayed on stdout. Otherwise, it is a no-op."
-    )]
+    #[arg(help = "If --wait is set, the link to debug the transaction with Walnut is displayed \
+                  on stdout. Otherwise, it is a no-op.")]
     #[arg(global = true)]
     pub walnut: bool,
 }
