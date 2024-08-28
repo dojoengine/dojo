@@ -463,6 +463,7 @@ impl<P: Provider + Sync> Engine<P> {
             *transaction_receipt.receipt.transaction_hash(),
             block_timestamp,
         );
+        let mut unprocessed = true;
         for processor in &self.processors.event {
             // If the processor has no event_key, means it's a catch-all processor.
             // We also validate the event
@@ -470,6 +471,7 @@ impl<P: Provider + Sync> Engine<P> {
                 || get_selector_from_name(&processor.event_key())? == event.keys[0])
                 && processor.validate(event)
             {
+                unprocessed = false;
                 if let Err(e) = processor
                     .process(
                         &self.world,
@@ -484,19 +486,21 @@ impl<P: Provider + Sync> Engine<P> {
                 {
                     error!(target: LOG_TARGET, event_name = processor.event_key(), error = %e, "Processing event.");
                 }
-            } else {
-                let unprocessed_event = UnprocessedEvent {
-                    keys: event.keys.iter().map(|k| format!("{:#x}", k)).collect(),
-                    data: event.data.iter().map(|d| format!("{:#x}", d)).collect(),
-                };
-
-                trace!(
-                    target: LOG_TARGET,
-                    keys = ?unprocessed_event.keys,
-                    data = ?unprocessed_event.data,
-                    "Unprocessed event.",
-                );
             }
+        }
+
+        if unprocessed {
+            let unprocessed_event = UnprocessedEvent {
+                keys: event.keys.iter().map(|k| format!("{:#x}", k)).collect(),
+                data: event.data.iter().map(|d| format!("{:#x}", d)).collect(),
+            };
+
+            trace!(
+                target: LOG_TARGET,
+                keys = ?unprocessed_event.keys,
+                data = ?unprocessed_event.data,
+                "Unprocessed event.",
+            );
         }
         Ok(())
     }
