@@ -30,6 +30,7 @@ pub enum TransactionWaitingError {
     Provider(ProviderError),
 }
 
+#[allow(clippy::too_long_first_doc_paragraph)]
 /// A type that waits for a transaction to achieve the desired status. The waiter will poll for the
 /// transaction receipt every `interval` miliseconds until it achieves the desired status or until
 /// `timeout` is reached.
