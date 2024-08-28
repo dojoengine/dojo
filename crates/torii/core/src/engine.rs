@@ -138,9 +138,10 @@ impl<P: Provider + Sync> Engine<P> {
         if from < latest_block_number {
             // if `from` == 0, then the block may or may not be processed yet.
             let from = if from == 0 { from } else { from + 1 };
-            info!(target: LOG_TARGET, from = %from, to = %latest_block_number, "Syncing range.");
+            debug!(target: LOG_TARGET, from = %from, to = %latest_block_number, "Syncing range.");
             pending_block_tx = self.sync_range(from, latest_block_number, pending_block_tx).await?;
         } else if self.config.index_pending {
+            debug!(target: LOG_TARGET, block_number = %latest_block_number + 1, pending_block_tx = ?pending_block_tx.map(|tx| format!("{:#x}", tx)), "Syncing pending.");
             pending_block_tx = self.sync_pending(latest_block_number + 1, pending_block_tx).await?;
         }
 
@@ -244,7 +245,7 @@ impl<P: Provider + Sync> Engine<P> {
             events_pages.push(get_events(Some(token.clone())).await?);
         }
 
-        info!(target: LOG_TARGET, "Total events pages fetched: {}", &events_pages.len());
+        debug!(target: LOG_TARGET, "Total events pages fetched: {}", &events_pages.len());
         // Transactions & blocks to process
         let mut last_block = 0_u64;
         let mut blocks = BTreeMap::new();
