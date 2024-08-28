@@ -12999,6 +12999,7 @@ dependencies = [
  "tracing",
  "url",
  "urlencoding",
+ "walnut",
 ]
 
 [[package]]
@@ -15369,6 +15370,23 @@ checksum = "29790946404f91d9c5d06f9874efddea1dc06c5efe94541a7d6863108e3a5e4b"
 dependencies = [
  "same-file",
  "winapi-util",
+]
+
+[[package]]
+name = "walnut"
+version = "1.0.0-alpha.7"
+dependencies = [
+ "anyhow",
+ "console",
+ "dojo-world",
+ "futures",
+ "reqwest 0.12.5",
+ "scarb",
+ "scarb-ui",
+ "serde",
+ "serde_json",
+ "url",
+ "walkdir",
 ]
 
 [[package]]
