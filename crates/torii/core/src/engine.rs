@@ -7,8 +7,7 @@ use dojo_world::contracts::world::WorldContractReader;
 use hashlink::LinkedHashMap;
 use starknet::core::types::{
     BlockId, BlockTag, EmittedEvent, Event, EventFilter, Felt, MaybePendingBlockWithTxHashes,
-    MaybePendingBlockWithTxs, ReceiptBlock, Transaction, TransactionReceipt,
-    TransactionReceiptWithBlockInfo,
+    MaybePendingBlockWithTxs, ReceiptBlock, TransactionReceipt, TransactionReceiptWithBlockInfo,
 };
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
@@ -177,7 +176,7 @@ impl<P: Provider + Sync> Engine<P> {
             match self
                 .process_transaction_with_receipt(
                     *transaction.transaction_hash(),
-                    &transaction,
+                    // &transaction,
                     block_number,
                     block.timestamp,
                 )
@@ -322,11 +321,11 @@ impl<P: Provider + Sync> Engine<P> {
         for ((block_number, transaction_hash), events) in transactions {
             debug!("Processing transaction hash: {:#x}", transaction_hash);
             // Process transaction
-            let transaction = self.provider.get_transaction_by_hash(transaction_hash).await?;
+            // let transaction = self.provider.get_transaction_by_hash(transaction_hash).await?;
 
             self.process_transaction_with_events(
                 transaction_hash,
-                &transaction,
+                // &transaction,
                 events.as_slice(),
                 block_number,
                 blocks[&block_number],
@@ -367,7 +366,7 @@ impl<P: Provider + Sync> Engine<P> {
     async fn process_transaction_with_events(
         &mut self,
         transaction_hash: Felt,
-        transaction: &Transaction,
+        // transaction: &Transaction,
         events: &[&EmittedEvent],
         block_number: u64,
         block_timestamp: u64,
@@ -392,14 +391,16 @@ impl<P: Provider + Sync> Engine<P> {
             .await?;
         }
 
-        Self::process_transaction(
-            self,
-            block_number,
-            block_timestamp,
-            transaction_hash,
-            transaction,
-        )
-        .await?;
+        // Commented out this transaction processor because it requires an RPC call for each
+        // transaction which is slowing down the sync process by alot.
+        // Self::process_transaction(
+        //     self,
+        //     block_number,
+        //     block_timestamp,
+        //     transaction_hash,
+        //     transaction,
+        // )
+        // .await?;
 
         Ok(())
     }
@@ -408,7 +409,7 @@ impl<P: Provider + Sync> Engine<P> {
     async fn process_transaction_with_receipt(
         &mut self,
         transaction_hash: Felt,
-        transaction: &Transaction,
+        // transaction: &Transaction,
         block_number: u64,
         block_timestamp: u64,
     ) -> Result<bool> {
@@ -442,16 +443,16 @@ impl<P: Provider + Sync> Engine<P> {
                 .await?;
             }
 
-            if world_event {
-                Self::process_transaction(
-                    self,
-                    block_number,
-                    block_timestamp,
-                    transaction_hash,
-                    transaction,
-                )
-                .await?;
-            }
+            // if world_event {
+            //     Self::process_transaction(
+            //         self,
+            //         block_number,
+            //         block_timestamp,
+            //         transaction_hash,
+            //         transaction,
+            //     )
+            //     .await?;
+            // }
         }
 
         Ok(world_event)
@@ -468,28 +469,28 @@ impl<P: Provider + Sync> Engine<P> {
         Ok(())
     }
 
-    async fn process_transaction(
-        &mut self,
-        block_number: u64,
-        block_timestamp: u64,
-        transaction_hash: Felt,
-        transaction: &Transaction,
-    ) -> Result<()> {
-        for processor in &self.processors.transaction {
-            processor
-                .process(
-                    &mut self.db,
-                    self.provider.as_ref(),
-                    block_number,
-                    block_timestamp,
-                    transaction_hash,
-                    transaction,
-                )
-                .await?
-        }
+    // async fn process_transaction(
+    //     &mut self,
+    //     block_number: u64,
+    //     block_timestamp: u64,
+    //     transaction_hash: Felt,
+    //     transaction: &Transaction,
+    // ) -> Result<()> {
+    //     for processor in &self.processors.transaction {
+    //         processor
+    //             .process(
+    //                 &mut self.db,
+    //                 self.provider.as_ref(),
+    //                 block_number,
+    //                 block_timestamp,
+    //                 transaction_hash,
+    //                 transaction,
+    //             )
+    //             .await?
+    //     }
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 
     async fn process_event(
         &mut self,
