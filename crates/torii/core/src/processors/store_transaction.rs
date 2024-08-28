@@ -1,6 +1,6 @@
 use anyhow::{Error, Ok, Result};
 use async_trait::async_trait;
-use starknet::core::types::{Felt, Transaction, TransactionReceiptWithBlockInfo};
+use starknet::core::types::{Felt, Transaction};
 use starknet::providers::Provider;
 
 use super::TransactionProcessor;
@@ -17,7 +17,6 @@ impl<P: Provider + Sync + std::fmt::Debug> TransactionProcessor<P> for StoreTran
         _provider: &P,
         block_number: u64,
         block_timestamp: u64,
-        _receipt: &TransactionReceiptWithBlockInfo,
         transaction_hash: Felt,
         transaction: &Transaction,
     ) -> Result<(), Error> {

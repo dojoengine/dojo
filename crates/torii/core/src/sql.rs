@@ -757,7 +757,11 @@ impl Sql {
             Ty::Enum(e) => {
                 if e.options.iter().all(
                     |o| {
-                        if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false }
+                        if let Ty::Tuple(t) = &o.ty {
+                            t.is_empty()
+                        } else {
+                            false
+                        }
                     },
                 ) {
                     return;
@@ -1173,6 +1177,7 @@ impl Sql {
     }
 
     pub async fn execute(&mut self) -> Result<()> {
+        eprintln!("Executing {} queries fromt the queue", self.query_queue.queue.len());
         self.query_queue.execute_all().await?;
 
         Ok(())
