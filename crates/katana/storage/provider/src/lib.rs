@@ -387,18 +387,18 @@ where
     Db: MessagingProvider,
 {
     fn get_send_from_block(&self) -> ProviderResult<Option<BlockNumber>> {
-         self.provider.get_send_from_block()
+        self.provider.get_send_from_block()
     }
 
     fn set_send_from_block(&self, send_from_block: BlockNumber) -> ProviderResult<()> {
-         self.provider.set_send_from_block(send_from_block)
+        self.provider.set_send_from_block(send_from_block)
     }
 
     fn get_gather_from_block(&self) -> ProviderResult<Option<BlockNumber>> {
-         self.provider.get_gather_from_block()
+        self.provider.get_gather_from_block()
     }
 
     fn set_gather_from_block(&self, gather_from_block: BlockNumber) -> ProviderResult<()> {
-         self.provider.set_gather_from_block(gather_from_block)
+        self.provider.set_gather_from_block(gather_from_block)
     }
 }

@@ -26,14 +26,13 @@ use crate::traits::block::{
 };
 use crate::traits::contract::ContractClassWriter;
 use crate::traits::env::BlockEnvProvider;
-use crate::traits::messaging::MessagingProvider;
+use crate::traits::messaging::{MessagingProvider, GATHER_FROM_BLOCK_KEY, SEND_FROM_BLOCK_KEY};
 use crate::traits::state::{StateFactoryProvider, StateProvider, StateRootProvider, StateWriter};
 use crate::traits::state_update::StateUpdateProvider;
 use crate::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionStatusProvider, TransactionTraceProvider,
     TransactionsProviderExt,
 };
-use crate::traits::messaging::{SEND_FROM_BLOCK_KEY, GATHER_FROM_BLOCK_KEY};
 use crate::ProviderResult;
 
 #[derive(Debug)]

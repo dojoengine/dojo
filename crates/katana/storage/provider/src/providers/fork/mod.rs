@@ -460,7 +460,6 @@ impl StateFactoryProvider for ForkedProvider {
     }
 }
 
-
 impl BlockWriter for ForkedProvider {
     fn insert_block_with_states_and_receipts(
         &self,
@@ -585,7 +584,6 @@ impl BlockEnvProvider for ForkedProvider {
 }
 
 impl MessagingProvider for ForkedProvider {
-
     fn get_send_from_block(&self) -> ProviderResult<Option<BlockNumber>> {
         Ok(None)
     }

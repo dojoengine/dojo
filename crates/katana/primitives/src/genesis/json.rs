@@ -612,7 +612,7 @@ impl TryFrom<GenesisJson> for Genesis {
             gas_prices: value.gas_prices,
             state_root: value.state_root,
             parent_hash: value.parent_hash,
-            gather_from_block: value.gather_from_block
+            gather_from_block: value.gather_from_block,
         })
     }
 }
