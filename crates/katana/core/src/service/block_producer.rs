@@ -222,7 +222,7 @@ impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
         let validator =
             TxValidator::new(state, flags.clone(), cfg.clone(), &block_env, permit.clone());
 
-        let producer = Self {
+        Self {
             validator,
             permit,
             backend,
@@ -233,9 +233,7 @@ impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
             executor: PendingExecutor::new(executor),
             tx_execution_listeners: RwLock::new(vec![]),
             blocking_task_spawner: BlockingTaskPool::new().unwrap(),
-        };
-
-        producer
+        }
     }
 
     /// Creates a new [IntervalBlockProducer] with no `interval`. This mode will not produce blocks
@@ -268,7 +266,7 @@ impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
         executor: PendingExecutor,
         backend: Arc<Backend<EF>>,
     ) -> Result<MinedBlockOutcome, BlockProductionError> {
-        let _ = unsafe { permit.raw() }.lock();
+        unsafe { permit.raw() }.lock();
         let executor = &mut executor.write();
 
         trace!(target: LOG_TARGET, "Creating new block.");
@@ -374,11 +372,7 @@ impl<EF: ExecutorFactory> Stream for IntervalBlockProducer<EF> {
                     let backend = pin.backend.clone();
                     let permit = pin.permit.clone();
 
-                    let fut = pin
-                        .blocking_task_spawner
-                        .spawn(|| Self::do_mine(permit, executor, backend));
-
-                    fut
+                    pin.blocking_task_spawner.spawn(|| Self::do_mine(permit, executor, backend))
                 }));
             }
         }
@@ -650,11 +644,8 @@ impl<EF: ExecutorFactory> Stream for InstantBlockProducer<EF> {
                 let backend = pin.backend.clone();
                 let permit = pin.permit.clone();
 
-                let task = pin
-                    .blocking_task_pool
-                    .spawn(|| Self::do_mine(validator, permit, backend, transactions));
-
-                task
+                pin.blocking_task_pool
+                    .spawn(|| Self::do_mine(validator, permit, backend, transactions))
             }));
         }
 

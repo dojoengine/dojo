@@ -138,6 +138,7 @@ impl Validator for TxValidator {
     type Transaction = ExecutableTxWithHash;
 
     fn validate(&self, tx: Self::Transaction) -> ValidationResult<Self::Transaction> {
+        let _permit = self.inner.permit.lock();
         let this = &mut *self.inner.validator.lock();
 
         // Check if validation of an invoke transaction should be skipped due to deploy_account not
