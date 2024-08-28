@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1724736620757,
+  "lastUpdate": 1724855291606,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -17329,6 +17329,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3914270,
             "range": "± 64120",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3d8b3ba591bb39dd574b82e4fa916a821749a622",
+          "message": "feat(libp2p): websocket transport (#2347)\n\n* feat(libp2p): websocket transport\r\n\r\n* feat: websocket port\r\n\r\n* feat: libp2p clinet websys trnasport\r\n\r\n* fmt\r\n\r\n* chore: use pkg vesrion for identify spec\r\n\r\n* fix: wasm\r\n\r\n* feat: relay client websocket\r\n\r\n* fmt",
+          "timestamp": "2024-08-28T10:07:23-04:00",
+          "tree_id": "56aa01a2b6e9e61712fabfbc1cee68747e4b9549",
+          "url": "https://github.com/dojoengine/dojo/commit/3d8b3ba591bb39dd574b82e4fa916a821749a622"
+        },
+        "date": 1724855290004,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17777231,
+            "range": "± 648926",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3961224,
+            "range": "± 211883",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3870487772,
+            "range": "± 734954600",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4376878,
+            "range": "± 487153",
             "unit": "ns/iter"
           }
         ]
