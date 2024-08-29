@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1724909159092,
+  "lastUpdate": 1724943513039,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -17761,6 +17761,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3864380,
             "range": "± 17490",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "13cee8687eb1688fd7d14fea266e95f589cf8856",
+          "message": "fix(torii-relay): remove tls for ws (#2361)\n\nfix: remove tls for ws",
+          "timestamp": "2024-08-29T08:38:58-06:00",
+          "tree_id": "0a38e1685bfc0f755cf197536e255f5bd6442add",
+          "url": "https://github.com/dojoengine/dojo/commit/13cee8687eb1688fd7d14fea266e95f589cf8856"
+        },
+        "date": 1724943511423,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17837890,
+            "range": "± 254495",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3968767,
+            "range": "± 365087",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3868423776,
+            "range": "± 758313649",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4072200,
+            "range": "± 450446",
             "unit": "ns/iter"
           }
         ]
