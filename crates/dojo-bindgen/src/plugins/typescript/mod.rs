@@ -7,7 +7,7 @@ use dojo_world::contracts::naming;
 
 use crate::error::BindgenResult;
 use crate::plugins::BuiltinPlugin;
-use crate::{DojoContract, DojoData, DojoModel};
+use crate::{compare_tokens_by_type_name, DojoContract, DojoData, DojoModel};
 
 #[cfg(test)]
 mod tests;
@@ -277,28 +277,20 @@ export const {name}Definition = {{
         for model in models {
             let tokens = &model.tokens;
 
-            for token in &tokens.enums {
+            let mut sorted_structs = tokens.structs.clone();
+            sorted_structs.sort_by(compare_tokens_by_type_name);
+
+            let mut sorted_enums = tokens.enums.clone();
+            sorted_enums.sort_by(compare_tokens_by_type_name);
+
+            for token in &sorted_enums {
                 handled_tokens.push(token.to_composite().unwrap().to_owned());
             }
-            for token in &tokens.structs {
+            for token in &sorted_structs {
                 handled_tokens.push(token.to_composite().unwrap().to_owned());
             }
 
-            let mut structs = tokens.structs.to_owned();
-            structs.sort_by(|a, b| {
-                if a.to_composite()
-                    .unwrap()
-                    .inners
-                    .iter()
-                    .any(|field| field.token.type_name() == b.type_name())
-                {
-                    std::cmp::Ordering::Greater
-                } else {
-                    std::cmp::Ordering::Less
-                }
-            });
-
-            for token in &tokens.enums {
+            for token in &sorted_enums {
                 if handled_tokens.iter().filter(|t| t.type_name() == token.type_name()).count() > 1
                 {
                     continue;
@@ -306,7 +298,7 @@ export const {name}Definition = {{
                 out += TypescriptPlugin::format_enum(token.to_composite().unwrap()).as_str();
             }
 
-            for token in &structs {
+            for token in &sorted_structs {
                 if handled_tokens.iter().filter(|t| t.type_name() == token.type_name()).count() > 1
                 {
                     continue;
@@ -601,14 +593,22 @@ impl BuiltinPlugin for TypescriptPlugin {
 
         // Handle codegen for models
         let models_path = Path::new("models.gen.ts").to_owned();
-        let models = data.models.values().collect::<Vec<_>>();
+        let mut models = data.models.values().collect::<Vec<_>>();
+
+        // Sort models based on their tag to ensure deterministic output.
+        models.sort_by(|a, b| a.tag.cmp(&b.tag));
+
         let code = self.handle_model(models.as_slice(), &mut handled_tokens);
 
         out.insert(models_path, code.as_bytes().to_vec());
 
         // Handle codegen for contracts & systems
         let contracts_path = Path::new("contracts.gen.ts").to_owned();
-        let contracts = data.contracts.values().collect::<Vec<_>>();
+        let mut contracts = data.contracts.values().collect::<Vec<_>>();
+
+        // Sort contracts based on their tag to ensure deterministic output.
+        contracts.sort_by(|a, b| a.tag.cmp(&b.tag));
+
         let code = self.handle_contracts(contracts.as_slice(), &handled_tokens);
 
         out.insert(contracts_path, code.as_bytes().to_vec());
