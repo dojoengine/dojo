@@ -190,7 +190,8 @@ async fn deploy_account(
         }
     );
 
-    // Verify the `getClassHashAt` returns the same class hash that we use for the account deployment
+    // Verify the `getClassHashAt` returns the same class hash that we use for the account
+    // deployment
     let res = provider.get_class_hash_at(BlockId::Tag(BlockTag::Pending), computed_address).await?;
     assert_eq!(res, class_hash);
 
