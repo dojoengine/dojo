@@ -128,7 +128,6 @@ pub async fn migrate<A>(
     dry_run: bool,
     txn_config: TxnConfig,
     skip_manifests: Option<Vec<String>>,
-    verify_with_walnut: bool,
 ) -> Result<Option<MigrationOutput>>
 where
     A: ConnectedAccount + Sync + Send + 'static,
@@ -344,7 +343,7 @@ where
             }
         }
 
-        if verify_with_walnut {
+        if txn_config.walnut {
             walnut_verify_migration_strategy(ws, rpc_url.clone(), &strategy).await?;
         }
 

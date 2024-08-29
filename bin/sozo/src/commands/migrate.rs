@@ -43,9 +43,6 @@ pub enum MigrateCommand {
     Apply {
         #[command(flatten)]
         transaction: TransactionOptions,
-        #[arg(long)]
-        #[arg(help = "Verify classes declared during migration.")]
-        walnut: bool,
     },
 }
 
@@ -57,10 +54,7 @@ impl MigrateArgs {
         account: AccountOptions,
     ) -> Self {
         Self {
-            command: MigrateCommand::Apply {
-                transaction: TransactionOptions::init_wait(),
-                walnut: false,
-            },
+            command: MigrateCommand::Apply { transaction: TransactionOptions::init_wait() },
             world,
             starknet,
             account,
@@ -108,12 +102,11 @@ impl MigrateArgs {
                         true,
                         TxnConfig::default(),
                         dojo_metadata.migration.map(|m| m.skip_contracts.clone()),
-                        false,
                     )
                     .await
                 })
                 .map(|_| ()),
-            MigrateCommand::Apply { transaction, walnut } => config
+            MigrateCommand::Apply { transaction } => config
                 .tokio_handle()
                 .block_on(async {
                     trace!(name, "Applying migration.");
@@ -128,7 +121,6 @@ impl MigrateArgs {
                         false,
                         txn_config,
                         dojo_metadata.migration.map(|m| m.skip_contracts.clone()),
-                        walnut,
                     )
                     .await
                 })
