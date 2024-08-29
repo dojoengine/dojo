@@ -8,9 +8,8 @@ use std::{fs, io};
 
 use chrono::Utc;
 use dojo_types::schema::Ty;
-use dojo_world::contracts::naming::compute_selector_from_names;
+use dojo_world::contracts::naming::compute_selector_from_tag;
 use futures::StreamExt;
-use indexmap::IndexMap;
 use libp2p::core::multiaddr::Protocol;
 use libp2p::core::muxing::StreamMuxerBox;
 use libp2p::core::upgrade::Version;
@@ -36,7 +35,7 @@ use crate::errors::Error;
 mod events;
 
 use crate::server::events::ServerEvent;
-use crate::typed_data::{parse_value_to_ty, PrimitiveType};
+use crate::typed_data::{parse_value_to_ty, PrimitiveType, TypedData};
 use crate::types::Message;
 
 pub(crate) const LOG_TARGET: &str = "torii::relay::server";
@@ -202,7 +201,7 @@ impl<P: Provider + Sync> Relay<P> {
                                 }
                             };
 
-                            let ty = match validate_message(&self.db, &data.message.message).await {
+                            let ty = match validate_message(&self.db, &data.message).await {
                                 Ok(parsed_message) => parsed_message,
                                 Err(e) => {
                                     info!(
@@ -455,37 +454,18 @@ fn ty_keys(ty: &Ty) -> Result<Vec<Felt>, Error> {
 
 // Validates the message model
 // and returns the identity and signature
-async fn validate_message(
-    db: &Sql,
-    message: &IndexMap<String, PrimitiveType>,
-) -> Result<Ty, Error> {
-    let (selector, model) = if let Some(model_name) = message.get("model") {
-        if let PrimitiveType::String(model_name) = model_name {
-            let (namespace, name) = model_name.split_once('-').ok_or_else(|| {
-                Error::InvalidMessageError(
-                    "Model name is not in the format namespace-model".to_string(),
-                )
-            })?;
-
-            (compute_selector_from_names(namespace, name), model_name)
-        } else {
-            return Err(Error::InvalidMessageError("Model name is not a string".to_string()));
-        }
-    } else {
-        return Err(Error::InvalidMessageError("Model name is missing".to_string()));
-    };
+async fn validate_message(db: &Sql, message: &TypedData) -> Result<Ty, Error> {
+    let selector = compute_selector_from_tag(&message.primary_type);
 
     let mut ty = db
         .model(selector)
         .await
-        .map_err(|e| Error::InvalidMessageError(format!("Model {} not found: {}", model, e)))?
+        .map_err(|e| {
+            Error::InvalidMessageError(format!("Model {} not found: {}", message.primary_type, e))
+        })?
         .schema;
 
-    if let Some(object) = message.get(model) {
-        parse_value_to_ty(object, &mut ty)?;
-    } else {
-        return Err(Error::InvalidMessageError("Model is missing".to_string()));
-    };
+    parse_value_to_ty(&PrimitiveType::Object(message.message.clone()), &mut ty)?;
 
     Ok(ty)
 }
