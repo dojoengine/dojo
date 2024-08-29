@@ -27,6 +27,8 @@ ENV TABLEGEN_170_PREFIX=/usr/lib/llvm-17
 
 # To allow independent workflow of the container, the rust-toolchain is explicitely given.
 RUN echo "1.80.0" > rust_toolchain_version
+# Make sure to sync the nightly version with the scripts in ./scripts
+RUN echo "nightly-2024-08-28" > nightly_rust_toolchain_version
 
 # Install cargo-binstall
 RUN curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
@@ -36,8 +38,8 @@ RUN rustup toolchain install $(cat rust_toolchain_version) && \
     rustup component add clippy && \
     rustup component add rustfmt
 
-RUN rustup toolchain install nightly && \
-    rustup component add rustfmt clippy --toolchain nightly
+RUN rustup toolchain install $(cat nightly_rust_toolchain_version) && \
+	rustup component add rustfmt clippy --toolchain $(cat nightly_rust_toolchain_version)
 
 RUN rustup target add x86_64-pc-windows-msvc && \
     rustup target add wasm32-unknown-unknown
@@ -60,7 +62,7 @@ RUN if [ "$TARGETPLATFORM" = "linux/arm64" ] ; then \
     rm -r hurl-4.1.0-x86_64-unknown-linux-gnu && \
     rm hurl.tar.gz && \
     rustup component add llvm-tools-preview --toolchain $(cat rust_toolchain_version)-x86_64-unknown-linux-gnu && \
-    rustup target add x86_64-fortanix-unknown-sgx --toolchain nightly; \
+    rustup target add x86_64-fortanix-unknown-sgx --toolchain $(cat nightly_rust_toolchain_version); \
     fi
 
 ARG DOJO_VERSION=stable
