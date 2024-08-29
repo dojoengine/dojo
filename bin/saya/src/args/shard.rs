@@ -10,14 +10,14 @@ use saya_core::SayaMode;
 pub struct SayaModeArg(pub SayaMode);
 
 #[derive(Debug, Args, Clone)]
-pub struct ShardOptions {
+pub struct SettlementOptions {
     #[arg(help = "Choose either ephemeral or persistent saya mode.")]
     #[arg(long = "mode")]
     pub saya_mode: SayaModeArg,
 
-    #[arg(help = "Piltover contract address.")]
-    #[arg(long = "piltover")]
-    pub piltover: FieldElement,
+    #[arg(help = "The settlement contract address.")]
+    #[arg(long)]
+    pub settlement_contract: FieldElement,
 }
 
 impl Default for SayaModeArg {

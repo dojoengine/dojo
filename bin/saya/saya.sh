@@ -12,8 +12,8 @@ SAYA_SNCAST_ACCOUNT_NAME="dev"
 
 # Probably no need to change these
 
-SAYA_PROVER_URL=http://prover.visoft.dev:3618
-SAYA_WORLD_NAME=saya-persistent-run
+# SAYA_PROVER_URL=http://prover.visoft.dev:3618
+SAYA_PROVER_URL=http://localhost:3618
 # SAYA_MANIFEST_PATH=../shard-dungeon/Scarb.toml
 SAYA_MANIFEST_PATH=examples/spawn-and-move/Scarb.toml
 SAYA_FACT_REGISTRY=0x216a9754a38e86a09261ee424012b97d498a0f4ca81653bd4be269d583c7ec9
@@ -122,7 +122,7 @@ fi
 
 
 if [[ -z "${SAYA_SKIP_MAKING_TRANSACTIONS}" ]]; then
-    cargo run -r --bin sozo -- execute dojo_examples-actions spawn \
+    sozo execute dojo_examples-actions spawn \
         --manifest-path $SAYA_MANIFEST_PATH \
         --rpc-url http://localhost:5050 \
         --private-key $SAYA_SEPOLIA_PRIVATE_KEY \
@@ -150,7 +150,7 @@ cargo run -r --bin saya -- \
     --mode persistent \
     --rpc-url http://localhost:5050 \
     --registry $SAYA_FACT_REGISTRY \
-    --piltover $SAYA_PILTOVER_ADDRESS \
+    --settlement-contract $SAYA_PILTOVER_ADDRESS \
     --world $SAYA_WORLD_ADDRESS \
     --prover-url $SAYA_PROVER_URL \
     --store-proofs \

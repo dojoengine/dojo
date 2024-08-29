@@ -3,6 +3,7 @@ use starknet_crypto::Felt;
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct BatcherOutput {
+    pub padding: [Felt; 2],
     pub prev_state_root: Felt,
     pub new_state_root: Felt,
     pub block_number: Felt,
@@ -72,10 +73,12 @@ mod batcher_args_tests {
 
     #[test]
     fn test_parse_program_output() {
-        let output = [0, 1, 2, 0x34, 0x2a, 0, 0u64].into_iter().map(Felt::from).collect::<Vec<_>>();
+        let output =
+            [0, 0, 0, 1, 2, 0x34, 0x2a, 0, 0u64].into_iter().map(Felt::from).collect::<Vec<_>>();
 
         let parsed = from_felts::<BatcherOutput>(&output).unwrap();
         let expected = BatcherOutput {
+            padding: [Felt::from(0u64); 2],
             prev_state_root: Felt::from(0u64),
             new_state_root: Felt::from(1u64),
             block_number: Felt::from(2u64),

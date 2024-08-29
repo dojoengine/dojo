@@ -7,7 +7,7 @@ use clap::Parser;
 use saya_core::data_availability::celestia::CelestiaConfig;
 use saya_core::data_availability::DataAvailabilityConfig;
 use saya_core::{ProverAccessKey, SayaConfig, StarknetAccountData};
-use shard::ShardOptions;
+use shard::SettlementOptions;
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet_account::StarknetAccountOptions;
 use tracing::Subscriber;
@@ -64,7 +64,7 @@ pub struct SayaArgs {
 
     #[command(flatten)]
     #[command(next_help_heading = "Choose the saya execution mode")]
-    pub shard: ShardOptions,
+    pub shard: SettlementOptions,
 
     #[command(flatten)]
     #[command(next_help_heading = "Data availability options")]
@@ -159,7 +159,7 @@ impl TryFrom<SayaArgs> for SayaConfig {
                 block_range: (args.start_block, args.end_block),
                 batch_size: args.batch_size,
                 mode: args.shard.saya_mode.0,
-                piltover_contract: args.shard.piltover,
+                piltover_contract: args.shard.settlement_contract,
                 data_availability: da_config,
                 world_address: args.proof.world_address,
                 fact_registry_address: args.proof.fact_registry_address,
@@ -194,9 +194,9 @@ mod tests {
             start_block: 0,
             end_block: None,
             batch_size: 4,
-            shard: ShardOptions {
+            shard: SettlementOptions {
                 saya_mode: shard::SayaModeArg(SayaMode::Persistent),
-                piltover: Felt::from_hex(
+                settlement_contract: Felt::from_hex(
                     "0x65c0d01ef63197f00372cbb93bb32a7c49b70d3e82c5e0880d7912f4421e1c4",
                 )
                 .unwrap(),

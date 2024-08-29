@@ -9,6 +9,7 @@
 
 use ::starknet::core::types::Felt;
 use serde::{Deserialize, Serialize};
+use tracing::trace;
 
 use crate::SayaStarknetAccount;
 
@@ -29,15 +30,30 @@ pub async fn verify(
     account: &SayaStarknetAccount,
     cairo_version: Felt,
 ) -> anyhow::Result<(String, Felt)> {
+    const TRY_LIMIT: usize = 3;
     match verifier {
         VerifierIdentifier::HerodotusStarknetSepolia(fact_registry_address) => {
-            starknet::starknet_verify(
-                fact_registry_address,
-                serialized_proof,
-                cairo_version,
-                account,
-            )
-            .await
+            let mut tries = 0;
+            loop {
+                match starknet::starknet_verify(
+                    fact_registry_address,
+                    serialized_proof.clone(),
+                    cairo_version,
+                    account,
+                )
+                .await
+                {
+                    Ok(result) => return Ok(result),
+                    Err(e) => {
+                        if tries < TRY_LIMIT {
+                            trace!("Failed to verify proof: {:?}", e);
+                            tries += 1;
+                            continue;
+                        }
+                        break Err(e);
+                    }
+                }
+            }
         }
         VerifierIdentifier::StoneLocal => unimplemented!("Stone Verifier not yet supported"),
         VerifierIdentifier::StarkwareEthereum => {
