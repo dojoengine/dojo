@@ -134,13 +134,25 @@ pub fn run(command: Commands, config: &Config) -> Result<()> {
     }
 }
 
+/// Checks if the package has a compatible version of dojo-core.
+/// In case of a workspace with multiple packages, each package is individually checked
+/// and the workspace manifest path is returned in case of virtual workspace.
 pub fn check_package_dojo_version(ws: &Workspace<'_>, package: &Package) -> anyhow::Result<()> {
     if let Some(dojo_dep) =
         package.manifest.summary.dependencies.iter().find(|dep| dep.name.as_str() == "dojo")
     {
         let dojo_version = env!("CARGO_PKG_VERSION");
+        println!("Dojo version: {}", dojo_version);
 
-        if !dojo_dep.to_string().contains(dojo_version) {
+        let dojo_dep_str = dojo_dep.to_string();
+        println!("Dojo dep: {}", dojo_dep_str);
+
+        // Only in case of git dependency with an explicit tag, we check if the tag is the same as
+        // the current version.
+        if dojo_dep_str.contains("git+")
+            && dojo_dep_str.contains("tag=v")
+            && !dojo_dep_str.contains(dojo_version)
+        {
             if let Ok(cp) = ws.current_package() {
                 let path =
                     if cp.id == package.id { package.manifest_path() } else { ws.manifest_path() };
