@@ -298,13 +298,14 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
             //
             // TODO: this is a temporary solution, we should have a better way to handle this.
             // perhaps a pending/pool state provider that implements all the state provider traits.
-            if let BlockIdOrTag::Tag(BlockTag::Pending) = block_id {
-                let pool_nonce = this.inner.validator.get_nonce(contract_address);
-                return Ok(pool_nonce);
-            }
+            let result = if let BlockIdOrTag::Tag(BlockTag::Pending) = block_id {
+                this.inner.validator.pool_nonce(contract_address)?
+            } else {
+                let state = this.state(&block_id)?;
+                state.nonce(contract_address)?
+            };
 
-            let state = this.state(&block_id)?;
-            let nonce = state.nonce(contract_address)?.ok_or(StarknetApiError::ContractNotFound)?;
+            let nonce = result.ok_or(StarknetApiError::ContractNotFound)?;
             Ok(nonce)
         })
         .await

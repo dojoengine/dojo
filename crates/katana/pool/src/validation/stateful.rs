@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use katana_executor::implementation::blockifier::blockifier::blockifier::stateful_validator::{
@@ -9,12 +10,14 @@ use katana_executor::implementation::blockifier::blockifier::transaction::errors
 };
 use katana_executor::implementation::blockifier::blockifier::transaction::transaction_execution::Transaction;
 use katana_executor::implementation::blockifier::utils::{
-    block_context_from_envs, to_address, to_blk_address, to_executor_tx,
+    block_context_from_envs, to_address, to_executor_tx,
 };
 use katana_executor::{SimulationFlag, StateProviderDb};
 use katana_primitives::contract::{ContractAddress, Nonce};
 use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash};
+use katana_primitives::FieldElement;
+use katana_provider::error::ProviderError;
 use katana_provider::traits::state::StateProvider;
 use parking_lot::Mutex;
 
@@ -24,14 +27,18 @@ use crate::tx::PoolTransaction;
 #[allow(missing_debug_implementations)]
 #[derive(Clone)]
 pub struct TxValidator {
-    inner: Arc<Inner>,
+    inner: Arc<Mutex<Inner>>,
+    permit: Arc<Mutex<()>>,
 }
 
 struct Inner {
+    // execution context
     cfg_env: CfgEnv,
+    block_env: BlockEnv,
     execution_flags: SimulationFlag,
-    validator: Mutex<StatefulValidatorAdapter>,
-    permit: Arc<Mutex<()>>,
+    state: Arc<Box<dyn StateProvider>>,
+
+    pool_nonces: HashMap<ContractAddress, Nonce>,
 }
 
 impl TxValidator {
@@ -39,29 +46,25 @@ impl TxValidator {
         state: Box<dyn StateProvider>,
         execution_flags: SimulationFlag,
         cfg_env: CfgEnv,
-        block_env: &BlockEnv,
+        block_env: BlockEnv,
         permit: Arc<Mutex<()>>,
     ) -> Self {
-        let validator = StatefulValidatorAdapter::new(state, block_env, &cfg_env);
-        Self {
-            inner: Arc::new(Inner {
-                permit,
-                cfg_env,
-                execution_flags,
-                validator: Mutex::new(validator),
-            }),
-        }
+        let inner = Arc::new(Mutex::new(Inner {
+            cfg_env,
+            block_env,
+            execution_flags,
+            state: Arc::new(state),
+            pool_nonces: HashMap::new(),
+        }));
+        Self { permit, inner }
     }
 
     /// Reset the state of the validator with the given params. This method is used to update the
     /// validator's state with a new state and block env after a block is mined.
-    pub fn update(&self, new_state: Box<dyn StateProvider>, block_env: &BlockEnv) {
-        let mut validator = self.inner.validator.lock();
-
-        let mut state = validator.inner.tx_executor.block_state.take().unwrap();
-        state.state = StateProviderDb::new(new_state);
-
-        *validator = StatefulValidatorAdapter::new_inner(state, block_env, &self.inner.cfg_env);
+    pub fn update(&self, new_state: Box<dyn StateProvider>, block_env: BlockEnv) {
+        let mut this = self.inner.lock();
+        this.block_env = block_env;
+        this.state = Arc::new(new_state);
     }
 
     // NOTE:
@@ -69,68 +72,24 @@ impl TxValidator {
     // unwraps the Option to get the state of the TransactionExecutor struct. StatefulValidator
     // guaranteees that the state will always be present so it is safe to uwnrap. However, this
     // safety is not guaranteed by TransactionExecutor itself.
-    pub fn get_nonce(&self, address: ContractAddress) -> Nonce {
-        let address = to_blk_address(address);
-        let nonce = self.inner.validator.lock().inner.get_nonce(address).expect("state err");
-        nonce.0
-    }
-}
-
-#[allow(missing_debug_implementations)]
-struct StatefulValidatorAdapter {
-    inner: StatefulValidator<StateProviderDb<'static>>,
-}
-
-impl StatefulValidatorAdapter {
-    fn new(state: Box<dyn StateProvider>, block_env: &BlockEnv, cfg_env: &CfgEnv) -> Self {
-        let state = CachedState::new(StateProviderDb::new(state));
-        Self::new_inner(state, block_env, cfg_env)
-    }
-
-    fn new_inner(
-        state: CachedState<StateProviderDb<'static>>,
-        block_env: &BlockEnv,
-        cfg_env: &CfgEnv,
-    ) -> Self {
-        let block_context = block_context_from_envs(block_env, cfg_env);
-        let inner = StatefulValidator::create(state, block_context, Default::default());
-        Self { inner }
-    }
-
-    /// Used only in the [`Validator::validate`] trait
-    fn validate(
-        &mut self,
-        tx: ExecutableTxWithHash,
-        skip_validate: bool,
-        skip_fee_check: bool,
-    ) -> ValidationResult<ExecutableTxWithHash> {
-        match to_executor_tx(tx.clone()) {
-            Transaction::AccountTransaction(blockifier_tx) => {
-                // Check if the transaction nonce is higher than the current account nonce,
-                // if yes, dont't run its validation logic but tag it as dependent
-                let account = to_blk_address(tx.sender());
-                let account_nonce = self.inner.get_nonce(account).expect("state err");
-
-                if tx.nonce() > account_nonce.0 {
-                    return Ok(ValidationOutcome::Dependent {
-                        current_nonce: account_nonce.0,
-                        tx_nonce: tx.nonce(),
-                        tx,
-                    });
-                }
-
-                match self.inner.perform_validations(blockifier_tx, skip_validate, skip_fee_check) {
-                    Ok(()) => Ok(ValidationOutcome::Valid(tx)),
-                    Err(e) => match map_invalid_tx_err(e) {
-                        Ok(error) => Ok(ValidationOutcome::Invalid { tx, error }),
-                        Err(error) => Err(Error { hash: tx.hash, error }),
-                    },
-                }
-            }
-
-            // we skip validation for L1HandlerTransaction
-            Transaction::L1HandlerTransaction(_) => Ok(ValidationOutcome::Valid(tx)),
+    pub fn pool_nonce(&self, address: ContractAddress) -> Result<Option<Nonce>, ProviderError> {
+        let this = self.inner.lock();
+        match this.pool_nonces.get(&address) {
+            Some(nonce) => Ok(Some(*nonce)),
+            None => Ok(this.state.nonce(address)?),
         }
+    }
+}
+
+impl Inner {
+    // Prepare the stateful validator with the current state and block env to be used
+    // for transaction validation.
+    fn prepare(&self) -> StatefulValidator<StateProviderDb<'static>> {
+        let state = Box::new(self.state.clone());
+        let cached_state = CachedState::new(StateProviderDb::new(state));
+        let context = block_context_from_envs(&self.block_env, &self.cfg_env);
+
+        StatefulValidator::create(cached_state, context, Default::default())
     }
 }
 
@@ -138,8 +97,24 @@ impl Validator for TxValidator {
     type Transaction = ExecutableTxWithHash;
 
     fn validate(&self, tx: Self::Transaction) -> ValidationResult<Self::Transaction> {
-        let _permit = self.inner.permit.lock();
-        let this = &mut *self.inner.validator.lock();
+        let _permit = self.permit.lock();
+        let mut this = self.inner.lock();
+
+        let tx_nonce = tx.nonce();
+        let address = tx.sender();
+
+        // Get the current nonce of the account from the pool or the state
+        let current_nonce = if let Some(nonce) = this.pool_nonces.get(&address) {
+            *nonce
+        } else {
+            this.state.nonce(address).unwrap().unwrap_or_default()
+        };
+
+        // Check if the transaction nonce is higher than the current account nonce,
+        // if yes, dont't run its validation logic and tag it as a dependent tx.
+        if tx_nonce > current_nonce {
+            return Ok(ValidationOutcome::Dependent { current_nonce, tx_nonce, tx });
+        }
 
         // Check if validation of an invoke transaction should be skipped due to deploy_account not
         // being proccessed yet. This feature is used to improve UX for users sending
@@ -147,21 +122,50 @@ impl Validator for TxValidator {
         let skip_validate = match tx.transaction {
             // we skip validation for invoke tx with nonce 1 and nonce 0 in the state, this
             ExecutableTx::DeployAccount(_) | ExecutableTx::Declare(_) => false,
-
             // we skip validation for invoke tx with nonce 1 and nonce 0 in the state, this
-            _ => {
-                let address = to_blk_address(tx.sender());
-                let account_nonce = this.inner.get_nonce(address).expect("state err");
-                tx.nonce() == Nonce::ONE && account_nonce.0 == Nonce::ZERO
-            }
+            _ => tx.nonce() == Nonce::ONE && current_nonce == Nonce::ZERO,
         };
 
-        StatefulValidatorAdapter::validate(
-            this,
+        // prepare a stateful validator and validate the transaction
+        let result = validate(
+            this.prepare(),
             tx,
-            self.inner.execution_flags.skip_validate || skip_validate,
-            self.inner.execution_flags.skip_fee_transfer,
-        )
+            this.execution_flags.skip_validate || skip_validate,
+            this.execution_flags.skip_fee_transfer,
+        );
+
+        match result {
+            res @ Ok(ValidationOutcome::Valid { .. }) => {
+                // update the nonce of the account in the pool only for valid tx
+                let updated_nonce = current_nonce + FieldElement::ONE;
+                this.pool_nonces.insert(address, updated_nonce);
+                res
+            }
+            _ => result,
+        }
+    }
+}
+
+// perform validation on the pool transaction using the provided stateful validator
+fn validate(
+    mut validator: StatefulValidator<StateProviderDb<'static>>,
+    pool_tx: ExecutableTxWithHash,
+    skip_validate: bool,
+    skip_fee_check: bool,
+) -> ValidationResult<ExecutableTxWithHash> {
+    match to_executor_tx(pool_tx.clone()) {
+        Transaction::AccountTransaction(tx) => {
+            match validator.perform_validations(tx, skip_validate, skip_fee_check) {
+                Ok(()) => Ok(ValidationOutcome::Valid(pool_tx)),
+                Err(e) => match map_invalid_tx_err(e) {
+                    Ok(error) => Ok(ValidationOutcome::Invalid { tx: pool_tx, error }),
+                    Err(error) => Err(Error { hash: pool_tx.hash, error }),
+                },
+            }
+        }
+
+        // we skip validation for L1HandlerTransaction
+        Transaction::L1HandlerTransaction(_) => Ok(ValidationOutcome::Valid(pool_tx)),
     }
 }
 

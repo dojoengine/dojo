@@ -220,7 +220,7 @@ impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
         let cfg = backend.executor_factory.cfg();
         let flags = backend.executor_factory.execution_flags();
         let validator =
-            TxValidator::new(state, flags.clone(), cfg.clone(), &block_env, permit.clone());
+            TxValidator::new(state, flags.clone(), cfg.clone(), block_env, permit.clone());
 
         Self {
             validator,
@@ -262,7 +262,7 @@ impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
                 let num = provider.latest_number().unwrap();
                 let block_env = provider.block_env_at(num.into()).unwrap().unwrap();
 
-                self.validator.update(state, &block_env);
+                self.validator.update(state, block_env);
 
                 // -------------------------------------------
 
@@ -448,7 +448,7 @@ impl<EF: ExecutorFactory> Stream for IntervalBlockProducer<EF> {
                                 let num = provider.latest_number()?;
                                 let block_env = provider.block_env_at(num.into()).unwrap().unwrap();
 
-                                pin.validator.update(state, &block_env);
+                                pin.validator.update(state, block_env);
 
                                 // -------------------------------------------
 
@@ -514,7 +514,7 @@ impl<EF: ExecutorFactory> InstantBlockProducer<EF> {
         let cfg = backend.executor_factory.cfg();
         let flags = backend.executor_factory.execution_flags();
         let validator =
-            TxValidator::new(state, flags.clone(), cfg.clone(), &block_env, permit.clone());
+            TxValidator::new(state, flags.clone(), cfg.clone(), block_env, permit.clone());
 
         Self {
             permit,
@@ -599,7 +599,7 @@ impl<EF: ExecutorFactory> InstantBlockProducer<EF> {
         let state = provider.latest()?;
         let latest_num = provider.latest_number()?;
         let block_env = provider.block_env_at(latest_num.into())?.expect("latest");
-        validator.update(state, &block_env);
+        validator.update(state, block_env);
 
         // -------------------------------------------
 
