@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1724957926824,
+  "lastUpdate": 1724969669563,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -17953,6 +17953,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3893393,
             "range": "± 48726",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "061a6eff97549131639f7fcf6365b41618836a26",
+          "message": "fix(katana): set bouncer weight to max (#2367)\n\nthe `StatefulValidator` runs the full execution flow for `DeployAccount` (as opposed to just the validation logic), the execution flow include a 'block limit' check and because currently we're setting the block limit to zero, executing a deploy account tx using the validator, will always return `Transaction size exceeds the maximum block capacity.` error.\r\n\r\nwhy this doesn't affect normal execution (ie `BlockExecutor`'s execution) ? bcs of the 'execute' function we're calling here:\r\n\r\nhttps://github.com/dojoengine/dojo/blob/fc1f894de7c25faef290399d8c904b290033a729/crates/katana/executor/src/implementation/blockifier/utils.rs#L86-L91\r\n\r\nin blockifier, the execute logic is duplicated on both `Transaction` and `AccountTransaction` structs. the execute logic in `Transaction` is the one that includes the block limit check, but based on above, we're calling the execute method of `AccountTransaction`.\r\n\r\nThis is the 'execute' we're using in `BlockExecutor`:\r\n\r\nhttps://github.com/dojoengine/blockifier/blob/031eef1b54766bc9799e97c43f63e36b63af30ee/\r\ncrates/blockifier/src/transaction/account_transaction.rs#L635\r\n\r\nand this is the one used in stateful validator:\r\n\r\nhttps://github.com/dojoengine/blockifier/blob/08ac6f38519f1ca87684665d084a7a62448009cc/crates/blockifier/src/transaction/transaction_execution.rs#L155-L190\r\n\r\nso the fix is to just naively increase the block limit to max. considering we're not using this in our execution path, this change is fine. even once we include it, at this point we dont really care about block limit, so keeping it at max is still fine.\r\n\r\nthe `deploy_account` test doesn't directly test for the block limit values, but its still a good test to have so imma keep that in.",
+          "timestamp": "2024-08-30T05:55:33+08:00",
+          "tree_id": "197b9fd8a09ac4ea43e5dfc12c705d87708ed7de",
+          "url": "https://github.com/dojoengine/dojo/commit/061a6eff97549131639f7fcf6365b41618836a26"
+        },
+        "date": 1724969668646,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17515119,
+            "range": "± 233298",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3927460,
+            "range": "± 108705",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3681481160,
+            "range": "± 795118198",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3976426,
+            "range": "± 62936",
             "unit": "ns/iter"
           }
         ]
