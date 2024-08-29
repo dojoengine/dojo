@@ -13,6 +13,7 @@ use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Row, Sqlite};
 use starknet::core::types::{Event, Felt, InvokeTransaction, Transaction};
 use starknet_crypto::poseidon_hash_many;
+use tracing::debug;
 
 use crate::cache::{Model, ModelCache};
 use crate::query_queue::{Argument, QueryQueue};
@@ -1173,6 +1174,7 @@ impl Sql {
     }
 
     pub async fn execute(&mut self) -> Result<()> {
+        debug!("Executing {} queries fromt the queue", self.query_queue.queue.len());
         self.query_queue.execute_all().await?;
 
         Ok(())

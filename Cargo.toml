@@ -51,7 +51,7 @@ edition = "2021"
 license = "Apache-2.0"
 license-file = "LICENSE"
 repository = "https://github.com/dojoengine/dojo/"
-version = "1.0.0-alpha.7"
+version = "1.0.0-alpha.8"
 
 [profile.performance]
 codegen-units = 1
@@ -192,6 +192,7 @@ starknet-crypto = "0.7.0"
 # we need this <https://github.com/starknet-io/types-rs/pull/75>. So we put strict
 # requirement here to prevent from being downgraded.
 # We can remove this requirement once `starknet-rs` is using >=0.1.4
+hashlink = "0.9.1"
 starknet-types-core = "~0.1.4"
 starknet_api = "0.11.0"
 strum = "0.25"

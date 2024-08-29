@@ -3,18 +3,17 @@
 use std::fs::{self};
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::Duration;
 
 use anyhow::Result;
 use assert_matches::assert_matches;
 use cainome::rs::abigen_legacy;
+use common::split_felt;
 use dojo_test_utils::sequencer::{get_default_test_starknet_config, TestSequencer};
 use indexmap::IndexSet;
 use katana_core::sequencer::SequencerConfig;
 use katana_primitives::genesis::constant::{
-    DEFAULT_FEE_TOKEN_ADDRESS, DEFAULT_PREFUNDED_ACCOUNT_BALANCE,
+    DEFAULT_FEE_TOKEN_ADDRESS, DEFAULT_PREFUNDED_ACCOUNT_BALANCE, DEFAULT_UDC_ADDRESS,
 };
-use katana_rpc_types::receipt::ReceiptBlock;
 use starknet::accounts::{
     Account, AccountError, Call, ConnectedAccount, ExecutionEncoding, SingleOwnerAccount,
 };
@@ -23,168 +22,121 @@ use starknet::core::types::{
     BlockId, BlockTag, DeclareTransactionReceipt, ExecutionResult, Felt, StarknetError,
     TransactionFinalityStatus, TransactionReceipt,
 };
-use starknet::core::utils::{get_contract_address, get_selector_from_name};
-use starknet::macros::felt;
+use starknet::core::utils::get_contract_address;
+use starknet::macros::{felt, selector};
 use starknet::providers::{Provider, ProviderError};
 use starknet::signers::{LocalWallet, SigningKey};
+use tokio::sync::Mutex;
 
 mod common;
 
-const WAIT_TX_DELAY_MILLIS: u64 = 1000;
-
-#[tokio::test(flavor = "multi_thread")]
-async fn test_send_declare_and_deploy_contract() {
+#[tokio::test]
+async fn test_send_declare_and_deploy_contract() -> Result<()> {
     let sequencer =
         TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
+
     let account = sequencer.account();
+    let provider = sequencer.provider();
 
     let path: PathBuf = PathBuf::from("tests/test_data/cairo1_contract.json");
-    let (contract, compiled_class_hash) =
-        common::prepare_contract_declaration_params(&path).unwrap();
+    let (contract, compiled_class_hash) = common::prepare_contract_declaration_params(&path)?;
 
     let class_hash = contract.class_hash();
-    let res = account.declare_v2(Arc::new(contract), compiled_class_hash).send().await.unwrap();
+    let res = account.declare_v2(contract.into(), compiled_class_hash).send().await?;
 
-    // wait for the tx to be mined
-    tokio::time::sleep(Duration::from_millis(WAIT_TX_DELAY_MILLIS)).await;
+    // check that the tx is executed successfully and return the correct receipt
+    let receipt = dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await?;
+    assert_matches!(receipt.receipt, TransactionReceipt::Declare(DeclareTransactionReceipt { .. }));
 
-    let receipt = account.provider().get_transaction_receipt(res.transaction_hash).await.unwrap();
+    // check that the class is actually declared
+    assert!(provider.get_class(BlockId::Tag(BlockTag::Pending), class_hash).await.is_ok());
 
-    match receipt.block {
-        ReceiptBlock::Block { .. } => {
-            let TransactionReceipt::Declare(DeclareTransactionReceipt { finality_status, .. }) =
-                receipt.receipt
-            else {
-                panic!("invalid tx receipt")
-            };
-
-            assert_eq!(finality_status, TransactionFinalityStatus::AcceptedOnL2);
-        }
-
-        _ => panic!("invalid tx receipt"),
-    }
-
-    assert!(account.provider().get_class(BlockId::Tag(BlockTag::Latest), class_hash).await.is_ok());
-
-    let constructor_calldata = vec![Felt::from(1_u32), Felt::from(2_u32)];
-
+    let ctor_args = vec![Felt::ONE, Felt::TWO];
     let calldata = [
         vec![
-            res.class_hash,                         // class hash
-            Felt::ZERO,                             // salt
-            Felt::ZERO,                             // unique
-            Felt::from(constructor_calldata.len()), // constructor calldata len
+            res.class_hash,              // class hash
+            Felt::ZERO,                  // salt
+            Felt::ZERO,                  // unique
+            Felt::from(ctor_args.len()), // constructor calldata len
         ],
-        constructor_calldata.clone(),
+        ctor_args.clone(),
     ]
     .concat();
 
-    let contract_address =
-        get_contract_address(Felt::ZERO, res.class_hash, &constructor_calldata, Felt::ZERO);
+    // pre-compute the contract address of the would-be deployed contract
+    let address = get_contract_address(Felt::ZERO, res.class_hash, &ctor_args, Felt::ZERO);
 
-    account
+    let res = account
         .execute_v1(vec![Call {
             calldata,
-            // devnet UDC address
-            to: Felt::from_hex("0x41a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf")
-                .unwrap(),
-            selector: get_selector_from_name("deployContract").unwrap(),
+            to: DEFAULT_UDC_ADDRESS.into(),
+            selector: selector!("deployContract"),
         }])
         .send()
-        .await
-        .unwrap();
+        .await?;
 
     // wait for the tx to be mined
-    tokio::time::sleep(Duration::from_millis(WAIT_TX_DELAY_MILLIS)).await;
+    dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await?;
 
-    assert_eq!(
-        account
-            .provider()
-            .get_class_hash_at(BlockId::Tag(BlockTag::Latest), contract_address)
-            .await
-            .unwrap(),
-        class_hash
-    );
+    // make sure the contract is deployed
+    let res = provider.get_class_hash_at(BlockId::Tag(BlockTag::Pending), address).await?;
+    assert_eq!(res, class_hash);
 
-    sequencer.stop().expect("failed to stop sequencer");
+    Ok(())
 }
 
-#[tokio::test(flavor = "multi_thread")]
-async fn test_send_declare_and_deploy_legacy_contract() {
+#[tokio::test]
+async fn test_send_declare_and_deploy_legacy_contract() -> Result<()> {
     let sequencer =
         TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
+
     let account = sequencer.account();
+    let provider = sequencer.provider();
 
     let path = PathBuf::from("tests/test_data/cairo0_contract.json");
+    let contract: LegacyContractClass = serde_json::from_reader(fs::File::open(path)?)?;
 
-    let legacy_contract: LegacyContractClass =
-        serde_json::from_reader(fs::File::open(path).unwrap()).unwrap();
-    let contract_class = Arc::new(legacy_contract);
+    let class_hash = contract.class_hash()?;
+    let res = account.declare_legacy(contract.into()).send().await?;
 
-    let class_hash = contract_class.class_hash().unwrap();
-    let res = account.declare_legacy(contract_class).send().await.unwrap();
-    // wait for the tx to be mined
-    tokio::time::sleep(Duration::from_millis(WAIT_TX_DELAY_MILLIS)).await;
+    let receipt = dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await?;
+    assert_matches!(receipt.receipt, TransactionReceipt::Declare(DeclareTransactionReceipt { .. }));
 
-    let receipt = account.provider().get_transaction_receipt(res.transaction_hash).await.unwrap();
+    // check that the class is actually declared
+    assert!(provider.get_class(BlockId::Tag(BlockTag::Pending), class_hash).await.is_ok());
 
-    match receipt.block {
-        ReceiptBlock::Block { .. } => {
-            let TransactionReceipt::Declare(DeclareTransactionReceipt { finality_status, .. }) =
-                receipt.receipt
-            else {
-                panic!("invalid tx receipt")
-            };
-
-            assert_eq!(finality_status, TransactionFinalityStatus::AcceptedOnL2);
-        }
-
-        _ => panic!("invalid tx receipt"),
-    }
-
-    assert!(account.provider().get_class(BlockId::Tag(BlockTag::Latest), class_hash).await.is_ok());
-
-    let constructor_calldata = vec![Felt::ONE];
-
+    let ctor_args = vec![Felt::ONE];
     let calldata = [
         vec![
-            res.class_hash,                         // class hash
-            Felt::ZERO,                             // salt
-            Felt::ZERO,                             // unique
-            Felt::from(constructor_calldata.len()), // constructor calldata len
+            res.class_hash,              // class hash
+            Felt::ZERO,                  // salt
+            Felt::ZERO,                  // unique
+            Felt::from(ctor_args.len()), // constructor calldata len
         ],
-        constructor_calldata.clone(),
+        ctor_args.clone(),
     ]
     .concat();
 
-    let contract_address =
-        get_contract_address(Felt::ZERO, res.class_hash, &constructor_calldata.clone(), Felt::ZERO);
+    // pre-compute the contract address of the would-be deployed contract
+    let address = get_contract_address(Felt::ZERO, res.class_hash, &ctor_args.clone(), Felt::ZERO);
 
-    account
+    let res = account
         .execute_v1(vec![Call {
             calldata,
-            // devnet UDC address
-            to: Felt::from_hex("0x41a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf")
-                .unwrap(),
-            selector: get_selector_from_name("deployContract").unwrap(),
+            to: DEFAULT_UDC_ADDRESS.into(),
+            selector: selector!("deployContract"),
         }])
         .send()
-        .await
-        .unwrap();
+        .await?;
 
     // wait for the tx to be mined
-    tokio::time::sleep(Duration::from_millis(WAIT_TX_DELAY_MILLIS)).await;
+    dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await?;
 
-    assert_eq!(
-        account
-            .provider()
-            .get_class_hash_at(BlockId::Tag(BlockTag::Latest), contract_address)
-            .await
-            .unwrap(),
-        class_hash
-    );
+    // make sure the contract is deployed
+    let res = provider.get_class_hash_at(BlockId::Tag(BlockTag::Pending), address).await?;
+    assert_eq!(res, class_hash);
 
-    sequencer.stop().expect("failed to stop sequencer");
+    Ok(())
 }
 
 #[tokio::test]
@@ -230,8 +182,8 @@ async fn estimate_fee() -> Result<()> {
 }
 
 #[rstest::rstest]
-#[tokio::test]
-async fn rapid_transactions_submissions(
+#[tokio::test(flavor = "multi_thread")]
+async fn concurrent_transactions_submissions(
     #[values(None, Some(1000))] block_time: Option<u64>,
 ) -> Result<()> {
     // setup test sequencer with the given configuration
@@ -240,25 +192,48 @@ async fn rapid_transactions_submissions(
 
     let sequencer = TestSequencer::start(sequencer_config, starknet_config).await;
     let provider = sequencer.provider();
-    let account = sequencer.account();
+    let account = Arc::new(sequencer.account());
 
     // setup test contract to interact with.
     abigen_legacy!(Contract, "crates/katana/rpc/rpc/tests/test_data/erc20.json");
-    let contract = Contract::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), &account);
 
     // function call params
     let recipient = Felt::ONE;
     let amount = Uint256 { low: Felt::ONE, high: Felt::ZERO };
 
-    const N: usize = 10;
-    let mut txs = IndexSet::with_capacity(N);
+    let initial_nonce =
+        provider.get_nonce(BlockId::Tag(BlockTag::Pending), sequencer.account().address()).await?;
+
+    const N: usize = 100;
+    let nonce = Arc::new(Mutex::new(initial_nonce));
+    let txs = Arc::new(Mutex::new(IndexSet::with_capacity(N)));
+
+    let mut handles = Vec::with_capacity(N);
 
     for _ in 0..N {
-        let res = contract.transfer(&recipient, &amount).send().await?;
-        txs.insert(res.transaction_hash);
+        let txs = txs.clone();
+        let nonce = nonce.clone();
+        let amount = amount.clone();
+        let account = account.clone();
+
+        let handle = tokio::spawn(async move {
+            let mut nonce = nonce.lock().await;
+            let contract = Contract::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), account);
+            let res = contract.transfer(&recipient, &amount).nonce(*nonce).send().await.unwrap();
+            txs.lock().await.insert(res.transaction_hash);
+            *nonce += Felt::ONE;
+        });
+
+        handles.push(handle);
+    }
+
+    // wait for all txs to be submitted
+    for handle in handles {
+        handle.await?;
     }
 
     // Wait only for the last transaction to be accepted
+    let txs = txs.lock().await;
     let last_tx = txs.last().unwrap();
     dojo_utils::TransactionWaiter::new(*last_tx, &provider).await?;
 
@@ -266,7 +241,7 @@ async fn rapid_transactions_submissions(
     assert_eq!(txs.len(), N);
 
     // check the status of each txs
-    for hash in txs {
+    for hash in txs.iter() {
         let receipt = provider.get_transaction_receipt(hash).await?;
         assert_eq!(receipt.receipt.execution_result(), &ExecutionResult::Succeeded);
         assert_eq!(receipt.receipt.finality_status(), &TransactionFinalityStatus::AcceptedOnL2);
@@ -283,6 +258,39 @@ macro_rules! assert_starknet_err {
     ($err:expr, $api_err:pat) => {
         assert_matches!($err, AccountError::Provider(ProviderError::StarknetError($api_err)))
     };
+}
+
+#[rstest::rstest]
+#[tokio::test]
+async fn ensure_validator_have_valid_state(
+    #[values(None, Some(1000))] block_time: Option<u64>,
+) -> Result<()> {
+    let mut starknet_config = get_default_test_starknet_config();
+    starknet_config.disable_fee = false;
+    let sequencer_config = SequencerConfig { block_time, ..Default::default() };
+
+    let sequencer = TestSequencer::start(sequencer_config, starknet_config).await;
+    let account = sequencer.account();
+
+    // setup test contract to interact with.
+    abigen_legacy!(Contract, "crates/katana/rpc/rpc/tests/test_data/erc20.json");
+    let contract = Contract::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), &account);
+
+    // reduce account balance
+    let recipient = felt!("0x1337");
+    let (low, high) = split_felt(Felt::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE / 2));
+    let amount = Uint256 { low, high };
+
+    let res = contract.transfer(&recipient, &amount).send().await?;
+    dojo_utils::TransactionWaiter::new(res.transaction_hash, &sequencer.provider()).await?;
+
+    // this should fail validation due to insufficient balance because we specify max fee > the
+    // actual balance that we have now.
+    let fee = Felt::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE);
+    let err = contract.transfer(&recipient, &amount).max_fee(fee).send().await.unwrap_err();
+    assert_starknet_err!(err, StarknetError::InsufficientAccountBalance);
+
+    Ok(())
 }
 
 #[rstest::rstest]

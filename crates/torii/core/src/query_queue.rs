@@ -15,7 +15,7 @@ pub enum Argument {
 #[derive(Debug, Clone)]
 pub struct QueryQueue {
     pool: Pool<Sqlite>,
-    queue: VecDeque<(String, Vec<Argument>)>,
+    pub queue: VecDeque<(String, Vec<Argument>)>,
 }
 
 impl QueryQueue {

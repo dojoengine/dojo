@@ -44,7 +44,6 @@ pub struct NodeService<EF: ExecutorFactory> {
     pub(crate) messaging: Option<MessagingService<EF>>,
     /// Metrics for recording the service operations
     metrics: ServiceMetrics,
-    // validator: StatefulValidator
 }
 
 impl<EF: ExecutorFactory> NodeService<EF> {
@@ -100,8 +99,6 @@ impl<EF: ExecutorFactory> Future for NodeService<EF> {
                         let steps_used = outcome.stats.cairo_steps_used;
                         metrics.l1_gas_processed_total.increment(gas_used as u64);
                         metrics.cairo_steps_processed_total.increment(steps_used as u64);
-
-                        pin.block_producer.update_validator().expect("failed to update validator");
                     }
 
                     Err(err) => {

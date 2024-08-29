@@ -7,7 +7,7 @@ use dojo_world::contracts::naming::{self, get_namespace_from_tag};
 
 use crate::error::BindgenResult;
 use crate::plugins::BuiltinPlugin;
-use crate::{DojoContract, DojoData, DojoModel};
+use crate::{compare_tokens_by_type_name, DojoContract, DojoData, DojoModel};
 
 #[derive(Debug)]
 pub struct UnityPlugin {}
@@ -237,7 +237,14 @@ namespace {namespace} {{
 
         let mut model_struct: Option<&Composite> = None;
         let tokens = &model.tokens;
-        for token in &tokens.structs {
+
+        let mut sorted_structs = tokens.structs.clone();
+        sorted_structs.sort_by(compare_tokens_by_type_name);
+
+        let mut sorted_enums = tokens.enums.clone();
+        sorted_enums.sort_by(compare_tokens_by_type_name);
+
+        for token in &sorted_structs {
             if handled_tokens.contains_key(&token.type_path()) {
                 continue;
             }
@@ -253,7 +260,7 @@ namespace {namespace} {{
             out += UnityPlugin::format_struct(token.to_composite().unwrap()).as_str();
         }
 
-        for token in &tokens.enums {
+        for token in &sorted_enums {
             if handled_tokens.contains_key(&token.type_path()) {
                 continue;
             }
@@ -542,8 +549,12 @@ impl BuiltinPlugin for UnityPlugin {
         let mut out: HashMap<PathBuf, Vec<u8>> = HashMap::new();
         let mut handled_tokens = HashMap::<String, Composite>::new();
 
+        let mut models = data.models.iter().collect::<Vec<_>>();
+        // Sort models based on their tag to ensure deterministic output.
+        models.sort_by(|(_, a), (_, b)| a.tag.cmp(&b.tag));
+
         // Handle codegen for models
-        for (name, model) in &data.models {
+        for (name, model) in &models {
             let models_path = Path::new(&format!("Models/{}.gen.cs", name)).to_owned();
 
             println!("Generating model: {}", name);
@@ -552,8 +563,12 @@ impl BuiltinPlugin for UnityPlugin {
             out.insert(models_path, code.as_bytes().to_vec());
         }
 
+        let mut contracts = data.contracts.iter().collect::<Vec<_>>();
+        // Sort contracts based on their tag to ensure deterministic output.
+        contracts.sort_by(|(_, a), (_, b)| a.tag.cmp(&b.tag));
+
         // Handle codegen for systems
-        for (name, contract) in &data.contracts {
+        for (name, contract) in &contracts {
             let contracts_path = Path::new(&format!("Contracts/{}.gen.cs", name)).to_owned();
 
             println!("Generating contract: {}", name);

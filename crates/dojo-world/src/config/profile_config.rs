@@ -12,6 +12,7 @@ use super::namespace_config::NamespaceConfig;
 use super::world_config::WorldConfig;
 
 /// Profile configuration that is used to configure the world and the environment.
+///
 /// This [`ProfileConfig`] is expected to be loaded from a TOML file that is located
 /// next to the `Scarb.toml` file, named with the profile name.
 #[derive(Debug, Clone, Default, Deserialize)]

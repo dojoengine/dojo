@@ -2,9 +2,9 @@ use anyhow::{Error, Ok, Result};
 use async_trait::async_trait;
 use dojo_world::contracts::naming;
 use dojo_world::contracts::world::WorldContractReader;
-use starknet::core::types::{Event, TransactionReceiptWithBlockInfo};
+use starknet::core::types::Event;
 use starknet::providers::Provider;
-use tracing::info;
+use tracing::{info, warn};
 
 use super::EventProcessor;
 use crate::processors::{ENTITY_ID_INDEX, MODEL_INDEX};
@@ -25,8 +25,12 @@ where
     }
 
     fn validate(&self, event: &Event) -> bool {
-        if event.keys.len() > 1 {
-            info!(
+        // At least 3:
+        // 0: Event selector
+        // 1: table
+        // 2: entity id
+        if event.keys.len() < 3 {
+            warn!(
                 target: LOG_TARGET,
                 event_key = %<StoreUpdateRecordProcessor as EventProcessor<P>>::event_key(self),
                 invalid_keys = %<StoreUpdateRecordProcessor as EventProcessor<P>>::event_keys_as_string(self, event),
@@ -43,7 +47,6 @@ where
         db: &mut Sql,
         _block_number: u64,
         block_timestamp: u64,
-        _transaction_receipt: &TransactionReceiptWithBlockInfo,
         event_id: &str,
         event: &Event,
     ) -> Result<(), Error> {

@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use cainome::cairo_serde::{ByteArray, CairoSerde};
 use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::world::WorldContractReader;
-use starknet::core::types::{Event, TransactionReceiptWithBlockInfo};
+use starknet::core::types::Event;
 use starknet::providers::Provider;
 use tracing::{debug, info};
 
@@ -25,7 +25,11 @@ where
     }
 
     fn validate(&self, event: &Event) -> bool {
-        if event.keys.len() > 1 {
+        // 7 is expected because we have:
+        // 0: event selector
+        // 1-3: name (bytearray, at least 3 felts)
+        // 4-6: namespace (bytearray, at least 3 felts)
+        if event.keys.len() < 7 {
             info!(
                 target: LOG_TARGET,
                 event_key = %<RegisterModelProcessor as EventProcessor<P>>::event_key(self),
@@ -43,12 +47,13 @@ where
         db: &mut Sql,
         _block_number: u64,
         block_timestamp: u64,
-        _transaction_receipt: &TransactionReceiptWithBlockInfo,
         _event_id: &str,
         event: &Event,
     ) -> Result<(), Error> {
-        let name = ByteArray::cairo_deserialize(&event.keys, 0)?;
-        let offset = ByteArray::cairo_serialized_size(&name);
+        // First key is always the event selector.
+        let mut offset = 1;
+        let name = ByteArray::cairo_deserialize(&event.keys, offset)?;
+        offset += ByteArray::cairo_serialized_size(&name);
         let namespace = ByteArray::cairo_deserialize(&event.keys, offset)?;
 
         let name = name.to_string()?;
