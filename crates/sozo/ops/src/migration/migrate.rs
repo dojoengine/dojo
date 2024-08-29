@@ -505,13 +505,24 @@ where
 
     ui.print_header(format!("# Models ({})", models.len()));
 
+    let world = WorldContract::new(world_address, &migrator);
+
     let mut declare_output = vec![];
-    let mut declared_models_tags = vec![];
+    let mut models_to_register = vec![];
 
     for (i, m) in models.iter().enumerate() {
         let tag = &m.diff.tag;
 
         ui.print(italic_message(tag).to_string());
+
+        if let Resource::Unregistered =
+            world.resource(&compute_selector_from_tag(tag)).call().await?
+        {
+            models_to_register.push(tag.clone());
+        } else {
+            ui.print_sub("Already registered");
+            continue;
+        }
 
         match m.declare(&migrator, txn_config).await {
             Ok(output) => {
@@ -525,7 +536,6 @@ where
             }
             Err(MigrationError::ClassAlreadyDeclared) => {
                 ui.print_sub("Already declared");
-                declared_models_tags.push(m.diff.tag.clone());
             }
             Err(MigrationError::ArtifactError(e)) => {
                 return Err(handle_artifact_error(ui, models[i].artifact_path(), e));
@@ -537,17 +547,10 @@ where
         }
     }
 
-    let world = WorldContract::new(world_address, &migrator);
-
-    let mut registered_models = vec![];
-
     let calls = models
         .iter()
-        .filter(|m| !declared_models_tags.contains(&m.diff.tag))
-        .map(|c| {
-            registered_models.push(c.diff.tag.clone());
-            world.register_model_getcall(&c.diff.local_class_hash.into())
-        })
+        .filter(|m| models_to_register.contains(&m.diff.tag))
+        .map(|c| world.register_model_getcall(&c.diff.local_class_hash.into()))
         .collect::<Vec<_>>();
 
     let InvokeTransactionResult { transaction_hash } =
@@ -560,7 +563,7 @@ where
 
     ui.print(format!("All models are registered at: {transaction_hash:#x}\n"));
 
-    Ok(RegisterOutput { transaction_hash, declare_output, registered_models })
+    Ok(RegisterOutput { transaction_hash, declare_output, registered_models: models_to_register })
 }
 
 // For now duplicated because the migrator account is different from the declarers account type.
@@ -587,7 +590,7 @@ where
     ui.print_header(format!("# Models ({})", models.len()));
 
     let mut declare_output = vec![];
-    let mut registered_models = vec![];
+    let mut models_to_register = vec![];
 
     let mut declarers_tasks = HashMap::new();
     for (i, m) in models.iter().enumerate() {
@@ -615,11 +618,21 @@ where
 
     let all_results = futures::future::join_all(futures).await;
 
-    let mut declared_models_tags = vec![];
+    let world = WorldContract::new(world_address, &migrator);
 
     for results in all_results {
         for (index, tag, result) in results {
             ui.print(italic_message(&tag).to_string());
+
+            if let Resource::Unregistered =
+                world.resource(&compute_selector_from_tag(&tag)).call().await?
+            {
+                models_to_register.push(tag.clone());
+            } else {
+                ui.print_sub("Already registered");
+                continue;
+            }
+
             match result {
                 Ok(output) => {
                     ui.print_sub(format!("Selector: {:#066x}", compute_selector_from_tag(&tag)));
@@ -632,7 +645,6 @@ where
                 }
                 Err(MigrationError::ClassAlreadyDeclared) => {
                     ui.print_sub("Already declared");
-                    declared_models_tags.push(tag.clone());
                 }
                 Err(MigrationError::ArtifactError(e)) => {
                     return Err(handle_artifact_error(ui, models[index].artifact_path(), e));
@@ -645,15 +657,10 @@ where
         }
     }
 
-    let world = WorldContract::new(world_address, &migrator);
-
     let calls = models
         .iter()
-        .filter(|m| !declared_models_tags.contains(&m.diff.tag))
-        .map(|c| {
-            registered_models.push(c.diff.tag.clone());
-            world.register_model_getcall(&c.diff.local_class_hash.into())
-        })
+        .filter(|m| models_to_register.contains(&m.diff.tag))
+        .map(|c| world.register_model_getcall(&c.diff.local_class_hash.into()))
         .collect::<Vec<_>>();
 
     let InvokeTransactionResult { transaction_hash } =
@@ -666,7 +673,7 @@ where
 
     ui.print(format!("All models are registered at: {transaction_hash:#x}\n"));
 
-    Ok(RegisterOutput { transaction_hash, declare_output, registered_models })
+    Ok(RegisterOutput { transaction_hash, declare_output, registered_models: models_to_register })
 }
 
 async fn register_dojo_contracts<A>(
