@@ -2,7 +2,7 @@ use core::fmt;
 
 use anyhow::Result;
 use clap::Subcommand;
-use scarb::core::Config;
+use scarb::core::{Config, Package, Workspace};
 
 pub(crate) mod account;
 pub(crate) mod auth;
@@ -132,4 +132,36 @@ pub fn run(command: Commands, config: &Config) -> Result<()> {
         Commands::PrintEnv(args) => args.run(config),
         Commands::Completions(args) => args.run(),
     }
+}
+
+pub fn check_package_dojo_version(ws: &Workspace<'_>, package: &Package) -> anyhow::Result<()> {
+    if let Some(dojo_dep) =
+        package.manifest.summary.dependencies.iter().find(|dep| dep.name.as_str() == "dojo")
+    {
+        let dojo_version = env!("CARGO_PKG_VERSION");
+
+        if !dojo_dep.to_string().contains(dojo_version) {
+            if let Ok(cp) = ws.current_package() {
+                let path =
+                    if cp.id == package.id { package.manifest_path() } else { ws.manifest_path() };
+
+                anyhow::bail!(
+                    "Found dojo-core version mismatch: expected {}. Please verify your dojo \
+                     dependency in {}",
+                    dojo_version,
+                    path
+                )
+            } else {
+                // Virtual workspace.
+                anyhow::bail!(
+                    "Found dojo-core version mismatch: expected {}. Please verify your dojo \
+                     dependency in {}",
+                    dojo_version,
+                    ws.manifest_path()
+                )
+            }
+        }
+    }
+
+    Ok(())
 }
