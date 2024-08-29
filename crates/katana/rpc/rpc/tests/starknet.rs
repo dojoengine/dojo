@@ -8,6 +8,7 @@ use std::time::Duration;
 use anyhow::Result;
 use assert_matches::assert_matches;
 use cainome::rs::abigen_legacy;
+use common::split_felt;
 use dojo_test_utils::sequencer::{get_default_test_starknet_config, TestSequencer};
 use indexmap::IndexSet;
 use katana_core::sequencer::SequencerConfig;
@@ -307,6 +308,39 @@ macro_rules! assert_starknet_err {
     ($err:expr, $api_err:pat) => {
         assert_matches!($err, AccountError::Provider(ProviderError::StarknetError($api_err)))
     };
+}
+
+#[rstest::rstest]
+#[tokio::test]
+async fn ensure_validator_have_valid_state(
+    #[values(None, Some(1000))] block_time: Option<u64>,
+) -> Result<()> {
+    let mut starknet_config = get_default_test_starknet_config();
+    starknet_config.disable_fee = false;
+    let sequencer_config = SequencerConfig { block_time, ..Default::default() };
+
+    let sequencer = TestSequencer::start(sequencer_config, starknet_config).await;
+    let account = sequencer.account();
+
+    // setup test contract to interact with.
+    abigen_legacy!(Contract, "crates/katana/rpc/rpc/tests/test_data/erc20.json");
+    let contract = Contract::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), &account);
+
+    // reduce account balance
+    let recipient = felt!("0x1337");
+    let (low, high) = split_felt(Felt::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE / 2));
+    let amount = Uint256 { low, high };
+
+    let res = contract.transfer(&recipient, &amount).send().await?;
+    dojo_utils::TransactionWaiter::new(res.transaction_hash, &sequencer.provider()).await?;
+
+    // this should fail validation due to insufficient balance because we specify max fee > the
+    // actual balance that we have now.
+    let fee = Felt::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE);
+    let err = contract.transfer(&recipient, &amount).max_fee(fee).send().await.unwrap_err();
+    assert_starknet_err!(err, StarknetError::InsufficientAccountBalance);
+
+    Ok(())
 }
 
 #[rstest::rstest]
