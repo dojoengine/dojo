@@ -39,8 +39,7 @@ pub struct TransactionOptions {
     pub receipt: bool,
 
     #[arg(long)]
-    #[arg(help = "If --wait is set, the link to debug the transaction with Walnut is displayed \
-                  on stdout. Otherwise, it is a no-op.")]
+    #[arg(help = "Display the link to debug the transaction with Walnut.")]
     #[arg(global = true)]
     pub walnut: bool,
 }
@@ -58,7 +57,7 @@ impl TransactionOptions {
             (true, false) => Ok(TxnAction::Estimate),
             (false, true) => Ok(TxnAction::Simulate),
             (false, false) => Ok(TxnAction::Send {
-                wait: self.wait,
+                wait: self.wait || self.walnut,
                 receipt: self.receipt,
                 max_fee_raw: self.max_fee_raw,
                 fee_estimate_multiplier: self.fee_estimate_multiplier,
@@ -78,7 +77,7 @@ impl From<TransactionOptions> for TxnConfig {
         );
         Self {
             fee_estimate_multiplier: value.fee_estimate_multiplier,
-            wait: value.wait,
+            wait: value.wait || value.walnut,
             receipt: value.receipt,
             max_fee_raw: value.max_fee_raw,
             walnut: value.walnut,
