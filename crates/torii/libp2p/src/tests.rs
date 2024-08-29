@@ -604,20 +604,7 @@ mod test {
         let mut typed_data = TypedData::new(
             IndexMap::from_iter(vec![
                 (
-                    "OffchainMessage".to_string(),
-                    vec![
-                        Field::SimpleType(SimpleField {
-                            name: "model".to_string(),
-                            r#type: "shortstring".to_string(),
-                        }),
-                        Field::SimpleType(SimpleField {
-                            name: "types_test-Message".to_string(),
-                            r#type: "Model".to_string(),
-                        }),
-                    ],
-                ),
-                (
-                    "Model".to_string(),
+                    "types_test-Message".to_string(),
                     vec![
                         Field::SimpleType(SimpleField {
                             name: "identity".to_string(),
@@ -651,31 +638,18 @@ mod test {
                     ],
                 ),
             ]),
-            "OffchainMessage",
+            "types_test-Message",
             Domain::new("types_test-Message", "1", "0x0", Some("1")),
             IndexMap::new(),
         );
+        typed_data.message.insert(
+            "identity".to_string(),
+            crate::typed_data::PrimitiveType::String(account.address.to_string()),
+        );
 
         typed_data.message.insert(
-            "model".to_string(),
-            crate::typed_data::PrimitiveType::String("types_test-Message".to_string()),
-        );
-        typed_data.message.insert(
-            "types_test-Message".to_string(),
-            crate::typed_data::PrimitiveType::Object(
-                vec![
-                    (
-                        "identity".to_string(),
-                        crate::typed_data::PrimitiveType::String(account.address.to_string()),
-                    ),
-                    (
-                        "message".to_string(),
-                        crate::typed_data::PrimitiveType::String("mimi".to_string()),
-                    ),
-                ]
-                .into_iter()
-                .collect(),
-            ),
+            "message".to_string(),
+            crate::typed_data::PrimitiveType::String("mimi".to_string()),
         );
 
         let message_hash = typed_data.encode(account.address).unwrap();
