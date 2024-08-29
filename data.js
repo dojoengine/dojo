@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1724881503650,
+  "lastUpdate": 1724909159092,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -17713,6 +17713,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3880827,
             "range": "± 60999",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a2fb8ced5a7912b438994bd856f1edbf0e1e363f",
+          "message": "fix(dojo-bindgen): ensure typescript plugin output deterministic order (#2359)\n\n* feat: ensure models and contracts are processed in order by Typescript plugin\r\n\r\n* fix: run clippy on the whole workspace\r\n\r\n* feat: add ordering to the unity plugin",
+          "timestamp": "2024-08-28T23:07:04-06:00",
+          "tree_id": "2d143291699de0d739e7d7ef3674ee56a7c8397c",
+          "url": "https://github.com/dojoengine/dojo/commit/a2fb8ced5a7912b438994bd856f1edbf0e1e363f"
+        },
+        "date": 1724909158157,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17393096,
+            "range": "± 222364",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3736697,
+            "range": "± 43132",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3602978500,
+            "range": "± 751317389",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3864380,
+            "range": "± 17490",
             "unit": "ns/iter"
           }
         ]
