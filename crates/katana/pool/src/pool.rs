@@ -1,6 +1,6 @@
 use core::fmt;
+use std::collections::{btree_set::IntoIter, BTreeSet};
 use std::sync::Arc;
-use std::vec::IntoIter;
 
 use futures::channel::mpsc::{channel, Receiver, Sender};
 use katana_primitives::transaction::TxHash;
@@ -24,8 +24,8 @@ where
 
 #[derive(Debug)]
 struct Inner<T, V, O: PoolOrd> {
-    /// List of all valid txs in the pool
-    transactions: RwLock<Vec<PendingTx<T, O>>>,
+    /// List of all valid txs in the pool.
+    transactions: RwLock<BTreeSet<PendingTx<T, O>>>,
 
     /// listeners for incoming txs
     listeners: RwLock<Vec<Sender<TxHash>>>,
@@ -108,7 +108,7 @@ where
                         let tx = PendingTx::new(id, tx, priority);
 
                         // insert the tx in the pool
-                        self.inner.transactions.write().push(tx);
+                        self.inner.transactions.write().insert(tx);
                         self.notify_listener(hash);
 
                         Ok(hash)
@@ -223,7 +223,7 @@ pub(crate) mod test_utils {
         bytes
     }
 
-    #[derive(Clone, Debug)]
+    #[derive(Clone, Debug, PartialEq, Eq)]
     pub struct PoolTx {
         tip: u64,
         nonce: Nonce,
@@ -324,10 +324,9 @@ mod tests {
 
     use super::test_utils::*;
     use super::Pool;
-    use crate::ordering::{self, FiFo};
-    use crate::pool::test_utils;
+    use crate::ordering::FiFo;
     use crate::tx::PoolTransaction;
-    use crate::validation::{NoopValidator, ValidationOutcome, Validator};
+    use crate::validation::NoopValidator;
     use crate::TransactionPool;
 
     /// Tx pool that uses a noop validator and a first-come-first-serve ordering.
@@ -422,109 +421,6 @@ mod tests {
 
         // we should be notified exactly the same number of txs as we added
         assert_eq!(counter, txs.len());
-    }
-
-    #[test]
-    #[ignore = "Rejected pool not implemented yet"]
-    fn transactions_rejected() {
-        let all = [
-            PoolTx::new().with_tip(5),
-            PoolTx::new().with_tip(0),
-            PoolTx::new().with_tip(15),
-            PoolTx::new().with_tip(8),
-            PoolTx::new().with_tip(12),
-            PoolTx::new().with_tip(10),
-            PoolTx::new().with_tip(1),
-        ];
-
-        // create a pool with a validator that rejects txs with tip < 10
-        let pool = Pool::new(test_utils::TipValidator::new(10), FiFo::new());
-
-        // Extract the expected valid and invalid transactions from the all list
-        let (expected_valids, expected_invalids) = pool
-            .validator()
-            .validate_all(all.to_vec())
-            .into_iter()
-            .filter_map(|res| res.ok())
-            .fold((Vec::new(), Vec::new()), |mut acc, res| match res {
-                ValidationOutcome::Valid(tx) => {
-                    acc.0.push(tx);
-                    acc
-                }
-
-                ValidationOutcome::Invalid { tx, .. } => {
-                    acc.1.push(tx);
-                    acc
-                }
-
-                ValidationOutcome::Dependent { tx, .. } => {
-                    acc.0.push(tx);
-                    acc
-                }
-            });
-
-        assert_eq!(expected_valids.len(), 3);
-        assert_eq!(expected_invalids.len(), 4);
-
-        // Add all transactions to the pool
-        all.iter().for_each(|tx| {
-            let _ = pool.add_transaction(tx.clone());
-        });
-
-        // Check that all transactions should be in the pool regardless of validity
-        assert!(all.iter().all(|tx| pool.get(tx.hash()).is_some()));
-        assert_eq!(pool.size(), all.len());
-
-        // Pending transactions should only contain the valid transactions
-        let pendings = pool.take_transactions().collect::<Vec<_>>();
-        assert_eq!(pendings.len(), expected_valids.len());
-
-        // bcs its a fcfs pool, the order of the pending txs should be the as its order of insertion
-        // (position in the array)
-        for (actual, expected) in pendings.iter().zip(expected_valids.iter()) {
-            assert_eq!(actual.tx.hash(), expected.hash());
-        }
-
-        // // rejected_txs should contain all the invalid txs
-        // assert_eq!(pool.inner.rejected.read().len(), expected_invalids.len());
-        // for tx in expected_invalids.iter() {
-        //     assert!(pool.inner.rejected.read().contains_key(&tx.hash()));
-        // }
-    }
-
-    #[test]
-    #[ignore = "Txs ordering not fully implemented yet"]
-    fn txs_ordering() {
-        // Create mock transactions with different tips and in random order
-        let txs = [
-            PoolTx::new().with_tip(1),
-            PoolTx::new().with_tip(6),
-            PoolTx::new().with_tip(3),
-            PoolTx::new().with_tip(2),
-            PoolTx::new().with_tip(5),
-            PoolTx::new().with_tip(4),
-            PoolTx::new().with_tip(7),
-        ];
-
-        // Create a pool with tip-based ordering
-        let pool = Pool::new(NoopValidator::new(), ordering::Tip::new());
-
-        // Add transactions to the pool
-        txs.iter().for_each(|tx| {
-            let _ = pool.add_transaction(tx.clone());
-        });
-
-        // Get pending transactions
-        let pending = pool.take_transactions().collect::<Vec<_>>();
-
-        // Assert that the transactions are ordered by tip (highest to lowest)
-        assert_eq!(pending[0].tx.tip(), 7);
-        assert_eq!(pending[1].tx.tip(), 6);
-        assert_eq!(pending[2].tx.tip(), 5);
-        assert_eq!(pending[3].tx.tip(), 4);
-        assert_eq!(pending[4].tx.tip(), 3);
-        assert_eq!(pending[5].tx.tip(), 2);
-        assert_eq!(pending[6].tx.tip(), 1);
     }
 
     #[test]
