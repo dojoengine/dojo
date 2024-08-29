@@ -1,6 +1,5 @@
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
-use std::io::Read;
 use std::net::Ipv4Addr;
 use std::path::Path;
 use std::str::FromStr;
@@ -95,20 +94,12 @@ impl<P: Provider + Sync> Relay<P> {
             })
             .expect("Failed to create WebRTC transport")
             .with_other_transport(|key| {
-                let mut transport = websocket::WsConfig::new(
+                let transport = websocket::WsConfig::new(
                     dns::tokio::Transport::system(tcp::tokio::Transport::new(
                         tcp::Config::default(),
                     ))
                     .unwrap(),
                 );
-
-                let rcgen_cert =
-                    rcgen::generate_simple_self_signed(vec!["localhost".to_string()]).unwrap();
-                let priv_key = websocket::tls::PrivateKey::new(rcgen_cert.key_pair.serialize_der());
-                let bytes: Result<Vec<_>, _> = rcgen_cert.cert.der().bytes().collect();
-                let cert = websocket::tls::Certificate::new(bytes.unwrap());
-                transport
-                    .set_tls_config(websocket::tls::Config::new(priv_key, vec![cert]).unwrap());
 
                 transport
                     .upgrade(Version::V1)
@@ -168,10 +159,10 @@ impl<P: Provider + Sync> Relay<P> {
             .with(Protocol::WebRTCDirect);
         swarm.listen_on(listen_addr_webrtc.clone())?;
 
-        // WSS
+        // WS
         let listen_addr_wss = Multiaddr::from(Ipv4Addr::UNSPECIFIED)
             .with(Protocol::Tcp(port_websocket))
-            .with(Protocol::Wss("/".to_string().into()));
+            .with(Protocol::Ws("/".to_string().into()));
         swarm.listen_on(listen_addr_wss.clone())?;
 
         // Clients will send their messages to the "message" topic
