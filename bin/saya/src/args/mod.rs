@@ -238,7 +238,7 @@ mod tests {
         assert!(config.skip_publishing_proof);
         assert_eq!(config.mode, SayaMode::Persistent);
         assert_eq!(
-            config.piltover_contract.to_string().as_str(),
+            config.piltover_contract.to_hex_string(),
             "0x65c0d01ef63197f00372cbb93bb32a7c49b70d3e82c5e0880d7912f4421e1c4"
         );
 
