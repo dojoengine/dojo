@@ -1,7 +1,6 @@
 use anyhow::Context;
 use cairo_proof_parser::to_felts;
-use dojo_world::migration::TxnConfig;
-use dojo_world::utils::TransactionExt;
+use dojo_utils::{TransactionExt, TxnConfig};
 use serde::Serialize;
 use starknet::accounts::{Account, Call};
 use starknet::core::utils::get_selector_from_name;

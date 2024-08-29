@@ -39,11 +39,13 @@ pub enum ProverIdentifier {
     Http(Arc<HttpProverParams>),
 }
 
+#[derive(Debug)]
 pub enum ProveDiffProgram {
     Differ,
     Merger,
 }
 
+#[derive(Debug)]
 pub enum ProveProgram {
     DiffProgram(ProveDiffProgram),
     Checker, // Contract specific checker program.
