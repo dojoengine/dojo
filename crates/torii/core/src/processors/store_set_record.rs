@@ -6,6 +6,7 @@ use starknet::providers::Provider;
 use tracing::{info, warn};
 
 use super::EventProcessor;
+use crate::processors::MODEL_INDEX;
 use crate::sql::Sql;
 
 pub(crate) const LOG_TARGET: &str = "torii_core::processors::store_set_record";
@@ -48,8 +49,7 @@ where
         event_id: &str,
         event: &Event,
     ) -> Result<(), Error> {
-        // Event selector is the first key.
-        let mut offset = 1;
+        let mut offset = MODEL_INDEX;
         let model_selector = event.keys[offset];
         offset += 1;
 

@@ -6,7 +6,7 @@ use starknet::providers::Provider;
 use tracing::info;
 
 use super::EventProcessor;
-use crate::processors::{ENTITY_ID_INDEX, MODEL_INDEX};
+use crate::processors::MODEL_INDEX;
 use crate::sql::Sql;
 
 pub(crate) const LOG_TARGET: &str = "torii_core::processors::store_del_record";
@@ -24,7 +24,11 @@ where
     }
 
     fn validate(&self, event: &Event) -> bool {
-        if event.keys.len() > 1 {
+        // At least 3:
+        // 0: Event selector
+        // 1: table
+        // 2: entity_id
+        if event.keys.len() != 3 {
             info!(
                 target: LOG_TARGET,
                 event_key = %<StoreDelRecordProcessor as EventProcessor<P>>::event_key(self),
@@ -45,7 +49,9 @@ where
         event_id: &str,
         event: &Event,
     ) -> Result<(), Error> {
-        let selector = event.keys[MODEL_INDEX];
+        let mut offset = MODEL_INDEX;
+        let selector = event.keys[offset];
+        offset += 1;
 
         let model = db.model(selector).await?;
 
@@ -55,7 +61,7 @@ where
             "Store delete record."
         );
 
-        let entity_id = event.keys[ENTITY_ID_INDEX];
+        let entity_id = event.keys[offset];
         let entity = model.schema;
 
         db.delete_entity(entity_id, entity, event_id, block_timestamp).await?;

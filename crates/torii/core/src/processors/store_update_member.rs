@@ -8,12 +8,10 @@ use starknet::providers::Provider;
 use tracing::{info, warn};
 
 use super::EventProcessor;
-use crate::processors::{ENTITY_ID_INDEX, MODEL_INDEX};
+use crate::processors::MODEL_INDEX;
 use crate::sql::Sql;
 
 pub(crate) const LOG_TARGET: &str = "torii_core::processors::store_update_member";
-
-const MEMBER_INDEX: usize = 2;
 
 #[derive(Default, Debug)]
 pub struct StoreUpdateMemberProcessor;
@@ -54,9 +52,14 @@ where
         event_id: &str,
         event: &Event,
     ) -> Result<(), Error> {
-        let selector = event.keys[MODEL_INDEX];
-        let entity_id = event.keys[ENTITY_ID_INDEX];
-        let member_selector = event.keys[MEMBER_INDEX];
+        let mut offset = MODEL_INDEX;
+        let selector = event.keys[offset];
+        offset += 1;
+
+        let entity_id = event.keys[offset];
+        offset += 1;
+
+        let member_selector = event.keys[offset];
 
         let model = db.model(selector).await?;
         let schema = model.schema;
