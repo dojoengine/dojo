@@ -12,6 +12,8 @@ use serde::Serialize;
 use serde_json::Value;
 use walkdir::WalkDir;
 
+/// Verifies all classes declared during migration.
+/// Only supported on hosted networks (non-localhost).
 pub async fn walnut_verify_migration_strategy(
     ws: &Workspace<'_>,
     rpc_url: String,
