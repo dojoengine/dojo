@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1724951660285,
+  "lastUpdate": 1724951664701,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -17857,6 +17857,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3958225,
             "range": "± 251244",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "adbaad790508f41335be7be570910c7d5b6503b5",
+          "message": "fix(katana): per transaction validator (#2362)\n\nCreate a new validator instance for every transaction to be validated instead of creating a single instance to be used throughout the duration of a block",
+          "timestamp": "2024-08-30T00:54:53+08:00",
+          "tree_id": "714ddbb4503fdb5511f3abe5d00d0c6d0c1c7f1a",
+          "url": "https://github.com/dojoengine/dojo/commit/adbaad790508f41335be7be570910c7d5b6503b5"
+        },
+        "date": 1724951663197,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17635247,
+            "range": "± 274406",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3878168,
+            "range": "± 161561",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3971444656,
+            "range": "± 837888090",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3911594,
+            "range": "± 205794",
             "unit": "ns/iter"
           }
         ]
