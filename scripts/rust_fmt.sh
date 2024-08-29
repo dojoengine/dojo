@@ -1,3 +1,3 @@
 #!/bin/bash
 
-cargo +nightly-2024-08-28 fmt --check --all -- "$@"
+cargo +nightly-2024-08-27 fmt --check --all -- "$@"
