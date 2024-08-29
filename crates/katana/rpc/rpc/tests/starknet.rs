@@ -12,26 +12,28 @@ use dojo_test_utils::sequencer::{get_default_test_starknet_config, TestSequencer
 use indexmap::IndexSet;
 use katana_core::sequencer::SequencerConfig;
 use katana_primitives::genesis::constant::{
-    DEFAULT_FEE_TOKEN_ADDRESS, DEFAULT_PREFUNDED_ACCOUNT_BALANCE, DEFAULT_UDC_ADDRESS,
+    DEFAULT_FEE_TOKEN_ADDRESS, DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH,
+    DEFAULT_PREFUNDED_ACCOUNT_BALANCE, DEFAULT_UDC_ADDRESS,
 };
 use starknet::accounts::{
-    Account, AccountError, Call, ConnectedAccount, ExecutionEncoding, SingleOwnerAccount,
+    Account, AccountError, AccountFactory, Call, ConnectedAccount, ExecutionEncoding,
+    OpenZeppelinAccountFactory, SingleOwnerAccount,
 };
 use starknet::core::types::contract::legacy::LegacyContractClass;
 use starknet::core::types::{
-    BlockId, BlockTag, DeclareTransactionReceipt, ExecutionResult, Felt, StarknetError,
-    TransactionFinalityStatus, TransactionReceipt,
+    BlockId, BlockTag, DeclareTransactionReceipt, DeployAccountTransactionReceipt, ExecutionResult,
+    Felt, StarknetError, TransactionFinalityStatus, TransactionReceipt,
 };
 use starknet::core::utils::get_contract_address;
 use starknet::macros::{felt, selector};
 use starknet::providers::{Provider, ProviderError};
-use starknet::signers::{LocalWallet, SigningKey};
+use starknet::signers::{LocalWallet, Signer, SigningKey};
 use tokio::sync::Mutex;
 
 mod common;
 
 #[tokio::test]
-async fn test_send_declare_and_deploy_contract() -> Result<()> {
+async fn declare_and_deploy_contract() -> Result<()> {
     let sequencer =
         TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
 
@@ -86,7 +88,7 @@ async fn test_send_declare_and_deploy_contract() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_send_declare_and_deploy_legacy_contract() -> Result<()> {
+async fn declare_and_deploy_legacy_contract() -> Result<()> {
     let sequencer =
         TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
 
@@ -134,6 +136,63 @@ async fn test_send_declare_and_deploy_legacy_contract() -> Result<()> {
 
     // make sure the contract is deployed
     let res = provider.get_class_hash_at(BlockId::Tag(BlockTag::Pending), address).await?;
+    assert_eq!(res, class_hash);
+
+    Ok(())
+}
+
+#[rstest::rstest]
+#[tokio::test]
+async fn deploy_account(
+    #[values(true, false)] disable_fee: bool,
+    #[values(None, Some(1000))] block_time: Option<u64>,
+) -> Result<()> {
+    // setup test sequencer with the given configuration
+    let mut starknet_config = get_default_test_starknet_config();
+    starknet_config.disable_fee = disable_fee;
+    let sequencer_config = SequencerConfig { block_time, ..Default::default() };
+
+    let sequencer = TestSequencer::start(sequencer_config, starknet_config).await;
+
+    let provider = sequencer.provider();
+    let funding_account = sequencer.account();
+    let chain_id = provider.chain_id().await?;
+
+    // Precompute the contract address of the new account with the given parameters:
+    let signer = LocalWallet::from(SigningKey::from_random());
+    let class_hash = DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH;
+    let salt = felt!("0x123");
+    let ctor_args = [signer.get_public_key().await?.scalar()];
+    let computed_address = get_contract_address(salt, class_hash, &ctor_args, Felt::ZERO);
+
+    // Fund the new account
+    abigen_legacy!(FeeToken, "crates/katana/rpc/rpc/tests/test_data/erc20.json");
+    let contract = FeeToken::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), &funding_account);
+
+    // send enough tokens to the new_account's address just to send the deploy account tx
+    let amount = Uint256 { low: felt!("0x100000000000"), high: Felt::ZERO };
+    let recipient = computed_address;
+    let res = contract.transfer(&recipient, &amount).send().await?;
+    dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await?;
+
+    // starknet-rs's utility for deploying an OpenZeppelin account
+    let factory = OpenZeppelinAccountFactory::new(class_hash, chain_id, &signer, &provider).await?;
+    let res = factory.deploy_v1(salt).send().await?;
+    // the contract address in the send tx result must be the same as the computed one
+    assert_eq!(res.contract_address, computed_address);
+
+    let receipt = dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await?;
+    assert_matches!(
+        receipt.receipt,
+        TransactionReceipt::DeployAccount(DeployAccountTransactionReceipt { contract_address, .. })  => {
+            // the contract address in the receipt must be the same as the computed one
+            assert_eq!(contract_address, computed_address)
+        }
+    );
+
+    // Verify the `getClassHashAt` returns the same class hash that we use for the account
+    // deployment
+    let res = provider.get_class_hash_at(BlockId::Tag(BlockTag::Pending), computed_address).await?;
     assert_eq!(res, class_hash);
 
     Ok(())
