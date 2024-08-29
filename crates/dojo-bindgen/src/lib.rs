@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
@@ -209,6 +210,13 @@ fn filter_model_tokens(tokens: &TokenizedAbi) -> TokenizedAbi {
     }
 
     TokenizedAbi { structs, enums, ..Default::default() }
+}
+
+/// Compares two tokens by their type name.
+pub fn compare_tokens_by_type_name(a: &Token, b: &Token) -> Ordering {
+    let a_name = a.to_composite().expect("composite expected").type_name_or_alias();
+    let b_name = b.to_composite().expect("composite expected").type_name_or_alias();
+    a_name.cmp(&b_name)
 }
 
 #[cfg(test)]

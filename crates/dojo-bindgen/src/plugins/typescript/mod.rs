@@ -1,4 +1,3 @@
-use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
@@ -8,7 +7,7 @@ use dojo_world::contracts::naming;
 
 use crate::error::BindgenResult;
 use crate::plugins::BuiltinPlugin;
-use crate::{DojoContract, DojoData, DojoModel};
+use crate::{compare_tokens_by_type_name, DojoContract, DojoData, DojoModel};
 
 #[cfg(test)]
 mod tests;
@@ -279,10 +278,10 @@ export const {name}Definition = {{
             let tokens = &model.tokens;
 
             let mut sorted_structs = tokens.structs.clone();
-            sorted_structs.sort_by(sort_tokens_by_name);
+            sorted_structs.sort_by(compare_tokens_by_type_name);
 
             let mut sorted_enums = tokens.enums.clone();
-            sorted_enums.sort_by(sort_tokens_by_name);
+            sorted_enums.sort_by(compare_tokens_by_type_name);
 
             for token in &sorted_enums {
                 handled_tokens.push(token.to_composite().unwrap().to_owned());
@@ -616,10 +615,4 @@ impl BuiltinPlugin for TypescriptPlugin {
 
         Ok(out)
     }
-}
-
-fn sort_tokens_by_name(a: &Token, b: &Token) -> Ordering {
-    let a_name = a.to_composite().expect("composite expected").type_name_or_alias();
-    let b_name = b.to_composite().expect("composite expected").type_name_or_alias();
-    a_name.cmp(&b_name)
 }
