@@ -177,7 +177,6 @@ impl<P: Provider + Sync> Engine<P> {
             match self
                 .process_transaction_with_receipt(
                     *transaction.transaction_hash(),
-                    // &transaction,
                     block_number,
                     block.timestamp,
                 )
@@ -326,7 +325,6 @@ impl<P: Provider + Sync> Engine<P> {
 
             self.process_transaction_with_events(
                 transaction_hash,
-                // &transaction,
                 events.as_slice(),
                 block_number,
                 blocks[&block_number],
@@ -367,7 +365,6 @@ impl<P: Provider + Sync> Engine<P> {
     async fn process_transaction_with_events(
         &mut self,
         transaction_hash: Felt,
-        // transaction: &Transaction,
         events: &[&EmittedEvent],
         block_number: u64,
         block_timestamp: u64,
@@ -410,7 +407,6 @@ impl<P: Provider + Sync> Engine<P> {
     async fn process_transaction_with_receipt(
         &mut self,
         transaction_hash: Felt,
-        // transaction: &Transaction,
         block_number: u64,
         block_timestamp: u64,
     ) -> Result<bool> {
