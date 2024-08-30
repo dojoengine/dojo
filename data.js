@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1724974125377,
+  "lastUpdate": 1724976660157,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -18097,6 +18097,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3978853,
             "range": "± 107090",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1d32ab1895978c14d71bcefc4ab7b584fb29cc93",
+          "message": "feat(sozo): ensure sozo errors with dojo-core version mismatch (#2364)\n\n* feat: ensure sozo errors with dojo-core version mismatch\r\n\r\n* fix: ensure only tag with git is checked for the match",
+          "timestamp": "2024-08-29T17:52:13-06:00",
+          "tree_id": "bf9b652d55afcada003c5a771770e08385c77d4b",
+          "url": "https://github.com/dojoengine/dojo/commit/1d32ab1895978c14d71bcefc4ab7b584fb29cc93"
+        },
+        "date": 1724976658561,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17526032,
+            "range": "± 202601",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3766548,
+            "range": "± 73893",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3649465265,
+            "range": "± 798913098",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3873747,
+            "range": "± 31768",
             "unit": "ns/iter"
           }
         ]
