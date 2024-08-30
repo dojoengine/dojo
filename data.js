@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1724976660157,
+  "lastUpdate": 1724976744295,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -18145,6 +18145,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3873747,
             "range": "± 31768",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fea03f45eb62152e0d8db2947e732935b59999ab",
+          "message": "feat: add prefixes for sozo call and better output message (#2366)",
+          "timestamp": "2024-08-29T17:52:24-06:00",
+          "tree_id": "1d4eb4e68514f2edeea29eb9304e26729c8ef3c5",
+          "url": "https://github.com/dojoengine/dojo/commit/fea03f45eb62152e0d8db2947e732935b59999ab"
+        },
+        "date": 1724976742688,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17705665,
+            "range": "± 255393",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3912389,
+            "range": "± 285153",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3838090128,
+            "range": "± 754644360",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4178109,
+            "range": "± 210195",
             "unit": "ns/iter"
           }
         ]
