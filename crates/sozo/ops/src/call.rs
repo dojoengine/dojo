@@ -1,12 +1,15 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use dojo_world::contracts::WorldContractReader;
+use scarb_ui::Ui;
 use starknet::core::types::{BlockId, BlockTag, Felt, FunctionCall};
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
 
+use crate::migration::ui::MigrationUi;
 use crate::utils::{get_contract_address_from_reader, parse_block_id};
 
 pub async fn call<P: Provider + Sync + Send>(
+    ui: &Ui,
     world_reader: WorldContractReader<P>,
     tag_or_address: String,
     entrypoint: String,
@@ -20,7 +23,7 @@ pub async fn call<P: Provider + Sync + Send>(
         BlockId::Tag(BlockTag::Pending)
     };
 
-    let output = world_reader
+    let res = world_reader
         .provider()
         .call(
             FunctionCall {
@@ -30,10 +33,23 @@ pub async fn call<P: Provider + Sync + Send>(
             },
             block_id,
         )
-        .await
-        .with_context(|| format!("Failed to call {entrypoint}"))?;
+        .await;
 
-    println!("[ {} ]", output.iter().map(|o| format!("0x{:x}", o)).collect::<Vec<_>>().join(" "));
+    match res {
+        Ok(output) => {
+            println!(
+                "[ {} ]",
+                output.iter().map(|o| format!("0x{:x}", o)).collect::<Vec<_>>().join(" ")
+            );
+        }
+        Err(e) => {
+            ui.print_hidden_sub(format!("{:?}", e));
+            anyhow::bail!(format!(
+                "Error calling entrypoint `{}` on address: {:#066x}",
+                entrypoint, contract_address
+            ));
+        }
+    }
 
     Ok(())
 }

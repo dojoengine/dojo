@@ -11,6 +11,7 @@ use scarb_ui::args::{FeaturesSpec, PackagesFilter};
 use sozo_ops::statistics::{get_contract_statistics_for_dir, ContractStatistics};
 use tracing::trace;
 
+use crate::commands::check_package_dojo_version;
 use crate::commands::clean::CleanArgs;
 
 const BYTECODE_SIZE_LABEL: &str = "Bytecode size [in felts]\n(Sierra, Casm)";
@@ -57,6 +58,10 @@ impl BuildArgs {
         } else {
             ws.members().collect()
         };
+
+        for p in &packages {
+            check_package_dojo_version(&ws, p)?;
+        }
 
         let profile_name =
             ws.current_profile().expect("Scarb profile is expected at this point.").to_string();

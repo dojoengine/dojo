@@ -24,7 +24,7 @@ dependencies = [
 
 [[package]]
 name = "dojo_examples"
-version = "1.0.0-alpha.4"
+version = "1.0.0-alpha.8"
 dependencies = [
  "armory",
  "bestiary",

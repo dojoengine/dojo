@@ -1,5 +1,6 @@
 use dojo_world::contracts::WorldContractReader;
 use katana_runner::{KatanaRunner, KatanaRunnerConfig};
+use scarb_ui::Ui;
 use starknet::accounts::SingleOwnerAccount;
 use starknet::core::types::Felt;
 use starknet::providers::jsonrpc::HttpTransport;
@@ -21,8 +22,11 @@ async fn call_with_bad_address() {
     let provider = sequencer.provider();
     let world_reader = WorldContractReader::new(world.address, provider);
 
+    let ui = Ui::new(scarb_ui::Verbosity::Verbose, scarb_ui::OutputFormat::Text);
+
     assert!(
         call::call(
+            &ui,
             world_reader,
             "0xBadCoffeeBadCode".to_string(),
             ENTRYPOINT.to_string(),
@@ -43,8 +47,11 @@ async fn call_with_bad_name() {
     let provider = sequencer.provider();
     let world_reader = WorldContractReader::new(world.address, provider);
 
+    let ui = Ui::new(scarb_ui::Verbosity::Verbose, scarb_ui::OutputFormat::Text);
+
     assert!(
         call::call(
+            &ui,
             world_reader,
             "BadName".to_string(),
             ENTRYPOINT.to_string(),
@@ -65,8 +72,11 @@ async fn call_with_bad_entrypoint() {
     let provider = sequencer.provider();
     let world_reader = WorldContractReader::new(world.address, provider);
 
+    let ui = Ui::new(scarb_ui::Verbosity::Verbose, scarb_ui::OutputFormat::Text);
+
     assert!(
         call::call(
+            &ui,
             world_reader,
             CONTRACT_TAG.to_string(),
             "BadEntryPoint".to_string(),
@@ -87,8 +97,11 @@ async fn call_with_bad_calldata() {
     let provider = sequencer.provider();
     let world_reader = WorldContractReader::new(world.address, provider);
 
+    let ui = Ui::new(scarb_ui::Verbosity::Verbose, scarb_ui::OutputFormat::Text);
+
     assert!(
         call::call(
+            &ui,
             world_reader,
             CONTRACT_TAG.to_string(),
             ENTRYPOINT.to_string(),
@@ -109,9 +122,17 @@ async fn call_with_contract_name() {
     let provider = sequencer.provider();
     let world_reader = WorldContractReader::new(world.address, provider);
 
-    let r =
-        call::call(world_reader, CONTRACT_TAG.to_string(), ENTRYPOINT.to_string(), vec![], None)
-            .await;
+    let ui = Ui::new(scarb_ui::Verbosity::Verbose, scarb_ui::OutputFormat::Text);
+
+    let r = call::call(
+        &ui,
+        world_reader,
+        CONTRACT_TAG.to_string(),
+        ENTRYPOINT.to_string(),
+        vec![],
+        None,
+    )
+    .await;
 
     assert!(r.is_ok());
 }
@@ -120,6 +141,8 @@ async fn call_with_contract_name() {
 async fn call_with_contract_address() {
     let config = KatanaRunnerConfig::default().with_db_dir("/tmp/spawn-and-move-db");
     let sequencer = KatanaRunner::new_with_config(config).expect("Failed to start runner.");
+
+    let ui = Ui::new(scarb_ui::Verbosity::Verbose, scarb_ui::OutputFormat::Text);
 
     let world = setup::setup_with_world(&sequencer).await.unwrap();
     let provider = sequencer.provider();
@@ -133,6 +156,7 @@ async fn call_with_contract_address() {
 
     assert!(
         call::call(
+            &ui,
             world_reader,
             format!("{:#x}", contract_address),
             ENTRYPOINT.to_string(),
