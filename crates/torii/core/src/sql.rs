@@ -16,8 +16,7 @@ use starknet_crypto::poseidon_hash_many;
 use tracing::debug;
 
 use crate::cache::{Model, ModelCache};
-use crate::query_queue::{Argument, QueryQueue};
-use crate::simple_broker::SimpleBroker;
+use crate::query_queue::{Argument, BrokerMessage, QueryQueue};
 use crate::types::{
     Entity as EntityUpdated, Event as EventEmitted, EventMessage as EventMessageUpdated,
     Model as ModelRegistered,
@@ -38,7 +37,7 @@ mod test;
 pub struct Sql {
     world_address: Felt,
     pub pool: Pool<Sqlite>,
-    query_queue: QueryQueue,
+    pub query_queue: QueryQueue,
     model_cache: Arc<ModelCache>,
 }
 
@@ -75,7 +74,6 @@ impl Sql {
 
         let indexer: (Option<i64>, Option<String>, String) =
             indexer_query.fetch_one(&mut *conn).await?;
-        assert!(indexer.2 == WORLD_CONTRACT_TYPE);
         Ok((
             indexer.0.map(|h| h.try_into().expect("doesn't fit in u64")).unwrap_or(0),
             indexer.1.map(|f| Felt::from_str(&f)).transpose()?,
@@ -142,9 +140,8 @@ impl Sql {
             &mut 0,
             &mut 0,
         );
-        self.query_queue.execute_all().await?;
-
-        SimpleBroker::publish(model_registered);
+        self.execute().await?;
+        self.query_queue.push_publish(BrokerMessage::ModelRegistered(model_registered));
 
         Ok(())
     }
@@ -201,9 +198,8 @@ impl Sql {
             block_timestamp,
             &vec![],
         );
-        self.query_queue.execute_all().await?;
 
-        SimpleBroker::publish(entity_updated);
+        self.query_queue.push_publish(BrokerMessage::EntityUpdated(entity_updated));
 
         Ok(())
     }
@@ -260,9 +256,8 @@ impl Sql {
             block_timestamp,
             &vec![],
         );
-        self.query_queue.execute_all().await?;
 
-        SimpleBroker::publish(event_message_updated);
+        self.query_queue.push_publish(BrokerMessage::EventMessageUpdated(event_message_updated));
 
         Ok(())
     }
@@ -291,7 +286,7 @@ impl Sql {
             block_timestamp,
             &vec![],
         );
-        self.query_queue.execute_all().await?;
+        self.execute().await?;
 
         let mut update_entity = sqlx::query_as::<_, EntityUpdated>(
             "UPDATE entities SET updated_at=CURRENT_TIMESTAMP, executed_at=?, event_id=? WHERE id \
@@ -304,8 +299,7 @@ impl Sql {
         .await?;
 
         update_entity.updated_model = Some(wrapped_ty);
-
-        SimpleBroker::publish(update_entity);
+        self.query_queue.push_publish(BrokerMessage::EntityUpdated(update_entity));
 
         Ok(())
     }
@@ -321,7 +315,7 @@ impl Sql {
         let path = vec![entity.name()];
         // delete entity models data
         self.build_delete_entity_queries_recursive(path, &entity_id, &entity);
-        self.query_queue.execute_all().await?;
+        self.execute().await?;
 
         let deleted_entity_model =
             sqlx::query("DELETE FROM entity_model WHERE entity_id = ? AND model_id = ?")
@@ -363,7 +357,7 @@ impl Sql {
             update_entity.deleted = true;
         }
 
-        SimpleBroker::publish(update_entity);
+        self.query_queue.push_publish(BrokerMessage::EntityUpdated(update_entity));
         Ok(())
     }
 
@@ -407,7 +401,6 @@ impl Sql {
         arguments.push(Argument::FieldElement(*resource));
 
         self.query_queue.enqueue(statement, arguments);
-        self.query_queue.execute_all().await?;
 
         Ok(())
     }
@@ -544,14 +537,16 @@ impl Sql {
             vec![id, keys, data, hash, executed_at],
         );
 
-        SimpleBroker::publish(EventEmitted {
+        let emitted = EventEmitted {
             id: event_id.to_string(),
             keys: felts_sql_string(&event.keys),
             data: felts_sql_string(&event.data),
             transaction_hash: format!("{:#x}", transaction_hash),
             created_at: Utc::now(),
             executed_at: must_utc_datetime_from_timestamp(block_timestamp),
-        });
+        };
+
+        self.query_queue.push_publish(BrokerMessage::EventEmitted(emitted));
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -1166,8 +1161,9 @@ impl Sql {
         });
     }
 
+    /// Execute all queries in the queue
     pub async fn execute(&mut self) -> Result<()> {
-        debug!("Executing {} queries fromt the queue", self.query_queue.queue.len());
+        debug!("Executing {} queries from the queue", self.query_queue.queue.len());
         self.query_queue.execute_all().await?;
 
         Ok(())
