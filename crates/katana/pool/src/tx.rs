@@ -94,11 +94,11 @@ impl<T, O: PoolOrd> PartialOrd for PendingTx<T, O> {
     }
 }
 
-/// When two transactions have the same priority, we want to prioritize the one that was added
-/// first. So, when an incoming transaction with similar priority value is added to the
-/// [BTreeSet](std::collections::BTreeSet), the transaction is assigned a 'greater'
-/// [Ordering](std::cmp::Ordering) so that it will be placed after the existing ones. This is
-/// because items in a BTree is ordered from lowest to highest.
+// When two transactions have the same priority, we want to prioritize the one that was added
+// first. So, when an incoming transaction with similar priority value is added to the
+// [BTreeSet](std::collections::BTreeSet), the transaction is assigned a 'greater'
+// [Ordering](std::cmp::Ordering) so that it will be placed after the existing ones. This is
+// because items in a BTree is ordered from lowest to highest.
 impl<T, O: PoolOrd> Ord for PendingTx<T, O> {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         match self.priority.cmp(&other.priority) {
