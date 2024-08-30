@@ -33,6 +33,7 @@ impl<P: Provider + Sync> Default for Processors<P> {
 }
 
 pub(crate) const LOG_TARGET: &str = "torii_core::engine";
+pub const QUERY_QUEUE_BATCH_SIZE: usize = 1000;
 
 #[derive(Debug)]
 pub struct EngineConfig {
@@ -339,6 +340,10 @@ impl<P: Provider + Sync> Engine<P> {
 
                 self.process_block(block_number, blocks[&block_number]).await?;
                 last_block = block_number;
+            }
+
+            if self.db.query_queue.queue.len() >= QUERY_QUEUE_BATCH_SIZE {
+                self.db.execute().await?;
             }
         }
 
