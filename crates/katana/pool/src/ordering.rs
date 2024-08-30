@@ -157,6 +157,7 @@ mod tests {
     fn tip_based_ordering() {
         // Create mock transactions with different tips and in random order
         let txs = [
+            PoolTx::new().with_tip(2),
             PoolTx::new().with_tip(1),
             PoolTx::new().with_tip(6),
             PoolTx::new().with_tip(3),
@@ -181,12 +182,30 @@ mod tests {
 
         // Assert that the transactions are ordered by tip (highest to lowest)
         assert_eq!(pending[0].tx.tip(), 7);
+        assert_eq!(pending[0].tx.hash(), txs[8].hash());
+
         assert_eq!(pending[1].tx.tip(), 6);
+        assert_eq!(pending[1].tx.hash(), txs[2].hash());
+
         assert_eq!(pending[2].tx.tip(), 5);
+        assert_eq!(pending[2].tx.hash(), txs[6].hash());
+
         assert_eq!(pending[3].tx.tip(), 4);
+        assert_eq!(pending[3].tx.hash(), txs[7].hash());
+
         assert_eq!(pending[4].tx.tip(), 3);
+        assert_eq!(pending[4].tx.hash(), txs[3].hash());
+
         assert_eq!(pending[5].tx.tip(), 2);
+        assert_eq!(pending[5].tx.hash(), txs[0].hash());
+
         assert_eq!(pending[6].tx.tip(), 2);
-        assert_eq!(pending[7].tx.tip(), 1);
+        assert_eq!(pending[6].tx.hash(), txs[4].hash());
+
+        assert_eq!(pending[7].tx.tip(), 2);
+        assert_eq!(pending[7].tx.hash(), txs[5].hash());
+
+        assert_eq!(pending[8].tx.tip(), 1);
+        assert_eq!(pending[8].tx.hash(), txs[1].hash());
     }
 }
