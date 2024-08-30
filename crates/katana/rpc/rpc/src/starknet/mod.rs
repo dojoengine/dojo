@@ -5,8 +5,6 @@ mod trace;
 mod write;
 
 use std::cmp::Ordering;
-use std::iter::Skip;
-use std::slice::Iter;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -346,99 +344,209 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         let provider = self.inner.backend.blockchain.provider();
         let mut current_block = 0;
 
-        let mut from =
-            provider.convert_block_id(from_block)?.ok_or(StarknetApiError::BlockNotFound)?;
-        let to = provider.convert_block_id(to_block)?.ok_or(StarknetApiError::BlockNotFound)?;
+        // convert block id to block number
+        let from = provider.convert_block_id(from_block)?;
+        let to = provider.convert_block_id(to_block)?;
+
+        let is_from_pending = matches!(from_block, BlockIdOrTag::Tag(BlockTag::Pending));
+        let is_to_pending = matches!(to_block, BlockIdOrTag::Tag(BlockTag::Pending));
+
+        // If either of the requested blocks is None, and neither of them is a pending block
+        // return an error.
+        if (from.is_none() || to.is_none()) && !(is_from_pending || is_to_pending) {
+            return Err(StarknetApiError::BlockNotFound);
+        }
 
         let mut continuation_token = match continuation_token {
-            Some(token) => ContinuationToken::parse(token)?,
+            Some(token) => ContinuationToken::parse(&token)?,
             None => ContinuationToken::default(),
         };
 
-        // skip blocks that have been already read
-        from += continuation_token.block_n;
+        let mut all_events = Vec::with_capacity(chunk_size as usize);
 
-        let mut filtered_events = Vec::with_capacity(chunk_size as usize);
+        if let (Some(from), Some(to)) = (from, to) {
+            // skip blocks as specified in the continuation token
+            let block_range = (from + continuation_token.block_n)..=to;
 
-        for i in from..=to {
-            let block_hash =
-                provider.block_hash_by_num(i)?.ok_or(StarknetApiError::BlockNotFound)?;
+            for current in block_range {
+                let block_hash = provider
+                    .block_hash_by_num(current)?
+                    .ok_or(StarknetApiError::UnexpectedError { reason: "Missing".into() })?;
 
-            let receipts =
-                provider.receipts_by_block(i.into())?.ok_or(StarknetApiError::BlockNotFound)?;
+                let receipts = provider
+                    .receipts_by_block(current.into())?
+                    .ok_or(StarknetApiError::UnexpectedError { reason: "Missing".into() })?;
 
-            let tx_range =
-                provider.block_body_indices(i.into())?.ok_or(StarknetApiError::BlockNotFound)?;
+                let tx_range = provider
+                    .block_body_indices(current.into())?
+                    .ok_or(StarknetApiError::UnexpectedError { reason: "Missing".into() })?;
 
-            let tx_hashes = provider.transaction_hashes_in_range(tx_range.into())?;
+                let tx_hashes = provider.transaction_hashes_in_range(tx_range.into())?;
 
-            let txn_n = receipts.len();
-            if (txn_n as u64) < continuation_token.txn_n {
-                return Err(StarknetApiError::InvalidContinuationToken);
-            }
+                let txn_n = receipts.len();
 
-            for (tx_hash, events) in tx_hashes
-                .into_iter()
-                .zip(receipts.iter().map(|r| r.events()))
-                .skip(continuation_token.txn_n as usize)
-            {
-                let txn_events_len: usize = events.len();
-
-                // check if continuation_token.event_n is correct
-                match (txn_events_len as u64).cmp(&continuation_token.event_n) {
-                    Ordering::Greater => (),
-                    Ordering::Less => {
-                        return Err(StarknetApiError::InvalidContinuationToken);
-                    }
-                    Ordering::Equal => {
-                        continuation_token.txn_n += 1;
-                        continuation_token.event_n = 0;
-                        continue;
-                    }
+                // the continuation_token.txn_n indicates from which transaction to start, so
+                // if the value is larger than the total number of transactions available in the
+                // block.
+                if (txn_n as u64) < continuation_token.txn_n {
+                    return Err(StarknetApiError::InvalidContinuationToken);
                 }
 
-                // skip events
-                let txn_events = events.iter().skip(continuation_token.event_n as usize);
+                // skip number of transactions as specified in the continuation token
+                for (tx_hash, events) in tx_hashes
+                    .into_iter()
+                    .zip(receipts.iter().map(|r| r.events()))
+                    .skip(continuation_token.txn_n as usize)
+                {
+                    let txn_events_len: usize = events.len();
 
-                let (new_filtered_events, continuation_index) = filter_events_by_params(
-                    txn_events,
-                    address,
-                    keys.clone(),
-                    Some((chunk_size as usize) - filtered_events.len()),
-                );
+                    // check if continuation_token.event_n is correct
+                    match (txn_events_len as u64).cmp(&continuation_token.event_n) {
+                        Ordering::Less => {
+                            return Err(StarknetApiError::InvalidContinuationToken);
+                        }
+                        Ordering::Equal => {
+                            continuation_token.txn_n += 1;
+                            continuation_token.event_n = 0;
+                            continue;
+                        }
+                        Ordering::Greater => (),
+                    }
 
-                filtered_events.extend(new_filtered_events.iter().map(|e| EmittedEvent {
-                    from_address: e.from_address.into(),
-                    keys: e.keys.clone(),
-                    data: e.data.clone(),
-                    block_hash: Some(block_hash),
-                    block_number: Some(i),
-                    transaction_hash: tx_hash,
-                }));
+                    // calculate the remaining capacity based on the chunk size and the current //
+                    // number of events we have taken.
+                    let remaining_capacity = chunk_size as usize - all_events.len();
 
-                if filtered_events.len() >= chunk_size as usize {
-                    let token = if current_block < to
-                        || continuation_token.txn_n < txn_n as u64 - 1
-                        || continuation_index < txn_events_len
-                    {
-                        continuation_token.event_n = continuation_index as u64;
-                        Some(continuation_token.to_string())
-                    } else {
-                        None
-                    };
-                    return Ok(EventsPage { events: filtered_events, continuation_token: token });
+                    // skip events according to the continuation token.
+                    let filtered_events = filter_events(events.iter(), address, keys.clone())
+                        .skip(continuation_token.event_n as usize)
+                        .take(remaining_capacity)
+                        .map(|e| EmittedEvent {
+                            keys: e.keys.clone(),
+                            data: e.data.clone(),
+                            block_number: Some(current),
+                            transaction_hash: tx_hash,
+                            block_hash: Some(block_hash),
+                            from_address: e.from_address.into(),
+                        })
+                        .collect::<Vec<_>>();
+
+                    // the next time we have to fetch the events, we will start from this index.
+                    let new_event_n = continuation_token.event_n as usize + filtered_events.len();
+
+                    all_events.extend(filtered_events);
+
+                    if all_events.len() >= chunk_size as usize {
+                        // check if there are still more events that we haven't fetched yet. if yes,
+                        // we need to return a continuation token that points to the next event to
+                        // start fetching from.
+                        let token = if current_block < to
+                            || continuation_token.txn_n < txn_n as u64 - 1
+                            || new_event_n < txn_events_len
+                        {
+                            continuation_token.event_n = new_event_n as u64;
+                            Some(continuation_token.to_string())
+                        } else {
+                            None
+                        };
+
+                        return Ok(EventsPage { events: all_events, continuation_token: token });
+                    }
+
+                    // reset the event index and increment the transaction index.
+                    continuation_token.txn_n += 1;
+                    continuation_token.event_n = 0;
                 }
 
-                continuation_token.txn_n += 1;
-                continuation_token.event_n = 0;
+                current_block += 1;
+                continuation_token.txn_n = 0;
+                continuation_token.block_n += 1;
             }
-
-            current_block += 1;
-            continuation_token.block_n += 1;
-            continuation_token.txn_n = 0;
         }
 
-        Ok(EventsPage { events: filtered_events, continuation_token: None })
+        // TODO: refactor this to avoid code duplication
+        // process the pending block
+        if is_from_pending || is_to_pending {
+            if let Some(pending_executor) = self.pending_executor() {
+                let pending_block = pending_executor.read();
+                let txs = pending_block.transactions();
+
+                // process indiviual transactions in the block
+                for (tx, res) in txs.iter().skip(continuation_token.txn_n as usize) {
+                    if let ExecutionResult::Success { receipt, .. } = res {
+                        let events = receipt.events();
+
+                        let txn_events_len = events.len();
+
+                        // check if continuation_token.event_n is correct
+                        match (txn_events_len as u64).cmp(&continuation_token.event_n) {
+                            Ordering::Less => {
+                                return Err(StarknetApiError::InvalidContinuationToken);
+                            }
+                            Ordering::Equal => {
+                                continuation_token.txn_n += 1;
+                                continuation_token.event_n = 0;
+                                continue;
+                            }
+                            Ordering::Greater => (),
+                        }
+
+                        // calculate the remaining capacity based on the chunk size and the current
+                        // // number of events we have taken.
+                        let remaining_capacity = chunk_size as usize - all_events.len();
+
+                        // skip events according to the continuation token.
+                        let filtered_events = filter_events(events.iter(), address, keys.clone())
+                            .skip(continuation_token.event_n as usize)
+                            .take(remaining_capacity)
+                            .map(|e| EmittedEvent {
+                                block_hash: None,
+                                block_number: None,
+                                keys: e.keys.clone(),
+                                data: e.data.clone(),
+                                transaction_hash: tx.hash,
+                                from_address: e.from_address.into(),
+                            })
+                            .collect::<Vec<_>>();
+
+                        // the next time we have to fetch the events, we will start from this index.
+                        let new_event_n =
+                            continuation_token.event_n as usize + filtered_events.len();
+
+                        all_events.extend(filtered_events);
+
+                        if all_events.len() >= chunk_size as usize {
+                            // check if there are still more events that we haven't fetched yet. if
+                            // yes, we need to return a continuation
+                            // token that points to the next event to
+                            // start fetching from.
+                            let token = if continuation_token.txn_n < txs.len() as u64 - 1
+                                || new_event_n < txn_events_len
+                            {
+                                continuation_token.event_n = new_event_n as u64;
+                                Some(continuation_token.to_string())
+                            } else {
+                                None
+                            };
+
+                            return Ok(EventsPage {
+                                events: all_events,
+                                continuation_token: token,
+                            });
+                        }
+
+                        continuation_token.txn_n += 1;
+                        continuation_token.event_n = 0;
+                    }
+                }
+            }
+
+            if is_from_pending && is_to_pending {
+                return Ok(EventsPage { events: all_events, continuation_token: None });
+            }
+        }
+
+        Ok(EventsPage { events: all_events, continuation_token: None })
     }
 
     async fn transaction_status(
@@ -500,52 +608,44 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
     }
 }
 
-fn filter_events_by_params(
-    events: Skip<Iter<'_, Event>>,
+#[derive(Debug)]
+struct FilteredEvents<'a, I: Iterator<Item = &'a Event>> {
+    iter: I,
     address: Option<ContractAddress>,
-    filter_keys: Option<Vec<Vec<FieldElement>>>,
-    max_results: Option<usize>,
-) -> (Vec<Event>, usize) {
-    let mut filtered_events = vec![];
-    let mut index = 0;
+    keys: Option<Vec<Vec<FieldElement>>>,
+}
 
-    // Iterate on block events.
-    for event in events {
-        index += 1;
-        if !address.map_or(true, |addr| addr == event.from_address) {
-            continue;
-        }
+impl<'a, I: Iterator<Item = &'a Event>> Iterator for FilteredEvents<'a, I> {
+    type Item = &'a Event;
 
-        let match_keys = match filter_keys {
-            // From starknet-api spec:
-            // Per key (by position), designate the possible values to be matched for events to be
-            // returned. Empty array designates 'any' value"
-            Some(ref filter_keys) => filter_keys.iter().enumerate().all(|(i, keys)| {
-                // Lets say we want to filter events which are either named `Event1` or `Event2` and
-                // custom key `0x1` or `0x2` Filter: [[sn_keccack("Event1"),
-                // sn_keccack("Event2")], ["0x1", "0x2"]]
+    fn next(&mut self) -> Option<Self::Item> {
+        for event in self.iter.by_ref() {
+            // Check if the event matches the address filter
+            if !self.address.map_or(true, |addr| addr == event.from_address) {
+                continue;
+            }
 
-                // This checks: number of keys in event >= number of keys in filter (we check > i
-                // and not >= i because i is zero indexed) because otherwise this
-                // event doesn't contain all the keys we requested
-                event.keys.len() > i &&
-                    // This checks: Empty array desginates 'any' value
-                    (keys.is_empty()
-                    ||
-                    // This checks: If this events i'th value is one of the requested value in filter_keys[i]
-                    keys.contains(&event.keys[i]))
-            }),
-            None => true,
-        };
+            // Check if the event matches the keys filter
+            let matched = match &self.keys {
+                None => true,
+                Some(filters) => filters.iter().enumerate().all(|(i, keys)| {
+                    event.keys.len() > i && (keys.is_empty() || keys.contains(&event.keys[i]))
+                }),
+            };
 
-        if match_keys {
-            filtered_events.push(event.clone());
-            if let Some(max_results) = max_results {
-                if filtered_events.len() >= max_results {
-                    break;
-                }
+            if matched {
+                return Some(event);
             }
         }
+
+        None
     }
-    (filtered_events, index)
+}
+
+fn filter_events<'a, I: Iterator<Item = &'a Event>>(
+    events: I,
+    address: Option<ContractAddress>,
+    filter_keys: Option<Vec<Vec<FieldElement>>>,
+) -> FilteredEvents<'a, I> {
+    FilteredEvents { iter: events, address, keys: filter_keys }
 }
