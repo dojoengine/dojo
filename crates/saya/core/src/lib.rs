@@ -32,7 +32,7 @@ use starknet::providers::JsonRpcClient;
 use starknet::signers::{LocalWallet, SigningKey};
 use starknet_crypto::{poseidon_hash_many, Felt};
 use tokio::fs::File;
-use tokio::io::AsyncWriteExt;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tracing::{error, info, trace};
 use url::Url;
 use verifier::VerifierIdentifier;
@@ -247,8 +247,19 @@ impl Saya {
                     // We might want to prove the signatures as well.
                     let proof = self.prover_identifier.prove_snos(input).await?;
 
+                    // TODO: Add an argument to cache proofs for debugging.
+                    // let proof = {
+                    //     let filename = format!("proof_{}.json", block + num_blocks - 1);
+                    //     let mut file =
+                    //         File::open(filename).await.context("Failed to create proof file.")?;
+                    //     let mut content = String::new();
+                    //     file.read_to_string(&mut content).await.unwrap();
+                    //     content
+                    // };
+
                     if self.config.store_proofs {
                         let filename = format!("proof_{}.json", block + num_blocks - 1);
+
                         let mut file =
                             File::create(filename).await.context("Failed to create proof file.")?;
                         file.write_all(proof.as_bytes()).await.context("Failed to write proof.")?;
@@ -492,7 +503,7 @@ impl Saya {
                 todo!("Ephemeral mode does not support publishing updated state yet.");
             }
             SayaMode::Persistent => {
-                let serialized_output = program_output.iter().skip(2).copied().collect_vec();
+                let serialized_output = program_output.iter().copied().collect_vec();
                 let batcher_output = from_felts::<BatcherOutput>(&serialized_output)
                     .context("Failed to parse program output.")?;
 

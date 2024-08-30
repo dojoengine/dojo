@@ -8,7 +8,7 @@ use starknet::providers::Provider;
 use tokio::time::sleep;
 use tracing::trace;
 
-use crate::SayaStarknetAccount;
+use crate::{SayaStarknetAccount, LOG_TARGET};
 
 pub async fn wait_for_sent_transaction(
     tx: InvokeTransactionResult,
@@ -31,7 +31,7 @@ pub async fn wait_for_sent_transaction(
 
         break match status {
             TransactionStatus::Received => {
-                trace!("Transaction received.");
+                trace!(target: LOG_TARGET, "Transaction received.");
                 sleep(Duration::from_secs(1)).await;
                 continue;
             }
@@ -45,14 +45,12 @@ pub async fn wait_for_sent_transaction(
 
     match execution_status {
         TransactionExecutionStatus::Succeeded => {
-            trace!("Transaction accepted on L2.");
+            trace!(target: LOG_TARGET, "Transaction accepted on L2.");
         }
         TransactionExecutionStatus::Reverted => {
             anyhow::bail!("Transaction failed with.");
         }
     }
-
-    sleep(Duration::from_secs(3)).await; // Sometimes fails in
 
     Ok(())
 }

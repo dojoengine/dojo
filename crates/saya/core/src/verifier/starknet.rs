@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use anyhow::Context;
 use dojo_utils::{TransactionExt, TxnConfig};
 use itertools::Itertools;
@@ -5,10 +7,13 @@ use starknet::accounts::{Account, Call, ConnectedAccount};
 use starknet::core::types::Felt;
 use starknet::core::utils::get_selector_from_name;
 use starknet_crypto::poseidon_hash_many;
-use tracing::trace;
+use tokio::time::sleep;
+use tracing::{info, trace};
 
 use super::utils::wait_for_sent_transaction;
-use crate::SayaStarknetAccount;
+use crate::{SayaStarknetAccount, LOG_TARGET};
+
+const CHUNK_SIZE: usize = 800;
 
 pub async fn starknet_verify(
     fact_registry_address: Felt,
@@ -16,8 +21,8 @@ pub async fn starknet_verify(
     cairo_version: Felt,
     account: &SayaStarknetAccount,
 ) -> anyhow::Result<(String, Felt)> {
-    if serialized_proof.len() > 2000 {
-        trace!(
+    if serialized_proof.len() > CHUNK_SIZE {
+        trace!(target: LOG_TARGET,
             "Calldata too long at: {} felts, transaction could fail, splitting it.",
             serialized_proof.len()
         );
@@ -28,7 +33,7 @@ pub async fn starknet_verify(
     let mut nonce = account.get_nonce().await?;
     let mut hashes = Vec::new();
 
-    for fragment in serialized_proof.into_iter().chunks(2000).into_iter() {
+    for fragment in serialized_proof.into_iter().chunks(CHUNK_SIZE).into_iter() {
         let mut fragment = fragment.collect::<Vec<_>>();
         let hash = poseidon_hash_many(&fragment);
         hashes.push(hash);
@@ -47,12 +52,15 @@ pub async fn starknet_verify(
             .await
             .context("Failed to send `publish_fragment` transaction.")?;
 
-        trace!("Sent `publish_fragment` transaction {:#x}", tx.transaction_hash);
+        wait_for_sent_transaction(tx.clone(), account).await?;
 
-        wait_for_sent_transaction(tx, account).await?;
+        trace!(target: LOG_TARGET, "Sent `publish_fragment` transaction {:#x}", tx.transaction_hash);
 
+        sleep(Duration::from_secs(5)).await;
         nonce += Felt::ONE;
     }
+
+    info!(target: LOG_TARGET, "Sent all proof fragments.");
 
     let calldata = [Felt::from(hashes.len() as u64)]
         .into_iter()
