@@ -142,10 +142,8 @@ pub fn check_package_dojo_version(ws: &Workspace<'_>, package: &Package) -> anyh
         package.manifest.summary.dependencies.iter().find(|dep| dep.name.as_str() == "dojo")
     {
         let dojo_version = env!("CARGO_PKG_VERSION");
-        println!("Dojo version: {}", dojo_version);
 
         let dojo_dep_str = dojo_dep.to_string();
-        println!("Dojo dep: {}", dojo_dep_str);
 
         // Only in case of git dependency with an explicit tag, we check if the tag is the same as
         // the current version.
