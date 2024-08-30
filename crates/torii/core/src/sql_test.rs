@@ -118,7 +118,7 @@ async fn test_load_from_remote() {
 
     let mut db = Sql::new(pool.clone(), world_reader.address).await.unwrap();
 
-    let _ = bootstrap_engine(world_reader, db.clone(), account.provider()).await;
+    let _ = bootstrap_engine(world_reader, db.clone(), account.provider()).await.unwrap();
 
     let _block_timestamp = 1710754478_u64;
     let models = sqlx::query("SELECT * FROM models").fetch_all(&pool).await.unwrap();
