@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1724986081387,
+  "lastUpdate": 1724989133177,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -18337,6 +18337,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3916417,
             "range": "± 90832",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "842c2569c1ad29415ea85b2d32e30412b8106644",
+          "message": "refactor(katana-pool): enable ordering using `BTreeSet` (#2370)",
+          "timestamp": "2024-08-30T11:19:45+08:00",
+          "tree_id": "5b848154a9f87da2f4cf2a3b55e792b7708012c1",
+          "url": "https://github.com/dojoengine/dojo/commit/842c2569c1ad29415ea85b2d32e30412b8106644"
+        },
+        "date": 1724989131646,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17767274,
+            "range": "± 219948",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 4217825,
+            "range": "± 144253",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3672016585,
+            "range": "± 834911041",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3971965,
+            "range": "± 87342",
             "unit": "ns/iter"
           }
         ]
