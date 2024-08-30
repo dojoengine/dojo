@@ -96,7 +96,10 @@ impl<T, O: PoolOrd> PartialOrd for PendingTx<T, O> {
 
 impl<T, O: PoolOrd> Ord for PendingTx<T, O> {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.priority.cmp(&other.priority)
+        match self.priority.cmp(&other.priority) {
+            std::cmp::Ordering::Equal => std::cmp::Ordering::Less,
+            other => other,
+        }
     }
 }
 

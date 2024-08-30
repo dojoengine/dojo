@@ -53,7 +53,7 @@ pub struct TxSubmissionNonce(u64);
 impl Ord for TxSubmissionNonce {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         // Reverse the ordering so lower values have higher priority
-        other.0.cmp(&self.0)
+        self.0.cmp(&other.0)
     }
 }
 
@@ -84,12 +84,35 @@ impl<T> TipOrdering<T> {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct Tip(u64);
+
+impl Ord for Tip {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        other.0.cmp(&self.0)
+    }
+}
+
+impl PartialOrd for Tip {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for Tip {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
+
+impl Eq for Tip {}
+
 impl<T: PoolTransaction> PoolOrd for TipOrdering<T> {
     type Transaction = T;
-    type PriorityValue = u64;
+    type PriorityValue = Tip;
 
     fn priority(&self, tx: &Self::Transaction) -> Self::PriorityValue {
-        tx.tip()
+        Tip(tx.tip())
     }
 }
 
@@ -138,6 +161,7 @@ mod tests {
             PoolTx::new().with_tip(6),
             PoolTx::new().with_tip(3),
             PoolTx::new().with_tip(2),
+            PoolTx::new().with_tip(2),
             PoolTx::new().with_tip(5),
             PoolTx::new().with_tip(4),
             PoolTx::new().with_tip(7),
@@ -153,6 +177,7 @@ mod tests {
 
         // Get pending transactions
         let pending = pool.take_transactions().collect::<Vec<_>>();
+        assert_eq!(pending.len(), txs.len());
 
         // Assert that the transactions are ordered by tip (highest to lowest)
         assert_eq!(pending[0].tx.tip(), 7);
@@ -161,6 +186,7 @@ mod tests {
         assert_eq!(pending[3].tx.tip(), 4);
         assert_eq!(pending[4].tx.tip(), 3);
         assert_eq!(pending[5].tx.tip(), 2);
-        assert_eq!(pending[6].tx.tip(), 1);
+        assert_eq!(pending[6].tx.tip(), 2);
+        assert_eq!(pending[7].tx.tip(), 1);
     }
 }

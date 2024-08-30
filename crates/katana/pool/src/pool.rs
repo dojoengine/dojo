@@ -1,5 +1,6 @@
 use core::fmt;
-use std::collections::{btree_set::IntoIter, BTreeSet};
+use std::collections::btree_set::IntoIter;
+use std::collections::BTreeSet;
 use std::sync::Arc;
 
 use futures::channel::mpsc::{channel, Receiver, Sender};
@@ -215,7 +216,6 @@ pub(crate) mod test_utils {
 
     use super::*;
     use crate::tx::PoolTransaction;
-    use crate::validation::{ValidationOutcome, ValidationResult, Validator};
 
     fn random_bytes<const SIZE: usize>() -> [u8; SIZE] {
         let mut bytes = [0u8; SIZE];
@@ -282,36 +282,6 @@ pub(crate) mod test_utils {
 
         fn tip(&self) -> u64 {
             self.tip
-        }
-    }
-
-    /// A tip-based validator that flags transactions as invalid if they have less than 10 tip.
-    pub struct TipValidator<T> {
-        threshold: u64,
-        t: std::marker::PhantomData<T>,
-    }
-
-    impl<T> TipValidator<T> {
-        pub fn new(threshold: u64) -> Self {
-            Self { threshold, t: std::marker::PhantomData }
-        }
-    }
-
-    impl<T: PoolTransaction> Validator for TipValidator<T> {
-        type Transaction = T;
-
-        fn validate(&self, tx: Self::Transaction) -> ValidationResult<Self::Transaction> {
-            if tx.tip() < self.threshold {
-                return ValidationResult::Ok(ValidationOutcome::Invalid {
-                    error: InvalidTransactionError::InsufficientFunds {
-                        balance: FieldElement::ONE,
-                        max_fee: tx.max_fee(),
-                    },
-                    tx,
-                });
-            }
-
-            ValidationResult::Ok(ValidationOutcome::Valid(tx))
         }
     }
 }
