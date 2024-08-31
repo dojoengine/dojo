@@ -332,6 +332,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         .await
     }
 
+    // TODO: should document more and possible find a simpler solution(?)
     fn events(
         &self,
         from_block: BlockIdOrTag,
@@ -342,7 +343,6 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         chunk_size: u64,
     ) -> Result<EventsPage, StarknetApiError> {
         let provider = self.inner.backend.blockchain.provider();
-        let mut current_block = 0;
 
         // convert block id to block number
         let from = provider.convert_block_id(from_block)?;
@@ -350,10 +350,11 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
 
         let is_from_pending = matches!(from_block, BlockIdOrTag::Tag(BlockTag::Pending));
         let is_to_pending = matches!(to_block, BlockIdOrTag::Tag(BlockTag::Pending));
+        let needs_pending = is_from_pending || is_to_pending;
 
         // If either of the requested blocks is None, and neither of them is a pending block
         // return an error.
-        if (from.is_none() || to.is_none()) && !(is_from_pending || is_to_pending) {
+        if (from.is_none() || to.is_none()) && !needs_pending {
             return Err(StarknetApiError::BlockNotFound);
         }
 
@@ -382,7 +383,6 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
                     .ok_or(StarknetApiError::UnexpectedError { reason: "Missing".into() })?;
 
                 let tx_hashes = provider.transaction_hashes_in_range(tx_range.into())?;
-
                 let txn_n = receipts.len();
 
                 // the continuation_token.txn_n indicates from which transaction to start, so
@@ -424,8 +424,8 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
                         .map(|e| EmittedEvent {
                             keys: e.keys.clone(),
                             data: e.data.clone(),
-                            block_number: Some(current),
                             transaction_hash: tx_hash,
+                            block_number: Some(current),
                             block_hash: Some(block_hash),
                             from_address: e.from_address.into(),
                         })
@@ -433,32 +433,41 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
 
                     // the next time we have to fetch the events, we will start from this index.
                     let new_event_n = continuation_token.event_n as usize + filtered_events.len();
-
                     all_events.extend(filtered_events);
 
                     if all_events.len() >= chunk_size as usize {
                         // check if there are still more events that we haven't fetched yet. if yes,
                         // we need to return a continuation token that points to the next event to
                         // start fetching from.
-                        let token = if current_block < to
-                            || continuation_token.txn_n < txn_n as u64 - 1
-                            || new_event_n < txn_events_len
-                        {
+                        if new_event_n < txn_events_len {
                             continuation_token.event_n = new_event_n as u64;
-                            Some(continuation_token.to_string())
-                        } else {
-                            None
-                        };
+                        }
+                        // reset the event index
+                        else {
+                            continuation_token.txn_n += 1;
+                            continuation_token.event_n = 0;
+                        }
 
-                        return Ok(EventsPage { events: all_events, continuation_token: token });
+                        // if we have reached the last block in the range and there are no more
+                        // events left AND we still have to fetch from the pending block, we need to
+                        // increment the block number in the continuation token to point to the
+                        // pending block.
+                        if current == to && is_to_pending && new_event_n == txn_events_len {
+                            continuation_token.txn_n = 0;
+                            continuation_token.event_n = 0;
+                            continuation_token.block_n += 1;
+                        }
+
+                        return Ok(EventsPage {
+                            events: all_events,
+                            continuation_token: Some(continuation_token.to_string()),
+                        });
                     }
 
-                    // reset the event index and increment the transaction index.
-                    continuation_token.txn_n += 1;
                     continuation_token.event_n = 0;
+                    continuation_token.txn_n += 1;
                 }
 
-                current_block += 1;
                 continuation_token.txn_n = 0;
                 continuation_token.block_n += 1;
             }
@@ -475,7 +484,6 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
                 for (tx, res) in txs.iter().skip(continuation_token.txn_n as usize) {
                     if let ExecutionResult::Success { receipt, .. } = res {
                         let events = receipt.events();
-
                         let txn_events_len = events.len();
 
                         // check if continuation_token.event_n is correct
@@ -492,7 +500,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
                         }
 
                         // calculate the remaining capacity based on the chunk size and the current
-                        // // number of events we have taken.
+                        // number of events we have taken.
                         let remaining_capacity = chunk_size as usize - all_events.len();
 
                         // skip events according to the continuation token.
@@ -515,34 +523,29 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
 
                         all_events.extend(filtered_events);
 
-                        if all_events.len() >= chunk_size as usize {
-                            // check if there are still more events that we haven't fetched yet. if
-                            // yes, we need to return a continuation
-                            // token that points to the next event to
-                            // start fetching from.
-                            let token = if continuation_token.txn_n < txs.len() as u64 - 1
-                                || new_event_n < txn_events_len
-                            {
-                                continuation_token.event_n = new_event_n as u64;
-                                Some(continuation_token.to_string())
-                            } else {
-                                None
-                            };
-
-                            return Ok(EventsPage {
-                                events: all_events,
-                                continuation_token: token,
-                            });
+                        // if there are still more events that we haven't fetched yet for this tx.
+                        if new_event_n < txn_events_len {
+                            continuation_token.event_n = new_event_n as u64;
+                        } else {
+                            continuation_token.txn_n += 1;
+                            continuation_token.event_n = 0;
                         }
 
-                        continuation_token.txn_n += 1;
-                        continuation_token.event_n = 0;
+                        if all_events.len() >= chunk_size as usize {
+                            return Ok(EventsPage {
+                                events: all_events,
+                                continuation_token: Some(continuation_token.to_string()),
+                            });
+                        }
                     }
                 }
             }
 
-            if is_from_pending && is_to_pending {
-                return Ok(EventsPage { events: all_events, continuation_token: None });
+            if is_to_pending {
+                return Ok(EventsPage {
+                    events: all_events,
+                    continuation_token: Some(continuation_token.to_string()),
+                });
             }
         }
 
