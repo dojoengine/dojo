@@ -31,15 +31,15 @@ pub struct ContinuationToken {
 
 #[derive(PartialEq, Eq, Debug, thiserror::Error)]
 pub enum ContinuationTokenError {
-    #[error("Missing block number")]
+    #[error("Missing block number. Expected format: block_n,txn_n,event_n")]
     MissingBlock,
-    #[error("Missing transaction number")]
+    #[error("Missing transaction number. Expected format: block_n,txn_n,event_n")]
     MissingTxn,
-    #[error("Missing event number")]
+    #[error("Missing event number. Expected format: block_n,txn_n,event_n")]
     MissingEvent,
     #[error("Invalid data")]
     InvalidToken,
-    #[error("Invalid format: {0}. Expected format: block_n,txn_n,event_n")]
+    #[error("Invalid value: {0}")]
     ParseFailed(#[from] ParseIntError),
 }
 
@@ -51,14 +51,19 @@ impl ContinuationToken {
             return Err(ContinuationTokenError::InvalidToken);
         }
 
-        let block = parts.next().ok_or(ContinuationTokenError::MissingBlock)?;
-        let block_n = u64::from_str_radix(block, 16)?;
+        macro_rules! part {
+            ($error:expr) => {{
+                let part = parts.next().ok_or($error)?;
+                if part.is_empty() {
+                    return Err($error);
+                }
+                u64::from_str_radix(part, 16)?
+            }};
+        }
 
-        let txn = parts.next().ok_or(ContinuationTokenError::MissingTxn)?;
-        let txn_n = u64::from_str_radix(txn, 16)?;
-
-        let event = parts.next().ok_or(ContinuationTokenError::MissingEvent)?;
-        let event_n = u64::from_str_radix(event, 16)?;
+        let block_n = part!(ContinuationTokenError::MissingBlock);
+        let txn_n = part!(ContinuationTokenError::MissingTxn);
+        let event_n = part!(ContinuationTokenError::MissingEvent);
 
         Ok(ContinuationToken { block_n, txn_n, event_n })
     }
@@ -71,6 +76,8 @@ impl fmt::Display for ContinuationToken {
 
 #[cfg(test)]
 mod test {
+    use assert_matches::assert_matches;
+
     use super::*;
 
     #[test]
@@ -94,17 +101,17 @@ mod test {
 
     #[test]
     fn parse_should_fail() {
-        assert_eq!(
+        assert_matches!(
             ContinuationToken::parse("100").unwrap_err(),
-            ContinuationTokenError::InvalidToken
+            ContinuationTokenError::MissingTxn
         );
-        assert_eq!(
+        assert_matches!(
             ContinuationToken::parse("0,").unwrap_err(),
-            ContinuationTokenError::InvalidToken
+            ContinuationTokenError::MissingTxn
         );
-        assert_eq!(
+        assert_matches!(
             ContinuationToken::parse("0,0").unwrap_err(),
-            ContinuationTokenError::InvalidToken
+            ContinuationTokenError::MissingEvent
         );
     }
 
