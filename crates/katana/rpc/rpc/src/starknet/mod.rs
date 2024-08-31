@@ -370,17 +370,17 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
             let block_range = (from + continuation_token.block_n)..=to;
 
             for current in block_range {
-                let block_hash = provider
-                    .block_hash_by_num(current)?
-                    .ok_or(StarknetApiError::UnexpectedError { reason: "Missing".into() })?;
+                let block_hash = provider.block_hash_by_num(current)?.ok_or(
+                    StarknetApiError::UnexpectedError { reason: "Missing block hash".into() },
+                )?;
 
-                let receipts = provider
-                    .receipts_by_block(current.into())?
-                    .ok_or(StarknetApiError::UnexpectedError { reason: "Missing".into() })?;
+                let receipts = provider.receipts_by_block(current.into())?.ok_or(
+                    StarknetApiError::UnexpectedError { reason: "Missing receipts".into() },
+                )?;
 
-                let tx_range = provider
-                    .block_body_indices(current.into())?
-                    .ok_or(StarknetApiError::UnexpectedError { reason: "Missing".into() })?;
+                let tx_range = provider.block_body_indices(current.into())?.ok_or(
+                    StarknetApiError::UnexpectedError { reason: "Missing block body index".into() },
+                )?;
 
                 let tx_hashes = provider.transaction_hashes_in_range(tx_range.into())?;
                 let txn_n = receipts.len();
