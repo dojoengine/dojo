@@ -432,7 +432,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
                         .collect::<Vec<_>>();
 
                     // the next time we have to fetch the events, we will start from this index.
-                    let new_event_n = continuation_token.event_n as usize + filtered_events.len();
+                    let new_event_n = continuation_token.event_n as usize + remaining_capacity;
                     all_events.extend(filtered_events);
 
                     if all_events.len() >= chunk_size as usize {
@@ -518,8 +518,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
                             .collect::<Vec<_>>();
 
                         // the next time we have to fetch the events, we will start from this index.
-                        let new_event_n =
-                            continuation_token.event_n as usize + filtered_events.len();
+                        let new_event_n = continuation_token.event_n as usize + remaining_capacity;
 
                         all_events.extend(filtered_events);
 
