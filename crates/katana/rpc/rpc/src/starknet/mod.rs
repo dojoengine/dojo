@@ -611,6 +611,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
     }
 }
 
+/// An iterator that yields events that match the given filters.
 #[derive(Debug)]
 struct FilteredEvents<'a, I: Iterator<Item = &'a Event>> {
     iter: I,
@@ -629,14 +630,31 @@ impl<'a, I: Iterator<Item = &'a Event>> Iterator for FilteredEvents<'a, I> {
             }
 
             // Check if the event matches the keys filter
-            let matched = match &self.keys {
+            let is_matched = match &self.keys {
                 None => true,
+                // From starknet-api spec:
+                // Per key (by position), designate the possible values to be matched for events to
+                // be returned. Empty array designates 'any' value"
                 Some(filters) => filters.iter().enumerate().all(|(i, keys)| {
-                    event.keys.len() > i && (keys.is_empty() || keys.contains(&event.keys[i]))
+                    // Lets say we want to filter events which are either named `Event1` or `Event2`
+                    // and custom key `0x1` or `0x2` Filter:
+                    // [[sn_keccack("Event1"), sn_keccack("Event2")], ["0x1",
+                    // "0x2"]]
+
+                    // This checks: number of keys in event >= number of keys in filter (we check >
+                    // i and not >= i because i is zero indexed) because
+                    // otherwise this event doesn't contain all the keys we
+                    // requested
+                    event.keys.len() > i &&
+                         // This checks: Empty array desginates 'any' value
+                         (keys.is_empty()
+                         ||
+                         // This checks: If this events i'th value is one of the requested value in filter_keys[i]
+                         keys.contains(&event.keys[i]))
                 }),
             };
 
-            if matched {
+            if is_matched {
                 return Some(event);
             }
         }
