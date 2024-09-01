@@ -77,7 +77,7 @@ mod test {
     #[test]
     fn parse_works() {
         fn helper(token: &str) -> ContinuationToken {
-            ContinuationToken::parse(&token).unwrap()
+            ContinuationToken::parse(token).unwrap()
         }
         assert_eq!(helper("0,0,0"), ContinuationToken { block_n: 0, txn_n: 0, event_n: 0 });
         assert_eq!(helper("1e,ff,4"), ContinuationToken { block_n: 30, txn_n: 255, event_n: 4 });
