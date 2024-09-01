@@ -406,7 +406,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
                         &mut buffer,
                     )?;
 
-                    if end {
+                    if end && buffer.len() as u64 == chunk_size {
                         return Ok(EventsPage {
                             events: buffer,
                             continuation_token: Some(cursor.to_string()),
