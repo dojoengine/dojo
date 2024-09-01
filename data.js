@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1725029185680,
+  "lastUpdate": 1725231099523,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -18481,6 +18481,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3949703,
             "range": "± 49759",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1d957827ebb6d0265e8520a43026e204858aac1b",
+          "message": "Break on empty events when loading from remote (#2376)\n\ncurrently we only stop querying for events when the provider no longer returns a continuation token. this pr adds an extra safety net to stop immediately when there are no more events being returned.\r\n\r\nthough the spec mentions explicitly that the token Should not appear if there are no more pages. but it doesn't mention exactly how the token should behave with pending block as the list of events in the pending block could still grow.\r\n\r\nthere could be a case where someone calls getEvents with the the to block sets to=pending. if they already reach the end of the pending block during the first call, yet the block could still emit new events. but if the returned continuation token is nil, then if the user wants to continue from the last events in the first call, they couldn't and had to start from the beginning again.",
+          "timestamp": "2024-09-02T06:33:01+08:00",
+          "tree_id": "1e7bd3a94bce293068685f811d11c69a70eec285",
+          "url": "https://github.com/dojoengine/dojo/commit/1d957827ebb6d0265e8520a43026e204858aac1b"
+        },
+        "date": 1725231098666,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17850270,
+            "range": "± 226986",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3742744,
+            "range": "± 101222",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3587470961,
+            "range": "± 711171734",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3845242,
+            "range": "± 35817",
             "unit": "ns/iter"
           }
         ]
