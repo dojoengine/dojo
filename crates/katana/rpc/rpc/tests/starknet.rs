@@ -566,7 +566,11 @@ async fn get_events_no_pending() -> Result<()> {
     // tx that emits 1 event
     let tx = || contract.transfer(&Felt::ONE, &Uint256 { low: Felt::ONE, high: Felt::ZERO });
 
-    for _ in 0..5 {
+    const BLOCK_1_TX_COUNT: usize = 5;
+    const EVENT_COUNT_PER_TX: usize = 1;
+    const TOTAL_EVENT_COUNT: usize = BLOCK_1_TX_COUNT * EVENT_COUNT_PER_TX;
+
+    for _ in 0..BLOCK_1_TX_COUNT {
         let res = tx().send().await?;
         dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await?;
     }
@@ -582,7 +586,7 @@ async fn get_events_no_pending() -> Result<()> {
     };
 
     // -----------------------------------------------------------------------
-    //  case 1
+    //  case 1 (chunk size = 0)
 
     let chunk_size = 0;
     let EventsPage { events, continuation_token } =
@@ -612,9 +616,19 @@ async fn get_events_no_pending() -> Result<()> {
     });
 
     let EventsPage { events, continuation_token } =
-        provider.get_events(filter, continuation_token, chunk_size).await?;
+        provider.get_events(filter.clone(), continuation_token, chunk_size).await?;
 
     assert_eq!(events.len(), 2, "Remaining should be 2");
+    assert_matches!(continuation_token, None);
+
+    // -----------------------------------------------------------------------
+    //  case 3 (max chunk is greater than total events in the requested range)
+
+    let chunk_size = 100;
+    let EventsPage { events, continuation_token } =
+        provider.get_events(filter.clone(), None, chunk_size).await?;
+
+    assert_eq!(events.len(), TOTAL_EVENT_COUNT);
     assert_matches!(continuation_token, None);
 
     Ok(())
