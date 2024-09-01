@@ -551,12 +551,17 @@ async fn get_events<P: Provider + Send + Sync>(
     loop {
         let res =
             provider.get_events(filter.clone(), continuation_token, DEFAULT_CHUNK_SIZE).await?;
-
         continuation_token = res.continuation_token;
-        events.extend(res.events);
 
         if continuation_token.is_none() {
             break;
+        }
+
+        // stop when there are no more events being returned
+        if res.events.is_empty() {
+            break;
+        } else {
+            events.extend(res.events);
         }
     }
 
