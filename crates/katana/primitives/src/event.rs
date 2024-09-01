@@ -31,43 +31,29 @@ pub struct ContinuationToken {
 
 #[derive(PartialEq, Eq, Debug, thiserror::Error)]
 pub enum ContinuationTokenError {
-    #[error("Missing block number. Expected format: block_n,txn_n,event_n")]
-    MissingBlock,
-    #[error("Missing transaction number. Expected format: block_n,txn_n,event_n")]
-    MissingTxn,
-    #[error("Missing event number. Expected format: block_n,txn_n,event_n")]
-    MissingEvent,
     #[error("Invalid data")]
     InvalidToken,
-    #[error("Invalid value: {0}")]
-    ParseFailed(#[from] ParseIntError),
+    #[error("Invalid format: {0}")]
+    ParseFailed(ParseIntError),
 }
 
 impl ContinuationToken {
     pub fn parse(token: &str) -> Result<Self, ContinuationTokenError> {
-        let mut parts = token.split(',');
-
-        if parts.clone().count() > 3 {
+        let arr: Vec<&str> = token.split(',').collect();
+        if arr.len() != 3 {
             return Err(ContinuationTokenError::InvalidToken);
         }
+        let block_n =
+            u64::from_str_radix(arr[0], 16).map_err(ContinuationTokenError::ParseFailed)?;
+        let receipt_n =
+            u64::from_str_radix(arr[1], 16).map_err(ContinuationTokenError::ParseFailed)?;
+        let event_n =
+            u64::from_str_radix(arr[2], 16).map_err(ContinuationTokenError::ParseFailed)?;
 
-        macro_rules! part {
-            ($error:expr) => {{
-                let part = parts.next().ok_or($error)?;
-                if part.is_empty() {
-                    return Err($error);
-                }
-                u64::from_str_radix(part, 16)?
-            }};
-        }
-
-        let block_n = part!(ContinuationTokenError::MissingBlock);
-        let txn_n = part!(ContinuationTokenError::MissingTxn);
-        let event_n = part!(ContinuationTokenError::MissingEvent);
-
-        Ok(ContinuationToken { block_n, txn_n, event_n })
+        Ok(ContinuationToken { block_n, txn_n: receipt_n, event_n })
     }
 }
+
 impl fmt::Display for ContinuationToken {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:x},{:x},{:x}", self.block_n, self.txn_n, self.event_n)
@@ -76,8 +62,6 @@ impl fmt::Display for ContinuationToken {
 
 #[cfg(test)]
 mod test {
-    use assert_matches::assert_matches;
-
     use super::*;
 
     #[test]
@@ -93,7 +77,7 @@ mod test {
     #[test]
     fn parse_works() {
         fn helper(token: &str) -> ContinuationToken {
-            ContinuationToken::parse(token).unwrap()
+            ContinuationToken::parse(&token).unwrap()
         }
         assert_eq!(helper("0,0,0"), ContinuationToken { block_n: 0, txn_n: 0, event_n: 0 });
         assert_eq!(helper("1e,ff,4"), ContinuationToken { block_n: 30, txn_n: 255, event_n: 4 });
@@ -101,17 +85,17 @@ mod test {
 
     #[test]
     fn parse_should_fail() {
-        assert_matches!(
+        assert_eq!(
             ContinuationToken::parse("100").unwrap_err(),
-            ContinuationTokenError::MissingTxn
+            ContinuationTokenError::InvalidToken
         );
-        assert_matches!(
+        assert_eq!(
             ContinuationToken::parse("0,").unwrap_err(),
-            ContinuationTokenError::MissingTxn
+            ContinuationTokenError::InvalidToken
         );
-        assert_matches!(
+        assert_eq!(
             ContinuationToken::parse("0,0").unwrap_err(),
-            ContinuationTokenError::MissingEvent
+            ContinuationTokenError::InvalidToken
         );
     }
 
