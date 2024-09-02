@@ -1,7 +1,10 @@
+use std::collections::HashMap;
+
 use anyhow::{Error, Result};
 use async_trait::async_trait;
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{Event, Felt, Transaction};
+use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
 
 use crate::sql::Sql;
@@ -68,4 +71,18 @@ pub trait TransactionProcessor<P: Provider + Sync> {
         transaction_hash: Felt,
         transaction: &Transaction,
     ) -> Result<(), Error>;
+}
+
+/// Given a list of event processors, generate a map of event keys to the event processor
+pub fn generate_event_processors_map<P: Provider + Sync + Send>(
+    event_processor: Vec<Box<dyn EventProcessor<P>>>,
+) -> Result<HashMap<Felt, Box<dyn EventProcessor<P>>>> {
+    let mut event_processors = HashMap::new();
+
+    for processor in event_processor {
+        let key = get_selector_from_name(processor.event_key().as_str())?;
+        event_processors.insert(key, processor);
+    }
+
+    Ok(event_processors)
 }

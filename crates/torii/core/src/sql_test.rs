@@ -18,6 +18,7 @@ use starknet_crypto::poseidon_hash_many;
 use tokio::sync::broadcast;
 
 use crate::engine::{Engine, EngineConfig, Processors};
+use crate::processors::generate_event_processors_map;
 use crate::processors::register_model::RegisterModelProcessor;
 use crate::processors::store_del_record::StoreDelRecordProcessor;
 use crate::processors::store_set_record::StoreSetRecordProcessor;
@@ -38,11 +39,11 @@ where
         db,
         provider,
         Processors {
-            event: vec![
+            event: generate_event_processors_map(vec![
                 Box::new(RegisterModelProcessor),
                 Box::new(StoreSetRecordProcessor),
                 Box::new(StoreDelRecordProcessor),
-            ],
+            ])?,
             ..Processors::default()
         },
         EngineConfig::default(),
