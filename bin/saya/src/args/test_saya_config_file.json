@@ -3,7 +3,7 @@
   "prover_url": "http://localhost:1234",
   "prover_key": "0xd0fa91f4949e9a777ebec071ca3ca6acc1f5cd6c6827f123b798f94e73425027",
   "store_proofs": false,
-  "batch_size": 4,
+  "batch_size": 1,
   "world_address": "0x332b8ff41b1b026991fa9b7f0ec352909f8bc33416b65a80527edc988a9b082",
   "fact_registry_address": "0x217746a5f74c2e5b6fa92c97e902d8cd78b1fabf1e8081c4aa0d2fe159bc0eb",
   "piltover_contract": "0x65c0d01ef63197f00372cbb93bb32a7c49b70d3e82c5e0880d7912f4421e1c4",

@@ -19,12 +19,10 @@ cairo-proof-parser.workspace = true
 dojo-utils.workspace = true
 futures.workspace = true
 itertools.workspace = true
-once_cell.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-starknet.workspace = true
 starknet-crypto.workspace = true
-starknet-types-core = { version = "0.1.4", default-features = false, features = [ "curve", "num-traits", "serde" ] }
+starknet.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 tracing.workspace = true

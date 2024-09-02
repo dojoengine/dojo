@@ -152,6 +152,7 @@ impl Saya {
 
         let block_before_the_first = self.provider.fetch_block(block - 1).await;
         let mut previous_block_state_root = block_before_the_first?.header.header.state_root;
+        let mut mock_state_hash = Felt::from(0u64);
 
         // The structure responsible for proving.
         let mut prove_scheduler = None;
@@ -174,7 +175,9 @@ impl Saya {
                 // Separate proofs for each block, starting as early as possible.
                 SayaMode::PersistentMerging => (block, latest_block),
                 // One proof per batch, waiting until all are available.
-                SayaMode::Persistent => (block, latest_block),
+                SayaMode::Persistent => {
+                    (block, latest_block.min(block + self.config.batch_size as u64 - 1))
+                }
             };
 
             if minimum_expected > latest_block {
@@ -240,9 +243,13 @@ impl Saya {
                     let input = BatcherInput {
                         calls,
                         block_number: Felt::from(block),
-                        prev_state_root: previous_block_state_root,
+                        prev_state_root: mock_state_hash,
                         block_hash: Felt::from(0u64),
                     };
+
+                    mock_state_hash += Felt::ONE;
+
+                    dbg!(&input);
 
                     // We might want to prove the signatures as well.
                     let proof = self.prover_identifier.prove_snos(input).await?;

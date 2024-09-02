@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use clap::Parser;
 use saya_core::data_availability::celestia::CelestiaConfig;
 use saya_core::data_availability::DataAvailabilityConfig;
-use saya_core::{ProverAccessKey, SayaConfig, StarknetAccountData};
+use saya_core::{ProverAccessKey, SayaConfig, SayaMode, StarknetAccountData};
 use shard::SettlementOptions;
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet_account::StarknetAccountOptions;
@@ -64,7 +64,7 @@ pub struct SayaArgs {
 
     #[command(flatten)]
     #[command(next_help_heading = "Choose the saya execution mode")]
-    pub shard: SettlementOptions,
+    pub settlement: SettlementOptions,
 
     #[command(flatten)]
     #[command(next_help_heading = "Data availability options")]
@@ -151,6 +151,13 @@ impl TryFrom<SayaArgs> for SayaConfig {
                     Box::new(std::io::Error::new(std::io::ErrorKind::InvalidInput, e.to_string()))
                 })?;
 
+            if args.settlement.saya_mode.0 == SayaMode::Persistent && args.batch_size > 1 {
+                return Err(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput,
+                    "Batch size must be 1 for persistent mode.",
+                )));
+            }
+
             Ok(SayaConfig {
                 katana_rpc: args.rpc_url,
                 prover_url: args.proof.prover_url,
@@ -158,8 +165,8 @@ impl TryFrom<SayaArgs> for SayaConfig {
                 store_proofs: args.store_proofs,
                 block_range: (args.start_block, args.end_block),
                 batch_size: args.batch_size,
-                mode: args.shard.saya_mode.0,
-                piltover_contract: args.shard.settlement_contract,
+                mode: args.settlement.saya_mode.0,
+                piltover_contract: args.settlement.settlement_contract,
                 data_availability: da_config,
                 world_address: args.proof.world_address,
                 fact_registry_address: args.proof.fact_registry_address,
@@ -193,8 +200,8 @@ mod tests {
             json_log: false,
             start_block: 0,
             end_block: None,
-            batch_size: 4,
-            shard: SettlementOptions {
+            batch_size: 1,
+            settlement: SettlementOptions {
                 saya_mode: shard::SayaModeArg(SayaMode::Persistent),
                 settlement_contract: Felt::from_hex(
                     "0x65c0d01ef63197f00372cbb93bb32a7c49b70d3e82c5e0880d7912f4421e1c4",
@@ -228,7 +235,7 @@ mod tests {
 
         assert_eq!(config.katana_rpc.as_str(), "http://localhost:5050/");
         assert_eq!(config.prover_url.as_str(), "http://localhost:1234/");
-        assert_eq!(config.batch_size, 4);
+        assert_eq!(config.batch_size, 1);
         assert_eq!(config.block_range, (0, Some(100)));
         assert_eq!(
             config.prover_key.signing_key_as_hex_string(),

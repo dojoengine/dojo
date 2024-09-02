@@ -2,8 +2,7 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use katana_primitives::FieldElement;
-use prover_sdk::{ProverSDK, ProverSdkErrors};
-use tokio::sync::OnceCell;
+use prover_sdk::ProverSDK;
 use url::Url;
 
 use super::loader::prepare_input_cairo1;
@@ -15,8 +14,6 @@ pub struct HttpProverParams {
     pub prover_url: Url,
     pub prover_key: prover_sdk::ProverAccessKey,
 }
-
-static ONCE: OnceCell<Result<ProverSDK, ProverSdkErrors>> = OnceCell::const_new();
 
 pub async fn http_prove_felts(
     prover_params: Arc<HttpProverParams>,
@@ -34,11 +31,8 @@ pub async fn http_prove(
     input: String,
     prove_program: ProveProgram,
 ) -> anyhow::Result<String> {
-    let prover = ONCE
-        .get_or_init(|| async {
-            ProverSDK::new(prover_params.prover_key.clone(), prover_params.prover_url.clone()).await
-        })
-        .await;
+    let prover =
+        ProverSDK::new(prover_params.prover_key.clone(), prover_params.prover_url.clone()).await;
     let prover = prover.as_ref().map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
     if prove_program.cairo_version() == FieldElement::ONE {

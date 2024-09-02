@@ -106,7 +106,7 @@ fi
 if [[ -z "${SAYA_PILTOVER_ADDRESS}" ]]; then
     sncast -a $SAYA_SNCAST_ACCOUNT_NAME -u $SAYA_SEPOLIA_ENDPOINT deploy \
         --class-hash $SAYA_PILTOVER_CLASS_HASH \
-        -c $SAYA_SEPOLIA_ACCOUNT_ADDRESS $SAYA_PILTOVER_STARTING_STATE_ROOT $(expr $SAYA_FORK_BLOCK_NUMBER + 1)  0
+        -c $SAYA_SEPOLIA_ACCOUNT_ADDRESS $SAYA_PILTOVER_STARTING_STATE_ROOT $(expr $SAYA_FORK_BLOCK_NUMBER + 1) 0
 
     echo "Set SAYA_PILTOVER_ADDRESS to the address of the deployed contract."
     exit 0
@@ -122,6 +122,14 @@ fi
 
 if [[ -z "${SAYA_SKIP_MAKING_TRANSACTIONS}" ]]; then
     cargo run -r --bin sozo -- execute dojo_examples-actions spawn \
+        --manifest-path $SAYA_MANIFEST_PATH \
+        --rpc-url http://localhost:5050 \
+        --private-key $SAYA_SEPOLIA_PRIVATE_KEY \
+        --account-address $SAYA_SEPOLIA_ACCOUNT_ADDRESS \
+        --world $SAYA_WORLD_ADDRESS \
+        --wait && \
+    cargo run -r --bin sozo -- execute dojo_examples-actions move \
+        -c 2 \
         --manifest-path $SAYA_MANIFEST_PATH \
         --rpc-url http://localhost:5050 \
         --private-key $SAYA_SEPOLIA_PRIVATE_KEY \
