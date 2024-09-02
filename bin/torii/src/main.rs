@@ -29,6 +29,7 @@ use tokio::sync::broadcast::Sender;
 use tokio_stream::StreamExt;
 use torii_core::engine::{Engine, EngineConfig, Processors};
 use torii_core::processors::event_message::EventMessageProcessor;
+use torii_core::processors::generate_event_processors_map;
 use torii_core::processors::metadata_update::MetadataUpdateProcessor;
 use torii_core::processors::register_model::RegisterModelProcessor;
 use torii_core::processors::store_del_record::StoreDelRecordProcessor;
@@ -172,8 +173,9 @@ async fn main() -> anyhow::Result<()> {
     let world = WorldContractReader::new(args.world_address, &provider);
 
     let db = Sql::new(pool.clone(), args.world_address).await?;
+
     let processors = Processors {
-        event: vec![
+        event: generate_event_processors_map(vec![
             Box::new(RegisterModelProcessor),
             Box::new(StoreSetRecordProcessor),
             Box::new(MetadataUpdateProcessor),
@@ -181,7 +183,7 @@ async fn main() -> anyhow::Result<()> {
             Box::new(EventMessageProcessor),
             Box::new(StoreUpdateRecordProcessor),
             Box::new(StoreUpdateMemberProcessor),
-        ],
+        ])?,
         transaction: vec![Box::new(StoreTransactionProcessor)],
         ..Processors::default()
     };

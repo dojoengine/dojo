@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fmt::Debug;
 use std::time::Duration;
 
@@ -10,26 +10,32 @@ use starknet::core::types::{
     MaybePendingBlockWithTxs, PendingBlockWithTxs, ReceiptBlock, TransactionReceipt,
     TransactionReceiptWithBlockInfo,
 };
-use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
 use tokio::sync::broadcast::Sender;
 use tokio::sync::mpsc::Sender as BoundedSender;
 use tokio::time::sleep;
 use tracing::{debug, error, info, trace, warn};
 
+use crate::processors::event_message::EventMessageProcessor;
 use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
 use crate::sql::Sql;
 
 #[allow(missing_debug_implementations)]
-pub struct Processors<P: Provider + Sync> {
+pub struct Processors<P: Provider + Send + Sync + std::fmt::Debug> {
     pub block: Vec<Box<dyn BlockProcessor<P>>>,
     pub transaction: Vec<Box<dyn TransactionProcessor<P>>>,
-    pub event: Vec<Box<dyn EventProcessor<P>>>,
+    pub event: HashMap<Felt, Box<dyn EventProcessor<P>>>,
+    pub catch_all_event: Box<dyn EventProcessor<P>>,
 }
 
-impl<P: Provider + Sync> Default for Processors<P> {
+impl<P: Provider + Send + Sync + std::fmt::Debug> Default for Processors<P> {
     fn default() -> Self {
-        Self { block: vec![], event: vec![], transaction: vec![] }
+        Self {
+            block: vec![],
+            event: HashMap::new(),
+            transaction: vec![],
+            catch_all_event: Box::new(EventMessageProcessor) as Box<dyn EventProcessor<P>>,
+        }
     }
 }
 
@@ -78,7 +84,7 @@ pub struct FetchPendingResult {
 }
 
 #[allow(missing_debug_implementations)]
-pub struct Engine<P: Provider + Sync> {
+pub struct Engine<P: Provider + Send + Sync + std::fmt::Debug> {
     world: WorldContractReader<P>,
     db: Sql,
     provider: Box<P>,
@@ -93,7 +99,7 @@ struct UnprocessedEvent {
     data: Vec<String>,
 }
 
-impl<P: Provider + Sync> Engine<P> {
+impl<P: Provider + Send + Sync + std::fmt::Debug> Engine<P> {
     pub fn new(
         world: WorldContractReader<P>,
         db: Sql,
@@ -574,16 +580,14 @@ impl<P: Provider + Sync> Engine<P> {
         transaction_hash: Felt,
     ) -> Result<()> {
         self.db.store_event(event_id, event, transaction_hash, block_timestamp);
-        let mut unprocessed = true;
-        for processor in &self.processors.event {
-            // If the processor has no event_key, means it's a catch-all processor.
-            // We also validate the event
-            if (processor.event_key().is_empty()
-                || get_selector_from_name(&processor.event_key())? == event.keys[0])
-                && processor.validate(event)
-            {
-                unprocessed = false;
-                if let Err(e) = processor
+        let event_key = event.keys[0];
+
+        let Some(processor) = self.processors.event.get(&event_key) else {
+            // if we dont have a processor for this event, we try the catch all processor
+            if self.processors.catch_all_event.validate(event) {
+                if let Err(e) = self
+                    .processors
+                    .catch_all_event
                     .process(
                         &self.world,
                         &mut self.db,
@@ -594,24 +598,34 @@ impl<P: Provider + Sync> Engine<P> {
                     )
                     .await
                 {
-                    error!(target: LOG_TARGET, event_name = processor.event_key(), error = %e, "Processing event.");
+                    error!(target: LOG_TARGET, error = %e, "Processing catch all event processor.");
                 }
+            } else {
+                let unprocessed_event = UnprocessedEvent {
+                    keys: event.keys.iter().map(|k| format!("{:#x}", k)).collect(),
+                    data: event.data.iter().map(|d| format!("{:#x}", d)).collect(),
+                };
+
+                trace!(
+                    target: LOG_TARGET,
+                    keys = ?unprocessed_event.keys,
+                    data = ?unprocessed_event.data,
+                    "Unprocessed event.",
+                );
             }
-        }
 
-        if unprocessed {
-            let unprocessed_event = UnprocessedEvent {
-                keys: event.keys.iter().map(|k| format!("{:#x}", k)).collect(),
-                data: event.data.iter().map(|d| format!("{:#x}", d)).collect(),
-            };
+            return Ok(());
+        };
 
-            trace!(
-                target: LOG_TARGET,
-                keys = ?unprocessed_event.keys,
-                data = ?unprocessed_event.data,
-                "Unprocessed event.",
-            );
+        // if processor.validate(event) {
+        if let Err(e) = processor
+            .process(&self.world, &mut self.db, block_number, block_timestamp, event_id, event)
+            .await
+        {
+            error!(target: LOG_TARGET, event_name = processor.event_key(), error = %e, "Processing event.");
         }
+        // }
+
         Ok(())
     }
 }

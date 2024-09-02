@@ -25,6 +25,7 @@ use starknet::providers::Provider;
 use tokio::sync::broadcast;
 use tokio_stream::StreamExt;
 use torii_core::engine::{Engine, EngineConfig, Processors};
+use torii_core::processors::generate_event_processors_map;
 use torii_core::processors::register_model::RegisterModelProcessor;
 use torii_core::processors::store_del_record::StoreDelRecordProcessor;
 use torii_core::processors::store_set_record::StoreSetRecordProcessor;
@@ -352,11 +353,12 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
         db,
         account.provider(),
         Processors {
-            event: vec![
+            event: generate_event_processors_map(vec![
                 Box::new(RegisterModelProcessor),
                 Box::new(StoreSetRecordProcessor),
                 Box::new(StoreDelRecordProcessor),
-            ],
+            ])
+            .unwrap(),
             ..Processors::default()
         },
         EngineConfig::default(),
