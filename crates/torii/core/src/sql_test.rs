@@ -32,6 +32,7 @@ where
     P: Provider + Send + Sync + core::fmt::Debug,
 {
     let (shutdown_tx, _) = broadcast::channel(1);
+    let to = provider.block_hash_and_number().await?.block_number;
     let mut engine = Engine::new(
         world,
         db,
@@ -49,7 +50,8 @@ where
         None,
     );
 
-    let _ = engine.sync_to_head(0, None).await?;
+    let data = engine.fetch_range(0, to, None).await.unwrap();
+    engine.process_range(data).await.unwrap();
 
     Ok(engine)
 }

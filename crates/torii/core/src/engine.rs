@@ -7,7 +7,8 @@ use dojo_world::contracts::world::WorldContractReader;
 use hashlink::LinkedHashMap;
 use starknet::core::types::{
     BlockId, BlockTag, EmittedEvent, Event, EventFilter, Felt, MaybePendingBlockWithTxHashes,
-    MaybePendingBlockWithTxs, ReceiptBlock, TransactionReceipt, TransactionReceiptWithBlockInfo,
+    MaybePendingBlockWithTxs, PendingBlockWithTxs, ReceiptBlock, TransactionReceipt,
+    TransactionReceiptWithBlockInfo,
 };
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
@@ -54,6 +55,28 @@ impl Default for EngineConfig {
     }
 }
 
+#[derive(Debug)]
+pub enum FetchDataResult {
+    Range(FetchRangeResult),
+    Pending(FetchPendingResult),
+    None,
+}
+
+#[derive(Debug)]
+pub struct FetchRangeResult {
+    // (block_number, transaction_hash) -> events
+    pub transactions: LinkedHashMap<(u64, Felt), Vec<EmittedEvent>>,
+    pub blocks: BTreeMap<u64, u64>,
+    pub latest_block_number: u64,
+}
+
+#[derive(Debug)]
+pub struct FetchPendingResult {
+    pub pending_block: Box<PendingBlockWithTxs>,
+    pub pending_block_tx: Option<Felt>,
+    pub block_number: u64,
+}
+
 #[allow(missing_debug_implementations)]
 pub struct Engine<P: Provider + Sync> {
     world: WorldContractReader<P>,
@@ -84,9 +107,9 @@ impl<P: Provider + Sync> Engine<P> {
     }
 
     pub async fn start(&mut self) -> Result<()> {
-        let (mut head, mut pending_block_tx) = self.db.head().await?;
+        let (head, pending_block_tx) = self.db.head().await?;
         if head == 0 {
-            head = self.config.start_block;
+            self.db.set_head(head, pending_block_tx);
         } else if self.config.start_block != 0 {
             warn!(target: LOG_TARGET, "Start block ignored, stored head exists and will be used instead.");
         }
@@ -98,25 +121,35 @@ impl<P: Provider + Sync> Engine<P> {
 
         let mut erroring_out = false;
         loop {
+            let (head, pending_block_tx) = self.db.head().await?;
             tokio::select! {
                 _ = shutdown_rx.recv() => {
                     break Ok(());
                 }
-                _ = async {
-                    match self.sync_to_head(head, pending_block_tx).await {
-                        Ok((latest_block_number, latest_pending_tx)) => {
+                res = self.fetch_data(head, pending_block_tx) => {
+                    match res {
+                        Ok(fetch_result) => {
                             if erroring_out {
                                 erroring_out = false;
                                 backoff_delay = Duration::from_secs(1);
-                                info!(target: LOG_TARGET, latest_block_number = latest_block_number, "Syncing reestablished.");
+                                info!(target: LOG_TARGET, "Syncing reestablished.");
                             }
 
-                            head = latest_block_number;
-                            pending_block_tx = latest_pending_tx;
+                            match self.process(fetch_result).await {
+                                Ok(()) => {}
+                                Err(e) => {
+                                    error!(target: LOG_TARGET, error = %e, "Processing fetched data.");
+                                    erroring_out = true;
+                                    sleep(backoff_delay).await;
+                                    if backoff_delay < max_backoff_delay {
+                                        backoff_delay *= 2;
+                                    }
+                                }
+                            }
                         }
                         Err(e) => {
                             erroring_out = true;
-                            error!(target: LOG_TARGET, error = %e, "Syncing to head.");
+                            error!(target: LOG_TARGET, error = %e, "Fetching data.");
                             sleep(backoff_delay).await;
                             if backoff_delay < max_backoff_delay {
                                 backoff_delay *= 2;
@@ -124,105 +157,43 @@ impl<P: Provider + Sync> Engine<P> {
                         }
                     };
                     sleep(self.config.polling_interval).await;
-                } => {}
+                }
             }
         }
     }
 
-    pub async fn sync_to_head(
+    pub async fn fetch_data(
         &mut self,
         from: u64,
-        mut pending_block_tx: Option<Felt>,
-    ) -> Result<(u64, Option<Felt>)> {
+        pending_block_tx: Option<Felt>,
+    ) -> Result<FetchDataResult> {
         let latest_block_number = self.provider.block_hash_and_number().await?.block_number;
 
-        if from < latest_block_number {
-            // if `from` == 0, then the block may or may not be processed yet.
+        let result = if from < latest_block_number {
             let from = if from == 0 { from } else { from + 1 };
-            debug!(target: LOG_TARGET, from = %from, to = %latest_block_number, "Syncing range.");
-            pending_block_tx = self.sync_range(from, latest_block_number, pending_block_tx).await?;
+            debug!(target: LOG_TARGET, from = %from, to = %latest_block_number, "Fetching data for range.");
+            let data = self.fetch_range(from, latest_block_number, pending_block_tx).await?;
+            FetchDataResult::Range(data)
         } else if self.config.index_pending {
-            debug!(target: LOG_TARGET, block_number = %latest_block_number + 1, pending_block_tx = ?pending_block_tx.map(|tx| format!("{:#x}", tx)), "Syncing pending.");
-            pending_block_tx = self.sync_pending(latest_block_number + 1, pending_block_tx).await?;
-        }
-
-        Ok((latest_block_number, pending_block_tx))
-    }
-
-    pub async fn sync_pending(
-        &mut self,
-        block_number: u64,
-        mut pending_block_tx: Option<Felt>,
-    ) -> Result<Option<Felt>> {
-        let block = if let MaybePendingBlockWithTxs::PendingBlock(pending) =
-            self.provider.get_block_with_txs(BlockId::Tag(BlockTag::Pending)).await?
-        {
-            pending
+            let data = self.fetch_pending(latest_block_number + 1, pending_block_tx).await?;
+            if let Some(data) = data {
+                FetchDataResult::Pending(data)
+            } else {
+                FetchDataResult::None
+            }
         } else {
-            return Ok(None);
+            FetchDataResult::None
         };
 
-        // Skip transactions that have been processed already
-        // Our cursor is the last processed transaction
-        let mut pending_block_tx_cursor = pending_block_tx;
-        for transaction in block.transactions {
-            if let Some(tx) = pending_block_tx_cursor {
-                if transaction.transaction_hash() != &tx {
-                    continue;
-                }
-
-                pending_block_tx_cursor = None;
-                continue;
-            }
-
-            match self
-                .process_transaction_with_receipt(
-                    *transaction.transaction_hash(),
-                    block_number,
-                    block.timestamp,
-                )
-                .await
-            {
-                Err(e) => {
-                    match e.to_string().as_str() {
-                        "TransactionHashNotFound" => {
-                            // We failed to fetch the transaction, which is because
-                            // the transaction might not have been processed fast enough by the
-                            // provider. So we can fail silently and try
-                            // again in the next iteration.
-                            warn!(target: LOG_TARGET, transaction_hash = %format!("{:#x}", transaction.transaction_hash()), "Retrieving pending transaction receipt.");
-                            return Ok(pending_block_tx);
-                        }
-                        _ => {
-                            error!(target: LOG_TARGET, error = %e, transaction_hash = %format!("{:#x}", transaction.transaction_hash()), "Processing pending transaction.");
-                            return Err(e);
-                        }
-                    }
-                }
-                Ok(true) => {
-                    pending_block_tx = Some(*transaction.transaction_hash());
-                    info!(target: LOG_TARGET, transaction_hash = %format!("{:#x}", transaction.transaction_hash()), "Processed pending world transaction.");
-                }
-                Ok(_) => {
-                    debug!(target: LOG_TARGET, transaction_hash = %format!("{:#x}", transaction.transaction_hash()), "Processed pending transaction.")
-                }
-            }
-        }
-
-        // Set the head to the last processed pending transaction
-        // Head block number should still be latest block number
-        self.db.set_head(block_number - 1, pending_block_tx);
-
-        self.db.execute().await?;
-        Ok(pending_block_tx)
+        Ok(result)
     }
 
-    pub async fn sync_range(
+    pub async fn fetch_range(
         &mut self,
         from: u64,
         to: u64,
         pending_block_tx: Option<Felt>,
-    ) -> Result<Option<Felt>> {
+    ) -> Result<FetchRangeResult> {
         // Process all blocks from current to latest.
         let get_events = |token: Option<String>| {
             self.provider.get_events(
@@ -254,9 +225,9 @@ impl<P: Provider + Sync> Engine<P> {
         // to array of (block_number, transaction_hash)
         let mut pending_block_tx_cursor = pending_block_tx;
         let mut transactions = LinkedHashMap::new();
-        for events_page in &events_pages {
+        for events_page in events_pages {
             debug!("Processing events page with events: {}", &events_page.events.len());
-            for event in &events_page.events {
+            for event in events_page.events {
                 let block_number = match event.block_number {
                     Some(block_number) => block_number,
                     // If the block number is not present, try to fetch it from the transaction
@@ -317,9 +288,110 @@ impl<P: Provider + Sync> Engine<P> {
 
         debug!("Transactions: {}", &transactions.len());
         debug!("Blocks: {}", &blocks.len());
+
+        Ok(FetchRangeResult { transactions, blocks, latest_block_number: to })
+    }
+
+    async fn fetch_pending(
+        &self,
+        block_number: u64,
+        pending_block_tx: Option<Felt>,
+    ) -> Result<Option<FetchPendingResult>> {
+        let block = if let MaybePendingBlockWithTxs::PendingBlock(pending) =
+            self.provider.get_block_with_txs(BlockId::Tag(BlockTag::Pending)).await?
+        {
+            pending
+        } else {
+            // TODO: change this to unreachable once katana is updated to return PendingBlockWithTxs
+            // when BlockTag is Pending unreachable!("We requested pending block, so it
+            // must be pending");
+            return Ok(None);
+        };
+
+        Ok(Some(FetchPendingResult {
+            pending_block: Box::new(block),
+            block_number,
+            pending_block_tx,
+        }))
+    }
+
+    pub async fn process(&mut self, fetch_result: FetchDataResult) -> Result<()> {
+        match fetch_result {
+            FetchDataResult::Range(data) => {
+                self.process_range(data).await?;
+            }
+            FetchDataResult::Pending(data) => {
+                self.process_pending(data).await?;
+            }
+            FetchDataResult::None => {}
+        }
+
+        Ok(())
+    }
+
+    pub async fn process_pending(&mut self, data: FetchPendingResult) -> Result<()> {
+        // Skip transactions that have been processed already
+        // Our cursor is the last processed transaction
+        let mut pending_block_tx_cursor = data.pending_block_tx;
+        let mut pending_block_tx = data.pending_block_tx;
+        let timestamp = data.pending_block.timestamp;
+        for transaction in data.pending_block.transactions {
+            if let Some(tx) = pending_block_tx_cursor {
+                if transaction.transaction_hash() != &tx {
+                    continue;
+                }
+
+                pending_block_tx_cursor = None;
+                continue;
+            }
+
+            match self
+                .process_transaction_with_receipt(
+                    *transaction.transaction_hash(),
+                    data.block_number,
+                    timestamp,
+                )
+                .await
+            {
+                Err(e) => {
+                    match e.to_string().as_str() {
+                        "TransactionHashNotFound" => {
+                            // We failed to fetch the transaction, which is because
+                            // the transaction might not have been processed fast enough by the
+                            // provider. So we can fail silently and try
+                            // again in the next iteration.
+                            warn!(target: LOG_TARGET, transaction_hash = %format!("{:#x}", transaction.transaction_hash()), "Retrieving pending transaction receipt.");
+                            self.db.set_head(data.block_number - 1, pending_block_tx);
+                            return Ok(());
+                        }
+                        _ => {
+                            error!(target: LOG_TARGET, error = %e, transaction_hash = %format!("{:#x}", transaction.transaction_hash()), "Processing pending transaction.");
+                            return Err(e);
+                        }
+                    }
+                }
+                Ok(true) => {
+                    pending_block_tx = Some(*transaction.transaction_hash());
+                    info!(target: LOG_TARGET, transaction_hash = %format!("{:#x}", transaction.transaction_hash()), "Processed pending world transaction.");
+                }
+                Ok(_) => {
+                    info!(target: LOG_TARGET, transaction_hash = %format!("{:#x}", transaction.transaction_hash()), "Processed pending transaction.")
+                }
+            }
+        }
+
+        // Set the head to the last processed pending transaction
+        // Head block number should still be latest block number
+        self.db.set_head(data.block_number - 1, pending_block_tx);
+
+        self.db.execute().await?;
+        Ok(())
+    }
+
+    pub async fn process_range(&mut self, data: FetchRangeResult) -> Result<()> {
         // Process all transactions
         let mut last_block = 0;
-        for ((block_number, transaction_hash), events) in transactions {
+        for ((block_number, transaction_hash), events) in data.transactions {
             debug!("Processing transaction hash: {:#x}", transaction_hash);
             // Process transaction
             // let transaction = self.provider.get_transaction_by_hash(transaction_hash).await?;
@@ -328,7 +400,7 @@ impl<P: Provider + Sync> Engine<P> {
                 transaction_hash,
                 events.as_slice(),
                 block_number,
-                blocks[&block_number],
+                data.blocks[&block_number],
             )
             .await?;
 
@@ -338,7 +410,7 @@ impl<P: Provider + Sync> Engine<P> {
                     block_tx.send(block_number).await?;
                 }
 
-                self.process_block(block_number, blocks[&block_number]).await?;
+                self.process_block(block_number, data.blocks[&block_number]).await?;
                 last_block = block_number;
             }
 
@@ -347,17 +419,16 @@ impl<P: Provider + Sync> Engine<P> {
             }
         }
 
-        // We return None for the pending_block_tx because our sync_range
-        // retrieves only specific events from the world. so some transactions
+        // We return None for the pending_block_tx because our process_range
+        // gets only specific events from the world. so some transactions
         // might get ignored and wont update the cursor.
         // so once the sync range is done, we assume all of the tx of the block
         // have been processed.
 
-        self.db.set_head(to, None);
-
+        self.db.set_head(data.latest_block_number, None);
         self.db.execute().await?;
 
-        Ok(None)
+        Ok(())
     }
 
     async fn get_block_timestamp(&self, block_number: u64) -> Result<u64> {
@@ -370,7 +441,7 @@ impl<P: Provider + Sync> Engine<P> {
     async fn process_transaction_with_events(
         &mut self,
         transaction_hash: Felt,
-        events: &[&EmittedEvent],
+        events: &[EmittedEvent],
         block_number: u64,
         block_timestamp: u64,
     ) -> Result<()> {
