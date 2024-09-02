@@ -64,7 +64,7 @@ pub async fn world_from_env_metadata(
         .account(
             provider,
             WorldAddressOrName::Address(world_address),
-            &starknet,
+            starknet,
             env_metadata,
             config,
         )

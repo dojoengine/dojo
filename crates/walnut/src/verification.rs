@@ -1,5 +1,5 @@
 use std::ffi::OsStr;
-use std::path::PathBuf;
+use std::path::Path;
 
 use anyhow::{anyhow, Context, Result};
 use console::{pad_str, Alignment, Style, StyledObject};
@@ -29,7 +29,7 @@ pub async fn walnut_verify_migration_strategy(
     }
 
     // its path to a file so `parent` should never return `None`
-    let root_dir: PathBuf = ws.manifest_path().parent().unwrap().to_path_buf().into();
+    let root_dir: &Path = ws.manifest_path().parent().unwrap().as_std_path();
     let default_namespace = get_default_namespace_from_ws(ws)?;
 
     // Check if there are any contracts or models in the strategy
@@ -51,7 +51,7 @@ pub async fn walnut_verify_migration_strategy(
         std::env::var("WALNUT_API_URL").unwrap_or_else(|_| "https://api.walnut.dev".to_string());
 
     // Collect source code
-    let source_code = collect_source_code(&root_dir)?;
+    let source_code = collect_source_code(root_dir)?;
 
     // Prepare verification payloads
     let mut verification_tasks = Vec::new();
@@ -102,7 +102,7 @@ pub async fn walnut_verify_migration_strategy(
     Ok(())
 }
 
-fn get_class_name_from_artifact_path(path: &PathBuf, namespace: &str) -> Result<String> {
+fn get_class_name_from_artifact_path(path: &Path, namespace: &str) -> Result<String> {
     let file_name =
         path.file_stem().and_then(OsStr::to_str).ok_or_else(|| anyhow!("Invalid file name"))?;
     let class_name = file_name
@@ -149,17 +149,17 @@ async fn verify_class(
     }
 }
 
-fn collect_source_code(root_dir: &PathBuf) -> Result<Value> {
+fn collect_source_code(root_dir: &Path) -> Result<Value> {
     let mut file_data = serde_json::Map::new();
 
     // Read toml files in the root folder
-    for entry in WalkDir::new(root_dir.clone()).max_depth(1).follow_links(true) {
+    for entry in WalkDir::new(root_dir).max_depth(1).follow_links(true) {
         let entry = entry?;
         let path = entry.path();
         if path.is_file() {
             if let Some(extension) = path.extension() {
                 if extension == OsStr::new("toml") {
-                    let relative_path = path.strip_prefix(root_dir.clone())?;
+                    let relative_path = path.strip_prefix(root_dir)?;
                     let file_content = std::fs::read_to_string(path)?;
                     file_data.insert(
                         relative_path.to_string_lossy().into_owned(),
@@ -178,7 +178,7 @@ fn collect_source_code(root_dir: &PathBuf) -> Result<Value> {
         if path.is_file() {
             if let Some(extension) = path.extension() {
                 if extension == OsStr::new("cairo") {
-                    let relative_path = path.strip_prefix(root_dir.clone())?;
+                    let relative_path = path.strip_prefix(root_dir)?;
                     let file_content = std::fs::read_to_string(path)?;
                     file_data.insert(
                         relative_path.to_string_lossy().into_owned(),
