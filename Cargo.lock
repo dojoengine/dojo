@@ -15373,7 +15373,7 @@ dependencies = [
 
 [[package]]
 name = "walnut"
-version = "1.0.0-alpha.7"
+version = "1.0.0-alpha.9"
 dependencies = [
  "anyhow",
  "console",
