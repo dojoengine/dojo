@@ -158,7 +158,11 @@ pub mod world {
         WriterUpdated: WriterUpdated,
         OwnerUpdated: OwnerUpdated,
         ConfigEvent: Config::Event,
-        StateUpdated: StateUpdated
+        StateUpdated: StateUpdated,
+
+        // Dojo System Events are emitted by the `emit!` macro.
+        // The selector is fixed to `selector!("dojo_core::event::SYSTEM_EVENT_SELECTOR")` and
+        // should not be used directly in this enumeration.
     }
 
     #[derive(Drop, starknet::Event, Debug, PartialEq)]

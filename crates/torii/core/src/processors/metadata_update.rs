@@ -35,7 +35,8 @@ where
     }
 
     fn validate(&self, event: &Event) -> bool {
-        if event.keys.len() > 1 {
+        // The keys should be the selector and the resource.
+        if event.keys.len() != 2 {
             info!(
                 target: LOG_TARGET,
                 event_key = %<MetadataUpdateProcessor as EventProcessor<P>>::event_key(self),
