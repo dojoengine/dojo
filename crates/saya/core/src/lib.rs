@@ -32,7 +32,7 @@ use starknet::providers::JsonRpcClient;
 use starknet::signers::{LocalWallet, SigningKey};
 use starknet_crypto::{poseidon_hash_many, Felt};
 use tokio::fs::File;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::io::AsyncWriteExt;
 use tracing::{error, info, trace};
 use url::Url;
 use verifier::VerifierIdentifier;
