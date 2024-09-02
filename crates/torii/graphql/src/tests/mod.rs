@@ -1,5 +1,6 @@
 use std::str::FromStr;
 
+use ahash::AHashMap;
 use anyhow::Result;
 use async_graphql::dynamic::Schema;
 use camino::Utf8PathBuf;
@@ -20,14 +21,17 @@ use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::SqlitePool;
 use starknet::accounts::{Account, Call, ConnectedAccount};
 use starknet::core::types::{Felt, InvokeTransactionResult};
+use starknet::core::utils::get_selector_from_name;
 use starknet::macros::selector;
-use starknet::providers::Provider;
+use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::{JsonRpcClient, Provider};
 use tokio::sync::broadcast;
 use tokio_stream::StreamExt;
 use torii_core::engine::{Engine, EngineConfig, Processors};
 use torii_core::processors::register_model::RegisterModelProcessor;
 use torii_core::processors::store_del_record::StoreDelRecordProcessor;
 use torii_core::processors::store_set_record::StoreSetRecordProcessor;
+use torii_core::processors::EventProcessor;
 use torii_core::sql::Sql;
 
 mod entities_test;
@@ -347,22 +351,53 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
     let db = Sql::new(pool.clone(), strat.world_address).await.unwrap();
 
     let (shutdown_tx, _) = broadcast::channel(1);
-    let mut engine = Engine::new(
-        world,
-        db,
-        account.provider(),
-        Processors {
-            event: vec![
-                Box::new(RegisterModelProcessor),
-                Box::new(StoreSetRecordProcessor),
-                Box::new(StoreDelRecordProcessor),
-            ],
-            ..Processors::default()
-        },
-        EngineConfig::default(),
-        shutdown_tx,
-        None,
-    );
+    let mut engine =
+        Engine::new(
+            world,
+            db,
+            account.provider(),
+            Processors {
+                event: AHashMap::from([
+                    (
+                        get_selector_from_name(
+                            <RegisterModelProcessor as EventProcessor<
+                                &JsonRpcClient<HttpTransport>,
+                            >>::event_key(&RegisterModelProcessor)
+                            .as_str(),
+                        )
+                        .unwrap(),
+                        Box::new(RegisterModelProcessor)
+                            as Box<dyn EventProcessor<&JsonRpcClient<HttpTransport>>>,
+                    ),
+                    (
+                        get_selector_from_name(
+                            <StoreSetRecordProcessor as EventProcessor<
+                                &JsonRpcClient<HttpTransport>,
+                            >>::event_key(&StoreSetRecordProcessor)
+                            .as_str(),
+                        )
+                        .unwrap(),
+                        Box::new(StoreSetRecordProcessor)
+                            as Box<dyn EventProcessor<&JsonRpcClient<HttpTransport>>>,
+                    ),
+                    (
+                        get_selector_from_name(
+                            <StoreDelRecordProcessor as EventProcessor<
+                                &JsonRpcClient<HttpTransport>,
+                            >>::event_key(&StoreDelRecordProcessor)
+                            .as_str(),
+                        )
+                        .unwrap(),
+                        Box::new(StoreDelRecordProcessor)
+                            as Box<dyn EventProcessor<&JsonRpcClient<HttpTransport>>>,
+                    ),
+                ]),
+                ..Processors::default()
+            },
+            EngineConfig::default(),
+            shutdown_tx,
+            None,
+        );
 
     let to = account.provider().block_hash_and_number().await?.block_number;
     let data = engine.fetch_range(0, to, None).await.unwrap();

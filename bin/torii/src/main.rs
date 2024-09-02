@@ -15,6 +15,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 
+use ahash::AHashMap;
 use clap::{ArgAction, Parser};
 use dojo_metrics::{metrics_process, prometheus_exporter};
 use dojo_utils::parse::{parse_socket_address, parse_url};
@@ -22,6 +23,7 @@ use dojo_world::contracts::world::WorldContractReader;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::SqlitePool;
 use starknet::core::types::Felt;
+use starknet::core::utils::get_selector_from_name;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use tokio::sync::broadcast;
@@ -36,6 +38,7 @@ use torii_core::processors::store_set_record::StoreSetRecordProcessor;
 use torii_core::processors::store_transaction::StoreTransactionProcessor;
 use torii_core::processors::store_update_member::StoreUpdateMemberProcessor;
 use torii_core::processors::store_update_record::StoreUpdateRecordProcessor;
+use torii_core::processors::EventProcessor;
 use torii_core::simple_broker::SimpleBroker;
 use torii_core::sql::Sql;
 use torii_core::types::Model;
@@ -172,16 +175,79 @@ async fn main() -> anyhow::Result<()> {
     let world = WorldContractReader::new(args.world_address, &provider);
 
     let db = Sql::new(pool.clone(), args.world_address).await?;
+
+    let event_processors: AHashMap<Felt, Box<dyn EventProcessor<_>>> =
+        AHashMap::from(
+            [
+                (
+                    get_selector_from_name(
+                        <RegisterModelProcessor as EventProcessor<
+                            &Arc<JsonRpcClient<HttpTransport>>,
+                        >>::event_key(&RegisterModelProcessor)
+                        .as_str(),
+                    )?,
+                    Box::new(RegisterModelProcessor)
+                        as Box<dyn EventProcessor<&Arc<JsonRpcClient<HttpTransport>>>>,
+                ),
+                (
+                    get_selector_from_name(
+                        <StoreSetRecordProcessor as EventProcessor<
+                            &Arc<JsonRpcClient<HttpTransport>>,
+                        >>::event_key(&StoreSetRecordProcessor)
+                        .as_str(),
+                    )?,
+                    Box::new(StoreSetRecordProcessor),
+                ),
+                (
+                    get_selector_from_name(
+                        <MetadataUpdateProcessor as EventProcessor<
+                            &Arc<JsonRpcClient<HttpTransport>>,
+                        >>::event_key(&MetadataUpdateProcessor)
+                        .as_str(),
+                    )?,
+                    Box::new(MetadataUpdateProcessor),
+                ),
+                (
+                    get_selector_from_name(
+                        <StoreDelRecordProcessor as EventProcessor<
+                            &Arc<JsonRpcClient<HttpTransport>>,
+                        >>::event_key(&StoreDelRecordProcessor)
+                        .as_str(),
+                    )?,
+                    Box::new(StoreDelRecordProcessor),
+                ),
+                (
+                    get_selector_from_name(
+                        <EventMessageProcessor as EventProcessor<
+                            &Arc<JsonRpcClient<HttpTransport>>,
+                        >>::event_key(&EventMessageProcessor)
+                        .as_str(),
+                    )?,
+                    Box::new(EventMessageProcessor),
+                ),
+                (
+                    get_selector_from_name(
+                        <StoreUpdateRecordProcessor as EventProcessor<
+                            &Arc<JsonRpcClient<HttpTransport>>,
+                        >>::event_key(&StoreUpdateRecordProcessor)
+                        .as_str(),
+                    )?,
+                    Box::new(StoreUpdateRecordProcessor),
+                ),
+                (
+                    get_selector_from_name(
+                        <StoreUpdateMemberProcessor as EventProcessor<
+                            &Arc<JsonRpcClient<HttpTransport>>,
+                        >>::event_key(&StoreUpdateMemberProcessor)
+                        .as_str(),
+                    )?,
+                    Box::new(StoreUpdateMemberProcessor),
+                ),
+            ],
+        );
+
     let processors = Processors {
-        event: vec![
-            Box::new(RegisterModelProcessor),
-            Box::new(StoreSetRecordProcessor),
-            Box::new(MetadataUpdateProcessor),
-            Box::new(StoreDelRecordProcessor),
-            Box::new(EventMessageProcessor),
-            Box::new(StoreUpdateRecordProcessor),
-            Box::new(StoreUpdateMemberProcessor),
-        ],
+        event: event_processors,
         transaction: vec![Box::new(StoreTransactionProcessor)],
         ..Processors::default()
     };

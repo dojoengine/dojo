@@ -1,5 +1,6 @@
 use std::str::FromStr;
 
+use ahash::AHashMap;
 use cainome::cairo_serde::ContractAddress;
 use camino::Utf8PathBuf;
 use dojo_test_utils::compiler::CompilerTestSetup;
@@ -21,6 +22,7 @@ use crate::engine::{Engine, EngineConfig, Processors};
 use crate::processors::register_model::RegisterModelProcessor;
 use crate::processors::store_del_record::StoreDelRecordProcessor;
 use crate::processors::store_set_record::StoreSetRecordProcessor;
+use crate::processors::EventProcessor;
 use crate::sql::Sql;
 
 pub async fn bootstrap_engine<P>(
@@ -38,11 +40,35 @@ where
         db,
         provider,
         Processors {
-            event: vec![
-                Box::new(RegisterModelProcessor),
-                Box::new(StoreSetRecordProcessor),
-                Box::new(StoreDelRecordProcessor),
-            ],
+            event: AHashMap::from([
+                (
+                    get_selector_from_name(
+                        <RegisterModelProcessor as EventProcessor<P>>::event_key(
+                            &RegisterModelProcessor,
+                        )
+                        .as_str(),
+                    )?,
+                    Box::new(RegisterModelProcessor) as Box<dyn EventProcessor<P>>,
+                ),
+                (
+                    get_selector_from_name(
+                        <StoreSetRecordProcessor as EventProcessor<P>>::event_key(
+                            &StoreSetRecordProcessor,
+                        )
+                        .as_str(),
+                    )?,
+                    Box::new(StoreSetRecordProcessor) as Box<dyn EventProcessor<P>>,
+                ),
+                (
+                    get_selector_from_name(
+                        <StoreDelRecordProcessor as EventProcessor<P>>::event_key(
+                            &StoreDelRecordProcessor,
+                        )
+                        .as_str(),
+                    )?,
+                    Box::new(StoreDelRecordProcessor) as Box<dyn EventProcessor<P>>,
+                ),
+            ]),
             ..Processors::default()
         },
         EngineConfig::default(),

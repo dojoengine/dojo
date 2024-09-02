@@ -1,6 +1,7 @@
 use std::str::FromStr;
 use std::sync::Arc;
 
+use ahash::AHashMap;
 use cainome::cairo_serde::ContractAddress;
 use camino::Utf8PathBuf;
 use dojo_test_utils::compiler::CompilerTestSetup;
@@ -21,6 +22,7 @@ use tokio::sync::broadcast;
 use torii_core::engine::{Engine, EngineConfig, Processors};
 use torii_core::processors::register_model::RegisterModelProcessor;
 use torii_core::processors::store_set_record::StoreSetRecordProcessor;
+use torii_core::processors::EventProcessor;
 use torii_core::sql::Sql;
 
 use crate::proto::types::KeysClause;
@@ -101,7 +103,29 @@ async fn test_entities_queries() {
         db.clone(),
         &provider,
         Processors {
-            event: vec![Box::new(RegisterModelProcessor), Box::new(StoreSetRecordProcessor)],
+            event: AHashMap::from([
+                (
+                    get_selector_from_name(
+                        <RegisterModelProcessor as EventProcessor<
+                            &Arc<JsonRpcClient<HttpTransport>>,
+                        >>::event_key(&RegisterModelProcessor)
+                        .as_str(),
+                    )
+                    .unwrap(),
+                    Box::new(RegisterModelProcessor)
+                        as Box<dyn EventProcessor<&Arc<JsonRpcClient<HttpTransport>>>>,
+                ),
+                (
+                    get_selector_from_name(
+                        <StoreSetRecordProcessor as EventProcessor<
+                            &Arc<JsonRpcClient<HttpTransport>>,
+                        >>::event_key(&StoreSetRecordProcessor)
+                        .as_str(),
+                    )
+                    .unwrap(),
+                    Box::new(StoreSetRecordProcessor),
+                ),
+            ]),
             ..Processors::default()
         },
         EngineConfig::default(),
