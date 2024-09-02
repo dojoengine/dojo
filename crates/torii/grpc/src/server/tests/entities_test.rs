@@ -19,6 +19,7 @@ use starknet::providers::{JsonRpcClient, Provider};
 use starknet_crypto::poseidon_hash_many;
 use tokio::sync::broadcast;
 use torii_core::engine::{Engine, EngineConfig, Processors};
+use torii_core::processors::generate_event_processors_map;
 use torii_core::processors::register_model::RegisterModelProcessor;
 use torii_core::processors::store_set_record::StoreSetRecordProcessor;
 use torii_core::sql::Sql;
@@ -63,7 +64,7 @@ async fn test_entities_queries() {
     let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
 
     let world = WorldContract::new(strat.world_address, &account);
-    let world_reader = WorldContractReader::new(strat.world_address, &provider);
+    let world_reader = WorldContractReader::new(strat.world_address, Arc::clone(&provider));
 
     let actions = strat.contracts.first().unwrap();
     let actions_address = get_contract_address(
@@ -99,9 +100,13 @@ async fn test_entities_queries() {
     let mut engine = Engine::new(
         world_reader,
         db.clone(),
-        &provider,
+        Arc::clone(&provider),
         Processors {
-            event: vec![Box::new(RegisterModelProcessor), Box::new(StoreSetRecordProcessor)],
+            event: generate_event_processors_map(vec![
+                Box::new(RegisterModelProcessor),
+                Box::new(StoreSetRecordProcessor),
+            ])
+            .unwrap(),
             ..Processors::default()
         },
         EngineConfig::default(),

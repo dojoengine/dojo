@@ -8,13 +8,13 @@ version.workspace = true
 [dependencies]
 bytes.workspace = true
 dojo-types = { path = "../../dojo-types" }
-futures.workspace = true
 futures-util.workspace = true
+futures.workspace = true
 num-traits.workspace = true
 parking_lot.workspace = true
 rayon.workspace = true
-starknet.workspace = true
 starknet-crypto.workspace = true
+starknet.workspace = true
 thiserror.workspace = true
 torii-core = { path = "../core", optional = true }
 
@@ -49,11 +49,11 @@ wasm-tonic.workspace = true
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 prost.workspace = true
 sqlx.workspace = true
-tokio.workspace = true
 tokio-stream = "0.1.14"
-tonic.workspace = true
+tokio.workspace = true
 tonic-reflection.workspace = true
 tonic-web.workspace = true
+tonic.workspace = true
 url.workspace = true
 
 [build-dependencies]
