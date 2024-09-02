@@ -21,6 +21,7 @@ use sqlx::SqlitePool;
 use starknet::accounts::{Account, Call, ConnectedAccount};
 use starknet::core::types::{Felt, InvokeTransactionResult};
 use starknet::macros::selector;
+use starknet::providers::Provider;
 use tokio::sync::broadcast;
 use tokio_stream::StreamExt;
 use torii_core::engine::{Engine, EngineConfig, Processors};
@@ -363,7 +364,9 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
         None,
     );
 
-    let _ = engine.sync_to_head(0, None).await?;
+    let to = account.provider().block_hash_and_number().await?.block_number;
+    let data = engine.fetch_range(0, to, None).await.unwrap();
+    engine.process_range(data).await.unwrap();
 
     Ok(pool)
 }

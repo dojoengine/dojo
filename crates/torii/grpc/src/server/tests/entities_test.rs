@@ -15,7 +15,7 @@ use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use starknet::accounts::{Account, Call};
 use starknet::core::utils::{get_contract_address, get_selector_from_name};
 use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::JsonRpcClient;
+use starknet::providers::{JsonRpcClient, Provider};
 use starknet_crypto::poseidon_hash_many;
 use tokio::sync::broadcast;
 use torii_core::engine::{Engine, EngineConfig, Processors};
@@ -109,7 +109,9 @@ async fn test_entities_queries() {
         None,
     );
 
-    let _ = engine.sync_to_head(0, None).await.unwrap();
+    let to = provider.block_hash_and_number().await.unwrap().block_number;
+    let data = engine.fetch_range(0, to, None).await.unwrap();
+    engine.process_range(data).await.unwrap();
 
     let (_, receiver) = tokio::sync::mpsc::channel(1);
     let grpc = DojoWorld::new(db.pool, receiver, strat.world_address, provider.clone());
