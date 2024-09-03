@@ -4,11 +4,8 @@ mod read;
 mod trace;
 mod write;
 
-use std::cmp::Ordering;
-use std::ops::RangeInclusive;
 use std::sync::Arc;
 
-use anyhow::Context;
 use katana_core::backend::Backend;
 use katana_core::service::block_producer::{BlockProducer, BlockProducerMode, PendingExecutor};
 use katana_executor::{ExecutionResult, ExecutorFactory};
@@ -22,12 +19,9 @@ use katana_primitives::contract::{ContractAddress, Nonce, StorageKey, StorageVal
 use katana_primitives::conversion::rpc::legacy_inner_to_rpc_class;
 use katana_primitives::env::BlockEnv;
 use katana_primitives::event::ContinuationToken;
-use katana_primitives::receipt::Event;
 use katana_primitives::transaction::{ExecutableTxWithHash, TxHash, TxWithHash};
 use katana_primitives::FieldElement;
-use katana_provider::traits::block::{
-    BlockHashProvider, BlockIdReader, BlockNumberProvider, BlockProvider,
-};
+use katana_provider::traits::block::{BlockHashProvider, BlockIdReader, BlockNumberProvider};
 use katana_provider::traits::contract::ContractClassProvider;
 use katana_provider::traits::env::BlockEnvProvider;
 use katana_provider::traits::state::{StateFactoryProvider, StateProvider};
@@ -38,8 +32,11 @@ use katana_rpc_types::error::starknet::StarknetApiError;
 use katana_rpc_types::FeeEstimate;
 use katana_tasks::{BlockingTaskPool, TokioTaskSpawner};
 use starknet::core::types::{
-    ContractClass, EmittedEvent, EventsPage, TransactionExecutionStatus, TransactionStatus,
+    ContractClass, EventsPage, TransactionExecutionStatus, TransactionStatus,
 };
+
+use crate::utils;
+use crate::utils::events::{Cursor, EventBlockId};
 
 #[allow(missing_debug_implementations)]
 pub struct StarknetApi<EF: ExecutorFactory> {
@@ -345,11 +342,6 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
     ) -> Result<EventsPage, StarknetApiError> {
         let provider = self.inner.backend.blockchain.provider();
 
-        enum EventBlockId {
-            Pending,
-            Num(BlockNumber),
-        }
-
         let from = if BlockIdOrTag::Tag(BlockTag::Pending) == from_block {
             EventBlockId::Pending
         } else {
@@ -364,75 +356,105 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
             EventBlockId::Num(num.ok_or(StarknetApiError::BlockNotFound)?)
         };
 
-        let mut cursor = match continuation_token {
-            Some(token) => ContinuationToken::parse(&token)?,
-            None => ContinuationToken::default(),
+        let token: Option<Cursor> = match continuation_token {
+            Some(token) => Some(ContinuationToken::parse(&token)?.into()),
+            None => None,
         };
 
         // reserved buffer to fill up with events to avoid reallocations
         let mut buffer = Vec::with_capacity(chunk_size as usize);
-        let filter = EventFilter { address, keys };
+        let filter = utils::events::Filter { address, keys };
 
         match (from, to) {
             (EventBlockId::Num(from), EventBlockId::Num(to)) => {
-                let end = fill_events_at(
-                    from..=to,
-                    filter,
-                    chunk_size,
+                let cursor = utils::events::fetch_events_at_blocks(
                     provider,
-                    &mut cursor,
+                    from..=to,
+                    &filter,
+                    chunk_size,
+                    token,
                     &mut buffer,
                 )?;
 
-                // if we have exhausted all events in the requested range,
-                // we don't need to return a continuation token anymore.
-                if end {
-                    return Ok(EventsPage { events: buffer, continuation_token: None });
-                }
+                Ok(EventsPage {
+                    events: buffer,
+                    continuation_token: cursor.map(|c| c.into_rpc_cursor().to_string()),
+                })
             }
 
             (EventBlockId::Num(from), EventBlockId::Pending) => {
                 let latest = provider.latest_number()?;
+                let int_cursor = utils::events::fetch_events_at_blocks(
+                    provider,
+                    from..=latest,
+                    &filter,
+                    chunk_size,
+                    token.clone(),
+                    &mut buffer,
+                )?;
 
-                // if the cursor points to a block that is already past the latest block (ie
-                // pending), we skip processing historical events.
-                if cursor.block_n <= latest {
-                    let end = fill_events_at(
-                        from..=latest,
-                        filter.clone(),
-                        chunk_size,
-                        provider,
-                        &mut cursor,
-                        &mut buffer,
-                    )?;
-
-                    if end && buffer.len() as u64 == chunk_size {
-                        return Ok(EventsPage {
-                            events: buffer,
-                            continuation_token: Some(cursor.to_string()),
-                        });
-                    }
+                // if the internal cursor is Some, meaning the buffer is full and we havent
+                // reached the latest block.
+                if let Some(c) = int_cursor {
+                    return Ok(EventsPage {
+                        events: buffer,
+                        continuation_token: Some(c.into_rpc_cursor().to_string()),
+                    });
                 }
 
                 if let Some(executor) = self.pending_executor() {
-                    fill_pending_events(&executor, filter, chunk_size, &mut cursor, &mut buffer)?;
+                    let cursor = utils::events::fetch_pending_events(
+                        &executor,
+                        &filter,
+                        chunk_size,
+                        token,
+                        &mut buffer,
+                    )?;
+
+                    Ok(EventsPage {
+                        events: buffer,
+                        continuation_token: Some(cursor.into_rpc_cursor().to_string()),
+                    })
+                } else {
+                    let cursor = Cursor::new_block(latest + 1);
+                    Ok(EventsPage {
+                        events: buffer,
+                        continuation_token: Some(cursor.into_rpc_cursor().to_string()),
+                    })
                 }
             }
 
             (EventBlockId::Pending, EventBlockId::Pending) => {
                 if let Some(executor) = self.pending_executor() {
-                    fill_pending_events(&executor, filter, chunk_size, &mut cursor, &mut buffer)?;
+                    let cursor = utils::events::fetch_pending_events(
+                        &executor,
+                        &filter,
+                        chunk_size,
+                        token,
+                        &mut buffer,
+                    )?;
+
+                    Ok(EventsPage {
+                        events: buffer,
+                        continuation_token: Some(cursor.into_rpc_cursor().to_string()),
+                    })
+                } else {
+                    let latest = provider.latest_number()?;
+                    let cursor = Cursor::new_block(latest);
+
+                    Ok(EventsPage {
+                        events: buffer,
+                        continuation_token: Some(cursor.into_rpc_cursor().to_string()),
+                    })
                 }
             }
 
             (EventBlockId::Pending, EventBlockId::Num(_)) => {
-                return Err(StarknetApiError::UnexpectedError {
-                    reason: "Invalid block range".to_string(),
-                });
+                Err(StarknetApiError::UnexpectedError {
+                    reason: "Invalid block range; `from` block must be lower than `to`".to_string(),
+                })
             }
         }
-
-        Ok(EventsPage { events: buffer, continuation_token: Some(cursor.to_string()) })
     }
 
     async fn transaction_status(
@@ -492,307 +514,4 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         })
         .await
     }
-}
-
-fn fill_pending_events(
-    pending_executor: &PendingExecutor,
-    filter: EventFilter,
-    chunk_size: u64,
-    cursor: &mut ContinuationToken,
-    buffer: &mut Vec<EmittedEvent>,
-) -> Result<(), StarknetApiError> {
-    let block = pending_executor.read();
-    let txs = block.transactions();
-
-    // process indiviual transactions in the block
-    for (i, (tx, res)) in txs.iter().enumerate().skip(cursor.txn_n as usize) {
-        cursor.txn_n = i as u64;
-
-        if let ExecutionResult::Success { receipt, .. } = res {
-            let events = receipt.events();
-            let tx_events_len = events.len();
-
-            // check if cursor.event_n is correct
-            match (tx_events_len as u64).cmp(&cursor.event_n) {
-                Ordering::Less => {
-                    return Err(StarknetApiError::InvalidContinuationToken);
-                }
-                Ordering::Equal => {
-                    cursor.txn_n += 1;
-                    cursor.event_n = 0;
-                    continue;
-                }
-                Ordering::Greater => (),
-            }
-
-            // calculate the remaining capacity based on the chunk size and the current
-            // number of events we have taken.
-            let total_can_take = (chunk_size as usize).saturating_sub(tx_events_len);
-
-            // skip events according to the continuation token.
-            let filtered = filter_events(events.iter(), filter.clone())
-                .enumerate()
-                .skip(cursor.event_n as usize)
-                .take(total_can_take)
-                .map(|(i, e)| {
-                    (
-                        i,
-                        EmittedEvent {
-                            block_hash: None,
-                            block_number: None,
-                            keys: e.keys.clone(),
-                            data: e.data.clone(),
-                            transaction_hash: tx.hash,
-                            from_address: e.from_address.into(),
-                        },
-                    )
-                })
-                .collect::<Vec<_>>();
-
-            // remaining possible events that we haven't seen due to the chunk size limit.
-            let chunk_seen_end = cursor.event_n as usize + total_can_take;
-            // get the index of the last matching event that we have reached. if there is not
-            // matching events (ie `filtered` is empty) we point the end of the chunk
-            // we've covered thus far..
-            let last_event_idx = filtered.last().map(|(i, _)| *i).unwrap_or(chunk_seen_end);
-            // the next time we have to fetch the events, we will start from this index.
-            let new_event_n = if total_can_take == 0 {
-                // if we haven't taken any events, due to the chunk size limit, we need to start
-                // from the the same event pointed by the current cursor..
-                cursor.event_n as usize + last_event_idx
-            } else {
-                // start at the next event of the last event we've filtered out.
-                cursor.event_n as usize + last_event_idx + 1
-            };
-
-            buffer.extend(filtered.into_iter().map(|(_, event)| event));
-
-            // if there are still more events that we haven't fetched yet for this tx.
-            if new_event_n < tx_events_len {
-                cursor.event_n = new_event_n as u64;
-            }
-            // reset the event index
-            else {
-                cursor.txn_n += 1;
-                cursor.event_n = 0;
-            }
-
-            if buffer.len() >= chunk_size as usize {
-                break;
-            }
-        }
-    }
-
-    Ok(())
-}
-
-/// Returns `true` if reach the end of the block range.
-fn fill_events_at<P>(
-    block_range: RangeInclusive<BlockNumber>,
-    filter: EventFilter,
-    chunk_size: u64,
-    provider: P,
-    cursor: &mut ContinuationToken,
-    buffer: &mut Vec<EmittedEvent>,
-) -> Result<bool, StarknetApiError>
-where
-    P: BlockProvider + ReceiptProvider,
-{
-    // update the block range to start from the block pointed by the cursor.
-    let range = (block_range.start() + cursor.block_n)..=*block_range.end();
-
-    for block_num in range {
-        cursor.block_n = block_num;
-
-        let block_hash = provider.block_hash_by_num(block_num)?.context("Missing block hash")?;
-        let receipts = provider.receipts_by_block(block_num.into())?.context("Missing receipts")?;
-        let tx_range =
-            provider.block_body_indices(block_num.into())?.context("Missing block body index")?;
-
-        let tx_hashes = provider.transaction_hashes_in_range(tx_range.into())?;
-        let total_txn = receipts.len();
-
-        // the cursor.txn_n indicates from which transaction to start, so
-        // if the value is larger than the total number of transactions available in the
-        // block.
-        if (total_txn as u64) < cursor.txn_n {
-            return Err(StarknetApiError::InvalidContinuationToken);
-        }
-
-        // skip number of transactions as specified in the continuation token
-        for (i, (tx_hash, events)) in tx_hashes
-            .into_iter()
-            .zip(receipts.iter().map(|r| r.events()))
-            .enumerate()
-            .skip(cursor.txn_n as usize)
-        {
-            cursor.txn_n = i as u64;
-
-            // the total number of events in the transaction
-            let tx_events_len: usize = events.len();
-
-            // check if cursor.event_n is correct
-            match tx_events_len.cmp(&(cursor.event_n as usize)) {
-                Ordering::Less => {
-                    return Err(StarknetApiError::InvalidContinuationToken);
-                }
-                Ordering::Equal => {
-                    cursor.txn_n += 1;
-                    cursor.event_n = 0;
-                    continue;
-                }
-                Ordering::Greater => (),
-            }
-
-            // calculate the remaining capacity based on the chunk size and the current
-            // number of events we have taken.
-            let total_can_take = (chunk_size as usize).saturating_sub(tx_events_len);
-
-            // skip events according to the continuation token.
-            let filtered = filter_events(events.iter(), filter.clone())
-                .enumerate()
-                .skip(cursor.event_n as usize)
-                .take(total_can_take)
-                .map(|(i, e)| {
-                    (
-                        i,
-                        EmittedEvent {
-                            keys: e.keys.clone(),
-                            data: e.data.clone(),
-                            transaction_hash: tx_hash,
-                            block_number: Some(block_num),
-                            block_hash: Some(block_hash),
-                            from_address: e.from_address.into(),
-                        },
-                    )
-                })
-                .collect::<Vec<_>>();
-
-            // remaining possible events that we haven't seen due to the chunk size limit.
-            let chunk_seen_end = cursor.event_n as usize + total_can_take;
-            // get the index of the last matching event that we have reached. if there is not
-            // matching events (ie `filtered` is empty) we point the end of the chunk
-            // we've covered thus far..
-            let last_event_idx = filtered.last().map(|(i, _)| *i).unwrap_or(chunk_seen_end);
-            // the next time we have to fetch the events, we will start from this index.
-            let new_event_n = if total_can_take == 0 {
-                // if we haven't taken any events, due to the chunk size limit, we need to start
-                // from the the same event pointed by the current cursor..
-                cursor.event_n as usize + last_event_idx
-            } else {
-                // start at the next event of the last event we've filtered out.
-                cursor.event_n as usize + last_event_idx + 1
-            };
-
-            buffer.extend(filtered.into_iter().map(|(_, event)| event));
-
-            if buffer.len() >= chunk_size as usize {
-                // check if there are still more events that we haven't fetched yet. if yes,
-                // we need to update the cursor to point to the next event to start fetching from
-                // in the same transaction..
-                if new_event_n < tx_events_len {
-                    cursor.event_n = new_event_n as u64;
-                }
-                // when there are no more events to fetch in this transaction
-                else {
-                    cursor.event_n = 0;
-
-                    // if there are still more transactions to fetch, we need to increment the
-                    // transaction index.
-                    if i + 1 < total_txn {
-                        cursor.txn_n += 1;
-                    }
-                    // if we have reached the end of the block, point to the next block.
-                    else if block_num == *block_range.end() {
-                        cursor.block_n += 1;
-                        cursor.txn_n = 0;
-                        return Ok(true);
-                    }
-                }
-
-                return Ok(false);
-            }
-        }
-    }
-
-    // reset the txn-scoped index
-    cursor.txn_n = 0;
-    cursor.event_n = 0;
-
-    Ok(true)
-}
-
-/// An object to specify how events should be filtered.
-#[derive(Debug, Default, Clone)]
-struct EventFilter {
-    /// The contract address to filter by.
-    ///
-    /// If `None`, all events are considered. If `Some`, only events emitted by the specified
-    /// contract are considered.
-    address: Option<ContractAddress>,
-    /// The keys to filter by.
-    keys: Option<Vec<Vec<FieldElement>>>,
-}
-
-/// An iterator that yields events that match the given filters.
-#[derive(Debug)]
-struct FilteredEvents<'a, I: Iterator<Item = &'a Event>> {
-    iter: I,
-    filter: EventFilter,
-}
-
-impl<'a, I: Iterator<Item = &'a Event>> FilteredEvents<'a, I> {
-    fn new(iter: I, filter: EventFilter) -> Self {
-        Self { iter, filter }
-    }
-}
-
-impl<'a, I: Iterator<Item = &'a Event>> Iterator for FilteredEvents<'a, I> {
-    type Item = &'a Event;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        for event in self.iter.by_ref() {
-            // Check if the event matches the address filter
-            if !self.filter.address.map_or(true, |addr| addr == event.from_address) {
-                continue;
-            }
-
-            // Check if the event matches the keys filter
-            let is_matched = match &self.filter.keys {
-                None => true,
-                // From starknet-api spec:
-                // Per key (by position), designate the possible values to be matched for events to
-                // be returned. Empty array designates 'any' value"
-                Some(filters) => filters.iter().enumerate().all(|(i, keys)| {
-                    // Lets say we want to filter events which are either named `Event1` or `Event2`
-                    // and custom key `0x1` or `0x2` Filter:
-                    // [[sn_keccak("Event1"), sn_keccak("Event2")], ["0x1", "0x2"]]
-
-                    // This checks: number of keys in event >= number of keys in filter (we check >
-                    // i and not >= i because i is zero indexed) because
-                    // otherwise this event doesn't contain all the keys we
-                    // requested
-                    event.keys.len() > i &&
-                         // This checks: Empty array desginates 'any' value
-                         (keys.is_empty()
-                         ||
-                         // This checks: If this events i'th value is one of the requested value in filter_keys[i]
-                         keys.contains(&event.keys[i]))
-                }),
-            };
-
-            if is_matched {
-                return Some(event);
-            }
-        }
-
-        None
-    }
-}
-
-fn filter_events<'a, I: Iterator<Item = &'a Event>>(
-    events: I,
-    filter: EventFilter,
-) -> FilteredEvents<'a, I> {
-    FilteredEvents::new(events, filter)
 }

@@ -151,8 +151,13 @@ impl From<ProviderError> for StarknetApiError {
 }
 
 impl From<ContinuationTokenError> for StarknetApiError {
-    fn from(_: ContinuationTokenError) -> Self {
-        StarknetApiError::InvalidContinuationToken
+    fn from(value: ContinuationTokenError) -> Self {
+        match value {
+            ContinuationTokenError::InvalidToken => StarknetApiError::InvalidContinuationToken,
+            ContinuationTokenError::ParseFailed(e) => {
+                StarknetApiError::UnexpectedError { reason: e.to_string() }
+            }
+        }
     }
 }
 
