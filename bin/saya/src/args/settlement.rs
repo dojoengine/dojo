@@ -17,7 +17,7 @@ pub struct SettlementOptions {
 
     #[arg(help = "The settlement contract address.")]
     #[arg(long)]
-    pub settlement_contract: FieldElement,
+    pub settlement_contract: Option<FieldElement>,
 }
 
 impl Default for SayaModeArg {

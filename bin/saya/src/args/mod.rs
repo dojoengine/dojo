@@ -7,7 +7,7 @@ use clap::Parser;
 use saya_core::data_availability::celestia::CelestiaConfig;
 use saya_core::data_availability::DataAvailabilityConfig;
 use saya_core::{ProverAccessKey, SayaConfig, SayaMode, StarknetAccountData};
-use shard::SettlementOptions;
+use settlement::SettlementOptions;
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet_account::StarknetAccountOptions;
 use tracing::Subscriber;
@@ -19,7 +19,7 @@ use crate::args::proof::ProofOptions;
 
 mod data_availability;
 mod proof;
-mod shard;
+mod settlement;
 mod starknet_account;
 
 #[derive(Parser, Debug)]
@@ -158,6 +158,16 @@ impl TryFrom<SayaArgs> for SayaConfig {
                 )));
             }
 
+            let settlement_contract =
+                if let Some(settlement_contract) = args.settlement.settlement_contract {
+                    settlement_contract
+                } else {
+                    return Err(Box::new(std::io::Error::new(
+                        std::io::ErrorKind::InvalidInput,
+                        "Persistent mode has to have a `settlement_contract`.",
+                    )));
+                };
+
             Ok(SayaConfig {
                 katana_rpc: args.rpc_url,
                 prover_url: args.proof.prover_url,
@@ -166,7 +176,7 @@ impl TryFrom<SayaArgs> for SayaConfig {
                 block_range: (args.start_block, args.end_block),
                 batch_size: args.batch_size,
                 mode: args.settlement.saya_mode.0,
-                settlement_contract: args.settlement.settlement_contract,
+                settlement_contract,
                 data_availability: da_config,
                 world_address: args.proof.world_address,
                 fact_registry_address: args.proof.fact_registry_address,
@@ -202,11 +212,13 @@ mod tests {
             end_block: None,
             batch_size: 1,
             settlement: SettlementOptions {
-                saya_mode: shard::SayaModeArg(SayaMode::Persistent),
-                settlement_contract: Felt::from_hex(
-                    "0x65c0d01ef63197f00372cbb93bb32a7c49b70d3e82c5e0880d7912f4421e1c4",
-                )
-                .unwrap(),
+                saya_mode: settlement::SayaModeArg(SayaMode::Persistent),
+                settlement_contract: Some(
+                    Felt::from_hex(
+                        "0x65c0d01ef63197f00372cbb93bb32a7c49b70d3e82c5e0880d7912f4421e1c4",
+                    )
+                    .unwrap(),
+                ),
             },
             data_availability: DataAvailabilityOptions {
                 da_chain: None,
