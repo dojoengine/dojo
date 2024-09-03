@@ -5,13 +5,13 @@ use dojo::utils::{bytearray_hash, entity_id_from_keys};
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, world};
 
 use dojo::tests::helpers::{
-    deploy_world, Foo, foo, foo_setter, IFooSetterDispatcher, IFooSetterDispatcherTrait
+    deploy_world, Foo, foo_setter, IFooSetterDispatcher, IFooSetterDispatcherTrait
 };
 
 #[test]
 fn test_owner() {
     let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model(Model::<Foo>::definition());
     let foo_selector = Model::<Foo>::selector();
 
     let alice = starknet::contract_address_const::<0xa11ce>();
@@ -52,7 +52,7 @@ fn test_grant_owner_not_registered_resource() {
 )]
 fn test_grant_owner_through_malicious_contract() {
     let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model(Model::<Foo>::definition());
     let foo_selector = Model::<Foo>::selector();
 
     let alice = starknet::contract_address_const::<0xa11ce>();
@@ -76,7 +76,7 @@ fn test_grant_owner_through_malicious_contract() {
 )]
 fn test_grant_owner_fails_for_non_owner() {
     let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model(Model::<Foo>::definition());
     let foo_selector = Model::<Foo>::selector();
 
     let alice = starknet::contract_address_const::<0xa11ce>();
@@ -97,7 +97,7 @@ fn test_grant_owner_fails_for_non_owner() {
 )]
 fn test_revoke_owner_through_malicious_contract() {
     let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model(Model::<Foo>::definition());
     let foo_selector = Model::<Foo>::selector();
 
     let alice = starknet::contract_address_const::<0xa11ce>();
@@ -122,7 +122,7 @@ fn test_revoke_owner_through_malicious_contract() {
 )]
 fn test_revoke_owner_fails_for_non_owner() {
     let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model(Model::<Foo>::definition());
     let foo_selector = Model::<Foo>::selector();
 
     let alice = starknet::contract_address_const::<0xa11ce>();
@@ -140,7 +140,7 @@ fn test_revoke_owner_fails_for_non_owner() {
 #[available_gas(6000000)]
 fn test_writer() {
     let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model(Model::<Foo>::definition());
     let foo_selector = Model::<Foo>::selector();
 
     assert(!world.is_writer(foo_selector, 69.try_into().unwrap()), 'should not be writer');
@@ -169,7 +169,7 @@ fn test_writer_not_registered_resource() {
 )]
 fn test_grant_writer_through_malicious_contract() {
     let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model(Model::<Foo>::definition());
     let foo_selector = Model::<Foo>::selector();
 
     let alice = starknet::contract_address_const::<0xa11ce>();
@@ -193,7 +193,7 @@ fn test_grant_writer_through_malicious_contract() {
 )]
 fn test_grant_writer_fails_for_non_owner() {
     let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model(Model::<Foo>::definition());
     let foo_selector = Model::<Foo>::selector();
 
     let alice = starknet::contract_address_const::<0xa11ce>();
@@ -214,7 +214,7 @@ fn test_grant_writer_fails_for_non_owner() {
 )]
 fn test_revoke_writer_through_malicious_contract() {
     let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model(Model::<Foo>::definition());
     let foo_selector = Model::<Foo>::selector();
 
     let alice = starknet::contract_address_const::<0xa11ce>();
@@ -239,7 +239,7 @@ fn test_revoke_writer_through_malicious_contract() {
 )]
 fn test_revoke_writer_fails_for_non_owner() {
     let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model(Model::<Foo>::definition());
     let foo_selector = Model::<Foo>::selector();
 
     let alice = starknet::contract_address_const::<0xa11ce>();
@@ -263,7 +263,7 @@ fn test_revoke_writer_fails_for_non_owner() {
 )]
 fn test_not_writer_with_known_contract() {
     let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model(Model::<Foo>::definition());
 
     let account = starknet::contract_address_const::<0xb0b>();
     world.grant_owner(bytearray_hash(@"dojo"), account);

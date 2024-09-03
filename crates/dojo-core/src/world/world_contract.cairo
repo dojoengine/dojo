@@ -2,14 +2,23 @@ use core::option::OptionTrait;
 use core::traits::{Into, TryInto};
 use starknet::{ContractAddress, ClassHash, storage_access::StorageBaseAddress, SyscallResult};
 
-use dojo::model::{ModelIndex, ResourceMetadata};
-use dojo::model::{Layout};
-use dojo::utils::bytearray_hash;
+use dojo::model::{Layout, ModelIndex, ResourceMetadata, ModelInfo};
+use dojo::model::introspect::Ty;
 
 #[derive(Drop, starknet::Store, Serde, Default, Debug)]
+enum ResourceType {
+    Model,
+    Contract,
+    Namespace,
+    World,
+    #[default]
+    Unregistered,
+}
+
+#[derive(Drop, Serde, Default, Debug)]
 pub enum Resource {
-    Model: (ClassHash, ContractAddress),
-    Contract: (ClassHash, ContractAddress),
+    Model: dojo::model::ModelDefinition,
+    Contract: dojo::contract::ContractDefinition,
     Namespace,
     World,
     #[default]
@@ -23,8 +32,12 @@ pub trait IWorld<T> {
 
     fn register_namespace(ref self: T, namespace: ByteArray);
 
-    fn register_model(ref self: T, class_hash: ClassHash);
-    fn upgrade_model(ref self: T, class_hash: ClassHash);
+    fn register_model(ref self: T, model_definition: dojo::model::ModelDefinition);
+    fn upgrade_model(ref self: T, model_selector: felt252, version: u8, ty: Ty, layout: Layout);
+
+    fn model_ty(self: @T, model_selector: felt252) -> Ty;
+    fn model_layout(self: @T, model_selector: felt252) -> Layout;
+    fn model_info(self: @T, model_selector: felt252) -> ModelInfo;
 
     fn deploy_contract(ref self: T, salt: felt252, class_hash: ClassHash) -> ContractAddress;
     fn upgrade_contract(ref self: T, selector: felt252, class_hash: ClassHash) -> ClassHash;
@@ -46,6 +59,7 @@ pub trait IWorld<T> {
     fn delete_entity(ref self: T, model_selector: felt252, index: ModelIndex, layout: Layout);
 
     fn base(self: @T) -> ClassHash;
+    fn resource_type(self: @T, selector: felt252) -> ResourceType;
     fn resource(self: @T, selector: felt252) -> Resource;
 
     /// In Dojo, there are 2 levels of authorization: `owner` and `writer`.
@@ -103,11 +117,12 @@ pub mod world {
     use starknet::{
         contract_address_const, get_caller_address, get_contract_address, get_tx_info, ClassHash,
         ContractAddress, syscalls::{deploy_syscall, emit_event_syscall, replace_class_syscall},
-        SyscallResult, SyscallResultTrait, storage::Map,
+        SyscallResult, SyscallResultTrait,
     };
     pub use starknet::storage::{
-        StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess,
-        StoragePointerWriteAccess
+        Map, Vec, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess,
+        StoragePointerWriteAccess, StoragePathEntry, VecTrait, MutableVecTrait, StorageAsPointer,
+        StorageAsPath
     };
 
     use dojo::world::errors;
@@ -118,19 +133,17 @@ pub mod world {
         IUpgradeableState, IFactRegistryDispatcher, IFactRegistryDispatcherTrait, StorageUpdate,
         ProgramOutput
     };
-    use dojo::model::{
-        Model, IModelDispatcher, IModelDispatcherTrait, Layout, ResourceMetadata,
-        ResourceMetadataTrait, metadata
-    };
+    use dojo::model::{Model, Layout, ResourceMetadata, ResourceMetadataTrait, metadata, ModelInfo};
+    use dojo::model::introspect::Ty;
     use dojo::storage;
-    use dojo::utils::{entity_id_from_keys, bytearray_hash};
+    use dojo::utils::{entity_id_from_keys, bytearray_hash, selector_from_names, tag_from_names};
 
     use super::{
-        ModelIndex, IWorldDispatcher, IWorldDispatcherTrait, IWorld, IUpgradeableWorld, Resource
+        ModelIndex, IWorldDispatcher, IWorldDispatcherTrait, IWorld, IUpgradeableWorld, Resource,
+        ResourceType
     };
 
     const WORLD: felt252 = 0;
-
     const DOJO_INIT_SELECTOR: felt252 = selector!("dojo_init");
 
     component!(path: Config, storage: config, event: ConfigEvent);
@@ -214,18 +227,17 @@ pub mod world {
     pub struct ModelRegistered {
         pub name: ByteArray,
         pub namespace: ByteArray,
-        pub class_hash: ClassHash,
-        pub address: ContractAddress,
+        pub version: u8,
+        pub ty: Ty,
+        pub layout: Layout
     }
 
     #[derive(Drop, starknet::Event, Debug, PartialEq)]
     pub struct ModelUpgraded {
-        pub name: ByteArray,
-        pub namespace: ByteArray,
-        pub class_hash: ClassHash,
-        pub prev_class_hash: ClassHash,
-        pub address: ContractAddress,
-        pub prev_address: ContractAddress,
+        pub selector: felt252,
+        pub version: u8,
+        pub ty: Ty,
+        pub layout: Layout
     }
 
     #[derive(Drop, starknet::Event)]
@@ -270,12 +282,29 @@ pub mod world {
         pub value: bool,
     }
 
+    #[starknet::storage_node]
+    pub struct ModelDefinition {
+        namespace: ByteArray,
+        name: ByteArray,
+        version: u8,
+        packed_size: Option<u32>,
+        unpacked_size: Option<u32>
+        // Note that `Ty` and `Layout` are stored manually (see storage::definition)
+    }
+
+    #[starknet::storage_node]
+    struct ContractDefinition {
+        class_hash: ClassHash,
+        contract_address: ContractAddress
+    }
+
     #[storage]
     struct Storage {
         contract_base: ClassHash,
         nonce: usize,
-        models_salt: usize,
-        resources: Map::<felt252, Resource>,
+        resources: Map::<felt252, ResourceType>,
+        models: Map::<felt252, ModelDefinition>,
+        contracts: Map::<felt252, ContractDefinition>,
         owners: Map::<(felt252, ContractAddress), bool>,
         writers: Map::<(felt252, ContractAddress), bool>,
         #[substorage(v0)]
@@ -284,11 +313,36 @@ pub mod world {
     }
 
     #[generate_trait]
-    impl ResourceIsNoneImpl of ResourceIsNoneTrait {
-        fn is_unregistered(self: @Resource) -> bool {
-            match self {
-                Resource::Unregistered => true,
-                _ => false
+    impl ResourceTypeImpl of ResourceTypeTrait {
+        fn is_unregistered(self: @ResourceType) -> bool {
+            if let ResourceType::Unregistered = self {
+                true
+            } else {
+                false
+            }
+        }
+
+        fn is_model(self: @ResourceType) -> bool {
+            if let ResourceType::Model = self {
+                true
+            } else {
+                false
+            }
+        }
+
+        fn is_contract(self: @ResourceType) -> bool {
+            if let ResourceType::Contract = self {
+                true
+            } else {
+                false
+            }
+        }
+
+        fn is_namespace(self: @ResourceType) -> bool {
+            if let ResourceType::Namespace = self {
+                true
+            } else {
+                false
             }
         }
     }
@@ -298,18 +352,14 @@ pub mod world {
         let creator = starknet::get_tx_info().unbox().account_contract_address;
         self.contract_base.write(contract_base);
 
-        self.resources.write(WORLD, Resource::World);
-        self
-            .resources
-            .write(
-                Model::<ResourceMetadata>::selector(),
-                Resource::Model((metadata::initial_class_hash(), metadata::initial_address()))
-            );
+        self.resources.write(WORLD, ResourceType::World);
         self.owners.write((WORLD, creator), true);
+
+        self.register_model_internal(creator, Model::<ResourceMetadata>::definition());
 
         let dojo_namespace_hash = bytearray_hash(@"__DOJO__");
 
-        self.resources.write(dojo_namespace_hash, Resource::Namespace);
+        self.resources.write(dojo_namespace_hash, ResourceType::Namespace);
         self.owners.write((dojo_namespace_hash, creator), true);
 
         self.config.initializer(creator);
@@ -489,96 +539,118 @@ pub mod world {
             EventEmitter::emit(ref self, WriterUpdated { resource, contract, value: false });
         }
 
-        /// Registers a model in the world. If the model is already registered,
-        /// the implementation will be updated.
+        /// Registers a model in the world.
         ///
         /// # Arguments
+        /// * `namespace` -
+        /// * `name` -
         ///
-        /// * `class_hash` - The class hash of the model to be registered.
-        fn register_model(ref self: ContractState, class_hash: ClassHash) {
+        fn register_model(ref self: ContractState, model_definition: dojo::model::ModelDefinition) {
             let caller = get_caller_address();
 
-            let salt = self.models_salt.read();
-            let (address, name, selector, namespace, namespace_hash) =
-                dojo::model::deploy_and_get_metadata(
-                salt.into(), class_hash
-            )
-                .unwrap_syscall();
-            self.models_salt.write(salt + 1);
+            let namespace_selector = bytearray_hash(@model_definition.namespace);
 
-            if selector.is_zero() {
-                panic_with_byte_array(@errors::invalid_resource_selector(selector));
+            if !self.is_namespace_registered(namespace_selector) {
+                panic_with_byte_array(
+                    @errors::namespace_not_registered(@model_definition.namespace)
+                );
+            }
+            self
+                .assert_caller_namespace_write_access(
+                    @model_definition.namespace, namespace_selector
+                );
+
+            if model_definition.selector.is_zero() {
+                panic_with_byte_array(
+                    @errors::invalid_resource_selector(model_definition.selector)
+                );
             }
 
-            if !self.is_namespace_registered(namespace_hash) {
-                panic_with_byte_array(@errors::namespace_not_registered(@namespace));
-            }
-
-            self.assert_caller_namespace_write_access(@namespace, namespace_hash);
-
-            let model = self.resources.read(selector);
+            let model = self.resources.read(model_definition.selector);
             if !model.is_unregistered() {
-                panic_with_byte_array(@errors::model_already_registered(@namespace, @name));
+                panic_with_byte_array(
+                    @errors::model_already_registered(
+                        @model_definition.namespace, @model_definition.name
+                    )
+                );
             }
 
-            self.resources.write(selector, Resource::Model((class_hash, address)));
-            self.owners.write((selector, caller), true);
-
-            EventEmitter::emit(ref self, ModelRegistered { name, namespace, address, class_hash });
-        }
-
-        fn upgrade_model(ref self: ContractState, class_hash: ClassHash) {
-            let caller = get_caller_address();
-
-            let salt = self.models_salt.read();
-            let (address, name, selector, namespace, namespace_hash) =
-                dojo::model::deploy_and_get_metadata(
-                salt.into(), class_hash
-            )
-                .unwrap_syscall();
-            self.models_salt.write(salt + 1);
-
-            if !self.is_namespace_registered(namespace_hash) {
-                panic_with_byte_array(@errors::namespace_not_registered(@namespace));
-            }
-
-            self.assert_caller_namespace_write_access(@namespace, namespace_hash);
-
-            if selector.is_zero() {
-                panic_with_byte_array(@errors::invalid_resource_selector(selector));
-            }
-
-            let mut prev_class_hash = core::num::traits::Zero::<ClassHash>::zero();
-            let mut prev_address = core::num::traits::Zero::<ContractAddress>::zero();
-
-            match self.resources.read(selector) {
-                // If model is already registered, validate permission to update.
-                Resource::Model((
-                    model_hash, model_address
-                )) => {
-                    if !self.is_owner(selector, caller) {
-                        panic_with_byte_array(@errors::not_owner_upgrade(caller, selector));
-                    }
-
-                    prev_class_hash = model_hash;
-                    prev_address = model_address;
-                },
-                Resource::Unregistered => {
-                    panic_with_byte_array(@errors::model_not_registered(@namespace, @name))
-                },
-                _ => panic_with_byte_array(
-                    @errors::resource_conflict(@format!("{}-{}", namespace, name), @"model")
-                )
-            };
-
-            self.resources.write(selector, Resource::Model((class_hash, address)));
+            self.register_model_internal(caller, model_definition.clone());
 
             EventEmitter::emit(
                 ref self,
-                ModelUpgraded {
-                    name, namespace, prev_address, address, class_hash, prev_class_hash
+                ModelRegistered {
+                    namespace: model_definition.namespace.clone(),
+                    name: model_definition.name.clone(),
+                    version: model_definition.version,
+                    ty: model_definition.ty.clone(),
+                    layout: model_definition.layout.clone()
                 }
             );
+        }
+
+        /// Upgrade a model in the world.
+        ///
+        /// # Arguments
+        ///
+        fn upgrade_model(
+            ref self: ContractState, model_selector: felt252, version: u8, ty: Ty, layout: Layout
+        ) {
+            let caller = get_caller_address();
+
+            match self.resources.read(model_selector) {
+                // If model is already registered, validate permission to update.
+                ResourceType::Model => {
+                    if !self.is_owner(model_selector, caller) {
+                        panic_with_byte_array(@errors::not_owner_upgrade(caller, model_selector));
+                    }
+
+                    let mut model_node = self.models.entry(model_selector);
+                    model_node.version.write(version);
+
+                    self.write_model_ty(model_selector, @ty);
+                    self.write_model_layout(model_selector, @layout);
+
+                    EventEmitter::emit(
+                        ref self, ModelUpgraded { selector: model_selector, version, ty, layout }
+                    );
+                },
+                ResourceType::Unregistered => {
+                    panic_with_byte_array(@errors::model_not_registered(model_selector))
+                },
+                _ => panic_with_byte_array(
+                    @errors::resource_conflict(@format!("{}", model_selector), @"model")
+                )
+            };
+        }
+
+        fn model_ty(self: @ContractState, model_selector: felt252) -> Ty {
+            if self.resources.read(model_selector).is_model() {
+                self.read_model_ty(model_selector)
+            } else {
+                panic_with_byte_array(@errors::model_not_registered(model_selector))
+            }
+        }
+
+        fn model_layout(self: @ContractState, model_selector: felt252) -> Layout {
+            if self.resources.read(model_selector).is_model() {
+                self.read_model_layout(model_selector)
+            } else {
+                panic_with_byte_array(@errors::model_not_registered(model_selector))
+            }
+        }
+
+        fn model_info(self: @ContractState, model_selector: felt252) -> ModelInfo {
+            if self.resources.read(model_selector).is_model() {
+                let model_node = self.models.entry(model_selector);
+                ModelInfo {
+                    namespace: model_node.namespace.read(),
+                    name: model_node.name.read(),
+                    version: model_node.version.read(),
+                }
+            } else {
+                panic_with_byte_array(@errors::model_not_registered(model_selector))
+            }
         }
 
         /// Registers a namespace in the world.
@@ -592,11 +664,11 @@ pub mod world {
             let hash = bytearray_hash(@namespace);
 
             match self.resources.read(hash) {
-                Resource::Namespace => panic_with_byte_array(
+                ResourceType::Namespace => panic_with_byte_array(
                     @errors::namespace_already_registered(@namespace)
                 ),
-                Resource::Unregistered => {
-                    self.resources.write(hash, Resource::Namespace);
+                ResourceType::Unregistered => {
+                    self.resources.write(hash, ResourceType::Namespace);
                     self.owners.write((hash, caller), true);
 
                     EventEmitter::emit(ref self, NamespaceRegistered { namespace, hash });
@@ -643,7 +715,11 @@ pub mod world {
 
             let selector = dispatcher.selector();
             self.owners.write((selector, caller), true);
-            self.resources.write(selector, Resource::Contract((class_hash, contract_address)));
+            self.resources.write(selector, ResourceType::Contract);
+
+            let mut contract_node = self.contracts.entry(selector);
+            contract_node.class_hash.write(class_hash.clone());
+            contract_node.contract_address.write(contract_address.clone());
 
             EventEmitter::emit(
                 ref self,
@@ -668,8 +744,10 @@ pub mod world {
         ) -> ClassHash {
             self.assert_caller_is_resource_owner(selector);
 
-            if let Resource::Contract((_, contract_address)) = self.resources.read(selector) {
-                IUpgradeableDispatcher { contract_address }.upgrade(class_hash);
+            if self.resources.read(selector).is_contract() {
+                let contract_address = self.contracts.entry(selector).contract_address.read();
+
+                IUpgradeableDispatcher { contract_address: contract_address }.upgrade(class_hash);
                 EventEmitter::emit(
                     ref self, ContractUpgraded { class_hash, address: contract_address }
                 );
@@ -686,8 +764,9 @@ pub mod world {
         /// * `selector` - The selector of the contract to initialize.
         /// * `init_calldata` - Calldata used to initialize the contract.
         fn init_contract(ref self: ContractState, selector: felt252, init_calldata: Span<felt252>) {
-            if let Resource::Contract((_, contract_address)) = self.resources.read(selector) {
+            if self.resources.read(selector).is_contract() {
                 let caller = get_caller_address();
+                let contract_address = self.contracts.entry(selector).contract_address.read();
 
                 let dispatcher = IContractDispatcher { contract_address };
                 let tag = dispatcher.tag();
@@ -816,6 +895,10 @@ pub mod world {
             self.contract_base.read()
         }
 
+        fn resource_type(self: @ContractState, selector: felt252) -> ResourceType {
+            self.resources.read(selector)
+        }
+
         /// Gets resource data from its selector.
         ///
         /// # Arguments
@@ -824,10 +907,39 @@ pub mod world {
         /// # Returns
         ///   * `Resource` - the resource data associated with the selector.
         fn resource(self: @ContractState, selector: felt252) -> Resource {
-            self.resources.read(selector)
+            match self.resources.read(selector) {
+                ResourceType::Model => {
+                    let model_node = self.models.entry(selector);
+
+                    Resource::Model(
+                        dojo::model::ModelDefinition {
+                            selector,
+                            namespace: model_node.namespace.read(),
+                            name: model_node.name.read(),
+                            version: model_node.version.read(),
+                            ty: self.read_model_ty(selector),
+                            layout: self.read_model_layout(selector),
+                            packed_size: model_node.packed_size.read(),
+                            unpacked_size: model_node.unpacked_size.read()
+                        }
+                    )
+                },
+                ResourceType::Contract => {
+                    let contract_node = self.contracts.entry(selector);
+
+                    Resource::Contract(
+                        dojo::contract::ContractDefinition {
+                            class_hash: contract_node.class_hash.read(),
+                            contract_address: contract_node.contract_address.read(),
+                        }
+                    )
+                },
+                ResourceType::Namespace => Resource::Namespace,
+                ResourceType::World => Resource::World,
+                ResourceType::Unregistered => Resource::Unregistered,
+            }
         }
     }
-
 
     #[abi(embed_v0)]
     impl UpgradeableWorld of IUpgradeableWorld<ContractState> {
@@ -956,11 +1068,12 @@ pub mod world {
 
             // Must have owner or writer role on the namespace or on the model.
             match self.resources.read(model_selector) {
-                Resource::Model((
-                    _, model_address
-                )) => {
-                    let model = IModelDispatcher { contract_address: model_address };
-                    let namespace_selector = model.namespace_hash();
+                ResourceType::Model => {
+                    let model_node = self.models.entry(model_selector);
+                    let namespace = model_node.namespace.read();
+                    let name = model_node.name.read();
+
+                    let namespace_selector = bytearray_hash(@namespace);
 
                     // - use several single if because it seems more efficient than a big one with
                     // several conditions.
@@ -982,18 +1095,20 @@ pub mod world {
                         return;
                     }
 
-                    let model_tag = model.tag();
                     let d = IContractDispatcher { contract_address: caller };
+                    let model_tag = tag_from_names(@namespace, @name);
 
                     // If the caller is not a dojo contract, the `d.selector()` will fail. In the
                     // future use the SRC5 to first query the contract to see if it implements the
                     // `IContract` interface.
                     // For now, we just assume that the caller is a dojo contract as it's 100% of
                     // the dojo use cases at the moment.
-                    if let Resource::Contract((_, contract_address)) = self
-                        .resources
-                        .read(d.selector()) {
-                        let d = IContractDispatcher { contract_address };
+                    if self.resources.read(d.selector()).is_contract() {
+                        let contract_node = self.contracts.entry(d.selector());
+
+                        let d = IContractDispatcher {
+                            contract_address: contract_node.contract_address.read()
+                        };
                         panic_with_byte_array(
                             @errors::no_write_access_with_tags(
                                 @d.tag(), @"model (or it's namespace)", @model_tag
@@ -1003,7 +1118,7 @@ pub mod world {
                         panic_with_byte_array(@errors::no_model_write_access(@model_tag, caller));
                     }
                 },
-                Resource::Unregistered => {
+                ResourceType::Unregistered => {
                     panic_with_byte_array(@errors::resource_not_registered(model_selector));
                 },
                 _ => panic_with_byte_array(
@@ -1046,8 +1161,12 @@ pub mod world {
             // use cases at the moment.
             let d = IContractDispatcher { contract_address: caller };
 
-            if let Resource::Contract((_, contract_address)) = self.resources.read(d.selector()) {
-                let d = IContractDispatcher { contract_address };
+            if self.resources.read(d.selector()).is_contract() {
+                let contract_node = self.contracts.entry(d.selector());
+
+                let d = IContractDispatcher {
+                    contract_address: contract_node.contract_address.read()
+                };
                 panic_with_byte_array(
                     @errors::no_write_access_with_tags(@d.tag(), @"namespace", namespace)
                 );
@@ -1065,10 +1184,7 @@ pub mod world {
         ///   * `namespace_hash` - the hash of the namespace.
         #[inline(always)]
         fn is_namespace_registered(self: @ContractState, namespace_hash: felt252) -> bool {
-            match self.resources.read(namespace_hash) {
-                Resource::Namespace => true,
-                _ => false
-            }
+            self.resources.read(namespace_hash).is_namespace()
         }
 
         /// Sets the model value for a model record/entity/member.
@@ -1273,6 +1389,45 @@ pub mod world {
                 ref offset,
                 layout
             )
+        }
+
+        fn register_model_internal(ref self: ContractState, creator: ContractAddress, model_definition: dojo::model::ModelDefinition) {
+            self.owners.write((model_definition.selector, creator), true);
+            self.resources.write(model_definition.selector, ResourceType::Model);
+
+            let mut model_node = self.models.entry(model_definition.selector);
+            model_node.namespace.write(model_definition.namespace);
+            model_node.name.write(model_definition.name);
+            model_node.version.write(model_definition.version);
+            model_node.packed_size.write(model_definition.packed_size);
+            model_node.unpacked_size.write(model_definition.unpacked_size);
+
+            self.write_model_ty(model_definition.selector, @model_definition.ty);
+            self.write_model_layout(model_definition.selector, @model_definition.layout);
+        }
+
+        fn write_model_ty(ref self: ContractState, model_selector: felt252, ty: @Ty) {
+            let mut serialized_data = ArrayTrait::new();
+            Serde::serialize(ty, ref serialized_data);
+
+            storage::definition::write_model_ty(model_selector, serialized_data.span());
+        }
+
+        fn write_model_layout(ref self: ContractState, model_selector: felt252, layout: @Layout) {
+            let mut serialized_data = ArrayTrait::new();
+            Serde::serialize(layout, ref serialized_data);
+
+            storage::definition::write_model_layout(model_selector, serialized_data.span());
+        }
+
+        fn read_model_ty(self: @ContractState, model_selector: felt252) -> Ty {
+            let mut serialized = storage::definition::read_model_ty(model_selector);
+            Serde::<Ty>::deserialize(ref serialized).unwrap()
+        }
+
+        fn read_model_layout(self: @ContractState, model_selector: felt252) -> Layout {
+            let mut serialized = storage::definition::read_model_layout(model_selector);
+            Serde::<Layout>::deserialize(ref serialized).unwrap()
         }
     }
 }

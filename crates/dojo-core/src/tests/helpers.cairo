@@ -203,7 +203,7 @@ pub fn deploy_world() -> IWorldDispatcher {
 pub fn deploy_world_and_bar() -> (IWorldDispatcher, IbarDispatcher) {
     // Spawn empty world
     let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model(Model::<Foo>::definition());
 
     // System contract
     let contract_address = deploy_with_world_address(bar::TEST_CLASS_HASH, world);

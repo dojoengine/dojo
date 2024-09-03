@@ -18,6 +18,10 @@ pub fn selector_from_names(namespace: @ByteArray, name: @ByteArray) -> felt252 {
     poseidon_hash_span([bytearray_hash(namespace), bytearray_hash(name)].span())
 }
 
+pub fn tag_from_names(namespace: @ByteArray, name: @ByteArray) -> ByteArray {
+    format!("{}-{}", namespace, name)
+}
+
 /// Computes the entity id from the keys.
 ///
 /// # Arguments

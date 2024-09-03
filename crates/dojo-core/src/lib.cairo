@@ -2,7 +2,9 @@ pub mod contract {
     mod base_contract;
     pub use base_contract::base;
     pub mod contract;
-    pub use contract::{IContract, IContractDispatcher, IContractDispatcherTrait};
+    pub use contract::{
+        IContract, IContractDispatcher, IContractDispatcherTrait, ContractDefinition
+    };
     pub mod upgradeable;
 }
 
@@ -12,21 +14,19 @@ pub mod model {
     pub use layout::{Layout, FieldLayout};
 
     pub mod model;
-    pub use model::{
-        Model, ModelIndex, ModelEntity, IModel, IModelDispatcher, IModelDispatcherTrait,
-        deploy_and_get_metadata
-    };
+    pub use model::{Model, ModelIndex, ModelEntity, ModelDefinition, ModelInfo};
 
     #[cfg(target: "test")]
     pub use model::{ModelTest, ModelEntityTest};
 
     pub mod metadata;
-    pub use metadata::{ResourceMetadata, ResourceMetadataTrait, resource_metadata};
+    pub use metadata::{ResourceMetadata, ResourceMetadataTrait};
     pub(crate) use metadata::{initial_address, initial_class_hash};
 }
 
 pub(crate) mod storage {
     pub(crate) mod database;
+    pub(crate) mod definition;
     pub(crate) mod packing;
     pub(crate) mod layout;
     pub(crate) mod storage;
@@ -48,7 +48,7 @@ pub mod utils {
     pub mod utils;
     pub use utils::{
         bytearray_hash, entity_id_from_keys, find_field_layout, find_model_field_layout, any_none,
-        sum, combine_key, selector_from_names
+        sum, combine_key, selector_from_names, tag_from_names
     };
 }
 

@@ -4,6 +4,25 @@ use dojo::model::Layout;
 use dojo::model::introspect::Ty;
 use dojo::world::IWorldDispatcher;
 
+#[derive(Drop, Clone, Serde, Debug)]
+pub struct ModelDefinition {
+    pub selector: felt252,
+    pub namespace: ByteArray,
+    pub name: ByteArray,
+    pub version: u8,
+    pub layout: Layout,
+    pub ty: Ty,
+    pub packed_size: Option<u32>,
+    pub unpacked_size: Option<u32>
+}
+
+#[derive(Drop, Serde, Debug)]
+pub struct ModelInfo {
+    pub namespace: ByteArray,
+    pub name: ByteArray,
+    pub version: u8,
+}
+
 #[derive(Copy, Drop, Serde, Debug, PartialEq)]
 pub enum ModelIndex {
     Keys: Span<felt252>,
@@ -55,6 +74,9 @@ pub trait Model<T> {
     // Returns the model tag which combines the namespace and the name.
     fn tag() -> ByteArray;
 
+    // Returns the full model definition as stored in the world contract.
+    fn definition() -> ModelDefinition;
+
     fn version() -> u8;
 
     /// Returns the model selector built from its name and its namespace.
@@ -69,45 +91,10 @@ pub trait Model<T> {
     fn keys(self: @T) -> Span<felt252>;
     fn values(self: @T) -> Span<felt252>;
     fn layout() -> Layout;
+    fn ty() -> Ty;
     fn instance_layout(self: @T) -> Layout;
     fn packed_size() -> Option<usize>;
-}
-
-#[starknet::interface]
-pub trait IModel<T> {
-    fn name(self: @T) -> ByteArray;
-    fn namespace(self: @T) -> ByteArray;
-    fn tag(self: @T) -> ByteArray;
-    fn version(self: @T) -> u8;
-
-    fn selector(self: @T) -> felt252;
-    fn name_hash(self: @T) -> felt252;
-    fn namespace_hash(self: @T) -> felt252;
-    fn unpacked_size(self: @T) -> Option<usize>;
-    fn packed_size(self: @T) -> Option<usize>;
-    fn layout(self: @T) -> Layout;
-    fn schema(self: @T) -> Ty;
-}
-
-/// Deploys a model with the given [`ClassHash`] and retrieves it's name.
-/// Currently, the model is expected to already be declared by `sozo`.
-///
-/// # Arguments
-///
-/// * `salt` - A salt used to uniquely deploy the model.
-/// * `class_hash` - Class Hash of the model.
-pub fn deploy_and_get_metadata(
-    salt: felt252, class_hash: starknet::ClassHash
-) -> SyscallResult<(starknet::ContractAddress, ByteArray, felt252, ByteArray, felt252)> {
-    let (contract_address, _) = starknet::syscalls::deploy_syscall(
-        class_hash, salt, [].span(), false,
-    )?;
-    let model = IModelDispatcher { contract_address };
-    let name = model.name();
-    let selector = model.selector();
-    let namespace = model.namespace();
-    let namespace_hash = model.namespace_hash();
-    Result::Ok((contract_address, name, selector, namespace, namespace_hash))
+    fn unpacked_size() -> Option<usize>;
 }
 
 #[cfg(target: "test")]

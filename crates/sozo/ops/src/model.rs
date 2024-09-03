@@ -14,38 +14,6 @@ use starknet::providers::Provider;
 
 const INDENT: &str = "    ";
 
-pub async fn model_class_hash<P>(tag: String, world_address: Felt, provider: P) -> Result<Felt>
-where
-    P: Provider + Send + Sync,
-{
-    let mut world_reader = WorldContractReader::new(world_address, provider);
-    world_reader.set_block(BlockId::Tag(BlockTag::Pending));
-
-    let model = world_reader.model_reader_with_tag(&tag).await?;
-
-    println!("{:#x}", model.class_hash());
-
-    Ok(model.class_hash())
-}
-
-pub async fn model_contract_address<P>(
-    tag: String,
-    world_address: Felt,
-    provider: P,
-) -> Result<Felt>
-where
-    P: Provider + Send + Sync,
-{
-    let mut world_reader = WorldContractReader::new(world_address, provider);
-    world_reader.set_block(BlockId::Tag(BlockTag::Pending));
-
-    let model = world_reader.model_reader_with_tag(&tag).await?;
-
-    println!("{:#x}", model.contract_address());
-
-    Ok(model.contract_address())
-}
-
 pub async fn model_layout<P>(tag: String, world_address: Felt, provider: P) -> Result<Layout>
 where
     P: Provider + Send + Sync,

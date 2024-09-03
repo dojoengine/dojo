@@ -10,7 +10,6 @@ use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{Terminal, TypedStablePtr, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
-use convert_case::{Case, Casing};
 use dojo_world::config::NamespaceConfig;
 use dojo_world::contracts::naming;
 use dojo_world::manifest::Member;
@@ -603,6 +602,18 @@ pub impl $type_name$ModelImpl of dojo::model::Model<$type_name$> {
     }
 
     #[inline(always)]
+    fn definition() -> dojo::model::ModelDefinition {
+        dojo::model::ModelDefinition {
+            selector: $model_selector$,
+            namespace: \"$model_namespace$\",
+            name: \"$type_name$\",
+            version: $model_version$,
+            ty: dojo::model::introspect::Introspect::<$type_name$>::ty(),
+            layout: dojo::model::introspect::Introspect::<$type_name$>::layout(),
+        }
+    }
+
+    #[inline(always)]
     fn version() -> u8 {
         $model_version$
     }
@@ -657,8 +668,18 @@ pub impl $type_name$ModelImpl of dojo::model::Model<$type_name$> {
     }
 
     #[inline(always)]
+    fn ty() -> dojo::model::introspect::Ty {
+        dojo::model::introspect::Introspect::<$type_name$>::ty()
+    }
+
+    #[inline(always)]
     fn packed_size() -> Option<usize> {
         dojo::model::layout::compute_packed_size(Self::layout())
+    }
+
+    #[inline(always)]
+    fn unpacked_size() -> Option<usize> {
+        dojo::model::introspect::Introspect::<$type_name$>::size()
     }
 }
 
@@ -695,76 +716,8 @@ pub impl $type_name$ModelTestImpl of dojo::model::ModelTest<$type_name$> {
         );
     }
 }
-
-#[starknet::interface]
-pub trait I$contract_name$<T> {
-    fn ensure_abi(self: @T, model: $type_name$);
-}
-
-#[starknet::contract]
-pub mod $contract_name$ {
-    use super::$type_name$;
-    use super::I$contract_name$;
-
-    #[storage]
-    struct Storage {}
-
-    #[abi(embed_v0)]
-    impl DojoModelImpl of dojo::model::IModel<ContractState>{
-        fn name(self: @ContractState) -> ByteArray {
-           dojo::model::Model::<$type_name$>::name()
-        }
-
-        fn namespace(self: @ContractState) -> ByteArray {
-           dojo::model::Model::<$type_name$>::namespace()
-        }
-
-        fn tag(self: @ContractState) -> ByteArray {
-            dojo::model::Model::<$type_name$>::tag()
-        }
-
-        fn version(self: @ContractState) -> u8 {
-           dojo::model::Model::<$type_name$>::version()
-        }
-
-        fn selector(self: @ContractState) -> felt252 {
-           dojo::model::Model::<$type_name$>::selector()
-        }
-
-        fn name_hash(self: @ContractState) -> felt252 {
-            dojo::model::Model::<$type_name$>::name_hash()
-        }
-
-        fn namespace_hash(self: @ContractState) -> felt252 {
-            dojo::model::Model::<$type_name$>::namespace_hash()
-        }
-
-        fn unpacked_size(self: @ContractState) -> Option<usize> {
-            dojo::model::introspect::Introspect::<$type_name$>::size()
-        }
-
-        fn packed_size(self: @ContractState) -> Option<usize> {
-            dojo::model::Model::<$type_name$>::packed_size()
-        }
-
-        fn layout(self: @ContractState) -> dojo::model::Layout {
-            dojo::model::Model::<$type_name$>::layout()
-        }
-
-        fn schema(self: @ContractState) -> dojo::model::introspect::Ty {
-            dojo::model::introspect::Introspect::<$type_name$>::ty()
-        }
-    }
-
-    #[abi(embed_v0)]
-    impl $contract_name$Impl of I$contract_name$<ContractState>{
-        fn ensure_abi(self: @ContractState, model: $type_name$) {
-        }
-    }
-}
 ",
             &UnorderedHashMap::from([
-                ("contract_name".to_string(), RewriteNode::Text(model_name.to_case(Case::Snake))),
                 ("type_name".to_string(), RewriteNode::Text(model_name)),
                 ("namespace".to_string(), RewriteNode::Text("namespace".to_string())),
                 ("serialized_keys".to_string(), RewriteNode::new_modified(serialized_keys)),

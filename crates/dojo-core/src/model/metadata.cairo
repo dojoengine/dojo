@@ -9,7 +9,7 @@ use core::poseidon::poseidon_hash_span;
 use core::serde::Serde;
 
 use dojo::model::introspect::{Introspect, Ty, Struct, Member};
-use dojo::model::{Model, ModelIndex, Layout, FieldLayout};
+use dojo::model::{Model, ModelIndex, Layout, FieldLayout, ModelDefinition};
 use dojo::utils;
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 
@@ -107,6 +107,19 @@ pub impl ResourceMetadataModel of Model<ResourceMetadata> {
         "__DOJO__-ResourceMetadata"
     }
 
+    fn definition() -> ModelDefinition {
+        ModelDefinition {
+            selector: Self::selector(),
+            namespace: Self::namespace(),
+            name: Self::name(),
+            version: Self::version(),
+            ty: Self::ty(),
+            layout: Self::layout(),
+            packed_size: Self::packed_size(),
+            unpacked_size: Self::unpacked_size()
+        }
+    }
+
     #[inline(always)]
     fn version() -> u8 {
         1
@@ -160,8 +173,18 @@ pub impl ResourceMetadataModel of Model<ResourceMetadata> {
     }
 
     #[inline(always)]
+    fn ty() -> Ty {
+        Introspect::<ResourceMetadata>::ty()
+    }
+
+    #[inline(always)]
     fn packed_size() -> Option<usize> {
         Option::None
+    }
+
+    #[inline(always)]
+    fn unpacked_size() -> Option<usize> {
+        Introspect::<ResourceMetadata>::size()
     }
 }
 
@@ -191,56 +214,4 @@ pub impl ResourceMetadataIntrospect<> of Introspect<ResourceMetadata<>> {
             }
         )
     }
-}
-
-#[starknet::contract]
-pub mod resource_metadata {
-    use super::ResourceMetadata;
-    use super::ResourceMetadataModel;
-
-    use dojo::model::introspect::{Introspect, Ty};
-    use dojo::model::Layout;
-
-    #[storage]
-    struct Storage {}
-
-    #[external(v0)]
-    fn selector(self: @ContractState) -> felt252 {
-        ResourceMetadataModel::selector()
-    }
-
-    fn name(self: @ContractState) -> ByteArray {
-        ResourceMetadataModel::name()
-    }
-
-    fn version(self: @ContractState) -> u8 {
-        ResourceMetadataModel::version()
-    }
-
-    fn namespace(self: @ContractState) -> ByteArray {
-        ResourceMetadataModel::namespace()
-    }
-
-    #[external(v0)]
-    fn unpacked_size(self: @ContractState) -> Option<usize> {
-        Introspect::<ResourceMetadata>::size()
-    }
-
-    #[external(v0)]
-    fn packed_size(self: @ContractState) -> Option<usize> {
-        ResourceMetadataModel::packed_size()
-    }
-
-    #[external(v0)]
-    fn layout(self: @ContractState) -> Layout {
-        ResourceMetadataModel::layout()
-    }
-
-    #[external(v0)]
-    fn schema(self: @ContractState) -> Ty {
-        Introspect::<ResourceMetadata>::ty()
-    }
-
-    #[external(v0)]
-    fn ensure_abi(self: @ContractState, model: ResourceMetadata) {}
 }

@@ -17,7 +17,7 @@ use dojo::model::introspect::Introspect;
 use dojo::storage::{database, storage};
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 
-use dojo::tests::helpers::{Foo, Sword, Case, CaseStore, case, Character, Abilities, Stats, Weapon};
+use dojo::tests::helpers::{Foo, Sword, Case, CaseStore, Character, Abilities, Stats, Weapon};
 use dojo::utils::test::{spawn_test_world, GasCounterTrait};
 
 #[derive(Drop, Serde)]
@@ -47,7 +47,9 @@ fn deploy_world() -> IWorldDispatcher {
     spawn_test_world(
         ["dojo"].span(),
         [
-            case::TEST_CLASS_HASH, case_not_packed::TEST_CLASS_HASH, complex_model::TEST_CLASS_HASH
+            Model::<Case>::definition(),
+            Model::<CaseNotPacked>::definition(),
+            Model::<ComplexModel>::definition(),
         ].span()
     )
 }

@@ -1,3 +1,11 @@
+use starknet::{ClassHash, ContractAddress};
+
+#[derive(Drop, Serde, Debug)]
+pub struct ContractDefinition {
+    pub class_hash: ClassHash,
+    pub contract_address: ContractAddress
+}
+
 #[starknet::interface]
 pub trait IContract<T> {
     fn contract_name(self: @T) -> ByteArray;

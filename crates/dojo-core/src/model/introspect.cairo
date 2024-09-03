@@ -1,6 +1,6 @@
 use dojo::model::{Layout, FieldLayout};
 
-#[derive(Copy, Drop, Serde)]
+#[derive(Copy, Drop, Serde, Debug, PartialEq)]
 pub enum Ty {
     Primitive: felt252,
     Struct: Struct,
@@ -13,21 +13,21 @@ pub enum Ty {
     ByteArray,
 }
 
-#[derive(Copy, Drop, Serde)]
+#[derive(Copy, Drop, Serde, Debug, PartialEq)]
 pub struct Struct {
     pub name: felt252,
     pub attrs: Span<felt252>,
     pub children: Span<Member>
 }
 
-#[derive(Copy, Drop, Serde)]
+#[derive(Copy, Drop, Serde, Debug, PartialEq)]
 pub struct Enum {
     pub name: felt252,
     pub attrs: Span<felt252>,
     pub children: Span<(felt252, Ty)>
 }
 
-#[derive(Copy, Drop, Serde)]
+#[derive(Copy, Drop, Serde, Debug, PartialEq)]
 pub struct Member {
     pub name: felt252,
     pub attrs: Span<felt252>,

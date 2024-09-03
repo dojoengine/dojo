@@ -48,7 +48,8 @@ fn test_from_values_bad_data() {
 #[test]
 fn test_get_and_update_entity() {
     let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+
+    world.register_model(Model::<Foo>::definition());
 
     let foo = Foo { k1: 1, k2: 2, v1: 3, v2: 4 };
     foo.set(world);
@@ -69,7 +70,7 @@ fn test_get_and_update_entity() {
 #[test]
 fn test_delete_entity() {
     let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model(Model::<Foo>::definition());
 
     let foo = Foo { k1: 1, k2: 2, v1: 3, v2: 4 };
     foo.set(world);
@@ -85,7 +86,7 @@ fn test_delete_entity() {
 #[test]
 fn test_get_and_set_member_from_entity() {
     let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model(Model::<Foo>::definition());
 
     let foo = Foo { k1: 1, k2: 2, v1: 3, v2: 4 };
     foo.set(world);
@@ -107,7 +108,7 @@ fn test_get_and_set_member_from_entity() {
 #[test]
 fn test_get_and_set_field_name() {
     let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model(Model::<Foo>::definition());
 
     let foo = Foo { k1: 1, k2: 2, v1: 3, v2: 4 };
     foo.set(world);
@@ -125,7 +126,7 @@ fn test_get_and_set_field_name() {
 #[test]
 fn test_get_and_set_from_model() {
     let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model(Model::<Foo>::definition());
 
     let foo = Foo { k1: 1, k2: 2, v1: 3, v2: 4 };
     foo.set(world);
@@ -143,7 +144,7 @@ fn test_get_and_set_from_model() {
 #[test]
 fn test_delete_from_model() {
     let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model(Model::<Foo>::definition());
 
     let foo = Foo { k1: 1, k2: 2, v1: 3, v2: 4 };
     foo.set(world);
@@ -161,7 +162,7 @@ fn test_delete_from_model() {
 #[test]
 fn test_get_and_set_member_from_model() {
     let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model(Model::<Foo>::definition());
 
     let foo = Foo { k1: 1, k2: 2, v1: 3, v2: 4 };
     let keys = [foo.k1.into(), foo.k2.into()].span();
@@ -180,7 +181,7 @@ fn test_get_and_set_member_from_model() {
 #[test]
 fn test_get_and_set_field_name_from_model() {
     let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model(Model::<Foo>::definition());
 
     let foo = Foo { k1: 1, k2: 2, v1: 3, v2: 4 };
     foo.set(world);

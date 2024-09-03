@@ -17,30 +17,6 @@ pub struct ModelArgs {
 
 #[derive(Debug, Subcommand)]
 pub enum ModelCommand {
-    #[command(about = "Retrieve the class hash of a model")]
-    ClassHash {
-        #[arg(help = "The tag or name of the model")]
-        tag_or_name: String,
-
-        #[command(flatten)]
-        world: WorldOptions,
-
-        #[command(flatten)]
-        starknet: StarknetOptions,
-    },
-
-    #[command(about = "Retrieve the contract address of a model")]
-    ContractAddress {
-        #[arg(help = "The tag or name of the model")]
-        tag_or_name: String,
-
-        #[command(flatten)]
-        world: WorldOptions,
-
-        #[command(flatten)]
-        starknet: StarknetOptions,
-    },
-
     #[command(about = "Displays the model's layout into dojo storage.\n
 The Dojo storage system uses the poseidon_hash function to compute
 hashes, called 'hash' in the following documentation.
@@ -113,22 +89,6 @@ impl ModelArgs {
 
         config.tokio_handle().block_on(async {
             match self.command {
-                ModelCommand::ClassHash { tag_or_name, starknet, world } => {
-                    let tag = model::check_tag_or_read_default_namespace(&tag_or_name, config)?;
-
-                    let world_address = world.address(env_metadata.as_ref()).unwrap();
-                    let provider = starknet.provider(env_metadata.as_ref()).unwrap();
-                    model::model_class_hash(tag, world_address, &provider).await?;
-                    Ok(())
-                }
-                ModelCommand::ContractAddress { tag_or_name, starknet, world } => {
-                    let tag = model::check_tag_or_read_default_namespace(&tag_or_name, config)?;
-
-                    let world_address = world.address(env_metadata.as_ref()).unwrap();
-                    let provider = starknet.provider(env_metadata.as_ref()).unwrap();
-                    model::model_contract_address(tag, world_address, &provider).await?;
-                    Ok(())
-                }
                 ModelCommand::Layout { tag_or_name, starknet, world } => {
                     let tag = model::check_tag_or_read_default_namespace(&tag_or_name, config)?;
 

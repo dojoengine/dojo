@@ -6,7 +6,7 @@ use core::traits::{Into, TryInto};
 use starknet::{ClassHash, ContractAddress, syscalls::deploy_syscall, get_caller_address};
 
 use dojo::contract::base;
-use dojo::model::resource_metadata;
+use dojo::model::{resource_metadata, ModelDefinition};
 use dojo::storage::packing::{shl, shr};
 use dojo::world::{world, IWorldDispatcher, IWorldDispatcherTrait};
 
@@ -50,7 +50,9 @@ pub fn deploy_with_world_address(class_hash: felt252, world: IWorldDispatcher) -
 /// # Returns
 ///
 /// * World dispatcher
-pub fn spawn_test_world(namespaces: Span<ByteArray>, models: Span<felt252>) -> IWorldDispatcher {
+pub fn spawn_test_world(
+    namespaces: Span<ByteArray>, models: Span<ModelDefinition>
+) -> IWorldDispatcher {
     let salt = core::testing::get_available_gas();
 
     let (world_address, _) = deploy_syscall(
@@ -70,13 +72,9 @@ pub fn spawn_test_world(namespaces: Span<ByteArray>, models: Span<felt252>) -> I
     };
 
     // Register all models.
-    let mut index = 0;
-    loop {
-        if index == models.len() {
-            break ();
-        }
-        world.register_model((*models[index]).try_into().unwrap());
-        index += 1;
+    let mut models = models;
+    while let Option::Some(definition) = models.pop_front() {
+        world.register_model(definition.clone());
     };
 
     world

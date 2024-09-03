@@ -32,8 +32,8 @@ pub fn model_already_registered(namespace: @ByteArray, name: @ByteArray) -> Byte
     format!("Resource `{}-{}` is already registered", namespace, name)
 }
 
-pub fn model_not_registered(namespace: @ByteArray, name: @ByteArray) -> ByteArray {
-    format!("Resource `{}-{}` is not registered", namespace, name)
+pub fn model_not_registered(model_selector: felt252) -> ByteArray {
+    format!("Model `{}` is not registered", model_selector)
 }
 
 pub fn resource_not_registered(resource: felt252) -> ByteArray {

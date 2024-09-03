@@ -38,29 +38,6 @@ async fn test_model_ops() {
         .unwrap();
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
-    assert_eq!(
-        model::model_class_hash(
-            "dojo_examples-Moves".to_string(),
-            world.address,
-            sequencer.provider()
-        )
-        .await
-        .unwrap(),
-        Felt::from_hex("0x4dd1c573b5cdc56561be8b28a4840048a3a008d1a4a6eed397ec4135effaf44")
-            .unwrap()
-    );
-
-    assert_eq!(
-        model::model_contract_address(
-            "dojo_examples-Moves".to_string(),
-            world.address,
-            sequencer.provider()
-        )
-        .await
-        .unwrap(),
-        Felt::from_hex("0x5581faa4aa9c7cf1903a7e07f28707a0a599b602ca13f3d2f88d68322e240d").unwrap()
-    );
-
     let layout =
         model::model_layout("dojo_examples-Moves".to_string(), world.address, sequencer.provider())
             .await
