@@ -65,33 +65,47 @@ impl Sql {
         })
     }
 
-    pub async fn head(&self) -> Result<(u64, Option<Felt>)> {
+    pub async fn head(&self) -> Result<(u64, Option<Felt>, Option<Felt>)> {
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
-        let indexer_query = sqlx::query_as::<_, (Option<i64>, Option<String>, String)>(
-            "SELECT head, pending_block_tx, contract_type FROM contracts WHERE id = ?",
-        )
-        .bind(format!("{:#x}", self.world_address));
+        let indexer_query =
+            sqlx::query_as::<_, (Option<i64>, Option<String>, Option<String>, String)>(
+                "SELECT head, last_pending_block_world_tx, last_pending_block_tx, contract_type \
+                 FROM contracts WHERE id = ?",
+            )
+            .bind(format!("{:#x}", self.world_address));
 
-        let indexer: (Option<i64>, Option<String>, String) =
+        let indexer: (Option<i64>, Option<String>, Option<String>, String) =
             indexer_query.fetch_one(&mut *conn).await?;
         Ok((
             indexer.0.map(|h| h.try_into().expect("doesn't fit in u64")).unwrap_or(0),
             indexer.1.map(|f| Felt::from_str(&f)).transpose()?,
+            indexer.2.map(|f| Felt::from_str(&f)).transpose()?,
         ))
     }
 
-    pub fn set_head(&mut self, head: u64, pending_block_tx: Option<Felt>) {
+    pub fn set_head(
+        &mut self,
+        head: u64,
+        last_pending_block_world_tx: Option<Felt>,
+        last_pending_block_tx: Option<Felt>,
+    ) {
         let head = Argument::Int(head.try_into().expect("doesn't fit in u64"));
         let id = Argument::FieldElement(self.world_address);
-        let pending_block_tx = if let Some(f) = pending_block_tx {
+        let last_pending_block_world_tx = if let Some(f) = last_pending_block_world_tx {
+            Argument::String(format!("{:#x}", f))
+        } else {
+            Argument::Null
+        };
+        let last_pending_block_tx = if let Some(f) = last_pending_block_tx {
             Argument::String(format!("{:#x}", f))
         } else {
             Argument::Null
         };
 
         self.query_queue.enqueue(
-            "UPDATE contracts SET head = ?, pending_block_tx = ? WHERE id = ?",
-            vec![head, pending_block_tx, id],
+            "UPDATE contracts SET head = ?, last_pending_block_world_tx = ?, \
+             last_pending_block_tx = ? WHERE id = ?",
+            vec![head, last_pending_block_world_tx, last_pending_block_tx, id],
         );
     }
 

@@ -79,7 +79,7 @@ pub struct FetchRangeResult {
 #[derive(Debug)]
 pub struct FetchPendingResult {
     pub pending_block: Box<PendingBlockWithReceipts>,
-    pub pending_block_tx: Option<Felt>,
+    pub last_pending_block_tx: Option<Felt>,
     pub block_number: u64,
 }
 
@@ -113,9 +113,14 @@ impl<P: Provider + Send + Sync + std::fmt::Debug> Engine<P> {
     }
 
     pub async fn start(&mut self) -> Result<()> {
-        let (head, pending_block_tx) = self.db.head().await?;
+        // use the start block provided by user if head is 0
+        let (head, last_pending_block_world_tx, last_pending_block_tx) = self.db.head().await?;
         if head == 0 {
-            self.db.set_head(head, pending_block_tx);
+            self.db.set_head(
+                self.config.start_block,
+                last_pending_block_world_tx,
+                last_pending_block_tx,
+            );
         } else if self.config.start_block != 0 {
             warn!(target: LOG_TARGET, "Start block ignored, stored head exists and will be used instead.");
         }
@@ -127,12 +132,12 @@ impl<P: Provider + Send + Sync + std::fmt::Debug> Engine<P> {
 
         let mut erroring_out = false;
         loop {
-            let (head, pending_block_tx) = self.db.head().await?;
+            let (head, last_pending_block_world_tx, last_pending_block_tx) = self.db.head().await?;
             tokio::select! {
                 _ = shutdown_rx.recv() => {
                     break Ok(());
                 }
-                res = self.fetch_data(head, pending_block_tx) => {
+                res = self.fetch_data(head, last_pending_block_world_tx, last_pending_block_tx) => {
                     match res {
                         Ok(fetch_result) => {
                             if erroring_out {
@@ -171,17 +176,19 @@ impl<P: Provider + Send + Sync + std::fmt::Debug> Engine<P> {
     pub async fn fetch_data(
         &mut self,
         from: u64,
-        pending_block_tx: Option<Felt>,
+        last_pending_block_world_tx: Option<Felt>,
+        last_pending_block_tx: Option<Felt>,
     ) -> Result<FetchDataResult> {
         let latest_block_number = self.provider.block_hash_and_number().await?.block_number;
 
         let result = if from < latest_block_number {
             let from = if from == 0 { from } else { from + 1 };
             debug!(target: LOG_TARGET, from = %from, to = %latest_block_number, "Fetching data for range.");
-            let data = self.fetch_range(from, latest_block_number, pending_block_tx).await?;
+            let data =
+                self.fetch_range(from, latest_block_number, last_pending_block_world_tx).await?;
             FetchDataResult::Range(data)
         } else if self.config.index_pending {
-            let data = self.fetch_pending(latest_block_number + 1, pending_block_tx).await?;
+            let data = self.fetch_pending(latest_block_number + 1, last_pending_block_tx).await?;
             if let Some(data) = data {
                 FetchDataResult::Pending(data)
             } else {
@@ -198,7 +205,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug> Engine<P> {
         &mut self,
         from: u64,
         to: u64,
-        pending_block_tx: Option<Felt>,
+        last_pending_block_world_tx: Option<Felt>,
     ) -> Result<FetchRangeResult> {
         // Process all blocks from current to latest.
         let get_events = |token: Option<String>| {
@@ -229,7 +236,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug> Engine<P> {
 
         // Flatten events pages and events according to the pending block cursor
         // to array of (block_number, transaction_hash)
-        let mut pending_block_tx_cursor = pending_block_tx;
+        let mut last_pending_block_world_tx_cursor = last_pending_block_world_tx;
         let mut transactions = LinkedHashMap::new();
         for events_page in events_pages {
             debug!("Processing events page with events: {}", &events_page.events.len());
@@ -269,17 +276,17 @@ impl<P: Provider + Send + Sync + std::fmt::Debug> Engine<P> {
 
                 // Then we skip all transactions until we reach the last pending processed
                 // transaction (if any)
-                if let Some(tx) = pending_block_tx_cursor {
+                if let Some(tx) = last_pending_block_world_tx_cursor {
                     if event.transaction_hash != tx {
                         continue;
                     }
 
-                    pending_block_tx_cursor = None;
+                    last_pending_block_world_tx_cursor = None;
                 }
 
                 // Skip the latest pending block transaction events
                 // * as we might have multiple events for the same transaction
-                if let Some(tx) = pending_block_tx {
+                if let Some(tx) = last_pending_block_world_tx {
                     if event.transaction_hash == tx {
                         continue;
                     }
@@ -301,7 +308,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug> Engine<P> {
     async fn fetch_pending(
         &self,
         block_number: u64,
-        pending_block_tx: Option<Felt>,
+        last_pending_block_tx: Option<Felt>,
     ) -> Result<Option<FetchPendingResult>> {
         let block = if let MaybePendingBlockWithReceipts::PendingBlock(pending) =
             self.provider.get_block_with_receipts(BlockId::Tag(BlockTag::Pending)).await?
@@ -317,7 +324,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug> Engine<P> {
         Ok(Some(FetchPendingResult {
             pending_block: Box::new(block),
             block_number,
-            pending_block_tx,
+            last_pending_block_tx,
         }))
     }
 
@@ -338,17 +345,21 @@ impl<P: Provider + Send + Sync + std::fmt::Debug> Engine<P> {
     pub async fn process_pending(&mut self, data: FetchPendingResult) -> Result<()> {
         // Skip transactions that have been processed already
         // Our cursor is the last processed transaction
-        let mut pending_block_tx_cursor = data.pending_block_tx;
-        let mut pending_block_tx = data.pending_block_tx;
+
+        let mut last_pending_block_tx_cursor = data.last_pending_block_tx;
+        let mut last_pending_block_tx = data.last_pending_block_tx;
+        let mut last_pending_block_world_tx = None;
+
         let timestamp = data.pending_block.timestamp;
+
         for t in data.pending_block.transactions {
             let transaction_hash = t.transaction.transaction_hash();
-            if let Some(tx) = pending_block_tx_cursor {
+            if let Some(tx) = last_pending_block_tx_cursor {
                 if transaction_hash != &tx {
                     continue;
                 }
 
-                pending_block_tx_cursor = None;
+                last_pending_block_tx_cursor = None;
                 continue;
             }
 
@@ -361,7 +372,11 @@ impl<P: Provider + Send + Sync + std::fmt::Debug> Engine<P> {
                             // provider. So we can fail silently and try
                             // again in the next iteration.
                             warn!(target: LOG_TARGET, transaction_hash = %format!("{:#x}", transaction_hash), "Retrieving pending transaction receipt.");
-                            self.db.set_head(data.block_number - 1, pending_block_tx);
+                            self.db.set_head(
+                                data.block_number - 1,
+                                last_pending_block_world_tx,
+                                last_pending_block_tx,
+                            );
                             return Ok(());
                         }
                         _ => {
@@ -371,10 +386,12 @@ impl<P: Provider + Send + Sync + std::fmt::Debug> Engine<P> {
                     }
                 }
                 Ok(true) => {
-                    pending_block_tx = Some(*transaction_hash);
+                    last_pending_block_world_tx = Some(*transaction_hash);
+                    last_pending_block_tx = Some(*transaction_hash);
                     info!(target: LOG_TARGET, transaction_hash = %format!("{:#x}", transaction_hash), "Processed pending world transaction.");
                 }
                 Ok(_) => {
+                    last_pending_block_tx = Some(*transaction_hash);
                     info!(target: LOG_TARGET, transaction_hash = %format!("{:#x}", transaction_hash), "Processed pending transaction.")
                 }
             }
@@ -382,7 +399,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug> Engine<P> {
 
         // Set the head to the last processed pending transaction
         // Head block number should still be latest block number
-        self.db.set_head(data.block_number - 1, pending_block_tx);
+        self.db.set_head(data.block_number - 1, last_pending_block_world_tx, last_pending_block_tx);
 
         self.db.execute().await?;
         Ok(())
@@ -425,7 +442,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug> Engine<P> {
         // so once the sync range is done, we assume all of the tx of the block
         // have been processed.
 
-        self.db.set_head(data.latest_block_number, None);
+        self.db.set_head(data.latest_block_number, None, None);
         self.db.execute().await?;
 
         Ok(())
