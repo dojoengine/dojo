@@ -1,8 +1,7 @@
 use anyhow::{Error, Result};
 use async_trait::async_trait;
-use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::world::WorldContractReader;
-use starknet::core::types::{Event, TransactionReceiptWithBlockInfo};
+use starknet::core::types::Event;
 use starknet::providers::Provider;
 use tracing::info;
 
@@ -42,7 +41,6 @@ where
         db: &mut Sql,
         _block_number: u64,
         block_timestamp: u64,
-        _transaction_receipt: &TransactionReceiptWithBlockInfo,
         event_id: &str,
         event: &Event,
     ) -> Result<(), Error> {
@@ -54,7 +52,7 @@ where
 
         info!(
             target: LOG_TARGET,
-            model = %model.name(),
+            model = %model.name,
             "Store event message."
         );
 
@@ -63,7 +61,7 @@ where
         let mut keys_and_unpacked =
             [event.keys[1..event.keys.len() - 1].to_vec(), event.data.clone()].concat();
 
-        let mut entity = model.schema().await?;
+        let mut entity = model.schema.clone();
         entity.deserialize(&mut keys_and_unpacked)?;
 
         db.set_event_message(entity, event_id, block_timestamp).await?;

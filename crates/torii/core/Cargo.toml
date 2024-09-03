@@ -19,6 +19,7 @@ dojo-types = { path = "../../dojo-types" }
 dojo-world = { path = "../../dojo-world", features = [ "contracts", "manifest" ] }
 futures-channel = "0.3.0"
 futures-util.workspace = true
+hashlink.workspace = true
 hex.workspace = true
 lazy_static.workspace = true
 log.workspace = true
@@ -31,8 +32,8 @@ serde_json.workspace = true
 slab = "0.4.2"
 sozo-ops.workspace = true
 sqlx.workspace = true
-starknet-crypto.workspace = true
 starknet.workspace = true
+starknet-crypto.workspace = true
 thiserror.workspace = true
 tokio = { version = "1.32.0", features = [ "sync" ], default-features = true }
 tokio-stream = "0.1.11"
@@ -42,5 +43,6 @@ tracing.workspace = true
 [dev-dependencies]
 camino.workspace = true
 dojo-test-utils = { path = "../../dojo-test-utils" }
+dojo-utils.workspace = true
 katana-runner.workspace = true
 scarb.workspace = true

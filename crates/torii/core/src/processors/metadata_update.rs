@@ -9,7 +9,7 @@ use dojo_world::contracts::world::WorldContractReader;
 use dojo_world::metadata::WorldMetadata;
 use dojo_world::uri::Uri;
 use reqwest::Client;
-use starknet::core::types::{Event, Felt, TransactionReceiptWithBlockInfo};
+use starknet::core::types::{Event, Felt};
 use starknet::providers::Provider;
 use tokio_util::bytes::Bytes;
 use tracing::{error, info};
@@ -53,7 +53,6 @@ where
         db: &mut Sql,
         _block_number: u64,
         block_timestamp: u64,
-        _transaction_receipt: &TransactionReceiptWithBlockInfo,
         _event_id: &str,
         event: &Event,
     ) -> Result<(), Error> {

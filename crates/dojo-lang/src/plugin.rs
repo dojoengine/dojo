@@ -30,8 +30,10 @@ use crate::event::handle_event_struct;
 use crate::inline_macros::delete::DeleteMacro;
 use crate::inline_macros::emit::EmitMacro;
 use crate::inline_macros::get::GetMacro;
+use crate::inline_macros::get_models_test_class_hashes::GetModelsTestClassHashes;
 use crate::inline_macros::selector_from_tag::SelectorFromTagMacro;
 use crate::inline_macros::set::SetMacro;
+use crate::inline_macros::spawn_test_world::SpawnTestWorld;
 use crate::interface::DojoInterface;
 use crate::introspect::{handle_introspect_enum, handle_introspect_struct};
 use crate::model::handle_model_struct;
@@ -53,10 +55,11 @@ pub struct Model {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct SystemAuxData {
+pub struct ContractAuxData {
     pub name: SmolStr,
     pub namespace: String,
     pub dependencies: Vec<Dependency>,
+    pub systems: Vec<String>,
 }
 
 /// Dojo related auxiliary data of the Dojo plugin.
@@ -64,8 +67,8 @@ pub struct SystemAuxData {
 pub struct DojoAuxData {
     /// A list of models that were processed by the plugin.
     pub models: Vec<Model>,
-    /// A list of systems that were processed by the plugin and their model dependencies.
-    pub systems: Vec<SystemAuxData>,
+    /// A list of contracts that were processed by the plugin and their model dependencies.
+    pub contracts: Vec<ContractAuxData>,
     /// A list of events that were processed by the plugin.
     pub events: Vec<StarkNetEventAuxData>,
 }
@@ -154,7 +157,9 @@ pub fn dojo_plugin_suite() -> PluginSuite {
         .add_inline_macro_plugin::<GetMacro>()
         .add_inline_macro_plugin::<SetMacro>()
         .add_inline_macro_plugin::<EmitMacro>()
-        .add_inline_macro_plugin::<SelectorFromTagMacro>();
+        .add_inline_macro_plugin::<SelectorFromTagMacro>()
+        .add_inline_macro_plugin::<GetModelsTestClassHashes>()
+        .add_inline_macro_plugin::<SpawnTestWorld>();
 
     suite
 }

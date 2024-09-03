@@ -186,28 +186,56 @@ pub mod actions {
 
 #[cfg(test)]
 mod tests {
-    use dojo::model::Model;
+    use dojo::model::{Model, ModelTest, ModelIndex, ModelEntityTest};
     use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 
-    use dojo::utils::test::{spawn_test_world, deploy_contract};
+    use dojo::utils::test::deploy_contract;
 
     use super::{actions, IActionsDispatcher, IActionsDispatcherTrait};
     use armory::flatbow;
-    use dojo_examples::models::{Position, position, Moves, moves, Direction, Vec2};
+    use dojo_examples::models::{
+        Position, position, PositionStore, PositionEntityStore, Moves, moves, Direction, Vec2
+    };
+
+    #[test]
+    fn test_world_test_set() {
+        let caller = starknet::contract_address_const::<0x0>();
+
+        let world = spawn_test_world!();
+
+        // Without having the permission, we can set data into the dojo database for the given
+        // models.
+        let mut position = PositionStore::get(world, caller);
+        assert(position.vec.x == 0 && position.vec.y == 0, 'bad x');
+
+        position.vec.x = 122;
+        // `set_test` and `delete_test` are available on `Model`.
+        // `update_test` and `delete_test` are available on `ModelEntity`.
+        position.set_test(world);
+
+        let id = PositionStore::entity_id_from_keys(caller);
+        let mut position = PositionEntityStore::get(world, id);
+        assert(position.vec.x == 122, 'bad x');
+
+        position.vec.y = 88;
+        position.update_test(world);
+
+        let mut position = PositionStore::get(world, caller);
+        assert(position.vec.y == 88, 'bad y');
+
+        position.delete_test(world);
+
+        let position = PositionStore::get(world, caller);
+        assert(position.vec.x == 0 && position.vec.y == 0, 'bad delete');
+    }
 
     #[test]
     #[available_gas(30000000)]
     fn test_move() {
         let caller = starknet::contract_address_const::<0x0>();
 
-        // models
-        let mut models = array![
-            position::TEST_CLASS_HASH, moves::TEST_CLASS_HASH, flatbow::TEST_CLASS_HASH
-        ];
-        // deploy world with models
-        let world = spawn_test_world(
-            ["dojo_examples", "dojo_examples_weapons"].span(), models.span()
-        );
+        // deploy world with only the models for the given namespaces.
+        let world = spawn_test_world!(["dojo_examples", "dojo_examples_weapons"]);
 
         // deploy systems contract
         let contract_address = world
@@ -223,7 +251,6 @@ mod tests {
         let initial_moves = get!(world, caller, Moves);
         let initial_position = get!(world, caller, Position);
 
-        println!("initial_position: {:?}", initial_position);
         assert(
             initial_position.vec.x == 10 && initial_position.vec.y == 10, 'wrong initial position'
         );

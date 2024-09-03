@@ -668,9 +668,10 @@ pub fn deep_print_ty(root: &Ty) {
     }
 }
 
-/// Checks if the tag is a valid tag, if not, return the default namespace. This allows
-/// sozo model commands to be run even without a Scarb.toml file in the current directory
-/// if a valid tag is provided.
+/// Checks if the tag is a valid tag, if not, return the default namespace.
+///
+/// This allows sozo model commands to be run even without a Scarb.toml file in the current
+/// directory if a valid tag is provided.
 /// TODO: This may be removed in the future once SDKs are updated to use the new bindgen.
 pub fn check_tag_or_read_default_namespace(tag_or_name: &str, config: &Config) -> Result<String> {
     if naming::is_valid_tag(tag_or_name) {

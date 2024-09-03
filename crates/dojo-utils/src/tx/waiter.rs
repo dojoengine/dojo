@@ -5,19 +5,12 @@ use std::time::Duration;
 
 use anyhow::Result;
 use futures::FutureExt;
-use starknet::accounts::{
-    AccountDeploymentV1, AccountError, AccountFactory, AccountFactoryError, ConnectedAccount,
-    DeclarationV2, ExecutionV1,
-};
 use starknet::core::types::{
-    DeclareTransactionResult, DeployAccountTransactionResult, ExecutionResult, Felt,
-    InvokeTransactionResult, ReceiptBlock, StarknetError, TransactionFinalityStatus,
+    ExecutionResult, Felt, ReceiptBlock, StarknetError, TransactionFinalityStatus,
     TransactionReceipt, TransactionReceiptWithBlockInfo, TransactionStatus,
 };
 use starknet::providers::{Provider, ProviderError};
 use tokio::time::{Instant, Interval};
-
-use crate::migration::TxnConfig;
 
 type GetTxStatusResult = Result<TransactionStatus, ProviderError>;
 type GetTxReceiptResult = Result<TransactionReceiptWithBlockInfo, ProviderError>;
@@ -37,9 +30,10 @@ pub enum TransactionWaitingError {
     Provider(ProviderError),
 }
 
-/// A type that waits for a transaction to achieve the desired status. The waiter will poll for the
-/// transaction receipt every `interval` miliseconds until it achieves the desired status or until
-/// `timeout` is reached.
+/// Utility for waiting on a transaction.
+///
+/// The waiter will poll for the transaction receipt every `interval` miliseconds until it achieves
+/// the desired status or until `timeout` is reached.
 ///
 /// The waiter can be configured to wait for a specific finality status (e.g, `ACCEPTED_ON_L2`), by
 /// default, it only waits until the transaction is included in the _pending_ block. It can also be
@@ -304,89 +298,6 @@ fn finality_status_from_receipt(receipt: &TransactionReceipt) -> TransactionFina
     }
 }
 
-/// Helper trait to abstract away setting `TxnConfig` configurations before sending a transaction
-/// Implemented by types from `starknet-accounts` like `Execution`, `Declaration`, etc...
-#[allow(async_fn_in_trait)]
-pub trait TransactionExt<T> {
-    type R;
-    type U;
-
-    /// Sets `fee_estimate_multiplier` and `max_fee_raw` from `TxnConfig` if its present before
-    /// calling `send` method on the respective type.
-    /// NOTE: If both are specified `max_fee_raw` will take precedence and `fee_estimate_multiplier`
-    /// will be ignored by `starknet-rs`
-    async fn send_with_cfg(self, txn_config: &TxnConfig) -> Result<Self::R, Self::U>;
-}
-
-impl<T> TransactionExt<T> for ExecutionV1<'_, T>
-where
-    T: ConnectedAccount + Sync,
-{
-    type R = InvokeTransactionResult;
-    type U = AccountError<T::SignError>;
-
-    async fn send_with_cfg(
-        mut self,
-        txn_config: &TxnConfig,
-    ) -> Result<Self::R, AccountError<T::SignError>> {
-        if let TxnConfig { fee_estimate_multiplier: Some(fee_est_mul), .. } = txn_config {
-            self = self.fee_estimate_multiplier(*fee_est_mul);
-        }
-
-        if let TxnConfig { max_fee_raw: Some(max_fee_r), .. } = txn_config {
-            self = self.max_fee(*max_fee_r);
-        }
-
-        self.send().await
-    }
-}
-
-impl<T> TransactionExt<T> for DeclarationV2<'_, T>
-where
-    T: ConnectedAccount + Sync,
-{
-    type R = DeclareTransactionResult;
-    type U = AccountError<T::SignError>;
-
-    async fn send_with_cfg(
-        mut self,
-        txn_config: &TxnConfig,
-    ) -> Result<Self::R, AccountError<T::SignError>> {
-        if let TxnConfig { fee_estimate_multiplier: Some(fee_est_mul), .. } = txn_config {
-            self = self.fee_estimate_multiplier(*fee_est_mul);
-        }
-
-        if let TxnConfig { max_fee_raw: Some(max_raw_f), .. } = txn_config {
-            self = self.max_fee(*max_raw_f);
-        }
-
-        self.send().await
-    }
-}
-
-impl<T> TransactionExt<T> for AccountDeploymentV1<'_, T>
-where
-    T: AccountFactory + Sync,
-{
-    type R = DeployAccountTransactionResult;
-    type U = AccountFactoryError<T::SignError>;
-
-    async fn send_with_cfg(
-        mut self,
-        txn_config: &TxnConfig,
-    ) -> Result<Self::R, AccountFactoryError<<T>::SignError>> {
-        if let TxnConfig { fee_estimate_multiplier: Some(fee_est_mul), .. } = txn_config {
-            self = self.fee_estimate_multiplier(*fee_est_mul);
-        }
-
-        if let TxnConfig { max_fee_raw: Some(max_raw_f), .. } = txn_config {
-            self = self.max_fee(*max_raw_f);
-        }
-
-        self.send().await
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use assert_matches::assert_matches;
@@ -394,15 +305,19 @@ mod tests {
     use dojo_test_utils::sequencer::{
         get_default_test_starknet_config, SequencerConfig, TestSequencer,
     };
+    use starknet::core::types::ExecutionResult::{Reverted, Succeeded};
+    use starknet::core::types::TransactionFinalityStatus::{self, AcceptedOnL1, AcceptedOnL2};
     use starknet::core::types::{
         ComputationResources, DataAvailabilityResources, DataResources, ExecutionResources,
-        ExecutionResult, FeePayment, Felt, InvokeTransactionReceipt, PriceUnit, ReceiptBlock,
-        TransactionFinalityStatus, TransactionReceipt, TransactionReceiptWithBlockInfo,
+        ExecutionResult, FeePayment, InvokeTransactionReceipt, PriceUnit, ReceiptBlock,
+        TransactionReceipt, TransactionReceiptWithBlockInfo,
     };
+    use starknet::macros::felt;
     use starknet::providers::jsonrpc::HttpTransport;
     use starknet::providers::JsonRpcClient;
 
     use super::{Duration, TransactionWaiter};
+    use crate::TransactionWaitingError;
 
     #[allow(deprecated)]
     async fn create_test_sequencer() -> (TestSequencer, JsonRpcClient<HttpTransport>) {
@@ -472,189 +387,77 @@ mod tests {
     async fn should_timeout_on_nonexistant_transaction() {
         let (_sequencer, provider) = create_test_sequencer().await;
 
-        assert_matches!(
-            TransactionWaiter::new(Felt::from_hex("0x1234").unwrap(), &provider)
-                .with_timeout(Duration::from_secs(1))
-                .await,
-            Err(super::TransactionWaitingError::Timeout)
-        );
+        let hash = felt!("0x1234");
+        let result = TransactionWaiter::new(hash, &provider)
+            .with_timeout(Duration::from_secs(1))
+            .await
+            .unwrap_err();
+
+        assert_matches!(result, TransactionWaitingError::Timeout);
     }
 
-    #[test]
-    fn wait_for_no_finality_status() {
-        let receipt =
-            mock_receipt(TransactionFinalityStatus::AcceptedOnL2, ExecutionResult::Succeeded);
-
-        assert_eq!(
+    macro_rules! eval_receipt {
+        ($receipt:expr, $must_succeed:expr) => {
             TransactionWaiter::<JsonRpcClient<HttpTransport>>::evaluate_receipt_from_params(
-                receipt.clone(),
+                $receipt,
                 None,
-                false
+                $must_succeed,
             )
-            .unwrap()
-            .unwrap(),
-            receipt
-        );
-    }
+        };
 
-    macro_rules! assert_eval_receipt {
-        (($receipt:expr, $expected_status:expr), $expected_receipt:expr) => {
-            assert_eq!(
-                TransactionWaiter::<JsonRpcClient<HttpTransport>>::evaluate_receipt_from_params(
-                    $receipt,
-                    $expected_status,
-                    false
-                )
-                .unwrap()
-                .unwrap(),
-                $expected_receipt
-            );
+        ($receipt:expr, $expected_status:expr, $must_succeed:expr) => {
+            TransactionWaiter::<JsonRpcClient<HttpTransport>>::evaluate_receipt_from_params(
+                $receipt,
+                Some($expected_status),
+                $must_succeed,
+            )
         };
     }
 
     #[test]
+    fn wait_for_no_finality_status() {
+        let receipt = mock_receipt(AcceptedOnL2, Succeeded);
+        assert!(eval_receipt!(receipt.clone(), false).unwrap().is_ok());
+    }
+
+    #[test]
     fn wait_for_finality_status_with_no_succeed() {
-        {
-            let receipt =
-                mock_receipt(TransactionFinalityStatus::AcceptedOnL2, ExecutionResult::Succeeded);
+        let receipt = mock_receipt(AcceptedOnL2, Succeeded);
+        assert!(eval_receipt!(receipt.clone(), AcceptedOnL2, false).unwrap().is_ok());
 
-            assert_eval_receipt!(
-                (receipt.clone(), Some(TransactionFinalityStatus::AcceptedOnL2)),
-                receipt
-            );
-        }
+        let receipt = mock_receipt(AcceptedOnL2, Succeeded);
+        assert!(eval_receipt!(receipt.clone(), AcceptedOnL1, true).is_none());
 
-        {
-            let receipt =
-                mock_receipt(TransactionFinalityStatus::AcceptedOnL2, ExecutionResult::Succeeded);
+        let receipt = mock_receipt(AcceptedOnL1, Succeeded);
+        assert!(eval_receipt!(receipt.clone(), AcceptedOnL2, false).unwrap().is_ok());
 
-            assert!(
-                TransactionWaiter::<JsonRpcClient<HttpTransport>>::evaluate_receipt_from_params(
-                    receipt,
-                    Some(TransactionFinalityStatus::AcceptedOnL1),
-                    true,
-                )
-                .is_none()
-            );
-        }
-
-        {
-            let receipt =
-                mock_receipt(TransactionFinalityStatus::AcceptedOnL1, ExecutionResult::Succeeded);
-
-            assert_eval_receipt!(
-                (receipt.clone(), Some(TransactionFinalityStatus::AcceptedOnL2)),
-                receipt
-            );
-        }
-
-        {
-            let receipt =
-                mock_receipt(TransactionFinalityStatus::AcceptedOnL1, ExecutionResult::Succeeded);
-
-            assert_eval_receipt!(
-                (receipt.clone(), Some(TransactionFinalityStatus::AcceptedOnL1)),
-                receipt
-            );
-        }
+        let receipt = mock_receipt(AcceptedOnL1, Succeeded);
+        assert!(eval_receipt!(receipt.clone(), AcceptedOnL1, false).unwrap().is_ok());
     }
 
     #[test]
     fn wait_for_finality_status_with_must_succeed() {
-        {
-            let receipt =
-                mock_receipt(TransactionFinalityStatus::AcceptedOnL2, ExecutionResult::Succeeded);
+        let receipt = mock_receipt(AcceptedOnL2, Succeeded);
+        assert!(eval_receipt!(receipt.clone(), AcceptedOnL2, true).unwrap().is_ok());
 
-            assert_eq!(
-                TransactionWaiter::<JsonRpcClient<HttpTransport>>::evaluate_receipt_from_params(
-                    receipt.clone(),
-                    Some(TransactionFinalityStatus::AcceptedOnL2),
-                    true
-                )
-                .unwrap()
-                .unwrap(),
-                receipt
-            )
-        }
+        let receipt = mock_receipt(AcceptedOnL1, Succeeded);
+        assert!(eval_receipt!(receipt.clone(), AcceptedOnL2, true).unwrap().is_ok());
 
-        {
-            let receipt =
-                mock_receipt(TransactionFinalityStatus::AcceptedOnL1, ExecutionResult::Succeeded);
-
-            assert_eq!(
-                TransactionWaiter::<JsonRpcClient<HttpTransport>>::evaluate_receipt_from_params(
-                    receipt.clone(),
-                    Some(TransactionFinalityStatus::AcceptedOnL2),
-                    true
-                )
-                .unwrap()
-                .unwrap(),
-                receipt
-            )
-        }
-
-        {
-            let receipt = mock_receipt(
-                TransactionFinalityStatus::AcceptedOnL1,
-                ExecutionResult::Reverted { reason: Default::default() },
-            );
-
-            let err =
-                TransactionWaiter::<JsonRpcClient<HttpTransport>>::evaluate_receipt_from_params(
-                    receipt,
-                    Some(TransactionFinalityStatus::AcceptedOnL1),
-                    true,
-                )
-                .unwrap()
-                .unwrap_err();
-
-            assert!(err.to_string().contains("transaction reverted"))
-        }
+        let receipt = mock_receipt(AcceptedOnL1, Reverted { reason: Default::default() });
+        let evaluation = eval_receipt!(receipt.clone(), AcceptedOnL1, true).unwrap();
+        assert_matches!(evaluation, Err(TransactionWaitingError::TransactionReverted(_)));
     }
 
     #[test]
     fn wait_for_pending_tx() {
-        {
-            let receipt = mock_pending_receipt(ExecutionResult::Succeeded);
+        let receipt = mock_pending_receipt(Succeeded);
+        assert!(eval_receipt!(receipt.clone(), AcceptedOnL2, true).is_none());
 
-            assert!(
-                TransactionWaiter::<JsonRpcClient<HttpTransport>>::evaluate_receipt_from_params(
-                    receipt,
-                    Some(TransactionFinalityStatus::AcceptedOnL2),
-                    true
-                )
-                .is_none()
-            )
-        }
+        let receipt = mock_pending_receipt(Reverted { reason: Default::default() });
+        assert!(eval_receipt!(receipt.clone(), false).unwrap().is_ok());
 
-        {
-            let receipt =
-                mock_pending_receipt(ExecutionResult::Reverted { reason: Default::default() });
-
-            assert_eq!(
-                TransactionWaiter::<JsonRpcClient<HttpTransport>>::evaluate_receipt_from_params(
-                    receipt.clone(),
-                    None,
-                    false
-                )
-                .unwrap()
-                .unwrap(),
-                receipt
-            )
-        }
-
-        {
-            let receipt =
-                mock_pending_receipt(ExecutionResult::Reverted { reason: Default::default() });
-
-            let err =
-                TransactionWaiter::<JsonRpcClient<HttpTransport>>::evaluate_receipt_from_params(
-                    receipt, None, true,
-                )
-                .unwrap()
-                .unwrap_err();
-
-            assert!(err.to_string().contains("transaction reverted"))
-        }
+        let receipt = mock_pending_receipt(Reverted { reason: Default::default() });
+        let evaluation = eval_receipt!(receipt.clone(), true).unwrap();
+        assert_matches!(evaluation, Err(TransactionWaitingError::TransactionReverted(_)));
     }
 }

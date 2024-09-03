@@ -10,15 +10,15 @@ async-trait.workspace = true
 crypto-bigint.workspace = true
 dojo-types = { path = "../../dojo-types" }
 dojo-world = { path = "../../dojo-world", features = [ "contracts" ] }
-futures-util.workspace = true
 futures.workspace = true
+futures-util.workspace = true
 libp2p-gossipsub = "0.46.1"
 num-traits.workspace = true
 parking_lot.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-starknet-crypto.workspace = true
 starknet.workspace = true
+starknet-crypto.workspace = true
 thiserror.workspace = true
 tokio = { version = "1.32.0", features = [ "sync" ], default-features = false }
 torii-grpc = { path = "../grpc", features = [ "client" ] }

@@ -8,12 +8,7 @@ set -x
 set -o pipefail
 
 run_clippy() {
-  cargo +nightly clippy --all-targets "$@" -- -D warnings -D future-incompatible -D nonstandard-style -D rust-2018-idioms -D unused -D missing-debug-implementations
+  cargo +nightly-2024-08-28 clippy --all-targets "$@" -- -D warnings -D future-incompatible -D nonstandard-style -D rust-2018-idioms -D unused -D missing-debug-implementations
 }
 
-run_clippy --all-features --workspace --exclude katana --exclude katana-executor
-
-run_clippy -p katana-executor --all
-run_clippy -p katana
-# TODO(kariy): uncomment this line when the `sir` support Cairo 2.6.3
-# run_clippy -p katana --no-default-features --features sir
+run_clippy --all-features --workspace

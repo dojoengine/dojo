@@ -3,6 +3,7 @@ use std::sync::Arc;
 use jsonrpsee::core::Error;
 pub use katana_core::backend::config::{Environment, StarknetConfig};
 use katana_core::backend::Backend;
+use katana_core::constants::DEFAULT_SEQUENCER_ADDRESS;
 #[allow(deprecated)]
 pub use katana_core::sequencer::SequencerConfig;
 use katana_executor::implementation::blockifier::BlockifierFactory;
@@ -120,9 +121,12 @@ impl TestSequencer {
 }
 
 pub fn get_default_test_starknet_config() -> StarknetConfig {
-    StarknetConfig {
+    let mut cfg = StarknetConfig {
         disable_fee: true,
         env: Environment { chain_id: ChainId::SEPOLIA, ..Default::default() },
         ..Default::default()
-    }
+    };
+
+    cfg.genesis.sequencer_address = *DEFAULT_SEQUENCER_ADDRESS;
+    cfg
 }

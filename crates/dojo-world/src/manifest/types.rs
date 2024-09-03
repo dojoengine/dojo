@@ -106,6 +106,7 @@ pub struct DojoContract {
     #[serde(default)]
     pub init_calldata: Vec<String>,
     pub tag: String,
+    pub systems: Vec<String>,
 }
 
 /// Represents a declaration of a model.
@@ -121,6 +122,7 @@ pub struct DojoModel {
     pub original_class_hash: Felt,
     pub abi: Option<AbiFormat>,
     pub tag: String,
+    pub qualified_path: String,
 }
 
 #[serde_as]

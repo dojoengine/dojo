@@ -100,7 +100,12 @@ fn test_set_metadata_not_possible_for_random_account() {
 }
 
 #[test]
-#[should_panic(expected: ("Caller `57005` is not an account", 'ENTRYPOINT_FAILED',))]
+#[should_panic(
+    expected: (
+        "Caller `57005` is not the owner of the resource `3123252206139358744730647958636922105676576163624049771737508399526017186883`",
+        'ENTRYPOINT_FAILED',
+    )
+)]
 fn test_set_metadata_through_malicious_contract() {
     let world = spawn_test_world(["dojo"].span(), [foo::TEST_CLASS_HASH].span(),);
 
@@ -217,7 +222,7 @@ fn test_upgrade_model_from_model_writer() {
     let alice = starknet::contract_address_const::<0xa11ce>();
 
     let world = deploy_world();
-    world.register_namespace(Model::<Foo>::namespace());
+    // dojo namespace is registered by the deploy_world function.
     world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
     world.grant_owner(Model::<Foo>::namespace_hash(), bob);
     world.grant_writer(Model::<Foo>::namespace_hash(), alice);
@@ -257,8 +262,10 @@ fn test_register_model_with_unregistered_namespace() {
     world.register_model(buzz::TEST_CLASS_HASH.try_into().unwrap());
 }
 
+// It's CONTRACT_NOT_DEPLOYED for now as in this example the contract is not a dojo contract
+// and it's not the account that is calling the register_model function.
 #[test]
-#[should_panic(expected: ("Caller `57005` is not an account", 'ENTRYPOINT_FAILED',))]
+#[should_panic(expected: ('CONTRACT_NOT_DEPLOYED', 'ENTRYPOINT_FAILED',))]
 fn test_register_model_through_malicious_contract() {
     let bob = starknet::contract_address_const::<0xb0b>();
     let malicious_contract = starknet::contract_address_const::<0xdead>();
@@ -295,6 +302,7 @@ fn test_register_namespace() {
 }
 
 #[test]
+#[should_panic(expected: ("Namespace `namespace` is already registered", 'ENTRYPOINT_FAILED',))]
 fn test_register_namespace_already_registered_same_caller() {
     let world = deploy_world();
 
@@ -302,19 +310,8 @@ fn test_register_namespace_already_registered_same_caller() {
     starknet::testing::set_account_contract_address(bob);
     starknet::testing::set_contract_address(bob);
 
-    let namespace = "namespace";
-    let hash = bytearray_hash(@namespace);
-
-    world.register_namespace(namespace.clone());
-
-    drop_all_events(world.contract_address);
-
-    world.register_namespace(namespace);
-
-    assert(world.is_owner(hash, bob), 'namespace not registered');
-
-    let event = starknet::testing::pop_log_raw(world.contract_address);
-    assert(event.is_none(), 'unexpected event');
+    world.register_namespace("namespace");
+    world.register_namespace("namespace");
 }
 
 #[test]
@@ -331,20 +328,6 @@ fn test_register_namespace_already_registered_other_caller() {
     let alice = starknet::contract_address_const::<0xa11ce>();
     starknet::testing::set_account_contract_address(alice);
     starknet::testing::set_contract_address(alice);
-
-    world.register_namespace("namespace");
-}
-
-#[test]
-#[should_panic(expected: ("Caller `48879` is not an account", 'ENTRYPOINT_FAILED',))]
-fn test_register_namespace_is_not_a_direct_call_from_account() {
-    let world = deploy_world();
-
-    let bob = starknet::contract_address_const::<0xb0b>();
-    let malicious_contract = starknet::contract_address_const::<0xbeef>();
-
-    starknet::testing::set_account_contract_address(bob);
-    starknet::testing::set_contract_address(malicious_contract);
 
     world.register_namespace("namespace");
 }
@@ -415,8 +398,10 @@ fn test_deploy_contract_with_unregistered_namespace() {
     world.deploy_contract('salt1', buzz_contract::TEST_CLASS_HASH.try_into().unwrap(),);
 }
 
+// It's CONTRACT_NOT_DEPLOYED for now as in this example the contract is not a dojo contract
+// and it's not the account that is calling the deploy_contract function.
 #[test]
-#[should_panic(expected: ("Caller `57005` is not an account", 'ENTRYPOINT_FAILED',))]
+#[should_panic(expected: ('CONTRACT_NOT_DEPLOYED', 'ENTRYPOINT_FAILED',))]
 fn test_deploy_contract_through_malicious_contract() {
     let world = deploy_world();
 
@@ -515,7 +500,12 @@ fn test_upgrade_contract_from_random_account() {
 }
 
 #[test]
-#[should_panic(expected: ("Caller `57005` is not an account", 'ENTRYPOINT_FAILED',))]
+#[should_panic(
+    expected: (
+        "Caller `57005` is not the owner of the resource `2368393732245529956313345237151518608283468650081902115301417183793437311044`",
+        'ENTRYPOINT_FAILED',
+    )
+)]
 fn test_upgrade_contract_through_malicious_contract() {
     let world = deploy_world();
     let class_hash = test_contract::TEST_CLASS_HASH.try_into().unwrap();

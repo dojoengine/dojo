@@ -24,7 +24,7 @@ use katana_core::service::{NodeService, TransactionMiner};
 use katana_executor::implementation::blockifier::BlockifierFactory;
 use katana_executor::{ExecutorFactory, SimulationFlag};
 use katana_pool::ordering::FiFo;
-use katana_pool::validation::NoopValidator;
+use katana_pool::validation::stateful::TxValidator;
 use katana_pool::{TransactionPool, TxPool};
 use katana_primitives::block::FinalityStatus;
 use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
@@ -152,11 +152,6 @@ pub async fn start(
         config: starknet_config,
     });
 
-    // --- build transaction pool and miner
-
-    let pool = TxPool::new(NoopValidator::new(), FiFo::new());
-    let miner = TransactionMiner::new(pool.add_listener());
-
     // --- build block producer service
 
     let block_producer = if sequencer_config.block_time.is_some() || sequencer_config.no_mining {
@@ -168,6 +163,12 @@ pub async fn start(
     } else {
         BlockProducer::instant(Arc::clone(&backend))
     };
+
+    // --- build transaction pool and miner
+
+    let validator = block_producer.validator();
+    let pool = TxPool::new(validator.clone(), FiFo::new());
+    let miner = TransactionMiner::new(pool.add_listener());
 
     // --- build metrics service
 
@@ -210,7 +211,7 @@ pub async fn start(
 
     // --- spawn rpc server
 
-    let node_components = (pool, backend.clone(), block_producer);
+    let node_components = (pool, backend.clone(), block_producer, validator);
     let rpc_handle = spawn(node_components, server_config).await?;
 
     Ok((rpc_handle, backend))
@@ -218,10 +219,10 @@ pub async fn start(
 
 // Moved from `katana_rpc` crate
 pub async fn spawn<EF: ExecutorFactory>(
-    node_components: (TxPool, Arc<Backend<EF>>, Arc<BlockProducer<EF>>),
+    node_components: (TxPool, Arc<Backend<EF>>, Arc<BlockProducer<EF>>, TxValidator),
     config: ServerConfig,
 ) -> Result<NodeHandle> {
-    let (pool, backend, block_producer) = node_components;
+    let (pool, backend, block_producer, validator) = node_components;
 
     let mut methods = RpcModule::new(());
     methods.register_method("health", |_, _| Ok(serde_json::json!({ "health": true })))?;
@@ -230,8 +231,12 @@ pub async fn spawn<EF: ExecutorFactory>(
         match api {
             ApiKind::Starknet => {
                 // TODO: merge these into a single logic.
-                let server =
-                    StarknetApi::new(backend.clone(), pool.clone(), block_producer.clone());
+                let server = StarknetApi::new(
+                    backend.clone(),
+                    pool.clone(),
+                    block_producer.clone(),
+                    validator.clone(),
+                );
                 methods.merge(StarknetApiServer::into_rpc(server.clone()))?;
                 methods.merge(StarknetWriteApiServer::into_rpc(server.clone()))?;
                 methods.merge(StarknetTraceApiServer::into_rpc(server))?;

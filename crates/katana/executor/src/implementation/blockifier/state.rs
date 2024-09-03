@@ -27,8 +27,7 @@ impl<'a> StateReader for StateProviderDb<'a> {
         &self,
         contract_address: katana_cairo::starknet_api::core::ContractAddress,
     ) -> StateResult<katana_cairo::starknet_api::core::ClassHash> {
-        self.0
-            .class_hash_of_contract(utils::to_address(contract_address))
+        self.class_hash_of_contract(utils::to_address(contract_address))
             .map(|v| ClassHash(v.unwrap_or_default()))
             .map_err(|e| StateError::StateReadError(e.to_string()))
     }
@@ -38,7 +37,6 @@ impl<'a> StateReader for StateProviderDb<'a> {
         class_hash: katana_cairo::starknet_api::core::ClassHash,
     ) -> StateResult<katana_cairo::starknet_api::core::CompiledClassHash> {
         if let Some(hash) = self
-            .0
             .compiled_class_hash_of_class_hash(class_hash.0)
             .map_err(|e| StateError::StateReadError(e.to_string()))?
         {
@@ -53,7 +51,7 @@ impl<'a> StateReader for StateProviderDb<'a> {
         class_hash: ClassHash,
     ) -> StateResult<blockifier::execution::contract_class::ContractClass> {
         if let Some(class) =
-            self.0.class(class_hash.0).map_err(|e| StateError::StateReadError(e.to_string()))?
+            self.class(class_hash.0).map_err(|e| StateError::StateReadError(e.to_string()))?
         {
             let class =
                 utils::to_class(class).map_err(|e| StateError::StateReadError(e.to_string()))?;
@@ -68,8 +66,7 @@ impl<'a> StateReader for StateProviderDb<'a> {
         &self,
         contract_address: katana_cairo::starknet_api::core::ContractAddress,
     ) -> StateResult<katana_cairo::starknet_api::core::Nonce> {
-        self.0
-            .nonce(utils::to_address(contract_address))
+        self.nonce(utils::to_address(contract_address))
             .map(|n| Nonce(n.unwrap_or_default()))
             .map_err(|e| StateError::StateReadError(e.to_string()))
     }
@@ -79,15 +76,14 @@ impl<'a> StateReader for StateProviderDb<'a> {
         contract_address: katana_cairo::starknet_api::core::ContractAddress,
         key: katana_cairo::starknet_api::state::StorageKey,
     ) -> StateResult<katana_cairo::starknet_api::hash::StarkHash> {
-        self.0
-            .storage(utils::to_address(contract_address), *key.0.key())
+        self.storage(utils::to_address(contract_address), *key.0.key())
             .map(|v| v.unwrap_or_default())
             .map_err(|e| StateError::StateReadError(e.to_string()))
     }
 }
 
 #[derive(Debug)]
-pub(super) struct CachedState<S: StateDb>(pub(super) Arc<Mutex<CachedStateInner<S>>>);
+pub struct CachedState<S: StateDb>(pub(super) Arc<Mutex<CachedStateInner<S>>>);
 
 impl<S: StateDb> Clone for CachedState<S> {
     fn clone(&self) -> Self {
@@ -286,7 +282,7 @@ mod tests {
     #[test]
     fn can_fetch_from_inner_state_provider() -> anyhow::Result<()> {
         let state = state_provider();
-        let cached_state = CachedState::new(StateProviderDb(state));
+        let cached_state = CachedState::new(StateProviderDb::new(state));
 
         let address = ContractAddress::from(felt!("0x67"));
         let legacy_class_hash = felt!("0x111");
@@ -357,7 +353,7 @@ mod tests {
         assert_eq!(actual_new_compiled_class_hash, None, "data shouldn't exist");
         assert_eq!(actual_new_legacy_compiled_hash, None, "data shouldn't exist");
 
-        let cached_state = CachedState::new(StateProviderDb(sp));
+        let cached_state = CachedState::new(StateProviderDb::new(sp));
 
         // insert some data to the cached state
         {
@@ -472,7 +468,7 @@ mod tests {
 
         let sp = db.latest()?;
 
-        let cached_state = CachedState::new(StateProviderDb(sp));
+        let cached_state = CachedState::new(StateProviderDb::new(sp));
 
         let api_address = utils::to_blk_address(address);
         let api_storage_key = StorageKey(storage_key.try_into().unwrap());

@@ -11,8 +11,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{bail, Context};
-use dojo_world::migration::TxnConfig;
-use dojo_world::utils::TransactionExt;
+use dojo_utils::{TransactionExt, TxnConfig};
 use itertools::chain;
 use once_cell::sync::OnceCell;
 use starknet::accounts::{Account, Call, ConnectedAccount, ExecutionEncoding, SingleOwnerAccount};

@@ -8,13 +8,13 @@ members = [
 	"bin/scheduler",
 	"bin/sozo",
 	"bin/torii",
-#	"crates/benches",
-	"crates/common",
+	#	"crates/benches",
 	"crates/dojo-bindgen",
 	"crates/dojo-core",
 	"crates/dojo-lang",
 	"crates/dojo-test-utils",
 	"crates/dojo-types",
+	"crates/dojo-utils",
 	"crates/dojo-world",
 	"crates/dojo-world/abigen",
 	"crates/katana/controller",
@@ -51,7 +51,7 @@ edition = "2021"
 license = "Apache-2.0"
 license-file = "LICENSE"
 repository = "https://github.com/dojoengine/dojo/"
-version = "1.0.0-alpha.5"
+version = "1.0.0-alpha.9"
 
 [profile.performance]
 codegen-units = 1
@@ -61,7 +61,7 @@ lto = "fat"
 
 [workspace.dependencies]
 cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.3.2", features = [ "abigen-rs" ] }
-common = { path = "crates/common" }
+dojo-utils = { path = "crates/dojo-utils" }
 
 # metrics
 dojo-metrics = { path = "crates/metrics" }
@@ -83,7 +83,7 @@ katana-codecs = { path = "crates/katana/storage/codecs" }
 katana-codecs-derive = { path = "crates/katana/storage/codecs/derive" }
 katana-core = { path = "crates/katana/core", default-features = false }
 katana-db = { path = "crates/katana/storage/db" }
-katana-executor = { path = "crates/katana/executor", default-features = false }
+katana-executor = { path = "crates/katana/executor" }
 katana-node = { path = "crates/katana/node", default-features = false }
 katana-pool = { path = "crates/katana/pool" }
 katana-primitives = { path = "crates/katana/primitives" }
@@ -172,7 +172,7 @@ pretty_assertions = "1.2.1"
 rand = "0.8.5"
 rayon = "1.8.0"
 regex = "1.10.3"
-reqwest = { version = "0.12", features = [ "blocking", "rustls-tls", "json" ], default-features = false }
+reqwest = { version = "0.12", features = [ "blocking", "json", "rustls-tls" ], default-features = false }
 rpassword = "7.2.0"
 rstest = "0.18.2"
 rstest_reuse = "0.6.0"
@@ -192,6 +192,7 @@ starknet-crypto = "0.7.0"
 # we need this <https://github.com/starknet-io/types-rs/pull/75>. So we put strict
 # requirement here to prevent from being downgraded.
 # We can remove this requirement once `starknet-rs` is using >=0.1.4
+hashlink = "0.9.1"
 starknet-types-core = "~0.1.4"
 starknet_api = "0.11.0"
 strum = "0.25"
@@ -199,7 +200,7 @@ strum_macros = "0.25"
 tempfile = "3.9.0"
 test-log = "0.2.11"
 thiserror = "1.0.32"
-tokio = { version = "1.32.0", features = [ "full" ] }
+tokio = { version = "1.39.2", features = [ "full" ] }
 toml = "0.8"
 tower = "0.4.13"
 tower-http = "0.4.4"

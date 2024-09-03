@@ -117,6 +117,8 @@ impl KatanaRunner {
             builder = builder.db_dir(path);
         }
 
+        builder = builder.dev(config.dev);
+
         let mut katana = builder.spawn();
 
         let stdout =

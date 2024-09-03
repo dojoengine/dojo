@@ -20,6 +20,8 @@ use scarb::ops::{self, CompileOpts};
 use scarb_ui::args::{FeaturesSpec, PackagesFilter};
 use tracing::trace;
 
+use super::check_package_dojo_version;
+
 pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::test";
 
 #[derive(Debug, Clone, PartialEq, clap::ValueEnum)]
@@ -80,6 +82,10 @@ impl TestArgs {
         } else {
             ws.members().collect()
         };
+
+        for p in &packages {
+            check_package_dojo_version(&ws, p)?;
+        }
 
         let resolve = ops::resolve_workspace(&ws)?;
 
@@ -233,7 +239,10 @@ mod tests {
 
     use super::*;
 
+    // Ignored as scarb takes too much time to compile in debug mode.
+    // It's anyway run in the CI in the `test` job.
     #[test]
+    #[ignore]
     fn test_spawn_and_move_test() {
         let setup = CompilerTestSetup::from_examples("../../crates/dojo-core", "../../examples/");
 

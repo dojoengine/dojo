@@ -13,10 +13,11 @@
 use std::net::SocketAddr;
 use std::str::FromStr;
 use std::sync::Arc;
+use std::time::Duration;
 
-use clap::Parser;
-use common::parse::{parse_socket_address, parse_url};
+use clap::{ArgAction, Parser};
 use dojo_metrics::{metrics_process, prometheus_exporter};
+use dojo_utils::parse::{parse_socket_address, parse_url};
 use dojo_world::contracts::world::WorldContractReader;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::SqlitePool;
@@ -78,6 +79,10 @@ struct Args {
     #[arg(long, value_name = "PORT", default_value = "9091")]
     relay_webrtc_port: u16,
 
+    /// Port to serve Libp2p WebRTC transport
+    #[arg(long, value_name = "PORT", default_value = "9092")]
+    relay_websocket_port: u16,
+
     /// Path to a local identity key file. If not specified, a new identity will be generated
     #[arg(long, value_name = "PATH")]
     relay_local_key_path: Option<String>,
@@ -109,12 +114,16 @@ struct Args {
     explorer: bool,
 
     /// Chunk size of the events page when indexing using events
-    #[arg(long, default_value = "1000")]
+    #[arg(long, default_value = "1024")]
     events_chunk_size: u64,
 
     /// Enable indexing pending blocks
-    #[arg(long)]
+    #[arg(long, action = ArgAction::Set, default_value_t = true)]
     index_pending: bool,
+
+    /// Polling interval in ms
+    #[arg(long, default_value = "500")]
+    polling_interval: u64,
 }
 
 #[tokio::main]
@@ -188,7 +197,7 @@ async fn main() -> anyhow::Result<()> {
             start_block: args.start_block,
             events_chunk_size: args.events_chunk_size,
             index_pending: args.index_pending,
-            ..Default::default()
+            polling_interval: Duration::from_millis(args.polling_interval),
         },
         shutdown_tx.clone(),
         Some(block_tx),
@@ -209,6 +218,7 @@ async fn main() -> anyhow::Result<()> {
         provider.clone(),
         args.relay_port,
         args.relay_webrtc_port,
+        args.relay_websocket_port,
         args.relay_local_key_path,
         args.relay_cert_path,
     )

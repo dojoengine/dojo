@@ -5,7 +5,8 @@ use std::str::FromStr;
 use anyhow::{anyhow, bail, Context, Result};
 use cainome::cairo_serde::ByteArray;
 use camino::Utf8PathBuf;
-use dojo_world::contracts::abi::world;
+use dojo_utils::{TransactionExt, TransactionWaiter, TxnConfig};
+use dojo_world::contracts::abi::world::{self, Resource};
 use dojo_world::contracts::naming::{
     self, compute_selector_from_tag, get_name_from_tag, get_namespace_from_tag,
 };
@@ -20,10 +21,7 @@ use dojo_world::migration::class::ClassMigration;
 use dojo_world::migration::contract::ContractMigration;
 use dojo_world::migration::strategy::{generate_salt, prepare_for_migration, MigrationStrategy};
 use dojo_world::migration::world::WorldDiff;
-use dojo_world::migration::{
-    Declarable, Deployable, MigrationError, RegisterOutput, TxnConfig, Upgradable,
-};
-use dojo_world::utils::{TransactionExt, TransactionWaiter};
+use dojo_world::migration::{Declarable, Deployable, MigrationError, RegisterOutput, Upgradable};
 use futures::future;
 use itertools::Itertools;
 use scarb::core::Workspace;
@@ -445,17 +443,33 @@ where
     A: ConnectedAccount + Send + Sync,
     <A as ConnectedAccount>::Provider: Send,
 {
-    ui.print_header(format!("# Namespaces ({})", namespaces.len()));
-
     let world = WorldContract::new(world_address, migrator);
+
+    // We need to check if the namespace is not already registered.
+    let mut registered_namespaces = vec![];
+
+    for namespace in namespaces {
+        let namespace_selector = naming::compute_bytearray_hash(namespace);
+
+        if let Resource::Namespace = world.resource(&namespace_selector).call().await? {
+            registered_namespaces.push(namespace);
+        }
+    }
 
     let calls = namespaces
         .iter()
+        .filter(|ns| !registered_namespaces.contains(ns))
         .map(|ns| {
             ui.print(italic_message(&ns).to_string());
             world.register_namespace_getcall(&ByteArray::from_string(ns).unwrap())
         })
         .collect::<Vec<_>>();
+
+    if calls.is_empty() {
+        return Ok(());
+    }
+
+    ui.print_header(format!("# Namespaces ({})", namespaces.len() - registered_namespaces.len()));
 
     let InvokeTransactionResult { transaction_hash } =
         world.account.execute_v1(calls).send_with_cfg(txn_config).await.map_err(|e| {
@@ -491,12 +505,24 @@ where
 
     ui.print_header(format!("# Models ({})", models.len()));
 
+    let world = WorldContract::new(world_address, &migrator);
+
     let mut declare_output = vec![];
+    let mut models_to_register = vec![];
 
     for (i, m) in models.iter().enumerate() {
         let tag = &m.diff.tag;
 
         ui.print(italic_message(tag).to_string());
+
+        if let Resource::Unregistered =
+            world.resource(&compute_selector_from_tag(tag)).call().await?
+        {
+            models_to_register.push(tag.clone());
+        } else {
+            ui.print_sub("Already registered");
+            continue;
+        }
 
         match m.declare(&migrator, txn_config).await {
             Ok(output) => {
@@ -521,16 +547,10 @@ where
         }
     }
 
-    let world = WorldContract::new(world_address, &migrator);
-
-    let mut registered_models = vec![];
-
     let calls = models
         .iter()
-        .map(|c| {
-            registered_models.push(c.diff.tag.clone());
-            world.register_model_getcall(&c.diff.local_class_hash.into())
-        })
+        .filter(|m| models_to_register.contains(&m.diff.tag))
+        .map(|c| world.register_model_getcall(&c.diff.local_class_hash.into()))
         .collect::<Vec<_>>();
 
     let InvokeTransactionResult { transaction_hash } =
@@ -543,7 +563,7 @@ where
 
     ui.print(format!("All models are registered at: {transaction_hash:#x}\n"));
 
-    Ok(RegisterOutput { transaction_hash, declare_output, registered_models })
+    Ok(RegisterOutput { transaction_hash, declare_output, registered_models: models_to_register })
 }
 
 // For now duplicated because the migrator account is different from the declarers account type.
@@ -570,7 +590,7 @@ where
     ui.print_header(format!("# Models ({})", models.len()));
 
     let mut declare_output = vec![];
-    let mut registered_models = vec![];
+    let mut models_to_register = vec![];
 
     let mut declarers_tasks = HashMap::new();
     for (i, m) in models.iter().enumerate() {
@@ -598,9 +618,21 @@ where
 
     let all_results = futures::future::join_all(futures).await;
 
+    let world = WorldContract::new(world_address, &migrator);
+
     for results in all_results {
         for (index, tag, result) in results {
             ui.print(italic_message(&tag).to_string());
+
+            if let Resource::Unregistered =
+                world.resource(&compute_selector_from_tag(&tag)).call().await?
+            {
+                models_to_register.push(tag.clone());
+            } else {
+                ui.print_sub("Already registered");
+                continue;
+            }
+
             match result {
                 Ok(output) => {
                     ui.print_sub(format!("Selector: {:#066x}", compute_selector_from_tag(&tag)));
@@ -625,14 +657,10 @@ where
         }
     }
 
-    let world = WorldContract::new(world_address, &migrator);
-
     let calls = models
         .iter()
-        .map(|c| {
-            registered_models.push(c.diff.tag.clone());
-            world.register_model_getcall(&c.diff.local_class_hash.into())
-        })
+        .filter(|m| models_to_register.contains(&m.diff.tag))
+        .map(|c| world.register_model_getcall(&c.diff.local_class_hash.into()))
         .collect::<Vec<_>>();
 
     let InvokeTransactionResult { transaction_hash } =
@@ -645,7 +673,7 @@ where
 
     ui.print(format!("All models are registered at: {transaction_hash:#x}\n"));
 
-    Ok(RegisterOutput { transaction_hash, declare_output, registered_models })
+    Ok(RegisterOutput { transaction_hash, declare_output, registered_models: models_to_register })
 }
 
 async fn register_dojo_contracts<A>(
@@ -701,7 +729,7 @@ where
         let tag = &contract.diff.tag;
         ui.print(italic_message(tag).to_string());
 
-        if let Ok((call, was_upgraded)) = contract
+        if let Ok((call, contract_address, was_upgraded)) = contract
             .deploy_dojo_contract_call(
                 world_address,
                 contract.diff.local_class_hash,
@@ -711,7 +739,6 @@ where
             )
             .await
         {
-            let contract_address = call.to;
             let base_class_hash = contract.diff.base_class_hash;
 
             calls.push(call);
@@ -829,7 +856,7 @@ where
         let tag = &contract.diff.tag;
         ui.print(italic_message(tag).to_string());
 
-        if let Ok((call, was_upgraded)) = contract
+        if let Ok((call, contract_address, was_upgraded)) = contract
             .deploy_dojo_contract_call(
                 world_address,
                 contract.diff.local_class_hash,
@@ -839,7 +866,6 @@ where
             )
             .await
         {
-            let contract_address = call.to;
             let base_class_hash = contract.diff.base_class_hash;
 
             calls.push(call);

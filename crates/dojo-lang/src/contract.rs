@@ -18,7 +18,7 @@ use dojo_types::system::Dependency;
 use dojo_world::config::NamespaceConfig;
 use dojo_world::contracts::naming;
 
-use crate::plugin::{DojoAuxData, SystemAuxData, DOJO_CONTRACT_ATTR};
+use crate::plugin::{ContractAuxData, DojoAuxData, DOJO_CONTRACT_ATTR};
 use crate::syntax::world_param::{self, WorldParamInjectionKind};
 use crate::syntax::{self_param, utils as syntax_utils};
 
@@ -36,6 +36,7 @@ pub struct ContractParameters {
 pub struct DojoContract {
     diagnostics: Vec<PluginDiagnostic>,
     dependencies: HashMap<smol_str::SmolStr, Dependency>,
+    systems: Vec<String>,
 }
 
 impl DojoContract {
@@ -50,7 +51,8 @@ impl DojoContract {
         let mut diagnostics = vec![];
         let parameters = get_parameters(db, module_ast, &mut diagnostics);
 
-        let mut system = DojoContract { diagnostics, dependencies: HashMap::new() };
+        let mut contract =
+            DojoContract { diagnostics, dependencies: HashMap::new(), systems: vec![] };
 
         let mut has_event = false;
         let mut has_storage = false;
@@ -96,19 +98,19 @@ impl DojoContract {
                     if let ast::ModuleItem::Enum(ref enum_ast) = el {
                         if enum_ast.name(db).text(db).to_string() == "Event" {
                             has_event = true;
-                            return system.merge_event(db, enum_ast.clone());
+                            return contract.merge_event(db, enum_ast.clone());
                         }
                     } else if let ast::ModuleItem::Struct(ref struct_ast) = el {
                         if struct_ast.name(db).text(db).to_string() == "Storage" {
                             has_storage = true;
-                            return system.merge_storage(db, struct_ast.clone());
+                            return contract.merge_storage(db, struct_ast.clone());
                         }
                     } else if let ast::ModuleItem::Impl(ref impl_ast) = el {
                         // If an implementation is not targetting the ContractState,
                         // the auto injection of self and world is not applied.
                         let trait_path = impl_ast.trait_path(db).node.get_text(db);
                         if trait_path.contains("<ContractState>") {
-                            return system.rewrite_impl(db, impl_ast.clone(), metadata);
+                            return contract.rewrite_impl(db, impl_ast.clone(), metadata);
                         }
                     } else if let ast::ModuleItem::FreeFunction(ref fn_ast) = el {
                         let fn_decl = fn_ast.declaration(db);
@@ -116,7 +118,7 @@ impl DojoContract {
 
                         if fn_name == DOJO_INIT_FN {
                             has_init = true;
-                            return system.handle_init_fn(db, fn_ast);
+                            return contract.handle_init_fn(db, fn_ast);
                         }
                     }
 
@@ -128,17 +130,21 @@ impl DojoContract {
                 let node = RewriteNode::interpolate_patched(
                     "
                     #[starknet::interface]
-                    trait IDojoInit<ContractState> {
+                    pub trait IDojoInit<ContractState> {
                         fn $init_name$(self: @ContractState);
                     }
 
                     #[abi(embed_v0)]
-                    impl IDojoInitImpl of IDojoInit<ContractState> {
+                    pub impl IDojoInitImpl of IDojoInit<ContractState> {
                         fn $init_name$(self: @ContractState) {
-                            assert(starknet::get_caller_address() == \
-                     self.world().contract_address, 'Only world can init');
-                            assert(self.world().is_owner(self.selector(), \
-                     starknet::get_tx_info().account_contract_address), 'Only owner can init');
+                            if starknet::get_caller_address() != self.world().contract_address {
+                                core::panics::panic_with_byte_array(
+                                    @format!(\"Only the world can init contract `{}`, but caller \
+                     is `{:?}`\",
+                                    self.tag(),
+                                    starknet::get_caller_address(),
+                                ));
+                            }
                         }
                     }
                 ",
@@ -151,11 +157,11 @@ impl DojoContract {
             }
 
             if !has_event {
-                body_nodes.append(&mut system.create_event())
+                body_nodes.append(&mut contract.create_event())
             }
 
             if !has_storage {
-                body_nodes.append(&mut system.create_storage())
+                body_nodes.append(&mut contract.create_storage())
             }
 
             let mut builder = PatchBuilder::new(db, module_ast);
@@ -251,16 +257,17 @@ impl DojoContract {
                     content: code,
                     aux_data: Some(DynGeneratedFileAuxData::new(DojoAuxData {
                         models: vec![],
-                        systems: vec![SystemAuxData {
+                        contracts: vec![ContractAuxData {
                             name,
                             namespace: contract_namespace.clone(),
-                            dependencies: system.dependencies.values().cloned().collect(),
+                            dependencies: contract.dependencies.values().cloned().collect(),
+                            systems: contract.systems.clone(),
                         }],
                         events: vec![],
                     })),
                     code_mappings,
                 }),
-                diagnostics: system.diagnostics,
+                diagnostics: contract.diagnostics,
                 remove_original_item: true,
             };
         }
@@ -291,26 +298,26 @@ impl DojoContract {
 
         let trait_node = RewriteNode::interpolate_patched(
             "#[starknet::interface]
-            trait IDojoInit<ContractState> {
-                fn dojo_init($params_str$);
+            pub trait IDojoInit<ContractState> {
+                fn $init_name$($params_str$);
             }
             ",
-            &UnorderedHashMap::from([(
-                "params_str".to_string(),
-                RewriteNode::Text(params_str.clone()),
-            )]),
+            &UnorderedHashMap::from([
+                ("init_name".to_string(), RewriteNode::Text(DOJO_INIT_FN.to_string())),
+                ("params_str".to_string(), RewriteNode::Text(params_str.clone())),
+            ]),
         );
 
         let impl_node = RewriteNode::Text(
             "
             #[abi(embed_v0)]
-            impl IDojoInitImpl of IDojoInit<ContractState> {
+            pub impl IDojoInitImpl of IDojoInit<ContractState> {
             "
             .to_string(),
         );
 
         let declaration_node = RewriteNode::Mapped {
-            node: Box::new(RewriteNode::Text(format!("fn dojo_init({}) {{", params_str))),
+            node: Box::new(RewriteNode::Text(format!("fn {}({}) {{", DOJO_INIT_FN, params_str))),
             origin: fn_ast.declaration(db).as_syntax_node().span_without_trivia(db),
         };
 
@@ -321,8 +328,9 @@ impl DojoContract {
         };
 
         let assert_world_caller_node = RewriteNode::Text(
-            "assert(starknet::get_caller_address() == self.world().contract_address, 'Only world \
-             can init');"
+            "if starknet::get_caller_address() != self.world().contract_address { \
+             core::panics::panic_with_byte_array(@format!(\"Only the world can init contract \
+             `{}`, but caller is `{:?}`\", self.tag(), starknet::get_caller_address())); }"
                 .to_string(),
         );
 
@@ -517,6 +525,11 @@ impl DojoContract {
         let fn_name = fn_ast.declaration(db).name(db).text(db);
         let return_type =
             fn_ast.declaration(db).signature(db).ret_ty(db).as_syntax_node().get_text(db);
+
+        // Consider the function as a system if no return type is specified.
+        if return_type.is_empty() {
+            self.systems.push(fn_name.to_string());
+        }
 
         let (params_str, was_world_injected) = self.rewrite_parameters(
             db,

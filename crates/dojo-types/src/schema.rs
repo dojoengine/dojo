@@ -56,7 +56,13 @@ impl Ty {
             Ty::Struct(s) => s.name.clone(),
             Ty::Enum(e) => e.name.clone(),
             Ty::Tuple(tys) => format!("({})", tys.iter().map(|ty| ty.name()).join(", ")),
-            Ty::Array(ty) => format!("Array<{}>", ty[0].name()),
+            Ty::Array(ty) => {
+                if let Some(inner) = ty.first() {
+                    format!("Array<{}>", inner.name())
+                } else {
+                    "Array".to_string()
+                }
+            }
             Ty::ByteArray(_) => "ByteArray".to_string(),
         }
     }

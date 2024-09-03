@@ -45,7 +45,7 @@ fn blockifier(
             || {
                 // setup state
                 let state = provider.latest().expect("failed to get latest state");
-                let state = CachedState::new(StateProviderDb::from(state));
+                let state = CachedState::new(StateProviderDb::new(state));
 
                 (state, &block_context, execution_flags, tx.clone())
             },

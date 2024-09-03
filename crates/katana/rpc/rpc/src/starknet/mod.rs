@@ -13,6 +13,7 @@ use anyhow::Result;
 use katana_core::backend::Backend;
 use katana_core::service::block_producer::{BlockProducer, BlockProducerMode, PendingExecutor};
 use katana_executor::{ExecutionResult, ExecutorFactory};
+use katana_pool::validation::stateful::TxValidator;
 use katana_pool::TxPool;
 use katana_primitives::block::{
     BlockHash, BlockHashOrNumber, BlockIdOrTag, BlockNumber, BlockTag, FinalityStatus,
@@ -53,6 +54,7 @@ impl<EF: ExecutorFactory> Clone for StarknetApi<EF> {
 }
 
 struct Inner<EF: ExecutorFactory> {
+    validator: TxValidator,
     pool: TxPool,
     backend: Arc<Backend<EF>>,
     block_producer: Arc<BlockProducer<EF>>,
@@ -64,11 +66,12 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         backend: Arc<Backend<EF>>,
         pool: TxPool,
         block_producer: Arc<BlockProducer<EF>>,
+        validator: TxValidator,
     ) -> Self {
         let blocking_task_pool =
             BlockingTaskPool::new().expect("failed to create blocking task pool");
 
-        let inner = Inner { pool, backend, block_producer, blocking_task_pool };
+        let inner = Inner { pool, backend, block_producer, blocking_task_pool, validator };
 
         Self { inner: Arc::new(inner) }
     }
@@ -131,7 +134,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
 
     /// Returns the pending state if the sequencer is running in _interval_ mode. Otherwise `None`.
     fn pending_executor(&self) -> Option<PendingExecutor> {
-        match &*self.inner.block_producer.inner.read() {
+        match &*self.inner.block_producer.producer.read() {
             BlockProducerMode::Instant(_) => None,
             BlockProducerMode::Interval(producer) => Some(producer.executor()),
         }
@@ -291,8 +294,18 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         contract_address: ContractAddress,
     ) -> Result<Nonce, StarknetApiError> {
         self.on_io_blocking_task(move |this| {
-            let state = this.state(&block_id)?;
-            let nonce = state.nonce(contract_address)?.ok_or(StarknetApiError::ContractNotFound)?;
+            // read from the pool state if pending block
+            //
+            // TODO: this is a temporary solution, we should have a better way to handle this.
+            // perhaps a pending/pool state provider that implements all the state provider traits.
+            let result = if let BlockIdOrTag::Tag(BlockTag::Pending) = block_id {
+                this.inner.validator.pool_nonce(contract_address)?
+            } else {
+                let state = this.state(&block_id)?;
+                state.nonce(contract_address)?
+            };
+
+            let nonce = result.ok_or(StarknetApiError::ContractNotFound)?;
             Ok(nonce)
         })
         .await

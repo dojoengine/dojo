@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use cainome::cairo_serde::{ByteArray, CairoSerde};
 use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::world::WorldContractReader;
-use starknet::core::types::{Event, TransactionReceiptWithBlockInfo};
+use starknet::core::types::Event;
 use starknet::providers::Provider;
 use tracing::{debug, info};
 
@@ -43,7 +43,6 @@ where
         db: &mut Sql,
         _block_number: u64,
         block_timestamp: u64,
-        _transaction_receipt: &TransactionReceiptWithBlockInfo,
         _event_id: &str,
         event: &Event,
     ) -> Result<(), Error> {

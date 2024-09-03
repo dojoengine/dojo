@@ -1,3 +1,8 @@
+#![cfg_attr(not(test), warn(unused_crate_dependencies))]
+
+mod manager;
+mod task;
+
 use std::any::Any;
 use std::future::Future;
 use std::panic::{self, AssertUnwindSafe};
@@ -6,7 +11,9 @@ use std::sync::Arc;
 use std::task::Poll;
 
 use futures::channel::oneshot;
+pub use manager::*;
 use rayon::ThreadPoolBuilder;
+pub use task::*;
 use tokio::runtime::Handle;
 use tokio::task::JoinHandle;
 
@@ -82,9 +89,11 @@ impl<T> Future for BlockingTaskHandle<T> {
     }
 }
 
-/// A thread-pool for spawning blocking tasks . This is a simple wrapper around *rayon*'s
-/// thread-pool. This is mainly for executing expensive CPU-bound tasks. For spawing blocking
-/// IO-bound tasks, use [TokioTaskSpawner::spawn_blocking] instead.
+/// A thread-pool for spawning blocking tasks.
+///
+/// This is a simple wrapper around *rayon*'s thread-pool. This is mainly for executing expensive
+/// CPU-bound tasks. For spawing blocking IO-bound tasks, use [TokioTaskSpawner::spawn_blocking]
+/// instead.
 ///
 /// Refer to the [CPU-bound tasks and blocking code] section of the *tokio* docs and this [blog
 /// post] for more information.

@@ -44,6 +44,13 @@ pub mod foo_setter {
 #[dojo::contract]
 pub mod test_contract {}
 
+#[dojo::contract]
+pub mod test_contract_with_dojo_init_args {
+    fn dojo_init(world: @IWorldDispatcher, _arg1: felt252) {
+        let _u = world.uuid();
+    }
+}
+
 #[dojo::contract(namespace: "buzz_namespace", nomapping: true)]
 pub mod buzz_contract {}
 

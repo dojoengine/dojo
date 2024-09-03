@@ -1,10 +1,9 @@
 use dojo_test_utils::migration::copy_spawn_and_move_db;
+use dojo_utils::{TransactionExt, TxnConfig};
 use dojo_world::contracts::abi::model::{FieldLayout, Layout};
 use dojo_world::contracts::abi::world::Resource;
 use dojo_world::contracts::naming::{compute_bytearray_hash, compute_selector_from_tag};
 use dojo_world::contracts::world::WorldContract;
-use dojo_world::migration::TxnConfig;
-use dojo_world::utils::TransactionExt;
 use katana_runner::{KatanaRunner, KatanaRunnerConfig};
 use scarb_ui::{OutputFormat, Ui, Verbosity};
 use starknet::accounts::Account;
@@ -59,8 +58,7 @@ async fn test_model_ops() {
         )
         .await
         .unwrap(),
-        Felt::from_hex("0x295714e4a1b077394d20ce9abe5c1d08efb47c6143533ad096f94496c8ba3ba")
-            .unwrap()
+        Felt::from_hex("0x5581faa4aa9c7cf1903a7e07f28707a0a599b602ca13f3d2f88d68322e240d").unwrap()
     );
 
     let layout =

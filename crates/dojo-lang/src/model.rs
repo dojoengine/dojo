@@ -332,6 +332,14 @@ pub impl $type_name$EntityStoreImpl of $type_name$EntityStore {
         $type_name$ModelEntityImpl::get(world, entity_id)
     }
 
+    fn update(self: @$type_name$Entity, world: dojo::world::IWorldDispatcher) {
+        dojo::model::ModelEntity::<$type_name$Entity>::update_entity(self, world);
+    }
+
+    fn delete(self: @$type_name$Entity, world: dojo::world::IWorldDispatcher) {
+        dojo::model::ModelEntity::<$type_name$Entity>::delete_entity(self, world);
+    }
+
     $entity_field_accessors$
 }
 
@@ -366,6 +374,14 @@ pub impl $type_name$StoreImpl of $type_name$Store {
         $serialized_param_keys$
 
         dojo::model::Model::<$type_name$>::get(world, serialized.span())
+    }
+
+    fn set(self: @$type_name$, world: dojo::world::IWorldDispatcher) {
+        dojo::model::Model::<$type_name$>::set_model(self, world);
+    }
+
+    fn delete(self: @$type_name$, world: dojo::world::IWorldDispatcher) {
+        dojo::model::Model::<$type_name$>::delete_model(self, world);
     }
 
     $field_accessors$
@@ -406,7 +422,7 @@ pub impl $type_name$ModelEntityImpl of dojo::model::ModelEntity<$type_name$Entit
         Self::from_values(entity_id, ref values)
     }
 
-    fn update(self: @$type_name$Entity, world: dojo::world::IWorldDispatcher) {
+    fn update_entity(self: @$type_name$Entity, world: dojo::world::IWorldDispatcher) {
         dojo::world::IWorldDispatcherTrait::set_entity(
             world,
             dojo::model::Model::<$type_name$>::selector(),
@@ -416,7 +432,7 @@ pub impl $type_name$ModelEntityImpl of dojo::model::ModelEntity<$type_name$Entit
         );
     }
 
-    fn delete(self: @$type_name$Entity, world: dojo::world::IWorldDispatcher) {
+    fn delete_entity(self: @$type_name$Entity, world: dojo::world::IWorldDispatcher) {
         dojo::world::IWorldDispatcherTrait::delete_entity(
             world,
             dojo::model::Model::<$type_name$>::selector(),
@@ -466,6 +482,34 @@ pub impl $type_name$ModelEntityImpl of dojo::model::ModelEntity<$type_name$Entit
     }
 }
 
+#[cfg(target: \"test\")]
+pub impl $type_name$ModelEntityTestImpl of dojo::model::ModelEntityTest<$type_name$Entity> {
+    fn update_test(self: @$type_name$Entity, world: dojo::world::IWorldDispatcher) {
+        let world_test = dojo::world::IWorldTestDispatcher { contract_address: \
+             world.contract_address };
+
+        dojo::world::IWorldTestDispatcherTrait::set_entity_test(
+            world_test,
+            dojo::model::Model::<$type_name$>::selector(),
+            dojo::model::ModelIndex::Id(self.id()),
+            self.values(),
+            dojo::model::Model::<$type_name$>::layout()
+        );
+    }
+
+    fn delete_test(self: @$type_name$Entity, world: dojo::world::IWorldDispatcher) {
+        let world_test = dojo::world::IWorldTestDispatcher { contract_address: \
+             world.contract_address };
+
+        dojo::world::IWorldTestDispatcherTrait::delete_entity_test(
+            world_test,
+            dojo::model::Model::<$type_name$>::selector(),
+            dojo::model::ModelIndex::Id(self.id()),
+            dojo::model::Model::<$type_name$>::layout()
+        );
+    }
+}
+
 pub impl $type_name$ModelImpl of dojo::model::Model<$type_name$> {
     fn get(world: dojo::world::IWorldDispatcher, keys: Span<felt252>) -> $type_name$ {
         let mut values = dojo::world::IWorldDispatcherTrait::entity(
@@ -479,7 +523,7 @@ pub impl $type_name$ModelImpl of dojo::model::Model<$type_name$> {
         $type_name$Store::from_values(ref _keys, ref values)
     }
 
-   fn set(
+   fn set_model(
         self: @$type_name$,
         world: dojo::world::IWorldDispatcher
     ) {
@@ -492,7 +536,7 @@ pub impl $type_name$ModelImpl of dojo::model::Model<$type_name$> {
         );
     }
 
-    fn delete(
+    fn delete_model(
         self: @$type_name$,
         world: dojo::world::IWorldDispatcher
     ) {
@@ -615,6 +659,40 @@ pub impl $type_name$ModelImpl of dojo::model::Model<$type_name$> {
     #[inline(always)]
     fn packed_size() -> Option<usize> {
         dojo::model::layout::compute_packed_size(Self::layout())
+    }
+}
+
+#[cfg(target: \"test\")]
+pub impl $type_name$ModelTestImpl of dojo::model::ModelTest<$type_name$> {
+   fn set_test(
+        self: @$type_name$,
+        world: dojo::world::IWorldDispatcher
+    ) {
+        let world_test = dojo::world::IWorldTestDispatcher { contract_address: \
+             world.contract_address };
+
+        dojo::world::IWorldTestDispatcherTrait::set_entity_test(
+            world_test,
+            dojo::model::Model::<$type_name$>::selector(),
+            dojo::model::ModelIndex::Keys(dojo::model::Model::<$type_name$>::keys(self)),
+            dojo::model::Model::<$type_name$>::values(self),
+            dojo::model::Model::<$type_name$>::layout()
+        );
+    }
+
+    fn delete_test(
+        self: @$type_name$,
+        world: dojo::world::IWorldDispatcher
+    ) {
+        let world_test = dojo::world::IWorldTestDispatcher { contract_address: \
+             world.contract_address };
+
+        dojo::world::IWorldTestDispatcherTrait::delete_entity_test(
+            world_test,
+            dojo::model::Model::<$type_name$>::selector(),
+            dojo::model::ModelIndex::Keys(dojo::model::Model::<$type_name$>::keys(self)),
+            dojo::model::Model::<$type_name$>::layout()
+        );
     }
 }
 

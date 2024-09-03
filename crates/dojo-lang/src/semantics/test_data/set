@@ -120,7 +120,7 @@ Block(
                 StatementExpr {
                     expr: FunctionCall(
                         ExprFunctionCall {
-                            function: ?6::set,
+                            function: ?6::set_model,
                             args: [
                                 Value(
                                     Snapshot(
