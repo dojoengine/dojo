@@ -30,6 +30,7 @@ pub async fn starknet_verify(
 
     let txn_config = TxnConfig { wait: true, receipt: true, ..Default::default() };
 
+    sleep(Duration::from_secs(2)).await;
     let mut nonce = account.get_nonce().await?;
     let mut hashes = Vec::new();
 
@@ -56,11 +57,11 @@ pub async fn starknet_verify(
 
         trace!(target: LOG_TARGET, "Sent `publish_fragment` transaction {:#x}", tx.transaction_hash);
 
-        sleep(Duration::from_secs(5)).await;
         nonce += Felt::ONE;
     }
 
     info!(target: LOG_TARGET, "Sent all proof fragments.");
+    sleep(Duration::from_secs(2)).await;
 
     let calldata = [Felt::from(hashes.len() as u64)]
         .into_iter()

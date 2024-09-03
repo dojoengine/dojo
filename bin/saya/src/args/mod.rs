@@ -166,7 +166,7 @@ impl TryFrom<SayaArgs> for SayaConfig {
                 block_range: (args.start_block, args.end_block),
                 batch_size: args.batch_size,
                 mode: args.settlement.saya_mode.0,
-                piltover_contract: args.settlement.settlement_contract,
+                settlement_contract: args.settlement.settlement_contract,
                 data_availability: da_config,
                 world_address: args.proof.world_address,
                 fact_registry_address: args.proof.fact_registry_address,
@@ -245,7 +245,7 @@ mod tests {
         assert!(config.skip_publishing_proof);
         assert_eq!(config.mode, SayaMode::Persistent);
         assert_eq!(
-            config.piltover_contract.to_hex_string(),
+            config.settlement_contract.to_hex_string(),
             "0x65c0d01ef63197f00372cbb93bb32a7c49b70d3e82c5e0880d7912f4421e1c4"
         );
 

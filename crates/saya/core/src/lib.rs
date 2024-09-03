@@ -57,7 +57,7 @@ pub struct SayaConfig {
     pub prover_url: Url,
     pub prover_key: ProverAccessKey,
     pub mode: SayaMode,
-    pub piltover_contract: Felt,
+    pub settlement_contract: Felt,
     pub store_proofs: bool,
     pub block_range: (u64, Option<u64>),
     pub batch_size: usize,
@@ -224,7 +224,9 @@ impl Saya {
                     //     let mut file =
                     //         File::open(filename).await.context("Failed to create proof file.")?;
                     //     let mut content = String::new();
-                    //     file.read_to_string(&mut content).await.unwrap();
+                    //     tokio::io::AsyncReadExt::read_to_string(&mut file, &mut content)
+                    //         .await
+                    //         .unwrap();
                     //     content
                     // };
 
@@ -492,7 +494,7 @@ impl Saya {
 
                 starknet_apply_piltover(
                     piltover_calldata,
-                    self.config.piltover_contract,
+                    self.config.settlement_contract,
                     &starknet_account,
                     nonce,
                 )
