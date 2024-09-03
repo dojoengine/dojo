@@ -5,9 +5,6 @@ use saya_core::{Saya, SayaConfig};
 
 mod args;
 
-#[cfg(test)]
-mod tests;
-
 use args::SayaArgs;
 
 #[tokio::main]

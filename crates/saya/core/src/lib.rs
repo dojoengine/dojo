@@ -16,10 +16,7 @@ use katana_primitives::state::StateUpdatesWithDeclaredClasses;
 use katana_primitives::transaction::Tx;
 use katana_rpc_types::trace::TxExecutionInfo;
 use prover::persistent::{BatcherCall, BatcherInput, BatcherOutput};
-use prover::{
-    extract_execute_calls, HttpProverParams, ProofAndDiff, ProveDiffProgram, ProveProgram,
-    ProverIdentifier,
-};
+use prover::{extract_execute_calls, HttpProverParams, ProveProgram, ProverIdentifier};
 pub use prover_sdk::ProverAccessKey;
 use saya_provider::rpc::JsonRpcProvider;
 use saya_provider::Provider as SayaProvider;
@@ -40,7 +37,7 @@ use verifier::VerifierIdentifier;
 use crate::blockchain::Blockchain;
 use crate::data_availability::{DataAvailabilityClient, DataAvailabilityConfig};
 use crate::error::SayaResult;
-use crate::prover::{extract_messages, ProgramInput, Scheduler};
+use crate::prover::{extract_messages, ProgramInput};
 
 pub mod blockchain;
 pub mod data_availability;
@@ -154,9 +151,6 @@ impl Saya {
         let mut previous_block_state_root = block_before_the_first?.header.header.state_root;
         let mut mock_state_hash = Felt::from(0u64);
 
-        // The structure responsible for proving.
-        let mut prove_scheduler = None;
-
         loop {
             let latest_block = match self.provider.block_number().await {
                 Ok(block_number) => block_number,
@@ -172,8 +166,6 @@ impl Saya {
                     let last = self.config.block_range.1.unwrap_or(block);
                     (last, last) // Only one proof is generated, no need to fetch earlier.
                 }
-                // Separate proofs for each block, starting as early as possible.
-                SayaMode::PersistentMerging => (block, latest_block),
                 // One proof per batch, waiting until all are available.
                 SayaMode::Persistent => {
                     (block, latest_block.min(block + self.config.batch_size as u64 - 1))
@@ -195,32 +187,6 @@ impl Saya {
             // problem
 
             match self.config.mode {
-                SayaMode::PersistentMerging => {
-                    for p in params {
-                        let mut scheduler = if let Some(scheduler) = prove_scheduler {
-                            prove_scheduler = None;
-                            scheduler
-                        } else {
-                            Scheduler::new(
-                                self.config.batch_size,
-                                self.config.world_address,
-                                self.prover_identifier.clone(),
-                            )
-                        };
-
-                        if let Some((prover_input, _)) = self.process_block(block, p)? {
-                            scheduler.push_diff(prover_input)?;
-                            if scheduler.is_full() {
-                                self.process_proven(scheduler.proved().await?).await?;
-                            } else {
-                                prove_scheduler = Some(scheduler);
-                            }
-                        }
-
-                        block += 1;
-                    }
-                }
-
                 SayaMode::Persistent => {
                     let num_blocks = params.len() as u64;
                     let calls = params
@@ -249,8 +215,6 @@ impl Saya {
 
                     mock_state_hash += Felt::ONE;
 
-                    dbg!(&input);
-
                     // We might want to prove the signatures as well.
                     let proof = self.prover_identifier.prove_snos(input).await?;
 
@@ -273,7 +237,7 @@ impl Saya {
                     }
 
                     let proof = StarkProof::try_from(proof.as_str())?;
-                    self.process_proven((proof, vec![], (block, block + num_blocks))).await?;
+                    self.process_proven(proof, vec![], block + num_blocks).await?;
 
                     block += num_blocks;
                     info!(target: LOG_TARGET, "Successfully processed {} blocks.", num_blocks);
@@ -306,7 +270,7 @@ impl Saya {
 
                     let proof = StarkProof::try_from(proof.as_str())?;
                     let diff = proof.extract_output()?.program_output;
-                    self.process_proven((proof, dbg!(diff), block_range)).await?;
+                    self.process_proven(proof, diff, block_range.1).await?;
 
                     info!(target: LOG_TARGET, "Successfully processed all {} blocks.", block_range.1 - block_range.0 + 1);
                     break;
@@ -461,10 +425,12 @@ impl Saya {
     ///
     /// * `prove_scheduler` - A full parallel prove scheduler.
     /// * `last_block` - The last block number in the `prove_scheduler`.
-    async fn process_proven(&self, proven: ProofAndDiff) -> SayaResult<()> {
-        // Prove each of the leaf nodes of the recursion tree and merge them into one
-        let (proof, state_diff, (_, last_block)) = proven;
-
+    async fn process_proven(
+        &self,
+        proof: StarkProof,
+        state_diff: Vec<Felt>,
+        last_block: u64,
+    ) -> SayaResult<()> {
         trace!(target: LOG_TARGET, last_block, "Processing proven blocks.");
 
         let serialized_proof = proof.to_felts();
@@ -532,23 +498,6 @@ impl Saya {
                 )
                 .await?;
             }
-            SayaMode::PersistentMerging => {
-                // When not waiting for couple of second `apply_diffs` will sometimes fail due to
-                // reliance on registered fact
-                tokio::time::sleep(std::time::Duration::from_secs(2)).await;
-
-                trace!(target: LOG_TARGET, last_block, "Applying diffs.");
-                let transaction_hash = dojo_os::starknet_apply_diffs(
-                    self.config.world_address,
-                    state_diff,
-                    program_output,
-                    program_hash,
-                    &starknet_account,
-                    nonce,
-                )
-                .await?;
-                info!(target: LOG_TARGET, last_block, transaction_hash, "Diffs applied.");
-            }
         }
 
         Ok(())
@@ -565,7 +514,6 @@ impl From<starknet::providers::ProviderError> for error::Error {
 pub enum SayaMode {
     Ephemeral,
     Persistent,
-    PersistentMerging,
 }
 
 impl SayaMode {
@@ -573,7 +521,6 @@ impl SayaMode {
         match self {
             SayaMode::Ephemeral => ProveProgram::Checker,
             SayaMode::Persistent => ProveProgram::Batcher,
-            SayaMode::PersistentMerging => ProveProgram::DiffProgram(ProveDiffProgram::Merger),
         }
     }
 }

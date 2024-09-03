@@ -6,17 +6,11 @@ use serde_json::Value;
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
 
-use super::{ProveDiffProgram, ProveProgram};
+use super::ProveProgram;
 
 pub async fn load_program(prove_program: ProveProgram) -> anyhow::Result<Value> {
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR")?);
     let program_file = match prove_program {
-        ProveProgram::DiffProgram(ProveDiffProgram::Differ) => {
-            manifest_dir.join("programs/cairo0differ.json")
-        }
-        ProveProgram::DiffProgram(ProveDiffProgram::Merger) => {
-            manifest_dir.join("programs/cairo0merger.json")
-        }
         ProveProgram::Checker => manifest_dir.join("programs/cairo1checker.json"),
         ProveProgram::Batcher => manifest_dir.join("programs/cairo1batcher.json"),
     };

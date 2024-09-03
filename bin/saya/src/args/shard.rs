@@ -28,18 +28,13 @@ impl Default for SayaModeArg {
 
 impl ValueEnum for SayaModeArg {
     fn value_variants<'a>() -> &'a [Self] {
-        &[
-            SayaModeArg(SayaMode::Ephemeral),
-            SayaModeArg(SayaMode::Persistent),
-            SayaModeArg(SayaMode::PersistentMerging),
-        ]
+        &[SayaModeArg(SayaMode::Ephemeral), SayaModeArg(SayaMode::Persistent)]
     }
 
     fn to_possible_value(&self) -> Option<PossibleValue> {
         match self.0 {
             SayaMode::Ephemeral => Some(PossibleValue::new("ephemeral").alias("shard")),
             SayaMode::Persistent => Some(PossibleValue::new("persistent")),
-            SayaMode::PersistentMerging => Some(PossibleValue::new("merging")),
         }
     }
 }
@@ -51,7 +46,6 @@ impl FromStr for SayaModeArg {
         let mode = match s {
             "ephemeral" | "shard" => SayaMode::Ephemeral,
             "persistent" => SayaMode::Persistent,
-            "merging" => SayaMode::PersistentMerging,
             _ => Err(anyhow::anyhow!("unknown da chain: {}", s))?,
         };
         Ok(SayaModeArg(mode))
@@ -63,7 +57,6 @@ impl Display for SayaModeArg {
         match self.0 {
             SayaMode::Ephemeral => write!(f, "ephemeral"),
             SayaMode::Persistent => write!(f, "persistent"),
-            SayaMode::PersistentMerging => write!(f, "merging"),
         }
     }
 }

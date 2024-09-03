@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use clap::Parser;
 use katana_primitives::felt::FieldElement;
-use saya_core::prover::{HttpProverParams, ProgramInput, ProverIdentifier, Scheduler};
+use saya_core::prover::{HttpProverParams, ProgramInput};
 use saya_core::ProverAccessKey;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
@@ -59,7 +59,7 @@ async fn main() -> anyhow::Result<()> {
     }
 
     // Process each file, converting JSON data to ProgramInput.
-    let inputs: Vec<ProgramInput> = args
+    let _inputs: Vec<ProgramInput> = args
         .files
         .iter()
         .map(|file| {
@@ -67,18 +67,19 @@ async fn main() -> anyhow::Result<()> {
             program_input_from_json(json_data)
         })
         .collect();
-    let prover_params = Arc::new(HttpProverParams {
+    let _prover_params = Arc::new(HttpProverParams {
         prover_url: Url::parse("http://localhost:3000").unwrap(),
         prover_key: ProverAccessKey::from_hex_string(&args.key).unwrap(),
     });
 
-    let (proof, _) =
-        Scheduler::merge(inputs, args.world, ProverIdentifier::Http(prover_params)).await.unwrap();
+    // let (proof, _) =
+    //     Scheduler::merge(inputs, args.world,
+    // ProverIdentifier::Http(prover_params)).await.unwrap();
 
-    let proof =
-        proof.to_felts().into_iter().map(|f| f.to_hex_string()).collect::<Vec<_>>().join(" ");
+    // let proof =
+    //     proof.to_felts().into_iter().map(|f| f.to_hex_string()).collect::<Vec<_>>().join(" ");
 
-    println!("{}", proof);
+    // println!("{}", proof);
 
     Ok(())
 }

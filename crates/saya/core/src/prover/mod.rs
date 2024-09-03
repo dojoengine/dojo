@@ -12,7 +12,6 @@ pub mod extract;
 mod loader;
 pub mod persistent;
 mod program_input;
-mod scheduler;
 pub mod state_diff;
 mod stone_image;
 mod vec252;
@@ -22,12 +21,9 @@ use client::http_prove_felts;
 pub use client::HttpProverParams;
 use persistent::BatcherInput;
 pub use program_input::*;
-pub use scheduler::*;
 use starknet::accounts::Call;
 use starknet_crypto::Felt;
 pub use stone_image::*;
-
-use self::client::http_prove;
 
 /// The prover used to generate the proof.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -40,34 +36,12 @@ pub enum ProverIdentifier {
 }
 
 #[derive(Debug)]
-pub enum ProveDiffProgram {
-    Differ,
-    Merger,
-}
-
-#[derive(Debug)]
 pub enum ProveProgram {
-    DiffProgram(ProveDiffProgram),
     Checker, // Contract specific checker program.
     Batcher, // Simulating snos, contract from dojo-os repository.
 }
 
 impl ProverIdentifier {
-    pub async fn prove_diff(
-        &self,
-        input: String,
-        program: ProveDiffProgram,
-    ) -> anyhow::Result<String> {
-        let program = ProveProgram::DiffProgram(program);
-
-        match self {
-            ProverIdentifier::Http(params) => http_prove(params.clone(), input, program).await,
-            ProverIdentifier::Stone => prove_stone(input, program).await,
-            ProverIdentifier::Sharp => todo!(),
-            ProverIdentifier::Platinum => todo!(),
-        }
-    }
-
     pub async fn prove_checker(&self, calls: Vec<Call>) -> anyhow::Result<String> {
         let len = Felt::from(calls.len() as u64);
         let mut args = calls
@@ -107,7 +81,6 @@ impl ProverIdentifier {
 impl ProveProgram {
     pub fn cairo_version(&self) -> Felt {
         match self {
-            ProveProgram::DiffProgram(_) => Felt::ZERO,
             ProveProgram::Checker => Felt::ONE,
             ProveProgram::Batcher => Felt::ONE,
         }
