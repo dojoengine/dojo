@@ -39,6 +39,10 @@ pub struct MessagingService<EF: ExecutorFactory> {
     send_from_block: u64,
     /// The message sending future.
     msg_send_fut: Option<MessageSettlingFuture>,
+    /// The maximum block number to gather messages from.
+    max_block: u64,
+    /// The chunk size of messages to gather.
+    chunk_size: u64,
 }
 
 impl<EF: ExecutorFactory> MessagingService<EF> {
@@ -54,31 +58,28 @@ impl<EF: ExecutorFactory> MessagingService<EF> {
             Ok(Some(block)) => block,
             Ok(None) => 0,
             Err(_) => {
-                panic!(
-                    "Messaging could not be initialized.\nVerify that the messaging target node \
-                     (anvil or other katana) is running.\n",
-                )
+                anyhow::bail!("Messaging could not be initialized.\nVerify that the messaging target node \
+                     (anvil or other katana) is running.\n")
             }
         };
         let send_from_block = match provider.get_send_from_block() {
             Ok(Some(block)) => block,
             Ok(None) => 0,
             Err(_) => {
-                panic!(
-                    "Messaging could not be initialized.\nVerify that the messaging target node \
-                     (anvil or other katana) is running.\n",
-                )
+                anyhow::bail!("Messaging could not be initialized.\nVerify that the messaging target node \
+                     (anvil or other katana) is running.\n")
             }
         };
+
+        let max_block = config.max_block;
+        let chunk_size = config.chunk_size;
 
         let interval = interval_from_seconds(config.interval);
         let messenger = match MessengerMode::from_config(config).await {
             Ok(m) => Arc::new(m),
             Err(_) => {
-                panic!(
-                    "Messaging could not be initialized.\nVerify that the messaging target node \
-                     (anvil or other katana) is running.\n",
-                )
+                anyhow::bail!("Messaging could not be initialized.\nVerify that the messaging target node \
+                     (anvil or other katana) is running.\n")
             }
         };
 
@@ -91,6 +92,8 @@ impl<EF: ExecutorFactory> MessagingService<EF> {
             send_from_block,
             msg_gather_fut: None,
             msg_send_fut: None,
+            max_block,
+            chunk_size,
         })
     }
 
@@ -99,10 +102,9 @@ impl<EF: ExecutorFactory> MessagingService<EF> {
         pool: TxPool,
         backend: Arc<Backend<EF>>,
         from_block: u64,
+        max_block: u64,
+        chunk_size: u64,
     ) -> MessengerResult<(u64, usize)> {
-        // 200 avoids any possible rejection from RPC with possibly lot's of messages.
-        // TODO: May this be configurable?
-        let max_block = 200;
 
         match messenger.as_ref() {
             MessengerMode::Ethereum(inner) => {
@@ -125,7 +127,7 @@ impl<EF: ExecutorFactory> MessagingService<EF> {
             #[cfg(feature = "starknet-messaging")]
             MessengerMode::Starknet(inner) => {
                 let (block_num, txs) =
-                    inner.gather_messages(from_block, max_block, backend.chain_id).await?;
+                    inner.gather_messages(from_block, max_block, chunk_size, backend.chain_id).await?;
                 let txs_count = txs.len();
 
                 txs.into_iter().for_each(|tx| {
@@ -210,6 +212,7 @@ impl<EF: ExecutorFactory> Stream for MessagingService<EF> {
                     pin.pool.clone(),
                     pin.backend.clone(),
                     pin.gather_from_block,
+                    pin.max_block,
                 )));
             }
 

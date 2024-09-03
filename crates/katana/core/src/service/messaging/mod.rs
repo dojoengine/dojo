@@ -112,6 +112,10 @@ pub struct MessagingConfig {
     pub interval: u64,
     /// The block on settlement chain from where Katana will start fetching messages.
     pub from_block: u64,
+    /// The maximum number of blocks in gather messages
+    pub max_block: u64,
+    /// The size of events returned by get_events call
+    pub chunk_size: u64,
 }
 
 impl MessagingConfig {

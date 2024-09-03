@@ -64,7 +64,8 @@ impl StarknetMessaging {
         &self,
         from_block: BlockId,
         to_block: BlockId,
-    ) -> Result<Vec<EmittedEvent>> {
+        chunk_size: u64,
+    ) -> Result<HashMap<u64, Vec<EmittedEvent>>> {
         trace!(target: LOG_TARGET, from_block = ?from_block, to_block = ?to_block, "Fetching logs.");
 
         let mut events = vec![];
@@ -77,8 +78,6 @@ impl StarknetMessaging {
             keys: None,
         };
 
-        // TODO: this chunk_size may also come from configuration?
-        let chunk_size = 200;
         let mut continuation_token: Option<String> = None;
 
         loop {
@@ -165,6 +164,7 @@ impl Messenger for StarknetMessaging {
         &self,
         from_block: u64,
         max_blocks: u64,
+        chunk_size: u64,
         chain_id: ChainId,
     ) -> MessengerResult<(u64, Vec<Self::MessageTransaction>)> {
         let chain_latest_block: u64 = match self.provider.block_number().await {
@@ -193,7 +193,7 @@ impl Messenger for StarknetMessaging {
 
         let mut l1_handler_txs: Vec<L1HandlerTx> = vec![];
 
-        self.fetch_events(BlockId::Number(from_block), BlockId::Number(to_block))
+        self.fetch_events(BlockId::Number(from_block), BlockId::Number(to_block), chunk_size)
             .await
             .map_err(|_| Error::SendError)
             .unwrap()
