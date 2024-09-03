@@ -172,7 +172,7 @@ async fn main() -> anyhow::Result<()> {
     let provider: Arc<_> = JsonRpcClient::new(HttpTransport::new(args.rpc)).into();
 
     // Get world address
-    let world = WorldContractReader::new(args.world_address, &provider);
+    let world = WorldContractReader::new(args.world_address, Arc::clone(&provider));
 
     let db = Sql::new(pool.clone(), args.world_address).await?;
 
@@ -182,17 +182,17 @@ async fn main() -> anyhow::Result<()> {
                 (
                     get_selector_from_name(
                         <RegisterModelProcessor as EventProcessor<
-                            &Arc<JsonRpcClient<HttpTransport>>,
+                            Arc<JsonRpcClient<HttpTransport>>,
                         >>::event_key(&RegisterModelProcessor)
                         .as_str(),
                     )?,
                     Box::new(RegisterModelProcessor)
-                        as Box<dyn EventProcessor<&Arc<JsonRpcClient<HttpTransport>>>>,
+                        as Box<dyn EventProcessor<Arc<JsonRpcClient<HttpTransport>>>>,
                 ),
                 (
                     get_selector_from_name(
                         <StoreSetRecordProcessor as EventProcessor<
-                            &Arc<JsonRpcClient<HttpTransport>>,
+                            Arc<JsonRpcClient<HttpTransport>>,
                         >>::event_key(&StoreSetRecordProcessor)
                         .as_str(),
                     )?,
@@ -201,7 +201,7 @@ async fn main() -> anyhow::Result<()> {
                 (
                     get_selector_from_name(
                         <MetadataUpdateProcessor as EventProcessor<
-                            &Arc<JsonRpcClient<HttpTransport>>,
+                            Arc<JsonRpcClient<HttpTransport>>,
                         >>::event_key(&MetadataUpdateProcessor)
                         .as_str(),
                     )?,
@@ -210,7 +210,7 @@ async fn main() -> anyhow::Result<()> {
                 (
                     get_selector_from_name(
                         <StoreDelRecordProcessor as EventProcessor<
-                            &Arc<JsonRpcClient<HttpTransport>>,
+                            Arc<JsonRpcClient<HttpTransport>>,
                         >>::event_key(&StoreDelRecordProcessor)
                         .as_str(),
                     )?,
@@ -219,7 +219,7 @@ async fn main() -> anyhow::Result<()> {
                 (
                     get_selector_from_name(
                         <EventMessageProcessor as EventProcessor<
-                            &Arc<JsonRpcClient<HttpTransport>>,
+                            Arc<JsonRpcClient<HttpTransport>>,
                         >>::event_key(&EventMessageProcessor)
                         .as_str(),
                     )?,
@@ -228,7 +228,7 @@ async fn main() -> anyhow::Result<()> {
                 (
                     get_selector_from_name(
                         <StoreUpdateRecordProcessor as EventProcessor<
-                            &Arc<JsonRpcClient<HttpTransport>>,
+                            Arc<JsonRpcClient<HttpTransport>>,
                         >>::event_key(&StoreUpdateRecordProcessor)
                         .as_str(),
                     )?,
@@ -237,7 +237,7 @@ async fn main() -> anyhow::Result<()> {
                 (
                     get_selector_from_name(
                         <StoreUpdateMemberProcessor as EventProcessor<
-                            &Arc<JsonRpcClient<HttpTransport>>,
+                            Arc<JsonRpcClient<HttpTransport>>,
                         >>::event_key(&StoreUpdateMemberProcessor)
                         .as_str(),
                     )?,
@@ -257,7 +257,7 @@ async fn main() -> anyhow::Result<()> {
     let mut engine = Engine::new(
         world,
         db.clone(),
-        &provider,
+        Arc::clone(&provider),
         processors,
         EngineConfig {
             start_block: args.start_block,
@@ -281,7 +281,7 @@ async fn main() -> anyhow::Result<()> {
 
     let mut libp2p_relay_server = torii_relay::server::Relay::new(
         db,
-        provider.clone(),
+        Arc::clone(&provider),
         args.relay_port,
         args.relay_webrtc_port,
         args.relay_websocket_port,

@@ -33,12 +33,23 @@ pub const FELT_DELIMITER: &str = "/";
 #[path = "sql_test.rs"]
 mod test;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Sql {
     world_address: Felt,
     pub pool: Pool<Sqlite>,
     pub query_queue: QueryQueue,
     model_cache: Arc<ModelCache>,
+}
+
+impl Clone for Sql {
+    fn clone(&self) -> Self {
+        Sql {
+            world_address: self.world_address,
+            pool: self.pool.clone(),
+            query_queue: QueryQueue::new(self.pool.clone()),
+            model_cache: self.model_cache.clone(),
+        }
+    }
 }
 
 impl Sql {
@@ -760,7 +771,11 @@ impl Sql {
             Ty::Enum(e) => {
                 if e.options.iter().all(
                     |o| {
-                        if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false }
+                        if let Ty::Tuple(t) = &o.ty {
+                            t.is_empty()
+                        } else {
+                            false
+                        }
                     },
                 ) {
                     return;
