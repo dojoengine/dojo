@@ -1,5 +1,6 @@
-use anyhow::{anyhow, Result};
 use std::env;
+
+use anyhow::{anyhow, Result};
 
 use crate::{WALNUT_API_KEY_ENV_VAR, WALNUT_API_URL, WALNUT_API_URL_ENV_VAR};
 

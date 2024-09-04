@@ -16,6 +16,12 @@ use crate::utils::{walnut_get_api_key, walnut_get_api_url};
 
 /// Verifies all classes declared during migration.
 /// Only supported on hosted networks (non-localhost).
+///
+/// This function verifies all contracts and models in the strategy. For every contract and model,
+/// it sends a request to the Walnut backend with the class name, class hash, RPC URL, and source
+/// code. Walnut will then build the project with Sozo, compare the Sierra bytecode with the
+/// bytecode on the network, and if they are equal, it will store the source code and associate it
+/// with the class hash.
 pub async fn walnut_verify_migration_strategy(
     ws: &Workspace<'_>,
     rpc_url: String,
@@ -114,9 +120,14 @@ fn get_class_name_from_artifact_path(path: &Path, namespace: &str) -> Result<Str
 
 #[derive(Debug, Serialize)]
 struct VerificationPayload {
+    /// The name of the class we want to verify together with the selector.
     pub class_name: String,
+    /// The hash of the Sierra class.
     pub class_hash: String,
+    /// The RPC URL of the network where this class is declared (can only be a hosted network).
     pub rpc_url: String,
+    /// JSON that contains a map where the key is the path to the file and the value is the content
+    /// of the file. It should contain all files required to build the Dojo project with Sozo.
     pub source_code: Value,
 }
 
