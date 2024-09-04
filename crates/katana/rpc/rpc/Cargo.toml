@@ -22,6 +22,7 @@ katana-rpc-types-builder.workspace = true
 katana-tasks.workspace = true
 metrics.workspace = true
 starknet.workspace = true
+thiserror.workspace = true
 tracing.workspace = true
 
 [dev-dependencies]

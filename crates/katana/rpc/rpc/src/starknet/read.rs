@@ -356,20 +356,27 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
 
     async fn get_events(&self, filter: EventFilterWithPage) -> RpcResult<EventsPage> {
         self.on_io_blocking_task(move |this| {
-            let from_block = filter.event_filter.from_block.unwrap_or(BlockIdOrTag::Number(0));
-            let to_block =
-                filter.event_filter.to_block.unwrap_or(BlockIdOrTag::Tag(BlockTag::Latest));
+            let EventFilterWithPage { event_filter, result_page_request } = filter;
 
-            let keys = filter.event_filter.keys;
-            let keys = keys.filter(|keys| !(keys.len() == 1 && keys.is_empty()));
+            let from = match event_filter.from_block {
+                Some(id) => id,
+                None => BlockIdOrTag::Number(0),
+            };
+
+            let to = match event_filter.to_block {
+                Some(id) => id,
+                None => BlockIdOrTag::Tag(BlockTag::Pending),
+            };
+
+            let keys = event_filter.keys.filter(|keys| !(keys.len() == 1 && keys.is_empty()));
 
             let events = this.events(
-                from_block,
-                to_block,
-                filter.event_filter.address.map(|f| f.into()),
+                from,
+                to,
+                event_filter.address.map(|f| f.into()),
                 keys,
-                filter.result_page_request.continuation_token,
-                filter.result_page_request.chunk_size,
+                result_page_request.continuation_token,
+                result_page_request.chunk_size,
             )?;
 
             Ok(events)

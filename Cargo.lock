@@ -7941,6 +7941,7 @@ version = "1.0.0-alpha.9"
 dependencies = [
  "alloy-primitives",
  "anyhow",
+ "assert_matches",
  "base64 0.21.7",
  "derive_more",
  "flate2",
@@ -8020,6 +8021,7 @@ dependencies = [
  "serde_json",
  "starknet 0.11.0",
  "tempfile",
+ "thiserror",
  "tokio",
  "tracing",
  "url",
