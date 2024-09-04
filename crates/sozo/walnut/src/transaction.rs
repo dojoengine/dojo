@@ -3,6 +3,8 @@ use starknet::core::types::Felt;
 use url::Url;
 use urlencoding::encode;
 
+use crate::WALNUT_APP_URL;
+
 /// Prints a URL to the Walnut page for debugging the transaction.
 /// Only supported on hosted networks (non-localhost).
 pub fn walnut_debug_transaction(ui: &Ui, rpc_url: &Url, transaction_hash: &Felt) {
@@ -11,9 +13,8 @@ pub fn walnut_debug_transaction(ui: &Ui, rpc_url: &Url, transaction_hash: &Felt)
         // Encode the RPC URL
         let encoded_rpc_url = encode(rpc_url.as_str());
         ui.print(format!(
-            "Debug transaction with Walnut: https://app.walnut.dev/transactions?rpcUrl={}&txHash={:#066x}",
-            encoded_rpc_url,
-            transaction_hash
+            "Debug transaction with Walnut: {}/transactions?rpcUrl={}&txHash={:#066x}",
+            WALNUT_APP_URL, encoded_rpc_url, transaction_hash
         ));
     } else {
         ui.print("Debugging transactions with Walnut is only supported on hosted networks");

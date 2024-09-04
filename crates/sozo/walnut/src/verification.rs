@@ -12,6 +12,8 @@ use serde::Serialize;
 use serde_json::Value;
 use walkdir::WalkDir;
 
+use crate::WALNUT_API_URL;
+
 /// Verifies all classes declared during migration.
 /// Only supported on hosted networks (non-localhost).
 pub async fn walnut_verify_migration_strategy(
@@ -47,8 +49,7 @@ pub async fn walnut_verify_migration_strategy(
 
     // Retrieve the API key and URL from environment variables
     let api_key = std::env::var("WALNUT_API_KEY").context("WALNUT_API_KEY not set")?;
-    let api_url =
-        std::env::var("WALNUT_API_URL").unwrap_or_else(|_| "https://api.walnut.dev".to_string());
+    let api_url = std::env::var("WALNUT_API_URL").unwrap_or_else(|_| WALNUT_API_URL.to_string()); // Use the constant
 
     // Collect source code
     let source_code = collect_source_code(root_dir)?;
