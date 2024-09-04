@@ -43,13 +43,7 @@ impl TestSequencer {
             host: "127.0.0.1".into(),
             max_connections: 100,
             allowed_origins: None,
-            apis: vec![
-                ApiKind::Starknet,
-                ApiKind::Katana,
-                ApiKind::Dev,
-                ApiKind::Saya,
-                ApiKind::Torii,
-            ],
+            apis: vec![ApiKind::Starknet, ApiKind::Dev, ApiKind::Saya, ApiKind::Torii],
         };
 
         let (handle, backend) = katana_node::start(server_config, config, starknet_config)

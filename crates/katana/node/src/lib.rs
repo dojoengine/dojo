@@ -32,13 +32,11 @@ use katana_provider::providers::fork::ForkedProvider;
 use katana_provider::providers::in_memory::InMemoryProvider;
 use katana_rpc::config::ServerConfig;
 use katana_rpc::dev::DevApi;
-use katana_rpc::katana::KatanaApi;
 use katana_rpc::metrics::RpcServerMetrics;
 use katana_rpc::saya::SayaApi;
 use katana_rpc::starknet::StarknetApi;
 use katana_rpc::torii::ToriiApi;
 use katana_rpc_api::dev::DevApiServer;
-use katana_rpc_api::katana::KatanaApiServer;
 use katana_rpc_api::saya::SayaApiServer;
 use katana_rpc_api::starknet::{StarknetApiServer, StarknetTraceApiServer, StarknetWriteApiServer};
 use katana_rpc_api::torii::ToriiApiServer;
@@ -242,9 +240,6 @@ pub async fn spawn<EF: ExecutorFactory>(
                 methods.merge(StarknetApiServer::into_rpc(server.clone()))?;
                 methods.merge(StarknetWriteApiServer::into_rpc(server.clone()))?;
                 methods.merge(StarknetTraceApiServer::into_rpc(server))?;
-            }
-            ApiKind::Katana => {
-                methods.merge(KatanaApi::new(backend.clone()).into_rpc())?;
             }
             ApiKind::Dev => {
                 methods.merge(DevApi::new(backend.clone(), block_producer.clone()).into_rpc())?;

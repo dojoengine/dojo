@@ -102,6 +102,7 @@ impl KatanaRunner {
             .accounts(n_accounts)
             .json_log(true)
             .max_connections(10000)
+            .dev(config.dev)
             .fee(!config.disable_fee);
 
         if let Some(block_time_ms) = config.block_time {

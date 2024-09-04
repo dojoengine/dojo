@@ -1,5 +1,4 @@
 pub mod dev;
-pub mod katana;
 pub mod saya;
 pub mod starknet;
 pub mod torii;
@@ -8,7 +7,6 @@ pub mod torii;
 #[derive(Debug, Copy, Clone)]
 pub enum ApiKind {
     Starknet,
-    Katana,
     Torii,
     Dev,
     Saya,
