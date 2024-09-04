@@ -10,6 +10,7 @@ use dojo_world::metadata::get_default_namespace_from_ws;
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{DeployOutput, UpgradeOutput};
 use scarb::core::Workspace;
+use sozo_walnut::utils::walnut_check_api_key;
 use sozo_walnut::verification::walnut_verify_migration_strategy;
 use starknet::accounts::{Call, ConnectedAccount, ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::types::{BlockId, BlockTag, Felt, InvokeTransactionResult};
@@ -217,6 +218,10 @@ where
 
         Ok(None)
     } else {
+        if txn_config.walnut {
+            walnut_check_api_key()?;
+        }
+
         let declarers = get_declarers_accounts(&account, &rpc_url).await?;
 
         let declarers_len = if declarers.is_empty() { 1 } else { declarers.len() };

@@ -12,7 +12,7 @@ use serde::Serialize;
 use serde_json::Value;
 use walkdir::WalkDir;
 
-use crate::WALNUT_API_URL;
+use crate::utils::{walnut_get_api_key, walnut_get_api_url};
 
 /// Verifies all classes declared during migration.
 /// Only supported on hosted networks (non-localhost).
@@ -48,8 +48,8 @@ pub async fn walnut_verify_migration_strategy(
     ui.print(" ");
 
     // Retrieve the API key and URL from environment variables
-    let api_key = std::env::var("WALNUT_API_KEY").context("WALNUT_API_KEY not set")?;
-    let api_url = std::env::var("WALNUT_API_URL").unwrap_or_else(|_| WALNUT_API_URL.to_string()); // Use the constant
+    let api_key = walnut_get_api_key()?;
+    let api_url = walnut_get_api_url();
 
     // Collect source code
     let source_code = collect_source_code(root_dir)?;
