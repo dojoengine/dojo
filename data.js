@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1725415011836,
+  "lastUpdate": 1725460694388,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -18625,6 +18625,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3853583,
             "range": "± 171838",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "da96b1291ab99c1edc59bbabed496ed80970ec06",
+          "message": "refactor(katana): move predeployedAccounts under DevApi and remove KatanaApi (#2310)\n\nfix: move predeployedAccounts under DevApi and remove KatanaApi",
+          "timestamp": "2024-09-04T08:18:51-06:00",
+          "tree_id": "183df31ddf518d34410873832bd926e04c7dea69",
+          "url": "https://github.com/dojoengine/dojo/commit/da96b1291ab99c1edc59bbabed496ed80970ec06"
+        },
+        "date": 1725460692786,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17690371,
+            "range": "± 271787",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3809899,
+            "range": "± 68408",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3682288769,
+            "range": "± 879049894",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3869593,
+            "range": "± 125434",
             "unit": "ns/iter"
           }
         ]
