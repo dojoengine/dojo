@@ -5,11 +5,11 @@ use dojo_world::contracts::naming::get_name_from_tag;
 use dojo_world::contracts::world::{WorldContract, WorldContractReader};
 use dojo_world::migration::strategy::generate_salt;
 use scarb_ui::Ui;
+use sozo_walnut::transaction::walnut_debug_transaction;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{BlockId, BlockTag, ExecutionResult, Felt, InvokeTransactionResult};
 use starknet::providers::Provider;
 use url::Url;
-use walnut::transaction::walnut_debug_transaction;
 
 use crate::migration::ui::MigrationUi;
 

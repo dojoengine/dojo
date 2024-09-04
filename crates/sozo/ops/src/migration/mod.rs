@@ -10,6 +10,7 @@ use dojo_world::metadata::get_default_namespace_from_ws;
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{DeployOutput, UpgradeOutput};
 use scarb::core::Workspace;
+use sozo_walnut::verification::walnut_verify_migration_strategy;
 use starknet::accounts::{Call, ConnectedAccount, ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::types::{BlockId, BlockTag, Felt, InvokeTransactionResult};
 use starknet::core::utils::{cairo_short_string_to_felt, get_contract_address};
@@ -19,7 +20,6 @@ use starknet::providers::{AnyProvider, JsonRpcClient, Provider};
 use starknet::signers::{LocalWallet, SigningKey};
 use starknet_crypto::poseidon_hash_single;
 use url::Url;
-use walnut::verification::walnut_verify_migration_strategy;
 
 mod auto_auth;
 mod migrate;
