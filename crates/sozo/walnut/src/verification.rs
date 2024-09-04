@@ -25,7 +25,7 @@ pub async fn walnut_verify_migration_strategy(
     // Check if rpc_url is localhost
     if rpc_url.contains("localhost") || rpc_url.contains("127.0.0.1") {
         ui.print(" ");
-        ui.print("Verifying classes with Walnut is only supported on hosted networks.");
+        ui.warn("Verifying classes with Walnut is only supported on hosted networks.");
         ui.print(" ");
         return Ok(());
     }

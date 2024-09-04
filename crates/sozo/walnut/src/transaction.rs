@@ -17,6 +17,6 @@ pub fn walnut_debug_transaction(ui: &Ui, rpc_url: &Url, transaction_hash: &Felt)
             WALNUT_APP_URL, encoded_rpc_url, transaction_hash
         ));
     } else {
-        ui.print("Debugging transactions with Walnut is only supported on hosted networks");
+        ui.warn("Debugging transactions with Walnut is only supported on hosted networks");
     }
 }
