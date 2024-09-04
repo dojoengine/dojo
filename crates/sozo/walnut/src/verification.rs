@@ -125,12 +125,10 @@ async fn verify_class(
     api_url: &str,
     api_key: &str,
 ) -> Result<String> {
-    // Serialize the payload to a JSON string for the POST request
     let json_payload = serde_json::to_string(&payload)?;
 
     let url = format!("{api_url}/v1/verify");
 
-    // Send the POST request to the API
     let client = reqwest::Client::new();
     let api_res = client
         .post(url)
