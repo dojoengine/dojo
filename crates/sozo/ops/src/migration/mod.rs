@@ -66,7 +66,7 @@ async fn get_declarers_accounts<A: ConnectedAccount>(
         .post(rpc_url)
         .json(&serde_json::json!({
             "jsonrpc": "2.0",
-            "method": "katana_predeployedAccounts",
+            "method": "dev_predeployedAccounts",
             "params": [],
             "id": 1
         }))
