@@ -10,19 +10,23 @@ use cainome::rs::abigen_legacy;
 use common::split_felt;
 use dojo_test_utils::sequencer::{get_default_test_starknet_config, TestSequencer};
 use indexmap::IndexSet;
+use jsonrpsee::http_client::HttpClientBuilder;
 use katana_core::sequencer::SequencerConfig;
+use katana_primitives::event::ContinuationToken;
 use katana_primitives::genesis::constant::{
     DEFAULT_FEE_TOKEN_ADDRESS, DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH,
     DEFAULT_PREFUNDED_ACCOUNT_BALANCE, DEFAULT_UDC_ADDRESS,
 };
+use katana_rpc_api::dev::DevApiClient;
 use starknet::accounts::{
     Account, AccountError, AccountFactory, Call, ConnectedAccount, ExecutionEncoding,
     OpenZeppelinAccountFactory, SingleOwnerAccount,
 };
 use starknet::core::types::contract::legacy::LegacyContractClass;
 use starknet::core::types::{
-    BlockId, BlockTag, DeclareTransactionReceipt, DeployAccountTransactionReceipt, ExecutionResult,
-    Felt, StarknetError, TransactionFinalityStatus, TransactionReceipt,
+    BlockId, BlockTag, DeclareTransactionReceipt, DeployAccountTransactionReceipt, EventFilter,
+    EventsPage, ExecutionResult, Felt, StarknetError, TransactionFinalityStatus,
+    TransactionReceipt,
 };
 use starknet::core::utils::get_contract_address;
 use starknet::macros::{felt, selector};
@@ -198,6 +202,8 @@ async fn deploy_account(
     Ok(())
 }
 
+abigen_legacy!(Erc20Contract, "crates/katana/rpc/rpc/tests/test_data/erc20.json");
+
 #[tokio::test]
 async fn estimate_fee() -> Result<()> {
     let sequencer =
@@ -207,8 +213,7 @@ async fn estimate_fee() -> Result<()> {
     let account = sequencer.account();
 
     // setup contract to interact with (can be any existing contract that can be interacted with)
-    abigen_legacy!(Erc20Token, "crates/katana/rpc/rpc/tests/test_data/erc20.json");
-    let contract = Erc20Token::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), &account);
+    let contract = Erc20Contract::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), &account);
 
     // setup contract function params
     let recipient = felt!("0x1");
@@ -253,9 +258,6 @@ async fn concurrent_transactions_submissions(
     let provider = sequencer.provider();
     let account = Arc::new(sequencer.account());
 
-    // setup test contract to interact with.
-    abigen_legacy!(Contract, "crates/katana/rpc/rpc/tests/test_data/erc20.json");
-
     // function call params
     let recipient = Felt::ONE;
     let amount = Uint256 { low: Felt::ONE, high: Felt::ZERO };
@@ -277,7 +279,7 @@ async fn concurrent_transactions_submissions(
 
         let handle = tokio::spawn(async move {
             let mut nonce = nonce.lock().await;
-            let contract = Contract::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), account);
+            let contract = Erc20Contract::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), account);
             let res = contract.transfer(&recipient, &amount).nonce(*nonce).send().await.unwrap();
             txs.lock().await.insert(res.transaction_hash);
             *nonce += Felt::ONE;
@@ -332,8 +334,7 @@ async fn ensure_validator_have_valid_state(
     let account = sequencer.account();
 
     // setup test contract to interact with.
-    abigen_legacy!(Contract, "crates/katana/rpc/rpc/tests/test_data/erc20.json");
-    let contract = Contract::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), &account);
+    let contract = Erc20Contract::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), &account);
 
     // reduce account balance
     let recipient = felt!("0x1337");
@@ -366,8 +367,7 @@ async fn send_txs_with_insufficient_fee(
     let sequencer = TestSequencer::start(sequencer_config, starknet_config).await;
 
     // setup test contract to interact with.
-    abigen_legacy!(Contract, "crates/katana/rpc/rpc/tests/test_data/erc20.json");
-    let contract = Contract::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), sequencer.account());
+    let contract = Erc20Contract::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), sequencer.account());
 
     // function call params
     let recipient = Felt::ONE;
@@ -444,8 +444,7 @@ async fn send_txs_with_invalid_signature(
     );
 
     // setup test contract to interact with.
-    abigen_legacy!(Contract, "crates/katana/rpc/rpc/tests/test_data/erc20.json");
-    let contract = Contract::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), &account);
+    let contract = Erc20Contract::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), &account);
 
     // function call params
     let recipient = Felt::ONE;
@@ -492,8 +491,7 @@ async fn send_txs_with_invalid_nonces(
     let account = sequencer.account();
 
     // setup test contract to interact with.
-    abigen_legacy!(Contract, "crates/katana/rpc/rpc/tests/test_data/erc20.json");
-    let contract = Contract::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), &account);
+    let contract = Erc20Contract::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), &account);
 
     // function call params
     let recipient = Felt::ONE;
@@ -545,6 +543,184 @@ async fn send_txs_with_invalid_nonces(
 
     let nonce = account.get_nonce().await?;
     assert_eq!(nonce, Felt::TWO, "Nonce shouldn't change bcs the tx is still invalid.");
+
+    Ok(())
+}
+
+// TODO: write more elaborate tests for get events.
+#[tokio::test]
+async fn get_events_no_pending() -> Result<()> {
+    // setup test sequencer with the given configuration
+    let starknet_config = get_default_test_starknet_config();
+    let sequencer_config = SequencerConfig { no_mining: true, ..Default::default() };
+    let sequencer = TestSequencer::start(sequencer_config, starknet_config).await;
+
+    // create a json rpc client to interact with the dev api.
+    let client = HttpClientBuilder::default().build(sequencer.url()).unwrap();
+
+    let provider = sequencer.provider();
+    let account = sequencer.account();
+
+    // setup test contract to interact with.
+    let contract = Erc20Contract::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), &account);
+    // tx that emits 1 event
+    let tx = || contract.transfer(&Felt::ONE, &Uint256 { low: Felt::ONE, high: Felt::ZERO });
+
+    const BLOCK_1_TX_COUNT: usize = 5;
+    const EVENT_COUNT_PER_TX: usize = 1;
+    const TOTAL_EVENT_COUNT: usize = BLOCK_1_TX_COUNT * EVENT_COUNT_PER_TX;
+
+    for _ in 0..BLOCK_1_TX_COUNT {
+        let res = tx().send().await?;
+        dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await?;
+    }
+
+    // generate a block to mine pending transactions.
+    client.generate_block().await?;
+
+    let filter = EventFilter {
+        keys: None,
+        address: None,
+        to_block: Some(BlockId::Number(1)),
+        from_block: Some(BlockId::Number(0)),
+    };
+
+    // -----------------------------------------------------------------------
+    //  case 1 (chunk size = 0)
+
+    let chunk_size = 0;
+    let EventsPage { events, continuation_token } =
+        provider.get_events(filter.clone(), None, chunk_size).await?;
+
+    assert_eq!(events.len(), 0);
+    assert_matches!(continuation_token, Some(token ) => {
+        let token = ContinuationToken::parse(&token)?;
+        assert_eq!(token.block_n, 1);
+        assert_eq!(token.txn_n, 0);
+        assert_eq!(token.event_n, 0);
+    });
+
+    // -----------------------------------------------------------------------
+    //  case 2
+
+    let chunk_size = 3;
+    let EventsPage { events, continuation_token } =
+        provider.get_events(filter.clone(), None, chunk_size).await?;
+
+    assert_eq!(events.len(), 3, "Total events should be limited by chunk size ({chunk_size})");
+    assert_matches!(continuation_token, Some(ref token) => {
+        let token = ContinuationToken::parse(token)?;
+        assert_eq!(token.block_n, 1);
+        assert_eq!(token.txn_n, 3);
+        assert_eq!(token.event_n, 0);
+    });
+
+    let EventsPage { events, continuation_token } =
+        provider.get_events(filter.clone(), continuation_token, chunk_size).await?;
+
+    assert_eq!(events.len(), 2, "Remaining should be 2");
+    assert_matches!(continuation_token, None);
+
+    // -----------------------------------------------------------------------
+    //  case 3 (max chunk is greater than total events in the requested range)
+
+    let chunk_size = 100;
+    let EventsPage { events, continuation_token } =
+        provider.get_events(filter.clone(), None, chunk_size).await?;
+
+    assert_eq!(events.len(), TOTAL_EVENT_COUNT);
+    assert_matches!(continuation_token, None);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn get_events_with_pending() -> Result<()> {
+    // setup test sequencer with the given configuration
+    let starknet_config = get_default_test_starknet_config();
+    let sequencer_config = SequencerConfig { no_mining: true, ..Default::default() };
+    let sequencer = TestSequencer::start(sequencer_config, starknet_config).await;
+
+    // create a json rpc client to interact with the dev api.
+    let client = HttpClientBuilder::default().build(sequencer.url()).unwrap();
+
+    let provider = sequencer.provider();
+    let account = sequencer.account();
+
+    // setup test contract to interact with.
+    let contract = Erc20Contract::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), &account);
+    // tx that emits 1 event
+    let tx = || contract.transfer(&Felt::ONE, &Uint256 { low: Felt::ONE, high: Felt::ZERO });
+
+    const BLOCK_1_TX_COUNT: usize = 5;
+    const PENDING_BLOCK_TX_COUNT: usize = 5;
+
+    for _ in 0..BLOCK_1_TX_COUNT {
+        let res = tx().send().await?;
+        dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await?;
+    }
+
+    // generate block 1
+    client.generate_block().await?;
+
+    // events in pending block (2)
+    for _ in 0..PENDING_BLOCK_TX_COUNT {
+        let res = tx().send().await?;
+        dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await?;
+    }
+
+    // because we didnt specifically set the `from` and `to` block, it will implicitly
+    // get events starting from the initial (0) block to the pending block (2)
+    let filter = EventFilter { keys: None, address: None, to_block: None, from_block: None };
+
+    let chunk_size = BLOCK_1_TX_COUNT;
+    let EventsPage { events, continuation_token } =
+        provider.get_events(filter.clone(), None, chunk_size as u64).await?;
+
+    assert_eq!(events.len(), chunk_size);
+    assert_matches!(continuation_token, Some(ref token) => {
+        // the continuation token should now point to block 2 (pending block) because:-
+        // (1) the filter doesn't specify the exact 'to' block, so it will keep moving the cursor to point to the next block.
+        // (2) events in block 1 has been exhausted by the first two queries.
+        let token = ContinuationToken::parse(token)?;
+        assert_eq!(token.block_n, 2);
+        assert_eq!(token.txn_n, 0);
+        assert_eq!(token.event_n, 0);
+    });
+
+    // we split the pending events into two chunks to cover different cases.
+
+    let chunk_size = 3;
+    let EventsPage { events, continuation_token } =
+        provider.get_events(filter.clone(), continuation_token, chunk_size).await?;
+
+    assert_eq!(events.len() as u64, chunk_size);
+    assert_matches!(continuation_token, Some(ref token) => {
+        let token = ContinuationToken::parse(token)?;
+        assert_eq!(token.block_n, 2);
+        assert_eq!(token.txn_n, 3);
+        assert_eq!(token.event_n, 0);
+    });
+
+    // get the rest of events in the pending block
+    let EventsPage { events, continuation_token } =
+        provider.get_events(filter.clone(), continuation_token, chunk_size).await?;
+
+    assert_eq!(events.len(), PENDING_BLOCK_TX_COUNT - chunk_size as usize);
+    assert_matches!(continuation_token, Some(ref token) => {
+        let token = ContinuationToken::parse(token)?;
+        assert_eq!(token.block_n, 2);
+        assert_eq!(token.txn_n, 5);
+        assert_eq!(token.event_n, 0);
+    });
+
+    // fetching events with the continuation token should return an empty list and the
+    // token shouldn't change.
+    let EventsPage { events, continuation_token: new_token } =
+        provider.get_events(filter, continuation_token.clone(), chunk_size).await?;
+
+    assert_eq!(events.len(), 0);
+    assert_eq!(new_token, continuation_token);
 
     Ok(())
 }
