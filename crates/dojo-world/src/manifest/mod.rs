@@ -5,6 +5,7 @@ use std::{fs, io};
 use anyhow::Result;
 use cainome::cairo_serde::{ByteArray, CairoSerde, Error as CainomeError, Zeroable};
 use camino::Utf8PathBuf;
+use num_traits::Zero;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use starknet::core::types::{BlockId, BlockTag, EmittedEvent, EventFilter, Felt, StarknetError};
@@ -584,7 +585,7 @@ fn parse_contracts_events(
             let contract = data.next().expect("contract is missing from event");
             let value = data.next().expect("value is missing from event");
 
-            let value = !value.is_zero();
+            let value = !Zeroable::is_zero(&value);
 
             // Events that do not have a block number are ignored because we are unable to evaluate
             // whether the events happened before or after the latest event that has been processed.
@@ -713,7 +714,8 @@ fn parse_models_events(events: Vec<EmittedEvent>) -> Vec<Manifest<DojoModel>> {
         let namespace = model_event.namespace.to_string().expect("ASCII encoded namespace");
         let model_tag = naming::get_tag(&namespace, &model_name);
 
-        models.insert(model_tag, model_event.class_hash.into());
+        // TODO RBA: to fix
+        models.insert(model_tag, Felt::zero());
     }
 
     // TODO: include address of the model in the manifest.

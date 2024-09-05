@@ -1391,7 +1391,11 @@ pub mod world {
             )
         }
 
-        fn register_model_internal(ref self: ContractState, creator: ContractAddress, model_definition: dojo::model::ModelDefinition) {
+        fn register_model_internal(
+            ref self: ContractState,
+            creator: ContractAddress,
+            model_definition: dojo::model::ModelDefinition
+        ) {
             self.owners.write((model_definition.selector, creator), true);
             self.resources.write(model_definition.selector, ResourceType::Model);
 

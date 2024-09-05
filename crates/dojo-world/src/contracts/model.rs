@@ -1,8 +1,7 @@
 use std::str::FromStr as _;
 
-pub use abigen::model::ModelContractReader;
 use async_trait::async_trait;
-use cainome::cairo_serde::{CairoSerde as _, ContractAddress, Error as CainomeError};
+use cainome::cairo_serde::Error as CainomeError;
 use dojo_types::packing::{PackingError, ParseError};
 use dojo_types::primitive::{Primitive, PrimitiveError};
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
@@ -13,7 +12,7 @@ use starknet::core::utils::{
 };
 use starknet::providers::{Provider, ProviderError};
 
-use super::abi::world::{Layout, ModelIndex};
+use super::abi::world::ModelIndex;
 use super::naming;
 use crate::contracts::WorldContractReader;
 
@@ -22,9 +21,6 @@ use crate::contracts::WorldContractReader;
 mod model_test;
 
 pub mod abigen {
-    pub mod model {
-        pub use crate::contracts::abi::model::*;
-    }
     pub mod world {
         pub use crate::contracts::abi::world::*;
     }
@@ -54,37 +50,25 @@ pub enum ModelError {
     TagError(String),
 }
 
-// TODO: to update to match with new model interface
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait ModelReader<E> {
-    fn namespace(&self) -> &str;
-    fn name(&self) -> &str;
+    fn namespace(&self) -> String;
+    fn name(&self) -> String;
     fn selector(&self) -> Felt;
-    fn class_hash(&self) -> Felt;
-    fn contract_address(&self) -> Felt;
-    async fn schema(&self) -> Result<Ty, E>;
-    async fn packed_size(&self) -> Result<u32, E>;
-    async fn unpacked_size(&self) -> Result<u32, E>;
-    async fn layout(&self) -> Result<abigen::model::Layout, E>;
+    fn layout(&self) -> abigen::world::Layout;
+    fn ty(&self) -> abigen::world::Ty;
+    fn packed_size(&self) -> u32;
+    fn unpacked_size(&self) -> u32;
+    fn schema(&self) -> Result<Ty, ModelError>;
 }
 
 #[derive(Debug)]
 pub struct ModelRPCReader<'a, P: Provider + Sync + Send> {
-    /// Namespace of the model
-    namespace: String,
-    /// Name of the model
-    name: String,
-    /// The selector of the model
-    selector: Felt,
-    /// The class hash of the model
-    class_hash: Felt,
-    /// The contract address of the model
-    contract_address: Felt,
+    definition: abigen::world::ModelDefinition,
+
     /// Contract reader of the World that the model is registered to.
     world_reader: &'a WorldContractReader<P>,
-    /// Contract reader of the model.
-    model_reader: ModelContractReader<&'a P>,
 }
 
 impl<'a, P> ModelRPCReader<'a, P>
@@ -98,49 +82,25 @@ where
     ) -> Result<ModelRPCReader<'a, P>, ModelError> {
         let model_selector = naming::compute_selector_from_names(namespace, name);
 
-        let (class_hash, contract_address) =
+        let model_definition =
             match world.resource(&model_selector).block_id(world.block_id).call().await? {
-                abigen::world::Resource::Model((hash, address)) => (hash, address),
+                abigen::world::Resource::Model(definition) => definition,
                 _ => return Err(ModelError::ModelNotFound),
             };
 
-        // World Cairo contract won't raise an error in case of unknown/unregistered
-        // model so raise an error here in case of zero address.
-        if contract_address == ContractAddress(Felt::ZERO) {
-            return Err(ModelError::ModelNotFound);
-        }
-
-        let model_reader = ModelContractReader::new(contract_address.into(), world.provider());
-
-        Ok(Self {
-            namespace: namespace.into(),
-            name: name.into(),
-            world_reader: world,
-            class_hash: class_hash.into(),
-            contract_address: contract_address.into(),
-            selector: model_selector,
-            model_reader,
-        })
+        Ok(Self { definition: model_definition, world_reader: world })
     }
 
     pub async fn entity_storage(&self, keys: &[Felt]) -> Result<Vec<Felt>, ModelError> {
-        // As the dojo::model::Layout type has been pasted
-        // in both `model` and `world` ABI by abigen, the compiler sees both types
-        // as different even if they are strictly identical.
-        // Here is a trick reading the model layout as raw FieldElement
-        // and deserialize it to a world::Layout.
-        let raw_layout = self.model_reader.layout().raw_call().await?;
-        let layout = Layout::cairo_deserialize(raw_layout.as_slice(), 0)?;
-
         Ok(self
             .world_reader
-            .entity(&self.selector(), &ModelIndex::Keys(keys.to_vec()), &layout)
+            .entity(&self.selector(), &ModelIndex::Keys(keys.to_vec()), &self.layout())
             .call()
             .await?)
     }
 
     pub async fn entity(&self, keys: &[Felt]) -> Result<Ty, ModelError> {
-        let mut schema = self.schema().await?;
+        let mut schema = self.schema()?;
         let values = self.entity_storage(keys).await?;
 
         let mut keys_and_unpacked = [keys, &values].concat();
@@ -157,49 +117,52 @@ impl<'a, P> ModelReader<ModelError> for ModelRPCReader<'a, P>
 where
     P: Provider + Sync + Send,
 {
-    fn namespace(&self) -> &str {
-        &self.namespace
+    fn namespace(&self) -> String {
+        self.definition.namespace.to_string().unwrap()
     }
 
-    fn name(&self) -> &str {
-        &self.name
+    fn name(&self) -> String {
+        self.definition.name.to_string().unwrap()
     }
 
     fn selector(&self) -> Felt {
-        self.selector
+        self.definition.selector
     }
 
-    fn class_hash(&self) -> Felt {
-        self.class_hash
+    fn layout(&self) -> abigen::world::Layout {
+        self.definition.layout.clone()
     }
 
-    fn contract_address(&self) -> Felt {
-        self.contract_address
+    fn ty(&self) -> abigen::world::Ty {
+        self.definition.ty.clone()
     }
 
-    async fn schema(&self) -> Result<Ty, ModelError> {
-        let res = self.model_reader.schema().call().await?;
-        parse_schema(&res).map_err(ModelError::Parse)
+    fn schema(&self) -> Result<Ty, ModelError> {
+        parse_schema(&self.definition.ty).map_err(ModelError::Parse)
     }
 
-    // For non fixed layouts, packed and unpacked sizes are None.
-    // Therefore we return 0 in this case.
-    async fn packed_size(&self) -> Result<u32, ModelError> {
-        Ok(self.model_reader.packed_size().call().await?.unwrap_or(0))
+    fn packed_size(&self) -> u32 {
+        // TODO: would be better to directly return an Option.
+        if let Some(s) = self.definition.packed_size {
+            s
+        } else {
+            0
+        }
     }
 
-    async fn unpacked_size(&self) -> Result<u32, ModelError> {
-        Ok(self.model_reader.unpacked_size().call().await?.unwrap_or(0))
-    }
-
-    async fn layout(&self) -> Result<abigen::model::Layout, ModelError> {
-        Ok(self.model_reader.layout().call().await?)
+    fn unpacked_size(&self) -> u32 {
+        // TODO: would be better to directly return an Option.
+        if let Some(s) = self.definition.unpacked_size {
+            s
+        } else {
+            0
+        }
     }
 }
 
-fn parse_schema(ty: &abigen::model::Ty) -> Result<Ty, ParseError> {
+fn parse_schema(ty: &abigen::world::Ty) -> Result<Ty, ParseError> {
     match ty {
-        abigen::model::Ty::Primitive(primitive) => {
+        abigen::world::Ty::Primitive(primitive) => {
             let ty = parse_cairo_short_string(primitive)?;
             let ty = ty.split("::").last().unwrap();
             let primitive = match Primitive::from_str(ty) {
@@ -209,7 +172,7 @@ fn parse_schema(ty: &abigen::model::Ty) -> Result<Ty, ParseError> {
 
             Ok(Ty::Primitive(primitive))
         }
-        abigen::model::Ty::Struct(schema) => {
+        abigen::world::Ty::Struct(schema) => {
             let name = parse_cairo_short_string(&schema.name)?;
 
             let children = schema
@@ -226,7 +189,7 @@ fn parse_schema(ty: &abigen::model::Ty) -> Result<Ty, ParseError> {
 
             Ok(Ty::Struct(Struct { name, children }))
         }
-        abigen::model::Ty::Enum(enum_) => {
+        abigen::world::Ty::Enum(enum_) => {
             let mut name = parse_cairo_short_string(&enum_.name)?;
 
             let options = enum_
@@ -251,16 +214,16 @@ fn parse_schema(ty: &abigen::model::Ty) -> Result<Ty, ParseError> {
 
             Ok(Ty::Enum(Enum { name, option: None, options }))
         }
-        abigen::model::Ty::Tuple(values) => {
+        abigen::world::Ty::Tuple(values) => {
             let values = values.iter().map(parse_schema).collect::<Result<Vec<_>, ParseError>>()?;
 
             Ok(Ty::Tuple(values))
         }
-        abigen::model::Ty::Array(values) => {
+        abigen::world::Ty::Array(values) => {
             let values = values.iter().map(parse_schema).collect::<Result<Vec<_>, ParseError>>()?;
 
             Ok(Ty::Array(values))
         }
-        abigen::model::Ty::ByteArray => Ok(Ty::ByteArray("".to_string())),
+        abigen::world::Ty::ByteArray => Ok(Ty::ByteArray("".to_string())),
     }
 }
