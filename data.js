@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1725555399212,
+  "lastUpdate": 1725575807592,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -18769,6 +18769,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4061369,
             "range": "± 191593",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c7ffa0baf59e74ccef79542ddc5439d871c39142",
+          "message": "Bump `blockifier` to HEAD of `cairo-2.7` branch (#2389)",
+          "timestamp": "2024-09-06T06:18:03+08:00",
+          "tree_id": "90e0862cffd32554711a7fd74927aea66b4c132a",
+          "url": "https://github.com/dojoengine/dojo/commit/c7ffa0baf59e74ccef79542ddc5439d871c39142"
+        },
+        "date": 1725575805939,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17588500,
+            "range": "± 262974",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3736094,
+            "range": "± 85642",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3565766414,
+            "range": "± 830112148",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3889077,
+            "range": "± 29975",
             "unit": "ns/iter"
           }
         ]
