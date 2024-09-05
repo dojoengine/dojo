@@ -11,6 +11,21 @@ COPY --from=artifacts $TARGETPLATFORM/katana /usr/local/bin/katana
 COPY --from=artifacts $TARGETPLATFORM/sozo /usr/local/bin/sozo
 COPY --from=artifacts $TARGETPLATFORM/torii /usr/local/bin/torii
 
+RUN apt-get update && apt install -y git libtool automake autoconf
+RUN apt install -y make
+
+RUN git clone https://github.com/Comcast/Infinite-File-Curtailer.git curtailer \
+    && cd curtailer \
+    && libtoolize \
+    && aclocal \
+    && autoheader \
+    && autoconf \
+    && automake --add-missing \
+    && ./configure \
+    && make \
+    && make install \
+    && curtail --version
+
 RUN chmod +x /usr/local/bin/katana \
     && chmod +x /usr/local/bin/sozo \
     && chmod +x /usr/local/bin/torii
