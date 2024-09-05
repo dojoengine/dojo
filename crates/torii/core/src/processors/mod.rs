@@ -18,12 +18,12 @@ pub mod store_transaction;
 pub mod store_update_member;
 pub mod store_update_record;
 
-const MODEL_INDEX: usize = 0;
-const NUM_KEYS_INDEX: usize = 1;
-const ENTITY_ID_INDEX: usize = 1;
+pub(crate) const MODEL_INDEX: usize = 0;
+pub(crate) const NUM_KEYS_INDEX: usize = 1;
+pub(crate) const ENTITY_ID_INDEX: usize = 1;
 
 #[async_trait]
-pub trait EventProcessor<P>
+pub trait EventProcessor<P>: Send + Sync
 where
     P: Provider + Sync,
 {
@@ -48,7 +48,7 @@ where
 }
 
 #[async_trait]
-pub trait BlockProcessor<P: Provider + Sync> {
+pub trait BlockProcessor<P: Provider + Sync>: Send + Sync {
     fn get_block_number(&self) -> String;
     async fn process(
         &self,
@@ -60,7 +60,7 @@ pub trait BlockProcessor<P: Provider + Sync> {
 }
 
 #[async_trait]
-pub trait TransactionProcessor<P: Provider + Sync> {
+pub trait TransactionProcessor<P: Provider + Sync>: Send + Sync {
     #[allow(clippy::too_many_arguments)]
     async fn process(
         &self,

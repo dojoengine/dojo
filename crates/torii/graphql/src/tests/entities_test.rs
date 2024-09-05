@@ -106,8 +106,15 @@ mod tests {
         let last_entity = connection.edges.last().unwrap();
         assert_eq!(connection.edges.len(), 2);
         assert_eq!(connection.total_count, 2);
-        assert_eq!(first_entity.node.keys.clone().unwrap(), vec!["0x0", "0x1"]);
-        assert_eq!(last_entity.node.keys.clone().unwrap(), vec!["0x0"]);
+        // due to parallelization order is nondeterministic
+        assert!(
+            first_entity.node.keys.clone().unwrap() == vec!["0x0", "0x1"]
+                || first_entity.node.keys.clone().unwrap() == vec!["0x0"]
+        );
+        assert!(
+            last_entity.node.keys.clone().unwrap() == vec!["0x0", "0x1"]
+                || last_entity.node.keys.clone().unwrap() == vec!["0x0"]
+        );
 
         // double key param - returns all entities with `0x0` as first key and `0x1` as second key
         let entities = entities_query(&schema, "(keys: [\"0x0\", \"0x1\"])").await;

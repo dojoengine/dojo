@@ -170,7 +170,7 @@ async fn main() -> anyhow::Result<()> {
     let provider: Arc<_> = JsonRpcClient::new(HttpTransport::new(args.rpc)).into();
 
     // Get world address
-    let world = WorldContractReader::new(args.world_address, &provider);
+    let world = WorldContractReader::new(args.world_address, Arc::clone(&provider));
 
     let db = Sql::new(pool.clone(), args.world_address).await?;
 
@@ -193,7 +193,7 @@ async fn main() -> anyhow::Result<()> {
     let mut engine = Engine::new(
         world,
         db.clone(),
-        &provider,
+        Arc::clone(&provider),
         processors,
         EngineConfig {
             start_block: args.start_block,
@@ -217,7 +217,7 @@ async fn main() -> anyhow::Result<()> {
 
     let mut libp2p_relay_server = torii_relay::server::Relay::new(
         db,
-        provider.clone(),
+        Arc::clone(&provider),
         args.relay_port,
         args.relay_webrtc_port,
         args.relay_websocket_port,

@@ -33,12 +33,23 @@ pub const FELT_DELIMITER: &str = "/";
 #[path = "sql_test.rs"]
 mod test;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Sql {
     world_address: Felt,
     pub pool: Pool<Sqlite>,
     pub query_queue: QueryQueue,
     model_cache: Arc<ModelCache>,
+}
+
+impl Clone for Sql {
+    fn clone(&self) -> Self {
+        Sql {
+            world_address: self.world_address,
+            pool: self.pool.clone(),
+            query_queue: QueryQueue::new(self.pool.clone()),
+            model_cache: self.model_cache.clone(),
+        }
+    }
 }
 
 impl Sql {
@@ -193,6 +204,9 @@ impl Sql {
                                ?, ?, ?) ON CONFLICT(id) DO UPDATE SET \
                                updated_at=CURRENT_TIMESTAMP, executed_at=EXCLUDED.executed_at, \
                                event_id=EXCLUDED.event_id RETURNING *";
+        // if timeout doesn't work
+        // fetch to get entity
+        // if not available, insert into queue
         let mut entity_updated: EntityUpdated = sqlx::query_as(insert_entities)
             .bind(&entity_id)
             .bind(&keys_str)

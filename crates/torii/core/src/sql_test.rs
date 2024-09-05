@@ -1,4 +1,5 @@
 use std::str::FromStr;
+use std::sync::Arc;
 
 use cainome::cairo_serde::ContractAddress;
 use camino::Utf8PathBuf;
@@ -10,10 +11,11 @@ use dojo_world::contracts::world::{WorldContract, WorldContractReader};
 use katana_runner::{KatanaRunner, KatanaRunnerConfig};
 use scarb::compiler::Profile;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
-use starknet::accounts::{Account, Call, ConnectedAccount};
+use starknet::accounts::{Account, Call};
 use starknet::core::types::Felt;
 use starknet::core::utils::{get_contract_address, get_selector_from_name};
-use starknet::providers::Provider;
+use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::{JsonRpcClient, Provider};
 use starknet_crypto::poseidon_hash_many;
 use tokio::sync::broadcast;
 
@@ -30,7 +32,7 @@ pub async fn bootstrap_engine<P>(
     provider: P,
 ) -> Result<Engine<P>, Box<dyn std::error::Error>>
 where
-    P: Provider + Send + Sync + core::fmt::Debug,
+    P: Provider + Send + Sync + core::fmt::Debug + Clone + 'static,
 {
     let (shutdown_tx, _) = broadcast::channel(1);
     let to = provider.block_hash_and_number().await?.block_number;
@@ -76,6 +78,7 @@ async fn test_load_from_remote() {
 
     let sequencer = KatanaRunner::new_with_config(seq_config).expect("Failed to start runner.");
     let account = sequencer.account(0);
+    let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
 
     let (strat, _) = prepare_migration_with_world_and_seed(
         manifest_path,
@@ -102,7 +105,7 @@ async fn test_load_from_remote() {
         .await
         .unwrap();
 
-    TransactionWaiter::new(res.transaction_hash, &account.provider()).await.unwrap();
+    TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
 
     // spawn
     let tx = &account
@@ -115,13 +118,13 @@ async fn test_load_from_remote() {
         .await
         .unwrap();
 
-    TransactionWaiter::new(tx.transaction_hash, &account.provider()).await.unwrap();
+    TransactionWaiter::new(tx.transaction_hash, &provider).await.unwrap();
 
-    let world_reader = WorldContractReader::new(strat.world_address, account.provider());
+    let world_reader = WorldContractReader::new(strat.world_address, Arc::clone(&provider));
 
     let mut db = Sql::new(pool.clone(), world_reader.address).await.unwrap();
 
-    let _ = bootstrap_engine(world_reader, db.clone(), account.provider()).await.unwrap();
+    let _ = bootstrap_engine(world_reader, db.clone(), provider).await.unwrap();
 
     let _block_timestamp = 1710754478_u64;
     let models = sqlx::query("SELECT * FROM models").fetch_all(&pool).await.unwrap();
@@ -210,6 +213,7 @@ async fn test_load_from_remote_del() {
 
     let sequencer = KatanaRunner::new_with_config(seq_config).expect("Failed to start runner.");
     let account = sequencer.account(0);
+    let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
 
     let (strat, _) = prepare_migration_with_world_and_seed(
         manifest_path,
@@ -235,7 +239,7 @@ async fn test_load_from_remote_del() {
         .await
         .unwrap();
 
-    TransactionWaiter::new(res.transaction_hash, &account.provider()).await.unwrap();
+    TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
 
     // spawn
     let res = account
@@ -248,7 +252,7 @@ async fn test_load_from_remote_del() {
         .await
         .unwrap();
 
-    TransactionWaiter::new(res.transaction_hash, &account.provider()).await.unwrap();
+    TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
 
     // Set player config.
     let res = account
@@ -262,7 +266,7 @@ async fn test_load_from_remote_del() {
         .await
         .unwrap();
 
-    TransactionWaiter::new(res.transaction_hash, &account.provider()).await.unwrap();
+    TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
 
     let res = account
         .execute_v1(vec![Call {
@@ -274,13 +278,13 @@ async fn test_load_from_remote_del() {
         .await
         .unwrap();
 
-    TransactionWaiter::new(res.transaction_hash, &account.provider()).await.unwrap();
+    TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
 
-    let world_reader = WorldContractReader::new(strat.world_address, account.provider());
+    let world_reader = WorldContractReader::new(strat.world_address, Arc::clone(&provider));
 
     let mut db = Sql::new(pool.clone(), world_reader.address).await.unwrap();
 
-    let _ = bootstrap_engine(world_reader, db.clone(), account.provider()).await;
+    let _ = bootstrap_engine(world_reader, db.clone(), provider).await;
 
     assert_eq!(count_table("dojo_examples-PlayerConfig", &pool).await, 0);
     assert_eq!(count_table("dojo_examples-PlayerConfig$favorite_item", &pool).await, 0);
@@ -328,6 +332,7 @@ async fn test_get_entity_keys() {
     );
 
     let account = sequencer.account(0);
+    let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
 
     let world = WorldContract::new(strat.world_address, &account);
 
@@ -337,7 +342,7 @@ async fn test_get_entity_keys() {
         .await
         .unwrap();
 
-    TransactionWaiter::new(res.transaction_hash, &account.provider()).await.unwrap();
+    TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
 
     // spawn
     let res = account
@@ -350,13 +355,13 @@ async fn test_get_entity_keys() {
         .await
         .unwrap();
 
-    TransactionWaiter::new(res.transaction_hash, &account.provider()).await.unwrap();
+    TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
 
-    let world_reader = WorldContractReader::new(strat.world_address, account.provider());
+    let world_reader = WorldContractReader::new(strat.world_address, Arc::clone(&provider));
 
     let mut db = Sql::new(pool.clone(), world_reader.address).await.unwrap();
 
-    let _ = bootstrap_engine(world_reader, db.clone(), account.provider()).await;
+    let _ = bootstrap_engine(world_reader, db.clone(), Arc::clone(&provider)).await.unwrap();
 
     let keys = db.get_entity_keys_def("dojo_examples-Moves").await.unwrap();
     assert_eq!(keys, vec![("player".to_string(), "ContractAddress".to_string()),]);

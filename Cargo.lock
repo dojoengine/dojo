@@ -825,6 +825,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4b46cbb362ab8752921c97e041f5e366ee6297bd428a31275b9fcf1e380f7299"
 
 [[package]]
+name = "ansi_term"
+version = "0.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d52a9bb7ec0cf484c551830a7ce27bd20d67eac647e1befb56b0be4ee39a55d2"
+dependencies = [
+ "winapi",
+]
+
+[[package]]
 name = "anstream"
 version = "0.6.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2173,7 +2182,7 @@ dependencies = [
  "starknet-types-core",
  "thiserror",
  "tracing",
- "tracing-subscriber",
+ "tracing-subscriber 0.3.18",
  "url",
 ]
 
@@ -2198,7 +2207,7 @@ dependencies = [
  "starknet-types-core",
  "thiserror",
  "tracing",
- "tracing-subscriber",
+ "tracing-subscriber 0.3.18",
  "url",
 ]
 
@@ -2498,7 +2507,7 @@ dependencies = [
  "tower-lsp",
  "tracing",
  "tracing-chrome",
- "tracing-subscriber",
+ "tracing-subscriber 0.3.18",
 ]
 
 [[package]]
@@ -6716,7 +6725,7 @@ dependencies = [
  "httpdate",
  "itoa",
  "pin-project-lite",
- "socket2 0.4.10",
+ "socket2 0.5.7",
  "tokio",
  "tower-service",
  "tracing",
@@ -7757,7 +7766,7 @@ dependencies = [
  "shellexpand",
  "tokio",
  "tracing",
- "tracing-subscriber",
+ "tracing-subscriber 0.3.18",
  "url",
 ]
 
@@ -9003,6 +9012,15 @@ name = "match_cfg"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ffbee8634e0d45d258acb448e7eaab3fce7a0a467395d4d9f228e3c1f01fb2e4"
+
+[[package]]
+name = "matchers"
+version = "0.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f099785f7595cc4b4553a174ce30dd7589ef93391ff414dbb67f62392b9e0ce1"
+dependencies = [
+ "regex-automata 0.1.10",
+]
 
 [[package]]
 name = "matchers"
@@ -11949,7 +11967,7 @@ dependencies = [
  "starknet-crypto 0.7.1",
  "tokio",
  "tracing",
- "tracing-subscriber",
+ "tracing-subscriber 0.3.18",
  "url",
 ]
 
@@ -12087,7 +12105,7 @@ dependencies = [
  "toml 0.8.15",
  "toml_edit 0.22.16",
  "tracing",
- "tracing-subscriber",
+ "tracing-subscriber 0.3.18",
  "typed-builder",
  "url",
  "walkdir",
@@ -12943,7 +12961,7 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-log 0.1.4",
- "tracing-subscriber",
+ "tracing-subscriber 0.3.18",
  "url",
 ]
 
@@ -14060,7 +14078,7 @@ checksum = "3dffced63c2b5c7be278154d76b479f9f9920ed34e7574201407f0b14e2bbb93"
 dependencies = [
  "env_logger 0.11.3",
  "test-log-macros",
- "tracing-subscriber",
+ "tracing-subscriber 0.3.18",
 ]
 
 [[package]]
@@ -14581,7 +14599,7 @@ dependencies = [
  "tower",
  "tower-http",
  "tracing",
- "tracing-subscriber",
+ "tracing-subscriber 0.3.18",
  "url",
  "webbrowser",
 ]
@@ -14654,6 +14672,7 @@ dependencies = [
  "tokio-stream",
  "tokio-util",
  "tracing",
+ "tracing-test",
 ]
 
 [[package]]
@@ -14779,7 +14798,7 @@ dependencies = [
  "tokio",
  "torii-core",
  "tracing",
- "tracing-subscriber",
+ "tracing-subscriber 0.3.18",
  "tracing-wasm",
  "wasm-bindgen-futures",
  "wasm-bindgen-test",
@@ -14934,7 +14953,7 @@ checksum = "bf0a738ed5d6450a9fb96e86a23ad808de2b727fd1394585da5cdd6788ffe724"
 dependencies = [
  "serde_json",
  "tracing-core",
- "tracing-subscriber",
+ "tracing-subscriber 0.3.18",
 ]
 
 [[package]]
@@ -14981,11 +15000,33 @@ dependencies = [
 
 [[package]]
 name = "tracing-subscriber"
+version = "0.2.25"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0e0d2eaa99c3c2e41547cfa109e910a68ea03823cccad4a0525dcbc9b01e8c71"
+dependencies = [
+ "ansi_term",
+ "chrono",
+ "lazy_static",
+ "matchers 0.0.1",
+ "regex",
+ "serde",
+ "serde_json",
+ "sharded-slab",
+ "smallvec",
+ "thread_local",
+ "tracing",
+ "tracing-core",
+ "tracing-log 0.1.4",
+ "tracing-serde",
+]
+
+[[package]]
+name = "tracing-subscriber"
 version = "0.3.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ad0f048c97dbd9faa9b7df56362b8ebcaa52adb06b498c050d2f4e32f90a7a8b"
 dependencies = [
- "matchers",
+ "matchers 0.1.0",
  "nu-ansi-term",
  "once_cell",
  "regex",
@@ -15001,13 +15042,36 @@ dependencies = [
 ]
 
 [[package]]
+name = "tracing-test"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a3b48778c2d401c6a7fcf38a0e3c55dc8e8e753cbd381044a8cdb6fd69a29f53"
+dependencies = [
+ "lazy_static",
+ "tracing-core",
+ "tracing-subscriber 0.2.25",
+ "tracing-test-macro",
+]
+
+[[package]]
+name = "tracing-test-macro"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c49adbab879d2e0dd7f75edace5f0ac2156939ecb7e6a1e8fa14e53728328c48"
+dependencies = [
+ "lazy_static",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
 name = "tracing-wasm"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4575c663a174420fa2d78f4108ff68f65bf2fbb7dd89f33749b6e826b3626e07"
 dependencies = [
  "tracing",
- "tracing-subscriber",
+ "tracing-subscriber 0.3.18",
  "wasm-bindgen",
 ]
 

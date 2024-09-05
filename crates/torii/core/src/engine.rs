@@ -1,23 +1,30 @@
 use std::collections::{BTreeMap, HashMap};
 use std::fmt::Debug;
+use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use dojo_world::contracts::world::WorldContractReader;
 use hashlink::LinkedHashMap;
+use num_traits::ToPrimitive;
 use starknet::core::types::{
     BlockId, BlockTag, EmittedEvent, Event, EventFilter, Felt, MaybePendingBlockWithReceipts,
     MaybePendingBlockWithTxHashes, PendingBlockWithReceipts, ReceiptBlock, TransactionReceipt,
-    TransactionReceiptWithBlockInfo, TransactionWithReceipt,
+    TransactionReceiptWithBlockInfo,
 };
+use starknet::macros::selector;
 use starknet::providers::Provider;
+use starknet_crypto::poseidon_hash_many;
 use tokio::sync::broadcast::Sender;
 use tokio::sync::mpsc::Sender as BoundedSender;
+use tokio::task::{self, JoinHandle};
 use tokio::time::sleep;
 use tracing::{debug, error, info, trace, warn};
 
 use crate::processors::event_message::EventMessageProcessor;
-use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
+use crate::processors::{
+    BlockProcessor, EventProcessor, TransactionProcessor, ENTITY_ID_INDEX, NUM_KEYS_INDEX,
+};
 use crate::sql::Sql;
 
 #[allow(missing_debug_implementations)]
@@ -84,11 +91,11 @@ pub struct FetchPendingResult {
 }
 
 #[allow(missing_debug_implementations)]
-pub struct Engine<P: Provider + Send + Sync + std::fmt::Debug> {
+pub struct Engine<P: Provider + Send + Sync + std::fmt::Debug + Clone> {
     world: WorldContractReader<P>,
     db: Sql,
     provider: Box<P>,
-    processors: Processors<P>,
+    processors: Arc<Processors<P>>,
     config: EngineConfig,
     shutdown_tx: Sender<()>,
     block_tx: Option<BoundedSender<u64>>,
@@ -99,7 +106,7 @@ struct UnprocessedEvent {
     data: Vec<String>,
 }
 
-impl<P: Provider + Send + Sync + std::fmt::Debug> Engine<P> {
+impl<P: Provider + Send + Sync + std::fmt::Debug + Clone + 'static> Engine<P> {
     pub fn new(
         world: WorldContractReader<P>,
         db: Sql,
@@ -109,6 +116,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug> Engine<P> {
         shutdown_tx: Sender<()>,
         block_tx: Option<BoundedSender<u64>>,
     ) -> Self {
+        let processors = Arc::new(processors);
         Self { world, db, provider: Box::new(provider), processors, config, shutdown_tx, block_tx }
     }
 
@@ -149,6 +157,9 @@ impl<P: Provider + Send + Sync + std::fmt::Debug> Engine<P> {
                             match self.process(fetch_result).await {
                                 Ok(()) => {}
                                 Err(e) => {
+                                    // TODO: we might not able able to properly handle this error case
+                                    // since we are trying to do things in parallel so we don't exactly
+                                    // know which task failed
                                     error!(target: LOG_TARGET, error = %e, "Processing fetched data.");
                                     erroring_out = true;
                                     sleep(backoff_delay).await;
@@ -350,7 +361,14 @@ impl<P: Provider + Send + Sync + std::fmt::Debug> Engine<P> {
         let mut last_pending_block_tx = data.last_pending_block_tx;
         let mut last_pending_block_world_tx = None;
 
-        let timestamp = data.pending_block.timestamp;
+        let block_timestamp = data.pending_block.timestamp;
+        let block_number = data.block_number;
+
+        // We use BTreeMap because we want to process events with key 0 first
+        // because they contain events like register_model which are required for other events
+        let mut map = BTreeMap::<u8, Vec<(Event, Felt, u64, u64)>>::new();
+        let modulo = 8u64;
+        let other = 0u64;
 
         for t in data.pending_block.transactions {
             let transaction_hash = t.transaction.transaction_hash();
@@ -363,38 +381,122 @@ impl<P: Provider + Send + Sync + std::fmt::Debug> Engine<P> {
                 continue;
             }
 
-            match self.process_transaction_with_receipt(&t, data.block_number, timestamp).await {
-                Err(e) => {
-                    match e.to_string().as_str() {
-                        "TransactionHashNotFound" => {
-                            // We failed to fetch the transaction, which is because
-                            // the transaction might not have been processed fast enough by the
-                            // provider. So we can fail silently and try
-                            // again in the next iteration.
-                            warn!(target: LOG_TARGET, transaction_hash = %format!("{:#x}", transaction_hash), "Retrieving pending transaction receipt.");
-                            self.db.set_head(
-                                data.block_number - 1,
-                                last_pending_block_world_tx,
-                                last_pending_block_tx,
-                            );
-                            return Ok(());
-                        }
-                        _ => {
-                            error!(target: LOG_TARGET, error = %e, transaction_hash = %format!("{:#x}", transaction_hash), "Processing pending transaction.");
-                            return Err(e);
-                        }
-                    }
+            let events = match t.receipt {
+                TransactionReceipt::Invoke(receipt) => receipt.events,
+                TransactionReceipt::L1Handler(receipt) => receipt.events,
+                _ => {
+                    continue;
                 }
-                Ok(true) => {
+            };
+
+            for event in events {
+                if event.from_address == self.world.address {
                     last_pending_block_world_tx = Some(*transaction_hash);
-                    last_pending_block_tx = Some(*transaction_hash);
-                    info!(target: LOG_TARGET, transaction_hash = %format!("{:#x}", transaction_hash), "Processed pending world transaction.");
                 }
-                Ok(_) => {
-                    last_pending_block_tx = Some(*transaction_hash);
-                    info!(target: LOG_TARGET, transaction_hash = %format!("{:#x}", transaction_hash), "Processed pending transaction.")
-                }
+                last_pending_block_tx = Some(*transaction_hash);
+                let event_name = event_type_from_felt(event.keys[0]);
+                let entity_id = match event_name {
+                    EventType::StoreSetRecord => {
+                        // let selector = event.data[MODEL_INDEX];
+
+                        let keys_start = NUM_KEYS_INDEX + 1;
+                        let keys_end: usize = keys_start
+                            + event.data[NUM_KEYS_INDEX].to_usize().context("invalid usize")?;
+
+                        let keys = event.data[keys_start..keys_end].to_vec();
+                        let entity_id = poseidon_hash_many(&keys);
+                        entity_id.to_raw()[3] % modulo + 1
+                    }
+                    EventType::StoreDelRecord => {
+                        let entity_id = event.data[ENTITY_ID_INDEX];
+                        entity_id.to_raw()[3] % modulo + 1
+                    }
+                    EventType::StoreUpdateMember => {
+                        let entity_id = event.data[ENTITY_ID_INDEX];
+                        entity_id.to_raw()[3] % modulo + 1
+                    }
+                    EventType::StoreUpdateRecord => {
+                        let entity_id = event.data[ENTITY_ID_INDEX];
+                        entity_id.to_raw()[3] % modulo + 1
+                    }
+                    EventType::Other => other,
+                };
+
+                map.entry(entity_id as u8).or_default().push((
+                    event,
+                    *transaction_hash,
+                    block_number,
+                    block_timestamp,
+                ));
             }
+
+            // TODO: remove this after implementation
+            // match self.process_transaction_with_receipt(&t, data.block_number, timestamp).await {
+            //     Ok(true) => {
+            //         last_pending_block_world_tx = Some(*transaction_hash);
+            //         last_pending_block_tx = Some(*transaction_hash);
+            //         info!(target: LOG_TARGET, transaction_hash = %format!("{:#x}",
+            // transaction_hash), "Processed pending world transaction.");     }
+            //     Ok(_) => {
+            //         last_pending_block_tx = Some(*transaction_hash);
+            //         info!(target: LOG_TARGET, transaction_hash = %format!("{:#x}",
+            // transaction_hash), "Processed pending transaction.")     }
+            // }
+        }
+
+        let mut tasks = Vec::new();
+
+        // loop over the collected events
+        for (id, events) in map.into_iter() {
+            let mut db = self.db.clone();
+            let processors = Arc::clone(&self.processors);
+            let world =
+                WorldContractReader::new(self.world.address, self.provider.as_ref().clone());
+
+            let task: JoinHandle<Result<()>> = task::spawn(async move {
+                for (event_idx, (event, transaction_hash, block_number, block_timestamp)) in
+                    events.iter().enumerate()
+                {
+                    // only event index is not enough so we add the task id as well
+                    let event_idx = format!("{}_{:#04x}", id, event_idx);
+                    if db.query_queue.queue.len() >= QUERY_QUEUE_BATCH_SIZE {
+                        db.execute().await?;
+                    }
+
+                    let event_id =
+                        format!("{:#064x}:{:#x}:{}", block_number, transaction_hash, event_idx);
+                    let event = Event {
+                        from_address: event.from_address,
+                        keys: event.keys.clone(),
+                        data: event.data.clone(),
+                    };
+
+                    process_event(
+                        *block_number,
+                        *block_timestamp,
+                        &event_id,
+                        &event,
+                        *transaction_hash,
+                        &mut db,
+                        Arc::clone(&processors),
+                        &world,
+                    )
+                    .await?
+                }
+
+                db.execute().await?;
+                Ok(())
+            });
+
+            if id as u64 == other {
+                task.await??;
+            } else {
+                tasks.push(task);
+            }
+        }
+
+        for task in tasks {
+            task.await??;
         }
 
         // Set the head to the last processed pending transaction
@@ -407,33 +509,129 @@ impl<P: Provider + Send + Sync + std::fmt::Debug> Engine<P> {
 
     pub async fn process_range(&mut self, data: FetchRangeResult) -> Result<()> {
         // Process all transactions
-        let mut last_block = 0;
-        for ((block_number, transaction_hash), events) in data.transactions {
-            debug!("Processing transaction hash: {:#x}", transaction_hash);
-            // Process transaction
-            // let transaction = self.provider.get_transaction_by_hash(transaction_hash).await?;
+        // StoreSetRecord | StoreDeleteRecord | StoreUpdateMember | StoreUpdateRecord | Other
 
-            self.process_transaction_with_events(
-                transaction_hash,
-                events.as_slice(),
-                block_number,
-                data.blocks[&block_number],
-            )
-            .await?;
+        let modulo = 8u64;
+        let other = 0u64;
+        let mut map = BTreeMap::<u8, Vec<(EmittedEvent, u64, u64)>>::new();
 
-            // Process block
-            if block_number > last_block {
-                if let Some(ref block_tx) = self.block_tx {
-                    block_tx.send(block_number).await?;
+        for ((block_number, _), events) in data.transactions {
+            let block_timestamp = data.blocks[&block_number];
+            for event in events {
+                let event_name = event_type_from_felt(event.keys[0]);
+                let entity_id = match event_name {
+                    EventType::StoreSetRecord => {
+                        let keys_start = NUM_KEYS_INDEX + 1;
+                        let keys_end: usize = keys_start
+                            + event.data[NUM_KEYS_INDEX].to_usize().context("invalid usize")?;
+
+                        let keys = event.data[keys_start..keys_end].to_vec();
+                        let entity_id = poseidon_hash_many(&keys);
+                        entity_id.to_raw()[3] % modulo + 1
+                    }
+                    EventType::StoreDelRecord => {
+                        let entity_id = event.data[ENTITY_ID_INDEX];
+                        entity_id.to_raw()[3] % modulo + 1
+                    }
+                    EventType::StoreUpdateMember => {
+                        let entity_id = event.data[ENTITY_ID_INDEX];
+                        entity_id.to_raw()[3] % modulo + 1
+                    }
+                    EventType::StoreUpdateRecord => {
+                        let entity_id = event.data[ENTITY_ID_INDEX];
+                        entity_id.to_raw()[3] % modulo + 1
+                    }
+                    EventType::Other => other,
+                };
+
+                map.entry(entity_id as u8).or_default().push((
+                    event,
+                    block_number,
+                    block_timestamp,
+                ));
+            }
+        }
+
+        let mut tasks = Vec::new();
+
+        // loop over the collected events
+        for (id, events) in map.into_iter() {
+            let mut db = self.db.clone();
+            let processors = Arc::clone(&self.processors);
+            let world =
+                WorldContractReader::new(self.world.address, self.provider.as_ref().clone());
+
+            let task: JoinHandle<Result<()>> = task::spawn(async move {
+                for (event_idx, (event, block_number, block_timestamp)) in events.iter().enumerate()
+                {
+                    // only event index is not enough so we add the task id as well
+                    let event_idx = format!("{}_{:#04x}", id, event_idx);
+                    if db.query_queue.queue.len() >= QUERY_QUEUE_BATCH_SIZE {
+                        db.execute().await?;
+                    }
+
+                    let transaction_hash = event.transaction_hash;
+                    let event_id =
+                        format!("{:#064x}:{:#x}:{}", block_number, transaction_hash, event_idx);
+                    let event = Event {
+                        from_address: event.from_address,
+                        keys: event.keys.clone(),
+                        data: event.data.clone(),
+                    };
+
+                    process_event(
+                        *block_number,
+                        *block_timestamp,
+                        &event_id,
+                        &event,
+                        transaction_hash,
+                        &mut db,
+                        Arc::clone(&processors),
+                        &world,
+                    )
+                    .await?
                 }
+                db.execute().await?;
+                Ok(())
+            });
 
-                self.process_block(block_number, data.blocks[&block_number]).await?;
-                last_block = block_number;
+            if id as u64 == other {
+                task.await??;
+            } else {
+                tasks.push(task);
+            }
+        }
+
+        for task in tasks {
+            task.await??;
+        }
+
+        // TODO: remove this after implementation
+        // for ((block_number, transaction_hash), events) in data.transactions {
+        //     debug!("Processing transaction hash: {:#x}", transaction_hash);
+        //     // Process transaction
+        //     // let transaction = self.provider.get_transaction_by_hash(transaction_hash).await?;
+
+        //     self.process_transaction_with_events(
+        //         transaction_hash,
+        //         events.as_slice(),
+        //         block_number,
+        //         data.blocks[&block_number],
+        //     )
+        //     .await?;
+
+        //     // Process block
+        //     if self.db.query_queue.queue.len() >= QUERY_QUEUE_BATCH_SIZE {
+        //         self.db.execute().await?;
+        //     }
+        // }
+
+        for (block_number, timestamp) in data.blocks.iter() {
+            if let Some(ref block_tx) = self.block_tx {
+                block_tx.send(*block_number).await?;
             }
 
-            if self.db.query_queue.queue.len() >= QUERY_QUEUE_BATCH_SIZE {
-                self.db.execute().await?;
-            }
+            self.process_block(*block_number, *timestamp).await?;
         }
 
         // We return None for the pending_block_tx because our process_range
@@ -455,97 +653,99 @@ impl<P: Provider + Send + Sync + std::fmt::Debug> Engine<P> {
         }
     }
 
-    async fn process_transaction_with_events(
-        &mut self,
-        transaction_hash: Felt,
-        events: &[EmittedEvent],
-        block_number: u64,
-        block_timestamp: u64,
-    ) -> Result<()> {
-        for (event_idx, event) in events.iter().enumerate() {
-            let event_id =
-                format!("{:#064x}:{:#x}:{:#04x}", block_number, transaction_hash, event_idx);
+    // async fn process_transaction_with_events(
+    //     &mut self,
+    //     transaction_hash: Felt,
+    //     events: &[EmittedEvent],
+    //     block_number: u64,
+    //     block_timestamp: u64,
+    // ) -> Result<()> {
+    //     for (event_idx, event) in events.iter().enumerate() {
+    //         let event_id =
+    //             format!("{:#064x}:{:#x}:{:#04x}", block_number, transaction_hash, event_idx);
 
-            let event = Event {
-                from_address: event.from_address,
-                keys: event.keys.clone(),
-                data: event.data.clone(),
-            };
-            Self::process_event(
-                self,
-                block_number,
-                block_timestamp,
-                &event_id,
-                &event,
-                transaction_hash,
-            )
-            .await?;
-        }
+    //         let event = Event {
+    //             from_address: event.from_address,
+    //             keys: event.keys.clone(),
+    //             data: event.data.clone(),
+    //         };
+    //         Self::process_event(
+    //             self,
+    //             block_number,
+    //             block_timestamp,
+    //             &event_id,
+    //             &event,
+    //             transaction_hash,
+    //         )
+    //         .await?;
+    //     }
 
-        // Commented out this transaction processor because it requires an RPC call for each
-        // transaction which is slowing down the sync process by alot.
-        // Self::process_transaction(
-        //     self,
-        //     block_number,
-        //     block_timestamp,
-        //     transaction_hash,
-        //     transaction,
-        // )
-        // .await?;
+    //     // Commented out this transaction processor because it requires an RPC call for each
+    //     // transaction which is slowing down the sync process by alot.
+    //     // Self::process_transaction(
+    //     //     self,
+    //     //     block_number,
+    //     //     block_timestamp,
+    //     //     transaction_hash,
+    //     //     transaction,
+    //     // )
+    //     // .await?;
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
+
     // Process a transaction and events from its receipt.
     // Returns whether the transaction has a world event.
-    async fn process_transaction_with_receipt(
-        &mut self,
-        transaction_with_receipt: &TransactionWithReceipt,
-        block_number: u64,
-        block_timestamp: u64,
-    ) -> Result<bool> {
-        let transaction_hash = transaction_with_receipt.transaction.transaction_hash();
-        let events = match &transaction_with_receipt.receipt {
-            TransactionReceipt::Invoke(receipt) => Some(&receipt.events),
-            TransactionReceipt::L1Handler(receipt) => Some(&receipt.events),
-            _ => None,
-        };
+    // async fn process_transaction_with_receipt(
+    //     &mut self,
+    //     transaction_with_receipt: &TransactionWithReceipt,
+    //     block_number: u64,
+    //     block_timestamp: u64,
+    // ) -> Result<bool> {
+    //     let transaction_hash = transaction_with_receipt.transaction.transaction_hash();
+    //     let events = match &transaction_with_receipt.receipt {
+    //         TransactionReceipt::Invoke(receipt) => Some(&receipt.events),
+    //         TransactionReceipt::L1Handler(receipt) => Some(&receipt.events),
+    //         _ => None,
+    //     };
 
-        let mut world_event = false;
-        if let Some(events) = events {
-            for (event_idx, event) in events.iter().enumerate() {
-                if event.from_address != self.world.address {
-                    continue;
-                }
+    //     let mut world_event = false;
+    //     if let Some(events) = events {
+    //         for (event_idx, event) in events.iter().enumerate() {
+    //             if event.from_address != self.world.address {
+    //                 continue;
+    //             }
 
-                world_event = true;
-                let event_id =
-                    format!("{:#064x}:{:#x}:{:#04x}", block_number, *transaction_hash, event_idx);
+    //             world_event = true;
+    //             let event_id =
+    //                 format!("{:#064x}:{:#x}:{:#04x}", block_number, *transaction_hash,
+    // event_idx);
 
-                Self::process_event(
-                    self,
-                    block_number,
-                    block_timestamp,
-                    &event_id,
-                    event,
-                    *transaction_hash,
-                )
-                .await?;
-            }
+    //             Self::process_event(
+    //                 self,
+    //                 block_number,
+    //                 block_timestamp,
+    //                 &event_id,
+    //                 event,
+    //                 *transaction_hash,
+    //             )
+    //             .await?;
+    //         }
 
-            // if world_event {
-            //     Self::process_transaction(
-            //         self,
-            //         block_number,
-            //         block_timestamp,
-            //         transaction_hash,
-            //         transaction,
-            //     )
-            //     .await?;
-            // }
-        }
+    //         // if world_event {
+    //         //     Self::process_transaction(
+    //         //         self,
+    //         //         block_number,
+    //         //         block_timestamp,
+    //         //         transaction_hash,
+    //         //         transaction,
+    //         //     )
+    //         //     .await?;
+    //         // }
+    //     }
 
-        Ok(world_event)
-    }
+    //     Ok(world_event)
+    // }
 
     async fn process_block(&mut self, block_number: u64, block_timestamp: u64) -> Result<()> {
         for processor in &self.processors.block {
@@ -580,62 +780,79 @@ impl<P: Provider + Send + Sync + std::fmt::Debug> Engine<P> {
 
     //     Ok(())
     // }
+}
 
-    async fn process_event(
-        &mut self,
-        block_number: u64,
-        block_timestamp: u64,
-        event_id: &str,
-        event: &Event,
-        transaction_hash: Felt,
-    ) -> Result<()> {
-        self.db.store_event(event_id, event, transaction_hash, block_timestamp);
-        let event_key = event.keys[0];
+fn event_type_from_felt(input: Felt) -> EventType {
+    let store_set = selector!("StoreSetRecord");
+    let store_delete = selector!("StoreDelRecord");
+    let store_update_member = selector!("StoreUpdateMember");
+    let store_update_record = selector!("StoreUpdateRecord");
 
-        let Some(processor) = self.processors.event.get(&event_key) else {
-            // if we dont have a processor for this event, we try the catch all processor
-            if self.processors.catch_all_event.validate(event) {
-                if let Err(e) = self
-                    .processors
-                    .catch_all_event
-                    .process(
-                        &self.world,
-                        &mut self.db,
-                        block_number,
-                        block_timestamp,
-                        event_id,
-                        event,
-                    )
-                    .await
-                {
-                    error!(target: LOG_TARGET, error = %e, "Processing catch all event processor.");
-                }
-            } else {
-                let unprocessed_event = UnprocessedEvent {
-                    keys: event.keys.iter().map(|k| format!("{:#x}", k)).collect(),
-                    data: event.data.iter().map(|d| format!("{:#x}", d)).collect(),
-                };
-
-                trace!(
-                    target: LOG_TARGET,
-                    keys = ?unprocessed_event.keys,
-                    data = ?unprocessed_event.data,
-                    "Unprocessed event.",
-                );
-            }
-
-            return Ok(());
-        };
-
-        // if processor.validate(event) {
-        if let Err(e) = processor
-            .process(&self.world, &mut self.db, block_number, block_timestamp, event_id, event)
-            .await
-        {
-            error!(target: LOG_TARGET, event_name = processor.event_key(), error = %e, "Processing event.");
-        }
-        // }
-
-        Ok(())
+    match input {
+        x if x == store_set => EventType::StoreSetRecord,
+        x if x == store_delete => EventType::StoreDelRecord,
+        x if x == store_update_member => EventType::StoreUpdateMember,
+        x if x == store_update_record => EventType::StoreUpdateRecord,
+        _ => EventType::Other,
     }
+}
+
+enum EventType {
+    StoreSetRecord,
+    StoreDelRecord,
+    StoreUpdateMember,
+    StoreUpdateRecord,
+    Other,
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn process_event<P: Provider + Send + Sync + std::fmt::Debug>(
+    block_number: u64,
+    block_timestamp: u64,
+    event_id: &str,
+    event: &Event,
+    transaction_hash: Felt,
+    db: &mut Sql,
+    processors: Arc<Processors<P>>,
+    world: &WorldContractReader<P>,
+) -> Result<()> {
+    db.store_event(event_id, event, transaction_hash, block_timestamp);
+    let event_key = event.keys[0];
+
+    let Some(processor) = processors.event.get(&event_key) else {
+        // if we dont have a processor for this event, we try the catch all processor
+        if processors.catch_all_event.validate(event) {
+            if let Err(e) = processors
+                .catch_all_event
+                .process(world, db, block_number, block_timestamp, event_id, event)
+                .await
+            {
+                error!(target: LOG_TARGET, error = %e, "Processing catch all event processor.");
+            }
+        } else {
+            let unprocessed_event = UnprocessedEvent {
+                keys: event.keys.iter().map(|k| format!("{:#x}", k)).collect(),
+                data: event.data.iter().map(|d| format!("{:#x}", d)).collect(),
+            };
+
+            trace!(
+                target: LOG_TARGET,
+                keys = ?unprocessed_event.keys,
+                data = ?unprocessed_event.data,
+                "Unprocessed event.",
+            );
+        }
+
+        return Ok(());
+    };
+
+    // if processor.validate(event) {
+    if let Err(e) =
+        processor.process(world, db, block_number, block_timestamp, event_id, event).await
+    {
+        error!(target: LOG_TARGET, event_name = processor.event_key(), error = %e, "Processing event.");
+    }
+    // }
+
+    Ok(())
 }
