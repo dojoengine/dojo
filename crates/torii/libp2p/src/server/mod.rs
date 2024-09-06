@@ -267,44 +267,29 @@ impl<P: Provider + Sync> Relay<P> {
                                 }
                             };
 
-                            if entity_identity.is_none() {
-                                // we can set the entity without checking identity
-                                if let Err(e) = self
-                                    .db
-                                    .set_entity(
-                                        ty,
-                                        &message_id.to_string(),
-                                        Utc::now().timestamp() as u64,
-                                    )
-                                    .await
-                                {
-                                    info!(
-                                        target: LOG_TARGET,
-                                        error = %e,
-                                        "Setting message."
-                                    );
-                                    continue;
-                                } else {
-                                    info!(
-                                        target: LOG_TARGET,
-                                        message_id = %message_id,
-                                        peer_id = %peer_id,
-                                        "Message set."
-                                    );
-                                    continue;
-                                }
-                            }
-
-                            let entity_identity = match Felt::from_str(&entity_identity.unwrap()) {
-                                Ok(identity) => identity,
-                                Err(e) => {
-                                    warn!(
-                                        target: LOG_TARGET,
-                                        error = %e,
-                                        "Parsing identity."
-                                    );
-                                    continue;
-                                }
+                            let entity_identity = match entity_identity {
+                                Some(identity) => match Felt::from_str(&identity) {
+                                    Ok(identity) => identity,
+                                    Err(e) => {
+                                        warn!(
+                                            target: LOG_TARGET,
+                                            error = %e,
+                                            "Parsing identity."
+                                        );
+                                        continue;
+                                    }
+                                },
+                                None => match get_identity_from_ty(&ty) {
+                                    Ok(identity) => identity,
+                                    Err(e) => {
+                                        warn!(
+                                            target: LOG_TARGET,
+                                            error = %e,
+                                            "Getting identity from message."
+                                        );
+                                        continue;
+                                    }
+                                },
                             };
 
                             // TODO: have a nonce in model to check
@@ -324,6 +309,8 @@ impl<P: Provider + Sync> Relay<P> {
                                 };
 
                             let mut calldata = vec![message_hash];
+                            calldata.push(Felt::TWO);
+
                             calldata.extend(data.signature);
                             if !match self
                                 .provider
@@ -503,6 +490,26 @@ fn read_or_create_certificate(path: &Path) -> anyhow::Result<Certificate> {
     info!(target: LOG_TARGET, path = %path.display(), "Generated new certificate.");
 
     Ok(cert)
+}
+
+fn get_identity_from_ty(ty: &Ty) -> Result<Felt, Error> {
+    let Some(identity) = ty.as_struct() else {
+        return Err(Error::InvalidMessageError("Message is not a struct".to_string()));
+    };
+
+    let Some(identity) = identity.get("identity") else {
+        return Err(Error::InvalidMessageError("No field identity".to_string()));
+    };
+
+    let Some(identity) = identity.as_primitive() else {
+        return Err(Error::InvalidMessageError("Identity is not a primitive".to_string()));
+    };
+
+    let Some(identity) = identity.as_contract_address() else {
+        return Err(Error::InvalidMessageError("Identity is not a contract address".to_string()));
+    };
+
+    Ok(identity)
 }
 
 #[cfg(test)]
