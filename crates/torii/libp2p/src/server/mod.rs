@@ -283,6 +283,7 @@ impl<P: Provider + Sync> Relay<P> {
                                         error = %e,
                                         "Setting message."
                                     );
+                                    self.db.execute().await.unwrap();
                                     continue;
                                 } else {
                                     info!(
@@ -291,6 +292,7 @@ impl<P: Provider + Sync> Relay<P> {
                                         peer_id = %peer_id,
                                         "Message set."
                                     );
+                                    self.db.execute().await.unwrap();
                                     continue;
                                 }
                             }

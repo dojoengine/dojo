@@ -16,7 +16,7 @@ use starknet_crypto::poseidon_hash_many;
 use tracing::debug;
 
 use crate::cache::{Model, ModelCache};
-use crate::query_queue::{Argument, BrokerMessage, QueryQueue};
+use crate::query_queue::{Argument, BrokerMessage, QueryQueue, QueryType};
 use crate::types::{
     Entity as EntityUpdated, Event as EventEmitted, EventMessage as EventMessageUpdated,
     Model as ModelRegistered,
@@ -193,29 +193,28 @@ impl Sql {
         let entity_id = format!("{:#x}", poseidon_hash_many(&keys));
         let model_id = format!("{:#x}", compute_selector_from_names(model_namespace, model_name));
 
+        let keys_str = felts_sql_string(&keys);
+
+        let insert_entities = "INSERT INTO entities (id, keys, event_id, executed_at) VALUES (?, \
+                               ?, ?, ?) ON CONFLICT(id) DO UPDATE SET \
+                               updated_at=CURRENT_TIMESTAMP, executed_at=EXCLUDED.executed_at, \
+                               event_id=EXCLUDED.event_id";
+
+        self.query_queue.enqueue(
+            insert_entities,
+            vec![
+                Argument::String(entity_id.clone()),
+                Argument::String(keys_str.clone()),
+                Argument::String(event_id.to_string()),
+                Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
+            ],
+        );
+
         self.query_queue.enqueue(
             "INSERT INTO entity_model (entity_id, model_id) VALUES (?, ?) ON CONFLICT(entity_id, \
              model_id) DO NOTHING",
             vec![Argument::String(entity_id.clone()), Argument::String(model_id.clone())],
         );
-
-        let keys_str = felts_sql_string(&keys);
-        let insert_entities = "INSERT INTO entities (id, keys, event_id, executed_at) VALUES (?, \
-                               ?, ?, ?) ON CONFLICT(id) DO UPDATE SET \
-                               updated_at=CURRENT_TIMESTAMP, executed_at=EXCLUDED.executed_at, \
-                               event_id=EXCLUDED.event_id RETURNING *";
-        // if timeout doesn't work
-        // fetch to get entity
-        // if not available, insert into queue
-        let mut entity_updated: EntityUpdated = sqlx::query_as(insert_entities)
-            .bind(&entity_id)
-            .bind(&keys_str)
-            .bind(event_id)
-            .bind(utc_dt_string_from_timestamp(block_timestamp))
-            .fetch_one(&self.pool)
-            .await?;
-
-        entity_updated.updated_model = Some(entity.clone());
 
         let path = vec![namespaced_name];
         self.build_set_entity_queries_recursive(
@@ -227,7 +226,12 @@ impl Sql {
             &vec![],
         );
 
-        self.query_queue.push_publish(BrokerMessage::EntityUpdated(entity_updated));
+        let query_entities_for_publish = "SELECT * FROM entities WHERE id = ?";
+        self.query_queue.push_publish_query(
+            query_entities_for_publish.to_string(),
+            vec![Argument::String(entity_id.clone())],
+            QueryType::SetEntity(entity.clone()),
+        );
 
         Ok(())
     }
@@ -316,18 +320,18 @@ impl Sql {
         );
         self.execute().await?;
 
-        let mut update_entity = sqlx::query_as::<_, EntityUpdated>(
-            "UPDATE entities SET updated_at=CURRENT_TIMESTAMP, executed_at=?, event_id=? WHERE id \
-             = ? RETURNING *",
-        )
-        .bind(utc_dt_string_from_timestamp(block_timestamp))
-        .bind(event_id)
-        .bind(entity_id)
-        .fetch_one(&self.pool)
-        .await?;
+        let update_query = "UPDATE entities SET updated_at=CURRENT_TIMESTAMP, executed_at=?, \
+                            event_id=? WHERE id = ? RETURNING *";
 
-        update_entity.updated_model = Some(wrapped_ty);
-        self.query_queue.push_publish(BrokerMessage::EntityUpdated(update_entity));
+        self.query_queue.push_publish_query(
+            update_query.to_string(),
+            vec![
+                Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
+                Argument::String(event_id.to_string()),
+                Argument::String(entity_id.clone()),
+            ],
+            QueryType::SetEntity(wrapped_ty),
+        );
 
         Ok(())
     }
