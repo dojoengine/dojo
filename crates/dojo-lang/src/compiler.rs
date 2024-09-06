@@ -2,6 +2,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::fs;
 use std::io::Write;
 use std::ops::DerefMut;
+use std::rc::Rc;
 
 use anyhow::{anyhow, Context, Result};
 use cairo_lang_compiler::db::RootDatabase;
@@ -41,6 +42,18 @@ use tracing::{debug, trace, trace_span};
 
 use crate::plugin::{DojoAuxData, Model};
 use crate::scarb_internal::debug::SierraToCairoDebugInfo;
+
+#[derive(Debug, Clone)]
+pub struct CompiledArtifact {
+    /// THe class hash of the Sierra contract.
+    class_hash: Felt,
+    /// The actual compiled Sierra contract class.
+    contract_class: Rc<ContractClass>,
+    debug_info: Option<Rc<SierraToCairoDebugInfo>>,
+}
+
+/// A type alias for a map of compiled artifacts by their path.
+type CompiledArtifactByPath = HashMap<String, CompiledArtifact>;
 
 const CAIRO_PATH_SEPARATOR: &str = "::";
 
@@ -144,20 +157,17 @@ impl Compiler for DojoCompiler {
             vec![None; contracts.len()]
         };
 
-        let mut compiled_classes: HashMap<
-            String,
-            (Felt, ContractClass, Option<SierraToCairoDebugInfo>),
-        > = HashMap::new();
+        let mut compiled_classes: CompiledArtifactByPath = HashMap::new();
         let list_selector = ListSelector::default();
 
-        for (decl, class, debug_info) in izip!(contracts, classes, debug_info_classes) {
+        for (decl, contract_class, debug_info) in izip!(contracts, classes, debug_info_classes) {
             let contract_name = decl.submodule_id.name(db.upcast_mut());
             // note that the qualified path is in snake case while
             // the `full_path()` method of StructId uses the original struct name case.
             // (see in `get_dojo_model_artifacts`)
             let qualified_path = decl.module_id().full_path(db.upcast_mut());
 
-            match class.validate_version_compatible(list_selector.clone()) {
+            match contract_class.validate_version_compatible(list_selector.clone()) {
                 Ok(()) => {}
                 Err(AllowedLibfuncsError::UnsupportedLibfunc {
                     invalid_libfunc,
@@ -177,11 +187,22 @@ impl Compiler for DojoCompiler {
                 }
             }
 
-            let class_hash = compute_class_hash_of_contract_class(&class).with_context(|| {
-                format!("problem computing class hash for contract `{}`", qualified_path.clone())
-            })?;
+            let class_hash =
+                compute_class_hash_of_contract_class(&contract_class).with_context(|| {
+                    format!(
+                        "problem computing class hash for contract `{}`",
+                        qualified_path.clone()
+                    )
+                })?;
 
-            compiled_classes.insert(qualified_path, (class_hash, class, debug_info));
+            compiled_classes.insert(
+                qualified_path,
+                CompiledArtifact {
+                    class_hash,
+                    contract_class: Rc::new(contract_class),
+                    debug_info: debug_info.map(Rc::new),
+                },
+            );
         }
 
         update_files(
@@ -273,7 +294,7 @@ fn update_files(
     ws: &Workspace<'_>,
     target_dir: &Filesystem,
     crate_ids: &[CrateId],
-    compiled_artifacts: HashMap<String, (Felt, ContractClass, Option<SierraToCairoDebugInfo>)>,
+    compiled_artifacts: CompiledArtifactByPath,
     external_contracts: Option<Vec<ContractSelector>>,
 ) -> anyhow::Result<()> {
     let profile_name =
@@ -287,9 +308,9 @@ fn update_files(
     let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
 
     fn get_compiled_artifact_from_map<'a>(
-        artifacts: &'a HashMap<String, (Felt, ContractClass, Option<SierraToCairoDebugInfo>)>,
+        artifacts: &'a CompiledArtifactByPath,
         qualified_artifact_path: &str,
-    ) -> anyhow::Result<&'a (Felt, ContractClass, Option<SierraToCairoDebugInfo>)> {
+    ) -> anyhow::Result<&'a CompiledArtifact> {
         artifacts.get(qualified_artifact_path).context(format!(
             "Contract `{qualified_artifact_path}` not found. Did you include `dojo` as a \
              dependency?",
@@ -302,8 +323,7 @@ fn update_files(
     for (qualified_path, tag) in
         [(WORLD_QUALIFIED_PATH, WORLD_CONTRACT_TAG), (BASE_QUALIFIED_PATH, BASE_CONTRACT_TAG)]
     {
-        let (hash, class, debug_info) =
-            get_compiled_artifact_from_map(&compiled_artifacts, qualified_path)?;
+        let artifact = get_compiled_artifact_from_map(&compiled_artifacts, qualified_path)?;
         let filename = naming::get_filename_from_tag(tag);
         write_manifest_and_abi(
             &base_manifests_dir,
@@ -312,18 +332,18 @@ fn update_files(
             &mut Manifest::new(
                 // abi path will be written by `write_manifest`
                 Class {
-                    class_hash: *hash,
+                    class_hash: artifact.class_hash,
                     abi: None,
-                    original_class_hash: *hash,
+                    original_class_hash: artifact.class_hash,
                     tag: tag.to_string(),
                 },
                 filename.clone(),
             ),
-            &class.abi,
+            &artifact.contract_class.abi,
         )?;
-        save_json_artifact_file(ws, target_dir, class, &filename, tag)?;
+        save_json_artifact_file(ws, target_dir, &artifact.contract_class, &filename, tag)?;
 
-        if let Some(debug_info) = debug_info {
+        if let Some(debug_info) = &artifact.debug_info {
             save_json_artifact_debug_file(ws, target_dir, debug_info, &filename, tag)?;
         }
     }
@@ -402,13 +422,13 @@ fn update_files(
         std::fs::create_dir_all(&base_contracts_abis_dir)?;
     }
 
-    for (_, (manifest, class, module_id, debug_info)) in contracts.iter_mut() {
+    for (_, (manifest, module_id, artifact)) in contracts.iter_mut() {
         write_manifest_and_abi(
             &base_contracts_dir,
             &base_contracts_abis_dir,
             &manifest_dir,
             manifest,
-            &class.abi,
+            &artifact.contract_class.abi,
         )?;
 
         let filename = naming::get_filename_from_tag(&manifest.inner.tag);
@@ -420,9 +440,15 @@ fn update_files(
             &filename,
             &manifest.inner.tag,
         )?;
-        save_json_artifact_file(ws, &contracts_dir, class, &filename, &manifest.inner.tag)?;
+        save_json_artifact_file(
+            ws,
+            &contracts_dir,
+            &artifact.contract_class,
+            &filename,
+            &manifest.inner.tag,
+        )?;
 
-        if let Some(debug_info) = debug_info {
+        if let Some(debug_info) = &artifact.debug_info {
             save_json_artifact_debug_file(
                 ws,
                 &contracts_dir,
@@ -449,20 +475,26 @@ fn update_files(
         std::fs::create_dir_all(&base_models_abis_dir)?;
     }
 
-    for (_, (manifest, class, module_id, debug_info)) in models.iter_mut() {
+    for (_, (manifest, module_id, artifact)) in models.iter_mut() {
         write_manifest_and_abi(
             &base_models_dir,
             &base_models_abis_dir,
             &manifest_dir,
             manifest,
-            &class.abi,
+            &artifact.contract_class.abi,
         )?;
 
         let filename = naming::get_filename_from_tag(&manifest.inner.tag);
         save_expanded_source_file(ws, *module_id, db, &models_dir, &filename, &manifest.inner.tag)?;
-        save_json_artifact_file(ws, &models_dir, class, &filename, &manifest.inner.tag)?;
+        save_json_artifact_file(
+            ws,
+            &models_dir,
+            &artifact.contract_class,
+            &filename,
+            &manifest.inner.tag,
+        )?;
 
-        if let Some(debug_info) = debug_info {
+        if let Some(debug_info) = &artifact.debug_info {
             save_json_artifact_debug_file(
                 ws,
                 &models_dir,
@@ -483,10 +515,8 @@ fn get_dojo_model_artifacts(
     db: &RootDatabase,
     aux_data: &Vec<Model>,
     module_id: ModuleId,
-    compiled_classes: &HashMap<String, (Felt, ContractClass, Option<SierraToCairoDebugInfo>)>,
-) -> anyhow::Result<
-    HashMap<String, (Manifest<DojoModel>, ContractClass, ModuleId, Option<SierraToCairoDebugInfo>)>,
-> {
+    compiled_classes: &CompiledArtifactByPath,
+) -> anyhow::Result<HashMap<String, (Manifest<DojoModel>, ModuleId, CompiledArtifact)>> {
     let mut models = HashMap::with_capacity(aux_data.len());
 
     for model in aux_data {
@@ -500,26 +530,18 @@ fn get_dojo_model_artifacts(
             let compiled_class = compiled_classes.get(&qualified_path).cloned();
             let tag = naming::get_tag(&model.namespace, &model.name);
 
-            if let Some((class_hash, class, debug_info)) = compiled_class {
-                models.insert(
-                    qualified_path.clone(),
-                    (
-                        Manifest::new(
-                            DojoModel {
-                                tag: tag.clone(),
-                                class_hash,
-                                abi: None,
-                                members: model.members.clone(),
-                                original_class_hash: class_hash,
-                                qualified_path,
-                            },
-                            naming::get_filename_from_tag(&tag),
-                        ),
-                        class,
-                        module_id,
-                        debug_info.clone(),
-                    ),
-                );
+            if let Some(artifact) = compiled_class {
+                let dojo_model = DojoModel {
+                    abi: None,
+                    tag: tag.clone(),
+                    members: model.members.clone(),
+                    class_hash: artifact.class_hash,
+                    qualified_path: qualified_path.clone(),
+                    original_class_hash: artifact.class_hash,
+                };
+
+                let manifest = Manifest::new(dojo_model, naming::get_filename_from_tag(&tag));
+                models.insert(qualified_path, (manifest, module_id, artifact.clone()));
             } else {
                 println!("Model {} not found in target.", tag.clone());
             }
@@ -534,14 +556,9 @@ fn get_dojo_contract_artifacts(
     db: &RootDatabase,
     module_id: &ModuleId,
     tag: &str,
-    compiled_classes: &HashMap<String, (Felt, ContractClass, Option<SierraToCairoDebugInfo>)>,
+    compiled_classes: &CompiledArtifactByPath,
     systems: &[String],
-) -> anyhow::Result<
-    HashMap<
-        String,
-        (Manifest<DojoContract>, ContractClass, ModuleId, Option<SierraToCairoDebugInfo>),
-    >,
-> {
+) -> Result<HashMap<String, (Manifest<DojoContract>, ModuleId, CompiledArtifact)>> {
     let mut result = HashMap::new();
 
     if !matches!(naming::get_name_from_tag(tag).as_str(), "world" | "resource_metadata" | "base") {
@@ -551,16 +568,14 @@ fn get_dojo_contract_artifacts(
         let contract_qualified_path =
             format!("{}{}{}", module_id.full_path(db), CAIRO_PATH_SEPARATOR, contract_name);
 
-        if let Some((class_hash, class, debug_info)) =
-            compiled_classes.get(&contract_qualified_path.to_string())
-        {
+        if let Some(artifact) = compiled_classes.get(&contract_qualified_path.to_string()) {
             let manifest = Manifest::new(
                 DojoContract {
                     tag: tag.to_string(),
                     writes: vec![],
                     reads: vec![],
-                    class_hash: *class_hash,
-                    original_class_hash: *class_hash,
+                    class_hash: artifact.class_hash,
+                    original_class_hash: artifact.class_hash,
                     systems: systems.to_vec(),
                     ..Default::default()
                 },
@@ -569,7 +584,7 @@ fn get_dojo_contract_artifacts(
 
             result.insert(
                 contract_qualified_path.to_string(),
-                (manifest, class.clone(), *module_id, debug_info.clone()),
+                (manifest, *module_id, artifact.clone()),
             );
         }
     }
