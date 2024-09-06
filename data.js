@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1725582519276,
+  "lastUpdate": 1725639602752,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -18865,6 +18865,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4031055,
             "range": "± 220775",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "76473430+edisontim@users.noreply.github.com",
+            "name": "tedison",
+            "username": "edisontim"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "dd4cd5f7cd567683699c8b23c74e0c292bcbcd1c",
+          "message": "fix(torii): offchain messages signature validation on first set (#2390)\n\n* Add verification of signature for on-chain message on first set of entity\r\n\r\n* Address PR comments",
+          "timestamp": "2024-09-06T10:00:42-06:00",
+          "tree_id": "d4c794f09fb18ac9797a58682ee265807002b5ac",
+          "url": "https://github.com/dojoengine/dojo/commit/dd4cd5f7cd567683699c8b23c74e0c292bcbcd1c"
+        },
+        "date": 1725639601768,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17574967,
+            "range": "± 285037",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3773216,
+            "range": "± 104240",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3886112861,
+            "range": "± 809179557",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4101991,
+            "range": "± 250652",
             "unit": "ns/iter"
           }
         ]
