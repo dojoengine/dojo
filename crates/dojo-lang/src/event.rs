@@ -9,6 +9,7 @@ use cairo_lang_starknet_classes::abi::EventFieldKind;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, Terminal, TypedStablePtr, TypedSyntaxNode};
+use dojo_types::event::SYSTEM_EVENT_SELECTOR;
 use indoc::formatdoc;
 
 use crate::plugin::DojoAuxData;
@@ -75,6 +76,9 @@ pub fn handle_event_struct(
     (
         // Append the event selector using the struct_name for the selector
         // and then append the members.
+        //
+        // The first key of a dojo event will be the selector for SYSTEM_EVENT_SELECTOR,
+        // to distinguish them from starknet events.
         RewriteNode::interpolate_patched(
             &formatdoc!(
                 "
@@ -82,6 +86,8 @@ pub fn handle_event_struct(
                 fn append_keys_and_data(
                     self: @$struct_name$, ref keys: Array<felt252>, ref data: Array<felt252>
                 ) {{
+                    core::array::ArrayTrait::append(ref keys, \
+                 selector!(\"{SYSTEM_EVENT_SELECTOR}\"));
                     core::array::ArrayTrait::append(ref keys, \
                  dojo::model::Model::<$struct_name$>::selector());
                     $append_members$

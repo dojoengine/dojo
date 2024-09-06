@@ -1,9 +1,10 @@
 use anyhow::{Error, Result};
 use async_trait::async_trait;
+use dojo_types::event::SYSTEM_EVENT_SELECTOR;
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::Event;
 use starknet::providers::Provider;
-use tracing::info;
+use tracing::{info, warn};
 
 use super::EventProcessor;
 use crate::processors::MODEL_INDEX;
@@ -20,14 +21,14 @@ where
     P: Provider + Send + Sync + std::fmt::Debug,
 {
     fn event_key(&self) -> String {
-        "".to_string()
+        SYSTEM_EVENT_SELECTOR.to_string()
     }
 
     fn validate(&self, event: &Event) -> bool {
         // we expect at least 3 keys
-        // 1: event selector
-        // 2: model keys, arbitrary length
-        // last key: system key
+        // 1: SYSTEM_EVENT_SELECTOR
+        // 2: Event selector
+        // 3: The last key must be the system address
         if event.keys.len() < 3 {
             return false;
         }
@@ -47,7 +48,14 @@ where
         // silently ignore if the model is not found
         let model = match db.model(event.keys[MODEL_INDEX]).await {
             Ok(model) => model,
-            Err(_) => return Ok(()),
+            Err(_) => {
+                warn!(
+                    target: LOG_TARGET,
+                    model = %event.keys[MODEL_INDEX],
+                    "System event model not found."
+                );
+                return Ok(());
+            }
         };
 
         info!(
@@ -56,10 +64,11 @@ where
             "Store event message."
         );
 
-        // skip the first key, as its the event selector
+        // skip the two first keys, as its the SYSTEM_EVENT_SELECTOR and the event selector
         // and dont include last key as its the system key
         let mut keys_and_unpacked =
-            [event.keys[1..event.keys.len() - 1].to_vec(), event.data.clone()].concat();
+            [event.keys[MODEL_INDEX + 1..event.keys.len() - 1].to_vec(), event.data.clone()]
+                .concat();
 
         let mut entity = model.schema.clone();
         entity.deserialize(&mut keys_and_unpacked)?;

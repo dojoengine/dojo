@@ -1,5 +1,7 @@
 use starknet::core::types::Felt;
 
+pub const SYSTEM_EVENT_SELECTOR: &str = "SystemEvent__";
+
 /// The event emitted when a World is spawned.
 #[derive(Clone, Debug)]
 pub struct WorldSpawned {

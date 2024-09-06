@@ -1,14 +1,13 @@
-use anyhow::{Context, Error, Ok, Result};
+use anyhow::{Error, Ok, Result};
 use async_trait::async_trait;
 use dojo_world::contracts::naming;
 use dojo_world::contracts::world::WorldContractReader;
-use num_traits::ToPrimitive;
 use starknet::core::types::Event;
 use starknet::providers::Provider;
-use tracing::info;
+use tracing::{info, warn};
 
 use super::EventProcessor;
-use crate::processors::{ENTITY_ID_INDEX, MODEL_INDEX};
+use crate::processors::MODEL_INDEX;
 use crate::sql::Sql;
 
 pub(crate) const LOG_TARGET: &str = "torii_core::processors::store_update_record";
@@ -26,8 +25,12 @@ where
     }
 
     fn validate(&self, event: &Event) -> bool {
-        if event.keys.len() > 1 {
-            info!(
+        // At least 3:
+        // 0: Event selector
+        // 1: table
+        // 2: entity id
+        if event.keys.len() < 3 {
+            warn!(
                 target: LOG_TARGET,
                 event_key = %<StoreUpdateRecordProcessor as EventProcessor<P>>::event_key(self),
                 invalid_keys = %<StoreUpdateRecordProcessor as EventProcessor<P>>::event_keys_as_string(self, event),
@@ -47,8 +50,11 @@ where
         event_id: &str,
         event: &Event,
     ) -> Result<(), Error> {
-        let selector = event.data[MODEL_INDEX];
-        let entity_id = event.data[ENTITY_ID_INDEX];
+        let mut offset = MODEL_INDEX;
+        let selector = event.keys[offset];
+        offset += 1;
+
+        let entity_id = event.keys[offset];
 
         let model = db.model(selector).await?;
 
@@ -59,12 +65,8 @@ where
             "Store update record.",
         );
 
-        let values_start = ENTITY_ID_INDEX + 1;
-        let values_end: usize =
-            values_start + event.data[values_start].to_usize().context("invalid usize")?;
-
         // Skip the length to only get the values as they will be deserialized.
-        let values = event.data[values_start + 1..=values_end].to_vec();
+        let values = event.data[1..].to_vec();
 
         let tag = naming::get_tag(&model.namespace, &model.name);
 

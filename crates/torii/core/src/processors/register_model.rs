@@ -25,7 +25,11 @@ where
     }
 
     fn validate(&self, event: &Event) -> bool {
-        if event.keys.len() > 1 {
+        // 7 is expected because we have:
+        // 0: event selector
+        // 1-3: name (bytearray, at least 3 felts)
+        // 4-6: namespace (bytearray, at least 3 felts)
+        if event.keys.len() < 7 {
             info!(
                 target: LOG_TARGET,
                 event_key = %<RegisterModelProcessor as EventProcessor<P>>::event_key(self),
@@ -46,10 +50,11 @@ where
         _event_id: &str,
         event: &Event,
     ) -> Result<(), Error> {
-        let name = ByteArray::cairo_deserialize(&event.data, 0)?;
-        let mut offset = ByteArray::cairo_serialized_size(&name);
-        let namespace = ByteArray::cairo_deserialize(&event.data, offset)?;
-        offset += ByteArray::cairo_serialized_size(&namespace);
+        // First key is always the event selector.
+        let mut offset = 1;
+        let name = ByteArray::cairo_deserialize(&event.keys, offset)?;
+        offset += ByteArray::cairo_serialized_size(&name);
+        let namespace = ByteArray::cairo_deserialize(&event.keys, offset)?;
 
         let name = name.to_string()?;
         let namespace = namespace.to_string()?;
@@ -61,8 +66,8 @@ where
         let unpacked_size: u32 = model.unpacked_size().await?;
         let packed_size: u32 = model.packed_size().await?;
 
-        let class_hash = event.data[offset];
-        let contract_address = event.data[offset + 1];
+        let class_hash = event.data[0];
+        let contract_address = event.data[1];
 
         info!(
             target: LOG_TARGET,

@@ -58,7 +58,8 @@ async fn test_model_ops() {
         )
         .await
         .unwrap(),
-        Felt::from_hex("0x5581faa4aa9c7cf1903a7e07f28707a0a599b602ca13f3d2f88d68322e240d").unwrap()
+        Felt::from_hex("0x73d1ddd4238638723f2db9b10787b282b7ff685de98db3ce676b6ca891a8829")
+            .unwrap()
     );
 
     let layout =

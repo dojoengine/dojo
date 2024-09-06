@@ -1,13 +1,12 @@
-use anyhow::{Context, Error, Ok, Result};
+use anyhow::{Error, Ok, Result};
 use async_trait::async_trait;
 use dojo_world::contracts::world::WorldContractReader;
-use num_traits::ToPrimitive;
 use starknet::core::types::Event;
 use starknet::providers::Provider;
-use tracing::info;
+use tracing::{info, warn};
 
 use super::EventProcessor;
-use crate::processors::{MODEL_INDEX, NUM_KEYS_INDEX};
+use crate::processors::MODEL_INDEX;
 use crate::sql::Sql;
 
 pub(crate) const LOG_TARGET: &str = "torii_core::processors::store_set_record";
@@ -25,8 +24,12 @@ where
     }
 
     fn validate(&self, event: &Event) -> bool {
-        if event.keys.len() > 1 {
-            info!(
+        // At least 3:
+        // 0: Event selector
+        // 1: table
+        // 2: keys (span, at least 1 felt)
+        if event.keys.len() < 3 {
+            warn!(
                 target: LOG_TARGET,
                 event_key = %<StoreSetRecordProcessor as EventProcessor<P>>::event_key(self),
                 invalid_keys = %<StoreSetRecordProcessor as EventProcessor<P>>::event_keys_as_string(self, event),
@@ -46,9 +49,11 @@ where
         event_id: &str,
         event: &Event,
     ) -> Result<(), Error> {
-        let selector = event.data[MODEL_INDEX];
+        let mut offset = MODEL_INDEX;
+        let model_selector = event.keys[offset];
+        offset += 1;
 
-        let model = db.model(selector).await?;
+        let model = db.model(model_selector).await?;
 
         info!(
             target: LOG_TARGET,
@@ -56,19 +61,14 @@ where
             "Store set record.",
         );
 
-        let keys_start = NUM_KEYS_INDEX + 1;
-        let keys_end: usize =
-            keys_start + event.data[NUM_KEYS_INDEX].to_usize().context("invalid usize")?;
-        let keys = event.data[keys_start..keys_end].to_vec();
+        // Skip the length to only get the keys as they will be deserialized.
+        offset += 1;
+        let keys = event.keys[offset..].to_vec();
 
-        // keys_end is already the length of the values array.
-
-        let values_start = keys_end + 1;
-        let values_end: usize =
-            values_start + event.data[keys_end].to_usize().context("invalid usize")?;
-
-        let values = event.data[values_start..values_end].to_vec();
-        let mut keys_and_unpacked = [keys, values].concat();
+        // Values are serialized as a span<felt252>. We need to skip the first key which is the
+        // length of the serialized span to only consider the data.
+        let data = event.data[1..].to_vec();
+        let mut keys_and_unpacked = [keys, data].concat();
 
         let mut entity = model.schema;
         entity.deserialize(&mut keys_and_unpacked)?;

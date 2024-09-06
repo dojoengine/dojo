@@ -35,7 +35,8 @@ where
     }
 
     fn validate(&self, event: &Event) -> bool {
-        if event.keys.len() > 1 {
+        // The keys should be the selector and the resource.
+        if event.keys.len() != 2 {
             info!(
                 target: LOG_TARGET,
                 event_key = %<MetadataUpdateProcessor as EventProcessor<P>>::event_key(self),
@@ -56,8 +57,8 @@ where
         _event_id: &str,
         event: &Event,
     ) -> Result<(), Error> {
-        let resource = &event.data[0];
-        let uri_str = ByteArray::cairo_deserialize(&event.data, 1)?.to_string()?;
+        let resource = &event.keys[1];
+        let uri_str = ByteArray::cairo_deserialize(&event.data, 0)?.to_string()?;
         info!(
             target: LOG_TARGET,
             resource = %format!("{:#x}", resource),
