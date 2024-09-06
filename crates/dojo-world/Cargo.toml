@@ -52,4 +52,4 @@ tokio.workspace = true
 contracts = [ "dep:dojo-types", "dep:http", "dep:num-traits" ]
 manifest = [ "contracts", "dep:dojo-types", "dep:scarb", "dep:url" ]
 metadata = [ "dep:ipfs-api-backend-hyper", "dep:scarb", "dep:url" ]
-migration = [ "dep:dojo-utils", "dep:scarb", "dep:tokio" ]
+migration = [ "dep:dojo-utils", "dep:scarb", "dep:tokio", "manifest" ]
