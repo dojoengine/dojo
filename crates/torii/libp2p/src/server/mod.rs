@@ -309,7 +309,7 @@ impl<P: Provider + Sync> Relay<P> {
                                 };
 
                             let mut calldata = vec![message_hash];
-                            calldata.push(Felt::TWO);
+                            calldata.push(Felt::from(data.signature.len()));
 
                             calldata.extend(data.signature);
                             if !match self
@@ -493,22 +493,17 @@ fn read_or_create_certificate(path: &Path) -> anyhow::Result<Certificate> {
 }
 
 fn get_identity_from_ty(ty: &Ty) -> Result<Felt, Error> {
-    let Some(identity) = ty.as_struct() else {
-        return Err(Error::InvalidMessageError("Message is not a struct".to_string()));
-    };
-
-    let Some(identity) = identity.get("identity") else {
-        return Err(Error::InvalidMessageError("No field identity".to_string()));
-    };
-
-    let Some(identity) = identity.as_primitive() else {
-        return Err(Error::InvalidMessageError("Identity is not a primitive".to_string()));
-    };
-
-    let Some(identity) = identity.as_contract_address() else {
-        return Err(Error::InvalidMessageError("Identity is not a contract address".to_string()));
-    };
-
+    let identity = ty
+        .as_struct()
+        .ok_or_else(|| Error::InvalidMessageError("Message is not a struct".to_string()))?
+        .get("identity")
+        .ok_or_else(|| Error::InvalidMessageError("No field identity".to_string()))?
+        .as_primitive()
+        .ok_or_else(|| Error::InvalidMessageError("Identity is not a primitive".to_string()))?
+        .as_contract_address()
+        .ok_or_else(|| {
+            Error::InvalidMessageError("Identity is not a contract address".to_string())
+        })?;
     Ok(identity)
 }
 
