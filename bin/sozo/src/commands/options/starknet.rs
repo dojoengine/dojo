@@ -1,12 +1,11 @@
 use anyhow::Result;
 use clap::Args;
+use dojo_utils::env::STARKNET_RPC_URL_ENV_VAR;
 use dojo_world::config::Environment;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use tracing::trace;
 use url::Url;
-
-use super::STARKNET_RPC_URL_ENV_VAR;
 
 #[derive(Debug, Args, Clone)]
 #[command(next_help_heading = "Starknet options")]
@@ -49,9 +48,9 @@ impl StarknetOptions {
 #[cfg(test)]
 mod tests {
     use clap::Parser;
+    use dojo_utils::env::STARKNET_RPC_URL_ENV_VAR;
 
     use super::StarknetOptions;
-    use crate::commands::options::STARKNET_RPC_URL_ENV_VAR;
 
     const ENV_RPC: &str = "http://localhost:7474/";
     const METADATA_RPC: &str = "http://localhost:6060/";

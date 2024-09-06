@@ -156,7 +156,7 @@ where
         &account,
         world_address,
         &ui,
-        skip_manifests,
+        &skip_manifests,
     )
     .await
     .map_err(|e| {
@@ -284,17 +284,31 @@ where
 
             // Run dojo inits now that everything is actually deployed and permissioned.
             let mut init_calls = vec![];
-            for c in strategy.contracts {
-                let was_upgraded = migration_output
-                    .contracts
-                    .iter()
-                    .flatten()
-                    .find(|output| output.tag == c.diff.tag)
-                    .map(|output| output.was_upgraded)
-                    .unwrap_or(false);
-
-                if was_upgraded {
+            for (i, c) in strategy.contracts.iter().enumerate() {
+                if let Some(contract_migration_output) = &migration_output.contracts[i] {
+                    if contract_migration_output.was_upgraded {
+                        ui.print_sub(format!(
+                            "Contract {} was upgraded, skipping initialization",
+                            c.diff.tag
+                        ));
+                        continue;
+                    }
+                } else {
+                    ui.print_sub(format!(
+                        "Contract {} was not deployed at this run, skipping initialization",
+                        c.diff.tag
+                    ));
                     continue;
+                }
+
+                if let Some(skips) = &skip_manifests {
+                    if skips.contains(&c.diff.tag) {
+                        ui.print_sub(format!(
+                            "Contract {} was skipped in config, skipping initialization",
+                            c.diff.tag
+                        ));
+                        continue;
+                    }
                 }
 
                 let contract_selector = compute_selector_from_tag(&c.diff.tag);
@@ -307,6 +321,16 @@ where
 
                 let mut calldata = vec![contract_selector, Felt::from(init_calldata.len())];
                 calldata.extend(init_calldata);
+
+                ui.print_sub(format!(
+                    "Initializing contract: {} ([{}])",
+                    c.diff.tag,
+                    calldata
+                        .iter()
+                        .map(|c| format!("{:#x}", c))
+                        .collect::<Vec<String>>()
+                        .join(", ")
+                ));
 
                 init_calls.push(Call {
                     calldata,
@@ -337,6 +361,11 @@ where
                 upload_metadata(ws, &account, migration_output.clone(), txn_config).await?;
             }
         }
+
+        // We should print the block number at which the world was deployed by polling the
+        // transaction hash of the migration transaction here once everything is done as it
+        // has high chance to be into a mined block. If not, just wait for this inclusion?
+        // Should be pretty fast with BOLT.
 
         Ok(migration_output)
     }

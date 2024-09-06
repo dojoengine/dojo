@@ -36,7 +36,7 @@ pub fn prepare_migration(
     )
     .unwrap();
 
-    if let Some(skip_manifests) = skip_migration {
+    if let Some(skip_manifests) = &skip_migration {
         manifest.remove_tags(skip_manifests);
     }
 

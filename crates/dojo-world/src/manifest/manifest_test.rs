@@ -318,7 +318,7 @@ fn fetch_remote_manifest() {
     .unwrap();
 
     if let Some(m) = dojo_metadata.migration {
-        local_manifest.remove_tags(m.skip_contracts);
+        local_manifest.remove_tags(&m.skip_contracts);
     }
 
     let overlay_dir = manifest_path.join(OVERLAYS_DIR).join(&profile_name);
@@ -597,7 +597,7 @@ fn base_manifest_remove_items_work_as_expected() {
 
     let mut base = BaseManifest { contracts, models, world, base };
 
-    base.remove_tags(vec!["ns:c1".to_string(), "ns:c3".to_string(), "ns:m2".to_string()]);
+    base.remove_tags(&["ns:c1".to_string(), "ns:c3".to_string(), "ns:m2".to_string()]);
 
     assert_eq!(base.contracts.len(), 1);
     assert_eq!(

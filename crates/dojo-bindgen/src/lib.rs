@@ -120,7 +120,7 @@ fn gather_dojo_data(
     let mut base_manifest = BaseManifest::load_from_path(&base_manifest_dir)?;
 
     if let Some(skip_manifests) = skip_migration {
-        base_manifest.remove_tags(skip_manifests);
+        base_manifest.remove_tags(&skip_manifests);
     }
 
     let mut models = HashMap::new();
