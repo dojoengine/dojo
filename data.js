@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1725639602752,
+  "lastUpdate": 1725650945525,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -18913,6 +18913,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4101991,
             "range": "± 250652",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ecab100620a77bee539ae6f77ca11b65a0d9099e",
+          "message": "feat(dojo-compiler): add sierra to cairo debug information (#2392)\n\n* feat: add sierra to cairo debug information\r\n\r\n* refactor: clean up\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-09-07T03:10:05+08:00",
+          "tree_id": "66a84025026c76aa17f9fe0a4ade25311c70eaf1",
+          "url": "https://github.com/dojoengine/dojo/commit/ecab100620a77bee539ae6f77ca11b65a0d9099e"
+        },
+        "date": 1725650944008,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17536208,
+            "range": "± 234434",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3780909,
+            "range": "± 126998",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3849635718,
+            "range": "± 849576167",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3937202,
+            "range": "± 168439",
             "unit": "ns/iter"
           }
         ]
