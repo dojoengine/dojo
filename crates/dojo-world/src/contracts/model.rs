@@ -143,20 +143,12 @@ where
 
     fn packed_size(&self) -> u32 {
         // TODO: would be better to directly return an Option.
-        if let Some(s) = self.definition.packed_size {
-            s
-        } else {
-            0
-        }
+        self.definition.packed_size.unwrap_or(0)
     }
 
     fn unpacked_size(&self) -> u32 {
         // TODO: would be better to directly return an Option.
-        if let Some(s) = self.definition.unpacked_size {
-            s
-        } else {
-            0
-        }
+        self.definition.unpacked_size.unwrap_or(0)
     }
 }
 

@@ -695,6 +695,8 @@ pub mod world {
         ) -> ContractAddress {
             let caller = get_caller_address();
 
+            println!("caller: {:?}  account: {:?}", caller, get_tx_info().account_contract_address);
+
             let (contract_address, _) = deploy_syscall(
                 self.contract_base.read(), salt, [].span(), false
             )
@@ -716,6 +718,11 @@ pub mod world {
             let selector = dispatcher.selector();
             self.owners.write((selector, caller), true);
             self.resources.write(selector, ResourceType::Contract);
+
+            // TODO RBA: to remove
+            self.owners.write((namespace_hash, contract_address.clone()), true);
+            self.writers.write((namespace_hash, contract_address.clone()), true);
+            //
 
             let mut contract_node = self.contracts.entry(selector);
             contract_node.class_hash.write(class_hash.clone());

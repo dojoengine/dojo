@@ -115,13 +115,6 @@ fn extract_events(
         }
     }
 
-    for model in &manifest.models {
-        if let Some(AbiFormat::Path(abi_path)) = model.inner.abi() {
-            let full_abi_path = project_dir.join(abi_path);
-            process_abi(&mut events_map, &full_abi_path)?;
-        }
-    }
-
     // Read the world and base ABI from scarb artifacts as the
     // manifest does not include them (at least base is not included).
     let world_abi_path =

@@ -153,23 +153,6 @@ fn gather_dojo_data(
         contracts.insert(tag.clone(), DojoContract { tag, tokens, systems });
     }
 
-    for model_manifest in &base_manifest.models {
-        // Base manifest always use path for ABI.
-        let abi = model_manifest
-            .inner
-            .abi
-            .as_ref()
-            .expect("Valid ABI for contract")
-            .load_abi_string(&root_dir)?;
-
-        let tokens = AbiParser::tokens_from_abi_string(&abi, &HashMap::new())?;
-        let tag = model_manifest.inner.tag.clone();
-
-        let model = DojoModel { tag: tag.clone(), tokens: filter_model_tokens(&tokens) };
-
-        models.insert(tag.clone(), model);
-    }
-
     let world = DojoWorld { name: root_package_name.to_string() };
 
     Ok(DojoData { world, models, contracts })

@@ -58,9 +58,9 @@ impl InlineMacroExprPlugin for SpawnTestWorld {
             vec![]
         };
 
-        let (namespaces, models) =
+        let namespaces =
             match load_manifest_models_and_namespaces(metadata.cfg_set, &whitelisted_namespaces) {
-                Ok((namespaces, models)) => (namespaces, models),
+                Ok(namespaces) => namespaces,
                 Err(_e) => {
                     return InlinePluginResult {
                         code: None,
@@ -78,13 +78,8 @@ impl InlineMacroExprPlugin for SpawnTestWorld {
         let mut builder = PatchBuilder::new(db, syntax);
 
         builder.add_str(&format!(
-            "dojo::utils::test::spawn_test_world([{}].span(), [{}].span())",
+            "dojo::utils::test::spawn_test_world([{}].span(), [].span())",
             namespaces.iter().map(|n| format!("\"{}\"", n)).collect::<Vec<String>>().join(", "),
-            models
-                .iter()
-                .map(|m| format!("{}::TEST_CLASS_HASH", m))
-                .collect::<Vec<String>>()
-                .join(", ")
         ));
 
         let (code, code_mappings) = builder.build();

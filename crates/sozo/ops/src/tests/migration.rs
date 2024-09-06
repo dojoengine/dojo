@@ -265,7 +265,6 @@ async fn migration_from_remote() {
     .unwrap();
 
     assert_eq!(local_manifest.world.inner.class_hash, remote_manifest.world.inner.class_hash);
-    assert_eq!(local_manifest.models.len(), remote_manifest.models.len());
 }
 
 #[tokio::test(flavor = "multi_thread")]

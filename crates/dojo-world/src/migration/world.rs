@@ -24,7 +24,6 @@ pub struct WorldDiff {
     pub world: ContractDiff,
     pub base: ClassDiff,
     pub contracts: Vec<ContractDiff>,
-    pub models: Vec<ClassDiff>,
 }
 
 impl WorldDiff {
@@ -33,22 +32,6 @@ impl WorldDiff {
         remote: Option<DeploymentManifest>,
         default_namespace: &str,
     ) -> Result<WorldDiff> {
-        let models = local
-            .models
-            .iter()
-            .map(|model| ClassDiff {
-                tag: model.inner.tag.to_string(),
-                local_class_hash: *model.inner.class_hash(),
-                original_class_hash: *model.inner.original_class_hash(),
-                remote_class_hash: remote.as_ref().and_then(|m| {
-                    m.models
-                        .iter()
-                        .find(|e| e.manifest_name == model.manifest_name)
-                        .map(|s| *s.inner.class_hash())
-                }),
-            })
-            .collect::<Vec<_>>();
-
         let contracts = local
             .contracts
             .iter()
@@ -106,7 +89,7 @@ impl WorldDiff {
             remote_writes: vec![],
         };
 
-        let mut diff = WorldDiff { world, base, contracts, models };
+        let mut diff = WorldDiff { world, base, contracts };
         diff.update_order(default_namespace)?;
 
         Ok(diff)
@@ -119,7 +102,6 @@ impl WorldDiff {
             count += 1;
         }
 
-        count += self.models.iter().filter(|s| !s.is_same()).count();
         count += self.contracts.iter().filter(|s| !s.is_same()).count();
         count
     }
@@ -190,10 +172,6 @@ impl WorldDiff {
 impl Display for WorldDiff {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "{}", self.world)?;
-
-        for model in &self.models {
-            writeln!(f, "{model}")?;
-        }
 
         for contract in &self.contracts {
             writeln!(f, "{contract}")?;

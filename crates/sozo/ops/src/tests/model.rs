@@ -1,7 +1,7 @@
 use dojo_test_utils::migration::copy_spawn_and_move_db;
 use dojo_utils::{TransactionExt, TxnConfig};
-use dojo_world::contracts::abi::model::{FieldLayout, Layout};
 use dojo_world::contracts::abi::world::Resource;
+use dojo_world::contracts::abi::world::{FieldLayout, Layout};
 use dojo_world::contracts::naming::{compute_bytearray_hash, compute_selector_from_tag};
 use dojo_world::contracts::world::WorldContract;
 use katana_runner::{KatanaRunner, KatanaRunnerConfig};
@@ -23,10 +23,10 @@ async fn test_model_ops() {
 
     let world = setup::setup_with_world(&sequencer).await.unwrap();
 
-    let action_address = if let Resource::Contract((_, address)) =
+    let action_address = if let Resource::Contract(definition) =
         world.resource(&compute_selector_from_tag("dojo_examples-actions")).call().await.unwrap()
     {
-        address
+        definition.contract_address
     } else {
         panic!("No action contract found in world");
     };

@@ -94,29 +94,9 @@ where
         resource_map.insert(selector.to_hex_string(), resource);
     }
 
-    for model in diff.models.iter() {
-        let resource = ResourceType::Model(model.tag.clone());
-        // we know the tag already contains the namespace
-        let default_namespace = get_namespace_from_tag(&model.tag);
-        let selector = get_resource_selector(ui, world, &resource, &default_namespace)
-            .await
-            .with_context(|| format!("Failed to get resource selector for model: {}", model.tag))?;
-
-        resource_map.insert(selector.to_hex_string(), resource);
-    }
-
     // Collect all the namespaces from the contracts and models
-    let namespaces = {
-        let mut namespaces =
-            diff.models.iter().map(|m| get_namespace_from_tag(&m.tag)).collect::<Vec<_>>();
-
-        namespaces.extend(
-            diff.contracts.iter().map(|c| get_namespace_from_tag(&c.tag)).collect::<Vec<_>>(),
-        );
-
-        // remove duplicates
-        namespaces.into_iter().unique().collect::<Vec<_>>()
-    };
+    let namespaces =
+        diff.contracts.iter().map(|c| get_namespace_from_tag(&c.tag)).collect::<Vec<_>>();
 
     for namespace in &namespaces {
         let resource = ResourceType::Namespace(namespace.clone());

@@ -610,6 +610,8 @@ pub impl $type_name$ModelImpl of dojo::model::Model<$type_name$> {
             version: $model_version$,
             ty: dojo::model::introspect::Introspect::<$type_name$>::ty(),
             layout: dojo::model::introspect::Introspect::<$type_name$>::layout(),
+            packed_size: Self::packed_size(),
+            unpacked_size: Self::unpacked_size()
         }
     }
 

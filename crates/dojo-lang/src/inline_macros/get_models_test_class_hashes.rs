@@ -59,35 +59,7 @@ impl InlineMacroExprPlugin for GetModelsTestClassHashes {
             vec![]
         };
 
-        let (_namespaces, models) =
-            match load_manifest_models_and_namespaces(metadata.cfg_set, &whitelisted_namespaces) {
-                Ok((namespaces, models)) => (namespaces, models),
-                Err(_e) => {
-                    return InlinePluginResult {
-                        code: None,
-                        diagnostics: vec![PluginDiagnostic {
-                            stable_ptr: syntax.stable_ptr().untyped(),
-                            message: "Failed to load models and namespaces, ensure you have run \
-                                      `sozo build` first."
-                                .to_string(),
-                            severity: Severity::Error,
-                        }],
-                    };
-                }
-            };
-
         let mut builder = PatchBuilder::new(db, syntax);
-
-        // Use the TEST_CLASS_HASH for each model, which is already a qualified path, no `use`
-        // required.
-        builder.add_str(&format!(
-            "[{}].span()",
-            models
-                .iter()
-                .map(|m| format!("{}::TEST_CLASS_HASH", m))
-                .collect::<Vec<String>>()
-                .join(", ")
-        ));
 
         let (code, code_mappings) = builder.build();
 

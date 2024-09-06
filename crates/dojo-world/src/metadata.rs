@@ -11,7 +11,7 @@ use url::Url;
 
 use crate::config::{Environment, MigrationConfig, NamespaceConfig, ProfileConfig, WorldConfig};
 use crate::contracts::naming;
-use crate::manifest::{BaseManifest, CONTRACTS_DIR, MODELS_DIR, WORLD_CONTRACT_TAG};
+use crate::manifest::{BaseManifest, CONTRACTS_DIR, WORLD_CONTRACT_TAG};
 use crate::uri::Uri;
 
 const LOG_TARGET: &str = "dojo_world::metadata";
@@ -152,23 +152,6 @@ fn metadata_artifacts_load(dojo_metadata: &mut DojoMetadata, ws: &Workspace<'_>)
     // load models and contracts metadata
     if manifest_dir.join(BASE_DIR).exists() {
         if let Ok(manifest) = BaseManifest::load_from_path(&manifest_dir.join(BASE_DIR)) {
-            for model in manifest.models {
-                let tag = model.inner.tag.clone();
-                let abi_model_dir = abi_dir.join(MODELS_DIR);
-                let source_model_dir = source_dir.join(MODELS_DIR);
-                dojo_metadata.resources_artifacts.insert(
-                    tag.clone(),
-                    ResourceMetadata {
-                        name: tag.clone(),
-                        artifacts: build_artifact_from_filename(
-                            &abi_model_dir,
-                            &source_model_dir,
-                            &naming::get_filename_from_tag(&tag),
-                        ),
-                    },
-                );
-            }
-
             for contract in manifest.contracts {
                 let tag = contract.inner.tag.clone();
                 let abi_contract_dir = abi_dir.join(CONTRACTS_DIR);

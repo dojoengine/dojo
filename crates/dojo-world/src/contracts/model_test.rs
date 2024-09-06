@@ -6,7 +6,6 @@ use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 use katana_runner::{KatanaRunner, KatanaRunnerConfig};
 use scarb::compiler::Profile;
 use starknet::accounts::ConnectedAccount;
-use starknet::macros::felt;
 
 use crate::contracts::model::ModelReader;
 use crate::contracts::world::WorldContractReader;
@@ -36,7 +35,7 @@ async fn test_model() {
 
     let world = WorldContractReader::new(strat.world_address, provider);
     let position = world.model_reader("dojo_examples", "Position").await.unwrap();
-    let schema = position.schema().await.unwrap();
+    let schema = position.schema().unwrap();
 
     assert_eq!(
         schema,
@@ -71,17 +70,12 @@ async fn test_model() {
         })
     );
 
-    assert_eq!(
-        position.class_hash(),
-        felt!("0x5af60d63e6a1d25fc117fde1fa7e1d628adc46a52c3d007541ed6dd369e8ea")
-    );
-
     // accessing to an unknown model should return an error
     let res = world.model_reader("dojo_examples", "UnknownModel").await;
     assert!(res.is_err());
 
     let moves = world.model_reader("dojo_examples", "Moves").await.unwrap();
-    let schema = moves.schema().await.unwrap();
+    let schema = moves.schema().unwrap();
 
     assert_eq!(
         schema,

@@ -15,13 +15,13 @@ use starknet::macros::{felt, selector};
 use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcMethod};
 
 use super::{
-    parse_contracts_events, AbiFormat, BaseManifest, DojoContract, DojoModel, OverlayDojoContract,
+    parse_contracts_events, AbiFormat, BaseManifest, DojoContract, OverlayDojoContract,
     OverlayManifest,
 };
 use crate::contracts::naming::{get_filename_from_tag, get_tag};
 use crate::manifest::{
-    parse_models_events, AbstractManifestError, DeploymentManifest, Manifest, OverlayClass,
-    OverlayDojoModel, BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR,
+    AbstractManifestError, DeploymentManifest, Manifest, OverlayClass, BASE_DIR, MANIFESTS_DIR,
+    OVERLAYS_DIR,
 };
 use crate::metadata::dojo_metadata_from_workspace;
 use crate::migration::world::WorldDiff;
@@ -50,40 +50,6 @@ async fn manifest_from_remote_throw_error_on_not_deployed() {
         }
         err => panic!("Unexpected error: {err}"),
     }
-}
-
-#[test]
-fn parse_registered_model_events() {
-    let expected_models = vec![
-        Manifest::new(
-            DojoModel {
-                tag: get_tag("ns", "modelA"),
-                class_hash: felt!("0x5555"),
-                ..Default::default()
-            },
-            get_filename_from_tag(&get_tag("ns", "modelA")),
-        ),
-        Manifest::new(
-            DojoModel {
-                tag: get_tag("ns", "modelB"),
-                class_hash: felt!("0x6666"),
-                ..Default::default()
-            },
-            get_filename_from_tag(&get_tag("ns", "modelB")),
-        ),
-    ];
-
-    let events = vec![
-        build_model_registered_event(vec![felt!("0x5555"), felt!("0xbeef")], "ns", "modelA"),
-        build_model_registered_event(vec![felt!("0x5555"), felt!("0xbeef")], "ns", "modelA"),
-        build_model_registered_event(vec![felt!("0x6666"), felt!("0xbaaf")], "ns", "modelB"),
-    ];
-
-    let actual_models = parse_models_events(events);
-
-    assert_eq!(actual_models.len(), 2);
-    assert!(expected_models.contains(&actual_models[0]));
-    assert!(expected_models.contains(&actual_models[1]));
 }
 
 #[test]
@@ -415,11 +381,6 @@ fn overlay_merge_for_contract_and_model_work_as_expected() {
             OverlayDojoContract { tag: "ns:othercontract2".into(), ..Default::default() },
             OverlayDojoContract { tag: "ns:existingcontract".into(), ..Default::default() },
         ],
-        models: vec![
-            OverlayDojoModel { tag: "ns:othermodel1".into(), ..Default::default() },
-            OverlayDojoModel { tag: "ns:othermodel2".into(), ..Default::default() },
-            OverlayDojoModel { tag: "ns:existingmodel".into(), ..Default::default() },
-        ],
         ..Default::default()
     };
 
@@ -428,11 +389,6 @@ fn overlay_merge_for_contract_and_model_work_as_expected() {
             OverlayDojoContract { tag: "ns:currentcontract1".into(), ..Default::default() },
             OverlayDojoContract { tag: "ns:currentcontract2".into(), ..Default::default() },
             OverlayDojoContract { tag: "ns:existingcontract".into(), ..Default::default() },
-        ],
-        models: vec![
-            OverlayDojoModel { tag: "ns:currentmodel1".into(), ..Default::default() },
-            OverlayDojoModel { tag: "ns:currentmodel2".into(), ..Default::default() },
-            OverlayDojoModel { tag: "ns:existingmodel".into(), ..Default::default() },
         ],
         ..Default::default()
     };
@@ -444,13 +400,6 @@ fn overlay_merge_for_contract_and_model_work_as_expected() {
             OverlayDojoContract { tag: "ns:existingcontract".into(), ..Default::default() },
             OverlayDojoContract { tag: "ns:othercontract1".into(), ..Default::default() },
             OverlayDojoContract { tag: "ns:othercontract2".into(), ..Default::default() },
-        ],
-        models: vec![
-            OverlayDojoModel { tag: "ns:currentmodel1".into(), ..Default::default() },
-            OverlayDojoModel { tag: "ns:currentmodel2".into(), ..Default::default() },
-            OverlayDojoModel { tag: "ns:existingmodel".into(), ..Default::default() },
-            OverlayDojoModel { tag: "ns:othermodel1".into(), ..Default::default() },
-            OverlayDojoModel { tag: "ns:othermodel2".into(), ..Default::default() },
         ],
         ..Default::default()
     };
@@ -587,15 +536,8 @@ fn base_manifest_remove_items_work_as_expected() {
             inner: DojoContract { tag: c.to_string(), ..Default::default() },
         })
         .collect();
-    let models = models
-        .iter()
-        .map(|c| Manifest {
-            manifest_name: c.to_string(),
-            inner: DojoModel { tag: c.to_string(), ..Default::default() },
-        })
-        .collect();
 
-    let mut base = BaseManifest { contracts, models, world, base };
+    let mut base = BaseManifest { contracts, world, base };
 
     base.remove_tags(vec!["ns:c1".to_string(), "ns:c3".to_string(), "ns:m2".to_string()]);
 

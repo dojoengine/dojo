@@ -1,7 +1,7 @@
 use anyhow::Result;
 use cainome::cairo_serde::{ByteArray, CairoSerde};
 use dojo_types::schema::Ty;
-use dojo_world::contracts::abi::model::Layout;
+use dojo_world::contracts::abi::world::Layout;
 use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::naming;
 use dojo_world::contracts::world::WorldContractReader;
@@ -22,14 +22,8 @@ where
     world_reader.set_block(BlockId::Tag(BlockTag::Pending));
 
     let model = world_reader.model_reader_with_tag(&tag).await?;
-    let layout = match model.layout().await {
-        Ok(x) => x,
-        Err(_) => anyhow::bail!(
-            "[Incorrect layout]\nThe model is packed but contains at least one custom type field \
-             which is not packed.\nPlease check your model to fix this."
-        ),
-    };
-    let schema = model.schema().await?;
+    let layout = model.layout();
+    let schema = model.schema()?;
 
     deep_print_layout(&tag, &layout, &schema);
 
@@ -49,7 +43,7 @@ where
     world_reader.set_block(BlockId::Tag(BlockTag::Pending));
 
     let model = world_reader.model_reader_with_tag(&tag).await?;
-    let schema = model.schema().await?;
+    let schema = model.schema()?;
 
     if to_json {
         println!("{}", serde_json::to_string_pretty(&schema)?)
@@ -77,7 +71,7 @@ where
     world_reader.set_block(BlockId::Tag(BlockTag::Pending));
 
     let model = world_reader.model_reader_with_tag(&tag).await?;
-    let schema = model.schema().await?;
+    let schema = model.schema()?;
     let values = model.entity_storage(&keys).await?;
 
     deep_print_record(&schema, &keys, &values);
@@ -116,11 +110,19 @@ fn format_layout_ref(type_name: &str) -> String {
 }
 
 fn format_selector(selector: String) -> String {
-    if selector.starts_with("0x") { format!("[{}]", selector) } else { selector }
+    if selector.starts_with("0x") {
+        format!("[{}]", selector)
+    } else {
+        selector
+    }
 }
 
 fn format_name(name: String) -> String {
-    if !name.is_empty() { format!(" {} ", name) } else { name }
+    if !name.is_empty() {
+        format!(" {} ", name)
+    } else {
+        name
+    }
 }
 
 fn format_field(selector: String, name: String, layout: String) -> String {
@@ -130,12 +132,12 @@ fn format_field(selector: String, name: String, layout: String) -> String {
 }
 
 fn format_field_layout(
-    layout: &dojo_world::contracts::model::abigen::model::Layout,
+    layout: &dojo_world::contracts::model::abigen::world::Layout,
     schema: &dojo_types::schema::Ty,
 ) -> String {
     match layout {
-        dojo_world::contracts::model::abigen::model::Layout::Fixed(x) => format_fixed(x),
-        dojo_world::contracts::model::abigen::model::Layout::ByteArray => {
+        dojo_world::contracts::model::abigen::world::Layout::Fixed(x) => format_fixed(x),
+        dojo_world::contracts::model::abigen::world::Layout::ByteArray => {
             "layout(ByteArray)".to_string()
         }
         _ => format_layout_ref(&get_name_from_schema(schema)),
@@ -177,7 +179,7 @@ fn get_name_from_schema(schema: &dojo_types::schema::Ty) -> String {
 }
 
 fn get_printable_layout_list_from_struct(
-    field_layouts: &[dojo_world::contracts::model::abigen::model::FieldLayout],
+    field_layouts: &[dojo_world::contracts::model::abigen::world::FieldLayout],
     schema: &dojo_types::schema::Ty,
     layout_list: &mut Vec<LayoutInfo>,
 ) {
@@ -211,7 +213,7 @@ fn get_printable_layout_list_from_struct(
 }
 
 fn get_printable_layout_list_from_enum(
-    field_layouts: &[dojo_world::contracts::model::abigen::model::FieldLayout],
+    field_layouts: &[dojo_world::contracts::model::abigen::world::FieldLayout],
     schema: &dojo_types::schema::Ty,
     layout_list: &mut Vec<LayoutInfo>,
 ) {
@@ -243,7 +245,7 @@ fn get_printable_layout_list_from_enum(
 }
 
 fn get_printable_layout_list_from_tuple(
-    item_layouts: &[dojo_world::contracts::model::abigen::model::Layout],
+    item_layouts: &[dojo_world::contracts::model::abigen::world::Layout],
     schema: &dojo_types::schema::Ty,
     layout_list: &mut Vec<LayoutInfo>,
 ) {
@@ -276,7 +278,7 @@ fn get_printable_layout_list_from_tuple(
 }
 
 fn get_printable_layout_list_from_array(
-    item_layout: &dojo_world::contracts::model::abigen::model::Layout,
+    item_layout: &dojo_world::contracts::model::abigen::world::Layout,
     schema: &dojo_types::schema::Ty,
     layout_list: &mut Vec<LayoutInfo>,
 ) {
@@ -302,21 +304,21 @@ fn get_printable_layout_list_from_array(
 }
 
 fn get_printable_layout_list(
-    root_layout: &dojo_world::contracts::model::abigen::model::Layout,
+    root_layout: &dojo_world::contracts::model::abigen::world::Layout,
     schema: &dojo_types::schema::Ty,
     layout_list: &mut Vec<LayoutInfo>,
 ) {
     match root_layout {
-        dojo_world::contracts::model::abigen::model::Layout::Struct(ls) => {
+        dojo_world::contracts::model::abigen::world::Layout::Struct(ls) => {
             get_printable_layout_list_from_struct(ls, schema, layout_list);
         }
-        dojo_world::contracts::model::abigen::model::Layout::Enum(le) => {
+        dojo_world::contracts::model::abigen::world::Layout::Enum(le) => {
             get_printable_layout_list_from_enum(le, schema, layout_list);
         }
-        dojo_world::contracts::model::abigen::model::Layout::Tuple(lt) => {
+        dojo_world::contracts::model::abigen::world::Layout::Tuple(lt) => {
             get_printable_layout_list_from_tuple(lt, schema, layout_list);
         }
-        dojo_world::contracts::model::abigen::model::Layout::Array(la) => {
+        dojo_world::contracts::model::abigen::world::Layout::Array(la) => {
             get_printable_layout_list_from_array(&la[0], schema, layout_list);
         }
         _ => {}
@@ -358,10 +360,10 @@ fn print_layout_info(layout_info: LayoutInfo) {
 // print the full Layout tree
 fn deep_print_layout(
     name: &String,
-    layout: &dojo_world::contracts::model::abigen::model::Layout,
+    layout: &dojo_world::contracts::model::abigen::world::Layout,
     schema: &dojo_types::schema::Ty,
 ) {
-    if let dojo_world::contracts::model::abigen::model::Layout::Fixed(lf) = layout {
+    if let dojo_world::contracts::model::abigen::world::Layout::Fixed(lf) = layout {
         println!("\n{} (packed)", name);
         println!("    selector : {:#x}", get_selector_from_name(name).unwrap());
         println!("    layout   : {}", format_fixed(lf));
@@ -378,7 +380,11 @@ fn deep_print_layout(
 }
 
 fn _start_indent(level: usize, start_indent: bool) -> String {
-    if start_indent { INDENT.repeat(level) } else { "".to_string() }
+    if start_indent {
+        INDENT.repeat(level)
+    } else {
+        "".to_string()
+    }
 }
 
 fn format_primitive(

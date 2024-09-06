@@ -7,9 +7,7 @@ use std::ops::DerefMut;
 use anyhow::{anyhow, Context, Result};
 use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_defs::db::DefsGroup;
-use cairo_lang_defs::ids::{
-    ModuleId, ModuleItemId, NamedLanguageElementId, TopLevelLanguageElementId,
-};
+use cairo_lang_defs::ids::{ModuleId, NamedLanguageElementId, TopLevelLanguageElementId};
 use cairo_lang_filesystem::db::FilesGroup;
 use cairo_lang_filesystem::ids::{CrateId, CrateLongId};
 use cairo_lang_formatter::format_string;
@@ -24,9 +22,9 @@ use camino::Utf8PathBuf;
 use convert_case::{Case, Casing};
 use dojo_world::contracts::naming;
 use dojo_world::manifest::{
-    AbiFormat, Class, DojoContract, DojoModel, Manifest, ManifestMethods, ABIS_DIR,
-    BASE_CONTRACT_TAG, BASE_DIR, BASE_QUALIFIED_PATH, CONTRACTS_DIR, MANIFESTS_DIR, MODELS_DIR,
-    WORLD_CONTRACT_TAG, WORLD_QUALIFIED_PATH,
+    AbiFormat, Class, DojoContract, Manifest, ManifestMethods, ABIS_DIR, BASE_CONTRACT_TAG,
+    BASE_DIR, BASE_QUALIFIED_PATH, CONTRACTS_DIR, MANIFESTS_DIR, MODELS_DIR, WORLD_CONTRACT_TAG,
+    WORLD_QUALIFIED_PATH,
 };
 use itertools::Itertools;
 use scarb::compiler::helpers::{build_compiler_config, collect_main_crate_ids};
@@ -40,7 +38,7 @@ use starknet::core::types::contract::SierraClass;
 use starknet::core::types::Felt;
 use tracing::{debug, trace, trace_span};
 
-use crate::plugin::{DojoAuxData, Model};
+use crate::plugin::DojoAuxData;
 
 const CAIRO_PATH_SEPARATOR: &str = "::";
 
@@ -306,7 +304,6 @@ fn update_files(
         save_json_artifact_file(ws, target_dir, class, &filename, tag)?;
     }
 
-    let mut models = BTreeMap::new();
     let mut contracts = BTreeMap::new();
 
     if let Some(external_contracts) = external_contracts {
@@ -338,18 +335,6 @@ fn update_files(
                             &contract.systems,
                         )?);
                     }
-
-                    // For the models, the `struct_id` is the full path including the struct's name
-                    // already. The `get_dojo_model_artifacts` function handles
-                    // the reconstruction of the full path by also using lower
-                    // case for the model's name to match the compiled artifacts of the generated
-                    // contract.
-                    models.extend(get_dojo_model_artifacts(
-                        db,
-                        &dojo_aux_data.models,
-                        *module_id,
-                        &compiled_artifacts,
-                    )?);
                 }
 
                 // StarknetAuxData shouldn't be required. Every dojo contract and model are starknet
@@ -358,10 +343,6 @@ fn update_files(
                 // only contain the contract's name.
             }
         }
-    }
-
-    for model in &models {
-        contracts.remove(model.0.as_str());
     }
 
     let contracts_dir = target_dir.child(CONTRACTS_DIR);
@@ -401,11 +382,6 @@ fn update_files(
         save_json_artifact_file(ws, &contracts_dir, class, &filename, &manifest.inner.tag)?;
     }
 
-    let models_dir = target_dir.child(MODELS_DIR);
-    if !models.is_empty() && !models_dir.exists() {
-        fs::create_dir_all(models_dir.path_unchecked())?;
-    }
-
     // Ensure `models` dir exist event if no models are compiled
     // to avoid errors when loading manifests.
     let base_models_dir = base_manifests_dir.join(MODELS_DIR);
@@ -417,71 +393,7 @@ fn update_files(
         std::fs::create_dir_all(&base_models_abis_dir)?;
     }
 
-    for (_, (manifest, class, module_id)) in models.iter_mut() {
-        write_manifest_and_abi(
-            &base_models_dir,
-            &base_models_abis_dir,
-            &manifest_dir,
-            manifest,
-            &class.abi,
-        )?;
-
-        let filename = naming::get_filename_from_tag(&manifest.inner.tag);
-        save_expanded_source_file(ws, *module_id, db, &models_dir, &filename, &manifest.inner.tag)?;
-        save_json_artifact_file(ws, &models_dir, class, &filename, &manifest.inner.tag)?;
-    }
-
     Ok(())
-}
-
-/// Finds the inline modules annotated as models in the given crate_ids and
-/// returns the corresponding Models.
-#[allow(clippy::type_complexity)]
-fn get_dojo_model_artifacts(
-    db: &RootDatabase,
-    aux_data: &Vec<Model>,
-    module_id: ModuleId,
-    compiled_classes: &HashMap<String, (Felt, ContractClass)>,
-) -> anyhow::Result<HashMap<String, (Manifest<DojoModel>, ContractClass, ModuleId)>> {
-    let mut models = HashMap::with_capacity(aux_data.len());
-
-    for model in aux_data {
-        if let Ok(Some(ModuleItemId::Struct(struct_id))) =
-            db.module_item_by_name(module_id, model.name.clone().into())
-        {
-            // Leverages the contract selector function to only snake case the model name and
-            // not the full path.
-            let contract_selector = ContractSelector(struct_id.full_path(db));
-            let qualified_path = contract_selector.path_with_model_snake_case();
-            let compiled_class = compiled_classes.get(&qualified_path).cloned();
-            let tag = naming::get_tag(&model.namespace, &model.name);
-
-            if let Some((class_hash, class)) = compiled_class {
-                models.insert(
-                    qualified_path.clone(),
-                    (
-                        Manifest::new(
-                            DojoModel {
-                                tag: tag.clone(),
-                                class_hash,
-                                abi: None,
-                                members: model.members.clone(),
-                                original_class_hash: class_hash,
-                                qualified_path,
-                            },
-                            naming::get_filename_from_tag(&tag),
-                        ),
-                        class,
-                        module_id,
-                    ),
-                );
-            } else {
-                println!("Model {} not found in target.", tag.clone());
-            }
-        }
-    }
-
-    Ok(models)
 }
 
 #[allow(clippy::type_complexity)]

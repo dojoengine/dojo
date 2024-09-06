@@ -2,7 +2,7 @@ use starknet::macros::felt;
 
 use super::*;
 use crate::contracts::naming::{get_filename_from_tag, get_tag};
-use crate::manifest::{BaseManifest, Class, DojoContract, DojoModel, Manifest};
+use crate::manifest::{BaseManifest, Class, DojoContract, Manifest};
 
 #[test]
 fn no_diff_when_local_and_remote_are_equal() {
@@ -16,18 +16,7 @@ fn no_diff_when_local_and_remote_are_equal() {
         get_filename_from_tag(BASE_CONTRACT_TAG),
     );
 
-    let models = vec![Manifest::new(
-        DojoModel { members: vec![], class_hash: 11_u32.into(), ..Default::default() },
-        "dojo_mock-model".into(),
-    )];
-
-    let remote_models = vec![Manifest::new(
-        DojoModel { members: vec![], class_hash: 11_u32.into(), ..Default::default() },
-        "dojo_mock-model".into(),
-    )];
-
-    let local =
-        BaseManifest { models, world: world_contract, base: base_contract, contracts: vec![] };
+    let local = BaseManifest { world: world_contract, base: base_contract, contracts: vec![] };
 
     let mut remote: DeploymentManifest = local.clone().into();
     remote.models = remote_models;
@@ -48,49 +37,6 @@ fn diff_when_local_and_remote_are_different() {
         Class { class_hash: 77_u32.into(), ..Default::default() },
         get_filename_from_tag(BASE_CONTRACT_TAG),
     );
-
-    let models = vec![
-        Manifest::new(
-            DojoModel {
-                tag: get_tag("dojo_mock", "model"),
-                members: vec![],
-                class_hash: felt!("0x11"),
-                ..Default::default()
-            },
-            get_filename_from_tag(&get_tag("dojo_mock", "model")),
-        ),
-        Manifest::new(
-            DojoModel {
-                tag: get_tag("dojo_mock", "model2"),
-                members: vec![],
-                class_hash: felt!("0x22"),
-                ..Default::default()
-            },
-            get_filename_from_tag(&get_tag("dojo_mock", "model2")),
-        ),
-    ];
-
-    let remote_models = vec![
-        Manifest::new(
-            DojoModel {
-                tag: get_tag("dojo_mock", "model"),
-                members: vec![],
-                class_hash: felt!("0x11"),
-                ..Default::default()
-            },
-            get_filename_from_tag(&get_tag("dojo_mock", "model")),
-        ),
-        Manifest::new(
-            DojoModel {
-                tag: get_tag("dojo_mock", "model2"),
-
-                members: vec![],
-                class_hash: felt!("0x33"),
-                ..Default::default()
-            },
-            get_filename_from_tag(&get_tag("dojo_mock", "model2")),
-        ),
-    ];
 
     let contracts = vec![
         Manifest::new(

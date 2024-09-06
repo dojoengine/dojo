@@ -1,6 +1,0 @@
-kind = "Class"
-class_hash = "0xa349b743d361ce4567361475a89b84a386bb383448c6926954e5fe0b525597"
-original_class_hash = "0xa349b743d361ce4567361475a89b84a386bb383448c6926954e5fe0b525597"
-abi = "manifests/release/base/abis/dojo-world.json"
-tag = "dojo-world"
-manifest_name = "dojo-world"
