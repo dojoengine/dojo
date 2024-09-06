@@ -25,7 +25,7 @@ pub(super) async fn load_world_manifests<A>(
     account: A,
     world_address: Option<Felt>,
     ui: &Ui,
-    skip_migration: Option<Vec<String>>,
+    skip_migration: &Option<Vec<String>>,
 ) -> Result<(BaseManifest, Option<DeploymentManifest>)>
 where
     A: ConnectedAccount + Sync + Send,

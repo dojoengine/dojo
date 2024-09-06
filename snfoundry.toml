@@ -1,0 +1,5 @@
+
+[sncast.glihm-sep]
+account = "glihm-sep"
+accounts-file = "/Users/glihm/.starknet_accounts/starknet_open_zeppelin_accounts.json"
+url = ""

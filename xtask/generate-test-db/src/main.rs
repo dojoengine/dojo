@@ -23,8 +23,6 @@ async fn migrate_spawn_and_move(db_path: &Path) -> Result<MigrationOutput> {
     let cfg = setup.build_test_config("spawn-and-move", Profile::DEV);
     let ws = scarb::ops::read_workspace(cfg.manifest_path(), &cfg)?;
 
-    println!("account {:?}", runner.account(0));
-
     let output = sozo_ops::migration::migrate(
         &ws,
         None,

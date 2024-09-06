@@ -2,6 +2,7 @@ use std::str::FromStr;
 
 use anyhow::{anyhow, Context, Result};
 use clap::Args;
+use dojo_utils::env::DOJO_ACCOUNT_ADDRESS_ENV_VAR;
 use dojo_world::config::Environment;
 use scarb::core::Config;
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
@@ -13,7 +14,6 @@ use url::Url;
 
 use super::signer::SignerOptions;
 use super::starknet::StarknetOptions;
-use super::DOJO_ACCOUNT_ADDRESS_ENV_VAR;
 
 #[cfg(feature = "controller")]
 pub mod controller;

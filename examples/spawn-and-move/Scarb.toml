@@ -20,3 +20,5 @@ build-external-contracts = [ "armory::Flatbow", "bestiary::RiverSkale" ]
 [features]
 default = [ "dungeon" ]
 dungeon = [  ]
+
+[profile.saya]
