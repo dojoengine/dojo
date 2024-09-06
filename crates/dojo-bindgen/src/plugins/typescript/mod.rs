@@ -446,7 +446,7 @@ export function defineContractComponents(world: World) {
                     \"{namespace}\"
                 );
             }} catch (error) {{
-                console.error(\"Error executing spawn:\", error);
+                console.error(\"Error executing {system_name}:\", error);
                 throw error;
             }}
         }};
