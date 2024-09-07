@@ -17,7 +17,7 @@ use katana_primitives::transaction::Tx;
 use katana_rpc_types::trace::TxExecutionInfo;
 use prover::persistent::{BatcherCall, BatcherInput, BatcherOutput};
 use prover::{extract_execute_calls, HttpProverParams, ProveProgram, ProverIdentifier};
-pub use prover_sdk::ProverAccessKey;
+pub use prover_sdk::access_key::ProverAccessKey;
 use saya_provider::rpc::JsonRpcProvider;
 use saya_provider::Provider as SayaProvider;
 use serde::{Deserialize, Serialize};

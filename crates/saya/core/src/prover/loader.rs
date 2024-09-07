@@ -1,8 +1,10 @@
 use std::env;
 use std::path::PathBuf;
+use std::str::FromStr;
 
-use prover_sdk::{Cairo0ProverInput, Cairo1ProverInput};
+use prover_sdk::{Cairo0ProverInput, CairoProverInput};
 use serde_json::Value;
+use starknet_crypto::Felt;
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
 
@@ -38,7 +40,7 @@ pub async fn prepare_input_cairo0(
 pub async fn prepare_input_cairo1(
     arguments: String,
     prove_program: ProveProgram,
-) -> anyhow::Result<Cairo1ProverInput> {
+) -> anyhow::Result<CairoProverInput> {
     let mut program = load_program(prove_program).await?;
 
     if let Value::Object(ref mut obj) = program {
@@ -47,6 +49,6 @@ pub async fn prepare_input_cairo1(
 
     let program = serde_json::from_str(&serde_json::to_string(&program)?)?;
 
-    let program_input = Value::Array(vec![Value::String(arguments)]);
-    Ok(Cairo1ProverInput { program, program_input, layout: "recursive".into() })
+    let program_input = vec![Felt::from_str(&arguments)?];
+    Ok(CairoProverInput { program, program_input, layout: "recursive".into() })
 }

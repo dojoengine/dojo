@@ -451,7 +451,7 @@ dependencies = [
  "futures-utils-wasm",
  "lru",
  "pin-project",
- "reqwest 0.12.5",
+ "reqwest 0.12.7",
  "serde",
  "serde_json",
  "tokio",
@@ -485,7 +485,7 @@ dependencies = [
  "futures-utils-wasm",
  "lru",
  "pin-project",
- "reqwest 0.12.5",
+ "reqwest 0.12.7",
  "serde",
  "serde_json",
  "tokio",
@@ -526,7 +526,7 @@ dependencies = [
  "alloy-transport-http 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures",
  "pin-project",
- "reqwest 0.12.5",
+ "reqwest 0.12.7",
  "serde",
  "serde_json",
  "tokio",
@@ -546,7 +546,7 @@ dependencies = [
  "alloy-transport-http 0.2.0 (git+https://github.com/alloy-rs/alloy)",
  "futures",
  "pin-project",
- "reqwest 0.12.5",
+ "reqwest 0.12.7",
  "serde",
  "serde_json",
  "tokio",
@@ -782,7 +782,7 @@ checksum = "6d8f1eefa8cb9e7550740ee330feba4fed303a77ad3085707546f9152a88c380"
 dependencies = [
  "alloy-json-rpc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "alloy-transport 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "reqwest 0.12.5",
+ "reqwest 0.12.7",
  "serde_json",
  "tower",
  "tracing",
@@ -796,7 +796,7 @@ source = "git+https://github.com/alloy-rs/alloy#067cc464bd1357e745653709db051707
 dependencies = [
  "alloy-json-rpc 0.2.0 (git+https://github.com/alloy-rs/alloy)",
  "alloy-transport 0.2.0 (git+https://github.com/alloy-rs/alloy)",
- "reqwest 0.12.5",
+ "reqwest 0.12.7",
  "serde_json",
  "tower",
  "tracing",
@@ -3458,13 +3458,13 @@ dependencies = [
 [[package]]
 name = "common"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/http-prover?rev=7d00b05#7d00b05fec6bdf533d4110656c635a086d5872b7"
+source = "git+https://github.com/cartridge-gg/http-prover?rev=103597b#103597b38e35136e27aeb15ec5dd6a7aaaa779a9"
 dependencies = [
  "ed25519-dalek",
- "prefix-hex",
  "serde",
  "serde_json",
  "serde_with 3.9.0",
+ "starknet-types-core",
 ]
 
 [[package]]
@@ -4534,7 +4534,7 @@ dependencies = [
  "assert_matches",
  "dojo-test-utils",
  "futures",
- "reqwest 0.12.5",
+ "reqwest 0.12.7",
  "rpassword",
  "starknet 0.11.0",
  "thiserror",
@@ -6718,7 +6718,7 @@ dependencies = [
  "httpdate",
  "itoa",
  "pin-project-lite",
- "socket2 0.4.10",
+ "socket2 0.5.7",
  "tokio",
  "tower-service",
  "tracing",
@@ -7244,7 +7244,7 @@ dependencies = [
  "socket2 0.5.7",
  "widestring",
  "windows-sys 0.48.0",
- "winreg 0.50.0",
+ "winreg",
 ]
 
 [[package]]
@@ -7824,7 +7824,7 @@ dependencies = [
  "metrics",
  "num-traits 0.2.19",
  "parking_lot 0.12.3",
- "reqwest 0.12.5",
+ "reqwest 0.12.7",
  "serde",
  "serde_json",
  "starknet 0.11.0",
@@ -10751,20 +10751,19 @@ dependencies = [
 [[package]]
 name = "prover-sdk"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/http-prover?rev=7d00b05#7d00b05fec6bdf533d4110656c635a086d5872b7"
+source = "git+https://github.com/cartridge-gg/http-prover?rev=103597b#103597b38e35136e27aeb15ec5dd6a7aaaa779a9"
 dependencies = [
- "bytes",
+ "base64 0.22.1",
  "common",
  "ed25519-dalek",
- "http 1.1.0",
- "hyper-util",
+ "futures",
  "prefix-hex",
  "rand",
- "reqwest 0.12.5",
+ "reqwest 0.12.7",
  "reqwest_cookie_store",
  "serde",
  "serde_json",
- "serde_with 3.9.0",
+ "starknet-types-core",
  "thiserror",
  "tokio",
  "tracing",
@@ -11211,14 +11210,14 @@ dependencies = [
  "wasm-streams 0.4.0",
  "web-sys",
  "webpki-roots 0.25.4",
- "winreg 0.50.0",
+ "winreg",
 ]
 
 [[package]]
 name = "reqwest"
-version = "0.12.5"
+version = "0.12.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7d6d2a27d57148378eb5e111173f4276ad26340ecc5c49a4a2152167a2d6a37"
+checksum = "f8f4955649ef5c38cc7f9e8aa41761d48fb9677197daea9984dc54f56aad5e63"
 dependencies = [
  "base64 0.22.1",
  "bytes",
@@ -11253,13 +11252,15 @@ dependencies = [
  "tokio",
  "tokio-native-tls",
  "tokio-rustls 0.26.0",
+ "tokio-util",
  "tower-service",
  "url",
  "wasm-bindgen",
  "wasm-bindgen-futures",
+ "wasm-streams 0.4.0",
  "web-sys",
  "webpki-roots 0.26.3",
- "winreg 0.52.0",
+ "windows-registry",
 ]
 
 [[package]]
@@ -11270,7 +11271,7 @@ checksum = "93ea5c6f30c19d766efe8d823c88f9abd1c56516648a0d4264ab2dc04cc19472"
 dependencies = [
  "bytes",
  "cookie_store 0.20.0",
- "reqwest 0.12.5",
+ "reqwest 0.12.7",
  "url",
 ]
 
@@ -12346,9 +12347,9 @@ dependencies = [
 
 [[package]]
 name = "serde"
-version = "1.0.204"
+version = "1.0.210"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc76f558e0cbb2a839d37354c575f1dc3fdc6546b5be373ba43d95f231bf7c12"
+checksum = "c8e3592472072e6e22e0a54d5904d9febf8508f65fb8552499a1abc7d1078c3a"
 dependencies = [
  "serde_derive",
 ]
@@ -12406,9 +12407,9 @@ dependencies = [
 
 [[package]]
 name = "serde_derive"
-version = "1.0.204"
+version = "1.0.210"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e0cd7e117be63d3c3678776753929474f3b04a43a080c744d6b0ae2a8c28e222"
+checksum = "243902eda00fad750862fc144cea25caca5e20d615af0a81bee94ca738f1df1f"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -12428,11 +12429,12 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.120"
+version = "1.0.128"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e0d21c9a8cae1235ad58a00c11cb40d4b1e5c784f1ef2c537876ed6ffd8b7c5"
+checksum = "6ff5456707a1de34e7e37f2a6fd3d3f808c318259cbd01ab6377795054b483d8"
 dependencies = [
  "itoa",
+ "memchr",
  "ryu",
  "serde",
 ]
@@ -12936,7 +12938,7 @@ dependencies = [
  "num-integer",
  "prettytable-rs",
  "regex",
- "reqwest 0.12.5",
+ "reqwest 0.12.7",
  "rpassword",
  "scarb",
  "scarb-ui",
@@ -12993,7 +12995,7 @@ dependencies = [
  "katana-runner",
  "num-bigint",
  "num-traits 0.2.19",
- "reqwest 0.12.5",
+ "reqwest 0.12.7",
  "rpassword",
  "scarb",
  "scarb-ui",
@@ -13956,6 +13958,9 @@ name = "sync_wrapper"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a7065abeca94b6a8a577f9bd45aa0867a2238b74e8eb67cf10d492bc39351394"
+dependencies = [
+ "futures-core",
+]
 
 [[package]]
 name = "synstructure"
@@ -14649,7 +14654,7 @@ dependencies = [
  "log",
  "num-traits 0.2.19",
  "once_cell",
- "reqwest 0.12.5",
+ "reqwest 0.12.7",
  "scarb",
  "scarb-ui",
  "serde",
@@ -15991,7 +15996,7 @@ checksum = "d2ed2439a290666cd67ecce2b0ffaad89c2a56b976b736e6ece670297897832d"
 dependencies = [
  "windows-implement",
  "windows-interface",
- "windows-result",
+ "windows-result 0.1.2",
  "windows-targets 0.52.6",
 ]
 
@@ -16018,11 +16023,41 @@ dependencies = [
 ]
 
 [[package]]
+name = "windows-registry"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e400001bb720a623c1c69032f8e3e4cf09984deec740f007dd2b03ec864804b0"
+dependencies = [
+ "windows-result 0.2.0",
+ "windows-strings",
+ "windows-targets 0.52.6",
+]
+
+[[package]]
 name = "windows-result"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5e383302e8ec8515204254685643de10811af0ed97ea37210dc26fb0032647f8"
 dependencies = [
+ "windows-targets 0.52.6",
+]
+
+[[package]]
+name = "windows-result"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1d1043d8214f791817bab27572aaa8af63732e11bf84aa21a45a78d6c317ae0e"
+dependencies = [
+ "windows-targets 0.52.6",
+]
+
+[[package]]
+name = "windows-strings"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4cd9b125c486025df0eabcb585e62173c6c9eddcec5d117d3b6e8c30e2ee4d10"
+dependencies = [
+ "windows-result 0.2.0",
  "windows-targets 0.52.6",
 ]
 
@@ -16260,16 +16295,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "winreg"
-version = "0.52.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a277a57398d4bfa075df44f501a17cfdf8542d224f0d36095a2adc7aee4ef0a5"
-dependencies = [
- "cfg-if",
- "windows-sys 0.48.0",
-]
-
-[[package]]
 name = "wyz"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -16373,7 +16398,7 @@ dependencies = [
  "dojo-test-utils",
  "dojo-utils",
  "katana-runner",
- "reqwest 0.12.5",
+ "reqwest 0.12.7",
  "scarb",
  "sozo-ops",
  "starknet 0.11.0",
