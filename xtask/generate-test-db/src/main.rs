@@ -14,6 +14,7 @@ async fn migrate_spawn_and_move(db_path: &Path) -> Result<MigrationOutput> {
     let cfg = KatanaRunnerConfig {
         db_dir: Some(db_path.to_path_buf()),
         n_accounts: 10,
+        dev: true,
         ..Default::default()
     };
     let runner = KatanaRunner::new_with_config(cfg)?;
@@ -45,6 +46,7 @@ async fn migrate_types_test(db_path: &Path) -> Result<MigrationOutput> {
     let cfg = KatanaRunnerConfig {
         db_dir: Some(db_path.to_path_buf()),
         n_accounts: 10,
+        dev: true,
         ..Default::default()
     };
     let runner = KatanaRunner::new_with_config(cfg)?;

@@ -946,6 +946,11 @@ abigen!(
         "kind": "data"
       },
       {
+        "name": "entity_id",
+        "type": "core::felt252",
+        "kind": "data"
+      },
+      {
         "name": "keys",
         "type": "core::array::Span::<core::felt252>",
         "kind": "data"

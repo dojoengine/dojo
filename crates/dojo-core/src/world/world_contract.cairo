@@ -231,6 +231,7 @@ pub mod world {
     #[derive(Drop, starknet::Event)]
     pub struct StoreSetRecord {
         pub table: felt252,
+        pub entity_id: felt252,
         pub keys: Span<felt252>,
         pub values: Span<felt252>,
     }
@@ -1091,7 +1092,7 @@ pub mod world {
                     let entity_id = entity_id_from_keys(keys);
                     self.write_model_entity(model_selector, entity_id, values, layout);
                     EventEmitter::emit(
-                        ref self, StoreSetRecord { table: model_selector, keys, values }
+                        ref self, StoreSetRecord { table: model_selector, keys, values, entity_id }
                     );
                 },
                 ModelIndex::Id(entity_id) => {

@@ -10,7 +10,7 @@ pub trait IActions {
     fn update_player_items(ref world: IWorldDispatcher, items: Array<PlayerItem>);
     fn reset_player_config(ref world: IWorldDispatcher);
     fn set_player_server_profile(ref world: IWorldDispatcher, server_id: u32, name: ByteArray);
-    fn set_models(ref world: IWorldDispatcher, seed: felt252);
+    fn set_models(ref world: IWorldDispatcher, seed: felt252, n_models: u32);
     #[cfg(feature: 'dungeon')]
     fn enter_dungeon(ref world: IWorldDispatcher, dungeon_address: starknet::ContractAddress);
 }
@@ -48,25 +48,21 @@ pub mod actions {
     #[abi(embed_v0)]
     impl ActionsImpl of IActions<ContractState> {
         // Set some models randomly.
-        fn set_models(ref world: IWorldDispatcher, seed: felt252) {
-            let tx_hash = starknet::get_tx_info().transaction_hash;
-            let hash: u256 = core::poseidon::poseidon_hash_span(array![seed, tx_hash].span()).into();
-            let prng: u32 = (hash % 4_294_967_000).try_into().unwrap();
-            let byte: u8 = (hash % 255).try_into().unwrap();
+        fn set_models(ref world: IWorldDispatcher, seed: felt252, n_models: u32) {
+            let uint: u256 = seed.into();
+            let prng: u32 = (uint % 4_294_967_000).try_into().unwrap();
+            let byte: u8 = (uint % 255).try_into().unwrap();
 
             let moves = Moves { player: seed.try_into().unwrap(), remaining: byte, last_direction: Direction::None };
             let position = Position { player: seed.try_into().unwrap(), vec: Vec2 { x: prng, y: prng } };
             let server_profile = ServerProfile { player: seed.try_into().unwrap(), server_id: prng, name: "hello" };
             let player_config = PlayerConfig { player: seed.try_into().unwrap(), name: "hello", items: array![], favorite_item: Option::None };
 
-            // Set different models based on a modulo to have different
-            // transactions events count.
-            let modulo = hash % 4;
-            if modulo == 0 {
+            if n_models == 4 {
                 set!(world, (moves, position, server_profile, player_config));
-            } else if modulo == 1 {
+            } else if n_models == 3 {
                 set!(world, (moves, position, server_profile));
-            } else if modulo == 2 {
+            } else if n_models == 2 {
                 set!(world, (moves, position));
             } else {
                 set!(world, (moves));

@@ -33,7 +33,16 @@ for ((i=1; i<=count; i++))
 do
     # Generates a random 248-bit number (to be sure it's fit in a felt252).
     seed=$(od -An -tx1 -N31 /dev/urandom | tr -d '  \n' | sed 's/^/0x/')
-    sozo execute actions set_models -c "$seed" \
+    # You can change seed by `$i` for reproducibility.
+    seed=$i
+    #seed=$(($i + 100000))
+
+    # Number of models to spawn
+    n_models=$((seed % 4 + 1))
+    # You can set the number of models for reproducibility.
+    n_models=1
+
+    sozo execute actions set_models -c "$seed","$n_models" \
         --manifest-path examples/spawn-and-move/Scarb.toml \
         --rpc-url "$RPC_URL"
 

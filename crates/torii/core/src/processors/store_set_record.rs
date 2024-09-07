@@ -4,11 +4,10 @@ use dojo_world::contracts::world::WorldContractReader;
 use num_traits::ToPrimitive;
 use starknet::core::types::Event;
 use starknet::providers::Provider;
-use starknet_crypto::poseidon_hash_many;
 use tracing::info;
 
 use super::EventProcessor;
-use crate::processors::{MODEL_INDEX, NUM_KEYS_INDEX};
+use crate::processors::{ENTITY_ID_INDEX, MODEL_INDEX, NUM_KEYS_INDEX};
 use crate::sql::{felts_sql_string, Sql};
 
 pub(crate) const LOG_TARGET: &str = "torii_core::processors::store_set_record";
@@ -70,7 +69,7 @@ where
             values_start + event.data[keys_end].to_usize().context("invalid usize")?;
 
         let values = event.data[values_start..values_end].to_vec();
-        let entity_id = poseidon_hash_many(&keys);
+        let entity_id = event.data[ENTITY_ID_INDEX];
 
         let mut keys_and_unpacked = [keys, values].concat();
 
