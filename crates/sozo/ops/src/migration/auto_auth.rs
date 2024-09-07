@@ -26,7 +26,8 @@ where
     let txn_config_without_walnut = TxnConfig { walnut: false, ..*txn_config };
 
     grant_writer(&ui, world, grant, txn_config_without_walnut, default_namespace, rpc_url).await?;
-    revoke_writer(&ui, world, revoke, txn_config_without_walnut, default_namespace, rpc_url).await?;
+    revoke_writer(&ui, world, revoke, txn_config_without_walnut, default_namespace, rpc_url)
+        .await?;
 
     Ok(())
 }
