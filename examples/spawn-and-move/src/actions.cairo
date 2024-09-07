@@ -53,10 +53,21 @@ pub mod actions {
             let prng: u32 = (uint % 4_294_967_000).try_into().unwrap();
             let byte: u8 = (uint % 255).try_into().unwrap();
 
-            let moves = Moves { player: seed.try_into().unwrap(), remaining: byte, last_direction: Direction::None };
-            let position = Position { player: seed.try_into().unwrap(), vec: Vec2 { x: prng, y: prng } };
-            let server_profile = ServerProfile { player: seed.try_into().unwrap(), server_id: prng, name: "hello" };
-            let player_config = PlayerConfig { player: seed.try_into().unwrap(), name: "hello", items: array![], favorite_item: Option::None };
+            let moves = Moves {
+                player: seed.try_into().unwrap(), remaining: byte, last_direction: Direction::None
+            };
+            let position = Position {
+                player: seed.try_into().unwrap(), vec: Vec2 { x: prng, y: prng }
+            };
+            let server_profile = ServerProfile {
+                player: seed.try_into().unwrap(), server_id: prng, name: "hello"
+            };
+            let player_config = PlayerConfig {
+                player: seed.try_into().unwrap(),
+                name: "hello",
+                items: array![],
+                favorite_item: Option::None
+            };
 
             if n_models == 4 {
                 set!(world, (moves, position, server_profile, player_config));
