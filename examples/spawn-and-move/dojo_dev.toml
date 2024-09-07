@@ -10,8 +10,8 @@ default = "dojo_examples"
 mappings = { "armory-Flatbow" = "dojo_examples_weapons", "bestiary" = "dojo_examples_foes" }
 
 [env]
-rpc_url = "https://api.cartridge.gg/x/kari-test/katana"
+rpc_url = "http://localhost:5050/"
 # Default account for katana with seed = 0
-account_address = "0x7af481c87d29af6940a23c28467b8d0194f88bf7f0e5cb344eaeb9076b90b03"
-private_key = "0x4fe70c28d3eeb57610b31b95a04e7b468dca5f986ac57d62c7b216db820e8af"
+account_address = "0x6162896d1d7ab204c7ccac6dd5f8e9e7c25ecd5ae4fcb4ad32e57786bb46e03"
+private_key = "0x1800000000300000180000000000030000000000003006001800006600"
 world_address = "0x6a5152f02567ffb01e5da73a92253dacd50f74932e1a87f3cb58723237a6dda"
