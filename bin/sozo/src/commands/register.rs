@@ -3,6 +3,7 @@ use clap::{Args, Subcommand};
 use dojo_world::contracts::WorldContractReader;
 use scarb::core::Config;
 use sozo_ops::register;
+use sozo_walnut::WalnutDebugger;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{BlockId, BlockTag, Felt};
 use tracing::trace;
@@ -58,6 +59,9 @@ impl RegisterArgs {
         let world_address = world.world_address.unwrap_or_default();
         trace!(?world_address, "Using world address.");
 
+        let walnut_debugger =
+            WalnutDebugger::new_from_flag(transaction.walnut, starknet.url(env_metadata.as_ref())?);
+
         config.tokio_handle().block_on(async {
             let world =
                 utils::world_from_env_metadata(world, account, &starknet, &env_metadata, config)
@@ -69,11 +73,11 @@ impl RegisterArgs {
             register::model_register(
                 models,
                 &world,
-                transaction.into(),
+                &transaction.into(),
                 world_reader,
                 world_address,
                 config,
-                &starknet.url(env_metadata.as_ref()).ok(),
+                &walnut_debugger,
             )
             .await
         })

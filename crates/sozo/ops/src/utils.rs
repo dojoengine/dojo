@@ -5,11 +5,10 @@ use dojo_world::contracts::naming::get_name_from_tag;
 use dojo_world::contracts::world::{WorldContract, WorldContractReader};
 use dojo_world::migration::strategy::generate_salt;
 use scarb_ui::Ui;
-use sozo_walnut::transaction::walnut_debug_transaction;
+use sozo_walnut::WalnutDebugger;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{BlockId, BlockTag, ExecutionResult, Felt, InvokeTransactionResult};
 use starknet::providers::Provider;
-use url::Url;
 
 use crate::migration::ui::MigrationUi;
 
@@ -77,20 +76,17 @@ pub async fn get_contract_address_from_reader<P: Provider + Sync + Send>(
 /// # Arguments
 ///
 /// * `provider` - Starknet provider to fetch transaction status.
-/// * `rpc_url` - The RPC URL to use for Walnut debugging.
 /// * `transaction_result` - Result of the transaction to handle.
 /// * `wait_for_tx` - Wait for the transaction to be mined.
 /// * `show_receipt` - If the receipt of the transaction should be displayed on stdout.
-/// * `debug_with_walnut` - If the link to debug the transaction with Walnut should be displayed on
-///   stdout.
+/// * `walnut_debugger` - Optionally a Walnut debugger to debug the transaction. stdout.
 pub async fn handle_transaction_result<P>(
     ui: &Ui,
     provider: P,
-    rpc_url: &Option<Url>,
     transaction_result: InvokeTransactionResult,
     wait_for_tx: bool,
     show_receipt: bool,
-    debug_with_walnut: bool,
+    walnut_debugger: &Option<WalnutDebugger>,
 ) -> Result<()>
 where
     P: Provider + Send,
@@ -114,12 +110,8 @@ where
                 }
             };
 
-            if debug_with_walnut {
-                if let Some(rpc_url) = rpc_url {
-                    walnut_debug_transaction(ui, rpc_url, &transaction_result.transaction_hash);
-                } else {
-                    ui.print("Unable to debug transaction with Walnut: no RPC URL provided");
-                }
+            if let Some(walnut_debugger) = walnut_debugger {
+                walnut_debugger.debug_transaction(ui, &transaction_result.transaction_hash);
             }
         }
     }

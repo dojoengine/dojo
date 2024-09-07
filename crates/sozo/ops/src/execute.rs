@@ -2,10 +2,10 @@ use anyhow::{Context, Result};
 use dojo_utils::{TransactionExt, TxnConfig};
 use dojo_world::contracts::world::WorldContract;
 use scarb_ui::Ui;
+use sozo_walnut::WalnutDebugger;
 use starknet::accounts::{Call, ConnectedAccount};
 use starknet::core::types::Felt;
 use starknet::core::utils::get_selector_from_name;
-use url::Url;
 
 use crate::utils;
 
@@ -16,7 +16,7 @@ pub async fn execute<A>(
     calldata: Vec<Felt>,
     world: &WorldContract<A>,
     txn_config: &TxnConfig,
-    rpc_url: &Option<Url>,
+    walnut_debugger: &Option<WalnutDebugger>,
 ) -> Result<()>
 where
     A: ConnectedAccount + Sync + Send + 'static,
@@ -36,11 +36,10 @@ where
     utils::handle_transaction_result(
         ui,
         &world.account.provider(),
-        rpc_url,
         res,
         txn_config.wait,
         txn_config.receipt,
-        txn_config.walnut,
+        walnut_debugger,
     )
     .await
 }

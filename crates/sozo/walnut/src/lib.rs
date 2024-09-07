@@ -17,9 +17,12 @@
 //! - Classes should be verified with `sozo migrate apply --walnut` before debugging transactions.
 //! - This feature is only supported on hosted networks.
 
+pub mod debugger;
 pub mod transaction;
 pub mod utils;
 pub mod verification;
+
+pub use debugger::WalnutDebugger;
 
 pub const WALNUT_APP_URL: &str = "https://app.walnut.dev";
 pub const WALNUT_API_URL: &str = "https://api.walnut.dev";

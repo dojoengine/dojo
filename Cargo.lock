@@ -12937,6 +12937,7 @@ dependencies = [
  "smol_str",
  "snapbox",
  "sozo-ops",
+ "sozo-walnut",
  "starknet 0.11.0",
  "starknet-crypto 0.7.1",
  "thiserror",

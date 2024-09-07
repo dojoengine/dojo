@@ -11,7 +11,7 @@ use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{DeployOutput, UpgradeOutput};
 use scarb::core::Workspace;
 use sozo_walnut::utils::walnut_check_api_key;
-use sozo_walnut::verification::walnut_verify_migration_strategy;
+use sozo_walnut::WalnutDebugger;
 use starknet::accounts::{Call, ConnectedAccount, ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::types::{BlockId, BlockTag, Felt, InvokeTransactionResult};
 use starknet::core::utils::{cairo_short_string_to_felt, get_contract_address};
@@ -136,6 +136,8 @@ where
     A::SignError: 'static,
 {
     let ui = ws.config().ui();
+    let walnut_debugger =
+        WalnutDebugger::new_from_flag(txn_config.walnut, Url::parse(&rpc_url).unwrap());
 
     // its path to a file so `parent` should never return `None`
     let root_dir = ws.manifest_path().parent().unwrap().to_path_buf();
@@ -282,7 +284,7 @@ where
             &default_namespace,
             &grant,
             &revoke,
-            &Url::parse(&rpc_url).ok(),
+            &walnut_debugger,
         )
         .await
         {
@@ -348,8 +350,8 @@ where
             }
         }
 
-        if txn_config.walnut {
-            walnut_verify_migration_strategy(ws, rpc_url.clone(), &strategy).await?;
+        if let Some(walnut_debugger) = &walnut_debugger {
+            walnut_debugger.verify_migration_strategy(ws, &strategy).await?;
         }
 
         if let Some(migration_output) = &migration_output {
