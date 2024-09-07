@@ -7,13 +7,13 @@ mod tests {
     use dojo_types::primitive::Primitive;
     use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
     use dojo_world::contracts::abi::model::Layout;
-    use dojo_world::contracts::naming::compute_selector_from_names;
+    use dojo_world::contracts::naming::{compute_selector_from_names, compute_selector_from_tag};
     use serial_test::serial;
     use sqlx::SqlitePool;
-    use starknet::core::types::{Event, Felt};
-    use starknet_crypto::poseidon_hash_many;
+    use starknet::core::types::Event;
+    use starknet_crypto::{poseidon_hash_many, Felt};
     use tokio::sync::mpsc;
-    use torii_core::sql::Sql;
+    use torii_core::sql::{felts_sql_string, Sql};
 
     use crate::tests::{model_fixtures, run_graphql_subscription};
     use crate::utils;
@@ -54,60 +54,68 @@ mod tests {
         tokio::spawn(async move {
             // 1. Open process and sleep.Go to execute subscription
             tokio::time::sleep(Duration::from_secs(1)).await;
+            let ty = Ty::Struct(Struct {
+                name: utils::struct_name_from_names(&namespace, &model_name),
+                children: vec![
+                    Member {
+                        name: "depth".to_string(),
+                        key: false,
+                        ty: Ty::Enum(Enum {
+                            name: "Depth".to_string(),
+                            option: Some(0),
+                            options: vec![
+                                EnumOption { name: "Zero".to_string(), ty: Ty::Tuple(vec![]) },
+                                EnumOption { name: "One".to_string(), ty: Ty::Tuple(vec![]) },
+                                EnumOption { name: "Two".to_string(), ty: Ty::Tuple(vec![]) },
+                                EnumOption { name: "Three".to_string(), ty: Ty::Tuple(vec![]) },
+                            ],
+                        }),
+                    },
+                    Member {
+                        name: "record_id".to_string(),
+                        key: false,
+                        ty: Ty::Primitive(Primitive::U8(Some(0))),
+                    },
+                    Member {
+                        name: "typeU16".to_string(),
+                        key: false,
+                        ty: Ty::Primitive(Primitive::U16(Some(1))),
+                    },
+                    Member {
+                        name: "type_u64".to_string(),
+                        key: false,
+                        ty: Ty::Primitive(Primitive::U64(Some(1))),
+                    },
+                    Member {
+                        name: "typeBool".to_string(),
+                        key: false,
+                        ty: Ty::Primitive(Primitive::Bool(Some(true))),
+                    },
+                    Member {
+                        name: "type_felt".to_string(),
+                        key: false,
+                        ty: Ty::Primitive(Primitive::Felt252(Some(Felt::from(1u128)))),
+                    },
+                    Member {
+                        name: "typeContractAddress".to_string(),
+                        key: true,
+                        ty: Ty::Primitive(Primitive::ContractAddress(Some(Felt::ONE))),
+                    },
+                ],
+            });
+            let keys = keys_from_ty(&ty).unwrap();
+            let keys_str = felts_sql_string(&keys);
+            let entity_id = poseidon_hash_many(&keys);
+            let model_id = model_id_from_ty(&ty);
 
             // Set entity with one Record model
             db.set_entity(
-                Ty::Struct(Struct {
-                    name: utils::struct_name_from_names(&namespace, &model_name),
-                    children: vec![
-                        Member {
-                            name: "depth".to_string(),
-                            key: false,
-                            ty: Ty::Enum(Enum {
-                                name: "Depth".to_string(),
-                                option: Some(0),
-                                options: vec![
-                                    EnumOption { name: "Zero".to_string(), ty: Ty::Tuple(vec![]) },
-                                    EnumOption { name: "One".to_string(), ty: Ty::Tuple(vec![]) },
-                                    EnumOption { name: "Two".to_string(), ty: Ty::Tuple(vec![]) },
-                                    EnumOption { name: "Three".to_string(), ty: Ty::Tuple(vec![]) },
-                                ],
-                            }),
-                        },
-                        Member {
-                            name: "record_id".to_string(),
-                            key: false,
-                            ty: Ty::Primitive(Primitive::U8(Some(0))),
-                        },
-                        Member {
-                            name: "typeU16".to_string(),
-                            key: false,
-                            ty: Ty::Primitive(Primitive::U16(Some(1))),
-                        },
-                        Member {
-                            name: "type_u64".to_string(),
-                            key: false,
-                            ty: Ty::Primitive(Primitive::U64(Some(1))),
-                        },
-                        Member {
-                            name: "typeBool".to_string(),
-                            key: false,
-                            ty: Ty::Primitive(Primitive::Bool(Some(true))),
-                        },
-                        Member {
-                            name: "type_felt".to_string(),
-                            key: false,
-                            ty: Ty::Primitive(Primitive::Felt252(Some(Felt::from(1u128)))),
-                        },
-                        Member {
-                            name: "typeContractAddress".to_string(),
-                            key: true,
-                            ty: Ty::Primitive(Primitive::ContractAddress(Some(Felt::ONE))),
-                        },
-                    ],
-                }),
+                ty,
                 &format!("0x{:064x}:0x{:04x}:0x{:04x}", 0, 0, 0),
                 block_timestamp,
+                entity_id,
+                model_id,
+                &keys_str,
             )
             .await
             .unwrap();
@@ -178,45 +186,54 @@ mod tests {
         tokio::spawn(async move {
             // 1. Open process and sleep.Go to execute subscription
             tokio::time::sleep(Duration::from_secs(1)).await;
+            let ty = Ty::Struct(Struct {
+                name: utils::struct_name_from_names(&namespace, &model_name),
+                children: vec![
+                    Member {
+                        name: "depth".to_string(),
+                        key: false,
+                        ty: Ty::Enum(Enum {
+                            name: "Depth".to_string(),
+                            option: Some(0),
+                            options: vec![
+                                EnumOption { name: "Zero".to_string(), ty: Ty::Tuple(vec![]) },
+                                EnumOption { name: "One".to_string(), ty: Ty::Tuple(vec![]) },
+                                EnumOption { name: "Two".to_string(), ty: Ty::Tuple(vec![]) },
+                                EnumOption { name: "Three".to_string(), ty: Ty::Tuple(vec![]) },
+                            ],
+                        }),
+                    },
+                    Member {
+                        name: "record_id".to_string(),
+                        key: false,
+                        ty: Ty::Primitive(Primitive::U32(Some(0))),
+                    },
+                    Member {
+                        name: "type_felt".to_string(),
+                        key: false,
+                        ty: Ty::Primitive(Primitive::Felt252(Some(Felt::from(1u128)))),
+                    },
+                    Member {
+                        name: "typeContractAddress".to_string(),
+                        key: true,
+                        ty: Ty::Primitive(Primitive::ContractAddress(Some(Felt::ONE))),
+                    },
+                ],
+            });
+
+            let keys = keys_from_ty(&ty).unwrap();
+            let keys_str = felts_sql_string(&keys);
+            let entity_id = poseidon_hash_many(&keys);
+            let model_id = model_id_from_ty(&ty);
 
             // Set entity with one Record model
             db.set_entity(
-                Ty::Struct(Struct {
-                    name: utils::struct_name_from_names(&namespace, &model_name),
-                    children: vec![
-                        Member {
-                            name: "depth".to_string(),
-                            key: false,
-                            ty: Ty::Enum(Enum {
-                                name: "Depth".to_string(),
-                                option: Some(0),
-                                options: vec![
-                                    EnumOption { name: "Zero".to_string(), ty: Ty::Tuple(vec![]) },
-                                    EnumOption { name: "One".to_string(), ty: Ty::Tuple(vec![]) },
-                                    EnumOption { name: "Two".to_string(), ty: Ty::Tuple(vec![]) },
-                                    EnumOption { name: "Three".to_string(), ty: Ty::Tuple(vec![]) },
-                                ],
-                            }),
-                        },
-                        Member {
-                            name: "record_id".to_string(),
-                            key: false,
-                            ty: Ty::Primitive(Primitive::U32(Some(0))),
-                        },
-                        Member {
-                            name: "type_felt".to_string(),
-                            key: false,
-                            ty: Ty::Primitive(Primitive::Felt252(Some(Felt::from(1u128)))),
-                        },
-                        Member {
-                            name: "typeContractAddress".to_string(),
-                            key: true,
-                            ty: Ty::Primitive(Primitive::ContractAddress(Some(Felt::ONE))),
-                        },
-                    ],
-                }),
+                ty,
                 &format!("0x{:064x}:0x{:04x}:0x{:04x}", 0, 0, 0),
                 block_timestamp,
+                entity_id,
+                model_id,
+                &keys_str,
             )
             .await
             .unwrap();
@@ -441,5 +458,25 @@ mod tests {
 
         assert_eq!(response_value, expected_value);
         rx.recv().await.unwrap();
+    }
+
+    fn keys_from_ty(ty: &Ty) -> anyhow::Result<Vec<Felt>> {
+        if let Ty::Struct(s) = &ty {
+            let mut keys = Vec::new();
+            for m in s.keys() {
+                keys.extend(
+                    m.serialize().map_err(|_| anyhow::anyhow!("Failed to serialize model key"))?,
+                );
+            }
+            Ok(keys)
+        } else {
+            anyhow::bail!("Entity is not a struct")
+        }
+    }
+
+    fn model_id_from_ty(ty: &Ty) -> Felt {
+        let namespaced_name = ty.name();
+
+        compute_selector_from_tag(&namespaced_name)
     }
 }

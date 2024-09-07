@@ -4,11 +4,12 @@ use dojo_world::contracts::world::WorldContractReader;
 use num_traits::ToPrimitive;
 use starknet::core::types::Event;
 use starknet::providers::Provider;
+use starknet_crypto::poseidon_hash_many;
 use tracing::info;
 
 use super::EventProcessor;
 use crate::processors::{MODEL_INDEX, NUM_KEYS_INDEX};
-use crate::sql::Sql;
+use crate::sql::{felts_sql_string, Sql};
 
 pub(crate) const LOG_TARGET: &str = "torii_core::processors::store_set_record";
 
@@ -46,9 +47,9 @@ where
         event_id: &str,
         event: &Event,
     ) -> Result<(), Error> {
-        let selector = event.data[MODEL_INDEX];
+        let model_id = event.data[MODEL_INDEX];
 
-        let model = db.model(selector).await?;
+        let model = db.model(model_id).await?;
 
         info!(
             target: LOG_TARGET,
@@ -60,6 +61,7 @@ where
         let keys_end: usize =
             keys_start + event.data[NUM_KEYS_INDEX].to_usize().context("invalid usize")?;
         let keys = event.data[keys_start..keys_end].to_vec();
+        let keys_str = felts_sql_string(&keys);
 
         // keys_end is already the length of the values array.
 
@@ -68,12 +70,14 @@ where
             values_start + event.data[keys_end].to_usize().context("invalid usize")?;
 
         let values = event.data[values_start..values_end].to_vec();
+        let entity_id = poseidon_hash_many(&keys);
+
         let mut keys_and_unpacked = [keys, values].concat();
 
         let mut entity = model.schema;
         entity.deserialize(&mut keys_and_unpacked)?;
 
-        db.set_entity(entity, event_id, block_timestamp).await?;
+        db.set_entity(entity, event_id, block_timestamp, entity_id, model_id, &keys_str).await?;
         Ok(())
     }
 }
