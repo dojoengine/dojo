@@ -6,6 +6,7 @@ use starknet::core::types::Felt;
 use url::Url;
 
 use crate::transaction::walnut_debug_transaction;
+use crate::utils::walnut_check_api_key;
 use crate::verification::walnut_verify_migration_strategy;
 
 /// A debugger for Starknet transactions embedding the walnut configuration.
@@ -38,5 +39,10 @@ impl WalnutDebugger {
         strategy: &MigrationStrategy,
     ) -> Result<()> {
         walnut_verify_migration_strategy(ws, self.rpc_url.to_string(), strategy).await
+    }
+
+    /// Checks if the Walnut API key is set.
+    pub fn check_api_key() -> Result<()> {
+        walnut_check_api_key()
     }
 }

@@ -13,14 +13,16 @@
 //! When running the `sozo execute` command with the `--walnut` flag, a link to the Walnut debugger
 //! page is printed to the terminal, allowing users to debug their transactions.
 //!
+//! At Sozo level, only the `WalnutDebugger` struct is exposed to handle the integration.
+//!
 //! Note:
 //! - Classes should be verified with `sozo migrate apply --walnut` before debugging transactions.
 //! - This feature is only supported on hosted networks.
 
-pub mod debugger;
-pub mod transaction;
-pub mod utils;
-pub mod verification;
+mod debugger;
+mod transaction;
+mod utils;
+mod verification;
 
 pub use debugger::WalnutDebugger;
 
