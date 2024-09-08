@@ -1,4 +1,3 @@
-use anyhow::Result;
 use dojo_world::migration::strategy::MigrationStrategy;
 use scarb::core::Workspace;
 use scarb_ui::Ui;
@@ -8,6 +7,7 @@ use url::Url;
 use crate::transaction::walnut_debug_transaction;
 use crate::utils::walnut_check_api_key;
 use crate::verification::walnut_verify_migration_strategy;
+use crate::Error;
 
 /// A debugger for Starknet transactions embedding the walnut configuration.
 #[derive(Debug)]
@@ -27,7 +27,7 @@ impl WalnutDebugger {
     }
 
     /// Debugs a transaction with Walnut by printing a link to the Walnut debugger page.
-    pub fn debug_transaction(&self, ui: &Ui, transaction_hash: &Felt) -> Result<()> {
+    pub fn debug_transaction(&self, ui: &Ui, transaction_hash: &Felt) -> Result<(), Error> {
         let url = walnut_debug_transaction(&self.rpc_url, transaction_hash)?;
         ui.print(format!("Debug transaction with Walnut: {url}"));
         Ok(())
@@ -39,12 +39,12 @@ impl WalnutDebugger {
         &self,
         ws: &Workspace<'_>,
         strategy: &MigrationStrategy,
-    ) -> Result<()> {
+    ) -> anyhow::Result<()> {
         walnut_verify_migration_strategy(ws, self.rpc_url.to_string(), strategy).await
     }
 
     /// Checks if the Walnut API key is set.
-    pub fn check_api_key() -> Result<()> {
+    pub fn check_api_key() -> Result<(), Error> {
         walnut_check_api_key()
     }
 }

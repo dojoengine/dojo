@@ -58,4 +58,10 @@ pub enum Error {
 
     #[error(transparent)]
     Io(#[from] std::io::Error),
+
+    #[error(
+        "Environment variable '{WALNUT_API_KEY_ENV_VAR}' is not set. Please set it to your Walnut \
+         API key."
+    )]
+    MissingApiKey,
 }
