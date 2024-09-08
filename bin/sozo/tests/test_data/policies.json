@@ -29,6 +29,10 @@
   },
   {
     "target": "0x2d24481107b55ecd73c4d1b62f6bfe8c42a224447b71db7dcec2eab484d53cd",
+    "method": "set_models"
+  },
+  {
+    "target": "0x2d24481107b55ecd73c4d1b62f6bfe8c42a224447b71db7dcec2eab484d53cd",
     "method": "enter_dungeon"
   },
   {

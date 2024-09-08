@@ -9,7 +9,7 @@ use tracing::info;
 
 use super::EventProcessor;
 use crate::processors::{ENTITY_ID_INDEX, MODEL_INDEX};
-use crate::sql::Sql;
+use crate::sql::{felts_sql_string, Sql};
 
 pub(crate) const LOG_TARGET: &str = "torii_core::processors::store_update_record";
 
@@ -47,10 +47,10 @@ where
         event_id: &str,
         event: &Event,
     ) -> Result<(), Error> {
-        let selector = event.data[MODEL_INDEX];
+        let model_id = event.data[MODEL_INDEX];
         let entity_id = event.data[ENTITY_ID_INDEX];
 
-        let model = db.model(selector).await?;
+        let model = db.model(model_id).await?;
 
         info!(
             target: LOG_TARGET,
@@ -71,12 +71,14 @@ where
         // Keys are read from the db, since we don't have access to them when only
         // the entity id is passed.
         let keys = db.get_entity_keys(entity_id, &tag).await?;
+
+        let keys_str = felts_sql_string(&keys);
         let mut keys_and_unpacked = [keys, values].concat();
 
         let mut entity = model.schema;
         entity.deserialize(&mut keys_and_unpacked)?;
 
-        db.set_entity(entity, event_id, block_timestamp).await?;
+        db.set_entity(entity, event_id, block_timestamp, entity_id, model_id, &keys_str).await?;
         Ok(())
     }
 }
