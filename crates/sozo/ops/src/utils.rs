@@ -111,7 +111,7 @@ where
             };
 
             if let Some(walnut_debugger) = walnut_debugger {
-                walnut_debugger.debug_transaction(ui, &transaction_result.transaction_hash);
+                walnut_debugger.debug_transaction(ui, &transaction_result.transaction_hash)?;
             }
         }
     }

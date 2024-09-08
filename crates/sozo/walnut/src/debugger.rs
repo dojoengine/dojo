@@ -27,8 +27,10 @@ impl WalnutDebugger {
     }
 
     /// Debugs a transaction with Walnut by printing a link to the Walnut debugger page.
-    pub fn debug_transaction(&self, ui: &Ui, transaction_hash: &Felt) {
-        walnut_debug_transaction(ui, &self.rpc_url, transaction_hash)
+    pub fn debug_transaction(&self, ui: &Ui, transaction_hash: &Felt) -> Result<()> {
+        let url = walnut_debug_transaction(&self.rpc_url, transaction_hash)?;
+        ui.print(format!("Debug transaction with Walnut: {url}"));
+        Ok(())
     }
 
     /// Verifies a migration strategy with Walnut by uploading the source code of the contracts and

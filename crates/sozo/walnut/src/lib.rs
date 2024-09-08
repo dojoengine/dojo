@@ -19,6 +19,8 @@
 //! - Classes should be verified with `sozo migrate apply --walnut` before debugging transactions.
 //! - This feature is only supported on hosted networks.
 
+#![cfg_attr(not(test), warn(unused_crate_dependencies))]
+
 mod debugger;
 mod transaction;
 mod utils;
@@ -30,3 +32,11 @@ pub const WALNUT_APP_URL: &str = "https://app.walnut.dev";
 pub const WALNUT_API_URL: &str = "https://api.walnut.dev";
 pub const WALNUT_API_KEY_ENV_VAR: &str = "WALNUT_API_KEY";
 pub const WALNUT_API_URL_ENV_VAR: &str = "WALNUT_API_URL";
+
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+    #[error("Debugging transactions with Walnut is only supported on hosted networks")]
+    UnsupportedNetwork,
+    #[error("{0}")]
+    UrlParseError(#[from] url::ParseError),
+}
