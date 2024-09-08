@@ -5,6 +5,7 @@ use dojo_world::contracts::naming::get_name_from_tag;
 use dojo_world::contracts::world::{WorldContract, WorldContractReader};
 use dojo_world::migration::strategy::generate_salt;
 use scarb_ui::Ui;
+use sozo_walnut::WalnutDebugger;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{BlockId, BlockTag, ExecutionResult, Felt, InvokeTransactionResult};
 use starknet::providers::Provider;
@@ -78,12 +79,14 @@ pub async fn get_contract_address_from_reader<P: Provider + Sync + Send>(
 /// * `transaction_result` - Result of the transaction to handle.
 /// * `wait_for_tx` - Wait for the transaction to be mined.
 /// * `show_receipt` - If the receipt of the transaction should be displayed on stdout.
+/// * `walnut_debugger` - Optionally a Walnut debugger to debug the transaction. stdout.
 pub async fn handle_transaction_result<P>(
     ui: &Ui,
     provider: P,
     transaction_result: InvokeTransactionResult,
     wait_for_tx: bool,
     show_receipt: bool,
+    walnut_debugger: &Option<WalnutDebugger>,
 ) -> Result<()>
 where
     P: Provider + Send,
@@ -106,6 +109,10 @@ where
                     ui.print(format!("Reason:\n{}", reason));
                 }
             };
+
+            if let Some(walnut_debugger) = walnut_debugger {
+                walnut_debugger.debug_transaction(ui, &transaction_result.transaction_hash)?;
+            }
         }
     }
 

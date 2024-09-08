@@ -2,6 +2,7 @@ use anyhow::Result;
 use dojo_utils::TxnConfig;
 use dojo_world::contracts::WorldContract;
 use scarb::core::Workspace;
+use sozo_walnut::WalnutDebugger;
 use starknet::accounts::ConnectedAccount;
 
 use crate::auth::{grant_writer, revoke_writer, ResourceWriter};
@@ -13,6 +14,7 @@ pub async fn auto_authorize<A>(
     default_namespace: &str,
     grant: &[ResourceWriter],
     revoke: &[ResourceWriter],
+    walnut_debugger: &Option<WalnutDebugger>,
 ) -> Result<()>
 where
     A: ConnectedAccount + Sync + Send + 'static,
@@ -20,8 +22,8 @@ where
 {
     let ui = ws.config().ui();
 
-    grant_writer(&ui, world, grant, *txn_config, default_namespace).await?;
-    revoke_writer(&ui, world, revoke, *txn_config, default_namespace).await?;
+    grant_writer(&ui, world, grant, txn_config, default_namespace, walnut_debugger).await?;
+    revoke_writer(&ui, world, revoke, txn_config, default_namespace, walnut_debugger).await?;
 
     Ok(())
 }

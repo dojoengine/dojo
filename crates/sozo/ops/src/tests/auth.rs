@@ -63,8 +63,9 @@ async fn auth_grant_writer_ok() {
         &Ui::new(Verbosity::Normal, OutputFormat::Text),
         &world,
         &get_resource_writers(),
-        TxnConfig { wait: true, ..Default::default() },
+        &TxnConfig { wait: true, ..Default::default() },
         DEFAULT_NAMESPACE,
+        &None,
     )
     .await
     .unwrap();
@@ -87,8 +88,9 @@ async fn auth_revoke_writer_ok() {
         &Ui::new(Verbosity::Normal, OutputFormat::Text),
         &world,
         &get_resource_writers(),
-        TxnConfig { wait: true, ..Default::default() },
+        &TxnConfig { wait: true, ..Default::default() },
         DEFAULT_NAMESPACE,
+        &None,
     )
     .await
     .unwrap();
@@ -99,8 +101,9 @@ async fn auth_revoke_writer_ok() {
         &Ui::new(Verbosity::Normal, OutputFormat::Text),
         &world,
         &get_resource_writers(),
-        TxnConfig { wait: true, ..Default::default() },
+        &TxnConfig { wait: true, ..Default::default() },
         DEFAULT_NAMESPACE,
+        &None,
     )
     .await
     .unwrap();
@@ -136,8 +139,9 @@ async fn auth_grant_owner_ok() {
         &Ui::new(Verbosity::Normal, OutputFormat::Text),
         &world,
         &get_resource_owners(other_account),
-        TxnConfig { wait: true, ..Default::default() },
+        &TxnConfig { wait: true, ..Default::default() },
         DEFAULT_NAMESPACE,
+        &None,
     )
     .await
     .unwrap();
@@ -169,8 +173,9 @@ async fn auth_revoke_owner_ok() {
         &Ui::new(Verbosity::Normal, OutputFormat::Text),
         &world,
         &get_resource_owners(default_account),
-        TxnConfig { wait: true, ..Default::default() },
+        &TxnConfig { wait: true, ..Default::default() },
         DEFAULT_NAMESPACE,
+        &None,
     )
     .await
     .unwrap();
@@ -199,6 +204,7 @@ async fn execute_spawn<A: ConnectedAccount + Sync + Send + 'static>(
         vec![],
         world,
         &TxnConfig::init_wait(),
+        &None,
     )
     .await;
 

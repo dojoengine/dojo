@@ -6,6 +6,7 @@ use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::{WorldContract, WorldContractReader};
 use dojo_world::manifest::DeploymentManifest;
 use scarb::core::Config;
+use sozo_walnut::WalnutDebugger;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::Felt;
 use starknet::providers::Provider;
@@ -15,10 +16,11 @@ use crate::utils::handle_transaction_result;
 pub async fn model_register<A, P>(
     models: Vec<Felt>,
     world: &WorldContract<A>,
-    txn_config: TxnConfig,
+    txn_config: &TxnConfig,
     world_reader: WorldContractReader<P>,
     world_address: Felt,
     config: &Config,
+    walnut_debugger: &Option<WalnutDebugger>,
 ) -> Result<()>
 where
     A: ConnectedAccount + Sync + Send + 'static,
@@ -66,7 +68,7 @@ where
     let res = world
         .account
         .execute_v1(calls)
-        .send_with_cfg(&txn_config)
+        .send_with_cfg(txn_config)
         .await
         .with_context(|| "Failed to send transaction")?;
 
@@ -76,6 +78,7 @@ where
         res,
         txn_config.wait,
         txn_config.receipt,
+        walnut_debugger,
     )
     .await?;
 

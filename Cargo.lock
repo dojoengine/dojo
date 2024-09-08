@@ -12939,6 +12939,7 @@ dependencies = [
  "smol_str",
  "snapbox",
  "sozo-ops",
+ "sozo-walnut",
  "starknet 0.11.0",
  "starknet-crypto 0.7.1",
  "thiserror",
@@ -12994,6 +12995,7 @@ dependencies = [
  "serde_json",
  "serde_with 2.3.3",
  "smol_str",
+ "sozo-walnut",
  "starknet 0.11.0",
  "starknet-crypto 0.7.1",
  "tee",
@@ -13010,6 +13012,26 @@ version = "1.0.0-alpha.9"
 dependencies = [
  "anyhow",
  "starknet 0.11.0",
+]
+
+[[package]]
+name = "sozo-walnut"
+version = "1.0.0-alpha.9"
+dependencies = [
+ "anyhow",
+ "console",
+ "dojo-world",
+ "futures",
+ "reqwest 0.12.5",
+ "scarb",
+ "scarb-ui",
+ "serde",
+ "serde_json",
+ "starknet 0.11.0",
+ "thiserror",
+ "url",
+ "urlencoding",
+ "walkdir",
 ]
 
 [[package]]

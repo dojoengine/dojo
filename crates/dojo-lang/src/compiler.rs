@@ -162,7 +162,6 @@ impl Compiler for DojoCompiler {
 
         for (decl, contract_class, debug_info) in izip!(contracts, classes, debug_info_classes) {
             let contract_name = decl.submodule_id.name(db.upcast_mut());
-
             // note that the qualified path is in snake case while
             // the `full_path()` method of StructId uses the original struct name case.
             // (see in `get_dojo_model_artifacts`)

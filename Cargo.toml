@@ -39,6 +39,7 @@ members = [
 	"crates/saya/core",
 	"crates/saya/provider",
 	"crates/sozo/signers",
+	"crates/sozo/walnut",
 	"crates/torii/client",
 	"crates/torii/server",
 	"crates/torii/types-test",
@@ -111,6 +112,7 @@ saya-provider = { path = "crates/saya/provider" }
 # sozo
 sozo-ops = { path = "crates/sozo/ops" }
 sozo-signers = { path = "crates/sozo/signers" }
+sozo-walnut = { path = "crates/sozo/walnut" }
 
 anyhow = "1.0.80"
 assert_fs = "1.1"
@@ -207,6 +209,7 @@ tower-http = "0.4.4"
 tracing = "0.1.34"
 tracing-subscriber = { version = "0.3.16", features = [ "env-filter", "json" ] }
 url = { version = "2.4.0", features = [ "serde" ] }
+walkdir = "2.5.0"
 
 # server
 hyper = "0.14.27"
