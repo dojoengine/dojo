@@ -136,9 +136,8 @@ async fn verify_class(
 ) -> Result<String, Error> {
     let res = reqwest::Client::new()
         .post(format!("{api_url}/v1/verify"))
-        .header("Content-Type", "application/json")
         .header("x-api-key", api_key)
-        .body(serde_json::to_string(&payload)?)
+        .json(&payload)
         .send()
         .await?;
 
