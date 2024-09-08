@@ -37,6 +37,25 @@ pub const WALNUT_API_URL_ENV_VAR: &str = "WALNUT_API_URL";
 pub enum Error {
     #[error("Debugging transactions with Walnut is only supported on hosted networks")]
     UnsupportedNetwork,
-    #[error("{0}")]
+
+    #[error(transparent)]
     UrlParseError(#[from] url::ParseError),
+
+    #[error("Invalid file name")]
+    InvalidFileName,
+
+    #[error("Namespace prefix not found in file name")]
+    NamespacePrefixNotFound,
+
+    #[error("Failed to serialize payload: {0}")]
+    SerializationError(#[from] serde_json::Error),
+
+    #[error(transparent)]
+    RequestError(#[from] reqwest::Error),
+
+    #[error("Failed to verify contract: {0}")]
+    VerificationError(String),
+
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
 }

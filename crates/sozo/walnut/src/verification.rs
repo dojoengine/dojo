@@ -1,7 +1,7 @@
 use std::ffi::OsStr;
+use std::io;
 use std::path::Path;
 
-use anyhow::{anyhow, Context, Result};
 use console::{pad_str, Alignment, Style, StyledObject};
 use dojo_world::metadata::get_default_namespace_from_ws;
 use dojo_world::migration::strategy::MigrationStrategy;
@@ -13,6 +13,7 @@ use serde_json::Value;
 use walkdir::WalkDir;
 
 use crate::utils::{walnut_get_api_key, walnut_get_api_url};
+use crate::Error;
 
 /// Verifies all classes declared during migration.
 /// Only supported on hosted networks (non-localhost).
@@ -26,7 +27,7 @@ pub async fn walnut_verify_migration_strategy(
     ws: &Workspace<'_>,
     rpc_url: String,
     migration_strategy: &MigrationStrategy,
-) -> Result<()> {
+) -> anyhow::Result<()> {
     let ui = ws.config().ui();
     // Check if rpc_url is localhost
     if rpc_url.contains("localhost") || rpc_url.contains("127.0.0.1") {
@@ -109,12 +110,9 @@ pub async fn walnut_verify_migration_strategy(
     Ok(())
 }
 
-fn get_class_name_from_artifact_path(path: &Path, namespace: &str) -> Result<String> {
-    let file_name =
-        path.file_stem().and_then(OsStr::to_str).ok_or_else(|| anyhow!("Invalid file name"))?;
-    let class_name = file_name
-        .get(namespace.len() + 1..)
-        .ok_or_else(|| anyhow!("Namespace prefix not found in file name"))?;
+fn get_class_name_from_artifact_path(path: &Path, namespace: &str) -> Result<String, Error> {
+    let file_name = path.file_stem().and_then(OsStr::to_str).ok_or(Error::InvalidFileName)?;
+    let class_name = file_name.strip_prefix(namespace).ok_or(Error::NamespacePrefixNotFound)?;
     Ok(class_name.to_string())
 }
 
@@ -135,69 +133,59 @@ async fn verify_class(
     payload: VerificationPayload,
     api_url: &str,
     api_key: &str,
-) -> Result<String> {
-    let json_payload = serde_json::to_string(&payload)?;
-
-    let url = format!("{api_url}/v1/verify");
-
-    let client = reqwest::Client::new();
-    let api_res = client
-        .post(url)
+) -> Result<String, Error> {
+    let res = reqwest::Client::new()
+        .post(format!("{api_url}/v1/verify"))
         .header("Content-Type", "application/json")
         .header("x-api-key", api_key)
-        .body(json_payload)
+        .body(serde_json::to_string(&payload)?)
         .send()
-        .await
-        .context("Failed to send request to verifier API")?;
+        .await?;
 
-    if api_res.status() == StatusCode::OK {
-        let message = api_res.text().await.context("Failed to read verifier API response")?;
-        Ok(message)
+    if res.status() == StatusCode::OK {
+        Ok(res.text().await?)
     } else {
-        let message = api_res.text().await.context("Failed to verify contract")?;
-        Err(anyhow!(message))
+        Err(Error::VerificationError(res.text().await?))
     }
 }
 
-fn collect_source_code(root_dir: &Path) -> Result<Value> {
+fn collect_source_code(root_dir: &Path) -> Result<Value, Error> {
+    fn collect_files(
+        root_dir: &Path,
+        search_dir: &Path,
+        extension: &str,
+        max_depth: Option<usize>,
+        file_data: &mut serde_json::Map<String, serde_json::Value>,
+    ) -> Result<(), Error> {
+        // Set max_depth to usize::MAX if None is provided, matching the default value set by
+        // WalkDir::new()
+        let max_depth = max_depth.unwrap_or(usize::MAX);
+        for entry in WalkDir::new(search_dir).max_depth(max_depth).follow_links(true) {
+            let entry = entry.map_err(io::Error::from)?;
+            let path = entry.path();
+            if path.is_file() {
+                if let Some(file_extension) = path.extension() {
+                    if file_extension == OsStr::new(extension) {
+                        // Safe to unwrap here because we're iterating over files within root_dir,
+                        // so path will always have root_dir as a prefix
+                        let relative_path = path.strip_prefix(root_dir).unwrap();
+                        let file_content = std::fs::read_to_string(path)?;
+                        file_data.insert(
+                            relative_path.to_string_lossy().into_owned(),
+                            serde_json::Value::String(file_content),
+                        );
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
     let mut file_data = serde_json::Map::new();
-
-    // Read toml files in the root folder
-    for entry in WalkDir::new(root_dir).max_depth(1).follow_links(true) {
-        let entry = entry?;
-        let path = entry.path();
-        if path.is_file() {
-            if let Some(extension) = path.extension() {
-                if extension == OsStr::new("toml") {
-                    let relative_path = path.strip_prefix(root_dir)?;
-                    let file_content = std::fs::read_to_string(path)?;
-                    file_data.insert(
-                        relative_path.to_string_lossy().into_owned(),
-                        serde_json::Value::String(file_content),
-                    );
-                }
-            }
-        }
-    }
-
-    // Read cairo files in the root/src folder
-    let src_dir = root_dir.join("src");
-    for entry in WalkDir::new(src_dir.clone()).follow_links(true) {
-        let entry = entry?;
-        let path = entry.path();
-        if path.is_file() {
-            if let Some(extension) = path.extension() {
-                if extension == OsStr::new("cairo") {
-                    let relative_path = path.strip_prefix(root_dir)?;
-                    let file_content = std::fs::read_to_string(path)?;
-                    file_data.insert(
-                        relative_path.to_string_lossy().into_owned(),
-                        serde_json::Value::String(file_content),
-                    );
-                }
-            }
-        }
-    }
+    // Read `.toml` files in the root folder
+    collect_files(root_dir, root_dir, "toml", Some(1), &mut file_data)?;
+    // Read `.cairo` files in the root/src folder
+    collect_files(root_dir, &root_dir.join("src"), "cairo", None, &mut file_data)?;
 
     Ok(serde_json::Value::Object(file_data))
 }
