@@ -300,7 +300,7 @@ mod tests {
             )
             .unwrap(),
             signer_key: Felt::from_hex(
-                "0x6b41bfa82e791a8b4e6b3ee058cb25b89714e4a23bd9a1ad6e6ba0bbc0b145b",
+                "0x06b41bfa82e791a8b4e6b3ee058cb25b89714e4a23bd9a1ad6e6ba0bbc0b145b",
             )
             .unwrap(),
         };

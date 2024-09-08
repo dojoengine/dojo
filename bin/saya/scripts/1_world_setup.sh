@@ -11,6 +11,7 @@
 #  export DOJO_KEYSTORE_PATH="<PATH_TO_KEYSTORE>"
 #  export DOJO_KEYSTORE_PASSWORD="<KEYSTORE_PASSWORD>"
 #
+set -e
 
 # Check if starkli is installed.
 if ! command -v starkli &> /dev/null

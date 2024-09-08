@@ -11941,6 +11941,8 @@ dependencies = [
  "anyhow",
  "cairo-proof-parser",
  "clap",
+ "clap-verbosity-flag",
+ "clap_complete",
  "console",
  "dojo-utils",
  "katana-primitives",

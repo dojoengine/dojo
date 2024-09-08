@@ -24,6 +24,6 @@
     "starknet_url": "http://localhost:5030",
     "chain_id": "SN_SEPOLIA",
     "signer_address": "0x3aa0a12c62a46a200b1a1211e8cd09b520164104e76d79648ca459cf05db94",
-    "signer_key": "0x6b41bfa82e791a8b4e6b3ee058cb25b89714e4a23bd9a1ad6e6ba0bbc0b145b"
+    "signer_key": "0x06b41bfa82e791a8b4e6b3ee058cb25b89714e4a23bd9a1ad6e6ba0bbc0b145b"
   }
 }

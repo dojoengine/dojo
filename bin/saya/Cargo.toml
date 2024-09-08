@@ -9,6 +9,8 @@ version.workspace = true
 [dependencies]
 anyhow.workspace = true
 clap.workspace = true
+clap-verbosity-flag.workspace = true
+clap_complete.workspace = true
 console.workspace = true
 dojo-utils.workspace = true
 katana-primitives.workspace = true

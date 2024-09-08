@@ -49,6 +49,11 @@ pub async fn prepare_input_cairo1(
 
     let program = serde_json::from_str(&serde_json::to_string(&program)?)?;
 
-    let program_input = vec![Felt::from_str(&arguments)?];
+    dbg!(&arguments);
+    let program_input = arguments
+        .split(',')
+        .map(|part| Felt::from_str(part).unwrap())
+        .collect::<Vec<Felt>>();
+
     Ok(CairoProverInput { program, program_input, layout: "recursive".into() })
 }

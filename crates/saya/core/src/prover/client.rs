@@ -21,8 +21,9 @@ pub async fn http_prove_felts(
     input: Vec<FieldElement>,
     prove_program: ProveProgram,
 ) -> anyhow::Result<String> {
-    let args = input.into_iter().map(|v| v.to_string()).collect::<Vec<_>>().join(" ");
-    let input = format!("[{}]", args);
+    // TODO: might be removed if we can target cairo1 directly, and pass an array of felt.
+    let args = input.into_iter().map(|v| v.to_string()).collect::<Vec<_>>().join(",");
+    let input = format!("{}", args);
 
     http_prove(prover_params, input, prove_program).await
 }
@@ -36,6 +37,7 @@ pub async fn http_prove(
         ProverSDK::new(prover_params.prover_url.clone(), prover_params.prover_key.clone()).await;
     let prover = prover.as_ref().map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
+    // TODO: cairo0 might be deprectated in the future.
     if prove_program.cairo_version() == FieldElement::ONE {
         let input = prepare_input_cairo1(input, prove_program).await?;
         prover.prove_cairo(input).await.context("Failed to prove using the http prover")
