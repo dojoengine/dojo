@@ -52,7 +52,7 @@ impl SignerOptions {
         let pk_cli = self.private_key.clone();
         let pk_env = env_metadata.and_then(|env| env.private_key().map(|s| s.to_string()));
 
-        let pk_keystore_cli = self.private_key_from_keystore_cli(no_wait)?;
+        let pk_keystore_cli = self.private_key_from_keystore_cli(env_metadata, no_wait)?;
         let pk_keystore_env = self.private_key_from_keystore_env(env_metadata, no_wait)?;
 
         let private_key = if let Some(private_key) = pk_cli {
@@ -79,9 +79,19 @@ impl SignerOptions {
 
     /// Retrieves the private key from the CLI keystore.
     /// If the keystore path is not set, it returns `None`.
-    pub fn private_key_from_keystore_cli(&self, no_wait: bool) -> Result<Option<SigningKey>> {
+    pub fn private_key_from_keystore_cli(
+        &self,
+        env_metadata: Option<&Environment>,
+        no_wait: bool,
+    ) -> Result<Option<SigningKey>> {
         if let Some(path) = &self.keystore_path {
-            let password = prompt_password_if_needed(self.keystore_password.as_deref(), no_wait)?;
+            let maybe_password = if self.keystore_password.is_some() {
+                self.keystore_password.as_deref()
+            } else {
+                env_metadata.and_then(|env| env.keystore_password())
+            };
+
+            let password = prompt_password_if_needed(maybe_password, no_wait)?;
 
             let private_key = SigningKey::from_keystore(path, &password)?;
             return Ok(Some(private_key));
@@ -98,10 +108,13 @@ impl SignerOptions {
         no_wait: bool,
     ) -> Result<Option<SigningKey>> {
         if let Some(path) = env_metadata.and_then(|env| env.keystore_path()) {
-            let password = prompt_password_if_needed(
-                env_metadata.and_then(|env| env.keystore_password()),
-                no_wait,
-            )?;
+            let maybe_password = if self.keystore_password.is_some() {
+                self.keystore_password.as_deref()
+            } else {
+                env_metadata.and_then(|env| env.keystore_password())
+            };
+
+            let password = prompt_password_if_needed(maybe_password, no_wait)?;
 
             let private_key = SigningKey::from_keystore(path, &password)?;
             return Ok(Some(private_key));
