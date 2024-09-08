@@ -37,7 +37,7 @@ mod tests {
         assert!(result.is_ok());
         let debug_url = result.unwrap();
         assert!(debug_url.as_str().starts_with(WALNUT_APP_URL));
-        assert!(debug_url.as_str().contains("rpcUrl=https%3A%2F%2Fexample.com"));
+        assert!(debug_url.as_str().contains("rpcUrl=https%253A%252F%252Fexample.com"));
         assert!(
             debug_url.as_str().contains(
                 "txHash=0x0000000000000000000000000000000000000000000000000000000000001234"
