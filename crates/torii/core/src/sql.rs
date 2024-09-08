@@ -165,22 +165,14 @@ impl Sql {
         entity: Ty,
         event_id: &str,
         block_timestamp: u64,
+        entity_id: Felt,
+        model_id: Felt,
+        keys_str: &str,
     ) -> Result<()> {
-        let keys = if let Ty::Struct(s) = &entity {
-            let mut keys = Vec::new();
-            for m in s.keys() {
-                keys.extend(m.serialize()?);
-            }
-            keys
-        } else {
-            return Err(anyhow!("Entity is not a struct"));
-        };
-
         let namespaced_name = entity.name();
-        let (model_namespace, model_name) = namespaced_name.split_once('-').unwrap();
 
-        let entity_id = format!("{:#x}", poseidon_hash_many(&keys));
-        let model_id = format!("{:#x}", compute_selector_from_names(model_namespace, model_name));
+        let entity_id = format!("{:#x}", entity_id);
+        let model_id = format!("{:#x}", model_id);
 
         self.query_queue.enqueue(
             "INSERT INTO entity_model (entity_id, model_id) VALUES (?, ?) ON CONFLICT(entity_id, \
@@ -188,14 +180,13 @@ impl Sql {
             vec![Argument::String(entity_id.clone()), Argument::String(model_id.clone())],
         );
 
-        let keys_str = felts_sql_string(&keys);
         let insert_entities = "INSERT INTO entities (id, keys, event_id, executed_at) VALUES (?, \
                                ?, ?, ?) ON CONFLICT(id) DO UPDATE SET \
                                updated_at=CURRENT_TIMESTAMP, executed_at=EXCLUDED.executed_at, \
                                event_id=EXCLUDED.event_id RETURNING *";
         let mut entity_updated: EntityUpdated = sqlx::query_as(insert_entities)
             .bind(&entity_id)
-            .bind(&keys_str)
+            .bind(keys_str)
             .bind(event_id)
             .bind(utc_dt_string_from_timestamp(block_timestamp))
             .fetch_one(&self.pool)
@@ -1184,7 +1175,7 @@ impl Sql {
     }
 }
 
-fn felts_sql_string(felts: &[Felt]) -> String {
+pub fn felts_sql_string(felts: &[Felt]) -> String {
     felts.iter().map(|k| format!("{:#x}", k)).collect::<Vec<String>>().join(FELT_DELIMITER)
         + FELT_DELIMITER
 }

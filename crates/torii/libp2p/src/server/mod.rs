@@ -25,7 +25,7 @@ use starknet::core::types::{BlockId, BlockTag, Felt, FunctionCall};
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
 use starknet_crypto::poseidon_hash_many;
-use torii_core::sql::Sql;
+use torii_core::sql::{felts_sql_string, Sql};
 use tracing::{info, warn};
 use webrtc::tokio::Certificate;
 
@@ -245,6 +245,9 @@ impl<P: Provider + Sync> Relay<P> {
                                     continue;
                                 }
                             };
+                            let keys_str = felts_sql_string(&keys);
+                            let entity_id = poseidon_hash_many(&keys);
+                            let model_id = ty_model_id(&ty).unwrap();
 
                             // select only identity field, if doesn't exist, empty string
                             let query = format!(
@@ -252,7 +255,7 @@ impl<P: Provider + Sync> Relay<P> {
                                 ty.name()
                             );
                             let entity_identity: Option<String> = match sqlx::query_scalar(&query)
-                                .bind(format!("{:#x}", poseidon_hash_many(&keys)))
+                                .bind(format!("{:#x}", entity_id))
                                 .fetch_optional(&mut *pool)
                                 .await
                             {
@@ -353,6 +356,9 @@ impl<P: Provider + Sync> Relay<P> {
                                     ty,
                                     &message_id.to_string(),
                                     Utc::now().timestamp() as u64,
+                                    entity_id,
+                                    model_id,
+                                    &keys_str
                                 )
                                 .await
                             {
@@ -437,6 +443,13 @@ fn ty_keys(ty: &Ty) -> Result<Vec<Felt>, Error> {
     } else {
         Err(Error::InvalidMessageError("Entity is not a struct".to_string()))
     }
+}
+
+fn ty_model_id(ty: &Ty) -> Result<Felt, Error> {
+    let namespaced_name = ty.name();
+
+    let selector = compute_selector_from_tag(&namespaced_name);
+    Ok(selector)
 }
 
 // Validates the message model

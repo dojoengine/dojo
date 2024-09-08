@@ -413,6 +413,11 @@ where
 
     let calls = resources.iter().map(|r| world.set_metadata_getcall(r)).collect::<Vec<_>>();
 
+    if calls.is_empty() {
+        ui.print_sub("No metadata to register");
+        return Ok(());
+    }
+
     let InvokeTransactionResult { transaction_hash } =
         migrator.execute_v1(calls).send_with_cfg(&txn_config).await.map_err(|e| {
             ui.verbose(format!("{e:?}"));
@@ -553,6 +558,14 @@ where
         .map(|c| world.register_model_getcall(&c.diff.local_class_hash.into()))
         .collect::<Vec<_>>();
 
+    if calls.is_empty() {
+        return Ok(RegisterOutput {
+            transaction_hash: Felt::ZERO,
+            declare_output: vec![],
+            registered_models: vec![],
+        });
+    }
+
     let InvokeTransactionResult { transaction_hash } =
         world.account.execute_v1(calls).send_with_cfg(txn_config).await.map_err(|e| {
             ui.verbose(format!("{e:?}"));
@@ -663,6 +676,14 @@ where
         .map(|c| world.register_model_getcall(&c.diff.local_class_hash.into()))
         .collect::<Vec<_>>();
 
+    if calls.is_empty() {
+        return Ok(RegisterOutput {
+            transaction_hash: Felt::ZERO,
+            declare_output: vec![],
+            registered_models: vec![],
+        });
+    }
+
     let InvokeTransactionResult { transaction_hash } =
         world.account.execute_v1(calls).send_with_cfg(txn_config).await.map_err(|e| {
             ui.verbose(format!("{e:?}"));
@@ -759,6 +780,10 @@ where
             // contract already deployed.
             deploy_outputs.push(None);
         }
+    }
+
+    if calls.is_empty() {
+        return Ok(deploy_outputs);
     }
 
     let InvokeTransactionResult { transaction_hash } =
@@ -886,6 +911,10 @@ where
             // contract already deployed.
             deploy_outputs.push(None);
         }
+    }
+
+    if calls.is_empty() {
+        return Ok(deploy_outputs);
     }
 
     let InvokeTransactionResult { transaction_hash } =
