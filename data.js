@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1725837543742,
+  "lastUpdate": 1725839904536,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -19153,6 +19153,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4241816,
             "range": "± 159908",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "30427286+barabanovro@users.noreply.github.com",
+            "name": "Roman",
+            "username": "barabanovro"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "76458a3b76c4e9459cc1ea3553adbcab1622f47d",
+          "message": "Add walnut flag to sozo execute and migrate apply commands (#2333)\n\n* feat: add sierra to cairo debug information\r\n\r\n* Add walnut flag to sozo execute command\r\n\r\n* Pass rpc url to handle_transaction_result\r\n\r\n* Add walnut flag to sozo migrate apply command\r\n\r\n* Move walnut_debug_transaction to walnut crate\r\n\r\n* Cargo fmt\r\n\r\n* Keep only one global walnut flag\r\n\r\n* Add comments\r\n\r\n* Add walnut flag to sozo execute command\r\n\r\n* Pass rpc url to handle_transaction_result\r\n\r\n* Add walnut flag to sozo migrate apply command\r\n\r\n* Move walnut_debug_transaction to walnut crate\r\n\r\n* Cargo fmt\r\n\r\n* Keep only one global walnut flag\r\n\r\n* Add comments\r\n\r\n* Resolve conflicts\r\n\r\n* Fix lint errors\r\n\r\n* Put the walnut crate under the /sozo dir\r\n\r\n* Add constants with API and app URLs\r\n\r\n* Warn where we fail silently\r\n\r\n* Remove unnecessary comments\r\n\r\n* Check Walnut API key before migration\r\n\r\n* Add doc comments\r\n\r\n* Disable walnut flag in auto_authorize\r\n\r\n* chore; use debug for pending tx log (#2383)\r\n\r\nUpdate engine.rs\r\n\r\n* refactor(katana-rpc): `getEvents` include pending block  (#2375)\r\n\r\n* refactor(katana): move predeployedAccounts under DevApi and remove KatanaApi (#2310)\r\n\r\nfix: move predeployedAccounts under DevApi and remove KatanaApi\r\n\r\n* remove world and indexers table in favour of contracts\r\n\r\ncommit-id:98359f5f\r\n\r\n* opt(torii): batch query execution in sync_range\r\n\r\ncommit-id:72f22f88\r\n\r\n* refactor(torii): make select block cancel safe\r\n\r\ncommit-id:8fbc8e6d\r\n\r\n* opt(torii): use hashmap instead of vector of event processors\r\n\r\ncommit-id:7303cc72\r\n\r\n* opt(torii): fetch receipts along with blocks instead of fetching them individually\r\n\r\ncommit-id:b6db4cb5\r\n\r\n* opt(torii): avoid re-processing of transactions in certain case\r\n\r\nfix: #2355\r\n\r\ncommit-id:a510b985\r\n\r\n* wip\r\n\r\n* chore(dojo-world): enable manifest feature on `migration` feature\r\n\r\n* fmt\r\n\r\n* refactor: move walnut config into WalnutDebugger\r\n\r\n* fix: ensure only WalnutDebugger is exposed\r\n\r\n* fix: restore default dojo_dev.toml\r\n\r\n* dont print in library code\r\n\r\n* use concrete error types in walnut/verification\r\n\r\n* use concrete types again\r\n\r\n* remove unecessary util function\r\n\r\n* use json method instead\r\n\r\n* fix: fix test\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>\r\nCo-authored-by: Larko <59736843+Larkooo@users.noreply.github.com>\r\nCo-authored-by: Ammar Arif <evergreenkary@gmail.com>\r\nCo-authored-by: lambda-0x <0xlambda@protonmail.com>",
+          "timestamp": "2024-09-08T17:39:19-06:00",
+          "tree_id": "148e5eef32ca96b8761630c4d181d4e74525ca3f",
+          "url": "https://github.com/dojoengine/dojo/commit/76458a3b76c4e9459cc1ea3553adbcab1622f47d"
+        },
+        "date": 1725839903539,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17747805,
+            "range": "± 303813",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 4254066,
+            "range": "± 391209",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3725061069,
+            "range": "± 809768455",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4053968,
+            "range": "± 147470",
             "unit": "ns/iter"
           }
         ]
