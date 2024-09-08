@@ -5,9 +5,8 @@ use starknet::core::types::Felt;
 use url::Url;
 
 use crate::transaction::walnut_debug_transaction;
-use crate::utils::walnut_check_api_key;
 use crate::verification::walnut_verify_migration_strategy;
-use crate::Error;
+use crate::{utils, Error};
 
 /// A debugger for Starknet transactions embedding the walnut configuration.
 #[derive(Debug)]
@@ -45,6 +44,7 @@ impl WalnutDebugger {
 
     /// Checks if the Walnut API key is set.
     pub fn check_api_key() -> Result<(), Error> {
-        walnut_check_api_key()
+        let _ = utils::walnut_get_api_key()?;
+        Ok(())
     }
 }
