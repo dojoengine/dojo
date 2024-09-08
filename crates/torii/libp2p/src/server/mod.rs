@@ -349,24 +349,23 @@ impl<P: Provider + Sync> Relay<P> {
                                 continue;
                             }
 
-                            if let Err(e) = self
-                                .db
-                                // event id is message id
-                                .set_entity(
-                                    ty,
-                                    &message_id.to_string(),
-                                    Utc::now().timestamp() as u64,
-                                    entity_id,
-                                    model_id,
-                                    &keys_str
-                                )
-                                .await
+                            if let Err(e) = set_entity(
+                                &mut self.db,
+                                ty,
+                                &message_id.to_string(),
+                                Utc::now().timestamp() as u64,
+                                entity_id,
+                                model_id,
+                                &keys_str,
+                            )
+                            .await
                             {
                                 info!(
                                     target: LOG_TARGET,
                                     error = %e,
                                     "Setting message."
                                 );
+                                continue;
                             }
 
                             info!(
@@ -518,6 +517,20 @@ fn get_identity_from_ty(ty: &Ty) -> Result<Felt, Error> {
             Error::InvalidMessageError("Identity is not a contract address".to_string())
         })?;
     Ok(identity)
+}
+
+async fn set_entity(
+    db: &mut Sql,
+    ty: Ty,
+    message_id: &str,
+    block_timestamp: u64,
+    entity_id: Felt,
+    model_id: Felt,
+    keys: &str,
+) -> anyhow::Result<()> {
+    db.set_entity(ty, message_id, block_timestamp, entity_id, model_id, keys).await?;
+    db.execute().await?;
+    Ok(())
 }
 
 #[cfg(test)]

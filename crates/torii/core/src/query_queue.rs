@@ -1,6 +1,8 @@
 use std::collections::VecDeque;
 
-use sqlx::{Executor, Pool, Sqlite};
+use anyhow::{Context, Result};
+use dojo_types::schema::Ty;
+use sqlx::{FromRow, Pool, Sqlite};
 use starknet::core::types::Felt;
 
 use crate::simple_broker::SimpleBroker;
@@ -29,10 +31,16 @@ pub enum BrokerMessage {
 #[derive(Debug, Clone)]
 pub struct QueryQueue {
     pool: Pool<Sqlite>,
-    pub queue: VecDeque<(String, Vec<Argument>)>,
+    pub queue: VecDeque<(String, Vec<Argument>, QueryType)>,
     // publishes that are related to queries in the queue, they should be sent
     // after the queries are executed
     pub publish_queue: VecDeque<BrokerMessage>,
+}
+
+#[derive(Debug, Clone)]
+pub enum QueryType {
+    SetEntity(Ty),
+    Other,
 }
 
 impl QueryQueue {
@@ -40,23 +48,32 @@ impl QueryQueue {
         QueryQueue { pool, queue: VecDeque::new(), publish_queue: VecDeque::new() }
     }
 
-    pub fn enqueue<S: Into<String>>(&mut self, statement: S, arguments: Vec<Argument>) {
-        self.queue.push_back((statement.into(), arguments));
+    pub fn enqueue<S: Into<String>>(
+        &mut self,
+        statement: S,
+        arguments: Vec<Argument>,
+        query_type: QueryType,
+    ) {
+        self.queue.push_back((statement.into(), arguments, query_type));
     }
 
-    pub fn push_front<S: Into<String>>(&mut self, statement: S, arguments: Vec<Argument>) {
-        self.queue.push_front((statement.into(), arguments));
+    pub fn push_front<S: Into<String>>(
+        &mut self,
+        statement: S,
+        arguments: Vec<Argument>,
+        query_type: QueryType,
+    ) {
+        self.queue.push_front((statement.into(), arguments, query_type));
     }
 
     pub fn push_publish(&mut self, value: BrokerMessage) {
         self.publish_queue.push_back(value);
     }
 
-    pub async fn execute_all(&mut self) -> sqlx::Result<u64> {
-        let mut total_affected = 0_u64;
+    pub async fn execute_all(&mut self) -> Result<()> {
         let mut tx = self.pool.begin().await?;
 
-        while let Some((statement, arguments)) = self.queue.pop_front() {
+        while let Some((statement, arguments, query_type)) = self.queue.pop_front() {
             let mut query = sqlx::query(&statement);
 
             for arg in &arguments {
@@ -69,20 +86,40 @@ impl QueryQueue {
                 }
             }
 
-            total_affected += tx.execute(query).await?.rows_affected();
+            match query_type {
+                QueryType::SetEntity(entity) => {
+                    let row = query.fetch_one(&mut *tx).await.with_context(|| {
+                        format!("Failed to execute query: {:?}, args: {:?}", statement, arguments)
+                    })?;
+                    let mut entity_updated = EntityUpdated::from_row(&row)?;
+                    entity_updated.updated_model = Some(entity);
+                    entity_updated.deleted = false;
+                    let broker_message = BrokerMessage::EntityUpdated(entity_updated);
+                    self.push_publish(broker_message);
+                }
+                QueryType::Other => {
+                    query.execute(&mut *tx).await.with_context(|| {
+                        format!("Failed to execute query: {:?}, args: {:?}", statement, arguments)
+                    })?;
+                }
+            }
         }
 
         tx.commit().await?;
 
         while let Some(message) = self.publish_queue.pop_front() {
-            match message {
-                BrokerMessage::ModelRegistered(model) => SimpleBroker::publish(model),
-                BrokerMessage::EntityUpdated(entity) => SimpleBroker::publish(entity),
-                BrokerMessage::EventMessageUpdated(event) => SimpleBroker::publish(event),
-                BrokerMessage::EventEmitted(event) => SimpleBroker::publish(event),
-            }
+            send_broker_message(message);
         }
 
-        Ok(total_affected)
+        Ok(())
+    }
+}
+
+fn send_broker_message(message: BrokerMessage) {
+    match message {
+        BrokerMessage::ModelRegistered(model) => SimpleBroker::publish(model),
+        BrokerMessage::EntityUpdated(entity) => SimpleBroker::publish(entity),
+        BrokerMessage::EventMessageUpdated(event) => SimpleBroker::publish(event),
+        BrokerMessage::EventEmitted(event) => SimpleBroker::publish(event),
     }
 }
