@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1725826061716,
+  "lastUpdate": 1725837543742,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -19105,6 +19105,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3909388,
             "range": "± 39612",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4d34bc5056662de2e4830a8d9a348647cbf21884",
+          "message": "fix: fix sozo issues with migration on sepolia (#2398)\n\n* fix: fix sozo issues with migration on sepolia\r\n\r\n* fix: ensure keystore password can be taken from env and cli",
+          "timestamp": "2024-09-08T16:59:53-06:00",
+          "tree_id": "f1187d1072cfa70c8bf08ac68e03b03bf62f7476",
+          "url": "https://github.com/dojoengine/dojo/commit/4d34bc5056662de2e4830a8d9a348647cbf21884"
+        },
+        "date": 1725837542158,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17713570,
+            "range": "± 224004",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3994546,
+            "range": "± 237437",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3566045684,
+            "range": "± 791369856",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4241816,
+            "range": "± 159908",
             "unit": "ns/iter"
           }
         ]
