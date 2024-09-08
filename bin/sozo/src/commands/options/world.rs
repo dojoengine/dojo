@@ -2,11 +2,10 @@ use std::str::FromStr;
 
 use anyhow::{anyhow, Result};
 use clap::Args;
+use dojo_utils::env::DOJO_WORLD_ADDRESS_ENV_VAR;
 use dojo_world::config::Environment;
 use starknet::core::types::Felt;
 use tracing::trace;
-
-use super::DOJO_WORLD_ADDRESS_ENV_VAR;
 
 #[derive(Debug, Args, Clone)]
 #[command(next_help_heading = "World options")]

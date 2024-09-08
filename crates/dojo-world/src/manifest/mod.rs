@@ -127,7 +127,7 @@ impl BaseManifest {
     }
 
     /// Given a list of contract or model tags, remove those from the manifest.
-    pub fn remove_tags(&mut self, tags: Vec<String>) {
+    pub fn remove_tags(&mut self, tags: &[String]) {
         self.contracts.retain(|contract| !tags.contains(&contract.inner.tag));
         self.models.retain(|model| !tags.contains(&model.inner.tag));
     }

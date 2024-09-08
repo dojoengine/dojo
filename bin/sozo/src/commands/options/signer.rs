@@ -2,12 +2,14 @@ use std::str::FromStr;
 
 use anyhow::{anyhow, Result};
 use clap::Args;
+use dojo_utils::env::{
+    DOJO_KEYSTORE_PASSWORD_ENV_VAR, DOJO_KEYSTORE_PATH_ENV_VAR, DOJO_PRIVATE_KEY_ENV_VAR,
+};
+use dojo_utils::keystore::prompt_password_if_needed;
 use dojo_world::config::Environment;
 use starknet::core::types::Felt;
 use starknet::signers::{LocalWallet, SigningKey};
 use tracing::trace;
-
-use super::{DOJO_KEYSTORE_PASSWORD_ENV_VAR, DOJO_KEYSTORE_PATH_ENV_VAR, DOJO_PRIVATE_KEY_ENV_VAR};
 
 #[derive(Debug, Args, Clone)]
 #[command(next_help_heading = "Signer options")]
@@ -42,35 +44,86 @@ pub struct SignerOptions {
 }
 
 impl SignerOptions {
+    /// Retrieves the signer from the CLI or environment metadata.
+    /// First, attempt to locate the signer from CLI arguments or environment variables via CLAP.
+    /// If unsuccessful, then search for the signer within the Dojo environment metadata.
+    /// If the signer is not found in any of the above locations, return an error.
     pub fn signer(&self, env_metadata: Option<&Environment>, no_wait: bool) -> Result<LocalWallet> {
-        if let Some(private_key) = self.private_key(env_metadata) {
-            trace!(private_key, "Signing using private key.");
-            return Ok(LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
-                Felt::from_str(&private_key)?,
-            )));
-        }
+        let pk_cli = self.private_key.clone();
+        let pk_env = env_metadata.and_then(|env| env.private_key().map(|s| s.to_string()));
 
-        if let Some(path) = self.keystore_path(env_metadata) {
-            let password = {
-                if let Some(password) = self.keystore_password(env_metadata) {
-                    password.to_owned()
-                } else if no_wait {
-                    return Err(anyhow!("Could not find password. Please specify the password."));
-                } else {
-                    trace!("Prompting user for keystore password.");
-                    rpassword::prompt_password("Enter password: ")?
-                }
-            };
-            let private_key = SigningKey::from_keystore(path, &password)?;
-            return Ok(LocalWallet::from_signing_key(private_key));
-        }
+        let pk_keystore_cli = self.private_key_from_keystore_cli(env_metadata, no_wait)?;
+        let pk_keystore_env = self.private_key_from_keystore_env(env_metadata, no_wait)?;
 
-        Err(anyhow!(
-            "Could not find private key. Please specify the private key or path to the keystore \
-             file."
-        ))
+        let private_key = if let Some(private_key) = pk_cli {
+            trace!("Signing using private key from CLI.");
+            SigningKey::from_secret_scalar(Felt::from_str(&private_key)?)
+        } else if let Some(private_key) = pk_keystore_cli {
+            trace!("Signing using private key from CLI keystore.");
+            private_key
+        } else if let Some(private_key) = pk_env {
+            trace!("Signing using private key from env metadata.");
+            SigningKey::from_secret_scalar(Felt::from_str(&private_key)?)
+        } else if let Some(private_key) = pk_keystore_env {
+            trace!("Signing using private key from env metadata keystore.");
+            private_key
+        } else {
+            return Err(anyhow!(
+                "Could not find private key. Please specify the private key or path to the \
+                 keystore file."
+            ));
+        };
+
+        Ok(LocalWallet::from_signing_key(private_key))
     }
 
+    /// Retrieves the private key from the CLI keystore.
+    /// If the keystore path is not set, it returns `None`.
+    pub fn private_key_from_keystore_cli(
+        &self,
+        env_metadata: Option<&Environment>,
+        no_wait: bool,
+    ) -> Result<Option<SigningKey>> {
+        if let Some(path) = &self.keystore_path {
+            let maybe_password = if self.keystore_password.is_some() {
+                self.keystore_password.as_deref()
+            } else {
+                env_metadata.and_then(|env| env.keystore_password())
+            };
+
+            let password = prompt_password_if_needed(maybe_password, no_wait)?;
+
+            let private_key = SigningKey::from_keystore(path, &password)?;
+            return Ok(Some(private_key));
+        }
+
+        Ok(None)
+    }
+
+    /// Retrieves the private key from the keystore in the environment metadata.
+    /// If the keystore path is not set, it returns `None`.
+    pub fn private_key_from_keystore_env(
+        &self,
+        env_metadata: Option<&Environment>,
+        no_wait: bool,
+    ) -> Result<Option<SigningKey>> {
+        if let Some(path) = env_metadata.and_then(|env| env.keystore_path()) {
+            let maybe_password = if self.keystore_password.is_some() {
+                self.keystore_password.as_deref()
+            } else {
+                env_metadata.and_then(|env| env.keystore_password())
+            };
+
+            let password = prompt_password_if_needed(maybe_password, no_wait)?;
+
+            let private_key = SigningKey::from_keystore(path, &password)?;
+            return Ok(Some(private_key));
+        }
+
+        Ok(None)
+    }
+
+    /// Retrieves the private key from the CLI or environment metadata.
     pub fn private_key(&self, env_metadata: Option<&Environment>) -> Option<String> {
         if let Some(s) = &self.private_key {
             Some(s.to_owned())
@@ -79,19 +132,12 @@ impl SignerOptions {
         }
     }
 
+    /// Retrieves the keystore path from the CLI or environment metadata.
     pub fn keystore_path(&self, env_metadata: Option<&Environment>) -> Option<String> {
         if let Some(s) = &self.keystore_path {
             Some(s.to_owned())
         } else {
             env_metadata.and_then(|env| env.keystore_path().map(|s| s.to_string()))
-        }
-    }
-
-    pub fn keystore_password(&self, env_metadata: Option<&Environment>) -> Option<String> {
-        if let Some(s) = &self.keystore_password {
-            Some(s.to_owned())
-        } else {
-            env_metadata.and_then(|env| env.keystore_password().map(|s| s.to_string()))
         }
     }
 }

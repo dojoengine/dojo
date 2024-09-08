@@ -10,6 +10,7 @@ version.workspace = true
 anyhow.workspace = true
 clap.workspace = true
 console.workspace = true
+dojo-utils.workspace = true
 katana-primitives.workspace = true
 katana-rpc-api.workspace = true
 saya-core.workspace = true

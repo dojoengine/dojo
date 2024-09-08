@@ -4,10 +4,12 @@ use std::io::BufReader;
 use std::path::PathBuf;
 
 use clap::Parser;
+use dojo_utils::keystore::prompt_password_if_needed;
 use saya_core::data_availability::celestia::CelestiaConfig;
 use saya_core::data_availability::DataAvailabilityConfig;
 use saya_core::{ProverAccessKey, SayaConfig, StarknetAccountData};
 use starknet::core::utils::cairo_short_string_to_felt;
+use starknet::signers::SigningKey;
 use starknet_account::StarknetAccountOptions;
 use tracing::Subscriber;
 use tracing_subscriber::{fmt, EnvFilter};
@@ -130,11 +132,30 @@ impl TryFrom<SayaArgs> for SayaConfig {
                 None => None,
             };
 
+            // Check if the private key is from keystore or provided directly to follow `sozo`
+            // conventions.
+            let private_key = if let Some(pk) = args.starknet_account.signer_key {
+                pk
+            } else if let Some(path) = args.starknet_account.signer_keystore_path {
+                let password = prompt_password_if_needed(
+                    args.starknet_account.signer_keystore_password.as_deref(),
+                    false,
+                )?;
+
+                SigningKey::from_keystore(path, &password)?.secret_scalar()
+            } else {
+                return Err(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput,
+                    "Could not find private key. Please specify the private key or path to the \
+                     keystore file.",
+                )));
+            };
+
             let starknet_account = StarknetAccountData {
                 starknet_url: args.starknet_account.starknet_url,
                 chain_id: cairo_short_string_to_felt(&args.starknet_account.chain_id)?,
                 signer_address: args.starknet_account.signer_address,
-                signer_key: args.starknet_account.signer_key,
+                signer_key: private_key,
             };
 
             let prover_key =
@@ -200,7 +221,9 @@ mod tests {
                 starknet_url: Url::parse("http://localhost:5030").unwrap(),
                 chain_id: "SN_SEPOLIA".to_string(),
                 signer_address: Default::default(),
-                signer_key: Default::default(),
+                signer_key: None,
+                signer_keystore_path: None,
+                signer_keystore_password: None,
             },
         };
 
