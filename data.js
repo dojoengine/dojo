@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1725651595253,
+  "lastUpdate": 1725820593139,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -19009,6 +19009,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4706618,
             "range": "± 666906",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6b9da8321b81f5a45239084603157b3dc4e7a164",
+          "message": "opt(torii): avoid calculating poseidon hash where possible (#2394)\n\n* opt(torii): avoid calculating poseidon hash where possible\r\n\r\ncommit-id:3b4d856a\r\n\r\n* add script to spam spawn-and-move with bunch of entities\r\n\r\n* feat: emit entity id for StoreSetRecord\r\n\r\n* fix: run fmt checkers\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-09-08T12:17:45-06:00",
+          "tree_id": "b7ec85541f3266aafcb0fe0c5c78278975bc6efa",
+          "url": "https://github.com/dojoengine/dojo/commit/6b9da8321b81f5a45239084603157b3dc4e7a164"
+        },
+        "date": 1725820591929,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17693345,
+            "range": "± 284560",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3783528,
+            "range": "± 166466",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3711968239,
+            "range": "± 770875395",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3897256,
+            "range": "± 53492",
             "unit": "ns/iter"
           }
         ]
