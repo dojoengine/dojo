@@ -392,7 +392,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug> Engine<P> {
                 }
                 Ok(_) => {
                     last_pending_block_tx = Some(*transaction_hash);
-                    info!(target: LOG_TARGET, transaction_hash = %format!("{:#x}", transaction_hash), "Processed pending transaction.")
+                    debug!(target: LOG_TARGET, transaction_hash = %format!("{:#x}", transaction_hash), "Processed pending transaction.")
                 }
             }
         }
