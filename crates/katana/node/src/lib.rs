@@ -54,7 +54,7 @@ pub struct Node {
     pub backend: Arc<Backend<BlockifierFactory>>,
     pub block_producer: Arc<BlockProducer<BlockifierFactory>>,
     pub pool: TxPool,
-    pub rpc: RpcServerHandle,
+    pub rpc: RpcServer,
 }
 
 /// Build the core Katana components from the given configurations and start running the node.
@@ -229,7 +229,7 @@ pub async fn start(
 pub async fn spawn<EF: ExecutorFactory>(
     node_components: (TxPool, Arc<Backend<EF>>, Arc<BlockProducer<EF>>, TxValidator),
     config: ServerConfig,
-) -> Result<RpcServerHandle> {
+) -> Result<RpcServer> {
     let (pool, backend, block_producer, validator) = node_components;
 
     let mut methods = RpcModule::new(());
@@ -299,11 +299,11 @@ pub async fn spawn<EF: ExecutorFactory>(
     let addr = server.local_addr()?;
     let handle = server.start(methods)?;
 
-    Ok(RpcServerHandle { handle, addr })
+    Ok(RpcServer { handle, addr })
 }
 
 #[derive(Debug)]
-pub struct RpcServerHandle {
+pub struct RpcServer {
     pub addr: SocketAddr,
     pub handle: ServerHandle,
 }
