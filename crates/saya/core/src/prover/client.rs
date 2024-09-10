@@ -1,9 +1,12 @@
 use std::sync::Arc;
+use std::time::Instant;
 
 use anyhow::Context;
 use katana_primitives::FieldElement;
 use prover_sdk::access_key::ProverAccessKey;
 use prover_sdk::sdk::ProverSDK;
+use serde::Deserialize;
+use serde_json::Value;
 use url::Url;
 
 use super::loader::prepare_input_cairo1;
@@ -14,6 +17,10 @@ use crate::prover::loader::prepare_input_cairo0;
 pub struct HttpProverParams {
     pub prover_url: Url,
     pub prover_key: ProverAccessKey,
+}
+#[derive(Deserialize)]
+pub struct JobId {
+    pub job_id: u64,
 }
 
 pub async fn http_prove_felts(
@@ -35,12 +42,30 @@ pub async fn http_prove(
 ) -> anyhow::Result<String> {
     let prover =
         ProverSDK::new(prover_params.prover_url.clone(), prover_params.prover_key.clone()).await;
-    let prover = prover.as_ref().map_err(|e| anyhow::anyhow!(e.to_string()))?;
+    let prover = prover.    as_ref().map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
     // TODO: cairo0 might be deprectated in the future.
     if prove_program.cairo_version() == FieldElement::ONE {
         let input = prepare_input_cairo1(input, prove_program).await?;
-        prover.prove_cairo(input).await.context("Failed to prove using the http prover")
+        let job_id = prover.prove_cairo(input).await.context("Failed to prove using the http prover")?;
+        let job:JobId = serde_json::from_str(&job_id).unwrap();
+        prover.sse(job.job_id).await?;
+        let response = prover.get_job(job.job_id).await?;
+        let response = response.text().await?;
+        let json_response: Value = serde_json::from_str(&response)?;
+        if let Some(status) = json_response.get("status").and_then(Value::as_str) {
+            if status == "Completed" {
+                return Ok(json_response
+                    .get("result")
+                    .and_then(Value::as_str)
+                    .unwrap_or("No result found")
+                    .to_string());
+            } else {
+                Err(anyhow::Error::msg(json_response.to_string()))
+            }
+        } else {
+            Err(anyhow::Error::msg(json_response.to_string()))
+        }
     } else {
         let input = prepare_input_cairo0(input, prove_program).await?;
         prover.prove_cairo0(input).await.context("Failed to prove using the http prover")

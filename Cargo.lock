@@ -3458,7 +3458,7 @@ dependencies = [
 [[package]]
 name = "common"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/http-prover?rev=103597b#103597b38e35136e27aeb15ec5dd6a7aaaa779a9"
+source = "git+https://github.com/cartridge-gg/http-prover?rev=b2c64c888b4e9fb7ecbcc0b4b49f9e831afa20dd#b2c64c888b4e9fb7ecbcc0b4b49f9e831afa20dd"
 dependencies = [
  "ed25519-dalek",
  "serde",
@@ -10751,7 +10751,7 @@ dependencies = [
 [[package]]
 name = "prover-sdk"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/http-prover?rev=103597b#103597b38e35136e27aeb15ec5dd6a7aaaa779a9"
+source = "git+https://github.com/cartridge-gg/http-prover?rev=b2c64c888b4e9fb7ecbcc0b4b49f9e831afa20dd#b2c64c888b4e9fb7ecbcc0b4b49f9e831afa20dd"
 dependencies = [
  "base64 0.22.1",
  "common",

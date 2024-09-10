@@ -35,4 +35,4 @@ cairo-felt = "0.9.1"
 num-bigint = "0.4.4"
 num-traits = "0.2.18"
 
-prover-sdk = { git = "https://github.com/cartridge-gg/http-prover", rev = "103597b" }
+prover-sdk = { git = "https://github.com/cartridge-gg/http-prover", rev = "b2c64c888b4e9fb7ecbcc0b4b49f9e831afa20dd" }
