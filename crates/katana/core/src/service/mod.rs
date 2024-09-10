@@ -1,4 +1,5 @@
-//! background service
+// TODO: remove the messaging feature flag
+// TODO: move the tasks to a separate module
 
 use std::future::Future;
 use std::pin::Pin;
@@ -14,7 +15,7 @@ use katana_primitives::FieldElement;
 use tracing::{error, info};
 
 use self::block_producer::BlockProducer;
-use self::metrics::{BlockProducerMetrics, ServiceMetrics};
+use self::metrics::BlockProducerMetrics;
 
 pub mod block_producer;
 #[cfg(feature = "messaging")]
@@ -26,90 +27,99 @@ use self::messaging::{MessagingOutcome, MessagingService};
 
 pub(crate) const LOG_TARGET: &str = "node";
 
+#[cfg(feature = "messaging")]
+#[allow(missing_debug_implementations)]
+#[must_use = "MessagingTask does nothing unless polled"]
+pub struct MessagingTask<EF: ExecutorFactory> {
+    messaging: MessagingService<EF>,
+}
+
+impl<EF: ExecutorFactory> MessagingTask<EF> {
+    pub fn new(messaging: MessagingService<EF>) -> Self {
+        Self { messaging }
+    }
+}
+
+#[cfg(feature = "messaging")]
+impl<EF: ExecutorFactory> Future for MessagingTask<EF> {
+    type Output = ();
+
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        let this = self.get_mut();
+
+        while let Poll::Ready(Some(outcome)) = this.messaging.poll_next_unpin(cx) {
+            match outcome {
+                MessagingOutcome::Gather { msg_count, .. } => {
+                    info!(target: LOG_TARGET, %msg_count, "Collected messages from settlement chain.");
+                }
+
+                MessagingOutcome::Send { msg_count, .. } => {
+                    info!(target: LOG_TARGET, %msg_count, "Sent messages to the settlement chain.");
+                }
+            }
+        }
+
+        Poll::Pending
+    }
+}
+
 /// The type that drives the blockchain's state
 ///
-/// This service is basically an endless future that continuously polls the miner which returns
+/// This task is basically an endless future that continuously polls the miner which returns
 /// transactions for the next block, then those transactions are handed off to the [BlockProducer]
 /// to construct a new block.
+#[must_use = "BlockProductionTask does nothing unless polled"]
 #[allow(missing_debug_implementations)]
-pub struct NodeService<EF: ExecutorFactory> {
-    /// the pool that holds all transactions
-    pub(crate) pool: TxPool,
+pub struct BlockProductionTask<EF: ExecutorFactory> {
     /// creates new blocks
     pub(crate) block_producer: Arc<BlockProducer<EF>>,
     /// the miner responsible to select transactions from the `pool´
     pub(crate) miner: TransactionMiner,
-    /// The messaging service
-    #[cfg(feature = "messaging")]
-    pub(crate) messaging: Option<MessagingService<EF>>,
+    /// the pool that holds all transactions
+    pub(crate) pool: TxPool,
     /// Metrics for recording the service operations
-    metrics: ServiceMetrics,
+    metrics: BlockProducerMetrics,
 }
 
-impl<EF: ExecutorFactory> NodeService<EF> {
+impl<EF: ExecutorFactory> BlockProductionTask<EF> {
     pub fn new(
         pool: TxPool,
         miner: TransactionMiner,
         block_producer: Arc<BlockProducer<EF>>,
-        #[cfg(feature = "messaging")] messaging: Option<MessagingService<EF>>,
     ) -> Self {
-        let metrics = ServiceMetrics { block_producer: BlockProducerMetrics::default() };
-
-        Self {
-            pool,
-            miner,
-            block_producer,
-            metrics,
-            #[cfg(feature = "messaging")]
-            messaging,
-        }
+        Self { block_producer, miner, pool, metrics: BlockProducerMetrics::default() }
     }
 }
 
-impl<EF: ExecutorFactory> Future for NodeService<EF> {
+impl<EF: ExecutorFactory> Future for BlockProductionTask<EF> {
     type Output = ();
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        let pin = self.get_mut();
-
-        #[cfg(feature = "messaging")]
-        if let Some(messaging) = pin.messaging.as_mut() {
-            while let Poll::Ready(Some(outcome)) = messaging.poll_next_unpin(cx) {
-                match outcome {
-                    MessagingOutcome::Gather { msg_count, .. } => {
-                        info!(target: LOG_TARGET, msg_count = %msg_count, "Collected messages from settlement chain.");
-                    }
-                    MessagingOutcome::Send { msg_count, .. } => {
-                        info!(target: LOG_TARGET,  msg_count = %msg_count, "Sent messages to the settlement chain.");
-                    }
-                }
-            }
-        }
+        let this = self.get_mut();
 
         // this drives block production and feeds new sets of ready transactions to the block
         // producer
         loop {
-            while let Poll::Ready(Some(res)) = pin.block_producer.poll_next(cx) {
+            while let Poll::Ready(Some(res)) = this.block_producer.poll_next(cx) {
                 match res {
                     Ok(outcome) => {
                         info!(target: LOG_TARGET, block_number = %outcome.block_number, "Mined block.");
 
-                        let metrics = &pin.metrics.block_producer;
                         let gas_used = outcome.stats.l1_gas_used;
                         let steps_used = outcome.stats.cairo_steps_used;
-                        metrics.l1_gas_processed_total.increment(gas_used as u64);
-                        metrics.cairo_steps_processed_total.increment(steps_used as u64);
+                        this.metrics.l1_gas_processed_total.increment(gas_used as u64);
+                        this.metrics.cairo_steps_processed_total.increment(steps_used as u64);
                     }
 
-                    Err(err) => {
-                        error!(target: LOG_TARGET, error = %err, "Mining block.");
+                    Err(error) => {
+                        error!(target: LOG_TARGET, %error, "Mining block.");
                     }
                 }
             }
 
-            if let Poll::Ready(pool_txs) = pin.miner.poll(&pin.pool, cx) {
+            if let Poll::Ready(pool_txs) = this.miner.poll(&this.pool, cx) {
                 // miner returned a set of transaction that we feed to the producer
-                pin.block_producer.queue(pool_txs);
+                this.block_producer.queue(pool_txs);
             } else {
                 // no progress made
                 break;
