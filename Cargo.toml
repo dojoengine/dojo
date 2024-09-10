@@ -234,7 +234,7 @@ alloy-sol-types = { version = "0.7.6", default-features = false }
 criterion = "0.5.1"
 
 # Controller integration
-account_sdk = { git = "https://github.com/cartridge-gg/controller", rev = "a47be9c" }
+account_sdk = { git = "https://github.com/cartridge-gg/controller", rev = "512ff89" }
 slot = { git = "https://github.com/cartridge-gg/slot", rev = "4c1165d" }
 
 alloy-contract = { version = "0.2", default-features = false }
@@ -252,3 +252,4 @@ alloy-transport = { version = "0.2", default-features = false }
 # To re-export the entire `felt` module from `starknet-types-core`.
 starknet-core = { git = "https://github.com/kariy/starknet-rs", branch = "dojo-patch" }
 starknet-types-core = { git = "https://github.com/dojoengine/types-rs", rev = "289e2f0" }
+web-sys = { git = "https://github.com/rustwasm/wasm-bindgen", tag = "0.3.70" }
