@@ -271,7 +271,7 @@ pub fn copy_project_temp(
 /// * `profile` - The profile to use for the config.
 pub fn build_test_config(path: &str, profile: Profile) -> anyhow::Result<Config> {
     let mut compilers = CompilerRepository::empty();
-    compilers.add(Box::new(DojoCompiler)).unwrap();
+    compilers.add(Box::new(DojoCompiler::default())).unwrap();
 
     let cairo_plugins = CairoPluginRepository::default();
 

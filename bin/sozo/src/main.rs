@@ -33,10 +33,16 @@ fn cli_main(args: SozoArgs) -> Result<()> {
     let cairo_plugins = CairoPluginRepository::default();
 
     match &args.command {
-        Commands::Build(_) | Commands::Dev(_) | Commands::Migrate(_) => {
+        Commands::Build(args) => {
             trace!("Adding DojoCompiler to compiler repository.");
-            compilers.add(Box::new(DojoCompiler)).unwrap()
+            compilers.add(Box::new(DojoCompiler::new(args.output_debug_info))).unwrap()
         }
+
+        Commands::Dev(_) | Commands::Migrate(_) => {
+            trace!("Adding DojoCompiler to compiler repository.");
+            compilers.add(Box::new(DojoCompiler::default())).unwrap()
+        }
+
         _ => {}
     }
 

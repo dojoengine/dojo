@@ -63,8 +63,21 @@ pub(crate) const LOG_TARGET: &str = "dojo_lang::compiler";
 #[path = "compiler_test.rs"]
 mod test;
 
-#[derive(Debug)]
-pub struct DojoCompiler;
+#[derive(Debug, Default)]
+pub struct DojoCompiler {
+    /// Output the debug information of the compiled Sierra contracts.
+    ///
+    /// Mainly used for the Walnut debugger integration. It is used
+    /// internally by Walnut to build the Dojo project with the Sierra
+    /// debug information. This flag has no use outside of that.
+    output_debug_info: bool,
+}
+
+impl DojoCompiler {
+    pub fn new(output_debug_info: bool) -> Self {
+        Self { output_debug_info }
+    }
+}
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -143,9 +156,7 @@ impl Compiler for DojoCompiler {
             compile_prepared_db(db, &contracts, compiler_config)?
         };
 
-        // TODO: get the debug flag from the `dojo_<profile>.toml` file.
-        let with_debug_info = true;
-        let debug_info_classes: Vec<Option<SierraToCairoDebugInfo>> = if with_debug_info {
+        let debug_info_classes: Vec<Option<SierraToCairoDebugInfo>> = if self.output_debug_info {
             let debug_classes =
                 crate::scarb_internal::debug::compile_prepared_db_to_debug_info(db, &contracts)?;
 
