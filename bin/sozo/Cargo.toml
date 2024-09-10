@@ -74,4 +74,4 @@ snapbox = "0.4.6"
 default = [ "controller", "walnut" ]
 
 controller = [ "dep:account_sdk", "dep:reqwest", "dep:slot" ]
-walnut = [ "dep:sozo-walnut" ]
+walnut = [ "dep:sozo-walnut", "sozo-ops/walnut" ]
