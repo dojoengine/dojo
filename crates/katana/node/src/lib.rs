@@ -41,6 +41,7 @@ use katana_rpc_api::saya::SayaApiServer;
 use katana_rpc_api::starknet::{StarknetApiServer, StarknetTraceApiServer, StarknetWriteApiServer};
 use katana_rpc_api::torii::ToriiApiServer;
 use katana_rpc_api::ApiKind;
+use katana_tasks::TaskManager;
 use num_traits::ToPrimitive;
 use starknet::core::types::{BlockId, BlockStatus, MaybePendingBlockWithTxHashes};
 use starknet::core::utils::parse_cairo_short_string;
@@ -54,8 +55,19 @@ use tracing::{info, trace};
 pub struct Handle {
     pub pool: TxPool,
     pub rpc: RpcServer,
+    pub task_manager: TaskManager,
     pub backend: Arc<Backend<BlockifierFactory>>,
     pub block_producer: Arc<BlockProducer<BlockifierFactory>>,
+}
+
+impl Handle {
+    /// Stops the Katana node.
+    pub async fn stop(self) -> Result<()> {
+        // TODO: wait for the rpc server to stop
+        self.rpc.handle.stop()?;
+        self.task_manager.shutdown().await;
+        Ok(())
+    }
 }
 
 /// Build the core Katana components from the given configurations and start running the node.
@@ -209,8 +221,11 @@ pub async fn start(
 
     let block_producer = Arc::new(block_producer);
 
-    // TODO: avoid dangling task, or at least store the handle to the NodeService
-    tokio::spawn(NodeService::new(
+    // Create a TaskManager using the ambient Tokio runtime
+    let task_manager = TaskManager::current();
+
+    // Spawn the NodeService as a critical task
+    task_manager.build_task().critical().name("NodeService").spawn(NodeService::new(
         pool.clone(),
         miner,
         block_producer.clone(),
@@ -223,7 +238,7 @@ pub async fn start(
     let node_components = (pool.clone(), backend.clone(), block_producer.clone(), validator);
     let rpc = spawn(node_components, server_config).await?;
 
-    Ok(Handle { backend, block_producer, pool, rpc })
+    Ok(Handle { backend, block_producer, pool, rpc, task_manager })
 }
 
 // Moved from `katana_rpc` crate

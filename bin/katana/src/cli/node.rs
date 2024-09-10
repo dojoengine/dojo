@@ -234,9 +234,14 @@ impl NodeArgs {
             print_intro(&self, genesis, node.rpc.addr);
         }
 
-        // Wait until Ctrl + C is pressed, then shutdown
-        ctrl_c().await?;
-        node.rpc.handle.stop()?;
+        // Wait until ctrl-c signal is received or TaskManager signals shutdown
+        tokio::select! {
+            _ = ctrl_c() => {},
+            _ = node.task_manager.wait_for_shutdown() => {}
+        }
+
+        info!("Shutting down...");
+        node.stop().await?;
 
         Ok(())
     }
