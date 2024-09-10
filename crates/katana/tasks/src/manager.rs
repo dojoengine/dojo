@@ -52,7 +52,12 @@ impl TaskManager {
     ///
     /// No task can be spawned on the manager after this method is called.
     pub async fn shutdown(self) {
+        if !self.on_cancel.is_cancelled() {
+            self.on_cancel.cancel();
+        }
+
         self.wait_for_shutdown().await;
+
         // need to close the tracker first before waiting
         let _ = self.tracker.close();
         self.tracker.wait().await;
