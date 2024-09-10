@@ -34,6 +34,7 @@ pub struct MessagingTask<EF: ExecutorFactory> {
     messaging: MessagingService<EF>,
 }
 
+#[cfg(feature = "messaging")]
 impl<EF: ExecutorFactory> MessagingTask<EF> {
     pub fn new(messaging: MessagingService<EF>) -> Self {
         Self { messaging }
