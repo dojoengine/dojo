@@ -4,6 +4,7 @@ use dojo_world::contracts::naming::ensure_namespace;
 use dojo_world::metadata::get_default_namespace_from_ws;
 use scarb::core::Config;
 use sozo_ops::execute;
+#[cfg(feature = "walnut")]
 use sozo_walnut::WalnutDebugger;
 use tracing::trace;
 
@@ -62,6 +63,7 @@ impl ExecuteArgs {
             ensure_namespace(&self.tag_or_address, &default_namespace)
         };
 
+        #[cfg(feature = "walnut")]
         let walnut_debugger = WalnutDebugger::new_from_flag(
             self.transaction.walnut,
             self.starknet.url(env_metadata.as_ref())?,
@@ -99,6 +101,7 @@ impl ExecuteArgs {
                 calldata,
                 &world,
                 &tx_config,
+                #[cfg(feature = "walnut")]
                 &walnut_debugger,
             )
             .await
