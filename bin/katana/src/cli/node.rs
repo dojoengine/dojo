@@ -226,18 +226,17 @@ impl NodeArgs {
         let starknet_config = self.starknet_config()?;
 
         // build the node and start it
-        let (rpc_handle, backend) =
-            katana_node::start(server_config, sequencer_config, starknet_config).await?;
+        let node = katana_node::start(server_config, sequencer_config, starknet_config).await?;
 
         if !self.silent {
             #[allow(deprecated)]
-            let genesis = &backend.config.genesis;
-            print_intro(&self, genesis, rpc_handle.addr);
+            let genesis = &node.backend.config.genesis;
+            print_intro(&self, genesis, node.rpc.addr);
         }
 
         // Wait until Ctrl + C is pressed, then shutdown
         ctrl_c().await?;
-        rpc_handle.handle.stop()?;
+        node.rpc.handle.stop()?;
 
         Ok(())
     }
