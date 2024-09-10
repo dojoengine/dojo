@@ -7,7 +7,7 @@ use katana_core::constants::DEFAULT_SEQUENCER_ADDRESS;
 #[allow(deprecated)]
 pub use katana_core::sequencer::SequencerConfig;
 use katana_executor::implementation::blockifier::BlockifierFactory;
-use katana_node::Node;
+use katana_node::Handle;
 use katana_primitives::chain::ChainId;
 use katana_rpc::config::ServerConfig;
 use katana_rpc_api::ApiKind;
@@ -29,7 +29,7 @@ pub struct TestAccount {
 #[allow(missing_debug_implementations)]
 pub struct TestSequencer {
     url: Url,
-    handle: Node,
+    handle: Handle,
     account: TestAccount,
 }
 

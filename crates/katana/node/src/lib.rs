@@ -49,12 +49,13 @@ use starknet::providers::{JsonRpcClient, Provider};
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing::{info, trace};
 
+/// A handle to the instantiated Katana node.
 #[allow(missing_debug_implementations)]
-pub struct Node {
-    pub backend: Arc<Backend<BlockifierFactory>>,
-    pub block_producer: Arc<BlockProducer<BlockifierFactory>>,
+pub struct Handle {
     pub pool: TxPool,
     pub rpc: RpcServer,
+    pub backend: Arc<Backend<BlockifierFactory>>,
+    pub block_producer: Arc<BlockProducer<BlockifierFactory>>,
 }
 
 /// Build the core Katana components from the given configurations and start running the node.
@@ -71,7 +72,7 @@ pub async fn start(
     server_config: ServerConfig,
     sequencer_config: SequencerConfig,
     mut starknet_config: StarknetConfig,
-) -> Result<Node> {
+) -> Result<Handle> {
     // --- build executor factory
 
     let cfg_env = CfgEnv {
@@ -222,7 +223,7 @@ pub async fn start(
     let node_components = (pool.clone(), backend.clone(), block_producer.clone(), validator);
     let rpc = spawn(node_components, server_config).await?;
 
-    Ok(Node { backend, block_producer, pool, rpc })
+    Ok(Handle { backend, block_producer, pool, rpc })
 }
 
 // Moved from `katana_rpc` crate
