@@ -49,6 +49,14 @@ use starknet::providers::{JsonRpcClient, Provider};
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing::{info, trace};
 
+#[allow(missing_debug_implementations)]
+pub struct Node {
+    pub backend: Arc<Backend<BlockifierFactory>>,
+    pub block_producer: Arc<BlockProducer<BlockifierFactory>>,
+    pub pool: TxPool,
+    pub rpc: RpcServerHandle,
+}
+
 /// Build the core Katana components from the given configurations and start running the node.
 // TODO: placeholder until we implement a dedicated class that encapsulate building the node
 // components
@@ -63,7 +71,7 @@ pub async fn start(
     server_config: ServerConfig,
     sequencer_config: SequencerConfig,
     mut starknet_config: StarknetConfig,
-) -> anyhow::Result<(NodeHandle, Arc<Backend<BlockifierFactory>>)> {
+) -> Result<Node> {
     // --- build executor factory
 
     let cfg_env = CfgEnv {
@@ -211,17 +219,17 @@ pub async fn start(
 
     // --- spawn rpc server
 
-    let node_components = (pool, backend.clone(), block_producer, validator);
-    let rpc_handle = spawn(node_components, server_config).await?;
+    let node_components = (pool.clone(), backend.clone(), block_producer.clone(), validator);
+    let rpc = spawn(node_components, server_config).await?;
 
-    Ok((rpc_handle, backend))
+    Ok(Node { backend, block_producer, pool, rpc })
 }
 
 // Moved from `katana_rpc` crate
 pub async fn spawn<EF: ExecutorFactory>(
     node_components: (TxPool, Arc<Backend<EF>>, Arc<BlockProducer<EF>>, TxValidator),
     config: ServerConfig,
-) -> Result<NodeHandle> {
+) -> Result<RpcServerHandle> {
     let (pool, backend, block_producer, validator) = node_components;
 
     let mut methods = RpcModule::new(());
@@ -291,12 +299,11 @@ pub async fn spawn<EF: ExecutorFactory>(
     let addr = server.local_addr()?;
     let handle = server.start(methods)?;
 
-    Ok(NodeHandle { config, handle, addr })
+    Ok(RpcServerHandle { handle, addr })
 }
 
-#[derive(Debug, Clone)]
-pub struct NodeHandle {
+#[derive(Debug)]
+pub struct RpcServerHandle {
     pub addr: SocketAddr,
-    pub config: ServerConfig,
     pub handle: ServerHandle,
 }
