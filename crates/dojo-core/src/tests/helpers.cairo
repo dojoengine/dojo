@@ -15,7 +15,7 @@ pub struct Foo {
 }
 
 #[derive(Copy, Drop, Serde)]
-#[dojo::model(namespace: "another_namespace", nomapping: true)]
+#[dojo::model(namespace: "bizz", nomapping: true)]
 pub struct Buzz {
     #[key]
     pub caller: ContractAddress,
@@ -203,7 +203,7 @@ pub fn deploy_world() -> IWorldDispatcher {
 pub fn deploy_world_and_bar() -> (IWorldDispatcher, IbarDispatcher) {
     // Spawn empty world
     let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model(dojo__foo::TEST_CLASS_HASH.try_into().unwrap());
 
     // System contract
     let contract_address = deploy_with_world_address(bar::TEST_CLASS_HASH, world);

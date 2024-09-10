@@ -404,7 +404,7 @@
   },
   {
     "type": "event",
-    "name": "armory::flatbow::Event",
+    "name": "armory::dojo_examples_weapons__flatbow::Event",
     "kind": "enum",
     "variants": []
   }

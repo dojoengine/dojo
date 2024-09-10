@@ -408,7 +408,7 @@
   },
   {
     "type": "event",
-    "name": "bestiary::river_skale::Event",
+    "name": "bestiary::dojo_examples_foes__river_skale::Event",
     "kind": "enum",
     "variants": []
   }

@@ -408,7 +408,7 @@
   },
   {
     "type": "event",
-    "name": "dojo_examples::models::message::Event",
+    "name": "dojo_examples::models::dojo_examples__message::Event",
     "kind": "enum",
     "variants": []
   }

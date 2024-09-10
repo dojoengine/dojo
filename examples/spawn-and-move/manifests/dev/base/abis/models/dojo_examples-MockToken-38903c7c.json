@@ -400,7 +400,7 @@
   },
   {
     "type": "event",
-    "name": "dojo_examples::models::mock_token::Event",
+    "name": "dojo_examples::models::dojo_examples__mock_token::Event",
     "kind": "enum",
     "variants": []
   }

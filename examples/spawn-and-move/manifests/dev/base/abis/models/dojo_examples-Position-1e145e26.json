@@ -414,7 +414,7 @@
   },
   {
     "type": "event",
-    "name": "dojo_examples::models::position::Event",
+    "name": "dojo_examples::models::dojo_examples__position::Event",
     "kind": "enum",
     "variants": []
   }

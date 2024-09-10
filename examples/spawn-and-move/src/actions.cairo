@@ -226,9 +226,8 @@ mod tests {
     use dojo::utils::test::deploy_contract;
 
     use super::{actions, IActionsDispatcher, IActionsDispatcherTrait};
-    use armory::flatbow;
     use dojo_examples::models::{
-        Position, position, PositionStore, PositionEntityStore, Moves, moves, Direction, Vec2
+        Position, PositionStore, PositionEntityStore, Moves, Direction, Vec2
     };
 
     #[test]

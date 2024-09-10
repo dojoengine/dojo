@@ -10,8 +10,8 @@ use dojo::world::{
     IUpgradeableWorldDispatcherTrait
 };
 use dojo::tests::helpers::{
-    IbarDispatcher, IbarDispatcherTrait, drop_all_events, deploy_world_and_bar, Foo, foo, bar,
-    Character, character, test_contract, test_contract_with_dojo_init_args
+    IbarDispatcher, IbarDispatcherTrait, drop_all_events, deploy_world_and_bar, Foo, dojo__foo, bar,
+    Character, dojo__character, test_contract, test_contract_with_dojo_init_args
 };
 use dojo::utils::test::{spawn_test_world, deploy_with_world_address, GasCounterTrait};
 
@@ -55,7 +55,7 @@ mod resource_metadata_malicious {
 #[available_gas(2000000)]
 fn test_model() {
     let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model(dojo__foo::TEST_CLASS_HASH.try_into().unwrap());
 }
 
 #[test]
@@ -107,10 +107,12 @@ fn test_contract_getter() {
 #[available_gas(6000000)]
 fn test_model_class_hash_getter() {
     let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model(dojo__foo::TEST_CLASS_HASH.try_into().unwrap());
 
     if let Resource::Model((class_hash, _)) = world.resource(Model::<Foo>::selector()) {
-        assert(class_hash == foo::TEST_CLASS_HASH.try_into().unwrap(), 'foo wrong class hash');
+        assert(
+            class_hash == dojo__foo::TEST_CLASS_HASH.try_into().unwrap(), 'foo wrong class hash'
+        );
     } else {
         panic!("Foo model not found");
     };
@@ -121,10 +123,12 @@ fn test_model_class_hash_getter() {
 #[available_gas(6000000)]
 fn test_legacy_model_class_hash_getter() {
     let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model(dojo__foo::TEST_CLASS_HASH.try_into().unwrap());
 
     if let Resource::Model((class_hash, _)) = world.resource('Foo') {
-        assert(class_hash == foo::TEST_CLASS_HASH.try_into().unwrap(), 'foo wrong class hash');
+        assert(
+            class_hash == dojo__foo::TEST_CLASS_HASH.try_into().unwrap(), 'foo wrong class hash'
+        );
     } else {
         panic!("Foo model not found");
     };
@@ -152,7 +156,7 @@ fn deploy_world() -> IWorldDispatcher {
 #[test]
 fn test_execute_multiple_worlds() {
     // Deploy world contract
-    let world1 = spawn_test_world(["dojo"].span(), [foo::TEST_CLASS_HASH].span(),);
+    let world1 = spawn_test_world(["dojo"].span(), [dojo__foo::TEST_CLASS_HASH].span(),);
     let contract_address = deploy_with_world_address(bar::TEST_CLASS_HASH, world1);
 
     world1.grant_writer(Model::<Foo>::selector(), contract_address);
@@ -160,7 +164,7 @@ fn test_execute_multiple_worlds() {
     let bar1_contract = IbarDispatcher { contract_address };
 
     // Deploy another world contract
-    let world2 = spawn_test_world(["dojo"].span(), [foo::TEST_CLASS_HASH].span(),);
+    let world2 = spawn_test_world(["dojo"].span(), [dojo__foo::TEST_CLASS_HASH].span(),);
     let contract_address = deploy_with_world_address(bar::TEST_CLASS_HASH, world2);
 
     world2.grant_writer(Model::<Foo>::selector(), contract_address);
@@ -202,7 +206,7 @@ fn bench_execute() {
 
 #[test]
 fn bench_execute_complex() {
-    let world = spawn_test_world(["dojo"].span(), [character::TEST_CLASS_HASH].span(),);
+    let world = spawn_test_world(["dojo"].span(), [dojo__character::TEST_CLASS_HASH].span(),);
     let contract_address = deploy_with_world_address(bar::TEST_CLASS_HASH, world);
     let bar_contract = IbarDispatcher { contract_address };
 

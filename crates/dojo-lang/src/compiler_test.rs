@@ -3,7 +3,7 @@ use scarb::compiler::Profile;
 use scarb::core::{PackageName, TargetKind};
 use scarb::ops::{CompileOpts, FeaturesOpts, FeaturesSelector};
 
-use crate::compiler::ContractSelector;
+use crate::compiler::{BaseContractSelector, DojoContractSelector};
 use crate::scarb_internal;
 
 // Ignored as scarb takes too much time to compile in debug mode.
@@ -37,27 +37,36 @@ fn test_compiler_cairo_features() {
 
 #[test]
 fn test_package() {
-    let selector = ContractSelector("my_package::my_contract".to_string());
+    let selector = BaseContractSelector("my_package::my_contract".to_string());
     assert_eq!(selector.package(), PackageName::new("my_package"));
 
-    let selector_no_separator = ContractSelector("my_package".to_string());
+    let selector_no_separator = BaseContractSelector("my_package".to_string());
     assert_eq!(selector_no_separator.package(), PackageName::new("my_package"));
 }
 
 #[test]
 fn test_path_with_model_snake_case() {
-    let selector = ContractSelector("my_package::MyContract".to_string());
-    assert_eq!(selector.path_with_model_snake_case(), "my_package::my_contract");
+    let selector =
+        DojoContractSelector::new("my_package::MyContract".to_string(), "MyNamespace".to_string());
+    assert_eq!(selector.path_with_model_snake_case(), "my_package::my_namespace__my_contract");
 
-    let selector_multiple_segments =
-        ContractSelector("my_package::sub_package::MyContract".to_string());
+    let selector_multiple_segments = DojoContractSelector::new(
+        "my_package::sub_package::MyContract".to_string(),
+        "MyNamespace".to_string(),
+    );
     assert_eq!(
         selector_multiple_segments.path_with_model_snake_case(),
-        "my_package::sub_package::my_contract"
+        "my_package::sub_package::my_namespace__my_contract"
     );
 
     // In snake case, erc20 should be erc_20. This test ensures that the path is converted to snake
     // case only for the model's name.
-    let selector_erc20 = ContractSelector("my_package::erc20::Token".to_string());
-    assert_eq!(selector_erc20.path_with_model_snake_case(), "my_package::erc20::token");
+    let selector_erc20 = DojoContractSelector::new(
+        "my_package::erc20::Token".to_string(),
+        "MyNamespace".to_string(),
+    );
+    assert_eq!(
+        selector_erc20.path_with_model_snake_case(),
+        "my_package::erc20::my_namespace__token"
+    );
 }

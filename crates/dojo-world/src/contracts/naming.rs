@@ -3,7 +3,7 @@ use cainome::cairo_serde::{ByteArray, CairoSerde};
 use starknet::core::types::Felt;
 use starknet_crypto::poseidon_hash_many;
 
-pub const CONTRACT_NAME_SEPARATOR: &str = "::";
+pub const DOJO_CONTRACT_SEPARATOR: &str = "__";
 pub const TAG_SEPARATOR: char = '-';
 pub const SELECTOR_CHUNK_SIZE: usize = 8;
 

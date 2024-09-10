@@ -69,30 +69,79 @@ pub struct DojoCompiler;
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct Props {
-    pub build_external_contracts: Option<Vec<ContractSelector>>,
+    pub build_external_contracts: Option<Vec<BaseContractSelector>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ContractSelector(String);
+pub struct BaseContractSelector(String);
 
-impl ContractSelector {
+impl BaseContractSelector {
     fn package(&self) -> PackageName {
         let parts = self.0.split_once(CAIRO_PATH_SEPARATOR).unwrap_or((self.0.as_str(), ""));
         PackageName::new(parts.0)
     }
 
-    /// Returns the path with the model name in snake case.
+    // Check if the contract selector matches with the provided contract path.
+    // Note that this contract path uses the Dojo format in Snaked case, which is :
+    //     `<path>::<namespace><naming::DOJO_CONTRACT_SEPARATOR><name>`.
+    // That means, to match the provided contract path, the contract selector path and name
+    // must match with this contract path `path` and `name`.
+    fn match_contract_path(&self, contract_path: String) -> bool {
+        let (source_path, source_name) =
+            contract_path.rsplit_once(CAIRO_PATH_SEPARATOR).unwrap_or(("", &contract_path));
+        let (source_namespace, source_name) =
+            source_name.rsplit_once(naming::DOJO_CONTRACT_SEPARATOR).unwrap_or(("", source_name));
+
+        let (self_path, self_name) =
+            self.0.rsplit_once(CAIRO_PATH_SEPARATOR).unwrap_or(("", &self.0));
+        let (self_namespace, self_name) =
+            self_name.rsplit_once(naming::DOJO_CONTRACT_SEPARATOR).unwrap_or(("", self_name));
+
+        let self_name = self_name.to_case(Case::Snake);
+
+        source_path == self_path
+            && source_name == self_name
+            && (self_namespace.is_empty() || self_namespace == source_namespace)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DojoContractSelector {
+    full_path: String,
+    namespace: String,
+}
+
+impl From<DojoContractSelector> for BaseContractSelector {
+    fn from(value: DojoContractSelector) -> Self {
+        BaseContractSelector(value.full_path)
+    }
+}
+
+impl DojoContractSelector {
+    pub(crate) fn new(full_path: String, namespace: String) -> DojoContractSelector {
+        DojoContractSelector { full_path, namespace }
+    }
+
+    /// Returns the model path using the Dojo format.
     /// This is used to match the output of the `compile()` function and Dojo plugin naming for
     /// models contracts.
-    fn path_with_model_snake_case(&self) -> String {
+    pub(crate) fn path_with_model_snake_case(&self) -> String {
         let (path, last_segment) =
-            self.0.rsplit_once(CAIRO_PATH_SEPARATOR).unwrap_or(("", &self.0));
+            self.full_path.rsplit_once(CAIRO_PATH_SEPARATOR).unwrap_or(("", &self.full_path));
 
         // We don't want to snake case the whole path because some of names like `erc20`
         // will be changed to `erc_20`, and leading to invalid paths.
-        // The model name has to be snaked case as it's how the Dojo plugin names the Model's
-        // contract.
-        format!("{}{}{}", path, CAIRO_PATH_SEPARATOR, last_segment.to_case(Case::Snake))
+        // The model name has to be snaked case and must follow the format
+        // `<namespace><naming::DOJO_CONTRACT_SEPARATOR><name>`  as it's how the Dojo plugin
+        // names the Model's contract.
+        format!(
+            "{}{}{}{}{}",
+            path,
+            CAIRO_PATH_SEPARATOR,
+            self.namespace.to_case(Case::Snake),
+            naming::DOJO_CONTRACT_SEPARATOR,
+            last_segment.to_case(Case::Snake)
+        )
     }
 }
 
@@ -227,7 +276,7 @@ fn compute_class_hash_of_contract_class(class: &ContractClass) -> Result<Felt> {
 fn find_project_contracts(
     mut db: &dyn SemanticGroup,
     main_crate_ids: Vec<CrateId>,
-    external_contracts: Option<Vec<ContractSelector>>,
+    external_contracts: Option<Vec<BaseContractSelector>>,
 ) -> Result<Vec<ContractDeclaration>> {
     let internal_contracts = {
         let _ = trace_span!("find_internal_contracts").enter();
@@ -254,7 +303,7 @@ fn find_project_contracts(
                 let contract_path = decl.module_id().full_path(db.upcast());
                 external_contracts
                     .iter()
-                    .any(|selector| contract_path == selector.path_with_model_snake_case())
+                    .any(|selector| selector.match_contract_path(contract_path.clone()))
             })
             .collect::<Vec<ContractDeclaration>>()
     } else {
@@ -267,8 +316,8 @@ fn find_project_contracts(
 
 pub fn collect_core_crate_ids(db: &RootDatabase) -> Vec<CrateId> {
     [
-        ContractSelector(BASE_QUALIFIED_PATH.to_string()),
-        ContractSelector(WORLD_QUALIFIED_PATH.to_string()),
+        BaseContractSelector(BASE_QUALIFIED_PATH.to_string()),
+        BaseContractSelector(WORLD_QUALIFIED_PATH.to_string()),
     ]
     .iter()
     .map(|selector| selector.package().into())
@@ -279,7 +328,7 @@ pub fn collect_core_crate_ids(db: &RootDatabase) -> Vec<CrateId> {
 
 pub fn collect_external_crate_ids(
     db: &RootDatabase,
-    external_contracts: Vec<ContractSelector>,
+    external_contracts: Vec<BaseContractSelector>,
 ) -> Vec<CrateId> {
     external_contracts
         .iter()
@@ -295,7 +344,7 @@ fn update_files(
     target_dir: &Filesystem,
     crate_ids: &[CrateId],
     compiled_artifacts: CompiledArtifactByPath,
-    external_contracts: Option<Vec<ContractSelector>>,
+    external_contracts: Option<Vec<BaseContractSelector>>,
 ) -> anyhow::Result<()> {
     let profile_name =
         ws.current_profile().expect("Scarb profile expected to be defined.").to_string();
@@ -525,10 +574,13 @@ fn get_dojo_model_artifacts(
         {
             // Leverages the contract selector function to only snake case the model name and
             // not the full path.
-            let contract_selector = ContractSelector(struct_id.full_path(db));
+            let contract_selector =
+                DojoContractSelector::new(struct_id.full_path(db), model.namespace.clone());
             let qualified_path = contract_selector.path_with_model_snake_case();
             let compiled_class = compiled_classes.get(&qualified_path).cloned();
             let tag = naming::get_tag(&model.namespace, &model.name);
+
+            debug!(target: LOG_TARGET, model_tag = %tag , %qualified_path, "Dojo model contracts.");
 
             if let Some(artifact) = compiled_class {
                 let dojo_model = DojoModel {

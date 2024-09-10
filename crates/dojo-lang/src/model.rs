@@ -702,7 +702,7 @@ pub trait I$contract_name$<T> {
 }
 
 #[starknet::contract]
-pub mod $contract_name$ {
+pub mod $model_namespace$$contract_separator$$contract_name$ {
     use super::$type_name$;
     use super::I$contract_name$;
 
@@ -788,6 +788,10 @@ pub mod $contract_name$ {
                 (
                     "entity_field_accessors".to_string(),
                     RewriteNode::new_modified(entity_field_accessors),
+                ),
+                (
+                    "contract_separator".to_string(),
+                    RewriteNode::Text(naming::DOJO_CONTRACT_SEPARATOR.to_string()),
                 ),
             ]),
         ),

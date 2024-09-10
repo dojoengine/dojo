@@ -1,9 +1,9 @@
 kind = "DojoModel"
-class_hash = "0x4f3cbb247febb63bf5ab34d87504fd85e7a3b4ab6ff16fa2bf23597bf3309c7"
-original_class_hash = "0x4f3cbb247febb63bf5ab34d87504fd85e7a3b4ab6ff16fa2bf23597bf3309c7"
+class_hash = "0x2080f40ebe67d83802c125462ab1c09702e4ffc69a768400f1f67838e91d843"
+original_class_hash = "0x2080f40ebe67d83802c125462ab1c09702e4ffc69a768400f1f67838e91d843"
 abi = "manifests/release/base/abis/models/dojo_examples_foes-RiverSkale-39535c12.json"
 tag = "dojo_examples_foes-RiverSkale"
-qualified_path = "bestiary::river_skale"
+qualified_path = "bestiary::dojo_examples_foes__river_skale"
 manifest_name = "dojo_examples_foes-RiverSkale-39535c12"
 
 [[members]]

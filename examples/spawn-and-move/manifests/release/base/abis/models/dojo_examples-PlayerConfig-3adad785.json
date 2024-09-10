@@ -426,7 +426,7 @@
   },
   {
     "type": "event",
-    "name": "dojo_examples::models::player_config::Event",
+    "name": "dojo_examples::models::dojo_examples__player_config::Event",
     "kind": "enum",
     "variants": []
   }

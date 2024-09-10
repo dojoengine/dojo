@@ -10,7 +10,7 @@ use dojo::world::world::{
 use dojo::contract::{IContractDispatcher, IContractDispatcherTrait};
 
 use dojo::tests::helpers::{
-    deploy_world, drop_all_events, Foo, foo, Buzz, buzz, test_contract, buzz_contract
+    deploy_world, drop_all_events, Foo, dojo__foo, Buzz, bizz__buzz, test_contract, buzz_contract
 };
 use dojo::utils::test::spawn_test_world;
 
@@ -29,7 +29,7 @@ fn test_set_metadata_world() {
 
 #[test]
 fn test_set_metadata_resource_owner() {
-    let world = spawn_test_world(["dojo"].span(), [foo::TEST_CLASS_HASH].span(),);
+    let world = spawn_test_world(["dojo"].span(), [dojo__foo::TEST_CLASS_HASH].span(),);
 
     let bob = starknet::contract_address_const::<0xb0b>();
 
@@ -63,7 +63,7 @@ fn test_set_metadata_resource_owner() {
     )
 )]
 fn test_set_metadata_not_possible_for_resource_writer() {
-    let world = spawn_test_world(["dojo"].span(), [foo::TEST_CLASS_HASH].span(),);
+    let world = spawn_test_world(["dojo"].span(), [dojo__foo::TEST_CLASS_HASH].span(),);
 
     let bob = starknet::contract_address_const::<0xb0b>();
 
@@ -107,7 +107,7 @@ fn test_set_metadata_not_possible_for_random_account() {
     )
 )]
 fn test_set_metadata_through_malicious_contract() {
-    let world = spawn_test_world(["dojo"].span(), [foo::TEST_CLASS_HASH].span(),);
+    let world = spawn_test_world(["dojo"].span(), [dojo__foo::TEST_CLASS_HASH].span(),);
 
     let bob = starknet::contract_address_const::<0xb0b>();
     let malicious_contract = starknet::contract_address_const::<0xdead>();
@@ -135,7 +135,7 @@ fn test_register_model_for_namespace_owner() {
 
     starknet::testing::set_account_contract_address(bob);
     starknet::testing::set_contract_address(bob);
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model(dojo__foo::TEST_CLASS_HASH.try_into().unwrap());
 
     let event = starknet::testing::pop_log::<ModelRegistered>(world.contract_address);
 
@@ -143,7 +143,9 @@ fn test_register_model_for_namespace_owner() {
     let event = event.unwrap();
     assert(event.name == Model::<Foo>::name(), 'bad model name');
     assert(event.namespace == Model::<Foo>::namespace(), 'bad model namespace');
-    assert(event.class_hash == foo::TEST_CLASS_HASH.try_into().unwrap(), 'bad model class_hash');
+    assert(
+        event.class_hash == dojo__foo::TEST_CLASS_HASH.try_into().unwrap(), 'bad model class_hash'
+    );
     assert(
         event.address != core::num::traits::Zero::<ContractAddress>::zero(),
         'bad model prev address'
@@ -163,7 +165,7 @@ fn test_register_model_for_namespace_writer() {
 
     starknet::testing::set_account_contract_address(bob);
     starknet::testing::set_contract_address(bob);
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model(dojo__foo::TEST_CLASS_HASH.try_into().unwrap());
 
     let event = starknet::testing::pop_log::<ModelRegistered>(world.contract_address);
 
@@ -171,7 +173,9 @@ fn test_register_model_for_namespace_writer() {
     let event = event.unwrap();
     assert(event.name == Model::<Foo>::name(), 'bad model name');
     assert(event.namespace == Model::<Foo>::namespace(), 'bad model namespace');
-    assert(event.class_hash == foo::TEST_CLASS_HASH.try_into().unwrap(), 'bad model class_hash');
+    assert(
+        event.class_hash == dojo__foo::TEST_CLASS_HASH.try_into().unwrap(), 'bad model class_hash'
+    );
     assert(
         event.address != core::num::traits::Zero::<ContractAddress>::zero(),
         'bad model prev address'
@@ -189,11 +193,11 @@ fn test_upgrade_model_from_model_owner() {
 
     starknet::testing::set_account_contract_address(bob);
     starknet::testing::set_contract_address(bob);
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model(dojo__foo::TEST_CLASS_HASH.try_into().unwrap());
 
     drop_all_events(world.contract_address);
 
-    world.upgrade_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.upgrade_model(dojo__foo::TEST_CLASS_HASH.try_into().unwrap());
 
     let event = starknet::testing::pop_log::<ModelUpgraded>(world.contract_address);
 
@@ -201,7 +205,9 @@ fn test_upgrade_model_from_model_owner() {
     let event = event.unwrap();
     assert(event.name == Model::<Foo>::name(), 'bad model name');
     assert(event.namespace == Model::<Foo>::namespace(), 'bad model namespace');
-    assert(event.class_hash == foo::TEST_CLASS_HASH.try_into().unwrap(), 'bad model class_hash');
+    assert(
+        event.class_hash == dojo__foo::TEST_CLASS_HASH.try_into().unwrap(), 'bad model class_hash'
+    );
     assert(
         event.address != core::num::traits::Zero::<ContractAddress>::zero(),
         'bad model prev address'
@@ -223,17 +229,17 @@ fn test_upgrade_model_from_model_writer() {
 
     let world = deploy_world();
     // dojo namespace is registered by the deploy_world function.
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model(dojo__foo::TEST_CLASS_HASH.try_into().unwrap());
     world.grant_owner(Model::<Foo>::namespace_hash(), bob);
     world.grant_writer(Model::<Foo>::namespace_hash(), alice);
 
     starknet::testing::set_account_contract_address(bob);
     starknet::testing::set_contract_address(bob);
-    world.upgrade_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.upgrade_model(dojo__foo::TEST_CLASS_HASH.try_into().unwrap());
 
     starknet::testing::set_account_contract_address(alice);
     starknet::testing::set_contract_address(alice);
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model(dojo__foo::TEST_CLASS_HASH.try_into().unwrap());
 }
 
 #[test]
@@ -248,18 +254,18 @@ fn test_upgrade_model_from_random_account() {
 
     starknet::testing::set_account_contract_address(bob);
     starknet::testing::set_contract_address(bob);
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model(dojo__foo::TEST_CLASS_HASH.try_into().unwrap());
 
     starknet::testing::set_account_contract_address(alice);
     starknet::testing::set_contract_address(alice);
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model(dojo__foo::TEST_CLASS_HASH.try_into().unwrap());
 }
 
 #[test]
-#[should_panic(expected: ("Namespace `another_namespace` is not registered", 'ENTRYPOINT_FAILED',))]
+#[should_panic(expected: ("Namespace `bizz` is not registered", 'ENTRYPOINT_FAILED',))]
 fn test_register_model_with_unregistered_namespace() {
     let world = deploy_world();
-    world.register_model(buzz::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model(bizz__buzz::TEST_CLASS_HASH.try_into().unwrap());
 }
 
 // It's CONTRACT_NOT_DEPLOYED for now as in this example the contract is not a dojo contract
@@ -275,7 +281,7 @@ fn test_register_model_through_malicious_contract() {
 
     starknet::testing::set_account_contract_address(bob);
     starknet::testing::set_contract_address(malicious_contract);
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model(dojo__foo::TEST_CLASS_HASH.try_into().unwrap());
 }
 
 #[test]

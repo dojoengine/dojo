@@ -430,7 +430,7 @@
   },
   {
     "type": "event",
-    "name": "dojo_examples::models::moves::Event",
+    "name": "dojo_examples::models::dojo_examples__moves::Event",
     "kind": "enum",
     "variants": []
   }

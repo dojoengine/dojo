@@ -2401,8 +2401,8 @@
           "key": false
         }
       ],
-      "class_hash": "0x720bb4a3a1324dea862ac8b3ac3e30ac55490ce6ec9f7f68341db081b290c08",
-      "original_class_hash": "0x720bb4a3a1324dea862ac8b3ac3e30ac55490ce6ec9f7f68341db081b290c08",
+      "class_hash": "0x3869ae2b02ccbe974e2c468114f4bf6147e85eedf9591ba05022c3c6da65421",
+      "original_class_hash": "0x3869ae2b02ccbe974e2c468114f4bf6147e85eedf9591ba05022c3c6da65421",
       "abi": [
         {
           "type": "impl",
@@ -2809,13 +2809,13 @@
         },
         {
           "type": "event",
-          "name": "dojo_examples::others::others::contract_initialized::Event",
+          "name": "dojo_examples::others::others::dojo_examples__contract_initialized::Event",
           "kind": "enum",
           "variants": []
         }
       ],
       "tag": "dojo_examples-ContractInitialized",
-      "qualified_path": "dojo_examples::others::others::contract_initialized",
+      "qualified_path": "dojo_examples::others::others::dojo_examples__contract_initialized",
       "manifest_name": "dojo_examples-ContractInitialized-376b7bd6"
     },
     {
@@ -2842,8 +2842,8 @@
           "key": true
         }
       ],
-      "class_hash": "0x3ca17c0ebb595e1d1cc01813923864316a49b91f4a725ef1371329abbc1947b",
-      "original_class_hash": "0x3ca17c0ebb595e1d1cc01813923864316a49b91f4a725ef1371329abbc1947b",
+      "class_hash": "0x70b97da7c4232af42e736c1b461c7c6d36f7f16cfead7bde76c742ad6c22dce",
+      "original_class_hash": "0x70b97da7c4232af42e736c1b461c7c6d36f7f16cfead7bde76c742ad6c22dce",
       "abi": [
         {
           "type": "impl",
@@ -3254,13 +3254,13 @@
         },
         {
           "type": "event",
-          "name": "dojo_examples::models::message::Event",
+          "name": "dojo_examples::models::dojo_examples__message::Event",
           "kind": "enum",
           "variants": []
         }
       ],
       "tag": "dojo_examples-Message",
-      "qualified_path": "dojo_examples::models::message",
+      "qualified_path": "dojo_examples::models::dojo_examples__message",
       "manifest_name": "dojo_examples-Message-1bb1d226"
     },
     {
@@ -3277,8 +3277,8 @@
           "key": false
         }
       ],
-      "class_hash": "0x244a875f2049e4ca875b631270f1203a5be374fc040a8c4bd40405eeeea07bd",
-      "original_class_hash": "0x244a875f2049e4ca875b631270f1203a5be374fc040a8c4bd40405eeeea07bd",
+      "class_hash": "0x3d6c0104c8bfd09d69c0afe27238ef16df64e9bc0eede0920b235765b5b7d31",
+      "original_class_hash": "0x3d6c0104c8bfd09d69c0afe27238ef16df64e9bc0eede0920b235765b5b7d31",
       "abi": [
         {
           "type": "impl",
@@ -3681,13 +3681,13 @@
         },
         {
           "type": "event",
-          "name": "dojo_examples::models::mock_token::Event",
+          "name": "dojo_examples::models::dojo_examples__mock_token::Event",
           "kind": "enum",
           "variants": []
         }
       ],
       "tag": "dojo_examples-MockToken",
-      "qualified_path": "dojo_examples::models::mock_token",
+      "qualified_path": "dojo_examples::models::dojo_examples__mock_token",
       "manifest_name": "dojo_examples-MockToken-38903c7c"
     },
     {
@@ -3704,8 +3704,8 @@
           "key": false
         }
       ],
-      "class_hash": "0x71f21bb9f7454ede4f4fe1482012218ef57448ca9687018dab409c4ddb790a2",
-      "original_class_hash": "0x71f21bb9f7454ede4f4fe1482012218ef57448ca9687018dab409c4ddb790a2",
+      "class_hash": "0x6867c2efb307789f706facd0fe932631057f4a02f063f7d9f0d218633ff4a3b",
+      "original_class_hash": "0x6867c2efb307789f706facd0fe932631057f4a02f063f7d9f0d218633ff4a3b",
       "abi": [
         {
           "type": "impl",
@@ -4134,13 +4134,13 @@
         },
         {
           "type": "event",
-          "name": "dojo_examples::actions::actions::moved::Event",
+          "name": "dojo_examples::actions::actions::dojo_examples__moved::Event",
           "kind": "enum",
           "variants": []
         }
       ],
       "tag": "dojo_examples-Moved",
-      "qualified_path": "dojo_examples::actions::actions::moved",
+      "qualified_path": "dojo_examples::actions::actions::dojo_examples__moved",
       "manifest_name": "dojo_examples-Moved-318ae40d"
     },
     {
@@ -4162,8 +4162,8 @@
           "key": false
         }
       ],
-      "class_hash": "0x4dd1c573b5cdc56561be8b28a4840048a3a008d1a4a6eed397ec4135effaf44",
-      "original_class_hash": "0x4dd1c573b5cdc56561be8b28a4840048a3a008d1a4a6eed397ec4135effaf44",
+      "class_hash": "0x28d469fa541e5343e13c53ed79c40c423060c29b01994cf651c585051ab18a3",
+      "original_class_hash": "0x28d469fa541e5343e13c53ed79c40c423060c29b01994cf651c585051ab18a3",
       "abi": [
         {
           "type": "impl",
@@ -4596,13 +4596,13 @@
         },
         {
           "type": "event",
-          "name": "dojo_examples::models::moves::Event",
+          "name": "dojo_examples::models::dojo_examples__moves::Event",
           "kind": "enum",
           "variants": []
         }
       ],
       "tag": "dojo_examples-Moves",
-      "qualified_path": "dojo_examples::models::moves",
+      "qualified_path": "dojo_examples::models::dojo_examples__moves",
       "manifest_name": "dojo_examples-Moves-2e2accba"
     },
     {
@@ -4629,8 +4629,8 @@
           "key": false
         }
       ],
-      "class_hash": "0x515f106010313c2fcd87719836e75873aa75a711a4bdcd2ea0b6e38854deebf",
-      "original_class_hash": "0x515f106010313c2fcd87719836e75873aa75a711a4bdcd2ea0b6e38854deebf",
+      "class_hash": "0x26270151710a597b55e919e03479192840b39d7ed778eda7b0198ab2aaa823d",
+      "original_class_hash": "0x26270151710a597b55e919e03479192840b39d7ed778eda7b0198ab2aaa823d",
       "abi": [
         {
           "type": "impl",
@@ -5059,13 +5059,13 @@
         },
         {
           "type": "event",
-          "name": "dojo_examples::models::player_config::Event",
+          "name": "dojo_examples::models::dojo_examples__player_config::Event",
           "kind": "enum",
           "variants": []
         }
       ],
       "tag": "dojo_examples-PlayerConfig",
-      "qualified_path": "dojo_examples::models::player_config",
+      "qualified_path": "dojo_examples::models::dojo_examples__player_config",
       "manifest_name": "dojo_examples-PlayerConfig-3adad785"
     },
     {
@@ -5082,8 +5082,8 @@
           "key": false
         }
       ],
-      "class_hash": "0x5af60d63e6a1d25fc117fde1fa7e1d628adc46a52c3d007541ed6dd369e8ea",
-      "original_class_hash": "0x5af60d63e6a1d25fc117fde1fa7e1d628adc46a52c3d007541ed6dd369e8ea",
+      "class_hash": "0x49022c6c42a2c0777747cefcdbb4a7cc5b7335d535b85e39a4ce1f847d84606",
+      "original_class_hash": "0x49022c6c42a2c0777747cefcdbb4a7cc5b7335d535b85e39a4ce1f847d84606",
       "abi": [
         {
           "type": "impl",
@@ -5500,13 +5500,13 @@
         },
         {
           "type": "event",
-          "name": "dojo_examples::models::position::Event",
+          "name": "dojo_examples::models::dojo_examples__position::Event",
           "kind": "enum",
           "variants": []
         }
       ],
       "tag": "dojo_examples-Position",
-      "qualified_path": "dojo_examples::models::position",
+      "qualified_path": "dojo_examples::models::dojo_examples__position",
       "manifest_name": "dojo_examples-Position-1e145e26"
     },
     {
@@ -5528,8 +5528,8 @@
           "key": false
         }
       ],
-      "class_hash": "0x2fa72f20995710bef20ac3c36e2f43ec210517a787927ea3407e2b29c21bb0b",
-      "original_class_hash": "0x2fa72f20995710bef20ac3c36e2f43ec210517a787927ea3407e2b29c21bb0b",
+      "class_hash": "0x8719c72387eeb28386e14013bbe347dfb129910a90dc4463d800bc7ca799c7",
+      "original_class_hash": "0x8719c72387eeb28386e14013bbe347dfb129910a90dc4463d800bc7ca799c7",
       "abi": [
         {
           "type": "impl",
@@ -5936,13 +5936,13 @@
         },
         {
           "type": "event",
-          "name": "dojo_examples::models::server_profile::Event",
+          "name": "dojo_examples::models::dojo_examples__server_profile::Event",
           "kind": "enum",
           "variants": []
         }
       ],
       "tag": "dojo_examples-ServerProfile",
-      "qualified_path": "dojo_examples::models::server_profile",
+      "qualified_path": "dojo_examples::models::dojo_examples__server_profile",
       "manifest_name": "dojo_examples-ServerProfile-4caad1e6"
     },
     {
@@ -5969,8 +5969,8 @@
           "key": false
         }
       ],
-      "class_hash": "0x4f3cbb247febb63bf5ab34d87504fd85e7a3b4ab6ff16fa2bf23597bf3309c7",
-      "original_class_hash": "0x4f3cbb247febb63bf5ab34d87504fd85e7a3b4ab6ff16fa2bf23597bf3309c7",
+      "class_hash": "0x2080f40ebe67d83802c125462ab1c09702e4ffc69a768400f1f67838e91d843",
+      "original_class_hash": "0x2080f40ebe67d83802c125462ab1c09702e4ffc69a768400f1f67838e91d843",
       "abi": [
         {
           "type": "impl",
@@ -6381,13 +6381,13 @@
         },
         {
           "type": "event",
-          "name": "bestiary::river_skale::Event",
+          "name": "bestiary::dojo_examples_foes__river_skale::Event",
           "kind": "enum",
           "variants": []
         }
       ],
       "tag": "dojo_examples_foes-RiverSkale",
-      "qualified_path": "bestiary::river_skale",
+      "qualified_path": "bestiary::dojo_examples_foes__river_skale",
       "manifest_name": "dojo_examples_foes-RiverSkale-39535c12"
     },
     {
@@ -6409,8 +6409,8 @@
           "key": false
         }
       ],
-      "class_hash": "0x783cecd986c0f03f8ac70318f67d57ea8072db7d4d135d54585f4de33c879ad",
-      "original_class_hash": "0x783cecd986c0f03f8ac70318f67d57ea8072db7d4d135d54585f4de33c879ad",
+      "class_hash": "0x1ebf97aea2237cd9d376eee372803e02e45f46ca56dc95c2cbd2daa88fcbc82",
+      "original_class_hash": "0x1ebf97aea2237cd9d376eee372803e02e45f46ca56dc95c2cbd2daa88fcbc82",
       "abi": [
         {
           "type": "impl",
@@ -6817,13 +6817,13 @@
         },
         {
           "type": "event",
-          "name": "armory::flatbow::Event",
+          "name": "armory::dojo_examples_weapons__flatbow::Event",
           "kind": "enum",
           "variants": []
         }
       ],
       "tag": "dojo_examples_weapons-Flatbow",
-      "qualified_path": "armory::flatbow",
+      "qualified_path": "armory::dojo_examples_weapons__flatbow",
       "manifest_name": "dojo_examples_weapons-Flatbow-22f5bd16"
     }
   ]

@@ -73,7 +73,7 @@ async fn test_model() {
 
     assert_eq!(
         position.class_hash(),
-        felt!("0x5af60d63e6a1d25fc117fde1fa7e1d628adc46a52c3d007541ed6dd369e8ea")
+        felt!("0x49022c6c42a2c0777747cefcdbb4a7cc5b7335d535b85e39a4ce1f847d84606")
     );
 
     // accessing to an unknown model should return an error

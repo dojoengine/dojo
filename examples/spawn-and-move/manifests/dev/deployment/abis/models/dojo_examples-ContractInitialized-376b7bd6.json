@@ -404,7 +404,7 @@
   },
   {
     "type": "event",
-    "name": "dojo_examples::others::others::contract_initialized::Event",
+    "name": "dojo_examples::others::others::dojo_examples__contract_initialized::Event",
     "kind": "enum",
     "variants": []
   }
