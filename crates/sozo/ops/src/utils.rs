@@ -5,6 +5,7 @@ use dojo_world::contracts::naming::get_name_from_tag;
 use dojo_world::contracts::world::{WorldContract, WorldContractReader};
 use dojo_world::migration::strategy::generate_salt;
 use scarb_ui::Ui;
+#[cfg(feature = "walnut")]
 use sozo_walnut::WalnutDebugger;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{BlockId, BlockTag, ExecutionResult, Felt, InvokeTransactionResult};
@@ -86,7 +87,7 @@ pub async fn handle_transaction_result<P>(
     transaction_result: InvokeTransactionResult,
     wait_for_tx: bool,
     show_receipt: bool,
-    walnut_debugger: &Option<WalnutDebugger>,
+    #[cfg(feature = "walnut")] walnut_debugger: &Option<WalnutDebugger>,
 ) -> Result<()>
 where
     P: Provider + Send,
@@ -110,6 +111,7 @@ where
                 }
             };
 
+            #[cfg(feature = "walnut")]
             if let Some(walnut_debugger) = walnut_debugger {
                 walnut_debugger.debug_transaction(ui, &transaction_result.transaction_hash)?;
             }

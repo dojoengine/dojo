@@ -387,8 +387,17 @@ async fn migrate_with_auto_authorize() {
             .await
             .unwrap();
 
-    let res =
-        auto_authorize(&ws, &world, &txn_config, &default_namespace, &grant, &revoke, &None).await;
+    let res = auto_authorize(
+        &ws,
+        &world,
+        &txn_config,
+        &default_namespace,
+        &grant,
+        &revoke,
+        #[cfg(feature = "walnut")]
+        &None,
+    )
+    .await;
     assert!(res.is_ok());
 
     let provider = sequencer.provider();
