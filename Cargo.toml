@@ -234,7 +234,7 @@ alloy-sol-types = { version = "0.7.6", default-features = false }
 criterion = "0.5.1"
 
 # Controller integration
-account_sdk = { git = "https://github.com/cartridge-gg/controller", rev = "512ff89" }
+account_sdk = { git = "https://github.com/cartridge-gg/controller", rev = "a47be9c" }
 slot = { git = "https://github.com/cartridge-gg/slot", rev = "4c1165d" }
 
 alloy-contract = { version = "0.2", default-features = false }
