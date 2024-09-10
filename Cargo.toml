@@ -117,7 +117,7 @@ sozo-walnut = { path = "crates/sozo/walnut" }
 anyhow = "1.0.80"
 assert_fs = "1.1"
 assert_matches = "1.5.0"
-async-trait = "0.1.82"
+async-trait = "0.1.77"
 auto_impl = "1.2.0"
 base64 = "0.21.2"
 bigdecimal = "0.4.1"
