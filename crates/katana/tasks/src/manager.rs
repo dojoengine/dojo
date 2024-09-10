@@ -42,21 +42,19 @@ impl TaskManager {
         self.spawn_inner(fut)
     }
 
-    /// Wait until all spawned tasks are completed.
-    pub async fn wait(&self) {
-        // need to close the tracker first before waiting
-        let _ = self.tracker.close();
-        self.tracker.wait().await;
-        // reopen the tracker for spawning future tasks
-        let _ = self.tracker.reopen();
+    /// Wait for the shutdown signal to be received.
+    pub async fn wait_for_shutdown(&self) {
+        self.on_cancel.cancelled().await;
     }
 
-    /// Consumes the manager and wait until all tasks are finished, either due to completion or
+    /// Shutdowns the manger and wait until all tasks are finished, either due to completion or
     /// cancellation.
-    pub async fn wait_shutdown(self) {
+    ///
+    /// No task can be spawned on the manager after this method is called.
+    pub async fn shutdown(self) {
+        self.wait_for_shutdown().await;
         // need to close the tracker first before waiting
         let _ = self.tracker.close();
-        let _ = self.on_cancel.cancelled().await;
         self.tracker.wait().await;
     }
 
@@ -68,6 +66,16 @@ impl TaskManager {
     /// Returns a new [`TaskBuilder`] for building a task to be spawned on this manager.
     pub fn build_task(&self) -> TaskBuilder<'_> {
         TaskBuilder::new(self)
+    }
+
+    /// Wait until all spawned tasks are completed.
+    #[cfg(test)]
+    async fn wait(&self) {
+        // need to close the tracker first before waiting
+        let _ = self.tracker.close();
+        self.tracker.wait().await;
+        // reopen the tracker for spawning future tasks
+        let _ = self.tracker.reopen();
     }
 
     fn spawn_inner<F>(&self, task: F) -> TaskHandle<F::Output>
@@ -156,20 +164,20 @@ mod tests {
         manager.build_task().graceful_shutdown().spawn(future::ready(()));
 
         // wait until all task spawned to the manager have been completed
-        manager.wait_shutdown().await;
+        manager.shutdown().await;
     }
 
     #[tokio::test]
     async fn critical_task_implicit_graceful_shutdown() {
         let manager = TaskManager::current();
         manager.build_task().critical().spawn(future::ready(()));
-        manager.wait_shutdown().await;
+        manager.shutdown().await;
     }
 
     #[tokio::test]
     async fn critical_task_graceful_shudown_on_panicked() {
         let manager = TaskManager::current();
         manager.build_task().critical().spawn(async { panic!("panicking") });
-        manager.wait_shutdown().await;
+        manager.shutdown().await;
     }
 }

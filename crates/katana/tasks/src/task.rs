@@ -79,15 +79,15 @@ impl<'a> TaskBuilder<'a> {
         let Self { manager, instrument, graceful_shutdown, .. } = self;
 
         // creates a future that will send a cancellation signal to the manager when the future is
-        // completed.
-        let fut = if graceful_shutdown {
+        // completed, regardless of success or error.
+        let fut = {
             let ct = manager.on_cancel.clone();
-            Either::Left(fut.map(move |a| {
-                ct.cancel();
-                a
-            }))
-        } else {
-            Either::Right(fut)
+            fut.map(move |res| {
+                if graceful_shutdown {
+                    ct.cancel();
+                }
+                res
+            })
         };
 
         let fut = if instrument {
