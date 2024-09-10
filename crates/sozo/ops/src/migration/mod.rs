@@ -10,6 +10,7 @@ use dojo_world::metadata::get_default_namespace_from_ws;
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{DeployOutput, UpgradeOutput};
 use scarb::core::Workspace;
+#[cfg(feature = "walnut")]
 use sozo_walnut::WalnutDebugger;
 use starknet::accounts::{Call, ConnectedAccount, ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::types::{BlockId, BlockTag, Felt, InvokeTransactionResult};
@@ -135,6 +136,8 @@ where
     A::SignError: 'static,
 {
     let ui = ws.config().ui();
+
+    #[cfg(feature = "walnut")]
     let walnut_debugger =
         WalnutDebugger::new_from_flag(txn_config.walnut, Url::parse(&rpc_url).unwrap());
 
@@ -219,6 +222,7 @@ where
 
         Ok(None)
     } else {
+        #[cfg(feature = "walnut")]
         if txn_config.walnut {
             WalnutDebugger::check_api_key()?;
         }
@@ -283,6 +287,7 @@ where
             &default_namespace,
             &grant,
             &revoke,
+            #[cfg(feature = "walnut")]
             &walnut_debugger,
         )
         .await
@@ -373,6 +378,7 @@ where
             }
         }
 
+        #[cfg(feature = "walnut")]
         if let Some(walnut_debugger) = &walnut_debugger {
             walnut_debugger.verify_migration_strategy(ws, &strategy).await?;
         }

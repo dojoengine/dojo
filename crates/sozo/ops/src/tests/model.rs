@@ -171,6 +171,7 @@ async fn test_model_ops() {
         vec![],
         &WorldContract::new(world.address, sequencer.account(0)),
         &TxnConfig::init_wait(),
+        #[cfg(feature = "walnut")]
         &None,
     )
     .await;

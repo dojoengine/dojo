@@ -5,6 +5,7 @@ use dojo_world::metadata::get_default_namespace_from_ws;
 use scarb::core::Config;
 use scarb_ui::Ui;
 use sozo_ops::auth;
+#[cfg(feature = "walnut")]
 use sozo_walnut::WalnutDebugger;
 use tracing::trace;
 
@@ -152,6 +153,7 @@ pub async fn grant(
     let world =
         utils::world_from_env_metadata(world, account, &starknet, &env_metadata, config).await?;
 
+    #[cfg(feature = "walnut")]
     let walnut_debugger =
         WalnutDebugger::new_from_flag(transaction.walnut, starknet.url(env_metadata.as_ref())?);
 
@@ -167,6 +169,7 @@ pub async fn grant(
                 &models_contracts,
                 &transaction.into(),
                 default_namespace,
+                #[cfg(feature = "walnut")]
                 &walnut_debugger,
             )
             .await
@@ -182,6 +185,7 @@ pub async fn grant(
                 &owners_resources,
                 &transaction.into(),
                 default_namespace,
+                #[cfg(feature = "walnut")]
                 &walnut_debugger,
             )
             .await
@@ -205,6 +209,7 @@ pub async fn revoke(
     let world =
         utils::world_from_env_metadata(world, account, &starknet, &env_metadata, config).await?;
 
+    #[cfg(feature = "walnut")]
     let walnut_debugger =
         WalnutDebugger::new_from_flag(transaction.walnut, starknet.url(env_metadata.as_ref())?);
 
@@ -220,6 +225,7 @@ pub async fn revoke(
                 &models_contracts,
                 &transaction.into(),
                 default_namespace,
+                #[cfg(feature = "walnut")]
                 &walnut_debugger,
             )
             .await
@@ -235,6 +241,7 @@ pub async fn revoke(
                 &owners_resources,
                 &transaction.into(),
                 default_namespace,
+                #[cfg(feature = "walnut")]
                 &walnut_debugger,
             )
             .await

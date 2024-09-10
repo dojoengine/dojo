@@ -51,7 +51,7 @@ serde.workspace = true
 serde_json.workspace = true
 smol_str.workspace = true
 sozo-ops.workspace = true
-sozo-walnut.workspace = true
+sozo-walnut = { workspace = true, optional = true }
 starknet.workspace = true
 starknet-crypto.workspace = true
 thiserror.workspace = true
@@ -71,5 +71,7 @@ katana-runner.workspace = true
 snapbox = "0.4.6"
 
 [features]
+default = [ "controller", "walnut" ]
+
 controller = [ "dep:account_sdk", "dep:reqwest", "dep:slot" ]
-default = [ "controller" ]
+walnut = [ "dep:sozo-walnut", "sozo-ops/walnut" ]

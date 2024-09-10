@@ -43,6 +43,7 @@ serde.workspace = true
 serde_json.workspace = true
 serde_with.workspace = true
 smol_str.workspace = true
+sozo-walnut = { workspace = true, optional = true }
 starknet.workspace = true
 starknet-crypto.workspace = true
 thiserror.workspace = true
@@ -50,7 +51,6 @@ tokio.workspace = true
 toml.workspace = true
 tracing.workspace = true
 url.workspace = true
-sozo-walnut.workspace = true
 
 dojo-test-utils = { workspace = true, features = [ "build-examples" ], optional = true }
 katana-runner = { workspace = true, optional = true }
@@ -64,3 +64,4 @@ tee = "0.1.0"
 
 [features]
 test-utils = [ "dep:dojo-test-utils", "dep:katana-runner" ]
+walnut = [ "dep:sozo-walnut" ]
