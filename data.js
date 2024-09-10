@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1726008633000,
+  "lastUpdate": 1726010261152,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -19585,6 +19585,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3876902,
             "range": "± 58610",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a3727acd4e4d7288f95b702184c332f52acbd3f1",
+          "message": "fix(katana-tasks): ensure is cancelled before waiting on shutdown (#2412)",
+          "timestamp": "2024-09-10T18:58:02-04:00",
+          "tree_id": "618b9033b2809c1cbccfcf963c39022b6d25be97",
+          "url": "https://github.com/dojoengine/dojo/commit/a3727acd4e4d7288f95b702184c332f52acbd3f1"
+        },
+        "date": 1726010259537,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17700117,
+            "range": "± 242827",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 4007653,
+            "range": "± 193502",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3745316598,
+            "range": "± 888488782",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3897120,
+            "range": "± 43033",
             "unit": "ns/iter"
           }
         ]
