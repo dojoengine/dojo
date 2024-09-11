@@ -202,7 +202,7 @@ async fn deploy_account(
     Ok(())
 }
 
-abigen_legacy!(Erc20Contract, "crates/katana/rpc/rpc/tests/test_data/erc20.json");
+abigen_legacy!(Erc20Contract, "crates/katana/rpc/rpc/tests/test_data/erc20.json", derives(Clone));
 
 #[tokio::test]
 async fn estimate_fee() -> Result<()> {
