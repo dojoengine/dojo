@@ -323,7 +323,7 @@ abigen!(
     "variants": []
   }
 ]"#,
-derives(Debug, serde::Serialize, serde::Deserialize),
+derives(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize),
 type_aliases {
 dojo::world::config::Config::Event as DojoConfigEvent;
 },
