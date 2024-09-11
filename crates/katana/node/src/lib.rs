@@ -19,8 +19,8 @@ use katana_core::env::BlockContextGenerator;
 use katana_core::sequencer::SequencerConfig;
 use katana_core::service::block_producer::BlockProducer;
 #[cfg(feature = "messaging")]
-use katana_core::service::messaging::MessagingService;
-use katana_core::service::{BlockProductionTask, MessagingTask, TransactionMiner};
+use katana_core::service::messaging::{MessagingService, MessagingTask};
+use katana_core::service::{BlockProductionTask, TransactionMiner};
 use katana_executor::implementation::blockifier::BlockifierFactory;
 use katana_executor::{ExecutorFactory, SimulationFlag};
 use katana_pool::ordering::FiFo;
@@ -214,7 +214,7 @@ pub async fn start(
 
     let task_manager = TaskManager::current();
 
-    // --- build messaging task
+    // --- build and spawn the messaging task
 
     #[cfg(feature = "messaging")]
     if let Some(config) = sequencer_config.messaging.clone() {
