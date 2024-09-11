@@ -2,8 +2,8 @@ use std::time::Duration;
 
 use anyhow::Context;
 use dojo_utils::{TransactionExt, TxnConfig};
-use starknet::accounts::{Account, Call, ConnectedAccount};
-use starknet::core::types::{Felt, TransactionExecutionStatus, TransactionStatus};
+use starknet::accounts::{Account, ConnectedAccount};
+use starknet::core::types::{Call, Felt, TransactionExecutionStatus, TransactionStatus};
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
 use tokio::time::sleep;

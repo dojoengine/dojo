@@ -61,7 +61,7 @@ inherits = "release"
 lto = "fat"
 
 [workspace.dependencies]
-cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.3.2", features = [ "abigen-rs" ] }
+cainome = { git = "https://github.com/cartridge-gg/cainome", rev = "fb91215", features = [ "abigen-rs" ] }
 dojo-utils = { path = "crates/dojo-utils" }
 
 # metrics
@@ -184,7 +184,7 @@ scarb-ui = { git = "https://github.com/software-mansion/scarb", tag = "v2.7.0" }
 semver = "1.0.5"
 serde = { version = "1.0", features = [ "derive" ] }
 serde_json = { version = "1.0", features = [ "arbitrary_precision" ] }
-serde_with = "2.3"
+serde_with = "3.9"
 similar-asserts = "1.5.0"
 smol_str = { version = "0.2.0", features = [ "serde" ] }
 sqlx = { version = "0.7.2", features = [ "chrono", "macros", "regexp", "runtime-async-std", "runtime-tokio", "sqlite", "uuid" ] }
@@ -235,7 +235,7 @@ criterion = "0.5.1"
 
 # Controller integration
 account_sdk = { git = "https://github.com/cartridge-gg/controller", rev = "512ff89" }
-slot = { git = "https://github.com/cartridge-gg/slot", rev = "4c1165d" }
+slot = { git = "https://github.com/cartridge-gg/slot", tag = "v0.13.0" }
 
 alloy-contract = { version = "0.2", default-features = false }
 alloy-json-rpc = { version = "0.2", default-features = false }
@@ -250,5 +250,5 @@ alloy-transport = { version = "0.2", default-features = false }
 #
 # To enable std feature on `starknet-types-core`.
 # To re-export the entire `felt` module from `starknet-types-core`.
-starknet-core = { git = "https://github.com/kariy/starknet-rs", branch = "dojo-patch" }
+starknet = { git = "https://github.com/xJonathanLEI/starknet-rs", rev = "2ddc694" }
 starknet-types-core = { git = "https://github.com/dojoengine/types-rs", rev = "289e2f0" }

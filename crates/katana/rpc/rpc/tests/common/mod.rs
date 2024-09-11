@@ -5,9 +5,8 @@ use anyhow::{anyhow, Result};
 use katana_cairo::lang::starknet_classes::casm_contract_class::CasmContractClass;
 use katana_cairo::lang::starknet_classes::contract_class::ContractClass;
 use katana_primitives::conversion::rpc::CompiledClass;
-use starknet::accounts::Call;
 use starknet::core::types::contract::SierraClass;
-use starknet::core::types::{Felt, FlattenedSierraClass};
+use starknet::core::types::{Call, Felt, FlattenedSierraClass};
 use starknet::core::utils::get_selector_from_name;
 
 pub fn prepare_contract_declaration_params(

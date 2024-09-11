@@ -19,13 +19,13 @@ use katana_primitives::genesis::constant::{
 };
 use katana_rpc_api::dev::DevApiClient;
 use starknet::accounts::{
-    Account, AccountError, AccountFactory, Call, ConnectedAccount, ExecutionEncoding,
+    Account, AccountError, AccountFactory, ConnectedAccount, ExecutionEncoding,
     OpenZeppelinAccountFactory, SingleOwnerAccount,
 };
 use starknet::core::types::contract::legacy::LegacyContractClass;
 use starknet::core::types::{
-    BlockId, BlockTag, DeclareTransactionReceipt, DeployAccountTransactionReceipt, EventFilter,
-    EventsPage, ExecutionResult, Felt, StarknetError, TransactionFinalityStatus,
+    BlockId, BlockTag, Call, DeclareTransactionReceipt, DeployAccountTransactionReceipt,
+    EventFilter, EventsPage, ExecutionResult, Felt, StarknetError, TransactionFinalityStatus,
     TransactionReceipt,
 };
 use starknet::core::utils::get_contract_address;
