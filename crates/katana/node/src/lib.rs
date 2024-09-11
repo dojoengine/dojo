@@ -19,8 +19,8 @@ use katana_core::env::BlockContextGenerator;
 use katana_core::sequencer::SequencerConfig;
 use katana_core::service::block_producer::BlockProducer;
 #[cfg(feature = "messaging")]
-use katana_core::service::messaging::MessagingService;
-use katana_core::service::{NodeService, TransactionMiner};
+use katana_core::service::messaging::{MessagingService, MessagingTask};
+use katana_core::service::{BlockProductionTask, TransactionMiner};
 use katana_executor::implementation::blockifier::BlockifierFactory;
 use katana_executor::{ExecutorFactory, SimulationFlag};
 use katana_pool::ordering::FiFo;
@@ -173,7 +173,7 @@ pub async fn start(
         config: starknet_config,
     });
 
-    // --- build block producer service
+    // --- build block producer
 
     let block_producer = if sequencer_config.block_time.is_some() || sequencer_config.no_mining {
         if let Some(interval) = sequencer_config.block_time {
@@ -210,28 +210,25 @@ pub async fn start(
         info!(%addr, "Metrics endpoint started.");
     }
 
-    // --- build messaging service
+    // --- create a TaskManager using the ambient Tokio runtime
+
+    let task_manager = TaskManager::current();
+
+    // --- build and spawn the messaging task
 
     #[cfg(feature = "messaging")]
-    let messaging = if let Some(config) = sequencer_config.messaging.clone() {
-        MessagingService::new(config, pool.clone(), Arc::clone(&backend)).await.ok()
-    } else {
-        None
-    };
+    if let Some(config) = sequencer_config.messaging.clone() {
+        let messaging = MessagingService::new(config, pool.clone(), Arc::clone(&backend)).await?;
+        let task = MessagingTask::new(messaging);
+        task_manager.build_task().critical().name("Messaging").spawn(task);
+    }
 
     let block_producer = Arc::new(block_producer);
 
-    // Create a TaskManager using the ambient Tokio runtime
-    let task_manager = TaskManager::current();
+    // --- build and spawn the block production task
 
-    // Spawn the NodeService as a critical task
-    task_manager.build_task().critical().name("NodeService").spawn(NodeService::new(
-        pool.clone(),
-        miner,
-        block_producer.clone(),
-        #[cfg(feature = "messaging")]
-        messaging,
-    ));
+    let task = BlockProductionTask::new(pool.clone(), miner, block_producer.clone());
+    task_manager.build_task().critical().name("BlockProduction").spawn(task);
 
     // --- spawn rpc server
 

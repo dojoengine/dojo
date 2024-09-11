@@ -131,9 +131,9 @@ impl<'a> CriticalTaskBuilder<'a> {
         let fut = AssertUnwindSafe(fut)
             .catch_unwind()
             .map_err(move |error| {
-                ct.cancel();
                 let error = PanickedTaskError { error };
                 error!(%error, task = task_name, "Critical task failed.");
+                ct.cancel();
                 error
             })
             .map(drop);

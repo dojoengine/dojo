@@ -47,8 +47,8 @@ impl TaskManager {
         self.on_cancel.cancelled().await;
     }
 
-    /// Shutdowns the manger and wait until all tasks are finished, either due to completion or
-    /// cancellation.
+    /// Shuts down the manager and wait until all currently running tasks are finished, either due
+    /// to completion or cancellation.
     ///
     /// No task can be spawned on the manager after this method is called.
     pub async fn shutdown(self) {
