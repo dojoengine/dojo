@@ -88,8 +88,7 @@ impl Inner {
         let state = Box::new(self.state.clone());
         let cached_state = CachedState::new(StateProviderDb::new(state));
         let context = block_context_from_envs(&self.block_env, &self.cfg_env);
-
-        StatefulValidator::create(cached_state, context, Default::default())
+        StatefulValidator::create(cached_state, context)
     }
 }
 

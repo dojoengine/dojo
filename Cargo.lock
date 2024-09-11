@@ -1858,8 +1858,8 @@ dependencies = [
 
 [[package]]
 name = "blockifier"
-version = "0.8.0-dev.2"
-source = "git+https://github.com/dojoengine/blockifier?branch=cairo-2.7#9fa0ab0aab6fb1038a76432f7099fd198da94ed1"
+version = "0.8.0-rc.3"
+source = "git+https://github.com/dojoengine/sequencer?tag=v0.8.0-rc3#290338edf2930e2d9ee0767685cb8c180ba1119a"
 dependencies = [
  "anyhow",
  "ark-ec",
@@ -1882,6 +1882,7 @@ dependencies = [
  "num-rational",
  "num-traits 0.2.19",
  "once_cell",
+ "paste",
  "phf",
  "rand",
  "rstest 0.17.0",
@@ -1891,8 +1892,8 @@ dependencies = [
  "sha3",
  "starknet-types-core",
  "starknet_api",
- "strum 0.24.1",
- "strum_macros 0.24.3",
+ "strum 0.25.0",
+ "strum_macros 0.25.3",
  "thiserror",
 ]
 
@@ -2976,9 +2977,9 @@ dependencies = [
 
 [[package]]
 name = "cairo-vm"
-version = "1.0.0"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "94a9ff830d1c79b41b146c69ddbf60cfc3765b92fabb5d5126908bdc1b1a9232"
+checksum = "58363ad8065ed891e3b14a8191b707677c7c7cb5b9d10030822506786d8d8108"
 dependencies = [
  "anyhow",
  "bincode 2.0.0-rc.3",
@@ -13689,9 +13690,8 @@ dependencies = [
 
 [[package]]
 name = "starknet_api"
-version = "0.13.0-rc.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e0a80f50db7439ceb65de759fcbadb1695c82aec82126b2313413632e40d4eec"
+version = "0.13.0-rc.1"
+source = "git+https://github.com/dojoengine/sequencer?tag=v0.8.0-rc3#290338edf2930e2d9ee0767685cb8c180ba1119a"
 dependencies = [
  "bitvec",
  "cairo-lang-starknet-classes",
