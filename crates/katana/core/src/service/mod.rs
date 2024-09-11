@@ -22,47 +22,7 @@ pub mod block_producer;
 pub mod messaging;
 mod metrics;
 
-#[cfg(feature = "messaging")]
-use self::messaging::{MessagingOutcome, MessagingService};
-
 pub(crate) const LOG_TARGET: &str = "node";
-
-#[cfg(feature = "messaging")]
-#[allow(missing_debug_implementations)]
-#[must_use = "MessagingTask does nothing unless polled"]
-pub struct MessagingTask<EF: ExecutorFactory> {
-    messaging: MessagingService<EF>,
-}
-
-#[cfg(feature = "messaging")]
-impl<EF: ExecutorFactory> MessagingTask<EF> {
-    pub fn new(messaging: MessagingService<EF>) -> Self {
-        Self { messaging }
-    }
-}
-
-#[cfg(feature = "messaging")]
-impl<EF: ExecutorFactory> Future for MessagingTask<EF> {
-    type Output = ();
-
-    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        let this = self.get_mut();
-
-        while let Poll::Ready(Some(outcome)) = this.messaging.poll_next_unpin(cx) {
-            match outcome {
-                MessagingOutcome::Gather { msg_count, .. } => {
-                    info!(target: LOG_TARGET, %msg_count, "Collected messages from settlement chain.");
-                }
-
-                MessagingOutcome::Send { msg_count, .. } => {
-                    info!(target: LOG_TARGET, %msg_count, "Sent messages to the settlement chain.");
-                }
-            }
-        }
-
-        Poll::Pending
-    }
-}
 
 /// The type that drives the blockchain's state
 ///
