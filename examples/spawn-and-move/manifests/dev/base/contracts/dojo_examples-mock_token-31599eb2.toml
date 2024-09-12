@@ -8,4 +8,5 @@ writes = []
 init_calldata = []
 tag = "dojo_examples-mock_token"
 systems = []
+interface_path = ""
 manifest_name = "dojo_examples-mock_token-31599eb2"

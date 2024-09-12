@@ -8,4 +8,5 @@ writes = []
 init_calldata = []
 tag = "dojo_examples-dungeon"
 systems = ["enter"]
+interface_path = "dojo_examples::dungeon::IDungeon"
 manifest_name = "dojo_examples-dungeon-6620e0e6"

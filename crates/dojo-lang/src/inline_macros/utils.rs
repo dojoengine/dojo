@@ -33,6 +33,22 @@ pub fn parent_of_kind(
     None
 }
 
+///
+pub fn find_interface_path(cfg_set: &CfgSet, contract_tag: &str) -> anyhow::Result<String> {
+    let dojo_manifests_dir = get_dojo_manifests_dir(cfg_set.clone())?;
+
+    let base_dir = dojo_manifests_dir.join("base");
+    let base_manifest = BaseManifest::load_from_path(&base_dir)?;
+
+    for contract in base_manifest.contracts {
+        if contract.inner.tag == contract_tag {
+            return Ok(contract.inner.interface_path);
+        }
+    }
+
+    Err(anyhow::anyhow!("Unable to find the interface path of `{}`", contract_tag))
+}
+
 /// Reads all the models and namespaces from base manifests files.
 pub fn load_manifest_models_and_namespaces(
     cfg_set: &CfgSet,

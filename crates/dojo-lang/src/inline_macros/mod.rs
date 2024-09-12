@@ -5,6 +5,7 @@ use cairo_lang_syntax::node::{ast, Terminal, TypedStablePtr, TypedSyntaxNode};
 use smol_str::SmolStr;
 
 pub mod delete;
+pub mod dispatcher_from_tag;
 pub mod emit;
 pub mod get;
 pub mod get_models_test_class_hashes;

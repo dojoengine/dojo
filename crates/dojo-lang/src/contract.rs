@@ -18,7 +18,7 @@ use dojo_types::system::Dependency;
 use dojo_world::config::NamespaceConfig;
 use dojo_world::contracts::naming;
 
-use crate::plugin::{ContractAuxData, DojoAuxData, DOJO_CONTRACT_ATTR};
+use crate::plugin::{ContractAuxData, DojoAuxData, Trait, DOJO_CONTRACT_ATTR};
 use crate::syntax::world_param::{self, WorldParamInjectionKind};
 use crate::syntax::{self_param, utils as syntax_utils};
 
@@ -50,6 +50,7 @@ impl DojoContract {
 
         let mut diagnostics = vec![];
         let parameters = get_parameters(db, module_ast, &mut diagnostics);
+        let traits = get_traits(db, module_ast);
 
         let mut contract =
             DojoContract { diagnostics, dependencies: HashMap::new(), systems: vec![] };
@@ -262,8 +263,10 @@ impl DojoContract {
                             namespace: contract_namespace.clone(),
                             dependencies: contract.dependencies.values().cloned().collect(),
                             systems: contract.systems.clone(),
+                            traits,
                         }],
                         events: vec![],
+                        interfaces: vec![],
                     })),
                     code_mappings,
                 }),
@@ -731,4 +734,82 @@ fn get_parameters(
     }
 
     parameters
+}
+
+fn get_traits(db: &dyn SyntaxGroup, module_ast: &ast::ItemModule) -> Vec<Trait> {
+    let traits = if let ast::MaybeModuleBody::Some(body) = module_ast.body(db) {
+        body.items(db)
+            .elements(db)
+            .iter()
+            .filter_map(|e| {
+                if let ast::ModuleItem::Impl(x) = e {
+                    let mut path_segments = x.trait_path(db).elements(db);
+
+                    // in Cairo, there is always a trait path linked to an impl, so path_segments always contain an item
+                    let last_segment = path_segments.pop().unwrap();
+
+                    // a dojo interface always has a generic <ContractState> argument, so just keep this kind of traits.
+                    match last_segment {
+                        ast::PathSegment::WithGenericArgs(p) => {
+                            let trait_name = p.ident(db).text(db).to_string();
+
+                            // Here, we have to rebuild the full trait path. There are several cases:
+                            //  1) there is no path with the trait name (example: IActions)
+                            //      => find the trait path in `use` clauses.
+                            //  2) the path is relative (example: `players::IActions`)
+                            //      => not possible to be sure that there is only one path in `use` clauses that matches
+                            //         with this relative path.
+                            //         (example: 2 use clauses: `use path1::players` and `use path2::players`).
+                            //  3) the path is absolute (example: `path::to::players::IActions`)
+                            //      => just use this path.
+                            //
+                            //  At the moment, only cases 1) and 3) are supported.
+                            let trait_path = if path_segments.is_empty() {
+                                get_trait_path(db, &body, trait_name.clone())
+                                    .expect("a path must always be found")
+                            } else {
+                                format!(
+                                    "{}::{trait_name}",
+                                    path_segments
+                                        .iter()
+                                        .map(|p| p.as_syntax_node().get_text(db))
+                                        .collect::<Vec<_>>()
+                                        .join("::")
+                                )
+                            };
+
+                            Some(Trait { name: trait_name.clone(), path: trait_path })
+                        }
+                        _ => None,
+                    }
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>()
+    } else {
+        vec![]
+    };
+
+    traits
+}
+
+fn get_trait_path(
+    db: &dyn SyntaxGroup,
+    module_body: &ast::ModuleBody,
+    trait_name: String,
+) -> Option<String> {
+    for e in module_body.items(db).elements(db) {
+        if let ast::ModuleItem::Use(u) = e {
+            if let ast::UsePath::Single(s) = u.use_path(db) {
+                let trait_path = s.as_syntax_node().get_text(db);
+
+                if trait_path.ends_with(&trait_name) {
+                    return Some(trait_path);
+                }
+            }
+        }
+    }
+
+    None
 }

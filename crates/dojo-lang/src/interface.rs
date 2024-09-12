@@ -1,6 +1,7 @@
 use cairo_lang_defs::patcher::{PatchBuilder, RewriteNode};
 use cairo_lang_defs::plugin::{
-    MacroPluginMetadata, PluginDiagnostic, PluginGeneratedFile, PluginResult,
+    DynGeneratedFileAuxData, MacroPluginMetadata, PluginDiagnostic, PluginGeneratedFile,
+    PluginResult,
 };
 use cairo_lang_diagnostics::Severity;
 use cairo_lang_plugins::plugins::HasItemsInCfgEx;
@@ -8,6 +9,7 @@ use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, ids, Terminal, TypedStablePtr, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 
+use crate::plugin::{DojoAuxData, InterfaceAuxData};
 use crate::syntax::self_param;
 use crate::syntax::world_param::{self, WorldParamInjectionKind};
 
@@ -84,7 +86,12 @@ impl DojoInterface {
             code: Some(PluginGeneratedFile {
                 name: name.clone(),
                 content: code,
-                aux_data: None,
+                aux_data: Some(DynGeneratedFileAuxData::new(DojoAuxData {
+                    models: vec![],
+                    contracts: vec![],
+                    events: vec![],
+                    interfaces: vec![InterfaceAuxData { name: name.to_string() }],
+                })),
                 code_mappings,
             }),
             diagnostics: interface.diagnostics,

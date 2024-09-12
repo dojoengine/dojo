@@ -8,4 +8,5 @@ writes = []
 init_calldata = []
 tag = "dojo_examples-others"
 systems = []
+interface_path = ""
 manifest_name = "dojo_examples-others-61de2c18"

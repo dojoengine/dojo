@@ -18,4 +18,5 @@ systems = [
     "update_player_name",
     "update_player_items",
 ]
+interface_path = "dojo_examples::actions::IActions"
 manifest_name = "dojo_examples-actions-40b6994c"

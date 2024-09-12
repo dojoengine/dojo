@@ -166,7 +166,8 @@ pub mod actions {
             let river_skale = RiverSkale { id: 1, health: 5, armor: 3, attack: 2 };
 
             set!(world, (flatbow, river_skale));
-            IDungeonDispatcher { contract_address: dungeon_address }.enter();
+            let d = dispatcher_from_tag("dojo_examples-dungeon", dungeon_address);
+            d.enter();
         }
 
         fn update_player_name(ref world: IWorldDispatcher, name: ByteArray) {

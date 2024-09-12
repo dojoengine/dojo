@@ -40,7 +40,7 @@ use starknet::core::types::contract::SierraClass;
 use starknet::core::types::Felt;
 use tracing::{debug, trace, trace_span};
 
-use crate::plugin::{DojoAuxData, Model};
+use crate::plugin::{DojoAuxData, Model, Trait};
 use crate::scarb_internal::debug::SierraToCairoDebugInfo;
 
 #[derive(Debug, Clone)]
@@ -350,6 +350,7 @@ fn update_files(
 
     let mut models = BTreeMap::new();
     let mut contracts = BTreeMap::new();
+    let mut dojo_interfaces = vec![];
 
     if let Some(external_contracts) = external_contracts {
         let external_crate_ids = collect_external_crate_ids(db, external_contracts);
@@ -378,6 +379,7 @@ fn update_files(
                             &naming::get_tag(&contract.namespace, &contract.name),
                             &compiled_artifacts,
                             &contract.systems,
+                            &contract.traits,
                         )?);
                     }
 
@@ -392,6 +394,9 @@ fn update_files(
                         *module_id,
                         &compiled_artifacts,
                     )?);
+
+                    // update the list of Dojo interface
+                    dojo_interfaces.extend(dojo_aux_data.interfaces.iter().map(|i| i.name.clone()));
                 }
 
                 // StarknetAuxData shouldn't be required. Every dojo contract and model are starknet
@@ -422,7 +427,37 @@ fn update_files(
         std::fs::create_dir_all(&base_contracts_abis_dir)?;
     }
 
-    for (_, (manifest, module_id, artifact)) in contracts.iter_mut() {
+    for (qualified_path, (manifest, module_id, artifact, traits)) in contracts.iter_mut() {
+        // During compilation, a list of traits implemented inside the contract is extracted.
+        // We need to find which of these traits is a Dojo interface, to be able to store its qualified path,
+        // and be able to use it in macros such `dispatcher_from_tag!`
+        let found_interfaces =
+            traits.iter().filter(|t| dojo_interfaces.contains(&t.name)).collect::<Vec<_>>();
+
+        // a contract may or may not implement a Dojo interface, but it cannot implement several Dojo interfaces.
+        if found_interfaces.len() > 1 {
+            return Err(anyhow!(
+                "The contract '{}' cannot implement several Dojo interfaces (found: [{}]).",
+                manifest.inner.tag,
+                found_interfaces.iter().map(|t| t.name.clone()).collect::<Vec<_>>().join(", ")
+            ));
+        }
+
+        manifest.inner.interface_path =
+            found_interfaces.first().map_or(String::new(), |x| x.path.clone());
+
+        // the Dojo interface path may start with `super`, referencing the trait which is
+        // in the same file than the contract.
+        // In this case, just replace `super` by the contract qualified path.
+        if manifest.inner.interface_path.starts_with("super") {
+            let (path, _) = qualified_path
+                .rsplit_once(CAIRO_PATH_SEPARATOR)
+                .unwrap_or((qualified_path.as_str(), ""));
+
+            manifest.inner.interface_path =
+                manifest.inner.interface_path.replacen("super", &path, 1);
+        }
+
         write_manifest_and_abi(
             &base_contracts_dir,
             &base_contracts_abis_dir,
@@ -558,7 +593,8 @@ fn get_dojo_contract_artifacts(
     tag: &str,
     compiled_classes: &CompiledArtifactByPath,
     systems: &[String],
-) -> Result<HashMap<String, (Manifest<DojoContract>, ModuleId, CompiledArtifact)>> {
+    traits: &Vec<Trait>,
+) -> Result<HashMap<String, (Manifest<DojoContract>, ModuleId, CompiledArtifact, Vec<Trait>)>> {
     let mut result = HashMap::new();
 
     if !matches!(naming::get_name_from_tag(tag).as_str(), "world" | "resource_metadata" | "base") {
@@ -584,7 +620,7 @@ fn get_dojo_contract_artifacts(
 
             result.insert(
                 contract_qualified_path.to_string(),
-                (manifest, *module_id, artifact.clone()),
+                (manifest, *module_id, artifact.clone(), traits.clone()),
             );
         }
     }

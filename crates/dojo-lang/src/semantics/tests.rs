@@ -19,6 +19,8 @@ test_file_test!(
 
         selector_from_tag: "selector_from_tag",
 
+        dispatcher_from_tag: "dispatcher_from_tag",
+
         get_models_test_class_hashes: "get_models_test_class_hashes",
 
         spawn_test_world: "spawn_test_world",

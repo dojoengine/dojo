@@ -1,0 +1,66 @@
+//! > Test no param
+
+//! > test_runner_name
+test_semantics
+
+//! > expression
+dispatcher_from_tag!()
+
+//! > expected
+Missing(
+    ExprMissing {
+        ty: <missing>,
+    },
+)
+
+//! > semantic_diagnostics
+error: Plugin diagnostic: Invalid arguments. Expected dispatcher_from_tag!("tag", contract_address)
+ --> lib.cairo:2:1
+dispatcher_from_tag!()
+^********************^
+
+//! > ==========================================================================
+
+//! > Test missing address
+
+//! > test_runner_name
+test_semantics
+
+//! > expression
+dispatcher_from_tag!("dojo-foo_setter")
+
+//! > expected
+Missing(
+    ExprMissing {
+        ty: <missing>,
+    },
+)
+
+//! > semantic_diagnostics
+error: Plugin diagnostic: Invalid arguments. Expected dispatcher_from_tag!("tag", contract_address)
+ --> lib.cairo:2:1
+dispatcher_from_tag!("dojo-foo_setter")
+^*************************************^
+
+//! > ==========================================================================
+
+//! > Test ok but expected to fail due to missing dojo_manifests_dir
+
+//! > test_runner_name
+test_semantics
+
+//! > expression
+dispatcher_from_tag!("dojo-foo_setter", 0x1234)
+
+//! > expected
+Missing(
+    ExprMissing {
+        ty: <missing>,
+    },
+)
+
+//! > semantic_diagnostics
+error: Plugin diagnostic: Failed to find the interface path of `dojo-foo_setter`
+ --> lib.cairo:2:1
+dispatcher_from_tag!("dojo-foo_setter", 0x1234)
+^*********************************************^

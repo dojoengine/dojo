@@ -28,6 +28,7 @@ use url::Url;
 use crate::contract::DojoContract;
 use crate::event::handle_event_struct;
 use crate::inline_macros::delete::DeleteMacro;
+use crate::inline_macros::dispatcher_from_tag::DispatcherFromTagMacro;
 use crate::inline_macros::emit::EmitMacro;
 use crate::inline_macros::get::GetMacro;
 use crate::inline_macros::get_models_test_class_hashes::GetModelsTestClassHashes;
@@ -54,12 +55,24 @@ pub struct Model {
     pub members: Vec<Member>,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Trait {
+    pub name: String,
+    pub path: String,
+}
+
 #[derive(Debug, PartialEq, Eq)]
 pub struct ContractAuxData {
     pub name: SmolStr,
     pub namespace: String,
     pub dependencies: Vec<Dependency>,
     pub systems: Vec<String>,
+    pub traits: Vec<Trait>,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct InterfaceAuxData {
+    pub name: String,
 }
 
 /// Dojo related auxiliary data of the Dojo plugin.
@@ -71,6 +84,8 @@ pub struct DojoAuxData {
     pub contracts: Vec<ContractAuxData>,
     /// A list of events that were processed by the plugin.
     pub events: Vec<StarkNetEventAuxData>,
+    /// A list of interfaces that were processed by the plugin.
+    pub interfaces: Vec<InterfaceAuxData>,
 }
 
 impl GeneratedFileAuxData for DojoAuxData {
@@ -78,7 +93,11 @@ impl GeneratedFileAuxData for DojoAuxData {
         self
     }
     fn eq(&self, other: &dyn GeneratedFileAuxData) -> bool {
-        if let Some(other) = other.as_any().downcast_ref::<Self>() { self == other } else { false }
+        if let Some(other) = other.as_any().downcast_ref::<Self>() {
+            self == other
+        } else {
+            false
+        }
     }
 }
 
@@ -158,6 +177,7 @@ pub fn dojo_plugin_suite() -> PluginSuite {
         .add_inline_macro_plugin::<SetMacro>()
         .add_inline_macro_plugin::<EmitMacro>()
         .add_inline_macro_plugin::<SelectorFromTagMacro>()
+        .add_inline_macro_plugin::<DispatcherFromTagMacro>()
         .add_inline_macro_plugin::<GetModelsTestClassHashes>()
         .add_inline_macro_plugin::<SpawnTestWorld>();
 

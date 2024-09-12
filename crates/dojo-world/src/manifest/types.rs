@@ -107,6 +107,7 @@ pub struct DojoContract {
     pub init_calldata: Vec<String>,
     pub tag: String,
     pub systems: Vec<String>,
+    pub interface_path: String,
 }
 
 /// Represents a declaration of a model.
