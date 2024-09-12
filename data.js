@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1726091819371,
+  "lastUpdate": 1726167292609,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -19729,6 +19729,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3947603,
             "range": "± 41743",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ebb3b7087801cb95652d78e45810da4d7ee0e7df",
+          "message": "fix(torii-grpc): member clause should never error out if no entities (#2418)\n\n* fix(torii-grpc): member clause should never error out if no entities\r\n\r\n* fix: total count\r\n\r\n* fmt",
+          "timestamp": "2024-09-12T14:35:14-04:00",
+          "tree_id": "36e07b529d0d67d7c5d801970ad54783b8114f59",
+          "url": "https://github.com/dojoengine/dojo/commit/ebb3b7087801cb95652d78e45810da4d7ee0e7df"
+        },
+        "date": 1726167290986,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17351753,
+            "range": "± 258157",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3803021,
+            "range": "± 87503",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3806268248,
+            "range": "± 758319309",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3868867,
+            "range": "± 48438",
             "unit": "ns/iter"
           }
         ]
