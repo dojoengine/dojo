@@ -16,6 +16,20 @@ struct Foo {
 }
 
 #[test]
+fn test_model_definition() {
+    let definition = dojo::model::Model::<Foo>::definition();
+
+    assert_eq!(definition.name, dojo::model::Model::<Foo>::name());
+    assert_eq!(definition.namespace, dojo::model::Model::<Foo>::namespace());
+    assert_eq!(definition.namespace_selector, dojo::model::Model::<Foo>::namespace_hash());
+    assert_eq!(definition.version, dojo::model::Model::<Foo>::version());
+    assert_eq!(definition.layout, dojo::model::Model::<Foo>::layout());
+    assert_eq!(definition.schema, dojo::model::Model::<Foo>::schema());
+    assert_eq!(definition.packed_size, dojo::model::Model::<Foo>::packed_size());
+    assert_eq!(definition.unpacked_size, dojo::model::introspect::Introspect::<Foo>::size());
+}
+
+#[test]
 fn test_id() {
     let mvalues = FooEntity { __id: 1, v1: 3, v2: 4 };
     assert!(mvalues.id() == 1);

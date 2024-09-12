@@ -660,6 +660,25 @@ pub impl $type_name$ModelImpl of dojo::model::Model<$type_name$> {
     fn packed_size() -> Option<usize> {
         dojo::model::layout::compute_packed_size(Self::layout())
     }
+
+    #[inline(always)]
+    fn schema() -> dojo::model::introspect::Ty {
+        dojo::model::introspect::Introspect::<$type_name$>::ty()
+    }
+
+    #[inline(always)]
+    fn definition() -> dojo::model::ModelDefinition {
+        dojo::model::ModelDefinition {
+            name: Self::name(),
+            namespace: Self::namespace(),
+            namespace_selector: Self::namespace_hash(),
+            version: Self::version(),
+            layout: Self::layout(),
+            schema: Self::schema(),
+            packed_size: Self::packed_size(),
+            unpacked_size: dojo::model::introspect::Introspect::<$type_name$>::size(),
+        }
+    }
 }
 
 #[cfg(target: \"test\")]
@@ -753,6 +772,10 @@ pub mod $contract_name$ {
 
         fn schema(self: @ContractState) -> dojo::model::introspect::Ty {
             dojo::model::introspect::Introspect::<$type_name$>::ty()
+        }
+
+        fn definition(self: @ContractState) -> dojo::model::ModelDefinition {
+            dojo::model::Model::<$type_name$>::definition()
         }
     }
 

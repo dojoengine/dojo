@@ -46,8 +46,7 @@ async fn test_model_ops() {
         )
         .await
         .unwrap(),
-        Felt::from_hex("0x4dd1c573b5cdc56561be8b28a4840048a3a008d1a4a6eed397ec4135effaf44")
-            .unwrap()
+        Felt::from_hex("0xbce546ee27713cb53d0ab70d08da90dabccba1de7deeee14bec49dd7d6e7f").unwrap()
     );
 
     assert_eq!(
@@ -58,7 +57,7 @@ async fn test_model_ops() {
         )
         .await
         .unwrap(),
-        Felt::from_hex("0x68e3a53988f20d84c6652f25d6add070633a5d05f8c4ac68285cacb228afa14")
+        Felt::from_hex("0x759ae2622a4b77066269a624efa5f7f0d4343c5e83b1c4591d02f5f53a51417")
             .unwrap()
     );
 

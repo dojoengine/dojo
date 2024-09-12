@@ -292,6 +292,55 @@ abigen!(
   },
   {
     "type": "struct",
+    "name": "dojo::model::definition::ModelDefinition",
+    "members": [
+      {
+        "name": "name",
+        "type": "core::byte_array::ByteArray"
+      },
+      {
+        "name": "namespace",
+        "type": "core::byte_array::ByteArray"
+      },
+      {
+        "name": "namespace_selector",
+        "type": "core::felt252"
+      },
+      {
+        "name": "version",
+        "type": "core::integer::u8"
+      },
+      {
+        "name": "layout",
+        "type": "dojo::model::layout::Layout"
+      },
+      {
+        "name": "schema",
+        "type": "dojo::model::introspect::Ty"
+      },
+      {
+        "name": "packed_size",
+        "type": "core::option::Option::<core::integer::u32>"
+      },
+      {
+        "name": "unpacked_size",
+        "type": "core::option::Option::<core::integer::u32>"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "definition",
+    "inputs": [],
+    "outputs": [
+      {
+        "type": "dojo::model::definition::ModelDefinition"
+      }
+    ],
+    "state_mutability": "view"
+  },
+  {
+    "type": "struct",
     "name": "dojo::model::metadata::ResourceMetadata",
     "members": [
       {

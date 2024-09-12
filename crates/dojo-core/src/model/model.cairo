@@ -2,6 +2,7 @@ use starknet::SyscallResult;
 
 use dojo::model::Layout;
 use dojo::model::introspect::Ty;
+use dojo::model::ModelDefinition;
 use dojo::world::IWorldDispatcher;
 
 #[derive(Copy, Drop, Serde, Debug, PartialEq)]
@@ -71,6 +72,9 @@ pub trait Model<T> {
     fn layout() -> Layout;
     fn instance_layout(self: @T) -> Layout;
     fn packed_size() -> Option<usize>;
+
+    fn schema() -> Ty;
+    fn definition() -> ModelDefinition;
 }
 
 #[starknet::interface]
@@ -87,6 +91,8 @@ pub trait IModel<T> {
     fn packed_size(self: @T) -> Option<usize>;
     fn layout(self: @T) -> Layout;
     fn schema(self: @T) -> Ty;
+
+    fn definition(self: @T) -> ModelDefinition;
 }
 
 /// Deploys a model with the given [`ClassHash`] and retrieves it's name.

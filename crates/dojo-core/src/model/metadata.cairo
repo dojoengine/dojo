@@ -9,7 +9,7 @@ use core::poseidon::poseidon_hash_span;
 use core::serde::Serde;
 
 use dojo::model::introspect::{Introspect, Ty, Struct, Member};
-use dojo::model::{Model, ModelIndex, Layout, FieldLayout};
+use dojo::model::{Model, ModelIndex, Layout, FieldLayout, ModelDefinition};
 use dojo::utils;
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 
@@ -163,6 +163,25 @@ pub impl ResourceMetadataModel of Model<ResourceMetadata> {
     fn packed_size() -> Option<usize> {
         Option::None
     }
+
+    #[inline(always)]
+    fn schema() -> Ty {
+        Introspect::<ResourceMetadata>::ty()
+    }
+
+    #[inline(always)]
+    fn definition() -> ModelDefinition {
+        ModelDefinition {
+            name: Self::name(),
+            namespace: Self::namespace(),
+            namespace_selector: Self::namespace_hash(),
+            version: Self::version(),
+            layout: Self::layout(),
+            schema: Self::schema(),
+            packed_size: Self::packed_size(),
+            unpacked_size: Introspect::<ResourceMetadata>::size()
+        }
+    }
 }
 
 pub impl ResourceMetadataIntrospect<> of Introspect<ResourceMetadata<>> {
@@ -199,7 +218,7 @@ pub mod resource_metadata {
     use super::ResourceMetadataModel;
 
     use dojo::model::introspect::{Introspect, Ty};
-    use dojo::model::Layout;
+    use dojo::model::{Layout, ModelDefinition};
 
     #[storage]
     struct Storage {}
@@ -240,6 +259,12 @@ pub mod resource_metadata {
     fn schema(self: @ContractState) -> Ty {
         Introspect::<ResourceMetadata>::ty()
     }
+
+    #[external(v0)]
+    fn definition(self: @ContractState) -> ModelDefinition {
+        ResourceMetadataModel::definition()
+    }
+
 
     #[external(v0)]
     fn ensure_abi(self: @ContractState, model: ResourceMetadata) {}

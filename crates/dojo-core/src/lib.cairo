@@ -11,6 +11,9 @@ pub mod model {
     pub mod layout;
     pub use layout::{Layout, FieldLayout};
 
+    pub mod definition;
+    pub use definition::ModelDefinition;
+
     pub mod model;
     pub use model::{
         Model, ModelIndex, ModelEntity, IModel, IModelDispatcher, IModelDispatcherTrait,
