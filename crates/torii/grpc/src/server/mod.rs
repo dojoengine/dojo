@@ -546,7 +546,7 @@ impl DojoWorld {
             let nested_table = parts[..parts.len() - 1].join("$");
             (format!("{model}${nested_table}"), format!("external_{}", parts.last().unwrap()))
         } else {
-            (format!("{model}"), format!("external_{}", member_clause.member))
+            (model, format!("external_{}", member_clause.member))
         };
         let (entity_query, arrays_queries, count_query) = build_sql_query(
             &schemas,
@@ -593,7 +593,7 @@ impl DojoWorld {
         offset: Option<u32>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         let (where_clause, having_clause, join_clause, bind_values) =
-            self.build_composite_clause(table, model_relation_table, &composite)?;
+            build_composite_clause(table, model_relation_table, &composite)?;
 
         let count_query = format!(
             r#"
@@ -669,107 +669,6 @@ impl DojoWorld {
         }
 
         Ok((entities, total_count))
-    }
-
-    fn build_composite_clause(
-        &self,
-        table: &str,
-        model_relation_table: &str,
-        composite: &proto::types::CompositeClause,
-    ) -> Result<(String, String, String, Vec<String>), Error> {
-        let is_or = composite.operator == LogicalOperator::Or as i32;
-        let mut where_clauses = Vec::new();
-        let mut join_clauses = Vec::new();
-        let mut having_clauses = Vec::new();
-        let mut bind_values = Vec::new();
-
-        for clause in &composite.clauses {
-            match clause.clause_type.as_ref().unwrap() {
-                ClauseType::HashedKeys(hashed_keys) => {
-                    let ids = hashed_keys
-                        .hashed_keys
-                        .iter()
-                        .map(|id| {
-                            bind_values.push(Felt::from_bytes_be_slice(id).to_string());
-                            "?".to_string()
-                        })
-                        .collect::<Vec<_>>()
-                        .join(", ");
-                    where_clauses.push(format!("{table}.id IN ({})", ids));
-                }
-                ClauseType::Keys(keys) => {
-                    let keys_pattern = build_keys_pattern(keys)?;
-                    bind_values.push(keys_pattern);
-                    where_clauses.push(format!("{table}.keys REGEXP ?"));
-                }
-                ClauseType::Member(member) => {
-                    let comparison_operator =
-                        ComparisonOperator::from_repr(member.operator as usize)
-                            .expect("invalid comparison operator");
-                    let value: Primitive = member.value.as_ref().unwrap().clone().try_into()?;
-                    let comparison_value = value.to_sql_value()?;
-                    bind_values.push(comparison_value);
-
-                    let model = member.model.clone();
-                    let parts: Vec<&str> = member.member.split('.').collect();
-                    let (table_name, column_name) = if parts.len() > 1 {
-                        let nested_table = parts[..parts.len() - 1].join("$");
-                        (
-                            format!("[{model}${nested_table}]"),
-                            format!("external_{}", parts.last().unwrap()),
-                        )
-                    } else {
-                        (format!("[{model}]"), format!("external_{}", member.member))
-                    };
-
-                    let (namespace, model) = member
-                        .model
-                        .split_once('-')
-                        .ok_or(QueryError::InvalidNamespacedModel(member.model.clone()))?;
-                    let model_id = compute_selector_from_names(namespace, model);
-                    join_clauses.push(format!(
-                        "LEFT JOIN {table_name} ON [{table}].id = {table_name}.entity_id"
-                    ));
-                    where_clauses
-                        .push(format!("{table_name}.{column_name} {comparison_operator} ?"));
-                    having_clauses.push(format!(
-                        "INSTR(group_concat({model_relation_table}.model_id), '{:#x}') > 0",
-                        model_id
-                    ));
-                }
-                ClauseType::Composite(nested_composite) => {
-                    let (nested_where, nested_having, nested_join, nested_values) =
-                        self.build_composite_clause(table, model_relation_table, nested_composite)?;
-                    where_clauses.push(format!("({})", nested_where.trim_start_matches("WHERE ")));
-                    if !nested_having.is_empty() {
-                        having_clauses
-                            .push(nested_having.trim_start_matches("HAVING ").to_string());
-                    }
-                    join_clauses.extend(
-                        nested_join
-                            .split_whitespace()
-                            .filter(|&s| s.starts_with("LEFT"))
-                            .map(String::from),
-                    );
-                    bind_values.extend(nested_values);
-                }
-                _ => return Err(QueryError::UnsupportedQuery.into()),
-            }
-        }
-
-        let join_clause = join_clauses.join(" ");
-        let where_clause = if !where_clauses.is_empty() {
-            format!("WHERE {}", where_clauses.join(if is_or { " OR " } else { " AND " }))
-        } else {
-            String::new()
-        };
-        let having_clause = if !having_clauses.is_empty() {
-            format!("HAVING {}", having_clauses.join(if is_or { " OR " } else { " AND " }))
-        } else {
-            String::new()
-        };
-
-        Ok((where_clause, having_clause, join_clause, bind_values))
     }
 
     pub async fn model_metadata(
@@ -1051,6 +950,104 @@ fn build_keys_pattern(clause: &proto::types::KeysClause) -> Result<String, Error
     keys_pattern += "/$";
 
     Ok(keys_pattern)
+}
+
+// builds a composite clause for a query
+fn build_composite_clause(
+    table: &str,
+    model_relation_table: &str,
+    composite: &proto::types::CompositeClause,
+) -> Result<(String, String, String, Vec<String>), Error> {
+    let is_or = composite.operator == LogicalOperator::Or as i32;
+    let mut where_clauses = Vec::new();
+    let mut join_clauses = Vec::new();
+    let mut having_clauses = Vec::new();
+    let mut bind_values = Vec::new();
+
+    for clause in &composite.clauses {
+        match clause.clause_type.as_ref().unwrap() {
+            ClauseType::HashedKeys(hashed_keys) => {
+                let ids = hashed_keys
+                    .hashed_keys
+                    .iter()
+                    .map(|id| {
+                        bind_values.push(Felt::from_bytes_be_slice(id).to_string());
+                        "?".to_string()
+                    })
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                where_clauses.push(format!("{table}.id IN ({})", ids));
+            }
+            ClauseType::Keys(keys) => {
+                let keys_pattern = build_keys_pattern(keys)?;
+                bind_values.push(keys_pattern);
+                where_clauses.push(format!("{table}.keys REGEXP ?"));
+            }
+            ClauseType::Member(member) => {
+                let comparison_operator = ComparisonOperator::from_repr(member.operator as usize)
+                    .expect("invalid comparison operator");
+                let value: Primitive = member.value.as_ref().unwrap().clone().try_into()?;
+                let comparison_value = value.to_sql_value()?;
+                bind_values.push(comparison_value);
+
+                let model = member.model.clone();
+                let parts: Vec<&str> = member.member.split('.').collect();
+                let (table_name, column_name) = if parts.len() > 1 {
+                    let nested_table = parts[..parts.len() - 1].join("$");
+                    (
+                        format!("[{model}${nested_table}]"),
+                        format!("external_{}", parts.last().unwrap()),
+                    )
+                } else {
+                    (format!("[{model}]"), format!("external_{}", member.member))
+                };
+
+                let (namespace, model) = member
+                    .model
+                    .split_once('-')
+                    .ok_or(QueryError::InvalidNamespacedModel(member.model.clone()))?;
+                let model_id = compute_selector_from_names(namespace, model);
+                join_clauses.push(format!(
+                    "LEFT JOIN {table_name} ON [{table}].id = {table_name}.entity_id"
+                ));
+                where_clauses.push(format!("{table_name}.{column_name} {comparison_operator} ?"));
+                having_clauses.push(format!(
+                    "INSTR(group_concat({model_relation_table}.model_id), '{:#x}') > 0",
+                    model_id
+                ));
+            }
+            ClauseType::Composite(nested_composite) => {
+                let (nested_where, nested_having, nested_join, nested_values) =
+                    self.build_composite_clause(table, model_relation_table, nested_composite)?;
+                where_clauses.push(format!("({})", nested_where.trim_start_matches("WHERE ")));
+                if !nested_having.is_empty() {
+                    having_clauses.push(nested_having.trim_start_matches("HAVING ").to_string());
+                }
+                join_clauses.extend(
+                    nested_join
+                        .split_whitespace()
+                        .filter(|&s| s.starts_with("LEFT"))
+                        .map(String::from),
+                );
+                bind_values.extend(nested_values);
+            }
+            _ => return Err(QueryError::UnsupportedQuery.into()),
+        }
+    }
+
+    let join_clause = join_clauses.join(" ");
+    let where_clause = if !where_clauses.is_empty() {
+        format!("WHERE {}", where_clauses.join(if is_or { " OR " } else { " AND " }))
+    } else {
+        String::new()
+    };
+    let having_clause = if !having_clauses.is_empty() {
+        format!("HAVING {}", having_clauses.join(if is_or { " OR " } else { " AND " }))
+    } else {
+        String::new()
+    };
+
+    Ok((where_clause, having_clause, join_clause, bind_values))
 }
 
 type ServiceResult<T> = Result<Response<T>, Status>;
