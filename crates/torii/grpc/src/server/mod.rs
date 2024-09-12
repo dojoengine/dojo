@@ -257,7 +257,7 @@ impl DojoWorld {
                 "#
         );
         // total count of rows without limit and offset
-        let total_count: u32 = sqlx::query_scalar(&count_query).fetch_one(&self.pool).await?;
+        let total_count: u32 = sqlx::query_scalar(&count_query).fetch_optional(&self.pool).await?.unwrap_or(0);
 
         if total_count == 0 {
             return Ok((Vec::new(), 0));
@@ -376,7 +376,7 @@ impl DojoWorld {
         );
 
         let total_count =
-            sqlx::query_scalar(&count_query).bind(&keys_pattern).fetch_one(&self.pool).await?;
+            sqlx::query_scalar(&count_query).bind(&keys_pattern).fetch_optional(&self.pool).await?.unwrap_or(0);
 
         if total_count == 0 {
             return Ok((Vec::new(), 0));
@@ -552,8 +552,9 @@ impl DojoWorld {
 
         let total_count = sqlx::query_scalar(&count_query)
             .bind(comparison_value.clone())
-            .fetch_one(&self.pool)
-            .await?;
+            .fetch_optional(&self.pool)
+            .await?
+            .unwrap_or(0);
 
         let db_entities = sqlx::query(&entity_query)
             .bind(comparison_value.clone())
@@ -678,7 +679,7 @@ impl DojoWorld {
             count_query = count_query.bind(value);
         }
 
-        let total_count = count_query.fetch_one(&self.pool).await?;
+        let total_count = count_query.fetch_optional(&self.pool).await?.unwrap_or(0);
 
         if total_count == 0 {
             return Ok((Vec::new(), 0));
