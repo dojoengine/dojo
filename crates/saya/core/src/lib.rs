@@ -454,6 +454,9 @@ impl Saya {
 
         let program_hash = proof.extract_program()?.program_hash;
         let ExtractOutputResult { program_output, program_output_hash } = proof.extract_output()?;
+        let program_hash_string = program_hash.to_string();
+        let program_output_hash_string = program_output_hash.to_string();
+        info!(target: LOG_TARGET, program_hash_string,program_output_hash_string, "Extracted program hash and output hash.");
         let expected_fact = poseidon_hash_many(&[program_hash, program_output_hash]).to_string();
         let program = program_hash.to_string();
         info!(target: LOG_TARGET, expected_fact, program, "Expected fact.");

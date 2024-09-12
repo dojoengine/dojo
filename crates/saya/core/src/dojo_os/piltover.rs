@@ -1,6 +1,7 @@
 use anyhow::Context;
 use cairo_proof_parser::to_felts;
 use dojo_utils::{TransactionExt, TxnConfig};
+use katana_rpc_types::trace;
 use serde::Serialize;
 use starknet::accounts::{Account, Call};
 use starknet::core::utils::get_selector_from_name;
@@ -26,7 +27,7 @@ pub async fn starknet_apply_piltover(
     let txn_config = TxnConfig { wait: true, receipt: true, ..Default::default() };
 
     let calldata = to_felts(&calldata)?;
-
+    trace!(target: LOG_TARGET, "Sending `update_state` piltover transaction to contract {:#x}", contract);
     let tx = account
         .execute_v1(vec![Call {
             to: contract,
@@ -35,9 +36,7 @@ pub async fn starknet_apply_piltover(
         }])
         .nonce(nonce)
         .send_with_cfg(&txn_config)
-        .await
-        .context("Failed to send `update_state` transaction.")?;
-
+        .await.unwrap();    
     trace!(target: LOG_TARGET,  "Sent `update_state` piltover transaction {:#x}", tx.transaction_hash);
 
     wait_for_sent_transaction(tx, account).await?;

@@ -142,7 +142,7 @@ cairo-lang-test-plugin = "2.7.0"
 cairo-lang-test-runner = "2.7.0"
 cairo-lang-test-utils = "2.7.0"
 cairo-lang-utils = "2.7.0"
-cairo-proof-parser = { git = "https://github.com/cartridge-gg/cairo-proof-parser", rev = "dd9274e5c48f60282a8d001014d2c807574a3dc5" }
+cairo-proof-parser = { git = "https://github.com/chudkowsky/cairo-proof-parser", rev = "75cbcbb76a7d1fad2b2e3258540622adf097cde7" }
 cairo-vm = "1.0.0-rc4"
 camino = { version = "1.1.2", features = [ "serde1" ] }
 chrono = { version = "0.4.24", features = [ "serde" ] }
