@@ -3,9 +3,7 @@ use clap::Parser;
 use console::Style;
 use saya_core::{Saya, SayaConfig};
 
-mod args;
-
-use args::SayaArgs;
+use saya::args::SayaArgs;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

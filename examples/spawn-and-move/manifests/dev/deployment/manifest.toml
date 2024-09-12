@@ -4,14 +4,14 @@ class_hash = "0xa349b743d361ce4567361475a89b84a386bb383448c6926954e5fe0b525597"
 original_class_hash = "0xa349b743d361ce4567361475a89b84a386bb383448c6926954e5fe0b525597"
 abi = "manifests/dev/deployment/abis/dojo-world.json"
 address = "0x6a5152f02567ffb01e5da73a92253dacd50f74932e1a87f3cb58723237a6dda"
-transaction_hash = "0x67359c73d4f29e73a35f681bc3e807b3dc694c3ea699a9b2f7d3cd166e6d877"
+transaction_hash = "0x33f3062846262fa6a52af3ff53ddf508baf004c48cd2ef86a095c3a572a9aca"
 block_number = 3
 seed = "dojo_examples"
 manifest_name = "dojo-world"
 
 [world.metadata]
 profile_name = "dev"
-rpc_url = "http://localhost:5050/"
+rpc_url = "http://localhost:60409/"
 
 [base]
 kind = "Class"
