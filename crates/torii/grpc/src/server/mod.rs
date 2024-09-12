@@ -300,14 +300,26 @@ impl DojoWorld {
 
         let mut entities = Vec::new();
         for (model_ids, entity_ids) in model_groups {
-            let schemas = self.model_cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect::<Vec<_>>();
+            let schemas = self
+                .model_cache
+                .models(&model_ids)
+                .await?
+                .into_iter()
+                .map(|m| m.schema)
+                .collect::<Vec<_>>();
 
             let (entity_query, arrays_queries, _) = build_sql_query(
                 &schemas,
                 table,
                 entity_relation_column,
-                Some(&format!("{table}.id IN ({})", entity_ids.iter().map(|_| "?").collect::<Vec<_>>().join(","))),
-                Some(&format!("{table}.id IN ({})", entity_ids.iter().map(|_| "?").collect::<Vec<_>>().join(","))),
+                Some(&format!(
+                    "{table}.id IN ({})",
+                    entity_ids.iter().map(|_| "?").collect::<Vec<_>>().join(",")
+                )),
+                Some(&format!(
+                    "{table}.id IN ({})",
+                    entity_ids.iter().map(|_| "?").collect::<Vec<_>>().join(",")
+                )),
                 None,
                 None,
             )?;
@@ -346,20 +358,24 @@ impl DojoWorld {
         offset: Option<u32>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         let keys_pattern = build_keys_pattern(keys_clause)?;
-    
+
         // Build the WHERE clause for model filtering
         let model_filter = if !keys_clause.models.is_empty() {
-            let model_ids = keys_clause.models.iter().map(|model| {
-                let (namespace, name) = model
-                    .split_once('-')
-                    .ok_or(QueryError::InvalidNamespacedModel(model.clone()))?;
-                Ok(format!("'{:#x}'", compute_selector_from_names(namespace, name)))
-            }).collect::<Result<Vec<_>, Error>>()?;
+            let model_ids = keys_clause
+                .models
+                .iter()
+                .map(|model| {
+                    let (namespace, name) = model
+                        .split_once('-')
+                        .ok_or(QueryError::InvalidNamespacedModel(model.clone()))?;
+                    Ok(format!("'{:#x}'", compute_selector_from_names(namespace, name)))
+                })
+                .collect::<Result<Vec<_>, Error>>()?;
             format!("AND {model_relation_table}.model_id IN ({})", model_ids.join(","))
         } else {
             String::new()
         };
-    
+
         // Count query
         let count_query = format!(
             r#"
@@ -370,17 +386,17 @@ impl DojoWorld {
             {model_filter}
             "#
         );
-    
+
         let total_count: u32 = sqlx::query_scalar(&count_query)
             .bind(&keys_pattern)
             .fetch_optional(&self.pool)
             .await?
             .unwrap_or(0);
-    
+
         if total_count == 0 {
             return Ok((Vec::new(), 0));
         }
-    
+
         // Main query
         let mut query = format!(
             r#"
@@ -393,14 +409,14 @@ impl DojoWorld {
             ORDER BY {table}.event_id DESC
             "#
         );
-    
+
         if limit.is_some() {
             query += " LIMIT ?";
         }
         if offset.is_some() {
             query += " OFFSET ?";
         }
-    
+
         let mut db_query = sqlx::query_as(&query).bind(&keys_pattern);
         if let Some(limit) = limit {
             db_query = db_query.bind(limit);
@@ -408,9 +424,9 @@ impl DojoWorld {
         if let Some(offset) = offset {
             db_query = db_query.bind(offset);
         }
-    
+
         let db_entities: Vec<(String, String)> = db_query.fetch_all(&self.pool).await?;
-    
+
         // Group entities by their models
         let mut model_groups: HashMap<Vec<Felt>, Vec<String>> = HashMap::new();
         for (entity_id, models_str) in db_entities {
@@ -421,27 +437,39 @@ impl DojoWorld {
                 .map_err(ParseError::FromStr)?;
             model_groups.entry(model_ids).or_default().push(entity_id);
         }
-    
+
         let mut entities = Vec::new();
         for (model_ids, entity_ids) in model_groups {
-            let schemas = self.model_cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect::<Vec<_>>();
-    
+            let schemas = self
+                .model_cache
+                .models(&model_ids)
+                .await?
+                .into_iter()
+                .map(|m| m.schema)
+                .collect::<Vec<_>>();
+
             let (entity_query, arrays_queries, _) = build_sql_query(
                 &schemas,
                 table,
                 entity_relation_column,
-                Some(&format!("{table}.id IN ({})", entity_ids.iter().map(|_| "?").collect::<Vec<_>>().join(","))),
-                Some(&format!("{table}.id IN ({})", entity_ids.iter().map(|_| "?").collect::<Vec<_>>().join(","))),
+                Some(&format!(
+                    "{table}.id IN ({})",
+                    entity_ids.iter().map(|_| "?").collect::<Vec<_>>().join(",")
+                )),
+                Some(&format!(
+                    "{table}.id IN ({})",
+                    entity_ids.iter().map(|_| "?").collect::<Vec<_>>().join(",")
+                )),
                 None,
                 None,
             )?;
-    
+
             let mut query = sqlx::query(&entity_query);
             for id in &entity_ids {
                 query = query.bind(id);
             }
             let rows = query.fetch_all(&self.pool).await?;
-    
+
             let mut arrays_rows = HashMap::new();
             for (name, array_query) in arrays_queries {
                 let mut query = sqlx::query(&array_query);
@@ -451,12 +479,12 @@ impl DojoWorld {
                 let array_rows = query.fetch_all(&self.pool).await?;
                 arrays_rows.insert(name, array_rows);
             }
-    
+
             for row in rows {
                 entities.push(map_row_to_entity(&row, &arrays_rows, schemas.clone())?);
             }
         }
-    
+
         Ok((entities, total_count))
     }
 
@@ -498,21 +526,21 @@ impl DojoWorld {
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         let comparison_operator = ComparisonOperator::from_repr(member_clause.operator as usize)
             .expect("invalid comparison operator");
-    
+
         let primitive: Primitive =
             member_clause.value.ok_or(QueryError::MissingParam("value".into()))?.try_into()?;
-    
+
         let comparison_value = primitive.to_sql_value()?;
-    
+
         let (namespace, model) = member_clause
             .model
             .split_once('-')
             .ok_or(QueryError::InvalidNamespacedModel(member_clause.model.clone()))?;
-    
+
         let model_id = compute_selector_from_names(namespace, model);
         let table_name = member_clause.model;
         let column_name = format!("external_{}", member_clause.member);
-    
+
         // Count query
         let count_query = format!(
             r#"
@@ -524,17 +552,17 @@ impl DojoWorld {
             AND [{table_name}].{column_name} {comparison_operator} ?
             "#
         );
-    
+
         let total_count: u32 = sqlx::query_scalar(&count_query)
             .bind(&comparison_value)
             .fetch_optional(&self.pool)
             .await?
             .unwrap_or(0);
-    
+
         if total_count == 0 {
             return Ok((Vec::new(), 0));
         }
-    
+
         // Main query
         let mut query = format!(
             r#"
@@ -548,14 +576,14 @@ impl DojoWorld {
             ORDER BY {table}.event_id DESC
             "#
         );
-    
+
         if limit.is_some() {
             query += " LIMIT ?";
         }
         if offset.is_some() {
             query += " OFFSET ?";
         }
-    
+
         let mut db_query = sqlx::query_as(&query).bind(&comparison_value);
         if let Some(limit) = limit {
             db_query = db_query.bind(limit);
@@ -563,9 +591,9 @@ impl DojoWorld {
         if let Some(offset) = offset {
             db_query = db_query.bind(offset);
         }
-    
+
         let db_entities: Vec<(String, String)> = db_query.fetch_all(&self.pool).await?;
-    
+
         // Group entities by their models
         let mut model_groups: HashMap<Vec<Felt>, Vec<String>> = HashMap::new();
         for (entity_id, models_str) in db_entities {
@@ -576,27 +604,39 @@ impl DojoWorld {
                 .map_err(ParseError::FromStr)?;
             model_groups.entry(model_ids).or_default().push(entity_id);
         }
-    
+
         let mut entities = Vec::new();
         for (model_ids, entity_ids) in model_groups {
-            let schemas = self.model_cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect::<Vec<_>>();
-    
+            let schemas = self
+                .model_cache
+                .models(&model_ids)
+                .await?
+                .into_iter()
+                .map(|m| m.schema)
+                .collect::<Vec<_>>();
+
             let (entity_query, arrays_queries, _) = build_sql_query(
                 &schemas,
                 table,
                 entity_relation_column,
-                Some(&format!("{table}.id IN ({})", entity_ids.iter().map(|_| "?").collect::<Vec<_>>().join(","))),
-                Some(&format!("{table}.id IN ({})", entity_ids.iter().map(|_| "?").collect::<Vec<_>>().join(","))),
+                Some(&format!(
+                    "{table}.id IN ({})",
+                    entity_ids.iter().map(|_| "?").collect::<Vec<_>>().join(",")
+                )),
+                Some(&format!(
+                    "{table}.id IN ({})",
+                    entity_ids.iter().map(|_| "?").collect::<Vec<_>>().join(",")
+                )),
                 None,
                 None,
             )?;
-    
+
             let mut query = sqlx::query(&entity_query);
             for id in &entity_ids {
                 query = query.bind(id);
             }
             let rows = query.fetch_all(&self.pool).await?;
-    
+
             let mut arrays_rows = HashMap::new();
             for (name, array_query) in arrays_queries {
                 let mut query = sqlx::query(&array_query);
@@ -606,12 +646,12 @@ impl DojoWorld {
                 let array_rows = query.fetch_all(&self.pool).await?;
                 arrays_rows.insert(name, array_rows);
             }
-    
+
             for row in rows {
                 entities.push(map_row_to_entity(&row, &arrays_rows, schemas.clone())?);
             }
         }
-    
+
         Ok((entities, total_count))
     }
 
@@ -628,7 +668,7 @@ impl DojoWorld {
         let mut join_clauses = Vec::new();
         let mut having_clauses = Vec::new();
         let mut bind_values = Vec::new();
-    
+
         for clause in composite.clauses {
             match clause.clause_type.unwrap() {
                 ClauseType::HashedKeys(hashed_keys) => {
@@ -648,18 +688,19 @@ impl DojoWorld {
                     where_clauses.push(format!("{table}.keys REGEXP ?"));
                 }
                 ClauseType::Member(member) => {
-                    let comparison_operator = ComparisonOperator::from_repr(member.operator as usize)
-                        .expect("invalid comparison operator");
+                    let comparison_operator =
+                        ComparisonOperator::from_repr(member.operator as usize)
+                            .expect("invalid comparison operator");
                     let value: Primitive = member.value.unwrap().try_into()?;
                     let comparison_value = value.to_sql_value()?;
-    
+
                     let column_name = format!("external_{}", member.member);
                     let (namespace, model) = member
                         .model
                         .split_once('-')
                         .ok_or(QueryError::InvalidNamespacedModel(member.model.clone()))?;
                     let model_id = compute_selector_from_names(namespace, model);
-    
+
                     join_clauses.push(format!(
                         "JOIN [{}] ON {}.id = [{}].entity_id",
                         member.model, table, member.model
@@ -674,14 +715,14 @@ impl DojoWorld {
                 _ => return Err(QueryError::UnsupportedQuery.into()),
             }
         }
-    
+
         let join_clause = join_clauses.join(" ");
         let where_clause = if !where_clauses.is_empty() {
             format!("WHERE {}", where_clauses.join(" AND "))
         } else {
             String::new()
         };
-    
+
         let count_query = format!(
             r#"
             SELECT COUNT(DISTINCT {table}.id)
@@ -691,18 +732,18 @@ impl DojoWorld {
             {where_clause}
             "#
         );
-    
+
         let mut count_query = sqlx::query_scalar::<_, u32>(&count_query);
         for value in &bind_values {
             count_query = count_query.bind(value);
         }
-    
+
         let total_count = count_query.fetch_optional(&self.pool).await?.unwrap_or(0);
-    
+
         if total_count == 0 {
             return Ok((Vec::new(), 0));
         }
-    
+
         let mut query = format!(
             r#"
             SELECT {table}.id, GROUP_CONCAT({model_relation_table}.model_id) as model_ids
@@ -714,14 +755,14 @@ impl DojoWorld {
             ORDER BY {table}.event_id DESC
             "#
         );
-    
+
         if limit.is_some() {
             query += " LIMIT ?";
         }
         if offset.is_some() {
             query += " OFFSET ?";
         }
-    
+
         let mut db_query = sqlx::query_as(&query);
         for value in &bind_values {
             db_query = db_query.bind(value);
@@ -732,9 +773,9 @@ impl DojoWorld {
         if let Some(offset) = offset {
             db_query = db_query.bind(offset);
         }
-    
+
         let db_entities: Vec<(String, String)> = db_query.fetch_all(&self.pool).await?;
-    
+
         // Group entities by their models
         let mut model_groups: HashMap<Vec<Felt>, Vec<String>> = HashMap::new();
         for (entity_id, models_str) in db_entities {
@@ -745,27 +786,39 @@ impl DojoWorld {
                 .map_err(ParseError::FromStr)?;
             model_groups.entry(model_ids).or_default().push(entity_id);
         }
-    
+
         let mut entities = Vec::new();
         for (model_ids, entity_ids) in model_groups {
-            let schemas = self.model_cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect::<Vec<_>>();
-    
+            let schemas = self
+                .model_cache
+                .models(&model_ids)
+                .await?
+                .into_iter()
+                .map(|m| m.schema)
+                .collect::<Vec<_>>();
+
             let (entity_query, arrays_queries, _) = build_sql_query(
                 &schemas,
                 table,
                 entity_relation_column,
-                Some(&format!("{table}.id IN ({})", entity_ids.iter().map(|_| "?").collect::<Vec<_>>().join(","))),
-                Some(&format!("{table}.id IN ({})", entity_ids.iter().map(|_| "?").collect::<Vec<_>>().join(","))),
+                Some(&format!(
+                    "{table}.id IN ({})",
+                    entity_ids.iter().map(|_| "?").collect::<Vec<_>>().join(",")
+                )),
+                Some(&format!(
+                    "{table}.id IN ({})",
+                    entity_ids.iter().map(|_| "?").collect::<Vec<_>>().join(",")
+                )),
                 None,
                 None,
             )?;
-    
+
             let mut query = sqlx::query(&entity_query);
             for id in &entity_ids {
                 query = query.bind(id);
             }
             let rows = query.fetch_all(&self.pool).await?;
-    
+
             let mut arrays_rows = HashMap::new();
             for (name, array_query) in arrays_queries {
                 let mut query = sqlx::query(&array_query);
@@ -775,12 +828,12 @@ impl DojoWorld {
                 let array_rows = query.fetch_all(&self.pool).await?;
                 arrays_rows.insert(name, array_rows);
             }
-    
+
             for row in rows {
                 entities.push(map_row_to_entity(&row, &arrays_rows, schemas.clone())?);
             }
         }
-    
+
         Ok((entities, total_count))
     }
 
