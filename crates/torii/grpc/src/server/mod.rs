@@ -264,7 +264,7 @@ impl DojoWorld {
             return Ok((Vec::new(), 0));
         }
 
-        // query to filter with limit and offset
+        // Query to get entities and their models
         let mut query = format!(
             r#"
             SELECT {table}.id, group_concat({model_relation_table}.model_id) as model_ids
@@ -287,36 +287,50 @@ impl DojoWorld {
         let db_entities: Vec<(String, String)> =
             sqlx::query_as(&query).bind(limit).bind(offset).fetch_all(&self.pool).await?;
 
-        let mut entities = Vec::with_capacity(db_entities.len());
+        // Group entities by their models
+        let mut model_groups: HashMap<Vec<Felt>, Vec<String>> = HashMap::new();
         for (entity_id, models_str) in db_entities {
             let model_ids: Vec<Felt> = models_str
                 .split(',')
                 .map(Felt::from_str)
                 .collect::<Result<_, _>>()
                 .map_err(ParseError::FromStr)?;
-            let schemas =
-                self.model_cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect();
+            model_groups.entry(model_ids).or_default().push(entity_id);
+        }
+
+        let mut entities = Vec::new();
+        for (model_ids, entity_ids) in model_groups {
+            let schemas = self.model_cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect::<Vec<_>>();
 
             let (entity_query, arrays_queries, _) = build_sql_query(
                 &schemas,
                 table,
                 entity_relation_column,
-                Some(&format!("{table}.id = ?")),
-                Some(&format!("{table}.id = ?")),
+                Some(&format!("{table}.id IN ({})", entity_ids.iter().map(|_| "?").collect::<Vec<_>>().join(","))),
+                Some(&format!("{table}.id IN ({})", entity_ids.iter().map(|_| "?").collect::<Vec<_>>().join(","))),
                 None,
                 None,
             )?;
 
-            let row =
-                sqlx::query(&entity_query).bind(entity_id.clone()).fetch_one(&self.pool).await?;
+            let mut query = sqlx::query(&entity_query);
+            for id in &entity_ids {
+                query = query.bind(id);
+            }
+            let rows = query.fetch_all(&self.pool).await?;
+
             let mut arrays_rows = HashMap::new();
-            for (name, query) in arrays_queries {
-                let rows =
-                    sqlx::query(&query).bind(entity_id.clone()).fetch_all(&self.pool).await?;
-                arrays_rows.insert(name, rows);
+            for (name, array_query) in arrays_queries {
+                let mut query = sqlx::query(&array_query);
+                for id in &entity_ids {
+                    query = query.bind(id);
+                }
+                let array_rows = query.fetch_all(&self.pool).await?;
+                arrays_rows.insert(name, array_rows);
             }
 
-            entities.push(map_row_to_entity(&row, &arrays_rows, schemas.clone())?);
+            for row in rows {
+                entities.push(map_row_to_entity(&row, &arrays_rows, schemas.clone())?);
+            }
         }
 
         Ok((entities, total_count))
@@ -332,136 +346,117 @@ impl DojoWorld {
         offset: Option<u32>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         let keys_pattern = build_keys_pattern(keys_clause)?;
-
-        // total count of rows that matches keys_pattern without limit and offset
+    
+        // Build the WHERE clause for model filtering
+        let model_filter = if !keys_clause.models.is_empty() {
+            let model_ids = keys_clause.models.iter().map(|model| {
+                let (namespace, name) = model
+                    .split_once('-')
+                    .ok_or(QueryError::InvalidNamespacedModel(model.clone()))?;
+                Ok(format!("'{:#x}'", compute_selector_from_names(namespace, name)))
+            }).collect::<Result<Vec<_>, Error>>()?;
+            format!("AND {model_relation_table}.model_id IN ({})", model_ids.join(","))
+        } else {
+            String::new()
+        };
+    
+        // Count query
         let count_query = format!(
             r#"
-            SELECT count(*)
+            SELECT COUNT(DISTINCT {table}.id)
             FROM {table}
-            {}
-        "#,
-            if !keys_clause.models.is_empty() {
-                // split the model names to namespace and model
-                let model_ids = keys_clause
-                    .models
-                    .iter()
-                    .map(|model| {
-                        model
-                            .split_once('-')
-                            .ok_or(QueryError::InvalidNamespacedModel(model.clone()))
-                    })
-                    .collect::<Result<Vec<_>, _>>()?;
-                // get the model selector from namespace and model and format
-                let model_ids_str = model_ids
-                    .iter()
-                    .map(|(namespace, model)| {
-                        format!("'{:#x}'", compute_selector_from_names(namespace, model))
-                    })
-                    .collect::<Vec<_>>()
-                    .join(",");
-                format!(
-                    r#"
-                JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
-                WHERE {model_relation_table}.model_id IN ({})
-                AND {table}.keys REGEXP ?
-            "#,
-                    model_ids_str
-                )
-            } else {
-                format!(
-                    r#"
-                WHERE {table}.keys REGEXP ?
+            JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
+            WHERE {table}.keys REGEXP ?
+            {model_filter}
             "#
-                )
-            }
         );
-
-        let total_count = sqlx::query_scalar(&count_query)
+    
+        let total_count: u32 = sqlx::query_scalar(&count_query)
             .bind(&keys_pattern)
             .fetch_optional(&self.pool)
             .await?
             .unwrap_or(0);
-
+    
         if total_count == 0 {
             return Ok((Vec::new(), 0));
         }
-
-        let mut models_query = format!(
+    
+        // Main query
+        let mut query = format!(
             r#"
-            SELECT {table}.id, group_concat({model_relation_table}.model_id) as model_ids
+            SELECT {table}.id, GROUP_CONCAT({model_relation_table}.model_id) as model_ids
             FROM {table}
             JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
             WHERE {table}.keys REGEXP ?
+            {model_filter}
             GROUP BY {table}.id
-        "#
+            ORDER BY {table}.event_id DESC
+            "#
         );
-
-        if !keys_clause.models.is_empty() {
-            // filter by models
-            models_query += &format!(
-                "HAVING {}",
-                keys_clause
-                    .models
-                    .iter()
-                    .map(|model| {
-                        let (namespace, name) = model
-                            .split_once('-')
-                            .ok_or(QueryError::InvalidNamespacedModel(model.clone()))?;
-                        let model_id = compute_selector_from_names(namespace, name);
-                        Ok(format!("INSTR(model_ids, '{:#x}') > 0", model_id))
-                    })
-                    .collect::<Result<Vec<_>, Error>>()?
-                    .join(" OR ")
-                    .as_str()
-            );
-        }
-
-        models_query += &format!(" ORDER BY {table}.event_id DESC");
-
+    
         if limit.is_some() {
-            models_query += " LIMIT ?";
+            query += " LIMIT ?";
         }
         if offset.is_some() {
-            models_query += " OFFSET ?";
+            query += " OFFSET ?";
         }
-
-        let db_entities: Vec<(String, String)> = sqlx::query_as(&models_query)
-            .bind(&keys_pattern)
-            .bind(limit)
-            .bind(offset)
-            .fetch_all(&self.pool)
-            .await?;
-
-        let mut entities = Vec::with_capacity(db_entities.len());
-        for (entity_id, models_strs) in &db_entities {
-            let model_ids: Vec<Felt> = models_strs
+    
+        let mut db_query = sqlx::query_as(&query).bind(&keys_pattern);
+        if let Some(limit) = limit {
+            db_query = db_query.bind(limit);
+        }
+        if let Some(offset) = offset {
+            db_query = db_query.bind(offset);
+        }
+    
+        let db_entities: Vec<(String, String)> = db_query.fetch_all(&self.pool).await?;
+    
+        // Group entities by their models
+        let mut model_groups: HashMap<Vec<Felt>, Vec<String>> = HashMap::new();
+        for (entity_id, models_str) in db_entities {
+            let model_ids: Vec<Felt> = models_str
                 .split(',')
                 .map(Felt::from_str)
                 .collect::<Result<_, _>>()
                 .map_err(ParseError::FromStr)?;
-            let schemas =
-                self.model_cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect();
-
+            model_groups.entry(model_ids).or_default().push(entity_id);
+        }
+    
+        let mut entities = Vec::new();
+        for (model_ids, entity_ids) in model_groups {
+            let schemas = self.model_cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect::<Vec<_>>();
+    
             let (entity_query, arrays_queries, _) = build_sql_query(
                 &schemas,
                 table,
                 entity_relation_column,
-                Some(&format!("{table}.id = ?")),
-                Some(&format!("{table}.id = ?")),
+                Some(&format!("{table}.id IN ({})", entity_ids.iter().map(|_| "?").collect::<Vec<_>>().join(","))),
+                Some(&format!("{table}.id IN ({})", entity_ids.iter().map(|_| "?").collect::<Vec<_>>().join(","))),
                 None,
                 None,
             )?;
-
-            let row = sqlx::query(&entity_query).bind(entity_id).fetch_one(&self.pool).await?;
-            let mut arrays_rows = HashMap::new();
-            for (name, query) in arrays_queries {
-                let rows = sqlx::query(&query).bind(entity_id).fetch_all(&self.pool).await?;
-                arrays_rows.insert(name, rows);
+    
+            let mut query = sqlx::query(&entity_query);
+            for id in &entity_ids {
+                query = query.bind(id);
             }
-
-            entities.push(map_row_to_entity(&row, &arrays_rows, schemas.clone())?);
+            let rows = query.fetch_all(&self.pool).await?;
+    
+            let mut arrays_rows = HashMap::new();
+            for (name, array_query) in arrays_queries {
+                let mut query = sqlx::query(&array_query);
+                for id in &entity_ids {
+                    query = query.bind(id);
+                }
+                let array_rows = query.fetch_all(&self.pool).await?;
+                arrays_rows.insert(name, array_rows);
+            }
+    
+            for row in rows {
+                entities.push(map_row_to_entity(&row, &arrays_rows, schemas.clone())?);
+            }
         }
-
+    
         Ok((entities, total_count))
     }
 
@@ -503,82 +498,121 @@ impl DojoWorld {
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         let comparison_operator = ComparisonOperator::from_repr(member_clause.operator as usize)
             .expect("invalid comparison operator");
-
+    
         let primitive: Primitive =
             member_clause.value.ok_or(QueryError::MissingParam("value".into()))?.try_into()?;
-
+    
         let comparison_value = primitive.to_sql_value()?;
-
+    
         let (namespace, model) = member_clause
             .model
             .split_once('-')
             .ok_or(QueryError::InvalidNamespacedModel(member_clause.model.clone()))?;
-
-        let models_query = format!(
-            r#"
-            SELECT group_concat({model_relation_table}.model_id) as model_ids
-            FROM {table}
-            JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
-            GROUP BY {table}.id
-            HAVING INSTR(model_ids, '{:#x}') > 0
-            LIMIT 1
-        "#,
-            compute_selector_from_names(namespace, model)
-        );
-
-        let models_result: Option<(String,)> =
-            sqlx::query_as(&models_query).fetch_optional(&self.pool).await?;
-        // we return an empty array of entities if the table is empty
-        if models_result.is_none() {
-            return Ok((Vec::new(), 0));
-        }
-
-        let (models_str,) = models_result.unwrap();
-
-        let model_ids = models_str
-            .split(',')
-            .map(Felt::from_str)
-            .collect::<Result<Vec<_>, _>>()
-            .map_err(ParseError::FromStr)?;
-        let schemas =
-            self.model_cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect();
-
+    
+        let model_id = compute_selector_from_names(namespace, model);
         let table_name = member_clause.model;
         let column_name = format!("external_{}", member_clause.member);
-        let (entity_query, arrays_queries, count_query) = build_sql_query(
-            &schemas,
-            table,
-            entity_relation_column,
-            Some(&format!("[{table_name}].{column_name} {comparison_operator} ?")),
-            None,
-            limit,
-            offset,
-        )?;
-
-        let total_count = sqlx::query_scalar(&count_query)
-            .bind(comparison_value.clone())
+    
+        // Count query
+        let count_query = format!(
+            r#"
+            SELECT COUNT(DISTINCT {table}.id)
+            FROM {table}
+            JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
+            JOIN [{table_name}] ON {table}.id = [{table_name}].entity_id
+            WHERE {model_relation_table}.model_id = '{model_id:#x}'
+            AND [{table_name}].{column_name} {comparison_operator} ?
+            "#
+        );
+    
+        let total_count: u32 = sqlx::query_scalar(&count_query)
+            .bind(&comparison_value)
             .fetch_optional(&self.pool)
             .await?
             .unwrap_or(0);
-
-        let db_entities = sqlx::query(&entity_query)
-            .bind(comparison_value.clone())
-            .bind(limit)
-            .bind(offset)
-            .fetch_all(&self.pool)
-            .await?;
-        let mut arrays_rows = HashMap::new();
-        for (name, query) in arrays_queries {
-            let rows =
-                sqlx::query(&query).bind(comparison_value.clone()).fetch_all(&self.pool).await?;
-            arrays_rows.insert(name, rows);
+    
+        if total_count == 0 {
+            return Ok((Vec::new(), 0));
         }
-
-        let entities_collection = db_entities
-            .iter()
-            .map(|row| map_row_to_entity(row, &arrays_rows, schemas.clone()))
-            .collect::<Result<Vec<_>, Error>>()?;
-        Ok((entities_collection, total_count))
+    
+        // Main query
+        let mut query = format!(
+            r#"
+            SELECT {table}.id, GROUP_CONCAT({model_relation_table}.model_id) as model_ids
+            FROM {table}
+            JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
+            JOIN [{table_name}] ON {table}.id = [{table_name}].entity_id
+            WHERE {model_relation_table}.model_id = '{model_id:#x}'
+            AND [{table_name}].{column_name} {comparison_operator} ?
+            GROUP BY {table}.id
+            ORDER BY {table}.event_id DESC
+            "#
+        );
+    
+        if limit.is_some() {
+            query += " LIMIT ?";
+        }
+        if offset.is_some() {
+            query += " OFFSET ?";
+        }
+    
+        let mut db_query = sqlx::query_as(&query).bind(&comparison_value);
+        if let Some(limit) = limit {
+            db_query = db_query.bind(limit);
+        }
+        if let Some(offset) = offset {
+            db_query = db_query.bind(offset);
+        }
+    
+        let db_entities: Vec<(String, String)> = db_query.fetch_all(&self.pool).await?;
+    
+        // Group entities by their models
+        let mut model_groups: HashMap<Vec<Felt>, Vec<String>> = HashMap::new();
+        for (entity_id, models_str) in db_entities {
+            let model_ids: Vec<Felt> = models_str
+                .split(',')
+                .map(Felt::from_str)
+                .collect::<Result<_, _>>()
+                .map_err(ParseError::FromStr)?;
+            model_groups.entry(model_ids).or_default().push(entity_id);
+        }
+    
+        let mut entities = Vec::new();
+        for (model_ids, entity_ids) in model_groups {
+            let schemas = self.model_cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect::<Vec<_>>();
+    
+            let (entity_query, arrays_queries, _) = build_sql_query(
+                &schemas,
+                table,
+                entity_relation_column,
+                Some(&format!("{table}.id IN ({})", entity_ids.iter().map(|_| "?").collect::<Vec<_>>().join(","))),
+                Some(&format!("{table}.id IN ({})", entity_ids.iter().map(|_| "?").collect::<Vec<_>>().join(","))),
+                None,
+                None,
+            )?;
+    
+            let mut query = sqlx::query(&entity_query);
+            for id in &entity_ids {
+                query = query.bind(id);
+            }
+            let rows = query.fetch_all(&self.pool).await?;
+    
+            let mut arrays_rows = HashMap::new();
+            for (name, array_query) in arrays_queries {
+                let mut query = sqlx::query(&array_query);
+                for id in &entity_ids {
+                    query = query.bind(id);
+                }
+                let array_rows = query.fetch_all(&self.pool).await?;
+                arrays_rows.insert(name, array_rows);
+            }
+    
+            for row in rows {
+                entities.push(map_row_to_entity(&row, &arrays_rows, schemas.clone())?);
+            }
+        }
+    
+        Ok((entities, total_count))
     }
 
     async fn query_by_composite(
@@ -590,15 +624,11 @@ impl DojoWorld {
         limit: Option<u32>,
         offset: Option<u32>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
-        // different types of clauses
         let mut where_clauses = Vec::new();
-        let mut model_clauses: HashMap<String, Vec<(String, ComparisonOperator, String)>> =
-            HashMap::new();
+        let mut join_clauses = Vec::new();
         let mut having_clauses = Vec::new();
-
-        // bind valeus for prepared statement
         let mut bind_values = Vec::new();
-
+    
         for clause in composite.clauses {
             match clause.clause_type.unwrap() {
                 ClauseType::HashedKeys(hashed_keys) => {
@@ -606,142 +636,151 @@ impl DojoWorld {
                         .hashed_keys
                         .iter()
                         .map(|id| {
-                            Ok(format!("{table}.id = '{:#x}'", Felt::from_bytes_be_slice(id)))
+                            bind_values.push(Felt::from_bytes_be_slice(id).to_string());
+                            Ok("?".to_string())
                         })
                         .collect::<Result<Vec<_>, Error>>()?;
-                    where_clauses.push(format!("({})", ids.join(" OR ")));
+                    where_clauses.push(format!("({table}.id IN ({}))", ids.join(",")));
                 }
                 ClauseType::Keys(keys) => {
                     let keys_pattern = build_keys_pattern(&keys)?;
-                    where_clauses.push(format!("{table}.keys REGEXP '{keys_pattern}'"));
+                    bind_values.push(keys_pattern);
+                    where_clauses.push(format!("{table}.keys REGEXP ?"));
                 }
                 ClauseType::Member(member) => {
-                    let comparison_operator =
-                        ComparisonOperator::from_repr(member.operator as usize)
-                            .expect("invalid comparison operator");
+                    let comparison_operator = ComparisonOperator::from_repr(member.operator as usize)
+                        .expect("invalid comparison operator");
                     let value: Primitive = member.value.unwrap().try_into()?;
                     let comparison_value = value.to_sql_value()?;
-
+    
                     let column_name = format!("external_{}", member.member);
-
-                    model_clauses.entry(member.model.clone()).or_default().push((
-                        column_name,
-                        comparison_operator,
-                        comparison_value,
-                    ));
-
                     let (namespace, model) = member
                         .model
                         .split_once('-')
                         .ok_or(QueryError::InvalidNamespacedModel(member.model.clone()))?;
-                    let model_id: Felt = compute_selector_from_names(namespace, model);
-                    having_clauses.push(format!("INSTR(model_ids, '{:#x}') > 0", model_id));
+                    let model_id = compute_selector_from_names(namespace, model);
+    
+                    join_clauses.push(format!(
+                        "JOIN [{}] ON {}.id = [{}].entity_id",
+                        member.model, table, member.model
+                    ));
+                    where_clauses.push(format!(
+                        "[{}].{} {} ? AND {}.model_id = ?",
+                        member.model, column_name, comparison_operator, model_relation_table
+                    ));
+                    bind_values.push(comparison_value);
+                    bind_values.push(model_id.to_string());
                 }
                 _ => return Err(QueryError::UnsupportedQuery.into()),
             }
         }
-
-        let mut join_clauses = Vec::new();
-        for (model, clauses) in model_clauses {
-            let model_conditions = clauses
-                .into_iter()
-                .map(|(column, op, value)| {
-                    bind_values.push(value);
-                    format!("[{}].{} {} ?", model, column, op)
-                })
-                .collect::<Vec<_>>()
-                .join(" AND ");
-
-            join_clauses.push(format!(
-                "JOIN [{}] ON [{}].id = [{}].entity_id AND ({})",
-                model, table, model, model_conditions
-            ));
-        }
-
+    
         let join_clause = join_clauses.join(" ");
         let where_clause = if !where_clauses.is_empty() {
             format!("WHERE {}", where_clauses.join(" AND "))
         } else {
             String::new()
         };
-        let having_clause = if !having_clauses.is_empty() {
-            format!("HAVING {}", having_clauses.join(" AND "))
-        } else {
-            String::new()
-        };
-
+    
         let count_query = format!(
             r#"
-            SELECT COUNT(DISTINCT [{table}].id)
-            FROM [{table}]
+            SELECT COUNT(DISTINCT {table}.id)
+            FROM {table}
+            JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
             {join_clause}
             {where_clause}
             "#
         );
-
+    
         let mut count_query = sqlx::query_scalar::<_, u32>(&count_query);
         for value in &bind_values {
             count_query = count_query.bind(value);
         }
-
+    
         let total_count = count_query.fetch_optional(&self.pool).await?.unwrap_or(0);
-
+    
         if total_count == 0 {
             return Ok((Vec::new(), 0));
         }
-
-        let query = format!(
+    
+        let mut query = format!(
             r#"
-            SELECT [{table}].id, group_concat({model_relation_table}.model_id) as model_ids
-            FROM [{table}]
-            JOIN {model_relation_table} ON [{table}].id = {model_relation_table}.entity_id
+            SELECT {table}.id, GROUP_CONCAT({model_relation_table}.model_id) as model_ids
+            FROM {table}
+            JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
             {join_clause}
             {where_clause}
-            GROUP BY [{table}].id
-            {having_clause}
-            ORDER BY [{table}].event_id DESC
-            LIMIT ? OFFSET ?
+            GROUP BY {table}.id
+            ORDER BY {table}.event_id DESC
             "#
         );
-
+    
+        if limit.is_some() {
+            query += " LIMIT ?";
+        }
+        if offset.is_some() {
+            query += " OFFSET ?";
+        }
+    
         let mut db_query = sqlx::query_as(&query);
-        for value in bind_values {
+        for value in &bind_values {
             db_query = db_query.bind(value);
         }
-        db_query = db_query.bind(limit.unwrap_or(u32::MAX)).bind(offset.unwrap_or(0));
-
+        if let Some(limit) = limit {
+            db_query = db_query.bind(limit);
+        }
+        if let Some(offset) = offset {
+            db_query = db_query.bind(offset);
+        }
+    
         let db_entities: Vec<(String, String)> = db_query.fetch_all(&self.pool).await?;
-
-        let mut entities = Vec::with_capacity(db_entities.len());
-        for (entity_id, models_str) in &db_entities {
+    
+        // Group entities by their models
+        let mut model_groups: HashMap<Vec<Felt>, Vec<String>> = HashMap::new();
+        for (entity_id, models_str) in db_entities {
             let model_ids: Vec<Felt> = models_str
                 .split(',')
                 .map(Felt::from_str)
                 .collect::<Result<_, _>>()
                 .map_err(ParseError::FromStr)?;
-            let schemas =
-                self.model_cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect();
-
+            model_groups.entry(model_ids).or_default().push(entity_id);
+        }
+    
+        let mut entities = Vec::new();
+        for (model_ids, entity_ids) in model_groups {
+            let schemas = self.model_cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect::<Vec<_>>();
+    
             let (entity_query, arrays_queries, _) = build_sql_query(
                 &schemas,
                 table,
                 entity_relation_column,
-                Some(&format!("[{table}].id = ?")),
-                Some(&format!("[{table}].id = ?")),
+                Some(&format!("{table}.id IN ({})", entity_ids.iter().map(|_| "?").collect::<Vec<_>>().join(","))),
+                Some(&format!("{table}.id IN ({})", entity_ids.iter().map(|_| "?").collect::<Vec<_>>().join(","))),
                 None,
                 None,
             )?;
-
-            let row = sqlx::query(&entity_query).bind(entity_id).fetch_one(&self.pool).await?;
-            let mut arrays_rows = HashMap::new();
-            for (name, query) in arrays_queries {
-                let rows = sqlx::query(&query).bind(entity_id).fetch_all(&self.pool).await?;
-                arrays_rows.insert(name, rows);
+    
+            let mut query = sqlx::query(&entity_query);
+            for id in &entity_ids {
+                query = query.bind(id);
             }
-
-            entities.push(map_row_to_entity(&row, &arrays_rows, schemas.clone())?);
+            let rows = query.fetch_all(&self.pool).await?;
+    
+            let mut arrays_rows = HashMap::new();
+            for (name, array_query) in arrays_queries {
+                let mut query = sqlx::query(&array_query);
+                for id in &entity_ids {
+                    query = query.bind(id);
+                }
+                let array_rows = query.fetch_all(&self.pool).await?;
+                arrays_rows.insert(name, array_rows);
+            }
+    
+            for row in rows {
+                entities.push(map_row_to_entity(&row, &arrays_rows, schemas.clone())?);
+            }
         }
-
+    
         Ok((entities, total_count))
     }
 
@@ -814,25 +853,21 @@ impl DojoWorld {
 
                 match clause_type {
                     ClauseType::HashedKeys(hashed_keys) => {
-                        if hashed_keys.hashed_keys.is_empty() {
-                            return Err(QueryError::MissingParam("ids".into()).into());
-                        }
-
                         self.query_by_hashed_keys(
                             ENTITIES_TABLE,
                             ENTITIES_MODEL_RELATION_TABLE,
                             ENTITIES_ENTITY_RELATION_COLUMN,
-                            Some(hashed_keys),
+                            if hashed_keys.hashed_keys.is_empty() {
+                                None
+                            } else {
+                                Some(hashed_keys)
+                            },
                             Some(query.limit),
                             Some(query.offset),
                         )
                         .await?
                     }
                     ClauseType::Keys(keys) => {
-                        if keys.keys.is_empty() {
-                            return Err(QueryError::MissingParam("keys".into()).into());
-                        }
-
                         self.query_by_keys(
                             ENTITIES_TABLE,
                             ENTITIES_MODEL_RELATION_TABLE,
@@ -893,25 +928,21 @@ impl DojoWorld {
 
                 match clause_type {
                     ClauseType::HashedKeys(hashed_keys) => {
-                        if hashed_keys.hashed_keys.is_empty() {
-                            return Err(QueryError::MissingParam("ids".into()).into());
-                        }
-
                         self.query_by_hashed_keys(
                             EVENT_MESSAGES_TABLE,
                             EVENT_MESSAGES_MODEL_RELATION_TABLE,
                             EVENT_MESSAGES_ENTITY_RELATION_COLUMN,
-                            Some(hashed_keys),
+                            if hashed_keys.hashed_keys.is_empty() {
+                                None
+                            } else {
+                                Some(hashed_keys)
+                            },
                             Some(query.limit),
                             Some(query.offset),
                         )
                         .await?
                     }
                     ClauseType::Keys(keys) => {
-                        if keys.keys.is_empty() {
-                            return Err(QueryError::MissingParam("keys".into()).into());
-                        }
-
                         self.query_by_keys(
                             EVENT_MESSAGES_TABLE,
                             EVENT_MESSAGES_MODEL_RELATION_TABLE,
