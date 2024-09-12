@@ -257,7 +257,8 @@ impl DojoWorld {
                 "#
         );
         // total count of rows without limit and offset
-        let total_count: u32 = sqlx::query_scalar(&count_query).fetch_one(&self.pool).await?;
+        let total_count: u32 =
+            sqlx::query_scalar(&count_query).fetch_optional(&self.pool).await?.unwrap_or(0);
 
         if total_count == 0 {
             return Ok((Vec::new(), 0));
@@ -375,8 +376,11 @@ impl DojoWorld {
             }
         );
 
-        let total_count =
-            sqlx::query_scalar(&count_query).bind(&keys_pattern).fetch_one(&self.pool).await?;
+        let total_count = sqlx::query_scalar(&count_query)
+            .bind(&keys_pattern)
+            .fetch_optional(&self.pool)
+            .await?
+            .unwrap_or(0);
 
         if total_count == 0 {
             return Ok((Vec::new(), 0));
@@ -521,7 +525,15 @@ impl DojoWorld {
         "#,
             compute_selector_from_names(namespace, model)
         );
-        let (models_str,): (String,) = sqlx::query_as(&models_query).fetch_one(&self.pool).await?;
+
+        let models_result: Option<(String,)> =
+            sqlx::query_as(&models_query).fetch_optional(&self.pool).await?;
+        // we return an empty array of entities if the table is empty
+        if models_result.is_none() {
+            return Ok((Vec::new(), 0));
+        }
+
+        let (models_str,) = models_result.unwrap();
 
         let model_ids = models_str
             .split(',')
@@ -545,8 +557,9 @@ impl DojoWorld {
 
         let total_count = sqlx::query_scalar(&count_query)
             .bind(comparison_value.clone())
-            .fetch_one(&self.pool)
-            .await?;
+            .fetch_optional(&self.pool)
+            .await?
+            .unwrap_or(0);
 
         let db_entities = sqlx::query(&entity_query)
             .bind(comparison_value.clone())
@@ -671,7 +684,7 @@ impl DojoWorld {
             count_query = count_query.bind(value);
         }
 
-        let total_count = count_query.fetch_one(&self.pool).await?;
+        let total_count = count_query.fetch_optional(&self.pool).await?.unwrap_or(0);
 
         if total_count == 0 {
             return Ok((Vec::new(), 0));
