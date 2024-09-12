@@ -75,3 +75,7 @@ default = [ "controller", "walnut" ]
 
 controller = [ "dep:account_sdk", "dep:reqwest", "dep:slot" ]
 walnut = [ "dep:sozo-walnut", "sozo-ops/walnut" ]
+
+[[bench]]
+harness = false
+name = "spawn-and-move-build"
