@@ -170,19 +170,19 @@ async fn main() -> anyhow::Result<()> {
     let provider: Arc<_> = JsonRpcClient::new(HttpTransport::new(args.rpc)).into();
 
     // Get world address
-    let world = WorldContractReader::new(args.world_address, &provider);
+    let world = WorldContractReader::new(args.world_address, provider.clone());
 
     let db = Sql::new(pool.clone(), args.world_address).await?;
 
     let processors = Processors {
         event: generate_event_processors_map(vec![
-            Box::new(RegisterModelProcessor),
-            Box::new(StoreSetRecordProcessor),
-            Box::new(MetadataUpdateProcessor),
-            Box::new(StoreDelRecordProcessor),
-            Box::new(EventMessageProcessor),
-            Box::new(StoreUpdateRecordProcessor),
-            Box::new(StoreUpdateMemberProcessor),
+            Arc::new(RegisterModelProcessor),
+            Arc::new(StoreSetRecordProcessor),
+            Arc::new(MetadataUpdateProcessor),
+            Arc::new(StoreDelRecordProcessor),
+            Arc::new(EventMessageProcessor),
+            Arc::new(StoreUpdateRecordProcessor),
+            Arc::new(StoreUpdateMemberProcessor),
         ])?,
         transaction: vec![Box::new(StoreTransactionProcessor)],
         ..Processors::default()
@@ -193,7 +193,7 @@ async fn main() -> anyhow::Result<()> {
     let mut engine = Engine::new(
         world,
         db.clone(),
-        &provider,
+        provider.clone(),
         processors,
         EngineConfig {
             start_block: args.start_block,

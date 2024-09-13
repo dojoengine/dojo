@@ -24,14 +24,14 @@ use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
 use crate::sql::Sql;
 
 #[allow(missing_debug_implementations)]
-pub struct Processors<P: Provider + Send + Sync + std::fmt::Debug> {
+pub struct Processors<P: Provider + Send + Sync + std::fmt::Debug + 'static> {
     pub block: Vec<Box<dyn BlockProcessor<P>>>,
     pub transaction: Vec<Box<dyn TransactionProcessor<P>>>,
     pub event: HashMap<Felt, Arc<dyn EventProcessor<P>>>,
     pub catch_all_event: Box<dyn EventProcessor<P>>,
 }
 
-impl<P: Provider + Send + Sync + std::fmt::Debug> Default for Processors<P> {
+impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Default for Processors<P> {
     fn default() -> Self {
         Self {
             block: vec![],
@@ -87,9 +87,9 @@ pub struct FetchPendingResult {
 }
 
 #[allow(missing_debug_implementations)]
-pub struct Engine<P: Provider + Send + Sync + std::fmt::Debug> {
+pub struct Engine<P: Provider + Send + Sync + std::fmt::Debug + 'static> {
     world: Arc<WorldContractReader<P>>,
-    db: Arc<Sql>,
+    db: Sql,
     provider: Box<P>,
     processors: Arc<Processors<P>>,
     config: EngineConfig,
@@ -103,7 +103,7 @@ struct UnprocessedEvent {
     data: Vec<String>,
 }
 
-impl<P: Provider + Send + Sync + std::fmt::Debug> Engine<P> {
+impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
     pub fn new(
         world: WorldContractReader<P>,
         db: Sql,
@@ -442,12 +442,13 @@ impl<P: Provider + Send + Sync + std::fmt::Debug> Engine<P> {
 
         // Process queued tasks in parallel
         let tasks: Vec<_> = self.tasks.drain().map(|(task_id, events)| {
-            let world = self.world.clone();
             let db = self.db.clone();
+            let world = self.world.clone();
             let processors = self.processors.clone();
             let block_timestamp = data.blocks[&last_block];
             
             tokio::spawn(async move {
+                let mut local_db = db.clone();
                 for (event_id, event) in events {
                     if let Some(processor) = processors.event.get(&event.keys[0]) {
                         if let Err(e) = processor
@@ -464,6 +465,10 @@ impl<P: Provider + Send + Sync + std::fmt::Debug> Engine<P> {
 
         // We wait for all tasks to complete processing
         let results = try_join_all(tasks).await?;
+        for local_db in results {
+            // We merge the query queues of each task into the main db
+            self.db.merge(local_db?)?;
+        }
 
         self.db.set_head(data.latest_block_number, None, None);
         self.db.execute().await?;

@@ -32,7 +32,7 @@ pub const FELT_DELIMITER: &str = "/";
 #[path = "sql_test.rs"]
 mod test;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Sql {
     world_address: Felt,
     pub pool: Pool<Sqlite>,
@@ -40,11 +40,11 @@ pub struct Sql {
     model_cache: Arc<ModelCache>,
 }
 
-// impl Clone for Sql {
-//     fn clone(&self) -> Self {
-//         Self { world_address: self.world_address, pool: self.pool.clone(), query_queue: QueryQueue::new(self.pool.clone()), model_cache: self.model_cache.clone() }
-//     }
-// }
+impl Clone for Sql {
+    fn clone(&self) -> Self {
+        Self { world_address: self.world_address, pool: self.pool.clone(), query_queue: QueryQueue::new(self.pool.clone()), model_cache: self.model_cache.clone() }
+    }
+}
 
 impl Sql {
     pub async fn new(pool: Pool<Sqlite>, world_address: Felt) -> Result<Self> {
@@ -71,21 +71,21 @@ impl Sql {
         })
     }
 
-    // pub fn merge(&mut self, other: Sql) -> Result<()> {
-    //     // Merge query queue
-    //     self.query_queue.queue.extend(other.query_queue.queue);
-    //     self.query_queue.publish_queue.extend(other.query_queue.publish_queue);
+    pub fn merge(&mut self, other: Sql) -> Result<()> {
+        // Merge query queue
+        self.query_queue.queue.extend(other.query_queue.queue);
+        self.query_queue.publish_queue.extend(other.query_queue.publish_queue);
 
-    //     // This should never happen
-    //     if self.world_address != other.world_address {
-    //         warn!(
-    //             "Merging Sql instances with different world addresses: {} and {}",
-    //             self.world_address, other.world_address
-    //         );
-    //     }
+        // This should never happen
+        if self.world_address != other.world_address {
+            warn!(
+                "Merging Sql instances with different world addresses: {} and {}",
+                self.world_address, other.world_address
+            );
+        }
 
-    //     Ok(())
-    // }
+        Ok(())
+    }
 
     pub async fn head(&self) -> Result<(u64, Option<Felt>, Option<Felt>)> {
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;

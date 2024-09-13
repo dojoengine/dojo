@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use anyhow::{Error, Result};
 use async_trait::async_trait;
@@ -75,8 +76,8 @@ pub trait TransactionProcessor<P: Provider + Sync>: Send + Sync {
 
 /// Given a list of event processors, generate a map of event keys to the event processor
 pub fn generate_event_processors_map<P: Provider + Sync + Send>(
-    event_processor: Vec<Box<dyn EventProcessor<P>>>,
-) -> Result<HashMap<Felt, Box<dyn EventProcessor<P>>>> {
+    event_processor: Vec<Arc<dyn EventProcessor<P>>>,
+) -> Result<HashMap<Felt, Arc<dyn EventProcessor<P>>>> {
     let mut event_processors = HashMap::new();
 
     for processor in event_processor {
