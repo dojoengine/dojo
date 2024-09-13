@@ -1,0 +1,1 @@
+ALTER TABLE contracts RENAME COLUMN last_pending_block_world_tx TO last_pending_block_contract_tx;

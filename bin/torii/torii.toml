@@ -1,0 +1,8 @@
+# Example configuration file for Torii
+# erc_contracts = [
+#     { contract_address = "0x1234567890abcdef1234567890abcdef12345678", start_block = 0, type = "ERC20" },
+#     { contract_address = "0xabcdef1234567890abcdef1234567890abcdef12", start_block = 1, type = "ERC721" },
+# ]
+# erc_contracts = [
+#     { type = "ERC20", contract_address = "0x07fc13cc1f43f0b0519f84df8bf13bea4d9fd5ce2d748c3baf27bf90a565f60a", start_block = 0 },
+# ]

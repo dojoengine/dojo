@@ -5,6 +5,7 @@ use dojo_types::schema::{Struct, Ty};
 use sqlx::{FromRow, Pool, Sqlite};
 use starknet::core::types::Felt;
 
+use super::utils::felt_to_sql_string;
 use crate::simple_broker::SimpleBroker;
 use crate::types::{
     Entity as EntityUpdated, Event as EventEmitted, EventMessage as EventMessageUpdated,

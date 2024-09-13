@@ -8,7 +8,8 @@ use tracing::info;
 
 use super::EventProcessor;
 use crate::processors::{ENTITY_ID_INDEX, MODEL_INDEX, NUM_KEYS_INDEX};
-use crate::sql::{felts_sql_string, Sql};
+use crate::sql::utils::felts_sql_string;
+use crate::sql::Sql;
 
 pub(crate) const LOG_TARGET: &str = "torii_core::processors::store_set_record";
 

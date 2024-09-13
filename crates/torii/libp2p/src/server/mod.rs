@@ -25,7 +25,8 @@ use starknet::core::types::{BlockId, BlockTag, Felt, FunctionCall};
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
 use starknet_crypto::poseidon_hash_many;
-use torii_core::sql::{felts_sql_string, Sql};
+use torii_core::sql::utils::felts_to_sql_string;
+use torii_core::sql::Sql;
 use tracing::{info, warn};
 use webrtc::tokio::Certificate;
 

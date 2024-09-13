@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::convert::TryInto;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -9,16 +10,18 @@ use dojo_types::schema::{EnumOption, Member, Struct, Ty};
 use dojo_world::contracts::abi::model::Layout;
 use dojo_world::contracts::naming::compute_selector_from_names;
 use dojo_world::metadata::WorldMetadata;
+use query_queue::{Argument, BrokerMessage, DeleteEntityQuery, QueryQueue, QueryType};
 use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Sqlite};
 use starknet::core::types::{Event, Felt, InvokeTransaction, Transaction};
 use starknet_crypto::poseidon_hash_many;
 use tracing::{debug, warn};
+use utils::felts_sql_string;
 
 use crate::cache::{Model, ModelCache};
-use crate::query_queue::{Argument, BrokerMessage, DeleteEntityQuery, QueryQueue, QueryType};
 use crate::types::{
-    Event as EventEmitted, EventMessage as EventMessageUpdated, Model as ModelRegistered,
+    ErcContract, Event as EventEmitted, EventMessage as EventMessageUpdated,
+    Model as ModelRegistered,
 };
 use crate::utils::{must_utc_datetime_from_timestamp, utc_dt_string_from_timestamp};
 
@@ -28,9 +31,12 @@ type IsStoreUpdate = bool;
 pub const WORLD_CONTRACT_TYPE: &str = "WORLD";
 pub const FELT_DELIMITER: &str = "/";
 
+pub mod erc;
+pub mod query_queue;
 #[cfg(test)]
-#[path = "sql_test.rs"]
+#[path = "test.rs"]
 mod test;
+pub mod utils;
 
 #[derive(Debug)]
 pub struct Sql {
@@ -38,6 +44,13 @@ pub struct Sql {
     pub pool: Pool<Sqlite>,
     pub query_queue: QueryQueue,
     model_cache: Arc<ModelCache>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Cursors {
+    pub cursor_map: HashMap<Felt, Felt>,
+    pub last_pending_block_tx: Option<Felt>,
+    pub head: Option<u64>,
 }
 
 impl Clone for Sql {
@@ -52,7 +65,11 @@ impl Clone for Sql {
 }
 
 impl Sql {
-    pub async fn new(pool: Pool<Sqlite>, world_address: Felt) -> Result<Self> {
+    pub async fn new(
+        pool: Pool<Sqlite>,
+        world_address: Felt,
+        erc_contracts: &HashMap<Felt, ErcContract>,
+    ) -> Result<Self> {
         let mut query_queue = QueryQueue::new(pool.clone());
 
         query_queue.enqueue(
@@ -65,6 +82,19 @@ impl Sql {
             ],
             QueryType::Other,
         );
+
+        for contract in erc_contracts.values() {
+            query_queue.enqueue(
+                "INSERT OR IGNORE INTO contracts (id, contract_address, contract_type) VALUES (?, \
+                 ?, ?)",
+                vec![
+                    Argument::FieldElement(contract.contract_address),
+                    Argument::FieldElement(contract.contract_address),
+                    Argument::String(contract.r#type.to_string()),
+                ],
+                QueryType::Other,
+            );
+        }
 
         query_queue.execute_all().await?;
 
@@ -92,14 +122,14 @@ impl Sql {
         Ok(())
     }
 
-    pub async fn head(&self) -> Result<(u64, Option<Felt>, Option<Felt>)> {
+    pub async fn head(&self, contract: Felt) -> Result<(u64, Option<Felt>, Option<Felt>)> {
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
         let indexer_query =
             sqlx::query_as::<_, (Option<i64>, Option<String>, Option<String>, String)>(
-                "SELECT head, last_pending_block_world_tx, last_pending_block_tx, contract_type \
-                 FROM contracts WHERE id = ?",
+                "SELECT head, last_pending_block_contract_tx, last_pending_block_tx, \
+                 contract_type FROM contracts WHERE id = ?",
             )
-            .bind(format!("{:#x}", self.world_address));
+            .bind(format!("{:#x}", contract));
 
         let indexer: (Option<i64>, Option<String>, Option<String>, String) =
             indexer_query.fetch_one(&mut *conn).await?;
@@ -110,9 +140,9 @@ impl Sql {
         ))
     }
 
-    pub fn set_head(&mut self, head: u64) {
+    pub fn set_head(&mut self, contract: Felt, head: u64) {
         let head = Argument::Int(head.try_into().expect("doesn't fit in u64"));
-        let id = Argument::FieldElement(self.world_address);
+        let id = Argument::FieldElement(contract);
         self.query_queue.enqueue(
             "UPDATE contracts SET head = ? WHERE id = ?",
             vec![head, id],
@@ -120,18 +150,22 @@ impl Sql {
         );
     }
 
-    pub fn set_last_pending_block_world_tx(&mut self, last_pending_block_world_tx: Option<Felt>) {
-        let last_pending_block_world_tx = if let Some(f) = last_pending_block_world_tx {
+    pub fn set_last_pending_block_contract_tx(
+        &mut self,
+        contract: Felt,
+        last_pending_block_contract_tx: Option<Felt>,
+    ) {
+        let last_pending_block_contract_tx = if let Some(f) = last_pending_block_contract_tx {
             Argument::String(format!("{:#x}", f))
         } else {
             Argument::Null
         };
 
-        let id = Argument::FieldElement(self.world_address);
+        let id = Argument::FieldElement(contract);
 
         self.query_queue.enqueue(
-            "UPDATE contracts SET last_pending_block_world_tx = ? WHERE id = ?",
-            vec![last_pending_block_world_tx, id],
+            "UPDATE contracts SET last_pending_block_contract_tx = ? WHERE id = ?",
+            vec![last_pending_block_contract_tx, id],
             QueryType::Other,
         );
     }
@@ -142,11 +176,86 @@ impl Sql {
         } else {
             Argument::Null
         };
-        let id = Argument::FieldElement(self.world_address);
 
         self.query_queue.enqueue(
-            "UPDATE contracts SET last_pending_block_tx = ? WHERE id = ?",
-            vec![last_pending_block_tx, id],
+            "UPDATE contracts SET last_pending_block_tx = ? WHERE 1=1",
+            vec![last_pending_block_tx],
+            QueryType::Other,
+        )
+    }
+
+    pub(crate) async fn cursors(&self) -> Result<Cursors> {
+        let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
+        let cursors = sqlx::query_as::<_, (String, String)>(
+            "SELECT contract_address, last_pending_block_contract_tx FROM contracts WHERE \
+             last_pending_block_contract_tx IS NOT NULL",
+        )
+        .fetch_all(&mut *conn)
+        .await?;
+
+        let (head, last_pending_block_tx) = sqlx::query_as::<_, (Option<i64>, Option<String>)>(
+            "SELECT head, last_pending_block_tx FROM contracts WHERE 1=1",
+        )
+        .fetch_one(&mut *conn)
+        .await?;
+
+        let head = head.map(|h| h.try_into().expect("doesn't fit in u64"));
+        let last_pending_block_tx =
+            last_pending_block_tx.map(|t| Felt::from_str(&t).expect("its a valid felt"));
+        Ok(Cursors {
+            cursor_map: cursors
+                .into_iter()
+                .map(|(c, t)| {
+                    (
+                        Felt::from_str(&c).expect("its a valid felt"),
+                        Felt::from_str(&t).expect("its a valid felt"),
+                    )
+                })
+                .collect(),
+            last_pending_block_tx,
+            head,
+        })
+    }
+
+    pub fn update_cursors(
+        &mut self,
+        head: u64,
+        last_pending_block_tx: Option<Felt>,
+        cursor_map: HashMap<Felt, Felt>,
+    ) {
+        let head = Argument::Int(head.try_into().expect("doesn't fit in u64"));
+        let last_pending_block_tx = if let Some(f) = last_pending_block_tx {
+            Argument::String(format!("{:#x}", f))
+        } else {
+            Argument::Null
+        };
+
+        self.query_queue.enqueue(
+            "UPDATE contracts SET head = ?, last_pending_block_tx = ? WHERE 1=1",
+            vec![head, last_pending_block_tx],
+            QueryType::Other,
+        );
+
+        for cursor in cursor_map {
+            let tx = Argument::FieldElement(cursor.1);
+            let contract = Argument::FieldElement(cursor.0);
+
+            self.query_queue.enqueue(
+                "UPDATE contracts SET last_pending_block_contract_tx = ? WHERE id = ?",
+                vec![tx, contract],
+                QueryType::Other,
+            );
+        }
+    }
+
+    // For a given contract address, sets head to the passed value and sets
+    // last_pending_block_contract_tx and last_pending_block_tx to null
+    pub fn reset_cursors(&mut self, head: u64) {
+        let head = Argument::Int(head.try_into().expect("doesn't fit in u64"));
+        self.query_queue.enqueue(
+            "UPDATE contracts SET head = ?, last_pending_block_contract_tx = ?, \
+             last_pending_block_tx = ? WHERE 1=1",
+            vec![head, Argument::Null, Argument::Null],
             QueryType::Other,
         );
     }
@@ -1150,9 +1259,4 @@ impl Sql {
 
         Ok(())
     }
-}
-
-pub fn felts_sql_string(felts: &[Felt]) -> String {
-    felts.iter().map(|k| format!("{:#x}", k)).collect::<Vec<String>>().join(FELT_DELIMITER)
-        + FELT_DELIMITER
 }

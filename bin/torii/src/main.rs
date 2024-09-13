@@ -12,6 +12,7 @@
 
 use std::cmp;
 use std::net::SocketAddr;
+use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
@@ -31,6 +32,9 @@ use tokio::sync::broadcast;
 use tokio::sync::broadcast::Sender;
 use tokio_stream::StreamExt;
 use torii_core::engine::{Engine, EngineConfig, IndexingFlags, Processors};
+use torii_core::processors::erc20_legacy_transfer::Erc20LegacyTransferProcessor;
+use torii_core::processors::erc20_transfer::Erc20TransferProcessor;
+use torii_core::processors::erc721_transfer::Erc721TransferProcessor;
 use torii_core::processors::event_message::EventMessageProcessor;
 use torii_core::processors::generate_event_processors_map;
 use torii_core::processors::metadata_update::MetadataUpdateProcessor;
@@ -42,7 +46,7 @@ use torii_core::processors::store_update_member::StoreUpdateMemberProcessor;
 use torii_core::processors::store_update_record::StoreUpdateRecordProcessor;
 use torii_core::simple_broker::SimpleBroker;
 use torii_core::sql::Sql;
-use torii_core::types::Model;
+use torii_core::types::{ErcContract, ErcType, Model, ToriiConfig};
 use torii_server::proxy::Proxy;
 use tracing::{error, info};
 use tracing_subscriber::{fmt, EnvFilter};
@@ -140,11 +144,38 @@ struct Args {
     /// Whether or not to index raw events
     #[arg(long, action = ArgAction::Set, default_value_t = true)]
     index_raw_events: bool,
+
+    /// ERC contract addresses to index
+    #[arg(long, value_parser = parse_erc_contracts)]
+    #[arg(conflicts_with = "config")]
+    erc_contracts: Option<std::vec::Vec<ErcContract>>,
+
+    /// Configuration file
+    #[arg(long)]
+    config: Option<PathBuf>,
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
+
+    let mut start_block = args.start_block;
+
+    let mut config = if let Some(path) = args.config {
+        ToriiConfig::load_from_path(&path)?
+    } else {
+        ToriiConfig::default()
+    };
+
+    if let Some(erc_contracts) = args.erc_contracts {
+        config.erc_contracts = erc_contracts;
+    }
+
+    for address in &config.erc_contracts {
+        if address.start_block < start_block {
+            start_block = address.start_block;
+        }
+    }
     let filter_layer = EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| EnvFilter::new("info,hyper_reverse_proxy=off"));
 
@@ -185,17 +216,26 @@ async fn main() -> anyhow::Result<()> {
     // Get world address
     let world = WorldContractReader::new(args.world_address, provider.clone());
 
-    let db = Sql::new(pool.clone(), args.world_address).await?;
+    let erc_contracts = config
+        .erc_contracts
+        .iter()
+        .map(|contract| (contract.contract_address, contract.clone()))
+        .collect();
+
+    let db = Sql::new(pool.clone(), args.world_address, &erc_contracts).await?;
 
     let processors = Processors {
         event: generate_event_processors_map(vec![
-            Arc::new(RegisterModelProcessor),
-            Arc::new(StoreSetRecordProcessor),
-            Arc::new(MetadataUpdateProcessor),
-            Arc::new(StoreDelRecordProcessor),
-            Arc::new(EventMessageProcessor),
-            Arc::new(StoreUpdateRecordProcessor),
-            Arc::new(StoreUpdateMemberProcessor),
+            Box::new(RegisterModelProcessor),
+            Box::new(StoreSetRecordProcessor),
+            Box::new(MetadataUpdateProcessor),
+            Box::new(StoreDelRecordProcessor),
+            Box::new(EventMessageProcessor),
+            Box::new(StoreUpdateRecordProcessor),
+            Box::new(StoreUpdateMemberProcessor),
+            Box::new(Erc20LegacyTransferProcessor),
+            Box::new(Erc20TransferProcessor),
+            Box::new(Erc721TransferProcessor),
         ])?,
         transaction: vec![Box::new(StoreTransactionProcessor)],
         ..Processors::default()
@@ -226,6 +266,7 @@ async fn main() -> anyhow::Result<()> {
         },
         shutdown_tx.clone(),
         Some(block_tx),
+        erc_contracts,
     );
 
     let shutdown_rx = shutdown_tx.subscribe();
@@ -321,4 +362,30 @@ async fn spawn_rebuilding_graphql_server(
             break;
         }
     }
+}
+
+// Parses clap cli argument which is expected to be in the format:
+// - erc_type:address:start_block
+// - address:start_block (erc_type defaults to ERC20)
+fn parse_erc_contracts(s: &str) -> anyhow::Result<Vec<ErcContract>> {
+    let parts: Vec<&str> = s.split(',').collect();
+    let mut contracts = Vec::new();
+    for part in parts {
+        match part.split(':').collect::<Vec<&str>>().as_slice() {
+            [r#type, address, start_block] => {
+                let contract_address = Felt::from_str(address).unwrap();
+                let start_block = start_block.parse::<u64>()?;
+                let r#type = r#type.parse::<ErcType>()?;
+                contracts.push(ErcContract { contract_address, start_block, r#type });
+            }
+            [address, start_block] => {
+                let contract_address = Felt::from_str(address)?;
+                let start_block = start_block.parse::<u64>()?;
+                let r#type = ErcType::default();
+                contracts.push(ErcContract { contract_address, start_block, r#type });
+            }
+            _ => return Err(anyhow::anyhow!("Invalid ERC contract format")),
+        }
+    }
+    Ok(contracts)
 }

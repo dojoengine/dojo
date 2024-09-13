@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -350,7 +351,7 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
 
     let world = WorldContractReader::new(strat.world_address, Arc::clone(&provider));
 
-    let db = Sql::new(pool.clone(), strat.world_address).await.unwrap();
+    let db = Sql::new(pool.clone(), strat.world_address, &HashMap::new()).await.unwrap();
 
     let (shutdown_tx, _) = broadcast::channel(1);
     let mut engine = Engine::new(
@@ -359,9 +360,9 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
         Arc::clone(&provider),
         Processors {
             event: generate_event_processors_map(vec![
-                Arc::new(RegisterModelProcessor),
-                Arc::new(StoreSetRecordProcessor),
-                Arc::new(StoreDelRecordProcessor),
+                Box::new(RegisterModelProcessor),
+                Box::new(StoreSetRecordProcessor),
+                Box::new(StoreDelRecordProcessor),
             ])
             .unwrap(),
             ..Processors::default()
@@ -369,10 +370,11 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
         EngineConfig::default(),
         shutdown_tx,
         None,
+        HashMap::new(),
     );
 
     let to = account.provider().block_hash_and_number().await?.block_number;
-    let data = engine.fetch_range(0, to, None).await.unwrap();
+    let data = engine.fetch_range(0, to, &HashMap::new()).await.unwrap();
     engine.process_range(data).await.unwrap();
 
     Ok(pool)
