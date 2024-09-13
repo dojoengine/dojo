@@ -1031,7 +1031,6 @@ fn build_composite_clause(
                 );
                 bind_values.extend(nested_values);
             }
-            _ => return Err(QueryError::UnsupportedQuery.into()),
         }
     }
 
