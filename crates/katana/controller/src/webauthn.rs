@@ -1,11 +1,11 @@
 pub mod credential {
-    use account_sdk::wasm_webauthn::CredentialID;
     use base64::engine::general_purpose;
     use base64::{DecodeError, Engine};
+    use slot::account_sdk::signers::webauthn::CredentialID;
 
     pub fn from_base64(base64: &str) -> Result<CredentialID, DecodeError> {
         let bytes = general_purpose::URL_SAFE_NO_PAD.decode(base64)?;
-        Ok(CredentialID(bytes))
+        Ok(CredentialID::from(bytes))
     }
 }
 

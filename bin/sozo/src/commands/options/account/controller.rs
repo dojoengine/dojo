@@ -1,8 +1,6 @@
 use std::str::FromStr;
+use std::sync::Arc;
 
-use account_sdk::account::session::hash::{AllowedMethod, Session};
-use account_sdk::account::session::SessionAccount;
-use account_sdk::signers::HashSigner;
 use anyhow::{bail, Context, Result};
 use camino::{Utf8Path, Utf8PathBuf};
 use dojo_utils::TransactionWaiter;
@@ -10,24 +8,33 @@ use dojo_world::contracts::naming::get_name_from_tag;
 use dojo_world::manifest::{BaseManifest, Class, DojoContract, Manifest};
 use dojo_world::migration::strategy::generate_salt;
 use scarb::core::Config;
-use slot::session::Policy;
+use slot::account_sdk::account::session::hash::{AllowedMethod, ProvedMethod};
+use slot::account_sdk::account::session::merkle::MerkleTree;
+use slot::account_sdk::account::session::SessionAccount;
+use slot::session::{FullSessionInfo, PolicyMethod};
 use starknet::core::types::contract::{AbiEntry, StateMutability};
 use starknet::core::types::StarknetError::ContractNotFound;
 use starknet::core::types::{BlockId, BlockTag, Felt};
-use starknet::core::utils::{cairo_short_string_to_felt, get_contract_address};
-use starknet::macros::{felt, short_string};
+use starknet::core::utils::{
+    cairo_short_string_to_felt, get_contract_address, get_selector_from_name,
+};
+use starknet::macros::felt;
 use starknet::providers::Provider;
 use starknet::providers::ProviderError::StarknetError;
-use starknet::signers::SigningKey;
 use starknet_crypto::poseidon_hash_single;
 use tracing::{trace, warn};
 use url::Url;
 
 use super::WorldAddressOrName;
 
+// Why the Arc? becaues the Controller account implementation over on `account_sdk` crate is
+// riddled with `+ Clone` bounds on its Provider generic. So we explicitly specify that the Provider
+// impl here is wrapped in an Arc to satisfy the Clone bound. Otherwise, you would get a 'trait
+// bound not satisfied' error.
+//
 // This type comes from account_sdk, which doesn't derive Debug.
 #[allow(missing_debug_implementations)]
-pub type ControllerSessionAccount<P> = SessionAccount<P, SigningKey, SigningKey>;
+pub type ControllerSessionAccount<P> = SessionAccount<Arc<P>>;
 
 /// Create a new Catridge Controller account based on session key.
 #[tracing::instrument(
@@ -59,30 +66,31 @@ where
         "Creating Controller session account"
     );
 
+    // make sure account exist on the provided chain, if not, we deploy it first before proceeding
+    deploy_account_if_not_exist(rpc_url.clone(), &provider, chain_id, contract_address, &username)
+        .await
+        .with_context(|| format!("Deploying Controller account on chain {chain_id}"))?;
+
     // Check if the session exists, if not create a new one
     let session_details = match slot::session::get(chain_id)? {
         Some(session) => {
-            trace!(expires_at = %session.expires_at, policies = session.policies.len(), "Found existing session.");
+            trace!(expires_at = %session.session.expires_at, policies = session.session.allowed_methods.len(), "Found existing session.");
 
-            // Perform policies diff check. For security reasons, we will always create a new
-            // session here if the current policies are different from the existing
-            // session.
-            //
-            // TODO(kariy): maybe don't need to update if current policies is a
-            // subset of the existing policies.
             let policies = collect_policies(world_addr_or_name, contract_address, config)?;
+            // check if the policies have changed
+            let is_equal = is_equal_to_existing(&policies, &session);
 
-            if policies != session.policies {
+            if is_equal {
+                session
+            } else {
                 trace!(
                     new_policies = policies.len(),
-                    existing_policies = session.policies.len(),
+                    existing_policies = session.session.allowed_methods.len(),
                     "Policies have changed. Creating new session."
                 );
 
                 let session = slot::session::create(rpc_url.clone(), &policies).await?;
                 slot::session::store(chain_id, &session)?;
-                session
-            } else {
                 session
             }
         }
@@ -97,35 +105,34 @@ where
         }
     };
 
-    let methods = session_details
-        .policies
+    Ok(session_details.into_account(Arc::new(provider)))
+}
+
+// Check if the new policies are equal to the ones in the existing session
+//
+// This function would compute the merkle root of the new policies and compare it with the root in
+// the existing SessionMetadata.
+fn is_equal_to_existing(new_policies: &[PolicyMethod], session_info: &FullSessionInfo) -> bool {
+    let allowed_methods = new_policies
+        .iter()
+        .map(|p| AllowedMethod::new(p.target, get_selector_from_name(&p.method).unwrap()))
+        .collect::<Vec<AllowedMethod>>();
+
+    // Copied from somewhere
+    let hashes = allowed_methods.iter().map(AllowedMethod::as_merkle_leaf).collect::<Vec<Felt>>();
+
+    let allowed_methods = allowed_methods
         .into_iter()
-        .map(|p| AllowedMethod::new(p.target, &p.method))
-        .collect::<Result<Vec<AllowedMethod>, _>>()?;
+        .enumerate()
+        .map(|(i, method)| ProvedMethod {
+            method,
+            proof: MerkleTree::compute_proof(hashes.clone(), i),
+        })
+        .collect::<Vec<ProvedMethod>>();
 
-    // Copied from `account-wasm` <https://github.com/cartridge-gg/controller/blob/0dd4dd6cbc5fcd3b9a1fd8d63dc127f6312b733f/packages/account-wasm/src/lib.rs#L78-L88>
-    let guardian = SigningKey::from_secret_scalar(short_string!("CARTRIDGE_GUARDIAN"));
-    let signer = SigningKey::from_secret_scalar(session_details.credentials.private_key);
-    // TODO(kariy): make `expires_at` a `u64` type in the session struct
-    let expires_at = session_details.expires_at.parse::<u64>()?;
-    let session = Session::new(methods, expires_at, &signer.signer())?;
+    let root = MerkleTree::compute_root(hashes[0], allowed_methods[0].proof.clone());
 
-    // make sure account exist on the provided chain, if not, we deploy it first before proceeding
-    deploy_account_if_not_exist(rpc_url, &provider, chain_id, contract_address, &username)
-        .await
-        .with_context(|| format!("Deploying Controller account on chain {chain_id}"))?;
-
-    let session_account = SessionAccount::new(
-        provider,
-        signer,
-        guardian,
-        contract_address,
-        chain_id,
-        session_details.credentials.authorization,
-        session,
-    );
-
-    Ok(session_account)
+    root == session_info.session.allowed_methods_root
 }
 
 /// Policies are the building block of a session key. It's what defines what methods are allowed for
@@ -137,7 +144,7 @@ fn collect_policies(
     world_addr_or_name: WorldAddressOrName,
     user_address: Felt,
     config: &Config,
-) -> Result<Vec<Policy>> {
+) -> Result<Vec<PolicyMethod>> {
     let root_dir = config.root();
     let manifest = get_project_base_manifest(root_dir, config.profile().as_str())?;
     let policies =
@@ -157,8 +164,8 @@ fn collect_policies_from_base_manifest(
     user_address: Felt,
     base_path: &Utf8Path,
     manifest: BaseManifest,
-) -> Result<Vec<Policy>> {
-    let mut policies: Vec<Policy> = Vec::new();
+) -> Result<Vec<PolicyMethod>> {
+    let mut policies: Vec<PolicyMethod> = Vec::new();
     let base_path: Utf8PathBuf = base_path.to_path_buf();
 
     // compute the world address here if it's a name
@@ -180,14 +187,14 @@ fn collect_policies_from_base_manifest(
     // special policy for sending declare tx
     // corresponds to [account_sdk::account::DECLARATION_SELECTOR]
     let method = "__declare_transaction__".to_string();
-    policies.push(Policy { target: user_address, method });
+    policies.push(PolicyMethod { target: user_address, method });
     trace!("Adding declare transaction policy");
 
     // for deploying using udc
     let method = "deployContract".to_string();
     const UDC_ADDRESS: Felt =
         felt!("0x041a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf");
-    policies.push(Policy { target: UDC_ADDRESS, method });
+    policies.push(PolicyMethod { target: UDC_ADDRESS, method });
     trace!("Adding UDC deployment policy");
 
     Ok(policies)
@@ -196,7 +203,7 @@ fn collect_policies_from_base_manifest(
 /// Recursively extract methods and convert them into policies from the all the
 /// ABIs in the project.
 fn policies_from_abis(
-    policies: &mut Vec<Policy>,
+    policies: &mut Vec<PolicyMethod>,
     contract_tag: &str,
     contract_address: Felt,
     entries: &[AbiEntry],
@@ -206,7 +213,8 @@ fn policies_from_abis(
             AbiEntry::Function(f) => {
                 // we only create policies for non-view functions
                 if let StateMutability::External = f.state_mutability {
-                    let policy = Policy { target: contract_address, method: f.name.to_string() };
+                    let policy =
+                        PolicyMethod { target: contract_address, method: f.name.to_string() };
                     trace!(tag = contract_tag, target = format!("{:#x}", policy.target), method = %policy.method, "Adding policy");
                     policies.push(policy);
                 }
@@ -357,7 +365,7 @@ mod tests {
     use scarb::compiler::Profile;
     use starknet::macros::felt;
 
-    use super::{collect_policies, Policy};
+    use super::{collect_policies, PolicyMethod};
     use crate::commands::options::account::WorldAddressOrName;
 
     #[test]
@@ -373,7 +381,7 @@ mod tests {
 
         // Get test data
         let test_data = include_str!("../../../../tests/test_data/policies.json");
-        let expected_policies: Vec<Policy> = serde_json::from_str(test_data).unwrap();
+        let expected_policies: Vec<PolicyMethod> = serde_json::from_str(test_data).unwrap();
 
         // Compare the collected policies with the test data
         assert_eq!(policies.len(), expected_policies.len());

@@ -7,10 +7,10 @@ use async_trait::async_trait;
 use cairo_lang_starknet_classes::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet_classes::contract_class::ContractClass;
 use dojo_utils::{TransactionExt, TransactionWaiter, TransactionWaitingError, TxnConfig};
-use starknet::accounts::{Account, AccountError, Call, ConnectedAccount};
+use starknet::accounts::{Account, AccountError, ConnectedAccount};
 use starknet::core::types::contract::{CompiledClass, SierraClass};
 use starknet::core::types::{
-    BlockId, BlockTag, DeclareTransactionResult, Felt, FlattenedSierraClass,
+    BlockId, BlockTag, Call, DeclareTransactionResult, Felt, FlattenedSierraClass,
     InvokeTransactionResult, ReceiptBlock, StarknetError, TransactionReceiptWithBlockInfo,
 };
 use starknet::core::utils::{get_contract_address, CairoShortStringToFeltError};
