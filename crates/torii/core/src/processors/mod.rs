@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::sync::Arc;
 
 use anyhow::{Error, Result};
 use async_trait::async_trait;
@@ -10,6 +9,12 @@ use starknet::providers::Provider;
 
 use crate::sql::Sql;
 
+// pub mod erc20_legacy_transfer;
+// pub mod erc20_transfer;
+// pub mod erc721_transfer;
+pub mod erc20_legacy_transfer;
+pub mod erc20_transfer;
+pub mod erc721_transfer;
 pub mod event_message;
 pub mod metadata_update;
 pub mod register_model;
@@ -74,15 +79,17 @@ pub trait TransactionProcessor<P: Provider + Sync>: Send + Sync {
     ) -> Result<(), Error>;
 }
 
+type EventProcessors<P> = Vec<Box<dyn EventProcessor<P>>>;
+
 /// Given a list of event processors, generate a map of event keys to the event processor
 pub fn generate_event_processors_map<P: Provider + Sync + Send>(
-    event_processor: Vec<Arc<dyn EventProcessor<P>>>,
-) -> Result<HashMap<Felt, Arc<dyn EventProcessor<P>>>> {
+    event_processor: EventProcessors<P>,
+) -> Result<HashMap<Felt, EventProcessors<P>>> {
     let mut event_processors = HashMap::new();
 
     for processor in event_processor {
         let key = get_selector_from_name(processor.event_key().as_str())?;
-        event_processors.insert(key, processor);
+        event_processors.entry(key).or_insert(vec![]).push(processor);
     }
 
     Ok(event_processors)

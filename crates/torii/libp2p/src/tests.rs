@@ -524,6 +524,7 @@ mod test {
     #[cfg(not(target_arch = "wasm32"))]
     #[tokio::test]
     async fn test_client_messaging() -> Result<(), Box<dyn Error>> {
+        use std::collections::HashMap;
         use std::time::Duration;
 
         use dojo_types::schema::{Member, Struct, Ty};
@@ -559,7 +560,7 @@ mod test {
 
         let account = sequencer.account_data(0);
 
-        let mut db = Sql::new(pool.clone(), Felt::ZERO).await?;
+        let mut db = Sql::new(pool.clone(), Felt::ZERO, &HashMap::new()).await?;
 
         // Register the model of our Message
         db.register_model(

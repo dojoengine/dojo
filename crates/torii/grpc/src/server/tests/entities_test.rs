@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -92,7 +93,7 @@ async fn test_entities_queries(sequencer: &RunnerCtx) {
 
     TransactionWaiter::new(tx.transaction_hash, &provider).await.unwrap();
 
-    let db = Sql::new(pool.clone(), strat.world_address).await.unwrap();
+    let db = Sql::new(pool.clone(), strat.world_address, &HashMap::new()).await.unwrap();
 
     let (shutdown_tx, _) = broadcast::channel(1);
     let mut engine = Engine::new(
@@ -101,8 +102,8 @@ async fn test_entities_queries(sequencer: &RunnerCtx) {
         Arc::clone(&provider),
         Processors {
             event: generate_event_processors_map(vec![
-                Arc::new(RegisterModelProcessor),
-                Arc::new(StoreSetRecordProcessor),
+                Box::new(RegisterModelProcessor),
+                Box::new(StoreSetRecordProcessor),
             ])
             .unwrap(),
             ..Processors::default()
@@ -110,10 +111,11 @@ async fn test_entities_queries(sequencer: &RunnerCtx) {
         EngineConfig::default(),
         shutdown_tx,
         None,
+        HashMap::new(),
     );
 
     let to = provider.block_hash_and_number().await.unwrap().block_number;
-    let data = engine.fetch_range(0, to, None).await.unwrap();
+    let data = engine.fetch_range(0, to, &HashMap::new()).await.unwrap();
     engine.process_range(data).await.unwrap();
 
     let (_, receiver) = tokio::sync::mpsc::channel(1);

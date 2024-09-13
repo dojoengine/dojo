@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -44,20 +45,21 @@ where
         provider,
         Processors {
             event: generate_event_processors_map(vec![
-                Arc::new(RegisterModelProcessor),
-                Arc::new(StoreSetRecordProcessor),
-                Arc::new(StoreUpdateRecordProcessor),
-                Arc::new(StoreUpdateMemberProcessor),
-                Arc::new(StoreDelRecordProcessor),
+                Box::new(RegisterModelProcessor),
+                Box::new(StoreSetRecordProcessor),
+                Box::new(StoreUpdateRecordProcessor),
+                Box::new(StoreUpdateMemberProcessor),
+                Box::new(StoreDelRecordProcessor),
             ])?,
             ..Processors::default()
         },
         EngineConfig::default(),
         shutdown_tx,
         None,
+        HashMap::new(),
     );
 
-    let data = engine.fetch_range(0, to, None).await.unwrap();
+    let data = engine.fetch_range(0, to, &HashMap::new()).await.unwrap();
     engine.process_range(data).await.unwrap();
 
     Ok(engine)
@@ -123,7 +125,7 @@ async fn test_load_from_remote(sequencer: &RunnerCtx) {
 
     let world_reader = WorldContractReader::new(strat.world_address, Arc::clone(&provider));
 
-    let mut db = Sql::new(pool.clone(), world_reader.address).await.unwrap();
+    let mut db = Sql::new(pool.clone(), world_reader.address, &HashMap::new()).await.unwrap();
 
     let _ = bootstrap_engine(world_reader, db.clone(), provider).await.unwrap();
 
@@ -280,7 +282,7 @@ async fn test_load_from_remote_del(sequencer: &RunnerCtx) {
 
     let world_reader = WorldContractReader::new(strat.world_address, Arc::clone(&provider));
 
-    let mut db = Sql::new(pool.clone(), world_reader.address).await.unwrap();
+    let mut db = Sql::new(pool.clone(), world_reader.address, &HashMap::new()).await.unwrap();
 
     let _ = bootstrap_engine(world_reader, db.clone(), provider).await;
 
@@ -367,7 +369,7 @@ async fn test_update_with_set_record(sequencer: &RunnerCtx) {
 
     let world_reader = WorldContractReader::new(strat.world_address, Arc::clone(&provider));
 
-    let mut db = Sql::new(pool.clone(), world_reader.address).await.unwrap();
+    let mut db = Sql::new(pool.clone(), world_reader.address, &HashMap::new()).await.unwrap();
 
     let _ = bootstrap_engine(world_reader, db.clone(), Arc::clone(&provider)).await.unwrap();
 
