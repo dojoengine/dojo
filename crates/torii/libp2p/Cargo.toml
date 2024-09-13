@@ -35,16 +35,16 @@ tempfile.workspace = true
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 rcgen = "0.13.1"
-libp2p = { git = "https://github.com/libp2p/rust-libp2p", features = [ "ed25519", "gossipsub", "identify", "macros", "noise", "ping", "quic", "relay", "tcp", "tokio", "yamux", "websocket", "dns" ], rev = "3837e33cd4c40ae703138e6aed6f6c9d52928a80" }
-libp2p-webrtc = { git = "https://github.com/libp2p/rust-libp2p", features = [ "pem", "tokio" ], rev = "3837e33cd4c40ae703138e6aed6f6c9d52928a80" }
+libp2p = { git = "https://github.com/libp2p/rust-libp2p", features = [ "ed25519", "gossipsub", "identify", "macros", "noise", "ping", "quic", "relay", "tcp", "tokio", "yamux", "websocket", "dns" ], rev = "cdc9638ac1256f8a5305adb2f50a188de8874a0f" }
+libp2p-webrtc = { git = "https://github.com/libp2p/rust-libp2p", features = [ "pem", "tokio" ], rev = "cdc9638ac1256f8a5305adb2f50a188de8874a0f" }
 sqlx.workspace = true
 tokio.workspace = true
 torii-core.workspace = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-libp2p = { git = "https://github.com/libp2p/rust-libp2p", features = [ "ed25519", "gossipsub", "identify", "macros", "ping", "tcp", "wasm-bindgen", "noise", "yamux" ], rev = "3837e33cd4c40ae703138e6aed6f6c9d52928a80" }
-libp2p-webrtc-websys = { git = "https://github.com/libp2p/rust-libp2p", rev = "3837e33cd4c40ae703138e6aed6f6c9d52928a80" }
-libp2p-websocket-websys = { git = "https://github.com/libp2p/rust-libp2p", rev = "3837e33cd4c40ae703138e6aed6f6c9d52928a80" }
+libp2p = { git = "https://github.com/libp2p/rust-libp2p", features = [ "ed25519", "gossipsub", "identify", "macros", "ping", "tcp", "wasm-bindgen", "noise", "yamux" ], rev = "cdc9638ac1256f8a5305adb2f50a188de8874a0f" }
+libp2p-webrtc-websys = { git = "https://github.com/libp2p/rust-libp2p", rev = "cdc9638ac1256f8a5305adb2f50a188de8874a0f" }
+libp2p-websocket-websys = { git = "https://github.com/libp2p/rust-libp2p", rev = "cdc9638ac1256f8a5305adb2f50a188de8874a0f" }
 tracing-wasm = "0.2.1"
 wasm-bindgen-futures = "0.4.40"
 wasm-bindgen-test = "0.3.40"
