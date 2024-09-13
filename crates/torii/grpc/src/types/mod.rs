@@ -11,7 +11,7 @@ use starknet::core::types::{
 };
 use strum_macros::{AsRefStr, EnumIter, FromRepr};
 
-use crate::proto::{self};
+use crate::proto::{self, types::member_clause};
 
 pub mod schema;
 
@@ -55,11 +55,17 @@ pub enum PatternMatching {
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
+pub enum MemberValue {
+    Primitive(Primitive),
+    String(String),
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct MemberClause {
     pub model: String,
     pub member: String,
     pub operator: ComparisonOperator,
-    pub value: Primitive,
+    pub value: MemberValue,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
@@ -294,6 +300,15 @@ impl From<CompositeClause> for proto::types::CompositeClause {
         Self {
             operator: value.operator as i32,
             clauses: value.clauses.into_iter().map(|clause| clause.into()).collect(),
+        }
+    }
+}
+
+impl From<MemberValue> for member_clause::Value {
+    fn from(value: MemberValue) -> Self {
+        match value {
+            MemberValue::Primitive(primitive) => member_clause::Value::Primitive(primitive.into()),
+            MemberValue::String(string) => member_clause::Value::String(string),
         }
     }
 }

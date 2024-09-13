@@ -116,7 +116,10 @@ message MemberClause {
     string model = 2;
     string member = 3;
     ComparisonOperator operator = 4;
-    Primitive value = 5;
+    oneof value {
+        Primitive primitive = 5;
+        string string = 6;
+    }
 }
 
 message CompositeClause {
