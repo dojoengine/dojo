@@ -13,7 +13,7 @@ use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Sqlite};
 use starknet::core::types::{Event, Felt, InvokeTransaction, Transaction};
 use starknet_crypto::poseidon_hash_many;
-use tracing::debug;
+use tracing::{debug, warn};
 
 use crate::cache::{Model, ModelCache};
 use crate::query_queue::{Argument, BrokerMessage, DeleteEntityQuery, QueryQueue, QueryType};
@@ -40,6 +40,12 @@ pub struct Sql {
     model_cache: Arc<ModelCache>,
 }
 
+// impl Clone for Sql {
+//     fn clone(&self) -> Self {
+//         Self { world_address: self.world_address, pool: self.pool.clone(), query_queue: QueryQueue::new(self.pool.clone()), model_cache: self.model_cache.clone() }
+//     }
+// }
+
 impl Sql {
     pub async fn new(pool: Pool<Sqlite>, world_address: Felt) -> Result<Self> {
         let mut query_queue = QueryQueue::new(pool.clone());
@@ -64,6 +70,22 @@ impl Sql {
             model_cache: Arc::new(ModelCache::new(pool)),
         })
     }
+
+    // pub fn merge(&mut self, other: Sql) -> Result<()> {
+    //     // Merge query queue
+    //     self.query_queue.queue.extend(other.query_queue.queue);
+    //     self.query_queue.publish_queue.extend(other.query_queue.publish_queue);
+
+    //     // This should never happen
+    //     if self.world_address != other.world_address {
+    //         warn!(
+    //             "Merging Sql instances with different world addresses: {} and {}",
+    //             self.world_address, other.world_address
+    //         );
+    //     }
+
+    //     Ok(())
+    // }
 
     pub async fn head(&self) -> Result<(u64, Option<Felt>, Option<Felt>)> {
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;

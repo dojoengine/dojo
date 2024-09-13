@@ -23,7 +23,7 @@ const ENTITY_ID_INDEX: usize = 1;
 const NUM_KEYS_INDEX: usize = 2;
 
 #[async_trait]
-pub trait EventProcessor<P>
+pub trait EventProcessor<P>: Send + Sync
 where
     P: Provider + Sync,
 {
@@ -48,7 +48,7 @@ where
 }
 
 #[async_trait]
-pub trait BlockProcessor<P: Provider + Sync> {
+pub trait BlockProcessor<P: Provider + Sync>: Send + Sync {
     fn get_block_number(&self) -> String;
     async fn process(
         &self,
@@ -60,7 +60,7 @@ pub trait BlockProcessor<P: Provider + Sync> {
 }
 
 #[async_trait]
-pub trait TransactionProcessor<P: Provider + Sync> {
+pub trait TransactionProcessor<P: Provider + Sync>: Send + Sync {
     #[allow(clippy::too_many_arguments)]
     async fn process(
         &self,
