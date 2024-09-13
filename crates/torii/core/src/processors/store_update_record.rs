@@ -70,13 +70,18 @@ where
 
         // Keys are read from the db, since we don't have access to them when only
         // the entity id is passed.
-        let keys = db.get_entity_keys(entity_id, &tag).await?;
+
+        let keys = db.get_entity_keys(entity_id, &tag).await.with_context(|| {
+            format!("Failed to get keys for entity: {:#x}, model: {}", entity_id, tag)
+        })?;
 
         let keys_str = felts_sql_string(&keys);
         let mut keys_and_unpacked = [keys, values].concat();
 
         let mut entity = model.schema;
-        entity.deserialize(&mut keys_and_unpacked)?;
+        entity.deserialize(&mut keys_and_unpacked).with_context(|| {
+            format!("Failed to deserialize entity: {}, schema: {}", model.name, &entity)
+        })?;
 
         db.set_entity(entity, event_id, block_timestamp, entity_id, model_id, &keys_str).await?;
         Ok(())

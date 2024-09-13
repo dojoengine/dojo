@@ -10,7 +10,7 @@ use dojo_world::contracts::abi::model::Layout;
 use dojo_world::contracts::naming::{compute_selector_from_names, compute_selector_from_tag};
 use dojo_world::metadata::WorldMetadata;
 use sqlx::pool::PoolConnection;
-use sqlx::{Pool, Row, Sqlite};
+use sqlx::{Column, Pool, Row, Sqlite, TypeInfo};
 use starknet::core::types::{Event, Felt, InvokeTransaction, Transaction};
 use starknet_crypto::poseidon_hash_many;
 use tracing::debug;
@@ -450,9 +450,23 @@ impl Sql {
         let result = query.fetch_all(&mut *conn).await?;
 
         for row in result {
-            for (i, _) in row.columns().iter().enumerate() {
-                let value: String = row.try_get(i)?;
-                keys.push(Felt::from_hex(&value)?);
+            for (i, c) in row.columns().iter().enumerate() {
+                let column_type = c.type_info().name();
+
+                let value = match column_type {
+                    "TEXT" => {
+                        let text: String = row.try_get(i)?;
+                        Felt::from_hex(&text)?
+                    }
+                    "INTEGER" => {
+                        let integer: i64 = row.try_get(i)?;
+                        Felt::from(integer as u64)
+                    }
+                    _ => {
+                        return Err(anyhow!("Unsupported column type: {}", c.type_info().name()));
+                    }
+                };
+                keys.push(value);
             }
         }
 
