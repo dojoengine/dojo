@@ -252,4 +252,3 @@ alloy-transport = { version = "0.2", default-features = false }
 # To re-export the entire `felt` module from `starknet-types-core`.
 starknet-core = { git = "https://github.com/kariy/starknet-rs", branch = "dojo-patch" }
 starknet-types-core = { git = "https://github.com/dojoengine/types-rs", rev = "289e2f0" }
-web-sys = { git = "https://github.com/rustwasm/wasm-bindgen", tag = "0.3.70" }
