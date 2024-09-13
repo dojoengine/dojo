@@ -43,7 +43,7 @@ dependencies = [
  "sha2 0.10.8",
  "starknet 0.11.0",
  "starknet-crypto 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "starknet-types-core",
+ "starknet-types-core 0.1.5 (git+https://github.com/dojoengine/types-rs?rev=289e2f0)",
  "thiserror",
  "tokio",
  "toml 0.8.15",
@@ -1961,7 +1961,7 @@ dependencies = [
  "serde_json",
  "sha2 0.10.8",
  "sha3",
- "starknet-types-core",
+ "starknet-types-core 0.1.5 (git+https://github.com/dojoengine/types-rs?rev=289e2f0)",
  "starknet_api",
  "strum 0.25.0",
  "strum_macros 0.25.3",
@@ -2242,7 +2242,7 @@ dependencies = [
  "serde",
  "serde_json",
  "starknet 0.11.0",
- "starknet-types-core",
+ "starknet-types-core 0.1.5 (git+https://github.com/starknet-io/types-rs?rev=f98f048)",
  "thiserror",
  "tracing",
  "tracing-subscriber",
@@ -2267,7 +2267,7 @@ dependencies = [
  "serde",
  "serde_json",
  "starknet 0.11.0",
- "starknet-types-core",
+ "starknet-types-core 0.1.5 (git+https://github.com/starknet-io/types-rs?rev=f98f048)",
  "thiserror",
  "tracing",
  "tracing-subscriber",
@@ -2717,7 +2717,7 @@ dependencies = [
  "rand",
  "sha2 0.10.8",
  "smol_str",
- "starknet-types-core",
+ "starknet-types-core 0.1.5 (git+https://github.com/dojoengine/types-rs?rev=289e2f0)",
  "thiserror",
 ]
 
@@ -2772,7 +2772,7 @@ dependencies = [
  "serde_json",
  "sha3",
  "smol_str",
- "starknet-types-core",
+ "starknet-types-core 0.1.5 (git+https://github.com/dojoengine/types-rs?rev=289e2f0)",
  "thiserror",
 ]
 
@@ -2850,7 +2850,7 @@ dependencies = [
  "itertools 0.12.1",
  "num-bigint",
  "num-traits 0.2.19",
- "starknet-types-core",
+ "starknet-types-core 0.1.5 (git+https://github.com/dojoengine/types-rs?rev=289e2f0)",
  "thiserror",
 ]
 
@@ -2891,7 +2891,7 @@ dependencies = [
  "serde",
  "serde_json",
  "smol_str",
- "starknet-types-core",
+ "starknet-types-core 0.1.5 (git+https://github.com/dojoengine/types-rs?rev=289e2f0)",
  "thiserror",
 ]
 
@@ -2915,7 +2915,7 @@ dependencies = [
  "serde_json",
  "sha3",
  "smol_str",
- "starknet-types-core",
+ "starknet-types-core 0.1.5 (git+https://github.com/dojoengine/types-rs?rev=289e2f0)",
  "thiserror",
 ]
 
@@ -2970,7 +2970,7 @@ dependencies = [
  "num-bigint",
  "num-traits 0.2.19",
  "serde",
- "starknet-types-core",
+ "starknet-types-core 0.1.5 (git+https://github.com/dojoengine/types-rs?rev=289e2f0)",
 ]
 
 [[package]]
@@ -2993,7 +2993,7 @@ dependencies = [
  "itertools 0.12.1",
  "num-traits 0.2.19",
  "rayon",
- "starknet-types-core",
+ "starknet-types-core 0.1.5 (git+https://github.com/dojoengine/types-rs?rev=289e2f0)",
 ]
 
 [[package]]
@@ -3042,7 +3042,7 @@ dependencies = [
  "serde_json",
  "starknet 0.11.0",
  "starknet-crypto 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "starknet-types-core",
+ "starknet-types-core 0.1.5 (git+https://github.com/dojoengine/types-rs?rev=289e2f0)",
  "tokio",
  "url",
 ]
@@ -3073,7 +3073,7 @@ dependencies = [
  "sha2 0.10.8",
  "sha3",
  "starknet-crypto 0.6.2",
- "starknet-types-core",
+ "starknet-types-core 0.1.5 (git+https://github.com/dojoengine/types-rs?rev=289e2f0)",
  "thiserror-no-std",
  "zip",
 ]
@@ -12066,7 +12066,7 @@ dependencies = [
  "serde_json",
  "starknet 0.11.0",
  "starknet-crypto 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "starknet-types-core",
+ "starknet-types-core 0.1.5 (git+https://github.com/dojoengine/types-rs?rev=289e2f0)",
  "thiserror",
  "tokio",
  "tracing",
@@ -13497,7 +13497,7 @@ dependencies = [
  "serde_with 3.9.0",
  "sha3",
  "starknet-crypto 0.7.1 (git+https://github.com/xJonathanLEI/starknet-rs?rev=2ddc694)",
- "starknet-types-core",
+ "starknet-types-core 0.1.5 (git+https://github.com/dojoengine/types-rs?rev=289e2f0)",
 ]
 
 [[package]]
@@ -13556,7 +13556,7 @@ dependencies = [
  "sha2 0.10.8",
  "starknet-crypto-codegen 0.4.0",
  "starknet-curve 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "starknet-types-core",
+ "starknet-types-core 0.1.5 (git+https://github.com/dojoengine/types-rs?rev=289e2f0)",
  "zeroize",
 ]
 
@@ -13574,7 +13574,7 @@ dependencies = [
  "rfc6979",
  "sha2 0.10.8",
  "starknet-curve 0.5.0 (git+https://github.com/xJonathanLEI/starknet-rs?rev=2ddc694)",
- "starknet-types-core",
+ "starknet-types-core 0.1.5 (git+https://github.com/dojoengine/types-rs?rev=289e2f0)",
  "zeroize",
 ]
 
@@ -13596,7 +13596,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2e179dedc3fa6da064e56811d3e05d446aa2f7459e4eb0e3e49378a337235437"
 dependencies = [
  "starknet-curve 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "starknet-types-core",
+ "starknet-types-core 0.1.5 (git+https://github.com/dojoengine/types-rs?rev=289e2f0)",
  "syn 2.0.71",
 ]
 
@@ -13624,7 +13624,7 @@ version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "56935b306dcf0b8f14bb2a1257164b8478bb8be4801dfae0923f5b266d1b457c"
 dependencies = [
- "starknet-types-core",
+ "starknet-types-core 0.1.5 (git+https://github.com/dojoengine/types-rs?rev=289e2f0)",
 ]
 
 [[package]]
@@ -13632,7 +13632,7 @@ name = "starknet-curve"
 version = "0.5.0"
 source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=2ddc694#2ddc69479d326ed154df438d22f2d720fbba746e"
 dependencies = [
- "starknet-types-core",
+ "starknet-types-core 0.1.5 (git+https://github.com/dojoengine/types-rs?rev=289e2f0)",
 ]
 
 [[package]]
@@ -13744,11 +13744,24 @@ dependencies = [
 [[package]]
 name = "starknet-types-core"
 version = "0.1.5"
-source = "git+https://github.com/starknet-io/types-rs?rev=f98f048#f98f048efa776f1f8da81a19f337a9b8c2f4b8f7"
+source = "git+https://github.com/dojoengine/types-rs?rev=289e2f0#289e2f0bfd5f01a98e7273ff7ce8902a23b5f9d5"
 dependencies = [
  "lambdaworks-crypto",
  "lambdaworks-math",
  "lazy_static",
+ "num-bigint",
+ "num-integer",
+ "num-traits 0.2.19",
+ "serde",
+]
+
+[[package]]
+name = "starknet-types-core"
+version = "0.1.5"
+source = "git+https://github.com/starknet-io/types-rs?rev=f98f048#f98f048efa776f1f8da81a19f337a9b8c2f4b8f7"
+dependencies = [
+ "lambdaworks-crypto",
+ "lambdaworks-math",
  "num-bigint",
  "num-integer",
  "num-traits 0.2.19",
@@ -13772,7 +13785,7 @@ dependencies = [
  "serde_json",
  "sha3",
  "starknet-crypto 0.5.2",
- "starknet-types-core",
+ "starknet-types-core 0.1.5 (git+https://github.com/dojoengine/types-rs?rev=289e2f0)",
  "strum 0.24.1",
  "strum_macros 0.24.3",
  "thiserror",

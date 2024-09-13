@@ -246,5 +246,8 @@ starknet-crypto = "0.7.1"
 starknet-types-core = "~0.1.4"
 
 [patch.crates-io]
+# Matching the same rev that `cainome` is using. Mainly because `starknet-rs` hasn't create a new release yet.
 starknet = { git = "https://github.com/xJonathanLEI/starknet-rs", rev = "2ddc694" }
-starknet-types-core = { git = "https://github.com/starknet-io/types-rs", rev = "f98f048" }
+# This patch is required especially for `katana-db` to work properly.
+# Ref: https://github.com/dojoengine/types-rs/commit/1943cb974a8738d2473d58479a3ace7badb0262f
+starknet-types-core = { git = "https://github.com/dojoengine/types-rs", rev = "289e2f0" }
