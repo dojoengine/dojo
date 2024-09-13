@@ -40,7 +40,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-      - name: Running Katana benchmarks
+      - name: Running Sozo benchmarks
         run: cargo bench --bench spawn-and-move-build -- --output-format bencher | sed 1d | tail -n 1 | tee output_sozo.txt
       - uses: benchmark-action/github-action-benchmark@v1
         with:
