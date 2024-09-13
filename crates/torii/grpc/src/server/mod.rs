@@ -1018,7 +1018,7 @@ fn build_composite_clause(
             }
             ClauseType::Composite(nested_composite) => {
                 let (nested_where, nested_having, nested_join, nested_values) =
-                    self.build_composite_clause(table, model_relation_table, nested_composite)?;
+                    build_composite_clause(table, model_relation_table, nested_composite)?;
                 where_clauses.push(format!("({})", nested_where.trim_start_matches("WHERE ")));
                 if !nested_having.is_empty() {
                     having_clauses.push(nested_having.trim_start_matches("HAVING ").to_string());
