@@ -11,7 +11,8 @@ use starknet::core::types::{
 };
 use strum_macros::{AsRefStr, EnumIter, FromRepr};
 
-use crate::proto::{self, types::member_clause};
+use crate::proto::types::member_clause;
+use crate::proto::{self};
 
 pub mod schema;
 
