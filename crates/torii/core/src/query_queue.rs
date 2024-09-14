@@ -66,15 +66,6 @@ impl QueryQueue {
         self.queue.push_back((statement.into(), arguments, query_type));
     }
 
-    pub fn push_front<S: Into<String>>(
-        &mut self,
-        statement: S,
-        arguments: Vec<Argument>,
-        query_type: QueryType,
-    ) {
-        self.queue.push_front((statement.into(), arguments, query_type));
-    }
-
     pub fn push_publish(&mut self, value: BrokerMessage) {
         self.publish_queue.push_back(value);
     }
