@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1726239145524,
+  "lastUpdate": 1726275364205,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -19825,6 +19825,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3878734,
             "range": "± 97273",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ed2aa83b18a1359c2237577e46487202b98ea16a",
+          "message": "fix(sozo): update Controller dependencies (#2303)",
+          "timestamp": "2024-09-13T20:37:03-04:00",
+          "tree_id": "dff7b4e6ea0adcba6ba50c625f6b0fc3ccebba34",
+          "url": "https://github.com/dojoengine/dojo/commit/ed2aa83b18a1359c2237577e46487202b98ea16a"
+        },
+        "date": 1726275363000,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17681876,
+            "range": "± 229646",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3767435,
+            "range": "± 90080",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3737441265,
+            "range": "± 707118877",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3870483,
+            "range": "± 97349",
             "unit": "ns/iter"
           }
         ]
