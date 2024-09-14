@@ -115,7 +115,7 @@ mod tests {
                 block_timestamp,
                 entity_id,
                 model_id,
-                &keys_str,
+                Some(&keys_str),
             )
             .await
             .unwrap();
@@ -233,7 +233,7 @@ mod tests {
                 block_timestamp,
                 entity_id,
                 model_id,
-                &keys_str,
+                Some(&keys_str),
             )
             .await
             .unwrap();
