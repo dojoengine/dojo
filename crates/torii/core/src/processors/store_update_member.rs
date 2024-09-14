@@ -99,10 +99,7 @@ where
         }
 
         member.ty.deserialize(&mut values)?;
-        let wrapped_ty = Ty::Struct(Struct {
-            name: schema.name(),
-            children: vec![member],
-        });
+        let wrapped_ty = Ty::Struct(Struct { name: schema.name(), children: vec![member] });
 
         db.set_entity(wrapped_ty, event_id, block_timestamp, entity_id, model_id, None).await?;
         Ok(())

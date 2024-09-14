@@ -177,12 +177,13 @@ impl Sql {
         let model_id = format!("{:#x}", model_id);
 
         let insert_entities = if keys_str.is_some() {
-            "INSERT INTO entities (id, event_id, executed_at, keys) VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET \
-             updated_at=CURRENT_TIMESTAMP, executed_at=EXCLUDED.executed_at, \
-             event_id=EXCLUDED.event_id, keys=EXCLUDED.keys RETURNING *"
+            "INSERT INTO entities (id, event_id, executed_at, keys) VALUES (?, ?, ?, ?) ON \
+             CONFLICT(id) DO UPDATE SET updated_at=CURRENT_TIMESTAMP, \
+             executed_at=EXCLUDED.executed_at, event_id=EXCLUDED.event_id, keys=EXCLUDED.keys \
+             RETURNING *"
         } else {
-            "INSERT INTO entities (id, event_id, executed_at) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET \
-             updated_at=CURRENT_TIMESTAMP, executed_at=EXCLUDED.executed_at, \
+            "INSERT INTO entities (id, event_id, executed_at) VALUES (?, ?, ?) ON CONFLICT(id) DO \
+             UPDATE SET updated_at=CURRENT_TIMESTAMP, executed_at=EXCLUDED.executed_at, \
              event_id=EXCLUDED.event_id RETURNING *"
         };
 
@@ -196,11 +197,7 @@ impl Sql {
             arguments.push(Argument::String(keys.to_string()));
         }
 
-        self.query_queue.enqueue(
-            insert_entities,
-            arguments,
-            QueryType::SetEntity(entity.clone()),
-        );
+        self.query_queue.enqueue(insert_entities, arguments, QueryType::SetEntity(entity.clone()));
 
         self.query_queue.enqueue(
             "INSERT INTO entity_model (entity_id, model_id) VALUES (?, ?) ON CONFLICT(entity_id, \
