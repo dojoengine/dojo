@@ -1,6 +1,6 @@
 use anyhow::{Context, Error, Ok, Result};
 use async_trait::async_trait;
-use dojo_world::contracts::naming;
+use dojo_types::schema::Ty;
 use dojo_world::contracts::world::WorldContractReader;
 use num_traits::ToPrimitive;
 use starknet::core::types::Event;
@@ -9,7 +9,7 @@ use tracing::info;
 
 use super::EventProcessor;
 use crate::processors::{ENTITY_ID_INDEX, MODEL_INDEX};
-use crate::sql::{felts_sql_string, Sql};
+use crate::sql::Sql;
 
 pub(crate) const LOG_TARGET: &str = "torii_core::processors::store_update_record";
 
@@ -64,14 +64,17 @@ where
             values_start + event.data[values_start].to_usize().context("invalid usize")?;
 
         // Skip the length to only get the values as they will be deserialized.
-        let values = event.data[values_start + 1..=values_end].to_vec();
-
-        let tag = naming::get_tag(&model.namespace, &model.name);
+        let mut values = event.data[values_start + 1..=values_end].to_vec();
 
         let mut entity = model.schema;
-        // we do not need the keys. the entity Ty has the keys in its schema
-        // so we should get rid of them to avoid trying to deserialize them
-        entity.as_struct().unwrap().children.retain(|field| !field.key);
+        match entity {
+            Ty::Struct(ref mut struct_) => {
+                // we do not need the keys. the entity Ty has the keys in its schema
+                // so we should get rid of them to avoid trying to deserialize them
+                struct_.children.retain(|field| !field.key);
+            }
+            _ => return Err(anyhow::anyhow!("Expected struct")),
+        }
 
         entity.deserialize(&mut values)?;
 

@@ -5,12 +5,12 @@ use std::sync::Arc;
 use anyhow::{anyhow, Result};
 use chrono::Utc;
 use dojo_types::primitive::Primitive;
-use dojo_types::schema::{EnumOption, Member, Struct, Ty};
+use dojo_types::schema::{EnumOption, Member, Ty};
 use dojo_world::contracts::abi::model::Layout;
 use dojo_world::contracts::naming::{compute_selector_from_names, compute_selector_from_tag};
 use dojo_world::metadata::WorldMetadata;
 use sqlx::pool::PoolConnection;
-use sqlx::{Pool, Row, Sqlite};
+use sqlx::{Pool, Sqlite};
 use starknet::core::types::{Event, Felt, InvokeTransaction, Transaction};
 use starknet_crypto::poseidon_hash_many;
 use tracing::debug;
@@ -24,7 +24,7 @@ use crate::types::{
 use crate::utils::{must_utc_datetime_from_timestamp, utc_dt_string_from_timestamp};
 
 type IsEventMessage = bool;
-type IsStoreUpdateMember = bool;
+type IsStoreUpdate = bool;
 
 pub const WORLD_CONTRACT_TYPE: &str = "WORLD";
 pub const FELT_DELIMITER: &str = "/";
@@ -211,7 +211,7 @@ impl Sql {
             path,
             event_id,
             (&entity_id, false),
-            (&entity, false),
+            (&entity, keys_str.is_none()),
             block_timestamp,
             &vec![],
         );
@@ -566,7 +566,7 @@ impl Sql {
         event_id: &str,
         // The id of the entity and if the entity is an event message
         entity_id: (&str, IsEventMessage),
-        entity: (&Ty, IsStoreUpdateMember),
+        entity: (&Ty, IsStoreUpdate),
         block_timestamp: u64,
         indexes: &Vec<i64>,
     ) {

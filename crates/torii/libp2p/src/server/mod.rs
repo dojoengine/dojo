@@ -528,7 +528,7 @@ async fn set_entity(
     model_id: Felt,
     keys: &str,
 ) -> anyhow::Result<()> {
-    db.set_entity(ty, message_id, block_timestamp, entity_id, model_id, keys).await?;
+    db.set_entity(ty, message_id, block_timestamp, entity_id, model_id, Some(keys)).await?;
     db.execute().await?;
     Ok(())
 }

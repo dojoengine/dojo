@@ -1,6 +1,6 @@
 use anyhow::{Context, Error, Result};
 use async_trait::async_trait;
-use dojo_types::schema::Struct;
+use dojo_types::schema::{Struct, Ty};
 use dojo_world::contracts::naming;
 use dojo_world::contracts::world::WorldContractReader;
 use num_traits::ToPrimitive;
@@ -51,11 +51,11 @@ where
         event_id: &str,
         event: &Event,
     ) -> Result<(), Error> {
-        let selector = event.data[MODEL_INDEX];
+        let model_id = event.data[MODEL_INDEX];
         let entity_id = event.data[ENTITY_ID_INDEX];
         let member_selector = event.data[MEMBER_INDEX];
 
-        let model = db.model(selector).await?;
+        let model = db.model(model_id).await?;
         let schema = model.schema;
 
         let mut member = schema
