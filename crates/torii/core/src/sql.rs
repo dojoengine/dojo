@@ -169,26 +169,36 @@ impl Sql {
         block_timestamp: u64,
         entity_id: Felt,
         model_id: Felt,
-        keys_str: &str,
+        keys_str: Option<&str>,
     ) -> Result<()> {
         let namespaced_name = entity.name();
 
         let entity_id = format!("{:#x}", entity_id);
         let model_id = format!("{:#x}", model_id);
 
-        let insert_entities = "INSERT INTO entities (id, keys, event_id, executed_at) VALUES (?, \
-                               ?, ?, ?) ON CONFLICT(id) DO UPDATE SET \
-                               updated_at=CURRENT_TIMESTAMP, executed_at=EXCLUDED.executed_at, \
-                               event_id=EXCLUDED.event_id RETURNING *";
+        let insert_entities = if keys_str.is_some() {
+            "INSERT INTO entities (id, event_id, executed_at, keys) VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET \
+             updated_at=CURRENT_TIMESTAMP, executed_at=EXCLUDED.executed_at, \
+             event_id=EXCLUDED.event_id, keys=EXCLUDED.keys RETURNING *"
+        } else {
+            "INSERT INTO entities (id, event_id, executed_at) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET \
+             updated_at=CURRENT_TIMESTAMP, executed_at=EXCLUDED.executed_at, \
+             event_id=EXCLUDED.event_id RETURNING *"
+        };
+
+        let mut arguments = vec![
+            Argument::String(entity_id.clone()),
+            Argument::String(event_id.to_string()),
+            Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
+        ];
+
+        if let Some(keys) = keys_str {
+            arguments.push(Argument::String(keys.to_string()));
+        }
 
         self.query_queue.enqueue(
             insert_entities,
-            vec![
-                Argument::String(entity_id.clone()),
-                Argument::String(keys_str.to_string()),
-                Argument::String(event_id.to_string()),
-                Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
-            ],
+            arguments,
             QueryType::SetEntity(entity.clone()),
         );
 
@@ -267,48 +277,6 @@ impl Sql {
         );
 
         self.query_queue.push_publish(BrokerMessage::EventMessageUpdated(event_message_updated));
-
-        Ok(())
-    }
-
-    pub async fn set_model_member(
-        &mut self,
-        model_tag: &str,
-        entity_id: Felt,
-        is_event_message: bool,
-        member: &Member,
-        event_id: &str,
-        block_timestamp: u64,
-    ) -> Result<()> {
-        let entity_id = format!("{:#x}", entity_id);
-        let path = vec![model_tag.to_string()];
-
-        let wrapped_ty =
-            Ty::Struct(Struct { name: model_tag.to_string(), children: vec![member.clone()] });
-
-        // update model member
-        self.build_set_entity_queries_recursive(
-            path,
-            event_id,
-            (&entity_id, is_event_message),
-            (&wrapped_ty, true),
-            block_timestamp,
-            &vec![],
-        );
-        self.execute().await?;
-
-        let update_query = "UPDATE entities SET updated_at=CURRENT_TIMESTAMP, executed_at=?, \
-                            event_id=? WHERE id = ? RETURNING *";
-
-        self.query_queue.enqueue(
-            update_query.to_string(),
-            vec![
-                Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
-                Argument::String(event_id.to_string()),
-                Argument::String(entity_id.clone()),
-            ],
-            QueryType::SetEntity(wrapped_ty),
-        );
 
         Ok(())
     }
@@ -417,46 +385,6 @@ impl Sql {
 
     pub async fn model(&self, selector: Felt) -> Result<Model> {
         self.model_cache.model(&selector).await.map_err(|e| e.into())
-    }
-
-    /// Retrieves the keys definition for a given model.
-    /// The key definition is currently implemented as (`name`, `type`).
-    pub async fn get_entity_keys_def(&self, model_tag: &str) -> Result<Vec<(String, String)>> {
-        let query = sqlx::query_as::<_, (String, String)>(
-            "SELECT name, type FROM model_members WHERE id = ? AND key = true",
-        )
-        .bind(model_tag);
-
-        let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
-        let rows: Vec<(String, String)> = query.fetch_all(&mut *conn).await?;
-        Ok(rows.iter().map(|(name, ty)| (name.to_string(), ty.to_string())).collect())
-    }
-
-    /// Retrieves the keys for a given entity.
-    /// The keys are returned in the same order as the keys definition.
-    pub async fn get_entity_keys(&self, entity_id: Felt, model_tag: &str) -> Result<Vec<Felt>> {
-        let entity_id = format!("{:#x}", entity_id);
-        let keys_def = self.get_entity_keys_def(model_tag).await?;
-
-        let keys_names =
-            keys_def.iter().map(|(name, _)| format!("external_{}", name)).collect::<Vec<String>>();
-
-        let sql = format!("SELECT {} FROM [{}] WHERE id = ?", keys_names.join(", "), model_tag);
-        let query = sqlx::query(sql.as_str()).bind(entity_id);
-
-        let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
-
-        let mut keys: Vec<Felt> = vec![];
-        let result = query.fetch_all(&mut *conn).await?;
-
-        for row in result {
-            for (i, _) in row.columns().iter().enumerate() {
-                let value: String = row.try_get(i)?;
-                keys.push(Felt::from_hex(&value)?);
-            }
-        }
-
-        Ok(keys)
     }
 
     pub async fn does_entity_exist(&self, model: String, key: Felt) -> Result<bool> {

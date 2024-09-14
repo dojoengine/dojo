@@ -1,5 +1,6 @@
 use anyhow::{Context, Error, Result};
 use async_trait::async_trait;
+use dojo_types::schema::Struct;
 use dojo_world::contracts::naming;
 use dojo_world::contracts::world::WorldContractReader;
 use num_traits::ToPrimitive;
@@ -98,9 +99,12 @@ where
         }
 
         member.ty.deserialize(&mut values)?;
+        let wrapped_ty = Ty::Struct(Struct {
+            name: schema.name(),
+            children: vec![member],
+        });
 
-        db.set_model_member(&schema.name(), entity_id, false, &member, event_id, block_timestamp)
-            .await?;
+        db.set_entity(wrapped_ty, event_id, block_timestamp, entity_id, model_id, None).await?;
         Ok(())
     }
 }

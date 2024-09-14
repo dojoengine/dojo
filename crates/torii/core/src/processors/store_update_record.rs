@@ -68,17 +68,14 @@ where
 
         let tag = naming::get_tag(&model.namespace, &model.name);
 
-        // Keys are read from the db, since we don't have access to them when only
-        // the entity id is passed.
-        let keys = db.get_entity_keys(entity_id, &tag).await?;
-
-        let keys_str = felts_sql_string(&keys);
-        let mut keys_and_unpacked = [keys, values].concat();
-
         let mut entity = model.schema;
+        // we do not need the keys. the entity Ty has the keys in its schema
+        // so we should get rid of them to avoid trying to deserialize them
+        entity.as_struct().unwrap().children.retain(|field| !field.key);
+
         entity.deserialize(&mut keys_and_unpacked)?;
 
-        db.set_entity(entity, event_id, block_timestamp, entity_id, model_id, &keys_str).await?;
+        db.set_entity(entity, event_id, block_timestamp, entity_id, model_id, None).await?;
         Ok(())
     }
 }
