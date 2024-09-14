@@ -289,49 +289,26 @@ impl Sql {
         let path = vec![entity.name()];
         // delete entity models data
         self.build_delete_entity_queries_recursive(path, &entity_id, &entity);
-        self.execute().await?;
 
-        let deleted_entity_model =
-            sqlx::query("DELETE FROM entity_model WHERE entity_id = ? AND model_id = ?")
-                .bind(&entity_id)
-                .bind(format!("{:#x}", compute_selector_from_tag(&entity.name())))
-                .execute(&self.pool)
-                .await?;
-        if deleted_entity_model.rows_affected() == 0 {
-            // fail silently. we have no entity-model relation to delete.
-            // this can happen if a entity model that doesnt exist
-            // got deleted
-            return Ok(());
-        }
+        self.query_queue.enqueue(
+            "DELETE FROM entity_model WHERE entity_id = ? AND model_id = ?",
+            vec![
+                Argument::String(entity_id.clone()),
+                Argument::String(format!("{:#x}", compute_selector_from_tag(&entity.name()))),
+            ],
+            QueryType::Other,
+        );
 
-        let mut update_entity = sqlx::query_as::<_, EntityUpdated>(
-            "UPDATE entities SET updated_at=CURRENT_TIMESTAMP, executed_at=?, event_id=? WHERE id \
-             = ? RETURNING *",
-        )
-        .bind(utc_dt_string_from_timestamp(block_timestamp))
-        .bind(event_id)
-        .bind(&entity_id)
-        .fetch_one(&self.pool)
-        .await?;
-        update_entity.updated_model = Some(entity.clone());
+        self.query_queue.enqueue(
+            "UPDATE entities SET updated_at=CURRENT_TIMESTAMP, executed_at=?, event_id=? WHERE id = ? RETURNING *",
+            vec![
+                Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
+                Argument::String(event_id.to_string()),
+                Argument::String(entity_id.clone()),
+            ],
+            QueryType::DeleteEntity(entity.clone()),
+        );
 
-        let models_count =
-            sqlx::query_scalar::<_, u32>("SELECT count(*) FROM entity_model WHERE entity_id = ?")
-                .bind(&entity_id)
-                .fetch_one(&self.pool)
-                .await?;
-
-        if models_count == 0 {
-            // delete entity
-            sqlx::query("DELETE FROM entities WHERE id = ?")
-                .bind(&entity_id)
-                .execute(&self.pool)
-                .await?;
-
-            update_entity.deleted = true;
-        }
-
-        self.query_queue.push_publish(BrokerMessage::EntityUpdated(update_entity));
         Ok(())
     }
 
@@ -683,7 +660,11 @@ impl Sql {
             Ty::Enum(e) => {
                 if e.options.iter().all(
                     |o| {
-                        if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false }
+                        if let Ty::Tuple(t) = &o.ty {
+                            t.is_empty()
+                        } else {
+                            false
+                        }
                     },
                 ) {
                     return;

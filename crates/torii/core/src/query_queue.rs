@@ -40,6 +40,7 @@ pub struct QueryQueue {
 #[derive(Debug, Clone)]
 pub enum QueryType {
     SetEntity(Ty),
+    DeleteEntity(Ty),
     Other,
 }
 
@@ -94,6 +95,30 @@ impl QueryQueue {
                     let mut entity_updated = EntityUpdated::from_row(&row)?;
                     entity_updated.updated_model = Some(entity);
                     entity_updated.deleted = false;
+                    let broker_message = BrokerMessage::EntityUpdated(entity_updated);
+                    self.push_publish(broker_message);
+                }
+                QueryType::DeleteEntity(entity) => {
+                    let row = query.fetch_one(&mut *tx).await.with_context(|| {
+                        format!("Failed to execute query: {:?}, args: {:?}", statement, arguments)
+                    })?;
+                    let mut entity_updated = EntityUpdated::from_row(&row)?;
+                    entity_updated.updated_model = Some(entity);
+
+                    let count = sqlx::query_scalar::<_, i64>("SELECT count(*) FROM entity_model WHERE entity_id = ?")
+                        .bind(entity_updated.id.clone())
+                        .fetch_one(&mut *tx)
+                        .await?;
+                    entity_updated.deleted = count == 0;
+
+                    // Delete entity if all of its models are deleted
+                    if entity_updated.deleted {
+                        sqlx::query("DELETE FROM entities WHERE id = ?")
+                            .bind(entity_updated.id.clone())
+                            .execute(&mut *tx)
+                            .await?;
+                    }
+
                     let broker_message = BrokerMessage::EntityUpdated(entity_updated);
                     self.push_publish(broker_message);
                 }
