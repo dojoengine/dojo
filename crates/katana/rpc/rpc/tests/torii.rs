@@ -12,8 +12,8 @@ use katana_rpc_api::dev::DevApiClient;
 use katana_rpc_api::starknet::StarknetApiClient;
 use katana_rpc_api::torii::ToriiApiClient;
 use katana_rpc_types::transaction::{TransactionsPage, TransactionsPageCursor};
-use starknet::accounts::{Account, Call, ConnectedAccount};
-use starknet::core::types::{Felt, TransactionStatus};
+use starknet::accounts::{Account, ConnectedAccount};
+use starknet::core::types::{Call, Felt, TransactionStatus};
 use starknet::core::utils::get_selector_from_name;
 use tokio::time::sleep;
 

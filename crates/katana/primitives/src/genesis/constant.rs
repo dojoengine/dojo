@@ -77,7 +77,8 @@ pub const DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH: ClassHash =
 pub const DEFAULT_OZ_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH: CompiledClassHash =
     felt!("0x016c6081eb34ad1e0c5513234ed0c025b3c7f305902d291bad534cd6474c85bc");
 
-pub const CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH: ClassHash = felt!("0xCC");
+pub const CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH: ClassHash =
+    felt!("0x024a9edbfa7082accfceabf6a92d7160086f346d622f28741bf1c651c412c9ab");
 
 // Pre-compiled contract classes
 lazy_static! {
@@ -98,7 +99,7 @@ lazy_static! {
 lazy_static! {
     // Cartridge Controller account
     pub static ref CONTROLLER_ACCOUNT_CONTRACT: SierraClass = parse_sierra_class(include_str!("../../../contracts/compiled/controller_CartridgeAccount.contract_class.json")).unwrap();
-    pub static ref CONTROLLER_ACCOUNT_CONTRACT_CASM: CompiledClass = read_compiled_class_artifact(include_str!("../../../contracts/compiled/oz_account_080.json"));
+    pub static ref CONTROLLER_ACCOUNT_CONTRACT_CASM: CompiledClass = read_compiled_class_artifact(include_str!("../../../contracts/compiled/controller_CartridgeAccount.contract_class.json"));
 }
 
 /// A helper function to get the base storage address for the fee token balance of a given account.
@@ -112,4 +113,17 @@ pub(super) fn get_fee_token_balance_base_storage_address(address: ContractAddres
 fn read_compiled_class_artifact(artifact: &str) -> CompiledClass {
     let value = serde_json::from_str(artifact).unwrap();
     parse_compiled_class(value).unwrap()
+}
+
+#[cfg(test)]
+mod tests {
+
+    #[cfg(feature = "controller")]
+    #[test]
+    fn controller_class_hash() {
+        use super::{CONTROLLER_ACCOUNT_CONTRACT, CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH};
+
+        let hash = CONTROLLER_ACCOUNT_CONTRACT.class_hash().unwrap();
+        assert_eq!(hash, CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH)
+    }
 }

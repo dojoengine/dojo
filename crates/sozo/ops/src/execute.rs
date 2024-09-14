@@ -4,8 +4,8 @@ use dojo_world::contracts::world::WorldContract;
 use scarb_ui::Ui;
 #[cfg(feature = "walnut")]
 use sozo_walnut::WalnutDebugger;
-use starknet::accounts::{Call, ConnectedAccount};
-use starknet::core::types::Felt;
+use starknet::accounts::ConnectedAccount;
+use starknet::core::types::{Call, Felt};
 use starknet::core::utils::get_selector_from_name;
 
 use crate::utils;

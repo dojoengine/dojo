@@ -14,9 +14,9 @@ use anyhow::{bail, Context};
 use dojo_utils::{TransactionExt, TxnConfig};
 use itertools::chain;
 use once_cell::sync::OnceCell;
-use starknet::accounts::{Account, Call, ConnectedAccount, ExecutionEncoding, SingleOwnerAccount};
+use starknet::accounts::{Account, ConnectedAccount, ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::types::{
-    BlockId, BlockTag, Felt, TransactionExecutionStatus, TransactionStatus,
+    BlockId, BlockTag, Call, Felt, TransactionExecutionStatus, TransactionStatus,
 };
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::jsonrpc::HttpTransport;

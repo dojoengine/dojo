@@ -61,7 +61,7 @@ inherits = "release"
 lto = "fat"
 
 [workspace.dependencies]
-cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.3.2", features = [ "abigen-rs" ] }
+cainome = { git = "https://github.com/cartridge-gg/cainome", rev = "0d29bb0", features = [ "abigen-rs" ] }
 dojo-utils = { path = "crates/dojo-utils" }
 
 # metrics
@@ -117,7 +117,7 @@ sozo-walnut = { path = "crates/sozo/walnut" }
 anyhow = "1.0.80"
 assert_fs = "1.1"
 assert_matches = "1.5.0"
-async-trait = "0.1.77"
+async-trait = "0.1.82"
 auto_impl = "1.2.0"
 base64 = "0.21.2"
 bigdecimal = "0.4.1"
@@ -158,6 +158,7 @@ derive_more = "0.99.17"
 flate2 = "1.0.24"
 futures = "0.3.30"
 futures-util = "0.3.30"
+hashlink = "0.9.1"
 hex = "0.4.3"
 http = "0.2.9"
 indexmap = "2.2.5"
@@ -184,18 +185,10 @@ scarb-ui = { git = "https://github.com/software-mansion/scarb", tag = "v2.7.0" }
 semver = "1.0.5"
 serde = { version = "1.0", features = [ "derive" ] }
 serde_json = { version = "1.0", features = [ "arbitrary_precision" ] }
-serde_with = "2.3"
+serde_with = "3.9.0"
 similar-asserts = "1.5.0"
 smol_str = { version = "0.2.0", features = [ "serde" ] }
 sqlx = { version = "0.7.2", features = [ "chrono", "macros", "regexp", "runtime-async-std", "runtime-tokio", "sqlite", "uuid" ] }
-starknet = "0.11.0"
-starknet-crypto = "0.7.0"
-# `starknet-rs` is using `starknet-types-core` 0.1.3, but we need >=0.1.4 because
-# we need this <https://github.com/starknet-io/types-rs/pull/75>. So we put strict
-# requirement here to prevent from being downgraded.
-# We can remove this requirement once `starknet-rs` is using >=0.1.4
-hashlink = "0.9.1"
-starknet-types-core = "~0.1.4"
 starknet_api = "0.11.0"
 strum = "0.25"
 strum_macros = "0.25"
@@ -233,9 +226,8 @@ alloy-sol-types = { version = "0.7.6", default-features = false }
 
 criterion = "0.5.1"
 
-# Controller integration
-account_sdk = { git = "https://github.com/cartridge-gg/controller", rev = "512ff89" }
-slot = { git = "https://github.com/cartridge-gg/slot", rev = "4c1165d" }
+# Slot integration. Dojo don't need to manually include `account_sdk` as dependency as `slot` already re-exports it.
+slot = { git = "https://github.com/cartridge-gg/slot", tag = "v0.14.0" }
 
 alloy-contract = { version = "0.2", default-features = false }
 alloy-json-rpc = { version = "0.2", default-features = false }
@@ -245,10 +237,17 @@ alloy-rpc-types-eth = { version = "0.2", default-features = false }
 alloy-signer = { version = "0.2", default-features = false }
 alloy-transport = { version = "0.2", default-features = false }
 
+starknet = "0.11.0"
+starknet-crypto = "0.7.1"
+# `starknet-rs` is using `starknet-types-core` 0.1.3, but we need >=0.1.4 because
+# we need this <https://github.com/starknet-io/types-rs/pull/75>. So we put strict
+# requirement here to prevent from being downgraded.
+# We can remove this requirement once `starknet-rs` is using >=0.1.4
+starknet-types-core = "~0.1.4"
+
 [patch.crates-io]
-# Remove this patch once the following PR is merged: <https://github.com/xJonathanLEI/starknet-rs/pull/615>
-#
-# To enable std feature on `starknet-types-core`.
-# To re-export the entire `felt` module from `starknet-types-core`.
-starknet-core = { git = "https://github.com/kariy/starknet-rs", branch = "dojo-patch" }
+# Matching the same rev that `cainome` is using. Mainly because `starknet-rs` hasn't create a new release yet.
+starknet = { git = "https://github.com/xJonathanLEI/starknet-rs", rev = "2ddc694" }
+# This patch is required especially for `katana-db` to work properly.
+# Ref: https://github.com/dojoengine/types-rs/commit/1943cb974a8738d2473d58479a3ace7badb0262f
 starknet-types-core = { git = "https://github.com/dojoengine/types-rs", rev = "289e2f0" }

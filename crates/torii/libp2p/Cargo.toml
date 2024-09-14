@@ -34,17 +34,17 @@ katana-runner.workspace = true
 tempfile.workspace = true
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+libp2p = { git = "https://github.com/libp2p/rust-libp2p", features = [ "dns", "ed25519", "gossipsub", "identify", "macros", "noise", "ping", "quic", "relay", "tcp", "tokio", "websocket", "yamux" ], rev = "cdc9638" }
+libp2p-webrtc = { git = "https://github.com/libp2p/rust-libp2p", features = [ "pem", "tokio" ], rev = "cdc9638" }
 rcgen = "0.13.1"
-libp2p = { git = "https://github.com/libp2p/rust-libp2p", features = [ "ed25519", "gossipsub", "identify", "macros", "noise", "ping", "quic", "relay", "tcp", "tokio", "yamux", "websocket", "dns" ], rev = "f0cbd4fb0cef8d1ae2298901eab95acb5f104ea3" }
-libp2p-webrtc = { git = "https://github.com/libp2p/rust-libp2p", features = [ "pem", "tokio" ], rev = "f0cbd4fb0cef8d1ae2298901eab95acb5f104ea3" }
 sqlx.workspace = true
 tokio.workspace = true
 torii-core.workspace = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-libp2p = { git = "https://github.com/libp2p/rust-libp2p", features = [ "ed25519", "gossipsub", "identify", "macros", "ping", "tcp", "wasm-bindgen", "noise", "yamux" ], rev = "f0cbd4fb0cef8d1ae2298901eab95acb5f104ea3" }
-libp2p-webrtc-websys = { git = "https://github.com/libp2p/rust-libp2p", rev = "f0cbd4fb0cef8d1ae2298901eab95acb5f104ea3" }
-libp2p-websocket-websys = { git = "https://github.com/libp2p/rust-libp2p", rev = "f0cbd4fb0cef8d1ae2298901eab95acb5f104ea3" }
+libp2p = { git = "https://github.com/libp2p/rust-libp2p", features = [ "ed25519", "gossipsub", "identify", "macros", "noise", "ping", "tcp", "wasm-bindgen", "yamux" ], rev = "cdc9638" }
+libp2p-webrtc-websys = { git = "https://github.com/libp2p/rust-libp2p", rev = "cdc9638" }
+libp2p-websocket-websys = { git = "https://github.com/libp2p/rust-libp2p", rev = "cdc9638" }
 tracing-wasm = "0.2.1"
 wasm-bindgen-futures = "0.4.40"
 wasm-bindgen-test = "0.3.40"
