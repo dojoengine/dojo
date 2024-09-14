@@ -105,10 +105,12 @@ impl QueryQueue {
                     let mut entity_updated = EntityUpdated::from_row(&row)?;
                     entity_updated.updated_model = Some(entity);
 
-                    let count = sqlx::query_scalar::<_, i64>("SELECT count(*) FROM entity_model WHERE entity_id = ?")
-                        .bind(entity_updated.id.clone())
-                        .fetch_one(&mut *tx)
-                        .await?;
+                    let count = sqlx::query_scalar::<_, i64>(
+                        "SELECT count(*) FROM entity_model WHERE entity_id = ?",
+                    )
+                    .bind(entity_updated.id.clone())
+                    .fetch_one(&mut *tx)
+                    .await?;
                     entity_updated.deleted = count == 0;
 
                     // Delete entity if all of its models are deleted

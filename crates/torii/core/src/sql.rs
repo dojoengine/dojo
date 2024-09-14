@@ -300,7 +300,8 @@ impl Sql {
         );
 
         self.query_queue.enqueue(
-            "UPDATE entities SET updated_at=CURRENT_TIMESTAMP, executed_at=?, event_id=? WHERE id = ? RETURNING *",
+            "UPDATE entities SET updated_at=CURRENT_TIMESTAMP, executed_at=?, event_id=? WHERE id \
+             = ? RETURNING *",
             vec![
                 Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
                 Argument::String(event_id.to_string()),
@@ -660,11 +661,7 @@ impl Sql {
             Ty::Enum(e) => {
                 if e.options.iter().all(
                     |o| {
-                        if let Ty::Tuple(t) = &o.ty {
-                            t.is_empty()
-                        } else {
-                            false
-                        }
+                        if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false }
                     },
                 ) {
                     return;
