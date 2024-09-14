@@ -73,7 +73,7 @@ where
         // so we should get rid of them to avoid trying to deserialize them
         entity.as_struct().unwrap().children.retain(|field| !field.key);
 
-        entity.deserialize(&mut keys_and_unpacked)?;
+        entity.deserialize(&mut values)?;
 
         db.set_entity(entity, event_id, block_timestamp, entity_id, model_id, None).await?;
         Ok(())
