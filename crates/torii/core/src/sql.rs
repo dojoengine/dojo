@@ -16,7 +16,7 @@ use starknet_crypto::poseidon_hash_many;
 use tracing::debug;
 
 use crate::cache::{Model, ModelCache};
-use crate::query_queue::{Argument, BrokerMessage, QueryQueue, QueryType};
+use crate::query_queue::{Argument, BrokerMessage, DeleteEntityQuery, QueryQueue, QueryType};
 use crate::types::{
     Entity as EntityUpdated, Event as EventEmitted, EventMessage as EventMessageUpdated,
     Model as ModelRegistered,
@@ -286,28 +286,20 @@ impl Sql {
         block_timestamp: u64,
     ) -> Result<()> {
         let entity_id = format!("{:#x}", entity_id);
+        let model_id = format!("{:#x}", compute_selector_from_tag(&entity.name()));
         let path = vec![entity.name()];
         // delete entity models data
         self.build_delete_entity_queries_recursive(path, &entity_id, &entity);
 
         self.query_queue.enqueue(
             "DELETE FROM entity_model WHERE entity_id = ? AND model_id = ?",
-            vec![
-                Argument::String(entity_id.clone()),
-                Argument::String(format!("{:#x}", compute_selector_from_tag(&entity.name()))),
-            ],
-            QueryType::Other,
-        );
-
-        self.query_queue.enqueue(
-            "UPDATE entities SET updated_at=CURRENT_TIMESTAMP, executed_at=?, event_id=? WHERE id \
-             = ? RETURNING *",
-            vec![
-                Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
-                Argument::String(event_id.to_string()),
-                Argument::String(entity_id.clone()),
-            ],
-            QueryType::DeleteEntity(entity.clone()),
+            vec![Argument::String(entity_id.clone()), Argument::String(model_id.clone())],
+            QueryType::DeleteEntity(DeleteEntityQuery {
+                entity_id: entity_id.clone(),
+                event_id: event_id.to_string(),
+                block_timestamp: utc_dt_string_from_timestamp(block_timestamp),
+                entity: entity.clone(),
+            }),
         );
 
         Ok(())
@@ -775,7 +767,7 @@ impl Sql {
             Ty::Struct(s) => {
                 let table_id = path.join("$");
                 let statement = format!("DELETE FROM [{table_id}] WHERE entity_id = ?");
-                self.query_queue.push_front(
+                self.query_queue.enqueue(
                     statement,
                     vec![Argument::String(entity_id.to_string())],
                     QueryType::Other,
@@ -796,7 +788,7 @@ impl Sql {
 
                 let table_id = path.join("$");
                 let statement = format!("DELETE FROM [{table_id}] WHERE entity_id = ?");
-                self.query_queue.push_front(
+                self.query_queue.enqueue(
                     statement,
                     vec![Argument::String(entity_id.to_string())],
                     QueryType::Other,
@@ -817,7 +809,7 @@ impl Sql {
             Ty::Array(array) => {
                 let table_id = path.join("$");
                 let statement = format!("DELETE FROM [{table_id}] WHERE entity_id = ?");
-                self.query_queue.push_front(
+                self.query_queue.enqueue(
                     statement,
                     vec![Argument::String(entity_id.to_string())],
                     QueryType::Other,
@@ -832,7 +824,7 @@ impl Sql {
             Ty::Tuple(t) => {
                 let table_id = path.join("$");
                 let statement = format!("DELETE FROM [{table_id}] WHERE entity_id = ?");
-                self.query_queue.push_front(
+                self.query_queue.enqueue(
                     statement,
                     vec![Argument::String(entity_id.to_string())],
                     QueryType::Other,
