@@ -77,6 +77,9 @@ where
         entity.deserialize(&mut keys_and_unpacked)?;
 
         db.set_entity(entity, event_id, block_timestamp, entity_id, model_id, &keys_str).await?;
+        // early flush the queue because this writes entity keys to a table which is required
+        // by other store_* events
+        db.execute().await?;
         Ok(())
     }
 }
