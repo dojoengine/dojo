@@ -76,7 +76,8 @@ where
         let mut entity = model.schema;
         entity.deserialize(&mut keys_and_unpacked)?;
 
-        db.set_entity(entity, event_id, block_timestamp, entity_id, model_id, Some(&keys_str)).await?;
+        db.set_entity(entity, event_id, block_timestamp, entity_id, model_id, Some(&keys_str))
+            .await?;
         Ok(())
     }
 }
