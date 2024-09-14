@@ -125,6 +125,10 @@ struct Args {
     /// Polling interval in ms
     #[arg(long, default_value = "500")]
     polling_interval: u64,
+
+    /// Max concurrent tasks
+    #[arg(long, default_value = "100")]
+    max_concurrent_tasks: usize,
 }
 
 #[tokio::main]
@@ -196,6 +200,7 @@ async fn main() -> anyhow::Result<()> {
         provider.clone(),
         processors,
         EngineConfig {
+            max_concurrent_tasks: args.max_concurrent_tasks,
             start_block: args.start_block,
             events_chunk_size: args.events_chunk_size,
             index_pending: args.index_pending,
