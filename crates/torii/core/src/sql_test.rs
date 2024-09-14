@@ -22,6 +22,8 @@ use crate::processors::generate_event_processors_map;
 use crate::processors::register_model::RegisterModelProcessor;
 use crate::processors::store_del_record::StoreDelRecordProcessor;
 use crate::processors::store_set_record::StoreSetRecordProcessor;
+use crate::processors::store_update_member::StoreUpdateMemberProcessor;
+use crate::processors::store_update_record::StoreUpdateRecordProcessor;
 use crate::sql::Sql;
 
 pub async fn bootstrap_engine<P>(
@@ -42,6 +44,8 @@ where
             event: generate_event_processors_map(vec![
                 Box::new(RegisterModelProcessor),
                 Box::new(StoreSetRecordProcessor),
+                Box::new(StoreUpdateRecordProcessor),
+                Box::new(StoreUpdateMemberProcessor),
                 Box::new(StoreDelRecordProcessor),
             ])?,
             ..Processors::default()
@@ -367,6 +371,94 @@ async fn test_get_entity_keys() {
     assert_eq!(keys, vec![account.address()]);
 
     db.execute().await.unwrap();
+}
+
+// Start of Selection
+#[tokio::test(flavor = "multi_thread")]
+async fn test_update_with_set_record() {
+    // Initialize the SQLite in-memory database
+    let options =
+        SqliteConnectOptions::from_str("sqlite::memory:").unwrap().create_if_missing(true);
+    let pool = SqlitePoolOptions::new().max_connections(5).connect_with(options).await.unwrap();
+    sqlx::migrate!("../migrations").run(&pool).await.unwrap();
+
+    // Set up the compiler test environment
+    let setup = CompilerTestSetup::from_examples("../../dojo-core", "../../../examples/");
+    let config = setup.build_test_config("spawn-and-move", Profile::DEV);
+
+    let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
+    let manifest_path = Utf8PathBuf::from(config.manifest_path().parent().unwrap());
+    let target_dir = Utf8PathBuf::from(ws.target_dir().to_string()).join("dev");
+
+    // Configure and start the KatanaRunner
+    let seq_config = KatanaRunnerConfig { n_accounts: 10, ..Default::default() }
+        .with_db_dir(copy_spawn_and_move_db().as_str());
+
+    let sequencer = KatanaRunner::new_with_config(seq_config).expect("Failed to start runner.");
+    let account = sequencer.account(0);
+
+    // Prepare migration with world and seed
+    let (strat, _) = prepare_migration_with_world_and_seed(
+        manifest_path,
+        target_dir,
+        None,
+        "dojo_examples",
+        "dojo_examples",
+    )
+    .unwrap();
+
+    let actions = strat.contracts.first().unwrap();
+    let actions_address = get_contract_address(
+        actions.salt,
+        strat.base.as_ref().unwrap().diff.local_class_hash,
+        &[],
+        strat.world_address,
+    );
+
+    let world = WorldContract::new(strat.world_address, &account);
+
+    // Grant writer permissions
+    let res = world
+        .grant_writer(&compute_bytearray_hash("dojo_examples"), &ContractAddress(actions_address))
+        .send_with_cfg(&TxnConfig::init_wait())
+        .await
+        .unwrap();
+
+    TransactionWaiter::new(res.transaction_hash, &account.provider()).await.unwrap();
+
+    // Send spawn transaction
+    let spawn_res = account
+        .execute_v1(vec![Call {
+            to: actions_address,
+            selector: get_selector_from_name("spawn").unwrap(),
+            calldata: vec![],
+        }])
+        .send_with_cfg(&TxnConfig::init_wait())
+        .await
+        .unwrap();
+
+    TransactionWaiter::new(spawn_res.transaction_hash, &account.provider()).await.unwrap();
+
+    // Send move transaction
+    let move_res = account
+        .execute_v1(vec![Call {
+            to: actions_address,
+            selector: get_selector_from_name("move").unwrap(),
+            calldata: vec![Felt::ZERO],
+        }])
+        .send_with_cfg(&TxnConfig::init_wait())
+        .await
+        .unwrap();
+
+    TransactionWaiter::new(move_res.transaction_hash, &account.provider()).await.unwrap();
+
+    let world_reader = WorldContractReader::new(strat.world_address, account.provider());
+
+    let db = Sql::new(pool.clone(), world_reader.address).await.unwrap();
+
+    // Expect bootstrap_engine to error out due to the existing bug
+    let result = bootstrap_engine(world_reader, db.clone(), account.provider()).await;
+    assert!(result.is_ok(), "bootstrap_engine should not fail");
 }
 
 /// Count the number of rows in a table.
