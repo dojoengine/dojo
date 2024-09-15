@@ -4,7 +4,7 @@ use dojo_world::contracts::world::WorldContractReader;
 use num_traits::ToPrimitive;
 use starknet::core::types::Event;
 use starknet::providers::Provider;
-use tracing::info;
+use tracing::{debug, info};
 
 use super::EventProcessor;
 use crate::processors::{ENTITY_ID_INDEX, MODEL_INDEX, NUM_KEYS_INDEX};
@@ -50,7 +50,7 @@ where
 
         let model = db.model(model_id).await?;
 
-        info!(
+        debug!(
             target: LOG_TARGET,
             name = %model.name,
             "Store set record.",

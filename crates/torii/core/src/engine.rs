@@ -183,11 +183,12 @@ impl<P: Provider + Send + Sync + std::fmt::Debug> Engine<P> {
 
         let result = if from < latest_block_number {
             let from = if from == 0 { from } else { from + 1 };
-            debug!(target: LOG_TARGET, from = %from, to = %latest_block_number, "Fetching data for range.");
+            info!(target: LOG_TARGET, from = %from, to = %latest_block_number, "Fetching data for range.");
             let data =
                 self.fetch_range(from, latest_block_number, last_pending_block_world_tx).await?;
             FetchDataResult::Range(data)
         } else if self.config.index_pending {
+            info!(target: LOG_TARGET, "Fetching data from pending block.");
             let data = self.fetch_pending(latest_block_number + 1, last_pending_block_tx).await?;
             if let Some(data) = data {
                 FetchDataResult::Pending(data)
@@ -388,7 +389,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug> Engine<P> {
                 Ok(true) => {
                     last_pending_block_world_tx = Some(*transaction_hash);
                     last_pending_block_tx = Some(*transaction_hash);
-                    info!(target: LOG_TARGET, transaction_hash = %format!("{:#x}", transaction_hash), "Processed pending world transaction.");
+                    debug!(target: LOG_TARGET, transaction_hash = %format!("{:#x}", transaction_hash), "Processed pending world transaction.");
                 }
                 Ok(_) => {
                     last_pending_block_tx = Some(*transaction_hash);
