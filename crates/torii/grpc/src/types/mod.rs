@@ -11,7 +11,7 @@ use starknet::core::types::{
 };
 use strum_macros::{AsRefStr, EnumIter, FromRepr};
 
-use crate::proto::types::member_clause;
+use crate::proto::types::member_value;
 use crate::proto::{self};
 
 pub mod schema;
@@ -291,7 +291,7 @@ impl From<MemberClause> for proto::types::MemberClause {
             model: value.model,
             member: value.member,
             operator: value.operator as i32,
-            value: Some(value.value.into()),
+            value: Some(proto::types::MemberValue { value_type: Some(value.value.into()) }),
         }
     }
 }
@@ -305,11 +305,13 @@ impl From<CompositeClause> for proto::types::CompositeClause {
     }
 }
 
-impl From<MemberValue> for member_clause::Value {
+impl From<MemberValue> for member_value::ValueType {
     fn from(value: MemberValue) -> Self {
         match value {
-            MemberValue::Primitive(primitive) => member_clause::Value::Primitive(primitive.into()),
-            MemberValue::String(string) => member_clause::Value::String(string),
+            MemberValue::Primitive(primitive) => {
+                member_value::ValueType::Primitive(primitive.into())
+            }
+            MemberValue::String(string) => member_value::ValueType::String(string),
         }
     }
 }
