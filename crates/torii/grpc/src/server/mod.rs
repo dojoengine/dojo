@@ -41,6 +41,7 @@ use self::subscriptions::entity::EntityManager;
 use self::subscriptions::event_message::EventMessageManager;
 use self::subscriptions::model_diff::{ModelDiffRequest, StateDiffManager};
 use crate::proto::types::clause::ClauseType;
+use crate::proto::types::member_value::ValueType;
 use crate::proto::world::world_server::WorldServer;
 use crate::proto::world::{
     SubscribeEntitiesRequest, SubscribeEntityResponse, SubscribeEventsResponse,
@@ -504,10 +505,15 @@ impl DojoWorld {
         let comparison_operator = ComparisonOperator::from_repr(member_clause.operator as usize)
             .expect("invalid comparison operator");
 
-        let primitive: Primitive =
-            member_clause.value.ok_or(QueryError::MissingParam("value".into()))?.try_into()?;
-
-        let comparison_value = primitive.to_sql_value()?;
+        let comparison_value =
+            match member_clause.value.ok_or(QueryError::MissingParam("value".into()))?.value_type {
+                Some(ValueType::String(value)) => value,
+                Some(ValueType::Primitive(value)) => {
+                    let primitive: Primitive = value.try_into()?;
+                    primitive.to_sql_value()?
+                }
+                None => return Err(QueryError::MissingParam("value_type".into()).into()),
+            };
 
         let (namespace, model) = member_clause
             .model
@@ -619,8 +625,18 @@ impl DojoWorld {
                     let comparison_operator =
                         ComparisonOperator::from_repr(member.operator as usize)
                             .expect("invalid comparison operator");
-                    let value: Primitive = member.value.unwrap().try_into()?;
-                    let comparison_value = value.to_sql_value()?;
+                    let comparison_value = match member
+                        .value
+                        .ok_or(QueryError::MissingParam("value".into()))?
+                        .value_type
+                    {
+                        Some(ValueType::String(value)) => value,
+                        Some(ValueType::Primitive(value)) => {
+                            let primitive: Primitive = value.try_into()?;
+                            primitive.to_sql_value()?
+                        }
+                        None => return Err(QueryError::MissingParam("value_type".into()).into()),
+                    };
 
                     let column_name = format!("external_{}", member.member);
 
