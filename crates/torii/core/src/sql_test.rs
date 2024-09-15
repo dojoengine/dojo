@@ -1,4 +1,5 @@
 use std::str::FromStr;
+use std::sync::Arc;
 
 use cainome::cairo_serde::ContractAddress;
 use camino::Utf8PathBuf;
@@ -42,11 +43,11 @@ where
         provider,
         Processors {
             event: generate_event_processors_map(vec![
-                Box::new(RegisterModelProcessor),
-                Box::new(StoreSetRecordProcessor),
-                Box::new(StoreUpdateRecordProcessor),
-                Box::new(StoreUpdateMemberProcessor),
-                Box::new(StoreDelRecordProcessor),
+                Arc::new(RegisterModelProcessor),
+                Arc::new(StoreSetRecordProcessor),
+                Arc::new(StoreUpdateRecordProcessor),
+                Arc::new(StoreUpdateMemberProcessor),
+                Arc::new(StoreDelRecordProcessor),
             ])?,
             ..Processors::default()
         },

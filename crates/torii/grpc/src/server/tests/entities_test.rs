@@ -104,8 +104,8 @@ async fn test_entities_queries() {
         Arc::clone(&provider),
         Processors {
             event: generate_event_processors_map(vec![
-                Box::new(RegisterModelProcessor),
-                Box::new(StoreSetRecordProcessor),
+                Arc::new(RegisterModelProcessor),
+                Arc::new(StoreSetRecordProcessor),
             ])
             .unwrap(),
             ..Processors::default()

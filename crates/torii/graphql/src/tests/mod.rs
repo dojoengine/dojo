@@ -1,4 +1,5 @@
 use std::str::FromStr;
+use std::sync::Arc;
 
 use anyhow::Result;
 use async_graphql::dynamic::Schema;
@@ -354,9 +355,9 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
         account.provider(),
         Processors {
             event: generate_event_processors_map(vec![
-                Box::new(RegisterModelProcessor),
-                Box::new(StoreSetRecordProcessor),
-                Box::new(StoreDelRecordProcessor),
+                Arc::new(RegisterModelProcessor),
+                Arc::new(StoreSetRecordProcessor),
+                Arc::new(StoreDelRecordProcessor),
             ])
             .unwrap(),
             ..Processors::default()
