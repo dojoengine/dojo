@@ -18,8 +18,7 @@ use tracing::debug;
 use crate::cache::{Model, ModelCache};
 use crate::query_queue::{Argument, BrokerMessage, DeleteEntityQuery, QueryQueue, QueryType};
 use crate::types::{
-    Entity as EntityUpdated, Event as EventEmitted, EventMessage as EventMessageUpdated,
-    Model as ModelRegistered,
+    Event as EventEmitted, EventMessage as EventMessageUpdated, Model as ModelRegistered,
 };
 use crate::utils::{must_utc_datetime_from_timestamp, utc_dt_string_from_timestamp};
 
