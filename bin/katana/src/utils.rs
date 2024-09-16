@@ -22,29 +22,6 @@ pub fn parse_genesis(value: &str) -> Result<Genesis, anyhow::Error> {
     Ok(genesis)
 }
 
-pub async fn wait_signal() {
-    use tokio::signal::ctrl_c;
-
-    #[cfg(unix)]
-    tokio::select! {
-        _ = ctrl_c() => {},
-        _ = sigterm() => {},
-    }
-
-    #[cfg(not(unix))]
-    tokio::select! {
-        _ = ctrl_c() => {},
-    }
-}
-
-/// Returns a future that can be awaited to wait for the SIGTERM signal.
-#[cfg(unix)]
-async fn sigterm() -> std::io::Result<()> {
-    use tokio::signal::unix::{signal, SignalKind};
-    signal(SignalKind::terminate())?.recv().await;
-    Ok(())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

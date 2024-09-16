@@ -38,7 +38,7 @@ use tracing::{info, Subscriber};
 use tracing_subscriber::{fmt, EnvFilter};
 use url::Url;
 
-use crate::utils::{parse_genesis, parse_seed, wait_signal};
+use crate::utils::{parse_genesis, parse_seed};
 
 #[derive(Parser, Debug)]
 pub struct NodeArgs {
@@ -235,7 +235,7 @@ impl NodeArgs {
 
         // Wait until an OS signal is received or TaskManager shutdown
         tokio::select! {
-            _ = wait_signal() => {},
+            _ = dojo_utils::signal::wait_signals() => {},
             _ = node.task_manager.wait_for_shutdown() => {}
         }
 
