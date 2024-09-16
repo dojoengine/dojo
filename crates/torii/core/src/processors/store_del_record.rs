@@ -58,7 +58,7 @@ where
         let entity_id = event.data[ENTITY_ID_INDEX];
         let entity = model.schema;
 
-        db.delete_entity(entity_id, model.id, entity, event_id, block_timestamp).await?;
+        db.delete_entity(entity_id, selector, entity, event_id, block_timestamp).await?;
 
         Ok(())
     }

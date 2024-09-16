@@ -7,7 +7,7 @@ use chrono::Utc;
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{EnumOption, Member, Ty};
 use dojo_world::contracts::abi::model::Layout;
-use dojo_world::contracts::naming::{compute_selector_from_names, compute_selector_from_tag};
+use dojo_world::contracts::naming::compute_selector_from_names;
 use dojo_world::metadata::WorldMetadata;
 use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Sqlite};
@@ -292,7 +292,7 @@ impl Sql {
 
         self.query_queue.enqueue(
             "DELETE FROM entity_model WHERE entity_id = ? AND model_id = ?",
-            vec![Argument::String(entity_id.clone()), Argument::String(model_id.clone())],
+            vec![Argument::String(entity_id.clone()), Argument::String(format!("{:#x}", model_id))],
             QueryType::DeleteEntity(DeleteEntityQuery {
                 entity_id: entity_id.clone(),
                 event_id: event_id.to_string(),
