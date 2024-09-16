@@ -282,28 +282,16 @@ pub fn deserialize_keys_and_values(
 ///
 /// * member: The member to serialize.
 pub fn serialize_member_ty(member: &Member, with_self: bool, dest_name: &str) -> RewriteNode {
-    match member.ty.as_str() {
-        "felt252" => RewriteNode::Text(format!(
-            "core::array::ArrayTrait::append(ref {dest_name}, {}{});\n",
-            if with_self { "*self." } else { "" },
-            member.name
-        )),
-        _ => RewriteNode::Text(format!(
-            "core::serde::Serde::serialize({}{}, ref {dest_name});\n",
-            if with_self { "self." } else { "@" },
-            member.name
-        )),
-    }
+    RewriteNode::Text(format!(
+        "core::serde::Serde::serialize({}{}, ref {dest_name});\n",
+        if with_self { "self." } else { "@" },
+        member.name
+    ))
 }
 
 pub fn deserialize_member_ty(member: &Member, input_name: &str) -> RewriteNode {
-    match member.ty.as_str() {
-        "felt252" => {
-            RewriteNode::Text(format!("let {} = {input_name}.pop_front()?;\n", member.name))
-        }
-        _ => RewriteNode::Text(format!(
-            "let {} = core::serde::Serde::<{}>::deserialize(ref {input_name})?;",
-            member.name, member.ty
-        )),
-    }
+    RewriteNode::Text(format!(
+        "let {} = core::serde::Serde::<{}>::deserialize(ref {input_name})?;\n",
+        member.name, member.ty
+    ))
 }

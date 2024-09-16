@@ -33,13 +33,9 @@ pub struct ResourceMetadata {
 
 #[generate_trait]
 pub impl ResourceMetadataImpl of ResourceMetadataTrait {
-    fn from_values(resource_id: felt252, ref values: Span<felt252>) -> ResourceMetadata {
-        let metadata_uri = Serde::<ByteArray>::deserialize(ref values);
-        if metadata_uri.is_none() {
-            panic!("Model `ResourceMetadata`: metadata_uri deserialization failed.");
-        }
-
-        ResourceMetadata { resource_id, metadata_uri: metadata_uri.unwrap() }
+    fn from_values(resource_id: felt252, ref values: Span<felt252>) -> Option<ResourceMetadata> {
+        let metadata_uri = Serde::<ByteArray>::deserialize(ref values)?;
+        Option::Some(ResourceMetadata { resource_id, metadata_uri })
     }
 }
 
@@ -50,7 +46,10 @@ pub impl ResourceMetadataModel of Model<ResourceMetadata> {
         };
 
         let mut values = world.entity(Self::selector(), ModelIndex::Keys(keys), Self::layout());
-        ResourceMetadataTrait::from_values(*keys.at(0), ref values)
+        match ResourceMetadataTrait::from_values(*keys.at(0), ref values) {
+            Option::Some(x) => x,
+            Option::None => { panic!("Model `ResourceMetadata`: deserialization failed.") }
+        }
     }
 
     fn set_model(self: @ResourceMetadata, world: IWorldDispatcher,) {

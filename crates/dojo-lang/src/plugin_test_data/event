@@ -7,6 +7,18 @@ test_expand_plugin
 event
 
 //! > cairo_code
+#[derive(Drop, Serde)]
+#[dojo::model]
+pub struct Message {
+    #[key]
+    pub identity: ContractAddress,
+    #[key]
+    pub channel: felt252,
+    pub message: ByteArray,
+    #[key]
+    pub salt: felt252
+}
+
 #[dojo::event(namespace: 'my_namespace')]
 struct MyEvent {
     #[key]
@@ -15,12 +27,899 @@ struct MyEvent {
 }
 
 //! > expanded_cairo_code
+#[derive(Drop, Serde)]
+#[dojo::model]
+pub struct Message {
+    #[key]
+    pub identity: ContractAddress,
+    #[key]
+    pub channel: felt252,
+    pub message: ByteArray,
+    #[key]
+    pub salt: felt252
+}
+
 #[dojo::event(namespace: 'my_namespace')]
 struct MyEvent {
     #[key]
     id: felt252,
     name: ByteArray,
+}impl MessageDrop of core::traits::Drop::<Message>;
+impl MessageSerde of core::serde::Serde::<Message> {
+    fn serialize(self: @Message, ref output: core::array::Array<felt252>) {
+        core::serde::Serde::serialize(self.identity, ref output);
+        core::serde::Serde::serialize(self.channel, ref output);
+        core::serde::Serde::serialize(self.message, ref output);
+        core::serde::Serde::serialize(self.salt, ref output)
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<Message> {
+        core::option::Option::Some(Message {
+            identity: core::serde::Serde::deserialize(ref serialized)?,
+            channel: core::serde::Serde::deserialize(ref serialized)?,
+            message: core::serde::Serde::deserialize(ref serialized)?,
+            salt: core::serde::Serde::deserialize(ref serialized)?,
+        })
+    }
 }
+
+impl MessageIntrospect<> of dojo::meta::introspect::Introspect<Message<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Struct(
+            array![
+            dojo::meta::FieldLayout {
+                    selector: 1234962429638067342109111948666382589302318509162806680039978245403372666376,
+                    layout: dojo::meta::introspect::Introspect::<ByteArray>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
+                name: 'Message',
+                attrs: array![].span(),
+                children: array![
+                dojo::meta::introspect::Member {
+            name: 'identity',
+            attrs: array!['key'].span(),
+            ty: dojo::meta::introspect::Introspect::<ContractAddress>::ty()
+        },
+dojo::meta::introspect::Member {
+            name: 'channel',
+            attrs: array!['key'].span(),
+            ty: dojo::meta::introspect::Introspect::<felt252>::ty()
+        },
+dojo::meta::introspect::Member {
+            name: 'message',
+            attrs: array![].span(),
+            ty: dojo::meta::introspect::Ty::ByteArray
+        },
+dojo::meta::introspect::Member {
+            name: 'salt',
+            attrs: array!['key'].span(),
+            ty: dojo::meta::introspect::Introspect::<felt252>::ty()
+        }
+
+                ].span()
+            }
+        )
+    }
+}
+        
+#[derive(Drop, Serde)]
+pub struct MessageEntity {
+    __id: felt252, // private field
+    pub message: ByteArray,
+
+}
+
+#[generate_trait]
+pub impl MessageEntityStoreImpl of MessageEntityStore {
+    fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> MessageEntity {
+        MessageModelEntityImpl::get(world, entity_id)
+    }
+
+    fn update(self: @MessageEntity, world: dojo::world::IWorldDispatcher) {
+        dojo::model::ModelEntity::<MessageEntity>::update_entity(self, world);
+    }
+
+    fn delete(self: @MessageEntity, world: dojo::world::IWorldDispatcher) {
+        dojo::model::ModelEntity::<MessageEntity>::delete_entity(self, world);
+    }
+
+    
+    fn get_message(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> ByteArray {
+        let mut values = dojo::model::ModelEntity::<MessageEntity>::get_member(
+            world,
+            entity_id,
+            1234962429638067342109111948666382589302318509162806680039978245403372666376
+        );
+        let field_value = core::serde::Serde::<ByteArray>::deserialize(ref values);
+
+        if core::option::OptionTrait::<ByteArray>::is_none(@field_value) {
+            panic!(
+                "Field `Message::message`: deserialization failed."
+            );
+        }
+
+        core::option::OptionTrait::<ByteArray>::unwrap(field_value)
+    }
+
+    fn set_message(self: @MessageEntity, world: dojo::world::IWorldDispatcher, value: ByteArray) {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(@value, ref serialized);
+
+        self.set_member(
+            world,
+            1234962429638067342109111948666382589302318509162806680039978245403372666376,
+            serialized.span()
+        );
+    }
+
+}
+
+#[generate_trait]
+pub impl MessageStoreImpl of MessageStore {
+    fn entity_id_from_keys(identity: ContractAddress, channel: felt252, salt: felt252) -> felt252 {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(@identity, ref serialized);
+core::serde::Serde::serialize(@channel, ref serialized);
+core::serde::Serde::serialize(@salt, ref serialized);
+
+        core::poseidon::poseidon_hash_span(serialized.span())
+    }
+
+    fn from_values(ref keys: Span<felt252>, ref values: Span<felt252>) -> Option<Message> {
+        let identity = core::serde::Serde::<ContractAddress>::deserialize(ref keys)?;
+let channel = core::serde::Serde::<felt252>::deserialize(ref keys)?;
+let salt = core::serde::Serde::<felt252>::deserialize(ref keys)?;
+
+        let message = core::serde::Serde::<ByteArray>::deserialize(ref values)?;
+
+
+        Option::Some(
+            Message {
+                identity,
+channel,
+salt,
+
+                message,
+
+            }
+        )
+    }
+
+    fn get(world: dojo::world::IWorldDispatcher, identity: ContractAddress, channel: felt252, salt: felt252) -> Message {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(@identity, ref serialized);
+core::serde::Serde::serialize(@channel, ref serialized);
+core::serde::Serde::serialize(@salt, ref serialized);
+
+
+        dojo::model::Model::<Message>::get(world, serialized.span())
+    }
+
+    fn set(self: @Message, world: dojo::world::IWorldDispatcher) {
+        dojo::model::Model::<Message>::set_model(self, world);
+    }
+
+    fn delete(self: @Message, world: dojo::world::IWorldDispatcher) {
+        dojo::model::Model::<Message>::delete_model(self, world);
+    }
+
+    
+    fn get_message(world: dojo::world::IWorldDispatcher, identity: ContractAddress, channel: felt252, salt: felt252) -> ByteArray {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(@identity, ref serialized);
+core::serde::Serde::serialize(@channel, ref serialized);
+core::serde::Serde::serialize(@salt, ref serialized);
+
+
+        let mut values = dojo::model::Model::<Message>::get_member(
+            world,
+            serialized.span(),
+            1234962429638067342109111948666382589302318509162806680039978245403372666376
+        );
+
+        let field_value = core::serde::Serde::<ByteArray>::deserialize(ref values);
+
+        if core::option::OptionTrait::<ByteArray>::is_none(@field_value) {
+            panic!(
+                "Field `Message::message`: deserialization failed."
+            );
+        }
+
+        core::option::OptionTrait::<ByteArray>::unwrap(field_value)
+    }
+
+    fn set_message(self: @Message, world: dojo::world::IWorldDispatcher, value: ByteArray) {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(@value, ref serialized);
+
+        self.set_member(
+            world,
+            1234962429638067342109111948666382589302318509162806680039978245403372666376,
+            serialized.span()
+        );
+    }
+            
+}
+
+pub impl MessageModelEntityImpl of dojo::model::ModelEntity<MessageEntity> {
+    fn id(self: @MessageEntity) -> felt252 {
+        *self.__id
+    }
+
+    fn values(self: @MessageEntity) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.message, ref serialized);
+
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    fn from_values(entity_id: felt252, ref values: Span<felt252>) -> Option<MessageEntity> {
+        let message = core::serde::Serde::<ByteArray>::deserialize(ref values)?;
+
+
+        Option::Some(
+            MessageEntity {
+                __id: entity_id,
+                message,
+
+            }
+        )
+    }
+
+    fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> MessageEntity {
+        let mut values = dojo::world::IWorldDispatcherTrait::entity(
+            world,
+            dojo::model::Model::<Message>::selector(),
+            dojo::model::ModelIndex::Id(entity_id),
+            dojo::model::Model::<Message>::layout()
+        );
+        match Self::from_values(entity_id, ref values) {
+            Option::Some(x) => x,
+            Option::None => {
+                panic!("ModelEntity `MessageEntity`: deserialization failed.")
+            }
+        }
+    }
+
+    fn update_entity(self: @MessageEntity, world: dojo::world::IWorldDispatcher) {
+        dojo::world::IWorldDispatcherTrait::set_entity(
+            world,
+            dojo::model::Model::<Message>::selector(),
+            dojo::model::ModelIndex::Id(self.id()),
+            self.values(),
+            dojo::model::Model::<Message>::layout()
+        );
+    }
+
+    fn delete_entity(self: @MessageEntity, world: dojo::world::IWorldDispatcher) {
+        dojo::world::IWorldDispatcherTrait::delete_entity(
+            world,
+            dojo::model::Model::<Message>::selector(),
+            dojo::model::ModelIndex::Id(self.id()),
+            dojo::model::Model::<Message>::layout()
+        );
+    }
+
+    fn get_member(
+        world: dojo::world::IWorldDispatcher,
+        entity_id: felt252,
+        member_id: felt252,
+    ) -> Span<felt252> {
+        match dojo::utils::find_model_field_layout(dojo::model::Model::<Message>::layout(), member_id) {
+            Option::Some(field_layout) => {
+                dojo::world::IWorldDispatcherTrait::entity(
+                    world,
+                    dojo::model::Model::<Message>::selector(),
+                    dojo::model::ModelIndex::MemberId((entity_id, member_id)),
+                    field_layout
+                )
+            },
+            Option::None => core::panic_with_felt252('bad member id')
+        }
+    }
+
+    fn set_member(
+        self: @MessageEntity,
+        world: dojo::world::IWorldDispatcher,
+        member_id: felt252,
+        values: Span<felt252>,
+    ) {
+        match dojo::utils::find_model_field_layout(dojo::model::Model::<Message>::layout(), member_id) {
+            Option::Some(field_layout) => {
+                dojo::world::IWorldDispatcherTrait::set_entity(
+                    world,
+                    dojo::model::Model::<Message>::selector(),
+                    dojo::model::ModelIndex::MemberId((self.id(), member_id)),
+                    values,
+                    field_layout
+                )
+            },
+            Option::None => core::panic_with_felt252('bad member id')
+        }
+    }
+}
+
+pub impl MessageModelImpl of dojo::model::Model<Message> {
+    fn get(world: dojo::world::IWorldDispatcher, keys: Span<felt252>) -> Message {
+        let mut values = dojo::world::IWorldDispatcherTrait::entity(
+            world,
+            Self::selector(),
+            dojo::model::ModelIndex::Keys(keys),
+            Self::layout()
+        );
+        let mut _keys = keys;
+
+        match MessageStore::from_values(ref _keys, ref values) {
+            Option::Some(x) => x,
+            Option::None => {
+                panic!("Model `Message`: deserialization failed.")
+            }
+        }
+    }
+
+   fn set_model(
+        self: @Message,
+        world: dojo::world::IWorldDispatcher
+    ) {
+        dojo::world::IWorldDispatcherTrait::set_entity(
+            world,
+            Self::selector(),
+            dojo::model::ModelIndex::Keys(Self::keys(self)),
+            Self::values(self),
+            Self::layout()
+        );
+    }
+
+    fn delete_model(
+        self: @Message,
+        world: dojo::world::IWorldDispatcher
+    ) {
+        dojo::world::IWorldDispatcherTrait::delete_entity(
+            world,
+            Self::selector(),
+            dojo::model::ModelIndex::Keys(Self::keys(self)),
+            Self::layout()
+        );
+    }
+
+    fn get_member(
+        world: dojo::world::IWorldDispatcher,
+        keys: Span<felt252>,
+        member_id: felt252
+    ) -> Span<felt252> {
+        match dojo::utils::find_model_field_layout(Self::layout(), member_id) {
+            Option::Some(field_layout) => {
+                let entity_id = dojo::utils::entity_id_from_keys(keys);
+                dojo::world::IWorldDispatcherTrait::entity(
+                    world,
+                    Self::selector(),
+                    dojo::model::ModelIndex::MemberId((entity_id, member_id)),
+                    field_layout
+                )
+            },
+            Option::None => core::panic_with_felt252('bad member id')
+        }
+    }
+
+    fn set_member(
+        self: @Message,
+        world: dojo::world::IWorldDispatcher,
+        member_id: felt252,
+        values: Span<felt252>
+    ) {
+        match dojo::utils::find_model_field_layout(Self::layout(), member_id) {
+            Option::Some(field_layout) => {
+                dojo::world::IWorldDispatcherTrait::set_entity(
+                    world,
+                    Self::selector(),
+                    dojo::model::ModelIndex::MemberId((self.entity_id(), member_id)),
+                    values,
+                    field_layout
+                )
+            },
+            Option::None => core::panic_with_felt252('bad member id')
+        }
+    }
+
+    #[inline(always)]
+    fn name() -> ByteArray {
+        "Message"
+    }
+
+    #[inline(always)]
+    fn namespace() -> ByteArray {
+        "dojo_test"
+    }
+
+    #[inline(always)]
+    fn tag() -> ByteArray {
+        "dojo_test-Message"
+    }
+
+    #[inline(always)]
+    fn version() -> u8 {
+        1
+    }
+
+    #[inline(always)]
+    fn selector() -> felt252 {
+        1906185680711303922822303398414928927091284519615502535643957313578662707163
+    }
+
+    #[inline(always)]
+    fn instance_selector(self: @Message) -> felt252 {
+        Self::selector()
+    }
+
+    #[inline(always)]
+    fn name_hash() -> felt252 {
+        1218932985479400212550774377351312162398071867364919833219536439613388630232
+    }
+
+    #[inline(always)]
+    fn namespace_hash() -> felt252 {
+        1452123528942907587532668415362544424816022573043154497385993678618948064048
+    }
+
+    #[inline(always)]
+    fn entity_id(self: @Message) -> felt252 {
+        core::poseidon::poseidon_hash_span(self.keys())
+    }
+
+    #[inline(always)]
+    fn keys(self: @Message) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.identity, ref serialized);
+core::serde::Serde::serialize(self.channel, ref serialized);
+core::serde::Serde::serialize(self.salt, ref serialized);
+
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn values(self: @Message) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.message, ref serialized);
+
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::introspect::Introspect::<Message>::layout()
+    }
+
+    #[inline(always)]
+    fn instance_layout(self: @Message) -> dojo::meta::Layout {
+        Self::layout()
+    }
+
+    #[inline(always)]
+    fn packed_size() -> Option<usize> {
+        dojo::meta::layout::compute_packed_size(Self::layout())
+    }
+}
+
+#[starknet::interface]
+pub trait Imessage<T> {
+    fn ensure_abi(self: @T, model: Message);
+}
+
+#[starknet::contract]
+pub mod message {
+    use super::Message;
+    use super::Imessage;
+
+    #[abi(embed_v0)]
+    impl DojoModelImpl of dojo::model::IModel<ContractState>{
+        fn name(self: @ContractState) -> ByteArray {
+           dojo::model::Model::<Message>::name()
+        }
+
+        fn namespace(self: @ContractState) -> ByteArray {
+           dojo::model::Model::<Message>::namespace()
+        }
+
+        fn tag(self: @ContractState) -> ByteArray {
+            dojo::model::Model::<Message>::tag()
+        }
+
+        fn version(self: @ContractState) -> u8 {
+           dojo::model::Model::<Message>::version()
+        }
+
+        fn selector(self: @ContractState) -> felt252 {
+           dojo::model::Model::<Message>::selector()
+        }
+
+        fn name_hash(self: @ContractState) -> felt252 {
+            dojo::model::Model::<Message>::name_hash()
+        }
+
+        fn namespace_hash(self: @ContractState) -> felt252 {
+            dojo::model::Model::<Message>::namespace_hash()
+        }
+
+        fn unpacked_size(self: @ContractState) -> Option<usize> {
+            dojo::meta::introspect::Introspect::<Message>::size()
+        }
+
+        fn packed_size(self: @ContractState) -> Option<usize> {
+            dojo::model::Model::<Message>::packed_size()
+        }
+
+        fn layout(self: @ContractState) -> dojo::meta::Layout {
+            dojo::model::Model::<Message>::layout()
+        }
+
+        fn schema(self: @ContractState) -> dojo::meta::introspect::Ty {
+            dojo::meta::introspect::Introspect::<Message>::ty()
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl messageImpl of Imessage<ContractState>{
+        fn ensure_abi(self: @ContractState, model: Message) {
+        }
+    }
+#[event]
+#[derive(Drop, starknet::Event)]
+pub enum Event {}
+
+
+#[phantom]
+pub struct Storage {
+}
+
+#[derive(Drop, Copy)]
+pub struct StorageStorageBase {
+}
+impl StorageStorageImpl of starknet::storage::StorageTrait<Storage> {
+    type BaseType = StorageStorageBase;
+    fn storage(self: starknet::storage::FlattenedStorage<Storage>) -> StorageStorageBase {
+        StorageStorageBase {
+        }
+    }
+}
+#[derive(Drop, Copy)]
+pub struct StorageStorageBaseMut {
+}
+impl StorageStorageMutImpl of starknet::storage::StorageTraitMut<Storage> {
+    type BaseType = StorageStorageBaseMut;
+    fn storage_mut(self: starknet::storage::FlattenedStorage<starknet::storage::Mutable::<Storage>>) -> StorageStorageBaseMut {
+        StorageStorageBaseMut {
+        }
+    }
+}
+
+pub struct ContractState {
+}
+
+impl ContractStateDrop of Drop<ContractState> {}
+ 
+impl ContractStateDeref of core::ops::SnapshotDeref<ContractState> {
+    type Target = starknet::storage::FlattenedStorage<Storage>;
+    fn snapshot_deref(self: @ContractState) -> starknet::storage::FlattenedStorage<Storage> {
+        starknet::storage::FlattenedStorage {}
+    }
+}
+impl ContractStateDerefMut of core::ops::DerefMut<ContractState> {
+    type Target = starknet::storage::FlattenedStorage<starknet::storage::Mutable<Storage>> ;
+    fn deref_mut(ref self: ContractState) -> starknet::storage::FlattenedStorage<starknet::storage::Mutable<Storage>> {
+        starknet::storage::FlattenedStorage {}
+    }
+}
+pub fn unsafe_new_contract_state() -> ContractState {
+    ContractState {
+    }
+}
+
+// TODO(Gil): This generates duplicate diagnostics because of the plugin system, squash the duplicates into one.
+#[deprecated(
+    feature: "deprecated_legacy_map",
+    note: "Use `starknet::storage::Map` instead."
+)]
+use starknet::storage::Map as LegacyMap;
+
+#[implicit_precedence(core::pedersen::Pedersen, core::RangeCheck, core::integer::Bitwise, core::ec::EcOp, core::poseidon::Poseidon, core::SegmentArena, core::circuit::RangeCheck96, core::circuit::AddMod, core::circuit::MulMod, core::gas::GasBuiltin, System)]
+fn __wrapper__DojoModelImpl__name(mut data: Span::<felt252>) -> Span::<felt252> {
+    core::internal::require_implicit::<System>();
+    core::internal::revoke_ap_tracking();
+    core::option::OptionTraitImpl::expect(core::gas::withdraw_gas(), 'Out of gas');
+    
+    assert(core::array::SpanTrait::is_empty(data), 'Input too long for arguments');
+    core::option::OptionTraitImpl::expect(
+        core::gas::withdraw_gas_all(core::gas::get_builtin_costs()), 'Out of gas',
+    );
+    let mut contract_state = unsafe_new_contract_state();
+    let res = DojoModelImpl::name(@contract_state, );
+    let mut arr = ArrayTrait::new();
+    // References.
+    // Result.
+    core::serde::Serde::<ByteArray>::serialize(@res, ref arr);
+    core::array::ArrayTrait::span(@arr)
+}
+
+#[implicit_precedence(core::pedersen::Pedersen, core::RangeCheck, core::integer::Bitwise, core::ec::EcOp, core::poseidon::Poseidon, core::SegmentArena, core::circuit::RangeCheck96, core::circuit::AddMod, core::circuit::MulMod, core::gas::GasBuiltin, System)]
+fn __wrapper__DojoModelImpl__namespace(mut data: Span::<felt252>) -> Span::<felt252> {
+    core::internal::require_implicit::<System>();
+    core::internal::revoke_ap_tracking();
+    core::option::OptionTraitImpl::expect(core::gas::withdraw_gas(), 'Out of gas');
+    
+    assert(core::array::SpanTrait::is_empty(data), 'Input too long for arguments');
+    core::option::OptionTraitImpl::expect(
+        core::gas::withdraw_gas_all(core::gas::get_builtin_costs()), 'Out of gas',
+    );
+    let mut contract_state = unsafe_new_contract_state();
+    let res = DojoModelImpl::namespace(@contract_state, );
+    let mut arr = ArrayTrait::new();
+    // References.
+    // Result.
+    core::serde::Serde::<ByteArray>::serialize(@res, ref arr);
+    core::array::ArrayTrait::span(@arr)
+}
+
+#[implicit_precedence(core::pedersen::Pedersen, core::RangeCheck, core::integer::Bitwise, core::ec::EcOp, core::poseidon::Poseidon, core::SegmentArena, core::circuit::RangeCheck96, core::circuit::AddMod, core::circuit::MulMod, core::gas::GasBuiltin, System)]
+fn __wrapper__DojoModelImpl__tag(mut data: Span::<felt252>) -> Span::<felt252> {
+    core::internal::require_implicit::<System>();
+    core::internal::revoke_ap_tracking();
+    core::option::OptionTraitImpl::expect(core::gas::withdraw_gas(), 'Out of gas');
+    
+    assert(core::array::SpanTrait::is_empty(data), 'Input too long for arguments');
+    core::option::OptionTraitImpl::expect(
+        core::gas::withdraw_gas_all(core::gas::get_builtin_costs()), 'Out of gas',
+    );
+    let mut contract_state = unsafe_new_contract_state();
+    let res = DojoModelImpl::tag(@contract_state, );
+    let mut arr = ArrayTrait::new();
+    // References.
+    // Result.
+    core::serde::Serde::<ByteArray>::serialize(@res, ref arr);
+    core::array::ArrayTrait::span(@arr)
+}
+
+#[implicit_precedence(core::pedersen::Pedersen, core::RangeCheck, core::integer::Bitwise, core::ec::EcOp, core::poseidon::Poseidon, core::SegmentArena, core::circuit::RangeCheck96, core::circuit::AddMod, core::circuit::MulMod, core::gas::GasBuiltin, System)]
+fn __wrapper__DojoModelImpl__version(mut data: Span::<felt252>) -> Span::<felt252> {
+    core::internal::require_implicit::<System>();
+    core::internal::revoke_ap_tracking();
+    core::option::OptionTraitImpl::expect(core::gas::withdraw_gas(), 'Out of gas');
+    
+    assert(core::array::SpanTrait::is_empty(data), 'Input too long for arguments');
+    core::option::OptionTraitImpl::expect(
+        core::gas::withdraw_gas_all(core::gas::get_builtin_costs()), 'Out of gas',
+    );
+    let mut contract_state = unsafe_new_contract_state();
+    let res = DojoModelImpl::version(@contract_state, );
+    let mut arr = ArrayTrait::new();
+    // References.
+    // Result.
+    core::serde::Serde::<u8>::serialize(@res, ref arr);
+    core::array::ArrayTrait::span(@arr)
+}
+
+#[implicit_precedence(core::pedersen::Pedersen, core::RangeCheck, core::integer::Bitwise, core::ec::EcOp, core::poseidon::Poseidon, core::SegmentArena, core::circuit::RangeCheck96, core::circuit::AddMod, core::circuit::MulMod, core::gas::GasBuiltin, System)]
+fn __wrapper__DojoModelImpl__selector(mut data: Span::<felt252>) -> Span::<felt252> {
+    core::internal::require_implicit::<System>();
+    core::internal::revoke_ap_tracking();
+    core::option::OptionTraitImpl::expect(core::gas::withdraw_gas(), 'Out of gas');
+    
+    assert(core::array::SpanTrait::is_empty(data), 'Input too long for arguments');
+    core::option::OptionTraitImpl::expect(
+        core::gas::withdraw_gas_all(core::gas::get_builtin_costs()), 'Out of gas',
+    );
+    let mut contract_state = unsafe_new_contract_state();
+    let res = DojoModelImpl::selector(@contract_state, );
+    let mut arr = ArrayTrait::new();
+    // References.
+    // Result.
+    core::serde::Serde::<felt252>::serialize(@res, ref arr);
+    core::array::ArrayTrait::span(@arr)
+}
+
+#[implicit_precedence(core::pedersen::Pedersen, core::RangeCheck, core::integer::Bitwise, core::ec::EcOp, core::poseidon::Poseidon, core::SegmentArena, core::circuit::RangeCheck96, core::circuit::AddMod, core::circuit::MulMod, core::gas::GasBuiltin, System)]
+fn __wrapper__DojoModelImpl__name_hash(mut data: Span::<felt252>) -> Span::<felt252> {
+    core::internal::require_implicit::<System>();
+    core::internal::revoke_ap_tracking();
+    core::option::OptionTraitImpl::expect(core::gas::withdraw_gas(), 'Out of gas');
+    
+    assert(core::array::SpanTrait::is_empty(data), 'Input too long for arguments');
+    core::option::OptionTraitImpl::expect(
+        core::gas::withdraw_gas_all(core::gas::get_builtin_costs()), 'Out of gas',
+    );
+    let mut contract_state = unsafe_new_contract_state();
+    let res = DojoModelImpl::name_hash(@contract_state, );
+    let mut arr = ArrayTrait::new();
+    // References.
+    // Result.
+    core::serde::Serde::<felt252>::serialize(@res, ref arr);
+    core::array::ArrayTrait::span(@arr)
+}
+
+#[implicit_precedence(core::pedersen::Pedersen, core::RangeCheck, core::integer::Bitwise, core::ec::EcOp, core::poseidon::Poseidon, core::SegmentArena, core::circuit::RangeCheck96, core::circuit::AddMod, core::circuit::MulMod, core::gas::GasBuiltin, System)]
+fn __wrapper__DojoModelImpl__namespace_hash(mut data: Span::<felt252>) -> Span::<felt252> {
+    core::internal::require_implicit::<System>();
+    core::internal::revoke_ap_tracking();
+    core::option::OptionTraitImpl::expect(core::gas::withdraw_gas(), 'Out of gas');
+    
+    assert(core::array::SpanTrait::is_empty(data), 'Input too long for arguments');
+    core::option::OptionTraitImpl::expect(
+        core::gas::withdraw_gas_all(core::gas::get_builtin_costs()), 'Out of gas',
+    );
+    let mut contract_state = unsafe_new_contract_state();
+    let res = DojoModelImpl::namespace_hash(@contract_state, );
+    let mut arr = ArrayTrait::new();
+    // References.
+    // Result.
+    core::serde::Serde::<felt252>::serialize(@res, ref arr);
+    core::array::ArrayTrait::span(@arr)
+}
+
+#[implicit_precedence(core::pedersen::Pedersen, core::RangeCheck, core::integer::Bitwise, core::ec::EcOp, core::poseidon::Poseidon, core::SegmentArena, core::circuit::RangeCheck96, core::circuit::AddMod, core::circuit::MulMod, core::gas::GasBuiltin, System)]
+fn __wrapper__DojoModelImpl__unpacked_size(mut data: Span::<felt252>) -> Span::<felt252> {
+    core::internal::require_implicit::<System>();
+    core::internal::revoke_ap_tracking();
+    core::option::OptionTraitImpl::expect(core::gas::withdraw_gas(), 'Out of gas');
+    
+    assert(core::array::SpanTrait::is_empty(data), 'Input too long for arguments');
+    core::option::OptionTraitImpl::expect(
+        core::gas::withdraw_gas_all(core::gas::get_builtin_costs()), 'Out of gas',
+    );
+    let mut contract_state = unsafe_new_contract_state();
+    let res = DojoModelImpl::unpacked_size(@contract_state, );
+    let mut arr = ArrayTrait::new();
+    // References.
+    // Result.
+    core::serde::Serde::<Option<usize>>::serialize(@res, ref arr);
+    core::array::ArrayTrait::span(@arr)
+}
+
+#[implicit_precedence(core::pedersen::Pedersen, core::RangeCheck, core::integer::Bitwise, core::ec::EcOp, core::poseidon::Poseidon, core::SegmentArena, core::circuit::RangeCheck96, core::circuit::AddMod, core::circuit::MulMod, core::gas::GasBuiltin, System)]
+fn __wrapper__DojoModelImpl__packed_size(mut data: Span::<felt252>) -> Span::<felt252> {
+    core::internal::require_implicit::<System>();
+    core::internal::revoke_ap_tracking();
+    core::option::OptionTraitImpl::expect(core::gas::withdraw_gas(), 'Out of gas');
+    
+    assert(core::array::SpanTrait::is_empty(data), 'Input too long for arguments');
+    core::option::OptionTraitImpl::expect(
+        core::gas::withdraw_gas_all(core::gas::get_builtin_costs()), 'Out of gas',
+    );
+    let mut contract_state = unsafe_new_contract_state();
+    let res = DojoModelImpl::packed_size(@contract_state, );
+    let mut arr = ArrayTrait::new();
+    // References.
+    // Result.
+    core::serde::Serde::<Option<usize>>::serialize(@res, ref arr);
+    core::array::ArrayTrait::span(@arr)
+}
+
+#[implicit_precedence(core::pedersen::Pedersen, core::RangeCheck, core::integer::Bitwise, core::ec::EcOp, core::poseidon::Poseidon, core::SegmentArena, core::circuit::RangeCheck96, core::circuit::AddMod, core::circuit::MulMod, core::gas::GasBuiltin, System)]
+fn __wrapper__DojoModelImpl__layout(mut data: Span::<felt252>) -> Span::<felt252> {
+    core::internal::require_implicit::<System>();
+    core::internal::revoke_ap_tracking();
+    core::option::OptionTraitImpl::expect(core::gas::withdraw_gas(), 'Out of gas');
+    
+    assert(core::array::SpanTrait::is_empty(data), 'Input too long for arguments');
+    core::option::OptionTraitImpl::expect(
+        core::gas::withdraw_gas_all(core::gas::get_builtin_costs()), 'Out of gas',
+    );
+    let mut contract_state = unsafe_new_contract_state();
+    let res = DojoModelImpl::layout(@contract_state, );
+    let mut arr = ArrayTrait::new();
+    // References.
+    // Result.
+    core::serde::Serde::<dojo::meta::Layout>::serialize(@res, ref arr);
+    core::array::ArrayTrait::span(@arr)
+}
+
+#[implicit_precedence(core::pedersen::Pedersen, core::RangeCheck, core::integer::Bitwise, core::ec::EcOp, core::poseidon::Poseidon, core::SegmentArena, core::circuit::RangeCheck96, core::circuit::AddMod, core::circuit::MulMod, core::gas::GasBuiltin, System)]
+fn __wrapper__DojoModelImpl__schema(mut data: Span::<felt252>) -> Span::<felt252> {
+    core::internal::require_implicit::<System>();
+    core::internal::revoke_ap_tracking();
+    core::option::OptionTraitImpl::expect(core::gas::withdraw_gas(), 'Out of gas');
+    
+    assert(core::array::SpanTrait::is_empty(data), 'Input too long for arguments');
+    core::option::OptionTraitImpl::expect(
+        core::gas::withdraw_gas_all(core::gas::get_builtin_costs()), 'Out of gas',
+    );
+    let mut contract_state = unsafe_new_contract_state();
+    let res = DojoModelImpl::schema(@contract_state, );
+    let mut arr = ArrayTrait::new();
+    // References.
+    // Result.
+    core::serde::Serde::<dojo::meta::introspect::Ty>::serialize(@res, ref arr);
+    core::array::ArrayTrait::span(@arr)
+}
+
+#[implicit_precedence(core::pedersen::Pedersen, core::RangeCheck, core::integer::Bitwise, core::ec::EcOp, core::poseidon::Poseidon, core::SegmentArena, core::circuit::RangeCheck96, core::circuit::AddMod, core::circuit::MulMod, core::gas::GasBuiltin, System)]
+fn __wrapper__messageImpl__ensure_abi(mut data: Span::<felt252>) -> Span::<felt252> {
+    core::internal::require_implicit::<System>();
+    core::internal::revoke_ap_tracking();
+    core::option::OptionTraitImpl::expect(core::gas::withdraw_gas(), 'Out of gas');
+    let __arg_model = core::option::OptionTraitImpl::expect(
+        core::serde::Serde::<Message>::deserialize(ref data),
+        'Failed to deserialize param #1'
+    );
+    assert(core::array::SpanTrait::is_empty(data), 'Input too long for arguments');
+    core::option::OptionTraitImpl::expect(
+        core::gas::withdraw_gas_all(core::gas::get_builtin_costs()), 'Out of gas',
+    );
+    let mut contract_state = unsafe_new_contract_state();
+    messageImpl::ensure_abi(@contract_state, __arg_model);
+    let mut arr = ArrayTrait::new();
+    // References.
+    // Result.
+    core::array::ArrayTrait::span(@arr)
+}
+
+
+pub mod __external {
+    pub use super::__wrapper__DojoModelImpl__name as name;
+    pub use super::__wrapper__DojoModelImpl__namespace as namespace;
+    pub use super::__wrapper__DojoModelImpl__tag as tag;
+    pub use super::__wrapper__DojoModelImpl__version as version;
+    pub use super::__wrapper__DojoModelImpl__selector as selector;
+    pub use super::__wrapper__DojoModelImpl__name_hash as name_hash;
+    pub use super::__wrapper__DojoModelImpl__namespace_hash as namespace_hash;
+    pub use super::__wrapper__DojoModelImpl__unpacked_size as unpacked_size;
+    pub use super::__wrapper__DojoModelImpl__packed_size as packed_size;
+    pub use super::__wrapper__DojoModelImpl__layout as layout;
+    pub use super::__wrapper__DojoModelImpl__schema as schema;
+    pub use super::__wrapper__messageImpl__ensure_abi as ensure_abi;
+}
+pub mod __l1_handler {
+}
+pub mod __constructor {
+}
+    impl ContractStateEventEmitter of starknet::event::EventEmitter<
+        ContractState, Event
+    > {
+        fn emit<S, impl IntoImp: core::traits::Into<S, Event>>(
+            ref self: ContractState, event: S
+        ) {
+            let event: Event = core::traits::Into::into(event);
+            let mut keys = Default::<core::array::Array>::default();
+            let mut data = Default::<core::array::Array>::default();
+            starknet::Event::append_keys_and_data(@event, ref keys, ref data);
+            starknet::SyscallResultTrait::unwrap_syscall(
+                starknet::syscalls::emit_event_syscall(
+                    core::array::ArrayTrait::span(@keys),
+                    core::array::ArrayTrait::span(@data),
+                )
+            )
+        }
+    }
+impl EventDrop of core::traits::Drop::<Event>;
+impl EventIsEvent of starknet::Event<Event> {
+    fn append_keys_and_data(
+        self: @Event, ref keys: Array<felt252>, ref data: Array<felt252>
+    ) {
+        match self {
+        }
+    }
+    fn deserialize(
+        ref keys: Span<felt252>, ref data: Span<felt252>,
+    ) -> Option<Event> {
+        let __selector__ = *core::array::SpanTrait::pop_front(ref keys)?;
+        Option::None
+    }
+}
+impl StorageStorageBaseDrop of core::traits::Drop::<StorageStorageBase>;
+impl StorageStorageBaseCopy of core::traits::Copy::<StorageStorageBase>;
+impl StorageStorageBaseMutDrop of core::traits::Drop::<StorageStorageBaseMut>;
+impl StorageStorageBaseMutCopy of core::traits::Copy::<StorageStorageBaseMut>;
+}
+
 impl MyEventStrkEventImpl of starknet::Event<MyEvent> {
 
     fn append_keys_and_data(
@@ -29,7 +928,7 @@ impl MyEventStrkEventImpl of starknet::Event<MyEvent> {
         core::array::ArrayTrait::append(
             ref keys, dojo::event::Event::<MyEvent>::selector()
         );
-        core::array::ArrayTrait::append(ref keys, *self.id);
+        core::serde::Serde::serialize(self.id, ref keys);
 
         core::serde::Serde::serialize(self.name, ref data);
 
@@ -40,9 +939,10 @@ impl MyEventStrkEventImpl of starknet::Event<MyEvent> {
     ) -> Option<MyEvent> {
         let _ = keys.pop_front();
 
-        let id = keys.pop_front()?;
+        let id = core::serde::Serde::<felt252>::deserialize(ref keys)?;
 
         let name = core::serde::Serde::<ByteArray>::deserialize(ref data)?;
+
 
         Option::Some(
             MyEvent {
@@ -492,5 +1392,477 @@ impl StorageStorageBaseCopy of core::traits::Copy::<StorageStorageBase>;
 impl StorageStorageBaseMutDrop of core::traits::Drop::<StorageStorageBaseMut>;
 impl StorageStorageBaseMutCopy of core::traits::Copy::<StorageStorageBaseMut>;
 }
+impl MessageEntityDrop of core::traits::Drop::<MessageEntity>;
+impl MessageEntitySerde of core::serde::Serde::<MessageEntity> {
+    fn serialize(self: @MessageEntity, ref output: core::array::Array<felt252>) {
+        core::serde::Serde::serialize(self.__id, ref output);
+        core::serde::Serde::serialize(self.message, ref output)
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<MessageEntity> {
+        core::option::Option::Some(MessageEntity {
+            __id: core::serde::Serde::deserialize(ref serialized)?,
+            message: core::serde::Serde::deserialize(ref serialized)?,
+        })
+    }
+}
+pub trait MessageEntityStore {
+    fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> MessageEntity;
+
+    fn update(self: @MessageEntity, world: dojo::world::IWorldDispatcher);
+
+    fn delete(self: @MessageEntity, world: dojo::world::IWorldDispatcher);
+
+    
+    fn get_message(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> ByteArray;
+
+    fn set_message(self: @MessageEntity, world: dojo::world::IWorldDispatcher, value: ByteArray);
+
+}
+pub trait MessageStore {
+    fn entity_id_from_keys(identity: ContractAddress, channel: felt252, salt: felt252) -> felt252;
+
+    fn from_values(ref keys: Span<felt252>, ref values: Span<felt252>) -> Option<Message>;
+
+    fn get(world: dojo::world::IWorldDispatcher, identity: ContractAddress, channel: felt252, salt: felt252) -> Message;
+
+    fn set(self: @Message, world: dojo::world::IWorldDispatcher);
+
+    fn delete(self: @Message, world: dojo::world::IWorldDispatcher);
+
+    
+    fn get_message(world: dojo::world::IWorldDispatcher, identity: ContractAddress, channel: felt252, salt: felt252) -> ByteArray;
+
+    fn set_message(self: @Message, world: dojo::world::IWorldDispatcher, value: ByteArray);
+            
+}
+pub trait ImessageDispatcherTrait<T> {
+    fn ensure_abi(self: T, model: Message);
+}
+
+#[derive(Copy, Drop, starknet::Store, Serde)]
+pub struct ImessageDispatcher {
+    pub contract_address: starknet::ContractAddress,
+}
+
+impl ImessageDispatcherImpl of ImessageDispatcherTrait<ImessageDispatcher> {
+    fn ensure_abi(self: ImessageDispatcher, model: Message) {
+        let mut __calldata__ = core::traits::Default::default();
+        core::serde::Serde::<Message>::serialize(@model, ref __calldata__);
+
+        let mut __dispatcher_return_data__ = starknet::syscalls::call_contract_syscall(
+            self.contract_address,
+            selector!("ensure_abi"),
+            core::array::ArrayTrait::span(@__calldata__),
+        );
+        let mut __dispatcher_return_data__ = starknet::SyscallResultTrait::unwrap_syscall(__dispatcher_return_data__);
+        ()
+    }
+
+}
+
+#[derive(Copy, Drop, starknet::Store, Serde)]
+pub struct ImessageLibraryDispatcher {
+    pub class_hash: starknet::ClassHash,
+}
+
+impl ImessageLibraryDispatcherImpl of ImessageDispatcherTrait<ImessageLibraryDispatcher> {
+    fn ensure_abi(self: ImessageLibraryDispatcher, model: Message) {
+        let mut __calldata__ = core::traits::Default::default();
+        core::serde::Serde::<Message>::serialize(@model, ref __calldata__);
+
+        let mut __dispatcher_return_data__ = starknet::syscalls::library_call_syscall(
+            self.class_hash,
+            selector!("ensure_abi"),
+            core::array::ArrayTrait::span(@__calldata__),
+        );
+        let mut __dispatcher_return_data__ = starknet::SyscallResultTrait::unwrap_syscall(__dispatcher_return_data__);
+        ()
+    }
+
+}
+
+pub trait ImessageSafeDispatcherTrait<T> {
+    #[unstable(feature: "safe_dispatcher")]
+    fn ensure_abi(self: T, model: Message) -> starknet::SyscallResult<()>;
+}
+
+#[derive(Copy, Drop, starknet::Store, Serde)]
+pub struct ImessageSafeLibraryDispatcher {
+    pub class_hash: starknet::ClassHash,
+}
+
+impl ImessageSafeLibraryDispatcherImpl of ImessageSafeDispatcherTrait<ImessageSafeLibraryDispatcher> {
+    fn ensure_abi(self: ImessageSafeLibraryDispatcher, model: Message) -> starknet::SyscallResult<()> {
+        let mut __calldata__ = core::traits::Default::default();
+        core::serde::Serde::<Message>::serialize(@model, ref __calldata__);
+
+        let mut __dispatcher_return_data__ = starknet::syscalls::library_call_syscall(
+            self.class_hash,
+            selector!("ensure_abi"),
+            core::array::ArrayTrait::span(@__calldata__),
+        );
+        let mut __dispatcher_return_data__ = __dispatcher_return_data__?;
+        Result::Ok(())
+    }
+
+}
+
+
+#[derive(Copy, Drop, starknet::Store, Serde)]
+pub struct ImessageSafeDispatcher {
+    pub contract_address: starknet::ContractAddress,
+}
+
+impl ImessageSafeDispatcherImpl of ImessageSafeDispatcherTrait<ImessageSafeDispatcher> {
+    fn ensure_abi(self: ImessageSafeDispatcher, model: Message) -> starknet::SyscallResult<()> {
+        let mut __calldata__ = core::traits::Default::default();
+        core::serde::Serde::<Message>::serialize(@model, ref __calldata__);
+
+        let mut __dispatcher_return_data__ = starknet::syscalls::call_contract_syscall(
+            self.contract_address,
+            selector!("ensure_abi"),
+            core::array::ArrayTrait::span(@__calldata__),
+        );
+        let mut __dispatcher_return_data__ = __dispatcher_return_data__?;
+        Result::Ok(())
+    }
+
+}
+impl ImessageDispatcherCopy of core::traits::Copy::<ImessageDispatcher>;
+impl ImessageDispatcherDrop of core::traits::Drop::<ImessageDispatcher>;
+impl ImessageDispatcherSerde of core::serde::Serde::<ImessageDispatcher> {
+    fn serialize(self: @ImessageDispatcher, ref output: core::array::Array<felt252>) {
+        core::serde::Serde::serialize(self.contract_address, ref output)
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<ImessageDispatcher> {
+        core::option::Option::Some(ImessageDispatcher {
+            contract_address: core::serde::Serde::deserialize(ref serialized)?,
+        })
+    }
+}
+impl StoreImessageDispatcher of starknet::Store::<ImessageDispatcher> {
+    fn read(address_domain: u32, base: starknet::storage_access::StorageBaseAddress) -> starknet::SyscallResult<ImessageDispatcher> {
+        let contract_address = starknet::Store::<starknet::ContractAddress>::read(address_domain, base)?;
+        starknet::SyscallResult::Ok(
+            ImessageDispatcher {
+                contract_address,
+            }
+        )
+    }
+    fn write(address_domain: u32, base: starknet::storage_access::StorageBaseAddress, value: ImessageDispatcher) -> starknet::SyscallResult<()> {
+        starknet::Store::<starknet::ContractAddress>::write(address_domain, base, value.contract_address)?;
+        starknet::SyscallResult::Ok(())
+    }
+    fn read_at_offset(address_domain: u32, base: starknet::storage_access::StorageBaseAddress, offset: u8) -> starknet::SyscallResult<ImessageDispatcher> {
+        let contract_address = starknet::Store::<starknet::ContractAddress>::read_at_offset(address_domain, base, offset)?;
+        starknet::SyscallResult::Ok(
+            ImessageDispatcher {
+                contract_address,
+            }
+        )
+    }
+    #[inline(always)]
+    fn write_at_offset(address_domain: u32, base: starknet::storage_access::StorageBaseAddress, offset: u8, value: ImessageDispatcher) -> starknet::SyscallResult<()> {
+        starknet::Store::<starknet::ContractAddress>::write_at_offset(address_domain, base, offset, value.contract_address)?;
+        starknet::SyscallResult::Ok(())
+    }
+    #[inline(always)]
+    fn size() -> u8 {
+        starknet::Store::<starknet::ContractAddress>::size()
+    }
+}
+
+#[derive(Drop, Copy)]
+pub struct ImessageDispatcherSubPointers {
+    pub contract_address: starknet::storage::StoragePointer<starknet::ContractAddress>,
+}
+impl ImessageDispatcherSubPointersImpl of starknet::storage::SubPointers<ImessageDispatcher> {
+    type SubPointersType = ImessageDispatcherSubPointers;
+    fn sub_pointers(self: starknet::storage::StoragePointer<ImessageDispatcher>) -> ImessageDispatcherSubPointers {
+        let base_address = self.__storage_pointer_address__;
+        let mut current_offset = self.__storage_pointer_offset__;
+        let contract_address_value = starknet::storage::StoragePointer {
+            __storage_pointer_address__: base_address,
+            __storage_pointer_offset__: current_offset,
+        };
+                ImessageDispatcherSubPointers {
+           contract_address: contract_address_value,
+        }
+    }
+}
+#[derive(Drop, Copy)]
+pub struct ImessageDispatcherSubPointersMut {
+    pub contract_address: starknet::storage::StoragePointer<starknet::storage::Mutable::<starknet::ContractAddress>>,
+}
+impl ImessageDispatcherSubPointersMutImpl of starknet::storage::SubPointersMut<ImessageDispatcher> {
+    type SubPointersType = ImessageDispatcherSubPointersMut;
+    fn sub_pointers_mut(self: starknet::storage::StoragePointer<starknet::storage::Mutable::<ImessageDispatcher>>) -> ImessageDispatcherSubPointersMut {
+        let base_address = self.__storage_pointer_address__;
+        let mut current_offset = self.__storage_pointer_offset__;
+        let contract_address_value = starknet::storage::StoragePointer {
+            __storage_pointer_address__: base_address,
+            __storage_pointer_offset__: current_offset,
+        };
+                ImessageDispatcherSubPointersMut {
+           contract_address: contract_address_value,
+        }
+    }
+}
+impl ImessageLibraryDispatcherCopy of core::traits::Copy::<ImessageLibraryDispatcher>;
+impl ImessageLibraryDispatcherDrop of core::traits::Drop::<ImessageLibraryDispatcher>;
+impl ImessageLibraryDispatcherSerde of core::serde::Serde::<ImessageLibraryDispatcher> {
+    fn serialize(self: @ImessageLibraryDispatcher, ref output: core::array::Array<felt252>) {
+        core::serde::Serde::serialize(self.class_hash, ref output)
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<ImessageLibraryDispatcher> {
+        core::option::Option::Some(ImessageLibraryDispatcher {
+            class_hash: core::serde::Serde::deserialize(ref serialized)?,
+        })
+    }
+}
+impl StoreImessageLibraryDispatcher of starknet::Store::<ImessageLibraryDispatcher> {
+    fn read(address_domain: u32, base: starknet::storage_access::StorageBaseAddress) -> starknet::SyscallResult<ImessageLibraryDispatcher> {
+        let class_hash = starknet::Store::<starknet::ClassHash>::read(address_domain, base)?;
+        starknet::SyscallResult::Ok(
+            ImessageLibraryDispatcher {
+                class_hash,
+            }
+        )
+    }
+    fn write(address_domain: u32, base: starknet::storage_access::StorageBaseAddress, value: ImessageLibraryDispatcher) -> starknet::SyscallResult<()> {
+        starknet::Store::<starknet::ClassHash>::write(address_domain, base, value.class_hash)?;
+        starknet::SyscallResult::Ok(())
+    }
+    fn read_at_offset(address_domain: u32, base: starknet::storage_access::StorageBaseAddress, offset: u8) -> starknet::SyscallResult<ImessageLibraryDispatcher> {
+        let class_hash = starknet::Store::<starknet::ClassHash>::read_at_offset(address_domain, base, offset)?;
+        starknet::SyscallResult::Ok(
+            ImessageLibraryDispatcher {
+                class_hash,
+            }
+        )
+    }
+    #[inline(always)]
+    fn write_at_offset(address_domain: u32, base: starknet::storage_access::StorageBaseAddress, offset: u8, value: ImessageLibraryDispatcher) -> starknet::SyscallResult<()> {
+        starknet::Store::<starknet::ClassHash>::write_at_offset(address_domain, base, offset, value.class_hash)?;
+        starknet::SyscallResult::Ok(())
+    }
+    #[inline(always)]
+    fn size() -> u8 {
+        starknet::Store::<starknet::ClassHash>::size()
+    }
+}
+
+#[derive(Drop, Copy)]
+pub struct ImessageLibraryDispatcherSubPointers {
+    pub class_hash: starknet::storage::StoragePointer<starknet::ClassHash>,
+}
+impl ImessageLibraryDispatcherSubPointersImpl of starknet::storage::SubPointers<ImessageLibraryDispatcher> {
+    type SubPointersType = ImessageLibraryDispatcherSubPointers;
+    fn sub_pointers(self: starknet::storage::StoragePointer<ImessageLibraryDispatcher>) -> ImessageLibraryDispatcherSubPointers {
+        let base_address = self.__storage_pointer_address__;
+        let mut current_offset = self.__storage_pointer_offset__;
+        let class_hash_value = starknet::storage::StoragePointer {
+            __storage_pointer_address__: base_address,
+            __storage_pointer_offset__: current_offset,
+        };
+                ImessageLibraryDispatcherSubPointers {
+           class_hash: class_hash_value,
+        }
+    }
+}
+#[derive(Drop, Copy)]
+pub struct ImessageLibraryDispatcherSubPointersMut {
+    pub class_hash: starknet::storage::StoragePointer<starknet::storage::Mutable::<starknet::ClassHash>>,
+}
+impl ImessageLibraryDispatcherSubPointersMutImpl of starknet::storage::SubPointersMut<ImessageLibraryDispatcher> {
+    type SubPointersType = ImessageLibraryDispatcherSubPointersMut;
+    fn sub_pointers_mut(self: starknet::storage::StoragePointer<starknet::storage::Mutable::<ImessageLibraryDispatcher>>) -> ImessageLibraryDispatcherSubPointersMut {
+        let base_address = self.__storage_pointer_address__;
+        let mut current_offset = self.__storage_pointer_offset__;
+        let class_hash_value = starknet::storage::StoragePointer {
+            __storage_pointer_address__: base_address,
+            __storage_pointer_offset__: current_offset,
+        };
+                ImessageLibraryDispatcherSubPointersMut {
+           class_hash: class_hash_value,
+        }
+    }
+}
+impl ImessageSafeLibraryDispatcherCopy of core::traits::Copy::<ImessageSafeLibraryDispatcher>;
+impl ImessageSafeLibraryDispatcherDrop of core::traits::Drop::<ImessageSafeLibraryDispatcher>;
+impl ImessageSafeLibraryDispatcherSerde of core::serde::Serde::<ImessageSafeLibraryDispatcher> {
+    fn serialize(self: @ImessageSafeLibraryDispatcher, ref output: core::array::Array<felt252>) {
+        core::serde::Serde::serialize(self.class_hash, ref output)
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<ImessageSafeLibraryDispatcher> {
+        core::option::Option::Some(ImessageSafeLibraryDispatcher {
+            class_hash: core::serde::Serde::deserialize(ref serialized)?,
+        })
+    }
+}
+impl StoreImessageSafeLibraryDispatcher of starknet::Store::<ImessageSafeLibraryDispatcher> {
+    fn read(address_domain: u32, base: starknet::storage_access::StorageBaseAddress) -> starknet::SyscallResult<ImessageSafeLibraryDispatcher> {
+        let class_hash = starknet::Store::<starknet::ClassHash>::read(address_domain, base)?;
+        starknet::SyscallResult::Ok(
+            ImessageSafeLibraryDispatcher {
+                class_hash,
+            }
+        )
+    }
+    fn write(address_domain: u32, base: starknet::storage_access::StorageBaseAddress, value: ImessageSafeLibraryDispatcher) -> starknet::SyscallResult<()> {
+        starknet::Store::<starknet::ClassHash>::write(address_domain, base, value.class_hash)?;
+        starknet::SyscallResult::Ok(())
+    }
+    fn read_at_offset(address_domain: u32, base: starknet::storage_access::StorageBaseAddress, offset: u8) -> starknet::SyscallResult<ImessageSafeLibraryDispatcher> {
+        let class_hash = starknet::Store::<starknet::ClassHash>::read_at_offset(address_domain, base, offset)?;
+        starknet::SyscallResult::Ok(
+            ImessageSafeLibraryDispatcher {
+                class_hash,
+            }
+        )
+    }
+    #[inline(always)]
+    fn write_at_offset(address_domain: u32, base: starknet::storage_access::StorageBaseAddress, offset: u8, value: ImessageSafeLibraryDispatcher) -> starknet::SyscallResult<()> {
+        starknet::Store::<starknet::ClassHash>::write_at_offset(address_domain, base, offset, value.class_hash)?;
+        starknet::SyscallResult::Ok(())
+    }
+    #[inline(always)]
+    fn size() -> u8 {
+        starknet::Store::<starknet::ClassHash>::size()
+    }
+}
+
+#[derive(Drop, Copy)]
+pub struct ImessageSafeLibraryDispatcherSubPointers {
+    pub class_hash: starknet::storage::StoragePointer<starknet::ClassHash>,
+}
+impl ImessageSafeLibraryDispatcherSubPointersImpl of starknet::storage::SubPointers<ImessageSafeLibraryDispatcher> {
+    type SubPointersType = ImessageSafeLibraryDispatcherSubPointers;
+    fn sub_pointers(self: starknet::storage::StoragePointer<ImessageSafeLibraryDispatcher>) -> ImessageSafeLibraryDispatcherSubPointers {
+        let base_address = self.__storage_pointer_address__;
+        let mut current_offset = self.__storage_pointer_offset__;
+        let class_hash_value = starknet::storage::StoragePointer {
+            __storage_pointer_address__: base_address,
+            __storage_pointer_offset__: current_offset,
+        };
+                ImessageSafeLibraryDispatcherSubPointers {
+           class_hash: class_hash_value,
+        }
+    }
+}
+#[derive(Drop, Copy)]
+pub struct ImessageSafeLibraryDispatcherSubPointersMut {
+    pub class_hash: starknet::storage::StoragePointer<starknet::storage::Mutable::<starknet::ClassHash>>,
+}
+impl ImessageSafeLibraryDispatcherSubPointersMutImpl of starknet::storage::SubPointersMut<ImessageSafeLibraryDispatcher> {
+    type SubPointersType = ImessageSafeLibraryDispatcherSubPointersMut;
+    fn sub_pointers_mut(self: starknet::storage::StoragePointer<starknet::storage::Mutable::<ImessageSafeLibraryDispatcher>>) -> ImessageSafeLibraryDispatcherSubPointersMut {
+        let base_address = self.__storage_pointer_address__;
+        let mut current_offset = self.__storage_pointer_offset__;
+        let class_hash_value = starknet::storage::StoragePointer {
+            __storage_pointer_address__: base_address,
+            __storage_pointer_offset__: current_offset,
+        };
+                ImessageSafeLibraryDispatcherSubPointersMut {
+           class_hash: class_hash_value,
+        }
+    }
+}
+impl ImessageSafeDispatcherCopy of core::traits::Copy::<ImessageSafeDispatcher>;
+impl ImessageSafeDispatcherDrop of core::traits::Drop::<ImessageSafeDispatcher>;
+impl ImessageSafeDispatcherSerde of core::serde::Serde::<ImessageSafeDispatcher> {
+    fn serialize(self: @ImessageSafeDispatcher, ref output: core::array::Array<felt252>) {
+        core::serde::Serde::serialize(self.contract_address, ref output)
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<ImessageSafeDispatcher> {
+        core::option::Option::Some(ImessageSafeDispatcher {
+            contract_address: core::serde::Serde::deserialize(ref serialized)?,
+        })
+    }
+}
+impl StoreImessageSafeDispatcher of starknet::Store::<ImessageSafeDispatcher> {
+    fn read(address_domain: u32, base: starknet::storage_access::StorageBaseAddress) -> starknet::SyscallResult<ImessageSafeDispatcher> {
+        let contract_address = starknet::Store::<starknet::ContractAddress>::read(address_domain, base)?;
+        starknet::SyscallResult::Ok(
+            ImessageSafeDispatcher {
+                contract_address,
+            }
+        )
+    }
+    fn write(address_domain: u32, base: starknet::storage_access::StorageBaseAddress, value: ImessageSafeDispatcher) -> starknet::SyscallResult<()> {
+        starknet::Store::<starknet::ContractAddress>::write(address_domain, base, value.contract_address)?;
+        starknet::SyscallResult::Ok(())
+    }
+    fn read_at_offset(address_domain: u32, base: starknet::storage_access::StorageBaseAddress, offset: u8) -> starknet::SyscallResult<ImessageSafeDispatcher> {
+        let contract_address = starknet::Store::<starknet::ContractAddress>::read_at_offset(address_domain, base, offset)?;
+        starknet::SyscallResult::Ok(
+            ImessageSafeDispatcher {
+                contract_address,
+            }
+        )
+    }
+    #[inline(always)]
+    fn write_at_offset(address_domain: u32, base: starknet::storage_access::StorageBaseAddress, offset: u8, value: ImessageSafeDispatcher) -> starknet::SyscallResult<()> {
+        starknet::Store::<starknet::ContractAddress>::write_at_offset(address_domain, base, offset, value.contract_address)?;
+        starknet::SyscallResult::Ok(())
+    }
+    #[inline(always)]
+    fn size() -> u8 {
+        starknet::Store::<starknet::ContractAddress>::size()
+    }
+}
+
+#[derive(Drop, Copy)]
+pub struct ImessageSafeDispatcherSubPointers {
+    pub contract_address: starknet::storage::StoragePointer<starknet::ContractAddress>,
+}
+impl ImessageSafeDispatcherSubPointersImpl of starknet::storage::SubPointers<ImessageSafeDispatcher> {
+    type SubPointersType = ImessageSafeDispatcherSubPointers;
+    fn sub_pointers(self: starknet::storage::StoragePointer<ImessageSafeDispatcher>) -> ImessageSafeDispatcherSubPointers {
+        let base_address = self.__storage_pointer_address__;
+        let mut current_offset = self.__storage_pointer_offset__;
+        let contract_address_value = starknet::storage::StoragePointer {
+            __storage_pointer_address__: base_address,
+            __storage_pointer_offset__: current_offset,
+        };
+                ImessageSafeDispatcherSubPointers {
+           contract_address: contract_address_value,
+        }
+    }
+}
+#[derive(Drop, Copy)]
+pub struct ImessageSafeDispatcherSubPointersMut {
+    pub contract_address: starknet::storage::StoragePointer<starknet::storage::Mutable::<starknet::ContractAddress>>,
+}
+impl ImessageSafeDispatcherSubPointersMutImpl of starknet::storage::SubPointersMut<ImessageSafeDispatcher> {
+    type SubPointersType = ImessageSafeDispatcherSubPointersMut;
+    fn sub_pointers_mut(self: starknet::storage::StoragePointer<starknet::storage::Mutable::<ImessageSafeDispatcher>>) -> ImessageSafeDispatcherSubPointersMut {
+        let base_address = self.__storage_pointer_address__;
+        let mut current_offset = self.__storage_pointer_offset__;
+        let contract_address_value = starknet::storage::StoragePointer {
+            __storage_pointer_address__: base_address,
+            __storage_pointer_offset__: current_offset,
+        };
+                ImessageSafeDispatcherSubPointersMut {
+           contract_address: contract_address_value,
+        }
+    }
+}
+impl ImessageDispatcherSubPointersDrop of core::traits::Drop::<ImessageDispatcherSubPointers>;
+impl ImessageDispatcherSubPointersCopy of core::traits::Copy::<ImessageDispatcherSubPointers>;
+impl ImessageDispatcherSubPointersMutDrop of core::traits::Drop::<ImessageDispatcherSubPointersMut>;
+impl ImessageDispatcherSubPointersMutCopy of core::traits::Copy::<ImessageDispatcherSubPointersMut>;
+impl ImessageLibraryDispatcherSubPointersDrop of core::traits::Drop::<ImessageLibraryDispatcherSubPointers>;
+impl ImessageLibraryDispatcherSubPointersCopy of core::traits::Copy::<ImessageLibraryDispatcherSubPointers>;
+impl ImessageLibraryDispatcherSubPointersMutDrop of core::traits::Drop::<ImessageLibraryDispatcherSubPointersMut>;
+impl ImessageLibraryDispatcherSubPointersMutCopy of core::traits::Copy::<ImessageLibraryDispatcherSubPointersMut>;
+impl ImessageSafeLibraryDispatcherSubPointersDrop of core::traits::Drop::<ImessageSafeLibraryDispatcherSubPointers>;
+impl ImessageSafeLibraryDispatcherSubPointersCopy of core::traits::Copy::<ImessageSafeLibraryDispatcherSubPointers>;
+impl ImessageSafeLibraryDispatcherSubPointersMutDrop of core::traits::Drop::<ImessageSafeLibraryDispatcherSubPointersMut>;
+impl ImessageSafeLibraryDispatcherSubPointersMutCopy of core::traits::Copy::<ImessageSafeLibraryDispatcherSubPointersMut>;
+impl ImessageSafeDispatcherSubPointersDrop of core::traits::Drop::<ImessageSafeDispatcherSubPointers>;
+impl ImessageSafeDispatcherSubPointersCopy of core::traits::Copy::<ImessageSafeDispatcherSubPointers>;
+impl ImessageSafeDispatcherSubPointersMutDrop of core::traits::Drop::<ImessageSafeDispatcherSubPointersMut>;
+impl ImessageSafeDispatcherSubPointersMutCopy of core::traits::Copy::<ImessageSafeDispatcherSubPointersMut>;
 
 //! > expected_diagnostics

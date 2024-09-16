@@ -381,7 +381,10 @@ pub mod world {
                     Model::<ResourceMetadata>::layout()
                 );
 
-            ResourceMetadataTrait::from_values(resource_selector, ref values)
+            match ResourceMetadataTrait::from_values(resource_selector, ref values) {
+                Option::Some(x) => x,
+                Option::None => { panic!("Model `ResourceMetadata`: deserialization failed.") }
+            }
         }
 
         /// Sets the metadata of the resource.

@@ -12,8 +12,8 @@ use dojo_world::manifest::Member;
 use starknet::core::utils::get_selector_from_name;
 
 use crate::data::{
-    compute_namespace, get_parameters, parse_members, serialize_keys_and_values,
-    serialize_member_ty, DEFAULT_DATA_VERSION,
+    compute_namespace, deserialize_keys_and_values, get_parameters, parse_members,
+    serialize_keys_and_values, serialize_member_ty, DEFAULT_DATA_VERSION,
 };
 use crate::plugin::{DojoAuxData, Model, DOJO_MODEL_ATTR};
 
@@ -70,15 +70,10 @@ pub fn handle_model_struct(
         ),
     };
 
-    let mut members_values: Vec<RewriteNode> = vec![];
-    let mut param_keys: Vec<String> = vec![];
-    let mut serialized_keys: Vec<RewriteNode> = vec![];
-    let mut serialized_param_keys: Vec<RewriteNode> = vec![];
-    let mut serialized_values: Vec<RewriteNode> = vec![];
-    let mut field_accessors: Vec<RewriteNode> = vec![];
-    let mut entity_field_accessors: Vec<RewriteNode> = vec![];
-
     let members = parse_members(db, &struct_ast.members(db).elements(db), &mut diagnostics);
+
+    let mut serialized_keys: Vec<RewriteNode> = vec![];
+    let mut serialized_values: Vec<RewriteNode> = vec![];
 
     serialize_keys_and_values(
         &members,
@@ -104,16 +99,38 @@ pub fn handle_model_struct(
         });
     }
 
+    let mut deserialized_keys: Vec<RewriteNode> = vec![];
+    let mut deserialized_values: Vec<RewriteNode> = vec![];
+
+    deserialize_keys_and_values(
+        &members,
+        "keys",
+        &mut deserialized_keys,
+        "values",
+        &mut deserialized_values,
+    );
+
+    let mut member_key_names: Vec<RewriteNode> = vec![];
+    let mut member_value_names: Vec<RewriteNode> = vec![];
+    let mut members_values: Vec<RewriteNode> = vec![];
+    let mut param_keys: Vec<String> = vec![];
+    let mut serialized_param_keys: Vec<RewriteNode> = vec![];
+
     members.iter().for_each(|member| {
         if member.key {
             param_keys.push(format!("{}: {}", member.name, member.ty));
             serialized_param_keys.push(serialize_member_ty(member, false, "serialized"));
+            member_key_names.push(RewriteNode::Text(format!("{},\n", member.name.clone())));
         } else {
             members_values
                 .push(RewriteNode::Text(format!("pub {}: {},\n", member.name, member.ty)));
+            member_value_names.push(RewriteNode::Text(format!("{},\n", member.name.clone())));
         }
     });
     let param_keys = param_keys.join(", ");
+
+    let mut field_accessors: Vec<RewriteNode> = vec![];
+    let mut entity_field_accessors: Vec<RewriteNode> = vec![];
 
     members.iter().filter(|m| !m.key).for_each(|member| {
         field_accessors.push(generate_field_accessors(
@@ -165,22 +182,16 @@ pub impl $type_name$StoreImpl of $type_name$Store {
         core::poseidon::poseidon_hash_span(serialized.span())
     }
 
-    fn from_values(ref keys: Span<felt252>, ref values: Span<felt252>) -> $type_name$ {
-        let mut serialized = core::array::ArrayTrait::new();
-        serialized.append_span(keys);
-        serialized.append_span(values);
-        let mut serialized = core::array::ArrayTrait::span(@serialized);
+    fn from_values(ref keys: Span<felt252>, ref values: Span<felt252>) -> Option<$type_name$> {
+        $deserialized_keys$
+        $deserialized_values$
 
-        let entity = core::serde::Serde::<$type_name$>::deserialize(ref serialized);
-
-        if core::option::OptionTrait::<$type_name$>::is_none(@entity) {
-            panic!(
-                \"Model `$type_name$`: deserialization failed. Ensure the length of the keys tuple \
-             is matching the number of #[key] fields in the model struct.\"
-            );
-        }
-
-        core::option::OptionTrait::<$type_name$>::unwrap(entity)
+        Option::Some(
+            $type_name$ {
+                $member_key_names$
+                $member_value_names$
+            }
+        )
     }
 
     fn get(world: dojo::world::IWorldDispatcher, $param_keys$) -> $type_name$ {
@@ -212,18 +223,15 @@ pub impl $type_name$ModelEntityImpl of dojo::model::ModelEntity<$type_name$Entit
         core::array::ArrayTrait::span(@serialized)
     }
 
-    fn from_values(entity_id: felt252, ref values: Span<felt252>) -> $type_name$Entity {
-        let mut serialized = array![entity_id];
-        serialized.append_span(values);
-        let mut serialized = core::array::ArrayTrait::span(@serialized);
+    fn from_values(entity_id: felt252, ref values: Span<felt252>) -> Option<$type_name$Entity> {
+        $deserialized_values$
 
-        let entity_values = core::serde::Serde::<$type_name$Entity>::deserialize(ref serialized);
-        if core::option::OptionTrait::<$type_name$Entity>::is_none(@entity_values) {
-            panic!(
-                \"ModelEntity `$type_name$Entity`: deserialization failed.\"
-            );
-        }
-        core::option::OptionTrait::<$type_name$Entity>::unwrap(entity_values)
+        Option::Some(
+            $type_name$Entity {
+                __id: entity_id,
+                $member_value_names$
+            }
+        )
     }
 
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> $type_name$Entity {
@@ -233,7 +241,12 @@ pub impl $type_name$ModelEntityImpl of dojo::model::ModelEntity<$type_name$Entit
             dojo::model::ModelIndex::Id(entity_id),
             dojo::model::Model::<$type_name$>::layout()
         );
-        Self::from_values(entity_id, ref values)
+        match Self::from_values(entity_id, ref values) {
+            Option::Some(x) => x,
+            Option::None => {
+                panic!(\"ModelEntity `$type_name$Entity`: deserialization failed.\")
+            }
+        }
     }
 
     fn update_entity(self: @$type_name$Entity, world: dojo::world::IWorldDispatcher) {
@@ -334,7 +347,12 @@ pub impl $type_name$ModelImpl of dojo::model::Model<$type_name$> {
         );
         let mut _keys = keys;
 
-        $type_name$Store::from_values(ref _keys, ref values)
+        match $type_name$Store::from_values(ref _keys, ref values) {
+            Option::Some(x) => x,
+            Option::None => {
+                panic!(\"Model `$type_name$`: deserialization failed.\")
+            }
+        }
     }
 
    fn set_model(
@@ -580,8 +598,12 @@ pub mod $contract_name$ {
             &UnorderedHashMap::from([
                 ("contract_name".to_string(), RewriteNode::Text(model_name.to_case(Case::Snake))),
                 ("type_name".to_string(), RewriteNode::Text(model_name)),
+                ("member_key_names".to_string(), RewriteNode::new_modified(member_key_names)),
+                ("member_value_names".to_string(), RewriteNode::new_modified(member_value_names)),
                 ("serialized_keys".to_string(), RewriteNode::new_modified(serialized_keys)),
                 ("serialized_values".to_string(), RewriteNode::new_modified(serialized_values)),
+                ("deserialized_keys".to_string(), RewriteNode::new_modified(deserialized_keys)),
+                ("deserialized_values".to_string(), RewriteNode::new_modified(deserialized_values)),
                 ("model_version".to_string(), model_version),
                 ("model_selector".to_string(), model_selector),
                 ("model_namespace".to_string(), RewriteNode::Text(model_namespace.clone())),
