@@ -102,7 +102,7 @@ pub trait StarknetApi {
     /// Get the contract class definition in the given block associated with the given hash.
     #[method(name = "getClass")]
     async fn get_class(&self, block_id: BlockIdOrTag, class_hash: Felt)
-        -> RpcResult<ContractClass>;
+    -> RpcResult<ContractClass>;
 
     /// Get the contract class hash in the given block for the contract deployed at the given
     /// address.

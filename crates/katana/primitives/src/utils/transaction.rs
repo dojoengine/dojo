@@ -57,7 +57,7 @@ pub fn compute_deploy_account_v1_tx_hash(
 
     compute_hash_on_elements(&[
         PREFIX_DEPLOY_ACCOUNT,
-        if is_query { QUERY_VERSION_OFFSET + Felt::ONE } else { Felt::ONE }, /* version */
+        if is_query { QUERY_VERSION_OFFSET + Felt::ONE } else { Felt::ONE }, // version
         sender_address,
         Felt::ZERO, // entry_point_selector
         compute_hash_on_elements(&calldata_to_hash),
@@ -86,7 +86,7 @@ pub fn compute_deploy_account_v3_tx_hash(
 ) -> Felt {
     poseidon_hash_many(&[
         PREFIX_DEPLOY_ACCOUNT,
-        if is_query { QUERY_VERSION_OFFSET + Felt::THREE } else { Felt::THREE }, /* version */
+        if is_query { QUERY_VERSION_OFFSET + Felt::THREE } else { Felt::THREE }, // version
         contract_address,
         hash_fee_fields(tip, l1_gas_bounds, l2_gas_bounds),
         poseidon_hash_many(paymaster_data),
@@ -110,7 +110,7 @@ pub fn compute_declare_v1_tx_hash(
 ) -> Felt {
     compute_hash_on_elements(&[
         PREFIX_DECLARE,
-        if is_query { QUERY_VERSION_OFFSET + Felt::ONE } else { Felt::ONE }, /* version */
+        if is_query { QUERY_VERSION_OFFSET + Felt::ONE } else { Felt::ONE }, // version
         sender_address,
         Felt::ZERO, // entry_point_selector
         compute_hash_on_elements(&[class_hash]),
@@ -132,7 +132,7 @@ pub fn compute_declare_v2_tx_hash(
 ) -> Felt {
     compute_hash_on_elements(&[
         PREFIX_DECLARE,
-        if is_query { QUERY_VERSION_OFFSET + Felt::TWO } else { Felt::TWO }, /* version */
+        if is_query { QUERY_VERSION_OFFSET + Felt::TWO } else { Felt::TWO }, // version
         sender_address,
         Felt::ZERO, // entry_point_selector
         compute_hash_on_elements(&[class_hash]),
@@ -162,7 +162,7 @@ pub fn compute_declare_v3_tx_hash(
 ) -> Felt {
     poseidon_hash_many(&[
         PREFIX_DECLARE,
-        if is_query { QUERY_VERSION_OFFSET + Felt::THREE } else { Felt::THREE }, /* version */
+        if is_query { QUERY_VERSION_OFFSET + Felt::THREE } else { Felt::THREE }, // version
         sender_address,
         hash_fee_fields(tip, l1_gas_bounds, l2_gas_bounds),
         poseidon_hash_many(paymaster_data),
@@ -186,7 +186,7 @@ pub fn compute_invoke_v1_tx_hash(
 ) -> Felt {
     compute_hash_on_elements(&[
         PREFIX_INVOKE,
-        if is_query { QUERY_VERSION_OFFSET + Felt::ONE } else { Felt::ONE }, /* version */
+        if is_query { QUERY_VERSION_OFFSET + Felt::ONE } else { Felt::ONE }, // version
         sender_address,
         Felt::ZERO, // entry_point_selector
         compute_hash_on_elements(calldata),
@@ -214,7 +214,7 @@ pub fn compute_invoke_v3_tx_hash(
 ) -> Felt {
     poseidon_hash_many(&[
         PREFIX_INVOKE,
-        if is_query { QUERY_VERSION_OFFSET + Felt::THREE } else { Felt::THREE }, /* version */
+        if is_query { QUERY_VERSION_OFFSET + Felt::THREE } else { Felt::THREE }, // version
         sender_address,
         hash_fee_fields(tip, l1_gas_bounds, l2_gas_bounds),
         poseidon_hash_many(paymaster_data),
