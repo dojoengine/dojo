@@ -270,6 +270,8 @@ pub async fn model_fixtures(db: &mut Sql) {
     )
     .await
     .unwrap();
+
+    db.execute().await.unwrap();
 }
 
 pub async fn spinup_types_test() -> Result<SqlitePool> {

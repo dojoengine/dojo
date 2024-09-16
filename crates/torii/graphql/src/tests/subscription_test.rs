@@ -24,7 +24,6 @@ mod tests {
         let mut db = Sql::new(pool.clone(), Felt::ZERO).await.unwrap();
 
         model_fixtures(&mut db).await;
-        db.execute().await.unwrap();
         // 0. Preprocess expected entity value
         let namespace = "types_test".to_string();
         let model_name = "Record".to_string();
