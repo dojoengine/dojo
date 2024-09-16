@@ -233,7 +233,7 @@ impl NodeArgs {
             print_intro(&self, genesis, node.rpc.addr);
         }
 
-        // Wait until a signal is received or TaskManager signals shutdown
+        // Wait until an OS signal is received or TaskManager shutdown
         tokio::select! {
             _ = wait_signal() => {},
             _ = node.task_manager.wait_for_shutdown() => {}
