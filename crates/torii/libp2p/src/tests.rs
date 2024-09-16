@@ -588,6 +588,7 @@ mod test {
         )
         .await
         .unwrap();
+        db.execute().await.unwrap();
 
         // Initialize the relay server
         let mut relay_server = Relay::new(db, provider, 9900, 9901, 9902, None, None)?;
