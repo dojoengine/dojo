@@ -42,7 +42,12 @@ pub struct Sql {
 
 impl Clone for Sql {
     fn clone(&self) -> Self {
-        Self { world_address: self.world_address, pool: self.pool.clone(), query_queue: QueryQueue::new(self.pool.clone()), model_cache: self.model_cache.clone() }
+        Self {
+            world_address: self.world_address,
+            pool: self.pool.clone(),
+            query_queue: QueryQueue::new(self.pool.clone()),
+            model_cache: self.model_cache.clone(),
+        }
     }
 }
 
@@ -177,7 +182,7 @@ impl Sql {
             &mut 0,
             &mut 0,
         );
-        
+
         self.query_queue.push_publish(BrokerMessage::ModelRegistered(model_registered));
 
         Ok(())

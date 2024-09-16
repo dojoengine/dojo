@@ -13,10 +13,12 @@ use starknet::core::types::{
 };
 use starknet::providers::Provider;
 use starknet_crypto::poseidon_hash_many;
-use tokio::sync::{broadcast::Sender, mpsc::Sender as BoundedSender, Semaphore};
+use tokio::sync::broadcast::Sender;
+use tokio::sync::mpsc::Sender as BoundedSender;
+use tokio::sync::Semaphore;
+use tokio::task::JoinSet;
 use tokio::time::sleep;
 use tracing::{debug, error, info, trace, warn};
-use tokio::task::JoinSet;
 
 use crate::processors::event_message::EventMessageProcessor;
 use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
@@ -114,7 +116,16 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         shutdown_tx: Sender<()>,
         block_tx: Option<BoundedSender<u64>>,
     ) -> Self {
-        Self { world: Arc::new(world), db, provider: Box::new(provider), processors: Arc::new(processors), config, shutdown_tx, block_tx, tasks: HashMap::new() }
+        Self {
+            world: Arc::new(world),
+            db,
+            provider: Box::new(provider),
+            processors: Arc::new(processors),
+            config,
+            shutdown_tx,
+            block_tx,
+            tasks: HashMap::new(),
+        }
     }
 
     pub async fn start(&mut self) -> Result<()> {
@@ -452,7 +463,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             let processors = self.processors.clone();
             let block_timestamp = data.blocks[&last_block];
             let semaphore = semaphore.clone();
-            
+
             set.spawn(async move {
                 let _permit = semaphore.acquire().await.unwrap();
                 let mut local_db = db.clone();
