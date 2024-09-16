@@ -11,7 +11,7 @@ use futures::stream::{Fuse, Stream, StreamExt};
 use katana_executor::ExecutorFactory;
 use katana_pool::{TransactionPool, TxPool};
 use katana_primitives::transaction::ExecutableTxWithHash;
-use katana_primitives::FieldElement;
+use katana_primitives::Felt;
 use tracing::{error, info};
 
 use self::block_producer::BlockProducer;
@@ -97,11 +97,11 @@ pub struct TransactionMiner {
     /// stores whether there are pending transacions (if known)
     has_pending_txs: Option<bool>,
     /// Receives hashes of transactions that are ready from the pool
-    rx: Fuse<Receiver<FieldElement>>,
+    rx: Fuse<Receiver<Felt>>,
 }
 
 impl TransactionMiner {
-    pub fn new(rx: Receiver<FieldElement>) -> Self {
+    pub fn new(rx: Receiver<Felt>) -> Self {
         Self { rx: rx.fuse(), has_pending_txs: None }
     }
 

@@ -4,7 +4,7 @@ use jsonrpsee::core::{async_trait, Error};
 use katana_core::backend::Backend;
 use katana_core::service::block_producer::{BlockProducer, BlockProducerMode, PendingExecutor};
 use katana_executor::ExecutorFactory;
-use katana_primitives::FieldElement;
+use katana_primitives::Felt;
 use katana_rpc_api::dev::DevApiServer;
 use katana_rpc_types::account::Account;
 use katana_rpc_types::error::dev::DevApiError;
@@ -81,9 +81,9 @@ impl<EF: ExecutorFactory> DevApiServer for DevApi<EF> {
 
     async fn set_storage_at(
         &self,
-        _contract_address: FieldElement,
-        _key: FieldElement,
-        _value: FieldElement,
+        _contract_address: Felt,
+        _key: Felt,
+        _value: Felt,
     ) -> Result<(), Error> {
         // self.sequencer
         //     .set_storage_at(contract_address.into(), key, value)

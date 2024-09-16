@@ -1,14 +1,14 @@
 use core::fmt;
 use std::num::ParseIntError;
 
-use crate::FieldElement;
+use crate::Felt;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct OrderedEvent {
     pub order: u64,
-    pub keys: Vec<FieldElement>,
-    pub data: Vec<FieldElement>,
+    pub keys: Vec<Felt>,
+    pub data: Vec<Felt>,
 }
 
 /// Represents a continuation token for implementing paging in event queries.

@@ -19,8 +19,4 @@ pub mod conversion;
 pub mod state;
 pub mod utils;
 
-pub use felt::FieldElement;
-
-pub mod felt {
-    pub use starknet::core::types::{Felt as FieldElement, FromStrError};
-}
+pub use starknet::core::types::{Felt, FromStrError};

@@ -148,7 +148,7 @@ mod tests {
     use katana_primitives::state::StateUpdatesWithDeclaredClasses;
     use katana_primitives::trace::TxExecInfo;
     use katana_primitives::transaction::{InvokeTx, Tx, TxWithHash};
-    use katana_primitives::FieldElement;
+    use katana_primitives::Felt;
     use katana_provider::providers::in_memory::InMemoryProvider;
     use katana_provider::traits::block::{
         BlockHashProvider, BlockNumberProvider, BlockProvider, BlockStatusProvider, BlockWriter,
@@ -185,7 +185,7 @@ mod tests {
 
         let genesis = Genesis {
             number: 23,
-            parent_hash: FieldElement::ZERO,
+            parent_hash: Felt::ZERO,
             state_root: felt!("1334"),
             timestamp: 6868,
             gas_prices: GasPrices { eth: 9090, strk: 8080 },
@@ -233,7 +233,7 @@ mod tests {
             status: FinalityStatus::AcceptedOnL1,
             block: Block {
                 header: Header {
-                    parent_hash: FieldElement::ZERO,
+                    parent_hash: Felt::ZERO,
                     number: 1,
                     gas_prices: GasPrices::default(),
                     timestamp: 123456,

@@ -445,7 +445,7 @@ impl StateRootProvider for InMemoryProvider {
     fn state_root(
         &self,
         block_id: BlockHashOrNumber,
-    ) -> ProviderResult<Option<katana_primitives::FieldElement>> {
+    ) -> ProviderResult<Option<katana_primitives::Felt>> {
         let state_root = self.block_number_by_id(block_id)?.and_then(|num| {
             self.storage.read().block_headers.get(&num).map(|header| header.state_root)
         });

@@ -21,7 +21,7 @@ use katana_primitives::transaction::{
 };
 use katana_primitives::utils::class::{parse_compiled_class, parse_sierra_class};
 use katana_primitives::version::Version;
-use katana_primitives::FieldElement;
+use katana_primitives::Felt;
 use katana_provider::providers::in_memory::InMemoryProvider;
 use katana_provider::traits::block::BlockWriter;
 use katana_provider::traits::state::{StateFactoryProvider, StateProvider};
@@ -120,7 +120,7 @@ pub fn valid_blocks() -> [ExecutableBlock; 3] {
                     ],
                     max_fee: 4367000000000000,
                     signature: vec![],
-                    nonce: FieldElement::ZERO,
+                    nonce: Felt::ZERO,
                 }))),
                 // declare contract
                 ExecutableTxWithHash::new(ExecutableTx::Declare({
@@ -129,7 +129,7 @@ pub fn valid_blocks() -> [ExecutableBlock; 3] {
                         compiled_class,
                         sierra_class: Some(sierra),
                         transaction: DeclareTx::V2(DeclareTxV2 {
-                            nonce: FieldElement::ONE,
+                            nonce: Felt::ONE,
                             max_fee: 27092100000000000,
                             chain_id,
                             signature: vec![],
@@ -208,7 +208,7 @@ pub fn valid_blocks() -> [ExecutableBlock; 3] {
                     ],
                     max_fee: 2700700000000000,
                     signature: vec![],
-                    nonce: FieldElement::TWO,
+                    nonce: Felt::TWO,
                 }))),
             ],
         },

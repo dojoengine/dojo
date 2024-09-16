@@ -5,7 +5,7 @@ use starknet::macros::felt;
 use crate::class::{ClassHash, CompiledClass, CompiledClassHash, SierraClass};
 use crate::contract::{ContractAddress, StorageKey};
 use crate::utils::class::{parse_compiled_class, parse_sierra_class};
-use crate::FieldElement;
+use crate::Felt;
 
 /// The default universal deployer contract address.
 /// Corresponds to 0x041a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf
@@ -106,7 +106,7 @@ lazy_static! {
 ///
 /// This is to compute the base storage address of the balance because the fee token balance is
 /// stored as a U256 value and as such has to be split into two U128 values (low and high).
-pub(super) fn get_fee_token_balance_base_storage_address(address: ContractAddress) -> FieldElement {
+pub(super) fn get_fee_token_balance_base_storage_address(address: ContractAddress) -> Felt {
     get_storage_var_address("ERC20_balances", &[address.into()]).unwrap()
 }
 

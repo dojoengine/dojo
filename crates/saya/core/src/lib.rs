@@ -13,7 +13,6 @@ use futures::future;
 use katana_primitives::block::{BlockNumber, FinalityStatus, SealedBlock, SealedBlockWithStatus};
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
 use katana_primitives::transaction::Tx;
-use katana_primitives::FieldElement;
 use katana_rpc_types::trace::TxExecutionInfo;
 use prover::{HttpProverParams, ProverIdentifier};
 pub use prover_sdk::ProverAccessKey;
@@ -55,8 +54,8 @@ pub struct SayaConfig {
     pub start_block: u64,
     pub batch_size: usize,
     pub data_availability: Option<DataAvailabilityConfig>,
-    pub world_address: FieldElement,
-    pub fact_registry_address: FieldElement,
+    pub world_address: Felt,
+    pub fact_registry_address: Felt,
     pub skip_publishing_proof: bool,
     pub starknet_account: StarknetAccountData,
 }
@@ -66,9 +65,9 @@ pub struct StarknetAccountData {
     #[serde(deserialize_with = "url_deserializer")]
     pub starknet_url: Url,
     #[serde(deserialize_with = "felt_string_deserializer")]
-    pub chain_id: FieldElement,
-    pub signer_address: FieldElement,
-    pub signer_key: FieldElement,
+    pub chain_id: Felt,
+    pub signer_address: Felt,
+    pub signer_key: Felt,
 }
 
 pub fn url_deserializer<'de, D>(deserializer: D) -> Result<Url, D::Error>
@@ -79,7 +78,7 @@ where
     Url::parse(&s).map_err(serde::de::Error::custom)
 }
 
-pub fn felt_string_deserializer<'de, D>(deserializer: D) -> Result<FieldElement, D::Error>
+pub fn felt_string_deserializer<'de, D>(deserializer: D) -> Result<Felt, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
@@ -103,7 +102,7 @@ pub struct Saya {
 struct FetchedBlockInfo {
     block_number: BlockNumber,
     block: SealedBlock,
-    prev_state_root: FieldElement,
+    prev_state_root: Felt,
     state_updates: StateUpdatesWithDeclaredClasses,
     exec_infos: Vec<TxExecutionInfo>,
 }
@@ -199,8 +198,8 @@ impl Saya {
     async fn prefetch_blocks(
         &mut self,
         block_numbers: RangeInclusive<BlockNumber>,
-        previous_block_state_root: FieldElement,
-    ) -> SayaResult<(FieldElement, Vec<FetchedBlockInfo>)> {
+        previous_block_state_root: Felt,
+    ) -> SayaResult<(Felt, Vec<FetchedBlockInfo>)> {
         // Fetch all blocks from the current block to the latest block
         let fetched_blocks = future::try_join_all(
             block_numbers.clone().map(|block_number| self.provider.fetch_block(block_number)),
@@ -319,7 +318,7 @@ impl Saya {
             prev_state_root,
             block_number,
             block_hash: block.block.header.hash,
-            config_hash: FieldElement::from(0u64),
+            config_hash: Felt::from(0u64),
             message_to_starknet_segment,
             message_to_appchain_segment,
             state_updates: state_updates_to_prove,
@@ -354,7 +353,7 @@ impl Saya {
             file.write_all(proof.as_bytes()).await.context("Failed to write proof.")?;
         }
 
-        let serialized_proof: Vec<FieldElement> = parse(&proof)?.into();
+        let serialized_proof: Vec<Felt> = parse(&proof)?.into();
         let world_da = state_diff.world_da.unwrap();
 
         // Publish state difference if DA client is available

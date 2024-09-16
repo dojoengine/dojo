@@ -13,7 +13,7 @@ use katana_primitives::transaction::{
     DeclareTx, DeclareTxV1, DeclareTxV2, DeclareTxV3, DeclareTxWithClass, DeployAccountTx,
     DeployAccountTxV1, DeployAccountTxV3, InvokeTx, InvokeTxV1, InvokeTxV3, TxHash, TxWithHash,
 };
-use katana_primitives::FieldElement;
+use katana_primitives::Felt;
 use num_traits::ToPrimitive;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::{
@@ -188,7 +188,7 @@ impl BroadcastedDeployAccountTx {
                     tx.contract_address_salt,
                     tx.class_hash,
                     &tx.constructor_calldata,
-                    FieldElement::ZERO,
+                    Felt::ZERO,
                 );
 
                 DeployAccountTx::V1(DeployAccountTxV1 {
@@ -208,7 +208,7 @@ impl BroadcastedDeployAccountTx {
                     tx.contract_address_salt,
                     tx.class_hash,
                     &tx.constructor_calldata,
-                    FieldElement::ZERO,
+                    Felt::ZERO,
                 );
 
                 DeployAccountTx::V3(DeployAccountTxV3 {
@@ -459,7 +459,7 @@ impl From<BroadcastedDeployAccountTx> for DeployAccountTx {
                     tx.contract_address_salt,
                     tx.class_hash,
                     &tx.constructor_calldata,
-                    FieldElement::ZERO,
+                    Felt::ZERO,
                 );
 
                 DeployAccountTx::V1(DeployAccountTxV1 {
@@ -479,7 +479,7 @@ impl From<BroadcastedDeployAccountTx> for DeployAccountTx {
                     tx.contract_address_salt,
                     tx.class_hash,
                     &tx.constructor_calldata,
-                    FieldElement::ZERO,
+                    Felt::ZERO,
                 );
 
                 DeployAccountTx::V3(DeployAccountTxV3 {

@@ -3,14 +3,14 @@ use starknet::core::crypto::compute_hash_on_elements;
 use starknet::core::types::{DataAvailabilityMode, EthAddress, MsgToL1, MsgToL2, ResourceBounds};
 use starknet_crypto::poseidon_hash_many;
 
-use crate::FieldElement;
+use crate::Felt;
 
 /// 2^ 128
-const QUERY_VERSION_OFFSET: FieldElement =
-    FieldElement::from_raw([576460752142434320, 18446744073709551584, 17407, 18446744073700081665]);
+const QUERY_VERSION_OFFSET: Felt =
+    Felt::from_raw([576460752142434320, 18446744073709551584, 17407, 18446744073700081665]);
 
 /// Cairo string for "invoke"
-const PREFIX_INVOKE: FieldElement = FieldElement::from_raw([
+const PREFIX_INVOKE: Felt = Felt::from_raw([
     513398556346534256,
     18446744073709551615,
     18446744073709551615,
@@ -18,7 +18,7 @@ const PREFIX_INVOKE: FieldElement = FieldElement::from_raw([
 ]);
 
 /// Cairo string for "declare"
-const PREFIX_DECLARE: FieldElement = FieldElement::from_raw([
+const PREFIX_DECLARE: Felt = Felt::from_raw([
     191557713328401194,
     18446744073709551615,
     18446744073709551615,
@@ -26,7 +26,7 @@ const PREFIX_DECLARE: FieldElement = FieldElement::from_raw([
 ]);
 
 /// Cairo string for "deploy_account"
-const PREFIX_DEPLOY_ACCOUNT: FieldElement = FieldElement::from_raw([
+const PREFIX_DEPLOY_ACCOUNT: Felt = Felt::from_raw([
     461298303000467581,
     18446744073709551615,
     18443211694809419988,
@@ -34,7 +34,7 @@ const PREFIX_DEPLOY_ACCOUNT: FieldElement = FieldElement::from_raw([
 ]);
 
 /// Cairo string for "l1_handler"
-const PREFIX_L1_HANDLER: FieldElement = FieldElement::from_raw([
+const PREFIX_L1_HANDLER: Felt = Felt::from_raw([
     157895833347907735,
     18446744073709551615,
     18446744073708665300,
@@ -44,22 +44,22 @@ const PREFIX_L1_HANDLER: FieldElement = FieldElement::from_raw([
 /// Compute the hash of a V1 DeployAccount transaction.
 #[allow(clippy::too_many_arguments)]
 pub fn compute_deploy_account_v1_tx_hash(
-    sender_address: FieldElement,
-    constructor_calldata: &[FieldElement],
-    class_hash: FieldElement,
-    contract_address_salt: FieldElement,
+    sender_address: Felt,
+    constructor_calldata: &[Felt],
+    class_hash: Felt,
+    contract_address_salt: Felt,
     max_fee: u128,
-    chain_id: FieldElement,
-    nonce: FieldElement,
+    chain_id: Felt,
+    nonce: Felt,
     is_query: bool,
-) -> FieldElement {
+) -> Felt {
     let calldata_to_hash = [&[class_hash, contract_address_salt], constructor_calldata].concat();
 
     compute_hash_on_elements(&[
         PREFIX_DEPLOY_ACCOUNT,
-        if is_query { QUERY_VERSION_OFFSET + FieldElement::ONE } else { FieldElement::ONE }, /* version */
+        if is_query { QUERY_VERSION_OFFSET + Felt::ONE } else { Felt::ONE }, /* version */
         sender_address,
-        FieldElement::ZERO, // entry_point_selector
+        Felt::ZERO, // entry_point_selector
         compute_hash_on_elements(&calldata_to_hash),
         max_fee.into(),
         chain_id,
@@ -70,23 +70,23 @@ pub fn compute_deploy_account_v1_tx_hash(
 /// Compute the hash of a V3 DeployAccount transaction.
 #[allow(clippy::too_many_arguments)]
 pub fn compute_deploy_account_v3_tx_hash(
-    contract_address: FieldElement,
-    constructor_calldata: &[FieldElement],
-    class_hash: FieldElement,
-    contract_address_salt: FieldElement,
+    contract_address: Felt,
+    constructor_calldata: &[Felt],
+    class_hash: Felt,
+    contract_address_salt: Felt,
     tip: u64,
     l1_gas_bounds: &ResourceBounds,
     l2_gas_bounds: &ResourceBounds,
-    paymaster_data: &[FieldElement],
-    chain_id: FieldElement,
-    nonce: FieldElement,
+    paymaster_data: &[Felt],
+    chain_id: Felt,
+    nonce: Felt,
     nonce_da_mode: &DataAvailabilityMode,
     fee_da_mode: &DataAvailabilityMode,
     is_query: bool,
-) -> FieldElement {
+) -> Felt {
     poseidon_hash_many(&[
         PREFIX_DEPLOY_ACCOUNT,
-        if is_query { QUERY_VERSION_OFFSET + FieldElement::THREE } else { FieldElement::THREE }, /* version */
+        if is_query { QUERY_VERSION_OFFSET + Felt::THREE } else { Felt::THREE }, /* version */
         contract_address,
         hash_fee_fields(tip, l1_gas_bounds, l2_gas_bounds),
         poseidon_hash_many(paymaster_data),
@@ -101,18 +101,18 @@ pub fn compute_deploy_account_v3_tx_hash(
 
 /// Compute the hash of a V1 Declare transaction.
 pub fn compute_declare_v1_tx_hash(
-    sender_address: FieldElement,
-    class_hash: FieldElement,
+    sender_address: Felt,
+    class_hash: Felt,
     max_fee: u128,
-    chain_id: FieldElement,
-    nonce: FieldElement,
+    chain_id: Felt,
+    nonce: Felt,
     is_query: bool,
-) -> FieldElement {
+) -> Felt {
     compute_hash_on_elements(&[
         PREFIX_DECLARE,
-        if is_query { QUERY_VERSION_OFFSET + FieldElement::ONE } else { FieldElement::ONE }, /* version */
+        if is_query { QUERY_VERSION_OFFSET + Felt::ONE } else { Felt::ONE }, /* version */
         sender_address,
-        FieldElement::ZERO, // entry_point_selector
+        Felt::ZERO, // entry_point_selector
         compute_hash_on_elements(&[class_hash]),
         max_fee.into(),
         chain_id,
@@ -122,19 +122,19 @@ pub fn compute_declare_v1_tx_hash(
 
 /// Compute the hash of a V2 Declare transaction.
 pub fn compute_declare_v2_tx_hash(
-    sender_address: FieldElement,
-    class_hash: FieldElement,
+    sender_address: Felt,
+    class_hash: Felt,
     max_fee: u128,
-    chain_id: FieldElement,
-    nonce: FieldElement,
-    compiled_class_hash: FieldElement,
+    chain_id: Felt,
+    nonce: Felt,
+    compiled_class_hash: Felt,
     is_query: bool,
-) -> FieldElement {
+) -> Felt {
     compute_hash_on_elements(&[
         PREFIX_DECLARE,
-        if is_query { QUERY_VERSION_OFFSET + FieldElement::TWO } else { FieldElement::TWO }, /* version */
+        if is_query { QUERY_VERSION_OFFSET + Felt::TWO } else { Felt::TWO }, /* version */
         sender_address,
-        FieldElement::ZERO, // entry_point_selector
+        Felt::ZERO, // entry_point_selector
         compute_hash_on_elements(&[class_hash]),
         max_fee.into(),
         chain_id,
@@ -146,23 +146,23 @@ pub fn compute_declare_v2_tx_hash(
 /// Compute the hash of a V3 Declare transaction.
 #[allow(clippy::too_many_arguments)]
 pub fn compute_declare_v3_tx_hash(
-    sender_address: FieldElement,
-    class_hash: FieldElement,
-    compiled_class_hash: FieldElement,
+    sender_address: Felt,
+    class_hash: Felt,
+    compiled_class_hash: Felt,
     tip: u64,
     l1_gas_bounds: &ResourceBounds,
     l2_gas_bounds: &ResourceBounds,
-    paymaster_data: &[FieldElement],
-    chain_id: FieldElement,
-    nonce: FieldElement,
+    paymaster_data: &[Felt],
+    chain_id: Felt,
+    nonce: Felt,
     nonce_da_mode: &DataAvailabilityMode,
     fee_da_mode: &DataAvailabilityMode,
-    account_deployment_data: &[FieldElement],
+    account_deployment_data: &[Felt],
     is_query: bool,
-) -> FieldElement {
+) -> Felt {
     poseidon_hash_many(&[
         PREFIX_DECLARE,
-        if is_query { QUERY_VERSION_OFFSET + FieldElement::THREE } else { FieldElement::THREE }, /* version */
+        if is_query { QUERY_VERSION_OFFSET + Felt::THREE } else { Felt::THREE }, /* version */
         sender_address,
         hash_fee_fields(tip, l1_gas_bounds, l2_gas_bounds),
         poseidon_hash_many(paymaster_data),
@@ -177,18 +177,18 @@ pub fn compute_declare_v3_tx_hash(
 
 /// Compute the hash of a V1 Invoke transaction.
 pub fn compute_invoke_v1_tx_hash(
-    sender_address: FieldElement,
-    calldata: &[FieldElement],
+    sender_address: Felt,
+    calldata: &[Felt],
     max_fee: u128,
-    chain_id: FieldElement,
-    nonce: FieldElement,
+    chain_id: Felt,
+    nonce: Felt,
     is_query: bool,
-) -> FieldElement {
+) -> Felt {
     compute_hash_on_elements(&[
         PREFIX_INVOKE,
-        if is_query { QUERY_VERSION_OFFSET + FieldElement::ONE } else { FieldElement::ONE }, /* version */
+        if is_query { QUERY_VERSION_OFFSET + Felt::ONE } else { Felt::ONE }, /* version */
         sender_address,
-        FieldElement::ZERO, // entry_point_selector
+        Felt::ZERO, // entry_point_selector
         compute_hash_on_elements(calldata),
         max_fee.into(),
         chain_id,
@@ -199,22 +199,22 @@ pub fn compute_invoke_v1_tx_hash(
 /// Compute the hash of a V3 Invoke transaction.
 #[allow(clippy::too_many_arguments)]
 pub fn compute_invoke_v3_tx_hash(
-    sender_address: FieldElement,
-    calldata: &[FieldElement],
+    sender_address: Felt,
+    calldata: &[Felt],
     tip: u64,
     l1_gas_bounds: &ResourceBounds,
     l2_gas_bounds: &ResourceBounds,
-    paymaster_data: &[FieldElement],
-    chain_id: FieldElement,
-    nonce: FieldElement,
+    paymaster_data: &[Felt],
+    chain_id: Felt,
+    nonce: Felt,
     nonce_da_mode: &DataAvailabilityMode,
     fee_da_mode: &DataAvailabilityMode,
-    account_deployment_data: &[FieldElement],
+    account_deployment_data: &[Felt],
     is_query: bool,
-) -> FieldElement {
+) -> Felt {
     poseidon_hash_many(&[
         PREFIX_INVOKE,
-        if is_query { QUERY_VERSION_OFFSET + FieldElement::THREE } else { FieldElement::THREE }, /* version */
+        if is_query { QUERY_VERSION_OFFSET + Felt::THREE } else { Felt::THREE }, /* version */
         sender_address,
         hash_fee_fields(tip, l1_gas_bounds, l2_gas_bounds),
         poseidon_hash_many(paymaster_data),
@@ -239,20 +239,20 @@ pub fn compute_invoke_v3_tx_hash(
 /// [Deoxys]: https://github.com/KasarLabs/deoxys/blob/82c49acdaa1167bc8dc67a3f6ad3d6856c6c7e89/crates/primitives/transactions/src/compute_hash.rs#L142-L151
 /// [Starknet docs]: https://docs.starknet.io/architecture-and-concepts/network-architecture/messaging-mechanism/#hashing_l1-l2
 pub fn compute_l1_handler_tx_hash(
-    version: FieldElement,
-    contract_address: FieldElement,
-    entry_point_selector: FieldElement,
-    calldata: &[FieldElement],
-    chain_id: FieldElement,
-    nonce: FieldElement,
-) -> FieldElement {
+    version: Felt,
+    contract_address: Felt,
+    entry_point_selector: Felt,
+    calldata: &[Felt],
+    chain_id: Felt,
+    nonce: Felt,
+) -> Felt {
     compute_hash_on_elements(&[
         PREFIX_L1_HANDLER,
         version,
         contract_address,
         entry_point_selector,
         compute_hash_on_elements(calldata),
-        FieldElement::ZERO, // No fee on L2 for L1 handler tx
+        Felt::ZERO, // No fee on L2 for L1 handler tx
         chain_id,
         nonce,
     ])
@@ -262,9 +262,9 @@ pub fn compute_l1_handler_tx_hash(
 ///
 /// The hash that is used to consume the message in L1.
 pub fn compute_l2_to_l1_message_hash(
-    from_address: FieldElement,
-    to_address: FieldElement,
-    payload: &[FieldElement],
+    from_address: Felt,
+    to_address: Felt,
+    payload: &[Felt],
 ) -> B256 {
     let msg = MsgToL1 { from_address, to_address, payload: payload.to_vec() };
     B256::from_slice(msg.hash().as_bytes())
@@ -275,16 +275,16 @@ pub fn compute_l2_to_l1_message_hash(
 /// Computes the hash of a L1 to L2 message.
 pub fn compute_l1_to_l2_message_hash(
     from_address: EthAddress,
-    to_address: FieldElement,
-    selector: FieldElement,
-    payload: &[FieldElement],
+    to_address: Felt,
+    selector: Felt,
+    payload: &[Felt],
     nonce: u64,
 ) -> B256 {
     let msg = MsgToL2 { from_address, to_address, selector, payload: payload.to_vec(), nonce };
     B256::from_slice(msg.hash().as_bytes())
 }
 
-fn encode_gas_bound(name: &[u8], bound: &ResourceBounds) -> FieldElement {
+fn encode_gas_bound(name: &[u8], bound: &ResourceBounds) -> Felt {
     let mut buffer = [0u8; 32];
     let (remainder, max_price) = buffer.split_at_mut(128 / 8);
     let (gas_kind, max_amount) = remainder.split_at_mut(64 / 8);
@@ -294,14 +294,14 @@ fn encode_gas_bound(name: &[u8], bound: &ResourceBounds) -> FieldElement {
     max_amount.copy_from_slice(&bound.max_amount.to_be_bytes());
     max_price.copy_from_slice(&bound.max_price_per_unit.to_be_bytes());
 
-    FieldElement::from_bytes_be(&buffer)
+    Felt::from_bytes_be(&buffer)
 }
 
 fn hash_fee_fields(
     tip: u64,
     l1_gas_bounds: &ResourceBounds,
     l2_gas_bounds: &ResourceBounds,
-) -> FieldElement {
+) -> Felt {
     poseidon_hash_many(&[
         tip.into(),
         encode_gas_bound(b"L1_GAS", l1_gas_bounds),
@@ -312,10 +312,10 @@ fn hash_fee_fields(
 fn encode_da_mode(
     nonce_da_mode: &DataAvailabilityMode,
     fee_da_mode: &DataAvailabilityMode,
-) -> FieldElement {
+) -> Felt {
     let nonce = (*nonce_da_mode as u64) << 32;
     let fee = *fee_da_mode as u64;
-    FieldElement::from(nonce + fee)
+    Felt::from(nonce + fee)
 }
 
 #[cfg(test)]
@@ -329,7 +329,7 @@ mod tests {
     #[test]
     fn test_query_version_offset() {
         // 2^ 128
-        assert_eq!(QUERY_VERSION_OFFSET, FieldElement::TWO.pow(128u8));
+        assert_eq!(QUERY_VERSION_OFFSET, Felt::TWO.pow(128u8));
     }
 
     #[test]
@@ -359,7 +359,7 @@ mod tests {
         let salt = felt!("0x43a8fbe19d5ace41a2328bb870143241831180eb3c3c48096642d63709c3096");
         let max_fee = felt!("0x38d7ea4c68000");
         let chain_id = ChainId::MAINNET.id();
-        let nonce = FieldElement::ZERO;
+        let nonce = Felt::ZERO;
 
         let actual_hash = compute_deploy_account_v1_tx_hash(
             contract_address,

@@ -182,7 +182,7 @@ impl TryFrom<SayaArgs> for SayaConfig {
 
 #[cfg(test)]
 mod tests {
-    use katana_primitives::felt::FieldElement;
+    use katana_primitives::Felt;
 
     use super::*;
     use crate::args::data_availability::CelestiaOptions;
@@ -249,12 +249,12 @@ mod tests {
 
         let expected = StarknetAccountData {
             starknet_url: Url::parse("http://localhost:5030").unwrap(),
-            chain_id: FieldElement::from_hex("0x534e5f5345504f4c4941").unwrap(),
-            signer_address: FieldElement::from_hex(
+            chain_id: Felt::from_hex("0x534e5f5345504f4c4941").unwrap(),
+            signer_address: Felt::from_hex(
                 "0x3aa0a12c62a46a200b1a1211e8cd09b520164104e76d79648ca459cf05db94",
             )
             .unwrap(),
-            signer_key: FieldElement::from_hex(
+            signer_key: Felt::from_hex(
                 "0x6b41bfa82e791a8b4e6b3ee058cb25b89714e4a23bd9a1ad6e6ba0bbc0b145b",
             )
             .unwrap(),

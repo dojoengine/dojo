@@ -34,7 +34,7 @@ use crate::contract::{ContractAddress, StorageKey, StorageValue};
 use crate::state::StateUpdatesWithDeclaredClasses;
 use crate::utils::split_u256;
 use crate::version::CURRENT_STARKNET_VERSION;
-use crate::FieldElement;
+use crate::Felt;
 
 #[serde_with::serde_as]
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -88,7 +88,7 @@ pub struct Genesis {
     pub parent_hash: BlockHash,
     /// The genesis block state root.
     #[serde_as(as = "UfeHex")]
-    pub state_root: FieldElement,
+    pub state_root: Felt,
     /// The genesis block number.
     pub number: BlockNumber,
     /// The genesis block timestamp.
@@ -204,7 +204,7 @@ impl Genesis {
                 // the storage address of low u128 of the balance
                 let low_bal_storage_var = bal_base_storage_var;
                 // the storage address of high u128 of the balance
-                let high_bal_storage_var = bal_base_storage_var + FieldElement::ONE;
+                let high_bal_storage_var = bal_base_storage_var + Felt::ONE;
 
                 fee_token_storage.insert(low_bal_storage_var, low);
                 fee_token_storage.insert(high_bal_storage_var, high);
@@ -213,17 +213,16 @@ impl Genesis {
 
         // TODO: put this in a separate function
 
-        let name: FieldElement = cairo_short_string_to_felt(&self.fee_token.name).unwrap();
-        let symbol: FieldElement = cairo_short_string_to_felt(&self.fee_token.symbol).unwrap();
-        let decimals: FieldElement = self.fee_token.decimals.into();
+        let name: Felt = cairo_short_string_to_felt(&self.fee_token.name).unwrap();
+        let symbol: Felt = cairo_short_string_to_felt(&self.fee_token.symbol).unwrap();
+        let decimals: Felt = self.fee_token.decimals.into();
         let (total_supply_low, total_supply_high) = split_u256(fee_token_total_supply);
 
         fee_token_storage.insert(ERC20_NAME_STORAGE_SLOT, name);
         fee_token_storage.insert(ERC20_SYMBOL_STORAGE_SLOT, symbol);
         fee_token_storage.insert(ERC20_DECIMAL_STORAGE_SLOT, decimals);
         fee_token_storage.insert(ERC20_TOTAL_SUPPLY_STORAGE_SLOT, total_supply_low);
-        fee_token_storage
-            .insert(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + FieldElement::ONE, total_supply_high);
+        fee_token_storage.insert(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + Felt::ONE, total_supply_high);
 
         states
             .state_updates
@@ -300,12 +299,12 @@ impl Default for Genesis {
         ]);
 
         Self {
-            parent_hash: FieldElement::ZERO,
+            parent_hash: Felt::ZERO,
             number: 0,
-            state_root: FieldElement::ZERO,
+            state_root: Felt::ZERO,
             timestamp: 0,
             gas_prices: GasPrices::default(),
-            sequencer_address: FieldElement::ZERO.into(),
+            sequencer_address: Felt::ZERO.into(),
             classes,
             allocations: BTreeMap::new(),
             fee_token,
@@ -436,9 +435,9 @@ mod tests {
 
         // setup expected storage values
 
-        let name: FieldElement = cairo_short_string_to_felt(&fee_token.name).unwrap();
-        let symbol: FieldElement = cairo_short_string_to_felt(&fee_token.symbol).unwrap();
-        let decimals: FieldElement = fee_token.decimals.into();
+        let name: Felt = cairo_short_string_to_felt(&fee_token.name).unwrap();
+        let symbol: Felt = cairo_short_string_to_felt(&fee_token.symbol).unwrap();
+        let decimals: Felt = fee_token.decimals.into();
 
         // there are only two allocations so the total token supply is
         // 0xD3C21BCECCEDA1000000 * 2 = 0x1a784379d99db42000000
@@ -450,8 +449,7 @@ mod tests {
         fee_token_storage.insert(ERC20_SYMBOL_STORAGE_SLOT, symbol);
         fee_token_storage.insert(ERC20_DECIMAL_STORAGE_SLOT, decimals);
         fee_token_storage.insert(ERC20_TOTAL_SUPPLY_STORAGE_SLOT, total_supply_low);
-        fee_token_storage
-            .insert(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + FieldElement::ONE, total_supply_high);
+        fee_token_storage.insert(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + Felt::ONE, total_supply_high);
 
         for (address, alloc) in &allocations {
             if let Some(balance) = alloc.balance() {
@@ -463,7 +461,7 @@ mod tests {
                 // the storage address of low u128 of the balance
                 let low_bal_storage_var = bal_base_storage_var;
                 // the storage address of high u128 of the balance
-                let high_bal_storage_var = bal_base_storage_var + FieldElement::ONE;
+                let high_bal_storage_var = bal_base_storage_var + Felt::ONE;
 
                 fee_token_storage.insert(low_bal_storage_var, low);
                 fee_token_storage.insert(high_bal_storage_var, high);
@@ -700,7 +698,7 @@ mod tests {
             Some(&total_supply_low)
         );
         assert_eq!(
-            fee_token_storage.get(&(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + FieldElement::ONE)),
+            fee_token_storage.get(&(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + Felt::ONE)),
             Some(&total_supply_high)
         );
 
@@ -722,7 +720,7 @@ mod tests {
                 // the storage address of low u128 of the balance
                 let low_bal_storage_var = bal_base_storage_var;
                 // the storage address of high u128 of the balance
-                let high_bal_storage_var = bal_base_storage_var + FieldElement::ONE;
+                let high_bal_storage_var = bal_base_storage_var + Felt::ONE;
 
                 assert_eq!(fee_token_storage.get(&low_bal_storage_var), Some(&low));
                 assert_eq!(fee_token_storage.get(&high_bal_storage_var), Some(&high));
@@ -742,7 +740,7 @@ mod tests {
             "total supply must be calculated from allocations balances correctly"
         );
         assert_eq!(
-            fee_token_storage.get(&(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + FieldElement::ONE)),
+            fee_token_storage.get(&(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + Felt::ONE)),
             Some(&actual_total_supply_high),
             "total supply must be calculated from allocations balances correctly"
         );

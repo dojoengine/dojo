@@ -1,5 +1,5 @@
 use katana_primitives::block::BlockHashOrNumber;
-use katana_primitives::FieldElement;
+use katana_primitives::Felt;
 use katana_provider::traits::block::{BlockHashProvider, BlockNumberProvider};
 use katana_provider::traits::state::StateRootProvider;
 use katana_provider::traits::state_update::StateUpdateProvider;
@@ -37,7 +37,7 @@ where
                 .expect("should exist if block exists");
 
             match block_num {
-                0 => FieldElement::ZERO,
+                0 => Felt::ZERO,
                 _ => StateRootProvider::state_root(&self.provider, (block_num - 1).into())?
                     .expect("should exist if not genesis"),
             }

@@ -11,7 +11,7 @@ use katana_primitives::genesis::constant::{
     DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH, DEFAULT_PREFUNDED_ACCOUNT_BALANCE, DEFAULT_UDC_ADDRESS,
 };
 use katana_primitives::transaction::TxWithHash;
-use katana_primitives::FieldElement;
+use katana_primitives::Felt;
 use katana_provider::traits::state::StateProvider;
 use starknet::core::utils::{
     get_storage_var_address, get_udc_deployed_address, UdcUniqueSettings, UdcUniqueness,
@@ -55,7 +55,11 @@ fn test_executor_with_valid_blocks_impl<EF: ExecutorFactory>(
 
     // ensure that all transactions succeeded, if not panic with the error message and tx index
     let has_failed = transactions.iter().enumerate().find_map(|(i, (_, res))| {
-        if let ExecutionResult::Failed { error } = res { Some((i, error)) } else { None }
+        if let ExecutionResult::Failed { error } = res {
+            Some((i, error))
+        } else {
+            None
+        }
     });
 
     if let Some((pos, error)) = has_failed {
@@ -89,7 +93,7 @@ fn test_executor_with_valid_blocks_impl<EF: ExecutorFactory>(
         .expect("storage should exist");
 
     assert!(
-        updated_main_acc_balance < FieldElement::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE),
+        updated_main_acc_balance < Felt::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE),
         "sender balance should decrease"
     );
     assert_eq!(actual_new_acc_balance, felt!("0x9999999999999999"), "account balance is updated");
@@ -223,7 +227,7 @@ fn test_executor_with_valid_blocks_impl<EF: ExecutorFactory>(
     let actual_storage_value_4_1 = state_provider
         .storage(
             deployed_contract.into(),
-            get_storage_var_address("ERC20_total_supply", &[]).unwrap() + FieldElement::ONE,
+            get_storage_var_address("ERC20_total_supply", &[]).unwrap() + Felt::ONE,
         )
         .unwrap();
     let actual_storage_value_5 = state_provider

@@ -3,7 +3,7 @@ use cairo_proof_parser::output::{extract_output, ExtractOutputResult};
 use futures::future::BoxFuture;
 use futures::FutureExt;
 use katana_primitives::state::StateUpdates;
-use katana_primitives::FieldElement;
+use katana_primitives::Felt;
 use tokio::sync::{mpsc, oneshot};
 use tracing::{info, trace};
 
@@ -32,7 +32,7 @@ pub struct Scheduler {
 }
 
 impl Scheduler {
-    pub fn new(capacity: usize, world: FieldElement, prover: ProverIdentifier) -> Self {
+    pub fn new(capacity: usize, world: Felt, prover: ProverIdentifier) -> Self {
         let (senders, receivers): (Vec<_>, Vec<_>) =
             (0..capacity).map(|_| oneshot::channel::<ProgramInput>()).unzip();
 
@@ -77,7 +77,7 @@ impl Scheduler {
 
     pub async fn merge(
         inputs: Vec<ProgramInput>,
-        world: FieldElement,
+        world: Felt,
         prover: ProverIdentifier,
     ) -> anyhow::Result<(Proof, ProgramInput)> {
         let mut scheduler = Scheduler::new(inputs.len(), world, prover);
@@ -134,7 +134,7 @@ async fn combine_proofs(
     prover: ProverIdentifier,
     state_updates1: StateUpdates,
     state_updates2: StateUpdates,
-    world: FieldElement,
+    world: Felt,
     number_of_inputs: usize,
 ) -> anyhow::Result<Proof> {
     let ExtractOutputResult { program_output: program_output1, program_output_hash: _ } =
@@ -164,7 +164,7 @@ async fn combine_proofs(
 /// calls.
 fn prove_recursively(
     mut inputs: Vec<oneshot::Receiver<ProgramInput>>,
-    world: FieldElement,
+    world: Felt,
     prover: ProverIdentifier,
     update_channel: mpsc::Sender<(u64, ProvingState)>,
 ) -> BoxFuture<'static, anyhow::Result<(Proof, ProgramInput)>> {

@@ -51,7 +51,7 @@ use katana_primitives::trace::{L1Gas, TxExecInfo, TxResources};
 use katana_primitives::transaction::{
     DeclareTx, DeployAccountTx, ExecutableTx, ExecutableTxWithHash, InvokeTx,
 };
-use katana_primitives::{class, event, message, trace, FieldElement};
+use katana_primitives::{class, event, message, trace, Felt};
 use katana_provider::traits::contract::ContractClassProvider;
 use starknet::core::types::PriceUnit;
 use starknet::core::utils::parse_cairo_short_string;
@@ -141,7 +141,7 @@ pub fn call<S: StateReader>(
     state: S,
     block_context: &BlockContext,
     initial_gas: u128,
-) -> Result<Vec<FieldElement>, ExecutionError> {
+) -> Result<Vec<Felt>, ExecutionError> {
     let mut state = cached_state::CachedState::new(state);
 
     let call = CallEntryPoint {
@@ -550,13 +550,11 @@ pub fn to_class(class: class::CompiledClass) -> Result<ClassInfo, ProgramError> 
 }
 
 /// TODO: remove this function once starknet api 0.8.0 is supported.
-fn starknet_api_ethaddr_to_felt(
-    value: katana_cairo::starknet_api::core::EthAddress,
-) -> FieldElement {
+fn starknet_api_ethaddr_to_felt(value: katana_cairo::starknet_api::core::EthAddress) -> Felt {
     let mut bytes = [0u8; 32];
     // Padding H160 with zeros to 32 bytes (big endian)
     bytes[12..32].copy_from_slice(value.0.as_bytes());
-    FieldElement::from_bytes_be(&bytes)
+    Felt::from_bytes_be(&bytes)
 }
 
 pub fn to_exec_info(exec_info: TransactionExecutionInfo) -> TxExecInfo {
@@ -660,7 +658,7 @@ mod tests {
     use katana_cairo::starknet_api::core::EntryPointSelector;
     use katana_cairo::starknet_api::felt;
     use katana_cairo::starknet_api::transaction::{EventContent, EventData, EventKey};
-    use katana_primitives::felt::FieldElement;
+    use katana_primitives::Felt;
 
     use super::*;
 
@@ -694,7 +692,7 @@ mod tests {
         //
         // This is how blockifier pass the chain id to the contract through a syscall.
         // https://github.com/dojoengine/blockifier/blob/f2246ce2862d043e4efe2ecf149a4cb7bee689cd/crates/blockifier/src/execution/syscalls/hint_processor.rs#L600-L602
-        let actual_id = FieldElement::from_hex(blockifier_id.as_hex().as_str()).unwrap();
+        let actual_id = Felt::from_hex(blockifier_id.as_hex().as_str()).unwrap();
 
         assert_eq!(actual_id, id)
     }
@@ -793,7 +791,7 @@ mod tests {
         };
 
         let expected_storage_read_values = call.storage_read_values.clone();
-        let expected_storage_keys: HashSet<FieldElement> =
+        let expected_storage_keys: HashSet<Felt> =
             call.accessed_storage_keys.iter().map(|v| *v.key()).collect();
         let expected_inner_calls: Vec<_> =
             call.inner_calls.clone().into_iter().map(to_call_info).collect();
