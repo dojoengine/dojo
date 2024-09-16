@@ -5,7 +5,7 @@ use std::sync::Arc;
 use anyhow::{anyhow, Result};
 use chrono::Utc;
 use dojo_types::primitive::Primitive;
-use dojo_types::schema::{EnumOption, Member, Ty};
+use dojo_types::schema::{EnumOption, Member, Struct, Ty};
 use dojo_world::contracts::abi::model::Layout;
 use dojo_world::contracts::naming::compute_selector_from_names;
 use dojo_world::metadata::WorldMetadata;
@@ -183,17 +183,22 @@ impl Sql {
             &mut 0,
         );
 
-        self.model_cache.set(selector, Model {
-            namespace: namespace.to_string(),
-            name: model.name().to_string(),
-            selector,
-            class_hash,
-            contract_address,
-            packed_size,
-            unpacked_size,
-            layout,
-            schema: model
-        }).await;
+        self.model_cache
+            .set(
+                selector,
+                Model {
+                    namespace: namespace.to_string(),
+                    name: model.name().to_string(),
+                    selector,
+                    class_hash,
+                    contract_address,
+                    packed_size,
+                    unpacked_size,
+                    layout,
+                    schema: model,
+                },
+            )
+            .await;
         self.query_queue.push_publish(BrokerMessage::ModelRegistered(model_registered));
 
         Ok(())
