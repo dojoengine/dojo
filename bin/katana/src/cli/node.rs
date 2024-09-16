@@ -34,12 +34,11 @@ use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
 use katana_primitives::genesis::Genesis;
 use katana_rpc::config::ServerConfig;
 use katana_rpc_api::ApiKind;
-use tokio::signal::ctrl_c;
 use tracing::{info, Subscriber};
 use tracing_subscriber::{fmt, EnvFilter};
 use url::Url;
 
-use crate::utils::{parse_genesis, parse_seed};
+use crate::utils::{parse_genesis, parse_seed, wait_signal};
 
 #[derive(Parser, Debug)]
 pub struct NodeArgs {
@@ -234,9 +233,9 @@ impl NodeArgs {
             print_intro(&self, genesis, node.rpc.addr);
         }
 
-        // Wait until ctrl-c signal is received or TaskManager signals shutdown
+        // Wait until an OS signal is received or TaskManager shutdown
         tokio::select! {
-            _ = ctrl_c() => {},
+            _ = wait_signal() => {},
             _ = node.task_manager.wait_for_shutdown() => {}
         }
 
