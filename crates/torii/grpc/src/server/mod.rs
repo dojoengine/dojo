@@ -992,19 +992,16 @@ fn build_composite_clause(
             ClauseType::Member(member) => {
                 let comparison_operator = ComparisonOperator::from_repr(member.operator as usize)
                     .expect("invalid comparison operator");
-                let value: Primitive = member.value.as_ref().unwrap().clone().try_into()?;
-                let comparison_value = match member
-                    .value
-                    .ok_or(QueryError::MissingParam("value".into()))?
-                    .value_type
-                {
-                    Some(ValueType::String(value)) => value,
-                    Some(ValueType::Primitive(value)) => {
-                        let primitive: Primitive = value.try_into()?;
-                        primitive.to_sql_value()?
-                    }
-                    None => return Err(QueryError::MissingParam("value_type".into()).into()),
-                };
+                let value = member.value.clone();
+                let comparison_value =
+                    match value.ok_or(QueryError::MissingParam("value".into()))?.value_type {
+                        Some(ValueType::String(value)) => value,
+                        Some(ValueType::Primitive(value)) => {
+                            let primitive: Primitive = value.try_into()?;
+                            primitive.to_sql_value()?
+                        }
+                        None => return Err(QueryError::MissingParam("value_type".into()).into()),
+                    };
                 bind_values.push(comparison_value);
 
                 let model = member.model.clone();
