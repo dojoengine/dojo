@@ -183,6 +183,17 @@ impl Sql {
             &mut 0,
         );
 
+        self.model_cache.set(selector, Model {
+            namespace: namespace.to_string(),
+            name: model.name().to_string(),
+            selector,
+            class_hash: format!("{:#x}", class_hash),
+            contract_address: format!("{:#x}", contract_address),
+            packed_size,
+            unpacked_size,
+            layout,
+            schema: model
+        });
         self.query_queue.push_publish(BrokerMessage::ModelRegistered(model_registered));
 
         Ok(())
