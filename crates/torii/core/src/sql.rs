@@ -177,7 +177,7 @@ impl Sql {
             &mut 0,
             &mut 0,
         );
-        self.execute().await?;
+        
         self.query_queue.push_publish(BrokerMessage::ModelRegistered(model_registered));
 
         Ok(())
