@@ -187,13 +187,13 @@ impl Sql {
             namespace: namespace.to_string(),
             name: model.name().to_string(),
             selector,
-            class_hash: format!("{:#x}", class_hash),
-            contract_address: format!("{:#x}", contract_address),
+            class_hash,
+            contract_address,
             packed_size,
             unpacked_size,
             layout,
             schema: model
-        });
+        }).await;
         self.query_queue.push_publish(BrokerMessage::ModelRegistered(model_registered));
 
         Ok(())
