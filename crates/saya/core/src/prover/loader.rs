@@ -1,8 +1,9 @@
 use std::env;
 use std::path::PathBuf;
 use std::str::FromStr;
+use prover_sdk::Cairo0ProverInput;
+use prover_sdk::CairoProverInput;
 
-use prover_sdk::{Cairo0ProverInput, CairoProverInput};
 use serde_json::Value;
 use starknet_crypto::Felt;
 use tokio::fs::File;
@@ -34,7 +35,7 @@ pub async fn prepare_input_cairo0(
     let program = serde_json::from_str(&serde_json::to_string(&program)?)?;
     let program_input: Value = serde_json::from_str(&arguments)?;
 
-    Ok(Cairo0ProverInput { program, program_input, layout: "recursive".into() })
+    Ok(Cairo0ProverInput { program, program_input, layout: "recursive".into() } ) 
 }
 
 pub async fn prepare_input_cairo1(

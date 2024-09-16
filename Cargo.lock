@@ -2958,7 +2958,7 @@ dependencies = [
 [[package]]
 name = "cairo-proof-parser"
 version = "0.1.0"
-source = "git+https://github.com/chudkowsky/cairo-proof-parser?rev=75cbcbb76a7d1fad2b2e3258540622adf097cde7#75cbcbb76a7d1fad2b2e3258540622adf097cde7"
+source = "git+https://github.com/chudkowsky/cairo-proof-parser?rev=86170a0#86170a05f41f454ec25630b15235561686967200"
 dependencies = [
  "anyhow",
  "clap",
@@ -3458,7 +3458,7 @@ dependencies = [
 [[package]]
 name = "common"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/http-prover?rev=b2c64c888b4e9fb7ecbcc0b4b49f9e831afa20dd#b2c64c888b4e9fb7ecbcc0b4b49f9e831afa20dd"
+source = "git+https://github.com/cartridge-gg/http-prover?rev=2a228de#2a228dee902e6ee79dc4444a8bda39afb4ad2c9c"
 dependencies = [
  "ed25519-dalek",
  "serde",
@@ -10751,7 +10751,7 @@ dependencies = [
 [[package]]
 name = "prover-sdk"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/http-prover?rev=b2c64c888b4e9fb7ecbcc0b4b49f9e831afa20dd#b2c64c888b4e9fb7ecbcc0b4b49f9e831afa20dd"
+source = "git+https://github.com/cartridge-gg/http-prover?rev=2a228de#2a228dee902e6ee79dc4444a8bda39afb4ad2c9c"
 dependencies = [
  "base64 0.22.1",
  "common",
@@ -12359,7 +12359,7 @@ dependencies = [
 [[package]]
 name = "serde-felt"
 version = "0.1.0"
-source = "git+https://github.com/chudkowsky/cairo-proof-parser?rev=75cbcbb76a7d1fad2b2e3258540622adf097cde7#75cbcbb76a7d1fad2b2e3258540622adf097cde7"
+source = "git+https://github.com/chudkowsky/cairo-proof-parser?rev=86170a0#86170a05f41f454ec25630b15235561686967200"
 dependencies = [
  "serde",
  "starknet-crypto 0.7.1",

@@ -12,12 +12,13 @@ SAYA_SNCAST_ACCOUNT_NAME="dev"
 
 # Probably no need to change these
 
-# SAYA_PROVER_URL=http://prover.visoft.dev:3618
-SAYA_PROVER_URL=http://localhost:3618
+SAYA_PROVER_URL=http://prover.visoft.dev:3618
+# SAYA_PROVER_URL=http://localhost:3040
+# SAYA_PROVER_URL=https://api.cartridge.gg/prover/
 # SAYA_MANIFEST_PATH=../shard-dungeon/Scarb.toml
 SAYA_MANIFEST_PATH=examples/spawn-and-move/Scarb.toml
-SAYA_FACT_REGISTRY=0x715c052c03b14a48d6070e45230d26b6e11388a4bb14d6a601d6afe87ac32f7
-SAYA_PILTOVER_CLASS_HASH=0x01dbe90a725edbf5e03dcb1f116250ba221d3231680a92894d9cc8069f209bd6
+SAYA_FACT_REGISTRY_CLASS_HASH=0x0485857a88cacd0a706452c61cfa613802c638dc4ce09bf3d8b289c70183d293
+SAYA_PILTOVER_CLASS_HASH=0x03a9e050ee09ffa330ab48cf3ba5a6eba9985cc7b91e02561a3bec353e229832
 SAYA_PILTOVER_STARTING_STATE_ROOT=0
 SAYA_CONFIG_HASH=42
 SAYA_PROGRAM_HASH=0x20c7f4084638a125956aa6be31f5e7075507f339b1743c3002c8301832c7ef7 #need to be reupdated
@@ -29,9 +30,15 @@ SAYA_WORLD_PREPARED="" # Set to anything after preparing the world successfully 
 SAYA_FORK_BLOCK_NUMBER=
 SAYA_SKIP_MAKING_TRANSACTIONS="" # Set to anything to skip making transactions
 SAYA_PILTOVER_ADDRESS=""
-SAYA_PILTOVER_PREPARED=""
+SAYA_PILTOVER_PREPARED=
 
-
+if [[ -z "${SAYA_FACT_REGISTRY}" ]]; then
+    sncast -a $SAYA_SNCAST_ACCOUNT_NAME -u $SAYA_SEPOLIA_ENDPOINT deploy \
+        --class-hash $SAYA_FACT_REGISTRY_CLASS_HASH \
+        --fee-token eth
+    echo "Set SAYA_FACT_REGISTRY to the address of the deployed contract."
+    exit 0
+fi
 if [[ -z "${SAYA_WORLD_ADDRESS}" ]]; then
   echo "World address not set: DEPLOYING WORLD"
 
