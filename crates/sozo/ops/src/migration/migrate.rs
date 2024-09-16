@@ -12,9 +12,9 @@ use dojo_world::contracts::naming::{
 };
 use dojo_world::contracts::{cairo_utils, WorldContract};
 use dojo_world::manifest::{
-    AbiFormat, BaseManifest, Class, DeploymentManifest, DojoContract, DojoModel, Manifest,
-    ManifestMethods, WorldContract as ManifestWorldContract, WorldMetadata, ABIS_DIR, BASE_DIR,
-    DEPLOYMENT_DIR, MANIFESTS_DIR,
+    AbiFormat, BaseManifest, Class, DeploymentManifest, DojoContract, DojoEvent, DojoModel,
+    Manifest, ManifestMethods, WorldContract as ManifestWorldContract, WorldMetadata, ABIS_DIR,
+    BASE_DIR, DEPLOYMENT_DIR, MANIFESTS_DIR,
 };
 use dojo_world::metadata::{dojo_metadata_from_workspace, ResourceMetadata};
 use dojo_world::migration::class::ClassMigration;
@@ -201,6 +201,7 @@ where
         world_block_number,
         full: false,
         models: vec![],
+        events: vec![],
         contracts: vec![],
     };
 
@@ -216,11 +217,23 @@ where
 
     // TODO: rework this part when more time.
     if declarers.is_empty() {
+        match register_dojo_events(&strategy.events, world_address, &migrator, &ui, &txn_config)
+            .await
+        {
+            Ok(output) => {
+                migration_output.events = output.registered_elements;
+            }
+            Err(e) => {
+                ui.anyhow(&e);
+                return Ok(migration_output);
+            }
+        };
+
         match register_dojo_models(&strategy.models, world_address, &migrator, &ui, &txn_config)
             .await
         {
             Ok(output) => {
-                migration_output.models = output.registered_models;
+                migration_output.models = output.registered_elements;
             }
             Err(e) => {
                 ui.anyhow(&e);
@@ -246,6 +259,25 @@ where
             }
         };
     } else {
+        match register_dojo_events_with_declarers(
+            &strategy.events,
+            world_address,
+            &migrator,
+            &ui,
+            &txn_config,
+            declarers,
+        )
+        .await
+        {
+            Ok(output) => {
+                migration_output.events = output.registered_elements;
+            }
+            Err(e) => {
+                ui.anyhow(&e);
+                return Ok(migration_output);
+            }
+        };
+
         match register_dojo_models_with_declarers(
             &strategy.models,
             world_address,
@@ -257,7 +289,7 @@ where
         .await
         {
             Ok(output) => {
-                migration_output.models = output.registered_models;
+                migration_output.models = output.registered_elements;
             }
             Err(e) => {
                 ui.anyhow(&e);
@@ -489,6 +521,214 @@ where
     Ok(())
 }
 
+async fn register_dojo_events<A>(
+    events: &[ClassMigration],
+    world_address: Felt,
+    migrator: &A,
+    ui: &Ui,
+    txn_config: &TxnConfig,
+) -> Result<RegisterOutput>
+where
+    A: ConnectedAccount + Send + Sync,
+    <A as ConnectedAccount>::Provider: Send,
+{
+    if events.is_empty() {
+        return Ok(RegisterOutput {
+            transaction_hash: Felt::ZERO,
+            declare_output: vec![],
+            registered_elements: vec![],
+        });
+    }
+
+    ui.print_header(format!("# Events ({})", events.len()));
+
+    let world = WorldContract::new(world_address, &migrator);
+
+    let mut declare_output = vec![];
+    let mut events_to_register = vec![];
+
+    for (i, m) in events.iter().enumerate() {
+        let tag = &m.diff.tag;
+
+        ui.print(italic_message(tag).to_string());
+
+        if let Resource::Unregistered =
+            world.resource(&compute_selector_from_tag(tag)).call().await?
+        {
+            events_to_register.push(tag.clone());
+        } else {
+            ui.print_sub("Already registered");
+            continue;
+        }
+
+        match m.declare(&migrator, txn_config).await {
+            Ok(output) => {
+                ui.print_sub(format!("Selector: {:#066x}", compute_selector_from_tag(tag)));
+                ui.print_hidden_sub(format!("Class hash: {:#066x}", output.class_hash));
+                ui.print_hidden_sub(format!(
+                    "Declare transaction: {:#066x}",
+                    output.transaction_hash
+                ));
+                declare_output.push(output);
+            }
+            Err(MigrationError::ClassAlreadyDeclared) => {
+                ui.print_sub("Already declared");
+            }
+            Err(MigrationError::ArtifactError(e)) => {
+                return Err(handle_artifact_error(ui, events[i].artifact_path(), e));
+            }
+            Err(e) => {
+                ui.verbose(format!("{e:?}"));
+                bail!("Failed to declare event: {e}")
+            }
+        }
+    }
+
+    let calls = events
+        .iter()
+        .filter(|m| events_to_register.contains(&m.diff.tag))
+        .map(|c| world.register_event_getcall(&c.diff.local_class_hash.into()))
+        .collect::<Vec<_>>();
+
+    if calls.is_empty() {
+        return Ok(RegisterOutput {
+            transaction_hash: Felt::ZERO,
+            declare_output: vec![],
+            registered_elements: vec![],
+        });
+    }
+
+    let InvokeTransactionResult { transaction_hash } =
+        world.account.execute_v1(calls).send_with_cfg(txn_config).await.map_err(|e| {
+            ui.verbose(format!("{e:?}"));
+            anyhow!("Failed to register events to World: {e}")
+        })?;
+
+    TransactionWaiter::new(transaction_hash, migrator.provider()).await?;
+
+    ui.print(format!("All events are registered at: {transaction_hash:#x}\n"));
+
+    Ok(RegisterOutput { transaction_hash, declare_output, registered_elements: events_to_register })
+}
+
+// For now duplicated because the migrator account is different from the declarers account type.
+async fn register_dojo_events_with_declarers<A>(
+    events: &[ClassMigration],
+    world_address: Felt,
+    migrator: &A,
+    ui: &Ui,
+    txn_config: &TxnConfig,
+    declarers: &[SingleOwnerAccount<AnyProvider, LocalWallet>],
+) -> Result<RegisterOutput>
+where
+    A: ConnectedAccount + Send + Sync,
+    <A as ConnectedAccount>::Provider: Send,
+{
+    if events.is_empty() {
+        return Ok(RegisterOutput {
+            transaction_hash: Felt::ZERO,
+            declare_output: vec![],
+            registered_elements: vec![],
+        });
+    }
+
+    ui.print_header(format!("# Events ({})", events.len()));
+
+    let mut declare_output = vec![];
+    let mut events_to_register = vec![];
+
+    let mut declarers_tasks = HashMap::new();
+    for (i, m) in events.iter().enumerate() {
+        let declarer_index = i % declarers.len();
+        declarers_tasks
+            .entry(declarer_index)
+            .or_insert(vec![])
+            .push((m.diff.tag.clone(), m.declare(&declarers[declarer_index], txn_config)));
+    }
+
+    let mut futures = Vec::new();
+
+    for (declarer_index, d_tasks) in declarers_tasks {
+        let future = async move {
+            let mut results = Vec::new();
+            for (tag, task) in d_tasks {
+                let result = task.await;
+                results.push((declarer_index, tag, result));
+            }
+            results
+        };
+
+        futures.push(future);
+    }
+
+    let all_results = futures::future::join_all(futures).await;
+
+    let world = WorldContract::new(world_address, &migrator);
+
+    for results in all_results {
+        for (index, tag, result) in results {
+            ui.print(italic_message(&tag).to_string());
+
+            if let Resource::Unregistered =
+                world.resource(&compute_selector_from_tag(&tag)).call().await?
+            {
+                events_to_register.push(tag.clone());
+            } else {
+                ui.print_sub("Already registered");
+                continue;
+            }
+
+            match result {
+                Ok(output) => {
+                    ui.print_sub(format!("Selector: {:#066x}", compute_selector_from_tag(&tag)));
+                    ui.print_hidden_sub(format!("Class hash: {:#066x}", output.class_hash));
+                    ui.print_hidden_sub(format!(
+                        "Declare transaction: {:#066x}",
+                        output.transaction_hash
+                    ));
+                    declare_output.push(output);
+                }
+                Err(MigrationError::ClassAlreadyDeclared) => {
+                    ui.print_sub("Already declared");
+                }
+                Err(MigrationError::ArtifactError(e)) => {
+                    return Err(handle_artifact_error(ui, events[index].artifact_path(), e));
+                }
+                Err(e) => {
+                    ui.verbose(format!("{e:?}"));
+                    bail!("Failed to declare event: {e}")
+                }
+            }
+        }
+    }
+
+    let calls = events
+        .iter()
+        .filter(|m| events_to_register.contains(&m.diff.tag))
+        .map(|c| world.register_event_getcall(&c.diff.local_class_hash.into()))
+        .collect::<Vec<_>>();
+
+    if calls.is_empty() {
+        return Ok(RegisterOutput {
+            transaction_hash: Felt::ZERO,
+            declare_output: vec![],
+            registered_elements: vec![],
+        });
+    }
+
+    let InvokeTransactionResult { transaction_hash } =
+        world.account.execute_v1(calls).send_with_cfg(txn_config).await.map_err(|e| {
+            ui.verbose(format!("{e:?}"));
+            anyhow!("Failed to register events to World: {e}")
+        })?;
+
+    TransactionWaiter::new(transaction_hash, migrator.provider()).await?;
+
+    ui.print(format!("All events are registered at: {transaction_hash:#x}\n"));
+
+    Ok(RegisterOutput { transaction_hash, declare_output, registered_elements: events_to_register })
+}
+
 async fn register_dojo_models<A>(
     models: &[ClassMigration],
     world_address: Felt,
@@ -504,7 +744,7 @@ where
         return Ok(RegisterOutput {
             transaction_hash: Felt::ZERO,
             declare_output: vec![],
-            registered_models: vec![],
+            registered_elements: vec![],
         });
     }
 
@@ -562,7 +802,7 @@ where
         return Ok(RegisterOutput {
             transaction_hash: Felt::ZERO,
             declare_output: vec![],
-            registered_models: vec![],
+            registered_elements: vec![],
         });
     }
 
@@ -576,7 +816,7 @@ where
 
     ui.print(format!("All models are registered at: {transaction_hash:#x}\n"));
 
-    Ok(RegisterOutput { transaction_hash, declare_output, registered_models: models_to_register })
+    Ok(RegisterOutput { transaction_hash, declare_output, registered_elements: models_to_register })
 }
 
 // For now duplicated because the migrator account is different from the declarers account type.
@@ -596,7 +836,7 @@ where
         return Ok(RegisterOutput {
             transaction_hash: Felt::ZERO,
             declare_output: vec![],
-            registered_models: vec![],
+            registered_elements: vec![],
         });
     }
 
@@ -680,7 +920,7 @@ where
         return Ok(RegisterOutput {
             transaction_hash: Felt::ZERO,
             declare_output: vec![],
-            registered_models: vec![],
+            registered_elements: vec![],
         });
     }
 
@@ -694,7 +934,7 @@ where
 
     ui.print(format!("All models are registered at: {transaction_hash:#x}\n"));
 
-    Ok(RegisterOutput { transaction_hash, declare_output, registered_models: models_to_register })
+    Ok(RegisterOutput { transaction_hash, declare_output, registered_elements: models_to_register })
 }
 
 async fn register_dojo_contracts<A>(
@@ -1398,5 +1638,9 @@ async fn update_manifest_abis(
 
     for model in local_manifest.models.iter_mut() {
         inner_helper::<DojoModel>(manifest_dir, profile_name, model).await;
+    }
+
+    for event in local_manifest.events.iter_mut() {
+        inner_helper::<DojoEvent>(manifest_dir, profile_name, event).await;
     }
 }

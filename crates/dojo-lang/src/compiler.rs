@@ -24,9 +24,9 @@ use camino::Utf8PathBuf;
 use convert_case::{Case, Casing};
 use dojo_world::contracts::naming;
 use dojo_world::manifest::{
-    AbiFormat, Class, DojoContract, DojoModel, Manifest, ManifestMethods, ABIS_DIR,
-    BASE_CONTRACT_TAG, BASE_DIR, BASE_QUALIFIED_PATH, CONTRACTS_DIR, MANIFESTS_DIR, MODELS_DIR,
-    WORLD_CONTRACT_TAG, WORLD_QUALIFIED_PATH,
+    AbiFormat, Class, DojoContract, DojoEvent, DojoModel, Manifest, ManifestMethods, ABIS_DIR,
+    BASE_CONTRACT_TAG, BASE_DIR, BASE_QUALIFIED_PATH, CONTRACTS_DIR, EVENTS_DIR, MANIFESTS_DIR,
+    MODELS_DIR, WORLD_CONTRACT_TAG, WORLD_QUALIFIED_PATH,
 };
 use itertools::{izip, Itertools};
 use scarb::compiler::helpers::{build_compiler_config, collect_main_crate_ids};
@@ -40,7 +40,7 @@ use starknet::core::types::contract::SierraClass;
 use starknet::core::types::Felt;
 use tracing::{debug, trace, trace_span};
 
-use crate::plugin::{DojoAuxData, Model};
+use crate::plugin::{DojoAuxData, Event, Model};
 use crate::scarb_internal::debug::SierraToCairoDebugInfo;
 
 #[derive(Debug, Clone)]
@@ -360,6 +360,7 @@ fn update_files(
     }
 
     let mut models = BTreeMap::new();
+    let mut events = BTreeMap::new();
     let mut contracts = BTreeMap::new();
 
     if let Some(external_contracts) = external_contracts {
@@ -403,6 +404,13 @@ fn update_files(
                         *module_id,
                         &compiled_artifacts,
                     )?);
+
+                    events.extend(get_dojo_event_artifacts(
+                        db,
+                        &dojo_aux_data.events,
+                        *module_id,
+                        &compiled_artifacts,
+                    )?);
                 }
 
                 // StarknetAuxData shouldn't be required. Every dojo contract and model are starknet
@@ -415,6 +423,10 @@ fn update_files(
 
     for model in &models {
         contracts.remove(model.0.as_str());
+    }
+
+    for event in &events {
+        contracts.remove(event.0.as_str());
     }
 
     let contracts_dir = target_dir.child(CONTRACTS_DIR);
@@ -516,7 +528,96 @@ fn update_files(
         }
     }
 
+    let events_dir = target_dir.child(EVENTS_DIR);
+    if !events.is_empty() && !events_dir.exists() {
+        fs::create_dir_all(events_dir.path_unchecked())?;
+    }
+
+    // Ensure `event` dir exist even if no events are compiled
+    // to avoid errors when loading manifests.
+    let base_events_dir = base_manifests_dir.join(EVENTS_DIR);
+    let base_events_abis_dir = base_abis_dir.join(EVENTS_DIR);
+    if !base_events_dir.exists() {
+        std::fs::create_dir_all(&base_events_dir)?;
+    }
+    if !base_events_abis_dir.exists() {
+        std::fs::create_dir_all(&base_events_abis_dir)?;
+    }
+
+    for (_, (manifest, module_id, artifact)) in events.iter_mut() {
+        write_manifest_and_abi(
+            &base_events_dir,
+            &base_events_abis_dir,
+            &manifest_dir,
+            manifest,
+            &artifact.contract_class.abi,
+        )?;
+
+        let filename = naming::get_filename_from_tag(&manifest.inner.tag);
+        save_expanded_source_file(ws, *module_id, db, &events_dir, &filename, &manifest.inner.tag)?;
+        save_json_artifact_file(
+            ws,
+            &events_dir,
+            &artifact.contract_class,
+            &filename,
+            &manifest.inner.tag,
+        )?;
+
+        if let Some(debug_info) = &artifact.debug_info {
+            save_json_artifact_debug_file(
+                ws,
+                &events_dir,
+                debug_info,
+                &filename,
+                &manifest.inner.tag,
+            )?;
+        }
+    }
+
     Ok(())
+}
+
+/// Finds the inline modules annotated as events in the given crate_ids and
+/// returns the corresponding Events.
+#[allow(clippy::type_complexity)]
+fn get_dojo_event_artifacts(
+    db: &RootDatabase,
+    aux_data: &Vec<Event>,
+    module_id: ModuleId,
+    compiled_classes: &CompiledArtifactByPath,
+) -> anyhow::Result<HashMap<String, (Manifest<DojoEvent>, ModuleId, CompiledArtifact)>> {
+    let mut events = HashMap::with_capacity(aux_data.len());
+
+    for event in aux_data {
+        if let Ok(Some(ModuleItemId::Struct(struct_id))) =
+            db.module_item_by_name(module_id, event.name.clone().into())
+        {
+            // Leverages the contract selector function to only snake case the event name and
+            // not the full path.
+            let contract_selector = ContractSelector(struct_id.full_path(db));
+            let qualified_path = contract_selector.path_with_model_snake_case();
+            let compiled_class = compiled_classes.get(&qualified_path).cloned();
+            let tag = naming::get_tag(&event.namespace, &event.name);
+
+            if let Some(artifact) = compiled_class {
+                let dojo_event = DojoEvent {
+                    abi: None,
+                    tag: tag.clone(),
+                    members: event.members.clone(),
+                    class_hash: artifact.class_hash,
+                    qualified_path: qualified_path.clone(),
+                    original_class_hash: artifact.class_hash,
+                };
+
+                let manifest = Manifest::new(dojo_event, naming::get_filename_from_tag(&tag));
+                events.insert(qualified_path, (manifest, module_id, artifact.clone()));
+            } else {
+                println!("Event {} not found in target.", tag.clone());
+            }
+        }
+    }
+
+    Ok(events)
 }
 
 /// Finds the inline modules annotated as models in the given crate_ids and

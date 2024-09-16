@@ -5,6 +5,7 @@
 //! Learn more at [dojoengine.gg](http://dojoengine.gg).
 pub mod compiler;
 pub mod contract;
+pub mod data;
 pub mod event;
 pub mod inline_macros;
 pub mod interface;

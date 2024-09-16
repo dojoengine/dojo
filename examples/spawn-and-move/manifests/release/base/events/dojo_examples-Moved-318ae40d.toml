@@ -1,0 +1,17 @@
+kind = "DojoEvent"
+class_hash = "0x3c194bbb3650ffbb0cb6d5220e409a6c0d4f0517ed62356b1ec1fef2dd7dc07"
+original_class_hash = "0x3c194bbb3650ffbb0cb6d5220e409a6c0d4f0517ed62356b1ec1fef2dd7dc07"
+abi = "manifests/release/base/abis/events/dojo_examples-Moved-318ae40d.json"
+tag = "dojo_examples-Moved"
+qualified_path = "dojo_examples::actions::actions::moved"
+manifest_name = "dojo_examples-Moved-318ae40d"
+
+[[members]]
+name = "player"
+type = "ContractAddress"
+key = true
+
+[[members]]
+name = "direction"
+type = "Direction"
+key = false

@@ -16,8 +16,8 @@ pub fn build_struct_ty(db: &dyn SyntaxGroup, name: &String, struct_ast: &ItemStr
         .collect::<Vec<_>>();
 
     format!(
-        "dojo::model::introspect::Ty::Struct(
-            dojo::model::introspect::Struct {{
+        "dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {{
                 name: '{name}',
                 attrs: array![].span(),
                 children: array![
@@ -39,8 +39,8 @@ pub fn build_enum_ty(db: &dyn SyntaxGroup, name: &String, enum_ast: &ItemEnum) -
     };
 
     format!(
-        "dojo::model::introspect::Ty::Enum(
-            dojo::model::introspect::Enum {{
+        "dojo::meta::introspect::Ty::Enum(
+            dojo::meta::introspect::Enum {{
                 name: '{name}',
                 attrs: array![].span(),
                 children: array![
@@ -56,7 +56,7 @@ pub fn build_member_ty(db: &dyn SyntaxGroup, member: &Member) -> String {
     let attrs = if member.has_attr(db, "key") { vec!["'key'"] } else { vec![] };
 
     format!(
-        "dojo::model::introspect::Member {{
+        "dojo::meta::introspect::Member {{
             name: '{name}',
             attrs: array![{}].span(),
             ty: {}
@@ -71,7 +71,7 @@ pub fn build_variant_ty(db: &dyn SyntaxGroup, variant: &Variant) -> String {
     match variant.type_clause(db) {
         OptionTypeClause::Empty(_) => {
             // use an empty tuple if the variant has no data
-            format!("('{name}', dojo::model::introspect::Ty::Tuple(array![].span()))")
+            format!("('{name}', dojo::meta::introspect::Ty::Tuple(array![].span()))")
         }
         OptionTypeClause::TypeClause(type_clause) => {
             format!("('{name}', {})", build_ty_from_type_clause(db, &type_clause))
@@ -100,7 +100,7 @@ pub fn build_item_ty_from_type(item_type: &String) -> String {
     if is_array(item_type) {
         let array_item_type = get_array_item_type(item_type);
         format!(
-            "dojo::model::introspect::Ty::Array(
+            "dojo::meta::introspect::Ty::Array(
                 array![
                 {}
                 ].span()
@@ -108,11 +108,11 @@ pub fn build_item_ty_from_type(item_type: &String) -> String {
             build_item_ty_from_type(&array_item_type)
         )
     } else if is_byte_array(item_type) {
-        "dojo::model::introspect::Ty::ByteArray".to_string()
+        "dojo::meta::introspect::Ty::ByteArray".to_string()
     } else if is_tuple(item_type) {
         build_tuple_ty_from_type(item_type)
     } else {
-        format!("dojo::model::introspect::Introspect::<{}>::ty()", item_type)
+        format!("dojo::meta::introspect::Introspect::<{}>::ty()", item_type)
     }
 }
 
@@ -123,7 +123,7 @@ pub fn build_tuple_ty_from_type(item_type: &str) -> String {
         .collect::<Vec<_>>()
         .join(",\n");
     format!(
-        "dojo::model::introspect::Ty::Tuple(
+        "dojo::meta::introspect::Ty::Tuple(
             array![
             {}
             ].span()

@@ -45,6 +45,7 @@ pub struct MigrationOutput {
     pub full: bool,
 
     pub models: Vec<String>,
+    pub events: Vec<String>,
     pub contracts: Vec<Option<ContractMigrationOutput>>,
 }
 

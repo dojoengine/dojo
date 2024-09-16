@@ -237,7 +237,7 @@ fn test_upgrade_model_from_model_writer() {
 }
 
 #[test]
-#[should_panic(expected: ("Resource `dojo-Foo` is already registered", 'ENTRYPOINT_FAILED',))]
+#[should_panic(expected: ("Model `dojo-Foo` is already registered", 'ENTRYPOINT_FAILED',))]
 fn test_upgrade_model_from_random_account() {
     let bob = starknet::contract_address_const::<0xb0b>();
     let alice = starknet::contract_address_const::<0xa11ce>();

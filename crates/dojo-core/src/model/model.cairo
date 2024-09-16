@@ -1,7 +1,7 @@
 use starknet::SyscallResult;
 
-use dojo::model::Layout;
-use dojo::model::introspect::Ty;
+use dojo::meta::Layout;
+use dojo::meta::introspect::Ty;
 use dojo::world::IWorldDispatcher;
 
 #[derive(Copy, Drop, Serde, Debug, PartialEq)]

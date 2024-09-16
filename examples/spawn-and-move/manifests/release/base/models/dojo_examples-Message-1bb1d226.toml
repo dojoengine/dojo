@@ -1,6 +1,6 @@
 kind = "DojoModel"
-class_hash = "0x3ca17c0ebb595e1d1cc01813923864316a49b91f4a725ef1371329abbc1947b"
-original_class_hash = "0x3ca17c0ebb595e1d1cc01813923864316a49b91f4a725ef1371329abbc1947b"
+class_hash = "0x1e1a725cce4b13e388375668532e16b7409ba1e963865e579f990f97980d694"
+original_class_hash = "0x1e1a725cce4b13e388375668532e16b7409ba1e963865e579f990f97980d694"
 abi = "manifests/release/base/abis/models/dojo_examples-Message-1bb1d226.json"
 tag = "dojo_examples-Message"
 qualified_path = "dojo_examples::models::message"

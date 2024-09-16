@@ -4,7 +4,7 @@ use core::option::Option;
 use core::poseidon::poseidon_hash_span;
 use core::serde::Serde;
 
-use dojo::model::{Layout, FieldLayout};
+use dojo::meta::{Layout, FieldLayout};
 
 /// Compute the poseidon hash of a serialized ByteArray
 pub fn bytearray_hash(data: @ByteArray) -> felt252 {

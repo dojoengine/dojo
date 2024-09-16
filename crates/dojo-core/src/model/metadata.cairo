@@ -8,8 +8,9 @@ use core::byte_array::ByteArray;
 use core::poseidon::poseidon_hash_span;
 use core::serde::Serde;
 
-use dojo::model::introspect::{Introspect, Ty, Struct, Member};
-use dojo::model::{Model, ModelIndex, Layout, FieldLayout};
+use dojo::meta::{Layout, FieldLayout};
+use dojo::meta::introspect::{Introspect, Ty, Struct, Member};
+use dojo::model::{Model, ModelIndex};
 use dojo::utils;
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 
@@ -198,8 +199,8 @@ pub mod resource_metadata {
     use super::ResourceMetadata;
     use super::ResourceMetadataModel;
 
-    use dojo::model::introspect::{Introspect, Ty};
-    use dojo::model::Layout;
+    use dojo::meta::introspect::{Introspect, Ty};
+    use dojo::meta::Layout;
 
     #[storage]
     struct Storage {}

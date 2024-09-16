@@ -51,7 +51,7 @@ pub struct UpgradeOutput {
 pub struct RegisterOutput {
     pub transaction_hash: Felt,
     pub declare_output: Vec<DeclareOutput>,
-    pub registered_models: Vec<String>,
+    pub registered_elements: Vec<String>,
 }
 
 #[derive(Debug, Error)]

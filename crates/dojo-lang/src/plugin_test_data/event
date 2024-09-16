@@ -1,0 +1,496 @@
+//! > Test expansion of the dojo::event.
+
+//! > test_runner_name
+test_expand_plugin
+
+//! > test_id
+event
+
+//! > cairo_code
+#[dojo::event(namespace: 'my_namespace')]
+struct MyEvent {
+    #[key]
+    id: felt252,
+    name: ByteArray,
+}
+
+//! > expanded_cairo_code
+#[dojo::event(namespace: 'my_namespace')]
+struct MyEvent {
+    #[key]
+    id: felt252,
+    name: ByteArray,
+}
+impl MyEventStrkEventImpl of starknet::Event<MyEvent> {
+
+    fn append_keys_and_data(
+        self: @MyEvent, ref keys: Array<felt252>, ref data: Array<felt252>
+    ) {
+        core::array::ArrayTrait::append(
+            ref keys, dojo::event::Event::<MyEvent>::selector()
+        );
+        core::array::ArrayTrait::append(ref keys, *self.id);
+
+        core::serde::Serde::serialize(self.name, ref data);
+
+    }
+
+    fn deserialize(
+        ref keys: Span<felt252>, ref data: Span<felt252>,
+    ) -> Option<MyEvent> {
+        let _ = keys.pop_front();
+
+        let id = keys.pop_front()?;
+
+        let name = core::serde::Serde::<ByteArray>::deserialize(ref data)?;
+
+        Option::Some(
+            MyEvent {
+                id,
+name,
+
+            }
+        )
+    }
+}
+
+pub impl MyEventEventImpl of dojo::event::Event<MyEvent> {
+
+    #[inline(always)]
+    fn name() -> ByteArray {
+        "MyEvent"
+    }
+
+    #[inline(always)]
+    fn namespace() -> ByteArray {
+        "dojo_test"
+    }
+
+    #[inline(always)]
+    fn tag() -> ByteArray {
+        "dojo_test-MyEvent"
+    }
+
+    #[inline(always)]
+    fn version() -> u8 {
+        1
+    }
+
+    #[inline(always)]
+    fn selector() -> felt252 {
+        2958269534562238924109099397789946589799451573209932519429687453334341163903
+    }
+
+    #[inline(always)]
+    fn instance_selector(self: @MyEvent) -> felt252 {
+        Self::selector()
+    }
+
+    #[inline(always)]
+    fn name_hash() -> felt252 {
+        92771332008364601068068539620837138880006294407614916787687390903459976481
+    }
+
+    #[inline(always)]
+    fn namespace_hash() -> felt252 {
+        1452123528942907587532668415362544424816022573043154497385993678618948064048
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::introspect::Introspect::<MyEvent>::layout()
+    }
+
+    #[inline(always)]
+    fn packed_size() -> Option<usize> {
+        dojo::meta::layout::compute_packed_size(Self::layout())
+    }
+
+    #[inline(always)]
+    fn unpacked_size() -> Option<usize> {
+        dojo::meta::introspect::Introspect::<MyEvent>::size()
+    }
+
+    #[inline(always)]
+    fn schema(self: @MyEvent) -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Introspect::<MyEvent>::ty()
+    }
+
+}
+
+#[starknet::contract]
+pub mod my_event {
+    use super::MyEvent;
+
+    #[abi(embed_v0)]
+    impl DojoEventImpl of dojo::event::IEvent<ContractState>{
+        fn name(self: @ContractState) -> ByteArray {
+           dojo::event::Event::<MyEvent>::name()
+        }
+
+        fn namespace(self: @ContractState) -> ByteArray {
+           dojo::event::Event::<MyEvent>::namespace()
+        }
+
+        fn tag(self: @ContractState) -> ByteArray {
+            dojo::event::Event::<MyEvent>::tag()
+        }
+
+        fn version(self: @ContractState) -> u8 {
+           dojo::event::Event::<MyEvent>::version()
+        }
+
+        fn selector(self: @ContractState) -> felt252 {
+           dojo::event::Event::<MyEvent>::selector()
+        }
+
+        fn name_hash(self: @ContractState) -> felt252 {
+            dojo::event::Event::<MyEvent>::name_hash()
+        }
+
+        fn namespace_hash(self: @ContractState) -> felt252 {
+            dojo::event::Event::<MyEvent>::namespace_hash()
+        }
+
+        fn unpacked_size(self: @ContractState) -> Option<usize> {
+            dojo::meta::introspect::Introspect::<MyEvent>::size()
+        }
+
+        fn packed_size(self: @ContractState) -> Option<usize> {
+            dojo::event::Event::<MyEvent>::packed_size()
+        }
+
+        fn layout(self: @ContractState) -> dojo::meta::Layout {
+            dojo::event::Event::<MyEvent>::layout()
+        }
+
+        fn schema(self: @ContractState) -> dojo::meta::introspect::Ty {
+            dojo::meta::introspect::Introspect::<MyEvent>::ty()
+        }
+    }
+#[event]
+#[derive(Drop, starknet::Event)]
+pub enum Event {}
+
+
+#[phantom]
+pub struct Storage {
+}
+
+#[derive(Drop, Copy)]
+pub struct StorageStorageBase {
+}
+impl StorageStorageImpl of starknet::storage::StorageTrait<Storage> {
+    type BaseType = StorageStorageBase;
+    fn storage(self: starknet::storage::FlattenedStorage<Storage>) -> StorageStorageBase {
+        StorageStorageBase {
+        }
+    }
+}
+#[derive(Drop, Copy)]
+pub struct StorageStorageBaseMut {
+}
+impl StorageStorageMutImpl of starknet::storage::StorageTraitMut<Storage> {
+    type BaseType = StorageStorageBaseMut;
+    fn storage_mut(self: starknet::storage::FlattenedStorage<starknet::storage::Mutable::<Storage>>) -> StorageStorageBaseMut {
+        StorageStorageBaseMut {
+        }
+    }
+}
+
+pub struct ContractState {
+}
+
+impl ContractStateDrop of Drop<ContractState> {}
+ 
+impl ContractStateDeref of core::ops::SnapshotDeref<ContractState> {
+    type Target = starknet::storage::FlattenedStorage<Storage>;
+    fn snapshot_deref(self: @ContractState) -> starknet::storage::FlattenedStorage<Storage> {
+        starknet::storage::FlattenedStorage {}
+    }
+}
+impl ContractStateDerefMut of core::ops::DerefMut<ContractState> {
+    type Target = starknet::storage::FlattenedStorage<starknet::storage::Mutable<Storage>> ;
+    fn deref_mut(ref self: ContractState) -> starknet::storage::FlattenedStorage<starknet::storage::Mutable<Storage>> {
+        starknet::storage::FlattenedStorage {}
+    }
+}
+pub fn unsafe_new_contract_state() -> ContractState {
+    ContractState {
+    }
+}
+
+// TODO(Gil): This generates duplicate diagnostics because of the plugin system, squash the duplicates into one.
+#[deprecated(
+    feature: "deprecated_legacy_map",
+    note: "Use `starknet::storage::Map` instead."
+)]
+use starknet::storage::Map as LegacyMap;
+
+#[implicit_precedence(core::pedersen::Pedersen, core::RangeCheck, core::integer::Bitwise, core::ec::EcOp, core::poseidon::Poseidon, core::SegmentArena, core::circuit::RangeCheck96, core::circuit::AddMod, core::circuit::MulMod, core::gas::GasBuiltin, System)]
+fn __wrapper__DojoEventImpl__name(mut data: Span::<felt252>) -> Span::<felt252> {
+    core::internal::require_implicit::<System>();
+    core::internal::revoke_ap_tracking();
+    core::option::OptionTraitImpl::expect(core::gas::withdraw_gas(), 'Out of gas');
+    
+    assert(core::array::SpanTrait::is_empty(data), 'Input too long for arguments');
+    core::option::OptionTraitImpl::expect(
+        core::gas::withdraw_gas_all(core::gas::get_builtin_costs()), 'Out of gas',
+    );
+    let mut contract_state = unsafe_new_contract_state();
+    let res = DojoEventImpl::name(@contract_state, );
+    let mut arr = ArrayTrait::new();
+    // References.
+    // Result.
+    core::serde::Serde::<ByteArray>::serialize(@res, ref arr);
+    core::array::ArrayTrait::span(@arr)
+}
+
+#[implicit_precedence(core::pedersen::Pedersen, core::RangeCheck, core::integer::Bitwise, core::ec::EcOp, core::poseidon::Poseidon, core::SegmentArena, core::circuit::RangeCheck96, core::circuit::AddMod, core::circuit::MulMod, core::gas::GasBuiltin, System)]
+fn __wrapper__DojoEventImpl__namespace(mut data: Span::<felt252>) -> Span::<felt252> {
+    core::internal::require_implicit::<System>();
+    core::internal::revoke_ap_tracking();
+    core::option::OptionTraitImpl::expect(core::gas::withdraw_gas(), 'Out of gas');
+    
+    assert(core::array::SpanTrait::is_empty(data), 'Input too long for arguments');
+    core::option::OptionTraitImpl::expect(
+        core::gas::withdraw_gas_all(core::gas::get_builtin_costs()), 'Out of gas',
+    );
+    let mut contract_state = unsafe_new_contract_state();
+    let res = DojoEventImpl::namespace(@contract_state, );
+    let mut arr = ArrayTrait::new();
+    // References.
+    // Result.
+    core::serde::Serde::<ByteArray>::serialize(@res, ref arr);
+    core::array::ArrayTrait::span(@arr)
+}
+
+#[implicit_precedence(core::pedersen::Pedersen, core::RangeCheck, core::integer::Bitwise, core::ec::EcOp, core::poseidon::Poseidon, core::SegmentArena, core::circuit::RangeCheck96, core::circuit::AddMod, core::circuit::MulMod, core::gas::GasBuiltin, System)]
+fn __wrapper__DojoEventImpl__tag(mut data: Span::<felt252>) -> Span::<felt252> {
+    core::internal::require_implicit::<System>();
+    core::internal::revoke_ap_tracking();
+    core::option::OptionTraitImpl::expect(core::gas::withdraw_gas(), 'Out of gas');
+    
+    assert(core::array::SpanTrait::is_empty(data), 'Input too long for arguments');
+    core::option::OptionTraitImpl::expect(
+        core::gas::withdraw_gas_all(core::gas::get_builtin_costs()), 'Out of gas',
+    );
+    let mut contract_state = unsafe_new_contract_state();
+    let res = DojoEventImpl::tag(@contract_state, );
+    let mut arr = ArrayTrait::new();
+    // References.
+    // Result.
+    core::serde::Serde::<ByteArray>::serialize(@res, ref arr);
+    core::array::ArrayTrait::span(@arr)
+}
+
+#[implicit_precedence(core::pedersen::Pedersen, core::RangeCheck, core::integer::Bitwise, core::ec::EcOp, core::poseidon::Poseidon, core::SegmentArena, core::circuit::RangeCheck96, core::circuit::AddMod, core::circuit::MulMod, core::gas::GasBuiltin, System)]
+fn __wrapper__DojoEventImpl__version(mut data: Span::<felt252>) -> Span::<felt252> {
+    core::internal::require_implicit::<System>();
+    core::internal::revoke_ap_tracking();
+    core::option::OptionTraitImpl::expect(core::gas::withdraw_gas(), 'Out of gas');
+    
+    assert(core::array::SpanTrait::is_empty(data), 'Input too long for arguments');
+    core::option::OptionTraitImpl::expect(
+        core::gas::withdraw_gas_all(core::gas::get_builtin_costs()), 'Out of gas',
+    );
+    let mut contract_state = unsafe_new_contract_state();
+    let res = DojoEventImpl::version(@contract_state, );
+    let mut arr = ArrayTrait::new();
+    // References.
+    // Result.
+    core::serde::Serde::<u8>::serialize(@res, ref arr);
+    core::array::ArrayTrait::span(@arr)
+}
+
+#[implicit_precedence(core::pedersen::Pedersen, core::RangeCheck, core::integer::Bitwise, core::ec::EcOp, core::poseidon::Poseidon, core::SegmentArena, core::circuit::RangeCheck96, core::circuit::AddMod, core::circuit::MulMod, core::gas::GasBuiltin, System)]
+fn __wrapper__DojoEventImpl__selector(mut data: Span::<felt252>) -> Span::<felt252> {
+    core::internal::require_implicit::<System>();
+    core::internal::revoke_ap_tracking();
+    core::option::OptionTraitImpl::expect(core::gas::withdraw_gas(), 'Out of gas');
+    
+    assert(core::array::SpanTrait::is_empty(data), 'Input too long for arguments');
+    core::option::OptionTraitImpl::expect(
+        core::gas::withdraw_gas_all(core::gas::get_builtin_costs()), 'Out of gas',
+    );
+    let mut contract_state = unsafe_new_contract_state();
+    let res = DojoEventImpl::selector(@contract_state, );
+    let mut arr = ArrayTrait::new();
+    // References.
+    // Result.
+    core::serde::Serde::<felt252>::serialize(@res, ref arr);
+    core::array::ArrayTrait::span(@arr)
+}
+
+#[implicit_precedence(core::pedersen::Pedersen, core::RangeCheck, core::integer::Bitwise, core::ec::EcOp, core::poseidon::Poseidon, core::SegmentArena, core::circuit::RangeCheck96, core::circuit::AddMod, core::circuit::MulMod, core::gas::GasBuiltin, System)]
+fn __wrapper__DojoEventImpl__name_hash(mut data: Span::<felt252>) -> Span::<felt252> {
+    core::internal::require_implicit::<System>();
+    core::internal::revoke_ap_tracking();
+    core::option::OptionTraitImpl::expect(core::gas::withdraw_gas(), 'Out of gas');
+    
+    assert(core::array::SpanTrait::is_empty(data), 'Input too long for arguments');
+    core::option::OptionTraitImpl::expect(
+        core::gas::withdraw_gas_all(core::gas::get_builtin_costs()), 'Out of gas',
+    );
+    let mut contract_state = unsafe_new_contract_state();
+    let res = DojoEventImpl::name_hash(@contract_state, );
+    let mut arr = ArrayTrait::new();
+    // References.
+    // Result.
+    core::serde::Serde::<felt252>::serialize(@res, ref arr);
+    core::array::ArrayTrait::span(@arr)
+}
+
+#[implicit_precedence(core::pedersen::Pedersen, core::RangeCheck, core::integer::Bitwise, core::ec::EcOp, core::poseidon::Poseidon, core::SegmentArena, core::circuit::RangeCheck96, core::circuit::AddMod, core::circuit::MulMod, core::gas::GasBuiltin, System)]
+fn __wrapper__DojoEventImpl__namespace_hash(mut data: Span::<felt252>) -> Span::<felt252> {
+    core::internal::require_implicit::<System>();
+    core::internal::revoke_ap_tracking();
+    core::option::OptionTraitImpl::expect(core::gas::withdraw_gas(), 'Out of gas');
+    
+    assert(core::array::SpanTrait::is_empty(data), 'Input too long for arguments');
+    core::option::OptionTraitImpl::expect(
+        core::gas::withdraw_gas_all(core::gas::get_builtin_costs()), 'Out of gas',
+    );
+    let mut contract_state = unsafe_new_contract_state();
+    let res = DojoEventImpl::namespace_hash(@contract_state, );
+    let mut arr = ArrayTrait::new();
+    // References.
+    // Result.
+    core::serde::Serde::<felt252>::serialize(@res, ref arr);
+    core::array::ArrayTrait::span(@arr)
+}
+
+#[implicit_precedence(core::pedersen::Pedersen, core::RangeCheck, core::integer::Bitwise, core::ec::EcOp, core::poseidon::Poseidon, core::SegmentArena, core::circuit::RangeCheck96, core::circuit::AddMod, core::circuit::MulMod, core::gas::GasBuiltin, System)]
+fn __wrapper__DojoEventImpl__unpacked_size(mut data: Span::<felt252>) -> Span::<felt252> {
+    core::internal::require_implicit::<System>();
+    core::internal::revoke_ap_tracking();
+    core::option::OptionTraitImpl::expect(core::gas::withdraw_gas(), 'Out of gas');
+    
+    assert(core::array::SpanTrait::is_empty(data), 'Input too long for arguments');
+    core::option::OptionTraitImpl::expect(
+        core::gas::withdraw_gas_all(core::gas::get_builtin_costs()), 'Out of gas',
+    );
+    let mut contract_state = unsafe_new_contract_state();
+    let res = DojoEventImpl::unpacked_size(@contract_state, );
+    let mut arr = ArrayTrait::new();
+    // References.
+    // Result.
+    core::serde::Serde::<Option<usize>>::serialize(@res, ref arr);
+    core::array::ArrayTrait::span(@arr)
+}
+
+#[implicit_precedence(core::pedersen::Pedersen, core::RangeCheck, core::integer::Bitwise, core::ec::EcOp, core::poseidon::Poseidon, core::SegmentArena, core::circuit::RangeCheck96, core::circuit::AddMod, core::circuit::MulMod, core::gas::GasBuiltin, System)]
+fn __wrapper__DojoEventImpl__packed_size(mut data: Span::<felt252>) -> Span::<felt252> {
+    core::internal::require_implicit::<System>();
+    core::internal::revoke_ap_tracking();
+    core::option::OptionTraitImpl::expect(core::gas::withdraw_gas(), 'Out of gas');
+    
+    assert(core::array::SpanTrait::is_empty(data), 'Input too long for arguments');
+    core::option::OptionTraitImpl::expect(
+        core::gas::withdraw_gas_all(core::gas::get_builtin_costs()), 'Out of gas',
+    );
+    let mut contract_state = unsafe_new_contract_state();
+    let res = DojoEventImpl::packed_size(@contract_state, );
+    let mut arr = ArrayTrait::new();
+    // References.
+    // Result.
+    core::serde::Serde::<Option<usize>>::serialize(@res, ref arr);
+    core::array::ArrayTrait::span(@arr)
+}
+
+#[implicit_precedence(core::pedersen::Pedersen, core::RangeCheck, core::integer::Bitwise, core::ec::EcOp, core::poseidon::Poseidon, core::SegmentArena, core::circuit::RangeCheck96, core::circuit::AddMod, core::circuit::MulMod, core::gas::GasBuiltin, System)]
+fn __wrapper__DojoEventImpl__layout(mut data: Span::<felt252>) -> Span::<felt252> {
+    core::internal::require_implicit::<System>();
+    core::internal::revoke_ap_tracking();
+    core::option::OptionTraitImpl::expect(core::gas::withdraw_gas(), 'Out of gas');
+    
+    assert(core::array::SpanTrait::is_empty(data), 'Input too long for arguments');
+    core::option::OptionTraitImpl::expect(
+        core::gas::withdraw_gas_all(core::gas::get_builtin_costs()), 'Out of gas',
+    );
+    let mut contract_state = unsafe_new_contract_state();
+    let res = DojoEventImpl::layout(@contract_state, );
+    let mut arr = ArrayTrait::new();
+    // References.
+    // Result.
+    core::serde::Serde::<dojo::meta::Layout>::serialize(@res, ref arr);
+    core::array::ArrayTrait::span(@arr)
+}
+
+#[implicit_precedence(core::pedersen::Pedersen, core::RangeCheck, core::integer::Bitwise, core::ec::EcOp, core::poseidon::Poseidon, core::SegmentArena, core::circuit::RangeCheck96, core::circuit::AddMod, core::circuit::MulMod, core::gas::GasBuiltin, System)]
+fn __wrapper__DojoEventImpl__schema(mut data: Span::<felt252>) -> Span::<felt252> {
+    core::internal::require_implicit::<System>();
+    core::internal::revoke_ap_tracking();
+    core::option::OptionTraitImpl::expect(core::gas::withdraw_gas(), 'Out of gas');
+    
+    assert(core::array::SpanTrait::is_empty(data), 'Input too long for arguments');
+    core::option::OptionTraitImpl::expect(
+        core::gas::withdraw_gas_all(core::gas::get_builtin_costs()), 'Out of gas',
+    );
+    let mut contract_state = unsafe_new_contract_state();
+    let res = DojoEventImpl::schema(@contract_state, );
+    let mut arr = ArrayTrait::new();
+    // References.
+    // Result.
+    core::serde::Serde::<dojo::meta::introspect::Ty>::serialize(@res, ref arr);
+    core::array::ArrayTrait::span(@arr)
+}
+
+
+pub mod __external {
+    pub use super::__wrapper__DojoEventImpl__name as name;
+    pub use super::__wrapper__DojoEventImpl__namespace as namespace;
+    pub use super::__wrapper__DojoEventImpl__tag as tag;
+    pub use super::__wrapper__DojoEventImpl__version as version;
+    pub use super::__wrapper__DojoEventImpl__selector as selector;
+    pub use super::__wrapper__DojoEventImpl__name_hash as name_hash;
+    pub use super::__wrapper__DojoEventImpl__namespace_hash as namespace_hash;
+    pub use super::__wrapper__DojoEventImpl__unpacked_size as unpacked_size;
+    pub use super::__wrapper__DojoEventImpl__packed_size as packed_size;
+    pub use super::__wrapper__DojoEventImpl__layout as layout;
+    pub use super::__wrapper__DojoEventImpl__schema as schema;
+}
+pub mod __l1_handler {
+}
+pub mod __constructor {
+}
+    impl ContractStateEventEmitter of starknet::event::EventEmitter<
+        ContractState, Event
+    > {
+        fn emit<S, impl IntoImp: core::traits::Into<S, Event>>(
+            ref self: ContractState, event: S
+        ) {
+            let event: Event = core::traits::Into::into(event);
+            let mut keys = Default::<core::array::Array>::default();
+            let mut data = Default::<core::array::Array>::default();
+            starknet::Event::append_keys_and_data(@event, ref keys, ref data);
+            starknet::SyscallResultTrait::unwrap_syscall(
+                starknet::syscalls::emit_event_syscall(
+                    core::array::ArrayTrait::span(@keys),
+                    core::array::ArrayTrait::span(@data),
+                )
+            )
+        }
+    }
+impl EventDrop of core::traits::Drop::<Event>;
+impl EventIsEvent of starknet::Event<Event> {
+    fn append_keys_and_data(
+        self: @Event, ref keys: Array<felt252>, ref data: Array<felt252>
+    ) {
+        match self {
+        }
+    }
+    fn deserialize(
+        ref keys: Span<felt252>, ref data: Span<felt252>,
+    ) -> Option<Event> {
+        let __selector__ = *core::array::SpanTrait::pop_front(ref keys)?;
+        Option::None
+    }
+}
+impl StorageStorageBaseDrop of core::traits::Drop::<StorageStorageBase>;
+impl StorageStorageBaseCopy of core::traits::Copy::<StorageStorageBase>;
+impl StorageStorageBaseMutDrop of core::traits::Drop::<StorageStorageBaseMut>;
+impl StorageStorageBaseMutCopy of core::traits::Copy::<StorageStorageBaseMut>;
+}
+
+//! > expected_diagnostics

@@ -3,12 +3,13 @@ use core::traits::{Into, TryInto};
 use starknet::{ContractAddress, ClassHash, storage_access::StorageBaseAddress, SyscallResult};
 
 use dojo::model::{ModelIndex, ResourceMetadata};
-use dojo::model::{Layout};
+use dojo::meta::Layout;
 use dojo::utils::bytearray_hash;
 
 #[derive(Drop, starknet::Store, Serde, Default, Debug)]
 pub enum Resource {
     Model: (ClassHash, ContractAddress),
+    Event: (ClassHash, ContractAddress),
     Contract: (ClassHash, ContractAddress),
     Namespace,
     World,
@@ -26,11 +27,15 @@ pub trait IWorld<T> {
     fn register_model(ref self: T, class_hash: ClassHash);
     fn upgrade_model(ref self: T, class_hash: ClassHash);
 
+    fn register_event(ref self: T, class_hash: ClassHash);
+    fn upgrade_event(ref self: T, class_hash: ClassHash);
+
     fn deploy_contract(ref self: T, salt: felt252, class_hash: ClassHash) -> ContractAddress;
     fn upgrade_contract(ref self: T, selector: felt252, class_hash: ClassHash) -> ClassHash;
     fn init_contract(ref self: T, selector: felt252, init_calldata: Span<felt252>);
 
     fn uuid(ref self: T) -> usize;
+
     fn emit(self: @T, keys: Array<felt252>, values: Span<felt252>);
 
     fn entity(
@@ -118,9 +123,11 @@ pub mod world {
         IUpgradeableState, IFactRegistryDispatcher, IFactRegistryDispatcherTrait, StorageUpdate,
         ProgramOutput
     };
+    use dojo::meta::Layout;
+    use dojo::event::{IEventDispatcher, IEventDispatcherTrait};
     use dojo::model::{
-        Model, IModelDispatcher, IModelDispatcherTrait, Layout, ResourceMetadata,
-        ResourceMetadataTrait, metadata
+        Model, IModelDispatcher, IModelDispatcherTrait, ResourceMetadata, ResourceMetadataTrait,
+        metadata
     };
     use dojo::storage;
     use dojo::utils::{entity_id_from_keys, bytearray_hash};
@@ -151,6 +158,8 @@ pub mod world {
         NamespaceRegistered: NamespaceRegistered,
         ModelRegistered: ModelRegistered,
         ModelUpgraded: ModelUpgraded,
+        EventRegistered: EventRegistered,
+        EventUpgraded: EventUpgraded,
         StoreSetRecord: StoreSetRecord,
         StoreUpdateRecord: StoreUpdateRecord,
         StoreUpdateMember: StoreUpdateMember,
@@ -228,6 +237,24 @@ pub mod world {
         pub prev_address: ContractAddress,
     }
 
+    #[derive(Drop, starknet::Event, Debug, PartialEq)]
+    pub struct EventRegistered {
+        pub name: ByteArray,
+        pub namespace: ByteArray,
+        pub class_hash: ClassHash,
+        pub address: ContractAddress,
+    }
+
+    #[derive(Drop, starknet::Event, Debug, PartialEq)]
+    pub struct EventUpgraded {
+        pub name: ByteArray,
+        pub namespace: ByteArray,
+        pub class_hash: ClassHash,
+        pub prev_class_hash: ClassHash,
+        pub address: ContractAddress,
+        pub prev_address: ContractAddress,
+    }
+
     #[derive(Drop, starknet::Event)]
     pub struct StoreSetRecord {
         pub table: felt252,
@@ -276,6 +303,7 @@ pub mod world {
         contract_base: ClassHash,
         nonce: usize,
         models_salt: usize,
+        events_salt: usize,
         resources: Map::<felt252, Resource>,
         owners: Map::<(felt252, ContractAddress), bool>,
         writers: Map::<(felt252, ContractAddress), bool>,
@@ -577,6 +605,99 @@ pub mod world {
             EventEmitter::emit(
                 ref self,
                 ModelUpgraded {
+                    name, namespace, prev_address, address, class_hash, prev_class_hash
+                }
+            );
+        }
+
+        /// Registers an event in the world. If the event is already registered,
+        /// the implementation will be updated.
+        ///
+        /// # Arguments
+        ///
+        /// * `class_hash` - The class hash of the event to be registered.
+        fn register_event(ref self: ContractState, class_hash: ClassHash) {
+            let caller = get_caller_address();
+
+            let salt = self.events_salt.read();
+            let (address, name, selector, namespace, namespace_hash) =
+                dojo::event::deploy_and_get_metadata(
+                salt.into(), class_hash
+            )
+                .unwrap_syscall();
+            self.events_salt.write(salt + 1);
+
+            if selector.is_zero() {
+                panic_with_byte_array(@errors::invalid_resource_selector(selector));
+            }
+
+            if !self.is_namespace_registered(namespace_hash) {
+                panic_with_byte_array(@errors::namespace_not_registered(@namespace));
+            }
+
+            self.assert_caller_namespace_write_access(@namespace, namespace_hash);
+
+            let event = self.resources.read(selector);
+            if !event.is_unregistered() {
+                panic_with_byte_array(@errors::event_already_registered(@namespace, @name));
+            }
+
+            self.resources.write(selector, Resource::Event((class_hash, address)));
+            self.owners.write((selector, caller), true);
+
+            EventEmitter::emit(ref self, EventRegistered { name, namespace, address, class_hash });
+        }
+
+        ///
+        fn upgrade_event(ref self: ContractState, class_hash: ClassHash) {
+            let caller = get_caller_address();
+
+            let salt = self.events_salt.read();
+            let (address, name, selector, namespace, namespace_hash) =
+                dojo::event::deploy_and_get_metadata(
+                salt.into(), class_hash
+            )
+                .unwrap_syscall();
+            self.events_salt.write(salt + 1);
+
+            if !self.is_namespace_registered(namespace_hash) {
+                panic_with_byte_array(@errors::namespace_not_registered(@namespace));
+            }
+
+            self.assert_caller_namespace_write_access(@namespace, namespace_hash);
+
+            if selector.is_zero() {
+                panic_with_byte_array(@errors::invalid_resource_selector(selector));
+            }
+
+            let mut prev_class_hash = core::num::traits::Zero::<ClassHash>::zero();
+            let mut prev_address = core::num::traits::Zero::<ContractAddress>::zero();
+
+            match self.resources.read(selector) {
+                // If event is already registered, validate permission to update.
+                Resource::Event((
+                    event_hash, event_address
+                )) => {
+                    if !self.is_owner(selector, caller) {
+                        panic_with_byte_array(@errors::not_owner_upgrade(caller, selector));
+                    }
+
+                    prev_class_hash = event_hash;
+                    prev_address = event_address;
+                },
+                Resource::Unregistered => {
+                    panic_with_byte_array(@errors::event_not_registered(@namespace, @name))
+                },
+                _ => panic_with_byte_array(
+                    @errors::resource_conflict(@format!("{}-{}", namespace, name), @"event")
+                )
+            };
+
+            self.resources.write(selector, Resource::Event((class_hash, address)));
+
+            EventEmitter::emit(
+                ref self,
+                EventUpgraded {
                     name, namespace, prev_address, address, class_hash, prev_class_hash
                 }
             );

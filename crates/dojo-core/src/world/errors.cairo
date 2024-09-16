@@ -28,12 +28,20 @@ pub fn no_namespace_write_access(caller: ContractAddress, namespace: @ByteArray)
     format!("Caller `{:?}` has no write access on namespace `{}`", caller, namespace)
 }
 
+pub fn event_already_registered(namespace: @ByteArray, name: @ByteArray) -> ByteArray {
+    format!("Event `{}-{}` is already registered", namespace, name)
+}
+
+pub fn event_not_registered(namespace: @ByteArray, name: @ByteArray) -> ByteArray {
+    format!("Event `{}-{}` is not registered", namespace, name)
+}
+
 pub fn model_already_registered(namespace: @ByteArray, name: @ByteArray) -> ByteArray {
-    format!("Resource `{}-{}` is already registered", namespace, name)
+    format!("Model `{}-{}` is already registered", namespace, name)
 }
 
 pub fn model_not_registered(namespace: @ByteArray, name: @ByteArray) -> ByteArray {
-    format!("Resource `{}-{}` is not registered", namespace, name)
+    format!("Model `{}-{}` is not registered", namespace, name)
 }
 
 pub fn resource_not_registered(resource: felt252) -> ByteArray {

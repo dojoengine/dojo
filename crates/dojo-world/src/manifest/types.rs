@@ -25,6 +25,7 @@ pub struct BaseManifest {
     pub base: Manifest<Class>,
     pub contracts: Vec<Manifest<DojoContract>>,
     pub models: Vec<Manifest<DojoModel>>,
+    pub events: Vec<Manifest<DojoEvent>>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -36,6 +37,7 @@ pub struct DeploymentManifest {
     // hashes from the events, so needs to be handled accordingly
     pub contracts: Vec<Manifest<DojoContract>>,
     pub models: Vec<Manifest<DojoModel>>,
+    pub events: Vec<Manifest<DojoEvent>>,
 }
 
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
@@ -45,6 +47,7 @@ pub struct OverlayManifest {
     pub base: Option<OverlayClass>,
     pub contracts: Vec<OverlayDojoContract>,
     pub models: Vec<OverlayDojoModel>,
+    pub events: Vec<OverlayDojoEvent>,
 }
 
 #[derive(Clone, Serialize, Default, Deserialize, Debug)]
@@ -125,6 +128,22 @@ pub struct DojoModel {
     pub qualified_path: String,
 }
 
+/// Represents a declaration of an event.
+#[serde_as]
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[cfg_attr(test, derive(PartialEq))]
+#[serde(tag = "kind")]
+pub struct DojoEvent {
+    pub members: Vec<Member>,
+    #[serde_as(as = "UfeHex")]
+    pub class_hash: Felt,
+    #[serde_as(as = "UfeHex")]
+    pub original_class_hash: Felt,
+    pub abi: Option<AbiFormat>,
+    pub tag: String,
+    pub qualified_path: String,
+}
+
 #[serde_as]
 #[derive(Clone, Default, Debug, Serialize, Deserialize)]
 #[cfg_attr(test, derive(PartialEq))]
@@ -172,6 +191,14 @@ pub struct OverlayDojoContract {
 #[derive(Clone, Default, Debug, Serialize, Deserialize)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct OverlayDojoModel {
+    pub tag: String,
+    pub original_class_hash: Option<Felt>,
+}
+
+#[serde_as]
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[cfg_attr(test, derive(PartialEq))]
+pub struct OverlayDojoEvent {
     pub tag: String,
     pub original_class_hash: Option<Felt>,
 }

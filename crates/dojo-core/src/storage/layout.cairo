@@ -1,4 +1,4 @@
-use dojo::model::{Layout, FieldLayout};
+use dojo::meta::{Layout, FieldLayout};
 use dojo::utils::{combine_key, find_field_layout};
 
 use super::database;

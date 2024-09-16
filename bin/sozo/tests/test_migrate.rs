@@ -45,7 +45,8 @@ async fn migrate_dry_run() {
 
     assert!(output.contains("Migration Strategy"));
     assert!(output.contains("# Base Contract"));
-    assert!(output.contains("# Models (10)"));
+    assert!(output.contains("# Models (8)"));
+    assert!(output.contains("# Events (2)"));
     assert!(output.contains("# World"));
     assert!(output.contains("# Contracts (4)"));
 }

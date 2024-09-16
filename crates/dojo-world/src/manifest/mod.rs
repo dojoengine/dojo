@@ -29,9 +29,9 @@ mod test;
 mod types;
 
 pub use types::{
-    AbiFormat, BaseManifest, Class, DeploymentManifest, DojoContract, DojoModel, Manifest,
-    ManifestMethods, Member, OverlayClass, OverlayContract, OverlayDojoContract, OverlayDojoModel,
-    OverlayManifest, WorldContract, WorldMetadata,
+    AbiFormat, BaseManifest, Class, DeploymentManifest, DojoContract, DojoEvent, DojoModel,
+    Manifest, ManifestMethods, Member, OverlayClass, OverlayContract, OverlayDojoContract,
+    OverlayDojoEvent, OverlayDojoModel, OverlayManifest, WorldContract, WorldMetadata,
 };
 
 pub const WORLD_CONTRACT_TAG: &str = "dojo-world";
@@ -49,6 +49,7 @@ pub const ABIS_DIR: &str = "abis";
 
 pub const CONTRACTS_DIR: &str = "contracts";
 pub const MODELS_DIR: &str = "models";
+pub const EVENTS_DIR: &str = "events";
 
 #[derive(Error, Debug)]
 pub enum AbstractManifestError {
@@ -105,6 +106,7 @@ impl From<BaseManifest> for DeploymentManifest {
             base: value.base,
             contracts: value.contracts,
             models: value.models,
+            events: value.events,
         }
     }
 }
@@ -122,14 +124,16 @@ impl BaseManifest {
 
         let contracts = elements_from_path::<DojoContract>(&path.join(CONTRACTS_DIR))?;
         let models = elements_from_path::<DojoModel>(&path.join(MODELS_DIR))?;
+        let events = elements_from_path::<DojoEvent>(&path.join(EVENTS_DIR))?;
 
-        Ok(Self { world, base, contracts, models })
+        Ok(Self { world, base, contracts, models, events })
     }
 
     /// Given a list of contract or model tags, remove those from the manifest.
     pub fn remove_tags(&mut self, tags: &[String]) {
         self.contracts.retain(|contract| !tags.contains(&contract.inner.tag));
         self.models.retain(|model| !tags.contains(&model.inner.tag));
+        self.events.retain(|event| !tags.contains(&event.inner.tag));
     }
 
     /// Generates a map of `tag -> ManifestKind`
@@ -141,6 +145,10 @@ impl BaseManifest {
 
         for model in self.models.as_slice() {
             kind_from_tags.insert(model.inner.tag.clone(), ManifestKind::Model);
+        }
+
+        for event in self.events.as_slice() {
+            kind_from_tags.insert(event.inner.tag.clone(), ManifestKind::Event);
         }
 
         for contract in self.contracts.as_slice() {
@@ -184,6 +192,7 @@ pub enum ManifestKind {
     WorldClass,
     Contract,
     Model,
+    Event,
 }
 
 impl OverlayManifest {
@@ -204,6 +213,10 @@ impl OverlayManifest {
             ManifestKind::Model => {
                 let overlay: OverlayDojoModel = toml::from_str(&fs::read_to_string(path)?)?;
                 overlays.models.push(overlay);
+            }
+            ManifestKind::Event => {
+                let overlay: OverlayDojoEvent = toml::from_str(&fs::read_to_string(path)?)?;
+                overlays.events.push(overlay);
             }
             ManifestKind::Contract => {
                 let overlay: OverlayDojoContract = toml::from_str(&fs::read_to_string(path)?)?;
@@ -299,6 +312,7 @@ impl OverlayManifest {
 
         overlay_to_path::<OverlayDojoContract>(path, self.contracts.as_slice(), |c| c.tag.clone())?;
         overlay_to_path::<OverlayDojoModel>(path, self.models.as_slice(), |m| m.tag.clone())?;
+        overlay_to_path::<OverlayDojoEvent>(path, self.events.as_slice(), |m| m.tag.clone())?;
         Ok(())
     }
 
@@ -324,6 +338,13 @@ impl OverlayManifest {
             let found = self.models.iter().find(|m| m.tag == other_model.tag);
             if found.is_none() {
                 self.models.push(other_model);
+            }
+        }
+
+        for other_event in other.events {
+            let found = self.events.iter().find(|m| m.tag == other_event.tag);
+            if found.is_none() {
+                self.events.push(other_event);
             }
         }
     }
@@ -384,6 +405,12 @@ impl DeploymentManifest {
             }
         }
 
+        for event in &mut manifest_with_abis.events {
+            if let Some(abi_format) = &event.inner.abi {
+                event.inner.abi = Some(abi_format.to_embed(root_dir)?);
+            }
+        }
+
         let deployed_manifest = serde_json::to_string_pretty(&manifest_with_abis)?;
         fs::write(path, deployed_manifest)?;
 
@@ -417,10 +444,11 @@ impl DeploymentManifest {
         let base_class_hash = world.base().block_id(BLOCK_ID).call().await?;
         let base_class_hash = base_class_hash.into();
 
-        let (models, contracts) =
-            get_remote_models_and_contracts(world_address, &world.provider()).await?;
+        let (events, models, contracts) =
+            get_remote_elements(world_address, &world.provider()).await?;
 
         Ok(DeploymentManifest {
+            events,
             models,
             contracts,
             world: Manifest::new(
@@ -474,13 +502,17 @@ impl DeploymentManifest {
 // #[async_trait]
 // impl<P: Provider + Sync + Send + 'static> RemoteLoadable<P> for DeploymentManifest {}
 
-async fn get_remote_models_and_contracts<P>(
+async fn get_remote_elements<P>(
     world: Felt,
     provider: P,
-) -> Result<(Vec<Manifest<DojoModel>>, Vec<Manifest<DojoContract>>), AbstractManifestError>
+) -> Result<
+    (Vec<Manifest<DojoEvent>>, Vec<Manifest<DojoModel>>, Vec<Manifest<DojoContract>>),
+    AbstractManifestError,
+>
 where
     P: Provider + Send + Sync,
 {
+    let registered_events_event_name = starknet_keccak("EventRegistered".as_bytes());
     let registered_models_event_name = starknet_keccak("ModelRegistered".as_bytes());
     let contract_deployed_event_name = starknet_keccak("ContractDeployed".as_bytes());
     let contract_upgraded_event_name = starknet_keccak("ContractUpgraded".as_bytes());
@@ -490,6 +522,7 @@ where
         &provider,
         world,
         vec![vec![
+            registered_events_event_name,
             registered_models_event_name,
             contract_deployed_event_name,
             contract_upgraded_event_name,
@@ -498,6 +531,7 @@ where
     )
     .await?;
 
+    let mut registered_events_events = vec![];
     let mut registered_models_events = vec![];
     let mut contract_deployed_events = vec![];
     let mut contract_upgraded_events = vec![];
@@ -505,6 +539,9 @@ where
 
     for event in events {
         match event.keys.first() {
+            Some(event_name) if *event_name == registered_events_event_name => {
+                registered_events_events.push(event)
+            }
             Some(event_name) if *event_name == registered_models_event_name => {
                 registered_models_events.push(event)
             }
@@ -521,6 +558,7 @@ where
         }
     }
 
+    let events = parse_events_events(registered_events_events);
     let models = parse_models_events(registered_models_events);
     let mut contracts = parse_contracts_events(
         contract_deployed_events,
@@ -532,7 +570,7 @@ where
         contract.manifest_name = naming::get_filename_from_tag(&contract.inner.tag);
     }
 
-    Ok((models, contracts))
+    Ok((events, models, contracts))
 }
 
 async fn get_events<P: Provider + Send + Sync>(
@@ -694,6 +732,35 @@ fn parse_contracts_events(
         .collect()
 }
 
+fn parse_events_events(events: Vec<EmittedEvent>) -> Vec<Manifest<DojoEvent>> {
+    let mut parsed_events: HashMap<String, Felt> = HashMap::with_capacity(events.len());
+
+    for e in events {
+        let event = match e.try_into() {
+            Ok(WorldEvent::EventRegistered(mr)) => mr,
+            Ok(_) => panic!("EventRegistered expected as already filtered"),
+            Err(_) => {
+                continue;
+            }
+        };
+
+        let model_name = event.name.to_string().expect("ASCII encoded name");
+        let namespace = event.namespace.to_string().expect("ASCII encoded namespace");
+        let event_tag = naming::get_tag(&namespace, &model_name);
+
+        parsed_events.insert(event_tag, event.class_hash.into());
+    }
+
+    // TODO: include address of the event in the manifest.
+    parsed_events
+        .into_iter()
+        .map(|(tag, class_hash)| Manifest::<DojoEvent> {
+            inner: DojoEvent { tag: tag.clone(), class_hash, abi: None, ..Default::default() },
+            manifest_name: naming::get_filename_from_tag(&tag),
+        })
+        .collect()
+}
+
 fn parse_models_events(events: Vec<EmittedEvent>) -> Vec<Manifest<DojoModel>> {
     let mut models: HashMap<String, Felt> = HashMap::with_capacity(events.len());
 
@@ -808,6 +875,36 @@ impl ManifestMethods for DojoContract {
         }
         if let Some(init_calldata) = old.init_calldata {
             self.init_calldata = init_calldata;
+        }
+    }
+}
+
+impl ManifestMethods for DojoEvent {
+    type OverlayType = OverlayDojoEvent;
+
+    fn abi(&self) -> Option<&AbiFormat> {
+        self.abi.as_ref()
+    }
+
+    fn set_abi(&mut self, abi: Option<AbiFormat>) {
+        self.abi = abi;
+    }
+
+    fn class_hash(&self) -> &Felt {
+        self.class_hash.as_ref()
+    }
+
+    fn set_class_hash(&mut self, class_hash: Felt) {
+        self.class_hash = class_hash;
+    }
+
+    fn original_class_hash(&self) -> &Felt {
+        self.original_class_hash.as_ref()
+    }
+
+    fn merge(&mut self, old: Self::OverlayType) {
+        if let Some(class_hash) = old.original_class_hash {
+            self.original_class_hash = class_hash;
         }
     }
 }

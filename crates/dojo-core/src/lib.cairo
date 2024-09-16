@@ -6,11 +6,20 @@ pub mod contract {
     pub mod upgradeable;
 }
 
-pub mod model {
+pub mod meta {
     pub mod introspect;
     pub mod layout;
     pub use layout::{Layout, FieldLayout};
+}
 
+pub mod event {
+    pub mod event;
+    pub use event::{
+        Event, IEvent, IEventDispatcher, IEventDispatcherTrait, deploy_and_get_metadata
+    };
+}
+
+pub mod model {
     pub mod model;
     pub use model::{
         Model, ModelIndex, ModelEntity, IModel, IModelDispatcher, IModelDispatcherTrait,
@@ -72,8 +81,11 @@ pub mod world {
 
 #[cfg(test)]
 mod tests {
-    mod model {
+    mod meta {
         mod introspect;
+    }
+
+    mod model {
         mod model;
     }
     mod storage {

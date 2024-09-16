@@ -30,7 +30,7 @@ pub fn build_field_layouts(
             let field_selector = get_selector_from_name(&field_name.to_string()).unwrap();
             let field_layout = get_layout_from_type_clause(db, diagnostics, &m.type_clause(db));
             Some(format!(
-                "dojo::model::FieldLayout {{
+                "dojo::meta::FieldLayout {{
                     selector: {field_selector},
                     layout: {field_layout}
                 }}"
@@ -57,7 +57,7 @@ pub fn build_variant_layouts(
 
             let variant_layout = match v.type_clause(db) {
                 OptionTypeClause::Empty(_) => {
-                    "dojo::model::Layout::Fixed(array![].span())".to_string()
+                    "dojo::meta::Layout::Fixed(array![].span())".to_string()
                 }
                 OptionTypeClause::TypeClause(type_clause) => {
                     get_layout_from_type_clause(db, diagnostics, &type_clause)
@@ -65,7 +65,7 @@ pub fn build_variant_layouts(
             };
 
             format!(
-                "dojo::model::FieldLayout {{
+                "dojo::meta::FieldLayout {{
                     selector: {selector},
                     layout: {variant_layout}
                 }}"
@@ -112,7 +112,7 @@ pub fn build_array_layout_from_type(
 
     if is_tuple(&array_item_type) {
         format!(
-            "dojo::model::Layout::Array(
+            "dojo::meta::Layout::Array(
                 array![
                     {}
                 ].span()
@@ -121,7 +121,7 @@ pub fn build_array_layout_from_type(
         )
     } else if is_array(&array_item_type) {
         format!(
-            "dojo::model::Layout::Array(
+            "dojo::meta::Layout::Array(
                 array![
                     {}
                 ].span()
@@ -129,7 +129,7 @@ pub fn build_array_layout_from_type(
             build_array_layout_from_type(diagnostics, diagnostic_item, &array_item_type)
         )
     } else {
-        format!("dojo::model::introspect::Introspect::<{}>::layout()", item_type)
+        format!("dojo::meta::introspect::Introspect::<{}>::layout()", item_type)
     }
 }
 
@@ -146,7 +146,7 @@ pub fn build_tuple_layout_from_type(
         .collect::<Vec<_>>()
         .join(",\n");
     format!(
-        "dojo::model::Layout::Tuple(
+        "dojo::meta::Layout::Tuple(
             array![
             {}
             ].span()
@@ -176,12 +176,12 @@ pub fn build_item_layout_from_type(
             });
         }
 
-        format!("dojo::model::introspect::Introspect::<{}>::layout()", item_type)
+        format!("dojo::meta::introspect::Introspect::<{}>::layout()", item_type)
     }
 }
 
 pub fn is_custom_layout(layout: &str) -> bool {
-    layout.starts_with("dojo::model::introspect::Introspect::")
+    layout.starts_with("dojo::meta::introspect::Introspect::")
 }
 
 pub fn build_packed_struct_layout(
@@ -207,7 +207,7 @@ pub fn build_packed_struct_layout(
         generate_cairo_code_for_fixed_layout_with_custom_types(&layouts)
     } else {
         format!(
-            "dojo::model::Layout::Fixed(
+            "dojo::meta::Layout::Fixed(
             array![
             {}
             ].span()
@@ -224,7 +224,7 @@ pub fn generate_cairo_code_for_fixed_layout_with_custom_types(layouts: &[String]
             if is_custom_layout(l) {
                 l.to_string()
             } else {
-                format!("dojo::model::Layout::Fixed(array![{l}].span())")
+                format!("dojo::meta::Layout::Fixed(array![{l}].span())")
             }
         })
         .collect::<Vec<_>>()
@@ -240,7 +240,7 @@ pub fn generate_cairo_code_for_fixed_layout_with_custom_types(layouts: &[String]
             match ArrayTrait::pop_front(ref layouts) {{
                 Option::Some(mut layout) => {{
                     match layout {{
-                        dojo::model::Layout::Fixed(mut l) => {{
+                        dojo::meta::Layout::Fixed(mut l) => {{
                             loop {{
                                 match SpanTrait::pop_front(ref l) {{
                                     Option::Some(x) => merged_layout.append(*x),
@@ -255,7 +255,7 @@ pub fn generate_cairo_code_for_fixed_layout_with_custom_types(layouts: &[String]
             }};
         }};
 
-        dojo::model::Layout::Fixed(merged_layout.span())
+        dojo::meta::Layout::Fixed(merged_layout.span())
         ",
     )
 }
@@ -288,7 +288,7 @@ pub fn build_packed_enum_layout(
         generate_cairo_code_for_fixed_layout_with_custom_types(&variant_layout)
     } else {
         format!(
-            "dojo::model::Layout::Fixed(
+            "dojo::meta::Layout::Fixed(
                 array![
                 {}
                 ].span()
@@ -352,7 +352,7 @@ pub fn get_packed_item_layout_from_type(
             // as we cannot verify that an enum/struct custom type is packable,
             // we suppose it is and let the user verify this.
             // If it's not the case, the Dojo model layout function will panic.
-            vec![format!("dojo::model::introspect::Introspect::<{}>::layout()", item_type)]
+            vec![format!("dojo::meta::introspect::Introspect::<{}>::layout()", item_type)]
         }
     }
 }
