@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1726505801347,
+  "lastUpdate": 1726505948298,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -20143,6 +20143,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 24250948859,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2d6e5de84e57a40bc286f4e19736db2559410f1d",
+          "message": "bench: add sozo build bench for spawn and move (#2419)\n\n* bench: add sozo build bench for spawn and move\r\n\r\n* update\r\n\r\n---------\r\n\r\nCo-authored-by: Ammar Arif <evergreenkary@gmail.com>",
+          "timestamp": "2024-09-16T10:40:02-06:00",
+          "tree_id": "93c5196ae184e53353c18568452f19f4e3b620f9",
+          "url": "https://github.com/dojoengine/dojo/commit/2d6e5de84e57a40bc286f4e19736db2559410f1d"
+        },
+        "date": 1726505947340,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17674444,
+            "range": "± 449469",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3817458,
+            "range": "± 132681",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3641202803,
+            "range": "± 781729174",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4067529,
+            "range": "± 86780",
             "unit": "ns/iter"
           }
         ]
