@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1726506790426,
+  "lastUpdate": 1726507083123,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -20269,6 +20269,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4029990,
             "range": "± 128528",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "remy.baranx@gmail.com",
+            "name": "Rémy Baranx",
+            "username": "remybar"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "435c2d11ed090207ef661b27ea6223d0c4b011e5",
+          "message": "fix: dojo-lang tests with default namespace (#2422)",
+          "timestamp": "2024-09-16T11:01:15-06:00",
+          "tree_id": "ec17884d07d9db2f9f4dd5e7f8e9587b1aad57c5",
+          "url": "https://github.com/dojoengine/dojo/commit/435c2d11ed090207ef661b27ea6223d0c4b011e5"
+        },
+        "date": 1726507081276,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 26931647293,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
