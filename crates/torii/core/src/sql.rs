@@ -177,7 +177,7 @@ impl Sql {
         self.build_register_queries_recursive(
             selector,
             &model,
-            vec![namespaced_name],
+            vec![namespaced_name.clone()],
             &mut model_idx,
             block_timestamp,
             &mut 0,
@@ -284,7 +284,6 @@ impl Sql {
             return Err(anyhow!("Entity is not a struct"));
         };
 
-        println!("entity: {:?}", entity);
         let namespaced_name = entity.name();
         let (model_namespace, model_name) = namespaced_name.split_once('-').unwrap();
 
