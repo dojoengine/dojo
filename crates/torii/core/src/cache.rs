@@ -115,11 +115,6 @@ impl ModelCache {
 
     pub async fn set(&self, selector: Felt, model: Model) {
         let mut cache = self.cache.write().await;
-
-        // we need to update the name of the struct to include the namespace
-        let mut schema = model.schema.clone().as_struct().unwrap();
-        schema.name = format!("{}-{}", model.namespace, model.name);
-        model.schema = Ty::Struct(schema);
         cache.insert(selector, model);
     }
 

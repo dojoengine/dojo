@@ -149,7 +149,8 @@ impl Sql {
         unpacked_size: u32,
         block_timestamp: u64,
     ) -> Result<()> {
-        let selector = compute_selector_from_names(namespace, &model.name());
+        let namespaced_name = format!("{}-{}", namespace, model.name());
+        let selector = compute_selector_from_names(namespace, &namespaced_name);
 
         let insert_models =
             "INSERT INTO models (id, namespace, name, class_hash, contract_address, layout, \
@@ -176,13 +177,15 @@ impl Sql {
         self.build_register_queries_recursive(
             selector,
             &model,
-            vec![format!("{}-{}", namespace, model.name())],
+            vec![namespaced_name],
             &mut model_idx,
             block_timestamp,
             &mut 0,
             &mut 0,
         );
 
+        // we set the model in the cache directly
+        // because entities might be using it before the query queue is processed
         self.model_cache
             .set(
                 selector,
@@ -195,7 +198,11 @@ impl Sql {
                     packed_size,
                     unpacked_size,
                     layout,
-                    schema: model,
+                    // we need to update the name of the struct to include the namespace
+                    schema: Ty::Struct(Struct {
+                        name: namespaced_name,
+                        children: model.as_struct().unwrap().children.clone(),
+                    }),
                 },
             )
             .await;
@@ -277,6 +284,7 @@ impl Sql {
             return Err(anyhow!("Entity is not a struct"));
         };
 
+        println!("entity: {:?}", entity);
         let namespaced_name = entity.name();
         let (model_namespace, model_name) = namespaced_name.split_once('-').unwrap();
 
