@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1726509232892,
+  "lastUpdate": 1726509420621,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -20455,6 +20455,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 24090494864,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9b5cebda8de340fb26dda41f1f8b4aa5a4a9a266",
+          "message": "Handle graceful shtudown on `SIGTERM` for all binaries (#2435)",
+          "timestamp": "2024-09-17T01:37:38+08:00",
+          "tree_id": "f6b375b9c303ed4e8d627899ad44f8a08c6071a1",
+          "url": "https://github.com/dojoengine/dojo/commit/9b5cebda8de340fb26dda41f1f8b4aa5a4a9a266"
+        },
+        "date": 1726509419385,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17488201,
+            "range": "± 171257",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3959615,
+            "range": "± 136044",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3647287397,
+            "range": "± 712494648",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4202312,
+            "range": "± 323758",
             "unit": "ns/iter"
           }
         ]
