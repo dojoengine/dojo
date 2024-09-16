@@ -2,14 +2,14 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use starknet::accounts::{
-    single_owner, Account, Call, ConnectedAccount, DeclarationV2, DeclarationV3, ExecutionEncoder,
+    single_owner, Account, ConnectedAccount, DeclarationV2, DeclarationV3, ExecutionEncoder,
     ExecutionV1, ExecutionV3, LegacyDeclaration, RawDeclarationV2, RawDeclarationV3,
     RawExecutionV1, RawExecutionV3, RawLegacyDeclaration, SingleOwnerAccount,
 };
 use starknet::core::types::contract::legacy::LegacyContractClass;
-use starknet::core::types::{BlockId, Felt, FlattenedSierraClass};
+use starknet::core::types::{BlockId, Call, Felt, FlattenedSierraClass};
 use starknet::providers::Provider;
-use starknet::signers::{local_wallet, LocalWallet};
+use starknet::signers::{local_wallet, LocalWallet, SignerInteractivityContext};
 
 #[cfg(feature = "controller")]
 use super::controller::ControllerSessionAccount;
@@ -21,7 +21,7 @@ pub enum SozoAccountSignError {
 
     #[cfg(feature = "controller")]
     #[error(transparent)]
-    Controller(#[from] account_sdk::signers::SignError),
+    Controller(#[from] slot::account_sdk::signers::SignError),
 }
 
 /// To unify the account types, we define a wrapper type that implements the
@@ -30,12 +30,10 @@ pub enum SozoAccountSignError {
 /// This is the account type that should be used by the CLI.
 #[must_use]
 #[non_exhaustive]
-#[derive(derive_more::From)]
 #[allow(missing_debug_implementations)]
 pub enum SozoAccount<P>
 where
-    P: Send,
-    P: Provider,
+    P: Provider + Send + Sync,
 {
     Standard(SingleOwnerAccount<P, LocalWallet>),
 
@@ -51,6 +49,14 @@ where
     P: Send + Sync,
 {
     type SignError = SozoAccountSignError;
+
+    fn is_signer_interactive(&self, context: SignerInteractivityContext<'_>) -> bool {
+        match self {
+            Self::Standard(account) => account.is_signer_interactive(context),
+            #[cfg(feature = "controller")]
+            Self::Controller(account) => account.is_signer_interactive(context),
+        }
+    }
 
     fn address(&self) -> Felt {
         match self {

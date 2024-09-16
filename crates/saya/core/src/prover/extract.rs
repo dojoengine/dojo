@@ -2,15 +2,15 @@ use anyhow::anyhow;
 use bigdecimal::BigDecimal;
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::state::StateUpdates;
-use katana_primitives::FieldElement;
+use katana_primitives::Felt;
 use num_traits::ToPrimitive;
 
 use super::{MessageToAppchain, MessageToStarknet, ProgramInput};
 
 pub fn program_input_from_program_output(
-    output: Vec<FieldElement>,
+    output: Vec<Felt>,
     state_updates: StateUpdates,
-    world: FieldElement,
+    world: Felt,
 ) -> anyhow::Result<ProgramInput> {
     let prev_state_root = output[0];
     let block_number = serde_json::from_str(&output[2].to_string()).unwrap();
@@ -49,9 +49,7 @@ pub fn program_input_from_program_output(
     Ok(input)
 }
 
-fn get_message_to_starknet_segment(
-    output: &[FieldElement],
-) -> anyhow::Result<Vec<MessageToStarknet>> {
+fn get_message_to_starknet_segment(output: &[Felt]) -> anyhow::Result<Vec<MessageToStarknet>> {
     let mut message_to_starknet_segment: Vec<MessageToStarknet> = vec![];
     let mut index = 0;
     loop {
@@ -69,9 +67,7 @@ fn get_message_to_starknet_segment(
     Ok(message_to_starknet_segment)
 }
 
-fn get_message_to_appchain_segment(
-    output: &[FieldElement],
-) -> anyhow::Result<Vec<MessageToAppchain>> {
+fn get_message_to_appchain_segment(output: &[Felt]) -> anyhow::Result<Vec<MessageToAppchain>> {
     let mut message_to_appchain_segment: Vec<MessageToAppchain> = vec![];
     let mut index = 0;
     loop {

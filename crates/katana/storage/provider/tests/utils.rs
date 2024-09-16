@@ -3,7 +3,7 @@ use katana_primitives::fee::TxFeeInfo;
 use katana_primitives::receipt::{InvokeTxReceipt, Receipt};
 use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{InvokeTx, Tx, TxHash, TxWithHash};
-use katana_primitives::FieldElement;
+use katana_primitives::Felt;
 use starknet::core::types::PriceUnit;
 
 pub fn generate_dummy_txs_and_receipts(
@@ -44,8 +44,7 @@ pub fn generate_dummy_blocks_and_receipts(
         let (body, receipts, executions) = generate_dummy_txs_and_receipts(tx_count);
 
         let header = Header { parent_hash, number: i, ..Default::default() };
-        let block =
-            Block { header, body }.seal_with_hash(FieldElement::from(rand::random::<u128>()));
+        let block = Block { header, body }.seal_with_hash(Felt::from(rand::random::<u128>()));
 
         parent_hash = block.header.hash;
 
@@ -67,8 +66,7 @@ pub fn generate_dummy_blocks_empty(count: u64) -> Vec<SealedBlockWithStatus> {
         let header = Header { parent_hash, number: i, ..Default::default() };
         let body = vec![];
 
-        let block =
-            Block { header, body }.seal_with_hash(FieldElement::from(rand::random::<u128>()));
+        let block = Block { header, body }.seal_with_hash(Felt::from(rand::random::<u128>()));
 
         parent_hash = block.header.hash;
 

@@ -8,7 +8,7 @@ use katana_primitives::chain::ChainId;
 use katana_primitives::env::BlockEnv;
 use katana_primitives::transaction::TxHash;
 use katana_primitives::version::CURRENT_STARKNET_VERSION;
-use katana_primitives::FieldElement;
+use katana_primitives::Felt;
 use katana_provider::providers::fork::ForkedProvider;
 use katana_provider::providers::in_memory::InMemoryProvider;
 use katana_provider::traits::block::{BlockHashProvider, BlockWriter};
@@ -157,7 +157,7 @@ impl<EF: ExecutorFactory> Backend<EF> {
         };
 
         let tx_hashes = txs.iter().map(|tx| tx.hash).collect::<Vec<TxHash>>();
-        let header = Header::new(partial_header, FieldElement::ZERO);
+        let header = Header::new(partial_header, Felt::ZERO);
         let block = Block { header, body: txs }.seal();
         let block = SealedBlockWithStatus { block, status: FinalityStatus::AcceptedOnL2 };
 

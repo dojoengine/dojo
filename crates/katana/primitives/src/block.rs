@@ -3,7 +3,7 @@ use starknet::core::crypto::compute_hash_on_elements;
 use crate::contract::ContractAddress;
 use crate::transaction::{ExecutableTxWithHash, TxHash, TxWithHash};
 use crate::version::Version;
-use crate::FieldElement;
+use crate::Felt;
 
 pub type BlockIdOrTag = starknet::core::types::BlockId;
 pub type BlockTag = starknet::core::types::BlockTag;
@@ -18,7 +18,7 @@ pub enum BlockHashOrNumber {
 /// Block number type.
 pub type BlockNumber = u64;
 /// Block hash type.
-pub type BlockHash = FieldElement;
+pub type BlockHash = Felt;
 
 /// Finality status of a canonical block.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -33,7 +33,7 @@ pub enum FinalityStatus {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct PartialHeader {
     pub number: BlockNumber,
-    pub parent_hash: FieldElement,
+    pub parent_hash: Felt,
     pub gas_prices: GasPrices,
     pub timestamp: u64,
     pub sequencer_address: ContractAddress,
@@ -66,13 +66,13 @@ pub struct Header {
     pub number: BlockNumber,
     pub gas_prices: GasPrices,
     pub timestamp: u64,
-    pub state_root: FieldElement,
+    pub state_root: Felt,
     pub sequencer_address: ContractAddress,
     pub version: Version,
 }
 
 impl Header {
-    pub fn new(partial_header: PartialHeader, state_root: FieldElement) -> Self {
+    pub fn new(partial_header: PartialHeader, state_root: Felt) -> Self {
         Self {
             state_root,
             number: partial_header.number,
@@ -85,16 +85,16 @@ impl Header {
     }
 
     /// Computes the hash of the header.
-    pub fn compute_hash(&self) -> FieldElement {
+    pub fn compute_hash(&self) -> Felt {
         compute_hash_on_elements(&vec![
             self.number.into(),            // block number
             self.state_root,               // state root
             self.sequencer_address.into(), // sequencer address
             self.timestamp.into(),         // block timestamp
-            FieldElement::ZERO,            // transaction commitment
-            FieldElement::ZERO,            // event commitment
-            FieldElement::ZERO,            // protocol version
-            FieldElement::ZERO,            // extra data
+            Felt::ZERO,                    // transaction commitment
+            Felt::ZERO,                    // event commitment
+            Felt::ZERO,                    // protocol version
+            Felt::ZERO,                    // extra data
             self.parent_hash,              // parent hash
         ])
     }

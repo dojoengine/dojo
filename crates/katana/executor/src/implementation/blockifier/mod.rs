@@ -16,7 +16,7 @@ use katana_primitives::block::{ExecutableBlock, GasPrices as KatanaGasPrices, Pa
 use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::fee::TxFeeInfo;
 use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash, TxWithHash};
-use katana_primitives::FieldElement;
+use katana_primitives::Felt;
 use katana_provider::traits::state::StateProvider;
 use tracing::info;
 
@@ -278,7 +278,7 @@ impl ExecutorExt for StarknetVMProcessor<'_> {
         })
     }
 
-    fn call(&self, call: EntryPointCall) -> Result<Vec<FieldElement>, ExecutionError> {
+    fn call(&self, call: EntryPointCall) -> Result<Vec<Felt>, ExecutionError> {
         let block_context = &self.block_context;
         let mut state = self.state.0.lock();
         let state = MutRefState::new(&mut state.inner);

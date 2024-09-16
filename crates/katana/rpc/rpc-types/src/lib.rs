@@ -24,22 +24,22 @@ use starknet::core::serde::unsigned_field_element::UfeHex;
 /// default.
 #[serde_as]
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct FeltAsHex(#[serde_as(serialize_as = "UfeHex")] katana_primitives::FieldElement);
+pub struct FeltAsHex(#[serde_as(serialize_as = "UfeHex")] katana_primitives::Felt);
 
-impl From<katana_primitives::FieldElement> for FeltAsHex {
-    fn from(value: katana_primitives::FieldElement) -> Self {
+impl From<katana_primitives::Felt> for FeltAsHex {
+    fn from(value: katana_primitives::Felt) -> Self {
         Self(value)
     }
 }
 
-impl From<FeltAsHex> for katana_primitives::FieldElement {
+impl From<FeltAsHex> for katana_primitives::Felt {
     fn from(value: FeltAsHex) -> Self {
         value.0
     }
 }
 
 impl Deref for FeltAsHex {
-    type Target = katana_primitives::FieldElement;
+    type Target = katana_primitives::Felt;
     fn deref(&self) -> &Self::Target {
         &self.0
     }

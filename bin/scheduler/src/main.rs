@@ -2,7 +2,7 @@ use std::fs;
 use std::sync::Arc;
 
 use clap::Parser;
-use katana_primitives::felt::FieldElement;
+use katana_primitives::Felt;
 use saya_core::prover::{HttpProverParams, ProgramInput, ProverIdentifier, Scheduler};
 use saya_core::ProverAccessKey;
 use serde::{Deserialize, Serialize};
@@ -14,7 +14,7 @@ use tokio::io::AsyncWriteExt;
 #[clap(author, version, about, long_about = None)]
 pub struct CliInput {
     #[arg(short, long)]
-    pub world: FieldElement,
+    pub world: Felt,
     #[arg(short, long)]
     pub key: String,
     pub files: Vec<std::path::PathBuf>,

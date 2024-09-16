@@ -96,11 +96,11 @@ impl AccountOptions {
         if self.controller {
             let url = starknet.url(env_metadata)?;
             let account = self.controller(url, provider, world_address_or_name, config).await?;
-            return Ok(SozoAccount::from(account));
+            return Ok(SozoAccount::Controller(account));
         }
 
         let account = self.std_account(provider, env_metadata).await?;
-        Ok(SozoAccount::from(account))
+        Ok(SozoAccount::Standard(account))
     }
 
     pub async fn std_account<P>(
@@ -151,7 +151,8 @@ impl AccountOptions {
 #[cfg(test)]
 mod tests {
     use clap::Parser;
-    use starknet::accounts::{Call, ExecutionEncoder};
+    use starknet::accounts::ExecutionEncoder;
+    use starknet::core::types::Call;
     use starknet_crypto::Felt;
 
     use super::{AccountOptions, DOJO_ACCOUNT_ADDRESS_ENV_VAR};

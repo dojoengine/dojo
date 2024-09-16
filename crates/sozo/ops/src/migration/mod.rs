@@ -12,8 +12,8 @@ use dojo_world::migration::{DeployOutput, UpgradeOutput};
 use scarb::core::Workspace;
 #[cfg(feature = "walnut")]
 use sozo_walnut::WalnutDebugger;
-use starknet::accounts::{Call, ConnectedAccount, ExecutionEncoding, SingleOwnerAccount};
-use starknet::core::types::{BlockId, BlockTag, Felt, InvokeTransactionResult};
+use starknet::accounts::{ConnectedAccount, ExecutionEncoding, SingleOwnerAccount};
+use starknet::core::types::{BlockId, BlockTag, Call, Felt, InvokeTransactionResult};
 use starknet::core::utils::{cairo_short_string_to_felt, get_contract_address};
 use starknet::macros::selector;
 use starknet::providers::jsonrpc::HttpTransport;

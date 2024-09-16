@@ -1,6 +1,6 @@
 use katana_primitives::class::ClassHash;
 use katana_primitives::contract::{ContractAddress, Nonce};
-use katana_primitives::FieldElement;
+use katana_primitives::Felt;
 
 /// Errors that can be returned by the executor.
 #[derive(Debug, thiserror::Error)]
@@ -16,7 +16,7 @@ pub enum ExecutionError {
     ClassAlreadyDeclared(ClassHash),
 
     #[error("Entry point {0:#x} not found in contract")]
-    EntryPointNotFound(FieldElement),
+    EntryPointNotFound(Felt),
 
     #[error("Invalid input: {input_descriptor}; {info}")]
     InvalidInput { input_descriptor: String, info: String },
@@ -46,7 +46,7 @@ pub enum ExecutionError {
         "Insufficient balance: max fee {max_fee} exceeds account balance u256({balance_low}, \
          {balance_high})"
     )]
-    InsufficientBalance { max_fee: u128, balance_low: FieldElement, balance_high: FieldElement },
+    InsufficientBalance { max_fee: u128, balance_low: Felt, balance_high: Felt },
 
     #[error("Actual fee ({actual_fee}) exceeded max fee ({max_fee})")]
     ActualFeeExceedsMaxFee { max_fee: u128, actual_fee: u128 },

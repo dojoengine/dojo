@@ -1,7 +1,7 @@
 use katana_primitives::block::BlockHashOrNumber;
 use katana_primitives::class::ClassHash;
 use katana_primitives::contract::{ContractAddress, Nonce, StorageKey, StorageValue};
-use katana_primitives::FieldElement;
+use katana_primitives::Felt;
 
 use super::contract::ContractClassProvider;
 use crate::ProviderResult;
@@ -9,7 +9,7 @@ use crate::ProviderResult;
 #[auto_impl::auto_impl(&, Box, Arc)]
 pub trait StateRootProvider: Send + Sync {
     /// Retrieves the state root of a block.
-    fn state_root(&self, block_id: BlockHashOrNumber) -> ProviderResult<Option<FieldElement>>;
+    fn state_root(&self, block_id: BlockHashOrNumber) -> ProviderResult<Option<Felt>>;
 }
 
 #[auto_impl::auto_impl(&, Box, Arc)]

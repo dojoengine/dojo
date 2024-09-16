@@ -43,7 +43,7 @@ use crate::class::{ClassHash, CompiledClass, SierraClass};
 use crate::contract::{ContractAddress, StorageKey, StorageValue};
 use crate::genesis::GenesisClass;
 use crate::utils::class::{parse_compiled_class_v1, parse_deprecated_compiled_class};
-use crate::FieldElement;
+use crate::Felt;
 
 type Object = Map<String, Value>;
 
@@ -181,7 +181,7 @@ pub struct UniversalDeployerConfigJson {
 pub struct GenesisContractJson {
     pub class: Option<ClassNameOrHash>,
     pub balance: Option<U256>,
-    pub nonce: Option<FieldElement>,
+    pub nonce: Option<Felt>,
     pub storage: Option<HashMap<StorageKey, StorageValue>>,
 }
 
@@ -189,13 +189,13 @@ pub struct GenesisContractJson {
 #[serde(rename_all = "camelCase")]
 pub struct GenesisAccountJson {
     /// The public key of the account.
-    pub public_key: FieldElement,
+    pub public_key: Felt,
     pub balance: Option<U256>,
-    pub nonce: Option<FieldElement>,
+    pub nonce: Option<Felt>,
     /// The class hash of the account contract. If not provided, the default account class is used.
     pub class: Option<ClassNameOrHash>,
     pub storage: Option<HashMap<StorageKey, StorageValue>>,
-    pub private_key: Option<FieldElement>,
+    pub private_key: Option<Felt>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -257,7 +257,7 @@ pub enum GenesisJsonError {
 #[serde(rename_all = "camelCase")]
 pub struct GenesisJson {
     pub parent_hash: BlockHash,
-    pub state_root: FieldElement,
+    pub state_root: Felt,
     pub number: BlockNumber,
     pub timestamp: u64,
     pub sequencer_address: ContractAddress,
@@ -318,7 +318,7 @@ impl TryFrom<GenesisJson> for Genesis {
 
     fn try_from(value: GenesisJson) -> Result<Self, Self::Error> {
         // a lookup table for classes that is assigned a name
-        let mut class_names: HashMap<String, FieldElement> = HashMap::new();
+        let mut class_names: HashMap<String, Felt> = HashMap::new();
         let mut classes: HashMap<ClassHash, GenesisClass> = HashMap::new();
 
         #[cfg(feature = "slot")]
