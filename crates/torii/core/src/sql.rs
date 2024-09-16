@@ -7,7 +7,7 @@ use chrono::Utc;
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{EnumOption, Member, Ty};
 use dojo_world::contracts::abi::model::Layout;
-use dojo_world::contracts::naming::{compute_selector_from_names, compute_selector_from_tag};
+use dojo_world::contracts::naming::compute_selector_from_names;
 use dojo_world::metadata::WorldMetadata;
 use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Sqlite};
@@ -16,10 +16,9 @@ use starknet_crypto::poseidon_hash_many;
 use tracing::debug;
 
 use crate::cache::{Model, ModelCache};
-use crate::query_queue::{Argument, BrokerMessage, QueryQueue, QueryType};
+use crate::query_queue::{Argument, BrokerMessage, DeleteEntityQuery, QueryQueue, QueryType};
 use crate::types::{
-    Entity as EntityUpdated, Event as EventEmitted, EventMessage as EventMessageUpdated,
-    Model as ModelRegistered,
+    Event as EventEmitted, EventMessage as EventMessageUpdated, Model as ModelRegistered,
 };
 use crate::utils::{must_utc_datetime_from_timestamp, utc_dt_string_from_timestamp};
 
@@ -281,6 +280,7 @@ impl Sql {
     pub async fn delete_entity(
         &mut self,
         entity_id: Felt,
+        model_id: Felt,
         entity: Ty,
         event_id: &str,
         block_timestamp: u64,
@@ -289,49 +289,18 @@ impl Sql {
         let path = vec![entity.name()];
         // delete entity models data
         self.build_delete_entity_queries_recursive(path, &entity_id, &entity);
-        self.execute().await?;
 
-        let deleted_entity_model =
-            sqlx::query("DELETE FROM entity_model WHERE entity_id = ? AND model_id = ?")
-                .bind(&entity_id)
-                .bind(format!("{:#x}", compute_selector_from_tag(&entity.name())))
-                .execute(&self.pool)
-                .await?;
-        if deleted_entity_model.rows_affected() == 0 {
-            // fail silently. we have no entity-model relation to delete.
-            // this can happen if a entity model that doesnt exist
-            // got deleted
-            return Ok(());
-        }
+        self.query_queue.enqueue(
+            "DELETE FROM entity_model WHERE entity_id = ? AND model_id = ?",
+            vec![Argument::String(entity_id.clone()), Argument::String(format!("{:#x}", model_id))],
+            QueryType::DeleteEntity(DeleteEntityQuery {
+                entity_id: entity_id.clone(),
+                event_id: event_id.to_string(),
+                block_timestamp: utc_dt_string_from_timestamp(block_timestamp),
+                entity: entity.clone(),
+            }),
+        );
 
-        let mut update_entity = sqlx::query_as::<_, EntityUpdated>(
-            "UPDATE entities SET updated_at=CURRENT_TIMESTAMP, executed_at=?, event_id=? WHERE id \
-             = ? RETURNING *",
-        )
-        .bind(utc_dt_string_from_timestamp(block_timestamp))
-        .bind(event_id)
-        .bind(&entity_id)
-        .fetch_one(&self.pool)
-        .await?;
-        update_entity.updated_model = Some(entity.clone());
-
-        let models_count =
-            sqlx::query_scalar::<_, u32>("SELECT count(*) FROM entity_model WHERE entity_id = ?")
-                .bind(&entity_id)
-                .fetch_one(&self.pool)
-                .await?;
-
-        if models_count == 0 {
-            // delete entity
-            sqlx::query("DELETE FROM entities WHERE id = ?")
-                .bind(&entity_id)
-                .execute(&self.pool)
-                .await?;
-
-            update_entity.deleted = true;
-        }
-
-        self.query_queue.push_publish(BrokerMessage::EntityUpdated(update_entity));
         Ok(())
     }
 
@@ -797,7 +766,7 @@ impl Sql {
             Ty::Struct(s) => {
                 let table_id = path.join("$");
                 let statement = format!("DELETE FROM [{table_id}] WHERE entity_id = ?");
-                self.query_queue.push_front(
+                self.query_queue.enqueue(
                     statement,
                     vec![Argument::String(entity_id.to_string())],
                     QueryType::Other,
@@ -818,7 +787,7 @@ impl Sql {
 
                 let table_id = path.join("$");
                 let statement = format!("DELETE FROM [{table_id}] WHERE entity_id = ?");
-                self.query_queue.push_front(
+                self.query_queue.enqueue(
                     statement,
                     vec![Argument::String(entity_id.to_string())],
                     QueryType::Other,
@@ -839,7 +808,7 @@ impl Sql {
             Ty::Array(array) => {
                 let table_id = path.join("$");
                 let statement = format!("DELETE FROM [{table_id}] WHERE entity_id = ?");
-                self.query_queue.push_front(
+                self.query_queue.enqueue(
                     statement,
                     vec![Argument::String(entity_id.to_string())],
                     QueryType::Other,
@@ -854,7 +823,7 @@ impl Sql {
             Ty::Tuple(t) => {
                 let table_id = path.join("$");
                 let statement = format!("DELETE FROM [{table_id}] WHERE entity_id = ?");
-                self.query_queue.push_front(
+                self.query_queue.enqueue(
                     statement,
                     vec![Argument::String(entity_id.to_string())],
                     QueryType::Other,
