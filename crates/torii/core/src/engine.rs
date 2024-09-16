@@ -674,7 +674,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         if task_identifier != Felt::ZERO {
             self.tasks
                 .entry(task_identifier)
-                .or_insert(vec![])
+                .or_default()
                 .push((event_id.to_string(), event.clone()));
         } else {
             // if we dont have a task identifier, we process the event immediately

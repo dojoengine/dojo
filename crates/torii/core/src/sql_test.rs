@@ -11,10 +11,11 @@ use dojo_world::contracts::world::{WorldContract, WorldContractReader};
 use katana_runner::{KatanaRunner, KatanaRunnerConfig};
 use scarb::compiler::Profile;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
-use starknet::accounts::{Account, ConnectedAccount};
+use starknet::accounts::Account;
 use starknet::core::types::{Call, Felt};
 use starknet::core::utils::{get_contract_address, get_selector_from_name};
-use starknet::providers::Provider;
+use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::{JsonRpcClient, Provider};
 use starknet_crypto::poseidon_hash_many;
 use tokio::sync::broadcast;
 
@@ -33,7 +34,7 @@ pub async fn bootstrap_engine<P>(
     provider: P,
 ) -> Result<Engine<P>, Box<dyn std::error::Error>>
 where
-    P: Provider + Send + Sync + core::fmt::Debug,
+    P: Provider + Send + Sync + core::fmt::Debug + Clone + 'static,
 {
     let (shutdown_tx, _) = broadcast::channel(1);
     let to = provider.block_hash_and_number().await?.block_number;
@@ -81,6 +82,7 @@ async fn test_load_from_remote() {
 
     let sequencer = KatanaRunner::new_with_config(seq_config).expect("Failed to start runner.");
     let account = sequencer.account(0);
+    let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
 
     let (strat, _) = prepare_migration_with_world_and_seed(
         manifest_path,
@@ -107,7 +109,7 @@ async fn test_load_from_remote() {
         .await
         .unwrap();
 
-    TransactionWaiter::new(res.transaction_hash, &account.provider()).await.unwrap();
+    TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
 
     // spawn
     let tx = &account
@@ -120,13 +122,13 @@ async fn test_load_from_remote() {
         .await
         .unwrap();
 
-    TransactionWaiter::new(tx.transaction_hash, &account.provider()).await.unwrap();
+    TransactionWaiter::new(tx.transaction_hash, &provider).await.unwrap();
 
-    let world_reader = WorldContractReader::new(strat.world_address, account.provider());
+    let world_reader = WorldContractReader::new(strat.world_address, Arc::clone(&provider));
 
     let mut db = Sql::new(pool.clone(), world_reader.address).await.unwrap();
 
-    let _ = bootstrap_engine(world_reader, db.clone(), account.provider()).await.unwrap();
+    let _ = bootstrap_engine(world_reader, db.clone(), provider).await.unwrap();
 
     let _block_timestamp = 1710754478_u64;
     let models = sqlx::query("SELECT * FROM models").fetch_all(&pool).await.unwrap();
@@ -215,6 +217,7 @@ async fn test_load_from_remote_del() {
 
     let sequencer = KatanaRunner::new_with_config(seq_config).expect("Failed to start runner.");
     let account = sequencer.account(0);
+    let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
 
     let (strat, _) = prepare_migration_with_world_and_seed(
         manifest_path,
@@ -240,7 +243,7 @@ async fn test_load_from_remote_del() {
         .await
         .unwrap();
 
-    TransactionWaiter::new(res.transaction_hash, &account.provider()).await.unwrap();
+    TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
 
     // spawn
     let res = account
@@ -253,7 +256,7 @@ async fn test_load_from_remote_del() {
         .await
         .unwrap();
 
-    TransactionWaiter::new(res.transaction_hash, &account.provider()).await.unwrap();
+    TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
 
     // Set player config.
     let res = account
@@ -267,7 +270,7 @@ async fn test_load_from_remote_del() {
         .await
         .unwrap();
 
-    TransactionWaiter::new(res.transaction_hash, &account.provider()).await.unwrap();
+    TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
 
     let res = account
         .execute_v1(vec![Call {
@@ -279,13 +282,13 @@ async fn test_load_from_remote_del() {
         .await
         .unwrap();
 
-    TransactionWaiter::new(res.transaction_hash, &account.provider()).await.unwrap();
+    TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
 
-    let world_reader = WorldContractReader::new(strat.world_address, account.provider());
+    let world_reader = WorldContractReader::new(strat.world_address, Arc::clone(&provider));
 
     let mut db = Sql::new(pool.clone(), world_reader.address).await.unwrap();
 
-    let _ = bootstrap_engine(world_reader, db.clone(), account.provider()).await;
+    let _ = bootstrap_engine(world_reader, db.clone(), provider).await;
 
     assert_eq!(count_table("dojo_examples-PlayerConfig", &pool).await, 0);
     assert_eq!(count_table("dojo_examples-PlayerConfig$favorite_item", &pool).await, 0);
@@ -297,16 +300,13 @@ async fn test_load_from_remote_del() {
     db.execute().await.unwrap();
 }
 
-// Start of Selection
 #[tokio::test(flavor = "multi_thread")]
 async fn test_update_with_set_record() {
-    // Initialize the SQLite in-memory database
     let options =
         SqliteConnectOptions::from_str("sqlite::memory:").unwrap().create_if_missing(true);
     let pool = SqlitePoolOptions::new().max_connections(5).connect_with(options).await.unwrap();
     sqlx::migrate!("../migrations").run(&pool).await.unwrap();
 
-    // Set up the compiler test environment
     let setup = CompilerTestSetup::from_examples("../../dojo-core", "../../../examples/");
     let config = setup.build_test_config("spawn-and-move", Profile::DEV);
 
@@ -314,14 +314,10 @@ async fn test_update_with_set_record() {
     let manifest_path = Utf8PathBuf::from(config.manifest_path().parent().unwrap());
     let target_dir = Utf8PathBuf::from(ws.target_dir().to_string()).join("dev");
 
-    // Configure and start the KatanaRunner
     let seq_config = KatanaRunnerConfig { n_accounts: 10, ..Default::default() }
         .with_db_dir(copy_spawn_and_move_db().as_str());
-
     let sequencer = KatanaRunner::new_with_config(seq_config).expect("Failed to start runner.");
-    let account = sequencer.account(0);
 
-    // Prepare migration with world and seed
     let (strat, _) = prepare_migration_with_world_and_seed(
         manifest_path,
         target_dir,
@@ -339,16 +335,18 @@ async fn test_update_with_set_record() {
         strat.world_address,
     );
 
+    let account = sequencer.account(0);
+    let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
+
     let world = WorldContract::new(strat.world_address, &account);
 
-    // Grant writer permissions
     let res = world
         .grant_writer(&compute_bytearray_hash("dojo_examples"), &ContractAddress(actions_address))
         .send_with_cfg(&TxnConfig::init_wait())
         .await
         .unwrap();
 
-    TransactionWaiter::new(res.transaction_hash, &account.provider()).await.unwrap();
+    TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
 
     // Send spawn transaction
     let spawn_res = account
@@ -361,7 +359,7 @@ async fn test_update_with_set_record() {
         .await
         .unwrap();
 
-    TransactionWaiter::new(spawn_res.transaction_hash, &account.provider()).await.unwrap();
+    TransactionWaiter::new(spawn_res.transaction_hash, &provider).await.unwrap();
 
     // Send move transaction
     let move_res = account
@@ -374,15 +372,15 @@ async fn test_update_with_set_record() {
         .await
         .unwrap();
 
-    TransactionWaiter::new(move_res.transaction_hash, &account.provider()).await.unwrap();
+    TransactionWaiter::new(move_res.transaction_hash, &provider).await.unwrap();
 
-    let world_reader = WorldContractReader::new(strat.world_address, account.provider());
+    let world_reader = WorldContractReader::new(strat.world_address, Arc::clone(&provider));
 
-    let db = Sql::new(pool.clone(), world_reader.address).await.unwrap();
+    let mut db = Sql::new(pool.clone(), world_reader.address).await.unwrap();
 
-    // Expect bootstrap_engine to error out due to the existing bug
-    let result = bootstrap_engine(world_reader, db.clone(), account.provider()).await;
-    assert!(result.is_ok(), "bootstrap_engine should not fail");
+    let _ = bootstrap_engine(world_reader, db.clone(), Arc::clone(&provider)).await.unwrap();
+
+    db.execute().await.unwrap();
 }
 
 /// Count the number of rows in a table.
