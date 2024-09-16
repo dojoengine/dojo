@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1726508346044,
+  "lastUpdate": 1726508515400,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -20377,6 +20377,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 24126377064,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "09203e884167b6a2837d841d2ece06144da27b86",
+          "message": "refactor: member clauses handle struct fields & operators & recursive (#2420)",
+          "timestamp": "2024-09-16T11:22:46-06:00",
+          "tree_id": "6546c2ace9d78bebcc8f08fe54a5d3ce5fb7fd13",
+          "url": "https://github.com/dojoengine/dojo/commit/09203e884167b6a2837d841d2ece06144da27b86"
+        },
+        "date": 1726508514342,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17338323,
+            "range": "± 146847",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3771199,
+            "range": "± 99450",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3797365433,
+            "range": "± 768211801",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3878368,
+            "range": "± 43178",
             "unit": "ns/iter"
           }
         ]
