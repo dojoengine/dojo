@@ -12841,8 +12841,8 @@ dependencies = [
 
 [[package]]
 name = "slot"
-version = "0.14.0"
-source = "git+https://github.com/cartridge-gg/slot?tag=v0.14.0#b87f26919c38e43a78fea429cf7b6b927940d0b4"
+version = "0.14.1"
+source = "git+https://github.com/cartridge-gg/slot?tag=v0.14.1#267f4fbcf30654f313c1bcedf7310bc93e586690"
 dependencies = [
  "account_sdk",
  "anyhow",
