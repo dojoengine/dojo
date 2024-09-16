@@ -1,6 +1,6 @@
 use anyhow::{Context, Error, Ok, Result};
 use async_trait::async_trait;
-use dojo_world::contracts::naming;
+use dojo_types::schema::Ty;
 use dojo_world::contracts::world::WorldContractReader;
 use num_traits::ToPrimitive;
 use starknet::core::types::Event;
@@ -9,7 +9,7 @@ use tracing::info;
 
 use super::EventProcessor;
 use crate::processors::{ENTITY_ID_INDEX, MODEL_INDEX};
-use crate::sql::{felts_sql_string, Sql};
+use crate::sql::Sql;
 
 pub(crate) const LOG_TARGET: &str = "torii_core::processors::store_update_record";
 
@@ -64,21 +64,21 @@ where
             values_start + event.data[values_start].to_usize().context("invalid usize")?;
 
         // Skip the length to only get the values as they will be deserialized.
-        let values = event.data[values_start + 1..=values_end].to_vec();
-
-        let tag = naming::get_tag(&model.namespace, &model.name);
-
-        // Keys are read from the db, since we don't have access to them when only
-        // the entity id is passed.
-        let keys = db.get_entity_keys(entity_id, &tag).await?;
-
-        let keys_str = felts_sql_string(&keys);
-        let mut keys_and_unpacked = [keys, values].concat();
+        let mut values = event.data[values_start + 1..=values_end].to_vec();
 
         let mut entity = model.schema;
-        entity.deserialize(&mut keys_and_unpacked)?;
+        match entity {
+            Ty::Struct(ref mut struct_) => {
+                // we do not need the keys. the entity Ty has the keys in its schema
+                // so we should get rid of them to avoid trying to deserialize them
+                struct_.children.retain(|field| !field.key);
+            }
+            _ => return Err(anyhow::anyhow!("Expected struct")),
+        }
 
-        db.set_entity(entity, event_id, block_timestamp, entity_id, model_id, &keys_str).await?;
+        entity.deserialize(&mut values)?;
+
+        db.set_entity(entity, event_id, block_timestamp, entity_id, model_id, None).await?;
         Ok(())
     }
 }
