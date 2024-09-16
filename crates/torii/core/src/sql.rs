@@ -149,8 +149,8 @@ impl Sql {
         unpacked_size: u32,
         block_timestamp: u64,
     ) -> Result<()> {
+        let selector = compute_selector_from_names(namespace, &model.name());
         let namespaced_name = format!("{}-{}", namespace, model.name());
-        let selector = compute_selector_from_names(namespace, &namespaced_name);
 
         let insert_models =
             "INSERT INTO models (id, namespace, name, class_hash, contract_address, layout, \
