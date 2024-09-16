@@ -270,6 +270,7 @@ async fn main() -> anyhow::Result<()> {
         _ = graphql_server => {},
         _ = grpc_server => {},
         _ = libp2p_relay_server.run() => {},
+        _ = dojo_utils::signal::wait_signals() => {},
     };
 
     Ok(())
