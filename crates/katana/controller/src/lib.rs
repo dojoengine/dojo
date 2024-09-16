@@ -8,7 +8,7 @@ use katana_primitives::contract::{ContractAddress, StorageKey, StorageValue};
 use katana_primitives::genesis::allocation::{GenesisAllocation, GenesisContractAlloc};
 use katana_primitives::genesis::constant::CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH;
 use katana_primitives::genesis::Genesis;
-use katana_primitives::FieldElement;
+use katana_primitives::Felt;
 use slot::account_sdk::signers::webauthn::{CredentialID, WebauthnBackend, WebauthnSigner};
 use slot::account_sdk::signers::{HashSigner, Signer, SignerTrait};
 use slot::account_sdk::OriginProvider;
@@ -47,9 +47,8 @@ fn add_controller_account_inner(genesis: &mut Genesis, user: slot::account::Acco
             storage: Some(get_contract_storage(credential_id, public_key)?),
         };
 
-        let address = ContractAddress::from(FieldElement::from_bytes_be(
-            &user.contract_address.to_bytes_be(),
-        ));
+        let address =
+            ContractAddress::from(Felt::from_bytes_be(&user.contract_address.to_bytes_be()));
 
         (address, GenesisAllocation::Contract(account))
     };
@@ -98,7 +97,7 @@ pub mod json {
                 storage: Some(get_contract_storage(credential_id, public_key)?),
             };
 
-            let address = ContractAddress::from(FieldElement::from_bytes_be(
+            let address = ContractAddress::from(Felt::from_bytes_be(
                 &user.account.contract_address.to_bytes_be(),
             ));
 
@@ -187,7 +186,7 @@ fn get_contract_storage(
     let storage = get_storage_var_address(MULTIPLE_OWNERS_COMPONENT_SUB_STORAGE, &[guid])?;
 
     // 1 for boolean True in Cairo. Refer to the provided link above.
-    let storage_mapping = HashMap::from([(storage, FieldElement::ONE)]);
+    let storage_mapping = HashMap::from([(storage, Felt::ONE)]);
 
     Ok(storage_mapping)
 }
@@ -206,12 +205,12 @@ mod tests {
     // Controller address: 0x00397333e993ae162b476690e1401548ae97a8819955506b8bc918e067bdafc3
     // <https://sepolia.starkscan.co/contract/0x00397333e993ae162b476690e1401548ae97a8819955506b8bc918e067bdafc3#contract-storage>
 
-    const CONTROLLER_ADDRESS: FieldElement =
+    const CONTROLLER_ADDRESS: Felt =
         felt!("0x00397333e993ae162b476690e1401548ae97a8819955506b8bc918e067bdafc3");
 
-    const STORAGE_KEY: FieldElement =
+    const STORAGE_KEY: Felt =
         felt!("0x023d8ecd0d641047a8d21e3cd8016377ed5c9cd9009539cd92b73adb8c023f10");
-    const STORAGE_VALUE: FieldElement = felt!("0x1");
+    const STORAGE_VALUE: Felt = felt!("0x1");
 
     const WEBAUTHN_CREDENTIAL_ID: &str = "ja0NkHny-dlfPnClYECdmce0xTCuGT0xFjeuStaVqCI";
     const WEBAUTHN_PUBLIC_KEY: &str = "pQECAyYgASFYIBLHWNmpxCtO47cfOXw9nFCGftMq57xhvQC98aY_zQchIlggIgGHmWwQe1_FGi9GYqcYYpoPC9mkkf0f1rVD5UoGPEA";

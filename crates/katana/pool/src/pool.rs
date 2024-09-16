@@ -211,7 +211,7 @@ where
 pub(crate) mod test_utils {
 
     use katana_primitives::contract::{ContractAddress, Nonce};
-    use katana_primitives::FieldElement;
+    use katana_primitives::Felt;
     use rand::Rng;
 
     use super::*;
@@ -241,7 +241,7 @@ pub(crate) mod test_utils {
                 hash: TxHash::from_bytes_be(&random_bytes::<32>()),
                 nonce: Nonce::from_bytes_be(&random_bytes::<32>()),
                 sender: {
-                    let felt = FieldElement::from_bytes_be(&random_bytes::<32>());
+                    let felt = Felt::from_bytes_be(&random_bytes::<32>());
                     ContractAddress::from(felt)
                 },
             }
@@ -290,7 +290,7 @@ pub(crate) mod test_utils {
 mod tests {
 
     use katana_primitives::contract::{ContractAddress, Nonce};
-    use katana_primitives::FieldElement;
+    use katana_primitives::Felt;
 
     use super::test_utils::*;
     use super::Pool;
@@ -400,7 +400,7 @@ mod tests {
 
         // Create 100 transactions with the same sender but increasing nonce
         let total = 100u128;
-        let sender = ContractAddress::from(FieldElement::from_hex("0x1337").unwrap());
+        let sender = ContractAddress::from(Felt::from_hex("0x1337").unwrap());
         let txs: Vec<PoolTx> = (0..total)
             .map(|i| PoolTx::new().with_sender(sender).with_nonce(Nonce::from(i)))
             .collect();

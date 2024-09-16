@@ -4,7 +4,7 @@ use katana_primitives::contract::{ContractAddress, Nonce, StorageKey, StorageVal
 use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::fee::TxFeeInfo;
 use katana_primitives::transaction::{ExecutableTxWithHash, TxWithHash};
-use katana_primitives::FieldElement;
+use katana_primitives::Felt;
 use katana_provider::traits::contract::ContractClassProvider;
 use katana_provider::traits::state::StateProvider;
 use katana_provider::ProviderResult;
@@ -86,7 +86,7 @@ impl ExecutorExt for NoopExecutor {
         vec![]
     }
 
-    fn call(&self, call: EntryPointCall) -> Result<Vec<FieldElement>, ExecutionError> {
+    fn call(&self, call: EntryPointCall) -> Result<Vec<Felt>, ExecutionError> {
         let _ = call;
         Ok(vec![])
     }

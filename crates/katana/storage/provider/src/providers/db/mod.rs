@@ -28,7 +28,7 @@ use katana_primitives::receipt::Receipt;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
 use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{TxHash, TxNumber, TxWithHash};
-use katana_primitives::FieldElement;
+use katana_primitives::Felt;
 
 use crate::error::ProviderError;
 use crate::traits::block::{
@@ -245,7 +245,7 @@ impl<Db: Database> BlockStatusProvider for DbProvider<Db> {
 }
 
 impl<Db: Database> StateRootProvider for DbProvider<Db> {
-    fn state_root(&self, block_id: BlockHashOrNumber) -> ProviderResult<Option<FieldElement>> {
+    fn state_root(&self, block_id: BlockHashOrNumber) -> ProviderResult<Option<Felt>> {
         let db_tx = self.0.tx()?;
 
         let block_num = match block_id {

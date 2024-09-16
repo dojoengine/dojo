@@ -6,7 +6,7 @@ use katana_primitives::genesis::constant::DEFAULT_FEE_TOKEN_ADDRESS;
 use katana_primitives::genesis::Genesis;
 use katana_primitives::transaction::ExecutableTxWithHash;
 use katana_primitives::utils::transaction::compute_invoke_v1_tx_hash;
-use katana_primitives::FieldElement;
+use katana_primitives::Felt;
 use num_traits::ToPrimitive;
 use starknet::accounts::{Account, ExecutionEncoder, ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::types::{
@@ -22,10 +22,10 @@ use super::{cfg, genesis};
 #[allow(unused)]
 pub fn invoke_executable_tx(
     address: ContractAddress,
-    private_key: FieldElement,
+    private_key: Felt,
     chain_id: ChainId,
     nonce: Nonce,
-    max_fee: FieldElement,
+    max_fee: Felt,
     signed: bool,
 ) -> ExecutableTxWithHash {
     let url = "http://localhost:5050";
@@ -109,7 +109,7 @@ pub fn executable_tx(signed: bool, genesis: &Genesis, cfg: CfgEnv) -> Executable
         *addr,
         account.private_key().unwrap(),
         cfg.chain_id,
-        FieldElement::ZERO,
+        Felt::ZERO,
         // this is an arbitrary large fee so that it doesn't fail
         felt!("0x999999999999999"),
         signed,
@@ -132,8 +132,8 @@ pub fn executable_tx_without_max_fee(
         *addr,
         account.private_key().unwrap(),
         cfg.chain_id,
-        FieldElement::ZERO,
-        FieldElement::ZERO,
+        Felt::ZERO,
+        Felt::ZERO,
         signed,
     )
 }

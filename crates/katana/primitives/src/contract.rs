@@ -4,23 +4,23 @@ use derive_more::Deref;
 use starknet::core::utils::normalize_address;
 
 use crate::class::ClassHash;
-use crate::FieldElement;
+use crate::Felt;
 
 /// Represents the type for a contract storage key.
-pub type StorageKey = FieldElement;
+pub type StorageKey = Felt;
 /// Represents the type for a contract storage value.
-pub type StorageValue = FieldElement;
+pub type StorageValue = Felt;
 
 /// Represents the type for a contract nonce.
-pub type Nonce = FieldElement;
+pub type Nonce = Felt;
 
 /// Represents a contract address.
 #[derive(Default, Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Hash, Debug, Deref)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct ContractAddress(#[deref] pub FieldElement);
+pub struct ContractAddress(#[deref] pub Felt);
 
 impl ContractAddress {
-    pub fn new(address: FieldElement) -> Self {
+    pub fn new(address: Felt) -> Self {
         ContractAddress(normalize_address(address))
     }
 }
@@ -31,13 +31,13 @@ impl fmt::Display for ContractAddress {
     }
 }
 
-impl From<FieldElement> for ContractAddress {
-    fn from(value: FieldElement) -> Self {
+impl From<Felt> for ContractAddress {
+    fn from(value: Felt) -> Self {
         ContractAddress::new(value)
     }
 }
 
-impl From<ContractAddress> for FieldElement {
+impl From<ContractAddress> for Felt {
     fn from(value: ContractAddress) -> Self {
         value.0
     }

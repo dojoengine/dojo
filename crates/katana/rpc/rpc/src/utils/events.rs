@@ -8,7 +8,7 @@ use katana_primitives::contract::ContractAddress;
 use katana_primitives::event::ContinuationToken;
 use katana_primitives::receipt::Event;
 use katana_primitives::transaction::TxHash;
-use katana_primitives::FieldElement;
+use katana_primitives::Felt;
 use katana_provider::error::ProviderError;
 use katana_provider::traits::block::BlockProvider;
 use katana_provider::traits::transaction::ReceiptProvider;
@@ -42,7 +42,7 @@ pub struct Filter {
     /// contract are considered.
     pub address: Option<ContractAddress>,
     /// The keys to filter by.
-    pub keys: Option<Vec<Vec<FieldElement>>>,
+    pub keys: Option<Vec<Vec<Felt>>>,
 }
 
 /// Internal cursor

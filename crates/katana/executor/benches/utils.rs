@@ -2,7 +2,7 @@ use katana_primitives::block::GasPrices;
 use katana_primitives::env::{BlockEnv, CfgEnv, FeeTokenAddressses};
 use katana_primitives::genesis::constant::DEFAULT_FEE_TOKEN_ADDRESS;
 use katana_primitives::transaction::{ExecutableTxWithHash, InvokeTx, InvokeTxV1};
-use katana_primitives::FieldElement;
+use katana_primitives::Felt;
 use starknet::macros::{felt, selector};
 
 pub fn tx() -> ExecutableTxWithHash {
@@ -11,10 +11,10 @@ pub fn tx() -> ExecutableTxWithHash {
         calldata: vec![
             DEFAULT_FEE_TOKEN_ADDRESS.into(),
             selector!("transfer"),
-            FieldElement::THREE,
+            Felt::THREE,
             felt!("0x100"),
-            FieldElement::ONE,
-            FieldElement::ZERO,
+            Felt::ONE,
+            Felt::ZERO,
         ],
         max_fee: 10_000,
         ..Default::default()

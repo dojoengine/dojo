@@ -16,7 +16,7 @@ use katana_executor::{SimulationFlag, StateProviderDb};
 use katana_primitives::contract::{ContractAddress, Nonce};
 use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash};
-use katana_primitives::FieldElement;
+use katana_primitives::Felt;
 use katana_provider::error::ProviderError;
 use katana_provider::traits::state::StateProvider;
 use parking_lot::Mutex;
@@ -136,7 +136,7 @@ impl Validator for TxValidator {
         match result {
             res @ Ok(ValidationOutcome::Valid { .. }) => {
                 // update the nonce of the account in the pool only for valid tx
-                let updated_nonce = current_nonce + FieldElement::ONE;
+                let updated_nonce = current_nonce + Felt::ONE;
                 this.pool_nonces.insert(address, updated_nonce);
                 res
             }

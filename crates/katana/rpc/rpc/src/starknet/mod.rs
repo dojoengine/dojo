@@ -20,7 +20,7 @@ use katana_primitives::conversion::rpc::legacy_inner_to_rpc_class;
 use katana_primitives::env::BlockEnv;
 use katana_primitives::event::ContinuationToken;
 use katana_primitives::transaction::{ExecutableTxWithHash, TxHash, TxWithHash};
-use katana_primitives::FieldElement;
+use katana_primitives::Felt;
 use katana_provider::traits::block::{BlockHashProvider, BlockIdReader, BlockNumberProvider};
 use katana_provider::traits::contract::ContractClassProvider;
 use katana_provider::traits::env::BlockEnvProvider;
@@ -336,7 +336,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         from_block: BlockIdOrTag,
         to_block: BlockIdOrTag,
         address: Option<ContractAddress>,
-        keys: Option<Vec<Vec<FieldElement>>>,
+        keys: Option<Vec<Vec<Felt>>>,
         continuation_token: Option<String>,
         chunk_size: u64,
     ) -> Result<EventsPage, StarknetApiError> {

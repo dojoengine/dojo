@@ -7,7 +7,7 @@ use blockifier::state::state_api::{StateReader, StateResult};
 use katana_cairo::starknet_api::core::{ClassHash, CompiledClassHash, Nonce};
 use katana_cairo::starknet_api::state::StorageKey;
 use katana_primitives::class::{CompiledClass, FlattenedSierraClass};
-use katana_primitives::FieldElement;
+use katana_primitives::Felt;
 use katana_provider::error::ProviderError;
 use katana_provider::traits::contract::ContractClassProvider;
 use katana_provider::traits::state::StateProvider;
@@ -129,7 +129,7 @@ impl<S: StateDb> ContractClassProvider for CachedState<S> {
             return Ok(None);
         };
 
-        if hash.0 == FieldElement::ZERO { Ok(None) } else { Ok(Some(hash.0)) }
+        if hash.0 == Felt::ZERO { Ok(None) } else { Ok(Some(hash.0)) }
     }
     fn sierra_class(
         &self,
@@ -153,7 +153,7 @@ impl<S: StateDb> StateProvider for CachedState<S> {
             return Ok(None);
         };
 
-        if hash.0 == FieldElement::ZERO { Ok(None) } else { Ok(Some(hash.0)) }
+        if hash.0 == Felt::ZERO { Ok(None) } else { Ok(Some(hash.0)) }
     }
 
     fn nonce(
@@ -238,7 +238,7 @@ mod tests {
         DEFAULT_OZ_ACCOUNT_CONTRACT_CASM,
     };
     use katana_primitives::utils::class::{parse_compiled_class, parse_sierra_class};
-    use katana_primitives::FieldElement;
+    use katana_primitives::Felt;
     use katana_provider::providers::in_memory::InMemoryProvider;
     use katana_provider::traits::contract::ContractClassWriter;
     use katana_provider::traits::state::{StateFactoryProvider, StateProvider, StateWriter};
@@ -524,7 +524,7 @@ mod tests {
         assert_eq!(actual_storage_value, None, "value of nonexistant contract should be None");
         assert_eq!(
             actual_edge_storage_value,
-            Some(FieldElement::ZERO),
+            Some(Felt::ZERO),
             "edge case: value of nonexistant storage key but existant contract should return zero"
         );
         assert_eq!(actual_compiled_hash, None);

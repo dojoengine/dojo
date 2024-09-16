@@ -13,7 +13,7 @@ use starknet::signers::SigningKey;
 use super::constant::DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH;
 use crate::class::ClassHash;
 use crate::contract::{ContractAddress, StorageKey, StorageValue};
-use crate::FieldElement;
+use crate::Felt;
 
 /// Represents a contract allocation in the genesis block.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -27,7 +27,7 @@ pub enum GenesisAllocation {
 
 impl GenesisAllocation {
     /// Get the public key of the account contract if it's an account contract, otherwise `None`.
-    pub fn public_key(&self) -> Option<FieldElement> {
+    pub fn public_key(&self) -> Option<Felt> {
         match self {
             Self::Contract(_) => None,
             Self::Account(account) => Some(account.public_key()),
@@ -51,7 +51,7 @@ impl GenesisAllocation {
     }
 
     /// Get the nonce.
-    pub fn nonce(&self) -> Option<FieldElement> {
+    pub fn nonce(&self) -> Option<Felt> {
         match self {
             Self::Contract(contract) => contract.nonce,
             Self::Account(account) => account.nonce(),
@@ -79,7 +79,7 @@ pub enum GenesisAccountAlloc {
 }
 
 impl GenesisAccountAlloc {
-    pub fn public_key(&self) -> FieldElement {
+    pub fn public_key(&self) -> Felt {
         match self {
             Self::Account(account) => account.public_key,
             Self::DevAccount(account) => account.public_key,
@@ -100,7 +100,7 @@ impl GenesisAccountAlloc {
         }
     }
 
-    pub fn nonce(&self) -> Option<FieldElement> {
+    pub fn nonce(&self) -> Option<Felt> {
         match self {
             Self::Account(account) => account.nonce,
             Self::DevAccount(account) => account.nonce,
@@ -114,7 +114,7 @@ impl GenesisAccountAlloc {
         }
     }
 
-    pub fn private_key(&self) -> Option<FieldElement> {
+    pub fn private_key(&self) -> Option<Felt> {
         match self {
             Self::Account(_) => None,
             Self::DevAccount(account) => Some(account.private_key),
@@ -133,7 +133,7 @@ pub struct GenesisContractAlloc {
     pub balance: Option<U256>,
     /// The initial nonce of the contract.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub nonce: Option<FieldElement>,
+    pub nonce: Option<Felt>,
     /// The initial storage values of the contract.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub storage: Option<HashMap<StorageKey, StorageValue>>,
@@ -146,7 +146,7 @@ pub struct GenesisContractAlloc {
 pub struct DevGenesisAccount {
     /// The private key associated with the public key of the account.
     #[serde_as(as = "UfeHex")]
-    pub private_key: FieldElement,
+    pub private_key: Felt,
     #[deref]
     #[deref_mut]
     #[serde(flatten)]
@@ -156,7 +156,7 @@ pub struct DevGenesisAccount {
 
 impl DevGenesisAccount {
     /// Creates a new dev account with the given `private_key` and `class_hash`.
-    pub fn new(private_key: FieldElement, class_hash: ClassHash) -> (ContractAddress, Self) {
+    pub fn new(private_key: Felt, class_hash: ClassHash) -> (ContractAddress, Self) {
         let public_key = public_key_from_private_key(private_key);
         let (addr, inner) = GenesisAccount::new(public_key, class_hash);
         (addr, Self { private_key, inner })
@@ -164,7 +164,7 @@ impl DevGenesisAccount {
 
     /// Creates a new dev account with the allocated `balance`.
     pub fn new_with_balance(
-        private_key: FieldElement,
+        private_key: Felt,
         class_hash: ClassHash,
         balance: U256,
     ) -> (ContractAddress, Self) {
@@ -180,7 +180,7 @@ impl DevGenesisAccount {
 pub struct GenesisAccount {
     /// The public key associated with the account for validation.
     #[serde_as(as = "UfeHex")]
-    pub public_key: FieldElement,
+    pub public_key: Felt,
     /// The class hash of the account contract.
     #[serde_as(as = "UfeHex")]
     pub class_hash: ClassHash,
@@ -188,26 +188,22 @@ pub struct GenesisAccount {
     pub balance: Option<U256>,
     /// The initial nonce of the account.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub nonce: Option<FieldElement>,
+    pub nonce: Option<Felt>,
     /// The initial storage values of the account.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub storage: Option<HashMap<StorageKey, StorageValue>>,
 }
 
 impl GenesisAccount {
-    pub fn new(public_key: FieldElement, class_hash: ClassHash) -> (ContractAddress, Self) {
-        let address = get_contract_address(
-            FieldElement::from(666u32),
-            class_hash,
-            &[public_key],
-            FieldElement::ZERO,
-        );
+    pub fn new(public_key: Felt, class_hash: ClassHash) -> (ContractAddress, Self) {
+        let address =
+            get_contract_address(Felt::from(666u32), class_hash, &[public_key], Felt::ZERO);
 
         (ContractAddress::from(address), Self { public_key, class_hash, ..Default::default() })
     }
 
     pub fn new_with_balance(
-        public_key: FieldElement,
+        public_key: Felt,
         class_hash: ClassHash,
         balance: U256,
     ) -> (ContractAddress, Self) {
@@ -229,7 +225,7 @@ pub struct DevAllocationsGenerator {
     total: u16,
     seed: [u8; 32],
     balance: U256,
-    class_hash: FieldElement,
+    class_hash: Felt,
 }
 
 impl DevAllocationsGenerator {
@@ -270,7 +266,7 @@ impl DevAllocationsGenerator {
                 private_key_bytes[0] %= 0x8;
                 seed = private_key_bytes;
 
-                let private_key = FieldElement::from_bytes_be(&private_key_bytes);
+                let private_key = Felt::from_bytes_be(&private_key_bytes);
                 DevGenesisAccount::new_with_balance(private_key, self.class_hash, self.balance)
             })
             .collect()
@@ -279,6 +275,6 @@ impl DevAllocationsGenerator {
 
 /// Helper function for generating the public key from the `private_key` using
 /// the Stark curve.
-fn public_key_from_private_key(private_key: FieldElement) -> FieldElement {
+fn public_key_from_private_key(private_key: Felt) -> Felt {
     SigningKey::from_secret_scalar(private_key).verifying_key().scalar()
 }

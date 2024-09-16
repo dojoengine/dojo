@@ -3,7 +3,7 @@ use alloy_primitives::B256;
 use crate::contract::ContractAddress;
 use crate::fee::TxFeeInfo;
 use crate::trace::TxResources;
-use crate::FieldElement;
+use crate::Felt;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -11,9 +11,9 @@ pub struct Event {
     /// The contract address that emitted the event.
     pub from_address: ContractAddress,
     /// The event keys.
-    pub keys: Vec<FieldElement>,
+    pub keys: Vec<Felt>,
     /// The event data.
-    pub data: Vec<FieldElement>,
+    pub data: Vec<Felt>,
 }
 
 /// Represents a message sent to L1.
@@ -23,9 +23,9 @@ pub struct MessageToL1 {
     /// The L2 contract address that sent the message.
     pub from_address: ContractAddress,
     /// The L1 contract address that the message is sent to.
-    pub to_address: FieldElement,
+    pub to_address: Felt,
     /// The payload of the message.
-    pub payload: Vec<FieldElement>,
+    pub payload: Vec<Felt>,
 }
 
 /// Receipt for a `Invoke` transaction.

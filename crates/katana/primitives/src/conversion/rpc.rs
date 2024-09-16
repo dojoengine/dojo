@@ -27,7 +27,7 @@ use crate::class::{
     ClassHash, CompiledClassHash, DeprecatedCompiledClass, FlattenedSierraClass,
     SierraCompiledClass, SierraProgram,
 };
-use crate::FieldElement;
+use crate::Felt;
 
 /// Converts the legacy inner compiled class type [DeprecatedCompiledClass] into its RPC equivalent
 /// [`ContractClass`].
@@ -158,7 +158,7 @@ pub fn flattened_sierra_to_compiled_class(
 /// Compute the compiled class hash from the given [`FlattenedSierraClass`].
 pub fn compiled_class_hash_from_flattened_sierra_class(
     contract_class: &FlattenedSierraClass,
-) -> Result<FieldElement> {
+) -> Result<Felt> {
     let contract_class = rpc_to_cairo_contract_class(contract_class)?;
     let casm = CasmContractClass::from_contract_class(contract_class, true, usize::MAX)?;
     let compiled_class: CompiledClass = serde_json::from_str(&serde_json::to_string(&casm)?)?;
@@ -243,7 +243,7 @@ fn decompress_legacy_program_data(data: &[u8]) -> Result<LegacyProgram, io::Erro
         builtins: Vec<String>,
         compiler_version: Option<String>,
         #[serde_as(as = "Vec<UfeHex>")]
-        data: Vec<FieldElement>,
+        data: Vec<Felt>,
         debug_info: Option<LegacyDebugInfo>,
         hints: BTreeMap<u64, Vec<LegacyHint>>,
         identifiers: BTreeMap<String, LegacyIdentifier>,
