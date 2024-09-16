@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1726507083123,
+  "lastUpdate": 1726507243723,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -20299,6 +20299,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 26931647293,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "remy.baranx@gmail.com",
+            "name": "Rémy Baranx",
+            "username": "remybar"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "435c2d11ed090207ef661b27ea6223d0c4b011e5",
+          "message": "fix: dojo-lang tests with default namespace (#2422)",
+          "timestamp": "2024-09-16T11:01:15-06:00",
+          "tree_id": "ec17884d07d9db2f9f4dd5e7f8e9587b1aad57c5",
+          "url": "https://github.com/dojoengine/dojo/commit/435c2d11ed090207ef661b27ea6223d0c4b011e5"
+        },
+        "date": 1726507242499,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17670772,
+            "range": "± 207677",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 4024400,
+            "range": "± 165047",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3887685786,
+            "range": "± 836096121",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4294292,
+            "range": "± 224481",
             "unit": "ns/iter"
           }
         ]
