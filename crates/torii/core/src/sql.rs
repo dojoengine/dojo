@@ -280,12 +280,12 @@ impl Sql {
     pub async fn delete_entity(
         &mut self,
         entity_id: Felt,
+        model_id: Felt,
         entity: Ty,
         event_id: &str,
         block_timestamp: u64,
     ) -> Result<()> {
         let entity_id = format!("{:#x}", entity_id);
-        let model_id = format!("{:#x}", compute_selector_from_tag(&entity.name()));
         let path = vec![entity.name()];
         // delete entity models data
         self.build_delete_entity_queries_recursive(path, &entity_id, &entity);
