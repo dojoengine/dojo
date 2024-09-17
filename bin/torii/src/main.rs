@@ -10,6 +10,7 @@
 //!   documentation for usage details. This is **not recommended on Windows**. See [here](https://rust-lang.github.io/rfcs/1974-global-allocators.html#jemalloc)
 //!   for more info.
 
+use std::cmp;
 use std::net::SocketAddr;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -168,7 +169,8 @@ async fn main() -> anyhow::Result<()> {
 
     // Set the number of threads based on CPU count
     let cpu_count = std::thread::available_parallelism().unwrap().get();
-    sqlx::query(&format!("PRAGMA threads = {};", cpu_count)).execute(&pool).await?;
+    let thread_count = cmp::min(cpu_count, 8);
+    sqlx::query(&format!("PRAGMA threads = {};", thread_count)).execute(&pool).await?;
 
     sqlx::migrate!("../../crates/torii/migrations").run(&pool).await?;
 
