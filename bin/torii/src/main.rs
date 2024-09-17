@@ -20,7 +20,9 @@ use clap::{ArgAction, Parser};
 use dojo_metrics::{metrics_process, prometheus_exporter};
 use dojo_utils::parse::{parse_socket_address, parse_url};
 use dojo_world::contracts::world::WorldContractReader;
-use sqlx::sqlite::{SqliteAutoVacuum, SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous};
+use sqlx::sqlite::{
+    SqliteAutoVacuum, SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous,
+};
 use sqlx::SqlitePool;
 use starknet::core::types::Felt;
 use starknet::providers::jsonrpc::HttpTransport;
@@ -154,9 +156,8 @@ async fn main() -> anyhow::Result<()> {
     .expect("Error setting Ctrl-C handler");
 
     let database_url = format!("sqlite:{}", &args.database);
-    let mut options = SqliteConnectOptions::from_str(&database_url)?
-        .create_if_missing(true)
-        .with_regexp();
+    let mut options =
+        SqliteConnectOptions::from_str(&database_url)?.create_if_missing(true).with_regexp();
 
     // Set cache to shared if using in-memory database
     if args.database == ":memory:" {
