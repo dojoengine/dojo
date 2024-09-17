@@ -13,28 +13,11 @@ env:
 
 jobs:
   build:
-    name: ${{ matrix.job.target }} (${{ matrix.job.os }})
-    runs-on: ${{ matrix.job.os }}
-    env:
-      PLATFORM_NAME: ${{ matrix.job.platform }}
-      TARGET: ${{ matrix.job.target }}
-      ARCH: ${{ matrix.job.arch }}
-    strategy:
-      matrix:
-        job:
-          - os: ubuntu-latest-4-cores
-            platform: linux
-            target: x86_64-unknown-linux-gnu
-            arch: amd64
+    name: Build
+    runs-on: ubuntu-latest-4-cores
 
     steps:
       - uses: actions/checkout@v4
-
-      - uses: dtolnay/rust-toolchain@master
-        name: Rust Toolchain Setup
-        with:
-          targets: ${{ matrix.job.target }}
-          toolchain: ${{ env.RUST_VERSION }}
 
       - uses: Swatinem/rust-cache@v1
 
@@ -45,27 +28,25 @@ jobs:
 
       - name: Build binaries
         run: |
-          cargo build -r --bin katana --target ${{ matrix.job.target }}
-          cargo build -r --bin torii --target ${{ matrix.job.target }}
-          cargo build -r --bin saya --target ${{ matrix.job.target }}
+          cargo build -r --bin katana
+          cargo build -r --bin torii
+          cargo build -r --bin sozo
 
       - name: Archive binaries
         id: artifacts
         env:
           VERSION_NAME: v${{ needs.prepare.outputs.tag_name }}
         run: |
-          tar -czvf "dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" -C ./target/${TARGET}/release katana torii saya
-          echo "file_name=dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" >> $GITHUB_OUTPUT
+          tar -czvf "dojo_${VERSION_NAME}_linux_amd64.tar.gz" -C ./target/release katana torii sozo
+          echo "file_name=dojo_${VERSION_NAME}_linux_amd64.tar.gz" >> $GITHUB_OUTPUT
         shell: bash
 
-      # We move binaries so they match $TARGETPLATFORM in the Docker build
       - name: Move Binaries
-        if: ${{ env.PLATFORM_NAME == 'linux' }}
         run: |
-          mkdir -p $PLATFORM_NAME/$ARCH
-          mv target/$TARGET/release/katana $PLATFORM_NAME/$ARCH
-          mv target/$TARGET/release/torii $PLATFORM_NAME/$ARCH
-          mv target/$TARGET/release/saya $PLATFORM_NAME/$ARCH
+          mkdir -p linux/amd64/
+          mv target/release/katana linux/amd64/
+          mv target/release/torii linux/amd64/
+          mv target/release/sozo linux/amd64/
         shell: bash
 
       # Upload these for use with the Docker build later
@@ -73,18 +54,11 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: binaries
-          path: ${{ env.PLATFORM_NAME }}
-          retention-days: 1
-
-      - name: Upload release artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: artifacts
-          path: ${{ steps.artifacts.outputs.file_name }}
+          path: linux/amd64/
           retention-days: 1
 
   docker-build-and-push:
-    runs-on: ubuntu-20.04-4-cores
+    runs-on: ubuntu-latest
     needs: [build]
 
     steps:
@@ -95,7 +69,10 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: binaries
-          path: artifacts/linux
+          path: artifacts
+
+      - name: TEMP LS
+        run: ls -R artifacts
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
@@ -131,7 +108,7 @@ jobs:
           slot d create preview--${{ github.ref_name }} katana --version preview--${{ github.ref_name }}
           slot d create preview--${{ github.ref_name }} torii --version preview--${{ github.ref_name }} \
             --rpc=http://slot.prod.svc.cluster.local/x/starknet/sepolia \
-            --world=0x1caef8b56b3f0627479ab624eefff92d7d8e1daa9d418cc76bd74935f1dc283 \
+            --world=0x53b7efae79ce1d7729828bb6dee2cee09358fde4c4325805cf97678919a4855 \
             --start-block=0
         env:
           SLOT_AUTH: ${{ secrets.SLOT_AUTH }}
