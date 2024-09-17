@@ -170,7 +170,6 @@ async fn main() -> anyhow::Result<()> {
 
     let pool = SqlitePoolOptions::new()
         .min_connections(1)
-        .max_connections(5)
         .connect_with(options)
         .await?;
 
