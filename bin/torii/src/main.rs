@@ -155,7 +155,11 @@ async fn main() -> anyhow::Result<()> {
     })
     .expect("Error setting Ctrl-C handler");
 
-    let database_url = format!("sqlite:{}", &args.database);
+    let database_url = if args.database == ":memory:" {
+        "sqlite:file:memorydb?mode=memory&cache=shared".to_string()
+    } else {
+        format!("sqlite:{}", &args.database)
+    };
     let mut options =
         SqliteConnectOptions::from_str(&database_url)?.create_if_missing(true).with_regexp();
 
