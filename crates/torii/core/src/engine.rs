@@ -138,13 +138,9 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
 
     pub async fn start(&mut self) -> Result<()> {
         // use the start block provided by user if head is 0
-        let (head, last_pending_block_world_tx, last_pending_block_tx) = self.db.head().await?;
+        let (head, _, _) = self.db.head().await?;
         if head == 0 {
-            self.db.set_head(
-                self.config.start_block,
-                last_pending_block_world_tx,
-                last_pending_block_tx,
-            );
+            self.db.set_head(self.config.start_block);
         } else if self.config.start_block != 0 {
             warn!(target: LOG_TARGET, "Start block ignored, stored head exists and will be used instead.");
         }
@@ -396,11 +392,15 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                             // provider. So we can fail silently and try
                             // again in the next iteration.
                             warn!(target: LOG_TARGET, transaction_hash = %format!("{:#x}", transaction_hash), "Retrieving pending transaction receipt.");
-                            self.db.set_head(
-                                data.block_number - 1,
-                                last_pending_block_world_tx,
-                                last_pending_block_tx,
-                            );
+                            self.db.set_head(data.block_number - 1);
+                            if let Some(tx) = last_pending_block_tx {
+                                self.db.set_last_pending_block_tx(Some(tx));
+                            }
+
+                            if let Some(tx) = last_pending_block_world_tx {
+                                self.db.set_last_pending_block_world_tx(Some(tx));
+                            }
+                            self.db.execute().await?;
                             return Ok(());
                         }
                         _ => {
@@ -426,7 +426,16 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
 
         // Set the head to the last processed pending transaction
         // Head block number should still be latest block number
-        self.db.set_head(data.block_number - 1, last_pending_block_world_tx, last_pending_block_tx);
+        self.db.set_head(data.block_number - 1);
+
+        if let Some(tx) = last_pending_block_tx {
+            self.db.set_last_pending_block_tx(Some(tx));
+        }
+
+        if let Some(tx) = last_pending_block_world_tx {
+            self.db.set_last_pending_block_world_tx(Some(tx));
+        }
+
         self.db.execute().await?;
 
         Ok(())
@@ -466,7 +475,10 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         // Process parallelized events
         self.process_tasks().await?;
 
-        self.db.set_head(data.latest_block_number, None, None);
+        self.db.set_head(data.latest_block_number);
+        self.db.set_last_pending_block_world_tx(None);
+        self.db.set_last_pending_block_tx(None);
+
         self.db.execute().await?;
 
         Ok(())
