@@ -1,5 +1,6 @@
 use std::collections::{BTreeMap, HashMap};
 use std::fmt::Debug;
+use std::hash::{DefaultHasher, Hash, Hasher};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -12,7 +13,6 @@ use starknet::core::types::{
     TransactionReceiptWithBlockInfo, TransactionWithReceipt,
 };
 use starknet::providers::Provider;
-use starknet_crypto::poseidon_hash_many;
 use tokio::sync::broadcast::Sender;
 use tokio::sync::mpsc::Sender as BoundedSender;
 use tokio::sync::Semaphore;
@@ -106,7 +106,7 @@ pub struct Engine<P: Provider + Send + Sync + std::fmt::Debug + 'static> {
     config: EngineConfig,
     shutdown_tx: Sender<()>,
     block_tx: Option<BoundedSender<u64>>,
-    tasks: HashMap<Felt, Vec<ParallelizedEvent>>,
+    tasks: HashMap<u64, Vec<ParallelizedEvent>>,
 }
 
 struct UnprocessedEvent {
@@ -693,13 +693,16 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
 
         let task_identifier = match processor.event_key().as_str() {
             "StoreSetRecord" | "StoreUpdateRecord" | "StoreUpdateMember" | "StoreDelRecord" => {
-                poseidon_hash_many(&[event.data[0], event.data[1]])
+                let mut hasher = DefaultHasher::new();
+                event.data[0].hash(&mut hasher);
+                event.data[1].hash(&mut hasher);
+                hasher.finish()
             }
-            _ => Felt::ZERO,
+            _ => 0,
         };
 
         // if we have a task identifier, we queue the event to be parallelized
-        if task_identifier != Felt::ZERO {
+        if task_identifier != 0 {
             self.tasks.entry(task_identifier).or_default().push(ParallelizedEvent {
                 event_id: event_id.to_string(),
                 event: event.clone(),
