@@ -166,6 +166,10 @@ async fn main() -> anyhow::Result<()> {
     sqlx::query("PRAGMA journal_mode = WAL;").execute(&pool).await?;
     sqlx::query("PRAGMA synchronous = NORMAL;").execute(&pool).await?;
 
+    // Set the number of threads based on CPU count
+    let cpu_count = std::thread::available_parallelism().unwrap().get();
+    sqlx::query(&format!("PRAGMA threads = {};", cpu_count)).execute(&pool).await?;
+
     sqlx::migrate!("../../crates/torii/migrations").run(&pool).await?;
 
     let provider: Arc<_> = JsonRpcClient::new(HttpTransport::new(args.rpc)).into();
