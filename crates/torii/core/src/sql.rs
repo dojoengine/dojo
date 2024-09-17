@@ -110,29 +110,43 @@ impl Sql {
         ))
     }
 
-    pub fn set_head(
-        &mut self,
-        head: u64,
-        last_pending_block_world_tx: Option<Felt>,
-        last_pending_block_tx: Option<Felt>,
-    ) {
+    pub fn set_head(&mut self, head: u64) {
         let head = Argument::Int(head.try_into().expect("doesn't fit in u64"));
         let id = Argument::FieldElement(self.world_address);
+        self.query_queue.enqueue(
+            "UPDATE contracts SET head = ? WHERE id = ?",
+            vec![head, id],
+            QueryType::Other,
+        );
+    }
+
+    pub fn set_last_pending_block_world_tx(&mut self, last_pending_block_world_tx: Option<Felt>) {
         let last_pending_block_world_tx = if let Some(f) = last_pending_block_world_tx {
             Argument::String(format!("{:#x}", f))
         } else {
             Argument::Null
         };
+
+        let id = Argument::FieldElement(self.world_address);
+
+        self.query_queue.enqueue(
+            "UPDATE contracts SET last_pending_block_world_tx = ? WHERE id = ?",
+            vec![last_pending_block_world_tx, id],
+            QueryType::Other,
+        );
+    }
+
+    pub fn set_last_pending_block_tx(&mut self, last_pending_block_tx: Option<Felt>) {
         let last_pending_block_tx = if let Some(f) = last_pending_block_tx {
             Argument::String(format!("{:#x}", f))
         } else {
             Argument::Null
         };
+        let id = Argument::FieldElement(self.world_address);
 
         self.query_queue.enqueue(
-            "UPDATE contracts SET head = ?, last_pending_block_world_tx = ?, \
-             last_pending_block_tx = ? WHERE id = ?",
-            vec![head, last_pending_block_world_tx, last_pending_block_tx, id],
+            "UPDATE contracts SET last_pending_block_tx = ? WHERE id = ?",
+            vec![last_pending_block_tx, id],
             QueryType::Other,
         );
     }
