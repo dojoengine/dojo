@@ -1,5 +1,7 @@
 use std::collections::{BTreeMap, HashMap};
 use std::fmt::Debug;
+use std::hash::{DefaultHasher, Hash, Hasher};
+use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Result;
@@ -13,6 +15,8 @@ use starknet::core::types::{
 use starknet::providers::Provider;
 use tokio::sync::broadcast::Sender;
 use tokio::sync::mpsc::Sender as BoundedSender;
+use tokio::sync::Semaphore;
+use tokio::task::JoinSet;
 use tokio::time::sleep;
 use tracing::{debug, error, info, trace, warn};
 
@@ -21,14 +25,14 @@ use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
 use crate::sql::Sql;
 
 #[allow(missing_debug_implementations)]
-pub struct Processors<P: Provider + Send + Sync + std::fmt::Debug> {
+pub struct Processors<P: Provider + Send + Sync + std::fmt::Debug + 'static> {
     pub block: Vec<Box<dyn BlockProcessor<P>>>,
     pub transaction: Vec<Box<dyn TransactionProcessor<P>>>,
-    pub event: HashMap<Felt, Box<dyn EventProcessor<P>>>,
+    pub event: HashMap<Felt, Arc<dyn EventProcessor<P>>>,
     pub catch_all_event: Box<dyn EventProcessor<P>>,
 }
 
-impl<P: Provider + Send + Sync + std::fmt::Debug> Default for Processors<P> {
+impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Default for Processors<P> {
     fn default() -> Self {
         Self {
             block: vec![],
@@ -48,6 +52,7 @@ pub struct EngineConfig {
     pub start_block: u64,
     pub events_chunk_size: u64,
     pub index_pending: bool,
+    pub max_concurrent_tasks: usize,
 }
 
 impl Default for EngineConfig {
@@ -57,6 +62,7 @@ impl Default for EngineConfig {
             start_block: 0,
             events_chunk_size: 1024,
             index_pending: true,
+            max_concurrent_tasks: 100,
         }
     }
 }
@@ -83,15 +89,24 @@ pub struct FetchPendingResult {
     pub block_number: u64,
 }
 
+#[derive(Debug)]
+pub struct ParallelizedEvent {
+    pub block_number: u64,
+    pub block_timestamp: u64,
+    pub event_id: String,
+    pub event: Event,
+}
+
 #[allow(missing_debug_implementations)]
-pub struct Engine<P: Provider + Send + Sync + std::fmt::Debug> {
-    world: WorldContractReader<P>,
+pub struct Engine<P: Provider + Send + Sync + std::fmt::Debug + 'static> {
+    world: Arc<WorldContractReader<P>>,
     db: Sql,
     provider: Box<P>,
-    processors: Processors<P>,
+    processors: Arc<Processors<P>>,
     config: EngineConfig,
     shutdown_tx: Sender<()>,
     block_tx: Option<BoundedSender<u64>>,
+    tasks: HashMap<u64, Vec<ParallelizedEvent>>,
 }
 
 struct UnprocessedEvent {
@@ -99,7 +114,7 @@ struct UnprocessedEvent {
     data: Vec<String>,
 }
 
-impl<P: Provider + Send + Sync + std::fmt::Debug> Engine<P> {
+impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
     pub fn new(
         world: WorldContractReader<P>,
         db: Sql,
@@ -109,7 +124,16 @@ impl<P: Provider + Send + Sync + std::fmt::Debug> Engine<P> {
         shutdown_tx: Sender<()>,
         block_tx: Option<BoundedSender<u64>>,
     ) -> Self {
-        Self { world, db, provider: Box::new(provider), processors, config, shutdown_tx, block_tx }
+        Self {
+            world: Arc::new(world),
+            db,
+            provider: Box::new(provider),
+            processors: Arc::new(processors),
+            config,
+            shutdown_tx,
+            block_tx,
+            tasks: HashMap::new(),
+        }
     }
 
     pub async fn start(&mut self) -> Result<()> {
@@ -397,11 +421,14 @@ impl<P: Provider + Send + Sync + std::fmt::Debug> Engine<P> {
             }
         }
 
+        // Process parallelized events
+        self.process_tasks().await?;
+
         // Set the head to the last processed pending transaction
         // Head block number should still be latest block number
         self.db.set_head(data.block_number - 1, last_pending_block_world_tx, last_pending_block_tx);
-
         self.db.execute().await?;
+
         Ok(())
     }
 
@@ -436,14 +463,51 @@ impl<P: Provider + Send + Sync + std::fmt::Debug> Engine<P> {
             }
         }
 
-        // We return None for the pending_block_tx because our process_range
-        // gets only specific events from the world. so some transactions
-        // might get ignored and wont update the cursor.
-        // so once the sync range is done, we assume all of the tx of the block
-        // have been processed.
+        // Process parallelized events
+        self.process_tasks().await?;
 
         self.db.set_head(data.latest_block_number, None, None);
         self.db.execute().await?;
+
+        Ok(())
+    }
+
+    async fn process_tasks(&mut self) -> Result<()> {
+        // We use a semaphore to limit the number of concurrent tasks
+        let semaphore = Arc::new(Semaphore::new(self.config.max_concurrent_tasks));
+
+        // Run all tasks concurrently
+        let mut set = JoinSet::new();
+        for (task_id, events) in self.tasks.drain() {
+            let db = self.db.clone();
+            let world = self.world.clone();
+            let processors = self.processors.clone();
+            let semaphore = semaphore.clone();
+
+            set.spawn(async move {
+                let _permit = semaphore.acquire().await.unwrap();
+                let mut local_db = db.clone();
+                for ParallelizedEvent { event_id, event, block_number, block_timestamp } in events {
+                    if let Some(processor) = processors.event.get(&event.keys[0]) {
+                        debug!(target: LOG_TARGET, event_name = processor.event_key(), task_id = %task_id, "Processing parallelized event.");
+
+                        if let Err(e) = processor
+                            .process(&world, &mut local_db, block_number, block_timestamp, &event_id, &event)
+                            .await
+                        {
+                            error!(target: LOG_TARGET, event_name = processor.event_key(), error = %e, task_id = %task_id, "Processing parallelized event.");
+                        }
+                    }
+                }
+                Ok::<_, anyhow::Error>(local_db)
+            });
+        }
+
+        // Join all tasks
+        while let Some(result) = set.join_next().await {
+            let local_db = result??;
+            self.db.merge(local_db)?;
+        }
 
         Ok(())
     }
@@ -477,7 +541,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug> Engine<P> {
                 block_timestamp,
                 &event_id,
                 &event,
-                transaction_hash,
+                // transaction_hash,
             )
             .await?;
         }
@@ -527,7 +591,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug> Engine<P> {
                     block_timestamp,
                     &event_id,
                     event,
-                    *transaction_hash,
+                    // *transaction_hash,
                 )
                 .await?;
             }
@@ -587,9 +651,9 @@ impl<P: Provider + Send + Sync + std::fmt::Debug> Engine<P> {
         block_timestamp: u64,
         event_id: &str,
         event: &Event,
-        transaction_hash: Felt,
+        // transaction_hash: Felt,
     ) -> Result<()> {
-        self.db.store_event(event_id, event, transaction_hash, block_timestamp);
+        // self.db.store_event(event_id, event, transaction_hash, block_timestamp);
         let event_key = event.keys[0];
 
         let Some(processor) = self.processors.event.get(&event_key) else {
@@ -627,14 +691,33 @@ impl<P: Provider + Send + Sync + std::fmt::Debug> Engine<P> {
             return Ok(());
         };
 
-        // if processor.validate(event) {
-        if let Err(e) = processor
-            .process(&self.world, &mut self.db, block_number, block_timestamp, event_id, event)
-            .await
-        {
-            error!(target: LOG_TARGET, event_name = processor.event_key(), error = %e, "Processing event.");
+        let task_identifier = match processor.event_key().as_str() {
+            "StoreSetRecord" | "StoreUpdateRecord" | "StoreUpdateMember" | "StoreDelRecord" => {
+                let mut hasher = DefaultHasher::new();
+                event.data[0].hash(&mut hasher);
+                event.data[1].hash(&mut hasher);
+                hasher.finish()
+            }
+            _ => 0,
+        };
+
+        // if we have a task identifier, we queue the event to be parallelized
+        if task_identifier != 0 {
+            self.tasks.entry(task_identifier).or_default().push(ParallelizedEvent {
+                event_id: event_id.to_string(),
+                event: event.clone(),
+                block_number,
+                block_timestamp,
+            });
+        } else {
+            // if we dont have a task identifier, we process the event immediately
+            if let Err(e) = processor
+                .process(&self.world, &mut self.db, block_number, block_timestamp, event_id, event)
+                .await
+            {
+                error!(target: LOG_TARGET, event_name = processor.event_key(), error = %e, "Processing event.");
+            }
         }
-        // }
 
         Ok(())
     }

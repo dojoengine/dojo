@@ -113,6 +113,11 @@ impl ModelCache {
         Ok(model)
     }
 
+    pub async fn set(&self, selector: Felt, model: Model) {
+        let mut cache = self.cache.write().await;
+        cache.insert(selector, model);
+    }
+
     pub async fn clear(&self) {
         self.cache.write().await.clear();
     }

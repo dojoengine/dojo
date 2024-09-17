@@ -10,6 +10,7 @@
 //!   documentation for usage details. This is **not recommended on Windows**. See [here](https://rust-lang.github.io/rfcs/1974-global-allocators.html#jemalloc)
 //!   for more info.
 
+use std::cmp;
 use std::net::SocketAddr;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -125,6 +126,10 @@ struct Args {
     /// Polling interval in ms
     #[arg(long, default_value = "500")]
     polling_interval: u64,
+
+    /// Max concurrent tasks
+    #[arg(long, default_value = "100")]
+    max_concurrent_tasks: usize,
 }
 
 #[tokio::main]
@@ -157,32 +162,34 @@ async fn main() -> anyhow::Result<()> {
         .connect_with(options)
         .await?;
 
-    if args.database == ":memory:" {
-        // Disable auto-vacuum
-        sqlx::query("PRAGMA auto_vacuum = NONE;").execute(&pool).await?;
+    // Disable auto-vacuum
+    sqlx::query("PRAGMA auto_vacuum = NONE;").execute(&pool).await?;
+    sqlx::query("PRAGMA journal_mode = WAL;").execute(&pool).await?;
+    sqlx::query("PRAGMA synchronous = NORMAL;").execute(&pool).await?;
 
-        // Switch DELETE journal mode
-        sqlx::query("PRAGMA journal_mode=DELETE;").execute(&pool).await?;
-    }
+    // Set the number of threads based on CPU count
+    let cpu_count = std::thread::available_parallelism().unwrap().get();
+    let thread_count = cmp::min(cpu_count, 8);
+    sqlx::query(&format!("PRAGMA threads = {};", thread_count)).execute(&pool).await?;
 
     sqlx::migrate!("../../crates/torii/migrations").run(&pool).await?;
 
     let provider: Arc<_> = JsonRpcClient::new(HttpTransport::new(args.rpc)).into();
 
     // Get world address
-    let world = WorldContractReader::new(args.world_address, &provider);
+    let world = WorldContractReader::new(args.world_address, provider.clone());
 
     let db = Sql::new(pool.clone(), args.world_address).await?;
 
     let processors = Processors {
         event: generate_event_processors_map(vec![
-            Box::new(RegisterModelProcessor),
-            Box::new(StoreSetRecordProcessor),
-            Box::new(MetadataUpdateProcessor),
-            Box::new(StoreDelRecordProcessor),
-            Box::new(EventMessageProcessor),
-            Box::new(StoreUpdateRecordProcessor),
-            Box::new(StoreUpdateMemberProcessor),
+            Arc::new(RegisterModelProcessor),
+            Arc::new(StoreSetRecordProcessor),
+            Arc::new(MetadataUpdateProcessor),
+            Arc::new(StoreDelRecordProcessor),
+            Arc::new(EventMessageProcessor),
+            Arc::new(StoreUpdateRecordProcessor),
+            Arc::new(StoreUpdateMemberProcessor),
         ])?,
         transaction: vec![Box::new(StoreTransactionProcessor)],
         ..Processors::default()
@@ -193,9 +200,10 @@ async fn main() -> anyhow::Result<()> {
     let mut engine = Engine::new(
         world,
         db.clone(),
-        &provider,
+        provider.clone(),
         processors,
         EngineConfig {
+            max_concurrent_tasks: args.max_concurrent_tasks,
             start_block: args.start_block,
             events_chunk_size: args.events_chunk_size,
             index_pending: args.index_pending,

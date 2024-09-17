@@ -5,7 +5,7 @@ use std::sync::Arc;
 use anyhow::{anyhow, Result};
 use chrono::Utc;
 use dojo_types::primitive::Primitive;
-use dojo_types::schema::{EnumOption, Member, Ty};
+use dojo_types::schema::{EnumOption, Member, Struct, Ty};
 use dojo_world::contracts::abi::model::Layout;
 use dojo_world::contracts::naming::compute_selector_from_names;
 use dojo_world::metadata::WorldMetadata;
@@ -13,7 +13,7 @@ use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Sqlite};
 use starknet::core::types::{Event, Felt, InvokeTransaction, Transaction};
 use starknet_crypto::poseidon_hash_many;
-use tracing::debug;
+use tracing::{debug, warn};
 
 use crate::cache::{Model, ModelCache};
 use crate::query_queue::{Argument, BrokerMessage, DeleteEntityQuery, QueryQueue, QueryType};
@@ -32,12 +32,23 @@ pub const FELT_DELIMITER: &str = "/";
 #[path = "sql_test.rs"]
 mod test;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Sql {
     world_address: Felt,
     pub pool: Pool<Sqlite>,
     pub query_queue: QueryQueue,
     model_cache: Arc<ModelCache>,
+}
+
+impl Clone for Sql {
+    fn clone(&self) -> Self {
+        Self {
+            world_address: self.world_address,
+            pool: self.pool.clone(),
+            query_queue: QueryQueue::new(self.pool.clone()),
+            model_cache: self.model_cache.clone(),
+        }
+    }
 }
 
 impl Sql {
@@ -63,6 +74,22 @@ impl Sql {
             query_queue,
             model_cache: Arc::new(ModelCache::new(pool)),
         })
+    }
+
+    pub fn merge(&mut self, other: Sql) -> Result<()> {
+        // Merge query queue
+        self.query_queue.queue.extend(other.query_queue.queue);
+        self.query_queue.publish_queue.extend(other.query_queue.publish_queue);
+
+        // This should never happen
+        if self.world_address != other.world_address {
+            warn!(
+                "Merging Sql instances with different world addresses: {} and {}",
+                self.world_address, other.world_address
+            );
+        }
+
+        Ok(())
     }
 
     pub async fn head(&self) -> Result<(u64, Option<Felt>, Option<Felt>)> {
@@ -123,6 +150,7 @@ impl Sql {
         block_timestamp: u64,
     ) -> Result<()> {
         let selector = compute_selector_from_names(namespace, &model.name());
+        let namespaced_name = format!("{}-{}", namespace, model.name());
 
         let insert_models =
             "INSERT INTO models (id, namespace, name, class_hash, contract_address, layout, \
@@ -149,13 +177,35 @@ impl Sql {
         self.build_register_queries_recursive(
             selector,
             &model,
-            vec![format!("{}-{}", namespace, model.name())],
+            vec![namespaced_name.clone()],
             &mut model_idx,
             block_timestamp,
             &mut 0,
             &mut 0,
         );
-        self.execute().await?;
+
+        // we set the model in the cache directly
+        // because entities might be using it before the query queue is processed
+        self.model_cache
+            .set(
+                selector,
+                Model {
+                    namespace: namespace.to_string(),
+                    name: model.name().to_string(),
+                    selector,
+                    class_hash,
+                    contract_address,
+                    packed_size,
+                    unpacked_size,
+                    layout,
+                    // we need to update the name of the struct to include the namespace
+                    schema: Ty::Struct(Struct {
+                        name: namespaced_name,
+                        children: model.as_struct().unwrap().children.clone(),
+                    }),
+                },
+            )
+            .await;
         self.query_queue.push_publish(BrokerMessage::ModelRegistered(model_registered));
 
         Ok(())

@@ -1,4 +1,5 @@
 use std::str::FromStr;
+use std::sync::Arc;
 
 use anyhow::Result;
 use async_graphql::dynamic::Schema;
@@ -21,7 +22,8 @@ use sqlx::SqlitePool;
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::types::{Call, Felt, InvokeTransactionResult};
 use starknet::macros::selector;
-use starknet::providers::Provider;
+use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::{JsonRpcClient, Provider};
 use tokio::sync::broadcast;
 use tokio_stream::StreamExt;
 use torii_core::engine::{Engine, EngineConfig, Processors};
@@ -268,6 +270,8 @@ pub async fn model_fixtures(db: &mut Sql) {
     )
     .await
     .unwrap();
+
+    db.execute().await.unwrap();
 }
 
 pub async fn spinup_types_test() -> Result<SqlitePool> {
@@ -290,6 +294,7 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
     let sequencer = KatanaRunner::new_with_config(seq_config).expect("Failed to start runner.");
 
     let account = sequencer.account(0);
+    let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
 
     let (strat, _) = prepare_migration_with_world_and_seed(
         manifest_path,
@@ -328,7 +333,7 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
         .await
         .unwrap();
 
-    TransactionWaiter::new(transaction_hash, &account.provider()).await?;
+    TransactionWaiter::new(transaction_hash, &provider).await?;
 
     // Execute `delete` and delete Record with id 20
     let InvokeTransactionResult { transaction_hash } = account
@@ -341,9 +346,9 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
         .await
         .unwrap();
 
-    TransactionWaiter::new(transaction_hash, &account.provider()).await?;
+    TransactionWaiter::new(transaction_hash, &provider).await?;
 
-    let world = WorldContractReader::new(strat.world_address, account.provider());
+    let world = WorldContractReader::new(strat.world_address, Arc::clone(&provider));
 
     let db = Sql::new(pool.clone(), strat.world_address).await.unwrap();
 
@@ -351,12 +356,12 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
     let mut engine = Engine::new(
         world,
         db,
-        account.provider(),
+        Arc::clone(&provider),
         Processors {
             event: generate_event_processors_map(vec![
-                Box::new(RegisterModelProcessor),
-                Box::new(StoreSetRecordProcessor),
-                Box::new(StoreDelRecordProcessor),
+                Arc::new(RegisterModelProcessor),
+                Arc::new(StoreSetRecordProcessor),
+                Arc::new(StoreDelRecordProcessor),
             ])
             .unwrap(),
             ..Processors::default()
