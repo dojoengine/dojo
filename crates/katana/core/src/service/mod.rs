@@ -31,28 +31,43 @@ pub(crate) const LOG_TARGET: &str = "node";
 /// to construct a new block.
 #[must_use = "BlockProductionTask does nothing unless polled"]
 #[allow(missing_debug_implementations)]
-pub struct BlockProductionTask<EF: ExecutorFactory> {
+pub struct BlockProductionTask<EF, P = TxPool>
+where
+    EF: ExecutorFactory,
+    P: TransactionPool,
+    P::Transaction: Into<ExecutableTxWithHash>,
+{
     /// creates new blocks
     pub(crate) block_producer: Arc<BlockProducer<EF>>,
     /// the miner responsible to select transactions from the `pool´
-    pub(crate) miner: TransactionMiner,
+    pub(crate) miner: TransactionMiner<P>,
     /// the pool that holds all transactions
-    pub(crate) pool: TxPool,
+    pub(crate) pool: P,
     /// Metrics for recording the service operations
     metrics: BlockProducerMetrics,
 }
 
-impl<EF: ExecutorFactory> BlockProductionTask<EF> {
+impl<EF, P> BlockProductionTask<EF, P>
+where
+    EF: ExecutorFactory,
+    P: TransactionPool,
+    P::Transaction: Into<ExecutableTxWithHash>,
+{
     pub fn new(
-        pool: TxPool,
-        miner: TransactionMiner,
+        pool: P,
+        miner: TransactionMiner<P>,
         block_producer: Arc<BlockProducer<EF>>,
     ) -> Self {
         Self { block_producer, miner, pool, metrics: BlockProducerMetrics::default() }
     }
 }
 
-impl<EF: ExecutorFactory> Future for BlockProductionTask<EF> {
+impl<EF, P> Future for BlockProductionTask<EF, P>
+where
+    EF: ExecutorFactory,
+    P: TransactionPool + Unpin,
+    P::Transaction: Into<ExecutableTxWithHash>,
+{
     type Output = ();
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
@@ -79,8 +94,9 @@ impl<EF: ExecutorFactory> Future for BlockProductionTask<EF> {
             }
 
             if let Poll::Ready(pool_txs) = this.miner.poll(&this.pool, cx) {
-                // miner returned a set of transaction that we feed to the producer
-                this.block_producer.queue(pool_txs);
+                // miner returned a set of transaction that we then feed to the producer
+                let executables = pool_txs.into_iter().map(Into::into).collect::<Vec<_>>();
+                this.block_producer.queue(executables);
             } else {
                 // no progress made
                 break;
@@ -93,19 +109,21 @@ impl<EF: ExecutorFactory> Future for BlockProductionTask<EF> {
 
 /// The type which takes the transaction from the pool and feeds them to the block producer.
 #[derive(Debug)]
-pub struct TransactionMiner {
+pub struct TransactionMiner<P> {
     /// stores whether there are pending transacions (if known)
     has_pending_txs: Option<bool>,
     /// Receives hashes of transactions that are ready from the pool
     rx: Fuse<Receiver<Felt>>,
+
+    _pool: std::marker::PhantomData<P>,
 }
 
-impl TransactionMiner {
+impl<P: TransactionPool> TransactionMiner<P> {
     pub fn new(rx: Receiver<Felt>) -> Self {
-        Self { rx: rx.fuse(), has_pending_txs: None }
+        Self { rx: rx.fuse(), has_pending_txs: None, _pool: std::marker::PhantomData }
     }
 
-    fn poll(&mut self, pool: &TxPool, cx: &mut Context<'_>) -> Poll<Vec<ExecutableTxWithHash>> {
+    fn poll(&mut self, pool: &P, cx: &mut Context<'_>) -> Poll<Vec<P::Transaction>> {
         // drain the notification stream
         while let Poll::Ready(Some(_)) = Pin::new(&mut self.rx).poll_next(cx) {
             self.has_pending_txs = Some(true);

@@ -2,6 +2,7 @@
 
 pub mod ordering;
 pub mod pool;
+pub mod subscription;
 pub mod tx;
 pub mod validation;
 
