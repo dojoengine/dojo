@@ -43,10 +43,10 @@ jobs:
 
       - name: Move Binaries
         run: |
-          mkdir -p linux/amd64/
-          mv target/release/katana linux/amd64/
-          mv target/release/torii linux/amd64/
-          mv target/release/sozo linux/amd64/
+          mkdir -p artifacts/linux/amd64/
+          mv target/release/katana artifacts/linux/amd64/
+          mv target/release/torii artifacts/linux/amd64/
+          mv target/release/sozo artifacts/linux/amd64/
         shell: bash
 
       # Upload these for use with the Docker build later
@@ -54,7 +54,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: binaries
-          path: linux/amd64/
+          path: artifacts
           retention-days: 1
 
   docker-build-and-push:
