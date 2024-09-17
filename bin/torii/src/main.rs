@@ -20,7 +20,7 @@ use clap::{ArgAction, Parser};
 use dojo_metrics::{metrics_process, prometheus_exporter};
 use dojo_utils::parse::{parse_socket_address, parse_url};
 use dojo_world::contracts::world::WorldContractReader;
-use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+use sqlx::sqlite::{SqliteAutoVacuum, SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous};
 use sqlx::SqlitePool;
 use starknet::core::types::Felt;
 use starknet::providers::jsonrpc::HttpTransport;
@@ -163,16 +163,16 @@ async fn main() -> anyhow::Result<()> {
         options = options.shared_cache(true);
     }
 
+    // Performance settings
+    options = options.auto_vacuum(SqliteAutoVacuum::None);
+    options = options.journal_mode(SqliteJournalMode::Wal);
+    options = options.synchronous(SqliteSynchronous::Normal);
+
     let pool = SqlitePoolOptions::new()
         .min_connections(1)
         .max_connections(5)
         .connect_with(options)
         .await?;
-
-    // Disable auto-vacuum
-    sqlx::query("PRAGMA auto_vacuum = NONE;").execute(&pool).await?;
-    sqlx::query("PRAGMA journal_mode = WAL;").execute(&pool).await?;
-    sqlx::query("PRAGMA synchronous = NORMAL;").execute(&pool).await?;
 
     // Set the number of threads based on CPU count
     let cpu_count = std::thread::available_parallelism().unwrap().get();
