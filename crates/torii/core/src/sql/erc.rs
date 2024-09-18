@@ -1,29 +1,29 @@
-use anyhow::Result;
-use cainome::cairo_serde::ByteArray;
-use cainome::cairo_serde::CairoSerde;
-use starknet::core::types::{BlockId, BlockTag, FunctionCall, U256};
-use starknet::core::utils::{get_selector_from_name, parse_cairo_short_string};
-use starknet::{core::types::Felt, providers::Provider};
 use std::ops::{Add, Sub};
+
+use anyhow::Result;
+use cainome::cairo_serde::{ByteArray, CairoSerde};
+use starknet::core::types::{BlockId, BlockTag, Felt, FunctionCall, U256};
+use starknet::core::utils::{get_selector_from_name, parse_cairo_short_string};
+use starknet::providers::Provider;
 
 use super::query_queue::{Argument, QueryQueue, QueryType};
 use super::utils::{sql_string_to_u256, u256_to_sql_string};
+use super::{Sql, FELT_DELIMITER};
+use crate::sql::utils::{felt_and_u256_to_sql_string, felt_to_sql_string, felts_to_sql_string};
 use crate::utils::utc_dt_string_from_timestamp;
-
-use super::Sql;
 
 impl Sql {
     pub async fn handle_erc20_transfer<P: Provider + Sync>(
         &mut self,
         contract_address: Felt,
-        from: Felt,
-        to: Felt,
+        from_address: Felt,
+        to_address: Felt,
         amount: U256,
         provider: &P,
         block_timestamp: u64,
     ) -> Result<()> {
         // unique token identifier in DB
-        let token_id = format!("{:#x}", contract_address);
+        let token_id = felt_to_sql_string(&contract_address);
 
         let token_exists: bool =
             sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM tokens WHERE id = ?)")
@@ -43,8 +43,8 @@ impl Sql {
 
         register_erc_transfer_event(
             contract_address,
-            from,
-            to,
+            from_address,
+            to_address,
             amount,
             &token_id,
             block_timestamp,
@@ -63,9 +63,9 @@ impl Sql {
                 "SELECT account_address, balance FROM balances WHERE contract_address = ? AND \
                  account_address IN (?, ?)",
             )
-            .bind(format!("{:#x}", contract_address))
-            .bind(format!("{:#x}", from))
-            .bind(format!("{:#x}", to));
+            .bind(felt_to_sql_string(&contract_address))
+            .bind(felt_to_sql_string(&from_address))
+            .bind(felt_to_sql_string(&to_address));
 
             // (address, balance)
             let balances: Vec<(String, String)> = query.fetch_all(&self.pool).await?;
@@ -75,22 +75,23 @@ impl Sql {
 
             let from_balance = balances
                 .iter()
-                .find(|(address, _)| address == &format!("{:#x}", from))
+                .find(|(address, _)| address == &felt_to_sql_string(&from_address))
                 .map(|(_, balance)| balance.clone())
-                .unwrap_or_else(|| format!("{:#64x}", crypto_bigint::U256::ZERO));
+                .unwrap_or_else(|| u256_to_sql_string(&U256::from(0u8)));
 
             let to_balance = balances
                 .iter()
-                .find(|(address, _)| address == &format!("{:#x}", to))
+                .find(|(address, _)| address == &felt_to_sql_string(&to_address))
                 .map(|(_, balance)| balance.clone())
-                .unwrap_or_else(|| format!("{:#64x}", crypto_bigint::U256::ZERO));
+                .unwrap_or_else(|| u256_to_sql_string(&U256::from(0u8)));
 
             let from_balance = sql_string_to_u256(&from_balance);
             let to_balance = sql_string_to_u256(&to_balance);
 
             let new_from_balance =
-                if from != Felt::ZERO { from_balance.sub(amount) } else { from_balance };
-            let new_to_balance = if to != Felt::ZERO { to_balance.add(amount) } else { to_balance };
+                if from_address != Felt::ZERO { from_balance.sub(amount) } else { from_balance };
+            let new_to_balance =
+                if to_address != Felt::ZERO { to_balance.add(amount) } else { to_balance };
 
             let update_query = "
             INSERT INTO balances (id, balance, account_address, contract_address, token_id)
@@ -98,13 +99,13 @@ impl Sql {
             ON CONFLICT (id) 
             DO UPDATE SET balance = excluded.balance";
 
-            if from != Felt::ZERO {
+            if from_address != Felt::ZERO {
                 self.query_queue.enqueue(
                     update_query,
                     vec![
-                        Argument::String(format!("{:#x}:{:#x}", from, contract_address)),
+                        Argument::String(felts_to_sql_string(&[from_address, contract_address])),
                         Argument::String(u256_to_sql_string(&new_from_balance)),
-                        Argument::FieldElement(from),
+                        Argument::FieldElement(from_address),
                         Argument::FieldElement(contract_address),
                         Argument::String(token_id.clone()),
                     ],
@@ -112,13 +113,13 @@ impl Sql {
                 );
             }
 
-            if to != Felt::ZERO {
+            if to_address != Felt::ZERO {
                 self.query_queue.enqueue(
                     update_query,
                     vec![
-                        Argument::String(format!("{:#x}:{:#x}", to, contract_address)),
+                        Argument::String(felts_to_sql_string(&[to_address, contract_address])),
                         Argument::String(u256_to_sql_string(&new_to_balance)),
-                        Argument::FieldElement(to),
+                        Argument::FieldElement(to_address),
                         Argument::FieldElement(contract_address),
                         Argument::String(token_id.clone()),
                     ],
@@ -134,13 +135,13 @@ impl Sql {
     pub async fn handle_erc721_transfer<P: Provider + Sync>(
         &mut self,
         contract_address: Felt,
-        from: Felt,
-        to: Felt,
+        from_address: Felt,
+        to_address: Felt,
         token_id: U256,
         provider: &P,
         block_timestamp: u64,
     ) -> Result<()> {
-        let token_id = format!("{:#x}:{}", contract_address, u256_to_sql_string(&token_id));
+        let token_id = felt_and_u256_to_sql_string(&contract_address, &token_id);
         let token_exists: bool =
             sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM tokens WHERE id = ?)")
                 .bind(token_id.clone())
@@ -159,8 +160,8 @@ impl Sql {
 
         register_erc_transfer_event(
             contract_address,
-            from,
-            to,
+            from_address,
+            to_address,
             U256::from(1u8),
             &token_id,
             block_timestamp,
@@ -175,7 +176,7 @@ impl Sql {
             ON CONFLICT (id) 
             DO UPDATE SET balance = excluded.balance";
 
-            if from != Felt::ZERO {
+            if from_address != Felt::ZERO {
                 self.query_queue.enqueue(
                     update_query,
                     vec![
@@ -193,7 +194,7 @@ impl Sql {
                 );
             }
 
-            if to != Felt::ZERO {
+            if to_address != Felt::ZERO {
                 self.query_queue.enqueue(
                     update_query,
                     vec![

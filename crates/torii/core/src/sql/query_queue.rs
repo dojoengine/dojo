@@ -83,7 +83,7 @@ impl QueryQueue {
                     Argument::Int(integer) => query.bind(integer),
                     Argument::Bool(bool) => query.bind(bool),
                     Argument::String(string) => query.bind(string),
-                    Argument::FieldElement(felt) => query.bind(format!("{:#x}", felt)),
+                    Argument::FieldElement(felt) => query.bind(felt_to_sql_string(felt)),
                 }
             }
 

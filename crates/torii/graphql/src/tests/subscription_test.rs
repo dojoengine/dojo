@@ -14,7 +14,8 @@ mod tests {
     use starknet::core::types::Event;
     use starknet_crypto::{poseidon_hash_many, Felt};
     use tokio::sync::mpsc;
-    use torii_core::sql::{felts_sql_string, Sql};
+    use torii_core::sql::utils::felts_to_sql_string;
+    use torii_core::sql::Sql;
 
     use crate::tests::{model_fixtures, run_graphql_subscription};
     use crate::utils;
@@ -105,7 +106,7 @@ mod tests {
                 ],
             });
             let keys = keys_from_ty(&ty).unwrap();
-            let keys_str = felts_sql_string(&keys);
+            let keys_str = felts_to_sql_string(&keys);
             let entity_id = poseidon_hash_many(&keys);
             let model_id = model_id_from_ty(&ty);
 
@@ -223,7 +224,7 @@ mod tests {
             });
 
             let keys = keys_from_ty(&ty).unwrap();
-            let keys_str = felts_sql_string(&keys);
+            let keys_str = felts_to_sql_string(&keys);
             let entity_id = poseidon_hash_many(&keys);
             let model_id = model_id_from_ty(&ty);
 
