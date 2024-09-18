@@ -8,7 +8,7 @@ use tracing::info;
 
 use super::EventProcessor;
 use crate::processors::{ENTITY_ID_INDEX, MODEL_INDEX, NUM_KEYS_INDEX};
-use crate::sql::utils::felts_sql_string;
+use crate::sql::utils::felts_to_sql_string;
 use crate::sql::Sql;
 
 pub(crate) const LOG_TARGET: &str = "torii_core::processors::store_set_record";
@@ -61,7 +61,7 @@ where
         let keys_end: usize =
             keys_start + event.data[NUM_KEYS_INDEX].to_usize().context("invalid usize")?;
         let keys = event.data[keys_start..keys_end].to_vec();
-        let keys_str = felts_sql_string(&keys);
+        let keys_str = felts_to_sql_string(&keys);
 
         // keys_end is already the length of the values array.
 
