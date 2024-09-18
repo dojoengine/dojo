@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1726614291390,
+  "lastUpdate": 1726686374933,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -20815,6 +20815,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3866729,
             "range": "± 35211",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0da6f0c0888663eeb0c6b6c8ead2a16699e13499",
+          "message": "Bump `serde_json` to `1.0.128` (#2445)\n\nref: https://purplesyringa.moe/blog/i-sped-up-serde-json-strings-by-20-percent/\r\n\r\nthere's a significant improvement (20%) to serde_json introduced in version 1.0.121. our current version is 1.0.120 but might as well bump to the latest version (1.0.128).",
+          "timestamp": "2024-09-19T02:45:34+08:00",
+          "tree_id": "228d5902a479f39fd57c7d08dc7e50684cecdba0",
+          "url": "https://github.com/dojoengine/dojo/commit/0da6f0c0888663eeb0c6b6c8ead2a16699e13499"
+        },
+        "date": 1726686373814,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 23205515953,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
