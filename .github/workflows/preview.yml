@@ -2,6 +2,12 @@ name: preview
 
 on:
   workflow_dispatch:
+    inputs:
+      world:
+        description: World address
+        required: false
+        type: string
+        default: '0x53b7efae79ce1d7729828bb6dee2cee09358fde4c4325805cf97678919a4855'
   push:
     branches:
       - ci-preview
@@ -121,7 +127,7 @@ jobs:
           $XDG_CONFIG_HOME/.slot/bin/slot d create preview--${{ steps.vars.outputs.sha_short }} katana --version preview--${{ steps.vars.outputs.sha_short }}
           $XDG_CONFIG_HOME/.slot/bin/slot d create preview--${{ steps.vars.outputs.sha_short }} torii --version preview--${{ steps.vars.outputs.sha_short }} \
             --rpc=http://slot.prod.svc.cluster.local/x/starknet/sepolia \
-            --world=0x53b7efae79ce1d7729828bb6dee2cee09358fde4c4325805cf97678919a4855 \
+            --world=${{ inputs.world }}
             --start-block=0
         env:
           SLOT_AUTH: ${{ secrets.SLOT_AUTH }}
