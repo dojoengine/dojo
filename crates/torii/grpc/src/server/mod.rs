@@ -906,6 +906,9 @@ fn build_composite_clause(
     let mut having_clauses = Vec::new();
     let mut bind_values = Vec::new();
 
+    // HashMap to track the number of joins per model
+    let mut model_counters: HashMap<String, usize> = HashMap::new();
+
     for clause in &composite.clauses {
         match clause.clause_type.as_ref().unwrap() {
             ClauseType::HashedKeys(hashed_keys) => {
@@ -952,15 +955,25 @@ fn build_composite_clause(
                     (format!("[{model}]"), format!("external_{}", member.member))
                 };
 
-                let (namespace, model) = member
+                let (namespace, model_name) = member
                     .model
                     .split_once('-')
                     .ok_or(QueryError::InvalidNamespacedModel(member.model.clone()))?;
-                let model_id = compute_selector_from_names(namespace, model);
+                let model_id = compute_selector_from_names(namespace, model_name);
+
+                // Generate a unique alias for each model
+                let counter = model_counters.entry(model.clone()).or_insert(0);
+                *counter += 1;
+                let alias = if *counter == 1 {
+                    model.clone()
+                } else {
+                    format!("{model}_{}", *counter - 1)
+                };
+
                 join_clauses.push(format!(
-                    "LEFT JOIN {table_name} ON [{table}].id = {table_name}.entity_id"
+                    "LEFT JOIN {table_name} AS [{alias}] ON [{table}].id = [{alias}].entity_id"
                 ));
-                where_clauses.push(format!("{table_name}.{column_name} {comparison_operator} ?"));
+                where_clauses.push(format!("[{alias}].{column_name} {comparison_operator} ?"));
                 having_clauses.push(format!(
                     "INSTR(group_concat({model_relation_table}.model_id), '{:#x}') > 0",
                     model_id
