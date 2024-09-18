@@ -1343,6 +1343,16 @@ pub async fn print_strategy<P>(
 
     ui.print(" ");
 
+    if !&strategy.events.is_empty() {
+        ui.print_header(format!("# Events ({})", &strategy.events.len()));
+        for e in &strategy.events {
+            ui.print(e.diff.tag.to_string());
+            ui.print_sub(format!("Class hash: {:#x}", e.diff.local_class_hash));
+        }
+    }
+
+    ui.print(" ");
+
     if !&strategy.contracts.is_empty() {
         ui.print_header(format!("# Contracts ({})", &strategy.contracts.len()));
         for c in &strategy.contracts {

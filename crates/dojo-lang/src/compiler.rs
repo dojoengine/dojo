@@ -483,7 +483,7 @@ fn update_files(
     }
 
     let models_dir = target_dir.child(MODELS_DIR);
-    if !models.is_empty() && !models_dir.exists() {
+    if !models_dir.exists() {
         fs::create_dir_all(models_dir.path_unchecked())?;
     }
 
@@ -529,7 +529,7 @@ fn update_files(
     }
 
     let events_dir = target_dir.child(EVENTS_DIR);
-    if !events.is_empty() && !events_dir.exists() {
+    if !events_dir.exists() {
         fs::create_dir_all(events_dir.path_unchecked())?;
     }
 

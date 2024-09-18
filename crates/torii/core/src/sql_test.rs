@@ -132,7 +132,7 @@ async fn test_load_from_remote() {
 
     let _block_timestamp = 1710754478_u64;
     let models = sqlx::query("SELECT * FROM models").fetch_all(&pool).await.unwrap();
-    assert_eq!(models.len(), 10);
+    assert_eq!(models.len(), 8);
 
     let (id, name, namespace, packed_size, unpacked_size): (String, String, String, u8, u8) =
         sqlx::query_as(

@@ -799,21 +799,23 @@ where
 {
     let mut elements = vec![];
 
-    let mut entries = path
-        .read_dir()?
-        .map(|entry| entry.map(|e| e.path()))
-        .collect::<Result<Vec<_>, io::Error>>()?;
+    if path.try_exists().unwrap_or(false) {
+        let mut entries = path
+            .read_dir()?
+            .map(|entry| entry.map(|e| e.path()))
+            .collect::<Result<Vec<_>, io::Error>>()?;
 
-    // `read_dir` doesn't guarantee any order, so we sort the entries ourself.
-    // see: https://doc.rust-lang.org/std/fs/fn.read_dir.html#platform-specific-behavior
-    entries.sort();
+        // `read_dir` doesn't guarantee any order, so we sort the entries ourself.
+        // see: https://doc.rust-lang.org/std/fs/fn.read_dir.html#platform-specific-behavior
+        entries.sort();
 
-    for path in entries {
-        if path.is_file() {
-            let manifest: Manifest<T> = toml::from_str(&fs::read_to_string(path)?)?;
-            elements.push(manifest);
-        } else {
-            continue;
+        for path in entries {
+            if path.is_file() {
+                let manifest: Manifest<T> = toml::from_str(&fs::read_to_string(path)?)?;
+                elements.push(manifest);
+            } else {
+                continue;
+            }
         }
     }
 
