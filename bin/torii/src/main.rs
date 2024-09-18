@@ -155,7 +155,8 @@ async fn main() -> anyhow::Result<()> {
     })
     .expect("Error setting Ctrl-C handler");
 
-    let mut options = SqliteConnectOptions::from_str(&args.database)?.create_if_missing(true).with_regexp();
+    let mut options =
+        SqliteConnectOptions::from_str(&args.database)?.create_if_missing(true).with_regexp();
 
     // Performance settings
     options = options.auto_vacuum(SqliteAutoVacuum::None);
