@@ -12,90 +12,90 @@ env:
   REGISTRY_IMAGE: ghcr.io/${{ github.repository }}
 
 jobs:
-  build:
-    name: Build
-    runs-on: ubuntu-latest-4-cores
+#  build:
+#    name: Build
+#    runs-on: ubuntu-latest-4-cores
 
-    steps:
-      - uses: actions/checkout@v4
+#    steps:
+#      - uses: actions/checkout@v4
 
-      - uses: Swatinem/rust-cache@v1
+#      - uses: Swatinem/rust-cache@v1
 
-      - uses: arduino/setup-protoc@v2
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          version: "25.x"
+#      - uses: arduino/setup-protoc@v2
+#        with:
+#          repo-token: ${{ secrets.GITHUB_TOKEN }}
+#          version: "25.x"
 
-      - name: Build binaries
-        run: |
-          cargo build -r --bin katana
-          cargo build -r --bin torii
-          cargo build -r --bin sozo
+#      - name: Build binaries
+#        run: |
+#          cargo build -r --bin katana
+#          cargo build -r --bin torii
+#          cargo build -r --bin sozo
 
-      - name: Archive binaries
-        id: artifacts
-        env:
-          VERSION_NAME: v${{ needs.prepare.outputs.tag_name }}
-        run: |
-          tar -czvf "dojo_${VERSION_NAME}_linux_amd64.tar.gz" -C ./target/release katana torii sozo
-          echo "file_name=dojo_${VERSION_NAME}_linux_amd64.tar.gz" >> $GITHUB_OUTPUT
-        shell: bash
+#      - name: Archive binaries
+#        id: artifacts
+#        env:
+#          VERSION_NAME: v${{ needs.prepare.outputs.tag_name }}
+#        run: |
+#          tar -czvf "dojo_${VERSION_NAME}_linux_amd64.tar.gz" -C ./target/release katana torii sozo
+#          echo "file_name=dojo_${VERSION_NAME}_linux_amd64.tar.gz" >> $GITHUB_OUTPUT
+#        shell: bash
 
-      - name: Move Binaries
-        run: |
-          mkdir -p artifacts/linux/amd64/
-          mv target/release/katana artifacts/linux/amd64/
-          mv target/release/torii artifacts/linux/amd64/
-          mv target/release/sozo artifacts/linux/amd64/
-        shell: bash
+#      - name: Move Binaries
+#        run: |
+#          mkdir -p artifacts/linux/amd64/
+#          mv target/release/katana artifacts/linux/amd64/
+#          mv target/release/torii artifacts/linux/amd64/
+#          mv target/release/sozo artifacts/linux/amd64/
+#        shell: bash
 
-      # Upload these for use with the Docker build later
-      - name: Upload docker binaries
-        uses: actions/upload-artifact@v3
-        with:
-          name: binaries
-          path: artifacts
-          retention-days: 1
+#      # Upload these for use with the Docker build later
+#      - name: Upload docker binaries
+#        uses: actions/upload-artifact@v3
+#        with:
+#          name: binaries
+#          path: artifacts
+#          retention-days: 1
 
-  docker-build-and-push:
-    runs-on: ubuntu-latest
-    needs: [build]
+#  docker-build-and-push:
+#    runs-on: ubuntu-latest
+#    needs: [build]
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
+#    steps:
+#      - name: Checkout repository
+#        uses: actions/checkout@v2
 
-      - name: Download binaries
-        uses: actions/download-artifact@v3
-        with:
-          name: binaries
-          path: artifacts
+#      - name: Download binaries
+#        uses: actions/download-artifact@v3
+#        with:
+#          name: binaries
+#          path: artifacts
 
-      - name: TEMP LS
-        run: ls -R artifacts
+#      - name: TEMP LS
+#        run: ls -R artifacts
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+#      - name: Set up Docker Buildx
+#        uses: docker/setup-buildx-action@v1
 
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+#      - name: Login to GitHub Container Registry
+#        uses: docker/login-action@v1
+#        with:
+#          registry: ghcr.io
+#          username: ${{ github.actor }}
+#          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push docker image
-        uses: docker/build-push-action@v3
-        with:
-          push: true
-          tags: ghcr.io/${{ github.repository }}:preview--${{ github.ref_name }}
-          platforms: linux/amd64
-          build-contexts: |
-            artifacts=artifacts
+#      - name: Build and push docker image
+#        uses: docker/build-push-action@v3
+#        with:
+#          push: true
+#          tags: ghcr.io/${{ github.repository }}:preview--${{ github.ref_name }}
+#          platforms: linux/amd64
+#          build-contexts: |
+#            artifacts=artifacts
 
   deploy:
     runs-on: ubuntu-latest
-    needs: [docker-build-and-push]
+#    needs: [docker-build-and-push]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
