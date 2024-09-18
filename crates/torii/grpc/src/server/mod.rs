@@ -736,7 +736,16 @@ impl DojoWorld {
         query: proto::types::Query,
     ) -> Result<proto::world::RetrieveEntitiesResponse, Error> {
         let (entities, total_count) = match query.clause {
-            None => self.entities_all(table, model_relation_table, entity_relation_column, query.limit, query.offset).await?,
+            None => {
+                self.entities_all(
+                    table,
+                    model_relation_table,
+                    entity_relation_column,
+                    query.limit,
+                    query.offset,
+                )
+                .await?
+            }
             Some(clause) => {
                 let clause_type =
                     clause.clause_type.ok_or(QueryError::MissingParam("clause_type".into()))?;
@@ -867,12 +876,12 @@ fn build_keys_pattern(clause: &proto::types::KeysClause) -> Result<String, Error
         clause
             .keys
             .iter()
-        .map(|bytes| {
-            if bytes.is_empty() {
-                return Ok("0x[0-9a-fA-F]+".to_string());
-            }
-            Ok(format!("{:#x}", Felt::from_bytes_be_slice(bytes)))
-        })
+            .map(|bytes| {
+                if bytes.is_empty() {
+                    return Ok("0x[0-9a-fA-F]+".to_string());
+                }
+                Ok(format!("{:#x}", Felt::from_bytes_be_slice(bytes)))
+            })
             .collect::<Result<Vec<_>, Error>>()?
     };
     let mut keys_pattern = format!("^{}", keys.join("/"));
