@@ -392,8 +392,6 @@ impl<EF: ExecutorFactory> Stream for IntervalBlockProducer<EF> {
         if let Some(mut timer) = pin.block_timer.take() {
             // mine block if the interval is over
             if timer.poll_tick(cx).is_ready() && pin.ongoing_mining.is_none() {
-                println!("timer consumed");
-
                 pin.ongoing_mining = Some(Box::pin({
                     let executor = pin.executor.take().unwrap();
                     let backend = pin.backend.clone();
@@ -402,7 +400,6 @@ impl<EF: ExecutorFactory> Stream for IntervalBlockProducer<EF> {
                     pin.blocking_task_spawner.spawn(|| Self::do_mine(permit, executor, backend))
                 }));
             } else {
-                println!("timer not yet");
                 // unable to mine block yet, put the timer back to be polled again
                 pin.block_timer = Some(timer);
             }
@@ -434,7 +431,6 @@ impl<EF: ExecutorFactory> Stream for IntervalBlockProducer<EF> {
                             // initialize block timer -------------------
 
                             if let Some(duration) = dbg!(pin.interval.as_ref()) {
-                                println!("setting timer");
                                 let duration = Duration::from_millis(*duration);
                                 let mut interval = interval_at(Instant::now() + duration, duration);
                                 interval.set_missed_tick_behavior(MissedTickBehavior::Delay);
