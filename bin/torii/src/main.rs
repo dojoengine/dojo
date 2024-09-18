@@ -155,23 +155,14 @@ async fn main() -> anyhow::Result<()> {
     })
     .expect("Error setting Ctrl-C handler");
 
-    let database_url = if args.database == ":memory:" {
-        "sqlite:file:memorydb?mode=memory&cache=shared".to_string()
-    } else {
-        format!("sqlite:{}", &args.database)
-    };
-    let mut options =
-        SqliteConnectOptions::from_str(&database_url)?.create_if_missing(true).with_regexp();
+    let mut options = SqliteConnectOptions::from_str(&args.database)?.create_if_missing(true).with_regexp();
 
     // Performance settings
     options = options.auto_vacuum(SqliteAutoVacuum::None);
     options = options.journal_mode(SqliteJournalMode::Wal);
     options = options.synchronous(SqliteSynchronous::Normal);
 
-    let pool = SqlitePoolOptions::new()
-        .min_connections(1)
-        .connect_with(options)
-        .await?;
+    let pool = SqlitePoolOptions::new().min_connections(1).connect_with(options).await?;
 
     // Set the number of threads based on CPU count
     let cpu_count = std::thread::available_parallelism().unwrap().get();
