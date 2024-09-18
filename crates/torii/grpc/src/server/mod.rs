@@ -21,6 +21,7 @@ use proto::world::{
     RetrieveEventsRequest, RetrieveEventsResponse, SubscribeModelsRequest, SubscribeModelsResponse,
     UpdateEntitiesSubscriptionRequest,
 };
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use sqlx::prelude::FromRow;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Pool, Row, Sqlite};
@@ -265,7 +266,7 @@ impl DojoWorld {
             return Ok((Vec::new(), 0));
         }
 
-        // query to filter with limit and offset
+        // Query to get entity IDs and their model IDs
         let mut query = format!(
             r#"
             SELECT {table}.id, group_concat({model_relation_table}.model_id) as model_ids
@@ -288,13 +289,19 @@ impl DojoWorld {
         let db_entities: Vec<(String, String)> =
             sqlx::query_as(&query).bind(limit).bind(offset).fetch_all(&self.pool).await?;
 
-        let mut entities = Vec::with_capacity(db_entities.len());
+        // Group entities by their model combinations
+        let mut model_groups: HashMap<Vec<Felt>, Vec<String>> = HashMap::new();
         for (entity_id, models_str) in db_entities {
             let model_ids: Vec<Felt> = models_str
                 .split(',')
                 .map(Felt::from_str)
                 .collect::<Result<_, _>>()
                 .map_err(ParseError::FromStr)?;
+            model_groups.entry(model_ids).or_default().push(entity_id);
+        }
+
+        let mut entities = Vec::new();
+        for (model_ids, entity_ids) in model_groups {
             let schemas =
                 self.model_cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect();
 
@@ -302,22 +309,43 @@ impl DojoWorld {
                 &schemas,
                 table,
                 entity_relation_column,
-                Some(&format!("{table}.id = ?")),
-                Some(&format!("{table}.id = ?")),
+                Some(&format!(
+                    "{table}.id IN ({})",
+                    entity_ids.iter().map(|_| "?").collect::<Vec<_>>().join(",")
+                )),
+                Some(&format!(
+                    "{table}.id IN ({})",
+                    entity_ids.iter().map(|_| "?").collect::<Vec<_>>().join(",")
+                )),
                 None,
                 None,
             )?;
 
-            let row =
-                sqlx::query(&entity_query).bind(entity_id.clone()).fetch_one(&self.pool).await?;
+            let mut query = sqlx::query(&entity_query);
+            for id in &entity_ids {
+                query = query.bind(id);
+            }
+            let rows = query.fetch_all(&self.pool).await?;
+
             let mut arrays_rows = HashMap::new();
-            for (name, query) in arrays_queries {
-                let rows =
-                    sqlx::query(&query).bind(entity_id.clone()).fetch_all(&self.pool).await?;
-                arrays_rows.insert(name, rows);
+            for (name, array_query) in arrays_queries {
+                let mut query = sqlx::query(&array_query);
+                for id in &entity_ids {
+                    query = query.bind(id);
+                }
+                let array_rows = query.fetch_all(&self.pool).await?;
+                arrays_rows.insert(name, array_rows);
             }
 
-            entities.push(map_row_to_entity(&row, &arrays_rows, schemas.clone())?);
+            let arrays_rows = Arc::new(arrays_rows);
+            let schemas = Arc::new(schemas);
+
+            let group_entities: Result<Vec<_>, Error> = rows
+                .par_iter()
+                .map(|row| map_row_to_entity(row, &arrays_rows, (*schemas).clone()))
+                .collect();
+
+            entities.extend(group_entities?);
         }
 
         Ok((entities, total_count))
@@ -582,11 +610,17 @@ impl DojoWorld {
             arrays_rows.insert(name, rows);
         }
 
-        let entities_collection = db_entities
-            .iter()
-            .map(|row| map_row_to_entity(row, &arrays_rows, schemas.clone()))
-            .collect::<Result<Vec<_>, Error>>()?;
-        Ok((entities_collection, total_count))
+        // Use Rayon to parallelize the mapping of rows to entities
+        let arrays_rows = Arc::new(arrays_rows);
+        let entities_collection: Result<Vec<_>, Error> = db_entities
+            .par_iter()
+            .map(|row| {
+                let schemas_clone = schemas.clone();
+                let arrays_rows_clone = arrays_rows.clone();
+                map_row_to_entity(row, &arrays_rows_clone, schemas_clone)
+            })
+            .collect();
+        Ok((entities_collection?, total_count))
     }
 
     pub(crate) async fn query_by_composite(
