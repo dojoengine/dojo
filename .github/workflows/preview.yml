@@ -102,12 +102,12 @@ jobs:
 
       - name: Deploy on slot
         run: |
+          set -eux
           curl -L https://slot.cartridge.sh | bash
-          ls -R $HOME/.slot
-          $HOME/.slot/bin/slotup
-          $HOME/.slot/bin/slot --version
-          $HOME/.slot/bin/slot d create preview--${{ github.ref_name }} katana --version preview--${{ github.ref_name }}
-          $HOME/.slot/bin/slot d create preview--${{ github.ref_name }} torii --version preview--${{ github.ref_name }} \
+          $XDG_CONFIG_HOME/.slot/bin/slotup
+          $XDG_CONFIG_HOME/.slot/bin/slot --version
+          $XDG_CONFIG_HOME/.slot/bin/slot d create preview--${{ github.ref_name }} katana --version preview--${{ github.ref_name }}
+          $XDG_CONFIG_HOME/.slot/bin/slot d create preview--${{ github.ref_name }} torii --version preview--${{ github.ref_name }} \
             --rpc=http://slot.prod.svc.cluster.local/x/starknet/sepolia \
             --world=0x53b7efae79ce1d7729828bb6dee2cee09358fde4c4325805cf97678919a4855 \
             --start-block=0
