@@ -103,7 +103,7 @@ jobs:
       - name: Deploy on slot
         run: |
           curl -L https://slot.cartridge.sh | bash
-          slotup
+          $HOME/.slot/bin/slotup
           $HOME/.slot/bin/slot --version
           $HOME/.slot/bin/slot d create preview--${{ github.ref_name }} katana --version preview--${{ github.ref_name }}
           $HOME/.slot/bin/slot d create preview--${{ github.ref_name }} torii --version preview--${{ github.ref_name }} \
