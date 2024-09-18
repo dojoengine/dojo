@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use katana_db::models::block::StoredBlockBodyIndices;
 use katana_primitives::block::{BlockHash, BlockNumber, FinalityStatus, Header};
+use katana_primitives::contract::Nonce;
 use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
 use katana_primitives::contract::{ContractAddress, GenericContractInfo, StorageKey, StorageValue};
 use katana_primitives::receipt::Receipt;
@@ -89,6 +90,9 @@ pub struct CacheDb<Db> {
     pub(crate) transaction_numbers: HashMap<TxHash, TxNumber>,
     pub(crate) transaction_block: HashMap<TxNumber, BlockNumber>,
     pub(crate) messaging_info: HashMap<u64, BlockNumber>,
+    pub(crate) messaging_nonce_info: HashMap<u64, Nonce>,
+    pub(crate) messaging_message_nonce_mapping: HashMap<Nonce, Nonce>,
+    pub(crate) messaging_index_info: HashMap<u64, u64>,
 }
 
 impl<Db> CacheStateDb<Db> {
@@ -122,6 +126,9 @@ impl<Db> CacheDb<Db> {
             latest_block_hash: Default::default(),
             latest_block_number: Default::default(),
             messaging_info: Default::default(),
+            messaging_nonce_info: Default::default(),
+            messaging_message_nonce_mapping: Default::default(),
+            messaging_index_info: Default::default(),
         }
     }
 }

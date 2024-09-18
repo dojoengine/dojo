@@ -14,6 +14,9 @@ pub type StorageValue = Felt;
 /// Represents the type for a contract nonce.
 pub type Nonce = Felt;
 
+/// Represents the type for a message hash.
+pub type MessageHash = FieldElement;
+
 /// Represents a contract address.
 #[derive(Default, Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Hash, Debug, Deref)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]

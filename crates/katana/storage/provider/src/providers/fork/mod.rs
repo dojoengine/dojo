@@ -10,7 +10,7 @@ use katana_primitives::block::{
     SealedBlockWithStatus,
 };
 use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
-use katana_primitives::contract::ContractAddress;
+use katana_primitives::contract::{ContractAddress, MessageHash, Nonce};
 use katana_primitives::env::BlockEnv;
 use katana_primitives::receipt::Receipt;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
@@ -599,4 +599,29 @@ impl MessagingProvider for ForkedProvider {
     fn set_gather_from_block(&self, _gather_from_block: BlockNumber) -> ProviderResult<()> {
         Ok(())
     }
+
+    fn get_gather_message_nonce(&self) -> ProviderResult<Option<Nonce>> {
+        Ok(None)
+    }
+
+    fn set_gather_message_nonce(&self, _nonce: Nonce) -> ProviderResult<()> {
+        Ok(())
+    }
+
+    fn get_nonce_from_message_hash(&self, _message_hash: MessageHash) -> ProviderResult<Option<Nonce>> {
+        Ok(None)
+    }
+
+    fn set_nonce_from_message_hash(&self, _message_hash: MessageHash, _nonce: Nonce) -> ProviderResult<()> {
+        Ok(())
+    }
+
+    fn get_send_from_index(&self) -> ProviderResult<Option<u64>> {
+        Ok(None)
+    }
+
+    fn set_send_from_index(&self, _send_from_index: u64) -> ProviderResult<()> {
+        Ok(())
+    }
+
 }

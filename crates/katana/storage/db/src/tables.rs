@@ -1,6 +1,6 @@
 use katana_primitives::block::{BlockHash, BlockNumber, FinalityStatus, Header};
 use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
-use katana_primitives::contract::{ContractAddress, GenericContractInfo, StorageKey};
+use katana_primitives::contract::{ContractAddress, GenericContractInfo, Nonce, StorageKey};
 use katana_primitives::receipt::Receipt;
 use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{Tx, TxHash, TxNumber};
@@ -44,7 +44,7 @@ pub enum TableType {
     DupSort,
 }
 
-pub const NUM_TABLES: usize = 24;
+pub const NUM_TABLES: usize = 27;
 
 /// Macro to declare `libmdbx` tables.
 #[macro_export]
@@ -168,7 +168,10 @@ define_tables_enum! {[
     (ClassChangeHistory, TableType::DupSort),
     (StorageChangeHistory, TableType::DupSort),
     (StorageChangeSet, TableType::Table),
-    (MessagingInfo, TableType::Table)
+    (MessagingInfo, TableType::Table),
+    (MessagingNonceInfo, TableType::Table),
+    (MessagingMessageNonceMapping, TableType::Table),
+    (MessagingIndexInfo, TableType::Table),
 ]}
 
 tables! {
@@ -227,7 +230,17 @@ tables! {
     StorageChangeHistory: (BlockNumber, ContractStorageKey) => ContractStorageEntry,
 
     /// Stores the block number related to messaging service
-    MessagingInfo: (u64) => BlockNumber
+    MessagingInfo: (u64) => BlockNumber,
+
+    /// Stores the nonce related to messaging service
+    MessagingNonceInfo: (u64) => Nonce,
+
+    /// Map a message hash to a message nonce
+    MessagingMessageNonceMapping: (TxHash) => Nonce,
+
+    /// Stores the index of the messaging service
+    MessagingIndexInfo: (u64) => u64,
+
 }
 
 #[cfg(test)]
@@ -262,6 +275,9 @@ mod tests {
         assert_eq!(Tables::ALL[21].name(), StorageChangeHistory::NAME);
         assert_eq!(Tables::ALL[22].name(), StorageChangeSet::NAME);
         assert_eq!(Tables::ALL[23].name(), MessagingInfo::NAME);
+        assert_eq!(Tables::ALL[24].name(), MessagingNonceInfo::NAME);
+        assert_eq!(Tables::ALL[25].name(), MessagingMessageNonceMapping::NAME);
+        assert_eq!(Tables::ALL[26].name(), MessagingMessageNonceMapping::NAME);
 
         assert_eq!(Tables::Headers.table_type(), TableType::Table);
         assert_eq!(Tables::BlockHashes.table_type(), TableType::Table);
@@ -287,6 +303,9 @@ mod tests {
         assert_eq!(Tables::StorageChangeHistory.table_type(), TableType::DupSort);
         assert_eq!(Tables::StorageChangeSet.table_type(), TableType::Table);
         assert_eq!(Tables::MessagingInfo.table_type(), TableType::Table);
+        assert_eq!(Tables::MessagingNonceInfo.table_type(), TableType::Table);
+        assert_eq!(Tables::MessagingMessageNonMapping.table_type(), TableType::Table);
+        assert_eq!(Tables::MessagingIndexInfo.table_type(), TableType::Table);
     }
 
     use katana_primitives::block::{BlockHash, BlockNumber, FinalityStatus, Header};

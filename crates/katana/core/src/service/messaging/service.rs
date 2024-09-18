@@ -213,6 +213,7 @@ impl<EF: ExecutorFactory> Stream for MessagingService<EF> {
                     pin.backend.clone(),
                     pin.gather_from_block,
                     pin.max_block,
+                    pin.chunk_size,
                 )));
             }
 

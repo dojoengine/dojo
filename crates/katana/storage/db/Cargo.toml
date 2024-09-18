@@ -21,6 +21,8 @@ tempfile = { workspace = true, optional = true }
 thiserror.workspace = true
 tracing.workspace = true
 
+alloy-primitives.workspace = true
+
 # codecs
 [dependencies.postcard]
 default-features = false

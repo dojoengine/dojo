@@ -21,7 +21,7 @@ use katana_primitives::block::{
 };
 use katana_primitives::class::{ClassHash, CompiledClassHash};
 use katana_primitives::contract::{
-    ContractAddress, GenericContractInfo, Nonce, StorageKey, StorageValue,
+    ContractAddress, GenericContractInfo, MessageHash, Nonce, StorageKey, StorageValue,
 };
 use katana_primitives::env::BlockEnv;
 use katana_primitives::receipt::Receipt;
@@ -36,7 +36,7 @@ use crate::traits::block::{
     HeaderProvider,
 };
 use crate::traits::env::BlockEnvProvider;
-use crate::traits::messaging::{MessagingProvider, GATHER_FROM_BLOCK_KEY, SEND_FROM_BLOCK_KEY};
+use crate::traits::messaging::{MessagingProvider, GATHER_FROM_BLOCK_KEY, SEND_FROM_BLOCK_KEY, GATHER_FROM_NONCE_KEY, SEND_FROM_INDEX_KEY};
 use crate::traits::state::{StateFactoryProvider, StateProvider, StateRootProvider};
 use crate::traits::state_update::StateUpdateProvider;
 use crate::traits::transaction::{
@@ -788,6 +788,48 @@ impl MessagingProvider for DbProvider {
     fn set_gather_from_block(&self, gather_from_block: BlockNumber) -> ProviderResult<()> {
         self.0.update(|db_tx| {
             db_tx.put::<tables::MessagingInfo>(GATHER_FROM_BLOCK_KEY, gather_from_block)?;
+            Ok(())
+        })?
+    }
+
+    fn get_gather_message_nonce(&self) -> ProviderResult<Option<Nonce>> {
+        let db_tx = self.0.tx()?;
+        let nonce = db_tx.get::<tables::MessagingNonceInfo>(GATHER_FROM_NONCE_KEY)?;
+        db_tx.commit()?;
+        Ok(nonce)
+    }
+
+    fn set_gather_message_nonce(&self, nonce: Nonce) -> ProviderResult<()> {
+        self.0.update(|db_tx| {
+            db_tx.put::<tables::MessagingNonceInfo>(GATHER_FROM_NONCE_KEY, nonce)?;
+            Ok(())
+        })?
+    }
+
+    fn get_nonce_from_message_hash(&self, message_hash: MessageHash) -> ProviderResult<Option<Nonce>> {
+        let db_tx = self.0.tx()?;
+        let nonce = db_tx.get::<tables::MessagingMessageNonceMapping>(message_hash)?;
+        db_tx.commit()?;
+        Ok(nonce)
+    }
+
+    fn set_nonce_from_message_hash(&self, message_hash: MessageHash, nonce: Nonce) -> ProviderResult<()> {
+        self.0.update(|db_tx| {
+            db_tx.put::<tables::MessagingMessageNonceMapping>(message_hash, nonce)?;
+            Ok(())
+        })?
+    }
+
+    fn get_send_from_index(&self) -> ProviderResult<Option<u64>> {
+        let db_tx = self.0.tx()?;
+        let index = db_tx.get::<tables::MessagingIndexInfo>(SEND_FROM_INDEX_KEY)?;
+        db_tx.commit()?;
+        Ok(index)
+    }
+
+    fn set_send_from_index(&self, send_from_index: u64) -> ProviderResult<()> {
+        self.0.update(|db_tx| {
+            db_tx.put::<tables::MessagingIndexInfo>(SEND_FROM_INDEX_KEY, send_from_index)?;
             Ok(())
         })?
     }
