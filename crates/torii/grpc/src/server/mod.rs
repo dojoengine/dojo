@@ -228,6 +228,82 @@ impl DojoWorld {
         row_events.iter().map(map_row_to_event).collect()
     }
 
+    async fn fetch_entities(&self, table: &str, entity_relation_column: &str, entities: Vec<(String, String)>) -> Result<Vec<proto::types::Entity>, Error> {
+        // Group entities by their model combinations
+        let mut model_groups: HashMap<String, Vec<String>> = HashMap::new();
+        for (entity_id, models_str) in entities {
+            model_groups.entry(models_str).or_default().push(entity_id);
+        }
+    
+        let mut all_entities = Vec::new();
+    
+        // Start a transaction
+        let mut tx = self.pool.begin().await?;
+    
+        // Create a temporary table to store entity IDs
+        sqlx::query("CREATE TEMPORARY TABLE temp_entity_ids (id TEXT PRIMARY KEY, model_group TEXT)")
+            .execute(&mut *tx).await?;
+    
+        // Insert all entity IDs into the temporary table
+        for (model_ids, entity_ids) in &model_groups {
+            for chunk in entity_ids.chunks(999) {
+                let placeholders = chunk.iter().map(|_| "(?, ?)").collect::<Vec<_>>().join(",");
+                let query = format!("INSERT INTO temp_entity_ids (id, model_group) VALUES {}", placeholders);
+                let mut query = sqlx::query(&query);
+                for id in chunk {
+                    query = query.bind(id).bind(model_ids);
+                }
+                query.execute(&mut *tx).await?;
+            }
+        }
+    
+        for (models_str, _) in model_groups {
+            let model_ids = models_str.split(',').map(|id| Felt::from_str(id).unwrap()).collect::<Vec<_>>();
+            let schemas =
+                self.model_cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect();
+    
+            let (entity_query, arrays_queries, _) = build_sql_query(
+                &schemas,
+                table,
+                entity_relation_column,
+                Some(&format!("[{table}].id IN (SELECT id FROM temp_entity_ids WHERE model_group = ?)")),
+                Some(&format!("[{table}].id IN (SELECT id FROM temp_entity_ids WHERE model_group = ?)")),
+                None,
+                None,
+            )?;
+    
+            let rows = sqlx::query(&entity_query)
+                .bind(&models_str)
+                .fetch_all(&mut *tx).await?;
+    
+            let mut arrays_rows = HashMap::new();
+            for (name, array_query) in arrays_queries {
+                let array_rows = sqlx::query(&array_query)
+                    .bind(&models_str)
+                    .fetch_all(&mut *tx).await?;
+                arrays_rows.insert(name, array_rows);
+            }
+
+            let arrays_rows = Arc::new(arrays_rows);
+            let schemas = Arc::new(schemas);
+    
+            let group_entities: Result<Vec<_>, Error> = rows
+                .par_iter()
+                .map(|row| map_row_to_entity(row, &arrays_rows, (*schemas).clone()))
+                .collect();
+    
+            all_entities.extend(group_entities?);
+        }
+    
+        // Drop the temporary table
+        sqlx::query("DROP TABLE temp_entity_ids").execute(&mut *tx).await?;
+    
+        // Commit the transaction
+        tx.commit().await?;
+    
+        Ok(all_entities)
+    }
+    
     pub(crate) async fn query_by_hashed_keys(
         &self,
         table: &str,
@@ -289,61 +365,7 @@ impl DojoWorld {
         let db_entities: Vec<(String, String)> =
             sqlx::query_as(&query).bind(limit).bind(offset).fetch_all(&self.pool).await?;
 
-        // Group entities by their model combinations
-        let mut model_groups: HashMap<String, Vec<String>> = HashMap::new();
-        for (entity_id, models_str) in db_entities {
-            model_groups.entry(models_str).or_default().push(entity_id);
-        }
-
-        let mut entities = Vec::new();
-        for (model_ids, entity_ids) in model_groups {
-            let model_ids = model_ids.split(',').map(|id| Felt::from_str(id).unwrap()).collect::<Vec<_>>();
-            let schemas =
-                self.model_cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect();
-
-            let (entity_query, arrays_queries, _) = build_sql_query(
-                &schemas,
-                table,
-                entity_relation_column,
-                Some(&format!(
-                    "{table}.id IN ({})",
-                    entity_ids.iter().map(|_| "?").collect::<Vec<_>>().join(",")
-                )),
-                Some(&format!(
-                    "{table}.id IN ({})",
-                    entity_ids.iter().map(|_| "?").collect::<Vec<_>>().join(",")
-                )),
-                None,
-                None,
-            )?;
-
-            let mut query = sqlx::query(&entity_query);
-            for id in &entity_ids {
-                query = query.bind(id);
-            }
-            let rows = query.fetch_all(&self.pool).await?;
-
-            let mut arrays_rows = HashMap::new();
-            for (name, array_query) in arrays_queries {
-                let mut query = sqlx::query(&array_query);
-                for id in &entity_ids {
-                    query = query.bind(id);
-                }
-                let array_rows = query.fetch_all(&self.pool).await?;
-                arrays_rows.insert(name, array_rows);
-            }
-
-            let arrays_rows = Arc::new(arrays_rows);
-            let schemas = Arc::new(schemas);
-
-            let group_entities: Result<Vec<_>, Error> = rows
-                .par_iter()
-                .map(|row| map_row_to_entity(row, &arrays_rows, (*schemas).clone()))
-                .collect();
-
-            entities.extend(group_entities?);
-        }
-
+        let entities = self.fetch_entities(table, entity_relation_column, db_entities).await?;
         Ok((entities, total_count))
     }
 
@@ -456,61 +478,7 @@ impl DojoWorld {
             .fetch_all(&self.pool)
             .await?;
 
-        // Group entities by their model combinations
-        let mut model_groups: HashMap<String, Vec<String>> = HashMap::new();
-        for (entity_id, models_str) in db_entities {
-            model_groups.entry(models_str).or_default().push(entity_id);
-        }
-
-        let mut entities = Vec::new();
-        for (model_ids, entity_ids) in model_groups {
-            let model_ids = model_ids.split(',').map(|id| Felt::from_str(id).unwrap()).collect::<Vec<_>>();
-            let schemas =
-                self.model_cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect();
-
-            let (entity_query, arrays_queries, _) = build_sql_query(
-                &schemas,
-                table,
-                entity_relation_column,
-                Some(&format!(
-                    "{table}.id IN ({})",
-                    entity_ids.iter().map(|_| "?").collect::<Vec<_>>().join(",")
-                )),
-                Some(&format!(
-                    "{table}.id IN ({})",
-                    entity_ids.iter().map(|_| "?").collect::<Vec<_>>().join(",")
-                )),
-                None,
-                None,
-            )?;
-
-            let mut query = sqlx::query(&entity_query);
-            for id in &entity_ids {
-                query = query.bind(id);
-            }
-            let rows = query.fetch_all(&self.pool).await?;
-
-            let mut arrays_rows = HashMap::new();
-            for (name, array_query) in arrays_queries {
-                let mut query = sqlx::query(&array_query);
-                for id in &entity_ids {
-                    query = query.bind(id);
-                }
-                let array_rows = query.fetch_all(&self.pool).await?;
-                arrays_rows.insert(name, array_rows);
-            }
-
-            let arrays_rows = Arc::new(arrays_rows);
-            let schemas = Arc::new(schemas);
-
-            let group_entities: Result<Vec<_>, Error> = rows
-                .par_iter()
-                .map(|row| map_row_to_entity(row, &arrays_rows, (*schemas).clone()))
-                .collect();
-
-            entities.extend(group_entities?);
-        }
-
+        let entities = self.fetch_entities(table, entity_relation_column, db_entities).await?;
         Ok((entities, total_count))
     }
 
@@ -699,61 +667,7 @@ impl DojoWorld {
 
         let db_entities: Vec<(String, String)> = db_query.fetch_all(&self.pool).await?;
 
-        // Group entities by their model combinations
-        let mut model_groups: HashMap<String, Vec<String>> = HashMap::new();
-        for (entity_id, models_str) in db_entities {
-            model_groups.entry(models_str).or_default().push(entity_id);
-        }
-
-        let mut entities = Vec::new();
-        for (model_ids, entity_ids) in model_groups {
-            let model_ids = model_ids.split(',').map(|id| Felt::from_str(id).unwrap()).collect::<Vec<_>>();
-            let schemas =
-                self.model_cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect();
-
-            let (entity_query, arrays_queries, _) = build_sql_query(
-                &schemas,
-                table,
-                entity_relation_column,
-                Some(&format!(
-                    "[{table}].id IN ({})",
-                    entity_ids.iter().map(|_| "?").collect::<Vec<_>>().join(",")
-                )),
-                Some(&format!(
-                    "[{table}].id IN ({})",
-                    entity_ids.iter().map(|_| "?").collect::<Vec<_>>().join(",")
-                )),
-                None,
-                None,
-            )?;
-
-            let mut query = sqlx::query(&entity_query);
-            for id in &entity_ids {
-                query = query.bind(id);
-            }
-            let rows = query.fetch_all(&self.pool).await?;
-
-            let mut arrays_rows = HashMap::new();
-            for (name, array_query) in arrays_queries {
-                let mut query = sqlx::query(&array_query);
-                for id in &entity_ids {
-                    query = query.bind(id);
-                }
-                let array_rows = query.fetch_all(&self.pool).await?;
-                arrays_rows.insert(name, array_rows);
-            }
-
-            let arrays_rows = Arc::new(arrays_rows);
-            let schemas = Arc::new(schemas);
-
-            let group_entities: Result<Vec<_>, Error> = rows
-                .par_iter()
-                .map(|row| map_row_to_entity(row, &arrays_rows, (*schemas).clone()))
-                .collect();
-
-            entities.extend(group_entities?);
-        }
-
+        let entities = self.fetch_entities(table, entity_relation_column, db_entities).await?;
         Ok((entities, total_count))
     }
 
