@@ -32,15 +32,6 @@ jobs:
           cargo build -r --bin torii
           cargo build -r --bin sozo
 
-      - name: Archive binaries
-        id: artifacts
-        env:
-          VERSION_NAME: v${{ needs.prepare.outputs.tag_name }}
-        run: |
-          tar -czvf "dojo_${VERSION_NAME}_linux_amd64.tar.gz" -C ./target/release katana torii sozo
-          echo "file_name=dojo_${VERSION_NAME}_linux_amd64.tar.gz" >> $GITHUB_OUTPUT
-        shell: bash
-
       - name: Move Binaries
         run: |
           mkdir -p artifacts/linux/amd64/
@@ -88,7 +79,7 @@ jobs:
         id: vars
         run: |
           git config --global --add safe.directory '*'
-          echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "sha_short=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Build and push docker image
         uses: docker/build-push-action@v3
