@@ -2,9 +2,6 @@ name: preview
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - ci-preview
 
 env:
   CARGO_TERM_COLOR: always
