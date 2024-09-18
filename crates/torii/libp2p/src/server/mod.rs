@@ -246,7 +246,7 @@ impl<P: Provider + Sync> Relay<P> {
                                     continue;
                                 }
                             };
-                            let keys_str = felts_sql_string(&keys);
+                            let keys_str = felts_to_sql_string(&keys);
                             let entity_id = poseidon_hash_many(&keys);
                             let model_id = ty_model_id(&ty).unwrap();
 

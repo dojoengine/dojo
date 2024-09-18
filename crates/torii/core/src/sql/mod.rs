@@ -16,7 +16,7 @@ use sqlx::{Pool, Sqlite};
 use starknet::core::types::{Event, Felt, InvokeTransaction, Transaction};
 use starknet_crypto::poseidon_hash_many;
 use tracing::{debug, warn};
-use utils::felts_sql_string;
+use utils::felts_to_sql_string;
 
 use crate::cache::{Model, ModelCache};
 use crate::types::{
@@ -420,7 +420,7 @@ impl Sql {
             QueryType::Other,
         );
 
-        let keys_str = felts_sql_string(&keys);
+        let keys_str = felts_to_sql_string(&keys);
         let insert_entities = "INSERT INTO event_messages (id, keys, event_id, executed_at) \
                                VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET \
                                updated_at=CURRENT_TIMESTAMP, executed_at=EXCLUDED.executed_at, \
@@ -561,15 +561,15 @@ impl Sql {
                 Transaction::Invoke(InvokeTransaction::V1(invoke_v1_transaction)) => (
                     Argument::FieldElement(invoke_v1_transaction.transaction_hash),
                     Argument::FieldElement(invoke_v1_transaction.sender_address),
-                    Argument::String(felts_sql_string(&invoke_v1_transaction.calldata)),
+                    Argument::String(felts_to_sql_string(&invoke_v1_transaction.calldata)),
                     Argument::FieldElement(invoke_v1_transaction.max_fee),
-                    Argument::String(felts_sql_string(&invoke_v1_transaction.signature)),
+                    Argument::String(felts_to_sql_string(&invoke_v1_transaction.signature)),
                     Argument::FieldElement(invoke_v1_transaction.nonce),
                 ),
                 Transaction::L1Handler(l1_handler_transaction) => (
                     Argument::FieldElement(l1_handler_transaction.transaction_hash),
                     Argument::FieldElement(l1_handler_transaction.contract_address),
-                    Argument::String(felts_sql_string(&l1_handler_transaction.calldata)),
+                    Argument::String(felts_to_sql_string(&l1_handler_transaction.calldata)),
                     Argument::FieldElement(Felt::ZERO), // has no max_fee
                     Argument::String("".to_string()),   // has no signature
                     Argument::FieldElement((l1_handler_transaction.nonce).into()),
@@ -604,8 +604,8 @@ impl Sql {
         block_timestamp: u64,
     ) {
         let id = Argument::String(event_id.to_string());
-        let keys = Argument::String(felts_sql_string(&event.keys));
-        let data = Argument::String(felts_sql_string(&event.data));
+        let keys = Argument::String(felts_to_sql_string(&event.keys));
+        let data = Argument::String(felts_to_sql_string(&event.data));
         let hash = Argument::FieldElement(transaction_hash);
         let executed_at = Argument::String(utc_dt_string_from_timestamp(block_timestamp));
 
@@ -618,8 +618,8 @@ impl Sql {
 
         let emitted = EventEmitted {
             id: event_id.to_string(),
-            keys: felts_sql_string(&event.keys),
-            data: felts_sql_string(&event.data),
+            keys: felts_to_sql_string(&event.keys),
+            data: felts_to_sql_string(&event.data),
             transaction_hash: format!("{:#x}", transaction_hash),
             created_at: Utc::now(),
             executed_at: must_utc_datetime_from_timestamp(block_timestamp),
