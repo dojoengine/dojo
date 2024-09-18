@@ -26,7 +26,7 @@ pub enum PoolError {
     #[error("Invalid transaction: {0}")]
     InvalidTransaction(Box<InvalidTransactionError>),
     #[error("Internal error: {0}")]
-    Internal(Box<dyn std::error::Error>),
+    Internal(Box<dyn std::error::Error + 'static>),
 }
 
 /// Represents a complete transaction pool.

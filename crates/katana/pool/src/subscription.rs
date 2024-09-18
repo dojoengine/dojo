@@ -1,14 +1,14 @@
-use std::{
-    collections::BTreeSet,
-    pin::Pin,
-    task::{Context, Poll},
-};
+use std::collections::BTreeSet;
+use std::pin::Pin;
+use std::task::{Context, Poll};
 
 use futures::{FutureExt, Stream};
 use parking_lot::Mutex;
 use tokio::sync::Notify;
 
-use crate::{ordering::PoolOrd, tx::PendingTx, TransactionPool};
+use crate::ordering::PoolOrd;
+use crate::tx::PendingTx;
+use crate::TransactionPool;
 
 pub struct PoolSubscription<T, O>
 where

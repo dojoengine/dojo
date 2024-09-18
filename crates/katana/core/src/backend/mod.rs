@@ -49,7 +49,7 @@ pub struct Backend<EF: ExecutorFactory> {
 
 impl<EF: ExecutorFactory> Backend<EF> {
     #[allow(deprecated, unused)]
-    pub(crate) async fn new(executor_factory: Arc<EF>, mut config: StarknetConfig) -> Self {
+    pub async fn new(executor_factory: Arc<EF>, mut config: StarknetConfig) -> Self {
         let block_context_generator = config.block_context_generator();
 
         let blockchain: Blockchain = if let Some(forked_url) = &config.fork_rpc_url {

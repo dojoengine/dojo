@@ -46,7 +46,7 @@ impl<EF: ExecutorFactory> SayaApi<EF> {
     fn pending_executor(&self) -> Option<PendingExecutor> {
         match &*self.block_producer.producer.read() {
             BlockProducerMode::Instant(_) => None,
-            BlockProducerMode::Interval(producer) => Some(producer.executor()),
+            BlockProducerMode::Interval(producer) => producer.executor(),
         }
     }
 }

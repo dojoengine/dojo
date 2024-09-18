@@ -22,7 +22,7 @@ use katana_provider::traits::state::StateFactoryProvider;
 use katana_tasks::{BlockingTaskPool, BlockingTaskResult};
 use parking_lot::lock_api::RawMutex;
 use parking_lot::{Mutex, RwLock};
-use tokio::time::{interval_at, Instant, Interval};
+use tokio::time::{interval_at, Instant, Interval, MissedTickBehavior};
 use tracing::{error, info, trace, warn};
 
 use crate::backend::Backend;
@@ -174,35 +174,39 @@ impl PendingExecutor {
 
 #[allow(missing_debug_implementations)]
 pub struct IntervalBlockProducer<EF: ExecutorFactory> {
-    /// The interval at which new blocks are mined.
-    interval: Option<Interval>,
-    backend: Arc<Backend<EF>>,
-    /// Single active future that mines a new block
-    ongoing_mining: Option<BlockProductionFuture>,
-    /// Backlog of sets of transactions ready to be mined
-    queued: VecDeque<Vec<ExecutableTxWithHash>>,
-    executor: PendingExecutor,
-    blocking_task_spawner: BlockingTaskPool,
-    ongoing_execution: Option<TxExecutionFuture>,
+    /// The countdown timer until the block is closed and committed.
+    block_timer: Option<Interval>,
+
     /// Listeners notified when a new executed tx is added.
     tx_execution_listeners: RwLock<Vec<Sender<Vec<TxWithOutcome>>>>,
+    blocking_task_spawner: BlockingTaskPool,
+    backend: Arc<Backend<EF>>,
 
-    permit: Arc<Mutex<()>>,
+    /// Backlog of sets of transactions ready to be mined
+    queued: VecDeque<Vec<ExecutableTxWithHash>>,
+    executor: Option<PendingExecutor>,
+
+    /// Single active future that mines a new block
+    ongoing_mining: Option<BlockProductionFuture>,
+    ongoing_execution: Option<TxExecutionFuture>,
 
     /// validator used in the tx pool
     // the validator needs to always be built against the state of the block producer, so
     // im putting here for now until we find a better way to handle this.
     validator: TxValidator,
+    permit: Arc<Mutex<()>>,
+
+    interval: Option<u64>,
 }
 
 impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
     pub fn new(backend: Arc<Backend<EF>>, interval: Option<u64>) -> Self {
-        let interval = interval.map(|time| {
-            let duration = Duration::from_millis(time);
-            let mut interval = interval_at(Instant::now() + duration, duration);
-            interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
-            interval
-        });
+        // let interval = interval.map(|time| {
+        //     let duration = Duration::from_millis(time);
+        //     let mut interval = interval_at(Instant::now() + duration, duration);
+        //     interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+        //     interval
+        // });
 
         let provider = backend.blockchain.provider();
 
@@ -223,14 +227,16 @@ impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
             TxValidator::new(state, flags.clone(), cfg.clone(), block_env, permit.clone());
 
         Self {
+            interval,
             validator,
             permit,
             backend,
-            interval,
+            block_timer: None,
             ongoing_mining: None,
             ongoing_execution: None,
             queued: VecDeque::default(),
-            executor: PendingExecutor::new(executor),
+            // executor: SomePendingExecutor::new(executor),
+            executor: None,
             tx_execution_listeners: RwLock::new(vec![]),
             blocking_task_spawner: BlockingTaskPool::new().unwrap(),
         }
@@ -243,33 +249,37 @@ impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
         Self::new(backend, None)
     }
 
-    pub fn executor(&self) -> PendingExecutor {
+    pub fn executor(&self) -> Option<PendingExecutor> {
         self.executor.clone()
     }
 
     /// Force mine a new block. It will only able to mine if there is no ongoing mining process.
     pub fn force_mine(&mut self) {
-        match Self::do_mine(self.permit.clone(), self.executor.clone(), self.backend.clone()) {
-            Ok(outcome) => {
-                info!(target: LOG_TARGET, block_number = %outcome.block_number, "Force mined block.");
-                self.executor =
-                    self.create_new_executor_for_next_block().expect("fail to create executor");
+        if let Some(executor) = self.executor.take() {
+            let result = Self::do_mine(self.permit.clone(), executor, self.backend.clone());
+            match result {
+                Ok(outcome) => {
+                    info!(target: LOG_TARGET, block_number = %outcome.block_number, "Force mined block.");
+                    let executor =
+                        self.create_new_executor_for_next_block().expect("fail to create executor");
 
-                // update pool validator state here ---------
+                    // update pool validator state here ---------
 
-                let provider = self.backend.blockchain.provider();
-                let state = self.executor.0.read().state();
-                let num = provider.latest_number().unwrap();
-                let block_env = provider.block_env_at(num.into()).unwrap().unwrap();
+                    let provider = self.backend.blockchain.provider();
+                    let state = executor.0.read().state();
+                    let num = provider.latest_number().unwrap();
+                    let block_env = provider.block_env_at(num.into()).unwrap().unwrap();
 
-                self.validator.update(state, block_env);
+                    self.validator.update(state, block_env);
 
-                // -------------------------------------------
+                    // -------------------------------------------
 
-                unsafe { self.permit.raw().unlock() };
-            }
-            Err(e) => {
-                error!(target: LOG_TARGET, error = %e, "On force mine.");
+                    self.executor = Some(executor);
+                    unsafe { self.permit.raw().unlock() };
+                }
+                Err(e) => {
+                    error!(target: LOG_TARGET, error = %e, "On force mine.");
+                }
             }
         }
     }
@@ -377,16 +387,24 @@ impl<EF: ExecutorFactory> Stream for IntervalBlockProducer<EF> {
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let pin = self.get_mut();
 
-        if let Some(interval) = &mut pin.interval {
+        // timer would only be set after receiving the first transaction after the previous block is
+        // mined
+        if let Some(mut timer) = pin.block_timer.take() {
             // mine block if the interval is over
-            if interval.poll_tick(cx).is_ready() && pin.ongoing_mining.is_none() {
+            if timer.poll_tick(cx).is_ready() && pin.ongoing_mining.is_none() {
+                println!("timer consumed");
+
                 pin.ongoing_mining = Some(Box::pin({
-                    let executor = pin.executor.clone();
+                    let executor = pin.executor.take().unwrap();
                     let backend = pin.backend.clone();
                     let permit = pin.permit.clone();
 
                     pin.blocking_task_spawner.spawn(|| Self::do_mine(permit, executor, backend))
                 }));
+            } else {
+                println!("timer not yet");
+                // unable to mine block yet, put the timer back to be polled again
+                pin.block_timer = Some(timer);
             }
         }
 
@@ -395,7 +413,42 @@ impl<EF: ExecutorFactory> Stream for IntervalBlockProducer<EF> {
                 && pin.ongoing_execution.is_none()
                 && pin.ongoing_mining.is_none()
             {
-                let executor = pin.executor.clone();
+                // is there a block opened?
+                let executor = if let Some(ref executor) = pin.executor {
+                    executor.clone()
+                } else {
+                    // if not, we open a new block. and set the timer
+                    match pin.create_new_executor_for_next_block() {
+                        Ok(executor) => {
+                            // update pool validator state here ---------
+
+                            let _ = pin.permit.lock();
+
+                            let provider = pin.backend.blockchain.provider();
+                            let state = executor.0.read().state();
+                            let num = provider.latest_number()?;
+                            let block_env = provider.block_env_at(num.into()).unwrap().unwrap();
+
+                            pin.validator.update(state, block_env);
+
+                            // initialize block timer -------------------
+
+                            if let Some(duration) = dbg!(pin.interval.as_ref()) {
+                                println!("setting timer");
+                                let duration = Duration::from_millis(*duration);
+                                let mut interval = interval_at(Instant::now() + duration, duration);
+                                interval.set_missed_tick_behavior(MissedTickBehavior::Delay);
+                                let _ = interval.poll_tick(cx);
+                                pin.block_timer = Some(interval);
+                            }
+
+                            pin.executor = Some(executor.clone());
+                            executor
+                        }
+
+                        Err(e) => return Poll::Ready(Some(Err(e))),
+                    }
+                };
 
                 let transactions: Vec<ExecutableTxWithHash> =
                     std::mem::take(&mut pin.queued).into_iter().flatten().collect();
@@ -409,8 +462,8 @@ impl<EF: ExecutorFactory> Stream for IntervalBlockProducer<EF> {
 
             // poll the ongoing execution if any
             if let Some(mut execution) = pin.ongoing_execution.take() {
-                if let Poll::Ready(executor) = execution.poll_unpin(cx) {
-                    match executor {
+                if let Poll::Ready(outcome) = execution.poll_unpin(cx) {
+                    match outcome {
                         Ok(Ok(txs)) => {
                             pin.notify_listener(txs);
                             continue;
@@ -439,26 +492,7 @@ impl<EF: ExecutorFactory> Stream for IntervalBlockProducer<EF> {
             if let Poll::Ready(res) = mining.poll_unpin(cx) {
                 match res {
                     Ok(outcome) => {
-                        match pin.create_new_executor_for_next_block() {
-                            Ok(executor) => {
-                                // update pool validator state here ---------
-
-                                let provider = pin.backend.blockchain.provider();
-                                let state = executor.0.read().state();
-                                let num = provider.latest_number()?;
-                                let block_env = provider.block_env_at(num.into()).unwrap().unwrap();
-
-                                pin.validator.update(state, block_env);
-
-                                // -------------------------------------------
-
-                                pin.executor = executor;
-                                unsafe { pin.permit.raw().unlock() };
-                            }
-
-                            Err(e) => return Poll::Ready(Some(Err(e))),
-                        }
-
+                        unsafe { pin.permit.raw().unlock() };
                         return Poll::Ready(Some(outcome));
                     }
 
