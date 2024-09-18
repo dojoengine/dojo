@@ -14819,6 +14819,7 @@ dependencies = [
  "futures-util",
  "hex",
  "hyper 0.14.30",
+ "itertools 0.12.1",
  "katana-runner",
  "num-traits 0.2.19",
  "parking_lot 0.12.3",
