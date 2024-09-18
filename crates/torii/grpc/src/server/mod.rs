@@ -290,18 +290,14 @@ impl DojoWorld {
             sqlx::query_as(&query).bind(limit).bind(offset).fetch_all(&self.pool).await?;
 
         // Group entities by their model combinations
-        let mut model_groups: HashMap<Vec<Felt>, Vec<String>> = HashMap::new();
+        let mut model_groups: HashMap<String, Vec<String>> = HashMap::new();
         for (entity_id, models_str) in db_entities {
-            let model_ids: Vec<Felt> = models_str
-                .split(',')
-                .map(Felt::from_str)
-                .collect::<Result<_, _>>()
-                .map_err(ParseError::FromStr)?;
-            model_groups.entry(model_ids).or_default().push(entity_id);
+            model_groups.entry(models_str).or_default().push(entity_id);
         }
 
         let mut entities = Vec::new();
         for (model_ids, entity_ids) in model_groups {
+            let model_ids = model_ids.split(',').map(|id| Felt::from_str(id).unwrap()).collect::<Vec<_>>();
             let schemas =
                 self.model_cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect();
 
@@ -461,18 +457,14 @@ impl DojoWorld {
             .await?;
 
         // Group entities by their model combinations
-        let mut model_groups: HashMap<Vec<Felt>, Vec<String>> = HashMap::new();
+        let mut model_groups: HashMap<String, Vec<String>> = HashMap::new();
         for (entity_id, models_str) in db_entities {
-            let model_ids: Vec<Felt> = models_str
-                .split(',')
-                .map(Felt::from_str)
-                .collect::<Result<_, _>>()
-                .map_err(ParseError::FromStr)?;
-            model_groups.entry(model_ids).or_default().push(entity_id);
+            model_groups.entry(models_str).or_default().push(entity_id);
         }
 
         let mut entities = Vec::new();
         for (model_ids, entity_ids) in model_groups {
+            let model_ids = model_ids.split(',').map(|id| Felt::from_str(id).unwrap()).collect::<Vec<_>>();
             let schemas =
                 self.model_cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect();
 
@@ -708,18 +700,14 @@ impl DojoWorld {
         let db_entities: Vec<(String, String)> = db_query.fetch_all(&self.pool).await?;
 
         // Group entities by their model combinations
-        let mut model_groups: HashMap<Vec<Felt>, Vec<String>> = HashMap::new();
+        let mut model_groups: HashMap<String, Vec<String>> = HashMap::new();
         for (entity_id, models_str) in db_entities {
-            let model_ids: Vec<Felt> = models_str
-                .split(',')
-                .map(Felt::from_str)
-                .collect::<Result<_, _>>()
-                .map_err(ParseError::FromStr)?;
-            model_groups.entry(model_ids).or_default().push(entity_id);
+            model_groups.entry(models_str).or_default().push(entity_id);
         }
 
         let mut entities = Vec::new();
         for (model_ids, entity_ids) in model_groups {
+            let model_ids = model_ids.split(',').map(|id| Felt::from_str(id).unwrap()).collect::<Vec<_>>();
             let schemas =
                 self.model_cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect();
 
