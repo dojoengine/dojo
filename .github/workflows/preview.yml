@@ -84,11 +84,17 @@ jobs:
 #          username: ${{ github.actor }}
 #          password: ${{ secrets.GITHUB_TOKEN }}
 
+#      - name: Set outputs
+#        id: vars
+#        run: |
+#          git config --global --add safe.directory '*'
+#          echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
 #      - name: Build and push docker image
 #        uses: docker/build-push-action@v3
 #        with:
 #          push: true
-#          tags: ghcr.io/${{ github.repository }}:preview--${{ github.ref_name }}
+#          tags: ghcr.io/${{ github.repository }}:preview--${{ steps.vars.outputs.sha_short }}
 #          platforms: linux/amd64
 #          build-contexts: |
 #            artifacts=artifacts
@@ -100,14 +106,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set outputs
+        id: vars
+        run: |
+          git config --global --add safe.directory '*'
+          echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
       - name: Deploy on slot
         run: |
           set -eux
           curl -L https://slot.cartridge.sh | bash
           $XDG_CONFIG_HOME/.slot/bin/slotup
           $XDG_CONFIG_HOME/.slot/bin/slot --version
-          $XDG_CONFIG_HOME/.slot/bin/slot d create preview--${{ github.ref_name }} katana --version preview--${{ github.ref_name }}
-          $XDG_CONFIG_HOME/.slot/bin/slot d create preview--${{ github.ref_name }} torii --version preview--${{ github.ref_name }} \
+          $XDG_CONFIG_HOME/.slot/bin/slot d create preview--${{ steps.vars.outputs.sha_short }} katana --version preview--${{ steps.vars.outputs.sha_short }}
+          $XDG_CONFIG_HOME/.slot/bin/slot d create preview--${{ steps.vars.outputs.sha_short }} torii --version preview--${{ steps.vars.outputs.sha_short }} \
             --rpc=http://slot.prod.svc.cluster.local/x/starknet/sepolia \
             --world=0x53b7efae79ce1d7729828bb6dee2cee09358fde4c4325805cf97678919a4855 \
             --start-block=0
