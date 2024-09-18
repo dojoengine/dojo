@@ -964,11 +964,8 @@ fn build_composite_clause(
                 // Generate a unique alias for each model
                 let counter = model_counters.entry(model.clone()).or_insert(0);
                 *counter += 1;
-                let alias = if *counter == 1 {
-                    model.clone()
-                } else {
-                    format!("{model}_{}", *counter - 1)
-                };
+                let alias =
+                    if *counter == 1 { model.clone() } else { format!("{model}_{}", *counter - 1) };
 
                 join_clauses.push(format!(
                     "LEFT JOIN {table_name} AS [{alias}] ON [{table}].id = [{alias}].entity_id"
