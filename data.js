@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1726712998504,
+  "lastUpdate": 1726757693272,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -20971,6 +20971,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3882389,
             "range": "± 39366",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5777c0076576de369bba7fe9ffd73abe38447dd3",
+          "message": "opt(torii-grpc): parallelize queries (#2443)\n\n* opt(torii-grpc): parallelize queries\r\n\r\n* feat :parallelize keys clause\r\n\r\n* feat: parallelize composite\r\n\r\n* opt hashmap\r\n\r\n* optimize fetching\r\n\r\n* itertools\r\n\r\n* refactor: queries & keys clause\r\n\r\n* fmt\r\n\r\n* fix: multiple mmeber clauses same column\r\n\r\n* fmt\r\n\r\n* clean\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-09-19T10:38:07-04:00",
+          "tree_id": "31b3502e1ca8ba3dea18f07e465184d8acc672c1",
+          "url": "https://github.com/dojoengine/dojo/commit/5777c0076576de369bba7fe9ffd73abe38447dd3"
+        },
+        "date": 1726757692028,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 23685934830,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
