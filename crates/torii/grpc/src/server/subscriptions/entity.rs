@@ -82,19 +82,11 @@ pub struct Service {
 }
 
 impl Service {
-    pub fn new(
-        subs_manager: Arc<EntityManager>,
-    ) -> Self {
-        Self {
-            subs_manager,
-            simple_broker: Box::pin(SimpleBroker::<Entity>::subscribe()),
-        }
+    pub fn new(subs_manager: Arc<EntityManager>) -> Self {
+        Self { subs_manager, simple_broker: Box::pin(SimpleBroker::<Entity>::subscribe()) }
     }
 
-    async fn publish_updates(
-        subs: Arc<EntityManager>,
-        entity: &Entity,
-    ) -> Result<(), Error> {
+    async fn publish_updates(subs: Arc<EntityManager>, entity: &Entity) -> Result<(), Error> {
         let mut closed_stream = Vec::new();
         let hashed = Felt::from_str(&entity.id).map_err(ParseError::FromStr)?;
         let keys = entity
@@ -196,9 +188,7 @@ impl Service {
             let resp = proto::world::SubscribeEntityResponse {
                 entity: Some(proto::types::Entity {
                     hashed_keys: hashed.to_bytes_be().to_vec(),
-                    models: vec![
-                        model.into()
-                    ],
+                    models: vec![model.into()],
                 }),
                 subscription_id: *idx,
             };

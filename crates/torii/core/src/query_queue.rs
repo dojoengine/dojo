@@ -115,10 +115,8 @@ impl QueryQueue {
                     .fetch_one(&mut *tx)
                     .await?;
                     let mut entity_updated = EntityUpdated::from_row(&row)?;
-                    entity_updated.updated_model = Some(Ty::Struct(Struct {
-                        name: entity.ty.name(),
-                        children: vec![],
-                    }));
+                    entity_updated.updated_model =
+                        Some(Ty::Struct(Struct { name: entity.ty.name(), children: vec![] }));
 
                     let count = sqlx::query_scalar::<_, i64>(
                         "SELECT count(*) FROM entity_model WHERE entity_id = ?",

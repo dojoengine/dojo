@@ -76,13 +76,8 @@ pub struct Service {
 }
 
 impl Service {
-    pub fn new(
-        subs_manager: Arc<EventMessageManager>,
-    ) -> Self {
-        Self {
-            subs_manager,
-            simple_broker: Box::pin(SimpleBroker::<EventMessage>::subscribe()),
-        }
+    pub fn new(subs_manager: Arc<EventMessageManager>) -> Self {
+        Self { subs_manager, simple_broker: Box::pin(SimpleBroker::<EventMessage>::subscribe()) }
     }
 
     async fn publish_updates(
@@ -174,9 +169,7 @@ impl Service {
             let resp = proto::world::SubscribeEntityResponse {
                 entity: Some(proto::types::Entity {
                     hashed_keys: hashed.to_bytes_be().to_vec(),
-                    models: vec![
-                        model.into()
-                    ],
+                    models: vec![model.into()],
                 }),
                 subscription_id: *idx,
             };
