@@ -21,10 +21,8 @@ use starknet::providers::{JsonRpcClient, Provider};
 use starknet_crypto::poseidon_hash_many;
 use tokio::sync::broadcast;
 use torii_core::engine::{Engine, EngineConfig, Processors};
-use torii_core::processors::generate_event_processors_map;
-use torii_core::processors::register_model::RegisterModelProcessor;
-use torii_core::processors::store_set_record::StoreSetRecordProcessor;
 use torii_core::sql::Sql;
+use torii_core::types::ContractType;
 
 use crate::proto::types::KeysClause;
 use crate::server::DojoWorld;
@@ -93,25 +91,25 @@ async fn test_entities_queries(sequencer: &RunnerCtx) {
 
     TransactionWaiter::new(tx.transaction_hash, &provider).await.unwrap();
 
-    let db = Sql::new(pool.clone(), strat.world_address, &HashMap::new()).await.unwrap();
+    let db = Sql::new(
+        pool.clone(),
+        strat.world_address,
+        &HashMap::from([(strat.world_address, ContractType::WORLD)]),
+    )
+    .await
+    .unwrap();
+    let world_address = strat.world_address;
 
     let (shutdown_tx, _) = broadcast::channel(1);
     let mut engine = Engine::new(
         world_reader,
         db.clone(),
         Arc::clone(&provider),
-        Processors {
-            event: generate_event_processors_map(vec![
-                Box::new(RegisterModelProcessor),
-                Box::new(StoreSetRecordProcessor),
-            ])
-            .unwrap(),
-            ..Processors::default()
-        },
+        Processors { ..Processors::default() },
         EngineConfig::default(),
         shutdown_tx,
         None,
-        HashMap::new(),
+        Arc::new(HashMap::from([(world_address, ContractType::WORLD)])),
     );
 
     let to = provider.block_hash_and_number().await.unwrap().block_number;
