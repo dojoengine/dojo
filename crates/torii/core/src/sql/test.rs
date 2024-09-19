@@ -21,13 +21,8 @@ use starknet_crypto::poseidon_hash_many;
 use tokio::sync::broadcast;
 
 use crate::engine::{Engine, EngineConfig, Processors};
-use crate::processors::generate_event_processors_map;
-use crate::processors::register_model::RegisterModelProcessor;
-use crate::processors::store_del_record::StoreDelRecordProcessor;
-use crate::processors::store_set_record::StoreSetRecordProcessor;
-use crate::processors::store_update_member::StoreUpdateMemberProcessor;
-use crate::processors::store_update_record::StoreUpdateRecordProcessor;
 use crate::sql::Sql;
+use crate::types::ContractType;
 
 pub async fn bootstrap_engine<P>(
     world: WorldContractReader<P>,
@@ -39,24 +34,16 @@ where
 {
     let (shutdown_tx, _) = broadcast::channel(1);
     let to = provider.block_hash_and_number().await?.block_number;
+    let world_address = world.address;
     let mut engine = Engine::new(
         world,
         db,
         provider,
-        Processors {
-            event: generate_event_processors_map(vec![
-                Box::new(RegisterModelProcessor),
-                Box::new(StoreSetRecordProcessor),
-                Box::new(StoreUpdateRecordProcessor),
-                Box::new(StoreUpdateMemberProcessor),
-                Box::new(StoreDelRecordProcessor),
-            ])?,
-            ..Processors::default()
-        },
+        Processors { ..Processors::default() },
         EngineConfig::default(),
         shutdown_tx,
         None,
-        HashMap::new(),
+        Arc::new(HashMap::from([(world_address, ContractType::WORLD)])),
     );
 
     let data = engine.fetch_range(0, to, &HashMap::new()).await.unwrap();
@@ -125,7 +112,13 @@ async fn test_load_from_remote(sequencer: &RunnerCtx) {
 
     let world_reader = WorldContractReader::new(strat.world_address, Arc::clone(&provider));
 
-    let mut db = Sql::new(pool.clone(), world_reader.address, &HashMap::new()).await.unwrap();
+    let mut db = Sql::new(
+        pool.clone(),
+        world_reader.address,
+        &HashMap::from([(world_reader.address, ContractType::WORLD)]),
+    )
+    .await
+    .unwrap();
 
     let _ = bootstrap_engine(world_reader, db.clone(), provider).await.unwrap();
 
@@ -282,7 +275,13 @@ async fn test_load_from_remote_del(sequencer: &RunnerCtx) {
 
     let world_reader = WorldContractReader::new(strat.world_address, Arc::clone(&provider));
 
-    let mut db = Sql::new(pool.clone(), world_reader.address, &HashMap::new()).await.unwrap();
+    let mut db = Sql::new(
+        pool.clone(),
+        world_reader.address,
+        &HashMap::from([(world_reader.address, ContractType::WORLD)]),
+    )
+    .await
+    .unwrap();
 
     let _ = bootstrap_engine(world_reader, db.clone(), provider).await;
 
@@ -369,7 +368,13 @@ async fn test_update_with_set_record(sequencer: &RunnerCtx) {
 
     let world_reader = WorldContractReader::new(strat.world_address, Arc::clone(&provider));
 
-    let mut db = Sql::new(pool.clone(), world_reader.address, &HashMap::new()).await.unwrap();
+    let mut db = Sql::new(
+        pool.clone(),
+        world_reader.address,
+        &HashMap::from([(world_reader.address, ContractType::WORLD)]),
+    )
+    .await
+    .unwrap();
 
     let _ = bootstrap_engine(world_reader, db.clone(), Arc::clone(&provider)).await.unwrap();
 

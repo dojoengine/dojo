@@ -164,7 +164,7 @@ checksum = "5c6cb57a04249c6480766f7f7cef5467412af1490f8d1e243141daddada3264f"
 [[package]]
 name = "alloy"
 version = "0.3.6"
-source = "git+https://github.com/alloy-rs/alloy#57dd4c538293421c3d1a793cba79ad6f46d6444f"
+source = "git+https://github.com/alloy-rs/alloy#04b1e0984b8661ef910b0ae88e1ef218db66b636"
 dependencies = [
  "alloy-consensus 0.3.6 (git+https://github.com/alloy-rs/alloy)",
  "alloy-contract 0.3.6 (git+https://github.com/alloy-rs/alloy)",
@@ -209,13 +209,14 @@ dependencies = [
 [[package]]
 name = "alloy-consensus"
 version = "0.3.6"
-source = "git+https://github.com/alloy-rs/alloy#57dd4c538293421c3d1a793cba79ad6f46d6444f"
+source = "git+https://github.com/alloy-rs/alloy#04b1e0984b8661ef910b0ae88e1ef218db66b636"
 dependencies = [
  "alloy-eips 0.3.6 (git+https://github.com/alloy-rs/alloy)",
  "alloy-primitives",
  "alloy-rlp",
  "alloy-serde 0.3.6 (git+https://github.com/alloy-rs/alloy)",
  "c-kzg",
+ "derive_more 1.0.0",
  "serde",
 ]
 
@@ -242,7 +243,7 @@ dependencies = [
 [[package]]
 name = "alloy-contract"
 version = "0.3.6"
-source = "git+https://github.com/alloy-rs/alloy#57dd4c538293421c3d1a793cba79ad6f46d6444f"
+source = "git+https://github.com/alloy-rs/alloy#04b1e0984b8661ef910b0ae88e1ef218db66b636"
 dependencies = [
  "alloy-dyn-abi",
  "alloy-json-abi",
@@ -330,7 +331,7 @@ dependencies = [
 [[package]]
 name = "alloy-eips"
 version = "0.3.6"
-source = "git+https://github.com/alloy-rs/alloy#57dd4c538293421c3d1a793cba79ad6f46d6444f"
+source = "git+https://github.com/alloy-rs/alloy#04b1e0984b8661ef910b0ae88e1ef218db66b636"
 dependencies = [
  "alloy-eip2930",
  "alloy-eip7702",
@@ -347,7 +348,7 @@ dependencies = [
 [[package]]
 name = "alloy-genesis"
 version = "0.3.6"
-source = "git+https://github.com/alloy-rs/alloy#57dd4c538293421c3d1a793cba79ad6f46d6444f"
+source = "git+https://github.com/alloy-rs/alloy#04b1e0984b8661ef910b0ae88e1ef218db66b636"
 dependencies = [
  "alloy-primitives",
  "alloy-serde 0.3.6 (git+https://github.com/alloy-rs/alloy)",
@@ -383,7 +384,7 @@ dependencies = [
 [[package]]
 name = "alloy-json-rpc"
 version = "0.3.6"
-source = "git+https://github.com/alloy-rs/alloy#57dd4c538293421c3d1a793cba79ad6f46d6444f"
+source = "git+https://github.com/alloy-rs/alloy#04b1e0984b8661ef910b0ae88e1ef218db66b636"
 dependencies = [
  "alloy-primitives",
  "alloy-sol-types",
@@ -417,7 +418,7 @@ dependencies = [
 [[package]]
 name = "alloy-network"
 version = "0.3.6"
-source = "git+https://github.com/alloy-rs/alloy#57dd4c538293421c3d1a793cba79ad6f46d6444f"
+source = "git+https://github.com/alloy-rs/alloy#04b1e0984b8661ef910b0ae88e1ef218db66b636"
 dependencies = [
  "alloy-consensus 0.3.6 (git+https://github.com/alloy-rs/alloy)",
  "alloy-eips 0.3.6 (git+https://github.com/alloy-rs/alloy)",
@@ -449,7 +450,7 @@ dependencies = [
 [[package]]
 name = "alloy-network-primitives"
 version = "0.3.6"
-source = "git+https://github.com/alloy-rs/alloy#57dd4c538293421c3d1a793cba79ad6f46d6444f"
+source = "git+https://github.com/alloy-rs/alloy#04b1e0984b8661ef910b0ae88e1ef218db66b636"
 dependencies = [
  "alloy-eips 0.3.6 (git+https://github.com/alloy-rs/alloy)",
  "alloy-primitives",
@@ -460,7 +461,7 @@ dependencies = [
 [[package]]
 name = "alloy-node-bindings"
 version = "0.3.6"
-source = "git+https://github.com/alloy-rs/alloy#57dd4c538293421c3d1a793cba79ad6f46d6444f"
+source = "git+https://github.com/alloy-rs/alloy#04b1e0984b8661ef910b0ae88e1ef218db66b636"
 dependencies = [
  "alloy-genesis",
  "alloy-primitives",
@@ -532,7 +533,7 @@ dependencies = [
 [[package]]
 name = "alloy-provider"
 version = "0.3.6"
-source = "git+https://github.com/alloy-rs/alloy#57dd4c538293421c3d1a793cba79ad6f46d6444f"
+source = "git+https://github.com/alloy-rs/alloy#04b1e0984b8661ef910b0ae88e1ef218db66b636"
 dependencies = [
  "alloy-chains",
  "alloy-consensus 0.3.6 (git+https://github.com/alloy-rs/alloy)",
@@ -611,7 +612,7 @@ dependencies = [
 [[package]]
 name = "alloy-rpc-client"
 version = "0.3.6"
-source = "git+https://github.com/alloy-rs/alloy#57dd4c538293421c3d1a793cba79ad6f46d6444f"
+source = "git+https://github.com/alloy-rs/alloy#04b1e0984b8661ef910b0ae88e1ef218db66b636"
 dependencies = [
  "alloy-json-rpc 0.3.6 (git+https://github.com/alloy-rs/alloy)",
  "alloy-transport 0.3.6 (git+https://github.com/alloy-rs/alloy)",
@@ -631,7 +632,7 @@ dependencies = [
 [[package]]
 name = "alloy-rpc-types-anvil"
 version = "0.3.6"
-source = "git+https://github.com/alloy-rs/alloy#57dd4c538293421c3d1a793cba79ad6f46d6444f"
+source = "git+https://github.com/alloy-rs/alloy#04b1e0984b8661ef910b0ae88e1ef218db66b636"
 dependencies = [
  "alloy-primitives",
  "alloy-serde 0.3.6 (git+https://github.com/alloy-rs/alloy)",
@@ -662,7 +663,7 @@ dependencies = [
 [[package]]
 name = "alloy-rpc-types-eth"
 version = "0.3.6"
-source = "git+https://github.com/alloy-rs/alloy#57dd4c538293421c3d1a793cba79ad6f46d6444f"
+source = "git+https://github.com/alloy-rs/alloy#04b1e0984b8661ef910b0ae88e1ef218db66b636"
 dependencies = [
  "alloy-consensus 0.3.6 (git+https://github.com/alloy-rs/alloy)",
  "alloy-eips 0.3.6 (git+https://github.com/alloy-rs/alloy)",
@@ -693,7 +694,7 @@ dependencies = [
 [[package]]
 name = "alloy-serde"
 version = "0.3.6"
-source = "git+https://github.com/alloy-rs/alloy#57dd4c538293421c3d1a793cba79ad6f46d6444f"
+source = "git+https://github.com/alloy-rs/alloy#04b1e0984b8661ef910b0ae88e1ef218db66b636"
 dependencies = [
  "alloy-primitives",
  "serde",
@@ -717,7 +718,7 @@ dependencies = [
 [[package]]
 name = "alloy-signer"
 version = "0.3.6"
-source = "git+https://github.com/alloy-rs/alloy#57dd4c538293421c3d1a793cba79ad6f46d6444f"
+source = "git+https://github.com/alloy-rs/alloy#04b1e0984b8661ef910b0ae88e1ef218db66b636"
 dependencies = [
  "alloy-primitives",
  "async-trait",
@@ -730,7 +731,7 @@ dependencies = [
 [[package]]
 name = "alloy-signer-local"
 version = "0.3.6"
-source = "git+https://github.com/alloy-rs/alloy#57dd4c538293421c3d1a793cba79ad6f46d6444f"
+source = "git+https://github.com/alloy-rs/alloy#04b1e0984b8661ef910b0ae88e1ef218db66b636"
 dependencies = [
  "alloy-consensus 0.3.6 (git+https://github.com/alloy-rs/alloy)",
  "alloy-network 0.3.6 (git+https://github.com/alloy-rs/alloy)",
@@ -837,7 +838,7 @@ dependencies = [
 [[package]]
 name = "alloy-transport"
 version = "0.3.6"
-source = "git+https://github.com/alloy-rs/alloy#57dd4c538293421c3d1a793cba79ad6f46d6444f"
+source = "git+https://github.com/alloy-rs/alloy#04b1e0984b8661ef910b0ae88e1ef218db66b636"
 dependencies = [
  "alloy-json-rpc 0.3.6 (git+https://github.com/alloy-rs/alloy)",
  "base64 0.22.1",
@@ -870,7 +871,7 @@ dependencies = [
 [[package]]
 name = "alloy-transport-http"
 version = "0.3.6"
-source = "git+https://github.com/alloy-rs/alloy#57dd4c538293421c3d1a793cba79ad6f46d6444f"
+source = "git+https://github.com/alloy-rs/alloy#04b1e0984b8661ef910b0ae88e1ef218db66b636"
 dependencies = [
  "alloy-json-rpc 0.3.6 (git+https://github.com/alloy-rs/alloy)",
  "alloy-transport 0.3.6 (git+https://github.com/alloy-rs/alloy)",
@@ -12856,9 +12857,9 @@ dependencies = [
 
 [[package]]
 name = "simdutf8"
-version = "0.1.4"
+version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f27f6278552951f1f2b8cf9da965d10969b2efdea95a6ec47987ab46edfe263a"
+checksum = "e3a9fe34e3e7a50316060351f37187a3f546bce95496156754b601a5fa71b76e"
 
 [[package]]
 name = "similar"
