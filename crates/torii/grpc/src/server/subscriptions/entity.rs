@@ -4,6 +4,7 @@ use std::pin::Pin;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::task::{Context, Poll};
+use std::time::Duration;
 
 use futures::Stream;
 use futures_util::StreamExt;
@@ -12,6 +13,7 @@ use sqlx::{Pool, Sqlite};
 use starknet::core::types::Felt;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tokio::sync::RwLock;
+use tokio::time::interval;
 use torii_core::cache::ModelCache;
 use torii_core::error::{Error, ParseError};
 use torii_core::model::build_sql_query;
@@ -81,10 +83,8 @@ impl EntityManager {
 #[must_use = "Service does nothing unless polled"]
 #[allow(missing_debug_implementations)]
 pub struct Service {
-    pool: Pool<Sqlite>,
-    subs_manager: Arc<EntityManager>,
-    model_cache: Arc<ModelCache>,
     simple_broker: Pin<Box<dyn Stream<Item = Entity> + Send>>,
+    update_sender: Sender<Entity>,
 }
 
 impl Service {
@@ -93,15 +93,49 @@ impl Service {
         subs_manager: Arc<EntityManager>,
         model_cache: Arc<ModelCache>,
     ) -> Self {
-        Self {
+        let (update_sender, update_receiver) = channel(100); // Adjust buffer size as needed
+        let service =
+            Self { simple_broker: Box::pin(SimpleBroker::<Entity>::subscribe()), update_sender };
+
+        // Spawn a task to process entity updates
+        tokio::spawn(Self::process_updates(
+            Arc::clone(&subs_manager),
+            Arc::clone(&model_cache),
             pool,
-            subs_manager,
-            model_cache,
-            simple_broker: Box::pin(SimpleBroker::<Entity>::subscribe()),
+            update_receiver,
+        ));
+
+        service
+    }
+
+    async fn process_updates(
+        subs: Arc<EntityManager>,
+        cache: Arc<ModelCache>,
+        pool: Pool<Sqlite>,
+        mut update_receiver: Receiver<Entity>,
+    ) {
+        let mut interval = interval(Duration::from_millis(100));
+        let mut pending_updates = Vec::new();
+
+        loop {
+            tokio::select! {
+                _ = interval.tick() => {
+                    if !pending_updates.is_empty() {
+                        for entity in pending_updates.drain(..) {
+                            if let Err(e) = Self::publish_updates(Arc::clone(&subs), Arc::clone(&cache), pool.clone(), &entity).await {
+                                error!(target = LOG_TARGET, error = %e, "Publishing entity update.");
+                            }
+                        }
+                    }
+                }
+                Some(entity) = update_receiver.recv() => {
+                    pending_updates.push(entity);
+                }
+            }
         }
     }
 
-    async fn publish_updates(
+    pub async fn publish_updates(
         subs: Arc<EntityManager>,
         cache: Arc<ModelCache>,
         pool: Pool<Sqlite>,
@@ -259,16 +293,14 @@ impl Service {
 impl Future for Service {
     type Output = ();
 
-    fn poll(self: std::pin::Pin<&mut Self>, cx: &mut Context<'_>) -> std::task::Poll<Self::Output> {
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let pin = self.get_mut();
 
         while let Poll::Ready(Some(entity)) = pin.simple_broker.poll_next_unpin(cx) {
-            let subs = Arc::clone(&pin.subs_manager);
-            let cache = Arc::clone(&pin.model_cache);
-            let pool = pin.pool.clone();
+            let sender = pin.update_sender.clone();
             tokio::spawn(async move {
-                if let Err(e) = Service::publish_updates(subs, cache, pool, &entity).await {
-                    error!(target = LOG_TARGET, error = %e, "Publishing entity update.");
+                if let Err(e) = sender.send(entity).await {
+                    error!(target = LOG_TARGET, error = %e, "Sending entity update to channel.");
                 }
             });
         }
