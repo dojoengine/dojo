@@ -134,11 +134,11 @@ struct Args {
     max_concurrent_tasks: usize,
 
     /// Whether or not to index world transactions
-    #[arg(long, action = ArgAction::Set, default_value_t = true)]
+    #[arg(long, action = ArgAction::Set, default_value_t = false)]
     index_transactions: bool,
 
     /// Whether or not to index raw events
-    #[arg(long, action = ArgAction::Set, default_value_t = true)]
+    #[arg(long, action = ArgAction::Set, default_value_t = false)]
     index_raw_events: bool,
 }
 
