@@ -5,12 +5,13 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Result;
+use bitflags::bitflags;
 use dojo_world::contracts::world::WorldContractReader;
 use hashlink::LinkedHashMap;
 use starknet::core::types::{
     BlockId, BlockTag, EmittedEvent, Event, EventFilter, Felt, MaybePendingBlockWithReceipts,
-    MaybePendingBlockWithTxHashes, PendingBlockWithReceipts, ReceiptBlock, TransactionReceipt,
-    TransactionReceiptWithBlockInfo, TransactionWithReceipt,
+    MaybePendingBlockWithTxHashes, PendingBlockWithReceipts, ReceiptBlock, Transaction,
+    TransactionReceipt, TransactionReceiptWithBlockInfo, TransactionWithReceipt,
 };
 use starknet::providers::Provider;
 use tokio::sync::broadcast::Sender;
@@ -46,6 +47,14 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Default for Processo
 pub(crate) const LOG_TARGET: &str = "torii_core::engine";
 pub const QUERY_QUEUE_BATCH_SIZE: usize = 1000;
 
+bitflags! {
+    #[derive(Debug, Clone)]
+    pub struct IndexingFlags: u32 {
+        const TRANSACTIONS = 0b00000001;
+        const RAW_EVENTS = 0b00000010;
+    }
+}
+
 #[derive(Debug)]
 pub struct EngineConfig {
     pub polling_interval: Duration,
@@ -53,6 +62,7 @@ pub struct EngineConfig {
     pub events_chunk_size: u64,
     pub index_pending: bool,
     pub max_concurrent_tasks: usize,
+    pub flags: IndexingFlags,
 }
 
 impl Default for EngineConfig {
@@ -63,6 +73,7 @@ impl Default for EngineConfig {
             events_chunk_size: 1024,
             index_pending: true,
             max_concurrent_tasks: 100,
+            flags: IndexingFlags::empty(),
         }
     }
 }
@@ -447,13 +458,18 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         for ((block_number, transaction_hash), events) in data.transactions {
             debug!("Processing transaction hash: {:#x}", transaction_hash);
             // Process transaction
-            // let transaction = self.provider.get_transaction_by_hash(transaction_hash).await?;
+            let transaction = if self.config.flags.contains(IndexingFlags::TRANSACTIONS) {
+                Some(self.provider.get_transaction_by_hash(transaction_hash).await?)
+            } else {
+                None
+            };
 
             self.process_transaction_with_events(
                 transaction_hash,
                 events.as_slice(),
                 block_number,
                 data.blocks[&block_number],
+                transaction,
             )
             .await?;
 
@@ -537,6 +553,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         events: &[EmittedEvent],
         block_number: u64,
         block_timestamp: u64,
+        transaction: Option<Transaction>,
     ) -> Result<()> {
         for (event_idx, event) in events.iter().enumerate() {
             let event_id =
@@ -553,24 +570,25 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                 block_timestamp,
                 &event_id,
                 &event,
-                // transaction_hash,
+                transaction_hash,
             )
             .await?;
         }
 
-        // Commented out this transaction processor because it requires an RPC call for each
-        // transaction which is slowing down the sync process by alot.
-        // Self::process_transaction(
-        //     self,
-        //     block_number,
-        //     block_timestamp,
-        //     transaction_hash,
-        //     transaction,
-        // )
-        // .await?;
+        if let Some(ref transaction) = transaction {
+            Self::process_transaction(
+                self,
+                block_number,
+                block_timestamp,
+                transaction_hash,
+                transaction,
+            )
+            .await?;
+        }
 
         Ok(())
     }
+
     // Process a transaction and events from its receipt.
     // Returns whether the transaction has a world event.
     async fn process_transaction_with_receipt(
@@ -603,21 +621,21 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                     block_timestamp,
                     &event_id,
                     event,
-                    // *transaction_hash,
+                    *transaction_hash,
                 )
                 .await?;
             }
 
-            // if world_event {
-            //     Self::process_transaction(
-            //         self,
-            //         block_number,
-            //         block_timestamp,
-            //         transaction_hash,
-            //         transaction,
-            //     )
-            //     .await?;
-            // }
+            if world_event && self.config.flags.contains(IndexingFlags::TRANSACTIONS) {
+                Self::process_transaction(
+                    self,
+                    block_number,
+                    block_timestamp,
+                    *transaction_hash,
+                    &transaction_with_receipt.transaction,
+                )
+                .await?;
+            }
         }
 
         Ok(world_event)
@@ -634,28 +652,28 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         Ok(())
     }
 
-    // async fn process_transaction(
-    //     &mut self,
-    //     block_number: u64,
-    //     block_timestamp: u64,
-    //     transaction_hash: Felt,
-    //     transaction: &Transaction,
-    // ) -> Result<()> {
-    //     for processor in &self.processors.transaction {
-    //         processor
-    //             .process(
-    //                 &mut self.db,
-    //                 self.provider.as_ref(),
-    //                 block_number,
-    //                 block_timestamp,
-    //                 transaction_hash,
-    //                 transaction,
-    //             )
-    //             .await?
-    //     }
+    async fn process_transaction(
+        &mut self,
+        block_number: u64,
+        block_timestamp: u64,
+        transaction_hash: Felt,
+        transaction: &Transaction,
+    ) -> Result<()> {
+        for processor in &self.processors.transaction {
+            processor
+                .process(
+                    &mut self.db,
+                    self.provider.as_ref(),
+                    block_number,
+                    block_timestamp,
+                    transaction_hash,
+                    transaction,
+                )
+                .await?
+        }
 
-    //     Ok(())
-    // }
+        Ok(())
+    }
 
     async fn process_event(
         &mut self,
@@ -663,9 +681,12 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         block_timestamp: u64,
         event_id: &str,
         event: &Event,
-        // transaction_hash: Felt,
+        transaction_hash: Felt,
     ) -> Result<()> {
-        // self.db.store_event(event_id, event, transaction_hash, block_timestamp);
+        if self.config.flags.contains(IndexingFlags::RAW_EVENTS) {
+            self.db.store_event(event_id, event, transaction_hash, block_timestamp);
+        }
+
         let event_key = event.keys[0];
 
         let Some(processor) = self.processors.event.get(&event_key) else {

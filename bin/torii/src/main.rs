@@ -30,7 +30,7 @@ use starknet::providers::JsonRpcClient;
 use tokio::sync::broadcast;
 use tokio::sync::broadcast::Sender;
 use tokio_stream::StreamExt;
-use torii_core::engine::{Engine, EngineConfig, Processors};
+use torii_core::engine::{Engine, EngineConfig, IndexingFlags, Processors};
 use torii_core::processors::event_message::EventMessageProcessor;
 use torii_core::processors::generate_event_processors_map;
 use torii_core::processors::metadata_update::MetadataUpdateProcessor;
@@ -132,6 +132,14 @@ struct Args {
     /// Max concurrent tasks
     #[arg(long, default_value = "100")]
     max_concurrent_tasks: usize,
+
+    /// Whether or not to index world transactions
+    #[arg(long, action = ArgAction::Set, default_value_t = true)]
+    index_transactions: bool,
+
+    /// Whether or not to index raw events
+    #[arg(long, action = ArgAction::Set, default_value_t = true)]
+    index_raw_events: bool,
 }
 
 #[tokio::main]
@@ -195,6 +203,14 @@ async fn main() -> anyhow::Result<()> {
 
     let (block_tx, block_rx) = tokio::sync::mpsc::channel(100);
 
+    let mut flags = IndexingFlags::empty();
+    if args.index_transactions {
+        flags.insert(IndexingFlags::TRANSACTIONS);
+    }
+    if args.index_raw_events {
+        flags.insert(IndexingFlags::RAW_EVENTS);
+    }
+
     let mut engine = Engine::new(
         world,
         db.clone(),
@@ -206,6 +222,7 @@ async fn main() -> anyhow::Result<()> {
             events_chunk_size: args.events_chunk_size,
             index_pending: args.index_pending,
             polling_interval: Duration::from_millis(args.polling_interval),
+            flags,
         },
         shutdown_tx.clone(),
         Some(block_tx),
