@@ -239,11 +239,7 @@ alloy-transport = { version = "0.2", default-features = false }
 
 starknet = "0.12.0"
 starknet-crypto = "0.7.1"
-# `starknet-rs` is using `starknet-types-core` 0.1.3, but we need >=0.1.4 because
-# we need this <https://github.com/starknet-io/types-rs/pull/75>. So we put strict
-# requirement here to prevent from being downgraded.
-# We can remove this requirement once `starknet-rs` is using >=0.1.4
-starknet-types-core = "~0.1.4"
+starknet-types-core = "0.1.5"
 
 [patch.crates-io]
 # This patch is required especially for `katana-db` to work properly.
