@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1726686648774,
+  "lastUpdate": 1726712946437,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -20893,6 +20893,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3924013,
             "range": "± 119021",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7c5a1f5d576a757b53f63d84a3232b62efef236d",
+          "message": "chore(torii-core): WAL journal mode & remove max conns (#2439)\n\n* fix(torii-core): sqlite shared cache\r\n\r\n* use options\r\n\r\n* fmt\r\n\r\n* database url\r\n\r\n* chore\r\n\r\n* shared cache better\r\n\r\n* removbe max connections\r\n\r\n* shared memory is by default on\r\n\r\n* fmt",
+          "timestamp": "2024-09-18T22:12:34-04:00",
+          "tree_id": "a98f6a857c3883b7616f4f8adc3c706ddb6dc2c3",
+          "url": "https://github.com/dojoengine/dojo/commit/7c5a1f5d576a757b53f63d84a3232b62efef236d"
+        },
+        "date": 1726712945160,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 22708970219,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
