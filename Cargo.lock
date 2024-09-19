@@ -8178,8 +8178,11 @@ dependencies = [
 name = "katana-runner-macro"
 version = "1.0.0-alpha.12"
 dependencies = [
+ "proc-macro2",
  "quote",
  "starknet 0.11.0",
+ "strum 0.25.0",
+ "strum_macros 0.25.3",
  "syn 2.0.77",
 ]
 

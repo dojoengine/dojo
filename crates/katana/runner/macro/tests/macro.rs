@@ -2,7 +2,7 @@
 
 // user can set the individual fields when using the macro
 #[katana_runner::test(
-	flavor = "embedded", // binary | embedded
+	block_time = 1000,
     fee = false,
     accounts = 1,
     chain_id = 0x12345,
@@ -20,8 +20,8 @@ async fn foo(node: &mut RunnerCtx) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-// but they could also just pass the whole RunnerCfg struct if they want to allow defining the configuration
-// once and reuse it across different tests
+// but they could also just pass the whole RunnerCfg struct if they want to allow defining the
+// configuration once and reuse it across different tests
 
 #[katana_runner::test(RunnerCfg { })]
 async fn foo(node: &mut RunnerCtx) -> Result<(), Box<dyn std::error::Error>> {
