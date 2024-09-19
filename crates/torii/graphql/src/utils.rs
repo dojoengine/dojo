@@ -1,5 +1,8 @@
+use std::str::FromStr;
+
 use async_graphql::{Result, Value};
 use convert_case::{Case, Casing};
+use starknet_crypto::Felt;
 
 use crate::error::ExtractError;
 use crate::types::ValueMapping;
@@ -23,6 +26,18 @@ impl ExtractFromIndexMap for String {
         let value = indexmap.get(input).ok_or_else(|| ExtractError::NotFound(input.to_string()))?;
         match value {
             Value::String(s) => Ok(s.to_string()),
+            _ => Err(ExtractError::NotString(input.to_string())),
+        }
+    }
+}
+
+impl ExtractFromIndexMap for Felt {
+    fn extract(indexmap: &ValueMapping, input: &str) -> Result<Self, ExtractError> {
+        let value = indexmap.get(input).ok_or_else(|| ExtractError::NotFound(input.to_string()))?;
+        match value {
+            Value::String(s) => {
+                Ok(Felt::from_str(s).map_err(|_| ExtractError::NotFelt(input.to_string()))?)
+            }
             _ => Err(ExtractError::NotString(input.to_string())),
         }
     }

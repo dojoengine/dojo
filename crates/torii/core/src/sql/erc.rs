@@ -148,6 +148,8 @@ impl Sql {
                 .fetch_one(&self.pool)
                 .await?;
 
+        // TODO(opt): we dont need to make rpc call for each token id for erc721, metadata for all
+        // tokens is same is same for a specific contract
         if !token_exists {
             register_erc721_token_metadata(
                 contract_address,
