@@ -7,8 +7,7 @@ on:
       - ci-preview
 
 jobs:
-  build-and-push:
-    name: Build and push
+  publish:
     runs-on: ubuntu-latest
 
     steps:
@@ -18,7 +17,16 @@ jobs:
       - name: Cache Docker layers
         uses: actions/cache@v4
         with:
-          path: /tmp/.buildx-cache
+          path: /tmp/.buildx-cache/prebuild
+          key: ${{ runner.os }}-buildx-${{ github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-${{ github.ref_name }}
+            ${{ runner.os }}-buildx-
+
+      - name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache/build
           key: ${{ runner.os }}-buildx-${{ github.ref_name }}-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-buildx-${{ github.ref_name }}
@@ -47,8 +55,8 @@ jobs:
           file: .github/Dockerfile
           load: true
           tags: build-local:latest
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+          cache-from: type=local,src=/tmp/.buildx-cache/prebuild
+          cache-to: type=local,dest=/tmp/.buildx-cache-new/prebuild,mode=max
           platforms: linux/amd64
 
       - name: Build local binaries
@@ -64,8 +72,8 @@ jobs:
         with:
           push: true
           tags: ghcr.io/${{ github.repository }}:preview--${{ steps.vars.outputs.sha_short }}
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+          cache-from: type=local,src=/tmp/.buildx-cache/build
+          cache-to: type=local,dest=/tmp/.buildx-cache-new/build,mode=max
           platforms: linux/amd64
           build-contexts: |
             artifacts=artifacts
@@ -75,5 +83,7 @@ jobs:
         # https://github.com/moby/buildkit/issues/1896
         name: Move cache
         run: |
-          rm -rf /tmp/.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+          rm -rf /tmp/.buildx-cache/prebuild
+          mv /tmp/.buildx-cache-new/prebuild /tmp/.buildx-cache/prebuild
+          rm -rf /tmp/.buildx-cache/build
+          mv /tmp/.buildx-cache-new/build /tmp/.buildx-cache/build
