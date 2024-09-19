@@ -5,8 +5,9 @@ use cainome::cairo_serde::{ByteArray, CairoSerde};
 use starknet::core::types::{BlockId, BlockTag, Felt, FunctionCall, U256};
 use starknet::core::utils::{get_selector_from_name, parse_cairo_short_string};
 use starknet::providers::Provider;
+use tracing::debug;
 
-use super::query_queue::{Argument, QueryQueue, QueryType};
+use super::query_queue::{Argument, QueryType};
 use super::utils::{sql_string_to_u256, u256_to_sql_string};
 use super::{Sql, FELT_DELIMITER};
 use crate::sql::utils::{felt_and_u256_to_sql_string, felt_to_sql_string, felts_to_sql_string};
@@ -32,23 +33,16 @@ impl Sql {
                 .await?;
 
         if !token_exists {
-            register_erc20_token_metadata(
-                contract_address,
-                &mut self.query_queue,
-                &token_id,
-                provider,
-            )
-            .await?;
+            self.register_erc20_token_metadata(contract_address, &token_id, provider).await?;
         }
 
-        register_erc_transfer_event(
+        self.register_erc_transfer_event(
             contract_address,
             from_address,
             to_address,
             amount,
             &token_id,
             block_timestamp,
-            &mut self.query_queue,
         );
 
         // Update balances in erc20_balance table
@@ -148,26 +142,17 @@ impl Sql {
                 .fetch_one(&self.pool)
                 .await?;
 
-        // TODO(opt): we dont need to make rpc call for each token id for erc721, metadata for all
-        // tokens is same is same for a specific contract
         if !token_exists {
-            register_erc721_token_metadata(
-                contract_address,
-                &mut self.query_queue,
-                &token_id,
-                provider,
-            )
-            .await?;
+            self.register_erc721_token_metadata(contract_address, &token_id, provider).await?;
         }
 
-        register_erc_transfer_event(
+        self.register_erc_transfer_event(
             contract_address,
             from_address,
             to_address,
             U256::from(1u8),
             &token_id,
             block_timestamp,
-            &mut self.query_queue,
         );
 
         // Update balances in erc721_balances table
@@ -218,173 +203,204 @@ impl Sql {
 
         Ok(())
     }
-}
 
-async fn register_erc20_token_metadata<P: Provider + Sync>(
-    contract_address: Felt,
-    queue: &mut QueryQueue,
-    token_id: &str,
-    provider: &P,
-) -> Result<()> {
-    // Fetch token information from the chain
-    let name = provider
-        .call(
-            FunctionCall {
-                contract_address,
-                entry_point_selector: get_selector_from_name("name").unwrap(),
-                calldata: vec![],
-            },
-            BlockId::Tag(BlockTag::Pending),
+    async fn register_erc20_token_metadata<P: Provider + Sync>(
+        &mut self,
+        contract_address: Felt,
+        token_id: &str,
+        provider: &P,
+    ) -> Result<()> {
+        // Fetch token information from the chain
+        let name = provider
+            .call(
+                FunctionCall {
+                    contract_address,
+                    entry_point_selector: get_selector_from_name("name").unwrap(),
+                    calldata: vec![],
+                },
+                BlockId::Tag(BlockTag::Pending),
+            )
+            .await?;
+
+        // len = 1 => return value felt (i.e. legacy erc20 token)
+        // len > 1 => return value ByteArray (i.e. new erc20 token)
+        let name = if name.len() == 1 {
+            parse_cairo_short_string(&name[0]).unwrap()
+        } else {
+            ByteArray::cairo_deserialize(&name, 0)
+                .expect("Return value not ByteArray")
+                .to_string()
+                .expect("Return value not String")
+        };
+
+        let symbol = provider
+            .call(
+                FunctionCall {
+                    contract_address,
+                    entry_point_selector: get_selector_from_name("symbol").unwrap(),
+                    calldata: vec![],
+                },
+                BlockId::Tag(BlockTag::Pending),
+            )
+            .await?;
+
+        let symbol = if symbol.len() == 1 {
+            parse_cairo_short_string(&symbol[0]).unwrap()
+        } else {
+            ByteArray::cairo_deserialize(&symbol, 0)
+                .expect("Return value not ByteArray")
+                .to_string()
+                .expect("Return value not String")
+        };
+
+        let decimals = provider
+            .call(
+                FunctionCall {
+                    contract_address,
+                    entry_point_selector: get_selector_from_name("decimals").unwrap(),
+                    calldata: vec![],
+                },
+                BlockId::Tag(BlockTag::Pending),
+            )
+            .await?;
+        let decimals = u8::cairo_deserialize(&decimals, 0).expect("Return value not u8");
+
+        // Insert the token into the tokens table
+        self.query_queue.enqueue(
+            "INSERT INTO tokens (id, contract_address, name, symbol, decimals) VALUES (?, ?, ?, \
+             ?, ?)",
+            vec![
+                Argument::String(token_id.to_string()),
+                Argument::FieldElement(contract_address),
+                Argument::String(name),
+                Argument::String(symbol),
+                Argument::Int(decimals.into()),
+            ],
+            QueryType::Other,
+        );
+
+        Ok(())
+    }
+
+    async fn register_erc721_token_metadata<P: Provider + Sync>(
+        &mut self,
+        contract_address: Felt,
+        token_id: &str,
+        provider: &P,
+    ) -> Result<()> {
+        let res = sqlx::query_as::<_, (String, String, u8)>(
+            "SELECT name, symbol, decimals FROM tokens WHERE contract_address = ?",
         )
-        .await?;
+        .bind(felt_to_sql_string(&contract_address))
+        .fetch_one(&self.pool)
+        .await;
 
-    // len = 1 => return value felt (i.e. legacy erc20 token)
-    // len > 1 => return value ByteArray (i.e. new erc20 token)
-    let name = if name.len() == 1 {
-        parse_cairo_short_string(&name[0]).unwrap()
-    } else {
-        ByteArray::cairo_deserialize(&name, 0)
-            .expect("Return value not ByteArray")
-            .to_string()
-            .expect("Return value not String")
-    };
+        // If we find a token already registered for this contract_address we dont need to refetch
+        // the data since its same for all ERC721 tokens
+        if let Ok((name, symbol, decimals)) = res {
+            debug!(
+                contract_address = %felt_to_sql_string(&contract_address),
+                "Token already registered for contract_address, so reusing fetched data",
+            );
+            self.query_queue.enqueue(
+                "INSERT INTO tokens (id, contract_address, name, symbol, decimals) VALUES (?, ?, \
+                 ?, ?, ?)",
+                vec![
+                    Argument::String(token_id.to_string()),
+                    Argument::FieldElement(contract_address),
+                    Argument::String(name),
+                    Argument::String(symbol),
+                    Argument::Int(decimals.into()),
+                ],
+                QueryType::Other,
+            );
+            return Ok(());
+        }
 
-    let symbol = provider
-        .call(
-            FunctionCall {
-                contract_address,
-                entry_point_selector: get_selector_from_name("symbol").unwrap(),
-                calldata: vec![],
-            },
-            BlockId::Tag(BlockTag::Pending),
-        )
-        .await?;
+        // Fetch token information from the chain
+        let name = provider
+            .call(
+                FunctionCall {
+                    contract_address,
+                    entry_point_selector: get_selector_from_name("name").unwrap(),
+                    calldata: vec![],
+                },
+                BlockId::Tag(BlockTag::Pending),
+            )
+            .await?;
 
-    let symbol = if symbol.len() == 1 {
-        parse_cairo_short_string(&symbol[0]).unwrap()
-    } else {
-        ByteArray::cairo_deserialize(&symbol, 0)
-            .expect("Return value not ByteArray")
-            .to_string()
-            .expect("Return value not String")
-    };
+        // len = 1 => return value felt (i.e. legacy erc721 token)
+        // len > 1 => return value ByteArray (i.e. new erc721 token)
+        let name = if name.len() == 1 {
+            parse_cairo_short_string(&name[0]).unwrap()
+        } else {
+            ByteArray::cairo_deserialize(&name, 0)
+                .expect("Return value not ByteArray")
+                .to_string()
+                .expect("Return value not String")
+        };
 
-    let decimals = provider
-        .call(
-            FunctionCall {
-                contract_address,
-                entry_point_selector: get_selector_from_name("decimals").unwrap(),
-                calldata: vec![],
-            },
-            BlockId::Tag(BlockTag::Pending),
-        )
-        .await?;
-    let decimals = u8::cairo_deserialize(&decimals, 0).expect("Return value not u8");
+        let symbol = provider
+            .call(
+                FunctionCall {
+                    contract_address,
+                    entry_point_selector: get_selector_from_name("symbol").unwrap(),
+                    calldata: vec![],
+                },
+                BlockId::Tag(BlockTag::Pending),
+            )
+            .await?;
+        let symbol = if symbol.len() == 1 {
+            parse_cairo_short_string(&symbol[0]).unwrap()
+        } else {
+            ByteArray::cairo_deserialize(&symbol, 0)
+                .expect("Return value not ByteArray")
+                .to_string()
+                .expect("Return value not String")
+        };
 
-    // Insert the token into the tokens table
-    queue.enqueue(
-        "INSERT INTO tokens (id, contract_address, name, symbol, decimals) VALUES (?, ?, ?, ?, ?)",
-        vec![
-            Argument::String(token_id.to_string()),
-            Argument::FieldElement(contract_address),
-            Argument::String(name),
-            Argument::String(symbol),
-            Argument::Int(decimals.into()),
-        ],
-        QueryType::Other,
-    );
+        let decimals = 0;
 
-    Ok(())
-}
+        // Insert the token into the tokens table
+        self.query_queue.enqueue(
+            "INSERT INTO tokens (id, contract_address, name, symbol, decimals) VALUES (?, ?, ?, \
+             ?, ?)",
+            vec![
+                Argument::String(token_id.to_string()),
+                Argument::FieldElement(contract_address),
+                Argument::String(name),
+                Argument::String(symbol),
+                Argument::Int(decimals.into()),
+            ],
+            QueryType::Other,
+        );
 
-async fn register_erc721_token_metadata<P: Provider + Sync>(
-    contract_address: Felt,
-    queue: &mut QueryQueue,
-    token_id: &str,
-    provider: &P,
-) -> Result<()> {
-    // Fetch token information from the chain
-    let name = provider
-        .call(
-            FunctionCall {
-                contract_address,
-                entry_point_selector: get_selector_from_name("name").unwrap(),
-                calldata: vec![],
-            },
-            BlockId::Tag(BlockTag::Pending),
-        )
-        .await?;
+        Ok(())
+    }
 
-    // len = 1 => return value felt (i.e. legacy erc721 token)
-    // len > 1 => return value ByteArray (i.e. new erc721 token)
-    let name = if name.len() == 1 {
-        parse_cairo_short_string(&name[0]).unwrap()
-    } else {
-        ByteArray::cairo_deserialize(&name, 0)
-            .expect("Return value not ByteArray")
-            .to_string()
-            .expect("Return value not String")
-    };
+    fn register_erc_transfer_event(
+        &mut self,
+        contract_address: Felt,
+        from: Felt,
+        to: Felt,
+        amount: U256,
+        token_id: &str,
+        block_timestamp: u64,
+    ) {
+        let insert_query = "INSERT INTO erc_transfers (contract_address, from_address, \
+                            to_address, amount, token_id, executed_at) VALUES (?, ?, ?, ?, ?, ?)";
 
-    let symbol = provider
-        .call(
-            FunctionCall {
-                contract_address,
-                entry_point_selector: get_selector_from_name("symbol").unwrap(),
-                calldata: vec![],
-            },
-            BlockId::Tag(BlockTag::Pending),
-        )
-        .await?;
-    let symbol = if symbol.len() == 1 {
-        parse_cairo_short_string(&symbol[0]).unwrap()
-    } else {
-        ByteArray::cairo_deserialize(&symbol, 0)
-            .expect("Return value not ByteArray")
-            .to_string()
-            .expect("Return value not String")
-    };
-
-    let decimals = 0;
-
-    // Insert the token into the tokens table
-    queue.enqueue(
-        "INSERT INTO tokens (id, contract_address, name, symbol, decimals) VALUES (?, ?, ?, ?, ?)",
-        vec![
-            Argument::String(token_id.to_string()),
-            Argument::FieldElement(contract_address),
-            Argument::String(name),
-            Argument::String(symbol),
-            Argument::Int(decimals.into()),
-        ],
-        QueryType::Other,
-    );
-
-    Ok(())
-}
-
-fn register_erc_transfer_event(
-    contract_address: Felt,
-    from: Felt,
-    to: Felt,
-    amount: U256,
-    token_id: &str,
-    block_timestamp: u64,
-    queue: &mut QueryQueue,
-) {
-    let insert_query = "INSERT INTO erc_transfers (contract_address, from_address, to_address, \
-                        amount, token_id, executed_at) VALUES (?, ?, ?, ?, ?, ?)";
-
-    queue.enqueue(
-        insert_query,
-        vec![
-            Argument::FieldElement(contract_address),
-            Argument::FieldElement(from),
-            Argument::FieldElement(to),
-            Argument::String(u256_to_sql_string(&amount)),
-            Argument::String(token_id.to_string()),
-            Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
-        ],
-        QueryType::Other,
-    );
+        self.query_queue.enqueue(
+            insert_query,
+            vec![
+                Argument::FieldElement(contract_address),
+                Argument::FieldElement(from),
+                Argument::FieldElement(to),
+                Argument::String(u256_to_sql_string(&amount)),
+                Argument::String(token_id.to_string()),
+                Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
+            ],
+            QueryType::Other,
+        );
+    }
 }
