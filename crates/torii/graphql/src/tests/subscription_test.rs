@@ -23,7 +23,7 @@ mod tests {
     #[sqlx::test(migrations = "../migrations")]
     #[serial]
     async fn test_entity_subscription(pool: SqlitePool) {
-        let mut db = Sql::new(pool.clone(), Felt::ZERO, &HashMap::new()).await.unwrap();
+        let mut db = Sql::new(pool.clone(), Felt::ZERO, &HashMap::default()).await.unwrap();
 
         model_fixtures(&mut db).await;
         // 0. Preprocess expected entity value
