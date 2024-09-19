@@ -7,6 +7,7 @@ mod tests {
     use sqlx::SqlitePool;
     use starknet::core::types::Felt;
     use torii_core::sql::Sql;
+    use torii_core::types::ContractType;
 
     use crate::schema::build_schema;
     use crate::tests::{run_graphql_query, Connection, Content, Metadata as SqlMetadata, Social};
@@ -50,7 +51,10 @@ mod tests {
 
     #[sqlx::test(migrations = "../migrations")]
     async fn test_metadata(pool: SqlitePool) {
-        let mut db = Sql::new(pool.clone(), Felt::ZERO, &HashMap::default()).await.unwrap();
+        let mut db =
+            Sql::new(pool.clone(), Felt::ZERO, &HashMap::from([(Felt::ZERO, ContractType::WORLD)]))
+                .await
+                .unwrap();
         let schema = build_schema(&pool).await.unwrap();
 
         let cover_img = "QWxsIHlvdXIgYmFzZSBiZWxvbmcgdG8gdXM=";
@@ -103,7 +107,10 @@ mod tests {
 
     #[sqlx::test(migrations = "../migrations")]
     async fn test_empty_content(pool: SqlitePool) {
-        let mut db = Sql::new(pool.clone(), Felt::ZERO, &HashMap::default()).await.unwrap();
+        let mut db =
+            Sql::new(pool.clone(), Felt::ZERO, &HashMap::from([(Felt::ZERO, ContractType::WORLD)]))
+                .await
+                .unwrap();
         let schema = build_schema(&pool).await.unwrap();
 
         db.set_metadata(&RESOURCE, URI, BLOCK_TIMESTAMP);

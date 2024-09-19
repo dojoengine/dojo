@@ -4,7 +4,7 @@ use cainome::cairo_serde::{CairoSerde, U256 as U256Cainome};
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{Event, U256};
 use starknet::providers::Provider;
-use tracing::info;
+use tracing::debug;
 
 use super::EventProcessor;
 use crate::sql::Sql;
@@ -24,6 +24,7 @@ where
     }
 
     fn validate(&self, event: &Event) -> bool {
+        // ref: https://github.com/OpenZeppelin/cairo-contracts/blob/ba00ce76a93dcf25c081ab2698da20690b5a1cfb/packages/token/src/erc20/erc20.cairo#L38-L46
         // key: [hash(Transfer), from, to]
         // data: [value.0, value.1]
         if event.keys.len() == 3 && event.data.len() == 2 {
@@ -51,7 +52,7 @@ where
 
         db.handle_erc20_transfer(token_address, from, to, value, world.provider(), block_timestamp)
             .await?;
-        info!(target: LOG_TARGET,from = ?from, to = ?to, value = ?value, "ERC20 Transfer");
+        debug!(target: LOG_TARGET,from = ?from, to = ?to, value = ?value, "ERC20 Transfer");
 
         Ok(())
     }

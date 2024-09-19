@@ -3,7 +3,7 @@ use std::convert::TryInto;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use chrono::Utc;
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{EnumOption, Member, Struct, Ty};
@@ -20,7 +20,7 @@ use utils::felts_to_sql_string;
 
 use crate::cache::{Model, ModelCache};
 use crate::types::{
-    ErcContract, Event as EventEmitted, EventMessage as EventMessageUpdated,
+    ContractType, Event as EventEmitted, EventMessage as EventMessageUpdated,
     Model as ModelRegistered,
 };
 use crate::utils::{must_utc_datetime_from_timestamp, utc_dt_string_from_timestamp};
@@ -68,29 +68,18 @@ impl Sql {
     pub async fn new(
         pool: Pool<Sqlite>,
         world_address: Felt,
-        erc_contracts: &HashMap<Felt, ErcContract>,
+        contracts: &HashMap<Felt, ContractType>,
     ) -> Result<Self> {
         let mut query_queue = QueryQueue::new(pool.clone());
 
-        query_queue.enqueue(
-            "INSERT OR IGNORE INTO contracts (id, contract_address, contract_type) VALUES (?, ?, \
-             ?)",
-            vec![
-                Argument::FieldElement(world_address),
-                Argument::FieldElement(world_address),
-                Argument::String(WORLD_CONTRACT_TYPE.to_string()),
-            ],
-            QueryType::Other,
-        );
-
-        for contract in erc_contracts.values() {
+        for contract in contracts {
             query_queue.enqueue(
                 "INSERT OR IGNORE INTO contracts (id, contract_address, contract_type) VALUES (?, \
                  ?, ?)",
                 vec![
-                    Argument::FieldElement(contract.contract_address),
-                    Argument::FieldElement(contract.contract_address),
-                    Argument::String(contract.r#type.to_string()),
+                    Argument::FieldElement(*contract.0),
+                    Argument::FieldElement(*contract.0),
+                    Argument::String(contract.1.to_string()),
                 ],
                 QueryType::Other,
             );
@@ -131,8 +120,10 @@ impl Sql {
             )
             .bind(format!("{:#x}", contract));
 
-        let indexer: (Option<i64>, Option<String>, Option<String>, String) =
-            indexer_query.fetch_one(&mut *conn).await?;
+        let indexer: (Option<i64>, Option<String>, Option<String>, String) = indexer_query
+            .fetch_one(&mut *conn)
+            .await
+            .with_context(|| format!("Failed to fetch head for contract: {:#x}", contract))?;
         Ok((
             indexer.0.map(|h| h.try_into().expect("doesn't fit in u64")).unwrap_or(0),
             indexer.1.map(|f| Felt::from_str(&f)).transpose()?,
