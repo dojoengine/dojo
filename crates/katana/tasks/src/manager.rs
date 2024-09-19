@@ -51,7 +51,7 @@ impl TaskManager {
     /// to completion or cancellation.
     ///
     /// No task can be spawned on the manager after this method is called.
-    pub async fn shutdown(self) {
+    pub async fn shutdown(&self) {
         if !self.on_cancel.is_cancelled() {
             self.on_cancel.cancel();
         }

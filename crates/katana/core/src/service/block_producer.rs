@@ -430,7 +430,7 @@ impl<EF: ExecutorFactory> Stream for IntervalBlockProducer<EF> {
 
                             // initialize block timer -------------------
 
-                            if let Some(duration) = dbg!(pin.interval.as_ref()) {
+                            if let Some(duration) = pin.interval.as_ref() {
                                 let duration = Duration::from_millis(*duration);
                                 let mut interval = interval_at(Instant::now() + duration, duration);
                                 interval.set_missed_tick_behavior(MissedTickBehavior::Delay);
