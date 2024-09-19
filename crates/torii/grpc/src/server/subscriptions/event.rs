@@ -4,6 +4,7 @@ use std::pin::Pin;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::task::{Context, Poll};
+use std::time::Duration;
 
 use futures::Stream;
 use futures_util::StreamExt;
@@ -11,6 +12,7 @@ use rand::Rng;
 use starknet::core::types::Felt;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tokio::sync::RwLock;
+use tokio::time::interval;
 use torii_core::error::{Error, ParseError};
 use torii_core::simple_broker::SimpleBroker;
 use torii_core::sql::FELT_DELIMITER;
@@ -62,13 +64,42 @@ impl EventManager {
 #[must_use = "Service does nothing unless polled"]
 #[allow(missing_debug_implementations)]
 pub struct Service {
-    subs_manager: Arc<EventManager>,
     simple_broker: Pin<Box<dyn Stream<Item = Event> + Send>>,
+    update_sender: Sender<Event>,
 }
 
 impl Service {
     pub fn new(subs_manager: Arc<EventManager>) -> Self {
-        Self { subs_manager, simple_broker: Box::pin(SimpleBroker::<Event>::subscribe()) }
+        let (update_sender, update_receiver) = channel(100);
+        let service =
+            Self { simple_broker: Box::pin(SimpleBroker::<Event>::subscribe()), update_sender };
+
+        // Spawn a task to process event updates
+        tokio::spawn(Self::process_updates(Arc::clone(&subs_manager), update_receiver));
+
+        service
+    }
+
+    async fn process_updates(subs: Arc<EventManager>, mut update_receiver: Receiver<Event>) {
+        let mut interval = interval(Duration::from_millis(100));
+        let mut pending_updates = Vec::new();
+
+        loop {
+            tokio::select! {
+                _ = interval.tick() => {
+                    if !pending_updates.is_empty() {
+                        for event in pending_updates.drain(..) {
+                            if let Err(e) = Self::publish_updates(Arc::clone(&subs), &event).await {
+                                error!(target = LOG_TARGET, error = %e, "Publishing events update.");
+                            }
+                        }
+                    }
+                }
+                Some(event) = update_receiver.recv() => {
+                    pending_updates.push(event);
+                }
+            }
+        }
     }
 
     async fn publish_updates(subs: Arc<EventManager>, event: &Event) -> Result<(), Error> {
@@ -151,10 +182,10 @@ impl Future for Service {
         let pin = self.get_mut();
 
         while let Poll::Ready(Some(event)) = pin.simple_broker.poll_next_unpin(cx) {
-            let subs = Arc::clone(&pin.subs_manager);
+            let sender = pin.update_sender.clone();
             tokio::spawn(async move {
-                if let Err(e) = Service::publish_updates(subs, &event).await {
-                    error!(target = LOG_TARGET, error = %e, "Publishing events update.");
+                if let Err(e) = sender.send(event).await {
+                    error!(target = LOG_TARGET, error = %e, "Sending event update to channel.");
                 }
             });
         }
