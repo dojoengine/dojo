@@ -28,11 +28,8 @@ use starknet::providers::{JsonRpcClient, Provider};
 use tokio::sync::broadcast;
 use tokio_stream::StreamExt;
 use torii_core::engine::{Engine, EngineConfig, Processors};
-use torii_core::processors::generate_event_processors_map;
-use torii_core::processors::register_model::RegisterModelProcessor;
-use torii_core::processors::store_del_record::StoreDelRecordProcessor;
-use torii_core::processors::store_set_record::StoreSetRecordProcessor;
 use torii_core::sql::Sql;
+use torii_core::types::ContractType;
 
 mod entities_test;
 mod events_test;
@@ -351,26 +348,25 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
 
     let world = WorldContractReader::new(strat.world_address, Arc::clone(&provider));
 
-    let db = Sql::new(pool.clone(), strat.world_address, &HashMap::new()).await.unwrap();
+    let db = Sql::new(
+        pool.clone(),
+        strat.world_address,
+        &HashMap::from([(strat.world_address, ContractType::WORLD)]),
+    )
+    .await
+    .unwrap();
+    let world_address = strat.world_address;
 
     let (shutdown_tx, _) = broadcast::channel(1);
     let mut engine = Engine::new(
         world,
         db,
         Arc::clone(&provider),
-        Processors {
-            event: generate_event_processors_map(vec![
-                Box::new(RegisterModelProcessor),
-                Box::new(StoreSetRecordProcessor),
-                Box::new(StoreDelRecordProcessor),
-            ])
-            .unwrap(),
-            ..Processors::default()
-        },
+        Processors { ..Processors::default() },
         EngineConfig::default(),
         shutdown_tx,
         None,
-        HashMap::new(),
+        Arc::new(HashMap::from([(world_address, ContractType::WORLD)])),
     );
 
     let to = account.provider().block_hash_and_number().await?.block_number;
