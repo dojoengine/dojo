@@ -55,6 +55,7 @@ jobs:
         run: |
           set -eux
           docker run --rm -v "$(pwd)/artifacts:/artifacts" build-local:latest /bin/sh -c "cp -r /app/artifacts/* /artifacts"
+          ls -R artifacts/
 
       - name: Build and push docker image
         uses: docker/build-push-action@v3
