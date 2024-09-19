@@ -42,8 +42,10 @@ jobs:
 
       - name: Build binaries
         run: |
-          docker build -t build -f .github/Dockerfile .
-            docker run --rm -v "$(pwd)/artifacts:/artifacts" build /bin/sh -c "cp -r /app/artifacts/* /artifacts"
+          docker buildx build -t build -f .github/Dockerfile . \
+            --cache-from type=local,src=/tmp/.buildx-cache \
+            --cache-to type=local,dest=/tmp/.buildx-cache-new,mode=max
+          docker run --rm -v "$(pwd)/artifacts:/artifacts" build /bin/sh -c "cp -r /app/artifacts/* /artifacts"
 
       - name: Build and push docker image
         uses: docker/build-push-action@v3
@@ -51,7 +53,7 @@ jobs:
           push: true
           tags: ghcr.io/${{ github.repository }}:preview--${{ steps.vars.outputs.sha_short }}
           cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache-new
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
           platforms: linux/amd64
           build-contexts: |
             artifacts=artifacts
