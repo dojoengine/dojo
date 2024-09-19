@@ -229,10 +229,10 @@ impl DojoWorld {
 
         let mut all_entities = Vec::new();
 
-        // Start a transaction
         let mut tx = self.pool.begin().await?;
 
-        // Create a temporary table to store entity IDs
+        // Create a temporary table to store entity IDs due to them potentially exceeding
+        // SQLite's parameters limit which is 999
         sqlx::query(
             "CREATE TEMPORARY TABLE temp_entity_ids (id TEXT PRIMARY KEY, model_group TEXT)",
         )
@@ -295,10 +295,8 @@ impl DojoWorld {
             all_entities.extend(group_entities?);
         }
 
-        // Drop the temporary table
         sqlx::query("DROP TABLE temp_entity_ids").execute(&mut *tx).await?;
 
-        // Commit the transaction
         tx.commit().await?;
 
         Ok(all_entities)
@@ -599,7 +597,6 @@ impl DojoWorld {
             arrays_rows.insert(name, rows);
         }
 
-        // Use Rayon to parallelize the mapping of rows to entities
         let arrays_rows = Arc::new(arrays_rows);
         let entities_collection: Result<Vec<_>, Error> = db_entities
             .par_iter()
@@ -870,15 +867,17 @@ fn map_row_to_entity(
 
 // this builds a sql safe regex pattern to match against for keys
 fn build_keys_pattern(clause: &proto::types::KeysClause) -> Result<String, Error> {
+    const KEY_PATTERN: &str = "0x[0-9a-fA-F]+";
+
     let keys = if clause.keys.is_empty() {
-        vec!["0x[0-9a-fA-F]+".to_string()]
+        vec![KEY_PATTERN.to_string()]
     } else {
         clause
             .keys
             .iter()
             .map(|bytes| {
                 if bytes.is_empty() {
-                    return Ok("0x[0-9a-fA-F]+".to_string());
+                    return Ok(KEY_PATTERN.to_string());
                 }
                 Ok(format!("{:#x}", Felt::from_bytes_be_slice(bytes)))
             })
@@ -887,7 +886,7 @@ fn build_keys_pattern(clause: &proto::types::KeysClause) -> Result<String, Error
     let mut keys_pattern = format!("^{}", keys.join("/"));
 
     if clause.pattern_matching == proto::types::PatternMatching::VariableLen as i32 {
-        keys_pattern += "(/0x[0-9a-fA-F]+)*";
+        keys_pattern += &format!("({})*", KEY_PATTERN);
     }
     keys_pattern += "/$";
 
