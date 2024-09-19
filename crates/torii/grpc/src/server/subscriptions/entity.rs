@@ -93,7 +93,7 @@ impl Service {
         subs_manager: Arc<EntityManager>,
         model_cache: Arc<ModelCache>,
     ) -> Self {
-        let (update_sender, update_receiver) = channel(100); // Adjust buffer size as needed
+        let (update_sender, update_receiver) = channel(100);
         let service =
             Self { simple_broker: Box::pin(SimpleBroker::<Entity>::subscribe()), update_sender };
 
