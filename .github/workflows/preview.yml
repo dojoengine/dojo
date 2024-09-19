@@ -40,12 +40,21 @@ jobs:
           git config --global --add safe.directory "${{ github.workspace }}"
           echo "sha_short=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
 
-      - name: Build binaries
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: .github/Dockerfile
+          load: true
+          tags: build-local:latest
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+          platforms: linux/amd64
+
+      - name: Build local binaries
         run: |
-          docker buildx build -t build -f .github/Dockerfile . \
-            --cache-from type=local,src=/tmp/.buildx-cache \
-            --cache-to type=local,dest=/tmp/.buildx-cache-new,mode=max
-          docker run --rm -v "$(pwd)/artifacts:/artifacts" build /bin/sh -c "cp -r /app/artifacts/* /artifacts"
+          set -eux
+          docker run --rm -v "$(pwd)/artifacts:/artifacts" build-local:latest /bin/sh -c "cp -r /app/artifacts/* /artifacts"
 
       - name: Build and push docker image
         uses: docker/build-push-action@v3
