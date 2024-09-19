@@ -334,7 +334,7 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
         .await
         .unwrap();
 
-    TransactionWaiter::new(transaction_hash, &provider).await?;
+    TransactionWaiter::new(transaction_hash, &account.provider()).await?;
 
     // Execute `delete` and delete Record with id 20
     let InvokeTransactionResult { transaction_hash } = account
