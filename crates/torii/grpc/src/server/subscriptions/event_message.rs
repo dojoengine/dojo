@@ -165,6 +165,7 @@ impl Service {
                 continue;
             }
 
+            // This should NEVER be None
             let model = entity.updated_model.as_ref().unwrap().as_struct().unwrap().clone();
             let resp = proto::world::SubscribeEntityResponse {
                 entity: Some(proto::types::Entity {
