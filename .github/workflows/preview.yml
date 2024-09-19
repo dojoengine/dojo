@@ -54,8 +54,10 @@ jobs:
       - name: Build local binaries
         run: |
           set -eux
-          docker run --rm -v "$(pwd)/artifacts:/artifacts" build-local:latest /bin/sh -c "cp -r /app/artifacts/* /artifacts"
+          docker run --rm -v "$(pwd)/artifacts:/artifacts" build-local:latest /bin/sh -c "cp -r /app/artifacts/* /artifacts/$PLATFORM"
           ls -R artifacts/
+        env:
+          PLATFORM: linux/amd64
 
       - name: Build and push docker image
         uses: docker/build-push-action@v3
