@@ -239,8 +239,4 @@ alloy-transport = { version = "0.3", default-features = false }
 
 starknet = "0.12.0"
 starknet-crypto = "0.7.1"
-starknet-types-core = "0.1.5"
-
-[patch.crates-io]
-# This patch is required especially for `katana-db` to work properly.
-starknet-types-core = { git = "https://github.com/starknet-io/types-rs", rev = "245907a" }
+starknet-types-core = "0.1.6"
