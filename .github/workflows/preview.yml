@@ -2,6 +2,9 @@ name: preview
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - ci-preview
 
 jobs:
   build-and-push:
