@@ -8,13 +8,10 @@ use std::task::{Context, Poll};
 use futures::Stream;
 use futures_util::StreamExt;
 use rand::Rng;
-use sqlx::{Pool, Sqlite};
 use starknet::core::types::Felt;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tokio::sync::RwLock;
-use torii_core::cache::ModelCache;
 use torii_core::error::{Error, ParseError};
-use torii_core::model::build_sql_query;
 use torii_core::simple_broker::SimpleBroker;
 use torii_core::sql::FELT_DELIMITER;
 use torii_core::types::Entity;
@@ -22,7 +19,6 @@ use tracing::{error, trace};
 
 use crate::proto;
 use crate::proto::world::SubscribeEntityResponse;
-use crate::server::map_row_to_entity;
 use crate::types::{EntityKeysClause, PatternMatching};
 
 pub(crate) const LOG_TARGET: &str = "torii::grpc::server::subscriptions::entity";
@@ -81,30 +77,22 @@ impl EntityManager {
 #[must_use = "Service does nothing unless polled"]
 #[allow(missing_debug_implementations)]
 pub struct Service {
-    pool: Pool<Sqlite>,
     subs_manager: Arc<EntityManager>,
-    model_cache: Arc<ModelCache>,
     simple_broker: Pin<Box<dyn Stream<Item = Entity> + Send>>,
 }
 
 impl Service {
     pub fn new(
-        pool: Pool<Sqlite>,
         subs_manager: Arc<EntityManager>,
-        model_cache: Arc<ModelCache>,
     ) -> Self {
         Self {
-            pool,
             subs_manager,
-            model_cache,
             simple_broker: Box::pin(SimpleBroker::<Entity>::subscribe()),
         }
     }
 
     async fn publish_updates(
         subs: Arc<EntityManager>,
-        cache: Arc<ModelCache>,
-        pool: Pool<Sqlite>,
         entity: &Entity,
     ) -> Result<(), Error> {
         let mut closed_stream = Vec::new();
@@ -204,41 +192,14 @@ impl Service {
                 continue;
             }
 
-            let models_query = r#"
-                    SELECT group_concat(entity_model.model_id) as model_ids
-                    FROM entities
-                    JOIN entity_model ON entities.id = entity_model.entity_id
-                    WHERE entities.id = ?
-                    GROUP BY entities.id
-                "#;
-            let (model_ids,): (String,) =
-                sqlx::query_as(models_query).bind(&entity.id).fetch_one(&pool).await?;
-            let model_ids: Vec<Felt> = model_ids
-                .split(',')
-                .map(Felt::from_str)
-                .collect::<Result<_, _>>()
-                .map_err(ParseError::FromStr)?;
-            let schemas = cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect();
-
-            let (entity_query, arrays_queries, _) = build_sql_query(
-                &schemas,
-                "entities",
-                "entity_id",
-                Some("entities.id = ?"),
-                Some("entities.id = ?"),
-                None,
-                None,
-            )?;
-
-            let row = sqlx::query(&entity_query).bind(&entity.id).fetch_one(&pool).await?;
-            let mut arrays_rows = HashMap::new();
-            for (name, query) in arrays_queries {
-                let row = sqlx::query(&query).bind(&entity.id).fetch_all(&pool).await?;
-                arrays_rows.insert(name, row);
-            }
-
+            let model = entity.updated_model.as_ref().unwrap().as_struct().unwrap().clone();
             let resp = proto::world::SubscribeEntityResponse {
-                entity: Some(map_row_to_entity(&row, &arrays_rows, schemas.clone())?),
+                entity: Some(proto::types::Entity {
+                    hashed_keys: hashed.to_bytes_be().to_vec(),
+                    models: vec![
+                        model.into()
+                    ],
+                }),
                 subscription_id: *idx,
             };
 
@@ -264,10 +225,8 @@ impl Future for Service {
 
         while let Poll::Ready(Some(entity)) = pin.simple_broker.poll_next_unpin(cx) {
             let subs = Arc::clone(&pin.subs_manager);
-            let cache = Arc::clone(&pin.model_cache);
-            let pool = pin.pool.clone();
             tokio::spawn(async move {
-                if let Err(e) = Service::publish_updates(subs, cache, pool, &entity).await {
+                if let Err(e) = Service::publish_updates(subs, &entity).await {
                     error!(target = LOG_TARGET, error = %e, "Publishing entity update.");
                 }
             });
