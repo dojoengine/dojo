@@ -138,7 +138,7 @@ struct Args {
     index_transactions: bool,
 
     /// Whether or not to index raw events
-    #[arg(long, action = ArgAction::Set, default_value_t = false)]
+    #[arg(long, action = ArgAction::Set, default_value_t = true)]
     index_raw_events: bool,
 }
 
@@ -211,7 +211,7 @@ async fn main() -> anyhow::Result<()> {
         flags.insert(IndexingFlags::RAW_EVENTS);
     }
 
-    let mut engine = Engine::new(
+    let mut engine: Engine<Arc<JsonRpcClient<HttpTransport>>> = Engine::new(
         world,
         db.clone(),
         provider.clone(),
