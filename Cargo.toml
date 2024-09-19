@@ -222,7 +222,7 @@ wasm-tonic = { version = "0.9.2", default-features = false, features = [ "codege
 wasm-tonic-build = { version = "0.9.2", default-features = false, features = [ "prost" ], package = "tonic-build" }
 
 alloy-primitives = { version = "0.8.3", default-features = false }
-alloy-sol-types = { version = "0.8.2", default-features = false }
+alloy-sol-types = { version = "0.8.3", default-features = false }
 
 criterion = "0.5.1"
 
