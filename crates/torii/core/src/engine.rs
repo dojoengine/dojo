@@ -1,4 +1,4 @@
-use std::collections::{btree_map, BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt::Debug;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::sync::Arc;
@@ -115,7 +115,7 @@ pub struct ParallelizedEvent {
 pub struct Engine<P: Provider + Send + Sync + std::fmt::Debug + 'static> {
     world: Arc<WorldContractReader<P>>,
     db: Sql,
-    provider: Box<P>,
+    provider: Arc<P>,
     processors: Arc<Processors<P>>,
     config: EngineConfig,
     shutdown_tx: Sender<()>,
@@ -145,7 +145,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         Self {
             world: Arc::new(world),
             db,
-            provider: Box::new(provider),
+            provider: Arc::new(provider),
             processors: Arc::new(processors),
             config,
             shutdown_tx,
@@ -314,6 +314,8 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         // Flatten events pages and events according to the pending block cursor
         // to array of (block_number, transaction_hash)
         let mut transactions = LinkedHashMap::new();
+
+        let mut block_set = HashSet::new();
         for event in events {
             let block_number = match event.block_number {
                 Some(block_number) => block_number,
@@ -340,17 +342,31 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                 }
             };
 
-            // Keep track of last block number and fetch block timestamp
-            if let btree_map::Entry::Vacant(v) = blocks.entry(block_number) {
-                debug!("Fetching block timestamp for block number: {}", block_number);
-                let block_timestamp = self.get_block_timestamp(block_number).await?;
-                v.insert(block_timestamp);
-            }
+            block_set.insert(block_number);
 
             transactions
                 .entry((block_number, event.transaction_hash))
                 .or_insert(vec![])
                 .push(event);
+        }
+
+        let semaphore = Arc::new(Semaphore::new(self.config.max_concurrent_tasks));
+        let mut set: JoinSet<Result<(u64, u64), anyhow::Error>> = JoinSet::new();
+
+        for block_number in block_set {
+            let semaphore = semaphore.clone();
+            let provider = self.provider.clone();
+            set.spawn(async move {
+                let _permit = semaphore.acquire().await.unwrap();
+                debug!("Fetching block timestamp for block number: {}", block_number);
+                let block_timestamp = get_block_timestamp(&provider, block_number).await?;
+                Ok((block_number, block_timestamp))
+            });
+        }
+
+        while let Some(result) = set.join_next().await {
+            let (block_number, block_timestamp) = result??;
+            blocks.insert(block_number, block_timestamp);
         }
 
         debug!("Transactions: {}", &transactions.len());
@@ -549,13 +565,6 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         }
 
         Ok(())
-    }
-
-    async fn get_block_timestamp(&self, block_number: u64) -> Result<u64> {
-        match self.provider.get_block_with_tx_hashes(BlockId::Number(block_number)).await? {
-            MaybePendingBlockWithTxHashes::Block(block) => Ok(block.timestamp),
-            MaybePendingBlockWithTxHashes::PendingBlock(block) => Ok(block.timestamp),
-        }
     }
 
     async fn process_transaction_with_events(
@@ -800,6 +809,10 @@ where
     let mut continuation_token = None;
 
     loop {
+        debug!(
+            "Fetching events page with continuation token: {:?}, for contract: {:?}",
+            continuation_token, events_filter.address
+        );
         let events_page = provider
             .get_events(events_filter.clone(), continuation_token.clone(), events_chunk_size)
             .await?;
@@ -813,4 +826,14 @@ where
     }
 
     Ok((events_filter.address, events_pages))
+}
+
+async fn get_block_timestamp<P>(provider: &P, block_number: u64) -> Result<u64>
+where
+    P: Provider + Sync,
+{
+    match provider.get_block_with_tx_hashes(BlockId::Number(block_number)).await? {
+        MaybePendingBlockWithTxHashes::Block(block) => Ok(block.timestamp),
+        MaybePendingBlockWithTxHashes::PendingBlock(block) => Ok(block.timestamp),
+    }
 }
