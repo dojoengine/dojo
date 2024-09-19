@@ -14,6 +14,11 @@ RUN git clone https://github.com/Comcast/Infinite-File-Curtailer.git curtailer \
     && make install \
     && curtail --version
 
+ENV TINI_VERSION v0.19.0
+ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
+RUN chmod +x /tini
+ENTRYPOINT ["/tini", "--"]
+
 FROM debian:bookworm-slim as base
 
 ARG TARGETPLATFORM
