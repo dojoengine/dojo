@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
 use std::fmt::Debug;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::sync::Arc;
@@ -10,11 +10,13 @@ use dojo_world::contracts::world::WorldContractReader;
 use futures_util::future::join_all;
 use hashlink::LinkedHashMap;
 use starknet::core::types::{
-    BlockId, BlockTag, EmittedEvent, Event, EventFilter, Felt, MaybePendingBlockWithReceipts,
-    MaybePendingBlockWithTxHashes, PendingBlockWithReceipts, ReceiptBlock, TransactionReceipt,
-    TransactionReceiptWithBlockInfo, TransactionWithReceipt,
+    BlockId, BlockTag, EmittedEvent, Event, EventFilter, EventsPage, MaybePendingBlockWithReceipts,
+    MaybePendingBlockWithTxHashes, PendingBlockWithReceipts, Transaction, TransactionReceipt,
+    TransactionWithReceipt,
 };
+use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
+use starknet_crypto::Felt;
 use tokio::sync::broadcast::Sender;
 use tokio::sync::mpsc::Sender as BoundedSender;
 use tokio::sync::Semaphore;
@@ -22,30 +24,94 @@ use tokio::task::JoinSet;
 use tokio::time::sleep;
 use tracing::{debug, error, info, trace, warn};
 
+use crate::processors::erc20_legacy_transfer::Erc20LegacyTransferProcessor;
+use crate::processors::erc20_transfer::Erc20TransferProcessor;
+use crate::processors::erc721_legacy_transfer::Erc721LegacyTransferProcessor;
+use crate::processors::erc721_transfer::Erc721TransferProcessor;
 use crate::processors::event_message::EventMessageProcessor;
+use crate::processors::metadata_update::MetadataUpdateProcessor;
+use crate::processors::register_model::RegisterModelProcessor;
+use crate::processors::store_del_record::StoreDelRecordProcessor;
+use crate::processors::store_set_record::StoreSetRecordProcessor;
+use crate::processors::store_update_member::StoreUpdateMemberProcessor;
+use crate::processors::store_update_record::StoreUpdateRecordProcessor;
 use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
 use crate::sql::{Cursors, Sql};
-use crate::types::ErcContract;
+use crate::types::ContractType;
 
 #[allow(missing_debug_implementations)]
 pub struct Processors<P: Provider + Send + Sync + std::fmt::Debug + 'static> {
     pub block: Vec<Box<dyn BlockProcessor<P>>>,
     pub transaction: Vec<Box<dyn TransactionProcessor<P>>>,
-    pub event: HashMap<Felt, Vec<Box<dyn EventProcessor<P>>>>,
     pub catch_all_event: Box<dyn EventProcessor<P>>,
+    pub event_processors: HashMap<ContractType, HashMap<Felt, Box<dyn EventProcessor<P>>>>,
 }
 
 impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Default for Processors<P> {
     fn default() -> Self {
         Self {
             block: vec![],
-            event: HashMap::new(),
             transaction: vec![],
             catch_all_event: Box::new(EventMessageProcessor) as Box<dyn EventProcessor<P>>,
+            event_processors: Self::initialize_event_processors(),
         }
     }
 }
 
+impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Processors<P> {
+    pub fn initialize_event_processors()
+    -> HashMap<ContractType, HashMap<Felt, Box<dyn EventProcessor<P>>>> {
+        let mut event_processors_map =
+            HashMap::<ContractType, HashMap<Felt, Box<dyn EventProcessor<P>>>>::new();
+
+        let event_processors = vec![
+            (
+                ContractType::WORLD,
+                vec![
+                    Box::new(RegisterModelProcessor) as Box<dyn EventProcessor<P>>,
+                    Box::new(StoreSetRecordProcessor),
+                    Box::new(MetadataUpdateProcessor),
+                    Box::new(StoreDelRecordProcessor),
+                    Box::new(StoreUpdateRecordProcessor),
+                    Box::new(StoreUpdateMemberProcessor),
+                ],
+            ),
+            (
+                ContractType::ERC20,
+                vec![Box::new(Erc20TransferProcessor) as Box<dyn EventProcessor<P>>],
+            ),
+            (
+                ContractType::ERC721,
+                vec![Box::new(Erc721TransferProcessor) as Box<dyn EventProcessor<P>>],
+            ),
+            (
+                ContractType::ERC20Legacy,
+                vec![Box::new(Erc20LegacyTransferProcessor) as Box<dyn EventProcessor<P>>],
+            ),
+            (
+                ContractType::ERC721Legacy,
+                vec![Box::new(Erc721LegacyTransferProcessor) as Box<dyn EventProcessor<P>>],
+            ),
+        ];
+
+        for (contract_type, processors) in event_processors {
+            for processor in processors {
+                let key = get_selector_from_name(processor.event_key().as_str())
+                    .expect("Event key is ASCII so this should never fail");
+                event_processors_map.entry(contract_type).or_default().insert(key, processor);
+            }
+        }
+
+        event_processors_map
+    }
+
+    pub fn get_event_processor(
+        &self,
+        contract_type: ContractType,
+    ) -> &HashMap<Felt, Box<dyn EventProcessor<P>>> {
+        self.event_processors.get(&contract_type).unwrap()
+    }
+}
 pub(crate) const LOG_TARGET: &str = "torii_core::engine";
 pub const QUERY_QUEUE_BATCH_SIZE: usize = 1000;
 
@@ -120,9 +186,8 @@ pub struct Engine<P: Provider + Send + Sync + std::fmt::Debug + 'static> {
     config: EngineConfig,
     shutdown_tx: Sender<()>,
     block_tx: Option<BoundedSender<u64>>,
-    // ERC tokens to index
-    tokens: HashMap<Felt, ErcContract>,
-    tasks: HashMap<u64, Vec<ParallelizedEvent>>,
+    tasks: HashMap<u64, Vec<(ContractType, ParallelizedEvent)>>,
+    contracts: Arc<HashMap<Felt, ContractType>>,
 }
 
 struct UnprocessedEvent {
@@ -140,7 +205,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         config: EngineConfig,
         shutdown_tx: Sender<()>,
         block_tx: Option<BoundedSender<u64>>,
-        tokens: HashMap<Felt, ErcContract>,
+        contracts: Arc<HashMap<Felt, ContractType>>,
     ) -> Self {
         Self {
             world: Arc::new(world),
@@ -150,7 +215,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             config,
             shutdown_tx,
             block_tx,
-            tokens,
+            contracts,
             tasks: HashMap::new(),
         }
     }
@@ -243,30 +308,23 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         cursor_map: &HashMap<Felt, Felt>,
     ) -> Result<FetchRangeResult> {
         // Process all blocks from current to latest.
-        let world_events_filter = EventFilter {
-            from_block: Some(BlockId::Number(from)),
-            to_block: Some(BlockId::Number(to)),
-            address: Some(self.world.address),
-            keys: None,
-        };
+        let mut fetch_all_events_tasks = VecDeque::new();
 
-        let mut fetch_all_events_tasks = vec![];
-        let world_events_pages =
-            get_all_events(&self.provider, world_events_filter, self.config.events_chunk_size);
-
-        fetch_all_events_tasks.push(world_events_pages);
-
-        for token in self.tokens.iter() {
+        for contract in self.contracts.iter() {
             let events_filter = EventFilter {
                 from_block: Some(BlockId::Number(from)),
                 to_block: Some(BlockId::Number(to)),
-                address: Some(*token.0),
+                address: Some(*contract.0),
                 keys: None,
             };
             let token_events_pages =
                 get_all_events(&self.provider, events_filter, self.config.events_chunk_size);
 
-            fetch_all_events_tasks.push(token_events_pages);
+            // Prefer processing world events first
+            match contract.1 {
+                ContractType::WORLD => fetch_all_events_tasks.push_front(token_events_pages),
+                _ => fetch_all_events_tasks.push_back(token_events_pages),
+            }
         }
 
         let task_result = join_all(fetch_all_events_tasks).await;
@@ -280,6 +338,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             let events_pages = result.1;
             let last_contract_tx = cursor_map.get(&contract_address).cloned();
             let mut last_contract_tx_tmp = last_contract_tx;
+
             debug!(target: LOG_TARGET, "Total events pages fetched for contract ({:#x}): {}", &contract_address, &events_pages.len());
 
             for events_page in events_pages {
@@ -319,27 +378,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         for event in events {
             let block_number = match event.block_number {
                 Some(block_number) => block_number,
-                // If the block number is not present, try to fetch it from the transaction
-                // receipt Should not/rarely happen. Thus the additional
-                // fetch is acceptable.
-                None => {
-                    let TransactionReceiptWithBlockInfo { receipt, block } =
-                        self.provider.get_transaction_receipt(event.transaction_hash).await?;
-
-                    match receipt {
-                        TransactionReceipt::Invoke(_) | TransactionReceipt::L1Handler(_) => {
-                            if let ReceiptBlock::Block { block_number, .. } = block {
-                                block_number
-                            } else {
-                                // If the block is pending, we assume the block number is the
-                                // latest + 1
-                                to + 1
-                            }
-                        }
-
-                        _ => to + 1,
-                    }
-                }
+                None => unreachable!("In fetch range all events should have block number"),
             };
 
             block_set.insert(block_number);
@@ -433,39 +472,16 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                 continue;
             }
 
-            match self
+            if let Err(e) = self
                 .process_transaction_with_receipt(&t, data.block_number, timestamp, &mut cursor_map)
                 .await
             {
-                Err(e) => {
-                    match e.to_string().as_str() {
-                        // TODO: remove this we now fetch the pending block with receipts so this
-                        // error is no longer relevant
-                        "TransactionHashNotFound" => {
-                            // We failed to fetch the transaction, which is because
-                            // the transaction might not have been processed fast enough by the
-                            // provider. So we can fail silently and try
-                            // again in the next iteration.
-                            warn!(target: LOG_TARGET, transaction_hash = %format!("{:#x}", transaction_hash), "Retrieving pending transaction receipt.");
-                            self.db.set_head(self.world.address, data.block_number - 1);
-                            if let Some(tx) = last_pending_block_tx {
-                                self.db.set_last_pending_block_tx(Some(tx));
-                            }
-
-                            self.db.execute().await?;
-                            return Ok(());
-                        }
-                        _ => {
-                            error!(target: LOG_TARGET, error = %e, transaction_hash = %format!("{:#x}", transaction_hash), "Processing pending transaction.");
-                            return Err(e);
-                        }
-                    }
-                }
-                Ok(_) => {
-                    last_pending_block_tx = Some(*transaction_hash);
-                    debug!(target: LOG_TARGET, transaction_hash = %format!("{:#x}", transaction_hash), "Processed pending transaction.")
-                }
+                error!(target: LOG_TARGET, error = %e, transaction_hash = %format!("{:#x}", transaction_hash), "Processing pending transaction.");
+                return Err(e);
             }
+
+            last_pending_block_tx = Some(*transaction_hash);
+            debug!(target: LOG_TARGET, transaction_hash = %format!("{:#x}", transaction_hash), "Processed pending transaction.");
         }
 
         // Process parallelized events
@@ -534,23 +550,22 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         for (task_id, events) in self.tasks.drain() {
             let db = self.db.clone();
             let world = self.world.clone();
-            let processors = self.processors.clone();
             let semaphore = semaphore.clone();
+            let processors = self.processors.clone();
 
             set.spawn(async move {
                 let _permit = semaphore.acquire().await.unwrap();
                 let mut local_db = db.clone();
-                for ParallelizedEvent { event_id, event, block_number, block_timestamp } in events {
-                    if let Some(event_processors) = processors.event.get(&event.keys[0]) {
-                        for processor in event_processors.iter() {
-                            debug!(target: LOG_TARGET, event_name = processor.event_key(), task_id = %task_id, "Processing parallelized event.");
+                for (contract_type, ParallelizedEvent { event_id, event, block_number, block_timestamp }) in events {
+                    let contract_processors = processors.get_event_processor(contract_type);
+                    if let Some(processor) = contract_processors.get(&event.keys[0]) {
+                        debug!(target: LOG_TARGET, event_name = processor.event_key(), task_id = %task_id, "Processing parallelized event.");
 
-                            if let Err(e) = processor
-                                .process(&world, &mut local_db, block_number, block_timestamp, &event_id, &event)
-                                .await
-                            {
-                                error!(target: LOG_TARGET, event_name = processor.event_key(), error = %e, task_id = %task_id, "Processing parallelized event.");
-                            }
+                        if let Err(e) = processor
+                            .process(&world, &mut local_db, block_number, block_timestamp, &event_id, &event)
+                            .await
+                        {
+                            error!(target: LOG_TARGET, event_name = processor.event_key(), error = %e, task_id = %task_id, "Processing parallelized event.");
                         }
                     }
                 }
@@ -585,6 +600,11 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                 keys: event.keys.clone(),
                 data: event.data.clone(),
             };
+
+            let Some(&contract_type) = self.contracts.get(&event.from_address) else {
+                continue;
+            };
+
             Self::process_event(
                 self,
                 block_number,
@@ -592,6 +612,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                 &event_id,
                 &event,
                 transaction_hash,
+                contract_type,
             )
             .await?;
         }
@@ -628,11 +649,9 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
 
         if let Some(events) = events {
             for (event_idx, event) in events.iter().enumerate() {
-                if event.from_address != self.world.address
-                    && !self.tokens.contains_key(&event.from_address)
-                {
+                let Some(&contract_type) = self.contracts.get(&event.from_address) else {
                     continue;
-                }
+                };
 
                 cursor_map.insert(event.from_address, *transaction_hash);
                 let event_id =
@@ -645,11 +664,12 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                     &event_id,
                     event,
                     *transaction_hash,
+                    contract_type,
                 )
                 .await?;
             }
 
-            if world_event && self.config.flags.contains(IndexingFlags::TRANSACTIONS) {
+            if self.config.flags.contains(IndexingFlags::TRANSACTIONS) {
                 Self::process_transaction(
                     self,
                     block_number,
@@ -705,6 +725,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         event_id: &str,
         event: &Event,
         transaction_hash: Felt,
+        contract_type: ContractType,
     ) -> Result<()> {
         if self.config.flags.contains(IndexingFlags::RAW_EVENTS) {
             self.db.store_event(event_id, event, transaction_hash, block_timestamp);
@@ -712,7 +733,8 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
 
         let event_key = event.keys[0];
 
-        let Some(processors) = self.processors.event.get(&event_key) else {
+        let processors = self.processors.get_event_processor(contract_type);
+        let Some(processor) = processors.get(&event_key) else {
             // if we dont have a processor for this event, we try the catch all processor
             if self.processors.catch_all_event.validate(event) {
                 if let Err(e) = self
@@ -747,36 +769,30 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             return Ok(());
         };
 
-        // For now we only have 1 processor for store* events
-        let task_identifier = if processors.len() == 1 {
-            match processors[0].event_key().as_str() {
-                "StoreSetRecord" | "StoreUpdateRecord" | "StoreUpdateMember" | "StoreDelRecord" => {
-                    let mut hasher = DefaultHasher::new();
-                    event.data[0].hash(&mut hasher);
-                    event.data[1].hash(&mut hasher);
-                    hasher.finish()
-                }
-                _ => 0,
+        let task_identifier = match processor.event_key().as_str() {
+            "StoreSetRecord" | "StoreUpdateRecord" | "StoreUpdateMember" | "StoreDelRecord" => {
+                let mut hasher = DefaultHasher::new();
+                event.data[0].hash(&mut hasher);
+                event.data[1].hash(&mut hasher);
+                hasher.finish()
             }
-        } else {
-            0
+            _ => 0,
         };
 
         // if we have a task identifier, we queue the event to be parallelized
         if task_identifier != 0 {
-            self.tasks.entry(task_identifier).or_default().push(ParallelizedEvent {
-                event_id: event_id.to_string(),
-                event: event.clone(),
-                block_number,
-                block_timestamp,
-            });
+            self.tasks.entry(task_identifier).or_default().push((
+                contract_type,
+                ParallelizedEvent {
+                    event_id: event_id.to_string(),
+                    event: event.clone(),
+                    block_number,
+                    block_timestamp,
+                },
+            ));
         } else {
             // if we dont have a task identifier, we process the event immediately
-            for processor in processors.iter() {
-                if !processor.validate(event) {
-                    continue;
-                }
-
+            if processor.validate(event) {
                 if let Err(e) = processor
                     .process(
                         &self.world,
@@ -790,6 +806,8 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                 {
                     error!(target: LOG_TARGET, event_name = processor.event_key(), error = ?e, "Processing event.");
                 }
+            } else {
+                warn!(target: LOG_TARGET, event_name = processor.event_key(), "Event not validated.");
             }
         }
 

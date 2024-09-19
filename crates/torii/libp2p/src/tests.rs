@@ -538,6 +538,7 @@ mod test {
         use tokio::select;
         use tokio::time::sleep;
         use torii_core::sql::Sql;
+        use torii_core::types::ContractType;
 
         use crate::server::Relay;
         use crate::typed_data::{Domain, Field, SimpleField, TypedData};
@@ -560,7 +561,10 @@ mod test {
 
         let account = sequencer.account_data(0);
 
-        let mut db = Sql::new(pool.clone(), Felt::ZERO, &HashMap::new()).await?;
+        let mut db =
+            Sql::new(pool.clone(), Felt::ZERO, &HashMap::from([(Felt::ZERO, ContractType::WORLD)]))
+                .await
+                .unwrap();
 
         // Register the model of our Message
         db.register_model(
