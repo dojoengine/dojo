@@ -45,6 +45,7 @@ jobs:
       - name: Set outputs
         id: vars
         run: |
+          set -eux
           git config --global --add safe.directory "${{ github.workspace }}"
           echo "sha_short=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
 
@@ -63,7 +64,6 @@ jobs:
         run: |
           set -eux
           docker run --rm -v "$(pwd)/artifacts/$PLATFORM:/artifacts" build-local:latest /bin/sh -c "cp -r /app/artifacts/* /artifacts/"
-          ls -R artifacts/
         env:
           PLATFORM: linux/amd64
 
