@@ -54,7 +54,7 @@ jobs:
       - name: Build local binaries
         run: |
           set -eux
-          docker run --rm -v "$(pwd)/artifacts:/artifacts" build-local:latest /bin/sh -c "cp -r /app/artifacts/* /artifacts/$PLATFORM"
+          docker run --rm -v "$(pwd)/artifacts:/artifacts/artifacts/$PLATFORM" build-local:latest /bin/sh -c "cp -r /app/artifacts/* /artifacts/$PLATFORM"
           ls -R artifacts/
         env:
           PLATFORM: linux/amd64
