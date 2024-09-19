@@ -1,4 +1,5 @@
 use core::fmt;
+use std::collections::VecDeque;
 use std::path::PathBuf;
 use std::str::FromStr;
 
@@ -89,8 +90,8 @@ pub struct Event {
 
 #[derive(Default, Deserialize, Debug, Clone)]
 pub struct ToriiConfig {
-    /// ERC contract addresses to index
-    pub erc_contracts: Vec<ErcContract>,
+    /// contract addresses to index
+    pub contracts: VecDeque<Contract>,
 }
 
 impl ToriiConfig {
@@ -101,37 +102,44 @@ impl ToriiConfig {
     }
 }
 
-#[derive(Default, Deserialize, Debug, Clone)]
-pub struct ErcContract {
-    pub contract_address: Felt,
-    pub start_block: u64,
-    pub r#type: ErcType,
+#[derive(Deserialize, Debug, Clone, Copy)]
+pub struct Contract {
+    pub address: Felt,
+    pub r#type: ContractType,
 }
 
-#[derive(Default, Deserialize, Debug, Clone)]
-pub enum ErcType {
-    #[default]
+#[derive(Deserialize, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum ContractType {
+    WORLD,
     ERC20,
+    ERC20Legacy,
     ERC721,
+    ERC721Legacy,
 }
 
-impl FromStr for ErcType {
+impl FromStr for ContractType {
     type Err = anyhow::Error;
 
     fn from_str(input: &str) -> Result<Self, Self::Err> {
         match input.to_lowercase().as_str() {
-            "erc20" => Ok(ErcType::ERC20),
-            "erc721" => Ok(ErcType::ERC721),
+            "world" => Ok(ContractType::WORLD),
+            "erc20" => Ok(ContractType::ERC20),
+            "erc721" => Ok(ContractType::ERC721),
+            "erc20legacy" | "erc20_legacy" => Ok(ContractType::ERC20Legacy),
+            "erc721legacy" | "erc721_legacy" => Ok(ContractType::ERC721Legacy),
             _ => Err(anyhow::anyhow!("Invalid ERC type: {}", input)),
         }
     }
 }
 
-impl std::fmt::Display for ErcType {
+impl std::fmt::Display for ContractType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ErcType::ERC20 => write!(f, "ERC20"),
-            ErcType::ERC721 => write!(f, "ERC721"),
+            ContractType::WORLD => write!(f, "WORLD"),
+            ContractType::ERC20 => write!(f, "ERC20"),
+            ContractType::ERC721 => write!(f, "ERC721"),
+            ContractType::ERC20Legacy => write!(f, "ERC20Legacy"),
+            ContractType::ERC721Legacy => write!(f, "ERC721Legacy"),
         }
     }
 }

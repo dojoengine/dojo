@@ -9,13 +9,13 @@ use tracing::debug;
 use super::EventProcessor;
 use crate::sql::Sql;
 
-pub(crate) const LOG_TARGET: &str = "torii_core::processors::erc721_transfer";
+pub(crate) const LOG_TARGET: &str = "torii_core::processors::erc721_legacy_transfer";
 
 #[derive(Default, Debug)]
-pub struct Erc721TransferProcessor;
+pub struct Erc721LegacyTransferProcessor;
 
 #[async_trait]
-impl<P> EventProcessor<P> for Erc721TransferProcessor
+impl<P> EventProcessor<P> for Erc721LegacyTransferProcessor
 where
     P: Provider + Send + Sync + std::fmt::Debug,
 {
@@ -24,10 +24,10 @@ where
     }
 
     fn validate(&self, event: &Event) -> bool {
-        // ref: https://github.com/OpenZeppelin/cairo-contracts/blob/ba00ce76a93dcf25c081ab2698da20690b5a1cfb/packages/token/src/erc721/erc721.cairo#L40-L49
-        // key: [hash(Transfer), from, to, token_id.low, token_id.high]
-        // data: []
-        if event.keys.len() == 5 && event.data.is_empty() {
+        // ref: https://github.com/OpenZeppelin/cairo-contracts/blob/1f9359219a92cdb1576f953db71ee993b8ef5f70/src/openzeppelin/token/erc721/library.cairo#L27-L29
+        // key: [hash(Transfer)]
+        // data: [from, to, token_id.0, token_id.1]
+        if event.keys.len() == 1 && event.data.len() == 4 {
             return true;
         }
 
@@ -44,10 +44,10 @@ where
         event: &Event,
     ) -> Result<(), Error> {
         let token_address = event.from_address;
-        let from = event.keys[1];
-        let to = event.keys[2];
+        let from = event.data[0];
+        let to = event.data[1];
 
-        let token_id = U256Cainome::cairo_deserialize(&event.keys, 3)?;
+        let token_id = U256Cainome::cairo_deserialize(&event.data, 2)?;
         let token_id = U256::from_words(token_id.low, token_id.high);
 
         db.handle_erc721_transfer(
