@@ -12,7 +12,7 @@ use katana_db::models::contract::{
     ContractClassChange, ContractInfoChangeList, ContractNonceChange,
 };
 use katana_db::models::list::BlockList;
-use katana_db::models::storage::{ContractStorageEntry, ContractStorageKey, StorageEntry};
+use katana_db::models::storage::{ContractStorageEntry, ContractStorageKey, MessagingCheckpointId, StorageEntry};
 use katana_db::tables::{self, DupSort, Table};
 use katana_db::utils::KeyValue;
 use katana_primitives::block::{
@@ -36,7 +36,7 @@ use crate::traits::block::{
     HeaderProvider,
 };
 use crate::traits::env::BlockEnvProvider;
-use crate::traits::messaging::{MessagingProvider, GATHER_FROM_BLOCK_KEY, SEND_FROM_BLOCK_KEY, GATHER_FROM_NONCE_KEY, SEND_FROM_INDEX_KEY};
+use crate::traits::messaging::MessagingCheckpointProvider;
 use crate::traits::state::{StateFactoryProvider, StateProvider, StateRootProvider};
 use crate::traits::state_update::StateUpdateProvider;
 use crate::traits::transaction::{
@@ -763,52 +763,45 @@ impl<Db: Database> BlockWriter for DbProvider<Db> {
     }
 }
 
-impl MessagingProvider for DbProvider {
-    fn get_send_from_block(&self) -> ProviderResult<Option<BlockNumber>> {
-        let db_tx = self.0.tx()?;
-        let block_num = db_tx.get::<tables::MessagingInfo>(SEND_FROM_BLOCK_KEY)?;
-        db_tx.commit()?;
-        Ok(block_num)
-    }
-
+impl MessagingCheckpointProvider for DbProvider {
     fn set_send_from_block(&self, send_from_block: BlockNumber) -> ProviderResult<()> {
         self.0.update(|db_tx| {
-            db_tx.put::<tables::MessagingInfo>(SEND_FROM_BLOCK_KEY, send_from_block)?;
+            db_tx.put::<tables::MessagingCheckpointBlock>(MessagingCheckpointId::SendBlock, send_from_block)?;
             Ok(())
         })?
     }
 
-    fn get_gather_from_block(&self) -> ProviderResult<Option<BlockNumber>> {
+    fn get_send_from_block(&self) -> ProviderResult<Option<BlockNumber>> {
         let db_tx = self.0.tx()?;
-        let block_num = db_tx.get::<tables::MessagingInfo>(GATHER_FROM_BLOCK_KEY)?;
+        let block_num = db_tx.get::<tables::MessagingCheckpointBlock>(MessagingCheckpointId::SendBlock)?;
         db_tx.commit()?;
         Ok(block_num)
     }
 
     fn set_gather_from_block(&self, gather_from_block: BlockNumber) -> ProviderResult<()> {
         self.0.update(|db_tx| {
-            db_tx.put::<tables::MessagingInfo>(GATHER_FROM_BLOCK_KEY, gather_from_block)?;
+            db_tx.put::<tables::MessagingCheckpointBlock>(MessagingCheckpointId::GatherBlock, gather_from_block)?;
+            Ok(())
+        })?
+    }
+
+    fn get_gather_from_block(&self) -> ProviderResult<Option<BlockNumber>> {
+        let db_tx = self.0.tx()?;
+        let block_num = db_tx.get::<tables::MessagingCheckpointBlock>(MessagingCheckpointId::GatherBlock)?;
+        db_tx.commit()?;
+        Ok(block_num)
+    }
+
+    fn set_gather_message_nonce(&self, nonce: Nonce) -> ProviderResult<()> {
+        self.0.update(|db_tx| {
+            db_tx.put::<tables::MessagingCheckpointNonce>(MessagingCheckpointId::GatherNonce, nonce)?;
             Ok(())
         })?
     }
 
     fn get_gather_message_nonce(&self) -> ProviderResult<Option<Nonce>> {
         let db_tx = self.0.tx()?;
-        let nonce = db_tx.get::<tables::MessagingNonceInfo>(GATHER_FROM_NONCE_KEY)?;
-        db_tx.commit()?;
-        Ok(nonce)
-    }
-
-    fn set_gather_message_nonce(&self, nonce: Nonce) -> ProviderResult<()> {
-        self.0.update(|db_tx| {
-            db_tx.put::<tables::MessagingNonceInfo>(GATHER_FROM_NONCE_KEY, nonce)?;
-            Ok(())
-        })?
-    }
-
-    fn get_nonce_from_message_hash(&self, message_hash: MessageHash) -> ProviderResult<Option<Nonce>> {
-        let db_tx = self.0.tx()?;
-        let nonce = db_tx.get::<tables::MessagingMessageNonceMapping>(message_hash)?;
+        let nonce = db_tx.get::<tables::MessagingCheckpointNonce>(MessagingCheckpointId::GatherNonce)?;
         db_tx.commit()?;
         Ok(nonce)
     }
@@ -820,18 +813,25 @@ impl MessagingProvider for DbProvider {
         })?
     }
 
-    fn get_send_from_index(&self) -> ProviderResult<Option<u64>> {
+    fn get_nonce_from_message_hash(&self, message_hash: MessageHash) -> ProviderResult<Option<Nonce>> {
         let db_tx = self.0.tx()?;
-        let index = db_tx.get::<tables::MessagingIndexInfo>(SEND_FROM_INDEX_KEY)?;
+        let nonce = db_tx.get::<tables::MessagingMessageNonceMapping>(message_hash)?;
         db_tx.commit()?;
-        Ok(index)
+        Ok(nonce)
     }
 
     fn set_send_from_index(&self, send_from_index: u64) -> ProviderResult<()> {
         self.0.update(|db_tx| {
-            db_tx.put::<tables::MessagingIndexInfo>(SEND_FROM_INDEX_KEY, send_from_index)?;
+            db_tx.put::<tables::MessagingCheckpointIndex>(MessagingCheckpointId::SendIndex, send_from_index)?;
             Ok(())
         })?
+    }
+
+    fn get_send_from_index(&self) -> ProviderResult<Option<u64>> {
+        let db_tx = self.0.tx()?;
+        let index = db_tx.get::<tables::MessagingCheckpointIndex>(MessagingCheckpointId::SendIndex)?;
+        db_tx.commit()?;
+        Ok(index)
     }
 }
 

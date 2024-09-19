@@ -7,7 +7,7 @@ use katana_provider::providers::db::DbProvider;
 use katana_provider::traits::block::{BlockProvider, BlockWriter};
 use katana_provider::traits::contract::ContractClassWriter;
 use katana_provider::traits::env::BlockEnvProvider;
-use katana_provider::traits::messaging::MessagingProvider;
+use katana_provider::traits::messaging::MessagingCheckpointProvider;
 use katana_provider::traits::state::{StateFactoryProvider, StateRootProvider, StateWriter};
 use katana_provider::traits::state_update::StateUpdateProvider;
 use katana_provider::traits::transaction::{
@@ -30,7 +30,7 @@ pub trait Database:
     + ContractClassWriter
     + StateFactoryProvider
     + BlockEnvProvider
-    + MessagingProvider
+    + MessagingCheckpointProvider
     + 'static
     + Send
     + Sync
@@ -52,7 +52,7 @@ impl<T> Database for T where
         + ContractClassWriter
         + StateFactoryProvider
         + BlockEnvProvider
-        + MessagingProvider
+        + MessagingCheckpointProvider
         + 'static
         + Send
         + Sync

@@ -15,7 +15,7 @@ pub type StorageValue = Felt;
 pub type Nonce = Felt;
 
 /// Represents the type for a message hash.
-pub type MessageHash = FieldElement;
+pub type MessageHash = Felt;
 
 /// Represents a contract address.
 #[derive(Default, Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Hash, Debug, Deref)]

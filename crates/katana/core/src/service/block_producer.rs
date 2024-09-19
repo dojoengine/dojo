@@ -5,6 +5,7 @@ use std::sync::Arc;
 use std::task::{Context, Poll};
 use std::time::Duration;
 
+use crate::backend::Backend;
 use futures::channel::mpsc::{channel, Receiver, Sender};
 use futures::stream::{Stream, StreamExt};
 use futures::FutureExt;
@@ -13,21 +14,19 @@ use katana_pool::validation::stateful::TxValidator;
 use katana_primitives::block::{BlockHashOrNumber, ExecutableBlock, PartialHeader};
 use katana_primitives::receipt::Receipt;
 use katana_primitives::trace::TxExecInfo;
-use katana_primitives::transaction::{ExecutableTxWithHash, TxHash, TxWithHash, Tx};
+use katana_primitives::transaction::{ExecutableTxWithHash, Tx, TxHash, TxWithHash};
 use katana_primitives::version::CURRENT_STARKNET_VERSION;
-use katana_primitives::FieldElement;
+use katana_primitives::Felt;
 use katana_provider::error::ProviderError;
-use katana_provider::traits::messaging::MessagingProvider;
 use katana_provider::traits::block::{BlockHashProvider, BlockNumberProvider};
 use katana_provider::traits::env::BlockEnvProvider;
+use katana_provider::traits::messaging::MessagingCheckpointProvider;
 use katana_provider::traits::state::StateFactoryProvider;
 use katana_tasks::{BlockingTaskPool, BlockingTaskResult};
 use parking_lot::lock_api::RawMutex;
 use parking_lot::{Mutex, RwLock};
 use tokio::time::{interval_at, Instant, Interval};
 use tracing::{error, info, trace, warn};
-
-use crate::backend::Backend;
 
 pub(crate) const LOG_TARGET: &str = "miner";
 
@@ -322,24 +321,15 @@ impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
                         // get stored nonce from message hash
                         let message_hash_bytes = l1_tx.message_hash;
                         let message_hash_bytes: [u8; 32] = *message_hash_bytes;
-                        match FieldElement::from_bytes_be(&message_hash_bytes) {
-                            Ok(message_hash) => {
-                                match provider.get_nonce_from_message_hash(message_hash) {
-                                    Ok(Some(nonce)) => provider.set_gather_message_nonce(nonce),
-                                    Ok(None) => {
-                                        Ok(())
-                                    },
-                                    Err(_e) => {
-                                        Ok(())
-                                    }
-                                }
-                            },
-                            Err(_e) => {
-                                Ok(())
-                            }
+
+                        let message_hash = Felt::from_bytes_be(&message_hash_bytes);
+                        match provider.get_nonce_from_message_hash(message_hash) {
+                            Ok(Some(nonce)) => provider.set_gather_message_nonce(nonce),
+                            Ok(None) => Ok(()),
+                            Err(_e) => Ok(()),
                         }
-                    },
-                    _ => Ok({})
+                    }
+                    _ => Ok(()),
                 };
 
                 match res {

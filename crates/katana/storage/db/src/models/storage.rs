@@ -83,6 +83,43 @@ impl Decompress for ContractStorageEntry {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum MessagingCheckpointId {
+    SendBlock,
+    SendIndex,
+    GatherBlock,
+    GatherNonce,
+}
+
+
+impl Encode for MessagingCheckpointId {
+    type Encoded = [u8; 1];
+    fn encode(self) -> Self::Encoded {
+        let mut buf = [0u8; 1];
+        buf[0] = match self {
+            MessagingCheckpointId::SendBlock => 1,
+            MessagingCheckpointId::SendIndex => 2,
+            MessagingCheckpointId::GatherBlock => 3,
+            MessagingCheckpointId::GatherNonce => 4,
+        };
+        buf
+    }
+}
+
+impl Decode for MessagingCheckpointId {
+    fn decode<B: AsRef<[u8]>>(bytes: B) -> Result<Self, CodecError> {
+        let bytes = bytes.as_ref();
+        match bytes[0] {
+            1 => Ok(MessagingCheckpointId::SendBlock),
+            2 => Ok(MessagingCheckpointId::SendIndex),
+            3 => Ok(MessagingCheckpointId::GatherBlock),
+            4 => Ok(MessagingCheckpointId::GatherNonce),
+            _ => Err(CodecError::Decode("Invalid MessagingCheckpointId".into())),
+        }
+    }
+}
+
+
 #[cfg(test)]
 mod tests {
     use starknet::macros::felt;

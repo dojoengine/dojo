@@ -9,7 +9,7 @@ use crate::codecs::{Compress, Decode, Decompress, Encode};
 use crate::models::block::StoredBlockBodyIndices;
 use crate::models::contract::{ContractClassChange, ContractInfoChangeList, ContractNonceChange};
 use crate::models::list::BlockList;
-use crate::models::storage::{ContractStorageEntry, ContractStorageKey, StorageEntry};
+use crate::models::storage::{ContractStorageEntry, ContractStorageKey, MessagingCheckpointId, StorageEntry};
 
 pub trait Key: Encode + Decode + Clone + std::fmt::Debug {}
 pub trait Value: Compress + Decompress + std::fmt::Debug {}
@@ -168,10 +168,10 @@ define_tables_enum! {[
     (ClassChangeHistory, TableType::DupSort),
     (StorageChangeHistory, TableType::DupSort),
     (StorageChangeSet, TableType::Table),
-    (MessagingInfo, TableType::Table),
-    (MessagingNonceInfo, TableType::Table),
+    (MessagingCheckpointBlock, TableType::Table),
+    (MessagingCheckpointNonce, TableType::Table),
     (MessagingMessageNonceMapping, TableType::Table),
-    (MessagingIndexInfo, TableType::Table),
+    (MessagingCheckpointIndex, TableType::Table)
 ]}
 
 tables! {
@@ -230,16 +230,16 @@ tables! {
     StorageChangeHistory: (BlockNumber, ContractStorageKey) => ContractStorageEntry,
 
     /// Stores the block number related to messaging service
-    MessagingInfo: (u64) => BlockNumber,
+    MessagingCheckpointBlock: (MessagingCheckpointId) => BlockNumber,
 
     /// Stores the nonce related to messaging service
-    MessagingNonceInfo: (u64) => Nonce,
+    MessagingCheckpointNonce: (MessagingCheckpointId) => Nonce,
 
     /// Map a message hash to a message nonce
     MessagingMessageNonceMapping: (TxHash) => Nonce,
 
     /// Stores the index of the messaging service
-    MessagingIndexInfo: (u64) => u64,
+    MessagingCheckpointIndex: (MessagingCheckpointId) => u64
 
 }
 
@@ -274,10 +274,10 @@ mod tests {
         assert_eq!(Tables::ALL[20].name(), ClassChangeHistory::NAME);
         assert_eq!(Tables::ALL[21].name(), StorageChangeHistory::NAME);
         assert_eq!(Tables::ALL[22].name(), StorageChangeSet::NAME);
-        assert_eq!(Tables::ALL[23].name(), MessagingInfo::NAME);
-        assert_eq!(Tables::ALL[24].name(), MessagingNonceInfo::NAME);
+        assert_eq!(Tables::ALL[23].name(), MessagingCheckpointBlock::NAME);
+        assert_eq!(Tables::ALL[24].name(), MessagingCheckpointNonce::NAME);
         assert_eq!(Tables::ALL[25].name(), MessagingMessageNonceMapping::NAME);
-        assert_eq!(Tables::ALL[26].name(), MessagingMessageNonceMapping::NAME);
+        assert_eq!(Tables::ALL[26].name(), MessagingCheckpointIndex::NAME);
 
         assert_eq!(Tables::Headers.table_type(), TableType::Table);
         assert_eq!(Tables::BlockHashes.table_type(), TableType::Table);
@@ -302,10 +302,10 @@ mod tests {
         assert_eq!(Tables::ClassChangeHistory.table_type(), TableType::DupSort);
         assert_eq!(Tables::StorageChangeHistory.table_type(), TableType::DupSort);
         assert_eq!(Tables::StorageChangeSet.table_type(), TableType::Table);
-        assert_eq!(Tables::MessagingInfo.table_type(), TableType::Table);
-        assert_eq!(Tables::MessagingNonceInfo.table_type(), TableType::Table);
-        assert_eq!(Tables::MessagingMessageNonMapping.table_type(), TableType::Table);
-        assert_eq!(Tables::MessagingIndexInfo.table_type(), TableType::Table);
+        assert_eq!(Tables::MessagingCheckpointBlock.table_type(), TableType::Table);
+        assert_eq!(Tables::MessagingCheckpointNonce.table_type(), TableType::Table);
+        assert_eq!(Tables::MessagingMessageNonceMapping.table_type(), TableType::Table);
+        assert_eq!(Tables::MessagingCheckpointIndex.table_type(), TableType::Table);
     }
 
     use katana_primitives::block::{BlockHash, BlockNumber, FinalityStatus, Header};
@@ -325,6 +325,7 @@ mod tests {
     };
     use crate::models::list::BlockList;
     use crate::models::storage::{ContractStorageEntry, ContractStorageKey, StorageEntry};
+    use crate::tables::Tables::{MessagingCheckpointBlock, MessagingCheckpointNonce};
 
     macro_rules! assert_key_encode_decode {
 	    { $( ($name:ty, $key:expr) ),* } => {

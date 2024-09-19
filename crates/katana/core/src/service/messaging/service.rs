@@ -58,16 +58,20 @@ impl<EF: ExecutorFactory> MessagingService<EF> {
             Ok(Some(block)) => block,
             Ok(None) => 0,
             Err(_) => {
-                anyhow::bail!("Messaging could not be initialized.\nVerify that the messaging target node \
-                     (anvil or other katana) is running.\n")
+                anyhow::bail!(
+                    "Messaging could not be initialized.\nVerify that the messaging target node \
+                     (anvil or other katana) is running.\n"
+                )
             }
         };
         let send_from_block = match provider.get_send_from_block() {
             Ok(Some(block)) => block,
             Ok(None) => 0,
             Err(_) => {
-                anyhow::bail!("Messaging could not be initialized.\nVerify that the messaging target node \
-                     (anvil or other katana) is running.\n")
+                anyhow::bail!(
+                    "Messaging could not be initialized.\nVerify that the messaging target node \
+                     (anvil or other katana) is running.\n"
+                )
             }
         };
 
@@ -78,8 +82,10 @@ impl<EF: ExecutorFactory> MessagingService<EF> {
         let messenger = match MessengerMode::from_config(config).await {
             Ok(m) => Arc::new(m),
             Err(_) => {
-                anyhow::bail!("Messaging could not be initialized.\nVerify that the messaging target node \
-                     (anvil or other katana) is running.\n")
+                anyhow::bail!(
+                    "Messaging could not be initialized.\nVerify that the messaging target node \
+                     (anvil or other katana) is running.\n"
+                )
             }
         };
 
@@ -105,7 +111,6 @@ impl<EF: ExecutorFactory> MessagingService<EF> {
         max_block: u64,
         chunk_size: u64,
     ) -> MessengerResult<(u64, usize)> {
-
         match messenger.as_ref() {
             MessengerMode::Ethereum(inner) => {
                 let (block_num, txs) =
@@ -126,8 +131,9 @@ impl<EF: ExecutorFactory> MessagingService<EF> {
 
             #[cfg(feature = "starknet-messaging")]
             MessengerMode::Starknet(inner) => {
-                let (block_num, txs) =
-                    inner.gather_messages(from_block, max_block, chunk_size, backend.chain_id).await?;
+                let (block_num, txs) = inner
+                    .gather_messages(from_block, max_block, chunk_size, backend.chain_id)
+                    .await?;
                 let txs_count = txs.len();
 
                 txs.into_iter().for_each(|tx| {

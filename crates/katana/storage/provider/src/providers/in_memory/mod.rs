@@ -26,7 +26,7 @@ use crate::traits::block::{
 };
 use crate::traits::contract::ContractClassWriter;
 use crate::traits::env::BlockEnvProvider;
-use crate::traits::messaging::{MessagingProvider, GATHER_FROM_BLOCK_KEY, SEND_FROM_BLOCK_KEY, GATHER_FROM_NONCE_KEY, SEND_FROM_INDEX_KEY};
+use crate::traits::messaging::MessagingCheckpointProvider;
 use crate::traits::state::{StateFactoryProvider, StateProvider, StateRootProvider, StateWriter};
 use crate::traits::state_update::StateUpdateProvider;
 use crate::traits::transaction::{
@@ -577,36 +577,32 @@ impl BlockEnvProvider for InMemoryProvider {
     }
 }
 
-impl MessagingProvider for InMemoryProvider {
-    fn get_send_from_block(&self) -> ProviderResult<Option<BlockNumber>> {
-        Ok(self.storage.read().messaging_info.get(&SEND_FROM_BLOCK_KEY).cloned())
+impl MessagingCheckpointProvider for InMemoryProvider {
+    fn set_send_from_block(&self, send_from_block: BlockNumber) -> ProviderResult<()> {
+        self.storage.write().messaging_info.send_block = Some(send_from_block);
+        Ok(())
     }
 
-    fn set_send_from_block(&self, send_from_block: BlockNumber) -> ProviderResult<()> {
-        self.storage.write().messaging_info.insert(SEND_FROM_BLOCK_KEY, send_from_block);
+    fn get_send_from_block(&self) -> ProviderResult<Option<BlockNumber>> {
+        Ok(self.storage.read().messaging_info.send_block)
+    }
+
+    fn set_gather_from_block(&self, gather_from_block: BlockNumber) -> ProviderResult<()> {
+        self.storage.write().messaging_info.send_block = Some(gather_from_block);
         Ok(())
     }
 
     fn get_gather_from_block(&self) -> ProviderResult<Option<BlockNumber>> {
-        Ok(self.storage.read().messaging_info.get(&GATHER_FROM_BLOCK_KEY).cloned())
+        Ok(self.storage.read().messaging_info.gather_block)
     }
 
-    fn set_gather_from_block(&self, gather_from_block: BlockNumber) -> ProviderResult<()> {
-        self.storage.write().messaging_info.insert(GATHER_FROM_BLOCK_KEY, gather_from_block);
+    fn set_gather_message_nonce(&self, nonce: Nonce) -> ProviderResult<()> {
+        self.storage.write().messaging_info.gather_nonce = Some(nonce);
         Ok(())
     }
 
     fn get_gather_message_nonce(&self) -> ProviderResult<Option<Nonce>> {
-        Ok(self.storage.read().messaging_nonce_info.get(&GATHER_FROM_NONCE_KEY).cloned())
-    }
-
-    fn set_gather_message_nonce(&self, nonce: Nonce) -> ProviderResult<()> {
-        self.storage.write().messaging_nonce_info.insert(GATHER_FROM_NONCE_KEY, nonce);
-        Ok(())
-    }
-
-    fn get_nonce_from_message_hash(&self, message_hash: MessageHash) -> ProviderResult<Option<Nonce>> {
-        Ok(self.storage.read().messaging_message_nonce_mapping.get(&message_hash).cloned())
+        Ok(self.storage.read().messaging_info.gather_nonce)
     }
 
     fn set_nonce_from_message_hash(&self, message_hash: MessageHash, nonce: Nonce) -> ProviderResult<()> {
@@ -614,12 +610,16 @@ impl MessagingProvider for InMemoryProvider {
         Ok(())
     }
 
-    fn get_send_from_index(&self) -> ProviderResult<Option<Nonce>> {
-        Ok(self.storage.read().messaging_index_info.get(&SEND_FROM_INDEX_KEY).cloned())
+    fn get_nonce_from_message_hash(&self, message_hash: MessageHash) -> ProviderResult<Option<Nonce>> {
+        Ok(self.storage.read().messaging_message_nonce_mapping.get(&message_hash).cloned())
     }
 
     fn set_send_from_index(&self, index: u64) -> ProviderResult<()> {
-        self.storage.write().messaging_index_info.insert(SEND_FROM_INDEX_KEY, index);
+        self.storage.write().messaging_info.send_index = Some(index);
         Ok(())
+    }
+
+    fn get_send_from_index(&self) -> ProviderResult<Option<u64>> {
+        Ok(self.storage.read().messaging_info.send_index)
     }
 }

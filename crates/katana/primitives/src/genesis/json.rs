@@ -270,7 +270,7 @@ pub struct GenesisJson {
     pub accounts: HashMap<ContractAddress, GenesisAccountJson>,
     #[serde(default)]
     pub contracts: HashMap<ContractAddress, GenesisContractJson>,
-    pub gather_from_block: BlockNumber,
+    pub settlement_block_number: BlockNumber,
 }
 
 impl GenesisJson {
@@ -612,7 +612,7 @@ impl TryFrom<GenesisJson> for Genesis {
             gas_prices: value.gas_prices,
             state_root: value.state_root,
             parent_hash: value.parent_hash,
-            gather_from_block: value.gather_from_block,
+            settlement_block_number: value.settlement_block_number,
         })
     }
 }

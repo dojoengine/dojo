@@ -3,13 +3,8 @@ use katana_primitives::contract::{Nonce, MessageHash};
 
 use crate::ProviderResult;
 
-pub const SEND_FROM_BLOCK_KEY: u64 = 1;
-pub const GATHER_FROM_BLOCK_KEY: u64 = 2;
-pub const GATHER_FROM_NONCE_KEY: u64 = 3;
-pub const SEND_FROM_INDEX_KEY: u64 = 4;
-
 #[auto_impl::auto_impl(&, Box, Arc)]
-pub trait MessagingProvider: Send + Sync {
+pub trait MessagingCheckpointProvider: Send + Sync {
     /// Sets the send from block.
     fn set_send_from_block(&self, send_from_block: BlockNumber) -> ProviderResult<()>;
     /// Returns the send from block.

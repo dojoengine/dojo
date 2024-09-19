@@ -206,7 +206,8 @@ impl Messenger for StarknetMessaging {
                 );
                 block_events.iter().for_each(|e| {
                     if let Ok(tx) = l1_handler_tx_from_event(e, chain_id) {
-                        let last_processed_nonce = self.provider.get_gather_message_nonce().unwrap_or(0.into());
+                        let last_processed_nonce =
+                            self.provider.get_gather_message_nonce().unwrap_or(0.into());
                         if tx.nonce > last_processed_nonce {
                             l1_handler_txs.push(tx)
                         }
@@ -239,11 +240,14 @@ impl Messenger for StarknetMessaging {
             };
         }
 
-        self.send_hashes(hashes.clone()).await?;
         for (index, hash) in hashes.iter().enumerate() {
+            let stored_index = self.provider.get_send_from_index();
             self.send_hashes(std::slice::from_ref(hash)).await?;
-            self.provider.set_send_from_index(*hash, index as u64).await?;
+            self.provider.set_send_from_index((index as u64) + 1).await?;
         }
+
+        // reset the index
+        self.provider.set_send_from_index(0).await?;
 
         Ok(hashes)
     }

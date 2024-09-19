@@ -42,6 +42,14 @@ pub struct CacheStateDb<Db> {
     pub(crate) compiled_class_hashes: RwLock<CompiledClassHashesMap>,
 }
 
+#[derive(Default, Debug)]
+pub struct MessagingCheckpointId {
+    pub(crate) send_block: Option<BlockNumber>,
+    pub(crate) send_index: Option<u64>,
+    pub(crate) gather_block: Option<BlockNumber>,
+    pub(crate) gather_nonce: Option<Nonce>,
+}
+
 impl<Db> CacheStateDb<Db> {
     /// Applies the given state updates to the cache.
     pub fn insert_updates(&self, updates: StateUpdatesWithDeclaredClasses) {
@@ -89,10 +97,8 @@ pub struct CacheDb<Db> {
     pub(crate) transaction_hashes: HashMap<TxNumber, TxHash>,
     pub(crate) transaction_numbers: HashMap<TxHash, TxNumber>,
     pub(crate) transaction_block: HashMap<TxNumber, BlockNumber>,
-    pub(crate) messaging_info: HashMap<u64, BlockNumber>,
-    pub(crate) messaging_nonce_info: HashMap<u64, Nonce>,
+    pub(crate) messaging_info: MessagingCheckpointId,
     pub(crate) messaging_message_nonce_mapping: HashMap<Nonce, Nonce>,
-    pub(crate) messaging_index_info: HashMap<u64, u64>,
 }
 
 impl<Db> CacheStateDb<Db> {
@@ -126,9 +132,7 @@ impl<Db> CacheDb<Db> {
             latest_block_hash: Default::default(),
             latest_block_number: Default::default(),
             messaging_info: Default::default(),
-            messaging_nonce_info: Default::default(),
             messaging_message_nonce_mapping: Default::default(),
-            messaging_index_info: Default::default(),
         }
     }
 }

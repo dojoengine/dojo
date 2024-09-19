@@ -30,7 +30,7 @@ use crate::traits::block::{
 };
 use crate::traits::contract::ContractClassWriter;
 use crate::traits::env::BlockEnvProvider;
-use crate::traits::messaging::MessagingProvider;
+use crate::traits::messaging::MessagingCheckpointProvider;
 use crate::traits::state::{StateFactoryProvider, StateProvider, StateRootProvider, StateWriter};
 use crate::traits::state_update::StateUpdateProvider;
 use crate::traits::transaction::{
@@ -583,45 +583,50 @@ impl BlockEnvProvider for ForkedProvider {
     }
 }
 
-impl MessagingProvider for ForkedProvider {
-    fn get_send_from_block(&self) -> ProviderResult<Option<BlockNumber>> {
-        Ok(None)
+impl MessagingCheckpointProvider for ForkedProvider {
+    fn set_send_from_block(&self, send_from_block: BlockNumber) -> ProviderResult<()> {
+        self.storage.write().messaging_info.send_block = Some(send_from_block);
+        Ok(())
     }
 
-    fn set_send_from_block(&self, _send_from_block: BlockNumber) -> ProviderResult<()> {
+    fn get_send_from_block(&self) -> ProviderResult<Option<BlockNumber>> {
+        Ok(self.storage.read().messaging_info.send_block)
+    }
+
+    fn set_gather_from_block(&self, gather_from_block: BlockNumber) -> ProviderResult<()> {
+        self.storage.write().messaging_info.send_block = Some(gather_from_block);
         Ok(())
     }
 
     fn get_gather_from_block(&self) -> ProviderResult<Option<BlockNumber>> {
-        Ok(None)
+        Ok(self.storage.read().messaging_info.gather_block)
     }
 
-    fn set_gather_from_block(&self, _gather_from_block: BlockNumber) -> ProviderResult<()> {
+    fn set_gather_message_nonce(&self, nonce: Nonce) -> ProviderResult<()> {
+        self.storage.write().messaging_info.gather_nonce = Some(nonce);
         Ok(())
     }
 
     fn get_gather_message_nonce(&self) -> ProviderResult<Option<Nonce>> {
-        Ok(None)
+        Ok(self.storage.read().messaging_info.gather_nonce)
     }
 
-    fn set_gather_message_nonce(&self, _nonce: Nonce) -> ProviderResult<()> {
+    fn set_nonce_from_message_hash(&self, message_hash: MessageHash, nonce: Nonce) -> ProviderResult<()> {
+        self.storage.write().messaging_message_nonce_mapping.insert(message_hash, nonce);
         Ok(())
     }
 
-    fn get_nonce_from_message_hash(&self, _message_hash: MessageHash) -> ProviderResult<Option<Nonce>> {
-        Ok(None)
+    fn get_nonce_from_message_hash(&self, message_hash: MessageHash) -> ProviderResult<Option<Nonce>> {
+        Ok(self.storage.read().messaging_message_nonce_mapping.get(&message_hash).cloned())
     }
 
-    fn set_nonce_from_message_hash(&self, _message_hash: MessageHash, _nonce: Nonce) -> ProviderResult<()> {
+    fn set_send_from_index(&self, index: u64) -> ProviderResult<()> {
+        self.storage.write().messaging_info.send_index = Some(index);
         Ok(())
     }
 
     fn get_send_from_index(&self) -> ProviderResult<Option<u64>> {
-        Ok(None)
-    }
-
-    fn set_send_from_index(&self, _send_from_index: u64) -> ProviderResult<()> {
-        Ok(())
+        Ok(self.storage.read().messaging_info.send_index)
     }
 
 }

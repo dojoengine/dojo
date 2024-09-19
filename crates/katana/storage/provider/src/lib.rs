@@ -16,7 +16,7 @@ use katana_primitives::Felt;
 use traits::block::{BlockIdReader, BlockStatusProvider, BlockWriter};
 use traits::contract::{ContractClassProvider, ContractClassWriter};
 use traits::env::BlockEnvProvider;
-use traits::messaging::MessagingProvider;
+use traits::messaging::MessagingCheckpointProvider;
 use traits::state::{StateRootProvider, StateWriter};
 use traits::transaction::{TransactionStatusProvider, TransactionTraceProvider};
 
@@ -382,9 +382,9 @@ where
     }
 }
 
-impl<Db> MessagingProvider for BlockchainProvider<Db>
+impl<Db> MessagingCheckpointProvider for BlockchainProvider<Db>
 where
-    Db: MessagingProvider,
+    Db: MessagingCheckpointProvider,
 {
     fn get_send_from_block(&self) -> ProviderResult<Option<BlockNumber>> {
         self.provider.get_send_from_block()
@@ -422,7 +422,7 @@ where
         self.provider.get_send_from_index()
     }
 
-    fn set_send_from_index(&self, _send_from_index: u64) -> ProviderResult<()> {
-        self.provider.get_send_from_index(send_from_index)
+    fn set_send_from_index(&self, send_from_index: u64) -> ProviderResult<()> {
+        self.provider.set_send_from_index(send_from_index)
     }
 }
