@@ -61,7 +61,7 @@ inherits = "release"
 lto = "fat"
 
 [workspace.dependencies]
-cainome = { git = "https://github.com/cartridge-gg/cainome", rev = "0d29bb0", features = [ "abigen-rs" ] }
+cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.4.1", features = [ "abigen-rs" ] }
 dojo-utils = { path = "crates/dojo-utils" }
 
 # metrics
@@ -227,7 +227,7 @@ alloy-sol-types = { version = "0.7.6", default-features = false }
 criterion = "0.5.1"
 
 # Slot integration. Dojo don't need to manually include `account_sdk` as dependency as `slot` already re-exports it.
-slot = { git = "https://github.com/cartridge-gg/slot", tag = "v0.14.1" }
+slot = { git = "https://github.com/cartridge-gg/slot", rev = "055dbb3" }
 
 alloy-contract = { version = "0.2", default-features = false }
 alloy-json-rpc = { version = "0.2", default-features = false }
