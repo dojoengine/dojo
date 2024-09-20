@@ -6,6 +6,7 @@ pub mod subscription;
 pub mod tx;
 pub mod validation;
 
+use std::collections::BTreeSet;
 use std::sync::Arc;
 
 use futures::channel::mpsc::Receiver;

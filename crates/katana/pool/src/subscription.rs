@@ -1,49 +1,66 @@
 use std::collections::BTreeSet;
-use std::pin::Pin;
-use std::task::{Context, Poll};
+use std::sync::Arc;
 
-use futures::{FutureExt, Stream};
-use parking_lot::Mutex;
-use tokio::sync::Notify;
+use parking_lot::{Condvar, Mutex};
 
 use crate::ordering::PoolOrd;
 use crate::tx::PendingTx;
-use crate::TransactionPool;
 
-pub struct PoolSubscription<T, O>
-where
-    T: TransactionPool,
-    O: PoolOrd,
-{
-    notification: Notify,
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+    #[error("Subscription has been closed.")]
+    SubscriptionClosed,
+}
+
+struct Inner<T, O: PoolOrd> {
+    condvar: Condvar,
     transactions: Mutex<BTreeSet<PendingTx<T, O>>>,
 }
 
-impl<T, O> PoolSubscription<T, O>
-where
-    T: TransactionPool,
-    O: PoolOrd,
-{
-    pub fn new() -> Self {
-        Self { notification: Notify::new(), transactions: Mutex::new(BTreeSet::new()) }
+pub(crate) struct Sender<T, O: PoolOrd> {
+    inner: Arc<Inner<T, O>>,
+}
+
+impl<T, O: PoolOrd> Sender<T, O> {
+    fn send(&self, tx: PendingTx<T, O>) -> Result<(), Error> {
+        let subscribers = Arc::strong_count(&self.inner);
+
+        // if there are no subscribers, return an error
+        if subscribers == 1 {
+            return Err(Error::SubscriptionClosed);
+        }
+
+        self.inner.transactions.lock().insert(tx);
+        let _ = self.inner.condvar.notify_one();
+        Ok(())
     }
 }
 
-impl<T, O> Stream for PoolSubscription<T, O>
-where
-    T: TransactionPool,
-    O: PoolOrd,
-{
-    type Item = PendingTx<T, O>;
-    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        let this = self.get_mut();
+pub struct Receiver<T, O: PoolOrd> {
+    inner: Arc<Inner<T, O>>,
+    pendings: Option<BTreeSet<PendingTx<T, O>>>,
+}
 
-        if let Some(tx) = this.transactions.lock().pop_first() {
-            return Poll::Ready(Some(tx));
-        } else {
-            let _ = Box::pin(this.notification.notified()).poll_unpin(cx);
+impl<T, O: PoolOrd> Receiver<T, O> {
+    pub fn recv(&mut self) -> Result<PendingTx<T, O>, Error> {
+        if let Some(mut pendings) = self.pendings.take() {
+            if let Some(tx) = pendings.pop_first() {
+                self.pendings = Some(pendings);
+                return Ok(tx);
+            }
         }
 
-        Poll::Pending
+        let mut transactions = self.inner.transactions.lock();
+        while transactions.is_empty() {
+            self.inner.condvar.wait(&mut transactions);
+        }
+
+        // if there are no subscribers, return an error
+        let subscribers = Arc::strong_count(&self.inner);
+        if subscribers == 1 {
+            return Err(Error::SubscriptionClosed);
+        }
+
+        Ok(transactions.pop_first().expect("qed; must not be empty"))
     }
 }
