@@ -1,5 +1,6 @@
 use std::collections::VecDeque;
-
+use std::sync::Arc;
+use tokio::sync::mpsc::{channel, Receiver, Sender};
 use anyhow::{Context, Result};
 use dojo_types::schema::Ty;
 use sqlx::{FromRow, Pool, Sqlite};
@@ -52,28 +53,29 @@ pub enum QueryType {
     Other,
 }
 
-impl QueryQueue {
-    pub fn new(pool: Pool<Sqlite>) -> Self {
-        QueryQueue { pool, queue: VecDeque::new(), publish_queue: VecDeque::new() }
+pub struct TxExecutor {
+    pool: Pool<Sqlite>,
+    rx: Receiver<QueryMessage>,
+}
+
+pub struct QueryMessage {
+    statement: String,
+    arguments: Vec<Argument>,
+    query_type: QueryType,
+}
+
+impl TxExecutor {
+    pub fn new(pool: Pool<Sqlite>) -> (Self, Sender<QueryMessage>) {
+        let (tx, rx) = channel(100); // Adjust buffer size as needed
+        (TxExecutor { pool, rx }, tx)
     }
 
-    pub fn enqueue<S: Into<String>>(
-        &mut self,
-        statement: S,
-        arguments: Vec<Argument>,
-        query_type: QueryType,
-    ) {
-        self.queue.push_back((statement.into(), arguments, query_type));
-    }
-
-    pub fn push_publish(&mut self, value: BrokerMessage) {
-        self.publish_queue.push_back(value);
-    }
-
-    pub async fn execute_all(&mut self) -> Result<()> {
+    pub async fn run(&mut self) -> Result<()> {
         let mut tx = self.pool.begin().await?;
+        let mut publish_queue = Vec::new();
 
-        while let Some((statement, arguments, query_type)) = self.queue.pop_front() {
+        while let Some(msg) = self.rx.recv().await {
+            let QueryMessage { statement, arguments, query_type } = msg;
             let mut query = sqlx::query(&statement);
 
             for arg in &arguments {
@@ -95,7 +97,7 @@ impl QueryQueue {
                     entity_updated.updated_model = Some(entity);
                     entity_updated.deleted = false;
                     let broker_message = BrokerMessage::EntityUpdated(entity_updated);
-                    self.push_publish(broker_message);
+                    publish_queue.push(broker_message);
                 }
                 QueryType::DeleteEntity(entity) => {
                     let delete_model = query.execute(&mut *tx).await.with_context(|| {
@@ -134,7 +136,7 @@ impl QueryQueue {
                     }
 
                     let broker_message = BrokerMessage::EntityUpdated(entity_updated);
-                    self.push_publish(broker_message);
+                    publish_queue.push(broker_message);
                 }
                 QueryType::Other => {
                     query.execute(&mut *tx).await.with_context(|| {
@@ -146,7 +148,7 @@ impl QueryQueue {
 
         tx.commit().await?;
 
-        while let Some(message) = self.publish_queue.pop_front() {
+        for message in publish_queue {
             send_broker_message(message);
         }
 

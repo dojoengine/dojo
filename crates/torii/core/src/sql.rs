@@ -16,7 +16,7 @@ use starknet_crypto::poseidon_hash_many;
 use tracing::{debug, warn};
 
 use crate::cache::{Model, ModelCache};
-use crate::query_queue::{Argument, BrokerMessage, DeleteEntityQuery, QueryQueue, QueryType};
+use crate::executor::{Argument, BrokerMessage, DeleteEntityQuery, QueryQueue, QueryType};
 use crate::types::{
     Event as EventEmitted, EventMessage as EventMessageUpdated, Model as ModelRegistered,
 };
