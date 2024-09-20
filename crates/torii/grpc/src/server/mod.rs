@@ -106,17 +106,11 @@ impl DojoWorld {
             Arc::clone(&state_diff_manager),
         ));
 
-        tokio::task::spawn(subscriptions::entity::Service::new(
-            pool.clone(),
-            Arc::clone(&entity_manager),
-            Arc::clone(&model_cache),
-        ));
+        tokio::task::spawn(subscriptions::entity::Service::new(Arc::clone(&entity_manager)));
 
-        tokio::task::spawn(subscriptions::event_message::Service::new(
-            pool.clone(),
-            Arc::clone(&event_message_manager),
-            Arc::clone(&model_cache),
-        ));
+        tokio::task::spawn(subscriptions::event_message::Service::new(Arc::clone(
+            &event_message_manager,
+        )));
 
         tokio::task::spawn(subscriptions::event::Service::new(Arc::clone(&event_manager)));
 
