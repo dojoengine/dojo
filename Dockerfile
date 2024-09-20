@@ -16,6 +16,11 @@ RUN git clone https://github.com/Comcast/Infinite-File-Curtailer.git curtailer \
 
 FROM debian:bookworm-slim as base
 
+ENV TINI_VERSION v0.19.0
+ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
+RUN chmod +x /tini
+ENTRYPOINT ["/tini", "--"]
+
 ARG TARGETPLATFORM
 
 LABEL description="Dojo is a provable game engine and toolchain for building onchain games and autonomous worlds with Cairo" \
