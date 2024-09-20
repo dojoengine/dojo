@@ -78,9 +78,21 @@ pub fn dojo_metadata_from_package(package: &Package, ws: &Workspace<'_>) -> Resu
         .summary
         .dependencies
         .iter()
-        .any(|dep| dep.name.as_str() == "dojo" || dep.name.as_str() == "dojo_plugin")
+        .any(|dep| dep.name.as_str() == "dojo")
     {
-        return Ok(DojoMetadata::default());
+        // Some tests (like dojo-core) may depend on dojo, but there is no dojo dependency in the manifest.
+        // In case the profile config file exists, we extract the default namespace from it.
+        if let Ok(profile_config) = ProfileConfig::new(
+            &Utf8PathBuf::from(package.manifest_path().parent().unwrap()),
+            ws.current_profile()?,
+        ) {
+            let mut metadata = DojoMetadata::default();
+            metadata.namespace = profile_config.namespace;
+            return Ok(metadata);
+        } else {
+            tracing::trace!(target: LOG_TARGET, package = ?package.manifest_path(), "No dojo dependency or profile config file found, skipping metadata collection.");
+            return Ok(DojoMetadata::default());
+        }
     }
 
     let profile_config = ProfileConfig::new(
