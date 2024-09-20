@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1726865324191,
+  "lastUpdate": 1726865385873,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -21235,6 +21235,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 22651160802,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7ff6593517a7d5855125f3dbd532db0544b0867c",
+          "message": "Bump `starknet` to `0.12.0` (#2454)\n\n* bump starknet\r\n\r\n* update cainome and slot\r\n\r\n* bump starknet-types-core\r\n\r\n* bump `starknet-types-core` to `0.1.6`\r\n\r\n* bump sol-types\r\n\r\n* bump `slot` & `account_sdk`",
+          "timestamp": "2024-09-21T04:32:02+08:00",
+          "tree_id": "9998fbc24737148581a1670a10398163e827572f",
+          "url": "https://github.com/dojoengine/dojo/commit/7ff6593517a7d5855125f3dbd532db0544b0867c"
+        },
+        "date": 1726865384853,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 15887289,
+            "range": "± 202232",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3945605,
+            "range": "± 135043",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2570864698,
+            "range": "± 224620079",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3930385,
+            "range": "± 41895",
             "unit": "ns/iter"
           }
         ]
