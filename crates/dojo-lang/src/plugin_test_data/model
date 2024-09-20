@@ -788,31 +788,31 @@ pub mod bad_model_multiple_versions {
     #[abi(embed_v0)]
     impl DojoModelImpl of dojo::model::IModel<ContractState>{
         fn name(self: @ContractState) -> ByteArray {
-           dojo::model::Model::<BadModelMultipleVersions>::name()
+           "BadModelMultipleVersions"
         }
 
         fn namespace(self: @ContractState) -> ByteArray {
-           dojo::model::Model::<BadModelMultipleVersions>::namespace()
+           "dojo_test"
         }
 
         fn tag(self: @ContractState) -> ByteArray {
-            dojo::model::Model::<BadModelMultipleVersions>::tag()
+            "dojo_test-BadModelMultipleVersions"
         }
 
         fn version(self: @ContractState) -> u8 {
-           dojo::model::Model::<BadModelMultipleVersions>::version()
+           0
         }
 
         fn selector(self: @ContractState) -> felt252 {
-           dojo::model::Model::<BadModelMultipleVersions>::selector()
+           "BadModelMultipleVersions"
         }
 
         fn name_hash(self: @ContractState) -> felt252 {
-            dojo::model::Model::<BadModelMultipleVersions>::name_hash()
+            3538888628466873673221842373412072042558277047191927145880480325050722136660
         }
 
         fn namespace_hash(self: @ContractState) -> felt252 {
-            dojo::model::Model::<BadModelMultipleVersions>::namespace_hash()
+            1452123528942907587532668415362544424816022573043154497385993678618948064048
         }
 
         fn unpacked_size(self: @ContractState) -> Option<usize> {
@@ -1616,31 +1616,31 @@ pub mod bad_model_bad_version_type {
     #[abi(embed_v0)]
     impl DojoModelImpl of dojo::model::IModel<ContractState>{
         fn name(self: @ContractState) -> ByteArray {
-           dojo::model::Model::<BadModelBadVersionType>::name()
+           "BadModelBadVersionType"
         }
 
         fn namespace(self: @ContractState) -> ByteArray {
-           dojo::model::Model::<BadModelBadVersionType>::namespace()
+           "dojo_test"
         }
 
         fn tag(self: @ContractState) -> ByteArray {
-            dojo::model::Model::<BadModelBadVersionType>::tag()
+            "dojo_test-BadModelBadVersionType"
         }
 
         fn version(self: @ContractState) -> u8 {
-           dojo::model::Model::<BadModelBadVersionType>::version()
+           1
         }
 
         fn selector(self: @ContractState) -> felt252 {
-           dojo::model::Model::<BadModelBadVersionType>::selector()
+           1905541678078795270787966976324692071183638743428320623241420232497892529006
         }
 
         fn name_hash(self: @ContractState) -> felt252 {
-            dojo::model::Model::<BadModelBadVersionType>::name_hash()
+            760683829940564015458541272487101565210915690045377810379189532484191344547
         }
 
         fn namespace_hash(self: @ContractState) -> felt252 {
-            dojo::model::Model::<BadModelBadVersionType>::namespace_hash()
+            1452123528942907587532668415362544424816022573043154497385993678618948064048
         }
 
         fn unpacked_size(self: @ContractState) -> Option<usize> {
@@ -2444,31 +2444,31 @@ pub mod bad_model_no_version_value {
     #[abi(embed_v0)]
     impl DojoModelImpl of dojo::model::IModel<ContractState>{
         fn name(self: @ContractState) -> ByteArray {
-           dojo::model::Model::<BadModelNoVersionValue>::name()
+           "BadModelNoVersionValue"
         }
 
         fn namespace(self: @ContractState) -> ByteArray {
-           dojo::model::Model::<BadModelNoVersionValue>::namespace()
+           "dojo_test"
         }
 
         fn tag(self: @ContractState) -> ByteArray {
-            dojo::model::Model::<BadModelNoVersionValue>::tag()
+            "dojo_test-BadModelNoVersionValue"
         }
 
         fn version(self: @ContractState) -> u8 {
-           dojo::model::Model::<BadModelNoVersionValue>::version()
+           1
         }
 
         fn selector(self: @ContractState) -> felt252 {
-           dojo::model::Model::<BadModelNoVersionValue>::selector()
+           2174173236757861924887576251338889271361403293870377278593064770381730742730
         }
 
         fn name_hash(self: @ContractState) -> felt252 {
-            dojo::model::Model::<BadModelNoVersionValue>::name_hash()
+            2459365230136118590954025890011480023818926626380754992635699340900694864996
         }
 
         fn namespace_hash(self: @ContractState) -> felt252 {
-            dojo::model::Model::<BadModelNoVersionValue>::namespace_hash()
+            1452123528942907587532668415362544424816022573043154497385993678618948064048
         }
 
         fn unpacked_size(self: @ContractState) -> Option<usize> {
@@ -3272,31 +3272,31 @@ pub mod bad_model_unexpected_arg_with_value {
     #[abi(embed_v0)]
     impl DojoModelImpl of dojo::model::IModel<ContractState>{
         fn name(self: @ContractState) -> ByteArray {
-           dojo::model::Model::<BadModelUnexpectedArgWithValue>::name()
+           "BadModelUnexpectedArgWithValue"
         }
 
         fn namespace(self: @ContractState) -> ByteArray {
-           dojo::model::Model::<BadModelUnexpectedArgWithValue>::namespace()
+           "dojo_test"
         }
 
         fn tag(self: @ContractState) -> ByteArray {
-            dojo::model::Model::<BadModelUnexpectedArgWithValue>::tag()
+            "dojo_test-BadModelUnexpectedArgWithValue"
         }
 
         fn version(self: @ContractState) -> u8 {
-           dojo::model::Model::<BadModelUnexpectedArgWithValue>::version()
+           1
         }
 
         fn selector(self: @ContractState) -> felt252 {
-           dojo::model::Model::<BadModelUnexpectedArgWithValue>::selector()
+           1774601905279008934284028706234273692471613779453192873246657851412081197776
         }
 
         fn name_hash(self: @ContractState) -> felt252 {
-            dojo::model::Model::<BadModelUnexpectedArgWithValue>::name_hash()
+            3586339245084542986020591057627093254376225984628310828088084183494435682971
         }
 
         fn namespace_hash(self: @ContractState) -> felt252 {
-            dojo::model::Model::<BadModelUnexpectedArgWithValue>::namespace_hash()
+            1452123528942907587532668415362544424816022573043154497385993678618948064048
         }
 
         fn unpacked_size(self: @ContractState) -> Option<usize> {
@@ -4100,31 +4100,31 @@ pub mod bad_model_unexpected_arg {
     #[abi(embed_v0)]
     impl DojoModelImpl of dojo::model::IModel<ContractState>{
         fn name(self: @ContractState) -> ByteArray {
-           dojo::model::Model::<BadModelUnexpectedArg>::name()
+           "BadModelUnexpectedArg"
         }
 
         fn namespace(self: @ContractState) -> ByteArray {
-           dojo::model::Model::<BadModelUnexpectedArg>::namespace()
+           "dojo_test"
         }
 
         fn tag(self: @ContractState) -> ByteArray {
-            dojo::model::Model::<BadModelUnexpectedArg>::tag()
+            "dojo_test-BadModelUnexpectedArg"
         }
 
         fn version(self: @ContractState) -> u8 {
-           dojo::model::Model::<BadModelUnexpectedArg>::version()
+           1
         }
 
         fn selector(self: @ContractState) -> felt252 {
-           dojo::model::Model::<BadModelUnexpectedArg>::selector()
+           285468224541147509570785281966044474829506125602814945625270991330973673529
         }
 
         fn name_hash(self: @ContractState) -> felt252 {
-            dojo::model::Model::<BadModelUnexpectedArg>::name_hash()
+            246403407829267991441535935236143476032296881039254363860883767387993960270
         }
 
         fn namespace_hash(self: @ContractState) -> felt252 {
-            dojo::model::Model::<BadModelUnexpectedArg>::namespace_hash()
+            1452123528942907587532668415362544424816022573043154497385993678618948064048
         }
 
         fn unpacked_size(self: @ContractState) -> Option<usize> {
@@ -4928,31 +4928,31 @@ pub mod bad_model_not_supported_version {
     #[abi(embed_v0)]
     impl DojoModelImpl of dojo::model::IModel<ContractState>{
         fn name(self: @ContractState) -> ByteArray {
-           dojo::model::Model::<BadModelNotSupportedVersion>::name()
+           "BadModelNotSupportedVersion"
         }
 
         fn namespace(self: @ContractState) -> ByteArray {
-           dojo::model::Model::<BadModelNotSupportedVersion>::namespace()
+           "dojo_test"
         }
 
         fn tag(self: @ContractState) -> ByteArray {
-            dojo::model::Model::<BadModelNotSupportedVersion>::tag()
+            "dojo_test-BadModelNotSupportedVersion"
         }
 
         fn version(self: @ContractState) -> u8 {
-           dojo::model::Model::<BadModelNotSupportedVersion>::version()
+           1
         }
 
         fn selector(self: @ContractState) -> felt252 {
-           dojo::model::Model::<BadModelNotSupportedVersion>::selector()
+           3364830312705791335907422218790599751780160858399843169712719310945970157661
         }
 
         fn name_hash(self: @ContractState) -> felt252 {
-            dojo::model::Model::<BadModelNotSupportedVersion>::name_hash()
+            1812257929012908024237871796629728977392496349235879470060252299886369485820
         }
 
         fn namespace_hash(self: @ContractState) -> felt252 {
-            dojo::model::Model::<BadModelNotSupportedVersion>::namespace_hash()
+            1452123528942907587532668415362544424816022573043154497385993678618948064048
         }
 
         fn unpacked_size(self: @ContractState) -> Option<usize> {
@@ -5756,31 +5756,31 @@ pub mod modelv_0 {
     #[abi(embed_v0)]
     impl DojoModelImpl of dojo::model::IModel<ContractState>{
         fn name(self: @ContractState) -> ByteArray {
-           dojo::model::Model::<Modelv0>::name()
+           "Modelv0"
         }
 
         fn namespace(self: @ContractState) -> ByteArray {
-           dojo::model::Model::<Modelv0>::namespace()
+           "dojo_test"
         }
 
         fn tag(self: @ContractState) -> ByteArray {
-            dojo::model::Model::<Modelv0>::tag()
+            "dojo_test-Modelv0"
         }
 
         fn version(self: @ContractState) -> u8 {
-           dojo::model::Model::<Modelv0>::version()
+           0
         }
 
         fn selector(self: @ContractState) -> felt252 {
-           dojo::model::Model::<Modelv0>::selector()
+           "Modelv0"
         }
 
         fn name_hash(self: @ContractState) -> felt252 {
-            dojo::model::Model::<Modelv0>::name_hash()
+            2212879130471315306779111820244908968466545702031328551192231795237740448313
         }
 
         fn namespace_hash(self: @ContractState) -> felt252 {
-            dojo::model::Model::<Modelv0>::namespace_hash()
+            1452123528942907587532668415362544424816022573043154497385993678618948064048
         }
 
         fn unpacked_size(self: @ContractState) -> Option<usize> {
@@ -6584,31 +6584,31 @@ pub mod model_with_bad_namespace_format {
     #[abi(embed_v0)]
     impl DojoModelImpl of dojo::model::IModel<ContractState>{
         fn name(self: @ContractState) -> ByteArray {
-           dojo::model::Model::<ModelWithBadNamespaceFormat>::name()
+           "ModelWithBadNamespaceFormat"
         }
 
         fn namespace(self: @ContractState) -> ByteArray {
-           dojo::model::Model::<ModelWithBadNamespaceFormat>::namespace()
+           "dojo_test"
         }
 
         fn tag(self: @ContractState) -> ByteArray {
-            dojo::model::Model::<ModelWithBadNamespaceFormat>::tag()
+            "dojo_test-ModelWithBadNamespaceFormat"
         }
 
         fn version(self: @ContractState) -> u8 {
-           dojo::model::Model::<ModelWithBadNamespaceFormat>::version()
+           1
         }
 
         fn selector(self: @ContractState) -> felt252 {
-           dojo::model::Model::<ModelWithBadNamespaceFormat>::selector()
+           3339335350336894195883884955409923858499485801033572582237787132047489035817
         }
 
         fn name_hash(self: @ContractState) -> felt252 {
-            dojo::model::Model::<ModelWithBadNamespaceFormat>::name_hash()
+            513559242384681567568052881519197161166285694153303371154270254637843894159
         }
 
         fn namespace_hash(self: @ContractState) -> felt252 {
-            dojo::model::Model::<ModelWithBadNamespaceFormat>::namespace_hash()
+            1452123528942907587532668415362544424816022573043154497385993678618948064048
         }
 
         fn unpacked_size(self: @ContractState) -> Option<usize> {
@@ -7412,31 +7412,31 @@ pub mod model_with_short_string_namespace {
     #[abi(embed_v0)]
     impl DojoModelImpl of dojo::model::IModel<ContractState>{
         fn name(self: @ContractState) -> ByteArray {
-           dojo::model::Model::<ModelWithShortStringNamespace>::name()
+           "ModelWithShortStringNamespace"
         }
 
         fn namespace(self: @ContractState) -> ByteArray {
-           dojo::model::Model::<ModelWithShortStringNamespace>::namespace()
+           "dojo_test"
         }
 
         fn tag(self: @ContractState) -> ByteArray {
-            dojo::model::Model::<ModelWithShortStringNamespace>::tag()
+            "dojo_test-ModelWithShortStringNamespace"
         }
 
         fn version(self: @ContractState) -> u8 {
-           dojo::model::Model::<ModelWithShortStringNamespace>::version()
+           1
         }
 
         fn selector(self: @ContractState) -> felt252 {
-           dojo::model::Model::<ModelWithShortStringNamespace>::selector()
+           3563011140946869267852628778244415212055246902495528859686589254859279333005
         }
 
         fn name_hash(self: @ContractState) -> felt252 {
-            dojo::model::Model::<ModelWithShortStringNamespace>::name_hash()
+            4646597166239297873853881466258165424425132957303541470648153031188639878
         }
 
         fn namespace_hash(self: @ContractState) -> felt252 {
-            dojo::model::Model::<ModelWithShortStringNamespace>::namespace_hash()
+            1452123528942907587532668415362544424816022573043154497385993678618948064048
         }
 
         fn unpacked_size(self: @ContractState) -> Option<usize> {
@@ -8240,31 +8240,31 @@ pub mod model_with_string_namespace {
     #[abi(embed_v0)]
     impl DojoModelImpl of dojo::model::IModel<ContractState>{
         fn name(self: @ContractState) -> ByteArray {
-           dojo::model::Model::<ModelWithStringNamespace>::name()
+           "ModelWithStringNamespace"
         }
 
         fn namespace(self: @ContractState) -> ByteArray {
-           dojo::model::Model::<ModelWithStringNamespace>::namespace()
+           "dojo_test"
         }
 
         fn tag(self: @ContractState) -> ByteArray {
-            dojo::model::Model::<ModelWithStringNamespace>::tag()
+            "dojo_test-ModelWithStringNamespace"
         }
 
         fn version(self: @ContractState) -> u8 {
-           dojo::model::Model::<ModelWithStringNamespace>::version()
+           1
         }
 
         fn selector(self: @ContractState) -> felt252 {
-           dojo::model::Model::<ModelWithStringNamespace>::selector()
+           3428238780389029245974129676124052799610748885939447299287640410044966811336
         }
 
         fn name_hash(self: @ContractState) -> felt252 {
-            dojo::model::Model::<ModelWithStringNamespace>::name_hash()
+            36187013840655350498900857372670392628596870210415176261336407419317644423
         }
 
         fn namespace_hash(self: @ContractState) -> felt252 {
-            dojo::model::Model::<ModelWithStringNamespace>::namespace_hash()
+            1452123528942907587532668415362544424816022573043154497385993678618948064048
         }
 
         fn unpacked_size(self: @ContractState) -> Option<usize> {
@@ -9068,31 +9068,31 @@ pub mod position {
     #[abi(embed_v0)]
     impl DojoModelImpl of dojo::model::IModel<ContractState>{
         fn name(self: @ContractState) -> ByteArray {
-           dojo::model::Model::<Position>::name()
+           "Position"
         }
 
         fn namespace(self: @ContractState) -> ByteArray {
-           dojo::model::Model::<Position>::namespace()
+           "dojo_test"
         }
 
         fn tag(self: @ContractState) -> ByteArray {
-            dojo::model::Model::<Position>::tag()
+            "dojo_test-Position"
         }
 
         fn version(self: @ContractState) -> u8 {
-           dojo::model::Model::<Position>::version()
+           1
         }
 
         fn selector(self: @ContractState) -> felt252 {
-           dojo::model::Model::<Position>::selector()
+           1782729361185285637005619480739442196364037716000358448825261820703351159758
         }
 
         fn name_hash(self: @ContractState) -> felt252 {
-            dojo::model::Model::<Position>::name_hash()
+            2899920299641094436341712346886623904698864491830316325765258522168980161362
         }
 
         fn namespace_hash(self: @ContractState) -> felt252 {
-            dojo::model::Model::<Position>::namespace_hash()
+            1452123528942907587532668415362544424816022573043154497385993678618948064048
         }
 
         fn unpacked_size(self: @ContractState) -> Option<usize> {
@@ -9892,31 +9892,31 @@ pub mod roles {
     #[abi(embed_v0)]
     impl DojoModelImpl of dojo::model::IModel<ContractState>{
         fn name(self: @ContractState) -> ByteArray {
-           dojo::model::Model::<Roles>::name()
+           "Roles"
         }
 
         fn namespace(self: @ContractState) -> ByteArray {
-           dojo::model::Model::<Roles>::namespace()
+           "dojo_test"
         }
 
         fn tag(self: @ContractState) -> ByteArray {
-            dojo::model::Model::<Roles>::tag()
+            "dojo_test-Roles"
         }
 
         fn version(self: @ContractState) -> u8 {
-           dojo::model::Model::<Roles>::version()
+           1
         }
 
         fn selector(self: @ContractState) -> felt252 {
-           dojo::model::Model::<Roles>::selector()
+           3584099896964965841643389141246184155284218827427504603233100831001054183182
         }
 
         fn name_hash(self: @ContractState) -> felt252 {
-            dojo::model::Model::<Roles>::name_hash()
+            2030971736961612564423689930729061756599290850089001157163423482274886199516
         }
 
         fn namespace_hash(self: @ContractState) -> felt252 {
-            dojo::model::Model::<Roles>::namespace_hash()
+            1452123528942907587532668415362544424816022573043154497385993678618948064048
         }
 
         fn unpacked_size(self: @ContractState) -> Option<usize> {
@@ -10648,31 +10648,31 @@ pub mod only_key_model {
     #[abi(embed_v0)]
     impl DojoModelImpl of dojo::model::IModel<ContractState>{
         fn name(self: @ContractState) -> ByteArray {
-           dojo::model::Model::<OnlyKeyModel>::name()
+           "OnlyKeyModel"
         }
 
         fn namespace(self: @ContractState) -> ByteArray {
-           dojo::model::Model::<OnlyKeyModel>::namespace()
+           "dojo_test"
         }
 
         fn tag(self: @ContractState) -> ByteArray {
-            dojo::model::Model::<OnlyKeyModel>::tag()
+            "dojo_test-OnlyKeyModel"
         }
 
         fn version(self: @ContractState) -> u8 {
-           dojo::model::Model::<OnlyKeyModel>::version()
+           1
         }
 
         fn selector(self: @ContractState) -> felt252 {
-           dojo::model::Model::<OnlyKeyModel>::selector()
+           2309092000941816896446401231215693966290521919639503466118437426986900396853
         }
 
         fn name_hash(self: @ContractState) -> felt252 {
-            dojo::model::Model::<OnlyKeyModel>::name_hash()
+            1001826121797570811408809643478760373535949956555931325019299477987282578617
         }
 
         fn namespace_hash(self: @ContractState) -> felt252 {
-            dojo::model::Model::<OnlyKeyModel>::namespace_hash()
+            1452123528942907587532668415362544424816022573043154497385993678618948064048
         }
 
         fn unpacked_size(self: @ContractState) -> Option<usize> {
@@ -11404,31 +11404,31 @@ pub mod u_256_key_model {
     #[abi(embed_v0)]
     impl DojoModelImpl of dojo::model::IModel<ContractState>{
         fn name(self: @ContractState) -> ByteArray {
-           dojo::model::Model::<U256KeyModel>::name()
+           "U256KeyModel"
         }
 
         fn namespace(self: @ContractState) -> ByteArray {
-           dojo::model::Model::<U256KeyModel>::namespace()
+           "dojo_test"
         }
 
         fn tag(self: @ContractState) -> ByteArray {
-            dojo::model::Model::<U256KeyModel>::tag()
+            "dojo_test-U256KeyModel"
         }
 
         fn version(self: @ContractState) -> u8 {
-           dojo::model::Model::<U256KeyModel>::version()
+           1
         }
 
         fn selector(self: @ContractState) -> felt252 {
-           dojo::model::Model::<U256KeyModel>::selector()
+           2221887666320363067192826725795502610968343119143207326025439486865385474790
         }
 
         fn name_hash(self: @ContractState) -> felt252 {
-            dojo::model::Model::<U256KeyModel>::name_hash()
+            1848733002266458148515852001373055968326209639346734967305014900020806934517
         }
 
         fn namespace_hash(self: @ContractState) -> felt252 {
-            dojo::model::Model::<U256KeyModel>::namespace_hash()
+            1452123528942907587532668415362544424816022573043154497385993678618948064048
         }
 
         fn unpacked_size(self: @ContractState) -> Option<usize> {
@@ -12241,31 +12241,31 @@ pub mod player {
     #[abi(embed_v0)]
     impl DojoModelImpl of dojo::model::IModel<ContractState>{
         fn name(self: @ContractState) -> ByteArray {
-           dojo::model::Model::<Player>::name()
+           "Player"
         }
 
         fn namespace(self: @ContractState) -> ByteArray {
-           dojo::model::Model::<Player>::namespace()
+           "dojo_test"
         }
 
         fn tag(self: @ContractState) -> ByteArray {
-            dojo::model::Model::<Player>::tag()
+            "dojo_test-Player"
         }
 
         fn version(self: @ContractState) -> u8 {
-           dojo::model::Model::<Player>::version()
+           1
         }
 
         fn selector(self: @ContractState) -> felt252 {
-           dojo::model::Model::<Player>::selector()
+           32472305970791489884889070587064570056671760620943135506258424375410423946
         }
 
         fn name_hash(self: @ContractState) -> felt252 {
-            dojo::model::Model::<Player>::name_hash()
+            1073075359926275415180704315933677548333097210683379121732618306925003101845
         }
 
         fn namespace_hash(self: @ContractState) -> felt252 {
-            dojo::model::Model::<Player>::namespace_hash()
+            1452123528942907587532668415362544424816022573043154497385993678618948064048
         }
 
         fn unpacked_size(self: @ContractState) -> Option<usize> {
@@ -13147,31 +13147,31 @@ pub mod model_with_simple_array {
     #[abi(embed_v0)]
     impl DojoModelImpl of dojo::model::IModel<ContractState>{
         fn name(self: @ContractState) -> ByteArray {
-           dojo::model::Model::<ModelWithSimpleArray>::name()
+           "ModelWithSimpleArray"
         }
 
         fn namespace(self: @ContractState) -> ByteArray {
-           dojo::model::Model::<ModelWithSimpleArray>::namespace()
+           "dojo_test"
         }
 
         fn tag(self: @ContractState) -> ByteArray {
-            dojo::model::Model::<ModelWithSimpleArray>::tag()
+            "dojo_test-ModelWithSimpleArray"
         }
 
         fn version(self: @ContractState) -> u8 {
-           dojo::model::Model::<ModelWithSimpleArray>::version()
+           1
         }
 
         fn selector(self: @ContractState) -> felt252 {
-           dojo::model::Model::<ModelWithSimpleArray>::selector()
+           2155888289741706273257207428305937938996511115291276975807216945184181752777
         }
 
         fn name_hash(self: @ContractState) -> felt252 {
-            dojo::model::Model::<ModelWithSimpleArray>::name_hash()
+            173141902001925402715103859951360389436088950156916962046507357841237663931
         }
 
         fn namespace_hash(self: @ContractState) -> felt252 {
-            dojo::model::Model::<ModelWithSimpleArray>::namespace_hash()
+            1452123528942907587532668415362544424816022573043154497385993678618948064048
         }
 
         fn unpacked_size(self: @ContractState) -> Option<usize> {
@@ -14049,31 +14049,31 @@ pub mod model_with_byte_array {
     #[abi(embed_v0)]
     impl DojoModelImpl of dojo::model::IModel<ContractState>{
         fn name(self: @ContractState) -> ByteArray {
-           dojo::model::Model::<ModelWithByteArray>::name()
+           "ModelWithByteArray"
         }
 
         fn namespace(self: @ContractState) -> ByteArray {
-           dojo::model::Model::<ModelWithByteArray>::namespace()
+           "dojo_test"
         }
 
         fn tag(self: @ContractState) -> ByteArray {
-            dojo::model::Model::<ModelWithByteArray>::tag()
+            "dojo_test-ModelWithByteArray"
         }
 
         fn version(self: @ContractState) -> u8 {
-           dojo::model::Model::<ModelWithByteArray>::version()
+           1
         }
 
         fn selector(self: @ContractState) -> felt252 {
-           dojo::model::Model::<ModelWithByteArray>::selector()
+           2309493726682581230048608406375650493303358263694405202817326852234706548038
         }
 
         fn name_hash(self: @ContractState) -> felt252 {
-            dojo::model::Model::<ModelWithByteArray>::name_hash()
+            2176409715042145900636260236501596599545103472111273072320531220776338338674
         }
 
         fn namespace_hash(self: @ContractState) -> felt252 {
-            dojo::model::Model::<ModelWithByteArray>::namespace_hash()
+            1452123528942907587532668415362544424816022573043154497385993678618948064048
         }
 
         fn unpacked_size(self: @ContractState) -> Option<usize> {
@@ -14955,31 +14955,31 @@ pub mod model_with_complex_array {
     #[abi(embed_v0)]
     impl DojoModelImpl of dojo::model::IModel<ContractState>{
         fn name(self: @ContractState) -> ByteArray {
-           dojo::model::Model::<ModelWithComplexArray>::name()
+           "ModelWithComplexArray"
         }
 
         fn namespace(self: @ContractState) -> ByteArray {
-           dojo::model::Model::<ModelWithComplexArray>::namespace()
+           "dojo_test"
         }
 
         fn tag(self: @ContractState) -> ByteArray {
-            dojo::model::Model::<ModelWithComplexArray>::tag()
+            "dojo_test-ModelWithComplexArray"
         }
 
         fn version(self: @ContractState) -> u8 {
-           dojo::model::Model::<ModelWithComplexArray>::version()
+           1
         }
 
         fn selector(self: @ContractState) -> felt252 {
-           dojo::model::Model::<ModelWithComplexArray>::selector()
+           1293570145807126672811046976011709110822800800255162893130594439459909679461
         }
 
         fn name_hash(self: @ContractState) -> felt252 {
-            dojo::model::Model::<ModelWithComplexArray>::name_hash()
+            2866472224509756243720005045848892642397514372569303051745174230372637769655
         }
 
         fn namespace_hash(self: @ContractState) -> felt252 {
-            dojo::model::Model::<ModelWithComplexArray>::namespace_hash()
+            1452123528942907587532668415362544424816022573043154497385993678618948064048
         }
 
         fn unpacked_size(self: @ContractState) -> Option<usize> {
@@ -15868,31 +15868,31 @@ pub mod model_with_tuple {
     #[abi(embed_v0)]
     impl DojoModelImpl of dojo::model::IModel<ContractState>{
         fn name(self: @ContractState) -> ByteArray {
-           dojo::model::Model::<ModelWithTuple>::name()
+           "ModelWithTuple"
         }
 
         fn namespace(self: @ContractState) -> ByteArray {
-           dojo::model::Model::<ModelWithTuple>::namespace()
+           "dojo_test"
         }
 
         fn tag(self: @ContractState) -> ByteArray {
-            dojo::model::Model::<ModelWithTuple>::tag()
+            "dojo_test-ModelWithTuple"
         }
 
         fn version(self: @ContractState) -> u8 {
-           dojo::model::Model::<ModelWithTuple>::version()
+           1
         }
 
         fn selector(self: @ContractState) -> felt252 {
-           dojo::model::Model::<ModelWithTuple>::selector()
+           2556860780543194947392385177981405629628409496147617432088261544126553394590
         }
 
         fn name_hash(self: @ContractState) -> felt252 {
-            dojo::model::Model::<ModelWithTuple>::name_hash()
+            3222351670132870101782632958288197874250493316621507272653773018669253981260
         }
 
         fn namespace_hash(self: @ContractState) -> felt252 {
-            dojo::model::Model::<ModelWithTuple>::namespace_hash()
+            1452123528942907587532668415362544424816022573043154497385993678618948064048
         }
 
         fn unpacked_size(self: @ContractState) -> Option<usize> {
@@ -16790,31 +16790,31 @@ pub mod model_with_tuple_no_primitives {
     #[abi(embed_v0)]
     impl DojoModelImpl of dojo::model::IModel<ContractState>{
         fn name(self: @ContractState) -> ByteArray {
-           dojo::model::Model::<ModelWithTupleNoPrimitives>::name()
+           "ModelWithTupleNoPrimitives"
         }
 
         fn namespace(self: @ContractState) -> ByteArray {
-           dojo::model::Model::<ModelWithTupleNoPrimitives>::namespace()
+           "dojo_test"
         }
 
         fn tag(self: @ContractState) -> ByteArray {
-            dojo::model::Model::<ModelWithTupleNoPrimitives>::tag()
+            "dojo_test-ModelWithTupleNoPrimitives"
         }
 
         fn version(self: @ContractState) -> u8 {
-           dojo::model::Model::<ModelWithTupleNoPrimitives>::version()
+           1
         }
 
         fn selector(self: @ContractState) -> felt252 {
-           dojo::model::Model::<ModelWithTupleNoPrimitives>::selector()
+           59168777730614245274545541976317431416582911855710103554159293691166950405
         }
 
         fn name_hash(self: @ContractState) -> felt252 {
-            dojo::model::Model::<ModelWithTupleNoPrimitives>::name_hash()
+            157059227407493660591195028728750607977045261142495925435047270200565107096
         }
 
         fn namespace_hash(self: @ContractState) -> felt252 {
-            dojo::model::Model::<ModelWithTupleNoPrimitives>::namespace_hash()
+            1452123528942907587532668415362544424816022573043154497385993678618948064048
         }
 
         fn unpacked_size(self: @ContractState) -> Option<usize> {

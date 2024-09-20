@@ -712,31 +712,31 @@ pub mod $contract_name$ {
     #[abi(embed_v0)]
     impl DojoModelImpl of dojo::model::IModel<ContractState>{
         fn name(self: @ContractState) -> ByteArray {
-           dojo::model::Model::<$type_name$>::name()
+           \"$type_name$\"
         }
 
         fn namespace(self: @ContractState) -> ByteArray {
-           dojo::model::Model::<$type_name$>::namespace()
+           \"$model_namespace$\"
         }
 
         fn tag(self: @ContractState) -> ByteArray {
-            dojo::model::Model::<$type_name$>::tag()
+            \"$model_tag$\"
         }
 
         fn version(self: @ContractState) -> u8 {
-           dojo::model::Model::<$type_name$>::version()
+           $model_version$
         }
 
         fn selector(self: @ContractState) -> felt252 {
-           dojo::model::Model::<$type_name$>::selector()
+           $model_selector$
         }
 
         fn name_hash(self: @ContractState) -> felt252 {
-            dojo::model::Model::<$type_name$>::name_hash()
+            $model_name_hash$
         }
 
         fn namespace_hash(self: @ContractState) -> felt252 {
-            dojo::model::Model::<$type_name$>::namespace_hash()
+            $model_namespace_hash$
         }
 
         fn unpacked_size(self: @ContractState) -> Option<usize> {
