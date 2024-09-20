@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1726855002463,
+  "lastUpdate": 1726855052055,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -21157,6 +21157,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 20390091442,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "contact@luca-steeb.com",
+            "name": "Luca Steeb",
+            "username": "steebchen"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8b7d6b2ce6c7abb7a885cf3bc55c825aa77adb84",
+          "message": "ci(workflows) add GitHub Actions workflow for preview builds (#2446)\n\n* Add GitHub Actions workflow for Docker builds and deployment\r\n\r\nThis commit introduces a new GitHub Actions workflow file, `preview.yml`, to automate building and deploying Docker images. The workflow includes steps for setting up the Rust toolchain, building binaries, archiving artifacts, and deploying them via Docker and Slot. This enhancement streamlines the CI/CD process, ensuring consistency and efficiency in releases.\r\n\r\n* wip\r\n\r\n* wip\r\n\r\n* fix\r\n\r\n* bin slot\r\n\r\n* fix\r\n\r\n* temp\r\n\r\n* wip\r\n\r\n* xdg\r\n\r\n* short sha\r\n\r\n* uncomment\r\n\r\n* world input\r\n\r\n* remove slot\r\n\r\n* fix\r\n\r\n* bump\r\n\r\n* remove branch deploy\r\n\r\n* dockerify all\r\n\r\n* temp preview publish\r\n\r\n* rust toolchain & fixes\r\n\r\n* docker wip\r\n\r\n* build local and run\r\n\r\n* revert\r\n\r\n* checkout fix\r\n\r\n* ls\r\n\r\n* fix\r\n\r\n* fix\r\n\r\n* fix artifacts\r\n\r\n* move cache\r\n\r\n* separate cache\r\n\r\n* minor adaptions\r\n\r\n* bump to 32 cores yolo\r\n\r\n* remove temp push trigger",
+          "timestamp": "2024-09-20T13:40:14-04:00",
+          "tree_id": "3041dff3b7695295aeb62214c51afc205cc21444",
+          "url": "https://github.com/dojoengine/dojo/commit/8b7d6b2ce6c7abb7a885cf3bc55c825aa77adb84"
+        },
+        "date": 1726855050363,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16155111,
+            "range": "± 231742",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3816686,
+            "range": "± 54417",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2466832450,
+            "range": "± 244971746",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3921384,
+            "range": "± 92088",
             "unit": "ns/iter"
           }
         ]
