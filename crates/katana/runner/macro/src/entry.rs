@@ -1,12 +1,12 @@
 use std::str::FromStr;
 
 use proc_macro2::TokenStream;
-use quote::quote;
 use strum_macros::{AsRefStr, EnumString};
 use syn::parse::Parser;
-use syn::ItemFn;
+use syn::spanned::Spanned;
 
 use crate::config::{Configuration, DEFAULT_ERROR_CONFIG};
+use crate::parse::parse_knobs;
 
 // Because syn::AttributeArgs does not implement syn::Parse
 type AttributeArgs = syn::punctuated::Punctuated<syn::Meta, syn::Token![,]>;
@@ -17,12 +17,9 @@ enum RunnerArg {
     BlockTime,
     Fee,
     Validation,
-    ChainId,
     Accounts,
     DbDir,
-    Binary,
-    Output,
-    Genesis,
+    Flavor,
 }
 
 pub(crate) fn test(args: TokenStream, item: TokenStream) -> TokenStream {
@@ -30,7 +27,7 @@ pub(crate) fn test(args: TokenStream, item: TokenStream) -> TokenStream {
     // to the expected output as possible. This helps out IDEs such that completions and other
     // related features keep working.
 
-    let input: ItemFn = match syn::parse2(item.clone()) {
+    let input: crate::parse::ItemFn = match syn::parse2(item.clone()) {
         Ok(it) => it,
         Err(e) => return token_stream_with_error(item, e),
     };
@@ -38,22 +35,25 @@ pub(crate) fn test(args: TokenStream, item: TokenStream) -> TokenStream {
     // parse the attribute arguments
     let config = AttributeArgs::parse_terminated
         .parse2(args.into())
-        .and_then(|args| build_config(&input, args));
+        .and_then(|args| build_config(&input, args, true));
 
     match config {
-        Ok(config) => todo!(),
-        Err(e) => token_stream_with_error(parse_knobs(input, true, DEFAULT_ERROR_CONFIG), e),
+        Ok(config) => parse_knobs(input, true, config),
+        Err(e) => token_stream_with_error(parse_knobs(input, false, DEFAULT_ERROR_CONFIG), e),
     }
 }
 
-fn build_config(input: &ItemFn, args: AttributeArgs) -> Result<Configuration, syn::Error> {
+fn build_config(
+    input: &crate::parse::ItemFn,
+    args: AttributeArgs,
+    is_test: bool,
+) -> Result<Configuration, syn::Error> {
     if input.sig.asyncness.is_none() {
         let msg = "the `async` keyword is missing from the function declaration";
         return Err(syn::Error::new_spanned(input.sig.fn_token, msg));
     }
 
-    // let mut config = Configuration::new(is_test, rt_multi_thread);
-    // let macro_name = config.macro_name();
+    let mut config = Configuration::new(is_test);
 
     for arg in args {
         match arg {
@@ -79,25 +79,27 @@ fn build_config(input: &ItemFn, args: AttributeArgs) -> Result<Configuration, sy
 
                 match arg {
                     Ok(arg) => match arg {
-                        RunnerArg::BlockTime => {
-                            //     config.set_worker_threads(lit.clone(),
-                            // syn::spanned::Spanned::span(lit))?;
+                        RunnerArg::Flavor => {
+                            config.set_flavor(lit.clone(), Spanned::span(lit))?;
                         }
-                        RunnerArg::Fee => {}
-                        RunnerArg::Validation => {}
-                        RunnerArg::Accounts => {}
-                        RunnerArg::ChainId => {}
-                        RunnerArg::DbDir => {}
-                        RunnerArg::Genesis => {}
-                        RunnerArg::Output => {}
-                        RunnerArg::Binary => {}
+                        RunnerArg::BlockTime => {
+                            config.set_block_time(lit.clone(), Spanned::span(lit))?
+                        }
+                        RunnerArg::Validation => {
+                            config.set_validation(lit.clone(), Spanned::span(lit))?
+                        }
+                        RunnerArg::Accounts => {
+                            config.set_accounts(lit.clone(), Spanned::span(lit))?;
+                        }
+
+                        RunnerArg::Fee => config.set_fee(lit.clone(), Spanned::span(lit))?,
+                        RunnerArg::DbDir => config.set_db_dir(lit.clone(), Spanned::span(lit))?,
                     },
 
                     Err(_) => {
                         let msg = format!(
-                            "Unknown attribute {ident} is specified; expected one of: `fee`, \
-                             `validation`, `accounts`, `chain_id`, `db_dir`, `genesis`, `output`, \
-                             binary`",
+                            "Unknown attribute {ident} is specified; expected one of: `flavor`, \
+                             `fee`, `validation`, `accounts`, `db_dir`, `block_time`",
                         );
                         return Err(syn::Error::new_spanned(namevalue, msg));
                     }
@@ -110,13 +112,7 @@ fn build_config(input: &ItemFn, args: AttributeArgs) -> Result<Configuration, sy
         }
     }
 
-    // config.build();
-
-    todo!()
-}
-
-fn parse_knobs(mut input: ItemFn, is_test: bool, config: Configuration) -> TokenStream {
-    todo!()
+    Ok(config)
 }
 
 fn token_stream_with_error(mut tokens: TokenStream, error: syn::Error) -> TokenStream {
