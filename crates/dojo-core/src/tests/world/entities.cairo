@@ -2,8 +2,9 @@ use core::array::{ArrayTrait, SpanTrait};
 
 use starknet::{contract_address_const, ContractAddress};
 
-use dojo::model::{ModelIndex, Layout, FieldLayout, Model};
-use dojo::model::introspect::Introspect;
+use dojo::meta::{Layout, FieldLayout};
+use dojo::model::{ModelIndex, Model};
+use dojo::meta::introspect::Introspect;
 use dojo::storage::database::MAX_ARRAY_LENGTH;
 use dojo::utils::entity_id_from_keys;
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, world};

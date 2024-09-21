@@ -1,14 +1,9 @@
-use std::collections::HashMap;
-
 use cairo_lang_defs::patcher::RewriteNode;
 use cairo_lang_defs::plugin::PluginDiagnostic;
 use cairo_lang_diagnostics::Severity;
-use cairo_lang_syntax::node::ast::{
-    ArgClause, Expr, ItemStruct, Member as MemberAst, OptionArgListParenthesized,
-};
+use cairo_lang_syntax::node::ast::ItemStruct;
 use cairo_lang_syntax::node::db::SyntaxGroup;
-use cairo_lang_syntax::node::helpers::QueryAttrs;
-use cairo_lang_syntax::node::{Terminal, TypedStablePtr, TypedSyntaxNode};
+use cairo_lang_syntax::node::{TypedStablePtr, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use convert_case::{Case, Casing};
 use dojo_world::config::NamespaceConfig;
@@ -16,183 +11,11 @@ use dojo_world::contracts::naming;
 use dojo_world::manifest::Member;
 use starknet::core::utils::get_selector_from_name;
 
+use crate::data::{
+    compute_namespace, deserialize_keys_and_values, get_parameters, parse_members,
+    serialize_keys_and_values, serialize_member_ty, DEFAULT_DATA_VERSION,
+};
 use crate::plugin::{DojoAuxData, Model, DOJO_MODEL_ATTR};
-
-const DEFAULT_MODEL_VERSION: u8 = 1;
-
-const MODEL_VERSION_NAME: &str = "version";
-const MODEL_NAMESPACE: &str = "namespace";
-const MODEL_NOMAPPING: &str = "nomapping";
-
-struct ModelParameters {
-    version: u8,
-    namespace: Option<String>,
-    nomapping: bool,
-}
-
-impl Default for ModelParameters {
-    fn default() -> ModelParameters {
-        ModelParameters {
-            version: DEFAULT_MODEL_VERSION,
-            namespace: Option::None,
-            nomapping: false,
-        }
-    }
-}
-
-/// Get the model version from the `Expr` parameter.
-fn get_model_version(
-    db: &dyn SyntaxGroup,
-    arg_value: Expr,
-    diagnostics: &mut Vec<PluginDiagnostic>,
-) -> u8 {
-    match arg_value {
-        Expr::Literal(ref value) => {
-            if let Ok(value) = value.text(db).parse::<u8>() {
-                if value <= DEFAULT_MODEL_VERSION {
-                    value
-                } else {
-                    diagnostics.push(PluginDiagnostic {
-                        message: format!("dojo::model version {} not supported", value),
-                        stable_ptr: arg_value.stable_ptr().untyped(),
-                        severity: Severity::Error,
-                    });
-                    DEFAULT_MODEL_VERSION
-                }
-            } else {
-                diagnostics.push(PluginDiagnostic {
-                    message: format!(
-                        "The argument '{}' of dojo::model must be an integer",
-                        MODEL_VERSION_NAME
-                    ),
-                    stable_ptr: arg_value.stable_ptr().untyped(),
-                    severity: Severity::Error,
-                });
-                DEFAULT_MODEL_VERSION
-            }
-        }
-        _ => {
-            diagnostics.push(PluginDiagnostic {
-                message: format!(
-                    "The argument '{}' of dojo::model must be an integer",
-                    MODEL_VERSION_NAME
-                ),
-                stable_ptr: arg_value.stable_ptr().untyped(),
-                severity: Severity::Error,
-            });
-            DEFAULT_MODEL_VERSION
-        }
-    }
-}
-
-/// Get the model namespace from the `Expr` parameter.
-fn get_model_namespace(
-    db: &dyn SyntaxGroup,
-    arg_value: Expr,
-    diagnostics: &mut Vec<PluginDiagnostic>,
-) -> Option<String> {
-    match arg_value {
-        Expr::ShortString(ss) => Some(ss.string_value(db).unwrap()),
-        Expr::String(s) => Some(s.string_value(db).unwrap()),
-        _ => {
-            diagnostics.push(PluginDiagnostic {
-                message: format!(
-                    "The argument '{}' of dojo::model must be a string",
-                    MODEL_NAMESPACE
-                ),
-                stable_ptr: arg_value.stable_ptr().untyped(),
-                severity: Severity::Error,
-            });
-            Option::None
-        }
-    }
-}
-
-/// Get parameters of the dojo::model attribute.
-///
-/// Note: dojo::model attribute has already been checked so there is one and only one attribute.
-///
-/// Parameters:
-/// * db: The semantic database.
-/// * struct_ast: The AST of the model struct.
-/// * diagnostics: vector of compiler diagnostics.
-///
-/// Returns:
-/// * A [`ModelParameters`] object containing all the dojo::model parameters with their default
-///   values if not set in the code.
-fn get_model_parameters(
-    db: &dyn SyntaxGroup,
-    struct_ast: ItemStruct,
-    diagnostics: &mut Vec<PluginDiagnostic>,
-) -> ModelParameters {
-    let mut parameters = ModelParameters::default();
-    let mut processed_args: HashMap<String, bool> = HashMap::new();
-
-    if let OptionArgListParenthesized::ArgListParenthesized(arguments) =
-        struct_ast.attributes(db).query_attr(db, DOJO_MODEL_ATTR).first().unwrap().arguments(db)
-    {
-        arguments.arguments(db).elements(db).iter().for_each(|a| match a.arg_clause(db) {
-            ArgClause::Named(x) => {
-                let arg_name = x.name(db).text(db).to_string();
-                let arg_value = x.value(db);
-
-                if processed_args.contains_key(&arg_name) {
-                    diagnostics.push(PluginDiagnostic {
-                        message: format!("Too many '{}' attributes for dojo::model", arg_name),
-                        stable_ptr: struct_ast.stable_ptr().untyped(),
-                        severity: Severity::Error,
-                    });
-                } else {
-                    processed_args.insert(arg_name.clone(), true);
-
-                    match arg_name.as_str() {
-                        MODEL_VERSION_NAME => {
-                            parameters.version = get_model_version(db, arg_value, diagnostics);
-                        }
-                        MODEL_NAMESPACE => {
-                            parameters.namespace = get_model_namespace(db, arg_value, diagnostics);
-                        }
-                        MODEL_NOMAPPING => {
-                            parameters.nomapping = true;
-                        }
-                        _ => {
-                            diagnostics.push(PluginDiagnostic {
-                                message: format!(
-                                    "Unexpected argument '{}' for dojo::model",
-                                    arg_name
-                                ),
-                                stable_ptr: x.stable_ptr().untyped(),
-                                severity: Severity::Warning,
-                            });
-                        }
-                    }
-                }
-            }
-            ArgClause::Unnamed(x) => {
-                diagnostics.push(PluginDiagnostic {
-                    message: format!(
-                        "Unexpected argument '{}' for dojo::model",
-                        x.as_syntax_node().get_text(db)
-                    ),
-                    stable_ptr: x.stable_ptr().untyped(),
-                    severity: Severity::Warning,
-                });
-            }
-            ArgClause::FieldInitShorthand(x) => {
-                diagnostics.push(PluginDiagnostic {
-                    message: format!(
-                        "Unexpected argument '{}' for dojo::model",
-                        x.name(db).name(db).text(db).to_string()
-                    ),
-                    stable_ptr: x.stable_ptr().untyped(),
-                    severity: Severity::Warning,
-                });
-            }
-        })
-    }
-
-    parameters
-}
 
 /// A handler for Dojo code that modifies a model struct.
 /// Parameters:
@@ -209,17 +32,11 @@ pub fn handle_model_struct(
 ) -> (RewriteNode, Vec<PluginDiagnostic>) {
     let mut diagnostics = vec![];
 
-    let parameters = get_model_parameters(db, struct_ast.clone(), &mut diagnostics);
+    let parameters =
+        get_parameters(db, &DOJO_MODEL_ATTR.to_string(), struct_ast.clone(), &mut diagnostics);
 
     let model_name = struct_ast.name(db).as_syntax_node().get_text(db).trim().to_string();
-    let unmapped_namespace = parameters.namespace.unwrap_or(namespace_config.default.clone());
-
-    let model_namespace = if parameters.nomapping {
-        unmapped_namespace
-    } else {
-        // Maps namespace from the tag to ensure higher precision on matching namespace mappings.
-        namespace_config.get_mapping(&naming::get_tag(&unmapped_namespace, &model_name))
-    };
+    let model_namespace = compute_namespace(&model_name, &parameters, namespace_config);
 
     for (id, value) in [("name", &model_name), ("namespace", &model_namespace)] {
         if !NamespaceConfig::is_name_valid(value) {
@@ -245,7 +62,7 @@ pub fn handle_model_struct(
     let (model_version, model_selector) = match parameters.version {
         0 => (RewriteNode::Text("0".to_string()), RewriteNode::Text(format!("\"{model_name}\""))),
         _ => (
-            RewriteNode::Text(DEFAULT_MODEL_VERSION.to_string()),
+            RewriteNode::Text(DEFAULT_DATA_VERSION.to_string()),
             RewriteNode::Text(
                 naming::compute_selector_from_hashes(model_namespace_hash, model_name_hash)
                     .to_string(),
@@ -253,47 +70,18 @@ pub fn handle_model_struct(
         ),
     };
 
-    let mut members: Vec<Member> = vec![];
-    let mut members_values: Vec<RewriteNode> = vec![];
-    let mut param_keys: Vec<String> = vec![];
+    let members = parse_members(db, &struct_ast.members(db).elements(db), &mut diagnostics);
+
     let mut serialized_keys: Vec<RewriteNode> = vec![];
-    let mut serialized_param_keys: Vec<RewriteNode> = vec![];
     let mut serialized_values: Vec<RewriteNode> = vec![];
-    let mut field_accessors: Vec<RewriteNode> = vec![];
-    let mut entity_field_accessors: Vec<RewriteNode> = vec![];
-    let elements = struct_ast.members(db).elements(db);
 
-    elements.iter().for_each(|member_ast| {
-        let member = Member {
-            name: member_ast.name(db).text(db).to_string(),
-            ty: member_ast.type_clause(db).ty(db).as_syntax_node().get_text(db).trim().to_string(),
-            key: member_ast.has_attr(db, "key"),
-        };
-
-        if member.key {
-            validate_key_member(&member, db, member_ast, &mut diagnostics);
-            serialized_keys.push(serialize_member_ty(&member, true));
-            serialized_param_keys.push(serialize_member_ty(&member, false));
-            param_keys.push(format!("{}: {}", member.name, member.ty));
-        } else {
-            serialized_values.push(serialize_member_ty(&member, true));
-            members_values
-                .push(RewriteNode::Text(format!("pub {}: {},\n", member.name, member.ty)));
-        }
-
-        members.push(member);
-    });
-    let param_keys = param_keys.join(", ");
-
-    members.iter().filter(|m| !m.key).for_each(|member| {
-        field_accessors.push(generate_field_accessors(
-            model_name.clone(),
-            param_keys.clone(),
-            serialized_param_keys.clone(),
-            member,
-        ));
-        entity_field_accessors.push(generate_entity_field_accessors(model_name.clone(), member));
-    });
+    serialize_keys_and_values(
+        &members,
+        "serialized",
+        &mut serialized_keys,
+        "serialized",
+        &mut serialized_values,
+    );
 
     if serialized_keys.is_empty() {
         diagnostics.push(PluginDiagnostic {
@@ -310,6 +98,49 @@ pub fn handle_model_struct(
             severity: Severity::Error,
         });
     }
+
+    let mut deserialized_keys: Vec<RewriteNode> = vec![];
+    let mut deserialized_values: Vec<RewriteNode> = vec![];
+
+    deserialize_keys_and_values(
+        &members,
+        "keys",
+        &mut deserialized_keys,
+        "values",
+        &mut deserialized_values,
+    );
+
+    let mut member_key_names: Vec<RewriteNode> = vec![];
+    let mut member_value_names: Vec<RewriteNode> = vec![];
+    let mut members_values: Vec<RewriteNode> = vec![];
+    let mut param_keys: Vec<String> = vec![];
+    let mut serialized_param_keys: Vec<RewriteNode> = vec![];
+
+    members.iter().for_each(|member| {
+        if member.key {
+            param_keys.push(format!("{}: {}", member.name, member.ty));
+            serialized_param_keys.push(serialize_member_ty(member, false, "serialized"));
+            member_key_names.push(RewriteNode::Text(format!("{},\n", member.name.clone())));
+        } else {
+            members_values
+                .push(RewriteNode::Text(format!("pub {}: {},\n", member.name, member.ty)));
+            member_value_names.push(RewriteNode::Text(format!("{},\n", member.name.clone())));
+        }
+    });
+    let param_keys = param_keys.join(", ");
+
+    let mut field_accessors: Vec<RewriteNode> = vec![];
+    let mut entity_field_accessors: Vec<RewriteNode> = vec![];
+
+    members.iter().filter(|m| !m.key).for_each(|member| {
+        field_accessors.push(generate_field_accessors(
+            model_name.clone(),
+            param_keys.clone(),
+            serialized_param_keys.clone(),
+            member,
+        ));
+        entity_field_accessors.push(generate_entity_field_accessors(model_name.clone(), member));
+    });
 
     aux_data.models.push(Model {
         name: model_name.clone(),
@@ -351,22 +182,16 @@ pub impl $type_name$StoreImpl of $type_name$Store {
         core::poseidon::poseidon_hash_span(serialized.span())
     }
 
-    fn from_values(ref keys: Span<felt252>, ref values: Span<felt252>) -> $type_name$ {
-        let mut serialized = core::array::ArrayTrait::new();
-        serialized.append_span(keys);
-        serialized.append_span(values);
-        let mut serialized = core::array::ArrayTrait::span(@serialized);
+    fn from_values(ref keys: Span<felt252>, ref values: Span<felt252>) -> Option<$type_name$> {
+        $deserialized_keys$
+        $deserialized_values$
 
-        let entity = core::serde::Serde::<$type_name$>::deserialize(ref serialized);
-
-        if core::option::OptionTrait::<$type_name$>::is_none(@entity) {
-            panic!(
-                \"Model `$type_name$`: deserialization failed. Ensure the length of the keys tuple \
-             is matching the number of #[key] fields in the model struct.\"
-            );
-        }
-
-        core::option::OptionTrait::<$type_name$>::unwrap(entity)
+        Option::Some(
+            $type_name$ {
+                $member_key_names$
+                $member_value_names$
+            }
+        )
     }
 
     fn get(world: dojo::world::IWorldDispatcher, $param_keys$) -> $type_name$ {
@@ -398,18 +223,15 @@ pub impl $type_name$ModelEntityImpl of dojo::model::ModelEntity<$type_name$Entit
         core::array::ArrayTrait::span(@serialized)
     }
 
-    fn from_values(entity_id: felt252, ref values: Span<felt252>) -> $type_name$Entity {
-        let mut serialized = array![entity_id];
-        serialized.append_span(values);
-        let mut serialized = core::array::ArrayTrait::span(@serialized);
+    fn from_values(entity_id: felt252, ref values: Span<felt252>) -> Option<$type_name$Entity> {
+        $deserialized_values$
 
-        let entity_values = core::serde::Serde::<$type_name$Entity>::deserialize(ref serialized);
-        if core::option::OptionTrait::<$type_name$Entity>::is_none(@entity_values) {
-            panic!(
-                \"ModelEntity `$type_name$Entity`: deserialization failed.\"
-            );
-        }
-        core::option::OptionTrait::<$type_name$Entity>::unwrap(entity_values)
+        Option::Some(
+            $type_name$Entity {
+                __id: entity_id,
+                $member_value_names$
+            }
+        )
     }
 
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> $type_name$Entity {
@@ -419,7 +241,12 @@ pub impl $type_name$ModelEntityImpl of dojo::model::ModelEntity<$type_name$Entit
             dojo::model::ModelIndex::Id(entity_id),
             dojo::model::Model::<$type_name$>::layout()
         );
-        Self::from_values(entity_id, ref values)
+        match Self::from_values(entity_id, ref values) {
+            Option::Some(x) => x,
+            Option::None => {
+                panic!(\"ModelEntity `$type_name$Entity`: deserialization failed.\")
+            }
+        }
     }
 
     fn update_entity(self: @$type_name$Entity, world: dojo::world::IWorldDispatcher) {
@@ -520,7 +347,12 @@ pub impl $type_name$ModelImpl of dojo::model::Model<$type_name$> {
         );
         let mut _keys = keys;
 
-        $type_name$Store::from_values(ref _keys, ref values)
+        match $type_name$Store::from_values(ref _keys, ref values) {
+            Option::Some(x) => x,
+            Option::None => {
+                panic!(\"Model `$type_name$`: deserialization failed.\")
+            }
+        }
     }
 
    fn set_model(
@@ -647,18 +479,18 @@ pub impl $type_name$ModelImpl of dojo::model::Model<$type_name$> {
     }
 
     #[inline(always)]
-    fn layout() -> dojo::model::Layout {
-        dojo::model::introspect::Introspect::<$type_name$>::layout()
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::introspect::Introspect::<$type_name$>::layout()
     }
 
     #[inline(always)]
-    fn instance_layout(self: @$type_name$) -> dojo::model::Layout {
+    fn instance_layout(self: @$type_name$) -> dojo::meta::Layout {
         Self::layout()
     }
 
     #[inline(always)]
     fn packed_size() -> Option<usize> {
-        dojo::model::layout::compute_packed_size(Self::layout())
+        dojo::meta::layout::compute_packed_size(Self::layout())
     }
 }
 
@@ -740,19 +572,19 @@ pub mod $contract_name$ {
         }
 
         fn unpacked_size(self: @ContractState) -> Option<usize> {
-            dojo::model::introspect::Introspect::<$type_name$>::size()
+            dojo::meta::introspect::Introspect::<$type_name$>::size()
         }
 
         fn packed_size(self: @ContractState) -> Option<usize> {
             dojo::model::Model::<$type_name$>::packed_size()
         }
 
-        fn layout(self: @ContractState) -> dojo::model::Layout {
+        fn layout(self: @ContractState) -> dojo::meta::Layout {
             dojo::model::Model::<$type_name$>::layout()
         }
 
-        fn schema(self: @ContractState) -> dojo::model::introspect::Ty {
-            dojo::model::introspect::Introspect::<$type_name$>::ty()
+        fn schema(self: @ContractState) -> dojo::meta::introspect::Ty {
+            dojo::meta::introspect::Introspect::<$type_name$>::ty()
         }
     }
 
@@ -766,9 +598,12 @@ pub mod $contract_name$ {
             &UnorderedHashMap::from([
                 ("contract_name".to_string(), RewriteNode::Text(model_name.to_case(Case::Snake))),
                 ("type_name".to_string(), RewriteNode::Text(model_name)),
-                ("namespace".to_string(), RewriteNode::Text("namespace".to_string())),
+                ("member_key_names".to_string(), RewriteNode::new_modified(member_key_names)),
+                ("member_value_names".to_string(), RewriteNode::new_modified(member_value_names)),
                 ("serialized_keys".to_string(), RewriteNode::new_modified(serialized_keys)),
                 ("serialized_values".to_string(), RewriteNode::new_modified(serialized_values)),
+                ("deserialized_keys".to_string(), RewriteNode::new_modified(deserialized_keys)),
+                ("deserialized_values".to_string(), RewriteNode::new_modified(deserialized_values)),
                 ("model_version".to_string(), model_version),
                 ("model_selector".to_string(), model_selector),
                 ("model_namespace".to_string(), RewriteNode::Text(model_namespace.clone())),
@@ -793,48 +628,6 @@ pub mod $contract_name$ {
         ),
         diagnostics,
     )
-}
-
-/// Validates that the key member is valid.
-/// # Arguments
-///
-/// * member: The member to validate.
-/// * diagnostics: The diagnostics to push to, if the member is an invalid key.
-fn validate_key_member(
-    member: &Member,
-    db: &dyn SyntaxGroup,
-    member_ast: &MemberAst,
-    diagnostics: &mut Vec<PluginDiagnostic>,
-) {
-    if member.ty == "u256" {
-        diagnostics.push(PluginDiagnostic {
-            message: "Key is only supported for core types that are 1 felt long once serialized. \
-                      `u256` is a struct of 2 u128, hence not supported."
-                .into(),
-            stable_ptr: member_ast.name(db).stable_ptr().untyped(),
-            severity: Severity::Error,
-        });
-    }
-}
-
-/// Creates a [`RewriteNode`] for the member type serialization.
-///
-/// # Arguments
-///
-/// * member: The member to serialize.
-fn serialize_member_ty(member: &Member, with_self: bool) -> RewriteNode {
-    match member.ty.as_str() {
-        "felt252" => RewriteNode::Text(format!(
-            "core::array::ArrayTrait::append(ref serialized, {}{});\n",
-            if with_self { "*self." } else { "" },
-            member.name
-        )),
-        _ => RewriteNode::Text(format!(
-            "core::serde::Serde::serialize({}{}, ref serialized);\n",
-            if with_self { "self." } else { "@" },
-            member.name
-        )),
-    }
 }
 
 /// Generates field accessors (`get_[field_name]` and `set_[field_name]`) for every

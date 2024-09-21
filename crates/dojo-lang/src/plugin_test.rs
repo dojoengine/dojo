@@ -28,6 +28,7 @@ cairo_lang_test_utils::test_file_test!(
     "src/plugin_test_data",
     {
         model: "model",
+        event: "event",
         print: "print",
         introspect: "introspect",
         system: "system",

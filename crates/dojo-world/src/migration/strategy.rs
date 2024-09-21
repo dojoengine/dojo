@@ -13,7 +13,7 @@ use super::contract::{ContractDiff, ContractMigration};
 use super::world::WorldDiff;
 use super::MigrationType;
 use crate::contracts::naming;
-use crate::manifest::{CONTRACTS_DIR, MODELS_DIR};
+use crate::manifest::{CONTRACTS_DIR, EVENTS_DIR, MODELS_DIR};
 
 #[derive(Debug, Clone)]
 pub enum MigrationMetadata {
@@ -27,6 +27,7 @@ pub struct MigrationStrategy {
     pub base: Option<ClassMigration>,
     pub contracts: Vec<ContractMigration>,
     pub models: Vec<ClassMigration>,
+    pub events: Vec<ClassMigration>,
     pub metadata: HashMap<String, MigrationMetadata>,
 }
 
@@ -54,6 +55,11 @@ impl MigrationStrategy {
         });
 
         self.models.iter().for_each(|item| match item.migration_type() {
+            MigrationType::New => new += 1,
+            MigrationType::Update => update += 1,
+        });
+
+        self.events.iter().for_each(|item| match item.migration_type() {
             MigrationType::New => new += 1,
             MigrationType::Update => update += 1,
         });
@@ -106,6 +112,7 @@ pub fn prepare_for_migration(
 
     read_artifact_paths(target_dir, &mut artifact_paths)?;
     read_artifact_paths(&target_dir.join(MODELS_DIR), &mut artifact_paths)?;
+    read_artifact_paths(&target_dir.join(EVENTS_DIR), &mut artifact_paths)?;
     read_artifact_paths(&target_dir.join(CONTRACTS_DIR), &mut artifact_paths)?;
 
     // We don't need to care if a contract has already been declared or not, because
@@ -122,6 +129,7 @@ pub fn prepare_for_migration(
         world.is_some(),
     )?;
     let models = evaluate_models_to_migrate(&diff.models, &artifact_paths, world.is_some())?;
+    let events = evaluate_events_to_migrate(&diff.events, &artifact_paths, world.is_some())?;
 
     // If world needs to be migrated, then we expect the `seed` to be provided.
     if let Some(world) = &mut world {
@@ -142,11 +150,29 @@ pub fn prepare_for_migration(
     let world_address = world_address.unwrap_or_else(|| world.as_ref().unwrap().contract_address);
 
     let mut migration =
-        MigrationStrategy { world_address, world, base, contracts, models, metadata };
+        MigrationStrategy { world_address, world, base, contracts, models, events, metadata };
 
     migration.resolve_variable(world_address)?;
 
     Ok(migration)
+}
+
+fn evaluate_events_to_migrate(
+    events: &[ClassDiff],
+    artifact_paths: &HashMap<String, PathBuf>,
+    world_contract_will_migrate: bool,
+) -> Result<Vec<ClassMigration>> {
+    let mut comps_to_migrate = vec![];
+
+    for c in events {
+        if let Ok(Some(c)) =
+            evaluate_class_to_migrate(c, artifact_paths, world_contract_will_migrate)
+        {
+            comps_to_migrate.push(c);
+        }
+    }
+
+    Ok(comps_to_migrate)
 }
 
 fn evaluate_models_to_migrate(

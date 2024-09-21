@@ -8,7 +8,6 @@ use cairo_lang_defs::plugin::{
 };
 use cairo_lang_diagnostics::Severity;
 use cairo_lang_semantic::plugin::PluginSuite;
-use cairo_lang_starknet::plugin::aux_data::StarkNetEventAuxData;
 use cairo_lang_syntax::attribute::structured::{AttributeArgVariant, AttributeStructurize};
 use cairo_lang_syntax::node::ast::Attribute;
 use cairo_lang_syntax::node::db::SyntaxGroup;
@@ -43,12 +42,20 @@ pub const DOJO_CONTRACT_ATTR: &str = "dojo::contract";
 pub const DOJO_INTERFACE_ATTR: &str = "dojo::interface";
 pub const DOJO_MODEL_ATTR: &str = "dojo::model";
 pub const DOJO_EVENT_ATTR: &str = "dojo::event";
+pub const DOJO_KEY_ATTR: &str = "key";
 
 pub const DOJO_INTROSPECT_ATTR: &str = "Introspect";
 pub const DOJO_PACKED_ATTR: &str = "IntrospectPacked";
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Model {
+    pub name: String,
+    pub namespace: String,
+    pub members: Vec<Member>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Event {
     pub name: String,
     pub namespace: String,
     pub members: Vec<Member>,
@@ -70,7 +77,7 @@ pub struct DojoAuxData {
     /// A list of contracts that were processed by the plugin and their model dependencies.
     pub contracts: Vec<ContractAuxData>,
     /// A list of events that were processed by the plugin.
-    pub events: Vec<StarkNetEventAuxData>,
+    pub events: Vec<Event>,
 }
 
 impl GeneratedFileAuxData for DojoAuxData {
@@ -371,8 +378,12 @@ impl MacroPlugin for BuiltinDojoPlugin {
 
                 match event_attrs.len().cmp(&1) {
                     Ordering::Equal => {
-                        let (event_rewrite_nodes, event_diagnostics) =
-                            handle_event_struct(db, &mut aux_data, struct_ast.clone());
+                        let (event_rewrite_nodes, event_diagnostics) = handle_event_struct(
+                            db,
+                            &mut aux_data,
+                            struct_ast.clone(),
+                            &namespace_config,
+                        );
                         rewrite_nodes.push(event_rewrite_nodes);
                         diagnostics.extend(event_diagnostics);
                     }
@@ -442,7 +453,7 @@ impl MacroPlugin for BuiltinDojoPlugin {
             DOJO_CONTRACT_ATTR.to_string(),
             DOJO_EVENT_ATTR.to_string(),
             DOJO_MODEL_ATTR.to_string(),
-            "key".to_string(),
+            DOJO_KEY_ATTR.to_string(),
         ]
     }
 

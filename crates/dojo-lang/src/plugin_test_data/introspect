@@ -529,22 +529,22 @@ impl Vec2Serde of core::serde::Serde::<Vec2> {
     }
 }
 
-impl Vec2Introspect<> of dojo::model::introspect::Introspect<Vec2<>> {
+impl Vec2Introspect<> of dojo::meta::introspect::Introspect<Vec2<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         Option::Some(2)
     }
 
-    fn layout() -> dojo::model::Layout {
-        dojo::model::Layout::Struct(
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Struct(
             array![
-            dojo::model::FieldLayout {
+            dojo::meta::FieldLayout {
                     selector: 512066735765477566404754172672287371265995314501343422459174036873487219331,
-                    layout: dojo::model::introspect::Introspect::<u32>::layout()
+                    layout: dojo::meta::introspect::Introspect::<u32>::layout()
                 },
-dojo::model::FieldLayout {
+dojo::meta::FieldLayout {
                     selector: 1591024729085637502504777720563487898377940395575083379770417352976841400819,
-                    layout: dojo::model::introspect::Introspect::<u32
+                    layout: dojo::meta::introspect::Introspect::<u32
 >::layout()
                 }
             ].span()
@@ -552,21 +552,21 @@ dojo::model::FieldLayout {
     }
 
     #[inline(always)]
-    fn ty() -> dojo::model::introspect::Ty {
-        dojo::model::introspect::Ty::Struct(
-            dojo::model::introspect::Struct {
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
                 name: 'Vec2',
                 attrs: array![].span(),
                 children: array![
-                dojo::model::introspect::Member {
+                dojo::meta::introspect::Member {
             name: 'x',
             attrs: array![].span(),
-            ty: dojo::model::introspect::Introspect::<u32>::ty()
+            ty: dojo::meta::introspect::Introspect::<u32>::ty()
         },
-dojo::model::introspect::Member {
+dojo::meta::introspect::Member {
             name: 'y',
             attrs: array![].span(),
-            ty: dojo::model::introspect::Introspect::<u32>::ty()
+            ty: dojo::meta::introspect::Introspect::<u32>::ty()
         }
 
                 ].span()
@@ -595,36 +595,36 @@ impl PlainEnumSerde of core::serde::Serde::<PlainEnum> {
 impl PlainEnumCopy of core::traits::Copy::<PlainEnum>;
 impl PlainEnumDrop of core::traits::Drop::<PlainEnum>;
 
-impl PlainEnumIntrospect<> of dojo::model::introspect::Introspect<PlainEnum<>> {
+impl PlainEnumIntrospect<> of dojo::meta::introspect::Introspect<PlainEnum<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         Option::Some(1)
     }
 
-    fn layout() -> dojo::model::Layout {
-        dojo::model::Layout::Enum(
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Enum(
             array![
-            dojo::model::FieldLayout {
+            dojo::meta::FieldLayout {
                     selector: 0,
-                    layout: dojo::model::Layout::Fixed(array![].span())
+                    layout: dojo::meta::Layout::Fixed(array![].span())
                 },
-dojo::model::FieldLayout {
+dojo::meta::FieldLayout {
                     selector: 1,
-                    layout: dojo::model::Layout::Fixed(array![].span())
+                    layout: dojo::meta::Layout::Fixed(array![].span())
                 }
             ].span()
         )
     }
 
     #[inline(always)]
-    fn ty() -> dojo::model::introspect::Ty {
-        dojo::model::introspect::Ty::Enum(
-            dojo::model::introspect::Enum {
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Enum(
+            dojo::meta::introspect::Enum {
                 name: 'PlainEnum',
                 attrs: array![].span(),
                 children: array![
-                ('Left', dojo::model::introspect::Ty::Tuple(array![].span())),
-('Right', dojo::model::introspect::Ty::Tuple(array![].span()))
+                ('Left', dojo::meta::introspect::Ty::Tuple(array![].span())),
+('Right', dojo::meta::introspect::Ty::Tuple(array![].span()))
 
                 ].span()
             }
@@ -652,36 +652,36 @@ impl EnumWithPrimitiveSerde of core::serde::Serde::<EnumWithPrimitive> {
 impl EnumWithPrimitiveCopy of core::traits::Copy::<EnumWithPrimitive>;
 impl EnumWithPrimitiveDrop of core::traits::Drop::<EnumWithPrimitive>;
 
-impl EnumWithPrimitiveIntrospect<> of dojo::model::introspect::Introspect<EnumWithPrimitive<>> {
+impl EnumWithPrimitiveIntrospect<> of dojo::meta::introspect::Introspect<EnumWithPrimitive<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         Option::Some(2)
     }
 
-    fn layout() -> dojo::model::Layout {
-        dojo::model::Layout::Enum(
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Enum(
             array![
-            dojo::model::FieldLayout {
+            dojo::meta::FieldLayout {
                     selector: 0,
-                    layout: dojo::model::introspect::Introspect::<u32>::layout()
+                    layout: dojo::meta::introspect::Introspect::<u32>::layout()
                 },
-dojo::model::FieldLayout {
+dojo::meta::FieldLayout {
                     selector: 1,
-                    layout: dojo::model::introspect::Introspect::<u32>::layout()
+                    layout: dojo::meta::introspect::Introspect::<u32>::layout()
                 }
             ].span()
         )
     }
 
     #[inline(always)]
-    fn ty() -> dojo::model::introspect::Ty {
-        dojo::model::introspect::Ty::Enum(
-            dojo::model::introspect::Enum {
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Enum(
+            dojo::meta::introspect::Enum {
                 name: 'EnumWithPrimitive',
                 attrs: array![].span(),
                 children: array![
-                ('Left', dojo::model::introspect::Introspect::<u32>::ty()),
-('Right', dojo::model::introspect::Introspect::<u32>::ty())
+                ('Left', dojo::meta::introspect::Introspect::<u32>::ty()),
+('Right', dojo::meta::introspect::Introspect::<u32>::ty())
 
                 ].span()
             }
@@ -709,11 +709,11 @@ impl EnumWithStructSerde of core::serde::Serde::<EnumWithStruct> {
 impl EnumWithStructCopy of core::traits::Copy::<EnumWithStruct>;
 impl EnumWithStructDrop of core::traits::Drop::<EnumWithStruct>;
 
-impl EnumWithStructIntrospect<> of dojo::model::introspect::Introspect<EnumWithStruct<>> {
+impl EnumWithStructIntrospect<> of dojo::meta::introspect::Introspect<EnumWithStruct<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         let sizes : Array<Option<usize>> = array![
-                    dojo::model::introspect::Introspect::<Vec2>::size(),
+                    dojo::meta::introspect::Introspect::<Vec2>::size(),
 Option::Some(1)
                 ];
 
@@ -724,30 +724,30 @@ Option::Some(1)
                 
     }
 
-    fn layout() -> dojo::model::Layout {
-        dojo::model::Layout::Enum(
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Enum(
             array![
-            dojo::model::FieldLayout {
+            dojo::meta::FieldLayout {
                     selector: 0,
-                    layout: dojo::model::introspect::Introspect::<Vec2>::layout()
+                    layout: dojo::meta::introspect::Introspect::<Vec2>::layout()
                 },
-dojo::model::FieldLayout {
+dojo::meta::FieldLayout {
                     selector: 1,
-                    layout: dojo::model::introspect::Introspect::<Vec2>::layout()
+                    layout: dojo::meta::introspect::Introspect::<Vec2>::layout()
                 }
             ].span()
         )
     }
 
     #[inline(always)]
-    fn ty() -> dojo::model::introspect::Ty {
-        dojo::model::introspect::Ty::Enum(
-            dojo::model::introspect::Enum {
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Enum(
+            dojo::meta::introspect::Enum {
                 name: 'EnumWithStruct',
                 attrs: array![].span(),
                 children: array![
-                ('Left', dojo::model::introspect::Introspect::<Vec2>::ty()),
-('Right', dojo::model::introspect::Introspect::<Vec2>::ty())
+                ('Left', dojo::meta::introspect::Introspect::<Vec2>::ty()),
+('Right', dojo::meta::introspect::Introspect::<Vec2>::ty())
 
                 ].span()
             }
@@ -775,42 +775,42 @@ impl EnumWithSimpleArraySerde of core::serde::Serde::<EnumWithSimpleArray> {
 impl EnumWithSimpleArrayCopy of core::traits::Copy::<EnumWithSimpleArray>;
 impl EnumWithSimpleArrayDrop of core::traits::Drop::<EnumWithSimpleArray>;
 
-impl EnumWithSimpleArrayIntrospect<> of dojo::model::introspect::Introspect<EnumWithSimpleArray<>> {
+impl EnumWithSimpleArrayIntrospect<> of dojo::meta::introspect::Introspect<EnumWithSimpleArray<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         Option::None
     }
 
-    fn layout() -> dojo::model::Layout {
-        dojo::model::Layout::Enum(
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Enum(
             array![
-            dojo::model::FieldLayout {
+            dojo::meta::FieldLayout {
                     selector: 0,
-                    layout: dojo::model::introspect::Introspect::<Array<u32>>::layout()
+                    layout: dojo::meta::introspect::Introspect::<Array<u32>>::layout()
                 },
-dojo::model::FieldLayout {
+dojo::meta::FieldLayout {
                     selector: 1,
-                    layout: dojo::model::introspect::Introspect::<Array<u32>>::layout()
+                    layout: dojo::meta::introspect::Introspect::<Array<u32>>::layout()
                 }
             ].span()
         )
     }
 
     #[inline(always)]
-    fn ty() -> dojo::model::introspect::Ty {
-        dojo::model::introspect::Ty::Enum(
-            dojo::model::introspect::Enum {
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Enum(
+            dojo::meta::introspect::Enum {
                 name: 'EnumWithSimpleArray',
                 attrs: array![].span(),
                 children: array![
-                ('Left', dojo::model::introspect::Ty::Array(
+                ('Left', dojo::meta::introspect::Ty::Array(
                 array![
-                dojo::model::introspect::Introspect::<u32>::ty()
+                dojo::meta::introspect::Introspect::<u32>::ty()
                 ].span()
             )),
-('Right', dojo::model::introspect::Ty::Array(
+('Right', dojo::meta::introspect::Ty::Array(
                 array![
-                dojo::model::introspect::Introspect::<u32>::ty()
+                dojo::meta::introspect::Introspect::<u32>::ty()
                 ].span()
             ))
 
@@ -840,36 +840,36 @@ impl EnumWithByteArraySerde of core::serde::Serde::<EnumWithByteArray> {
 impl EnumWithByteArrayCopy of core::traits::Copy::<EnumWithByteArray>;
 impl EnumWithByteArrayDrop of core::traits::Drop::<EnumWithByteArray>;
 
-impl EnumWithByteArrayIntrospect<> of dojo::model::introspect::Introspect<EnumWithByteArray<>> {
+impl EnumWithByteArrayIntrospect<> of dojo::meta::introspect::Introspect<EnumWithByteArray<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         Option::None
     }
 
-    fn layout() -> dojo::model::Layout {
-        dojo::model::Layout::Enum(
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Enum(
             array![
-            dojo::model::FieldLayout {
+            dojo::meta::FieldLayout {
                     selector: 0,
-                    layout: dojo::model::introspect::Introspect::<ByteArray>::layout()
+                    layout: dojo::meta::introspect::Introspect::<ByteArray>::layout()
                 },
-dojo::model::FieldLayout {
+dojo::meta::FieldLayout {
                     selector: 1,
-                    layout: dojo::model::introspect::Introspect::<ByteArray>::layout()
+                    layout: dojo::meta::introspect::Introspect::<ByteArray>::layout()
                 }
             ].span()
         )
     }
 
     #[inline(always)]
-    fn ty() -> dojo::model::introspect::Ty {
-        dojo::model::introspect::Ty::Enum(
-            dojo::model::introspect::Enum {
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Enum(
+            dojo::meta::introspect::Enum {
                 name: 'EnumWithByteArray',
                 attrs: array![].span(),
                 children: array![
-                ('Left', dojo::model::introspect::Ty::ByteArray),
-('Right', dojo::model::introspect::Ty::ByteArray)
+                ('Left', dojo::meta::introspect::Ty::ByteArray),
+('Right', dojo::meta::introspect::Ty::ByteArray)
 
                 ].span()
             }
@@ -897,30 +897,30 @@ impl EnumWithSimpleTupleSerde of core::serde::Serde::<EnumWithSimpleTuple> {
 impl EnumWithSimpleTupleCopy of core::traits::Copy::<EnumWithSimpleTuple>;
 impl EnumWithSimpleTupleDrop of core::traits::Drop::<EnumWithSimpleTuple>;
 
-impl EnumWithSimpleTupleIntrospect<> of dojo::model::introspect::Introspect<EnumWithSimpleTuple<>> {
+impl EnumWithSimpleTupleIntrospect<> of dojo::meta::introspect::Introspect<EnumWithSimpleTuple<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         Option::Some(4)
     }
 
-    fn layout() -> dojo::model::Layout {
-        dojo::model::Layout::Enum(
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Enum(
             array![
-            dojo::model::FieldLayout {
+            dojo::meta::FieldLayout {
                     selector: 0,
-                    layout: dojo::model::Layout::Tuple(
+                    layout: dojo::meta::Layout::Tuple(
             array![
-            dojo::model::introspect::Introspect::<u8>::layout(),
-dojo::model::introspect::Introspect::<u256>::layout()
+            dojo::meta::introspect::Introspect::<u8>::layout(),
+dojo::meta::introspect::Introspect::<u256>::layout()
             ].span()
         )
                 },
-dojo::model::FieldLayout {
+dojo::meta::FieldLayout {
                     selector: 1,
-                    layout: dojo::model::Layout::Tuple(
+                    layout: dojo::meta::Layout::Tuple(
             array![
-            dojo::model::introspect::Introspect::<u8>::layout(),
-dojo::model::introspect::Introspect::<u256>::layout()
+            dojo::meta::introspect::Introspect::<u8>::layout(),
+dojo::meta::introspect::Introspect::<u256>::layout()
             ].span()
         )
                 }
@@ -929,22 +929,22 @@ dojo::model::introspect::Introspect::<u256>::layout()
     }
 
     #[inline(always)]
-    fn ty() -> dojo::model::introspect::Ty {
-        dojo::model::introspect::Ty::Enum(
-            dojo::model::introspect::Enum {
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Enum(
+            dojo::meta::introspect::Enum {
                 name: 'EnumWithSimpleTuple',
                 attrs: array![].span(),
                 children: array![
-                ('Left', dojo::model::introspect::Ty::Tuple(
+                ('Left', dojo::meta::introspect::Ty::Tuple(
             array![
-            dojo::model::introspect::Introspect::<u8>::ty(),
-dojo::model::introspect::Introspect::<u256>::ty()
+            dojo::meta::introspect::Introspect::<u8>::ty(),
+dojo::meta::introspect::Introspect::<u256>::ty()
             ].span()
         )),
-('Right', dojo::model::introspect::Ty::Tuple(
+('Right', dojo::meta::introspect::Ty::Tuple(
             array![
-            dojo::model::introspect::Introspect::<u8>::ty(),
-dojo::model::introspect::Introspect::<u256>::ty()
+            dojo::meta::introspect::Introspect::<u8>::ty(),
+dojo::meta::introspect::Introspect::<u256>::ty()
             ].span()
         ))
 
@@ -974,11 +974,11 @@ impl EnumWithComplexTupleSerde of core::serde::Serde::<EnumWithComplexTuple> {
 impl EnumWithComplexTupleCopy of core::traits::Copy::<EnumWithComplexTuple>;
 impl EnumWithComplexTupleDrop of core::traits::Drop::<EnumWithComplexTuple>;
 
-impl EnumWithComplexTupleIntrospect<> of dojo::model::introspect::Introspect<EnumWithComplexTuple<>> {
+impl EnumWithComplexTupleIntrospect<> of dojo::meta::introspect::Introspect<EnumWithComplexTuple<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         let sizes : Array<Option<usize>> = array![
-                    dojo::model::introspect::Introspect::<Vec2>::size(),
+                    dojo::meta::introspect::Introspect::<Vec2>::size(),
 Option::Some(2)
                 ];
 
@@ -989,24 +989,24 @@ Option::Some(2)
                 
     }
 
-    fn layout() -> dojo::model::Layout {
-        dojo::model::Layout::Enum(
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Enum(
             array![
-            dojo::model::FieldLayout {
+            dojo::meta::FieldLayout {
                     selector: 0,
-                    layout: dojo::model::Layout::Tuple(
+                    layout: dojo::meta::Layout::Tuple(
             array![
-            dojo::model::introspect::Introspect::<u8>::layout(),
-dojo::model::introspect::Introspect::<Vec2>::layout()
+            dojo::meta::introspect::Introspect::<u8>::layout(),
+dojo::meta::introspect::Introspect::<Vec2>::layout()
             ].span()
         )
                 },
-dojo::model::FieldLayout {
+dojo::meta::FieldLayout {
                     selector: 1,
-                    layout: dojo::model::Layout::Tuple(
+                    layout: dojo::meta::Layout::Tuple(
             array![
-            dojo::model::introspect::Introspect::<u8>::layout(),
-dojo::model::introspect::Introspect::<Vec2>::layout()
+            dojo::meta::introspect::Introspect::<u8>::layout(),
+dojo::meta::introspect::Introspect::<Vec2>::layout()
             ].span()
         )
                 }
@@ -1015,22 +1015,22 @@ dojo::model::introspect::Introspect::<Vec2>::layout()
     }
 
     #[inline(always)]
-    fn ty() -> dojo::model::introspect::Ty {
-        dojo::model::introspect::Ty::Enum(
-            dojo::model::introspect::Enum {
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Enum(
+            dojo::meta::introspect::Enum {
                 name: 'EnumWithComplexTuple',
                 attrs: array![].span(),
                 children: array![
-                ('Left', dojo::model::introspect::Ty::Tuple(
+                ('Left', dojo::meta::introspect::Ty::Tuple(
             array![
-            dojo::model::introspect::Introspect::<u8>::ty(),
-dojo::model::introspect::Introspect::<Vec2>::ty()
+            dojo::meta::introspect::Introspect::<u8>::ty(),
+dojo::meta::introspect::Introspect::<Vec2>::ty()
             ].span()
         )),
-('Right', dojo::model::introspect::Ty::Tuple(
+('Right', dojo::meta::introspect::Ty::Tuple(
             array![
-            dojo::model::introspect::Introspect::<u8>::ty(),
-dojo::model::introspect::Introspect::<Vec2>::ty()
+            dojo::meta::introspect::Introspect::<u8>::ty(),
+dojo::meta::introspect::Introspect::<Vec2>::ty()
             ].span()
         ))
 
@@ -1060,36 +1060,36 @@ impl EnumWithPrimitiveSerde of core::serde::Serde::<EnumWithPrimitive> {
 impl EnumWithPrimitiveCopy of core::traits::Copy::<EnumWithPrimitive>;
 impl EnumWithPrimitiveDrop of core::traits::Drop::<EnumWithPrimitive>;
 
-impl EnumWithPrimitiveIntrospect<> of dojo::model::introspect::Introspect<EnumWithPrimitive<>> {
+impl EnumWithPrimitiveIntrospect<> of dojo::meta::introspect::Introspect<EnumWithPrimitive<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         Option::Some(2)
     }
 
-    fn layout() -> dojo::model::Layout {
-        dojo::model::Layout::Enum(
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Enum(
             array![
-            dojo::model::FieldLayout {
+            dojo::meta::FieldLayout {
                     selector: 0,
-                    layout: dojo::model::introspect::Introspect::<u32>::layout()
+                    layout: dojo::meta::introspect::Introspect::<u32>::layout()
                 },
-dojo::model::FieldLayout {
+dojo::meta::FieldLayout {
                     selector: 1,
-                    layout: dojo::model::introspect::Introspect::<u32>::layout()
+                    layout: dojo::meta::introspect::Introspect::<u32>::layout()
                 }
             ].span()
         )
     }
 
     #[inline(always)]
-    fn ty() -> dojo::model::introspect::Ty {
-        dojo::model::introspect::Ty::Enum(
-            dojo::model::introspect::Enum {
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Enum(
+            dojo::meta::introspect::Enum {
                 name: 'EnumWithPrimitive',
                 attrs: array![].span(),
                 children: array![
-                ('Left', dojo::model::introspect::Introspect::<u32>::ty()),
-('Right', dojo::model::introspect::Introspect::<u32>::ty())
+                ('Left', dojo::meta::introspect::Introspect::<u32>::ty()),
+('Right', dojo::meta::introspect::Introspect::<u32>::ty())
 
                 ].span()
             }
@@ -1117,11 +1117,11 @@ impl EnumCustomSerde of core::serde::Serde::<EnumCustom> {
 impl EnumCustomCopy of core::traits::Copy::<EnumCustom>;
 impl EnumCustomDrop of core::traits::Drop::<EnumCustom>;
 
-impl EnumCustomIntrospect<> of dojo::model::introspect::Introspect<EnumCustom<>> {
+impl EnumCustomIntrospect<> of dojo::meta::introspect::Introspect<EnumCustom<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         let sizes : Array<Option<usize>> = array![
-                    dojo::model::introspect::Introspect::<Vec2>::size(),
+                    dojo::meta::introspect::Introspect::<Vec2>::size(),
 Option::Some(1)
                 ];
 
@@ -1132,30 +1132,30 @@ Option::Some(1)
                 
     }
 
-    fn layout() -> dojo::model::Layout {
-        dojo::model::Layout::Enum(
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Enum(
             array![
-            dojo::model::FieldLayout {
+            dojo::meta::FieldLayout {
                     selector: 0,
-                    layout: dojo::model::introspect::Introspect::<Vec2>::layout()
+                    layout: dojo::meta::introspect::Introspect::<Vec2>::layout()
                 },
-dojo::model::FieldLayout {
+dojo::meta::FieldLayout {
                     selector: 1,
-                    layout: dojo::model::introspect::Introspect::<Vec2>::layout()
+                    layout: dojo::meta::introspect::Introspect::<Vec2>::layout()
                 }
             ].span()
         )
     }
 
     #[inline(always)]
-    fn ty() -> dojo::model::introspect::Ty {
-        dojo::model::introspect::Ty::Enum(
-            dojo::model::introspect::Enum {
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Enum(
+            dojo::meta::introspect::Enum {
                 name: 'EnumCustom',
                 attrs: array![].span(),
                 children: array![
-                ('Left', dojo::model::introspect::Introspect::<Vec2>::ty()),
-('Right', dojo::model::introspect::Introspect::<Vec2>::ty())
+                ('Left', dojo::meta::introspect::Introspect::<Vec2>::ty()),
+('Right', dojo::meta::introspect::Introspect::<Vec2>::ty())
 
                 ].span()
             }
@@ -1183,12 +1183,12 @@ impl EnumTupleMixSerde of core::serde::Serde::<EnumTupleMix> {
 impl EnumTupleMixCopy of core::traits::Copy::<EnumTupleMix>;
 impl EnumTupleMixDrop of core::traits::Drop::<EnumTupleMix>;
 
-impl EnumTupleMixIntrospect<> of dojo::model::introspect::Introspect<EnumTupleMix<>> {
+impl EnumTupleMixIntrospect<> of dojo::meta::introspect::Introspect<EnumTupleMix<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         let sizes : Array<Option<usize>> = array![
-                    dojo::model::introspect::Introspect::<Vec2>::size(),
-dojo::model::introspect::Introspect::<EnumCustom>::size(),
+                    dojo::meta::introspect::Introspect::<Vec2>::size(),
+dojo::meta::introspect::Introspect::<EnumCustom>::size(),
 Option::Some(2)
                 ];
 
@@ -1199,26 +1199,26 @@ Option::Some(2)
                 
     }
 
-    fn layout() -> dojo::model::Layout {
-        dojo::model::Layout::Enum(
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Enum(
             array![
-            dojo::model::FieldLayout {
+            dojo::meta::FieldLayout {
                     selector: 0,
-                    layout: dojo::model::Layout::Tuple(
+                    layout: dojo::meta::Layout::Tuple(
             array![
-            dojo::model::introspect::Introspect::<Vec2>::layout(),
-dojo::model::introspect::Introspect::<u64>::layout(),
-dojo::model::introspect::Introspect::<EnumCustom>::layout()
+            dojo::meta::introspect::Introspect::<Vec2>::layout(),
+dojo::meta::introspect::Introspect::<u64>::layout(),
+dojo::meta::introspect::Introspect::<EnumCustom>::layout()
             ].span()
         )
                 },
-dojo::model::FieldLayout {
+dojo::meta::FieldLayout {
                     selector: 1,
-                    layout: dojo::model::Layout::Tuple(
+                    layout: dojo::meta::Layout::Tuple(
             array![
-            dojo::model::introspect::Introspect::<Vec2>::layout(),
-dojo::model::introspect::Introspect::<u64>::layout(),
-dojo::model::introspect::Introspect::<EnumCustom>::layout()
+            dojo::meta::introspect::Introspect::<Vec2>::layout(),
+dojo::meta::introspect::Introspect::<u64>::layout(),
+dojo::meta::introspect::Introspect::<EnumCustom>::layout()
             ].span()
         )
                 }
@@ -1227,24 +1227,24 @@ dojo::model::introspect::Introspect::<EnumCustom>::layout()
     }
 
     #[inline(always)]
-    fn ty() -> dojo::model::introspect::Ty {
-        dojo::model::introspect::Ty::Enum(
-            dojo::model::introspect::Enum {
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Enum(
+            dojo::meta::introspect::Enum {
                 name: 'EnumTupleMix',
                 attrs: array![].span(),
                 children: array![
-                ('Left', dojo::model::introspect::Ty::Tuple(
+                ('Left', dojo::meta::introspect::Ty::Tuple(
             array![
-            dojo::model::introspect::Introspect::<Vec2>::ty(),
-dojo::model::introspect::Introspect::<u64>::ty(),
-dojo::model::introspect::Introspect::<EnumCustom>::ty()
+            dojo::meta::introspect::Introspect::<Vec2>::ty(),
+dojo::meta::introspect::Introspect::<u64>::ty(),
+dojo::meta::introspect::Introspect::<EnumCustom>::ty()
             ].span()
         )),
-('Right', dojo::model::introspect::Ty::Tuple(
+('Right', dojo::meta::introspect::Ty::Tuple(
             array![
-            dojo::model::introspect::Introspect::<Vec2>::ty(),
-dojo::model::introspect::Introspect::<u64>::ty(),
-dojo::model::introspect::Introspect::<EnumCustom>::ty()
+            dojo::meta::introspect::Introspect::<Vec2>::ty(),
+dojo::meta::introspect::Introspect::<u64>::ty(),
+dojo::meta::introspect::Introspect::<EnumCustom>::ty()
             ].span()
         ))
 
@@ -1276,29 +1276,29 @@ impl EnumWithDifferentVariantDataSerde of core::serde::Serde::<EnumWithDifferent
 impl EnumWithDifferentVariantDataCopy of core::traits::Copy::<EnumWithDifferentVariantData>;
 impl EnumWithDifferentVariantDataDrop of core::traits::Drop::<EnumWithDifferentVariantData>;
 
-impl EnumWithDifferentVariantDataIntrospect<> of dojo::model::introspect::Introspect<EnumWithDifferentVariantData<>> {
+impl EnumWithDifferentVariantDataIntrospect<> of dojo::meta::introspect::Introspect<EnumWithDifferentVariantData<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         Option::None
     }
 
-    fn layout() -> dojo::model::Layout {
-        dojo::model::Layout::Enum(
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Enum(
             array![
-            dojo::model::FieldLayout {
+            dojo::meta::FieldLayout {
                     selector: 0,
-                    layout: dojo::model::Layout::Fixed(array![].span())
+                    layout: dojo::meta::Layout::Fixed(array![].span())
                 },
-dojo::model::FieldLayout {
+dojo::meta::FieldLayout {
                     selector: 1,
-                    layout: dojo::model::introspect::Introspect::<u32>::layout()
+                    layout: dojo::meta::introspect::Introspect::<u32>::layout()
                 },
-dojo::model::FieldLayout {
+dojo::meta::FieldLayout {
                     selector: 2,
-                    layout: dojo::model::Layout::Tuple(
+                    layout: dojo::meta::Layout::Tuple(
             array![
-            dojo::model::introspect::Introspect::<Vec2>::layout(),
-dojo::model::introspect::Introspect::<u64>::layout()
+            dojo::meta::introspect::Introspect::<Vec2>::layout(),
+dojo::meta::introspect::Introspect::<u64>::layout()
             ].span()
         )
                 }
@@ -1307,18 +1307,18 @@ dojo::model::introspect::Introspect::<u64>::layout()
     }
 
     #[inline(always)]
-    fn ty() -> dojo::model::introspect::Ty {
-        dojo::model::introspect::Ty::Enum(
-            dojo::model::introspect::Enum {
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Enum(
+            dojo::meta::introspect::Enum {
                 name: 'EnumWithDifferentVariantData',
                 attrs: array![].span(),
                 children: array![
-                ('One', dojo::model::introspect::Ty::Tuple(array![].span())),
-('Two', dojo::model::introspect::Introspect::<u32>::ty()),
-('Three', dojo::model::introspect::Ty::Tuple(
+                ('One', dojo::meta::introspect::Ty::Tuple(array![].span())),
+('Two', dojo::meta::introspect::Introspect::<u32>::ty()),
+('Three', dojo::meta::introspect::Ty::Tuple(
             array![
-            dojo::model::introspect::Introspect::<Vec2>::ty(),
-dojo::model::introspect::Introspect::<u64>::ty()
+            dojo::meta::introspect::Introspect::<Vec2>::ty(),
+dojo::meta::introspect::Introspect::<u64>::ty()
             ].span()
         ))
 
@@ -1330,48 +1330,48 @@ dojo::model::introspect::Introspect::<u64>::ty()
 impl StructWithPrimitivesCopy of core::traits::Copy::<StructWithPrimitives>;
 impl StructWithPrimitivesDrop of core::traits::Drop::<StructWithPrimitives>;
 
-impl StructWithPrimitivesIntrospect<> of dojo::model::introspect::Introspect<StructWithPrimitives<>> {
+impl StructWithPrimitivesIntrospect<> of dojo::meta::introspect::Introspect<StructWithPrimitives<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         Option::Some(2)
     }
 
-    fn layout() -> dojo::model::Layout {
-        dojo::model::Layout::Struct(
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Struct(
             array![
-            dojo::model::FieldLayout {
+            dojo::meta::FieldLayout {
                     selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
-                    layout: dojo::model::introspect::Introspect::<u8>::layout()
+                    layout: dojo::meta::introspect::Introspect::<u8>::layout()
                 },
-dojo::model::FieldLayout {
+dojo::meta::FieldLayout {
                     selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
-                    layout: dojo::model::introspect::Introspect::<u16>::layout()
+                    layout: dojo::meta::introspect::Introspect::<u16>::layout()
                 }
             ].span()
         )
     }
 
     #[inline(always)]
-    fn ty() -> dojo::model::introspect::Ty {
-        dojo::model::introspect::Ty::Struct(
-            dojo::model::introspect::Struct {
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
                 name: 'StructWithPrimitives',
                 attrs: array![].span(),
                 children: array![
-                dojo::model::introspect::Member {
+                dojo::meta::introspect::Member {
             name: 'player',
             attrs: array!['key'].span(),
-            ty: dojo::model::introspect::Introspect::<ContractAddress>::ty()
+            ty: dojo::meta::introspect::Introspect::<ContractAddress>::ty()
         },
-dojo::model::introspect::Member {
+dojo::meta::introspect::Member {
             name: 'before',
             attrs: array![].span(),
-            ty: dojo::model::introspect::Introspect::<u8>::ty()
+            ty: dojo::meta::introspect::Introspect::<u8>::ty()
         },
-dojo::model::introspect::Member {
+dojo::meta::introspect::Member {
             name: 'after',
             attrs: array![].span(),
-            ty: dojo::model::introspect::Introspect::<u16>::ty()
+            ty: dojo::meta::introspect::Introspect::<u16>::ty()
         }
 
                 ].span()
@@ -1382,11 +1382,11 @@ dojo::model::introspect::Member {
 impl StructWithStructCopy of core::traits::Copy::<StructWithStruct>;
 impl StructWithStructDrop of core::traits::Drop::<StructWithStruct>;
 
-impl StructWithStructIntrospect<> of dojo::model::introspect::Introspect<StructWithStruct<>> {
+impl StructWithStructIntrospect<> of dojo::meta::introspect::Introspect<StructWithStruct<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         let sizes : Array<Option<usize>> = array![
-                    dojo::model::introspect::Introspect::<Vec2>::size(),
+                    dojo::meta::introspect::Introspect::<Vec2>::size(),
 Option::Some(1)
                 ];
 
@@ -1397,42 +1397,42 @@ Option::Some(1)
                 
     }
 
-    fn layout() -> dojo::model::Layout {
-        dojo::model::Layout::Struct(
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Struct(
             array![
-            dojo::model::FieldLayout {
+            dojo::meta::FieldLayout {
                     selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
-                    layout: dojo::model::introspect::Introspect::<u8>::layout()
+                    layout: dojo::meta::introspect::Introspect::<u8>::layout()
                 },
-dojo::model::FieldLayout {
+dojo::meta::FieldLayout {
                     selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
-                    layout: dojo::model::introspect::Introspect::<Vec2>::layout()
+                    layout: dojo::meta::introspect::Introspect::<Vec2>::layout()
                 }
             ].span()
         )
     }
 
     #[inline(always)]
-    fn ty() -> dojo::model::introspect::Ty {
-        dojo::model::introspect::Ty::Struct(
-            dojo::model::introspect::Struct {
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
                 name: 'StructWithStruct',
                 attrs: array![].span(),
                 children: array![
-                dojo::model::introspect::Member {
+                dojo::meta::introspect::Member {
             name: 'player',
             attrs: array!['key'].span(),
-            ty: dojo::model::introspect::Introspect::<ContractAddress>::ty()
+            ty: dojo::meta::introspect::Introspect::<ContractAddress>::ty()
         },
-dojo::model::introspect::Member {
+dojo::meta::introspect::Member {
             name: 'before',
             attrs: array![].span(),
-            ty: dojo::model::introspect::Introspect::<u8>::ty()
+            ty: dojo::meta::introspect::Introspect::<u8>::ty()
         },
-dojo::model::introspect::Member {
+dojo::meta::introspect::Member {
             name: 'after',
             attrs: array![].span(),
-            ty: dojo::model::introspect::Introspect::<Vec2>::ty()
+            ty: dojo::meta::introspect::Introspect::<Vec2>::ty()
         }
 
                 ].span()
@@ -1443,50 +1443,50 @@ dojo::model::introspect::Member {
 impl StructWithSimpleArrayCopy of core::traits::Copy::<StructWithSimpleArray>;
 impl StructWithSimpleArrayDrop of core::traits::Drop::<StructWithSimpleArray>;
 
-impl StructWithSimpleArrayIntrospect<> of dojo::model::introspect::Introspect<StructWithSimpleArray<>> {
+impl StructWithSimpleArrayIntrospect<> of dojo::meta::introspect::Introspect<StructWithSimpleArray<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         Option::None
     }
 
-    fn layout() -> dojo::model::Layout {
-        dojo::model::Layout::Struct(
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Struct(
             array![
-            dojo::model::FieldLayout {
+            dojo::meta::FieldLayout {
                     selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
-                    layout: dojo::model::introspect::Introspect::<u8>::layout()
+                    layout: dojo::meta::introspect::Introspect::<u8>::layout()
                 },
-dojo::model::FieldLayout {
+dojo::meta::FieldLayout {
                     selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
-                    layout: dojo::model::introspect::Introspect::<Array<u32>>::layout()
+                    layout: dojo::meta::introspect::Introspect::<Array<u32>>::layout()
                 }
             ].span()
         )
     }
 
     #[inline(always)]
-    fn ty() -> dojo::model::introspect::Ty {
-        dojo::model::introspect::Ty::Struct(
-            dojo::model::introspect::Struct {
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
                 name: 'StructWithSimpleArray',
                 attrs: array![].span(),
                 children: array![
-                dojo::model::introspect::Member {
+                dojo::meta::introspect::Member {
             name: 'player',
             attrs: array!['key'].span(),
-            ty: dojo::model::introspect::Introspect::<ContractAddress>::ty()
+            ty: dojo::meta::introspect::Introspect::<ContractAddress>::ty()
         },
-dojo::model::introspect::Member {
+dojo::meta::introspect::Member {
             name: 'before',
             attrs: array![].span(),
-            ty: dojo::model::introspect::Introspect::<u8>::ty()
+            ty: dojo::meta::introspect::Introspect::<u8>::ty()
         },
-dojo::model::introspect::Member {
+dojo::meta::introspect::Member {
             name: 'after',
             attrs: array![].span(),
-            ty: dojo::model::introspect::Ty::Array(
+            ty: dojo::meta::introspect::Ty::Array(
                 array![
-                dojo::model::introspect::Introspect::<u32>::ty()
+                dojo::meta::introspect::Introspect::<u32>::ty()
                 ].span()
             )
         }
@@ -1499,48 +1499,48 @@ dojo::model::introspect::Member {
 impl StructWithByteArrayCopy of core::traits::Copy::<StructWithByteArray>;
 impl StructWithByteArrayDrop of core::traits::Drop::<StructWithByteArray>;
 
-impl StructWithByteArrayIntrospect<> of dojo::model::introspect::Introspect<StructWithByteArray<>> {
+impl StructWithByteArrayIntrospect<> of dojo::meta::introspect::Introspect<StructWithByteArray<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         Option::None
     }
 
-    fn layout() -> dojo::model::Layout {
-        dojo::model::Layout::Struct(
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Struct(
             array![
-            dojo::model::FieldLayout {
+            dojo::meta::FieldLayout {
                     selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
-                    layout: dojo::model::introspect::Introspect::<u8>::layout()
+                    layout: dojo::meta::introspect::Introspect::<u8>::layout()
                 },
-dojo::model::FieldLayout {
+dojo::meta::FieldLayout {
                     selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
-                    layout: dojo::model::introspect::Introspect::<ByteArray>::layout()
+                    layout: dojo::meta::introspect::Introspect::<ByteArray>::layout()
                 }
             ].span()
         )
     }
 
     #[inline(always)]
-    fn ty() -> dojo::model::introspect::Ty {
-        dojo::model::introspect::Ty::Struct(
-            dojo::model::introspect::Struct {
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
                 name: 'StructWithByteArray',
                 attrs: array![].span(),
                 children: array![
-                dojo::model::introspect::Member {
+                dojo::meta::introspect::Member {
             name: 'player',
             attrs: array!['key'].span(),
-            ty: dojo::model::introspect::Introspect::<ContractAddress>::ty()
+            ty: dojo::meta::introspect::Introspect::<ContractAddress>::ty()
         },
-dojo::model::introspect::Member {
+dojo::meta::introspect::Member {
             name: 'before',
             attrs: array![].span(),
-            ty: dojo::model::introspect::Introspect::<u8>::ty()
+            ty: dojo::meta::introspect::Introspect::<u8>::ty()
         },
-dojo::model::introspect::Member {
+dojo::meta::introspect::Member {
             name: 'after',
             attrs: array![].span(),
-            ty: dojo::model::introspect::Ty::ByteArray
+            ty: dojo::meta::introspect::Ty::ByteArray
         }
 
                 ].span()
@@ -1551,50 +1551,50 @@ dojo::model::introspect::Member {
 impl StructWithComplexArrayCopy of core::traits::Copy::<StructWithComplexArray>;
 impl StructWithComplexArrayDrop of core::traits::Drop::<StructWithComplexArray>;
 
-impl StructWithComplexArrayIntrospect<> of dojo::model::introspect::Introspect<StructWithComplexArray<>> {
+impl StructWithComplexArrayIntrospect<> of dojo::meta::introspect::Introspect<StructWithComplexArray<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         Option::None
     }
 
-    fn layout() -> dojo::model::Layout {
-        dojo::model::Layout::Struct(
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Struct(
             array![
-            dojo::model::FieldLayout {
+            dojo::meta::FieldLayout {
                     selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
-                    layout: dojo::model::introspect::Introspect::<u8>::layout()
+                    layout: dojo::meta::introspect::Introspect::<u8>::layout()
                 },
-dojo::model::FieldLayout {
+dojo::meta::FieldLayout {
                     selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
-                    layout: dojo::model::introspect::Introspect::<Array<Vec2>>::layout()
+                    layout: dojo::meta::introspect::Introspect::<Array<Vec2>>::layout()
                 }
             ].span()
         )
     }
 
     #[inline(always)]
-    fn ty() -> dojo::model::introspect::Ty {
-        dojo::model::introspect::Ty::Struct(
-            dojo::model::introspect::Struct {
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
                 name: 'StructWithComplexArray',
                 attrs: array![].span(),
                 children: array![
-                dojo::model::introspect::Member {
+                dojo::meta::introspect::Member {
             name: 'player',
             attrs: array!['key'].span(),
-            ty: dojo::model::introspect::Introspect::<ContractAddress>::ty()
+            ty: dojo::meta::introspect::Introspect::<ContractAddress>::ty()
         },
-dojo::model::introspect::Member {
+dojo::meta::introspect::Member {
             name: 'before',
             attrs: array![].span(),
-            ty: dojo::model::introspect::Introspect::<u8>::ty()
+            ty: dojo::meta::introspect::Introspect::<u8>::ty()
         },
-dojo::model::introspect::Member {
+dojo::meta::introspect::Member {
             name: 'after',
             attrs: array![].span(),
-            ty: dojo::model::introspect::Ty::Array(
+            ty: dojo::meta::introspect::Ty::Array(
                 array![
-                dojo::model::introspect::Introspect::<Vec2>::ty()
+                dojo::meta::introspect::Introspect::<Vec2>::ty()
                 ].span()
             )
         }
@@ -1607,25 +1607,25 @@ dojo::model::introspect::Member {
 impl StructWithSimpleTupleCopy of core::traits::Copy::<StructWithSimpleTuple>;
 impl StructWithSimpleTupleDrop of core::traits::Drop::<StructWithSimpleTuple>;
 
-impl StructWithSimpleTupleIntrospect<> of dojo::model::introspect::Introspect<StructWithSimpleTuple<>> {
+impl StructWithSimpleTupleIntrospect<> of dojo::meta::introspect::Introspect<StructWithSimpleTuple<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         Option::Some(4)
     }
 
-    fn layout() -> dojo::model::Layout {
-        dojo::model::Layout::Struct(
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Struct(
             array![
-            dojo::model::FieldLayout {
+            dojo::meta::FieldLayout {
                     selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
-                    layout: dojo::model::introspect::Introspect::<u8>::layout()
+                    layout: dojo::meta::introspect::Introspect::<u8>::layout()
                 },
-dojo::model::FieldLayout {
+dojo::meta::FieldLayout {
                     selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
-                    layout: dojo::model::Layout::Tuple(
+                    layout: dojo::meta::Layout::Tuple(
             array![
-            dojo::model::introspect::Introspect::<u8>::layout(),
-dojo::model::introspect::Introspect::<u256>::layout()
+            dojo::meta::introspect::Introspect::<u8>::layout(),
+dojo::meta::introspect::Introspect::<u256>::layout()
             ].span()
         )
                 }
@@ -1634,29 +1634,29 @@ dojo::model::introspect::Introspect::<u256>::layout()
     }
 
     #[inline(always)]
-    fn ty() -> dojo::model::introspect::Ty {
-        dojo::model::introspect::Ty::Struct(
-            dojo::model::introspect::Struct {
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
                 name: 'StructWithSimpleTuple',
                 attrs: array![].span(),
                 children: array![
-                dojo::model::introspect::Member {
+                dojo::meta::introspect::Member {
             name: 'player',
             attrs: array!['key'].span(),
-            ty: dojo::model::introspect::Introspect::<ContractAddress>::ty()
+            ty: dojo::meta::introspect::Introspect::<ContractAddress>::ty()
         },
-dojo::model::introspect::Member {
+dojo::meta::introspect::Member {
             name: 'before',
             attrs: array![].span(),
-            ty: dojo::model::introspect::Introspect::<u8>::ty()
+            ty: dojo::meta::introspect::Introspect::<u8>::ty()
         },
-dojo::model::introspect::Member {
+dojo::meta::introspect::Member {
             name: 'after',
             attrs: array![].span(),
-            ty: dojo::model::introspect::Ty::Tuple(
+            ty: dojo::meta::introspect::Ty::Tuple(
             array![
-            dojo::model::introspect::Introspect::<u8>::ty(),
-dojo::model::introspect::Introspect::<u256>::ty()
+            dojo::meta::introspect::Introspect::<u8>::ty(),
+dojo::meta::introspect::Introspect::<u256>::ty()
             ].span()
         )
         }
@@ -1669,12 +1669,12 @@ dojo::model::introspect::Introspect::<u256>::ty()
 impl StructWithComplexTupleCopy of core::traits::Copy::<StructWithComplexTuple>;
 impl StructWithComplexTupleDrop of core::traits::Drop::<StructWithComplexTuple>;
 
-impl StructWithComplexTupleIntrospect<> of dojo::model::introspect::Introspect<StructWithComplexTuple<>> {
+impl StructWithComplexTupleIntrospect<> of dojo::meta::introspect::Introspect<StructWithComplexTuple<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         let sizes : Array<Option<usize>> = array![
-                    dojo::model::introspect::Introspect::<Vec2>::size(),
-dojo::model::introspect::Introspect::<EnumCustom>::size(),
+                    dojo::meta::introspect::Introspect::<Vec2>::size(),
+dojo::meta::introspect::Introspect::<EnumCustom>::size(),
 Option::Some(2)
                 ];
 
@@ -1685,20 +1685,20 @@ Option::Some(2)
                 
     }
 
-    fn layout() -> dojo::model::Layout {
-        dojo::model::Layout::Struct(
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Struct(
             array![
-            dojo::model::FieldLayout {
+            dojo::meta::FieldLayout {
                     selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
-                    layout: dojo::model::introspect::Introspect::<u8>::layout()
+                    layout: dojo::meta::introspect::Introspect::<u8>::layout()
                 },
-dojo::model::FieldLayout {
+dojo::meta::FieldLayout {
                     selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
-                    layout: dojo::model::Layout::Tuple(
+                    layout: dojo::meta::Layout::Tuple(
             array![
-            dojo::model::introspect::Introspect::<u8>::layout(),
-dojo::model::introspect::Introspect::<Vec2>::layout(),
-dojo::model::introspect::Introspect::<EnumCustom>::layout()
+            dojo::meta::introspect::Introspect::<u8>::layout(),
+dojo::meta::introspect::Introspect::<Vec2>::layout(),
+dojo::meta::introspect::Introspect::<EnumCustom>::layout()
             ].span()
         )
                 }
@@ -1707,30 +1707,30 @@ dojo::model::introspect::Introspect::<EnumCustom>::layout()
     }
 
     #[inline(always)]
-    fn ty() -> dojo::model::introspect::Ty {
-        dojo::model::introspect::Ty::Struct(
-            dojo::model::introspect::Struct {
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
                 name: 'StructWithComplexTuple',
                 attrs: array![].span(),
                 children: array![
-                dojo::model::introspect::Member {
+                dojo::meta::introspect::Member {
             name: 'player',
             attrs: array!['key'].span(),
-            ty: dojo::model::introspect::Introspect::<ContractAddress>::ty()
+            ty: dojo::meta::introspect::Introspect::<ContractAddress>::ty()
         },
-dojo::model::introspect::Member {
+dojo::meta::introspect::Member {
             name: 'before',
             attrs: array![].span(),
-            ty: dojo::model::introspect::Introspect::<u8>::ty()
+            ty: dojo::meta::introspect::Introspect::<u8>::ty()
         },
-dojo::model::introspect::Member {
+dojo::meta::introspect::Member {
             name: 'after',
             attrs: array![].span(),
-            ty: dojo::model::introspect::Ty::Tuple(
+            ty: dojo::meta::introspect::Ty::Tuple(
             array![
-            dojo::model::introspect::Introspect::<u8>::ty(),
-dojo::model::introspect::Introspect::<Vec2>::ty(),
-dojo::model::introspect::Introspect::<EnumCustom>::ty()
+            dojo::meta::introspect::Introspect::<u8>::ty(),
+dojo::meta::introspect::Introspect::<Vec2>::ty(),
+dojo::meta::introspect::Introspect::<EnumCustom>::ty()
             ].span()
         )
         }
@@ -1743,26 +1743,26 @@ dojo::model::introspect::Introspect::<EnumCustom>::ty()
 impl StructWithNestedArraysCopy of core::traits::Copy::<StructWithNestedArrays>;
 impl StructWithNestedArraysDrop of core::traits::Drop::<StructWithNestedArrays>;
 
-impl StructWithNestedArraysIntrospect<> of dojo::model::introspect::Introspect<StructWithNestedArrays<>> {
+impl StructWithNestedArraysIntrospect<> of dojo::meta::introspect::Introspect<StructWithNestedArrays<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         Option::None
     }
 
-    fn layout() -> dojo::model::Layout {
-        dojo::model::Layout::Struct(
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Struct(
             array![
-            dojo::model::FieldLayout {
+            dojo::meta::FieldLayout {
                     selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
-                    layout: dojo::model::introspect::Introspect::<u8>::layout()
+                    layout: dojo::meta::introspect::Introspect::<u8>::layout()
                 },
-dojo::model::FieldLayout {
+dojo::meta::FieldLayout {
                     selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
-                    layout: dojo::model::Layout::Array(
+                    layout: dojo::meta::Layout::Array(
                 array![
-                    dojo::model::Layout::Array(
+                    dojo::meta::Layout::Array(
                 array![
-                    dojo::model::introspect::Introspect::<Array<Vec2>>::layout()
+                    dojo::meta::introspect::Introspect::<Array<Vec2>>::layout()
                 ].span()
             )
                 ].span()
@@ -1773,32 +1773,32 @@ dojo::model::FieldLayout {
     }
 
     #[inline(always)]
-    fn ty() -> dojo::model::introspect::Ty {
-        dojo::model::introspect::Ty::Struct(
-            dojo::model::introspect::Struct {
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
                 name: 'StructWithNestedArrays',
                 attrs: array![].span(),
                 children: array![
-                dojo::model::introspect::Member {
+                dojo::meta::introspect::Member {
             name: 'player',
             attrs: array!['key'].span(),
-            ty: dojo::model::introspect::Introspect::<ContractAddress>::ty()
+            ty: dojo::meta::introspect::Introspect::<ContractAddress>::ty()
         },
-dojo::model::introspect::Member {
+dojo::meta::introspect::Member {
             name: 'before',
             attrs: array![].span(),
-            ty: dojo::model::introspect::Introspect::<u8>::ty()
+            ty: dojo::meta::introspect::Introspect::<u8>::ty()
         },
-dojo::model::introspect::Member {
+dojo::meta::introspect::Member {
             name: 'after',
             attrs: array![].span(),
-            ty: dojo::model::introspect::Ty::Array(
+            ty: dojo::meta::introspect::Ty::Array(
                 array![
-                dojo::model::introspect::Ty::Array(
+                dojo::meta::introspect::Ty::Array(
                 array![
-                dojo::model::introspect::Ty::Array(
+                dojo::meta::introspect::Ty::Array(
                 array![
-                dojo::model::introspect::Introspect::<Vec2>::ty()
+                dojo::meta::introspect::Introspect::<Vec2>::ty()
                 ].span()
             )
                 ].span()
@@ -1815,12 +1815,12 @@ dojo::model::introspect::Member {
 impl StructWithNestedTuplesCopy of core::traits::Copy::<StructWithNestedTuples>;
 impl StructWithNestedTuplesDrop of core::traits::Drop::<StructWithNestedTuples>;
 
-impl StructWithNestedTuplesIntrospect<> of dojo::model::introspect::Introspect<StructWithNestedTuples<>> {
+impl StructWithNestedTuplesIntrospect<> of dojo::meta::introspect::Introspect<StructWithNestedTuples<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         let sizes : Array<Option<usize>> = array![
-                    dojo::model::introspect::Introspect::<Vec2>::size(),
-dojo::model::introspect::Introspect::<EnumCustom>::size(),
+                    dojo::meta::introspect::Introspect::<Vec2>::size(),
+dojo::meta::introspect::Introspect::<EnumCustom>::size(),
 Option::Some(3)
                 ];
 
@@ -1831,27 +1831,27 @@ Option::Some(3)
                 
     }
 
-    fn layout() -> dojo::model::Layout {
-        dojo::model::Layout::Struct(
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Struct(
             array![
-            dojo::model::FieldLayout {
+            dojo::meta::FieldLayout {
                     selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
-                    layout: dojo::model::introspect::Introspect::<u8>::layout()
+                    layout: dojo::meta::introspect::Introspect::<u8>::layout()
                 },
-dojo::model::FieldLayout {
+dojo::meta::FieldLayout {
                     selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
-                    layout: dojo::model::Layout::Tuple(
+                    layout: dojo::meta::Layout::Tuple(
             array![
-            dojo::model::Layout::Tuple(
+            dojo::meta::Layout::Tuple(
             array![
-            dojo::model::introspect::Introspect::<u8>::layout(),
-dojo::model::introspect::Introspect::<u32>::layout()
+            dojo::meta::introspect::Introspect::<u8>::layout(),
+dojo::meta::introspect::Introspect::<u32>::layout()
             ].span()
         ),
-dojo::model::Layout::Tuple(
+dojo::meta::Layout::Tuple(
             array![
-            dojo::model::introspect::Introspect::<Vec2>::layout(),
-dojo::model::introspect::Introspect::<EnumCustom>::layout()
+            dojo::meta::introspect::Introspect::<Vec2>::layout(),
+dojo::meta::introspect::Introspect::<EnumCustom>::layout()
             ].span()
         )
             ].span()
@@ -1862,37 +1862,37 @@ dojo::model::introspect::Introspect::<EnumCustom>::layout()
     }
 
     #[inline(always)]
-    fn ty() -> dojo::model::introspect::Ty {
-        dojo::model::introspect::Ty::Struct(
-            dojo::model::introspect::Struct {
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
                 name: 'StructWithNestedTuples',
                 attrs: array![].span(),
                 children: array![
-                dojo::model::introspect::Member {
+                dojo::meta::introspect::Member {
             name: 'player',
             attrs: array!['key'].span(),
-            ty: dojo::model::introspect::Introspect::<ContractAddress>::ty()
+            ty: dojo::meta::introspect::Introspect::<ContractAddress>::ty()
         },
-dojo::model::introspect::Member {
+dojo::meta::introspect::Member {
             name: 'before',
             attrs: array![].span(),
-            ty: dojo::model::introspect::Introspect::<u8>::ty()
+            ty: dojo::meta::introspect::Introspect::<u8>::ty()
         },
-dojo::model::introspect::Member {
+dojo::meta::introspect::Member {
             name: 'after',
             attrs: array![].span(),
-            ty: dojo::model::introspect::Ty::Tuple(
+            ty: dojo::meta::introspect::Ty::Tuple(
             array![
-            dojo::model::introspect::Ty::Tuple(
+            dojo::meta::introspect::Ty::Tuple(
             array![
-            dojo::model::introspect::Introspect::<u8>::ty(),
-dojo::model::introspect::Introspect::<u32>::ty()
+            dojo::meta::introspect::Introspect::<u8>::ty(),
+dojo::meta::introspect::Introspect::<u32>::ty()
             ].span()
         ),
-dojo::model::introspect::Ty::Tuple(
+dojo::meta::introspect::Ty::Tuple(
             array![
-            dojo::model::introspect::Introspect::<Vec2>::ty(),
-dojo::model::introspect::Introspect::<EnumCustom>::ty()
+            dojo::meta::introspect::Introspect::<Vec2>::ty(),
+dojo::meta::introspect::Introspect::<EnumCustom>::ty()
             ].span()
         )
             ].span()
@@ -1907,33 +1907,33 @@ dojo::model::introspect::Introspect::<EnumCustom>::ty()
 impl StructWithNestedTuplesAndByteArrayCopy of core::traits::Copy::<StructWithNestedTuplesAndByteArray>;
 impl StructWithNestedTuplesAndByteArrayDrop of core::traits::Drop::<StructWithNestedTuplesAndByteArray>;
 
-impl StructWithNestedTuplesAndByteArrayIntrospect<> of dojo::model::introspect::Introspect<StructWithNestedTuplesAndByteArray<>> {
+impl StructWithNestedTuplesAndByteArrayIntrospect<> of dojo::meta::introspect::Introspect<StructWithNestedTuplesAndByteArray<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         Option::None
     }
 
-    fn layout() -> dojo::model::Layout {
-        dojo::model::Layout::Struct(
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Struct(
             array![
-            dojo::model::FieldLayout {
+            dojo::meta::FieldLayout {
                     selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
-                    layout: dojo::model::introspect::Introspect::<u8>::layout()
+                    layout: dojo::meta::introspect::Introspect::<u8>::layout()
                 },
-dojo::model::FieldLayout {
+dojo::meta::FieldLayout {
                     selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
-                    layout: dojo::model::Layout::Tuple(
+                    layout: dojo::meta::Layout::Tuple(
             array![
-            dojo::model::Layout::Tuple(
+            dojo::meta::Layout::Tuple(
             array![
-            dojo::model::introspect::Introspect::<u8>::layout(),
-dojo::model::introspect::Introspect::<u32>::layout()
+            dojo::meta::introspect::Introspect::<u8>::layout(),
+dojo::meta::introspect::Introspect::<u32>::layout()
             ].span()
         ),
-dojo::model::Layout::Tuple(
+dojo::meta::Layout::Tuple(
             array![
-            dojo::model::introspect::Introspect::<Vec2>::layout(),
-dojo::model::introspect::Introspect::<ByteArray>::layout()
+            dojo::meta::introspect::Introspect::<Vec2>::layout(),
+dojo::meta::introspect::Introspect::<ByteArray>::layout()
             ].span()
         )
             ].span()
@@ -1944,37 +1944,37 @@ dojo::model::introspect::Introspect::<ByteArray>::layout()
     }
 
     #[inline(always)]
-    fn ty() -> dojo::model::introspect::Ty {
-        dojo::model::introspect::Ty::Struct(
-            dojo::model::introspect::Struct {
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
                 name: 'StructWithNestedTuplesAndByteArray',
                 attrs: array![].span(),
                 children: array![
-                dojo::model::introspect::Member {
+                dojo::meta::introspect::Member {
             name: 'player',
             attrs: array!['key'].span(),
-            ty: dojo::model::introspect::Introspect::<ContractAddress>::ty()
+            ty: dojo::meta::introspect::Introspect::<ContractAddress>::ty()
         },
-dojo::model::introspect::Member {
+dojo::meta::introspect::Member {
             name: 'before',
             attrs: array![].span(),
-            ty: dojo::model::introspect::Introspect::<u8>::ty()
+            ty: dojo::meta::introspect::Introspect::<u8>::ty()
         },
-dojo::model::introspect::Member {
+dojo::meta::introspect::Member {
             name: 'after',
             attrs: array![].span(),
-            ty: dojo::model::introspect::Ty::Tuple(
+            ty: dojo::meta::introspect::Ty::Tuple(
             array![
-            dojo::model::introspect::Ty::Tuple(
+            dojo::meta::introspect::Ty::Tuple(
             array![
-            dojo::model::introspect::Introspect::<u8>::ty(),
-dojo::model::introspect::Introspect::<u32>::ty()
+            dojo::meta::introspect::Introspect::<u8>::ty(),
+dojo::meta::introspect::Introspect::<u32>::ty()
             ].span()
         ),
-dojo::model::introspect::Ty::Tuple(
+dojo::meta::introspect::Ty::Tuple(
             array![
-            dojo::model::introspect::Introspect::<Vec2>::ty(),
-dojo::model::introspect::Ty::ByteArray
+            dojo::meta::introspect::Introspect::<Vec2>::ty(),
+dojo::meta::introspect::Ty::ByteArray
             ].span()
         )
             ].span()
@@ -1989,53 +1989,53 @@ dojo::model::introspect::Ty::ByteArray
 impl StructWithNestedEverythingCopy of core::traits::Copy::<StructWithNestedEverything>;
 impl StructWithNestedEverythingDrop of core::traits::Drop::<StructWithNestedEverything>;
 
-impl StructWithNestedEverythingIntrospect<> of dojo::model::introspect::Introspect<StructWithNestedEverything<>> {
+impl StructWithNestedEverythingIntrospect<> of dojo::meta::introspect::Introspect<StructWithNestedEverything<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         Option::None
     }
 
-    fn layout() -> dojo::model::Layout {
-        dojo::model::Layout::Struct(
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Struct(
             array![
-            dojo::model::FieldLayout {
+            dojo::meta::FieldLayout {
                     selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
-                    layout: dojo::model::introspect::Introspect::<u8>::layout()
+                    layout: dojo::meta::introspect::Introspect::<u8>::layout()
                 },
-dojo::model::FieldLayout {
+dojo::meta::FieldLayout {
                     selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
-                    layout: dojo::model::Layout::Tuple(
+                    layout: dojo::meta::Layout::Tuple(
             array![
-            dojo::model::Layout::Tuple(
+            dojo::meta::Layout::Tuple(
             array![
-            dojo::model::introspect::Introspect::<u8>::layout(),
-dojo::model::introspect::Introspect::<u32>::layout()
+            dojo::meta::introspect::Introspect::<u8>::layout(),
+dojo::meta::introspect::Introspect::<u32>::layout()
             ].span()
         ),
-dojo::model::Layout::Tuple(
+dojo::meta::Layout::Tuple(
             array![
-            dojo::model::introspect::Introspect::<Vec2>::layout(),
-dojo::model::introspect::Introspect::<EnumCustom>::layout()
+            dojo::meta::introspect::Introspect::<Vec2>::layout(),
+dojo::meta::introspect::Introspect::<EnumCustom>::layout()
             ].span()
         ),
-dojo::model::Layout::Tuple(
+dojo::meta::Layout::Tuple(
             array![
-            dojo::model::Layout::Array(
+            dojo::meta::Layout::Array(
                 array![
-                    dojo::model::Layout::Tuple(
+                    dojo::meta::Layout::Tuple(
             array![
-            dojo::model::introspect::Introspect::<u32>::layout(),
-dojo::model::introspect::Introspect::<Vec2>::layout()
+            dojo::meta::introspect::Introspect::<u32>::layout(),
+dojo::meta::introspect::Introspect::<Vec2>::layout()
             ].span()
         )
                 ].span()
             ),
-dojo::model::introspect::Introspect::<EnumCustom>::layout()
+dojo::meta::introspect::Introspect::<EnumCustom>::layout()
             ].span()
         ),
-dojo::model::Layout::Tuple(
+dojo::meta::Layout::Tuple(
             array![
-            dojo::model::introspect::Introspect::<u16>::layout()
+            dojo::meta::introspect::Introspect::<u16>::layout()
             ].span()
         )
             ].span()
@@ -2046,57 +2046,57 @@ dojo::model::Layout::Tuple(
     }
 
     #[inline(always)]
-    fn ty() -> dojo::model::introspect::Ty {
-        dojo::model::introspect::Ty::Struct(
-            dojo::model::introspect::Struct {
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
                 name: 'StructWithNestedEverything',
                 attrs: array![].span(),
                 children: array![
-                dojo::model::introspect::Member {
+                dojo::meta::introspect::Member {
             name: 'player',
             attrs: array!['key'].span(),
-            ty: dojo::model::introspect::Introspect::<ContractAddress>::ty()
+            ty: dojo::meta::introspect::Introspect::<ContractAddress>::ty()
         },
-dojo::model::introspect::Member {
+dojo::meta::introspect::Member {
             name: 'before',
             attrs: array![].span(),
-            ty: dojo::model::introspect::Introspect::<u8>::ty()
+            ty: dojo::meta::introspect::Introspect::<u8>::ty()
         },
-dojo::model::introspect::Member {
+dojo::meta::introspect::Member {
             name: 'after',
             attrs: array![].span(),
-            ty: dojo::model::introspect::Ty::Tuple(
+            ty: dojo::meta::introspect::Ty::Tuple(
             array![
-            dojo::model::introspect::Ty::Tuple(
+            dojo::meta::introspect::Ty::Tuple(
             array![
-            dojo::model::introspect::Introspect::<u8>::ty(),
-dojo::model::introspect::Introspect::<u32>::ty()
+            dojo::meta::introspect::Introspect::<u8>::ty(),
+dojo::meta::introspect::Introspect::<u32>::ty()
             ].span()
         ),
-dojo::model::introspect::Ty::Tuple(
+dojo::meta::introspect::Ty::Tuple(
             array![
-            dojo::model::introspect::Introspect::<Vec2>::ty(),
-dojo::model::introspect::Introspect::<EnumCustom>::ty()
+            dojo::meta::introspect::Introspect::<Vec2>::ty(),
+dojo::meta::introspect::Introspect::<EnumCustom>::ty()
             ].span()
         ),
-dojo::model::introspect::Ty::Tuple(
+dojo::meta::introspect::Ty::Tuple(
             array![
-            dojo::model::introspect::Ty::Array(
+            dojo::meta::introspect::Ty::Array(
                 array![
-                dojo::model::introspect::Ty::Tuple(
+                dojo::meta::introspect::Ty::Tuple(
             array![
-            dojo::model::introspect::Introspect::<u32>::ty(),
-dojo::model::introspect::Introspect::<Vec2>::ty()
+            dojo::meta::introspect::Introspect::<u32>::ty(),
+dojo::meta::introspect::Introspect::<Vec2>::ty()
             ].span()
         )
                 ].span()
             ),
-dojo::model::introspect::Introspect::<EnumCustom>::ty()
+dojo::meta::introspect::Introspect::<EnumCustom>::ty()
             ].span()
         ),
-dojo::model::introspect::Ty::Tuple(
+dojo::meta::introspect::Ty::Tuple(
             array![
-            dojo::model::introspect::Introspect::<u16>::ty()
+            dojo::meta::introspect::Introspect::<u16>::ty()
             ].span()
         )
             ].span()
@@ -2121,34 +2121,34 @@ impl GenericStructSerde<T, +core::serde::Serde<T>, +core::traits::Destruct<T>> o
     }
 }
 
-impl GenericStructIntrospect<T, impl TIntrospect: dojo::model::introspect::Introspect<T>> of dojo::model::introspect::Introspect<GenericStruct<T>> {
+impl GenericStructIntrospect<T, impl TIntrospect: dojo::meta::introspect::Introspect<T>> of dojo::meta::introspect::Introspect<GenericStruct<T>> {
     #[inline(always)]
     fn size() -> Option<usize> {
-        dojo::model::introspect::Introspect::<T>::size()
+        dojo::meta::introspect::Introspect::<T>::size()
     }
 
-    fn layout() -> dojo::model::Layout {
-        dojo::model::Layout::Struct(
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Struct(
             array![
-            dojo::model::FieldLayout {
+            dojo::meta::FieldLayout {
                     selector: 1246920879054256875300693562709339669009726288543267794550465531256469553289,
-                    layout: dojo::model::introspect::Introspect::<T>::layout()
+                    layout: dojo::meta::introspect::Introspect::<T>::layout()
                 }
             ].span()
         )
     }
 
     #[inline(always)]
-    fn ty() -> dojo::model::introspect::Ty {
-        dojo::model::introspect::Ty::Struct(
-            dojo::model::introspect::Struct {
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
                 name: 'GenericStruct',
                 attrs: array![].span(),
                 children: array![
-                dojo::model::introspect::Member {
+                dojo::meta::introspect::Member {
             name: 't',
             attrs: array![].span(),
-            ty: dojo::model::introspect::Introspect::<T>::ty()
+            ty: dojo::meta::introspect::Introspect::<T>::ty()
         }
 
                 ].span()
@@ -2169,18 +2169,18 @@ impl StructWithBadOptionSerde of core::serde::Serde::<StructWithBadOption> {
     }
 }
 
-impl StructWithBadOptionIntrospect<> of dojo::model::introspect::Introspect<StructWithBadOption<>> {
+impl StructWithBadOptionIntrospect<> of dojo::meta::introspect::Introspect<StructWithBadOption<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
-        dojo::model::introspect::Introspect::<Option<(u8, u16)>>::size()
+        dojo::meta::introspect::Introspect::<Option<(u8, u16)>>::size()
     }
 
-    fn layout() -> dojo::model::Layout {
-        dojo::model::Layout::Struct(
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Struct(
             array![
-            dojo::model::FieldLayout {
+            dojo::meta::FieldLayout {
                     selector: 512066735765477566404754172672287371265995314501343422459174036873487219331,
-                    layout: dojo::model::introspect::Introspect::<Option<(u8, u16)>
+                    layout: dojo::meta::introspect::Introspect::<Option<(u8, u16)>
 >::layout()
                 }
             ].span()
@@ -2188,16 +2188,16 @@ impl StructWithBadOptionIntrospect<> of dojo::model::introspect::Introspect<Stru
     }
 
     #[inline(always)]
-    fn ty() -> dojo::model::introspect::Ty {
-        dojo::model::introspect::Ty::Struct(
-            dojo::model::introspect::Struct {
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
                 name: 'StructWithBadOption',
                 attrs: array![].span(),
                 children: array![
-                dojo::model::introspect::Member {
+                dojo::meta::introspect::Member {
             name: 'x',
             attrs: array![].span(),
-            ty: dojo::model::introspect::Introspect::<Option<(u8, u16)>>::ty()
+            ty: dojo::meta::introspect::Introspect::<Option<(u8, u16)>>::ty()
         }
 
                 ].span()
@@ -2224,11 +2224,11 @@ impl EnumWithBadOptionSerde of core::serde::Serde::<EnumWithBadOption> {
     }
 }
 
-impl EnumWithBadOptionIntrospect<> of dojo::model::introspect::Introspect<EnumWithBadOption<>> {
+impl EnumWithBadOptionIntrospect<> of dojo::meta::introspect::Introspect<EnumWithBadOption<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         let sizes : Array<Option<usize>> = array![
-                    dojo::model::introspect::Introspect::<Option<(u8, u16)>>::size(),
+                    dojo::meta::introspect::Introspect::<Option<(u8, u16)>>::size(),
 Option::Some(1)
                 ];
 
@@ -2239,25 +2239,25 @@ Option::Some(1)
                 
     }
 
-    fn layout() -> dojo::model::Layout {
-        dojo::model::Layout::Enum(
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Enum(
             array![
-            dojo::model::FieldLayout {
+            dojo::meta::FieldLayout {
                     selector: 0,
-                    layout: dojo::model::introspect::Introspect::<Option<(u8, u16)>>::layout()
+                    layout: dojo::meta::introspect::Introspect::<Option<(u8, u16)>>::layout()
                 }
             ].span()
         )
     }
 
     #[inline(always)]
-    fn ty() -> dojo::model::introspect::Ty {
-        dojo::model::introspect::Ty::Enum(
-            dojo::model::introspect::Enum {
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Enum(
+            dojo::meta::introspect::Enum {
                 name: 'EnumWithBadOption',
                 attrs: array![].span(),
                 children: array![
-                ('first', dojo::model::introspect::Introspect::<Option<(u8, u16)>>::ty())
+                ('first', dojo::meta::introspect::Introspect::<Option<(u8, u16)>>::ty())
 
                 ].span()
             }
@@ -2265,14 +2265,14 @@ Option::Some(1)
     }
 }
 
-impl EnumIncompatibleAttrsIntrospect<> of dojo::model::introspect::Introspect<EnumIncompatibleAttrs<>> {
+impl EnumIncompatibleAttrsIntrospect<> of dojo::meta::introspect::Introspect<EnumIncompatibleAttrs<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         Option::None
     }
 
-    fn layout() -> dojo::model::Layout {
-        dojo::model::Layout::Enum(
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Enum(
             array![
             
             ].span()
@@ -2280,9 +2280,9 @@ impl EnumIncompatibleAttrsIntrospect<> of dojo::model::introspect::Introspect<En
     }
 
     #[inline(always)]
-    fn ty() -> dojo::model::introspect::Ty {
-        dojo::model::introspect::Ty::Enum(
-            dojo::model::introspect::Enum {
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Enum(
+            dojo::meta::introspect::Enum {
                 name: 'EnumIncompatibleAttrs',
                 attrs: array![].span(),
                 children: array![
@@ -2294,14 +2294,14 @@ impl EnumIncompatibleAttrsIntrospect<> of dojo::model::introspect::Introspect<En
     }
 }
         
-impl EnumIncompatibleAttrsIntrospect<> of dojo::model::introspect::Introspect<EnumIncompatibleAttrs<>> {
+impl EnumIncompatibleAttrsIntrospect<> of dojo::meta::introspect::Introspect<EnumIncompatibleAttrs<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         Option::None
     }
 
-    fn layout() -> dojo::model::Layout {
-        dojo::model::Layout::Fixed(
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Fixed(
                 array![
                 8
                 ].span()
@@ -2309,9 +2309,9 @@ impl EnumIncompatibleAttrsIntrospect<> of dojo::model::introspect::Introspect<En
     }
 
     #[inline(always)]
-    fn ty() -> dojo::model::introspect::Ty {
-        dojo::model::introspect::Ty::Enum(
-            dojo::model::introspect::Enum {
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Enum(
+            dojo::meta::introspect::Enum {
                 name: 'EnumIncompatibleAttrs',
                 attrs: array![].span(),
                 children: array![
@@ -2323,14 +2323,14 @@ impl EnumIncompatibleAttrsIntrospect<> of dojo::model::introspect::Introspect<En
     }
 }
 
-impl StructIncompatibleAttrsIntrospect<> of dojo::model::introspect::Introspect<StructIncompatibleAttrs<>> {
+impl StructIncompatibleAttrsIntrospect<> of dojo::meta::introspect::Introspect<StructIncompatibleAttrs<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         Option::None
     }
 
-    fn layout() -> dojo::model::Layout {
-        dojo::model::Layout::Struct(
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Struct(
             array![
             
             ].span()
@@ -2338,9 +2338,9 @@ impl StructIncompatibleAttrsIntrospect<> of dojo::model::introspect::Introspect<
     }
 
     #[inline(always)]
-    fn ty() -> dojo::model::introspect::Ty {
-        dojo::model::introspect::Ty::Struct(
-            dojo::model::introspect::Struct {
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
                 name: 'StructIncompatibleAttrs',
                 attrs: array![].span(),
                 children: array![
@@ -2352,14 +2352,14 @@ impl StructIncompatibleAttrsIntrospect<> of dojo::model::introspect::Introspect<
     }
 }
         
-impl StructIncompatibleAttrsIntrospect<> of dojo::model::introspect::Introspect<StructIncompatibleAttrs<>> {
+impl StructIncompatibleAttrsIntrospect<> of dojo::meta::introspect::Introspect<StructIncompatibleAttrs<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         Option::None
     }
 
-    fn layout() -> dojo::model::Layout {
-        dojo::model::Layout::Fixed(
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Fixed(
             array![
             
             ].span()
@@ -2367,9 +2367,9 @@ impl StructIncompatibleAttrsIntrospect<> of dojo::model::introspect::Introspect<
     }
 
     #[inline(always)]
-    fn ty() -> dojo::model::introspect::Ty {
-        dojo::model::introspect::Ty::Struct(
-            dojo::model::introspect::Struct {
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
                 name: 'StructIncompatibleAttrs',
                 attrs: array![].span(),
                 children: array![
@@ -2381,14 +2381,14 @@ impl StructIncompatibleAttrsIntrospect<> of dojo::model::introspect::Introspect<
     }
 }
 
-impl StructIncompatibleAttrs2Introspect<> of dojo::model::introspect::Introspect<StructIncompatibleAttrs2<>> {
+impl StructIncompatibleAttrs2Introspect<> of dojo::meta::introspect::Introspect<StructIncompatibleAttrs2<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         Option::None
     }
 
-    fn layout() -> dojo::model::Layout {
-        dojo::model::Layout::Struct(
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Struct(
             array![
             
             ].span()
@@ -2396,9 +2396,9 @@ impl StructIncompatibleAttrs2Introspect<> of dojo::model::introspect::Introspect
     }
 
     #[inline(always)]
-    fn ty() -> dojo::model::introspect::Ty {
-        dojo::model::introspect::Ty::Struct(
-            dojo::model::introspect::Struct {
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
                 name: 'StructIncompatibleAttrs2',
                 attrs: array![].span(),
                 children: array![
@@ -2410,14 +2410,14 @@ impl StructIncompatibleAttrs2Introspect<> of dojo::model::introspect::Introspect
     }
 }
         
-impl StructIncompatibleAttrs2Introspect<> of dojo::model::introspect::Introspect<StructIncompatibleAttrs2<>> {
+impl StructIncompatibleAttrs2Introspect<> of dojo::meta::introspect::Introspect<StructIncompatibleAttrs2<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         Option::None
     }
 
-    fn layout() -> dojo::model::Layout {
-        dojo::model::Layout::Fixed(
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Fixed(
             array![
             
             ].span()
@@ -2425,9 +2425,9 @@ impl StructIncompatibleAttrs2Introspect<> of dojo::model::introspect::Introspect
     }
 
     #[inline(always)]
-    fn ty() -> dojo::model::introspect::Ty {
-        dojo::model::introspect::Ty::Struct(
-            dojo::model::introspect::Struct {
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
                 name: 'StructIncompatibleAttrs2',
                 attrs: array![].span(),
                 children: array![
@@ -2439,14 +2439,14 @@ impl StructIncompatibleAttrs2Introspect<> of dojo::model::introspect::Introspect
     }
 }
 
-impl EnumIncompatibleAttrs2Introspect<> of dojo::model::introspect::Introspect<EnumIncompatibleAttrs2<>> {
+impl EnumIncompatibleAttrs2Introspect<> of dojo::meta::introspect::Introspect<EnumIncompatibleAttrs2<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         Option::None
     }
 
-    fn layout() -> dojo::model::Layout {
-        dojo::model::Layout::Enum(
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Enum(
             array![
             
             ].span()
@@ -2454,9 +2454,9 @@ impl EnumIncompatibleAttrs2Introspect<> of dojo::model::introspect::Introspect<E
     }
 
     #[inline(always)]
-    fn ty() -> dojo::model::introspect::Ty {
-        dojo::model::introspect::Ty::Enum(
-            dojo::model::introspect::Enum {
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Enum(
+            dojo::meta::introspect::Enum {
                 name: 'EnumIncompatibleAttrs2',
                 attrs: array![].span(),
                 children: array![
@@ -2468,14 +2468,14 @@ impl EnumIncompatibleAttrs2Introspect<> of dojo::model::introspect::Introspect<E
     }
 }
         
-impl EnumIncompatibleAttrs2Introspect<> of dojo::model::introspect::Introspect<EnumIncompatibleAttrs2<>> {
+impl EnumIncompatibleAttrs2Introspect<> of dojo::meta::introspect::Introspect<EnumIncompatibleAttrs2<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         Option::None
     }
 
-    fn layout() -> dojo::model::Layout {
-        dojo::model::Layout::Fixed(
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Fixed(
                 array![
                 8
                 ].span()
@@ -2483,9 +2483,9 @@ impl EnumIncompatibleAttrs2Introspect<> of dojo::model::introspect::Introspect<E
     }
 
     #[inline(always)]
-    fn ty() -> dojo::model::introspect::Ty {
-        dojo::model::introspect::Ty::Enum(
-            dojo::model::introspect::Enum {
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Enum(
+            dojo::meta::introspect::Enum {
                 name: 'EnumIncompatibleAttrs2',
                 attrs: array![].span(),
                 children: array![
@@ -2497,14 +2497,14 @@ impl EnumIncompatibleAttrs2Introspect<> of dojo::model::introspect::Introspect<E
     }
 }
 
-impl StructPacked1Introspect<> of dojo::model::introspect::Introspect<StructPacked1<>> {
+impl StructPacked1Introspect<> of dojo::meta::introspect::Introspect<StructPacked1<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         Option::Some(1)
     }
 
-    fn layout() -> dojo::model::Layout {
-        dojo::model::Layout::Fixed(
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Fixed(
             array![
             8
             ].span()
@@ -2512,16 +2512,16 @@ impl StructPacked1Introspect<> of dojo::model::introspect::Introspect<StructPack
     }
 
     #[inline(always)]
-    fn ty() -> dojo::model::introspect::Ty {
-        dojo::model::introspect::Ty::Struct(
-            dojo::model::introspect::Struct {
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
                 name: 'StructPacked1',
                 attrs: array![].span(),
                 children: array![
-                dojo::model::introspect::Member {
+                dojo::meta::introspect::Member {
             name: 'x',
             attrs: array![].span(),
-            ty: dojo::model::introspect::Introspect::<u8>::ty()
+            ty: dojo::meta::introspect::Introspect::<u8>::ty()
         }
 
                 ].span()
@@ -2530,14 +2530,14 @@ impl StructPacked1Introspect<> of dojo::model::introspect::Introspect<StructPack
     }
 }
 
-impl StructPacked2Introspect<> of dojo::model::introspect::Introspect<StructPacked2<>> {
+impl StructPacked2Introspect<> of dojo::meta::introspect::Introspect<StructPacked2<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         Option::Some(3)
     }
 
-    fn layout() -> dojo::model::Layout {
-        dojo::model::Layout::Fixed(
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Fixed(
             array![
             8,128,128
             ].span()
@@ -2545,21 +2545,21 @@ impl StructPacked2Introspect<> of dojo::model::introspect::Introspect<StructPack
     }
 
     #[inline(always)]
-    fn ty() -> dojo::model::introspect::Ty {
-        dojo::model::introspect::Ty::Struct(
-            dojo::model::introspect::Struct {
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
                 name: 'StructPacked2',
                 attrs: array![].span(),
                 children: array![
-                dojo::model::introspect::Member {
+                dojo::meta::introspect::Member {
             name: 'x',
             attrs: array![].span(),
-            ty: dojo::model::introspect::Introspect::<u8>::ty()
+            ty: dojo::meta::introspect::Introspect::<u8>::ty()
         },
-dojo::model::introspect::Member {
+dojo::meta::introspect::Member {
             name: 'y',
             attrs: array![].span(),
-            ty: dojo::model::introspect::Introspect::<u256>::ty()
+            ty: dojo::meta::introspect::Introspect::<u256>::ty()
         }
 
                 ].span()
@@ -2568,14 +2568,14 @@ dojo::model::introspect::Member {
     }
 }
 
-impl StructPacked3Introspect<> of dojo::model::introspect::Introspect<StructPacked3<>> {
+impl StructPacked3Introspect<> of dojo::meta::introspect::Introspect<StructPacked3<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         Option::Some(4)
     }
 
-    fn layout() -> dojo::model::Layout {
-        dojo::model::Layout::Fixed(
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Fixed(
             array![
             128,128,8,32
             ].span()
@@ -2583,24 +2583,24 @@ impl StructPacked3Introspect<> of dojo::model::introspect::Introspect<StructPack
     }
 
     #[inline(always)]
-    fn ty() -> dojo::model::introspect::Ty {
-        dojo::model::introspect::Ty::Struct(
-            dojo::model::introspect::Struct {
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
                 name: 'StructPacked3',
                 attrs: array![].span(),
                 children: array![
-                dojo::model::introspect::Member {
+                dojo::meta::introspect::Member {
             name: 'x',
             attrs: array![].span(),
-            ty: dojo::model::introspect::Introspect::<u256>::ty()
+            ty: dojo::meta::introspect::Introspect::<u256>::ty()
         },
-dojo::model::introspect::Member {
+dojo::meta::introspect::Member {
             name: 'y',
             attrs: array![].span(),
-            ty: dojo::model::introspect::Ty::Tuple(
+            ty: dojo::meta::introspect::Ty::Tuple(
             array![
-            dojo::model::introspect::Introspect::<u8>::ty(),
-dojo::model::introspect::Introspect::<u32>::ty()
+            dojo::meta::introspect::Introspect::<u8>::ty(),
+dojo::meta::introspect::Introspect::<u32>::ty()
             ].span()
         )
         }
@@ -2611,14 +2611,14 @@ dojo::model::introspect::Introspect::<u32>::ty()
     }
 }
 
-impl StructNotPackable1Introspect<> of dojo::model::introspect::Introspect<StructNotPackable1<>> {
+impl StructNotPackable1Introspect<> of dojo::meta::introspect::Introspect<StructNotPackable1<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         Option::None
     }
 
-    fn layout() -> dojo::model::Layout {
-        dojo::model::Layout::Fixed(
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Fixed(
             array![
             8,ERROR
             ].span()
@@ -2626,23 +2626,23 @@ impl StructNotPackable1Introspect<> of dojo::model::introspect::Introspect<Struc
     }
 
     #[inline(always)]
-    fn ty() -> dojo::model::introspect::Ty {
-        dojo::model::introspect::Ty::Struct(
-            dojo::model::introspect::Struct {
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
                 name: 'StructNotPackable1',
                 attrs: array![].span(),
                 children: array![
-                dojo::model::introspect::Member {
+                dojo::meta::introspect::Member {
             name: 'x',
             attrs: array![].span(),
-            ty: dojo::model::introspect::Introspect::<u8>::ty()
+            ty: dojo::meta::introspect::Introspect::<u8>::ty()
         },
-dojo::model::introspect::Member {
+dojo::meta::introspect::Member {
             name: 'y',
             attrs: array![].span(),
-            ty: dojo::model::introspect::Ty::Array(
+            ty: dojo::meta::introspect::Ty::Array(
                 array![
-                dojo::model::introspect::Introspect::<u32>::ty()
+                dojo::meta::introspect::Introspect::<u32>::ty()
                 ].span()
             )
         }
@@ -2653,11 +2653,11 @@ dojo::model::introspect::Member {
     }
 }
 
-impl StructPackableWithInnerPackedIntrospect<> of dojo::model::introspect::Introspect<StructPackableWithInnerPacked<>> {
+impl StructPackableWithInnerPackedIntrospect<> of dojo::meta::introspect::Introspect<StructPackableWithInnerPacked<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         let sizes : Array<Option<usize>> = array![
-                    dojo::model::introspect::Introspect::<StructPacked1>::size(),
+                    dojo::meta::introspect::Introspect::<StructPacked1>::size(),
 Option::Some(1)
                 ];
 
@@ -2666,10 +2666,10 @@ Option::Some(1)
                 
     }
 
-    fn layout() -> dojo::model::Layout {
+    fn layout() -> dojo::meta::Layout {
         let mut layouts = array![
-            dojo::model::Layout::Fixed(array![8].span()),
-dojo::model::introspect::Introspect::<StructPacked1>::layout()
+            dojo::meta::Layout::Fixed(array![8].span()),
+dojo::meta::introspect::Introspect::<StructPacked1>::layout()
         ];
         let mut merged_layout = ArrayTrait::<u8>::new();
 
@@ -2677,7 +2677,7 @@ dojo::model::introspect::Introspect::<StructPacked1>::layout()
             match ArrayTrait::pop_front(ref layouts) {
                 Option::Some(mut layout) => {
                     match layout {
-                        dojo::model::Layout::Fixed(mut l) => {
+                        dojo::meta::Layout::Fixed(mut l) => {
                             loop {
                                 match SpanTrait::pop_front(ref l) {
                                     Option::Some(x) => merged_layout.append(*x),
@@ -2692,26 +2692,26 @@ dojo::model::introspect::Introspect::<StructPacked1>::layout()
             };
         };
 
-        dojo::model::Layout::Fixed(merged_layout.span())
+        dojo::meta::Layout::Fixed(merged_layout.span())
         
     }
 
     #[inline(always)]
-    fn ty() -> dojo::model::introspect::Ty {
-        dojo::model::introspect::Ty::Struct(
-            dojo::model::introspect::Struct {
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
                 name: 'StructPackableWithInnerPacked',
                 attrs: array![].span(),
                 children: array![
-                dojo::model::introspect::Member {
+                dojo::meta::introspect::Member {
             name: 'x',
             attrs: array![].span(),
-            ty: dojo::model::introspect::Introspect::<u8>::ty()
+            ty: dojo::meta::introspect::Introspect::<u8>::ty()
         },
-dojo::model::introspect::Member {
+dojo::meta::introspect::Member {
             name: 'y',
             attrs: array![].span(),
-            ty: dojo::model::introspect::Introspect::<StructPacked1>::ty()
+            ty: dojo::meta::introspect::Introspect::<StructPacked1>::ty()
         }
 
                 ].span()
@@ -2720,14 +2720,14 @@ dojo::model::introspect::Member {
     }
 }
 
-impl EnumPacked1Introspect<> of dojo::model::introspect::Introspect<EnumPacked1<>> {
+impl EnumPacked1Introspect<> of dojo::meta::introspect::Introspect<EnumPacked1<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         Option::Some(1)
     }
 
-    fn layout() -> dojo::model::Layout {
-        dojo::model::Layout::Fixed(
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Fixed(
                 array![
                 8
                 ].span()
@@ -2735,15 +2735,15 @@ impl EnumPacked1Introspect<> of dojo::model::introspect::Introspect<EnumPacked1<
     }
 
     #[inline(always)]
-    fn ty() -> dojo::model::introspect::Ty {
-        dojo::model::introspect::Ty::Enum(
-            dojo::model::introspect::Enum {
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Enum(
+            dojo::meta::introspect::Enum {
                 name: 'EnumPacked1',
                 attrs: array![].span(),
                 children: array![
-                ('a', dojo::model::introspect::Ty::Tuple(array![].span())),
-('b', dojo::model::introspect::Ty::Tuple(array![].span())),
-('c', dojo::model::introspect::Ty::Tuple(array![].span()))
+                ('a', dojo::meta::introspect::Ty::Tuple(array![].span())),
+('b', dojo::meta::introspect::Ty::Tuple(array![].span())),
+('c', dojo::meta::introspect::Ty::Tuple(array![].span()))
 
                 ].span()
             }
@@ -2751,14 +2751,14 @@ impl EnumPacked1Introspect<> of dojo::model::introspect::Introspect<EnumPacked1<
     }
 }
 
-impl EnumPacked2Introspect<> of dojo::model::introspect::Introspect<EnumPacked2<>> {
+impl EnumPacked2Introspect<> of dojo::meta::introspect::Introspect<EnumPacked2<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         Option::Some(2)
     }
 
-    fn layout() -> dojo::model::Layout {
-        dojo::model::Layout::Fixed(
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Fixed(
                 array![
                 8,8
                 ].span()
@@ -2766,15 +2766,15 @@ impl EnumPacked2Introspect<> of dojo::model::introspect::Introspect<EnumPacked2<
     }
 
     #[inline(always)]
-    fn ty() -> dojo::model::introspect::Ty {
-        dojo::model::introspect::Ty::Enum(
-            dojo::model::introspect::Enum {
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Enum(
+            dojo::meta::introspect::Enum {
                 name: 'EnumPacked2',
                 attrs: array![].span(),
                 children: array![
-                ('a', dojo::model::introspect::Introspect::<u8>::ty()),
-('b', dojo::model::introspect::Introspect::<u8>::ty()),
-('c', dojo::model::introspect::Introspect::<u8>::ty())
+                ('a', dojo::meta::introspect::Introspect::<u8>::ty()),
+('b', dojo::meta::introspect::Introspect::<u8>::ty()),
+('c', dojo::meta::introspect::Introspect::<u8>::ty())
 
                 ].span()
             }
@@ -2782,14 +2782,14 @@ impl EnumPacked2Introspect<> of dojo::model::introspect::Introspect<EnumPacked2<
     }
 }
 
-impl EnumPacked3Introspect<> of dojo::model::introspect::Introspect<EnumPacked3<>> {
+impl EnumPacked3Introspect<> of dojo::meta::introspect::Introspect<EnumPacked3<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         Option::Some(3)
     }
 
-    fn layout() -> dojo::model::Layout {
-        dojo::model::Layout::Fixed(
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Fixed(
                 array![
                 8,128,128
                 ].span()
@@ -2797,19 +2797,19 @@ impl EnumPacked3Introspect<> of dojo::model::introspect::Introspect<EnumPacked3<
     }
 
     #[inline(always)]
-    fn ty() -> dojo::model::introspect::Ty {
-        dojo::model::introspect::Ty::Enum(
-            dojo::model::introspect::Enum {
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Enum(
+            dojo::meta::introspect::Enum {
                 name: 'EnumPacked3',
                 attrs: array![].span(),
                 children: array![
-                ('a', dojo::model::introspect::Ty::Tuple(
+                ('a', dojo::meta::introspect::Ty::Tuple(
             array![
-            dojo::model::introspect::Introspect::<u128>::ty(),
-dojo::model::introspect::Introspect::<u128>::ty()
+            dojo::meta::introspect::Introspect::<u128>::ty(),
+dojo::meta::introspect::Introspect::<u128>::ty()
             ].span()
         )),
-('b', dojo::model::introspect::Introspect::<u256>::ty())
+('b', dojo::meta::introspect::Introspect::<u256>::ty())
 
                 ].span()
             }
@@ -2817,11 +2817,11 @@ dojo::model::introspect::Introspect::<u128>::ty()
     }
 }
 
-impl EnumPackableWithInnerPackedIntrospect<> of dojo::model::introspect::Introspect<EnumPackableWithInnerPacked<>> {
+impl EnumPackableWithInnerPackedIntrospect<> of dojo::meta::introspect::Introspect<EnumPackableWithInnerPacked<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         let sizes : Array<Option<usize>> = array![
-                    dojo::model::introspect::Introspect::<StructPacked1>::size(),
+                    dojo::meta::introspect::Introspect::<StructPacked1>::size(),
 Option::Some(1)
                 ];
 
@@ -2830,10 +2830,10 @@ Option::Some(1)
                 
     }
 
-    fn layout() -> dojo::model::Layout {
+    fn layout() -> dojo::meta::Layout {
         let mut layouts = array![
-            dojo::model::Layout::Fixed(array![8].span()),
-dojo::model::introspect::Introspect::<StructPacked1>::layout()
+            dojo::meta::Layout::Fixed(array![8].span()),
+dojo::meta::introspect::Introspect::<StructPacked1>::layout()
         ];
         let mut merged_layout = ArrayTrait::<u8>::new();
 
@@ -2841,7 +2841,7 @@ dojo::model::introspect::Introspect::<StructPacked1>::layout()
             match ArrayTrait::pop_front(ref layouts) {
                 Option::Some(mut layout) => {
                     match layout {
-                        dojo::model::Layout::Fixed(mut l) => {
+                        dojo::meta::Layout::Fixed(mut l) => {
                             loop {
                                 match SpanTrait::pop_front(ref l) {
                                     Option::Some(x) => merged_layout.append(*x),
@@ -2856,19 +2856,19 @@ dojo::model::introspect::Introspect::<StructPacked1>::layout()
             };
         };
 
-        dojo::model::Layout::Fixed(merged_layout.span())
+        dojo::meta::Layout::Fixed(merged_layout.span())
         
     }
 
     #[inline(always)]
-    fn ty() -> dojo::model::introspect::Ty {
-        dojo::model::introspect::Ty::Enum(
-            dojo::model::introspect::Enum {
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Enum(
+            dojo::meta::introspect::Enum {
                 name: 'EnumPackableWithInnerPacked',
                 attrs: array![].span(),
                 children: array![
-                ('a', dojo::model::introspect::Introspect::<StructPacked1>::ty()),
-('b', dojo::model::introspect::Introspect::<StructPacked1>::ty())
+                ('a', dojo::meta::introspect::Introspect::<StructPacked1>::ty()),
+('b', dojo::meta::introspect::Introspect::<StructPacked1>::ty())
 
                 ].span()
             }
@@ -2876,25 +2876,25 @@ dojo::model::introspect::Introspect::<StructPacked1>::layout()
     }
 }
 
-impl EnumNotPackable1Introspect<> of dojo::model::introspect::Introspect<EnumNotPackable1<>> {
+impl EnumNotPackable1Introspect<> of dojo::meta::introspect::Introspect<EnumNotPackable1<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         Option::None
     }
 
-    fn layout() -> dojo::model::Layout {
+    fn layout() -> dojo::meta::Layout {
         ERROR
     }
 
     #[inline(always)]
-    fn ty() -> dojo::model::introspect::Ty {
-        dojo::model::introspect::Ty::Enum(
-            dojo::model::introspect::Enum {
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Enum(
+            dojo::meta::introspect::Enum {
                 name: 'EnumNotPackable1',
                 attrs: array![].span(),
                 children: array![
-                ('a', dojo::model::introspect::Introspect::<u8>::ty()),
-('b', dojo::model::introspect::Introspect::<u256>::ty())
+                ('a', dojo::meta::introspect::Introspect::<u8>::ty()),
+('b', dojo::meta::introspect::Introspect::<u256>::ty())
 
                 ].span()
             }

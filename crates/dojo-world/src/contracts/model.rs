@@ -124,7 +124,7 @@ where
     }
 
     pub async fn entity_storage(&self, keys: &[Felt]) -> Result<Vec<Felt>, ModelError> {
-        // As the dojo::model::Layout type has been pasted
+        // As the dojo::meta::Layout type has been pasted
         // in both `model` and `world` ABI by abigen, the compiler sees both types
         // as different even if they are strictly identical.
         // Here is a trick reading the model layout as raw FieldElement

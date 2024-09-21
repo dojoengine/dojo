@@ -220,7 +220,7 @@ mod invalid_model_world {
 #[test]
 #[available_gas(6000000)]
 #[should_panic(
-    expected: ("Resource `dojo-invalid_model` is already registered", 'ENTRYPOINT_FAILED',)
+    expected: ("Model `dojo-invalid_model` is already registered", 'ENTRYPOINT_FAILED',)
 )]
 fn test_deploy_from_world_invalid_model() {
     let world = deploy_world();

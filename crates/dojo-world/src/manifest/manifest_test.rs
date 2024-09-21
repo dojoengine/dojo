@@ -20,8 +20,8 @@ use super::{
 };
 use crate::contracts::naming::{get_filename_from_tag, get_tag};
 use crate::manifest::{
-    parse_models_events, AbstractManifestError, DeploymentManifest, Manifest, OverlayClass,
-    OverlayDojoModel, BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR,
+    parse_models_events, AbstractManifestError, DeploymentManifest, DojoEvent, Manifest,
+    OverlayClass, OverlayDojoModel, BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR,
 };
 use crate::metadata::dojo_metadata_from_workspace;
 use crate::migration::world::WorldDiff;
@@ -333,10 +333,12 @@ fn fetch_remote_manifest() {
         DeploymentManifest::load_from_remote(provider, strat.world_address).await.unwrap()
     });
 
-    assert_eq!(local_manifest.models.len(), 10);
+    assert_eq!(local_manifest.models.len(), 8);
+    assert_eq!(local_manifest.events.len(), 2);
     assert_eq!(local_manifest.contracts.len(), 4);
 
-    assert_eq!(remote_manifest.models.len(), 10);
+    assert_eq!(remote_manifest.models.len(), 8);
+    assert_eq!(remote_manifest.events.len(), 2);
     assert_eq!(remote_manifest.contracts.len(), 4);
 
     // compute diff from local and remote manifest
@@ -576,6 +578,7 @@ fn overlay_merge_for_base_work_as_expected() {
 fn base_manifest_remove_items_work_as_expected() {
     let contracts = ["ns:c1", "ns:c2", "ns:c3"];
     let models = ["ns:m1", "ns:m2", "ns:m3"];
+    let events = ["ns:e1", "ns:e2", "ns:e3"];
 
     let world = Manifest { manifest_name: "world".into(), inner: Default::default() };
     let base = Manifest { manifest_name: "dojo-base".to_string(), inner: Default::default() };
@@ -594,10 +597,22 @@ fn base_manifest_remove_items_work_as_expected() {
             inner: DojoModel { tag: c.to_string(), ..Default::default() },
         })
         .collect();
+    let events = events
+        .iter()
+        .map(|e| Manifest {
+            manifest_name: e.to_string(),
+            inner: DojoEvent { tag: e.to_string(), ..Default::default() },
+        })
+        .collect();
 
-    let mut base = BaseManifest { contracts, models, world, base };
+    let mut base = BaseManifest { contracts, models, events, world, base };
 
-    base.remove_tags(&["ns:c1".to_string(), "ns:c3".to_string(), "ns:m2".to_string()]);
+    base.remove_tags(&[
+        "ns:c1".to_string(),
+        "ns:c3".to_string(),
+        "ns:m2".to_string(),
+        "ns:e3".to_string(),
+    ]);
 
     assert_eq!(base.contracts.len(), 1);
     assert_eq!(
@@ -609,6 +624,12 @@ fn base_manifest_remove_items_work_as_expected() {
     assert_eq!(
         base.models.iter().map(|c| c.manifest_name.clone()).collect::<Vec<String>>(),
         vec!["ns:m1", "ns:m3"]
+    );
+
+    assert_eq!(base.events.len(), 2);
+    assert_eq!(
+        base.events.iter().map(|e| e.manifest_name.clone()).collect::<Vec<String>>(),
+        vec!["ns:e1", "ns:e2"]
     );
 }
 

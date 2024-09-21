@@ -187,7 +187,7 @@ pub fn compute_item_size_from_type(item_type: &String) -> Vec<String> {
         if let Some(p) = primitives.get(item_type) {
             vec![p.0.to_string()]
         } else {
-            vec![format!("dojo::model::introspect::Introspect::<{}>::size()", item_type)]
+            vec![format!("dojo::meta::introspect::Introspect::<{}>::size()", item_type)]
         }
     }
 }

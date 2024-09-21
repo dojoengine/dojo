@@ -46,7 +46,7 @@ async fn test_model_ops() {
         )
         .await
         .unwrap(),
-        Felt::from_hex("0x4dd1c573b5cdc56561be8b28a4840048a3a008d1a4a6eed397ec4135effaf44")
+        Felt::from_hex("0x3f6ca7e8349d9ca3525132c2d45debaf5ee0c19500ef1e768eddb057ff9367e")
             .unwrap()
     );
 
@@ -58,8 +58,7 @@ async fn test_model_ops() {
         )
         .await
         .unwrap(),
-        Felt::from_hex("0x68e3a53988f20d84c6652f25d6add070633a5d05f8c4ac68285cacb228afa14")
-            .unwrap()
+        Felt::from_hex("0xceb99997071ac4c57e30cc29d5b3f2702c541325dfe5015905f7b128704d58").unwrap()
     );
 
     let layout =

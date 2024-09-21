@@ -4,9 +4,8 @@ pub mod others {
     use dojo_examples::models::{Position, Moves, Direction, Vec2};
     use dojo_examples::utils::next_position;
 
-    #[derive(Copy, Drop, Serde)]
+    #[derive(IntrospectPacked, Copy, Drop, Serde)]
     #[dojo::event]
-    #[dojo::model]
     struct ContractInitialized {
         #[key]
         contract_address: ContractAddress,

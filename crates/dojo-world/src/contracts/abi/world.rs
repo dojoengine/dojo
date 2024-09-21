@@ -82,7 +82,7 @@ abigen!(
   },
   {
     "type": "struct",
-    "name": "dojo::model::layout::FieldLayout",
+    "name": "dojo::meta::layout::FieldLayout",
     "members": [
       {
         "name": "selector",
@@ -90,33 +90,33 @@ abigen!(
       },
       {
         "name": "layout",
-        "type": "dojo::model::layout::Layout"
+        "type": "dojo::meta::layout::Layout"
       }
     ]
   },
   {
     "type": "struct",
-    "name": "core::array::Span::<dojo::model::layout::FieldLayout>",
+    "name": "core::array::Span::<dojo::meta::layout::FieldLayout>",
     "members": [
       {
         "name": "snapshot",
-        "type": "@core::array::Array::<dojo::model::layout::FieldLayout>"
+        "type": "@core::array::Array::<dojo::meta::layout::FieldLayout>"
       }
     ]
   },
   {
     "type": "struct",
-    "name": "core::array::Span::<dojo::model::layout::Layout>",
+    "name": "core::array::Span::<dojo::meta::layout::Layout>",
     "members": [
       {
         "name": "snapshot",
-        "type": "@core::array::Array::<dojo::model::layout::Layout>"
+        "type": "@core::array::Array::<dojo::meta::layout::Layout>"
       }
     ]
   },
   {
     "type": "enum",
-    "name": "dojo::model::layout::Layout",
+    "name": "dojo::meta::layout::Layout",
     "variants": [
       {
         "name": "Fixed",
@@ -124,15 +124,15 @@ abigen!(
       },
       {
         "name": "Struct",
-        "type": "core::array::Span::<dojo::model::layout::FieldLayout>"
+        "type": "core::array::Span::<dojo::meta::layout::FieldLayout>"
       },
       {
         "name": "Tuple",
-        "type": "core::array::Span::<dojo::model::layout::Layout>"
+        "type": "core::array::Span::<dojo::meta::layout::Layout>"
       },
       {
         "name": "Array",
-        "type": "core::array::Span::<dojo::model::layout::Layout>"
+        "type": "core::array::Span::<dojo::meta::layout::Layout>"
       },
       {
         "name": "ByteArray",
@@ -140,7 +140,7 @@ abigen!(
       },
       {
         "name": "Enum",
-        "type": "core::array::Span::<dojo::model::layout::FieldLayout>"
+        "type": "core::array::Span::<dojo::meta::layout::FieldLayout>"
       }
     ]
   },
@@ -150,6 +150,10 @@ abigen!(
     "variants": [
       {
         "name": "Model",
+        "type": "(core::starknet::class_hash::ClassHash, core::starknet::contract_address::ContractAddress)"
+      },
+      {
+        "name": "Event",
         "type": "(core::starknet::class_hash::ClassHash, core::starknet::contract_address::ContractAddress)"
       },
       {
@@ -243,6 +247,30 @@ abigen!(
       {
         "type": "function",
         "name": "upgrade_model",
+        "inputs": [
+          {
+            "name": "class_hash",
+            "type": "core::starknet::class_hash::ClassHash"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "register_event",
+        "inputs": [
+          {
+            "name": "class_hash",
+            "type": "core::starknet::class_hash::ClassHash"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "upgrade_event",
         "inputs": [
           {
             "name": "class_hash",
@@ -349,7 +377,7 @@ abigen!(
           },
           {
             "name": "layout",
-            "type": "dojo::model::layout::Layout"
+            "type": "dojo::meta::layout::Layout"
           }
         ],
         "outputs": [
@@ -377,7 +405,7 @@ abigen!(
           },
           {
             "name": "layout",
-            "type": "dojo::model::layout::Layout"
+            "type": "dojo::meta::layout::Layout"
           }
         ],
         "outputs": [],
@@ -397,7 +425,7 @@ abigen!(
           },
           {
             "name": "layout",
-            "type": "dojo::model::layout::Layout"
+            "type": "dojo::meta::layout::Layout"
           }
         ],
         "outputs": [],
@@ -937,6 +965,70 @@ abigen!(
   },
   {
     "type": "event",
+    "name": "dojo::world::world_contract::world::EventRegistered",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "name",
+        "type": "core::byte_array::ByteArray",
+        "kind": "data"
+      },
+      {
+        "name": "namespace",
+        "type": "core::byte_array::ByteArray",
+        "kind": "data"
+      },
+      {
+        "name": "class_hash",
+        "type": "core::starknet::class_hash::ClassHash",
+        "kind": "data"
+      },
+      {
+        "name": "address",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "dojo::world::world_contract::world::EventUpgraded",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "name",
+        "type": "core::byte_array::ByteArray",
+        "kind": "data"
+      },
+      {
+        "name": "namespace",
+        "type": "core::byte_array::ByteArray",
+        "kind": "data"
+      },
+      {
+        "name": "class_hash",
+        "type": "core::starknet::class_hash::ClassHash",
+        "kind": "data"
+      },
+      {
+        "name": "prev_class_hash",
+        "type": "core::starknet::class_hash::ClassHash",
+        "kind": "data"
+      },
+      {
+        "name": "address",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      },
+      {
+        "name": "prev_address",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
     "name": "dojo::world::world_contract::world::StoreSetRecord",
     "kind": "struct",
     "members": [
@@ -1190,6 +1282,16 @@ abigen!(
       {
         "name": "ModelUpgraded",
         "type": "dojo::world::world_contract::world::ModelUpgraded",
+        "kind": "nested"
+      },
+      {
+        "name": "EventRegistered",
+        "type": "dojo::world::world_contract::world::EventRegistered",
+        "kind": "nested"
+      },
+      {
+        "name": "EventUpgraded",
+        "type": "dojo::world::world_contract::world::EventUpgraded",
         "kind": "nested"
       },
       {

@@ -35,9 +35,8 @@ pub mod actions {
     #[cfg(feature: 'dungeon')]
     use bestiary::RiverSkale;
 
-    #[derive(Copy, Drop, Serde)]
+    #[derive(IntrospectPacked, Copy, Drop, Serde)]
     #[dojo::event]
-    #[dojo::model]
     pub struct Moved {
         #[key]
         pub player: ContractAddress,

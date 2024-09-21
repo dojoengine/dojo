@@ -2,7 +2,7 @@ use starknet::macros::felt;
 
 use super::*;
 use crate::contracts::naming::{get_filename_from_tag, get_tag};
-use crate::manifest::{BaseManifest, Class, DojoContract, DojoModel, Manifest};
+use crate::manifest::{BaseManifest, Class, DojoContract, DojoEvent, DojoModel, Manifest};
 
 #[test]
 fn no_diff_when_local_and_remote_are_equal() {
@@ -26,11 +26,27 @@ fn no_diff_when_local_and_remote_are_equal() {
         "dojo_mock-model".into(),
     )];
 
-    let local =
-        BaseManifest { models, world: world_contract, base: base_contract, contracts: vec![] };
+    let events = vec![Manifest::new(
+        DojoEvent { members: vec![], class_hash: 11_u32.into(), ..Default::default() },
+        "dojo_mock-event".into(),
+    )];
+
+    let remote_events = vec![Manifest::new(
+        DojoEvent { members: vec![], class_hash: 11_u32.into(), ..Default::default() },
+        "dojo_mock-event".into(),
+    )];
+
+    let local = BaseManifest {
+        models,
+        events,
+        world: world_contract,
+        base: base_contract,
+        contracts: vec![],
+    };
 
     let mut remote: DeploymentManifest = local.clone().into();
     remote.models = remote_models;
+    remote.events = remote_events;
 
     let diff = WorldDiff::compute(local, Some(remote), "dojo-test").unwrap();
 
@@ -92,6 +108,18 @@ fn diff_when_local_and_remote_are_different() {
         ),
     ];
 
+    let events = vec![Manifest::new(
+        DojoEvent {
+            tag: get_tag("dojo_mock", "event"),
+            members: vec![],
+            class_hash: felt!("0x11"),
+            ..Default::default()
+        },
+        get_filename_from_tag(&get_tag("dojo_mock", "event")),
+    )];
+
+    let remote_events = vec![];
+
     let contracts = vec![
         Manifest::new(
             DojoContract {
@@ -113,19 +141,22 @@ fn diff_when_local_and_remote_are_different() {
         ),
     ];
 
-    let local = BaseManifest { models, contracts, world: world_contract, base: base_contract };
+    let local =
+        BaseManifest { models, events, contracts, world: world_contract, base: base_contract };
 
     let mut remote: DeploymentManifest = local.clone().into();
     remote.models = remote_models;
+    remote.events = remote_events;
     remote.world.inner.class_hash = 44_u32.into();
     remote.models[1].inner.class_hash = 33_u32.into();
     remote.contracts[0].inner.class_hash = felt!("0x1112");
 
     let diff = WorldDiff::compute(local, Some(remote), "dojo-test").unwrap();
 
-    assert_eq!(diff.count_diffs(), 3);
+    assert_eq!(diff.count_diffs(), 4);
     assert!(diff.models.iter().any(|m| m.tag == get_tag("dojo_mock", "model2")));
     assert!(diff.contracts.iter().any(|c| c.tag == get_tag("dojo_mock", "my_contract")));
+    assert!(diff.events.iter().any(|e| e.tag == get_tag("dojo_mock", "event")));
 }
 
 #[test]
@@ -154,6 +185,7 @@ fn updating_order_as_expected() {
         base: ClassDiff::default(),
         contracts,
         models: vec![],
+        events: vec![],
     };
 
     diff.update_order("ns").unwrap();
@@ -190,6 +222,7 @@ fn updating_order_when_cyclic_dependency_fail() {
         base: ClassDiff::default(),
         contracts,
         models: vec![],
+        events: vec![],
     };
 
     assert!(diff.update_order("ns").is_err_and(|e| e.to_string().contains("Cyclic")));

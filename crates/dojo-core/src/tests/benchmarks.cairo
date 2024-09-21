@@ -12,8 +12,9 @@ use starknet::storage_access::{
 };
 use starknet::syscalls::{storage_read_syscall, storage_write_syscall};
 
-use dojo::model::{Model, Layout, ModelIndex};
-use dojo::model::introspect::Introspect;
+use dojo::meta::Layout;
+use dojo::model::{Model, ModelIndex};
+use dojo::meta::introspect::Introspect;
 use dojo::storage::{database, storage};
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 

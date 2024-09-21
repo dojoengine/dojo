@@ -35,14 +35,16 @@ fn test_from_values() {
     let mut values = [3, 4].span();
 
     let model_entity = ModelEntity::<FooEntity>::from_values(1, ref values);
+    assert!(model_entity.is_some());
+    let model_entity = model_entity.unwrap();
     assert!(model_entity.__id == 1 && model_entity.v1 == 3 && model_entity.v2 == 4);
 }
 
 #[test]
-#[should_panic(expected: "ModelEntity `FooEntity`: deserialization failed.")]
 fn test_from_values_bad_data() {
     let mut values = [3].span();
-    let _ = ModelEntity::<FooEntity>::from_values(1, ref values);
+    let res = ModelEntity::<FooEntity>::from_values(1, ref values);
+    assert!(res.is_none());
 }
 
 #[test]

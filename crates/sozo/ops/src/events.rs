@@ -291,7 +291,7 @@ mod tests {
         let result = extract_events(&manifest, &project_dir, &target_dir).unwrap();
 
         // we are just collecting all events from manifest file so just verifying count should work
-        assert_eq!(result.len(), 20);
+        assert_eq!(result.len(), 22);
     }
 
     #[test]

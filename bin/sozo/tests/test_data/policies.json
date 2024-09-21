@@ -69,6 +69,14 @@
   },
   {
     "target": "0x74c73d35df54ddc53bcf34aab5e0dbb09c447e99e01f4d69535441253c9571a",
+    "method": "register_event"
+  },
+  {
+    "target": "0x74c73d35df54ddc53bcf34aab5e0dbb09c447e99e01f4d69535441253c9571a",
+    "method": "upgrade_event"
+  },
+  {
+    "target": "0x74c73d35df54ddc53bcf34aab5e0dbb09c447e99e01f4d69535441253c9571a",
     "method": "deploy_contract"
   },
   {
