@@ -31,7 +31,7 @@ fn test_account_new() {
 }
 
 #[tokio::test]
-#[katana_runner::test(accounts = 1, fee = false)]
+#[katana_runner::test(accounts = 2, fee = false)]
 async fn test_account_fetch(runner: &RunnerCtx) {
     let pt = assert_fs::TempDir::new().unwrap();
 
