@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1726964567144,
+  "lastUpdate": 1726964889430,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -21439,6 +21439,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3910931,
             "range": "± 111703",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "remy.baranx@gmail.com",
+            "name": "Rémy Baranx",
+            "username": "remybar"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "892cd03e96c86d755af1fb3acbd93cef498393de",
+          "message": "fix: avoid model classhash conflicts when some models have a same name (#2457)",
+          "timestamp": "2024-09-21T20:11:51-04:00",
+          "tree_id": "75b26572ad7bf523ba21bc9736fbe10c88ba2140",
+          "url": "https://github.com/dojoengine/dojo/commit/892cd03e96c86d755af1fb3acbd93cef498393de"
+        },
+        "date": 1726964888135,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 21487916744,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
