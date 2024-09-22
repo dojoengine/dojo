@@ -1,8 +1,10 @@
+#![allow(unused)]
+
 use std::str::FromStr;
 
 use syn::spanned::Spanned;
 
-use crate::parse::{parse_bool, parse_int, parse_path, parse_string};
+use crate::utils::{parse_bool, parse_int, parse_path, parse_string};
 
 pub const DEFAULT_ERROR_CONFIG: Configuration = Configuration::new(false);
 
@@ -145,15 +147,10 @@ impl std::str::FromStr for RunnerArg {
 }
 
 pub fn build_config(
-    _input: &crate::parse::ItemFn,
+    _input: &crate::item::ItemFn,
     args: crate::entry::AttributeArgs,
     is_test: bool,
 ) -> Result<Configuration, syn::Error> {
-    // if input.sig.asyncness.is_none() {
-    //     let msg = "the `async` keyword is missing from the function declaration";
-    //     return Err(syn::Error::new_spanned(input.sig.fn_token, msg));
-    // }
-
     let mut config = Configuration::new(is_test);
 
     for arg in args {

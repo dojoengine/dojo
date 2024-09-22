@@ -20,6 +20,23 @@ use tokio::sync::Mutex;
 use url::Url;
 use utils::find_free_port;
 
+#[allow(dead_code)]
+#[derive(Debug)]
+pub struct RunnerCtx(KatanaRunner);
+
+impl RunnerCtx {
+    pub fn new(runner: KatanaRunner) -> Self {
+        Self(runner)
+    }
+}
+
+impl core::ops::Deref for RunnerCtx {
+    type Target = KatanaRunner;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
 #[derive(Debug)]
 pub struct KatanaRunner {
     instance: KatanaInstance,

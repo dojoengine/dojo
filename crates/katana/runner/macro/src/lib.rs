@@ -3,7 +3,8 @@
 
 pub(crate) mod config;
 mod entry;
-pub(crate) mod parse;
+pub(crate) mod item;
+pub(crate) mod utils;
 
 use proc_macro::TokenStream;
 
