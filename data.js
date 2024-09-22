@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1726964912394,
+  "lastUpdate": 1726964960895,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -21499,6 +21499,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 11382845594,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "remy.baranx@gmail.com",
+            "name": "Rémy Baranx",
+            "username": "remybar"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "892cd03e96c86d755af1fb3acbd93cef498393de",
+          "message": "fix: avoid model classhash conflicts when some models have a same name (#2457)",
+          "timestamp": "2024-09-21T20:11:51-04:00",
+          "tree_id": "75b26572ad7bf523ba21bc9736fbe10c88ba2140",
+          "url": "https://github.com/dojoengine/dojo/commit/892cd03e96c86d755af1fb3acbd93cef498393de"
+        },
+        "date": 1726964959590,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 15560443,
+            "range": "± 201843",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3846578,
+            "range": "± 304013",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2546670796,
+            "range": "± 234571390",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4057115,
+            "range": "± 184360",
             "unit": "ns/iter"
           }
         ]
