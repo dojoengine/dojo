@@ -1,11 +1,97 @@
+#![allow(unused)]
+
 use proc_macro2::{Span, TokenStream, TokenTree};
-use quote::TokenStreamExt;
-use quote::{quote, quote_spanned, ToTokens};
+use quote::{quote, quote_spanned, ToTokens, TokenStreamExt};
 use syn::parse::{Parse, ParseStream};
-use syn::spanned::Spanned;
 use syn::{braced, Attribute, Ident, Signature, Visibility};
 
 use crate::config::Configuration;
+
+pub fn parse_knobs(input: ItemFn, is_test: bool, config: Configuration) -> TokenStream {
+    // If type mismatch occurs, the current rustc points to the last statement.
+    let (last_stmt_start_span, last_stmt_end_span) = {
+        let mut last_stmt = input.stmts.last().cloned().unwrap_or_default().into_iter();
+
+        // `Span` on stable Rust has a limitation that only points to the first
+        // token, not the whole tokens. We can work around this limitation by
+        // using the first/last span of the tokens like
+        // `syn::Error::new_spanned` does.
+        let start = last_stmt.next().map_or_else(Span::call_site, |t| t.span());
+        let end = last_stmt.last().map_or(start, |t| t.span());
+        (start, end)
+    };
+
+    let crate_path = config
+        .crate_name
+        .map(ToTokens::into_token_stream)
+        .unwrap_or_else(|| Ident::new("katana_runner", last_stmt_start_span).into_token_stream());
+
+    let mut cfg: TokenStream = quote! {};
+
+    if let Some(value) = config.block_time {
+        cfg = quote_spanned! (last_stmt_start_span=> #cfg block_time: Some(#value), );
+    }
+
+    if let Some(value) = config.fee {
+        cfg = quote_spanned! (last_stmt_start_span=> #cfg disable_fee: #value, );
+    }
+
+    if let Some(value) = config.db_dir {
+        cfg = quote_spanned! (last_stmt_start_span=> #cfg db_dir: Some(std::path::PathBuf::from(#value)), );
+    }
+
+    if let Some(value) = config.accounts {
+        cfg = quote_spanned! (last_stmt_start_span=> #cfg n_accounts: #value, );
+    }
+
+    if let Some(value) = config.log_path {
+        cfg = quote_spanned! (last_stmt_start_span=> #cfg, log_path: Some(#value), );
+    }
+
+    if config.dev {
+        cfg = quote_spanned! (last_stmt_start_span=> #cfg dev: true, );
+    }
+
+    cfg = quote_spanned! {last_stmt_start_span=>
+        #crate_path::KatanaRunnerConfig { #cfg ..Default::default() }
+    };
+
+    let generated_attrs = if is_test {
+        quote! {
+            #[::core::prelude::v1::test]
+        }
+    } else {
+        quote! {}
+    };
+
+    let mut inner = input.clone();
+    inner.sig.ident = Ident::new(&format!("___{}", inner.sig.ident), inner.sig.ident.span());
+    inner.outer_attrs.clear();
+    let inner_name = &inner.sig.ident;
+
+    let last_block = quote_spanned! {last_stmt_end_span=>
+        {
+            let runner = #crate_path::KatanaRunner::new_with_config(#cfg).expect("Failed to start runner.");
+            let ctx = RunnerCtx(runner);
+            return #inner_name(&ctx);
+        }
+    };
+
+    let inner = quote! {
+        struct RunnerCtx(#crate_path::KatanaRunner);
+
+        impl core::ops::Deref for RunnerCtx {
+            type Target = #crate_path::KatanaRunner;
+            fn deref(&self) -> &Self::Target {
+                &self.0
+            }
+        }
+
+        #inner
+    };
+
+    input.into_tokens(generated_attrs, inner, last_block)
+}
 
 #[derive(Clone)]
 pub struct ItemFn {
@@ -33,15 +119,12 @@ impl ItemFn {
     fn into_tokens(
         mut self,
         generated_attrs: proc_macro2::TokenStream,
-        // func: proc_macro2::TokenStream,
+        inner: proc_macro2::TokenStream,
         last_block: proc_macro2::TokenStream,
     ) -> TokenStream {
         self.sig.asyncness = None;
         // empty out the arguments
         self.sig.inputs.clear();
-
-        // remove duplicate outer attributes
-        self.outer_attrs.dedup_by(|a, b| a.path() == b.path());
 
         let mut tokens = proc_macro2::TokenStream::new();
         // Outer attributes are simply streamed as-is.
@@ -64,11 +147,23 @@ impl ItemFn {
         self.sig.to_tokens(&mut tokens);
 
         self.brace_token.surround(&mut tokens, |tokens| {
-            // func.to_tokens(tokens);
+            inner.to_tokens(tokens);
             last_block.to_tokens(tokens);
         });
 
         tokens
+    }
+}
+
+impl ToTokens for ItemFn {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        tokens.append_all(self.outer_attrs.iter());
+        self.vis.to_tokens(tokens);
+        self.sig.to_tokens(tokens);
+        self.brace_token.surround(tokens, |tokens| {
+            tokens.append_all(self.inner_attrs.iter());
+            tokens.append_all(&self.stmts);
+        });
     }
 }
 
@@ -127,104 +222,6 @@ impl ToTokens for Body<'_> {
             }
         });
     }
-}
-
-pub fn parse_knobs(mut input: ItemFn, is_test: bool, config: Configuration) -> TokenStream {
-    // If type mismatch occurs, the current rustc points to the last statement.
-    let (last_stmt_start_span, last_stmt_end_span) = {
-        let mut last_stmt = input.stmts.last().cloned().unwrap_or_default().into_iter();
-
-        // `Span` on stable Rust has a limitation that only points to the first
-        // token, not the whole tokens. We can work around this limitation by
-        // using the first/last span of the tokens like
-        // `syn::Error::new_spanned` does.
-        let start = last_stmt.next().map_or_else(Span::call_site, |t| t.span());
-        let end = last_stmt.last().map_or(start, |t| t.span());
-        (start, end)
-    };
-
-    let crate_path = config
-        .crate_name
-        .map(ToTokens::into_token_stream)
-        .unwrap_or_else(|| Ident::new("katana_runner", last_stmt_start_span).into_token_stream());
-
-    let mut cfg: TokenStream = quote! {};
-
-    if let Some(value) = config.block_time {
-        cfg = quote_spanned! (last_stmt_start_span=> #cfg block_time: Some(#value), );
-    }
-
-    if let Some(value) = config.fee {
-        cfg = quote_spanned! (last_stmt_start_span=> #cfg disable_fee: #value, );
-    }
-
-    if let Some(value) = config.db_dir {
-        cfg = quote_spanned! (last_stmt_start_span=> #cfg db_dir: Some(#value), );
-    }
-
-    if let Some(value) = config.accounts {
-        cfg = quote_spanned! (last_stmt_start_span=> #cfg n_accounts: #value, );
-    }
-
-    if let Some(value) = config.log_path {
-        cfg = quote_spanned! (last_stmt_start_span=> #cfg, log_path: Some(#value), );
-    }
-
-    if config.dev {
-        cfg = quote_spanned! (last_stmt_start_span=> #cfg dev: true, );
-    }
-
-    cfg = quote_spanned! {last_stmt_start_span=>
-        #crate_path::KatanaRunnerConfig { #cfg ..Default::default() }
-    };
-
-    let generated_attrs = if is_test {
-        quote! {
-            #[::core::prelude::v1::test]
-        }
-    } else {
-        quote! {}
-    };
-
-    let body = input.body();
-    let body = if input.sig.asyncness.is_some() {
-        quote! {
-            struct RunnerCtx(#crate_path::KatanaRunner);
-
-            impl core::ops::Deref for RunnerCtx {
-                type Target = #crate_path::KatanaRunner;
-                fn deref(&self) -> &Self::Target {
-                    &self.0
-                }
-            }
-
-            let body = async #body;
-        }
-    } else {
-        quote! {
-            struct RunnerCtx(#crate_path::KatanaRunner);
-
-            impl core::ops::Deref for RunnerCtx {
-                type Target = #crate_path::KatanaRunner;
-                fn deref(&self) -> &Self::Target {
-                    &self.0
-                }
-            }
-
-            let body = || #body;
-        }
-    };
-
-    let last_block = quote_spanned! {last_stmt_end_span=>
-        {
-            let runner = #crate_path::KatanaRunner::new_with_config(#cfg).expect("Failed to start runner.");
-            let ctx = RunnerCtx(runner);
-            #body
-            return body();
-        }
-    };
-
-    input.into_tokens(generated_attrs, last_block)
 }
 
 pub fn parse_string(

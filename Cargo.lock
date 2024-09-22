@@ -8178,6 +8178,7 @@ dependencies = [
  "chrono",
  "katana-node-bindings",
  "katana-runner-macro",
+ "rstest 0.18.2",
  "serde",
  "serde_json",
  "starknet 0.12.0",

@@ -1,11 +1,21 @@
-use katana_runner::*;
 use starknet::providers::Provider;
 
+#[katana_runner::test(fee = false, accounts = 10)]
+fn simple(runner: &RunnerCtx) {
+    assert_eq!(runner.accounts().len(), 10);
+}
+
+#[katana_runner::test]
+fn with_return(_: &RunnerCtx) -> Result<(), Box<dyn std::error::Error>> {
+    Ok(())
+}
+
 #[tokio::test]
-#[katana_runner::test(fee = false)]
-async fn some_test(ctx: &mut RunnerCtx) {
-    let account = ctx.accounts();
-    println!("Ohayo!");
+#[katana_runner::test]
+async fn with_async(ctx: &RunnerCtx) -> Result<(), Box<dyn std::error::Error>> {
+    let provider = ctx.provider();
+    let _ = provider.chain_id().await?;
+    Ok(())
 }
 
 // #[katana_test(2, false)]
@@ -22,9 +32,4 @@ async fn some_test(ctx: &mut RunnerCtx) {
 //         // created by the macro at the beginning of the test
 //         let _other_block_number = runner.provider().block_number().await.unwrap();
 //     }
-// }
-
-// #[katana_test(2, true)]
-// async fn basic_macro_usage() {
-//     let _block_number = runner.provider().block_number().await.unwrap();
 // }
