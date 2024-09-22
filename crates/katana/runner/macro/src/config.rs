@@ -1,72 +1,67 @@
 use std::str::FromStr;
 
+use syn::spanned::Spanned;
+
 use crate::parse::{parse_bool, parse_int, parse_path, parse_string};
-pub const DEFAULT_ERROR_CONFIG: Configuration = Configuration::new(true);
 
-pub enum RunnerFlavor {
-    Embedded,
-    Binary,
-}
+pub const DEFAULT_ERROR_CONFIG: Configuration = Configuration::new(false);
 
+/// Partial configuration for extracting the individual configuration values from the attribute
+/// arguments.
 pub struct Configuration {
-    dev: bool,
-    is_test: bool,
-    accounts: Option<u16>,
-    fee: Option<bool>,
-    validation: Option<bool>,
-    db_dir: Option<syn::Path>,
-    block_time: Option<u64>,
-    log_path: Option<syn::Path>,
-    flavor: Option<RunnerFlavor>,
+    pub crate_name: Option<syn::Path>,
+    pub dev: bool,
+    pub is_test: bool,
+    pub accounts: Option<u16>,
+    pub fee: Option<bool>,
+    pub validation: Option<bool>,
+    pub db_dir: Option<String>,
+    pub block_time: Option<u64>,
+    pub log_path: Option<syn::Path>,
 }
 
 impl Configuration {
-    pub const fn new(is_test: bool) -> Self {
-        Configuration {
+    const fn new(is_test: bool) -> Self {
+        Self {
             is_test,
             fee: None,
             db_dir: None,
             accounts: None,
             dev: is_test,
-            flavor: None,
             log_path: None,
             validation: None,
             block_time: None,
+            crate_name: None,
         }
     }
 
-    pub fn set_flavor(
+    fn set_crate_name(
         &mut self,
-        flavor: syn::Lit,
+        name: syn::Lit,
         span: proc_macro2::Span,
     ) -> Result<(), syn::Error> {
-        if self.flavor.is_some() {
-            return Err(syn::Error::new(span, "`flavor` set multiple times."));
+        if self.crate_name.is_some() {
+            return Err(syn::Error::new(span, "`crate` set multiple times."));
         }
 
-        let runner = parse_string(flavor, span, "flavor")?;
-        let runner = RunnerFlavor::from_str(&runner).map_err(|err| syn::Error::new(span, err))?;
+        let name_path = parse_path(name, span, "crate")?;
+        self.crate_name = Some(name_path);
 
-        self.flavor = Some(runner);
         Ok(())
     }
 
-    pub fn set_db_dir(
-        &mut self,
-        db_dir: syn::Lit,
-        span: proc_macro2::Span,
-    ) -> Result<(), syn::Error> {
+    fn set_db_dir(&mut self, db_dir: syn::Lit, span: proc_macro2::Span) -> Result<(), syn::Error> {
         if self.db_dir.is_some() {
             return Err(syn::Error::new(span, "`db_dir` set multiple times."));
         }
 
-        let db_dir = parse_path(db_dir, span, "db_dir")?;
+        let db_dir = parse_string(db_dir, span, "db_dir")?;
         self.db_dir = Some(db_dir);
 
         Ok(())
     }
 
-    pub fn set_fee(&mut self, fee: syn::Lit, span: proc_macro2::Span) -> Result<(), syn::Error> {
+    fn set_fee(&mut self, fee: syn::Lit, span: proc_macro2::Span) -> Result<(), syn::Error> {
         if self.fee.is_some() {
             return Err(syn::Error::new(span, "`fee` set multiple times."));
         }
@@ -77,7 +72,7 @@ impl Configuration {
         Ok(())
     }
 
-    pub fn set_validation(
+    fn set_validation(
         &mut self,
         validation: syn::Lit,
         span: proc_macro2::Span,
@@ -92,7 +87,7 @@ impl Configuration {
         Ok(())
     }
 
-    pub fn set_block_time(
+    fn set_block_time(
         &mut self,
         block_time: syn::Lit,
         span: proc_macro2::Span,
@@ -107,7 +102,7 @@ impl Configuration {
         Ok(())
     }
 
-    pub fn set_accounts(
+    fn set_accounts(
         &mut self,
         accounts: syn::Lit,
         span: proc_macro2::Span,
@@ -123,16 +118,88 @@ impl Configuration {
     }
 }
 
-impl std::str::FromStr for RunnerFlavor {
+enum RunnerArg {
+    BlockTime,
+    Fee,
+    Validation,
+    Accounts,
+    DbDir,
+}
+
+impl std::str::FromStr for RunnerArg {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "binary" => Ok(RunnerFlavor::Binary),
-            "embedded" => Ok(RunnerFlavor::Embedded),
+            "block_time" => Ok(RunnerArg::BlockTime),
+            "fee" => Ok(RunnerArg::Fee),
+            "validation" => Ok(RunnerArg::Validation),
+            "accounts" => Ok(RunnerArg::Accounts),
+            "db_dir" => Ok(RunnerArg::DbDir),
             _ => Err(format!(
-                "No such runner flavor `{s}`. The runner flavors are `embedded` and `binary`."
+                "Unknown attribute {s} is specified; expected one of: `fee`, `validation`, \
+                 `accounts`, `db_dir`, `block_time`",
             )),
         }
     }
+}
+
+pub fn build_config(
+    input: &crate::parse::ItemFn,
+    args: crate::entry::AttributeArgs,
+    is_test: bool,
+) -> Result<Configuration, syn::Error> {
+    // if input.sig.asyncness.is_none() {
+    //     let msg = "the `async` keyword is missing from the function declaration";
+    //     return Err(syn::Error::new_spanned(input.sig.fn_token, msg));
+    // }
+
+    let mut config = Configuration::new(is_test);
+
+    for arg in args {
+        match arg {
+            syn::Meta::NameValue(namevalue) => {
+                let ident = namevalue
+                    .path
+                    .get_ident()
+                    .ok_or_else(|| {
+                        syn::Error::new_spanned(&namevalue, "Must have specified ident")
+                    })?
+                    .to_string()
+                    .to_lowercase();
+
+                // the value of the attribute
+                let lit = match &namevalue.value {
+                    syn::Expr::Lit(syn::ExprLit { lit, .. }) => lit,
+                    expr => return Err(syn::Error::new_spanned(expr, "Must be a literal")),
+                };
+
+                // the ident of the attribute
+                let ident = ident.as_str();
+                let arg = RunnerArg::from_str(ident)
+                    .map_err(|err| syn::Error::new_spanned(&namevalue, err))?;
+
+                match arg {
+                    RunnerArg::BlockTime => {
+                        config.set_block_time(lit.clone(), Spanned::span(lit))?
+                    }
+                    RunnerArg::Validation => {
+                        config.set_validation(lit.clone(), Spanned::span(lit))?
+                    }
+                    RunnerArg::Accounts => {
+                        config.set_accounts(lit.clone(), Spanned::span(lit))?;
+                    }
+
+                    RunnerArg::Fee => config.set_fee(lit.clone(), Spanned::span(lit))?,
+                    RunnerArg::DbDir => config.set_db_dir(lit.clone(), Spanned::span(lit))?,
+                }
+            }
+
+            other => {
+                return Err(syn::Error::new_spanned(other, "Unknown attribute inside the macro"));
+            }
+        }
+    }
+
+    Ok(config)
 }

@@ -8192,8 +8192,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "starknet 0.12.0",
- "strum 0.25.0",
- "strum_macros 0.25.3",
  "syn 2.0.77",
 ]
 

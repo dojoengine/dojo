@@ -10,7 +10,7 @@ use std::thread;
 use anyhow::{Context, Result};
 use assert_fs::TempDir;
 use katana_node_bindings::{Katana, KatanaInstance};
-pub use katana_runner_macro::{katana_test, runner};
+pub use katana_runner_macro::test;
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::types::{BlockId, BlockTag, Felt};
 use starknet::providers::jsonrpc::HttpTransport;
@@ -231,12 +231,16 @@ impl KatanaRunner {
 /// Determines the default program path for the katana runner based on the KATANA_RUNNER_BIN
 /// environment variable. If not set, try to to use katana from the PATH.
 fn determine_default_program_path() -> String {
-    if let Ok(bin) = std::env::var("KATANA_RUNNER_BIN") { bin } else { "katana".to_string() }
+    if let Ok(bin) = std::env::var("KATANA_RUNNER_BIN") {
+        bin
+    } else {
+        "katana".to_string()
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::determine_default_program_path;
 
     #[test]
     fn test_determine_default_program_path() {

@@ -1,10 +1,13 @@
 use proc_macro2::{Span, TokenStream, TokenTree};
+use quote::TokenStreamExt;
 use quote::{quote, quote_spanned, ToTokens};
 use syn::parse::{Parse, ParseStream};
+use syn::spanned::Spanned;
 use syn::{braced, Attribute, Ident, Signature, Visibility};
 
-use crate::config::{Configuration, RunnerFlavor};
+use crate::config::Configuration;
 
+#[derive(Clone)]
 pub struct ItemFn {
     pub outer_attrs: Vec<Attribute>,
     pub vis: Visibility,
@@ -28,11 +31,14 @@ impl ItemFn {
 
     /// Convert our local function item into a token stream.
     fn into_tokens(
-        self,
+        mut self,
         generated_attrs: proc_macro2::TokenStream,
-        body: proc_macro2::TokenStream,
+        func: proc_macro2::TokenStream,
         last_block: proc_macro2::TokenStream,
     ) -> TokenStream {
+        // empty out the arguments
+        self.sig.inputs.clear();
+
         let mut tokens = proc_macro2::TokenStream::new();
         // Outer attributes are simply streamed as-is.
         for attr in self.outer_attrs {
@@ -54,7 +60,7 @@ impl ItemFn {
         self.sig.to_tokens(&mut tokens);
 
         self.brace_token.surround(&mut tokens, |tokens| {
-            body.to_tokens(tokens);
+            func.to_tokens(tokens);
             last_block.to_tokens(tokens);
         });
 
@@ -120,98 +126,94 @@ impl ToTokens for Body<'_> {
 }
 
 pub fn parse_knobs(mut input: ItemFn, is_test: bool, config: Configuration) -> TokenStream {
-    // input.sig.asyncness = None;
+    // If type mismatch occurs, the current rustc points to the last statement.
+    let (last_stmt_start_span, last_stmt_end_span) = {
+        let mut last_stmt = input.stmts.last().cloned().unwrap_or_default().into_iter();
 
-    // // If type mismatch occurs, the current rustc points to the last statement.
-    // let (last_stmt_start_span, last_stmt_end_span) = {
-    //     let mut last_stmt = input.stmts.last().cloned().unwrap_or_default().into_iter();
+        // `Span` on stable Rust has a limitation that only points to the first
+        // token, not the whole tokens. We can work around this limitation by
+        // using the first/last span of the tokens like
+        // `syn::Error::new_spanned` does.
+        let start = last_stmt.next().map_or_else(Span::call_site, |t| t.span());
+        let end = last_stmt.last().map_or(start, |t| t.span());
+        (start, end)
+    };
 
-    //     // `Span` on stable Rust has a limitation that only points to the first
-    //     // token, not the whole tokens. We can work around this limitation by
-    //     // using the first/last span of the tokens like
-    //     // `syn::Error::new_spanned` does.
-    //     let start = last_stmt.next().map_or_else(Span::call_site, |t| t.span());
-    //     let end = last_stmt.last().map_or(start, |t| t.span());
-    //     (start, end)
-    // };
+    let crate_path = config
+        .crate_name
+        .map(ToTokens::into_token_stream)
+        .unwrap_or_else(|| Ident::new("katana_runner", last_stmt_start_span).into_token_stream());
 
-    // let crate_path = config
-    //     .crate_name
-    //     .map(ToTokens::into_token_stream)
-    //     .unwrap_or_else(|| Ident::new("tokio", last_stmt_start_span).into_token_stream());
+    let mut cfg: TokenStream = quote! {};
 
-    // let mut rt = match config.flavor {
-    //     RunnerFlavor::Binary => quote_spanned! {last_stmt_start_span=>
-    //         #crate_path::runtime::Builder::new_current_thread()
-    //     },
-    //     RunnerFlavor::Embedded => quote_spanned! {last_stmt_start_span=>
-    //         #crate_path::runtime::Builder::new_multi_thread()
-    //     },
-    // };
-    // if let Some(v) = config.worker_threads {
-    //     rt = quote_spanned! {last_stmt_start_span=> #rt.worker_threads(#v) };
-    // }
-    // if let Some(v) = config.start_paused {
-    //     rt = quote_spanned! {last_stmt_start_span=> #rt.start_paused(#v) };
-    // }
-    // if let Some(v) = config.unhandled_panic {
-    //     let unhandled_panic = v.into_tokens(&crate_path);
-    //     rt = quote_spanned! {last_stmt_start_span=> #rt.unhandled_panic(#unhandled_panic) };
-    // }
+    if let Some(value) = config.block_time {
+        cfg = quote_spanned! (last_stmt_start_span=> #cfg block_time: Some(#value), );
+    }
 
-    // let generated_attrs = if is_test {
-    //     quote! {
-    //         #[::core::prelude::v1::test]
-    //     }
-    // } else {
-    //     quote! {}
-    // };
+    if let Some(value) = config.fee {
+        cfg = quote_spanned! (last_stmt_start_span=> #cfg disable_fee: #value, );
+    }
 
-    // let body_ident = quote! { body };
-    // let last_block = quote_spanned! {last_stmt_end_span=>
-    //     #[allow(clippy::expect_used, clippy::diverging_sub_expression)]
-    //     {
-    //         return #rt
-    //             .enable_all()
-    //             .build()
-    //             .expect("Failed building the Runtime")
-    //             .block_on(#body_ident);
-    //     }
-    // };
+    if let Some(value) = config.db_dir {
+        cfg = quote_spanned! (last_stmt_start_span=> #cfg db_dir: Some(#value), );
+    }
 
-    // let body = input.body();
+    if let Some(value) = config.accounts {
+        cfg = quote_spanned! (last_stmt_start_span=> #cfg n_accounts: #value, );
+    }
 
-    // // For test functions pin the body to the stack and use `Pin<&mut dyn
-    // // Future>` to reduce the amount of `Runtime::block_on` (and related
-    // // functions) copies we generate during compilation due to the generic
-    // // parameter `F` (the future to block on). This could have an impact on
-    // // performance, but because it's only for testing it's unlikely to be very
-    // // large.
-    // //
-    // // We don't do this for the main function as it should only be used once so
-    // // there will be no benefit.
-    // let body = if is_test {
-    //     let output_type = match &input.sig.output {
-    //         // For functions with no return value syn doesn't print anything,
-    //         // but that doesn't work as `Output` for our boxed `Future`, so
-    //         // default to `()` (the same type as the function output).
-    //         syn::ReturnType::Default => quote! { () },
-    //         syn::ReturnType::Type(_, ret_type) => quote! { #ret_type },
-    //     };
-    //     quote! {
-    //         let body = async #body;
-    //         #crate_path::pin!(body);
-    //         let body: ::core::pin::Pin<&mut dyn ::core::future::Future<Output = #output_type>> =
-    // body;     }
-    // } else {
-    //     quote! {
-    //         let body = async #body;
-    //     }
-    // };
+    if let Some(value) = config.log_path {
+        cfg = quote_spanned! (last_stmt_start_span=> #cfg, log_path: Some(#value), );
+    }
 
-    // input.into_tokens(generated_attrs, body, last_block)
+    if config.dev {
+        cfg = quote_spanned! (last_stmt_start_span=> #cfg dev: true, );
+    }
 
-    todo!()
+    cfg = quote_spanned! {last_stmt_start_span=>
+        #crate_path::KatanaRunnerConfig { #cfg ..Default::default() }
+    };
+
+    let generated_attrs = if is_test {
+        quote! {
+            #[::core::prelude::v1::test]
+        }
+    } else {
+        quote! {}
+    };
+
+    let ident = Ident::new(&format!("__{}__", input.sig.ident), input.sig.ident.span());
+
+    let last_block = quote_spanned! {last_stmt_end_span=>
+        let runner = #crate_path::KatanaRunner::new_with_config(#cfg).expect("Failed to start runner.");
+        let mut ctx = RunnerCtx(runner);
+        #ident(&mut ctx);
+    };
+
+    let ret = &input.sig.output;
+    let body = input.body();
+
+    let func = quote! {
+        struct RunnerCtx(#crate_path::KatanaRunner);
+
+        impl core::ops::Deref for RunnerCtx {
+            type Target = #crate_path::KatanaRunner;
+            fn deref(&self) -> &Self::Target {
+                &self.0
+            }
+        }
+
+        impl core::ops::DerefMut for RunnerCtx {
+            fn deref_mut(&mut self) -> &mut Self::Target {
+                &mut self.0
+            }
+        }
+
+        fn #ident(ctx: &mut RunnerCtx) #ret
+        #body
+    };
+
+    input.into_tokens(generated_attrs, func, last_block)
 }
 
 pub fn parse_string(
