@@ -113,7 +113,10 @@ impl Configuration {
             return Err(syn::Error::new(span, "`accounts` set multiple times."));
         }
 
-        let accounts = parse_int(accounts, span, "accounts")? as u16;
+        let int = parse_int(accounts, span, "accounts")?;
+        let accounts = u16::try_from(int)
+            .map_err(|_| syn::Error::new(span, "`accounts` must be a valid u16."))?;
+
         self.accounts = Some(accounts);
 
         Ok(())
