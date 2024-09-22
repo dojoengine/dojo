@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1726964461555,
+  "lastUpdate": 1726964567144,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -21391,6 +21391,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 21225882801,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "contact@luca-steeb.com",
+            "name": "Luca Steeb",
+            "username": "steebchen"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0d08411aa3be048af7c0b0cf15551453c6cf0384",
+          "message": "feat(Dockerfile): add Tini init system for better process management (#2459)\n\n- Added Tini version v0.19.0\r\n- Configured ENTRYPOINT to use Tini",
+          "timestamp": "2024-09-21T20:05:12-04:00",
+          "tree_id": "b2389d3ac263cf02506d236dadebad3b6d80ae08",
+          "url": "https://github.com/dojoengine/dojo/commit/0d08411aa3be048af7c0b0cf15551453c6cf0384"
+        },
+        "date": 1726964565475,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 15855048,
+            "range": "± 200651",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3826488,
+            "range": "± 110794",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2531559735,
+            "range": "± 227333420",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3910931,
+            "range": "± 111703",
             "unit": "ns/iter"
           }
         ]
