@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1726872104983,
+  "lastUpdate": 1726964461555,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -21361,6 +21361,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3960358,
             "range": "± 30252",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "contact@luca-steeb.com",
+            "name": "Luca Steeb",
+            "username": "steebchen"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0d08411aa3be048af7c0b0cf15551453c6cf0384",
+          "message": "feat(Dockerfile): add Tini init system for better process management (#2459)\n\n- Added Tini version v0.19.0\r\n- Configured ENTRYPOINT to use Tini",
+          "timestamp": "2024-09-21T20:05:12-04:00",
+          "tree_id": "b2389d3ac263cf02506d236dadebad3b6d80ae08",
+          "url": "https://github.com/dojoengine/dojo/commit/0d08411aa3be048af7c0b0cf15551453c6cf0384"
+        },
+        "date": 1726964460490,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 21225882801,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
