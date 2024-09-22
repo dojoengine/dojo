@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1726964889430,
+  "lastUpdate": 1726964912394,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -21468,6 +21468,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 21487916744,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "86dbd4428a1393f326d376685fe807aacee79b5a",
+          "message": "fix: remove dojo plugin dep (#2461)\n\n* chore(dojo-core): move dojo plugin as a dev dependency\r\n\r\n* fix: remove plugin dependency\r\n\r\n* fix: run clippy and fmt",
+          "timestamp": "2024-09-21T20:12:22-04:00",
+          "tree_id": "2732e4119dd1ebcacf84d810b80efeaeb41fc8e9",
+          "url": "https://github.com/dojoengine/dojo/commit/86dbd4428a1393f326d376685fe807aacee79b5a"
+        },
+        "date": 1726964911084,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11382845594,
             "range": "± 0",
             "unit": "ns/iter"
           }
