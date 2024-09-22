@@ -6,7 +6,6 @@ name = "dojo"
 version = "1.0.0-alpha.4"
 
 [dependencies]
-dojo_plugin = { git = "https://github.com/dojoengine/dojo", rev = "f15def33" }
 starknet = "=2.7.0"
 
 [lib]
