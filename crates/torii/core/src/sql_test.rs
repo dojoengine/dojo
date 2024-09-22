@@ -8,7 +8,7 @@ use dojo_test_utils::migration::{copy_spawn_and_move_db, prepare_migration_with_
 use dojo_utils::{TransactionExt, TransactionWaiter, TxnConfig};
 use dojo_world::contracts::naming::{compute_bytearray_hash, compute_selector_from_names};
 use dojo_world::contracts::world::{WorldContract, WorldContractReader};
-use katana_runner::{KatanaRunner, KatanaRunnerConfig};
+use katana_runner::RunnerCtx;
 use scarb::compiler::Profile;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use starknet::accounts::Account;
@@ -64,7 +64,8 @@ where
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn test_load_from_remote() {
+#[katana_runner::test(accounts = 10, db_dir = copy_spawn_and_move_db().as_str())]
+async fn test_load_from_remote(sequencer: &RunnerCtx) {
     let options =
         SqliteConnectOptions::from_str("sqlite::memory:").unwrap().create_if_missing(true);
     let pool = SqlitePoolOptions::new().max_connections(5).connect_with(options).await.unwrap();
@@ -77,10 +78,6 @@ async fn test_load_from_remote() {
     let manifest_path = Utf8PathBuf::from(config.manifest_path().parent().unwrap());
     let target_dir = Utf8PathBuf::from(ws.target_dir().to_string()).join("dev");
 
-    let seq_config = KatanaRunnerConfig { n_accounts: 10, ..Default::default() }
-        .with_db_dir(copy_spawn_and_move_db().as_str());
-
-    let sequencer = KatanaRunner::new_with_config(seq_config).expect("Failed to start runner.");
     let account = sequencer.account(0);
     let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
 
@@ -199,7 +196,8 @@ async fn test_load_from_remote() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn test_load_from_remote_del() {
+#[katana_runner::test(accounts = 10, db_dir = copy_spawn_and_move_db().as_str())]
+async fn test_load_from_remote_del(sequencer: &RunnerCtx) {
     let options =
         SqliteConnectOptions::from_str("sqlite::memory:").unwrap().create_if_missing(true);
     let pool = SqlitePoolOptions::new().max_connections(5).connect_with(options).await.unwrap();
@@ -212,10 +210,6 @@ async fn test_load_from_remote_del() {
     let manifest_path = Utf8PathBuf::from(config.manifest_path().parent().unwrap());
     let target_dir = Utf8PathBuf::from(ws.target_dir().to_string()).join("dev");
 
-    let seq_config = KatanaRunnerConfig { n_accounts: 10, ..Default::default() }
-        .with_db_dir(copy_spawn_and_move_db().as_str());
-
-    let sequencer = KatanaRunner::new_with_config(seq_config).expect("Failed to start runner.");
     let account = sequencer.account(0);
     let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
 
@@ -301,7 +295,8 @@ async fn test_load_from_remote_del() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn test_update_with_set_record() {
+#[katana_runner::test(accounts = 10, db_dir = copy_spawn_and_move_db().as_str())]
+async fn test_update_with_set_record(sequencer: &RunnerCtx) {
     let options =
         SqliteConnectOptions::from_str("sqlite::memory:").unwrap().create_if_missing(true);
     let pool = SqlitePoolOptions::new().max_connections(5).connect_with(options).await.unwrap();
@@ -313,10 +308,6 @@ async fn test_update_with_set_record() {
     let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
     let manifest_path = Utf8PathBuf::from(config.manifest_path().parent().unwrap());
     let target_dir = Utf8PathBuf::from(ws.target_dir().to_string()).join("dev");
-
-    let seq_config = KatanaRunnerConfig { n_accounts: 10, ..Default::default() }
-        .with_db_dir(copy_spawn_and_move_db().as_str());
-    let sequencer = KatanaRunner::new_with_config(seq_config).expect("Failed to start runner.");
 
     let (strat, _) = prepare_migration_with_world_and_seed(
         manifest_path,

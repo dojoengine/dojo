@@ -11,7 +11,7 @@ fn with_return(_: &RunnerCtx) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "current_thread")]
 #[katana_runner::test]
 async fn with_async(ctx: &RunnerCtx) -> Result<(), Box<dyn std::error::Error>> {
     let provider = ctx.provider();

@@ -1,5 +1,5 @@
 use dojo_world::contracts::WorldContractReader;
-use katana_runner::{KatanaRunner, KatanaRunnerConfig};
+use katana_runner::RunnerCtx;
 use scarb_ui::Ui;
 use starknet::accounts::SingleOwnerAccount;
 use starknet::core::types::Felt;
@@ -14,11 +14,9 @@ const CONTRACT_TAG: &str = "dojo_examples-actions";
 const ENTRYPOINT: &str = "get_player_position";
 
 #[tokio::test]
-async fn call_with_bad_address() {
-    let config = KatanaRunnerConfig::default().with_db_dir("/tmp/spawn-and-move-db");
-    let sequencer = KatanaRunner::new_with_config(config).expect("Failed to start runner.");
-
-    let world = setup::setup_with_world(&sequencer).await.unwrap();
+#[katana_runner::test(db_dir = "/tmp/spawn-and-move-db")]
+async fn call_with_bad_address(sequencer: &RunnerCtx) {
+    let world = setup::setup_with_world(sequencer).await.unwrap();
     let provider = sequencer.provider();
     let world_reader = WorldContractReader::new(world.address, provider);
 
@@ -39,11 +37,9 @@ async fn call_with_bad_address() {
 }
 
 #[tokio::test]
-async fn call_with_bad_name() {
-    let config = KatanaRunnerConfig::default().with_db_dir("/tmp/spawn-and-move-db");
-    let sequencer = KatanaRunner::new_with_config(config).expect("Failed to start runner.");
-
-    let world = setup::setup_with_world(&sequencer).await.unwrap();
+#[katana_runner::test(db_dir = "/tmp/spawn-and-move-db")]
+async fn call_with_bad_name(sequencer: &RunnerCtx) {
+    let world = setup::setup_with_world(sequencer).await.unwrap();
     let provider = sequencer.provider();
     let world_reader = WorldContractReader::new(world.address, provider);
 
@@ -64,11 +60,9 @@ async fn call_with_bad_name() {
 }
 
 #[tokio::test]
-async fn call_with_bad_entrypoint() {
-    let config = KatanaRunnerConfig::default().with_db_dir("/tmp/spawn-and-move-db");
-    let sequencer = KatanaRunner::new_with_config(config).expect("Failed to start runner.");
-
-    let world = setup::setup_with_world(&sequencer).await.unwrap();
+#[katana_runner::test(db_dir = "/tmp/spawn-and-move-db")]
+async fn call_with_bad_entrypoint(sequencer: &RunnerCtx) {
+    let world = setup::setup_with_world(sequencer).await.unwrap();
     let provider = sequencer.provider();
     let world_reader = WorldContractReader::new(world.address, provider);
 
@@ -89,11 +83,9 @@ async fn call_with_bad_entrypoint() {
 }
 
 #[tokio::test]
-async fn call_with_bad_calldata() {
-    let config = KatanaRunnerConfig::default().with_db_dir("/tmp/spawn-and-move-db");
-    let sequencer = KatanaRunner::new_with_config(config).expect("Failed to start runner.");
-
-    let world = setup::setup_with_world(&sequencer).await.unwrap();
+#[katana_runner::test(db_dir = "/tmp/spawn-and-move-db")]
+async fn call_with_bad_calldata(sequencer: &RunnerCtx) {
+    let world = setup::setup_with_world(sequencer).await.unwrap();
     let provider = sequencer.provider();
     let world_reader = WorldContractReader::new(world.address, provider);
 
@@ -114,11 +106,9 @@ async fn call_with_bad_calldata() {
 }
 
 #[tokio::test]
-async fn call_with_contract_name() {
-    let config = KatanaRunnerConfig::default().with_db_dir("/tmp/spawn-and-move-db");
-    let sequencer = KatanaRunner::new_with_config(config).expect("Failed to start runner.");
-
-    let world = setup::setup_with_world(&sequencer).await.unwrap();
+#[katana_runner::test(db_dir = "/tmp/spawn-and-move-db")]
+async fn call_with_contract_name(sequencer: &RunnerCtx) {
+    let world = setup::setup_with_world(sequencer).await.unwrap();
     let provider = sequencer.provider();
     let world_reader = WorldContractReader::new(world.address, provider);
 
@@ -138,13 +128,11 @@ async fn call_with_contract_name() {
 }
 
 #[tokio::test]
-async fn call_with_contract_address() {
-    let config = KatanaRunnerConfig::default().with_db_dir("/tmp/spawn-and-move-db");
-    let sequencer = KatanaRunner::new_with_config(config).expect("Failed to start runner.");
-
+#[katana_runner::test(db_dir = "/tmp/spawn-and-move-db")]
+async fn call_with_contract_address(sequencer: &RunnerCtx) {
     let ui = Ui::new(scarb_ui::Verbosity::Verbose, scarb_ui::OutputFormat::Text);
 
-    let world = setup::setup_with_world(&sequencer).await.unwrap();
+    let world = setup::setup_with_world(sequencer).await.unwrap();
     let provider = sequencer.provider();
     let world_reader = WorldContractReader::new(world.address, provider);
 

@@ -3,7 +3,7 @@ mod utils;
 use camino::Utf8PathBuf;
 use dojo_test_utils::compiler::CompilerTestSetup;
 use dojo_test_utils::migration::{copy_spawn_and_move_db, prepare_migration_with_world_and_seed};
-use katana_runner::{KatanaRunner, KatanaRunnerConfig};
+use katana_runner::RunnerCtx;
 use scarb::compiler::Profile;
 use scarb::ops;
 use starknet::accounts::Account;
@@ -11,7 +11,8 @@ use starknet::core::types::{BlockId, BlockTag};
 use utils::snapbox::get_snapbox;
 
 #[tokio::test(flavor = "multi_thread")]
-async fn reregister_models() {
+#[katana_runner::test(db_dir = copy_spawn_and_move_db().as_str())]
+async fn reregister_models(sequencer: &RunnerCtx) {
     let setup = CompilerTestSetup::from_examples("../../crates/dojo-core", "../../examples/");
     let config = setup.build_test_config("spawn-and-move", Profile::DEV);
 
@@ -21,9 +22,6 @@ async fn reregister_models() {
     let manifest_path = Utf8PathBuf::from(config.manifest_path().parent().unwrap());
     let target_path =
         ws.target_dir().path_existent().unwrap().join(ws.config().profile().to_string());
-
-    let seq_config = KatanaRunnerConfig::default().with_db_dir(copy_spawn_and_move_db().as_str());
-    let sequencer = KatanaRunner::new_with_config(seq_config).expect("Failed to start runner.");
 
     let (strat, _) = prepare_migration_with_world_and_seed(
         manifest_path,

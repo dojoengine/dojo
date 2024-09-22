@@ -20,7 +20,7 @@ use dojo_world::migration::world::WorldDiff;
 use dojo_world::uri::Uri;
 use futures::TryStreamExt;
 use ipfs_api_backend_hyper::{HyperBackend, IpfsApi, IpfsClient, TryFromUri};
-use katana_runner::{KatanaRunner, KatanaRunnerConfig};
+use katana_runner::RunnerCtx;
 use starknet::core::types::{BlockId, BlockTag, Felt};
 use starknet::macros::felt;
 use starknet::providers::jsonrpc::HttpTransport;
@@ -34,16 +34,10 @@ use crate::test_utils::setup;
 use crate::utils::get_contract_address_from_reader;
 
 #[tokio::test(flavor = "multi_thread")]
-async fn default_migrate_no_dry_run() {
+#[katana_runner::test(accounts = 10)]
+async fn default_migrate_no_dry_run(sequencer: &RunnerCtx) {
     let config = setup::load_config();
     let ws = setup::setup_ws(&config);
-
-    let sequencer = KatanaRunner::new_with_config(KatanaRunnerConfig {
-        n_accounts: 10,
-        dev: true,
-        ..Default::default()
-    })
-    .expect("Fail to start runner");
 
     let mut account = sequencer.account(0);
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
@@ -63,48 +57,39 @@ async fn default_migrate_no_dry_run() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn migrate_with_auto_mine() {
+#[katana_runner::test(accounts = 10)]
+async fn migrate_with_auto_mine(sequencer: &RunnerCtx) {
     let config = setup::load_config();
     let ws = setup::setup_ws(&config);
 
     let (migration, _) = setup::setup_migration(&config, "dojo_examples").unwrap();
 
-    let sequencer =
-        KatanaRunner::new_with_config(KatanaRunnerConfig { n_accounts: 10, ..Default::default() })
-            .expect("Fail to start runner");
-
     let mut account = sequencer.account(0);
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
-    let declarers = setup::get_declarers_from_sequencer(&sequencer).await;
+    let declarers = setup::get_declarers_from_sequencer(sequencer).await;
 
     execute_strategy(&ws, &migration, &account, TxnConfig::init_wait(), &declarers).await.unwrap();
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn migrate_with_block_time() {
+#[katana_runner::test(accounts = 10, block_time = 1000)]
+async fn migrate_with_block_time(sequencer: &RunnerCtx) {
     let config = setup::load_config();
     let ws = setup::setup_ws(&config);
 
     let (migration, _) = setup::setup_migration(&config, "dojo_examples").unwrap();
 
-    let sequencer = KatanaRunner::new_with_config(KatanaRunnerConfig {
-        n_accounts: 10,
-        block_time: Some(1000),
-        ..Default::default()
-    })
-    .expect("Fail to start runner");
-
     let mut account = sequencer.account(0);
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
-    let declarers = setup::get_declarers_from_sequencer(&sequencer).await;
+    let declarers = setup::get_declarers_from_sequencer(sequencer).await;
 
     execute_strategy(&ws, &migration, &account, TxnConfig::default(), &declarers).await.unwrap();
 }
 
-#[tokio::test]
-async fn metadata_calculated_properly() {
+#[test]
+fn metadata_calculated_properly() {
     let config = setup::load_config();
     let ws = setup::setup_ws(&config);
 
@@ -145,16 +130,13 @@ async fn metadata_calculated_properly() {
 }
 
 #[tokio::test]
-async fn migration_with_correct_calldata_second_time_work_as_expected() {
+#[katana_runner::test(accounts = 10)]
+async fn migration_with_correct_calldata_second_time_work_as_expected(sequencer: &RunnerCtx) {
     let config = setup::load_config();
     let ws = setup::setup_ws(&config);
 
     let base = config.manifest_path().parent().unwrap();
     let target_dir = format!("{}/target/dev", base);
-
-    let sequencer =
-        KatanaRunner::new_with_config(KatanaRunnerConfig { n_accounts: 10, ..Default::default() })
-            .expect("Failed to start runner.");
 
     let account = sequencer.account(0);
 
@@ -175,7 +157,7 @@ async fn migration_with_correct_calldata_second_time_work_as_expected() {
     )
     .unwrap();
 
-    let declarers = setup::get_declarers_from_sequencer(&sequencer).await;
+    let declarers = setup::get_declarers_from_sequencer(sequencer).await;
 
     let migration_output =
         execute_strategy(&ws, &migration, &account, TxnConfig::init_wait(), &declarers)
@@ -218,16 +200,13 @@ async fn migration_with_correct_calldata_second_time_work_as_expected() {
 }
 
 #[tokio::test]
-async fn migration_from_remote() {
+#[katana_runner::test(accounts = 10)]
+async fn migration_from_remote(sequencer: &RunnerCtx) {
     let config = setup::load_config();
     let ws = setup::setup_ws(&config);
 
     let base = config.manifest_path().parent().unwrap();
     let target_dir = format!("{}/target/dev", base);
-
-    let sequencer =
-        KatanaRunner::new_with_config(KatanaRunnerConfig { n_accounts: 10, ..Default::default() })
-            .expect("Failed to start runner.");
 
     let account = sequencer.account(0);
 
@@ -248,7 +227,7 @@ async fn migration_from_remote() {
     )
     .unwrap();
 
-    let declarers = setup::get_declarers_from_sequencer(&sequencer).await;
+    let declarers = setup::get_declarers_from_sequencer(sequencer).await;
 
     execute_strategy(&ws, &migration, &account, TxnConfig::init_wait(), &declarers).await.unwrap();
 
@@ -269,20 +248,17 @@ async fn migration_from_remote() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn migrate_with_metadata() {
+#[katana_runner::test(accounts = 10)]
+async fn migrate_with_metadata(sequencer: &RunnerCtx) {
     let config = setup::load_config();
     let ws = setup::setup_ws(&config);
 
     let (migration, _) = setup::setup_migration(&config, "dojo_examples").unwrap();
 
-    let sequencer =
-        KatanaRunner::new_with_config(KatanaRunnerConfig { n_accounts: 10, ..Default::default() })
-            .expect("Failed to start runner.");
-
     let mut account = sequencer.account(0);
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
-    let declarers = setup::get_declarers_from_sequencer(&sequencer).await;
+    let declarers = setup::get_declarers_from_sequencer(sequencer).await;
 
     let output = execute_strategy(&ws, &migration, &account, TxnConfig::init_wait(), &declarers)
         .await
@@ -348,7 +324,8 @@ async fn migrate_with_metadata() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn migrate_with_auto_authorize() {
+#[katana_runner::test(accounts = 10)]
+async fn migrate_with_auto_authorize(sequencer: &RunnerCtx) {
     let config = setup::load_config();
     let ws = setup::setup_ws(&config);
 
@@ -365,16 +342,12 @@ async fn migrate_with_auto_authorize() {
         manifest.merge(overlay_manifest);
     }
 
-    let sequencer =
-        KatanaRunner::new_with_config(KatanaRunnerConfig { n_accounts: 10, ..Default::default() })
-            .expect("Failed to start runner.");
-
     let mut account = sequencer.account(0);
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
     let txn_config = TxnConfig::init_wait();
 
-    let declarers = setup::get_declarers_from_sequencer(&sequencer).await;
+    let declarers = setup::get_declarers_from_sequencer(sequencer).await;
 
     let output = execute_strategy(&ws, &migration, &account, txn_config, &declarers).await.unwrap();
 
@@ -428,8 +401,8 @@ async fn migrate_with_auto_authorize() {
     }
 }
 
-#[tokio::test(flavor = "multi_thread")]
-async fn migration_with_mismatching_world_address_and_seed() {
+#[test]
+fn migration_with_mismatching_world_address_and_seed() {
     let config = setup::load_config();
     let ws = setup::setup_ws(&config);
 
