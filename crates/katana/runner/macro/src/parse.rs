@@ -33,11 +33,15 @@ impl ItemFn {
     fn into_tokens(
         mut self,
         generated_attrs: proc_macro2::TokenStream,
-        func: proc_macro2::TokenStream,
+        // func: proc_macro2::TokenStream,
         last_block: proc_macro2::TokenStream,
     ) -> TokenStream {
+        self.sig.asyncness = None;
         // empty out the arguments
         self.sig.inputs.clear();
+
+        // remove duplicate outer attributes
+        self.outer_attrs.dedup_by(|a, b| a.path() == b.path());
 
         let mut tokens = proc_macro2::TokenStream::new();
         // Outer attributes are simply streamed as-is.
@@ -60,7 +64,7 @@ impl ItemFn {
         self.sig.to_tokens(&mut tokens);
 
         self.brace_token.surround(&mut tokens, |tokens| {
-            func.to_tokens(tokens);
+            // func.to_tokens(tokens);
             last_block.to_tokens(tokens);
         });
 
@@ -182,38 +186,45 @@ pub fn parse_knobs(mut input: ItemFn, is_test: bool, config: Configuration) -> T
         quote! {}
     };
 
-    let ident = Ident::new(&format!("__{}__", input.sig.ident), input.sig.ident.span());
+    let body = input.body();
+    let body = if input.sig.asyncness.is_some() {
+        quote! {
+            struct RunnerCtx(#crate_path::KatanaRunner);
+
+            impl core::ops::Deref for RunnerCtx {
+                type Target = #crate_path::KatanaRunner;
+                fn deref(&self) -> &Self::Target {
+                    &self.0
+                }
+            }
+
+            let body = async #body;
+        }
+    } else {
+        quote! {
+            struct RunnerCtx(#crate_path::KatanaRunner);
+
+            impl core::ops::Deref for RunnerCtx {
+                type Target = #crate_path::KatanaRunner;
+                fn deref(&self) -> &Self::Target {
+                    &self.0
+                }
+            }
+
+            let body = || #body;
+        }
+    };
 
     let last_block = quote_spanned! {last_stmt_end_span=>
-        let runner = #crate_path::KatanaRunner::new_with_config(#cfg).expect("Failed to start runner.");
-        let mut ctx = RunnerCtx(runner);
-        #ident(&mut ctx);
+        {
+            let runner = #crate_path::KatanaRunner::new_with_config(#cfg).expect("Failed to start runner.");
+            let ctx = RunnerCtx(runner);
+            #body
+            return body();
+        }
     };
 
-    let ret = &input.sig.output;
-    let body = input.body();
-
-    let func = quote! {
-        struct RunnerCtx(#crate_path::KatanaRunner);
-
-        impl core::ops::Deref for RunnerCtx {
-            type Target = #crate_path::KatanaRunner;
-            fn deref(&self) -> &Self::Target {
-                &self.0
-            }
-        }
-
-        impl core::ops::DerefMut for RunnerCtx {
-            fn deref_mut(&mut self) -> &mut Self::Target {
-                &mut self.0
-            }
-        }
-
-        fn #ident(ctx: &mut RunnerCtx) #ret
-        #body
-    };
-
-    input.into_tokens(generated_attrs, func, last_block)
+    input.into_tokens(generated_attrs, last_block)
 }
 
 pub fn parse_string(

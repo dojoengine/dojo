@@ -1,8 +1,10 @@
 use katana_runner::*;
 use starknet::providers::Provider;
 
-#[katana_runner::test]
-fn some_test(ctx: &mut RunnerCtx) {
+#[tokio::test]
+#[katana_runner::test(fee = false)]
+async fn some_test(ctx: &mut RunnerCtx) {
+    let account = ctx.accounts();
     println!("Ohayo!");
 }
 

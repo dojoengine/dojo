@@ -145,7 +145,7 @@ impl std::str::FromStr for RunnerArg {
 }
 
 pub fn build_config(
-    input: &crate::parse::ItemFn,
+    _input: &crate::parse::ItemFn,
     args: crate::entry::AttributeArgs,
     is_test: bool,
 ) -> Result<Configuration, syn::Error> {
