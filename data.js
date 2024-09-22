@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1727036943900,
+  "lastUpdate": 1727037042845,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -21625,6 +21625,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 11424601627,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bb149b7001e611a2f0bec62a0e837ce1b622cf71",
+          "message": "Improve Katana runner macro (#2464)",
+          "timestamp": "2024-09-23T04:12:53+08:00",
+          "tree_id": "7300cc032f69891263d235ff0b7af4329f730fba",
+          "url": "https://github.com/dojoengine/dojo/commit/bb149b7001e611a2f0bec62a0e837ce1b622cf71"
+        },
+        "date": 1727037041149,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 15498904,
+            "range": "± 332244",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3835128,
+            "range": "± 57052",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2597570132,
+            "range": "± 251081942",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3941493,
+            "range": "± 92069",
             "unit": "ns/iter"
           }
         ]
