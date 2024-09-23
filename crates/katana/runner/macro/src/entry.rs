@@ -66,7 +66,7 @@ pub fn parse_knobs(input: ItemFn, is_test: bool, config: Configuration) -> Token
     }
 
     if let Some(value) = config.db_dir {
-        cfg = quote_spanned! (last_stmt_start_span=> #cfg db_dir: Some(std::path::PathBuf::from(#value)), );
+        cfg = quote_spanned! (last_stmt_start_span=> #cfg db_dir: Some(core::str::FromStr::from_str(#value).expect("valid path")), );
     }
 
     if let Some(value) = config.accounts {
