@@ -13168,7 +13168,6 @@ dependencies = [
  "anyhow",
  "console",
  "dojo-world",
- "futures",
  "reqwest 0.12.7",
  "scarb",
  "scarb-ui",
