@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1727037042845,
+  "lastUpdate": 1727054123337,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -21673,6 +21673,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3941493,
             "range": "± 92069",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "60c1575927db63e98ababda56c5ffa9f6337fb56",
+          "message": "chore: use the new Katana runner proc macro (#2465)",
+          "timestamp": "2024-09-23T08:58:54+08:00",
+          "tree_id": "8b9e8cf7675faf813028e6d23ff47955f9bb8e0c",
+          "url": "https://github.com/dojoengine/dojo/commit/60c1575927db63e98ababda56c5ffa9f6337fb56"
+        },
+        "date": 1727054121644,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11225546280,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
