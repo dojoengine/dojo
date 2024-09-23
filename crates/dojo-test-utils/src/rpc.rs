@@ -6,6 +6,7 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 use serde_json::Value;
 use starknet::providers::jsonrpc::{JsonRpcMethod, JsonRpcResponse, JsonRpcTransport};
+use starknet::providers::ProviderRequestData;
 use thiserror::Error;
 
 #[derive(Debug)]
@@ -65,5 +66,15 @@ impl JsonRpcTransport for MockJsonRpcTransport {
                 panic!("Response not set in mock for method {method:?} and params {params:?}")
             }
         }
+    }
+
+    async fn send_requests<R>(
+        &self,
+        _: R,
+    ) -> Result<Vec<JsonRpcResponse<serde_json::Value>>, Self::Error>
+    where
+        R: AsRef<[ProviderRequestData]> + Send + Sync,
+    {
+        unimplemented!()
     }
 }

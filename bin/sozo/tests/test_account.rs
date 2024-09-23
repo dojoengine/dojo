@@ -3,6 +3,7 @@ mod utils;
 use std::fs;
 
 use assert_fs::fixture::PathChild;
+use katana_runner::RunnerCtx;
 use sozo_ops::account;
 use starknet::accounts::Account;
 use utils::snapbox::get_snapbox;
@@ -29,8 +30,9 @@ fn test_account_new() {
     assert!(pt.child("account.json").exists());
 }
 
-#[katana_runner::katana_test(1, true)]
-async fn test_account_fetch() {
+#[tokio::test]
+#[katana_runner::test(accounts = 2, fee = false)]
+async fn test_account_fetch(runner: &RunnerCtx) {
     let pt = assert_fs::TempDir::new().unwrap();
 
     account::fetch(

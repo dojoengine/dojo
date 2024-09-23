@@ -8,7 +8,7 @@ use dojo_test_utils::migration::{copy_spawn_and_move_db, prepare_migration_with_
 use dojo_utils::{TransactionExt, TransactionWaiter, TxnConfig};
 use dojo_world::contracts::naming::compute_bytearray_hash;
 use dojo_world::contracts::{WorldContract, WorldContractReader};
-use katana_runner::{KatanaRunner, KatanaRunnerConfig};
+use katana_runner::RunnerCtx;
 use scarb::compiler::Profile;
 use scarb::ops;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
@@ -30,7 +30,8 @@ use crate::server::DojoWorld;
 use crate::types::schema::Entity;
 
 #[tokio::test(flavor = "multi_thread")]
-async fn test_entities_queries() {
+#[katana_runner::test(accounts = 10, db_dir = copy_spawn_and_move_db().as_str())]
+async fn test_entities_queries(sequencer: &RunnerCtx) {
     let options = SqliteConnectOptions::from_str("sqlite::memory:")
         .unwrap()
         .create_if_missing(true)
@@ -47,10 +48,6 @@ async fn test_entities_queries() {
     let manifest_path = Utf8PathBuf::from(config.manifest_path().parent().unwrap());
     let target_path = ws.target_dir().path_existent().unwrap().join(config.profile().to_string());
 
-    let seq_config = KatanaRunnerConfig { n_accounts: 10, ..Default::default() }
-        .with_db_dir(copy_spawn_and_move_db().as_str());
-
-    let sequencer = KatanaRunner::new_with_config(seq_config).expect("Failed to start runner.");
     let account = sequencer.account(0);
 
     let (strat, _) = prepare_migration_with_world_and_seed(

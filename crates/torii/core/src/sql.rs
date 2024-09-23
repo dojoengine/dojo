@@ -361,7 +361,7 @@ impl Sql {
                 entity_id: entity_id.clone(),
                 event_id: event_id.to_string(),
                 block_timestamp: utc_dt_string_from_timestamp(block_timestamp),
-                entity: entity.clone(),
+                ty: entity.clone(),
             }),
         );
 
