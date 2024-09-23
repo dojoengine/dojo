@@ -110,14 +110,42 @@ impl Sql {
         ))
     }
 
-    pub fn set_head(&mut self, head: u64) {
+    pub async fn set_head(
+        &mut self,
+        head: u64,
+        last_block_timestamp: u64,
+        txns_count: u64,
+    ) -> Result<()> {
         let head = Argument::Int(head.try_into().expect("doesn't fit in u64"));
         let id = Argument::FieldElement(self.world_address);
+
+        let mut conn = self.pool.acquire().await?;
+        let previous_block_timestamp: u64 =
+            sqlx::query_scalar::<_, i64>("SELECT last_block_timestamp FROM contracts WHERE id = ?")
+                .bind(format!("{:#x}", self.world_address))
+                .fetch_optional(&mut *conn)
+                .await?
+                .unwrap_or(0)
+                .try_into()
+                .expect("doesn't fit in u64");
+
+        let tps: u64 = txns_count / (last_block_timestamp - previous_block_timestamp);
+        let tps = Argument::Int(tps.try_into().expect("doesn't fit in u64"));
+
+        let last_block_timestamp =
+            Argument::Int(last_block_timestamp.try_into().expect("doesn't fit in u64"));
         self.query_queue.enqueue(
-            "UPDATE contracts SET head = ? WHERE id = ?",
-            vec![head, id],
+            "UPDATE contracts SET head = ?, tps = ?, last_block_timestamp = ? WHERE id = ?",
+            vec![
+                head,
+                tps,
+                last_block_timestamp,
+                id,
+            ],
             QueryType::Other,
         );
+
+        Ok(())
     }
 
     pub fn set_last_pending_block_world_tx(&mut self, last_pending_block_world_tx: Option<Felt>) {
@@ -716,7 +744,11 @@ impl Sql {
             Ty::Enum(e) => {
                 if e.options.iter().all(
                     |o| {
-                        if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false }
+                        if let Ty::Tuple(t) = &o.ty {
+                            t.is_empty()
+                        } else {
+                            false
+                        }
                     },
                 ) {
                     return;
