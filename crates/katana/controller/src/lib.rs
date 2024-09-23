@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use alloy_primitives::U256;
 use anyhow::Result;
@@ -131,7 +131,7 @@ pub mod json {
 fn get_contract_storage(
     credential_id: CredentialID,
     public_key: CoseKey,
-) -> Result<HashMap<StorageKey, StorageValue>> {
+) -> Result<BTreeMap<StorageKey, StorageValue>> {
     use slot::account_sdk::signers::DeviceError;
     use webauthn_rs_proto::auth::PublicKeyCredentialRequestOptions;
     use webauthn_rs_proto::{
@@ -186,7 +186,7 @@ fn get_contract_storage(
     let storage = get_storage_var_address(MULTIPLE_OWNERS_COMPONENT_SUB_STORAGE, &[guid])?;
 
     // 1 for boolean True in Cairo. Refer to the provided link above.
-    let storage_mapping = HashMap::from([(storage, Felt::ONE)]);
+    let storage_mapping = BTreeMap::from([(storage, Felt::ONE)]);
 
     Ok(storage_mapping)
 }

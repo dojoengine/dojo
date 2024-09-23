@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use katana_db::mdbx;
@@ -92,21 +92,25 @@ pub fn mock_state_updates() -> [StateUpdatesWithDeclaredClasses; 3] {
 
     let state_update_1 = StateUpdatesWithDeclaredClasses {
         state_updates: StateUpdates {
-            nonce_updates: HashMap::from([(address_1, 1u8.into()), (address_2, 1u8.into())]),
-            storage_updates: HashMap::from([
+            nonce_updates: BTreeMap::from([(address_1, 1u8.into()), (address_2, 1u8.into())]),
+            storage_updates: BTreeMap::from([
                 (
                     address_1,
-                    HashMap::from([(1u8.into(), 100u32.into()), (2u8.into(), 101u32.into())]),
+                    BTreeMap::from([(1u8.into(), 100u32.into()), (2u8.into(), 101u32.into())]),
                 ),
                 (
                     address_2,
-                    HashMap::from([(1u8.into(), 200u32.into()), (2u8.into(), 201u32.into())]),
+                    BTreeMap::from([(1u8.into(), 200u32.into()), (2u8.into(), 201u32.into())]),
                 ),
             ]),
-            declared_classes: HashMap::from([(class_hash_1, compiled_class_hash_1)]),
-            contract_updates: HashMap::from([(address_1, class_hash_1), (address_2, class_hash_1)]),
+            declared_classes: BTreeMap::from([(class_hash_1, compiled_class_hash_1)]),
+            deployed_contracts: BTreeMap::from([
+                (address_1, class_hash_1),
+                (address_2, class_hash_1),
+            ]),
+            ..Default::default()
         },
-        declared_compiled_classes: HashMap::from([(
+        declared_compiled_classes: BTreeMap::from([(
             class_hash_1,
             DEFAULT_LEGACY_ERC20_CONTRACT_CASM.clone(),
         )]),
@@ -115,36 +119,44 @@ pub fn mock_state_updates() -> [StateUpdatesWithDeclaredClasses; 3] {
 
     let state_update_2 = StateUpdatesWithDeclaredClasses {
         state_updates: StateUpdates {
-            nonce_updates: HashMap::from([(address_1, 2u8.into())]),
-            storage_updates: HashMap::from([(
+            nonce_updates: BTreeMap::from([(address_1, 2u8.into())]),
+            storage_updates: BTreeMap::from([(
                 address_1,
-                HashMap::from([(felt!("1"), felt!("111")), (felt!("2"), felt!("222"))]),
+                BTreeMap::from([(felt!("1"), felt!("111")), (felt!("2"), felt!("222"))]),
             )]),
-            declared_classes: HashMap::from([(class_hash_2, compiled_class_hash_2)]),
-            contract_updates: HashMap::from([(address_2, class_hash_2)]),
+            declared_classes: BTreeMap::from([(class_hash_2, compiled_class_hash_2)]),
+            deployed_contracts: BTreeMap::from([(address_2, class_hash_2)]),
+            ..Default::default()
         },
-        declared_compiled_classes: HashMap::from([(class_hash_2, DEFAULT_LEGACY_UDC_CASM.clone())]),
+        declared_compiled_classes: BTreeMap::from([(
+            class_hash_2,
+            DEFAULT_LEGACY_UDC_CASM.clone(),
+        )]),
         ..Default::default()
     };
 
     let state_update_3 = StateUpdatesWithDeclaredClasses {
         state_updates: StateUpdates {
-            nonce_updates: HashMap::from([(address_1, 3u8.into()), (address_2, 2u8.into())]),
-            storage_updates: HashMap::from([
-                (address_1, HashMap::from([(3u8.into(), 77u32.into())])),
+            nonce_updates: BTreeMap::from([(address_1, 3u8.into()), (address_2, 2u8.into())]),
+            storage_updates: BTreeMap::from([
+                (address_1, BTreeMap::from([(3u8.into(), 77u32.into())])),
                 (
                     address_2,
-                    HashMap::from([(1u8.into(), 12u32.into()), (2u8.into(), 13u32.into())]),
+                    BTreeMap::from([(1u8.into(), 12u32.into()), (2u8.into(), 13u32.into())]),
                 ),
             ]),
-            contract_updates: HashMap::from([(address_1, class_hash_2), (address_2, class_hash_3)]),
-            declared_classes: HashMap::from([(class_hash_3, compiled_class_hash_3)]),
+            deployed_contracts: BTreeMap::from([
+                (address_1, class_hash_2),
+                (address_2, class_hash_3),
+            ]),
+            declared_classes: BTreeMap::from([(class_hash_3, compiled_class_hash_3)]),
+            ..Default::default()
         },
-        declared_compiled_classes: HashMap::from([(
+        declared_compiled_classes: BTreeMap::from([(
             class_hash_3,
             (*DOJO_WORLD_COMPILED_CLASS).clone(),
         )]),
-        declared_sierra_classes: HashMap::from([(
+        declared_sierra_classes: BTreeMap::from([(
             class_hash_3,
             (*DOJO_WORLD_SIERRA_CLASS).clone(),
         )]),

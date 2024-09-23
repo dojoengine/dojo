@@ -1,7 +1,7 @@
 //! JSON representation of the genesis configuration. Used to deserialize the genesis configuration
 //! from a JSON file.
 
-use std::collections::{hash_map, BTreeMap, HashMap};
+use std::collections::{btree_map, hash_map, BTreeMap, HashMap};
 use std::fs::File;
 use std::io::{
     BufReader, {self},
@@ -161,7 +161,7 @@ pub struct FeeTokenConfigJson {
     /// If not provided, the default fee token class is used.
     pub class: Option<ClassNameOrHash>,
     /// To initialize the fee token contract storage
-    pub storage: Option<HashMap<StorageKey, StorageValue>>,
+    pub storage: Option<BTreeMap<StorageKey, StorageValue>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -173,7 +173,7 @@ pub struct UniversalDeployerConfigJson {
     /// If not provided, the default UD class is used.
     pub class: Option<ClassNameOrHash>,
     /// To initialize the UD contract storage
-    pub storage: Option<HashMap<StorageKey, StorageValue>>,
+    pub storage: Option<BTreeMap<StorageKey, StorageValue>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -182,7 +182,7 @@ pub struct GenesisContractJson {
     pub class: Option<ClassNameOrHash>,
     pub balance: Option<U256>,
     pub nonce: Option<Felt>,
-    pub storage: Option<HashMap<StorageKey, StorageValue>>,
+    pub storage: Option<BTreeMap<StorageKey, StorageValue>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -194,7 +194,7 @@ pub struct GenesisAccountJson {
     pub nonce: Option<Felt>,
     /// The class hash of the account contract. If not provided, the default account class is used.
     pub class: Option<ClassNameOrHash>,
-    pub storage: Option<HashMap<StorageKey, StorageValue>>,
+    pub storage: Option<BTreeMap<StorageKey, StorageValue>>,
     pub private_key: Option<Felt>,
 }
 
@@ -267,9 +267,9 @@ pub struct GenesisJson {
     pub fee_token: FeeTokenConfigJson,
     pub universal_deployer: Option<UniversalDeployerConfigJson>,
     #[serde(default)]
-    pub accounts: HashMap<ContractAddress, GenesisAccountJson>,
+    pub accounts: BTreeMap<ContractAddress, GenesisAccountJson>,
     #[serde(default)]
-    pub contracts: HashMap<ContractAddress, GenesisContractJson>,
+    pub contracts: BTreeMap<ContractAddress, GenesisContractJson>,
 }
 
 impl GenesisJson {
@@ -319,7 +319,7 @@ impl TryFrom<GenesisJson> for Genesis {
     fn try_from(value: GenesisJson) -> Result<Self, Self::Error> {
         // a lookup table for classes that is assigned a name
         let mut class_names: HashMap<String, Felt> = HashMap::new();
-        let mut classes: HashMap<ClassHash, GenesisClass> = HashMap::new();
+        let mut classes: BTreeMap<ClassHash, GenesisClass> = BTreeMap::new();
 
         #[cfg(feature = "slot")]
         // Merely a band aid fix for now.
@@ -521,7 +521,7 @@ impl TryFrom<GenesisJson> for Genesis {
                 None => {
                     // check that the default account class exists in the classes field before
                     // inserting it
-                    if let hash_map::Entry::Vacant(e) =
+                    if let btree_map::Entry::Vacant(e) =
                         classes.entry(DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH)
                     {
                         // insert default account class to the classes map
@@ -697,7 +697,7 @@ mod tests {
         assert_eq!(json.fee_token.decimals, 18);
         assert_eq!(
             json.fee_token.storage,
-            Some(HashMap::from([(felt!("0x111"), felt!("0x1")), (felt!("0x222"), felt!("0x2"))]))
+            Some(BTreeMap::from([(felt!("0x111"), felt!("0x1")), (felt!("0x222"), felt!("0x2"))]))
         );
 
         assert_eq!(
@@ -709,7 +709,7 @@ mod tests {
         assert_eq!(json.universal_deployer.unwrap().class, None);
         assert_eq!(
             json.fee_token.storage,
-            Some(HashMap::from([(felt!("0x111"), felt!("0x1")), (felt!("0x222"), felt!("0x2")),]))
+            Some(BTreeMap::from([(felt!("0x111"), felt!("0x1")), (felt!("0x222"), felt!("0x2")),]))
         );
 
         let acc_1 = ContractAddress::from(felt!(
@@ -736,7 +736,7 @@ mod tests {
         assert_eq!(json.accounts[&acc_1].class, Some(ClassNameOrHash::Hash(felt!("0x80085"))));
         assert_eq!(
             json.accounts[&acc_1].storage,
-            Some(HashMap::from([(felt!("0x1"), felt!("0x1")), (felt!("0x2"), felt!("0x2")),]))
+            Some(BTreeMap::from([(felt!("0x1"), felt!("0x1")), (felt!("0x2"), felt!("0x2")),]))
         );
 
         assert_eq!(json.accounts[&acc_2].public_key, felt!("0x2"));
@@ -787,7 +787,7 @@ mod tests {
         );
         assert_eq!(
             json.contracts[&contract_1].storage,
-            Some(HashMap::from([(felt!("0x1"), felt!("0x1")), (felt!("0x2"), felt!("0x2"))]))
+            Some(BTreeMap::from([(felt!("0x1"), felt!("0x1")), (felt!("0x2"), felt!("0x2"))]))
         );
 
         assert_eq!(
@@ -806,7 +806,7 @@ mod tests {
         );
         assert_eq!(
             json.contracts[&contract_3].storage,
-            Some(HashMap::from([(felt!("0x1"), felt!("0x1"))]))
+            Some(BTreeMap::from([(felt!("0x1"), felt!("0x1"))]))
         );
 
         similar_asserts::assert_eq!(
@@ -877,7 +877,7 @@ mod tests {
         let json = GenesisJson::load(path).unwrap();
         let actual_genesis = Genesis::try_from(json).unwrap();
 
-        let expected_classes = HashMap::from([
+        let expected_classes = BTreeMap::from([
             (
                 felt!("0x07b3e05f48f0c69e4a65ce5e076a66271a527aff2c34ce1083ec6e1526997a69"),
                 GenesisClass {
@@ -929,7 +929,7 @@ mod tests {
             symbol: String::from("ETH"),
             decimals: 18,
             class_hash: felt!("0x8"),
-            storage: Some(HashMap::from([
+            storage: Some(BTreeMap::from([
                 (felt!("0x111"), felt!("0x1")),
                 (felt!("0x222"), felt!("0x2")),
             ])),
@@ -965,7 +965,7 @@ mod tests {
                     balance: Some(U256::from_str("0xD3C21BCECCEDA1000000").unwrap()),
                     nonce: Some(felt!("0x1")),
                     class_hash: felt!("0x80085"),
-                    storage: Some(HashMap::from([
+                    storage: Some(BTreeMap::from([
                         (felt!("0x1"), felt!("0x1")),
                         (felt!("0x2"), felt!("0x2")),
                     ])),
@@ -1010,7 +1010,7 @@ mod tests {
                     balance: Some(U256::from_str("0xD3C21BCECCEDA1000000").unwrap()),
                     nonce: None,
                     class_hash: Some(felt!("0x8")),
-                    storage: Some(HashMap::from([
+                    storage: Some(BTreeMap::from([
                         (felt!("0x1"), felt!("0x1")),
                         (felt!("0x2"), felt!("0x2")),
                     ])),
@@ -1031,7 +1031,7 @@ mod tests {
                     balance: None,
                     nonce: None,
                     class_hash: Some(felt!("0x80085")),
-                    storage: Some(HashMap::from([(felt!("0x1"), felt!("0x1"))])),
+                    storage: Some(BTreeMap::from([(felt!("0x1"), felt!("0x1"))])),
                 }),
             ),
         ]);
@@ -1116,7 +1116,7 @@ mod tests {
         let genesis_json: GenesisJson = GenesisJson::from_str(json).unwrap();
         let actual_genesis = Genesis::try_from(genesis_json).unwrap();
 
-        let classes = HashMap::from([
+        let classes = BTreeMap::from([
             (
                 DEFAULT_LEGACY_UDC_CLASS_HASH,
                 GenesisClass {
@@ -1215,12 +1215,10 @@ mod tests {
     fn genesis_from_json_with_unresolved_paths() {
         let file = File::open("./src/genesis/test-genesis.json").unwrap();
         let json: GenesisJson = serde_json::from_reader(file).unwrap();
-        assert!(
-            Genesis::try_from(json)
-                .unwrap_err()
-                .to_string()
-                .contains("Unresolved class artifact path")
-        );
+        assert!(Genesis::try_from(json)
+            .unwrap_err()
+            .to_string()
+            .contains("Unresolved class artifact path"));
     }
 
     #[test]
@@ -1264,8 +1262,9 @@ mod tests {
             .expect("failed to load genesis file");
 
         let res = Genesis::try_from(json);
-        assert!(
-            res.unwrap_err().to_string().contains(&format!("Class name '{name}' already exists"))
-        )
+        assert!(res
+            .unwrap_err()
+            .to_string()
+            .contains(&format!("Class name '{name}' already exists")))
     }
 }

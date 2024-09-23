@@ -1,6 +1,6 @@
 pub mod state;
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::fmt::Debug;
 use std::ops::{Range, RangeInclusive};
 
@@ -292,17 +292,17 @@ impl<Db: Database> StateUpdateProvider for DbProvider<Db> {
             let nonce_updates = dup_entries::<
                 Db,
                 tables::NonceChangeHistory,
-                HashMap<ContractAddress, Nonce>,
+                BTreeMap<ContractAddress, Nonce>,
                 _,
             >(&db_tx, block_num, |entry| {
                 let (_, ContractNonceChange { contract_address, nonce }) = entry?;
                 Ok((contract_address, nonce))
             })?;
 
-            let contract_updates = dup_entries::<
+            let deployed_contracts = dup_entries::<
                 Db,
                 tables::ClassChangeHistory,
-                HashMap<ContractAddress, ClassHash>,
+                BTreeMap<ContractAddress, ClassHash>,
                 _,
             >(&db_tx, block_num, |entry| {
                 let (_, ContractClassChange { contract_address, class_hash }) = entry?;
@@ -312,7 +312,7 @@ impl<Db: Database> StateUpdateProvider for DbProvider<Db> {
             let declared_classes = dup_entries::<
                 Db,
                 tables::ClassDeclarations,
-                HashMap<ClassHash, CompiledClassHash>,
+                BTreeMap<ClassHash, CompiledClassHash>,
                 _,
             >(&db_tx, block_num, |entry| {
                 let (_, class_hash) = entry?;
@@ -335,7 +335,7 @@ impl<Db: Database> StateUpdateProvider for DbProvider<Db> {
                     Ok((key.contract_address, (key.key, value)))
                 })?;
 
-                let mut map: HashMap<_, HashMap<StorageKey, StorageValue>> = HashMap::new();
+                let mut map: BTreeMap<_, BTreeMap<StorageKey, StorageValue>> = BTreeMap::new();
 
                 entries.into_iter().for_each(|(addr, (key, value))| {
                     map.entry(addr).or_default().insert(key, value);
@@ -348,8 +348,9 @@ impl<Db: Database> StateUpdateProvider for DbProvider<Db> {
             Ok(Some(StateUpdates {
                 nonce_updates,
                 storage_updates,
-                contract_updates,
+                deployed_contracts,
                 declared_classes,
+                ..Default::default()
             }))
         } else {
             Ok(None)
@@ -706,7 +707,7 @@ impl<Db: Database> BlockWriter for DbProvider<Db> {
 
             // update contract info
 
-            for (addr, class_hash) in states.state_updates.contract_updates {
+            for (addr, class_hash) in states.state_updates.deployed_contracts {
                 let value = if let Some(info) = db_tx.get::<tables::ContractInfo>(addr)? {
                     GenericContractInfo { class_hash, ..info }
                 } else {
@@ -765,7 +766,7 @@ impl<Db: Database> BlockWriter for DbProvider<Db> {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
+    use std::collections::BTreeMap;
 
     use katana_db::mdbx::DbEnvKind;
     use katana_primitives::block::{
@@ -803,22 +804,23 @@ mod tests {
     fn create_dummy_state_updates() -> StateUpdatesWithDeclaredClasses {
         StateUpdatesWithDeclaredClasses {
             state_updates: StateUpdates {
-                nonce_updates: HashMap::from([
+                nonce_updates: BTreeMap::from([
                     (ContractAddress::from(felt!("1")), felt!("1")),
                     (ContractAddress::from(felt!("2")), felt!("2")),
                 ]),
-                contract_updates: HashMap::from([
+                deployed_contracts: BTreeMap::from([
                     (ContractAddress::from(felt!("1")), felt!("3")),
                     (ContractAddress::from(felt!("2")), felt!("4")),
                 ]),
-                declared_classes: HashMap::from([
+                declared_classes: BTreeMap::from([
                     (felt!("3"), felt!("89")),
                     (felt!("4"), felt!("90")),
                 ]),
-                storage_updates: HashMap::from([(
+                storage_updates: BTreeMap::from([(
                     ContractAddress::from(felt!("1")),
-                    HashMap::from([(felt!("1"), felt!("1")), (felt!("2"), felt!("2"))]),
+                    BTreeMap::from([(felt!("1"), felt!("1")), (felt!("2"), felt!("2"))]),
                 )]),
+                ..Default::default()
             },
             ..Default::default()
         }
@@ -827,17 +829,17 @@ mod tests {
     fn create_dummy_state_updates_2() -> StateUpdatesWithDeclaredClasses {
         StateUpdatesWithDeclaredClasses {
             state_updates: StateUpdates {
-                nonce_updates: HashMap::from([
+                nonce_updates: BTreeMap::from([
                     (ContractAddress::from(felt!("1")), felt!("5")),
                     (ContractAddress::from(felt!("2")), felt!("6")),
                 ]),
-                contract_updates: HashMap::from([
+                deployed_contracts: BTreeMap::from([
                     (ContractAddress::from(felt!("1")), felt!("77")),
                     (ContractAddress::from(felt!("2")), felt!("66")),
                 ]),
-                storage_updates: HashMap::from([(
+                storage_updates: BTreeMap::from([(
                     ContractAddress::from(felt!("1")),
-                    HashMap::from([(felt!("1"), felt!("100")), (felt!("2"), felt!("200"))]),
+                    BTreeMap::from([(felt!("1"), felt!("100")), (felt!("2"), felt!("200"))]),
                 )]),
                 ..Default::default()
             },
@@ -852,7 +854,6 @@ mod tests {
     #[test]
     fn insert_block() {
         let provider = create_db_provider();
-
         let block = create_dummy_block();
         let state_updates = create_dummy_state_updates();
 

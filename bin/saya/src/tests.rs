@@ -71,7 +71,7 @@ async fn test_program_input_from_program_output() -> anyhow::Result<()> {
         ],
         state_updates: StateUpdates {
             nonce_updates: {
-                let mut map = std::collections::HashMap::new();
+                let mut map = std::collections::BTreeMap::new();
                 map.insert(
                     ContractAddress::from(Felt::from_str("1111").unwrap()),
                     Felt::from_str("22222").unwrap(),
@@ -84,8 +84,8 @@ async fn test_program_input_from_program_output() -> anyhow::Result<()> {
             )]
             .into_iter()
             .collect(),
-            contract_updates: {
-                let mut map = std::collections::HashMap::new();
+            deployed_contracts: {
+                let mut map = std::collections::BTreeMap::new();
                 map.insert(
                     ContractAddress::from(Felt::from_str("66666").unwrap()),
                     Felt::from_str("7777").unwrap(),
@@ -93,10 +93,11 @@ async fn test_program_input_from_program_output() -> anyhow::Result<()> {
                 map
             },
             declared_classes: {
-                let mut map = std::collections::HashMap::new();
+                let mut map = std::collections::BTreeMap::new();
                 map.insert(Felt::from_str("88888").unwrap(), Felt::from_str("99999").unwrap());
                 map
             },
+            ..Default::default()
         },
         world_da: None,
     };
