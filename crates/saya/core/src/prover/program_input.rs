@@ -509,12 +509,14 @@ fn test_deserialize_input() -> anyhow::Result<()> {
             "0x457": "0x56ce",
             "0x45c": "0x56cf"
         },
-        "contract_updates":{
+        "deployed_contracts":{
             "0x3": "0x1a102c21"
         },
         "declared_classes":{
             "0x4d2": "0x3039"
-        }
+        },
+        "deprecated_declared_classes": [],
+        "replaced_classes": {}
     }"#;
     let mut expected = ProgramInput {
         prev_state_root: Felt::from_str("101")?,
