@@ -1,5 +1,4 @@
-use std::collections::BTreeMap;
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
 use crate::contract::{ContractAddress, Nonce, StorageKey, StorageValue};
@@ -20,7 +19,8 @@ pub struct StateUpdates {
     pub declared_classes: BTreeMap<ClassHash, CompiledClassHash>,
     /// A mapping of newly declared legacy class hashes.
     pub deprecated_declared_classes: BTreeSet<ClassHash>,
-    /// A mapping of replaced contract addresses to their new class hashes ie using `replace_class` syscall.
+    /// A mapping of replaced contract addresses to their new class hashes ie using `replace_class`
+    /// syscall.
     pub replaced_classes: BTreeMap<ContractAddress, ClassHash>,
 }
 

@@ -315,7 +315,8 @@ impl Default for Genesis {
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashMap, str::FromStr};
+    use std::collections::HashMap;
+    use std::str::FromStr;
 
     use allocation::GenesisAccount;
     use starknet::macros::felt;
