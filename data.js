@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1727110296826,
+  "lastUpdate": 1727110306626,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -21799,6 +21799,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3957546,
             "range": "± 70849",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "30427286+barabanovro@users.noreply.github.com",
+            "name": "Roman",
+            "username": "barabanovro"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b598b0758e4677b2da091c0d1d298b344e6f5c50",
+          "message": "Walnut: Enable multi-class verification via single API request (#2456)\n\n* Multi-class verification via single API request\r\n\r\n* Remove futures dependency",
+          "timestamp": "2024-09-24T00:34:32+08:00",
+          "tree_id": "5dc9a1eccd58d4c7c5790ea5b75671c2eec624a6",
+          "url": "https://github.com/dojoengine/dojo/commit/b598b0758e4677b2da091c0d1d298b344e6f5c50"
+        },
+        "date": 1727110304833,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 12477943488,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
