@@ -11,7 +11,7 @@ use crate::utils;
 const ACTION_CONTRACT_TAG: &str = "dojo_examples-actions";
 
 #[tokio::test(flavor = "multi_thread")]
-#[katana_runner::test(fee  = true, accounts = 1, db_dir = copy_spawn_and_move_db().as_str())]
+#[katana_runner::test(db_dir = copy_spawn_and_move_db().as_str())]
 async fn get_contract_address_from_world(sequencer: &RunnerCtx) {
     let world = setup::setup_with_world(sequencer).await.unwrap();
     let contract_address = utils::get_contract_address(&world, ACTION_CONTRACT_TAG).await.unwrap();
