@@ -299,13 +299,6 @@ impl Sql {
         let entity_id = format!("{:#x}", poseidon_hash_many(&keys));
         let model_id = format!("{:#x}", compute_selector_from_names(model_namespace, model_name));
 
-        self.query_queue.enqueue(
-            "INSERT INTO event_model (entity_id, model_id) VALUES (?, ?) ON CONFLICT(entity_id, \
-             model_id) DO NOTHING",
-            vec![Argument::String(entity_id.clone()), Argument::String(model_id.clone())],
-            QueryType::Other,
-        );
-
         let keys_str = felts_sql_string(&keys);
         let insert_entities = "INSERT INTO event_messages (id, keys, event_id, executed_at) \
                                VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET \
@@ -319,6 +312,12 @@ impl Sql {
                 Argument::String(event_id.to_string()),
                 Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
             ],
+            QueryType::Other,
+        );
+        self.query_queue.enqueue(
+            "INSERT INTO event_model (entity_id, model_id) VALUES (?, ?) ON CONFLICT(entity_id, \
+             model_id) DO NOTHING",
+            vec![Argument::String(entity_id.clone()), Argument::String(model_id.clone())],
             QueryType::Other,
         );
 
