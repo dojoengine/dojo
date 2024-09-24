@@ -496,7 +496,7 @@ impl Sql {
 
         self.query_queue.enqueue(
             "INSERT OR IGNORE INTO events (id, keys, data, transaction_hash, executed_at) VALUES \
-             (?, ?, ?, ?, ?)",
+             (?, ?, ?, ?, ?) RETURNING *",
             vec![id, keys, data, hash, executed_at],
             QueryType::StoreEvent,
         );
