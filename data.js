@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1727204511072,
+  "lastUpdate": 1727210619432,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -21907,6 +21907,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3912219,
             "range": "± 34099",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "78250fad9e9189faaff9e5df5a05c4a493387af5",
+          "message": "fix(torii): improve log messages (#2463)\n\ncommit-id:88796bb8",
+          "timestamp": "2024-09-24T16:27:28-04:00",
+          "tree_id": "b01a68661478c88182bd57582fd3a73a47eb595d",
+          "url": "https://github.com/dojoengine/dojo/commit/78250fad9e9189faaff9e5df5a05c4a493387af5"
+        },
+        "date": 1727210618263,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11354502529,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
