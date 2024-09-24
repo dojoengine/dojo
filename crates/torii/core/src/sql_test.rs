@@ -20,6 +20,7 @@ use starknet_crypto::poseidon_hash_many;
 use tokio::sync::broadcast;
 
 use crate::engine::{Engine, EngineConfig, Processors};
+use crate::executor::{Executor, QueryMessage, QueryType};
 use crate::processors::generate_event_processors_map;
 use crate::processors::register_model::RegisterModelProcessor;
 use crate::processors::store_del_record::StoreDelRecordProcessor;
@@ -126,7 +127,12 @@ async fn test_load_from_remote() {
 
     let world_reader = WorldContractReader::new(strat.world_address, Arc::clone(&provider));
 
-    let mut db = Sql::new(pool.clone(), world_reader.address).await.unwrap();
+    let (mut executor, sender) = Executor::new(pool.clone());
+    tokio::spawn(async move {
+        executor.run().await.unwrap();
+    });
+
+    let db = Sql::new(pool.clone(), world_reader.address, sender.clone()).await.unwrap();
 
     let _ = bootstrap_engine(world_reader, db.clone(), provider).await.unwrap();
 
@@ -195,7 +201,11 @@ async fn test_load_from_remote() {
     assert_eq!(id, format!("{:#x}", poseidon_hash_many(&[account.address()])));
     assert_eq!(keys, format!("{:#x}/", account.address()));
 
-    db.execute().await.unwrap();
+    sender.send(QueryMessage {
+        statement: "COMMIT".to_string(),
+        arguments: vec![],
+        query_type: QueryType::Commit,
+    });
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -286,7 +296,12 @@ async fn test_load_from_remote_del() {
 
     let world_reader = WorldContractReader::new(strat.world_address, Arc::clone(&provider));
 
-    let mut db = Sql::new(pool.clone(), world_reader.address).await.unwrap();
+    let (mut executor, sender) = Executor::new(pool.clone());
+    tokio::spawn(async move {
+        executor.run().await.unwrap();
+    });
+
+    let db = Sql::new(pool.clone(), world_reader.address, sender.clone()).await.unwrap();
 
     let _ = bootstrap_engine(world_reader, db.clone(), provider).await;
 
@@ -297,7 +312,11 @@ async fn test_load_from_remote_del() {
     // TODO: check how we can have a test that is more chronological with Torii re-syncing
     // to ensure we can test intermediate states.
 
-    db.execute().await.unwrap();
+    sender.send(QueryMessage {
+        statement: "COMMIT".to_string(),
+        arguments: vec![],
+        query_type: QueryType::Commit,
+    });
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -376,11 +395,20 @@ async fn test_update_with_set_record() {
 
     let world_reader = WorldContractReader::new(strat.world_address, Arc::clone(&provider));
 
-    let mut db = Sql::new(pool.clone(), world_reader.address).await.unwrap();
+    let (mut executor, sender) = Executor::new(pool.clone());
+    tokio::spawn(async move {
+        executor.run().await.unwrap();
+    });
+
+    let db = Sql::new(pool.clone(), world_reader.address, sender.clone()).await.unwrap();
 
     let _ = bootstrap_engine(world_reader, db.clone(), Arc::clone(&provider)).await.unwrap();
 
-    db.execute().await.unwrap();
+    sender.send(QueryMessage {
+        statement: "COMMIT".to_string(),
+        arguments: vec![],
+        query_type: QueryType::Commit,
+    });
 }
 
 /// Count the number of rows in a table.

@@ -21,6 +21,7 @@ use tokio::task::JoinSet;
 use tokio::time::sleep;
 use tracing::{debug, error, info, trace, warn};
 
+use crate::executor::{Executor, QueryMessage, QueryType};
 use crate::processors::event_message::EventMessageProcessor;
 use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
 use crate::sql::Sql;
@@ -177,16 +178,28 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                                 info!(target: LOG_TARGET, "Syncing reestablished.");
                             }
 
+                            let (mut executor, sender) = Executor::new(self.db.pool.clone());
+                            tokio::spawn(async move {
+                                executor.run().await;
+                            });
+                            self.db.executor = sender;
+
                             match self.process(fetch_result).await {
-                                Ok(()) => {}
-                                Err(e) => {
-                                    error!(target: LOG_TARGET, error = %e, "Processing fetched data.");
-                                    erroring_out = true;
-                                    sleep(backoff_delay).await;
-                                    if backoff_delay < max_backoff_delay {
-                                        backoff_delay *= 2;
-                                    }
+                                Ok(()) => {
+                                    self.db.executor.send(QueryMessage {
+                                        statement: "COMMIT".to_string(),
+                                        arguments: vec![],
+                                        query_type: QueryType::Commit,
+                                    });
                                 }
+                            Err(e) => {
+                                error!(target: LOG_TARGET, error = %e, "Processing fetched data.");
+                                erroring_out = true;
+                                sleep(backoff_delay).await;
+                                if backoff_delay < max_backoff_delay {
+                                    backoff_delay *= 2;
+                                }
+                            }
                             }
                         }
                         Err(e) => {
@@ -411,7 +424,6 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                             if let Some(tx) = last_pending_block_world_tx {
                                 self.db.set_last_pending_block_world_tx(Some(tx));
                             }
-                            self.db.execute().await?;
                             return Ok(());
                         }
                         _ => {
@@ -447,8 +459,6 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             self.db.set_last_pending_block_world_tx(Some(tx));
         }
 
-        self.db.execute().await?;
-
         Ok(())
     }
 
@@ -482,10 +492,6 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                 self.process_block(block_number, data.blocks[&block_number]).await?;
                 last_block = block_number;
             }
-
-            if self.db.query_queue.queue.len() >= QUERY_QUEUE_BATCH_SIZE {
-                self.db.execute().await?;
-            }
         }
 
         // Process parallelized events
@@ -494,8 +500,6 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         self.db.set_head(data.latest_block_number);
         self.db.set_last_pending_block_world_tx(None);
         self.db.set_last_pending_block_tx(None);
-
-        self.db.execute().await?;
 
         Ok(())
     }
@@ -532,10 +536,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         }
 
         // Join all tasks
-        while let Some(result) = set.join_next().await {
-            let local_db = result??;
-            self.db.merge(local_db)?;
-        }
+        while let Some(_) = set.join_next().await {}
 
         Ok(())
     }

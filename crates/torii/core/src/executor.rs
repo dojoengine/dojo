@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 use std::sync::Arc;
-use tokio::sync::mpsc::{channel, Receiver, Sender};
+use tokio::sync::mpsc::{unbounded_channel, Receiver, Sender, UnboundedReceiver, UnboundedSender};
 use anyhow::{Context, Result};
 use dojo_types::schema::Ty;
 use sqlx::{FromRow, Pool, Sqlite};
@@ -30,15 +30,6 @@ pub enum BrokerMessage {
 }
 
 #[derive(Debug, Clone)]
-pub struct QueryQueue {
-    pool: Pool<Sqlite>,
-    pub queue: VecDeque<(String, Vec<Argument>, QueryType)>,
-    // publishes that are related to queries in the queue, they should be sent
-    // after the queries are executed
-    pub publish_queue: VecDeque<BrokerMessage>,
-}
-
-#[derive(Debug, Clone)]
 pub struct DeleteEntityQuery {
     pub entity_id: String,
     pub event_id: String,
@@ -50,24 +41,27 @@ pub struct DeleteEntityQuery {
 pub enum QueryType {
     SetEntity(Ty),
     DeleteEntity(DeleteEntityQuery),
+    RegisterModel,
+    StoreEvent,
+    Commit,
     Other,
 }
 
-pub struct TxExecutor {
+pub struct Executor {
     pool: Pool<Sqlite>,
-    rx: Receiver<QueryMessage>,
+    rx: UnboundedReceiver<QueryMessage>,
 }
 
 pub struct QueryMessage {
-    statement: String,
-    arguments: Vec<Argument>,
-    query_type: QueryType,
+    pub statement: String,
+    pub arguments: Vec<Argument>,
+    pub query_type: QueryType,
 }
 
-impl TxExecutor {
-    pub fn new(pool: Pool<Sqlite>) -> (Self, Sender<QueryMessage>) {
-        let (tx, rx) = channel(100); // Adjust buffer size as needed
-        (TxExecutor { pool, rx }, tx)
+impl Executor {
+    pub fn new(pool: Pool<Sqlite>) -> (Self, UnboundedSender<QueryMessage>) {
+        let (tx, rx) = unbounded_channel();
+        (Executor { pool, rx }, tx)
     }
 
     pub async fn run(&mut self) -> Result<()> {
@@ -137,6 +131,25 @@ impl TxExecutor {
 
                     let broker_message = BrokerMessage::EntityUpdated(entity_updated);
                     publish_queue.push(broker_message);
+                }
+                QueryType::RegisterModel => {
+                    let row = query.fetch_one(&mut *tx).await.with_context(|| {
+                        format!("Failed to execute query: {:?}, args: {:?}", statement, arguments)
+                    })?;
+                    let model_registered = ModelRegistered::from_row(&row)?;
+                    let broker_message = BrokerMessage::ModelRegistered(model_registered);
+                    publish_queue.push(broker_message);
+                }
+                QueryType::StoreEvent => {
+                    let row = query.fetch_one(&mut *tx).await.with_context(|| {
+                        format!("Failed to execute query: {:?}, args: {:?}", statement, arguments)
+                    })?;
+                    let event = EventEmitted::from_row(&row)?;
+                    let broker_message = BrokerMessage::EventEmitted(event);
+                    publish_queue.push(broker_message);
+                }
+                QueryType::Commit => {
+                    break;
                 }
                 QueryType::Other => {
                     query.execute(&mut *tx).await.with_context(|| {
