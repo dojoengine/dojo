@@ -129,19 +129,19 @@ impl Sql {
                 .try_into()
                 .expect("doesn't fit in u64");
 
-        let tps: u64 = txns_count / (last_block_timestamp - previous_block_timestamp);
+        let tps: u64 = if last_block_timestamp - previous_block_timestamp != 0 {
+            txns_count / (last_block_timestamp - previous_block_timestamp)
+        } else {
+            0
+        };
         let tps = Argument::Int(tps.try_into().expect("doesn't fit in u64"));
 
         let last_block_timestamp =
             Argument::Int(last_block_timestamp.try_into().expect("doesn't fit in u64"));
+
         self.query_queue.enqueue(
             "UPDATE contracts SET head = ?, tps = ?, last_block_timestamp = ? WHERE id = ?",
-            vec![
-                head,
-                tps,
-                last_block_timestamp,
-                id,
-            ],
+            vec![head, tps, last_block_timestamp, id],
             QueryType::Other,
         );
 

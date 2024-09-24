@@ -494,7 +494,8 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         // Process parallelized events
         self.process_tasks().await?;
 
-        self.db.set_head(data.latest_block_number, data.blocks[&data.latest_block_number], transactions_count as u64).await?;
+        let last_block_timestamp = self.get_block_timestamp(data.latest_block_number).await?;
+        self.db.set_head(data.latest_block_number, last_block_timestamp, transactions_count as u64).await?;
         self.db.set_last_pending_block_world_tx(None);
         self.db.set_last_pending_block_tx(None);
 
