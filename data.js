@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1727204470893,
+  "lastUpdate": 1727204511072,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -21859,6 +21859,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 11737806968,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "dd8b160dccb999956a88ce64f8a6e3733c174aba",
+          "message": "refactor(katana-primitives): replace `HashMap` with `BTreeMap` in state updates and genesis types (#2469)",
+          "timestamp": "2024-09-24T14:44:35-04:00",
+          "tree_id": "7c6fe00e323928a269eead9bbb3744cb41c634c7",
+          "url": "https://github.com/dojoengine/dojo/commit/dd8b160dccb999956a88ce64f8a6e3733c174aba"
+        },
+        "date": 1727204509939,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 15761321,
+            "range": "± 187790",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3753861,
+            "range": "± 64503",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2514692954,
+            "range": "± 222832313",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3912219,
+            "range": "± 34099",
             "unit": "ns/iter"
           }
         ]
