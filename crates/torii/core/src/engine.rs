@@ -186,7 +186,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
 
                             match self.process(fetch_result).await {
                                 Ok(()) => {
-                                    self.db.executor.send(QueryMessage {
+                                    let _ = self.db.executor.send(QueryMessage {
                                         statement: "COMMIT".to_string(),
                                         arguments: vec![],
                                         query_type: QueryType::Commit,

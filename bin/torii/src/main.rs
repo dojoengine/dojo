@@ -31,6 +31,7 @@ use tokio::sync::broadcast;
 use tokio::sync::broadcast::Sender;
 use tokio_stream::StreamExt;
 use torii_core::engine::{Engine, EngineConfig, IndexingFlags, Processors};
+use torii_core::executor::{Executor, QueryMessage, QueryType};
 use torii_core::processors::event_message::EventMessageProcessor;
 use torii_core::processors::generate_event_processors_map;
 use torii_core::processors::metadata_update::MetadataUpdateProcessor;
@@ -185,7 +186,12 @@ async fn main() -> anyhow::Result<()> {
     // Get world address
     let world = WorldContractReader::new(args.world_address, provider.clone());
 
-    let db = Sql::new(pool.clone(), args.world_address).await?;
+    let (mut executor, sender) = Executor::new(pool.clone());
+    tokio::spawn(async move {
+        executor.run().await.unwrap();
+    });
+
+    let db = Sql::new(pool.clone(), args.world_address, sender.clone()).await?;
 
     let processors = Processors {
         event: generate_event_processors_map(vec![
@@ -227,6 +233,12 @@ async fn main() -> anyhow::Result<()> {
         shutdown_tx.clone(),
         Some(block_tx),
     );
+
+    sender.send(QueryMessage {
+        statement: "COMMIT".to_string(),
+        arguments: vec![],
+        query_type: QueryType::Commit,
+    })?;
 
     let shutdown_rx = shutdown_tx.subscribe();
     let (grpc_addr, grpc_server) = torii_grpc::server::new(

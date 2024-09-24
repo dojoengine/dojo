@@ -52,7 +52,7 @@ impl Sql {
                 Argument::String(WORLD_CONTRACT_TYPE.to_string()),
             ],
             query_type: QueryType::Other,
-        });
+        })?;
 
         executor.send(QueryMessage {
             statement: "INSERT OR IGNORE INTO contracts (id, contract_address, contract_type) VALUES (?, ?, \
@@ -63,7 +63,7 @@ impl Sql {
                 Argument::String(WORLD_CONTRACT_TYPE.to_string()),
             ],
             query_type: QueryType::Other,
-        });
+        })?;
 
         Ok(Self {
             pool: pool.clone(),
@@ -90,17 +90,19 @@ impl Sql {
         ))
     }
 
-    pub fn set_head(&mut self, head: u64) {
+    pub fn set_head(&mut self, head: u64) -> Result<()> {
         let head = Argument::Int(head.try_into().expect("doesn't fit in u64"));
         let id = Argument::FieldElement(self.world_address);
         self.executor.send(QueryMessage {
             statement: "UPDATE contracts SET head = ? WHERE id = ?".to_string(),
             arguments: vec![head, id],
             query_type: QueryType::Other,
-        });
+        })?;
+
+        Ok(())
     }
 
-    pub fn set_last_pending_block_world_tx(&mut self, last_pending_block_world_tx: Option<Felt>) {
+    pub fn set_last_pending_block_world_tx(&mut self, last_pending_block_world_tx: Option<Felt>) -> Result<()> {
         let last_pending_block_world_tx = if let Some(f) = last_pending_block_world_tx {
             Argument::String(format!("{:#x}", f))
         } else {
@@ -114,10 +116,12 @@ impl Sql {
                 .to_string(),
             arguments: vec![last_pending_block_world_tx, id],
             query_type: QueryType::Other,
-        });
+        })?;
+
+        Ok(())
     }
 
-    pub fn set_last_pending_block_tx(&mut self, last_pending_block_tx: Option<Felt>) {
+    pub fn set_last_pending_block_tx(&mut self, last_pending_block_tx: Option<Felt>) -> Result<()> {
         let last_pending_block_tx = if let Some(f) = last_pending_block_tx {
             Argument::String(format!("{:#x}", f))
         } else {
@@ -129,7 +133,9 @@ impl Sql {
             statement: "UPDATE contracts SET last_pending_block_tx = ? WHERE id = ?".to_string(),
             arguments: vec![last_pending_block_tx, id],
             query_type: QueryType::Other,
-        });
+        })?;
+
+        Ok(())
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -169,7 +175,7 @@ impl Sql {
             statement: insert_models.to_string(),
             arguments,
             query_type: QueryType::RegisterModel,
-        });
+        })?;
 
         let mut model_idx = 0_i64;
         self.build_register_queries_recursive(
@@ -180,7 +186,7 @@ impl Sql {
             block_timestamp,
             &mut 0,
             &mut 0,
-        );
+        )?;
 
         // we set the model in the cache directly
         // because entities might be using it before the query queue is processed
@@ -247,14 +253,14 @@ impl Sql {
             statement: insert_entities.to_string(),
             arguments,
             query_type: QueryType::SetEntity(entity.clone()),
-        });
+        })?;
 
         self.executor.send(QueryMessage {
             statement: "INSERT INTO entity_model (entity_id, model_id) VALUES (?, ?) ON CONFLICT(entity_id, \
              model_id) DO NOTHING".to_string(),
             arguments: vec![Argument::String(entity_id.clone()), Argument::String(model_id.clone())],
             query_type: QueryType::Other,
-        });
+        })?;
 
         let path = vec![namespaced_name];
         self.build_set_entity_queries_recursive(
@@ -264,7 +270,7 @@ impl Sql {
             (&entity, keys_str.is_none()),
             block_timestamp,
             &vec![],
-        );
+        )?;
 
         Ok(())
     }
@@ -296,7 +302,7 @@ impl Sql {
              model_id) DO NOTHING".to_string(),
             arguments: vec![Argument::String(entity_id.clone()), Argument::String(model_id.clone())],
             query_type: QueryType::Other,
-        });
+        })?;
 
         let keys_str = felts_sql_string(&keys);
         let insert_entities = "INSERT INTO event_messages (id, keys, event_id, executed_at) \
@@ -321,7 +327,7 @@ impl Sql {
             (&entity, false),
             block_timestamp,
             &vec![],
-        );
+        )?;
 
         self.executor.send(QueryMessage {
             statement: "INSERT INTO event_messages (id, keys, event_id, executed_at) \
@@ -336,7 +342,7 @@ impl Sql {
                 Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
             ],
             query_type: QueryType::Other,
-        });
+        })?;
 
         Ok(())
     }
@@ -352,7 +358,7 @@ impl Sql {
         let entity_id = format!("{:#x}", entity_id);
         let path = vec![entity.name()];
         // delete entity models data
-        self.build_delete_entity_queries_recursive(path, &entity_id, &entity);
+        self.build_delete_entity_queries_recursive(path, &entity_id, &entity)?;
 
         self.executor.send(QueryMessage {
             statement: "DELETE FROM entity_model WHERE entity_id = ? AND model_id = ?".to_string(),
@@ -366,12 +372,12 @@ impl Sql {
                 block_timestamp: utc_dt_string_from_timestamp(block_timestamp),
                 entity: entity.clone(),
             }),
-        });
+        })?;
 
         Ok(())
     }
 
-    pub fn set_metadata(&mut self, resource: &Felt, uri: &str, block_timestamp: u64) {
+    pub fn set_metadata(&mut self, resource: &Felt, uri: &str, block_timestamp: u64) -> Result<()> {
         let resource = Argument::FieldElement(*resource);
         let uri = Argument::String(uri.to_string());
         let executed_at = Argument::String(utc_dt_string_from_timestamp(block_timestamp));
@@ -384,7 +390,9 @@ impl Sql {
                     .to_string(),
             arguments: vec![resource, uri, executed_at],
             query_type: QueryType::Other,
-        });
+        })?;
+
+        Ok(())
     }
 
     pub async fn update_metadata(
@@ -413,7 +421,7 @@ impl Sql {
         let statement = format!("UPDATE metadata SET {} WHERE id = ?", update.join(","));
         arguments.push(Argument::FieldElement(*resource));
 
-        self.executor.send(QueryMessage { statement, arguments, query_type: QueryType::Other });
+        self.executor.send(QueryMessage { statement, arguments, query_type: QueryType::Other })?;
 
         Ok(())
     }
@@ -443,13 +451,13 @@ impl Sql {
         transaction: &Transaction,
         transaction_id: &str,
         block_timestamp: u64,
-    ) {
+    ) -> Result<()> {
         let id = Argument::String(transaction_id.to_string());
 
         let transaction_type = match transaction {
             Transaction::Invoke(_) => "INVOKE",
             Transaction::L1Handler(_) => "L1_HANDLER",
-            _ => return,
+            _ => return Ok(()),
         };
 
         let (transaction_hash, sender_address, calldata, max_fee, signature, nonce) =
@@ -470,7 +478,7 @@ impl Sql {
                     Argument::String("".to_string()),   // has no signature
                     Argument::FieldElement((l1_handler_transaction.nonce).into()),
                 ),
-                _ => return,
+                _ => return Ok(()),
             };
 
         self.executor.send(QueryMessage {
@@ -489,7 +497,9 @@ impl Sql {
                 Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
             ],
             query_type: QueryType::Other,
-        });
+        })?;
+
+        Ok(())
     }
 
     pub fn store_event(
@@ -498,7 +508,7 @@ impl Sql {
         event: &Event,
         transaction_hash: Felt,
         block_timestamp: u64,
-    ) {
+    ) -> Result<()> {
         let id = Argument::String(event_id.to_string());
         let keys = Argument::String(felts_sql_string(&event.keys));
         let data = Argument::String(felts_sql_string(&event.data));
@@ -510,7 +520,9 @@ impl Sql {
              (?, ?, ?, ?, ?)".to_string(),
             arguments: vec![id.clone(), keys.clone(), data.clone(), hash.clone(), executed_at.clone()],
             query_type: QueryType::StoreEvent,
-        });
+        })?;
+
+        Ok(())
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -523,11 +535,11 @@ impl Sql {
         block_timestamp: u64,
         array_idx: &mut usize,
         parent_array_idx: &mut usize,
-    ) {
+    ) -> Result<()> {
         if let Ty::Enum(e) = model {
             if e.options.iter().all(|o| if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false })
             {
-                return;
+                return Ok(());
             }
         }
 
@@ -539,13 +551,13 @@ impl Sql {
             block_timestamp,
             *array_idx,
             *parent_array_idx,
-        );
+        )?;
 
-        let mut build_member = |pathname: &str, member: &Ty| {
+        let mut build_member = |pathname: &str, member: &Ty| -> Result<()> {
             if let Ty::Primitive(_) = member {
-                return;
+                return Ok(());
             } else if let Ty::ByteArray(_) = member {
-                return;
+                return Ok(());
             }
 
             let mut path_clone = path.clone();
@@ -559,20 +571,22 @@ impl Sql {
                 block_timestamp,
                 &mut (*array_idx + if let Ty::Array(_) = member { 1 } else { 0 }),
                 &mut (*parent_array_idx + if let Ty::Array(_) = model { 1 } else { 0 }),
-            );
+            )?;
+
+            Ok(())
         };
 
         if let Ty::Struct(s) = model {
             for member in s.children.iter() {
-                build_member(&member.name, &member.ty);
+                build_member(&member.name, &member.ty)?;
             }
         } else if let Ty::Tuple(t) = model {
             for (idx, member) in t.iter().enumerate() {
-                build_member(format!("_{}", idx).as_str(), member);
+                build_member(format!("_{}", idx).as_str(), member)?;
             }
         } else if let Ty::Array(array) = model {
             let ty = &array[0];
-            build_member("data", ty);
+            build_member("data", ty)?;
         } else if let Ty::Enum(e) = model {
             for child in e.options.iter() {
                 // Skip enum options that have no type / member
@@ -582,9 +596,11 @@ impl Sql {
                     }
                 }
 
-                build_member(&child.name, &child.ty);
+                build_member(&child.name, &child.ty)?;
             }
         }
+
+        Ok(())
     }
 
     fn build_set_entity_queries_recursive(
@@ -596,13 +612,13 @@ impl Sql {
         entity: (&Ty, IsStoreUpdate),
         block_timestamp: u64,
         indexes: &Vec<i64>,
-    ) {
+    ) -> Result<()> {
         let (entity_id, is_event_message) = entity_id;
         let (entity, is_store_update_member) = entity;
 
         let update_members = |members: &[Member],
                               executor: &mut UnboundedSender<QueryMessage>,
-                              indexes: &Vec<i64>| {
+                              indexes: &Vec<i64>| -> Result<()> {
             let table_id = path.join("$");
             let mut columns = vec![
                 "id".to_string(),
@@ -688,12 +704,14 @@ impl Sql {
                 )
             };
 
-            executor.send(QueryMessage { statement, arguments, query_type: QueryType::Other });
+            executor.send(QueryMessage { statement, arguments, query_type: QueryType::Other })?;
+
+            Ok(())
         };
 
         match entity {
             Ty::Struct(s) => {
-                update_members(&s.children, &mut self.executor, indexes);
+                update_members(&s.children, &mut self.executor, indexes)?;
 
                 for member in s.children.iter() {
                     let mut path_clone = path.clone();
@@ -705,7 +723,7 @@ impl Sql {
                         (&member.ty, is_store_update_member),
                         block_timestamp,
                         indexes,
-                    );
+                    )?;
                 }
             }
             Ty::Enum(e) => {
@@ -718,7 +736,7 @@ impl Sql {
                         }
                     },
                 ) {
-                    return;
+                    return Ok(());
                 }
 
                 let option = e.options[e.option.unwrap() as usize].clone();
@@ -730,7 +748,7 @@ impl Sql {
                     ],
                     &mut self.executor,
                     indexes,
-                );
+                )?;
 
                 match &option.ty {
                     // Skip enum options that have no type / member
@@ -745,7 +763,7 @@ impl Sql {
                             (&option.ty, is_store_update_member),
                             block_timestamp,
                             indexes,
-                        );
+                        )?;
                     }
                 }
             }
@@ -762,7 +780,7 @@ impl Sql {
                         .as_slice(),
                     &mut self.executor,
                     indexes,
-                );
+                )?;
 
                 for (idx, member) in t.iter().enumerate() {
                     let mut path_clone = path.clone();
@@ -774,7 +792,7 @@ impl Sql {
                         (member, is_store_update_member),
                         block_timestamp,
                         indexes,
-                    );
+                    )?;
                 }
             }
             Ty::Array(array) => {
@@ -794,7 +812,7 @@ impl Sql {
                     statement: query,
                     arguments,
                     query_type: QueryType::Other,
-                });
+                })?;
 
                 // insert the new array elements
                 for (idx, member) in array.iter().enumerate() {
@@ -805,7 +823,7 @@ impl Sql {
                         &[Member { name: "data".to_string(), ty: member.clone(), key: false }],
                         &mut self.executor,
                         &indexes,
-                    );
+                    )?;
 
                     let mut path_clone = path.clone();
                     path_clone.push("data".to_string());
@@ -816,11 +834,13 @@ impl Sql {
                         (member, is_store_update_member),
                         block_timestamp,
                         &indexes,
-                    );
+                    )?;
                 }
             }
             _ => {}
         }
+
+        Ok(())
     }
 
     fn build_delete_entity_queries_recursive(
@@ -828,7 +848,7 @@ impl Sql {
         path: Vec<String>,
         entity_id: &str,
         entity: &Ty,
-    ) {
+    ) -> Result<()> {
         match entity {
             Ty::Struct(s) => {
                 let table_id = path.join("$");
@@ -837,11 +857,11 @@ impl Sql {
                     statement,
                     arguments: vec![Argument::String(entity_id.to_string())],
                     query_type: QueryType::Other,
-                });
+                })?;
                 for member in s.children.iter() {
                     let mut path_clone = path.clone();
                     path_clone.push(member.name.clone());
-                    self.build_delete_entity_queries_recursive(path_clone, entity_id, &member.ty);
+                    self.build_delete_entity_queries_recursive(path_clone, entity_id, &member.ty)?;
                 }
             }
             Ty::Enum(e) => {
@@ -849,7 +869,7 @@ impl Sql {
                     .iter()
                     .all(|o| if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false })
                 {
-                    return;
+                    return Ok(());
                 }
 
                 let table_id = path.join("$");
@@ -858,7 +878,7 @@ impl Sql {
                     statement,
                     arguments: vec![Argument::String(entity_id.to_string())],
                     query_type: QueryType::Other,
-                });
+                })?;
 
                 for child in e.options.iter() {
                     if let Ty::Tuple(t) = &child.ty {
@@ -869,7 +889,7 @@ impl Sql {
 
                     let mut path_clone = path.clone();
                     path_clone.push(child.name.clone());
-                    self.build_delete_entity_queries_recursive(path_clone, entity_id, &child.ty);
+                    self.build_delete_entity_queries_recursive(path_clone, entity_id, &child.ty)?;
                 }
             }
             Ty::Array(array) => {
@@ -879,12 +899,12 @@ impl Sql {
                     statement,
                     arguments: vec![Argument::String(entity_id.to_string())],
                     query_type: QueryType::Other,
-                });
+                })?;
 
                 for member in array.iter() {
                     let mut path_clone = path.clone();
                     path_clone.push("data".to_string());
-                    self.build_delete_entity_queries_recursive(path_clone, entity_id, member);
+                    self.build_delete_entity_queries_recursive(path_clone, entity_id, member)?;
                 }
             }
             Ty::Tuple(t) => {
@@ -894,16 +914,18 @@ impl Sql {
                     statement,
                     arguments: vec![Argument::String(entity_id.to_string())],
                     query_type: QueryType::Other,
-                });
+                })?;
 
                 for (idx, member) in t.iter().enumerate() {
                     let mut path_clone = path.clone();
                     path_clone.push(format!("_{}", idx));
-                    self.build_delete_entity_queries_recursive(path_clone, entity_id, member);
+                    self.build_delete_entity_queries_recursive(path_clone, entity_id, member)?;
                 }
             }
             _ => {}
         }
+
+        Ok(())
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -916,7 +938,7 @@ impl Sql {
         block_timestamp: u64,
         array_idx: usize,
         parent_array_idx: usize,
-    ) {
+    ) -> Result<()> {
         let table_id = path.join("$");
         let mut indices = Vec::new();
 
@@ -1012,7 +1034,7 @@ impl Sql {
                         statement: statement.to_string(),
                         arguments,
                         query_type: QueryType::Other,
-                    });
+                    })?;
                 }
             }
             Ty::Tuple(tuple) => {
@@ -1044,7 +1066,7 @@ impl Sql {
                         statement: statement.to_string(),
                         arguments,
                         query_type: QueryType::Other,
-                    });
+                    })?;
                 }
             }
             Ty::Array(array) => {
@@ -1073,7 +1095,7 @@ impl Sql {
                     statement: statement.to_string(),
                     arguments,
                     query_type: QueryType::Other,
-                });
+                })?;
             }
             Ty::Enum(e) => {
                 for (idx, child) in e
@@ -1116,7 +1138,7 @@ impl Sql {
                         statement: statement.to_string(),
                         arguments,
                         query_type: QueryType::Other,
-                    });
+                    })?;
                 }
             }
             _ => {}
@@ -1159,15 +1181,17 @@ impl Sql {
             statement: create_table_query,
             arguments: vec![],
             query_type: QueryType::Other,
-        });
+        })?;
 
-        indices.iter().for_each(|s| {
+        for s in indices.iter() {
             self.executor.send(QueryMessage {
                 statement: s.to_string(),
                 arguments: vec![],
                 query_type: QueryType::Other,
-            });
-        });
+            })?;
+        }
+
+        Ok(())
     }
 }
 
