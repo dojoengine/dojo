@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1727210677958,
+  "lastUpdate": 1727213960860,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -21985,6 +21985,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3912490,
             "range": "± 65963",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "87ad4abb3344eceb371a09077659328c41aa6c59",
+          "message": "fix(dojo-lang): add a default namespace to ensure language server support (#2472)\n\nfix: add a default namespace to ensure language server support",
+          "timestamp": "2024-09-24T17:22:48-04:00",
+          "tree_id": "836388e3f442e7ef5376b619abcabad684ceb66a",
+          "url": "https://github.com/dojoengine/dojo/commit/87ad4abb3344eceb371a09077659328c41aa6c59"
+        },
+        "date": 1727213959698,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11886806753,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
