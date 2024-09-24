@@ -49,6 +49,9 @@ pub struct DeleteEntityQuery {
 pub enum QueryType {
     SetEntity(Ty),
     DeleteEntity(DeleteEntityQuery),
+    EventMessage(Ty),
+    RegisterModel,
+    StoreEvent,
     Other,
 }
 
@@ -136,6 +139,29 @@ impl QueryQueue {
 
                     let broker_message = BrokerMessage::EntityUpdated(entity_updated);
                     self.push_publish(broker_message);
+                }
+                QueryType::RegisterModel => {
+                    let row = query.fetch_one(&mut *tx).await.with_context(|| {
+                        format!("Failed to execute query: {:?}, args: {:?}", statement, arguments)
+                    })?;
+                    let model_registered = ModelRegistered::from_row(&row)?;
+                    self.push_publish(BrokerMessage::ModelRegistered(model_registered));
+                }
+                QueryType::EventMessage(entity) => {
+                    let row = query.fetch_one(&mut *tx).await.with_context(|| {
+                        format!("Failed to execute query: {:?}, args: {:?}", statement, arguments)
+                    })?;
+                    let mut event_message = EventMessageUpdated::from_row(&row)?;
+                    event_message.updated_model = Some(entity);
+                    let broker_message = BrokerMessage::EventMessageUpdated(event_message);
+                    self.push_publish(broker_message);
+                }
+                QueryType::StoreEvent => {
+                    let row = query.fetch_one(&mut *tx).await.with_context(|| {
+                        format!("Failed to execute query: {:?}, args: {:?}", statement, arguments)
+                    })?;
+                    let event = EventEmitted::from_row(&row)?;
+                    self.push_publish(BrokerMessage::EventEmitted(event));
                 }
                 QueryType::Other => {
                     query.execute(&mut *tx).await.with_context(|| {
