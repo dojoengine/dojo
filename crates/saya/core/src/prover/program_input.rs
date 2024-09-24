@@ -668,12 +668,14 @@ fn test_serialize_to_prover_args() -> anyhow::Result<()> {
                 "0x115c": "0x22b"
             }
         },
-        "contract_updates":{
+        "deployed_contracts":{
             "0x1046a": "0x1e61"
         },
         "declared_classes":{
             "0x15b38": "0x1869f"
         },
+        "deprecated_declared_classes": [],
+        "replaced_classes": {},
         "message_to_starknet_segment":["0x7b","0x1c8","0x7b","0x80"],
         "message_to_appchain_segment":["0x6c","0x6d","0x6e","0x6f","0x1","0x70"]
     }"#;
