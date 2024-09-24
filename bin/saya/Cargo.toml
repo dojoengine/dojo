@@ -24,5 +24,4 @@ tracing-subscriber.workspace = true
 url.workspace = true
 
 [dev-dependencies]
-cairo-proof-parser.workspace = true
 starknet-crypto.workspace = true

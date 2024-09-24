@@ -6,8 +6,7 @@ use std::ops::RangeInclusive;
 use std::sync::Arc;
 
 use anyhow::Context;
-use cairo_proof_parser::output::ExtractOutputResult;
-use cairo_proof_parser::{from_felts, StarkProof};
+use cairo_proof_parser::{from_felts};
 use dojo_os::piltover::{starknet_apply_piltover, PiltoverCalldata};
 use futures::future;
 use itertools::Itertools;
@@ -18,6 +17,7 @@ use katana_rpc_types::trace::TxExecutionInfo;
 use prover::persistent::{BatcherCall, BatcherInput, BatcherOutput};
 use prover::{extract_execute_calls, HttpProverParams, ProveProgram, ProverIdentifier};
 pub use prover_sdk::access_key::ProverAccessKey;
+use prover_sdk::ProverResult;
 use saya_provider::rpc::JsonRpcProvider;
 use saya_provider::Provider as SayaProvider;
 use serde::{Deserialize, Serialize};
@@ -43,6 +43,7 @@ pub mod blockchain;
 pub mod data_availability;
 pub mod dojo_os;
 pub mod error;
+pub mod macros;
 pub mod prover;
 pub mod verifier;
 
@@ -51,9 +52,7 @@ pub(crate) const LOG_TARGET: &str = "saya::core";
 /// Saya's main configuration.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SayaConfig {
-    #[serde(deserialize_with = "url_deserializer")]
     pub katana_rpc: Url,
-    #[serde(deserialize_with = "url_deserializer")]
     pub prover_url: Url,
     pub prover_key: ProverAccessKey,
     pub mode: SayaMode,
@@ -69,14 +68,6 @@ pub struct SayaConfig {
 }
 
 type SayaStarknetAccount = SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>;
-
-pub fn url_deserializer<'de, D>(deserializer: D) -> Result<Url, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    let s = String::deserialize(deserializer)?;
-    Url::parse(&s).map_err(serde::de::Error::custom)
-}
 
 pub fn felt_string_deserializer<'de, D>(deserializer: D) -> Result<Felt, D::Error>
 where
@@ -235,10 +226,10 @@ impl Saya {
 
                         let mut file =
                             File::create(filename).await.context("Failed to create proof file.")?;
-                        file.write_all(proof.as_bytes()).await.context("Failed to write proof.")?;
+                        file.write_all(serde_json::to_string(&proof).unwrap().as_bytes())
+                            .await
+                            .context("Failed to write proof.")?;
                     }
-
-                    let proof = StarkProof::try_from(proof.as_str())?;
                     self.process_proven(proof, vec![], block + num_blocks).await?;
 
                     block += num_blocks;
@@ -260,21 +251,21 @@ impl Saya {
                     // We might want to prove the signatures as well.
                     let proof = self.prover_identifier.prove_checker(calls).await?;
 
-                    if self.config.store_proofs {
-                        let filename = format!("proof_{}.json", block + num_blocks - 1);
-                        let mut file =
-                            File::create(filename).await.context("Failed to create proof file.")?;
-                        file.write_all(proof.as_bytes()).await.context("Failed to write proof.")?;
-                    }
+                    // if self.config.store_proofs {
+                    //     let filename = format!("proof_{}.json", block + num_blocks - 1);
+                    //     let mut file =
+                    //         File::create(filename).await.context("Failed to create proof file.")?;
+                    //     file.write_all(proof.as_bytes()).await.context("Failed to write proof.")?;
+                    // }
 
-                    let block_range =
-                        (self.config.block_range.0, self.config.block_range.1.unwrap());
+                    // let block_range =
+                    //     (self.config.block_range.0, self.config.block_range.1.unwrap());
 
-                    let proof = StarkProof::try_from(proof.as_str())?;
-                    let diff = proof.extract_output()?.program_output;
-                    self.process_proven(proof, diff, block_range.1).await?;
+                    // let proof = StarkProof::try_from(proof.as_str())?;
+                    // let diff = proof.extract_output()?.program_output;
+                    // self.process_proven(proof, diff, block_range.1).await?;
 
-                    info!(target: LOG_TARGET, "Successfully processed all {} blocks.", block_range.1 - block_range.0 + 1);
+                    // info!(target: LOG_TARGET, "Successfully processed all {} blocks.", block_range.1 - block_range.0 + 1);
                     break;
                 }
             }
@@ -429,14 +420,12 @@ impl Saya {
     /// * `last_block` - The last block number in the `prove_scheduler`.
     async fn process_proven(
         &self,
-        proof: StarkProof,
+        proof: ProverResult,
         state_diff: Vec<Felt>,
         last_block: u64,
     ) -> SayaResult<()> {
         trace!(target: LOG_TARGET, last_block, "Processing proven blocks.");
-
-        let serialized_proof = proof.to_felts();
-
+        let serialized_proof = proof.serialized_proof;
         // Publish state difference if DA client is available.
         if let Some(da) = &self.da_client {
             trace!(target: LOG_TARGET, last_block, "Publishing DA.");
@@ -452,10 +441,13 @@ impl Saya {
             }
         }
 
-        let program_hash = proof.extract_program()?.program_hash;
-        let ExtractOutputResult { program_output, program_output_hash } = proof.extract_output()?;
+        let program_hash = proof.program_hash;
+        let program_output_hash = proof.program_output_hash;
+        let program_output = proof.program_output;
+
         let program_hash_string = program_hash.to_string();
         let program_output_hash_string = program_output_hash.to_string();
+
         info!(target: LOG_TARGET, program_hash_string,program_output_hash_string, "Extracted program hash and output hash.");
         let expected_fact = poseidon_hash_many(&[program_hash, program_output_hash]).to_string();
         let program = program_hash.to_string();
@@ -499,12 +491,10 @@ impl Saya {
                     piltover_calldata,
                     self.config.settlement_contract,
                     &starknet_account,
-                    nonce,
                 )
                 .await?;
             }
         }
-
         Ok(())
     }
 }
@@ -532,7 +522,6 @@ impl SayaMode {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct StarknetAccountData {
-    #[serde(deserialize_with = "url_deserializer")]
     pub starknet_url: Url,
     #[serde(deserialize_with = "felt_string_deserializer")]
     pub chain_id: Felt,

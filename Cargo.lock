@@ -875,9 +875,9 @@ dependencies = [
 
 [[package]]
 name = "anyhow"
-version = "1.0.86"
+version = "1.0.89"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b3d1d046238990b9cf5bcde22a3fb3584ee5cf65fb2765f454ed428c7a0063da"
+checksum = "86fdf8605db99b54d3cd748a44c6d04df638eb5dafb219b135d0149bd0db01f6"
 
 [[package]]
 name = "arc-swap"
@@ -2958,7 +2958,7 @@ dependencies = [
 [[package]]
 name = "cairo-proof-parser"
 version = "0.1.0"
-source = "git+https://github.com/chudkowsky/cairo-proof-parser?rev=86170a0#86170a05f41f454ec25630b15235561686967200"
+source = "git+https://github.com/cartridge-gg/cairo-proof-parser.git?rev=f175d58#f175d58b487cc32c073d1a92d6d367eff234993b"
 dependencies = [
  "anyhow",
  "clap",
@@ -3458,7 +3458,7 @@ dependencies = [
 [[package]]
 name = "common"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/http-prover?rev=2a228de#2a228dee902e6ee79dc4444a8bda39afb4ad2c9c"
+source = "git+https://github.com/cartridge-gg/http-prover?rev=24256d5#24256d530e60de5458956a858106cc6be1cbee17"
 dependencies = [
  "ed25519-dalek",
  "serde",
@@ -10751,7 +10751,7 @@ dependencies = [
 [[package]]
 name = "prover-sdk"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/http-prover?rev=2a228de#2a228dee902e6ee79dc4444a8bda39afb4ad2c9c"
+source = "git+https://github.com/cartridge-gg/http-prover?rev=24256d5#24256d530e60de5458956a858106cc6be1cbee17"
 dependencies = [
  "base64 0.22.1",
  "common",
@@ -11939,7 +11939,6 @@ name = "saya"
 version = "1.0.0-alpha.9"
 dependencies = [
  "anyhow",
- "cairo-proof-parser",
  "clap",
  "clap-verbosity-flag",
  "clap_complete",
@@ -11977,6 +11976,7 @@ dependencies = [
  "num-bigint",
  "num-traits 0.2.19",
  "prover-sdk",
+ "reqwest 0.12.7",
  "saya-provider",
  "serde",
  "serde_json",
@@ -12359,7 +12359,7 @@ dependencies = [
 [[package]]
 name = "serde-felt"
 version = "0.1.0"
-source = "git+https://github.com/chudkowsky/cairo-proof-parser?rev=86170a0#86170a05f41f454ec25630b15235561686967200"
+source = "git+https://github.com/cartridge-gg/cairo-proof-parser.git?rev=f175d58#f175d58b487cc32c073d1a92d6d367eff234993b"
 dependencies = [
  "serde",
  "starknet-crypto 0.7.1",

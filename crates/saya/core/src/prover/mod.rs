@@ -8,30 +8,25 @@ use anyhow::bail;
 use async_trait::async_trait;
 
 mod client;
-pub mod extract;
 mod loader;
 pub mod persistent;
 mod program_input;
-pub mod state_diff;
-mod stone_image;
-mod vec252;
-
 use cairo_proof_parser::to_felts;
-use client::http_prove_felts;
+use client::http_prove;
 pub use client::HttpProverParams;
 use persistent::BatcherInput;
 pub use program_input::*;
+use prover_sdk::ProverResult;
 use starknet::accounts::Call;
 use starknet_crypto::Felt;
-pub use stone_image::*;
+
+use crate::error::ProverError;
+// pub use stone_image::*;
 
 /// The prover used to generate the proof.
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ProverIdentifier {
-    #[default]
-    Stone,
-    Sharp,
-    Platinum,
+    HerodotusSharp,
     Http(Arc<HttpProverParams>),
 }
 
@@ -42,7 +37,7 @@ pub enum ProveProgram {
 }
 
 impl ProverIdentifier {
-    pub async fn prove_checker(&self, calls: Vec<Call>) -> anyhow::Result<String> {
+    pub async fn prove_checker(&self, calls: Vec<Call>) -> Result<ProverResult, ProverError> {
         let len = Felt::from(calls.len() as u64);
         let mut args = calls
             .into_iter()
@@ -56,24 +51,20 @@ impl ProverIdentifier {
 
         match self {
             ProverIdentifier::Http(params) => {
-                http_prove_felts(params.clone(), args, ProveProgram::Checker).await
+                http_prove(params.clone(), args, ProveProgram::Checker).await
             }
-            ProverIdentifier::Stone => todo!(),
-            ProverIdentifier::Sharp => todo!(),
-            ProverIdentifier::Platinum => todo!(),
+            ProverIdentifier::HerodotusSharp => todo!(),
         }
     }
 
-    pub async fn prove_snos(&self, calls: BatcherInput) -> anyhow::Result<String> {
-        let calldata = to_felts(&calls)?;
+    pub async fn prove_snos(&self, calls: BatcherInput) -> Result<ProverResult, ProverError> {
+        let calldata = to_felts(&calls).map_err(|e| ProverError::SerdeFeltError(e.to_string()))?;
 
         match self {
             ProverIdentifier::Http(params) => {
-                http_prove_felts(params.clone(), calldata, ProveProgram::Batcher).await
+                http_prove(params.clone(), calldata, ProveProgram::Batcher).await
             }
-            ProverIdentifier::Stone => todo!(),
-            ProverIdentifier::Sharp => todo!(),
-            ProverIdentifier::Platinum => todo!(),
+            ProverIdentifier::HerodotusSharp => todo!(),
         }
     }
 }
@@ -102,9 +93,7 @@ impl FromStr for ProverIdentifier {
 
     fn from_str(prover: &str) -> anyhow::Result<Self> {
         Ok(match prover {
-            "stone" => ProverIdentifier::Stone,
-            "sharp" => ProverIdentifier::Sharp,
-            "platinum" => ProverIdentifier::Platinum,
+            "herodotus-sharp" => ProverIdentifier::HerodotusSharp,
             _ => bail!("Unknown prover: `{}`.", prover),
         })
     }
