@@ -32,6 +32,7 @@
 //! ```
 
 use std::collections::BTreeMap;
+use std::num::ParseIntError;
 
 use num_bigint::BigUint;
 use num_traits::{FromPrimitive, One, ToPrimitive};
@@ -61,8 +62,12 @@ pub enum EncodingError {
     MissingClassHash,
     #[error("Missing compiled class hash")]
     MissingCompiledClassHash,
-    #[error("invalid value")]
+    #[error("Invalid value")]
     InvalidValue,
+    #[error("Invalid metadata")]
+    InvalidMetadata,
+    #[error(transparent)]
+    ParseInt(#[from] ParseIntError),
 }
 
 /// This function doesn't enforce that the resulting [Vec] is of a certain length.
@@ -137,7 +142,7 @@ pub fn decode_state_updates(value: &[BigUint]) -> Result<StateUpdates, EncodingE
         let address: ContractAddress = Felt::from(address).into();
 
         let metadata = iter.next().ok_or(EncodingError::MissingMetadata)?;
-        let metadata = Metadata::decode(metadata);
+        let metadata = Metadata::decode(metadata)?;
 
         let class_hash = if metadata.class_information_flag {
             let hash = iter.next().ok_or(EncodingError::MissingNewClassHash)?;
@@ -214,23 +219,24 @@ struct Metadata {
 
 impl Metadata {
     // TODO: find a way to not use &str
-    fn decode(word: &BigUint) -> Self {
+    // TODO: improve errors?
+    fn decode(word: &BigUint) -> Result<Self, EncodingError> {
         // expand to 256 bits if needed
         let bits = format!("{word:0>256b}");
 
-        let flag = bits.get(127..(127 + 1)).unwrap();
-        let flag = u8::from_str_radix(flag, 2).unwrap();
+        let flag = bits.get(127..(127 + 1)).ok_or(EncodingError::InvalidMetadata)?;
+        let flag = u8::from_str_radix(flag, 2)?;
         let class_information_flag = flag == 1;
 
-        let nonce = bits.get(128..(128 + 64)).unwrap();
-        let nonce = u64::from_str_radix(nonce, 2).unwrap();
-        let nonce = Felt::from_u64(nonce).unwrap();
+        let nonce = bits.get(128..(128 + 64)).ok_or(EncodingError::InvalidMetadata)?;
+        let nonce = u64::from_str_radix(nonce, 2)?;
+        let nonce = Felt::from_u64(nonce).ok_or(EncodingError::InvalidMetadata)?;
         let new_nonce = if nonce == Felt::ZERO { None } else { Some(nonce) };
 
-        let total = bits.get(192..(192 + 64)).unwrap();
-        let total_storage_updates = usize::from_str_radix(total, 2).unwrap();
+        let total = bits.get(192..(192 + 64)).ok_or(EncodingError::InvalidMetadata)?;
+        let total_storage_updates = usize::from_str_radix(total, 2)?;
 
-        Self { class_information_flag, new_nonce, total_storage_updates }
+        Ok(Self { class_information_flag, new_nonce, total_storage_updates })
     }
 
     fn encode(&self) -> BigUint {
@@ -313,7 +319,7 @@ mod tests {
     fn rt_metadata_encoding() {
         let metadata = felt!("0x10000000000000001").to_biguint();
 
-        let encoded = Metadata::decode(&metadata);
+        let encoded = Metadata::decode(&metadata).unwrap();
         assert!(!encoded.class_information_flag);
         assert_eq!(encoded.new_nonce, Some(Felt::ONE));
         assert_eq!(encoded.total_storage_updates, 1);
