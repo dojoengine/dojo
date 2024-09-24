@@ -75,7 +75,6 @@ impl Sql {
     pub fn merge(&mut self, other: Sql) -> Result<()> {
         // Merge query queue
         self.query_queue.queue.extend(other.query_queue.queue);
-        self.query_queue.publish_queue.extend(other.query_queue.publish_queue);
 
         // This should never happen
         if self.world_address != other.world_address {
