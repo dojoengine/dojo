@@ -1,3 +1,36 @@
+//! Data availability encoding and decoding.
+//!
+//! The encoding format is based on the format of which Starknet's publishes its state diffs onto
+//! the Ethereum blockchain, refer to the Starknet [docs](https://docs.starknet.io/architecture-and-concepts/network-architecture/data-availability/) for more information.
+//!
+//! Example of a Starknet's encoded state diff that might be published on onchain:
+//!
+//! ```
+//! ┌───────┬─────────────────────────────────────────────────────────────────────┐
+//! │ Index │                          Field Element                              │
+//! ├───────┼─────────────────────────────────────────────────────────────────────┤
+//! │  [0]  │ 1                                                                   │
+//! │  [1]  │ 2019172390095051323869047481075102003731246132997057518965927979... │
+//! │  [2]  │ 18446744073709551617                                                │
+//! │  [3]  │ 100                                                                 │
+//! │  [4]  │ 200                                                                 │
+//! │  [5]  │ 1                                                                   │
+//! │  [6]  │ 1351148242645005540004162531550805076995747746087542030095186557... │
+//! │  [7]  │ 5584042735604047785084552540304580210136563524662166906885950118... │
+//! └───────┴─────────────────────────────────────────────────────────────────────┘
+//!
+//! Explanation:-
+//!
+//! [0] The number of contracts whose state was updated.
+//! [1] The address of the first, and only, contract whose state changed.
+//! [2] Meta information regarding the update, see [Metadata] for more details.
+//! [3] Key of the storage update
+//! [4] Value of the storage update (value of key 100 is set to 200)
+//! [5] New declare section: 1 declare v2 transaction in this state update
+//! [6] Encoding of the class hash
+//! [7] Encoding of the compiled class hash of the declared class
+//! ```
+
 use std::collections::BTreeMap;
 
 use num_bigint::BigUint;
@@ -8,8 +41,35 @@ use crate::contract::{ContractAddress, StorageKey, StorageValue};
 use crate::state::StateUpdates;
 use crate::Felt;
 
-use super::eip4844::BLOB_LEN;
+#[derive(Debug, thiserror::Error)]
+pub enum EncodingError {
+    #[error("Missing contract updates entry count")]
+    MissingUpdatesCount,
+    #[error("Missing class declarations entry count")]
+    MissingDeclarationsCount,
+    #[error("Missing contract address")]
+    MissingAddress,
+    #[error("Missing contract update metadata")]
+    MissingMetadata,
+    #[error("Missing updated storage key")]
+    MissingStorageKey,
+    #[error("Missing updated storage value")]
+    MissingStorageValue,
+    #[error("Missing new updated class hash")]
+    MissingNewClassHash,
+    #[error("Missing class hash")]
+    MissingClassHash,
+    #[error("Missing compiled class hash")]
+    MissingCompiledClassHash,
+    #[error("invalid value")]
+    InvalidValue,
+}
 
+/// This function doesn't enforce that the resulting [Vec] is of a certain length.
+///
+/// In a scenario where the state diffs of a block corresponds to a single data availability's
+/// blob object (eg an EIP4844 blob), it should be the sequencer's responsibility to ensure that
+/// the state diffs should fit inside the single blob object.
 pub fn encode_state_updates(value: StateUpdates) -> Vec<BigUint> {
     let mut contract_updates = BTreeMap::<ContractAddress, ContractUpdate>::new();
 
@@ -53,30 +113,49 @@ pub fn encode_state_updates(value: StateUpdates) -> Vec<BigUint> {
     buffer
 }
 
-pub fn decode_state_updates<'a>(value: impl IntoIterator<Item = &'a BigUint>) -> StateUpdates {
+/// Similar to the [encode_state_updates] function, this function doesn't enforce that the input
+/// [BigUint] values are of a certain length either.
+///
+/// # Errors
+///
+/// Will return an error if the list is already exhausted while decoding the intermediary fields
+/// that are expected to exist.
+pub fn decode_state_updates(value: &[BigUint]) -> Result<StateUpdates, EncodingError> {
     let mut state_updates = StateUpdates::default();
-    let mut iter = value.into_iter();
 
-    let total_contract_updates = iter.next().and_then(|v| v.to_usize()).expect("valid usize");
+    if value.is_empty() {
+        return Ok(state_updates);
+    }
 
-    for _ in 0..total_contract_updates {
-        let address: ContractAddress = iter.next().map(Felt::from).expect("valid address").into();
-        let metadata = iter.next().map(Metadata::decode).expect("valid metadata");
+    let mut iter = value.iter();
+
+    let total_updates = iter.next().ok_or(EncodingError::MissingUpdatesCount)?;
+    let total_updates = total_updates.to_usize().ok_or(EncodingError::InvalidValue)?;
+
+    for _ in 0..total_updates {
+        let address = iter.next().ok_or(EncodingError::MissingAddress)?;
+        let address: ContractAddress = Felt::from(address).into();
+
+        let metadata = iter.next().ok_or(EncodingError::MissingMetadata)?;
+        let metadata = Metadata::decode(metadata);
 
         let class_hash = if metadata.class_information_flag {
-            iter.next().map(Felt::from).map(Some).expect("valid class hash")
+            let hash = iter.next().ok_or(EncodingError::MissingNewClassHash)?;
+            Some(Felt::from(hash))
         } else {
             None
         };
 
         let mut storages = BTreeMap::new();
+
         for _ in 0..metadata.total_storage_updates {
-            let key = iter.next().map(StorageKey::from).expect("valid storage key");
-            if let Some(value) = iter.next().map(StorageValue::from) {
-                storages.insert(key, value);
-            } else {
-                return state_updates;
-            }
+            let key = iter.next().ok_or(EncodingError::MissingStorageKey)?;
+            let key = StorageKey::from(key);
+
+            let value = iter.next().ok_or(EncodingError::MissingStorageValue)?;
+            let value = StorageValue::from(value);
+
+            storages.insert(key, value);
         }
 
         if !storages.is_empty() {
@@ -92,24 +171,30 @@ pub fn decode_state_updates<'a>(value: impl IntoIterator<Item = &'a BigUint>) ->
         }
     }
 
-    let total_declared_classes = iter.next().and_then(|v| v.to_usize()).expect("valid usize");
+    let total_declarations = iter.next().ok_or(EncodingError::MissingDeclarationsCount)?;
+    let total_declarations = total_declarations.to_usize().ok_or(EncodingError::InvalidValue)?;
 
-    for _ in 0..total_declared_classes {
-        let class_hash = iter.next().map(ClassHash::from).expect("valid class hash");
-        let compiled_class_hash =
-            iter.next().map(CompiledClassHash::from).expect("valid compiled class hash");
+    for _ in 0..total_declarations {
+        let class_hash = iter.next().ok_or(EncodingError::MissingClassHash)?;
+        let class_hash = ClassHash::from(class_hash);
+
+        let compiled_class_hash = iter.next().ok_or(EncodingError::MissingCompiledClassHash)?;
+        let compiled_class_hash = CompiledClassHash::from(compiled_class_hash);
+
         state_updates.declared_classes.insert(class_hash, compiled_class_hash);
     }
 
-    state_updates
+    Ok(state_updates)
 }
 
 /// Metadata information about the contract update.
-///
-/// Encoding format:
-///
-/// |---padding---|---class flag---|---new nonce---|---no. storage updates---|
-///     127 bits        1 bit           64 bits             64 bits
+// Encoding format:
+//
+// ┌───────────────┬───────────────┬───────────────┬───────────────────────────┐
+// │    padding    │  class flag   │   new nonce   │   no. storage updates     │
+// ├───────────────┼───────────────┼───────────────┼───────────────────────────┤
+// │    127 bits   │    1 bit      │    64 bits    │         64 bits           │
+// └───────────────┴───────────────┴───────────────┴───────────────────────────┘
 #[derive(Debug, Default)]
 struct Metadata {
     /// Class information flag, whose value in the encoded format is one of the following:
@@ -135,7 +220,7 @@ impl Metadata {
 
         let flag = bits.get(127..(127 + 1)).unwrap();
         let flag = u8::from_str_radix(flag, 2).unwrap();
-        let class_information_flag = if flag == 1 { true } else { false };
+        let class_information_flag = flag == 1;
 
         let nonce = bits.get(128..(128 + 64)).unwrap();
         let nonce = u64::from_str_radix(nonce, 2).unwrap();
@@ -254,7 +339,7 @@ mod tests {
             biguint!("558404273560404778508455254030458021013656352466216690688595011803280448032"),
         ];
 
-        let state_updates = super::decode_state_updates(&input);
+        let state_updates = super::decode_state_updates(&input).unwrap();
 
         assert_eq!(state_updates.nonce_updates.len(), 1);
         assert_eq!(state_updates.storage_updates.len(), 1);
