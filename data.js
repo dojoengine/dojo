@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1727110306626,
+  "lastUpdate": 1727204470893,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -21828,6 +21828,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 12477943488,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "dd8b160dccb999956a88ce64f8a6e3733c174aba",
+          "message": "refactor(katana-primitives): replace `HashMap` with `BTreeMap` in state updates and genesis types (#2469)",
+          "timestamp": "2024-09-24T14:44:35-04:00",
+          "tree_id": "7c6fe00e323928a269eead9bbb3744cb41c634c7",
+          "url": "https://github.com/dojoengine/dojo/commit/dd8b160dccb999956a88ce64f8a6e3733c174aba"
+        },
+        "date": 1727204466460,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11737806968,
             "range": "± 0",
             "unit": "ns/iter"
           }
