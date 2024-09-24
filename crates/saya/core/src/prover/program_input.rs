@@ -121,7 +121,7 @@ impl ProgramInput {
             .state_updates
             .storage_updates
             .get(&ContractAddress::from(world))
-            .unwrap_or(&std::collections::HashMap::new())
+            .unwrap_or(&std::collections::BTreeMap::new())
             .iter()
             .flat_map(|(k, v)| vec![*k, *v])
             .collect::<Vec<_>>();
@@ -134,8 +134,8 @@ impl ProgramInput {
         self.message_to_starknet_segment.extend(latter.message_to_starknet_segment);
 
         // the later state should overwrite the previous one.
-        latter.state_updates.contract_updates.into_iter().for_each(|(k, v)| {
-            self.state_updates.contract_updates.insert(k, v);
+        latter.state_updates.deployed_contracts.into_iter().for_each(|(k, v)| {
+            self.state_updates.deployed_contracts.insert(k, v);
         });
         latter.state_updates.declared_classes.into_iter().for_each(|(k, v)| {
             self.state_updates.declared_classes.insert(k, v);
@@ -187,7 +187,7 @@ impl ProgramInput {
             .state_updates
             .storage_updates
             .get(&ContractAddress::from(world))
-            .unwrap_or(&std::collections::HashMap::new())
+            .unwrap_or(&std::collections::BTreeMap::new())
             .iter()
             .flat_map(|(k, v)| vec![*k, *v])
             .collect::<Vec<_>>();
@@ -219,8 +219,8 @@ impl ProgramInput {
             }
         }
 
-        out.push(Felt::from(self.state_updates.contract_updates.len()));
-        for (k, v) in &self.state_updates.contract_updates {
+        out.push(Felt::from(self.state_updates.deployed_contracts.len()));
+        for (k, v) in &self.state_updates.deployed_contracts {
             out.push(**k);
             out.push(*v);
         }
@@ -509,12 +509,14 @@ fn test_deserialize_input() -> anyhow::Result<()> {
             "0x457": "0x56ce",
             "0x45c": "0x56cf"
         },
-        "contract_updates":{
+        "deployed_contracts":{
             "0x3": "0x1a102c21"
         },
         "declared_classes":{
             "0x4d2": "0x3039"
-        }
+        },
+        "deprecated_declared_classes": [],
+        "replaced_classes": {}
     }"#;
     let mut expected = ProgramInput {
         prev_state_root: Felt::from_str("101")?,
@@ -553,7 +555,7 @@ fn test_deserialize_input() -> anyhow::Result<()> {
             .into_iter()
             .collect(),
 
-            contract_updates: vec![(
+            deployed_contracts: vec![(
                 ContractAddress::from(Felt::from_str("3")?),
                 Felt::from_str("437267489")?,
             )]
@@ -563,6 +565,8 @@ fn test_deserialize_input() -> anyhow::Result<()> {
             declared_classes: vec![(Felt::from_str("1234")?, Felt::from_str("12345")?)]
                 .into_iter()
                 .collect(),
+
+            ..Default::default()
         },
         world_da: None,
     };
@@ -621,7 +625,7 @@ fn test_serialize_input() -> anyhow::Result<()> {
             .into_iter()
             .collect(),
 
-            contract_updates: vec![(
+            deployed_contracts: vec![(
                 ContractAddress::from(Felt::from_str("3")?),
                 Felt::from_str("437267489")?,
             )]
@@ -631,6 +635,8 @@ fn test_serialize_input() -> anyhow::Result<()> {
             declared_classes: vec![(Felt::from_str("1234")?, Felt::from_str("12345")?)]
                 .into_iter()
                 .collect(),
+
+            ..Default::default()
         },
         world_da: Some(vec![
             Felt::from_str("2010")?,
@@ -662,12 +668,14 @@ fn test_serialize_to_prover_args() -> anyhow::Result<()> {
                 "0x115c": "0x22b"
             }
         },
-        "contract_updates":{
+        "deployed_contracts":{
             "0x1046a": "0x1e61"
         },
         "declared_classes":{
             "0x15b38": "0x1869f"
         },
+        "deprecated_declared_classes": [],
+        "replaced_classes": {},
         "message_to_starknet_segment":["0x7b","0x1c8","0x7b","0x80"],
         "message_to_appchain_segment":["0x6c","0x6d","0x6e","0x6f","0x1","0x70"]
     }"#;

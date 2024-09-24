@@ -71,7 +71,7 @@ fn test_simulate_tx_impl<EF: ExecutorFactory>(
 
     assert!(states.state_updates.nonce_updates.is_empty(), "no state updates");
     assert!(states.state_updates.storage_updates.is_empty(), "no state updates");
-    assert!(states.state_updates.contract_updates.is_empty(), "no state updates");
+    assert!(states.state_updates.deployed_contracts.is_empty(), "no state updates");
     assert!(states.state_updates.declared_classes.is_empty(), "no state updates");
 
     assert!(states.declared_sierra_classes.is_empty(), "no new classes should be declared");

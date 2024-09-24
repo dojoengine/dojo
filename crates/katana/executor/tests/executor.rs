@@ -1,6 +1,6 @@
 mod fixtures;
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use fixtures::{state_provider, valid_blocks};
 use katana_executor::{ExecutionOutput, ExecutionResult, ExecutorFactory};
@@ -283,16 +283,17 @@ fn test_executor_with_valid_blocks_impl<EF: ExecutorFactory>(
     assert_eq!(actual_txs, expected_txs);
 
     let actual_nonce_updates = states.state_updates.nonce_updates;
-    let expected_nonce_updates = HashMap::from([(main_account, felt!("3")), (new_acc, felt!("1"))]);
+    let expected_nonce_updates =
+        BTreeMap::from([(main_account, felt!("3")), (new_acc, felt!("1"))]);
 
     let actual_declared_classes = states.state_updates.declared_classes;
-    let expected_declared_classes = HashMap::from([(
+    let expected_declared_classes = BTreeMap::from([(
         felt!("0x420"),
         felt!("0x016c6081eb34ad1e0c5513234ed0c025b3c7f305902d291bad534cd6474c85bc"),
     )]);
 
-    let actual_contract_deployed = states.state_updates.contract_updates;
-    let expected_contract_deployed = HashMap::from([
+    let actual_contract_deployed = states.state_updates.deployed_contracts;
+    let expected_contract_deployed = BTreeMap::from([
         (new_acc, DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH),
         (deployed_contract.into(), DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH),
     ]);

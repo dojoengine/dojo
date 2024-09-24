@@ -217,7 +217,7 @@ impl ContractClassProvider for ForkedSnapshot {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
+    use std::collections::BTreeMap;
 
     use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
     use starknet::macros::felt;
@@ -253,7 +253,7 @@ mod tests {
             let remote = SharedStateProvider::new_with_backend(backend.clone());
             let local = ForkedStateDb::new(remote.clone());
 
-            let nonce_updates = HashMap::from([(address, remote_nonce)]);
+            let nonce_updates = BTreeMap::from([(address, remote_nonce)]);
             let updates = StateUpdatesWithDeclaredClasses {
                 state_updates: StateUpdates { nonce_updates, ..Default::default() },
                 ..Default::default()
@@ -273,19 +273,19 @@ mod tests {
             let remote = SharedStateProvider::new_with_backend(backend.clone());
             let local = ForkedStateDb::new(remote.clone());
 
-            let nonce_updates = HashMap::from([(address, remote_nonce)]);
-            let contract_updates = HashMap::from([(address, class_hash)]);
+            let nonce_updates = BTreeMap::from([(address, remote_nonce)]);
+            let deployed_contracts = BTreeMap::from([(address, class_hash)]);
             let updates = StateUpdatesWithDeclaredClasses {
                 state_updates: StateUpdates {
                     nonce_updates,
-                    contract_updates,
+                    deployed_contracts,
                     ..Default::default()
                 },
                 ..Default::default()
             };
             remote.0.insert_updates(updates);
 
-            let nonce_updates = HashMap::from([(address, local_nonce)]);
+            let nonce_updates = BTreeMap::from([(address, local_nonce)]);
             let updates = StateUpdatesWithDeclaredClasses {
                 state_updates: StateUpdates { nonce_updates, ..Default::default() },
                 ..Default::default()
@@ -305,12 +305,12 @@ mod tests {
             let remote = SharedStateProvider::new_with_backend(backend.clone());
             let local = ForkedStateDb::new(remote.clone());
 
-            let contract_updates = HashMap::from([(address, class_hash)]);
-            let nonce_updates = HashMap::from([(address, local_nonce)]);
+            let deployed_contracts = BTreeMap::from([(address, class_hash)]);
+            let nonce_updates = BTreeMap::from([(address, local_nonce)]);
             let updates = StateUpdatesWithDeclaredClasses {
                 state_updates: StateUpdates {
                     nonce_updates,
-                    contract_updates,
+                    deployed_contracts,
                     ..Default::default()
                 },
                 ..Default::default()
@@ -330,9 +330,9 @@ mod tests {
             let remote = SharedStateProvider::new_with_backend(backend.clone());
             let local = ForkedStateDb::new(remote.clone());
 
-            let contract_updates = HashMap::from([(address, class_hash)]);
+            let deployed_contracts = BTreeMap::from([(address, class_hash)]);
             let updates = StateUpdatesWithDeclaredClasses {
-                state_updates: StateUpdates { contract_updates, ..Default::default() },
+                state_updates: StateUpdates { deployed_contracts, ..Default::default() },
                 ..Default::default()
             };
             local.insert_updates(updates);
