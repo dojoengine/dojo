@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1727210619432,
+  "lastUpdate": 1727210677958,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -21937,6 +21937,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 11354502529,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "78250fad9e9189faaff9e5df5a05c4a493387af5",
+          "message": "fix(torii): improve log messages (#2463)\n\ncommit-id:88796bb8",
+          "timestamp": "2024-09-24T16:27:28-04:00",
+          "tree_id": "b01a68661478c88182bd57582fd3a73a47eb595d",
+          "url": "https://github.com/dojoengine/dojo/commit/78250fad9e9189faaff9e5df5a05c4a493387af5"
+        },
+        "date": 1727210676886,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 15554137,
+            "range": "± 291883",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3833612,
+            "range": "± 105127",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2479900696,
+            "range": "± 202868069",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3912490,
+            "range": "± 65963",
             "unit": "ns/iter"
           }
         ]
