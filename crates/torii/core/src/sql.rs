@@ -65,6 +65,12 @@ impl Sql {
             query_type: QueryType::Other,
         })?;
 
+        executor.send(QueryMessage {
+            statement: "".to_string(),
+            arguments: vec![],
+            query_type: QueryType::Execute,
+        })?;
+
         Ok(Self {
             pool: pool.clone(),
             world_address,

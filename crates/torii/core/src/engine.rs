@@ -152,7 +152,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         // use the start block provided by user if head is 0
         let (head, _, _) = self.db.head().await?;
         if head == 0 {
-            self.db.set_head(self.config.start_block);
+            self.db.set_head(self.config.start_block)?;
         } else if self.config.start_block != 0 {
             warn!(target: LOG_TARGET, "Start block ignored, stored head exists and will be used instead.");
         }
@@ -178,18 +178,12 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                                 info!(target: LOG_TARGET, "Syncing reestablished.");
                             }
 
-                            let (mut executor, sender) = Executor::new(self.db.pool.clone());
-                            tokio::spawn(async move {
-                                executor.run().await;
-                            });
-                            self.db.executor = sender;
-
                             match self.process(fetch_result).await {
                                 Ok(()) => {
                                     let _ = self.db.executor.send(QueryMessage {
-                                        statement: "COMMIT".to_string(),
+                                        statement: "".to_string(),
                                         arguments: vec![],
-                                        query_type: QueryType::Commit,
+                                        query_type: QueryType::Execute,
                                     });
                                 }
                             Err(e) => {
@@ -497,9 +491,9 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         // Process parallelized events
         self.process_tasks().await?;
 
-        self.db.set_head(data.latest_block_number);
-        self.db.set_last_pending_block_world_tx(None);
-        self.db.set_last_pending_block_tx(None);
+        self.db.set_head(data.latest_block_number)?;
+        self.db.set_last_pending_block_world_tx(None)?;
+        self.db.set_last_pending_block_tx(None)?;
 
         Ok(())
     }

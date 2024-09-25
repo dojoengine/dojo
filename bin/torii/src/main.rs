@@ -186,7 +186,7 @@ async fn main() -> anyhow::Result<()> {
     // Get world address
     let world = WorldContractReader::new(args.world_address, provider.clone());
 
-    let (mut executor, sender) = Executor::new(pool.clone());
+    let (mut executor, sender) = Executor::new(pool.clone()).await?;
     tokio::spawn(async move {
         executor.run().await.unwrap();
     });
@@ -233,12 +233,6 @@ async fn main() -> anyhow::Result<()> {
         shutdown_tx.clone(),
         Some(block_tx),
     );
-
-    sender.send(QueryMessage {
-        statement: "COMMIT".to_string(),
-        arguments: vec![],
-        query_type: QueryType::Commit,
-    })?;
 
     let shutdown_rx = shutdown_tx.subscribe();
     let (grpc_addr, grpc_server) = torii_grpc::server::new(

@@ -41,7 +41,7 @@ where
     let to = provider.block_hash_and_number().await?.block_number;
     let mut engine = Engine::new(
         world,
-        db,
+        db.clone(),
         provider,
         Processors {
             event: generate_event_processors_map(vec![
@@ -60,6 +60,12 @@ where
 
     let data = engine.fetch_range(0, to, None).await.unwrap();
     engine.process_range(data).await.unwrap();
+
+    db.executor.send(QueryMessage {
+        statement: "".to_string(),
+        arguments: vec![],
+        query_type: QueryType::Execute,
+    });
 
     Ok(engine)
 }
@@ -127,7 +133,7 @@ async fn test_load_from_remote() {
 
     let world_reader = WorldContractReader::new(strat.world_address, Arc::clone(&provider));
 
-    let (mut executor, sender) = Executor::new(pool.clone());
+    let (mut executor, sender) = Executor::new(pool.clone()).await.unwrap();
     tokio::spawn(async move {
         executor.run().await.unwrap();
     });
@@ -200,12 +206,6 @@ async fn test_load_from_remote() {
 
     assert_eq!(id, format!("{:#x}", poseidon_hash_many(&[account.address()])));
     assert_eq!(keys, format!("{:#x}/", account.address()));
-
-    sender.send(QueryMessage {
-        statement: "COMMIT".to_string(),
-        arguments: vec![],
-        query_type: QueryType::Commit,
-    });
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -296,7 +296,7 @@ async fn test_load_from_remote_del() {
 
     let world_reader = WorldContractReader::new(strat.world_address, Arc::clone(&provider));
 
-    let (mut executor, sender) = Executor::new(pool.clone());
+    let (mut executor, sender) = Executor::new(pool.clone()).await.unwrap();
     tokio::spawn(async move {
         executor.run().await.unwrap();
     });
@@ -311,12 +311,6 @@ async fn test_load_from_remote_del() {
 
     // TODO: check how we can have a test that is more chronological with Torii re-syncing
     // to ensure we can test intermediate states.
-
-    sender.send(QueryMessage {
-        statement: "COMMIT".to_string(),
-        arguments: vec![],
-        query_type: QueryType::Commit,
-    });
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -395,7 +389,7 @@ async fn test_update_with_set_record() {
 
     let world_reader = WorldContractReader::new(strat.world_address, Arc::clone(&provider));
 
-    let (mut executor, sender) = Executor::new(pool.clone());
+    let (mut executor, sender) = Executor::new(pool.clone()).await.unwrap();
     tokio::spawn(async move {
         executor.run().await.unwrap();
     });
@@ -403,12 +397,6 @@ async fn test_update_with_set_record() {
     let db = Sql::new(pool.clone(), world_reader.address, sender.clone()).await.unwrap();
 
     let _ = bootstrap_engine(world_reader, db.clone(), Arc::clone(&provider)).await.unwrap();
-
-    sender.send(QueryMessage {
-        statement: "COMMIT".to_string(),
-        arguments: vec![],
-        query_type: QueryType::Commit,
-    });
 }
 
 /// Count the number of rows in a table.
