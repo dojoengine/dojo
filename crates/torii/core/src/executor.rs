@@ -79,7 +79,11 @@ impl QueryMessage {
     }
 
     pub fn execute(sender: oneshot::Sender<Result<()>>) -> Self {
-        Self { statement: "".to_string(), arguments: vec![], query_type: QueryType::Execute(sender) }
+        Self {
+            statement: "".to_string(),
+            arguments: vec![],
+            query_type: QueryType::Execute(sender),
+        }
     }
 }
 

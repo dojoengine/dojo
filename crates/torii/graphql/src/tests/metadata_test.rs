@@ -108,7 +108,8 @@ mod tests {
     #[sqlx::test(migrations = "../migrations")]
     async fn test_empty_content(pool: SqlitePool) {
         let (shutdown_tx, _) = broadcast::channel(1);
-        let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
+        let (mut executor, sender) =
+            Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
         tokio::spawn(async move {
             executor.run().await.unwrap();
         });
