@@ -199,6 +199,38 @@ async fn deploy_account(
     let res = provider.get_class_hash_at(BlockId::Tag(BlockTag::Pending), computed_address).await?;
     assert_eq!(res, class_hash);
 
+    // deploy from empty balance,
+    // need to test this case because of how blockifier's StatefulValidator works.
+    // TODO: add more descriptive reason
+    if disable_fee {
+        let salt = felt!("0x456");
+
+        // starknet-rs's utility for deploying an OpenZeppelin account
+        let factory =
+            OpenZeppelinAccountFactory::new(class_hash, chain_id, &signer, &provider).await?;
+        let res = factory.deploy_v1(salt).send().await?;
+        let ctor_args = [signer.get_public_key().await?.scalar()];
+        let computed_address = get_contract_address(salt, class_hash, &ctor_args, Felt::ZERO);
+
+        // the contract address in the send tx result must be the same as the computed one
+        assert_eq!(res.contract_address, computed_address);
+
+        let receipt = dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await?;
+        assert_matches!(
+            receipt.receipt,
+            TransactionReceipt::DeployAccount(DeployAccountTransactionReceipt { contract_address, .. })  => {
+                // the contract address in the receipt must be the same as the computed one
+                assert_eq!(contract_address, computed_address)
+            }
+        );
+
+        // Verify the `getClassHashAt` returns the same class hash that we use for the account
+        // deployment
+        let res =
+            provider.get_class_hash_at(BlockId::Tag(BlockTag::Pending), computed_address).await?;
+        assert_eq!(res, class_hash);
+    }
+
     Ok(())
 }
 
