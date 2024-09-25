@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1727302081484,
+  "lastUpdate": 1727302170894,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -22561,6 +22561,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 12244189142,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ae41d8c2a41454a55eef2f8ff11b202fcbbb5bbd",
+          "message": "Bump `blockifier` to fix `DeployAccount` tx not respecting disable fee flag (#2478)",
+          "timestamp": "2024-09-26T05:51:37+08:00",
+          "tree_id": "ef9de5c6d461e90df3f1fe3cf0df5036c78b6802",
+          "url": "https://github.com/dojoengine/dojo/commit/ae41d8c2a41454a55eef2f8ff11b202fcbbb5bbd"
+        },
+        "date": 1727302169719,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 15820481,
+            "range": "± 291093",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 4986033,
+            "range": "± 290379",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2649338109,
+            "range": "± 230789626",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4183445,
+            "range": "± 418180",
             "unit": "ns/iter"
           }
         ]
