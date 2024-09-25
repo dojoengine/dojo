@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1727228519735,
+  "lastUpdate": 1727277159918,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -22297,6 +22297,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3911731,
             "range": "± 56349",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c11da6cbc71589a62cf9c58f11031cb82239a1f1",
+          "message": "Katana: Add state update DA encodings (#2474)",
+          "timestamp": "2024-09-25T22:56:35+08:00",
+          "tree_id": "650c90ae8955189c0e7e4e15a60ab9bc23810324",
+          "url": "https://github.com/dojoengine/dojo/commit/c11da6cbc71589a62cf9c58f11031cb82239a1f1"
+        },
+        "date": 1727277158682,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11154413269,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
