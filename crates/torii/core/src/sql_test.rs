@@ -20,7 +20,7 @@ use starknet_crypto::poseidon_hash_many;
 use tokio::sync::broadcast;
 
 use crate::engine::{Engine, EngineConfig, Processors};
-use crate::executor::{Executor, QueryMessage, QueryType};
+use crate::executor::{Executor, QueryMessage};
 use crate::processors::generate_event_processors_map;
 use crate::processors::register_model::RegisterModelProcessor;
 use crate::processors::store_del_record::StoreDelRecordProcessor;
@@ -61,11 +61,7 @@ where
     let data = engine.fetch_range(0, to, None).await.unwrap();
     engine.process_range(data).await.unwrap();
 
-    db.executor.send(QueryMessage {
-        statement: "".to_string(),
-        arguments: vec![],
-        query_type: QueryType::Execute,
-    })?;
+    db.executor.send(QueryMessage::execute())?;
 
     Ok(engine)
 }
