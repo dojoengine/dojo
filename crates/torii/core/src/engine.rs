@@ -157,7 +157,8 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
 
     pub async fn start(&mut self) -> Result<()> {
         // use the start block provided by user if head is 0
-        let (mut head, mut last_pending_block_tx, mut last_pending_block_world_tx) = self.db.head().await?;
+        let (mut head, mut last_pending_block_tx, mut last_pending_block_world_tx) =
+            self.db.head().await?;
         if head == 0 {
             self.db.set_head(self.config.start_block)?;
         } else if self.config.start_block != 0 {
@@ -379,15 +380,9 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
 
     pub async fn process(&mut self, fetch_result: FetchDataResult) -> Result<Option<EngineHead>> {
         match fetch_result {
-            FetchDataResult::Range(data) => {
-                self.process_range(data).await.map(Some)
-            }
-            FetchDataResult::Pending(data) => {
-                self.process_pending(data).await.map(Some)
-            }
-            FetchDataResult::None => {
-                Ok(None)
-            }
+            FetchDataResult::Range(data) => self.process_range(data).await.map(Some),
+            FetchDataResult::Pending(data) => self.process_pending(data).await.map(Some),
+            FetchDataResult::None => Ok(None),
         }
     }
 
@@ -429,7 +424,11 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                             if let Some(tx) = last_pending_block_world_tx {
                                 self.db.set_last_pending_block_world_tx(Some(tx))?;
                             }
-                            return Ok(EngineHead { block_number: data.block_number - 1, last_pending_block_tx, last_pending_block_world_tx });
+                            return Ok(EngineHead {
+                                block_number: data.block_number - 1,
+                                last_pending_block_tx,
+                                last_pending_block_world_tx,
+                            });
                         }
                         _ => {
                             error!(target: LOG_TARGET, error = %e, transaction_hash = %format!("{:#x}", transaction_hash), "Processing pending transaction.");
@@ -464,7 +463,11 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             self.db.set_last_pending_block_world_tx(Some(tx))?;
         }
 
-        Ok(EngineHead { block_number: data.block_number - 1, last_pending_block_tx, last_pending_block_world_tx })
+        Ok(EngineHead {
+            block_number: data.block_number - 1,
+            last_pending_block_tx,
+            last_pending_block_world_tx,
+        })
     }
 
     pub async fn process_range(&mut self, data: FetchRangeResult) -> Result<EngineHead> {
@@ -506,7 +509,11 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         self.db.set_last_pending_block_world_tx(None)?;
         self.db.set_last_pending_block_tx(None)?;
 
-        Ok(EngineHead { block_number: data.latest_block_number, last_pending_block_tx: None, last_pending_block_world_tx: None })
+        Ok(EngineHead {
+            block_number: data.latest_block_number,
+            last_pending_block_tx: None,
+            last_pending_block_world_tx: None,
+        })
     }
 
     async fn process_tasks(&mut self) -> Result<()> {
