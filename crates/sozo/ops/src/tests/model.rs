@@ -54,7 +54,7 @@ async fn test_model_ops(sequencer: &RunnerCtx) {
         )
         .await
         .unwrap(),
-        Felt::from_hex("0x68e3a53988f20d84c6652f25d6add070633a5d05f8c4ac68285cacb228afa14")
+        Felt::from_hex("0x237386e1b35190b45c7d0aa29b3957d84ba2d4d22c2c10f7511b3abf0d7bd73")
             .unwrap()
     );
 

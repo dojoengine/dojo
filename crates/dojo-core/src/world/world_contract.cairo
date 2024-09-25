@@ -643,6 +643,12 @@ pub mod world {
             self.assert_caller_namespace_write_access(@namespace, namespace_hash);
 
             let selector = dispatcher.selector();
+
+            match self.resources.read(selector) {
+                Resource::Unregistered => {},
+                _ => panic_with_byte_array(@errors::resource_already_registered(selector))
+            };
+
             self.owners.write((selector, caller), true);
             self.resources.write(selector, Resource::Contract((class_hash, contract_address)));
 

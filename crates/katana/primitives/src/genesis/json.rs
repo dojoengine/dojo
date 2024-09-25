@@ -1,7 +1,7 @@
 //! JSON representation of the genesis configuration. Used to deserialize the genesis configuration
 //! from a JSON file.
 
-use std::collections::{hash_map, BTreeMap, HashMap};
+use std::collections::{btree_map, hash_map, BTreeMap, HashMap};
 use std::fs::File;
 use std::io::{
     BufReader, {self},
@@ -161,7 +161,7 @@ pub struct FeeTokenConfigJson {
     /// If not provided, the default fee token class is used.
     pub class: Option<ClassNameOrHash>,
     /// To initialize the fee token contract storage
-    pub storage: Option<HashMap<StorageKey, StorageValue>>,
+    pub storage: Option<BTreeMap<StorageKey, StorageValue>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -173,7 +173,7 @@ pub struct UniversalDeployerConfigJson {
     /// If not provided, the default UD class is used.
     pub class: Option<ClassNameOrHash>,
     /// To initialize the UD contract storage
-    pub storage: Option<HashMap<StorageKey, StorageValue>>,
+    pub storage: Option<BTreeMap<StorageKey, StorageValue>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -182,7 +182,7 @@ pub struct GenesisContractJson {
     pub class: Option<ClassNameOrHash>,
     pub balance: Option<U256>,
     pub nonce: Option<Felt>,
-    pub storage: Option<HashMap<StorageKey, StorageValue>>,
+    pub storage: Option<BTreeMap<StorageKey, StorageValue>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -194,7 +194,7 @@ pub struct GenesisAccountJson {
     pub nonce: Option<Felt>,
     /// The class hash of the account contract. If not provided, the default account class is used.
     pub class: Option<ClassNameOrHash>,
-    pub storage: Option<HashMap<StorageKey, StorageValue>>,
+    pub storage: Option<BTreeMap<StorageKey, StorageValue>>,
     pub private_key: Option<Felt>,
 }
 
@@ -267,9 +267,9 @@ pub struct GenesisJson {
     pub fee_token: FeeTokenConfigJson,
     pub universal_deployer: Option<UniversalDeployerConfigJson>,
     #[serde(default)]
-    pub accounts: HashMap<ContractAddress, GenesisAccountJson>,
+    pub accounts: BTreeMap<ContractAddress, GenesisAccountJson>,
     #[serde(default)]
-    pub contracts: HashMap<ContractAddress, GenesisContractJson>,
+    pub contracts: BTreeMap<ContractAddress, GenesisContractJson>,
 }
 
 impl GenesisJson {
@@ -319,7 +319,7 @@ impl TryFrom<GenesisJson> for Genesis {
     fn try_from(value: GenesisJson) -> Result<Self, Self::Error> {
         // a lookup table for classes that is assigned a name
         let mut class_names: HashMap<String, Felt> = HashMap::new();
-        let mut classes: HashMap<ClassHash, GenesisClass> = HashMap::new();
+        let mut classes: BTreeMap<ClassHash, GenesisClass> = BTreeMap::new();
 
         #[cfg(feature = "slot")]
         // Merely a band aid fix for now.
@@ -521,7 +521,7 @@ impl TryFrom<GenesisJson> for Genesis {
                 None => {
                     // check that the default account class exists in the classes field before
                     // inserting it
-                    if let hash_map::Entry::Vacant(e) =
+                    if let btree_map::Entry::Vacant(e) =
                         classes.entry(DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH)
                     {
                         // insert default account class to the classes map
@@ -677,6 +677,7 @@ mod tests {
     use starknet::macros::felt;
 
     use super::*;
+    use crate::address;
 
     #[test]
     fn deserialize_from_json() {
@@ -690,40 +691,30 @@ mod tests {
         assert_eq!(json.gas_prices.eth, 1111);
         assert_eq!(json.gas_prices.strk, 2222);
 
-        assert_eq!(json.fee_token.address, Some(ContractAddress::from(felt!("0x55"))));
+        assert_eq!(json.fee_token.address, Some(address!("0x55")));
         assert_eq!(json.fee_token.name, String::from("ETHER"));
         assert_eq!(json.fee_token.symbol, String::from("ETH"));
         assert_eq!(json.fee_token.class, Some(ClassNameOrHash::Name(String::from("MyErc20"))));
         assert_eq!(json.fee_token.decimals, 18);
         assert_eq!(
             json.fee_token.storage,
-            Some(HashMap::from([(felt!("0x111"), felt!("0x1")), (felt!("0x222"), felt!("0x2"))]))
+            Some(BTreeMap::from([(felt!("0x111"), felt!("0x1")), (felt!("0x222"), felt!("0x2"))]))
         );
 
         assert_eq!(
             json.universal_deployer.clone().unwrap().address,
-            Some(ContractAddress::from(felt!(
-                "0x041a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf"
-            )))
+            Some(address!("0x041a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf"))
         );
         assert_eq!(json.universal_deployer.unwrap().class, None);
         assert_eq!(
             json.fee_token.storage,
-            Some(HashMap::from([(felt!("0x111"), felt!("0x1")), (felt!("0x222"), felt!("0x2")),]))
+            Some(BTreeMap::from([(felt!("0x111"), felt!("0x1")), (felt!("0x222"), felt!("0x2")),]))
         );
 
-        let acc_1 = ContractAddress::from(felt!(
-            "0x66efb28ac62686966ae85095ff3a772e014e7fbf56d4c5f6fac5606d4dde23a"
-        ));
-        let acc_2 = ContractAddress::from(felt!(
-            "0x6b86e40118f29ebe393a75469b4d926c7a44c2e2681b6d319520b7c1156d114"
-        ));
-        let acc_3 = ContractAddress::from(felt!(
-            "0x79156ecb3d8f084001bb498c95e37fa1c4b40dbb35a3ae47b77b1ad535edcb9"
-        ));
-        let acc_4 = ContractAddress::from(felt!(
-            "0x053a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf"
-        ));
+        let acc_1 = address!("0x66efb28ac62686966ae85095ff3a772e014e7fbf56d4c5f6fac5606d4dde23a");
+        let acc_2 = address!("0x6b86e40118f29ebe393a75469b4d926c7a44c2e2681b6d319520b7c1156d114");
+        let acc_3 = address!("0x79156ecb3d8f084001bb498c95e37fa1c4b40dbb35a3ae47b77b1ad535edcb9");
+        let acc_4 = address!("0x053a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf");
 
         assert_eq!(json.accounts.len(), 4);
 
@@ -736,7 +727,7 @@ mod tests {
         assert_eq!(json.accounts[&acc_1].class, Some(ClassNameOrHash::Hash(felt!("0x80085"))));
         assert_eq!(
             json.accounts[&acc_1].storage,
-            Some(HashMap::from([(felt!("0x1"), felt!("0x1")), (felt!("0x2"), felt!("0x2")),]))
+            Some(BTreeMap::from([(felt!("0x1"), felt!("0x1")), (felt!("0x2"), felt!("0x2")),]))
         );
 
         assert_eq!(json.accounts[&acc_2].public_key, felt!("0x2"));
@@ -766,15 +757,12 @@ mod tests {
 
         assert_eq!(json.contracts.len(), 3);
 
-        let contract_1 = ContractAddress::from(felt!(
-            "0x29873c310fbefde666dc32a1554fea6bb45eecc84f680f8a2b0a8fbb8cb89af"
-        ));
-        let contract_2 = ContractAddress::from(felt!(
-            "0xe29882a1fcba1e7e10cad46212257fea5c752a4f9b1b1ec683c503a2cf5c8a"
-        ));
-        let contract_3 = ContractAddress::from(felt!(
-            "0x05400e90f7e0ae78bd02c77cd75527280470e2fe19c54970dd79dc37a9d3645c"
-        ));
+        let contract_1 =
+            address!("0x29873c310fbefde666dc32a1554fea6bb45eecc84f680f8a2b0a8fbb8cb89af");
+        let contract_2 =
+            address!("0xe29882a1fcba1e7e10cad46212257fea5c752a4f9b1b1ec683c503a2cf5c8a");
+        let contract_3 =
+            address!("0x05400e90f7e0ae78bd02c77cd75527280470e2fe19c54970dd79dc37a9d3645c");
 
         assert_eq!(
             json.contracts[&contract_1].balance,
@@ -787,7 +775,7 @@ mod tests {
         );
         assert_eq!(
             json.contracts[&contract_1].storage,
-            Some(HashMap::from([(felt!("0x1"), felt!("0x1")), (felt!("0x2"), felt!("0x2"))]))
+            Some(BTreeMap::from([(felt!("0x1"), felt!("0x1")), (felt!("0x2"), felt!("0x2"))]))
         );
 
         assert_eq!(
@@ -806,7 +794,7 @@ mod tests {
         );
         assert_eq!(
             json.contracts[&contract_3].storage,
-            Some(HashMap::from([(felt!("0x1"), felt!("0x1"))]))
+            Some(BTreeMap::from([(felt!("0x1"), felt!("0x1"))]))
         );
 
         similar_asserts::assert_eq!(
@@ -877,7 +865,7 @@ mod tests {
         let json = GenesisJson::load(path).unwrap();
         let actual_genesis = Genesis::try_from(json).unwrap();
 
-        let expected_classes = HashMap::from([
+        let expected_classes = BTreeMap::from([
             (
                 felt!("0x07b3e05f48f0c69e4a65ce5e076a66271a527aff2c34ce1083ec6e1526997a69"),
                 GenesisClass {
@@ -924,38 +912,27 @@ mod tests {
         ]);
 
         let expected_fee_token = FeeTokenConfig {
-            address: ContractAddress::from(felt!("0x55")),
+            address: address!("0x55"),
             name: String::from("ETHER"),
             symbol: String::from("ETH"),
             decimals: 18,
             class_hash: felt!("0x8"),
-            storage: Some(HashMap::from([
+            storage: Some(BTreeMap::from([
                 (felt!("0x111"), felt!("0x1")),
                 (felt!("0x222"), felt!("0x2")),
             ])),
         };
 
-        let acc_1 = ContractAddress::from(felt!(
-            "0x66efb28ac62686966ae85095ff3a772e014e7fbf56d4c5f6fac5606d4dde23a"
-        ));
-        let acc_2 = ContractAddress::from(felt!(
-            "0x6b86e40118f29ebe393a75469b4d926c7a44c2e2681b6d319520b7c1156d114"
-        ));
-        let acc_3 = ContractAddress::from(felt!(
-            "0x79156ecb3d8f084001bb498c95e37fa1c4b40dbb35a3ae47b77b1ad535edcb9"
-        ));
-        let acc_4 = ContractAddress::from(felt!(
-            "0x053a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf"
-        ));
-        let contract_1 = ContractAddress::from(felt!(
-            "0x29873c310fbefde666dc32a1554fea6bb45eecc84f680f8a2b0a8fbb8cb89af"
-        ));
-        let contract_2 = ContractAddress::from(felt!(
-            "0xe29882a1fcba1e7e10cad46212257fea5c752a4f9b1b1ec683c503a2cf5c8a"
-        ));
-        let contract_3 = ContractAddress::from(felt!(
-            "0x05400e90f7e0ae78bd02c77cd75527280470e2fe19c54970dd79dc37a9d3645c"
-        ));
+        let acc_1 = address!("0x66efb28ac62686966ae85095ff3a772e014e7fbf56d4c5f6fac5606d4dde23a");
+        let acc_2 = address!("0x6b86e40118f29ebe393a75469b4d926c7a44c2e2681b6d319520b7c1156d114");
+        let acc_3 = address!("0x79156ecb3d8f084001bb498c95e37fa1c4b40dbb35a3ae47b77b1ad535edcb9");
+        let acc_4 = address!("0x053a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf");
+        let contract_1 =
+            address!("0x29873c310fbefde666dc32a1554fea6bb45eecc84f680f8a2b0a8fbb8cb89af");
+        let contract_2 =
+            address!("0xe29882a1fcba1e7e10cad46212257fea5c752a4f9b1b1ec683c503a2cf5c8a");
+        let contract_3 =
+            address!("0x05400e90f7e0ae78bd02c77cd75527280470e2fe19c54970dd79dc37a9d3645c");
 
         let expected_allocations = BTreeMap::from([
             (
@@ -965,7 +942,7 @@ mod tests {
                     balance: Some(U256::from_str("0xD3C21BCECCEDA1000000").unwrap()),
                     nonce: Some(felt!("0x1")),
                     class_hash: felt!("0x80085"),
-                    storage: Some(HashMap::from([
+                    storage: Some(BTreeMap::from([
                         (felt!("0x1"), felt!("0x1")),
                         (felt!("0x2"), felt!("0x2")),
                     ])),
@@ -1010,7 +987,7 @@ mod tests {
                     balance: Some(U256::from_str("0xD3C21BCECCEDA1000000").unwrap()),
                     nonce: None,
                     class_hash: Some(felt!("0x8")),
-                    storage: Some(HashMap::from([
+                    storage: Some(BTreeMap::from([
                         (felt!("0x1"), felt!("0x1")),
                         (felt!("0x2"), felt!("0x2")),
                     ])),
@@ -1031,7 +1008,7 @@ mod tests {
                     balance: None,
                     nonce: None,
                     class_hash: Some(felt!("0x80085")),
-                    storage: Some(HashMap::from([(felt!("0x1"), felt!("0x1"))])),
+                    storage: Some(BTreeMap::from([(felt!("0x1"), felt!("0x1"))])),
                 }),
             ),
         ]);
@@ -1042,15 +1019,15 @@ mod tests {
             fee_token: expected_fee_token,
             allocations: expected_allocations,
             timestamp: 5123512314u64,
-            sequencer_address: ContractAddress::from(felt!("0x100")),
+            sequencer_address: address!("0x100"),
             state_root: felt!("0x99"),
             parent_hash: felt!("0x999"),
             gas_prices: GasPrices { eth: 1111, strk: 2222 },
             universal_deployer: Some(UniversalDeployerConfig {
                 class_hash: DEFAULT_LEGACY_UDC_CLASS_HASH,
-                address: ContractAddress::from(felt!(
+                address: address!(
                     "0x041a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf"
-                )),
+                ),
                 storage: Some([(felt!("0x10"), felt!("0x100"))].into()),
             }),
         };
@@ -1116,7 +1093,7 @@ mod tests {
         let genesis_json: GenesisJson = GenesisJson::from_str(json).unwrap();
         let actual_genesis = Genesis::try_from(genesis_json).unwrap();
 
-        let classes = HashMap::from([
+        let classes = BTreeMap::from([
             (
                 DEFAULT_LEGACY_UDC_CLASS_HASH,
                 GenesisClass {
@@ -1162,9 +1139,7 @@ mod tests {
         };
 
         let allocations = BTreeMap::from([(
-            ContractAddress::from(felt!(
-                "0x66efb28ac62686966ae85095ff3a772e014e7fbf56d4c5f6fac5606d4dde23a"
-            )),
+            address!("0x66efb28ac62686966ae85095ff3a772e014e7fbf56d4c5f6fac5606d4dde23a"),
             GenesisAllocation::Account(GenesisAccountAlloc::Account(GenesisAccount {
                 public_key: felt!("0x1"),
                 balance: Some(U256::from_str("0xD3C21BCECCEDA1000000").unwrap()),
@@ -1182,7 +1157,7 @@ mod tests {
             timestamp: 5123512314u64,
             state_root: felt!("0x99"),
             parent_hash: felt!("0x999"),
-            sequencer_address: ContractAddress(felt!("0x100")),
+            sequencer_address: address!("0x100"),
             gas_prices: GasPrices { eth: 1111, strk: 2222 },
             universal_deployer: Some(UniversalDeployerConfig {
                 class_hash: DEFAULT_LEGACY_UDC_CLASS_HASH,

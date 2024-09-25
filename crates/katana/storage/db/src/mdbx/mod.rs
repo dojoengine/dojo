@@ -208,7 +208,7 @@ mod tests {
 
     use katana_primitives::block::Header;
     use katana_primitives::contract::{ContractAddress, GenericContractInfo};
-    use katana_primitives::Felt;
+    use katana_primitives::{address, Felt};
     use starknet::macros::felt;
 
     use super::*;
@@ -348,7 +348,7 @@ mod tests {
         let tx = db.tx_mut().expect(ERROR_INIT_TX);
 
         let mut cursor = tx.cursor::<ContractInfo>().unwrap();
-        let key: ContractAddress = felt!("0x1337").into();
+        let key = address!("0x1337");
 
         let account = GenericContractInfo::default();
         cursor.upsert(key, account).expect(ERROR_UPSERT);
@@ -462,7 +462,7 @@ mod tests {
     #[test]
     fn db_dup_sort() {
         let env = create_test_db(DbEnvKind::RW);
-        let key = ContractAddress::from(felt!("0xa2c122be93b0074270ebee7f6b7292c7deb45047"));
+        let key = address!("0xa2c122be93b0074270ebee7f6b7292c7deb45047");
 
         // PUT (0,0)
         let value00 = StorageEntry::default();

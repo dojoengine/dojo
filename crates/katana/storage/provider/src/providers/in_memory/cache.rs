@@ -55,7 +55,7 @@ impl<Db> CacheStateDb<Db> {
             info.nonce = nonce;
         }
 
-        for (contract_address, class_hash) in updates.state_updates.contract_updates {
+        for (contract_address, class_hash) in updates.state_updates.deployed_contracts {
             let info = contract_state.entry(contract_address).or_default();
             info.class_hash = class_hash;
         }
