@@ -52,6 +52,7 @@ pub enum QueryType {
     Other,
 }
 
+#[derive(Debug)]
 pub struct Executor<'c> {
     pool: Pool<Sqlite>,
     transaction: Transaction<'c, Sqlite>,
@@ -60,6 +61,7 @@ pub struct Executor<'c> {
     shutdown_rx: Receiver<()>,
 }
 
+#[derive(Debug, Clone)]
 pub struct QueryMessage {
     pub statement: String,
     pub arguments: Vec<Argument>,

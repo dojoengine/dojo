@@ -7,6 +7,7 @@ use std::time::Duration;
 use anyhow::Result;
 use bitflags::bitflags;
 use dojo_world::contracts::world::WorldContractReader;
+use futures_util::future::try_join_all;
 use hashlink::LinkedHashMap;
 use starknet::core::types::{
     BlockId, BlockTag, EmittedEvent, Event, EventFilter, Felt, MaybePendingBlockWithReceipts,
@@ -17,7 +18,6 @@ use starknet::providers::Provider;
 use tokio::sync::broadcast::Sender;
 use tokio::sync::mpsc::Sender as BoundedSender;
 use tokio::sync::Semaphore;
-use tokio::task::JoinSet;
 use tokio::time::{sleep, Instant};
 use tracing::{debug, error, info, trace, warn};
 
@@ -500,14 +500,14 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         let semaphore = Arc::new(Semaphore::new(self.config.max_concurrent_tasks));
 
         // Run all tasks concurrently
-        let mut set = JoinSet::new();
+        let mut handles = Vec::new();
         for (task_id, events) in self.tasks.drain() {
             let db = self.db.clone();
             let world = self.world.clone();
             let processors = self.processors.clone();
             let semaphore = semaphore.clone();
 
-            set.spawn(async move {
+            handles.push(tokio::spawn(async move {
                 let _permit = semaphore.acquire().await.unwrap();
                 let mut local_db = db.clone();
                 for ParallelizedEvent { event_id, event, block_number, block_timestamp } in events {
@@ -523,11 +523,11 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                     }
                 }
                 Ok::<_, anyhow::Error>(local_db)
-            });
+            }));
         }
 
         // Join all tasks
-        while let Some(_) = set.join_next().await {}
+        try_join_all(handles).await?;
 
         Ok(())
     }

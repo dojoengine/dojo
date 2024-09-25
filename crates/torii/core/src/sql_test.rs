@@ -124,6 +124,19 @@ async fn test_load_from_remote(sequencer: &RunnerCtx) {
 
     TransactionWaiter::new(tx.transaction_hash, &provider).await.unwrap();
 
+    // move
+    let tx = &account
+        .execute_v1(vec![Call {
+            to: actions_address,
+            selector: get_selector_from_name("move").unwrap(),
+            calldata: vec![Felt::ONE],
+        }])
+        .send()
+        .await
+        .unwrap();
+
+    TransactionWaiter::new(tx.transaction_hash, &provider).await.unwrap();
+
     let world_reader = WorldContractReader::new(strat.world_address, Arc::clone(&provider));
 
     let (shutdown_tx, _) = broadcast::channel(1);
@@ -186,6 +199,7 @@ async fn test_load_from_remote(sequencer: &RunnerCtx) {
     assert_eq!(unpacked_size, 0);
 
     assert_eq!(count_table("entities", &pool).await, 2);
+    assert_eq!(count_table("event_messages", &pool).await, 1);
 
     let (id, keys): (String, String) = sqlx::query_as(
         format!(
