@@ -187,10 +187,6 @@ async fn main() -> anyhow::Result<()> {
     let world = WorldContractReader::new(args.world_address, provider.clone());
 
     let (mut executor, sender) = Executor::new(pool.clone()).await?;
-    tokio::spawn(async move {
-        executor.run().await.unwrap();
-    });
-
     let db = Sql::new(pool.clone(), args.world_address, sender.clone()).await?;
 
     let processors = Processors {
@@ -295,6 +291,7 @@ async fn main() -> anyhow::Result<()> {
 
     tokio::select! {
         res = engine.start() => res?,
+        _ = executor.run() => {},
         _ = proxy_server.start(shutdown_tx.subscribe()) => {},
         _ = graphql_server => {},
         _ = grpc_server => {},
