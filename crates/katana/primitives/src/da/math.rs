@@ -5,6 +5,22 @@ lazy_static! {
     pub static ref TWO: BigUint = 2u32.to_biguint().unwrap();
 }
 
+pub fn fft(elements: Vec<BigUint>, xs: Vec<BigUint>, p: &BigUint) -> Vec<BigUint> {
+    let n = elements.len();
+    let mut transform = vec![BigUint::ZERO; n];
+
+    for i in 0..n {
+        for j in (0..n).rev() {
+            let value = &transform[i] * &xs[i];
+            let value = value + &elements[j];
+            let value = value % p;
+            transform[i] = value;
+        }
+    }
+
+    transform
+}
+
 /// Performs the inverse Fast Fourier Transform on a vector of `BigUint`.
 ///
 /// # Arguments
