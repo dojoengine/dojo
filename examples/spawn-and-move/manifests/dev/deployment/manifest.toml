@@ -3,9 +3,9 @@ kind = "WorldContract"
 class_hash = "0x5c4271c8cd454ceb8049d2b0724c99d12c2ef8077fc6ad325b18978f614aab0"
 original_class_hash = "0x5c4271c8cd454ceb8049d2b0724c99d12c2ef8077fc6ad325b18978f614aab0"
 abi = "manifests/dev/deployment/abis/dojo-world.json"
-address = "0x15b584f1132fe386a0aa7a447e7073233a545ac4b84b361ed797edaa8f0f14"
-transaction_hash = "0x715b5d1bde9766b6db3f8b903a0626343c553a91e199f96d721644d121e676b"
-block_number = 3
+address = "0x5fedbace16902d9ca4cdc1522f9fe156cd8c69a5d25e1436ee4b7b9933ad997"
+transaction_hash = "0x4c8e0d28e32c21f29f33ff68e245b65fcc91763abf53f284cce8c2274ff6115"
+block_number = 6
 seed = "dojo_examples"
 manifest_name = "dojo-world"
 

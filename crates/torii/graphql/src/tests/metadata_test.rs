@@ -4,6 +4,7 @@ mod tests {
     use dojo_world::metadata::WorldMetadata;
     use sqlx::SqlitePool;
     use starknet::core::types::Felt;
+    use tokio::sync::broadcast;
     use torii_core::executor::Executor;
     use torii_core::sql::Sql;
 
@@ -49,7 +50,8 @@ mod tests {
 
     #[sqlx::test(migrations = "../migrations")]
     async fn test_metadata(pool: SqlitePool) {
-        let (mut executor, sender) = Executor::new(pool.clone()).await.unwrap();
+        let (shutdown_tx, _) = broadcast::channel(1);
+        let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx).await.unwrap();
         tokio::spawn(async move {
             executor.run().await.unwrap();
         });
@@ -105,7 +107,8 @@ mod tests {
 
     #[sqlx::test(migrations = "../migrations")]
     async fn test_empty_content(pool: SqlitePool) {
-        let (mut executor, sender) = Executor::new(pool.clone()).await.unwrap();
+        let (shutdown_tx, _) = broadcast::channel(1);
+        let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx).await.unwrap();
         tokio::spawn(async move {
             executor.run().await.unwrap();
         });

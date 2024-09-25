@@ -535,6 +535,7 @@ mod test {
         use starknet::signers::SigningKey;
         use starknet_crypto::Felt;
         use tokio::select;
+        use tokio::sync::broadcast;
         use tokio::time::sleep;
         use torii_core::executor::Executor;
         use torii_core::sql::Sql;
@@ -560,7 +561,8 @@ mod test {
 
         let account = sequencer.account_data(0);
 
-        let (mut executor, sender) = Executor::new(pool.clone()).await.unwrap();
+        let (shutdown_tx, _) = broadcast::channel(1);
+        let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx).await.unwrap();
         tokio::spawn(async move {
             executor.run().await.unwrap();
         });

@@ -93,7 +93,8 @@ async fn test_entities_queries(sequencer: &RunnerCtx) {
 
     TransactionWaiter::new(tx.transaction_hash, &provider).await.unwrap();
 
-    let (mut executor, sender) = Executor::new(pool.clone()).await.unwrap();
+    let (shutdown_tx, _) = broadcast::channel(1);
+    let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx).await.unwrap();
     tokio::spawn(async move {
         executor.run().await.unwrap();
     });

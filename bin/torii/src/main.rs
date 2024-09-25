@@ -186,7 +186,7 @@ async fn main() -> anyhow::Result<()> {
     // Get world address
     let world = WorldContractReader::new(args.world_address, provider.clone());
 
-    let (mut executor, sender) = Executor::new(pool.clone()).await?;
+    let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx.clone()).await?;
     let db = Sql::new(pool.clone(), args.world_address, sender.clone()).await?;
 
     let processors = Processors {

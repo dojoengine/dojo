@@ -351,7 +351,8 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
 
     let world = WorldContractReader::new(strat.world_address, Arc::clone(&provider));
 
-    let (mut executor, sender) = Executor::new(pool.clone()).await.unwrap();
+    let (shutdown_tx, _) = broadcast::channel(1);
+    let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx).await.unwrap();
     tokio::spawn(async move {
         executor.run().await.unwrap();
     });

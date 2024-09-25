@@ -21,7 +21,6 @@ use tokio::task::JoinSet;
 use tokio::time::{sleep, Instant};
 use tracing::{debug, error, info, trace, warn};
 
-use crate::executor::{QueryMessage, QueryType};
 use crate::processors::event_message::EventMessageProcessor;
 use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
 use crate::sql::Sql;
