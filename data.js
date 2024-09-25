@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1727216383608,
+  "lastUpdate": 1727226597423,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -22141,6 +22141,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3917649,
             "range": "± 84076",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "731ff47016408186347c365a4d3e28bef926722e",
+          "message": "fix(dojo-core): ensure contract deployment verifies if the selector is unregistered (#2473)\n\nfix: ensure a contract can't be deployed with selector clash",
+          "timestamp": "2024-09-24T20:53:52-04:00",
+          "tree_id": "18f17315ae8967a7011eefd284688c910256ec77",
+          "url": "https://github.com/dojoengine/dojo/commit/731ff47016408186347c365a4d3e28bef926722e"
+        },
+        "date": 1727226595691,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11348291123,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
