@@ -536,6 +536,7 @@ mod test {
         use starknet_crypto::Felt;
         use tokio::select;
         use tokio::time::sleep;
+        use torii_core::executor::Executor;
         use torii_core::sql::Sql;
 
         use crate::server::Relay;
@@ -559,7 +560,11 @@ mod test {
 
         let account = sequencer.account_data(0);
 
-        let mut db = Sql::new(pool.clone(), Felt::ZERO).await?;
+        let (mut executor, sender) = Executor::new(pool.clone()).await.unwrap();
+        tokio::spawn(async move {
+            executor.run().await.unwrap();
+        });
+        let mut db = Sql::new(pool.clone(), Felt::ZERO, sender).await.unwrap();
 
         // Register the model of our Message
         db.register_model(
@@ -588,7 +593,7 @@ mod test {
         )
         .await
         .unwrap();
-        db.execute().await.unwrap();
+        db.execute().unwrap();
 
         // Initialize the relay server
         let mut relay_server = Relay::new(db, provider, 9900, 9901, 9902, None, None)?;

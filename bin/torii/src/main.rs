@@ -31,7 +31,7 @@ use tokio::sync::broadcast;
 use tokio::sync::broadcast::Sender;
 use tokio_stream::StreamExt;
 use torii_core::engine::{Engine, EngineConfig, IndexingFlags, Processors};
-use torii_core::executor::{Executor, QueryMessage, QueryType};
+use torii_core::executor::Executor;
 use torii_core::processors::event_message::EventMessageProcessor;
 use torii_core::processors::generate_event_processors_map;
 use torii_core::processors::metadata_update::MetadataUpdateProcessor;

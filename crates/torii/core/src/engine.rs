@@ -21,7 +21,7 @@ use tokio::task::JoinSet;
 use tokio::time::{sleep, Instant};
 use tracing::{debug, error, info, trace, warn};
 
-use crate::executor::{Executor, QueryMessage, QueryType};
+use crate::executor::{QueryMessage, QueryType};
 use crate::processors::event_message::EventMessageProcessor;
 use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
 use crate::sql::Sql;
@@ -414,13 +414,13 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                             // provider. So we can fail silently and try
                             // again in the next iteration.
                             warn!(target: LOG_TARGET, transaction_hash = %format!("{:#x}", transaction_hash), "Retrieving pending transaction receipt.");
-                            self.db.set_head(data.block_number - 1);
+                            self.db.set_head(data.block_number - 1)?;
                             if let Some(tx) = last_pending_block_tx {
-                                self.db.set_last_pending_block_tx(Some(tx));
+                                self.db.set_last_pending_block_tx(Some(tx))?;
                             }
 
                             if let Some(tx) = last_pending_block_world_tx {
-                                self.db.set_last_pending_block_world_tx(Some(tx));
+                                self.db.set_last_pending_block_world_tx(Some(tx))?;
                             }
                             return Ok(());
                         }
@@ -447,14 +447,14 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
 
         // Set the head to the last processed pending transaction
         // Head block number should still be latest block number
-        self.db.set_head(data.block_number - 1);
+        self.db.set_head(data.block_number - 1)?;
 
         if let Some(tx) = last_pending_block_tx {
-            self.db.set_last_pending_block_tx(Some(tx));
+            self.db.set_last_pending_block_tx(Some(tx))?;
         }
 
         if let Some(tx) = last_pending_block_world_tx {
-            self.db.set_last_pending_block_world_tx(Some(tx));
+            self.db.set_last_pending_block_world_tx(Some(tx))?;
         }
 
         Ok(())
@@ -683,7 +683,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         transaction_hash: Felt,
     ) -> Result<()> {
         if self.config.flags.contains(IndexingFlags::RAW_EVENTS) {
-            self.db.store_event(event_id, event, transaction_hash, block_timestamp);
+            self.db.store_event(event_id, event, transaction_hash, block_timestamp)?;
         }
 
         let event_key = event.keys[0];

@@ -20,6 +20,7 @@ use starknet::providers::{JsonRpcClient, Provider};
 use starknet_crypto::poseidon_hash_many;
 use tokio::sync::broadcast;
 use torii_core::engine::{Engine, EngineConfig, Processors};
+use torii_core::executor::Executor;
 use torii_core::processors::generate_event_processors_map;
 use torii_core::processors::register_model::RegisterModelProcessor;
 use torii_core::processors::store_set_record::StoreSetRecordProcessor;
@@ -92,7 +93,11 @@ async fn test_entities_queries(sequencer: &RunnerCtx) {
 
     TransactionWaiter::new(tx.transaction_hash, &provider).await.unwrap();
 
-    let db = Sql::new(pool.clone(), strat.world_address).await.unwrap();
+    let (mut executor, sender) = Executor::new(pool.clone()).await.unwrap();
+    tokio::spawn(async move {
+        executor.run().await.unwrap();
+    });
+    let db = Sql::new(pool.clone(), strat.world_address, sender).await.unwrap();
 
     let (shutdown_tx, _) = broadcast::channel(1);
     let mut engine = Engine::new(

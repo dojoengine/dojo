@@ -16,7 +16,6 @@ use tokio::sync::mpsc::UnboundedSender;
 
 use crate::cache::{Model, ModelCache};
 use crate::executor::{Argument, DeleteEntityQuery, QueryMessage, QueryType};
-use crate::types::EventMessage as EventMessageUpdated;
 use crate::utils::utc_dt_string_from_timestamp;
 
 type IsEventMessage = bool;
@@ -386,7 +385,7 @@ impl Sql {
         Ok(())
     }
 
-    pub async fn update_metadata(
+    pub fn update_metadata(
         &mut self,
         resource: &Felt,
         uri: &str,
@@ -1181,6 +1180,16 @@ impl Sql {
                 query_type: QueryType::Other,
             })?;
         }
+
+        Ok(())
+    }
+
+    pub fn execute(&self) -> Result<()> {
+        self.executor.send(QueryMessage {
+            statement: "".to_string(),
+            arguments: vec![],
+            query_type: QueryType::Execute,
+        })?;
 
         Ok(())
     }

@@ -27,6 +27,7 @@ use starknet::providers::{JsonRpcClient, Provider};
 use tokio::sync::broadcast;
 use tokio_stream::StreamExt;
 use torii_core::engine::{Engine, EngineConfig, Processors};
+use torii_core::executor::Executor;
 use torii_core::processors::generate_event_processors_map;
 use torii_core::processors::register_model::RegisterModelProcessor;
 use torii_core::processors::store_del_record::StoreDelRecordProcessor;
@@ -271,7 +272,7 @@ pub async fn model_fixtures(db: &mut Sql) {
     .await
     .unwrap();
 
-    db.execute().await.unwrap();
+    db.execute().unwrap();
 }
 
 pub async fn spinup_types_test() -> Result<SqlitePool> {
@@ -350,12 +351,16 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
 
     let world = WorldContractReader::new(strat.world_address, Arc::clone(&provider));
 
-    let db = Sql::new(pool.clone(), strat.world_address).await.unwrap();
+    let (mut executor, sender) = Executor::new(pool.clone()).await.unwrap();
+    tokio::spawn(async move {
+        executor.run().await.unwrap();
+    });
+    let db = Sql::new(pool.clone(), strat.world_address, sender).await.unwrap();
 
     let (shutdown_tx, _) = broadcast::channel(1);
     let mut engine = Engine::new(
         world,
-        db,
+        db.clone(),
         Arc::clone(&provider),
         Processors {
             event: generate_event_processors_map(vec![
@@ -374,6 +379,6 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
     let to = account.provider().block_hash_and_number().await?.block_number;
     let data = engine.fetch_range(0, to, None).await.unwrap();
     engine.process_range(data).await.unwrap();
-
+    db.execute().unwrap();
     Ok(pool)
 }

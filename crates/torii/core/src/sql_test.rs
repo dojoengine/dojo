@@ -65,7 +65,7 @@ where
         statement: "".to_string(),
         arguments: vec![],
         query_type: QueryType::Execute,
-    });
+    })?;
 
     Ok(engine)
 }
