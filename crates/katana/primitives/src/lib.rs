@@ -19,4 +19,6 @@ pub mod conversion;
 pub mod state;
 pub mod utils;
 
+pub use contract::ContractAddress;
 pub use starknet::core::types::{Felt, FromStrError};
+pub use starknet::macros::felt;

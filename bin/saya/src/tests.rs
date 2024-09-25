@@ -6,6 +6,7 @@ use std::time::Duration;
 use cairo_proof_parser::output::extract_output;
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::state::StateUpdates;
+use katana_primitives::{address, felt};
 use saya_core::prover::extract::program_input_from_program_output;
 use saya_core::prover::{
     prove_diff, HttpProverParams, MessageToAppchain, MessageToStarknet, ProgramInput, ProveProgram,
@@ -43,27 +44,27 @@ async fn test_program_input_from_program_output() -> anyhow::Result<()> {
         config_hash: Felt::from_str("104").unwrap(),
         message_to_starknet_segment: vec![
             MessageToStarknet {
-                from_address: ContractAddress::from(Felt::from_str("105").unwrap()),
-                to_address: ContractAddress::from(Felt::from_str("106").unwrap()),
+                from_address: address!("105"),
+                to_address: address!("106"),
                 payload: vec![Felt::from_str("107").unwrap()],
             },
             MessageToStarknet {
-                from_address: ContractAddress::from(Felt::from_str("105").unwrap()),
-                to_address: ContractAddress::from(Felt::from_str("106").unwrap()),
+                from_address: address!("105"),
+                to_address: address!("106"),
                 payload: vec![Felt::from_str("107").unwrap()],
             },
         ],
         message_to_appchain_segment: vec![
             MessageToAppchain {
-                from_address: ContractAddress::from(Felt::from_str("108").unwrap()),
-                to_address: ContractAddress::from(Felt::from_str("109").unwrap()),
+                from_address: address!("108"),
+                to_address: address!("109"),
                 nonce: Felt::from_str("110").unwrap(),
                 selector: Felt::from_str("111").unwrap(),
                 payload: vec![Felt::from_str("112").unwrap()],
             },
             MessageToAppchain {
-                from_address: ContractAddress::from(Felt::from_str("108").unwrap()),
-                to_address: ContractAddress::from(Felt::from_str("109").unwrap()),
+                from_address: address!("108"),
+                to_address: address!("109"),
                 nonce: Felt::from_str("110").unwrap(),
                 selector: Felt::from_str("111").unwrap(),
                 payload: vec![Felt::from_str("112").unwrap()],
@@ -72,24 +73,18 @@ async fn test_program_input_from_program_output() -> anyhow::Result<()> {
         state_updates: StateUpdates {
             nonce_updates: {
                 let mut map = std::collections::BTreeMap::new();
-                map.insert(
-                    ContractAddress::from(Felt::from_str("1111").unwrap()),
-                    Felt::from_str("22222").unwrap(),
-                );
+                map.insert(address!("1111"), felt!("22222"));
                 map
             },
             storage_updates: vec![(
-                ContractAddress::from(Felt::from_str("333")?),
+                address!("333"),
                 vec![(Felt::from_str("4444")?, Felt::from_str("555")?)].into_iter().collect(),
             )]
             .into_iter()
             .collect(),
             deployed_contracts: {
                 let mut map = std::collections::BTreeMap::new();
-                map.insert(
-                    ContractAddress::from(Felt::from_str("66666").unwrap()),
-                    Felt::from_str("7777").unwrap(),
-                );
+                map.insert(address!("66666"), felt!("7777"));
                 map
             },
             declared_classes: {

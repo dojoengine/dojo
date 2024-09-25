@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use katana_db::mdbx;
+use katana_primitives::address;
 use katana_primitives::block::{
     BlockHashOrNumber, FinalityStatus, Header, SealedBlock, SealedBlockWithStatus, SealedHeader,
 };
@@ -78,8 +79,8 @@ pub fn db_provider() -> BlockchainProvider<DbProvider> {
 
 #[rstest::fixture]
 pub fn mock_state_updates() -> [StateUpdatesWithDeclaredClasses; 3] {
-    let address_1 = ContractAddress::from(felt!("1"));
-    let address_2 = ContractAddress::from(felt!("2"));
+    let address_1 = address!("1");
+    let address_2 = address!("2");
 
     let class_hash_1 = felt!("11");
     let compiled_class_hash_1 = felt!("1000");

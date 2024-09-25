@@ -11,7 +11,7 @@ use katana_primitives::genesis::constant::{
     DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH, DEFAULT_PREFUNDED_ACCOUNT_BALANCE, DEFAULT_UDC_ADDRESS,
 };
 use katana_primitives::transaction::TxWithHash;
-use katana_primitives::Felt;
+use katana_primitives::{address, Felt};
 use katana_provider::traits::state::StateProvider;
 use starknet::core::utils::{
     get_storage_var_address, get_udc_deployed_address, UdcUniqueSettings, UdcUniqueness,
@@ -26,11 +26,10 @@ fn test_executor_with_valid_blocks_impl<EF: ExecutorFactory>(
     let cfg_env = factory.cfg();
 
     // the contract address of the main account used to send most of the transactions
-    let main_account: ContractAddress =
-        felt!("0x6b86e40118f29ebe393a75469b4d926c7a44c2e2681b6d319520b7c1156d114").into();
+    let main_account =
+        address!("0x6b86e40118f29ebe393a75469b4d926c7a44c2e2681b6d319520b7c1156d114");
     // the contract address of the account deployed using the `DeployAccount` tx
-    let new_acc: ContractAddress =
-        felt!("0x3ddfa445a70b927497249f94ff7431fc2e2abc761a34417fd4891beb7c2db85").into();
+    let new_acc = address!("0x3ddfa445a70b927497249f94ff7431fc2e2abc761a34417fd4891beb7c2db85");
 
     let mut executor = factory.with_state(state);
     let mut expected_txs: Vec<TxWithHash> = Vec::with_capacity(3);

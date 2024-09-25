@@ -769,6 +769,7 @@ mod tests {
     use std::collections::BTreeMap;
 
     use katana_db::mdbx::DbEnvKind;
+    use katana_primitives::address;
     use katana_primitives::block::{
         Block, BlockHashOrNumber, FinalityStatus, Header, SealedBlockWithStatus,
     };
@@ -805,19 +806,19 @@ mod tests {
         StateUpdatesWithDeclaredClasses {
             state_updates: StateUpdates {
                 nonce_updates: BTreeMap::from([
-                    (ContractAddress::from(felt!("1")), felt!("1")),
-                    (ContractAddress::from(felt!("2")), felt!("2")),
+                    (address!("1"), felt!("1")),
+                    (address!("2"), felt!("2")),
                 ]),
                 deployed_contracts: BTreeMap::from([
-                    (ContractAddress::from(felt!("1")), felt!("3")),
-                    (ContractAddress::from(felt!("2")), felt!("4")),
+                    (address!("1"), felt!("3")),
+                    (address!("2"), felt!("4")),
                 ]),
                 declared_classes: BTreeMap::from([
                     (felt!("3"), felt!("89")),
                     (felt!("4"), felt!("90")),
                 ]),
                 storage_updates: BTreeMap::from([(
-                    ContractAddress::from(felt!("1")),
+                    address!("1"),
                     BTreeMap::from([(felt!("1"), felt!("1")), (felt!("2"), felt!("2"))]),
                 )]),
                 ..Default::default()
@@ -830,15 +831,15 @@ mod tests {
         StateUpdatesWithDeclaredClasses {
             state_updates: StateUpdates {
                 nonce_updates: BTreeMap::from([
-                    (ContractAddress::from(felt!("1")), felt!("5")),
-                    (ContractAddress::from(felt!("2")), felt!("6")),
+                    (address!("1"), felt!("5")),
+                    (address!("2"), felt!("6")),
                 ]),
                 deployed_contracts: BTreeMap::from([
-                    (ContractAddress::from(felt!("1")), felt!("77")),
-                    (ContractAddress::from(felt!("2")), felt!("66")),
+                    (address!("1"), felt!("77")),
+                    (address!("2"), felt!("66")),
                 ]),
                 storage_updates: BTreeMap::from([(
-                    ContractAddress::from(felt!("1")),
+                    address!("1"),
                     BTreeMap::from([(felt!("1"), felt!("100")), (felt!("2"), felt!("200"))]),
                 )]),
                 ..Default::default()
@@ -895,8 +896,8 @@ mod tests {
 
         let state_prov = StateFactoryProvider::latest(&provider).unwrap();
 
-        let nonce1 = state_prov.nonce(ContractAddress::from(felt!("1"))).unwrap().unwrap();
-        let nonce2 = state_prov.nonce(ContractAddress::from(felt!("2"))).unwrap().unwrap();
+        let nonce1 = state_prov.nonce(address!("1")).unwrap().unwrap();
+        let nonce2 = state_prov.nonce(address!("2")).unwrap().unwrap();
 
         let class_hash1 = state_prov.class_hash_of_contract(felt!("1").into()).unwrap().unwrap();
         let class_hash2 = state_prov.class_hash_of_contract(felt!("2").into()).unwrap().unwrap();
@@ -906,10 +907,8 @@ mod tests {
         let compiled_hash2 =
             state_prov.compiled_class_hash_of_class_hash(class_hash2).unwrap().unwrap();
 
-        let storage1 =
-            state_prov.storage(ContractAddress::from(felt!("1")), felt!("1")).unwrap().unwrap();
-        let storage2 =
-            state_prov.storage(ContractAddress::from(felt!("1")), felt!("2")).unwrap().unwrap();
+        let storage1 = state_prov.storage(address!("1"), felt!("1")).unwrap().unwrap();
+        let storage2 = state_prov.storage(address!("1"), felt!("2")).unwrap().unwrap();
 
         // assert values are populated correctly
 
@@ -992,16 +991,14 @@ mod tests {
 
         let state_prov = StateFactoryProvider::latest(&provider).unwrap();
 
-        let nonce1 = state_prov.nonce(ContractAddress::from(felt!("1"))).unwrap().unwrap();
-        let nonce2 = state_prov.nonce(ContractAddress::from(felt!("2"))).unwrap().unwrap();
+        let nonce1 = state_prov.nonce(address!("1")).unwrap().unwrap();
+        let nonce2 = state_prov.nonce(address!("2")).unwrap().unwrap();
 
         let class_hash1 = state_prov.class_hash_of_contract(felt!("1").into()).unwrap().unwrap();
         let class_hash2 = state_prov.class_hash_of_contract(felt!("2").into()).unwrap().unwrap();
 
-        let storage1 =
-            state_prov.storage(ContractAddress::from(felt!("1")), felt!("1")).unwrap().unwrap();
-        let storage2 =
-            state_prov.storage(ContractAddress::from(felt!("1")), felt!("2")).unwrap().unwrap();
+        let storage1 = state_prov.storage(address!("1"), felt!("1")).unwrap().unwrap();
+        let storage2 = state_prov.storage(address!("1"), felt!("2")).unwrap().unwrap();
 
         assert_eq!(nonce1, felt!("5"));
         assert_eq!(nonce2, felt!("6"));
