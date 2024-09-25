@@ -8230,6 +8230,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "katana-tracing"
+version = "1.0.0-alpha.12"
+dependencies = [
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "keccak"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"

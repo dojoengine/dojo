@@ -34,7 +34,7 @@ members = [
 	"crates/katana/storage/codecs/derive",
 	"crates/katana/storage/db",
 	"crates/katana/storage/provider",
-	"crates/katana/tasks",
+	"crates/katana/tasks", "crates/katana/tracing",
 	"crates/metrics",
 	"crates/saya/core",
 	"crates/saya/provider",
