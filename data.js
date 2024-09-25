@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1727278429373,
+  "lastUpdate": 1727302081484,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -22531,6 +22531,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4108808,
             "range": "± 267732",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ae41d8c2a41454a55eef2f8ff11b202fcbbb5bbd",
+          "message": "Bump `blockifier` to fix `DeployAccount` tx not respecting disable fee flag (#2478)",
+          "timestamp": "2024-09-26T05:51:37+08:00",
+          "tree_id": "ef9de5c6d461e90df3f1fe3cf0df5036c78b6802",
+          "url": "https://github.com/dojoengine/dojo/commit/ae41d8c2a41454a55eef2f8ff11b202fcbbb5bbd"
+        },
+        "date": 1727302080138,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 12244189142,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
