@@ -11,6 +11,7 @@ anyhow.workspace = true
 base64.workspace = true
 derive_more.workspace = true
 lazy_static.workspace = true
+num-traits.workspace = true
 rand = { workspace = true, features = [ "small_rng" ] }
 serde.workspace = true
 serde_json.workspace = true
@@ -23,10 +24,11 @@ thiserror.workspace = true
 alloy-primitives.workspace = true
 flate2 = { workspace = true, optional = true }
 katana-cairo.workspace = true
+num-bigint = "0.4.6"
 
 [dev-dependencies]
-num-traits.workspace = true
 assert_matches.workspace = true
+rstest.workspace = true
 similar-asserts.workspace = true
 
 [features]
