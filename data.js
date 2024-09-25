@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1727278068270,
+  "lastUpdate": 1727278345177,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -22453,6 +22453,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3939260,
             "range": "± 217220",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1e8ad6fd09e4ffc765262f5fc4d240cd364bb89e",
+          "message": "fix: ensure `log` crate output is shown with `tracing` (#2477)\n\nfix: ensure log crate is taken in account by tracing",
+          "timestamp": "2024-09-25T11:16:15-04:00",
+          "tree_id": "ba3adcd8443b08a4652588d007eb413f69a5ee66",
+          "url": "https://github.com/dojoengine/dojo/commit/1e8ad6fd09e4ffc765262f5fc4d240cd364bb89e"
+        },
+        "date": 1727278343970,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11546411320,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
