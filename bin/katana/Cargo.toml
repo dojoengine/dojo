@@ -27,6 +27,7 @@ serde_json.workspace = true
 shellexpand = "3.1.0"
 tokio.workspace = true
 tracing.workspace = true
+tracing-log.workspace = true
 tracing-subscriber.workspace = true
 url.workspace = true
 

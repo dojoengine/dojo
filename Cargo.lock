@@ -7851,6 +7851,7 @@ dependencies = [
  "shellexpand",
  "tokio",
  "tracing",
+ "tracing-log 0.1.4",
  "tracing-subscriber",
  "url",
 ]
@@ -12099,6 +12100,7 @@ dependencies = [
  "starknet-crypto 0.7.2",
  "tokio",
  "tracing",
+ "tracing-log 0.1.4",
  "tracing-subscriber",
  "url",
 ]
