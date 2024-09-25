@@ -180,21 +180,15 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                             }
 
                             match self.process(fetch_result).await {
-                                Ok(()) => {
-                                    let _ = self.db.executor.send(QueryMessage {
-                                        statement: "".to_string(),
-                                        arguments: vec![],
-                                        query_type: QueryType::Execute,
-                                    });
+                                Ok(()) => self.db.execute()?,
+                                Err(e) => {
+                                    error!(target: LOG_TARGET, error = %e, "Processing fetched data.");
+                                    erroring_out = true;
+                                    sleep(backoff_delay).await;
+                                    if backoff_delay < max_backoff_delay {
+                                        backoff_delay *= 2;
+                                    }
                                 }
-                            Err(e) => {
-                                error!(target: LOG_TARGET, error = %e, "Processing fetched data.");
-                                erroring_out = true;
-                                sleep(backoff_delay).await;
-                                if backoff_delay < max_backoff_delay {
-                                    backoff_delay *= 2;
-                                }
-                            }
                             }
                             debug!(target: LOG_TARGET, duration = ?instant.elapsed(), "Processed fetched data.");
                         }

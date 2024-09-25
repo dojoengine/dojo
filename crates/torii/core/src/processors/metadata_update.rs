@@ -83,8 +83,7 @@ where
 async fn try_retrieve(mut db: Sql, resource: Felt, uri_str: String) {
     match metadata(uri_str.clone()).await {
         Ok((metadata, icon_img, cover_img)) => {
-            db.update_metadata(&resource, &uri_str, &metadata, &icon_img, &cover_img)
-                .unwrap();
+            db.update_metadata(&resource, &uri_str, &metadata, &icon_img, &cover_img).unwrap();
             info!(
                 target: LOG_TARGET,
                 resource = %format!("{:#x}", resource),

@@ -43,8 +43,9 @@ impl Sql {
         executor: UnboundedSender<QueryMessage>,
     ) -> Result<Self> {
         executor.send(QueryMessage {
-            statement: "INSERT OR IGNORE INTO contracts (id, contract_address, contract_type) VALUES (?, ?, \
-             ?)".to_string(),
+            statement: "INSERT OR IGNORE INTO contracts (id, contract_address, contract_type) \
+                        VALUES (?, ?, ?)"
+                .to_string(),
             arguments: vec![
                 Argument::FieldElement(world_address),
                 Argument::FieldElement(world_address),
@@ -54,8 +55,9 @@ impl Sql {
         })?;
 
         executor.send(QueryMessage {
-            statement: "INSERT OR IGNORE INTO contracts (id, contract_address, contract_type) VALUES (?, ?, \
-             ?)".to_string(),
+            statement: "INSERT OR IGNORE INTO contracts (id, contract_address, contract_type) \
+                        VALUES (?, ?, ?)"
+                .to_string(),
             arguments: vec![
                 Argument::FieldElement(world_address),
                 Argument::FieldElement(world_address),
@@ -107,7 +109,10 @@ impl Sql {
         Ok(())
     }
 
-    pub fn set_last_pending_block_world_tx(&mut self, last_pending_block_world_tx: Option<Felt>) -> Result<()> {
+    pub fn set_last_pending_block_world_tx(
+        &mut self,
+        last_pending_block_world_tx: Option<Felt>,
+    ) -> Result<()> {
         let last_pending_block_world_tx = if let Some(f) = last_pending_block_world_tx {
             Argument::String(format!("{:#x}", f))
         } else {
@@ -261,9 +266,13 @@ impl Sql {
         })?;
 
         self.executor.send(QueryMessage {
-            statement: "INSERT INTO entity_model (entity_id, model_id) VALUES (?, ?) ON CONFLICT(entity_id, \
-             model_id) DO NOTHING".to_string(),
-            arguments: vec![Argument::String(entity_id.clone()), Argument::String(model_id.clone())],
+            statement: "INSERT INTO entity_model (entity_id, model_id) VALUES (?, ?) ON \
+                        CONFLICT(entity_id, model_id) DO NOTHING"
+                .to_string(),
+            arguments: vec![
+                Argument::String(entity_id.clone()),
+                Argument::String(model_id.clone()),
+            ],
             query_type: QueryType::Other,
         })?;
 
@@ -318,9 +327,13 @@ impl Sql {
             query_type: QueryType::EventMessage(entity.clone()),
         })?;
         self.executor.send(QueryMessage {
-            statement: "INSERT INTO event_model (entity_id, model_id) VALUES (?, ?) ON CONFLICT(entity_id, \
-             model_id) DO NOTHING".to_string(),
-            arguments: vec![Argument::String(entity_id.clone()), Argument::String(model_id.clone())],
+            statement: "INSERT INTO event_model (entity_id, model_id) VALUES (?, ?) ON \
+                        CONFLICT(entity_id, model_id) DO NOTHING"
+                .to_string(),
+            arguments: vec![
+                Argument::String(entity_id.clone()),
+                Argument::String(model_id.clone()),
+            ],
             query_type: QueryType::Other,
         })?;
 
@@ -373,11 +386,10 @@ impl Sql {
         let executed_at = Argument::String(utc_dt_string_from_timestamp(block_timestamp));
 
         self.executor.send(QueryMessage {
-            statement:
-                "INSERT INTO metadata (id, uri, executed_at) VALUES (?, ?, ?) ON CONFLICT(id) DO \
-             UPDATE SET id=excluded.id, executed_at=excluded.executed_at, \
-             updated_at=CURRENT_TIMESTAMP"
-                    .to_string(),
+            statement: "INSERT INTO metadata (id, uri, executed_at) VALUES (?, ?, ?) ON \
+                        CONFLICT(id) DO UPDATE SET id=excluded.id, \
+                        executed_at=excluded.executed_at, updated_at=CURRENT_TIMESTAMP"
+                .to_string(),
             arguments: vec![resource, uri, executed_at],
             query_type: QueryType::Other,
         })?;
@@ -472,9 +484,10 @@ impl Sql {
             };
 
         self.executor.send(QueryMessage {
-            statement: "INSERT OR IGNORE INTO transactions (id, transaction_hash, sender_address, calldata, \
-             max_fee, signature, nonce, transaction_type, executed_at) VALUES (?, ?, ?, ?, ?, ?, \
-             ?, ?, ?)".to_string(),
+            statement: "INSERT OR IGNORE INTO transactions (id, transaction_hash, sender_address, \
+                        calldata, max_fee, signature, nonce, transaction_type, executed_at) \
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                .to_string(),
             arguments: vec![
                 id,
                 transaction_hash,
@@ -506,8 +519,9 @@ impl Sql {
         let executed_at = Argument::String(utc_dt_string_from_timestamp(block_timestamp));
 
         self.executor.send(QueryMessage {
-            statement: "INSERT OR IGNORE INTO events (id, keys, data, transaction_hash, executed_at) VALUES \
-             (?, ?, ?, ?, ?) RETURNING *".to_string(),
+            statement: "INSERT OR IGNORE INTO events (id, keys, data, transaction_hash, \
+                        executed_at) VALUES (?, ?, ?, ?, ?) RETURNING *"
+                .to_string(),
             arguments: vec![id, keys, data, hash, executed_at],
             query_type: QueryType::StoreEvent,
         })?;
@@ -608,7 +622,8 @@ impl Sql {
 
         let update_members = |members: &[Member],
                               executor: &mut UnboundedSender<QueryMessage>,
-                              indexes: &Vec<i64>| -> Result<()> {
+                              indexes: &Vec<i64>|
+         -> Result<()> {
             let table_id = path.join("$");
             let mut columns = vec![
                 "id".to_string(),
@@ -719,11 +734,7 @@ impl Sql {
             Ty::Enum(e) => {
                 if e.options.iter().all(
                     |o| {
-                        if let Ty::Tuple(t) = &o.ty {
-                            t.is_empty()
-                        } else {
-                            false
-                        }
+                        if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false }
                     },
                 ) {
                     return Ok(());

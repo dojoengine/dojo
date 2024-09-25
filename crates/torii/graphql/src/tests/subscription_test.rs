@@ -444,7 +444,8 @@ mod tests {
                 },
                 Felt::ZERO,
                 block_timestamp,
-            ).unwrap();
+            )
+            .unwrap();
             db.execute().unwrap();
 
             tx.send(()).await.unwrap();
