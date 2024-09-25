@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1727277159918,
+  "lastUpdate": 1727277248187,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -22327,6 +22327,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 11154413269,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c11da6cbc71589a62cf9c58f11031cb82239a1f1",
+          "message": "Katana: Add state update DA encodings (#2474)",
+          "timestamp": "2024-09-25T22:56:35+08:00",
+          "tree_id": "650c90ae8955189c0e7e4e15a60ab9bc23810324",
+          "url": "https://github.com/dojoengine/dojo/commit/c11da6cbc71589a62cf9c58f11031cb82239a1f1"
+        },
+        "date": 1727277246840,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16582306,
+            "range": "± 233075",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3812662,
+            "range": "± 123880",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2554894323,
+            "range": "± 220084567",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4012552,
+            "range": "± 101436",
             "unit": "ns/iter"
           }
         ]
