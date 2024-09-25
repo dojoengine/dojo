@@ -140,7 +140,7 @@ async fn test_load_from_remote(sequencer: &RunnerCtx) {
     let world_reader = WorldContractReader::new(strat.world_address, Arc::clone(&provider));
 
     let (shutdown_tx, _) = broadcast::channel(1);
-    let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx).await.unwrap();
+    let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
     tokio::spawn(async move {
         executor.run().await.unwrap();
     });
@@ -302,7 +302,7 @@ async fn test_load_from_remote_del(sequencer: &RunnerCtx) {
     let world_reader = WorldContractReader::new(strat.world_address, Arc::clone(&provider));
 
     let (shutdown_tx, _) = broadcast::channel(1);
-    let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx).await.unwrap();
+    let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
     tokio::spawn(async move {
         executor.run().await.unwrap();
     });
@@ -393,7 +393,7 @@ async fn test_update_with_set_record(sequencer: &RunnerCtx) {
     let world_reader = WorldContractReader::new(strat.world_address, Arc::clone(&provider));
 
     let (shutdown_tx, _) = broadcast::channel(1);
-    let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx).await.unwrap();
+    let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
     tokio::spawn(async move {
         executor.run().await.unwrap();
     });
