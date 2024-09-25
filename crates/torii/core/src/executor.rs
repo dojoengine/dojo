@@ -201,7 +201,7 @@ impl<'c> Executor<'c> {
         Ok(())
     }
 
-    pub async fn execute(&mut self) -> Result<()> {
+    async fn execute(&mut self) -> Result<()> {
         let transaction = mem::replace(&mut self.transaction, self.pool.begin().await?);
         transaction.commit().await?;
 
