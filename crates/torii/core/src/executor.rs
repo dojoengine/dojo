@@ -10,12 +10,16 @@ use starknet::core::types::Felt;
 use tokio::sync::broadcast::{Receiver, Sender};
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 use tokio::sync::oneshot;
+use tokio::time::Instant;
+use tracing::{debug, error};
 
 use crate::simple_broker::SimpleBroker;
 use crate::types::{
     Entity as EntityUpdated, Event as EventEmitted, EventMessage as EventMessageUpdated,
     Model as ModelRegistered,
 };
+
+pub(crate) const LOG_TARGET: &str = "torii_core::executor";
 
 #[derive(Debug, Clone)]
 pub enum Argument {
@@ -42,7 +46,7 @@ pub struct DeleteEntityQuery {
     pub ty: Ty,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum QueryType {
     SetEntity(Ty),
     DeleteEntity(DeleteEntityQuery),
@@ -75,7 +79,11 @@ impl QueryMessage {
         Self { statement, arguments, query_type, tx: None }
     }
 
-    pub fn new_recv(statement: String, arguments: Vec<Argument>, query_type: QueryType) -> (Self, oneshot::Receiver<Result<()>>) {
+    pub fn new_recv(
+        statement: String,
+        arguments: Vec<Argument>,
+        query_type: QueryType,
+    ) -> (Self, oneshot::Receiver<Result<()>>) {
         let (tx, rx) = oneshot::channel();
         (Self { statement, arguments, query_type, tx: Some(tx) }, rx)
     }
@@ -84,23 +92,34 @@ impl QueryMessage {
         Self { statement, arguments, query_type: QueryType::Other, tx: None }
     }
 
-    pub fn other_recv(statement: String, arguments: Vec<Argument>) -> (Self, oneshot::Receiver<Result<()>>) {
+    pub fn other_recv(
+        statement: String,
+        arguments: Vec<Argument>,
+    ) -> (Self, oneshot::Receiver<Result<()>>) {
         let (tx, rx) = oneshot::channel();
         (Self { statement, arguments, query_type: QueryType::Other, tx: Some(tx) }, rx)
     }
 
     pub fn execute() -> Self {
-        Self { statement: "".to_string(), arguments: vec![], query_type: QueryType::Execute, tx: None }
+        Self {
+            statement: "".to_string(),
+            arguments: vec![],
+            query_type: QueryType::Execute,
+            tx: None,
+        }
     }
 
     pub fn execute_recv() -> (Self, oneshot::Receiver<Result<()>>) {
         let (tx, rx) = oneshot::channel();
-        (Self {
-            statement: "".to_string(),
-            arguments: vec![],
-            query_type: QueryType::Execute,
-            tx: Some(tx),
-        }, rx)
+        (
+            Self {
+                statement: "".to_string(),
+                arguments: vec![],
+                query_type: QueryType::Execute,
+                tx: Some(tx),
+            },
+            rx,
+        )
     }
 }
 
@@ -138,7 +157,12 @@ impl<'c> Executor<'c> {
                         }
                     }
 
-                    self.handle_query_type(query, query_type, &statement, &arguments, tx).await?;
+                    match self.handle_query_type(query, query_type.clone(), &statement, &arguments, tx).await {
+                        Ok(()) => {},
+                        Err(e) => {
+                            error!(target: LOG_TARGET, r#type = ?query_type, error = %e, "Failed to execute query.");
+                        }
+                    }
                 }
             }
         }
@@ -229,9 +253,17 @@ impl<'c> Executor<'c> {
                 self.publish_queue.push_back(BrokerMessage::EventEmitted(event));
             }
             QueryType::Execute => {
+                debug!(target: LOG_TARGET, "Executing query.");
+                let instant = Instant::now();
                 let res = self.execute().await;
+                debug!(target: LOG_TARGET, duration = ?instant.elapsed(), "Executed query.");
+
                 if let Some(sender) = sender {
-                    sender.send(res).map_err(|_| anyhow::anyhow!("Failed to send execute result"))?;
+                    sender
+                        .send(res)
+                        .map_err(|_| anyhow::anyhow!("Failed to send execute result"))?;
+                } else {
+                    res?;
                 }
             }
             QueryType::Other => {
