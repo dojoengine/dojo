@@ -21,6 +21,7 @@ use tokio::sync::Semaphore;
 use tokio::time::{sleep, Instant};
 use tracing::{debug, error, info, trace, warn};
 
+use crate::executor::QueryMessage;
 use crate::processors::event_message::EventMessageProcessor;
 use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
 use crate::sql::Sql;
@@ -179,7 +180,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                             }
 
                             match self.process(fetch_result).await {
-                                Ok(()) => self.db.execute().await?,
+                                Ok(()) => self.db.executor.send(QueryMessage::execute())?,
                                 Err(e) => {
                                     error!(target: LOG_TARGET, error = %e, "Processing fetched data.");
                                     erroring_out = true;

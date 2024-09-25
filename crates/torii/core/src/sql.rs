@@ -13,7 +13,6 @@ use sqlx::{Pool, Sqlite};
 use starknet::core::types::{Event, Felt, InvokeTransaction, Transaction};
 use starknet_crypto::poseidon_hash_many;
 use tokio::sync::mpsc::UnboundedSender;
-use tokio::sync::oneshot;
 
 use crate::cache::{Model, ModelCache};
 use crate::executor::{Argument, DeleteEntityQuery, QueryMessage, QueryType};
@@ -1128,9 +1127,9 @@ impl Sql {
     }
 
     pub async fn execute(&self) -> Result<()> {
-        let (sender, receiver) = oneshot::channel();
-        self.executor.send(QueryMessage::execute(sender))?;
-        receiver.await?
+        let (execute, recv) = QueryMessage::execute_recv();
+        self.executor.send(execute)?;
+        recv.await?
     }
 }
 

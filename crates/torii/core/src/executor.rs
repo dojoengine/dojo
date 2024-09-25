@@ -49,7 +49,7 @@ pub enum QueryType {
     EventMessage(Ty),
     RegisterModel,
     StoreEvent,
-    Execute(oneshot::Sender<Result<()>>),
+    Execute,
     Other,
 }
 
@@ -67,23 +67,40 @@ pub struct QueryMessage {
     pub statement: String,
     pub arguments: Vec<Argument>,
     pub query_type: QueryType,
+    tx: Option<oneshot::Sender<Result<()>>>,
 }
 
 impl QueryMessage {
     pub fn new(statement: String, arguments: Vec<Argument>, query_type: QueryType) -> Self {
-        Self { statement, arguments, query_type }
+        Self { statement, arguments, query_type, tx: None }
+    }
+
+    pub fn new_recv(statement: String, arguments: Vec<Argument>, query_type: QueryType) -> (Self, oneshot::Receiver<Result<()>>) {
+        let (tx, rx) = oneshot::channel();
+        (Self { statement, arguments, query_type, tx: Some(tx) }, rx)
     }
 
     pub fn other(statement: String, arguments: Vec<Argument>) -> Self {
-        Self { statement, arguments, query_type: QueryType::Other }
+        Self { statement, arguments, query_type: QueryType::Other, tx: None }
     }
 
-    pub fn execute(sender: oneshot::Sender<Result<()>>) -> Self {
-        Self {
+    pub fn other_recv(statement: String, arguments: Vec<Argument>) -> (Self, oneshot::Receiver<Result<()>>) {
+        let (tx, rx) = oneshot::channel();
+        (Self { statement, arguments, query_type: QueryType::Other, tx: Some(tx) }, rx)
+    }
+
+    pub fn execute() -> Self {
+        Self { statement: "".to_string(), arguments: vec![], query_type: QueryType::Execute, tx: None }
+    }
+
+    pub fn execute_recv() -> (Self, oneshot::Receiver<Result<()>>) {
+        let (tx, rx) = oneshot::channel();
+        (Self {
             statement: "".to_string(),
             arguments: vec![],
-            query_type: QueryType::Execute(sender),
-        }
+            query_type: QueryType::Execute,
+            tx: Some(tx),
+        }, rx)
     }
 }
 
@@ -108,7 +125,7 @@ impl<'c> Executor<'c> {
                     break Ok(());
                 }
                 Some(msg) = self.rx.recv() => {
-                    let QueryMessage { statement, arguments, query_type } = msg;
+                    let QueryMessage { statement, arguments, query_type, tx } = msg;
                     let mut query = sqlx::query(&statement);
 
                     for arg in &arguments {
@@ -121,7 +138,7 @@ impl<'c> Executor<'c> {
                         }
                     }
 
-                    self.handle_query_type(query, query_type, &statement, &arguments).await?;
+                    self.handle_query_type(query, query_type, &statement, &arguments, tx).await?;
                 }
             }
         }
@@ -133,6 +150,7 @@ impl<'c> Executor<'c> {
         query_type: QueryType,
         statement: &str,
         arguments: &[Argument],
+        sender: Option<oneshot::Sender<Result<()>>>,
     ) -> Result<()> {
         let tx = &mut self.transaction;
 
@@ -210,10 +228,11 @@ impl<'c> Executor<'c> {
                 let event = EventEmitted::from_row(&row)?;
                 self.publish_queue.push_back(BrokerMessage::EventEmitted(event));
             }
-            QueryType::Execute(sender) => {
-                sender
-                    .send(self.execute().await)
-                    .map_err(|_| anyhow::anyhow!("Failed to send execute result"))?;
+            QueryType::Execute => {
+                let res = self.execute().await;
+                if let Some(sender) = sender {
+                    sender.send(res).map_err(|_| anyhow::anyhow!("Failed to send execute result"))?;
+                }
             }
             QueryType::Other => {
                 query.execute(&mut **tx).await.with_context(|| {
