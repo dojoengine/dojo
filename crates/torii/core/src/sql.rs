@@ -42,35 +42,12 @@ impl Sql {
         world_address: Felt,
         executor: UnboundedSender<QueryMessage>,
     ) -> Result<Self> {
-        executor.send(QueryMessage {
-            statement: "INSERT OR IGNORE INTO contracts (id, contract_address, contract_type) \
-                        VALUES (?, ?, ?)"
-                .to_string(),
-            arguments: vec![
-                Argument::FieldElement(world_address),
-                Argument::FieldElement(world_address),
-                Argument::String(WORLD_CONTRACT_TYPE.to_string()),
-            ],
-            query_type: QueryType::Other,
-        })?;
-
-        executor.send(QueryMessage {
-            statement: "INSERT OR IGNORE INTO contracts (id, contract_address, contract_type) \
-                        VALUES (?, ?, ?)"
-                .to_string(),
-            arguments: vec![
-                Argument::FieldElement(world_address),
-                Argument::FieldElement(world_address),
-                Argument::String(WORLD_CONTRACT_TYPE.to_string()),
-            ],
-            query_type: QueryType::Other,
-        })?;
-
-        executor.send(QueryMessage {
-            statement: "".to_string(),
-            arguments: vec![],
-            query_type: QueryType::Execute,
-        })?;
+        sqlx::query("INSERT OR IGNORE INTO contracts (id, contract_address, contract_type) VALUES (?, ?, ?)")
+            .bind(format!("{:#x}", world_address))
+            .bind(format!("{:#x}", world_address))
+            .bind(WORLD_CONTRACT_TYPE)
+            .execute(&pool)
+            .await?;
 
         Ok(Self {
             pool: pool.clone(),
