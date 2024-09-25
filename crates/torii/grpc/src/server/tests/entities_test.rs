@@ -122,6 +122,8 @@ async fn test_entities_queries(sequencer: &RunnerCtx) {
     let data = engine.fetch_range(0, to, None).await.unwrap();
     engine.process_range(data).await.unwrap();
 
+    db.execute().await.unwrap();
+
     let (_, receiver) = tokio::sync::mpsc::channel(1);
     let grpc = DojoWorld::new(db.pool, receiver, strat.world_address, provider.clone());
 

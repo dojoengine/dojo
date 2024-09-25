@@ -211,7 +211,9 @@ impl<'c> Executor<'c> {
                 self.publish_queue.push_back(BrokerMessage::EventEmitted(event));
             }
             QueryType::Execute(sender) => {
-                self.execute(sender).await?;
+                sender
+                    .send(self.execute().await)
+                    .map_err(|_| anyhow::anyhow!("Failed to send execute result"))?;
             }
             QueryType::Other => {
                 query.execute(&mut **tx).await.with_context(|| {
@@ -223,7 +225,7 @@ impl<'c> Executor<'c> {
         Ok(())
     }
 
-    async fn execute(&mut self, sender: oneshot::Sender<Result<()>>) -> Result<()> {
+    async fn execute(&mut self) -> Result<()> {
         let transaction = mem::replace(&mut self.transaction, self.pool.begin().await?);
         transaction.commit().await?;
 
@@ -231,10 +233,7 @@ impl<'c> Executor<'c> {
             send_broker_message(message);
         }
 
-        match sender.send(Ok(())) {
-            Ok(()) => Ok(()),
-            Err(_) => Err(anyhow::anyhow!("Failed to send result to sender")),
-        }
+        Ok(())
     }
 }
 
