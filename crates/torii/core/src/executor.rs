@@ -66,6 +66,20 @@ pub struct QueryMessage {
     pub query_type: QueryType,
 }
 
+impl QueryMessage {
+    pub fn new(statement: String, arguments: Vec<Argument>, query_type: QueryType) -> Self {
+        Self { statement, arguments, query_type }
+    }
+
+    pub fn other(statement: String, arguments: Vec<Argument>) -> Self {
+        Self { statement, arguments, query_type: QueryType::Other }
+    }
+
+    pub fn execute() -> Self {
+        Self { statement: "".to_string(), arguments: vec![], query_type: QueryType::Execute }
+    }
+}
+
 impl<'c> Executor<'c> {
     pub async fn new(
         pool: Pool<Sqlite>,

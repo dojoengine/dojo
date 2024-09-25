@@ -42,12 +42,15 @@ impl Sql {
         world_address: Felt,
         executor: UnboundedSender<QueryMessage>,
     ) -> Result<Self> {
-        sqlx::query("INSERT OR IGNORE INTO contracts (id, contract_address, contract_type) VALUES (?, ?, ?)")
-            .bind(format!("{:#x}", world_address))
-            .bind(format!("{:#x}", world_address))
-            .bind(WORLD_CONTRACT_TYPE)
-            .execute(&pool)
-            .await?;
+        sqlx::query(
+            "INSERT OR IGNORE INTO contracts (id, contract_address, contract_type) VALUES (?, ?, \
+             ?)",
+        )
+        .bind(format!("{:#x}", world_address))
+        .bind(format!("{:#x}", world_address))
+        .bind(WORLD_CONTRACT_TYPE)
+        .execute(&pool)
+        .await?;
 
         Ok(Self {
             pool: pool.clone(),
@@ -77,11 +80,10 @@ impl Sql {
     pub fn set_head(&mut self, head: u64) -> Result<()> {
         let head = Argument::Int(head.try_into().expect("doesn't fit in u64"));
         let id = Argument::FieldElement(self.world_address);
-        self.executor.send(QueryMessage {
-            statement: "UPDATE contracts SET head = ? WHERE id = ?".to_string(),
-            arguments: vec![head, id],
-            query_type: QueryType::Other,
-        })?;
+        self.executor.send(QueryMessage::other(
+            "UPDATE contracts SET head = ? WHERE id = ?".to_string(),
+            vec![head, id],
+        ))?;
 
         Ok(())
     }
@@ -98,12 +100,10 @@ impl Sql {
 
         let id = Argument::FieldElement(self.world_address);
 
-        self.executor.send(QueryMessage {
-            statement: "UPDATE contracts SET last_pending_block_world_tx = ? WHERE id = ?"
-                .to_string(),
-            arguments: vec![last_pending_block_world_tx, id],
-            query_type: QueryType::Other,
-        })?;
+        self.executor.send(QueryMessage::other(
+            "UPDATE contracts SET last_pending_block_world_tx = ? WHERE id = ?".to_string(),
+            vec![last_pending_block_world_tx, id],
+        ))?;
 
         Ok(())
     }
@@ -116,11 +116,10 @@ impl Sql {
         };
         let id = Argument::FieldElement(self.world_address);
 
-        self.executor.send(QueryMessage {
-            statement: "UPDATE contracts SET last_pending_block_tx = ? WHERE id = ?".to_string(),
-            arguments: vec![last_pending_block_tx, id],
-            query_type: QueryType::Other,
-        })?;
+        self.executor.send(QueryMessage::other(
+            "UPDATE contracts SET last_pending_block_tx = ? WHERE id = ?".to_string(),
+            vec![last_pending_block_tx, id],
+        ))?;
 
         Ok(())
     }
@@ -158,11 +157,11 @@ impl Sql {
             Argument::Int(unpacked_size as i64),
             Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
         ];
-        self.executor.send(QueryMessage {
-            statement: insert_models.to_string(),
+        self.executor.send(QueryMessage::new(
+            insert_models.to_string(),
             arguments,
-            query_type: QueryType::RegisterModel,
-        })?;
+            QueryType::RegisterModel,
+        ))?;
 
         let mut model_idx = 0_i64;
         self.build_register_queries_recursive(
@@ -236,22 +235,18 @@ impl Sql {
             arguments.push(Argument::String(keys.to_string()));
         }
 
-        self.executor.send(QueryMessage {
-            statement: insert_entities.to_string(),
+        self.executor.send(QueryMessage::new(
+            insert_entities.to_string(),
             arguments,
-            query_type: QueryType::SetEntity(entity.clone()),
-        })?;
+            QueryType::SetEntity(entity.clone()),
+        ))?;
 
-        self.executor.send(QueryMessage {
-            statement: "INSERT INTO entity_model (entity_id, model_id) VALUES (?, ?) ON \
-                        CONFLICT(entity_id, model_id) DO NOTHING"
+        self.executor.send(QueryMessage::other(
+            "INSERT INTO entity_model (entity_id, model_id) VALUES (?, ?) ON CONFLICT(entity_id, \
+             model_id) DO NOTHING"
                 .to_string(),
-            arguments: vec![
-                Argument::String(entity_id.clone()),
-                Argument::String(model_id.clone()),
-            ],
-            query_type: QueryType::Other,
-        })?;
+            vec![Argument::String(entity_id.clone()), Argument::String(model_id.clone())],
+        ))?;
 
         let path = vec![namespaced_name];
         self.build_set_entity_queries_recursive(
@@ -293,26 +288,22 @@ impl Sql {
                                VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET \
                                updated_at=CURRENT_TIMESTAMP, executed_at=EXCLUDED.executed_at, \
                                event_id=EXCLUDED.event_id RETURNING *";
-        self.executor.send(QueryMessage {
-            statement: insert_entities.to_string(),
-            arguments: vec![
+        self.executor.send(QueryMessage::new(
+            insert_entities.to_string(),
+            vec![
                 Argument::String(entity_id.clone()),
                 Argument::String(keys_str),
                 Argument::String(event_id.to_string()),
                 Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
             ],
-            query_type: QueryType::EventMessage(entity.clone()),
-        })?;
-        self.executor.send(QueryMessage {
-            statement: "INSERT INTO event_model (entity_id, model_id) VALUES (?, ?) ON \
-                        CONFLICT(entity_id, model_id) DO NOTHING"
+            QueryType::EventMessage(entity.clone()),
+        ))?;
+        self.executor.send(QueryMessage::other(
+            "INSERT INTO event_model (entity_id, model_id) VALUES (?, ?) ON CONFLICT(entity_id, \
+             model_id) DO NOTHING"
                 .to_string(),
-            arguments: vec![
-                Argument::String(entity_id.clone()),
-                Argument::String(model_id.clone()),
-            ],
-            query_type: QueryType::Other,
-        })?;
+            vec![Argument::String(entity_id.clone()), Argument::String(model_id.clone())],
+        ))?;
 
         let path = vec![namespaced_name];
         self.build_set_entity_queries_recursive(
@@ -340,19 +331,16 @@ impl Sql {
         // delete entity models data
         self.build_delete_entity_queries_recursive(path, &entity_id, &entity)?;
 
-        self.executor.send(QueryMessage {
-            statement: "DELETE FROM entity_model WHERE entity_id = ? AND model_id = ?".to_string(),
-            arguments: vec![
-                Argument::String(entity_id.clone()),
-                Argument::String(format!("{:#x}", model_id)),
-            ],
-            query_type: QueryType::DeleteEntity(DeleteEntityQuery {
+        self.executor.send(QueryMessage::new(
+            "DELETE FROM entity_model WHERE entity_id = ? AND model_id = ?".to_string(),
+            vec![Argument::String(entity_id.clone()), Argument::String(format!("{:#x}", model_id))],
+            QueryType::DeleteEntity(DeleteEntityQuery {
                 entity_id: entity_id.clone(),
                 event_id: event_id.to_string(),
                 block_timestamp: utc_dt_string_from_timestamp(block_timestamp),
                 ty: entity.clone(),
             }),
-        })?;
+        ))?;
 
         Ok(())
     }
@@ -362,14 +350,13 @@ impl Sql {
         let uri = Argument::String(uri.to_string());
         let executed_at = Argument::String(utc_dt_string_from_timestamp(block_timestamp));
 
-        self.executor.send(QueryMessage {
-            statement: "INSERT INTO metadata (id, uri, executed_at) VALUES (?, ?, ?) ON \
-                        CONFLICT(id) DO UPDATE SET id=excluded.id, \
-                        executed_at=excluded.executed_at, updated_at=CURRENT_TIMESTAMP"
+        self.executor.send(QueryMessage::other(
+            "INSERT INTO metadata (id, uri, executed_at) VALUES (?, ?, ?) ON CONFLICT(id) DO \
+             UPDATE SET id=excluded.id, executed_at=excluded.executed_at, \
+             updated_at=CURRENT_TIMESTAMP"
                 .to_string(),
-            arguments: vec![resource, uri, executed_at],
-            query_type: QueryType::Other,
-        })?;
+            vec![resource, uri, executed_at],
+        ))?;
 
         Ok(())
     }
@@ -400,7 +387,7 @@ impl Sql {
         let statement = format!("UPDATE metadata SET {} WHERE id = ?", update.join(","));
         arguments.push(Argument::FieldElement(*resource));
 
-        self.executor.send(QueryMessage { statement, arguments, query_type: QueryType::Other })?;
+        self.executor.send(QueryMessage::other(statement, arguments))?;
 
         Ok(())
     }
@@ -460,12 +447,12 @@ impl Sql {
                 _ => return Ok(()),
             };
 
-        self.executor.send(QueryMessage {
-            statement: "INSERT OR IGNORE INTO transactions (id, transaction_hash, sender_address, \
-                        calldata, max_fee, signature, nonce, transaction_type, executed_at) \
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        self.executor.send(QueryMessage::other(
+            "INSERT OR IGNORE INTO transactions (id, transaction_hash, sender_address, calldata, \
+             max_fee, signature, nonce, transaction_type, executed_at) VALUES (?, ?, ?, ?, ?, ?, \
+             ?, ?, ?)"
                 .to_string(),
-            arguments: vec![
+            vec![
                 id,
                 transaction_hash,
                 sender_address,
@@ -476,8 +463,7 @@ impl Sql {
                 Argument::String(transaction_type.to_string()),
                 Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
             ],
-            query_type: QueryType::Other,
-        })?;
+        ))?;
 
         Ok(())
     }
@@ -495,13 +481,13 @@ impl Sql {
         let hash = Argument::FieldElement(transaction_hash);
         let executed_at = Argument::String(utc_dt_string_from_timestamp(block_timestamp));
 
-        self.executor.send(QueryMessage {
-            statement: "INSERT OR IGNORE INTO events (id, keys, data, transaction_hash, \
-                        executed_at) VALUES (?, ?, ?, ?, ?) RETURNING *"
+        self.executor.send(QueryMessage::new(
+            "INSERT OR IGNORE INTO events (id, keys, data, transaction_hash, executed_at) VALUES \
+             (?, ?, ?, ?, ?) RETURNING *"
                 .to_string(),
-            arguments: vec![id, keys, data, hash, executed_at],
-            query_type: QueryType::StoreEvent,
-        })?;
+            vec![id, keys, data, hash, executed_at],
+            QueryType::StoreEvent,
+        ))?;
 
         Ok(())
     }
@@ -686,7 +672,7 @@ impl Sql {
                 )
             };
 
-            executor.send(QueryMessage { statement, arguments, query_type: QueryType::Other })?;
+            executor.send(QueryMessage::other(statement, arguments))?;
 
             Ok(())
         };
@@ -786,11 +772,7 @@ impl Sql {
                 let mut arguments = vec![Argument::String(entity_id.to_string())];
                 arguments.extend(indexes.iter().map(|idx| Argument::Int(*idx)));
 
-                self.executor.send(QueryMessage {
-                    statement: query,
-                    arguments,
-                    query_type: QueryType::Other,
-                })?;
+                self.executor.send(QueryMessage::other(query, arguments))?;
 
                 // insert the new array elements
                 for (idx, member) in array.iter().enumerate() {
@@ -831,11 +813,10 @@ impl Sql {
             Ty::Struct(s) => {
                 let table_id = path.join("$");
                 let statement = format!("DELETE FROM [{table_id}] WHERE entity_id = ?");
-                self.executor.send(QueryMessage {
+                self.executor.send(QueryMessage::other(
                     statement,
-                    arguments: vec![Argument::String(entity_id.to_string())],
-                    query_type: QueryType::Other,
-                })?;
+                    vec![Argument::String(entity_id.to_string())],
+                ))?;
                 for member in s.children.iter() {
                     let mut path_clone = path.clone();
                     path_clone.push(member.name.clone());
@@ -852,11 +833,10 @@ impl Sql {
 
                 let table_id = path.join("$");
                 let statement = format!("DELETE FROM [{table_id}] WHERE entity_id = ?");
-                self.executor.send(QueryMessage {
+                self.executor.send(QueryMessage::other(
                     statement,
-                    arguments: vec![Argument::String(entity_id.to_string())],
-                    query_type: QueryType::Other,
-                })?;
+                    vec![Argument::String(entity_id.to_string())],
+                ))?;
 
                 for child in e.options.iter() {
                     if let Ty::Tuple(t) = &child.ty {
@@ -873,11 +853,10 @@ impl Sql {
             Ty::Array(array) => {
                 let table_id = path.join("$");
                 let statement = format!("DELETE FROM [{table_id}] WHERE entity_id = ?");
-                self.executor.send(QueryMessage {
+                self.executor.send(QueryMessage::other(
                     statement,
-                    arguments: vec![Argument::String(entity_id.to_string())],
-                    query_type: QueryType::Other,
-                })?;
+                    vec![Argument::String(entity_id.to_string())],
+                ))?;
 
                 for member in array.iter() {
                     let mut path_clone = path.clone();
@@ -888,11 +867,10 @@ impl Sql {
             Ty::Tuple(t) => {
                 let table_id = path.join("$");
                 let statement = format!("DELETE FROM [{table_id}] WHERE entity_id = ?");
-                self.executor.send(QueryMessage {
+                self.executor.send(QueryMessage::other(
                     statement,
-                    arguments: vec![Argument::String(entity_id.to_string())],
-                    query_type: QueryType::Other,
-                })?;
+                    vec![Argument::String(entity_id.to_string())],
+                ))?;
 
                 for (idx, member) in t.iter().enumerate() {
                     let mut path_clone = path.clone();
@@ -1008,11 +986,7 @@ impl Sql {
                         Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
                     ];
 
-                    self.executor.send(QueryMessage {
-                        statement: statement.to_string(),
-                        arguments,
-                        query_type: QueryType::Other,
-                    })?;
+                    self.executor.send(QueryMessage::other(statement.to_string(), arguments))?;
                 }
             }
             Ty::Tuple(tuple) => {
@@ -1040,11 +1014,7 @@ impl Sql {
                         Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
                     ];
 
-                    self.executor.send(QueryMessage {
-                        statement: statement.to_string(),
-                        arguments,
-                        query_type: QueryType::Other,
-                    })?;
+                    self.executor.send(QueryMessage::other(statement.to_string(), arguments))?;
                 }
             }
             Ty::Array(array) => {
@@ -1069,11 +1039,7 @@ impl Sql {
                     Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
                 ];
 
-                self.executor.send(QueryMessage {
-                    statement: statement.to_string(),
-                    arguments,
-                    query_type: QueryType::Other,
-                })?;
+                self.executor.send(QueryMessage::other(statement.to_string(), arguments))?;
             }
             Ty::Enum(e) => {
                 for (idx, child) in e
@@ -1112,11 +1078,7 @@ impl Sql {
                         Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
                     ];
 
-                    self.executor.send(QueryMessage {
-                        statement: statement.to_string(),
-                        arguments,
-                        query_type: QueryType::Other,
-                    })?;
+                    self.executor.send(QueryMessage::other(statement.to_string(), arguments))?;
                 }
             }
             _ => {}
@@ -1155,30 +1117,17 @@ impl Sql {
         create_table_query
             .push_str("FOREIGN KEY (event_message_id) REFERENCES event_messages(id));");
 
-        self.executor.send(QueryMessage {
-            statement: create_table_query,
-            arguments: vec![],
-            query_type: QueryType::Other,
-        })?;
+        self.executor.send(QueryMessage::other(create_table_query, vec![]))?;
 
         for s in indices.iter() {
-            self.executor.send(QueryMessage {
-                statement: s.to_string(),
-                arguments: vec![],
-                query_type: QueryType::Other,
-            })?;
+            self.executor.send(QueryMessage::other(s.to_string(), vec![]))?;
         }
 
         Ok(())
     }
 
     pub fn execute(&self) -> Result<()> {
-        self.executor.send(QueryMessage {
-            statement: "".to_string(),
-            arguments: vec![],
-            query_type: QueryType::Execute,
-        })?;
-
+        self.executor.send(QueryMessage::execute())?;
         Ok(())
     }
 }
