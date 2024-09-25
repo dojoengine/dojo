@@ -312,7 +312,7 @@ impl Sql {
                 Argument::String(event_id.to_string()),
                 Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
             ],
-            QueryType::Other,
+            QueryType::EventMessage(entity.clone()),
         );
         self.query_queue.enqueue(
             "INSERT INTO event_model (entity_id, model_id) VALUES (?, ?) ON CONFLICT(entity_id, \
