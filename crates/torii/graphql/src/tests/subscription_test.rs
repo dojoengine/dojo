@@ -125,7 +125,7 @@ mod tests {
             )
             .await
             .unwrap();
-            db.execute().unwrap();
+            db.execute().await.unwrap();
 
             tx.send(()).await.unwrap();
         });
@@ -248,7 +248,7 @@ mod tests {
             )
             .await
             .unwrap();
-            db.execute().unwrap();
+            db.execute().await.unwrap();
 
             tx.send(()).await.unwrap();
         });
@@ -325,7 +325,7 @@ mod tests {
             )
             .await
             .unwrap();
-            db.execute().unwrap();
+            db.execute().await.unwrap();
 
             // 3. fn publish() is called from state.set_entity()
 
@@ -394,7 +394,7 @@ mod tests {
             )
             .await
             .unwrap();
-            db.execute().unwrap();
+            db.execute().await.unwrap();
             // 3. fn publish() is called from state.set_entity()
 
             tx.send(()).await.unwrap();
@@ -451,7 +451,7 @@ mod tests {
                 block_timestamp,
             )
             .unwrap();
-            db.execute().unwrap();
+            db.execute().await.unwrap();
 
             tx.send(()).await.unwrap();
         });

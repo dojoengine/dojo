@@ -80,7 +80,7 @@ mod tests {
         db.set_metadata(&RESOURCE, URI, BLOCK_TIMESTAMP).unwrap();
         db.update_metadata(&RESOURCE, URI, &world_metadata, &None, &Some(cover_img.to_string()))
             .unwrap();
-        db.execute().unwrap();
+        db.execute().await.unwrap();
 
         let result = run_graphql_query(&schema, QUERY).await;
         let value = result.get("metadatas").ok_or("metadatas not found").unwrap().clone();
@@ -108,7 +108,7 @@ mod tests {
     #[sqlx::test(migrations = "../migrations")]
     async fn test_empty_content(pool: SqlitePool) {
         let (shutdown_tx, _) = broadcast::channel(1);
-        let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx).await.unwrap();
+        let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
         tokio::spawn(async move {
             executor.run().await.unwrap();
         });
@@ -116,7 +116,7 @@ mod tests {
         let schema = build_schema(&pool).await.unwrap();
 
         db.set_metadata(&RESOURCE, URI, BLOCK_TIMESTAMP).unwrap();
-        db.execute().unwrap();
+        db.execute().await.unwrap();
 
         let result = run_graphql_query(&schema, QUERY).await;
         let value = result.get("metadatas").ok_or("metadatas not found").unwrap().clone();

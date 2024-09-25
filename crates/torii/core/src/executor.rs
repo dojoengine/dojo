@@ -9,6 +9,7 @@ use sqlx::{FromRow, Pool, Sqlite, Transaction};
 use starknet::core::types::Felt;
 use tokio::sync::broadcast::{Receiver, Sender};
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
+use tokio::sync::oneshot;
 
 use crate::simple_broker::SimpleBroker;
 use crate::types::{
@@ -41,14 +42,14 @@ pub struct DeleteEntityQuery {
     pub ty: Ty,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum QueryType {
     SetEntity(Ty),
     DeleteEntity(DeleteEntityQuery),
     EventMessage(Ty),
     RegisterModel,
     StoreEvent,
-    Execute,
+    Execute(oneshot::Sender<Result<()>>),
     Other,
 }
 
@@ -61,7 +62,7 @@ pub struct Executor<'c> {
     shutdown_rx: Receiver<()>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct QueryMessage {
     pub statement: String,
     pub arguments: Vec<Argument>,
@@ -77,8 +78,8 @@ impl QueryMessage {
         Self { statement, arguments, query_type: QueryType::Other }
     }
 
-    pub fn execute() -> Self {
-        Self { statement: "".to_string(), arguments: vec![], query_type: QueryType::Execute }
+    pub fn execute(sender: oneshot::Sender<Result<()>>) -> Self {
+        Self { statement: "".to_string(), arguments: vec![], query_type: QueryType::Execute(sender) }
     }
 }
 
@@ -99,6 +100,7 @@ impl<'c> Executor<'c> {
         loop {
             tokio::select! {
                 _ = self.shutdown_rx.recv() => {
+                    println!("Shutting down executor");
                     break Ok(());
                 }
                 Some(msg) = self.rx.recv() => {
@@ -204,8 +206,8 @@ impl<'c> Executor<'c> {
                 let event = EventEmitted::from_row(&row)?;
                 self.publish_queue.push_back(BrokerMessage::EventEmitted(event));
             }
-            QueryType::Execute => {
-                self.execute().await?;
+            QueryType::Execute(sender) => {
+                self.execute(sender).await?;
             }
             QueryType::Other => {
                 query.execute(&mut **tx).await.with_context(|| {
@@ -217,7 +219,7 @@ impl<'c> Executor<'c> {
         Ok(())
     }
 
-    async fn execute(&mut self) -> Result<()> {
+    async fn execute(&mut self, sender: oneshot::Sender<Result<()>>) -> Result<()> {
         let transaction = mem::replace(&mut self.transaction, self.pool.begin().await?);
         transaction.commit().await?;
 
@@ -225,7 +227,10 @@ impl<'c> Executor<'c> {
             send_broker_message(message);
         }
 
-        Ok(())
+        match sender.send(Ok(())) {
+            Ok(()) => Ok(()),
+            Err(_) => Err(anyhow::anyhow!("Failed to send result to sender")),
+        }
     }
 }
 

@@ -272,7 +272,7 @@ pub async fn model_fixtures(db: &mut Sql) {
     .await
     .unwrap();
 
-    db.execute().unwrap();
+    db.execute().await.unwrap();
 }
 
 pub async fn spinup_types_test() -> Result<SqlitePool> {
@@ -380,6 +380,6 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
     let to = account.provider().block_hash_and_number().await?.block_number;
     let data = engine.fetch_range(0, to, None).await.unwrap();
     engine.process_range(data).await.unwrap();
-    db.execute().unwrap();
+    db.execute().await.unwrap();
     Ok(pool)
 }
