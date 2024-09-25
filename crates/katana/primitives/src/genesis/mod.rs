@@ -322,6 +322,7 @@ mod tests {
     use starknet::macros::felt;
 
     use super::*;
+    use crate::address;
 
     #[test]
     fn genesis_block_and_state_updates() {
@@ -377,7 +378,7 @@ mod tests {
 
         let allocations = [
             (
-                ContractAddress::from(felt!("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")),
+                address!("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
                 GenesisAllocation::Account(GenesisAccountAlloc::Account(GenesisAccount {
                     public_key: felt!(
                         "0x01ef15c18599971b7beced415a40f0c7deacfd9b0d1819e03d723d8bc943cfca"
@@ -392,7 +393,7 @@ mod tests {
                 })),
             ),
             (
-                ContractAddress::from(felt!("0xdeadbeef")),
+                address!("0xdeadbeef"),
                 GenesisAllocation::Contract(GenesisContractAlloc {
                     balance: Some(U256::from_str("0xD3C21BCECCEDA1000000").unwrap()),
                     class_hash: Some(DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH),
@@ -404,7 +405,7 @@ mod tests {
                 }),
             ),
             (
-                ContractAddress::from(felt!("0x2")),
+                address!("0x2"),
                 GenesisAllocation::Account(GenesisAccountAlloc::Account(GenesisAccount {
                     public_key: felt!("0x2"),
                     balance: Some(U256::ZERO),
@@ -416,7 +417,7 @@ mod tests {
         ];
 
         let ud = UniversalDeployerConfig {
-            address: ContractAddress(felt!("0xb00b1e5")),
+            address: address!("0xb00b1e5"),
             class_hash: DEFAULT_LEGACY_UDC_CLASS_HASH,
             storage: Some([(felt!("0x10"), felt!("0x100"))].into()),
         };
@@ -429,7 +430,7 @@ mod tests {
             timestamp: 5123512314u64,
             state_root: felt!("0x99"),
             parent_hash: felt!("0x999"),
-            sequencer_address: ContractAddress(felt!("0x100")),
+            sequencer_address: address!("0x100"),
             gas_prices: GasPrices { eth: 1111, strk: 2222 },
             universal_deployer: Some(ud.clone()),
         };
