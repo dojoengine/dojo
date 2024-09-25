@@ -9,7 +9,6 @@ version.workspace = true
 anyhow.workspace = true
 console.workspace = true
 dojo-world = { workspace = true, features = [ "contracts", "metadata", "migration" ] }
-futures.workspace = true
 reqwest.workspace = true
 scarb.workspace = true
 scarb-ui.workspace = true

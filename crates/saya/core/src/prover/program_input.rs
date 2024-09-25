@@ -121,7 +121,7 @@ impl ProgramInput {
             .state_updates
             .storage_updates
             .get(&ContractAddress::from(world))
-            .unwrap_or(&std::collections::HashMap::new())
+            .unwrap_or(&std::collections::BTreeMap::new())
             .iter()
             .flat_map(|(k, v)| vec![*k, *v])
             .collect::<Vec<_>>();
@@ -134,8 +134,8 @@ impl ProgramInput {
         self.message_to_starknet_segment.extend(latter.message_to_starknet_segment);
 
         // the later state should overwrite the previous one.
-        latter.state_updates.contract_updates.into_iter().for_each(|(k, v)| {
-            self.state_updates.contract_updates.insert(k, v);
+        latter.state_updates.deployed_contracts.into_iter().for_each(|(k, v)| {
+            self.state_updates.deployed_contracts.insert(k, v);
         });
         latter.state_updates.declared_classes.into_iter().for_each(|(k, v)| {
             self.state_updates.declared_classes.insert(k, v);
@@ -187,7 +187,7 @@ impl ProgramInput {
             .state_updates
             .storage_updates
             .get(&ContractAddress::from(world))
-            .unwrap_or(&std::collections::HashMap::new())
+            .unwrap_or(&std::collections::BTreeMap::new())
             .iter()
             .flat_map(|(k, v)| vec![*k, *v])
             .collect::<Vec<_>>();
@@ -219,8 +219,8 @@ impl ProgramInput {
             }
         }
 
-        out.push(Felt::from(self.state_updates.contract_updates.len()));
-        for (k, v) in &self.state_updates.contract_updates {
+        out.push(Felt::from(self.state_updates.deployed_contracts.len()));
+        for (k, v) in &self.state_updates.deployed_contracts {
             out.push(**k);
             out.push(*v);
         }
@@ -488,11 +488,17 @@ impl MessageToAppchain {
     }
 }
 
-#[test]
-fn test_deserialize_input() -> anyhow::Result<()> {
+#[cfg(test)]
+mod tests {
     use std::str::FromStr;
 
-    let input = r#"{
+    use katana_primitives::{address, felt};
+
+    use super::*;
+
+    #[test]
+    fn test_deserialize_input() -> anyhow::Result<()> {
+        let input = r#"{
         "prev_state_root":"0x65",
         "block_number": 102,
         "block_hash":"0x67",
@@ -509,147 +515,132 @@ fn test_deserialize_input() -> anyhow::Result<()> {
             "0x457": "0x56ce",
             "0x45c": "0x56cf"
         },
-        "contract_updates":{
+        "deployed_contracts":{
             "0x3": "0x1a102c21"
         },
         "declared_classes":{
             "0x4d2": "0x3039"
-        }
+        },
+        "deprecated_declared_classes": [],
+        "replaced_classes": {}
     }"#;
-    let mut expected = ProgramInput {
-        prev_state_root: Felt::from_str("101")?,
-        block_number: 102,
-        block_hash: Felt::from_str("103")?,
-        config_hash: Felt::from_str("104")?,
-        message_to_starknet_segment: vec![MessageToStarknet {
-            from_address: ContractAddress::from(Felt::from_str("105")?),
-            to_address: ContractAddress::from(Felt::from_str("106")?),
-            payload: vec![Felt::from_str("1")?],
-        }],
-        message_to_appchain_segment: vec![MessageToAppchain {
-            from_address: ContractAddress::from(Felt::from_str("108")?),
-            to_address: ContractAddress::from(Felt::from_str("109")?),
-            nonce: Felt::from_str("110")?,
-            selector: Felt::from_str("111")?,
-            payload: vec![Felt::from_str("112")?],
-        }],
-        state_updates: StateUpdates {
-            storage_updates: vec![(
-                ContractAddress::from(Felt::from_str("42")?),
-                vec![
-                    (Felt::from_str("2010")?, Felt::from_str("1200")?),
-                    (Felt::from_str("2012")?, Felt::from_str("1300")?),
+        let mut expected = ProgramInput {
+            prev_state_root: Felt::from_str("101")?,
+            block_number: 102,
+            block_hash: Felt::from_str("103")?,
+            config_hash: Felt::from_str("104")?,
+            message_to_starknet_segment: vec![MessageToStarknet {
+                from_address: address!("105"),
+                to_address: address!("106"),
+                payload: vec![felt!("1")],
+            }],
+            message_to_appchain_segment: vec![MessageToAppchain {
+                from_address: address!("108"),
+                to_address: address!("109"),
+                nonce: felt!("110"),
+                selector: felt!("111"),
+                payload: vec![Felt::from_str("112")?],
+            }],
+            state_updates: StateUpdates {
+                storage_updates: vec![(
+                    address!("42"),
+                    vec![
+                        (felt!("2010"), felt!("1200")),
+                        (Felt::from_str("2012")?, Felt::from_str("1300")?),
+                    ]
+                    .into_iter()
+                    .collect(),
+                )]
+                .into_iter()
+                .collect(),
+
+                nonce_updates: vec![
+                    (address!("1111"), felt!("22222")),
+                    (address!("1116"), felt!("22223")),
                 ]
                 .into_iter()
                 .collect(),
-            )]
-            .into_iter()
-            .collect(),
 
-            nonce_updates: vec![
-                (ContractAddress::from(Felt::from_str("1111")?), Felt::from_str("22222")?),
-                (ContractAddress::from(Felt::from_str("1116")?), Felt::from_str("22223")?),
-            ]
-            .into_iter()
-            .collect(),
+                deployed_contracts: vec![(address!("3"), felt!("437267489"))].into_iter().collect(),
 
-            contract_updates: vec![(
-                ContractAddress::from(Felt::from_str("3")?),
-                Felt::from_str("437267489")?,
-            )]
-            .into_iter()
-            .collect(),
+                declared_classes: vec![(Felt::from_str("1234")?, Felt::from_str("12345")?)]
+                    .into_iter()
+                    .collect(),
 
-            declared_classes: vec![(Felt::from_str("1234")?, Felt::from_str("12345")?)]
-                .into_iter()
-                .collect(),
-        },
-        world_da: None,
-    };
-    let mut deserialized = serde_json::from_str::<ProgramInput>(input)?;
-    assert_eq!(expected, deserialized);
+                ..Default::default()
+            },
+            world_da: None,
+        };
+        let mut deserialized = serde_json::from_str::<ProgramInput>(input)?;
+        assert_eq!(expected, deserialized);
 
-    deserialized.fill_da(Felt::from_str("42")?);
-    expected.world_da = Some(vec![
-        Felt::from_str("2010")?,
-        Felt::from_str("1200")?,
-        Felt::from_str("2012")?,
-        Felt::from_str("1300")?,
-    ]);
-
-    Ok(())
-}
-
-#[test]
-fn test_serialize_input() -> anyhow::Result<()> {
-    use std::str::FromStr;
-
-    let input = ProgramInput {
-        prev_state_root: Felt::from_str("101")?,
-        block_number: 102,
-        block_hash: Felt::from_str("103")?,
-        config_hash: Felt::from_str("104")?,
-        message_to_starknet_segment: vec![MessageToStarknet {
-            from_address: ContractAddress::from(Felt::from_str("105")?),
-            to_address: ContractAddress::from(Felt::from_str("106")?),
-            payload: vec![Felt::from_str("1")?],
-        }],
-        message_to_appchain_segment: vec![MessageToAppchain {
-            from_address: ContractAddress::from(Felt::from_str("108")?),
-            to_address: ContractAddress::from(Felt::from_str("109")?),
-            nonce: Felt::from_str("110")?,
-            selector: Felt::from_str("111")?,
-            payload: vec![Felt::from_str("112")?],
-        }],
-        state_updates: StateUpdates {
-            storage_updates: vec![(
-                ContractAddress::from(Felt::from_str("42")?),
-                vec![
-                    (Felt::from_str("2010")?, Felt::from_str("1200")?),
-                    (Felt::from_str("2012")?, Felt::from_str("1300")?),
-                ]
-                .into_iter()
-                .collect(),
-            )]
-            .into_iter()
-            .collect(),
-
-            nonce_updates: vec![
-                (ContractAddress::from(Felt::from_str("1111")?), Felt::from_str("22222")?),
-                (ContractAddress::from(Felt::from_str("1116")?), Felt::from_str("22223")?),
-            ]
-            .into_iter()
-            .collect(),
-
-            contract_updates: vec![(
-                ContractAddress::from(Felt::from_str("3")?),
-                Felt::from_str("437267489")?,
-            )]
-            .into_iter()
-            .collect(),
-
-            declared_classes: vec![(Felt::from_str("1234")?, Felt::from_str("12345")?)]
-                .into_iter()
-                .collect(),
-        },
-        world_da: Some(vec![
+        deserialized.fill_da(Felt::from_str("42")?);
+        expected.world_da = Some(vec![
             Felt::from_str("2010")?,
             Felt::from_str("1200")?,
             Felt::from_str("2012")?,
             Felt::from_str("1300")?,
-        ]),
-    };
+        ]);
 
-    let serialized = serde_json::to_string::<ProgramInput>(&input.clone())?;
-    let deserialized = serde_json::from_str::<ProgramInput>(&serialized)?;
-    assert_eq!(input, deserialized);
+        Ok(())
+    }
 
-    Ok(())
-}
+    #[test]
+    fn test_serialize_input() -> anyhow::Result<()> {
+        use std::str::FromStr;
 
-#[test]
-fn test_serialize_to_prover_args() -> anyhow::Result<()> {
-    let input = r#"{
+        let input = ProgramInput {
+            prev_state_root: Felt::from_str("101")?,
+            block_number: 102,
+            block_hash: Felt::from_str("103")?,
+            config_hash: felt!("104"),
+            message_to_starknet_segment: vec![MessageToStarknet {
+                from_address: address!("105"),
+                to_address: address!("106"),
+                payload: vec![felt!("1")],
+            }],
+            message_to_appchain_segment: vec![MessageToAppchain {
+                from_address: address!("108"),
+                to_address: address!("109"),
+                nonce: felt!("110"),
+                selector: felt!("111"),
+                payload: vec![felt!("112")],
+            }],
+            state_updates: StateUpdates {
+                storage_updates: vec![(
+                    address!("42"),
+                    vec![(felt!("2010"), felt!("1200")), (felt!("2012"), felt!("1300"))]
+                        .into_iter()
+                        .collect(),
+                )]
+                .into_iter()
+                .collect(),
+
+                nonce_updates: vec![
+                    (address!("1111"), felt!("22222")),
+                    (address!("1116"), felt!("22223")),
+                ]
+                .into_iter()
+                .collect(),
+
+                deployed_contracts: vec![(address!("3"), felt!("437267489"))].into_iter().collect(),
+                declared_classes: vec![(felt!("1234"), felt!("12345"))].into_iter().collect(),
+
+                ..Default::default()
+            },
+            world_da: Some(vec![felt!("2010"), felt!("1200"), felt!("2012"), felt!("1300")]),
+        };
+
+        let serialized = serde_json::to_string::<ProgramInput>(&input.clone())?;
+        let deserialized = serde_json::from_str::<ProgramInput>(&serialized)?;
+        assert_eq!(input, deserialized);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_serialize_to_prover_args() -> anyhow::Result<()> {
+        let input = r#"{
         "prev_state_root":"0x65",
         "block_number":102,
         "block_hash":"0x67",
@@ -662,31 +653,32 @@ fn test_serialize_to_prover_args() -> anyhow::Result<()> {
                 "0x115c": "0x22b"
             }
         },
-        "contract_updates":{
+        "deployed_contracts":{
             "0x1046a": "0x1e61"
         },
         "declared_classes":{
             "0x15b38": "0x1869f"
         },
+        "deprecated_declared_classes": [],
+        "replaced_classes": {},
         "message_to_starknet_segment":["0x7b","0x1c8","0x7b","0x80"],
         "message_to_appchain_segment":["0x6c","0x6d","0x6e","0x6f","0x1","0x70"]
     }"#;
-    let mut input = serde_json::from_str::<ProgramInput>(input)?;
-    input.fill_da(Felt::from_str("333")?);
+        let mut input = serde_json::from_str::<ProgramInput>(input)?;
+        input.fill_da(felt!("333"));
 
-    // println!("{:?}", input);
+        let serialized = input.serialize_to_prover_args();
 
-    let serialized = input.serialize_to_prover_args();
+        let expected = vec![
+            101, 102, 103, 104, 1, 1111, 22222, 1, 333, 1, 4444, 555, 1, 66666, 7777, 1, 88888,
+            99999, 4, 123, 456, 1, 128, 6, 108, 109, 110, 111, 1, 112, 1, 4444, 555, 0u64,
+        ]
+        .into_iter()
+        .map(Felt::from)
+        .collect::<Vec<_>>();
 
-    let expected = vec![
-        101, 102, 103, 104, 1, 1111, 22222, 1, 333, 1, 4444, 555, 1, 66666, 7777, 1, 88888, 99999,
-        4, 123, 456, 1, 128, 6, 108, 109, 110, 111, 1, 112, 1, 4444, 555, 0u64,
-    ]
-    .into_iter()
-    .map(Felt::from)
-    .collect::<Vec<_>>();
+        assert_eq!(serialized, expected);
 
-    assert_eq!(serialized, expected);
-
-    Ok(())
+        Ok(())
+    }
 }

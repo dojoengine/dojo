@@ -46,7 +46,7 @@ impl From<katana_primitives::state::StateUpdates> for StateDiff {
             .collect();
 
         let deployed_contracts: Vec<DeployedContractItem> = value
-            .contract_updates
+            .deployed_contracts
             .into_iter()
             .map(|(addr, class_hash)| DeployedContractItem { address: addr.into(), class_hash })
             .collect();

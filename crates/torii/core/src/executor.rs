@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 use std::mem;
 
 use anyhow::{Context, Result};
-use dojo_types::schema::Ty;
+use dojo_types::schema::{Struct, Ty};
 use sqlx::{FromRow, Pool, Sqlite, Transaction};
 use starknet::core::types::Felt;
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
@@ -35,13 +35,14 @@ pub struct DeleteEntityQuery {
     pub entity_id: String,
     pub event_id: String,
     pub block_timestamp: String,
-    pub entity: Ty,
+    pub ty: Ty,
 }
 
 #[derive(Debug, Clone)]
 pub enum QueryType {
     SetEntity(Ty),
     DeleteEntity(DeleteEntityQuery),
+    EventMessage(Ty),
     RegisterModel,
     StoreEvent,
     Execute,
@@ -51,7 +52,7 @@ pub enum QueryType {
 pub struct Executor<'c> {
     pool: Pool<Sqlite>,
     transaction: Transaction<'c, Sqlite>,
-    publish_queue: Vec<BrokerMessage>,
+    publish_queue: VecDeque<BrokerMessage>,
     rx: UnboundedReceiver<QueryMessage>,
 }
 
@@ -65,7 +66,7 @@ impl<'c> Executor<'c> {
     pub async fn new(pool: Pool<Sqlite>) -> Result<(Self, UnboundedSender<QueryMessage>)> {
         let (tx, rx) = unbounded_channel();
         let transaction = pool.begin().await?;
-        let publish_queue = Vec::new();
+        let publish_queue = VecDeque::new();
 
         Ok((Executor { pool, transaction, publish_queue, rx }, tx))
     }
@@ -95,7 +96,7 @@ impl<'c> Executor<'c> {
                     entity_updated.updated_model = Some(entity);
                     entity_updated.deleted = false;
                     let broker_message = BrokerMessage::EntityUpdated(entity_updated);
-                    self.publish_queue.push(broker_message);
+                    self.publish_queue.push_back(broker_message);
                 }
                 QueryType::DeleteEntity(entity) => {
                     let delete_model = query.execute(&mut **tx).await.with_context(|| {
@@ -115,7 +116,8 @@ impl<'c> Executor<'c> {
                     .fetch_one(&mut **tx)
                     .await?;
                     let mut entity_updated = EntityUpdated::from_row(&row)?;
-                    entity_updated.updated_model = Some(entity.entity);
+                    entity_updated.updated_model =
+                        Some(Ty::Struct(Struct { name: entity.ty.name(), children: vec![] }));
 
                     let count = sqlx::query_scalar::<_, i64>(
                         "SELECT count(*) FROM entity_model WHERE entity_id = ?",
@@ -134,23 +136,30 @@ impl<'c> Executor<'c> {
                     }
 
                     let broker_message = BrokerMessage::EntityUpdated(entity_updated);
-                    self.publish_queue.push(broker_message);
+                    self.publish_queue.push_back(broker_message);
                 }
                 QueryType::RegisterModel => {
                     let row = query.fetch_one(&mut **tx).await.with_context(|| {
                         format!("Failed to execute query: {:?}, args: {:?}", statement, arguments)
                     })?;
                     let model_registered = ModelRegistered::from_row(&row)?;
-                    let broker_message = BrokerMessage::ModelRegistered(model_registered);
-                    self.publish_queue.push(broker_message);
+                    self.publish_queue.push_back(BrokerMessage::ModelRegistered(model_registered));
+                }
+                QueryType::EventMessage(entity) => {
+                    let row = query.fetch_one(&mut **tx).await.with_context(|| {
+                        format!("Failed to execute query: {:?}, args: {:?}", statement, arguments)
+                    })?;
+                    let mut event_message = EventMessageUpdated::from_row(&row)?;
+                    event_message.updated_model = Some(entity);
+                    let broker_message = BrokerMessage::EventMessageUpdated(event_message);
+                    self.publish_queue.push_back(broker_message);
                 }
                 QueryType::StoreEvent => {
                     let row = query.fetch_one(&mut **tx).await.with_context(|| {
                         format!("Failed to execute query: {:?}, args: {:?}", statement, arguments)
                     })?;
                     let event = EventEmitted::from_row(&row)?;
-                    let broker_message = BrokerMessage::EventEmitted(event);
-                    self.publish_queue.push(broker_message);
+                    self.publish_queue.push_back(BrokerMessage::EventEmitted(event));
                 }
                 QueryType::Execute => {
                     self.execute().await?;
@@ -170,7 +179,7 @@ impl<'c> Executor<'c> {
         let transaction = mem::replace(&mut self.transaction, self.pool.begin().await?);
         transaction.commit().await?;
 
-        for message in self.publish_queue.drain(..) {
+        while let Some(message) = self.publish_queue.pop_front() {
             send_broker_message(message);
         }
 

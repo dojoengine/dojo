@@ -5,7 +5,7 @@ use camino::Utf8PathBuf;
 use dojo_test_utils::compiler::CompilerTestSetup;
 use dojo_test_utils::migration::{copy_spawn_and_move_db, prepare_migration_with_world_and_seed};
 use dojo_test_utils::rpc::MockJsonRpcTransport;
-use katana_runner::{KatanaRunner, KatanaRunnerConfig};
+use katana_runner::RunnerCtx;
 use scarb::compiler::Profile;
 use serde_json::json;
 use starknet::accounts::ConnectedAccount;
@@ -285,11 +285,8 @@ fn events_without_block_number_arent_parsed() {
     similar_asserts::assert_eq!(actual_contracts, expected_contracts);
 }
 
-#[test]
-fn fetch_remote_manifest() {
-    let seq_config = KatanaRunnerConfig::default().with_db_dir(copy_spawn_and_move_db().as_str());
-    let sequencer = KatanaRunner::new_with_config(seq_config).expect("Failed to start runner.");
-
+#[katana_runner::test(db_dir = copy_spawn_and_move_db().as_str())]
+fn fetch_remote_manifest(sequencer: &RunnerCtx) {
     let account = sequencer.account(0);
     let provider = account.provider();
 

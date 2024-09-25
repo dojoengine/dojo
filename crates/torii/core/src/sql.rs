@@ -303,27 +303,27 @@ impl Sql {
         let entity_id = format!("{:#x}", poseidon_hash_many(&keys));
         let model_id = format!("{:#x}", compute_selector_from_names(model_namespace, model_name));
 
+        let keys_str = felts_sql_string(&keys);
+        let insert_entities = "INSERT INTO event_messages (id, keys, event_id, executed_at) \
+                               VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET \
+                               updated_at=CURRENT_TIMESTAMP, executed_at=EXCLUDED.executed_at, \
+                               event_id=EXCLUDED.event_id RETURNING *";
+        self.executor.send(QueryMessage {
+            statement: insert_entities.to_string(),
+            arguments: vec![
+                Argument::String(entity_id.clone()),
+                Argument::String(keys_str),
+                Argument::String(event_id.to_string()),
+                Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
+            ],
+            query_type: QueryType::EventMessage(entity.clone()),
+        })?;
         self.executor.send(QueryMessage {
             statement: "INSERT INTO event_model (entity_id, model_id) VALUES (?, ?) ON CONFLICT(entity_id, \
              model_id) DO NOTHING".to_string(),
             arguments: vec![Argument::String(entity_id.clone()), Argument::String(model_id.clone())],
             query_type: QueryType::Other,
         })?;
-
-        let keys_str = felts_sql_string(&keys);
-        let insert_entities = "INSERT INTO event_messages (id, keys, event_id, executed_at) \
-                               VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET \
-                               updated_at=CURRENT_TIMESTAMP, executed_at=EXCLUDED.executed_at, \
-                               event_id=EXCLUDED.event_id RETURNING *";
-        let mut event_message_updated: EventMessageUpdated = sqlx::query_as(insert_entities)
-            .bind(&entity_id)
-            .bind(&keys_str)
-            .bind(event_id)
-            .bind(utc_dt_string_from_timestamp(block_timestamp))
-            .fetch_one(&self.pool)
-            .await?;
-
-        event_message_updated.updated_model = Some(entity.clone());
 
         let path = vec![namespaced_name];
         self.build_set_entity_queries_recursive(
@@ -334,21 +334,6 @@ impl Sql {
             block_timestamp,
             &vec![],
         )?;
-
-        self.executor.send(QueryMessage {
-            statement: "INSERT INTO event_messages (id, keys, event_id, executed_at) \
-             VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET \
-             updated_at=CURRENT_TIMESTAMP, executed_at=EXCLUDED.executed_at, \
-             event_id=EXCLUDED.event_id RETURNING *"
-                .to_string(),
-            arguments: vec![
-                Argument::String(entity_id.clone()),
-                Argument::String(keys_str),
-                Argument::String(event_id.to_string()),
-                Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
-            ],
-            query_type: QueryType::Other,
-        })?;
 
         Ok(())
     }
@@ -376,7 +361,7 @@ impl Sql {
                 entity_id: entity_id.clone(),
                 event_id: event_id.to_string(),
                 block_timestamp: utc_dt_string_from_timestamp(block_timestamp),
-                entity: entity.clone(),
+                ty: entity.clone(),
             }),
         })?;
 
@@ -523,8 +508,8 @@ impl Sql {
 
         self.executor.send(QueryMessage {
             statement: "INSERT OR IGNORE INTO events (id, keys, data, transaction_hash, executed_at) VALUES \
-             (?, ?, ?, ?, ?)".to_string(),
-            arguments: vec![id.clone(), keys.clone(), data.clone(), hash.clone(), executed_at.clone()],
+             (?, ?, ?, ?, ?) RETURNING *".to_string(),
+            arguments: vec![id, keys, data, hash, executed_at],
             query_type: QueryType::StoreEvent,
         })?;
 
