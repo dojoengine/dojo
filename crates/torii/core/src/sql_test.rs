@@ -11,6 +11,7 @@ use dojo_world::contracts::world::{WorldContract, WorldContractReader};
 use katana_runner::RunnerCtx;
 use scarb::compiler::Profile;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+use sqlx::SqlitePool;
 use starknet::accounts::Account;
 use starknet::core::types::{Call, Felt};
 use starknet::core::utils::{get_contract_address, get_selector_from_name};
@@ -30,7 +31,7 @@ use crate::processors::store_update_member::StoreUpdateMemberProcessor;
 use crate::processors::store_update_record::StoreUpdateRecordProcessor;
 use crate::sql::Sql;
 
-pub async fn setup_sqlite_pool(world_address: Felt) -> Result<Sql, Box<dyn std::error::Error>> {
+pub async fn setup_sqlite_pool() -> Result<SqlitePool, Box<dyn std::error::Error>> {
     let tempfile = NamedTempFile::new().unwrap();
     let path = tempfile.path().to_string_lossy();
     let options = SqliteConnectOptions::from_str(&path).unwrap().create_if_missing(true);
@@ -42,15 +43,7 @@ pub async fn setup_sqlite_pool(world_address: Felt) -> Result<Sql, Box<dyn std::
         .await?;
     sqlx::migrate!("../migrations").run(&pool).await?;
 
-    let (shutdown_tx, _) = broadcast::channel(1);
-    let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
-    tokio::spawn(async move {
-        executor.run().await.unwrap();
-    });
-
-    let db = Sql::new(pool.clone(), world_address, sender.clone()).await.unwrap();
-
-    Ok(db)
+    Ok(pool)
 }
 
 pub async fn bootstrap_engine<P>(
@@ -157,7 +150,14 @@ async fn test_load_from_remote(sequencer: &RunnerCtx) {
     TransactionWaiter::new(tx.transaction_hash, &provider).await.unwrap();
 
     let world_reader = WorldContractReader::new(strat.world_address, Arc::clone(&provider));
-    let db = setup_sqlite_pool(world_reader.address).await.unwrap();
+    let pool = setup_sqlite_pool().await.unwrap();
+    let (shutdown_tx, _) = broadcast::channel(1);
+    let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
+    tokio::spawn(async move {
+        executor.run().await.unwrap();
+    });
+
+    let db = Sql::new(pool.clone(), world_reader.address, sender.clone()).await.unwrap();
 
     let _ = bootstrap_engine(world_reader, db.clone(), provider).await.unwrap();
 
@@ -307,7 +307,14 @@ async fn test_load_from_remote_del(sequencer: &RunnerCtx) {
     TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
 
     let world_reader = WorldContractReader::new(strat.world_address, Arc::clone(&provider));
-    let db = setup_sqlite_pool(world_reader.address).await.unwrap();
+    let pool = setup_sqlite_pool().await.unwrap();
+    let (shutdown_tx, _) = broadcast::channel(1);
+    let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
+    tokio::spawn(async move {
+        executor.run().await.unwrap();
+    });
+
+    let db = Sql::new(pool.clone(), world_reader.address, sender.clone()).await.unwrap();
 
     let _ = bootstrap_engine(world_reader, db.clone(), provider).await;
 
@@ -386,7 +393,14 @@ async fn test_update_with_set_record(sequencer: &RunnerCtx) {
     TransactionWaiter::new(move_res.transaction_hash, &provider).await.unwrap();
 
     let world_reader = WorldContractReader::new(strat.world_address, Arc::clone(&provider));
-    let db = setup_sqlite_pool(world_reader.address).await.unwrap();
+    let pool = setup_sqlite_pool().await.unwrap();
+    let (shutdown_tx, _) = broadcast::channel(1);
+    let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
+    tokio::spawn(async move {
+        executor.run().await.unwrap();
+    });
+
+    let db = Sql::new(pool.clone(), world_reader.address, sender.clone()).await.unwrap();
 
     let _ = bootstrap_engine(world_reader, db.clone(), Arc::clone(&provider)).await.unwrap();
 }
