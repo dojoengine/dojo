@@ -661,7 +661,7 @@ impl StorageStorageBaseMutCopy of core::traits::Copy::<StorageStorageBaseMut>;
 
                     #[abi(embed_v0)]
                     pub impl ContractImpl of IContract<ContractState> {
-                        fn contract_name(self: @ContractState) -> ByteArray {
+                        fn name(self: @ContractState) -> ByteArray {
                             "bad_namespace_format"
                         }
 
@@ -921,7 +921,7 @@ pub fn unsafe_new_contract_state() -> ContractState {
 use starknet::storage::Map as LegacyMap;
 
 #[implicit_precedence(core::pedersen::Pedersen, core::RangeCheck, core::integer::Bitwise, core::ec::EcOp, core::poseidon::Poseidon, core::SegmentArena, core::circuit::RangeCheck96, core::circuit::AddMod, core::circuit::MulMod, core::gas::GasBuiltin, System)]
-fn __wrapper__ContractImpl__contract_name(mut data: Span::<felt252>) -> Span::<felt252> {
+fn __wrapper__ContractImpl__name(mut data: Span::<felt252>) -> Span::<felt252> {
     core::internal::require_implicit::<System>();
     core::internal::revoke_ap_tracking();
     core::option::OptionTraitImpl::expect(core::gas::withdraw_gas(), 'Out of gas');
@@ -931,7 +931,7 @@ fn __wrapper__ContractImpl__contract_name(mut data: Span::<felt252>) -> Span::<f
         core::gas::withdraw_gas_all(core::gas::get_builtin_costs()), 'Out of gas',
     );
     let mut contract_state = unsafe_new_contract_state();
-    let res = ContractImpl::contract_name(@contract_state, );
+    let res = ContractImpl::name(@contract_state, );
     let mut arr = ArrayTrait::new();
     // References.
     // Result.
@@ -1079,7 +1079,7 @@ fn __wrapper__IDojoInitImpl__dojo_init(mut data: Span::<felt252>) -> Span::<felt
 
 
 pub mod __external {
-    pub use super::__wrapper__ContractImpl__contract_name as contract_name;
+    pub use super::__wrapper__ContractImpl__name as name;
     pub use super::__wrapper__ContractImpl__namespace as namespace;
     pub use super::__wrapper__ContractImpl__tag as tag;
     pub use super::__wrapper__ContractImpl__name_hash as name_hash;
@@ -1486,7 +1486,7 @@ impl IDojoInitSafeDispatcherSubPointersMutCopy of core::traits::Copy::<IDojoInit
 
                     #[abi(embed_v0)]
                     pub impl ContractImpl of IContract<ContractState> {
-                        fn contract_name(self: @ContractState) -> ByteArray {
+                        fn name(self: @ContractState) -> ByteArray {
                             "spawn"
                         }
 
@@ -1746,7 +1746,7 @@ pub fn unsafe_new_contract_state() -> ContractState {
 use starknet::storage::Map as LegacyMap;
 
 #[implicit_precedence(core::pedersen::Pedersen, core::RangeCheck, core::integer::Bitwise, core::ec::EcOp, core::poseidon::Poseidon, core::SegmentArena, core::circuit::RangeCheck96, core::circuit::AddMod, core::circuit::MulMod, core::gas::GasBuiltin, System)]
-fn __wrapper__ContractImpl__contract_name(mut data: Span::<felt252>) -> Span::<felt252> {
+fn __wrapper__ContractImpl__name(mut data: Span::<felt252>) -> Span::<felt252> {
     core::internal::require_implicit::<System>();
     core::internal::revoke_ap_tracking();
     core::option::OptionTraitImpl::expect(core::gas::withdraw_gas(), 'Out of gas');
@@ -1756,7 +1756,7 @@ fn __wrapper__ContractImpl__contract_name(mut data: Span::<felt252>) -> Span::<f
         core::gas::withdraw_gas_all(core::gas::get_builtin_costs()), 'Out of gas',
     );
     let mut contract_state = unsafe_new_contract_state();
-    let res = ContractImpl::contract_name(@contract_state, );
+    let res = ContractImpl::name(@contract_state, );
     let mut arr = ArrayTrait::new();
     // References.
     // Result.
@@ -1904,7 +1904,7 @@ fn __wrapper__IDojoInitImpl__dojo_init(mut data: Span::<felt252>) -> Span::<felt
 
 
 pub mod __external {
-    pub use super::__wrapper__ContractImpl__contract_name as contract_name;
+    pub use super::__wrapper__ContractImpl__name as name;
     pub use super::__wrapper__ContractImpl__namespace as namespace;
     pub use super::__wrapper__ContractImpl__tag as tag;
     pub use super::__wrapper__ContractImpl__name_hash as name_hash;
@@ -2311,7 +2311,7 @@ impl IDojoInitSafeDispatcherSubPointersMutCopy of core::traits::Copy::<IDojoInit
 
                     #[abi(embed_v0)]
                     pub impl ContractImpl of IContract<ContractState> {
-                        fn contract_name(self: @ContractState) -> ByteArray {
+                        fn name(self: @ContractState) -> ByteArray {
                             "proxy"
                         }
 
@@ -2568,7 +2568,7 @@ pub fn unsafe_new_contract_state() -> ContractState {
 use starknet::storage::Map as LegacyMap;
 
 #[implicit_precedence(core::pedersen::Pedersen, core::RangeCheck, core::integer::Bitwise, core::ec::EcOp, core::poseidon::Poseidon, core::SegmentArena, core::circuit::RangeCheck96, core::circuit::AddMod, core::circuit::MulMod, core::gas::GasBuiltin, System)]
-fn __wrapper__ContractImpl__contract_name(mut data: Span::<felt252>) -> Span::<felt252> {
+fn __wrapper__ContractImpl__name(mut data: Span::<felt252>) -> Span::<felt252> {
     core::internal::require_implicit::<System>();
     core::internal::revoke_ap_tracking();
     core::option::OptionTraitImpl::expect(core::gas::withdraw_gas(), 'Out of gas');
@@ -2578,7 +2578,7 @@ fn __wrapper__ContractImpl__contract_name(mut data: Span::<felt252>) -> Span::<f
         core::gas::withdraw_gas_all(core::gas::get_builtin_costs()), 'Out of gas',
     );
     let mut contract_state = unsafe_new_contract_state();
-    let res = ContractImpl::contract_name(@contract_state, );
+    let res = ContractImpl::name(@contract_state, );
     let mut arr = ArrayTrait::new();
     // References.
     // Result.
@@ -2726,7 +2726,7 @@ fn __wrapper__IDojoInitImpl__dojo_init(mut data: Span::<felt252>) -> Span::<felt
 
 
 pub mod __external {
-    pub use super::__wrapper__ContractImpl__contract_name as contract_name;
+    pub use super::__wrapper__ContractImpl__name as name;
     pub use super::__wrapper__ContractImpl__namespace as namespace;
     pub use super::__wrapper__ContractImpl__tag as tag;
     pub use super::__wrapper__ContractImpl__name_hash as name_hash;
@@ -3133,7 +3133,7 @@ impl IDojoInitSafeDispatcherSubPointersMutCopy of core::traits::Copy::<IDojoInit
 
                     #[abi(embed_v0)]
                     pub impl ContractImpl of IContract<ContractState> {
-                        fn contract_name(self: @ContractState) -> ByteArray {
+                        fn name(self: @ContractState) -> ByteArray {
                             "ctxnamed"
                         }
 
@@ -3393,7 +3393,7 @@ pub fn unsafe_new_contract_state() -> ContractState {
 use starknet::storage::Map as LegacyMap;
 
 #[implicit_precedence(core::pedersen::Pedersen, core::RangeCheck, core::integer::Bitwise, core::ec::EcOp, core::poseidon::Poseidon, core::SegmentArena, core::circuit::RangeCheck96, core::circuit::AddMod, core::circuit::MulMod, core::gas::GasBuiltin, System)]
-fn __wrapper__ContractImpl__contract_name(mut data: Span::<felt252>) -> Span::<felt252> {
+fn __wrapper__ContractImpl__name(mut data: Span::<felt252>) -> Span::<felt252> {
     core::internal::require_implicit::<System>();
     core::internal::revoke_ap_tracking();
     core::option::OptionTraitImpl::expect(core::gas::withdraw_gas(), 'Out of gas');
@@ -3403,7 +3403,7 @@ fn __wrapper__ContractImpl__contract_name(mut data: Span::<felt252>) -> Span::<f
         core::gas::withdraw_gas_all(core::gas::get_builtin_costs()), 'Out of gas',
     );
     let mut contract_state = unsafe_new_contract_state();
-    let res = ContractImpl::contract_name(@contract_state, );
+    let res = ContractImpl::name(@contract_state, );
     let mut arr = ArrayTrait::new();
     // References.
     // Result.
@@ -3551,7 +3551,7 @@ fn __wrapper__IDojoInitImpl__dojo_init(mut data: Span::<felt252>) -> Span::<felt
 
 
 pub mod __external {
-    pub use super::__wrapper__ContractImpl__contract_name as contract_name;
+    pub use super::__wrapper__ContractImpl__name as name;
     pub use super::__wrapper__ContractImpl__namespace as namespace;
     pub use super::__wrapper__ContractImpl__tag as tag;
     pub use super::__wrapper__ContractImpl__name_hash as name_hash;
@@ -3958,7 +3958,7 @@ impl IDojoInitSafeDispatcherSubPointersMutCopy of core::traits::Copy::<IDojoInit
 
                     #[abi(embed_v0)]
                     pub impl ContractImpl of IContract<ContractState> {
-                        fn contract_name(self: @ContractState) -> ByteArray {
+                        fn name(self: @ContractState) -> ByteArray {
                             "withevent"
                         }
 
@@ -4251,7 +4251,7 @@ pub fn unsafe_new_contract_state() -> ContractState {
 use starknet::storage::Map as LegacyMap;
 
 #[implicit_precedence(core::pedersen::Pedersen, core::RangeCheck, core::integer::Bitwise, core::ec::EcOp, core::poseidon::Poseidon, core::SegmentArena, core::circuit::RangeCheck96, core::circuit::AddMod, core::circuit::MulMod, core::gas::GasBuiltin, System)]
-fn __wrapper__ContractImpl__contract_name(mut data: Span::<felt252>) -> Span::<felt252> {
+fn __wrapper__ContractImpl__name(mut data: Span::<felt252>) -> Span::<felt252> {
     core::internal::require_implicit::<System>();
     core::internal::revoke_ap_tracking();
     core::option::OptionTraitImpl::expect(core::gas::withdraw_gas(), 'Out of gas');
@@ -4261,7 +4261,7 @@ fn __wrapper__ContractImpl__contract_name(mut data: Span::<felt252>) -> Span::<f
         core::gas::withdraw_gas_all(core::gas::get_builtin_costs()), 'Out of gas',
     );
     let mut contract_state = unsafe_new_contract_state();
-    let res = ContractImpl::contract_name(@contract_state, );
+    let res = ContractImpl::name(@contract_state, );
     let mut arr = ArrayTrait::new();
     // References.
     // Result.
@@ -4409,7 +4409,7 @@ fn __wrapper__IDojoInitImpl__dojo_init(mut data: Span::<felt252>) -> Span::<felt
 
 
 pub mod __external {
-    pub use super::__wrapper__ContractImpl__contract_name as contract_name;
+    pub use super::__wrapper__ContractImpl__name as name;
     pub use super::__wrapper__ContractImpl__namespace as namespace;
     pub use super::__wrapper__ContractImpl__tag as tag;
     pub use super::__wrapper__ContractImpl__name_hash as name_hash;
@@ -4816,7 +4816,7 @@ impl IDojoInitSafeDispatcherSubPointersMutCopy of core::traits::Copy::<IDojoInit
 
                     #[abi(embed_v0)]
                     pub impl ContractImpl of IContract<ContractState> {
-                        fn contract_name(self: @ContractState) -> ByteArray {
+                        fn name(self: @ContractState) -> ByteArray {
                             "withcomponent"
                         }
 
@@ -4971,7 +4971,7 @@ pub fn unsafe_new_contract_state() -> ContractState {
 use starknet::storage::Map as LegacyMap;
 
 #[implicit_precedence(core::pedersen::Pedersen, core::RangeCheck, core::integer::Bitwise, core::ec::EcOp, core::poseidon::Poseidon, core::SegmentArena, core::circuit::RangeCheck96, core::circuit::AddMod, core::circuit::MulMod, core::gas::GasBuiltin, System)]
-fn __wrapper__ContractImpl__contract_name(mut data: Span::<felt252>) -> Span::<felt252> {
+fn __wrapper__ContractImpl__name(mut data: Span::<felt252>) -> Span::<felt252> {
     core::internal::require_implicit::<System>();
     core::internal::revoke_ap_tracking();
     core::option::OptionTraitImpl::expect(core::gas::withdraw_gas(), 'Out of gas');
@@ -4981,7 +4981,7 @@ fn __wrapper__ContractImpl__contract_name(mut data: Span::<felt252>) -> Span::<f
         core::gas::withdraw_gas_all(core::gas::get_builtin_costs()), 'Out of gas',
     );
     let mut contract_state = unsafe_new_contract_state();
-    let res = ContractImpl::contract_name(@contract_state, );
+    let res = ContractImpl::name(@contract_state, );
     let mut arr = ArrayTrait::new();
     // References.
     // Result.
@@ -5129,7 +5129,7 @@ fn __wrapper__IDojoInitImpl__dojo_init(mut data: Span::<felt252>) -> Span::<felt
 
 
 pub mod __external {
-    pub use super::__wrapper__ContractImpl__contract_name as contract_name;
+    pub use super::__wrapper__ContractImpl__name as name;
     pub use super::__wrapper__ContractImpl__namespace as namespace;
     pub use super::__wrapper__ContractImpl__tag as tag;
     pub use super::__wrapper__ContractImpl__name_hash as name_hash;
@@ -5752,7 +5752,7 @@ impl IDojoInitSafeDispatcherSubPointersMutCopy of core::traits::Copy::<IDojoInit
 
                     #[abi(embed_v0)]
                     pub impl ContractImpl of IContract<ContractState> {
-                        fn contract_name(self: @ContractState) -> ByteArray {
+                        fn name(self: @ContractState) -> ByteArray {
                             "MyFaultyContract"
                         }
 
@@ -6021,7 +6021,7 @@ pub fn unsafe_new_contract_state() -> ContractState {
 use starknet::storage::Map as LegacyMap;
 
 #[implicit_precedence(core::pedersen::Pedersen, core::RangeCheck, core::integer::Bitwise, core::ec::EcOp, core::poseidon::Poseidon, core::SegmentArena, core::circuit::RangeCheck96, core::circuit::AddMod, core::circuit::MulMod, core::gas::GasBuiltin, System)]
-fn __wrapper__ContractImpl__contract_name(mut data: Span::<felt252>) -> Span::<felt252> {
+fn __wrapper__ContractImpl__name(mut data: Span::<felt252>) -> Span::<felt252> {
     core::internal::require_implicit::<System>();
     core::internal::revoke_ap_tracking();
     core::option::OptionTraitImpl::expect(core::gas::withdraw_gas(), 'Out of gas');
@@ -6031,7 +6031,7 @@ fn __wrapper__ContractImpl__contract_name(mut data: Span::<felt252>) -> Span::<f
         core::gas::withdraw_gas_all(core::gas::get_builtin_costs()), 'Out of gas',
     );
     let mut contract_state = unsafe_new_contract_state();
-    let res = ContractImpl::contract_name(@contract_state, );
+    let res = ContractImpl::name(@contract_state, );
     let mut arr = ArrayTrait::new();
     // References.
     // Result.
@@ -6333,7 +6333,7 @@ fn __wrapper__IDojoInitImpl__dojo_init(mut data: Span::<felt252>) -> Span::<felt
 
 
 pub mod __external {
-    pub use super::__wrapper__ContractImpl__contract_name as contract_name;
+    pub use super::__wrapper__ContractImpl__name as name;
     pub use super::__wrapper__ContractImpl__namespace as namespace;
     pub use super::__wrapper__ContractImpl__tag as tag;
     pub use super::__wrapper__ContractImpl__name_hash as name_hash;
@@ -6747,7 +6747,7 @@ impl IDojoInitSafeDispatcherSubPointersMutCopy of core::traits::Copy::<IDojoInit
 
                     #[abi(embed_v0)]
                     pub impl ContractImpl of IContract<ContractState> {
-                        fn contract_name(self: @ContractState) -> ByteArray {
+                        fn name(self: @ContractState) -> ByteArray {
                             "MyNominalContract"
                         }
 
@@ -7027,7 +7027,7 @@ pub fn unsafe_new_contract_state() -> ContractState {
 use starknet::storage::Map as LegacyMap;
 
 #[implicit_precedence(core::pedersen::Pedersen, core::RangeCheck, core::integer::Bitwise, core::ec::EcOp, core::poseidon::Poseidon, core::SegmentArena, core::circuit::RangeCheck96, core::circuit::AddMod, core::circuit::MulMod, core::gas::GasBuiltin, System)]
-fn __wrapper__ContractImpl__contract_name(mut data: Span::<felt252>) -> Span::<felt252> {
+fn __wrapper__ContractImpl__name(mut data: Span::<felt252>) -> Span::<felt252> {
     core::internal::require_implicit::<System>();
     core::internal::revoke_ap_tracking();
     core::option::OptionTraitImpl::expect(core::gas::withdraw_gas(), 'Out of gas');
@@ -7037,7 +7037,7 @@ fn __wrapper__ContractImpl__contract_name(mut data: Span::<felt252>) -> Span::<f
         core::gas::withdraw_gas_all(core::gas::get_builtin_costs()), 'Out of gas',
     );
     let mut contract_state = unsafe_new_contract_state();
-    let res = ContractImpl::contract_name(@contract_state, );
+    let res = ContractImpl::name(@contract_state, );
     let mut arr = ArrayTrait::new();
     // References.
     // Result.
@@ -7350,7 +7350,7 @@ fn __wrapper__IDojoInitImpl__dojo_init(mut data: Span::<felt252>) -> Span::<felt
 
 
 pub mod __external {
-    pub use super::__wrapper__ContractImpl__contract_name as contract_name;
+    pub use super::__wrapper__ContractImpl__name as name;
     pub use super::__wrapper__ContractImpl__namespace as namespace;
     pub use super::__wrapper__ContractImpl__tag as tag;
     pub use super::__wrapper__ContractImpl__name_hash as name_hash;
@@ -7765,7 +7765,7 @@ impl IDojoInitSafeDispatcherSubPointersMutCopy of core::traits::Copy::<IDojoInit
 
                     #[abi(embed_v0)]
                     pub impl ContractImpl of IContract<ContractState> {
-                        fn contract_name(self: @ContractState) -> ByteArray {
+                        fn name(self: @ContractState) -> ByteArray {
                             "init_test"
                         }
 
@@ -8039,7 +8039,7 @@ pub fn unsafe_new_contract_state() -> ContractState {
 use starknet::storage::Map as LegacyMap;
 
 #[implicit_precedence(core::pedersen::Pedersen, core::RangeCheck, core::integer::Bitwise, core::ec::EcOp, core::poseidon::Poseidon, core::SegmentArena, core::circuit::RangeCheck96, core::circuit::AddMod, core::circuit::MulMod, core::gas::GasBuiltin, System)]
-fn __wrapper__ContractImpl__contract_name(mut data: Span::<felt252>) -> Span::<felt252> {
+fn __wrapper__ContractImpl__name(mut data: Span::<felt252>) -> Span::<felt252> {
     core::internal::require_implicit::<System>();
     core::internal::revoke_ap_tracking();
     core::option::OptionTraitImpl::expect(core::gas::withdraw_gas(), 'Out of gas');
@@ -8049,7 +8049,7 @@ fn __wrapper__ContractImpl__contract_name(mut data: Span::<felt252>) -> Span::<f
         core::gas::withdraw_gas_all(core::gas::get_builtin_costs()), 'Out of gas',
     );
     let mut contract_state = unsafe_new_contract_state();
-    let res = ContractImpl::contract_name(@contract_state, );
+    let res = ContractImpl::name(@contract_state, );
     let mut arr = ArrayTrait::new();
     // References.
     // Result.
@@ -8208,7 +8208,7 @@ fn __wrapper__IDojoInitImpl__dojo_init(mut data: Span::<felt252>) -> Span::<felt
 
 
 pub mod __external {
-    pub use super::__wrapper__ContractImpl__contract_name as contract_name;
+    pub use super::__wrapper__ContractImpl__name as name;
     pub use super::__wrapper__ContractImpl__namespace as namespace;
     pub use super::__wrapper__ContractImpl__tag as tag;
     pub use super::__wrapper__ContractImpl__name_hash as name_hash;
@@ -8615,7 +8615,7 @@ impl IDojoInitSafeDispatcherSubPointersMutCopy of core::traits::Copy::<IDojoInit
 
                     #[abi(embed_v0)]
                     pub impl ContractImpl of IContract<ContractState> {
-                        fn contract_name(self: @ContractState) -> ByteArray {
+                        fn name(self: @ContractState) -> ByteArray {
                             "no_init_test"
                         }
 
@@ -8869,7 +8869,7 @@ pub fn unsafe_new_contract_state() -> ContractState {
 use starknet::storage::Map as LegacyMap;
 
 #[implicit_precedence(core::pedersen::Pedersen, core::RangeCheck, core::integer::Bitwise, core::ec::EcOp, core::poseidon::Poseidon, core::SegmentArena, core::circuit::RangeCheck96, core::circuit::AddMod, core::circuit::MulMod, core::gas::GasBuiltin, System)]
-fn __wrapper__ContractImpl__contract_name(mut data: Span::<felt252>) -> Span::<felt252> {
+fn __wrapper__ContractImpl__name(mut data: Span::<felt252>) -> Span::<felt252> {
     core::internal::require_implicit::<System>();
     core::internal::revoke_ap_tracking();
     core::option::OptionTraitImpl::expect(core::gas::withdraw_gas(), 'Out of gas');
@@ -8879,7 +8879,7 @@ fn __wrapper__ContractImpl__contract_name(mut data: Span::<felt252>) -> Span::<f
         core::gas::withdraw_gas_all(core::gas::get_builtin_costs()), 'Out of gas',
     );
     let mut contract_state = unsafe_new_contract_state();
-    let res = ContractImpl::contract_name(@contract_state, );
+    let res = ContractImpl::name(@contract_state, );
     let mut arr = ArrayTrait::new();
     // References.
     // Result.
@@ -9027,7 +9027,7 @@ fn __wrapper__IDojoInitImpl__dojo_init(mut data: Span::<felt252>) -> Span::<felt
 
 
 pub mod __external {
-    pub use super::__wrapper__ContractImpl__contract_name as contract_name;
+    pub use super::__wrapper__ContractImpl__name as name;
     pub use super::__wrapper__ContractImpl__namespace as namespace;
     pub use super::__wrapper__ContractImpl__tag as tag;
     pub use super::__wrapper__ContractImpl__name_hash as name_hash;

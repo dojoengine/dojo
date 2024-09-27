@@ -185,7 +185,7 @@ impl DojoContract {
 
                     #[abi(embed_v0)]
                     pub impl ContractImpl of IContract<ContractState> {
-                        fn contract_name(self: @ContractState) -> ByteArray {
+                        fn name(self: @ContractState) -> ByteArray {
                             \"$name$\"
                         }
 
