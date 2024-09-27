@@ -1,5 +1,5 @@
 CREATE TABLE balances (
-    -- account_address:contract_address:token_id
+    -- account_address:token_id
     id TEXT NOT NULL PRIMARY KEY,
     balance TEXT NOT NULL,
     account_address TEXT NOT NULL,

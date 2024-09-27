@@ -36,6 +36,7 @@ use crate::processors::store_set_record::StoreSetRecordProcessor;
 use crate::processors::store_update_member::StoreUpdateMemberProcessor;
 use crate::processors::store_update_record::StoreUpdateRecordProcessor;
 use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
+use crate::sql::utils::I256;
 use crate::sql::{Cursors, Sql};
 use crate::types::ContractType;
 
@@ -192,6 +193,7 @@ pub struct Engine<P: Provider + Send + Sync + std::fmt::Debug + 'static> {
     block_tx: Option<BoundedSender<u64>>,
     tasks: HashMap<u64, Vec<(ContractType, ParallelizedEvent)>>,
     contracts: Arc<HashMap<Felt, ContractType>>,
+    cache: HashMap<String, I256>,
 }
 
 struct UnprocessedEvent {
@@ -221,6 +223,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             block_tx,
             contracts,
             tasks: HashMap::new(),
+            cache: HashMap::new(),
         }
     }
 
@@ -455,6 +458,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             }
             FetchDataResult::None => {}
         }
+        self.db.apply_cache_diff(&mut self.cache).await?;
 
         Ok(())
     }
@@ -573,7 +577,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                         debug!(target: LOG_TARGET, event_name = processor.event_key(), task_id = %task_id, "Processing parallelized event.");
 
                         if let Err(e) = processor
-                            .process(&world, &mut local_db, block_number, block_timestamp, &event_id, &event)
+                            .process(&world, &mut local_db, None, block_number, block_timestamp, &event_id, &event)
                             .await
                         {
                             error!(target: LOG_TARGET, event_name = processor.event_key(), error = %e, task_id = %task_id, "Processing parallelized event.");
@@ -761,6 +765,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                     .process(
                         &self.world,
                         &mut self.db,
+                        None,
                         block_number,
                         block_timestamp,
                         event_id,
@@ -820,6 +825,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                     .process(
                         &self.world,
                         &mut self.db,
+                        Some(&mut self.cache),
                         block_number,
                         block_timestamp,
                         event_id,

@@ -1,9 +1,12 @@
+use std::collections::HashMap;
+
 use anyhow::{Error, Result};
 use async_trait::async_trait;
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{Event, Felt, Transaction};
 use starknet::providers::Provider;
 
+use crate::sql::utils::I256;
 use crate::sql::Sql;
 
 pub mod erc20_legacy_transfer;
@@ -41,6 +44,7 @@ where
         &self,
         world: &WorldContractReader<P>,
         db: &mut Sql,
+        cache: Option<&mut HashMap<String, I256>>,
         block_number: u64,
         block_timestamp: u64,
         event_id: &str,

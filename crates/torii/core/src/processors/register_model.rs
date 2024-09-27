@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use anyhow::{Error, Ok, Result};
 use async_trait::async_trait;
 use cainome::cairo_serde::{ByteArray, CairoSerde};
@@ -8,6 +10,7 @@ use starknet::providers::Provider;
 use tracing::{debug, info};
 
 use super::EventProcessor;
+use crate::sql::utils::I256;
 use crate::sql::Sql;
 
 pub(crate) const LOG_TARGET: &str = "torii_core::processors::register_model";
@@ -41,6 +44,7 @@ where
         &self,
         world: &WorldContractReader<P>,
         db: &mut Sql,
+        _cache: Option<&mut HashMap<String, I256>>,
         _block_number: u64,
         block_timestamp: u64,
         _event_id: &str,
