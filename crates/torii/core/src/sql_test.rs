@@ -158,7 +158,7 @@ async fn test_load_from_remote(sequencer: &RunnerCtx) {
         executor.run().await.unwrap();
     });
 
-    let db = Sql::new(pool.clone(), world_reader.address, sender.clone()).await.unwrap();
+    let db = Sql::new(pool.clone(), world_reader.address, sender).await.unwrap();
 
     let _ = bootstrap_engine(world_reader, db.clone(), provider).await.unwrap();
 
@@ -317,7 +317,7 @@ async fn test_load_from_remote_del(sequencer: &RunnerCtx) {
         executor.run().await.unwrap();
     });
 
-    let db = Sql::new(pool.clone(), world_reader.address, sender.clone()).await.unwrap();
+    let db = Sql::new(pool.clone(), world_reader.address, sender).await.unwrap();
 
     let _ = bootstrap_engine(world_reader, db.clone(), provider).await;
 
@@ -405,7 +405,7 @@ async fn test_update_with_set_record(sequencer: &RunnerCtx) {
         executor.run().await.unwrap();
     });
 
-    let db = Sql::new(pool.clone(), world_reader.address, sender.clone()).await.unwrap();
+    let db = Sql::new(pool.clone(), world_reader.address, sender).await.unwrap();
 
     let _ = bootstrap_engine(world_reader, db.clone(), Arc::clone(&provider)).await.unwrap();
 }
