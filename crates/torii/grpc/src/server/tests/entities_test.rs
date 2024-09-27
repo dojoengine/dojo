@@ -18,6 +18,7 @@ use starknet::core::utils::{get_contract_address, get_selector_from_name};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
 use starknet_crypto::poseidon_hash_many;
+use tempfile::NamedTempFile;
 use tokio::sync::broadcast;
 use torii_core::engine::{Engine, EngineConfig, Processors};
 use torii_core::executor::Executor;
@@ -33,7 +34,18 @@ use crate::types::schema::Entity;
 #[tokio::test(flavor = "multi_thread")]
 #[katana_runner::test(accounts = 10, db_dir = copy_spawn_and_move_db().as_str())]
 async fn test_entities_queries(sequencer: &RunnerCtx) {
-    let pool = setup_sqlite_pool().await.unwrap();
+    let tempfile = NamedTempFile::new().unwrap();
+    let path = tempfile.path().to_string_lossy();
+    let options =
+        SqliteConnectOptions::from_str(&path).unwrap().create_if_missing(true).with_regexp();
+    let pool = SqlitePoolOptions::new()
+        .min_connections(1)
+        .idle_timeout(None)
+        .max_lifetime(None)
+        .connect_with(options)
+        .await
+        .unwrap();
+    sqlx::migrate!("../migrations").run(&pool).await.unwrap();
 
     let setup = CompilerTestSetup::from_examples("../../dojo-core", "../../../examples/");
     let config = setup.build_test_config("spawn-and-move", Profile::DEV);

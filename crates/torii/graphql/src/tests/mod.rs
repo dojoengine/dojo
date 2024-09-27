@@ -279,7 +279,8 @@ pub async fn model_fixtures(db: &mut Sql) {
 pub async fn spinup_types_test() -> Result<SqlitePool> {
     let tempfile = NamedTempFile::new().unwrap();
     let path = tempfile.path().to_string_lossy();
-    let options = SqliteConnectOptions::from_str(&path).unwrap().create_if_missing(true).with_regexp();
+    let options =
+        SqliteConnectOptions::from_str(&path).unwrap().create_if_missing(true).with_regexp();
     let pool = SqlitePoolOptions::new()
         .min_connections(1)
         .idle_timeout(None)

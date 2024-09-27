@@ -41,6 +41,7 @@ dojo-utils.workspace = true
 katana-runner.workspace = true
 scarb.workspace = true
 sozo-ops.workspace = true
+tempfile.workspace = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 tonic-web-wasm-client.workspace = true
