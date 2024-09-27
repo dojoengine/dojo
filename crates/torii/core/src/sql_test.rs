@@ -41,7 +41,7 @@ pub async fn setup_sqlite_pool(world_address: Felt) -> Result<Sql, Box<dyn std::
         .connect_with(options)
         .await?;
     sqlx::migrate!("../migrations").run(&pool).await?;
-    
+
     let (shutdown_tx, _) = broadcast::channel(1);
     let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
     tokio::spawn(async move {
