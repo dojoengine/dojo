@@ -354,7 +354,7 @@ fn test_deploy_contract_for_namespace_owner() {
     let event = event.unwrap();
     assert(event.salt == 'salt1', 'bad event salt');
     assert(event.class_hash == class_hash, 'bad class_hash');
-    assert(event.name == dispatcher.contract_name(), 'bad contract name');
+    assert(event.name == dispatcher.name(), 'bad contract name');
     assert(event.namespace == dispatcher.namespace(), 'bad namespace');
     assert(
         event.address != core::num::traits::Zero::<ContractAddress>::zero(), 'bad contract address'
