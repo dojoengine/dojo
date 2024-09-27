@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1727349256967,
+  "lastUpdate": 1727401420356,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -22765,6 +22765,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3986029,
             "range": "± 77952",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ee06e5606f070a5dad7c52248974e8204cd080a2",
+          "message": "fix: use name for contract interface to be consistent (#2482)",
+          "timestamp": "2024-09-26T20:27:23-05:00",
+          "tree_id": "50b8e3313745d4bd1a366ba9487fe33ed62f6506",
+          "url": "https://github.com/dojoengine/dojo/commit/ee06e5606f070a5dad7c52248974e8204cd080a2"
+        },
+        "date": 1727401418953,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11782068378,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
