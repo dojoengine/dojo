@@ -11,12 +11,14 @@ use dojo_world::contracts::world::{WorldContract, WorldContractReader};
 use katana_runner::RunnerCtx;
 use scarb::compiler::Profile;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+use sqlx::SqlitePool;
 use starknet::accounts::Account;
 use starknet::core::types::{Call, Felt};
 use starknet::core::utils::{get_contract_address, get_selector_from_name};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
 use starknet_crypto::poseidon_hash_many;
+use tempfile::NamedTempFile;
 use tokio::sync::broadcast;
 
 use crate::engine::{Engine, EngineConfig, Processors};
@@ -28,6 +30,20 @@ use crate::processors::store_set_record::StoreSetRecordProcessor;
 use crate::processors::store_update_member::StoreUpdateMemberProcessor;
 use crate::processors::store_update_record::StoreUpdateRecordProcessor;
 use crate::sql::Sql;
+
+pub async fn setup_sqlite_pool() -> Result<SqlitePool, Box<dyn std::error::Error>> {
+    let tempfile = NamedTempFile::new().unwrap();
+    let path = tempfile.path().to_string_lossy();
+    let options = SqliteConnectOptions::from_str(&path).unwrap().create_if_missing(true);
+    let pool = SqlitePoolOptions::new()
+        .min_connections(1)
+        .idle_timeout(None)
+        .max_lifetime(None)
+        .connect_with(options)
+        .await?;
+    sqlx::migrate!("../migrations").run(&pool).await?;
+    Ok(pool)
+}
 
 pub async fn bootstrap_engine<P>(
     world: WorldContractReader<P>,
@@ -69,15 +85,7 @@ where
 #[tokio::test(flavor = "multi_thread")]
 #[katana_runner::test(accounts = 10, db_dir = copy_spawn_and_move_db().as_str())]
 async fn test_load_from_remote(sequencer: &RunnerCtx) {
-    let options = SqliteConnectOptions::from_str("").unwrap().create_if_missing(true);
-    let pool = SqlitePoolOptions::new()
-        .min_connections(1)
-        .idle_timeout(None)
-        .max_lifetime(None)
-        .connect_with(options)
-        .await
-        .unwrap();
-    sqlx::migrate!("../migrations").run(&pool).await.unwrap();
+    let pool = setup_sqlite_pool().await.unwrap();
 
     let setup = CompilerTestSetup::from_examples("../../dojo-core", "../../../examples/");
     let config = setup.build_test_config("spawn-and-move", Profile::DEV);
@@ -224,15 +232,7 @@ async fn test_load_from_remote(sequencer: &RunnerCtx) {
 #[tokio::test(flavor = "multi_thread")]
 #[katana_runner::test(accounts = 10, db_dir = copy_spawn_and_move_db().as_str())]
 async fn test_load_from_remote_del(sequencer: &RunnerCtx) {
-    let options = SqliteConnectOptions::from_str("").unwrap().create_if_missing(true);
-    let pool = SqlitePoolOptions::new()
-        .min_connections(1)
-        .idle_timeout(None)
-        .max_lifetime(None)
-        .connect_with(options)
-        .await
-        .unwrap();
-    sqlx::migrate!("../migrations").run(&pool).await.unwrap();
+    let pool = setup_sqlite_pool().await.unwrap();
 
     let setup = CompilerTestSetup::from_examples("../../dojo-core", "../../../examples/");
     let config = setup.build_test_config("spawn-and-move", Profile::DEV);
@@ -332,15 +332,7 @@ async fn test_load_from_remote_del(sequencer: &RunnerCtx) {
 #[tokio::test(flavor = "multi_thread")]
 #[katana_runner::test(accounts = 10, db_dir = copy_spawn_and_move_db().as_str())]
 async fn test_update_with_set_record(sequencer: &RunnerCtx) {
-    let options = SqliteConnectOptions::from_str("").unwrap().create_if_missing(true);
-    let pool = SqlitePoolOptions::new()
-        .min_connections(1)
-        .idle_timeout(None)
-        .max_lifetime(None)
-        .connect_with(options)
-        .await
-        .unwrap();
-    sqlx::migrate!("../migrations").run(&pool).await.unwrap();
+    let pool = setup_sqlite_pool().await.unwrap();
 
     let setup = CompilerTestSetup::from_examples("../../dojo-core", "../../../examples/");
     let config = setup.build_test_config("spawn-and-move", Profile::DEV);

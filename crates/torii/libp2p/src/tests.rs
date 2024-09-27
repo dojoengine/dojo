@@ -534,6 +534,7 @@ mod test {
         use starknet::providers::JsonRpcClient;
         use starknet::signers::SigningKey;
         use starknet_crypto::Felt;
+        use tempfile::NamedTempFile;
         use tokio::select;
         use tokio::sync::broadcast;
         use tokio::time::sleep;
@@ -549,7 +550,9 @@ mod test {
             .try_init();
 
         // Database
-        let options = <SqliteConnectOptions as std::str::FromStr>::from_str("")
+        let tempfile = NamedTempFile::new().unwrap();
+        let path = tempfile.path().to_string_lossy();
+        let options = <SqliteConnectOptions as std::str::FromStr>::from_str(&path)
             .unwrap()
             .create_if_missing(true);
         let pool = SqlitePoolOptions::new()

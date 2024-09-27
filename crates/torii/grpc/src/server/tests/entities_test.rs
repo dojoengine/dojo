@@ -33,15 +33,7 @@ use crate::types::schema::Entity;
 #[tokio::test(flavor = "multi_thread")]
 #[katana_runner::test(accounts = 10, db_dir = copy_spawn_and_move_db().as_str())]
 async fn test_entities_queries(sequencer: &RunnerCtx) {
-    let options = SqliteConnectOptions::from_str("").unwrap().create_if_missing(true).with_regexp();
-    let pool = SqlitePoolOptions::new()
-        .min_connections(1)
-        .idle_timeout(None)
-        .max_lifetime(None)
-        .connect_with(options)
-        .await
-        .unwrap();
-    sqlx::migrate!("../migrations").run(&pool).await.unwrap();
+    let pool = setup_sqlite_pool().await.unwrap();
 
     let setup = CompilerTestSetup::from_examples("../../dojo-core", "../../../examples/");
     let config = setup.build_test_config("spawn-and-move", Profile::DEV);

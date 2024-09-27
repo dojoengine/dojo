@@ -48,3 +48,4 @@ dojo-test-utils = { path = "../../dojo-test-utils" }
 dojo-utils.workspace = true
 katana-runner.workspace = true
 scarb.workspace = true
+tempfile.workspace = true
