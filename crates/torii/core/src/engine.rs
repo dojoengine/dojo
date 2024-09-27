@@ -39,12 +39,14 @@ use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
 use crate::sql::{Cursors, Sql};
 use crate::types::ContractType;
 
+type EventProcessorMap<P> = HashMap<Felt, Vec<Box<dyn EventProcessor<P>>>>;
+
 #[allow(missing_debug_implementations)]
 pub struct Processors<P: Provider + Send + Sync + std::fmt::Debug + 'static> {
     pub block: Vec<Box<dyn BlockProcessor<P>>>,
     pub transaction: Vec<Box<dyn TransactionProcessor<P>>>,
     pub catch_all_event: Box<dyn EventProcessor<P>>,
-    pub event_processors: HashMap<ContractType, HashMap<Felt, Box<dyn EventProcessor<P>>>>,
+    pub event_processors: HashMap<ContractType, EventProcessorMap<P>>,
 }
 
 impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Default for Processors<P> {
@@ -59,10 +61,8 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Default for Processo
 }
 
 impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Processors<P> {
-    pub fn initialize_event_processors(
-    ) -> HashMap<ContractType, HashMap<Felt, Box<dyn EventProcessor<P>>>> {
-        let mut event_processors_map =
-            HashMap::<ContractType, HashMap<Felt, Box<dyn EventProcessor<P>>>>::new();
+    pub fn initialize_event_processors() -> HashMap<ContractType, EventProcessorMap<P>> {
+        let mut event_processors_map = HashMap::<ContractType, EventProcessorMap<P>>::new();
 
         let event_processors = vec![
             (
@@ -78,19 +78,17 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Processors<P> {
             ),
             (
                 ContractType::ERC20,
-                vec![Box::new(Erc20TransferProcessor) as Box<dyn EventProcessor<P>>],
+                vec![
+                    Box::new(Erc20TransferProcessor) as Box<dyn EventProcessor<P>>,
+                    Box::new(Erc20LegacyTransferProcessor) as Box<dyn EventProcessor<P>>,
+                ],
             ),
             (
                 ContractType::ERC721,
-                vec![Box::new(Erc721TransferProcessor) as Box<dyn EventProcessor<P>>],
-            ),
-            (
-                ContractType::ERC20Legacy,
-                vec![Box::new(Erc20LegacyTransferProcessor) as Box<dyn EventProcessor<P>>],
-            ),
-            (
-                ContractType::ERC721Legacy,
-                vec![Box::new(Erc721LegacyTransferProcessor) as Box<dyn EventProcessor<P>>],
+                vec![
+                    Box::new(Erc721TransferProcessor) as Box<dyn EventProcessor<P>>,
+                    Box::new(Erc721LegacyTransferProcessor) as Box<dyn EventProcessor<P>>,
+                ],
             ),
         ];
 
@@ -98,7 +96,13 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Processors<P> {
             for processor in processors {
                 let key = get_selector_from_name(processor.event_key().as_str())
                     .expect("Event key is ASCII so this should never fail");
-                event_processors_map.entry(contract_type).or_default().insert(key, processor);
+                // event_processors_map.entry(contract_type).or_default().insert(key, processor);
+                event_processors_map
+                    .entry(contract_type)
+                    .or_default()
+                    .entry(key)
+                    .or_default()
+                    .push(processor);
             }
         }
 
@@ -108,7 +112,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Processors<P> {
     pub fn get_event_processor(
         &self,
         contract_type: ContractType,
-    ) -> &HashMap<Felt, Box<dyn EventProcessor<P>>> {
+    ) -> &HashMap<Felt, Vec<Box<dyn EventProcessor<P>>>> {
         self.event_processors.get(&contract_type).unwrap()
     }
 }
@@ -562,7 +566,10 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                 let mut local_db = db.clone();
                 for (contract_type, ParallelizedEvent { event_id, event, block_number, block_timestamp }) in events {
                     let contract_processors = processors.get_event_processor(contract_type);
-                    if let Some(processor) = contract_processors.get(&event.keys[0]) {
+                    if let Some(processors) = contract_processors.get(&event.keys[0]) {
+
+                        let processor = processors.iter().find(|p| p.validate(&event)).expect("Must find atleast one processor for the event");
+
                         debug!(target: LOG_TARGET, event_name = processor.event_key(), task_id = %task_id, "Processing parallelized event.");
 
                         if let Err(e) = processor
@@ -732,13 +739,20 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         contract_type: ContractType,
     ) -> Result<()> {
         if self.config.flags.contains(IndexingFlags::RAW_EVENTS) {
-            self.db.store_event(event_id, event, transaction_hash, block_timestamp);
+            match contract_type {
+                ContractType::WORLD => {
+                    self.db.store_event(event_id, event, transaction_hash, block_timestamp);
+                }
+                // ERC events needs to be processed inside there respective processor
+                // we store transfer events for ERC contracts regardless of this flag
+                ContractType::ERC20 | ContractType::ERC721 => {}
+            }
         }
 
         let event_key = event.keys[0];
 
         let processors = self.processors.get_event_processor(contract_type);
-        let Some(processor) = processors.get(&event_key) else {
+        let Some(processors) = processors.get(&event_key) else {
             // if we dont have a processor for this event, we try the catch all processor
             if self.processors.catch_all_event.validate(event) {
                 if let Err(e) = self
@@ -772,6 +786,11 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
 
             return Ok(());
         };
+
+        let processor = processors
+            .iter()
+            .find(|p| p.validate(event))
+            .expect("Must find atleast one processor for the event");
 
         let task_identifier = match processor.event_key().as_str() {
             "StoreSetRecord" | "StoreUpdateRecord" | "StoreUpdateMember" | "StoreDelRecord" => {

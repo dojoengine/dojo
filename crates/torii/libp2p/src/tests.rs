@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod test {
+    use std::collections::HashMap;
     use std::error::Error;
 
     use crate::client::RelayClient;
@@ -20,7 +21,7 @@ mod test {
     use starknet::core::types::Felt;
     use torii_core::simple_broker::SimpleBroker;
     use torii_core::sql::Sql;
-    use torii_core::types::EventMessage;
+    use torii_core::types::{ContractType, EventMessage};
     #[cfg(target_arch = "wasm32")]
     use wasm_bindgen_test::*;
 
@@ -705,7 +706,10 @@ mod test {
         let pool = SqlitePoolOptions::new().max_connections(5).connect_with(options).await.unwrap();
         sqlx::migrate!("../migrations").run(&pool).await.unwrap();
 
-        let mut db = Sql::new(pool.clone(), Felt::ZERO).await.unwrap();
+        let mut db =
+            Sql::new(pool.clone(), Felt::ZERO, &HashMap::from([(Felt::ZERO, ContractType::WORLD)]))
+                .await
+                .unwrap();
         let mut broker = SimpleBroker::<EventMessage>::subscribe();
 
         let entity = Ty::Struct(Struct { name: "Message".to_string(), children: vec![] });
