@@ -552,7 +552,7 @@ mod test {
         let options = <SqliteConnectOptions as std::str::FromStr>::from_str("")
             .unwrap()
             .create_if_missing(true);
-        let pool = SqlitePoolOptions::new().max_connections(5).connect_with(options).await.unwrap();
+        let pool = SqlitePoolOptions::new().min_connections(1).idle_timeout(None).max_lifetime(None).connect_with(options).await.unwrap();
         sqlx::migrate!("../migrations").run(&pool).await.unwrap();
 
         let sequencer = KatanaRunner::new().expect("Failed to create Katana sequencer");
