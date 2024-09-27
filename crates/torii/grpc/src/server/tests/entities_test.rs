@@ -33,7 +33,7 @@ use crate::types::schema::Entity;
 #[tokio::test(flavor = "multi_thread")]
 #[katana_runner::test(accounts = 10, db_dir = copy_spawn_and_move_db().as_str())]
 async fn test_entities_queries(sequencer: &RunnerCtx) {
-    let options = SqliteConnectOptions::from_str("sqlite::memory:")
+    let options = SqliteConnectOptions::from_str("")
         .unwrap()
         .create_if_missing(true)
         .with_regexp();

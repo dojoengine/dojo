@@ -65,7 +65,7 @@ struct Args {
 
     /// Database filepath (ex: indexer.db). If specified file doesn't exist, it will be
     /// created. Defaults to in-memory database
-    #[arg(short, long, default_value = ":memory:")]
+    #[arg(short, long, default_value = "")]
     database: String,
 
     /// Specify a block to start indexing from, ignored if stored head exists

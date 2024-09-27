@@ -549,7 +549,7 @@ mod test {
             .try_init();
 
         // Database
-        let options = <SqliteConnectOptions as std::str::FromStr>::from_str("sqlite::memory:")
+        let options = <SqliteConnectOptions as std::str::FromStr>::from_str("")
             .unwrap()
             .create_if_missing(true);
         let pool = SqlitePoolOptions::new().max_connections(5).connect_with(options).await.unwrap();

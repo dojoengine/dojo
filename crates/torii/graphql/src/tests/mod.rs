@@ -278,7 +278,7 @@ pub async fn model_fixtures(db: &mut Sql) {
 pub async fn spinup_types_test() -> Result<SqlitePool> {
     // change sqlite::memory: to sqlite:~/.test.db to dump database to disk
     let options =
-        SqliteConnectOptions::from_str("sqlite::memory:")?.create_if_missing(true).with_regexp();
+        SqliteConnectOptions::from_str("")?.create_if_missing(true).with_regexp();
     let pool = SqlitePoolOptions::new().max_connections(5).connect_with(options).await.unwrap();
     sqlx::migrate!("../migrations").run(&pool).await.unwrap();
 

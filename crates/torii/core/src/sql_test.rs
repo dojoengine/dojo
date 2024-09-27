@@ -70,7 +70,7 @@ where
 #[katana_runner::test(accounts = 10, db_dir = copy_spawn_and_move_db().as_str())]
 async fn test_load_from_remote(sequencer: &RunnerCtx) {
     let options =
-        SqliteConnectOptions::from_str("sqlite::memory:").unwrap().create_if_missing(true);
+        SqliteConnectOptions::from_str("").unwrap().create_if_missing(true);
     let pool = SqlitePoolOptions::new().max_connections(5).connect_with(options).await.unwrap();
     sqlx::migrate!("../migrations").run(&pool).await.unwrap();
 
@@ -220,7 +220,7 @@ async fn test_load_from_remote(sequencer: &RunnerCtx) {
 #[katana_runner::test(accounts = 10, db_dir = copy_spawn_and_move_db().as_str())]
 async fn test_load_from_remote_del(sequencer: &RunnerCtx) {
     let options =
-        SqliteConnectOptions::from_str("sqlite::memory:").unwrap().create_if_missing(true);
+        SqliteConnectOptions::from_str("").unwrap().create_if_missing(true);
     let pool = SqlitePoolOptions::new().max_connections(5).connect_with(options).await.unwrap();
     sqlx::migrate!("../migrations").run(&pool).await.unwrap();
 
@@ -323,7 +323,7 @@ async fn test_load_from_remote_del(sequencer: &RunnerCtx) {
 #[katana_runner::test(accounts = 10, db_dir = copy_spawn_and_move_db().as_str())]
 async fn test_update_with_set_record(sequencer: &RunnerCtx) {
     let options =
-        SqliteConnectOptions::from_str("sqlite::memory:").unwrap().create_if_missing(true);
+        SqliteConnectOptions::from_str("").unwrap().create_if_missing(true);
     let pool = SqlitePoolOptions::new().max_connections(5).connect_with(options).await.unwrap();
     sqlx::migrate!("../migrations").run(&pool).await.unwrap();
 
