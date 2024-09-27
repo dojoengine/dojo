@@ -21,7 +21,7 @@ use tokio::sync::broadcast::Sender;
 use tokio::sync::mpsc::Sender as BoundedSender;
 use tokio::sync::Semaphore;
 use tokio::task::JoinSet;
-use tokio::time::sleep;
+use tokio::time::{sleep, Instant};
 use tracing::{debug, error, info, trace, warn};
 
 use crate::processors::erc20_legacy_transfer::Erc20LegacyTransferProcessor;
@@ -59,8 +59,8 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Default for Processo
 }
 
 impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Processors<P> {
-    pub fn initialize_event_processors()
-    -> HashMap<ContractType, HashMap<Felt, Box<dyn EventProcessor<P>>>> {
+    pub fn initialize_event_processors(
+    ) -> HashMap<ContractType, HashMap<Felt, Box<dyn EventProcessor<P>>>> {
         let mut event_processors_map =
             HashMap::<ContractType, HashMap<Felt, Box<dyn EventProcessor<P>>>>::new();
 
@@ -244,6 +244,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                 res = self.fetch_data(&cursors) => {
                     match res {
                         Ok(fetch_result) => {
+                            let instant = Instant::now();
                             if erroring_out {
                                 erroring_out = false;
                                 backoff_delay = Duration::from_secs(1);
@@ -261,6 +262,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                                     }
                                 }
                             }
+                            debug!(target: LOG_TARGET, duration = ?instant.elapsed(), "Processed fetched data.");
                         }
                         Err(e) => {
                             erroring_out = true;
@@ -281,14 +283,16 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         let latest_block_number = self.provider.block_hash_and_number().await?.block_number;
         let from = cursors.head.unwrap_or(0);
 
+        let instant = Instant::now();
         let result = if from < latest_block_number {
             let from = if from == 0 { from } else { from + 1 };
-            debug!(target: LOG_TARGET, from = %from, to = %latest_block_number, "Fetching data for range.");
             let data = self.fetch_range(from, latest_block_number, &cursors.cursor_map).await?;
+            debug!(target: LOG_TARGET, duration = ?instant.elapsed(), from = %from, to = %latest_block_number, "Fetched data for range.");
             FetchDataResult::Range(data)
         } else if self.config.index_pending {
             let data =
                 self.fetch_pending(latest_block_number + 1, cursors.last_pending_block_tx).await?;
+            debug!(target: LOG_TARGET, duration = ?instant.elapsed(), latest_block_number = %latest_block_number, "Fetched pending data.");
             if let Some(data) = data {
                 FetchDataResult::Pending(data)
             } else {

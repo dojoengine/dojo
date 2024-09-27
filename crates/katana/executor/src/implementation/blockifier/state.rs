@@ -238,7 +238,7 @@ mod tests {
         DEFAULT_OZ_ACCOUNT_CONTRACT_CASM,
     };
     use katana_primitives::utils::class::{parse_compiled_class, parse_sierra_class};
-    use katana_primitives::Felt;
+    use katana_primitives::{address, Felt};
     use katana_provider::providers::in_memory::InMemoryProvider;
     use katana_provider::traits::contract::ContractClassWriter;
     use katana_provider::traits::state::{StateFactoryProvider, StateProvider, StateWriter};
@@ -256,7 +256,7 @@ mod tests {
     }
 
     fn state_provider() -> Box<dyn StateProvider> {
-        let address = ContractAddress::from(felt!("0x67"));
+        let address = address!("0x67");
         let nonce = felt!("0x7");
         let storage_key = felt!("0x1");
         let storage_value = felt!("0x2");
@@ -284,7 +284,7 @@ mod tests {
         let state = state_provider();
         let cached_state = CachedState::new(StateProviderDb::new(state));
 
-        let address = ContractAddress::from(felt!("0x67"));
+        let address = address!("0x67");
         let legacy_class_hash = felt!("0x111");
         let storage_key = felt!("0x1");
 
@@ -319,7 +319,7 @@ mod tests {
         let sp = state_provider();
 
         // cache_state native data
-        let new_address = ContractAddress::from(felt!("0xdead"));
+        let new_address = address!("0xdead");
         let new_storage_key = felt!("0xf00");
         let new_storage_value = felt!("0xba");
         let new_legacy_class_hash = felt!("0x1234");
@@ -391,7 +391,7 @@ mod tests {
         // assert that can fetch data from the underlyign state provider
         let sp: Box<dyn StateProvider> = Box::new(cached_state);
 
-        let address = ContractAddress::from(felt!("0x67"));
+        let address = address!("0x67");
         let class_hash = felt!("0x123");
         let legacy_class_hash = felt!("0x111");
 
@@ -454,7 +454,7 @@ mod tests {
     fn fetch_non_existant_data() -> anyhow::Result<()> {
         let db = InMemoryProvider::new();
 
-        let address = ContractAddress::from(felt!("0x1"));
+        let address = address!("0x1");
         let class_hash = felt!("0x123");
         let storage_key = felt!("0x1");
 
@@ -463,7 +463,7 @@ mod tests {
         // only return None if the contract does not exist. The intended behaviour for
         // StateProvider::storage is to return None if the storage key or contract address
         // does not exist.
-        let edge_address = ContractAddress::from(felt!("0x2"));
+        let edge_address = address!("0x2");
         db.set_class_hash_of_contract(edge_address, class_hash)?;
 
         let sp = db.latest()?;

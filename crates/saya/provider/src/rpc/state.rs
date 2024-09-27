@@ -10,7 +10,7 @@
 //! to know if an address has been deployed or declared.
 //! To avoid this overhead, we may want to first generate an hashmap of such
 //! arrays to then have O(1) search.
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashSet};
 
 use alloy_primitives::U256;
 use katana_primitives::contract::ContractAddress;
@@ -40,7 +40,7 @@ pub fn state_updates_from_rpc(state_update: &StateUpdate) -> ProviderResult<Stat
 
         let address: ContractAddress = (*address).into();
 
-        let contract_entry = out.storage_updates.entry(address).or_insert_with(HashMap::new);
+        let contract_entry = out.storage_updates.entry(address).or_insert_with(BTreeMap::new);
 
         for e in entries {
             contract_entry.insert(e.key, e.value);
@@ -54,7 +54,7 @@ pub fn state_updates_from_rpc(state_update: &StateUpdate) -> ProviderResult<Stat
 
     for deployed in &state_diff.deployed_contracts {
         let DeployedContractItem { address, class_hash } = *deployed;
-        out.contract_updates.insert(address.into(), class_hash);
+        out.deployed_contracts.insert(address.into(), class_hash);
     }
 
     for decl in &state_diff.declared_classes {

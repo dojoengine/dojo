@@ -33,9 +33,6 @@ pub enum BrokerMessage {
 pub struct QueryQueue {
     pool: Pool<Sqlite>,
     pub queue: VecDeque<(String, Vec<Argument>, QueryType)>,
-    // publishes that are related to queries in the queue, they should be sent
-    // after the queries are executed
-    pub publish_queue: VecDeque<BrokerMessage>,
 }
 
 #[derive(Debug, Clone)]
@@ -50,12 +47,15 @@ pub struct DeleteEntityQuery {
 pub enum QueryType {
     SetEntity(Ty),
     DeleteEntity(DeleteEntityQuery),
+    EventMessage(Ty),
+    RegisterModel,
+    StoreEvent,
     Other,
 }
 
 impl QueryQueue {
     pub fn new(pool: Pool<Sqlite>) -> Self {
-        QueryQueue { pool, queue: VecDeque::new(), publish_queue: VecDeque::new() }
+        QueryQueue { pool, queue: VecDeque::new() }
     }
 
     pub fn enqueue<S: Into<String>>(
@@ -67,12 +67,11 @@ impl QueryQueue {
         self.queue.push_back((statement.into(), arguments, query_type));
     }
 
-    pub fn push_publish(&mut self, value: BrokerMessage) {
-        self.publish_queue.push_back(value);
-    }
-
     pub async fn execute_all(&mut self) -> Result<()> {
         let mut tx = self.pool.begin().await?;
+        // publishes that are related to queries in the queue, they should be sent
+        // after the queries are executed
+        let mut publish_queue = VecDeque::new();
 
         while let Some((statement, arguments, query_type)) = self.queue.pop_front() {
             let mut query = sqlx::query(&statement);
@@ -96,7 +95,7 @@ impl QueryQueue {
                     entity_updated.updated_model = Some(entity);
                     entity_updated.deleted = false;
                     let broker_message = BrokerMessage::EntityUpdated(entity_updated);
-                    self.push_publish(broker_message);
+                    publish_queue.push_back(broker_message);
                 }
                 QueryType::DeleteEntity(entity) => {
                     let delete_model = query.execute(&mut *tx).await.with_context(|| {
@@ -136,7 +135,30 @@ impl QueryQueue {
                     }
 
                     let broker_message = BrokerMessage::EntityUpdated(entity_updated);
-                    self.push_publish(broker_message);
+                    publish_queue.push_back(broker_message);
+                }
+                QueryType::RegisterModel => {
+                    let row = query.fetch_one(&mut *tx).await.with_context(|| {
+                        format!("Failed to execute query: {:?}, args: {:?}", statement, arguments)
+                    })?;
+                    let model_registered = ModelRegistered::from_row(&row)?;
+                    publish_queue.push_back(BrokerMessage::ModelRegistered(model_registered));
+                }
+                QueryType::EventMessage(entity) => {
+                    let row = query.fetch_one(&mut *tx).await.with_context(|| {
+                        format!("Failed to execute query: {:?}, args: {:?}", statement, arguments)
+                    })?;
+                    let mut event_message = EventMessageUpdated::from_row(&row)?;
+                    event_message.updated_model = Some(entity);
+                    let broker_message = BrokerMessage::EventMessageUpdated(event_message);
+                    publish_queue.push_back(broker_message);
+                }
+                QueryType::StoreEvent => {
+                    let row = query.fetch_one(&mut *tx).await.with_context(|| {
+                        format!("Failed to execute query: {:?}, args: {:?}", statement, arguments)
+                    })?;
+                    let event = EventEmitted::from_row(&row)?;
+                    publish_queue.push_back(BrokerMessage::EventEmitted(event));
                 }
                 QueryType::Other => {
                     query.execute(&mut *tx).await.with_context(|| {
@@ -148,7 +170,7 @@ impl QueryQueue {
 
         tx.commit().await?;
 
-        while let Some(message) = self.publish_queue.pop_front() {
+        while let Some(message) = publish_queue.pop_front() {
             send_broker_message(message);
         }
 

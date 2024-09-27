@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 use std::num::NonZeroU128;
 use std::sync::Arc;
 
@@ -403,12 +403,15 @@ pub(super) fn state_update_from_cached_state<S: StateDb>(
 
     let state_diff = state.0.lock().inner.to_state_diff().unwrap();
 
-    let mut declared_compiled_classes: HashMap<katana_primitives::class::ClassHash, CompiledClass> =
-        HashMap::new();
-    let mut declared_sierra_classes: HashMap<
+    let mut declared_compiled_classes: BTreeMap<
+        katana_primitives::class::ClassHash,
+        CompiledClass,
+    > = BTreeMap::new();
+
+    let mut declared_sierra_classes: BTreeMap<
         katana_primitives::class::ClassHash,
         FlattenedSierraClass,
-    > = HashMap::new();
+    > = BTreeMap::new();
 
     for class_hash in state_diff.compiled_class_hashes.keys() {
         let hash = class_hash.0;
@@ -427,27 +430,29 @@ pub(super) fn state_update_from_cached_state<S: StateDb>(
             .nonces
             .into_iter()
             .map(|(key, value)| (to_address(key), value.0))
-            .collect::<HashMap<
+            .collect::<BTreeMap<
                 katana_primitives::contract::ContractAddress,
                 katana_primitives::contract::Nonce,
             >>();
 
-    let storage_updates =
-        state_diff.storage.into_iter().fold(HashMap::new(), |mut storage, ((addr, key), value)| {
-            let entry: &mut HashMap<
+    let storage_updates = state_diff.storage.into_iter().fold(
+        BTreeMap::new(),
+        |mut storage, ((addr, key), value)| {
+            let entry: &mut BTreeMap<
                 katana_primitives::contract::StorageKey,
                 katana_primitives::contract::StorageValue,
             > = storage.entry(to_address(addr)).or_default();
             entry.insert(*key.0.key(), value);
             storage
-        });
+        },
+    );
 
-    let contract_updates =
+    let deployed_contracts =
         state_diff
             .class_hashes
             .into_iter()
             .map(|(key, value)| (to_address(key), value.0))
-            .collect::<HashMap<
+            .collect::<BTreeMap<
                 katana_primitives::contract::ContractAddress,
                 katana_primitives::class::ClassHash,
             >>();
@@ -457,7 +462,7 @@ pub(super) fn state_update_from_cached_state<S: StateDb>(
             .compiled_class_hashes
             .into_iter()
             .map(|(key, value)| (key.0, value.0))
-            .collect::<HashMap<
+            .collect::<BTreeMap<
                 katana_primitives::class::ClassHash,
                 katana_primitives::class::CompiledClassHash,
             >>();
@@ -468,8 +473,9 @@ pub(super) fn state_update_from_cached_state<S: StateDb>(
         state_updates: StateUpdates {
             nonce_updates,
             storage_updates,
-            contract_updates,
+            deployed_contracts,
             declared_classes,
+            ..Default::default()
         },
     }
 }
@@ -651,7 +657,7 @@ fn to_l2_l1_messages(
 #[cfg(test)]
 mod tests {
 
-    use std::collections::HashSet;
+    use std::collections::{HashMap, HashSet};
 
     use katana_cairo::cairo_vm::types::builtin_name::BuiltinName;
     use katana_cairo::cairo_vm::vm::runners::cairo_runner::ExecutionResources;

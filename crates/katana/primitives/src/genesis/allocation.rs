@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fmt::Debug;
 
 use alloy_primitives::U256;
@@ -59,7 +59,7 @@ impl GenesisAllocation {
     }
 
     /// Get the storage values for this contract allocation.
-    pub fn storage(&self) -> Option<&HashMap<StorageKey, StorageValue>> {
+    pub fn storage(&self) -> Option<&BTreeMap<StorageKey, StorageValue>> {
         match self {
             Self::Contract(contract) => contract.storage.as_ref(),
             Self::Account(account) => account.storage(),
@@ -107,7 +107,7 @@ impl GenesisAccountAlloc {
         }
     }
 
-    pub fn storage(&self) -> Option<&HashMap<StorageKey, StorageValue>> {
+    pub fn storage(&self) -> Option<&BTreeMap<StorageKey, StorageValue>> {
         match self {
             Self::Account(account) => account.storage.as_ref(),
             Self::DevAccount(account) => account.storage.as_ref(),
@@ -136,7 +136,7 @@ pub struct GenesisContractAlloc {
     pub nonce: Option<Felt>,
     /// The initial storage values of the contract.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub storage: Option<HashMap<StorageKey, StorageValue>>,
+    pub storage: Option<BTreeMap<StorageKey, StorageValue>>,
 }
 
 /// Used mainly for development purposes where the account info including the
@@ -191,7 +191,7 @@ pub struct GenesisAccount {
     pub nonce: Option<Felt>,
     /// The initial storage values of the account.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub storage: Option<HashMap<StorageKey, StorageValue>>,
+    pub storage: Option<BTreeMap<StorageKey, StorageValue>>,
 }
 
 impl GenesisAccount {
