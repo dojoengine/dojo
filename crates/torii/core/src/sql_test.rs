@@ -18,7 +18,6 @@ use starknet::core::utils::{get_contract_address, get_selector_from_name};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
 use starknet_crypto::poseidon_hash_many;
-use tempfile::NamedTempFile;
 use tokio::sync::broadcast;
 
 use crate::engine::{Engine, EngineConfig, Processors};
@@ -32,9 +31,7 @@ use crate::processors::store_update_record::StoreUpdateRecordProcessor;
 use crate::sql::Sql;
 
 pub async fn setup_sqlite_pool() -> Result<SqlitePool, Box<dyn std::error::Error>> {
-    let tempfile = NamedTempFile::new().unwrap();
-    let path = tempfile.path().to_string_lossy();
-    let options = SqliteConnectOptions::from_str(&path).unwrap().create_if_missing(true);
+    let options = SqliteConnectOptions::from_str("").unwrap().create_if_missing(true);
     let pool = SqlitePoolOptions::new()
         .min_connections(1)
         .idle_timeout(None)
