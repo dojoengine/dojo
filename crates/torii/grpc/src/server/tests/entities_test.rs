@@ -34,7 +34,13 @@ use crate::types::schema::Entity;
 #[katana_runner::test(accounts = 10, db_dir = copy_spawn_and_move_db().as_str())]
 async fn test_entities_queries(sequencer: &RunnerCtx) {
     let options = SqliteConnectOptions::from_str("").unwrap().create_if_missing(true).with_regexp();
-    let pool = SqlitePoolOptions::new().min_connections(1).idle_timeout(None).max_lifetime(None).connect_with(options).await.unwrap();
+    let pool = SqlitePoolOptions::new()
+        .min_connections(1)
+        .idle_timeout(None)
+        .max_lifetime(None)
+        .connect_with(options)
+        .await
+        .unwrap();
     sqlx::migrate!("../migrations").run(&pool).await.unwrap();
 
     let setup = CompilerTestSetup::from_examples("../../dojo-core", "../../../examples/");
