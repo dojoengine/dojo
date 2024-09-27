@@ -224,8 +224,8 @@ impl Sql {
                 "Token already registered for contract_address, so reusing fetched data",
             );
             self.query_queue.enqueue(
-                "INSERT INTO tokens (id, contract_address, name, symbol, decimals) VALUES (?, \
-                 ?, ?, ?, ?)",
+                "INSERT INTO tokens (id, contract_address, name, symbol, decimals) VALUES (?, ?, \
+                 ?, ?, ?)",
                 vec![
                     Argument::String(token_id.to_string()),
                     Argument::FieldElement(contract_address),
@@ -396,10 +396,10 @@ impl Sql {
 
         // write the new balance to the database
         sqlx::query(
-            "INSERT OR REPLACE INTO balances (id, contract_address, account_address, token_id, balance) \
-             VALUES (?, ?, ?, ?, ?)"
+            "INSERT OR REPLACE INTO balances (id, contract_address, account_address, token_id, \
+             balance) VALUES (?, ?, ?, ?, ?)",
         )
-        .bind(&id)
+        .bind(id)
         .bind(contract_address)
         .bind(account_address)
         .bind(token_id)
