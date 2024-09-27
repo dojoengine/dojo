@@ -48,7 +48,7 @@ pub async fn setup_sqlite_pool(world_address: Felt) -> Result<Sql, Box<dyn std::
         executor.run().await.unwrap();
     });
 
-    let db = Sql::new(pool.clone(), world_address, sender).await.unwrap();
+    let db = Sql::new(pool.clone(), world_address, sender.clone()).await.unwrap();
 
     Ok(db)
 }
