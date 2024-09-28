@@ -377,7 +377,7 @@ impl Sql {
         balance_diff: &I256,
     ) -> Result<()> {
         let balance: Option<(String,)> =
-            sqlx::query_as("SELECT balance FROM balances WHERE id = ? ")
+            sqlx::query_as("SELECT balance FROM balances WHERE id = ?")
                 .bind(id)
                 .fetch_optional(&self.pool)
                 .await?;
@@ -389,6 +389,9 @@ impl Sql {
         };
 
         if balance_diff.is_negative {
+            if balance < balance_diff.value {
+                dbg!(&balance_diff, balance, id);
+            }
             balance -= balance_diff.value;
         } else {
             balance += balance_diff.value;
