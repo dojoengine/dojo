@@ -17,6 +17,7 @@ use starknet::core::utils::{get_contract_address, get_selector_from_name};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
 use starknet_crypto::poseidon_hash_many;
+use tempfile::NamedTempFile;
 use tokio::sync::broadcast;
 
 use crate::engine::{Engine, EngineConfig, Processors};
@@ -134,9 +135,9 @@ async fn test_load_from_remote(sequencer: &RunnerCtx) {
 
     let world_reader = WorldContractReader::new(strat.world_address, Arc::clone(&provider));
 
-    let options = SqliteConnectOptions::from_str("/tmp/test_load_from_remote.db")
-        .unwrap()
-        .create_if_missing(true);
+    let tempfile = NamedTempFile::new().unwrap();
+    let path = tempfile.path().to_string_lossy();
+    let options = SqliteConnectOptions::from_str(&path).unwrap().create_if_missing(true);
     let pool = SqlitePoolOptions::new().connect_with(options).await.unwrap();
     sqlx::migrate!("../migrations").run(&pool).await.unwrap();
 
@@ -297,9 +298,9 @@ async fn test_load_from_remote_del(sequencer: &RunnerCtx) {
 
     let world_reader = WorldContractReader::new(strat.world_address, Arc::clone(&provider));
 
-    let options = SqliteConnectOptions::from_str("/tmp/test_load_from_remote_del.db")
-        .unwrap()
-        .create_if_missing(true);
+    let tempfile = NamedTempFile::new().unwrap();
+    let path = tempfile.path().to_string_lossy();
+    let options = SqliteConnectOptions::from_str(&path).unwrap().create_if_missing(true);
     let pool = SqlitePoolOptions::new().connect_with(options).await.unwrap();
     sqlx::migrate!("../migrations").run(&pool).await.unwrap();
 
@@ -389,9 +390,9 @@ async fn test_update_with_set_record(sequencer: &RunnerCtx) {
 
     let world_reader = WorldContractReader::new(strat.world_address, Arc::clone(&provider));
 
-    let options = SqliteConnectOptions::from_str("/tmp/test_update_with_set_record.db")
-        .unwrap()
-        .create_if_missing(true);
+    let tempfile = NamedTempFile::new().unwrap();
+    let path = tempfile.path().to_string_lossy();
+    let options = SqliteConnectOptions::from_str(&path).unwrap().create_if_missing(true);
     let pool = SqlitePoolOptions::new().connect_with(options).await.unwrap();
     sqlx::migrate!("../migrations").run(&pool).await.unwrap();
 
