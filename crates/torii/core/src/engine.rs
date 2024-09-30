@@ -157,7 +157,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
 
     pub async fn start(&mut self) -> Result<()> {
         // use the start block provided by user if head is 0
-        let (mut head, mut last_pending_block_tx, mut last_pending_block_world_tx) =
+        let (mut head, mut last_pending_block_world_tx, mut last_pending_block_tx) =
             self.db.head().await?;
         if head == 0 {
             self.db.set_head(self.config.start_block)?;
@@ -191,8 +191,8 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                                     self.db.executor.send(QueryMessage::execute())?;
                                     if let Some(new_head) = res {
                                         head = new_head.block_number;
-                                        last_pending_block_tx = new_head.last_pending_block_tx;
                                         last_pending_block_world_tx = new_head.last_pending_block_world_tx;
+                                        last_pending_block_tx = new_head.last_pending_block_tx;
                                     }
                                 }
                                 Err(e) => {
