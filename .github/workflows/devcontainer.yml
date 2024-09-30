@@ -51,13 +51,13 @@ jobs:
         run: |
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c 1-7)
           echo "DOCKER_TAG=$SHORT_SHA" >> $GITHUB_ENV
-          echo "DOJO_VERSION=$SHORT_SHA" >> $GITHUB_OUTPUT
+          echo "DOJO_VERSION=$SHORT_SHA" >> $GITHUB_ENV
 
       - name: Set Docker tag for workflow_dispatch event
         if: github.event_name == 'workflow_dispatch'
         run: |
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c 1-7)
-          echo "DOJO_VERSION=$SHORT_SHA" >> $GITHUB_OUTPUT
+          echo "DOJO_VERSION=$SHORT_SHA" >> $GITHUB_ENV
           echo "DOCKER_TAG=${{ inputs.docker_tag }}" >> $GITHUB_ENV
 
       - name: Set outputs
