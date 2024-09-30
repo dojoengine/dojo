@@ -828,10 +828,11 @@ async fn block_traces() -> Result<()> {
     let recipient = felt!("0x1");
     let amount = Uint256 { low: felt!("0x1"), high: Felt::ZERO };
 
+    let mut hashes = Vec::new();
+
     // -----------------------------------------------------------------------
     // Block 1
 
-    let mut hashes = Vec::new();
     for _ in 0..5 {
         let res = contract.transfer(&recipient, &amount).send().await?;
         dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await?;
@@ -854,7 +855,9 @@ async fn block_traces() -> Result<()> {
     // -----------------------------------------------------------------------
     // Block 2
 
-    let mut hashes = Vec::new();
+    // remove the previous transaction hashes
+    hashes.clear();
+
     for _ in 0..2 {
         let res = contract.transfer(&recipient, &amount).send().await?;
         dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await?;
@@ -877,7 +880,9 @@ async fn block_traces() -> Result<()> {
     // -----------------------------------------------------------------------
     // Block 3 (Pending)
 
-    let mut hashes = Vec::new();
+    // remove the previous transaction hashes
+    hashes.clear();
+
     for _ in 0..3 {
         let res = contract.transfer(&recipient, &amount).send().await?;
         dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await?;
