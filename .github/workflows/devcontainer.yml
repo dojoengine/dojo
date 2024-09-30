@@ -54,6 +54,8 @@ jobs:
       - name: Set Docker tag for workflow_dispatch event
         if: github.event_name == 'workflow_dispatch'
         run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c 1-7)
+          echo "tag_name=$SHORT_SHA" >> $GITHUB_OUTPUT
           echo "DOCKER_TAG=${{ inputs.docker_tag }}" >> $GITHUB_ENV
 
       - name: Set outputs

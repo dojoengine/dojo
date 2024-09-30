@@ -76,6 +76,9 @@ RUN if [ "$BUILD_TYPE" = "release" ]; then \
     elif [ "$BUILD_TYPE" = "push" ]; then \
     echo "Installing Dojo at commit $DOJO_VERSION"; \
     dojoup -c $DOJO_VERSION; \
+    elif [ "$BUILD_TYPE" = "workflow_dispatch" ]; then \
+    echo "Installing Dojo at commit $DOJO_VERSION"; \
+    dojoup -c $DOJO_VERSION; \
     else \
     echo "Installing latest stable version of Dojo"; \
     dojoup; \
