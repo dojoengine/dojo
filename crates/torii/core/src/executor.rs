@@ -140,7 +140,7 @@ impl<'c> Executor<'c> {
         loop {
             tokio::select! {
                 _ = self.shutdown_rx.recv() => {
-                    println!("Shutting down executor");
+                    debug!(target: LOG_TARGET, "Shutting down executor");
                     break Ok(());
                 }
                 Some(msg) = self.rx.recv() => {

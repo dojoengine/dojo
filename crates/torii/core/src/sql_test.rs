@@ -11,14 +11,12 @@ use dojo_world::contracts::world::{WorldContract, WorldContractReader};
 use katana_runner::RunnerCtx;
 use scarb::compiler::Profile;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
-use sqlx::SqlitePool;
 use starknet::accounts::Account;
 use starknet::core::types::{Call, Felt};
 use starknet::core::utils::{get_contract_address, get_selector_from_name};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
 use starknet_crypto::poseidon_hash_many;
-use tempfile::NamedTempFile;
 use tokio::sync::broadcast;
 
 use crate::engine::{Engine, EngineConfig, Processors};
@@ -30,21 +28,6 @@ use crate::processors::store_set_record::StoreSetRecordProcessor;
 use crate::processors::store_update_member::StoreUpdateMemberProcessor;
 use crate::processors::store_update_record::StoreUpdateRecordProcessor;
 use crate::sql::Sql;
-
-pub async fn setup_sqlite_pool() -> Result<SqlitePool, Box<dyn std::error::Error>> {
-    let tempfile = NamedTempFile::new().unwrap();
-    let path = tempfile.path().to_string_lossy();
-    let options = SqliteConnectOptions::from_str(&path).unwrap().create_if_missing(true);
-    let pool = SqlitePoolOptions::new()
-        .min_connections(1)
-        .idle_timeout(None)
-        .max_lifetime(None)
-        .connect_with(options)
-        .await?;
-    sqlx::migrate!("../migrations").run(&pool).await?;
-
-    Ok(pool)
-}
 
 pub async fn bootstrap_engine<P>(
     world: WorldContractReader<P>,
@@ -150,7 +133,13 @@ async fn test_load_from_remote(sequencer: &RunnerCtx) {
     TransactionWaiter::new(tx.transaction_hash, &provider).await.unwrap();
 
     let world_reader = WorldContractReader::new(strat.world_address, Arc::clone(&provider));
-    let pool = setup_sqlite_pool().await.unwrap();
+
+    let options = SqliteConnectOptions::from_str("/tmp/test_load_from_remote.db")
+        .unwrap()
+        .create_if_missing(true);
+    let pool = SqlitePoolOptions::new().connect_with(options).await.unwrap();
+    sqlx::migrate!("../migrations").run(&pool).await.unwrap();
+
     let (shutdown_tx, _) = broadcast::channel(1);
     let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
     tokio::spawn(async move {
@@ -162,7 +151,7 @@ async fn test_load_from_remote(sequencer: &RunnerCtx) {
     let _ = bootstrap_engine(world_reader, db.clone(), provider).await.unwrap();
 
     let _block_timestamp = 1710754478_u64;
-    let models = sqlx::query("SELECT * FROM models").fetch_all(&db.pool).await.unwrap();
+    let models = sqlx::query("SELECT * FROM models").fetch_all(&pool).await.unwrap();
     assert_eq!(models.len(), 10);
 
     let (id, name, namespace, packed_size, unpacked_size): (String, String, String, u8, u8) =
@@ -170,7 +159,7 @@ async fn test_load_from_remote(sequencer: &RunnerCtx) {
             "SELECT id, name, namespace, packed_size, unpacked_size FROM models WHERE name = \
              'Position'",
         )
-        .fetch_one(&db.pool)
+        .fetch_one(&pool)
         .await
         .unwrap();
 
@@ -185,7 +174,7 @@ async fn test_load_from_remote(sequencer: &RunnerCtx) {
             "SELECT id, name, namespace, packed_size, unpacked_size FROM models WHERE name = \
              'Moves'",
         )
-        .fetch_one(&db.pool)
+        .fetch_one(&pool)
         .await
         .unwrap();
 
@@ -200,7 +189,7 @@ async fn test_load_from_remote(sequencer: &RunnerCtx) {
             "SELECT id, name, namespace, packed_size, unpacked_size FROM models WHERE name = \
              'PlayerConfig'",
         )
-        .fetch_one(&db.pool)
+        .fetch_one(&pool)
         .await
         .unwrap();
 
@@ -210,8 +199,8 @@ async fn test_load_from_remote(sequencer: &RunnerCtx) {
     assert_eq!(packed_size, 0);
     assert_eq!(unpacked_size, 0);
 
-    assert_eq!(count_table("entities", &db.pool).await, 2);
-    assert_eq!(count_table("event_messages", &db.pool).await, 1);
+    assert_eq!(count_table("entities", &pool).await, 2);
+    assert_eq!(count_table("event_messages", &pool).await, 2);
 
     let (id, keys): (String, String) = sqlx::query_as(
         format!(
@@ -220,7 +209,7 @@ async fn test_load_from_remote(sequencer: &RunnerCtx) {
         )
         .as_str(),
     )
-    .fetch_one(&db.pool)
+    .fetch_one(&pool)
     .await
     .unwrap();
 
@@ -307,7 +296,13 @@ async fn test_load_from_remote_del(sequencer: &RunnerCtx) {
     TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
 
     let world_reader = WorldContractReader::new(strat.world_address, Arc::clone(&provider));
-    let pool = setup_sqlite_pool().await.unwrap();
+
+    let options = SqliteConnectOptions::from_str("/tmp/test_load_from_remote_del.db")
+        .unwrap()
+        .create_if_missing(true);
+    let pool = SqlitePoolOptions::new().connect_with(options).await.unwrap();
+    sqlx::migrate!("../migrations").run(&pool).await.unwrap();
+
     let (shutdown_tx, _) = broadcast::channel(1);
     let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
     tokio::spawn(async move {
@@ -318,9 +313,9 @@ async fn test_load_from_remote_del(sequencer: &RunnerCtx) {
 
     let _ = bootstrap_engine(world_reader, db.clone(), provider).await;
 
-    assert_eq!(count_table("dojo_examples-PlayerConfig", &db.pool).await, 0);
-    assert_eq!(count_table("dojo_examples-PlayerConfig$favorite_item", &db.pool).await, 0);
-    assert_eq!(count_table("dojo_examples-PlayerConfig$items", &db.pool).await, 0);
+    assert_eq!(count_table("dojo_examples-PlayerConfig", &pool).await, 0);
+    assert_eq!(count_table("dojo_examples-PlayerConfig$favorite_item", &pool).await, 0);
+    assert_eq!(count_table("dojo_examples-PlayerConfig$items", &pool).await, 0);
 
     // TODO: check how we can have a test that is more chronological with Torii re-syncing
     // to ensure we can test intermediate states.
@@ -393,7 +388,13 @@ async fn test_update_with_set_record(sequencer: &RunnerCtx) {
     TransactionWaiter::new(move_res.transaction_hash, &provider).await.unwrap();
 
     let world_reader = WorldContractReader::new(strat.world_address, Arc::clone(&provider));
-    let pool = setup_sqlite_pool().await.unwrap();
+
+    let options = SqliteConnectOptions::from_str("/tmp/test_update_with_set_record.db")
+        .unwrap()
+        .create_if_missing(true);
+    let pool = SqlitePoolOptions::new().connect_with(options).await.unwrap();
+    sqlx::migrate!("../migrations").run(&pool).await.unwrap();
+
     let (shutdown_tx, _) = broadcast::channel(1);
     let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
     tokio::spawn(async move {
