@@ -47,8 +47,7 @@ fn add_controller_account_inner(genesis: &mut Genesis, user: slot::account::Acco
             storage: Some(get_contract_storage(credential_id, public_key)?),
         };
 
-        let address =
-            ContractAddress::from(Felt::from_bytes_be(&user.contract_address.to_bytes_be()));
+        let address = ContractAddress::from(user.contract_address);
 
         (address, GenesisAllocation::Contract(account))
     };
@@ -97,9 +96,7 @@ pub mod json {
                 storage: Some(get_contract_storage(credential_id, public_key)?),
             };
 
-            let address = ContractAddress::from(Felt::from_bytes_be(
-                &user.account.contract_address.to_bytes_be(),
-            ));
+            let address = ContractAddress::from(user.account.contract_address);
 
             (address, account)
         };
