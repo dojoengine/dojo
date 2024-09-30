@@ -14791,6 +14791,7 @@ dependencies = [
  "sqlx",
  "starknet 0.12.0",
  "starknet-crypto 0.7.2",
+ "tempfile",
  "tokio",
  "tokio-stream",
  "tokio-util",

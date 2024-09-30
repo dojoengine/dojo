@@ -27,6 +27,7 @@ use sqlx::SqlitePool;
 use starknet::core::types::Felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
+use tempfile::NamedTempFile;
 use tokio::sync::broadcast;
 use tokio::sync::broadcast::Sender;
 use tokio_stream::StreamExt;
@@ -164,8 +165,19 @@ async fn main() -> anyhow::Result<()> {
     })
     .expect("Error setting Ctrl-C handler");
 
+    let mut tempfile = None;
+    if args.database.is_empty() {
+        tempfile = Some(NamedTempFile::new()?);
+    }
+
+    let database_path = if let Some(tempfile) = &tempfile {
+        tempfile.path().to_str().unwrap()
+    } else {
+        &args.database
+    };
+
     let mut options =
-        SqliteConnectOptions::from_str(&args.database)?.create_if_missing(true).with_regexp();
+        SqliteConnectOptions::from_str(database_path)?.create_if_missing(true).with_regexp();
 
     // Performance settings
     options = options.auto_vacuum(SqliteAutoVacuum::None);
