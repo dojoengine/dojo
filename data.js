@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1727738725680,
+  "lastUpdate": 1727739935259,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -23047,6 +23047,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 5468516,
             "range": "± 336815",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5eb722ac28080d656599de5f681942e0e5762f6d",
+          "message": "chore: replace `reth-metrics-derive` with the new standalone version (#2487)\n\nthe reth team has made the previously named reth-metrics-derive into a standalone crate, metrics-derive",
+          "timestamp": "2024-09-30T19:08:11-04:00",
+          "tree_id": "5cc0b26957934ee1c97768089b60fe44747485f4",
+          "url": "https://github.com/dojoengine/dojo/commit/5eb722ac28080d656599de5f681942e0e5762f6d"
+        },
+        "date": 1727739933826,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11576814841,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
