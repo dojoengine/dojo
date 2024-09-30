@@ -448,6 +448,9 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             }
         }
 
+        // Directly commit non entity related queries
+        self.db.execute().await?;
+
         // Process parallelized events
         self.process_tasks().await?;
 
@@ -502,6 +505,9 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             }
         }
 
+        // Directly commit non entity related queries
+        self.db.execute().await?;
+
         // Process parallelized events
         self.process_tasks().await?;
 
@@ -529,7 +535,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             let semaphore = semaphore.clone();
 
             handles.push(tokio::spawn(async move {
-                let _permit = semaphore.acquire().await.unwrap();
+                let _permit = semaphore.acquire().await?;
                 let mut local_db = db.clone();
                 for ParallelizedEvent { event_id, event, block_number, block_timestamp } in events {
                     if let Some(processor) = processors.event.get(&event.keys[0]) {
@@ -543,6 +549,8 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                         }
                     }
                 }
+
+                local_db.execute().await?;
                 Ok::<_, anyhow::Error>(local_db)
             }));
         }
