@@ -26,7 +26,7 @@ use starknet::core::types::contract::legacy::LegacyContractClass;
 use starknet::core::types::{
     BlockId, BlockTag, Call, DeclareTransactionReceipt, DeployAccountTransactionReceipt,
     EventFilter, EventsPage, ExecutionResult, Felt, StarknetError, TransactionFinalityStatus,
-    TransactionReceipt,
+    TransactionReceipt, TransactionTrace,
 };
 use starknet::core::utils::get_contract_address;
 use starknet::macros::{felt, selector};
@@ -753,6 +753,72 @@ async fn get_events_with_pending() -> Result<()> {
 
     assert_eq!(events.len(), 0);
     assert_eq!(new_token, continuation_token);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn trace() -> Result<()> {
+    let sequencer =
+        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
+
+    let provider = sequencer.provider();
+    let account = sequencer.account();
+
+    // setup contract to interact with (can be any existing contract that can be interacted with)
+    let contract = Erc20Contract::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), &account);
+
+    // setup contract function params
+    let recipient = felt!("0x1");
+    let amount = Uint256 { low: felt!("0x1"), high: Felt::ZERO };
+
+    let res = contract.transfer(&recipient, &amount).send().await?;
+    dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await?;
+
+    let trace = provider.trace_transaction(res.transaction_hash).await?;
+    assert_matches!(trace, TransactionTrace::Invoke(_));
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn block_traces() -> Result<()> {
+    let sequencer = TestSequencer::start(
+        SequencerConfig { no_mining: true, ..Default::default() },
+        get_default_test_starknet_config(),
+    )
+    .await;
+
+    let provider = sequencer.provider();
+    let account = sequencer.account();
+
+    // setup contract to interact with (can be any existing contract that can be interacted with)
+    let contract = Erc20Contract::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), &account);
+
+    // setup contract function params
+    let recipient = felt!("0x1");
+    let amount = Uint256 { low: felt!("0x1"), high: Felt::ZERO };
+
+    let mut hashes = Vec::new();
+    for _ in 0..5 {
+        let res = contract.transfer(&recipient, &amount).send().await?;
+        dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await?;
+        hashes.push(res.transaction_hash);
+    }
+
+    let client = HttpClientBuilder::default().build(sequencer.url())?;
+
+    // Generate a block to include the transactions. The generated block will have block number 1.
+    client.generate_block().await?;
+
+    // Get the traces of the transactions in block 1.
+    let traces = provider.trace_block_transactions(BlockId::Number(1)).await?;
+    assert_eq!(traces.len(), 5);
+
+    for i in 0..5 {
+        assert_eq!(traces[i].transaction_hash, hashes[i]);
+        assert_matches!(&traces[i].trace_root, TransactionTrace::Invoke(_));
+    }
 
     Ok(())
 }
