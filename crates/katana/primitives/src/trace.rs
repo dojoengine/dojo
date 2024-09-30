@@ -185,7 +185,28 @@ impl BuiltinCounters {
 impl From<HashMap<BuiltinName, usize>> for BuiltinCounters {
     fn from(map: HashMap<BuiltinName, usize>) -> Self {
         // Filter out the builtins with 0 count.
-        let filtered = map.into_iter().filter(|builtin| builtin.1 != 0).collect();
+        let filtered = map.into_iter().filter(|(_, count)| *count != 0).collect();
         BuiltinCounters(filtered)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_builtin_counters_from_hashmap_removes_zero_entries() {
+        let mut map = HashMap::new();
+        map.insert(BuiltinName::output, 1);
+        map.insert(BuiltinName::range_check, 0);
+        map.insert(BuiltinName::pedersen, 2);
+        map.insert(BuiltinName::ecdsa, 0);
+
+        let counters = BuiltinCounters::from(map);
+
+        assert_eq!(counters.output(), Some(1));
+        assert_eq!(counters.range_check(), None);
+        assert_eq!(counters.pedersen(), Some(2));
+        assert_eq!(counters.ecdsa(), None);
     }
 }
