@@ -44,6 +44,7 @@ members = [
 	"crates/torii/server",
 	"crates/torii/types-test",
 	"examples/spawn-and-move",
+	"scripts/verify_db_balances",
 	"xtask/generate-test-db",
 ]
 

@@ -1,0 +1,14 @@
+[package]
+edition.workspace = true
+license.workspace = true
+name = "verify_db_balances"
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+num-traits = "0.2.19"
+sqlx.workspace = true
+starknet.workspace = true
+tokio = { workspace = true, features = [ "full" ] }
+tracing-subscriber.workspace = true
+tracing.workspace = true

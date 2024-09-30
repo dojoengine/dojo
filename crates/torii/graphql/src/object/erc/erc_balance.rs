@@ -74,8 +74,8 @@ async fn fetch_erc_balances(
     for row in rows {
         let row = BalanceQueryResultRaw::from_row(&row)?;
 
-        let balance_value = match row.contract_type.as_str() {
-            "ERC20" | "Erc20" | "erc20" => {
+        let balance_value = match row.contract_type.to_lowercase().as_str() {
+            "erc20" => {
                 let token_metadata = Value::Object(ValueMapping::from([
                     (Name::new("name"), Value::String(row.name)),
                     (Name::new("symbol"), Value::String(row.symbol)),
@@ -91,7 +91,7 @@ async fn fetch_erc_balances(
                     (Name::new("token_metadata"), token_metadata),
                 ]))
             }
-            "ERC721" | "Erc721" | "erc721" => {
+            "erc721" => {
                 // contract_address:token_id
                 let token_id = row.token_id.split(':').collect::<Vec<&str>>();
                 assert!(token_id.len() == 2);
@@ -100,7 +100,7 @@ async fn fetch_erc_balances(
                     (Name::new("contract_address"), Value::String(row.contract_address.clone())),
                     (Name::new("name"), Value::String(row.name)),
                     (Name::new("symbol"), Value::String(row.symbol)),
-                    (Name::new("token_id"), Value::String(row.token_id)),
+                    (Name::new("token_id"), Value::String(token_id[1].to_string())),
                     (Name::new("decimals"), Value::String(row.decimals.to_string())),
                 ]));
 

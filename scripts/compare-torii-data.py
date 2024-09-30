@@ -1,4 +1,4 @@
-# This script compares data across 'events', 'entities', and 'transactions' tables between two SQLite databases.
+# This script compares data across 'events', 'entities', 'transactions', 'balances', 'tokens', and 'erc_transfers' tables between two SQLite databases.
 # Helpful to make sure any changes made in torii doesn't affect the resulting data.
 
 import sqlite3
@@ -46,6 +46,9 @@ def compare_databases(db_path1, db_path2):
     events_columns = ["id", "keys", "data", "transaction_hash"]
     entities_columns = ["id", "keys"]
     transactions_columns = ["id", "transaction_hash", "sender_address", "calldata", "max_fee", "signature", "nonce", "transaction_type"]
+    balances_columns = ["id", "balance", "account_address", "contract_address", "token_id"]
+    tokens_columns = ["id", "contract_address", "name", "symbol", "decimals"]
+    erc_transfers_columns = ["id", "contract_address", "from_address", "to_address", "amount", "token_id"]
 
     # Fetch data from both databases
     events_data_db1 = fetch_table_data(db_path1, "events", events_columns)
@@ -54,6 +57,12 @@ def compare_databases(db_path1, db_path2):
     entities_data_db2 = fetch_table_data(db_path2, "entities", entities_columns)
     transactions_data_db1 = fetch_table_data(db_path1, "transactions", transactions_columns)
     transactions_data_db2 = fetch_table_data(db_path2, "transactions", transactions_columns)
+    balances_data_db1 = fetch_table_data(db_path1, "balances", balances_columns)
+    balances_data_db2 = fetch_table_data(db_path2, "balances", balances_columns)
+    tokens_data_db1 = fetch_table_data(db_path1, "tokens", tokens_columns)
+    tokens_data_db2 = fetch_table_data(db_path2, "tokens", tokens_columns)
+    erc_transfers_data_db1 = fetch_table_data(db_path1, "erc_transfers", erc_transfers_columns)
+    erc_transfers_data_db2 = fetch_table_data(db_path2, "erc_transfers", erc_transfers_columns)
 
     # Get row counts from both databases
     events_count_db1 = get_table_row_count(db_path1, "events")
@@ -62,11 +71,20 @@ def compare_databases(db_path1, db_path2):
     entities_count_db2 = get_table_row_count(db_path2, "entities")
     transactions_count_db1 = get_table_row_count(db_path1, "transactions")
     transactions_count_db2 = get_table_row_count(db_path2, "transactions")
+    balances_count_db1 = get_table_row_count(db_path1, "balances")
+    balances_count_db2 = get_table_row_count(db_path2, "balances")
+    tokens_count_db1 = get_table_row_count(db_path1, "tokens")
+    tokens_count_db2 = get_table_row_count(db_path2, "tokens")
+    erc_transfers_count_db1 = get_table_row_count(db_path1, "erc_transfers")
+    erc_transfers_count_db2 = get_table_row_count(db_path2, "erc_transfers")
 
     # Print row counts
     print(f"Number of rows in events table: Database 1 = {events_count_db1}, Database 2 = {events_count_db2}")
     print(f"Number of rows in entities table: Database 1 = {entities_count_db1}, Database 2 = {entities_count_db2}")
     print(f"Number of rows in transactions table: Database 1 = {transactions_count_db1}, Database 2 = {transactions_count_db2}")
+    print(f"Number of rows in balances table: Database 1 = {balances_count_db1}, Database 2 = {balances_count_db2}")
+    print(f"Number of rows in tokens table: Database 1 = {tokens_count_db1}, Database 2 = {tokens_count_db2}")
+    print(f"Number of rows in erc_transfers table: Database 1 = {erc_transfers_count_db1}, Database 2 = {erc_transfers_count_db2}")
 
     # Compare data
     print("\nComparing events table:")
@@ -78,8 +96,17 @@ def compare_databases(db_path1, db_path2):
     print("\nComparing transactions table:")
     compare_data(transactions_data_db1, transactions_data_db2, "transactions")
 
+    print("\nComparing balances table:")
+    compare_data(balances_data_db1, balances_data_db2, "balances")
+
+    print("\nComparing tokens table:")
+    compare_data(tokens_data_db1, tokens_data_db2, "tokens")
+
+    print("\nComparing erc_transfers table:")
+    compare_data(erc_transfers_data_db1, erc_transfers_data_db2, "erc_transfers")
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Compare data in events, entities, and transactions tables between two SQLite databases.")
+    parser = argparse.ArgumentParser(description="Compare data in events, entities, transactions, balances, tokens, and erc_transfers tables between two SQLite databases.")
     parser.add_argument("db_path1", help="Path to the first SQLite database")
     parser.add_argument("db_path2", help="Path to the second SQLite database")
     args = parser.parse_args()

@@ -1,4 +1,4 @@
-use std::ops::{Add, Sub};
+use std::collections::HashMap;
 
 use anyhow::Result;
 use cainome::cairo_serde::{ByteArray, CairoSerde};
@@ -8,12 +8,13 @@ use starknet::providers::Provider;
 use tracing::debug;
 
 use super::query_queue::{Argument, QueryType};
-use super::utils::{sql_string_to_u256, u256_to_sql_string};
+use super::utils::{sql_string_to_u256, u256_to_sql_string, I256};
 use super::{Sql, FELT_DELIMITER};
 use crate::sql::utils::{felt_and_u256_to_sql_string, felt_to_sql_string, felts_to_sql_string};
 use crate::utils::utc_dt_string_from_timestamp;
 
 impl Sql {
+    #[allow(clippy::too_many_arguments)]
     pub async fn handle_erc20_transfer<P: Provider + Sync>(
         &mut self,
         contract_address: Felt,
@@ -22,8 +23,9 @@ impl Sql {
         amount: U256,
         provider: &P,
         block_timestamp: u64,
+        cache: &mut HashMap<String, I256>,
     ) -> Result<()> {
-        // unique token identifier in DB
+        // contract_address
         let token_id = felt_to_sql_string(&contract_address);
 
         let token_exists: bool =
@@ -36,7 +38,7 @@ impl Sql {
             self.register_erc20_token_metadata(contract_address, &token_id, provider).await?;
         }
 
-        self.register_erc_transfer_event(
+        self.store_erc_transfer_event(
             contract_address,
             from_address,
             to_address,
@@ -45,87 +47,29 @@ impl Sql {
             block_timestamp,
         );
 
-        // Update balances in erc20_balance table
-        {
-            // NOTE: formatting here should match the format we use for Argument type in QueryQueue
-            // TODO: abstract this so they cannot mismatch
-
-            // Since balance are stored as TEXT in db, we cannot directly use INSERT OR UPDATE
-            // statements.
-            // Fetch balances for both `from` and `to` addresses, update them and write back to db
-            let query = sqlx::query_as::<_, (String, String)>(
-                "SELECT account_address, balance FROM balances WHERE contract_address = ? AND \
-                 account_address IN (?, ?)",
-            )
-            .bind(felt_to_sql_string(&contract_address))
-            .bind(felt_to_sql_string(&from_address))
-            .bind(felt_to_sql_string(&to_address));
-
-            // (address, balance)
-            let balances: Vec<(String, String)> = query.fetch_all(&self.pool).await?;
-            // (address, balance) is primary key in DB, and we are fetching for 2 addresses so there
-            // should be at most 2 rows returned
-            assert!(balances.len() <= 2);
-
-            let from_balance = balances
-                .iter()
-                .find(|(address, _)| address == &felt_to_sql_string(&from_address))
-                .map(|(_, balance)| balance.clone())
-                .unwrap_or_else(|| u256_to_sql_string(&U256::from(0u8)));
-
-            let to_balance = balances
-                .iter()
-                .find(|(address, _)| address == &felt_to_sql_string(&to_address))
-                .map(|(_, balance)| balance.clone())
-                .unwrap_or_else(|| u256_to_sql_string(&U256::from(0u8)));
-
-            let from_balance = sql_string_to_u256(&from_balance);
-            let to_balance = sql_string_to_u256(&to_balance);
-
-            let new_from_balance =
-                if from_address != Felt::ZERO { from_balance.sub(amount) } else { from_balance };
-            let new_to_balance =
-                if to_address != Felt::ZERO { to_balance.add(amount) } else { to_balance };
-
-            let update_query = "
-            INSERT INTO balances (id, balance, account_address, contract_address, token_id)
-            VALUES (?, ?, ?, ?, ?)
-            ON CONFLICT (id) 
-            DO UPDATE SET balance = excluded.balance";
-
-            if from_address != Felt::ZERO {
-                self.query_queue.enqueue(
-                    update_query,
-                    vec![
-                        Argument::String(felts_to_sql_string(&[from_address, contract_address])),
-                        Argument::String(u256_to_sql_string(&new_from_balance)),
-                        Argument::FieldElement(from_address),
-                        Argument::FieldElement(contract_address),
-                        Argument::String(token_id.clone()),
-                    ],
-                    QueryType::Other,
-                );
-            }
-
-            if to_address != Felt::ZERO {
-                self.query_queue.enqueue(
-                    update_query,
-                    vec![
-                        Argument::String(felts_to_sql_string(&[to_address, contract_address])),
-                        Argument::String(u256_to_sql_string(&new_to_balance)),
-                        Argument::FieldElement(to_address),
-                        Argument::FieldElement(contract_address),
-                        Argument::String(token_id.clone()),
-                    ],
-                    QueryType::Other,
-                );
-            }
-        }
         self.query_queue.execute_all().await?;
+
+        if from_address != Felt::ZERO {
+            // from_address/contract_address/
+            let from_balance_id = felts_to_sql_string(&[from_address, contract_address]);
+            let from_balance = cache.entry(from_balance_id).or_default();
+            *from_balance -= I256::from(amount);
+        }
+
+        if to_address != Felt::ZERO {
+            let to_balance_id = felts_to_sql_string(&[to_address, contract_address]);
+            let to_balance = cache.entry(to_balance_id).or_default();
+            *to_balance += I256::from(amount);
+        }
+
+        if cache.len() >= 100000 {
+            self.apply_cache_diff(cache).await?;
+        }
 
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn handle_erc721_transfer<P: Provider + Sync>(
         &mut self,
         contract_address: Felt,
@@ -134,7 +78,9 @@ impl Sql {
         token_id: U256,
         provider: &P,
         block_timestamp: u64,
+        cache: &mut HashMap<String, I256>,
     ) -> Result<()> {
+        // contract_address:id
         let token_id = felt_and_u256_to_sql_string(&contract_address, &token_id);
         let token_exists: bool =
             sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM tokens WHERE id = ?)")
@@ -146,7 +92,7 @@ impl Sql {
             self.register_erc721_token_metadata(contract_address, &token_id, provider).await?;
         }
 
-        self.register_erc_transfer_event(
+        self.store_erc_transfer_event(
             contract_address,
             from_address,
             to_address,
@@ -155,51 +101,26 @@ impl Sql {
             block_timestamp,
         );
 
-        // Update balances in erc721_balances table
-        {
-            let update_query = "
-            INSERT INTO balances (id, balance, account_address, contract_address, token_id)
-            VALUES (?, ?, ?, ?, ?)
-            ON CONFLICT (id) 
-            DO UPDATE SET balance = excluded.balance";
-
-            if from_address != Felt::ZERO {
-                self.query_queue.enqueue(
-                    update_query,
-                    vec![
-                        Argument::String(format!(
-                            "{}{FELT_DELIMITER}{}",
-                            felt_to_sql_string(&from_address),
-                            &token_id
-                        )),
-                        Argument::String(u256_to_sql_string(&U256::from(0u8))),
-                        Argument::FieldElement(from_address),
-                        Argument::FieldElement(contract_address),
-                        Argument::String(token_id.clone()),
-                    ],
-                    QueryType::Other,
-                );
-            }
-
-            if to_address != Felt::ZERO {
-                self.query_queue.enqueue(
-                    update_query,
-                    vec![
-                        Argument::String(format!(
-                            "{}{FELT_DELIMITER}{}",
-                            felt_to_sql_string(&to_address),
-                            &token_id
-                        )),
-                        Argument::String(u256_to_sql_string(&U256::from(1u8))),
-                        Argument::FieldElement(to_address),
-                        Argument::FieldElement(contract_address),
-                        Argument::String(token_id.clone()),
-                    ],
-                    QueryType::Other,
-                );
-            }
-        }
         self.query_queue.execute_all().await?;
+
+        // from_address/contract_address:id
+        if from_address != Felt::ZERO {
+            let from_balance_id =
+                format!("{}{FELT_DELIMITER}{}", felt_to_sql_string(&from_address), &token_id);
+            let from_balance = cache.entry(from_balance_id).or_default();
+            *from_balance -= I256::from(1u8);
+        }
+
+        if to_address != Felt::ZERO {
+            let to_balance_id =
+                format!("{}{FELT_DELIMITER}{}", felt_to_sql_string(&to_address), &token_id);
+            let to_balance = cache.entry(to_balance_id).or_default();
+            *to_balance += I256::from(1u8);
+        }
+
+        if cache.len() >= 100000 {
+            self.apply_cache_diff(cache).await?;
+        }
 
         Ok(())
     }
@@ -378,7 +299,7 @@ impl Sql {
         Ok(())
     }
 
-    fn register_erc_transfer_event(
+    fn store_erc_transfer_event(
         &mut self,
         contract_address: Felt,
         from: Felt,
@@ -402,5 +323,93 @@ impl Sql {
             ],
             QueryType::Other,
         );
+    }
+
+    pub async fn apply_cache_diff(&mut self, cache: &mut HashMap<String, I256>) -> Result<()> {
+        for (id_str, balance) in cache.iter() {
+            let id = id_str.split(FELT_DELIMITER).collect::<Vec<&str>>();
+            match id.len() {
+                // account_address/contract_address:id => ERC721
+                2 => {
+                    let account_address = id[0];
+                    let token_id = id[1];
+                    let mid = token_id.split(":").collect::<Vec<&str>>();
+                    let contract_address = mid[0];
+
+                    self.apply_balance_diff(
+                        id_str,
+                        account_address,
+                        contract_address,
+                        token_id,
+                        balance,
+                    )
+                    .await?;
+                }
+                // account_address/contract_address/ => ERC20
+                3 => {
+                    let account_address = id[0];
+                    let contract_address = id[1];
+                    let token_id = id[1];
+
+                    self.apply_balance_diff(
+                        id_str,
+                        account_address,
+                        contract_address,
+                        token_id,
+                        balance,
+                    )
+                    .await?;
+                }
+                _ => unreachable!(),
+            }
+        }
+
+        cache.clear();
+        Ok(())
+    }
+
+    async fn apply_balance_diff(
+        &self,
+        id: &str,
+        account_address: &str,
+        contract_address: &str,
+        token_id: &str,
+        balance_diff: &I256,
+    ) -> Result<()> {
+        let balance: Option<(String,)> =
+            sqlx::query_as("SELECT balance FROM balances WHERE id = ?")
+                .bind(id)
+                .fetch_optional(&self.pool)
+                .await?;
+
+        let mut balance = if let Some(balance) = balance {
+            sql_string_to_u256(&balance.0)
+        } else {
+            U256::from(0u8)
+        };
+
+        if balance_diff.is_negative {
+            if balance < balance_diff.value {
+                dbg!(&balance_diff, balance, id);
+            }
+            balance -= balance_diff.value;
+        } else {
+            balance += balance_diff.value;
+        }
+
+        // write the new balance to the database
+        sqlx::query(
+            "INSERT OR REPLACE INTO balances (id, contract_address, account_address, token_id, \
+             balance) VALUES (?, ?, ?, ?, ?)",
+        )
+        .bind(id)
+        .bind(contract_address)
+        .bind(account_address)
+        .bind(token_id)
+        .bind(u256_to_sql_string(&balance))
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
     }
 }

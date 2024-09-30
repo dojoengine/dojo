@@ -112,9 +112,7 @@ pub struct Contract {
 pub enum ContractType {
     WORLD,
     ERC20,
-    ERC20Legacy,
     ERC721,
-    ERC721Legacy,
 }
 
 impl FromStr for ContractType {
@@ -125,8 +123,6 @@ impl FromStr for ContractType {
             "world" => Ok(ContractType::WORLD),
             "erc20" => Ok(ContractType::ERC20),
             "erc721" => Ok(ContractType::ERC721),
-            "erc20legacy" | "erc20_legacy" => Ok(ContractType::ERC20Legacy),
-            "erc721legacy" | "erc721_legacy" => Ok(ContractType::ERC721Legacy),
             _ => Err(anyhow::anyhow!("Invalid ERC type: {}", input)),
         }
     }
@@ -138,8 +134,6 @@ impl std::fmt::Display for ContractType {
             ContractType::WORLD => write!(f, "WORLD"),
             ContractType::ERC20 => write!(f, "ERC20"),
             ContractType::ERC721 => write!(f, "ERC721"),
-            ContractType::ERC20Legacy => write!(f, "ERC20Legacy"),
-            ContractType::ERC721Legacy => write!(f, "ERC721Legacy"),
         }
     }
 }
