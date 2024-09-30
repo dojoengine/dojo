@@ -772,11 +772,13 @@ async fn trace() -> Result<()> {
     let recipient = felt!("0x1");
     let amount = Uint256 { low: felt!("0x1"), high: Felt::ZERO };
 
-    let res = contract.transfer(&recipient, &amount).send().await?;
-    dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await?;
+    for _ in 0..2 {
+        let res = contract.transfer(&recipient, &amount).send().await?;
+        dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await?;
 
-    let trace = provider.trace_transaction(res.transaction_hash).await?;
-    assert_matches!(trace, TransactionTrace::Invoke(_));
+        let trace = provider.trace_transaction(res.transaction_hash).await?;
+        assert_matches!(trace, TransactionTrace::Invoke(_));
+    }
 
     Ok(())
 }
@@ -794,10 +796,14 @@ async fn block_traces() -> Result<()> {
 
     // setup contract to interact with (can be any existing contract that can be interacted with)
     let contract = Erc20Contract::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), &account);
+    let rpc_client = HttpClientBuilder::default().build(sequencer.url())?;
 
     // setup contract function params
     let recipient = felt!("0x1");
     let amount = Uint256 { low: felt!("0x1"), high: Felt::ZERO };
+
+    // -----------------------------------------------------------------------
+    // Block 1
 
     let mut hashes = Vec::new();
     for _ in 0..5 {
@@ -806,16 +812,36 @@ async fn block_traces() -> Result<()> {
         hashes.push(res.transaction_hash);
     }
 
-    let client = HttpClientBuilder::default().build(sequencer.url())?;
-
     // Generate a block to include the transactions. The generated block will have block number 1.
-    client.generate_block().await?;
+    rpc_client.generate_block().await?;
 
     // Get the traces of the transactions in block 1.
     let traces = provider.trace_block_transactions(BlockId::Number(1)).await?;
     assert_eq!(traces.len(), 5);
 
     for i in 0..5 {
+        assert_eq!(traces[i].transaction_hash, hashes[i]);
+        assert_matches!(&traces[i].trace_root, TransactionTrace::Invoke(_));
+    }
+
+    // -----------------------------------------------------------------------
+    // Block 2
+
+    let mut hashes = Vec::new();
+    for _ in 0..2 {
+        let res = contract.transfer(&recipient, &amount).send().await?;
+        dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await?;
+        hashes.push(res.transaction_hash);
+    }
+
+    // Generate a block to include the transactions. The generated block will have block number 2.
+    rpc_client.generate_block().await?;
+
+    // Get the traces of the transactions in block 2.
+    let traces = provider.trace_block_transactions(BlockId::Number(2)).await?;
+    assert_eq!(traces.len(), 2);
+
+    for i in 0..2 {
         assert_eq!(traces[i].transaction_hash, hashes[i]);
         assert_matches!(&traces[i].trace_root, TransactionTrace::Invoke(_));
     }
