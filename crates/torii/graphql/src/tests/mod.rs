@@ -277,7 +277,7 @@ pub async fn model_fixtures(db: &mut Sql) {
 
 pub async fn spinup_types_test(path: &str) -> Result<SqlitePool> {
     let options =
-        SqliteConnectOptions::from_str(&path).unwrap().create_if_missing(true).with_regexp();
+        SqliteConnectOptions::from_str(path).unwrap().create_if_missing(true).with_regexp();
     let pool = SqlitePoolOptions::new().connect_with(options).await.unwrap();
     sqlx::migrate!("../migrations").run(&pool).await.unwrap();
 
