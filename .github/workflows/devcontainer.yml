@@ -43,6 +43,7 @@ jobs:
         if: github.event_name == 'release'
         run: |
           echo "DOCKER_TAG=${{ github.event.release.tag_name }}" >> $GITHUB_ENV
+          echo "DOJO_VERSION=${{ github.event.release.tag_name }}" >> $GITHUB_ENV
           echo "tag_name=$DOCKER_TAG" >> $GITHUB_OUTPUT
 
       - name: Set Docker tag for push event
@@ -50,12 +51,13 @@ jobs:
         run: |
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c 1-7)
           echo "DOCKER_TAG=$SHORT_SHA" >> $GITHUB_ENV
+          echo "DOJO_VERSION=$SHORT_SHA" >> $GITHUB_OUTPUT
 
       - name: Set Docker tag for workflow_dispatch event
         if: github.event_name == 'workflow_dispatch'
         run: |
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c 1-7)
-          echo "tag_name=$SHORT_SHA" >> $GITHUB_OUTPUT
+          echo "DOJO_VERSION=$SHORT_SHA" >> $GITHUB_OUTPUT
           echo "DOCKER_TAG=${{ inputs.docker_tag }}" >> $GITHUB_ENV
 
       - name: Set outputs
@@ -72,7 +74,7 @@ jobs:
           build-args: |
             VARIANT=bookworm
             BUILD_TYPE=${{ github.event_name }}
-            DOJO_VERSION=${{ github.event.release.tag_name }}
+            DOJO_VERSION=${{ env.DOJO_VERSION }}
           platforms: linux/amd64,linux/arm64
           cache-from: type=registry,ref=ghcr.io/${{ github.repository }}-dev:latest
 
