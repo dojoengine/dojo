@@ -24,7 +24,6 @@ use starknet::core::types::{Call, Felt, InvokeTransactionResult};
 use starknet::macros::selector;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
-use tempfile::NamedTempFile;
 use tokio::sync::broadcast;
 use tokio_stream::StreamExt;
 use torii_core::engine::{Engine, EngineConfig, Processors};
@@ -276,18 +275,10 @@ pub async fn model_fixtures(db: &mut Sql) {
     db.execute().await.unwrap();
 }
 
-pub async fn spinup_types_test() -> Result<SqlitePool> {
-    let tempfile = NamedTempFile::new().unwrap();
-    let path = tempfile.path().to_string_lossy();
+pub async fn spinup_types_test(path: &str) -> Result<SqlitePool> {
     let options =
         SqliteConnectOptions::from_str(&path).unwrap().create_if_missing(true).with_regexp();
-    let pool = SqlitePoolOptions::new()
-        .min_connections(1)
-        .idle_timeout(None)
-        .max_lifetime(None)
-        .connect_with(options)
-        .await
-        .unwrap();
+    let pool = SqlitePoolOptions::new().connect_with(options).await.unwrap();
     sqlx::migrate!("../migrations").run(&pool).await.unwrap();
 
     let setup = CompilerTestSetup::from_paths("../../dojo-core", &["../types-test"]);
