@@ -14,10 +14,10 @@ tracing.workspace = true
 
 # Metrics
 metrics.workspace = true
+metrics-derive = "0.1"
 metrics-exporter-prometheus = "0.15.3"
 metrics-process = "2.1.0"
 metrics-util = "0.17.0"
-reth-metrics-derive = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.3" }
 
 [target.'cfg(not(windows))'.dependencies]
 jemalloc-ctl = { version = "0.5.0", optional = true }

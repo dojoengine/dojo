@@ -4497,10 +4497,10 @@ dependencies = [
  "jemalloc-ctl",
  "jemallocator",
  "metrics",
+ "metrics-derive",
  "metrics-exporter-prometheus",
  "metrics-process",
  "metrics-util",
- "reth-metrics-derive",
  "thiserror",
  "tokio",
  "tracing",
@@ -9184,6 +9184,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "metrics-derive"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f3dbdd96ed57d565ec744cba02862d707acf373c5772d152abae6ec5c4e24f6c"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "regex",
+ "syn 2.0.77",
+]
+
+[[package]]
 name = "metrics-exporter-prometheus"
 version = "0.15.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -11446,18 +11458,6 @@ dependencies = [
  "bindgen 0.68.1",
  "cc",
  "libc",
-]
-
-[[package]]
-name = "reth-metrics-derive"
-version = "1.0.3"
-source = "git+https://github.com/paradigmxyz/reth.git?tag=v1.0.3#390f30aadebcdd509e72cc04327c3b854de076a6"
-dependencies = [
- "once_cell",
- "proc-macro2",
- "quote",
- "regex",
- "syn 2.0.77",
 ]
 
 [[package]]
