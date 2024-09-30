@@ -21,7 +21,6 @@ use tokio::sync::Semaphore;
 use tokio::time::{sleep, Instant};
 use tracing::{debug, error, info, trace, warn};
 
-use crate::executor::QueryMessage;
 use crate::processors::event_message::EventMessageProcessor;
 use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
 use crate::sql::Sql;
@@ -112,8 +111,8 @@ pub struct ParallelizedEvent {
 #[derive(Debug)]
 pub struct EngineHead {
     pub block_number: u64,
-    pub last_pending_block_tx: Option<Felt>,
     pub last_pending_block_world_tx: Option<Felt>,
+    pub last_pending_block_tx: Option<Felt>,
 }
 
 #[allow(missing_debug_implementations)]
@@ -157,8 +156,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
 
     pub async fn start(&mut self) -> Result<()> {
         // use the start block provided by user if head is 0
-        let (mut head, mut last_pending_block_world_tx, mut last_pending_block_tx) =
-            self.db.head().await?;
+        let (head, _, _) = self.db.head().await?;
         if head == 0 {
             self.db.set_head(self.config.start_block)?;
         } else if self.config.start_block != 0 {
@@ -172,6 +170,8 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
 
         let mut erroring_out = false;
         loop {
+            let (head, last_pending_block_world_tx, last_pending_block_tx) = self.db.head().await?;
+
             tokio::select! {
                 _ = shutdown_rx.recv() => {
                     break Ok(());
@@ -187,14 +187,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                             }
 
                             match self.process(fetch_result).await {
-                                Ok(res) => {
-                                    self.db.executor.send(QueryMessage::execute())?;
-                                    if let Some(new_head) = res {
-                                        head = new_head.block_number;
-                                        last_pending_block_world_tx = new_head.last_pending_block_world_tx;
-                                        last_pending_block_tx = new_head.last_pending_block_tx;
-                                    }
-                                }
+                                Ok(_) => self.db.execute().await?,
                                 Err(e) => {
                                     error!(target: LOG_TARGET, error = %e, "Processing fetched data.");
                                     erroring_out = true;
@@ -468,8 +461,8 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
 
         Ok(EngineHead {
             block_number: data.block_number - 1,
-            last_pending_block_tx,
             last_pending_block_world_tx,
+            last_pending_block_tx,
         })
     }
 
