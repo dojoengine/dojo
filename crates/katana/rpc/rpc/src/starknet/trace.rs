@@ -164,8 +164,21 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
 
     fn trace(&self, tx_hash: TxHash) -> Result<TransactionTrace, StarknetApiError> {
         use StarknetApiError::TxnHashNotFound;
+
+        // Check in the pending block first
+        if let Some(state) = self.pending_executor() {
+            let pending_block = state.read();
+            let tx = pending_block.transactions().iter().find(|(t, _)| t.hash == tx_hash);
+
+            if let Some(trace) = tx.and_then(|(_, res)| res.trace()) {
+                return Ok(to_rpc_trace(trace.clone()));
+            }
+        }
+
+        // If not found in pending block, fallback to the provider
         let provider = self.inner.backend.blockchain.provider();
         let trace = provider.transaction_execution(tx_hash)?.ok_or(TxnHashNotFound)?;
+
         Ok(to_rpc_trace(trace))
     }
 }
@@ -220,8 +233,8 @@ fn to_rpc_trace(trace: TxExecInfo) -> TransactionTrace {
             };
 
             TransactionTrace::Invoke(InvokeTransactionTrace {
-                execution_resources: execution_resources.clone(),
                 fee_transfer_invocation,
+                execution_resources,
                 validate_invocation,
                 execute_invocation,
                 state_diff,
@@ -229,19 +242,19 @@ fn to_rpc_trace(trace: TxExecInfo) -> TransactionTrace {
         }
 
         TxType::Declare => TransactionTrace::Declare(DeclareTransactionTrace {
-            execution_resources: execution_resources.clone(),
             fee_transfer_invocation,
             validate_invocation,
+            execution_resources,
             state_diff,
         }),
 
         TxType::DeployAccount => {
             let constructor_invocation = execute_invocation.expect("should exist if not reverted");
             TransactionTrace::DeployAccount(DeployAccountTransactionTrace {
-                execution_resources: execution_resources.clone(),
                 fee_transfer_invocation,
                 constructor_invocation,
                 validate_invocation,
+                execution_resources,
                 state_diff,
             })
         }

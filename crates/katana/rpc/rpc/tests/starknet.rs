@@ -759,11 +759,15 @@ async fn get_events_with_pending() -> Result<()> {
 
 #[tokio::test]
 async fn trace() -> Result<()> {
-    let sequencer =
-        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
+    let sequencer = TestSequencer::start(
+        SequencerConfig { no_mining: true, ..Default::default() },
+        get_default_test_starknet_config(),
+    )
+    .await;
 
     let provider = sequencer.provider();
     let account = sequencer.account();
+    let rpc_client = HttpClientBuilder::default().build(sequencer.url())?;
 
     // setup contract to interact with (can be any existing contract that can be interacted with)
     let contract = Erc20Contract::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), &account);
@@ -771,6 +775,28 @@ async fn trace() -> Result<()> {
     // setup contract function params
     let recipient = felt!("0x1");
     let amount = Uint256 { low: felt!("0x1"), high: Felt::ZERO };
+
+    // -----------------------------------------------------------------------
+    // Transactions not in pending block
+
+    let mut hashes = Vec::new();
+
+    for _ in 0..2 {
+        let res = contract.transfer(&recipient, &amount).send().await?;
+        dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await?;
+        hashes.push(res.transaction_hash);
+    }
+
+    // Generate a block to include the transactions. The generated block will have block number 1.
+    rpc_client.generate_block().await?;
+
+    for hash in hashes {
+        let trace = provider.trace_transaction(hash).await?;
+        assert_matches!(trace, TransactionTrace::Invoke(_));
+    }
+
+    // -----------------------------------------------------------------------
+    // Transactions in pending block
 
     for _ in 0..2 {
         let res = contract.transfer(&recipient, &amount).send().await?;
@@ -793,10 +819,10 @@ async fn block_traces() -> Result<()> {
 
     let provider = sequencer.provider();
     let account = sequencer.account();
+    let rpc_client = HttpClientBuilder::default().build(sequencer.url())?;
 
     // setup contract to interact with (can be any existing contract that can be interacted with)
     let contract = Erc20Contract::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), &account);
-    let rpc_client = HttpClientBuilder::default().build(sequencer.url())?;
 
     // setup contract function params
     let recipient = felt!("0x1");
