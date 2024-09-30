@@ -816,7 +816,8 @@ async fn block_traces() -> Result<()> {
     rpc_client.generate_block().await?;
 
     // Get the traces of the transactions in block 1.
-    let traces = provider.trace_block_transactions(BlockId::Number(1)).await?;
+    let block_id = BlockId::Number(1);
+    let traces = provider.trace_block_transactions(block_id).await?;
     assert_eq!(traces.len(), 5);
 
     for i in 0..5 {
@@ -838,10 +839,31 @@ async fn block_traces() -> Result<()> {
     rpc_client.generate_block().await?;
 
     // Get the traces of the transactions in block 2.
-    let traces = provider.trace_block_transactions(BlockId::Number(2)).await?;
+    let block_id = BlockId::Number(2);
+    let traces = provider.trace_block_transactions(block_id).await?;
     assert_eq!(traces.len(), 2);
 
     for i in 0..2 {
+        assert_eq!(traces[i].transaction_hash, hashes[i]);
+        assert_matches!(&traces[i].trace_root, TransactionTrace::Invoke(_));
+    }
+
+    // -----------------------------------------------------------------------
+    // Block 3 (Pending)
+
+    let mut hashes = Vec::new();
+    for _ in 0..3 {
+        let res = contract.transfer(&recipient, &amount).send().await?;
+        dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await?;
+        hashes.push(res.transaction_hash);
+    }
+
+    // Get the traces of the transactions in block 3 (pending).
+    let block_id = BlockId::Tag(BlockTag::Pending);
+    let traces = provider.trace_block_transactions(block_id).await?;
+    assert_eq!(traces.len(), 3);
+
+    for i in 0..3 {
         assert_eq!(traces[i].transaction_hash, hashes[i]);
         assert_matches!(&traces[i].trace_root, TransactionTrace::Invoke(_));
     }
