@@ -42,22 +42,26 @@ impl Sql {
         world_address: Felt,
         executor: UnboundedSender<QueryMessage>,
     ) -> Result<Self> {
-        sqlx::query(
+        executor.send(QueryMessage::other(
             "INSERT OR IGNORE INTO contracts (id, contract_address, contract_type) VALUES (?, ?, \
-             ?)",
-        )
-        .bind(format!("{:#x}", world_address))
-        .bind(format!("{:#x}", world_address))
-        .bind(WORLD_CONTRACT_TYPE)
-        .execute(&pool)
-        .await?;
+             ?)"
+            .to_string(),
+            vec![
+                Argument::FieldElement(world_address),
+                Argument::FieldElement(world_address),
+                Argument::String(WORLD_CONTRACT_TYPE.to_string()),
+            ],
+        ))?;
 
-        Ok(Self {
+        let db = Self {
             pool: pool.clone(),
             world_address,
             executor,
             model_cache: Arc::new(ModelCache::new(pool)),
-        })
+        };
+        db.execute().await?;
+
+        Ok(db)
     }
 
     pub async fn head(&self) -> Result<(u64, Option<Felt>, Option<Felt>)> {
