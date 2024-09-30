@@ -4,7 +4,7 @@ use katana_primitives::block::{BlockHashOrNumber, BlockIdOrTag};
 use katana_primitives::fee::TxFeeInfo;
 use katana_primitives::trace::{BuiltinCounters, TxExecInfo};
 use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash, TxHash, TxType};
-use katana_provider::traits::block::{BlockHashProvider, BlockNumberProvider, BlockProvider};
+use katana_provider::traits::block::{BlockNumberProvider, BlockProvider};
 use katana_provider::traits::transaction::{TransactionTraceProvider, TransactionsProviderExt};
 use katana_rpc_api::starknet::StarknetTraceApiServer;
 use katana_rpc_types::error::starknet::StarknetApiError;
@@ -21,7 +21,7 @@ use starknet::core::types::{
 use super::StarknetApi;
 
 impl<EF: ExecutorFactory> StarknetApi<EF> {
-    pub fn simulate_txs(
+    fn simulate_txs(
         &self,
         block_id: BlockIdOrTag,
         transactions: Vec<BroadcastedTx>,
@@ -111,7 +111,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         Ok(simulated)
     }
 
-    pub fn block_traces(
+    fn block_traces(
         &self,
         block_id: BlockIdOrTag,
     ) -> Result<Vec<TransactionTraceWithHash>, StarknetApiError> {
@@ -138,14 +138,15 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
                     return Ok(traces.collect::<Vec<TransactionTraceWithHash>>());
                 }
 
-                None => provider.latest_hash()?.into(),
+                // if there is no pending block, return the latest block
+                None => provider.latest_number()?.into(),
             },
             BlockIdOrTag::Tag(BlockTag::Latest) => provider.latest_number()?.into(),
             BlockIdOrTag::Number(num) => num.into(),
             BlockIdOrTag::Hash(hash) => hash.into(),
         };
 
-        // TODO: this could probably be reduced to a single query
+        // TODO: we should probably simplify this query
         let indices = provider.block_body_indices(block_id)?.ok_or(BlockNotFound)?;
         let hashes = provider.transaction_hashes_in_range(indices.into())?;
         let traces = provider.transaction_executions_by_block(block_id)?.ok_or(BlockNotFound)?;
@@ -161,7 +162,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         Ok(result)
     }
 
-    pub fn trace(&self, tx_hash: TxHash) -> Result<TransactionTrace, StarknetApiError> {
+    fn trace(&self, tx_hash: TxHash) -> Result<TransactionTrace, StarknetApiError> {
         use StarknetApiError::TxnHashNotFound;
         let provider = self.inner.backend.blockchain.provider();
         let trace = provider.transaction_execution(tx_hash)?.ok_or(TxnHashNotFound)?;
