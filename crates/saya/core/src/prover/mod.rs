@@ -1,10 +1,8 @@
 //! Prover backends.
 //!
 //! The prover is in charge of generating a proof from the cairo execution trace.
-use std::str::FromStr;
 use std::sync::Arc;
 
-use anyhow::bail;
 use async_trait::async_trait;
 
 mod client;
@@ -12,8 +10,8 @@ mod loader;
 pub mod persistent;
 mod program_input;
 use cairo_proof_parser::to_felts;
-use client::http_prove;
 pub use client::HttpProverParams;
+use client::{http_prove, sharp_prove};
 use persistent::BatcherInput;
 pub use program_input::*;
 use prover_sdk::ProverResult;
@@ -26,7 +24,7 @@ use crate::error::ProverError;
 /// The prover used to generate the proof.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ProverIdentifier {
-    HerodotusSharp,
+    HerodotusSharp(String),
     Http(Arc<HttpProverParams>),
 }
 
@@ -53,7 +51,9 @@ impl ProverIdentifier {
             ProverIdentifier::Http(params) => {
                 http_prove(params.clone(), args, ProveProgram::Checker).await
             }
-            ProverIdentifier::HerodotusSharp => todo!(),
+            ProverIdentifier::HerodotusSharp(key) => {
+                sharp_prove(args, key.to_string(), ProveProgram::Checker).await
+            }
         }
     }
 
@@ -64,7 +64,9 @@ impl ProverIdentifier {
             ProverIdentifier::Http(params) => {
                 http_prove(params.clone(), calldata, ProveProgram::Batcher).await
             }
-            ProverIdentifier::HerodotusSharp => todo!(),
+            ProverIdentifier::HerodotusSharp(key) => {
+                sharp_prove(calldata, key.to_string(), ProveProgram::Batcher).await
+            }
         }
     }
 }
@@ -86,15 +88,4 @@ pub trait ProverClient {
     /// Generates the proof from the given trace.
     /// The proven input has to be valid for the proving program.
     async fn prove(&self, input: String) -> anyhow::Result<String>;
-}
-
-impl FromStr for ProverIdentifier {
-    type Err = anyhow::Error;
-
-    fn from_str(prover: &str) -> anyhow::Result<Self> {
-        Ok(match prover {
-            "herodotus-sharp" => ProverIdentifier::HerodotusSharp,
-            _ => bail!("Unknown prover: `{}`.", prover),
-        })
-    }
 }

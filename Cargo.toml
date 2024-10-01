@@ -145,7 +145,7 @@ cairo-lang-utils = "2.7.0"
 cairo-vm = "1.0.0-rc4"
 camino = { version = "1.1.2", features = [ "serde1" ] }
 chrono = { version = "0.4.24", features = [ "serde" ] }
-clap = { version = "4.5.4", features = [ "derive", "env" ] }
+clap = { version = "4.5.16", features = [ "derive", "env" ] }
 clap-verbosity-flag = "2.0.1"
 clap_complete = "4.3"
 console = "0.15.7"

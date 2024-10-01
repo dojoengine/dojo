@@ -9,6 +9,7 @@ use starknet_crypto::Felt;
 use tokio::time::sleep;
 use tracing::trace;
 
+use crate::error::{Error, ProverError};
 use crate::verifier::utils::wait_for_sent_transaction;
 use crate::{retry, SayaStarknetAccount, LOG_TARGET};
 
@@ -23,7 +24,7 @@ pub async fn starknet_apply_piltover(
     calldata: PiltoverCalldata,
     contract: Felt,
     account: &SayaStarknetAccount,
-) -> anyhow::Result<()> {
+) -> Result<(), Error> {
     sleep(Duration::from_secs(2)).await;
     let nonce = account.get_nonce().await?;
     let txn_config = TxnConfig { wait: true, receipt: true, ..Default::default() };
@@ -37,7 +38,7 @@ pub async fn starknet_apply_piltover(
         }])
         .nonce(nonce)
         .send_with_cfg(&txn_config))
-    .unwrap();
+    .map_err(|e| ProverError::SendTransactionError(e.to_string()))?;
     trace!(target: LOG_TARGET,  "Sent `update_state` piltover transaction {:#x}", tx.transaction_hash);
     wait_for_sent_transaction(tx, account).await?;
 

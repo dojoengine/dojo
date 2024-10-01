@@ -20,11 +20,19 @@ pub enum Error {
     InvalidChainId,
     #[error(transparent)]
     ProverError(#[from] ProverError),
+    #[error("{0}")]
+    TimeoutError(String),
+    #[error("{0}")]
+    TransactionRejected(String),
+    #[error("{0}")]
+    TransactionFailed(String),
+    #[error("{0}")]
+    SerdeFeltError(#[from] serde_felt::Error),
 }
 
 pub type SayaResult<T, E = Error> = Result<T, E>;
 
-#[derive(thiserror::Error, Debug)] 
+#[derive(thiserror::Error, Debug)]
 pub enum ProverError {
     #[error(transparent)]
     ProverSdkError(#[from] prover_sdk::errors::SdkErrors),
@@ -38,4 +46,10 @@ pub enum ProverError {
     RequestError(#[from] reqwest::Error),
     #[error("Failed to convert calls to felts: {0}")]
     SerdeFeltError(String),
+    #[error(transparent)]
+    SharpError(#[from] herodotus_sharp_playground::SharpSdkError),
+    #[error(transparent)]
+    Cairo1PlaygroundError(#[from] cairo1_playground::error::Error),
+    #[error("Failed to send transaction: {0}")]
+    SendTransactionError(String),
 }

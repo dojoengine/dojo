@@ -11,7 +11,6 @@ pub mod piltover;
 
 use std::time::Duration;
 
-use anyhow::{bail, Context};
 use dojo_utils::{TransactionExt, TxnConfig};
 use itertools::chain;
 use starknet::accounts::{Account, Call, ConnectedAccount};
@@ -19,8 +18,10 @@ use starknet::core::types::{Felt, TransactionExecutionStatus, TransactionStatus}
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
 use tokio::time::sleep;
+use tracing::trace;
 
-use crate::SayaStarknetAccount;
+use crate::{error::Error, SayaStarknetAccount};
+use crate::{retry, LOG_TARGET};
 
 pub async fn starknet_apply_diffs(
     world: Felt,
@@ -29,8 +30,8 @@ pub async fn starknet_apply_diffs(
     program_hash: Felt,
     account: &SayaStarknetAccount,
     nonce: Felt,
-) -> anyhow::Result<String> {
-    let calldata = chain![
+) -> Result<String, Error> {
+    let calldata: Vec<Felt> = chain![
         [Felt::from(new_state.len() as u64 / 2)].into_iter(),
         new_state.clone().into_iter(),
         program_output.into_iter(),
@@ -39,22 +40,24 @@ pub async fn starknet_apply_diffs(
     .collect();
 
     let txn_config = TxnConfig { wait: true, receipt: true, ..Default::default() };
-    let tx = account
+    let tx = retry!(account
         .execute_v1(vec![Call {
             to: world,
             selector: get_selector_from_name("upgrade_state").expect("invalid selector"),
-            calldata,
+            calldata: calldata.clone(),
         }])
         .nonce(nonce)
-        .send_with_cfg(&txn_config)
-        .await
-        .context("Failed to send `upgrade state` transaction.")?;
+        .send_with_cfg(&txn_config))
+    .map_err(|e| Error::TransactionFailed(e.to_string()))?;
 
     let start_fetching = std::time::Instant::now();
     let wait_for = Duration::from_secs(60);
     let execution_status = loop {
         if start_fetching.elapsed() > wait_for {
-            bail!("Transaction not mined in {} seconds.", wait_for.as_secs());
+            return Err(Error::TimeoutError(format!(
+                "Transaction not mined in {} seconds.",
+                wait_for.as_secs()
+            )));
         }
 
         let status = match account.provider().get_transaction_status(tx.transaction_hash).await {
@@ -72,7 +75,7 @@ pub async fn starknet_apply_diffs(
                 continue;
             }
             TransactionStatus::Rejected => {
-                bail!("Transaction {:#x} rejected.", tx.transaction_hash);
+                return Err(Error::TransactionRejected(tx.transaction_hash.to_string()));
             }
             TransactionStatus::AcceptedOnL2(execution_status) => execution_status,
             TransactionStatus::AcceptedOnL1(execution_status) => execution_status,
@@ -81,10 +84,10 @@ pub async fn starknet_apply_diffs(
 
     match execution_status {
         TransactionExecutionStatus::Succeeded => {
-            println!("Transaction accepted on L2.");
+            trace!(target: LOG_TARGET, "Transaction accepted on L2.");
         }
         TransactionExecutionStatus::Reverted => {
-            bail!("Transaction failed with.");
+            return Err(Error::TransactionFailed(tx.transaction_hash.to_string()));
         }
     }
 

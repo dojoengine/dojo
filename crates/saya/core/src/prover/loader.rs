@@ -17,7 +17,7 @@ pub async fn load_program(prove_program: ProveProgram) -> Result<Value, ProverEr
         ProveProgram::Checker => manifest_dir.join("programs/cairo1checker.json"),
         ProveProgram::Batcher => manifest_dir.join("programs/cairo1batcher.json"),
     };
-    
+
     let mut program_file = File::open(program_file).await?;
 
     let mut data = String::new();
@@ -37,8 +37,6 @@ pub async fn prepare_input_cairo(
     }
 
     let program = serde_json::from_str(&serde_json::to_string(&program)?)?;
-
-    dbg!(&program_input);
 
     Ok(CairoProverInput {
         program,

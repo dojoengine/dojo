@@ -30,8 +30,9 @@ url.workspace = true
 celestia-rpc = "0.2.0"
 celestia-types = "0.2.0"
 reqwest.workspace = true
-cairo-felt = "0.9.1"
-num-bigint = "0.4.4"
-num-traits = "0.2.18"
+serde-felt= { git = "https://github.com/cartridge-gg/cairo-proof-parser.git",rev = "f175d58" }
 cairo-proof-parser = { git = "https://github.com/cartridge-gg/cairo-proof-parser.git",rev = "f175d58" }
 prover-sdk = { git = "https://github.com/cartridge-gg/http-prover",rev = "24256d5" }
+herodotus_sharp_playground = {git= "https://github.com/chudkowsky/herodotus_sharp_playground.git",rev = "28bf4cc"}
+cairo1-playground = {git= "https://github.com/chudkowsky/cairo1-playground.git",rev = "3fda965"}
+tempdir = "0.3.7"

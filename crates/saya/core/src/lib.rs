@@ -6,7 +6,7 @@ use std::ops::RangeInclusive;
 use std::sync::Arc;
 
 use anyhow::Context;
-use cairo_proof_parser::{from_felts};
+use cairo_proof_parser::from_felts;
 use dojo_os::piltover::{starknet_apply_piltover, PiltoverCalldata};
 use futures::future;
 use itertools::Itertools;
@@ -251,21 +251,22 @@ impl Saya {
                     // We might want to prove the signatures as well.
                     let proof = self.prover_identifier.prove_checker(calls).await?;
 
-                    // if self.config.store_proofs {
-                    //     let filename = format!("proof_{}.json", block + num_blocks - 1);
-                    //     let mut file =
-                    //         File::create(filename).await.context("Failed to create proof file.")?;
-                    //     file.write_all(proof.as_bytes()).await.context("Failed to write proof.")?;
-                    // }
+                    if self.config.store_proofs {
+                        let filename = format!("proof_{}.json", block + num_blocks - 1);
+                        let mut file =
+                            File::create(filename).await.context("Failed to create proof file.")?;
+                        file.write_all(proof.proof.as_bytes())
+                            .await
+                            .context("Failed to write proof.")?;
+                    }
 
-                    // let block_range =
-                    //     (self.config.block_range.0, self.config.block_range.1.unwrap());
+                    let block_range =
+                        (self.config.block_range.0, self.config.block_range.1.unwrap());
 
-                    // let proof = StarkProof::try_from(proof.as_str())?;
-                    // let diff = proof.extract_output()?.program_output;
-                    // self.process_proven(proof, diff, block_range.1).await?;
+                    let diff = proof.clone().program_output;
+                    self.process_proven(proof.clone(), diff, block_range.1).await?;
 
-                    // info!(target: LOG_TARGET, "Successfully processed all {} blocks.", block_range.1 - block_range.0 + 1);
+                    info!(target: LOG_TARGET, "Successfully processed all {} blocks.", block_range.1 - block_range.0 + 1);
                     break;
                 }
             }
@@ -457,7 +458,7 @@ impl Saya {
 
         // Verify the proof and register fact.
         trace!(target: LOG_TARGET, last_block, "Verifying block.");
-        let (transaction_hash, nonce) = verifier::verify(
+        let (transaction_hash, _nonce) = verifier::verify(
             VerifierIdentifier::HerodotusStarknetSepolia(self.config.fact_registry_address),
             serialized_proof,
             &starknet_account,
@@ -474,9 +475,9 @@ impl Saya {
             }
             SayaMode::Persistent => {
                 let serialized_output = program_output.iter().copied().collect_vec();
-                let batcher_output = from_felts::<BatcherOutput>(&serialized_output)
-                    .context("Failed to parse program output.")?;
+                println!("serialized_output: {:?}", serialized_output);
 
+                let batcher_output = from_felts::<BatcherOutput>(&serialized_output).unwrap();
                 let piltover_calldata = PiltoverCalldata {
                     program_output: serialized_output,
                     onchain_data_hash: batcher_output.new_state_root,

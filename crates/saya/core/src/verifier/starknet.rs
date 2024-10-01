@@ -11,7 +11,7 @@ use tokio::time::sleep;
 use tracing::{info, trace};
 
 use super::utils::wait_for_sent_transaction;
-use crate::error::Error;
+use crate::error::{Error, ProverError};
 use crate::{retry, SayaStarknetAccount, LOG_TARGET};
 
 const CHUNK_SIZE: usize = 800;
@@ -20,7 +20,7 @@ pub async fn starknet_verify(
     serialized_proof: Vec<Felt>,
     cairo_version: Felt,
     account: &SayaStarknetAccount,
-) -> Result<(String, Felt),Error> {
+) -> Result<(String, Felt), Error> {
     if serialized_proof.len() > CHUNK_SIZE {
         trace!(target: LOG_TARGET,
             "Calldata too long at: {} felts, transaction could fail, splitting it.",
@@ -30,16 +30,15 @@ pub async fn starknet_verify(
 
     let txn_config = TxnConfig { wait: true, receipt: true, ..Default::default() };
 
-    sleep(Duration::from_secs(2)).await;
-    let mut nonce = account.get_nonce().await?;
     let mut hashes = Vec::new();
 
     for fragment in serialized_proof.into_iter().chunks(CHUNK_SIZE).into_iter() {
+        sleep(Duration::from_secs(12)).await;
+        let nonce = account.get_nonce().await?;
         let mut fragment = fragment.collect::<Vec<_>>();
         let hash = poseidon_hash_many(&fragment);
         hashes.push(hash);
         fragment.insert(0, fragment.len().into());
-
         let tx = retry!(account
             .execute_v1(vec![Call {
                 to: fact_registry_address,
@@ -47,8 +46,8 @@ pub async fn starknet_verify(
                 calldata: fragment.clone(),
             }])
             .nonce(nonce)
-            .send_with_cfg(&txn_config)
-            ).unwrap(); //TODO: handle this
+            .send_with_cfg(&txn_config))
+        .map_err(|e| ProverError::SendTransactionError(e.to_string()))?;
 
         wait_for_sent_transaction(tx.clone(), account).await?;
 
@@ -64,7 +63,7 @@ pub async fn starknet_verify(
         .collect::<Vec<_>>();
 
     sleep(Duration::from_secs(2)).await;
-    nonce = account.get_nonce().await?; 
+    let nonce = account.get_nonce().await?;
 
     let tx = retry!(account
         .execute_v1(vec![Call {
@@ -74,9 +73,9 @@ pub async fn starknet_verify(
             calldata: calldata.clone(),
         }])
         .nonce(nonce)
-        .send_with_cfg(&txn_config)
-        ).unwrap();
-        
+        .send_with_cfg(&txn_config))
+    .map_err(|e| ProverError::SendTransactionError(e.to_string()))?;
+
     let transaction_hash = format!("{:#x}", tx.transaction_hash);
     wait_for_sent_transaction(tx, account).await?;
 
