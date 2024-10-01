@@ -8,11 +8,10 @@ version.workspace = true
 [dependencies]
 async-trait.workspace = true
 crypto-bigint.workspace = true
-dojo-types = { path = "../../dojo-types" }
-dojo-world = { path = "../../dojo-world", features = [ "contracts" ] }
+dojo-types.workspace = true
+dojo-world = { workspace = true, features = [ "contracts" ] }
 futures.workspace = true
 futures-util.workspace = true
-libp2p-gossipsub = "0.46.1"
 num-traits.workspace = true
 parking_lot.workspace = true
 serde.workspace = true
@@ -21,8 +20,8 @@ starknet.workspace = true
 starknet-crypto.workspace = true
 thiserror.workspace = true
 tokio = { version = "1.32.0", features = [ "sync" ], default-features = false }
-torii-grpc = { path = "../grpc", features = [ "client" ] }
-torii-relay = { path = "../libp2p" }
+torii-grpc = { workspace = true, features = [ "client" ] }
+torii-relay = { workspace = true }
 url.workspace = true
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
@@ -35,5 +34,5 @@ wasm-tonic.workspace = true
 
 [dev-dependencies]
 camino.workspace = true
-dojo-world = { path = "../../dojo-world" }
+dojo-world.workspace = true
 tokio.workspace = true
