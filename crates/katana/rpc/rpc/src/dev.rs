@@ -92,6 +92,18 @@ impl<EF: ExecutorFactory> DevApiServer for DevApi<EF> {
         Ok(())
     }
 
+    async fn account_balance(&self, _contract_address: Felt) -> Result<u64, Error> {
+        Ok(1)
+    }
+
+    async fn fee_token(&self,) -> Result<u64, Error> {
+        Ok(1)
+    }
+
+    async fn mint(&self) -> Result<(), Error> {
+        Ok(())
+    }
+
     #[allow(deprecated)]
     async fn predeployed_accounts(&self) -> Result<Vec<Account>, Error> {
         Ok(self.backend.config.genesis.accounts().map(|e| Account::new(*e.0, e.1)).collect())
