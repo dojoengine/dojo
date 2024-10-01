@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1727751275329,
+  "lastUpdate": 1727751377908,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -23107,6 +23107,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 11224104318,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "edc8840cc008c2d5b14910fdc4169796c3de3343",
+          "message": "chore: remove unused deps (#2489)",
+          "timestamp": "2024-09-30T22:38:31-04:00",
+          "tree_id": "0dc2150421227aafd02551a745482053240684bc",
+          "url": "https://github.com/dojoengine/dojo/commit/edc8840cc008c2d5b14910fdc4169796c3de3343"
+        },
+        "date": 1727751377063,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16066762,
+            "range": "± 349079",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3853609,
+            "range": "± 178591",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2567823764,
+            "range": "± 216956704",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4173330,
+            "range": "± 170731",
             "unit": "ns/iter"
           }
         ]
