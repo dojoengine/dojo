@@ -13,27 +13,53 @@ use tracing::{error, info, Level};
 async fn get_balance_from_starknet(
     account_address: &str,
     contract_address: &str,
+    contract_type: &str,
+    token_id: &str,
     provider: Arc<JsonRpcClient<HttpTransport>>,
 ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
     let account_address = Felt::from_str(account_address).unwrap();
     let contract_address = Felt::from_str(contract_address).unwrap();
 
-    let balance = provider
-        .call(
-            FunctionCall {
-                contract_address,
-                entry_point_selector: selector!("balanceOf"),
-                calldata: vec![account_address],
-            },
-            BlockId::Tag(starknet::core::types::BlockTag::Pending),
-        )
-        .await?;
+    let balance = match contract_type {
+        "ERC20" => {
+            let balance = provider
+                .call(
+                    FunctionCall {
+                        contract_address,
+                        entry_point_selector: selector!("balanceOf"),
+                        calldata: vec![account_address],
+                    },
+                    BlockId::Tag(starknet::core::types::BlockTag::Pending),
+                )
+                .await?;
 
-    let balance_low = balance[0].to_u128().unwrap();
-    let balance_high = balance[1].to_u128().unwrap();
+            let balance_low = balance[0].to_u128().unwrap();
+            let balance_high = balance[1].to_u128().unwrap();
 
-    let balance = U256::from_words(balance_low, balance_high);
-    let balance = format!("{:#064x}", balance);
+            let balance = U256::from_words(balance_low, balance_high);
+            format!("{:#064x}", balance)
+        }
+        "ERC721" => {
+            let token_id = Felt::from_str(token_id.split(":").nth(1).unwrap()).unwrap();
+            let balance = provider
+                .call(
+                    FunctionCall {
+                        contract_address,
+                        entry_point_selector: selector!("ownerOf"),
+                        // HACK: assumes token_id.high == 0
+                        calldata: vec![token_id, Felt::ZERO],
+                    },
+                    BlockId::Tag(starknet::core::types::BlockTag::Pending),
+                )
+                .await?;
+            if account_address != balance[0] {
+                format!("{:#064x}", U256::from(0u8))
+            } else {
+                format!("{:#064x}", U256::from(1u8))
+            }
+        }
+        _ => unreachable!(),
+    };
     Ok(balance)
 }
 
@@ -44,9 +70,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     let pool = SqlitePool::connect("sqlite:../../torii.db").await?;
 
-    let rows = sqlx::query("SELECT account_address, contract_address, balance FROM balances")
-        .fetch_all(&pool)
-        .await?;
+    let rows = sqlx::query(
+        "
+        SELECT b.account_address, b.contract_address, b.balance, c.contract_type, b.token_id
+        FROM balances b
+        JOIN contracts c ON b.contract_address = c.contract_address
+    ",
+    )
+    .fetch_all(&pool)
+    .await?;
 
     // Create a semaphore to limit concurrent tasks
     let semaphore = std::sync::Arc::new(tokio::sync::Semaphore::new(10)); // Adjust the number as needed
@@ -65,18 +97,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let account_address: String = row.get("account_address");
         let contract_address: String = row.get("contract_address");
         let db_balance: String = row.get("balance");
+        let contract_type: String = row.get("contract_type");
+        let token_id: String = row.get("token_id");
         let semaphore_clone = semaphore.clone();
         let provider = provider.clone();
 
         let handle = tokio::spawn(async move {
             let _permit = semaphore_clone.acquire().await.unwrap();
-            let starknet_balance =
-                get_balance_from_starknet(&account_address, &contract_address, provider).await?;
+            let starknet_balance = get_balance_from_starknet(
+                &account_address,
+                &contract_address,
+                &contract_type,
+                &token_id,
+                provider,
+            )
+            .await?;
 
             if db_balance != starknet_balance {
                 error!(
-                    "Mismatch for account {}: DB balance = {}, Starknet balance = {}",
-                    account_address, db_balance, starknet_balance
+                    "Mismatch for account {} and contract {}: DB balance = {}, Starknet balance = {}",
+                    account_address, contract_address, db_balance, starknet_balance
                 );
             } else {
                 info!(
