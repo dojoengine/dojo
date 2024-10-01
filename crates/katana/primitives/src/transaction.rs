@@ -17,6 +17,29 @@ pub type TxHash = Felt;
 /// The sequential number for all the transactions.
 pub type TxNumber = u64;
 
+/// The transaction types as defined by the [Starknet API].
+///
+/// [Starknet API]: https://github.com/starkware-libs/starknet-specs/blob/b5c43955b1868b8e19af6d1736178e02ec84e678/api/starknet_api_openrpc.json
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum TxType {
+    /// Invokes a function of a contract.
+    #[default]
+    Invoke,
+
+    /// Declares new contract class.
+    Declare,
+
+    /// Deploys new account contracts.
+    DeployAccount,
+
+    /// Function invocation that is instantiated from the L1.
+    ///
+    /// It is only used internally for handling messages sent from L1. Therefore, it is not a
+    /// transaction that can be broadcasted like the other transaction types.
+    L1Handler,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Tx {
@@ -61,6 +84,15 @@ impl ExecutableTx {
             ExecutableTx::L1Handler(tx) => TxRef::L1Handler(tx),
             ExecutableTx::Declare(tx) => TxRef::Declare(tx),
             ExecutableTx::DeployAccount(tx) => TxRef::DeployAccount(tx),
+        }
+    }
+
+    pub fn r#type(&self) -> TxType {
+        match self {
+            ExecutableTx::Invoke(_) => TxType::Invoke,
+            ExecutableTx::Declare(_) => TxType::Declare,
+            ExecutableTx::L1Handler(_) => TxType::L1Handler,
+            ExecutableTx::DeployAccount(_) => TxType::DeployAccount,
         }
     }
 }

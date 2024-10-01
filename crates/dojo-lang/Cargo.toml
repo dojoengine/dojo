@@ -11,15 +11,11 @@ testing = [  ]
 
 [dependencies]
 anyhow.workspace = true
-cainome.workspace = true
 cairo-lang-compiler.workspace = true
-cairo-lang-debug.workspace = true
 cairo-lang-defs.workspace = true
 cairo-lang-diagnostics.workspace = true
 cairo-lang-filesystem.workspace = true
 cairo-lang-formatter.workspace = true
-cairo-lang-lowering.workspace = true
-cairo-lang-parser.workspace = true
 cairo-lang-plugins.workspace = true
 cairo-lang-project.workspace = true
 cairo-lang-semantic.workspace = true
@@ -31,35 +27,28 @@ cairo-lang-test-plugin.workspace = true
 cairo-lang-utils.workspace = true
 camino.workspace = true
 convert_case.workspace = true
-directories = "5"
-dojo-types = { path = "../dojo-types" }
-dojo-world = { path = "../dojo-world", features = [ "manifest", "metadata" ] }
+dojo-types.workspace = true
+dojo-world = { workspace = true, features = [ "manifest", "metadata" ] }
 indoc.workspace = true
 itertools.workspace = true
-lazy_static.workspace = true
-num-traits.workspace = true
-once_cell.workspace = true
 regex.workspace = true
-salsa.workspace = true
 scarb.workspace = true
 scarb-ui.workspace = true
 semver.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-serde_with.workspace = true
 smol_str.workspace = true
 starknet.workspace = true
-starknet-crypto.workspace = true
-thiserror.workspace = true
 toml.workspace = true
 tracing.workspace = true
 url.workspace = true
 
 [dev-dependencies]
-assert_fs.workspace = true
+cairo-lang-debug.workspace = true
+cairo-lang-parser.workspace = true
 cairo-lang-semantic.workspace = true
 cairo-lang-test-utils.workspace = true
-dojo-test-utils = { path = "../dojo-test-utils" }
-env_logger = "0.10.0"
-pretty_assertions.workspace = true
+dojo-test-utils.workspace = true
+once_cell.workspace = true
+salsa.workspace = true
 test-log.workspace = true
