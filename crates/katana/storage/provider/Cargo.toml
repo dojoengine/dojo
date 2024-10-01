@@ -32,7 +32,6 @@ test-utils = [ "dep:alloy-primitives", "dep:serde_json" ]
 
 [dev-dependencies]
 alloy-primitives.workspace = true
-katana-core.workspace = true
 katana-runner.workspace = true
 lazy_static.workspace = true
 rand.workspace = true

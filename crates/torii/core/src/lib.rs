@@ -1,3 +1,5 @@
+#![warn(unused_crate_dependencies)]
+
 pub mod cache;
 pub mod engine;
 pub mod error;
