@@ -441,9 +441,6 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             }
         }
 
-        // Directly commit non entity related queries
-        self.db.execute().await?;
-
         // Process parallelized events
         self.process_tasks().await?;
 
@@ -498,9 +495,6 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             }
         }
 
-        // Directly commit non entity related queries
-        self.db.execute().await?;
-
         // Process parallelized events
         self.process_tasks().await?;
 
@@ -543,8 +537,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                     }
                 }
 
-                local_db.execute().await?;
-                Ok::<_, anyhow::Error>(local_db)
+                Ok::<_, anyhow::Error>(())
             }));
         }
 
