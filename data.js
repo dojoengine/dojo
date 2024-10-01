@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1727739935259,
+  "lastUpdate": 1727751275329,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -23076,6 +23076,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 11576814841,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "edc8840cc008c2d5b14910fdc4169796c3de3343",
+          "message": "chore: remove unused deps (#2489)",
+          "timestamp": "2024-09-30T22:38:31-04:00",
+          "tree_id": "0dc2150421227aafd02551a745482053240684bc",
+          "url": "https://github.com/dojoengine/dojo/commit/edc8840cc008c2d5b14910fdc4169796c3de3343"
+        },
+        "date": 1727751273159,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11224104318,
             "range": "± 0",
             "unit": "ns/iter"
           }
