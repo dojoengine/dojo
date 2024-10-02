@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use anyhow::Result;
 use cainome::cairo_serde::{ByteArray, CairoSerde};
 use starknet::core::types::{BlockId, BlockTag, Felt, FunctionCall, U256};
@@ -23,16 +21,11 @@ impl Sql {
         amount: U256,
         provider: &P,
         block_timestamp: u64,
-        cache: &mut HashMap<String, I256>,
     ) -> Result<()> {
         // contract_address
         let token_id = felt_to_sql_string(&contract_address);
 
-        let token_exists: bool =
-            sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM tokens WHERE id = ?)")
-                .bind(token_id.clone())
-                .fetch_one(&self.pool)
-                .await?;
+        let token_exists: bool = self.local_cache.contains_token_id(&token_id);
 
         if !token_exists {
             self.register_erc20_token_metadata(contract_address, &token_id, provider).await?;
@@ -52,18 +45,18 @@ impl Sql {
         if from_address != Felt::ZERO {
             // from_address/contract_address/
             let from_balance_id = felts_to_sql_string(&[from_address, contract_address]);
-            let from_balance = cache.entry(from_balance_id).or_default();
+            let from_balance = self.local_cache.erc_cache.entry(from_balance_id).or_default();
             *from_balance -= I256::from(amount);
         }
 
         if to_address != Felt::ZERO {
             let to_balance_id = felts_to_sql_string(&[to_address, contract_address]);
-            let to_balance = cache.entry(to_balance_id).or_default();
+            let to_balance = self.local_cache.erc_cache.entry(to_balance_id).or_default();
             *to_balance += I256::from(amount);
         }
 
-        if cache.len() >= 100000 {
-            self.apply_cache_diff(cache).await?;
+        if self.local_cache.erc_cache.len() >= 100000 {
+            self.apply_cache_diff().await?;
         }
 
         Ok(())
@@ -78,15 +71,10 @@ impl Sql {
         token_id: U256,
         provider: &P,
         block_timestamp: u64,
-        cache: &mut HashMap<String, I256>,
     ) -> Result<()> {
         // contract_address:id
         let token_id = felt_and_u256_to_sql_string(&contract_address, &token_id);
-        let token_exists: bool =
-            sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM tokens WHERE id = ?)")
-                .bind(token_id.clone())
-                .fetch_one(&self.pool)
-                .await?;
+        let token_exists: bool = self.local_cache.contains_token_id(&token_id);
 
         if !token_exists {
             self.register_erc721_token_metadata(contract_address, &token_id, provider).await?;
@@ -107,19 +95,19 @@ impl Sql {
         if from_address != Felt::ZERO {
             let from_balance_id =
                 format!("{}{FELT_DELIMITER}{}", felt_to_sql_string(&from_address), &token_id);
-            let from_balance = cache.entry(from_balance_id).or_default();
+            let from_balance = self.local_cache.erc_cache.entry(from_balance_id).or_default();
             *from_balance -= I256::from(1u8);
         }
 
         if to_address != Felt::ZERO {
             let to_balance_id =
                 format!("{}{FELT_DELIMITER}{}", felt_to_sql_string(&to_address), &token_id);
-            let to_balance = cache.entry(to_balance_id).or_default();
+            let to_balance = self.local_cache.erc_cache.entry(to_balance_id).or_default();
             *to_balance += I256::from(1u8);
         }
 
-        if cache.len() >= 100000 {
-            self.apply_cache_diff(cache).await?;
+        if self.local_cache.erc_cache.len() >= 100000 {
+            self.apply_cache_diff().await?;
         }
 
         Ok(())
@@ -200,6 +188,8 @@ impl Sql {
             QueryType::Other,
         );
 
+        self.local_cache.register_token_id(token_id.to_string());
+
         Ok(())
     }
 
@@ -235,6 +225,7 @@ impl Sql {
                 ],
                 QueryType::Other,
             );
+            self.local_cache.register_token_id(token_id.to_string());
             return Ok(());
         }
 
@@ -296,6 +287,8 @@ impl Sql {
             QueryType::Other,
         );
 
+        self.local_cache.register_token_id(token_id.to_string());
+
         Ok(())
     }
 
@@ -325,8 +318,8 @@ impl Sql {
         );
     }
 
-    pub async fn apply_cache_diff(&mut self, cache: &mut HashMap<String, I256>) -> Result<()> {
-        for (id_str, balance) in cache.iter() {
+    pub async fn apply_cache_diff(&mut self) -> Result<()> {
+        for (id_str, balance) in self.local_cache.erc_cache.iter() {
             let id = id_str.split(FELT_DELIMITER).collect::<Vec<&str>>();
             match id.len() {
                 // account_address/contract_address:id => ERC721
@@ -364,7 +357,7 @@ impl Sql {
             }
         }
 
-        cache.clear();
+        self.local_cache.erc_cache.clear();
         Ok(())
     }
 

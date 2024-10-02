@@ -17,7 +17,6 @@ use starknet_crypto::poseidon_hash_many;
 use tracing::{debug, warn};
 use utils::felts_to_sql_string;
 
-use crate::cache::{Model, ModelCache};
 use crate::types::ContractType;
 use crate::utils::utc_dt_string_from_timestamp;
 
@@ -27,6 +26,7 @@ type IsStoreUpdate = bool;
 pub const WORLD_CONTRACT_TYPE: &str = "WORLD";
 pub const FELT_DELIMITER: &str = "/";
 
+pub mod cache;
 pub mod erc;
 pub mod query_queue;
 #[cfg(test)]
@@ -34,12 +34,16 @@ pub mod query_queue;
 mod test;
 pub mod utils;
 
+use cache::{LocalCache, Model, ModelCache};
+
 #[derive(Debug)]
 pub struct Sql {
     world_address: Felt,
     pub pool: Pool<Sqlite>,
     pub query_queue: QueryQueue,
     model_cache: Arc<ModelCache>,
+    // when SQL struct is cloned a empty local_cache is created
+    local_cache: LocalCache,
 }
 
 #[derive(Debug, Clone)]
@@ -56,6 +60,7 @@ impl Clone for Sql {
             pool: self.pool.clone(),
             query_queue: QueryQueue::new(self.pool.clone()),
             model_cache: self.model_cache.clone(),
+            local_cache: LocalCache::new(),
         }
     }
 }
@@ -88,6 +93,7 @@ impl Sql {
             world_address,
             query_queue,
             model_cache: Arc::new(ModelCache::new(pool)),
+            local_cache: LocalCache::new(),
         })
     }
 
@@ -798,7 +804,11 @@ impl Sql {
             Ty::Enum(e) => {
                 if e.options.iter().all(
                     |o| {
-                        if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false }
+                        if let Ty::Tuple(t) = &o.ty {
+                            t.is_empty()
+                        } else {
+                            false
+                        }
                     },
                 ) {
                     return;
