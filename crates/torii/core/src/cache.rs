@@ -121,4 +121,9 @@ impl ModelCache {
     pub async fn clear(&self) {
         self.cache.write().await.clear();
     }
+
+    pub async fn remove(&self, selector: &Felt) {
+        let mut cache = self.cache.write().await;
+        cache.remove(selector);
+    }
 }
