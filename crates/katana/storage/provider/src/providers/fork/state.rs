@@ -219,6 +219,7 @@ impl ContractClassProvider for ForkedSnapshot {
 mod tests {
     use std::collections::BTreeMap;
 
+    use katana_primitives::address;
     use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
     use starknet::macros::felt;
 
@@ -229,7 +230,7 @@ mod tests {
     fn test_get_nonce() {
         let backend = create_forked_backend("http://localhost:8080", 1);
 
-        let address: ContractAddress = felt!("1").into();
+        let address = address!("1");
         let class_hash = felt!("11");
         let remote_nonce = felt!("111");
         let local_nonce = felt!("1111");

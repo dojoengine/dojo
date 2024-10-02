@@ -1,11 +1,13 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
+use katana_cairo::cairo_vm::types::builtin_name::BuiltinName;
 use katana_cairo::cairo_vm::vm;
 
 use crate::class::ClassHash;
 use crate::contract::ContractAddress;
 use crate::event::OrderedEvent;
 use crate::message::OrderedL2ToL1Message;
+use crate::transaction::TxType;
 use crate::Felt;
 
 pub type ExecutionResources = vm::runners::cairo_runner::ExecutionResources;
@@ -26,6 +28,8 @@ pub struct TxExecInfo {
     pub actual_resources: TxResources,
     /// Error string for reverted transactions; [None] if transaction execution was successful.
     pub revert_error: Option<String>,
+    /// The transaction type of this execution info.
+    pub r#type: TxType,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -106,4 +110,103 @@ pub struct CallInfo {
     pub gas_consumed: u128,
     /// True if the execution has failed, false otherwise.
     pub failed: bool,
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct BuiltinCounters(HashMap<BuiltinName, usize>);
+
+impl BuiltinCounters {
+    /// Returns the number of instances of the `output` builtin, if any.
+    pub fn output(&self) -> Option<u64> {
+        self.builtin(BuiltinName::output)
+    }
+
+    /// Returns the number of instances of the `range_check` builtin, if any.
+    pub fn range_check(&self) -> Option<u64> {
+        self.builtin(BuiltinName::range_check)
+    }
+
+    /// Returns the number of instances of the `pedersen` builtin, if any.
+    pub fn pedersen(&self) -> Option<u64> {
+        self.builtin(BuiltinName::pedersen)
+    }
+
+    /// Returns the number of instances of the `ecdsa` builtin, if any.
+    pub fn ecdsa(&self) -> Option<u64> {
+        self.builtin(BuiltinName::ecdsa)
+    }
+
+    /// Returns the number of instances of the `keccak` builtin, if any.
+    pub fn keccak(&self) -> Option<u64> {
+        self.builtin(BuiltinName::keccak)
+    }
+
+    /// Returns the number of instances of the `bitwise` builtin, if any.
+    pub fn bitwise(&self) -> Option<u64> {
+        self.builtin(BuiltinName::bitwise)
+    }
+
+    /// Returns the number of instances of the `ec_op` builtin, if any.
+    pub fn ec_op(&self) -> Option<u64> {
+        self.builtin(BuiltinName::ec_op)
+    }
+
+    /// Returns the number of instances of the `poseidon` builtin, if any.
+    pub fn poseidon(&self) -> Option<u64> {
+        self.builtin(BuiltinName::poseidon)
+    }
+
+    /// Returns the number of instances of the `segment_arena` builtin, if any.
+    pub fn segment_arena(&self) -> Option<u64> {
+        self.builtin(BuiltinName::segment_arena)
+    }
+
+    /// Returns the number of instances of the `range_check96` builtin, if any.
+    pub fn range_check96(&self) -> Option<u64> {
+        self.builtin(BuiltinName::range_check96)
+    }
+
+    /// Returns the number of instances of the `add_mod` builtin, if any.
+    pub fn add_mod(&self) -> Option<u64> {
+        self.builtin(BuiltinName::add_mod)
+    }
+
+    /// Returns the number of instances of the `mul_mod` builtin, if any.
+    pub fn mul_mod(&self) -> Option<u64> {
+        self.builtin(BuiltinName::mul_mod)
+    }
+
+    fn builtin(&self, builtin: BuiltinName) -> Option<u64> {
+        self.0.get(&builtin).map(|&x| x as u64)
+    }
+}
+
+impl From<HashMap<BuiltinName, usize>> for BuiltinCounters {
+    fn from(map: HashMap<BuiltinName, usize>) -> Self {
+        // Filter out the builtins with 0 count.
+        let filtered = map.into_iter().filter(|(_, count)| *count != 0).collect();
+        BuiltinCounters(filtered)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_builtin_counters_from_hashmap_removes_zero_entries() {
+        let mut map = HashMap::new();
+        map.insert(BuiltinName::output, 1);
+        map.insert(BuiltinName::range_check, 0);
+        map.insert(BuiltinName::pedersen, 2);
+        map.insert(BuiltinName::ecdsa, 0);
+
+        let counters = BuiltinCounters::from(map);
+
+        assert_eq!(counters.output(), Some(1));
+        assert_eq!(counters.range_check(), None);
+        assert_eq!(counters.pedersen(), Some(2));
+        assert_eq!(counters.ecdsa(), None);
+    }
 }

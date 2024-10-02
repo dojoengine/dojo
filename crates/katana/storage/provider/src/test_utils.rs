@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use alloy_primitives::U256;
 use katana_db::mdbx::{test_utils, DbEnvKind};
+use katana_primitives::address;
 use katana_primitives::block::{BlockHash, FinalityStatus};
 use katana_primitives::class::CompiledClass;
 use katana_primitives::contract::ContractAddress;
@@ -49,7 +50,7 @@ fn initialize_test_provider<P: BlockWriter>(provider: &P) {
 /// - An account with simple `__execute__` function, deployed at address `0x1`.
 pub fn create_genesis_for_testing() -> Genesis {
     let class_hash = felt!("0x111");
-    let address = ContractAddress::from(felt!("0x1"));
+    let address = address!("0x1");
 
     // TODO: we should have a genesis builder that can do all of this for us.
     let class = {

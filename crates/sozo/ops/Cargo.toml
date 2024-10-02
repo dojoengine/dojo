@@ -60,7 +60,6 @@ assert_fs.workspace = true
 dojo-test-utils = { workspace = true, features = [ "build-examples" ] }
 ipfs-api-backend-hyper = { git = "https://github.com/ferristseng/rust-ipfs-api", rev = "af2c17f7b19ef5b9898f458d97a90055c3605633", features = [ "with-hyper-rustls" ] }
 katana-runner.workspace = true
-tee = "0.1.0"
 
 [features]
 test-utils = [ "dep:dojo-test-utils", "dep:katana-runner" ]
