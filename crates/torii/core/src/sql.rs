@@ -194,6 +194,7 @@ impl Sql {
             &mut 0,
         );
 
+        self.model_cache.remove(&selector).await;
         // we set the model in the cache directly
         // because entities might be using it before the query queue is processed
         self.model_cache
