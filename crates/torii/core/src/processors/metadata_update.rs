@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::time::Duration;
 
 use anyhow::{Error, Result};
@@ -16,7 +15,6 @@ use tokio_util::bytes::Bytes;
 use tracing::{error, info};
 
 use super::EventProcessor;
-use crate::sql::utils::I256;
 use crate::sql::Sql;
 
 const IPFS_URL: &str = "https://cartridge.infura-ipfs.io/ipfs/";
@@ -53,7 +51,6 @@ where
         &self,
         _world: &WorldContractReader<P>,
         db: &mut Sql,
-        _cache: Option<&mut HashMap<String, I256>>,
         _block_number: u64,
         block_timestamp: u64,
         _event_id: &str,

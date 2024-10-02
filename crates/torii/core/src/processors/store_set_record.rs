@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use anyhow::{Context, Error, Ok, Result};
 use async_trait::async_trait;
 use dojo_world::contracts::world::WorldContractReader;
@@ -10,7 +8,7 @@ use tracing::info;
 
 use super::EventProcessor;
 use crate::processors::{ENTITY_ID_INDEX, MODEL_INDEX, NUM_KEYS_INDEX};
-use crate::sql::utils::{felts_to_sql_string, I256};
+use crate::sql::utils::felts_to_sql_string;
 use crate::sql::Sql;
 
 pub(crate) const LOG_TARGET: &str = "torii_core::processors::store_set_record";
@@ -44,7 +42,6 @@ where
         &self,
         _world: &WorldContractReader<P>,
         db: &mut Sql,
-        _cache: Option<&mut HashMap<String, I256>>,
         _block_number: u64,
         block_timestamp: u64,
         event_id: &str,

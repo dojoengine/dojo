@@ -1,4 +1,3 @@
-pub mod cache;
 pub mod engine;
 pub mod error;
 pub mod model;

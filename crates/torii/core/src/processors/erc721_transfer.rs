@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use anyhow::Error;
 use async_trait::async_trait;
 use cainome::cairo_serde::{CairoSerde, U256 as U256Cainome};
@@ -9,7 +7,6 @@ use starknet::providers::Provider;
 use tracing::debug;
 
 use super::EventProcessor;
-use crate::sql::utils::I256;
 use crate::sql::Sql;
 
 pub(crate) const LOG_TARGET: &str = "torii_core::processors::erc721_transfer";
@@ -41,7 +38,6 @@ where
         &self,
         world: &WorldContractReader<P>,
         db: &mut Sql,
-        cache: Option<&mut HashMap<String, I256>>,
         _block_number: u64,
         block_timestamp: u64,
         _event_id: &str,
@@ -61,7 +57,6 @@ where
             token_id,
             world.provider(),
             block_timestamp,
-            cache.expect("cache is required"),
         )
         .await?;
         debug!(target: LOG_TARGET, from = ?from, to = ?to, token_id = ?token_id, "ERC721 Transfer");
