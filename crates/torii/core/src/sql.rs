@@ -74,20 +74,29 @@ impl Sql {
 
         let indexer: (Option<i64>, Option<String>, Option<String>, String) =
             indexer_query.fetch_one(&self.pool).await?;
+
         Ok((
-            indexer.0.map(|h| h.try_into().expect("doesn't fit in u64")).unwrap_or(0),
+            indexer
+                .0
+                .map(|h| h.try_into().map_err(|_| anyhow!("Head value {} doesn't fit in u64", h)))
+                .transpose()?
+                .unwrap_or(0),
             indexer.1.map(|f| Felt::from_str(&f)).transpose()?,
             indexer.2.map(|f| Felt::from_str(&f)).transpose()?,
         ))
     }
 
     pub fn set_head(&mut self, head: u64) -> Result<()> {
-        let head = Argument::Int(head.try_into().expect("doesn't fit in u64"));
+        let head = Argument::Int(
+            head.try_into().map_err(|_| anyhow!("Head value {} doesn't fit in i64", head))?,
+        );
         let id = Argument::FieldElement(self.world_address);
-        self.executor.send(QueryMessage::other(
-            "UPDATE contracts SET head = ? WHERE id = ?".to_string(),
-            vec![head, id],
-        ))?;
+        self.executor
+            .send(QueryMessage::other(
+                "UPDATE contracts SET head = ? WHERE id = ?".to_string(),
+                vec![head, id],
+            ))
+            .map_err(|e| anyhow!("Failed to send set_head message: {}", e))?;
 
         Ok(())
     }
