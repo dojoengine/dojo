@@ -3,9 +3,8 @@ use std::fmt::Display;
 
 use async_trait::async_trait;
 use celestia_rpc::{BlobClient, Client};
-use celestia_types::blob::GasPrice;
 use celestia_types::nmt::Namespace;
-use celestia_types::Blob;
+use celestia_types::{Blob, TxConfig};
 use serde::{Deserialize, Serialize};
 use starknet::core::types::Felt;
 use url::Url;
@@ -61,7 +60,7 @@ impl DataAvailabilityClient for CelestiaClient {
         // TODO: we may want to use `blob_get` to ensure the state diff has been published
         // correctly.
         self.client
-            .blob_submit(&[blob], GasPrice::default())
+            .blob_submit(&[blob], TxConfig::default())
             .await
             .map_err(|e| Error::Client(format!("Celestia RPC error: {e}")))
     }
@@ -79,7 +78,16 @@ impl DataAvailabilityClient for CelestiaClient {
         let proof_blob = Blob::new(self.namespace, proof_bytes)?;
 
         self.client
-            .blob_submit(&[blob, proof_blob], GasPrice::default())
+            .blob_submit(&[blob, proof_blob], TxConfig::default())
+            .await
+            .map_err(|e| Error::Client(format!("Celestia RPC error: {e}")))
+    }
+
+    async fn publish_proof_json(&self, proof_json: &str) -> DataAvailabilityResult<u64> {
+        let bytes = proof_json.as_bytes().to_vec();
+
+        self.client
+            .blob_submit(&[Blob::new(self.namespace, bytes)?], TxConfig::default())
             .await
             .map_err(|e| Error::Client(format!("Celestia RPC error: {e}")))
     }

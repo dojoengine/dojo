@@ -206,20 +206,23 @@ impl Saya {
 
                     mock_state_hash += Felt::ONE;
 
+                    info!(target: LOG_TARGET, "Proving {} blocks.", num_blocks);
+
                     // We might want to prove the signatures as well.
-                    let proof = self.prover_identifier.prove_snos(input).await?;
+                    // let proof = self.prover_identifier.prove_snos(input).await?;
 
                     // TODO: Add an argument to cache proofs for debugging.
-                    // let proof = {
-                    //     let filename = format!("proof_{}.json", block + num_blocks - 1);
-                    //     let mut file =
-                    //         File::open(filename).await.context("Failed to create proof file.")?;
-                    //     let mut content = String::new();
-                    //     tokio::io::AsyncReadExt::read_to_string(&mut file, &mut content)
-                    //         .await
-                    //         .unwrap();
-                    //     content
-                    // };
+                    let proof = {
+                        let filename = format!("proof_{}.json", block + num_blocks - 1);
+                        let mut file =
+                            File::open(filename).await.context("Failed to open proof file.")?;
+                        let mut content = String::new();
+                        tokio::io::AsyncReadExt::read_to_string(&mut file, &mut content)
+                            .await
+                            .unwrap();
+
+                        serde_json::from_str(&content).unwrap()
+                    };
 
                     if self.config.store_proofs {
                         let filename = format!("proof_{}.json", block + num_blocks - 1);
@@ -432,10 +435,8 @@ impl Saya {
             trace!(target: LOG_TARGET, last_block, "Publishing DA.");
 
             if self.config.mode != SayaMode::Ephemeral {
-                todo!("DA publishing is not supported for non-ephemeral modes yet.");
-            }
-
-            if self.config.skip_publishing_proof {
+                da.publish_proof_json(&proof.proof).await?;
+            } else if self.config.skip_publishing_proof {
                 da.publish_state_diff_felts(&state_diff).await?;
             } else {
                 da.publish_state_diff_and_proof_felts(&state_diff, &serialized_proof).await?;

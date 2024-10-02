@@ -73,6 +73,14 @@ pub trait DataAvailabilityClient {
         state_diff: &[Felt],
         state_diff_proof: &[Felt],
     ) -> DataAvailabilityResult<u64>;
+
+    /// Publishes a JSON-formatted proof on the DA layer.
+    /// Returns the block height in which the proof was included.
+    ///
+    /// # Arguments
+    ///
+    /// * `state_diff` - A JSON string representing the proof to be published.
+    async fn publish_proof_json(&self, state_diff: &str) -> DataAvailabilityResult<u64>;
 }
 
 /// Initializes a [`DataAvailabilityClient`] from a [`DataAvailabilityConfig`].
