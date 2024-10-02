@@ -30,6 +30,7 @@ impl Sql {
 
         if !token_exists {
             self.register_erc20_token_metadata(contract_address, &token_id, provider).await?;
+            self.query_queue.execute_all().await?;
         }
 
         self.store_erc_transfer_event(
@@ -82,6 +83,7 @@ impl Sql {
 
         if !token_exists {
             self.register_erc721_token_metadata(contract_address, &token_id, provider).await?;
+            self.query_queue.execute_all().await?;
         }
 
         self.store_erc_transfer_event(
@@ -329,9 +331,6 @@ impl Sql {
     }
 
     pub async fn apply_cache_diff(&mut self) -> Result<()> {
-        // execute the query queue to apply any queries registering token metadata
-        self.query_queue.execute_all().await?;
-
         for ((contract_type, id_str), balance) in self.local_cache.erc_cache.iter() {
             let id = id_str.split(FELT_DELIMITER).collect::<Vec<&str>>();
             match contract_type {
