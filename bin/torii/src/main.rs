@@ -165,16 +165,9 @@ async fn main() -> anyhow::Result<()> {
     })
     .expect("Error setting Ctrl-C handler");
 
-    let mut tempfile = None;
-    if args.database.is_empty() {
-        tempfile = Some(NamedTempFile::new()?);
-    }
-
-    let database_path = if let Some(tempfile) = &tempfile {
-        tempfile.path().to_str().unwrap()
-    } else {
-        &args.database
-    };
+    let tempfile = NamedTempFile::new()?;
+    let database_path =
+        if args.database.is_empty() { tempfile.path().to_str().unwrap() } else { &args.database };
 
     let mut options =
         SqliteConnectOptions::from_str(database_path)?.create_if_missing(true).with_regexp();
