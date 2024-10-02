@@ -2,13 +2,14 @@ use std::collections::{HashMap, HashSet};
 
 use dojo_types::schema::Ty;
 use dojo_world::contracts::abi::model::Layout;
-use sqlx::SqlitePool;
+use sqlx::{Pool, Sqlite, SqlitePool};
 use starknet_crypto::Felt;
 use tokio::sync::RwLock;
 
 use crate::error::{Error, ParseError, QueryError};
 use crate::model::{parse_sql_model_members, SqlModelMember};
 use crate::sql::utils::I256;
+use crate::types::ContractType;
 
 #[derive(Debug, Clone)]
 pub struct Model {
@@ -126,12 +127,24 @@ impl ModelCache {
 
 #[derive(Debug)]
 pub struct LocalCache {
-    pub erc_cache: HashMap<String, I256>,
+    pub erc_cache: HashMap<(ContractType, String), I256>,
     pub token_id_registry: HashSet<String>,
 }
 
 impl LocalCache {
-    pub fn new() -> Self {
+    pub async fn new(pool: Pool<Sqlite>) -> Self {
+        // read existing token_id's from balances table and cache them
+        let token_id_registry: Vec<(String,)> = sqlx::query_as("SELECT token_id FROM balances")
+            .fetch_all(&pool)
+            .await
+            .expect("Should be able to read token_id's from blances table");
+
+        let token_id_registry = token_id_registry.into_iter().map(|token_id| token_id.0).collect();
+
+        Self { erc_cache: HashMap::new(), token_id_registry }
+    }
+
+    pub fn empty() -> Self {
         Self { erc_cache: HashMap::new(), token_id_registry: HashSet::new() }
     }
 

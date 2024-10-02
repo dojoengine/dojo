@@ -60,7 +60,7 @@ impl Clone for Sql {
             pool: self.pool.clone(),
             query_queue: QueryQueue::new(self.pool.clone()),
             model_cache: self.model_cache.clone(),
-            local_cache: LocalCache::new(),
+            local_cache: LocalCache::empty(),
         }
     }
 }
@@ -88,12 +88,14 @@ impl Sql {
 
         query_queue.execute_all().await?;
 
+        let local_cache = LocalCache::new(pool.clone()).await;
+
         Ok(Self {
             pool: pool.clone(),
             world_address,
             query_queue,
             model_cache: Arc::new(ModelCache::new(pool)),
-            local_cache: LocalCache::new(),
+            local_cache,
         })
     }
 
@@ -804,11 +806,7 @@ impl Sql {
             Ty::Enum(e) => {
                 if e.options.iter().all(
                     |o| {
-                        if let Ty::Tuple(t) = &o.ty {
-                            t.is_empty()
-                        } else {
-                            false
-                        }
+                        if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false }
                     },
                 ) {
                     return;

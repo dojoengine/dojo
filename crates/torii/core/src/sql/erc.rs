@@ -9,6 +9,7 @@ use super::query_queue::{Argument, QueryType};
 use super::utils::{sql_string_to_u256, u256_to_sql_string, I256};
 use super::{Sql, FELT_DELIMITER};
 use crate::sql::utils::{felt_and_u256_to_sql_string, felt_to_sql_string, felts_to_sql_string};
+use crate::types::ContractType;
 use crate::utils::utc_dt_string_from_timestamp;
 
 impl Sql {
@@ -40,18 +41,21 @@ impl Sql {
             block_timestamp,
         );
 
-        self.query_queue.execute_all().await?;
-
         if from_address != Felt::ZERO {
             // from_address/contract_address/
             let from_balance_id = felts_to_sql_string(&[from_address, contract_address]);
-            let from_balance = self.local_cache.erc_cache.entry(from_balance_id).or_default();
+            let from_balance = self
+                .local_cache
+                .erc_cache
+                .entry((ContractType::ERC20, from_balance_id))
+                .or_default();
             *from_balance -= I256::from(amount);
         }
 
         if to_address != Felt::ZERO {
             let to_balance_id = felts_to_sql_string(&[to_address, contract_address]);
-            let to_balance = self.local_cache.erc_cache.entry(to_balance_id).or_default();
+            let to_balance =
+                self.local_cache.erc_cache.entry((ContractType::ERC20, to_balance_id)).or_default();
             *to_balance += I256::from(amount);
         }
 
@@ -89,20 +93,26 @@ impl Sql {
             block_timestamp,
         );
 
-        self.query_queue.execute_all().await?;
-
         // from_address/contract_address:id
         if from_address != Felt::ZERO {
             let from_balance_id =
                 format!("{}{FELT_DELIMITER}{}", felt_to_sql_string(&from_address), &token_id);
-            let from_balance = self.local_cache.erc_cache.entry(from_balance_id).or_default();
+            let from_balance = self
+                .local_cache
+                .erc_cache
+                .entry((ContractType::ERC721, from_balance_id))
+                .or_default();
             *from_balance -= I256::from(1u8);
         }
 
         if to_address != Felt::ZERO {
             let to_balance_id =
                 format!("{}{FELT_DELIMITER}{}", felt_to_sql_string(&to_address), &token_id);
-            let to_balance = self.local_cache.erc_cache.entry(to_balance_id).or_default();
+            let to_balance = self
+                .local_cache
+                .erc_cache
+                .entry((ContractType::ERC721, to_balance_id))
+                .or_default();
             *to_balance += I256::from(1u8);
         }
 
@@ -319,11 +329,16 @@ impl Sql {
     }
 
     pub async fn apply_cache_diff(&mut self) -> Result<()> {
-        for (id_str, balance) in self.local_cache.erc_cache.iter() {
+        // execute the query queue to apply any queries registering token metadata
+        self.query_queue.execute_all().await?;
+
+        for ((contract_type, id_str), balance) in self.local_cache.erc_cache.iter() {
             let id = id_str.split(FELT_DELIMITER).collect::<Vec<&str>>();
-            match id.len() {
-                // account_address/contract_address:id => ERC721
-                2 => {
+            match contract_type {
+                ContractType::WORLD => unreachable!(),
+                ContractType::ERC721 => {
+                    // account_address/contract_address:id => ERC721
+                    assert!(id.len() == 2);
                     let account_address = id[0];
                     let token_id = id[1];
                     let mid = token_id.split(":").collect::<Vec<&str>>();
@@ -338,8 +353,9 @@ impl Sql {
                     )
                     .await?;
                 }
-                // account_address/contract_address/ => ERC20
-                3 => {
+                ContractType::ERC20 => {
+                    // account_address/contract_address/ => ERC20
+                    assert!(id.len() == 3);
                     let account_address = id[0];
                     let contract_address = id[1];
                     let token_id = id[1];
@@ -353,7 +369,6 @@ impl Sql {
                     )
                     .await?;
                 }
-                _ => unreachable!(),
             }
         }
 

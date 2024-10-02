@@ -115,7 +115,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
             if db_balance != starknet_balance {
                 error!(
-                    "Mismatch for account {} and contract {}: DB balance = {}, Starknet balance = {}",
+                    "Mismatch for account {} and contract {}: DB balance = {}, Starknet balance = \
+                     {}",
                     account_address, contract_address, db_balance, starknet_balance
                 );
             } else {

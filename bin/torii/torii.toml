@@ -4,12 +4,3 @@
 #     { type = "ERC20", address = "<ERC20_CONTRACT_ADDRESS>" },
 #     { type = "ERC721", address = "<ERC721_CONTRACT_ADDRESS>" },
 # ]
-
-contracts = [
-    # num-sepolia
-    { type = "WORLD", address = "0x50c46c6f69ea9f12b24fcdd1569a584ae8893db0c70ea7884b605384da78ebc" },
-    # LORDS
-    { type = "ERC20", address = "0x044e6bcc627e6201ce09f781d1aae44ea4c21c2fdef299e34fce55bef2d02210" },
-    # LSVR
-    { type = "ERC721", address = "0x0046506cccd3ffb110bc04445d25d94f1d26d645a30e6ac8a17c24e084bed08b" },
-]
