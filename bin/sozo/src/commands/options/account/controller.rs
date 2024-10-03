@@ -8,7 +8,7 @@ use dojo_world::contracts::naming::get_name_from_tag;
 use dojo_world::manifest::{BaseManifest, Class, DojoContract, Manifest};
 use dojo_world::migration::strategy::generate_salt;
 use scarb::core::Config;
-use slot::account_sdk::account::session::hash::{AllowedMethod, ProvedMethod};
+use slot::account_sdk::account::session::hash::{Policy, ProvedPolicy};
 use slot::account_sdk::account::session::merkle::MerkleTree;
 use slot::account_sdk::account::session::SessionAccount;
 use slot::session::{FullSessionInfo, PolicyMethod};
@@ -74,7 +74,7 @@ where
     // Check if the session exists, if not create a new one
     let session_details = match slot::session::get(chain_id)? {
         Some(session) => {
-            trace!(expires_at = %session.session.expires_at, policies = session.session.allowed_methods.len(), "Found existing session.");
+            trace!(expires_at = %session.session.expires_at, policies = session.session.policies.len(), "Found existing session.");
 
             let policies = collect_policies(world_addr_or_name, contract_address, config)?;
             // check if the policies have changed
@@ -85,7 +85,7 @@ where
             } else {
                 trace!(
                     new_policies = policies.len(),
-                    existing_policies = session.session.allowed_methods.len(),
+                    existing_policies = session.session.policies.len(),
                     "Policies have changed. Creating new session."
                 );
 
@@ -113,26 +113,25 @@ where
 // This function would compute the merkle root of the new policies and compare it with the root in
 // the existing SessionMetadata.
 fn is_equal_to_existing(new_policies: &[PolicyMethod], session_info: &FullSessionInfo) -> bool {
-    let allowed_methods = new_policies
+    let new_policies = new_policies
         .iter()
-        .map(|p| AllowedMethod::new(p.target, get_selector_from_name(&p.method).unwrap()))
-        .collect::<Vec<AllowedMethod>>();
+        .map(|p| Policy::new(p.target, get_selector_from_name(&p.method).unwrap()))
+        .collect::<Vec<Policy>>();
 
-    // Copied from somewhere
-    let hashes = allowed_methods.iter().map(AllowedMethod::as_merkle_leaf).collect::<Vec<Felt>>();
+    // Copied from Session::new
+    let hashes = new_policies.iter().map(Policy::as_merkle_leaf).collect::<Vec<Felt>>();
 
-    let allowed_methods = allowed_methods
+    let new_policies = new_policies
         .into_iter()
         .enumerate()
-        .map(|(i, method)| ProvedMethod {
-            method,
+        .map(|(i, policy)| ProvedPolicy {
+            policy,
             proof: MerkleTree::compute_proof(hashes.clone(), i),
         })
-        .collect::<Vec<ProvedMethod>>();
+        .collect::<Vec<ProvedPolicy>>();
 
-    let root = MerkleTree::compute_root(hashes[0], allowed_methods[0].proof.clone());
-
-    root == session_info.session.allowed_methods_root
+    let new_policies_root = MerkleTree::compute_root(hashes[0], new_policies[0].proof.clone());
+    new_policies_root == session_info.session.authorization_root
 }
 
 /// Policies are the building block of a session key. It's what defines what methods are allowed for
