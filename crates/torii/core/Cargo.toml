@@ -41,3 +41,4 @@ dojo-test-utils.workspace = true
 dojo-utils.workspace = true
 katana-runner.workspace = true
 scarb.workspace = true
+tempfile.workspace = true

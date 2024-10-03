@@ -27,10 +27,12 @@ use sqlx::SqlitePool;
 use starknet::core::types::Felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
+use tempfile::NamedTempFile;
 use tokio::sync::broadcast;
 use tokio::sync::broadcast::Sender;
 use tokio_stream::StreamExt;
 use torii_core::engine::{Engine, EngineConfig, IndexingFlags, Processors};
+use torii_core::executor::Executor;
 use torii_core::processors::event_message::EventMessageProcessor;
 use torii_core::processors::generate_event_processors_map;
 use torii_core::processors::metadata_update::MetadataUpdateProcessor;
@@ -64,7 +66,7 @@ struct Args {
 
     /// Database filepath (ex: indexer.db). If specified file doesn't exist, it will be
     /// created. Defaults to in-memory database
-    #[arg(short, long, default_value = ":memory:")]
+    #[arg(short, long, default_value = "")]
     database: String,
 
     /// Specify a block to start indexing from, ignored if stored head exists
@@ -163,8 +165,12 @@ async fn main() -> anyhow::Result<()> {
     })
     .expect("Error setting Ctrl-C handler");
 
+    let tempfile = NamedTempFile::new()?;
+    let database_path =
+        if args.database.is_empty() { tempfile.path().to_str().unwrap() } else { &args.database };
+
     let mut options =
-        SqliteConnectOptions::from_str(&args.database)?.create_if_missing(true).with_regexp();
+        SqliteConnectOptions::from_str(database_path)?.create_if_missing(true).with_regexp();
 
     // Performance settings
     options = options.auto_vacuum(SqliteAutoVacuum::None);
@@ -185,7 +191,12 @@ async fn main() -> anyhow::Result<()> {
     // Get world address
     let world = WorldContractReader::new(args.world_address, provider.clone());
 
-    let db = Sql::new(pool.clone(), args.world_address).await?;
+    let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx.clone()).await?;
+    tokio::spawn(async move {
+        executor.run().await.unwrap();
+    });
+
+    let db = Sql::new(pool.clone(), args.world_address, sender.clone()).await?;
 
     let processors = Processors {
         event: generate_event_processors_map(vec![

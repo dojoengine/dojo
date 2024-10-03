@@ -7,6 +7,7 @@ use std::time::Duration;
 use anyhow::Result;
 use bitflags::bitflags;
 use dojo_world::contracts::world::WorldContractReader;
+use futures_util::future::try_join_all;
 use hashlink::LinkedHashMap;
 use starknet::core::types::{
     BlockId, BlockTag, EmittedEvent, Event, EventFilter, Felt, MaybePendingBlockWithReceipts,
@@ -17,7 +18,6 @@ use starknet::providers::Provider;
 use tokio::sync::broadcast::Sender;
 use tokio::sync::mpsc::Sender as BoundedSender;
 use tokio::sync::Semaphore;
-use tokio::task::JoinSet;
 use tokio::time::{sleep, Instant};
 use tracing::{debug, error, info, trace, warn};
 
@@ -108,6 +108,13 @@ pub struct ParallelizedEvent {
     pub event: Event,
 }
 
+#[derive(Debug)]
+pub struct EngineHead {
+    pub block_number: u64,
+    pub last_pending_block_world_tx: Option<Felt>,
+    pub last_pending_block_tx: Option<Felt>,
+}
+
 #[allow(missing_debug_implementations)]
 pub struct Engine<P: Provider + Send + Sync + std::fmt::Debug + 'static> {
     world: Arc<WorldContractReader<P>>,
@@ -151,7 +158,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         // use the start block provided by user if head is 0
         let (head, _, _) = self.db.head().await?;
         if head == 0 {
-            self.db.set_head(self.config.start_block);
+            self.db.set_head(self.config.start_block)?;
         } else if self.config.start_block != 0 {
             warn!(target: LOG_TARGET, "Start block ignored, stored head exists and will be used instead.");
         }
@@ -164,6 +171,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         let mut erroring_out = false;
         loop {
             let (head, last_pending_block_world_tx, last_pending_block_tx) = self.db.head().await?;
+
             tokio::select! {
                 _ = shutdown_rx.recv() => {
                     break Ok(());
@@ -179,7 +187,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                             }
 
                             match self.process(fetch_result).await {
-                                Ok(()) => {}
+                                Ok(_) => self.db.execute().await?,
                                 Err(e) => {
                                     error!(target: LOG_TARGET, error = %e, "Processing fetched data.");
                                     erroring_out = true;
@@ -363,21 +371,15 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         }))
     }
 
-    pub async fn process(&mut self, fetch_result: FetchDataResult) -> Result<()> {
+    pub async fn process(&mut self, fetch_result: FetchDataResult) -> Result<Option<EngineHead>> {
         match fetch_result {
-            FetchDataResult::Range(data) => {
-                self.process_range(data).await?;
-            }
-            FetchDataResult::Pending(data) => {
-                self.process_pending(data).await?;
-            }
-            FetchDataResult::None => {}
+            FetchDataResult::Range(data) => self.process_range(data).await.map(Some),
+            FetchDataResult::Pending(data) => self.process_pending(data).await.map(Some),
+            FetchDataResult::None => Ok(None),
         }
-
-        Ok(())
     }
 
-    pub async fn process_pending(&mut self, data: FetchPendingResult) -> Result<()> {
+    pub async fn process_pending(&mut self, data: FetchPendingResult) -> Result<EngineHead> {
         // Skip transactions that have been processed already
         // Our cursor is the last processed transaction
 
@@ -407,16 +409,19 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                             // provider. So we can fail silently and try
                             // again in the next iteration.
                             warn!(target: LOG_TARGET, transaction_hash = %format!("{:#x}", transaction_hash), "Retrieving pending transaction receipt.");
-                            self.db.set_head(data.block_number - 1);
+                            self.db.set_head(data.block_number - 1)?;
                             if let Some(tx) = last_pending_block_tx {
-                                self.db.set_last_pending_block_tx(Some(tx));
+                                self.db.set_last_pending_block_tx(Some(tx))?;
                             }
 
                             if let Some(tx) = last_pending_block_world_tx {
-                                self.db.set_last_pending_block_world_tx(Some(tx));
+                                self.db.set_last_pending_block_world_tx(Some(tx))?;
                             }
-                            self.db.execute().await?;
-                            return Ok(());
+                            return Ok(EngineHead {
+                                block_number: data.block_number - 1,
+                                last_pending_block_tx,
+                                last_pending_block_world_tx,
+                            });
                         }
                         _ => {
                             error!(target: LOG_TARGET, error = %e, transaction_hash = %format!("{:#x}", transaction_hash), "Processing pending transaction.");
@@ -441,22 +446,24 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
 
         // Set the head to the last processed pending transaction
         // Head block number should still be latest block number
-        self.db.set_head(data.block_number - 1);
+        self.db.set_head(data.block_number - 1)?;
 
         if let Some(tx) = last_pending_block_tx {
-            self.db.set_last_pending_block_tx(Some(tx));
+            self.db.set_last_pending_block_tx(Some(tx))?;
         }
 
         if let Some(tx) = last_pending_block_world_tx {
-            self.db.set_last_pending_block_world_tx(Some(tx));
+            self.db.set_last_pending_block_world_tx(Some(tx))?;
         }
 
-        self.db.execute().await?;
-
-        Ok(())
+        Ok(EngineHead {
+            block_number: data.block_number - 1,
+            last_pending_block_world_tx,
+            last_pending_block_tx,
+        })
     }
 
-    pub async fn process_range(&mut self, data: FetchRangeResult) -> Result<()> {
+    pub async fn process_range(&mut self, data: FetchRangeResult) -> Result<EngineHead> {
         // Process all transactions
         let mut last_block = 0;
         for ((block_number, transaction_hash), events) in data.transactions {
@@ -486,22 +493,20 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                 self.process_block(block_number, data.blocks[&block_number]).await?;
                 last_block = block_number;
             }
-
-            if self.db.query_queue.queue.len() >= QUERY_QUEUE_BATCH_SIZE {
-                self.db.execute().await?;
-            }
         }
 
         // Process parallelized events
         self.process_tasks().await?;
 
-        self.db.set_head(data.latest_block_number);
-        self.db.set_last_pending_block_world_tx(None);
-        self.db.set_last_pending_block_tx(None);
+        self.db.set_head(data.latest_block_number)?;
+        self.db.set_last_pending_block_world_tx(None)?;
+        self.db.set_last_pending_block_tx(None)?;
 
-        self.db.execute().await?;
-
-        Ok(())
+        Ok(EngineHead {
+            block_number: data.latest_block_number,
+            last_pending_block_tx: None,
+            last_pending_block_world_tx: None,
+        })
     }
 
     async fn process_tasks(&mut self) -> Result<()> {
@@ -509,15 +514,15 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         let semaphore = Arc::new(Semaphore::new(self.config.max_concurrent_tasks));
 
         // Run all tasks concurrently
-        let mut set = JoinSet::new();
+        let mut handles = Vec::new();
         for (task_id, events) in self.tasks.drain() {
             let db = self.db.clone();
             let world = self.world.clone();
             let processors = self.processors.clone();
             let semaphore = semaphore.clone();
 
-            set.spawn(async move {
-                let _permit = semaphore.acquire().await.unwrap();
+            handles.push(tokio::spawn(async move {
+                let _permit = semaphore.acquire().await?;
                 let mut local_db = db.clone();
                 for ParallelizedEvent { event_id, event, block_number, block_timestamp } in events {
                     if let Some(processor) = processors.event.get(&event.keys[0]) {
@@ -531,15 +536,13 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                         }
                     }
                 }
-                Ok::<_, anyhow::Error>(local_db)
-            });
+
+                Ok::<_, anyhow::Error>(())
+            }));
         }
 
         // Join all tasks
-        while let Some(result) = set.join_next().await {
-            let local_db = result??;
-            self.db.merge(local_db)?;
-        }
+        try_join_all(handles).await?;
 
         Ok(())
     }
@@ -688,7 +691,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         transaction_hash: Felt,
     ) -> Result<()> {
         if self.config.flags.contains(IndexingFlags::RAW_EVENTS) {
-            self.db.store_event(event_id, event, transaction_hash, block_timestamp);
+            self.db.store_event(event_id, event, transaction_hash, block_timestamp)?;
         }
 
         let event_key = event.keys[0];

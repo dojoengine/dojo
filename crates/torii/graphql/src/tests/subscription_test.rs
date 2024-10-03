@@ -12,7 +12,8 @@ mod tests {
     use sqlx::SqlitePool;
     use starknet::core::types::Event;
     use starknet_crypto::{poseidon_hash_many, Felt};
-    use tokio::sync::mpsc;
+    use tokio::sync::{broadcast, mpsc};
+    use torii_core::executor::Executor;
     use torii_core::sql::{felts_sql_string, Sql};
 
     use crate::tests::{model_fixtures, run_graphql_subscription};
@@ -21,7 +22,13 @@ mod tests {
     #[sqlx::test(migrations = "../migrations")]
     #[serial]
     async fn test_entity_subscription(pool: SqlitePool) {
-        let mut db = Sql::new(pool.clone(), Felt::ZERO).await.unwrap();
+        let (shutdown_tx, _) = broadcast::channel(1);
+        let (mut executor, sender) =
+            Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
+        tokio::spawn(async move {
+            executor.run().await.unwrap();
+        });
+        let mut db = Sql::new(pool.clone(), Felt::ZERO, sender).await.unwrap();
 
         model_fixtures(&mut db).await;
         // 0. Preprocess expected entity value
@@ -156,7 +163,13 @@ mod tests {
     #[sqlx::test(migrations = "../migrations")]
     #[serial]
     async fn test_entity_subscription_with_id(pool: SqlitePool) {
-        let mut db = Sql::new(pool.clone(), Felt::ZERO).await.unwrap();
+        let (shutdown_tx, _) = broadcast::channel(1);
+        let (mut executor, sender) =
+            Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
+        tokio::spawn(async move {
+            executor.run().await.unwrap();
+        });
+        let mut db = Sql::new(pool.clone(), Felt::ZERO, sender).await.unwrap();
 
         model_fixtures(&mut db).await;
         // 0. Preprocess expected entity value
@@ -271,7 +284,13 @@ mod tests {
     #[sqlx::test(migrations = "../migrations")]
     #[serial]
     async fn test_model_subscription(pool: SqlitePool) {
-        let mut db = Sql::new(pool.clone(), Felt::ZERO).await.unwrap();
+        let (shutdown_tx, _) = broadcast::channel(1);
+        let (mut executor, sender) =
+            Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
+        tokio::spawn(async move {
+            executor.run().await.unwrap();
+        });
+        let mut db = Sql::new(pool.clone(), Felt::ZERO, sender).await.unwrap();
         // 0. Preprocess model value
         let namespace = "types_test".to_string();
         let model_name = "Subrecord".to_string();
@@ -336,7 +355,13 @@ mod tests {
     #[sqlx::test(migrations = "../migrations")]
     #[serial]
     async fn test_model_subscription_with_id(pool: SqlitePool) {
-        let mut db = Sql::new(pool.clone(), Felt::ZERO).await.unwrap();
+        let (shutdown_tx, _) = broadcast::channel(1);
+        let (mut executor, sender) =
+            Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
+        tokio::spawn(async move {
+            executor.run().await.unwrap();
+        });
+        let mut db = Sql::new(pool.clone(), Felt::ZERO, sender).await.unwrap();
         // 0. Preprocess model value
         let namespace = "types_test".to_string();
         let model_name = "Subrecord".to_string();
@@ -402,7 +427,13 @@ mod tests {
     #[sqlx::test(migrations = "../migrations")]
     #[serial]
     async fn test_event_emitted(pool: SqlitePool) {
-        let mut db = Sql::new(pool.clone(), Felt::ZERO).await.unwrap();
+        let (shutdown_tx, _) = broadcast::channel(1);
+        let (mut executor, sender) =
+            Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
+        tokio::spawn(async move {
+            executor.run().await.unwrap();
+        });
+        let mut db = Sql::new(pool.clone(), Felt::ZERO, sender).await.unwrap();
         let block_timestamp: u64 = 1710754478_u64;
         let (tx, mut rx) = mpsc::channel(7);
         tokio::spawn(async move {
@@ -423,7 +454,8 @@ mod tests {
                 },
                 Felt::ZERO,
                 block_timestamp,
-            );
+            )
+            .unwrap();
             db.execute().await.unwrap();
 
             tx.send(()).await.unwrap();

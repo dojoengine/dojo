@@ -3,6 +3,7 @@ mod tests {
     use anyhow::Result;
     use async_graphql::dynamic::Schema;
     use serde_json::Value;
+    use tempfile::NamedTempFile;
 
     use crate::schema::build_schema;
     use crate::tests::{run_graphql_query, spinup_types_test, Connection, WorldModel};
@@ -44,7 +45,9 @@ mod tests {
     // to run so combine all related tests into one
     #[tokio::test(flavor = "multi_thread")]
     async fn models_ordering_test() -> Result<()> {
-        let pool = spinup_types_test().await?;
+        let tempfile = NamedTempFile::new().unwrap();
+        let path = tempfile.path().to_string_lossy();
+        let pool = spinup_types_test(&path).await?;
         let schema = build_schema(&pool).await.unwrap();
 
         // default params, test entity relationship, test nested types
