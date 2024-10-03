@@ -2,6 +2,7 @@
 
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
 
+use std::collections::HashMap;
 use std::ops::RangeInclusive;
 use std::sync::Arc;
 
@@ -14,7 +15,7 @@ use katana_primitives::block::{BlockNumber, FinalityStatus, SealedBlock, SealedB
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
 use katana_primitives::transaction::Tx;
 use katana_rpc_types::trace::TxExecutionInfo;
-use prover::persistent::{BatcherCall, BatcherInput, BatcherOutput};
+use prover::persistent::{BatcherCall, BatcherInput, StarknetOsOutput};
 use prover::{extract_execute_calls, HttpProverParams, ProveProgram, ProverIdentifier};
 pub use prover_sdk::access_key::ProverAccessKey;
 use prover_sdk::ProverResult;
@@ -197,7 +198,7 @@ impl Saya {
                         })
                         .collect::<Vec<_>>();
 
-                    let input = BatcherInput {
+                    let _input = BatcherInput {
                         calls,
                         block_number: Felt::from(block),
                         prev_state_root: mock_state_hash,
@@ -211,18 +212,36 @@ impl Saya {
                     // We might want to prove the signatures as well.
                     // let proof = self.prover_identifier.prove_snos(input).await?;
 
-                    // TODO: Add an argument to cache proofs for debugging.
-                    let proof = {
-                        let filename = format!("proof_{}.json", block + num_blocks - 1);
-                        let mut file =
-                            File::open(filename).await.context("Failed to open proof file.")?;
-                        let mut content = String::new();
-                        tokio::io::AsyncReadExt::read_to_string(&mut file, &mut content)
-                            .await
-                            .unwrap();
-
-                        serde_json::from_str(&content).unwrap()
+                    let input = StarknetOsOutput {
+                        initial_root: mock_state_hash,
+                        final_root: mock_state_hash + Felt::ONE,
+                        prev_block_number: Felt::from(block),
+                        new_block_number: Felt::from(block) + Felt::ONE,
+                        prev_block_hash: Felt::from(1u64),
+                        new_block_hash: Felt::from(2u64),
+                        os_program_hash: Felt::from(3u64),
+                        starknet_os_config_hash: Felt::from(4u64),
+                        use_kzg_da: Felt::from(5u64),
+                        full_output: Felt::from(6u64),
+                        messages_to_l1: vec![],
+                        messages_to_l2: vec![],
+                        contracts: vec![],
+                        classes: HashMap::new(),
                     };
+
+                    let proof = self.prover_identifier.prove_echo(input).await?;
+
+                    // let proof = {
+                    //     let filename = format!("proof_{}.json", block + num_blocks - 1);
+                    //     let mut file =
+                    //         File::open(filename).await.context("Failed to open proof file.")?;
+                    //     let mut content = String::new();
+                    //     tokio::io::AsyncReadExt::read_to_string(&mut file, &mut content)
+                    //         .await
+                    //         .unwrap();
+
+                    //     serde_json::from_str(&content).unwrap()
+                    // };
 
                     if self.config.store_proofs {
                         let filename = format!("proof_{}.json", block + num_blocks - 1);
@@ -478,15 +497,19 @@ impl Saya {
                 let serialized_output = program_output.iter().copied().collect_vec();
                 println!("serialized_output: {:?}", serialized_output);
 
-                let batcher_output = from_felts::<BatcherOutput>(&serialized_output).unwrap();
+                // todo!("Persistent mode does not support publishing updated state with SNOS yet.");
+
+                let batcher_output = from_felts::<StarknetOsOutput>(&serialized_output).unwrap();
                 let piltover_calldata = PiltoverCalldata {
                     program_output: serialized_output,
-                    onchain_data_hash: batcher_output.new_state_root,
+                    // onchain_data_hash: batcher_output.new_state_root,
+                    onchain_data_hash: batcher_output.new_block_hash,
                     onchain_data_size: (Felt::ZERO, Felt::ZERO),
                 };
 
-                let expected_state_root = batcher_output.prev_state_root.to_string();
-                let expected_block_number = (batcher_output.block_number - Felt::ONE).to_string();
+                let expected_state_root = batcher_output.new_block_hash.to_string();
+                let expected_block_number =
+                    (batcher_output.new_block_number - Felt::ONE).to_string();
                 info!(target: LOG_TARGET, last_block, expected_state_root, expected_block_number, "Applying snos to piltover.");
 
                 starknet_apply_piltover(

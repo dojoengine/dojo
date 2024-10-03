@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 use starknet_crypto::Felt;
 
@@ -28,6 +30,50 @@ pub struct BatcherInput {
     pub block_number: Felt,
     pub prev_state_root: Felt,
     pub block_hash: Felt,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct StarknetOsOutput {
+    /// The root before.
+    pub initial_root: Felt,
+    /// The root after.
+    pub final_root: Felt,
+    /// The previous block number.
+    pub prev_block_number: Felt,
+    /// The current block number.
+    pub new_block_number: Felt,
+    /// The previous block hash.
+    pub prev_block_hash: Felt,
+    /// The current block hash.
+    pub new_block_hash: Felt,
+    /// The hash of the OS program, if the aggregator was used. Zero if the OS was used directly.
+    pub os_program_hash: Felt,
+    /// The hash of the OS config.
+    pub starknet_os_config_hash: Felt,
+    /// Whether KZG data availability was used.
+    pub use_kzg_da: Felt,
+    /// Indicates whether previous state values are included in the state update information.
+    pub full_output: Felt,
+    /// Messages from L2 to L1.
+    pub messages_to_l1: Vec<Felt>,
+    /// Messages from L1 to L2.
+    pub messages_to_l2: Vec<Felt>,
+    /// The list of contracts that were changed.
+    pub contracts: Vec<ContractChanges>,
+    /// The list of classes that were declared. A map from class hash to compiled class hash.
+    pub classes: HashMap<Felt, Felt>,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+pub struct ContractChanges {
+    /// The address of the contract.
+    pub addr: Felt,
+    /// The new nonce of the contract (for account contracts).
+    pub nonce: Felt,
+    /// The new class hash (if changed).
+    pub class_hash: Option<Felt>,
+    /// A map from storage key to its new value.
+    pub storage_changes: HashMap<Felt, Felt>,
 }
 
 #[cfg(test)]

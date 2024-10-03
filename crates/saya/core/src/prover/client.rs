@@ -4,9 +4,12 @@ use prover_sdk::access_key::ProverAccessKey;
 use prover_sdk::errors::SdkErrors;
 use prover_sdk::sdk::ProverSDK;
 use prover_sdk::{JobResponse, ProverResult};
+use serde_json::Value;
 use starknet::core::types::Felt;
 use std::sync::Arc;
-use tracing::trace;
+use std::time::Duration;
+use tokio::time::sleep;
+use tracing::{info, trace};
 use url::Url;
 
 use crate::error::ProverError;
@@ -85,4 +88,36 @@ pub async fn sharp_prove(
         program_output: proof.program_output,
         program_output_hash: proof.program_output_hash,
     })
+}
+
+pub async fn fetch_job_polling(sdk: ProverSDK, job: u64) -> Result<ProverResult, ProverError> {
+    info!("Fetching job: {}", job);
+    let mut counter = 0;
+    loop {
+        let response = sdk.get_job(job).await?;
+        let response = response.text().await?;
+        let json_response: Value = serde_json::from_str(&response)?;
+        if let Some(status) = json_response.get("status").and_then(Value::as_str) {
+            match status {
+                "Completed" => {
+                    let json_response: JobResponse = serde_json::from_str(&response).unwrap();
+                    if let JobResponse::Completed { result, .. } = json_response {
+                        return Ok(result);
+                    }
+                }
+                "Pending" | "Running" => {
+                    info!("Job is still in progress. Status: {}", status);
+                    info!(
+                        "Time passed: {} Waiting for 10 seconds before retrying...",
+                        counter * 10
+                    );
+                    counter += 1;
+                    sleep(Duration::from_secs(10)).await;
+                }
+                _ => {
+                    return Err(ProverError::ProvingFailed(json_response.to_string()));
+                }
+            }
+        }
+    }
 }
