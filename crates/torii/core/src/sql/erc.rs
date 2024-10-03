@@ -5,9 +5,9 @@ use starknet::core::utils::{get_selector_from_name, parse_cairo_short_string};
 use starknet::providers::Provider;
 use tracing::debug;
 
-use super::query_queue::{Argument, QueryType};
 use super::utils::{sql_string_to_u256, u256_to_sql_string, I256};
 use super::{Sql, FELT_DELIMITER};
+use crate::executor::{Argument, QueryMessage};
 use crate::sql::utils::{felt_and_u256_to_sql_string, felt_to_sql_string, felts_to_sql_string};
 use crate::types::ContractType;
 use crate::utils::utc_dt_string_from_timestamp;
@@ -30,7 +30,7 @@ impl Sql {
 
         if !token_exists {
             self.register_erc20_token_metadata(contract_address, &token_id, provider).await?;
-            self.query_queue.execute_all().await?;
+            self.execute().await?;
         }
 
         self.store_erc_transfer_event(
@@ -40,7 +40,7 @@ impl Sql {
             amount,
             &token_id,
             block_timestamp,
-        );
+        )?;
 
         if from_address != Felt::ZERO {
             // from_address/contract_address/
@@ -83,7 +83,7 @@ impl Sql {
 
         if !token_exists {
             self.register_erc721_token_metadata(contract_address, &token_id, provider).await?;
-            self.query_queue.execute_all().await?;
+            self.execute().await?;
         }
 
         self.store_erc_transfer_event(
@@ -93,7 +93,7 @@ impl Sql {
             U256::from(1u8),
             &token_id,
             block_timestamp,
-        );
+        )?;
 
         // from_address/contract_address:id
         if from_address != Felt::ZERO {
@@ -187,9 +187,10 @@ impl Sql {
         let decimals = u8::cairo_deserialize(&decimals, 0).expect("Return value not u8");
 
         // Insert the token into the tokens table
-        self.query_queue.enqueue(
+        self.executor.send(QueryMessage::other(
             "INSERT INTO tokens (id, contract_address, name, symbol, decimals) VALUES (?, ?, ?, \
-             ?, ?)",
+             ?, ?)"
+                .to_string(),
             vec![
                 Argument::String(token_id.to_string()),
                 Argument::FieldElement(contract_address),
@@ -197,8 +198,7 @@ impl Sql {
                 Argument::String(symbol),
                 Argument::Int(decimals.into()),
             ],
-            QueryType::Other,
-        );
+        ))?;
 
         self.local_cache.register_token_id(token_id.to_string());
 
@@ -225,9 +225,10 @@ impl Sql {
                 contract_address = %felt_to_sql_string(&contract_address),
                 "Token already registered for contract_address, so reusing fetched data",
             );
-            self.query_queue.enqueue(
+            self.executor.send(QueryMessage::other(
                 "INSERT INTO tokens (id, contract_address, name, symbol, decimals) VALUES (?, ?, \
-                 ?, ?, ?)",
+                 ?, ?, ?)"
+                    .to_string(),
                 vec![
                     Argument::String(token_id.to_string()),
                     Argument::FieldElement(contract_address),
@@ -235,8 +236,7 @@ impl Sql {
                     Argument::String(symbol),
                     Argument::Int(decimals.into()),
                 ],
-                QueryType::Other,
-            );
+            ))?;
             self.local_cache.register_token_id(token_id.to_string());
             return Ok(());
         }
@@ -286,9 +286,10 @@ impl Sql {
         let decimals = 0;
 
         // Insert the token into the tokens table
-        self.query_queue.enqueue(
+        self.executor.send(QueryMessage::other(
             "INSERT INTO tokens (id, contract_address, name, symbol, decimals) VALUES (?, ?, ?, \
-             ?, ?)",
+             ?, ?)"
+                .to_string(),
             vec![
                 Argument::String(token_id.to_string()),
                 Argument::FieldElement(contract_address),
@@ -296,8 +297,7 @@ impl Sql {
                 Argument::String(symbol),
                 Argument::Int(decimals.into()),
             ],
-            QueryType::Other,
-        );
+        ))?;
 
         self.local_cache.register_token_id(token_id.to_string());
 
@@ -312,12 +312,12 @@ impl Sql {
         amount: U256,
         token_id: &str,
         block_timestamp: u64,
-    ) {
+    ) -> Result<()> {
         let insert_query = "INSERT INTO erc_transfers (contract_address, from_address, \
                             to_address, amount, token_id, executed_at) VALUES (?, ?, ?, ?, ?, ?)";
 
-        self.query_queue.enqueue(
-            insert_query,
+        self.executor.send(QueryMessage::other(
+            insert_query.to_string(),
             vec![
                 Argument::FieldElement(contract_address),
                 Argument::FieldElement(from),
@@ -326,8 +326,9 @@ impl Sql {
                 Argument::String(token_id.to_string()),
                 Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
             ],
-            QueryType::Other,
-        );
+        ))?;
+
+        Ok(())
     }
 
     pub async fn apply_cache_diff(&mut self) -> Result<()> {

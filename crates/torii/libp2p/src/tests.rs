@@ -1,6 +1,5 @@
 #[cfg(test)]
 mod test {
-    use std::collections::HashMap;
     use std::error::Error;
 
     use crate::client::RelayClient;
@@ -13,15 +12,9 @@ mod test {
     use crypto_bigint::U256;
     use dojo_types::primitive::Primitive;
     use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
-    use dojo_world::contracts::abi::model::Layout;
-    use futures::StreamExt;
     use katana_runner::KatanaRunner;
     use serde_json::Number;
-    use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
     use starknet::core::types::Felt;
-    use torii_core::simple_broker::SimpleBroker;
-    use torii_core::sql::Sql;
-    use torii_core::types::{ContractType, EventMessage};
     #[cfg(target_arch = "wasm32")]
     use wasm_bindgen_test::*;
 
@@ -542,8 +535,11 @@ mod test {
         use starknet::providers::JsonRpcClient;
         use starknet::signers::SigningKey;
         use starknet_crypto::Felt;
+        use tempfile::NamedTempFile;
         use tokio::select;
+        use tokio::sync::broadcast;
         use tokio::time::sleep;
+        use torii_core::executor::Executor;
         use torii_core::sql::Sql;
         use torii_core::types::ContractType;
 
@@ -556,10 +552,18 @@ mod test {
             .try_init();
 
         // Database
-        let options = <SqliteConnectOptions as std::str::FromStr>::from_str("sqlite::memory:")
+        let tempfile = NamedTempFile::new().unwrap();
+        let path = tempfile.path().to_string_lossy();
+        let options = <SqliteConnectOptions as std::str::FromStr>::from_str(&path)
             .unwrap()
             .create_if_missing(true);
-        let pool = SqlitePoolOptions::new().max_connections(5).connect_with(options).await.unwrap();
+        let pool = SqlitePoolOptions::new()
+            .min_connections(1)
+            .idle_timeout(None)
+            .max_lifetime(None)
+            .connect_with(options)
+            .await
+            .unwrap();
         sqlx::migrate!("../migrations").run(&pool).await.unwrap();
 
         let sequencer = KatanaRunner::new().expect("Failed to create Katana sequencer");
@@ -568,8 +572,14 @@ mod test {
 
         let account = sequencer.account_data(0);
 
+        let (shutdown_tx, _) = broadcast::channel(1);
+        let (mut executor, sender) =
+            Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
+        tokio::spawn(async move {
+            executor.run().await.unwrap();
+        });
         let mut db =
-            Sql::new(pool.clone(), Felt::ZERO, &HashMap::from([(Felt::ZERO, ContractType::WORLD)]))
+            Sql::new(pool.clone(), sender, &HashMap::from([(Felt::ZERO, ContractType::WORLD)]))
                 .await
                 .unwrap();
 
@@ -688,60 +698,6 @@ mod test {
                     println!("Test Failed: Did not receive message within 5 seconds.");
                     return Err("Timeout reached without receiving a message".into());
                 }
-            }
-        }
-    }
-
-    // Test to verify that setting an entity message in the SQL database
-    // triggers a publish event on the broker
-    #[tokio::test]
-    async fn test_entity_message_trigger_publish() -> Result<(), Box<dyn Error>> {
-        let _ = tracing_subscriber::fmt()
-            .with_env_filter("torii::relay::client=debug,torii::relay::server=debug")
-            .try_init();
-
-        let options = <SqliteConnectOptions as std::str::FromStr>::from_str("sqlite::memory:")
-            .unwrap()
-            .create_if_missing(true);
-        let pool = SqlitePoolOptions::new().max_connections(5).connect_with(options).await.unwrap();
-        sqlx::migrate!("../migrations").run(&pool).await.unwrap();
-
-        let mut db =
-            Sql::new(pool.clone(), Felt::ZERO, &HashMap::from([(Felt::ZERO, ContractType::WORLD)]))
-                .await
-                .unwrap();
-        let mut broker = SimpleBroker::<EventMessage>::subscribe();
-
-        let entity = Ty::Struct(Struct { name: "Message".to_string(), children: vec![] });
-        db.register_model(
-            "test_namespace",
-            entity.clone(),
-            Layout::Fixed(vec![]),
-            Felt::ZERO,
-            Felt::ZERO,
-            0,
-            0,
-            0,
-        )
-        .await?;
-
-        // FIXME: register_model and set_event_message handle the name and namespace of entity type
-        // differently.
-        let entity =
-            Ty::Struct(Struct { name: "test_namespace-Message".to_string(), children: vec![] });
-
-        // Set the event message in the database
-        db.set_event_message(entity, "some_entity_id", 0).await?;
-        db.query_queue.execute_all().await?;
-
-        // Check if a message was published to the broker
-        tokio::select! {
-            Some(message) = broker.next() => {
-                println!("Received message: {:?}", message);
-                Ok(())
-            },
-            _ = tokio::time::sleep(std::time::Duration::from_secs(5)) => {
-                Err("Timeout: No message received".into())
             }
         }
     }

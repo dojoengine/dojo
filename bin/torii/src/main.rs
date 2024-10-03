@@ -30,10 +30,12 @@ use sqlx::SqlitePool;
 use starknet::core::types::Felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
+use tempfile::NamedTempFile;
 use tokio::sync::broadcast;
 use tokio::sync::broadcast::Sender;
 use tokio_stream::StreamExt;
 use torii_core::engine::{Engine, EngineConfig, IndexingFlags, Processors};
+use torii_core::executor::Executor;
 use torii_core::processors::store_transaction::StoreTransactionProcessor;
 use torii_core::simple_broker::SimpleBroker;
 use torii_core::sql::Sql;
@@ -59,7 +61,7 @@ struct Args {
 
     /// Database filepath (ex: indexer.db). If specified file doesn't exist, it will be
     /// created. Defaults to in-memory database
-    #[arg(short, long, default_value = ":memory:")]
+    #[arg(short, long, default_value = "")]
     database: String,
 
     /// Address to serve api endpoints at.
@@ -178,8 +180,12 @@ async fn main() -> anyhow::Result<()> {
     })
     .expect("Error setting Ctrl-C handler");
 
+    let tempfile = NamedTempFile::new()?;
+    let database_path =
+        if args.database.is_empty() { tempfile.path().to_str().unwrap() } else { &args.database };
+
     let mut options =
-        SqliteConnectOptions::from_str(&args.database)?.create_if_missing(true).with_regexp();
+        SqliteConnectOptions::from_str(database_path)?.create_if_missing(true).with_regexp();
 
     // Performance settings
     options = options.auto_vacuum(SqliteAutoVacuum::None);
@@ -203,7 +209,12 @@ async fn main() -> anyhow::Result<()> {
     let contracts =
         config.contracts.iter().map(|contract| (contract.address, contract.r#type)).collect();
 
-    let db = Sql::new(pool.clone(), world_address, &contracts).await?;
+    let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx.clone()).await?;
+    tokio::spawn(async move {
+        executor.run().await.unwrap();
+    });
+
+    let db = Sql::new(pool.clone(), sender.clone(), &contracts).await?;
 
     let processors = Processors {
         transaction: vec![Box::new(StoreTransactionProcessor)],

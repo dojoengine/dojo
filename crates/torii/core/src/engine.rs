@@ -7,7 +7,7 @@ use std::time::Duration;
 use anyhow::Result;
 use bitflags::bitflags;
 use dojo_world::contracts::world::WorldContractReader;
-use futures_util::future::join_all;
+use futures_util::future::{join_all, try_join_all};
 use hashlink::LinkedHashMap;
 use starknet::core::types::{
     BlockId, BlockTag, EmittedEvent, Event, EventFilter, EventsPage, MaybePendingBlockWithReceipts,
@@ -181,6 +181,13 @@ pub struct ParallelizedEvent {
     pub event: Event,
 }
 
+#[derive(Debug)]
+pub struct EngineHead {
+    pub block_number: u64,
+    pub last_pending_block_world_tx: Option<Felt>,
+    pub last_pending_block_tx: Option<Felt>,
+}
+
 #[allow(missing_debug_implementations)]
 pub struct Engine<P: Provider + Send + Sync + std::fmt::Debug + 'static> {
     world: Arc<WorldContractReader<P>>,
@@ -228,7 +235,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         // use the start block provided by user if head is 0
         let (head, _, _) = self.db.head(self.world.address).await?;
         if head == 0 {
-            self.db.set_head(self.world.address, self.config.start_block);
+            self.db.set_head(self.world.address, self.config.start_block)?;
         } else if self.config.start_block != 0 {
             warn!(target: LOG_TARGET, "Start block ignored, stored head exists and will be used instead.");
         }
@@ -256,7 +263,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                             }
 
                             match self.process(fetch_result).await {
-                                Ok(()) => {}
+                                Ok(_) => self.db.execute().await?,
                                 Err(e) => {
                                     error!(target: LOG_TARGET, error = %e, "Processing fetched data.");
                                     erroring_out = true;
@@ -447,14 +454,10 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
 
     pub async fn process(&mut self, fetch_result: FetchDataResult) -> Result<()> {
         match fetch_result {
-            FetchDataResult::Range(data) => {
-                self.process_range(data).await?;
-            }
-            FetchDataResult::Pending(data) => {
-                self.process_pending(data).await?;
-            }
+            FetchDataResult::Range(data) => self.process_range(data).await?,
+            FetchDataResult::Pending(data) => self.process_pending(data).await?,
             FetchDataResult::None => {}
-        }
+        };
         self.db.apply_cache_diff().await?;
 
         Ok(())
@@ -497,9 +500,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         self.process_tasks().await?;
 
         // Head block number should still be latest block number
-        self.db.update_cursors(data.block_number - 1, last_pending_block_tx, cursor_map);
-
-        self.db.execute().await?;
+        self.db.update_cursors(data.block_number - 1, last_pending_block_tx, cursor_map)?;
 
         Ok(())
     }
@@ -534,18 +535,12 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                 self.process_block(block_number, data.blocks[&block_number]).await?;
                 processed_blocks.insert(block_number);
             }
-
-            if self.db.query_queue.queue.len() >= QUERY_QUEUE_BATCH_SIZE {
-                self.db.execute().await?;
-            }
         }
 
         // Process parallelized events
         self.process_tasks().await?;
 
-        self.db.reset_cursors(data.latest_block_number);
-
-        self.db.execute().await?;
+        self.db.reset_cursors(data.latest_block_number)?;
 
         Ok(())
     }
@@ -555,15 +550,15 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         let semaphore = Arc::new(Semaphore::new(self.config.max_concurrent_tasks));
 
         // Run all tasks concurrently
-        let mut set = JoinSet::new();
+        let mut handles = Vec::new();
         for (task_id, events) in self.tasks.drain() {
             let db = self.db.clone();
             let world = self.world.clone();
             let semaphore = semaphore.clone();
             let processors = self.processors.clone();
 
-            set.spawn(async move {
-                let _permit = semaphore.acquire().await.unwrap();
+            handles.push(tokio::spawn(async move {
+                let _permit = semaphore.acquire().await?;
                 let mut local_db = db.clone();
                 for (contract_type, ParallelizedEvent { event_id, event, block_number, block_timestamp }) in events {
                     let contract_processors = processors.get_event_processor(contract_type);
@@ -581,15 +576,13 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                         }
                     }
                 }
-                Ok::<_, anyhow::Error>(local_db)
-            });
+
+                Ok::<_, anyhow::Error>(())
+            }));
         }
 
         // Join all tasks
-        while let Some(result) = set.join_next().await {
-            let local_db = result??;
-            self.db.merge(local_db)?;
-        }
+        try_join_all(handles).await?;
 
         Ok(())
     }
@@ -742,7 +735,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         if self.config.flags.contains(IndexingFlags::RAW_EVENTS) {
             match contract_type {
                 ContractType::WORLD => {
-                    self.db.store_event(event_id, event, transaction_hash, block_timestamp);
+                    self.db.store_event(event_id, event, transaction_hash, block_timestamp)?;
                 }
                 // ERC events needs to be processed inside there respective processor
                 // we store transfer events for ERC contracts regardless of this flag

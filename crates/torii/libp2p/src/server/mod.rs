@@ -25,6 +25,7 @@ use starknet::core::types::{BlockId, BlockTag, Felt, FunctionCall};
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
 use starknet_crypto::poseidon_hash_many;
+use torii_core::executor::QueryMessage;
 use torii_core::sql::utils::felts_to_sql_string;
 use torii_core::sql::Sql;
 use tracing::{info, warn};
@@ -530,7 +531,7 @@ async fn set_entity(
     keys: &str,
 ) -> anyhow::Result<()> {
     db.set_entity(ty, message_id, block_timestamp, entity_id, model_id, Some(keys)).await?;
-    db.execute().await?;
+    db.executor.send(QueryMessage::execute())?;
     Ok(())
 }
 
