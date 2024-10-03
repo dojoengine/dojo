@@ -4,10 +4,16 @@ use jsonrpsee::core::{async_trait, Error};
 use katana_core::backend::Backend;
 use katana_core::service::block_producer::{BlockProducer, BlockProducerMode, PendingExecutor};
 use katana_executor::ExecutorFactory;
-use katana_primitives::Felt;
+use katana_primitives::genesis::constant::DEFAULT_FEE_TOKEN_ADDRESS;
+use katana_primitives::{address, ContractAddress, Felt};
 use katana_rpc_api::dev::DevApiServer;
 use katana_rpc_types::account::Account;
 use katana_rpc_types::error::dev::DevApiError;
+use starknet::core::types::{BlockId, BlockTag, FunctionCall};
+use starknet::macros::selector;
+use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::{JsonRpcClient, Provider};
+use url::Url;
 
 #[allow(missing_debug_implementations)]
 pub struct DevApi<EF: ExecutorFactory> {
@@ -54,7 +60,6 @@ impl<EF: ExecutorFactory> DevApi<EF> {
 
         let mut block_context_generator = self.backend.block_context_generator.write();
         block_context_generator.block_timestamp_offset += offset as i64;
-
         Ok(())
     }
 }
@@ -92,11 +97,31 @@ impl<EF: ExecutorFactory> DevApiServer for DevApi<EF> {
         Ok(())
     }
 
-    async fn account_balance(&self, _contract_address: Felt) -> Result<u64, Error> {
-        Ok(1)
+    #[allow(deprecated)]
+    async fn account_balance(&self, account_address: &str) -> Result<u128, Error> {
+        // let account_address =
+        //     address!("0x6b86e40118f29ebe393a75469b4d926c7a44c2e2681b6d319520b7c1156d114");
+        let account_address = Felt::from_dec_str(&account_address).unwrap();
+        let account_address = ContractAddress::from(account_address);
+        let url = Url::parse("http://localhost:5050").unwrap();
+        let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(url)));
+        let res = provider
+            .call(
+                FunctionCall {
+                    contract_address: DEFAULT_FEE_TOKEN_ADDRESS.into(),
+                    entry_point_selector: selector!("balanceOf"),
+                    calldata: vec![account_address.into()],
+                },
+                BlockId::Tag(BlockTag::Latest),
+            )
+            .await;
+
+        let balance: u128 = res.unwrap()[0].to_string().parse().unwrap();
+
+        Ok(balance)
     }
 
-    async fn fee_token(&self,) -> Result<u64, Error> {
+    async fn fee_token(&self) -> Result<u64, Error> {
         Ok(1)
     }
 
