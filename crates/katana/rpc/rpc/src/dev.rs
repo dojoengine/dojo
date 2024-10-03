@@ -5,7 +5,7 @@ use katana_core::backend::Backend;
 use katana_core::service::block_producer::{BlockProducer, BlockProducerMode, PendingExecutor};
 use katana_executor::ExecutorFactory;
 use katana_primitives::genesis::constant::DEFAULT_FEE_TOKEN_ADDRESS;
-use katana_primitives::{address, ContractAddress, Felt};
+use katana_primitives::{ContractAddress, Felt};
 use katana_rpc_api::dev::DevApiServer;
 use katana_rpc_types::account::Account;
 use katana_rpc_types::error::dev::DevApiError;
@@ -101,7 +101,7 @@ impl<EF: ExecutorFactory> DevApiServer for DevApi<EF> {
     async fn account_balance(&self, account_address: &str) -> Result<u128, Error> {
         // let account_address =
         //     address!("0x6b86e40118f29ebe393a75469b4d926c7a44c2e2681b6d319520b7c1156d114");
-        let account_address = Felt::from_dec_str(&account_address).unwrap();
+        let account_address = Felt::from_dec_str(account_address).unwrap();
         let account_address = ContractAddress::from(account_address);
         let url = Url::parse("http://localhost:5050").unwrap();
         let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(url)));
