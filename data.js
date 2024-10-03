@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1727967858900,
+  "lastUpdate": 1727967888925,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -23263,6 +23263,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 12141365892,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c291c7a36490ee45d1735993b16bb31e62506388",
+          "message": "opt(torii-core): move off queryqueue for executing tx (#2460)\n\n* opt(torii-core): move off queryqueue for executing tx\r\n\r\n* feat: replace queury queue by executor\r\n\r\n* fix: executor\r\n\r\n* refactor: executor logic\r\n\r\n* fix: tests\r\n\r\n* fmt\r\n\r\n* executor inside of tokio select\r\n\r\n* executor graceful exit\r\n\r\n* priv execute\r\n\r\n* contracts insertion shouldnt go through executor\r\n\r\n* clean code\r\n\r\n* exec\r\n\r\n* fix: tests\r\n\r\n* oneshot channel for execution result\r\n\r\n* fmt\r\n\r\n* clone shutdown tx\r\n\r\n* fmt\r\n\r\n* fix: test exec\r\n\r\n* non bloking execute engine\r\n\r\n* executor logs\r\n\r\n* in memory head\r\n\r\n* fmt\r\n\r\n* fix: tests\r\n\r\n* fixx: libp2p\r\n\r\n* fmt\r\n\r\n* try fix libp2p test\r\n\r\n* fix tests\r\n\r\n* fmt\r\n\r\n* use tempfile for tests\r\n\r\n* fix\r\n\r\n* c\r\n\r\n* fix: sql tests\r\n\r\n* clone\r\n\r\n* fmt\r\n\r\n* fmt\r\n\r\n* no temp file\r\n\r\n* tmp file\r\n\r\n* fix: lock issues\r\n\r\n* manuallyt use tmp file\r\n\r\n* fix graphql tests\r\n\r\n* fix: tests\r\n\r\n* clippy\r\n\r\n* fix torii bin\r\n\r\n* engine executions\r\n\r\n* use tmp file for db\r\n\r\n* fix: cursor\r\n\r\n* chore\r\n\r\n* wip\r\n\r\n* cleaning code\r\n\r\n* refactor: handle errors without panic\r\n\r\n* use vec",
+          "timestamp": "2024-10-03T08:47:31-06:00",
+          "tree_id": "3e7bf4307c9d2b7730200f8b0f974863201ea40a",
+          "url": "https://github.com/dojoengine/dojo/commit/c291c7a36490ee45d1735993b16bb31e62506388"
+        },
+        "date": 1727967887693,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 15902093,
+            "range": "± 486285",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3931719,
+            "range": "± 161168",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2485197893,
+            "range": "± 224287037",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3935069,
+            "range": "± 127560",
             "unit": "ns/iter"
           }
         ]
