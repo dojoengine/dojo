@@ -1,37 +1,30 @@
 //! Prover backends.
 //!
 //! The prover is in charge of generating a proof from the cairo execution trace.
-use std::str::FromStr;
 use std::sync::Arc;
 
-use anyhow::bail;
 use async_trait::async_trait;
 
 mod client;
-pub mod extract;
 mod loader;
 pub mod persistent;
 mod program_input;
-pub mod state_diff;
-mod stone_image;
-mod vec252;
-
 use cairo_proof_parser::to_felts;
-use client::http_prove_felts;
 pub use client::HttpProverParams;
-use persistent::BatcherInput;
+use client::{http_prove, sharp_prove};
+use persistent::{BatcherInput, StarknetOsOutput};
 pub use program_input::*;
+use prover_sdk::ProverResult;
 use starknet::accounts::Call;
 use starknet_crypto::Felt;
-pub use stone_image::*;
+
+use crate::error::ProverError;
+// pub use stone_image::*;
 
 /// The prover used to generate the proof.
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ProverIdentifier {
-    #[default]
-    Stone,
-    Sharp,
-    Platinum,
+    HerodotusSharp(String),
     Http(Arc<HttpProverParams>),
 }
 
@@ -39,10 +32,11 @@ pub enum ProverIdentifier {
 pub enum ProveProgram {
     Checker, // Contract specific checker program.
     Batcher, // Simulating snos, contract from dojo-os repository.
+    Echo,    // A mock program repeating the input value.
 }
 
 impl ProverIdentifier {
-    pub async fn prove_checker(&self, calls: Vec<Call>) -> anyhow::Result<String> {
+    pub async fn prove_checker(&self, calls: Vec<Call>) -> Result<ProverResult, ProverError> {
         let len = Felt::from(calls.len() as u64);
         let mut args = calls
             .into_iter()
@@ -56,24 +50,39 @@ impl ProverIdentifier {
 
         match self {
             ProverIdentifier::Http(params) => {
-                http_prove_felts(params.clone(), args, ProveProgram::Checker).await
+                http_prove(params.clone(), args, ProveProgram::Checker).await
             }
-            ProverIdentifier::Stone => todo!(),
-            ProverIdentifier::Sharp => todo!(),
-            ProverIdentifier::Platinum => todo!(),
+            ProverIdentifier::HerodotusSharp(key) => {
+                sharp_prove(args, key.to_string(), ProveProgram::Checker).await
+            }
         }
     }
 
-    pub async fn prove_snos(&self, calls: BatcherInput) -> anyhow::Result<String> {
-        let calldata = to_felts(&calls)?;
+    pub async fn prove_snos(&self, calls: BatcherInput) -> Result<ProverResult, ProverError> {
+        let calldata = to_felts(&calls).map_err(|e| ProverError::SerdeFeltError(e.to_string()))?;
 
         match self {
             ProverIdentifier::Http(params) => {
-                http_prove_felts(params.clone(), calldata, ProveProgram::Batcher).await
+                http_prove(params.clone(), calldata, ProveProgram::Batcher).await
             }
-            ProverIdentifier::Stone => todo!(),
-            ProverIdentifier::Sharp => todo!(),
-            ProverIdentifier::Platinum => todo!(),
+            ProverIdentifier::HerodotusSharp(key) => {
+                sharp_prove(calldata, key.to_string(), ProveProgram::Batcher).await
+            }
+        }
+    }
+
+    pub async fn prove_echo(&self, calls: StarknetOsOutput) -> Result<ProverResult, ProverError> {
+        let calldata = to_felts(&calls).map_err(|e| ProverError::SerdeFeltError(e.to_string()))?;
+
+        dbg!(&calldata);
+
+        match self {
+            ProverIdentifier::Http(params) => {
+                http_prove(params.clone(), calldata, ProveProgram::Echo).await
+            }
+            ProverIdentifier::HerodotusSharp(key) => {
+                sharp_prove(calldata, key.to_string(), ProveProgram::Echo).await
+            }
         }
     }
 }
@@ -81,6 +90,7 @@ impl ProverIdentifier {
 impl ProveProgram {
     pub fn cairo_version(&self) -> Felt {
         match self {
+            ProveProgram::Echo => Felt::ONE,
             ProveProgram::Checker => Felt::ONE,
             ProveProgram::Batcher => Felt::ONE,
         }
@@ -95,17 +105,4 @@ pub trait ProverClient {
     /// Generates the proof from the given trace.
     /// The proven input has to be valid for the proving program.
     async fn prove(&self, input: String) -> anyhow::Result<String>;
-}
-
-impl FromStr for ProverIdentifier {
-    type Err = anyhow::Error;
-
-    fn from_str(prover: &str) -> anyhow::Result<Self> {
-        Ok(match prover {
-            "stone" => ProverIdentifier::Stone,
-            "sharp" => ProverIdentifier::Sharp,
-            "platinum" => ProverIdentifier::Platinum,
-            _ => bail!("Unknown prover: `{}`.", prover),
-        })
-    }
 }
