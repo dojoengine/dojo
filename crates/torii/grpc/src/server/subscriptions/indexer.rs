@@ -82,7 +82,8 @@ impl Service {
         let mut closed_stream = Vec::new();
 
         for (idx, sub) in subs.subscribers.read().await.iter() {
-            if sub.contract_address != update.contract_address {
+            if sub.contract_address != Felt::ZERO && sub.contract_address != update.contract_address
+            {
                 continue;
             }
 
