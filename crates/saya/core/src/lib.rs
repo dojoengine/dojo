@@ -231,26 +231,11 @@ impl Saya {
 
                     let proof = self.prover_identifier.prove_echo(input).await?;
 
-                    // let proof = {
-                    //     let filename = format!("proof_{}.json", block + num_blocks - 1);
-                    //     let mut file =
-                    //         File::open(filename).await.context("Failed to open proof file.")?;
-                    //     let mut content = String::new();
-                    //     tokio::io::AsyncReadExt::read_to_string(&mut file, &mut content)
-                    //         .await
-                    //         .unwrap();
-
-                    //     serde_json::from_str(&content).unwrap()
-                    // };
-
                     if self.config.store_proofs {
                         let filename = format!("proof_{}.json", block + num_blocks - 1);
 
-                        let mut file =
-                            File::create(filename).await.context("Failed to create proof file.")?;
-                        file.write_all(serde_json::to_string(&proof).unwrap().as_bytes())
-                            .await
-                            .context("Failed to write proof.")?;
+                        let mut file = File::create(filename).await?;
+                        file.write_all(serde_json::to_string(&proof)?.as_bytes()).await?;
                     }
                     self.process_proven(proof, vec![], block + num_blocks).await?;
 

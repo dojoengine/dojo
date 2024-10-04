@@ -26,8 +26,12 @@ pub enum Error {
     TransactionRejected(String),
     #[error("{0}")]
     TransactionFailed(String),
-    #[error("{0}")]
+    #[error(transparent)]
     SerdeFeltError(#[from] serde_felt::Error),
+    #[error(transparent)]
+    IoError(#[from] std::io::Error),
+    #[error(transparent)]
+    SerdeJsonError(#[from] serde_json::Error),
 }
 
 pub type SayaResult<T, E = Error> = Result<T, E>;

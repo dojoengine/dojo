@@ -12,9 +12,9 @@ SAYA_SNCAST_ACCOUNT_NAME="dev"
 
 # Probably no need to change these
 
-SAYA_PROVER_URL=http://prover.visoft.dev:3618
+# SAYA_PROVER_URL=http://prover.visoft.dev:3618
 # SAYA_PROVER_URL=http://localhost:3040
-# SAYA_PROVER_URL=https://api.cartridge.gg/prover/
+SAYA_PROVER_URL=https://api.cartridge.gg/prover/
 # SAYA_MANIFEST_PATH=../shard-dungeon/Scarb.toml
 SAYA_MANIFEST_PATH=examples/spawn-and-move/Scarb.toml
 SAYA_FACT_REGISTRY_CLASS_HASH=0x0485857a88cacd0a706452c61cfa613802c638dc4ce09bf3d8b289c70183d293
@@ -35,9 +35,10 @@ SAYA_FACT_REGISTRY=""
 
 
 if [[ -z "${SAYA_FACT_REGISTRY}" ]]; then
-    sncast -a $SAYA_SNCAST_ACCOUNT_NAME -u $SAYA_SEPOLIA_ENDPOINT deploy \
+    sncast -a $SAYA_SNCAST_ACCOUNT_NAME deploy \
         --class-hash $SAYA_FACT_REGISTRY_CLASS_HASH \
-        --fee-token eth
+        --fee-token eth \
+        -u $SAYA_SEPOLIA_ENDPOINT
     echo "Set SAYA_FACT_REGISTRY to the address of the deployed contract."
     exit 0
 fi
@@ -113,19 +114,28 @@ if [[ -z "${SAYA_FORK_BLOCK_NUMBER}" ]]; then
 fi
 
 if [[ -z "${SAYA_PILTOVER_ADDRESS}" ]]; then
-    sncast -a $SAYA_SNCAST_ACCOUNT_NAME -u $SAYA_SEPOLIA_ENDPOINT deploy \
+    sncast -a $SAYA_SNCAST_ACCOUNT_NAME deploy \
         --class-hash $SAYA_PILTOVER_CLASS_HASH \
-        -c $SAYA_SEPOLIA_ACCOUNT_ADDRESS $SAYA_PILTOVER_STARTING_STATE_ROOT $(expr $SAYA_FORK_BLOCK_NUMBER + 1) 0
+        -c $SAYA_SEPOLIA_ACCOUNT_ADDRESS $SAYA_PILTOVER_STARTING_STATE_ROOT $(expr $SAYA_FORK_BLOCK_NUMBER + 1) 0 \
+        --fee-token eth \
+        -u $SAYA_SEPOLIA_ENDPOINT
+
 
     echo "Set SAYA_PILTOVER_ADDRESS to the address of the deployed contract."
     exit 0
 fi
 
 if [[ -z "${SAYA_PILTOVER_PREPARED}" ]]; then
-    sncast -a $SAYA_SNCAST_ACCOUNT_NAME -u $SAYA_SEPOLIA_ENDPOINT --wait invoke \
-        --contract-address $SAYA_PILTOVER_ADDRESS --function set_program_info -c $SAYA_PROGRAM_HASH $SAYA_CONFIG_HASH
-    sncast -a $SAYA_SNCAST_ACCOUNT_NAME -u $SAYA_SEPOLIA_ENDPOINT --wait invoke \
-        --contract-address $SAYA_PILTOVER_ADDRESS --function set_facts_registry -c $SAYA_FACT_REGISTRY
+    sncast -a $SAYA_SNCAST_ACCOUNT_NAME --wait invoke \
+        --contract-address $SAYA_PILTOVER_ADDRESS --function set_program_info -c $SAYA_PROGRAM_HASH $SAYA_CONFIG_HASH \
+        --fee-token eth \
+        -u $SAYA_SEPOLIA_ENDPOINT
+
+    sncast -a $SAYA_SNCAST_ACCOUNT_NAME --wait invoke \
+        --contract-address $SAYA_PILTOVER_ADDRESS --function set_facts_registry -c $SAYA_FACT_REGISTRY \
+        --fee-token eth \
+        -u $SAYA_SEPOLIA_ENDPOINT
+
 fi
 
 
@@ -170,5 +180,5 @@ cargo run -r --bin saya -- \
     --da-chain celestia \
     --celestia-node-url http://localhost:26658 \
     --celestia-namespace saya-dev \
-    --celestia-node-auth-token eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJwdWJsaWMiLCJyZWFkIiwid3JpdGUiLCJhZG1pbiJdfQ.4HyTFCSqomIB9W1IrJu_O8RiOE6oaqAB1Un6aAs0nPE
+    --celestia-node-auth-token eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJwdWJsaWMiLCJyZWFkIiwid3JpdGUiLCJhZG1pbiJdfQ.kjW6UL2m2XIylCDzG5vwgyW5YA75LyLzXMbnp8Fpe_E
     # --end-block $(expr $SAYA_FORK_BLOCK_NUMBER + 4)
