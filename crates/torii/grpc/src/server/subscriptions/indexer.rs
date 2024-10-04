@@ -1,15 +1,17 @@
 use std::collections::HashMap;
 use std::future::Future;
 use std::pin::Pin;
+use std::str::FromStr;
 use std::sync::Arc;
 use std::task::{Context, Poll};
 
 use futures::{Stream, StreamExt};
 use rand::Rng;
+use sqlx::{FromRow, Pool, Sqlite};
 use starknet::core::types::Felt;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tokio::sync::RwLock;
-use torii_core::error::Error;
+use torii_core::error::{Error, ParseError};
 use torii_core::simple_broker::SimpleBroker;
 use torii_core::types::Contract as ContractUpdated;
 use tracing::{error, trace};
@@ -35,6 +37,7 @@ pub struct IndexerManager {
 impl IndexerManager {
     pub async fn add_subscriber(
         &self,
+        pool: &Pool<Sqlite>,
         contract_address: Felt,
     ) -> Result<Receiver<Result<proto::world::SubscribeIndexerResponse, tonic::Status>>, Error>
     {
@@ -44,11 +47,19 @@ impl IndexerManager {
         // NOTE: unlock issue with firefox/safari
         // initially send empty stream message to return from
         // initial subscribe call
+        let contract = sqlx::query(
+            "SELECT head, tps, last_block_timestamp, contract_address FROM contracts WHERE id = ?",
+        )
+        .bind(format!("{:#x}", contract_address))
+        .fetch_one(pool)
+        .await?;
+        let contract = ContractUpdated::from_row(&contract)?;
+
         let _ = sender
             .send(Ok(SubscribeIndexerResponse {
-                head: 0,
-                tps: 0,
-                last_block_timestamp: 0,
+                head: contract.head,
+                tps: contract.tps,
+                last_block_timestamp: contract.last_block_timestamp,
                 contract_address: contract_address.to_bytes_be().to_vec(),
             }))
             .await;
@@ -80,10 +91,11 @@ impl Service {
         update: &ContractUpdated,
     ) -> Result<(), Error> {
         let mut closed_stream = Vec::new();
+        let contract_address =
+            Felt::from_str(&update.contract_address).map_err(ParseError::FromStr)?;
 
         for (idx, sub) in subs.subscribers.read().await.iter() {
-            if sub.contract_address != Felt::ZERO && sub.contract_address != update.contract_address
-            {
+            if sub.contract_address != Felt::ZERO && sub.contract_address != contract_address {
                 continue;
             }
 
@@ -91,7 +103,7 @@ impl Service {
                 head: update.head,
                 tps: update.tps,
                 last_block_timestamp: update.last_block_timestamp,
-                contract_address: update.contract_address.to_bytes_be().to_vec(),
+                contract_address: contract_address.to_bytes_be().to_vec(),
             };
 
             if sub.sender.send(Ok(resp)).await.is_err() {

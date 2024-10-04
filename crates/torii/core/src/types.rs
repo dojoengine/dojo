@@ -88,8 +88,8 @@ pub struct Event {
 #[derive(FromRow, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Contract {
-    pub head: u64,
-    pub tps: u64,
-    pub last_block_timestamp: u64,
-    pub contract_address: Felt,
+    pub head: i64,
+    pub tps: i64,
+    pub last_block_timestamp: i64,
+    pub contract_address: String,
 }

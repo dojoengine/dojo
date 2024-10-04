@@ -208,18 +208,14 @@ impl<'c> Executor<'c> {
                     format!("Failed to execute query: {:?}, args: {:?}", statement, arguments)
                 })?;
 
-                sqlx::query("UPDATE contracts SET tps = ? WHERE id = ?")
+                let row = sqlx::query("UPDATE contracts SET tps = ? WHERE id = ? RETURNING *")
                     .bind(tps as i64)
                     .bind(format!("{:#x}", set_head.contract_address))
-                    .execute(&mut **tx)
+                    .fetch_one(&mut **tx)
                     .await?;
 
-                self.publish_queue.push(BrokerMessage::SetHead(ContractUpdated {
-                    head: set_head.head,
-                    tps,
-                    last_block_timestamp: set_head.last_block_timestamp,
-                    contract_address: set_head.contract_address,
-                }));
+                let contract = ContractUpdated::from_row(&row)?;
+                self.publish_queue.push(BrokerMessage::SetHead(contract));
             }
             QueryType::SetEntity(entity) => {
                 let row = query.fetch_one(&mut **tx).await.with_context(|| {

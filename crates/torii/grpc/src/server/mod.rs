@@ -696,7 +696,7 @@ impl DojoWorld {
         contract_address: Felt,
     ) -> Result<Receiver<Result<proto::world::SubscribeIndexerResponse, tonic::Status>>, Error>
     {
-        self.indexer_manager.add_subscriber(contract_address).await
+        self.indexer_manager.add_subscriber(&self.pool, contract_address).await
     }
 
     async fn subscribe_models(

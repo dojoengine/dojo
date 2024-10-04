@@ -18,9 +18,9 @@ pub mod schema;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct IndexerUpdate {
-    pub head: u64,
-    pub tps: u64,
-    pub last_block_timestamp: u64,
+    pub head: i64,
+    pub tps: i64,
+    pub last_block_timestamp: i64,
     pub contract_address: Felt,
 }
 

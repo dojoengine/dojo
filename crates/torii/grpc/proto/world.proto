@@ -48,9 +48,9 @@ message SubscribeIndexerRequest {
 
 // A response containing indexer updates.
 message SubscribeIndexerResponse {
-    uint64 head = 1;
-    uint64 tps = 2;
-    uint64 last_block_timestamp = 3;
+    int64 head = 1;
+    int64 tps = 2;
+    int64 last_block_timestamp = 3;
     bytes contract_address = 4;
 }
 
