@@ -12,15 +12,16 @@ SAYA_SNCAST_ACCOUNT_NAME="dev"
 
 # Probably no need to change these
 
-# SAYA_PROVER_URL=http://prover.visoft.dev:3618
-SAYA_PROVER_URL=http://localhost:3618
+SAYA_PROVER_URL=http://prover.visoft.dev:3618
+# SAYA_PROVER_URL=http://localhost:3040
+# SAYA_PROVER_URL=https://api.cartridge.gg/prover/
 # SAYA_MANIFEST_PATH=../shard-dungeon/Scarb.toml
 SAYA_MANIFEST_PATH=examples/spawn-and-move/Scarb.toml
-SAYA_FACT_REGISTRY=0x2b2317f53704404f653468e2da15bdb9a26fd7782abbfa3e0efe4008bb03626
-SAYA_PILTOVER_CLASS_HASH=0x01dbe90a725edbf5e03dcb1f116250ba221d3231680a92894d9cc8069f209bd6
+SAYA_FACT_REGISTRY_CLASS_HASH=0x0485857a88cacd0a706452c61cfa613802c638dc4ce09bf3d8b289c70183d293
+SAYA_PILTOVER_CLASS_HASH=0x257ff6ae9b025da27883ff40982e7754fc811910f3357dae425864a62c1bfcd
 SAYA_PILTOVER_STARTING_STATE_ROOT=0
 SAYA_CONFIG_HASH=42
-SAYA_PROGRAM_HASH=0x1d55211dd0a3d906104984e010fe31d3eb50f20ec6db04b5b4b733db3b3907
+SAYA_PROGRAM_HASH=0x20c7f4084638a125956aa6be31f5e7075507f339b1743c3002c8301832c7ef7 #need to be reupdated
 
 # Set after runnig the script
 
@@ -29,9 +30,17 @@ SAYA_WORLD_PREPARED="" # Set to anything after preparing the world successfully 
 SAYA_FORK_BLOCK_NUMBER=
 SAYA_SKIP_MAKING_TRANSACTIONS="" # Set to anything to skip making transactions
 SAYA_PILTOVER_ADDRESS=""
-SAYA_PILTOVER_PREPARED=""
+SAYA_PILTOVER_PREPARED=
+SAYA_FACT_REGISTRY=""
 
 
+if [[ -z "${SAYA_FACT_REGISTRY}" ]]; then
+    sncast -a $SAYA_SNCAST_ACCOUNT_NAME -u $SAYA_SEPOLIA_ENDPOINT deploy \
+        --class-hash $SAYA_FACT_REGISTRY_CLASS_HASH \
+        --fee-token eth
+    echo "Set SAYA_FACT_REGISTRY to the address of the deployed contract."
+    exit 0
+fi
 if [[ -z "${SAYA_WORLD_ADDRESS}" ]]; then
   echo "World address not set: DEPLOYING WORLD"
 
@@ -157,6 +166,9 @@ cargo run -r --bin saya -- \
     --signer-address $SAYA_SEPOLIA_ACCOUNT_ADDRESS \
     --private-key $SAYA_PROVER_KEY \
     --batch-size 1 \
-    --start-block $(expr $SAYA_FORK_BLOCK_NUMBER + 1)
-
+    --start-block $(expr $SAYA_FORK_BLOCK_NUMBER + 1) \
+    --da-chain celestia \
+    --celestia-node-url http://localhost:26658 \
+    --celestia-namespace saya-dev \
+    --celestia-node-auth-token eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJwdWJsaWMiLCJyZWFkIiwid3JpdGUiLCJhZG1pbiJdfQ.4HyTFCSqomIB9W1IrJu_O8RiOE6oaqAB1Un6aAs0nPE
     # --end-block $(expr $SAYA_FORK_BLOCK_NUMBER + 4)

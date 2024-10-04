@@ -2,12 +2,12 @@
 
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
 
+use std::collections::HashMap;
 use std::ops::RangeInclusive;
 use std::sync::Arc;
 
 use anyhow::Context;
-use cairo_proof_parser::output::ExtractOutputResult;
-use cairo_proof_parser::{from_felts, StarkProof};
+use cairo_proof_parser::from_felts;
 use dojo_os::piltover::{starknet_apply_piltover, PiltoverCalldata};
 use futures::future;
 use itertools::Itertools;
@@ -15,9 +15,10 @@ use katana_primitives::block::{BlockNumber, FinalityStatus, SealedBlock, SealedB
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
 use katana_primitives::transaction::Tx;
 use katana_rpc_types::trace::TxExecutionInfo;
-use prover::persistent::{BatcherCall, BatcherInput, BatcherOutput};
+use prover::persistent::{BatcherCall, BatcherInput, StarknetOsOutput};
 use prover::{extract_execute_calls, HttpProverParams, ProveProgram, ProverIdentifier};
 pub use prover_sdk::access_key::ProverAccessKey;
+use prover_sdk::ProverResult;
 use saya_provider::rpc::JsonRpcProvider;
 use saya_provider::Provider as SayaProvider;
 use serde::{Deserialize, Serialize};
@@ -43,6 +44,7 @@ pub mod blockchain;
 pub mod data_availability;
 pub mod dojo_os;
 pub mod error;
+pub mod macros;
 pub mod prover;
 pub mod verifier;
 
@@ -51,9 +53,7 @@ pub(crate) const LOG_TARGET: &str = "saya::core";
 /// Saya's main configuration.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SayaConfig {
-    #[serde(deserialize_with = "url_deserializer")]
     pub katana_rpc: Url,
-    #[serde(deserialize_with = "url_deserializer")]
     pub prover_url: Url,
     pub prover_key: ProverAccessKey,
     pub mode: SayaMode,
@@ -69,14 +69,6 @@ pub struct SayaConfig {
 }
 
 type SayaStarknetAccount = SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>;
-
-pub fn url_deserializer<'de, D>(deserializer: D) -> Result<Url, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    let s = String::deserialize(deserializer)?;
-    Url::parse(&s).map_err(serde::de::Error::custom)
-}
 
 pub fn felt_string_deserializer<'de, D>(deserializer: D) -> Result<Felt, D::Error>
 where
@@ -206,7 +198,7 @@ impl Saya {
                         })
                         .collect::<Vec<_>>();
 
-                    let input = BatcherInput {
+                    let _input = BatcherInput {
                         calls,
                         block_number: Felt::from(block),
                         prev_state_root: mock_state_hash,
@@ -215,19 +207,40 @@ impl Saya {
 
                     mock_state_hash += Felt::ONE;
 
-                    // We might want to prove the signatures as well.
-                    let proof = self.prover_identifier.prove_snos(input).await?;
+                    info!(target: LOG_TARGET, "Proving {} blocks.", num_blocks);
 
-                    // TODO: Add an argument to cache proofs for debugging.
+                    // We might want to prove the signatures as well.
+                    // let proof = self.prover_identifier.prove_snos(input).await?;
+
+                    let input = StarknetOsOutput {
+                        initial_root: mock_state_hash,
+                        final_root: mock_state_hash + Felt::ONE,
+                        prev_block_number: Felt::from(block),
+                        new_block_number: Felt::from(block) + Felt::ONE,
+                        prev_block_hash: Felt::from(1u64),
+                        new_block_hash: Felt::from(2u64),
+                        os_program_hash: Felt::from(3u64),
+                        starknet_os_config_hash: Felt::from(4u64),
+                        use_kzg_da: Felt::from(5u64),
+                        full_output: Felt::from(6u64),
+                        messages_to_l1: vec![],
+                        messages_to_l2: vec![],
+                        contracts: vec![],
+                        classes: HashMap::new(),
+                    };
+
+                    let proof = self.prover_identifier.prove_echo(input).await?;
+
                     // let proof = {
                     //     let filename = format!("proof_{}.json", block + num_blocks - 1);
                     //     let mut file =
-                    //         File::open(filename).await.context("Failed to create proof file.")?;
+                    //         File::open(filename).await.context("Failed to open proof file.")?;
                     //     let mut content = String::new();
                     //     tokio::io::AsyncReadExt::read_to_string(&mut file, &mut content)
                     //         .await
                     //         .unwrap();
-                    //     content
+
+                    //     serde_json::from_str(&content).unwrap()
                     // };
 
                     if self.config.store_proofs {
@@ -235,10 +248,10 @@ impl Saya {
 
                         let mut file =
                             File::create(filename).await.context("Failed to create proof file.")?;
-                        file.write_all(proof.as_bytes()).await.context("Failed to write proof.")?;
+                        file.write_all(serde_json::to_string(&proof).unwrap().as_bytes())
+                            .await
+                            .context("Failed to write proof.")?;
                     }
-
-                    let proof = StarkProof::try_from(proof.as_str())?;
                     self.process_proven(proof, vec![], block + num_blocks).await?;
 
                     block += num_blocks;
@@ -264,15 +277,16 @@ impl Saya {
                         let filename = format!("proof_{}.json", block + num_blocks - 1);
                         let mut file =
                             File::create(filename).await.context("Failed to create proof file.")?;
-                        file.write_all(proof.as_bytes()).await.context("Failed to write proof.")?;
+                        file.write_all(proof.proof.as_bytes())
+                            .await
+                            .context("Failed to write proof.")?;
                     }
 
                     let block_range =
                         (self.config.block_range.0, self.config.block_range.1.unwrap());
 
-                    let proof = StarkProof::try_from(proof.as_str())?;
-                    let diff = proof.extract_output()?.program_output;
-                    self.process_proven(proof, diff, block_range.1).await?;
+                    let diff = proof.clone().program_output;
+                    self.process_proven(proof.clone(), diff, block_range.1).await?;
 
                     info!(target: LOG_TARGET, "Successfully processed all {} blocks.", block_range.1 - block_range.0 + 1);
                     break;
@@ -429,31 +443,33 @@ impl Saya {
     /// * `last_block` - The last block number in the `prove_scheduler`.
     async fn process_proven(
         &self,
-        proof: StarkProof,
+        proof: ProverResult,
         state_diff: Vec<Felt>,
         last_block: u64,
     ) -> SayaResult<()> {
         trace!(target: LOG_TARGET, last_block, "Processing proven blocks.");
-
-        let serialized_proof = proof.to_felts();
-
+        let serialized_proof = proof.serialized_proof;
         // Publish state difference if DA client is available.
         if let Some(da) = &self.da_client {
             trace!(target: LOG_TARGET, last_block, "Publishing DA.");
 
             if self.config.mode != SayaMode::Ephemeral {
-                todo!("DA publishing is not supported for non-ephemeral modes yet.");
-            }
-
-            if self.config.skip_publishing_proof {
+                da.publish_proof_json(&proof.proof).await?;
+            } else if self.config.skip_publishing_proof {
                 da.publish_state_diff_felts(&state_diff).await?;
             } else {
                 da.publish_state_diff_and_proof_felts(&state_diff, &serialized_proof).await?;
             }
         }
 
-        let program_hash = proof.extract_program()?.program_hash;
-        let ExtractOutputResult { program_output, program_output_hash } = proof.extract_output()?;
+        let program_hash = proof.program_hash;
+        let program_output_hash = proof.program_output_hash;
+        let program_output = proof.program_output;
+
+        let program_hash_string = program_hash.to_string();
+        let program_output_hash_string = program_output_hash.to_string();
+
+        info!(target: LOG_TARGET, program_hash_string,program_output_hash_string, "Extracted program hash and output hash.");
         let expected_fact = poseidon_hash_many(&[program_hash, program_output_hash]).to_string();
         let program = program_hash.to_string();
         info!(target: LOG_TARGET, expected_fact, program, "Expected fact.");
@@ -462,7 +478,7 @@ impl Saya {
 
         // Verify the proof and register fact.
         trace!(target: LOG_TARGET, last_block, "Verifying block.");
-        let (transaction_hash, nonce) = verifier::verify(
+        let (transaction_hash, _nonce) = verifier::verify(
             VerifierIdentifier::HerodotusStarknetSepolia(self.config.fact_registry_address),
             serialized_proof,
             &starknet_account,
@@ -479,29 +495,31 @@ impl Saya {
             }
             SayaMode::Persistent => {
                 let serialized_output = program_output.iter().copied().collect_vec();
-                let batcher_output = from_felts::<BatcherOutput>(&serialized_output)
-                    .context("Failed to parse program output.")?;
+                println!("serialized_output: {:?}", serialized_output);
 
+                // todo!("Persistent mode does not support publishing updated state with SNOS yet.");
+
+                let batcher_output = from_felts::<StarknetOsOutput>(&serialized_output).unwrap();
                 let piltover_calldata = PiltoverCalldata {
                     program_output: serialized_output,
-                    onchain_data_hash: batcher_output.new_state_root,
+                    // onchain_data_hash: batcher_output.new_state_root,
+                    onchain_data_hash: batcher_output.new_block_hash,
                     onchain_data_size: (Felt::ZERO, Felt::ZERO),
                 };
 
-                let expected_state_root = batcher_output.prev_state_root.to_string();
-                let expected_block_number = (batcher_output.block_number - Felt::ONE).to_string();
+                let expected_state_root = batcher_output.new_block_hash.to_string();
+                let expected_block_number =
+                    (batcher_output.new_block_number - Felt::ONE).to_string();
                 info!(target: LOG_TARGET, last_block, expected_state_root, expected_block_number, "Applying snos to piltover.");
 
                 starknet_apply_piltover(
                     piltover_calldata,
                     self.config.settlement_contract,
                     &starknet_account,
-                    nonce,
                 )
                 .await?;
             }
         }
-
         Ok(())
     }
 }
@@ -529,7 +547,6 @@ impl SayaMode {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct StarknetAccountData {
-    #[serde(deserialize_with = "url_deserializer")]
     pub starknet_url: Url,
     #[serde(deserialize_with = "felt_string_deserializer")]
     pub chain_id: Felt,

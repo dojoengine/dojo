@@ -112,7 +112,7 @@ saya-provider = { path = "crates/saya/provider" }
 sozo-ops = { path = "crates/sozo/ops" }
 sozo-signers = { path = "crates/sozo/signers" }
 
-anyhow = "1.0.80"
+anyhow = "1.0.89"
 assert_fs = "1.1"
 assert_matches = "1.5.0"
 async-trait = "0.1.77"
@@ -142,11 +142,10 @@ cairo-lang-test-plugin = "2.7.0"
 cairo-lang-test-runner = "2.7.0"
 cairo-lang-test-utils = "2.7.0"
 cairo-lang-utils = "2.7.0"
-cairo-proof-parser = { git = "https://github.com/cartridge-gg/cairo-proof-parser", rev = "dd9274e5c48f60282a8d001014d2c807574a3dc5" }
 cairo-vm = "1.0.0-rc4"
 camino = { version = "1.1.2", features = [ "serde1" ] }
 chrono = { version = "0.4.24", features = [ "serde" ] }
-clap = { version = "4.5.4", features = [ "derive", "env" ] }
+clap = { version = "4.5.16", features = [ "derive", "env" ] }
 clap-verbosity-flag = "2.0.1"
 clap_complete = "4.3"
 console = "0.15.7"
