@@ -86,11 +86,10 @@ impl Sql {
         ))
     }
 
-    pub async fn set_head(
-        &mut self,
-        head: u64,
-    ) -> Result<()> {
-        let head = Argument::Int(head.try_into().map_err(|_| anyhow!("Head value {} doesn't fit in u64", head))?);
+    pub async fn set_head(&mut self, head: u64) -> Result<()> {
+        let head = Argument::Int(
+            head.try_into().map_err(|_| anyhow!("Head value {} doesn't fit in u64", head))?,
+        );
         let id = Argument::FieldElement(self.world_address);
 
         self.executor.send(QueryMessage::other(
@@ -120,8 +119,13 @@ impl Sql {
             txns_count
         };
 
-        let tps = Argument::Int(tps.try_into().map_err(|_| anyhow!("Tps value {} doesn't fit in u64", tps))?);
-        let last_block_timestamp = Argument::Int(last_block_timestamp.try_into().map_err(|_| anyhow!("Last block timestamp value {} doesn't fit in u64", last_block_timestamp))?);
+        let tps = Argument::Int(
+            tps.try_into().map_err(|_| anyhow!("Tps value {} doesn't fit in u64", tps))?,
+        );
+        let last_block_timestamp =
+            Argument::Int(last_block_timestamp.try_into().map_err(|_| {
+                anyhow!("Last block timestamp value {} doesn't fit in u64", last_block_timestamp)
+            })?);
 
         self.executor.send(QueryMessage::other(
             "UPDATE contracts SET tps = ?, last_block_timestamp = ? WHERE id = ?".to_string(),
@@ -740,11 +744,7 @@ impl Sql {
             Ty::Enum(e) => {
                 if e.options.iter().all(
                     |o| {
-                        if let Ty::Tuple(t) = &o.ty {
-                            t.is_empty()
-                        } else {
-                            false
-                        }
+                        if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false }
                     },
                 ) {
                     return Ok(());
