@@ -89,10 +89,19 @@ impl Sql {
     pub async fn set_head(
         &mut self,
         head: u64,
-        last_block_timestamp: u64,
-        txns_count: u64,
     ) -> Result<()> {
         let head = Argument::Int(head.try_into().map_err(|_| anyhow!("Head value {} doesn't fit in u64", head))?);
+        let id = Argument::FieldElement(self.world_address);
+
+        self.executor.send(QueryMessage::other(
+            "UPDATE contracts SET head = ? WHERE id = ?".to_string(),
+            vec![head, id],
+        ))?;
+
+        Ok(())
+    }
+
+    pub async fn set_tps(&mut self, txns_count: u64, last_block_timestamp: u64) -> Result<()> {
         let id = Argument::FieldElement(self.world_address);
 
         let mut conn = self.pool.acquire().await?;
@@ -108,16 +117,15 @@ impl Sql {
         let tps: u64 = if last_block_timestamp - previous_block_timestamp != 0 {
             txns_count / (last_block_timestamp - previous_block_timestamp)
         } else {
-            0
+            txns_count
         };
-        let tps = Argument::Int(tps.try_into().map_err(|_| anyhow!("Tps value {} doesn't fit in u64", tps))?);
 
-        let last_block_timestamp =
-            Argument::Int(last_block_timestamp.try_into().map_err(|_| anyhow!("Last block timestamp value {} doesn't fit in u64", last_block_timestamp))?);
+        let tps = Argument::Int(tps.try_into().map_err(|_| anyhow!("Tps value {} doesn't fit in u64", tps))?);
+        let last_block_timestamp = Argument::Int(last_block_timestamp.try_into().map_err(|_| anyhow!("Last block timestamp value {} doesn't fit in u64", last_block_timestamp))?);
 
         self.executor.send(QueryMessage::other(
-            "UPDATE contracts SET head = ?, tps = ?, last_block_timestamp = ? WHERE id = ?".to_string(),
-            vec![head, tps, last_block_timestamp, id],
+            "UPDATE contracts SET tps = ?, last_block_timestamp = ? WHERE id = ?".to_string(),
+            vec![tps, last_block_timestamp, id],
         ))?;
 
         Ok(())

@@ -158,7 +158,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         // use the start block provided by user if head is 0
         let (head, _, _) = self.db.head().await?;
         if head == 0 {
-            self.db.set_head(self.config.start_block, 0, 0).await?;
+            self.db.set_head(self.config.start_block).await?;
         } else if self.config.start_block != 0 {
             warn!(target: LOG_TARGET, "Start block ignored, stored head exists and will be used instead.");
         }
@@ -410,7 +410,8 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                             // provider. So we can fail silently and try
                             // again in the next iteration.
                             warn!(target: LOG_TARGET, transaction_hash = %format!("{:#x}", transaction_hash), "Retrieving pending transaction receipt.");
-                            self.db.set_head(data.block_number - 1, timestamp, world_txns_count).await?;
+                            self.db.set_head(data.block_number - 1).await?;
+                            self.db.set_tps(world_txns_count, timestamp).await?;
                             if let Some(tx) = last_pending_block_tx {
                                 self.db.set_last_pending_block_tx(Some(tx))?;
                             }
@@ -448,7 +449,8 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
 
         // Set the head to the last processed pending transaction
         // Head block number should still be latest block number
-        self.db.set_head(data.block_number - 1, timestamp, world_txns_count).await?;
+        self.db.set_head(data.block_number - 1).await?;
+        self.db.set_tps(world_txns_count, timestamp).await?;
 
         if let Some(tx) = last_pending_block_tx {
             self.db.set_last_pending_block_tx(Some(tx))?;
@@ -502,9 +504,10 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         self.process_tasks().await?;
 
         let last_block_timestamp = self.get_block_timestamp(data.latest_block_number).await?;
-        self.db.set_head(data.latest_block_number, last_block_timestamp, transactions_count as u64).await?;
-        self.db.set_last_pending_block_world_tx(None);
-        self.db.set_last_pending_block_tx(None);
+        self.db.set_head(data.latest_block_number).await?;
+        self.db.set_tps(transactions_count as u64, last_block_timestamp).await?;
+        self.db.set_last_pending_block_world_tx(None)?;
+        self.db.set_last_pending_block_tx(None)?;
 
         Ok(EngineHead {
             block_number: data.latest_block_number,
