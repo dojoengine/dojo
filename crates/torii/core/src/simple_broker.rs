@@ -1,5 +1,5 @@
 use std::any::{Any, TypeId};
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::marker::PhantomData;
 use std::pin::Pin;
 use std::sync::Mutex;
@@ -13,7 +13,10 @@ use slab::Slab;
 static SUBSCRIBERS: Lazy<Mutex<HashMap<TypeId, Box<dyn Any + Send>>>> = Lazy::new(Default::default);
 
 #[derive(Debug)]
-pub struct Senders<T>(pub Slab<UnboundedSender<T>>);
+pub struct Senders<T> {
+    pub slab: Slab<UnboundedSender<T>>,
+    pub message_queue: VecDeque<T>,
+}
 
 struct BrokerStream<T: Sync + Send + Clone + 'static>(usize, UnboundedReceiver<T>);
 
@@ -25,13 +28,16 @@ where
     let mut map = SUBSCRIBERS.lock().unwrap();
     let senders = map
         .entry(TypeId::of::<Senders<T>>())
-        .or_insert_with(|| Box::new(Senders::<T>(Default::default())));
+        .or_insert_with(|| Box::new(Senders::<T> {
+            slab: Default::default(),
+            message_queue: VecDeque::new(),
+        }));
     f(senders.downcast_mut::<Senders<T>>().unwrap())
 }
 
 impl<T: Sync + Send + Clone + 'static> Drop for BrokerStream<T> {
     fn drop(&mut self) {
-        with_senders::<T, _, _>(|senders| senders.0.remove(self.0));
+        with_senders::<T, _, _>(|senders| senders.slab.remove(self.0));
     }
 }
 
@@ -51,17 +57,30 @@ impl<T: Sync + Send + Clone + 'static> SimpleBroker<T> {
     /// Publish a message that all subscription streams can receive.
     pub fn publish(msg: T) {
         with_senders::<T, _, _>(|senders| {
-            for (_, sender) in senders.0.iter_mut() {
-                sender.start_send(msg.clone()).ok();
-            }
+            senders.message_queue.push_back(msg.clone());
+            Self::send_messages(senders);
         });
+    }
+
+    fn send_messages(senders: &mut Senders<T>) {
+        while let Some(msg) = senders.message_queue.pop_front() {
+            let mut failed_senders = Vec::new();
+            for (id, sender) in senders.slab.iter_mut() {
+                if sender.start_send(msg.clone()).is_err() {
+                    failed_senders.push(id);
+                }
+            }
+            for id in failed_senders {
+                senders.slab.remove(id);
+            }
+        }
     }
 
     /// Subscribe to the message of the specified type and returns a `Stream`.
     pub fn subscribe() -> impl Stream<Item = T> {
         with_senders::<T, _, _>(|senders| {
             let (tx, rx) = mpsc::unbounded();
-            let id = senders.0.insert(tx);
+            let id = senders.slab.insert(tx);
             BrokerStream(id, rx)
         })
     }
