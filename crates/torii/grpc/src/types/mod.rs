@@ -26,7 +26,12 @@ pub struct IndexerUpdate {
 
 impl From<proto::world::SubscribeIndexerResponse> for IndexerUpdate {
     fn from(value: proto::world::SubscribeIndexerResponse) -> Self {
-        Self { head: value.head, tps: value.tps, last_block_timestamp: value.last_block_timestamp, contract_address: Felt::from_bytes_be_slice(&value.contract_address) }
+        Self {
+            head: value.head,
+            tps: value.tps,
+            last_block_timestamp: value.last_block_timestamp,
+            contract_address: Felt::from_bytes_be_slice(&value.contract_address),
+        }
     }
 }
 

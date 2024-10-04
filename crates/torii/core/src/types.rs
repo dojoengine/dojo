@@ -85,7 +85,6 @@ pub struct Event {
     pub created_at: DateTime<Utc>,
 }
 
-
 #[derive(Debug, Clone)]
 pub struct IndexerUpdate {
     pub head: u64,

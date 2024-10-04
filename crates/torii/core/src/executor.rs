@@ -14,7 +14,8 @@ use tracing::{debug, error};
 
 use crate::simple_broker::SimpleBroker;
 use crate::types::{
-    Entity as EntityUpdated, Event as EventEmitted, EventMessage as EventMessageUpdated, IndexerUpdate, Model as ModelRegistered
+    Entity as EntityUpdated, Event as EventEmitted, EventMessage as EventMessageUpdated,
+    IndexerUpdate, Model as ModelRegistered,
 };
 
 pub(crate) const LOG_TARGET: &str = "torii_core::executor";
