@@ -85,7 +85,7 @@ pub struct Event {
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(FromRow, Deserialize, Debug, Clone)]
+#[derive(FromRow, Deserialize, Debug, Clone, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct Contract {
     pub head: i64,

@@ -7,7 +7,7 @@ use std::task::{Context, Poll};
 
 use futures::{Stream, StreamExt};
 use rand::Rng;
-use sqlx::{FromRow, Pool, Sqlite};
+use sqlx::{Pool, Sqlite};
 use starknet::core::types::Felt;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tokio::sync::RwLock;
@@ -47,23 +47,30 @@ impl IndexerManager {
         // NOTE: unlock issue with firefox/safari
         // initially send empty stream message to return from
         // initial subscribe call
-        let contract = sqlx::query(
-            "SELECT head, tps, last_block_timestamp, contract_address FROM contracts WHERE id = ?",
-        )
-        .bind(format!("{:#x}", contract_address))
-        .fetch_one(pool)
-        .await?;
-        let contract = ContractUpdated::from_row(&contract)?;
+        let mut statement =
+            "SELECT head, tps, last_block_timestamp, contract_address FROM contracts".to_string();
 
-        let _ = sender
-            .send(Ok(SubscribeIndexerResponse {
-                head: contract.head,
-                tps: contract.tps,
-                last_block_timestamp: contract.last_block_timestamp,
-                contract_address: contract_address.to_bytes_be().to_vec(),
-            }))
-            .await;
+        let contracts: Vec<ContractUpdated> = if contract_address != Felt::ZERO {
+            statement += " WHERE id = ?";
 
+            sqlx::query_as(&statement)
+                .bind(format!("{:#x}", contract_address))
+                .fetch_all(pool)
+                .await?
+        } else {
+            sqlx::query_as(&statement).fetch_all(pool).await?
+        };
+
+        for contract in contracts {
+            let _ = sender
+                .send(Ok(SubscribeIndexerResponse {
+                    head: contract.head,
+                    tps: contract.tps,
+                    last_block_timestamp: contract.last_block_timestamp,
+                    contract_address: contract_address.to_bytes_be().to_vec(),
+                }))
+                .await;
+        }
         self.subscribers.write().await.insert(id, IndexerSubscriber { contract_address, sender });
 
         Ok(receiver)
