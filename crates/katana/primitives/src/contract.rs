@@ -1,6 +1,6 @@
 use std::fmt;
 
-use derive_more::Deref;
+use num_bigint::BigUint;
 use starknet::core::utils::normalize_address;
 
 use crate::class::ClassHash;
@@ -15,13 +15,21 @@ pub type StorageValue = Felt;
 pub type Nonce = Felt;
 
 /// Represents a contract address.
-#[derive(Default, Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Hash, Debug, Deref)]
+#[derive(Default, Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct ContractAddress(#[deref] pub Felt);
+pub struct ContractAddress(pub Felt);
 
 impl ContractAddress {
     pub fn new(address: Felt) -> Self {
         ContractAddress(normalize_address(address))
+    }
+}
+
+impl core::ops::Deref for ContractAddress {
+    type Target = Felt;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
@@ -41,6 +49,25 @@ impl From<ContractAddress> for Felt {
     fn from(value: ContractAddress) -> Self {
         value.0
     }
+}
+
+impl From<&BigUint> for ContractAddress {
+    fn from(biguint: &BigUint) -> Self {
+        Self::new(Felt::from_bytes_le_slice(&biguint.to_bytes_le()))
+    }
+}
+
+impl From<BigUint> for ContractAddress {
+    fn from(biguint: BigUint) -> Self {
+        Self::new(Felt::from_bytes_le_slice(&biguint.to_bytes_le()))
+    }
+}
+
+#[macro_export]
+macro_rules! address {
+    ($value:expr) => {
+        ContractAddress::new($crate::felt!($value))
+    };
 }
 
 /// Represents a generic contract instance information.

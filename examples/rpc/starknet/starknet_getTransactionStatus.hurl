@@ -12,4 +12,5 @@ Content-Type: application/json
 HTTP 200
 [Asserts]
 jsonpath "$.error.message" equals "Transaction hash not found"
+jsonpath "$.error.code" == 29
 jsonpath "$.result" not exists

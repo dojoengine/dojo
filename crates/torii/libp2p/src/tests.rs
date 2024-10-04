@@ -534,8 +534,11 @@ mod test {
         use starknet::providers::JsonRpcClient;
         use starknet::signers::SigningKey;
         use starknet_crypto::Felt;
+        use tempfile::NamedTempFile;
         use tokio::select;
+        use tokio::sync::broadcast;
         use tokio::time::sleep;
+        use torii_core::executor::Executor;
         use torii_core::sql::Sql;
 
         use crate::server::Relay;
@@ -547,10 +550,18 @@ mod test {
             .try_init();
 
         // Database
-        let options = <SqliteConnectOptions as std::str::FromStr>::from_str("sqlite::memory:")
+        let tempfile = NamedTempFile::new().unwrap();
+        let path = tempfile.path().to_string_lossy();
+        let options = <SqliteConnectOptions as std::str::FromStr>::from_str(&path)
             .unwrap()
             .create_if_missing(true);
-        let pool = SqlitePoolOptions::new().max_connections(5).connect_with(options).await.unwrap();
+        let pool = SqlitePoolOptions::new()
+            .min_connections(1)
+            .idle_timeout(None)
+            .max_lifetime(None)
+            .connect_with(options)
+            .await
+            .unwrap();
         sqlx::migrate!("../migrations").run(&pool).await.unwrap();
 
         let sequencer = KatanaRunner::new().expect("Failed to create Katana sequencer");
@@ -559,7 +570,13 @@ mod test {
 
         let account = sequencer.account_data(0);
 
-        let mut db = Sql::new(pool.clone(), Felt::ZERO).await?;
+        let (shutdown_tx, _) = broadcast::channel(1);
+        let (mut executor, sender) =
+            Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
+        tokio::spawn(async move {
+            executor.run().await.unwrap();
+        });
+        let mut db = Sql::new(pool.clone(), Felt::ZERO, sender).await.unwrap();
 
         // Register the model of our Message
         db.register_model(

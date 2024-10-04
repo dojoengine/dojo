@@ -5,7 +5,6 @@ use std::path::Path;
 use console::{pad_str, Alignment, Style, StyledObject};
 use dojo_world::metadata::get_default_namespace_from_ws;
 use dojo_world::migration::strategy::MigrationStrategy;
-use futures::future::join_all;
 use reqwest::StatusCode;
 use scarb::core::Workspace;
 use serde::Serialize;
@@ -61,50 +60,32 @@ pub async fn walnut_verify_migration_strategy(
     // Collect source code
     let source_code = collect_source_code(root_dir)?;
 
-    // Prepare verification payloads
-    let mut verification_tasks = Vec::new();
-    let mut class_tags = Vec::new();
+    let mut class_names = Vec::new();
+    let mut class_hashes = Vec::new();
 
     for contract_migration in &migration_strategy.contracts {
         let class_name = get_class_name_from_artifact_path(
             &contract_migration.artifact_path,
             &default_namespace,
         )?;
-        let verification_payload = VerificationPayload {
-            class_name: class_name.clone(),
-            class_hash: contract_migration.diff.local_class_hash.to_hex_string(),
-            rpc_url: rpc_url.clone(),
-            source_code: source_code.clone(),
-        };
-        class_tags.push(contract_migration.diff.tag.clone());
-        verification_tasks.push(verify_class(verification_payload, &api_url, &api_key));
+        class_names.push(class_name);
+        class_hashes.push(contract_migration.diff.local_class_hash.to_hex_string());
     }
 
     for class_migration in &migration_strategy.models {
         let class_name =
             get_class_name_from_artifact_path(&class_migration.artifact_path, &default_namespace)?;
-        let verification_payload = VerificationPayload {
-            class_name: class_name.clone(),
-            class_hash: class_migration.diff.local_class_hash.to_hex_string(),
-            rpc_url: rpc_url.clone(),
-            source_code: source_code.clone(),
-        };
-        class_tags.push(class_migration.diff.tag.clone());
-        verification_tasks.push(verify_class(verification_payload, &api_url, &api_key));
+        class_names.push(class_name);
+        class_hashes.push(class_migration.diff.local_class_hash.to_hex_string());
     }
 
-    // Run all verification tasks
-    let results = join_all(verification_tasks).await;
+    let verification_payload =
+        VerificationPayload { class_names, class_hashes, rpc_url, source_code };
 
-    for (i, result) in results.into_iter().enumerate() {
-        match result {
-            Ok(message) => {
-                ui.print(subtitle(format!("{}: {}", class_tags[i], message)));
-            }
-            Err(e) => {
-                ui.print(subtitle(format!("{}: {}", class_tags[i], e)));
-            }
-        }
+    // Send verification request
+    match verify_classes(verification_payload, &api_url, &api_key).await {
+        Ok(message) => ui.print(subtitle(message)),
+        Err(e) => ui.print(subtitle(e.to_string())),
     }
 
     Ok(())
@@ -118,18 +99,18 @@ fn get_class_name_from_artifact_path(path: &Path, namespace: &str) -> Result<Str
 
 #[derive(Debug, Serialize)]
 struct VerificationPayload {
-    /// The name of the class we want to verify together with the selector.
-    pub class_name: String,
-    /// The hash of the Sierra class.
-    pub class_hash: String,
-    /// The RPC URL of the network where this class is declared (can only be a hosted network).
+    /// The names of the classes we want to verify together with the selector.
+    pub class_names: Vec<String>,
+    /// The hashes of the Sierra classes.
+    pub class_hashes: Vec<String>,
+    /// The RPC URL of the network where these classes are declared (can only be a hosted network).
     pub rpc_url: String,
     /// JSON that contains a map where the key is the path to the file and the value is the content
     /// of the file. It should contain all files required to build the Dojo project with Sozo.
     pub source_code: Value,
 }
 
-async fn verify_class(
+async fn verify_classes(
     payload: VerificationPayload,
     api_url: &str,
     api_key: &str,

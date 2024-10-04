@@ -5,6 +5,7 @@ mod tests {
     use serde_json::Value;
     use starknet::core::types::Felt;
     use starknet_crypto::poseidon_hash_many;
+    use tempfile::NamedTempFile;
 
     use crate::schema::build_schema;
     use crate::tests::{
@@ -90,7 +91,9 @@ mod tests {
     // to run so combine all related tests into one
     #[tokio::test(flavor = "multi_thread")]
     async fn entities_test() -> Result<()> {
-        let pool = spinup_types_test().await?;
+        let tempfile = NamedTempFile::new().unwrap();
+        let path = tempfile.path().to_string_lossy();
+        let pool = spinup_types_test(&path).await?;
         let schema = build_schema(&pool).await.unwrap();
 
         // default without params

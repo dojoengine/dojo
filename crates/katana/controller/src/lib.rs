@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use alloy_primitives::U256;
 use anyhow::Result;
@@ -47,8 +47,7 @@ fn add_controller_account_inner(genesis: &mut Genesis, user: slot::account::Acco
             storage: Some(get_contract_storage(credential_id, public_key)?),
         };
 
-        let address =
-            ContractAddress::from(Felt::from_bytes_be(&user.contract_address.to_bytes_be()));
+        let address = ContractAddress::from(user.contract_address);
 
         (address, GenesisAllocation::Contract(account))
     };
@@ -97,9 +96,7 @@ pub mod json {
                 storage: Some(get_contract_storage(credential_id, public_key)?),
             };
 
-            let address = ContractAddress::from(Felt::from_bytes_be(
-                &user.account.contract_address.to_bytes_be(),
-            ));
+            let address = ContractAddress::from(user.account.contract_address);
 
             (address, account)
         };
@@ -131,7 +128,7 @@ pub mod json {
 fn get_contract_storage(
     credential_id: CredentialID,
     public_key: CoseKey,
-) -> Result<HashMap<StorageKey, StorageValue>> {
+) -> Result<BTreeMap<StorageKey, StorageValue>> {
     use slot::account_sdk::signers::DeviceError;
     use webauthn_rs_proto::auth::PublicKeyCredentialRequestOptions;
     use webauthn_rs_proto::{
@@ -186,7 +183,7 @@ fn get_contract_storage(
     let storage = get_storage_var_address(MULTIPLE_OWNERS_COMPONENT_SUB_STORAGE, &[guid])?;
 
     // 1 for boolean True in Cairo. Refer to the provided link above.
-    let storage_mapping = HashMap::from([(storage, Felt::ONE)]);
+    let storage_mapping = BTreeMap::from([(storage, Felt::ONE)]);
 
     Ok(storage_mapping)
 }

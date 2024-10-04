@@ -93,7 +93,7 @@ impl ProvedStateDiff {
         result.push_str(&format!(r#","contract_updates":{}"#, "{"));
         let contract_updates = self
             .state_updates
-            .contract_updates
+            .deployed_contracts
             .iter()
             .map(|(k, v)| format!(r#""{}":{}"#, k.0, v))
             .collect::<Vec<_>>()

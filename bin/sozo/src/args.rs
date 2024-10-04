@@ -5,9 +5,8 @@ use scarb::compiler::Profile;
 use scarb_ui::Verbosity;
 use smol_str::SmolStr;
 use tracing::level_filters::LevelFilter;
-use tracing::Subscriber;
-use tracing_log::AsTrace;
-use tracing_subscriber::{fmt, EnvFilter};
+use tracing_log::{AsTrace, LogTracer};
+use tracing_subscriber::FmtSubscriber;
 
 use crate::commands::Commands;
 use crate::utils::generate_version;
@@ -53,13 +52,16 @@ impl SozoArgs {
     }
 
     pub fn init_logging(&self) -> Result<(), Box<dyn std::error::Error>> {
-        const DEFAULT_LOG_FILTER: &str = "info,hyper=off,scarb=off";
+        const DEFAULT_LOG_FILTER: &str = "info,hyper=off,scarb=off,salsa=off";
 
-        let builder = fmt::Subscriber::builder().with_env_filter(
-            EnvFilter::try_from_default_env().or(EnvFilter::try_new(DEFAULT_LOG_FILTER))?,
-        );
+        LogTracer::init()?;
 
-        let subscriber: Box<dyn Subscriber + Send + Sync> = Box::new(builder.finish());
+        let subscriber = FmtSubscriber::builder()
+            .with_env_filter(
+                tracing_subscriber::EnvFilter::try_from_default_env()
+                    .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new(DEFAULT_LOG_FILTER)),
+            )
+            .finish();
 
         Ok(tracing::subscriber::set_global_default(subscriber)?)
     }

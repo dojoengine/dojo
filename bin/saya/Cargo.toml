@@ -18,6 +18,7 @@ serde_json.workspace = true
 starknet.workspace = true
 tokio.workspace = true
 tracing.workspace = true
+tracing-log.workspace = true
 tracing-subscriber.workspace = true
 url.workspace = true
 

@@ -40,6 +40,10 @@ pub fn resource_not_registered(resource: felt252) -> ByteArray {
     format!("Resource `{}` is not registered", resource)
 }
 
+pub fn resource_already_registered(resource: felt252) -> ByteArray {
+    format!("Resource `{}` is already registered", resource)
+}
+
 pub fn not_owner(caller: ContractAddress, resource: felt252) -> ByteArray {
     format!("Caller `{:?}` is not the owner of the resource `{}`", caller, resource)
 }

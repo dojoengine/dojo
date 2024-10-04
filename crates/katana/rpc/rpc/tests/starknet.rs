@@ -26,7 +26,7 @@ use starknet::core::types::contract::legacy::LegacyContractClass;
 use starknet::core::types::{
     BlockId, BlockTag, Call, DeclareTransactionReceipt, DeployAccountTransactionReceipt,
     EventFilter, EventsPage, ExecutionResult, Felt, StarknetError, TransactionFinalityStatus,
-    TransactionReceipt,
+    TransactionReceipt, TransactionTrace,
 };
 use starknet::core::utils::get_contract_address;
 use starknet::macros::{felt, selector};
@@ -198,6 +198,38 @@ async fn deploy_account(
     // deployment
     let res = provider.get_class_hash_at(BlockId::Tag(BlockTag::Pending), computed_address).await?;
     assert_eq!(res, class_hash);
+
+    // deploy from empty balance,
+    // need to test this case because of how blockifier's StatefulValidator works.
+    // TODO: add more descriptive reason
+    if disable_fee {
+        let salt = felt!("0x456");
+
+        // starknet-rs's utility for deploying an OpenZeppelin account
+        let factory =
+            OpenZeppelinAccountFactory::new(class_hash, chain_id, &signer, &provider).await?;
+        let res = factory.deploy_v1(salt).send().await?;
+        let ctor_args = [signer.get_public_key().await?.scalar()];
+        let computed_address = get_contract_address(salt, class_hash, &ctor_args, Felt::ZERO);
+
+        // the contract address in the send tx result must be the same as the computed one
+        assert_eq!(res.contract_address, computed_address);
+
+        let receipt = dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await?;
+        assert_matches!(
+            receipt.receipt,
+            TransactionReceipt::DeployAccount(DeployAccountTransactionReceipt { contract_address, .. })  => {
+                // the contract address in the receipt must be the same as the computed one
+                assert_eq!(contract_address, computed_address)
+            }
+        );
+
+        // Verify the `getClassHashAt` returns the same class hash that we use for the account
+        // deployment
+        let res =
+            provider.get_class_hash_at(BlockId::Tag(BlockTag::Pending), computed_address).await?;
+        assert_eq!(res, class_hash);
+    }
 
     Ok(())
 }
@@ -721,6 +753,151 @@ async fn get_events_with_pending() -> Result<()> {
 
     assert_eq!(events.len(), 0);
     assert_eq!(new_token, continuation_token);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn trace() -> Result<()> {
+    let sequencer = TestSequencer::start(
+        SequencerConfig { no_mining: true, ..Default::default() },
+        get_default_test_starknet_config(),
+    )
+    .await;
+
+    let provider = sequencer.provider();
+    let account = sequencer.account();
+    let rpc_client = HttpClientBuilder::default().build(sequencer.url())?;
+
+    // setup contract to interact with (can be any existing contract that can be interacted with)
+    let contract = Erc20Contract::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), &account);
+
+    // setup contract function params
+    let recipient = felt!("0x1");
+    let amount = Uint256 { low: felt!("0x1"), high: Felt::ZERO };
+
+    // -----------------------------------------------------------------------
+    // Transactions not in pending block
+
+    let mut hashes = Vec::new();
+
+    for _ in 0..2 {
+        let res = contract.transfer(&recipient, &amount).send().await?;
+        dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await?;
+        hashes.push(res.transaction_hash);
+    }
+
+    // Generate a block to include the transactions. The generated block will have block number 1.
+    rpc_client.generate_block().await?;
+
+    for hash in hashes {
+        let trace = provider.trace_transaction(hash).await?;
+        assert_matches!(trace, TransactionTrace::Invoke(_));
+    }
+
+    // -----------------------------------------------------------------------
+    // Transactions in pending block
+
+    for _ in 0..2 {
+        let res = contract.transfer(&recipient, &amount).send().await?;
+        dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await?;
+
+        let trace = provider.trace_transaction(res.transaction_hash).await?;
+        assert_matches!(trace, TransactionTrace::Invoke(_));
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn block_traces() -> Result<()> {
+    let sequencer = TestSequencer::start(
+        SequencerConfig { no_mining: true, ..Default::default() },
+        get_default_test_starknet_config(),
+    )
+    .await;
+
+    let provider = sequencer.provider();
+    let account = sequencer.account();
+    let rpc_client = HttpClientBuilder::default().build(sequencer.url())?;
+
+    // setup contract to interact with (can be any existing contract that can be interacted with)
+    let contract = Erc20Contract::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), &account);
+
+    // setup contract function params
+    let recipient = felt!("0x1");
+    let amount = Uint256 { low: felt!("0x1"), high: Felt::ZERO };
+
+    let mut hashes = Vec::new();
+
+    // -----------------------------------------------------------------------
+    // Block 1
+
+    for _ in 0..5 {
+        let res = contract.transfer(&recipient, &amount).send().await?;
+        dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await?;
+        hashes.push(res.transaction_hash);
+    }
+
+    // Generate a block to include the transactions. The generated block will have block number 1.
+    rpc_client.generate_block().await?;
+
+    // Get the traces of the transactions in block 1.
+    let block_id = BlockId::Number(1);
+    let traces = provider.trace_block_transactions(block_id).await?;
+    assert_eq!(traces.len(), 5);
+
+    for i in 0..5 {
+        assert_eq!(traces[i].transaction_hash, hashes[i]);
+        assert_matches!(&traces[i].trace_root, TransactionTrace::Invoke(_));
+    }
+
+    // -----------------------------------------------------------------------
+    // Block 2
+
+    // remove the previous transaction hashes
+    hashes.clear();
+
+    for _ in 0..2 {
+        let res = contract.transfer(&recipient, &amount).send().await?;
+        dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await?;
+        hashes.push(res.transaction_hash);
+    }
+
+    // Generate a block to include the transactions. The generated block will have block number 2.
+    rpc_client.generate_block().await?;
+
+    // Get the traces of the transactions in block 2.
+    let block_id = BlockId::Number(2);
+    let traces = provider.trace_block_transactions(block_id).await?;
+    assert_eq!(traces.len(), 2);
+
+    for i in 0..2 {
+        assert_eq!(traces[i].transaction_hash, hashes[i]);
+        assert_matches!(&traces[i].trace_root, TransactionTrace::Invoke(_));
+    }
+
+    // -----------------------------------------------------------------------
+    // Block 3 (Pending)
+
+    // remove the previous transaction hashes
+    hashes.clear();
+
+    for _ in 0..3 {
+        let res = contract.transfer(&recipient, &amount).send().await?;
+        dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await?;
+        hashes.push(res.transaction_hash);
+    }
+
+    // Get the traces of the transactions in block 3 (pending).
+    let block_id = BlockId::Tag(BlockTag::Pending);
+    let traces = provider.trace_block_transactions(block_id).await?;
+    assert_eq!(traces.len(), 3);
+
+    for i in 0..3 {
+        assert_eq!(traces[i].transaction_hash, hashes[i]);
+        assert_matches!(&traces[i].trace_root, TransactionTrace::Invoke(_));
+    }
 
     Ok(())
 }
