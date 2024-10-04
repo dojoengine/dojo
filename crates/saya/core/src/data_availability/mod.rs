@@ -14,6 +14,8 @@ pub mod celestia;
 pub mod error;
 use error::DataAvailabilityResult;
 
+use crate::prover::persistent::PublishedStateDiff;
+
 /// All possible chains configuration for data availability.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub enum DataAvailabilityConfig {
@@ -80,7 +82,10 @@ pub trait DataAvailabilityClient {
     /// # Arguments
     ///
     /// * `state_diff` - A JSON string representing the proof to be published.
-    async fn publish_proof_json(&self, state_diff: &str) -> DataAvailabilityResult<u64>;
+    async fn publish_checkpoint(
+        &self,
+        state_diff: PublishedStateDiff,
+    ) -> DataAvailabilityResult<u64>;
 }
 
 /// Initializes a [`DataAvailabilityClient`] from a [`DataAvailabilityConfig`].

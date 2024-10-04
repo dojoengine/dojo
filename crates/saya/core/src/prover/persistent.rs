@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use celestia_types::{nmt::Namespace, Commitment};
 use serde::{Deserialize, Serialize};
 use starknet_crypto::Felt;
 
@@ -32,7 +33,25 @@ pub struct BatcherInput {
     pub block_hash: Felt,
 }
 
+// TODO: import this form katana instead of redefining it once it is merged.
+pub type BlockHeight = u64;
 #[derive(Debug, Serialize, Deserialize)]
+pub struct PublishedStateDiff {
+    pub prev_state_root: Felt,
+    pub state_root: Felt,
+
+    // pointer to the previous state diffs that were published to Celestia
+    pub prev_da_height: Option<BlockHeight>,
+    pub prev_da_commitment: Option<Commitment>,
+    // felt representation of the Starknet OS output
+    // content: Vec<Felt>
+
+    // the state diff itself along with
+    // pub content: StarknetOsOutput,
+    pub proof: serde_json::Value,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct StarknetOsOutput {
     /// The root before.
     pub initial_root: Felt,
@@ -61,19 +80,21 @@ pub struct StarknetOsOutput {
     /// The list of contracts that were changed.
     pub contracts: Vec<ContractChanges>,
     /// The list of classes that were declared. A map from class hash to compiled class hash.
-    pub classes: HashMap<Felt, Felt>,
+    // pub classes: HashMap<Felt, Felt>,
+    pub classes: Vec<(Felt, Felt)>,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Eq)]
 pub struct ContractChanges {
     /// The address of the contract.
     pub addr: Felt,
     /// The new nonce of the contract (for account contracts).
     pub nonce: Felt,
     /// The new class hash (if changed).
-    pub class_hash: Option<Felt>,
+    // pub class_hash: Option<Felt>,
+    pub class_hash: Felt,
     /// A map from storage key to its new value.
-    pub storage_changes: HashMap<Felt, Felt>,
+    pub storage_changes: Vec<(Felt, Felt)>,
 }
 
 #[cfg(test)]

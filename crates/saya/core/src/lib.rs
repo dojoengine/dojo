@@ -15,7 +15,7 @@ use katana_primitives::block::{BlockNumber, FinalityStatus, SealedBlock, SealedB
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
 use katana_primitives::transaction::Tx;
 use katana_rpc_types::trace::TxExecutionInfo;
-use prover::persistent::{BatcherCall, BatcherInput, StarknetOsOutput};
+use prover::persistent::{BatcherCall, BatcherInput, PublishedStateDiff, StarknetOsOutput};
 use prover::{extract_execute_calls, HttpProverParams, ProveProgram, ProverIdentifier};
 pub use prover_sdk::access_key::ProverAccessKey;
 use prover_sdk::ProverResult;
@@ -172,6 +172,9 @@ impl Saya {
 
             let (last_state_root, params) =
                 self.prefetch_blocks(block..=maximum_expected, previous_block_state_root).await?;
+
+            let state_root_change = (previous_block_state_root, last_state_root);
+
             previous_block_state_root = last_state_root;
 
             // Updating the local state sequentially, as there is only one instance of
@@ -226,7 +229,7 @@ impl Saya {
                         messages_to_l1: vec![],
                         messages_to_l2: vec![],
                         contracts: vec![],
-                        classes: HashMap::new(),
+                        classes: HashMap::new().into_iter().collect(),
                     };
 
                     let proof = self.prover_identifier.prove_echo(input).await?;
@@ -237,7 +240,8 @@ impl Saya {
                         let mut file = File::create(filename).await?;
                         file.write_all(serde_json::to_string(&proof)?.as_bytes()).await?;
                     }
-                    self.process_proven(proof, vec![], block + num_blocks).await?;
+                    self.process_proven(proof, vec![], block + num_blocks, state_root_change)
+                        .await?;
 
                     block += num_blocks;
                     info!(target: LOG_TARGET, "Successfully processed {} blocks.", num_blocks);
@@ -271,7 +275,8 @@ impl Saya {
                         (self.config.block_range.0, self.config.block_range.1.unwrap());
 
                     let diff = proof.clone().program_output;
-                    self.process_proven(proof.clone(), diff, block_range.1).await?;
+                    self.process_proven(proof.clone(), diff, block_range.1, state_root_change)
+                        .await?;
 
                     info!(target: LOG_TARGET, "Successfully processed all {} blocks.", block_range.1 - block_range.0 + 1);
                     break;
@@ -431,6 +436,7 @@ impl Saya {
         proof: ProverResult,
         state_diff: Vec<Felt>,
         last_block: u64,
+        state_roots: (Felt, Felt),
     ) -> SayaResult<()> {
         trace!(target: LOG_TARGET, last_block, "Processing proven blocks.");
         let serialized_proof = proof.serialized_proof;
@@ -438,13 +444,23 @@ impl Saya {
         if let Some(da) = &self.da_client {
             trace!(target: LOG_TARGET, last_block, "Publishing DA.");
 
-            if self.config.mode != SayaMode::Ephemeral {
-                da.publish_proof_json(&proof.proof).await?;
+            let checkpoint = PublishedStateDiff {
+                prev_state_root: state_roots.0,
+                state_root: state_roots.1,
+                prev_da_height: None,
+                prev_da_commitment: None,
+                proof: serde_json::to_value(&proof.proof).unwrap(),
+            };
+
+            let height = if self.config.mode != SayaMode::Ephemeral {
+                da.publish_checkpoint(checkpoint).await?
             } else if self.config.skip_publishing_proof {
-                da.publish_state_diff_felts(&state_diff).await?;
+                da.publish_state_diff_felts(&state_diff).await?
             } else {
-                da.publish_state_diff_and_proof_felts(&state_diff, &serialized_proof).await?;
-            }
+                da.publish_state_diff_and_proof_felts(&state_diff, &serialized_proof).await?
+            };
+
+            info!(target: LOG_TARGET, last_block, height, "DA published.");
         }
 
         let program_hash = proof.program_hash;
@@ -484,7 +500,9 @@ impl Saya {
 
                 // todo!("Persistent mode does not support publishing updated state with SNOS yet.");
 
-                let batcher_output = from_felts::<StarknetOsOutput>(&serialized_output).unwrap();
+                let deduplicated_output =
+                    serialized_output[1..serialized_output.len() / 2].to_vec();
+                let batcher_output = from_felts::<StarknetOsOutput>(&deduplicated_output).unwrap();
                 let piltover_calldata = PiltoverCalldata {
                     program_output: serialized_output,
                     // onchain_data_hash: batcher_output.new_state_root,

@@ -4,13 +4,14 @@ use std::fmt::Display;
 use async_trait::async_trait;
 use celestia_rpc::{BlobClient, Client};
 use celestia_types::nmt::Namespace;
-use celestia_types::{Blob, TxConfig};
+use celestia_types::{Blob, Commitment, TxConfig};
 use serde::{Deserialize, Serialize};
 use starknet::core::types::Felt;
 use url::Url;
 
 use crate::data_availability::error::{DataAvailabilityResult, Error};
 use crate::data_availability::{DataAvailabilityClient, DataAvailabilityMode};
+use crate::prover::persistent::PublishedStateDiff;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct CelestiaConfig {
@@ -83,8 +84,11 @@ impl DataAvailabilityClient for CelestiaClient {
             .map_err(|e| Error::Client(format!("Celestia RPC error: {e}")))
     }
 
-    async fn publish_proof_json(&self, proof_json: &str) -> DataAvailabilityResult<u64> {
-        let bytes = proof_json.as_bytes().to_vec();
+    async fn publish_checkpoint(
+        &self,
+        proof_json: PublishedStateDiff,
+    ) -> DataAvailabilityResult<u64> {
+        let bytes = serde_json::to_vec(&proof_json).unwrap();
 
         self.client
             .blob_submit(&[Blob::new(self.namespace, bytes)?], TxConfig::default())
