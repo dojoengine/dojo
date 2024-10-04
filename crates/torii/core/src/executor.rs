@@ -190,9 +190,9 @@ impl<'c> Executor<'c> {
                     id: entity_updated.id.clone(),
                     keys: entity_updated.keys.clone(),
                     event_id: entity_updated.event_id.clone(),
-                    executed_at: entity_updated.executed_at.clone(),
-                    created_at: entity_updated.created_at.clone(),
-                    updated_at: entity_updated.updated_at.clone(),
+                    executed_at: entity_updated.executed_at,
+                    created_at: entity_updated.created_at,
+                    updated_at: entity_updated.updated_at,
                     updated_model: entity_updated.updated_model.clone(),
                     deleted: entity_updated.deleted,
                 };
@@ -242,9 +242,9 @@ impl<'c> Executor<'c> {
                     id: entity_updated.id.clone(),
                     keys: entity_updated.keys.clone(),
                     event_id: entity_updated.event_id.clone(),
-                    executed_at: entity_updated.executed_at.clone(),
-                    created_at: entity_updated.created_at.clone(),
-                    updated_at: entity_updated.updated_at.clone(),
+                    executed_at: entity_updated.executed_at,
+                    created_at: entity_updated.created_at,
+                    updated_at: entity_updated.updated_at,
                     updated_model: entity_updated.updated_model.clone(),
                     deleted: entity_updated.deleted,
                 };
@@ -270,9 +270,9 @@ impl<'c> Executor<'c> {
                     id: event_message.id.clone(),
                     keys: event_message.keys.clone(),
                     event_id: event_message.event_id.clone(),
-                    executed_at: event_message.executed_at.clone(),
-                    created_at: event_message.created_at.clone(),
-                    updated_at: event_message.updated_at.clone(),
+                    executed_at: event_message.executed_at,
+                    created_at: event_message.created_at,
+                    updated_at: event_message.updated_at,
                     updated_model: event_message.updated_model.clone(),
                 };
                 SimpleBroker::publish(optimistic_event_message);
