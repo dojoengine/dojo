@@ -92,7 +92,7 @@ impl Sql {
         last_block_timestamp: u64,
         txns_count: u64,
     ) -> Result<()> {
-        let head = Argument::Int(head.try_into().expect("doesn't fit in u64"));
+        let head = Argument::Int(head.try_into().map_err(|_| anyhow!("Head value {} doesn't fit in u64", head))?);
         let id = Argument::FieldElement(self.world_address);
 
         let mut conn = self.pool.acquire().await?;
@@ -110,16 +110,15 @@ impl Sql {
         } else {
             0
         };
-        let tps = Argument::Int(tps.try_into().expect("doesn't fit in u64"));
+        let tps = Argument::Int(tps.try_into().map_err(|_| anyhow!("Tps value {} doesn't fit in u64", tps))?);
 
         let last_block_timestamp =
-            Argument::Int(last_block_timestamp.try_into().expect("doesn't fit in u64"));
+            Argument::Int(last_block_timestamp.try_into().map_err(|_| anyhow!("Last block timestamp value {} doesn't fit in u64", last_block_timestamp))?);
 
-        self.query_queue.enqueue(
-            "UPDATE contracts SET head = ?, tps = ?, last_block_timestamp = ? WHERE id = ?",
+        self.executor.send(QueryMessage::other(
+            "UPDATE contracts SET head = ?, tps = ?, last_block_timestamp = ? WHERE id = ?".to_string(),
             vec![head, tps, last_block_timestamp, id],
-            QueryType::Other,
-        );
+        ))?;
 
         Ok(())
     }
