@@ -8,13 +8,10 @@ use starknet::core::types::{Felt, FromStrError, StateDiff, StateUpdate};
 use tonic::transport::Endpoint;
 
 use crate::proto::world::{
-    world_client, MetadataRequest, RetrieveEntitiesRequest, RetrieveEntitiesResponse,
-    RetrieveEventsRequest, RetrieveEventsResponse, SubscribeEntitiesRequest,
-    SubscribeEntityResponse, SubscribeEventsRequest, SubscribeEventsResponse,
-    SubscribeModelsRequest, SubscribeModelsResponse, UpdateEntitiesSubscriptionRequest,
+    world_client, RetrieveEntitiesRequest, RetrieveEntitiesResponse, RetrieveEventsRequest, RetrieveEventsResponse, SubscribeEntitiesRequest, SubscribeEntityResponse, SubscribeEventsRequest, SubscribeEventsResponse, SubscribeIndexerRequest, SubscribeIndexerResponse, SubscribeModelsRequest, SubscribeModelsResponse, UpdateEntitiesSubscriptionRequest, WorldMetadataRequest
 };
 use crate::types::schema::{Entity, SchemaError};
-use crate::types::{EntityKeysClause, Event, EventQuery, KeysClause, ModelKeysClause, Query};
+use crate::types::{EntityKeysClause, Event, EventQuery, IndexerUpdate, KeysClause, ModelKeysClause, Query};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -68,7 +65,7 @@ impl WorldClient {
     /// Retrieve the metadata of the World.
     pub async fn metadata(&mut self) -> Result<dojo_types::WorldMetadata, Error> {
         self.inner
-            .world_metadata(MetadataRequest {})
+            .world_metadata(WorldMetadataRequest {})
             .await
             .map_err(Error::Grpc)
             .and_then(|res| {
@@ -105,6 +102,18 @@ impl WorldClient {
     ) -> Result<RetrieveEventsResponse, Error> {
         let request = RetrieveEventsRequest { query: Some(query.into()) };
         self.inner.retrieve_events(request).await.map_err(Error::Grpc).map(|res| res.into_inner())
+    }
+
+    /// Subscribe to indexer updates.
+    pub async fn subscribe_indexer(
+        &mut self,
+        contract_address: Felt,
+    ) -> Result<IndexerUpdateStreaming, Error> {
+        let request = SubscribeIndexerRequest { contract_address: contract_address.to_bytes_be().to_vec() };
+        let stream = self.inner.subscribe_indexer(request).await.map_err(Error::Grpc).map(|res| res.into_inner())?;
+        Ok(IndexerUpdateStreaming(stream.map_ok(Box::new(|res| {
+            res.into()
+        }))))
     }
 
     /// Subscribe to entities updates of a World.
@@ -281,6 +290,26 @@ impl Stream for EventUpdateStreaming {
         self.0.poll_next_unpin(cx)
     }
 }
+
+type IndexerMappedStream = MapOk<
+    tonic::Streaming<SubscribeIndexerResponse>,
+    Box<dyn Fn(SubscribeIndexerResponse) -> IndexerUpdate + Send>,
+>;
+
+#[derive(Debug)]
+pub struct IndexerUpdateStreaming(IndexerMappedStream);
+
+impl Stream for IndexerUpdateStreaming {
+    type Item = <IndexerMappedStream as Stream>::Item;
+    fn poll_next(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        self.0.poll_next_unpin(cx)
+    }
+}
+
+
 
 fn empty_state_update() -> StateUpdate {
     StateUpdate {

@@ -15,7 +15,7 @@ use starknet_crypto::poseidon_hash_many;
 use tokio::sync::mpsc::UnboundedSender;
 
 use crate::cache::{Model, ModelCache};
-use crate::executor::{Argument, DeleteEntityQuery, QueryMessage, QueryType};
+use crate::executor::{Argument, DeleteEntityQuery, QueryMessage, QueryType, SetHeadQuery};
 use crate::utils::utc_dt_string_from_timestamp;
 
 type IsEventMessage = bool;
@@ -86,50 +86,31 @@ impl Sql {
         ))
     }
 
-    pub async fn set_head(&mut self, head: u64) -> Result<()> {
-        let head = Argument::Int(
-            head.try_into().map_err(|_| anyhow!("Head value {} doesn't fit in u64", head))?,
+    pub async fn set_head(
+        &mut self,
+        head: u64,
+        last_block_timestamp: u64,
+        world_txns_count: u64,
+        contract_address: Felt,
+    ) -> Result<()> {
+        let head_arg = Argument::Int(
+            head.try_into().map_err(|_| anyhow!("Head value {} doesn't fit in i64", head))?,
         );
-        let id = Argument::FieldElement(self.world_address);
-
-        self.executor.send(QueryMessage::other(
-            "UPDATE contracts SET head = ? WHERE id = ?".to_string(),
-            vec![head, id],
-        ))?;
-
-        Ok(())
-    }
-
-    pub async fn set_tps(&mut self, txns_count: u64, last_block_timestamp: u64) -> Result<()> {
-        let id = Argument::FieldElement(self.world_address);
-
-        let mut conn = self.pool.acquire().await?;
-        let previous_block_timestamp: u64 =
-            sqlx::query_scalar::<_, i64>("SELECT last_block_timestamp FROM contracts WHERE id = ?")
-                .bind(format!("{:#x}", self.world_address))
-                .fetch_optional(&mut *conn)
-                .await?
-                .unwrap_or(0)
-                .try_into()
-                .expect("doesn't fit in u64");
-
-        let tps: u64 = if last_block_timestamp - previous_block_timestamp != 0 {
-            txns_count / (last_block_timestamp - previous_block_timestamp)
-        } else {
-            txns_count
-        };
-
-        let tps = Argument::Int(
-            tps.try_into().map_err(|_| anyhow!("Tps value {} doesn't fit in u64", tps))?,
-        );
-        let last_block_timestamp =
+        let last_block_timestamp_arg =
             Argument::Int(last_block_timestamp.try_into().map_err(|_| {
-                anyhow!("Last block timestamp value {} doesn't fit in u64", last_block_timestamp)
+                anyhow!("Last block timestamp value {} doesn't fit in i64", last_block_timestamp)
             })?);
+        let id = Argument::FieldElement(self.world_address);
 
-        self.executor.send(QueryMessage::other(
-            "UPDATE contracts SET tps = ?, last_block_timestamp = ? WHERE id = ?".to_string(),
-            vec![tps, last_block_timestamp, id],
+        self.executor.send(QueryMessage::new(
+            "UPDATE contracts SET head = ?, last_block_timestamp = ? WHERE id = ?".to_string(),
+            vec![head_arg, last_block_timestamp_arg, id],
+            QueryType::SetHead(SetHeadQuery {
+                head,
+                last_block_timestamp,
+                txns_count: world_txns_count,
+                contract_address,
+            }),
         ))?;
 
         Ok(())

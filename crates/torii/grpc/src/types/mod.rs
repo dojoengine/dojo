@@ -17,6 +17,20 @@ use crate::proto::{self};
 pub mod schema;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
+pub struct IndexerUpdate {
+    pub head: u64,
+    pub tps: u64,
+    pub last_block_timestamp: u64,
+    pub contract_address: Felt,
+}
+
+impl From<proto::world::SubscribeIndexerResponse> for IndexerUpdate {
+    fn from(value: proto::world::SubscribeIndexerResponse) -> Self {
+        Self { head: value.head, tps: value.tps, last_block_timestamp: value.last_block_timestamp, contract_address: Felt::from_bytes_be_slice(&value.contract_address) }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct Query {
     pub clause: Option<Clause>,
     pub limit: u32,

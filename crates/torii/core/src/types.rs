@@ -84,3 +84,12 @@ pub struct Event {
     pub executed_at: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
 }
+
+
+#[derive(Debug, Clone)]
+pub struct IndexerUpdate {
+    pub head: u64,
+    pub tps: u64,
+    pub last_block_timestamp: u64,
+    pub contract_address: Felt,
+}
