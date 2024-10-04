@@ -14,7 +14,7 @@ use tokio::sync::RwLock;
 use torii_core::error::{Error, ParseError};
 use torii_core::simple_broker::SimpleBroker;
 use torii_core::sql::FELT_DELIMITER;
-use torii_core::types::Entity;
+use torii_core::types::OptimisticEntity;
 use tracing::{error, trace};
 
 use crate::proto;
@@ -78,15 +78,21 @@ impl EntityManager {
 #[allow(missing_debug_implementations)]
 pub struct Service {
     subs_manager: Arc<EntityManager>,
-    simple_broker: Pin<Box<dyn Stream<Item = Entity> + Send>>,
+    simple_broker: Pin<Box<dyn Stream<Item = OptimisticEntity> + Send>>,
 }
 
 impl Service {
     pub fn new(subs_manager: Arc<EntityManager>) -> Self {
-        Self { subs_manager, simple_broker: Box::pin(SimpleBroker::<Entity>::subscribe()) }
+        Self {
+            subs_manager,
+            simple_broker: Box::pin(SimpleBroker::<OptimisticEntity>::subscribe()),
+        }
     }
 
-    async fn publish_updates(subs: Arc<EntityManager>, entity: &Entity) -> Result<(), Error> {
+    async fn publish_updates(
+        subs: Arc<EntityManager>,
+        entity: &OptimisticEntity,
+    ) -> Result<(), Error> {
         let mut closed_stream = Vec::new();
         let hashed = Felt::from_str(&entity.id).map_err(ParseError::FromStr)?;
         let keys = entity
