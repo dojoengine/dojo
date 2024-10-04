@@ -31,6 +31,8 @@ SAYA_FORK_BLOCK_NUMBER=
 SAYA_SKIP_MAKING_TRANSACTIONS="" # Set to anything to skip making transactions
 SAYA_PILTOVER_ADDRESS=""
 SAYA_PILTOVER_PREPARED=
+SAYA_FACT_REGISTRY=""
+
 
 if [[ -z "${SAYA_FACT_REGISTRY}" ]]; then
     sncast -a $SAYA_SNCAST_ACCOUNT_NAME -u $SAYA_SEPOLIA_ENDPOINT deploy \
@@ -164,6 +166,9 @@ cargo run -r --bin saya -- \
     --signer-address $SAYA_SEPOLIA_ACCOUNT_ADDRESS \
     --private-key $SAYA_PROVER_KEY \
     --batch-size 1 \
-    --start-block $(expr $SAYA_FORK_BLOCK_NUMBER + 1)
-
+    --start-block $(expr $SAYA_FORK_BLOCK_NUMBER + 1) \
+    --da-chain celestia \
+    --celestia-node-url http://localhost:26658 \
+    --celestia-namespace saya-dev \
+    --celestia-node-auth-token eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJwdWJsaWMiLCJyZWFkIiwid3JpdGUiLCJhZG1pbiJdfQ.4HyTFCSqomIB9W1IrJu_O8RiOE6oaqAB1Un6aAs0nPE
     # --end-block $(expr $SAYA_FORK_BLOCK_NUMBER + 4)

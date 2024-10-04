@@ -52,4 +52,6 @@ pub enum ProverError {
     Cairo1PlaygroundError(#[from] cairo1_playground::error::Error),
     #[error("Failed to send transaction: {0}")]
     SendTransactionError(String),
+    #[error("Failed to prove: {0}")]
+    ProvingFailed(String),
 }

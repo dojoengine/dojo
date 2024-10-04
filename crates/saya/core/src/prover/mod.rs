@@ -12,7 +12,7 @@ mod program_input;
 use cairo_proof_parser::to_felts;
 pub use client::HttpProverParams;
 use client::{http_prove, sharp_prove};
-use persistent::BatcherInput;
+use persistent::{BatcherInput, StarknetOsOutput};
 pub use program_input::*;
 use prover_sdk::ProverResult;
 use starknet::accounts::Call;
@@ -32,6 +32,7 @@ pub enum ProverIdentifier {
 pub enum ProveProgram {
     Checker, // Contract specific checker program.
     Batcher, // Simulating snos, contract from dojo-os repository.
+    Echo,    // A mock program repeating the input value.
 }
 
 impl ProverIdentifier {
@@ -69,11 +70,27 @@ impl ProverIdentifier {
             }
         }
     }
+
+    pub async fn prove_echo(&self, calls: StarknetOsOutput) -> Result<ProverResult, ProverError> {
+        let calldata = to_felts(&calls).map_err(|e| ProverError::SerdeFeltError(e.to_string()))?;
+
+        dbg!(&calldata);
+
+        match self {
+            ProverIdentifier::Http(params) => {
+                http_prove(params.clone(), calldata, ProveProgram::Echo).await
+            }
+            ProverIdentifier::HerodotusSharp(key) => {
+                sharp_prove(calldata, key.to_string(), ProveProgram::Echo).await
+            }
+        }
+    }
 }
 
 impl ProveProgram {
     pub fn cairo_version(&self) -> Felt {
         match self {
+            ProveProgram::Echo => Felt::ONE,
             ProveProgram::Checker => Felt::ONE,
             ProveProgram::Batcher => Felt::ONE,
         }
