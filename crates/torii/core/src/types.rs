@@ -85,8 +85,9 @@ pub struct Event {
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone)]
-pub struct IndexerUpdate {
+#[derive(FromRow, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct Contract {
     pub head: u64,
     pub tps: u64,
     pub last_block_timestamp: u64,

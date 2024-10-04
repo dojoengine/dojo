@@ -14,8 +14,8 @@ use tracing::{debug, error};
 
 use crate::simple_broker::SimpleBroker;
 use crate::types::{
-    Entity as EntityUpdated, Event as EventEmitted, EventMessage as EventMessageUpdated,
-    IndexerUpdate, Model as ModelRegistered,
+    Contract as ContractUpdated, Entity as EntityUpdated, Event as EventEmitted,
+    EventMessage as EventMessageUpdated, Model as ModelRegistered,
 };
 
 pub(crate) const LOG_TARGET: &str = "torii_core::executor";
@@ -31,7 +31,7 @@ pub enum Argument {
 
 #[derive(Debug, Clone)]
 pub enum BrokerMessage {
-    SetHead(IndexerUpdate),
+    SetHead(ContractUpdated),
     ModelRegistered(ModelRegistered),
     EntityUpdated(EntityUpdated),
     EventMessageUpdated(EventMessageUpdated),
@@ -208,7 +208,13 @@ impl<'c> Executor<'c> {
                     format!("Failed to execute query: {:?}, args: {:?}", statement, arguments)
                 })?;
 
-                self.publish_queue.push(BrokerMessage::SetHead(IndexerUpdate {
+                sqlx::query("UPDATE contracts SET tps = ? WHERE id = ?")
+                    .bind(tps as i64)
+                    .bind(format!("{:#x}", set_head.contract_address))
+                    .execute(&mut **tx)
+                    .await?;
+
+                self.publish_queue.push(BrokerMessage::SetHead(ContractUpdated {
                     head: set_head.head,
                     tps,
                     last_block_timestamp: set_head.last_block_timestamp,

@@ -11,7 +11,7 @@ use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tokio::sync::RwLock;
 use torii_core::error::Error;
 use torii_core::simple_broker::SimpleBroker;
-use torii_core::types::IndexerUpdate;
+use torii_core::types::Contract as ContractUpdated;
 use tracing::{error, trace};
 
 use crate::proto;
@@ -67,17 +67,17 @@ impl IndexerManager {
 #[allow(missing_debug_implementations)]
 pub struct Service {
     subs_manager: Arc<IndexerManager>,
-    simple_broker: Pin<Box<dyn Stream<Item = IndexerUpdate> + Send>>,
+    simple_broker: Pin<Box<dyn Stream<Item = ContractUpdated> + Send>>,
 }
 
 impl Service {
     pub fn new(subs_manager: Arc<IndexerManager>) -> Self {
-        Self { subs_manager, simple_broker: Box::pin(SimpleBroker::<IndexerUpdate>::subscribe()) }
+        Self { subs_manager, simple_broker: Box::pin(SimpleBroker::<ContractUpdated>::subscribe()) }
     }
 
     async fn publish_updates(
         subs: Arc<IndexerManager>,
-        update: &IndexerUpdate,
+        update: &ContractUpdated,
     ) -> Result<(), Error> {
         let mut closed_stream = Vec::new();
 
