@@ -26,12 +26,9 @@ where
     F: FnOnce(&mut Senders<T>) -> R,
 {
     let mut map = SUBSCRIBERS.lock().unwrap();
-    let senders = map
-        .entry(TypeId::of::<Senders<T>>())
-        .or_insert_with(|| Box::new(Senders::<T> {
-            slab: Default::default(),
-            message_queue: VecDeque::new(),
-        }));
+    let senders = map.entry(TypeId::of::<Senders<T>>()).or_insert_with(|| {
+        Box::new(Senders::<T> { slab: Default::default(), message_queue: VecDeque::new() })
+    });
     f(senders.downcast_mut::<Senders<T>>().unwrap())
 }
 
