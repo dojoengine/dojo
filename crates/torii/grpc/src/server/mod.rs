@@ -1053,7 +1053,7 @@ impl proto::world::world_server::World for DojoWorld {
     ) -> ServiceResult<Self::SubscribeIndexerStream> {
         let SubscribeIndexerRequest { contract_address } = request.into_inner();
         let rx = self
-            .subscribe_indexer(Felt::from_bytes_be_slice(contract_address.as_slice()))
+            .subscribe_indexer(Felt::from_bytes_be_slice(&contract_address))
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
         Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::SubscribeIndexerStream))
