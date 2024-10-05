@@ -1,6 +1,4 @@
-use std::collections::HashMap;
-
-use celestia_types::{nmt::Namespace, Commitment};
+use celestia_types::Commitment;
 use serde::{Deserialize, Serialize};
 use starknet_crypto::Felt;
 
@@ -39,15 +37,8 @@ pub type BlockHeight = u64;
 pub struct PublishedStateDiff {
     pub prev_state_root: Felt,
     pub state_root: Felt,
-
-    // pointer to the previous state diffs that were published to Celestia
-    pub prev_da_height: Option<BlockHeight>,
-    pub prev_da_commitment: Option<Commitment>,
-    // felt representation of the Starknet OS output
-    // content: Vec<Felt>
-
-    // the state diff itself along with
-    // pub content: StarknetOsOutput,
+    pub prev_height: Option<BlockHeight>,
+    pub prev_commitment: Option<Commitment>,
     pub proof: serde_json::Value,
 }
 

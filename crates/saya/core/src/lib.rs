@@ -8,6 +8,7 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use cairo_proof_parser::from_felts;
+use celestia_types::Commitment;
 use dojo_os::piltover::{starknet_apply_piltover, PiltoverCalldata};
 use futures::future;
 use itertools::Itertools;
@@ -91,6 +92,8 @@ pub struct Saya {
     blockchain: Blockchain,
     /// The proving backend identifier.
     prover_identifier: ProverIdentifier,
+    prev_commitment: Option<Commitment>,
+    prev_height: Option<u64>,
 }
 
 struct FetchedBlockInfo {
@@ -125,7 +128,7 @@ impl Saya {
             prover_key: config.prover_key.clone(),
         }));
 
-        Ok(Self { config, da_client, provider, blockchain, prover_identifier })
+        Ok(Self { config, da_client, provider, blockchain, prover_identifier, prev_commitment: None, prev_height: None })
     }
 
     /// Starts the Saya mainloop to fetch and process data.
@@ -233,12 +236,15 @@ impl Saya {
                     };
 
                     let proof = self.prover_identifier.prove_echo(input).await?;
+                    trace!(target: LOG_TARGET, "Proof size: {:?}", proof.serialized_proof.len());   
 
                     if self.config.store_proofs {
                         let filename = format!("proof_{}.json", block + num_blocks - 1);
 
                         let mut file = File::create(filename).await?;
                         file.write_all(serde_json::to_string(&proof)?.as_bytes()).await?;
+                        let mut file = File::create("demo.json").await?;
+                        file.write_all(serde_json::to_string_pretty(&proof.proof)?.as_bytes()).await?;
                     }
                     self.process_proven(proof, vec![], block + num_blocks, state_root_change)
                         .await?;
@@ -262,6 +268,7 @@ impl Saya {
                     // We might want to prove the signatures as well.
                     let proof = self.prover_identifier.prove_checker(calls).await?;
 
+                    trace!(target: LOG_TARGET, "Proof size: {:?}", proof.serialized_proof.len());   
                     if self.config.store_proofs {
                         let filename = format!("proof_{}.json", block + num_blocks - 1);
                         let mut file =
@@ -432,7 +439,7 @@ impl Saya {
     /// * `prove_scheduler` - A full parallel prove scheduler.
     /// * `last_block` - The last block number in the `prove_scheduler`.
     async fn process_proven(
-        &self,
+        &mut self,
         proof: ProverResult,
         state_diff: Vec<Felt>,
         last_block: u64,
@@ -447,30 +454,33 @@ impl Saya {
             let checkpoint = PublishedStateDiff {
                 prev_state_root: state_roots.0,
                 state_root: state_roots.1,
-                prev_da_height: None,
-                prev_da_commitment: None,
+                prev_height: self.prev_height,
+                prev_commitment: self.prev_commitment,
                 proof: serde_json::to_value(&proof.proof).unwrap(),
             };
-
-            let height = if self.config.mode != SayaMode::Ephemeral {
+            // let ns = Namespace::new_v0(b"saya-dev").unwrap();
+            // let commitment = Commitment::from_blob(ns, 0, &serialized_proof.iter().map(|felt| felt.to_bytes()).collect::<Vec<_>>());
+            let (commitment, height) = if self.config.mode != SayaMode::Ephemeral {
                 da.publish_checkpoint(checkpoint).await?
             } else if self.config.skip_publishing_proof {
                 da.publish_state_diff_felts(&state_diff).await?
             } else {
                 da.publish_state_diff_and_proof_felts(&state_diff, &serialized_proof).await?
             };
+            self.prev_commitment = Some(commitment);
+            self.prev_height = Some(height);
 
-            info!(target: LOG_TARGET, last_block, height, "DA published.");
+            info!(target: LOG_TARGET,"commitment: {:?}, height: {:?}", commitment.0, height);
         }
 
         let program_hash = proof.program_hash;
         let program_output_hash = proof.program_output_hash;
         let program_output = proof.program_output;
 
-        let program_hash_string = program_hash.to_string();
-        let program_output_hash_string = program_output_hash.to_string();
+        let program_hash_string = program_hash;
+        let program_output_hash_string = program_output_hash;
 
-        info!(target: LOG_TARGET, program_hash_string,program_output_hash_string, "Extracted program hash and output hash.");
+        info!(target: LOG_TARGET,"Extracted program hash and output hash. {:?} {:?}", program_hash_string, program_output_hash_string);
         let expected_fact = poseidon_hash_many(&[program_hash, program_output_hash]).to_string();
         let program = program_hash.to_string();
         info!(target: LOG_TARGET, expected_fact, program, "Expected fact.");
