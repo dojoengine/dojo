@@ -6,12 +6,15 @@ use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use cairo_lang_starknet_classes::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet_classes::contract_class::ContractClass;
-use dojo_utils::{TransactionExt, TransactionWaiter, TransactionWaitingError, TxnConfig};
+use dojo_utils::{
+    FeeSetting, TokenFeeSetting, TransactionExtETH, TransactionExtSTRK, TransactionWaiter,
+    TransactionWaitingError, TxnConfig,
+};
 use starknet::accounts::{Account, AccountError, ConnectedAccount};
 use starknet::core::types::contract::{CompiledClass, SierraClass};
 use starknet::core::types::{
-    BlockId, BlockTag, Call, DeclareTransactionResult, Felt, FlattenedSierraClass,
-    InvokeTransactionResult, ReceiptBlock, StarknetError, TransactionReceiptWithBlockInfo,
+    BlockId, BlockTag, Call, DeclareTransactionResult, Felt, FlattenedSierraClass, ReceiptBlock,
+    StarknetError, TransactionReceiptWithBlockInfo,
 };
 use starknet::core::utils::{get_contract_address, CairoShortStringToFeltError};
 use starknet::macros::{felt, selector};
@@ -117,11 +120,32 @@ pub trait Declarable {
             Err(e) => return Err(MigrationError::Provider(e)),
         }
 
-        let DeclareTransactionResult { transaction_hash, class_hash } = account
-            .declare_v2(Arc::new(flattened_class), casm_class_hash)
-            .send_with_cfg(txn_config)
-            .await
-            .map_err(MigrationError::Migrator)?;
+        let (transaction_hash, class_hash) = match txn_config.fee_setting {
+            FeeSetting::Eth(token_fee_setting) => match token_fee_setting {
+                TokenFeeSetting::Send(fee_setting) => {
+                    let DeclareTransactionResult { transaction_hash, class_hash } = account
+                        .declare_v2(Arc::new(flattened_class), casm_class_hash)
+                        .send_with_cfg(&fee_setting)
+                        .await
+                        .map_err(MigrationError::Migrator)?;
+
+                    (transaction_hash, class_hash)
+                }
+                TokenFeeSetting::EstimateOnly => todo!(),
+            },
+            FeeSetting::Strk(token_fee_setting) => match token_fee_setting {
+                TokenFeeSetting::Send(fee_setting) => {
+                    let DeclareTransactionResult { transaction_hash, class_hash } = account
+                        .declare_v3(Arc::new(flattened_class), casm_class_hash)
+                        .send_with_cfg(&fee_setting)
+                        .await
+                        .map_err(MigrationError::Migrator)?;
+
+                    (transaction_hash, class_hash)
+                }
+                TokenFeeSetting::EstimateOnly => todo!(),
+            },
+        };
 
         TransactionWaiter::new(transaction_hash, account.provider())
             .await
@@ -197,7 +221,7 @@ pub trait Deployable: Declarable + Sync {
         tag: &str,
     ) -> Result<DeployOutput, MigrationError<<A as Account>::SignError>>
     where
-        A: ConnectedAccount + Send + Sync,
+        A: ConnectedAccount + Send + Sync + 'static,
         <A as ConnectedAccount>::Provider: Send,
     {
         let contract_address =
@@ -234,12 +258,13 @@ pub trait Deployable: Declarable + Sync {
             Err(e) => return Err(MigrationError::Provider(e)),
         };
 
-        let InvokeTransactionResult { transaction_hash } = account
-            .execute_v1(vec![call])
-            .send_with_cfg(txn_config)
-            .await
-            .map_err(MigrationError::Migrator)?;
+        let Some(invoke_res) =
+            dojo_utils::handle_execute(txn_config.fee_setting, &account, vec![call]).await?
+        else {
+            todo!("handle estimate only and simulate")
+        };
 
+        let transaction_hash = invoke_res.transaction_hash;
         let receipt = TransactionWaiter::new(transaction_hash, account.provider()).await?;
         let block_number = get_block_number_from_receipt(receipt);
 
@@ -295,16 +320,20 @@ pub trait Deployable: Declarable + Sync {
             Err(e) => return Err(MigrationError::Provider(e)),
         }
 
-        let txn = account.execute_v1(vec![Call {
+        let call = Call {
             calldata,
             // devnet UDC address
             selector: selector!("deployContract"),
             to: felt!("0x41a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf"),
-        }]);
+        };
 
-        let InvokeTransactionResult { transaction_hash } =
-            txn.send_with_cfg(txn_config).await.map_err(MigrationError::Migrator)?;
+        let Some(invoke_res) =
+            dojo_utils::handle_execute(txn_config.fee_setting, &account, vec![call]).await?
+        else {
+            todo!("handle estimate only and simulate")
+        };
 
+        let transaction_hash = invoke_res.transaction_hash;
         let receipt = TransactionWaiter::new(transaction_hash, account.provider()).await?;
         let block_number = get_block_number_from_receipt(receipt);
 
@@ -361,17 +390,15 @@ pub trait Upgradable: Deployable + Declarable + Sync {
         }
 
         let calldata = vec![class_hash];
+        let call = Call { calldata, selector: selector!("upgrade"), to: contract_address };
 
-        let InvokeTransactionResult { transaction_hash } = account
-            .execute_v1(vec![Call {
-                calldata,
-                selector: selector!("upgrade"),
-                to: contract_address,
-            }])
-            .send_with_cfg(txn_config)
-            .await
-            .map_err(MigrationError::Migrator)?;
+        let Some(invoke_res) =
+            dojo_utils::handle_execute(txn_config.fee_setting, &account, vec![call]).await?
+        else {
+            todo!("handle estimate only and simulate");
+        };
 
+        let transaction_hash = invoke_res.transaction_hash;
         let receipt = TransactionWaiter::new(transaction_hash, account.provider()).await?;
         let block_number = get_block_number_from_receipt(receipt);
 

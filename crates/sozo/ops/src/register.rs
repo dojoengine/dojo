@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use anyhow::{Context, Result};
-use dojo_utils::{TransactionExt, TxnConfig};
+use anyhow::Result;
+use dojo_utils::TxnConfig;
 use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::{WorldContract, WorldContractReader};
 use dojo_world::manifest::DeploymentManifest;
@@ -66,17 +66,16 @@ where
         .map(|c| world.register_model_getcall(&(*c).into()))
         .collect::<Vec<_>>();
 
-    let res = world
-        .account
-        .execute_v1(calls)
-        .send_with_cfg(txn_config)
-        .await
-        .with_context(|| "Failed to send transaction")?;
+    let Some(invoke_res) =
+        dojo_utils::handle_execute(txn_config.fee_setting, &world.account, calls).await?
+    else {
+        todo!("handle estimate and simulate")
+    };
 
     handle_transaction_result(
         &config.ui(),
         &world.account.provider(),
-        res,
+        invoke_res,
         txn_config.wait,
         txn_config.receipt,
         #[cfg(feature = "walnut")]

@@ -5,7 +5,7 @@ use std::str::FromStr;
 use anyhow::{anyhow, bail, Context, Result};
 use cainome::cairo_serde::ByteArray;
 use camino::Utf8PathBuf;
-use dojo_utils::{TransactionExt, TransactionWaiter, TxnConfig};
+use dojo_utils::{TransactionWaiter, TxnConfig};
 use dojo_world::contracts::abi::world::{self, Resource};
 use dojo_world::contracts::naming::{
     self, compute_selector_from_tag, get_name_from_tag, get_namespace_from_tag,
@@ -27,9 +27,7 @@ use itertools::Itertools;
 use scarb::core::Workspace;
 use scarb_ui::Ui;
 use starknet::accounts::{Account, ConnectedAccount, SingleOwnerAccount};
-use starknet::core::types::{
-    BlockId, BlockTag, Felt, FunctionCall, InvokeTransactionResult, StarknetError,
-};
+use starknet::core::types::{BlockId, BlockTag, Felt, FunctionCall, StarknetError};
 use starknet::core::utils::{
     cairo_short_string_to_felt, get_contract_address, get_selector_from_name,
 };
@@ -78,7 +76,7 @@ pub async fn apply_diff<A>(
     declarers: &[SingleOwnerAccount<AnyProvider, LocalWallet>],
 ) -> Result<MigrationOutput>
 where
-    A: ConnectedAccount + Sync + Send,
+    A: ConnectedAccount + Sync + Send + 'static,
     <A as ConnectedAccount>::Provider: Send,
     A::SignError: 'static,
 {
@@ -231,7 +229,7 @@ where
         match register_dojo_contracts(
             &strategy.contracts,
             world_address,
-            migrator,
+            &migrator,
             &ui,
             &txn_config,
         )
@@ -344,7 +342,7 @@ pub async fn upload_metadata<A>(
     txn_config: TxnConfig,
 ) -> Result<()>
 where
-    A: ConnectedAccount + Sync + Send,
+    A: ConnectedAccount + Sync + Send + 'static,
     <A as ConnectedAccount>::Provider: Send,
 {
     let ui = ws.config().ui();
@@ -418,12 +416,13 @@ where
         return Ok(());
     }
 
-    let InvokeTransactionResult { transaction_hash } =
-        migrator.execute_v1(calls).send_with_cfg(&txn_config).await.map_err(|e| {
-            ui.verbose(format!("{e:?}"));
-            anyhow!("Failed to register metadata into the resource registry: {e}")
-        })?;
+    let Some(invoke_res) =
+        dojo_utils::handle_execute(txn_config.fee_setting, &migrator, calls).await?
+    else {
+        todo!("handle estimate and simulate");
+    };
 
+    let transaction_hash = invoke_res.transaction_hash;
     TransactionWaiter::new(transaction_hash, migrator.provider()).await?;
 
     ui.print(format!(
@@ -476,11 +475,14 @@ where
 
     ui.print_header(format!("# Namespaces ({})", namespaces.len() - registered_namespaces.len()));
 
-    let InvokeTransactionResult { transaction_hash } =
-        world.account.execute_v1(calls).send_with_cfg(txn_config).await.map_err(|e| {
-            ui.verbose(format!("{e:?}"));
-            anyhow!("Failed to register namespace to World: {e}")
-        })?;
+    let Some(invoke_res) =
+        dojo_utils::handle_execute(txn_config.fee_setting, &world.account, calls)
+            .await
+            .with_context(|| "Failed to register namespace to world")?
+    else {
+        todo!("handle estimate and simulate");
+    };
+    let transaction_hash = invoke_res.transaction_hash;
 
     TransactionWaiter::new(transaction_hash, migrator.provider()).await?;
 
@@ -492,7 +494,7 @@ where
 async fn register_dojo_models<A>(
     models: &[ClassMigration],
     world_address: Felt,
-    migrator: &A,
+    migrator: A,
     ui: &Ui,
     txn_config: &TxnConfig,
 ) -> Result<RegisterOutput>
@@ -566,12 +568,15 @@ where
         });
     }
 
-    let InvokeTransactionResult { transaction_hash } =
-        world.account.execute_v1(calls).send_with_cfg(txn_config).await.map_err(|e| {
-            ui.verbose(format!("{e:?}"));
-            anyhow!("Failed to register models to World: {e}")
-        })?;
+    let Some(invoke_res) =
+        dojo_utils::handle_execute(txn_config.fee_setting, &world.account, calls)
+            .await
+            .with_context(|| "Faileed to register models to World")?
+    else {
+        todo!("handle estimate and simulate");
+    };
 
+    let transaction_hash = invoke_res.transaction_hash;
     TransactionWaiter::new(transaction_hash, migrator.provider()).await?;
 
     ui.print(format!("All models are registered at: {transaction_hash:#x}\n"));
@@ -684,12 +689,15 @@ where
         });
     }
 
-    let InvokeTransactionResult { transaction_hash } =
-        world.account.execute_v1(calls).send_with_cfg(txn_config).await.map_err(|e| {
-            ui.verbose(format!("{e:?}"));
-            anyhow!("Failed to register models to World: {e}")
-        })?;
+    let Some(invoke_res) =
+        dojo_utils::handle_execute(txn_config.fee_setting, &world.account, calls)
+            .await
+            .with_context(|| "Failed to register models to world.")?
+    else {
+        todo!("handle estimate and simulate");
+    };
 
+    let transaction_hash = invoke_res.transaction_hash;
     TransactionWaiter::new(transaction_hash, migrator.provider()).await?;
 
     ui.print(format!("All models are registered at: {transaction_hash:#x}\n"));
@@ -786,12 +794,13 @@ where
         return Ok(deploy_outputs);
     }
 
-    let InvokeTransactionResult { transaction_hash } =
-        migrator.execute_v1(calls).send_with_cfg(txn_config).await.map_err(|e| {
-            ui.verbose(format!("{e:?}"));
-            anyhow!("Failed to deploy contracts: {e}")
-        })?;
+    let Some(invoke_res) =
+        dojo_utils::handle_execute(txn_config.fee_setting, &migrator, calls).await?
+    else {
+        todo!("handle estimate and invoke");
+    };
 
+    let transaction_hash = invoke_res.transaction_hash;
     TransactionWaiter::new(transaction_hash, migrator.provider()).await?;
 
     ui.print(format!("All contracts are deployed at: {transaction_hash:#x}\n"));
@@ -917,12 +926,14 @@ where
         return Ok(deploy_outputs);
     }
 
-    let InvokeTransactionResult { transaction_hash } =
-        migrator.execute_v1(calls).send_with_cfg(txn_config).await.map_err(|e| {
-            ui.verbose(format!("{e:?}"));
-            anyhow!("Failed to deploy contracts: {e}")
-        })?;
+    let Some(invoke_res) = dojo_utils::handle_execute(txn_config.fee_setting, &migrator, calls)
+        .await
+        .with_context(|| "Failed to deploy contracts")?
+    else {
+        todo!("handle estimate and simulate");
+    };
 
+    let transaction_hash = invoke_res.transaction_hash;
     TransactionWaiter::new(transaction_hash, migrator.provider()).await?;
 
     ui.print(format!("All contracts are deployed at: {transaction_hash:#x}\n"));

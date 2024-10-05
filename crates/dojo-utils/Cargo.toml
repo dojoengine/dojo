@@ -7,6 +7,7 @@ version.workspace = true
 
 [dependencies]
 anyhow.workspace = true
+clap.workspace = true
 futures.workspace = true
 reqwest.workspace = true
 rpassword.workspace = true

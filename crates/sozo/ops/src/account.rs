@@ -5,8 +5,11 @@ use std::path::PathBuf;
 use anyhow::{Context, Result};
 use colored::Colorize;
 use colored_json::{ColorMode, Output};
-use dojo_utils::{TransactionExt, TransactionWaiter, TxnAction, TxnConfig};
-use num_traits::ToPrimitive;
+use dojo_utils::{
+    EthFeeSetting, FeeSetting, StrkFeeSetting, TokenFeeSetting, TransactionExtETH,
+    TransactionExtSTRK, TransactionWaiter, TxnConfig,
+};
+use num_traits::{FromPrimitive, ToPrimitive};
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use starknet::accounts::{AccountFactory, AccountFactoryError, OpenZeppelinAccountFactory};
@@ -114,33 +117,6 @@ pub struct DeployedStatus {
     pub address: Felt,
 }
 
-enum MaxFeeType {
-    Manual { max_fee: Felt },
-    Estimated { estimate: Felt, estimate_with_buffer: Felt },
-}
-
-impl MaxFeeType {
-    pub fn max_fee(&self) -> Felt {
-        match self {
-            Self::Manual { max_fee } => *max_fee,
-            Self::Estimated { estimate_with_buffer, .. } => *estimate_with_buffer,
-        }
-    }
-}
-
-#[derive(Debug)]
-pub enum FeeSetting {
-    Manual(Felt),
-    EstimateOnly,
-    None,
-}
-
-impl FeeSetting {
-    pub fn is_estimate_only(&self) -> bool {
-        matches!(self, FeeSetting::EstimateOnly)
-    }
-}
-
 pub async fn new(signer: LocalWallet, force: bool, file: PathBuf) -> Result<()> {
     if file.exists() && !force {
         anyhow::bail!("account config file already exists");
@@ -187,7 +163,7 @@ pub async fn new(signer: LocalWallet, force: bool, file: PathBuf) -> Result<()> 
 pub async fn deploy(
     provider: JsonRpcClient<HttpTransport>,
     signer: LocalWallet,
-    txn_action: TxnAction,
+    txn_config: TxnConfig,
     nonce: Option<Felt>,
     poll_interval: u64,
     file: PathBuf,
@@ -233,135 +209,212 @@ pub async fn deploy(
         }
     };
 
-    let account_deployment = factory.deploy_v1(undeployed_status.salt);
-
     let target_deployment_address = account.deploy_account_address()?;
+    let account_deployment_tx = match txn_config.fee_setting {
+        FeeSetting::Eth(fee_setting) => {
+            let account_deployment = factory.deploy_v1(undeployed_status.salt);
 
-    // Sanity check. We don't really need to check again here actually
-    if account_deployment.address() != target_deployment_address {
-        panic!("Unexpected account deployment address mismatch");
-    }
+            // Sanity check. We don't really need to check again here actually
+            if account_deployment.address() != target_deployment_address {
+                anyhow::bail!("Unexpected account deployment address mismatch");
+            }
 
-    let account_deployment = match nonce {
-        Some(nonce) => account_deployment.nonce(nonce),
-        None => account_deployment,
-    };
+            let account_deployment = match nonce {
+                Some(nonce) => account_deployment.nonce(nonce),
+                None => account_deployment,
+            };
 
-    match txn_action {
-        TxnAction::Send { wait, receipt, max_fee_raw, fee_estimate_multiplier, walnut } => {
-            let max_fee = if let Some(max_fee_raw) = max_fee_raw {
-                MaxFeeType::Manual { max_fee: max_fee_raw }
-            } else {
-                let estimated_fee = account_deployment
-                    .estimate_fee()
-                    .await
-                    .map_err(|err| match err {
-                        AccountFactoryError::Provider(ProviderError::StarknetError(err)) => {
-                            map_starknet_error(err)
+            let account_deployment_tx = match fee_setting {
+                TokenFeeSetting::Send(fee) => {
+                    match fee {
+                        EthFeeSetting::Manual { max_fee_raw } => {
+                            eprintln!(
+                                "You've manually specified the account deployment fee to be {}. \
+                             Therefore, fund at least:\n    {}",
+                                format!("{} ETH", utils::felt_to_bigdecimal(max_fee_raw, 18))
+                                    .bright_yellow(),
+                                format!("{} ETH", utils::felt_to_bigdecimal(max_fee_raw, 18))
+                                    .bright_yellow(),
+                            );
                         }
-                        err => anyhow::anyhow!("{}", err),
-                    })?
-                    .overall_fee;
+                        EthFeeSetting::Estimate { fee_estimate_multiplier } => {
+                            let fee_estimate_multiplier = fee_estimate_multiplier.unwrap_or(1.1);
+                            let estimated_fee = account_deployment
+                                .estimate_fee()
+                                .await
+                                .map_err(|err| match err {
+                                    AccountFactoryError::Provider(
+                                        ProviderError::StarknetError(err),
+                                    ) => map_starknet_error(err),
+                                    err => anyhow::anyhow!("{}", err),
+                                })?
+                                .overall_fee;
 
-                let fee_estimate_multiplier = fee_estimate_multiplier.unwrap_or(1.1);
+                            let estimated_fee_with_buffer: Felt =
+                                (((estimated_fee.to_u64().context("Invalid u64")? as f64)
+                                    * fee_estimate_multiplier)
+                                    as u64)
+                                    .into();
 
-                let estimated_fee_with_buffer =
-                    (((estimated_fee.to_u64().context("Invalid u64")? as f64)
-                        * fee_estimate_multiplier) as u64)
-                        .into();
+                            eprintln!(
+                            "The estimated account deployment fee is {} STRK. However, to avoid \
+                             failure, fund atleast:\n    {}",
+                            format!("{} ETH", utils::felt_to_bigdecimal(estimated_fee, 18))
+                                .bright_yellow(),
+                            format!("{} ETH", utils::felt_to_bigdecimal(estimated_fee_with_buffer, 18))
+                                .bright_yellow()
+                        );
+                        }
+                    }
 
-                MaxFeeType::Estimated {
-                    estimate: estimated_fee,
-                    estimate_with_buffer: estimated_fee_with_buffer,
+                    do_account_deploy_v1(
+                        fee,
+                        target_deployment_address,
+                        no_confirmation,
+                        account_deployment,
+                    )
+                    .await?
+                }
+                TokenFeeSetting::EstimateOnly => {
+                    let estimated_fee = account_deployment
+                        .estimate_fee()
+                        .await
+                        .map_err(|err| match err {
+                            AccountFactoryError::Provider(ProviderError::StarknetError(err)) => {
+                                map_starknet_error(err)
+                            }
+                            err => anyhow::anyhow!("{}", err),
+                        })?
+                        .overall_fee;
+
+                    let decimal = utils::felt_to_bigdecimal(estimated_fee, 18);
+                    println!("{} ETH", format!("{decimal}").bright_yellow());
+                    return Ok(());
                 }
             };
 
-            let account_deployment = account_deployment.max_fee(max_fee.max_fee());
-            let txn_config =
-                TxnConfig { fee_estimate_multiplier, wait, receipt, max_fee_raw, walnut };
-            do_account_deploy(
-                max_fee,
-                txn_config,
-                target_deployment_address,
-                no_confirmation,
-                account_deployment,
-                &provider,
-                poll_interval,
-                &mut account,
-            )
-            .await?;
-
-            write_account_to_file(file, account)?;
-            Ok(())
+            account_deployment_tx
         }
-        TxnAction::Estimate => {
-            let estimated_fee = account_deployment
-                .estimate_fee()
-                .await
-                .map_err(|err| match err {
-                    AccountFactoryError::Provider(ProviderError::StarknetError(err)) => {
-                        map_starknet_error(err)
+        FeeSetting::Strk(fee_setting) => {
+            let account_deployment = factory.deploy_v3(undeployed_status.salt);
+
+            // Sanity check. We don't really need to check again here actually
+            if account_deployment.address() != target_deployment_address {
+                anyhow::bail!("Unexpected account deployment address mismatch");
+            }
+
+            let account_deployment = match nonce {
+                Some(nonce) => account_deployment.nonce(nonce),
+                None => account_deployment,
+            };
+
+            let account_deployment_tx = match fee_setting {
+                TokenFeeSetting::Send(fee) => {
+                    match fee {
+                        StrkFeeSetting::Manual { gas, gas_price } => {
+                            let fee_estimate = account_deployment.estimate_fee().await.map_err(
+                                |err| match err {
+                                    AccountFactoryError::Provider(
+                                        ProviderError::StarknetError(err),
+                                    ) => map_starknet_error(err),
+                                    err => anyhow::anyhow!("{}", err),
+                                },
+                            )?;
+
+                            let gas = if let Some(gas) = gas {
+                                let gas = Felt::from_u64(gas).unwrap();
+                                if fee_estimate.gas_consumed > gas {
+                                    anyhow::bail!("gas consumed more than the limit");
+                                } else {
+                                    gas
+                                }
+                            } else {
+                                fee_estimate.gas_consumed
+                            };
+
+                            let gas_price = if let Some(gas_price) = gas_price {
+                                let gas_price = Felt::from_u128(gas_price).unwrap();
+                                if fee_estimate.gas_price > gas_price {
+                                    anyhow::bail!("gas price higher than limit");
+                                } else {
+                                    gas_price
+                                }
+                            } else {
+                                fee_estimate.gas_price
+                            };
+
+                            let overall_fee = (gas * gas_price)
+                                + (fee_estimate.data_gas_consumed * fee_estimate.data_gas_price);
+                            eprintln!(
+                                "You've manually specified the account deployment fee to be {}. \
+                             Therefore, fund at least:\n    {}",
+                                format!("{} STRK", utils::felt_to_bigdecimal(overall_fee, 18))
+                                    .bright_yellow(),
+                                format!("{} STRK", utils::felt_to_bigdecimal(overall_fee, 18))
+                                    .bright_yellow(),
+                            );
+                        }
+                        StrkFeeSetting::Estimate { gas_estimate_multiplier } => {
+                            let gas_estimate_multiplier = gas_estimate_multiplier.unwrap_or(1.1);
+                            let estimated_fee = account_deployment
+                                .estimate_fee()
+                                .await
+                                .map_err(|err| match err {
+                                    AccountFactoryError::Provider(
+                                        ProviderError::StarknetError(err),
+                                    ) => map_starknet_error(err),
+                                    err => anyhow::anyhow!("{}", err),
+                                })?
+                                .overall_fee;
+
+                            let estimated_fee_with_buffer: Felt =
+                                (((estimated_fee.to_u64().context("Invalid u64")? as f64)
+                                    * gas_estimate_multiplier)
+                                    as u64)
+                                    .into();
+
+                            eprintln!(
+                            "The estimated account deployment fee is {} STRK. However, to avoid \
+                             failure, fund least:\n    {}",
+                            format!("{} STRK", utils::felt_to_bigdecimal(estimated_fee, 18))
+                                .bright_yellow(),
+                            format!(
+                                "{} STRK",
+                                utils::felt_to_bigdecimal(estimated_fee_with_buffer, 18)
+                            )
+                            .bright_yellow()
+                        );
+                        }
                     }
-                    err => anyhow::anyhow!("{}", err),
-                })?
-                .overall_fee;
+                    do_account_deploy_v3(
+                        fee,
+                        target_deployment_address,
+                        no_confirmation,
+                        account_deployment,
+                    )
+                    .await?
+                }
+                TokenFeeSetting::EstimateOnly => {
+                    let estimated_fee = account_deployment
+                        .estimate_fee()
+                        .await
+                        .map_err(|err| match err {
+                            AccountFactoryError::Provider(ProviderError::StarknetError(err)) => {
+                                map_starknet_error(err)
+                            }
+                            err => anyhow::anyhow!("{}", err),
+                        })?
+                        .overall_fee;
 
-            let decimal = utils::felt_to_bigdecimal(estimated_fee, 18);
-            println!("{} ETH", format!("{decimal}").bright_yellow());
+                    let decimal = utils::felt_to_bigdecimal(estimated_fee, 18);
+                    println!("{} STRK", format!("{decimal}").bright_yellow());
+                    return Ok(());
+                }
+            };
 
-            Ok(())
+            account_deployment_tx
         }
-        TxnAction::Simulate => {
-            simulate_account_deploy(&account_deployment).await?;
-            Ok(())
-        }
-    }
-}
-
-#[allow(clippy::too_many_arguments)]
-async fn do_account_deploy(
-    max_fee: MaxFeeType,
-    txn_config: TxnConfig,
-    target_deployment_address: Felt,
-    no_confirmation: bool,
-    account_deployment: starknet::accounts::AccountDeploymentV1<
-        '_,
-        OpenZeppelinAccountFactory<LocalWallet, &JsonRpcClient<HttpTransport>>,
-    >,
-    provider: &JsonRpcClient<HttpTransport>,
-    poll_interval: u64,
-    account: &mut AccountConfig,
-) -> Result<(), anyhow::Error> {
-    match max_fee {
-        MaxFeeType::Manual { max_fee } => {
-            eprintln!(
-                "You've manually specified the account deployment fee to be {}. Therefore, fund \
-                 at least:\n    {}",
-                format!("{} ETH", utils::felt_to_bigdecimal(max_fee, 18)).bright_yellow(),
-                format!("{} ETH", utils::felt_to_bigdecimal(max_fee, 18)).bright_yellow(),
-            );
-        }
-        MaxFeeType::Estimated { estimate, estimate_with_buffer } => {
-            eprintln!(
-                "The estimated account deployment fee is {}. However, to avoid failure, fund at \
-                 least:\n    {}",
-                format!("{} ETH", utils::felt_to_bigdecimal(estimate, 18)).bright_yellow(),
-                format!("{} ETH", utils::felt_to_bigdecimal(estimate_with_buffer, 18))
-                    .bright_yellow()
-            );
-        }
-    }
-    eprintln!(
-        "to the following address:\n    {}",
-        format!("{:#064x}", target_deployment_address).bright_yellow()
-    );
-    if !no_confirmation {
-        eprint!("Press [ENTER] once you've funded the address.");
-        std::io::stdin().read_line(&mut String::new())?;
-    }
-
-    let account_deployment_tx =
-        account_deployment.send_with_cfg(&txn_config).await?.transaction_hash;
+    };
 
     eprintln!(
         "Account deployment transaction: {}",
@@ -389,7 +442,60 @@ async fn do_account_deploy(
 
     account.deployment.to_deployed(target_deployment_address);
 
+    write_account_to_file(file, account)?;
     Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn do_account_deploy_v1(
+    fee_setting: EthFeeSetting,
+    target_deployment_address: Felt,
+    no_confirmation: bool,
+    account_deployment: starknet::accounts::AccountDeploymentV1<
+        '_,
+        OpenZeppelinAccountFactory<LocalWallet, &JsonRpcClient<HttpTransport>>,
+    >,
+) -> Result<Felt, anyhow::Error> {
+    eprintln!(
+        "to the following address:\n    {}",
+        format!("{:#064x}", target_deployment_address).bright_yellow()
+    );
+
+    if !no_confirmation {
+        eprint!("Press [ENTER] once you've funded the address.");
+        std::io::stdin().read_line(&mut String::new())?;
+    }
+
+    let account_deployment_tx =
+        account_deployment.send_with_cfg(&fee_setting).await?.transaction_hash;
+
+    return Ok(account_deployment_tx);
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn do_account_deploy_v3(
+    fee_setting: StrkFeeSetting,
+    target_deployment_address: Felt,
+    no_confirmation: bool,
+    account_deployment: starknet::accounts::AccountDeploymentV3<
+        '_,
+        OpenZeppelinAccountFactory<LocalWallet, &JsonRpcClient<HttpTransport>>,
+    >,
+) -> Result<Felt, anyhow::Error> {
+    eprintln!(
+        "to the following address:\n    {}",
+        format!("{:#064x}", target_deployment_address).bright_yellow()
+    );
+
+    if !no_confirmation {
+        eprint!("Press [ENTER] once you've funded the address.");
+        std::io::stdin().read_line(&mut String::new())?;
+    }
+
+    let account_deployment_tx =
+        account_deployment.send_with_cfg(&fee_setting).await?.transaction_hash;
+
+    return Ok(account_deployment_tx);
 }
 
 fn write_account_to_file(file: PathBuf, account: AccountConfig) -> Result<(), anyhow::Error> {

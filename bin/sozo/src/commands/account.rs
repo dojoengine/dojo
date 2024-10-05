@@ -45,13 +45,6 @@ pub enum AccountCommand {
         #[clap(flatten)]
         transaction: TransactionOptions,
 
-        #[clap(long, help = "Simulate the transaction only")]
-        simulate: bool,
-
-        #[clap(long, help = "Only estimate transaction fee without sending transaction")]
-        #[arg(global = true)]
-        estimate_only: bool,
-
         #[clap(long, help = "Provide transaction nonce manually")]
         nonce: Option<Felt>,
 
@@ -102,8 +95,6 @@ impl AccountArgs {
                     starknet,
                     signer,
                     transaction,
-                    simulate,
-                    estimate_only,
                     nonce,
                     poll_interval,
                     file,
@@ -111,12 +102,12 @@ impl AccountArgs {
                 } => {
                     let provider = starknet.provider(env_metadata.as_ref())?;
                     let signer = signer.signer(env_metadata.as_ref(), false)?;
-                    let txn_action = transaction.to_txn_action(simulate, estimate_only)?;
+                    let txn_action = transaction.to_txn_action()?;
+                    let txn_config = transaction.into();
                     trace!(
                         ?starknet,
                         ?signer,
                         ?txn_action,
-                        simulate,
                         ?nonce,
                         poll_interval,
                         ?file,
@@ -127,6 +118,7 @@ impl AccountArgs {
                         provider,
                         signer,
                         txn_action,
+                        txn_config,
                         nonce,
                         poll_interval,
                         file,
