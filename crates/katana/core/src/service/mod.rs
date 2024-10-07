@@ -3,7 +3,6 @@
 
 use std::future::Future;
 use std::pin::Pin;
-use std::sync::Arc;
 use std::task::{Context, Poll};
 
 use futures::channel::mpsc::Receiver;
@@ -33,7 +32,7 @@ pub(crate) const LOG_TARGET: &str = "node";
 #[allow(missing_debug_implementations)]
 pub struct BlockProductionTask<EF: ExecutorFactory> {
     /// creates new blocks
-    pub(crate) block_producer: Arc<BlockProducer<EF>>,
+    pub(crate) block_producer: BlockProducer<EF>,
     /// the miner responsible to select transactions from the `pool´
     pub(crate) miner: TransactionMiner,
     /// the pool that holds all transactions
@@ -43,11 +42,7 @@ pub struct BlockProductionTask<EF: ExecutorFactory> {
 }
 
 impl<EF: ExecutorFactory> BlockProductionTask<EF> {
-    pub fn new(
-        pool: TxPool,
-        miner: TransactionMiner,
-        block_producer: Arc<BlockProducer<EF>>,
-    ) -> Self {
+    pub fn new(pool: TxPool, miner: TransactionMiner, block_producer: BlockProducer<EF>) -> Self {
         Self { block_producer, miner, pool, metrics: BlockProducerMetrics::default() }
     }
 }
