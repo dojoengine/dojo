@@ -322,7 +322,8 @@ pub async fn handle_execute<A>(
     calls: Vec<Call>,
 ) -> Result<Option<InvokeTransactionResult>, AccountError<A::SignError>>
 where
-    A: ConnectedAccount + Sync,
+    A: ConnectedAccount + Sync + Send,
+    A::SignError: 'static,
 {
     let invoke_res = match fee_setting {
         FeeSetting::Eth(token_fee_setting) => match token_fee_setting {

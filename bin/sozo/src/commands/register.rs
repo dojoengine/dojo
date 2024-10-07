@@ -75,7 +75,7 @@ impl RegisterArgs {
             register::model_register(
                 models,
                 &world,
-                &transaction.into(),
+                &transaction.try_into()?,
                 world_reader,
                 world_address,
                 config,

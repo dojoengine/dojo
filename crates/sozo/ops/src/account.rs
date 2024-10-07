@@ -230,7 +230,7 @@ pub async fn deploy(
                         EthFeeSetting::Manual { max_fee_raw } => {
                             eprintln!(
                                 "You've manually specified the account deployment fee to be {}. \
-                             Therefore, fund at least:\n    {}",
+                                 Therefore, fund at least:\n    {}",
                                 format!("{} ETH", utils::felt_to_bigdecimal(max_fee_raw, 18))
                                     .bright_yellow(),
                                 format!("{} ETH", utils::felt_to_bigdecimal(max_fee_raw, 18))
@@ -257,13 +257,16 @@ pub async fn deploy(
                                     .into();
 
                             eprintln!(
-                            "The estimated account deployment fee is {} STRK. However, to avoid \
-                             failure, fund atleast:\n    {}",
-                            format!("{} ETH", utils::felt_to_bigdecimal(estimated_fee, 18))
-                                .bright_yellow(),
-                            format!("{} ETH", utils::felt_to_bigdecimal(estimated_fee_with_buffer, 18))
+                                "The estimated account deployment fee is {} STRK. However, to \
+                                 avoid failure, fund atleast:\n    {}",
+                                format!("{} ETH", utils::felt_to_bigdecimal(estimated_fee, 18))
+                                    .bright_yellow(),
+                                format!(
+                                    "{} ETH",
+                                    utils::felt_to_bigdecimal(estimated_fee_with_buffer, 18)
+                                )
                                 .bright_yellow()
-                        );
+                            );
                         }
                     }
 
@@ -347,7 +350,7 @@ pub async fn deploy(
                                 + (fee_estimate.data_gas_consumed * fee_estimate.data_gas_price);
                             eprintln!(
                                 "You've manually specified the account deployment fee to be {}. \
-                             Therefore, fund at least:\n    {}",
+                                 Therefore, fund at least:\n    {}",
                                 format!("{} STRK", utils::felt_to_bigdecimal(overall_fee, 18))
                                     .bright_yellow(),
                                 format!("{} STRK", utils::felt_to_bigdecimal(overall_fee, 18))
@@ -374,16 +377,16 @@ pub async fn deploy(
                                     .into();
 
                             eprintln!(
-                            "The estimated account deployment fee is {} STRK. However, to avoid \
-                             failure, fund least:\n    {}",
-                            format!("{} STRK", utils::felt_to_bigdecimal(estimated_fee, 18))
-                                .bright_yellow(),
-                            format!(
-                                "{} STRK",
-                                utils::felt_to_bigdecimal(estimated_fee_with_buffer, 18)
-                            )
-                            .bright_yellow()
-                        );
+                                "The estimated account deployment fee is {} STRK. However, to \
+                                 avoid failure, fund least:\n    {}",
+                                format!("{} STRK", utils::felt_to_bigdecimal(estimated_fee, 18))
+                                    .bright_yellow(),
+                                format!(
+                                    "{} STRK",
+                                    utils::felt_to_bigdecimal(estimated_fee_with_buffer, 18)
+                                )
+                                .bright_yellow()
+                            );
                         }
                     }
                     do_account_deploy_v3(
@@ -518,6 +521,7 @@ fn write_account_to_file(file: PathBuf, account: AccountConfig) -> Result<(), an
     Ok(())
 }
 
+#[allow(dead_code)]
 async fn simulate_account_deploy(
     account_deployment: &starknet::accounts::AccountDeploymentV1<
         '_,

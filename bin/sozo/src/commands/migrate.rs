@@ -110,7 +110,7 @@ impl MigrateArgs {
                 .tokio_handle()
                 .block_on(async {
                     trace!(name, "Applying migration.");
-                    let txn_config: TxnConfig = transaction.into();
+                    let txn_config: TxnConfig = transaction.try_into()?;
 
                     migration::migrate(
                         &ws,

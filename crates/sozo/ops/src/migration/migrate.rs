@@ -446,6 +446,7 @@ async fn register_namespaces<A>(
 where
     A: ConnectedAccount + Send + Sync,
     <A as ConnectedAccount>::Provider: Send,
+    A::SignError: 'static,
 {
     let world = WorldContract::new(world_address, migrator);
 
@@ -501,6 +502,7 @@ async fn register_dojo_models<A>(
 where
     A: ConnectedAccount + Send + Sync,
     <A as ConnectedAccount>::Provider: Send,
+    A::SignError: 'static,
 {
     if models.is_empty() {
         return Ok(RegisterOutput {
@@ -596,6 +598,7 @@ async fn register_dojo_models_with_declarers<A>(
 where
     A: ConnectedAccount + Send + Sync,
     <A as ConnectedAccount>::Provider: Send,
+    A::SignError: 'static,
 {
     if models.is_empty() {
         return Ok(RegisterOutput {
@@ -715,6 +718,7 @@ async fn register_dojo_contracts<A>(
 where
     A: ConnectedAccount + Send + Sync,
     <A as ConnectedAccount>::Provider: Send,
+    A::SignError: 'static,
 {
     if contracts.is_empty() {
         return Ok(vec![]);
@@ -819,6 +823,7 @@ async fn register_dojo_contracts_declarers<A>(
 where
     A: ConnectedAccount + Send + Sync,
     <A as ConnectedAccount>::Provider: Send,
+    A::SignError: 'static,
 {
     if contracts.is_empty() {
         return Ok(vec![]);
@@ -952,6 +957,7 @@ async fn deploy_contract<A>(
 where
     A: ConnectedAccount + Send + Sync,
     <A as ConnectedAccount>::Provider: Send,
+    A::SignError: 'static,
 {
     match contract
         .deploy(contract.diff.local_class_hash, constructor_calldata, migrator, txn_config)
@@ -995,6 +1001,7 @@ async fn upgrade_contract<A>(
 where
     A: ConnectedAccount + Send + Sync,
     <A as ConnectedAccount>::Provider: Send,
+    A::SignError: 'static,
 {
     match contract
         .upgrade_world(

@@ -102,12 +102,10 @@ impl AccountArgs {
                 } => {
                     let provider = starknet.provider(env_metadata.as_ref())?;
                     let signer = signer.signer(env_metadata.as_ref(), false)?;
-                    let txn_action = transaction.to_txn_action()?;
-                    let txn_config = transaction.into();
+                    let txn_config = transaction.try_into()?;
                     trace!(
                         ?starknet,
                         ?signer,
-                        ?txn_action,
                         ?nonce,
                         poll_interval,
                         ?file,
@@ -117,7 +115,6 @@ impl AccountArgs {
                     account::deploy(
                         provider,
                         signer,
-                        txn_action,
                         txn_config,
                         nonce,
                         poll_interval,

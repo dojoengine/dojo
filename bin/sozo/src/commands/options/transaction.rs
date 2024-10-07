@@ -1,13 +1,7 @@
-use std::fmt::{Display, Formatter};
-
-use anyhow::{bail, Result};
+use anyhow::Result;
 use bigdecimal::{BigDecimal, Zero};
-use clap::builder::PossibleValue;
-use clap::{Args, ValueEnum};
-use dojo_utils::{
-    EthManualFeeSetting, FeeSetting, FeeToken, StrkManualFeeSetting, TokenFeeSetting, TxnAction,
-    TxnConfig,
-};
+use clap::Args;
+use dojo_utils::{EthFeeSetting, FeeSetting, FeeToken, StrkFeeSetting, TokenFeeSetting, TxnConfig};
 use num_integer::Integer;
 use num_traits::ToPrimitive;
 use starknet::core::types::Felt;
@@ -125,17 +119,21 @@ impl TransactionOptions {
                             )
                         }
 
-                        Ok(FeeSetting::Eth(TokenFeeSetting::Send(EthManualFeeSetting {
-                            max_fee: max_fee_felt,
+                        Ok(FeeSetting::Eth(TokenFeeSetting::Send(EthFeeSetting::Manual {
+                            max_fee_raw: max_fee_felt,
                         })))
                     }
                     (None, Some(max_fee_raw), false) => {
-                        Ok(FeeSetting::Eth(TokenFeeSetting::Send(EthManualFeeSetting {
-                            max_fee: max_fee_raw,
+                        Ok(FeeSetting::Eth(TokenFeeSetting::Send(EthFeeSetting::Manual {
+                            max_fee_raw,
                         })))
                     }
                     (None, None, true) => Ok(FeeSetting::Eth(TokenFeeSetting::EstimateOnly)),
-                    (None, None, false) => Ok(FeeSetting::Eth(TokenFeeSetting::None)),
+                    (None, None, false) => {
+                        Ok(FeeSetting::Eth(TokenFeeSetting::Send(EthFeeSetting::Estimate {
+                            fee_estimate_multiplier: self.fee_estimate_multiplier,
+                        })))
+                    }
                     _ => Err(anyhow::anyhow!(
                         "invalid fee option. At most one of --max-fee, --max-fee-raw, and \
                          --estimate-only can be used."
@@ -209,9 +207,13 @@ impl TransactionOptions {
                     };
 
                     match (gas_override, gas_price_override) {
-                        (None, None) => Ok(FeeSetting::Strk(TokenFeeSetting::None)),
+                        (None, None) => {
+                            Ok(FeeSetting::Strk(TokenFeeSetting::Send(StrkFeeSetting::Estimate {
+                                gas_estimate_multiplier: self.fee_estimate_multiplier,
+                            })))
+                        }
                         (gas_override, gas_price_override) => {
-                            Ok(FeeSetting::Strk(TokenFeeSetting::Send(StrkManualFeeSetting {
+                            Ok(FeeSetting::Strk(TokenFeeSetting::Send(StrkFeeSetting::Manual {
                                 gas: gas_override,
                                 gas_price: gas_price_override,
                             })))
@@ -240,7 +242,6 @@ impl TryFrom<TransactionOptions> for TxnConfig {
             "Converting TransactionOptions to TxnConfig."
         );
         Ok(Self {
-            fee_estimate_multiplier: value.fee_estimate_multiplier,
             wait: value.wait || value.walnut,
             receipt: value.receipt,
             walnut: value.walnut,

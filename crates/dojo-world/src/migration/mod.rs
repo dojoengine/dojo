@@ -289,6 +289,7 @@ pub trait Deployable: Declarable + Sync {
     where
         A: ConnectedAccount + Send + Sync,
         <A as ConnectedAccount>::Provider: Send,
+        A::SignError: 'static,
     {
         let declare = match self.declare(&account, txn_config).await {
             Ok(res) => Some(res),
@@ -365,6 +366,7 @@ pub trait Upgradable: Deployable + Declarable + Sync {
     where
         A: ConnectedAccount + Send + Sync,
         <A as ConnectedAccount>::Provider: Send,
+        A::SignError: 'static,
     {
         let declare = match self.declare(&account, txn_config).await {
             Ok(res) => Some(res),
