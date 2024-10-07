@@ -14,8 +14,8 @@ mod plugins;
 use plugins::typescript::TypescriptPlugin;
 use plugins::typescript_v2::TypeScriptV2Plugin;
 use plugins::unity::UnityPlugin;
-use plugins::BuiltinPlugin;
 pub use plugins::BuiltinPlugins;
+use plugins::{BindgenWriter, BuiltinPlugin};
 
 #[derive(Debug, PartialEq)]
 pub struct DojoModel {
@@ -71,7 +71,10 @@ pub struct PluginManager {
 
 impl PluginManager {
     /// Generates the bindings for all the given Plugin.
-    pub async fn generate(&self, skip_migration: Option<Vec<String>>) -> BindgenResult<()> {
+    pub async fn generate(
+        &self,
+        skip_migration: Option<Vec<String>>,
+    ) -> BindgenResult<()> {
         if self.builtin_plugins.is_empty() && self.plugins.is_empty() {
             return Ok(());
         }

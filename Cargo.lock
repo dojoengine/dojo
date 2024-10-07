@@ -4407,6 +4407,7 @@ dependencies = [
  "convert_case 0.6.0",
  "dojo-test-utils",
  "dojo-world",
+ "log",
  "scarb",
  "serde",
  "serde_json",
