@@ -57,6 +57,15 @@ impl Add for I256 {
     type Output = I256;
 
     fn add(self, other: I256) -> I256 {
+        // Special case: if both are negative zero, return positive zero
+        if self.value == U256::from(0u8)
+            && other.value == U256::from(0u8)
+            && self.is_negative
+            && other.is_negative
+        {
+            return I256 { value: U256::from(0u8), is_negative: false };
+        }
+
         if self.is_negative == other.is_negative {
             // Same sign: add the values and keep the sign
             I256 { value: self.value + other.value, is_negative: self.is_negative }
@@ -80,22 +89,9 @@ impl Sub for I256 {
     type Output = I256;
 
     fn sub(self, other: I256) -> I256 {
-        if self.is_negative != other.is_negative {
-            // Different signs: add the values and keep the sign of self
-            I256 { value: self.value + other.value, is_negative: self.is_negative }
-        } else {
-            // Same sign: subtract the values
-            match self.value.cmp(&other.value) {
-                Ordering::Greater => {
-                    I256 { value: self.value - other.value, is_negative: self.is_negative }
-                }
-                Ordering::Less => {
-                    I256 { value: other.value - self.value, is_negative: !self.is_negative }
-                }
-                // If both values are equal, the result is zero and not negative
-                Ordering::Equal => I256 { value: U256::from(0u8), is_negative: false },
-            }
-        }
+        let new_sign = if other.value == U256::from(0u8) { false } else { !other.is_negative };
+        let negated_other = I256 { value: other.value, is_negative: new_sign };
+        self.add(negated_other)
     }
 }
 
