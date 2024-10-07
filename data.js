@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728341062294,
+  "lastUpdate": 1728341190081,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -23497,6 +23497,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 12069915359,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1dad9ce7970ca0b05d394c8778e2c00a334ea48a",
+          "message": "Bump `slot` to avoid ambiguous rev for `account_sdk` (#2503)",
+          "timestamp": "2024-10-07T18:28:22-04:00",
+          "tree_id": "04b37526249f5d5b4097e67088d5b4fdfb9f80ef",
+          "url": "https://github.com/dojoengine/dojo/commit/1dad9ce7970ca0b05d394c8778e2c00a334ea48a"
+        },
+        "date": 1728341188168,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16812875,
+            "range": "± 163585",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3985148,
+            "range": "± 241962",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2691650643,
+            "range": "± 216212594",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4205924,
+            "range": "± 298497",
             "unit": "ns/iter"
           }
         ]
