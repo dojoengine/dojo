@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728396344493,
+  "lastUpdate": 1728398666079,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -23779,6 +23779,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3979061,
             "range": "± 90244",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "771639cdbe73c199afdf57f61f55278372cd005e",
+          "message": "feat: add tps metric to contracts table (#2468)\n\n* feat: add tps metric to contracts table\r\n\r\n* set head\r\n\r\n* refactor: tps set head\r\n\r\n* wip\r\n\r\n* tps\r\n\r\n* fmt\r\n\r\n* indexer updates subscription\r\n\r\n* fmt\r\n\r\n* naming refactor\r\n\r\n* wild card felt zero\r\n\r\n* cleamn\r\n\r\n* fetch contract firsdt\r\n\r\n* handle m,uiltiple contracts\r\n\r\n* clean\r\n\r\n* torii client",
+          "timestamp": "2024-10-08T10:27:42-04:00",
+          "tree_id": "e34abbe9b0f08ee19546ed2d382b5c5b687a6331",
+          "url": "https://github.com/dojoengine/dojo/commit/771639cdbe73c199afdf57f61f55278372cd005e"
+        },
+        "date": 1728398664113,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11800630779,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
