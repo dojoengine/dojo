@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728398753498,
+  "lastUpdate": 1728401204513,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -23857,6 +23857,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4031786,
             "range": "± 171757",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d039c6d46f819edc3f2161c0520b8c8fecec0092",
+          "message": "feat(torii-core): optimistically broadcast entity update (#2466)\n\n* refactor: update to use executor\r\n\r\n* clippy\r\n\r\n* make sure order\r\n\r\n* fmt\r\n\r\n* c\r\n\r\n* fmt",
+          "timestamp": "2024-10-08T11:09:59-04:00",
+          "tree_id": "7ac04bc995ec2c5132b5188f449b9502c0ddb27a",
+          "url": "https://github.com/dojoengine/dojo/commit/d039c6d46f819edc3f2161c0520b8c8fecec0092"
+        },
+        "date": 1728401202569,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11696383319,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
