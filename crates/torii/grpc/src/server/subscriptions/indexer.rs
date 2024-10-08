@@ -19,11 +19,11 @@ use tracing::{error, trace};
 use crate::proto;
 use crate::proto::world::SubscribeIndexerResponse;
 
-pub(crate) const LOG_TARGET: &str = "torii::grpc::server::subscriptions::event";
+pub(crate) const LOG_TARGET: &str = "torii::grpc::server::subscriptions::indexer";
 
 #[derive(Debug)]
 pub struct IndexerSubscriber {
-    /// Event keys that the subscriber is interested in
+    /// Contract address that the subscriber is interested in
     contract_address: Felt,
     /// The channel to send the response back to the subscriber.
     sender: Sender<Result<proto::world::SubscribeIndexerResponse, tonic::Status>>,
@@ -44,9 +44,6 @@ impl IndexerManager {
         let id = rand::thread_rng().gen::<usize>();
         let (sender, receiver) = channel(1);
 
-        // NOTE: unlock issue with firefox/safari
-        // initially send empty stream message to return from
-        // initial subscribe call
         let mut statement =
             "SELECT head, tps, last_block_timestamp, contract_address FROM contracts".to_string();
 
@@ -119,7 +116,7 @@ impl Service {
         }
 
         for id in closed_stream {
-            trace!(target = LOG_TARGET, id = %id, "Closing events stream.");
+            trace!(target = LOG_TARGET, id = %id, "Closing indexer updates stream.");
             subs.remove_subscriber(id).await
         }
 
