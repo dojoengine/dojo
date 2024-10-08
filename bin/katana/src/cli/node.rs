@@ -226,7 +226,9 @@ impl NodeArgs {
         let starknet_config = self.starknet_config()?;
 
         // Build the node
-        let node = katana_node::build(server_config, sequencer_config, starknet_config).await?;
+        let node = katana_node::build(server_config, sequencer_config, starknet_config)
+            .await
+            .context("failed to build node")?;
 
         if !self.silent {
             #[allow(deprecated)]
