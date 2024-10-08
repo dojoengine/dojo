@@ -114,6 +114,10 @@ struct Args {
     #[arg(long, default_value = "1024")]
     events_chunk_size: u64,
 
+    /// Number of blocks to process before commiting to DB
+    #[arg(long, default_value = "10240")]
+    blocks_chunk_size: u64,
+
     /// Enable indexing pending blocks
     #[arg(long, action = ArgAction::Set, default_value_t = true)]
     index_pending: bool,
@@ -239,6 +243,7 @@ async fn main() -> anyhow::Result<()> {
         EngineConfig {
             max_concurrent_tasks: args.max_concurrent_tasks,
             start_block: 0,
+            blocks_chunk_size: args.blocks_chunk_size,
             events_chunk_size: args.events_chunk_size,
             index_pending: args.index_pending,
             polling_interval: Duration::from_millis(args.polling_interval),
