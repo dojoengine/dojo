@@ -15,7 +15,8 @@ use tracing::{debug, error};
 use crate::simple_broker::SimpleBroker;
 use crate::types::{
     Contract as ContractUpdated, Entity as EntityUpdated, Event as EventEmitted,
-    EventMessage as EventMessageUpdated, Model as ModelRegistered,
+    EventMessage as EventMessageUpdated, Model as ModelRegistered, OptimisticEntity,
+    OptimisticEventMessage,
 };
 
 pub(crate) const LOG_TARGET: &str = "torii_core::executor";
@@ -224,6 +225,19 @@ impl<'c> Executor<'c> {
                 let mut entity_updated = EntityUpdated::from_row(&row)?;
                 entity_updated.updated_model = Some(entity);
                 entity_updated.deleted = false;
+
+                let optimistic_entity = OptimisticEntity {
+                    id: entity_updated.id.clone(),
+                    keys: entity_updated.keys.clone(),
+                    event_id: entity_updated.event_id.clone(),
+                    executed_at: entity_updated.executed_at,
+                    created_at: entity_updated.created_at,
+                    updated_at: entity_updated.updated_at,
+                    updated_model: entity_updated.updated_model.clone(),
+                    deleted: entity_updated.deleted,
+                };
+                SimpleBroker::publish(optimistic_entity);
+
                 let broker_message = BrokerMessage::EntityUpdated(entity_updated);
                 self.publish_queue.push(broker_message);
             }
@@ -264,6 +278,17 @@ impl<'c> Executor<'c> {
                     entity_updated.deleted = true;
                 }
 
+                let optimistic_entity = OptimisticEntity {
+                    id: entity_updated.id.clone(),
+                    keys: entity_updated.keys.clone(),
+                    event_id: entity_updated.event_id.clone(),
+                    executed_at: entity_updated.executed_at,
+                    created_at: entity_updated.created_at,
+                    updated_at: entity_updated.updated_at,
+                    updated_model: entity_updated.updated_model.clone(),
+                    deleted: entity_updated.deleted,
+                };
+                SimpleBroker::publish(optimistic_entity);
                 let broker_message = BrokerMessage::EntityUpdated(entity_updated);
                 self.publish_queue.push(broker_message);
             }
@@ -280,6 +305,18 @@ impl<'c> Executor<'c> {
                 })?;
                 let mut event_message = EventMessageUpdated::from_row(&row)?;
                 event_message.updated_model = Some(entity);
+
+                let optimistic_event_message = OptimisticEventMessage {
+                    id: event_message.id.clone(),
+                    keys: event_message.keys.clone(),
+                    event_id: event_message.event_id.clone(),
+                    executed_at: event_message.executed_at,
+                    created_at: event_message.created_at,
+                    updated_at: event_message.updated_at,
+                    updated_model: event_message.updated_model.clone(),
+                };
+                SimpleBroker::publish(optimistic_event_message);
+
                 let broker_message = BrokerMessage::EventMessageUpdated(event_message);
                 self.publish_queue.push(broker_message);
             }
