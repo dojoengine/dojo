@@ -158,7 +158,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         // use the start block provided by user if head is 0
         let (head, _, _) = self.db.head().await?;
         if head == 0 {
-            self.db.set_head(self.config.start_block)?;
+            self.db.set_head(self.config.start_block, 0, 0, self.world.address).await?;
         } else if self.config.start_block != 0 {
             warn!(target: LOG_TARGET, "Start block ignored, stored head exists and will be used instead.");
         }
@@ -389,6 +389,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
 
         let timestamp = data.pending_block.timestamp;
 
+        let mut world_txns_count = 0;
         for t in data.pending_block.transactions {
             let transaction_hash = t.transaction.transaction_hash();
             if let Some(tx) = last_pending_block_tx_cursor {
@@ -409,7 +410,14 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                             // provider. So we can fail silently and try
                             // again in the next iteration.
                             warn!(target: LOG_TARGET, transaction_hash = %format!("{:#x}", transaction_hash), "Retrieving pending transaction receipt.");
-                            self.db.set_head(data.block_number - 1)?;
+                            self.db
+                                .set_head(
+                                    data.block_number - 1,
+                                    timestamp,
+                                    world_txns_count,
+                                    self.world.address,
+                                )
+                                .await?;
                             if let Some(tx) = last_pending_block_tx {
                                 self.db.set_last_pending_block_tx(Some(tx))?;
                             }
@@ -430,6 +438,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                     }
                 }
                 Ok(true) => {
+                    world_txns_count += 1;
                     last_pending_block_world_tx = Some(*transaction_hash);
                     last_pending_block_tx = Some(*transaction_hash);
                     info!(target: LOG_TARGET, transaction_hash = %format!("{:#x}", transaction_hash), "Processed pending world transaction.");
@@ -446,7 +455,9 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
 
         // Set the head to the last processed pending transaction
         // Head block number should still be latest block number
-        self.db.set_head(data.block_number - 1)?;
+        self.db
+            .set_head(data.block_number - 1, timestamp, world_txns_count, self.world.address)
+            .await?;
 
         if let Some(tx) = last_pending_block_tx {
             self.db.set_last_pending_block_tx(Some(tx))?;
@@ -466,6 +477,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
     pub async fn process_range(&mut self, data: FetchRangeResult) -> Result<EngineHead> {
         // Process all transactions
         let mut last_block = 0;
+        let transactions_count = data.transactions.len();
         for ((block_number, transaction_hash), events) in data.transactions {
             debug!("Processing transaction hash: {:#x}", transaction_hash);
             // Process transaction
@@ -498,7 +510,15 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         // Process parallelized events
         self.process_tasks().await?;
 
-        self.db.set_head(data.latest_block_number)?;
+        let last_block_timestamp = self.get_block_timestamp(data.latest_block_number).await?;
+        self.db
+            .set_head(
+                data.latest_block_number,
+                last_block_timestamp,
+                transactions_count as u64,
+                self.world.address,
+            )
+            .await?;
         self.db.set_last_pending_block_world_tx(None)?;
         self.db.set_last_pending_block_tx(None)?;
 

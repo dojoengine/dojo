@@ -14,8 +14,8 @@ use tracing::{debug, error};
 
 use crate::simple_broker::SimpleBroker;
 use crate::types::{
-    Entity as EntityUpdated, Event as EventEmitted, EventMessage as EventMessageUpdated,
-    Model as ModelRegistered,
+    Contract as ContractUpdated, Entity as EntityUpdated, Event as EventEmitted,
+    EventMessage as EventMessageUpdated, Model as ModelRegistered,
 };
 
 pub(crate) const LOG_TARGET: &str = "torii_core::executor";
@@ -31,6 +31,7 @@ pub enum Argument {
 
 #[derive(Debug, Clone)]
 pub enum BrokerMessage {
+    SetHead(ContractUpdated),
     ModelRegistered(ModelRegistered),
     EntityUpdated(EntityUpdated),
     EventMessageUpdated(EventMessageUpdated),
@@ -46,7 +47,16 @@ pub struct DeleteEntityQuery {
 }
 
 #[derive(Debug, Clone)]
+pub struct SetHeadQuery {
+    pub head: u64,
+    pub last_block_timestamp: u64,
+    pub txns_count: u64,
+    pub contract_address: Felt,
+}
+
+#[derive(Debug, Clone)]
 pub enum QueryType {
+    SetHead(SetHeadQuery),
     SetEntity(Ty),
     DeleteEntity(DeleteEntityQuery),
     EventMessage(Ty),
@@ -178,6 +188,35 @@ impl<'c> Executor<'c> {
         let tx = &mut self.transaction;
 
         match query_type {
+            QueryType::SetHead(set_head) => {
+                let previous_block_timestamp: u64 = sqlx::query_scalar::<_, i64>(
+                    "SELECT last_block_timestamp FROM contracts WHERE id = ?",
+                )
+                .bind(format!("{:#x}", set_head.contract_address))
+                .fetch_one(&mut **tx)
+                .await?
+                .try_into()
+                .map_err(|_| anyhow::anyhow!("Last block timestamp doesn't fit in u64"))?;
+
+                let tps: u64 = if set_head.last_block_timestamp - previous_block_timestamp != 0 {
+                    set_head.txns_count / (set_head.last_block_timestamp - previous_block_timestamp)
+                } else {
+                    set_head.txns_count
+                };
+
+                query.execute(&mut **tx).await.with_context(|| {
+                    format!("Failed to execute query: {:?}, args: {:?}", statement, arguments)
+                })?;
+
+                let row = sqlx::query("UPDATE contracts SET tps = ? WHERE id = ? RETURNING *")
+                    .bind(tps as i64)
+                    .bind(format!("{:#x}", set_head.contract_address))
+                    .fetch_one(&mut **tx)
+                    .await?;
+
+                let contract = ContractUpdated::from_row(&row)?;
+                self.publish_queue.push(BrokerMessage::SetHead(contract));
+            }
             QueryType::SetEntity(entity) => {
                 let row = query.fetch_one(&mut **tx).await.with_context(|| {
                     format!("Failed to execute query: {:?}, args: {:?}", statement, arguments)
@@ -289,6 +328,7 @@ impl<'c> Executor<'c> {
 
 fn send_broker_message(message: BrokerMessage) {
     match message {
+        BrokerMessage::SetHead(update) => SimpleBroker::publish(update),
         BrokerMessage::ModelRegistered(model) => SimpleBroker::publish(model),
         BrokerMessage::EntityUpdated(entity) => SimpleBroker::publish(entity),
         BrokerMessage::EventMessageUpdated(event) => SimpleBroker::publish(event),
