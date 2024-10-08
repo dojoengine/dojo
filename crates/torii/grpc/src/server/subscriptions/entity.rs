@@ -76,6 +76,8 @@ impl EntityManager {
     }
 }
 
+#[must_use = "Service does nothing unless polled"]
+#[allow(missing_debug_implementations)]
 pub struct Service {
     simple_broker: Pin<Box<dyn Stream<Item = OptimisticEntity> + Send>>,
     entity_sender: UnboundedSender<OptimisticEntity>,
