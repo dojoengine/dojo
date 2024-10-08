@@ -35,9 +35,8 @@ url.workspace = true
 assert_matches.workspace = true
 
 [features]
-default = [ "jemalloc", "messaging", "slot" ]
+default = [ "jemalloc", "slot" ]
 
 jemalloc = [  ]
-messaging = [ "katana-node/messaging" ]
 slot = [ "dep:katana-slot-controller", "katana-primitives/slot" ]
 starknet-messaging = [ "katana-node/starknet-messaging" ]
