@@ -9,7 +9,7 @@ use futures::Stream;
 use futures_util::StreamExt;
 use rand::Rng;
 use starknet::core::types::Felt;
-use tokio::sync::mpsc::{channel, Receiver, unbounded_channel, UnboundedReceiver, UnboundedSender};
+use tokio::sync::mpsc::{channel, unbounded_channel, Receiver, UnboundedReceiver, UnboundedSender};
 use tokio::sync::RwLock;
 use torii_core::error::{Error, ParseError};
 use torii_core::simple_broker::SimpleBroker;
