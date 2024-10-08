@@ -22,7 +22,7 @@ const MAX_PAGE_SIZE: usize = 100;
 pub struct ToriiApi<EF: ExecutorFactory> {
     backend: Arc<Backend<EF>>,
     pool: TxPool,
-    block_producer: Arc<BlockProducer<EF>>,
+    block_producer: BlockProducer<EF>,
 }
 
 impl<EF: ExecutorFactory> Clone for ToriiApi<EF> {
@@ -30,17 +30,13 @@ impl<EF: ExecutorFactory> Clone for ToriiApi<EF> {
         Self {
             pool: self.pool.clone(),
             backend: Arc::clone(&self.backend),
-            block_producer: Arc::clone(&self.block_producer),
+            block_producer: self.block_producer.clone(),
         }
     }
 }
 
 impl<EF: ExecutorFactory> ToriiApi<EF> {
-    pub fn new(
-        backend: Arc<Backend<EF>>,
-        pool: TxPool,
-        block_producer: Arc<BlockProducer<EF>>,
-    ) -> Self {
+    pub fn new(backend: Arc<Backend<EF>>, pool: TxPool, block_producer: BlockProducer<EF>) -> Self {
         Self { pool, backend, block_producer }
     }
 
