@@ -8,6 +8,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Result;
+use dojo_metrics::prometheus_exporter::PrometheusHandle;
 use dojo_metrics::{metrics_process, prometheus_exporter, Report};
 use hyper::{Method, Uri};
 use jsonrpsee::server::middleware::proxy_get_request::ProxyGetRequestLayer;
@@ -88,6 +89,7 @@ pub struct Node {
     pub pool: TxPool,
     pub db: Option<DbEnv>,
     pub task_manager: TaskManager,
+    pub prometheus_handle: PrometheusHandle,
     pub backend: Arc<Backend<BlockifierFactory>>,
     pub block_producer: BlockProducer<BlockifierFactory>,
     pub server_config: ServerConfig,
@@ -100,20 +102,15 @@ impl Node {
     ///
     /// This method will start all the node process, running them until the node is stopped.
     pub async fn launch(self) -> Result<LaunchedNode> {
-        // Metrics recorder must be initialized before calling any of the metrics macros, in order
-        // for it to be registered.
-
         if let Some(addr) = self.server_config.metrics {
-            let prometheus_handle = prometheus_exporter::install_recorder("katana")?;
             let mut reports = Vec::new();
-
             if let Some(ref db) = self.db {
                 reports.push(Box::new(db.clone()) as Box<dyn Report>);
             }
 
             prometheus_exporter::serve(
                 addr,
-                prometheus_handle,
+                self.prometheus_handle.clone(),
                 metrics_process::Collector::default(),
                 reports,
             )
@@ -167,6 +164,10 @@ pub async fn build(
     sequencer_config: SequencerConfig,
     mut starknet_config: StarknetConfig,
 ) -> Result<Node> {
+    // Metrics recorder must be initialized before calling any of the metrics macros, in order
+    // for it to be registered.
+    let prometheus_handle = prometheus_exporter::install_recorder("katana")?;
+
     // --- build executor factory
 
     let cfg_env = CfgEnv {
@@ -279,6 +280,7 @@ pub async fn build(
         server_config,
         block_producer,
         sequencer_config,
+        prometheus_handle,
         task_manager: TaskManager::current(),
     };
 
