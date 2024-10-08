@@ -30,5 +30,4 @@ tower-http = { workspace = true, features = [ "full" ] }
 tracing.workspace = true
 
 [features]
-messaging = [ "katana-core/messaging" ]
-starknet-messaging = [ "katana-core/starknet-messaging", "messaging" ]
+starknet-messaging = [ "katana-core/starknet-messaging" ]

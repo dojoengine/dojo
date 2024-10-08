@@ -17,7 +17,6 @@ use self::block_producer::BlockProducer;
 use self::metrics::BlockProducerMetrics;
 
 pub mod block_producer;
-#[cfg(feature = "messaging")]
 pub mod messaging;
 mod metrics;
 

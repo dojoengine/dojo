@@ -89,7 +89,6 @@ pub struct NodeArgs {
     #[arg(help = "Fork the network at a specific block.")]
     pub fork_block_number: Option<u64>,
 
-    #[cfg(feature = "messaging")]
     #[arg(long)]
     #[arg(value_name = "PATH")]
     #[arg(value_parser = katana_core::service::messaging::MessagingConfig::parse)]
@@ -280,7 +279,6 @@ impl NodeArgs {
         SequencerConfig {
             block_time: self.block_time,
             no_mining: self.no_mining,
-            #[cfg(feature = "messaging")]
             messaging: self.messaging.clone(),
         }
     }

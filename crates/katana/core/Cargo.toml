@@ -15,7 +15,7 @@ katana-provider.workspace = true
 katana-tasks.workspace = true
 
 anyhow.workspace = true
-async-trait = { workspace = true, optional = true }
+async-trait.workspace = true
 derive_more.workspace = true
 dojo-metrics.workspace = true
 futures.workspace = true
@@ -23,9 +23,9 @@ lazy_static.workspace = true
 metrics.workspace = true
 num-traits.workspace = true
 parking_lot.workspace = true
-reqwest = { workspace = true, optional = true }
-serde = { workspace = true, optional = true }
-serde_json = { workspace = true, optional = true }
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
 starknet.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
@@ -33,13 +33,13 @@ tracing.workspace = true
 url.workspace = true
 
 alloy-primitives = { workspace = true, features = [ "serde" ] }
-alloy-sol-types = { workspace = true, default-features = false, features = [ "json" ], optional = true }
+alloy-sol-types = { workspace = true, default-features = false, features = [ "json" ] }
 
-alloy-contract = { workspace = true, default-features = false, optional = true }
-alloy-network = { workspace = true, default-features = false, optional = true }
-alloy-provider = { workspace = true, default-features = false, optional = true, features = [ "reqwest" ] }
-alloy-rpc-types-eth = { workspace = true, default-features = false, optional = true }
-alloy-transport = { workspace = true, default-features = false, optional = true }
+alloy-contract = { workspace = true, default-features = false }
+alloy-network = { workspace = true, default-features = false }
+alloy-provider = { workspace = true, default-features = false, features = [ "reqwest" ] }
+alloy-rpc-types-eth = { workspace = true, default-features = false }
+alloy-transport = { workspace = true, default-features = false }
 
 [dev-dependencies]
 assert_matches.workspace = true
@@ -47,16 +47,4 @@ hex.workspace = true
 tempfile.workspace = true
 
 [features]
-messaging = [
-	"alloy-contract",
-	"alloy-network",
-	"alloy-provider",
-	"alloy-rpc-types-eth",
-	"alloy-sol-types",
-	"alloy-transport",
-	"async-trait",
-	"reqwest",
-	"serde",
-	"serde_json",
-]
 starknet-messaging = [  ]

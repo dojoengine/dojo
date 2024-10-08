@@ -5,6 +5,5 @@
 pub struct SequencerConfig {
     pub block_time: Option<u64>,
     pub no_mining: bool,
-    #[cfg(feature = "messaging")]
     pub messaging: Option<crate::service::messaging::MessagingConfig>,
 }
