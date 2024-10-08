@@ -7,7 +7,7 @@ use katana_core::constants::DEFAULT_SEQUENCER_ADDRESS;
 #[allow(deprecated)]
 pub use katana_core::sequencer::SequencerConfig;
 use katana_executor::implementation::blockifier::BlockifierFactory;
-use katana_node::Handle;
+use katana_node::LaunchedNode;
 use katana_primitives::chain::ChainId;
 use katana_rpc::config::ServerConfig;
 use katana_rpc_api::ApiKind;
@@ -29,7 +29,7 @@ pub struct TestAccount {
 #[allow(missing_debug_implementations)]
 pub struct TestSequencer {
     url: Url,
-    handle: Handle,
+    handle: LaunchedNode,
     account: TestAccount,
 }
 
@@ -45,19 +45,20 @@ impl TestSequencer {
             apis: vec![ApiKind::Starknet, ApiKind::Dev, ApiKind::Saya, ApiKind::Torii],
         };
 
-        let node = katana_node::start(server_config, config, starknet_config)
+        let node = katana_node::build(server_config, config, starknet_config)
             .await
             .expect("Failed to build node components");
+        let handle = node.launch().await.expect("Failed to launch node");
 
-        let url = Url::parse(&format!("http://{}", node.rpc.addr)).expect("Failed to parse URL");
+        let url = Url::parse(&format!("http://{}", handle.rpc.addr)).expect("Failed to parse URL");
 
-        let account = node.backend.config.genesis.accounts().next().unwrap();
+        let account = handle.node.backend.config.genesis.accounts().next().unwrap();
         let account = TestAccount {
             private_key: Felt::from_bytes_be(&account.1.private_key().unwrap().to_bytes_be()),
             account_address: Felt::from_bytes_be(&account.0.to_bytes_be()),
         };
 
-        TestSequencer { handle: node, account, url }
+        TestSequencer { handle, account, url }
     }
 
     pub fn account(&self) -> SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet> {
@@ -79,7 +80,7 @@ impl TestSequencer {
     }
 
     pub fn backend(&self) -> &Arc<Backend<BlockifierFactory>> {
-        &self.handle.backend
+        &self.handle.node.backend
     }
 
     pub fn account_at_index(
@@ -87,7 +88,7 @@ impl TestSequencer {
         index: usize,
     ) -> SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet> {
         #[allow(deprecated)]
-        let accounts: Vec<_> = self.handle.backend.config.genesis.accounts().collect::<_>();
+        let accounts: Vec<_> = self.handle.node.backend.config.genesis.accounts().collect::<_>();
 
         let account = accounts[index];
         let private_key = Felt::from_bytes_be(&account.1.private_key().unwrap().to_bytes_be());
