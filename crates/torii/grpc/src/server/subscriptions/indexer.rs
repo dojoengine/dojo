@@ -9,7 +9,7 @@ use futures::{Stream, StreamExt};
 use rand::Rng;
 use sqlx::{Pool, Sqlite};
 use starknet::core::types::Felt;
-use tokio::sync::mpsc::{channel, Receiver, Sender};
+use tokio::sync::mpsc::{channel, Receiver, Sender, unbounded_channel, UnboundedReceiver, UnboundedSender};
 use tokio::sync::RwLock;
 use torii_core::error::{Error, ParseError};
 use torii_core::simple_broker::SimpleBroker;
@@ -81,17 +81,36 @@ impl IndexerManager {
 #[must_use = "Service does nothing unless polled"]
 #[allow(missing_debug_implementations)]
 pub struct Service {
-    subs_manager: Arc<IndexerManager>,
     simple_broker: Pin<Box<dyn Stream<Item = ContractUpdated> + Send>>,
+    update_sender: UnboundedSender<ContractUpdated>,
 }
 
 impl Service {
     pub fn new(subs_manager: Arc<IndexerManager>) -> Self {
-        Self { subs_manager, simple_broker: Box::pin(SimpleBroker::<ContractUpdated>::subscribe()) }
+        let (update_sender, update_receiver) = unbounded_channel();
+        let service = Self {
+            simple_broker: Box::pin(SimpleBroker::<ContractUpdated>::subscribe()),
+            update_sender,
+        };
+
+        tokio::spawn(Self::publish_updates(subs_manager, update_receiver));
+
+        service
     }
 
     async fn publish_updates(
         subs: Arc<IndexerManager>,
+        mut update_receiver: UnboundedReceiver<ContractUpdated>,
+    ) {
+        while let Some(update) = update_receiver.recv().await {
+            if let Err(e) = Self::process_update(&subs, &update).await {
+                error!(target = LOG_TARGET, error = %e, "Processing indexer update.");
+            }
+        }
+    }
+
+    async fn process_update(
+        subs: &Arc<IndexerManager>,
         update: &ContractUpdated,
     ) -> Result<(), Error> {
         let mut closed_stream = Vec::new();
@@ -127,16 +146,13 @@ impl Service {
 impl Future for Service {
     type Output = ();
 
-    fn poll(self: std::pin::Pin<&mut Self>, cx: &mut Context<'_>) -> std::task::Poll<Self::Output> {
-        let pin = self.get_mut();
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        let this = self.get_mut();
 
-        while let Poll::Ready(Some(event)) = pin.simple_broker.poll_next_unpin(cx) {
-            let subs = Arc::clone(&pin.subs_manager);
-            tokio::spawn(async move {
-                if let Err(e) = Service::publish_updates(subs, &event).await {
-                    error!(target = LOG_TARGET, error = %e, "Publishing indexer update.");
-                }
-            });
+        while let Poll::Ready(Some(update)) = this.simple_broker.poll_next_unpin(cx) {
+            if let Err(e) = this.update_sender.send(update) {
+                error!(target = LOG_TARGET, error = %e, "Sending indexer update to processor.");
+            }
         }
 
         Poll::Pending

@@ -9,7 +9,7 @@ use futures::Stream;
 use futures_util::StreamExt;
 use rand::Rng;
 use starknet::core::types::Felt;
-use tokio::sync::mpsc::{channel, Receiver, Sender};
+use tokio::sync::mpsc::{channel, Receiver, Sender, unbounded_channel, UnboundedReceiver, UnboundedSender};
 use tokio::sync::RwLock;
 use torii_core::error::{Error, ParseError};
 use torii_core::simple_broker::SimpleBroker;
@@ -74,23 +74,37 @@ impl EntityManager {
     }
 }
 
-#[must_use = "Service does nothing unless polled"]
-#[allow(missing_debug_implementations)]
 pub struct Service {
-    subs_manager: Arc<EntityManager>,
     simple_broker: Pin<Box<dyn Stream<Item = OptimisticEntity> + Send>>,
+    entity_sender: UnboundedSender<OptimisticEntity>,
 }
 
 impl Service {
     pub fn new(subs_manager: Arc<EntityManager>) -> Self {
-        Self {
-            subs_manager,
+        let (entity_sender, entity_receiver) = unbounded_channel();
+        let service = Self {
             simple_broker: Box::pin(SimpleBroker::<OptimisticEntity>::subscribe()),
-        }
+            entity_sender,
+        };
+
+        tokio::spawn(Self::publish_updates(subs_manager, entity_receiver));
+
+        service
     }
 
     async fn publish_updates(
         subs: Arc<EntityManager>,
+        mut entity_receiver: UnboundedReceiver<OptimisticEntity>,
+    ) {
+        while let Some(entity) = entity_receiver.recv().await {
+            if let Err(e) = Self::process_entity_update(&subs, &entity).await {
+                error!(target = LOG_TARGET, error = %e, "Processing entity update.");
+            }
+        }
+    }
+
+    async fn process_entity_update(
+        subs: &Arc<EntityManager>,
         entity: &OptimisticEntity,
     ) -> Result<(), Error> {
         let mut closed_stream = Vec::new();
@@ -217,16 +231,13 @@ impl Service {
 impl Future for Service {
     type Output = ();
 
-    fn poll(self: std::pin::Pin<&mut Self>, cx: &mut Context<'_>) -> std::task::Poll<Self::Output> {
-        let pin = self.get_mut();
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        let this = self.get_mut();
 
-        while let Poll::Ready(Some(entity)) = pin.simple_broker.poll_next_unpin(cx) {
-            let subs = Arc::clone(&pin.subs_manager);
-            tokio::spawn(async move {
-                if let Err(e) = Service::publish_updates(subs, &entity).await {
-                    error!(target = LOG_TARGET, error = %e, "Publishing entity update.");
-                }
-            });
+        while let Poll::Ready(Some(entity)) = this.simple_broker.poll_next_unpin(cx) {
+            if let Err(e) = this.entity_sender.send(entity) {
+                error!(target = LOG_TARGET, error = %e, "Sending entity update to processor.");
+            }
         }
 
         Poll::Pending

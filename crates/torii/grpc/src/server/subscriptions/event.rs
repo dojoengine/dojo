@@ -9,7 +9,7 @@ use futures::Stream;
 use futures_util::StreamExt;
 use rand::Rng;
 use starknet::core::types::Felt;
-use tokio::sync::mpsc::{channel, Receiver, Sender};
+use tokio::sync::mpsc::{channel, Receiver, Sender, unbounded_channel, UnboundedReceiver, UnboundedSender};
 use tokio::sync::RwLock;
 use torii_core::error::{Error, ParseError};
 use torii_core::simple_broker::SimpleBroker;
@@ -62,16 +62,35 @@ impl EventManager {
 #[must_use = "Service does nothing unless polled"]
 #[allow(missing_debug_implementations)]
 pub struct Service {
-    subs_manager: Arc<EventManager>,
     simple_broker: Pin<Box<dyn Stream<Item = Event> + Send>>,
+    event_sender: UnboundedSender<Event>,
 }
 
 impl Service {
     pub fn new(subs_manager: Arc<EventManager>) -> Self {
-        Self { subs_manager, simple_broker: Box::pin(SimpleBroker::<Event>::subscribe()) }
+        let (event_sender, event_receiver) = unbounded_channel();
+        let service = Self {
+            simple_broker: Box::pin(SimpleBroker::<Event>::subscribe()),
+            event_sender,
+        };
+
+        tokio::spawn(Self::publish_updates(subs_manager, event_receiver));
+
+        service
     }
 
-    async fn publish_updates(subs: Arc<EventManager>, event: &Event) -> Result<(), Error> {
+    async fn publish_updates(
+        subs: Arc<EventManager>,
+        mut event_receiver: UnboundedReceiver<Event>,
+    ) {
+        while let Some(event) = event_receiver.recv().await {
+            if let Err(e) = Self::process_event(&subs, &event).await {
+                error!(target = LOG_TARGET, error = %e, "Processing event update.");
+            }
+        }
+    }
+
+    async fn process_event(subs: &Arc<EventManager>, event: &Event) -> Result<(), Error> {
         let mut closed_stream = Vec::new();
         let keys = event
             .keys
@@ -151,12 +170,9 @@ impl Future for Service {
         let pin = self.get_mut();
 
         while let Poll::Ready(Some(event)) = pin.simple_broker.poll_next_unpin(cx) {
-            let subs = Arc::clone(&pin.subs_manager);
-            tokio::spawn(async move {
-                if let Err(e) = Service::publish_updates(subs, &event).await {
-                    error!(target = LOG_TARGET, error = %e, "Publishing events update.");
-                }
-            });
+            if let Err(e) = pin.event_sender.send(event) {
+                error!(target = LOG_TARGET, error = %e, "Sending event to processor.");
+            }
         }
 
         Poll::Pending
