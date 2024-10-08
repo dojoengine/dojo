@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728362498051,
+  "lastUpdate": 1728362646349,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -23653,6 +23653,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 11490218489,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3e51d5d916a9cf0ba5335bf275cc26acecec0570",
+          "message": "refactor(katana-node): distinguish between launched node handle  (#2504)\n\nabstraction to distinguish between a launched and not yet launch node handle. also appropriately place the stop methods under the launched handle. this PR also includes some ergonomic changes to some of the futures used to stop the node.\r\n\r\nhaving a different struct for this would allow conveying to the readers that the node can either be in static (not yet launched) and already launched node. and thus only expose certain methods based on the appropriate handle.\r\n\r\neg, the LaunchedNode::stop() method is placed under LaunchedNode because you can only stop node that has been started. it doesn't make sense to stop a node that hasn't even been ran.",
+          "timestamp": "2024-10-08T12:25:26+08:00",
+          "tree_id": "c1dd4a824accbb85c989b568418db13f22617195",
+          "url": "https://github.com/dojoengine/dojo/commit/3e51d5d916a9cf0ba5335bf275cc26acecec0570"
+        },
+        "date": 1728362645077,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16485559,
+            "range": "± 225876",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3757254,
+            "range": "± 59438",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3532479541,
+            "range": "± 787487385",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3880392,
+            "range": "± 38336",
             "unit": "ns/iter"
           }
         ]
