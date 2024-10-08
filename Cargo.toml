@@ -22,6 +22,7 @@ members = [
 	"crates/katana/executor",
 	"crates/katana/node",
 	"crates/katana/node-bindings",
+	"crates/katana/pipeline",
 	"crates/katana/pool",
 	"crates/katana/primitives",
 	"crates/katana/rpc/rpc",
@@ -87,6 +88,7 @@ katana-db = { path = "crates/katana/storage/db" }
 katana-executor = { path = "crates/katana/executor" }
 katana-node = { path = "crates/katana/node", default-features = false }
 katana-node-bindings = { path = "crates/katana/node-bindings" }
+katana-pipeline = { path = "crates/katana/pipeline" }
 katana-pool = { path = "crates/katana/pool" }
 katana-primitives = { path = "crates/katana/primitives" }
 katana-provider = { path = "crates/katana/storage/provider" }

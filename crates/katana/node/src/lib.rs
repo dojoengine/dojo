@@ -1,5 +1,6 @@
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
 
+use std::future::IntoFuture;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
@@ -18,14 +19,12 @@ use katana_core::env::BlockContextGenerator;
 #[allow(deprecated)]
 use katana_core::sequencer::SequencerConfig;
 use katana_core::service::block_producer::BlockProducer;
-#[cfg(feature = "messaging")]
-use katana_core::service::messaging::{MessagingService, MessagingTask};
-use katana_core::service::{BlockProductionTask, TransactionMiner};
 use katana_executor::implementation::blockifier::BlockifierFactory;
 use katana_executor::{ExecutorFactory, SimulationFlag};
+use katana_pipeline::{stage, Pipeline};
 use katana_pool::ordering::FiFo;
 use katana_pool::validation::stateful::TxValidator;
-use katana_pool::{TransactionPool, TxPool};
+use katana_pool::TxPool;
 use katana_primitives::block::FinalityStatus;
 use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
 use katana_provider::providers::fork::ForkedProvider;
@@ -57,7 +56,7 @@ pub struct Handle {
     pub rpc: RpcServer,
     pub task_manager: TaskManager,
     pub backend: Arc<Backend<BlockifierFactory>>,
-    pub block_producer: Arc<BlockProducer<BlockifierFactory>>,
+    pub block_producer: BlockProducer<BlockifierFactory>,
 }
 
 impl Handle {
@@ -185,11 +184,10 @@ pub async fn start(
         BlockProducer::instant(Arc::clone(&backend))
     };
 
-    // --- build transaction pool and miner
+    // --- build transaction pool
 
     let validator = block_producer.validator();
     let pool = TxPool::new(validator.clone(), FiFo::new());
-    let miner = TransactionMiner::new(pool.add_listener());
 
     // --- build metrics service
 
@@ -214,21 +212,22 @@ pub async fn start(
 
     let task_manager = TaskManager::current();
 
-    // --- build and spawn the messaging task
+    // --- build sequencing stage
 
-    #[cfg(feature = "messaging")]
-    if let Some(config) = sequencer_config.messaging.clone() {
-        let messaging = MessagingService::new(config, pool.clone(), Arc::clone(&backend)).await?;
-        let task = MessagingTask::new(messaging);
-        task_manager.build_task().critical().name("Messaging").spawn(task);
-    }
+    let sequencing = stage::Sequencing::new(
+        pool.clone(),
+        backend.clone(),
+        task_manager.clone(),
+        block_producer.clone(),
+        sequencer_config.messaging.clone(),
+    );
 
-    let block_producer = Arc::new(block_producer);
+    // --- build and start the pipeline
 
-    // --- build and spawn the block production task
+    let mut pipeline = Pipeline::new();
+    pipeline.add_stage(Box::new(sequencing));
 
-    let task = BlockProductionTask::new(pool.clone(), miner, block_producer.clone());
-    task_manager.build_task().critical().name("BlockProduction").spawn(task);
+    task_manager.spawn(pipeline.into_future());
 
     // --- spawn rpc server
 
@@ -240,7 +239,7 @@ pub async fn start(
 
 // Moved from `katana_rpc` crate
 pub async fn spawn<EF: ExecutorFactory>(
-    node_components: (TxPool, Arc<Backend<EF>>, Arc<BlockProducer<EF>>, TxValidator),
+    node_components: (TxPool, Arc<Backend<EF>>, BlockProducer<EF>, TxValidator),
     config: ServerConfig,
 ) -> Result<RpcServer> {
     let (pool, backend, block_producer, validator) = node_components;

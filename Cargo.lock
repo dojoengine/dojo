@@ -8029,6 +8029,7 @@ dependencies = [
  "katana-core",
  "katana-db",
  "katana-executor",
+ "katana-pipeline",
  "katana-pool",
  "katana-primitives",
  "katana-provider",
@@ -8055,6 +8056,21 @@ dependencies = [
  "tokio",
  "tracing",
  "url",
+]
+
+[[package]]
+name = "katana-pipeline"
+version = "1.0.0-alpha.14"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "futures",
+ "katana-core",
+ "katana-executor",
+ "katana-pool",
+ "katana-tasks",
+ "thiserror",
+ "tracing",
 ]
 
 [[package]]
