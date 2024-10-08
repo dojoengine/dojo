@@ -1,8 +1,13 @@
-use std::future::Future;
+use core::future::Future;
+use core::pin::Pin;
+use core::task::{Context, Poll};
 
+use futures::future::BoxFuture;
+use futures::FutureExt;
 use tokio::runtime::Handle;
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
+pub use tokio_util::sync::WaitForCancellationFuture as WaitForShutdownFuture;
 use tokio_util::task::TaskTracker;
 
 use crate::task::{TaskBuilder, TaskResult};
@@ -42,25 +47,29 @@ impl TaskManager {
         self.spawn_inner(fut)
     }
 
-    /// Wait for the shutdown signal to be received.
-    pub async fn wait_for_shutdown(&self) {
-        self.on_cancel.cancelled().await;
+    /// Returns a future that can be awaited for the shutdown signal to be received.
+    pub fn wait_for_shutdown(&self) -> WaitForShutdownFuture<'_> {
+        self.on_cancel.cancelled()
     }
 
     /// Shuts down the manager and wait until all currently running tasks are finished, either due
     /// to completion or cancellation.
     ///
     /// No task can be spawned on the manager after this method is called.
-    pub async fn shutdown(self) {
-        if !self.on_cancel.is_cancelled() {
-            self.on_cancel.cancel();
-        }
+    pub fn shutdown(&self) -> ShutdownFuture<'_> {
+        let fut = Box::pin(async {
+            if !self.on_cancel.is_cancelled() {
+                self.on_cancel.cancel();
+            }
 
-        self.wait_for_shutdown().await;
+            self.wait_for_shutdown().await;
 
-        // need to close the tracker first before waiting
-        let _ = self.tracker.close();
-        self.tracker.wait().await;
+            // need to close the tracker first before waiting
+            let _ = self.tracker.close();
+            self.tracker.wait().await;
+        });
+
+        ShutdownFuture { fut }
     }
 
     /// Return the handle to the Tokio runtime that the manager is associated with.
@@ -114,6 +123,26 @@ impl TaskManager {
 impl Drop for TaskManager {
     fn drop(&mut self) {
         self.on_cancel.cancel();
+    }
+}
+
+/// A futures that resolves when the [TaskManager] is shutdown.
+#[must_use = "futures do nothing unless polled"]
+pub struct ShutdownFuture<'a> {
+    fut: BoxFuture<'a, ()>,
+}
+
+impl<'a> Future for ShutdownFuture<'a> {
+    type Output = ();
+
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        self.get_mut().fut.poll_unpin(cx)
+    }
+}
+
+impl<'a> core::fmt::Debug for ShutdownFuture<'a> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("ShutdownFuture").field("fut", &"...").finish()
     }
 }
 
