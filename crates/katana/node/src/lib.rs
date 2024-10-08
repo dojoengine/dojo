@@ -54,7 +54,7 @@ use tracing::{info, trace};
 
 use crate::exit::NodeStoppedFuture;
 
-/// A handle to the launched Katana node.
+/// A handle to the launched node.
 #[allow(missing_debug_implementations)]
 pub struct LaunchedNode {
     pub node: Node,
