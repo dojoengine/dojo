@@ -455,7 +455,7 @@ async fn send_txs_with_invalid_signature(
 ) -> Result<()> {
     // setup test sequencer with the given configuration
     let mut config = get_default_test_config(SequencingConfig { block_time, ..Default::default() });
-    config.dev.validate = !disable_validate;
+    config.dev.account_validation = !disable_validate;
     let sequencer = TestSequencer::start(config).await;
 
     // starknet-rs doesn't provide a way to manually set the signatures so instead we create an

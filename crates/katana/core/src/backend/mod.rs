@@ -28,7 +28,6 @@ pub(crate) const LOG_TARGET: &str = "katana::core::backend";
 #[derive(Debug)]
 pub struct Backend<EF: ExecutorFactory> {
     /// The config used to generate the backend.
-    #[deprecated]
     pub config: StarknetConfig,
 
     pub chain_spec: ChainSpec,

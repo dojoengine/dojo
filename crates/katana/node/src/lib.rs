@@ -152,7 +152,10 @@ impl Node {
     }
 }
 
-/// Build the core Katana components from the given configurations.
+/// Build the node components from the given [`Config`].
+///
+/// This returns a [`Node`] instance which can be launched with the all the necessary components
+/// configured.
 pub async fn build(mut config: Config) -> Result<Node> {
     // Metrics recorder must be initialized before calling any of the metrics macros, in order
     // for it to be registered.
@@ -172,7 +175,7 @@ pub async fn build(mut config: Config) -> Result<Node> {
     };
 
     let simulation_flags = SimulationFlag {
-        skip_validate: !config.dev.validate,
+        skip_validate: !config.dev.account_validation,
         skip_fee_transfer: !config.dev.fee,
         ..Default::default()
     };
@@ -237,7 +240,6 @@ pub async fn build(mut config: Config) -> Result<Node> {
     };
 
     let block_context_generator = BlockContextGenerator::default().into();
-    #[allow(deprecated)]
     let backend = Arc::new(Backend {
         blockchain,
         executor_factory,

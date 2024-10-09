@@ -116,7 +116,7 @@ impl TestSequencer {
 }
 
 pub fn get_default_test_config(sequencing: SequencingConfig) -> Config {
-    let dev = DevConfig { fee: false, validate: true };
+    let dev = DevConfig { fee: false, account_validation: true };
     let mut chain = ChainSpec { id: ChainId::SEPOLIA, ..Default::default() };
     chain.genesis.sequencer_address = *DEFAULT_SEQUENCER_ADDRESS;
 

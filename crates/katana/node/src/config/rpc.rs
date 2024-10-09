@@ -17,6 +17,7 @@ pub enum ApiKind {
     Saya,
 }
 
+/// Configuration for the RPC server.
 #[derive(Debug, Clone)]
 pub struct RpcConfig {
     pub addr: IpAddr,
@@ -27,6 +28,7 @@ pub struct RpcConfig {
 }
 
 impl RpcConfig {
+    /// Returns the [`SocketAddr`] for the RPC server.
     pub fn socket_addr(&self) -> SocketAddr {
         SocketAddr::new(self.addr, self.port)
     }

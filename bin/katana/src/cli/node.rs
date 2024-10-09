@@ -343,7 +343,10 @@ impl NodeArgs {
     }
 
     fn dev_config(&self) -> DevConfig {
-        DevConfig { fee: !self.starknet.disable_fee, validate: !self.starknet.disable_validate }
+        DevConfig {
+            fee: !self.starknet.disable_fee,
+            account_validation: !self.starknet.disable_validate,
+        }
     }
 
     fn starknet_config(&self) -> Result<StarknetConfig> {
@@ -491,7 +494,7 @@ mod test {
         let config = args.config().unwrap();
 
         assert!(config.dev.fee);
-        assert!(config.dev.validate);
+        assert!(config.dev.account_validation);
         assert_eq!(config.starknet.fork_rpc_url, None);
         assert_eq!(config.starknet.fork_block_number, None);
         assert_eq!(config.starknet.env.invoke_max_steps, DEFAULT_INVOKE_MAX_STEPS);
@@ -525,7 +528,7 @@ mod test {
         let config = args.config().unwrap();
 
         assert!(!config.dev.fee);
-        assert!(!config.dev.validate);
+        assert!(!config.dev.account_validation);
         assert_eq!(config.starknet.env.invoke_max_steps, 200);
         assert_eq!(config.starknet.env.validate_max_steps, 100);
         assert_eq!(config.db.dir, Some(PathBuf::from("/path/to/db")));
