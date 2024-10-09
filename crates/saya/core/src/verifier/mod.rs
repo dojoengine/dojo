@@ -10,7 +10,8 @@
 use ::starknet::core::types::Felt;
 use serde::{Deserialize, Serialize};
 
-use crate::{error::Error, SayaStarknetAccount};
+use crate::error::Error;
+use crate::SayaStarknetAccount;
 
 mod starknet;
 pub mod utils;

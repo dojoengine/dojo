@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use cairo1_playground::get_cairo_pie;
 use herodotus_sharp_playground::SharpSdk;
 use prover_sdk::access_key::ProverAccessKey;
@@ -5,14 +7,12 @@ use prover_sdk::errors::SdkErrors;
 use prover_sdk::sdk::ProverSDK;
 use prover_sdk::{JobResponse, ProverResult};
 use starknet::core::types::Felt;
-use std::sync::Arc;
 use tracing::trace;
 use url::Url;
 
-use crate::error::ProverError;
-
 use super::loader::{load_program, prepare_input_cairo};
 use super::ProveProgram;
+use crate::error::ProverError;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HttpProverParams {

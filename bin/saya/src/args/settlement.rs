@@ -3,8 +3,8 @@ use std::str::FromStr;
 
 use clap::builder::PossibleValue;
 use clap::{Args, ValueEnum};
-use starknet::core::types::Felt;
 use saya_core::SayaMode;
+use starknet::core::types::Felt;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SayaModeArg(pub SayaMode);

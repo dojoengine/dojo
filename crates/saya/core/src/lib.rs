@@ -24,8 +24,7 @@ use saya_provider::rpc::JsonRpcProvider;
 use saya_provider::Provider as SayaProvider;
 use serde::{Deserialize, Serialize};
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
-use starknet::core::types::Call;
-use starknet::core::types::{BlockId, BlockTag};
+use starknet::core::types::{BlockId, BlockTag, Call};
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
@@ -469,7 +468,8 @@ impl Saya {
                 proof: serde_json::to_value(&proof.proof).unwrap(),
             };
             // let ns = Namespace::new_v0(b"saya-dev").unwrap();
-            // let commitment = Commitment::from_blob(ns, 0, &serialized_proof.iter().map(|felt| felt.to_bytes()).collect::<Vec<_>>());
+            // let commitment = Commitment::from_blob(ns, 0, &serialized_proof.iter().map(|felt|
+            // felt.to_bytes()).collect::<Vec<_>>());
             let (commitment, height) = if self.config.mode != SayaMode::Ephemeral {
                 da.publish_checkpoint(checkpoint).await?
             } else if self.config.skip_publishing_proof {
@@ -518,7 +518,8 @@ impl Saya {
                 let serialized_output = program_output.iter().copied().collect_vec();
                 println!("serialized_output: {:?}", serialized_output);
 
-                // todo!("Persistent mode does not support publishing updated state with SNOS yet.");
+                // todo!("Persistent mode does not support publishing updated state with SNOS
+                // yet.");
 
                 let deduplicated_output =
                     serialized_output[1..serialized_output.len() / 2].to_vec();

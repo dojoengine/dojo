@@ -4,8 +4,7 @@ use std::vec;
 use dojo_utils::{TransactionExt, TxnConfig};
 use itertools::Itertools;
 use starknet::accounts::{Account, ConnectedAccount};
-use starknet::core::types::Call;
-use starknet::core::types::Felt;
+use starknet::core::types::{Call, Felt};
 use starknet::core::utils::get_selector_from_name;
 use starknet_crypto::poseidon_hash_many;
 use tokio::time::sleep;
@@ -40,14 +39,16 @@ pub async fn starknet_verify(
         let hash = poseidon_hash_many(&fragment);
         hashes.push(hash);
         fragment.insert(0, fragment.len().into());
-        let tx = retry!(account
-            .execute_v1(vec![Call {
-                to: fact_registry_address,
-                selector: get_selector_from_name("publish_fragment").expect("invalid selector"),
-                calldata: fragment.clone(),
-            }])
-            .nonce(nonce)
-            .send_with_cfg(&txn_config))
+        let tx = retry!(
+            account
+                .execute_v1(vec![Call {
+                    to: fact_registry_address,
+                    selector: get_selector_from_name("publish_fragment").expect("invalid selector"),
+                    calldata: fragment.clone(),
+                }])
+                .nonce(nonce)
+                .send_with_cfg(&txn_config)
+        )
         .map_err(|e| ProverError::SendTransactionError(e.to_string()))?;
 
         wait_for_sent_transaction(tx.clone(), account).await?;
@@ -66,15 +67,17 @@ pub async fn starknet_verify(
     sleep(Duration::from_secs(2)).await;
     let nonce = account.get_nonce().await?;
 
-    let tx = retry!(account
-        .execute_v1(vec![Call {
-            to: fact_registry_address,
-            selector: get_selector_from_name("verify_and_register_fact_from_fragments")
-                .expect("invalid selector"),
-            calldata: calldata.clone(),
-        }])
-        .nonce(nonce)
-        .send_with_cfg(&txn_config))
+    let tx = retry!(
+        account
+            .execute_v1(vec![Call {
+                to: fact_registry_address,
+                selector: get_selector_from_name("verify_and_register_fact_from_fragments")
+                    .expect("invalid selector"),
+                calldata: calldata.clone(),
+            }])
+            .nonce(nonce)
+            .send_with_cfg(&txn_config)
+    )
     .map_err(|e| ProverError::SendTransactionError(e.to_string()))?;
 
     let transaction_hash = format!("{:#x}", tx.transaction_hash);

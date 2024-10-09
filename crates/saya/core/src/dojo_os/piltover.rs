@@ -31,14 +31,16 @@ pub async fn starknet_apply_piltover(
     let txn_config = TxnConfig { wait: true, receipt: true, ..Default::default() };
     let calldata = to_felts(&calldata)?;
     trace!(target: LOG_TARGET, "Sending `update_state` piltover transaction to contract {:#x}", contract);
-    let tx = retry!(account
-        .execute_v1(vec![Call {
-            to: contract,
-            selector: get_selector_from_name("update_state").expect("invalid selector"),
-            calldata: calldata.clone()
-        }])
-        .nonce(nonce)
-        .send_with_cfg(&txn_config))
+    let tx = retry!(
+        account
+            .execute_v1(vec![Call {
+                to: contract,
+                selector: get_selector_from_name("update_state").expect("invalid selector"),
+                calldata: calldata.clone()
+            }])
+            .nonce(nonce)
+            .send_with_cfg(&txn_config)
+    )
     .map_err(|e| ProverError::SendTransactionError(e.to_string()))?;
     trace!(target: LOG_TARGET,  "Sent `update_state` piltover transaction {:#x}", tx.transaction_hash);
     wait_for_sent_transaction(tx, account).await?;

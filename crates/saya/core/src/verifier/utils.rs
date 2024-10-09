@@ -1,9 +1,10 @@
+use std::time::Duration;
+
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{
     InvokeTransactionResult, TransactionExecutionStatus, TransactionStatus,
 };
 use starknet::providers::Provider;
-use std::time::Duration;
 use tokio::time::sleep;
 use tracing::trace;
 

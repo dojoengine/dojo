@@ -13,16 +13,15 @@ use std::time::Duration;
 
 use dojo_utils::{TransactionExt, TxnConfig};
 use itertools::chain;
-use starknet::accounts::{Account,ConnectedAccount};
-use starknet::core::types::Call;
-use starknet::core::types::{Felt, TransactionExecutionStatus, TransactionStatus};
+use starknet::accounts::{Account, ConnectedAccount};
+use starknet::core::types::{Call, Felt, TransactionExecutionStatus, TransactionStatus};
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
 use tokio::time::sleep;
 use tracing::trace;
 
-use crate::{error::Error, SayaStarknetAccount};
-use crate::{retry, LOG_TARGET};
+use crate::error::Error;
+use crate::{retry, SayaStarknetAccount, LOG_TARGET};
 
 pub async fn starknet_apply_diffs(
     world: Felt,
@@ -41,14 +40,16 @@ pub async fn starknet_apply_diffs(
     .collect();
 
     let txn_config = TxnConfig { wait: true, receipt: true, ..Default::default() };
-    let tx = retry!(account
-        .execute_v1(vec![Call {
-            to: world,
-            selector: get_selector_from_name("upgrade_state").expect("invalid selector"),
-            calldata: calldata.clone(),
-        }])
-        .nonce(nonce)
-        .send_with_cfg(&txn_config))
+    let tx = retry!(
+        account
+            .execute_v1(vec![Call {
+                to: world,
+                selector: get_selector_from_name("upgrade_state").expect("invalid selector"),
+                calldata: calldata.clone(),
+            }])
+            .nonce(nonce)
+            .send_with_cfg(&txn_config)
+    )
     .map_err(|e| Error::TransactionFailed(e.to_string()))?;
 
     let start_fetching = std::time::Instant::now();

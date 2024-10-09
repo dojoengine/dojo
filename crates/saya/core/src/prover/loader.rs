@@ -1,15 +1,14 @@
-use prover_sdk::CairoProverInput;
 use std::env;
 use std::path::PathBuf;
 
+use prover_sdk::CairoProverInput;
 use serde_json::Value;
 use starknet_crypto::Felt;
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
 
-use crate::error::ProverError;
-
 use super::ProveProgram;
+use crate::error::ProverError;
 
 pub async fn load_program(prove_program: ProveProgram) -> Result<Value, ProverError> {
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR")?);
