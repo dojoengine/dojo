@@ -335,16 +335,18 @@ impl Sql {
     }
 
     pub async fn apply_cache_diff(&mut self) -> Result<()> {
-        self.executor.send(QueryMessage::new(
-            "".to_string(),
-            vec![],
-            QueryType::ApplyBalanceDiff(ApplyBalanceDiffQuery {
-                erc_cache: mem::replace(
-                    &mut self.local_cache.erc_cache,
-                    HashMap::with_capacity(64),
-                ),
-            }),
-        ))?;
+        if !self.local_cache.erc_cache.is_empty() {
+            self.executor.send(QueryMessage::new(
+                "".to_string(),
+                vec![],
+                QueryType::ApplyBalanceDiff(ApplyBalanceDiffQuery {
+                    erc_cache: mem::replace(
+                        &mut self.local_cache.erc_cache,
+                        HashMap::with_capacity(64),
+                    ),
+                }),
+            ))?;
+        }
         Ok(())
     }
 }
