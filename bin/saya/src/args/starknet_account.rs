@@ -5,7 +5,7 @@ use dojo_utils::env::{
     DOJO_ACCOUNT_ADDRESS_ENV_VAR, DOJO_KEYSTORE_PASSWORD_ENV_VAR, DOJO_KEYSTORE_PATH_ENV_VAR,
     DOJO_PRIVATE_KEY_ENV_VAR, STARKNET_RPC_URL_ENV_VAR,
 };
-use katana_primitives::Felt;
+use starknet::core::types::Felt;
 use url::Url;
 
 #[derive(Debug, Args, Clone)]
@@ -15,8 +15,8 @@ pub struct StarknetAccountOptions {
     pub starknet_url: Url,
 
     #[arg(long)]
-    #[arg(env)]
     #[arg(help = "The chain id of the starknet node.")]
+    #[arg(default_value = "SN_SEPOLIA")]
     pub chain_id: String,
 
     #[arg(long, env = DOJO_ACCOUNT_ADDRESS_ENV_VAR)]

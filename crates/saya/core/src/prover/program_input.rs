@@ -9,7 +9,7 @@ use katana_primitives::transaction::{L1HandlerTx, TxHash};
 use katana_rpc_types::trace::TxExecutionInfo;
 use serde::ser::{SerializeSeq, Serializer};
 use serde::{Deserialize, Deserializer, Serialize};
-use starknet::core::types::Felt;
+use starknet::core::types::{Call, Felt};
 
 /// Based on https://github.com/cartridge-gg/piltover/blob/2be9d46f00c9c71e2217ab74341f77b09f034c81/src/snos_output.cairo#L19-L20
 /// With the new state root computed by the prover.
@@ -111,6 +111,19 @@ pub fn extract_messages(
     (message_to_starknet_segment, message_to_appchain_segment)
 }
 
+pub fn extract_execute_calls(exec_infos: &[TxExecutionInfo]) -> Vec<Call> {
+    // Ignoring the inner calls at this point.
+    exec_infos
+        .iter()
+        .filter_map(|t| t.trace.execute_call_info.clone())
+        .map(|c| Call {
+            to: c.contract_address.into(),
+            selector: c.entry_point_selector,
+            calldata: c.calldata,
+        })
+        .collect()
+}
+
 impl ProgramInput {
     /// Extracts the storage updates for the given world, and flattens them into a single vector
     /// that represent the serialized DA. The length is not included as the array contains
@@ -194,7 +207,7 @@ impl ProgramInput {
 
         updates
     }
-
+    // TODO: change to use cainome/serde_felt
     fn serialize_to_prover_args(&self) -> Vec<Felt> {
         let mut out = vec![
             self.prev_state_root,

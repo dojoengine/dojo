@@ -1,59 +1,23 @@
-//! Starknet OS types.
-// SNOS is based on blockifier, which is not in sync with
-// current primitives.
-// And SNOS is for now not used. This work must be resume once
-// SNOS is actualized.
-// mod felt;
-// pub mod input;
-// pub mod transaction;
-
-pub mod piltover;
-
 use std::time::Duration;
 
-use dojo_utils::{TransactionExt, TxnConfig};
-use itertools::chain;
-use starknet::accounts::{Account, ConnectedAccount};
-use starknet::core::types::{Call, Felt, TransactionExecutionStatus, TransactionStatus};
-use starknet::core::utils::get_selector_from_name;
+use starknet::accounts::ConnectedAccount;
+use starknet::core::types::{
+    InvokeTransactionResult, TransactionExecutionStatus, TransactionStatus,
+};
 use starknet::providers::Provider;
 use tokio::time::sleep;
 use tracing::trace;
 
 use crate::error::Error;
-use crate::{retry, SayaStarknetAccount, LOG_TARGET};
+use crate::{SayaStarknetAccount, LOG_TARGET};
 
-pub async fn starknet_apply_diffs(
-    world: Felt,
-    new_state: Vec<Felt>,
-    program_output: Vec<Felt>,
-    program_hash: Felt,
+pub async fn wait_for_sent_transaction(
+    tx: InvokeTransactionResult,
     account: &SayaStarknetAccount,
-    nonce: Felt,
-) -> Result<String, Error> {
-    let calldata: Vec<Felt> = chain![
-        [Felt::from(new_state.len() as u64 / 2)].into_iter(),
-        new_state.clone().into_iter(),
-        program_output.into_iter(),
-        [program_hash],
-    ]
-    .collect();
-
-    let txn_config = TxnConfig { wait: true, receipt: true, ..Default::default() };
-    let tx = retry!(
-        account
-            .execute_v1(vec![Call {
-                to: world,
-                selector: get_selector_from_name("upgrade_state").expect("invalid selector"),
-                calldata: calldata.clone(),
-            }])
-            .nonce(nonce)
-            .send_with_cfg(&txn_config)
-    )
-    .map_err(|e| Error::TransactionFailed(e.to_string()))?;
-
+) -> Result<(), Error> {
     let start_fetching = std::time::Instant::now();
     let wait_for = Duration::from_secs(60);
+
     let execution_status = loop {
         if start_fetching.elapsed() > wait_for {
             return Err(Error::TimeoutError(format!(
@@ -72,7 +36,7 @@ pub async fn starknet_apply_diffs(
 
         break match status {
             TransactionStatus::Received => {
-                println!("Transaction received.");
+                trace!(target: LOG_TARGET, "Transaction received.");
                 sleep(Duration::from_secs(1)).await;
                 continue;
             }
@@ -83,15 +47,15 @@ pub async fn starknet_apply_diffs(
             TransactionStatus::AcceptedOnL1(execution_status) => execution_status,
         };
     };
-
     match execution_status {
         TransactionExecutionStatus::Succeeded => {
             trace!(target: LOG_TARGET, "Transaction accepted on L2.");
         }
         TransactionExecutionStatus::Reverted => {
+            // Return a custom error when the transaction is reverted
             return Err(Error::TransactionFailed(tx.transaction_hash.to_string()));
         }
     }
 
-    Ok(format!("{:#x}", tx.transaction_hash))
+    Ok(())
 }
