@@ -1,13 +1,13 @@
 use clap::Args;
 use dojo_utils::env::DOJO_WORLD_ADDRESS_ENV_VAR;
-use katana_primitives::felt::FieldElement;
+use starknet::core::types::Felt;
 use url::Url;
 
 #[derive(Debug, Args, Clone)]
 pub struct ProofOptions {
     #[arg(help = "The address of the World contract.")]
     #[arg(long = "world", env = DOJO_WORLD_ADDRESS_ENV_VAR)]
-    pub world_address: FieldElement,
+    pub world_address: Felt,
 
     #[arg(help = "The address of the Fact Registry contract.")]
     #[arg(long = "registry")]

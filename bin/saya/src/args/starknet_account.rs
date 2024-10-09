@@ -5,7 +5,7 @@ use dojo_utils::env::{
     DOJO_ACCOUNT_ADDRESS_ENV_VAR, DOJO_KEYSTORE_PASSWORD_ENV_VAR, DOJO_KEYSTORE_PATH_ENV_VAR,
     DOJO_PRIVATE_KEY_ENV_VAR, STARKNET_RPC_URL_ENV_VAR,
 };
-use katana_primitives::felt::FieldElement;
+use starknet::core::types::Felt;
 use url::Url;
 
 #[derive(Debug, Args, Clone)]
@@ -25,7 +25,7 @@ pub struct StarknetAccountOptions {
 
     #[arg(long, env = DOJO_PRIVATE_KEY_ENV_VAR)]
     #[arg(help = "The private key of the starknet account.")]
-    pub signer_key: Option<FieldElement>,
+    pub signer_key: Option<Felt>,
 
     #[arg(long = "keystore", env = DOJO_KEYSTORE_PATH_ENV_VAR)]
     #[arg(value_name = "PATH")]

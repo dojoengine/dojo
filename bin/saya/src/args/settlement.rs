@@ -3,7 +3,7 @@ use std::str::FromStr;
 
 use clap::builder::PossibleValue;
 use clap::{Args, ValueEnum};
-use katana_primitives::FieldElement;
+use starknet::core::types::Felt;
 use saya_core::SayaMode;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -17,7 +17,7 @@ pub struct SettlementOptions {
 
     #[arg(help = "The settlement contract address.")]
     #[arg(long)]
-    pub settlement_contract: Option<FieldElement>,
+    pub settlement_contract: Option<Felt>,
 }
 
 impl Default for SayaModeArg {

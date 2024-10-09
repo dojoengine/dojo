@@ -15,7 +15,7 @@ use client::{http_prove, sharp_prove};
 use persistent::{BatcherInput, StarknetOsOutput};
 pub use program_input::*;
 use prover_sdk::ProverResult;
-use starknet::accounts::Call;
+use starknet::core::types::Call;
 use starknet_crypto::Felt;
 
 use crate::error::ProverError;

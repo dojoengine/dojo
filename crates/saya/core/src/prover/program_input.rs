@@ -9,7 +9,7 @@ use katana_primitives::transaction::{L1HandlerTx, TxHash};
 use katana_rpc_types::trace::TxExecutionInfo;
 use serde::ser::{SerializeSeq, Serializer};
 use serde::{Deserialize, Deserializer, Serialize};
-use starknet::accounts::Call;
+use starknet::core::types::Call;
 use starknet::core::types::Felt;
 
 /// Based on https://github.com/cartridge-gg/piltover/blob/2be9d46f00c9c71e2217ab74341f77b09f034c81/src/snos_output.cairo#L19-L20

@@ -3,7 +3,8 @@ use std::vec;
 
 use dojo_utils::{TransactionExt, TxnConfig};
 use itertools::Itertools;
-use starknet::accounts::{Account, Call, ConnectedAccount};
+use starknet::accounts::{Account, ConnectedAccount};
+use starknet::core::types::Call;
 use starknet::core::types::Felt;
 use starknet::core::utils::get_selector_from_name;
 use starknet_crypto::poseidon_hash_many;
