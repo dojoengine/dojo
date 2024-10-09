@@ -53,7 +53,10 @@ impl DataAvailabilityClient for CelestiaClient {
         self.mode
     }
 
-    async fn publish_state_diff_felts(&self, state_diff: &[Felt]) -> DataAvailabilityResult<(Commitment, u64)> {
+    async fn publish_state_diff_felts(
+        &self,
+        state_diff: &[Felt],
+    ) -> DataAvailabilityResult<(Commitment, u64)> {
         let bytes: Vec<u8> = state_diff.iter().flat_map(|fe| fe.to_bytes_be().to_vec()).collect();
         let commitment = Commitment::from_blob(self.namespace, 0, &bytes)?;
         let blob = Blob::new(self.namespace, bytes)?;
@@ -61,7 +64,8 @@ impl DataAvailabilityClient for CelestiaClient {
         // TODO: we may want to use `blob_get` to ensure the state diff has been published
         // correctly.
 
-        let height = self.client
+        let height = self
+            .client
             .blob_submit(&[blob], TxConfig::default())
             .await
             .map_err(|e| Error::Client(format!("Celestia RPC error: {e}")))?;
@@ -80,7 +84,8 @@ impl DataAvailabilityClient for CelestiaClient {
             state_diff_proof.iter().flat_map(|fe| fe.to_bytes_be().to_vec()).collect();
         let proof_blob = Blob::new(self.namespace, proof_bytes)?;
 
-        let height = self.client
+        let height = self
+            .client
             .blob_submit(&[blob, proof_blob], TxConfig::default())
             .await
             .map_err(|e| Error::Client(format!("Celestia RPC error: {e}")))?;
@@ -93,7 +98,8 @@ impl DataAvailabilityClient for CelestiaClient {
     ) -> DataAvailabilityResult<(Commitment, u64)> {
         let bytes = serde_json::to_vec(&published_state_diff).unwrap();
         let commitment = Commitment::from_blob(self.namespace, 0, &bytes)?;
-        let height = self.client
+        let height = self
+            .client
             .blob_submit(&[Blob::new(self.namespace, bytes)?], TxConfig::default())
             .await
             .map_err(|e| Error::Client(format!("Celestia RPC error: {e}")))?;

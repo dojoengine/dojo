@@ -60,7 +60,10 @@ pub trait DataAvailabilityClient {
     /// * `state_diff` - An array of felt representing the data to be published on the DA layer. We
     ///   use felt as all fields inside the state diff can be expressed as a felt. Nonce and updates
     ///   count are limited to 64 bits anyway.
-    async fn publish_state_diff_felts(&self, state_diff: &[Felt]) -> DataAvailabilityResult<(Commitment, u64)>;
+    async fn publish_state_diff_felts(
+        &self,
+        state_diff: &[Felt],
+    ) -> DataAvailabilityResult<(Commitment, u64)>;
 
     /// Publishes both data and transition proof on the DA layer atomically.
     /// Returns the block height in which the state diff was included.

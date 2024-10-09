@@ -128,7 +128,15 @@ impl Saya {
             prover_key: config.prover_key.clone(),
         }));
 
-        Ok(Self { config, da_client, provider, blockchain, prover_identifier, prev_commitment: None, prev_height: None })
+        Ok(Self {
+            config,
+            da_client,
+            provider,
+            blockchain,
+            prover_identifier,
+            prev_commitment: None,
+            prev_height: None,
+        })
     }
 
     /// Starts the Saya mainloop to fetch and process data.
@@ -236,7 +244,7 @@ impl Saya {
                     };
 
                     let proof = self.prover_identifier.prove_echo(input).await?;
-                    trace!(target: LOG_TARGET, "Proof size: {:?}", proof.serialized_proof.len());   
+                    trace!(target: LOG_TARGET, "Proof size: {:?}", proof.serialized_proof.len());
 
                     if self.config.store_proofs {
                         let filename = format!("proof_{}.json", block + num_blocks - 1);
@@ -244,7 +252,8 @@ impl Saya {
                         let mut file = File::create(filename).await?;
                         file.write_all(serde_json::to_string(&proof)?.as_bytes()).await?;
                         let mut file = File::create("demo.json").await?;
-                        file.write_all(serde_json::to_string_pretty(&proof.proof)?.as_bytes()).await?;
+                        file.write_all(serde_json::to_string_pretty(&proof.proof)?.as_bytes())
+                            .await?;
                     }
                     self.process_proven(proof, vec![], block + num_blocks, state_root_change)
                         .await?;
@@ -268,7 +277,7 @@ impl Saya {
                     // We might want to prove the signatures as well.
                     let proof = self.prover_identifier.prove_checker(calls).await?;
 
-                    trace!(target: LOG_TARGET, "Proof size: {:?}", proof.serialized_proof.len());   
+                    trace!(target: LOG_TARGET, "Proof size: {:?}", proof.serialized_proof.len());
                     if self.config.store_proofs {
                         let filename = format!("proof_{}.json", block + num_blocks - 1);
                         let mut file =
