@@ -37,11 +37,11 @@ impl RpcConfig {
 impl Default for RpcConfig {
     fn default() -> Self {
         Self {
+            allowed_origins: None,
             addr: DEFAULT_RPC_ADDR,
             port: DEFAULT_RPC_PORT,
             max_connections: DEFAULT_RPC_MAX_CONNECTIONS,
-            allowed_origins: None,
-            apis: HashSet::new(),
+            apis: HashSet::from([ApiKind::Starknet]),
         }
     }
 }
