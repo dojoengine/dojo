@@ -153,15 +153,6 @@ impl Node {
 }
 
 /// Build the core Katana components from the given configurations.
-// TODO: placeholder until we implement a dedicated class that encapsulate building the node
-// components
-//
-// Most of the logic are taken out of the `main.rs` file in `/bin/katana` crate, and combined
-// with the exact copy of the setup logic for `NodeService` from `KatanaSequencer::new`. It also
-// includes logic that was previously in `Backend::new`.
-//
-// NOTE: Don't rely on this function as it is mainly used as a placeholder for now.
-#[allow(deprecated)]
 pub async fn build(mut config: Config) -> Result<Node> {
     // Metrics recorder must be initialized before calling any of the metrics macros, in order
     // for it to be registered.
@@ -246,6 +237,7 @@ pub async fn build(mut config: Config) -> Result<Node> {
     };
 
     let block_context_generator = BlockContextGenerator::default().into();
+    #[allow(deprecated)]
     let backend = Arc::new(Backend {
         blockchain,
         executor_factory,
