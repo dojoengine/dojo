@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728498781441,
+  "lastUpdate": 1728503849112,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -24247,6 +24247,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3933353,
             "range": "± 164456",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "distinct": true,
+          "id": "975f3e4334707df176debc59391e2c37a94e1da4",
+          "message": "feat(torii): limit number of blocks processed in one go",
+          "timestamp": "2024-10-10T01:11:18+05:30",
+          "tree_id": "29081070fa7c87fd77e7b93b199645f691c76da4",
+          "url": "https://github.com/dojoengine/dojo/commit/975f3e4334707df176debc59391e2c37a94e1da4"
+        },
+        "date": 1728503847104,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 12221166443,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
