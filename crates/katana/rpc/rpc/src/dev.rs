@@ -94,6 +94,6 @@ impl<EF: ExecutorFactory> DevApiServer for DevApi<EF> {
 
     #[allow(deprecated)]
     async fn predeployed_accounts(&self) -> Result<Vec<Account>, Error> {
-        Ok(self.backend.config.genesis.accounts().map(|e| Account::new(*e.0, e.1)).collect())
+        Ok(self.backend.chain_spec.genesis.accounts().map(|e| Account::new(*e.0, e.1)).collect())
     }
 }

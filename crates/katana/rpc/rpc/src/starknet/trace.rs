@@ -27,7 +27,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         transactions: Vec<BroadcastedTx>,
         simulation_flags: Vec<SimulationFlag>,
     ) -> Result<Vec<SimulatedTransaction>, StarknetApiError> {
-        let chain_id = self.inner.backend.chain_id;
+        let chain_id = self.inner.backend.chain_spec.id;
 
         let executables = transactions
             .into_iter()
@@ -66,13 +66,13 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         // even if the `SKIP_VALIDATE` flag is not set.
         #[allow(deprecated)]
         let should_validate = !(simulation_flags.contains(&SimulationFlag::SkipValidate)
-            || self.inner.backend.config.disable_validate);
+            || self.inner.backend.executor_factory.execution_flags().skip_validate);
 
         // If the node is run with fee charge disabled, then we should disable charing fees even
         // if the `SKIP_FEE_CHARGE` flag is not set.
         #[allow(deprecated)]
         let should_skip_fee = !(simulation_flags.contains(&SimulationFlag::SkipFeeCharge)
-            || self.inner.backend.config.disable_fee);
+            || self.inner.backend.executor_factory.execution_flags().skip_fee_transfer);
 
         let flags = katana_executor::SimulationFlag {
             skip_validate: !should_validate,

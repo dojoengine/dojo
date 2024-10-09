@@ -3,11 +3,10 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use dojo_test_utils::sequencer::{get_default_test_starknet_config, TestSequencer};
+use dojo_test_utils::sequencer::{get_default_test_config, TestSequencer};
 use dojo_utils::TransactionWaiter;
 use jsonrpsee::http_client::HttpClientBuilder;
-#[allow(deprecated)]
-use katana_core::sequencer::SequencerConfig;
+use katana_node::config::SequencingConfig;
 use katana_primitives::block::{BlockIdOrTag, BlockTag};
 use katana_rpc_api::dev::DevApiClient;
 use katana_rpc_api::saya::SayaApiClient;
@@ -21,10 +20,10 @@ mod common;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn fetch_traces_from_block() {
-    let sequencer = TestSequencer::start(
-        SequencerConfig { no_mining: true, ..Default::default() },
-        get_default_test_starknet_config(),
-    )
+    let sequencer = TestSequencer::start(get_default_test_config(SequencingConfig {
+        no_mining: true,
+        ..Default::default()
+    }))
     .await;
 
     let client = HttpClientBuilder::default().build(sequencer.url()).unwrap();
@@ -90,10 +89,10 @@ async fn fetch_traces_from_block() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn fetch_traces_from_pending_block() {
-    let sequencer = TestSequencer::start(
-        SequencerConfig { no_mining: true, ..Default::default() },
-        get_default_test_starknet_config(),
-    )
+    let sequencer = TestSequencer::start(get_default_test_config(SequencingConfig {
+        no_mining: true,
+        ..Default::default()
+    }))
     .await;
 
     let client = HttpClientBuilder::default().build(sequencer.url()).unwrap();
