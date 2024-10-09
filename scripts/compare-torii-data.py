@@ -10,7 +10,12 @@ def fetch_table_data(db_path, table_name, columns):
     cursor.execute(f"SELECT {', '.join(columns)} FROM {table_name}")
     data = cursor.fetchall()
     conn.close()
-    return {row[0]: row[1:] for row in data}
+    if table_name == "erc_transfers":
+        # Use a set of tuples for row-wise comparison since there's no unique ID
+        return set(tuple(row) for row in data)
+    else:
+        # Use the first column as the key for other tables
+        return {row[0]: row[1:] for row in data}
 
 def get_table_row_count(db_path, table_name):
     conn = sqlite3.connect(db_path)
@@ -21,25 +26,34 @@ def get_table_row_count(db_path, table_name):
     return count
 
 def compare_data(data1, data2, table_name):
-    differences_found = False
-    for id, values in data1.items():
-        if id in data2:
-            if values != data2[id]:
-                print(f"Mismatch found in {table_name} for ID {id}:")
-                print(f"  Database 1: {values}")
-                print(f"  Database 2: {data2[id]}")
-                differences_found = True
+    if table_name == "erc_transfers":
+        differences = data1.symmetric_difference(data2)
+        if differences:
+            print(f"Differences found in {table_name} table:")
+            for row in differences:
+                print(f"  {row}")
         else:
-            print(f"ID {id} found in {table_name} of Database 1 but not in Database 2")
-            differences_found = True
+            print(f"No differences found in {table_name}")
+    else:
+        differences_found = False
+        for id, values in data1.items():
+            if id in data2:
+                if values != data2[id]:
+                    print(f"Mismatch found in {table_name} for ID {id}:")
+                    print(f"  Database 1: {values}")
+                    print(f"  Database 2: {data2[id]}")
+                    differences_found = True
+            else:
+                print(f"ID {id} found in {table_name} of Database 1 but not in Database 2")
+                differences_found = True
 
-    for id in data2:
-        if id not in data1:
-            print(f"ID {id} found in {table_name} of Database 2 but not in Database 1")
-            differences_found = True
+        for id in data2:
+            if id not in data1:
+                print(f"ID {id} found in {table_name} of Database 2 but not in Database 1")
+                differences_found = True
 
-    if not differences_found:
-        print(f"No differences found in {table_name}")
+        if not differences_found:
+            print(f"No differences found in {table_name}")
 
 def table_exists(db_path, table_name):
     conn = sqlite3.connect(db_path)
@@ -57,7 +71,7 @@ def compare_databases(db_path1, db_path2):
         "transactions": ["id", "transaction_hash", "sender_address", "calldata", "max_fee", "signature", "nonce", "transaction_type"],
         "balances": ["id", "balance", "account_address", "contract_address", "token_id"],
         "tokens": ["id", "contract_address", "name", "symbol", "decimals"],
-        "erc_transfers": ["id", "contract_address", "from_address", "to_address", "amount", "token_id"]
+        "erc_transfers": ["contract_address", "from_address", "to_address", "amount", "token_id"]
     }
 
     for table_name, columns in table_columns.items():
