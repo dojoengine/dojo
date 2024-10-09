@@ -12,7 +12,8 @@ macro_rules! retry {
 
         loop {
             match $func.await {
-                Ok(result) => break Ok(result), //If the function succeeds, break the loop and return the result
+                Ok(result) => break Ok(result), // If the function succeeds, break the loop and
+                // return the result
                 Err(err) => {
                     tracing::warn!("Error: {}", err);
 
