@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728513018496,
+  "lastUpdate": 1728513209978,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -24433,6 +24433,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 11799411222,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "60236390+matzayonc@users.noreply.github.com",
+            "name": "Mateusz Zając",
+            "username": "matzayonc"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4fb8f3f6c96fd915bf01b242db94ab621c94c35a",
+          "message": "Persistent mode for saya using mock of SNOS (#2253)\n\n* updated celestia and publishing proof\r\n\r\n* merging all if end block specified\r\n\r\n* running checker on calls\r\n\r\n* feat: Cairo 1 checker program update\r\n\r\n* added contract checkr\r\n\r\n* choosing saya mode\r\n\r\n* fragmented proof verification\r\n\r\n* batcher input and output parsing\r\n\r\n* working piltover\r\n\r\n* passing piltover from cli\r\n\r\n* saya flow script\r\n\r\n* fixes after rebase and new felts\r\n\r\n* clippy, formatter and warning\r\n\r\n* Update bin/saya/README.md\r\n\r\nCo-authored-by: glihm <dev@glihm.net>\r\n\r\n* fixes after rebase and new felts\r\n\r\n* fixed failing build\r\n\r\n* saya.sh small fix\r\n\r\n* readme update\r\n\r\n* saya script using tags and sozo from source\r\n\r\n* readme update for spawn and move example\r\n\r\n* minor test comments\r\n\r\n* clippy and fixes after rebase\r\n\r\n* fixed test\r\n\r\n* minor debugging\r\n\r\n* updated saya contracts\r\n\r\n* just an unused import\r\n\r\n* fixed consecutive proofs\r\n\r\n* removed merger program\r\n\r\n* limited wait time between transactions\r\n\r\n* renamed shard file to settlement\r\n\r\n* updates serialized args file\r\n\r\n* fix: refacto README + add new scripts + fix sozo issues with migration on sepolia\r\n\r\n* fix: migrate to new prover sdk\r\n\r\n* fix: add some comment and fix cairo 1 arguments\r\n\r\n* adapt saya to new prover, new batcher and checker\r\n\r\n* updated fact registry to herodotus\r\n\r\n* retries on onchain contracts\r\n\r\n* piltover class hash update\r\n\r\n* refactor part1\r\n\r\n* errrors refactor, sharp prover\r\n\r\n* updated celestia and json upload\r\n\r\n* publishing to celestia\r\n\r\n* errors, update script\r\n\r\n* added a header to celestia data\r\n\r\n* height and commitment calculated values\r\n\r\n* piltover update\r\n\r\n* Readme\r\n\r\n* fmt\r\n\r\n* post merge fix\r\n\r\n* fmt\r\n\r\n* fmt and dependency\r\n\r\n* fmt again\r\n\r\n* fmt\r\n\r\n* removed unused variable\r\n\r\n* rebuild test artefacts\r\n\r\n* test fix\r\n\r\n* db files update\r\n\r\n---------\r\n\r\nCo-authored-by: tejks <sarmatys.programmer@gmail.com>\r\nCo-authored-by: glihm <dev@glihm.net>\r\nCo-authored-by: Mateusz Chudkowski <mateuszchudy03@gmail.com>\r\nCo-authored-by: Mateusz Chudkowski <120587768+chudkowsky@users.noreply.github.com>",
+          "timestamp": "2024-10-09T16:14:35-06:00",
+          "tree_id": "a94204cbd21c0fd50810627bd2221ae0ef71ec01",
+          "url": "https://github.com/dojoengine/dojo/commit/4fb8f3f6c96fd915bf01b242db94ab621c94c35a"
+        },
+        "date": 1728513209006,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 15613745,
+            "range": "± 309491",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3845290,
+            "range": "± 40937",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3845922499,
+            "range": "± 769014602",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3888456,
+            "range": "± 39204",
             "unit": "ns/iter"
           }
         ]
