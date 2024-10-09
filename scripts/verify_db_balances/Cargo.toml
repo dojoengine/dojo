@@ -12,3 +12,5 @@ starknet.workspace = true
 tokio = { workspace = true, features = [ "full" ] }
 tracing-subscriber.workspace = true
 tracing.workspace = true
+
+clap.workspace = true

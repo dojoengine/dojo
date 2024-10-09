@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::mem;
+use std::str::FromStr;
 
 use anyhow::{Context, Result};
 use dojo_types::schema::{Struct, Ty};
@@ -14,11 +15,12 @@ use tokio::time::Instant;
 use tracing::{debug, error};
 
 use crate::simple_broker::SimpleBroker;
-use crate::sql::utils::{sql_string_to_u256, u256_to_sql_string, I256};
+use crate::sql::utils::{felt_to_sql_string, sql_string_to_u256, u256_to_sql_string, I256};
 use crate::sql::FELT_DELIMITER;
 use crate::types::{
-    ContractType, Entity as EntityUpdated, Event as EventEmitted,
-    EventMessage as EventMessageUpdated, Model as ModelRegistered,
+    ContractCursor, ContractType, Entity as EntityUpdated, Event as EventEmitted,
+    EventMessage as EventMessageUpdated, Model as ModelRegistered, OptimisticEntity,
+    OptimisticEventMessage,
 };
 
 pub(crate) const LOG_TARGET: &str = "torii_core::executor";
@@ -34,6 +36,7 @@ pub enum Argument {
 
 #[derive(Debug, Clone)]
 pub enum BrokerMessage {
+    SetHead(ContractCursor),
     ModelRegistered(ModelRegistered),
     EntityUpdated(EntityUpdated),
     EventMessageUpdated(EventMessageUpdated),
@@ -54,7 +57,35 @@ pub struct ApplyBalanceDiffQuery {
 }
 
 #[derive(Debug, Clone)]
+pub struct SetHeadQuery {
+    pub head: u64,
+    pub last_block_timestamp: u64,
+    pub txns_count: u64,
+    pub contract_address: Felt,
+}
+
+#[derive(Debug, Clone)]
+pub struct ResetCursorsQuery {
+    // contract => (last_txn, txn_count)
+    pub cursor_map: HashMap<Felt, (Felt, u64)>,
+    pub last_block_timestamp: u64,
+    pub last_block_number: u64,
+}
+
+#[derive(Debug, Clone)]
+pub struct UpdateCursorsQuery {
+    // contract => (last_txn, txn_count)
+    pub cursor_map: HashMap<Felt, (Felt, u64)>,
+    pub last_block_number: u64,
+    pub last_pending_block_tx: Option<Felt>,
+    pub pending_block_timestamp: u64,
+}
+
+#[derive(Debug, Clone)]
 pub enum QueryType {
+    SetHead(SetHeadQuery),
+    ResetCursors(ResetCursorsQuery),
+    UpdateCursors(UpdateCursorsQuery),
     SetEntity(Ty),
     DeleteEntity(DeleteEntityQuery),
     EventMessage(Ty),
@@ -189,6 +220,142 @@ impl<'c> Executor<'c> {
         let tx = &mut self.transaction;
 
         match query_type {
+            QueryType::SetHead(set_head) => {
+                let previous_block_timestamp: u64 = sqlx::query_scalar::<_, i64>(
+                    "SELECT last_block_timestamp FROM contracts WHERE id = ?",
+                )
+                .bind(format!("{:#x}", set_head.contract_address))
+                .fetch_one(&mut **tx)
+                .await?
+                .try_into()
+                .map_err(|_| anyhow::anyhow!("Last block timestamp doesn't fit in u64"))?;
+
+                let tps: u64 = if set_head.last_block_timestamp - previous_block_timestamp != 0 {
+                    set_head.txns_count / (set_head.last_block_timestamp - previous_block_timestamp)
+                } else {
+                    set_head.txns_count
+                };
+
+                query.execute(&mut **tx).await.with_context(|| {
+                    format!("Failed to execute query: {:?}, args: {:?}", statement, arguments)
+                })?;
+
+                let row = sqlx::query("UPDATE contracts SET tps = ? WHERE id = ? RETURNING *")
+                    .bind(tps as i64)
+                    .bind(format!("{:#x}", set_head.contract_address))
+                    .fetch_one(&mut **tx)
+                    .await?;
+
+                let contract = ContractCursor::from_row(&row)?;
+                self.publish_queue.push(BrokerMessage::SetHead(contract));
+            }
+            QueryType::ResetCursors(reset_heads) => {
+                // Read all cursors from db
+                let mut cursors: Vec<ContractCursor> =
+                    sqlx::query_as("SELECT * FROM contracts").fetch_all(&mut **tx).await?;
+
+                let new_head =
+                    reset_heads.last_block_number.try_into().expect("doesn't fit in i64");
+                let new_timestamp = reset_heads.last_block_timestamp;
+
+                for cursor in &mut cursors {
+                    if let Some(new_cursor) = reset_heads
+                        .cursor_map
+                        .get(&Felt::from_str(&cursor.contract_address).unwrap())
+                    {
+                        let cursor_timestamp: u64 =
+                            cursor.last_block_timestamp.try_into().expect("doesn't fit in i64");
+
+                        let new_tps = if new_timestamp - cursor_timestamp != 0 {
+                            new_cursor.1 / (new_timestamp - cursor_timestamp)
+                        } else {
+                            new_cursor.1
+                        };
+
+                        cursor.tps = new_tps.try_into().expect("does't fit in i64");
+                    } else {
+                        cursor.tps = 0;
+                    }
+
+                    cursor.head = new_head;
+                    cursor.last_block_timestamp =
+                        new_timestamp.try_into().expect("doesnt fit in i64");
+                    cursor.last_pending_block_tx = None;
+                    cursor.last_pending_block_contract_tx = None;
+
+                    sqlx::query(
+                        "UPDATE contracts SET head = ?, last_block_timestamp = ?, \
+                         last_pending_block_tx = ?, last_pending_block_contract_tx = ? WHERE id = \
+                         ?",
+                    )
+                    .bind(cursor.head)
+                    .bind(cursor.last_block_timestamp)
+                    .bind(&cursor.last_pending_block_tx)
+                    .bind(&cursor.last_pending_block_contract_tx)
+                    .bind(&cursor.contract_address)
+                    .execute(&mut **tx)
+                    .await?;
+
+                    // Send appropriate ContractUpdated publish message
+                    self.publish_queue.push(BrokerMessage::SetHead(cursor.clone()));
+                }
+            }
+            QueryType::UpdateCursors(update_cursors) => {
+                // Read all cursors from db
+                let mut cursors: Vec<ContractCursor> =
+                    sqlx::query_as("SELECT * FROM contracts").fetch_all(&mut **tx).await?;
+
+                let new_head =
+                    update_cursors.last_block_number.try_into().expect("doesn't fit in i64");
+                let new_timestamp = update_cursors.pending_block_timestamp;
+
+                for cursor in &mut cursors {
+                    if let Some(new_cursor) = update_cursors
+                        .cursor_map
+                        .get(&Felt::from_str(&cursor.contract_address).unwrap())
+                    {
+                        let cursor_timestamp: u64 =
+                            cursor.last_block_timestamp.try_into().expect("doesn't fit in i64");
+
+                        let num_transactions = new_cursor.1;
+
+                        let new_tps = if new_timestamp - cursor_timestamp != 0 {
+                            num_transactions / (new_timestamp - cursor_timestamp)
+                        } else {
+                            num_transactions
+                        };
+
+                        cursor.last_pending_block_contract_tx =
+                            Some(felt_to_sql_string(&new_cursor.0));
+                        cursor.tps = new_tps.try_into().expect("does't fit in i64");
+                    } else {
+                        cursor.tps = 0;
+                    }
+                    cursor.last_block_timestamp = update_cursors
+                        .pending_block_timestamp
+                        .try_into()
+                        .expect("doesn't fit in i64");
+                    cursor.head = new_head;
+                    cursor.last_pending_block_tx =
+                        update_cursors.last_pending_block_tx.map(|felt| felt_to_sql_string(&felt));
+
+                    sqlx::query(
+                        "UPDATE contracts SET head = ?, last_block_timestamp = ?, \
+                         last_pending_block_tx = ?, last_pending_block_contract_tx = ? WHERE id = \
+                         ?",
+                    )
+                    .bind(cursor.head)
+                    .bind(cursor.last_block_timestamp)
+                    .bind(&cursor.last_pending_block_tx)
+                    .bind(&cursor.last_pending_block_contract_tx)
+                    .bind(&cursor.contract_address)
+                    .execute(&mut **tx)
+                    .await?;
+
+                    // Send appropriate ContractUpdated publish message
+                    self.publish_queue.push(BrokerMessage::SetHead(cursor.clone()));
+                }
+            }
             QueryType::SetEntity(entity) => {
                 let row = query.fetch_one(&mut **tx).await.with_context(|| {
                     format!("Failed to execute query: {:?}, args: {:?}", statement, arguments)
@@ -196,6 +363,19 @@ impl<'c> Executor<'c> {
                 let mut entity_updated = EntityUpdated::from_row(&row)?;
                 entity_updated.updated_model = Some(entity);
                 entity_updated.deleted = false;
+
+                let optimistic_entity = OptimisticEntity {
+                    id: entity_updated.id.clone(),
+                    keys: entity_updated.keys.clone(),
+                    event_id: entity_updated.event_id.clone(),
+                    executed_at: entity_updated.executed_at,
+                    created_at: entity_updated.created_at,
+                    updated_at: entity_updated.updated_at,
+                    updated_model: entity_updated.updated_model.clone(),
+                    deleted: entity_updated.deleted,
+                };
+                SimpleBroker::publish(optimistic_entity);
+
                 let broker_message = BrokerMessage::EntityUpdated(entity_updated);
                 self.publish_queue.push(broker_message);
             }
@@ -236,6 +416,17 @@ impl<'c> Executor<'c> {
                     entity_updated.deleted = true;
                 }
 
+                let optimistic_entity = OptimisticEntity {
+                    id: entity_updated.id.clone(),
+                    keys: entity_updated.keys.clone(),
+                    event_id: entity_updated.event_id.clone(),
+                    executed_at: entity_updated.executed_at,
+                    created_at: entity_updated.created_at,
+                    updated_at: entity_updated.updated_at,
+                    updated_model: entity_updated.updated_model.clone(),
+                    deleted: entity_updated.deleted,
+                };
+                SimpleBroker::publish(optimistic_entity);
                 let broker_message = BrokerMessage::EntityUpdated(entity_updated);
                 self.publish_queue.push(broker_message);
             }
@@ -252,6 +443,18 @@ impl<'c> Executor<'c> {
                 })?;
                 let mut event_message = EventMessageUpdated::from_row(&row)?;
                 event_message.updated_model = Some(entity);
+
+                let optimistic_event_message = OptimisticEventMessage {
+                    id: event_message.id.clone(),
+                    keys: event_message.keys.clone(),
+                    event_id: event_message.event_id.clone(),
+                    executed_at: event_message.executed_at,
+                    created_at: event_message.created_at,
+                    updated_at: event_message.updated_at,
+                    updated_model: event_message.updated_model.clone(),
+                };
+                SimpleBroker::publish(optimistic_event_message);
+
                 let broker_message = BrokerMessage::EventMessageUpdated(event_message);
                 self.publish_queue.push(broker_message);
             }
@@ -402,6 +605,7 @@ impl<'c> Executor<'c> {
 
 fn send_broker_message(message: BrokerMessage) {
     match message {
+        BrokerMessage::SetHead(update) => SimpleBroker::publish(update),
         BrokerMessage::ModelRegistered(model) => SimpleBroker::publish(model),
         BrokerMessage::EntityUpdated(entity) => SimpleBroker::publish(entity),
         BrokerMessage::EventMessageUpdated(event) => SimpleBroker::publish(event),

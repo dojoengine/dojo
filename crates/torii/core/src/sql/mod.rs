@@ -16,7 +16,10 @@ use starknet_crypto::poseidon_hash_many;
 use tokio::sync::mpsc::UnboundedSender;
 use utils::felts_to_sql_string;
 
-use crate::executor::{Argument, DeleteEntityQuery, QueryMessage, QueryType};
+use crate::executor::{
+    Argument, DeleteEntityQuery, QueryMessage, QueryType, ResetCursorsQuery, SetHeadQuery,
+    UpdateCursorsQuery,
+};
 use crate::types::ContractType;
 use crate::utils::utc_dt_string_from_timestamp;
 
@@ -107,12 +110,31 @@ impl Sql {
         ))
     }
 
-    pub fn set_head(&mut self, contract: Felt, head: u64) -> Result<()> {
-        let head = Argument::Int(head.try_into().expect("doesn't fit in u64"));
-        let id = Argument::FieldElement(contract);
-        self.executor.send(QueryMessage::other(
-            "UPDATE contracts SET head = ? WHERE id = ?".to_string(),
-            vec![head, id],
+    pub async fn set_head(
+        &mut self,
+        head: u64,
+        last_block_timestamp: u64,
+        world_txns_count: u64,
+        contract_address: Felt,
+    ) -> Result<()> {
+        let head_arg = Argument::Int(
+            head.try_into().map_err(|_| anyhow!("Head value {} doesn't fit in i64", head))?,
+        );
+        let last_block_timestamp_arg =
+            Argument::Int(last_block_timestamp.try_into().map_err(|_| {
+                anyhow!("Last block timestamp value {} doesn't fit in i64", last_block_timestamp)
+            })?);
+        let id = Argument::FieldElement(contract_address);
+
+        self.executor.send(QueryMessage::new(
+            "UPDATE contracts SET head = ?, last_block_timestamp = ? WHERE id = ?".to_string(),
+            vec![head_arg, last_block_timestamp_arg, id],
+            QueryType::SetHead(SetHeadQuery {
+                head,
+                last_block_timestamp,
+                txns_count: world_txns_count,
+                contract_address,
+            }),
         ))?;
 
         Ok(())
@@ -187,48 +209,44 @@ impl Sql {
         })
     }
 
-    pub fn update_cursors(
+    // For a given contract address, sets head to the passed value and sets
+    // last_pending_block_contract_tx and last_pending_block_tx to null
+    pub fn reset_cursors(
         &mut self,
         head: u64,
-        last_pending_block_tx: Option<Felt>,
-        cursor_map: HashMap<Felt, Felt>,
+        cursor_map: HashMap<Felt, (Felt, u64)>,
+        last_block_timestamp: u64,
     ) -> Result<()> {
-        let head = Argument::Int(head.try_into().expect("doesn't fit in u64"));
-        let last_pending_block_tx = if let Some(f) = last_pending_block_tx {
-            Argument::String(format!("{:#x}", f))
-        } else {
-            Argument::Null
-        };
-
-        self.executor.send(QueryMessage::other(
-            "UPDATE contracts SET head = ?, last_pending_block_tx = ? WHERE 1=1".to_string(),
-            vec![head, last_pending_block_tx],
+        self.executor.send(QueryMessage::new(
+            "".to_string(),
+            vec![],
+            QueryType::ResetCursors(ResetCursorsQuery {
+                cursor_map,
+                last_block_timestamp,
+                last_block_number: head,
+            }),
         ))?;
-
-        for cursor in cursor_map {
-            let tx = Argument::FieldElement(cursor.1);
-            let contract = Argument::FieldElement(cursor.0);
-
-            self.executor.send(QueryMessage::other(
-                "UPDATE contracts SET last_pending_block_contract_tx = ? WHERE id = ?".to_string(),
-                vec![tx, contract],
-            ))?;
-        }
 
         Ok(())
     }
 
-    // For a given contract address, sets head to the passed value and sets
-    // last_pending_block_contract_tx and last_pending_block_tx to null
-    pub fn reset_cursors(&mut self, head: u64) -> Result<()> {
-        let head = Argument::Int(head.try_into().expect("doesn't fit in u64"));
-        self.executor.send(QueryMessage::other(
-            "UPDATE contracts SET head = ?, last_pending_block_contract_tx = ?, \
-             last_pending_block_tx = ? WHERE 1=1"
-                .to_string(),
-            vec![head, Argument::Null, Argument::Null],
+    pub fn update_cursors(
+        &mut self,
+        head: u64,
+        last_pending_block_tx: Option<Felt>,
+        cursor_map: HashMap<Felt, (Felt, u64)>,
+        pending_block_timestamp: u64,
+    ) -> Result<()> {
+        self.executor.send(QueryMessage::new(
+            "".to_string(),
+            vec![],
+            QueryType::UpdateCursors(UpdateCursorsQuery {
+                cursor_map,
+                last_pending_block_tx,
+                last_block_number: head,
+                pending_block_timestamp,
+            }),
         ))?;
-
         Ok(())
     }
 

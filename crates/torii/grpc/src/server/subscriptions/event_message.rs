@@ -14,7 +14,7 @@ use tokio::sync::RwLock;
 use torii_core::error::{Error, ParseError};
 use torii_core::simple_broker::SimpleBroker;
 use torii_core::sql::FELT_DELIMITER;
-use torii_core::types::EventMessage;
+use torii_core::types::OptimisticEventMessage;
 use tracing::{error, trace};
 
 use super::entity::EntitiesSubscriber;
@@ -72,17 +72,20 @@ impl EventMessageManager {
 #[allow(missing_debug_implementations)]
 pub struct Service {
     subs_manager: Arc<EventMessageManager>,
-    simple_broker: Pin<Box<dyn Stream<Item = EventMessage> + Send>>,
+    simple_broker: Pin<Box<dyn Stream<Item = OptimisticEventMessage> + Send>>,
 }
 
 impl Service {
     pub fn new(subs_manager: Arc<EventMessageManager>) -> Self {
-        Self { subs_manager, simple_broker: Box::pin(SimpleBroker::<EventMessage>::subscribe()) }
+        Self {
+            subs_manager,
+            simple_broker: Box::pin(SimpleBroker::<OptimisticEventMessage>::subscribe()),
+        }
     }
 
     async fn publish_updates(
         subs: Arc<EventMessageManager>,
-        entity: &EventMessage,
+        entity: &OptimisticEventMessage,
     ) -> Result<(), Error> {
         let mut closed_stream = Vec::new();
         let hashed = Felt::from_str(&entity.id).map_err(ParseError::FromStr)?;

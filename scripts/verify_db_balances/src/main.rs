@@ -1,6 +1,7 @@
 use std::str::FromStr;
 use std::sync::Arc;
 
+use clap::Parser;
 use num_traits::ToPrimitive;
 use sqlx::sqlite::SqlitePool;
 use sqlx::Row;
@@ -63,12 +64,28 @@ async fn get_balance_from_starknet(
     Ok(balance)
 }
 
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    /// Path to the SQLite database file
+    #[arg(short, long)]
+    db_path: String,
+
+    /// RPC URL for the Starknet provider
+    #[arg(short, long)]
+    rpc_url: String,
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // Initialize the logger
     tracing_subscriber::fmt().with_max_level(Level::INFO).init();
 
-    let pool = SqlitePool::connect("sqlite:../../torii.db").await?;
+    // Parse command line arguments
+    let args = Args::parse();
+
+    // Use the provided database path
+    let pool = SqlitePool::connect(&format!("sqlite:{}", args.db_path)).await?;
 
     let rows = sqlx::query(
         "
@@ -88,9 +105,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // print number of balances
     info!("Checking {} balances", rows.len());
 
-    let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(
-        Url::parse("https://api.cartridge.gg/rpc/starknet-sepolia").unwrap(),
-    )));
+    let provider =
+        Arc::new(JsonRpcClient::new(HttpTransport::new(Url::parse(&args.rpc_url).unwrap())));
 
     // IMPROVEMENT: batch multiple balanceOf calls in same rpc call
     for row in rows {

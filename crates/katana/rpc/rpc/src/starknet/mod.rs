@@ -53,7 +53,7 @@ struct Inner<EF: ExecutorFactory> {
     validator: TxValidator,
     pool: TxPool,
     backend: Arc<Backend<EF>>,
-    block_producer: Arc<BlockProducer<EF>>,
+    block_producer: BlockProducer<EF>,
     blocking_task_pool: BlockingTaskPool,
 }
 
@@ -61,7 +61,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
     pub fn new(
         backend: Arc<Backend<EF>>,
         pool: TxPool,
-        block_producer: Arc<BlockProducer<EF>>,
+        block_producer: BlockProducer<EF>,
         validator: TxValidator,
     ) -> Self {
         let blocking_task_pool =

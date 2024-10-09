@@ -17,8 +17,8 @@ use dojo_types::schema::Ty;
 use dojo_world::contracts::naming::compute_selector_from_names;
 use futures::Stream;
 use proto::world::{
-    MetadataRequest, MetadataResponse, RetrieveEntitiesRequest, RetrieveEntitiesResponse,
-    RetrieveEventsRequest, RetrieveEventsResponse, SubscribeModelsRequest, SubscribeModelsResponse,
+    RetrieveEntitiesRequest, RetrieveEntitiesResponse, RetrieveEventsRequest,
+    RetrieveEventsResponse, SubscribeModelsRequest, SubscribeModelsResponse,
     UpdateEntitiesSubscriptionRequest,
 };
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
@@ -29,6 +29,7 @@ use starknet::core::types::Felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use subscriptions::event::EventManager;
+use subscriptions::indexer::IndexerManager;
 use tokio::net::TcpListener;
 use tokio::sync::mpsc::Receiver;
 use tokio_stream::wrappers::{ReceiverStream, TcpListenerStream};
@@ -47,6 +48,7 @@ use crate::proto::types::LogicalOperator;
 use crate::proto::world::world_server::WorldServer;
 use crate::proto::world::{
     SubscribeEntitiesRequest, SubscribeEntityResponse, SubscribeEventsResponse,
+    SubscribeIndexerRequest, SubscribeIndexerResponse, WorldMetadataRequest, WorldMetadataResponse,
 };
 use crate::proto::{self};
 use crate::types::schema::SchemaError;
@@ -84,6 +86,7 @@ pub struct DojoWorld {
     event_message_manager: Arc<EventMessageManager>,
     event_manager: Arc<EventManager>,
     state_diff_manager: Arc<StateDiffManager>,
+    indexer_manager: Arc<IndexerManager>,
 }
 
 impl DojoWorld {
@@ -98,6 +101,7 @@ impl DojoWorld {
         let event_message_manager = Arc::new(EventMessageManager::default());
         let event_manager = Arc::new(EventManager::default());
         let state_diff_manager = Arc::new(StateDiffManager::default());
+        let indexer_manager = Arc::new(IndexerManager::default());
 
         tokio::task::spawn(subscriptions::model_diff::Service::new_with_block_rcv(
             block_rx,
@@ -114,6 +118,8 @@ impl DojoWorld {
 
         tokio::task::spawn(subscriptions::event::Service::new(Arc::clone(&event_manager)));
 
+        tokio::task::spawn(subscriptions::indexer::Service::new(Arc::clone(&indexer_manager)));
+
         Self {
             pool,
             world_address,
@@ -122,12 +128,13 @@ impl DojoWorld {
             event_message_manager,
             event_manager,
             state_diff_manager,
+            indexer_manager,
         }
     }
 }
 
 impl DojoWorld {
-    pub async fn metadata(&self) -> Result<proto::types::WorldMetadata, Error> {
+    pub async fn world(&self) -> Result<proto::types::WorldMetadata, Error> {
         let world_address = sqlx::query_scalar(&format!(
             "SELECT contract_address FROM contracts WHERE id = '{:#x}'",
             self.world_address
@@ -684,6 +691,14 @@ impl DojoWorld {
         })
     }
 
+    async fn subscribe_indexer(
+        &self,
+        contract_address: Felt,
+    ) -> Result<Receiver<Result<proto::world::SubscribeIndexerResponse, tonic::Status>>, Error>
+    {
+        self.indexer_manager.add_subscriber(&self.pool, contract_address).await
+    }
+
     async fn subscribe_models(
         &self,
         models_keys: Vec<proto::types::ModelKeysClause>,
@@ -1009,6 +1024,8 @@ type SubscribeEntitiesResponseStream =
     Pin<Box<dyn Stream<Item = Result<SubscribeEntityResponse, Status>> + Send>>;
 type SubscribeEventsResponseStream =
     Pin<Box<dyn Stream<Item = Result<SubscribeEventsResponse, Status>> + Send>>;
+type SubscribeIndexerResponseStream =
+    Pin<Box<dyn Stream<Item = Result<SubscribeIndexerResponse, Status>> + Send>>;
 
 #[tonic::async_trait]
 impl proto::world::world_server::World for DojoWorld {
@@ -1016,17 +1033,30 @@ impl proto::world::world_server::World for DojoWorld {
     type SubscribeEntitiesStream = SubscribeEntitiesResponseStream;
     type SubscribeEventMessagesStream = SubscribeEntitiesResponseStream;
     type SubscribeEventsStream = SubscribeEventsResponseStream;
+    type SubscribeIndexerStream = SubscribeIndexerResponseStream;
 
     async fn world_metadata(
         &self,
-        _request: Request<MetadataRequest>,
-    ) -> Result<Response<MetadataResponse>, Status> {
-        let metadata = Some(self.metadata().await.map_err(|e| match e {
+        _request: Request<WorldMetadataRequest>,
+    ) -> Result<Response<WorldMetadataResponse>, Status> {
+        let metadata = Some(self.world().await.map_err(|e| match e {
             Error::Sql(sqlx::Error::RowNotFound) => Status::not_found("World not found"),
             e => Status::internal(e.to_string()),
         })?);
 
-        Ok(Response::new(MetadataResponse { metadata }))
+        Ok(Response::new(WorldMetadataResponse { metadata }))
+    }
+
+    async fn subscribe_indexer(
+        &self,
+        request: Request<SubscribeIndexerRequest>,
+    ) -> ServiceResult<Self::SubscribeIndexerStream> {
+        let SubscribeIndexerRequest { contract_address } = request.into_inner();
+        let rx = self
+            .subscribe_indexer(Felt::from_bytes_be_slice(&contract_address))
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+        Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::SubscribeIndexerStream))
     }
 
     async fn subscribe_models(

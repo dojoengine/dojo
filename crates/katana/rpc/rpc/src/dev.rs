@@ -12,11 +12,11 @@ use katana_rpc_types::error::dev::DevApiError;
 #[allow(missing_debug_implementations)]
 pub struct DevApi<EF: ExecutorFactory> {
     backend: Arc<Backend<EF>>,
-    block_producer: Arc<BlockProducer<EF>>,
+    block_producer: BlockProducer<EF>,
 }
 
 impl<EF: ExecutorFactory> DevApi<EF> {
-    pub fn new(backend: Arc<Backend<EF>>, block_producer: Arc<BlockProducer<EF>>) -> Self {
+    pub fn new(backend: Arc<Backend<EF>>, block_producer: BlockProducer<EF>) -> Self {
         Self { backend, block_producer }
     }
 

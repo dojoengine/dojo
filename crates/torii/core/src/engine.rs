@@ -181,13 +181,6 @@ pub struct ParallelizedEvent {
     pub event: Event,
 }
 
-#[derive(Debug)]
-pub struct EngineHead {
-    pub block_number: u64,
-    pub last_pending_block_world_tx: Option<Felt>,
-    pub last_pending_block_tx: Option<Felt>,
-}
-
 #[allow(missing_debug_implementations)]
 pub struct Engine<P: Provider + Send + Sync + std::fmt::Debug + 'static> {
     world: Arc<WorldContractReader<P>>,
@@ -235,7 +228,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         // use the start block provided by user if head is 0
         let (head, _, _) = self.db.head(self.world.address).await?;
         if head == 0 {
-            self.db.set_head(self.world.address, self.config.start_block)?;
+            self.db.set_head(self.config.start_block, 0, 0, self.world.address).await?;
         } else if self.config.start_block != 0 {
             warn!(target: LOG_TARGET, "Start block ignored, stored head exists and will be used instead.");
         }
@@ -263,7 +256,10 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                             }
 
                             match self.process(fetch_result).await {
-                                Ok(_) => self.db.execute().await?,
+                                Ok(_) => {
+                                    self.db.execute().await?;
+                                    self.db.apply_cache_diff().await?;
+                                },
                                 Err(e) => {
                                     error!(target: LOG_TARGET, error = %e, "Processing fetched data.");
                                     erroring_out = true;
@@ -458,7 +454,6 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             FetchDataResult::Pending(data) => self.process_pending(data).await?,
             FetchDataResult::None => {}
         };
-        self.db.apply_cache_diff().await?;
 
         Ok(())
     }
@@ -499,8 +494,12 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         // Process parallelized events
         self.process_tasks().await?;
 
-        // Head block number should still be latest block number
-        self.db.update_cursors(data.block_number - 1, last_pending_block_tx, cursor_map)?;
+        self.db.update_cursors(
+            data.block_number - 1,
+            last_pending_block_tx,
+            cursor_map,
+            timestamp,
+        )?;
 
         Ok(())
     }
@@ -508,6 +507,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
     pub async fn process_range(&mut self, data: FetchRangeResult) -> Result<()> {
         // Process all transactions
         let mut processed_blocks = HashSet::new();
+        let mut cursor_map = HashMap::new();
         for ((block_number, transaction_hash), events) in data.transactions {
             debug!("Processing transaction hash: {:#x}", transaction_hash);
             // Process transaction
@@ -523,6 +523,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                 block_number,
                 data.blocks[&block_number],
                 transaction,
+                &mut cursor_map,
             )
             .await?;
 
@@ -540,7 +541,10 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         // Process parallelized events
         self.process_tasks().await?;
 
-        self.db.reset_cursors(data.latest_block_number)?;
+        let last_block_timestamp =
+            get_block_timestamp(&self.provider, data.latest_block_number).await?;
+
+        self.db.reset_cursors(data.latest_block_number, cursor_map, last_block_timestamp)?;
 
         Ok(())
     }
@@ -594,7 +598,9 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         block_number: u64,
         block_timestamp: u64,
         transaction: Option<Transaction>,
+        cursor_map: &mut HashMap<Felt, (Felt, u64)>,
     ) -> Result<()> {
+        let mut unique_contracts = HashSet::new();
         // Contract -> Cursor
         for (event_idx, event) in events.iter().enumerate() {
             let event_id =
@@ -610,6 +616,8 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                 continue;
             };
 
+            unique_contracts.insert(event.from_address);
+
             Self::process_event(
                 self,
                 block_number,
@@ -620,6 +628,11 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                 contract_type,
             )
             .await?;
+        }
+
+        for contract in unique_contracts {
+            let entry = cursor_map.entry(contract).or_insert((transaction_hash, 0));
+            entry.1 += 1;
         }
 
         if let Some(ref transaction) = transaction {
@@ -643,7 +656,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         transaction_with_receipt: &TransactionWithReceipt,
         block_number: u64,
         block_timestamp: u64,
-        cursor_map: &mut HashMap<Felt, Felt>,
+        cursor_map: &mut HashMap<Felt, (Felt, u64)>,
     ) -> Result<()> {
         let transaction_hash = transaction_with_receipt.transaction.transaction_hash();
         let events = match &transaction_with_receipt.receipt {
@@ -652,13 +665,15 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             _ => None,
         };
 
+        let mut unique_contracts = HashSet::new();
         if let Some(events) = events {
             for (event_idx, event) in events.iter().enumerate() {
                 let Some(&contract_type) = self.contracts.get(&event.from_address) else {
                     continue;
                 };
 
-                cursor_map.insert(event.from_address, *transaction_hash);
+                unique_contracts.insert(event.from_address);
+
                 let event_id =
                     format!("{:#064x}:{:#x}:{:#04x}", block_number, *transaction_hash, event_idx);
 
@@ -684,6 +699,11 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                 )
                 .await?;
             }
+        }
+
+        for contract in unique_contracts {
+            let entry = cursor_map.entry(contract).or_insert((*transaction_hash, 0));
+            entry.1 += 1;
         }
 
         Ok(())

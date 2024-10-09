@@ -1,10 +1,14 @@
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
 
+mod exit;
+
+use std::future::IntoFuture;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Result;
+use dojo_metrics::prometheus_exporter::PrometheusHandle;
 use dojo_metrics::{metrics_process, prometheus_exporter, Report};
 use hyper::{Method, Uri};
 use jsonrpsee::server::middleware::proxy_get_request::ProxyGetRequestLayer;
@@ -18,14 +22,13 @@ use katana_core::env::BlockContextGenerator;
 #[allow(deprecated)]
 use katana_core::sequencer::SequencerConfig;
 use katana_core::service::block_producer::BlockProducer;
-#[cfg(feature = "messaging")]
-use katana_core::service::messaging::{MessagingService, MessagingTask};
-use katana_core::service::{BlockProductionTask, TransactionMiner};
+use katana_db::mdbx::DbEnv;
 use katana_executor::implementation::blockifier::BlockifierFactory;
 use katana_executor::{ExecutorFactory, SimulationFlag};
+use katana_pipeline::{stage, Pipeline};
 use katana_pool::ordering::FiFo;
 use katana_pool::validation::stateful::TxValidator;
-use katana_pool::{TransactionPool, TxPool};
+use katana_pool::TxPool;
 use katana_primitives::block::FinalityStatus;
 use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
 use katana_provider::providers::fork::ForkedProvider;
@@ -50,27 +53,103 @@ use starknet::providers::{JsonRpcClient, Provider};
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing::{info, trace};
 
-/// A handle to the instantiated Katana node.
+use crate::exit::NodeStoppedFuture;
+
+/// A handle to the launched node.
 #[allow(missing_debug_implementations)]
-pub struct Handle {
-    pub pool: TxPool,
+pub struct LaunchedNode {
+    pub node: Node,
+    /// Handle to the rpc server.
     pub rpc: RpcServer,
-    pub task_manager: TaskManager,
-    pub backend: Arc<Backend<BlockifierFactory>>,
-    pub block_producer: Arc<BlockProducer<BlockifierFactory>>,
 }
 
-impl Handle {
-    /// Stops the Katana node.
-    pub async fn stop(self) -> Result<()> {
-        // TODO: wait for the rpc server to stop
+impl LaunchedNode {
+    /// Stops the node.
+    ///
+    /// This will instruct the node to stop and wait until it has actually stop.
+    pub async fn stop(&self) -> Result<()> {
+        // TODO: wait for the rpc server to stop instead of just stopping it.
         self.rpc.handle.stop()?;
-        self.task_manager.shutdown().await;
+        self.node.task_manager.shutdown().await;
         Ok(())
+    }
+
+    /// Returns a future which resolves only when the node has stopped.
+    pub fn stopped(&self) -> NodeStoppedFuture<'_> {
+        NodeStoppedFuture::new(self)
     }
 }
 
-/// Build the core Katana components from the given configurations and start running the node.
+/// A node instance.
+///
+/// The struct contains the handle to all the components of the node.
+#[must_use = "Node does nothing unless launched."]
+#[allow(missing_debug_implementations)]
+pub struct Node {
+    pub pool: TxPool,
+    pub db: Option<DbEnv>,
+    pub task_manager: TaskManager,
+    pub prometheus_handle: PrometheusHandle,
+    pub backend: Arc<Backend<BlockifierFactory>>,
+    pub block_producer: BlockProducer<BlockifierFactory>,
+    pub server_config: ServerConfig,
+    #[allow(deprecated)]
+    pub sequencer_config: SequencerConfig,
+}
+
+impl Node {
+    /// Start the node.
+    ///
+    /// This method will start all the node process, running them until the node is stopped.
+    pub async fn launch(self) -> Result<LaunchedNode> {
+        if let Some(addr) = self.server_config.metrics {
+            let mut reports = Vec::new();
+            if let Some(ref db) = self.db {
+                reports.push(Box::new(db.clone()) as Box<dyn Report>);
+            }
+
+            prometheus_exporter::serve(
+                addr,
+                self.prometheus_handle.clone(),
+                metrics_process::Collector::default(),
+                reports,
+            )
+            .await?;
+
+            info!(%addr, "Metrics endpoint started.");
+        }
+
+        let pool = self.pool.clone();
+        let backend = self.backend.clone();
+        let block_producer = self.block_producer.clone();
+        let validator = self.block_producer.validator().clone();
+
+        // --- build sequencing stage
+
+        #[allow(deprecated)]
+        let sequencing = stage::Sequencing::new(
+            pool.clone(),
+            backend.clone(),
+            self.task_manager.clone(),
+            block_producer.clone(),
+            self.sequencer_config.messaging.clone(),
+        );
+
+        // --- build and start the pipeline
+
+        let mut pipeline = Pipeline::new();
+        pipeline.add_stage(Box::new(sequencing));
+
+        self.task_manager.spawn(pipeline.into_future());
+
+        let node_components = (pool, backend, block_producer, validator);
+        let rpc = spawn(node_components, self.server_config.clone()).await?;
+
+        Ok(LaunchedNode { node: self, rpc })
+    }
+}
+
+/// Build the core Katana components from the given configurations.
 // TODO: placeholder until we implement a dedicated class that encapsulate building the node
 // components
 //
@@ -80,11 +159,15 @@ impl Handle {
 //
 // NOTE: Don't rely on this function as it is mainly used as a placeholder for now.
 #[allow(deprecated)]
-pub async fn start(
+pub async fn build(
     server_config: ServerConfig,
     sequencer_config: SequencerConfig,
     mut starknet_config: StarknetConfig,
-) -> Result<Handle> {
+) -> Result<Node> {
+    // Metrics recorder must be initialized before calling any of the metrics macros, in order
+    // for it to be registered.
+    let prometheus_handle = prometheus_exporter::install_recorder("katana")?;
+
     // --- build executor factory
 
     let cfg_env = CfgEnv {
@@ -185,62 +268,28 @@ pub async fn start(
         BlockProducer::instant(Arc::clone(&backend))
     };
 
-    // --- build transaction pool and miner
+    // --- build transaction pool
 
     let validator = block_producer.validator();
     let pool = TxPool::new(validator.clone(), FiFo::new());
-    let miner = TransactionMiner::new(pool.add_listener());
 
-    // --- build metrics service
+    let node = Node {
+        db,
+        pool,
+        backend,
+        server_config,
+        block_producer,
+        sequencer_config,
+        prometheus_handle,
+        task_manager: TaskManager::current(),
+    };
 
-    // Metrics recorder must be initialized before calling any of the metrics macros, in order for
-    // it to be registered.
-    if let Some(addr) = server_config.metrics {
-        let prometheus_handle = prometheus_exporter::install_recorder("katana")?;
-        let reports = db.map(|db| vec![Box::new(db) as Box<dyn Report>]).unwrap_or_default();
-
-        prometheus_exporter::serve(
-            addr,
-            prometheus_handle,
-            metrics_process::Collector::default(),
-            reports,
-        )
-        .await?;
-
-        info!(%addr, "Metrics endpoint started.");
-    }
-
-    // --- create a TaskManager using the ambient Tokio runtime
-
-    let task_manager = TaskManager::current();
-
-    // --- build and spawn the messaging task
-
-    #[cfg(feature = "messaging")]
-    if let Some(config) = sequencer_config.messaging.clone() {
-        let messaging = MessagingService::new(config, pool.clone(), Arc::clone(&backend)).await?;
-        let task = MessagingTask::new(messaging);
-        task_manager.build_task().critical().name("Messaging").spawn(task);
-    }
-
-    let block_producer = Arc::new(block_producer);
-
-    // --- build and spawn the block production task
-
-    let task = BlockProductionTask::new(pool.clone(), miner, block_producer.clone());
-    task_manager.build_task().critical().name("BlockProduction").spawn(task);
-
-    // --- spawn rpc server
-
-    let node_components = (pool.clone(), backend.clone(), block_producer.clone(), validator);
-    let rpc = spawn(node_components, server_config).await?;
-
-    Ok(Handle { backend, block_producer, pool, rpc, task_manager })
+    Ok(node)
 }
 
 // Moved from `katana_rpc` crate
 pub async fn spawn<EF: ExecutorFactory>(
-    node_components: (TxPool, Arc<Backend<EF>>, Arc<BlockProducer<EF>>, TxValidator),
+    node_components: (TxPool, Arc<Backend<EF>>, BlockProducer<EF>, TxValidator),
     config: ServerConfig,
 ) -> Result<RpcServer> {
     let (pool, backend, block_producer, validator) = node_components;

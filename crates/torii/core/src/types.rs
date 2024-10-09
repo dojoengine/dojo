@@ -51,7 +51,39 @@ pub struct Entity {
 
 #[derive(FromRow, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
+pub struct OptimisticEntity {
+    pub id: String,
+    pub keys: String,
+    pub event_id: String,
+    pub executed_at: DateTime<Utc>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+
+    // this should never be None
+    #[sqlx(skip)]
+    pub updated_model: Option<Ty>,
+    #[sqlx(skip)]
+    pub deleted: bool,
+}
+
+#[derive(FromRow, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct EventMessage {
+    pub id: String,
+    pub keys: String,
+    pub event_id: String,
+    pub executed_at: DateTime<Utc>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+
+    // this should never be None
+    #[sqlx(skip)]
+    pub updated_model: Option<Ty>,
+}
+
+#[derive(FromRow, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct OptimisticEventMessage {
     pub id: String,
     pub keys: String,
     pub event_id: String,
@@ -136,4 +168,15 @@ impl std::fmt::Display for ContractType {
             ContractType::ERC721 => write!(f, "ERC721"),
         }
     }
+}
+
+#[derive(FromRow, Deserialize, Debug, Clone, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct ContractCursor {
+    pub head: i64,
+    pub tps: i64,
+    pub last_block_timestamp: i64,
+    pub contract_address: String,
+    pub last_pending_block_tx: Option<String>,
+    pub last_pending_block_contract_tx: Option<String>,
 }
