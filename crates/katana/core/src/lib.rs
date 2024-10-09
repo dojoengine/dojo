@@ -3,6 +3,5 @@
 pub mod backend;
 pub mod constants;
 pub mod env;
-pub mod sequencer;
 pub mod service;
 pub mod utils;
