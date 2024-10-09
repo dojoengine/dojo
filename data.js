@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728401272906,
+  "lastUpdate": 1728483539264,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -23935,6 +23935,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3963611,
             "range": "± 103063",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e591364206d2fb0006ea110cbe4dbd84c7ccbd91",
+          "message": "feat(torii): index whitelisted erc20/erc721 (#2494)\n\n* feat(torii): index whitelisted erc20/erc721\r\n\r\ncommit-id:5231a946\r\n\r\n* refactor(torii): abstract out how to format felts to avoid bugs\r\n\r\ncommit-id:d618e874\r\n\r\n* feat(torii): implement graphql for erc\r\n\r\ncommit-id:10465a00\r\n\r\n* opt(torii): reuse token metadata from db for ERC721\r\n\r\ncommit-id:3bfe5955\r\n\r\n* opt(torii): fetch block timestamp in parallel\r\n\r\ncommit-id:923dbba6\r\n\r\n* refactor(torii/processor): use contract type info to select processor\r\n\r\n- cleanup plus other refactor for the PR stack\r\n- `start_block` configuration removed since it was no longer necessary now that we use `get_events` for `sync_range`\r\n- use debug log level transfer events\r\n\r\ncommit-id:4acad5f3\r\n\r\n* feat(torii): add a script to verify data\r\n\r\ncommit-id:c6195721\r\n\r\n* refactor(torii): inmemory cache for erc and handle contract type at runtime (#2483)\r\n\r\n* refactor(torii): handle normal and legacy erc contract type at runtime\r\n\r\n* refactor(torii): use inmemory cache to speedup erc indexing\r\n\r\n* fix lints\r\n\r\n* add script to verify balances in torii db by quering rpc\r\n\r\n* fix(torii/graphql): return only actual token_id in graphql response\r\n\r\n* add debug statement for shouldn't reach state\r\n\r\n* add tests for I256 type\r\n\r\n* update torii toml file\r\n\r\n* adapt script to verify erc721 balances\r\n\r\n* refactor(torii): move cache into Sql struct\r\n\r\n* improve compare script\r\n\r\n* refactor(torii): load token_id into cache on startup\r\n\r\n* execute queue when new token is registered\r\n\r\n* Merge branch 'main' into feat/torii/ercs\r\n\r\n* move diff apply logic to executor\r\n\r\n* add more tests\r\n\r\n* simplify implementation of i256 type\r\n\r\n* send query only when required\r\n\r\n* update script to compare erc_transfers table properly",
+          "timestamp": "2024-10-09T08:02:51-06:00",
+          "tree_id": "d8ecda9b1c179710f7967408be548d1631097f74",
+          "url": "https://github.com/dojoengine/dojo/commit/e591364206d2fb0006ea110cbe4dbd84c7ccbd91"
+        },
+        "date": 1728483537866,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 12009573010,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
