@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728483754334,
+  "lastUpdate": 1728490992368,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -24013,6 +24013,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4126710,
             "range": "± 226075",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3f82a3111f8ab0619ad93b9157c4efc9cad94a4f",
+          "message": "Remove call to `cartridge_deployController` for Controller deployment (#2509)\n\n* remove call to `cartridge_deployController`\r\n\r\n* typo",
+          "timestamp": "2024-10-09T12:06:24-04:00",
+          "tree_id": "1796a910aaaf0bbfdc8e721e771720bf32bdcef6",
+          "url": "https://github.com/dojoengine/dojo/commit/3f82a3111f8ab0619ad93b9157c4efc9cad94a4f"
+        },
+        "date": 1728490990459,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 12212074324,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
