@@ -31,26 +31,27 @@ cargo run --bin saya -- \
 
 1. Setup your environment:
     * For now starknet foundry is required until Sozo supports deploying non-dojo contracts. Please refer to [install instructions](https://foundry-rs.github.io/starknet-foundry/getting-started/installation.html#installation-via-asdf).
-    * Setup some environment variables for `sozo`:
+    If you dont have a imported sncast account: 
     ```bash
-    # Use private key or keystore, only one of them is required. For the keystore, please refer to Starkli documentation: https://book.starkli.rs/signers#encrypted-keystores.
     export STARKNET_RPC_URL="https://api.cartridge.gg/x/starknet/sepolia"
     export DOJO_ACCOUNT_ADDRESS="<YOUR_ACCOUNT_ADDRESS>"
     export DOJO_PRIVATE_KEY="<YOUR_PRIVATE_KEY>"
     ```
-    * `sncast` doesn't support environment variables, for now, so you may have to set the options manually.
+    * Setup variables in or use enviroment variables ```bin/saya/scripts/0_account_setup.sh```, and run script   
+    * `sncast` doesn't support environment variables, for now, so you may have to set the options manually.  
 
-    During this tutorial, we will export environment variables, so you must remain in the same shell session.
+    **During this tutorial, we will export environment variables, so you must remain in the same shell session**.
+
 
 2. Prepare fact registry contract
-   Declare or use already declared `class-hash`: `0x7f6076572e04d7182a1c5c9f1f4c15aafcb069b1bfdb3de4d7c9e47c99deeb4`.
-   Deploy or use already deployed `contract`: `0x217746a5f74c2e5b6fa92c97e902d8cd78b1fabf1e8081c4aa0d2fe159bc0eb`.
+   Declare or use already declared `class-hash`: `0x0485857a88cacd0a706452c61cfa613802c638dc4ce09bf3d8b289c70183d293`.
+   Deploy or use already deployed(recommended) `contract`: `0x2cc03dd3136b634bfea2e36e9aac5f966db9576dde3fe43e3ef72e9ece1f42b`.
 
    ```bash
-   export SAYA_FACT_REGISTRY_ADDRESS="0x217746a5f74c2e5b6fa92c97e902d8cd78b1fabf1e8081c4aa0d2fe159bc0eb"
+   export SAYA_FACT_REGISTRY_ADDRESS="0x2cc03dd3136b634bfea2e36e9aac5f966db9576dde3fe43e3ef72e9ece1f42b"
    ```
 
-   In the repository https://github.com/HerodotusDev/integrity run
+   In the repository https://github.com/cartridge-gg/cairo-verifier run
 
     ```bash
     fact_registry/1-declare.sh # extract `class-hash`
@@ -61,7 +62,7 @@ cargo run --bin saya -- \
 
     You must choose a different world seed as an other person trying this example will have the same world's address. To modify the world's seed, modify the `seed` parameter in the `examples/spawn-and-move/dojo_saya.toml` file.
 
-    Then execute this command, being at the root of the repository:
+    Then set all neccesery variables ```bin/saya/scripts/1_world_setup.sh``` in script execute this command, being at the root of the repository:
 
     ```bash
     bash bin/saya/scripts/1_world_setup.sh
@@ -80,7 +81,7 @@ cargo run --bin saya -- \
     ```
 
 4. Preparing Piltover Contract
-    The current Piltover contract is under [Cartridge github](https://github.com/cartridge-gg/piltover) and the class hash is `0x01dbe90a725edbf5e03dcb1f116250ba221d3231680a92894d9cc8069f209bd6`.
+    The current Piltover contract is under [Cartridge github](https://github.com/cartridge-gg/piltover) and the class hash is `0x2a7a2276cf2f00206960ea8a0ea86b1549d6514ab11f546cc71b8154b597c1d`.
 
     At the moment, we don't have a piltover maintained by Dojo community to receive all state updates for multiple
     appchain, this is coming soon.
@@ -165,17 +166,26 @@ cargo run --bin saya -- \
     If not (this includes Apple Silicon), some emulation will take place to run the prover on your machine, and this is very very slow.
 
     It's important that the `--start-block` of Saya is the first block produced by Katana as for now Katana is not fetching events from the forked network. To get this value, you can add one to the `SAYA_FORK_BLOCK_NUMBER` value.
+    **Currently saya supports only persistant mode, ephermal will be implemented in future
 
     ```bash
     cargo run -r --bin saya -- \
         --mode persistent \
         --rpc-url http://localhost:5050 \
-        --registry $SAYA_FACT_REGISTRY_ADDRESS \
+        --registry $SAYA_FACT_REGISTRY \
         --settlement-contract $SAYA_PILTOVER_ADDRESS \
-        --prover-url <PROVER_URL> \
-        --store-proofs \
-        --private-key <PROVER_PRIVATE_KEY> \
-        --start-block $(($SAYA_FORK_BLOCK_NUMBER + 1))
+        --world $SAYA_WORLD_ADDRESS \
+        --prover-url $SAYA_PROVER_URL \
+        --starknet-url $SAYA_SEPOLIA_ENDPOINT \
+        --signer-key $SAYA_SEPOLIA_PRIVATE_KEY \
+        --signer-address $SAYA_SEPOLIA_ACCOUNT_ADDRESS \
+        --private-key $SAYA_PROVER_KEY \
+        --batch-size 1 \
+        --start-block $(expr $SAYA_FORK_BLOCK_NUMBER + 1) \
+        --da-chain celestia \
+        --celestia-node-url http://celestia-arabica.cartridge.gg \
+        --celestia-namespace saya-dev \
+        --celestia-node-auth-token eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJwdWJsaWMiLCJyZWFkIiwid3JpdGUiLCJhZG1pbiJdfQ.l26OoOmRmLhKdvvUaeqhSpt2d5eZTWkaixSZeje7XIY
     ```
 
     After this command, Saya will pick up the blocks with transactions, generate the proof for the state transition, and send it to the base layer world contract.

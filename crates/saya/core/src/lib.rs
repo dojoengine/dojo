@@ -225,7 +225,7 @@ impl Saya {
                         new_block_number: Felt::from(block) + Felt::ONE,
                         prev_block_hash: Felt::from(1u64),
                         new_block_hash: Felt::from(2u64),
-                        os_program_hash: Felt::from(3u64),
+                        os_program_hash: Felt::from(42u64),
                         starknet_os_config_hash: Felt::from(4u64),
                         use_kzg_da: Felt::from(5u64),
                         full_output: Felt::from(6u64),

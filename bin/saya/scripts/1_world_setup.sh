@@ -2,25 +2,16 @@
 #
 # Before running the script, please make sure to have the following environment variables set:
 #
-#  export STARKNET_RPC_URL="https://api.cartridge.gg/x/starknet/sepolia"
-#  export DOJO_ACCOUNT_ADDRESS="<YOUR_ACCOUNT_ADDRESS>"
-#  export DOJO_PRIVATE_KEY="<YOUR_PRIVATE_KEY>"
+# - DOJO_PRIVATE_KEY: The private key of the account that will deploy the world.
+# - DOJO_ACCOUNT_ADDRESS: The address of the account that will deploy the world.
+# - STARKNET_RPC_URL: The RPC URL of the StarkNet network you are deploying to.
 #
-#  OR use a keystore (if you don't use the DOJO_KEYSTORE_PASSWORD, the password will be asked during the script):
-#
-#  export DOJO_KEYSTORE_PATH="<PATH_TO_KEYSTORE>"
-#  export DOJO_KEYSTORE_PASSWORD="<KEYSTORE_PASSWORD>"
-#
-set -e
 
-# Check if starkli is installed.
-if ! command -v starkli &> /dev/null
-then
-    echo "starkli could not be found. Please install it running the following commands:"
-    echo "curl https://get.starkli.sh | sh"
-    echo "starkliup"
-    exit 1
-fi
+DOJO_PRIVATE_KEY=
+DOJO_ACCOUNT_ADDRESS=
+STARKNET_RPC_URL=
+
+set -e
 
 # Check if jq is installed.
 if ! command -v jq &> /dev/null
@@ -36,7 +27,7 @@ cargo run -r --bin sozo -- \
     build \
     --manifest-path examples/spawn-and-move/Scarb.toml
 
-# Ensures no previous run corrupted the environment.
+# # Ensures no previous run corrupted the environment.
 unset DOJO_WORLD_ADDRESS
 
 # Migrate the world on chain (Sepolia fees can be high, so we multiply the estimate by 20 here to pass everytime).
@@ -45,25 +36,32 @@ cargo run -r --bin sozo -- \
     -P saya \
     migrate apply \
     --manifest-path examples/spawn-and-move/Scarb.toml \
+    --rpc-url $STARKNET_RPC_URL\
+    --private-key $DOJO_PRIVATE_KEY \
+    --account-address $DOJO_ACCOUNT_ADDRESS \
     --fee-estimate-multiplier 20 \
     -vvv
 
 #
 # The world is now deployed, you should extract the address and the block number at which it was deployed to set the
 # following environment variables:
-#
-# export DOJO_WORLD_ADDRESS="<WORLD_ADDRESS>"
-# export SAYA_FORK_BLOCK_NUMBER="<WORLD_DEPLOYMENT_BLOCK_NUMBER>"
-#
+
+
 # /!\ Be aware that the block number needs to be the block in which the transaction that deploys the world was mined.
 
 # Function to extract a specific key from the [world] section in the deployment manifest.
 extract_key() {
-    local key=$1
-    awk -v key="$key" '
-    /^\[world\]/ {in_world=1; next}
-    /^\[/ {in_world=0}
-    in_world && $1 == key {
+    local section=$1
+    local key=$2
+
+    awk -v section="$section" -v key="$key" '
+    # Track the current section
+    /^\[.*\]/ {
+        in_section = ($0 == "[" section "]")
+        next
+    }
+    # When in the desired section, extract the key
+    in_section && $1 == key {
         gsub(/^[^=]+=[ ]*"?|"?$/, "")
         print $0
         exit
@@ -71,9 +69,16 @@ extract_key() {
     ' "$TOML_FILE"
 }
 
+# Example usage
 TOML_FILE="examples/spawn-and-move/manifests/saya/deployment/manifest.toml"
-WORLD_ADDRESS=$(extract_key "address")
-TRANSACTION_HASH=$(extract_key "transaction_hash")
+WORLD_ADDRESS=$(extract_key "world" "address")
+echo "world address: $WORLD_ADDRESS"
+
+TRANSACTION_HASH=$(extract_key "world" "transaction_hash")
+echo "transaction hash: $TRANSACTION_HASH"
+
+RPC_URL=$(extract_key "world.metadata" "rpc_url")
+echo "RPC URL: $RPC_URL"
 
 # Check if TRANSACTION_HASH and WORLD_ADDRESS are empty
 if [ -z "$TRANSACTION_HASH" ] || [ -z "$WORLD_ADDRESS" ]; then
@@ -82,18 +87,38 @@ if [ -z "$TRANSACTION_HASH" ] || [ -z "$WORLD_ADDRESS" ]; then
     exit 1
 fi
 
-while true; do
-    status=$(starkli status $TRANSACTION_HASH --network sepolia | jq -r '.finality_status')
-    if [ "$status" = "ACCEPTED_ON_L2" ]; then
-        receipt=$(starkli receipt $TRANSACTION_HASH --network sepolia)
-        block_number=$(echo "$receipt" | jq -r '.block_number')
-        echo ""
-        echo "World deploy transaction accepted, you can export the following variables:"
-        echo "export DOJO_WORLD_ADDRESS=$WORLD_ADDRESS"
-        echo "export SAYA_FORK_BLOCK_NUMBER=$block_number"
-        break
+
+check_finality() {
+    local tx_hash="$1"
+    local url="$2"
+    
+    # Call sncast to get transaction status
+    local result=$(sncast --account dev tx-status "$tx_hash" --url "$url")
+
+    # Extract finality status from the result
+    local execution_status=$(echo "$result" | grep -oP '(?<=execution_status: ).*')
+    local finality_status=$(echo "$result" | grep -oP '(?<=finality_status: ).*')
+
+    # Output the statuses for debugging purposes
+    echo "Execution Status: $execution_status"
+    echo "Finality Status: $finality_status"
+
+    # Check if finality status is AcceptedOnL2
+    if [ "$finality_status" == "AcceptedOnL2" ]; then
+        echo "Transaction $tx_hash has been accepted on L2!"
+        return 0
     else
-        echo "World deploy transaction not yet accepted. Current status: $status. Retrying in 1 second..."
-        sleep 1
+        echo "Transaction $tx_hash has not yet been accepted on L2. Waiting..."
+        return 1
     fi
+}
+
+# Loop until finality status is "AcceptedOnL2"
+while true; do
+    check_finality "$TRANSACTION_HASH" "$STARKNET_RPC_URL"
+    if [ $? -eq 0 ]; then
+        break
+    fi
+    # Sleep for a few seconds before checking again
+    sleep 1
 done

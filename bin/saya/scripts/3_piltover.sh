@@ -1,60 +1,77 @@
-# With sncast, you must first initialize your account. Once the account is initialized,
-# and the configuration file is available, you can run the sncast commands referring to your account by name.
-#
-# Define the account name to be re-used.
-SN_CAST_ACCOUNT_NAME="glihm-sep"
-SN_CAST_ACCOUNT_TYPE="<braavos|oz|argent>"
-
-# Use existing values if defined, otherwise set default values
-: ${SAYA_FACT_REGISTRY_ADDRESS:="<ADDRESS>"}
-: ${DOJO_ACCOUNT_ADDRESS:="<ADDRESS>"}
-: ${DOJO_PRIVATE_KEY:="<PRIVATE_KEY>"}
-: ${SAYA_FORK_BLOCK_NUMBER:=1000000}
-: ${STARKNET_RPC_URL:="https://api.cartridge.gg/x/starknet/sepolia"}
-
-PILTOVER_CLASS_HASH="0x01dbe90a725edbf5e03dcb1f116250ba221d3231680a92894d9cc8069f209bd6"
+# Define the account and contract details required for deployment
+PILTOVER_CLASS_HASH="0x2a7a2276cf2f00206960ea8a0ea86b1549d6514ab11f546cc71b8154b597c1d"
 SAYA_CONFIG_HASH=42
-SAYA_PROGRAM_HASH=0x1d55211dd0a3d906104984e010fe31d3eb50f20ec6db04b5b4b733db3b3907
+SAYA_PROGRAM_HASH=0x2aa9e430c145b26d681a8087819ed5bff93f5596105d0e74f00fc7caa46fa18
+SAYA_FACT_REGISTRY_ADDRESS=0x2cc03dd3136b634bfea2e36e9aac5f966db9576dde3fe43e3ef72e9ece1f42b
 
-# Use this to initialize your account.
-#sncast account add --name $SN_CAST_ACCOUNT_NAME \
-#    --address $DOJO_ACCOUNT_ADDRESS \
-#    --type $SN_CAST_ACCOUNT_TYPE \
-#    --private-key $DOJO_PRIVATE_KEY \
-#    --url $STARKNET_RPC_URL \
-#    --add-profile $SN_CAST_ACCOUNT_NAME
+# Set the required environment variables
+SN_CAST_ACCOUNT_NAME= # The name of the account used with sncast
+STARKNET_RPC_URL=     # The Starknet RPC URL to interact with the network
+DOJO_ACCOUNT_ADDRESS= # The Dojo account address used for deployment
 
+# Deploy the contract using sncast, and capture the output for transaction and contract address
 output=$(sncast -a $SN_CAST_ACCOUNT_NAME deploy \
     -u $STARKNET_RPC_URL \
     --class-hash $PILTOVER_CLASS_HASH \
     --fee-token eth \
     -c $DOJO_ACCOUNT_ADDRESS 0 $((SAYA_FORK_BLOCK_NUMBER + 1)) 0)
 
-# sncast doesn't have a --wait flag, so we need to wait for the transaction to be accepted on L2 to continue.
+# Parse the output to extract the transaction hash and the contract address
 TRANSACTION_HASH=$(echo "$output" | grep "transaction_hash:" | awk '{print $2}')
 PILTOVER_CONTRACT_ADDRESS=$(echo "$output" | grep "contract_address:" | awk '{print $2}')
 
-while true; do
-    status=$(starkli status $TRANSACTION_HASH --network sepolia | jq -r '.finality_status')
-    if [ "$status" = "ACCEPTED_ON_L2" ]; then
-        echo ""
-        echo "Piltover contract deployed successfully, you can now set the environment variable:"
-        echo "export SAYA_PILTOVER_ADDRESS=$PILTOVER_CONTRACT_ADDRESS"
-        break
-    else
-        echo "Piltover deploy transaction not yet accepted. Current status: $status. Retrying in 1 second..."
-        sleep 1
-    fi
-done
+# Display the transaction hash and contract address for reference
+echo "Piltover deploy transaction hash: $TRANSACTION_HASH"
+echo "Piltover contract address: $PILTOVER_CONTRACT_ADDRESS"
 
+# Function to check the finality status of the transaction on L2
+check_finality() {
+    local tx_hash="$1"    # Transaction hash to check the status for
+    local url="$2"        # Starknet RPC URL
+
+    # Use sncast to retrieve the transaction status
+    local result=$(sncast --account dev tx-status "$tx_hash" --url "$url")
+
+    # Extract and display the execution and finality statuses
+    local execution_status=$(echo "$result" | grep -oP '(?<=execution_status: ).*')
+    local finality_status=$(echo "$result" | grep -oP '(?<=finality_status: ).*')
+
+    echo "Execution Status: $execution_status"
+    echo "Finality Status: $finality_status"
+
+    # Check if the transaction has been accepted on L2
+    if [ "$finality_status" == "AcceptedOnL2" ]; then
+        echo "Transaction $tx_hash has been accepted on L2!"
+        return 0
+    else
+        echo "Transaction $tx_hash has not yet been accepted on L2. Waiting..."
+        return 1
+    fi
+}
+
+# Loop to repeatedly check the finality status until the transaction is accepted on L2
+while true; do
+    check_finality "$TRANSACTION_HASH" "$STARKNET_RPC_URL"
+    if [ $? -eq 0 ]; then
+        break
+    fi
+    # Wait for 5 seconds before checking again
+    sleep 5
+done
 echo ""
 
+# Invoke the contract to set program information after deployment
 sncast -a $SN_CAST_ACCOUNT_NAME --wait invoke -u $STARKNET_RPC_URL \
         --fee-token eth --contract-address $PILTOVER_CONTRACT_ADDRESS --function set_program_info -c \
         $SAYA_PROGRAM_HASH $SAYA_CONFIG_HASH
 
 echo ""
 
+# Invoke the contract to set the facts registry address
 sncast -a $SN_CAST_ACCOUNT_NAME --wait invoke -u $STARKNET_RPC_URL \
         --fee-token eth --contract-address $PILTOVER_CONTRACT_ADDRESS --function set_facts_registry -c \
         $SAYA_FACT_REGISTRY_ADDRESS
+
+echo ""
+# Display the final contract address for saving
+echo -e "Save piltover address \e[1;32m$PILTOVER_CONTRACT_ADDRESS\e[0m"
