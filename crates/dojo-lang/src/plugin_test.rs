@@ -4,7 +4,7 @@ use std::sync::Arc;
 use cairo_lang_defs::db::{DefsDatabase, DefsGroup};
 use cairo_lang_defs::ids::ModuleId;
 use cairo_lang_defs::plugin::MacroPlugin;
-use cairo_lang_filesystem::cfg::CfgSet;
+use cairo_lang_filesystem::cfg::{Cfg, CfgSet};
 use cairo_lang_filesystem::db::{
     init_files_group, AsFilesGroupMut, CrateConfiguration, FilesDatabase, FilesGroup, FilesGroupEx,
 };
@@ -18,6 +18,8 @@ use cairo_lang_test_utils::parse_test_file::TestRunnerResult;
 use cairo_lang_test_utils::verify_diagnostics_expectation;
 use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
 use cairo_lang_utils::Upcast;
+use dojo_world::config::namespace_config::DEFAULT_NAMESPACE_CFG_KEY;
+use smol_str::SmolStr;
 
 use super::BuiltinDojoPlugin;
 
@@ -90,11 +92,18 @@ pub fn test_expand_plugin_inner(
     plugins.extend_from_slice(extra_plugins);
     db.set_macro_plugins(plugins);
 
-    let cfg_set: Option<CfgSet> =
-        inputs.get("cfg").map(|s| serde_json::from_str(s.as_str()).unwrap());
-    if let Some(cfg_set) = cfg_set {
-        db.set_cfg_set(Arc::new(cfg_set));
-    }
+    // if no configuration is provided, be sure there is at least a default namespace,
+    // so all the tests have a correct configuration.
+    let cfg_set: CfgSet = match inputs.get("cfg") {
+        Some(cfg) => serde_json::from_str(cfg.as_str()).unwrap(),
+        None => {
+            let mut cfg_set = CfgSet::new();
+            cfg_set.insert(Cfg::kv(DEFAULT_NAMESPACE_CFG_KEY, SmolStr::from("dojo_test")));
+            cfg_set
+        }
+    };
+
+    db.set_cfg_set(Arc::new(cfg_set));
 
     let test_id = &inputs["test_id"];
     let cairo_code = &inputs["cairo_code"];

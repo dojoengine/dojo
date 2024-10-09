@@ -231,6 +231,7 @@ pub mod world {
     #[derive(Drop, starknet::Event)]
     pub struct StoreSetRecord {
         pub table: felt252,
+        pub entity_id: felt252,
         pub keys: Span<felt252>,
         pub values: Span<felt252>,
     }
@@ -632,7 +633,7 @@ pub mod world {
 
             let dispatcher = IContractDispatcher { contract_address };
             let namespace = dispatcher.namespace();
-            let name = dispatcher.contract_name();
+            let name = dispatcher.name();
             let namespace_hash = dispatcher.namespace_hash();
 
             if !self.is_namespace_registered(namespace_hash) {
@@ -642,6 +643,12 @@ pub mod world {
             self.assert_caller_namespace_write_access(@namespace, namespace_hash);
 
             let selector = dispatcher.selector();
+
+            match self.resources.read(selector) {
+                Resource::Unregistered => {},
+                _ => panic_with_byte_array(@errors::resource_already_registered(selector))
+            };
+
             self.owners.write((selector, caller), true);
             self.resources.write(selector, Resource::Contract((class_hash, contract_address)));
 
@@ -1091,7 +1098,7 @@ pub mod world {
                     let entity_id = entity_id_from_keys(keys);
                     self.write_model_entity(model_selector, entity_id, values, layout);
                     EventEmitter::emit(
-                        ref self, StoreSetRecord { table: model_selector, keys, values }
+                        ref self, StoreSetRecord { table: model_selector, keys, values, entity_id }
                     );
                 },
                 ModelIndex::Id(entity_id) => {

@@ -4,18 +4,19 @@ use jsonrpsee::core::{async_trait, Error};
 use katana_core::backend::Backend;
 use katana_core::service::block_producer::{BlockProducer, BlockProducerMode, PendingExecutor};
 use katana_executor::ExecutorFactory;
-use katana_primitives::FieldElement;
+use katana_primitives::Felt;
 use katana_rpc_api::dev::DevApiServer;
+use katana_rpc_types::account::Account;
 use katana_rpc_types::error::dev::DevApiError;
 
 #[allow(missing_debug_implementations)]
 pub struct DevApi<EF: ExecutorFactory> {
     backend: Arc<Backend<EF>>,
-    block_producer: Arc<BlockProducer<EF>>,
+    block_producer: BlockProducer<EF>,
 }
 
 impl<EF: ExecutorFactory> DevApi<EF> {
-    pub fn new(backend: Arc<Backend<EF>>, block_producer: Arc<BlockProducer<EF>>) -> Self {
+    pub fn new(backend: Arc<Backend<EF>>, block_producer: BlockProducer<EF>) -> Self {
         Self { backend, block_producer }
     }
 
@@ -80,14 +81,19 @@ impl<EF: ExecutorFactory> DevApiServer for DevApi<EF> {
 
     async fn set_storage_at(
         &self,
-        _contract_address: FieldElement,
-        _key: FieldElement,
-        _value: FieldElement,
+        _contract_address: Felt,
+        _key: Felt,
+        _value: Felt,
     ) -> Result<(), Error> {
         // self.sequencer
         //     .set_storage_at(contract_address.into(), key, value)
         //     .await
         //     .map_err(|_| Error::from(KatanaApiError::FailedToUpdateStorage))
         Ok(())
+    }
+
+    #[allow(deprecated)]
+    async fn predeployed_accounts(&self) -> Result<Vec<Account>, Error> {
+        Ok(self.backend.config.genesis.accounts().map(|e| Account::new(*e.0, e.1)).collect())
     }
 }

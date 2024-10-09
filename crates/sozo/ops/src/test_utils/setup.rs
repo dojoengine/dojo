@@ -155,6 +155,8 @@ pub async fn setup(
         &default_namespace,
         &grant,
         &revoke,
+        #[cfg(feature = "walnut")]
+        &None,
     )
     .await?;
 

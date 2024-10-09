@@ -16,7 +16,7 @@ use katana_executor::{SimulationFlag, StateProviderDb};
 use katana_primitives::contract::{ContractAddress, Nonce};
 use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash};
-use katana_primitives::FieldElement;
+use katana_primitives::Felt;
 use katana_provider::error::ProviderError;
 use katana_provider::traits::state::StateProvider;
 use parking_lot::Mutex;
@@ -24,13 +24,13 @@ use parking_lot::Mutex;
 use super::{Error, InvalidTransactionError, ValidationOutcome, ValidationResult, Validator};
 use crate::tx::PoolTransaction;
 
-#[allow(missing_debug_implementations)]
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct TxValidator {
     inner: Arc<Mutex<Inner>>,
     permit: Arc<Mutex<()>>,
 }
 
+#[derive(Debug)]
 struct Inner {
     // execution context
     cfg_env: CfgEnv,
@@ -88,8 +88,7 @@ impl Inner {
         let state = Box::new(self.state.clone());
         let cached_state = CachedState::new(StateProviderDb::new(state));
         let context = block_context_from_envs(&self.block_env, &self.cfg_env);
-
-        StatefulValidator::create(cached_state, context, Default::default())
+        StatefulValidator::create(cached_state, context)
     }
 }
 
@@ -137,7 +136,7 @@ impl Validator for TxValidator {
         match result {
             res @ Ok(ValidationOutcome::Valid { .. }) => {
                 // update the nonce of the account in the pool only for valid tx
-                let updated_nonce = current_nonce + FieldElement::ONE;
+                let updated_nonce = current_nonce + Felt::ONE;
                 this.pool_nonces.insert(address, updated_nonce);
                 res
             }

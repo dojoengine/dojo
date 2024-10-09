@@ -9,10 +9,10 @@ version.workspace = true
 anyhow.workspace = true
 futures.workspace = true
 reqwest.workspace = true
+rpassword.workspace = true
 starknet.workspace = true
 thiserror.workspace = true
-rpassword.workspace = true
-tokio = { version = "1", features = [ "time" ], default-features = false }
+tokio = { version = "1", features = [ "signal", "time" ], default-features = false }
 
 [dev-dependencies]
 assert_matches.workspace = true

@@ -2,12 +2,12 @@ use katana_cairo::lang::sierra::program::Program;
 use katana_cairo::lang::starknet_classes::casm_contract_class::CasmContractClass;
 use katana_cairo::lang::starknet_classes::contract_class::ContractEntryPoints;
 
-use crate::FieldElement;
+use crate::Felt;
 
 /// The canonical hash of a contract class. This is the identifier of a class.
-pub type ClassHash = FieldElement;
+pub type ClassHash = Felt;
 /// The hash of a compiled contract class.
-pub type CompiledClassHash = FieldElement;
+pub type CompiledClassHash = Felt;
 
 pub type SierraClass = starknet::core::types::contract::SierraClass;
 pub type FlattenedSierraClass = starknet::core::types::FlattenedSierraClass;

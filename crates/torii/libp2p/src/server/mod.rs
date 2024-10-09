@@ -25,6 +25,8 @@ use starknet::core::types::{BlockId, BlockTag, Felt, FunctionCall};
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
 use starknet_crypto::poseidon_hash_many;
+use torii_core::executor::QueryMessage;
+use torii_core::sql::utils::felts_to_sql_string;
 use torii_core::sql::Sql;
 use tracing::{info, warn};
 use webrtc::tokio::Certificate;
@@ -245,6 +247,9 @@ impl<P: Provider + Sync> Relay<P> {
                                     continue;
                                 }
                             };
+                            let keys_str = felts_to_sql_string(&keys);
+                            let entity_id = poseidon_hash_many(&keys);
+                            let model_id = ty_model_id(&ty).unwrap();
 
                             // select only identity field, if doesn't exist, empty string
                             let query = format!(
@@ -252,7 +257,7 @@ impl<P: Provider + Sync> Relay<P> {
                                 ty.name()
                             );
                             let entity_identity: Option<String> = match sqlx::query_scalar(&query)
-                                .bind(format!("{:#x}", poseidon_hash_many(&keys)))
+                                .bind(format!("{:#x}", entity_id))
                                 .fetch_optional(&mut *pool)
                                 .await
                             {
@@ -267,44 +272,29 @@ impl<P: Provider + Sync> Relay<P> {
                                 }
                             };
 
-                            if entity_identity.is_none() {
-                                // we can set the entity without checking identity
-                                if let Err(e) = self
-                                    .db
-                                    .set_entity(
-                                        ty,
-                                        &message_id.to_string(),
-                                        Utc::now().timestamp() as u64,
-                                    )
-                                    .await
-                                {
-                                    info!(
-                                        target: LOG_TARGET,
-                                        error = %e,
-                                        "Setting message."
-                                    );
-                                    continue;
-                                } else {
-                                    info!(
-                                        target: LOG_TARGET,
-                                        message_id = %message_id,
-                                        peer_id = %peer_id,
-                                        "Message set."
-                                    );
-                                    continue;
-                                }
-                            }
-
-                            let entity_identity = match Felt::from_str(&entity_identity.unwrap()) {
-                                Ok(identity) => identity,
-                                Err(e) => {
-                                    warn!(
-                                        target: LOG_TARGET,
-                                        error = %e,
-                                        "Parsing identity."
-                                    );
-                                    continue;
-                                }
+                            let entity_identity = match entity_identity {
+                                Some(identity) => match Felt::from_str(&identity) {
+                                    Ok(identity) => identity,
+                                    Err(e) => {
+                                        warn!(
+                                            target: LOG_TARGET,
+                                            error = %e,
+                                            "Parsing identity."
+                                        );
+                                        continue;
+                                    }
+                                },
+                                None => match get_identity_from_ty(&ty) {
+                                    Ok(identity) => identity,
+                                    Err(e) => {
+                                        warn!(
+                                            target: LOG_TARGET,
+                                            error = %e,
+                                            "Getting identity from message."
+                                        );
+                                        continue;
+                                    }
+                                },
                             };
 
                             // TODO: have a nonce in model to check
@@ -324,6 +314,8 @@ impl<P: Provider + Sync> Relay<P> {
                                 };
 
                             let mut calldata = vec![message_hash];
+                            calldata.push(Felt::from(data.signature.len()));
+
                             calldata.extend(data.signature);
                             if !match self
                                 .provider
@@ -359,21 +351,23 @@ impl<P: Provider + Sync> Relay<P> {
                                 continue;
                             }
 
-                            if let Err(e) = self
-                                .db
-                                // event id is message id
-                                .set_entity(
-                                    ty,
-                                    &message_id.to_string(),
-                                    Utc::now().timestamp() as u64,
-                                )
-                                .await
+                            if let Err(e) = set_entity(
+                                &mut self.db,
+                                ty,
+                                &message_id.to_string(),
+                                Utc::now().timestamp() as u64,
+                                entity_id,
+                                model_id,
+                                &keys_str,
+                            )
+                            .await
                             {
                                 info!(
                                     target: LOG_TARGET,
                                     error = %e,
                                     "Setting message."
                                 );
+                                continue;
                             }
 
                             info!(
@@ -452,6 +446,13 @@ fn ty_keys(ty: &Ty) -> Result<Vec<Felt>, Error> {
     }
 }
 
+fn ty_model_id(ty: &Ty) -> Result<Felt, Error> {
+    let namespaced_name = ty.name();
+
+    let selector = compute_selector_from_tag(&namespaced_name);
+    Ok(selector)
+}
+
 // Validates the message model
 // and returns the identity and signature
 async fn validate_message(db: &Sql, message: &TypedData) -> Result<Ty, Error> {
@@ -503,6 +504,35 @@ fn read_or_create_certificate(path: &Path) -> anyhow::Result<Certificate> {
     info!(target: LOG_TARGET, path = %path.display(), "Generated new certificate.");
 
     Ok(cert)
+}
+
+fn get_identity_from_ty(ty: &Ty) -> Result<Felt, Error> {
+    let identity = ty
+        .as_struct()
+        .ok_or_else(|| Error::InvalidMessageError("Message is not a struct".to_string()))?
+        .get("identity")
+        .ok_or_else(|| Error::InvalidMessageError("No field identity".to_string()))?
+        .as_primitive()
+        .ok_or_else(|| Error::InvalidMessageError("Identity is not a primitive".to_string()))?
+        .as_contract_address()
+        .ok_or_else(|| {
+            Error::InvalidMessageError("Identity is not a contract address".to_string())
+        })?;
+    Ok(identity)
+}
+
+async fn set_entity(
+    db: &mut Sql,
+    ty: Ty,
+    message_id: &str,
+    block_timestamp: u64,
+    entity_id: Felt,
+    model_id: Felt,
+    keys: &str,
+) -> anyhow::Result<()> {
+    db.set_entity(ty, message_id, block_timestamp, entity_id, model_id, Some(keys)).await?;
+    db.executor.send(QueryMessage::execute())?;
+    Ok(())
 }
 
 #[cfg(test)]

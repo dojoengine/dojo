@@ -208,7 +208,7 @@ mod tests {
 
     use katana_primitives::block::Header;
     use katana_primitives::contract::{ContractAddress, GenericContractInfo};
-    use katana_primitives::FieldElement;
+    use katana_primitives::{address, Felt};
     use starknet::macros::felt;
 
     use super::*;
@@ -348,7 +348,7 @@ mod tests {
         let tx = db.tx_mut().expect(ERROR_INIT_TX);
 
         let mut cursor = tx.cursor::<ContractInfo>().unwrap();
-        let key: ContractAddress = felt!("0x1337").into();
+        let key = address!("0x1337");
 
         let account = GenericContractInfo::default();
         cursor.upsert(key, account).expect(ERROR_UPSERT);
@@ -365,12 +365,12 @@ mod tests {
         let mut dup_cursor = tx.cursor::<ContractStorage>().unwrap();
         let subkey = felt!("0x9");
 
-        let value = FieldElement::from(1u8);
+        let value = Felt::from(1u8);
         let entry1 = StorageEntry { key: subkey, value };
         dup_cursor.upsert(key, entry1).expect(ERROR_UPSERT);
         assert_eq!(dup_cursor.seek_by_key_subkey(key, subkey), Ok(Some(entry1)));
 
-        let value = FieldElement::from(2u8);
+        let value = Felt::from(2u8);
         let entry2 = StorageEntry { key: subkey, value };
         dup_cursor.upsert(key, entry2).expect(ERROR_UPSERT);
         assert_eq!(dup_cursor.seek_by_key_subkey(key, subkey), Ok(Some(entry1)));
@@ -408,16 +408,16 @@ mod tests {
 
         // PUT (0, 0), (1, 0), (2, 0)
         let tx = db.tx_mut().expect(ERROR_INIT_TX);
-        (0..3).try_for_each(|key| tx.put::<BlockHashes>(key, FieldElement::ZERO)).expect(ERROR_PUT);
+        (0..3).try_for_each(|key| tx.put::<BlockHashes>(key, Felt::ZERO)).expect(ERROR_PUT);
         tx.commit().expect(ERROR_COMMIT);
 
         let tx = db.tx().expect(ERROR_INIT_TX);
         let mut cursor = tx.cursor::<BlockHashes>().expect(ERROR_INIT_CURSOR);
         let mut walker = Walker::new(&mut cursor, None);
 
-        assert_eq!(walker.next(), Some(Ok((0, FieldElement::ZERO))));
-        assert_eq!(walker.next(), Some(Ok((1, FieldElement::ZERO))));
-        assert_eq!(walker.next(), Some(Ok((2, FieldElement::ZERO))));
+        assert_eq!(walker.next(), Some(Ok((0, Felt::ZERO))));
+        assert_eq!(walker.next(), Some(Ok((1, Felt::ZERO))));
+        assert_eq!(walker.next(), Some(Ok((2, Felt::ZERO))));
         assert_eq!(walker.next(), None);
     }
 
@@ -427,9 +427,7 @@ mod tests {
 
         // PUT
         let tx = db.tx_mut().expect(ERROR_INIT_TX);
-        (0..=4)
-            .try_for_each(|key| tx.put::<BlockHashes>(key, FieldElement::ZERO))
-            .expect(ERROR_PUT);
+        (0..=4).try_for_each(|key| tx.put::<BlockHashes>(key, Felt::ZERO)).expect(ERROR_PUT);
         tx.commit().expect(ERROR_COMMIT);
 
         let key_to_insert = 5;
@@ -437,19 +435,19 @@ mod tests {
         let mut cursor = tx.cursor::<BlockHashes>().expect(ERROR_INIT_CURSOR);
 
         // INSERT
-        assert_eq!(cursor.insert(key_to_insert, FieldElement::ZERO), Ok(()));
-        assert_eq!(cursor.current(), Ok(Some((key_to_insert, FieldElement::ZERO))));
+        assert_eq!(cursor.insert(key_to_insert, Felt::ZERO), Ok(()));
+        assert_eq!(cursor.current(), Ok(Some((key_to_insert, Felt::ZERO))));
 
         // INSERT (failure)
         assert_eq!(
-            cursor.insert(key_to_insert, FieldElement::ZERO),
+            cursor.insert(key_to_insert, Felt::ZERO),
             Err(DatabaseError::Write {
                 table: BlockHashes::NAME,
                 error: libmdbx::Error::KeyExist,
                 key: Box::from(key_to_insert.encode())
             })
         );
-        assert_eq!(cursor.current(), Ok(Some((key_to_insert, FieldElement::ZERO))));
+        assert_eq!(cursor.current(), Ok(Some((key_to_insert, Felt::ZERO))));
 
         tx.commit().expect(ERROR_COMMIT);
 
@@ -464,7 +462,7 @@ mod tests {
     #[test]
     fn db_dup_sort() {
         let env = create_test_db(DbEnvKind::RW);
-        let key = ContractAddress::from(felt!("0xa2c122be93b0074270ebee7f6b7292c7deb45047"));
+        let key = address!("0xa2c122be93b0074270ebee7f6b7292c7deb45047");
 
         // PUT (0,0)
         let value00 = StorageEntry::default();

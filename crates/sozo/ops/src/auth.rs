@@ -9,6 +9,8 @@ use dojo_world::contracts::naming::{
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::contracts::WorldContractReader;
 use scarb_ui::Ui;
+#[cfg(feature = "walnut")]
+use sozo_walnut::WalnutDebugger;
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::types::{BlockId, BlockTag, Felt};
 
@@ -108,8 +110,9 @@ pub async fn grant_writer<'a, A>(
     ui: &'a Ui,
     world: &WorldContract<A>,
     new_writers: &[ResourceWriter],
-    txn_config: TxnConfig,
+    txn_config: &TxnConfig,
     default_namespace: &str,
+    #[cfg(feature = "walnut")] walnut_debugger: &Option<WalnutDebugger>,
 ) -> Result<()>
 where
     A: ConnectedAccount + Sync + Send,
@@ -129,7 +132,7 @@ where
         let res = world
             .account
             .execute_v1(calls)
-            .send_with_cfg(&txn_config)
+            .send_with_cfg(txn_config)
             .await
             .with_context(|| "Failed to send transaction")?;
 
@@ -141,6 +144,8 @@ where
             res,
             txn_config.wait,
             txn_config.receipt,
+            #[cfg(feature = "walnut")]
+            walnut_debugger,
         )
         .await?;
     }
@@ -152,8 +157,9 @@ pub async fn grant_owner<A>(
     ui: &Ui,
     world: &WorldContract<A>,
     new_owners: &[ResourceOwner],
-    txn_config: TxnConfig,
+    txn_config: &TxnConfig,
     default_namespace: &str,
+    #[cfg(feature = "walnut")] walnut_debugger: &Option<WalnutDebugger>,
 ) -> Result<()>
 where
     A: ConnectedAccount + Sync + Send + 'static,
@@ -169,7 +175,7 @@ where
     let res = world
         .account
         .execute_v1(calls)
-        .send_with_cfg(&txn_config)
+        .send_with_cfg(txn_config)
         .await
         .with_context(|| "Failed to send transaction")?;
 
@@ -181,6 +187,8 @@ where
         res,
         txn_config.wait,
         txn_config.receipt,
+        #[cfg(feature = "walnut")]
+        walnut_debugger,
     )
     .await?;
 
@@ -191,8 +199,9 @@ pub async fn revoke_writer<A>(
     ui: &Ui,
     world: &WorldContract<A>,
     new_writers: &[ResourceWriter],
-    txn_config: TxnConfig,
+    txn_config: &TxnConfig,
     default_namespace: &str,
+    #[cfg(feature = "walnut")] walnut_debugger: &Option<WalnutDebugger>,
 ) -> Result<()>
 where
     A: ConnectedAccount + Sync + Send + 'static,
@@ -211,7 +220,7 @@ where
         let res = world
             .account
             .execute_v1(calls)
-            .send_with_cfg(&txn_config)
+            .send_with_cfg(txn_config)
             .await
             .with_context(|| "Failed to send transaction")?;
 
@@ -223,6 +232,8 @@ where
             res,
             txn_config.wait,
             txn_config.receipt,
+            #[cfg(feature = "walnut")]
+            walnut_debugger,
         )
         .await?;
     }
@@ -234,8 +245,9 @@ pub async fn revoke_owner<A>(
     ui: &Ui,
     world: &WorldContract<A>,
     new_owners: &[ResourceOwner],
-    txn_config: TxnConfig,
+    txn_config: &TxnConfig,
     default_namespace: &str,
+    #[cfg(feature = "walnut")] walnut_debugger: &Option<WalnutDebugger>,
 ) -> Result<()>
 where
     A: ConnectedAccount + Sync + Send + 'static,
@@ -251,7 +263,7 @@ where
     let res = world
         .account
         .execute_v1(calls)
-        .send_with_cfg(&txn_config)
+        .send_with_cfg(txn_config)
         .await
         .with_context(|| "Failed to send transaction")?;
 
@@ -261,6 +273,8 @@ where
         res,
         txn_config.wait,
         txn_config.receipt,
+        #[cfg(feature = "walnut")]
+        walnut_debugger,
     )
     .await?;
 

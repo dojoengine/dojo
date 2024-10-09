@@ -4,12 +4,8 @@ mod read;
 mod trace;
 mod write;
 
-use std::cmp::Ordering;
-use std::iter::Skip;
-use std::slice::Iter;
 use std::sync::Arc;
 
-use anyhow::Result;
 use katana_core::backend::Backend;
 use katana_core::service::block_producer::{BlockProducer, BlockProducerMode, PendingExecutor};
 use katana_executor::{ExecutionResult, ExecutorFactory};
@@ -23,24 +19,24 @@ use katana_primitives::contract::{ContractAddress, Nonce, StorageKey, StorageVal
 use katana_primitives::conversion::rpc::legacy_inner_to_rpc_class;
 use katana_primitives::env::BlockEnv;
 use katana_primitives::event::ContinuationToken;
-use katana_primitives::receipt::Event;
 use katana_primitives::transaction::{ExecutableTxWithHash, TxHash, TxWithHash};
-use katana_primitives::FieldElement;
-use katana_provider::traits::block::{
-    BlockHashProvider, BlockIdReader, BlockNumberProvider, BlockProvider,
-};
+use katana_primitives::Felt;
+use katana_provider::traits::block::{BlockHashProvider, BlockIdReader, BlockNumberProvider};
 use katana_provider::traits::contract::ContractClassProvider;
 use katana_provider::traits::env::BlockEnvProvider;
 use katana_provider::traits::state::{StateFactoryProvider, StateProvider};
 use katana_provider::traits::transaction::{
-    ReceiptProvider, TransactionProvider, TransactionStatusProvider, TransactionsProviderExt,
+    ReceiptProvider, TransactionProvider, TransactionStatusProvider,
 };
 use katana_rpc_types::error::starknet::StarknetApiError;
 use katana_rpc_types::FeeEstimate;
 use katana_tasks::{BlockingTaskPool, TokioTaskSpawner};
 use starknet::core::types::{
-    ContractClass, EmittedEvent, EventsPage, TransactionExecutionStatus, TransactionStatus,
+    ContractClass, EventsPage, TransactionExecutionStatus, TransactionStatus,
 };
+
+use crate::utils;
+use crate::utils::events::{Cursor, EventBlockId};
 
 #[allow(missing_debug_implementations)]
 pub struct StarknetApi<EF: ExecutorFactory> {
@@ -57,7 +53,7 @@ struct Inner<EF: ExecutorFactory> {
     validator: TxValidator,
     pool: TxPool,
     backend: Arc<Backend<EF>>,
-    block_producer: Arc<BlockProducer<EF>>,
+    block_producer: BlockProducer<EF>,
     blocking_task_pool: BlockingTaskPool,
 }
 
@@ -65,7 +61,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
     pub fn new(
         backend: Arc<Backend<EF>>,
         pool: TxPool,
-        block_producer: Arc<BlockProducer<EF>>,
+        block_producer: BlockProducer<EF>,
         validator: TxValidator,
     ) -> Self {
         let blocking_task_pool =
@@ -334,111 +330,131 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         .await
     }
 
+    // TODO: should document more and possible find a simpler solution(?)
     fn events(
         &self,
         from_block: BlockIdOrTag,
         to_block: BlockIdOrTag,
         address: Option<ContractAddress>,
-        keys: Option<Vec<Vec<FieldElement>>>,
+        keys: Option<Vec<Vec<Felt>>>,
         continuation_token: Option<String>,
         chunk_size: u64,
     ) -> Result<EventsPage, StarknetApiError> {
         let provider = self.inner.backend.blockchain.provider();
-        let mut current_block = 0;
 
-        let mut from =
-            provider.convert_block_id(from_block)?.ok_or(StarknetApiError::BlockNotFound)?;
-        let to = provider.convert_block_id(to_block)?.ok_or(StarknetApiError::BlockNotFound)?;
-
-        let mut continuation_token = match continuation_token {
-            Some(token) => ContinuationToken::parse(token)?,
-            None => ContinuationToken::default(),
+        let from = if BlockIdOrTag::Tag(BlockTag::Pending) == from_block {
+            EventBlockId::Pending
+        } else {
+            let num = provider.convert_block_id(from_block)?;
+            EventBlockId::Num(num.ok_or(StarknetApiError::BlockNotFound)?)
         };
 
-        // skip blocks that have been already read
-        from += continuation_token.block_n;
+        let to = if BlockIdOrTag::Tag(BlockTag::Pending) == to_block {
+            EventBlockId::Pending
+        } else {
+            let num = provider.convert_block_id(to_block)?;
+            EventBlockId::Num(num.ok_or(StarknetApiError::BlockNotFound)?)
+        };
 
-        let mut filtered_events = Vec::with_capacity(chunk_size as usize);
+        let token: Option<Cursor> = match continuation_token {
+            Some(token) => Some(ContinuationToken::parse(&token)?.into()),
+            None => None,
+        };
 
-        for i in from..=to {
-            let block_hash =
-                provider.block_hash_by_num(i)?.ok_or(StarknetApiError::BlockNotFound)?;
+        // reserved buffer to fill up with events to avoid reallocations
+        let mut buffer = Vec::with_capacity(chunk_size as usize);
+        let filter = utils::events::Filter { address, keys };
 
-            let receipts =
-                provider.receipts_by_block(i.into())?.ok_or(StarknetApiError::BlockNotFound)?;
+        match (from, to) {
+            (EventBlockId::Num(from), EventBlockId::Num(to)) => {
+                let cursor = utils::events::fetch_events_at_blocks(
+                    provider,
+                    from..=to,
+                    &filter,
+                    chunk_size,
+                    token,
+                    &mut buffer,
+                )?;
 
-            let tx_range =
-                provider.block_body_indices(i.into())?.ok_or(StarknetApiError::BlockNotFound)?;
-
-            let tx_hashes = provider.transaction_hashes_in_range(tx_range.into())?;
-
-            let txn_n = receipts.len();
-            if (txn_n as u64) < continuation_token.txn_n {
-                return Err(StarknetApiError::InvalidContinuationToken);
+                Ok(EventsPage {
+                    events: buffer,
+                    continuation_token: cursor.map(|c| c.into_rpc_cursor().to_string()),
+                })
             }
 
-            for (tx_hash, events) in tx_hashes
-                .into_iter()
-                .zip(receipts.iter().map(|r| r.events()))
-                .skip(continuation_token.txn_n as usize)
-            {
-                let txn_events_len: usize = events.len();
+            (EventBlockId::Num(from), EventBlockId::Pending) => {
+                let latest = provider.latest_number()?;
+                let int_cursor = utils::events::fetch_events_at_blocks(
+                    provider,
+                    from..=latest,
+                    &filter,
+                    chunk_size,
+                    token.clone(),
+                    &mut buffer,
+                )?;
 
-                // check if continuation_token.event_n is correct
-                match (txn_events_len as u64).cmp(&continuation_token.event_n) {
-                    Ordering::Greater => (),
-                    Ordering::Less => {
-                        return Err(StarknetApiError::InvalidContinuationToken);
-                    }
-                    Ordering::Equal => {
-                        continuation_token.txn_n += 1;
-                        continuation_token.event_n = 0;
-                        continue;
-                    }
+                // if the internal cursor is Some, meaning the buffer is full and we havent
+                // reached the latest block.
+                if let Some(c) = int_cursor {
+                    return Ok(EventsPage {
+                        events: buffer,
+                        continuation_token: Some(c.into_rpc_cursor().to_string()),
+                    });
                 }
 
-                // skip events
-                let txn_events = events.iter().skip(continuation_token.event_n as usize);
+                if let Some(executor) = self.pending_executor() {
+                    let cursor = utils::events::fetch_pending_events(
+                        &executor,
+                        &filter,
+                        chunk_size,
+                        token,
+                        &mut buffer,
+                    )?;
 
-                let (new_filtered_events, continuation_index) = filter_events_by_params(
-                    txn_events,
-                    address,
-                    keys.clone(),
-                    Some((chunk_size as usize) - filtered_events.len()),
-                );
-
-                filtered_events.extend(new_filtered_events.iter().map(|e| EmittedEvent {
-                    from_address: e.from_address.into(),
-                    keys: e.keys.clone(),
-                    data: e.data.clone(),
-                    block_hash: Some(block_hash),
-                    block_number: Some(i),
-                    transaction_hash: tx_hash,
-                }));
-
-                if filtered_events.len() >= chunk_size as usize {
-                    let token = if current_block < to
-                        || continuation_token.txn_n < txn_n as u64 - 1
-                        || continuation_index < txn_events_len
-                    {
-                        continuation_token.event_n = continuation_index as u64;
-                        Some(continuation_token.to_string())
-                    } else {
-                        None
-                    };
-                    return Ok(EventsPage { events: filtered_events, continuation_token: token });
+                    Ok(EventsPage {
+                        events: buffer,
+                        continuation_token: Some(cursor.into_rpc_cursor().to_string()),
+                    })
+                } else {
+                    let cursor = Cursor::new_block(latest + 1);
+                    Ok(EventsPage {
+                        events: buffer,
+                        continuation_token: Some(cursor.into_rpc_cursor().to_string()),
+                    })
                 }
-
-                continuation_token.txn_n += 1;
-                continuation_token.event_n = 0;
             }
 
-            current_block += 1;
-            continuation_token.block_n += 1;
-            continuation_token.txn_n = 0;
+            (EventBlockId::Pending, EventBlockId::Pending) => {
+                if let Some(executor) = self.pending_executor() {
+                    let cursor = utils::events::fetch_pending_events(
+                        &executor,
+                        &filter,
+                        chunk_size,
+                        token,
+                        &mut buffer,
+                    )?;
+
+                    Ok(EventsPage {
+                        events: buffer,
+                        continuation_token: Some(cursor.into_rpc_cursor().to_string()),
+                    })
+                } else {
+                    let latest = provider.latest_number()?;
+                    let cursor = Cursor::new_block(latest);
+
+                    Ok(EventsPage {
+                        events: buffer,
+                        continuation_token: Some(cursor.into_rpc_cursor().to_string()),
+                    })
+                }
+            }
+
+            (EventBlockId::Pending, EventBlockId::Num(_)) => {
+                Err(StarknetApiError::UnexpectedError {
+                    reason: "Invalid block range; `from` block must be lower than `to`".to_string(),
+                })
+            }
         }
-
-        Ok(EventsPage { events: filtered_events, continuation_token: None })
     }
 
     async fn transaction_status(
@@ -498,54 +514,4 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         })
         .await
     }
-}
-
-fn filter_events_by_params(
-    events: Skip<Iter<'_, Event>>,
-    address: Option<ContractAddress>,
-    filter_keys: Option<Vec<Vec<FieldElement>>>,
-    max_results: Option<usize>,
-) -> (Vec<Event>, usize) {
-    let mut filtered_events = vec![];
-    let mut index = 0;
-
-    // Iterate on block events.
-    for event in events {
-        index += 1;
-        if !address.map_or(true, |addr| addr == event.from_address) {
-            continue;
-        }
-
-        let match_keys = match filter_keys {
-            // From starknet-api spec:
-            // Per key (by position), designate the possible values to be matched for events to be
-            // returned. Empty array designates 'any' value"
-            Some(ref filter_keys) => filter_keys.iter().enumerate().all(|(i, keys)| {
-                // Lets say we want to filter events which are either named `Event1` or `Event2` and
-                // custom key `0x1` or `0x2` Filter: [[sn_keccack("Event1"),
-                // sn_keccack("Event2")], ["0x1", "0x2"]]
-
-                // This checks: number of keys in event >= number of keys in filter (we check > i
-                // and not >= i because i is zero indexed) because otherwise this
-                // event doesn't contain all the keys we requested
-                event.keys.len() > i &&
-                    // This checks: Empty array desginates 'any' value
-                    (keys.is_empty()
-                    ||
-                    // This checks: If this events i'th value is one of the requested value in filter_keys[i]
-                    keys.contains(&event.keys[i]))
-            }),
-            None => true,
-        };
-
-        if match_keys {
-            filtered_events.push(event.clone());
-            if let Some(max_results) = max_results {
-                if filtered_events.len() >= max_results {
-                    break;
-                }
-            }
-        }
-    }
-    (filtered_events, index)
 }

@@ -28,7 +28,7 @@
     "items": [
       {
         "type": "function",
-        "name": "contract_name",
+        "name": "name",
         "inputs": [],
         "outputs": [
           {
@@ -291,6 +291,22 @@
           {
             "name": "name",
             "type": "core::byte_array::ByteArray"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "set_models",
+        "inputs": [
+          {
+            "name": "seed",
+            "type": "core::felt252"
+          },
+          {
+            "name": "n_models",
+            "type": "core::integer::u32"
           }
         ],
         "outputs": [],

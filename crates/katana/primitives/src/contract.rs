@@ -1,27 +1,35 @@
 use std::fmt;
 
-use derive_more::Deref;
+use num_bigint::BigUint;
 use starknet::core::utils::normalize_address;
 
 use crate::class::ClassHash;
-use crate::FieldElement;
+use crate::Felt;
 
 /// Represents the type for a contract storage key.
-pub type StorageKey = FieldElement;
+pub type StorageKey = Felt;
 /// Represents the type for a contract storage value.
-pub type StorageValue = FieldElement;
+pub type StorageValue = Felt;
 
 /// Represents the type for a contract nonce.
-pub type Nonce = FieldElement;
+pub type Nonce = Felt;
 
 /// Represents a contract address.
-#[derive(Default, Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Hash, Debug, Deref)]
+#[derive(Default, Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct ContractAddress(#[deref] pub FieldElement);
+pub struct ContractAddress(pub Felt);
 
 impl ContractAddress {
-    pub fn new(address: FieldElement) -> Self {
+    pub fn new(address: Felt) -> Self {
         ContractAddress(normalize_address(address))
+    }
+}
+
+impl core::ops::Deref for ContractAddress {
+    type Target = Felt;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
@@ -31,16 +39,35 @@ impl fmt::Display for ContractAddress {
     }
 }
 
-impl From<FieldElement> for ContractAddress {
-    fn from(value: FieldElement) -> Self {
+impl From<Felt> for ContractAddress {
+    fn from(value: Felt) -> Self {
         ContractAddress::new(value)
     }
 }
 
-impl From<ContractAddress> for FieldElement {
+impl From<ContractAddress> for Felt {
     fn from(value: ContractAddress) -> Self {
         value.0
     }
+}
+
+impl From<&BigUint> for ContractAddress {
+    fn from(biguint: &BigUint) -> Self {
+        Self::new(Felt::from_bytes_le_slice(&biguint.to_bytes_le()))
+    }
+}
+
+impl From<BigUint> for ContractAddress {
+    fn from(biguint: BigUint) -> Self {
+        Self::new(Felt::from_bytes_le_slice(&biguint.to_bytes_le()))
+    }
+}
+
+#[macro_export]
+macro_rules! address {
+    ($value:expr) => {
+        ContractAddress::new($crate::felt!($value))
+    };
 }
 
 /// Represents a generic contract instance information.

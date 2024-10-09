@@ -4,7 +4,7 @@ use dojo_world::contracts::abi::model::{FieldLayout, Layout};
 use dojo_world::contracts::abi::world::Resource;
 use dojo_world::contracts::naming::{compute_bytearray_hash, compute_selector_from_tag};
 use dojo_world::contracts::world::WorldContract;
-use katana_runner::{KatanaRunner, KatanaRunnerConfig};
+use katana_runner::RunnerCtx;
 use scarb_ui::{OutputFormat, Ui, Verbosity};
 use starknet::accounts::Account;
 use starknet::core::types::Felt;
@@ -15,13 +15,9 @@ use crate::{execute, model};
 // Test model ops in the same to avoid spinning up several katana with full
 // migration for now. Should be replaced by individual tests once Katana spinning up is enhanced.
 #[tokio::test(flavor = "multi_thread")]
-async fn test_model_ops() {
-    let seq_config = KatanaRunnerConfig { n_accounts: 10, ..Default::default() }
-        .with_db_dir(copy_spawn_and_move_db().as_str());
-
-    let sequencer = KatanaRunner::new_with_config(seq_config).expect("Failed to start runner.");
-
-    let world = setup::setup_with_world(&sequencer).await.unwrap();
+#[katana_runner::test(accounts = 10, db_dir = copy_spawn_and_move_db().as_str())]
+async fn test_model_ops(sequencer: &RunnerCtx) {
+    let world = setup::setup_with_world(sequencer).await.unwrap();
 
     let action_address = if let Resource::Contract((_, address)) =
         world.resource(&compute_selector_from_tag("dojo_examples-actions")).call().await.unwrap()
@@ -58,7 +54,8 @@ async fn test_model_ops() {
         )
         .await
         .unwrap(),
-        Felt::from_hex("0x5581faa4aa9c7cf1903a7e07f28707a0a599b602ca13f3d2f88d68322e240d").unwrap()
+        Felt::from_hex("0x60d4450c23606e0e9bdd4f1b146ef50e5bc4dde5034946b54c3012bae1add02")
+            .unwrap()
     );
 
     let layout =
@@ -170,6 +167,8 @@ async fn test_model_ops() {
         vec![],
         &WorldContract::new(world.address, sequencer.account(0)),
         &TxnConfig::init_wait(),
+        #[cfg(feature = "walnut")]
+        &None,
     )
     .await;
 
@@ -189,8 +188,8 @@ async fn test_model_ops() {
     assert_eq!(values, expected_values);
 }
 
-#[tokio::test(flavor = "multi_thread")]
-async fn test_check_tag_or_read_default() {
+#[test]
+fn test_check_tag_or_read_default() {
     let config = setup::load_config();
 
     let tag = model::check_tag_or_read_default_namespace("Moves", &config).unwrap();

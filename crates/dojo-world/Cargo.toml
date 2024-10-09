@@ -36,7 +36,7 @@ scarb = { workspace = true, optional = true }
 tokio = { version = "1.32.0", features = [ "time" ], default-features = false, optional = true }
 toml.workspace = true
 url = { workspace = true, optional = true }
-walkdir = "2.5.0"
+walkdir.workspace = true
 
 [dev-dependencies]
 assert_fs.workspace = true
@@ -52,4 +52,4 @@ tokio.workspace = true
 contracts = [ "dep:dojo-types", "dep:http", "dep:num-traits" ]
 manifest = [ "contracts", "dep:dojo-types", "dep:scarb", "dep:url" ]
 metadata = [ "dep:ipfs-api-backend-hyper", "dep:scarb", "dep:url" ]
-migration = [ "dep:dojo-utils", "dep:scarb", "dep:tokio" ]
+migration = [ "dep:dojo-utils", "dep:scarb", "dep:tokio", "manifest" ]

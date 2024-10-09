@@ -3,7 +3,7 @@ use katana_executor::{EntryPointCall, ExecutionResult, ExecutorFactory};
 use katana_primitives::block::{BlockHashOrNumber, BlockIdOrTag, FinalityStatus, PartialHeader};
 use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash, TxHash};
 use katana_primitives::version::CURRENT_STARKNET_VERSION;
-use katana_primitives::FieldElement;
+use katana_primitives::Felt;
 use katana_provider::traits::block::{BlockHashProvider, BlockIdReader, BlockNumberProvider};
 use katana_provider::traits::transaction::TransactionProvider;
 use katana_rpc_api::starknet::StarknetApiServer;
@@ -35,7 +35,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
     async fn get_nonce(
         &self,
         block_id: BlockIdOrTag,
-        contract_address: FieldElement,
+        contract_address: Felt,
     ) -> RpcResult<FeltAsHex> {
         Ok(self.nonce_at(block_id, contract_address.into()).await?.into())
     }
@@ -44,7 +44,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
         Ok(self.latest_block_number().await?)
     }
 
-    async fn get_transaction_by_hash(&self, transaction_hash: FieldElement) -> RpcResult<Tx> {
+    async fn get_transaction_by_hash(&self, transaction_hash: Felt) -> RpcResult<Tx> {
         Ok(self.transaction(transaction_hash).await?.into())
     }
 
@@ -55,7 +55,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
     async fn get_class_at(
         &self,
         block_id: BlockIdOrTag,
-        contract_address: FieldElement,
+        contract_address: Felt,
     ) -> RpcResult<ContractClass> {
         Ok(self.class_at_address(block_id, contract_address.into()).await?)
     }
@@ -296,7 +296,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
 
     async fn get_transaction_receipt(
         &self,
-        transaction_hash: FieldElement,
+        transaction_hash: Felt,
     ) -> RpcResult<TxReceiptWithBlockInfo> {
         self.on_io_blocking_task(move |this| {
             let provider = this.inner.backend.blockchain.provider();
@@ -341,7 +341,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
     async fn get_class_hash_at(
         &self,
         block_id: BlockIdOrTag,
-        contract_address: FieldElement,
+        contract_address: Felt,
     ) -> RpcResult<FeltAsHex> {
         Ok(self.class_hash_at_address(block_id, contract_address.into()).await?.into())
     }
@@ -349,27 +349,34 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
     async fn get_class(
         &self,
         block_id: BlockIdOrTag,
-        class_hash: FieldElement,
+        class_hash: Felt,
     ) -> RpcResult<ContractClass> {
         Ok(self.class_at_hash(block_id, class_hash).await?)
     }
 
     async fn get_events(&self, filter: EventFilterWithPage) -> RpcResult<EventsPage> {
         self.on_io_blocking_task(move |this| {
-            let from_block = filter.event_filter.from_block.unwrap_or(BlockIdOrTag::Number(0));
-            let to_block =
-                filter.event_filter.to_block.unwrap_or(BlockIdOrTag::Tag(BlockTag::Latest));
+            let EventFilterWithPage { event_filter, result_page_request } = filter;
 
-            let keys = filter.event_filter.keys;
-            let keys = keys.filter(|keys| !(keys.len() == 1 && keys.is_empty()));
+            let from = match event_filter.from_block {
+                Some(id) => id,
+                None => BlockIdOrTag::Number(0),
+            };
+
+            let to = match event_filter.to_block {
+                Some(id) => id,
+                None => BlockIdOrTag::Tag(BlockTag::Pending),
+            };
+
+            let keys = event_filter.keys.filter(|keys| !(keys.len() == 1 && keys.is_empty()));
 
             let events = this.events(
-                from_block,
-                to_block,
-                filter.event_filter.address.map(|f| f.into()),
+                from,
+                to,
+                event_filter.address.map(|f| f.into()),
                 keys,
-                filter.result_page_request.continuation_token,
-                filter.result_page_request.chunk_size,
+                result_page_request.continuation_token,
+                result_page_request.chunk_size,
             )?;
 
             Ok(events)
@@ -406,8 +413,8 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
 
     async fn get_storage_at(
         &self,
-        contract_address: FieldElement,
-        key: FieldElement,
+        contract_address: Felt,
+        key: Felt,
         block_id: BlockIdOrTag,
     ) -> RpcResult<FeltAsHex> {
         self.on_io_blocking_task(move |this| {

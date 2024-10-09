@@ -1,5 +1,5 @@
 use katana_primitives::contract::ContractAddress;
-use katana_primitives::FieldElement;
+use katana_primitives::Felt;
 
 /// Trait for writing compact representation of the types that implement it.
 pub trait Compact: Sized {
@@ -63,9 +63,9 @@ macro_rules! impl_compact_felt {
                     if len > 0 {
                         let mut arr = [0u8; 32];
                         arr[32 - len..].copy_from_slice(&buf[..len]);
-                        (FieldElement::from_bytes_be(&arr).into(), &buf[len..])
+                        (Felt::from_bytes_be(&arr).into(), &buf[len..])
                     } else {
-                        (FieldElement::ZERO.into(), buf)
+                        (Felt::ZERO.into(), buf)
                     }
                 }
             }
@@ -74,20 +74,20 @@ macro_rules! impl_compact_felt {
 }
 
 impl_compact_for_uints!(u64);
-impl_compact_felt!(FieldElement, ContractAddress);
+impl_compact_felt!(Felt, ContractAddress);
 
 #[cfg(test)]
 mod tests {
-    use katana_primitives::FieldElement;
+    use katana_primitives::Felt;
 
     use crate::Compact;
 
     #[test]
     fn felt_compact() {
         let mut compacted = vec![];
-        let value = FieldElement::from(124123137u128);
+        let value = Felt::from(124123137u128);
         let compacted_size = value.to_compact(&mut compacted);
-        let (uncompacted, _) = FieldElement::from_compact(&compacted, compacted_size);
+        let (uncompacted, _) = Felt::from_compact(&compacted, compacted_size);
         assert_eq!(value, uncompacted);
     }
 

@@ -10,7 +10,7 @@ use starknet::core::types::Felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use tokio::sync::RwLock as AsyncRwLock;
-use torii_grpc::client::{EntityUpdateStreaming, EventUpdateStreaming};
+use torii_grpc::client::{EntityUpdateStreaming, EventUpdateStreaming, IndexerUpdateStreaming};
 use torii_grpc::proto::world::{RetrieveEntitiesResponse, RetrieveEventsResponse};
 use torii_grpc::types::schema::Entity;
 use torii_grpc::types::{EntityKeysClause, Event, EventQuery, KeysClause, Query};
@@ -156,12 +156,26 @@ impl Client {
         Ok(())
     }
 
+    /// A direct stream to grpc subscribe starknet events
     pub async fn on_starknet_event(
         &self,
         keys: Option<KeysClause>,
     ) -> Result<EventUpdateStreaming, Error> {
         let mut grpc_client = self.inner.write().await;
         let stream = grpc_client.subscribe_events(keys).await?;
+        Ok(stream)
+    }
+
+    /// Subscribe to indexer updates for a specific contract address.
+    /// If no contract address is provided, it will subscribe to updates for world contract.
+    pub async fn on_indexer_updated(
+        &self,
+        contract_address: Option<Felt>,
+    ) -> Result<IndexerUpdateStreaming, Error> {
+        let mut grpc_client = self.inner.write().await;
+        let stream = grpc_client
+            .subscribe_indexer(contract_address.unwrap_or(self.world_reader.address))
+            .await?;
         Ok(stream)
     }
 }

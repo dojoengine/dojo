@@ -18,6 +18,7 @@ pub struct TxnConfig {
     pub wait: bool,
     pub receipt: bool,
     pub max_fee_raw: Option<Felt>,
+    pub walnut: bool,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -29,6 +30,7 @@ pub enum TxnAction {
         /// The multiplier for how much the actual transaction max fee should be relative to the
         /// estimated fee. If `None` is provided, the multiplier is set to `1.1`.
         fee_estimate_multiplier: Option<f64>,
+        walnut: bool,
     },
     Estimate,
     Simulate,

@@ -6,6 +6,10 @@ use starknet::providers::Provider;
 
 use crate::sql::Sql;
 
+pub mod erc20_legacy_transfer;
+pub mod erc20_transfer;
+pub mod erc721_legacy_transfer;
+pub mod erc721_transfer;
 pub mod event_message;
 pub mod metadata_update;
 pub mod register_model;
@@ -16,11 +20,11 @@ pub mod store_update_member;
 pub mod store_update_record;
 
 const MODEL_INDEX: usize = 0;
-const NUM_KEYS_INDEX: usize = 1;
 const ENTITY_ID_INDEX: usize = 1;
+const NUM_KEYS_INDEX: usize = 2;
 
 #[async_trait]
-pub trait EventProcessor<P>
+pub trait EventProcessor<P>: Send + Sync
 where
     P: Provider + Sync,
 {
@@ -45,7 +49,7 @@ where
 }
 
 #[async_trait]
-pub trait BlockProcessor<P: Provider + Sync> {
+pub trait BlockProcessor<P: Provider + Sync>: Send + Sync {
     fn get_block_number(&self) -> String;
     async fn process(
         &self,
@@ -57,7 +61,7 @@ pub trait BlockProcessor<P: Provider + Sync> {
 }
 
 #[async_trait]
-pub trait TransactionProcessor<P: Provider + Sync> {
+pub trait TransactionProcessor<P: Provider + Sync>: Send + Sync {
     #[allow(clippy::too_many_arguments)]
     async fn process(
         &self,

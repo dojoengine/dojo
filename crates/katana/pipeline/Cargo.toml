@@ -1,0 +1,18 @@
+[package]
+edition.workspace = true
+license.workspace = true
+name = "katana-pipeline"
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+katana-core.workspace = true
+katana-executor.workspace = true
+katana-pool.workspace = true
+katana-tasks.workspace = true
+
+anyhow.workspace = true
+async-trait.workspace = true
+futures.workspace = true
+thiserror.workspace = true
+tracing.workspace = true

@@ -15,7 +15,7 @@ starknet = { workspace = true, optional = true }
 thiserror.workspace = true
 tracing.workspace = true
 
-blockifier = { git = "https://github.com/dojoengine/blockifier", branch = "cairo-2.7-newer", features = [ "testing" ], optional = true }
+blockifier = { git = "https://github.com/dojoengine/sequencer", tag = "v0.8.0-rc3.1", features = [ "testing" ], optional = true }
 katana-cairo = { workspace = true, optional = true }
 
 [dev-dependencies]
@@ -24,6 +24,7 @@ anyhow.workspace = true
 katana-cairo.workspace = true
 katana-provider = { workspace = true, features = [ "test-utils" ] }
 katana-rpc-types.workspace = true
+num-traits.workspace = true
 rstest.workspace = true
 rstest_reuse.workspace = true
 serde_json.workspace = true

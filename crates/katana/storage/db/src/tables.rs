@@ -284,6 +284,7 @@ mod tests {
         assert_eq!(Tables::StorageChangeSet.table_type(), TableType::Table);
     }
 
+    use katana_primitives::address;
     use katana_primitives::block::{BlockHash, BlockNumber, FinalityStatus, Header};
     use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash};
     use katana_primitives::contract::{ContractAddress, GenericContractInfo};
@@ -338,8 +339,8 @@ mod tests {
             (TxHash, felt!("0x123456789")),
             (TxNumber, 100),
             (ClassHash, felt!("0x123456789")),
-            (ContractAddress, ContractAddress(felt!("0x123456789"))),
-            (ContractStorageKey, ContractStorageKey { contract_address : ContractAddress(felt!("0x123456789")), key : felt!("0x123456789")})
+            (ContractAddress, address!("0x123456789")),
+            (ContractStorageKey, ContractStorageKey { contract_address : address!("0x123456789"), key : felt!("0x123456789")})
         }
     }
 

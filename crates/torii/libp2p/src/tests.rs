@@ -524,6 +524,7 @@ mod test {
     #[cfg(not(target_arch = "wasm32"))]
     #[tokio::test]
     async fn test_client_messaging() -> Result<(), Box<dyn Error>> {
+        use std::collections::HashMap;
         use std::time::Duration;
 
         use dojo_types::schema::{Member, Struct, Ty};
@@ -534,9 +535,13 @@ mod test {
         use starknet::providers::JsonRpcClient;
         use starknet::signers::SigningKey;
         use starknet_crypto::Felt;
+        use tempfile::NamedTempFile;
         use tokio::select;
+        use tokio::sync::broadcast;
         use tokio::time::sleep;
+        use torii_core::executor::Executor;
         use torii_core::sql::Sql;
+        use torii_core::types::ContractType;
 
         use crate::server::Relay;
         use crate::typed_data::{Domain, Field, SimpleField, TypedData};
@@ -547,10 +552,18 @@ mod test {
             .try_init();
 
         // Database
-        let options = <SqliteConnectOptions as std::str::FromStr>::from_str("sqlite::memory:")
+        let tempfile = NamedTempFile::new().unwrap();
+        let path = tempfile.path().to_string_lossy();
+        let options = <SqliteConnectOptions as std::str::FromStr>::from_str(&path)
             .unwrap()
             .create_if_missing(true);
-        let pool = SqlitePoolOptions::new().max_connections(5).connect_with(options).await.unwrap();
+        let pool = SqlitePoolOptions::new()
+            .min_connections(1)
+            .idle_timeout(None)
+            .max_lifetime(None)
+            .connect_with(options)
+            .await
+            .unwrap();
         sqlx::migrate!("../migrations").run(&pool).await.unwrap();
 
         let sequencer = KatanaRunner::new().expect("Failed to create Katana sequencer");
@@ -559,7 +572,16 @@ mod test {
 
         let account = sequencer.account_data(0);
 
-        let mut db = Sql::new(pool.clone(), Felt::ZERO).await?;
+        let (shutdown_tx, _) = broadcast::channel(1);
+        let (mut executor, sender) =
+            Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
+        tokio::spawn(async move {
+            executor.run().await.unwrap();
+        });
+        let mut db =
+            Sql::new(pool.clone(), sender, &HashMap::from([(Felt::ZERO, ContractType::WORLD)]))
+                .await
+                .unwrap();
 
         // Register the model of our Message
         db.register_model(
@@ -588,6 +610,7 @@ mod test {
         )
         .await
         .unwrap();
+        db.execute().await.unwrap();
 
         // Initialize the relay server
         let mut relay_server = Relay::new(db, provider, 9900, 9901, 9902, None, None)?;

@@ -5,6 +5,7 @@ mod tests {
     use serde_json::Value;
     use starknet::core::types::Felt;
     use starknet_crypto::poseidon_hash_many;
+    use tempfile::NamedTempFile;
 
     use crate::schema::build_schema;
     use crate::tests::{
@@ -90,7 +91,9 @@ mod tests {
     // to run so combine all related tests into one
     #[tokio::test(flavor = "multi_thread")]
     async fn entities_test() -> Result<()> {
-        let pool = spinup_types_test().await?;
+        let tempfile = NamedTempFile::new().unwrap();
+        let path = tempfile.path().to_string_lossy();
+        let pool = spinup_types_test(&path).await?;
         let schema = build_schema(&pool).await.unwrap();
 
         // default without params
@@ -106,8 +109,15 @@ mod tests {
         let last_entity = connection.edges.last().unwrap();
         assert_eq!(connection.edges.len(), 2);
         assert_eq!(connection.total_count, 2);
-        assert_eq!(first_entity.node.keys.clone().unwrap(), vec!["0x0", "0x1"]);
-        assert_eq!(last_entity.node.keys.clone().unwrap(), vec!["0x0"]);
+        // due to parallelization order is nondeterministic
+        assert!(
+            first_entity.node.keys.clone().unwrap() == vec!["0x0", "0x1"]
+                || first_entity.node.keys.clone().unwrap() == vec!["0x0"]
+        );
+        assert!(
+            last_entity.node.keys.clone().unwrap() == vec!["0x0", "0x1"]
+                || last_entity.node.keys.clone().unwrap() == vec!["0x0"]
+        );
 
         // double key param - returns all entities with `0x0` as first key and `0x1` as second key
         let entities = entities_query(&schema, "(keys: [\"0x0\", \"0x1\"])").await;

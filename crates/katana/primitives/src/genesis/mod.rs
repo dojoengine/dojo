@@ -2,7 +2,7 @@ pub mod allocation;
 pub mod constant;
 pub mod json;
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 use std::fmt::Debug;
 use std::sync::Arc;
 
@@ -34,7 +34,7 @@ use crate::contract::{ContractAddress, StorageKey, StorageValue};
 use crate::state::StateUpdatesWithDeclaredClasses;
 use crate::utils::split_u256;
 use crate::version::CURRENT_STARKNET_VERSION;
-use crate::FieldElement;
+use crate::Felt;
 
 #[serde_with::serde_as]
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -51,7 +51,7 @@ pub struct FeeTokenConfig {
     #[serde_as(as = "UfeHex")]
     pub class_hash: ClassHash,
     /// To initialize the fee token contract storage
-    pub storage: Option<HashMap<StorageKey, StorageValue>>,
+    pub storage: Option<BTreeMap<StorageKey, StorageValue>>,
 }
 
 #[serde_with::serde_as]
@@ -76,7 +76,7 @@ pub struct UniversalDeployerConfig {
     /// The address of the universal deployer contract.
     pub address: ContractAddress,
     /// To initialize the UD contract storage
-    pub storage: Option<HashMap<StorageKey, StorageValue>>,
+    pub storage: Option<BTreeMap<StorageKey, StorageValue>>,
 }
 
 /// Genesis block configuration.
@@ -88,7 +88,7 @@ pub struct Genesis {
     pub parent_hash: BlockHash,
     /// The genesis block state root.
     #[serde_as(as = "UfeHex")]
-    pub state_root: FieldElement,
+    pub state_root: Felt,
     /// The genesis block number.
     pub number: BlockNumber,
     /// The genesis block timestamp.
@@ -98,7 +98,7 @@ pub struct Genesis {
     /// The genesis block L1 gas prices.
     pub gas_prices: GasPrices,
     /// The classes to declare in the genesis block.
-    pub classes: HashMap<ClassHash, GenesisClass>,
+    pub classes: BTreeMap<ClassHash, GenesisClass>,
     /// The fee token configuration.
     pub fee_token: FeeTokenConfig,
     /// The universal deployer (UDC) configuration.
@@ -174,7 +174,7 @@ impl Genesis {
             let address = *address;
 
             if let Some(hash) = alloc.class_hash() {
-                states.state_updates.contract_updates.insert(address, hash);
+                states.state_updates.deployed_contracts.insert(address, hash);
             }
 
             if let Some(nonce) = alloc.nonce() {
@@ -204,7 +204,7 @@ impl Genesis {
                 // the storage address of low u128 of the balance
                 let low_bal_storage_var = bal_base_storage_var;
                 // the storage address of high u128 of the balance
-                let high_bal_storage_var = bal_base_storage_var + FieldElement::ONE;
+                let high_bal_storage_var = bal_base_storage_var + Felt::ONE;
 
                 fee_token_storage.insert(low_bal_storage_var, low);
                 fee_token_storage.insert(high_bal_storage_var, high);
@@ -213,21 +213,20 @@ impl Genesis {
 
         // TODO: put this in a separate function
 
-        let name: FieldElement = cairo_short_string_to_felt(&self.fee_token.name).unwrap();
-        let symbol: FieldElement = cairo_short_string_to_felt(&self.fee_token.symbol).unwrap();
-        let decimals: FieldElement = self.fee_token.decimals.into();
+        let name: Felt = cairo_short_string_to_felt(&self.fee_token.name).unwrap();
+        let symbol: Felt = cairo_short_string_to_felt(&self.fee_token.symbol).unwrap();
+        let decimals: Felt = self.fee_token.decimals.into();
         let (total_supply_low, total_supply_high) = split_u256(fee_token_total_supply);
 
         fee_token_storage.insert(ERC20_NAME_STORAGE_SLOT, name);
         fee_token_storage.insert(ERC20_SYMBOL_STORAGE_SLOT, symbol);
         fee_token_storage.insert(ERC20_DECIMAL_STORAGE_SLOT, decimals);
         fee_token_storage.insert(ERC20_TOTAL_SUPPLY_STORAGE_SLOT, total_supply_low);
-        fee_token_storage
-            .insert(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + FieldElement::ONE, total_supply_high);
+        fee_token_storage.insert(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + Felt::ONE, total_supply_high);
 
         states
             .state_updates
-            .contract_updates
+            .deployed_contracts
             .insert(self.fee_token.address, self.fee_token.class_hash);
         states.state_updates.storage_updates.insert(self.fee_token.address, fee_token_storage);
 
@@ -235,7 +234,7 @@ impl Genesis {
         if let Some(udc) = &self.universal_deployer {
             let storage = udc.storage.clone().unwrap_or_default();
 
-            states.state_updates.contract_updates.insert(udc.address, udc.class_hash);
+            states.state_updates.deployed_contracts.insert(udc.address, udc.class_hash);
             states.state_updates.storage_updates.insert(udc.address, storage);
         }
 
@@ -263,7 +262,7 @@ impl Default for Genesis {
             storage: None,
         };
 
-        let classes = HashMap::from([
+        let classes = BTreeMap::from([
             (
                 DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH,
                 GenesisClass {
@@ -300,12 +299,12 @@ impl Default for Genesis {
         ]);
 
         Self {
-            parent_hash: FieldElement::ZERO,
+            parent_hash: Felt::ZERO,
             number: 0,
-            state_root: FieldElement::ZERO,
+            state_root: Felt::ZERO,
             timestamp: 0,
             gas_prices: GasPrices::default(),
-            sequencer_address: FieldElement::ZERO.into(),
+            sequencer_address: Felt::ZERO.into(),
             classes,
             allocations: BTreeMap::new(),
             fee_token,
@@ -316,18 +315,20 @@ impl Default for Genesis {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
     use std::str::FromStr;
 
     use allocation::GenesisAccount;
     use starknet::macros::felt;
 
     use super::*;
+    use crate::address;
 
     #[test]
     fn genesis_block_and_state_updates() {
         // setup initial states to test
 
-        let classes = HashMap::from([
+        let classes = BTreeMap::from([
             (
                 DEFAULT_LEGACY_UDC_CLASS_HASH,
                 GenesisClass {
@@ -369,7 +370,7 @@ mod tests {
             symbol: String::from("ETH"),
             decimals: 18,
             class_hash: DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH,
-            storage: Some(HashMap::from([
+            storage: Some(BTreeMap::from([
                 (felt!("0x111"), felt!("0x1")),
                 (felt!("0x222"), felt!("0x2")),
             ])),
@@ -377,7 +378,7 @@ mod tests {
 
         let allocations = [
             (
-                ContractAddress::from(felt!("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")),
+                address!("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
                 GenesisAllocation::Account(GenesisAccountAlloc::Account(GenesisAccount {
                     public_key: felt!(
                         "0x01ef15c18599971b7beced415a40f0c7deacfd9b0d1819e03d723d8bc943cfca"
@@ -385,26 +386,26 @@ mod tests {
                     balance: Some(U256::from_str("0xD3C21BCECCEDA1000000").unwrap()),
                     class_hash: DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH,
                     nonce: Some(felt!("0x99")),
-                    storage: Some(HashMap::from([
+                    storage: Some(BTreeMap::from([
                         (felt!("0x1"), felt!("0x1")),
                         (felt!("0x2"), felt!("0x2")),
                     ])),
                 })),
             ),
             (
-                ContractAddress::from(felt!("0xdeadbeef")),
+                address!("0xdeadbeef"),
                 GenesisAllocation::Contract(GenesisContractAlloc {
                     balance: Some(U256::from_str("0xD3C21BCECCEDA1000000").unwrap()),
                     class_hash: Some(DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH),
                     nonce: Some(felt!("0x100")),
-                    storage: Some(HashMap::from([
+                    storage: Some(BTreeMap::from([
                         (felt!("0x100"), felt!("0x111")),
                         (felt!("0x200"), felt!("0x222")),
                     ])),
                 }),
             ),
             (
-                ContractAddress::from(felt!("0x2")),
+                address!("0x2"),
                 GenesisAllocation::Account(GenesisAccountAlloc::Account(GenesisAccount {
                     public_key: felt!("0x2"),
                     balance: Some(U256::ZERO),
@@ -416,7 +417,7 @@ mod tests {
         ];
 
         let ud = UniversalDeployerConfig {
-            address: ContractAddress(felt!("0xb00b1e5")),
+            address: address!("0xb00b1e5"),
             class_hash: DEFAULT_LEGACY_UDC_CLASS_HASH,
             storage: Some([(felt!("0x10"), felt!("0x100"))].into()),
         };
@@ -429,16 +430,16 @@ mod tests {
             timestamp: 5123512314u64,
             state_root: felt!("0x99"),
             parent_hash: felt!("0x999"),
-            sequencer_address: ContractAddress(felt!("0x100")),
+            sequencer_address: address!("0x100"),
             gas_prices: GasPrices { eth: 1111, strk: 2222 },
             universal_deployer: Some(ud.clone()),
         };
 
         // setup expected storage values
 
-        let name: FieldElement = cairo_short_string_to_felt(&fee_token.name).unwrap();
-        let symbol: FieldElement = cairo_short_string_to_felt(&fee_token.symbol).unwrap();
-        let decimals: FieldElement = fee_token.decimals.into();
+        let name: Felt = cairo_short_string_to_felt(&fee_token.name).unwrap();
+        let symbol: Felt = cairo_short_string_to_felt(&fee_token.symbol).unwrap();
+        let decimals: Felt = fee_token.decimals.into();
 
         // there are only two allocations so the total token supply is
         // 0xD3C21BCECCEDA1000000 * 2 = 0x1a784379d99db42000000
@@ -450,8 +451,7 @@ mod tests {
         fee_token_storage.insert(ERC20_SYMBOL_STORAGE_SLOT, symbol);
         fee_token_storage.insert(ERC20_DECIMAL_STORAGE_SLOT, decimals);
         fee_token_storage.insert(ERC20_TOTAL_SUPPLY_STORAGE_SLOT, total_supply_low);
-        fee_token_storage
-            .insert(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + FieldElement::ONE, total_supply_high);
+        fee_token_storage.insert(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + Felt::ONE, total_supply_high);
 
         for (address, alloc) in &allocations {
             if let Some(balance) = alloc.balance() {
@@ -463,7 +463,7 @@ mod tests {
                 // the storage address of low u128 of the balance
                 let low_bal_storage_var = bal_base_storage_var;
                 // the storage address of high u128 of the balance
-                let high_bal_storage_var = bal_base_storage_var + FieldElement::ONE;
+                let high_bal_storage_var = bal_base_storage_var + Felt::ONE;
 
                 fee_token_storage.insert(low_bal_storage_var, low);
                 fee_token_storage.insert(high_bal_storage_var, high);
@@ -537,7 +537,7 @@ mod tests {
         );
 
         assert_eq!(
-            actual_state_updates.state_updates.contract_updates.get(&fee_token.address),
+            actual_state_updates.state_updates.deployed_contracts.get(&fee_token.address),
             Some(&fee_token.class_hash),
             "The fee token contract should be created"
         );
@@ -560,7 +560,7 @@ mod tests {
         );
 
         assert_eq!(
-            actual_state_updates.state_updates.contract_updates.get(&ud.address),
+            actual_state_updates.state_updates.deployed_contracts.get(&ud.address),
             Some(&ud.class_hash),
             "The universal deployer contract should be created"
         );
@@ -622,7 +622,7 @@ mod tests {
         // check that all contract allocations exist in the state updates
 
         assert_eq!(
-            actual_state_updates.state_updates.contract_updates.len(),
+            actual_state_updates.state_updates.deployed_contracts.len(),
             5,
             "5 contracts should be created: fee token, universal deployer, and 3 allocations"
         );
@@ -636,7 +636,7 @@ mod tests {
         );
 
         assert_eq!(
-            actual_state_updates.state_updates.contract_updates.get(&alloc_1_addr),
+            actual_state_updates.state_updates.deployed_contracts.get(&alloc_1_addr),
             allocations[0].1.class_hash().as_ref(),
             "allocation should exist"
         );
@@ -654,7 +654,7 @@ mod tests {
         let alloc_2_addr = allocations[1].0;
 
         assert_eq!(
-            actual_state_updates.state_updates.contract_updates.get(&alloc_2_addr),
+            actual_state_updates.state_updates.deployed_contracts.get(&alloc_2_addr),
             allocations[1].1.class_hash().as_ref(),
             "allocation should exist"
         );
@@ -672,7 +672,7 @@ mod tests {
         let alloc_3_addr = allocations[2].0;
 
         assert_eq!(
-            actual_state_updates.state_updates.contract_updates.get(&alloc_3_addr),
+            actual_state_updates.state_updates.deployed_contracts.get(&alloc_3_addr),
             allocations[2].1.class_hash().as_ref(),
             "allocation should exist"
         );
@@ -683,7 +683,7 @@ mod tests {
         );
         assert_eq!(
             actual_state_updates.state_updates.storage_updates.get(&alloc_3_addr).cloned(),
-            Some(HashMap::from([(OZ_ACCOUNT_CONTRACT_PUBKEY_STORAGE_SLOT, felt!("0x2"))])),
+            Some(BTreeMap::from([(OZ_ACCOUNT_CONTRACT_PUBKEY_STORAGE_SLOT, felt!("0x2"))])),
             "account allocation storage should be updated"
         );
 
@@ -700,7 +700,7 @@ mod tests {
             Some(&total_supply_low)
         );
         assert_eq!(
-            fee_token_storage.get(&(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + FieldElement::ONE)),
+            fee_token_storage.get(&(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + Felt::ONE)),
             Some(&total_supply_high)
         );
 
@@ -722,7 +722,7 @@ mod tests {
                 // the storage address of low u128 of the balance
                 let low_bal_storage_var = bal_base_storage_var;
                 // the storage address of high u128 of the balance
-                let high_bal_storage_var = bal_base_storage_var + FieldElement::ONE;
+                let high_bal_storage_var = bal_base_storage_var + Felt::ONE;
 
                 assert_eq!(fee_token_storage.get(&low_bal_storage_var), Some(&low));
                 assert_eq!(fee_token_storage.get(&high_bal_storage_var), Some(&high));
@@ -742,7 +742,7 @@ mod tests {
             "total supply must be calculated from allocations balances correctly"
         );
         assert_eq!(
-            fee_token_storage.get(&(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + FieldElement::ONE)),
+            fee_token_storage.get(&(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + Felt::ONE)),
             Some(&actual_total_supply_high),
             "total supply must be calculated from allocations balances correctly"
         );

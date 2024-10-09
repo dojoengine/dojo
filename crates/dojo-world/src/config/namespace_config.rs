@@ -8,12 +8,19 @@ use serde::Deserialize;
 pub const NAMESPACE_CFG_PREFIX: &str = "nm|";
 pub const DEFAULT_NAMESPACE_CFG_KEY: &str = "namespace_default";
 pub const DOJO_MANIFESTS_DIR_CFG_KEY: &str = "dojo_manifests_dir";
+pub const DEFAULT_NAMESPACE: &str = "DEFAULT_NAMESPACE";
 
 /// Namespace configuration.
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct NamespaceConfig {
     pub default: String,
     pub mappings: Option<HashMap<String, String>>,
+}
+
+impl Default for NamespaceConfig {
+    fn default() -> Self {
+        NamespaceConfig { default: DEFAULT_NAMESPACE.to_string(), mappings: None }
+    }
 }
 
 impl NamespaceConfig {

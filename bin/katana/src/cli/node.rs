@@ -34,8 +34,8 @@ use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
 use katana_primitives::genesis::Genesis;
 use katana_rpc::config::ServerConfig;
 use katana_rpc_api::ApiKind;
-use tokio::signal::ctrl_c;
 use tracing::{info, Subscriber};
+use tracing_log::LogTracer;
 use tracing_subscriber::{fmt, EnvFilter};
 use url::Url;
 
@@ -89,7 +89,6 @@ pub struct NodeArgs {
     #[arg(help = "Fork the network at a specific block.")]
     pub fork_block_number: Option<u64>,
 
-    #[cfg(feature = "messaging")]
     #[arg(long)]
     #[arg(value_name = "PATH")]
     #[arg(value_parser = katana_core::service::messaging::MessagingConfig::parse)]
@@ -225,19 +224,32 @@ impl NodeArgs {
         let sequencer_config = self.sequencer_config();
         let starknet_config = self.starknet_config()?;
 
-        // build the node and start it
-        let (rpc_handle, backend) =
-            katana_node::start(server_config, sequencer_config, starknet_config).await?;
+        // Build the node
+        let node = katana_node::build(server_config, sequencer_config, starknet_config)
+            .await
+            .context("failed to build node")?;
 
         if !self.silent {
             #[allow(deprecated)]
-            let genesis = &backend.config.genesis;
-            print_intro(&self, genesis, rpc_handle.addr);
+            let genesis = &node.backend.config.genesis;
+            let server_address = node.server_config.addr();
+            print_intro(&self, genesis, &server_address);
         }
 
-        // Wait until Ctrl + C is pressed, then shutdown
-        ctrl_c().await?;
-        rpc_handle.handle.stop()?;
+        // Launch the node
+        let handle = node.launch().await.context("failed to launch node")?;
+
+        // Wait until an OS signal (ie SIGINT, SIGTERM) is received or the node is shutdown.
+        tokio::select! {
+            _ = dojo_utils::signal::wait_signals() => {
+                // Gracefully shutdown the node before exiting
+                handle.stop().await?;
+            },
+
+            _ = handle.stopped() => { }
+        }
+
+        info!("Shutting down.");
 
         Ok(())
     }
@@ -246,6 +258,8 @@ impl NodeArgs {
         const DEFAULT_LOG_FILTER: &str = "info,executor=trace,forking::backend=trace,server=debug,\
                                           katana_core=trace,blockifier=off,jsonrpsee_server=off,\
                                           hyper=off,messaging=debug,node=error";
+
+        LogTracer::init()?;
 
         let builder = fmt::Subscriber::builder().with_env_filter(
             EnvFilter::try_from_default_env().or(EnvFilter::try_new(DEFAULT_LOG_FILTER))?,
@@ -265,13 +279,12 @@ impl NodeArgs {
         SequencerConfig {
             block_time: self.block_time,
             no_mining: self.no_mining,
-            #[cfg(feature = "messaging")]
             messaging: self.messaging.clone(),
         }
     }
 
     fn server_config(&self) -> ServerConfig {
-        let mut apis = vec![ApiKind::Starknet, ApiKind::Katana, ApiKind::Torii, ApiKind::Saya];
+        let mut apis = vec![ApiKind::Starknet, ApiKind::Torii, ApiKind::Saya];
         // only enable `katana` API in dev mode
         if self.dev {
             apis.push(ApiKind::Dev);
@@ -333,7 +346,7 @@ impl NodeArgs {
     }
 }
 
-fn print_intro(args: &NodeArgs, genesis: &Genesis, address: SocketAddr) {
+fn print_intro(args: &NodeArgs, genesis: &Genesis, address: &str) {
     let mut accounts = genesis.accounts().peekable();
     let account_class_hash = accounts.peek().map(|e| e.1.class_hash());
     let seed = &args.starknet.seed;

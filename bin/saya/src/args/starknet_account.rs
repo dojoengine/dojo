@@ -21,7 +21,7 @@ pub struct StarknetAccountOptions {
 
     #[arg(long, env = DOJO_ACCOUNT_ADDRESS_ENV_VAR)]
     #[arg(help = "The address of the starknet account.")]
-    pub signer_address: FieldElement,
+    pub signer_address: Felt,
 
     #[arg(long, env = DOJO_PRIVATE_KEY_ENV_VAR)]
     #[arg(help = "The private key of the starknet account.")]

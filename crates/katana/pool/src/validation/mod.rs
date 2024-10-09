@@ -3,7 +3,7 @@ pub mod stateful;
 use katana_primitives::class::ClassHash;
 use katana_primitives::contract::{ContractAddress, Nonce};
 use katana_primitives::transaction::TxHash;
-use katana_primitives::FieldElement;
+use katana_primitives::Felt;
 
 use crate::tx::PoolTransaction;
 
@@ -25,7 +25,7 @@ pub enum InvalidTransactionError {
         /// The specified transaction fee.
         max_fee: u128,
         /// The account's balance of the fee token.
-        balance: FieldElement,
+        balance: Felt,
     },
 
     /// Error when the specified transaction fee is insufficient to cover the minimum fee required.

@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -8,32 +9,41 @@ use dojo_test_utils::migration::{copy_spawn_and_move_db, prepare_migration_with_
 use dojo_utils::{TransactionExt, TransactionWaiter, TxnConfig};
 use dojo_world::contracts::naming::compute_bytearray_hash;
 use dojo_world::contracts::{WorldContract, WorldContractReader};
-use katana_runner::{KatanaRunner, KatanaRunnerConfig};
+use katana_runner::RunnerCtx;
 use scarb::compiler::Profile;
 use scarb::ops;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
-use starknet::accounts::{Account, Call};
+use starknet::accounts::Account;
+use starknet::core::types::Call;
 use starknet::core::utils::{get_contract_address, get_selector_from_name};
 use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::JsonRpcClient;
+use starknet::providers::{JsonRpcClient, Provider};
 use starknet_crypto::poseidon_hash_many;
+use tempfile::NamedTempFile;
 use tokio::sync::broadcast;
 use torii_core::engine::{Engine, EngineConfig, Processors};
-use torii_core::processors::register_model::RegisterModelProcessor;
-use torii_core::processors::store_set_record::StoreSetRecordProcessor;
+use torii_core::executor::Executor;
 use torii_core::sql::Sql;
+use torii_core::types::ContractType;
 
 use crate::proto::types::KeysClause;
 use crate::server::DojoWorld;
 use crate::types::schema::Entity;
 
 #[tokio::test(flavor = "multi_thread")]
-async fn test_entities_queries() {
-    let options = SqliteConnectOptions::from_str("sqlite::memory:")
-        .unwrap()
-        .create_if_missing(true)
-        .with_regexp();
-    let pool = SqlitePoolOptions::new().max_connections(5).connect_with(options).await.unwrap();
+#[katana_runner::test(accounts = 10, db_dir = copy_spawn_and_move_db().as_str())]
+async fn test_entities_queries(sequencer: &RunnerCtx) {
+    let tempfile = NamedTempFile::new().unwrap();
+    let path = tempfile.path().to_string_lossy();
+    let options =
+        SqliteConnectOptions::from_str(&path).unwrap().create_if_missing(true).with_regexp();
+    let pool = SqlitePoolOptions::new()
+        .min_connections(1)
+        .idle_timeout(None)
+        .max_lifetime(None)
+        .connect_with(options)
+        .await
+        .unwrap();
     sqlx::migrate!("../migrations").run(&pool).await.unwrap();
 
     let setup = CompilerTestSetup::from_examples("../../dojo-core", "../../../examples/");
@@ -45,10 +55,6 @@ async fn test_entities_queries() {
     let manifest_path = Utf8PathBuf::from(config.manifest_path().parent().unwrap());
     let target_path = ws.target_dir().path_existent().unwrap().join(config.profile().to_string());
 
-    let seq_config = KatanaRunnerConfig { n_accounts: 10, ..Default::default() }
-        .with_db_dir(copy_spawn_and_move_db().as_str());
-
-    let sequencer = KatanaRunner::new_with_config(seq_config).expect("Failed to start runner.");
     let account = sequencer.account(0);
 
     let (strat, _) = prepare_migration_with_world_and_seed(
@@ -63,7 +69,7 @@ async fn test_entities_queries() {
     let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
 
     let world = WorldContract::new(strat.world_address, &account);
-    let world_reader = WorldContractReader::new(strat.world_address, &provider);
+    let world_reader = WorldContractReader::new(strat.world_address, Arc::clone(&provider));
 
     let actions = strat.contracts.first().unwrap();
     let actions_address = get_contract_address(
@@ -93,23 +99,36 @@ async fn test_entities_queries() {
 
     TransactionWaiter::new(tx.transaction_hash, &provider).await.unwrap();
 
-    let db = Sql::new(pool.clone(), strat.world_address).await.unwrap();
+    let (shutdown_tx, _) = broadcast::channel(1);
+    let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
+    tokio::spawn(async move {
+        executor.run().await.unwrap();
+    });
+    let db = Sql::new(
+        pool.clone(),
+        sender,
+        &HashMap::from([(strat.world_address, ContractType::WORLD)]),
+    )
+    .await
+    .unwrap();
 
     let (shutdown_tx, _) = broadcast::channel(1);
     let mut engine = Engine::new(
         world_reader,
         db.clone(),
-        &provider,
-        Processors {
-            event: vec![Box::new(RegisterModelProcessor), Box::new(StoreSetRecordProcessor)],
-            ..Processors::default()
-        },
+        Arc::clone(&provider),
+        Processors { ..Processors::default() },
         EngineConfig::default(),
         shutdown_tx,
         None,
+        Arc::new(HashMap::from([(strat.world_address, ContractType::WORLD)])),
     );
 
-    let _ = engine.sync_to_head(0, None).await.unwrap();
+    let to = provider.block_hash_and_number().await.unwrap().block_number;
+    let data = engine.fetch_range(0, to, &HashMap::new()).await.unwrap();
+    engine.process_range(data).await.unwrap();
+
+    db.execute().await.unwrap();
 
     let (_, receiver) = tokio::sync::mpsc::channel(1);
     let grpc = DojoWorld::new(db.pool, receiver, strat.world_address, provider.clone());

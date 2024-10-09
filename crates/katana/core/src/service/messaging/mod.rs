@@ -37,13 +37,18 @@ mod service;
 #[cfg(feature = "starknet-messaging")]
 mod starknet;
 
+use std::future::Future;
 use std::path::Path;
+use std::pin::Pin;
+use std::task::{Context, Poll};
 
 use ::starknet::providers::ProviderError as StarknetProviderError;
 use alloy_transport::TransportError;
 use anyhow::Result;
 use async_trait::async_trait;
 use ethereum::EthereumMessaging;
+use futures::StreamExt;
+use katana_executor::ExecutorFactory;
 use katana_primitives::chain::ChainId;
 use katana_primitives::receipt::MessageToL1;
 use serde::Deserialize;
@@ -200,5 +205,39 @@ impl MessengerMode {
                 Err(Error::UnsupportedChain)
             }
         }
+    }
+}
+
+#[allow(missing_debug_implementations)]
+#[must_use = "MessagingTask does nothing unless polled"]
+pub struct MessagingTask<EF: ExecutorFactory> {
+    messaging: MessagingService<EF>,
+}
+
+impl<EF: ExecutorFactory> MessagingTask<EF> {
+    pub fn new(messaging: MessagingService<EF>) -> Self {
+        Self { messaging }
+    }
+}
+
+impl<EF: ExecutorFactory> Future for MessagingTask<EF> {
+    type Output = ();
+
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        let this = self.get_mut();
+
+        while let Poll::Ready(Some(outcome)) = this.messaging.poll_next_unpin(cx) {
+            match outcome {
+                MessagingOutcome::Gather { msg_count, .. } => {
+                    info!(target: LOG_TARGET, %msg_count, "Collected messages from settlement chain.");
+                }
+
+                MessagingOutcome::Send { msg_count, .. } => {
+                    info!(target: LOG_TARGET, %msg_count, "Sent messages to the settlement chain.");
+                }
+            }
+        }
+
+        Poll::Pending
     }
 }

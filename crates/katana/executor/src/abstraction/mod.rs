@@ -9,7 +9,7 @@ use katana_primitives::receipt::Receipt;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
 use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::TxWithHash;
-use katana_primitives::FieldElement;
+use katana_primitives::Felt;
 use katana_provider::traits::contract::ContractClassProvider;
 use katana_provider::traits::state::StateProvider;
 use katana_provider::ProviderResult;
@@ -96,9 +96,9 @@ pub struct EntryPointCall {
     /// The address of the contract whose function you're calling.
     pub contract_address: ContractAddress,
     /// The input to the function.
-    pub calldata: Vec<FieldElement>,
+    pub calldata: Vec<Felt>,
     /// The contract function name.
-    pub entry_point_selector: FieldElement,
+    pub entry_point_selector: Felt,
 }
 
 #[allow(clippy::large_enum_variant)]

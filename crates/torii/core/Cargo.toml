@@ -12,37 +12,35 @@ version.workspace = true
 anyhow.workspace = true
 async-trait.workspace = true
 base64.workspace = true
+bitflags = "2.6.0"
 cainome.workspace = true
 chrono.workspace = true
 crypto-bigint.workspace = true
-dojo-types = { path = "../../dojo-types" }
-dojo-world = { path = "../../dojo-world", features = [ "contracts", "manifest" ] }
+dojo-types.workspace = true
+dojo-world = { workspace = true, features = [ "contracts", "manifest" ] }
 futures-channel = "0.3.0"
 futures-util.workspace = true
 hashlink.workspace = true
-hex.workspace = true
-lazy_static.workspace = true
-log.workspace = true
 num-traits.workspace = true
 once_cell.workspace = true
 reqwest.workspace = true
-scarb-ui.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 slab = "0.4.2"
-sozo-ops.workspace = true
 sqlx.workspace = true
-starknet.workspace = true
 starknet-crypto.workspace = true
+starknet.workspace = true
 thiserror.workspace = true
 tokio = { version = "1.32.0", features = [ "sync" ], default-features = true }
-tokio-stream = "0.1.11"
-tokio-util = "0.7.7"
+# tokio-stream = "0.1.11"
+tokio-util.workspace = true
+toml.workspace = true
 tracing.workspace = true
 
 [dev-dependencies]
 camino.workspace = true
-dojo-test-utils = { path = "../../dojo-test-utils" }
+dojo-test-utils.workspace = true
 dojo-utils.workspace = true
 katana-runner.workspace = true
 scarb.workspace = true
+tempfile.workspace = true

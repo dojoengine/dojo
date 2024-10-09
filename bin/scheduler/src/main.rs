@@ -14,7 +14,7 @@ use tokio::io::AsyncWriteExt;
 #[clap(author, version, about, long_about = None)]
 pub struct CliInput {
     #[arg(short, long)]
-    pub world: FieldElement,
+    pub world: Felt,
     #[arg(short, long)]
     pub key: String,
     pub files: Vec<std::path::PathBuf>,

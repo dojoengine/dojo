@@ -1,10 +1,14 @@
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
 
+mod exit;
+
+use std::future::IntoFuture;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Result;
+use dojo_metrics::prometheus_exporter::PrometheusHandle;
 use dojo_metrics::{metrics_process, prometheus_exporter, Report};
 use hyper::{Method, Uri};
 use jsonrpsee::server::middleware::proxy_get_request::ProxyGetRequestLayer;
@@ -18,31 +22,29 @@ use katana_core::env::BlockContextGenerator;
 #[allow(deprecated)]
 use katana_core::sequencer::SequencerConfig;
 use katana_core::service::block_producer::BlockProducer;
-#[cfg(feature = "messaging")]
-use katana_core::service::messaging::MessagingService;
-use katana_core::service::{NodeService, TransactionMiner};
+use katana_db::mdbx::DbEnv;
 use katana_executor::implementation::blockifier::BlockifierFactory;
 use katana_executor::{ExecutorFactory, SimulationFlag};
+use katana_pipeline::{stage, Pipeline};
 use katana_pool::ordering::FiFo;
 use katana_pool::validation::stateful::TxValidator;
-use katana_pool::{TransactionPool, TxPool};
+use katana_pool::TxPool;
 use katana_primitives::block::FinalityStatus;
 use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
 use katana_provider::providers::fork::ForkedProvider;
 use katana_provider::providers::in_memory::InMemoryProvider;
 use katana_rpc::config::ServerConfig;
 use katana_rpc::dev::DevApi;
-use katana_rpc::katana::KatanaApi;
 use katana_rpc::metrics::RpcServerMetrics;
 use katana_rpc::saya::SayaApi;
 use katana_rpc::starknet::StarknetApi;
 use katana_rpc::torii::ToriiApi;
 use katana_rpc_api::dev::DevApiServer;
-use katana_rpc_api::katana::KatanaApiServer;
 use katana_rpc_api::saya::SayaApiServer;
 use katana_rpc_api::starknet::{StarknetApiServer, StarknetTraceApiServer, StarknetWriteApiServer};
 use katana_rpc_api::torii::ToriiApiServer;
 use katana_rpc_api::ApiKind;
+use katana_tasks::TaskManager;
 use num_traits::ToPrimitive;
 use starknet::core::types::{BlockId, BlockStatus, MaybePendingBlockWithTxHashes};
 use starknet::core::utils::parse_cairo_short_string;
@@ -51,7 +53,103 @@ use starknet::providers::{JsonRpcClient, Provider};
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing::{info, trace};
 
-/// Build the core Katana components from the given configurations and start running the node.
+use crate::exit::NodeStoppedFuture;
+
+/// A handle to the launched node.
+#[allow(missing_debug_implementations)]
+pub struct LaunchedNode {
+    pub node: Node,
+    /// Handle to the rpc server.
+    pub rpc: RpcServer,
+}
+
+impl LaunchedNode {
+    /// Stops the node.
+    ///
+    /// This will instruct the node to stop and wait until it has actually stop.
+    pub async fn stop(&self) -> Result<()> {
+        // TODO: wait for the rpc server to stop instead of just stopping it.
+        self.rpc.handle.stop()?;
+        self.node.task_manager.shutdown().await;
+        Ok(())
+    }
+
+    /// Returns a future which resolves only when the node has stopped.
+    pub fn stopped(&self) -> NodeStoppedFuture<'_> {
+        NodeStoppedFuture::new(self)
+    }
+}
+
+/// A node instance.
+///
+/// The struct contains the handle to all the components of the node.
+#[must_use = "Node does nothing unless launched."]
+#[allow(missing_debug_implementations)]
+pub struct Node {
+    pub pool: TxPool,
+    pub db: Option<DbEnv>,
+    pub task_manager: TaskManager,
+    pub prometheus_handle: PrometheusHandle,
+    pub backend: Arc<Backend<BlockifierFactory>>,
+    pub block_producer: BlockProducer<BlockifierFactory>,
+    pub server_config: ServerConfig,
+    #[allow(deprecated)]
+    pub sequencer_config: SequencerConfig,
+}
+
+impl Node {
+    /// Start the node.
+    ///
+    /// This method will start all the node process, running them until the node is stopped.
+    pub async fn launch(self) -> Result<LaunchedNode> {
+        if let Some(addr) = self.server_config.metrics {
+            let mut reports = Vec::new();
+            if let Some(ref db) = self.db {
+                reports.push(Box::new(db.clone()) as Box<dyn Report>);
+            }
+
+            prometheus_exporter::serve(
+                addr,
+                self.prometheus_handle.clone(),
+                metrics_process::Collector::default(),
+                reports,
+            )
+            .await?;
+
+            info!(%addr, "Metrics endpoint started.");
+        }
+
+        let pool = self.pool.clone();
+        let backend = self.backend.clone();
+        let block_producer = self.block_producer.clone();
+        let validator = self.block_producer.validator().clone();
+
+        // --- build sequencing stage
+
+        #[allow(deprecated)]
+        let sequencing = stage::Sequencing::new(
+            pool.clone(),
+            backend.clone(),
+            self.task_manager.clone(),
+            block_producer.clone(),
+            self.sequencer_config.messaging.clone(),
+        );
+
+        // --- build and start the pipeline
+
+        let mut pipeline = Pipeline::new();
+        pipeline.add_stage(Box::new(sequencing));
+
+        self.task_manager.spawn(pipeline.into_future());
+
+        let node_components = (pool, backend, block_producer, validator);
+        let rpc = spawn(node_components, self.server_config.clone()).await?;
+
+        Ok(LaunchedNode { node: self, rpc })
+    }
+}
+
+/// Build the core Katana components from the given configurations.
 // TODO: placeholder until we implement a dedicated class that encapsulate building the node
 // components
 //
@@ -61,11 +159,15 @@ use tracing::{info, trace};
 //
 // NOTE: Don't rely on this function as it is mainly used as a placeholder for now.
 #[allow(deprecated)]
-pub async fn start(
+pub async fn build(
     server_config: ServerConfig,
     sequencer_config: SequencerConfig,
     mut starknet_config: StarknetConfig,
-) -> anyhow::Result<(NodeHandle, Arc<Backend<BlockifierFactory>>)> {
+) -> Result<Node> {
+    // Metrics recorder must be initialized before calling any of the metrics macros, in order
+    // for it to be registered.
+    let prometheus_handle = prometheus_exporter::install_recorder("katana")?;
+
     // --- build executor factory
 
     let cfg_env = CfgEnv {
@@ -154,7 +256,7 @@ pub async fn start(
         config: starknet_config,
     });
 
-    // --- build block producer service
+    // --- build block producer
 
     let block_producer = if sequencer_config.block_time.is_some() || sequencer_config.no_mining {
         if let Some(interval) = sequencer_config.block_time {
@@ -166,64 +268,30 @@ pub async fn start(
         BlockProducer::instant(Arc::clone(&backend))
     };
 
-    // --- build transaction pool and miner
+    // --- build transaction pool
 
     let validator = block_producer.validator();
     let pool = TxPool::new(validator.clone(), FiFo::new());
-    let miner = TransactionMiner::new(pool.add_listener());
 
-    // --- build metrics service
-
-    // Metrics recorder must be initialized before calling any of the metrics macros, in order for
-    // it to be registered.
-    if let Some(addr) = server_config.metrics {
-        let prometheus_handle = prometheus_exporter::install_recorder("katana")?;
-        let reports = db.map(|db| vec![Box::new(db) as Box<dyn Report>]).unwrap_or_default();
-
-        prometheus_exporter::serve(
-            addr,
-            prometheus_handle,
-            metrics_process::Collector::default(),
-            reports,
-        )
-        .await?;
-
-        info!(%addr, "Metrics endpoint started.");
-    }
-
-    // --- build messaging service
-
-    #[cfg(feature = "messaging")]
-    let messaging = if let Some(config) = sequencer_config.messaging.clone() {
-        MessagingService::new(config, pool.clone(), Arc::clone(&backend)).await.ok()
-    } else {
-        None
+    let node = Node {
+        db,
+        pool,
+        backend,
+        server_config,
+        block_producer,
+        sequencer_config,
+        prometheus_handle,
+        task_manager: TaskManager::current(),
     };
 
-    let block_producer = Arc::new(block_producer);
-
-    // TODO: avoid dangling task, or at least store the handle to the NodeService
-    tokio::spawn(NodeService::new(
-        pool.clone(),
-        miner,
-        block_producer.clone(),
-        #[cfg(feature = "messaging")]
-        messaging,
-    ));
-
-    // --- spawn rpc server
-
-    let node_components = (pool, backend.clone(), block_producer, validator);
-    let rpc_handle = spawn(node_components, server_config).await?;
-
-    Ok((rpc_handle, backend))
+    Ok(node)
 }
 
 // Moved from `katana_rpc` crate
 pub async fn spawn<EF: ExecutorFactory>(
-    node_components: (TxPool, Arc<Backend<EF>>, Arc<BlockProducer<EF>>, TxValidator),
+    node_components: (TxPool, Arc<Backend<EF>>, BlockProducer<EF>, TxValidator),
     config: ServerConfig,
-) -> Result<NodeHandle> {
+) -> Result<RpcServer> {
     let (pool, backend, block_producer, validator) = node_components;
 
     let mut methods = RpcModule::new(());
@@ -242,9 +310,6 @@ pub async fn spawn<EF: ExecutorFactory>(
                 methods.merge(StarknetApiServer::into_rpc(server.clone()))?;
                 methods.merge(StarknetWriteApiServer::into_rpc(server.clone()))?;
                 methods.merge(StarknetTraceApiServer::into_rpc(server))?;
-            }
-            ApiKind::Katana => {
-                methods.merge(KatanaApi::new(backend.clone()).into_rpc())?;
             }
             ApiKind::Dev => {
                 methods.merge(DevApi::new(backend.clone(), block_producer.clone()).into_rpc())?;
@@ -296,12 +361,11 @@ pub async fn spawn<EF: ExecutorFactory>(
     let addr = server.local_addr()?;
     let handle = server.start(methods)?;
 
-    Ok(NodeHandle { config, handle, addr })
+    Ok(RpcServer { handle, addr })
 }
 
-#[derive(Debug, Clone)]
-pub struct NodeHandle {
+#[derive(Debug)]
+pub struct RpcServer {
     pub addr: SocketAddr,
-    pub config: ServerConfig,
     pub handle: ServerHandle,
 }

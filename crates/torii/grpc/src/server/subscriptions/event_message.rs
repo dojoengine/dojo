@@ -8,22 +8,18 @@ use std::task::{Context, Poll};
 use futures::Stream;
 use futures_util::StreamExt;
 use rand::Rng;
-use sqlx::{Pool, Sqlite};
 use starknet::core::types::Felt;
 use tokio::sync::mpsc::{channel, Receiver};
 use tokio::sync::RwLock;
-use torii_core::cache::ModelCache;
 use torii_core::error::{Error, ParseError};
-use torii_core::model::build_sql_query;
 use torii_core::simple_broker::SimpleBroker;
 use torii_core::sql::FELT_DELIMITER;
-use torii_core::types::EventMessage;
+use torii_core::types::OptimisticEventMessage;
 use tracing::{error, trace};
 
 use super::entity::EntitiesSubscriber;
 use crate::proto;
 use crate::proto::world::SubscribeEntityResponse;
-use crate::server::map_row_to_entity;
 use crate::types::{EntityKeysClause, PatternMatching};
 
 pub(crate) const LOG_TARGET: &str = "torii::grpc::server::subscriptions::event_message";
@@ -75,31 +71,21 @@ impl EventMessageManager {
 #[must_use = "Service does nothing unless polled"]
 #[allow(missing_debug_implementations)]
 pub struct Service {
-    pool: Pool<Sqlite>,
     subs_manager: Arc<EventMessageManager>,
-    model_cache: Arc<ModelCache>,
-    simple_broker: Pin<Box<dyn Stream<Item = EventMessage> + Send>>,
+    simple_broker: Pin<Box<dyn Stream<Item = OptimisticEventMessage> + Send>>,
 }
 
 impl Service {
-    pub fn new(
-        pool: Pool<Sqlite>,
-        subs_manager: Arc<EventMessageManager>,
-        model_cache: Arc<ModelCache>,
-    ) -> Self {
+    pub fn new(subs_manager: Arc<EventMessageManager>) -> Self {
         Self {
-            pool,
             subs_manager,
-            model_cache,
-            simple_broker: Box::pin(SimpleBroker::<EventMessage>::subscribe()),
+            simple_broker: Box::pin(SimpleBroker::<OptimisticEventMessage>::subscribe()),
         }
     }
 
     async fn publish_updates(
         subs: Arc<EventMessageManager>,
-        cache: Arc<ModelCache>,
-        pool: Pool<Sqlite>,
-        entity: &EventMessage,
+        entity: &OptimisticEventMessage,
     ) -> Result<(), Error> {
         let mut closed_stream = Vec::new();
         let hashed = Felt::from_str(&entity.id).map_err(ParseError::FromStr)?;
@@ -182,42 +168,13 @@ impl Service {
                 continue;
             }
 
-            // publish all updates if ids is empty or only ids that are subscribed to
-            let models_query = r#"
-                    SELECT group_concat(event_model.model_id) as model_ids
-                    FROM event_messages
-                    JOIN event_model ON event_messages.id = event_model.entity_id
-                    WHERE event_messages.id = ?
-                    GROUP BY event_messages.id
-                "#;
-            let (model_ids,): (String,) =
-                sqlx::query_as(models_query).bind(&entity.id).fetch_one(&pool).await?;
-            let model_ids: Vec<Felt> = model_ids
-                .split(',')
-                .map(Felt::from_str)
-                .collect::<Result<_, _>>()
-                .map_err(ParseError::FromStr)?;
-            let schemas = cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect();
-
-            let (entity_query, arrays_queries, _) = build_sql_query(
-                &schemas,
-                "event_messages",
-                "event_message_id",
-                Some("event_messages.id = ?"),
-                Some("event_messages.id = ?"),
-                None,
-                None,
-            )?;
-
-            let row = sqlx::query(&entity_query).bind(&entity.id).fetch_one(&pool).await?;
-            let mut arrays_rows = HashMap::new();
-            for (name, query) in arrays_queries {
-                let rows = sqlx::query(&query).bind(&entity.id).fetch_all(&pool).await?;
-                arrays_rows.insert(name, rows);
-            }
-
+            // This should NEVER be None
+            let model = entity.updated_model.as_ref().unwrap().as_struct().unwrap().clone();
             let resp = proto::world::SubscribeEntityResponse {
-                entity: Some(map_row_to_entity(&row, &arrays_rows, schemas.clone())?),
+                entity: Some(proto::types::Entity {
+                    hashed_keys: hashed.to_bytes_be().to_vec(),
+                    models: vec![model.into()],
+                }),
                 subscription_id: *idx,
             };
 
@@ -243,10 +200,8 @@ impl Future for Service {
 
         while let Poll::Ready(Some(entity)) = pin.simple_broker.poll_next_unpin(cx) {
             let subs = Arc::clone(&pin.subs_manager);
-            let cache = Arc::clone(&pin.model_cache);
-            let pool = pin.pool.clone();
             tokio::spawn(async move {
-                if let Err(e) = Service::publish_updates(subs, cache, pool, &entity).await {
+                if let Err(e) = Service::publish_updates(subs, &entity).await {
                     error!(target = LOG_TARGET, error = %e, "Publishing entity update.");
                 }
             });

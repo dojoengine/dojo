@@ -13,6 +13,7 @@ use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::signers::SigningKey;
 use starknet_account::StarknetAccountOptions;
 use tracing::Subscriber;
+use tracing_log::LogTracer;
 use tracing_subscriber::{fmt, EnvFilter};
 use url::Url;
 
@@ -83,7 +84,9 @@ pub struct SayaArgs {
 
 impl SayaArgs {
     pub fn init_logging(&self) -> Result<(), Box<dyn std::error::Error>> {
-        const DEFAULT_LOG_FILTER: &str = "info,saya::core=trace,blockchain=trace,provider=trace";
+        const DEFAULT_LOG_FILTER: &str = "info,saya::core=trace,blockchain=off,provider=off";
+
+        LogTracer::init()?;
 
         let builder = fmt::Subscriber::builder().with_env_filter(
             EnvFilter::try_from_default_env().or(EnvFilter::try_new(DEFAULT_LOG_FILTER))?,

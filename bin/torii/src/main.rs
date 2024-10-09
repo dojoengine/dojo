@@ -10,35 +10,36 @@
 //!   documentation for usage details. This is **not recommended on Windows**. See [here](https://rust-lang.github.io/rfcs/1974-global-allocators.html#jemalloc)
 //!   for more info.
 
+use std::cmp;
+use std::collections::VecDeque;
 use std::net::SocketAddr;
+use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 
+use anyhow::Context;
 use clap::{ArgAction, Parser};
 use dojo_metrics::{metrics_process, prometheus_exporter};
 use dojo_utils::parse::{parse_socket_address, parse_url};
 use dojo_world::contracts::world::WorldContractReader;
-use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+use sqlx::sqlite::{
+    SqliteAutoVacuum, SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous,
+};
 use sqlx::SqlitePool;
 use starknet::core::types::Felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
+use tempfile::NamedTempFile;
 use tokio::sync::broadcast;
 use tokio::sync::broadcast::Sender;
 use tokio_stream::StreamExt;
-use torii_core::engine::{Engine, EngineConfig, Processors};
-use torii_core::processors::event_message::EventMessageProcessor;
-use torii_core::processors::metadata_update::MetadataUpdateProcessor;
-use torii_core::processors::register_model::RegisterModelProcessor;
-use torii_core::processors::store_del_record::StoreDelRecordProcessor;
-use torii_core::processors::store_set_record::StoreSetRecordProcessor;
+use torii_core::engine::{Engine, EngineConfig, IndexingFlags, Processors};
+use torii_core::executor::Executor;
 use torii_core::processors::store_transaction::StoreTransactionProcessor;
-use torii_core::processors::store_update_member::StoreUpdateMemberProcessor;
-use torii_core::processors::store_update_record::StoreUpdateRecordProcessor;
 use torii_core::simple_broker::SimpleBroker;
 use torii_core::sql::Sql;
-use torii_core::types::Model;
+use torii_core::types::{Contract, ContractType, Model, ToriiConfig};
 use torii_server::proxy::Proxy;
 use tracing::{error, info};
 use tracing_subscriber::{fmt, EnvFilter};
@@ -52,7 +53,7 @@ pub(crate) const LOG_TARGET: &str = "torii::cli";
 struct Args {
     /// The world to index
     #[arg(short, long = "world", env = "DOJO_WORLD_ADDRESS")]
-    world_address: Felt,
+    world_address: Option<Felt>,
 
     /// The sequencer rpc endpoint to index.
     #[arg(long, value_name = "URL", default_value = ":5050", value_parser = parse_url)]
@@ -60,12 +61,8 @@ struct Args {
 
     /// Database filepath (ex: indexer.db). If specified file doesn't exist, it will be
     /// created. Defaults to in-memory database
-    #[arg(short, long, default_value = ":memory:")]
+    #[arg(short, long, default_value = "")]
     database: String,
-
-    /// Specify a block to start indexing from, ignored if stored head exists
-    #[arg(short, long, default_value = "0")]
-    start_block: u64,
 
     /// Address to serve api endpoints at.
     #[arg(long, value_name = "SOCKET", default_value = "0.0.0.0:8080", value_parser = parse_socket_address)]
@@ -124,11 +121,47 @@ struct Args {
     /// Polling interval in ms
     #[arg(long, default_value = "500")]
     polling_interval: u64,
+
+    /// Max concurrent tasks
+    #[arg(long, default_value = "100")]
+    max_concurrent_tasks: usize,
+
+    /// Whether or not to index world transactions
+    #[arg(long, action = ArgAction::Set, default_value_t = false)]
+    index_transactions: bool,
+
+    /// Whether or not to index raw events
+    #[arg(long, action = ArgAction::Set, default_value_t = true)]
+    index_raw_events: bool,
+
+    /// ERC contract addresses to index
+    #[arg(long, value_parser = parse_erc_contracts)]
+    #[arg(conflicts_with = "config")]
+    contracts: Option<std::vec::Vec<Contract>>,
+
+    /// Configuration file
+    #[arg(long)]
+    config: Option<PathBuf>,
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
+
+    let mut config = if let Some(path) = args.config {
+        ToriiConfig::load_from_path(&path)?
+    } else {
+        let mut config = ToriiConfig::default();
+
+        if let Some(contracts) = args.contracts {
+            config.contracts = VecDeque::from(contracts);
+        }
+
+        config
+    };
+
+    let world_address = verify_single_world_address(args.world_address, &mut config)?;
+
     let filter_layer = EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| EnvFilter::new("info,hyper_reverse_proxy=off"));
 
@@ -147,71 +180,79 @@ async fn main() -> anyhow::Result<()> {
     })
     .expect("Error setting Ctrl-C handler");
 
-    let database_url = format!("sqlite:{}", &args.database);
-    let options =
-        SqliteConnectOptions::from_str(&database_url)?.create_if_missing(true).with_regexp();
-    let pool = SqlitePoolOptions::new()
-        .min_connections(1)
-        .max_connections(5)
-        .connect_with(options)
-        .await?;
+    let tempfile = NamedTempFile::new()?;
+    let database_path =
+        if args.database.is_empty() { tempfile.path().to_str().unwrap() } else { &args.database };
 
-    if args.database == ":memory:" {
-        // Disable auto-vacuum
-        sqlx::query("PRAGMA auto_vacuum = NONE;").execute(&pool).await?;
+    let mut options =
+        SqliteConnectOptions::from_str(database_path)?.create_if_missing(true).with_regexp();
 
-        // Switch DELETE journal mode
-        sqlx::query("PRAGMA journal_mode=DELETE;").execute(&pool).await?;
-    }
+    // Performance settings
+    options = options.auto_vacuum(SqliteAutoVacuum::None);
+    options = options.journal_mode(SqliteJournalMode::Wal);
+    options = options.synchronous(SqliteSynchronous::Normal);
+
+    let pool = SqlitePoolOptions::new().min_connections(1).connect_with(options).await?;
+
+    // Set the number of threads based on CPU count
+    let cpu_count = std::thread::available_parallelism().unwrap().get();
+    let thread_count = cmp::min(cpu_count, 8);
+    sqlx::query(&format!("PRAGMA threads = {};", thread_count)).execute(&pool).await?;
 
     sqlx::migrate!("../../crates/torii/migrations").run(&pool).await?;
 
     let provider: Arc<_> = JsonRpcClient::new(HttpTransport::new(args.rpc)).into();
 
     // Get world address
-    let world = WorldContractReader::new(args.world_address, &provider);
+    let world = WorldContractReader::new(world_address, provider.clone());
 
-    let db = Sql::new(pool.clone(), args.world_address).await?;
+    let contracts =
+        config.contracts.iter().map(|contract| (contract.address, contract.r#type)).collect();
+
+    let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx.clone()).await?;
+    tokio::spawn(async move {
+        executor.run().await.unwrap();
+    });
+
+    let db = Sql::new(pool.clone(), sender.clone(), &contracts).await?;
+
     let processors = Processors {
-        event: vec![
-            Box::new(RegisterModelProcessor),
-            Box::new(StoreSetRecordProcessor),
-            Box::new(MetadataUpdateProcessor),
-            Box::new(StoreDelRecordProcessor),
-            Box::new(EventMessageProcessor),
-            Box::new(StoreUpdateRecordProcessor),
-            Box::new(StoreUpdateMemberProcessor),
-        ],
         transaction: vec![Box::new(StoreTransactionProcessor)],
         ..Processors::default()
     };
 
     let (block_tx, block_rx) = tokio::sync::mpsc::channel(100);
 
-    let mut engine = Engine::new(
+    let mut flags = IndexingFlags::empty();
+    if args.index_transactions {
+        flags.insert(IndexingFlags::TRANSACTIONS);
+    }
+    if args.index_raw_events {
+        flags.insert(IndexingFlags::RAW_EVENTS);
+    }
+
+    let mut engine: Engine<Arc<JsonRpcClient<HttpTransport>>> = Engine::new(
         world,
         db.clone(),
-        &provider,
+        provider.clone(),
         processors,
         EngineConfig {
-            start_block: args.start_block,
+            max_concurrent_tasks: args.max_concurrent_tasks,
+            start_block: 0,
             events_chunk_size: args.events_chunk_size,
             index_pending: args.index_pending,
             polling_interval: Duration::from_millis(args.polling_interval),
+            flags,
         },
         shutdown_tx.clone(),
         Some(block_tx),
+        Arc::new(contracts),
     );
 
     let shutdown_rx = shutdown_tx.subscribe();
-    let (grpc_addr, grpc_server) = torii_grpc::server::new(
-        shutdown_rx,
-        &pool,
-        block_rx,
-        args.world_address,
-        Arc::clone(&provider),
-    )
-    .await?;
+    let (grpc_addr, grpc_server) =
+        torii_grpc::server::new(shutdown_rx, &pool, block_rx, world_address, Arc::clone(&provider))
+            .await?;
 
     let mut libp2p_relay_server = torii_relay::server::Relay::new(
         db,
@@ -263,14 +304,35 @@ async fn main() -> anyhow::Result<()> {
     }
 
     tokio::select! {
-        _ = engine.start() => {},
+        res = engine.start() => res?,
         _ = proxy_server.start(shutdown_tx.subscribe()) => {},
         _ = graphql_server => {},
         _ = grpc_server => {},
         _ = libp2p_relay_server.run() => {},
+        _ = dojo_utils::signal::wait_signals() => {},
     };
 
     Ok(())
+}
+
+// Verifies that the world address is defined at most once
+// and returns the world address
+fn verify_single_world_address(
+    world_address: Option<Felt>,
+    config: &mut ToriiConfig,
+) -> anyhow::Result<Felt> {
+    let world_from_config =
+        config.contracts.iter().find(|c| c.r#type == ContractType::WORLD).map(|c| c.address);
+
+    match (world_address, world_from_config) {
+        (Some(_), Some(_)) => Err(anyhow::anyhow!("World address specified multiple times")),
+        (Some(addr), _) => {
+            config.contracts.push_front(Contract { address: addr, r#type: ContractType::WORLD });
+            Ok(addr)
+        }
+        (_, Some(addr)) => Ok(addr),
+        (None, None) => Err(anyhow::anyhow!("World address not specified")),
+    }
 }
 
 async fn spawn_rebuilding_graphql_server(
@@ -295,4 +357,30 @@ async fn spawn_rebuilding_graphql_server(
             break;
         }
     }
+}
+
+// Parses clap cli argument which is expected to be in the format:
+// - erc_type:address:start_block
+// - address:start_block (erc_type defaults to ERC20)
+fn parse_erc_contracts(s: &str) -> anyhow::Result<Vec<Contract>> {
+    let parts: Vec<&str> = s.split(',').collect();
+    let mut contracts = Vec::new();
+    for part in parts {
+        match part.split(':').collect::<Vec<&str>>().as_slice() {
+            [r#type, address] => {
+                let r#type = r#type.parse::<ContractType>()?;
+                let address = Felt::from_str(address)
+                    .with_context(|| format!("Expected address, found {}", address))?;
+                contracts.push(Contract { address, r#type });
+            }
+            [address] => {
+                let r#type = ContractType::WORLD;
+                let address = Felt::from_str(address)
+                    .with_context(|| format!("Expected address, found {}", address))?;
+                contracts.push(Contract { address, r#type });
+            }
+            _ => return Err(anyhow::anyhow!("Invalid contract format")),
+        }
+    }
+    Ok(contracts)
 }

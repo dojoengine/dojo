@@ -11,7 +11,7 @@ pub struct ProofOptions {
 
     #[arg(help = "The address of the Fact Registry contract.")]
     #[arg(long = "registry")]
-    pub fact_registry_address: FieldElement,
+    pub fact_registry_address: Felt,
 
     #[arg(long)]
     #[arg(value_name = "PROVER URL")]

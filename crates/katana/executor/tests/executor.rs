@@ -1,6 +1,6 @@
 mod fixtures;
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use fixtures::{state_provider, valid_blocks};
 use katana_executor::{ExecutionOutput, ExecutionResult, ExecutorFactory};
@@ -11,7 +11,7 @@ use katana_primitives::genesis::constant::{
     DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH, DEFAULT_PREFUNDED_ACCOUNT_BALANCE, DEFAULT_UDC_ADDRESS,
 };
 use katana_primitives::transaction::TxWithHash;
-use katana_primitives::FieldElement;
+use katana_primitives::{address, Felt};
 use katana_provider::traits::state::StateProvider;
 use starknet::core::utils::{
     get_storage_var_address, get_udc_deployed_address, UdcUniqueSettings, UdcUniqueness,
@@ -26,11 +26,10 @@ fn test_executor_with_valid_blocks_impl<EF: ExecutorFactory>(
     let cfg_env = factory.cfg();
 
     // the contract address of the main account used to send most of the transactions
-    let main_account: ContractAddress =
-        felt!("0x6b86e40118f29ebe393a75469b4d926c7a44c2e2681b6d319520b7c1156d114").into();
+    let main_account =
+        address!("0x6b86e40118f29ebe393a75469b4d926c7a44c2e2681b6d319520b7c1156d114");
     // the contract address of the account deployed using the `DeployAccount` tx
-    let new_acc: ContractAddress =
-        felt!("0x3ddfa445a70b927497249f94ff7431fc2e2abc761a34417fd4891beb7c2db85").into();
+    let new_acc = address!("0x3ddfa445a70b927497249f94ff7431fc2e2abc761a34417fd4891beb7c2db85");
 
     let mut executor = factory.with_state(state);
     let mut expected_txs: Vec<TxWithHash> = Vec::with_capacity(3);
@@ -89,7 +88,7 @@ fn test_executor_with_valid_blocks_impl<EF: ExecutorFactory>(
         .expect("storage should exist");
 
     assert!(
-        updated_main_acc_balance < FieldElement::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE),
+        updated_main_acc_balance < Felt::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE),
         "sender balance should decrease"
     );
     assert_eq!(actual_new_acc_balance, felt!("0x9999999999999999"), "account balance is updated");
@@ -223,7 +222,7 @@ fn test_executor_with_valid_blocks_impl<EF: ExecutorFactory>(
     let actual_storage_value_4_1 = state_provider
         .storage(
             deployed_contract.into(),
-            get_storage_var_address("ERC20_total_supply", &[]).unwrap() + FieldElement::ONE,
+            get_storage_var_address("ERC20_total_supply", &[]).unwrap() + Felt::ONE,
         )
         .unwrap();
     let actual_storage_value_5 = state_provider
@@ -283,16 +282,17 @@ fn test_executor_with_valid_blocks_impl<EF: ExecutorFactory>(
     assert_eq!(actual_txs, expected_txs);
 
     let actual_nonce_updates = states.state_updates.nonce_updates;
-    let expected_nonce_updates = HashMap::from([(main_account, felt!("3")), (new_acc, felt!("1"))]);
+    let expected_nonce_updates =
+        BTreeMap::from([(main_account, felt!("3")), (new_acc, felt!("1"))]);
 
     let actual_declared_classes = states.state_updates.declared_classes;
-    let expected_declared_classes = HashMap::from([(
+    let expected_declared_classes = BTreeMap::from([(
         felt!("0x420"),
         felt!("0x016c6081eb34ad1e0c5513234ed0c025b3c7f305902d291bad534cd6474c85bc"),
     )]);
 
-    let actual_contract_deployed = states.state_updates.contract_updates;
-    let expected_contract_deployed = HashMap::from([
+    let actual_contract_deployed = states.state_updates.deployed_contracts;
+    let expected_contract_deployed = BTreeMap::from([
         (new_acc, DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH),
         (deployed_contract.into(), DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH),
     ]);

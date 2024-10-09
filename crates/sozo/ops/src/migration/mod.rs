@@ -10,8 +10,10 @@ use dojo_world::metadata::get_default_namespace_from_ws;
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{DeployOutput, UpgradeOutput};
 use scarb::core::Workspace;
-use starknet::accounts::{Call, ConnectedAccount, ExecutionEncoding, SingleOwnerAccount};
-use starknet::core::types::{BlockId, BlockTag, Felt, InvokeTransactionResult};
+#[cfg(feature = "walnut")]
+use sozo_walnut::WalnutDebugger;
+use starknet::accounts::{ConnectedAccount, ExecutionEncoding, SingleOwnerAccount};
+use starknet::core::types::{BlockId, BlockTag, Call, Felt, InvokeTransactionResult};
 use starknet::core::utils::{cairo_short_string_to_felt, get_contract_address};
 use starknet::macros::selector;
 use starknet::providers::jsonrpc::HttpTransport;
@@ -64,7 +66,7 @@ async fn get_declarers_accounts<A: ConnectedAccount>(
         .post(rpc_url)
         .json(&serde_json::json!({
             "jsonrpc": "2.0",
-            "method": "katana_predeployedAccounts",
+            "method": "dev_predeployedAccounts",
             "params": [],
             "id": 1
         }))
@@ -134,6 +136,10 @@ where
     A::SignError: 'static,
 {
     let ui = ws.config().ui();
+
+    #[cfg(feature = "walnut")]
+    let walnut_debugger =
+        WalnutDebugger::new_from_flag(txn_config.walnut, Url::parse(&rpc_url).unwrap());
 
     // its path to a file so `parent` should never return `None`
     let root_dir = ws.manifest_path().parent().unwrap().to_path_buf();
@@ -216,6 +222,11 @@ where
 
         Ok(None)
     } else {
+        #[cfg(feature = "walnut")]
+        if txn_config.walnut {
+            WalnutDebugger::check_api_key()?;
+        }
+
         let declarers = get_declarers_accounts(&account, &rpc_url).await?;
 
         let declarers_len = if declarers.is_empty() { 1 } else { declarers.len() };
@@ -269,7 +280,18 @@ where
         )
         .await?;
 
-        match auto_authorize(ws, &world, &txn_config, &default_namespace, &grant, &revoke).await {
+        match auto_authorize(
+            ws,
+            &world,
+            &txn_config,
+            &default_namespace,
+            &grant,
+            &revoke,
+            #[cfg(feature = "walnut")]
+            &walnut_debugger,
+        )
+        .await
+        {
             Ok(()) => {
                 ui.print_sub("Auto authorize completed successfully");
             }
@@ -354,6 +376,11 @@ where
             } else {
                 ui.print_sub("No contracts to initialize");
             }
+        }
+
+        #[cfg(feature = "walnut")]
+        if let Some(walnut_debugger) = &walnut_debugger {
+            walnut_debugger.verify_migration_strategy(ws, &strategy).await?;
         }
 
         if let Some(migration_output) = &migration_output {

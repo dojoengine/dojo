@@ -10,12 +10,35 @@ use crate::utils::transaction::{
     compute_deploy_account_v1_tx_hash, compute_deploy_account_v3_tx_hash,
     compute_invoke_v1_tx_hash, compute_l1_handler_tx_hash,
 };
-use crate::{utils, FieldElement};
+use crate::{utils, Felt};
 
 /// The hash of a transaction.
-pub type TxHash = FieldElement;
+pub type TxHash = Felt;
 /// The sequential number for all the transactions.
 pub type TxNumber = u64;
+
+/// The transaction types as defined by the [Starknet API].
+///
+/// [Starknet API]: https://github.com/starkware-libs/starknet-specs/blob/b5c43955b1868b8e19af6d1736178e02ec84e678/api/starknet_api_openrpc.json
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum TxType {
+    /// Invokes a function of a contract.
+    #[default]
+    Invoke,
+
+    /// Declares new contract class.
+    Declare,
+
+    /// Deploys new account contracts.
+    DeployAccount,
+
+    /// Function invocation that is instantiated from the L1.
+    ///
+    /// It is only used internally for handling messages sent from L1. Therefore, it is not a
+    /// transaction that can be broadcasted like the other transaction types.
+    L1Handler,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -61,6 +84,15 @@ impl ExecutableTx {
             ExecutableTx::L1Handler(tx) => TxRef::L1Handler(tx),
             ExecutableTx::Declare(tx) => TxRef::Declare(tx),
             ExecutableTx::DeployAccount(tx) => TxRef::DeployAccount(tx),
+        }
+    }
+
+    pub fn r#type(&self) -> TxType {
+        match self {
+            ExecutableTx::Invoke(_) => TxType::Invoke,
+            ExecutableTx::Declare(_) => TxType::Declare,
+            ExecutableTx::L1Handler(_) => TxType::L1Handler,
+            ExecutableTx::DeployAccount(_) => TxType::DeployAccount,
         }
     }
 }
@@ -139,9 +171,9 @@ pub struct InvokeTxV1 {
     /// sender.
     pub nonce: Nonce,
     /// The data used as the input to the execute entry point of sender account contract.
-    pub calldata: Vec<FieldElement>,
+    pub calldata: Vec<Felt>,
     /// The transaction signature associated with the sender address.
-    pub signature: Vec<FieldElement>,
+    pub signature: Vec<Felt>,
     /// The max fee that the sender is willing to pay for the transaction.
     pub max_fee: u128,
 }
@@ -157,24 +189,24 @@ pub struct InvokeTxV3 {
     pub sender_address: ContractAddress,
     /// The nonce value of the account. Corresponds to the number of transactions initiated by
     /// sender.
-    pub nonce: FieldElement,
+    pub nonce: Felt,
     /// The data used as the input to the execute entry point of sender account contract.
-    pub calldata: Vec<FieldElement>,
+    pub calldata: Vec<Felt>,
     /// The transaction signature associated with the sender address.
-    pub signature: Vec<FieldElement>,
+    pub signature: Vec<Felt>,
     /// Resource bounds for the transaction execution.
     pub resource_bounds: ResourceBoundsMapping,
     /// The tip for the transaction.
     pub tip: u64,
     /// Data needed to allow the paymaster to pay for the transaction in native tokens.
-    pub paymaster_data: Vec<FieldElement>,
+    pub paymaster_data: Vec<Felt>,
     /// Data needed to deploy the account contract from which this tx will be initiated. This field
     /// is used when the transaction is initiated from a address that is not yet deployed. The
     /// account contract will be deployed first before the function invocation is executed.
     ///
     /// The list contains the class_hash, salt, and the calldata needed for the constructor for
     /// account deployment.
-    pub account_deployment_data: Vec<FieldElement>,
+    pub account_deployment_data: Vec<Felt>,
     /// The storage domain of the account's nonce (an account has a nonce per da mode)
     pub nonce_data_availability_mode: DataAvailabilityMode,
     /// The storage domain of the account's balance from which fee will be charged
@@ -242,9 +274,9 @@ pub struct DeclareTxV1 {
     pub sender_address: ContractAddress,
     /// The nonce value of the account. Corresponds to the number of transactions initiated by
     /// sender.
-    pub nonce: FieldElement,
+    pub nonce: Felt,
     /// The transaction signature associated with the sender address.
-    pub signature: Vec<FieldElement>,
+    pub signature: Vec<Felt>,
     /// The class hash of the contract class to be declared.
     pub class_hash: ClassHash,
     /// The max fee that the sender is willing to pay for the transaction.
@@ -263,9 +295,9 @@ pub struct DeclareTxV2 {
     pub sender_address: ContractAddress,
     /// The nonce value of the account. Corresponds to the number of transactions initiated by
     /// sender.
-    pub nonce: FieldElement,
+    pub nonce: Felt,
     /// The transaction signature associated with the sender address.
-    pub signature: Vec<FieldElement>,
+    pub signature: Vec<Felt>,
     /// The class hash of the contract class to be declared.
     pub class_hash: ClassHash,
     /// The compiled class hash of the contract class (only if it's a Sierra class).
@@ -286,9 +318,9 @@ pub struct DeclareTxV3 {
     pub sender_address: ContractAddress,
     /// The nonce value of the account. Corresponds to the number of transactions initiated by
     /// sender.
-    pub nonce: FieldElement,
+    pub nonce: Felt,
     /// The transaction signature associated with the sender address.
-    pub signature: Vec<FieldElement>,
+    pub signature: Vec<Felt>,
     /// The class hash of the contract class to be declared.
     pub class_hash: ClassHash,
     /// The CASM class hash of the Sierra contract class.
@@ -298,9 +330,9 @@ pub struct DeclareTxV3 {
     /// The tip for the transaction
     pub tip: u64,
     /// Data needed to allow the paymaster to pay for the transaction in native tokens
-    pub paymaster_data: Vec<FieldElement>,
+    pub paymaster_data: Vec<Felt>,
     /// Data needed to deploy the account contract from which this tx will be initiated
-    pub account_deployment_data: Vec<FieldElement>,
+    pub account_deployment_data: Vec<Felt>,
     /// The storage domain of the account's nonce (an account has a nonce per da mode)
     pub nonce_data_availability_mode: DataAvailabilityMode,
     /// The storage domain of the account's balance from which fee will be charged
@@ -360,15 +392,15 @@ pub struct L1HandlerTx {
     /// Amount of fee paid on L1.
     pub paid_fee_on_l1: u128,
     /// Transaction version.
-    pub version: FieldElement,
+    pub version: Felt,
     /// L1 to L2 message hash.
     pub message_hash: B256,
     /// The input to the L1 handler function.
-    pub calldata: Vec<FieldElement>,
+    pub calldata: Vec<Felt>,
     /// Contract address of the L1 handler.
     pub contract_address: ContractAddress,
     /// The L1 handler function selector.
-    pub entry_point_selector: FieldElement,
+    pub entry_point_selector: Felt,
 }
 
 impl L1HandlerTx {
@@ -412,15 +444,15 @@ pub struct DeployAccountTxV1 {
     /// sender.
     pub nonce: Nonce,
     /// The transaction signature associated with the sender address.
-    pub signature: Vec<FieldElement>,
+    pub signature: Vec<Felt>,
     /// The hash of the contract class from which the account contract will be deployed from.
     pub class_hash: ClassHash,
     /// The contract address of the account contract that will be deployed.
     pub contract_address: ContractAddress,
     /// The salt used to generate the contract address.
-    pub contract_address_salt: FieldElement,
+    pub contract_address_salt: Felt,
     /// The input data to the constructor function of the contract class.
-    pub constructor_calldata: Vec<FieldElement>,
+    pub constructor_calldata: Vec<Felt>,
     /// The max fee that the sender is willing to pay for the transaction.
     pub max_fee: u128,
 }
@@ -436,21 +468,21 @@ pub struct DeployAccountTxV3 {
     /// sender.
     pub nonce: Nonce,
     /// The transaction signature associated with the sender address.
-    pub signature: Vec<FieldElement>,
+    pub signature: Vec<Felt>,
     /// The hash of the contract class from which the account contract will be deployed from.
     pub class_hash: ClassHash,
     /// The contract address of the account contract that will be deployed.
     pub contract_address: ContractAddress,
     /// The salt used to generate the contract address.
-    pub contract_address_salt: FieldElement,
+    pub contract_address_salt: Felt,
     /// The input data to the constructor function of the contract class.
-    pub constructor_calldata: Vec<FieldElement>,
+    pub constructor_calldata: Vec<Felt>,
     /// Resource bounds for the transaction execution
     pub resource_bounds: ResourceBoundsMapping,
     /// The tip for the transaction
     pub tip: u64,
     /// Data needed to allow the paymaster to pay for the transaction in native tokens
-    pub paymaster_data: Vec<FieldElement>,
+    pub paymaster_data: Vec<Felt>,
     /// The storage domain of the account's nonce (an account has a nonce per da mode)
     pub nonce_data_availability_mode: DataAvailabilityMode,
     /// The storage domain of the account's balance from which fee will be charged

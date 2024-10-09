@@ -4,7 +4,7 @@ use dojo_test_utils::migration::copy_spawn_and_move_db;
 use dojo_utils::TxnConfig;
 use dojo_world::contracts::naming::compute_selector_from_tag;
 use dojo_world::contracts::world::WorldContract;
-use katana_runner::{KatanaRunner, KatanaRunnerConfig};
+use katana_runner::RunnerCtx;
 use scarb_ui::{OutputFormat, Ui, Verbosity};
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::types::Felt;
@@ -49,13 +49,9 @@ fn get_resource_owners(owner: Felt) -> [ResourceOwner; 2] {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn auth_grant_writer_ok() {
-    let config = KatanaRunnerConfig { n_accounts: 10, ..Default::default() }
-        .with_db_dir(copy_spawn_and_move_db().as_str());
-
-    let sequencer = KatanaRunner::new_with_config(config).expect("Failed to start runner.");
-
-    let world = setup::setup_with_world(&sequencer).await.unwrap();
+#[katana_runner::test(accounts = 10, db_dir = copy_spawn_and_move_db().as_str())]
+async fn auth_grant_writer_ok(sequencer: &RunnerCtx) {
+    let world = setup::setup_with_world(sequencer).await.unwrap();
 
     // Overlays already have the writer set up. But running again to ensure we don't
     // actually revert something with this call.
@@ -63,8 +59,10 @@ async fn auth_grant_writer_ok() {
         &Ui::new(Verbosity::Normal, OutputFormat::Text),
         &world,
         &get_resource_writers(),
-        TxnConfig { wait: true, ..Default::default() },
+        &TxnConfig { wait: true, ..Default::default() },
         DEFAULT_NAMESPACE,
+        #[cfg(feature = "walnut")]
+        &None,
     )
     .await
     .unwrap();
@@ -75,20 +73,18 @@ async fn auth_grant_writer_ok() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn auth_revoke_writer_ok() {
-    let config = KatanaRunnerConfig { n_accounts: 10, ..Default::default() }
-        .with_db_dir(copy_spawn_and_move_db().as_str());
-
-    let sequencer = KatanaRunner::new_with_config(config).expect("Failed to start runner.");
-
-    let world = setup::setup_with_world(&sequencer).await.unwrap();
+#[katana_runner::test(accounts = 10, db_dir = copy_spawn_and_move_db().as_str())]
+async fn auth_revoke_writer_ok(sequencer: &RunnerCtx) {
+    let world = setup::setup_with_world(sequencer).await.unwrap();
 
     auth::grant_writer(
         &Ui::new(Verbosity::Normal, OutputFormat::Text),
         &world,
         &get_resource_writers(),
-        TxnConfig { wait: true, ..Default::default() },
+        &TxnConfig { wait: true, ..Default::default() },
         DEFAULT_NAMESPACE,
+        #[cfg(feature = "walnut")]
+        &None,
     )
     .await
     .unwrap();
@@ -99,8 +95,10 @@ async fn auth_revoke_writer_ok() {
         &Ui::new(Verbosity::Normal, OutputFormat::Text),
         &world,
         &get_resource_writers(),
-        TxnConfig { wait: true, ..Default::default() },
+        &TxnConfig { wait: true, ..Default::default() },
         DEFAULT_NAMESPACE,
+        #[cfg(feature = "walnut")]
+        &None,
     )
     .await
     .unwrap();
@@ -110,17 +108,14 @@ async fn auth_revoke_writer_ok() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn auth_grant_owner_ok() {
+#[katana_runner::test(accounts = 10, db_dir = copy_spawn_and_move_db().as_str())]
+async fn auth_grant_owner_ok(sequencer: &RunnerCtx) {
     let move_model_selector = compute_selector_from_tag(MOVE_MODEL_TAG);
     let position_model_selector = compute_selector_from_tag(POSITION_MODEL_TAG);
 
-    let config = KatanaRunnerConfig { n_accounts: 10, ..Default::default() }
-        .with_db_dir(copy_spawn_and_move_db().as_str());
-
-    let sequencer = KatanaRunner::new_with_config(config).expect("Failed to start runner.");
     println!("sequencer logs: {:?}", sequencer.log_file_path());
 
-    let world = setup::setup_with_world(&sequencer).await.unwrap();
+    let world = setup::setup_with_world(sequencer).await.unwrap();
 
     let default_account = sequencer.account(0).address();
     let other_account = sequencer.account(1).address();
@@ -136,8 +131,10 @@ async fn auth_grant_owner_ok() {
         &Ui::new(Verbosity::Normal, OutputFormat::Text),
         &world,
         &get_resource_owners(other_account),
-        TxnConfig { wait: true, ..Default::default() },
+        &TxnConfig { wait: true, ..Default::default() },
         DEFAULT_NAMESPACE,
+        #[cfg(feature = "walnut")]
+        &None,
     )
     .await
     .unwrap();
@@ -147,16 +144,12 @@ async fn auth_grant_owner_ok() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn auth_revoke_owner_ok() {
+#[katana_runner::test(accounts = 10, db_dir = copy_spawn_and_move_db().as_str())]
+async fn auth_revoke_owner_ok(sequencer: &RunnerCtx) {
     let move_model_selector = compute_selector_from_tag(MOVE_MODEL_TAG);
     let position_model_selector = compute_selector_from_tag(POSITION_MODEL_TAG);
 
-    let config = KatanaRunnerConfig { n_accounts: 10, ..Default::default() }
-        .with_db_dir(copy_spawn_and_move_db().as_str());
-
-    let sequencer = KatanaRunner::new_with_config(config).expect("Failed to start runner.");
-
-    let world = setup::setup_with_world(&sequencer).await.unwrap();
+    let world = setup::setup_with_world(sequencer).await.unwrap();
 
     let default_account = sequencer.account(0).address();
 
@@ -169,8 +162,10 @@ async fn auth_revoke_owner_ok() {
         &Ui::new(Verbosity::Normal, OutputFormat::Text),
         &world,
         &get_resource_owners(default_account),
-        TxnConfig { wait: true, ..Default::default() },
+        &TxnConfig { wait: true, ..Default::default() },
         DEFAULT_NAMESPACE,
+        #[cfg(feature = "walnut")]
+        &None,
     )
     .await
     .unwrap();
@@ -199,6 +194,8 @@ async fn execute_spawn<A: ConnectedAccount + Sync + Send + 'static>(
         vec![],
         world,
         &TxnConfig::init_wait(),
+        #[cfg(feature = "walnut")]
+        &None,
     )
     .await;
 

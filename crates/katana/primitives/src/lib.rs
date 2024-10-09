@@ -4,6 +4,7 @@ pub mod block;
 pub mod chain;
 pub mod class;
 pub mod contract;
+pub mod da;
 pub mod env;
 pub mod event;
 pub mod fee;
@@ -19,8 +20,6 @@ pub mod conversion;
 pub mod state;
 pub mod utils;
 
-pub use felt::FieldElement;
-
-pub mod felt {
-    pub use starknet::core::types::{Felt as FieldElement, FromStrError};
-}
+pub use contract::ContractAddress;
+pub use starknet::core::types::{Felt, FromStrError};
+pub use starknet::macros::felt;

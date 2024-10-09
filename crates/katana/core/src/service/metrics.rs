@@ -1,11 +1,6 @@
 use dojo_metrics::Metrics;
 use metrics::Counter;
 
-#[derive(Debug)]
-pub(crate) struct ServiceMetrics {
-    pub(crate) block_producer: BlockProducerMetrics,
-}
-
 #[derive(Metrics)]
 #[metrics(scope = "block_producer")]
 pub(crate) struct BlockProducerMetrics {

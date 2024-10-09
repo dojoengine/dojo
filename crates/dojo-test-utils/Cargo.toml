@@ -9,10 +9,6 @@ version.workspace = true
 anyhow.workspace = true
 assert_fs.workspace = true
 async-trait.workspace = true
-cairo-lang-compiler.workspace = true
-cairo-lang-filesystem.workspace = true
-cairo-lang-project.workspace = true
-cairo-lang-starknet.workspace = true
 camino.workspace = true
 dojo-lang = { path = "../dojo-lang" }
 dojo-world = { path = "../dojo-world", features = [ "manifest", "migration" ] }
@@ -23,18 +19,13 @@ katana-node.workspace = true
 katana-primitives = { path = "../katana/primitives" }
 katana-rpc = { path = "../katana/rpc/rpc" }
 katana-rpc-api = { path = "../katana/rpc/rpc-api" }
-katana-starknet = { package = "starknet", version = "=0.10.0" }
 scarb.workspace = true
 scarb-ui.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-serde_with.workspace = true
-smol_str.workspace = true
 starknet.workspace = true
 thiserror.workspace = true
-tokio = { version = "1.28.0", features = [ "full" ] }
 toml.workspace = true
-tracing.workspace = true
 url.workspace = true
 
 [build-dependencies]

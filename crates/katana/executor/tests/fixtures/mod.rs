@@ -21,7 +21,7 @@ use katana_primitives::transaction::{
 };
 use katana_primitives::utils::class::{parse_compiled_class, parse_sierra_class};
 use katana_primitives::version::Version;
-use katana_primitives::FieldElement;
+use katana_primitives::{address, Felt};
 use katana_provider::providers::in_memory::InMemoryProvider;
 use katana_provider::traits::block::BlockWriter;
 use katana_provider::traits::state::{StateFactoryProvider, StateProvider};
@@ -88,9 +88,8 @@ pub fn valid_blocks() -> [ExecutableBlock; 3] {
     let chain_id = ChainId::parse("KATANA").unwrap();
     let sequencer_address = ContractAddress(1u64.into());
 
-    let sender_address = ContractAddress(felt!(
-        "0x06b86e40118f29ebe393a75469b4d926c7a44c2e2681b6d319520b7c1156d114"
-    ));
+    let sender_address =
+        address!("0x06b86e40118f29ebe393a75469b4d926c7a44c2e2681b6d319520b7c1156d114");
 
     let gas_prices = GasPrices { eth: 100 * u128::pow(10, 9), strk: 100 * u128::pow(10, 9) };
 
@@ -120,7 +119,7 @@ pub fn valid_blocks() -> [ExecutableBlock; 3] {
                     ],
                     max_fee: 4367000000000000,
                     signature: vec![],
-                    nonce: FieldElement::ZERO,
+                    nonce: Felt::ZERO,
                 }))),
                 // declare contract
                 ExecutableTxWithHash::new(ExecutableTx::Declare({
@@ -129,7 +128,7 @@ pub fn valid_blocks() -> [ExecutableBlock; 3] {
                         compiled_class,
                         sierra_class: Some(sierra),
                         transaction: DeclareTx::V2(DeclareTxV2 {
-                            nonce: FieldElement::ONE,
+                            nonce: Felt::ONE,
                             max_fee: 27092100000000000,
                             chain_id,
                             signature: vec![],
@@ -169,9 +168,9 @@ pub fn valid_blocks() -> [ExecutableBlock; 3] {
                         class_hash: felt!(
                             "0x5400e90f7e0ae78bd02c77cd75527280470e2fe19c54970dd79dc37a9d3645c"
                         ),
-                        contract_address: ContractAddress(felt!(
+                        contract_address: address!(
                             "0x3ddfa445a70b927497249f94ff7431fc2e2abc761a34417fd4891beb7c2db85"
-                        )),
+                        ),
                     },
                 ))),
             ],
@@ -208,7 +207,7 @@ pub fn valid_blocks() -> [ExecutableBlock; 3] {
                     ],
                     max_fee: 2700700000000000,
                     signature: vec![],
-                    nonce: FieldElement::TWO,
+                    nonce: Felt::TWO,
                 }))),
             ],
         },

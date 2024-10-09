@@ -5,8 +5,9 @@
 
 pub mod config;
 pub mod dev;
-pub mod katana;
 pub mod metrics;
 pub mod saya;
 pub mod starknet;
 pub mod torii;
+
+mod utils;

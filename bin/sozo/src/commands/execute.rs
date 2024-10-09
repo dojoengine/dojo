@@ -4,6 +4,8 @@ use dojo_world::contracts::naming::ensure_namespace;
 use dojo_world::metadata::get_default_namespace_from_ws;
 use scarb::core::Config;
 use sozo_ops::execute;
+#[cfg(feature = "walnut")]
+use sozo_walnut::WalnutDebugger;
 use tracing::trace;
 
 use super::calldata_decoder;
@@ -61,11 +63,17 @@ impl ExecuteArgs {
             ensure_namespace(&self.tag_or_address, &default_namespace)
         };
 
+        #[cfg(feature = "walnut")]
+        let walnut_debugger = WalnutDebugger::new_from_flag(
+            self.transaction.walnut,
+            self.starknet.url(env_metadata.as_ref())?,
+        );
+
         config.tokio_handle().block_on(async {
             let world = utils::world_from_env_metadata(
                 self.world,
                 self.account,
-                self.starknet,
+                &self.starknet,
                 &env_metadata,
                 config,
             )
@@ -93,6 +101,8 @@ impl ExecuteArgs {
                 calldata,
                 &world,
                 &tx_config,
+                #[cfg(feature = "walnut")]
+                &walnut_debugger,
             )
             .await
         })

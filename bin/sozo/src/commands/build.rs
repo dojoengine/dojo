@@ -47,6 +47,10 @@ pub struct BuildArgs {
     /// Specify packages to build.
     #[command(flatten)]
     pub packages: Option<PackagesFilter>,
+
+    #[arg(long)]
+    #[arg(help = "Output the Sierra debug information for the compiled contracts.")]
+    pub output_debug_info: bool,
 }
 
 impl BuildArgs {
@@ -167,6 +171,7 @@ impl Default for BuildArgs {
             bindings_output: "bindings".to_string(),
             stats: false,
             packages: None,
+            output_debug_info: false,
         }
     }
 }

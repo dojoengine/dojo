@@ -1,107 +1,253 @@
+use std::collections::HashMap;
 use std::convert::TryInto;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use anyhow::{anyhow, Result};
-use chrono::Utc;
+use anyhow::{anyhow, Context, Result};
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{EnumOption, Member, Struct, Ty};
 use dojo_world::contracts::abi::model::Layout;
-use dojo_world::contracts::naming::{compute_selector_from_names, compute_selector_from_tag};
+use dojo_world::contracts::naming::compute_selector_from_names;
 use dojo_world::metadata::WorldMetadata;
 use sqlx::pool::PoolConnection;
-use sqlx::{Pool, Row, Sqlite};
+use sqlx::{Pool, Sqlite};
 use starknet::core::types::{Event, Felt, InvokeTransaction, Transaction};
 use starknet_crypto::poseidon_hash_many;
-use tracing::debug;
+use tokio::sync::mpsc::UnboundedSender;
+use utils::felts_to_sql_string;
 
-use crate::cache::{Model, ModelCache};
-use crate::query_queue::{Argument, QueryQueue};
-use crate::simple_broker::SimpleBroker;
-use crate::types::{
-    Entity as EntityUpdated, Event as EventEmitted, EventMessage as EventMessageUpdated,
-    Model as ModelRegistered,
+use crate::executor::{
+    Argument, DeleteEntityQuery, QueryMessage, QueryType, ResetCursorsQuery, SetHeadQuery,
+    UpdateCursorsQuery,
 };
-use crate::utils::{must_utc_datetime_from_timestamp, utc_dt_string_from_timestamp};
-use crate::World;
+use crate::types::ContractType;
+use crate::utils::utc_dt_string_from_timestamp;
 
 type IsEventMessage = bool;
-type IsStoreUpdateMember = bool;
+type IsStoreUpdate = bool;
 
+pub const WORLD_CONTRACT_TYPE: &str = "WORLD";
 pub const FELT_DELIMITER: &str = "/";
 
+pub mod cache;
+pub mod erc;
+pub mod query_queue;
 #[cfg(test)]
-#[path = "sql_test.rs"]
+#[path = "test.rs"]
 mod test;
+pub mod utils;
+
+use cache::{LocalCache, Model, ModelCache};
 
 #[derive(Debug, Clone)]
 pub struct Sql {
-    world_address: Felt,
     pub pool: Pool<Sqlite>,
-    query_queue: QueryQueue,
+    pub executor: UnboundedSender<QueryMessage>,
     model_cache: Arc<ModelCache>,
+    // when SQL struct is cloned a empty local_cache is created
+    local_cache: LocalCache,
+}
+
+#[derive(Debug, Clone)]
+pub struct Cursors {
+    pub cursor_map: HashMap<Felt, Felt>,
+    pub last_pending_block_tx: Option<Felt>,
+    pub head: Option<u64>,
 }
 
 impl Sql {
-    pub async fn new(pool: Pool<Sqlite>, world_address: Felt) -> Result<Self> {
-        let mut query_queue = QueryQueue::new(pool.clone());
+    pub async fn new(
+        pool: Pool<Sqlite>,
+        executor: UnboundedSender<QueryMessage>,
+        contracts: &HashMap<Felt, ContractType>,
+    ) -> Result<Self> {
+        for contract in contracts {
+            executor.send(QueryMessage::other(
+                "INSERT OR IGNORE INTO contracts (id, contract_address, contract_type) VALUES (?, \
+                 ?, ?)"
+                    .to_string(),
+                vec![
+                    Argument::FieldElement(*contract.0),
+                    Argument::FieldElement(*contract.0),
+                    Argument::String(contract.1.to_string()),
+                ],
+            ))?;
+        }
 
-        query_queue.enqueue(
-            "INSERT OR IGNORE INTO indexers (id, head) VALUES (?, ?)",
-            vec![Argument::FieldElement(world_address), Argument::Int(0)],
-        );
-        query_queue.enqueue(
-            "INSERT OR IGNORE INTO worlds (id, world_address) VALUES (?, ?)",
-            vec![Argument::FieldElement(world_address), Argument::FieldElement(world_address)],
-        );
-
-        query_queue.execute_all().await?;
-
-        Ok(Self {
+        let local_cache = LocalCache::new(pool.clone()).await;
+        let db = Self {
             pool: pool.clone(),
-            world_address,
-            query_queue,
-            model_cache: Arc::new(ModelCache::new(pool)),
-        })
+            executor,
+            model_cache: Arc::new(ModelCache::new(pool.clone())),
+            local_cache,
+        };
+
+        db.execute().await?;
+
+        Ok(db)
     }
 
-    pub async fn head(&self) -> Result<(u64, Option<Felt>)> {
-        let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
-        let indexer_query = sqlx::query_as::<_, (i64, Option<String>)>(
-            "SELECT head, pending_block_tx FROM indexers WHERE id = ?",
-        )
-        .bind(format!("{:#x}", self.world_address));
+    pub async fn head(&self, contract: Felt) -> Result<(u64, Option<Felt>, Option<Felt>)> {
+        let indexer_query =
+            sqlx::query_as::<_, (Option<i64>, Option<String>, Option<String>, String)>(
+                "SELECT head, last_pending_block_contract_tx, last_pending_block_tx, \
+                 contract_type FROM contracts WHERE id = ?",
+            )
+            .bind(format!("{:#x}", contract));
 
-        let indexer: (i64, Option<String>) = indexer_query.fetch_one(&mut *conn).await?;
+        let indexer: (Option<i64>, Option<String>, Option<String>, String) = indexer_query
+            .fetch_one(&self.pool)
+            .await
+            .with_context(|| format!("Failed to fetch head for contract: {:#x}", contract))?;
         Ok((
-            indexer.0.try_into().expect("doesn't fit in u64"),
+            indexer
+                .0
+                .map(|h| h.try_into().map_err(|_| anyhow!("Head value {} doesn't fit in u64", h)))
+                .transpose()?
+                .unwrap_or(0),
             indexer.1.map(|f| Felt::from_str(&f)).transpose()?,
+            indexer.2.map(|f| Felt::from_str(&f)).transpose()?,
         ))
     }
 
-    pub fn set_head(&mut self, head: u64, pending_block_tx: Option<Felt>) {
-        let head = Argument::Int(head.try_into().expect("doesn't fit in u64"));
-        let id = Argument::FieldElement(self.world_address);
-        let pending_block_tx = if let Some(f) = pending_block_tx {
+    pub async fn set_head(
+        &mut self,
+        head: u64,
+        last_block_timestamp: u64,
+        world_txns_count: u64,
+        contract_address: Felt,
+    ) -> Result<()> {
+        let head_arg = Argument::Int(
+            head.try_into().map_err(|_| anyhow!("Head value {} doesn't fit in i64", head))?,
+        );
+        let last_block_timestamp_arg =
+            Argument::Int(last_block_timestamp.try_into().map_err(|_| {
+                anyhow!("Last block timestamp value {} doesn't fit in i64", last_block_timestamp)
+            })?);
+        let id = Argument::FieldElement(contract_address);
+
+        self.executor.send(QueryMessage::new(
+            "UPDATE contracts SET head = ?, last_block_timestamp = ? WHERE id = ?".to_string(),
+            vec![head_arg, last_block_timestamp_arg, id],
+            QueryType::SetHead(SetHeadQuery {
+                head,
+                last_block_timestamp,
+                txns_count: world_txns_count,
+                contract_address,
+            }),
+        ))?;
+
+        Ok(())
+    }
+
+    pub fn set_last_pending_block_contract_tx(
+        &mut self,
+        contract: Felt,
+        last_pending_block_contract_tx: Option<Felt>,
+    ) -> Result<()> {
+        let last_pending_block_contract_tx = if let Some(f) = last_pending_block_contract_tx {
             Argument::String(format!("{:#x}", f))
         } else {
             Argument::Null
         };
 
-        self.query_queue.enqueue(
-            "UPDATE indexers SET head = ?, pending_block_tx = ? WHERE id = ?",
-            vec![head, pending_block_tx, id],
-        );
+        let id = Argument::FieldElement(contract);
+
+        self.executor.send(QueryMessage::other(
+            "UPDATE contracts SET last_pending_block_contract_tx = ? WHERE id = ?".to_string(),
+            vec![last_pending_block_contract_tx, id],
+        ))?;
+
+        Ok(())
     }
 
-    pub async fn world(&self) -> Result<World> {
-        let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
-        let meta: World = sqlx::query_as("SELECT * FROM worlds WHERE id = ?")
-            .bind(format!("{:#x}", self.world_address))
-            .fetch_one(&mut *conn)
-            .await?;
+    pub fn set_last_pending_block_tx(&mut self, last_pending_block_tx: Option<Felt>) -> Result<()> {
+        let last_pending_block_tx = if let Some(f) = last_pending_block_tx {
+            Argument::String(format!("{:#x}", f))
+        } else {
+            Argument::Null
+        };
 
-        Ok(meta)
+        self.executor.send(QueryMessage::other(
+            "UPDATE contracts SET last_pending_block_tx = ? WHERE 1=1".to_string(),
+            vec![last_pending_block_tx],
+        ))?;
+
+        Ok(())
+    }
+
+    pub(crate) async fn cursors(&self) -> Result<Cursors> {
+        let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
+        let cursors = sqlx::query_as::<_, (String, String)>(
+            "SELECT contract_address, last_pending_block_contract_tx FROM contracts WHERE \
+             last_pending_block_contract_tx IS NOT NULL",
+        )
+        .fetch_all(&mut *conn)
+        .await?;
+
+        let (head, last_pending_block_tx) = sqlx::query_as::<_, (Option<i64>, Option<String>)>(
+            "SELECT head, last_pending_block_tx FROM contracts WHERE 1=1",
+        )
+        .fetch_one(&mut *conn)
+        .await?;
+
+        let head = head.map(|h| h.try_into().expect("doesn't fit in u64"));
+        let last_pending_block_tx =
+            last_pending_block_tx.map(|t| Felt::from_str(&t).expect("its a valid felt"));
+        Ok(Cursors {
+            cursor_map: cursors
+                .into_iter()
+                .map(|(c, t)| {
+                    (
+                        Felt::from_str(&c).expect("its a valid felt"),
+                        Felt::from_str(&t).expect("its a valid felt"),
+                    )
+                })
+                .collect(),
+            last_pending_block_tx,
+            head,
+        })
+    }
+
+    // For a given contract address, sets head to the passed value and sets
+    // last_pending_block_contract_tx and last_pending_block_tx to null
+    pub fn reset_cursors(
+        &mut self,
+        head: u64,
+        cursor_map: HashMap<Felt, (Felt, u64)>,
+        last_block_timestamp: u64,
+    ) -> Result<()> {
+        self.executor.send(QueryMessage::new(
+            "".to_string(),
+            vec![],
+            QueryType::ResetCursors(ResetCursorsQuery {
+                cursor_map,
+                last_block_timestamp,
+                last_block_number: head,
+            }),
+        ))?;
+
+        Ok(())
+    }
+
+    pub fn update_cursors(
+        &mut self,
+        head: u64,
+        last_pending_block_tx: Option<Felt>,
+        cursor_map: HashMap<Felt, (Felt, u64)>,
+        pending_block_timestamp: u64,
+    ) -> Result<()> {
+        self.executor.send(QueryMessage::new(
+            "".to_string(),
+            vec![],
+            QueryType::UpdateCursors(UpdateCursorsQuery {
+                cursor_map,
+                last_pending_block_tx,
+                last_block_number: head,
+                pending_block_timestamp,
+            }),
+        ))?;
+        Ok(())
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -117,6 +263,7 @@ impl Sql {
         block_timestamp: u64,
     ) -> Result<()> {
         let selector = compute_selector_from_names(namespace, &model.name());
+        let namespaced_name = format!("{}-{}", namespace, model.name());
 
         let insert_models =
             "INSERT INTO models (id, namespace, name, class_hash, contract_address, layout, \
@@ -125,33 +272,56 @@ impl Sql {
              class_hash=EXCLUDED.class_hash, layout=EXCLUDED.layout, \
              packed_size=EXCLUDED.packed_size, unpacked_size=EXCLUDED.unpacked_size, \
              executed_at=EXCLUDED.executed_at RETURNING *";
-        let model_registered: ModelRegistered = sqlx::query_as(insert_models)
-            // this is temporary until the model hash is precomputed
-            .bind(format!("{:#x}", selector))
-            .bind(namespace)
-            .bind(model.name())
-            .bind(format!("{class_hash:#x}"))
-            .bind(format!("{contract_address:#x}"))
-            .bind(serde_json::to_string(&layout)?)
-            .bind(packed_size)
-            .bind(unpacked_size)
-            .bind(utc_dt_string_from_timestamp(block_timestamp))
-            .fetch_one(&self.pool)
-            .await?;
+        let arguments = vec![
+            Argument::String(format!("{:#x}", selector)),
+            Argument::String(namespace.to_string()),
+            Argument::String(model.name().to_string()),
+            Argument::String(format!("{class_hash:#x}")),
+            Argument::String(format!("{contract_address:#x}")),
+            Argument::String(serde_json::to_string(&layout)?),
+            Argument::Int(packed_size as i64),
+            Argument::Int(unpacked_size as i64),
+            Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
+        ];
+        self.executor.send(QueryMessage::new(
+            insert_models.to_string(),
+            arguments,
+            QueryType::RegisterModel,
+        ))?;
 
         let mut model_idx = 0_i64;
         self.build_register_queries_recursive(
             selector,
             &model,
-            vec![format!("{}-{}", namespace, model.name())],
+            vec![namespaced_name.clone()],
             &mut model_idx,
             block_timestamp,
             &mut 0,
             &mut 0,
-        );
-        self.query_queue.execute_all().await?;
+        )?;
 
-        SimpleBroker::publish(model_registered);
+        // we set the model in the cache directly
+        // because entities might be using it before the query queue is processed
+        self.model_cache
+            .set(
+                selector,
+                Model {
+                    namespace: namespace.to_string(),
+                    name: model.name().to_string(),
+                    selector,
+                    class_hash,
+                    contract_address,
+                    packed_size,
+                    unpacked_size,
+                    layout,
+                    // we need to update the name of the struct to include the namespace
+                    schema: Ty::Struct(Struct {
+                        name: namespaced_name,
+                        children: model.as_struct().unwrap().children.clone(),
+                    }),
+                },
+            )
+            .await;
 
         Ok(())
     }
@@ -161,56 +331,58 @@ impl Sql {
         entity: Ty,
         event_id: &str,
         block_timestamp: u64,
+        entity_id: Felt,
+        model_id: Felt,
+        keys_str: Option<&str>,
     ) -> Result<()> {
-        let keys = if let Ty::Struct(s) = &entity {
-            let mut keys = Vec::new();
-            for m in s.keys() {
-                keys.extend(m.serialize()?);
-            }
-            keys
+        let namespaced_name = entity.name();
+
+        let entity_id = format!("{:#x}", entity_id);
+        let model_id = format!("{:#x}", model_id);
+
+        let insert_entities = if keys_str.is_some() {
+            "INSERT INTO entities (id, event_id, executed_at, keys) VALUES (?, ?, ?, ?) ON \
+             CONFLICT(id) DO UPDATE SET updated_at=CURRENT_TIMESTAMP, \
+             executed_at=EXCLUDED.executed_at, event_id=EXCLUDED.event_id, keys=EXCLUDED.keys \
+             RETURNING *"
         } else {
-            return Err(anyhow!("Entity is not a struct"));
+            "INSERT INTO entities (id, event_id, executed_at) VALUES (?, ?, ?) ON CONFLICT(id) DO \
+             UPDATE SET updated_at=CURRENT_TIMESTAMP, executed_at=EXCLUDED.executed_at, \
+             event_id=EXCLUDED.event_id RETURNING *"
         };
 
-        let namespaced_name = entity.name();
-        let (model_namespace, model_name) = namespaced_name.split_once('-').unwrap();
+        let mut arguments = vec![
+            Argument::String(entity_id.clone()),
+            Argument::String(event_id.to_string()),
+            Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
+        ];
 
-        let entity_id = format!("{:#x}", poseidon_hash_many(&keys));
-        let model_id = format!("{:#x}", compute_selector_from_names(model_namespace, model_name));
+        if let Some(keys) = keys_str {
+            arguments.push(Argument::String(keys.to_string()));
+        }
 
-        self.query_queue.enqueue(
+        self.executor.send(QueryMessage::new(
+            insert_entities.to_string(),
+            arguments,
+            QueryType::SetEntity(entity.clone()),
+        ))?;
+
+        self.executor.send(QueryMessage::other(
             "INSERT INTO entity_model (entity_id, model_id) VALUES (?, ?) ON CONFLICT(entity_id, \
-             model_id) DO NOTHING",
+             model_id) DO NOTHING"
+                .to_string(),
             vec![Argument::String(entity_id.clone()), Argument::String(model_id.clone())],
-        );
-
-        let keys_str = felts_sql_string(&keys);
-        let insert_entities = "INSERT INTO entities (id, keys, event_id, executed_at) VALUES (?, \
-                               ?, ?, ?) ON CONFLICT(id) DO UPDATE SET \
-                               updated_at=CURRENT_TIMESTAMP, executed_at=EXCLUDED.executed_at, \
-                               event_id=EXCLUDED.event_id RETURNING *";
-        let mut entity_updated: EntityUpdated = sqlx::query_as(insert_entities)
-            .bind(&entity_id)
-            .bind(&keys_str)
-            .bind(event_id)
-            .bind(utc_dt_string_from_timestamp(block_timestamp))
-            .fetch_one(&self.pool)
-            .await?;
-
-        entity_updated.updated_model = Some(entity.clone());
+        ))?;
 
         let path = vec![namespaced_name];
         self.build_set_entity_queries_recursive(
             path,
             event_id,
             (&entity_id, false),
-            (&entity, false),
+            (&entity, keys_str.is_none()),
             block_timestamp,
             &vec![],
-        );
-        self.query_queue.execute_all().await?;
-
-        SimpleBroker::publish(entity_updated);
+        )?;
 
         Ok(())
     }
@@ -237,26 +409,27 @@ impl Sql {
         let entity_id = format!("{:#x}", poseidon_hash_many(&keys));
         let model_id = format!("{:#x}", compute_selector_from_names(model_namespace, model_name));
 
-        self.query_queue.enqueue(
-            "INSERT INTO event_model (entity_id, model_id) VALUES (?, ?) ON CONFLICT(entity_id, \
-             model_id) DO NOTHING",
-            vec![Argument::String(entity_id.clone()), Argument::String(model_id.clone())],
-        );
-
-        let keys_str = felts_sql_string(&keys);
+        let keys_str = felts_to_sql_string(&keys);
         let insert_entities = "INSERT INTO event_messages (id, keys, event_id, executed_at) \
                                VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET \
                                updated_at=CURRENT_TIMESTAMP, executed_at=EXCLUDED.executed_at, \
                                event_id=EXCLUDED.event_id RETURNING *";
-        let mut event_message_updated: EventMessageUpdated = sqlx::query_as(insert_entities)
-            .bind(&entity_id)
-            .bind(&keys_str)
-            .bind(event_id)
-            .bind(utc_dt_string_from_timestamp(block_timestamp))
-            .fetch_one(&self.pool)
-            .await?;
-
-        event_message_updated.updated_model = Some(entity.clone());
+        self.executor.send(QueryMessage::new(
+            insert_entities.to_string(),
+            vec![
+                Argument::String(entity_id.clone()),
+                Argument::String(keys_str),
+                Argument::String(event_id.to_string()),
+                Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
+            ],
+            QueryType::EventMessage(entity.clone()),
+        ))?;
+        self.executor.send(QueryMessage::other(
+            "INSERT INTO event_model (entity_id, model_id) VALUES (?, ?) ON CONFLICT(entity_id, \
+             model_id) DO NOTHING"
+                .to_string(),
+            vec![Argument::String(entity_id.clone()), Argument::String(model_id.clone())],
+        ))?;
 
         let path = vec![namespaced_name];
         self.build_set_entity_queries_recursive(
@@ -266,53 +439,7 @@ impl Sql {
             (&entity, false),
             block_timestamp,
             &vec![],
-        );
-        self.query_queue.execute_all().await?;
-
-        SimpleBroker::publish(event_message_updated);
-
-        Ok(())
-    }
-
-    pub async fn set_model_member(
-        &mut self,
-        model_tag: &str,
-        entity_id: Felt,
-        is_event_message: bool,
-        member: &Member,
-        event_id: &str,
-        block_timestamp: u64,
-    ) -> Result<()> {
-        let entity_id = format!("{:#x}", entity_id);
-        let path = vec![model_tag.to_string()];
-
-        let wrapped_ty =
-            Ty::Struct(Struct { name: model_tag.to_string(), children: vec![member.clone()] });
-
-        // update model member
-        self.build_set_entity_queries_recursive(
-            path,
-            event_id,
-            (&entity_id, is_event_message),
-            (&wrapped_ty, true),
-            block_timestamp,
-            &vec![],
-        );
-        self.query_queue.execute_all().await?;
-
-        let mut update_entity = sqlx::query_as::<_, EntityUpdated>(
-            "UPDATE entities SET updated_at=CURRENT_TIMESTAMP, executed_at=?, event_id=? WHERE id \
-             = ? RETURNING *",
-        )
-        .bind(utc_dt_string_from_timestamp(block_timestamp))
-        .bind(event_id)
-        .bind(entity_id)
-        .fetch_one(&self.pool)
-        .await?;
-
-        update_entity.updated_model = Some(wrapped_ty);
-
-        SimpleBroker::publish(update_entity);
+        )?;
 
         Ok(())
     }
@@ -320,6 +447,7 @@ impl Sql {
     pub async fn delete_entity(
         &mut self,
         entity_id: Felt,
+        model_id: Felt,
         entity: Ty,
         event_id: &str,
         block_timestamp: u64,
@@ -327,67 +455,39 @@ impl Sql {
         let entity_id = format!("{:#x}", entity_id);
         let path = vec![entity.name()];
         // delete entity models data
-        self.build_delete_entity_queries_recursive(path, &entity_id, &entity);
-        self.query_queue.execute_all().await?;
+        self.build_delete_entity_queries_recursive(path, &entity_id, &entity)?;
 
-        let deleted_entity_model =
-            sqlx::query("DELETE FROM entity_model WHERE entity_id = ? AND model_id = ?")
-                .bind(&entity_id)
-                .bind(format!("{:#x}", compute_selector_from_tag(&entity.name())))
-                .execute(&self.pool)
-                .await?;
-        if deleted_entity_model.rows_affected() == 0 {
-            // fail silently. we have no entity-model relation to delete.
-            // this can happen if a entity model that doesnt exist
-            // got deleted
-            return Ok(());
-        }
+        self.executor.send(QueryMessage::new(
+            "DELETE FROM entity_model WHERE entity_id = ? AND model_id = ?".to_string(),
+            vec![Argument::String(entity_id.clone()), Argument::String(format!("{:#x}", model_id))],
+            QueryType::DeleteEntity(DeleteEntityQuery {
+                entity_id: entity_id.clone(),
+                event_id: event_id.to_string(),
+                block_timestamp: utc_dt_string_from_timestamp(block_timestamp),
+                ty: entity.clone(),
+            }),
+        ))?;
 
-        let mut update_entity = sqlx::query_as::<_, EntityUpdated>(
-            "UPDATE entities SET updated_at=CURRENT_TIMESTAMP, executed_at=?, event_id=? WHERE id \
-             = ? RETURNING *",
-        )
-        .bind(utc_dt_string_from_timestamp(block_timestamp))
-        .bind(event_id)
-        .bind(&entity_id)
-        .fetch_one(&self.pool)
-        .await?;
-        update_entity.updated_model = Some(entity.clone());
-
-        let models_count =
-            sqlx::query_scalar::<_, u32>("SELECT count(*) FROM entity_model WHERE entity_id = ?")
-                .bind(&entity_id)
-                .fetch_one(&self.pool)
-                .await?;
-
-        if models_count == 0 {
-            // delete entity
-            sqlx::query("DELETE FROM entities WHERE id = ?")
-                .bind(&entity_id)
-                .execute(&self.pool)
-                .await?;
-
-            update_entity.deleted = true;
-        }
-
-        SimpleBroker::publish(update_entity);
         Ok(())
     }
 
-    pub fn set_metadata(&mut self, resource: &Felt, uri: &str, block_timestamp: u64) {
+    pub fn set_metadata(&mut self, resource: &Felt, uri: &str, block_timestamp: u64) -> Result<()> {
         let resource = Argument::FieldElement(*resource);
         let uri = Argument::String(uri.to_string());
         let executed_at = Argument::String(utc_dt_string_from_timestamp(block_timestamp));
 
-        self.query_queue.enqueue(
+        self.executor.send(QueryMessage::other(
             "INSERT INTO metadata (id, uri, executed_at) VALUES (?, ?, ?) ON CONFLICT(id) DO \
              UPDATE SET id=excluded.id, executed_at=excluded.executed_at, \
-             updated_at=CURRENT_TIMESTAMP",
+             updated_at=CURRENT_TIMESTAMP"
+                .to_string(),
             vec![resource, uri, executed_at],
-        );
+        ))?;
+
+        Ok(())
     }
 
-    pub async fn update_metadata(
+    pub fn update_metadata(
         &mut self,
         resource: &Felt,
         uri: &str,
@@ -413,54 +513,13 @@ impl Sql {
         let statement = format!("UPDATE metadata SET {} WHERE id = ?", update.join(","));
         arguments.push(Argument::FieldElement(*resource));
 
-        self.query_queue.enqueue(statement, arguments);
-        self.query_queue.execute_all().await?;
+        self.executor.send(QueryMessage::other(statement, arguments))?;
 
         Ok(())
     }
 
     pub async fn model(&self, selector: Felt) -> Result<Model> {
         self.model_cache.model(&selector).await.map_err(|e| e.into())
-    }
-
-    /// Retrieves the keys definition for a given model.
-    /// The key definition is currently implemented as (`name`, `type`).
-    pub async fn get_entity_keys_def(&self, model_tag: &str) -> Result<Vec<(String, String)>> {
-        let query = sqlx::query_as::<_, (String, String)>(
-            "SELECT name, type FROM model_members WHERE id = ? AND key = true",
-        )
-        .bind(model_tag);
-
-        let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
-        let rows: Vec<(String, String)> = query.fetch_all(&mut *conn).await?;
-        Ok(rows.iter().map(|(name, ty)| (name.to_string(), ty.to_string())).collect())
-    }
-
-    /// Retrieves the keys for a given entity.
-    /// The keys are returned in the same order as the keys definition.
-    pub async fn get_entity_keys(&self, entity_id: Felt, model_tag: &str) -> Result<Vec<Felt>> {
-        let entity_id = format!("{:#x}", entity_id);
-        let keys_def = self.get_entity_keys_def(model_tag).await?;
-
-        let keys_names =
-            keys_def.iter().map(|(name, _)| format!("external_{}", name)).collect::<Vec<String>>();
-
-        let sql = format!("SELECT {} FROM [{}] WHERE id = ?", keys_names.join(", "), model_tag);
-        let query = sqlx::query(sql.as_str()).bind(entity_id);
-
-        let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
-
-        let mut keys: Vec<Felt> = vec![];
-        let result = query.fetch_all(&mut *conn).await?;
-
-        for row in result {
-            for (i, _) in row.columns().iter().enumerate() {
-                let value: String = row.try_get(i)?;
-                keys.push(Felt::from_hex(&value)?);
-            }
-        }
-
-        Ok(keys)
     }
 
     pub async fn does_entity_exist(&self, model: String, key: Felt) -> Result<bool> {
@@ -484,13 +543,13 @@ impl Sql {
         transaction: &Transaction,
         transaction_id: &str,
         block_timestamp: u64,
-    ) {
+    ) -> Result<()> {
         let id = Argument::String(transaction_id.to_string());
 
         let transaction_type = match transaction {
             Transaction::Invoke(_) => "INVOKE",
             Transaction::L1Handler(_) => "L1_HANDLER",
-            _ => return,
+            _ => return Ok(()),
         };
 
         let (transaction_hash, sender_address, calldata, max_fee, signature, nonce) =
@@ -498,26 +557,27 @@ impl Sql {
                 Transaction::Invoke(InvokeTransaction::V1(invoke_v1_transaction)) => (
                     Argument::FieldElement(invoke_v1_transaction.transaction_hash),
                     Argument::FieldElement(invoke_v1_transaction.sender_address),
-                    Argument::String(felts_sql_string(&invoke_v1_transaction.calldata)),
+                    Argument::String(felts_to_sql_string(&invoke_v1_transaction.calldata)),
                     Argument::FieldElement(invoke_v1_transaction.max_fee),
-                    Argument::String(felts_sql_string(&invoke_v1_transaction.signature)),
+                    Argument::String(felts_to_sql_string(&invoke_v1_transaction.signature)),
                     Argument::FieldElement(invoke_v1_transaction.nonce),
                 ),
                 Transaction::L1Handler(l1_handler_transaction) => (
                     Argument::FieldElement(l1_handler_transaction.transaction_hash),
                     Argument::FieldElement(l1_handler_transaction.contract_address),
-                    Argument::String(felts_sql_string(&l1_handler_transaction.calldata)),
+                    Argument::String(felts_to_sql_string(&l1_handler_transaction.calldata)),
                     Argument::FieldElement(Felt::ZERO), // has no max_fee
                     Argument::String("".to_string()),   // has no signature
                     Argument::FieldElement((l1_handler_transaction.nonce).into()),
                 ),
-                _ => return,
+                _ => return Ok(()),
             };
 
-        self.query_queue.enqueue(
+        self.executor.send(QueryMessage::other(
             "INSERT OR IGNORE INTO transactions (id, transaction_hash, sender_address, calldata, \
              max_fee, signature, nonce, transaction_type, executed_at) VALUES (?, ?, ?, ?, ?, ?, \
-             ?, ?, ?)",
+             ?, ?, ?)"
+                .to_string(),
             vec![
                 id,
                 transaction_hash,
@@ -529,7 +589,9 @@ impl Sql {
                 Argument::String(transaction_type.to_string()),
                 Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
             ],
-        );
+        ))?;
+
+        Ok(())
     }
 
     pub fn store_event(
@@ -538,27 +600,22 @@ impl Sql {
         event: &Event,
         transaction_hash: Felt,
         block_timestamp: u64,
-    ) {
+    ) -> Result<()> {
         let id = Argument::String(event_id.to_string());
-        let keys = Argument::String(felts_sql_string(&event.keys));
-        let data = Argument::String(felts_sql_string(&event.data));
+        let keys = Argument::String(felts_to_sql_string(&event.keys));
+        let data = Argument::String(felts_to_sql_string(&event.data));
         let hash = Argument::FieldElement(transaction_hash);
         let executed_at = Argument::String(utc_dt_string_from_timestamp(block_timestamp));
 
-        self.query_queue.enqueue(
+        self.executor.send(QueryMessage::new(
             "INSERT OR IGNORE INTO events (id, keys, data, transaction_hash, executed_at) VALUES \
-             (?, ?, ?, ?, ?)",
+             (?, ?, ?, ?, ?) RETURNING *"
+                .to_string(),
             vec![id, keys, data, hash, executed_at],
-        );
+            QueryType::StoreEvent,
+        ))?;
 
-        SimpleBroker::publish(EventEmitted {
-            id: event_id.to_string(),
-            keys: felts_sql_string(&event.keys),
-            data: felts_sql_string(&event.data),
-            transaction_hash: format!("{:#x}", transaction_hash),
-            created_at: Utc::now(),
-            executed_at: must_utc_datetime_from_timestamp(block_timestamp),
-        });
+        Ok(())
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -571,11 +628,11 @@ impl Sql {
         block_timestamp: u64,
         array_idx: &mut usize,
         parent_array_idx: &mut usize,
-    ) {
+    ) -> Result<()> {
         if let Ty::Enum(e) = model {
             if e.options.iter().all(|o| if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false })
             {
-                return;
+                return Ok(());
             }
         }
 
@@ -587,13 +644,13 @@ impl Sql {
             block_timestamp,
             *array_idx,
             *parent_array_idx,
-        );
+        )?;
 
-        let mut build_member = |pathname: &str, member: &Ty| {
+        let mut build_member = |pathname: &str, member: &Ty| -> Result<()> {
             if let Ty::Primitive(_) = member {
-                return;
+                return Ok(());
             } else if let Ty::ByteArray(_) = member {
-                return;
+                return Ok(());
             }
 
             let mut path_clone = path.clone();
@@ -607,20 +664,22 @@ impl Sql {
                 block_timestamp,
                 &mut (*array_idx + if let Ty::Array(_) = member { 1 } else { 0 }),
                 &mut (*parent_array_idx + if let Ty::Array(_) = model { 1 } else { 0 }),
-            );
+            )?;
+
+            Ok(())
         };
 
         if let Ty::Struct(s) = model {
             for member in s.children.iter() {
-                build_member(&member.name, &member.ty);
+                build_member(&member.name, &member.ty)?;
             }
         } else if let Ty::Tuple(t) = model {
             for (idx, member) in t.iter().enumerate() {
-                build_member(format!("_{}", idx).as_str(), member);
+                build_member(format!("_{}", idx).as_str(), member)?;
             }
         } else if let Ty::Array(array) = model {
             let ty = &array[0];
-            build_member("data", ty);
+            build_member("data", ty)?;
         } else if let Ty::Enum(e) = model {
             for child in e.options.iter() {
                 // Skip enum options that have no type / member
@@ -630,9 +689,11 @@ impl Sql {
                     }
                 }
 
-                build_member(&child.name, &child.ty);
+                build_member(&child.name, &child.ty)?;
             }
         }
+
+        Ok(())
     }
 
     fn build_set_entity_queries_recursive(
@@ -641,106 +702,110 @@ impl Sql {
         event_id: &str,
         // The id of the entity and if the entity is an event message
         entity_id: (&str, IsEventMessage),
-        entity: (&Ty, IsStoreUpdateMember),
+        entity: (&Ty, IsStoreUpdate),
         block_timestamp: u64,
         indexes: &Vec<i64>,
-    ) {
+    ) -> Result<()> {
         let (entity_id, is_event_message) = entity_id;
         let (entity, is_store_update_member) = entity;
 
-        let update_members =
-            |members: &[Member], query_queue: &mut QueryQueue, indexes: &Vec<i64>| {
-                let table_id = path.join("$");
-                let mut columns = vec![
-                    "id".to_string(),
-                    "event_id".to_string(),
-                    "executed_at".to_string(),
-                    "updated_at".to_string(),
-                    if is_event_message {
-                        "event_message_id".to_string()
-                    } else {
-                        "entity_id".to_string()
-                    },
-                ];
-
-                let mut arguments = vec![
-                    Argument::String(if is_event_message {
-                        "event:".to_string() + entity_id
-                    } else {
-                        entity_id.to_string()
-                    }),
-                    Argument::String(event_id.to_string()),
-                    Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
-                    Argument::String(chrono::Utc::now().to_rfc3339()),
-                    Argument::String(entity_id.to_string()),
-                ];
-
-                if !indexes.is_empty() {
-                    columns.push("full_array_id".to_string());
-                    arguments.push(Argument::String(
-                        std::iter::once(entity_id.to_string())
-                            .chain(indexes.iter().map(|i| i.to_string()))
-                            .collect::<Vec<String>>()
-                            .join(FELT_DELIMITER),
-                    ));
-                }
-
-                for (column_idx, idx) in indexes.iter().enumerate() {
-                    columns.push(format!("idx_{}", column_idx));
-                    arguments.push(Argument::Int(*idx));
-                }
-
-                for member in members.iter() {
-                    match &member.ty {
-                        Ty::Primitive(ty) => {
-                            columns.push(format!("external_{}", &member.name));
-                            arguments.push(Argument::String(ty.to_sql_value().unwrap()));
-                        }
-                        Ty::Enum(e) => {
-                            columns.push(format!("external_{}", &member.name));
-                            arguments.push(Argument::String(e.to_sql_value().unwrap()));
-                        }
-                        Ty::ByteArray(b) => {
-                            columns.push(format!("external_{}", &member.name));
-                            arguments.push(Argument::String(b.clone()));
-                        }
-                        _ => {}
-                    }
-                }
-
-                let placeholders: Vec<&str> = arguments.iter().map(|_| "?").collect();
-                let statement = if is_store_update_member && indexes.is_empty() {
-                    arguments.push(Argument::String(if is_event_message {
-                        "event:".to_string() + entity_id
-                    } else {
-                        entity_id.to_string()
-                    }));
-
-                    // row has to exist. update it directly
-                    format!(
-                        "UPDATE [{table_id}] SET {updates} WHERE id = ?",
-                        table_id = table_id,
-                        updates = columns
-                            .iter()
-                            .zip(placeholders.iter())
-                            .map(|(column, placeholder)| format!("{} = {}", column, placeholder))
-                            .collect::<Vec<String>>()
-                            .join(", ")
-                    )
+        let update_members = |members: &[Member],
+                              executor: &mut UnboundedSender<QueryMessage>,
+                              indexes: &Vec<i64>|
+         -> Result<()> {
+            let table_id = path.join("$");
+            let mut columns = vec![
+                "id".to_string(),
+                "event_id".to_string(),
+                "executed_at".to_string(),
+                "updated_at".to_string(),
+                if is_event_message {
+                    "event_message_id".to_string()
                 } else {
-                    format!(
-                        "INSERT OR REPLACE INTO [{table_id}] ({}) VALUES ({})",
-                        columns.join(","),
-                        placeholders.join(",")
-                    )
-                };
+                    "entity_id".to_string()
+                },
+            ];
 
-                query_queue.enqueue(statement, arguments);
+            let mut arguments = vec![
+                Argument::String(if is_event_message {
+                    "event:".to_string() + entity_id
+                } else {
+                    entity_id.to_string()
+                }),
+                Argument::String(event_id.to_string()),
+                Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
+                Argument::String(chrono::Utc::now().to_rfc3339()),
+                Argument::String(entity_id.to_string()),
+            ];
+
+            if !indexes.is_empty() {
+                columns.push("full_array_id".to_string());
+                arguments.push(Argument::String(
+                    std::iter::once(entity_id.to_string())
+                        .chain(indexes.iter().map(|i| i.to_string()))
+                        .collect::<Vec<String>>()
+                        .join(FELT_DELIMITER),
+                ));
+            }
+
+            for (column_idx, idx) in indexes.iter().enumerate() {
+                columns.push(format!("idx_{}", column_idx));
+                arguments.push(Argument::Int(*idx));
+            }
+
+            for member in members.iter() {
+                match &member.ty {
+                    Ty::Primitive(ty) => {
+                        columns.push(format!("external_{}", &member.name));
+                        arguments.push(Argument::String(ty.to_sql_value().unwrap()));
+                    }
+                    Ty::Enum(e) => {
+                        columns.push(format!("external_{}", &member.name));
+                        arguments.push(Argument::String(e.to_sql_value().unwrap()));
+                    }
+                    Ty::ByteArray(b) => {
+                        columns.push(format!("external_{}", &member.name));
+                        arguments.push(Argument::String(b.clone()));
+                    }
+                    _ => {}
+                }
+            }
+
+            let placeholders: Vec<&str> = arguments.iter().map(|_| "?").collect();
+            let statement = if is_store_update_member && indexes.is_empty() {
+                arguments.push(Argument::String(if is_event_message {
+                    "event:".to_string() + entity_id
+                } else {
+                    entity_id.to_string()
+                }));
+
+                // row has to exist. update it directly
+                format!(
+                    "UPDATE [{table_id}] SET {updates} WHERE id = ?",
+                    table_id = table_id,
+                    updates = columns
+                        .iter()
+                        .zip(placeholders.iter())
+                        .map(|(column, placeholder)| format!("{} = {}", column, placeholder))
+                        .collect::<Vec<String>>()
+                        .join(", ")
+                )
+            } else {
+                format!(
+                    "INSERT OR REPLACE INTO [{table_id}] ({}) VALUES ({})",
+                    columns.join(","),
+                    placeholders.join(",")
+                )
             };
+
+            executor.send(QueryMessage::other(statement, arguments))?;
+
+            Ok(())
+        };
 
         match entity {
             Ty::Struct(s) => {
-                update_members(&s.children, &mut self.query_queue, indexes);
+                update_members(&s.children, &mut self.executor, indexes)?;
 
                 for member in s.children.iter() {
                     let mut path_clone = path.clone();
@@ -752,7 +817,7 @@ impl Sql {
                         (&member.ty, is_store_update_member),
                         block_timestamp,
                         indexes,
-                    );
+                    )?;
                 }
             }
             Ty::Enum(e) => {
@@ -761,7 +826,7 @@ impl Sql {
                         if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false }
                     },
                 ) {
-                    return;
+                    return Ok(());
                 }
 
                 let option = e.options[e.option.unwrap() as usize].clone();
@@ -771,9 +836,9 @@ impl Sql {
                         Member { name: "option".to_string(), ty: Ty::Enum(e.clone()), key: false },
                         Member { name: option.name.clone(), ty: option.ty.clone(), key: false },
                     ],
-                    &mut self.query_queue,
+                    &mut self.executor,
                     indexes,
-                );
+                )?;
 
                 match &option.ty {
                     // Skip enum options that have no type / member
@@ -788,7 +853,7 @@ impl Sql {
                             (&option.ty, is_store_update_member),
                             block_timestamp,
                             indexes,
-                        );
+                        )?;
                     }
                 }
             }
@@ -803,9 +868,9 @@ impl Sql {
                         })
                         .collect::<Vec<Member>>()
                         .as_slice(),
-                    &mut self.query_queue,
+                    &mut self.executor,
                     indexes,
-                );
+                )?;
 
                 for (idx, member) in t.iter().enumerate() {
                     let mut path_clone = path.clone();
@@ -817,7 +882,7 @@ impl Sql {
                         (member, is_store_update_member),
                         block_timestamp,
                         indexes,
-                    );
+                    )?;
                 }
             }
             Ty::Array(array) => {
@@ -833,7 +898,7 @@ impl Sql {
                 let mut arguments = vec![Argument::String(entity_id.to_string())];
                 arguments.extend(indexes.iter().map(|idx| Argument::Int(*idx)));
 
-                self.query_queue.enqueue(query, arguments);
+                self.executor.send(QueryMessage::other(query, arguments))?;
 
                 // insert the new array elements
                 for (idx, member) in array.iter().enumerate() {
@@ -842,9 +907,9 @@ impl Sql {
 
                     update_members(
                         &[Member { name: "data".to_string(), ty: member.clone(), key: false }],
-                        &mut self.query_queue,
+                        &mut self.executor,
                         &indexes,
-                    );
+                    )?;
 
                     let mut path_clone = path.clone();
                     path_clone.push("data".to_string());
@@ -855,11 +920,13 @@ impl Sql {
                         (member, is_store_update_member),
                         block_timestamp,
                         &indexes,
-                    );
+                    )?;
                 }
             }
             _ => {}
         }
+
+        Ok(())
     }
 
     fn build_delete_entity_queries_recursive(
@@ -867,17 +934,19 @@ impl Sql {
         path: Vec<String>,
         entity_id: &str,
         entity: &Ty,
-    ) {
+    ) -> Result<()> {
         match entity {
             Ty::Struct(s) => {
                 let table_id = path.join("$");
                 let statement = format!("DELETE FROM [{table_id}] WHERE entity_id = ?");
-                self.query_queue
-                    .push_front(statement, vec![Argument::String(entity_id.to_string())]);
+                self.executor.send(QueryMessage::other(
+                    statement,
+                    vec![Argument::String(entity_id.to_string())],
+                ))?;
                 for member in s.children.iter() {
                     let mut path_clone = path.clone();
                     path_clone.push(member.name.clone());
-                    self.build_delete_entity_queries_recursive(path_clone, entity_id, &member.ty);
+                    self.build_delete_entity_queries_recursive(path_clone, entity_id, &member.ty)?;
                 }
             }
             Ty::Enum(e) => {
@@ -885,13 +954,15 @@ impl Sql {
                     .iter()
                     .all(|o| if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false })
                 {
-                    return;
+                    return Ok(());
                 }
 
                 let table_id = path.join("$");
                 let statement = format!("DELETE FROM [{table_id}] WHERE entity_id = ?");
-                self.query_queue
-                    .push_front(statement, vec![Argument::String(entity_id.to_string())]);
+                self.executor.send(QueryMessage::other(
+                    statement,
+                    vec![Argument::String(entity_id.to_string())],
+                ))?;
 
                 for child in e.options.iter() {
                     if let Ty::Tuple(t) = &child.ty {
@@ -902,35 +973,41 @@ impl Sql {
 
                     let mut path_clone = path.clone();
                     path_clone.push(child.name.clone());
-                    self.build_delete_entity_queries_recursive(path_clone, entity_id, &child.ty);
+                    self.build_delete_entity_queries_recursive(path_clone, entity_id, &child.ty)?;
                 }
             }
             Ty::Array(array) => {
                 let table_id = path.join("$");
                 let statement = format!("DELETE FROM [{table_id}] WHERE entity_id = ?");
-                self.query_queue
-                    .push_front(statement, vec![Argument::String(entity_id.to_string())]);
+                self.executor.send(QueryMessage::other(
+                    statement,
+                    vec![Argument::String(entity_id.to_string())],
+                ))?;
 
                 for member in array.iter() {
                     let mut path_clone = path.clone();
                     path_clone.push("data".to_string());
-                    self.build_delete_entity_queries_recursive(path_clone, entity_id, member);
+                    self.build_delete_entity_queries_recursive(path_clone, entity_id, member)?;
                 }
             }
             Ty::Tuple(t) => {
                 let table_id = path.join("$");
                 let statement = format!("DELETE FROM [{table_id}] WHERE entity_id = ?");
-                self.query_queue
-                    .push_front(statement, vec![Argument::String(entity_id.to_string())]);
+                self.executor.send(QueryMessage::other(
+                    statement,
+                    vec![Argument::String(entity_id.to_string())],
+                ))?;
 
                 for (idx, member) in t.iter().enumerate() {
                     let mut path_clone = path.clone();
                     path_clone.push(format!("_{}", idx));
-                    self.build_delete_entity_queries_recursive(path_clone, entity_id, member);
+                    self.build_delete_entity_queries_recursive(path_clone, entity_id, member)?;
                 }
             }
             _ => {}
         }
+
+        Ok(())
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -943,7 +1020,7 @@ impl Sql {
         block_timestamp: u64,
         array_idx: usize,
         parent_array_idx: usize,
-    ) {
+    ) -> Result<()> {
         let table_id = path.join("$");
         let mut indices = Vec::new();
 
@@ -1035,7 +1112,7 @@ impl Sql {
                         Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
                     ];
 
-                    self.query_queue.enqueue(statement, arguments);
+                    self.executor.send(QueryMessage::other(statement.to_string(), arguments))?;
                 }
             }
             Ty::Tuple(tuple) => {
@@ -1063,7 +1140,7 @@ impl Sql {
                         Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
                     ];
 
-                    self.query_queue.enqueue(statement, arguments);
+                    self.executor.send(QueryMessage::other(statement.to_string(), arguments))?;
                 }
             }
             Ty::Array(array) => {
@@ -1088,7 +1165,7 @@ impl Sql {
                     Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
                 ];
 
-                self.query_queue.enqueue(statement, arguments);
+                self.executor.send(QueryMessage::other(statement.to_string(), arguments))?;
             }
             Ty::Enum(e) => {
                 for (idx, child) in e
@@ -1127,7 +1204,7 @@ impl Sql {
                         Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
                     ];
 
-                    self.query_queue.enqueue(statement, arguments);
+                    self.executor.send(QueryMessage::other(statement.to_string(), arguments))?;
                 }
             }
             _ => {}
@@ -1166,22 +1243,18 @@ impl Sql {
         create_table_query
             .push_str("FOREIGN KEY (event_message_id) REFERENCES event_messages(id));");
 
-        self.query_queue.enqueue(create_table_query, vec![]);
+        self.executor.send(QueryMessage::other(create_table_query, vec![]))?;
 
-        indices.iter().for_each(|s| {
-            self.query_queue.enqueue(s, vec![]);
-        });
-    }
-
-    pub async fn execute(&mut self) -> Result<()> {
-        debug!("Executing {} queries fromt the queue", self.query_queue.queue.len());
-        self.query_queue.execute_all().await?;
+        for s in indices.iter() {
+            self.executor.send(QueryMessage::other(s.to_string(), vec![]))?;
+        }
 
         Ok(())
     }
-}
 
-fn felts_sql_string(felts: &[Felt]) -> String {
-    felts.iter().map(|k| format!("{:#x}", k)).collect::<Vec<String>>().join(FELT_DELIMITER)
-        + FELT_DELIMITER
+    pub async fn execute(&self) -> Result<()> {
+        let (execute, recv) = QueryMessage::execute_recv();
+        self.executor.send(execute)?;
+        recv.await?
+    }
 }

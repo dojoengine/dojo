@@ -14,7 +14,7 @@ jobs:
   bench-katana:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:v1.0.0-alpha.9
+      image: ghcr.io/dojoengine/dojo-dev:v1.0.0-alpha.14
     steps:
       - uses: actions/checkout@v3
       - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
@@ -24,6 +24,28 @@ jobs:
         with:
           tool: "cargo"
           output-file-path: output.txt
+          benchmark-data-dir-path: "."
+          # Access token to deploy GitHub Pages branch
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          # Push and deploy GitHub pages branch automatically
+          auto-push: true
+          alert-threshold: "130%"
+          comment-on-alert: true
+          alert-comment-cc-users: "@kariy,@glihm,@tarrencev"
+
+  bench-sozo:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/dojoengine/dojo-dev:v1.0.0-alpha.14
+    steps:
+      - uses: actions/checkout@v3
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: Running Sozo benchmarks
+        run: cargo bench --bench spawn-and-move-build -- --output-format bencher | sed 1d | tail -n 1 | tee output_sozo.txt
+      - uses: benchmark-action/github-action-benchmark@v1
+        with:
+          tool: "cargo"
+          output-file-path: output_sozo.txt
           benchmark-data-dir-path: "."
           # Access token to deploy GitHub Pages branch
           github-token: ${{ secrets.GITHUB_TOKEN }}

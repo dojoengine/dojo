@@ -11,9 +11,29 @@ use starknet::core::types::{
 };
 use strum_macros::{AsRefStr, EnumIter, FromRepr};
 
+use crate::proto::types::member_value;
 use crate::proto::{self};
 
 pub mod schema;
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
+pub struct IndexerUpdate {
+    pub head: i64,
+    pub tps: i64,
+    pub last_block_timestamp: i64,
+    pub contract_address: Felt,
+}
+
+impl From<proto::world::SubscribeIndexerResponse> for IndexerUpdate {
+    fn from(value: proto::world::SubscribeIndexerResponse) -> Self {
+        Self {
+            head: value.head,
+            tps: value.tps,
+            last_block_timestamp: value.last_block_timestamp,
+            contract_address: Felt::from_bytes_be_slice(&value.contract_address),
+        }
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct Query {
@@ -55,11 +75,17 @@ pub enum PatternMatching {
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
+pub enum MemberValue {
+    Primitive(Primitive),
+    String(String),
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct MemberClause {
     pub model: String,
     pub member: String,
     pub operator: ComparisonOperator,
-    pub value: Primitive,
+    pub value: MemberValue,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
@@ -284,7 +310,7 @@ impl From<MemberClause> for proto::types::MemberClause {
             model: value.model,
             member: value.member,
             operator: value.operator as i32,
-            value: Some(value.value.into()),
+            value: Some(proto::types::MemberValue { value_type: Some(value.value.into()) }),
         }
     }
 }
@@ -294,6 +320,17 @@ impl From<CompositeClause> for proto::types::CompositeClause {
         Self {
             operator: value.operator as i32,
             clauses: value.clauses.into_iter().map(|clause| clause.into()).collect(),
+        }
+    }
+}
+
+impl From<MemberValue> for member_value::ValueType {
+    fn from(value: MemberValue) -> Self {
+        match value {
+            MemberValue::Primitive(primitive) => {
+                member_value::ValueType::Primitive(primitive.into())
+            }
+            MemberValue::String(string) => member_value::ValueType::String(string),
         }
     }
 }

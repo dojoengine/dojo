@@ -96,11 +96,11 @@ impl AccountOptions {
         if self.controller {
             let url = starknet.url(env_metadata)?;
             let account = self.controller(url, provider, world_address_or_name, config).await?;
-            return Ok(SozoAccount::from(account));
+            return Ok(SozoAccount::Controller(account));
         }
 
         let account = self.std_account(provider, env_metadata).await?;
-        Ok(SozoAccount::from(account))
+        Ok(SozoAccount::Standard(account))
     }
 
     pub async fn std_account<P>(
@@ -151,7 +151,9 @@ impl AccountOptions {
 #[cfg(test)]
 mod tests {
     use clap::Parser;
-    use starknet::accounts::{Call, ExecutionEncoder};
+    use katana_runner::RunnerCtx;
+    use starknet::accounts::ExecutionEncoder;
+    use starknet::core::types::Call;
     use starknet_crypto::Felt;
 
     use super::{AccountOptions, DOJO_ACCOUNT_ADDRESS_ENV_VAR};
@@ -210,8 +212,9 @@ mod tests {
         assert!(cmd.account.account_address(None).is_err());
     }
 
-    #[katana_runner::katana_test(2, true)]
-    async fn legacy_flag_works_as_expected() {
+    #[tokio::test]
+    #[katana_runner::test(accounts = 2, fee = false)]
+    async fn legacy_flag_works_as_expected(runner: &RunnerCtx) {
         let cmd = Command::parse_from([
             "sozo",
             "--legacy",
@@ -234,8 +237,9 @@ mod tests {
         assert!(*result.get(3).unwrap() == Felt::from_hex("0x0").unwrap());
     }
 
-    #[katana_runner::katana_test(2, true)]
-    async fn without_legacy_flag_works_as_expected() {
+    #[tokio::test]
+    #[katana_runner::test(accounts = 2, fee = false)]
+    async fn without_legacy_flag_works_as_expected(runner: &RunnerCtx) {
         let cmd = Command::parse_from(["sozo", "--account-address", "0x0", "--private-key", "0x1"]);
         let dummy_call = vec![Call {
             to: Felt::from_hex("0x0").unwrap(),

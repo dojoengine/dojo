@@ -17,5 +17,5 @@ cairo-lang-sierra-to-casm = "2.7.0"
 cairo-lang-starknet = "2.7.0"
 cairo-lang-starknet-classes = "2.7.0"
 cairo-lang-utils = "2.7.0"
-cairo-vm = "1.0.0"
-starknet_api = "0.13.0-dev.9"
+cairo-vm = "1.0.1"
+starknet_api = { git = "https://github.com/dojoengine/sequencer", tag = "v0.8.0-rc3.1" }
