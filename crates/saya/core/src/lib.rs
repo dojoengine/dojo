@@ -16,7 +16,7 @@ use katana_primitives::block::{BlockNumber, FinalityStatus, SealedBlock, SealedB
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
 use katana_primitives::transaction::Tx;
 use katana_rpc_types::trace::TxExecutionInfo;
-use prover::persistent::{BatcherCall, BatcherInput, PublishedStateDiff, StarknetOsOutput};
+use prover::persistent::{PublishedStateDiff, StarknetOsOutput};
 use prover::{extract_execute_calls, HttpProverParams, ProveProgram, ProverIdentifier};
 pub use prover_sdk::access_key::ProverAccessKey;
 use prover_sdk::ProverResult;
@@ -195,30 +195,6 @@ impl Saya {
             match self.config.mode {
                 SayaMode::Persistent => {
                     let num_blocks = params.len() as u64;
-                    let calls = params
-                        .into_iter()
-                        .enumerate()
-                        .map(|(i, p)| self.process_block(block + i as u64, p))
-                        .collect::<Result<Vec<_>, _>>()?
-                        .into_iter()
-                        .flatten()
-                        .flat_map(|(_, c)| c)
-                        .map(|c| BatcherCall {
-                            to: c.to,
-                            selector: c.selector,
-                            calldata: c.calldata,
-                            starknet_messages: Vec::new(), // TODO: Fill messages.
-                            appchain_messages: Vec::new(),
-                        })
-                        .collect::<Vec<_>>();
-
-                    let _input = BatcherInput {
-                        calls,
-                        block_number: Felt::from(block),
-                        prev_state_root: mock_state_hash,
-                        block_hash: Felt::from(0u64),
-                    };
-
                     mock_state_hash += Felt::ONE;
 
                     info!(target: LOG_TARGET, "Proving {} blocks.", num_blocks);
