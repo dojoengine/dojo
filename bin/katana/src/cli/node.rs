@@ -490,8 +490,8 @@ mod test {
         let args = NodeArgs::parse_from(["katana"]);
         let config = args.config().unwrap();
 
-        assert!(!config.dev.fee);
-        assert!(!config.dev.validate);
+        assert!(config.dev.fee);
+        assert!(config.dev.validate);
         assert_eq!(config.starknet.fork_rpc_url, None);
         assert_eq!(config.starknet.fork_block_number, None);
         assert_eq!(config.starknet.env.invoke_max_steps, DEFAULT_INVOKE_MAX_STEPS);
@@ -524,8 +524,8 @@ mod test {
         ]);
         let config = args.config().unwrap();
 
-        assert!(config.dev.fee);
-        assert!(config.dev.validate);
+        assert!(!config.dev.fee);
+        assert!(!config.dev.validate);
         assert_eq!(config.starknet.env.invoke_max_steps, 200);
         assert_eq!(config.starknet.env.validate_max_steps, 100);
         assert_eq!(config.db.dir, Some(PathBuf::from("/path/to/db")));
