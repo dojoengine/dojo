@@ -41,7 +41,7 @@ pub type ControllerSessionAccount<P> = SessionAccount<Arc<P>>;
 /// # Supported networks
 ///
 /// * Starknet mainnet
-/// * Stakrnet sepolia
+/// * Starknet sepolia
 /// * Slot hosted networks
 #[tracing::instrument(
     name = "create_controller",
