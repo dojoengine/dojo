@@ -1,9 +1,7 @@
-use std::str::FromStr;
 use std::sync::Arc;
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result};
 use camino::{Utf8Path, Utf8PathBuf};
-use dojo_utils::TransactionWaiter;
 use dojo_world::contracts::naming::get_name_from_tag;
 use dojo_world::manifest::{BaseManifest, Class, DojoContract, Manifest};
 use dojo_world::migration::strategy::generate_salt;
@@ -13,16 +11,14 @@ use slot::account_sdk::account::session::merkle::MerkleTree;
 use slot::account_sdk::account::session::SessionAccount;
 use slot::session::{FullSessionInfo, PolicyMethod};
 use starknet::core::types::contract::{AbiEntry, StateMutability};
-use starknet::core::types::StarknetError::ContractNotFound;
-use starknet::core::types::{BlockId, BlockTag, Felt};
+use starknet::core::types::Felt;
 use starknet::core::utils::{
     cairo_short_string_to_felt, get_contract_address, get_selector_from_name,
 };
 use starknet::macros::felt;
 use starknet::providers::Provider;
-use starknet::providers::ProviderError::StarknetError;
 use starknet_crypto::poseidon_hash_single;
-use tracing::{trace, warn};
+use tracing::trace;
 use url::Url;
 
 use super::WorldAddressOrName;
@@ -37,6 +33,16 @@ use super::WorldAddressOrName;
 pub type ControllerSessionAccount<P> = SessionAccount<Arc<P>>;
 
 /// Create a new Catridge Controller account based on session key.
+///
+/// Controller guarantees that if the provided network is among one of the supported networks,
+/// then the Controller account should exist. If it doesn't yet exist, it will automatically
+/// be created when a session is created (ie during the session registration stage).
+///
+/// # Supported networks
+///
+/// * Starknet mainnet
+/// * Stakrnet sepolia
+/// * Slot hosted networks
 #[tracing::instrument(
     name = "create_controller",
     skip(rpc_url, provider, world_addr_or_name, config)
@@ -65,11 +71,6 @@ where
         address = format!("{contract_address:#x}"),
         "Creating Controller session account"
     );
-
-    // make sure account exist on the provided chain, if not, we deploy it first before proceeding
-    deploy_account_if_not_exist(rpc_url.clone(), &provider, chain_id, contract_address, &username)
-        .await
-        .with_context(|| format!("Deploying Controller account on chain {chain_id}"))?;
 
     // Check if the session exists, if not create a new one
     let session_details = match slot::session::get(chain_id)? {
@@ -266,95 +267,6 @@ fn get_dojo_world_address(
             );
             Ok(address)
         }
-    }
-}
-
-/// This function will call the `cartridge_deployController` method to deploy the account if it
-/// doesn't yet exist on the chain. But this JSON-RPC method is only available on Katana deployed on
-/// Slot. If the `rpc_url` is not a Slot url, it will return an error.
-///
-/// `cartridge_deployController` is not a method that Katana itself exposes. It's from a middleware
-/// layer that is deployed on top of the Katana deployment on Slot. This method will deploy the
-/// contract of a user based on the Slot deployment.
-async fn deploy_account_if_not_exist<P>(
-    rpc_url: Url,
-    provider: &P,
-    chain_id: Felt,
-    address: Felt,
-    username: &str,
-) -> Result<()>
-where
-    P: Provider + Send,
-{
-    use reqwest::Client;
-    use serde_json::json;
-
-    // Check if the account exists on the chain
-    match provider.get_class_at(BlockId::Tag(BlockTag::Pending), address).await {
-        Ok(_) => Ok(()),
-
-        // if account doesn't exist, deploy it by calling `cartridge_deployController` method
-        Err(err @ StarknetError(ContractNotFound)) => {
-            trace!(
-                %username,
-                chain = format!("{chain_id:#}"),
-                address = format!("{address:#x}"),
-                "Controller does not exist on chain. Attempting to deploy..."
-            );
-
-            // Skip deployment if the rpc_url is not a Slot instance
-            if !rpc_url.host_str().map_or(false, |host| host.contains("api.cartridge.gg")) {
-                warn!(%rpc_url, "Unable to deploy Controller on non-Slot instance.");
-                bail!("Controller with username '{username}' does not exist: {err}");
-            }
-
-            let body = json!({
-                "id": 1,
-                "jsonrpc": "2.0",
-                "params": { "id": username },
-                "method": "cartridge_deployController",
-            });
-
-            // The response object is in the form:
-            //
-            // {
-            //   "id": 1,
-            //   "jsonrpc": "2.0",
-            //   "result": {
-            //     "already_deployed": false,
-            //     "transaction_hash": "0x12345"
-            //   }
-            // }
-            let res = Client::new()
-                .post(rpc_url)
-                .json(&body)
-                .send()
-                .await?
-                .error_for_status()
-                .context("Failed to deploy controller")?;
-
-            // TODO: handle this more elegantly
-            let response = res.json::<serde_json::Value>().await?;
-            let hex = response["result"]["transaction_hash"]
-                .as_str()
-                .context("Failed to get Controller deployment transaction hash from response")?;
-
-            // wait for deployment tx to finish
-            let tx_hash = Felt::from_str(hex)?;
-            let _ = TransactionWaiter::new(tx_hash, provider).await?;
-
-            trace!(
-                %username,
-                chain = format!("{chain_id:#}"),
-                address = format!("{address:#x}"),
-                tx = format!("{tx_hash:#x}"),
-                "Controller deployed successfully.",
-            );
-
-            Ok(())
-        }
-
-        Err(e) => bail!(e),
     }
 }
 
