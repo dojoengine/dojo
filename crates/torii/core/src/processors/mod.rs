@@ -1,15 +1,15 @@
-use std::collections::HashMap;
-use std::sync::Arc;
-
 use anyhow::{Error, Result};
 use async_trait::async_trait;
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{Event, Felt, Transaction};
-use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
 
 use crate::sql::Sql;
 
+pub mod erc20_legacy_transfer;
+pub mod erc20_transfer;
+pub mod erc721_legacy_transfer;
+pub mod erc721_transfer;
 pub mod event_message;
 pub mod metadata_update;
 pub mod register_model;
@@ -72,18 +72,4 @@ pub trait TransactionProcessor<P: Provider + Sync>: Send + Sync {
         transaction_hash: Felt,
         transaction: &Transaction,
     ) -> Result<(), Error>;
-}
-
-/// Given a list of event processors, generate a map of event keys to the event processor
-pub fn generate_event_processors_map<P: Provider + Sync + Send>(
-    event_processor: Vec<Arc<dyn EventProcessor<P>>>,
-) -> Result<HashMap<Felt, Arc<dyn EventProcessor<P>>>> {
-    let mut event_processors = HashMap::new();
-
-    for processor in event_processor {
-        let key = get_selector_from_name(processor.event_key().as_str())?;
-        event_processors.insert(key, processor);
-    }
-
-    Ok(event_processors)
 }

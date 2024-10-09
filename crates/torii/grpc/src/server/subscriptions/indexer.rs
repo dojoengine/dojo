@@ -13,7 +13,7 @@ use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tokio::sync::RwLock;
 use torii_core::error::{Error, ParseError};
 use torii_core::simple_broker::SimpleBroker;
-use torii_core::types::Contract as ContractUpdated;
+use torii_core::types::ContractCursor as ContractUpdated;
 use tracing::{error, trace};
 
 use crate::proto;

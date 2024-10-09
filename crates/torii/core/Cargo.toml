@@ -28,11 +28,13 @@ serde.workspace = true
 serde_json.workspace = true
 slab = "0.4.2"
 sqlx.workspace = true
-starknet.workspace = true
 starknet-crypto.workspace = true
+starknet.workspace = true
 thiserror.workspace = true
 tokio = { version = "1.32.0", features = [ "sync" ], default-features = true }
+# tokio-stream = "0.1.11"
 tokio-util.workspace = true
+toml.workspace = true
 tracing.workspace = true
 
 [dev-dependencies]

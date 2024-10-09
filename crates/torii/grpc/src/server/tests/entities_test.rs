@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -22,10 +23,8 @@ use tempfile::NamedTempFile;
 use tokio::sync::broadcast;
 use torii_core::engine::{Engine, EngineConfig, Processors};
 use torii_core::executor::Executor;
-use torii_core::processors::generate_event_processors_map;
-use torii_core::processors::register_model::RegisterModelProcessor;
-use torii_core::processors::store_set_record::StoreSetRecordProcessor;
 use torii_core::sql::Sql;
+use torii_core::types::ContractType;
 
 use crate::proto::types::KeysClause;
 use crate::server::DojoWorld;
@@ -105,28 +104,28 @@ async fn test_entities_queries(sequencer: &RunnerCtx) {
     tokio::spawn(async move {
         executor.run().await.unwrap();
     });
-    let db = Sql::new(pool.clone(), strat.world_address, sender).await.unwrap();
+    let db = Sql::new(
+        pool.clone(),
+        sender,
+        &HashMap::from([(strat.world_address, ContractType::WORLD)]),
+    )
+    .await
+    .unwrap();
 
     let (shutdown_tx, _) = broadcast::channel(1);
     let mut engine = Engine::new(
         world_reader,
         db.clone(),
         Arc::clone(&provider),
-        Processors {
-            event: generate_event_processors_map(vec![
-                Arc::new(RegisterModelProcessor),
-                Arc::new(StoreSetRecordProcessor),
-            ])
-            .unwrap(),
-            ..Processors::default()
-        },
+        Processors { ..Processors::default() },
         EngineConfig::default(),
         shutdown_tx,
         None,
+        Arc::new(HashMap::from([(strat.world_address, ContractType::WORLD)])),
     );
 
     let to = provider.block_hash_and_number().await.unwrap().block_number;
-    let data = engine.fetch_range(0, to, None).await.unwrap();
+    let data = engine.fetch_range(0, to, &HashMap::new()).await.unwrap();
     engine.process_range(data).await.unwrap();
 
     db.execute().await.unwrap();

@@ -1,0 +1,6 @@
+# Example configuration file for Torii
+# contracts = [
+#     { type = "WORLD", address = "<WORLD_CONTRACT_ADDRESS>" },
+#     { type = "ERC20", address = "<ERC20_CONTRACT_ADDRESS>" },
+#     { type = "ERC721", address = "<ERC721_CONTRACT_ADDRESS>" },
+# ]

@@ -1,11 +1,13 @@
+use std::collections::HashMap;
 use std::mem;
+use std::str::FromStr;
 
 use anyhow::{Context, Result};
 use dojo_types::schema::{Struct, Ty};
 use sqlx::query::Query;
 use sqlx::sqlite::SqliteArguments;
 use sqlx::{FromRow, Pool, Sqlite, Transaction};
-use starknet::core::types::Felt;
+use starknet::core::types::{Felt, U256};
 use tokio::sync::broadcast::{Receiver, Sender};
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 use tokio::sync::oneshot;
@@ -13,8 +15,10 @@ use tokio::time::Instant;
 use tracing::{debug, error};
 
 use crate::simple_broker::SimpleBroker;
+use crate::sql::utils::{felt_to_sql_string, sql_string_to_u256, u256_to_sql_string, I256};
+use crate::sql::FELT_DELIMITER;
 use crate::types::{
-    Contract as ContractUpdated, Entity as EntityUpdated, Event as EventEmitted,
+    ContractCursor, ContractType, Entity as EntityUpdated, Event as EventEmitted,
     EventMessage as EventMessageUpdated, Model as ModelRegistered, OptimisticEntity,
     OptimisticEventMessage,
 };
@@ -32,7 +36,7 @@ pub enum Argument {
 
 #[derive(Debug, Clone)]
 pub enum BrokerMessage {
-    SetHead(ContractUpdated),
+    SetHead(ContractCursor),
     ModelRegistered(ModelRegistered),
     EntityUpdated(EntityUpdated),
     EventMessageUpdated(EventMessageUpdated),
@@ -48,6 +52,11 @@ pub struct DeleteEntityQuery {
 }
 
 #[derive(Debug, Clone)]
+pub struct ApplyBalanceDiffQuery {
+    pub erc_cache: HashMap<(ContractType, String), I256>,
+}
+
+#[derive(Debug, Clone)]
 pub struct SetHeadQuery {
     pub head: u64,
     pub last_block_timestamp: u64,
@@ -56,11 +65,31 @@ pub struct SetHeadQuery {
 }
 
 #[derive(Debug, Clone)]
+pub struct ResetCursorsQuery {
+    // contract => (last_txn, txn_count)
+    pub cursor_map: HashMap<Felt, (Felt, u64)>,
+    pub last_block_timestamp: u64,
+    pub last_block_number: u64,
+}
+
+#[derive(Debug, Clone)]
+pub struct UpdateCursorsQuery {
+    // contract => (last_txn, txn_count)
+    pub cursor_map: HashMap<Felt, (Felt, u64)>,
+    pub last_block_number: u64,
+    pub last_pending_block_tx: Option<Felt>,
+    pub pending_block_timestamp: u64,
+}
+
+#[derive(Debug, Clone)]
 pub enum QueryType {
     SetHead(SetHeadQuery),
+    ResetCursors(ResetCursorsQuery),
+    UpdateCursors(UpdateCursorsQuery),
     SetEntity(Ty),
     DeleteEntity(DeleteEntityQuery),
     EventMessage(Ty),
+    ApplyBalanceDiff(ApplyBalanceDiffQuery),
     RegisterModel,
     StoreEvent,
     Execute,
@@ -69,6 +98,8 @@ pub enum QueryType {
 
 #[derive(Debug)]
 pub struct Executor<'c> {
+    // Queries should use `transaction` instead of `pool`
+    // This `pool` is only used to create a new `transaction`
     pool: Pool<Sqlite>,
     transaction: Transaction<'c, Sqlite>,
     publish_queue: Vec<BrokerMessage>,
@@ -215,8 +246,115 @@ impl<'c> Executor<'c> {
                     .fetch_one(&mut **tx)
                     .await?;
 
-                let contract = ContractUpdated::from_row(&row)?;
+                let contract = ContractCursor::from_row(&row)?;
                 self.publish_queue.push(BrokerMessage::SetHead(contract));
+            }
+            QueryType::ResetCursors(reset_heads) => {
+                // Read all cursors from db
+                let mut cursors: Vec<ContractCursor> =
+                    sqlx::query_as("SELECT * FROM contracts").fetch_all(&mut **tx).await?;
+
+                let new_head =
+                    reset_heads.last_block_number.try_into().expect("doesn't fit in i64");
+                let new_timestamp = reset_heads.last_block_timestamp;
+
+                for cursor in &mut cursors {
+                    if let Some(new_cursor) = reset_heads
+                        .cursor_map
+                        .get(&Felt::from_str(&cursor.contract_address).unwrap())
+                    {
+                        let cursor_timestamp: u64 =
+                            cursor.last_block_timestamp.try_into().expect("doesn't fit in i64");
+
+                        let new_tps = if new_timestamp - cursor_timestamp != 0 {
+                            new_cursor.1 / (new_timestamp - cursor_timestamp)
+                        } else {
+                            new_cursor.1
+                        };
+
+                        cursor.tps = new_tps.try_into().expect("does't fit in i64");
+                    } else {
+                        cursor.tps = 0;
+                    }
+
+                    cursor.head = new_head;
+                    cursor.last_block_timestamp =
+                        new_timestamp.try_into().expect("doesnt fit in i64");
+                    cursor.last_pending_block_tx = None;
+                    cursor.last_pending_block_contract_tx = None;
+
+                    sqlx::query(
+                        "UPDATE contracts SET head = ?, last_block_timestamp = ?, \
+                         last_pending_block_tx = ?, last_pending_block_contract_tx = ? WHERE id = \
+                         ?",
+                    )
+                    .bind(cursor.head)
+                    .bind(cursor.last_block_timestamp)
+                    .bind(&cursor.last_pending_block_tx)
+                    .bind(&cursor.last_pending_block_contract_tx)
+                    .bind(&cursor.contract_address)
+                    .execute(&mut **tx)
+                    .await?;
+
+                    // Send appropriate ContractUpdated publish message
+                    self.publish_queue.push(BrokerMessage::SetHead(cursor.clone()));
+                }
+            }
+            QueryType::UpdateCursors(update_cursors) => {
+                // Read all cursors from db
+                let mut cursors: Vec<ContractCursor> =
+                    sqlx::query_as("SELECT * FROM contracts").fetch_all(&mut **tx).await?;
+
+                let new_head =
+                    update_cursors.last_block_number.try_into().expect("doesn't fit in i64");
+                let new_timestamp = update_cursors.pending_block_timestamp;
+
+                for cursor in &mut cursors {
+                    if let Some(new_cursor) = update_cursors
+                        .cursor_map
+                        .get(&Felt::from_str(&cursor.contract_address).unwrap())
+                    {
+                        let cursor_timestamp: u64 =
+                            cursor.last_block_timestamp.try_into().expect("doesn't fit in i64");
+
+                        let num_transactions = new_cursor.1;
+
+                        let new_tps = if new_timestamp - cursor_timestamp != 0 {
+                            num_transactions / (new_timestamp - cursor_timestamp)
+                        } else {
+                            num_transactions
+                        };
+
+                        cursor.last_pending_block_contract_tx =
+                            Some(felt_to_sql_string(&new_cursor.0));
+                        cursor.tps = new_tps.try_into().expect("does't fit in i64");
+                    } else {
+                        cursor.tps = 0;
+                    }
+                    cursor.last_block_timestamp = update_cursors
+                        .pending_block_timestamp
+                        .try_into()
+                        .expect("doesn't fit in i64");
+                    cursor.head = new_head;
+                    cursor.last_pending_block_tx =
+                        update_cursors.last_pending_block_tx.map(|felt| felt_to_sql_string(&felt));
+
+                    sqlx::query(
+                        "UPDATE contracts SET head = ?, last_block_timestamp = ?, \
+                         last_pending_block_tx = ?, last_pending_block_contract_tx = ? WHERE id = \
+                         ?",
+                    )
+                    .bind(cursor.head)
+                    .bind(cursor.last_block_timestamp)
+                    .bind(&cursor.last_pending_block_tx)
+                    .bind(&cursor.last_pending_block_contract_tx)
+                    .bind(&cursor.contract_address)
+                    .execute(&mut **tx)
+                    .await?;
+
+                    // Send appropriate ContractUpdated publish message
+                    self.publish_queue.push(BrokerMessage::SetHead(cursor.clone()));
+                }
             }
             QueryType::SetEntity(entity) => {
                 let row = query.fetch_one(&mut **tx).await.with_context(|| {
@@ -327,6 +465,12 @@ impl<'c> Executor<'c> {
                 let event = EventEmitted::from_row(&row)?;
                 self.publish_queue.push(BrokerMessage::EventEmitted(event));
             }
+            QueryType::ApplyBalanceDiff(apply_balance_diff) => {
+                debug!(target: LOG_TARGET, "Applying balance diff.");
+                let instant = Instant::now();
+                self.apply_balance_diff(apply_balance_diff).await?;
+                debug!(target: LOG_TARGET, duration = ?instant.elapsed(), "Applied balance diff.");
+            }
             QueryType::Execute => {
                 debug!(target: LOG_TARGET, "Executing query.");
                 let instant = Instant::now();
@@ -358,6 +502,102 @@ impl<'c> Executor<'c> {
         for message in self.publish_queue.drain(..) {
             send_broker_message(message);
         }
+
+        Ok(())
+    }
+
+    async fn apply_balance_diff(
+        &mut self,
+        apply_balance_diff: ApplyBalanceDiffQuery,
+    ) -> Result<()> {
+        let erc_cache = apply_balance_diff.erc_cache;
+        for ((contract_type, id_str), balance) in erc_cache.iter() {
+            let id = id_str.split(FELT_DELIMITER).collect::<Vec<&str>>();
+            match contract_type {
+                ContractType::WORLD => unreachable!(),
+                ContractType::ERC721 => {
+                    // account_address/contract_address:id => ERC721
+                    assert!(id.len() == 2);
+                    let account_address = id[0];
+                    let token_id = id[1];
+                    let mid = token_id.split(":").collect::<Vec<&str>>();
+                    let contract_address = mid[0];
+
+                    self.apply_balance_diff_helper(
+                        id_str,
+                        account_address,
+                        contract_address,
+                        token_id,
+                        balance,
+                    )
+                    .await
+                    .with_context(|| "Failed to apply balance diff in apply_cache_diff")?;
+                }
+                ContractType::ERC20 => {
+                    // account_address/contract_address/ => ERC20
+                    assert!(id.len() == 3);
+                    let account_address = id[0];
+                    let contract_address = id[1];
+                    let token_id = id[1];
+
+                    self.apply_balance_diff_helper(
+                        id_str,
+                        account_address,
+                        contract_address,
+                        token_id,
+                        balance,
+                    )
+                    .await
+                    .with_context(|| "Failed to apply balance diff in apply_cache_diff")?;
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    async fn apply_balance_diff_helper(
+        &mut self,
+        id: &str,
+        account_address: &str,
+        contract_address: &str,
+        token_id: &str,
+        balance_diff: &I256,
+    ) -> Result<()> {
+        let tx = &mut self.transaction;
+        let balance: Option<(String,)> =
+            sqlx::query_as("SELECT balance FROM balances WHERE id = ?")
+                .bind(id)
+                .fetch_optional(&mut **tx)
+                .await?;
+
+        let mut balance = if let Some(balance) = balance {
+            sql_string_to_u256(&balance.0)
+        } else {
+            U256::from(0u8)
+        };
+
+        if balance_diff.is_negative {
+            if balance < balance_diff.value {
+                dbg!(&balance_diff, balance, id);
+            }
+            balance -= balance_diff.value;
+        } else {
+            balance += balance_diff.value;
+        }
+
+        // write the new balance to the database
+        sqlx::query(
+            "INSERT OR REPLACE INTO balances (id, contract_address, account_address, token_id, \
+             balance) VALUES (?, ?, ?, ?, ?)",
+        )
+        .bind(id)
+        .bind(contract_address)
+        .bind(account_address)
+        .bind(token_id)
+        .bind(u256_to_sql_string(&balance))
+        .execute(&mut **tx)
+        .await?;
 
         Ok(())
     }

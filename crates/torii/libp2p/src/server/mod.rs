@@ -26,7 +26,8 @@ use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
 use starknet_crypto::poseidon_hash_many;
 use torii_core::executor::QueryMessage;
-use torii_core::sql::{felts_sql_string, Sql};
+use torii_core::sql::utils::felts_to_sql_string;
+use torii_core::sql::Sql;
 use tracing::{info, warn};
 use webrtc::tokio::Certificate;
 
@@ -246,7 +247,7 @@ impl<P: Provider + Sync> Relay<P> {
                                     continue;
                                 }
                             };
-                            let keys_str = felts_sql_string(&keys);
+                            let keys_str = felts_to_sql_string(&keys);
                             let entity_id = poseidon_hash_many(&keys);
                             let model_id = ty_model_id(&ty).unwrap();
 
