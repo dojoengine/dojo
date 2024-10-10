@@ -5,6 +5,7 @@ use async_trait::async_trait;
 use cainome::parser::tokens::Composite;
 use generator::interface::TsInterfaceGenerator;
 use generator::r#enum::TsEnumGenerator;
+use generator::schema::TsSchemaGenerator;
 use writer::TsFileWriter;
 
 use crate::error::BindgenResult;
@@ -29,7 +30,11 @@ impl TypescriptPlugin {
             writers: vec![
                 Box::new(TsFileWriter::new(
                     "models.gen.ts",
-                    vec![Box::new(TsInterfaceGenerator {}), Box::new(TsEnumGenerator {})],
+                    vec![
+                        Box::new(TsInterfaceGenerator {}),
+                        Box::new(TsEnumGenerator {}),
+                        Box::new(TsSchemaGenerator {}),
+                    ],
                 )),
                 Box::new(TsFileWriter::new("contracts.gen.ts", vec![])),
             ],
