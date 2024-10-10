@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use anyhow::{anyhow, Context, Result};
 use clap::{Args, Subcommand};
 use dojo_utils::TxnConfig;
@@ -12,6 +14,7 @@ use starknet::core::types::{BlockId, BlockTag, Felt, StarknetError};
 use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider, ProviderError};
+use tokio::time;
 use tracing::trace;
 
 use super::options::account::{AccountOptions, SozoAccount};
@@ -147,7 +150,19 @@ pub async fn setup_env<'a>(
         let provider = starknet.provider(env)?;
         trace!(?provider, "Provider initialized.");
 
-        let spec_version = provider.spec_version().await?;
+        let get_spec_version = provider.spec_version();
+        let timeout = time::sleep(Duration::from_secs(5));
+        tokio::pin!(timeout);
+
+        let spec_version = tokio::select! {
+            _ = &mut timeout => {
+                Err(anyhow!( "Unable to connect to RPC provider: timeout, might be cors issue"))
+            },
+            version = get_spec_version => {
+                Ok(version.unwrap())
+            },
+        }?;
+
         trace!(spec_version);
 
         if !is_compatible_version(&spec_version, RPC_SPEC_VERSION)? {
