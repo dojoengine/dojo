@@ -1,19 +1,19 @@
-use crate::DojoData;
+use crate::{plugins::BindgenContractGenerator, DojoData};
 use cainome::parser::tokens::Composite;
 use std::path::{Path, PathBuf};
 
 use crate::{
     error::BindgenResult,
-    plugins::{BindgenGenerator, BindgenWriter},
+    plugins::{BindgenModelGenerator, BindgenWriter},
 };
 
 pub struct TsFileWriter {
     path: &'static str,
-    generators: Vec<Box<dyn BindgenGenerator>>,
+    generators: Vec<Box<dyn BindgenModelGenerator>>,
 }
 
 impl TsFileWriter {
-    pub fn new(path: &'static str, generators: Vec<Box<dyn BindgenGenerator>>) -> Self {
+    pub fn new(path: &'static str, generators: Vec<Box<dyn BindgenModelGenerator>>) -> Self {
         Self { path, generators }
     }
 }
@@ -72,6 +72,69 @@ impl BindgenWriter for TsFileWriter {
     }
 
     fn get_path(&self) -> &'static str {
+        self.path
+    }
+}
+
+pub struct TsFileContractWriter {
+    path: &'static str,
+    generators: Vec<Box<dyn BindgenContractGenerator>>,
+}
+
+impl TsFileContractWriter {
+    pub fn new(path: &'static str, generators: Vec<Box<dyn BindgenContractGenerator>>) -> Self {
+        Self { path, generators }
+    }
+}
+
+impl BindgenWriter for TsFileContractWriter {
+    fn write(&self, path: &str, data: &DojoData) -> BindgenResult<(PathBuf, Vec<u8>)> {
+        let models_path = Path::new(path).to_owned();
+
+        let code = self
+            .generators
+            .iter()
+            .fold(Vec::<String>::new(), |mut acc, g| {
+                data.contracts.iter().for_each(|(_, c)| {
+                    c.systems
+                        .iter()
+                        .filter(|s| {
+                            let name = s.to_function().unwrap().name.as_str();
+                            ![
+                                "contract_name",
+                                "namespace",
+                                "tag",
+                                "name_hash",
+                                "selector",
+                                "dojo_init",
+                                "namespace_hash",
+                                "world",
+                            ]
+                            .contains(&name)
+                        })
+                        .for_each(|s| match s.to_function() {
+                            Ok(f) => match g.generate(c, f, &mut acc) {
+                                Ok(code) => {
+                                    if !code.is_empty() {
+                                        acc.push(code)
+                                    }
+                                }
+                                Err(_) => {
+                                    log::error!("Failed to generate code for system {:?}", s);
+                                }
+                            },
+                            Err(_) => {
+                                log::error!("Failed to get function out of system {:?}", s);
+                            }
+                        })
+                });
+
+                acc
+            })
+            .join("\n");
+        Ok((models_path, code.as_bytes().to_vec()))
+    }
+    fn get_path(&self) -> &str {
         self.path
     }
 }

@@ -3,10 +3,10 @@ use std::fmt;
 use std::path::PathBuf;
 
 use async_trait::async_trait;
-use cainome::parser::tokens::Composite;
+use cainome::parser::tokens::{Composite, Function};
 
 use crate::error::BindgenResult;
-use crate::DojoData;
+use crate::{DojoContract, DojoData};
 
 pub mod typescript;
 pub mod typescript_v2;
@@ -49,7 +49,7 @@ pub trait BindgenWriter: Sync {
     fn get_path(&self) -> &str;
 }
 
-pub trait BindgenGenerator: Sync {
+pub trait BindgenModelGenerator: Sync {
     /// Generates code by executing the plugin.
     /// The generated code is written to the specified path.
     /// This will write file sequentially (for now) so we need one generator per part of the file.
@@ -60,4 +60,13 @@ pub trait BindgenGenerator: Sync {
     ///
     ///
     fn generate(&self, token: &Composite, buffer: &mut Vec<String>) -> BindgenResult<String>;
+}
+
+pub trait BindgenContractGenerator: Sync {
+    fn generate(
+        &self,
+        contract: &DojoContract,
+        token: &Function,
+        buffer: &mut Vec<String>,
+    ) -> BindgenResult<String>;
 }

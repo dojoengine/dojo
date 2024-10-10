@@ -3,10 +3,11 @@ use std::path::PathBuf;
 
 use async_trait::async_trait;
 use cainome::parser::tokens::Composite;
+use generator::function::TsFunctionGenerator;
 use generator::interface::TsInterfaceGenerator;
 use generator::r#enum::TsEnumGenerator;
 use generator::schema::TsSchemaGenerator;
-use writer::TsFileWriter;
+use writer::{TsFileContractWriter, TsFileWriter};
 
 use crate::error::BindgenResult;
 use crate::plugins::BuiltinPlugin;
@@ -36,16 +37,12 @@ impl TypescriptPlugin {
                         Box::new(TsSchemaGenerator {}),
                     ],
                 )),
-                Box::new(TsFileWriter::new("contracts.gen.ts", vec![])),
+                Box::new(TsFileContractWriter::new(
+                    "contracts.gen.ts",
+                    vec![Box::new(TsFunctionGenerator {})],
+                )),
             ],
         }
-    }
-
-    /// Check if type path is defined in cairo models or in corelib
-    /// * token: &Composite
-    ///
-    fn filter_type_path(token: &Composite) -> bool {
-        return token.type_path.starts_with("core::") || token.type_path.starts_with("dojo::");
     }
 
     //     // Maps cairo types to C#/Unity SDK defined types
@@ -348,169 +345,214 @@ impl TypescriptPlugin {
     //         out
     //     }
     //
-    //     // Formats a system into a C# method used by the contract class
-    //     // Handled tokens should be a list of all structs and enums used by the contract
-    //     // Such as a set of referenced tokens from a model
-    //     fn format_system(system: &Function, handled_tokens: &[Composite], namespace: String) -> String {
-    //         if [
-    //             "contract_name",
-    //             "namespace",
-    //             "tag",
-    //             "name_hash",
-    //             "selector",
-    //             "dojo_init",
-    //             "namespace_hash",
-    //         ]
-    //         .contains(&system.name.as_str())
-    //         {
-    //             return String::new();
+
+    // // Formats a system into a C# method used by the contract class
+    // // Handled tokens should be a list of all structs and enums used by the contract
+    // // Such as a set of referenced tokens from a model
+    // fn format_system(system: &Function, handled_tokens: &[Composite], namespace: String) -> String {
+    //     if [
+    //         "contract_name",
+    //         "namespace",
+    //         "tag",
+    //         "name_hash",
+    //         "selector",
+    //         "dojo_init",
+    //         "namespace_hash",
+    //     ]
+    //     .contains(&system.name.as_str())
+    //     {
+    //         return String::new();
+    //     }
+    //     fn map_type(token: &Token) -> String {
+    //         match token {
+    //             Token::CoreBasic(_) => TypescriptPlugin::map_type(token)
+    //             .replace("RecsType.", "").replace("Array", "[]")
+    //             // types should be lowercased
+    //             .to_lowercase(),
+    //             Token::Composite(t) => format!("models.{}", t.type_name()),
+    //             Token::Array(_) => TypescriptPlugin::map_type(token),
+    //             _ => panic!("Unsupported token type: {:?}", token),
     //         }
-    //         fn map_type(token: &Token) -> String {
-    //             match token {
-    //                 Token::CoreBasic(_) => TypescriptPlugin::map_type(token)
-    //                 .replace("RecsType.", "").replace("Array", "[]")
-    //                 // types should be lowercased
-    //                 .to_lowercase(),
-    //                 Token::Composite(t) => format!("models.{}", t.type_name()),
-    //                 Token::Array(_) => TypescriptPlugin::map_type(token),
-    //                 _ => panic!("Unsupported token type: {:?}", token),
-    //             }
-    //         }
-    //
-    //         let args = system
-    //             .inputs
-    //             .iter()
-    //             .map(|arg| format!("{}: {}", arg.0, map_type(&arg.1)))
-    //             .collect::<Vec<String>>()
-    //             .join(", ");
-    //
-    //         fn handle_arg_recursive(
-    //             arg_name: &str,
-    //             arg: &Token,
-    //             handled_tokens: &[Composite],
-    //         ) -> String {
-    //             match arg {
-    //                 Token::Composite(_) => {
-    //                     match handled_tokens.iter().find(|t| t.type_name() == arg.type_name()) {
-    //                         Some(t) => {
-    //                             // Need to flatten the struct members.
-    //                             match t.r#type {
-    //                                 CompositeType::Struct if t.type_name() == "ByteArray" => {
-    //                                     format!("byteArray.byteArrayFromString(props.{})", arg_name)
-    //                                 }
-    //                                 CompositeType::Struct => t
-    //                                     .inners
-    //                                     .iter()
-    //                                     .map(|field| format!("props.{}.{}", arg_name, field.name))
-    //                                     .collect::<Vec<String>>()
-    //                                     .join(",\n                    "),
-    //                                 CompositeType::Enum => format!(
-    //                                     "[{}].indexOf(props.{}.type)",
-    //                                     t.inners
-    //                                         .iter()
-    //                                         .map(|field| format!("\"{}\"", field.name))
-    //                                         .collect::<Vec<String>>()
-    //                                         .join(", "),
-    //                                     arg_name
-    //                                 ),
-    //                                 _ => {
-    //                                     format!("props.{}", arg_name)
-    //                                 }
-    //                             }
-    //                         }
-    //                         None => format!("props.{}", arg_name),
-    //                     }
-    //                 }
-    //                 Token::Array(_) => format!("...props.{}", arg_name),
-    //                 Token::Tuple(t) => format!(
-    //                     "...[{}]",
-    //                     t.inners
-    //                         .iter()
-    //                         .enumerate()
-    //                         .map(|(idx, t)| handle_arg_recursive(
-    //                             &format!("props.{arg_name}[{idx}]"),
-    //                             t,
-    //                             handled_tokens
-    //                         ))
-    //                         .collect::<Vec<String>>()
-    //                         .join(", ")
-    //                 ),
-    //                 _ => format!("props.{}", arg_name),
-    //             }
-    //         }
-    //
-    //         let calldata = system
-    //             .inputs
-    //             .iter()
-    //             .map(|arg| handle_arg_recursive(&arg.0, &arg.1, handled_tokens))
-    //             .collect::<Vec<String>>()
-    //             .join(",\n                ");
-    //
-    //         format!(
-    //             "
-    //         // Call the `{system_name}` system with the specified Account and calldata
-    //         const {system_name} = async (props: {{ account: Account{arg_sep}{args} }}) => {{
-    //             try {{
-    //                 return await provider.execute(
-    //                     props.account,
-    //                     {{
-    //                         contractName: contract_name,
-    //                         entrypoint: \"{system_name}\",
-    //                         calldata: [{calldata}],
-    //                     }},
-    //                     \"{namespace}\"
-    //                 );
-    //             }} catch (error) {{
-    //                 console.error(\"Error executing {system_name}:\", error);
-    //                 throw error;
-    //             }}
-    //         }};
-    //             ",
-    //             // selector for execute
-    //             system_name = system.name,
-    //             // add comma if we have args
-    //             arg_sep = if !args.is_empty() { ", " } else { "" },
-    //             // formatted args to use our mapped types
-    //             args = args,
-    //             // calldata for execute
-    //             calldata = calldata,
-    //             namespace = TypescriptPlugin::get_namespace_from_tag(&namespace)
-    //         )
     //     }
     //
-    //     // Formats a contract tag into a pretty contract name
-    //     // eg. dojo_examples-actions -> actions
-    //     fn formatted_contract_name(tag: &str) -> String {
-    //         naming::get_name_from_tag(tag)
-    //     }
+    //     let args = system
+    //         .inputs
+    //         .iter()
+    //         .map(|arg| format!("{}: {}", arg.0, map_type(&arg.1)))
+    //         .collect::<Vec<String>>()
+    //         .join(", ");
     //
-    //     fn get_namespace_from_tag(tag: &str) -> String {
-    //         tag.split('-').next().unwrap_or(tag).to_string()
-    //     }
-    //
-    //     // Handles a contract definition and its underlying systems
-    //     // Will format the contract into a C# class and
-    //     // all systems into C# methods
-    //     // Handled tokens should be a list of all structs and enums used by the contract
-    //     fn handle_contracts(
-    //         &self,
-    //         contracts: &[&DojoContract],
+    //     fn handle_arg_recursive(
+    //         arg_name: &str,
+    //         arg: &Token,
     //         handled_tokens: &[Composite],
     //     ) -> String {
-    //         let mut out = String::new();
-    //         out += TypescriptPlugin::generated_header().as_str();
-    //         out += "import { Account, byteArray } from \"starknet\";\n";
-    //         out += "import { DojoProvider } from \"@dojoengine/core\";\n";
-    //         out += "import * as models from \"./models.gen\";\n";
-    //         out += "\n";
-    //         out += "export type IWorld = Awaited<ReturnType<typeof setupWorld>>;";
+    //         match arg {
+    //             Token::Composite(_) => {
+    //                 match handled_tokens.iter().find(|t| t.type_name() == arg.type_name()) {
+    //                     Some(t) => {
+    //                         // Need to flatten the struct members.
+    //                         match t.r#type {
+    //                             CompositeType::Struct if t.type_name() == "ByteArray" => {
+    //                                 format!("byteArray.byteArrayFromString(props.{})", arg_name)
+    //                             }
+    //                             CompositeType::Struct => t
+    //                                 .inners
+    //                                 .iter()
+    //                                 .map(|field| format!("props.{}.{}", arg_name, field.name))
+    //                                 .collect::<Vec<String>>()
+    //                                 .join(",\n                    "),
+    //                             CompositeType::Enum => format!(
+    //                                 "[{}].indexOf(props.{}.type)",
+    //                                 t.inners
+    //                                     .iter()
+    //                                     .map(|field| format!("\"{}\"", field.name))
+    //                                     .collect::<Vec<String>>()
+    //                                     .join(", "),
+    //                                 arg_name
+    //                             ),
+    //                             _ => {
+    //                                 format!("props.{}", arg_name)
+    //                             }
+    //                         }
+    //                     }
+    //                     None => format!("props.{}", arg_name),
+    //                 }
+    //             }
+    //             Token::Array(_) => format!("...props.{}", arg_name),
+    //             Token::Tuple(t) => format!(
+    //                 "...[{}]",
+    //                 t.inners
+    //                     .iter()
+    //                     .enumerate()
+    //                     .map(|(idx, t)| handle_arg_recursive(
+    //                         &format!("props.{arg_name}[{idx}]"),
+    //                         t,
+    //                         handled_tokens
+    //                     ))
+    //                     .collect::<Vec<String>>()
+    //                     .join(", ")
+    //             ),
+    //             _ => format!("props.{}", arg_name),
+    //         }
+    //     }
     //
-    //         out += "\n\n";
+    //     let calldata = system
+    //         .inputs
+    //         .iter()
+    //         .map(|arg| handle_arg_recursive(&arg.0, &arg.1, handled_tokens))
+    //         .collect::<Vec<String>>()
+    //         .join(",\n                ");
     //
-    //         out += "export async function setupWorld(provider: DojoProvider) {";
+    //     format!(
+    //         "
+    //     // Call the `{system_name}` system with the specified Account and calldata
+    //     const {system_name} = async (props: {{ account: Account{arg_sep}{args} }}) => {{
+    //         try {{
+    //             return await provider.execute(
+    //                 props.account,
+    //                 {{
+    //                     contractName: contract_name,
+    //                     entrypoint: \"{system_name}\",
+    //                     calldata: [{calldata}],
+    //                 }},
+    //                 \"{namespace}\"
+    //             );
+    //         }} catch (error) {{
+    //             console.error(\"Error executing {system_name}:\", error);
+    //             throw error;
+    //         }}
+    //     }};
+    //         ",
+    //         // selector for execute
+    //         system_name = system.name,
+    //         // add comma if we have args
+    //         arg_sep = if !args.is_empty() { ", " } else { "" },
+    //         // formatted args to use our mapped types
+    //         args = args,
+    //         // calldata for execute
+    //         calldata = calldata,
+    //         namespace = TypescriptPlugin::get_namespace_from_tag(&namespace)
+    //     )
+    // }
+    // //
+    // //     // Formats a contract tag into a pretty contract name
+    // //     // eg. dojo_examples-actions -> actions
+    // //     fn formatted_contract_name(tag: &str) -> String {
+    // //         naming::get_name_from_tag(tag)
+    // //     }
+    // //
+    // //     fn get_namespace_from_tag(tag: &str) -> String {
+    // //         tag.split('-').next().unwrap_or(tag).to_string()
+    // //     }
+    // //
+    // // Handles a contract definition and its underlying systems
+    // // Will format the contract into a C# class and
+    // // all systems into C# methods
+    // // Handled tokens should be a list of all structs and enums used by the contract
+    // fn handle_contracts(
+    //     &self,
+    //     contracts: &[&DojoContract],
+    //     handled_tokens: &[Composite],
+    // ) -> String {
+    //     let mut out = String::new();
+    //     out += TypescriptPlugin::generated_header().as_str();
+    //     out += "import { Account, byteArray } from \"starknet\";\n";
+    //     out += "import { DojoProvider } from \"@dojoengine/core\";\n";
+    //     out += "import * as models from \"./models.gen\";\n";
+    //     out += "\n";
+    //     out += "export type IWorld = Awaited<ReturnType<typeof setupWorld>>;";
     //
-    //         for contract in contracts {
-    //             let systems = contract
+    //     out += "\n\n";
+    //
+    //     out += "export async function setupWorld(provider: DojoProvider) {";
+    //
+    //     for contract in contracts {
+    //         let systems = contract
+    //             .systems
+    //             .iter()
+    //             .filter(|system| {
+    //                 let name = system.to_function().unwrap().name.as_str();
+    //                 ![
+    //                     "contract_name",
+    //                     "namespace",
+    //                     "tag",
+    //                     "name_hash",
+    //                     "selector",
+    //                     "dojo_init",
+    //                     "namespace_hash",
+    //                 ]
+    //                 .contains(&name)
+    //             })
+    //             .map(|system| {
+    //                 TypescriptPlugin::format_system(
+    //                     system.to_function().unwrap(),
+    //                     handled_tokens,
+    //                     contract.tag.clone(),
+    //                 )
+    //             })
+    //             .collect::<Vec<String>>()
+    //             .join("\n\n    ");
+    //
+    //         out += &format!(
+    //             "
+    // // System definitions for `{}` contract
+    // function {}() {{
+    //     const contract_name = \"{}\";
+    //
+    //     {}
+    //
+    //     return {{
+    //         {}
+    //     }};
+    // }}
+    //  ",
+    //             contract.tag,
+    //             // capitalize contract name
+    //             TypescriptPlugin::formatted_contract_name(&contract.tag),
+    //             TypescriptPlugin::formatted_contract_name(&contract.tag),
+    //             systems,
+    //             contract
     //                 .systems
     //                 .iter()
     //                 .filter(|system| {
@@ -526,78 +568,34 @@ impl TypescriptPlugin {
     //                     ]
     //                     .contains(&name)
     //                 })
-    //                 .map(|system| {
-    //                     TypescriptPlugin::format_system(
-    //                         system.to_function().unwrap(),
-    //                         handled_tokens,
-    //                         contract.tag.clone(),
-    //                     )
-    //                 })
+    //                 .map(|system| { system.to_function().unwrap().name.to_string() })
     //                 .collect::<Vec<String>>()
-    //                 .join("\n\n    ");
-    //
-    //             out += &format!(
-    //                 "
-    //     // System definitions for `{}` contract
-    //     function {}() {{
-    //         const contract_name = \"{}\";
-    //
-    //         {}
-    //
-    //         return {{
-    //             {}
-    //         }};
-    //     }}
-    // ",
-    //                 contract.tag,
-    //                 // capitalize contract name
-    //                 TypescriptPlugin::formatted_contract_name(&contract.tag),
-    //                 TypescriptPlugin::formatted_contract_name(&contract.tag),
-    //                 systems,
-    //                 contract
-    //                     .systems
-    //                     .iter()
-    //                     .filter(|system| {
-    //                         let name = system.to_function().unwrap().name.as_str();
-    //                         ![
-    //                             "contract_name",
-    //                             "namespace",
-    //                             "tag",
-    //                             "name_hash",
-    //                             "selector",
-    //                             "dojo_init",
-    //                             "namespace_hash",
-    //                         ]
-    //                         .contains(&name)
-    //                     })
-    //                     .map(|system| { system.to_function().unwrap().name.to_string() })
-    //                     .collect::<Vec<String>>()
-    //                     .join(", ")
-    //             );
-    //         }
-    //
-    //         out += "
-    //     return {
-    //         ";
-    //
-    //         out += &contracts
-    //             .iter()
-    //             .map(|c| {
-    //                 format!(
-    //                     "{}: {}()",
-    //                     TypescriptPlugin::formatted_contract_name(&c.tag),
-    //                     TypescriptPlugin::formatted_contract_name(&c.tag)
-    //                 )
-    //             })
-    //             .collect::<Vec<String>>()
-    //             .join(",\n        ");
-    //
-    //         out += "
-    //     };
-    // }\n";
-    //
-    //         out
+    //                 .join(", ")
+    //         );
     //     }
+    //
+    //     out += "
+    // return {
+    //     ";
+    //
+    //     out += &contracts
+    //         .iter()
+    //         .map(|c| {
+    //             format!(
+    //                 "{}: {}()",
+    //                 TypescriptPlugin::formatted_contract_name(&c.tag),
+    //                 TypescriptPlugin::formatted_contract_name(&c.tag)
+    //             )
+    //         })
+    //         .collect::<Vec<String>>()
+    //         .join(",\n        ");
+    //
+    //     out += "
+    // };
+    //  }\n";
+    //
+    //     out
+    // }
 }
 
 #[async_trait]
@@ -627,4 +625,3 @@ impl BuiltinPlugin for TypescriptPlugin {
         Ok(out)
     }
 }
-

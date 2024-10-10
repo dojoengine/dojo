@@ -3,7 +3,7 @@ use convert_case::{Case, Casing};
 
 use crate::{
     error::BindgenResult,
-    plugins::{typescript::generator::JsDefaultValue, BindgenGenerator},
+    plugins::{typescript::generator::JsDefaultValue, BindgenModelGenerator},
 };
 
 /// This generator will build a schema based on previous generator results.
@@ -113,7 +113,7 @@ impl TsSchemaGenerator {
     }
 }
 
-impl BindgenGenerator for TsSchemaGenerator {
+impl BindgenModelGenerator for TsSchemaGenerator {
     fn generate(&self, token: &Composite, buffer: &mut Vec<String>) -> BindgenResult<String> {
         if token.inners.is_empty() || token.r#type != CompositeType::Struct {
             return Ok(String::new());
@@ -144,7 +144,7 @@ mod tests {
     };
 
     use super::*;
-    use crate::plugins::BindgenGenerator;
+    use crate::plugins::BindgenModelGenerator;
 
     #[test]
     fn test_it_does_nothing_if_no_inners() {

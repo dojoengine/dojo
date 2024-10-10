@@ -1,12 +1,12 @@
 use cainome::parser::tokens::{Composite, CompositeType};
 
-use crate::{error::BindgenResult, plugins::BindgenGenerator};
+use crate::{error::BindgenResult, plugins::BindgenModelGenerator};
 
 use super::JsType;
 
 pub(crate) struct TsInterfaceGenerator;
 
-impl BindgenGenerator for TsInterfaceGenerator {
+impl BindgenModelGenerator for TsInterfaceGenerator {
     fn generate(&self, token: &Composite, buffer: &mut Vec<String>) -> BindgenResult<String> {
         if token.r#type != CompositeType::Struct || token.inners.is_empty() {
             return Ok(String::new());
@@ -115,4 +115,3 @@ mod tests {
         }
     }
 }
-

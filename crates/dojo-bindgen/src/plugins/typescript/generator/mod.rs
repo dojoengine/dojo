@@ -22,6 +22,11 @@ impl From<&str> for JsType {
         }
     }
 }
+impl std::fmt::Display for JsType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
+    }
+}
 
 pub(crate) struct JsDefaultValue(String);
 impl From<&str> for JsDefaultValue {
