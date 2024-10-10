@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728588282415,
+  "lastUpdate": 1728588475522,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -24667,6 +24667,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 12075843396,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "58a2a349f7d00c18b12df65e91604a12cb55fb8f",
+          "message": "refactor(katana): move the rpc address log (#2518)\n\n* move rpc address log out of the startup log\r\n\r\n* include ci binaries at PATH",
+          "timestamp": "2024-10-11T03:08:46+08:00",
+          "tree_id": "c4c8c682c3e3ec796866d384124776ca65b0a87e",
+          "url": "https://github.com/dojoengine/dojo/commit/58a2a349f7d00c18b12df65e91604a12cb55fb8f"
+        },
+        "date": 1728588474016,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16366299,
+            "range": "± 271588",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3891350,
+            "range": "± 215229",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3697105654,
+            "range": "± 816646091",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4017126,
+            "range": "± 147152",
             "unit": "ns/iter"
           }
         ]
