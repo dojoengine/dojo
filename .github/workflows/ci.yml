@@ -40,12 +40,13 @@ jobs:
           name: dojo-bins
           path: /tmp/bins
       - run: |
+          export PATH=/tmp/bins:$PATH
           chmod +x /tmp/bins/katana
           chmod +x /tmp/bins/sozo
           bash scripts/build_cairo_projects.sh /tmp/bins/sozo
           tar -xzf spawn-and-move-db.tar.gz -C /tmp/
           tar -xzf types-test-db.tar.gz -C /tmp/
-          KATANA_RUNNER_BIN=/tmp/bins/katana cargo llvm-cov nextest --no-report --all-features --workspace --build-jobs 20
+          cargo llvm-cov nextest --no-report --all-features --workspace --build-jobs 20
           cargo llvm-cov report --lcov --output-path lcov.info
       - uses: codecov/codecov-action@v4
         with:
