@@ -79,7 +79,7 @@ impl ExecuteArgs {
             )
             .await?;
 
-            let tx_config = self.transaction.into();
+            let txn_config = self.transaction.try_into()?;
 
             trace!(
                 contract=?tag_or_address,
@@ -100,7 +100,7 @@ impl ExecuteArgs {
                 self.entrypoint,
                 calldata,
                 &world,
-                &tx_config,
+                &txn_config,
                 #[cfg(feature = "walnut")]
                 &walnut_debugger,
             )
