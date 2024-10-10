@@ -80,15 +80,15 @@ async fn fetch_erc_balances(
                     (Name::new("name"), Value::String(row.name)),
                     (Name::new("symbol"), Value::String(row.symbol)),
                     // for erc20 there is no token_id
-                    (Name::new("token_id"), Value::Null),
+                    (Name::new("tokenId"), Value::Null),
                     (Name::new("decimals"), Value::String(row.decimals.to_string())),
-                    (Name::new("contract_address"), Value::String(row.contract_address.clone())),
+                    (Name::new("contractAddress"), Value::String(row.contract_address.clone())),
                 ]));
 
                 Value::Object(ValueMapping::from([
                     (Name::new("balance"), Value::String(row.balance)),
                     (Name::new("type"), Value::String(row.contract_type)),
-                    (Name::new("token_metadata"), token_metadata),
+                    (Name::new("tokenMetadata"), token_metadata),
                 ]))
             }
             "erc721" => {
@@ -97,17 +97,17 @@ async fn fetch_erc_balances(
                 assert!(token_id.len() == 2);
 
                 let token_metadata = Value::Object(ValueMapping::from([
-                    (Name::new("contract_address"), Value::String(row.contract_address.clone())),
+                    (Name::new("contractAddress"), Value::String(row.contract_address.clone())),
                     (Name::new("name"), Value::String(row.name)),
                     (Name::new("symbol"), Value::String(row.symbol)),
-                    (Name::new("token_id"), Value::String(token_id[1].to_string())),
+                    (Name::new("tokenId"), Value::String(token_id[1].to_string())),
                     (Name::new("decimals"), Value::String(row.decimals.to_string())),
                 ]));
 
                 Value::Object(ValueMapping::from([
                     (Name::new("balance"), Value::String(row.balance)),
                     (Name::new("type"), Value::String(row.contract_type)),
-                    (Name::new("token_metadata"), token_metadata),
+                    (Name::new("tokenMetadata"), token_metadata),
                 ]))
             }
             _ => {

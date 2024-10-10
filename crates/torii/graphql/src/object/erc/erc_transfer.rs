@@ -103,15 +103,15 @@ LIMIT {};
     for row in rows {
         let row = TransferQueryResultRaw::from_row(&row)?;
 
-        let transfer_value = match row.contract_type.as_str() {
-            "ERC20" | "Erc20" | "erc20" => {
+        let transfer_value = match row.contract_type.to_lowercase().as_str() {
+            "erc20" => {
                 let token_metadata = Value::Object(ValueMapping::from([
                     (Name::new("name"), Value::String(row.name)),
                     (Name::new("symbol"), Value::String(row.symbol)),
                     // for erc20 there is no token_id
-                    (Name::new("token_id"), Value::Null),
+                    (Name::new("tokenId"), Value::Null),
                     (Name::new("decimals"), Value::String(row.decimals.to_string())),
-                    (Name::new("contract_address"), Value::String(row.contract_address.clone())),
+                    (Name::new("contractAddress"), Value::String(row.contract_address.clone())),
                 ]));
 
                 Value::Object(ValueMapping::from([
@@ -119,11 +119,11 @@ LIMIT {};
                     (Name::new("to"), Value::String(row.to_address)),
                     (Name::new("amount"), Value::String(row.amount)),
                     (Name::new("type"), Value::String(row.contract_type)),
-                    (Name::new("executed_at"), Value::String(row.executed_at)),
-                    (Name::new("token_metadata"), token_metadata),
+                    (Name::new("executedAt"), Value::String(row.executed_at)),
+                    (Name::new("tokenMetadata"), token_metadata),
                 ]))
             }
-            "ERC721" | "Erc721" | "erc721" => {
+            "erc721" => {
                 // contract_address:token_id
                 let token_id = row.token_id.split(':').collect::<Vec<&str>>();
                 assert!(token_id.len() == 2);
@@ -131,9 +131,9 @@ LIMIT {};
                 let token_metadata = Value::Object(ValueMapping::from([
                     (Name::new("name"), Value::String(row.name)),
                     (Name::new("symbol"), Value::String(row.symbol)),
-                    (Name::new("token_id"), Value::String(token_id[1].to_string())),
+                    (Name::new("tokenId"), Value::String(token_id[1].to_string())),
                     (Name::new("decimals"), Value::String(row.decimals.to_string())),
-                    (Name::new("contract_address"), Value::String(row.contract_address.clone())),
+                    (Name::new("contractAddress"), Value::String(row.contract_address.clone())),
                 ]));
 
                 Value::Object(ValueMapping::from([
@@ -141,8 +141,8 @@ LIMIT {};
                     (Name::new("to"), Value::String(row.to_address)),
                     (Name::new("amount"), Value::String(row.amount)),
                     (Name::new("type"), Value::String(row.contract_type)),
-                    (Name::new("executed_at"), Value::String(row.executed_at)),
-                    (Name::new("token_metadata"), token_metadata),
+                    (Name::new("executedAt"), Value::String(row.executed_at)),
+                    (Name::new("tokenMetadata"), token_metadata),
                 ]))
             }
             _ => {
