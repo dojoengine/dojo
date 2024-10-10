@@ -148,7 +148,7 @@ lazy_static! {
     pub static ref ERC_BALANCE_TYPE_MAPPING: TypeMapping = IndexMap::from([
         (Name::new("balance"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
         (Name::new("type"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
-        (Name::new("token_metadata"), TypeData::Simple(TypeRef::named(ERC_TOKEN_TYPE_NAME))),
+        (Name::new("tokenMetadata"), TypeData::Simple(TypeRef::named(ERC_TOKEN_TYPE_NAME))),
     ]);
 
     pub static ref ERC_TRANSFER_TYPE_MAPPING: TypeMapping = IndexMap::from([
@@ -156,15 +156,15 @@ lazy_static! {
         (Name::new("to"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
         (Name::new("amount"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
         (Name::new("type"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
-        (Name::new("executed_at"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
-        (Name::new("token_metadata"), TypeData::Simple(TypeRef::named(ERC_TOKEN_TYPE_NAME))),
+        (Name::new("executedAt"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("tokenMetadata"), TypeData::Simple(TypeRef::named(ERC_TOKEN_TYPE_NAME))),
     ]);
 
     pub static ref ERC_TOKEN_TYPE_MAPPING: TypeMapping = IndexMap::from([
         (Name::new("name"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
         (Name::new("symbol"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
-        (Name::new("token_id"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("tokenId"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
         (Name::new("decimals"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
-        (Name::new("contract_address"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("contractAddress"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
     ]);
 }
