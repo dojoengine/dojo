@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728523206446,
+  "lastUpdate": 1728588282415,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -24637,6 +24637,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3983138,
             "range": "± 94295",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "58a2a349f7d00c18b12df65e91604a12cb55fb8f",
+          "message": "refactor(katana): move the rpc address log (#2518)\n\n* move rpc address log out of the startup log\r\n\r\n* include ci binaries at PATH",
+          "timestamp": "2024-10-11T03:08:46+08:00",
+          "tree_id": "c4c8c682c3e3ec796866d384124776ca65b0a87e",
+          "url": "https://github.com/dojoengine/dojo/commit/58a2a349f7d00c18b12df65e91604a12cb55fb8f"
+        },
+        "date": 1728588281092,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 12075843396,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
