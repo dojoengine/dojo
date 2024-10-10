@@ -8,7 +8,8 @@ use katana_core::service::messaging::{MessagingConfig, MessagingService, Messagi
 use katana_core::service::{BlockProductionTask, TransactionMiner};
 use katana_executor::ExecutorFactory;
 use katana_pool::{TransactionPool, TxPool};
-use katana_tasks::TaskManager;
+use katana_tasks::{TaskHandle, TaskSpawner};
+use tracing::error;
 
 use super::{StageId, StageResult};
 use crate::Stage;
@@ -18,7 +19,7 @@ use crate::Stage;
 pub struct Sequencing<EF: ExecutorFactory> {
     pool: TxPool,
     backend: Arc<Backend<EF>>,
-    task_manager: TaskManager,
+    task_spawner: TaskSpawner,
     block_producer: BlockProducer<EF>,
     messaging_config: Option<MessagingConfig>,
 }
@@ -27,14 +28,14 @@ impl<EF: ExecutorFactory> Sequencing<EF> {
     pub fn new(
         pool: TxPool,
         backend: Arc<Backend<EF>>,
-        task_manager: TaskManager,
+        task_spawner: TaskSpawner,
         block_producer: BlockProducer<EF>,
         messaging_config: Option<MessagingConfig>,
     ) -> Self {
-        Self { pool, backend, task_manager, block_producer, messaging_config }
+        Self { pool, backend, task_spawner, block_producer, messaging_config }
     }
 
-    async fn run_messaging(&self) -> Result<()> {
+    async fn run_messaging(&self) -> Result<TaskHandle<()>> {
         if let Some(config) = &self.messaging_config {
             let config = config.clone();
             let pool = self.pool.clone();
@@ -42,26 +43,22 @@ impl<EF: ExecutorFactory> Sequencing<EF> {
 
             let service = MessagingService::new(config, pool, backend).await?;
             let task = MessagingTask::new(service);
-            self.task_manager.build_task().critical().name("Messaging").spawn(task);
-        } else {
-            // this will create a future that will never resolve
-            self.task_manager
-                .build_task()
-                .critical()
-                .name("Messaging")
-                .spawn(future::pending::<()>());
-        }
 
-        Ok(())
+            let handle = self.task_spawner.build_task().name("Messaging").spawn(task);
+            Ok(handle)
+        } else {
+            let handle = self.task_spawner.build_task().spawn(future::pending::<()>());
+            Ok(handle)
+        }
     }
 
-    async fn run_block_production(&self) {
+    fn run_block_production(&self) -> TaskHandle<()> {
         let pool = self.pool.clone();
         let miner = TransactionMiner::new(pool.add_listener());
         let block_producer = self.block_producer.clone();
 
         let service = BlockProductionTask::new(pool, miner, block_producer);
-        self.task_manager.build_task().critical().name("Block production").spawn(service);
+        self.task_spawner.build_task().name("Block production").spawn(service)
     }
 }
 
@@ -71,9 +68,25 @@ impl<EF: ExecutorFactory> Stage for Sequencing<EF> {
         StageId::Sequencing
     }
 
+    #[tracing::instrument(skip(self), name = "Stage", fields(id = %self.id()))]
     async fn execute(&mut self) -> StageResult {
-        let _ = self.run_messaging().await?;
-        let _ = self.run_block_production().await;
-        future::pending::<StageResult>().await
+        // Build the messaging and block production tasks.
+        let messaging = self.run_messaging().await?;
+        let block_production = self.run_block_production();
+
+        // Neither of these tasks should complete as they are meant to be run forever,
+        // but if either of them do complete, the sequencing stage should return.
+        //
+        // Select on the tasks completion to prevent the task from failing silently (if any).
+        tokio::select! {
+            res = messaging => {
+                error!(target: "pipeline", reason = ?res, "Messaging task finished unexpectedly.");
+            },
+            res = block_production => {
+                error!(target: "pipeline", reason = ?res, "Block production task finished unexpectedly.");
+            }
+        }
+
+        Ok(())
     }
 }

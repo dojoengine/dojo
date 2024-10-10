@@ -6,7 +6,7 @@ use core::future::IntoFuture;
 
 use futures::future::BoxFuture;
 use stage::Stage;
-use tracing::info;
+use tracing::{error, info};
 
 /// The result of a pipeline execution.
 pub type PipelineResult = Result<(), Error>;
@@ -46,9 +46,10 @@ impl Pipeline {
     /// Start the pipeline.
     pub async fn run(&mut self) -> PipelineResult {
         for stage in &mut self.stages {
-            info!(id = %stage.id(), "Executing stage");
+            info!(target: "pipeline", id = %stage.id(), "Executing stage.");
             stage.execute().await?;
         }
+        info!(target: "pipeline", "Pipeline finished.");
         Ok(())
     }
 }
@@ -58,7 +59,11 @@ impl IntoFuture for Pipeline {
     type IntoFuture = PipelineFut;
 
     fn into_future(mut self) -> Self::IntoFuture {
-        Box::pin(async move { self.run().await })
+        Box::pin(async move {
+            self.run().await.inspect_err(|error| {
+                error!(target: "pipeline", %error, "Pipeline failed.");
+            })
+        })
     }
 }
 
