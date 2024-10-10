@@ -129,11 +129,10 @@ impl Node {
 
         // --- build sequencing stage
 
-        #[allow(deprecated)]
         let sequencing = stage::Sequencing::new(
             pool.clone(),
             backend.clone(),
-            self.task_manager.clone(),
+            self.task_manager.task_spawner(),
             block_producer.clone(),
             self.messaging_config.clone(),
         );
@@ -143,7 +142,12 @@ impl Node {
         let mut pipeline = Pipeline::new();
         pipeline.add_stage(Box::new(sequencing));
 
-        self.task_manager.spawn(pipeline.into_future());
+        self.task_manager
+            .task_spawner()
+            .build_task()
+            .critical()
+            .name("Pipeline")
+            .spawn(pipeline.into_future());
 
         let node_components = (pool, backend, block_producer, validator);
         let rpc = spawn(node_components, self.rpc_config.clone()).await?;
