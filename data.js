@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728588475522,
+  "lastUpdate": 1728591819652,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -24715,6 +24715,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4017126,
             "range": "± 147152",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9a1e3004d772d97eae61331dd457ad48f2f45d66",
+          "message": "refactor(katana-tasks): separate tasks spawning responsibility from `TaskManager` (#2514)",
+          "timestamp": "2024-10-11T04:06:58+08:00",
+          "tree_id": "ac73b99c595c11ae87d9dd796598281b91bc2e1e",
+          "url": "https://github.com/dojoengine/dojo/commit/9a1e3004d772d97eae61331dd457ad48f2f45d66"
+        },
+        "date": 1728591817700,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 12773637752,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
