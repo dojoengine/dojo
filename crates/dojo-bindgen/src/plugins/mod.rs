@@ -8,6 +8,7 @@ use cainome::parser::tokens::{Composite, Function};
 use crate::error::BindgenResult;
 use crate::{DojoContract, DojoData};
 
+pub mod recs;
 pub mod typescript;
 pub mod typescript_v2;
 pub mod unity;
@@ -17,6 +18,7 @@ pub enum BuiltinPlugins {
     Typescript,
     Unity,
     TypeScriptV2,
+    Recs,
 }
 
 impl fmt::Display for BuiltinPlugins {
@@ -25,6 +27,7 @@ impl fmt::Display for BuiltinPlugins {
             BuiltinPlugins::Typescript => write!(f, "typescript"),
             BuiltinPlugins::Unity => write!(f, "unity"),
             BuiltinPlugins::TypeScriptV2 => write!(f, "typescript_v2"),
+            BuiltinPlugins::Recs => write!(f, "recs"),
         }
     }
 }

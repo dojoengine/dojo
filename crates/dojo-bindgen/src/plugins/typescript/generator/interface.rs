@@ -7,7 +7,7 @@ use super::JsType;
 pub(crate) struct TsInterfaceGenerator;
 
 impl BindgenModelGenerator for TsInterfaceGenerator {
-    fn generate(&self, token: &Composite, buffer: &mut Vec<String>) -> BindgenResult<String> {
+    fn generate(&self, token: &Composite, _buffer: &mut Vec<String>) -> BindgenResult<String> {
         if token.r#type != CompositeType::Struct || token.inners.is_empty() {
             return Ok(String::new());
         }

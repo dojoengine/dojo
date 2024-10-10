@@ -5,7 +5,7 @@ use crate::{error::BindgenResult, plugins::BindgenModelGenerator};
 pub(crate) struct TsEnumGenerator;
 
 impl BindgenModelGenerator for TsEnumGenerator {
-    fn generate(&self, token: &Composite, buffer: &mut Vec<String>) -> BindgenResult<String> {
+    fn generate(&self, token: &Composite, _buffer: &mut Vec<String>) -> BindgenResult<String> {
         if token.r#type != CompositeType::Enum || token.inners.is_empty() {
             return Ok(String::new());
         }

@@ -150,7 +150,6 @@ mod tests {
     #[test]
     fn test_generate_system_function() {
         let generator = TsFunctionGenerator {};
-        let mut buff: Vec<String> = Vec::new();
         let function = create_change_theme_function();
         let expected = "\tconst changeTheme = async (account: Account, value: number) => {
 \t\ttry {
