@@ -25,6 +25,7 @@ impl Sql {
         amount: U256,
         provider: &P,
         block_timestamp: u64,
+        transaction_hash: &str,
     ) -> Result<()> {
         // contract_address
         let token_id = felt_to_sql_string(&contract_address);
@@ -43,6 +44,7 @@ impl Sql {
             amount,
             &token_id,
             block_timestamp,
+            transaction_hash,
         )?;
 
         if from_address != Felt::ZERO {
@@ -79,6 +81,7 @@ impl Sql {
         token_id: U256,
         provider: &P,
         block_timestamp: u64,
+        transaction_hash: &str,
     ) -> Result<()> {
         // contract_address:id
         let token_id = felt_and_u256_to_sql_string(&contract_address, &token_id);
@@ -96,6 +99,7 @@ impl Sql {
             U256::from(1u8),
             &token_id,
             block_timestamp,
+            transaction_hash,
         )?;
 
         // from_address/contract_address:id
@@ -307,6 +311,7 @@ impl Sql {
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn store_erc_transfer_event(
         &mut self,
         contract_address: Felt,
@@ -315,9 +320,11 @@ impl Sql {
         amount: U256,
         token_id: &str,
         block_timestamp: u64,
+        transaction_hash: &str,
     ) -> Result<()> {
         let insert_query = "INSERT INTO erc_transfers (contract_address, from_address, \
-                            to_address, amount, token_id, executed_at) VALUES (?, ?, ?, ?, ?, ?)";
+                            to_address, amount, token_id, executed_at, transaction_hash) VALUES \
+                            (?, ?, ?, ?, ?, ?, ?)";
 
         self.executor.send(QueryMessage::other(
             insert_query.to_string(),
@@ -328,6 +335,7 @@ impl Sql {
                 Argument::String(u256_to_sql_string(&amount)),
                 Argument::String(token_id.to_string()),
                 Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
+                Argument::String(transaction_hash.to_string()),
             ],
         ))?;
 
