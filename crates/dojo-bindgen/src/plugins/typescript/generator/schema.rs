@@ -39,6 +39,12 @@ impl TsSchemaGenerator {
             return;
         }
 
+        // type has already been initialized
+        let gen = format!("\n\t\t{type_name}: {type_name},");
+        if buffer.iter().any(|b| b.contains(&gen)) {
+            return;
+        }
+
         // fastest way to add a field to the interface is to search for the n-1 `,` and add the
         // field directly after it.
         // to improve this logic, we would need to either have some kind of code parsing.
@@ -48,7 +54,7 @@ impl TsSchemaGenerator {
         if let Some(st) = buffer.get_mut(pos) {
             let indices = st.match_indices(",").map(|(i, _)| i).collect::<Vec<usize>>();
             let append_after = indices[indices.len() - 2] + 1;
-            st.insert_str(append_after, &format!("\n\t\t{type_name}: {type_name},"));
+            st.insert_str(append_after, &gen);
         }
     }
 
@@ -65,14 +71,17 @@ impl TsSchemaGenerator {
             return;
         }
 
+        // type has already been initialized
+        let gen = format!("\n\t\t{type_name}: {},", self.generate_type_init(token));
+        if buffer.iter().any(|b| b.contains(&gen)) {
+            return;
+        }
+
         let pos = buffer.iter().position(|b| b.contains(&const_type)).unwrap();
         if let Some(st) = buffer.get_mut(pos) {
             let indices = st.match_indices(",").map(|(i, _)| i).collect::<Vec<usize>>();
             let append_after = indices[indices.len() - 2] + 1;
-            st.insert_str(
-                append_after,
-                &format!("\n\t\t{type_name}: {},", self.generate_type_init(token)),
-            );
+            st.insert_str(append_after, &gen);
         }
     }
 
@@ -99,11 +108,7 @@ impl TsSchemaGenerator {
                             // `core::felt252`
                             // `core::integer::u64`
                             // and so son
-                            format!(
-                                "\t\t\t{}: {},",
-                                i.name,
-                                JsDefaultValue::from(i.token.type_name().as_str())
-                            )
+                            format!("\t\t\t{}: {},", i.name, JsDefaultValue::from(&i.token))
                         }
                     }
                 })

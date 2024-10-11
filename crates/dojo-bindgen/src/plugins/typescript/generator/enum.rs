@@ -5,12 +5,12 @@ use crate::{error::BindgenResult, plugins::BindgenModelGenerator};
 pub(crate) struct TsEnumGenerator;
 
 impl BindgenModelGenerator for TsEnumGenerator {
-    fn generate(&self, token: &Composite, _buffer: &mut Vec<String>) -> BindgenResult<String> {
+    fn generate(&self, token: &Composite, buffer: &mut Vec<String>) -> BindgenResult<String> {
         if token.r#type != CompositeType::Enum || token.inners.is_empty() {
             return Ok(String::new());
         }
 
-        Ok(format!(
+        let gen = format!(
             "// Type definition for `{path}` enum
 export enum {name} {{
 {variants}
@@ -24,7 +24,13 @@ export enum {name} {{
                 .map(|inner| format!("\t{},", inner.name))
                 .collect::<Vec<String>>()
                 .join("\n")
-        ))
+        );
+
+        if buffer.iter().any(|b| b.contains(&gen)) {
+            return Ok(String::new());
+        }
+
+        Ok(gen)
     }
 }
 
@@ -76,6 +82,18 @@ mod tests {
         let result = writer.generate(&token, &mut buff).unwrap();
 
         assert_eq!(result, "// Type definition for `core::test::AvailableTheme` enum\nexport enum AvailableTheme {\n\tLight,\n\tDark,\n\tDojo,\n}\n");
+    }
+
+    #[test]
+    fn test_it_does_not_duplicates_enum() {
+        let mut buff: Vec<String> = Vec::new();
+        let writer = TsEnumGenerator;
+        buff.push("// Type definition for `core::test::AvailableTheme` enum\nexport enum AvailableTheme {\n\tLight,\n\tDark,\n\tDojo,\n}\n".to_owned());
+
+        let token_dup = create_available_theme_enum_token();
+        let result = writer.generate(&token_dup, &mut buff).unwrap();
+        assert_eq!(buff.len(), 1);
+        assert!(result.is_empty())
     }
 
     fn create_available_theme_enum_token() -> Composite {

@@ -24,11 +24,7 @@ export interface {name} {{
             fields = token
                 .inners
                 .iter()
-                .map(|inner| format!(
-                    "\t{}: {};",
-                    inner.name,
-                    JsType::from(inner.token.type_name().as_str()).0
-                ))
+                .map(|inner| { format!("\t{}: {};", inner.name, JsType::from(&inner.token)) })
                 .collect::<Vec<String>>()
                 .join("\n")
         ))

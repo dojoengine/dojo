@@ -1,4 +1,4 @@
-use cainome::parser::tokens::Function;
+use cainome::parser::tokens::{CompositeType, Function, Token};
 use convert_case::{Case, Casing};
 use dojo_world::contracts::naming;
 
@@ -16,12 +16,8 @@ impl TsFunctionGenerator {
         }
     }
 
-    fn setup_function_wrapper_start(
-        &self,
-        contract: &DojoContract,
-        buffer: &mut Vec<String>,
-    ) -> usize {
-        let fn_wrapper = format!("export async function setupWorld(provider: DojoProvider) {{\n\tconst contractName = \"{}\";\n", naming::get_name_from_tag(&contract.tag));
+    fn setup_function_wrapper_start(&self, buffer: &mut Vec<String>) -> usize {
+        let fn_wrapper = format!("export async function setupWorld(provider: DojoProvider) {{\n");
 
         if !buffer.iter().any(|b| b.contains(&fn_wrapper)) {
             buffer.push(fn_wrapper.clone());
@@ -30,14 +26,14 @@ impl TsFunctionGenerator {
         buffer.iter().position(|b| b.contains(&fn_wrapper)).unwrap()
     }
 
-    fn generate_system_function(&self, token: &Function) -> String {
+    fn generate_system_function(&self, contract_name: &str, token: &Function) -> String {
         format!(
             "\tconst {} = async ({}) => {{
 \t\ttry {{
 \t\t\treturn await provider.execute(\n
 \t\t\t\taccount,
 \t\t\t\t{{
-\t\t\t\t\tcontractName,
+\t\t\t\t\tcontractName: \"{contract_name}\",
 \t\t\t\t\tentryPoint: \"{}\",
 \t\t\t\t\tcalldata: [{}],
 \t\t\t\t}}
@@ -59,7 +55,22 @@ impl TsFunctionGenerator {
             .inputs
             .iter()
             .fold(inputs, |mut acc, input| {
-                acc.push(format!("{}: {}", input.0, JsType::from(input.1.type_name().as_str())));
+                let prefix = match &input.1 {
+                    Token::Composite(t) => {
+                        if t.r#type == CompositeType::Enum {
+                            "models."
+                        } else {
+                            ""
+                        }
+                    }
+                    _ => "",
+                };
+                acc.push(format!(
+                    "{}: {}{}",
+                    input.0.to_case(Case::Camel),
+                    prefix,
+                    JsType::from(&input.1)
+                ));
                 acc
             })
             .join(", ")
@@ -70,7 +81,7 @@ impl TsFunctionGenerator {
             .inputs
             .iter()
             .fold(Vec::new(), |mut acc, input| {
-                acc.push(format!("{}", input.0));
+                acc.push(input.0.to_case(Case::Camel));
                 acc
             })
             .join(", ")
@@ -108,8 +119,12 @@ impl BindgenContractGenerator for TsFunctionGenerator {
         buffer: &mut Vec<String>,
     ) -> BindgenResult<String> {
         self.check_imports(buffer);
-        let idx = self.setup_function_wrapper_start(contract, buffer);
-        self.append_function_body(idx, buffer, self.generate_system_function(token));
+        let idx = self.setup_function_wrapper_start(buffer);
+        self.append_function_body(
+            idx,
+            buffer,
+            self.generate_system_function(naming::get_name_from_tag(&contract.tag).as_str(), token),
+        );
         self.setup_function_wrapper_end(token, buffer);
         Ok(String::new())
     }
@@ -121,6 +136,7 @@ mod tests {
         tokens::{CoreBasic, Function, Token},
         TokenizedAbi,
     };
+    use dojo_world::contracts::naming;
 
     use super::TsFunctionGenerator;
     use crate::{plugins::BindgenContractGenerator, DojoContract};
@@ -141,7 +157,7 @@ mod tests {
     fn test_setup_function_wrapper_start() {
         let generator = TsFunctionGenerator {};
         let mut buff: Vec<String> = Vec::new();
-        let idx = generator.setup_function_wrapper_start(&create_dojo_contract(), &mut buff);
+        let idx = generator.setup_function_wrapper_start(&mut buff);
 
         assert_eq!(buff.len(), 1);
         assert_eq!(idx, 0);
@@ -156,7 +172,7 @@ mod tests {
 \t\t\treturn await provider.execute(\n
 \t\t\t\taccount,
 \t\t\t\t{
-\t\t\t\t\tcontractName,
+\t\t\t\t\tcontractName: \"actions\",
 \t\t\t\t\tentryPoint: \"change_theme\",
 \t\t\t\t\tcalldata: [value],
 \t\t\t\t}
@@ -166,11 +182,26 @@ mod tests {
 \t\t}
 \t};\n";
 
-        assert_eq!(expected, generator.generate_system_function(&function))
+        let contract = create_dojo_contract();
+        assert_eq!(
+            expected,
+            generator.generate_system_function(
+                naming::get_name_from_tag(&contract.tag).as_str(),
+                &function
+            )
+        )
     }
 
     #[test]
     fn test_format_function_inputs() {
+        let generator = TsFunctionGenerator {};
+        let function = create_change_theme_function();
+        let expected = "account: Account, value: number";
+        assert_eq!(expected, generator.format_function_inputs(&function))
+    }
+
+    #[test]
+    fn test_format_function_inputs_complex() {
         let generator = TsFunctionGenerator {};
         let function = create_change_theme_function();
         let expected = "account: Account, value: number";
