@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728657030186,
+  "lastUpdate": 1728671997461,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -24871,6 +24871,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3972852,
             "range": "± 105911",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "60658558+enitrat@users.noreply.github.com",
+            "name": "Mathieu",
+            "username": "enitrat"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "61f318d0f0076ed19a84d00df62e283eaac35378",
+          "message": "feat: update default ERC20 class to support snake_case entrypoints (#2521)\n\n* feat/update-erc20-class\r\n\r\n* remove unused owner arg from constructor\r\n\r\n* update test\r\n\r\n* include source code for reference\r\n\r\n* update test\r\n\r\n---------\r\n\r\nCo-authored-by: Ammar Arif <evergreenkary@gmail.com>",
+          "timestamp": "2024-10-12T02:23:58+08:00",
+          "tree_id": "4cc8e7e640423c578c83337abb6ef4d8b1dc8c1c",
+          "url": "https://github.com/dojoengine/dojo/commit/61f318d0f0076ed19a84d00df62e283eaac35378"
+        },
+        "date": 1728671995865,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11895124033,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
