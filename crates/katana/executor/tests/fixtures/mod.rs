@@ -12,7 +12,8 @@ use katana_primitives::contract::ContractAddress;
 use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
 use katana_primitives::genesis::constant::{
-    DEFAULT_FEE_TOKEN_ADDRESS, DEFAULT_PREFUNDED_ACCOUNT_BALANCE,
+    DEFAULT_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH,
+    DEFAULT_PREFUNDED_ACCOUNT_BALANCE,
 };
 use katana_primitives::genesis::Genesis;
 use katana_primitives::transaction::{
@@ -185,25 +186,29 @@ pub fn valid_blocks() -> [ExecutableBlock; 3] {
                 gas_prices: gas_prices.clone(),
             },
             body: vec![
-                // deploy contract using UDC
+                // deploy a erc20 contract using UDC
                 ExecutableTxWithHash::new(ExecutableTx::Invoke(InvokeTx::V1(InvokeTxV1 {
                     chain_id,
                     sender_address,
+                    // the calldata is encoded based on the standard account call encoding
                     calldata: vec![
                         felt!("0x1"),
                         felt!("0x41a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf"),
                         felt!("0x1987cbd17808b9a23693d4de7e246a443cfe37e6e7fbaeabd7d7e6532b07c3d"),
-                        felt!("0xa"),
-                        felt!("0x2a8846878b6ad1f54f6ba46f5f40e11cee755c677f130b2c4b60566c9003f1f"),
-                        felt!("0x6ea2ff5aa6f633708e69f5c61d2ac5f860d2435b46ddbd016aa065bce25100a"),
-                        felt!("0x1"),
-                        felt!("0x6"),
-                        felt!("0x4b415249"),
-                        felt!("0x4b415249"),
-                        felt!("0x12"),
-                        felt!("0x1b39"),
-                        felt!("0x0"),
-                        sender_address.into(),
+                        felt!("0xb"), // the # of felts after this point
+                        // --- udc::deployContract arguments
+                        DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH, // class hash
+                        felt!("0x6ea2ff5aa6f633708e69f5c61d2ac5f860d2435b46ddbd016aa065bce25100a"), /* salt */
+                        felt!("0x1"), // uniquness
+                        felt!("7"),   // ctor calldata length
+                        // ---- ctor calldata of the erc20 class
+                        felt!("0x4b415249"),   // erc20 name
+                        felt!("0x4b415249"),   // erc20 symbol
+                        felt!("0x12"),         // erc20 decimals
+                        felt!("0x1b39"),       // erc20 total supply (low)
+                        felt!("0x0"),          // erc20 total supply (high)
+                        sender_address.into(), // recipient
+                        sender_address.into(), // owner
                     ],
                     max_fee: 2700700000000000,
                     signature: vec![],
