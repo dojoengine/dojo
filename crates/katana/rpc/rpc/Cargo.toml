@@ -24,7 +24,6 @@ metrics.workspace = true
 starknet.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
-url = "2.5.0"
 
 [dev-dependencies]
 alloy = { git = "https://github.com/alloy-rs/alloy", features = [ "contract", "network", "node-bindings", "provider-http", "providers", "signer-local" ] }

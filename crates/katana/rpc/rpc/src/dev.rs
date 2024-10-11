@@ -4,16 +4,13 @@ use jsonrpsee::core::{async_trait, Error};
 use katana_core::backend::Backend;
 use katana_core::service::block_producer::{BlockProducer, BlockProducerMode, PendingExecutor};
 use katana_executor::ExecutorFactory;
-use katana_primitives::genesis::constant::DEFAULT_FEE_TOKEN_ADDRESS;
-use katana_primitives::{ContractAddress, Felt};
+use katana_primitives::genesis::constant::ERC20_NAME_STORAGE_SLOT;
+use katana_primitives::{address, ContractAddress, Felt};
+use katana_provider::traits::state::StateFactoryProvider;
 use katana_rpc_api::dev::DevApiServer;
 use katana_rpc_types::account::Account;
 use katana_rpc_types::error::dev::DevApiError;
-use starknet::core::types::{BlockId, BlockTag, FunctionCall};
-use starknet::macros::selector;
-use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::{JsonRpcClient, Provider};
-use url::Url;
+use starknet::core::utils::get_storage_var_address;
 
 #[allow(missing_debug_implementations)]
 pub struct DevApi<EF: ExecutorFactory> {
@@ -98,31 +95,30 @@ impl<EF: ExecutorFactory> DevApiServer for DevApi<EF> {
     }
 
     #[allow(deprecated)]
-    async fn account_balance(&self, account_address: &str) -> Result<u128, Error> {
-        // let account_address =
-        //     address!("0x6b86e40118f29ebe393a75469b4d926c7a44c2e2681b6d319520b7c1156d114");
-        let account_address = Felt::from_dec_str(account_address).unwrap();
-        let account_address = ContractAddress::from(account_address);
-        let url = Url::parse("http://localhost:5050").unwrap();
-        let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(url)));
-        let res = provider
-            .call(
-                FunctionCall {
-                    contract_address: DEFAULT_FEE_TOKEN_ADDRESS.into(),
-                    entry_point_selector: selector!("balanceOf"),
-                    calldata: vec![account_address.into()],
-                },
-                BlockId::Tag(BlockTag::Latest),
-            )
-            .await;
-
-        let balance: u128 = res.unwrap()[0].to_string().parse().unwrap();
-
+    async fn account_balance(&self) -> Result<u128, Error> {
+        let account_address =
+            address!("0x6b86e40118f29ebe393a75469b4d926c7a44c2e2681b6d319520b7c1156d114"); //This is temp
+        let provider = self.backend.blockchain.provider();
+        let state = provider.latest().unwrap();
+        let storage_slot =
+            get_storage_var_address("ERC20_balances", &[account_address.into()]).unwrap();
+        let balance_felt = state
+            .storage(self.backend.config.genesis.fee_token.address, storage_slot)
+            .unwrap()
+            .unwrap();
+        let balance: u128 = balance_felt.to_string().parse().unwrap();
         Ok(balance)
     }
 
-    async fn fee_token(&self) -> Result<u64, Error> {
-        Ok(1)
+    #[allow(deprecated)]
+    async fn fee_token(&self) -> Result<String, Error> {
+        let provider = self.backend.blockchain.provider();
+        let state = provider.latest().unwrap();
+        let fee_token = state
+            .storage(self.backend.config.genesis.fee_token.address, ERC20_NAME_STORAGE_SLOT)
+            .unwrap()
+            .unwrap();
+        Ok(fee_token.to_string())
     }
 
     async fn mint(&self) -> Result<(), Error> {
