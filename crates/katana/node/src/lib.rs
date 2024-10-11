@@ -346,6 +346,8 @@ pub async fn spawn<EF: ExecutorFactory>(
     let middleware = tower::ServiceBuilder::new()
         .option_layer(cors)
         .layer(ProxyGetRequestLayer::new("/", "health")?)
+        .layer(ProxyGetRequestLayer::new("/account_balance", "dev_accountBalance")?)
+        .layer(ProxyGetRequestLayer::new("/fee_token", "dev_feeToken")?)
         .timeout(Duration::from_secs(20));
 
     let server = ServerBuilder::new()

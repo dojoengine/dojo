@@ -4,10 +4,13 @@ use jsonrpsee::core::{async_trait, Error};
 use katana_core::backend::Backend;
 use katana_core::service::block_producer::{BlockProducer, BlockProducerMode, PendingExecutor};
 use katana_executor::ExecutorFactory;
-use katana_primitives::Felt;
+use katana_primitives::genesis::constant::ERC20_NAME_STORAGE_SLOT;
+use katana_primitives::{address, ContractAddress, Felt};
+use katana_provider::traits::state::StateFactoryProvider;
 use katana_rpc_api::dev::DevApiServer;
 use katana_rpc_types::account::Account;
 use katana_rpc_types::error::dev::DevApiError;
+use starknet::core::utils::get_storage_var_address;
 
 #[allow(missing_debug_implementations)]
 pub struct DevApi<EF: ExecutorFactory> {
@@ -54,7 +57,6 @@ impl<EF: ExecutorFactory> DevApi<EF> {
 
         let mut block_context_generator = self.backend.block_context_generator.write();
         block_context_generator.block_timestamp_offset += offset as i64;
-
         Ok(())
     }
 }
@@ -89,6 +91,37 @@ impl<EF: ExecutorFactory> DevApiServer for DevApi<EF> {
         //     .set_storage_at(contract_address.into(), key, value)
         //     .await
         //     .map_err(|_| Error::from(KatanaApiError::FailedToUpdateStorage))
+        Ok(())
+    }
+
+    #[allow(deprecated)]
+    async fn account_balance(&self) -> Result<u128, Error> {
+        let account_address =
+            address!("0x6b86e40118f29ebe393a75469b4d926c7a44c2e2681b6d319520b7c1156d114"); //This is temp
+        let provider = self.backend.blockchain.provider();
+        let state = provider.latest().unwrap();
+        let storage_slot =
+            get_storage_var_address("ERC20_balances", &[account_address.into()]).unwrap();
+        let balance_felt = state
+            .storage(self.backend.config.genesis.fee_token.address, storage_slot)
+            .unwrap()
+            .unwrap();
+        let balance: u128 = balance_felt.to_string().parse().unwrap();
+        Ok(balance)
+    }
+
+    #[allow(deprecated)]
+    async fn fee_token(&self) -> Result<String, Error> {
+        let provider = self.backend.blockchain.provider();
+        let state = provider.latest().unwrap();
+        let fee_token = state
+            .storage(self.backend.config.genesis.fee_token.address, ERC20_NAME_STORAGE_SLOT)
+            .unwrap()
+            .unwrap();
+        Ok(fee_token.to_string())
+    }
+
+    async fn mint(&self) -> Result<(), Error> {
         Ok(())
     }
 
