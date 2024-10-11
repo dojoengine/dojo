@@ -622,16 +622,15 @@ mod tests {
     async fn can_launch_katana() {
         // this will launch katana with random ports
         let katana = Katana::new().spawn();
-
         // assert some default values
         assert_eq!(katana.accounts().len(), 10);
         assert_eq!(katana.chain_id(), short_string!("KATANA"));
         // assert that all accounts have private key
         assert!(katana.accounts().iter().all(|a| a.private_key.is_some()));
 
-        // try to connect as a provider
-        let provider = JsonRpcClient::new(HttpTransport::new(dbg!(katana.endpoint_url())));
-        assert!(provider.chain_id().await.is_ok())
+        let provider = JsonRpcClient::new(HttpTransport::new(katana.endpoint_url()));
+        let result = provider.chain_id().await;
+        assert!(result.is_ok());
     }
 
     #[test]

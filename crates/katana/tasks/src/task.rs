@@ -6,10 +6,9 @@ use futures::future::Either;
 use futures::{FutureExt, TryFutureExt};
 use thiserror::Error;
 use tokio_metrics::TaskMonitor;
-use tracing::{debug, error};
+use tracing::error;
 
-use crate::manager::TaskHandle;
-use crate::TaskSpawner;
+use crate::manager::{TaskHandle, TaskManager};
 
 /// A task result that can be either completed or cancelled.
 #[derive(Debug, Copy, Clone)]
@@ -33,7 +32,7 @@ impl<T> TaskResult<T> {
 #[derive(Debug)]
 pub struct TaskBuilder<'a> {
     /// The task manager that the task will be spawned on.
-    spawner: &'a TaskSpawner,
+    manager: &'a TaskManager,
     /// The name of the task.
     name: Option<String>,
     /// Indicates whether the task should be instrumented.
@@ -45,8 +44,8 @@ pub struct TaskBuilder<'a> {
 
 impl<'a> TaskBuilder<'a> {
     /// Creates a new task builder associated with the given task manager.
-    pub(crate) fn new(spawner: &'a TaskSpawner) -> Self {
-        Self { spawner, name: None, instrument: false, graceful_shutdown: false }
+    pub(crate) fn new(manager: &'a TaskManager) -> Self {
+        Self { manager, name: None, instrument: false, graceful_shutdown: false }
     }
 
     pub fn critical(self) -> CriticalTaskBuilder<'a> {
@@ -77,15 +76,14 @@ impl<'a> TaskBuilder<'a> {
         F: Future + Send + 'static,
         F::Output: Send + 'static,
     {
-        let Self { spawner, instrument, graceful_shutdown, name } = self;
+        let Self { manager, instrument, graceful_shutdown, .. } = self;
 
         // creates a future that will send a cancellation signal to the manager when the future is
         // completed, regardless of success or error.
         let fut = {
-            let ct = spawner.cancellation_token().clone();
+            let ct = manager.on_cancel.clone();
             fut.map(move |res| {
                 if graceful_shutdown {
-                    debug!(target: "tasks", task = name, "Task with graceful shutdown completed.");
                     ct.cancel();
                 }
                 res
@@ -100,7 +98,7 @@ impl<'a> TaskBuilder<'a> {
             Either::Right(fut)
         };
 
-        spawner.spawn(fut)
+        manager.spawn(fut)
     }
 }
 
@@ -127,8 +125,8 @@ impl<'a> CriticalTaskBuilder<'a> {
     where
         F: Future + Send + 'static,
     {
-        let task_name = self.builder.name.clone().unwrap_or("".to_string());
-        let ct = self.builder.spawner.cancellation_token().clone();
+        let task_name = self.builder.name.clone().unwrap_or("unnamed".to_string());
+        let ct = self.builder.manager.on_cancel.clone();
 
         let fut = AssertUnwindSafe(fut)
             .catch_unwind()

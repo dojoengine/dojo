@@ -15,5 +15,4 @@ anyhow.workspace = true
 async-trait.workspace = true
 futures.workspace = true
 thiserror.workspace = true
-tokio.workspace = true
 tracing.workspace = true

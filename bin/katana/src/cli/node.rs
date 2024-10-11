@@ -232,6 +232,7 @@ impl NodeArgs {
         let node = katana_node::build(config).await.context("failed to build node")?;
 
         if !self.silent {
+            #[allow(deprecated)]
             let genesis = &node.backend.chain_spec.genesis;
             print_intro(&self, genesis);
         }
@@ -255,10 +256,9 @@ impl NodeArgs {
     }
 
     fn init_logging(&self) -> Result<()> {
-        const DEFAULT_LOG_FILTER: &str = "tasks=debug,info,executor=trace,forking::backend=trace,\
-                                          server=debug,katana_core=trace,blockifier=off,\
-                                          jsonrpsee_server=off,hyper=off,messaging=debug,\
-                                          node=error";
+        const DEFAULT_LOG_FILTER: &str = "info,executor=trace,forking::backend=trace,server=debug,\
+                                          katana_core=trace,blockifier=off,jsonrpsee_server=off,\
+                                          hyper=off,messaging=debug,node=error";
 
         LogTracer::init()?;
 

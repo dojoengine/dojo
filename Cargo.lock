@@ -8176,7 +8176,6 @@ dependencies = [
  "katana-pool",
  "katana-tasks",
  "thiserror",
- "tokio",
  "tracing",
 ]
 
