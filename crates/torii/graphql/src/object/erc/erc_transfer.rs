@@ -79,7 +79,8 @@ SELECT
     t.name,
     t.symbol,
     t.decimals,
-    c.contract_type
+    c.contract_type,
+    et.transaction_hash
 FROM
     erc_transfers et
 JOIN
@@ -121,6 +122,7 @@ LIMIT {};
                     (Name::new("type"), Value::String(row.contract_type)),
                     (Name::new("executedAt"), Value::String(row.executed_at)),
                     (Name::new("tokenMetadata"), token_metadata),
+                    (Name::new("transactionHash"), Value::String(row.transaction_hash.clone())),
                 ]))
             }
             "erc721" => {
@@ -143,6 +145,7 @@ LIMIT {};
                     (Name::new("type"), Value::String(row.contract_type)),
                     (Name::new("executedAt"), Value::String(row.executed_at)),
                     (Name::new("tokenMetadata"), token_metadata),
+                    (Name::new("transactionHash"), Value::String(row.transaction_hash.clone())),
                 ]))
             }
             _ => {
@@ -178,4 +181,5 @@ struct TransferQueryResultRaw {
     pub symbol: String,
     pub decimals: u8,
     pub contract_type: String,
+    pub transaction_hash: String,
 }

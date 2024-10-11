@@ -146,25 +146,26 @@ lazy_static! {
     ]);
 
     pub static ref ERC_BALANCE_TYPE_MAPPING: TypeMapping = IndexMap::from([
-        (Name::new("balance"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
-        (Name::new("type"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
-        (Name::new("tokenMetadata"), TypeData::Simple(TypeRef::named(ERC_TOKEN_TYPE_NAME))),
+        (Name::new("balance"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
+        (Name::new("type"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
+        (Name::new("tokenMetadata"), TypeData::Simple(TypeRef::named_nn(ERC_TOKEN_TYPE_NAME))),
     ]);
 
     pub static ref ERC_TRANSFER_TYPE_MAPPING: TypeMapping = IndexMap::from([
-        (Name::new("from"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
-        (Name::new("to"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
-        (Name::new("amount"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
-        (Name::new("type"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
-        (Name::new("executedAt"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
-        (Name::new("tokenMetadata"), TypeData::Simple(TypeRef::named(ERC_TOKEN_TYPE_NAME))),
+        (Name::new("from"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
+        (Name::new("to"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
+        (Name::new("amount"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
+        (Name::new("type"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
+        (Name::new("executedAt"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
+        (Name::new("tokenMetadata"), TypeData::Simple(TypeRef::named_nn(ERC_TOKEN_TYPE_NAME))),
+        (Name::new("transactionHash"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
     ]);
 
     pub static ref ERC_TOKEN_TYPE_MAPPING: TypeMapping = IndexMap::from([
-        (Name::new("name"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
-        (Name::new("symbol"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
-        (Name::new("tokenId"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
-        (Name::new("decimals"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
-        (Name::new("contractAddress"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("name"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
+        (Name::new("symbol"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
+        (Name::new("tokenId"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
+        (Name::new("decimals"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
+        (Name::new("contractAddress"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
     ]);
 }

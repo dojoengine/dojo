@@ -610,6 +610,8 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         let mut unique_contracts = HashSet::new();
         // Contract -> Cursor
         for (event_idx, event) in events.iter().enumerate() {
+            // NOTE: erc* processors expect the event_id to be in this format to get
+            // transaction_hash:
             let event_id =
                 format!("{:#064x}:{:#x}:{:#04x}", block_number, transaction_hash, event_idx);
 
@@ -681,6 +683,8 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
 
                 unique_contracts.insert(event.from_address);
 
+                // NOTE: erc* processors expect the event_id to be in this format to get
+                // transaction_hash:
                 let event_id =
                     format!("{:#064x}:{:#x}:{:#04x}", block_number, *transaction_hash, event_idx);
 
@@ -898,4 +902,9 @@ where
         MaybePendingBlockWithTxHashes::Block(block) => Ok(block.timestamp),
         MaybePendingBlockWithTxHashes::PendingBlock(block) => Ok(block.timestamp),
     }
+}
+
+// event_id format: block_number:transaction_hash:event_idx
+pub(crate) fn get_transaction_hash_from_event_id(event_id: &str) -> String {
+    event_id.split(':').nth(1).unwrap().to_string()
 }
