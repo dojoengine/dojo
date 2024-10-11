@@ -64,13 +64,11 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
 
         // If the node is run with transaction validation disabled, then we should not validate
         // even if the `SKIP_VALIDATE` flag is not set.
-        #[allow(deprecated)]
         let should_validate = !(simulation_flags.contains(&SimulationFlag::SkipValidate)
             || self.inner.backend.executor_factory.execution_flags().skip_validate);
 
         // If the node is run with fee charge disabled, then we should disable charing fees even
         // if the `SKIP_FEE_CHARGE` flag is not set.
-        #[allow(deprecated)]
         let should_skip_fee = !(simulation_flags.contains(&SimulationFlag::SkipFeeCharge)
             || self.inner.backend.executor_factory.execution_flags().skip_fee_transfer);
 
