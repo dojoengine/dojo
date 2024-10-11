@@ -21,6 +21,7 @@ itertools.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 starknet-crypto.workspace = true
+starknet-os.workspace = true
 starknet.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
@@ -31,7 +32,7 @@ celestia-rpc = "0.4.0"
 celestia-types = "0.5.0"
 
 cairo-proof-parser = { git = "https://github.com/cartridge-gg/cairo-proof-parser.git", rev = "f175d58" }
-cairo1-playground = { git = "https://github.com/chudkowsky/cairo1-playground.git", rev = "3fda965" }
+cairo1-playground = { git = "https://github.com/matzayonc/cairo1-playground.git", rev = "26d44d9aa35ed06ff58f9f69f7cdd3d62c5853ae" }
 herodotus_sharp_playground = { git = "https://github.com/chudkowsky/herodotus_sharp_playground.git", rev = "db64bfd" }
 prover-sdk = { git = "https://github.com/cartridge-gg/http-prover", rev = "24256d5" }
 reqwest.workspace = true

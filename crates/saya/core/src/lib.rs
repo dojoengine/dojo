@@ -71,6 +71,8 @@ pub struct SayaConfig {
 
 type SayaStarknetAccount = SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>;
 
+pub const DEFAULT_COMPILED_OS: &[u8] = include_bytes!("../../../bin/saya/os_latest.json");
+
 pub fn felt_string_deserializer<'de, D>(deserializer: D) -> Result<Felt, D::Error>
 where
     D: serde::Deserializer<'de>,
@@ -198,6 +200,14 @@ impl Saya {
                     mock_state_hash += Felt::ONE;
 
                     info!(target: LOG_TARGET, "Proving {} blocks.", num_blocks);
+
+                    run_os(
+                        config::DEFAULT_COMPILED_OS,
+                        layout,
+                        os_input,
+                        block_context,
+                        execution_helper,
+                    )?;
 
                     // We might want to prove the signatures as well.
                     // let proof = self.prover_identifier.prove_snos(input).await?;

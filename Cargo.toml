@@ -126,29 +126,29 @@ auto_impl = "1.2.0"
 base64 = "0.21.2"
 bigdecimal = "0.4.1"
 bytes = "1.6"
-cairo-lang-compiler = "2.7.0"
-cairo-lang-debug = "2.7.0"
-cairo-lang-defs = "2.7.0"
-cairo-lang-diagnostics = "2.7.0"
-cairo-lang-filesystem = "2.7.0"
-cairo-lang-formatter = "2.7.0"
-cairo-lang-language-server = "2.7.0"
-cairo-lang-lowering = "2.7.0"
-cairo-lang-parser = "2.7.0"
-cairo-lang-plugins = { version = "2.7.0", features = [ "testing" ] }
-cairo-lang-project = "2.7.0"
-cairo-lang-semantic = "2.7.0"
-cairo-lang-sierra = "2.7.0"
-cairo-lang-sierra-generator = "2.7.0"
-cairo-lang-sierra-to-casm = "2.7.0"
-cairo-lang-starknet = "2.7.0"
-cairo-lang-starknet-classes = "2.7.0"
-cairo-lang-syntax = "2.7.0"
-cairo-lang-test-plugin = "2.7.0"
-cairo-lang-test-runner = "2.7.0"
-cairo-lang-test-utils = "2.7.0"
-cairo-lang-utils = "2.7.0"
-cairo-vm = "1.0.0-rc4"
+cairo-lang-compiler = "=2.8.2"
+cairo-lang-debug = "=2.8.2"
+cairo-lang-defs = "=2.8.2"
+cairo-lang-diagnostics = "=2.8.2"
+cairo-lang-filesystem = "=2.8.2"
+cairo-lang-formatter = "=2.8.2"
+cairo-lang-language-server = "=2.8.2"
+cairo-lang-lowering = "=2.8.2"
+cairo-lang-parser = "=2.8.2"
+cairo-lang-plugins = { version = "=2.8.2", features = [ "testing" ] }
+cairo-lang-project = "=2.8.2"
+cairo-lang-semantic = "=2.8.2"
+cairo-lang-sierra = "=2.8.2"
+cairo-lang-sierra-generator = "=2.8.2"
+cairo-lang-sierra-to-casm = "=2.8.2"
+cairo-lang-starknet = "=2.8.2"
+cairo-lang-starknet-classes = "=2.8.2"
+cairo-lang-syntax = "=2.8.2"
+cairo-lang-test-plugin = "=2.8.2"
+cairo-lang-test-runner = "=2.8.2"
+cairo-lang-test-utils = "=2.8.2"
+cairo-lang-utils = "=2.8.2"
+cairo-vm = { git = "https://github.com/matzayonc/cairo-vm.git", rev = "59ceafbe7a10e03d41415994984e2578207172d3" }
 camino = { version = "1.1.2", features = [ "serde1" ] }
 chrono = { version = "0.4.24", features = [ "serde" ] }
 clap = { version = "4.5.16", features = [ "derive", "env" ] }
@@ -192,6 +192,7 @@ serde_with = "3.9.0"
 similar-asserts = "1.5.0"
 smol_str = { version = "0.2.0", features = [ "serde" ] }
 sqlx = { version = "0.7.2", features = [ "chrono", "macros", "regexp", "runtime-async-std", "runtime-tokio", "sqlite", "uuid" ] }
+starknet-os = { git = "https://github.com/keep-starknet-strange/snos.git", rev = "af74c7599231c25ad9c342f6888668680a9782d9" }
 starknet_api = "0.11.0"
 strum = "0.25"
 strum_macros = "0.25"
@@ -245,3 +246,6 @@ alloy-transport = { version = "0.3", default-features = false }
 starknet = "0.12.0"
 starknet-crypto = "0.7.1"
 starknet-types-core = "0.1.6"
+
+[patch.'https://github.com/Moonsong-Labs/cairo-vm']
+cairo-vm = { git = "https://github.com/matzayonc/cairo-vm.git", rev = "59ceafbe7a10e03d41415994984e2578207172d3" }
