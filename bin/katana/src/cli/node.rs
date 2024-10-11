@@ -234,7 +234,8 @@ impl NodeArgs {
         if !self.silent {
             #[allow(deprecated)]
             let genesis = &node.backend.chain_spec.genesis;
-            print_intro(&self, genesis);
+            let server_address = node.rpc_config.socket_addr();
+            print_intro(&self, genesis, &server_address);
         }
 
         // Launch the node
@@ -368,7 +369,7 @@ impl NodeArgs {
     }
 }
 
-fn print_intro(args: &NodeArgs, genesis: &Genesis) {
+fn print_intro(args: &NodeArgs, genesis: &Genesis, address: &SocketAddr) {
     let mut accounts = genesis.accounts().peekable();
     let account_class_hash = accounts.peek().map(|e| e.1.class_hash());
     let seed = &args.starknet.seed;
@@ -380,6 +381,7 @@ fn print_intro(args: &NodeArgs, genesis: &Genesis) {
             serde_json::json!({
                 "accounts": accounts.map(|a| serde_json::json!(a)).collect::<Vec<_>>(),
                 "seed": format!("{}", seed),
+                "address": format!("{address}"),
             })
         )
     } else {
@@ -410,6 +412,13 @@ ACCOUNTS SEED
 {seed}
     "
         );
+
+        let addr = format!(
+            "🚀 JSON-RPC server started: {}",
+            Style::new().red().apply_to(format!("http://{address}"))
+        );
+
+        println!("\n{addr}\n\n",);
     }
 }
 

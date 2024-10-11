@@ -355,8 +355,6 @@ pub async fn spawn<EF: ExecutorFactory>(
     let addr = server.local_addr()?;
     let handle = server.start(methods)?;
 
-    info!(target: "rpc", %addr, "RPC server started.");
-
     Ok(RpcServer { handle, addr })
 }
 
