@@ -11,6 +11,8 @@ katana-core.workspace = true
 katana-db.workspace = true
 katana-node.workspace = true
 katana-primitives.workspace = true
+katana-rpc.workspace = true
+katana-rpc-api.workspace = true
 katana-slot-controller = { workspace = true, optional = true }
 
 alloy-primitives.workspace = true

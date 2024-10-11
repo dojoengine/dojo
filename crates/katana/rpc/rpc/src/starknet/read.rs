@@ -29,7 +29,7 @@ use super::StarknetApi;
 #[async_trait]
 impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
     async fn chain_id(&self) -> RpcResult<FeltAsHex> {
-        Ok(self.inner.backend.chain_spec.id.id().into())
+        Ok(self.inner.backend.chain_id.id().into())
     }
 
     async fn get_nonce(
@@ -431,7 +431,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
         block_id: BlockIdOrTag,
     ) -> RpcResult<Vec<FeeEstimate>> {
         self.on_cpu_blocking_task(move |this| {
-            let chain_id = this.inner.backend.chain_spec.id;
+            let chain_id = this.inner.backend.chain_id;
 
             let transactions = request
                 .into_iter()
@@ -470,8 +470,8 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
 
             // If the node is run with transaction validation disabled, then we should not validate
             // transactions when estimating the fee even if the `SKIP_VALIDATE` flag is not set.
-            let should_validate = !(skip_validate
-                || this.inner.backend.executor_factory.execution_flags().skip_validate);
+            #[allow(deprecated)]
+            let should_validate = !(skip_validate || this.inner.backend.config.disable_validate);
             let flags = katana_executor::SimulationFlag {
                 skip_validate: !should_validate,
                 // We don't care about the nonce when estimating the fee as the nonce value
@@ -495,7 +495,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
         block_id: BlockIdOrTag,
     ) -> RpcResult<FeeEstimate> {
         self.on_cpu_blocking_task(move |this| {
-            let chain_id = this.inner.backend.chain_spec.id;
+            let chain_id = this.inner.backend.chain_id;
 
             let tx = message.into_tx_with_chain_id(chain_id);
             let hash = tx.calculate_hash();

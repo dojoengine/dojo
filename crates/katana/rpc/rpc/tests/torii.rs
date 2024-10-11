@@ -4,10 +4,10 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
-use dojo_test_utils::sequencer::{get_default_test_config, TestSequencer};
+use dojo_test_utils::sequencer::{get_default_test_starknet_config, TestSequencer};
 use dojo_utils::TransactionWaiter;
 use jsonrpsee::http_client::HttpClientBuilder;
-use katana_node::config::SequencingConfig;
+use katana_core::sequencer::SequencerConfig;
 use katana_rpc_api::dev::DevApiClient;
 use katana_rpc_api::starknet::StarknetApiClient;
 use katana_rpc_api::torii::ToriiApiClient;
@@ -25,9 +25,11 @@ pub const ENOUGH_GAS: &str = "0x100000000000000000";
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_get_transactions() {
-    // setup test sequencer with the given configuration
-    let sequencing_config = SequencingConfig { no_mining: true, ..Default::default() };
-    let sequencer = TestSequencer::start(get_default_test_config(sequencing_config)).await;
+    let sequencer = TestSequencer::start(
+        SequencerConfig { no_mining: true, ..Default::default() },
+        get_default_test_starknet_config(),
+    )
+    .await;
 
     let client = HttpClientBuilder::default().build(sequencer.url()).unwrap();
 
@@ -180,8 +182,11 @@ async fn test_get_transactions() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_get_transactions_with_instant_mining() {
-    let sequencing_config = SequencingConfig::default();
-    let sequencer = TestSequencer::start(get_default_test_config(sequencing_config)).await;
+    let sequencer = TestSequencer::start(
+        SequencerConfig { no_mining: false, ..Default::default() },
+        get_default_test_starknet_config(),
+    )
+    .await;
 
     let client = HttpClientBuilder::default().build(sequencer.url()).unwrap();
 

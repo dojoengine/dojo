@@ -8,10 +8,10 @@ use anyhow::Result;
 use assert_matches::assert_matches;
 use cainome::rs::abigen_legacy;
 use common::split_felt;
-use dojo_test_utils::sequencer::{get_default_test_config, TestSequencer};
+use dojo_test_utils::sequencer::{get_default_test_starknet_config, TestSequencer};
 use indexmap::IndexSet;
 use jsonrpsee::http_client::HttpClientBuilder;
-use katana_node::config::SequencingConfig;
+use katana_core::sequencer::SequencerConfig;
 use katana_primitives::event::ContinuationToken;
 use katana_primitives::genesis::constant::{
     DEFAULT_FEE_TOKEN_ADDRESS, DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH,
@@ -39,7 +39,7 @@ mod common;
 #[tokio::test]
 async fn declare_and_deploy_contract() -> Result<()> {
     let sequencer =
-        TestSequencer::start(get_default_test_config(SequencingConfig::default())).await;
+        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
 
     let account = sequencer.account();
     let provider = sequencer.provider();
@@ -94,7 +94,7 @@ async fn declare_and_deploy_contract() -> Result<()> {
 #[tokio::test]
 async fn declare_and_deploy_legacy_contract() -> Result<()> {
     let sequencer =
-        TestSequencer::start(get_default_test_config(SequencingConfig::default())).await;
+        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
 
     let account = sequencer.account();
     let provider = sequencer.provider();
@@ -152,11 +152,11 @@ async fn deploy_account(
     #[values(None, Some(1000))] block_time: Option<u64>,
 ) -> Result<()> {
     // setup test sequencer with the given configuration
-    let sequencing_config = SequencingConfig { block_time, ..Default::default() };
-    let mut config = get_default_test_config(sequencing_config);
-    config.dev.fee = !disable_fee;
+    let mut starknet_config = get_default_test_starknet_config();
+    starknet_config.disable_fee = disable_fee;
+    let sequencer_config = SequencerConfig { block_time, ..Default::default() };
 
-    let sequencer = TestSequencer::start(config).await;
+    let sequencer = TestSequencer::start(sequencer_config, starknet_config).await;
 
     let provider = sequencer.provider();
     let funding_account = sequencer.account();
@@ -239,7 +239,7 @@ abigen_legacy!(Erc20Contract, "crates/katana/rpc/rpc/tests/test_data/erc20.json"
 #[tokio::test]
 async fn estimate_fee() -> Result<()> {
     let sequencer =
-        TestSequencer::start(get_default_test_config(SequencingConfig::default())).await;
+        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
 
     let provider = sequencer.provider();
     let account = sequencer.account();
@@ -283,9 +283,10 @@ async fn concurrent_transactions_submissions(
     #[values(None, Some(1000))] block_time: Option<u64>,
 ) -> Result<()> {
     // setup test sequencer with the given configuration
-    let config = get_default_test_config(SequencingConfig { block_time, ..Default::default() });
-    let sequencer = TestSequencer::start(config).await;
+    let starknet_config = get_default_test_starknet_config();
+    let sequencer_config = SequencerConfig { block_time, ..Default::default() };
 
+    let sequencer = TestSequencer::start(sequencer_config, starknet_config).await;
     let provider = sequencer.provider();
     let account = Arc::new(sequencer.account());
 
@@ -357,10 +358,11 @@ macro_rules! assert_starknet_err {
 async fn ensure_validator_have_valid_state(
     #[values(None, Some(1000))] block_time: Option<u64>,
 ) -> Result<()> {
-    let mut config = get_default_test_config(SequencingConfig { block_time, ..Default::default() });
-    config.dev.fee = true;
+    let mut starknet_config = get_default_test_starknet_config();
+    starknet_config.disable_fee = false;
+    let sequencer_config = SequencerConfig { block_time, ..Default::default() };
 
-    let sequencer = TestSequencer::start(config).await;
+    let sequencer = TestSequencer::start(sequencer_config, starknet_config).await;
     let account = sequencer.account();
 
     // setup test contract to interact with.
@@ -390,9 +392,11 @@ async fn send_txs_with_insufficient_fee(
     #[values(None, Some(1000))] block_time: Option<u64>,
 ) -> Result<()> {
     // setup test sequencer with the given configuration
-    let mut config = get_default_test_config(SequencingConfig { block_time, ..Default::default() });
-    config.dev.fee = !disable_fee;
-    let sequencer = TestSequencer::start(config).await;
+    let mut starknet_config = get_default_test_starknet_config();
+    starknet_config.disable_fee = disable_fee;
+    let sequencer_config = SequencerConfig { block_time, ..Default::default() };
+
+    let sequencer = TestSequencer::start(sequencer_config, starknet_config).await;
 
     // setup test contract to interact with.
     let contract = Erc20Contract::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), sequencer.account());
@@ -454,9 +458,11 @@ async fn send_txs_with_invalid_signature(
     #[values(None, Some(1000))] block_time: Option<u64>,
 ) -> Result<()> {
     // setup test sequencer with the given configuration
-    let mut config = get_default_test_config(SequencingConfig { block_time, ..Default::default() });
-    config.dev.account_validation = !disable_validate;
-    let sequencer = TestSequencer::start(config).await;
+    let mut starknet_config = get_default_test_starknet_config();
+    starknet_config.disable_validate = disable_validate;
+    let sequencer_config = SequencerConfig { block_time, ..Default::default() };
+
+    let sequencer = TestSequencer::start(sequencer_config, starknet_config).await;
 
     // starknet-rs doesn't provide a way to manually set the signatures so instead we create an
     // account with random signer to simulate invalid signatures.
@@ -509,9 +515,10 @@ async fn send_txs_with_invalid_nonces(
     #[values(None, Some(1000))] block_time: Option<u64>,
 ) -> Result<()> {
     // setup test sequencer with the given configuration
-    let config = get_default_test_config(SequencingConfig { block_time, ..Default::default() });
-    let sequencer = TestSequencer::start(config).await;
+    let starknet_config = get_default_test_starknet_config();
+    let sequencer_config = SequencerConfig { block_time, ..Default::default() };
 
+    let sequencer = TestSequencer::start(sequencer_config, starknet_config).await;
     let provider = sequencer.provider();
     let account = sequencer.account();
 
@@ -576,9 +583,9 @@ async fn send_txs_with_invalid_nonces(
 #[tokio::test]
 async fn get_events_no_pending() -> Result<()> {
     // setup test sequencer with the given configuration
-    let config =
-        get_default_test_config(SequencingConfig { no_mining: true, ..Default::default() });
-    let sequencer = TestSequencer::start(config).await;
+    let starknet_config = get_default_test_starknet_config();
+    let sequencer_config = SequencerConfig { no_mining: true, ..Default::default() };
+    let sequencer = TestSequencer::start(sequencer_config, starknet_config).await;
 
     // create a json rpc client to interact with the dev api.
     let client = HttpClientBuilder::default().build(sequencer.url()).unwrap();
@@ -662,9 +669,9 @@ async fn get_events_no_pending() -> Result<()> {
 #[tokio::test]
 async fn get_events_with_pending() -> Result<()> {
     // setup test sequencer with the given configuration
-    let config =
-        get_default_test_config(SequencingConfig { no_mining: true, ..Default::default() });
-    let sequencer = TestSequencer::start(config).await;
+    let starknet_config = get_default_test_starknet_config();
+    let sequencer_config = SequencerConfig { no_mining: true, ..Default::default() };
+    let sequencer = TestSequencer::start(sequencer_config, starknet_config).await;
 
     // create a json rpc client to interact with the dev api.
     let client = HttpClientBuilder::default().build(sequencer.url()).unwrap();
@@ -752,9 +759,11 @@ async fn get_events_with_pending() -> Result<()> {
 
 #[tokio::test]
 async fn trace() -> Result<()> {
-    let config =
-        get_default_test_config(SequencingConfig { no_mining: true, ..Default::default() });
-    let sequencer = TestSequencer::start(config).await;
+    let sequencer = TestSequencer::start(
+        SequencerConfig { no_mining: true, ..Default::default() },
+        get_default_test_starknet_config(),
+    )
+    .await;
 
     let provider = sequencer.provider();
     let account = sequencer.account();
@@ -802,9 +811,11 @@ async fn trace() -> Result<()> {
 
 #[tokio::test]
 async fn block_traces() -> Result<()> {
-    let config =
-        get_default_test_config(SequencingConfig { no_mining: true, ..Default::default() });
-    let sequencer = TestSequencer::start(config).await;
+    let sequencer = TestSequencer::start(
+        SequencerConfig { no_mining: true, ..Default::default() },
+        get_default_test_starknet_config(),
+    )
+    .await;
 
     let provider = sequencer.provider();
     let account = sequencer.account();

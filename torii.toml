@@ -1,0 +1,14 @@
+contracts = [
+    # number-challenge
+    { type = "WORLD", address = "0x50c46c6f69ea9f12b24fcdd1569a584ae8893db0c70ea7884b605384da78ebc" },
+    # LORDS Mainnet
+    { type = "ERC20", address = "0x0124aeb495b947201f5fac96fd1138e326ad86195b98df6dec9009158a533b49" },
+    # BEASTS Mainnet
+    { type = "ERC721", address = "0x0158160018d590d93528995b340260e65aedd76d28a686e9daa5c4e8fad0c5dd" },
+    # Loot Survivor Mainnet
+    { type = "ERC721", address = "0x018108b32cea514a78ef1b0e4a0753e855cdf620bc0565202c02456f618c4dc4" },
+    # Loot Survivor: Golden Token Mainnet
+    { type = "ERC721", address = "0x04f5e296c805126637552cf3930e857f380e7c078e8f00696de4fc8545356b1d" },
+    # Blobert Mainnet
+    { type = "ERC721", address = "0x00539f522b29ae9251dbf7443c7a950cf260372e69efab3710a11bf17a9599f1" }
+]

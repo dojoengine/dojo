@@ -1,11 +1,13 @@
-use dojo_test_utils::sequencer::{get_default_test_config, TestSequencer};
-use katana_node::config::SequencingConfig;
+#![allow(deprecated)]
+
+use dojo_test_utils::sequencer::{get_default_test_starknet_config, TestSequencer};
+use katana_core::sequencer::SequencerConfig;
 use katana_provider::traits::block::{BlockNumberProvider, BlockProvider};
 use katana_provider::traits::env::BlockEnvProvider;
 use katana_rpc_api::dev::DevApiClient;
 
 async fn create_test_sequencer() -> TestSequencer {
-    TestSequencer::start(get_default_test_config(SequencingConfig::default())).await
+    TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await
 }
 
 use jsonrpsee::http_client::HttpClientBuilder;
