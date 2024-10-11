@@ -74,31 +74,28 @@ type BlockProductionWithTxnsFuture =
 #[allow(missing_debug_implementations)]
 pub struct BlockProducer<EF: ExecutorFactory> {
     /// The inner mode of mining.
-    pub producer: Arc<RwLock<BlockProducerMode<EF>>>,
+    pub producer: RwLock<BlockProducerMode<EF>>,
 }
 
 impl<EF: ExecutorFactory> BlockProducer<EF> {
     /// Creates a block producer that mines a new block every `interval` milliseconds.
     pub fn interval(backend: Arc<Backend<EF>>, interval: u64) -> Self {
-        let producer = IntervalBlockProducer::new(backend, Some(interval));
-        let producer = Arc::new(RwLock::new(BlockProducerMode::Interval(producer)));
-        Self { producer }
+        let prod = IntervalBlockProducer::new(backend, Some(interval));
+        Self { producer: BlockProducerMode::Interval(prod).into() }
     }
 
     /// Creates a new block producer that will only be possible to mine by calling the
     /// `katana_generateBlock` RPC method.
     pub fn on_demand(backend: Arc<Backend<EF>>) -> Self {
-        let producer = IntervalBlockProducer::new(backend, None);
-        let producer = Arc::new(RwLock::new(BlockProducerMode::Interval(producer)));
-        Self { producer }
+        let prod = IntervalBlockProducer::new(backend, None);
+        Self { producer: BlockProducerMode::Interval(prod).into() }
     }
 
     /// Creates a block producer that mines a new block as soon as there are ready transactions in
     /// the transactions pool.
     pub fn instant(backend: Arc<Backend<EF>>) -> Self {
-        let producer = InstantBlockProducer::new(backend);
-        let producer = Arc::new(RwLock::new(BlockProducerMode::Instant(producer)));
-        Self { producer }
+        let prod = InstantBlockProducer::new(backend);
+        Self { producer: BlockProducerMode::Instant(prod).into() }
     }
 
     pub(super) fn queue(&self, transactions: Vec<ExecutableTxWithHash>) {
@@ -143,12 +140,6 @@ impl<EF: ExecutorFactory> BlockProducer<EF> {
             BlockProducerMode::Instant(producer) => producer.poll_next_unpin(cx),
             BlockProducerMode::Interval(producer) => producer.poll_next_unpin(cx),
         }
-    }
-}
-
-impl<EF: ExecutorFactory> Clone for BlockProducer<EF> {
-    fn clone(&self) -> Self {
-        BlockProducer { producer: self.producer.clone() }
     }
 }
 

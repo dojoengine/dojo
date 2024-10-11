@@ -24,13 +24,13 @@ use parking_lot::Mutex;
 use super::{Error, InvalidTransactionError, ValidationOutcome, ValidationResult, Validator};
 use crate::tx::PoolTransaction;
 
-#[derive(Debug, Clone)]
+#[allow(missing_debug_implementations)]
+#[derive(Clone)]
 pub struct TxValidator {
     inner: Arc<Mutex<Inner>>,
     permit: Arc<Mutex<()>>,
 }
 
-#[derive(Debug)]
 struct Inner {
     // execution context
     cfg_env: CfgEnv,
