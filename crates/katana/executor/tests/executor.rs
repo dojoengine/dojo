@@ -176,27 +176,25 @@ fn test_executor_with_valid_blocks_impl<EF: ExecutorFactory>(
     assert_eq!(actual_block_env.sequencer_address, block.header.sequencer_address);
 
     let transactions = executor.transactions();
-    assert_eq!(
-        transactions.len(),
-        4,
-        "should not change bcs no transactions were executed in block 3"
-    );
+    assert_eq!(transactions.len(), 4, "+1 tx from block 3");
 
-    // compute the contract address that we deploy thru the UDC using Invoke tx
+    // compute the contract address that we deploy thru the UDC using Invoke tx (the erc20 contract)
     let deployed_contract = get_udc_deployed_address(
         felt!("0x6ea2ff5aa6f633708e69f5c61d2ac5f860d2435b46ddbd016aa065bce25100a"),
-        felt!("0x02a8846878b6ad1f54f6ba46f5f40e11cee755c677f130b2c4b60566c9003f1f"),
+        DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH,
         &UdcUniqueness::Unique(UdcUniqueSettings {
             deployer_address: *main_account,
             udc_contract_address: DEFAULT_UDC_ADDRESS.into(),
         }),
+        // constructor arguments (refer to the valid_blocks fixture for the contract deployment for
+        // the meaning of these values)
         &[
             felt!("0x4b415249"),
             felt!("0x4b415249"),
             felt!("0x12"),
             felt!("0x1b39"),
             felt!("0x0"),
-            felt!("0x6b86e40118f29ebe393a75469b4d926c7a44c2e2681b6d319520b7c1156d114"),
+            felt!("0x06b86e40118f29ebe393a75469b4d926c7a44c2e2681b6d319520b7c1156d114"),
         ],
     );
 
