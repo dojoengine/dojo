@@ -8131,7 +8131,6 @@ version = "1.0.0-alpha.15"
 dependencies = [
  "anyhow",
  "dojo-metrics",
- "futures",
  "hyper 0.14.30",
  "jsonrpsee 0.16.3",
  "katana-core",

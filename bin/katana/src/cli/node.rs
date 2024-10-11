@@ -224,32 +224,23 @@ impl NodeArgs {
         let sequencer_config = self.sequencer_config();
         let starknet_config = self.starknet_config()?;
 
-        // Build the node
-        let node = katana_node::build(server_config, sequencer_config, starknet_config)
-            .await
-            .context("failed to build node")?;
+        // build the node and start it
+        let node = katana_node::start(server_config, sequencer_config, starknet_config).await?;
 
         if !self.silent {
             #[allow(deprecated)]
             let genesis = &node.backend.config.genesis;
-            let server_address = node.server_config.addr();
-            print_intro(&self, genesis, &server_address);
+            print_intro(&self, genesis, node.rpc.addr);
         }
 
-        // Launch the node
-        let handle = node.launch().await.context("failed to launch node")?;
-
-        // Wait until an OS signal (ie SIGINT, SIGTERM) is received or the node is shutdown.
+        // Wait until an OS signal is received or TaskManager shutdown
         tokio::select! {
-            _ = dojo_utils::signal::wait_signals() => {
-                // Gracefully shutdown the node before exiting
-                handle.stop().await?;
-            },
-
-            _ = handle.stopped() => { }
+            _ = dojo_utils::signal::wait_signals() => {},
+            _ = node.task_manager.wait_for_shutdown() => {}
         }
 
-        info!("Shutting down.");
+        info!("Shutting down...");
+        node.stop().await?;
 
         Ok(())
     }
@@ -346,7 +337,7 @@ impl NodeArgs {
     }
 }
 
-fn print_intro(args: &NodeArgs, genesis: &Genesis, address: &str) {
+fn print_intro(args: &NodeArgs, genesis: &Genesis, address: SocketAddr) {
     let mut accounts = genesis.accounts().peekable();
     let account_class_hash = accounts.peek().map(|e| e.1.class_hash());
     let seed = &args.starknet.seed;

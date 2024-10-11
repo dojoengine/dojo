@@ -9,8 +9,7 @@ use anyhow::{Context, Result};
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Request, Response, Server};
 use metrics::{describe_gauge, gauge};
-use metrics_exporter_prometheus::PrometheusBuilder;
-pub use metrics_exporter_prometheus::PrometheusHandle;
+use metrics_exporter_prometheus::{PrometheusBuilder, PrometheusHandle};
 use metrics_util::layers::{PrefixLayer, Stack};
 
 use crate::Report;
