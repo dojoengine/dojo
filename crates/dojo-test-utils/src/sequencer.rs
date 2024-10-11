@@ -35,7 +35,6 @@ pub struct TestSequencer {
 }
 
 impl TestSequencer {
-    #[allow(deprecated)]
     pub async fn start(config: Config) -> Self {
         let handle = katana_node::build(config)
             .await
@@ -81,7 +80,6 @@ impl TestSequencer {
         &self,
         index: usize,
     ) -> SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet> {
-        #[allow(deprecated)]
         let accounts: Vec<_> =
             self.handle.node.backend.chain_spec.genesis.accounts().collect::<_>();
 
