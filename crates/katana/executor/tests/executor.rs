@@ -195,7 +195,6 @@ fn test_executor_with_valid_blocks_impl<EF: ExecutorFactory>(
             felt!("0x1b39"),
             felt!("0x0"),
             felt!("0x06b86e40118f29ebe393a75469b4d926c7a44c2e2681b6d319520b7c1156d114"),
-            felt!("0x06b86e40118f29ebe393a75469b4d926c7a44c2e2681b6d319520b7c1156d114"),
         ],
     );
 

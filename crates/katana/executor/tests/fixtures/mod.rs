@@ -195,12 +195,12 @@ pub fn valid_blocks() -> [ExecutableBlock; 3] {
                         felt!("0x1"),
                         felt!("0x41a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf"),
                         felt!("0x1987cbd17808b9a23693d4de7e246a443cfe37e6e7fbaeabd7d7e6532b07c3d"),
-                        felt!("0xb"), // the # of felts after this point
+                        felt!("10"), // the # of felts after this point
                         // --- udc::deployContract arguments
                         DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH, // class hash
                         felt!("0x6ea2ff5aa6f633708e69f5c61d2ac5f860d2435b46ddbd016aa065bce25100a"), /* salt */
                         felt!("0x1"), // uniquness
-                        felt!("7"),   // ctor calldata length
+                        felt!("6"),   // ctor calldata length
                         // ---- ctor calldata of the erc20 class
                         felt!("0x4b415249"),   // erc20 name
                         felt!("0x4b415249"),   // erc20 symbol
@@ -208,7 +208,6 @@ pub fn valid_blocks() -> [ExecutableBlock; 3] {
                         felt!("0x1b39"),       // erc20 total supply (low)
                         felt!("0x0"),          // erc20 total supply (high)
                         sender_address.into(), // recipient
-                        sender_address.into(), // owner
                     ],
                     max_fee: 2700700000000000,
                     signature: vec![],
