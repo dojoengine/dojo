@@ -1,1 +1,0 @@
-ALTER TABLE erc_transfers ADD COLUMN transaction_hash TEXT NOT NULL;

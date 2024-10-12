@@ -905,6 +905,6 @@ where
 }
 
 // event_id format: block_number:transaction_hash:event_idx
-pub(crate) fn get_transaction_hash_from_event_id(event_id: &str) -> String {
+pub fn get_transaction_hash_from_event_id(event_id: &str) -> String {
     event_id.split(':').nth(1).unwrap().to_string()
 }

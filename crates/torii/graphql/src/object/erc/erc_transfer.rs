@@ -4,6 +4,7 @@ use convert_case::{Case, Casing};
 use serde::Deserialize;
 use sqlx::{FromRow, Pool, Sqlite, SqliteConnection};
 use starknet_crypto::Felt;
+use torii_core::engine::get_transaction_hash_from_event_id;
 use torii_core::sql::utils::felt_to_sql_string;
 use tracing::warn;
 
@@ -70,6 +71,7 @@ async fn fetch_erc_transfers(
     let query = format!(
         r#"
 SELECT
+    et.id,
     et.contract_address,
     et.from_address,
     et.to_address,
@@ -79,8 +81,7 @@ SELECT
     t.name,
     t.symbol,
     t.decimals,
-    c.contract_type,
-    et.transaction_hash
+    c.contract_type
 FROM
     erc_transfers et
 JOIN
@@ -103,6 +104,7 @@ LIMIT {};
 
     for row in rows {
         let row = TransferQueryResultRaw::from_row(&row)?;
+        let transaction_hash = get_transaction_hash_from_event_id(&row.id);
 
         let transfer_value = match row.contract_type.to_lowercase().as_str() {
             "erc20" => {
@@ -122,7 +124,7 @@ LIMIT {};
                     (Name::new("type"), Value::String(row.contract_type)),
                     (Name::new("executedAt"), Value::String(row.executed_at)),
                     (Name::new("tokenMetadata"), token_metadata),
-                    (Name::new("transactionHash"), Value::String(row.transaction_hash.clone())),
+                    (Name::new("transactionHash"), Value::String(transaction_hash)),
                 ]))
             }
             "erc721" => {
@@ -145,7 +147,7 @@ LIMIT {};
                     (Name::new("type"), Value::String(row.contract_type)),
                     (Name::new("executedAt"), Value::String(row.executed_at)),
                     (Name::new("tokenMetadata"), token_metadata),
-                    (Name::new("transactionHash"), Value::String(row.transaction_hash.clone())),
+                    (Name::new("transactionHash"), Value::String(transaction_hash)),
                 ]))
             }
             _ => {
@@ -171,6 +173,7 @@ LIMIT {};
 #[derive(FromRow, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 struct TransferQueryResultRaw {
+    pub id: String,
     pub contract_address: String,
     pub from_address: String,
     pub to_address: String,
@@ -181,5 +184,4 @@ struct TransferQueryResultRaw {
     pub symbol: String,
     pub decimals: u8,
     pub contract_type: String,
-    pub transaction_hash: String,
 }
