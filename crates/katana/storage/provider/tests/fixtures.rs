@@ -8,9 +8,7 @@ use katana_primitives::block::{
 };
 use katana_primitives::class::{CompiledClass, FlattenedSierraClass, SierraClass};
 use katana_primitives::contract::ContractAddress;
-use katana_primitives::genesis::constant::{
-    DEFAULT_LEGACY_ERC20_CONTRACT_CASM, DEFAULT_LEGACY_UDC_CASM,
-};
+use katana_primitives::genesis::constant::{DEFAULT_LEGACY_ERC20_CASM, DEFAULT_LEGACY_UDC_CASM};
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
 use katana_primitives::utils::class::parse_compiled_class;
 use katana_provider::providers::db::DbProvider;
@@ -113,7 +111,7 @@ pub fn mock_state_updates() -> [StateUpdatesWithDeclaredClasses; 3] {
         },
         declared_compiled_classes: BTreeMap::from([(
             class_hash_1,
-            DEFAULT_LEGACY_ERC20_CONTRACT_CASM.clone(),
+            DEFAULT_LEGACY_ERC20_CASM.clone(),
         )]),
         ..Default::default()
     };

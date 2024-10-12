@@ -14,8 +14,8 @@ use jsonrpsee::http_client::HttpClientBuilder;
 use katana_node::config::SequencingConfig;
 use katana_primitives::event::ContinuationToken;
 use katana_primitives::genesis::constant::{
-    DEFAULT_FEE_TOKEN_ADDRESS, DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH,
-    DEFAULT_PREFUNDED_ACCOUNT_BALANCE, DEFAULT_UDC_ADDRESS,
+    DEFAULT_ACCOUNT_CLASS_HASH, DEFAULT_FEE_TOKEN_ADDRESS, DEFAULT_PREFUNDED_ACCOUNT_BALANCE,
+    DEFAULT_UDC_ADDRESS,
 };
 use katana_rpc_api::dev::DevApiClient;
 use starknet::accounts::{
@@ -164,7 +164,7 @@ async fn deploy_account(
 
     // Precompute the contract address of the new account with the given parameters:
     let signer = LocalWallet::from(SigningKey::from_random());
-    let class_hash = DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH;
+    let class_hash = DEFAULT_ACCOUNT_CLASS_HASH;
     let salt = felt!("0x123");
     let ctor_args = [signer.get_public_key().await?.scalar()];
     let computed_address = get_contract_address(salt, class_hash, &ctor_args, Felt::ZERO);

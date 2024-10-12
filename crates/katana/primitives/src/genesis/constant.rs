@@ -17,10 +17,10 @@ pub const DEFAULT_UDC_ADDRESS: ContractAddress =
 pub const DEFAULT_FEE_TOKEN_ADDRESS: ContractAddress =
     ContractAddress(felt!("0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"));
 
-/// The standard storage address for `public key` in OpenZeppelin account contract.
+/// The standard storage address for `public key` in the default account class.
 /// Corresponds to keccak("Account_public_key") ==
 /// 0x1379ac0624b939ceb9dede92211d7db5ee174fe28be72245b0a1a2abd81c98f
-pub const OZ_ACCOUNT_CONTRACT_PUBKEY_STORAGE_SLOT: StorageKey =
+pub const DEFAULT_ACCOUNT_CLASS_PUBKEY_STORAGE_SLOT: StorageKey =
     felt!("0x1379ac0624b939ceb9dede92211d7db5ee174fe28be72245b0a1a2abd81c98f");
 
 /// The standard storage address for `ERC20_name` in ERC20 contract.
@@ -52,12 +52,12 @@ pub const DEFAULT_PREFUNDED_ACCOUNT_BALANCE: u128 = 10 * u128::pow(10, 21);
 
 /// The class hash of DEFAULT_LEGACY_ERC20_CONTRACT_CASM.
 /// Corresponds to 0x02a8846878b6ad1f54f6ba46f5f40e11cee755c677f130b2c4b60566c9003f1f
-pub const DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH: ClassHash =
+pub const DEFAULT_LEGACY_ERC20_CLASS_HASH: ClassHash =
     felt!("0x02a8846878b6ad1f54f6ba46f5f40e11cee755c677f130b2c4b60566c9003f1f");
 
 /// The compiled class hash of DEFAULT_LEGACY_ERC20_CONTRACT_CASM.
-pub const DEFAULT_LEGACY_ERC20_CONTRACT_COMPILED_CLASS_HASH: CompiledClassHash =
-    DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH;
+pub const DEFAULT_LEGACY_ERC20_COMPILED_CLASS_HASH: CompiledClassHash =
+    DEFAULT_LEGACY_ERC20_CLASS_HASH;
 
 /// The class hash of DEFAULT_LEGACY_UDC_CASM.
 /// Corresponds to 0x07b3e05f48f0c69e4a65ce5e076a66271a527aff2c34ce1083ec6e1526997a69
@@ -67,17 +67,16 @@ pub const DEFAULT_LEGACY_UDC_CLASS_HASH: ClassHash =
 /// The compiled class hash of DEFAULT_LEGACY_UDC_CASM.
 pub const DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH: CompiledClassHash = DEFAULT_LEGACY_UDC_CLASS_HASH;
 
-/// The class hash of DEFAULT_OZ_ACCOUNT_CONTRACT.
-/// Corresponds to 0x05400e90f7e0ae78bd02c77cd75527280470e2fe19c54970dd79dc37a9d3645c
-pub const DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH: ClassHash =
-    felt!("0x05400e90f7e0ae78bd02c77cd75527280470e2fe19c54970dd79dc37a9d3645c");
+/// The class hash of DEFAULT_ACCOUNT_CLASS.
+pub const DEFAULT_ACCOUNT_CLASS_HASH: ClassHash =
+    felt!("0x07dc7899aa655b0aae51eadff6d801a58e97dd99cf4666ee59e704249e51adf2");
 
-/// The compiled class hash of DEFAULT_OZ_ACCOUNT_CONTRACT.
-/// Corresponds to 0x016c6081eb34ad1e0c5513234ed0c025b3c7f305902d291bad534cd6474c85bc
-pub const DEFAULT_OZ_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH: CompiledClassHash =
-    felt!("0x016c6081eb34ad1e0c5513234ed0c025b3c7f305902d291bad534cd6474c85bc");
+/// The compiled class hash of DEFAULT_ACCOUNT_CLASS.
+pub const DEFAULT_ACCOUNT_COMPILED_CLASS_HASH: CompiledClassHash =
+    felt!("0x01b97e0ef7f5c2f2b7483cda252a3accc7f917773fb69d4bd290f92770069aec");
 
-pub const CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH: ClassHash =
+/// Cartridge Controller account class hash.
+pub const CONTROLLER_CLASS_HASH: ClassHash =
     felt!("0x024a9edbfa7082accfceabf6a92d7160086f346d622f28741bf1c651c412c9ab");
 
 // Pre-compiled contract classes
@@ -85,21 +84,21 @@ lazy_static! {
 
     // Default fee token contract
     // pub static ref DEFAULT_LEGACY_ERC20_CONTRACT_CASM: CompiledContractClass = parse_compiled_class(include_str!("../../contracts/compiled/erc20.json")).unwrap();
-    pub static ref DEFAULT_LEGACY_ERC20_CONTRACT_CASM: CompiledClass = read_compiled_class_artifact(include_str!("../../../contracts/compiled/erc20.json"));
+    pub static ref DEFAULT_LEGACY_ERC20_CASM: CompiledClass = read_compiled_class_artifact(include_str!("../../../contracts/build/erc20.json"));
 
     // Default universal deployer
-    pub static ref DEFAULT_LEGACY_UDC_CASM: CompiledClass = read_compiled_class_artifact(include_str!("../../../contracts/compiled/universal_deployer.json"));
+    pub static ref DEFAULT_LEGACY_UDC_CASM: CompiledClass = read_compiled_class_artifact(include_str!("../../../contracts/build/universal_deployer.json"));
 
     // Default account contract
-    pub static ref DEFAULT_OZ_ACCOUNT_CONTRACT: SierraClass = parse_sierra_class(include_str!("../../../contracts/compiled/oz_account_080.json")).unwrap();
-    pub static ref DEFAULT_OZ_ACCOUNT_CONTRACT_CASM: CompiledClass = read_compiled_class_artifact(include_str!("../../../contracts/compiled/oz_account_080.json"));
+    pub static ref DEFAULT_ACCOUNT_CLASS: SierraClass = parse_sierra_class(include_str!("../../../contracts/build/default_account.json")).unwrap();
+    pub static ref DEFAULT_ACCOUNT_CLASS_CASM: CompiledClass = read_compiled_class_artifact(include_str!("../../../contracts/build/default_account.json"));
 }
 
 #[cfg(feature = "controller")]
 lazy_static! {
     // Cartridge Controller account
-    pub static ref CONTROLLER_ACCOUNT_CONTRACT: SierraClass = parse_sierra_class(include_str!("../../../contracts/compiled/controller_CartridgeAccount.contract_class.json")).unwrap();
-    pub static ref CONTROLLER_ACCOUNT_CONTRACT_CASM: CompiledClass = read_compiled_class_artifact(include_str!("../../../contracts/compiled/controller_CartridgeAccount.contract_class.json"));
+    pub static ref CONTROLLER_ACCOUNT_CLASS: SierraClass = parse_sierra_class(include_str!("../../../contracts/build/controller_CartridgeAccount.contract_class.json")).unwrap();
+    pub static ref CONTROLLER_ACCOUNT_CLASS_CASM: CompiledClass = read_compiled_class_artifact(include_str!("../../../contracts/build/controller_CartridgeAccount.contract_class.json"));
 }
 
 /// A helper function to get the base storage address for the fee token balance of a given account.
@@ -121,9 +120,9 @@ mod tests {
     #[cfg(feature = "controller")]
     #[test]
     fn controller_class_hash() {
-        use super::{CONTROLLER_ACCOUNT_CONTRACT, CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH};
+        use super::{CONTROLLER_ACCOUNT_CLASS, CONTROLLER_CLASS_HASH};
 
-        let hash = CONTROLLER_ACCOUNT_CONTRACT.class_hash().unwrap();
-        assert_eq!(hash, CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH)
+        let hash = CONTROLLER_ACCOUNT_CLASS.class_hash().unwrap();
+        assert_eq!(hash, CONTROLLER_CLASS_HASH)
     }
 }

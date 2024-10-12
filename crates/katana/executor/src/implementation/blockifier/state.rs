@@ -234,8 +234,8 @@ mod tests {
     use katana_primitives::class::{CompiledClass, FlattenedSierraClass};
     use katana_primitives::contract::ContractAddress;
     use katana_primitives::genesis::constant::{
-        DEFAULT_LEGACY_ERC20_CONTRACT_CASM, DEFAULT_LEGACY_UDC_CASM, DEFAULT_OZ_ACCOUNT_CONTRACT,
-        DEFAULT_OZ_ACCOUNT_CONTRACT_CASM,
+        DEFAULT_ACCOUNT_CLASS, DEFAULT_ACCOUNT_CLASS_CASM, DEFAULT_LEGACY_ERC20_CASM,
+        DEFAULT_LEGACY_UDC_CASM,
     };
     use katana_primitives::utils::class::{parse_compiled_class, parse_sierra_class};
     use katana_primitives::{address, Felt};
@@ -262,10 +262,10 @@ mod tests {
         let storage_value = felt!("0x2");
         let class_hash = felt!("0x123");
         let compiled_hash = felt!("0x456");
-        let sierra_class = DEFAULT_OZ_ACCOUNT_CONTRACT.clone().flatten().unwrap();
-        let class = DEFAULT_OZ_ACCOUNT_CONTRACT_CASM.clone();
+        let sierra_class = DEFAULT_ACCOUNT_CLASS.clone().flatten().unwrap();
+        let class = DEFAULT_ACCOUNT_CLASS_CASM.clone();
         let legacy_class_hash = felt!("0x111");
-        let legacy_class = DEFAULT_LEGACY_ERC20_CONTRACT_CASM.clone();
+        let legacy_class = DEFAULT_LEGACY_ERC20_CASM.clone();
 
         let provider = InMemoryProvider::new();
         provider.set_nonce(address, nonce).unwrap();
@@ -304,11 +304,11 @@ mod tests {
         assert_eq!(actual_compiled_hash.0, felt!("0x456"));
         assert_eq!(
             actual_class,
-            utils::to_class(DEFAULT_OZ_ACCOUNT_CONTRACT_CASM.clone()).unwrap().contract_class()
+            utils::to_class(DEFAULT_ACCOUNT_CLASS_CASM.clone()).unwrap().contract_class()
         );
         assert_eq!(
             actual_legacy_class,
-            utils::to_class(DEFAULT_LEGACY_ERC20_CONTRACT_CASM.clone()).unwrap().contract_class()
+            utils::to_class(DEFAULT_LEGACY_ERC20_CASM.clone()).unwrap().contract_class()
         );
 
         Ok(())
@@ -407,9 +407,9 @@ mod tests {
         assert_eq!(actual_class_hash, Some(class_hash));
         assert_eq!(actual_storage_value, Some(felt!("0x2")));
         assert_eq!(actual_compiled_hash, Some(felt!("0x456")));
-        assert_eq!(actual_class, Some(DEFAULT_OZ_ACCOUNT_CONTRACT_CASM.clone()));
-        assert_eq!(actual_sierra_class, Some(DEFAULT_OZ_ACCOUNT_CONTRACT.clone().flatten()?));
-        assert_eq!(actual_legacy_class, Some(DEFAULT_LEGACY_ERC20_CONTRACT_CASM.clone()));
+        assert_eq!(actual_class, Some(DEFAULT_ACCOUNT_CLASS_CASM.clone()));
+        assert_eq!(actual_sierra_class, Some(DEFAULT_ACCOUNT_CLASS.clone().flatten()?));
+        assert_eq!(actual_legacy_class, Some(DEFAULT_LEGACY_ERC20_CASM.clone()));
 
         // assert that can fetch data native to the cached state from the state provider
 

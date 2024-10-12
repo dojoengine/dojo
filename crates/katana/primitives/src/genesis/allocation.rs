@@ -10,7 +10,7 @@ use starknet::core::serde::unsigned_field_element::{UfeHex, UfeHexOption};
 use starknet::core::utils::get_contract_address;
 use starknet::signers::SigningKey;
 
-use super::constant::DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH;
+use super::constant::DEFAULT_ACCOUNT_CLASS_HASH;
 use crate::class::ClassHash;
 use crate::contract::{ContractAddress, StorageKey, StorageValue};
 use crate::Felt;
@@ -233,12 +233,7 @@ impl DevAllocationsGenerator {
     ///
     /// This will return a [DevAllocationsGenerator] with the default parameters.
     pub fn new(total: u16) -> Self {
-        Self {
-            total,
-            seed: [0u8; 32],
-            balance: U256::ZERO,
-            class_hash: DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH,
-        }
+        Self { total, seed: [0u8; 32], balance: U256::ZERO, class_hash: DEFAULT_ACCOUNT_CLASS_HASH }
     }
 
     pub fn with_class(self, class_hash: ClassHash) -> Self {

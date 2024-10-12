@@ -6,7 +6,7 @@ use async_trait::async_trait;
 use coset::CoseKey;
 use katana_primitives::contract::{ContractAddress, StorageKey, StorageValue};
 use katana_primitives::genesis::allocation::{GenesisAllocation, GenesisContractAlloc};
-use katana_primitives::genesis::constant::CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH;
+use katana_primitives::genesis::constant::CONTROLLER_CLASS_HASH;
 use katana_primitives::genesis::Genesis;
 use katana_primitives::Felt;
 use slot::account_sdk::signers::webauthn::{CredentialID, WebauthnBackend, WebauthnSigner};
@@ -47,7 +47,7 @@ fn add_controller_account_inner(
         let account = GenesisContractAlloc {
             nonce: None,
             balance: Some(U256::from(0xfffffffffffffffu128)),
-            class_hash: Some(CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH),
+            class_hash: Some(CONTROLLER_CLASS_HASH),
             storage: Some(get_contract_storage(credential_id, public_key)?),
         };
 
@@ -77,7 +77,7 @@ pub mod json {
     use super::*;
 
     const CONTROLLER_SIERRA_ARTIFACT: &str =
-        include_str!("../../contracts/compiled/controller_CartridgeAccount.contract_class.json");
+        include_str!("../../contracts/build/controller_CartridgeAccount.contract_class.json");
     const CONTROLLER_CLASS_NAME: &str = "controller";
 
     // TODO(kariy): should accept the whole account struct instead of individual fields
@@ -246,7 +246,7 @@ mod tests {
 
         assert!(genesis.allocations.contains_key(&address));
         assert_eq!(allocation.balance(), Some(U256::from(0xfffffffffffffffu128)));
-        assert_eq!(allocation.class_hash(), Some(CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH));
+        assert_eq!(allocation.class_hash(), Some(CONTROLLER_CLASS_HASH));
 
         // Check the owner storage value
         assert_matches!(allocation, GenesisAllocation::Contract(contract) => {

@@ -8,25 +8,20 @@ use std::sync::Arc;
 
 use alloy_primitives::U256;
 #[cfg(feature = "slot")]
-use constant::{
-    CONTROLLER_ACCOUNT_CONTRACT, CONTROLLER_ACCOUNT_CONTRACT_CASM,
-    CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
-};
+use constant::{CONTROLLER_ACCOUNT_CLASS, CONTROLLER_ACCOUNT_CLASS_CASM, CONTROLLER_CLASS_HASH};
 use serde::{Deserialize, Serialize};
 use starknet::core::serde::unsigned_field_element::UfeHex;
 use starknet::core::utils::cairo_short_string_to_felt;
 
 use self::allocation::{GenesisAccountAlloc, GenesisAllocation, GenesisContractAlloc};
 use self::constant::{
-    get_fee_token_balance_base_storage_address, DEFAULT_FEE_TOKEN_ADDRESS,
-    DEFAULT_LEGACY_ERC20_CONTRACT_CASM, DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH,
-    DEFAULT_LEGACY_ERC20_CONTRACT_COMPILED_CLASS_HASH, DEFAULT_LEGACY_UDC_CASM,
-    DEFAULT_LEGACY_UDC_CLASS_HASH, DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH,
-    DEFAULT_OZ_ACCOUNT_CONTRACT, DEFAULT_OZ_ACCOUNT_CONTRACT_CASM,
-    DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH, DEFAULT_OZ_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH,
+    get_fee_token_balance_base_storage_address, DEFAULT_ACCOUNT_CLASS, DEFAULT_ACCOUNT_CLASS_CASM,
+    DEFAULT_ACCOUNT_CLASS_HASH, DEFAULT_ACCOUNT_CLASS_PUBKEY_STORAGE_SLOT,
+    DEFAULT_ACCOUNT_COMPILED_CLASS_HASH, DEFAULT_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CASM,
+    DEFAULT_LEGACY_ERC20_CLASS_HASH, DEFAULT_LEGACY_ERC20_COMPILED_CLASS_HASH,
+    DEFAULT_LEGACY_UDC_CASM, DEFAULT_LEGACY_UDC_CLASS_HASH, DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH,
     DEFAULT_UDC_ADDRESS, ERC20_DECIMAL_STORAGE_SLOT, ERC20_NAME_STORAGE_SLOT,
     ERC20_SYMBOL_STORAGE_SLOT, ERC20_TOTAL_SUPPLY_STORAGE_SLOT,
-    OZ_ACCOUNT_CONTRACT_PUBKEY_STORAGE_SLOT,
 };
 use crate::block::{Block, BlockHash, BlockNumber, GasPrices, Header};
 use crate::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
@@ -183,7 +178,7 @@ impl Genesis {
 
             let mut storage = alloc.storage().cloned().unwrap_or_default();
             if let Some(pub_key) = alloc.public_key() {
-                storage.insert(OZ_ACCOUNT_CONTRACT_PUBKEY_STORAGE_SLOT, pub_key);
+                storage.insert(DEFAULT_ACCOUNT_CLASS_PUBKEY_STORAGE_SLOT, pub_key);
             }
 
             states.state_updates.storage_updates.insert(address, storage);
@@ -252,7 +247,7 @@ impl Default for Genesis {
             name: "Ether".into(),
             symbol: "ETH".into(),
             address: DEFAULT_FEE_TOKEN_ADDRESS,
-            class_hash: DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH,
+            class_hash: DEFAULT_LEGACY_ERC20_CLASS_HASH,
             storage: None,
         };
 
@@ -264,11 +259,11 @@ impl Default for Genesis {
 
         let classes = BTreeMap::from([
             (
-                DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH,
+                DEFAULT_LEGACY_ERC20_CLASS_HASH,
                 GenesisClass {
                     sierra: None,
-                    casm: DEFAULT_LEGACY_ERC20_CONTRACT_CASM.clone().into(),
-                    compiled_class_hash: DEFAULT_LEGACY_ERC20_CONTRACT_COMPILED_CLASS_HASH,
+                    casm: DEFAULT_LEGACY_ERC20_CASM.clone().into(),
+                    compiled_class_hash: DEFAULT_LEGACY_ERC20_COMPILED_CLASS_HASH,
                 },
             ),
             (
@@ -280,20 +275,20 @@ impl Default for Genesis {
                 },
             ),
             (
-                DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH,
+                DEFAULT_ACCOUNT_CLASS_HASH,
                 GenesisClass {
-                    sierra: Some(DEFAULT_OZ_ACCOUNT_CONTRACT.clone().flatten().unwrap().into()),
-                    casm: DEFAULT_OZ_ACCOUNT_CONTRACT_CASM.clone().into(),
-                    compiled_class_hash: DEFAULT_OZ_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH,
+                    sierra: Some(DEFAULT_ACCOUNT_CLASS.clone().flatten().unwrap().into()),
+                    casm: DEFAULT_ACCOUNT_CLASS_CASM.clone().into(),
+                    compiled_class_hash: DEFAULT_ACCOUNT_COMPILED_CLASS_HASH,
                 },
             ),
             #[cfg(feature = "slot")]
             (
-                CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
+                CONTROLLER_CLASS_HASH,
                 GenesisClass {
-                    casm: CONTROLLER_ACCOUNT_CONTRACT_CASM.clone().into(),
-                    compiled_class_hash: CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
-                    sierra: Some(CONTROLLER_ACCOUNT_CONTRACT.clone().flatten().unwrap().into()),
+                    casm: CONTROLLER_ACCOUNT_CLASS_CASM.clone().into(),
+                    compiled_class_hash: CONTROLLER_CLASS_HASH,
+                    sierra: Some(CONTROLLER_ACCOUNT_CLASS.clone().flatten().unwrap().into()),
                 },
             ),
         ]);
@@ -338,28 +333,28 @@ mod tests {
                 },
             ),
             (
-                DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH,
+                DEFAULT_LEGACY_ERC20_CLASS_HASH,
                 GenesisClass {
                     sierra: None,
-                    casm: DEFAULT_LEGACY_ERC20_CONTRACT_CASM.clone().into(),
-                    compiled_class_hash: DEFAULT_LEGACY_ERC20_CONTRACT_COMPILED_CLASS_HASH,
+                    casm: DEFAULT_LEGACY_ERC20_CASM.clone().into(),
+                    compiled_class_hash: DEFAULT_LEGACY_ERC20_COMPILED_CLASS_HASH,
                 },
             ),
             (
-                DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH,
+                DEFAULT_ACCOUNT_CLASS_HASH,
                 GenesisClass {
-                    compiled_class_hash: DEFAULT_OZ_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH,
-                    casm: DEFAULT_OZ_ACCOUNT_CONTRACT_CASM.clone().into(),
-                    sierra: Some(DEFAULT_OZ_ACCOUNT_CONTRACT.clone().flatten().unwrap().into()),
+                    compiled_class_hash: DEFAULT_ACCOUNT_COMPILED_CLASS_HASH,
+                    casm: DEFAULT_ACCOUNT_CLASS_CASM.clone().into(),
+                    sierra: Some(DEFAULT_ACCOUNT_CLASS.clone().flatten().unwrap().into()),
                 },
             ),
             #[cfg(feature = "slot")]
             (
-                CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
+                CONTROLLER_CLASS_HASH,
                 GenesisClass {
-                    casm: CONTROLLER_ACCOUNT_CONTRACT_CASM.clone().into(),
-                    compiled_class_hash: CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
-                    sierra: Some(CONTROLLER_ACCOUNT_CONTRACT.clone().flatten().unwrap().into()),
+                    casm: CONTROLLER_ACCOUNT_CLASS_CASM.clone().into(),
+                    compiled_class_hash: CONTROLLER_CLASS_HASH,
+                    sierra: Some(CONTROLLER_ACCOUNT_CLASS.clone().flatten().unwrap().into()),
                 },
             ),
         ]);
@@ -369,7 +364,7 @@ mod tests {
             name: String::from("ETHER"),
             symbol: String::from("ETH"),
             decimals: 18,
-            class_hash: DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH,
+            class_hash: DEFAULT_LEGACY_ERC20_CLASS_HASH,
             storage: Some(BTreeMap::from([
                 (felt!("0x111"), felt!("0x1")),
                 (felt!("0x222"), felt!("0x2")),
@@ -384,7 +379,7 @@ mod tests {
                         "0x01ef15c18599971b7beced415a40f0c7deacfd9b0d1819e03d723d8bc943cfca"
                     ),
                     balance: Some(U256::from_str("0xD3C21BCECCEDA1000000").unwrap()),
-                    class_hash: DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH,
+                    class_hash: DEFAULT_ACCOUNT_CLASS_HASH,
                     nonce: Some(felt!("0x99")),
                     storage: Some(BTreeMap::from([
                         (felt!("0x1"), felt!("0x1")),
@@ -396,7 +391,7 @@ mod tests {
                 address!("0xdeadbeef"),
                 GenesisAllocation::Contract(GenesisContractAlloc {
                     balance: Some(U256::from_str("0xD3C21BCECCEDA1000000").unwrap()),
-                    class_hash: Some(DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH),
+                    class_hash: Some(DEFAULT_ACCOUNT_CLASS_HASH),
                     nonce: Some(felt!("0x100")),
                     storage: Some(BTreeMap::from([
                         (felt!("0x100"), felt!("0x111")),
@@ -409,7 +404,7 @@ mod tests {
                 GenesisAllocation::Account(GenesisAccountAlloc::Account(GenesisAccount {
                     public_key: felt!("0x2"),
                     balance: Some(U256::ZERO),
-                    class_hash: DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH,
+                    class_hash: DEFAULT_ACCOUNT_CLASS_HASH,
                     nonce: None,
                     storage: None,
                 })),
@@ -521,13 +516,13 @@ mod tests {
 
         assert_eq!(
             actual_state_updates.state_updates.declared_classes.get(&fee_token.class_hash),
-            Some(&DEFAULT_LEGACY_ERC20_CONTRACT_COMPILED_CLASS_HASH),
+            Some(&DEFAULT_LEGACY_ERC20_COMPILED_CLASS_HASH),
             "The default fee token class should be declared"
         );
 
         assert_eq!(
             actual_state_updates.declared_compiled_classes.get(&fee_token.class_hash),
-            Some(&DEFAULT_LEGACY_ERC20_CONTRACT_CASM.clone()),
+            Some(&DEFAULT_LEGACY_ERC20_CASM.clone()),
             "The default fee token casm class should be declared"
         );
 
@@ -566,55 +561,43 @@ mod tests {
         );
 
         assert_eq!(
-            actual_state_updates
-                .state_updates
-                .declared_classes
-                .get(&DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH),
-            Some(&DEFAULT_OZ_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH),
+            actual_state_updates.state_updates.declared_classes.get(&DEFAULT_ACCOUNT_CLASS_HASH),
+            Some(&DEFAULT_ACCOUNT_COMPILED_CLASS_HASH),
             "The default oz account class should be declared"
         );
 
         assert_eq!(
             actual_state_updates
                 .declared_compiled_classes
-                .get(&DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH)
+                .get(&DEFAULT_ACCOUNT_CLASS_HASH)
                 .unwrap(),
-            &DEFAULT_OZ_ACCOUNT_CONTRACT_CASM.clone(),
+            &DEFAULT_ACCOUNT_CLASS_CASM.clone(),
             "The default oz account contract casm class should be declared"
         );
 
         assert_eq!(
-            actual_state_updates
-                .declared_sierra_classes
-                .get(&DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH),
-            Some(&DEFAULT_OZ_ACCOUNT_CONTRACT.clone().flatten().unwrap()),
+            actual_state_updates.declared_sierra_classes.get(&DEFAULT_ACCOUNT_CLASS_HASH),
+            Some(&DEFAULT_ACCOUNT_CLASS.clone().flatten().unwrap()),
             "The default oz account contract sierra class should be declared"
         );
 
         #[cfg(feature = "slot")]
         {
             assert_eq!(
-                actual_state_updates
-                    .state_updates
-                    .declared_classes
-                    .get(&CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH),
-                Some(&CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH),
+                actual_state_updates.state_updates.declared_classes.get(&CONTROLLER_CLASS_HASH),
+                Some(&CONTROLLER_CLASS_HASH),
                 "The controller account class should be declared"
             );
 
             assert_eq!(
-                actual_state_updates
-                    .declared_compiled_classes
-                    .get(&CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH),
-                Some(&CONTROLLER_ACCOUNT_CONTRACT_CASM.clone()),
+                actual_state_updates.declared_compiled_classes.get(&CONTROLLER_CLASS_HASH),
+                Some(&CONTROLLER_ACCOUNT_CLASS_CASM.clone()),
                 "The controller account contract casm class should be declared"
             );
 
             assert_eq!(
-                actual_state_updates
-                    .declared_sierra_classes
-                    .get(&CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH),
-                Some(&CONTROLLER_ACCOUNT_CONTRACT.clone().flatten().unwrap()),
+                actual_state_updates.declared_sierra_classes.get(&CONTROLLER_CLASS_HASH),
+                Some(&CONTROLLER_ACCOUNT_CLASS.clone().flatten().unwrap()),
                 "The controller account contract sierra class should be declared"
             );
         }
@@ -631,7 +614,7 @@ mod tests {
 
         let mut account_allocation_storage = allocations[0].1.storage().unwrap().clone();
         account_allocation_storage.insert(
-            OZ_ACCOUNT_CONTRACT_PUBKEY_STORAGE_SLOT,
+            DEFAULT_ACCOUNT_CLASS_PUBKEY_STORAGE_SLOT,
             felt!("0x01ef15c18599971b7beced415a40f0c7deacfd9b0d1819e03d723d8bc943cfca"),
         );
 
@@ -683,7 +666,7 @@ mod tests {
         );
         assert_eq!(
             actual_state_updates.state_updates.storage_updates.get(&alloc_3_addr).cloned(),
-            Some(BTreeMap::from([(OZ_ACCOUNT_CONTRACT_PUBKEY_STORAGE_SLOT, felt!("0x2"))])),
+            Some(BTreeMap::from([(DEFAULT_ACCOUNT_CLASS_PUBKEY_STORAGE_SLOT, felt!("0x2"))])),
             "account allocation storage should be updated"
         );
 

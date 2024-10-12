@@ -139,9 +139,8 @@ mod tests {
     };
     use katana_primitives::fee::TxFeeInfo;
     use katana_primitives::genesis::constant::{
-        DEFAULT_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CONTRACT_CASM,
-        DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH, DEFAULT_LEGACY_UDC_CASM,
-        DEFAULT_LEGACY_UDC_CLASS_HASH, DEFAULT_UDC_ADDRESS,
+        DEFAULT_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CASM, DEFAULT_LEGACY_ERC20_CLASS_HASH,
+        DEFAULT_LEGACY_UDC_CASM, DEFAULT_LEGACY_UDC_CLASS_HASH, DEFAULT_UDC_ADDRESS,
     };
     use katana_primitives::genesis::Genesis;
     use katana_primitives::receipt::{InvokeTxReceipt, Receipt};
@@ -176,7 +175,7 @@ mod tests {
 
         assert_eq!(latest_number, 0);
         assert_eq!(udc_class_hash, DEFAULT_LEGACY_UDC_CLASS_HASH);
-        assert_eq!(fee_token_class_hash, DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH);
+        assert_eq!(fee_token_class_hash, DEFAULT_LEGACY_ERC20_CLASS_HASH);
     }
 
     #[test]
@@ -287,8 +286,8 @@ mod tests {
             assert_eq!(actual_udc_class_hash, DEFAULT_LEGACY_UDC_CLASS_HASH);
             assert_eq!(actual_udc_class, DEFAULT_LEGACY_UDC_CASM.clone());
 
-            assert_eq!(actual_fee_token_class_hash, DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH);
-            assert_eq!(actual_fee_token_class, DEFAULT_LEGACY_ERC20_CONTRACT_CASM.clone());
+            assert_eq!(actual_fee_token_class_hash, DEFAULT_LEGACY_ERC20_CLASS_HASH);
+            assert_eq!(actual_fee_token_class, DEFAULT_LEGACY_ERC20_CASM.clone());
         }
 
         // re open the db and assert the state is the same and not overwritten
@@ -313,8 +312,8 @@ mod tests {
             assert_eq!(actual_udc_class_hash, DEFAULT_LEGACY_UDC_CLASS_HASH);
             assert_eq!(actual_udc_class, DEFAULT_LEGACY_UDC_CASM.clone());
 
-            assert_eq!(actual_fee_token_class_hash, DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH);
-            assert_eq!(actual_fee_token_class, DEFAULT_LEGACY_ERC20_CONTRACT_CASM.clone());
+            assert_eq!(actual_fee_token_class_hash, DEFAULT_LEGACY_ERC20_CLASS_HASH);
+            assert_eq!(actual_fee_token_class, DEFAULT_LEGACY_ERC20_CASM.clone());
 
             let block_number = blockchain.provider().latest_number().unwrap();
             let block_hash = blockchain.provider().latest_hash().unwrap();
