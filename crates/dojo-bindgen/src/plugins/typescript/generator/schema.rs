@@ -3,7 +3,7 @@ use convert_case::{Case, Casing};
 
 use crate::{
     error::BindgenResult,
-    plugins::{typescript::generator::JsDefaultValue, BindgenModelGenerator},
+    plugins::{typescript::generator::JsDefaultValue, BindgenModelGenerator, Buffer},
 };
 
 /// This generator will build a schema based on previous generator results.
@@ -13,8 +13,8 @@ use crate::{
 pub(crate) struct TsSchemaGenerator {}
 impl TsSchemaGenerator {
     /// Import only needs to be present once
-    fn import_schema_type(&self, buffer: &mut Vec<String>) {
-        if !buffer.iter().any(|b| b.contains("import type { SchemaType }")) {
+    fn import_schema_type(&self, buffer: &mut Buffer) {
+        if !buffer.has("import type { SchemaType }") {
             buffer.insert(0, "import type { SchemaType } from \"@dojoengine/sdk\";\n".to_owned());
         }
     }
@@ -31,17 +31,17 @@ impl TsSchemaGenerator {
     }
 
     /// Generates the type definition for the schema
-    fn handle_schema_type(&self, token: &Composite, buffer: &mut Vec<String>) {
+    fn handle_schema_type(&self, token: &Composite, buffer: &mut Buffer) {
         let (ns, namespace, type_name) = self.get_namespace_and_path(token);
         let schema_type = format!("export interface {namespace}SchemaType extends SchemaType");
-        if !buffer.iter().any(|b| b.contains(&schema_type)) {
+        if !buffer.has(&schema_type) {
             buffer.push(format!("export interface {namespace}SchemaType extends SchemaType {{\n\t{ns}: {{\n\t\t{}: {},\n\t}},\n}}", type_name, type_name));
             return;
         }
 
         // type has already been initialized
         let gen = format!("\n\t\t{type_name}: {type_name},");
-        if buffer.iter().any(|b| b.contains(&gen)) {
+        if buffer.has(&gen) {
             return;
         }
 
@@ -50,19 +50,14 @@ impl TsSchemaGenerator {
         // to improve this logic, we would need to either have some kind of code parsing.
         // we could otherwise have some intermediate representation that we pass to this generator
         // function.
-        let pos = buffer.iter().position(|b| b.contains(&schema_type)).unwrap();
-        if let Some(st) = buffer.get_mut(pos) {
-            let indices = st.match_indices(",").map(|(i, _)| i).collect::<Vec<usize>>();
-            let append_after = indices[indices.len() - 2] + 1;
-            st.insert_str(append_after, &gen);
-        }
+        buffer.insert_after(gen, &schema_type, ",", 2);
     }
 
     /// Generates the default values for the schema
-    fn handle_schema_const(&self, token: &Composite, buffer: &mut Vec<String>) {
+    fn handle_schema_const(&self, token: &Composite, buffer: &mut Buffer) {
         let (ns, namespace, type_name) = self.get_namespace_and_path(token);
         let const_type = format!("export const schema: {namespace}SchemaType");
-        if !buffer.iter().any(|b| b.contains(&const_type)) {
+        if !buffer.has(&const_type) {
             buffer.push(format!(
             "export const schema: {namespace}SchemaType = {{\n\t{ns}: {{\n\t\t{}: {},\n\t}},\n}};",
             type_name,
@@ -73,16 +68,10 @@ impl TsSchemaGenerator {
 
         // type has already been initialized
         let gen = format!("\n\t\t{type_name}: {},", self.generate_type_init(token));
-        if buffer.iter().any(|b| b.contains(&gen)) {
+        if buffer.has(&gen) {
             return;
         }
-
-        let pos = buffer.iter().position(|b| b.contains(&const_type)).unwrap();
-        if let Some(st) = buffer.get_mut(pos) {
-            let indices = st.match_indices(",").map(|(i, _)| i).collect::<Vec<usize>>();
-            let append_after = indices[indices.len() - 2] + 1;
-            st.insert_str(append_after, &gen);
-        }
+        buffer.insert_after(gen, &const_type, ",", 2);
     }
 
     /// Generates default values for each fields of the struct.
@@ -119,7 +108,7 @@ impl TsSchemaGenerator {
 }
 
 impl BindgenModelGenerator for TsSchemaGenerator {
-    fn generate(&self, token: &Composite, buffer: &mut Vec<String>) -> BindgenResult<String> {
+    fn generate(&self, token: &Composite, buffer: &mut Buffer) -> BindgenResult<String> {
         if token.inners.is_empty() || token.r#type != CompositeType::Struct {
             return Ok(String::new());
         }
@@ -154,7 +143,7 @@ mod tests {
     #[test]
     fn test_it_does_nothing_if_no_inners() {
         let generator = TsSchemaGenerator {};
-        let mut buffer = Vec::new();
+        let mut buffer = Buffer::new();
 
         let token = Composite {
             type_path: "core::test::Test".to_owned(),
@@ -171,7 +160,7 @@ mod tests {
     #[test]
     fn test_it_adds_imports() {
         let generator = TsSchemaGenerator {};
-        let mut buffer = Vec::new();
+        let mut buffer = Buffer::new();
 
         let token = create_test_struct_token("TestStruct");
         let _result = generator.generate(&token, &mut buffer);
@@ -185,7 +174,7 @@ mod tests {
     #[test]
     fn test_it_appends_schema_type() {
         let generator = TsSchemaGenerator {};
-        let mut buffer = Vec::new();
+        let mut buffer = Buffer::new();
 
         let token = create_test_struct_token("TestStruct");
         let _result = generator.generate(&token, &mut buffer);
@@ -195,7 +184,7 @@ mod tests {
     #[test]
     fn test_handle_schema_type() {
         let generator = TsSchemaGenerator {};
-        let mut buffer = Vec::new();
+        let mut buffer = Buffer::new();
 
         let token = create_test_struct_token("TestStruct");
         generator.handle_schema_type(&token, &mut buffer);
@@ -229,7 +218,7 @@ mod tests {
     #[test]
     fn test_handle_schema_const() {
         let generator = TsSchemaGenerator {};
-        let mut buffer = Vec::new();
+        let mut buffer = Buffer::new();
         let token = create_test_struct_token("TestStruct");
 
         generator.handle_schema_const(&token, &mut buffer);

@@ -1,4 +1,7 @@
-use crate::{plugins::BindgenContractGenerator, DojoData};
+use crate::{
+    plugins::{BindgenContractGenerator, Buffer},
+    DojoData,
+};
 use cainome::parser::tokens::Composite;
 use std::path::{Path, PathBuf};
 
@@ -51,7 +54,7 @@ impl BindgenWriter for TsFileWriter {
         let code = self
             .generators
             .iter()
-            .fold(Vec::new(), |mut acc, g| {
+            .fold(Buffer::new(), |mut acc, g| {
                 composites.iter().for_each(|c| {
                     match g.generate(c, &mut acc) {
                         Ok(code) => {
@@ -94,7 +97,7 @@ impl BindgenWriter for TsFileContractWriter {
         let code = self
             .generators
             .iter()
-            .fold(Vec::<String>::new(), |mut acc, g| {
+            .fold(Buffer::new(), |mut acc, g| {
                 data.contracts.iter().for_each(|(_, c)| {
                     c.systems
                         .iter()

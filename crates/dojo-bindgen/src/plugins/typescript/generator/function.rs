@@ -2,24 +2,28 @@ use cainome::parser::tokens::{CompositeType, Function, Token};
 use convert_case::{Case, Casing};
 use dojo_world::contracts::naming;
 
-use crate::{error::BindgenResult, plugins::BindgenContractGenerator, DojoContract};
+use crate::{
+    error::BindgenResult,
+    plugins::{BindgenContractGenerator, Buffer},
+    DojoContract,
+};
 
 use super::JsType;
 
 pub(crate) struct TsFunctionGenerator;
 impl TsFunctionGenerator {
-    fn check_imports(&self, buffer: &mut Vec<String>) {
-        if !buffer.iter().any(|b| b.contains("import { DojoProvider } from ")) {
+    fn check_imports(&self, buffer: &mut Buffer) {
+        if !buffer.has("import { DojoProvider } from ") {
             buffer.insert(0, "import { DojoProvider } from \"@dojoengine/core\";".to_owned());
             buffer.insert(1, "import { Account } from \"starknet\";".to_owned());
             buffer.insert(2, "import * as models from \"./models.gen\";\n".to_owned());
         }
     }
 
-    fn setup_function_wrapper_start(&self, buffer: &mut Vec<String>) -> usize {
+    fn setup_function_wrapper_start(&self, buffer: &mut Buffer) -> usize {
         let fn_wrapper = format!("export async function setupWorld(provider: DojoProvider) {{\n");
 
-        if !buffer.iter().any(|b| b.contains(&fn_wrapper)) {
+        if !buffer.has(&fn_wrapper) {
             buffer.push(fn_wrapper.clone());
         }
 
@@ -87,27 +91,27 @@ impl TsFunctionGenerator {
             .join(", ")
     }
 
-    fn append_function_body(&self, idx: usize, buffer: &mut Vec<String>, body: String) {
+    fn append_function_body(&self, idx: usize, buffer: &mut Buffer, body: String) {
         // check if function was already appended to body, if so, append after other functions
         let pos = if buffer.len() - idx > 2 { buffer.len() - 2 } else { idx };
 
         buffer.insert(pos + 1, body);
     }
 
-    fn setup_function_wrapper_end(&self, token: &Function, buffer: &mut Vec<String>) {
+    fn setup_function_wrapper_end(&self, token: &Function, buffer: &mut Buffer) {
         let return_token = "\treturn {";
-        if !buffer.iter().any(|b| b.contains(return_token)) {
+        if !buffer.has(return_token) {
             buffer
                 .push(format!("\treturn {{\n\t\t{},\n\t}};\n}}", token.name.to_case(Case::Camel)));
             return;
         }
 
-        let pos = buffer.iter().position(|b| b.contains(return_token)).unwrap();
-        if let Some(st) = buffer.get_mut(pos) {
-            let indices = st.match_indices(",").map(|(i, _)| i).collect::<Vec<usize>>();
-            let append_after = indices[indices.len() - 1] + 1;
-            st.insert_str(append_after, &format!("\n\t\t{},", token.name.to_case(Case::Camel)));
-        }
+        buffer.insert_after(
+            format!("\n\t\t{},", token.name.to_case(Case::Camel)),
+            return_token,
+            ",",
+            1,
+        );
     }
 }
 
@@ -116,7 +120,7 @@ impl BindgenContractGenerator for TsFunctionGenerator {
         &self,
         contract: &DojoContract,
         token: &Function,
-        buffer: &mut Vec<String>,
+        buffer: &mut Buffer,
     ) -> BindgenResult<String> {
         self.check_imports(buffer);
         let idx = self.setup_function_wrapper_start(buffer);
@@ -139,12 +143,15 @@ mod tests {
     use dojo_world::contracts::naming;
 
     use super::TsFunctionGenerator;
-    use crate::{plugins::BindgenContractGenerator, DojoContract};
+    use crate::{
+        plugins::{BindgenContractGenerator, Buffer},
+        DojoContract,
+    };
 
     #[test]
     fn test_check_imports() {
         let generator = TsFunctionGenerator {};
-        let mut buff: Vec<String> = Vec::new();
+        let mut buff = Buffer::new();
 
         // check imports are added only once
         generator.check_imports(&mut buff);
@@ -156,7 +163,7 @@ mod tests {
     #[test]
     fn test_setup_function_wrapper_start() {
         let generator = TsFunctionGenerator {};
-        let mut buff: Vec<String> = Vec::new();
+        let mut buff = Buffer::new();
         let idx = generator.setup_function_wrapper_start(&mut buff);
 
         assert_eq!(buff.len(), 1);
@@ -219,7 +226,9 @@ mod tests {
     #[test]
     fn test_append_function_body() {
         let generator = TsFunctionGenerator {};
-        let mut buff = vec!["import".to_owned(), "function wrapper".to_owned()];
+        let mut buff = Buffer::new();
+        buff.push("import".to_owned());
+        buff.push("function wrapper".to_owned());
 
         generator.append_function_body(1, &mut buff, "function body".to_owned());
 
@@ -229,7 +238,7 @@ mod tests {
     #[test]
     fn test_setup_function_wrapper_end() {
         let generator = TsFunctionGenerator {};
-        let mut buff: Vec<String> = Vec::new();
+        let mut buff = Buffer::new();
 
         generator.setup_function_wrapper_end(&create_change_theme_function(), &mut buff);
 
@@ -254,7 +263,7 @@ mod tests {
     #[test]
     fn test_it_generates_function() {
         let generator = TsFunctionGenerator {};
-        let mut buffer = Vec::new();
+        let mut buffer = Buffer::new();
         let change_theme = create_change_theme_function();
 
         let _ = generator.generate(&create_dojo_contract(), &change_theme, &mut buffer);

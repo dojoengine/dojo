@@ -1,11 +1,14 @@
 use cainome::parser::tokens::{Composite, CompositeType};
 
-use crate::{error::BindgenResult, plugins::BindgenModelGenerator};
+use crate::{
+    error::BindgenResult,
+    plugins::{BindgenModelGenerator, Buffer},
+};
 
 pub(crate) struct TsEnumGenerator;
 
 impl BindgenModelGenerator for TsEnumGenerator {
-    fn generate(&self, token: &Composite, buffer: &mut Vec<String>) -> BindgenResult<String> {
+    fn generate(&self, token: &Composite, buffer: &mut Buffer) -> BindgenResult<String> {
         if token.r#type != CompositeType::Enum || token.inners.is_empty() {
             return Ok(String::new());
         }
@@ -26,7 +29,7 @@ export enum {name} {{
                 .join("\n")
         );
 
-        if buffer.iter().any(|b| b.contains(&gen)) {
+        if buffer.has(&gen) {
             return Ok(String::new());
         }
 
@@ -40,11 +43,13 @@ mod tests {
         CompositeInner, CompositeInnerKind, CompositeType, CoreBasic, Token,
     };
 
+    use crate::plugins::Buffer;
+
     use super::*;
 
     #[test]
     fn test_enumeration_without_inners() {
-        let mut buff: Vec<String> = Vec::new();
+        let mut buff = Buffer::new();
         let writer = TsEnumGenerator;
         let token = Composite {
             type_path: "core::test::Test".to_owned(),
@@ -60,7 +65,7 @@ mod tests {
 
     #[test]
     fn test_enumeration_not_enum() {
-        let mut buff: Vec<String> = Vec::new();
+        let mut buff = Buffer::new();
         let writer = TsEnumGenerator;
         let token = Composite {
             type_path: "core::test::Test".to_owned(),
@@ -76,7 +81,7 @@ mod tests {
 
     #[test]
     fn test_enumeration_with_inners() {
-        let mut buff: Vec<String> = Vec::new();
+        let mut buff = Buffer::new();
         let writer = TsEnumGenerator;
         let token = create_available_theme_enum_token();
         let result = writer.generate(&token, &mut buff).unwrap();
@@ -86,7 +91,7 @@ mod tests {
 
     #[test]
     fn test_it_does_not_duplicates_enum() {
-        let mut buff: Vec<String> = Vec::new();
+        let mut buff = Buffer::new();
         let writer = TsEnumGenerator;
         buff.push("// Type definition for `core::test::AvailableTheme` enum\nexport enum AvailableTheme {\n\tLight,\n\tDark,\n\tDojo,\n}\n".to_owned());
 

@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::fmt;
+use std::ops::{Deref, DerefMut};
 use std::path::PathBuf;
 
 use async_trait::async_trait;
@@ -29,6 +30,45 @@ impl fmt::Display for BuiltinPlugins {
             BuiltinPlugins::TypeScriptV2 => write!(f, "typescript_v2"),
             BuiltinPlugins::Recs => write!(f, "recs"),
         }
+    }
+}
+
+pub struct Buffer(Vec<String>);
+impl Buffer {
+    pub fn new() -> Self {
+        Self(Vec::new())
+    }
+
+    pub fn has(&self, s: &str) -> bool {
+        self.0.iter().any(|b| b.contains(s))
+    }
+
+    pub fn push(&mut self, s: String) {
+        self.0.push(s.clone());
+    }
+
+    pub fn insert_after(&mut self, s: String, pos: &str, sep: &str, idx: usize) {
+        let pos = self.0.iter().position(|b| b.contains(pos)).unwrap();
+        if let Some(st) = self.0.get_mut(pos) {
+            let indices = st.match_indices(sep).map(|(i, _)| i).collect::<Vec<usize>>();
+            let append_after = indices[indices.len() - idx] + 1;
+            st.insert_str(append_after, &s);
+        }
+    }
+    pub fn join(&mut self, sep: &str) -> String {
+        self.0.join(sep)
+    }
+}
+
+impl Deref for Buffer {
+    type Target = Vec<String>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+impl DerefMut for Buffer {
+    fn deref_mut(&mut self) -> &mut Vec<String> {
+        &mut self.0
     }
 }
 
@@ -62,7 +102,7 @@ pub trait BindgenModelGenerator: Sync {
     /// # Arguments
     ///
     ///
-    fn generate(&self, token: &Composite, buffer: &mut Vec<String>) -> BindgenResult<String>;
+    fn generate(&self, token: &Composite, buffer: &mut Buffer) -> BindgenResult<String>;
 }
 
 pub trait BindgenContractGenerator: Sync {
@@ -70,6 +110,6 @@ pub trait BindgenContractGenerator: Sync {
         &self,
         contract: &DojoContract,
         token: &Function,
-        buffer: &mut Vec<String>,
+        buffer: &mut Buffer,
     ) -> BindgenResult<String>;
 }

@@ -1,13 +1,16 @@
 use cainome::parser::tokens::{Composite, CompositeType};
 
-use crate::{error::BindgenResult, plugins::BindgenModelGenerator};
+use crate::{
+    error::BindgenResult,
+    plugins::{BindgenModelGenerator, Buffer},
+};
 
 use super::JsType;
 
 pub(crate) struct TsInterfaceGenerator;
 
 impl BindgenModelGenerator for TsInterfaceGenerator {
-    fn generate(&self, token: &Composite, _buffer: &mut Vec<String>) -> BindgenResult<String> {
+    fn generate(&self, token: &Composite, _buffer: &mut Buffer) -> BindgenResult<String> {
         if token.r#type != CompositeType::Struct || token.inners.is_empty() {
             return Ok(String::new());
         }
@@ -37,11 +40,13 @@ mod tests {
         CompositeInner, CompositeInnerKind, CompositeType, CoreBasic, Token,
     };
 
+    use crate::plugins::Buffer;
+
     use super::*;
 
     #[test]
     fn test_interface_without_inners() {
-        let mut buff: Vec<String> = Vec::new();
+        let mut buff = Buffer::new();
         let writer = TsInterfaceGenerator;
         let token = Composite {
             type_path: "core::test::Test".to_string(),
@@ -57,7 +62,7 @@ mod tests {
 
     #[test]
     fn test_interface_not_struct() {
-        let mut buff: Vec<String> = Vec::new();
+        let mut buff = Buffer::new();
         let writer = TsInterfaceGenerator;
         let token = Composite {
             type_path: "core::test::Test".to_string(),
@@ -73,7 +78,7 @@ mod tests {
 
     #[test]
     fn test_interface_with_inners() {
-        let mut buff: Vec<String> = Vec::new();
+        let mut buff = Buffer::new();
         let writer = TsInterfaceGenerator;
         let token = create_test_struct_token();
         let result = writer.generate(&token, &mut buff).unwrap();
