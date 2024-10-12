@@ -7,7 +7,6 @@ use starknet::providers::Provider;
 use tracing::debug;
 
 use super::EventProcessor;
-use crate::engine::get_transaction_hash_from_event_id;
 use crate::sql::Sql;
 
 pub(crate) const LOG_TARGET: &str = "torii_core::processors::erc20_transfer";
@@ -50,7 +49,6 @@ where
 
         let value = U256Cainome::cairo_deserialize(&event.data, 0)?;
         let value = U256::from_words(value.low, value.high);
-        let transaction_hash = get_transaction_hash_from_event_id(event_id);
 
         db.handle_erc20_transfer(
             token_address,
@@ -59,7 +57,7 @@ where
             value,
             world.provider(),
             block_timestamp,
-            &transaction_hash,
+            event_id,
         )
         .await?;
         debug!(target: LOG_TARGET,from = ?from, to = ?to, value = ?value, "ERC20 Transfer");

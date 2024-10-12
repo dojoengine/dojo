@@ -23,7 +23,7 @@ CREATE TABLE tokens (
 );
 
 CREATE TABLE erc_transfers (
-    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    id TEXT NOT NULL PRIMARY KEY,
     contract_address TEXT NOT NULL,
     from_address TEXT NOT NULL,
     to_address TEXT NOT NULL,
