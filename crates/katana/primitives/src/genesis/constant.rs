@@ -67,13 +67,13 @@ pub const DEFAULT_LEGACY_UDC_CLASS_HASH: ClassHash =
 /// The compiled class hash of DEFAULT_LEGACY_UDC_CASM.
 pub const DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH: CompiledClassHash = DEFAULT_LEGACY_UDC_CLASS_HASH;
 
-/// The class hash of DEFAULT_ACCOUNT_CLASS.
+/// The class hash of [`DEFAULT_ACCOUNT_CLASS`].
 pub const DEFAULT_ACCOUNT_CLASS_HASH: ClassHash =
-    felt!("0x07dc7899aa655b0aae51eadff6d801a58e97dd99cf4666ee59e704249e51adf2");
+    felt!("0x06599b8b9b4b4d65da09c8f5bede6046908452fa8e112d6ad4a2f979a5e65bbd");
 
-/// The compiled class hash of DEFAULT_ACCOUNT_CLASS.
+/// The compiled class hash of [`DEFAULT_ACCOUNT_CLASS`].
 pub const DEFAULT_ACCOUNT_COMPILED_CLASS_HASH: CompiledClassHash =
-    felt!("0x01b97e0ef7f5c2f2b7483cda252a3accc7f917773fb69d4bd290f92770069aec");
+    felt!("0x0138105ded3d2e4ea1939a0bc106fb80fd8774c9eb89c1890d4aeac88e6a1b27");
 
 /// Cartridge Controller account class hash.
 pub const CONTROLLER_CLASS_HASH: ClassHash =

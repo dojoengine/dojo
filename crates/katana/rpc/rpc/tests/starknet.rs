@@ -413,7 +413,7 @@ async fn send_txs_with_insufficient_fee(
         // in no fee mode, setting the max fee (which translates to the tx run resources) lower
         // than the amount required would result in a validation failure. due to insufficient
         // resources.
-        assert_starknet_err!(dbg!(res).unwrap_err(), StarknetError::ValidationFailure(_));
+        assert_starknet_err!(res.unwrap_err(), StarknetError::ValidationFailure(_));
     } else {
         assert_starknet_err!(res.unwrap_err(), StarknetError::InsufficientMaxFee);
     }

@@ -12,7 +12,7 @@ mappings = { "armory-Flatbow" = "dojo_examples_weapons", "bestiary" = "dojo_exam
 [env]
 rpc_url = "http://localhost:5050/"
 # Default account for katana with seed = 0
-account_address = "0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba"
+account_address = "0x5a37d83d451063858217e9c510d6f45d6bd37ff8664a7c0466329316f7a2891"
 private_key = "0x1800000000300000180000000000030000000000003006001800006600"
 world_address = "0x577ff0295103774d1bedd597a1c5673670eea0bb2cdeba6b8205d79396825b3"
 

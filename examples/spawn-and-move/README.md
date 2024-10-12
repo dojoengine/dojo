@@ -33,12 +33,12 @@ sozo model schema Moves --world 0x33ac2f528bb97cc7b79148fd1756dc368be0e95d391d8c
 > }
 
 # Get the value of the Moves model for an entity. (in this example,
-# 0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba, is
+# 0x5a37d83d451063858217e9c510d6f45d6bd37ff8664a7c0466329316f7a2891, is
 # the calling account which is also the key to retrieve a Moves model)
-sozo model get Moves 0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba --world 0x33ac2f528bb97cc7b79148fd1756dc368be0e95d391d8c6d6473ecb60b4560e
+sozo model get Moves 0x5a37d83d451063858217e9c510d6f45d6bd37ff8664a7c0466329316f7a2891 --world 0x33ac2f528bb97cc7b79148fd1756dc368be0e95d391d8c6d6473ecb60b4560e
 > struct Moves {
 >   #[key]
->   player: ContractAddress = 0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba,
+>   player: ContractAddress = 0x5a37d83d451063858217e9c510d6f45d6bd37ff8664a7c0466329316f7a2891,
 >   remaining: u8 = 0,
 >   last_direction: Direction = None,
 > }
@@ -48,10 +48,10 @@ sozo model get Moves 0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88bef
 sozo execute 0x152dcff993befafe5001975149d2c50bd9621da7cbaed74f68e7d5e54e65abc spawn
 
 # Fetch the updated entity.
-sozo model get Moves 0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba --world 0x33ac2f528bb97cc7b79148fd1756dc368be0e95d391d8c6d6473ecb60b4560e
+sozo model get Moves 0x5a37d83d451063858217e9c510d6f45d6bd37ff8664a7c0466329316f7a2891 --world 0x33ac2f528bb97cc7b79148fd1756dc368be0e95d391d8c6d6473ecb60b4560e
 > struct Moves {
 >   #[key]
->   player: ContractAddress = 0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba,
+>   player: ContractAddress = 0x5a37d83d451063858217e9c510d6f45d6bd37ff8664a7c0466329316f7a2891,
 >   remaining: u8 = 1,
 >   last_direction: Direction = None,
 > }

@@ -28,7 +28,7 @@ fn test_executor_with_valid_blocks_impl<EF: ExecutorFactory>(
     // the contract address of the main account used to send most of the transactions (see the
     // `valid_blocks` fixture)
     let main_account =
-        address!("0x6677fe62ee39c7b07401f754138502bab7fac99d2d3c5d37df7d1c6fab10819");
+        address!("0x5a37d83d451063858217e9c510d6f45d6bd37ff8664a7c0466329316f7a2891");
     // the contract address of the account deployed using the `DeployAccount` tx (see the
     // `valid_blocks` fixture)
     let new_acc = address!("0x3ddfa445a70b927497249f94ff7431fc2e2abc761a34417fd4891beb7c2db85");
@@ -56,7 +56,11 @@ fn test_executor_with_valid_blocks_impl<EF: ExecutorFactory>(
 
     // ensure that all transactions succeeded, if not panic with the error message and tx index
     let has_failed = transactions.iter().enumerate().find_map(|(i, (_, res))| {
-        if let ExecutionResult::Failed { error } = res { Some((i, error)) } else { None }
+        if let ExecutionResult::Failed { error } = res {
+            Some((i, error))
+        } else {
+            None
+        }
     });
 
     if let Some((pos, error)) = has_failed {
@@ -196,7 +200,8 @@ fn test_executor_with_valid_blocks_impl<EF: ExecutorFactory>(
             felt!("0x12"),
             felt!("0x1b39"),
             felt!("0x0"),
-            felt!("0x6677fe62ee39c7b07401f754138502bab7fac99d2d3c5d37df7d1c6fab10819"),
+            // this address must match with the `sender_address` in `valid_blocks` fixture
+            felt!("0x5a37d83d451063858217e9c510d6f45d6bd37ff8664a7c0466329316f7a2891"),
         ],
     );
 
