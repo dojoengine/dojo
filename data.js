@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728698079330,
+  "lastUpdate": 1728755397914,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -25027,6 +25027,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4549308,
             "range": "± 93220",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6311c8e4e0a56c72801fe30cacb5603423e8be5a",
+          "message": "test(katana-rpc): don't use binary runner in katana tests (#2525)\n\ndont use binary runner in katana tests",
+          "timestamp": "2024-10-13T01:34:03+08:00",
+          "tree_id": "621cf18c631f44969ffab078a196190ba54cbd07",
+          "url": "https://github.com/dojoengine/dojo/commit/6311c8e4e0a56c72801fe30cacb5603423e8be5a"
+        },
+        "date": 1728755396428,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11942129147,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
