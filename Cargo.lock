@@ -8272,7 +8272,6 @@ dependencies = [
  "katana-rpc-api",
  "katana-rpc-types",
  "katana-rpc-types-builder",
- "katana-runner",
  "katana-tasks",
  "metrics",
  "num-traits 0.2.19",

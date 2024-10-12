@@ -7,14 +7,15 @@ use alloy::providers::{ProviderBuilder, WalletProvider};
 use alloy::sol;
 use cainome::cairo_serde::EthAddress;
 use cainome::rs::abigen;
+use dojo_test_utils::sequencer::{get_default_test_config, TestSequencer};
 use dojo_utils::TransactionWaiter;
+use katana_core::service::messaging::MessagingConfig;
+use katana_node::config::SequencingConfig;
 use katana_primitives::utils::transaction::{
     compute_l1_handler_tx_hash, compute_l1_to_l2_message_hash, compute_l2_to_l1_message_hash,
 };
 use katana_rpc_types::receipt::ReceiptBlock;
-use katana_runner::{KatanaRunner, KatanaRunnerConfig};
 use rand::Rng;
-use serde_json::json;
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::contract::ContractFactory;
 use starknet::core::types::{
@@ -24,7 +25,6 @@ use starknet::core::types::{
 use starknet::core::utils::get_contract_address;
 use starknet::macros::selector;
 use starknet::providers::Provider;
-use tempfile::tempdir;
 
 mod common;
 
@@ -62,30 +62,21 @@ async fn test_messaging() {
     // Deploy test contract on L1 used to send/receive messages to/from L2
     let l1_test_contract = Contract1::deploy(&l1_provider, *core_contract.address()).await.unwrap();
 
-    // Prepare Katana + Messaging Contract
-    let messaging_config = json!({
-        "chain": "ethereum",
-        "rpc_url": format!("http://localhost:{}", port),
-        "contract_address": core_contract.address().to_string(),
-        "sender_address": l1_provider.default_signer_address(),
-        "private_key": "",
-        "interval": 2,
-        "from_block": 0
-    })
-    .to_string();
+    let messaging_config = MessagingConfig {
+        chain: "ethereum".to_string(),
+        rpc_url: format!("http://localhost:{}", port),
+        contract_address: core_contract.address().to_string(),
+        sender_address: l1_provider.default_signer_address().to_string(),
+        private_key: "".to_string(),
+        interval: 2,
+        from_block: 0,
+    };
 
-    let dir = tempdir().expect("failed creating temp dir");
-    let path = dir.path().join("temp-anvil-messaging.json");
-    std::fs::write(&path, messaging_config.as_bytes()).expect("failed to write config to file");
+    let mut config = get_default_test_config(SequencingConfig::default());
+    config.messaging = Some(messaging_config);
+    let sequencer = TestSequencer::start(config).await;
 
-    let katana_runner = KatanaRunner::new_with_config(KatanaRunnerConfig {
-        n_accounts: 2,
-        messaging: Some(path.to_str().unwrap().to_string()),
-        ..Default::default()
-    })
-    .unwrap();
-
-    let katana_account = katana_runner.account(0);
+    let katana_account = sequencer.account();
 
     // Deploy test L2 contract that can send/receive messages to/from L1
     let l2_test_contract = {
@@ -183,7 +174,7 @@ async fn test_messaging() {
             recipient,
             selector,
             &l1_tx_calldata,
-            katana_runner.provider().chain_id().await.unwrap(),
+            sequencer.provider().chain_id().await.unwrap(),
             nonce.to::<u64>().into(),
         );
 
