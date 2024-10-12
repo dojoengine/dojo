@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728672168699,
+  "lastUpdate": 1728697916306,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -24949,6 +24949,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4784643,
             "range": "± 370598",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9b47e7c7cf451eb0dd9389cc2ecf060eb5009c21",
+          "message": "Convert `katana/contracts` into a Scarb workspace (#2523)",
+          "timestamp": "2024-10-12T09:36:01+08:00",
+          "tree_id": "fd680a52a165b0f9b16260dd504721727ff7020b",
+          "url": "https://github.com/dojoengine/dojo/commit/9b47e7c7cf451eb0dd9389cc2ecf060eb5009c21"
+        },
+        "date": 1728697914950,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 12071802225,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
