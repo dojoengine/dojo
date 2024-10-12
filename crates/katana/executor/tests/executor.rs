@@ -25,10 +25,12 @@ fn test_executor_with_valid_blocks_impl<EF: ExecutorFactory>(
 ) {
     let cfg_env = factory.cfg();
 
-    // the contract address of the main account used to send most of the transactions
+    // the contract address of the main account used to send most of the transactions (see the
+    // `valid_blocks` fixture)
     let main_account =
-        address!("0x6b86e40118f29ebe393a75469b4d926c7a44c2e2681b6d319520b7c1156d114");
-    // the contract address of the account deployed using the `DeployAccount` tx
+        address!("0x6677fe62ee39c7b07401f754138502bab7fac99d2d3c5d37df7d1c6fab10819");
+    // the contract address of the account deployed using the `DeployAccount` tx (see the
+    // `valid_blocks` fixture)
     let new_acc = address!("0x3ddfa445a70b927497249f94ff7431fc2e2abc761a34417fd4891beb7c2db85");
 
     let mut executor = factory.with_state(state);
@@ -194,7 +196,7 @@ fn test_executor_with_valid_blocks_impl<EF: ExecutorFactory>(
             felt!("0x12"),
             felt!("0x1b39"),
             felt!("0x0"),
-            felt!("0x06b86e40118f29ebe393a75469b4d926c7a44c2e2681b6d319520b7c1156d114"),
+            felt!("0x6677fe62ee39c7b07401f754138502bab7fac99d2d3c5d37df7d1c6fab10819"),
         ],
     );
 

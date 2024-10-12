@@ -1,38 +1,38 @@
 {
-    "number": 0,
-    "parentHash": "0x999",
-    "timestamp": 5123512314,
-    "stateRoot": "0x99",
-    "sequencerAddress": "0x100",
-    "gasPrices": {
-        "ETH": 1111,
-        "STRK": 2222
+  "number": 0,
+  "parentHash": "0x999",
+  "timestamp": 5123512314,
+  "stateRoot": "0x99",
+  "sequencerAddress": "0x100",
+  "gasPrices": {
+    "ETH": 1111,
+    "STRK": 2222
+  },
+  "feeToken": {
+    "name": "ETHER",
+    "symbol": "ETH",
+    "decimals": 18
+  },
+  "universalDeployer": {},
+  "accounts": {
+    "0x66efb28ac62686966ae85095ff3a772e014e7fbf56d4c5f6fac5606d4dde23a": {
+      "publicKey": "0x1",
+      "balance": "0xD3C21BCECCEDA1000000"
+    }
+  },
+  "contracts": {},
+  "classes": [
+    {
+      "class": "../../../contracts/build/erc20.json",
+      "classHash": "0x8",
+      "name": "MyClass"
     },
-    "feeToken": {
-        "name": "ETHER",
-        "symbol": "ETH",
-        "decimals": 18
+    {
+      "class": "../../../contracts/build/universal_deployer.json"
     },
-    "universalDeployer": {},
-    "accounts": {
-        "0x66efb28ac62686966ae85095ff3a772e014e7fbf56d4c5f6fac5606d4dde23a": {
-            "publicKey": "0x1",
-            "balance": "0xD3C21BCECCEDA1000000"
-        }
-    },
-    "contracts": {},
-    "classes": [
-        {
-            "class": "../../../contracts/compiled/erc20.json",
-            "classHash": "0x8",
-            "name": "MyClass"
-        },
-        {
-            "class": "../../../contracts/compiled/universal_deployer.json"
-        },
-        {
-            "class": "../../../contracts/compiled/oz_account_080.json",
-            "name": "MyClass"
-        }
-    ]
+    {
+      "class": "../../../contracts/build/default_account.json",
+      "name": "MyClass"
+    }
+  ]
 }

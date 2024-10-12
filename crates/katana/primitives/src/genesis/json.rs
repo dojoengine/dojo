@@ -798,18 +798,17 @@ mod tests {
             vec![
                 GenesisClassJson {
                     class_hash: Some(felt!("0x8")),
-                    class: PathBuf::from("../../../contracts/compiled/erc20.json").into(),
+                    class: PathBuf::from("../../../contracts/build/erc20.json").into(),
                     name: Some("MyErc20".to_string()),
                 },
                 GenesisClassJson {
                     class_hash: Some(felt!("0x80085")),
-                    class: PathBuf::from("../../../contracts/compiled/universal_deployer.json")
-                        .into(),
+                    class: PathBuf::from("../../../contracts/build/universal_deployer.json").into(),
                     name: None,
                 },
                 GenesisClassJson {
                     class_hash: None,
-                    class: PathBuf::from("../../../contracts/compiled/oz_account_080.json").into(),
+                    class: PathBuf::from("../../../contracts/build/default_account.json").into(),
                     name: Some("MyClass".to_string()),
                 },
             ]
@@ -827,13 +826,13 @@ mod tests {
                     vec![
                         GenesisClassJson {
                             class_hash: None,
-                            class: PathBuf::from("../../../contracts/compiled/erc20.json").into(),
+                            class: PathBuf::from("../../../contracts/build/erc20.json").into(),
                             name: Some("MyErc20".to_string()),
                         },
                         GenesisClassJson {
                             class_hash: Some(felt!("0x80085")),
                             class: PathBuf::from(
-                                "../../../contracts/compiled/universal_deployer.json"
+                                "../../../contracts/build/universal_deployer.json"
                             )
                             .into(),
                             name: None,

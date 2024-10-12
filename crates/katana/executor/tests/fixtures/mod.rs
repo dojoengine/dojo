@@ -12,7 +12,8 @@ use katana_primitives::contract::ContractAddress;
 use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
 use katana_primitives::genesis::constant::{
-    DEFAULT_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CLASS_HASH, DEFAULT_PREFUNDED_ACCOUNT_BALANCE,
+    DEFAULT_ACCOUNT_CLASS_HASH, DEFAULT_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CLASS_HASH,
+    DEFAULT_PREFUNDED_ACCOUNT_BALANCE,
 };
 use katana_primitives::genesis::Genesis;
 use katana_primitives::transaction::{
@@ -89,7 +90,7 @@ pub fn valid_blocks() -> [ExecutableBlock; 3] {
     let sequencer_address = ContractAddress(1u64.into());
 
     let sender_address =
-        address!("0x06b86e40118f29ebe393a75469b4d926c7a44c2e2681b6d319520b7c1156d114");
+        address!("0x6677fe62ee39c7b07401f754138502bab7fac99d2d3c5d37df7d1c6fab10819");
 
     let gas_prices = GasPrices { eth: 100 * u128::pow(10, 9), strk: 100 * u128::pow(10, 9) };
 
@@ -165,9 +166,7 @@ pub fn valid_blocks() -> [ExecutableBlock; 3] {
                         constructor_calldata: vec![felt!(
                             "0x4c339f18b9d1b95b64a6d378abd1480b2e0d5d5bd33cd0828cbce4d65c27284"
                         )],
-                        class_hash: felt!(
-                            "0x5400e90f7e0ae78bd02c77cd75527280470e2fe19c54970dd79dc37a9d3645c"
-                        ),
+                        class_hash: DEFAULT_ACCOUNT_CLASS_HASH,
                         contract_address: address!(
                             "0x3ddfa445a70b927497249f94ff7431fc2e2abc761a34417fd4891beb7c2db85"
                         ),
