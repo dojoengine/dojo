@@ -9,6 +9,8 @@ pub const EVENT_MESSAGE_TABLE: &str = "event_messages";
 pub const MODEL_TABLE: &str = "models";
 pub const TRANSACTION_TABLE: &str = "transactions";
 pub const METADATA_TABLE: &str = "metadata";
+pub const ERC_BALANCE_TABLE: &str = "balances";
+pub const ERC_TRANSFER_TABLE: &str = "erc_transfers";
 
 pub const ID_COLUMN: &str = "id";
 pub const EVENT_ID_COLUMN: &str = "event_id";
