@@ -34,7 +34,7 @@ pub struct Fields<T = serde_json::Value> {
 ///   "timestamp": "2024-10-10T14:55:04.452924Z",
 ///   "level": "INFO",
 ///   "fields": {
-///     "message": "{\"accounts\":[[\"0x127fd5f1fe78a71f8bcd1fec63e3fe2f0486b6ecd5c86a0466c3a21fa5cfcec\",{\"balance\":\"0x21e19e0c9bab2400000\",\"class_hash\":\"0x5400e90f7e0ae78bd02c77cd75527280470e2fe19c54970dd79dc37a9d3645c\",\"private_key\":\"0x1800000000300000180000000000030000000000003006001800006600\",\"public_key\":\"0x2b191c2f3ecf685a91af7cf72a43e7b90e2e41220175de5c4f7498981b10053\"}]],\"seed\":\"0\"}"
+///     "message": "{\"accounts\":[[\"0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba\",{\"balance\":\"0x21e19e0c9bab2400000\",\"class_hash\":\"0x5400e90f7e0ae78bd02c77cd75527280470e2fe19c54970dd79dc37a9d3645c\",\"private_key\":\"0x1800000000300000180000000000030000000000003006001800006600\",\"public_key\":\"0x2b191c2f3ecf685a91af7cf72a43e7b90e2e41220175de5c4f7498981b10053\"}]],\"seed\":\"0\"}"
 ///   },
 ///   "target": "katana::cli"
 /// }

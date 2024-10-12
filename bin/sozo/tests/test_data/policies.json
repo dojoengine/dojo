@@ -128,7 +128,7 @@
     "method": "set_facts_registry"
   },
   {
-    "target": "0x127fd5f1fe78a71f8bcd1fec63e3fe2f0486b6ecd5c86a0466c3a21fa5cfcec",
+    "target": "0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba",
     "method": "__declare_transaction__"
   },
   {
