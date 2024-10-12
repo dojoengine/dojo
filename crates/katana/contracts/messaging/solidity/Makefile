@@ -9,7 +9,7 @@ export $(shell sed 's/=.*//' .env)
 
 # Addresses fixed here for easy testing.
 C_MSG_L2_ADDR=0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
-L2_ACCOUNT=0x6162896d1d7ab204c7ccac6dd5f8e9e7c25ecd5ae4fcb4ad32e57786bb46e03
+L2_ACCOUNT=0x127fd5f1fe78a71f8bcd1fec63e3fe2f0486b6ecd5c86a0466c3a21fa5cfcec
 L2_CONTRACT_ADDR=0x609f8e7a76b6cc36f3ff86f09f6e5fdd0e6320f117d817e4344c1bf9fac7d67
 
 deploy_messaging_contracts:

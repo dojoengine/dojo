@@ -285,7 +285,7 @@ mod tests {
             .build_test_config("spawn-and-move", Profile::DEV);
 
         let world_addr = felt!("0x74c73d35df54ddc53bcf34aab5e0dbb09c447e99e01f4d69535441253c9571a");
-        let user_addr = felt!("0x6162896d1d7ab204c7ccac6dd5f8e9e7c25ecd5ae4fcb4ad32e57786bb46e03");
+        let user_addr = felt!("0x127fd5f1fe78a71f8bcd1fec63e3fe2f0486b6ecd5c86a0466c3a21fa5cfcec");
 
         let policies =
             collect_policies(WorldAddressOrName::Address(world_addr), user_addr, &config).unwrap();

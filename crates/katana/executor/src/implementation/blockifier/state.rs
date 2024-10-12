@@ -129,7 +129,11 @@ impl<S: StateDb> ContractClassProvider for CachedState<S> {
             return Ok(None);
         };
 
-        if hash.0 == Felt::ZERO { Ok(None) } else { Ok(Some(hash.0)) }
+        if hash.0 == Felt::ZERO {
+            Ok(None)
+        } else {
+            Ok(Some(hash.0))
+        }
     }
     fn sierra_class(
         &self,
@@ -153,7 +157,11 @@ impl<S: StateDb> StateProvider for CachedState<S> {
             return Ok(None);
         };
 
-        if hash.0 == Felt::ZERO { Ok(None) } else { Ok(Some(hash.0)) }
+        if hash.0 == Felt::ZERO {
+            Ok(None)
+        } else {
+            Ok(Some(hash.0))
+        }
     }
 
     fn nonce(
@@ -248,7 +256,7 @@ mod tests {
     use crate::StateProviderDb;
 
     fn new_sierra_class() -> (FlattenedSierraClass, CompiledClass) {
-        let json = include_str!("../../../../contracts/compiled/cairo1_contract.json");
+        let json = include_str!("../../../../contracts/build/cairo1_contract.json");
         let artifact = serde_json::from_str(json).unwrap();
         let compiled_class = parse_compiled_class(artifact).unwrap();
         let sierra_class = parse_sierra_class(json).unwrap().flatten().unwrap();
