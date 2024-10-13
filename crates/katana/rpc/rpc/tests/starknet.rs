@@ -410,8 +410,8 @@ async fn send_txs_with_insufficient_fee(
     let res = contract.transfer(&recipient, &amount).max_fee(Felt::TWO).send().await;
 
     if disable_fee {
-        // In no fee mode, the transaction resources (ie max fee) is totally ignored. So doesn't matter
-        // what value is set, the transaction will always be executed successfully.
+        // In no fee mode, the transaction resources (ie max fee) is totally ignored. So doesn't
+        // matter what value is set, the transaction will always be executed successfully.
         assert_matches!(res, Ok(tx) => {
             let tx_hash = tx.transaction_hash;
             assert_matches!(dojo_utils::TransactionWaiter::new(tx_hash, &sequencer.provider()).await, Ok(_));
