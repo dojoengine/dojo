@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use camino::{Utf8Path, Utf8PathBuf};
 use dojo_world::contracts::naming::get_name_from_tag;
 use dojo_world::manifest::{BaseManifest, Class, DojoContract, Manifest};
@@ -60,17 +60,17 @@ where
     P: Send + Sync,
 {
     let chain_id = provider.chain_id().await?;
+
+    trace!(target: "account::controller", "Loading Slot credentials.");
     let credentials = slot::credential::Credentials::load()?;
 
     let username = credentials.account.id;
-    let contract_address = credentials.account.contract_address;
+    let Some(contract_address) = credentials.account.controllers.first().map(|c| c.address) else {
+        // TODO: deploy the controller contract, if there isn't one
+        bail!("No Controller is associated with this account.");
+    };
 
-    trace!(
-        %username,
-        chain = format!("{chain_id:#x}"),
-        address = format!("{contract_address:#x}"),
-        "Creating Controller session account"
-    );
+    trace!(target: "account::controller", "Fetching Controller account info.");
 
     // Check if the session exists, if not create a new one
     let session_details = match slot::session::get(chain_id)? {
