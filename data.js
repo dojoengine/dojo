@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728790246522,
+  "lastUpdate": 1728847966850,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -25183,6 +25183,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4430927,
             "range": "± 34098",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "distinct": true,
+          "id": "67a174783ba45a6f2d45940e595f40ad5b423cd0",
+          "message": "refactor(torii/graphql): use camelCase in graphql to be more consistent\n\ncommit-id:108ca77e",
+          "timestamp": "2024-10-14T00:46:52+05:30",
+          "tree_id": "69c64d652a85ac98b441bee865155776386008b0",
+          "url": "https://github.com/dojoengine/dojo/commit/67a174783ba45a6f2d45940e595f40ad5b423cd0"
+        },
+        "date": 1728847965462,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 12131096984,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
