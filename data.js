@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728848148302,
+  "lastUpdate": 1728849678305,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -25261,6 +25261,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4592679,
             "range": "± 186393",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ac0fa99dcf5f19bdac5948d6caddc7cf9e69e741",
+          "message": "chore: clean up unused deps (#2532)",
+          "timestamp": "2024-10-13T15:44:06-04:00",
+          "tree_id": "6c0f2857f997845b263b989698a9d786a02f31a5",
+          "url": "https://github.com/dojoengine/dojo/commit/ac0fa99dcf5f19bdac5948d6caddc7cf9e69e741"
+        },
+        "date": 1728849676410,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11973058271,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
