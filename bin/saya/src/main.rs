@@ -1,3 +1,5 @@
+#![warn(unused_crate_dependencies)]
+
 //! Saya executable entry point.
 use clap::Parser;
 use console::Style;
