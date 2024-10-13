@@ -410,16 +410,20 @@ async fn send_txs_with_insufficient_fee(
     let res = contract.transfer(&recipient, &amount).max_fee(Felt::TWO).send().await;
 
     if disable_fee {
-        // in no fee mode, setting the max fee (which translates to the tx run resources) lower
-        // than the amount required would result in a validation failure. due to insufficient
-        // resources.
-        assert_starknet_err!(res.unwrap_err(), StarknetError::ValidationFailure(_));
+        // In no fee mode, the transaction resources (ie max fee) is totally ignored. So doesn't matter
+        // what value is set, the transaction will always be executed successfully.
+        assert_matches!(res, Ok(tx) => {
+            let tx_hash = tx.transaction_hash;
+            assert_matches!(dojo_utils::TransactionWaiter::new(tx_hash, &sequencer.provider()).await, Ok(_));
+        });
+
+        let nonce = sequencer.account().get_nonce().await?;
+        assert_eq!(initial_nonce + 1, nonce, "Nonce should change in fee-disabled mode");
     } else {
         assert_starknet_err!(res.unwrap_err(), StarknetError::InsufficientMaxFee);
+        let nonce = sequencer.account().get_nonce().await?;
+        assert_eq!(initial_nonce, nonce, "Nonce shouldn't change in fee-enabled mode");
     }
-
-    let nonce = sequencer.account().get_nonce().await?;
-    assert_eq!(initial_nonce, nonce, "Nonce shouldn't change after invalid tx");
 
     // -----------------------------------------------------------------------
     //  transaction with insufficient balance.
@@ -435,13 +439,13 @@ async fn send_txs_with_insufficient_fee(
 
         // nonce should be incremented by 1 after a valid tx.
         let nonce = sequencer.account().get_nonce().await?;
-        assert_eq!(initial_nonce + 1, nonce);
+        assert_eq!(initial_nonce + 2, nonce, "Nonce should change in fee-disabled mode");
     } else {
         assert_starknet_err!(res.unwrap_err(), StarknetError::InsufficientAccountBalance);
 
         // nonce shouldn't change for an invalid tx.
         let nonce = sequencer.account().get_nonce().await?;
-        assert_eq!(initial_nonce, nonce);
+        assert_eq!(initial_nonce, nonce, "Nonce shouldn't change in fee-enabled mode");
     }
 
     Ok(())
