@@ -1,7 +1,7 @@
 use jsonrpsee::core::Error;
 use jsonrpsee::types::error::CallError;
 use jsonrpsee::types::ErrorObject;
-use katana_pool::validation::InvalidTransactionError;
+use katana_pool::validation::error::InvalidTransactionError;
 use katana_pool::PoolError;
 use katana_primitives::event::ContinuationTokenError;
 use katana_provider::error::ProviderError;
@@ -182,7 +182,7 @@ impl From<Box<InvalidTransactionError>> for StarknetApiError {
     fn from(error: Box<InvalidTransactionError>) -> Self {
         match error.as_ref() {
             InvalidTransactionError::InsufficientFunds { .. } => Self::InsufficientAccountBalance,
-            InvalidTransactionError::InsufficientMaxFee { .. } => Self::InsufficientMaxFee,
+            InvalidTransactionError::IntrinsicFeeTooLow { .. } => Self::InsufficientMaxFee,
             InvalidTransactionError::NonAccount { .. } => Self::NonAccount,
             InvalidTransactionError::InvalidNonce { .. } => {
                 Self::InvalidTransactionNonce { reason: error.to_string() }
