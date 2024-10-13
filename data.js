@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728851688197,
+  "lastUpdate": 1728851893301,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -25447,6 +25447,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 12053214004,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "distinct": true,
+          "id": "7035d547b1799d8e91dee5873062a2dd4724a1aa",
+          "message": "torii!: change type of `id` in erc_transfers\n\ncommit-id:dd61fbb9",
+          "timestamp": "2024-10-14T01:48:41+05:30",
+          "tree_id": "5627769635efa532948dc2683bdba7b75d50e547",
+          "url": "https://github.com/dojoengine/dojo/commit/7035d547b1799d8e91dee5873062a2dd4724a1aa"
+        },
+        "date": 1728851891321,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16424943,
+            "range": "± 164407",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 4531730,
+            "range": "± 253400",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3747819874,
+            "range": "± 766395109",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4512453,
+            "range": "± 40096",
             "unit": "ns/iter"
           }
         ]
