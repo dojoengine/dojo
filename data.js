@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728847966850,
+  "lastUpdate": 1728848148302,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -25213,6 +25213,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 12131096984,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "distinct": true,
+          "id": "67a174783ba45a6f2d45940e595f40ad5b423cd0",
+          "message": "refactor(torii/graphql): use camelCase in graphql to be more consistent\n\ncommit-id:108ca77e",
+          "timestamp": "2024-10-14T00:46:52+05:30",
+          "tree_id": "69c64d652a85ac98b441bee865155776386008b0",
+          "url": "https://github.com/dojoengine/dojo/commit/67a174783ba45a6f2d45940e595f40ad5b423cd0"
+        },
+        "date": 1728848146966,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16088852,
+            "range": "± 890826",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 4297898,
+            "range": "± 183188",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3745540423,
+            "range": "± 766591102",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4592679,
+            "range": "± 186393",
             "unit": "ns/iter"
           }
         ]
