@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use camino::{Utf8Path, Utf8PathBuf};
 use dojo_world::contracts::naming::get_name_from_tag;
 use dojo_world::manifest::{BaseManifest, Class, DojoContract, Manifest};
@@ -34,9 +34,9 @@ pub type ControllerSessionAccount<P> = SessionAccount<Arc<P>>;
 
 /// Create a new Catridge Controller account based on session key.
 ///
-/// Controller guarantees that if the provided network is among one of the supported networks,
-/// then the Controller account should exist. If it doesn't yet exist, it will automatically
-/// be created when a session is created (ie during the session registration stage).
+/// For now, Controller guarantees that if the provided network is among one of the supported
+/// networks, then the Controller account should exist. If it doesn't yet exist, it will
+/// automatically be created when a session is created (ie during the session registration stage).
 ///
 /// # Supported networks
 ///
@@ -60,31 +60,31 @@ where
     P: Send + Sync,
 {
     let chain_id = provider.chain_id().await?;
+
+    trace!(target: "account::controller", "Loading Slot credentials.");
     let credentials = slot::credential::Credentials::load()?;
-
     let username = credentials.account.id;
-    let contract_address = credentials.account.contract_address;
 
-    trace!(
-        %username,
-        chain = format!("{chain_id:#x}"),
-        address = format!("{contract_address:#x}"),
-        "Creating Controller session account"
-    );
+    // Right now, the Cartridge Controller API ensures that there's always a Controller associated
+    // with an account, but that might change in the future.
+    let Some(contract_address) = credentials.account.controllers.first().map(|c| c.address) else {
+        bail!("No Controller is associated with this account.");
+    };
 
     // Check if the session exists, if not create a new one
     let session_details = match slot::session::get(chain_id)? {
         Some(session) => {
-            trace!(expires_at = %session.session.expires_at, policies = session.session.policies.len(), "Found existing session.");
+            trace!(target: "account::controller", expires_at = %session.session.expires_at, policies = session.session.policies.len(), "Found existing session.");
 
+            // Check if the policies have changed
             let policies = collect_policies(world_addr_or_name, contract_address, config)?;
-            // check if the policies have changed
             let is_equal = is_equal_to_existing(&policies, &session);
 
             if is_equal {
                 session
             } else {
                 trace!(
+                    target: "account::controller",
                     new_policies = policies.len(),
                     existing_policies = session.session.policies.len(),
                     "Policies have changed. Creating new session."
@@ -98,7 +98,7 @@ where
 
         // Create a new session if not found
         None => {
-            trace!(%username, chain = format!("{chain_id:#}"), "Creating new session.");
+            trace!(target: "account::controller", %username, chain = format!("{chain_id:#}"), "Creating new session.");
             let policies = collect_policies(world_addr_or_name, contract_address, config)?;
             let session = slot::session::create(rpc_url.clone(), &policies).await?;
             slot::session::store(chain_id, &session)?;
@@ -149,7 +149,7 @@ fn collect_policies(
     let manifest = get_project_base_manifest(root_dir, config.profile().as_str())?;
     let policies =
         collect_policies_from_base_manifest(world_addr_or_name, user_address, root_dir, manifest)?;
-    trace!(policies_count = policies.len(), "Extracted policies from project.");
+    trace!(target: "account::controller", policies_count = policies.len(), "Extracted policies from project.");
     Ok(policies)
 }
 
@@ -188,14 +188,14 @@ fn collect_policies_from_base_manifest(
     // corresponds to [account_sdk::account::DECLARATION_SELECTOR]
     let method = "__declare_transaction__".to_string();
     policies.push(PolicyMethod { target: user_address, method });
-    trace!("Adding declare transaction policy");
+    trace!(target: "account::controller", "Adding declare transaction policy");
 
     // for deploying using udc
     let method = "deployContract".to_string();
     const UDC_ADDRESS: Felt =
         felt!("0x041a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf");
     policies.push(PolicyMethod { target: UDC_ADDRESS, method });
-    trace!("Adding UDC deployment policy");
+    trace!(target: "account::controller", "Adding UDC deployment policy");
 
     Ok(policies)
 }
@@ -215,7 +215,7 @@ fn policies_from_abis(
                 if let StateMutability::External = f.state_mutability {
                     let policy =
                         PolicyMethod { target: contract_address, method: f.name.to_string() };
-                    trace!(tag = contract_tag, target = format!("{:#x}", policy.target), method = %policy.method, "Adding policy");
+                    trace!(target: "account::controller", tag = contract_tag, target = format!("{:#x}", policy.target), method = %policy.method, "Adding policy");
                     policies.push(policy);
                 }
             }
