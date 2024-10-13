@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728851143564,
+  "lastUpdate": 1728851297374,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -25369,6 +25369,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 12725491515,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "73a82b33e8ed0ffd42fe881b6910bffbfb52e288",
+          "message": "chore(sozo): update `slot` due to credentials format change (#2530)",
+          "timestamp": "2024-10-14T04:09:21+08:00",
+          "tree_id": "bc96d2ef1c2ba7089087f4d724fe0dd427cabc1e",
+          "url": "https://github.com/dojoengine/dojo/commit/73a82b33e8ed0ffd42fe881b6910bffbfb52e288"
+        },
+        "date": 1728851295870,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16319943,
+            "range": "± 175755",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 4265645,
+            "range": "± 144555",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3674881051,
+            "range": "± 820406542",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4430167,
+            "range": "± 64257",
             "unit": "ns/iter"
           }
         ]
