@@ -71,8 +71,6 @@ where
         bail!("No Controller is associated with this account.");
     };
 
-    trace!(target: "account::controller", "Fetching Controller account info.");
-
     // Check if the session exists, if not create a new one
     let session_details = match slot::session::get(chain_id)? {
         Some(session) => {
