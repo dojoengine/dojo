@@ -28,9 +28,22 @@ pub enum InvalidTransactionError {
         balance: Felt,
     },
 
-    /// Error when the specified transaction fee is insufficient to cover the minimum fee required.
-    #[error("The specified tx max fee is insufficient")]
-    InsufficientMaxFee { min_fee: u128, max_fee: u128 },
+    /// Error when the specified transaction fee is insufficient to cover the minimum fee required
+    /// to start the invocation (including the account's validation logic).
+    ///
+    /// It is a static check that is performed before the transaction is invoked to ensure the
+    /// transaction can cover the DA cost, etc.
+    ///
+    /// This is different from an error due to transaction runs out of gas during execution ie.
+    /// the specified max fee is lower than the amount needed to finish the transaction execution
+    /// (either validation or execution).
+    #[error("Intrinsic transaction fee is too low")]
+    IntrinsicFeeTooLow {
+        /// The minimum required for the transaction to be executed.
+        min: u128,
+        /// The specified transaction fee.
+        max_fee: u128,
+    },
 
     /// Error when the account's validation logic fails (ie __validate__ function).
     #[error("{error}")]
@@ -45,7 +58,7 @@ pub enum InvalidTransactionError {
     },
 
     /// Error when the transaction's sender is not an account contract.
-    #[error("sender is not an account")]
+    #[error("Sender is not an account")]
     NonAccount {
         /// The address of the contract that is not an account.
         address: ContractAddress,

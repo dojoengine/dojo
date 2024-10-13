@@ -209,7 +209,7 @@ fn map_invalid_tx_err(
                 TransactionFeeError::MaxFeeTooLow { min_fee, max_fee } => {
                     let max_fee = max_fee.0;
                     let min_fee = min_fee.0;
-                    Ok(InvalidTransactionError::InsufficientMaxFee { max_fee, min_fee })
+                    Ok(InvalidTransactionError::IntrinsicFeeTooLow { max_fee, min: min_fee })
                 }
 
                 _ => Err(Box::new(err)),
