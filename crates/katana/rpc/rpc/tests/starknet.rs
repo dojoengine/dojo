@@ -14,8 +14,8 @@ use jsonrpsee::http_client::HttpClientBuilder;
 use katana_node::config::SequencingConfig;
 use katana_primitives::event::ContinuationToken;
 use katana_primitives::genesis::constant::{
-    DEFAULT_FEE_TOKEN_ADDRESS, DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH,
-    DEFAULT_PREFUNDED_ACCOUNT_BALANCE, DEFAULT_UDC_ADDRESS,
+    DEFAULT_ACCOUNT_CLASS_HASH, DEFAULT_FEE_TOKEN_ADDRESS, DEFAULT_PREFUNDED_ACCOUNT_BALANCE,
+    DEFAULT_UDC_ADDRESS,
 };
 use katana_rpc_api::dev::DevApiClient;
 use starknet::accounts::{
@@ -164,7 +164,7 @@ async fn deploy_account(
 
     // Precompute the contract address of the new account with the given parameters:
     let signer = LocalWallet::from(SigningKey::from_random());
-    let class_hash = DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH;
+    let class_hash = DEFAULT_ACCOUNT_CLASS_HASH;
     let salt = felt!("0x123");
     let ctor_args = [signer.get_public_key().await?.scalar()];
     let computed_address = get_contract_address(salt, class_hash, &ctor_args, Felt::ZERO);
@@ -410,16 +410,20 @@ async fn send_txs_with_insufficient_fee(
     let res = contract.transfer(&recipient, &amount).max_fee(Felt::TWO).send().await;
 
     if disable_fee {
-        // in no fee mode, setting the max fee (which translates to the tx run resources) lower
-        // than the amount required would result in a validation failure. due to insufficient
-        // resources.
-        assert_starknet_err!(res.unwrap_err(), StarknetError::ValidationFailure(_));
+        // In no fee mode, the transaction resources (ie max fee) is totally ignored. So doesn't
+        // matter what value is set, the transaction will always be executed successfully.
+        assert_matches!(res, Ok(tx) => {
+            let tx_hash = tx.transaction_hash;
+            assert_matches!(dojo_utils::TransactionWaiter::new(tx_hash, &sequencer.provider()).await, Ok(_));
+        });
+
+        let nonce = sequencer.account().get_nonce().await?;
+        assert_eq!(initial_nonce + 1, nonce, "Nonce should change in fee-disabled mode");
     } else {
         assert_starknet_err!(res.unwrap_err(), StarknetError::InsufficientMaxFee);
+        let nonce = sequencer.account().get_nonce().await?;
+        assert_eq!(initial_nonce, nonce, "Nonce shouldn't change in fee-enabled mode");
     }
-
-    let nonce = sequencer.account().get_nonce().await?;
-    assert_eq!(initial_nonce, nonce, "Nonce shouldn't change after invalid tx");
 
     // -----------------------------------------------------------------------
     //  transaction with insufficient balance.
@@ -435,13 +439,13 @@ async fn send_txs_with_insufficient_fee(
 
         // nonce should be incremented by 1 after a valid tx.
         let nonce = sequencer.account().get_nonce().await?;
-        assert_eq!(initial_nonce + 1, nonce);
+        assert_eq!(initial_nonce + 2, nonce, "Nonce should change in fee-disabled mode");
     } else {
         assert_starknet_err!(res.unwrap_err(), StarknetError::InsufficientAccountBalance);
 
         // nonce shouldn't change for an invalid tx.
         let nonce = sequencer.account().get_nonce().await?;
-        assert_eq!(initial_nonce, nonce);
+        assert_eq!(initial_nonce, nonce, "Nonce shouldn't change in fee-enabled mode");
     }
 
     Ok(())

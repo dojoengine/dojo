@@ -511,12 +511,10 @@ impl Katana {
             trace!(line);
 
             if self.json_log {
-                dbg!(&line);
-
                 // Because we using a concrete type for rpc addr log, we need to parse this first.
                 // Otherwise if we were to inverse the if statements, the else block
                 // would never be executed as all logs can be parsed as `JsonLog`.
-                if let Ok(log) = dbg!(serde_json::from_str::<JsonLog<RpcAddr>>(&line)) {
+                if let Ok(log) = serde_json::from_str::<JsonLog<RpcAddr>>(&line) {
                     debug_assert!(log.fields.message.contains(RPC_ADDR_LOG_SUBSTR));
                     port = log.fields.other.addr.port();
                     // We can safely break here as we don't need any information after the rpc
@@ -630,7 +628,7 @@ mod tests {
         assert!(katana.accounts().iter().all(|a| a.private_key.is_some()));
 
         // try to connect as a provider
-        let provider = JsonRpcClient::new(HttpTransport::new(dbg!(katana.endpoint_url())));
+        let provider = JsonRpcClient::new(HttpTransport::new(katana.endpoint_url()));
         assert!(provider.chain_id().await.is_ok())
     }
 

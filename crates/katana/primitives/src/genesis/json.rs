@@ -26,15 +26,13 @@ use super::allocation::{
 };
 #[cfg(feature = "slot")]
 use super::constant::{
-    CONTROLLER_ACCOUNT_CONTRACT, CONTROLLER_ACCOUNT_CONTRACT_CASM,
-    CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
+    CONTROLLER_ACCOUNT_CLASS, CONTROLLER_ACCOUNT_CLASS_CASM, CONTROLLER_CLASS_HASH,
 };
 use super::constant::{
-    DEFAULT_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CONTRACT_CASM,
-    DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH, DEFAULT_LEGACY_ERC20_CONTRACT_COMPILED_CLASS_HASH,
+    DEFAULT_ACCOUNT_CLASS, DEFAULT_ACCOUNT_CLASS_CASM, DEFAULT_ACCOUNT_CLASS_HASH,
+    DEFAULT_ACCOUNT_COMPILED_CLASS_HASH, DEFAULT_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CASM,
+    DEFAULT_LEGACY_ERC20_CLASS_HASH, DEFAULT_LEGACY_ERC20_COMPILED_CLASS_HASH,
     DEFAULT_LEGACY_UDC_CASM, DEFAULT_LEGACY_UDC_CLASS_HASH, DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH,
-    DEFAULT_OZ_ACCOUNT_CONTRACT, DEFAULT_OZ_ACCOUNT_CONTRACT_CASM,
-    DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH, DEFAULT_OZ_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH,
     DEFAULT_UDC_ADDRESS,
 };
 use super::{FeeTokenConfig, Genesis, GenesisAllocation, UniversalDeployerConfig};
@@ -326,11 +324,11 @@ impl TryFrom<GenesisJson> for Genesis {
         // Adding this by default so that we can support mounting the genesis file from k8s
         // ConfigMap when we embed the Controller class, and its capacity is only limited to 1MiB.
         classes.insert(
-            CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
+            CONTROLLER_CLASS_HASH,
             GenesisClass {
-                casm: Arc::new(CONTROLLER_ACCOUNT_CONTRACT_CASM.clone()),
-                compiled_class_hash: CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
-                sierra: Some(Arc::new(CONTROLLER_ACCOUNT_CONTRACT.clone().flatten()?)),
+                casm: Arc::new(CONTROLLER_ACCOUNT_CLASS_CASM.clone()),
+                compiled_class_hash: CONTROLLER_CLASS_HASH,
+                sierra: Some(Arc::new(CONTROLLER_ACCOUNT_CLASS.clone().flatten()?)),
             },
         );
 
@@ -408,7 +406,7 @@ impl TryFrom<GenesisJson> for Genesis {
                 Some(ClassNameOrHash::Name(ref class_name)) => *class_names
                     .get(class_name)
                     .ok_or_else(|| GenesisJsonError::UnknownClassName(class_name.clone()))?,
-                None => DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH,
+                None => DEFAULT_LEGACY_ERC20_CLASS_HASH,
             },
             storage: value.fee_token.storage,
         };
@@ -433,11 +431,11 @@ impl TryFrom<GenesisJson> for Genesis {
             // if no class hash is provided, use the default fee token class
             None => {
                 let _ = classes.insert(
-                    DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH,
+                    DEFAULT_LEGACY_ERC20_CLASS_HASH,
                     GenesisClass {
                         sierra: None,
-                        casm: Arc::new(DEFAULT_LEGACY_ERC20_CONTRACT_CASM.clone()),
-                        compiled_class_hash: DEFAULT_LEGACY_ERC20_CONTRACT_COMPILED_CLASS_HASH,
+                        casm: Arc::new(DEFAULT_LEGACY_ERC20_CASM.clone()),
+                        compiled_class_hash: DEFAULT_LEGACY_ERC20_COMPILED_CLASS_HASH,
                     },
                 );
             }
@@ -521,18 +519,16 @@ impl TryFrom<GenesisJson> for Genesis {
                 None => {
                     // check that the default account class exists in the classes field before
                     // inserting it
-                    if let btree_map::Entry::Vacant(e) =
-                        classes.entry(DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH)
-                    {
+                    if let btree_map::Entry::Vacant(e) = classes.entry(DEFAULT_ACCOUNT_CLASS_HASH) {
                         // insert default account class to the classes map
                         e.insert(GenesisClass {
-                            casm: Arc::new(DEFAULT_OZ_ACCOUNT_CONTRACT_CASM.clone()),
-                            sierra: Some(Arc::new(DEFAULT_OZ_ACCOUNT_CONTRACT.clone().flatten()?)),
-                            compiled_class_hash: DEFAULT_OZ_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH,
+                            casm: Arc::new(DEFAULT_ACCOUNT_CLASS_CASM.clone()),
+                            sierra: Some(Arc::new(DEFAULT_ACCOUNT_CLASS.clone().flatten()?)),
+                            compiled_class_hash: DEFAULT_ACCOUNT_COMPILED_CLASS_HASH,
                         });
                     }
 
-                    DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH
+                    DEFAULT_ACCOUNT_CLASS_HASH
                 }
             };
 
@@ -802,18 +798,17 @@ mod tests {
             vec![
                 GenesisClassJson {
                     class_hash: Some(felt!("0x8")),
-                    class: PathBuf::from("../../../contracts/compiled/erc20.json").into(),
+                    class: PathBuf::from("../../../contracts/build/erc20.json").into(),
                     name: Some("MyErc20".to_string()),
                 },
                 GenesisClassJson {
                     class_hash: Some(felt!("0x80085")),
-                    class: PathBuf::from("../../../contracts/compiled/universal_deployer.json")
-                        .into(),
+                    class: PathBuf::from("../../../contracts/build/universal_deployer.json").into(),
                     name: None,
                 },
                 GenesisClassJson {
                     class_hash: None,
-                    class: PathBuf::from("../../../contracts/compiled/oz_account_080.json").into(),
+                    class: PathBuf::from("../../../contracts/build/default_account.json").into(),
                     name: Some("MyClass".to_string()),
                 },
             ]
@@ -831,20 +826,20 @@ mod tests {
                     vec![
                         GenesisClassJson {
                             class_hash: None,
-                            class: PathBuf::from("../../../contracts/compiled/erc20.json").into(),
+                            class: PathBuf::from("../../../contracts/build/erc20.json").into(),
                             name: Some("MyErc20".to_string()),
                         },
                         GenesisClassJson {
                             class_hash: Some(felt!("0x80085")),
                             class: PathBuf::from(
-                                "../../../contracts/compiled/universal_deployer.json"
+                                "../../../contracts/build/universal_deployer.json"
                             )
                             .into(),
                             name: None,
                         },
                         GenesisClassJson {
                             class_hash: Some(felt!("0xa55")),
-                            class: serde_json::to_value(DEFAULT_OZ_ACCOUNT_CONTRACT.clone())
+                            class: serde_json::to_value(DEFAULT_ACCOUNT_CLASS.clone())
                                 .unwrap()
                                 .into(),
                             name: None,
@@ -889,24 +884,24 @@ mod tests {
                 GenesisClass {
                     sierra: None,
                     compiled_class_hash: felt!("0x8"),
-                    casm: DEFAULT_LEGACY_ERC20_CONTRACT_CASM.clone().into(),
+                    casm: DEFAULT_LEGACY_ERC20_CASM.clone().into(),
                 },
             ),
             (
-                DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH,
+                DEFAULT_ACCOUNT_CLASS_HASH,
                 GenesisClass {
-                    compiled_class_hash: DEFAULT_OZ_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH,
-                    casm: DEFAULT_OZ_ACCOUNT_CONTRACT_CASM.clone().into(),
-                    sierra: Some(DEFAULT_OZ_ACCOUNT_CONTRACT.clone().flatten().unwrap().into()),
+                    compiled_class_hash: DEFAULT_ACCOUNT_COMPILED_CLASS_HASH,
+                    casm: DEFAULT_ACCOUNT_CLASS_CASM.clone().into(),
+                    sierra: Some(DEFAULT_ACCOUNT_CLASS.clone().flatten().unwrap().into()),
                 },
             ),
             #[cfg(feature = "slot")]
             (
-                CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
+                CONTROLLER_CLASS_HASH,
                 GenesisClass {
-                    casm: Arc::new(CONTROLLER_ACCOUNT_CONTRACT_CASM.clone()),
-                    compiled_class_hash: CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
-                    sierra: Some(Arc::new(CONTROLLER_ACCOUNT_CONTRACT.clone().flatten().unwrap())),
+                    casm: Arc::new(CONTROLLER_ACCOUNT_CLASS_CASM.clone()),
+                    compiled_class_hash: CONTROLLER_CLASS_HASH,
+                    sierra: Some(Arc::new(CONTROLLER_ACCOUNT_CLASS.clone().flatten().unwrap())),
                 },
             ),
         ]);
@@ -953,7 +948,7 @@ mod tests {
                 GenesisAllocation::Account(GenesisAccountAlloc::Account(GenesisAccount {
                     public_key: felt!("0x2"),
                     balance: Some(U256::from_str("0xD3C21BCECCEDA1000000").unwrap()),
-                    class_hash: DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH,
+                    class_hash: DEFAULT_ACCOUNT_CLASS_HASH,
                     nonce: None,
                     storage: None,
                 })),
@@ -963,7 +958,7 @@ mod tests {
                 GenesisAllocation::Account(GenesisAccountAlloc::Account(GenesisAccount {
                     public_key: felt!("0x3"),
                     balance: None,
-                    class_hash: DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH,
+                    class_hash: DEFAULT_ACCOUNT_CLASS_HASH,
                     nonce: None,
                     storage: None,
                 })),
@@ -975,7 +970,7 @@ mod tests {
                     inner: GenesisAccount {
                         public_key: felt!("0x4"),
                         balance: Some(U256::from_str("0xD3C21BCECCEDA1000000").unwrap()),
-                        class_hash: DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH,
+                        class_hash: DEFAULT_ACCOUNT_CLASS_HASH,
                         nonce: None,
                         storage: None,
                     },
@@ -1103,28 +1098,28 @@ mod tests {
                 },
             ),
             (
-                DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH,
+                DEFAULT_LEGACY_ERC20_CLASS_HASH,
                 GenesisClass {
                     sierra: None,
-                    casm: DEFAULT_LEGACY_ERC20_CONTRACT_CASM.clone().into(),
-                    compiled_class_hash: DEFAULT_LEGACY_ERC20_CONTRACT_COMPILED_CLASS_HASH,
+                    casm: DEFAULT_LEGACY_ERC20_CASM.clone().into(),
+                    compiled_class_hash: DEFAULT_LEGACY_ERC20_COMPILED_CLASS_HASH,
                 },
             ),
             (
-                DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH,
+                DEFAULT_ACCOUNT_CLASS_HASH,
                 GenesisClass {
-                    compiled_class_hash: DEFAULT_OZ_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH,
-                    casm: DEFAULT_OZ_ACCOUNT_CONTRACT_CASM.clone().into(),
-                    sierra: Some(DEFAULT_OZ_ACCOUNT_CONTRACT.clone().flatten().unwrap().into()),
+                    compiled_class_hash: DEFAULT_ACCOUNT_COMPILED_CLASS_HASH,
+                    casm: DEFAULT_ACCOUNT_CLASS_CASM.clone().into(),
+                    sierra: Some(DEFAULT_ACCOUNT_CLASS.clone().flatten().unwrap().into()),
                 },
             ),
             #[cfg(feature = "slot")]
             (
-                CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
+                CONTROLLER_CLASS_HASH,
                 GenesisClass {
-                    casm: Arc::new(CONTROLLER_ACCOUNT_CONTRACT_CASM.clone()),
-                    compiled_class_hash: CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
-                    sierra: Some(Arc::new(CONTROLLER_ACCOUNT_CONTRACT.clone().flatten().unwrap())),
+                    casm: Arc::new(CONTROLLER_ACCOUNT_CLASS_CASM.clone()),
+                    compiled_class_hash: CONTROLLER_CLASS_HASH,
+                    sierra: Some(Arc::new(CONTROLLER_ACCOUNT_CLASS.clone().flatten().unwrap())),
                 },
             ),
         ]);
@@ -1134,7 +1129,7 @@ mod tests {
             name: String::from("ETHER"),
             symbol: String::from("ETH"),
             decimals: 18,
-            class_hash: DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH,
+            class_hash: DEFAULT_LEGACY_ERC20_CLASS_HASH,
             storage: None,
         };
 
@@ -1143,7 +1138,7 @@ mod tests {
             GenesisAllocation::Account(GenesisAccountAlloc::Account(GenesisAccount {
                 public_key: felt!("0x1"),
                 balance: Some(U256::from_str("0xD3C21BCECCEDA1000000").unwrap()),
-                class_hash: DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH,
+                class_hash: DEFAULT_ACCOUNT_CLASS_HASH,
                 nonce: None,
                 storage: None,
             })),

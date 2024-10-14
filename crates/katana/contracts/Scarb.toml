@@ -10,5 +10,4 @@ edition = "2023_11"
 [workspace.dependencies]
 starknet = "2.8.2"
 openzeppelin = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", tag = "v0.17.0" }
-snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry", tag = "v0.31.0" }
-assert_macros = "2.8.2"
+snforge_std = "0.30.0"

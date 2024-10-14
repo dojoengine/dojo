@@ -7,8 +7,8 @@ use katana_executor::{ExecutionOutput, ExecutionResult, ExecutorFactory};
 use katana_primitives::block::ExecutableBlock;
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::genesis::constant::{
-    DEFAULT_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH,
-    DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH, DEFAULT_PREFUNDED_ACCOUNT_BALANCE, DEFAULT_UDC_ADDRESS,
+    DEFAULT_ACCOUNT_CLASS_HASH, DEFAULT_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CLASS_HASH,
+    DEFAULT_PREFUNDED_ACCOUNT_BALANCE, DEFAULT_UDC_ADDRESS,
 };
 use katana_primitives::transaction::TxWithHash;
 use katana_primitives::{address, Felt};
@@ -25,10 +25,12 @@ fn test_executor_with_valid_blocks_impl<EF: ExecutorFactory>(
 ) {
     let cfg_env = factory.cfg();
 
-    // the contract address of the main account used to send most of the transactions
+    // the contract address of the main account used to send most of the transactions (see the
+    // `valid_blocks` fixture)
     let main_account =
-        address!("0x6b86e40118f29ebe393a75469b4d926c7a44c2e2681b6d319520b7c1156d114");
-    // the contract address of the account deployed using the `DeployAccount` tx
+        address!("0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba");
+    // the contract address of the account deployed using the `DeployAccount` tx (see the
+    // `valid_blocks` fixture)
     let new_acc = address!("0x3ddfa445a70b927497249f94ff7431fc2e2abc761a34417fd4891beb7c2db85");
 
     let mut executor = factory.with_state(state);
@@ -141,7 +143,7 @@ fn test_executor_with_valid_blocks_impl<EF: ExecutorFactory>(
 
     assert_eq!(
         actual_new_acc_class_hash,
-        Some(DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH),
+        Some(DEFAULT_ACCOUNT_CLASS_HASH),
         "account should be deployed"
     );
     assert_eq!(actual_new_acc_nonce, Some(1u64.into()), "account nonce is updated");
@@ -181,7 +183,7 @@ fn test_executor_with_valid_blocks_impl<EF: ExecutorFactory>(
     // compute the contract address that we deploy thru the UDC using Invoke tx (the erc20 contract)
     let deployed_contract = get_udc_deployed_address(
         felt!("0x6ea2ff5aa6f633708e69f5c61d2ac5f860d2435b46ddbd016aa065bce25100a"),
-        DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH,
+        DEFAULT_LEGACY_ERC20_CLASS_HASH,
         &UdcUniqueness::Unique(UdcUniqueSettings {
             deployer_address: *main_account,
             udc_contract_address: DEFAULT_UDC_ADDRESS.into(),
@@ -194,7 +196,8 @@ fn test_executor_with_valid_blocks_impl<EF: ExecutorFactory>(
             felt!("0x12"),
             felt!("0x1b39"),
             felt!("0x0"),
-            felt!("0x06b86e40118f29ebe393a75469b4d926c7a44c2e2681b6d319520b7c1156d114"),
+            // this address must match with the `sender_address` in `valid_blocks` fixture
+            felt!("0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba"),
         ],
     );
 
@@ -232,7 +235,7 @@ fn test_executor_with_valid_blocks_impl<EF: ExecutorFactory>(
 
     assert_eq!(
         actual_deployed_contract_class_hash,
-        Some(DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH),
+        Some(DEFAULT_LEGACY_ERC20_CLASS_HASH),
         "contract should be deployed"
     );
     assert_eq!(actual_storage_value_1, Some(felt!("0x4b415249")), "ERC_name should be set");
@@ -291,8 +294,8 @@ fn test_executor_with_valid_blocks_impl<EF: ExecutorFactory>(
 
     let actual_contract_deployed = states.state_updates.deployed_contracts;
     let expected_contract_deployed = BTreeMap::from([
-        (new_acc, DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH),
-        (deployed_contract.into(), DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH),
+        (new_acc, DEFAULT_ACCOUNT_CLASS_HASH),
+        (deployed_contract.into(), DEFAULT_LEGACY_ERC20_CLASS_HASH),
     ]);
 
     similar_asserts::assert_eq!(actual_nonce_updates, expected_nonce_updates);
