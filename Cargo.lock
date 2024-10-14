@@ -8179,7 +8179,7 @@ dependencies = [
  "cairo-lang-starknet",
  "cairo-lang-starknet-classes",
  "cairo-lang-utils",
- "cairo-vm 1.0.1 (git+https://github.com/matzayonc/cairo-vm.git?rev=59ceafbe7a10e03d41415994984e2578207172d3)",
+ "cairo-vm 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "starknet_api 0.13.0-rc.1 (git+https://github.com/dojoengine/sequencer?tag=v0.8.0-rc3.1)",
 ]
 
@@ -12506,7 +12506,9 @@ dependencies = [
  "anyhow",
  "async-trait",
  "bigdecimal 0.4.5",
+ "blockifier 0.8.0-rc.3 (git+https://github.com/Moonsong-Labs/sequencer?rev=6624e910c57db9a16f1607c1ed26f7d8f1114e73)",
  "cairo-proof-parser",
+ "cairo-vm 1.0.1 (git+https://github.com/matzayonc/cairo-vm.git?rev=59ceafbe7a10e03d41415994984e2578207172d3)",
  "cairo1-playground",
  "celestia-rpc",
  "celestia-types",
@@ -12526,6 +12528,7 @@ dependencies = [
  "starknet 0.12.0",
  "starknet-crypto 0.7.2",
  "starknet-os",
+ "starknet_api 0.13.0-rc.1 (git+https://github.com/Moonsong-Labs/sequencer?rev=6624e910c57db9a16f1607c1ed26f7d8f1114e73)",
  "tempdir",
  "thiserror",
  "tokio",

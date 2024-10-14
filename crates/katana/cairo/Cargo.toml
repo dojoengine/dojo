@@ -17,5 +17,5 @@ cairo-lang-sierra-to-casm = "=2.8.2"
 cairo-lang-starknet = "=2.8.2"
 cairo-lang-starknet-classes = "=2.8.2"
 cairo-lang-utils = "=2.8.2"
-cairo-vm = { workspace = true }
+cairo-vm.workspace = true
 starknet_api = { git = "https://github.com/dojoengine/sequencer", tag = "v0.8.0-rc3.1" }

@@ -9,7 +9,7 @@ use std::sync::Arc;
 use anyhow::Context;
 use cairo_proof_parser::from_felts;
 use celestia_types::Commitment;
-use dojo_os::piltover::{starknet_apply_piltover, PiltoverCalldata};
+use dojo_os::piltover::{PiltoverCalldata, starknet_apply_piltover};
 use futures::future;
 use itertools::Itertools;
 use katana_primitives::block::{BlockNumber, FinalityStatus, SealedBlock, SealedBlockWithStatus};
@@ -17,19 +17,19 @@ use katana_primitives::state::StateUpdatesWithDeclaredClasses;
 use katana_primitives::transaction::Tx;
 use katana_rpc_types::trace::TxExecutionInfo;
 use prover::persistent::{PublishedStateDiff, StarknetOsOutput};
-use prover::{extract_execute_calls, HttpProverParams, ProveProgram, ProverIdentifier};
-pub use prover_sdk::access_key::ProverAccessKey;
+use prover::{HttpProverParams, ProveProgram, ProverIdentifier, extract_execute_calls};
 use prover_sdk::ProverResult;
-use saya_provider::rpc::JsonRpcProvider;
+pub use prover_sdk::access_key::ProverAccessKey;
 use saya_provider::Provider as SayaProvider;
+use saya_provider::rpc::JsonRpcProvider;
 use serde::{Deserialize, Serialize};
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::types::{BlockId, BlockTag, Call};
 use starknet::core::utils::cairo_short_string_to_felt;
-use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
+use starknet::providers::jsonrpc::HttpTransport;
 use starknet::signers::{LocalWallet, SigningKey};
-use starknet_crypto::{poseidon_hash_many, Felt};
+use starknet_crypto::{Felt, poseidon_hash_many};
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 use tracing::{error, info, trace};
@@ -39,7 +39,7 @@ use verifier::VerifierIdentifier;
 use crate::blockchain::Blockchain;
 use crate::data_availability::{DataAvailabilityClient, DataAvailabilityConfig};
 use crate::error::SayaResult;
-use crate::prover::{extract_messages, ProgramInput};
+use crate::prover::{ProgramInput, extract_messages};
 
 pub mod blockchain;
 pub mod data_availability;
@@ -71,7 +71,8 @@ pub struct SayaConfig {
 
 type SayaStarknetAccount = SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>;
 
-pub const DEFAULT_COMPILED_OS: &[u8] = include_bytes!("../../../bin/saya/os_latest.json");
+pub const DEFAULT_COMPILED_OS: &[u8] =
+    include_bytes!("../../../../bin/saya/programs/os_latest.json");
 
 pub fn felt_string_deserializer<'de, D>(deserializer: D) -> Result<Felt, D::Error>
 where
@@ -200,14 +201,6 @@ impl Saya {
                     mock_state_hash += Felt::ONE;
 
                     info!(target: LOG_TARGET, "Proving {} blocks.", num_blocks);
-
-                    run_os(
-                        config::DEFAULT_COMPILED_OS,
-                        layout,
-                        os_input,
-                        block_context,
-                        execution_helper,
-                    )?;
 
                     // We might want to prove the signatures as well.
                     // let proof = self.prover_identifier.prove_snos(input).await?;
@@ -579,5 +572,100 @@ impl StarknetAccountData {
 
         account.set_block_id(BlockId::Tag(BlockTag::Pending));
         Ok(account)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::num::NonZeroU128;
+
+    use blockifier::blockifier::block::{BlockInfo, GasPrices};
+    use blockifier::bouncer::BouncerConfig;
+    use blockifier::context::{BlockContext, ChainInfo};
+    use blockifier::versioned_constants::VersionedConstants;
+    use config::StarknetGeneralConfig;
+    use starknet_api::block::{BlockNumber, BlockTimestamp};
+    use starknet_api::core::ContractAddress;
+    use starknet_os::execution::helper::{ContractStorageMap, ExecutionHelperWrapper};
+    use starknet_os::io::input::StarknetOsInput;
+    use starknet_os::starknet::starknet_storage::{
+        CommitmentInfo, CommitmentInfoError, PerContractStorage,
+    };
+    use starknet_os::starkware_utils::commitment_tree::base_types::TreeIndex;
+    use starknet_os::{config, run_os};
+
+    use super::*;
+
+    #[test]
+    fn test_snos_compile() {
+        let input = StarknetOsInput {
+            contract_state_commitment_info: CommitmentInfo::default(),
+            contract_class_commitment_info: CommitmentInfo::default(),
+            deprecated_compiled_classes: HashMap::default(),
+            compiled_classes: HashMap::default(),
+            compiled_class_visited_pcs: HashMap::default(),
+            contracts: HashMap::default(),
+            class_hash_to_compiled_class_hash: HashMap::default(),
+            general_config: StarknetGeneralConfig::default(),
+            transactions: vec![],
+            declared_class_hash_to_component_hashes: HashMap::default(),
+            new_block_hash: Felt::default(),
+            prev_block_hash: Felt::default(),
+            full_output: false,
+        };
+
+        struct ProverPerContractStorage;
+
+        impl PerContractStorage for ProverPerContractStorage {
+            async fn compute_commitment(&mut self) -> Result<CommitmentInfo, CommitmentInfoError> {
+                Ok(CommitmentInfo::default())
+            }
+
+            fn write(&mut self, key: TreeIndex, value: Felt) {
+                let _ = value;
+                let _ = key;
+            }
+
+            async fn read(&mut self, key: TreeIndex) -> Option<Felt> {
+                let _ = key;
+                None
+            }
+        }
+
+        let block_context = BlockContext::new(
+            BlockInfo {
+                block_number: BlockNumber(0),
+                block_timestamp: BlockTimestamp(0),
+                sequencer_address: ContractAddress::from(0u128),
+                gas_prices: GasPrices {
+                    eth_l1_gas_price: NonZeroU128::new(1u128).unwrap(),
+                    strk_l1_gas_price: NonZeroU128::new(1u128).unwrap(),
+                    eth_l1_data_gas_price: NonZeroU128::new(1u128).unwrap(),
+                    strk_l1_data_gas_price: NonZeroU128::new(1u128).unwrap(),
+                },
+                use_kzg_da: false,
+            },
+            ChainInfo::default(),
+            VersionedConstants::default(),
+            BouncerConfig::default(),
+        );
+
+        let execution_helper = ExecutionHelperWrapper::<ProverPerContractStorage>::new(
+            ContractStorageMap::new(),
+            vec![],
+            &block_context,
+            (Felt::default(), Felt::default()),
+        );
+
+        // This will not run, but should compile
+        let res = run_os(
+            DEFAULT_COMPILED_OS,
+            config::default_layout(),
+            input,
+            block_context,
+            execution_helper,
+        );
+
+        assert!(res.is_err());
     }
 }

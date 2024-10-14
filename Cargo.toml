@@ -148,7 +148,7 @@ cairo-lang-test-plugin = "=2.8.2"
 cairo-lang-test-runner = "=2.8.2"
 cairo-lang-test-utils = "=2.8.2"
 cairo-lang-utils = "=2.8.2"
-cairo-vm = { git = "https://github.com/matzayonc/cairo-vm.git", rev = "59ceafbe7a10e03d41415994984e2578207172d3" }
+cairo-vm = "1.0.1"
 camino = { version = "1.1.2", features = [ "serde1" ] }
 chrono = { version = "0.4.24", features = [ "serde" ] }
 clap = { version = "4.5.16", features = [ "derive", "env" ] }

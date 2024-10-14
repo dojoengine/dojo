@@ -31,10 +31,16 @@ url.workspace = true
 celestia-rpc = "0.4.0"
 celestia-types = "0.5.0"
 
+blockifier = { git = "https://github.com/Moonsong-Labs/sequencer", rev = "6624e910c57db9a16f1607c1ed26f7d8f1114e73", features = [ "testing" ] }
 cairo-proof-parser = { git = "https://github.com/cartridge-gg/cairo-proof-parser.git", rev = "f175d58" }
+cairo-vm = { git = "https://github.com/matzayonc/cairo-vm.git", rev = "59ceafbe7a10e03d41415994984e2578207172d3" }
 cairo1-playground = { git = "https://github.com/matzayonc/cairo1-playground.git", rev = "26d44d9aa35ed06ff58f9f69f7cdd3d62c5853ae" }
 herodotus_sharp_playground = { git = "https://github.com/chudkowsky/herodotus_sharp_playground.git", rev = "db64bfd" }
 prover-sdk = { git = "https://github.com/cartridge-gg/http-prover", rev = "24256d5" }
 reqwest.workspace = true
 serde-felt = { git = "https://github.com/cartridge-gg/cairo-proof-parser.git", rev = "f175d58" }
+starknet_api = { git = "https://github.com/Moonsong-Labs/sequencer", rev = "6624e910c57db9a16f1607c1ed26f7d8f1114e73", features = [ "testing" ] }
 tempdir = "0.3.7"
+
+[patch.'https://github.com/Moonsong-Labs/cairo-vm']
+cairo-vm = { git = "https://github.com/matzayonc/cairo-vm.git", rev = "59ceafbe7a10e03d41415994984e2578207172d3" }
