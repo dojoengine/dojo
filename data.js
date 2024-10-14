@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728851893301,
+  "lastUpdate": 1728920592333,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -25495,6 +25495,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4512453,
             "range": "± 40096",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "contact@luca-steeb.com",
+            "name": "Luca Steeb",
+            "username": "steebchen"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "86b3a852b0ed71ddb58cf0e7aabbfd53ae59e80a",
+          "message": "fix(Dockerfile): use tini from package manager (#2533)",
+          "timestamp": "2024-10-14T16:27:10+01:00",
+          "tree_id": "794dd0651ff0aebcd9f12024c2fb4db9ea3e1abb",
+          "url": "https://github.com/dojoengine/dojo/commit/86b3a852b0ed71ddb58cf0e7aabbfd53ae59e80a"
+        },
+        "date": 1728920590932,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 12142099794,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
