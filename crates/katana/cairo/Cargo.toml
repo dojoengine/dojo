@@ -10,12 +10,12 @@ version.workspace = true
 
 # Use from git instead of crates.io registry so that the workspace patches aren't applied.
 [dependencies]
-cairo-lang-casm = "=2.8.2"
-cairo-lang-runner = "=2.8.2"
-cairo-lang-sierra = "=2.8.2"
-cairo-lang-sierra-to-casm = "=2.8.2"
-cairo-lang-starknet = "=2.8.2"
-cairo-lang-starknet-classes = "=2.8.2"
-cairo-lang-utils = "=2.8.2"
+cairo-lang-casm = "2.7.0"
+cairo-lang-runner = "2.7.0"
+cairo-lang-sierra = "2.7.0"
+cairo-lang-sierra-to-casm = "2.7.0"
+cairo-lang-starknet = "2.7.0"
+cairo-lang-starknet-classes = "2.7.0"
+cairo-lang-utils = "2.7.0"
 cairo-vm.workspace = true
 starknet_api = { git = "https://github.com/dojoengine/sequencer", tag = "v0.8.0-rc3.1" }
