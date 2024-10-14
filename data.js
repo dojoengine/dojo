@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728931516533,
+  "lastUpdate": 1728931698097,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -25759,6 +25759,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 12110404962,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bc5d2f6b77244ed0e1779ee2dcc5f6aeef3f0793",
+          "message": "katana: update default predeployed accounts (#2524)\n\nref #2498 #2405 \r\n\r\n- update the default predeployed account class implementation to OZ `0.17.0` account [preset](https://github.com/OpenZeppelin/cairo-contracts/blob/v0.17.0/packages/presets/src/account.cairo)\r\n- rename class constants\r\n\r\nis it required to change the account implementation because the version we're using doesn't support transaction version > 1 as seen below:\r\n\r\nhttps://github.com/OpenZeppelin/cairo-contracts/blob/6ab91b5cf57d6a7d02f2d5c5abfc7b5712bc8e47/src/account/account.cairo#L75C1-L77C14\r\n\r\ntechnically v3 support is later added in OZ `0.8.1`. so going all the way to `0.17.0` may seem exaggerated, but `0.8.1` is ~8 months old now so better to just use the latest compatible version. tbh i dont exactly know how different `0.17.0` is compared to `0.8.1`.",
+          "timestamp": "2024-10-15T02:29:13+08:00",
+          "tree_id": "6da11ca47a7154a15babed8f55ba26b69cdef3e0",
+          "url": "https://github.com/dojoengine/dojo/commit/bc5d2f6b77244ed0e1779ee2dcc5f6aeef3f0793"
+        },
+        "date": 1728931696707,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16483399,
+            "range": "± 197718",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 5004809,
+            "range": "± 672722",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3718606973,
+            "range": "± 739888592",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4511718,
+            "range": "± 203999",
             "unit": "ns/iter"
           }
         ]
