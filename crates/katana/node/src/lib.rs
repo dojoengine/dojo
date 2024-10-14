@@ -173,8 +173,8 @@ pub async fn build(mut config: Config) -> Result<Node> {
         validate_max_n_steps: config.starknet.env.validate_max_steps,
         max_recursion_depth: MAX_RECURSION_DEPTH,
         fee_token_addresses: FeeTokenAddressses {
-            eth: config.chain.genesis.fee_token.address,
-            strk: Default::default(),
+            eth: config.chain.fee_contracts.eth,
+            strk: config.chain.fee_contracts.strk,
         },
     };
 

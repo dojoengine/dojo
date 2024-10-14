@@ -139,7 +139,7 @@ mod tests {
     };
     use katana_primitives::fee::TxFeeInfo;
     use katana_primitives::genesis::constant::{
-        DEFAULT_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CASM, DEFAULT_LEGACY_ERC20_CLASS_HASH,
+        DEFAULT_ETH_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CASM, DEFAULT_LEGACY_ERC20_CLASS_HASH,
         DEFAULT_LEGACY_UDC_CASM, DEFAULT_LEGACY_UDC_CLASS_HASH, DEFAULT_UDC_ADDRESS,
     };
     use katana_primitives::genesis::Genesis;
@@ -170,7 +170,7 @@ mod tests {
 
         let latest_number = blockchain.provider().latest_number().unwrap();
         let fee_token_class_hash =
-            state.class_hash_of_contract(DEFAULT_FEE_TOKEN_ADDRESS).unwrap().unwrap();
+            state.class_hash_of_contract(DEFAULT_ETH_FEE_TOKEN_ADDRESS).unwrap().unwrap();
         let udc_class_hash = state.class_hash_of_contract(DEFAULT_UDC_ADDRESS).unwrap().unwrap();
 
         assert_eq!(latest_number, 0);
@@ -280,7 +280,7 @@ mod tests {
             let actual_udc_class = state.class(actual_udc_class_hash).unwrap().unwrap();
 
             let actual_fee_token_class_hash =
-                state.class_hash_of_contract(DEFAULT_FEE_TOKEN_ADDRESS).unwrap().unwrap();
+                state.class_hash_of_contract(DEFAULT_ETH_FEE_TOKEN_ADDRESS).unwrap().unwrap();
             let actual_fee_token_class = state.class(actual_fee_token_class_hash).unwrap().unwrap();
 
             assert_eq!(actual_udc_class_hash, DEFAULT_LEGACY_UDC_CLASS_HASH);
@@ -306,7 +306,7 @@ mod tests {
             let actual_udc_class = state.class(actual_udc_class_hash).unwrap().unwrap();
 
             let actual_fee_token_class_hash =
-                state.class_hash_of_contract(DEFAULT_FEE_TOKEN_ADDRESS).unwrap().unwrap();
+                state.class_hash_of_contract(DEFAULT_ETH_FEE_TOKEN_ADDRESS).unwrap().unwrap();
             let actual_fee_token_class = state.class(actual_fee_token_class_hash).unwrap().unwrap();
 
             assert_eq!(actual_udc_class_hash, DEFAULT_LEGACY_UDC_CLASS_HASH);

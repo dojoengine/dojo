@@ -12,10 +12,15 @@ use crate::Felt;
 pub const DEFAULT_UDC_ADDRESS: ContractAddress =
     ContractAddress(felt!("0x041a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf"));
 
-/// The default fee token contract address.
+/// The default ETH fee token contract address.
 /// Corresponds to 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
-pub const DEFAULT_FEE_TOKEN_ADDRESS: ContractAddress =
+pub const DEFAULT_ETH_FEE_TOKEN_ADDRESS: ContractAddress =
     ContractAddress(felt!("0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"));
+
+/// The default STRK fee token contract address.
+/// Corresponds to 0x04718f5a0Fc34cC1AF16A1cdee98fFB20C31f5cD61D6Ab07201858f4287c938D
+pub const DEFAULT_STRK_FEE_TOKEN_ADDRESS: ContractAddress =
+    ContractAddress(felt!("0x04718f5a0Fc34cC1AF16A1cdee98fFB20C31f5cD61D6Ab07201858f4287c938D"));
 
 /// The standard storage address for `public key` in the default account class.
 /// Corresponds to keccak("Account_public_key") ==

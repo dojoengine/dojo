@@ -30,7 +30,7 @@ use super::constant::{
 };
 use super::constant::{
     DEFAULT_ACCOUNT_CLASS, DEFAULT_ACCOUNT_CLASS_CASM, DEFAULT_ACCOUNT_CLASS_HASH,
-    DEFAULT_ACCOUNT_COMPILED_CLASS_HASH, DEFAULT_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CASM,
+    DEFAULT_ACCOUNT_COMPILED_CLASS_HASH, DEFAULT_ETH_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CASM,
     DEFAULT_LEGACY_ERC20_CLASS_HASH, DEFAULT_LEGACY_ERC20_COMPILED_CLASS_HASH,
     DEFAULT_LEGACY_UDC_CASM, DEFAULT_LEGACY_UDC_CLASS_HASH, DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH,
     DEFAULT_UDC_ADDRESS,
@@ -400,7 +400,7 @@ impl TryFrom<GenesisJson> for Genesis {
             name: value.fee_token.name,
             symbol: value.fee_token.symbol,
             decimals: value.fee_token.decimals,
-            address: value.fee_token.address.unwrap_or(DEFAULT_FEE_TOKEN_ADDRESS),
+            address: value.fee_token.address.unwrap_or(DEFAULT_ETH_FEE_TOKEN_ADDRESS),
             class_hash: match value.fee_token.class {
                 Some(ClassNameOrHash::Hash(class_hash)) => class_hash,
                 Some(ClassNameOrHash::Name(ref class_name)) => *class_names
@@ -1125,7 +1125,7 @@ mod tests {
         ]);
 
         let fee_token = FeeTokenConfig {
-            address: DEFAULT_FEE_TOKEN_ADDRESS,
+            address: DEFAULT_ETH_FEE_TOKEN_ADDRESS,
             name: String::from("ETHER"),
             symbol: String::from("ETH"),
             decimals: 18,

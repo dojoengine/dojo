@@ -32,9 +32,8 @@ use katana_node::config::rpc::{
     ApiKind, RpcConfig, DEFAULT_RPC_ADDR, DEFAULT_RPC_MAX_CONNECTIONS, DEFAULT_RPC_PORT,
 };
 use katana_node::config::{Config, SequencingConfig};
-use katana_primitives::block::GasPrices;
 use katana_primitives::chain::ChainId;
-use katana_primitives::chain_spec::ChainSpec;
+use katana_primitives::chain_spec::{self, ChainSpec};
 use katana_primitives::class::ClassHash;
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::genesis::allocation::{DevAllocationsGenerator, GenesisAccountAlloc};
@@ -150,7 +149,7 @@ pub struct StarknetOptions {
 
     #[arg(long = "accounts")]
     #[arg(value_name = "NUM")]
-    #[arg(default_value = "10")]
+    #[arg(default_value_t = 10)]
     #[arg(help = "Number of pre-funded accounts to generate.")]
     pub total_accounts: u16,
 
@@ -179,9 +178,8 @@ pub struct EnvironmentOptions {
     #[arg(long_help = "The chain ID. If a raw hex string (`0x` prefix) is provided, then it'd \
                        used as the actual chain ID. Otherwise, it's represented as the raw \
                        ASCII values. It must be a valid Cairo short string.")]
-    #[arg(default_value = "KATANA")]
     #[arg(value_parser = ChainId::parse)]
-    pub chain_id: ChainId,
+    pub chain_id: Option<ChainId>,
 
     #[arg(long)]
     #[arg(help = "The maximum number of steps available for the account validation logic.")]
@@ -309,36 +307,33 @@ impl NodeArgs {
     }
 
     fn chain_spec(&self) -> Result<ChainSpec> {
-        let genesis = match self.starknet.genesis.clone() {
-            Some(genesis) => genesis,
-            None => {
-                let gas_prices = GasPrices {
-                    eth: self.starknet.environment.l1_eth_gas_price,
-                    strk: self.starknet.environment.l1_strk_gas_price,
-                };
+        let mut chain_spec = chain_spec::DEV_UNALLOCATED.clone();
 
-                let accounts = DevAllocationsGenerator::new(self.starknet.total_accounts)
-                    .with_seed(parse_seed(&self.starknet.seed))
-                    .with_balance(U256::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE))
-                    .generate();
+        if let Some(id) = self.starknet.environment.chain_id {
+            chain_spec.id = id;
+        }
 
-                let mut genesis = Genesis {
-                    gas_prices,
-                    sequencer_address: *DEFAULT_SEQUENCER_ADDRESS,
-                    ..Default::default()
-                };
+        if let Some(genesis) = self.starknet.genesis.clone() {
+            chain_spec.genesis = genesis;
+        }
 
-                #[cfg(feature = "slot")]
-                if self.slot.controller {
-                    katana_slot_controller::add_controller_account(&mut genesis)?;
-                }
+        // generate dev accounts
+        let accounts = DevAllocationsGenerator::new(self.starknet.total_accounts)
+            .with_seed(parse_seed(&self.starknet.seed))
+            .with_balance(U256::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE))
+            .generate();
 
-                genesis.extend_allocations(accounts.into_iter().map(|(k, v)| (k, v.into())));
-                genesis
-            }
-        };
+        chain_spec.genesis.extend_allocations(accounts.into_iter().map(|(k, v)| (k, v.into())));
+        chain_spec.genesis.sequencer_address = *DEFAULT_SEQUENCER_ADDRESS;
+        chain_spec.genesis.gas_prices.eth = self.starknet.environment.l1_eth_gas_price;
+        chain_spec.genesis.gas_prices.eth = self.starknet.environment.l1_strk_gas_price;
 
-        Ok(ChainSpec { id: self.starknet.environment.chain_id, genesis })
+        #[cfg(feature = "slot")]
+        if self.slot.controller {
+            katana_slot_controller::add_controller_account(&mut chain_spec.genesis)?;
+        }
+
+        Ok(chain_spec)
     }
 
     fn dev_config(&self) -> DevConfig {

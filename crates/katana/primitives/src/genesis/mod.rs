@@ -9,15 +9,16 @@ use std::sync::Arc;
 use alloy_primitives::U256;
 #[cfg(feature = "slot")]
 use constant::{CONTROLLER_ACCOUNT_CLASS, CONTROLLER_ACCOUNT_CLASS_CASM, CONTROLLER_CLASS_HASH};
+use constant::{DEFAULT_ACCOUNT_CLASS, DEFAULT_STRK_FEE_TOKEN_ADDRESS};
 use serde::{Deserialize, Serialize};
 use starknet::core::serde::unsigned_field_element::UfeHex;
 use starknet::core::utils::cairo_short_string_to_felt;
 
 use self::allocation::{GenesisAccountAlloc, GenesisAllocation, GenesisContractAlloc};
 use self::constant::{
-    get_fee_token_balance_base_storage_address, DEFAULT_ACCOUNT_CLASS, DEFAULT_ACCOUNT_CLASS_CASM,
+    get_fee_token_balance_base_storage_address, DEFAULT_ACCOUNT_CLASS_CASM,
     DEFAULT_ACCOUNT_CLASS_HASH, DEFAULT_ACCOUNT_CLASS_PUBKEY_STORAGE_SLOT,
-    DEFAULT_ACCOUNT_COMPILED_CLASS_HASH, DEFAULT_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CASM,
+    DEFAULT_ACCOUNT_COMPILED_CLASS_HASH, DEFAULT_ETH_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CASM,
     DEFAULT_LEGACY_ERC20_CLASS_HASH, DEFAULT_LEGACY_ERC20_COMPILED_CLASS_HASH,
     DEFAULT_LEGACY_UDC_CASM, DEFAULT_LEGACY_UDC_CLASS_HASH, DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH,
     DEFAULT_UDC_ADDRESS, ERC20_DECIMAL_STORAGE_SLOT, ERC20_NAME_STORAGE_SLOT,
@@ -184,46 +185,8 @@ impl Genesis {
             states.state_updates.storage_updates.insert(address, storage);
         }
 
-        // insert fee token related data
-        let mut fee_token_storage = self.fee_token.storage.clone().unwrap_or_default();
-        let mut fee_token_total_supply = U256::ZERO;
-
-        for (address, alloc) in &self.allocations {
-            if let Some(balance) = alloc.balance() {
-                fee_token_total_supply += balance;
-                let (low, high) = split_u256(balance);
-
-                // the base storage address for a standard ERC20 contract balance
-                let bal_base_storage_var = get_fee_token_balance_base_storage_address(*address);
-
-                // the storage address of low u128 of the balance
-                let low_bal_storage_var = bal_base_storage_var;
-                // the storage address of high u128 of the balance
-                let high_bal_storage_var = bal_base_storage_var + Felt::ONE;
-
-                fee_token_storage.insert(low_bal_storage_var, low);
-                fee_token_storage.insert(high_bal_storage_var, high);
-            }
-        }
-
-        // TODO: put this in a separate function
-
-        let name: Felt = cairo_short_string_to_felt(&self.fee_token.name).unwrap();
-        let symbol: Felt = cairo_short_string_to_felt(&self.fee_token.symbol).unwrap();
-        let decimals: Felt = self.fee_token.decimals.into();
-        let (total_supply_low, total_supply_high) = split_u256(fee_token_total_supply);
-
-        fee_token_storage.insert(ERC20_NAME_STORAGE_SLOT, name);
-        fee_token_storage.insert(ERC20_SYMBOL_STORAGE_SLOT, symbol);
-        fee_token_storage.insert(ERC20_DECIMAL_STORAGE_SLOT, decimals);
-        fee_token_storage.insert(ERC20_TOTAL_SUPPLY_STORAGE_SLOT, total_supply_low);
-        fee_token_storage.insert(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + Felt::ONE, total_supply_high);
-
-        states
-            .state_updates
-            .deployed_contracts
-            .insert(self.fee_token.address, self.fee_token.class_hash);
-        states.state_updates.storage_updates.insert(self.fee_token.address, fee_token_storage);
+        // insert fee tokens (ETH & STRK) storage
+        self.apply_fee_tokens_storage(&mut states);
 
         // insert universal deployer related data
         if let Some(udc) = &self.universal_deployer {
@@ -234,6 +197,79 @@ impl Genesis {
         }
 
         states
+    }
+
+    fn apply_fee_tokens_storage(&self, states: &mut StateUpdatesWithDeclaredClasses) {
+        // -- ETH
+        Self::apply_fee_token_storage(
+            states,
+            "Ether",
+            "ETH",
+            18,
+            DEFAULT_ETH_FEE_TOKEN_ADDRESS,
+            DEFAULT_LEGACY_ERC20_CLASS_HASH,
+            &self.allocations,
+        );
+
+        // -- STRK
+        Self::apply_fee_token_storage(
+            states,
+            "Starknet Token",
+            "STRK",
+            18,
+            DEFAULT_STRK_FEE_TOKEN_ADDRESS,
+            DEFAULT_LEGACY_ERC20_CLASS_HASH,
+            &self.allocations,
+        );
+    }
+
+    fn apply_fee_token_storage(
+        states: &mut StateUpdatesWithDeclaredClasses,
+        name: &str,
+        symbol: &str,
+        decimals: u8,
+        address: ContractAddress,
+        class_hash: ClassHash,
+        allocations: &BTreeMap<ContractAddress, GenesisAllocation>,
+    ) {
+        let mut storage = BTreeMap::new();
+        let mut total_supply = U256::ZERO;
+
+        // --- set the ERC20 balances for each allocations that have a balance
+
+        for (address, alloc) in allocations {
+            if let Some(balance) = alloc.balance() {
+                total_supply += balance;
+                let (low, high) = split_u256(balance);
+
+                // the base storage address for a standard ERC20 contract balance
+                let bal_base_storage_var = get_fee_token_balance_base_storage_address(*address);
+
+                // the storage address of low u128 of the balance
+                let low_bal_storage_var = bal_base_storage_var;
+                // the storage address of high u128 of the balance
+                let high_bal_storage_var = bal_base_storage_var + Felt::ONE;
+
+                storage.insert(low_bal_storage_var, low);
+                storage.insert(high_bal_storage_var, high);
+            }
+        }
+
+        // --- ERC20 metadata
+
+        let name: Felt = cairo_short_string_to_felt(name).unwrap();
+        let symbol: Felt = cairo_short_string_to_felt(symbol).unwrap();
+        let decimals: Felt = decimals.into();
+        let (total_supply_low, total_supply_high) = split_u256(total_supply);
+
+        storage.insert(ERC20_NAME_STORAGE_SLOT, name);
+        storage.insert(ERC20_SYMBOL_STORAGE_SLOT, symbol);
+        storage.insert(ERC20_DECIMAL_STORAGE_SLOT, decimals);
+        storage.insert(ERC20_TOTAL_SUPPLY_STORAGE_SLOT, total_supply_low);
+        storage.insert(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + Felt::ONE, total_supply_high);
+
+        states.state_updates.deployed_contracts.insert(address, class_hash);
+        states.state_updates.storage_updates.insert(address, storage);
     }
 }
 
@@ -246,7 +282,7 @@ impl Default for Genesis {
             decimals: 18,
             name: "Ether".into(),
             symbol: "ETH".into(),
-            address: DEFAULT_FEE_TOKEN_ADDRESS,
+            address: DEFAULT_ETH_FEE_TOKEN_ADDRESS,
             class_hash: DEFAULT_LEGACY_ERC20_CLASS_HASH,
             storage: None,
         };
@@ -360,7 +396,7 @@ mod tests {
         ]);
 
         let fee_token = FeeTokenConfig {
-            address: DEFAULT_FEE_TOKEN_ADDRESS,
+            address: DEFAULT_ETH_FEE_TOKEN_ADDRESS,
             name: String::from("ETHER"),
             symbol: String::from("ETH"),
             decimals: 18,

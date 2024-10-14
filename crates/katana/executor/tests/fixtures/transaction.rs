@@ -2,7 +2,7 @@ use katana_primitives::chain::ChainId;
 use katana_primitives::contract::{ContractAddress, Nonce};
 use katana_primitives::env::CfgEnv;
 use katana_primitives::genesis::allocation::GenesisAllocation;
-use katana_primitives::genesis::constant::DEFAULT_FEE_TOKEN_ADDRESS;
+use katana_primitives::genesis::constant::DEFAULT_ETH_FEE_TOKEN_ADDRESS;
 use katana_primitives::genesis::Genesis;
 use katana_primitives::transaction::ExecutableTxWithHash;
 use katana_primitives::utils::transaction::compute_invoke_v1_tx_hash;
@@ -43,7 +43,7 @@ pub fn invoke_executable_tx(
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
     let calls = vec![Call {
-        to: DEFAULT_FEE_TOKEN_ADDRESS.into(),
+        to: DEFAULT_ETH_FEE_TOKEN_ADDRESS.into(),
         selector: selector!("transfer"),
         calldata: vec![felt!("0x1"), felt!("0x99"), felt!("0x0")],
     }];
