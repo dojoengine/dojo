@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728920592333,
+  "lastUpdate": 1728920792043,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -25525,6 +25525,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 12142099794,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "contact@luca-steeb.com",
+            "name": "Luca Steeb",
+            "username": "steebchen"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "86b3a852b0ed71ddb58cf0e7aabbfd53ae59e80a",
+          "message": "fix(Dockerfile): use tini from package manager (#2533)",
+          "timestamp": "2024-10-14T16:27:10+01:00",
+          "tree_id": "794dd0651ff0aebcd9f12024c2fb4db9ea3e1abb",
+          "url": "https://github.com/dojoengine/dojo/commit/86b3a852b0ed71ddb58cf0e7aabbfd53ae59e80a"
+        },
+        "date": 1728920790701,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16629030,
+            "range": "± 325265",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 4706887,
+            "range": "± 553214",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3702033388,
+            "range": "± 799281087",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4942347,
+            "range": "± 616592",
             "unit": "ns/iter"
           }
         ]
