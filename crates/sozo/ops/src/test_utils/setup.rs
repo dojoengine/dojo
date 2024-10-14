@@ -10,7 +10,7 @@ use katana_runner::KatanaRunner;
 use scarb::compiler::Profile;
 use scarb::core::{Config, Workspace};
 use scarb::ops;
-use starknet::accounts::{Account, ExecutionEncoding, SingleOwnerAccount};
+use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::types::{BlockId, BlockTag};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{AnyProvider, JsonRpcClient, Provider};
@@ -183,7 +183,6 @@ pub async fn setup_with_world(
     let mut account = sequencer.account(0);
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
-    dbg!(account.address());
     let world = WorldContract::new(migration.world_address, account)
         .with_block(BlockId::Tag(BlockTag::Pending));
 
