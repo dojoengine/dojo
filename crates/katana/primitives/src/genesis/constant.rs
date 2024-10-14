@@ -69,7 +69,7 @@ pub const DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH: CompiledClassHash = DEFAULT_LE
 
 /// The class hash of [`DEFAULT_ACCOUNT_CLASS`].
 pub const DEFAULT_ACCOUNT_CLASS_HASH: ClassHash =
-    felt!("0x06599b8b9b4b4d65da09c8f5bede6046908452fa8e112d6ad4a2f979a5e65bbd");
+    felt!("0x03a1cb99c855ca8ff11633e37a0a971e2af84239f127ff3022ce5d4c2dbf50cb");
 
 /// The compiled class hash of [`DEFAULT_ACCOUNT_CLASS`].
 pub const DEFAULT_ACCOUNT_COMPILED_CLASS_HASH: CompiledClassHash =
