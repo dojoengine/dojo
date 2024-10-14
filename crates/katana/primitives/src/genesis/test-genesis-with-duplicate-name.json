@@ -8,12 +8,6 @@
     "ETH": 1111,
     "STRK": 2222
   },
-  "feeToken": {
-    "name": "ETHER",
-    "symbol": "ETH",
-    "decimals": 18
-  },
-  "universalDeployer": {},
   "accounts": {
     "0x66efb28ac62686966ae85095ff3a772e014e7fbf56d4c5f6fac5606d4dde23a": {
       "publicKey": "0x1",

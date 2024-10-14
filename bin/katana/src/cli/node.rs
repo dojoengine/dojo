@@ -394,7 +394,7 @@ fn print_intro(args: &NodeArgs, genesis: &Genesis) {
             )
         );
 
-        print_genesis_contracts(genesis, account_class_hash);
+        // print_genesis_contracts(genesis, account_class_hash);
         print_genesis_accounts(accounts);
 
         println!(
@@ -408,36 +408,36 @@ ACCOUNTS SEED
     }
 }
 
-fn print_genesis_contracts(genesis: &Genesis, account_class_hash: Option<ClassHash>) {
-    println!(
-        r"
-PREDEPLOYED CONTRACTS
-==================
+// fn print_genesis_contracts(genesis: &Genesis, account_class_hash: Option<ClassHash>) {
+//     //     println!(
+//     //         r"
+//     // PREDEPLOYED CONTRACTS
+//     // ==================
 
-| Contract        | Fee Token
-| Address         | {}
-| Class Hash      | {:#064x}",
-        genesis.fee_token.address, genesis.fee_token.class_hash,
-    );
+//     // | Contract        | Fee Token
+//     // | Address         | {}
+//     // | Class Hash      | {:#064x}",
+//     //         genesis.fee_token.address, genesis.fee_token.class_hash,
+//     //     );
 
-    if let Some(ref udc) = genesis.universal_deployer {
-        println!(
-            r"
-| Contract        | Universal Deployer
-| Address         | {}
-| Class Hash      | {:#064x}",
-            udc.address, udc.class_hash
-        )
-    }
+//     //     if let Some(ref udc) = genesis.universal_deployer {
+//     //         println!(
+//     //             r"
+//     // | Contract        | Universal Deployer
+//     // | Address         | {}
+//     // | Class Hash      | {:#064x}",
+//     //             udc.address, udc.class_hash
+//     //         )
+//     //     }
 
-    if let Some(hash) = account_class_hash {
-        println!(
-            r"
-| Contract        | Account Contract
-| Class Hash      | {hash:#064x}"
-        )
-    }
-}
+//     //     if let Some(hash) = account_class_hash {
+//     //         println!(
+//     //             r"
+//     // | Contract        | Account Contract
+//     // | Class Hash      | {hash:#064x}"
+//     //         )
+//     //     }
+// }
 
 fn print_genesis_accounts<'a, Accounts>(accounts: Accounts)
 where

@@ -21,8 +21,8 @@ use self::constant::{
     DEFAULT_ACCOUNT_COMPILED_CLASS_HASH, DEFAULT_ETH_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CASM,
     DEFAULT_LEGACY_ERC20_CLASS_HASH, DEFAULT_LEGACY_ERC20_COMPILED_CLASS_HASH,
     DEFAULT_LEGACY_UDC_CASM, DEFAULT_LEGACY_UDC_CLASS_HASH, DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH,
-    DEFAULT_UDC_ADDRESS, ERC20_DECIMAL_STORAGE_SLOT, ERC20_NAME_STORAGE_SLOT,
-    ERC20_SYMBOL_STORAGE_SLOT, ERC20_TOTAL_SUPPLY_STORAGE_SLOT,
+    ERC20_DECIMAL_STORAGE_SLOT, ERC20_NAME_STORAGE_SLOT, ERC20_SYMBOL_STORAGE_SLOT,
+    ERC20_TOTAL_SUPPLY_STORAGE_SLOT,
 };
 use crate::block::{Block, BlockHash, BlockNumber, GasPrices, Header};
 use crate::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
@@ -83,7 +83,6 @@ pub struct Genesis {
     #[serde_as(as = "UfeHex")]
     pub parent_hash: BlockHash,
     /// The genesis block state root.
-    #[serde_as(as = "UfeHex")]
     pub state_root: Felt,
     /// The genesis block number.
     pub number: BlockNumber,
@@ -95,10 +94,6 @@ pub struct Genesis {
     pub gas_prices: GasPrices,
     /// The classes to declare in the genesis block.
     pub classes: BTreeMap<ClassHash, GenesisClass>,
-    /// The fee token configuration.
-    pub fee_token: FeeTokenConfig,
-    /// The universal deployer (UDC) configuration.
-    pub universal_deployer: Option<UniversalDeployerConfig>,
     /// The genesis contract allocations.
     pub allocations: BTreeMap<ContractAddress, GenesisAllocation>,
 }
@@ -189,12 +184,12 @@ impl Genesis {
         self.apply_fee_tokens_storage(&mut states);
 
         // insert universal deployer related data
-        if let Some(udc) = &self.universal_deployer {
-            let storage = udc.storage.clone().unwrap_or_default();
+        // if let Some(udc) = &self.universal_deployer {
+        //     let storage = udc.storage.clone().unwrap_or_default();
 
-            states.state_updates.deployed_contracts.insert(udc.address, udc.class_hash);
-            states.state_updates.storage_updates.insert(udc.address, storage);
-        }
+        //     states.state_updates.deployed_contracts.insert(udc.address, udc.class_hash);
+        //     states.state_updates.storage_updates.insert(udc.address, storage);
+        // }
 
         states
     }
@@ -278,21 +273,6 @@ impl Default for Genesis {
     /// classes are a legacy ERC20 class for the fee token, a legacy UDC class for the
     /// universal deployer, and an OpenZeppelin account contract class.
     fn default() -> Self {
-        let fee_token = FeeTokenConfig {
-            decimals: 18,
-            name: "Ether".into(),
-            symbol: "ETH".into(),
-            address: DEFAULT_ETH_FEE_TOKEN_ADDRESS,
-            class_hash: DEFAULT_LEGACY_ERC20_CLASS_HASH,
-            storage: None,
-        };
-
-        let universal_deployer = UniversalDeployerConfig {
-            address: DEFAULT_UDC_ADDRESS,
-            class_hash: DEFAULT_LEGACY_UDC_CLASS_HASH,
-            storage: None,
-        };
-
         let classes = BTreeMap::from([
             (
                 DEFAULT_LEGACY_ERC20_CLASS_HASH,
@@ -338,8 +318,6 @@ impl Default for Genesis {
             sequencer_address: Felt::ZERO.into(),
             classes,
             allocations: BTreeMap::new(),
-            fee_token,
-            universal_deployer: Some(universal_deployer),
         }
     }
 }
@@ -455,7 +433,7 @@ mod tests {
 
         let genesis = Genesis {
             classes,
-            fee_token: fee_token.clone(),
+            // fee_token: fee_token.clone(),
             allocations: BTreeMap::from(allocations.clone()),
             number: 0,
             timestamp: 5123512314u64,
@@ -463,7 +441,7 @@ mod tests {
             parent_hash: felt!("0x999"),
             sequencer_address: address!("0x100"),
             gas_prices: GasPrices { eth: 1111, strk: 2222 },
-            universal_deployer: Some(ud.clone()),
+            // universal_deployer: Some(ud.clone()),
         };
 
         // setup expected storage values
