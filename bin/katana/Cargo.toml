@@ -2,7 +2,7 @@
 description = "A fast and lightweight local Starknet development sequencer."
 edition.workspace = true
 license-file.workspace = true
-name = "katana"
+name = "katana-cli"
 repository.workspace = true
 version.workspace = true
 
