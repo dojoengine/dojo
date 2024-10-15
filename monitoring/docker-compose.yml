@@ -1,0 +1,45 @@
+name: "katana"
+
+services:
+  katana:
+    restart: unless-stopped
+    image: ghcr.io/dojoengine/dojo
+    ports:
+      - "5050:5050" # rpc
+      - "9001:9001" # metrics
+    command: >
+      katana
+      --metrics 9001
+      --host 0.0.0.0 --port 5050
+
+  prometheus:
+    restart: unless-stopped
+    image: prom/prometheus
+    depends_on:
+      - katana
+    ports:
+      - 9090:9090
+    volumes:
+      - ./prometheus/:/etc/prometheus/
+      - prometheusdata:/prometheus
+    command:
+      - --config.file=/etc/prometheus/config.yml
+      - --storage.tsdb.path=/prometheus
+
+  grafana:
+    restart: unless-stopped
+    image: grafana/grafana
+    depends_on:
+      - prometheus
+    ports:
+      - 3000:3000
+    volumes:
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources
+      - grafanadata:/var/lib/grafana
+
+volumes:
+  prometheusdata:
+    driver: local
+  grafanadata:
+    driver: local
