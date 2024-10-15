@@ -50,50 +50,51 @@ use crate::utils::{parse_genesis, parse_seed};
 
 #[derive(Parser, Debug)]
 pub struct NodeArgs {
+    /// Don't print anything on startup.
     #[arg(long)]
-    #[arg(help = "Don't print anything on startup.")]
     pub silent: bool,
 
+    /// Disable auto and interval mining, and mine on demand instead via an endpoint.
     #[arg(long)]
     #[arg(conflicts_with = "block_time")]
-    #[arg(help = "Disable auto and interval mining, and mine on demand instead via an endpoint.")]
     pub no_mining: bool,
 
+    /// Block time in milliseconds for interval mining.
     #[arg(short, long)]
     #[arg(value_name = "MILLISECONDS")]
-    #[arg(help = "Block time in milliseconds for interval mining.")]
     pub block_time: Option<u64>,
 
+    /// Directory path of the database to initialize from.
+    ///
+    /// The path must either be an empty directory or a directory which already contains a
+    /// previously initialized Katana database.
     #[arg(long)]
     #[arg(value_name = "PATH")]
-    #[arg(help = "Directory path of the database to initialize from.")]
-    #[arg(long_help = "Directory path of the database to initialize from. The path must either \
-                       be an empty directory or a directory which already contains a previously \
-                       initialized Katana database.")]
     pub db_dir: Option<PathBuf>,
 
+    /// The Starknet RPC provider to fork the network from.
     #[arg(long)]
     #[arg(value_name = "URL")]
-    #[arg(help = "The Starknet RPC provider to fork the network from.")]
     pub rpc_url: Option<Url>,
 
+    /// Output logs in JSON format.
     #[arg(long)]
-    #[arg(help = "Output logs in JSON format.")]
     pub json_log: bool,
 
+    /// Fork the network at a specific block.
     #[arg(long)]
     #[arg(requires = "rpc_url")]
     #[arg(value_name = "BLOCK_NUMBER")]
-    #[arg(help = "Fork the network at a specific block.")]
     pub fork_block_number: Option<u64>,
 
+    /// Configure the messaging with an other chain.
+    ///
+    /// Configure the messaging to allow Katana listening/sending messages on a
+    /// settlement chain that can be Ethereum or an other Starknet sequencer.
+    /// The configuration file details and examples can be found here: https://book.dojoengine.org/toolchain/katana/reference#messaging
     #[arg(long)]
     #[arg(value_name = "PATH")]
     #[arg(value_parser = katana_core::service::messaging::MessagingConfig::parse)]
-    #[arg(help = "Configure the messaging with an other chain.")]
-    #[arg(long_help = "Configure the messaging to allow Katana listening/sending messages on a \
-                       settlement chain that can be Ethereum or an other Starknet sequencer. \
-                       The configuration file details and examples can be found here: https://book.dojoengine.org/toolchain/katana/reference#messaging")]
     pub messaging: Option<MessagingConfig>,
 
     #[command(flatten)]
@@ -139,24 +140,24 @@ pub struct MetricsOptions {
 #[derive(Debug, Args, Clone)]
 #[command(next_help_heading = "Server options")]
 pub struct ServerOptions {
+    /// HTTP-RPC server listening interface.
     #[arg(long = "http.addr", value_name = "ADDRESS")]
     #[arg(default_value_t = DEFAULT_RPC_ADDR)]
-    #[arg(help = "The IP address the server will listen on.")]
     pub http_addr: IpAddr,
 
+    /// HTTP-RPC server listening port.
     #[arg(long = "http.port", value_name = "PORT")]
     #[arg(default_value_t = DEFAULT_RPC_PORT)]
-    #[arg(help = "Port number to listen on.")]
     pub http_port: u16,
 
+    /// Comma separated list of domains from which to accept cross origin requests.
     #[arg(long = "http.corsdomain")]
     #[arg(value_delimiter = ',')]
-    #[arg(help = "Enables the CORS layer and sets the allowed origins, separated by commas.")]
     pub http_cors_domain: Option<Vec<String>>,
 
+    /// Maximum number of concurrent connections allowed.
     #[arg(long = "rpc.max-connections", value_name = "COUNT")]
     #[arg(default_value_t = DEFAULT_RPC_MAX_CONNECTIONS)]
-    #[arg(help = "Maximum number of concurrent connections allowed.")]
     pub max_connections: u32,
 }
 
@@ -175,33 +176,34 @@ pub struct StarknetOptions {
 #[derive(Debug, Args, Clone)]
 #[command(next_help_heading = "Environment options")]
 pub struct EnvironmentOptions {
+    /// The chain ID.
+    ///
+    /// The chain ID. If a raw hex string (`0x` prefix) is provided, then it'd
+    /// used as the actual chain ID. Otherwise, it's represented as the raw
+    /// ASCII values. It must be a valid Cairo short string.
     #[arg(long)]
-    #[arg(help = "The chain ID.")]
-    #[arg(long_help = "The chain ID. If a raw hex string (`0x` prefix) is provided, then it'd \
-                       used as the actual chain ID. Otherwise, it's represented as the raw \
-                       ASCII values. It must be a valid Cairo short string.")]
     #[arg(value_parser = ChainId::parse)]
     pub chain_id: Option<ChainId>,
 
+    /// The maximum number of steps available for the account validation logic.
     #[arg(long)]
-    #[arg(help = "The maximum number of steps available for the account validation logic.")]
     #[arg(default_value_t = DEFAULT_VALIDATE_MAX_STEPS)]
     pub validate_max_steps: u32,
 
+    /// The maximum number of steps available for the account execution logic.
     #[arg(long)]
-    #[arg(help = "The maximum number of steps available for the account execution logic.")]
     #[arg(default_value_t = DEFAULT_INVOKE_MAX_STEPS)]
     pub invoke_max_steps: u32,
 
+    /// The L1 ETH gas price. (denominated in wei)
     #[arg(long = "eth-gas-price")]
     #[arg(conflicts_with = "genesis")]
-    #[arg(help = "The L1 ETH gas price. (denominated in wei)")]
     #[arg(default_value_t = DEFAULT_ETH_L1_GAS_PRICE)]
     pub l1_eth_gas_price: u128,
 
+    /// The L1 STRK gas price. (denominated in fri)
     #[arg(long = "strk-gas-price")]
     #[arg(conflicts_with = "genesis")]
-    #[arg(help = "The L1 STRK gas price. (denominated in fri)")]
     #[arg(default_value_t = DEFAULT_STRK_L1_GAS_PRICE)]
     pub l1_strk_gas_price: u128,
 }
