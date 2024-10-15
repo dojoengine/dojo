@@ -78,9 +78,6 @@ pub struct NodeArgs {
     pub rpc_url: Option<Url>,
 
     #[arg(long)]
-    pub dev: bool,
-
-    #[arg(long)]
     #[arg(help = "Output logs in JSON format.")]
     pub json_log: bool,
 
@@ -107,6 +104,9 @@ pub struct NodeArgs {
 
     #[command(flatten)]
     pub starknet: StarknetOptions,
+
+    #[command(flatten)]
+    pub development: DevOptions,
 
     #[cfg(feature = "slot")]
     #[command(flatten)]
@@ -163,25 +163,6 @@ pub struct ServerOptions {
 #[derive(Debug, Args, Clone)]
 #[command(next_help_heading = "Starknet options")]
 pub struct StarknetOptions {
-    #[arg(long)]
-    #[arg(default_value = "0")]
-    #[arg(help = "Specify the seed for randomness of accounts to be predeployed.")]
-    pub seed: String,
-
-    #[arg(long = "accounts")]
-    #[arg(value_name = "NUM")]
-    #[arg(default_value_t = 10)]
-    #[arg(help = "Number of pre-funded accounts to generate.")]
-    pub total_accounts: u16,
-
-    #[arg(long)]
-    #[arg(help = "Disable charging fee when executing transactions.")]
-    pub disable_fee: bool,
-
-    #[arg(long)]
-    #[arg(help = "Disable validation when executing transactions.")]
-    pub disable_validate: bool,
-
     #[command(flatten)]
     pub environment: EnvironmentOptions,
 
@@ -223,6 +204,35 @@ pub struct EnvironmentOptions {
     #[arg(help = "The L1 STRK gas price. (denominated in fri)")]
     #[arg(default_value_t = DEFAULT_STRK_L1_GAS_PRICE)]
     pub l1_strk_gas_price: u128,
+}
+
+#[derive(Debug, Args, Clone)]
+#[command(next_help_heading = "Development options")]
+pub struct DevOptions {
+    /// Enable development mode.
+    #[arg(long)]
+    pub dev: bool,
+
+    /// Specify the seed for randomness of accounts to be predeployed.
+    #[arg(requires = "dev")]
+    #[arg(long = "dev.seed", default_value = "0")]
+    pub seed: String,
+
+    /// Number of pre-funded accounts to generate.
+    #[arg(requires = "dev")]
+    #[arg(long = "dev.accounts", value_name = "NUM")]
+    #[arg(default_value_t = 10)]
+    pub total_accounts: u16,
+
+    /// Disable charging fee when executing transactions.
+    #[arg(requires = "dev")]
+    #[arg(long = "dev.disable-fee")]
+    pub disable_fee: bool,
+
+    /// Skip account validation when executing transactions.
+    #[arg(requires = "dev")]
+    #[arg(long = "dev.disable-account-validation")]
+    pub disable_validate: bool,
 }
 
 #[cfg(feature = "slot")]
@@ -314,7 +324,7 @@ impl NodeArgs {
     fn rpc_config(&self) -> RpcConfig {
         let mut apis = HashSet::from([ApiKind::Starknet, ApiKind::Torii, ApiKind::Saya]);
         // only enable `katana` API in dev mode
-        if self.dev {
+        if self.development.dev {
             apis.insert(ApiKind::Dev);
         }
 
@@ -339,8 +349,8 @@ impl NodeArgs {
         }
 
         // generate dev accounts
-        let accounts = DevAllocationsGenerator::new(self.starknet.total_accounts)
-            .with_seed(parse_seed(&self.starknet.seed))
+        let accounts = DevAllocationsGenerator::new(self.development.total_accounts)
+            .with_seed(parse_seed(&self.development.seed))
             .with_balance(U256::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE))
             .generate();
 
@@ -359,8 +369,8 @@ impl NodeArgs {
 
     fn dev_config(&self) -> DevConfig {
         DevConfig {
-            fee: !self.starknet.disable_fee,
-            account_validation: !self.starknet.disable_validate,
+            fee: !self.development.disable_fee,
+            account_validation: !self.development.disable_validate,
         }
     }
 
@@ -391,7 +401,7 @@ impl NodeArgs {
 fn print_intro(args: &NodeArgs, chain: &ChainSpec) {
     let mut accounts = chain.genesis.accounts().peekable();
     let account_class_hash = accounts.peek().map(|e| e.1.class_hash());
-    let seed = &args.starknet.seed;
+    let seed = &args.development.seed;
 
     if args.json_log {
         info!(
