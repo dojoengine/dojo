@@ -20,7 +20,7 @@ use crate::genesis::constant::{
 use crate::genesis::Genesis;
 use crate::state::StateUpdatesWithDeclaredClasses;
 use crate::utils::split_u256;
-use crate::version::CURRENT_STARKNET_VERSION;
+use crate::version::{Version, CURRENT_STARKNET_VERSION};
 
 /// A chain specification.
 // TODO: include l1 core contract
@@ -33,6 +33,8 @@ pub struct ChainSpec {
     pub genesis: Genesis,
     /// The chain fee token contract.
     pub fee_contracts: FeeContracts,
+    /// The protocol version.
+    pub version: Version,
 }
 
 /// Tokens that can be used for transaction fee payments in the chain. As
@@ -49,7 +51,7 @@ pub struct FeeContracts {
 impl ChainSpec {
     pub fn block(&self) -> Block {
         let header = Header {
-            version: CURRENT_STARKNET_VERSION,
+            version: self.version.clone(),
             number: self.genesis.number,
             timestamp: self.genesis.timestamp,
             state_root: self.genesis.state_root,
@@ -155,7 +157,7 @@ lazy_static! {
         let id = ChainId::parse("KATANA").unwrap();
         let genesis = Genesis::default();
         let fee_contracts = FeeContracts { eth: DEFAULT_ETH_FEE_TOKEN_ADDRESS, strk: DEFAULT_STRK_FEE_TOKEN_ADDRESS };
-        ChainSpec { id, genesis, fee_contracts }
+        ChainSpec { id, genesis, fee_contracts, version: CURRENT_STARKNET_VERSION }
     };
 }
 
@@ -314,6 +316,7 @@ mod tests {
         ];
         let chain_spec = ChainSpec {
             id: ChainId::SEPOLIA,
+            version: CURRENT_STARKNET_VERSION,
             genesis: Genesis {
                 classes,
                 allocations: BTreeMap::from(allocations.clone()),
