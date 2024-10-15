@@ -104,7 +104,7 @@ impl Node {
     /// This method will start all the node process, running them until the node is stopped.
     pub async fn launch(self) -> Result<LaunchedNode> {
         if let Some(ref cfg) = self.metrics_config {
-            let addr = cfg.addr;
+            let addr = cfg.socket_addr();
             let mut reports = Vec::new();
 
             if let Some(ref db) = self.db {
