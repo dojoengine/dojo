@@ -32,14 +32,22 @@ impl std::default::Default for Version {
     }
 }
 
+/// Formats the version as a string, where each segment is separated by a dot.
+/// The last segment (fourth part) will not be printed if it's zero.
+///
+/// For example:
+/// - Version::new([1, 2, 3, 4]) will be displayed as "1.2.3.4"
+/// - Version::new([1, 2, 3, 0]) will be displayed as "1.2.3"
+/// - Version::new([0, 2, 3, 0]) will be displayed as "0.2.3"
 impl std::fmt::Display for Version {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for (i, segment) in self.segments.iter().enumerate() {
-            if i == self.segments.len() - 1 {
-                if i != 0 {
+        for (idx, segment) in self.segments.iter().enumerate() {
+            // If it's the last segment, don't print it if it's zero.
+            if idx == self.segments.len() - 1 {
+                if *segment != 0 {
                     write!(f, ".{segment}")?;
                 }
-            } else if i == 0 {
+            } else if idx == 0 {
                 write!(f, "{segment}")?;
             } else {
                 write!(f, ".{segment}")?;
@@ -85,7 +93,7 @@ mod tests {
         let version = "1.9.0.0";
         let parsed = Version::parse(version).unwrap();
         assert_eq!(parsed.segments, [1, 9, 0, 0]);
-        assert_eq!(String::from("1.9.0.0"), parsed.to_string());
+        assert_eq!(String::from("1.9.0"), parsed.to_string());
     }
 
     #[test]
