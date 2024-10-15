@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728960262080,
+  "lastUpdate": 1729016730302,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -25885,6 +25885,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7557731,
             "range": "± 253096",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cddb99ecf7eb8e38f8212bdd60cae8f052b4377d",
+          "message": "refactor(katana): remove fee tokens & udc declaration from genesis (#2541)",
+          "timestamp": "2024-10-16T02:09:10+08:00",
+          "tree_id": "1d7e5285593a4c3dfad8662e4accdbca04a54201",
+          "url": "https://github.com/dojoengine/dojo/commit/cddb99ecf7eb8e38f8212bdd60cae8f052b4377d"
+        },
+        "date": 1729016728002,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 12254390771,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
