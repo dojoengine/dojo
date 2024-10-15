@@ -9,7 +9,8 @@ services:
       - "9001:9001" # metrics
     command: >
       katana
-      --metrics 9001
+      --db-dir .katana/data-dir
+      --metrics 0.0.0.0:9001
       --host 0.0.0.0 --port 5050
 
   prometheus:
