@@ -313,20 +313,19 @@ pub async fn spawn<EF: ExecutorFactory>(
             .allow_methods([Method::POST, Method::GET])
             .allow_headers([hyper::header::CONTENT_TYPE, "argent-client".parse().unwrap(), "argent-version".parse().unwrap()]);
 
-    let cors =
-        config.allowed_origins.clone().map(|allowed_origins| match allowed_origins.as_slice() {
-            [origin] if origin == "*" => cors.allow_origin(AllowOrigin::mirror_request()),
-            origins => cors.allow_origin(
-                origins
-                    .iter()
-                    .map(|o| {
-                        let _ = o.parse::<Uri>().expect("Invalid URI");
+    let cors = config.cors_domain.clone().map(|allowed_origins| match allowed_origins.as_slice() {
+        [origin] if origin == "*" => cors.allow_origin(AllowOrigin::mirror_request()),
+        origins => cors.allow_origin(
+            origins
+                .iter()
+                .map(|o| {
+                    let _ = o.parse::<Uri>().expect("Invalid URI");
 
-                        o.parse().expect("Invalid origin")
-                    })
-                    .collect::<Vec<_>>(),
-            ),
-        });
+                    o.parse().expect("Invalid origin")
+                })
+                .collect::<Vec<_>>(),
+        ),
+    });
 
     let middleware = tower::ServiceBuilder::new()
         .option_layer(cors)

@@ -125,16 +125,14 @@ pub struct MetricsOptions {
     pub metrics: bool,
 
     /// The metrics will be served at the given address.
-    #[arg(long = "metrics.addr")]
-    #[arg(value_name = "ADD")]
     #[arg(requires = "metrics")]
+    #[arg(long = "metrics.addr", value_name = "ADDRESS")]
     #[arg(default_value_t = DEFAULT_METRICS_ADDR)]
     pub metrics_addr: IpAddr,
 
     /// The metrics will be served at the given port.
-    #[arg(long = "metrics.port")]
-    #[arg(value_name = "PORT")]
     #[arg(requires = "metrics")]
+    #[arg(long = "metrics.port", value_name = "PORT")]
     #[arg(default_value_t = DEFAULT_METRICS_PORT)]
     pub metrics_port: u16,
 }
@@ -142,25 +140,25 @@ pub struct MetricsOptions {
 #[derive(Debug, Args, Clone)]
 #[command(next_help_heading = "Server options")]
 pub struct ServerOptions {
-    #[arg(short, long)]
-    #[arg(default_value_t = DEFAULT_RPC_PORT)]
-    #[arg(help = "Port number to listen on.")]
-    pub port: u16,
-
-    #[arg(long)]
+    #[arg(long = "http.addr", value_name = "ADDRESS")]
     #[arg(default_value_t = DEFAULT_RPC_ADDR)]
     #[arg(help = "The IP address the server will listen on.")]
-    pub host: IpAddr,
+    pub http_addr: IpAddr,
 
-    #[arg(long)]
+    #[arg(long = "http.port", value_name = "PORT")]
+    #[arg(default_value_t = DEFAULT_RPC_PORT)]
+    #[arg(help = "Port number to listen on.")]
+    pub http_port: u16,
+
+    #[arg(long = "http.corsdomain")]
+    #[arg(value_delimiter = ',')]
+    #[arg(help = "Enables the CORS layer and sets the allowed origins, separated by commas.")]
+    pub http_cors_domain: Option<Vec<String>>,
+
+    #[arg(long = "rpc.max-connections", value_name = "COUNT")]
     #[arg(default_value_t = DEFAULT_RPC_MAX_CONNECTIONS)]
     #[arg(help = "Maximum number of concurrent connections allowed.")]
     pub max_connections: u32,
-
-    #[arg(long)]
-    #[arg(value_delimiter = ',')]
-    #[arg(help = "Enables the CORS layer and sets the allowed origins, separated by commas.")]
-    pub allowed_origins: Option<Vec<String>>,
 }
 
 #[derive(Debug, Args, Clone)]
@@ -329,10 +327,10 @@ impl NodeArgs {
 
         RpcConfig {
             apis,
-            port: self.server.port,
-            addr: self.server.host,
+            port: self.server.http_port,
+            addr: self.server.http_addr,
             max_connections: self.server.max_connections,
-            allowed_origins: self.server.allowed_origins.clone(),
+            cors_domain: self.server.http_cors_domain.clone(),
         }
     }
 
