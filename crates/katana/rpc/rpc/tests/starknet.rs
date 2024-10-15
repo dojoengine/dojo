@@ -8,14 +8,14 @@ use anyhow::Result;
 use assert_matches::assert_matches;
 use cainome::rs::abigen_legacy;
 use common::split_felt;
-use dojo_test_utils::sequencer::{get_default_test_config, TestSequencer};
+use dojo_test_utils::sequencer::{TestSequencer, get_default_test_config};
 use indexmap::IndexSet;
 use jsonrpsee::http_client::HttpClientBuilder;
 use katana_node::config::SequencingConfig;
 use katana_primitives::event::ContinuationToken;
 use katana_primitives::genesis::constant::{
-    DEFAULT_ACCOUNT_CLASS_HASH, DEFAULT_ETH_FEE_TOKEN_ADDRESS, DEFAULT_PREFUNDED_ACCOUNT_BALANCE,
-    DEFAULT_STRK_FEE_TOKEN_ADDRESS, DEFAULT_UDC_ADDRESS,
+    DEFAULT_ACCOUNT_CLASS_HASH, DEFAULT_ETH_ETH_FEE_TOKEN_ADDRESS,
+    DEFAULT_PREFUNDED_ACCOUNT_BALANCE, DEFAULT_STRK_FEE_TOKEN_ADDRESS, DEFAULT_UDC_ADDRESS,
 };
 use katana_rpc_api::dev::DevApiClient;
 use starknet::accounts::{
