@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1729016730302,
+  "lastUpdate": 1729016888702,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -25915,6 +25915,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 12254390771,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cddb99ecf7eb8e38f8212bdd60cae8f052b4377d",
+          "message": "refactor(katana): remove fee tokens & udc declaration from genesis (#2541)",
+          "timestamp": "2024-10-16T02:09:10+08:00",
+          "tree_id": "1d7e5285593a4c3dfad8662e4accdbca04a54201",
+          "url": "https://github.com/dojoengine/dojo/commit/cddb99ecf7eb8e38f8212bdd60cae8f052b4377d"
+        },
+        "date": 1729016887249,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16345451,
+            "range": "± 207069",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 4367938,
+            "range": "± 315986",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3583027909,
+            "range": "± 810220436",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4495595,
+            "range": "± 119489",
             "unit": "ns/iter"
           }
         ]
