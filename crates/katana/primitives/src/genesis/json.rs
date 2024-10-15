@@ -546,6 +546,7 @@ mod tests {
 
     use super::*;
     use crate::address;
+    use crate::genesis::constant::{DEFAULT_LEGACY_ERC20_CASM, DEFAULT_LEGACY_UDC_CASM};
 
     #[test]
     fn deserialize_from_json() {
@@ -713,6 +714,22 @@ mod tests {
         let actual_genesis = Genesis::try_from(json).unwrap();
 
         let expected_classes = BTreeMap::from([
+            (
+                felt!("0x8"),
+                GenesisClass {
+                    compiled_class_hash: felt!("0x8"),
+                    casm: DEFAULT_LEGACY_ERC20_CASM.clone().into(),
+                    sierra: None,
+                },
+            ),
+            (
+                felt!("0x80085"),
+                GenesisClass {
+                    compiled_class_hash: felt!("0x80085"),
+                    casm: DEFAULT_LEGACY_UDC_CASM.clone().into(),
+                    sierra: None,
+                },
+            ),
             (
                 DEFAULT_ACCOUNT_CLASS_HASH,
                 GenesisClass {

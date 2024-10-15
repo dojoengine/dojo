@@ -328,7 +328,7 @@ impl NodeArgs {
         chain_spec.genesis.extend_allocations(accounts.into_iter().map(|(k, v)| (k, v.into())));
         chain_spec.genesis.sequencer_address = *DEFAULT_SEQUENCER_ADDRESS;
         chain_spec.genesis.gas_prices.eth = self.starknet.environment.l1_eth_gas_price;
-        chain_spec.genesis.gas_prices.eth = self.starknet.environment.l1_strk_gas_price;
+        chain_spec.genesis.gas_prices.strk = self.starknet.environment.l1_strk_gas_price;
 
         #[cfg(feature = "slot")]
         if self.slot.controller {

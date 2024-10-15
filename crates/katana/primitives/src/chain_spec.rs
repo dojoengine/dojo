@@ -47,8 +47,8 @@ pub struct FeeContracts {
 }
 
 impl ChainSpec {
-    pub fn genesis_header(&self) -> Header {
-        Header {
+    pub fn block(&self) -> Block {
+        let header = Header {
             version: CURRENT_STARKNET_VERSION,
             number: self.genesis.number,
             timestamp: self.genesis.timestamp,
@@ -56,11 +56,7 @@ impl ChainSpec {
             parent_hash: self.genesis.parent_hash,
             gas_prices: self.genesis.gas_prices.clone(),
             sequencer_address: self.genesis.sequencer_address,
-        }
-    }
-
-    pub fn block(&self) -> Block {
-        let header = self.genesis_header();
+        };
         Block { header, body: Vec::new() }
     }
 
@@ -100,7 +96,7 @@ impl ChainSpec {
         //-- Fee tokens
 
         // -- ETH
-        Self::add_fee_token(
+        add_fee_token(
             &mut states,
             "Ether",
             "ETH",
@@ -111,7 +107,7 @@ impl ChainSpec {
         );
 
         // -- STRK
-        Self::add_fee_token(
+        add_fee_token(
             &mut states,
             "Starknet Token",
             "STRK",
@@ -129,55 +125,6 @@ impl ChainSpec {
             .insert(DEFAULT_UDC_ADDRESS, DEFAULT_LEGACY_UDC_CLASS_HASH);
 
         states
-    }
-
-    fn add_fee_token(
-        states: &mut StateUpdatesWithDeclaredClasses,
-        name: &str,
-        symbol: &str,
-        decimals: u8,
-        address: ContractAddress,
-        class_hash: ClassHash,
-        allocations: &BTreeMap<ContractAddress, GenesisAllocation>,
-    ) {
-        let mut storage = BTreeMap::new();
-        let mut total_supply = U256::ZERO;
-
-        // --- set the ERC20 balances for each allocations that have a balance
-
-        for (address, alloc) in allocations {
-            if let Some(balance) = alloc.balance() {
-                total_supply += balance;
-                let (low, high) = split_u256(balance);
-
-                // the base storage address for a standard ERC20 contract balance
-                let bal_base_storage_var = get_fee_token_balance_base_storage_address(*address);
-
-                // the storage address of low u128 of the balance
-                let low_bal_storage_var = bal_base_storage_var;
-                // the storage address of high u128 of the balance
-                let high_bal_storage_var = bal_base_storage_var + Felt::ONE;
-
-                storage.insert(low_bal_storage_var, low);
-                storage.insert(high_bal_storage_var, high);
-            }
-        }
-
-        // --- ERC20 metadata
-
-        let name = cairo_short_string_to_felt(name).unwrap();
-        let symbol = cairo_short_string_to_felt(symbol).unwrap();
-        let decimals = decimals.into();
-        let (total_supply_low, total_supply_high) = split_u256(total_supply);
-
-        storage.insert(ERC20_NAME_STORAGE_SLOT, name);
-        storage.insert(ERC20_SYMBOL_STORAGE_SLOT, symbol);
-        storage.insert(ERC20_DECIMAL_STORAGE_SLOT, decimals);
-        storage.insert(ERC20_TOTAL_SUPPLY_STORAGE_SLOT, total_supply_low);
-        storage.insert(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + Felt::ONE, total_supply_high);
-
-        states.state_updates.deployed_contracts.insert(address, class_hash);
-        states.state_updates.storage_updates.insert(address, storage);
     }
 }
 
@@ -209,6 +156,55 @@ lazy_static! {
         let fee_contracts = FeeContracts { eth: DEFAULT_ETH_FEE_TOKEN_ADDRESS, strk: DEFAULT_STRK_FEE_TOKEN_ADDRESS };
         ChainSpec { id, genesis, fee_contracts }
     };
+}
+
+fn add_fee_token(
+    states: &mut StateUpdatesWithDeclaredClasses,
+    name: &str,
+    symbol: &str,
+    decimals: u8,
+    address: ContractAddress,
+    class_hash: ClassHash,
+    allocations: &BTreeMap<ContractAddress, GenesisAllocation>,
+) {
+    let mut storage = BTreeMap::new();
+    let mut total_supply = U256::ZERO;
+
+    // --- set the ERC20 balances for each allocations that have a balance
+
+    for (address, alloc) in allocations {
+        if let Some(balance) = alloc.balance() {
+            total_supply += balance;
+            let (low, high) = split_u256(balance);
+
+            // the base storage address for a standard ERC20 contract balance
+            let bal_base_storage_var = get_fee_token_balance_base_storage_address(*address);
+
+            // the storage address of low u128 of the balance
+            let low_bal_storage_var = bal_base_storage_var;
+            // the storage address of high u128 of the balance
+            let high_bal_storage_var = bal_base_storage_var + Felt::ONE;
+
+            storage.insert(low_bal_storage_var, low);
+            storage.insert(high_bal_storage_var, high);
+        }
+    }
+
+    // --- ERC20 metadata
+
+    let name = cairo_short_string_to_felt(name).unwrap();
+    let symbol = cairo_short_string_to_felt(symbol).unwrap();
+    let decimals = decimals.into();
+    let (total_supply_low, total_supply_high) = split_u256(total_supply);
+
+    storage.insert(ERC20_NAME_STORAGE_SLOT, name);
+    storage.insert(ERC20_SYMBOL_STORAGE_SLOT, symbol);
+    storage.insert(ERC20_DECIMAL_STORAGE_SLOT, decimals);
+    storage.insert(ERC20_TOTAL_SUPPLY_STORAGE_SLOT, total_supply_low);
+    storage.insert(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + Felt::ONE, total_supply_high);
+
+    states.state_updates.deployed_contracts.insert(address, class_hash);
+    states.state_updates.storage_updates.insert(address, storage);
 }
 
 #[cfg(test)]

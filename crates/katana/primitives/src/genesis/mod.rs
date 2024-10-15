@@ -23,7 +23,7 @@ use crate::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraC
 use crate::contract::ContractAddress;
 use crate::Felt;
 
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[derive(Clone, Serialize, PartialEq, Eq)]
 pub struct GenesisClass {
     /// The compiled class hash of the contract class.
     pub compiled_class_hash: CompiledClassHash,
@@ -33,6 +33,16 @@ pub struct GenesisClass {
     /// The sierra class definition.
     #[serde(skip_serializing)]
     pub sierra: Option<Arc<FlattenedSierraClass>>,
+}
+
+impl core::fmt::Debug for GenesisClass {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("GenesisClass")
+            .field("compiled_class_hash", &self.compiled_class_hash)
+            .field("casm", &"...")
+            .field("sierra", &"...")
+            .finish()
+    }
 }
 
 /// Genesis block configuration.
