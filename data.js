@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728931698097,
+  "lastUpdate": 1728959998498,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -25807,6 +25807,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4511718,
             "range": "± 203999",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "547ad8baebc48718aca5150dfd979b7ec1614173",
+          "message": "docs(katana): docker compose example for setting up monitoring services (#2538)",
+          "timestamp": "2024-10-15T10:24:11+08:00",
+          "tree_id": "9bc7ba24c3d8e4db013f6d5b9470ec0314ebeafd",
+          "url": "https://github.com/dojoengine/dojo/commit/547ad8baebc48718aca5150dfd979b7ec1614173"
+        },
+        "date": 1728959997068,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11902137964,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
