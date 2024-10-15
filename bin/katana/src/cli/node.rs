@@ -413,16 +413,16 @@ ACCOUNTS SEED
 fn print_genesis_contracts(chain: &ChainSpec, account_class_hash: Option<ClassHash>) {
     println!(
         r"
-    PREDEPLOYED CONTRACTS
-    ==================
+PREDEPLOYED CONTRACTS
+==================
 
-    | Contract        | ETH Fee Token
-    | Address         | {}
-    | Class Hash      | {},
+| Contract        | ETH Fee Token
+| Address         | {}
+| Class Hash      | {:#064x}
 
-    | Contract        | STRK Fee Token
-    | Address         | {}
-    | Class Hash      | {}",
+| Contract        | STRK Fee Token
+| Address         | {}
+| Class Hash      | {:#064x}",
         chain.fee_contracts.eth,
         DEFAULT_LEGACY_ERC20_CLASS_HASH,
         chain.fee_contracts.strk,
@@ -431,17 +431,17 @@ fn print_genesis_contracts(chain: &ChainSpec, account_class_hash: Option<ClassHa
 
     println!(
         r"
-    | Contract        | Universal Deployer
-    | Address         | {}
-    | Class Hash      | {}",
+| Contract        | Universal Deployer
+| Address         | {}
+| Class Hash      | {:#064x}",
         DEFAULT_UDC_ADDRESS, DEFAULT_LEGACY_UDC_CLASS_HASH
     );
 
     if let Some(hash) = account_class_hash {
         println!(
             r"
-    | Contract        | Account Contract
-    | Class Hash      | {hash:#064x}"
+| Contract        | Account Contract
+| Class Hash      | {hash:#064x}"
         )
     }
 }
