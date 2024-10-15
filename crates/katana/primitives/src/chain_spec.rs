@@ -151,7 +151,7 @@ lazy_static! {
     ///
     /// Used when we want to create a chain spec with user defined # of allocations.
     pub static ref DEV_UNALLOCATED: ChainSpec = {
-        let id = ChainId::SEPOLIA;
+        let id = ChainId::parse("KATANA").unwrap();
         let genesis = Genesis::default();
         let fee_contracts = FeeContracts { eth: DEFAULT_ETH_FEE_TOKEN_ADDRESS, strk: DEFAULT_STRK_FEE_TOKEN_ADDRESS };
         ChainSpec { id, genesis, fee_contracts }
