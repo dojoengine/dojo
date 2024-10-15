@@ -7974,7 +7974,22 @@ dependencies = [
 ]
 
 [[package]]
-name = "katana"
+name = "katana-cairo"
+version = "1.0.0-alpha.16"
+dependencies = [
+ "cairo-lang-casm",
+ "cairo-lang-runner",
+ "cairo-lang-sierra",
+ "cairo-lang-sierra-to-casm",
+ "cairo-lang-starknet",
+ "cairo-lang-starknet-classes",
+ "cairo-lang-utils",
+ "cairo-vm 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "starknet_api",
+]
+
+[[package]]
+name = "katana-cli"
 version = "1.0.0-alpha.16"
 dependencies = [
  "alloy-primitives",
@@ -7998,21 +8013,6 @@ dependencies = [
  "tracing-log 0.1.4",
  "tracing-subscriber",
  "url",
-]
-
-[[package]]
-name = "katana-cairo"
-version = "1.0.0-alpha.16"
-dependencies = [
- "cairo-lang-casm",
- "cairo-lang-runner",
- "cairo-lang-sierra",
- "cairo-lang-sierra-to-casm",
- "cairo-lang-starknet",
- "cairo-lang-starknet-classes",
- "cairo-lang-utils",
- "cairo-vm 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "starknet_api",
 ]
 
 [[package]]
