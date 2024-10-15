@@ -28,7 +28,7 @@ num-bigint = "0.4.6"
 
 [dev-dependencies]
 assert_matches.workspace = true
-postcard = "1.0.10"
+postcard.workspace = true
 rstest.workspace = true
 similar-asserts.workspace = true
 
