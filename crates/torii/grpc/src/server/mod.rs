@@ -865,7 +865,7 @@ fn map_row_to_entity(
         .map(|schema| {
             let mut ty = schema.clone();
             map_row_to_ty("", &schema.name(), &mut ty, row, arrays_rows)?;
-            Ok(schema.as_struct().unwrap().clone().into())
+            Ok(ty.as_struct().unwrap().clone().into())
         })
         .collect::<Result<Vec<_>, Error>>()?;
 
