@@ -511,6 +511,7 @@ impl DojoWorld {
     pub(crate) async fn query_by_member(
         &self,
         table: &str,
+        model_relation_table: &str,
         entity_relation_column: &str,
         member_clause: proto::types::MemberClause,
         limit: Option<u32>,
@@ -534,8 +535,32 @@ impl DojoWorld {
             .split_once('-')
             .ok_or(QueryError::InvalidNamespacedModel(member_clause.model.clone()))?;
 
+        let models_query = format!(
+            r#"
+            SELECT group_concat({model_relation_table}.model_id) as model_ids
+            FROM {table}
+            JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
+            GROUP BY {table}.id
+            HAVING INSTR(model_ids, '{:#x}') > 0
+            LIMIT 1
+        "#,
+            compute_selector_from_names(namespace, model)
+        );
+        let models_str: Option<String> =
+            sqlx::query_scalar(&models_query).fetch_optional(&self.pool).await?;
+        if models_str.is_none() {
+            return Ok((Vec::new(), 0));
+        }
+
+        let models_str = models_str.unwrap();
+
+        let model_ids = models_str
+            .split(',')
+            .map(Felt::from_str)
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(ParseError::FromStr)?;
         let schemas =
-            self.model_cache.models(&[compute_selector_from_names(namespace, model)]).await?.into_iter().map(|m| m.schema).collect();
+            self.model_cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect();
 
         let model = member_clause.model.clone();
         let parts: Vec<&str> = member_clause.member.split('.').collect();
@@ -758,6 +783,7 @@ impl DojoWorld {
                     ClauseType::Member(member) => {
                         self.query_by_member(
                             table,
+                            model_relation_table,
                             entity_relation_column,
                             member,
                             Some(query.limit),
@@ -835,7 +861,7 @@ fn map_row_to_entity(
 ) -> Result<proto::types::Entity, Error> {
     let hashed_keys = Felt::from_str(&row.get::<String, _>("id")).map_err(ParseError::FromStr)?;
     let models = schemas
-        .iter()
+        .par_iter()
         .map(|schema| {
             let mut ty = schema.clone();
             map_row_to_ty("", &schema.name(), &mut ty, row, arrays_rows)?;
