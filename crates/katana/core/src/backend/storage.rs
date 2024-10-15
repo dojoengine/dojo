@@ -2,7 +2,6 @@ use anyhow::{anyhow, Result};
 use katana_db::mdbx::DbEnv;
 use katana_primitives::block::{BlockHash, FinalityStatus, SealedBlockWithStatus};
 use katana_primitives::chain_spec::ChainSpec;
-use katana_primitives::genesis::Genesis;
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
 use katana_provider::providers::db::DbProvider;
 use katana_provider::traits::block::{BlockProvider, BlockWriter};

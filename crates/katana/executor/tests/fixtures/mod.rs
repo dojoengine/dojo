@@ -16,7 +16,6 @@ use katana_primitives::genesis::constant::{
     DEFAULT_ACCOUNT_CLASS_HASH, DEFAULT_ETH_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CLASS_HASH,
     DEFAULT_PREFUNDED_ACCOUNT_BALANCE,
 };
-use katana_primitives::genesis::Genesis;
 use katana_primitives::transaction::{
     DeclareTx, DeclareTxV2, DeclareTxWithClass, DeployAccountTx, DeployAccountTxV1, ExecutableTx,
     ExecutableTxWithHash, InvokeTx, InvokeTxV1,

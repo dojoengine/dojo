@@ -4,7 +4,6 @@ use katana_primitives::contract::{ContractAddress, Nonce};
 use katana_primitives::env::CfgEnv;
 use katana_primitives::genesis::allocation::GenesisAllocation;
 use katana_primitives::genesis::constant::DEFAULT_ETH_FEE_TOKEN_ADDRESS;
-use katana_primitives::genesis::Genesis;
 use katana_primitives::transaction::ExecutableTxWithHash;
 use katana_primitives::utils::transaction::compute_invoke_v1_tx_hash;
 use katana_primitives::Felt;

@@ -34,9 +34,13 @@ use katana_node::config::rpc::{
 use katana_node::config::{Config, SequencingConfig};
 use katana_primitives::chain::ChainId;
 use katana_primitives::chain_spec::{self, ChainSpec};
+use katana_primitives::class::ClassHash;
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::genesis::allocation::{DevAllocationsGenerator, GenesisAccountAlloc};
-use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
+use katana_primitives::genesis::constant::{
+    DEFAULT_LEGACY_ERC20_CLASS_HASH, DEFAULT_LEGACY_UDC_CLASS_HASH,
+    DEFAULT_PREFUNDED_ACCOUNT_BALANCE, DEFAULT_UDC_ADDRESS,
+};
 use katana_primitives::genesis::Genesis;
 use tracing::{info, Subscriber};
 use tracing_log::LogTracer;
@@ -229,8 +233,7 @@ impl NodeArgs {
         let node = katana_node::build(config).await.context("failed to build node")?;
 
         if !self.silent {
-            let genesis = &node.backend.chain_spec.genesis;
-            print_intro(&self, genesis);
+            print_intro(&self, &node.backend.chain_spec);
         }
 
         // Launch the node
@@ -362,8 +365,8 @@ impl NodeArgs {
     }
 }
 
-fn print_intro(args: &NodeArgs, genesis: &Genesis) {
-    let mut accounts = genesis.accounts().peekable();
+fn print_intro(args: &NodeArgs, chain: &ChainSpec) {
+    let mut accounts = chain.genesis.accounts().peekable();
     let account_class_hash = accounts.peek().map(|e| e.1.class_hash());
     let seed = &args.starknet.seed;
 
@@ -393,7 +396,7 @@ fn print_intro(args: &NodeArgs, genesis: &Genesis) {
             )
         );
 
-        // print_genesis_contracts(genesis, account_class_hash);
+        print_genesis_contracts(chain, account_class_hash);
         print_genesis_accounts(accounts);
 
         println!(
@@ -407,36 +410,41 @@ ACCOUNTS SEED
     }
 }
 
-// fn print_genesis_contracts(genesis: &Genesis, account_class_hash: Option<ClassHash>) {
-//     //     println!(
-//     //         r"
-//     // PREDEPLOYED CONTRACTS
-//     // ==================
+fn print_genesis_contracts(chain: &ChainSpec, account_class_hash: Option<ClassHash>) {
+    println!(
+        r"
+    PREDEPLOYED CONTRACTS
+    ==================
 
-//     // | Contract        | Fee Token
-//     // | Address         | {}
-//     // | Class Hash      | {:#064x}",
-//     //         genesis.fee_token.address, genesis.fee_token.class_hash,
-//     //     );
+    | Contract        | ETH Fee Token
+    | Address         | {}
+    | Class Hash      | {},
 
-//     //     if let Some(ref udc) = genesis.universal_deployer {
-//     //         println!(
-//     //             r"
-//     // | Contract        | Universal Deployer
-//     // | Address         | {}
-//     // | Class Hash      | {:#064x}",
-//     //             udc.address, udc.class_hash
-//     //         )
-//     //     }
+    | Contract        | STRK Fee Token
+    | Address         | {}
+    | Class Hash      | {}",
+        chain.fee_contracts.eth,
+        DEFAULT_LEGACY_ERC20_CLASS_HASH,
+        chain.fee_contracts.strk,
+        DEFAULT_LEGACY_ERC20_CLASS_HASH
+    );
 
-//     //     if let Some(hash) = account_class_hash {
-//     //         println!(
-//     //             r"
-//     // | Contract        | Account Contract
-//     // | Class Hash      | {hash:#064x}"
-//     //         )
-//     //     }
-// }
+    println!(
+        r"
+    | Contract        | Universal Deployer
+    | Address         | {}
+    | Class Hash      | {}",
+        DEFAULT_UDC_ADDRESS, DEFAULT_LEGACY_UDC_CLASS_HASH
+    );
+
+    if let Some(hash) = account_class_hash {
+        println!(
+            r"
+    | Contract        | Account Contract
+    | Class Hash      | {hash:#064x}"
+        )
+    }
+}
 
 fn print_genesis_accounts<'a, Accounts>(accounts: Accounts)
 where

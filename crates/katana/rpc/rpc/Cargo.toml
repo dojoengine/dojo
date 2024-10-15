@@ -21,7 +21,6 @@ katana-rpc-types.workspace = true
 katana-rpc-types-builder.workspace = true
 katana-tasks.workspace = true
 metrics.workspace = true
-serde_json.workspace = true
 starknet.workspace = true
 thiserror.workspace = true
 tracing.workspace = true

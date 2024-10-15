@@ -224,7 +224,9 @@ mod tests {
     use crate::block::{Block, GasPrices, Header};
     use crate::genesis::allocation::{GenesisAccount, GenesisAccountAlloc, GenesisContractAlloc};
     #[cfg(feature = "slot")]
-    use crate::genesis::constant::{CONTROLLER_ACCOUNT_CLASS, CONTROLLER_ACCOUNT_CLASS_CASM};
+    use crate::genesis::constant::{
+        CONTROLLER_ACCOUNT_CLASS, CONTROLLER_ACCOUNT_CLASS_CASM, CONTROLLER_CLASS_HASH,
+    };
     use crate::genesis::constant::{
         DEFAULT_ACCOUNT_CLASS, DEFAULT_ACCOUNT_CLASS_CASM, DEFAULT_ACCOUNT_CLASS_HASH,
         DEFAULT_ACCOUNT_COMPILED_CLASS_HASH, DEFAULT_LEGACY_ERC20_CASM,
