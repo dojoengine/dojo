@@ -173,8 +173,8 @@ pub async fn build(mut config: Config) -> Result<Node> {
         validate_max_n_steps: config.starknet.env.validate_max_steps,
         max_recursion_depth: MAX_RECURSION_DEPTH,
         fee_token_addresses: FeeTokenAddressses {
-            eth: config.chain.genesis.fee_token.address,
-            strk: Default::default(),
+            eth: config.chain.fee_contracts.eth,
+            strk: config.chain.fee_contracts.strk,
         },
     };
 
@@ -225,7 +225,7 @@ pub async fn build(mut config: Config) -> Result<Node> {
         let blockchain = Blockchain::new_from_forked(
             ForkedProvider::new(provider, forked_block_num.into()).unwrap(),
             block.block_hash,
-            &config.chain.genesis,
+            &config.chain,
             match block.status {
                 BlockStatus::AcceptedOnL1 => FinalityStatus::AcceptedOnL1,
                 BlockStatus::AcceptedOnL2 => FinalityStatus::AcceptedOnL2,
@@ -238,9 +238,9 @@ pub async fn build(mut config: Config) -> Result<Node> {
         (blockchain, None)
     } else if let Some(db_path) = &config.db.dir {
         let db = katana_db::init_db(db_path)?;
-        (Blockchain::new_with_db(db.clone(), &config.chain.genesis)?, Some(db))
+        (Blockchain::new_with_db(db.clone(), &config.chain)?, Some(db))
     } else {
-        (Blockchain::new_with_genesis(InMemoryProvider::new(), &config.chain.genesis)?, None)
+        (Blockchain::new_with_genesis(InMemoryProvider::new(), &config.chain)?, None)
     };
 
     let block_context_generator = BlockContextGenerator::default().into();

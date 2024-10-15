@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Result};
 use katana_db::mdbx::DbEnv;
 use katana_primitives::block::{BlockHash, FinalityStatus, SealedBlockWithStatus};
-use katana_primitives::genesis::Genesis;
+use katana_primitives::chain_spec::ChainSpec;
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
 use katana_provider::providers::db::DbProvider;
 use katana_provider::traits::block::{BlockProvider, BlockWriter};
@@ -68,13 +68,13 @@ impl Blockchain {
     }
 
     /// Creates a new [Blockchain] with the given [Database] implementation and genesis state.
-    pub fn new_with_genesis(provider: impl Database, genesis: &Genesis) -> Result<Self> {
+    pub fn new_with_genesis(provider: impl Database, chain: &ChainSpec) -> Result<Self> {
         // check whether the genesis block has been initialized
-        let genesis_hash = provider.block_hash_by_num(genesis.number)?;
+        let genesis_hash = provider.block_hash_by_num(chain.genesis.number)?;
 
         match genesis_hash {
             Some(db_hash) => {
-                let genesis_hash = genesis.block().header.compute_hash();
+                let genesis_hash = chain.block().header.compute_hash();
                 // check genesis should be the same
                 if db_hash == genesis_hash {
                     Ok(Self::new(provider))
@@ -86,9 +86,9 @@ impl Blockchain {
             }
 
             None => {
-                let block = genesis.block().seal();
+                let block = chain.block().seal();
                 let block = SealedBlockWithStatus { block, status: FinalityStatus::AcceptedOnL1 };
-                let state_updates = genesis.state_updates();
+                let state_updates = chain.state_updates();
 
                 Self::new_with_block_and_state(provider, block, state_updates)
             }
@@ -96,19 +96,19 @@ impl Blockchain {
     }
 
     /// Creates a new [Blockchain] from a database at `path` and `genesis` state.
-    pub fn new_with_db(db: DbEnv, genesis: &Genesis) -> Result<Self> {
-        Self::new_with_genesis(DbProvider::new(db), genesis)
+    pub fn new_with_db(db: DbEnv, chain: &ChainSpec) -> Result<Self> {
+        Self::new_with_genesis(DbProvider::new(db), chain)
     }
 
     /// Builds a new blockchain with a forked block.
     pub fn new_from_forked(
         provider: impl Database,
         genesis_hash: BlockHash,
-        genesis: &Genesis,
+        chain: &ChainSpec,
         block_status: FinalityStatus,
     ) -> Result<Self> {
-        let block = genesis.block().seal_with_hash_and_status(genesis_hash, block_status);
-        let state_updates = genesis.state_updates();
+        let block = chain.block().seal_with_hash_and_status(genesis_hash, block_status);
+        let state_updates = chain.state_updates();
         Self::new_with_block_and_state(provider, block, state_updates)
     }
 
@@ -139,7 +139,7 @@ mod tests {
     };
     use katana_primitives::fee::TxFeeInfo;
     use katana_primitives::genesis::constant::{
-        DEFAULT_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CASM, DEFAULT_LEGACY_ERC20_CLASS_HASH,
+        DEFAULT_ETH_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CASM, DEFAULT_LEGACY_ERC20_CLASS_HASH,
         DEFAULT_LEGACY_UDC_CASM, DEFAULT_LEGACY_UDC_CLASS_HASH, DEFAULT_UDC_ADDRESS,
     };
     use katana_primitives::genesis::Genesis;
@@ -147,7 +147,7 @@ mod tests {
     use katana_primitives::state::StateUpdatesWithDeclaredClasses;
     use katana_primitives::trace::TxExecInfo;
     use katana_primitives::transaction::{InvokeTx, Tx, TxWithHash};
-    use katana_primitives::Felt;
+    use katana_primitives::{chain_spec, Felt};
     use katana_provider::providers::in_memory::InMemoryProvider;
     use katana_provider::traits::block::{
         BlockHashProvider, BlockNumberProvider, BlockProvider, BlockStatusProvider, BlockWriter,
@@ -164,13 +164,13 @@ mod tests {
     fn blockchain_from_genesis_states() {
         let provider = InMemoryProvider::new();
 
-        let blockchain = Blockchain::new_with_genesis(provider, &Genesis::default())
+        let blockchain = Blockchain::new_with_genesis(provider, &chain_spec::DEV)
             .expect("failed to create blockchain from genesis block");
         let state = blockchain.provider().latest().expect("failed to get latest state");
 
         let latest_number = blockchain.provider().latest_number().unwrap();
         let fee_token_class_hash =
-            state.class_hash_of_contract(DEFAULT_FEE_TOKEN_ADDRESS).unwrap().unwrap();
+            state.class_hash_of_contract(DEFAULT_ETH_FEE_TOKEN_ADDRESS).unwrap().unwrap();
         let udc_class_hash = state.class_hash_of_contract(DEFAULT_UDC_ADDRESS).unwrap().unwrap();
 
         assert_eq!(latest_number, 0);
@@ -191,12 +191,15 @@ mod tests {
             ..Default::default()
         };
 
+        let mut chain = chain_spec::DEV.clone();
+        chain.genesis = genesis;
+
         let genesis_hash = felt!("1111");
 
         let blockchain = Blockchain::new_from_forked(
             provider,
             genesis_hash,
-            &genesis,
+            &chain,
             FinalityStatus::AcceptedOnL1,
         )
         .expect("failed to create fork blockchain");
@@ -207,15 +210,15 @@ mod tests {
         let block_status =
             blockchain.provider().block_status(latest_number.into()).unwrap().unwrap();
 
-        assert_eq!(latest_number, genesis.number);
+        assert_eq!(latest_number, chain.genesis.number);
         assert_eq!(latest_hash, genesis_hash);
 
         assert_eq!(header.gas_prices.eth, 9090);
         assert_eq!(header.gas_prices.strk, 8080);
         assert_eq!(header.timestamp, 6868);
         assert_eq!(header.number, latest_number);
-        assert_eq!(header.state_root, genesis.state_root);
-        assert_eq!(header.parent_hash, genesis.parent_hash);
+        assert_eq!(header.state_root, chain.genesis.state_root);
+        assert_eq!(header.parent_hash, chain.genesis.parent_hash);
         assert_eq!(block_status, FinalityStatus::AcceptedOnL1);
     }
 
@@ -243,11 +246,9 @@ mod tests {
             .seal(),
         };
 
-        let genesis = Genesis::default();
-
         {
             let db = katana_db::init_db(&db_path).expect("Failed to init database");
-            let blockchain = Blockchain::new_with_db(db, &genesis)
+            let blockchain = Blockchain::new_with_db(db, &chain_spec::DEV)
                 .expect("Failed to create db-backed blockchain storage");
 
             blockchain
@@ -280,7 +281,7 @@ mod tests {
             let actual_udc_class = state.class(actual_udc_class_hash).unwrap().unwrap();
 
             let actual_fee_token_class_hash =
-                state.class_hash_of_contract(DEFAULT_FEE_TOKEN_ADDRESS).unwrap().unwrap();
+                state.class_hash_of_contract(DEFAULT_ETH_FEE_TOKEN_ADDRESS).unwrap().unwrap();
             let actual_fee_token_class = state.class(actual_fee_token_class_hash).unwrap().unwrap();
 
             assert_eq!(actual_udc_class_hash, DEFAULT_LEGACY_UDC_CLASS_HASH);
@@ -294,7 +295,7 @@ mod tests {
 
         {
             let db = katana_db::init_db(db_path).expect("Failed to init database");
-            let blockchain = Blockchain::new_with_db(db, &genesis)
+            let blockchain = Blockchain::new_with_db(db, &chain_spec::DEV)
                 .expect("Failed to create db-backed blockchain storage");
 
             // assert genesis state is correct
@@ -306,7 +307,7 @@ mod tests {
             let actual_udc_class = state.class(actual_udc_class_hash).unwrap().unwrap();
 
             let actual_fee_token_class_hash =
-                state.class_hash_of_contract(DEFAULT_FEE_TOKEN_ADDRESS).unwrap().unwrap();
+                state.class_hash_of_contract(DEFAULT_ETH_FEE_TOKEN_ADDRESS).unwrap().unwrap();
             let actual_fee_token_class = state.class(actual_fee_token_class_hash).unwrap().unwrap();
 
             assert_eq!(actual_udc_class_hash, DEFAULT_LEGACY_UDC_CLASS_HASH);

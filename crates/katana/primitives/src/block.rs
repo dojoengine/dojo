@@ -166,6 +166,8 @@ impl SealedBlock {
 }
 
 /// A sealed block along with its status.
+///
+/// Block whose commitment has been computed.
 #[derive(Debug, Clone)]
 pub struct SealedBlockWithStatus {
     pub block: SealedBlock,
