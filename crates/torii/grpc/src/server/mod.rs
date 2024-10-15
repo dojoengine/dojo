@@ -290,7 +290,7 @@ impl DojoWorld {
 
             let group_entities: Result<Vec<_>, Error> = rows
                 .par_iter()
-                .map(|row| map_row_to_entity(row, &arrays_rows, (*schemas).clone()))
+                .map(|row| map_row_to_entity(row, &arrays_rows, &schemas))
                 .collect();
 
             all_entities.extend(group_entities?);
@@ -511,7 +511,6 @@ impl DojoWorld {
     pub(crate) async fn query_by_member(
         &self,
         table: &str,
-        model_relation_table: &str,
         entity_relation_column: &str,
         member_clause: proto::types::MemberClause,
         limit: Option<u32>,
@@ -535,32 +534,8 @@ impl DojoWorld {
             .split_once('-')
             .ok_or(QueryError::InvalidNamespacedModel(member_clause.model.clone()))?;
 
-        let models_query = format!(
-            r#"
-            SELECT group_concat({model_relation_table}.model_id) as model_ids
-            FROM {table}
-            JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
-            GROUP BY {table}.id
-            HAVING INSTR(model_ids, '{:#x}') > 0
-            LIMIT 1
-        "#,
-            compute_selector_from_names(namespace, model)
-        );
-        let models_str: Option<String> =
-            sqlx::query_scalar(&models_query).fetch_optional(&self.pool).await?;
-        if models_str.is_none() {
-            return Ok((Vec::new(), 0));
-        }
-
-        let models_str = models_str.unwrap();
-
-        let model_ids = models_str
-            .split(',')
-            .map(Felt::from_str)
-            .collect::<Result<Vec<_>, _>>()
-            .map_err(ParseError::FromStr)?;
         let schemas =
-            self.model_cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect();
+            self.model_cache.models(&[compute_selector_from_names(namespace, model)]).await?.into_iter().map(|m| m.schema).collect();
 
         let model = member_clause.model.clone();
         let parts: Vec<&str> = member_clause.member.split('.').collect();
@@ -598,13 +573,10 @@ impl DojoWorld {
             arrays_rows.insert(name, rows);
         }
 
-        let arrays_rows = Arc::new(arrays_rows);
         let entities_collection: Result<Vec<_>, Error> = db_entities
             .par_iter()
             .map(|row| {
-                let schemas_clone = schemas.clone();
-                let arrays_rows_clone = arrays_rows.clone();
-                map_row_to_entity(row, &arrays_rows_clone, schemas_clone)
+                map_row_to_entity(row, &arrays_rows, &schemas)
             })
             .collect();
         Ok((entities_collection?, total_count))
@@ -786,7 +758,6 @@ impl DojoWorld {
                     ClauseType::Member(member) => {
                         self.query_by_member(
                             table,
-                            model_relation_table,
                             entity_relation_column,
                             member,
                             Some(query.limit),
@@ -860,13 +831,14 @@ fn map_row_to_event(row: &(String, String, String)) -> Result<proto::types::Even
 fn map_row_to_entity(
     row: &SqliteRow,
     arrays_rows: &HashMap<String, Vec<SqliteRow>>,
-    mut schemas: Vec<Ty>,
+    schemas: &Vec<Ty>,
 ) -> Result<proto::types::Entity, Error> {
     let hashed_keys = Felt::from_str(&row.get::<String, _>("id")).map_err(ParseError::FromStr)?;
     let models = schemas
-        .iter_mut()
+        .iter()
         .map(|schema| {
-            map_row_to_ty("", &schema.name(), schema, row, arrays_rows)?;
+            let mut ty = schema.clone();
+            map_row_to_ty("", &schema.name(), &mut ty, row, arrays_rows)?;
             Ok(schema.as_struct().unwrap().clone().into())
         })
         .collect::<Result<Vec<_>, Error>>()?;
