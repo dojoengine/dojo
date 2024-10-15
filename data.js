@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1729018668803,
+  "lastUpdate": 1729018854980,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -25993,6 +25993,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 12036235155,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "542df4f2781cca3bbc7ca4f5c81f48c5d30a6f36",
+          "message": "feat(katana): add STRK fee token (#2536)",
+          "timestamp": "2024-10-16T02:41:51+08:00",
+          "tree_id": "c6927ac9e0fdd4d56e0930c4881d61f97a7efc66",
+          "url": "https://github.com/dojoengine/dojo/commit/542df4f2781cca3bbc7ca4f5c81f48c5d30a6f36"
+        },
+        "date": 1729018852899,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16357081,
+            "range": "± 183434",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 4461120,
+            "range": "± 184839",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3688905496,
+            "range": "± 855509827",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4823762,
+            "range": "± 247109",
             "unit": "ns/iter"
           }
         ]
