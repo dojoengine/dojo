@@ -34,7 +34,6 @@ use katana_node::config::rpc::{
 use katana_node::config::{Config, SequencingConfig};
 use katana_primitives::chain::ChainId;
 use katana_primitives::chain_spec::{self, ChainSpec};
-use katana_primitives::class::ClassHash;
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::genesis::allocation::{DevAllocationsGenerator, GenesisAccountAlloc};
 use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;

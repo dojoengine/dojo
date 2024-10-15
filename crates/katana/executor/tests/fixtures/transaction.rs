@@ -1,4 +1,5 @@
 use katana_primitives::chain::ChainId;
+use katana_primitives::chain_spec::ChainSpec;
 use katana_primitives::contract::{ContractAddress, Nonce};
 use katana_primitives::env::CfgEnv;
 use katana_primitives::genesis::allocation::GenesisAllocation;
@@ -17,7 +18,7 @@ use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Url};
 use starknet::signers::{LocalWallet, Signer, SigningKey};
 
-use super::{cfg, genesis};
+use super::{cfg, chain};
 
 #[allow(unused)]
 pub fn invoke_executable_tx(
@@ -98,8 +99,8 @@ fn signed() -> bool {
 }
 
 #[rstest::fixture]
-pub fn executable_tx(signed: bool, genesis: &Genesis, cfg: CfgEnv) -> ExecutableTxWithHash {
-    let (addr, alloc) = genesis.allocations.first_key_value().expect("should have account");
+pub fn executable_tx(signed: bool, chain: &ChainSpec, cfg: CfgEnv) -> ExecutableTxWithHash {
+    let (addr, alloc) = chain.genesis.allocations.first_key_value().expect("should have account");
 
     let GenesisAllocation::Account(account) = alloc else {
         panic!("should be account");
@@ -119,10 +120,10 @@ pub fn executable_tx(signed: bool, genesis: &Genesis, cfg: CfgEnv) -> Executable
 #[rstest::fixture]
 pub fn executable_tx_without_max_fee(
     signed: bool,
-    genesis: &Genesis,
+    chain: &ChainSpec,
     cfg: CfgEnv,
 ) -> ExecutableTxWithHash {
-    let (addr, alloc) = genesis.allocations.first_key_value().expect("should have account");
+    let (addr, alloc) = chain.genesis.allocations.first_key_value().expect("should have account");
 
     let GenesisAllocation::Account(account) = alloc else {
         panic!("should be account");
