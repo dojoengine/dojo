@@ -60,8 +60,7 @@ impl ChainSpec {
         Block { header, body: Vec::new() }
     }
 
-    // this method will include the the ETH fee token, and the UDC. Declaring and deploying the
-    // necessary classes and contracts.
+    // this method will include the the ETH and STRK fee tokens, and the UDC
     pub fn state_updates(&self) -> StateUpdatesWithDeclaredClasses {
         let mut states = StateUpdatesWithDeclaredClasses::default();
 
@@ -95,7 +94,7 @@ impl ChainSpec {
             states.state_updates.storage_updates.insert(address, storage);
         }
 
-        //-- Fee token
+        //-- Fee tokens
 
         // -- ETH
         add_fee_token(
@@ -104,6 +103,17 @@ impl ChainSpec {
             "ETH",
             18,
             DEFAULT_ETH_FEE_TOKEN_ADDRESS,
+            DEFAULT_LEGACY_ERC20_CLASS_HASH,
+            &self.genesis.allocations,
+        );
+
+        // -- STRK
+        add_fee_token(
+            &mut states,
+            "Starknet Token",
+            "STRK",
+            18,
+            DEFAULT_STRK_FEE_TOKEN_ADDRESS,
             DEFAULT_LEGACY_ERC20_CLASS_HASH,
             &self.genesis.allocations,
         );
@@ -216,9 +226,9 @@ mod tests {
     };
     use crate::genesis::constant::{
         DEFAULT_ACCOUNT_CLASS, DEFAULT_ACCOUNT_CLASS_CASM, DEFAULT_ACCOUNT_CLASS_HASH,
-        DEFAULT_ACCOUNT_COMPILED_CLASS_HASH, DEFAULT_LEGACY_ERC20_CASM,
-        DEFAULT_LEGACY_ERC20_COMPILED_CLASS_HASH, DEFAULT_LEGACY_UDC_CASM,
-        DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH,
+        DEFAULT_ACCOUNT_CLASS_PUBKEY_STORAGE_SLOT, DEFAULT_ACCOUNT_COMPILED_CLASS_HASH,
+        DEFAULT_LEGACY_ERC20_CASM, DEFAULT_LEGACY_ERC20_COMPILED_CLASS_HASH,
+        DEFAULT_LEGACY_UDC_CASM, DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH,
     };
     use crate::genesis::GenesisClass;
     use crate::version::CURRENT_STARKNET_VERSION;
@@ -401,6 +411,14 @@ mod tests {
             Some(&DEFAULT_LEGACY_ERC20_CLASS_HASH),
             "The ETH fee token contract should be created"
         );
+        assert_eq!(
+            actual_state_updates
+                .state_updates
+                .deployed_contracts
+                .get(&DEFAULT_STRK_FEE_TOKEN_ADDRESS),
+            Some(&DEFAULT_LEGACY_ERC20_CLASS_HASH),
+            "The STRK fee token contract should be created"
+        );
 
         assert_eq!(
             actual_state_updates.state_updates.declared_classes.get(&DEFAULT_LEGACY_UDC_CLASS_HASH),
@@ -473,8 +491,9 @@ mod tests {
 
         assert_eq!(
             actual_state_updates.state_updates.deployed_contracts.len(),
-            5,
-            "5 contracts should be created: ETH fee token, universal deployer, and 3 allocations"
+            6,
+            "6 contracts should be created: STRK fee token, ETH fee token, universal deployer, \
+             and 3 allocations"
         );
 
         let alloc_1_addr = allocations[0].0;
@@ -566,9 +585,33 @@ mod tests {
             Some(&total_supply_high)
         );
 
+        // check STRK fee token contract storage
+
+        let strk_name = cairo_short_string_to_felt("Starknet Token").unwrap();
+        let strk_symbol = cairo_short_string_to_felt("STRK").unwrap();
+        let strk_decimals = Felt::from(18);
+
+        let strk_fee_token_storage = actual_state_updates
+            .state_updates
+            .storage_updates
+            .get(&DEFAULT_STRK_FEE_TOKEN_ADDRESS)
+            .unwrap();
+
+        assert_eq!(strk_fee_token_storage.get(&ERC20_NAME_STORAGE_SLOT), Some(&strk_name));
+        assert_eq!(strk_fee_token_storage.get(&ERC20_SYMBOL_STORAGE_SLOT), Some(&strk_symbol));
+        assert_eq!(strk_fee_token_storage.get(&ERC20_DECIMAL_STORAGE_SLOT), Some(&strk_decimals));
+        assert_eq!(
+            strk_fee_token_storage.get(&ERC20_TOTAL_SUPPLY_STORAGE_SLOT),
+            Some(&total_supply_low)
+        );
+        assert_eq!(
+            strk_fee_token_storage.get(&(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + Felt::ONE)),
+            Some(&total_supply_high)
+        );
+
         let mut allocs_total_supply = U256::ZERO;
 
-        // check for balance in both ETH
+        // check for balance in both ETH and STRK
         for (address, alloc) in &allocations {
             if let Some(balance) = alloc.balance() {
                 let (low, high) = split_u256(balance);
@@ -583,6 +626,9 @@ mod tests {
 
                 assert_eq!(eth_fee_token_storage.get(&low_bal_storage_var), Some(&low));
                 assert_eq!(eth_fee_token_storage.get(&high_bal_storage_var), Some(&high));
+
+                assert_eq!(strk_fee_token_storage.get(&low_bal_storage_var), Some(&low));
+                assert_eq!(strk_fee_token_storage.get(&high_bal_storage_var), Some(&high));
 
                 allocs_total_supply += balance;
             }
@@ -601,6 +647,17 @@ mod tests {
             eth_fee_token_storage.get(&(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + Felt::ONE)),
             Some(&actual_total_supply_high),
             "ETH total supply must be calculated from allocations balances correctly"
+        );
+
+        assert_eq!(
+            strk_fee_token_storage.get(&ERC20_TOTAL_SUPPLY_STORAGE_SLOT),
+            Some(&actual_total_supply_low),
+            "STRK total supply must be calculated from allocations balances correctly"
+        );
+        assert_eq!(
+            strk_fee_token_storage.get(&(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + Felt::ONE)),
+            Some(&actual_total_supply_high),
+            "STRK total supply must be calculated from allocations balances correctly"
         );
     }
 }
