@@ -213,8 +213,6 @@ pub fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
                 let fee_data_availability_mode = to_api_da_mode(tx.fee_data_availability_mode);
                 let nonce_data_availability_mode = to_api_da_mode(tx.nonce_data_availability_mode);
 
-                println!("creating invoke transaction v3...");
-
                 Transaction::AccountTransaction(AccountTransaction::Invoke(InvokeTransaction {
                     tx: ApiInvokeTransaction::V3(
                         katana_cairo::starknet_api::transaction::InvokeTransactionV3 {

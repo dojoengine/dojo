@@ -2,10 +2,10 @@ use lazy_static::lazy_static;
 use starknet::core::utils::get_storage_var_address;
 use starknet::macros::felt;
 
-use crate::Felt;
 use crate::class::{ClassHash, CompiledClass, CompiledClassHash, SierraClass};
 use crate::contract::{ContractAddress, StorageKey};
 use crate::utils::class::{parse_compiled_class, parse_sierra_class};
+use crate::Felt;
 
 /// The default universal deployer contract address.
 pub const DEFAULT_UDC_ADDRESS: ContractAddress =

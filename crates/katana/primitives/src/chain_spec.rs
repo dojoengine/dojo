@@ -5,25 +5,19 @@ use lazy_static::lazy_static;
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet_crypto::Felt;
 
-use crate::block::{Block, Block, Header, Header};
+use crate::block::{Block, Header};
 use crate::chain::ChainId;
 use crate::class::ClassHash;
 use crate::contract::ContractAddress;
-use crate::genesis::Genesis;
-use crate::genesis::allocation::{
-    DevAllocationsGenerator, DevAllocationsGenerator, GenesisAllocation, GenesisAllocation,
-};
+use crate::genesis::allocation::{DevAllocationsGenerator, GenesisAllocation};
 use crate::genesis::constant::{
-    DEFAULT_ACCOUNT_CLASS_PUBKEY_STORAGE_SLOT, DEFAULT_ACCOUNT_CLASS_PUBKEY_STORAGE_SLOT,
-    DEFAULT_ETH_FEE_TOKEN_ADDRESS, DEFAULT_ETH_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CLASS_HASH,
-    DEFAULT_LEGACY_ERC20_CLASS_HASH, DEFAULT_LEGACY_UDC_CLASS_HASH, DEFAULT_LEGACY_UDC_CLASS_HASH,
-    DEFAULT_PREFUNDED_ACCOUNT_BALANCE, DEFAULT_PREFUNDED_ACCOUNT_BALANCE,
-    DEFAULT_STRK_FEE_TOKEN_ADDRESS, DEFAULT_STRK_FEE_TOKEN_ADDRESS, DEFAULT_UDC_ADDRESS,
-    DEFAULT_UDC_ADDRESS, ERC20_DECIMAL_STORAGE_SLOT, ERC20_DECIMAL_STORAGE_SLOT,
-    ERC20_NAME_STORAGE_SLOT, ERC20_NAME_STORAGE_SLOT, ERC20_SYMBOL_STORAGE_SLOT,
-    ERC20_SYMBOL_STORAGE_SLOT, ERC20_TOTAL_SUPPLY_STORAGE_SLOT, ERC20_TOTAL_SUPPLY_STORAGE_SLOT,
-    get_fee_token_balance_base_storage_address, get_fee_token_balance_base_storage_address,
+    get_fee_token_balance_base_storage_address, DEFAULT_ACCOUNT_CLASS_PUBKEY_STORAGE_SLOT,
+    DEFAULT_ETH_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CLASS_HASH, DEFAULT_LEGACY_UDC_CLASS_HASH,
+    DEFAULT_PREFUNDED_ACCOUNT_BALANCE, DEFAULT_STRK_FEE_TOKEN_ADDRESS, DEFAULT_UDC_ADDRESS,
+    ERC20_DECIMAL_STORAGE_SLOT, ERC20_NAME_STORAGE_SLOT, ERC20_SYMBOL_STORAGE_SLOT,
+    ERC20_TOTAL_SUPPLY_STORAGE_SLOT,
 };
+use crate::genesis::Genesis;
 use crate::state::StateUpdatesWithDeclaredClasses;
 use crate::utils::split_u256;
 use crate::version::CURRENT_STARKNET_VERSION;
@@ -147,14 +141,6 @@ lazy_static! {
     /// The default chain specification in dev mode.
     pub static ref DEV: ChainSpec = {
         let mut chain_spec = DEV_UNALLOCATED.clone();
-        DEV.clone()
-    }
-}
-
-lazy_static! {
-    /// The default chain specification in dev mode.
-    pub static ref DEV: ChainSpec = {
-        let mut chain_spec = DEV_UNALLOCATED.clone();
 
         let accounts = DevAllocationsGenerator::new(10)
             .with_balance(U256::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE))
@@ -235,7 +221,6 @@ mod tests {
     use super::*;
     use crate::address;
     use crate::block::{Block, GasPrices, Header};
-    use crate::genesis::GenesisClass;
     use crate::genesis::allocation::{GenesisAccount, GenesisAccountAlloc, GenesisContractAlloc};
     #[cfg(feature = "slot")]
     use crate::genesis::constant::{
@@ -243,10 +228,11 @@ mod tests {
     };
     use crate::genesis::constant::{
         DEFAULT_ACCOUNT_CLASS, DEFAULT_ACCOUNT_CLASS_CASM, DEFAULT_ACCOUNT_CLASS_HASH,
-        DEFAULT_ACCOUNT_COMPILED_CLASS_HASH, DEFAULT_LEGACY_ERC20_CASM,
-        DEFAULT_LEGACY_ERC20_COMPILED_CLASS_HASH, DEFAULT_LEGACY_UDC_CASM,
-        DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH,
+        DEFAULT_ACCOUNT_CLASS_PUBKEY_STORAGE_SLOT, DEFAULT_ACCOUNT_COMPILED_CLASS_HASH,
+        DEFAULT_LEGACY_ERC20_CASM, DEFAULT_LEGACY_ERC20_COMPILED_CLASS_HASH,
+        DEFAULT_LEGACY_UDC_CASM, DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH,
     };
+    use crate::genesis::GenesisClass;
     use crate::version::CURRENT_STARKNET_VERSION;
 
     #[test]
@@ -254,27 +240,39 @@ mod tests {
         // setup initial states to test
 
         let classes = BTreeMap::from([
-            (DEFAULT_LEGACY_UDC_CLASS_HASH, GenesisClass {
-                sierra: None,
-                casm: DEFAULT_LEGACY_UDC_CASM.clone().into(),
-                compiled_class_hash: DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH,
-            }),
-            (DEFAULT_LEGACY_ERC20_CLASS_HASH, GenesisClass {
-                sierra: None,
-                casm: DEFAULT_LEGACY_ERC20_CASM.clone().into(),
-                compiled_class_hash: DEFAULT_LEGACY_ERC20_COMPILED_CLASS_HASH,
-            }),
-            (DEFAULT_ACCOUNT_CLASS_HASH, GenesisClass {
-                compiled_class_hash: DEFAULT_ACCOUNT_COMPILED_CLASS_HASH,
-                casm: DEFAULT_ACCOUNT_CLASS_CASM.clone().into(),
-                sierra: Some(DEFAULT_ACCOUNT_CLASS.clone().flatten().unwrap().into()),
-            }),
+            (
+                DEFAULT_LEGACY_UDC_CLASS_HASH,
+                GenesisClass {
+                    sierra: None,
+                    casm: DEFAULT_LEGACY_UDC_CASM.clone().into(),
+                    compiled_class_hash: DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH,
+                },
+            ),
+            (
+                DEFAULT_LEGACY_ERC20_CLASS_HASH,
+                GenesisClass {
+                    sierra: None,
+                    casm: DEFAULT_LEGACY_ERC20_CASM.clone().into(),
+                    compiled_class_hash: DEFAULT_LEGACY_ERC20_COMPILED_CLASS_HASH,
+                },
+            ),
+            (
+                DEFAULT_ACCOUNT_CLASS_HASH,
+                GenesisClass {
+                    compiled_class_hash: DEFAULT_ACCOUNT_COMPILED_CLASS_HASH,
+                    casm: DEFAULT_ACCOUNT_CLASS_CASM.clone().into(),
+                    sierra: Some(DEFAULT_ACCOUNT_CLASS.clone().flatten().unwrap().into()),
+                },
+            ),
             #[cfg(feature = "slot")]
-            (CONTROLLER_CLASS_HASH, GenesisClass {
-                casm: CONTROLLER_ACCOUNT_CLASS_CASM.clone().into(),
-                compiled_class_hash: CONTROLLER_CLASS_HASH,
-                sierra: Some(CONTROLLER_ACCOUNT_CLASS.clone().flatten().unwrap().into()),
-            }),
+            (
+                CONTROLLER_CLASS_HASH,
+                GenesisClass {
+                    casm: CONTROLLER_ACCOUNT_CLASS_CASM.clone().into(),
+                    compiled_class_hash: CONTROLLER_CLASS_HASH,
+                    sierra: Some(CONTROLLER_ACCOUNT_CLASS.clone().flatten().unwrap().into()),
+                },
+            ),
         ]);
 
         let allocations = [

@@ -13,7 +13,7 @@ use katana_primitives::contract::ContractAddress;
 use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
 use katana_primitives::genesis::constant::{
-    DEFAULT_ACCOUNT_CLASS_HASH, DEFAULT_ETH_ETH_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CLASS_HASH,
+    DEFAULT_ACCOUNT_CLASS_HASH, DEFAULT_ETH_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CLASS_HASH,
     DEFAULT_PREFUNDED_ACCOUNT_BALANCE, DEFAULT_STRK_FEE_TOKEN_ADDRESS,
 };
 use katana_primitives::transaction::{
@@ -22,7 +22,7 @@ use katana_primitives::transaction::{
 };
 use katana_primitives::utils::class::{parse_compiled_class, parse_sierra_class};
 use katana_primitives::version::Version;
-use katana_primitives::{Felt, address};
+use katana_primitives::{address, Felt};
 use katana_provider::providers::in_memory::InMemoryProvider;
 use katana_provider::traits::block::BlockWriter;
 use katana_provider::traits::state::{StateFactoryProvider, StateProvider};
@@ -257,10 +257,10 @@ pub fn executor_factory<EF: ExecutorFactory>(
 
 #[cfg(feature = "blockifier")]
 pub mod blockifier {
-    use katana_executor::SimulationFlag;
     use katana_executor::implementation::blockifier::BlockifierFactory;
+    use katana_executor::SimulationFlag;
 
-    use super::{CfgEnv, cfg, flags};
+    use super::{cfg, flags, CfgEnv};
 
     #[rstest::fixture]
     pub fn factory(cfg: CfgEnv, #[with(true)] flags: SimulationFlag) -> BlockifierFactory {
