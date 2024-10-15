@@ -1,9 +1,9 @@
 use katana_primitives::chain::ChainId;
+use katana_primitives::chain_spec::ChainSpec;
 use katana_primitives::contract::{ContractAddress, Nonce};
 use katana_primitives::env::CfgEnv;
 use katana_primitives::genesis::allocation::GenesisAllocation;
-use katana_primitives::genesis::constant::DEFAULT_FEE_TOKEN_ADDRESS;
-use katana_primitives::genesis::Genesis;
+use katana_primitives::genesis::constant::DEFAULT_ETH_FEE_TOKEN_ADDRESS;
 use katana_primitives::transaction::ExecutableTxWithHash;
 use katana_primitives::utils::transaction::compute_invoke_v1_tx_hash;
 use katana_primitives::Felt;
@@ -17,7 +17,7 @@ use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Url};
 use starknet::signers::{LocalWallet, Signer, SigningKey};
 
-use super::{cfg, genesis};
+use super::{cfg, chain};
 
 #[allow(unused)]
 pub fn invoke_executable_tx(
@@ -43,7 +43,7 @@ pub fn invoke_executable_tx(
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
     let calls = vec![Call {
-        to: DEFAULT_FEE_TOKEN_ADDRESS.into(),
+        to: DEFAULT_ETH_FEE_TOKEN_ADDRESS.into(),
         selector: selector!("transfer"),
         calldata: vec![felt!("0x1"), felt!("0x99"), felt!("0x0")],
     }];
@@ -98,8 +98,8 @@ fn signed() -> bool {
 }
 
 #[rstest::fixture]
-pub fn executable_tx(signed: bool, genesis: &Genesis, cfg: CfgEnv) -> ExecutableTxWithHash {
-    let (addr, alloc) = genesis.allocations.first_key_value().expect("should have account");
+pub fn executable_tx(signed: bool, chain: &ChainSpec, cfg: CfgEnv) -> ExecutableTxWithHash {
+    let (addr, alloc) = chain.genesis.allocations.first_key_value().expect("should have account");
 
     let GenesisAllocation::Account(account) = alloc else {
         panic!("should be account");
@@ -119,10 +119,10 @@ pub fn executable_tx(signed: bool, genesis: &Genesis, cfg: CfgEnv) -> Executable
 #[rstest::fixture]
 pub fn executable_tx_without_max_fee(
     signed: bool,
-    genesis: &Genesis,
+    chain: &ChainSpec,
     cfg: CfgEnv,
 ) -> ExecutableTxWithHash {
-    let (addr, alloc) = genesis.allocations.first_key_value().expect("should have account");
+    let (addr, alloc) = chain.genesis.allocations.first_key_value().expect("should have account");
 
     let GenesisAllocation::Account(account) = alloc else {
         panic!("should be account");

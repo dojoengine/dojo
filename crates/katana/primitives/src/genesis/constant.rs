@@ -8,14 +8,18 @@ use crate::utils::class::{parse_compiled_class, parse_sierra_class};
 use crate::Felt;
 
 /// The default universal deployer contract address.
-/// Corresponds to 0x041a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf
 pub const DEFAULT_UDC_ADDRESS: ContractAddress =
     ContractAddress(felt!("0x041a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf"));
 
-/// The default fee token contract address.
-/// Corresponds to 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
-pub const DEFAULT_FEE_TOKEN_ADDRESS: ContractAddress =
+/// The default ETH fee token contract address.
+/// See https://github.com/starknet-io/starknet-addresses/blob/master/bridged_tokens/mainnet.json
+pub const DEFAULT_ETH_FEE_TOKEN_ADDRESS: ContractAddress =
     ContractAddress(felt!("0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"));
+
+/// The default STRK fee token contract address.
+/// See https://github.com/starknet-io/starknet-addresses/blob/master/bridged_tokens/mainnet.json
+pub const DEFAULT_STRK_FEE_TOKEN_ADDRESS: ContractAddress =
+    ContractAddress(felt!("0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d"));
 
 /// The standard storage address for `public key` in the default account class.
 /// Corresponds to keccak("Account_public_key") ==
@@ -105,7 +109,7 @@ lazy_static! {
 ///
 /// This is to compute the base storage address of the balance because the fee token balance is
 /// stored as a U256 value and as such has to be split into two U128 values (low and high).
-pub(super) fn get_fee_token_balance_base_storage_address(address: ContractAddress) -> Felt {
+pub fn get_fee_token_balance_base_storage_address(address: ContractAddress) -> Felt {
     get_storage_var_address("ERC20_balances", &[address.into()]).unwrap()
 }
 

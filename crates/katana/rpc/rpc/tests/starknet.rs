@@ -14,7 +14,7 @@ use jsonrpsee::http_client::HttpClientBuilder;
 use katana_node::config::SequencingConfig;
 use katana_primitives::event::ContinuationToken;
 use katana_primitives::genesis::constant::{
-    DEFAULT_ACCOUNT_CLASS_HASH, DEFAULT_FEE_TOKEN_ADDRESS, DEFAULT_PREFUNDED_ACCOUNT_BALANCE,
+    DEFAULT_ACCOUNT_CLASS_HASH, DEFAULT_ETH_FEE_TOKEN_ADDRESS, DEFAULT_PREFUNDED_ACCOUNT_BALANCE,
     DEFAULT_UDC_ADDRESS,
 };
 use katana_rpc_api::dev::DevApiClient;
@@ -171,7 +171,7 @@ async fn deploy_account(
 
     // Fund the new account
     abigen_legacy!(FeeToken, "crates/katana/rpc/rpc/tests/test_data/erc20.json");
-    let contract = FeeToken::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), &funding_account);
+    let contract = FeeToken::new(DEFAULT_ETH_FEE_TOKEN_ADDRESS.into(), &funding_account);
 
     // send enough tokens to the new_account's address just to send the deploy account tx
     let amount = Uint256 { low: felt!("0x100000000000"), high: Felt::ZERO };
@@ -245,7 +245,7 @@ async fn estimate_fee() -> Result<()> {
     let account = sequencer.account();
 
     // setup contract to interact with (can be any existing contract that can be interacted with)
-    let contract = Erc20Contract::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), &account);
+    let contract = Erc20Contract::new(DEFAULT_ETH_FEE_TOKEN_ADDRESS.into(), &account);
 
     // setup contract function params
     let recipient = felt!("0x1");
@@ -310,7 +310,7 @@ async fn concurrent_transactions_submissions(
 
         let handle = tokio::spawn(async move {
             let mut nonce = nonce.lock().await;
-            let contract = Erc20Contract::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), account);
+            let contract = Erc20Contract::new(DEFAULT_ETH_FEE_TOKEN_ADDRESS.into(), account);
             let res = contract.transfer(&recipient, &amount).nonce(*nonce).send().await.unwrap();
             txs.lock().await.insert(res.transaction_hash);
             *nonce += Felt::ONE;
@@ -364,7 +364,7 @@ async fn ensure_validator_have_valid_state(
     let account = sequencer.account();
 
     // setup test contract to interact with.
-    let contract = Erc20Contract::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), &account);
+    let contract = Erc20Contract::new(DEFAULT_ETH_FEE_TOKEN_ADDRESS.into(), &account);
 
     // reduce account balance
     let recipient = felt!("0x1337");
@@ -395,7 +395,7 @@ async fn send_txs_with_insufficient_fee(
     let sequencer = TestSequencer::start(config).await;
 
     // setup test contract to interact with.
-    let contract = Erc20Contract::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), sequencer.account());
+    let contract = Erc20Contract::new(DEFAULT_ETH_FEE_TOKEN_ADDRESS.into(), sequencer.account());
 
     // function call params
     let recipient = Felt::ONE;
@@ -474,7 +474,7 @@ async fn send_txs_with_invalid_signature(
     );
 
     // setup test contract to interact with.
-    let contract = Erc20Contract::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), &account);
+    let contract = Erc20Contract::new(DEFAULT_ETH_FEE_TOKEN_ADDRESS.into(), &account);
 
     // function call params
     let recipient = Felt::ONE;
@@ -520,7 +520,7 @@ async fn send_txs_with_invalid_nonces(
     let account = sequencer.account();
 
     // setup test contract to interact with.
-    let contract = Erc20Contract::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), &account);
+    let contract = Erc20Contract::new(DEFAULT_ETH_FEE_TOKEN_ADDRESS.into(), &account);
 
     // function call params
     let recipient = Felt::ONE;
@@ -591,7 +591,7 @@ async fn get_events_no_pending() -> Result<()> {
     let account = sequencer.account();
 
     // setup test contract to interact with.
-    let contract = Erc20Contract::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), &account);
+    let contract = Erc20Contract::new(DEFAULT_ETH_FEE_TOKEN_ADDRESS.into(), &account);
     // tx that emits 1 event
     let tx = || contract.transfer(&Felt::ONE, &Uint256 { low: Felt::ONE, high: Felt::ZERO });
 
@@ -677,7 +677,7 @@ async fn get_events_with_pending() -> Result<()> {
     let account = sequencer.account();
 
     // setup test contract to interact with.
-    let contract = Erc20Contract::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), &account);
+    let contract = Erc20Contract::new(DEFAULT_ETH_FEE_TOKEN_ADDRESS.into(), &account);
     // tx that emits 1 event
     let tx = || contract.transfer(&Felt::ONE, &Uint256 { low: Felt::ONE, high: Felt::ZERO });
 
@@ -765,7 +765,7 @@ async fn trace() -> Result<()> {
     let rpc_client = HttpClientBuilder::default().build(sequencer.url())?;
 
     // setup contract to interact with (can be any existing contract that can be interacted with)
-    let contract = Erc20Contract::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), &account);
+    let contract = Erc20Contract::new(DEFAULT_ETH_FEE_TOKEN_ADDRESS.into(), &account);
 
     // setup contract function params
     let recipient = felt!("0x1");
@@ -815,7 +815,7 @@ async fn block_traces() -> Result<()> {
     let rpc_client = HttpClientBuilder::default().build(sequencer.url())?;
 
     // setup contract to interact with (can be any existing contract that can be interacted with)
-    let contract = Erc20Contract::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), &account);
+    let contract = Erc20Contract::new(DEFAULT_ETH_FEE_TOKEN_ADDRESS.into(), &account);
 
     // setup contract function params
     let recipient = felt!("0x1");

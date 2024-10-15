@@ -7,15 +7,15 @@ use katana_primitives::block::{
     Block, ExecutableBlock, FinalityStatus, GasPrices, PartialHeader, SealedBlockWithStatus,
 };
 use katana_primitives::chain::ChainId;
+use katana_primitives::chain_spec::{self, ChainSpec};
 use katana_primitives::class::{CompiledClass, FlattenedSierraClass};
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
 use katana_primitives::genesis::constant::{
-    DEFAULT_ACCOUNT_CLASS_HASH, DEFAULT_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CLASS_HASH,
-    DEFAULT_PREFUNDED_ACCOUNT_BALANCE,
+    DEFAULT_ACCOUNT_CLASS_HASH, DEFAULT_ETH_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CLASS_HASH,
+    DEFAULT_PREFUNDED_ACCOUNT_BALANCE, DEFAULT_STRK_FEE_TOKEN_ADDRESS,
 };
-use katana_primitives::genesis::Genesis;
 use katana_primitives::transaction::{
     DeclareTx, DeclareTxV2, DeclareTxWithClass, DeployAccountTx, DeployAccountTxV1, ExecutableTx,
     ExecutableTxWithHash, InvokeTx, InvokeTxV1,
@@ -48,7 +48,11 @@ pub fn contract_class() -> (CompiledClass, FlattenedSierraClass) {
 
 #[rstest::fixture]
 #[once]
-pub fn genesis() -> Genesis {
+pub fn chain() -> ChainSpec {
+    let mut chain = chain_spec::DEV_UNALLOCATED.clone();
+
+    // to generate the exact list of accounts as you would when you just run `katana` w/o
+    // any additional flags
     let mut seed = [0u8; 32];
     seed[0] = b'0';
 
@@ -57,15 +61,14 @@ pub fn genesis() -> Genesis {
         .with_balance(U256::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE))
         .generate();
 
-    let mut genesis = Genesis::default();
-    genesis.extend_allocations(accounts.into_iter().map(|(k, v)| (k, v.into())));
-    genesis
+    chain.genesis.extend_allocations(accounts.into_iter().map(|(k, v)| (k, v.into())));
+    chain
 }
 
 /// Returns a state provider with some prefilled states.
 #[rstest::fixture]
-pub fn state_provider(genesis: &Genesis) -> Box<dyn StateProvider> {
-    let states = genesis.state_updates();
+pub fn state_provider(chain: &ChainSpec) -> Box<dyn StateProvider> {
+    let states = chain.state_updates();
     let provider = InMemoryProvider::new();
 
     let block = SealedBlockWithStatus {
@@ -220,8 +223,10 @@ pub fn valid_blocks() -> [ExecutableBlock; 3] {
 
 #[rstest::fixture]
 pub fn cfg() -> CfgEnv {
-    let fee_token_addresses =
-        FeeTokenAddressses { eth: DEFAULT_FEE_TOKEN_ADDRESS, strk: ContractAddress(222u64.into()) };
+    let fee_token_addresses = FeeTokenAddressses {
+        eth: DEFAULT_ETH_FEE_TOKEN_ADDRESS,
+        strk: DEFAULT_STRK_FEE_TOKEN_ADDRESS,
+    };
 
     CfgEnv {
         fee_token_addresses,

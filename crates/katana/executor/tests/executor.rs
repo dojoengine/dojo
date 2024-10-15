@@ -7,7 +7,7 @@ use katana_executor::{ExecutionOutput, ExecutionResult, ExecutorFactory};
 use katana_primitives::block::ExecutableBlock;
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::genesis::constant::{
-    DEFAULT_ACCOUNT_CLASS_HASH, DEFAULT_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CLASS_HASH,
+    DEFAULT_ACCOUNT_CLASS_HASH, DEFAULT_ETH_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CLASS_HASH,
     DEFAULT_PREFUNDED_ACCOUNT_BALANCE, DEFAULT_UDC_ADDRESS,
 };
 use katana_primitives::transaction::TxWithHash;
@@ -306,7 +306,7 @@ fn test_executor_with_valid_blocks_impl<EF: ExecutorFactory>(
     let actual_storage_updates = states.state_updates.storage_updates;
     assert_eq!(actual_storage_updates.len(), 3, "only 3 contracts whose storage should be updated");
     assert!(
-        actual_storage_updates.contains_key(&DEFAULT_FEE_TOKEN_ADDRESS),
+        actual_storage_updates.contains_key(&DEFAULT_ETH_FEE_TOKEN_ADDRESS),
         "fee token storage must get updated"
     );
     assert!(
