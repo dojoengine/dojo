@@ -335,20 +335,6 @@ impl From<MemberValue> for member_value::ValueType {
     }
 }
 
-impl From<Value> for proto::types::Value {
-    fn from(value: Value) -> Self {
-        let value_type = match value.value_type {
-            ValueType::String(val) => Some(proto::types::value::ValueType::StringValue(val)),
-            ValueType::Int(val) => Some(proto::types::value::ValueType::IntValue(val)),
-            ValueType::UInt(val) => Some(proto::types::value::ValueType::UintValue(val)),
-            ValueType::Bool(val) => Some(proto::types::value::ValueType::BoolValue(val)),
-            ValueType::Bytes(val) => Some(proto::types::value::ValueType::ByteValue(val)),
-        };
-
-        Self { value_type }
-    }
-}
-
 impl TryFrom<proto::types::StorageEntry> for StorageEntry {
     type Error = FromStrError;
     fn try_from(value: proto::types::StorageEntry) -> Result<Self, Self::Error> {
