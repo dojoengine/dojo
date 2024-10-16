@@ -1237,12 +1237,8 @@ impl proto::world::world_server::World for DojoWorld {
 }
 
 const DEFAULT_MAX_AGE: Duration = Duration::from_secs(24 * 60 * 60);
-const DEFAULT_EXPOSED_HEADERS: [&str; 4] = [
-    "grpc-status",
-    "grpc-message",
-    "grpc-status-details-bin",
-    "grpc-encoding",
-];
+const DEFAULT_EXPOSED_HEADERS: [&str; 4] =
+    ["grpc-status", "grpc-message", "grpc-status-details-bin", "grpc-encoding"];
 const DEFAULT_ALLOW_HEADERS: [&str; 6] = [
     "x-grpc-web",
     "content-type",
