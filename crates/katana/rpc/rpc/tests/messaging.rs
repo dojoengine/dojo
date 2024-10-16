@@ -20,10 +20,9 @@ use katana_rpc_types::receipt::ReceiptBlock;
 use rand::Rng;
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::contract::ContractFactory;
-use starknet::core::types::MsgFromL1;
 use starknet::core::types::{
-    BlockId, BlockTag, ContractClass, Felt, Hash256, Transaction, TransactionFinalityStatus,
-    TransactionReceipt,
+    BlockId, BlockTag, ContractClass, Felt, Hash256, MsgFromL1, Transaction,
+    TransactionFinalityStatus, TransactionReceipt,
 };
 use starknet::core::utils::get_contract_address;
 use starknet::macros::selector;
@@ -331,8 +330,10 @@ async fn estimate_message_fee() -> Result<()> {
     // Compute the contract address of the l1 handler contract
     let l1handler_address = get_contract_address(Felt::ZERO, class_hash, &[], Felt::ZERO);
 
+    // Attempt to estimate the cost of calling a #[l1handler] function
+
     let entry_point_selector = selector!("msg_handler_value");
-    let payload = vec![felt!("0x123"), felt!("123")];
+    let payload = vec![felt!("0x123"), felt!("123")]; // function arguments
     let from_address = felt!("0x1337");
     let to_address = l1handler_address;
 
@@ -344,13 +345,7 @@ async fn estimate_message_fee() -> Result<()> {
     };
 
     let result = provider.estimate_message_fee(msg, BlockId::Tag(BlockTag::Pending)).await;
-
-    match result {
-        Ok(_) => {}
-        Err(e) => {
-            dbg!(e);
-        }
-    }
+    assert!(result.is_ok());
 
     Ok(())
 }

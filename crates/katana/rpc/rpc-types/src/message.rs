@@ -13,6 +13,12 @@ impl MsgFromL1 {
         // for the `estimateMessageFee` RPC.
         let nonce = Felt::ZERO;
 
+        // When executing a l1 handler tx, blockifier just assert that the paid_fee_on_l1 is
+        // anything but 0. See: https://github.com/dojoengine/sequencer/blob/d6951f24fc2082c7aa89cdbc063648915b131d74/crates/blockifier/src/transaction/transaction_execution.rs#L140-L145
+        //
+        // For fee estimation, this value is basically irrelevant.
+        let paid_fee_on_l1 = 1u128;
+
         let message_hash = compute_l2_to_l1_message_hash(
             // This conversion will never fail bcs `from_address` is 20 bytes and the it will only
             // fail if the slice is > 32 bytes
@@ -25,9 +31,9 @@ impl MsgFromL1 {
             nonce,
             chain_id,
             message_hash,
-            calldata: self.0.payload,
+            paid_fee_on_l1,
             version: Felt::ZERO,
-            paid_fee_on_l1: Default::default(),
+            calldata: self.0.payload,
             contract_address: self.0.to_address.into(),
             entry_point_selector: self.0.entry_point_selector,
         }
