@@ -20,7 +20,7 @@ use crate::genesis::constant::{
 use crate::genesis::Genesis;
 use crate::state::StateUpdatesWithDeclaredClasses;
 use crate::utils::split_u256;
-use crate::version::{Version, CURRENT_STARKNET_VERSION};
+use crate::version::{ProtocolVersion, CURRENT_STARKNET_VERSION};
 
 /// A chain specification.
 // TODO: include l1 core contract
@@ -34,7 +34,7 @@ pub struct ChainSpec {
     /// The chain fee token contract.
     pub fee_contracts: FeeContracts,
     /// The protocol version.
-    pub version: Version,
+    pub version: ProtocolVersion,
 }
 
 /// Tokens that can be used for transaction fee payments in the chain. As

@@ -1,18 +1,29 @@
 /// The currently supported version of the Starknet protocol.
-pub const CURRENT_STARKNET_VERSION: Version = Version::new([0, 13, 1, 1]); // version 0.13.1.1
+pub const CURRENT_STARKNET_VERSION: ProtocolVersion = ProtocolVersion::new([0, 13, 1, 1]); // version 0.13.1.1
 
+// TODO: figure out the exact format of the version string.
 /// Starknet protocol version.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Version {
+pub struct ProtocolVersion {
+    /// Each segments represents a part of the version number.
     segments: [u8; 4],
 }
 
-impl Version {
+#[derive(Debug, thiserror::Error)]
+pub enum ParseVersionError {
+    #[error("invalid version format")]
+    InvalidFormat,
+    #[error("failed to parse segment: {0}")]
+    ParseSegmentError(#[from] std::num::ParseIntError),
+}
+
+impl ProtocolVersion {
     pub const fn new(segments: [u8; 4]) -> Self {
         Self { segments }
     }
 
-    pub fn parse(version: &str) -> anyhow::Result<Self> {
+    /// Parses a version string in the format `x.y.z.w` where x, y, z, w are u8 numbers.
+    pub fn parse(version: &str) -> Result<Self, ParseVersionError> {
         let segments: Result<Vec<u8>, _> = version.split('.').map(|s| s.parse::<u8>()).collect();
 
         match segments {
@@ -21,26 +32,27 @@ impl Version {
                 arr.copy_from_slice(&segments);
                 Ok(Self { segments: arr })
             }
-            _ => Err(anyhow::anyhow!("invalid version format")),
+            Ok(_) => Err(ParseVersionError::InvalidFormat),
+            Err(e) => Err(ParseVersionError::ParseSegmentError(e)),
         }
     }
 }
 
-impl std::default::Default for Version {
+impl core::default::Default for ProtocolVersion {
     fn default() -> Self {
-        Version::new([0, 1, 0, 0])
+        ProtocolVersion::new([0, 1, 0, 0])
     }
 }
 
-/// Formats the version as a string, where each segment is separated by a dot.
-/// The last segment (fourth part) will not be printed if it's zero.
-///
-/// For example:
-/// - Version::new([1, 2, 3, 4]) will be displayed as "1.2.3.4"
-/// - Version::new([1, 2, 3, 0]) will be displayed as "1.2.3"
-/// - Version::new([0, 2, 3, 0]) will be displayed as "0.2.3"
-impl std::fmt::Display for Version {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+// Formats the version as a string, where each segment is separated by a dot.
+// The last segment (fourth part) will not be printed if it's zero.
+//
+// For example:
+// - Version::new([1, 2, 3, 4]) will be displayed as "1.2.3.4"
+// - Version::new([1, 2, 3, 0]) will be displayed as "1.2.3"
+// - Version::new([0, 2, 3, 0]) will be displayed as "0.2.3"
+impl core::fmt::Display for ProtocolVersion {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         for (idx, segment) in self.segments.iter().enumerate() {
             // If it's the last segment, don't print it if it's zero.
             if idx == self.segments.len() - 1 {
@@ -58,28 +70,30 @@ impl std::fmt::Display for Version {
     }
 }
 
+impl TryFrom<String> for ProtocolVersion {
+    type Error = ParseVersionError;
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        ProtocolVersion::parse(&value)
+    }
+}
+
 #[cfg(feature = "serde")]
 mod serde {
     use super::*;
 
-    impl ::serde::Serialize for Version {
+    // We de/serialize the version from/into a human-readable string format to prevent breaking the
+    // database encoding format if ever decide to change its memory representation.
+
+    impl ::serde::Serialize for ProtocolVersion {
         fn serialize<S: ::serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-            if serializer.is_human_readable() {
-                serializer.serialize_str(&self.to_string())
-            } else {
-                self.segments.serialize(serializer)
-            }
+            serializer.serialize_str(&self.to_string())
         }
     }
 
-    impl<'de> ::serde::Deserialize<'de> for Version {
+    impl<'de> ::serde::Deserialize<'de> for ProtocolVersion {
         fn deserialize<D: ::serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-            if deserializer.is_human_readable() {
-                let s = String::deserialize(deserializer)?;
-                Version::parse(&s).map_err(::serde::de::Error::custom)
-            } else {
-                Ok(Version::new(<[u8; 4]>::deserialize(deserializer)?))
-            }
+            let s = String::deserialize(deserializer)?;
+            ProtocolVersion::parse(&s).map_err(::serde::de::Error::custom)
         }
     }
 }
@@ -91,7 +105,7 @@ mod tests {
     #[test]
     fn parse_version_valid() {
         let version = "1.9.0.0";
-        let parsed = Version::parse(version).unwrap();
+        let parsed = ProtocolVersion::parse(version).unwrap();
         assert_eq!(parsed.segments, [1, 9, 0, 0]);
         assert_eq!(String::from("1.9.0"), parsed.to_string());
     }
@@ -99,25 +113,25 @@ mod tests {
     #[test]
     fn parse_version_missing_parts() {
         let version = "1.9.0";
-        assert!(Version::parse(version).is_err());
+        assert!(ProtocolVersion::parse(version).is_err());
     }
 
     #[test]
     fn parse_version_invalid_digit_should_fail() {
         let version = "0.fv.1.0";
-        assert!(Version::parse(version).is_err());
+        assert!(ProtocolVersion::parse(version).is_err());
     }
 
     #[test]
     fn parse_version_missing_digit_should_fail() {
         let version = "1...";
-        assert!(Version::parse(version).is_err());
+        assert!(ProtocolVersion::parse(version).is_err());
     }
 
     #[test]
     fn parse_version_many_parts_should_succeed() {
         let version = "1.2.3.4";
-        let parsed = Version::parse(version).unwrap();
+        let parsed = ProtocolVersion::parse(version).unwrap();
         assert_eq!(parsed.segments, [1, 2, 3, 4]);
         assert_eq!(String::from("1.2.3.4"), parsed.to_string());
     }
@@ -128,18 +142,17 @@ mod tests {
 
         #[test]
         fn rt_human_readable() {
-            let version = Version::new([1, 2, 3, 4]);
+            let version = ProtocolVersion::new([1, 2, 3, 4]);
             let serialized = serde_json::to_string(&version).unwrap();
-            assert_eq!(serialized, "\"1.2.3.4\"");
-            let deserialized: Version = serde_json::from_str(&serialized).unwrap();
+            let deserialized: ProtocolVersion = serde_json::from_str(&serialized).unwrap();
             assert_eq!(version, deserialized);
         }
 
         #[test]
         fn rt_non_human_readable() {
-            let version = Version::new([1, 2, 3, 4]);
+            let version = ProtocolVersion::new([1, 2, 3, 4]);
             let serialized = postcard::to_stdvec(&version).unwrap();
-            let deserialized: Version = postcard::from_bytes(&serialized).unwrap();
+            let deserialized: ProtocolVersion = postcard::from_bytes(&serialized).unwrap();
             assert_eq!(version, deserialized);
         }
     }

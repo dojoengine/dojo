@@ -33,7 +33,7 @@ use katana_pool::validation::stateful::TxValidator;
 use katana_pool::TxPool;
 use katana_primitives::block::FinalityStatus;
 use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
-use katana_primitives::version::Version;
+use katana_primitives::version::ProtocolVersion;
 use katana_provider::providers::fork::ForkedProvider;
 use katana_provider::providers::in_memory::InMemoryProvider;
 use katana_rpc::dev::DevApi;
@@ -205,7 +205,7 @@ pub async fn build(mut config: Config) -> Result<Node> {
             panic!("block to be forked is a pending block")
         };
 
-        config.chain.version = Version::parse(&block.starknet_version)?;
+        config.chain.version = ProtocolVersion::parse(&block.starknet_version)?;
 
         // adjust the genesis to match the forked block
         config.chain.genesis.number = block.block_number;
