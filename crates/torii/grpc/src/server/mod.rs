@@ -33,6 +33,7 @@ use subscriptions::indexer::IndexerManager;
 use tokio::net::TcpListener;
 use tokio::sync::mpsc::{channel, Receiver};
 use tokio_stream::wrappers::{ReceiverStream, TcpListenerStream};
+use tonic::codec::CompressionEncoding;
 use tonic::transport::Server;
 use tonic::{Request, Response, Status};
 use torii_core::error::{Error, ParseError, QueryError};
@@ -1250,7 +1251,9 @@ pub async fn new(
         .unwrap();
 
     let world = DojoWorld::new(pool.clone(), block_rx, world_address, provider);
-    let server = WorldServer::new(world);
+    let server = WorldServer::new(world)
+        .accept_compressed(CompressionEncoding::Gzip)
+        .send_compressed(CompressionEncoding::Gzip);
 
     let server_future = Server::builder()
         // GrpcWeb is over http1 so we must enable it.

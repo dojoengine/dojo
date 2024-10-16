@@ -50,12 +50,16 @@ pub struct WorldClient {
 impl WorldClient {
     #[cfg(not(target_arch = "wasm32"))]
     pub async fn new(dst: String, world_address: Felt) -> Result<Self, Error> {
+        use tonic::codec::CompressionEncoding;
+
         let endpoint =
             Endpoint::from_shared(dst.clone()).map_err(|e| Error::Endpoint(e.to_string()))?;
         let channel = endpoint.connect().await.map_err(Error::Transport)?;
         Ok(Self {
             _world_address: world_address,
-            inner: world_client::WorldClient::with_origin(channel, endpoint.uri().clone()),
+            inner: world_client::WorldClient::with_origin(channel, endpoint.uri().clone())
+                .accept_compressed(CompressionEncoding::Gzip)
+                .send_compressed(CompressionEncoding::Gzip),
         })
     }
 
@@ -64,7 +68,9 @@ impl WorldClient {
     pub async fn new(endpoint: String, _world_address: Felt) -> Result<Self, Error> {
         Ok(Self {
             _world_address,
-            inner: world_client::WorldClient::new(tonic_web_wasm_client::Client::new(endpoint)),
+            inner: world_client::WorldClient::new(tonic_web_wasm_client::Client::new(endpoint))
+                .accept_compressed(CompressionEncoding::Gzip)
+                .send_compressed(CompressionEncoding::Gzip),
         })
     }
 
