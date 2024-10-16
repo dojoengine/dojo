@@ -31,7 +31,7 @@ use starknet::providers::JsonRpcClient;
 use subscriptions::event::EventManager;
 use subscriptions::indexer::IndexerManager;
 use tokio::net::TcpListener;
-use tokio::sync::mpsc::Receiver;
+use tokio::sync::mpsc::{channel, unbounded_channel, Receiver};
 use tokio_stream::wrappers::{ReceiverStream, TcpListenerStream};
 use tonic::transport::Server;
 use tonic::{Request, Response, Status};
@@ -47,8 +47,7 @@ use crate::proto::types::member_value::ValueType;
 use crate::proto::types::LogicalOperator;
 use crate::proto::world::world_server::WorldServer;
 use crate::proto::world::{
-    SubscribeEntitiesRequest, SubscribeEntityResponse, SubscribeEventsResponse,
-    SubscribeIndexerRequest, SubscribeIndexerResponse, WorldMetadataRequest, WorldMetadataResponse,
+    RetrieveEntitiesStreamingResponse, SubscribeEntitiesRequest, SubscribeEntityResponse, SubscribeEventsResponse, SubscribeIndexerRequest, SubscribeIndexerResponse, WorldMetadataRequest, WorldMetadataResponse
 };
 use crate::proto::{self};
 use crate::types::schema::SchemaError;
@@ -861,7 +860,7 @@ fn map_row_to_entity(
 ) -> Result<proto::types::Entity, Error> {
     let hashed_keys = Felt::from_str(&row.get::<String, _>("id")).map_err(ParseError::FromStr)?;
     let models = schemas
-        .par_iter()
+        .iter()
         .map(|schema| {
             let mut ty = schema.clone();
             map_row_to_ty("", &schema.name(), &mut ty, row, arrays_rows)?;
@@ -1024,6 +1023,8 @@ type SubscribeEventsResponseStream =
     Pin<Box<dyn Stream<Item = Result<SubscribeEventsResponse, Status>> + Send>>;
 type SubscribeIndexerResponseStream =
     Pin<Box<dyn Stream<Item = Result<SubscribeIndexerResponse, Status>> + Send>>;
+type RetrieveEntitiesStreamingResponseStream =
+    Pin<Box<dyn Stream<Item = Result<RetrieveEntitiesStreamingResponse, Status>> + Send>>;
 
 #[tonic::async_trait]
 impl proto::world::world_server::World for DojoWorld {
@@ -1032,6 +1033,7 @@ impl proto::world::world_server::World for DojoWorld {
     type SubscribeEventMessagesStream = SubscribeEntitiesResponseStream;
     type SubscribeEventsStream = SubscribeEventsResponseStream;
     type SubscribeIndexerStream = SubscribeIndexerResponseStream;
+    type RetrieveEntitiesStreamingStream = RetrieveEntitiesStreamingResponseStream;
 
     async fn world_metadata(
         &self,
@@ -1115,6 +1117,26 @@ impl proto::world::world_server::World for DojoWorld {
             .map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(entities))
+    }
+
+    async fn retrieve_entities_streaming(
+        &self,
+        request: Request<RetrieveEntitiesRequest>,
+    ) -> ServiceResult<Self::RetrieveEntitiesStreamingStream> {
+        let query = request
+            .into_inner()
+            .query
+            .ok_or_else(|| Status::invalid_argument("Missing query argument"))?;
+
+        let (tx, rx) = channel(100);
+        let res = self.retrieve_entities(ENTITIES_TABLE, ENTITIES_MODEL_RELATION_TABLE, ENTITIES_ENTITY_RELATION_COLUMN, query).await.map_err(|e| Status::internal(e.to_string()))?;
+        tokio::spawn(async move {
+            for (i, entity) in res.entities.iter().enumerate() {
+                tx.send(Ok(RetrieveEntitiesStreamingResponse { entity: Some(entity.clone()), remaining_count: (res.total_count - i as u32) as u32 })).await.unwrap();
+            }
+        });
+
+        Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::RetrieveEntitiesStreamingStream))
     }
 
     async fn subscribe_event_messages(
