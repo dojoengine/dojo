@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1729093331807,
+  "lastUpdate": 1729093525392,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -26149,6 +26149,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 12402584671,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9fdd351df39121f8251222954cdbbac231a7ee33",
+          "message": "refactor(katana): move forked blockchain creation logic to core (#2545)",
+          "timestamp": "2024-10-16T23:26:13+08:00",
+          "tree_id": "1f905ec858ce8180654c1c1b523826db55e20255",
+          "url": "https://github.com/dojoengine/dojo/commit/9fdd351df39121f8251222954cdbbac231a7ee33"
+        },
+        "date": 1729093523748,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16382746,
+            "range": "± 268053",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 4391969,
+            "range": "± 261288",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3670017065,
+            "range": "± 800753499",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4799785,
+            "range": "± 64855",
             "unit": "ns/iter"
           }
         ]
