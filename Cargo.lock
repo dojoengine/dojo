@@ -14936,6 +14936,7 @@ dependencies = [
  "dojo-world",
  "futures",
  "futures-util",
+ "http 0.2.12",
  "hyper 0.14.30",
  "katana-runner",
  "num-traits 0.2.19",
@@ -14964,6 +14965,7 @@ dependencies = [
  "tonic-web-wasm-client",
  "torii-core",
  "tower 0.4.13",
+ "tower-http 0.4.4",
  "tracing",
 ]
 

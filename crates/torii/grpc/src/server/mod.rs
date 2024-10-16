@@ -11,11 +11,13 @@ use std::pin::Pin;
 use std::str;
 use std::str::FromStr;
 use std::sync::Arc;
+use std::time::Duration;
 
 use dojo_types::primitive::{Primitive, PrimitiveError};
 use dojo_types::schema::Ty;
 use dojo_world::contracts::naming::compute_selector_from_names;
 use futures::Stream;
+use http::HeaderName;
 use proto::world::{
     RetrieveEntitiesRequest, RetrieveEntitiesResponse, RetrieveEventsRequest,
     RetrieveEventsResponse, SubscribeModelsRequest, SubscribeModelsResponse,
@@ -36,9 +38,11 @@ use tokio_stream::wrappers::{ReceiverStream, TcpListenerStream};
 use tonic::codec::CompressionEncoding;
 use tonic::transport::Server;
 use tonic::{Request, Response, Status};
+use tonic_web::GrpcWebLayer;
 use torii_core::error::{Error, ParseError, QueryError};
 use torii_core::model::{build_sql_query, map_row_to_ty};
 use torii_core::sql::cache::ModelCache;
+use tower_http::cors::{AllowOrigin, CorsLayer};
 
 use self::subscriptions::entity::EntityManager;
 use self::subscriptions::event_message::EventMessageManager;
@@ -1232,6 +1236,21 @@ impl proto::world::world_server::World for DojoWorld {
     }
 }
 
+const DEFAULT_MAX_AGE: Duration = Duration::from_secs(24 * 60 * 60);
+const DEFAULT_EXPOSED_HEADERS: [&str; 4] = [
+    "grpc-status",
+    "grpc-message",
+    "grpc-status-details-bin",
+    "grpc-encoding",
+];
+const DEFAULT_ALLOW_HEADERS: [&str; 5] = [
+    "x-grpc-web",
+    "content-type",
+    "x-user-agent",
+    "grpc-timeout",
+    "grpc-accept-encoding",
+];
+
 pub async fn new(
     mut shutdown_rx: tokio::sync::broadcast::Receiver<()>,
     pool: &Pool<Sqlite>,
@@ -1258,8 +1277,29 @@ pub async fn new(
     let server_future = Server::builder()
         // GrpcWeb is over http1 so we must enable it.
         .accept_http1(true)
+        .layer(
+            CorsLayer::new()
+                .allow_origin(AllowOrigin::mirror_request())
+                .allow_credentials(true)
+                .max_age(DEFAULT_MAX_AGE)
+                .expose_headers(
+                    DEFAULT_EXPOSED_HEADERS
+                        .iter()
+                        .cloned()
+                        .map(HeaderName::from_static)
+                        .collect::<Vec<HeaderName>>(),
+                )
+                .allow_headers(
+                    DEFAULT_ALLOW_HEADERS
+                        .iter()
+                        .cloned()
+                        .map(HeaderName::from_static)
+                        .collect::<Vec<HeaderName>>(),
+                ),
+        )
+        .layer(GrpcWebLayer::new())
         .add_service(reflection)
-        .add_service(tonic_web::enable(server))
+        .add_service(server)
         .serve_with_incoming_shutdown(TcpListenerStream::new(listener), async move {
             shutdown_rx.recv().await.map_or((), |_| ())
         });
