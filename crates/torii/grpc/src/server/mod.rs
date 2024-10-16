@@ -47,7 +47,9 @@ use crate::proto::types::member_value::ValueType;
 use crate::proto::types::LogicalOperator;
 use crate::proto::world::world_server::WorldServer;
 use crate::proto::world::{
-    RetrieveEntitiesStreamingResponse, SubscribeEntitiesRequest, SubscribeEntityResponse, SubscribeEventsResponse, SubscribeIndexerRequest, SubscribeIndexerResponse, WorldMetadataRequest, WorldMetadataResponse
+    RetrieveEntitiesStreamingResponse, SubscribeEntitiesRequest, SubscribeEntityResponse,
+    SubscribeEventsResponse, SubscribeIndexerRequest, SubscribeIndexerResponse,
+    WorldMetadataRequest, WorldMetadataResponse,
 };
 use crate::proto::{self};
 use crate::types::schema::SchemaError;
@@ -287,10 +289,8 @@ impl DojoWorld {
             let arrays_rows = Arc::new(arrays_rows);
             let schemas = Arc::new(schemas);
 
-            let group_entities: Result<Vec<_>, Error> = rows
-                .par_iter()
-                .map(|row| map_row_to_entity(row, &arrays_rows, &schemas))
-                .collect();
+            let group_entities: Result<Vec<_>, Error> =
+                rows.par_iter().map(|row| map_row_to_entity(row, &arrays_rows, &schemas)).collect();
 
             all_entities.extend(group_entities?);
         }
@@ -599,9 +599,7 @@ impl DojoWorld {
 
         let entities_collection: Result<Vec<_>, Error> = db_entities
             .par_iter()
-            .map(|row| {
-                map_row_to_entity(row, &arrays_rows, &schemas)
-            })
+            .map(|row| map_row_to_entity(row, &arrays_rows, &schemas))
             .collect();
         Ok((entities_collection?, total_count))
     }
@@ -1129,14 +1127,31 @@ impl proto::world::world_server::World for DojoWorld {
             .ok_or_else(|| Status::invalid_argument("Missing query argument"))?;
 
         let (tx, rx) = channel(100);
-        let res = self.retrieve_entities(ENTITIES_TABLE, ENTITIES_MODEL_RELATION_TABLE, ENTITIES_ENTITY_RELATION_COLUMN, query).await.map_err(|e| Status::internal(e.to_string()))?;
+        let res = self
+            .retrieve_entities(
+                ENTITIES_TABLE,
+                ENTITIES_MODEL_RELATION_TABLE,
+                ENTITIES_ENTITY_RELATION_COLUMN,
+                query,
+            )
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
         tokio::spawn(async move {
             for (i, entity) in res.entities.iter().enumerate() {
-                tx.send(Ok(RetrieveEntitiesStreamingResponse { entity: Some(entity.clone()), remaining_count: (res.total_count - i as u32) as u32 })).await.unwrap();
+                tx.send(Ok(RetrieveEntitiesStreamingResponse {
+                    entity: Some(entity.clone()),
+                    remaining_count: (res.total_count - i as u32) as u32,
+                }))
+                .await
+                .unwrap();
             }
         });
 
-        Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::RetrieveEntitiesStreamingStream))
+        Ok(
+            Response::new(
+                Box::pin(ReceiverStream::new(rx)) as Self::RetrieveEntitiesStreamingStream
+            ),
+        )
     }
 
     async fn subscribe_event_messages(
