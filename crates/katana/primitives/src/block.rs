@@ -2,7 +2,7 @@ use starknet::core::crypto::compute_hash_on_elements;
 
 use crate::contract::ContractAddress;
 use crate::transaction::{ExecutableTxWithHash, TxHash, TxWithHash};
-use crate::version::Version;
+use crate::version::ProtocolVersion;
 use crate::Felt;
 
 pub type BlockIdOrTag = starknet::core::types::BlockId;
@@ -37,7 +37,7 @@ pub struct PartialHeader {
     pub gas_prices: GasPrices,
     pub timestamp: u64,
     pub sequencer_address: ContractAddress,
-    pub version: Version,
+    pub version: ProtocolVersion,
 }
 
 /// The L1 gas prices.
@@ -68,7 +68,7 @@ pub struct Header {
     pub timestamp: u64,
     pub state_root: Felt,
     pub sequencer_address: ContractAddress,
-    pub version: Version,
+    pub protocol_version: ProtocolVersion,
 }
 
 impl Header {
@@ -76,7 +76,7 @@ impl Header {
         Self {
             state_root,
             number: partial_header.number,
-            version: partial_header.version,
+            protocol_version: partial_header.version,
             timestamp: partial_header.timestamp,
             gas_prices: partial_header.gas_prices,
             parent_hash: partial_header.parent_hash,

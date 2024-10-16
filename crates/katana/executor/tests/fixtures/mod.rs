@@ -21,7 +21,7 @@ use katana_primitives::transaction::{
     ExecutableTxWithHash, InvokeTx, InvokeTxV1,
 };
 use katana_primitives::utils::class::{parse_compiled_class, parse_sierra_class};
-use katana_primitives::version::Version;
+use katana_primitives::version::CURRENT_STARKNET_VERSION;
 use katana_primitives::{address, Felt};
 use katana_provider::providers::in_memory::InMemoryProvider;
 use katana_provider::traits::block::BlockWriter;
@@ -88,7 +88,7 @@ pub fn state_provider(chain: &ChainSpec) -> Box<dyn StateProvider> {
 /// [state_provider].
 #[rstest::fixture]
 pub fn valid_blocks() -> [ExecutableBlock; 3] {
-    let version = Version::new(0, 13, 0);
+    let version = CURRENT_STARKNET_VERSION;
     let chain_id = ChainId::parse("KATANA").unwrap();
     let sequencer_address = ContractAddress(1u64.into());
 
@@ -102,7 +102,7 @@ pub fn valid_blocks() -> [ExecutableBlock; 3] {
     [
         ExecutableBlock {
             header: PartialHeader {
-                version,
+                version: version.clone(),
                 number: 1,
                 timestamp: 100,
                 sequencer_address,
@@ -150,7 +150,7 @@ pub fn valid_blocks() -> [ExecutableBlock; 3] {
         },
         ExecutableBlock {
             header: PartialHeader {
-                version,
+                version: version.clone(),
                 number: 2,
                 timestamp: 200,
                 sequencer_address,

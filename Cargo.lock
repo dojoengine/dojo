@@ -8209,6 +8209,7 @@ dependencies = [
  "lazy_static",
  "num-bigint",
  "num-traits 0.2.19",
+ "postcard",
  "rand 0.8.5",
  "rstest 0.18.2",
  "serde",
