@@ -2,9 +2,11 @@
 mod tests {
     use std::collections::HashMap;
     use std::str::FromStr;
+    use std::sync::Arc;
     use std::time::Duration;
 
     use async_graphql::value;
+    use camino::Utf8PathBuf;
     use dojo_types::primitive::Primitive;
     use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
     use dojo_world::contracts::abi::model::Layout;
@@ -12,12 +14,16 @@ mod tests {
     use serial_test::serial;
     use sqlx::SqlitePool;
     use starknet::core::types::Event;
+    use starknet::providers::jsonrpc::HttpTransport;
+    use starknet::providers::JsonRpcClient;
     use starknet_crypto::{poseidon_hash_many, Felt};
+    use tempfile::TempDir;
     use tokio::sync::{broadcast, mpsc};
     use torii_core::executor::Executor;
     use torii_core::sql::utils::felts_to_sql_string;
     use torii_core::sql::Sql;
     use torii_core::types::ContractType;
+    use url::Url;
 
     use crate::tests::{model_fixtures, run_graphql_subscription};
     use crate::utils;
@@ -26,8 +32,15 @@ mod tests {
     #[serial]
     async fn test_entity_subscription(pool: SqlitePool) {
         let (shutdown_tx, _) = broadcast::channel(1);
+        let tempdir = TempDir::new().unwrap();
+        let tempdir_path = Utf8PathBuf::from(tempdir.path().to_str().unwrap());
+        // used to fetch token_uri data for erc721 tokens so pass dummy for the test
+        let url: Url = "https://www.example.com".parse().unwrap();
+        let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(url)));
         let (mut executor, sender) =
-            Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
+            Executor::new(pool.clone(), shutdown_tx.clone(), &tempdir_path, provider, 100)
+                .await
+                .unwrap();
         tokio::spawn(async move {
             executor.run().await.unwrap();
         });
@@ -170,8 +183,17 @@ mod tests {
     #[serial]
     async fn test_entity_subscription_with_id(pool: SqlitePool) {
         let (shutdown_tx, _) = broadcast::channel(1);
+        let tempdir = TempDir::new().unwrap();
+        let tempdir_path = Utf8PathBuf::from(tempdir.path().to_str().unwrap());
+
+        // dummy provider since its required to query data for erc721 tokens
+        let url: Url = "https://www.example.com".parse().unwrap();
+        let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(url)));
+
         let (mut executor, sender) =
-            Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
+            Executor::new(pool.clone(), shutdown_tx.clone(), &tempdir_path, provider, 100)
+                .await
+                .unwrap();
         tokio::spawn(async move {
             executor.run().await.unwrap();
         });
@@ -294,8 +316,15 @@ mod tests {
     #[serial]
     async fn test_model_subscription(pool: SqlitePool) {
         let (shutdown_tx, _) = broadcast::channel(1);
+        let tempdir = TempDir::new().unwrap();
+        let tempdir_path = Utf8PathBuf::from(tempdir.path().to_str().unwrap());
+
+        let url: Url = "https://www.example.com".parse().unwrap();
+        let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(url)));
         let (mut executor, sender) =
-            Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
+            Executor::new(pool.clone(), shutdown_tx.clone(), &tempdir_path, provider, 100)
+                .await
+                .unwrap();
         tokio::spawn(async move {
             executor.run().await.unwrap();
         });
@@ -368,8 +397,15 @@ mod tests {
     #[serial]
     async fn test_model_subscription_with_id(pool: SqlitePool) {
         let (shutdown_tx, _) = broadcast::channel(1);
+        let tempdir = TempDir::new().unwrap();
+        let tempdir_path = Utf8PathBuf::from(tempdir.path().to_str().unwrap());
+
+        let url: Url = "https://www.example.com".parse().unwrap();
+        let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(url)));
         let (mut executor, sender) =
-            Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
+            Executor::new(pool.clone(), shutdown_tx.clone(), &tempdir_path, provider, 100)
+                .await
+                .unwrap();
         tokio::spawn(async move {
             executor.run().await.unwrap();
         });
@@ -443,8 +479,15 @@ mod tests {
     #[serial]
     async fn test_event_emitted(pool: SqlitePool) {
         let (shutdown_tx, _) = broadcast::channel(1);
+        let tempdir = TempDir::new().unwrap();
+        let tempdir_path = Utf8PathBuf::from(tempdir.path().to_str().unwrap());
+
+        let url: Url = "https://www.example.com".parse().unwrap();
+        let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(url)));
         let (mut executor, sender) =
-            Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
+            Executor::new(pool.clone(), shutdown_tx.clone(), &tempdir_path, provider, 100)
+                .await
+                .unwrap();
         tokio::spawn(async move {
             executor.run().await.unwrap();
         });

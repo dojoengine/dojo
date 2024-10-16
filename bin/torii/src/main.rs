@@ -19,6 +19,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Context;
+use camino::Utf8PathBuf;
 use clap::{ArgAction, Parser};
 use dojo_metrics::exporters::prometheus::PrometheusRecorder;
 use dojo_utils::parse::{parse_socket_address, parse_url};
@@ -30,7 +31,7 @@ use sqlx::SqlitePool;
 use starknet::core::types::Felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
-use tempfile::NamedTempFile;
+use tempfile::{NamedTempFile, TempDir};
 use tokio::sync::broadcast;
 use tokio::sync::broadcast::Sender;
 use tokio_stream::StreamExt;
@@ -146,6 +147,10 @@ struct Args {
     /// Configuration file
     #[arg(long)]
     config: Option<PathBuf>,
+
+    /// Path to a directory to store ERC artifacts
+    #[arg(long)]
+    artifacts_path: Option<Utf8PathBuf>,
 }
 
 #[tokio::main]
@@ -213,7 +218,18 @@ async fn main() -> anyhow::Result<()> {
     let contracts =
         config.contracts.iter().map(|contract| (contract.address, contract.r#type)).collect();
 
-    let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx.clone()).await?;
+    let temp_dir = TempDir::new()?;
+    let artifacts_path =
+        args.artifacts_path.unwrap_or_else(|| Utf8PathBuf::from(temp_dir.path().to_str().unwrap()));
+
+    let (mut executor, sender) = Executor::new(
+        pool.clone(),
+        shutdown_tx.clone(),
+        &artifacts_path,
+        provider.clone(),
+        args.max_concurrent_tasks,
+    )
+    .await?;
     tokio::spawn(async move {
         executor.run().await.unwrap();
     });
@@ -254,10 +270,20 @@ async fn main() -> anyhow::Result<()> {
         Arc::new(contracts),
     );
 
-    let shutdown_rx = shutdown_tx.subscribe();
-    let (grpc_addr, grpc_server) =
-        torii_grpc::server::new(shutdown_rx, &pool, block_rx, world_address, Arc::clone(&provider))
-            .await?;
+    let (grpc_addr, grpc_server) = torii_grpc::server::new(
+        shutdown_tx.subscribe(),
+        &pool,
+        block_rx,
+        world_address,
+        Arc::clone(&provider),
+    )
+    .await?;
+
+    tokio::fs::create_dir_all(&artifacts_path).await?;
+    let absolute_path = artifacts_path.canonicalize_utf8()?;
+
+    let (artifacts_addr, artifacts_server) =
+        torii_server::artifacts::new(shutdown_tx.subscribe(), &absolute_path, pool.clone()).await?;
 
     let mut libp2p_relay_server = torii_relay::server::Relay::new(
         db,
@@ -270,7 +296,13 @@ async fn main() -> anyhow::Result<()> {
     )
     .expect("Failed to start libp2p relay server");
 
-    let proxy_server = Arc::new(Proxy::new(args.addr, args.allowed_origins, Some(grpc_addr), None));
+    let proxy_server = Arc::new(Proxy::new(
+        args.addr,
+        args.allowed_origins,
+        Some(grpc_addr),
+        None,
+        Some(artifacts_addr),
+    ));
 
     let graphql_server = spawn_rebuilding_graphql_server(
         shutdown_tx.clone(),
@@ -288,6 +320,7 @@ async fn main() -> anyhow::Result<()> {
     info!(target: LOG_TARGET, endpoint = %endpoint, "Starting torii endpoint.");
     info!(target: LOG_TARGET, endpoint = %gql_endpoint, "Serving Graphql playground.");
     info!(target: LOG_TARGET, url = %explorer_url, "Serving World Explorer.");
+    info!(target: LOG_TARGET, path = %artifacts_path, "Serving ERC artifacts at path");
 
     if args.explorer {
         if let Err(e) = webbrowser::open(&explorer_url) {
@@ -308,6 +341,7 @@ async fn main() -> anyhow::Result<()> {
     let graphql_server_handle = tokio::spawn(graphql_server);
     let grpc_server_handle = tokio::spawn(grpc_server);
     let libp2p_relay_server_handle = tokio::spawn(async move { libp2p_relay_server.run().await });
+    let artifacts_server_handle = tokio::spawn(artifacts_server);
 
     tokio::select! {
         res = engine_handle => res??,
@@ -315,6 +349,7 @@ async fn main() -> anyhow::Result<()> {
         res = graphql_server_handle => res?,
         res = grpc_server_handle => res??,
         res = libp2p_relay_server_handle => res?,
+        res = artifacts_server_handle => res?,
         _ = dojo_utils::signal::wait_signals() => {},
     };
 

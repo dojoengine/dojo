@@ -18,7 +18,7 @@ use starknet::core::utils::{get_contract_address, get_selector_from_name};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
 use starknet_crypto::poseidon_hash_many;
-use tempfile::NamedTempFile;
+use tempfile::{NamedTempFile, TempDir};
 use tokio::sync::broadcast;
 
 use crate::engine::{Engine, EngineConfig, Processors};
@@ -130,8 +130,19 @@ async fn test_load_from_remote(sequencer: &RunnerCtx) {
     let pool = SqlitePoolOptions::new().connect_with(options).await.unwrap();
     sqlx::migrate!("../migrations").run(&pool).await.unwrap();
 
+    let tempfolder = TempDir::new().unwrap();
+    let tempfolder_path = Utf8PathBuf::from(tempfolder.path().to_str().unwrap());
+
     let (shutdown_tx, _) = broadcast::channel(1);
-    let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
+    let (mut executor, sender) = Executor::new(
+        pool.clone(),
+        shutdown_tx.clone(),
+        &tempfolder_path,
+        Arc::clone(&provider),
+        100,
+    )
+    .await
+    .unwrap();
     tokio::spawn(async move {
         executor.run().await.unwrap();
     });
@@ -300,7 +311,12 @@ async fn test_load_from_remote_del(sequencer: &RunnerCtx) {
     sqlx::migrate!("../migrations").run(&pool).await.unwrap();
 
     let (shutdown_tx, _) = broadcast::channel(1);
-    let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
+    let tempdir = TempDir::new().unwrap();
+    let tempdir_path = Utf8PathBuf::from(tempdir.path().to_str().unwrap());
+    let (mut executor, sender) =
+        Executor::new(pool.clone(), shutdown_tx.clone(), &tempdir_path, Arc::clone(&provider), 100)
+            .await
+            .unwrap();
     tokio::spawn(async move {
         executor.run().await.unwrap();
     });
@@ -313,7 +329,7 @@ async fn test_load_from_remote_del(sequencer: &RunnerCtx) {
     .await
     .unwrap();
 
-    let _ = bootstrap_engine(world_reader, db.clone(), provider).await;
+    let _ = bootstrap_engine(world_reader, db.clone(), Arc::clone(&provider)).await.unwrap();
 
     assert_eq!(count_table("dojo_examples-PlayerConfig", &pool).await, 0);
     assert_eq!(count_table("dojo_examples-PlayerConfig$favorite_item", &pool).await, 0);
@@ -398,7 +414,13 @@ async fn test_update_with_set_record(sequencer: &RunnerCtx) {
     sqlx::migrate!("../migrations").run(&pool).await.unwrap();
 
     let (shutdown_tx, _) = broadcast::channel(1);
-    let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
+    let tempdir = TempDir::new().unwrap();
+    let tempdir_path = Utf8PathBuf::from(tempdir.path().to_str().unwrap());
+
+    let (mut executor, sender) =
+        Executor::new(pool.clone(), shutdown_tx.clone(), &tempdir_path, Arc::clone(&provider), 100)
+            .await
+            .unwrap();
     tokio::spawn(async move {
         executor.run().await.unwrap();
     });

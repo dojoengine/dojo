@@ -14,10 +14,13 @@ async-trait.workspace = true
 base64.workspace = true
 bitflags = "2.6.0"
 cainome.workspace = true
+camino.workspace = true
 chrono.workspace = true
 crypto-bigint.workspace = true
+data-url.workspace = true
 dojo-types.workspace = true
 dojo-world = { workspace = true, features = [ "contracts", "manifest" ] }
+# fluent-uri.workspace = true
 futures-channel = "0.3.0"
 futures-util.workspace = true
 hashlink.workspace = true
@@ -33,6 +36,7 @@ starknet.workspace = true
 thiserror.workspace = true
 tokio = { version = "1.32.0", features = [ "sync" ], default-features = true }
 # tokio-stream = "0.1.11"
+ipfs-api-backend-hyper.workspace = true
 tokio-util.workspace = true
 toml.workspace = true
 tracing.workspace = true

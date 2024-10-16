@@ -20,12 +20,13 @@ dojo-types.workspace = true
 dojo-world = { path = "../../dojo-world", features = [ "contracts" ] }
 indexmap.workspace = true
 serde_json.workspace = true
-starknet.workspace = true
 starknet-crypto.workspace = true
+starknet.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 
 [dev-dependencies]
+camino.workspace = true
 katana-runner.workspace = true
 tempfile.workspace = true
 tokio.workspace = true
