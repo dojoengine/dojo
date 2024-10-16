@@ -1243,12 +1243,13 @@ const DEFAULT_EXPOSED_HEADERS: [&str; 4] = [
     "grpc-status-details-bin",
     "grpc-encoding",
 ];
-const DEFAULT_ALLOW_HEADERS: [&str; 5] = [
+const DEFAULT_ALLOW_HEADERS: [&str; 6] = [
     "x-grpc-web",
     "content-type",
     "x-user-agent",
     "grpc-timeout",
     "grpc-accept-encoding",
+    "grpc-encoding",
 ];
 
 pub async fn new(
