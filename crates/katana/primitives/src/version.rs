@@ -25,15 +25,19 @@ impl ProtocolVersion {
     /// Parses a version string in the format `x.y.z.w` where x, y, z, w are u8 numbers.
     /// The string can have fewer than 4 segments; missing segments are filled with zeros.
     pub fn parse(version: &str) -> Result<Self, ParseVersionError> {
+        if version.is_empty() {
+            return Err(ParseVersionError::InvalidFormat);
+        }
+
         let segments = version.split('.').collect::<Vec<&str>>();
 
-        if segments.is_empty() || segments.len() > 4 {
+        if segments.len() > 4 {
             return Err(ParseVersionError::InvalidFormat);
         }
 
         let mut buffer = [0u8; 4];
         for (buf, seg) in buffer.iter_mut().zip(segments) {
-            *buf = seg.parse::<u8>()?;
+            *buf = if seg.is_empty() { 0 } else { seg.parse::<u8>()? };
         }
 
         Ok(Self::new(buffer))
@@ -115,7 +119,9 @@ mod tests {
     #[test]
     fn parse_version_missing_parts() {
         let version = "1.9.0";
-        assert!(ProtocolVersion::parse(version).is_err());
+        let parsed = ProtocolVersion::parse(version).unwrap();
+        assert_eq!(parsed.segments, [1, 9, 0, 0]);
+        assert_eq!("1.9.0", parsed.to_string());
     }
 
     #[test]
@@ -125,9 +131,11 @@ mod tests {
     }
 
     #[test]
-    fn parse_version_missing_digit_should_fail() {
+    fn parse_version_missing_digit_default_zero() {
         let version = "1...";
-        assert!(ProtocolVersion::parse(version).is_err());
+        let parsed = ProtocolVersion::parse(version).unwrap();
+        assert_eq!(parsed.segments, [1, 0, 0, 0]);
+        assert_eq!("1.0.0", parsed.to_string());
     }
 
     #[test]
@@ -135,7 +143,15 @@ mod tests {
         let version = "1.2.3.4";
         let parsed = ProtocolVersion::parse(version).unwrap();
         assert_eq!(parsed.segments, [1, 2, 3, 4]);
-        assert_eq!(String::from("1.2.3.4"), parsed.to_string());
+        assert_eq!("1.2.3.4", parsed.to_string());
+    }
+
+    #[test]
+    fn parse_invalid_formats() {
+        let version = "";
+        assert!(ProtocolVersion::parse(version).is_err());
+        let version = "1.2.3.4.5";
+        assert!(ProtocolVersion::parse(version).is_err());
     }
 
     #[cfg(feature = "serde")]
