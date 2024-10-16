@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1729104147944,
+  "lastUpdate": 1729106824224,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -26275,6 +26275,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4431996,
             "range": "± 42973",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fbef8a8d49b119923ae182577614e4a04cbd77aa",
+          "message": "fix(katana): estimate message insufficient fee error (#2549)",
+          "timestamp": "2024-10-17T03:11:16+08:00",
+          "tree_id": "82b9434e304f31f2d6a2688b46ecdf6acf903b8a",
+          "url": "https://github.com/dojoengine/dojo/commit/fbef8a8d49b119923ae182577614e4a04cbd77aa"
+        },
+        "date": 1729106822769,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 12419750938,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
