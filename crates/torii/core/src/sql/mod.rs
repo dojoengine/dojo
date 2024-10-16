@@ -1257,4 +1257,10 @@ impl Sql {
         self.executor.send(execute)?;
         recv.await?
     }
+
+    pub async fn flush(&self) -> Result<()> {
+        let (flush, recv) = QueryMessage::flush_recv();
+        self.executor.send(flush)?;
+        recv.await?
+    }
 }

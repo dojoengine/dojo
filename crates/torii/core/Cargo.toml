@@ -14,13 +14,17 @@ async-trait.workspace = true
 base64.workspace = true
 bitflags = "2.6.0"
 cainome.workspace = true
+camino.workspace = true
 chrono.workspace = true
 crypto-bigint.workspace = true
+data-url.workspace = true
 dojo-types.workspace = true
 dojo-world = { workspace = true, features = [ "contracts", "manifest" ] }
+fluent-uri.workspace = true
 futures-channel = "0.3.0"
 futures-util.workspace = true
 hashlink.workspace = true
+image.workspace = true
 num-traits.workspace = true
 once_cell.workspace = true
 reqwest.workspace = true

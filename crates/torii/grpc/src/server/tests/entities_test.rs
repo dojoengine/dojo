@@ -19,7 +19,7 @@ use starknet::core::utils::{get_contract_address, get_selector_from_name};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
 use starknet_crypto::poseidon_hash_many;
-use tempfile::NamedTempFile;
+use tempfile::{NamedTempFile, TempDir};
 use tokio::sync::broadcast;
 use torii_core::engine::{Engine, EngineConfig, Processors};
 use torii_core::executor::Executor;
@@ -100,7 +100,15 @@ async fn test_entities_queries(sequencer: &RunnerCtx) {
     TransactionWaiter::new(tx.transaction_hash, &provider).await.unwrap();
 
     let (shutdown_tx, _) = broadcast::channel(1);
-    let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
+    let tempdir = TempDir::new().unwrap();
+    let (mut executor, sender) = Executor::new(
+        pool.clone(),
+        shutdown_tx.clone(),
+        tempdir.path().to_path_buf().try_into().unwrap(),
+        Arc::clone(&provider),
+    )
+    .await
+    .unwrap();
     tokio::spawn(async move {
         executor.run().await.unwrap();
     });
