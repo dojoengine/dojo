@@ -27,13 +27,18 @@ impl MsgFromL1 {
             &self.0.payload,
         );
 
+        // In an l1_handler transaction, the first element of the calldata is always the Ethereum
+        // address of the sender (msg.sender). https://docs.starknet.io/documentation/architecture_and_concepts/Network_Architecture/messaging-mechanism/#l1-l2-messages
+        let mut calldata = vec![Felt::from(self.0.from_address)];
+        calldata.extend(self.0.payload);
+
         L1HandlerTx {
             nonce,
             chain_id,
+            calldata,
             message_hash,
             paid_fee_on_l1,
             version: Felt::ZERO,
-            calldata: self.0.payload,
             contract_address: self.0.to_address.into(),
             entry_point_selector: self.0.entry_point_selector,
         }
