@@ -100,7 +100,7 @@ impl Provider for JsonRpcProvider {
                     timestamp: block.timestamp,
                     state_root: block.new_root,
                     sequencer_address: block.sequencer_address.into(),
-                    version: ProtocolVersion::parse(&block.starknet_version).unwrap(),
+                    protocol_version: ProtocolVersion::parse(&block.starknet_version).unwrap(),
                 },
             },
             body: txs,

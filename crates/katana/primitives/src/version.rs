@@ -14,7 +14,7 @@ pub enum ParseVersionError {
     #[error("invalid version format")]
     InvalidFormat,
     #[error("failed to parse segment: {0}")]
-    ParseSegmentError(#[from] std::num::ParseIntError),
+    ParseSegment(#[from] std::num::ParseIntError),
 }
 
 impl ProtocolVersion {
@@ -23,18 +23,20 @@ impl ProtocolVersion {
     }
 
     /// Parses a version string in the format `x.y.z.w` where x, y, z, w are u8 numbers.
+    /// The string can have fewer than 4 segments; missing segments are filled with zeros.
     pub fn parse(version: &str) -> Result<Self, ParseVersionError> {
-        let segments: Result<Vec<u8>, _> = version.split('.').map(|s| s.parse::<u8>()).collect();
+        let segments = version.split('.').collect::<Vec<&str>>();
 
-        match segments {
-            Ok(segments) if segments.len() == 4 => {
-                let mut arr = [0u8; 4];
-                arr.copy_from_slice(&segments);
-                Ok(Self { segments: arr })
-            }
-            Ok(_) => Err(ParseVersionError::InvalidFormat),
-            Err(e) => Err(ParseVersionError::ParseSegmentError(e)),
+        if segments.is_empty() || segments.len() > 4 {
+            return Err(ParseVersionError::InvalidFormat);
         }
+
+        let mut buffer = [0u8; 4];
+        for (buf, seg) in buffer.iter_mut().zip(segments) {
+            *buf = seg.parse::<u8>()?;
+        }
+
+        Ok(Self::new(buffer))
     }
 }
 

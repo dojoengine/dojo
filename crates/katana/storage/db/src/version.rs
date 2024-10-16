@@ -5,7 +5,7 @@ use std::mem;
 use std::path::{Path, PathBuf};
 
 /// Current version of the database.
-pub const CURRENT_DB_VERSION: u32 = 1;
+pub const CURRENT_DB_VERSION: u32 = 2;
 
 /// Name of the version file.
 const DB_VERSION_FILE_NAME: &str = "db.version";

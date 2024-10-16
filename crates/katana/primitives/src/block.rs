@@ -68,7 +68,7 @@ pub struct Header {
     pub timestamp: u64,
     pub state_root: Felt,
     pub sequencer_address: ContractAddress,
-    pub version: ProtocolVersion,
+    pub protocol_version: ProtocolVersion,
 }
 
 impl Header {
@@ -76,7 +76,7 @@ impl Header {
         Self {
             state_root,
             number: partial_header.number,
-            version: partial_header.version,
+            protocol_version: partial_header.version,
             timestamp: partial_header.timestamp,
             gas_prices: partial_header.gas_prices,
             parent_hash: partial_header.parent_hash,

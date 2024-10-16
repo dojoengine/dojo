@@ -35,7 +35,7 @@ impl BlockWithTxs {
             timestamp: block.header.timestamp,
             block_number: block.header.number,
             parent_hash: block.header.parent_hash,
-            starknet_version: block.header.version.to_string(),
+            starknet_version: block.header.protocol_version.to_string(),
             sequencer_address: block.header.sequencer_address.into(),
             status: match finality_status {
                 FinalityStatus::AcceptedOnL1 => BlockStatus::AcceptedOnL1,
@@ -112,7 +112,7 @@ impl BlockWithTxHashes {
             timestamp: block.header.timestamp,
             block_number: block.header.number,
             parent_hash: block.header.parent_hash,
-            starknet_version: block.header.version.to_string(),
+            starknet_version: block.header.protocol_version.to_string(),
             sequencer_address: block.header.sequencer_address.into(),
             status: match finality_status {
                 FinalityStatus::AcceptedOnL1 => BlockStatus::AcceptedOnL1,
@@ -219,7 +219,7 @@ impl BlockWithReceipts {
                 price_in_wei: Default::default(),
             },
             l1_da_mode: L1DataAvailabilityMode::Calldata,
-            starknet_version: header.version.to_string(),
+            starknet_version: header.protocol_version.to_string(),
             transactions,
         })
     }

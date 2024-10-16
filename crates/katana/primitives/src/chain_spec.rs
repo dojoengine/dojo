@@ -51,7 +51,7 @@ pub struct FeeContracts {
 impl ChainSpec {
     pub fn block(&self) -> Block {
         let header = Header {
-            version: self.version.clone(),
+            protocol_version: self.version.clone(),
             number: self.genesis.number,
             timestamp: self.genesis.timestamp,
             state_root: self.genesis.state_root,
@@ -343,7 +343,7 @@ mod tests {
                 parent_hash: chain_spec.genesis.parent_hash,
                 sequencer_address: chain_spec.genesis.sequencer_address,
                 gas_prices: chain_spec.genesis.gas_prices.clone(),
-                version: CURRENT_STARKNET_VERSION,
+                protocol_version: CURRENT_STARKNET_VERSION,
             },
             body: Vec::new(),
         };
@@ -359,7 +359,7 @@ mod tests {
         assert_eq!(actual_block.header.parent_hash, expected_block.header.parent_hash);
         assert_eq!(actual_block.header.sequencer_address, expected_block.header.sequencer_address);
         assert_eq!(actual_block.header.gas_prices, expected_block.header.gas_prices);
-        assert_eq!(actual_block.header.version, expected_block.header.version);
+        assert_eq!(actual_block.header.protocol_version, expected_block.header.protocol_version);
         assert_eq!(actual_block.body, expected_block.body);
 
         if cfg!(feature = "slot") {
