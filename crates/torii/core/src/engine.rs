@@ -277,8 +277,9 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
 
                             match self.process(fetch_result).await {
                                 Ok(_) => {
-                                    self.db.execute().await?;
+                                    self.db.flush().await?;
                                     self.db.apply_cache_diff().await?;
+                                    self.db.execute().await?;
                                 },
                                 Err(e) => {
                                     error!(target: LOG_TARGET, error = %e, "Processing fetched data.");
@@ -646,8 +647,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
 
             unique_contracts.insert(event.from_address);
 
-            Self::process_event(
-                self,
+            self.process_event(
                 block_number,
                 block_timestamp,
                 &event_id,
@@ -707,8 +707,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                 let event_id =
                     format!("{:#064x}:{:#x}:{:#04x}", block_number, *transaction_hash, event_idx);
 
-                Self::process_event(
-                    self,
+                self.process_event(
                     block_number,
                     block_timestamp,
                     &event_id,
@@ -720,8 +719,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             }
 
             if self.config.flags.contains(IndexingFlags::TRANSACTIONS) {
-                Self::process_transaction(
-                    self,
+                self.process_transaction(
                     block_number,
                     block_timestamp,
                     *transaction_hash,

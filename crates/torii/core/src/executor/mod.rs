@@ -1,28 +1,33 @@
 use std::collections::HashMap;
 use std::mem;
 use std::str::FromStr;
+use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::{Context, Result};
+use cainome::cairo_serde::{ByteArray, CairoSerde};
 use dojo_types::schema::{Struct, Ty};
-use sqlx::query::Query;
-use sqlx::sqlite::SqliteArguments;
 use sqlx::{FromRow, Pool, Sqlite, Transaction};
-use starknet::core::types::{Felt, U256};
+use starknet::core::types::{BlockId, BlockTag, Felt, FunctionCall};
+use starknet::core::utils::{get_selector_from_name, parse_cairo_short_string};
+use starknet::providers::Provider;
 use tokio::sync::broadcast::{Receiver, Sender};
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
-use tokio::sync::oneshot;
+use tokio::sync::{oneshot, Semaphore};
+use tokio::task::JoinSet;
 use tokio::time::Instant;
 use tracing::{debug, error};
 
 use crate::simple_broker::SimpleBroker;
-use crate::sql::utils::{felt_to_sql_string, sql_string_to_u256, u256_to_sql_string, I256};
-use crate::sql::FELT_DELIMITER;
+use crate::sql::utils::{felt_to_sql_string, I256};
 use crate::types::{
     ContractCursor, ContractType, Entity as EntityUpdated, Event as EventEmitted,
     EventMessage as EventMessageUpdated, Model as ModelRegistered, OptimisticEntity,
     OptimisticEventMessage,
 };
+
+pub mod erc;
+pub use erc::{RegisterErc20TokenQuery, RegisterErc721TokenMetadata, RegisterErc721TokenQuery};
 
 pub(crate) const LOG_TARGET: &str = "torii_core::executor";
 
@@ -102,14 +107,19 @@ pub enum QueryType {
     DeleteEntity(DeleteEntityQuery),
     EventMessage(EventMessageQuery),
     ApplyBalanceDiff(ApplyBalanceDiffQuery),
+    RegisterErc721Token(RegisterErc721TokenQuery),
+    RegisterErc20Token(RegisterErc20TokenQuery),
+    TokenTransfer,
     RegisterModel,
     StoreEvent,
+    // similar to execute but doesn't create a new transaction
+    Flush,
     Execute,
     Other,
 }
 
 #[derive(Debug)]
-pub struct Executor<'c> {
+pub struct Executor<'c, P: Provider + Sync + Send + 'static> {
     // Queries should use `transaction` instead of `pool`
     // This `pool` is only used to create a new `transaction`
     pool: Pool<Sqlite>,
@@ -117,6 +127,16 @@ pub struct Executor<'c> {
     publish_queue: Vec<BrokerMessage>,
     rx: UnboundedReceiver<QueryMessage>,
     shutdown_rx: Receiver<()>,
+    // These tasks are spawned to fetch ERC721 token metadata from the chain
+    // to not block the main loop
+    register_tasks: JoinSet<Result<RegisterErc721TokenMetadata>>,
+    // Some queries depends on the metadata being registered, so we defer them
+    // until the metadata is fetched
+    deferred_query_messages: Vec<QueryMessage>,
+    // It is used to make RPC calls to fetch token_uri data for erc721 contracts
+    provider: Arc<P>,
+    // Used to limit number of tasks that run in parallel to fetch metadata
+    semaphore: Arc<Semaphore>,
 }
 
 #[derive(Debug)]
@@ -174,19 +194,48 @@ impl QueryMessage {
             rx,
         )
     }
+
+    pub fn flush_recv() -> (Self, oneshot::Receiver<Result<()>>) {
+        let (tx, rx) = oneshot::channel();
+        (
+            Self {
+                statement: "".to_string(),
+                arguments: vec![],
+                query_type: QueryType::Flush,
+                tx: Some(tx),
+            },
+            rx,
+        )
+    }
 }
 
-impl<'c> Executor<'c> {
+impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
     pub async fn new(
         pool: Pool<Sqlite>,
         shutdown_tx: Sender<()>,
+        provider: Arc<P>,
+        max_concurrent_tasks: usize,
     ) -> Result<(Self, UnboundedSender<QueryMessage>)> {
         let (tx, rx) = unbounded_channel();
         let transaction = pool.begin().await?;
         let publish_queue = Vec::new();
         let shutdown_rx = shutdown_tx.subscribe();
+        let semaphore = Arc::new(Semaphore::new(max_concurrent_tasks));
 
-        Ok((Executor { pool, transaction, publish_queue, rx, shutdown_rx }, tx))
+        Ok((
+            Executor {
+                pool,
+                transaction,
+                publish_queue,
+                rx,
+                shutdown_rx,
+                register_tasks: JoinSet::new(),
+                deferred_query_messages: Vec::new(),
+                provider,
+                semaphore,
+            },
+            tx,
+        ))
     }
 
     pub async fn run(&mut self) -> Result<()> {
@@ -197,41 +246,38 @@ impl<'c> Executor<'c> {
                     break Ok(());
                 }
                 Some(msg) = self.rx.recv() => {
-                    let QueryMessage { statement, arguments, query_type, tx } = msg;
-                    let mut query = sqlx::query(&statement);
-
-                    for arg in &arguments {
-                        query = match arg {
-                            Argument::Null => query.bind(None::<String>),
-                            Argument::Int(integer) => query.bind(integer),
-                            Argument::Bool(bool) => query.bind(bool),
-                            Argument::String(string) => query.bind(string),
-                            Argument::FieldElement(felt) => query.bind(format!("{:#x}", felt)),
-                        }
-                    }
-
-                    match self.handle_query_type(query, query_type.clone(), &statement, &arguments, tx).await {
+                    let query_type = msg.query_type.clone();
+                    match self.handle_query_message(msg).await {
                         Ok(()) => {},
                         Err(e) => {
                             error!(target: LOG_TARGET, r#type = ?query_type, error = %e, "Failed to execute query.");
                         }
                     }
                 }
+                Some(result) = self.register_tasks.join_next() => {
+                    let result = result??;
+                    self.handle_erc721_token_metadata(result).await?;
+                }
             }
         }
     }
 
-    async fn handle_query_type<'a>(
-        &mut self,
-        query: Query<'a, Sqlite, SqliteArguments<'a>>,
-        query_type: QueryType,
-        statement: &str,
-        arguments: &[Argument],
-        sender: Option<oneshot::Sender<Result<()>>>,
-    ) -> Result<()> {
+    async fn handle_query_message(&mut self, query_message: QueryMessage) -> Result<()> {
         let tx = &mut self.transaction;
 
-        match query_type {
+        let mut query = sqlx::query(&query_message.statement);
+
+        for arg in &query_message.arguments {
+            query = match arg {
+                Argument::Null => query.bind(None::<String>),
+                Argument::Int(integer) => query.bind(integer),
+                Argument::Bool(bool) => query.bind(bool),
+                Argument::String(string) => query.bind(string),
+                Argument::FieldElement(felt) => query.bind(format!("{:#x}", felt)),
+            }
+        }
+
+        match query_message.query_type {
             QueryType::SetHead(set_head) => {
                 let previous_block_timestamp: u64 = sqlx::query_scalar::<_, i64>(
                     "SELECT last_block_timestamp FROM contracts WHERE id = ?",
@@ -249,7 +295,10 @@ impl<'c> Executor<'c> {
                 };
 
                 query.execute(&mut **tx).await.with_context(|| {
-                    format!("Failed to execute query: {:?}, args: {:?}", statement, arguments)
+                    format!(
+                        "Failed to execute query: {:?}, args: {:?}",
+                        query_message.statement, query_message.arguments
+                    )
                 })?;
 
                 let row = sqlx::query("UPDATE contracts SET tps = ? WHERE id = ? RETURNING *")
@@ -373,7 +422,10 @@ impl<'c> Executor<'c> {
             }
             QueryType::SetEntity(entity) => {
                 let row = query.fetch_one(&mut **tx).await.with_context(|| {
-                    format!("Failed to execute query: {:?}, args: {:?}", statement, arguments)
+                    format!(
+                        "Failed to execute query: {:?}, args: {:?}",
+                        query_message.statement, query_message.arguments
+                    )
                 })?;
                 let mut entity_updated = EntityUpdated::from_row(&row)?;
                 entity_updated.updated_model = Some(entity);
@@ -396,7 +448,10 @@ impl<'c> Executor<'c> {
             }
             QueryType::DeleteEntity(entity) => {
                 let delete_model = query.execute(&mut **tx).await.with_context(|| {
-                    format!("Failed to execute query: {:?}, args: {:?}", statement, arguments)
+                    format!(
+                        "Failed to execute query: {:?}, args: {:?}",
+                        query_message.statement, query_message.arguments
+                    )
                 })?;
                 if delete_model.rows_affected() == 0 {
                     return Ok(());
@@ -447,7 +502,10 @@ impl<'c> Executor<'c> {
             }
             QueryType::RegisterModel => {
                 let row = query.fetch_one(&mut **tx).await.with_context(|| {
-                    format!("Failed to execute query: {:?}, args: {:?}", statement, arguments)
+                    format!(
+                        "Failed to execute query: {:?}, args: {:?}",
+                        query_message.statement, query_message.arguments
+                    )
                 })?;
                 let model_registered = ModelRegistered::from_row(&row)?;
                 self.publish_queue.push(BrokerMessage::ModelRegistered(model_registered));
@@ -455,7 +513,10 @@ impl<'c> Executor<'c> {
             QueryType::EventMessage(em_query) => {
                 // Must be executed first since other tables have foreign keys on event_messages.id.
                 let event_messages_row = query.fetch_one(&mut **tx).await.with_context(|| {
-                    format!("Failed to execute query: {:?}, args: {:?}", statement, arguments)
+                    format!(
+                        "Failed to execute query: {:?}, args: {:?}",
+                        query_message.statement, query_message.arguments
+                    )
                 })?;
 
                 let mut event_counter: i64 = sqlx::query_scalar::<_, i64>(
@@ -525,7 +586,10 @@ impl<'c> Executor<'c> {
             }
             QueryType::StoreEvent => {
                 let row = query.fetch_one(&mut **tx).await.with_context(|| {
-                    format!("Failed to execute query: {:?}, args: {:?}", statement, arguments)
+                    format!(
+                        "Failed to execute query: {:?}, args: {:?}",
+                        query_message.statement, query_message.arguments
+                    )
                 })?;
                 let event = EventEmitted::from_row(&row)?;
                 self.publish_queue.push(BrokerMessage::EventEmitted(event));
@@ -536,13 +600,113 @@ impl<'c> Executor<'c> {
                 self.apply_balance_diff(apply_balance_diff).await?;
                 debug!(target: LOG_TARGET, duration = ?instant.elapsed(), "Applied balance diff.");
             }
-            QueryType::Execute => {
-                debug!(target: LOG_TARGET, "Executing query.");
-                let instant = Instant::now();
-                let res = self.execute().await;
-                debug!(target: LOG_TARGET, duration = ?instant.elapsed(), "Executed query.");
+            QueryType::RegisterErc721Token(register_erc721_token) => {
+                let semaphore = self.semaphore.clone();
+                let provider = self.provider.clone();
+                let res = sqlx::query_as::<_, (String, String)>(
+                    "SELECT name, symbol FROM tokens WHERE contract_address = ?",
+                )
+                .bind(felt_to_sql_string(&register_erc721_token.contract_address))
+                .fetch_one(&mut **tx)
+                .await;
 
-                if let Some(sender) = sender {
+                // If we find a token already registered for this contract_address we dont need to
+                // refetch the data since its same for all ERC721 tokens
+                let (name, symbol) = match res {
+                    Ok((name, symbol)) => {
+                        debug!(
+                            contract_address = %felt_to_sql_string(&register_erc721_token.contract_address),
+                            "Token already registered for contract_address, so reusing fetched data",
+                        );
+                        (name, symbol)
+                    }
+                    Err(_) => {
+                        // Fetch token information from the chain
+                        let name = provider
+                            .call(
+                                FunctionCall {
+                                    contract_address: register_erc721_token.contract_address,
+                                    entry_point_selector: get_selector_from_name("name").unwrap(),
+                                    calldata: vec![],
+                                },
+                                BlockId::Tag(BlockTag::Pending),
+                            )
+                            .await?;
+
+                        // len = 1 => return value felt (i.e. legacy erc721 token)
+                        // len > 1 => return value ByteArray (i.e. new erc721 token)
+                        let name = if name.len() == 1 {
+                            parse_cairo_short_string(&name[0]).unwrap()
+                        } else {
+                            ByteArray::cairo_deserialize(&name, 0)
+                                .expect("Return value not ByteArray")
+                                .to_string()
+                                .expect("Return value not String")
+                        };
+
+                        let symbol = provider
+                            .call(
+                                FunctionCall {
+                                    contract_address: register_erc721_token.contract_address,
+                                    entry_point_selector: get_selector_from_name("symbol").unwrap(),
+                                    calldata: vec![],
+                                },
+                                BlockId::Tag(BlockTag::Pending),
+                            )
+                            .await?;
+                        let symbol = if symbol.len() == 1 {
+                            parse_cairo_short_string(&symbol[0]).unwrap()
+                        } else {
+                            ByteArray::cairo_deserialize(&symbol, 0)
+                                .expect("Return value not ByteArray")
+                                .to_string()
+                                .expect("Return value not String")
+                        };
+
+                        (name, symbol)
+                    }
+                };
+
+                self.register_tasks.spawn(async move {
+                    let permit = semaphore.acquire().await.unwrap();
+
+                    let result = Self::process_register_erc721_token_query(
+                        register_erc721_token,
+                        provider,
+                        name,
+                        symbol,
+                    )
+                    .await;
+
+                    drop(permit);
+                    result
+                });
+            }
+            QueryType::RegisterErc20Token(register_erc20_token) => {
+                let query = sqlx::query(
+                    "INSERT INTO tokens (id, contract_address, name, symbol, decimals) VALUES (?, \
+                     ?, ?, ?, ?)",
+                )
+                .bind(&register_erc20_token.token_id)
+                .bind(felt_to_sql_string(&register_erc20_token.contract_address))
+                .bind(&register_erc20_token.name)
+                .bind(&register_erc20_token.symbol)
+                .bind(register_erc20_token.decimals);
+
+                query.execute(&mut **tx).await.with_context(|| {
+                    format!(
+                        "Failed to execute RegisterErc20Token query: {:?}",
+                        register_erc20_token
+                    )
+                })?;
+            }
+            QueryType::Flush => {
+                debug!(target: LOG_TARGET, "Flushing query.");
+                let instant = Instant::now();
+                let res = self.execute(false).await;
+                debug!(target: LOG_TARGET, duration = ?instant.elapsed(), "Flushed query.");
+
+                if let Some(sender) = query_message.tx {
                     sender
                         .send(res)
                         .map_err(|_| anyhow::anyhow!("Failed to send execute result"))?;
@@ -550,9 +714,30 @@ impl<'c> Executor<'c> {
                     res?;
                 }
             }
+            QueryType::Execute => {
+                debug!(target: LOG_TARGET, "Executing query.");
+                let instant = Instant::now();
+                let res = self.execute(true).await;
+                debug!(target: LOG_TARGET, duration = ?instant.elapsed(), "Executed query.");
+
+                if let Some(sender) = query_message.tx {
+                    sender
+                        .send(res)
+                        .map_err(|_| anyhow::anyhow!("Failed to send execute result"))?;
+                } else {
+                    res?;
+                }
+            }
+            QueryType::TokenTransfer => {
+                // defer executing these queries since they depend on TokenRegister queries
+                self.deferred_query_messages.push(query_message);
+            }
             QueryType::Other => {
                 query.execute(&mut **tx).await.with_context(|| {
-                    format!("Failed to execute query: {:?}, args: {:?}", statement, arguments)
+                    format!(
+                        "Failed to execute query: {:?}, args: {:?}",
+                        query_message.statement, query_message.arguments
+                    )
                 })?;
             }
         }
@@ -560,109 +745,42 @@ impl<'c> Executor<'c> {
         Ok(())
     }
 
-    async fn execute(&mut self) -> Result<()> {
-        let transaction = mem::replace(&mut self.transaction, self.pool.begin().await?);
-        transaction.commit().await?;
+    async fn execute(&mut self, new_transaction: bool) -> Result<()> {
+        if new_transaction {
+            let transaction = mem::replace(&mut self.transaction, self.pool.begin().await?);
+            transaction.commit().await?;
+        }
 
         for message in self.publish_queue.drain(..) {
             send_broker_message(message);
         }
 
-        Ok(())
-    }
-
-    async fn apply_balance_diff(
-        &mut self,
-        apply_balance_diff: ApplyBalanceDiffQuery,
-    ) -> Result<()> {
-        let erc_cache = apply_balance_diff.erc_cache;
-        for ((contract_type, id_str), balance) in erc_cache.iter() {
-            let id = id_str.split(FELT_DELIMITER).collect::<Vec<&str>>();
-            match contract_type {
-                ContractType::WORLD => unreachable!(),
-                ContractType::ERC721 => {
-                    // account_address/contract_address:id => ERC721
-                    assert!(id.len() == 2);
-                    let account_address = id[0];
-                    let token_id = id[1];
-                    let mid = token_id.split(":").collect::<Vec<&str>>();
-                    let contract_address = mid[0];
-
-                    self.apply_balance_diff_helper(
-                        id_str,
-                        account_address,
-                        contract_address,
-                        token_id,
-                        balance,
-                    )
-                    .await
-                    .with_context(|| "Failed to apply balance diff in apply_cache_diff")?;
-                }
-                ContractType::ERC20 => {
-                    // account_address/contract_address/ => ERC20
-                    assert!(id.len() == 3);
-                    let account_address = id[0];
-                    let contract_address = id[1];
-                    let token_id = id[1];
-
-                    self.apply_balance_diff_helper(
-                        id_str,
-                        account_address,
-                        contract_address,
-                        token_id,
-                        balance,
-                    )
-                    .await
-                    .with_context(|| "Failed to apply balance diff in apply_cache_diff")?;
-                }
-            }
+        while let Some(result) = self.register_tasks.join_next().await {
+            let result = result??;
+            self.handle_erc721_token_metadata(result).await?;
         }
 
-        Ok(())
-    }
+        let mut deferred_query_messages = mem::take(&mut self.deferred_query_messages);
 
-    async fn apply_balance_diff_helper(
-        &mut self,
-        id: &str,
-        account_address: &str,
-        contract_address: &str,
-        token_id: &str,
-        balance_diff: &I256,
-    ) -> Result<()> {
-        let tx = &mut self.transaction;
-        let balance: Option<(String,)> =
-            sqlx::query_as("SELECT balance FROM balances WHERE id = ?")
-                .bind(id)
-                .fetch_optional(&mut **tx)
-                .await?;
-
-        let mut balance = if let Some(balance) = balance {
-            sql_string_to_u256(&balance.0)
-        } else {
-            U256::from(0u8)
-        };
-
-        if balance_diff.is_negative {
-            if balance < balance_diff.value {
-                dbg!(&balance_diff, balance, id);
+        for query_message in deferred_query_messages.drain(..) {
+            let mut query = sqlx::query(&query_message.statement);
+            for arg in &query_message.arguments {
+                query = match arg {
+                    Argument::Null => query.bind(None::<String>),
+                    Argument::Int(integer) => query.bind(integer),
+                    Argument::Bool(bool) => query.bind(bool),
+                    Argument::String(string) => query.bind(string),
+                    Argument::FieldElement(felt) => query.bind(format!("{:#x}", felt)),
+                };
             }
-            balance -= balance_diff.value;
-        } else {
-            balance += balance_diff.value;
-        }
 
-        // write the new balance to the database
-        sqlx::query(
-            "INSERT OR REPLACE INTO balances (id, contract_address, account_address, token_id, \
-             balance) VALUES (?, ?, ?, ?, ?)",
-        )
-        .bind(id)
-        .bind(contract_address)
-        .bind(account_address)
-        .bind(token_id)
-        .bind(u256_to_sql_string(&balance))
-        .execute(&mut **tx)
-        .await?;
+            query.execute(&mut *self.transaction).await.with_context(|| {
+                format!(
+                    "Failed to execute query: {:?}, args: {:?}",
+                    query_message.statement, query_message.arguments
+                )
+            })?;
+        }
 
         Ok(())
     }

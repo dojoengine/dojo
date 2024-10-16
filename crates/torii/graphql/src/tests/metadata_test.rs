@@ -5,11 +5,14 @@ mod tests {
     use dojo_world::config::{ProfileConfig, WorldMetadata};
     use sqlx::SqlitePool;
     use starknet::core::types::Felt;
+    use starknet::providers::jsonrpc::HttpTransport;
+    use starknet::providers::JsonRpcClient;
     use tokio::sync::broadcast;
     use torii_core::executor::Executor;
     use torii_core::sql::cache::ModelCache;
     use torii_core::sql::Sql;
     use torii_core::types::{Contract, ContractType};
+    use url::Url;
 
     use crate::schema::build_schema;
     use crate::tests::{run_graphql_query, Connection, Content, Metadata as SqlMetadata, Social};
@@ -54,8 +57,12 @@ mod tests {
     #[sqlx::test(migrations = "../migrations")]
     async fn test_metadata(pool: SqlitePool) {
         let (shutdown_tx, _) = broadcast::channel(1);
+        let url: Url = "https://www.example.com".parse().unwrap();
+        let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(url)));
         let (mut executor, sender) =
-            Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
+            Executor::new(pool.clone(), shutdown_tx.clone(), Arc::clone(&provider), 100)
+                .await
+                .unwrap();
         tokio::spawn(async move {
             executor.run().await.unwrap();
         });
@@ -120,8 +127,12 @@ mod tests {
     #[sqlx::test(migrations = "../migrations")]
     async fn test_empty_content(pool: SqlitePool) {
         let (shutdown_tx, _) = broadcast::channel(1);
+        let url: Url = "https://www.example.com".parse().unwrap();
+        let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(url)));
         let (mut executor, sender) =
-            Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
+            Executor::new(pool.clone(), shutdown_tx.clone(), Arc::clone(&provider), 100)
+                .await
+                .unwrap();
         tokio::spawn(async move {
             executor.run().await.unwrap();
         });

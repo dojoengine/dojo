@@ -16,7 +16,10 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 
+use anyhow::Context;
+use camino::Utf8PathBuf;
 use clap::Parser;
+use clap::{ArgAction, Parser};
 use dojo_metrics::exporters::prometheus::PrometheusRecorder;
 use dojo_world::contracts::world::WorldContractReader;
 use sqlx::sqlite::{
@@ -25,7 +28,7 @@ use sqlx::sqlite::{
 use sqlx::SqlitePool;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
-use tempfile::NamedTempFile;
+use tempfile::{NamedTempFile, TempDir};
 use tokio::sync::broadcast;
 use tokio::sync::broadcast::Sender;
 use tokio_stream::StreamExt;
@@ -44,6 +47,111 @@ use tracing_subscriber::{fmt, EnvFilter};
 use url::{form_urlencoded, Url};
 
 pub(crate) const LOG_TARGET: &str = "torii::cli";
+
+/// Dojo World Indexer
+#[derive(Parser, Debug)]
+#[command(name = "torii", author, version, about, long_about = None)]
+struct Args {
+    /// The world to index
+    #[arg(short, long = "world", env = "DOJO_WORLD_ADDRESS")]
+    world_address: Option<Felt>,
+
+    /// The sequencer rpc endpoint to index.
+    #[arg(long, value_name = "URL", default_value = ":5050", value_parser = parse_url)]
+    rpc: Url,
+
+    /// Database filepath (ex: indexer.db). If specified file doesn't exist, it will be
+    /// created. Defaults to in-memory database
+    #[arg(short, long, default_value = "")]
+    database: String,
+
+    /// Address to serve api endpoints at.
+    #[arg(long, value_name = "SOCKET", default_value = "0.0.0.0:8080", value_parser = parse_socket_address)]
+    addr: SocketAddr,
+
+    /// Port to serve Libp2p TCP & UDP Quic transports
+    #[arg(long, value_name = "PORT", default_value = "9090")]
+    relay_port: u16,
+
+    /// Port to serve Libp2p WebRTC transport
+    #[arg(long, value_name = "PORT", default_value = "9091")]
+    relay_webrtc_port: u16,
+
+    /// Port to serve Libp2p WebRTC transport
+    #[arg(long, value_name = "PORT", default_value = "9092")]
+    relay_websocket_port: u16,
+
+    /// Path to a local identity key file. If not specified, a new identity will be generated
+    #[arg(long, value_name = "PATH")]
+    relay_local_key_path: Option<String>,
+
+    /// Path to a local certificate file. If not specified, a new certificate will be generated
+    /// for WebRTC connections
+    #[arg(long, value_name = "PATH")]
+    relay_cert_path: Option<String>,
+
+    /// Specify allowed origins for api endpoints (comma-separated list of allowed origins, or "*"
+    /// for all)
+    #[arg(long)]
+    #[arg(value_delimiter = ',')]
+    allowed_origins: Option<Vec<String>>,
+
+    /// The external url of the server, used for configuring the GraphQL Playground in a hosted
+    /// environment
+    #[arg(long, value_parser = parse_url)]
+    external_url: Option<Url>,
+
+    /// Enable Prometheus metrics.
+    ///
+    /// The metrics will be served at the given interface and port.
+    #[arg(long, value_name = "SOCKET", value_parser = parse_socket_address, help_heading = "Metrics")]
+    metrics: Option<SocketAddr>,
+
+    /// Open World Explorer on the browser.
+    #[arg(long)]
+    explorer: bool,
+
+    /// Chunk size of the events page when indexing using events
+    #[arg(long, default_value = "1024")]
+    events_chunk_size: u64,
+
+    /// Number of blocks to process before commiting to DB
+    #[arg(long, default_value = "10240")]
+    blocks_chunk_size: u64,
+
+    /// Enable indexing pending blocks
+    #[arg(long, action = ArgAction::Set, default_value_t = true)]
+    index_pending: bool,
+
+    /// Polling interval in ms
+    #[arg(long, default_value = "500")]
+    polling_interval: u64,
+
+    /// Max concurrent tasks
+    #[arg(long, default_value = "100")]
+    max_concurrent_tasks: usize,
+
+    /// Whether or not to index world transactions
+    #[arg(long, action = ArgAction::Set, default_value_t = false)]
+    index_transactions: bool,
+
+    /// Whether or not to index raw events
+    #[arg(long, action = ArgAction::Set, default_value_t = true)]
+    index_raw_events: bool,
+
+    /// ERC contract addresses to index
+    #[arg(long, value_parser = parse_erc_contracts)]
+    #[arg(conflicts_with = "config")]
+    contracts: Option<std::vec::Vec<Contract>>,
+
+    /// Configuration file
+    #[arg(long)]
+    config: Option<PathBuf>,
+
+    /// Path to a directory to store ERC artifacts
+    #[arg(long)]
+    artifacts_path: Option<Utf8PathBuf>,
+}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -109,7 +217,21 @@ async fn main() -> anyhow::Result<()> {
     // Get world address
     let world = WorldContractReader::new(world_address, provider.clone());
 
-    let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx.clone()).await?;
+    // let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx.clone()).await?;
+    let contracts = args
+        .indexing
+        .contracts
+        .iter()
+        .map(|contract| (contract.address, contract.r#type))
+        .collect();
+
+    let (mut executor, sender) = Executor::new(
+        pool.clone(),
+        shutdown_tx.clone(),
+        provider.clone(),
+        args.max_concurrent_tasks,
+    )
+    .await?;
     tokio::spawn(async move {
         executor.run().await.unwrap();
     });
@@ -184,6 +306,7 @@ async fn main() -> anyhow::Result<()> {
         args.server.http_cors_origins.filter(|cors_origins| !cors_origins.is_empty()),
         Some(grpc_addr),
         None,
+        Some(artifacts_addr),
     ));
 
     let graphql_server = spawn_rebuilding_graphql_server(
@@ -201,6 +324,7 @@ async fn main() -> anyhow::Result<()> {
     info!(target: LOG_TARGET, endpoint = %addr, "Starting torii endpoint.");
     info!(target: LOG_TARGET, endpoint = %gql_endpoint, "Serving Graphql playground.");
     info!(target: LOG_TARGET, url = %explorer_url, "Serving World Explorer.");
+    info!(target: LOG_TARGET, path = %artifacts_path, "Serving ERC artifacts at path");
 
     if args.explorer {
         if let Err(e) = webbrowser::open(&explorer_url) {
@@ -222,6 +346,7 @@ async fn main() -> anyhow::Result<()> {
     let graphql_server_handle = tokio::spawn(graphql_server);
     let grpc_server_handle = tokio::spawn(grpc_server);
     let libp2p_relay_server_handle = tokio::spawn(async move { libp2p_relay_server.run().await });
+    let artifacts_server_handle = tokio::spawn(artifacts_server);
 
     tokio::select! {
         res = engine_handle => res??,
@@ -229,6 +354,7 @@ async fn main() -> anyhow::Result<()> {
         res = graphql_server_handle => res?,
         res = grpc_server_handle => res??,
         res = libp2p_relay_server_handle => res?,
+        res = artifacts_server_handle => res?,
         _ = dojo_utils::signal::wait_signals() => {},
     };
 
