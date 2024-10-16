@@ -17,7 +17,7 @@ use tower::ServiceBuilder;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing::error;
 
-const DEFAULT_ALLOW_HEADERS: [&str; 11] = [
+const DEFAULT_ALLOW_HEADERS: [&str; 12] = [
     "accept",
     "origin",
     "content-type",
@@ -29,9 +29,10 @@ const DEFAULT_ALLOW_HEADERS: [&str; 11] = [
     "connection",
     "sec-websocket-key",
     "sec-websocket-version",
+    "grpc-accept-encoding",
 ];
-const DEFAULT_EXPOSED_HEADERS: [&str; 5] =
-    ["grpc-status", "grpc-message", "grpc-status-details-bin", "grpc-accept-encoding", "grpc-encoding"];
+const DEFAULT_EXPOSED_HEADERS: [&str; 4] =
+    ["grpc-status", "grpc-message", "grpc-status-details-bin", "grpc-encoding"];
 const DEFAULT_MAX_AGE: Duration = Duration::from_secs(24 * 60 * 60);
 
 lazy_static::lazy_static! {
