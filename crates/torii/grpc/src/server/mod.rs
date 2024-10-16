@@ -859,7 +859,7 @@ fn map_row_to_event(row: &(String, String, String)) -> Result<proto::types::Even
 fn map_row_to_entity(
     row: &SqliteRow,
     arrays_rows: &HashMap<String, Vec<SqliteRow>>,
-    schemas: &Vec<Ty>,
+    schemas: &[Ty],
 ) -> Result<proto::types::Entity, Error> {
     let hashed_keys = Felt::from_str(&row.get::<String, _>("id")).map_err(ParseError::FromStr)?;
     let models = schemas
@@ -1145,7 +1145,7 @@ impl proto::world::world_server::World for DojoWorld {
             for (i, entity) in res.entities.iter().enumerate() {
                 tx.send(Ok(RetrieveEntitiesStreamingResponse {
                     entity: Some(entity.clone()),
-                    remaining_count: (res.total_count - i as u32) as u32,
+                    remaining_count: (res.total_count - (i + 1) as u32),
                 }))
                 .await
                 .unwrap();
