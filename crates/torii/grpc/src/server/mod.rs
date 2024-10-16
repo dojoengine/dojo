@@ -31,7 +31,7 @@ use starknet::providers::JsonRpcClient;
 use subscriptions::event::EventManager;
 use subscriptions::indexer::IndexerManager;
 use tokio::net::TcpListener;
-use tokio::sync::mpsc::{channel, unbounded_channel, Receiver};
+use tokio::sync::mpsc::{channel, Receiver};
 use tokio_stream::wrappers::{ReceiverStream, TcpListenerStream};
 use tonic::transport::Server;
 use tonic::{Request, Response, Status};
