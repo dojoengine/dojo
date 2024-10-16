@@ -1,16 +1,28 @@
 use std::collections::HashMap;
+use std::io::Cursor;
 use std::mem;
+use std::str::FromStr;
 
 use anyhow::{Context, Result};
 use cainome::cairo_serde::{ByteArray, CairoSerde};
+use camino::Utf8PathBuf;
+use data_url::mime::Mime;
+use data_url::DataUrl;
+use fluent_uri::Uri;
+use image::{DynamicImage, ImageFormat};
+use reqwest::Client;
 use starknet::core::types::{BlockId, BlockTag, Felt, FunctionCall, U256};
 use starknet::core::utils::{get_selector_from_name, parse_cairo_short_string};
 use starknet::providers::Provider;
+use tokio::fs;
+use tokio::io::AsyncWriteExt;
 use tracing::debug;
 
 use super::utils::{u256_to_sql_string, I256};
 use super::{Sql, FELT_DELIMITER};
-use crate::executor::{ApplyBalanceDiffQuery, Argument, QueryMessage, QueryType};
+use crate::executor::{
+    ApplyBalanceDiffQuery, Argument, QueryMessage, QueryType, RegisterErc721TokenQuery,
+};
 use crate::sql::utils::{felt_and_u256_to_sql_string, felt_to_sql_string, felts_to_sql_string};
 use crate::types::ContractType;
 use crate::utils::utc_dt_string_from_timestamp;
@@ -84,11 +96,18 @@ impl Sql {
         event_id: &str,
     ) -> Result<()> {
         // contract_address:id
+        let actual_token_id = token_id;
         let token_id = felt_and_u256_to_sql_string(&contract_address, &token_id);
         let token_exists: bool = self.local_cache.contains_token_id(&token_id);
 
         if !token_exists {
-            self.register_erc721_token_metadata(contract_address, &token_id, provider).await?;
+            self.register_erc721_token_metadata(
+                contract_address,
+                &token_id,
+                actual_token_id,
+                provider,
+            )
+            .await?;
             self.execute().await?;
         }
 
@@ -216,10 +235,11 @@ impl Sql {
         &mut self,
         contract_address: Felt,
         token_id: &str,
+        actual_token_id: U256,
         provider: &P,
     ) -> Result<()> {
-        let res = sqlx::query_as::<_, (String, String, u8)>(
-            "SELECT name, symbol, decimals FROM tokens WHERE contract_address = ?",
+        let res = sqlx::query_as::<_, (String, String)>(
+            "SELECT name, symbol FROM tokens WHERE contract_address = ?",
         )
         .bind(felt_to_sql_string(&contract_address))
         .fetch_one(&self.pool)
@@ -227,83 +247,110 @@ impl Sql {
 
         // If we find a token already registered for this contract_address we dont need to refetch
         // the data since its same for all ERC721 tokens
-        if let Ok((name, symbol, decimals)) = res {
-            debug!(
-                contract_address = %felt_to_sql_string(&contract_address),
-                "Token already registered for contract_address, so reusing fetched data",
-            );
-            self.executor.send(QueryMessage::other(
-                "INSERT INTO tokens (id, contract_address, name, symbol, decimals) VALUES (?, ?, \
-                 ?, ?, ?)"
-                    .to_string(),
-                vec![
-                    Argument::String(token_id.to_string()),
-                    Argument::FieldElement(contract_address),
-                    Argument::String(name),
-                    Argument::String(symbol),
-                    Argument::Int(decimals.into()),
-                ],
-            ))?;
-            self.local_cache.register_token_id(token_id.to_string());
-            return Ok(());
-        }
+        let (name, symbol) = match res {
+            Ok((name, symbol)) => {
+                debug!(
+                    contract_address = %felt_to_sql_string(&contract_address),
+                    "Token already registered for contract_address, so reusing fetched data",
+                );
+                (name, symbol)
+            }
+            Err(_) => {
+                // Fetch token information from the chain
+                let name = provider
+                    .call(
+                        FunctionCall {
+                            contract_address,
+                            entry_point_selector: get_selector_from_name("name").unwrap(),
+                            calldata: vec![],
+                        },
+                        BlockId::Tag(BlockTag::Pending),
+                    )
+                    .await?;
 
-        // Fetch token information from the chain
-        let name = provider
+                // len = 1 => return value felt (i.e. legacy erc721 token)
+                // len > 1 => return value ByteArray (i.e. new erc721 token)
+                let name = if name.len() == 1 {
+                    parse_cairo_short_string(&name[0]).unwrap()
+                } else {
+                    ByteArray::cairo_deserialize(&name, 0)
+                        .expect("Return value not ByteArray")
+                        .to_string()
+                        .expect("Return value not String")
+                };
+
+                let symbol = provider
+                    .call(
+                        FunctionCall {
+                            contract_address,
+                            entry_point_selector: get_selector_from_name("symbol").unwrap(),
+                            calldata: vec![],
+                        },
+                        BlockId::Tag(BlockTag::Pending),
+                    )
+                    .await?;
+                let symbol = if symbol.len() == 1 {
+                    parse_cairo_short_string(&symbol[0]).unwrap()
+                } else {
+                    ByteArray::cairo_deserialize(&symbol, 0)
+                        .expect("Return value not ByteArray")
+                        .to_string()
+                        .expect("Return value not String")
+                };
+
+                (name, symbol)
+            }
+        };
+
+        let token_uri = provider
             .call(
                 FunctionCall {
                     contract_address,
-                    entry_point_selector: get_selector_from_name("name").unwrap(),
-                    calldata: vec![],
+                    entry_point_selector: get_selector_from_name("token_uri").unwrap(),
+                    calldata: vec![actual_token_id.low().into(), actual_token_id.high().into()],
                 },
                 BlockId::Tag(BlockTag::Pending),
             )
             .await?;
 
-        // len = 1 => return value felt (i.e. legacy erc721 token)
-        // len > 1 => return value ByteArray (i.e. new erc721 token)
-        let name = if name.len() == 1 {
-            parse_cairo_short_string(&name[0]).unwrap()
+        let token_uri = if let Ok(byte_array) = ByteArray::cairo_deserialize(&token_uri, 0) {
+            byte_array.to_string().expect("Return value not String")
+        } else if let Ok(felt_array) = Vec::<Felt>::cairo_deserialize(&token_uri, 0) {
+            felt_array
+                .iter()
+                .map(parse_cairo_short_string)
+                .collect::<Result<Vec<String>, _>>()
+                .map(|strings| strings.join(""))
+                .map_err(|_| anyhow::anyhow!("Failed parsing Array<Felt> to String"))?
         } else {
-            ByteArray::cairo_deserialize(&name, 0)
-                .expect("Return value not ByteArray")
-                .to_string()
-                .expect("Return value not String")
+            return Err(anyhow::anyhow!("token_uri is neither ByteArray nor Array<Felt>").into());
         };
 
-        let symbol = provider
-            .call(
-                FunctionCall {
-                    contract_address,
-                    entry_point_selector: get_selector_from_name("symbol").unwrap(),
-                    calldata: vec![],
-                },
-                BlockId::Tag(BlockTag::Pending),
-            )
-            .await?;
-        let symbol = if symbol.len() == 1 {
-            parse_cairo_short_string(&symbol[0]).unwrap()
-        } else {
-            ByteArray::cairo_deserialize(&symbol, 0)
-                .expect("Return value not ByteArray")
-                .to_string()
-                .expect("Return value not String")
-        };
+        let metadata = Self::fetch_metadata(&token_uri).await?;
+        let image_url = metadata
+            .get("image")
+            .with_context(|| "Image URL not found in metadata")?
+            .as_str()
+            .with_context(|| "Image field not a string")?
+            .to_string();
 
-        let decimals = 0;
+        let image_path =
+            Self::fetch_and_process_image(&image_url, &self.artifacts_path, token_id).await?;
 
-        // Insert the token into the tokens table
-        self.executor.send(QueryMessage::other(
-            "INSERT INTO tokens (id, contract_address, name, symbol, decimals) VALUES (?, ?, ?, \
-             ?, ?)"
-                .to_string(),
-            vec![
-                Argument::String(token_id.to_string()),
-                Argument::FieldElement(contract_address),
-                Argument::String(name),
-                Argument::String(symbol),
-                Argument::Int(decimals.into()),
-            ],
+        // serialized metadata as json string
+        let metadata = serde_json::to_string(&metadata).context("Failed to serialize metadata")?;
+
+        self.executor.send(QueryMessage::new(
+            "".to_string(),
+            vec![],
+            QueryType::RegisterErc721Token(RegisterErc721TokenQuery {
+                token_id: token_id.to_string(),
+                contract_address,
+                name,
+                symbol,
+                metadata,
+                image_path,
+            }),
         ))?;
 
         self.local_cache.register_token_id(token_id.to_string());
@@ -357,4 +404,230 @@ impl Sql {
         }
         Ok(())
     }
+
+    // given a uri which can be either http/https url or data uri, fetch the metadata erc721
+    // metadata json schema
+    async fn fetch_metadata(token_uri: &str) -> Result<serde_json::Value> {
+        // Parse the token_uri
+        let uri = Uri::parse(token_uri).context("Invalid token URI")?;
+
+        match uri.scheme().as_str() {
+            "http" | "https" => {
+                // Fetch metadata from HTTP/HTTPS URL
+                let response =
+                    reqwest::get(token_uri).await.context("Failed to fetch metadata from URL")?;
+
+                let json: serde_json::Value =
+                    response.json().await.context("Failed to parse metadata JSON")?;
+
+                Ok(json)
+            }
+            "ipfs" => {
+                let cid = token_uri.strip_prefix("ipfs://").unwrap();
+                let gateway_url = format!("https://ipfs.io/ipfs/{}", cid);
+                let client = Client::new();
+                let response = client
+                    .get(&gateway_url)
+                    .send()
+                    .await
+                    .context("Failed to fetch metadata from IPFS")?;
+
+                let json: serde_json::Value =
+                    response.json().await.context("Failed to parse metadata JSON from IPFS")?;
+
+                Ok(json)
+            }
+            "data" => {
+                // Parse and decode data URI
+                let data_url = DataUrl::process(token_uri).context("Failed to parse data URI")?;
+
+                // Ensure the MIME type is JSON
+                if data_url.mime_type() != &Mime::from_str("application/json").unwrap() {
+                    return Err(anyhow::anyhow!("Data URI is not of JSON type"));
+                }
+
+                let decoded = data_url.decode_to_vec().context("Failed to decode data URI")?;
+
+                let json: serde_json::Value = serde_json::from_slice(&decoded.0)
+                    .context("Failed to parse metadata JSON from data URI")?;
+
+                Ok(json)
+            }
+            _ => Err(anyhow::anyhow!("Unsupported URI scheme found in token URI: {}", uri)),
+        }
+    }
+
+    async fn fetch_and_process_image(
+        image_uri: &str,
+        artifacts_path: &Utf8PathBuf,
+        token_id: &str,
+    ) -> Result<String> {
+        // Determine the URI scheme
+        let uri = Uri::parse(image_uri).context("Invalid image URI")?;
+        let image_type = match uri.scheme().as_str() {
+            "http" | "https" => {
+                // Fetch image from HTTP/HTTPS URL
+                let client = Client::new();
+                let response = client
+                    .get(image_uri)
+                    .send()
+                    .await
+                    .context("Failed to fetch image from URL")?
+                    .bytes()
+                    .await
+                    .context("Failed to read image bytes from response")?;
+
+                // svg files typically start with <svg or <?xml
+                if response.starts_with(b"<svg") || response.starts_with(b"<?xml") {
+                    ErcImageType::Svg(response.to_vec())
+                } else {
+                    let format =
+                        image::guess_format(&response).with_context(|| "Unknown file format")?;
+                    ErcImageType::DynamicImage((
+                        image::load_from_memory(&response)
+                            .context("Failed to load image from bytes")?,
+                        format,
+                    ))
+                }
+            }
+            "ipfs" => {
+                let cid = image_uri.strip_prefix("ipfs://").unwrap();
+                let gateway_url = format!("https://ipfs.io/ipfs/{}", cid);
+                let client = Client::new();
+                let response = client
+                    .get(&gateway_url)
+                    .send()
+                    .await
+                    .context("Failed to fetch image from IPFS")?
+                    .bytes()
+                    .await
+                    .context("Failed to read image bytes from IPFS response")?;
+
+                if response.starts_with(b"<svg") || response.starts_with(b"<?xml") {
+                    ErcImageType::Svg(response.to_vec())
+                } else {
+                    let format =
+                        image::guess_format(&response).with_context(|| "Unknown file format")?;
+                    ErcImageType::DynamicImage((
+                        image::load_from_memory(&response)
+                            .context("Failed to load image from bytes")?,
+                        format,
+                    ))
+                }
+            }
+            "data" => {
+                // Parse and decode data URI
+                let data_url = DataUrl::process(image_uri).context("Failed to parse data URI")?;
+
+                // Check if it's an SVG
+                if data_url.mime_type() == &Mime::from_str("image/svg+xml").unwrap() {
+                    let decoded = data_url.decode_to_vec().context("Failed to decode data URI")?;
+                    ErcImageType::Svg(decoded.0)
+                } else {
+                    let decoded = data_url.decode_to_vec().context("Failed to decode data URI")?;
+                    let format =
+                        image::guess_format(&decoded.0).with_context(|| "Unknown file format")?;
+                    ErcImageType::DynamicImage((
+                        image::load_from_memory(&decoded.0)
+                            .context("Failed to load image from bytes")?,
+                        format,
+                    ))
+                }
+            }
+            _ => {
+                return Err(anyhow::anyhow!("Unsupported URI scheme: {}", uri.scheme()));
+            }
+        };
+
+        // Extract contract_address and token_id from token_id
+        let parts: Vec<&str> = token_id.split(':').collect();
+        if parts.len() != 2 {
+            return Err(anyhow::anyhow!("token_id must be in format contract_address:token_id"));
+        }
+        let contract_address = parts[0];
+        let token_id_part = parts[1];
+
+        // Define directory path
+        let dir_path = artifacts_path.join(contract_address).join(token_id_part);
+
+        // Create directories if they don't exist
+        fs::create_dir_all(&dir_path)
+            .await
+            .context("Failed to create directories for image storage")?;
+
+        // Define base image name
+        let base_image_name = "image";
+
+        let relative_path = Utf8PathBuf::new().join(contract_address).join(token_id_part);
+
+        match image_type {
+            ErcImageType::DynamicImage((img, format)) => {
+                let format_ext = format.extensions_str()[0];
+
+                let scales = [1.0, 0.5, 0.25]; // 1x, 0.5x, 0.25x
+
+                for &scale in &scales {
+                    let resized_image = Self::resize_image(&img, scale)?;
+                    let file_name = if scale == 1.0 {
+                        format!("{}.{}", base_image_name, format_ext)
+                    } else {
+                        format!(
+                            "{}@{}x.{}",
+                            base_image_name,
+                            if scale == 0.5 { "0_5" } else { "0_25" },
+                            format_ext
+                        )
+                    };
+                    let file_path = dir_path.join(&file_name);
+
+                    // Save the resized image
+                    let mut file = fs::File::create(&file_path)
+                        .await
+                        .with_context(|| format!("Failed to create file: {:?}", file_path))?;
+                    let encoded_image = Self::encode_image_to_vec(&resized_image, format)
+                        .context("Failed to encode image")?;
+                    file.write_all(&encoded_image).await.with_context(|| {
+                        format!("Failed to write image to file: {:?}", file_path)
+                    })?;
+                }
+
+                Ok(format!("{}/{}.{}", relative_path, base_image_name, format_ext))
+            }
+            ErcImageType::Svg(svg_data) => {
+                let file_name = format!("{}.svg", base_image_name);
+                let file_path = dir_path.join(&file_name);
+
+                // Save the SVG file
+                let mut file = fs::File::create(&file_path)
+                    .await
+                    .with_context(|| format!("Failed to create file: {:?}", file_path))?;
+                file.write_all(&svg_data)
+                    .await
+                    .with_context(|| format!("Failed to write SVG to file: {:?}", file_path))?;
+
+                Ok(format!("{}/{}", relative_path, file_name))
+            }
+        }
+    }
+
+    // Helper function to resize image based on scale
+    fn resize_image(image: &DynamicImage, scale: f32) -> Result<DynamicImage> {
+        let width = (image.width() as f32 * scale) as u32;
+        let height = (image.height() as f32 * scale) as u32;
+        Ok(image.resize(width, height, image::imageops::FilterType::Lanczos3))
+    }
+
+    // Helper function to encode image to bytes
+    fn encode_image_to_vec(image: &DynamicImage, format: ImageFormat) -> Result<Vec<u8>> {
+        let mut buf = Vec::new();
+        image
+            .write_to(&mut Cursor::new(&mut buf), format)
+            .context("Failed to write image to buffer")?;
+        Ok(buf)
+    }
+}
+
+pub enum ErcImageType {
+    DynamicImage((DynamicImage, ImageFormat)),
+    Svg(Vec<u8>),
 }

@@ -264,11 +264,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                                 },
                                 Err(e) => {
                                     error!(target: LOG_TARGET, error = %e, "Processing fetched data.");
-                                    erroring_out = true;
-                                    sleep(backoff_delay).await;
-                                    if backoff_delay < max_backoff_delay {
-                                        backoff_delay *= 2;
-                                    }
+                                    return Err(e);
                                 }
                             }
                             debug!(target: LOG_TARGET, duration = ?instant.elapsed(), "Processed fetched data.");
@@ -853,6 +849,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                     .await
                 {
                     error!(target: LOG_TARGET, event_name = processor.event_key(), error = ?e, "Processing event.");
+                    return Err(e);
                 }
             } else {
                 warn!(target: LOG_TARGET, event_name = processor.event_key(), "Event not validated.");

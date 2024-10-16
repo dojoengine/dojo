@@ -12,7 +12,8 @@ use tokio::sync::broadcast::{Receiver, Sender};
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 use tokio::sync::oneshot;
 use tokio::time::Instant;
-use tracing::{debug, error};
+use tracing::{debug, error}; /* Added import for data URI parsing // Uncommented to reuse
+                              * HTTP client */
 
 use crate::simple_broker::SimpleBroker;
 use crate::sql::utils::{felt_to_sql_string, sql_string_to_u256, u256_to_sql_string, I256};
@@ -82,6 +83,16 @@ pub struct UpdateCursorsQuery {
 }
 
 #[derive(Debug, Clone)]
+pub struct RegisterErc721TokenQuery {
+    pub token_id: String,
+    pub contract_address: Felt,
+    pub name: String,
+    pub symbol: String,
+    pub metadata: String,
+    pub image_path: String,
+}
+
+#[derive(Debug, Clone)]
 pub enum QueryType {
     SetHead(SetHeadQuery),
     ResetCursors(ResetCursorsQuery),
@@ -90,6 +101,7 @@ pub enum QueryType {
     DeleteEntity(DeleteEntityQuery),
     EventMessage(Ty),
     ApplyBalanceDiff(ApplyBalanceDiffQuery),
+    RegisterErc721Token(RegisterErc721TokenQuery),
     RegisterModel,
     StoreEvent,
     Execute,
@@ -470,6 +482,26 @@ impl<'c> Executor<'c> {
                 let instant = Instant::now();
                 self.apply_balance_diff(apply_balance_diff).await?;
                 debug!(target: LOG_TARGET, duration = ?instant.elapsed(), "Applied balance diff.");
+            }
+            QueryType::RegisterErc721Token(register_erc721_token) => {
+                let query = sqlx::query(
+                    "INSERT INTO tokens (id, contract_address, name, symbol, decimals, metadata, \
+                     image_url) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                )
+                .bind(&register_erc721_token.token_id)
+                .bind(felt_to_sql_string(&register_erc721_token.contract_address))
+                .bind(&register_erc721_token.name)
+                .bind(&register_erc721_token.symbol)
+                .bind(0)
+                .bind(&register_erc721_token.metadata)
+                .bind(&register_erc721_token.image_path);
+
+                query.execute(&mut **tx).await.with_context(|| {
+                    format!(
+                        "Failed to execute RegisterErc721Token query: {:?}",
+                        register_erc721_token
+                    )
+                })?;
             }
             QueryType::Execute => {
                 debug!(target: LOG_TARGET, "Executing query.");
