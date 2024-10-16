@@ -174,6 +174,7 @@ metrics = "0.23.0"
 num-traits = { version = "0.2", default-features = false }
 once_cell = "1.0"
 parking_lot = "0.12.1"
+postcard = { version = "1.0.10", features = [ "use-std" ], default-features = false }
 pretty_assertions = "1.2.1"
 rand = "0.8.5"
 rayon = "1.8.0"

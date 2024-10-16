@@ -12,7 +12,7 @@ use katana_primitives::chain::ChainId;
 use katana_primitives::conversion::rpc as rpc_converter;
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
 use katana_primitives::transaction::TxWithHash;
-use katana_primitives::version::Version;
+use katana_primitives::version::ProtocolVersion;
 use katana_rpc_api::saya::SayaApiClient;
 use katana_rpc_types::trace::TxExecutionInfo;
 use num_traits::ToPrimitive;
@@ -100,7 +100,7 @@ impl Provider for JsonRpcProvider {
                     timestamp: block.timestamp,
                     state_root: block.new_root,
                     sequencer_address: block.sequencer_address.into(),
-                    version: Version::parse(&block.starknet_version)?,
+                    protocol_version: ProtocolVersion::parse(&block.starknet_version).unwrap(),
                 },
             },
             body: txs,

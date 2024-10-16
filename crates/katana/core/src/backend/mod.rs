@@ -7,7 +7,6 @@ use katana_primitives::block::{
 use katana_primitives::chain_spec::ChainSpec;
 use katana_primitives::env::BlockEnv;
 use katana_primitives::transaction::TxHash;
-use katana_primitives::version::CURRENT_STARKNET_VERSION;
 use katana_primitives::Felt;
 use katana_provider::traits::block::{BlockHashProvider, BlockWriter};
 use parking_lot::RwLock;
@@ -66,7 +65,7 @@ impl<EF: ExecutorFactory> Backend<EF> {
         let partial_header = PartialHeader {
             number: block_number,
             parent_hash: prev_hash,
-            version: CURRENT_STARKNET_VERSION,
+            version: self.chain_spec.version.clone(),
             timestamp: block_env.timestamp,
             sequencer_address: block_env.sequencer_address,
             gas_prices: GasPrices {

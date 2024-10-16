@@ -2,7 +2,6 @@ use jsonrpsee::core::{async_trait, Error, RpcResult};
 use katana_executor::{EntryPointCall, ExecutionResult, ExecutorFactory};
 use katana_primitives::block::{BlockHashOrNumber, BlockIdOrTag, FinalityStatus, PartialHeader};
 use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash, TxHash};
-use katana_primitives::version::CURRENT_STARKNET_VERSION;
 use katana_primitives::Felt;
 use katana_provider::traits::block::{BlockHashProvider, BlockIdReader, BlockNumberProvider};
 use katana_provider::traits::transaction::TransactionProvider;
@@ -87,7 +86,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                         gas_prices,
                         parent_hash: latest_hash,
                         timestamp: block_env.timestamp,
-                        version: CURRENT_STARKNET_VERSION,
+                        version: this.inner.backend.chain_spec.version.clone(),
                         sequencer_address: block_env.sequencer_address,
                     };
 
@@ -174,9 +173,9 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                         number: block_env.number,
                         gas_prices,
                         parent_hash: latest_hash,
-                        version: CURRENT_STARKNET_VERSION,
                         timestamp: block_env.timestamp,
                         sequencer_address: block_env.sequencer_address,
+                        version: this.inner.backend.chain_spec.version.clone(),
                     };
 
                     // TODO(kariy): create a method that can perform this filtering for us instead
@@ -231,7 +230,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                         number: block_env.number,
                         gas_prices,
                         parent_hash: latest_hash,
-                        version: CURRENT_STARKNET_VERSION,
+                        version: this.inner.backend.chain_spec.version.clone(),
                         timestamp: block_env.timestamp,
                         sequencer_address: block_env.sequencer_address,
                     };

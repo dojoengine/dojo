@@ -27,11 +27,13 @@ use katana_core::constants::{
 use katana_core::service::messaging::MessagingConfig;
 use katana_node::config::db::DbConfig;
 use katana_node::config::dev::DevConfig;
+use katana_node::config::fork::ForkingConfig;
 use katana_node::config::metrics::MetricsConfig;
 use katana_node::config::rpc::{
     ApiKind, RpcConfig, DEFAULT_RPC_ADDR, DEFAULT_RPC_MAX_CONNECTIONS, DEFAULT_RPC_PORT,
 };
 use katana_node::config::{Config, SequencingConfig};
+use katana_primitives::block::BlockHashOrNumber;
 use katana_primitives::chain::ChainId;
 use katana_primitives::chain_spec::{self, ChainSpec};
 use katana_primitives::class::ClassHash;
@@ -47,7 +49,7 @@ use tracing_log::LogTracer;
 use tracing_subscriber::{fmt, EnvFilter};
 use url::Url;
 
-use crate::utils::{parse_genesis, parse_seed};
+use crate::utils::{parse_block_hash_or_number, parse_genesis, parse_seed};
 
 #[derive(Parser, Debug)]
 pub struct NodeArgs {
@@ -73,10 +75,16 @@ pub struct NodeArgs {
                        initialized Katana database.")]
     pub db_dir: Option<PathBuf>,
 
-    #[arg(long)]
-    #[arg(value_name = "URL")]
+    #[arg(long = "fork.rpc-url", value_name = "URL", alias = "rpc-url")]
     #[arg(help = "The Starknet RPC provider to fork the network from.")]
-    pub rpc_url: Option<Url>,
+    pub fork_rpc_url: Option<Url>,
+
+    #[arg(long = "fork.block", value_name = "BLOCK_ID", alias = "fork-block-number")]
+    #[arg(requires = "fork_rpc_url")]
+    #[arg(help = "Fork the network at a specific block id, can either be a hash (0x-prefixed) \
+                  or number.")]
+    #[arg(value_parser = parse_block_hash_or_number)]
+    pub fork_block: Option<BlockHashOrNumber>,
 
     #[arg(long)]
     pub dev: bool,
@@ -90,12 +98,6 @@ pub struct NodeArgs {
     /// The metrics will be served at the given interface and port.
     #[arg(long, value_name = "SOCKET", value_parser = parse_socket_address, help_heading = "Metrics")]
     pub metrics: Option<SocketAddr>,
-
-    #[arg(long)]
-    #[arg(requires = "rpc_url")]
-    #[arg(value_name = "BLOCK_NUMBER")]
-    #[arg(help = "Fork the network at a specific block.")]
-    pub fork_block_number: Option<u64>,
 
     #[arg(long)]
     #[arg(value_name = "PATH")]
@@ -170,7 +172,7 @@ pub struct StarknetOptions {
 
     #[arg(long)]
     #[arg(value_parser = parse_genesis)]
-    #[arg(conflicts_with_all(["rpc_url", "seed", "total_accounts"]))]
+    #[arg(conflicts_with_all(["fork_rpc_url", "seed", "total_accounts"]))]
     pub genesis: Option<Genesis>,
 }
 
@@ -255,10 +257,9 @@ impl NodeArgs {
     }
 
     fn init_logging(&self) -> Result<()> {
-        const DEFAULT_LOG_FILTER: &str = "tasks=debug,info,executor=trace,forking::backend=trace,\
-                                          server=debug,katana_core=trace,blockifier=off,\
-                                          jsonrpsee_server=off,hyper=off,messaging=debug,\
-                                          node=error";
+        const DEFAULT_LOG_FILTER: &str = "info,tasks=debug,executor=trace,forking::backend=trace,\
+                                          server=debug,blockifier=off,jsonrpsee_server=off,\
+                                          hyper=off,messaging=debug,node=error";
 
         LogTracer::init()?;
 
@@ -282,10 +283,11 @@ impl NodeArgs {
         let chain = self.chain_spec()?;
         let metrics = self.metrics_config();
         let starknet = self.starknet_config()?;
+        let forking = self.forking_config()?;
         let sequencing = self.sequencer_config();
         let messaging = self.messaging.clone();
 
-        Ok(Config { metrics, db, dev, rpc, chain, starknet, sequencing, messaging })
+        Ok(Config { metrics, db, dev, rpc, chain, starknet, sequencing, messaging, forking })
     }
 
     fn sequencer_config(&self) -> SequencingConfig {
@@ -347,13 +349,19 @@ impl NodeArgs {
 
     fn starknet_config(&self) -> Result<StarknetConfig> {
         Ok(StarknetConfig {
-            fork_rpc_url: self.rpc_url.clone(),
-            fork_block_number: self.fork_block_number,
             env: Environment {
                 invoke_max_steps: self.starknet.environment.invoke_max_steps,
                 validate_max_steps: self.starknet.environment.validate_max_steps,
             },
         })
+    }
+
+    fn forking_config(&self) -> Result<Option<ForkingConfig>> {
+        if let Some(url) = self.fork_rpc_url.clone() {
+            Ok(Some(ForkingConfig { url, block: self.fork_block }))
+        } else {
+            Ok(None)
+        }
     }
 
     fn db_config(&self) -> DbConfig {
@@ -488,8 +496,7 @@ mod test {
 
         assert!(config.dev.fee);
         assert!(config.dev.account_validation);
-        assert_eq!(config.starknet.fork_rpc_url, None);
-        assert_eq!(config.starknet.fork_block_number, None);
+        assert!(config.forking.is_none());
         assert_eq!(config.starknet.env.invoke_max_steps, DEFAULT_INVOKE_MAX_STEPS);
         assert_eq!(config.starknet.env.validate_max_steps, DEFAULT_VALIDATE_MAX_STEPS);
         assert_eq!(config.db.dir, None);

@@ -2,7 +2,7 @@ use starknet::core::crypto::compute_hash_on_elements;
 
 use crate::contract::ContractAddress;
 use crate::transaction::{ExecutableTxWithHash, TxHash, TxWithHash};
-use crate::version::Version;
+use crate::version::ProtocolVersion;
 use crate::Felt;
 
 pub type BlockIdOrTag = starknet::core::types::BlockId;
@@ -13,6 +13,15 @@ pub type BlockTag = starknet::core::types::BlockTag;
 pub enum BlockHashOrNumber {
     Hash(BlockHash),
     Num(BlockNumber),
+}
+
+impl std::fmt::Display for BlockHashOrNumber {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BlockHashOrNumber::Num(num) => write!(f, "{num}"),
+            BlockHashOrNumber::Hash(hash) => write!(f, "{hash:#x}"),
+        }
+    }
 }
 
 /// Block number type.
@@ -37,7 +46,7 @@ pub struct PartialHeader {
     pub gas_prices: GasPrices,
     pub timestamp: u64,
     pub sequencer_address: ContractAddress,
-    pub version: Version,
+    pub version: ProtocolVersion,
 }
 
 /// The L1 gas prices.
@@ -68,7 +77,7 @@ pub struct Header {
     pub timestamp: u64,
     pub state_root: Felt,
     pub sequencer_address: ContractAddress,
-    pub version: Version,
+    pub protocol_version: ProtocolVersion,
 }
 
 impl Header {
@@ -76,7 +85,7 @@ impl Header {
         Self {
             state_root,
             number: partial_header.number,
-            version: partial_header.version,
+            protocol_version: partial_header.version,
             timestamp: partial_header.timestamp,
             gas_prices: partial_header.gas_prices,
             parent_hash: partial_header.parent_hash,
@@ -184,6 +193,15 @@ impl From<BlockNumber> for BlockHashOrNumber {
 impl From<BlockHash> for BlockHashOrNumber {
     fn from(hash: BlockHash) -> Self {
         Self::Hash(hash)
+    }
+}
+
+impl From<BlockHashOrNumber> for BlockIdOrTag {
+    fn from(value: BlockHashOrNumber) -> Self {
+        match value {
+            BlockHashOrNumber::Hash(hash) => BlockIdOrTag::Hash(hash),
+            BlockHashOrNumber::Num(number) => BlockIdOrTag::Number(number),
+        }
     }
 }
 

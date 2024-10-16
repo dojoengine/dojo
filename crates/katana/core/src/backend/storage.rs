@@ -1,9 +1,15 @@
-use anyhow::{anyhow, Result};
+use std::sync::Arc;
+
+use anyhow::{anyhow, bail, Context, Result};
 use katana_db::mdbx::DbEnv;
-use katana_primitives::block::{BlockHash, FinalityStatus, SealedBlockWithStatus};
+use katana_primitives::block::{
+    BlockHashOrNumber, BlockIdOrTag, FinalityStatus, SealedBlockWithStatus,
+};
 use katana_primitives::chain_spec::ChainSpec;
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
+use katana_primitives::version::ProtocolVersion;
 use katana_provider::providers::db::DbProvider;
+use katana_provider::providers::fork::ForkedProvider;
 use katana_provider::traits::block::{BlockProvider, BlockWriter};
 use katana_provider::traits::contract::ContractClassWriter;
 use katana_provider::traits::env::BlockEnvProvider;
@@ -14,6 +20,13 @@ use katana_provider::traits::transaction::{
     TransactionsProviderExt,
 };
 use katana_provider::BlockchainProvider;
+use num_traits::ToPrimitive;
+use starknet::core::types::{BlockStatus, MaybePendingBlockWithTxHashes};
+use starknet::core::utils::parse_cairo_short_string;
+use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::{JsonRpcClient, Provider};
+use tracing::info;
+use url::Url;
 
 pub trait Database:
     BlockProvider
@@ -68,7 +81,7 @@ impl Blockchain {
     }
 
     /// Creates a new [Blockchain] with the given [Database] implementation and genesis state.
-    pub fn new_with_genesis(provider: impl Database, chain: &ChainSpec) -> Result<Self> {
+    pub fn new_with_chain(provider: impl Database, chain: &ChainSpec) -> Result<Self> {
         // check whether the genesis block has been initialized
         let genesis_hash = provider.block_hash_by_num(chain.genesis.number)?;
 
@@ -90,33 +103,84 @@ impl Blockchain {
                 let block = SealedBlockWithStatus { block, status: FinalityStatus::AcceptedOnL1 };
                 let state_updates = chain.state_updates();
 
-                Self::new_with_block_and_state(provider, block, state_updates)
+                Self::new_with_genesis_block_and_state(provider, block, state_updates)
             }
         }
     }
 
     /// Creates a new [Blockchain] from a database at `path` and `genesis` state.
     pub fn new_with_db(db: DbEnv, chain: &ChainSpec) -> Result<Self> {
-        Self::new_with_genesis(DbProvider::new(db), chain)
+        Self::new_with_chain(DbProvider::new(db), chain)
     }
 
     /// Builds a new blockchain with a forked block.
-    pub fn new_from_forked(
-        provider: impl Database,
-        genesis_hash: BlockHash,
-        chain: &ChainSpec,
-        block_status: FinalityStatus,
+    pub async fn new_from_forked(
+        fork_url: Url,
+        fork_block: Option<BlockHashOrNumber>,
+        chain: &mut ChainSpec,
     ) -> Result<Self> {
-        let block = chain.block().seal_with_hash_and_status(genesis_hash, block_status);
+        let provider = JsonRpcClient::new(HttpTransport::new(fork_url));
+        let chain_id = provider.chain_id().await.context("failed to fetch forked network id")?;
+
+        // if the id is not in ASCII encoding, we display the chain id as is in hex.
+        let parsed_id = match parse_cairo_short_string(&chain_id) {
+            Ok(id) => id,
+            Err(_) => format!("{chain_id:#x}"),
+        };
+
+        // If the fork block number is not specified, we use the latest accepted block on the forked
+        // network.
+        let block_id = if let Some(id) = fork_block {
+            id
+        } else {
+            let num = provider.block_number().await?;
+            BlockHashOrNumber::Num(num)
+        };
+
+        info!(chain = %parsed_id, block = %block_id, "Forking chain.");
+
+        let block = provider
+            .get_block_with_tx_hashes(BlockIdOrTag::from(block_id))
+            .await
+            .context("failed to fetch forked block")?;
+
+        let MaybePendingBlockWithTxHashes::Block(block) = block else {
+            bail!("forking a pending block is not allowed")
+        };
+
+        chain.id = chain_id.into();
+        chain.version = ProtocolVersion::parse(&block.starknet_version)?;
+
+        // adjust the genesis to match the forked block
+        chain.genesis.timestamp = block.timestamp;
+        chain.genesis.number = block.block_number;
+        chain.genesis.state_root = block.new_root;
+        chain.genesis.parent_hash = block.parent_hash;
+        chain.genesis.sequencer_address = block.sequencer_address.into();
+        chain.genesis.gas_prices.eth =
+            block.l1_gas_price.price_in_wei.to_u128().expect("should fit in u128");
+        chain.genesis.gas_prices.strk =
+            block.l1_gas_price.price_in_fri.to_u128().expect("should fit in u128");
+
+        let status = match block.status {
+            BlockStatus::AcceptedOnL1 => FinalityStatus::AcceptedOnL1,
+            BlockStatus::AcceptedOnL2 => FinalityStatus::AcceptedOnL2,
+            // we already checked for pending block earlier. so this should never happen.
+            _ => bail!("qed; block status shouldn't be pending"),
+        };
+
+        let database = ForkedProvider::new(Arc::new(provider), block_id)?;
+        let block = chain.block().seal_with_hash_and_status(block.block_hash, status);
         let state_updates = chain.state_updates();
-        Self::new_with_block_and_state(provider, block, state_updates)
+
+        Self::new_with_genesis_block_and_state(database, block, state_updates)
     }
 
     pub fn provider(&self) -> &BlockchainProvider<Box<dyn Database>> {
         &self.inner
     }
 
-    fn new_with_block_and_state(
+    fn new_with_genesis_block_and_state(
         provider: impl Database,
         block: SealedBlockWithStatus,
         states: StateUpdatesWithDeclaredClasses,
@@ -142,7 +206,6 @@ mod tests {
         DEFAULT_ETH_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CASM, DEFAULT_LEGACY_ERC20_CLASS_HASH,
         DEFAULT_LEGACY_UDC_CASM, DEFAULT_LEGACY_UDC_CLASS_HASH, DEFAULT_UDC_ADDRESS,
     };
-    use katana_primitives::genesis::Genesis;
     use katana_primitives::receipt::{InvokeTxReceipt, Receipt};
     use katana_primitives::state::StateUpdatesWithDeclaredClasses;
     use katana_primitives::trace::TxExecInfo;
@@ -150,8 +213,7 @@ mod tests {
     use katana_primitives::{chain_spec, Felt};
     use katana_provider::providers::in_memory::InMemoryProvider;
     use katana_provider::traits::block::{
-        BlockHashProvider, BlockNumberProvider, BlockProvider, BlockStatusProvider, BlockWriter,
-        HeaderProvider,
+        BlockHashProvider, BlockNumberProvider, BlockProvider, BlockWriter,
     };
     use katana_provider::traits::state::StateFactoryProvider;
     use katana_provider::traits::transaction::{TransactionProvider, TransactionTraceProvider};
@@ -164,7 +226,7 @@ mod tests {
     fn blockchain_from_genesis_states() {
         let provider = InMemoryProvider::new();
 
-        let blockchain = Blockchain::new_with_genesis(provider, &chain_spec::DEV)
+        let blockchain = Blockchain::new_with_chain(provider, &chain_spec::DEV)
             .expect("failed to create blockchain from genesis block");
         let state = blockchain.provider().latest().expect("failed to get latest state");
 
@@ -176,50 +238,6 @@ mod tests {
         assert_eq!(latest_number, 0);
         assert_eq!(udc_class_hash, DEFAULT_LEGACY_UDC_CLASS_HASH);
         assert_eq!(fee_token_class_hash, DEFAULT_LEGACY_ERC20_CLASS_HASH);
-    }
-
-    #[test]
-    fn blockchain_from_fork() {
-        let provider = InMemoryProvider::new();
-
-        let genesis = Genesis {
-            number: 23,
-            parent_hash: Felt::ZERO,
-            state_root: felt!("1334"),
-            timestamp: 6868,
-            gas_prices: GasPrices { eth: 9090, strk: 8080 },
-            ..Default::default()
-        };
-
-        let mut chain = chain_spec::DEV.clone();
-        chain.genesis = genesis;
-
-        let genesis_hash = felt!("1111");
-
-        let blockchain = Blockchain::new_from_forked(
-            provider,
-            genesis_hash,
-            &chain,
-            FinalityStatus::AcceptedOnL1,
-        )
-        .expect("failed to create fork blockchain");
-
-        let latest_number = blockchain.provider().latest_number().unwrap();
-        let latest_hash = blockchain.provider().latest_hash().unwrap();
-        let header = blockchain.provider().header(latest_number.into()).unwrap().unwrap();
-        let block_status =
-            blockchain.provider().block_status(latest_number.into()).unwrap().unwrap();
-
-        assert_eq!(latest_number, chain.genesis.number);
-        assert_eq!(latest_hash, genesis_hash);
-
-        assert_eq!(header.gas_prices.eth, 9090);
-        assert_eq!(header.gas_prices.strk, 8080);
-        assert_eq!(header.timestamp, 6868);
-        assert_eq!(header.number, latest_number);
-        assert_eq!(header.state_root, chain.genesis.state_root);
-        assert_eq!(header.parent_hash, chain.genesis.parent_hash);
-        assert_eq!(block_status, FinalityStatus::AcceptedOnL1);
     }
 
     #[test]

@@ -31,9 +31,7 @@ use katana_pipeline::{stage, Pipeline};
 use katana_pool::ordering::FiFo;
 use katana_pool::validation::stateful::TxValidator;
 use katana_pool::TxPool;
-use katana_primitives::block::FinalityStatus;
 use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
-use katana_provider::providers::fork::ForkedProvider;
 use katana_provider::providers::in_memory::InMemoryProvider;
 use katana_rpc::dev::DevApi;
 use katana_rpc::metrics::RpcServerMetrics;
@@ -45,13 +43,8 @@ use katana_rpc_api::saya::SayaApiServer;
 use katana_rpc_api::starknet::{StarknetApiServer, StarknetTraceApiServer, StarknetWriteApiServer};
 use katana_rpc_api::torii::ToriiApiServer;
 use katana_tasks::TaskManager;
-use num_traits::ToPrimitive;
-use starknet::core::types::{BlockId, BlockStatus, MaybePendingBlockWithTxHashes};
-use starknet::core::utils::parse_cairo_short_string;
-use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::{JsonRpcClient, Provider};
 use tower_http::cors::{AllowOrigin, CorsLayer};
-use tracing::{info, trace};
+use tracing::info;
 
 use crate::exit::NodeStoppedFuture;
 
@@ -188,59 +181,14 @@ pub async fn build(mut config: Config) -> Result<Node> {
 
     // --- build backend
 
-    let (blockchain, db) = if let Some(forked_url) = &config.starknet.fork_rpc_url {
-        let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(forked_url.clone())));
-        let forked_chain_id = provider.chain_id().await.unwrap();
-
-        let forked_block_num = if let Some(num) = config.starknet.fork_block_number {
-            num
-        } else {
-            provider.block_number().await.expect("failed to fetch block number from forked network")
-        };
-
-        let block =
-            provider.get_block_with_tx_hashes(BlockId::Number(forked_block_num)).await.unwrap();
-        let MaybePendingBlockWithTxHashes::Block(block) = block else {
-            panic!("block to be forked is a pending block")
-        };
-
-        // adjust the genesis to match the forked block
-        config.chain.genesis.number = block.block_number;
-        config.chain.genesis.state_root = block.new_root;
-        config.chain.genesis.parent_hash = block.parent_hash;
-        config.chain.genesis.timestamp = block.timestamp;
-        config.chain.genesis.sequencer_address = block.sequencer_address.into();
-        config.chain.genesis.gas_prices.eth =
-            block.l1_gas_price.price_in_wei.to_u128().expect("should fit in u128");
-        config.chain.genesis.gas_prices.strk =
-            block.l1_gas_price.price_in_fri.to_u128().expect("should fit in u128");
-
-        trace!(
-            chain = %parse_cairo_short_string(&forked_chain_id).unwrap(),
-            block_number = %block.block_number,
-            forked_url = %forked_url,
-            "Forking chain.",
-        );
-
-        let blockchain = Blockchain::new_from_forked(
-            ForkedProvider::new(provider, forked_block_num.into()).unwrap(),
-            block.block_hash,
-            &config.chain,
-            match block.status {
-                BlockStatus::AcceptedOnL1 => FinalityStatus::AcceptedOnL1,
-                BlockStatus::AcceptedOnL2 => FinalityStatus::AcceptedOnL2,
-                _ => panic!("unable to fork for non-accepted block"),
-            },
-        )?;
-
-        config.chain.id = forked_chain_id.into();
-
-        (blockchain, None)
+    let (blockchain, db) = if let Some(cfg) = config.forking {
+        let bc = Blockchain::new_from_forked(cfg.url.clone(), cfg.block, &mut config.chain).await?;
+        (bc, None)
     } else if let Some(db_path) = &config.db.dir {
         let db = katana_db::init_db(db_path)?;
         (Blockchain::new_with_db(db.clone(), &config.chain)?, Some(db))
     } else {
-        (Blockchain::new_with_genesis(InMemoryProvider::new(), &config.chain)?, None)
+        (Blockchain::new_with_chain(InMemoryProvider::new(), &config.chain)?, None)
     };
 
     let block_context_generator = BlockContextGenerator::default().into();
