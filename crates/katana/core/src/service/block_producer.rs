@@ -11,6 +11,7 @@ use futures::FutureExt;
 use katana_executor::{BlockExecutor, ExecutionResult, ExecutionStats, ExecutorFactory};
 use katana_pool::validation::stateful::TxValidator;
 use katana_primitives::block::{BlockHashOrNumber, ExecutableBlock, PartialHeader};
+use katana_primitives::da::L1DataAvailabilityMode;
 use katana_primitives::receipt::Receipt;
 use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{ExecutableTxWithHash, TxHash, TxWithHash};
@@ -563,6 +564,8 @@ impl<EF: ExecutorFactory> InstantBlockProducer<EF> {
 
         let provider = backend.blockchain.provider();
 
+        // TODO: don't use the previous block env, we should create on based on the current state of
+        // the l1 (to determine the proper gas prices)
         let latest_num = provider.latest_number()?;
         let mut block_env = provider.block_env_at(BlockHashOrNumber::Num(latest_num))?.unwrap();
         backend.update_block_env(&mut block_env);
@@ -578,9 +581,11 @@ impl<EF: ExecutorFactory> InstantBlockProducer<EF> {
                 parent_hash,
                 number: block_env.number,
                 timestamp: block_env.timestamp,
-                gas_prices: block_env.l1_gas_prices.clone(),
-                sequencer_address: block_env.sequencer_address,
                 version: backend.chain_spec.version.clone(),
+                sequencer_address: block_env.sequencer_address,
+                l1_da_mode: L1DataAvailabilityMode::Calldata,
+                l1_gas_prices: block_env.l1_gas_prices.clone(),
+                l1_data_gas_prices: block_env.l1_data_gas_prices.clone(),
             },
         };
 

@@ -5,6 +5,7 @@ use katana_primitives::block::{
     Block, FinalityStatus, GasPrices, Header, PartialHeader, SealedBlockWithStatus,
 };
 use katana_primitives::chain_spec::ChainSpec;
+use katana_primitives::da::L1DataAvailabilityMode;
 use katana_primitives::env::BlockEnv;
 use katana_primitives::transaction::TxHash;
 use katana_primitives::Felt;
@@ -68,9 +69,14 @@ impl<EF: ExecutorFactory> Backend<EF> {
             version: self.chain_spec.version.clone(),
             timestamp: block_env.timestamp,
             sequencer_address: block_env.sequencer_address,
-            gas_prices: GasPrices {
+            l1_da_mode: L1DataAvailabilityMode::Calldata,
+            l1_gas_prices: GasPrices {
                 eth: block_env.l1_gas_prices.eth,
                 strk: block_env.l1_gas_prices.strk,
+            },
+            l1_data_gas_prices: GasPrices {
+                eth: block_env.l1_data_gas_prices.eth,
+                strk: block_env.l1_data_gas_prices.strk,
             },
         };
 

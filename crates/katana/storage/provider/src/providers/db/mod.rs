@@ -590,7 +590,8 @@ impl<Db: Database> BlockEnvProvider for DbProvider<Db> {
         Ok(Some(BlockEnv {
             number: header.number,
             timestamp: header.timestamp,
-            l1_gas_prices: header.gas_prices,
+            l1_gas_prices: header.l1_gas_prices,
+            l1_data_gas_prices: header.l1_data_gas_prices,
             sequencer_address: header.sequencer_address,
         }))
     }

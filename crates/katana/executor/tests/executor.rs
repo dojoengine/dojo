@@ -48,7 +48,7 @@ fn test_executor_with_valid_blocks_impl<EF: ExecutorFactory>(
     let actual_block_env = executor.block_env();
     assert_eq!(actual_block_env.number, block.header.number);
     assert_eq!(actual_block_env.timestamp, block.header.timestamp);
-    assert_eq!(actual_block_env.l1_gas_prices, block.header.gas_prices);
+    assert_eq!(actual_block_env.l1_gas_prices, block.header.l1_gas_prices);
     assert_eq!(actual_block_env.sequencer_address, block.header.sequencer_address);
 
     let transactions = executor.transactions();
@@ -127,7 +127,7 @@ fn test_executor_with_valid_blocks_impl<EF: ExecutorFactory>(
     let actual_block_env = executor.block_env();
     assert_eq!(actual_block_env.number, block.header.number);
     assert_eq!(actual_block_env.timestamp, block.header.timestamp);
-    assert_eq!(actual_block_env.l1_gas_prices, block.header.gas_prices);
+    assert_eq!(actual_block_env.l1_gas_prices, block.header.l1_gas_prices);
     assert_eq!(actual_block_env.sequencer_address, block.header.sequencer_address);
 
     let transactions = executor.transactions();
@@ -174,7 +174,7 @@ fn test_executor_with_valid_blocks_impl<EF: ExecutorFactory>(
     let actual_block_env = executor.block_env();
     assert_eq!(actual_block_env.number, block.header.number);
     assert_eq!(actual_block_env.timestamp, block.header.timestamp);
-    assert_eq!(actual_block_env.l1_gas_prices, block.header.gas_prices);
+    assert_eq!(actual_block_env.l1_gas_prices, block.header.l1_gas_prices);
     assert_eq!(actual_block_env.sequencer_address, block.header.sequencer_address);
 
     let transactions = executor.transactions();

@@ -1,6 +1,7 @@
 use starknet::core::crypto::compute_hash_on_elements;
 
 use crate::contract::ContractAddress;
+use crate::da::L1DataAvailabilityMode;
 use crate::transaction::{ExecutableTxWithHash, TxHash, TxWithHash};
 use crate::version::ProtocolVersion;
 use crate::Felt;
@@ -43,12 +44,15 @@ pub enum FinalityStatus {
 pub struct PartialHeader {
     pub number: BlockNumber,
     pub parent_hash: Felt,
-    pub gas_prices: GasPrices,
     pub timestamp: u64,
     pub sequencer_address: ContractAddress,
     pub version: ProtocolVersion,
+    pub l1_gas_prices: GasPrices,
+    pub l1_data_gas_prices: GasPrices,
+    pub l1_da_mode: L1DataAvailabilityMode,
 }
 
+// TODO: change names to wei and fri
 /// The L1 gas prices.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -62,22 +66,40 @@ pub struct GasPrices {
 }
 
 impl GasPrices {
-    pub fn new(eth_gas_price: u128, strk_gas_price: u128) -> Self {
-        Self { eth: eth_gas_price, strk: strk_gas_price }
+    pub fn new(wei_gas_price: u128, fri_gas_price: u128) -> Self {
+        Self { eth: wei_gas_price, strk: fri_gas_price }
     }
 }
 
 /// Represents a block header.
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Header {
     pub parent_hash: BlockHash,
     pub number: BlockNumber,
-    pub gas_prices: GasPrices,
     pub timestamp: u64,
     pub state_root: Felt,
     pub sequencer_address: ContractAddress,
     pub protocol_version: ProtocolVersion,
+    pub l1_gas_prices: GasPrices,
+    pub l1_data_gas_prices: GasPrices,
+    pub l1_da_mode: L1DataAvailabilityMode,
+}
+
+impl Default for Header {
+    fn default() -> Self {
+        Self {
+            timestamp: 0,
+            number: BlockNumber::default(),
+            state_root: Felt::default(),
+            parent_hash: BlockHash::default(),
+            l1_gas_prices: GasPrices::default(),
+            protocol_version: ProtocolVersion::default(),
+            sequencer_address: ContractAddress::default(),
+            l1_data_gas_prices: GasPrices::default(),
+            l1_da_mode: L1DataAvailabilityMode::Calldata,
+        }
+    }
 }
 
 impl Header {
@@ -87,9 +109,11 @@ impl Header {
             number: partial_header.number,
             protocol_version: partial_header.version,
             timestamp: partial_header.timestamp,
-            gas_prices: partial_header.gas_prices,
             parent_hash: partial_header.parent_hash,
             sequencer_address: partial_header.sequencer_address,
+            l1_gas_prices: partial_header.l1_gas_prices,
+            l1_da_mode: partial_header.l1_da_mode,
+            l1_data_gas_prices: partial_header.l1_data_gas_prices,
         }
     }
 

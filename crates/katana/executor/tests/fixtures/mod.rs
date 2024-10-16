@@ -10,6 +10,7 @@ use katana_primitives::chain::ChainId;
 use katana_primitives::chain_spec::{self, ChainSpec};
 use katana_primitives::class::{CompiledClass, FlattenedSierraClass};
 use katana_primitives::contract::ContractAddress;
+use katana_primitives::da::L1DataAvailabilityMode;
 use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
 use katana_primitives::genesis::constant::{
@@ -107,7 +108,9 @@ pub fn valid_blocks() -> [ExecutableBlock; 3] {
                 timestamp: 100,
                 sequencer_address,
                 parent_hash: 123u64.into(),
-                gas_prices: gas_prices.clone(),
+                l1_gas_prices: gas_prices.clone(),
+                l1_data_gas_prices: gas_prices.clone(),
+                l1_da_mode: L1DataAvailabilityMode::Calldata,
             },
             body: vec![
                 // fund the account to be deployed, sending 0x9999999999999 amount
@@ -155,7 +158,9 @@ pub fn valid_blocks() -> [ExecutableBlock; 3] {
                 timestamp: 200,
                 sequencer_address,
                 parent_hash: 1234u64.into(),
-                gas_prices: gas_prices.clone(),
+                l1_gas_prices: gas_prices.clone(),
+                l1_data_gas_prices: gas_prices.clone(),
+                l1_da_mode: L1DataAvailabilityMode::Calldata,
             },
             body: vec![
                 // deploy account tx with the default account class
@@ -186,7 +191,9 @@ pub fn valid_blocks() -> [ExecutableBlock; 3] {
                 timestamp: 300,
                 sequencer_address,
                 parent_hash: 12345u64.into(),
-                gas_prices: gas_prices.clone(),
+                l1_gas_prices: gas_prices.clone(),
+                l1_data_gas_prices: gas_prices.clone(),
+                l1_da_mode: L1DataAvailabilityMode::Calldata,
             },
             body: vec![
                 // deploy a erc20 contract using UDC
