@@ -6,6 +6,7 @@ use futures_util::{Stream, StreamExt, TryStreamExt};
 use starknet::core::types::{Felt, FromStrError, StateDiff, StateUpdate};
 #[cfg(not(target_arch = "wasm32"))]
 use tonic::transport::Endpoint;
+use tonic::codec::CompressionEncoding;
 
 use crate::proto::world::{
     world_client, RetrieveEntitiesRequest, RetrieveEntitiesResponse, RetrieveEventsRequest,
@@ -50,8 +51,6 @@ pub struct WorldClient {
 impl WorldClient {
     #[cfg(not(target_arch = "wasm32"))]
     pub async fn new(dst: String, world_address: Felt) -> Result<Self, Error> {
-        use tonic::codec::CompressionEncoding;
-
         let endpoint =
             Endpoint::from_shared(dst.clone()).map_err(|e| Error::Endpoint(e.to_string()))?;
         let channel = endpoint.connect().await.map_err(Error::Transport)?;
@@ -65,7 +64,7 @@ impl WorldClient {
 
     // we make this function async so that we can keep the function signature similar
     #[cfg(target_arch = "wasm32")]
-    pub async fn new(endpoint: String, _world_address: Felt) -> Result<Self, Error> {
+    pub async fn new(endpoint: String, _world_address: Felt) -> Result<Self, Error> {        
         Ok(Self {
             _world_address,
             inner: world_client::WorldClient::new(tonic_web_wasm_client::Client::new(endpoint))
