@@ -22,7 +22,7 @@ use katana_primitives::Felt;
 use parking_lot::Mutex;
 use starknet::core::types::{BlockId, ContractClass as RpcContractClass, StarknetError};
 use starknet::providers::{Provider, ProviderError as StarknetProviderError};
-use tracing::{error, info, trace};
+use tracing::{error, trace};
 
 use crate::error::ProviderError;
 use crate::providers::in_memory::cache::CacheStateDb;
@@ -152,7 +152,7 @@ where
             })
             .map_err(BackendError::BackendThreadInit)?;
 
-        info!(target: LOG_TARGET, "Forking backend started.");
+        trace!(target: LOG_TARGET, "Forking backend started.");
 
         Ok(handle)
     }
