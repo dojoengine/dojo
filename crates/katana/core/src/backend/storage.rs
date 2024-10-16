@@ -144,25 +144,27 @@ impl Blockchain {
             .await
             .context("failed to fetch forked block")?;
 
-        let MaybePendingBlockWithTxHashes::Block(block) = block else {
+        let MaybePendingBlockWithTxHashes::Block(forked_block) = block else {
             bail!("forking a pending block is not allowed")
         };
 
         chain.id = chain_id.into();
-        chain.version = ProtocolVersion::parse(&block.starknet_version)?;
+        chain.version = ProtocolVersion::parse(&forked_block.starknet_version)?;
 
         // adjust the genesis to match the forked block
-        chain.genesis.timestamp = block.timestamp;
-        chain.genesis.number = block.block_number;
-        chain.genesis.state_root = block.new_root;
-        chain.genesis.parent_hash = block.parent_hash;
-        chain.genesis.sequencer_address = block.sequencer_address.into();
-        chain.genesis.gas_prices.eth =
-            block.l1_gas_price.price_in_wei.to_u128().expect("should fit in u128");
-        chain.genesis.gas_prices.strk =
-            block.l1_gas_price.price_in_fri.to_u128().expect("should fit in u128");
+        chain.genesis.timestamp = forked_block.timestamp;
+        chain.genesis.number = forked_block.block_number;
+        chain.genesis.state_root = forked_block.new_root;
+        chain.genesis.parent_hash = forked_block.parent_hash;
+        chain.genesis.sequencer_address = forked_block.sequencer_address.into();
 
-        let status = match block.status {
+        // TODO: remove gas price from genesis
+        chain.genesis.gas_prices.eth =
+            forked_block.l1_gas_price.price_in_wei.to_u128().expect("should fit in u128");
+        chain.genesis.gas_prices.strk =
+            forked_block.l1_gas_price.price_in_fri.to_u128().expect("should fit in u128");
+
+        let status = match forked_block.status {
             BlockStatus::AcceptedOnL1 => FinalityStatus::AcceptedOnL1,
             BlockStatus::AcceptedOnL2 => FinalityStatus::AcceptedOnL2,
             // we already checked for pending block earlier. so this should never happen.
@@ -170,7 +172,19 @@ impl Blockchain {
         };
 
         let database = ForkedProvider::new(Arc::new(provider), block_id)?;
-        let block = chain.block().seal_with_hash_and_status(block.block_hash, status);
+
+        // update the genesis block with the forked block's data
+        // we dont update the `l1_gas_price` bcs its already done when we set the `gas_prices` in
+        // genesis. this flow is kinda flawed, we should probably refactor it out of the
+        // genesis.
+        let mut block = chain.block();
+        block.header.l1_data_gas_prices.eth =
+            forked_block.l1_data_gas_price.price_in_wei.to_u128().expect("should fit in u128");
+        block.header.l1_data_gas_prices.strk =
+            forked_block.l1_data_gas_price.price_in_fri.to_u128().expect("should fit in u128");
+        block.header.l1_da_mode = forked_block.l1_da_mode;
+
+        let block = block.seal_with_hash_and_status(forked_block.block_hash, status);
         let state_updates = chain.state_updates();
 
         Self::new_with_genesis_block_and_state(database, block, state_updates)
@@ -201,6 +215,7 @@ mod tests {
     use katana_primitives::block::{
         Block, FinalityStatus, GasPrices, Header, SealedBlockWithStatus,
     };
+    use katana_primitives::da::L1DataAvailabilityMode;
     use katana_primitives::fee::TxFeeInfo;
     use katana_primitives::genesis::constant::{
         DEFAULT_ETH_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CASM, DEFAULT_LEGACY_ERC20_CLASS_HASH,
@@ -255,7 +270,9 @@ mod tests {
                 header: Header {
                     parent_hash: Felt::ZERO,
                     number: 1,
-                    gas_prices: GasPrices::default(),
+                    l1_gas_prices: GasPrices::default(),
+                    l1_data_gas_prices: GasPrices::default(),
+                    l1_da_mode: L1DataAvailabilityMode::Calldata,
                     timestamp: 123456,
                     ..Default::default()
                 },

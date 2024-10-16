@@ -576,7 +576,8 @@ impl BlockEnvProvider for ForkedProvider {
         Ok(self.header(block_id)?.map(|header| BlockEnv {
             number: header.number,
             timestamp: header.timestamp,
-            l1_gas_prices: header.gas_prices,
+            l1_gas_prices: header.l1_gas_prices,
+            l1_data_gas_prices: header.l1_data_gas_prices,
             sequencer_address: header.sequencer_address,
         }))
     }

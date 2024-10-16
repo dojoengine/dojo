@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 
 use alloy_primitives::U256;
 use lazy_static::lazy_static;
+use starknet::core::types::L1DataAvailabilityMode;
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet_crypto::Felt;
 
@@ -56,7 +57,9 @@ impl ChainSpec {
             timestamp: self.genesis.timestamp,
             state_root: self.genesis.state_root,
             parent_hash: self.genesis.parent_hash,
-            gas_prices: self.genesis.gas_prices.clone(),
+            l1_da_mode: L1DataAvailabilityMode::Calldata,
+            l1_gas_prices: self.genesis.gas_prices.clone(),
+            l1_data_gas_prices: self.genesis.gas_prices.clone(),
             sequencer_address: self.genesis.sequencer_address,
         };
         Block { header, body: Vec::new() }
@@ -216,6 +219,7 @@ mod tests {
     use std::str::FromStr;
 
     use alloy_primitives::U256;
+    use starknet::core::types::L1DataAvailabilityMode;
     use starknet::macros::felt;
 
     use super::*;
@@ -342,7 +346,9 @@ mod tests {
                 state_root: chain_spec.genesis.state_root,
                 parent_hash: chain_spec.genesis.parent_hash,
                 sequencer_address: chain_spec.genesis.sequencer_address,
-                gas_prices: chain_spec.genesis.gas_prices.clone(),
+                l1_gas_prices: chain_spec.genesis.gas_prices.clone(),
+                l1_data_gas_prices: chain_spec.genesis.gas_prices.clone(),
+                l1_da_mode: L1DataAvailabilityMode::Calldata,
                 protocol_version: CURRENT_STARKNET_VERSION,
             },
             body: Vec::new(),
@@ -358,7 +364,12 @@ mod tests {
         assert_eq!(actual_block.header.state_root, expected_block.header.state_root);
         assert_eq!(actual_block.header.parent_hash, expected_block.header.parent_hash);
         assert_eq!(actual_block.header.sequencer_address, expected_block.header.sequencer_address);
-        assert_eq!(actual_block.header.gas_prices, expected_block.header.gas_prices);
+        assert_eq!(actual_block.header.l1_gas_prices, expected_block.header.l1_gas_prices);
+        assert_eq!(
+            actual_block.header.l1_data_gas_prices,
+            expected_block.header.l1_data_gas_prices
+        );
+        assert_eq!(actual_block.header.l1_da_mode, expected_block.header.l1_da_mode);
         assert_eq!(actual_block.header.protocol_version, expected_block.header.protocol_version);
         assert_eq!(actual_block.body, expected_block.body);
 

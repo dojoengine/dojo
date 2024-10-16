@@ -93,10 +93,15 @@ impl Provider for JsonRpcProvider {
                 header: Header {
                     parent_hash: block.parent_hash,
                     number: block.block_number,
-                    gas_prices: GasPrices::new(
+                    l1_gas_prices: GasPrices::new(
                         block.l1_gas_price.price_in_wei.to_u128().unwrap(),
                         block.l1_gas_price.price_in_fri.to_u128().unwrap(),
                     ),
+                    l1_data_gas_prices: GasPrices::new(
+                        block.l1_data_gas_price.price_in_wei.to_u128().unwrap(),
+                        block.l1_data_gas_price.price_in_fri.to_u128().unwrap(),
+                    ),
+                    l1_da_mode: block.l1_da_mode,
                     timestamp: block.timestamp,
                     state_root: block.new_root,
                     sequencer_address: block.sequencer_address.into(),

@@ -1,6 +1,7 @@
 use jsonrpsee::core::{async_trait, Error, RpcResult};
 use katana_executor::{EntryPointCall, ExecutionResult, ExecutorFactory};
 use katana_primitives::block::{BlockHashOrNumber, BlockIdOrTag, FinalityStatus, PartialHeader};
+use katana_primitives::da::L1DataAvailabilityMode;
 use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash, TxHash};
 use katana_primitives::Felt;
 use katana_provider::traits::block::{BlockHashProvider, BlockIdReader, BlockNumberProvider};
@@ -79,11 +80,14 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                     let block_env = executor.read().block_env();
                     let latest_hash = provider.latest_hash().map_err(StarknetApiError::from)?;
 
-                    let gas_prices = block_env.l1_gas_prices.clone();
+                    let l1_gas_prices = block_env.l1_gas_prices.clone();
+                    let l1_data_gas_prices = block_env.l1_data_gas_prices.clone();
 
                     let header = PartialHeader {
+                        l1_da_mode: L1DataAvailabilityMode::Calldata,
+                        l1_data_gas_prices,
+                        l1_gas_prices,
                         number: block_env.number,
-                        gas_prices,
                         parent_hash: latest_hash,
                         timestamp: block_env.timestamp,
                         version: this.inner.backend.chain_spec.version.clone(),
@@ -167,11 +171,14 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                     let block_env = executor.read().block_env();
                     let latest_hash = provider.latest_hash().map_err(StarknetApiError::from)?;
 
-                    let gas_prices = block_env.l1_gas_prices.clone();
+                    let l1_gas_prices = block_env.l1_gas_prices.clone();
+                    let l1_data_gas_prices = block_env.l1_data_gas_prices.clone();
 
                     let header = PartialHeader {
+                        l1_da_mode: L1DataAvailabilityMode::Calldata,
+                        l1_gas_prices,
+                        l1_data_gas_prices,
                         number: block_env.number,
-                        gas_prices,
                         parent_hash: latest_hash,
                         timestamp: block_env.timestamp,
                         sequencer_address: block_env.sequencer_address,
@@ -224,11 +231,14 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                     let block_env = executor.read().block_env();
                     let latest_hash = provider.latest_hash().map_err(StarknetApiError::from)?;
 
-                    let gas_prices = block_env.l1_gas_prices.clone();
+                    let l1_gas_prices = block_env.l1_gas_prices.clone();
+                    let l1_data_gas_prices = block_env.l1_data_gas_prices.clone();
 
                     let header = PartialHeader {
+                        l1_da_mode: L1DataAvailabilityMode::Calldata,
+                        l1_gas_prices,
+                        l1_data_gas_prices,
                         number: block_env.number,
-                        gas_prices,
                         parent_hash: latest_hash,
                         version: this.inner.backend.chain_spec.version.clone(),
                         timestamp: block_env.timestamp,

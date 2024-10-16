@@ -11,6 +11,8 @@ pub struct BlockEnv {
     pub timestamp: u64,
     /// The L1 gas prices at this particular block.
     pub l1_gas_prices: GasPrices,
+    /// The L1 data gas prices at this particular block.
+    pub l1_data_gas_prices: GasPrices,
     /// The contract address of the sequencer.
     pub sequencer_address: ContractAddress,
 }
