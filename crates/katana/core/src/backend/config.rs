@@ -1,14 +1,9 @@
-use katana_primitives::block::BlockNumber;
-use url::Url;
-
 use crate::constants::{DEFAULT_INVOKE_MAX_STEPS, DEFAULT_VALIDATE_MAX_STEPS};
 use crate::env::BlockContextGenerator;
 
 #[derive(Debug, Clone, Default)]
 pub struct StarknetConfig {
     pub env: Environment,
-    pub fork_rpc_url: Option<Url>,
-    pub fork_block_number: Option<BlockNumber>,
 }
 
 impl StarknetConfig {

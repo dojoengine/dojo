@@ -1,5 +1,7 @@
 use std::path::PathBuf;
 
+use anyhow::{Context, Result};
+use katana_primitives::block::{BlockHash, BlockHashOrNumber};
 use katana_primitives::genesis::json::GenesisJson;
 use katana_primitives::genesis::Genesis;
 
@@ -16,10 +18,20 @@ pub fn parse_seed(seed: &str) -> [u8; 32] {
 }
 
 /// Used as clap value parser for [Genesis].
-pub fn parse_genesis(value: &str) -> Result<Genesis, anyhow::Error> {
+pub fn parse_genesis(value: &str) -> Result<Genesis> {
     let path = PathBuf::from(shellexpand::full(value)?.into_owned());
     let genesis = Genesis::try_from(GenesisJson::load(path)?)?;
     Ok(genesis)
+}
+
+pub fn parse_block_hash_or_number(value: &str) -> Result<BlockHashOrNumber> {
+    if value.starts_with("0x") {
+        let hash = BlockHash::from_hex(value)?;
+        Ok(BlockHashOrNumber::Hash(hash))
+    } else {
+        let num = value.parse::<u64>().context("could not parse block number")?;
+        Ok(BlockHashOrNumber::Num(num))
+    }
 }
 
 #[cfg(test)]

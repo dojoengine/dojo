@@ -29,7 +29,6 @@ starknet.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 tracing.workspace = true
-url.workspace = true
 
 alloy-primitives = { workspace = true, features = [ "serde" ] }
 alloy-sol-types = { workspace = true, default-features = false, features = [ "json" ] }

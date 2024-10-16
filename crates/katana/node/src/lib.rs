@@ -8,18 +8,18 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::Result;
+use anyhow::{Context, Result, bail};
 use config::metrics::MetricsConfig;
 use config::rpc::{ApiKind, RpcConfig};
 use config::{Config, SequencingConfig};
 use dojo_metrics::prometheus_exporter::PrometheusHandle;
-use dojo_metrics::{metrics_process, prometheus_exporter, Report};
+use dojo_metrics::{Report, metrics_process, prometheus_exporter};
 use hyper::{Method, Uri};
+use jsonrpsee::RpcModule;
 use jsonrpsee::server::middleware::proxy_get_request::ProxyGetRequestLayer;
 use jsonrpsee::server::{AllowHosts, ServerBuilder, ServerHandle};
-use jsonrpsee::RpcModule;
-use katana_core::backend::storage::Blockchain;
 use katana_core::backend::Backend;
+use katana_core::backend::storage::Blockchain;
 use katana_core::constants::MAX_RECURSION_DEPTH;
 use katana_core::env::BlockContextGenerator;
 use katana_core::service::block_producer::BlockProducer;
@@ -27,11 +27,11 @@ use katana_core::service::messaging::MessagingConfig;
 use katana_db::mdbx::DbEnv;
 use katana_executor::implementation::blockifier::BlockifierFactory;
 use katana_executor::{ExecutorFactory, SimulationFlag};
-use katana_pipeline::{stage, Pipeline};
+use katana_pipeline::{Pipeline, stage};
+use katana_pool::TxPool;
 use katana_pool::ordering::FiFo;
 use katana_pool::validation::stateful::TxValidator;
-use katana_pool::TxPool;
-use katana_primitives::block::FinalityStatus;
+use katana_primitives::block::{BlockHashOrNumber, BlockIdOrTag, FinalityStatus};
 use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
 use katana_primitives::version::ProtocolVersion;
 use katana_provider::providers::fork::ForkedProvider;
@@ -47,12 +47,12 @@ use katana_rpc_api::starknet::{StarknetApiServer, StarknetTraceApiServer, Starkn
 use katana_rpc_api::torii::ToriiApiServer;
 use katana_tasks::TaskManager;
 use num_traits::ToPrimitive;
-use starknet::core::types::{BlockId, BlockStatus, MaybePendingBlockWithTxHashes};
+use starknet::core::types::{BlockStatus, MaybePendingBlockWithTxHashes};
 use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
 use tower_http::cors::{AllowOrigin, CorsLayer};
-use tracing::{info, trace};
+use tracing::info;
 
 use crate::exit::NodeStoppedFuture;
 
@@ -189,23 +189,33 @@ pub async fn build(mut config: Config) -> Result<Node> {
 
     // --- build backend
 
-    let (blockchain, db) = if let Some(forked_url) = &config.starknet.fork_rpc_url {
-        let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(forked_url.clone())));
-        let forked_chain_id = provider.chain_id().await.unwrap();
+    let (blockchain, db) = if let Some(cfg) = config.forking {
+        let provider = JsonRpcClient::new(HttpTransport::new(cfg.url.clone()));
+        let forked_chain_id =
+            provider.chain_id().await.context("failed to fetch forked network id")?;
 
-        let forked_block_num = if let Some(num) = config.starknet.fork_block_number {
-            num
+        // If the fork block number is not specified, we use the latest accepted block.
+        let block_id = if let Some(id) = cfg.block {
+            id
         } else {
-            provider.block_number().await.expect("failed to fetch block number from forked network")
+            BlockHashOrNumber::Num(provider.block_number().await?)
         };
 
-        let block =
-            provider.get_block_with_tx_hashes(BlockId::Number(forked_block_num)).await.unwrap();
+        let block = provider
+            .get_block_with_tx_hashes(BlockIdOrTag::from(block_id))
+            .await
+            .context("failed to fetch forked block")?;
+
         let MaybePendingBlockWithTxHashes::Block(block) = block else {
-            panic!("block to be forked is a pending block")
+            bail!("forking a pending block is not allowed")
         };
 
+<<<<<<< Updated upstream
         config.chain.version = ProtocolVersion::parse(&block.starknet_version)?;
+=======
+        config.chain.id = forked_chain_id.into();
+        config.chain.version = Version::parse(&block.starknet_version)?;
+>>>>>>> Stashed changes
 
         // adjust the genesis to match the forked block
         config.chain.genesis.number = block.block_number;
@@ -218,25 +228,27 @@ pub async fn build(mut config: Config) -> Result<Node> {
         config.chain.genesis.gas_prices.strk =
             block.l1_gas_price.price_in_fri.to_u128().expect("should fit in u128");
 
-        trace!(
+        info!(
             chain = %parse_cairo_short_string(&forked_chain_id).unwrap(),
             block_number = %block.block_number,
-            forked_url = %forked_url,
+            url = %cfg.url,
             "Forking chain.",
         );
 
+        let block_status = match block.status {
+            BlockStatus::AcceptedOnL1 => FinalityStatus::AcceptedOnL1,
+            BlockStatus::AcceptedOnL2 => FinalityStatus::AcceptedOnL2,
+            // we already checked for pending block earlier. so this should never happen.
+            _ => bail!("qed; block status shouldn't be pending"),
+        };
+
+        let storage_provider = ForkedProvider::new(Arc::new(provider), block_id.into())?;
         let blockchain = Blockchain::new_from_forked(
-            ForkedProvider::new(provider, forked_block_num.into()).unwrap(),
+            storage_provider,
             block.block_hash,
             &config.chain,
-            match block.status {
-                BlockStatus::AcceptedOnL1 => FinalityStatus::AcceptedOnL1,
-                BlockStatus::AcceptedOnL2 => FinalityStatus::AcceptedOnL2,
-                _ => panic!("unable to fork for non-accepted block"),
-            },
+            block_status,
         )?;
-
-        config.chain.id = forked_chain_id.into();
 
         (blockchain, None)
     } else if let Some(db_path) = &config.db.dir {

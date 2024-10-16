@@ -8068,7 +8068,6 @@ dependencies = [
  "thiserror",
  "tokio",
  "tracing",
- "url",
 ]
 
 [[package]]

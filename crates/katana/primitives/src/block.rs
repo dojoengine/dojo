@@ -187,6 +187,15 @@ impl From<BlockHash> for BlockHashOrNumber {
     }
 }
 
+impl From<BlockHashOrNumber> for BlockIdOrTag {
+    fn from(value: BlockHashOrNumber) -> Self {
+        match value {
+            BlockHashOrNumber::Hash(hash) => BlockIdOrTag::Hash(hash),
+            BlockHashOrNumber::Num(number) => BlockIdOrTag::Number(number),
+        }
+    }
+}
+
 /// A block that can executed. This is a block whose transactions includes
 /// all the necessary information to be executed.
 #[derive(Debug, Clone)]

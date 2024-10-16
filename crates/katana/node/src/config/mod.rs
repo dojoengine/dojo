@@ -1,10 +1,12 @@
 pub mod db;
 pub mod dev;
+pub mod fork;
 pub mod metrics;
 pub mod rpc;
 
 use db::DbConfig;
 use dev::DevConfig;
+use fork::ForkingConfig;
 use katana_core::backend::config::StarknetConfig;
 use katana_core::service::messaging::MessagingConfig;
 use katana_primitives::chain_spec::ChainSpec;
@@ -21,6 +23,9 @@ pub struct Config {
 
     /// Database options.
     pub db: DbConfig,
+
+    /// Forking options.
+    pub forking: Option<ForkingConfig>,
 
     /// Rpc options.
     pub rpc: RpcConfig,
