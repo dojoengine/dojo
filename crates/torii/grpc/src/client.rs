@@ -58,8 +58,8 @@ impl WorldClient {
         Ok(Self {
             _world_address: world_address,
             inner: world_client::WorldClient::with_origin(channel, endpoint.uri().clone())
-                .accept_compressed(CompressionEncoding::Zstd)
-                .send_compressed(CompressionEncoding::Zstd),
+                .accept_compressed(CompressionEncoding::Gzip)
+                .send_compressed(CompressionEncoding::Gzip),
         })
     }
 
@@ -69,8 +69,8 @@ impl WorldClient {
         Ok(Self {
             _world_address,
             inner: world_client::WorldClient::new(tonic_web_wasm_client::Client::new(endpoint))
-                .accept_compressed(CompressionEncoding::Zstd)
-                .send_compressed(CompressionEncoding::Zstd),
+                .accept_compressed(CompressionEncoding::Gzip)
+                .send_compressed(CompressionEncoding::Gzip),
         })
     }
 

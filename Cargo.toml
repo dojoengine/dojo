@@ -215,7 +215,7 @@ warp = "0.3"
 
 # gRPC
 prost = "0.12"
-tonic = { version = "0.11", features = [ "tls", "tls-roots", "gzip", "zstd" ] }
+tonic = { version = "0.11", features = [ "tls", "tls-roots", "gzip" ] }
 tonic-build = "0.11"
 tonic-reflection = "0.11"
 tonic-web = "0.11"
@@ -223,7 +223,7 @@ tonic-web = "0.11"
 # WASM-compatible gRPC deps
 tonic-web-wasm-client = "0.4.0"
 wasm-prost = { version = "0.11.9", package = "prost" }
-wasm-tonic = { version = "0.9.2", default-features = false, features = [ "codegen", "gzip", "zstd", "prost" ], package = "tonic" }
+wasm-tonic = { version = "0.9.2", default-features = false, features = [ "codegen", "gzip", "prost" ], package = "tonic" }
 wasm-tonic-build = { version = "0.9.2", default-features = false, features = [ "prost" ], package = "tonic-build" }
 
 alloy-primitives = { version = "0.8.3", default-features = false }
