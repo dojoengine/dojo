@@ -81,6 +81,6 @@ mod tests {
     #[test]
     fn test_current_version() {
         use super::CURRENT_DB_VERSION;
-        assert_eq!(CURRENT_DB_VERSION, 1, "Invalid current database version")
+        assert_eq!(CURRENT_DB_VERSION, 2, "Invalid current database version")
     }
 }
