@@ -8,18 +8,18 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use config::metrics::MetricsConfig;
 use config::rpc::{ApiKind, RpcConfig};
 use config::{Config, SequencingConfig};
 use dojo_metrics::prometheus_exporter::PrometheusHandle;
-use dojo_metrics::{Report, metrics_process, prometheus_exporter};
+use dojo_metrics::{metrics_process, prometheus_exporter, Report};
 use hyper::{Method, Uri};
-use jsonrpsee::RpcModule;
 use jsonrpsee::server::middleware::proxy_get_request::ProxyGetRequestLayer;
 use jsonrpsee::server::{AllowHosts, ServerBuilder, ServerHandle};
-use katana_core::backend::Backend;
+use jsonrpsee::RpcModule;
 use katana_core::backend::storage::Blockchain;
+use katana_core::backend::Backend;
 use katana_core::constants::MAX_RECURSION_DEPTH;
 use katana_core::env::BlockContextGenerator;
 use katana_core::service::block_producer::BlockProducer;
@@ -27,10 +27,10 @@ use katana_core::service::messaging::MessagingConfig;
 use katana_db::mdbx::DbEnv;
 use katana_executor::implementation::blockifier::BlockifierFactory;
 use katana_executor::{ExecutorFactory, SimulationFlag};
-use katana_pipeline::{Pipeline, stage};
-use katana_pool::TxPool;
+use katana_pipeline::{stage, Pipeline};
 use katana_pool::ordering::FiFo;
 use katana_pool::validation::stateful::TxValidator;
+use katana_pool::TxPool;
 use katana_primitives::block::{BlockHashOrNumber, BlockIdOrTag, FinalityStatus};
 use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
 use katana_primitives::version::ProtocolVersion;
@@ -210,12 +210,8 @@ pub async fn build(mut config: Config) -> Result<Node> {
             bail!("forking a pending block is not allowed")
         };
 
-<<<<<<< Updated upstream
-        config.chain.version = ProtocolVersion::parse(&block.starknet_version)?;
-=======
         config.chain.id = forked_chain_id.into();
-        config.chain.version = Version::parse(&block.starknet_version)?;
->>>>>>> Stashed changes
+        config.chain.version = ProtocolVersion::parse(&block.starknet_version)?;
 
         // adjust the genesis to match the forked block
         config.chain.genesis.number = block.block_number;

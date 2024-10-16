@@ -75,12 +75,12 @@ pub struct NodeArgs {
                        initialized Katana database.")]
     pub db_dir: Option<PathBuf>,
 
-    #[arg(long = "fork.rpc-url", value_name = "URL")]
+    #[arg(long = "fork.rpc-url", value_name = "URL", alias = "rpc-url")]
     #[arg(help = "The Starknet RPC provider to fork the network from.")]
     pub fork_rpc_url: Option<Url>,
 
-    #[arg(long = "fork.block", value_name = "BLOCK_ID")]
-    #[arg(requires = "rpc_url")]
+    #[arg(long = "fork.block", value_name = "BLOCK_ID", alias = "fork-block-number")]
+    #[arg(requires = "fork_rpc_url")]
     #[arg(help = "Fork the network at a specific block id, can either be a hash (0x-prefixed) \
                   or number.")]
     #[arg(value_parser = parse_block_hash_or_number)]
@@ -172,7 +172,7 @@ pub struct StarknetOptions {
 
     #[arg(long)]
     #[arg(value_parser = parse_genesis)]
-    #[arg(conflicts_with_all(["rpc_url", "seed", "total_accounts"]))]
+    #[arg(conflicts_with_all(["fork_rpc_url", "seed", "total_accounts"]))]
     pub genesis: Option<Genesis>,
 }
 
