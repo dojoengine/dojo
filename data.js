@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1729103963519,
+  "lastUpdate": 1729104147944,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -26227,6 +26227,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 12100906495,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f9a559f94840a656d0469fcdb6e79e7c9921cf3d",
+          "message": "feat(katana): add l1 data price info in header (#2547)\n\nthe values in the new fields are mostly dumb values rn bcs we arent sampling anything from the L1. so the next todo to make these changes correct, is to create a gas oracle that samples the actual values from the l1.\r\n\r\nsimilar to PR #2543, the database format for `Header` is changed. considering we already bumped the db version in PR #2543, we can keep using the same version and defer bumping it again once this commit is included in a release.",
+          "timestamp": "2024-10-17T02:22:58+08:00",
+          "tree_id": "5887cd48f04274f57f7a5bdd7271a9ecd09a221d",
+          "url": "https://github.com/dojoengine/dojo/commit/f9a559f94840a656d0469fcdb6e79e7c9921cf3d"
+        },
+        "date": 1729104145618,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16374525,
+            "range": "± 623059",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 4292399,
+            "range": "± 108425",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3728803187,
+            "range": "± 774303767",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4431996,
+            "range": "± 42973",
             "unit": "ns/iter"
           }
         ]
