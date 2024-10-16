@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1729106824224,
+  "lastUpdate": 1729107026485,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -26305,6 +26305,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 12419750938,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fbef8a8d49b119923ae182577614e4a04cbd77aa",
+          "message": "fix(katana): estimate message insufficient fee error (#2549)",
+          "timestamp": "2024-10-17T03:11:16+08:00",
+          "tree_id": "82b9434e304f31f2d6a2688b46ecdf6acf903b8a",
+          "url": "https://github.com/dojoengine/dojo/commit/fbef8a8d49b119923ae182577614e4a04cbd77aa"
+        },
+        "date": 1729107024158,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16191659,
+            "range": "± 225692",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 4247916,
+            "range": "± 119674",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3690158545,
+            "range": "± 887206233",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4418763,
+            "range": "± 41809",
             "unit": "ns/iter"
           }
         ]
