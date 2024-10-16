@@ -1,5 +1,3 @@
-#![allow(deprecated)]
-
 use std::fs::{self};
 use std::path::PathBuf;
 use std::sync::Arc;
