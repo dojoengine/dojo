@@ -330,10 +330,42 @@ async fn estimate_message_fee() -> Result<()> {
     // Compute the contract address of the l1 handler contract
     let l1handler_address = get_contract_address(Felt::ZERO, class_hash, &[], Felt::ZERO);
 
-    // Attempt to estimate the cost of calling a #[l1handler] function
+    // This is the function signature of the #[l1handler] function we''re gonna call. Though the
+    // function accepts two arguments, we're only gonna pass one argument, as the `from_address`
+    // of the `MsgFromL1` will be automatically injected as part of the function calldata.
+    //
+    // See https://docs.starknet.io/documentation/architecture_and_concepts/Network_Architecture/messaging-mechanism/#l1-l2-messages.
+    //
+    // #[l1_handler]
+    // fn msg_handler_value(ref self: ContractState, from_address: felt252, value: felt252)
 
     let entry_point_selector = selector!("msg_handler_value");
-    let payload = vec![felt!("0x123"), felt!("123")]; // function arguments
+    let payload = vec![felt!("123")];
+    let from_address = felt!("0x1337");
+    let to_address = l1handler_address;
+
+    let msg = MsgFromL1 {
+        payload,
+        to_address,
+        entry_point_selector,
+        from_address: from_address.try_into()?,
+    };
+
+    let result = provider.estimate_message_fee(msg, BlockId::Tag(BlockTag::Pending)).await;
+    assert!(result.is_ok());
+
+    // #[derive(Drop, Serde)]
+    // struct MyData {
+    //     a: felt252,
+    //     b: felt252,
+    // }
+    //
+    // #[l1_handler]
+    // fn msg_handler_struct(ref self: ContractState, from_address: felt252, data: MyData)
+
+    let entry_point_selector = selector!("msg_handler_struct");
+    // [ MyData.a , MyData.b ]
+    let payload = vec![felt!("1"), felt!("2")];
     let from_address = felt!("0x1337");
     let to_address = l1handler_address;
 
