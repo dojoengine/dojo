@@ -30,8 +30,8 @@ const DEFAULT_ALLOW_HEADERS: [&str; 11] = [
     "sec-websocket-key",
     "sec-websocket-version",
 ];
-const DEFAULT_EXPOSED_HEADERS: [&str; 3] =
-    ["grpc-status", "grpc-message", "grpc-status-details-bin"];
+const DEFAULT_EXPOSED_HEADERS: [&str; 5] =
+    ["grpc-status", "grpc-message", "grpc-status-details-bin", "grpc-accept-encoding", "grpc-encoding"];
 const DEFAULT_MAX_AGE: Duration = Duration::from_secs(24 * 60 * 60);
 
 lazy_static::lazy_static! {
