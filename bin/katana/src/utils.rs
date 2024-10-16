@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
-use katana_primitives::block::{BlockHash, BlockHashOrNumber};
+use katana_primitives::block::{BlockHash, BlockHashOrNumber, BlockNumber};
 use katana_primitives::genesis::json::GenesisJson;
 use katana_primitives::genesis::Genesis;
 
@@ -24,12 +24,12 @@ pub fn parse_genesis(value: &str) -> Result<Genesis> {
     Ok(genesis)
 }
 
+/// If the value starts with `0x`, it is parsed as a [`BlockHash`], otherwise as a [`BlockNumber`].
 pub fn parse_block_hash_or_number(value: &str) -> Result<BlockHashOrNumber> {
     if value.starts_with("0x") {
-        let hash = BlockHash::from_hex(value)?;
-        Ok(BlockHashOrNumber::Hash(hash))
+        Ok(BlockHashOrNumber::Hash(BlockHash::from_hex(value)?))
     } else {
-        let num = value.parse::<u64>().context("could not parse block number")?;
+        let num = value.parse::<BlockNumber>().context("could not parse block number")?;
         Ok(BlockHashOrNumber::Num(num))
     }
 }
