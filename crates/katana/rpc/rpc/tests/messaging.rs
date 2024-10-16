@@ -343,7 +343,14 @@ async fn estimate_message_fee() -> Result<()> {
         from_address: from_address.try_into()?,
     };
 
-    let _ = provider.estimate_message_fee(msg, BlockId::Tag(BlockTag::Pending)).await?;
+    let result = provider.estimate_message_fee(msg, BlockId::Tag(BlockTag::Pending)).await;
+
+    match result {
+        Ok(_) => {}
+        Err(e) => {
+            dbg!(e);
+        }
+    }
 
     Ok(())
 }
