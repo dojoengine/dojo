@@ -5,12 +5,14 @@ use std::time::Duration;
 use alloy::primitives::{Uint, U256};
 use alloy::providers::{ProviderBuilder, WalletProvider};
 use alloy::sol;
+use anyhow::Result;
 use cainome::cairo_serde::EthAddress;
 use cainome::rs::abigen;
 use dojo_test_utils::sequencer::{get_default_test_config, TestSequencer};
 use dojo_utils::TransactionWaiter;
 use katana_core::service::messaging::MessagingConfig;
 use katana_node::config::SequencingConfig;
+use katana_primitives::felt;
 use katana_primitives::utils::transaction::{
     compute_l1_handler_tx_hash, compute_l1_to_l2_message_hash, compute_l2_to_l1_message_hash,
 };
@@ -19,8 +21,8 @@ use rand::Rng;
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::contract::ContractFactory;
 use starknet::core::types::{
-    BlockId, BlockTag, ContractClass, Felt, Hash256, Transaction, TransactionFinalityStatus,
-    TransactionReceipt,
+    BlockId, BlockTag, ContractClass, Felt, Hash256, MsgFromL1, Transaction,
+    TransactionFinalityStatus, TransactionReceipt,
 };
 use starknet::core::utils::get_contract_address;
 use starknet::macros::selector;
@@ -299,4 +301,51 @@ async fn test_messaging() {
 
         assert_eq!(msg_fee._0, U256::ZERO, "msg fee must be zero after consuming");
     }
+}
+
+#[tokio::test]
+async fn estimate_message_fee() -> Result<()> {
+    let config = get_default_test_config(SequencingConfig::default());
+    let sequencer = TestSequencer::start(config).await;
+
+    let provider = sequencer.provider();
+    let account = sequencer.account();
+
+    // Declare and deploy a l1 handler contract
+    let path = PathBuf::from("tests/test_data/cairo_l1_msg_contract.json");
+    let (contract, compiled_hash) = common::prepare_contract_declaration_params(&path)?;
+    let class_hash = contract.class_hash();
+
+    let res = account.declare_v2(contract.into(), compiled_hash).send().await?;
+    TransactionWaiter::new(res.transaction_hash, account.provider()).await?;
+
+    // Deploy the contract using UDC
+    let res = ContractFactory::new(class_hash, &account)
+        .deploy_v1(Vec::new(), Felt::ZERO, false)
+        .send()
+        .await?;
+
+    TransactionWaiter::new(res.transaction_hash, account.provider()).await?;
+
+    // Compute the contract address of the l1 handler contract
+    let l1handler_address = get_contract_address(Felt::ZERO, class_hash, &[], Felt::ZERO);
+
+    // Attempt to estimate the cost of calling a #[l1handler] function
+
+    let entry_point_selector = selector!("msg_handler_value");
+    let payload = vec![felt!("0x123"), felt!("123")]; // function arguments
+    let from_address = felt!("0x1337");
+    let to_address = l1handler_address;
+
+    let msg = MsgFromL1 {
+        payload,
+        to_address,
+        entry_point_selector,
+        from_address: from_address.try_into()?,
+    };
+
+    let result = provider.estimate_message_fee(msg, BlockId::Tag(BlockTag::Pending)).await;
+    assert!(result.is_ok());
+
+    Ok(())
 }
