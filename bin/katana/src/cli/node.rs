@@ -257,10 +257,9 @@ impl NodeArgs {
     }
 
     fn init_logging(&self) -> Result<()> {
-        const DEFAULT_LOG_FILTER: &str = "tasks=debug,info,executor=trace,forking::backend=trace,\
-                                          server=debug,katana_core=trace,blockifier=off,\
-                                          jsonrpsee_server=off,hyper=off,messaging=debug,\
-                                          node=error";
+        const DEFAULT_LOG_FILTER: &str = "info,tasks=debug,executor=trace,forking::backend=trace,\
+                                          server=debug,blockifier=off,jsonrpsee_server=off,\
+                                          hyper=off,messaging=debug,node=error";
 
         LogTracer::init()?;
 

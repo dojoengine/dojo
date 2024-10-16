@@ -8,7 +8,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::{bail, Context, Result};
+use anyhow::Result;
 use config::metrics::MetricsConfig;
 use config::rpc::{ApiKind, RpcConfig};
 use config::{Config, SequencingConfig};
@@ -31,10 +31,7 @@ use katana_pipeline::{stage, Pipeline};
 use katana_pool::ordering::FiFo;
 use katana_pool::validation::stateful::TxValidator;
 use katana_pool::TxPool;
-use katana_primitives::block::{BlockHashOrNumber, BlockIdOrTag, FinalityStatus};
 use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
-use katana_primitives::version::ProtocolVersion;
-use katana_provider::providers::fork::ForkedProvider;
 use katana_provider::providers::in_memory::InMemoryProvider;
 use katana_rpc::dev::DevApi;
 use katana_rpc::metrics::RpcServerMetrics;
@@ -46,11 +43,6 @@ use katana_rpc_api::saya::SayaApiServer;
 use katana_rpc_api::starknet::{StarknetApiServer, StarknetTraceApiServer, StarknetWriteApiServer};
 use katana_rpc_api::torii::ToriiApiServer;
 use katana_tasks::TaskManager;
-use num_traits::ToPrimitive;
-use starknet::core::types::{BlockStatus, MaybePendingBlockWithTxHashes};
-use starknet::core::utils::parse_cairo_short_string;
-use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::{JsonRpcClient, Provider};
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing::info;
 
@@ -190,68 +182,13 @@ pub async fn build(mut config: Config) -> Result<Node> {
     // --- build backend
 
     let (blockchain, db) = if let Some(cfg) = config.forking {
-        let provider = JsonRpcClient::new(HttpTransport::new(cfg.url.clone()));
-        let forked_chain_id =
-            provider.chain_id().await.context("failed to fetch forked network id")?;
-
-        // If the fork block number is not specified, we use the latest accepted block.
-        let block_id = if let Some(id) = cfg.block {
-            id
-        } else {
-            BlockHashOrNumber::Num(provider.block_number().await?)
-        };
-
-        let block = provider
-            .get_block_with_tx_hashes(BlockIdOrTag::from(block_id))
-            .await
-            .context("failed to fetch forked block")?;
-
-        let MaybePendingBlockWithTxHashes::Block(block) = block else {
-            bail!("forking a pending block is not allowed")
-        };
-
-        config.chain.id = forked_chain_id.into();
-        config.chain.version = ProtocolVersion::parse(&block.starknet_version)?;
-
-        // adjust the genesis to match the forked block
-        config.chain.genesis.number = block.block_number;
-        config.chain.genesis.state_root = block.new_root;
-        config.chain.genesis.parent_hash = block.parent_hash;
-        config.chain.genesis.timestamp = block.timestamp;
-        config.chain.genesis.sequencer_address = block.sequencer_address.into();
-        config.chain.genesis.gas_prices.eth =
-            block.l1_gas_price.price_in_wei.to_u128().expect("should fit in u128");
-        config.chain.genesis.gas_prices.strk =
-            block.l1_gas_price.price_in_fri.to_u128().expect("should fit in u128");
-
-        info!(
-            chain = %parse_cairo_short_string(&forked_chain_id).unwrap(),
-            block_number = %block.block_number,
-            url = %cfg.url,
-            "Forking chain.",
-        );
-
-        let block_status = match block.status {
-            BlockStatus::AcceptedOnL1 => FinalityStatus::AcceptedOnL1,
-            BlockStatus::AcceptedOnL2 => FinalityStatus::AcceptedOnL2,
-            // we already checked for pending block earlier. so this should never happen.
-            _ => bail!("qed; block status shouldn't be pending"),
-        };
-
-        let storage_provider = ForkedProvider::new(Arc::new(provider), block_id.into())?;
-        let blockchain = Blockchain::new_from_forked(
-            storage_provider,
-            block.block_hash,
-            &config.chain,
-            block_status,
-        )?;
-
-        (blockchain, None)
+        let bc = Blockchain::new_from_forked(cfg.url.clone(), cfg.block, &mut config.chain).await?;
+        (bc, None)
     } else if let Some(db_path) = &config.db.dir {
         let db = katana_db::init_db(db_path)?;
         (Blockchain::new_with_db(db.clone(), &config.chain)?, Some(db))
     } else {
-        (Blockchain::new_with_genesis(InMemoryProvider::new(), &config.chain)?, None)
+        (Blockchain::new_with_chain(InMemoryProvider::new(), &config.chain)?, None)
     };
 
     let block_context_generator = BlockContextGenerator::default().into();

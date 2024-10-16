@@ -15,6 +15,15 @@ pub enum BlockHashOrNumber {
     Num(BlockNumber),
 }
 
+impl std::fmt::Display for BlockHashOrNumber {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BlockHashOrNumber::Num(num) => write!(f, "{num}"),
+            BlockHashOrNumber::Hash(hash) => write!(f, "{hash:#x}"),
+        }
+    }
+}
+
 /// Block number type.
 pub type BlockNumber = u64;
 /// Block hash type.
