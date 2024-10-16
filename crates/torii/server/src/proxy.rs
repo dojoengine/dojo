@@ -172,19 +172,7 @@ async fn handle(
             if let Some(grpc_addr) = grpc_addr {
                 let grpc_addr = format!("http://{}", grpc_addr);
                 return match GRPC_PROXY_CLIENT.call(client_ip, &grpc_addr, req).await {
-                    Ok(response) => {
-                        // Forward all headers from the GRPC response
-                        let mut forwarded_response = Response::builder()
-                            .status(response.status());
-                        
-                        for (name, value) in response.headers() {
-                            forwarded_response = forwarded_response.header(name, value);
-                        }
-
-                        Ok(forwarded_response
-                            .body(response.into_body())
-                            .unwrap_or_else(|_| Response::new(Body::empty())))
-                    },
+                    Ok(response) => Ok(response),
                     Err(_error) => {
                         error!("{:?}", _error);
                         Ok(Response::builder()
