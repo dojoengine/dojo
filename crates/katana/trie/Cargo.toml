@@ -1,0 +1,9 @@
+[package]
+name = "katana-trie"
+edition.workspace = true
+license.workspace = true
+license-file.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[dependencies]

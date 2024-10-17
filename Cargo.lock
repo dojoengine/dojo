@@ -8391,6 +8391,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "katana-trie"
+version = "1.0.0-alpha.16"
+
+[[package]]
 name = "keccak"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
