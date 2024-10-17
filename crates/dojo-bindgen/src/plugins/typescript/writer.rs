@@ -30,7 +30,7 @@ impl BindgenWriter for TsFileWriter {
         models.sort_by(|a, b| a.tag.cmp(&b.tag));
         let composites = models
             .iter()
-            .map(|m| {
+            .flat_map(|m| {
                 let mut composites: Vec<&Composite> = Vec::new();
                 let mut enum_composites =
                     m.tokens.enums.iter().map(|e| e.to_composite().unwrap()).collect::<Vec<_>>();
@@ -47,7 +47,6 @@ impl BindgenWriter for TsFileWriter {
                 composites.append(&mut func_composites);
                 composites
             })
-            .flatten()
             .filter(|c| !(c.type_path.starts_with("dojo::") || c.type_path.starts_with("core::")))
             .collect::<Vec<_>>();
 

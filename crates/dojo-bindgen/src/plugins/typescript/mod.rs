@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use async_trait::async_trait;
+use generator::erc::TsErcGenerator;
 use generator::function::TsFunctionGenerator;
 use generator::interface::TsInterfaceGenerator;
 use generator::r#enum::TsEnumGenerator;
@@ -31,6 +32,7 @@ impl TypescriptPlugin {
                         Box::new(TsInterfaceGenerator {}),
                         Box::new(TsEnumGenerator {}),
                         Box::new(TsSchemaGenerator {}),
+                        Box::new(TsErcGenerator {}),
                     ],
                 )),
                 Box::new(TsFileContractWriter::new(

@@ -21,13 +21,13 @@ impl TsFunctionGenerator {
     }
 
     fn setup_function_wrapper_start(&self, buffer: &mut Buffer) -> usize {
-        let fn_wrapper = format!("export async function setupWorld(provider: DojoProvider) {{\n");
+        let fn_wrapper = "export async function setupWorld(provider: DojoProvider) {{\n";
 
-        if !buffer.has(&fn_wrapper) {
-            buffer.push(fn_wrapper.clone());
+        if !buffer.has(fn_wrapper) {
+            buffer.push(fn_wrapper.to_owned());
         }
 
-        buffer.iter().position(|b| b.contains(&fn_wrapper)).unwrap()
+        buffer.iter().position(|b| b.contains(fn_wrapper)).unwrap()
     }
 
     fn generate_system_function(&self, contract_name: &str, token: &Function) -> String {

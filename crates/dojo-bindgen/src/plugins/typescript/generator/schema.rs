@@ -1,10 +1,11 @@
 use cainome::parser::tokens::{Composite, CompositeType};
-use convert_case::{Case, Casing};
 
 use crate::{
     error::BindgenResult,
-    plugins::{typescript::generator::JsDefaultValue, BindgenModelGenerator, Buffer},
+    plugins::{BindgenModelGenerator, Buffer},
 };
+
+use super::{generate_type_init, get_namespace_and_path};
 
 /// This generator will build a schema based on previous generator results.
 /// first we need to generate interface of schema which will be used in dojo.js sdk to fully type
@@ -19,20 +20,9 @@ impl TsSchemaGenerator {
         }
     }
 
-    fn get_namespace_and_path(&self, token: &Composite) -> (String, String, String) {
-        let ns_split = token.type_path.split("::").collect::<Vec<&str>>();
-        if ns_split.len() < 2 {
-            panic!("type is invalid type_path has to be at least namespace::type");
-        }
-        let ns = ns_split[0];
-        let type_name = ns_split[ns_split.len() - 1];
-        let namespace = ns.to_case(Case::Pascal);
-        (ns.to_owned(), namespace, type_name.to_owned())
-    }
-
     /// Generates the type definition for the schema
     fn handle_schema_type(&self, token: &Composite, buffer: &mut Buffer) {
-        let (ns, namespace, type_name) = self.get_namespace_and_path(token);
+        let (ns, namespace, type_name) = get_namespace_and_path(token);
         let schema_type = format!("export interface {namespace}SchemaType extends SchemaType");
         if !buffer.has(&schema_type) {
             buffer.push(format!("export interface {namespace}SchemaType extends SchemaType {{\n\t{ns}: {{\n\t\t{}: {},\n\t}},\n}}", type_name, type_name));
@@ -55,55 +45,23 @@ impl TsSchemaGenerator {
 
     /// Generates the default values for the schema
     fn handle_schema_const(&self, token: &Composite, buffer: &mut Buffer) {
-        let (ns, namespace, type_name) = self.get_namespace_and_path(token);
+        let (ns, namespace, type_name) = get_namespace_and_path(token);
         let const_type = format!("export const schema: {namespace}SchemaType");
         if !buffer.has(&const_type) {
             buffer.push(format!(
             "export const schema: {namespace}SchemaType = {{\n\t{ns}: {{\n\t\t{}: {},\n\t}},\n}};",
             type_name,
-            self.generate_type_init(token)
+            generate_type_init(token)
             ));
             return;
         }
 
         // type has already been initialized
-        let gen = format!("\n\t\t{type_name}: {},", self.generate_type_init(token));
+        let gen = format!("\n\t\t{type_name}: {},", generate_type_init(token));
         if buffer.has(&gen) {
             return;
         }
         buffer.insert_after(gen, &const_type, ",", 2);
-    }
-
-    /// Generates default values for each fields of the struct.
-    fn generate_type_init(&self, token: &Composite) -> String {
-        format!(
-            "{{\n\t\t\tfieldOrder: [{}],\n{}\n\t\t}}",
-            token
-                .inners
-                .iter()
-                .map(|i| format!("'{}'", i.name))
-                .collect::<Vec<String>>()
-                .join(", "),
-            token
-                .inners
-                .iter()
-                .map(|i| {
-                    match i.token.to_composite() {
-                        Ok(c) => {
-                            format!("\t\t\t{}: {},", i.name, JsDefaultValue::from(c))
-                        }
-                        Err(_) => {
-                            // this will fail on core types as `core::starknet::contract_address::ContractAddress`
-                            // `core::felt252`
-                            // `core::integer::u64`
-                            // and so son
-                            format!("\t\t\t{}: {},", i.name, JsDefaultValue::from(&i.token))
-                        }
-                    }
-                })
-                .collect::<Vec<String>>()
-                .join("\n")
-        )
     }
 }
 
@@ -195,24 +153,6 @@ mod tests {
         let token_2 = create_test_struct_token("AvailableTheme");
         generator.handle_schema_type(&token_2, &mut buffer);
         assert_eq!("export interface OnchainDashSchemaType extends SchemaType {\n\tonchain_dash: {\n\t\tTestStruct: TestStruct,\n\t\tAvailableTheme: AvailableTheme,\n\t},\n}", buffer[0]);
-    }
-
-    #[test]
-    fn test_generate_type_init() {
-        let generator = TsSchemaGenerator {};
-        let token = create_test_struct_token("TestStruct");
-        let init_type = generator.generate_type_init(&token);
-
-        // we expect having something like this:
-        // the content of generate_type_init is wrapped in a function that adds brackets before and
-        // after
-        let expected = "{
-\t\t\tfieldOrder: ['field1', 'field2', 'field3'],
-\t\t\tfield1: 0,
-\t\t\tfield2: 0,
-\t\t\tfield3: 0,
-\t\t}";
-        assert_eq!(expected, init_type);
     }
 
     #[test]

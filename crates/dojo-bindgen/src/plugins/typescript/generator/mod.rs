@@ -1,9 +1,53 @@
 use cainome::parser::tokens::{Composite, Token};
+use convert_case::{Case, Casing};
 
 pub(crate) mod r#enum;
+pub(crate) mod erc;
 pub(crate) mod function;
 pub(crate) mod interface;
 pub(crate) mod schema;
+
+/// Get the namespace and path of a model
+/// eg. dojo_examples-actions -> actions
+/// or just get the raw type name -> actions
+///
+pub(crate) fn get_namespace_and_path(token: &Composite) -> (String, String, String) {
+    let ns_split = token.type_path.split("::").collect::<Vec<&str>>();
+    if ns_split.len() < 2 {
+        panic!("type is invalid type_path has to be at least namespace::type");
+    }
+    let ns = ns_split[0];
+    let type_name = ns_split[ns_split.len() - 1];
+    let namespace = ns.to_case(Case::Pascal);
+    (ns.to_owned(), namespace, type_name.to_owned())
+}
+
+/// Generates default values for each fields of the struct.
+pub(crate) fn generate_type_init(token: &Composite) -> String {
+    format!(
+        "{{\n\t\t\tfieldOrder: [{}],\n{}\n\t\t}}",
+        token.inners.iter().map(|i| format!("'{}'", i.name)).collect::<Vec<String>>().join(", "),
+        token
+            .inners
+            .iter()
+            .map(|i| {
+                match i.token.to_composite() {
+                    Ok(c) => {
+                        format!("\t\t\t{}: {},", i.name, JsDefaultValue::from(c))
+                    }
+                    Err(_) => {
+                        // this will fail on core types as `core::starknet::contract_address::ContractAddress`
+                        // `core::felt252`
+                        // `core::integer::u64`
+                        // and so son
+                        format!("\t\t\t{}: {},", i.name, JsDefaultValue::from(&i.token))
+                    }
+                }
+            })
+            .collect::<Vec<String>>()
+            .join("\n")
+    )
+}
 
 #[derive(Debug)]
 pub(crate) struct JsType(String);
@@ -125,8 +169,12 @@ impl std::fmt::Display for JsDefaultValue {
 
 #[cfg(test)]
 mod tests {
-    use cainome::parser::tokens::{Array, CoreBasic, Token, Tuple};
+    use cainome::parser::tokens::{
+        Array, Composite, CompositeInner, CompositeInnerKind, CompositeType, CoreBasic, Token,
+        Tuple,
+    };
 
+    use crate::plugins::typescript::generator::generate_type_init;
     use crate::plugins::typescript::generator::{JsDefaultValue, JsType};
 
     impl PartialEq<JsType> for &str {
@@ -233,5 +281,51 @@ mod tests {
                 is_legacy: false,
             }))
         )
+    }
+
+    #[test]
+    fn test_generate_type_init() {
+        let token = create_test_struct_token("TestStruct");
+        let init_type = generate_type_init(&token);
+
+        // we expect having something like this:
+        // the content of generate_type_init is wrapped in a function that adds brackets before and
+        // after
+        let expected = "{
+\t\t\tfieldOrder: ['field1', 'field2', 'field3'],
+\t\t\tfield1: 0,
+\t\t\tfield2: 0,
+\t\t\tfield3: 0,
+\t\t}";
+        assert_eq!(expected, init_type);
+    }
+    fn create_test_struct_token(name: &str) -> Composite {
+        Composite {
+            type_path: format!("onchain_dash::{name}"),
+            inners: vec![
+                CompositeInner {
+                    index: 0,
+                    name: "field1".to_owned(),
+                    kind: CompositeInnerKind::Key,
+                    token: Token::CoreBasic(CoreBasic { type_path: "core::felt252".to_owned() }),
+                },
+                CompositeInner {
+                    index: 1,
+                    name: "field2".to_owned(),
+                    kind: CompositeInnerKind::Key,
+                    token: Token::CoreBasic(CoreBasic { type_path: "core::felt252".to_owned() }),
+                },
+                CompositeInner {
+                    index: 2,
+                    name: "field3".to_owned(),
+                    kind: CompositeInnerKind::Key,
+                    token: Token::CoreBasic(CoreBasic { type_path: "core::felt252".to_owned() }),
+                },
+            ],
+            generic_args: vec![],
+            r#type: CompositeType::Struct,
+            is_event: false,
+            alias: None,
+        }
     }
 }
