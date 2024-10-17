@@ -145,6 +145,7 @@ async fn test_entities_queries(sequencer: &RunnerCtx) {
             },
             Some(1),
             None,
+            false,
         )
         .await
         .unwrap()
