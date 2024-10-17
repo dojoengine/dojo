@@ -16,7 +16,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .build_server(false)
             .build_client(feature_client.is_ok())
             .file_descriptor_set_path(out_dir.join("world_descriptor.bin"))
-            .compile(&["proto/world.proto"], &["proto"])?;
+            .compile_protos(&["proto/world.proto"], &["proto"])?;
     } else {
         tonic_build::configure()
             .build_server(feature_server.is_ok())

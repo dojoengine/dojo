@@ -11,11 +11,13 @@ use std::pin::Pin;
 use std::str;
 use std::str::FromStr;
 use std::sync::Arc;
+use std::time::Duration;
 
 use dojo_types::primitive::{Primitive, PrimitiveError};
 use dojo_types::schema::Ty;
 use dojo_world::contracts::naming::compute_selector_from_names;
 use futures::Stream;
+use http::HeaderName;
 use proto::world::{
     RetrieveEntitiesRequest, RetrieveEntitiesResponse, RetrieveEventsRequest,
     RetrieveEventsResponse, SubscribeModelsRequest, SubscribeModelsResponse,
@@ -31,13 +33,16 @@ use starknet::providers::JsonRpcClient;
 use subscriptions::event::EventManager;
 use subscriptions::indexer::IndexerManager;
 use tokio::net::TcpListener;
-use tokio::sync::mpsc::Receiver;
+use tokio::sync::mpsc::{channel, Receiver};
 use tokio_stream::wrappers::{ReceiverStream, TcpListenerStream};
+use tonic::codec::CompressionEncoding;
 use tonic::transport::Server;
 use tonic::{Request, Response, Status};
+use tonic_web::GrpcWebLayer;
 use torii_core::error::{Error, ParseError, QueryError};
 use torii_core::model::{build_sql_query, map_row_to_ty};
 use torii_core::sql::cache::ModelCache;
+use tower_http::cors::{AllowOrigin, CorsLayer};
 
 use self::subscriptions::entity::EntityManager;
 use self::subscriptions::event_message::EventMessageManager;
@@ -47,8 +52,9 @@ use crate::proto::types::member_value::ValueType;
 use crate::proto::types::LogicalOperator;
 use crate::proto::world::world_server::WorldServer;
 use crate::proto::world::{
-    SubscribeEntitiesRequest, SubscribeEntityResponse, SubscribeEventsResponse,
-    SubscribeIndexerRequest, SubscribeIndexerResponse, WorldMetadataRequest, WorldMetadataResponse,
+    RetrieveEntitiesStreamingResponse, SubscribeEntitiesRequest, SubscribeEntityResponse,
+    SubscribeEventsResponse, SubscribeIndexerRequest, SubscribeIndexerResponse,
+    WorldMetadataRequest, WorldMetadataResponse,
 };
 use crate::proto::{self};
 use crate::types::schema::SchemaError;
@@ -190,6 +196,7 @@ impl DojoWorld {
         entity_relation_column: &str,
         limit: u32,
         offset: u32,
+        dont_include_hashed_keys: bool,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         self.query_by_hashed_keys(
             table,
@@ -198,6 +205,7 @@ impl DojoWorld {
             None,
             Some(limit),
             Some(offset),
+            dont_include_hashed_keys,
         )
         .await
     }
@@ -221,6 +229,7 @@ impl DojoWorld {
         table: &str,
         entity_relation_column: &str,
         entities: Vec<(String, String)>,
+        dont_include_hashed_keys: bool,
     ) -> Result<Vec<proto::types::Entity>, Error> {
         // Group entities by their model combinations
         let mut model_groups: HashMap<String, Vec<String>> = HashMap::new();
@@ -290,7 +299,7 @@ impl DojoWorld {
 
             let group_entities: Result<Vec<_>, Error> = rows
                 .par_iter()
-                .map(|row| map_row_to_entity(row, &arrays_rows, (*schemas).clone()))
+                .map(|row| map_row_to_entity(row, &arrays_rows, &schemas, dont_include_hashed_keys))
                 .collect();
 
             all_entities.extend(group_entities?);
@@ -303,6 +312,7 @@ impl DojoWorld {
         Ok(all_entities)
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(crate) async fn query_by_hashed_keys(
         &self,
         table: &str,
@@ -311,6 +321,7 @@ impl DojoWorld {
         hashed_keys: Option<proto::types::HashedKeysClause>,
         limit: Option<u32>,
         offset: Option<u32>,
+        dont_include_hashed_keys: bool,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         // TODO: use prepared statement for where clause
         let filter_ids = match hashed_keys {
@@ -364,10 +375,13 @@ impl DojoWorld {
         let db_entities: Vec<(String, String)> =
             sqlx::query_as(&query).bind(limit).bind(offset).fetch_all(&self.pool).await?;
 
-        let entities = self.fetch_entities(table, entity_relation_column, db_entities).await?;
+        let entities = self
+            .fetch_entities(table, entity_relation_column, db_entities, dont_include_hashed_keys)
+            .await?;
         Ok((entities, total_count))
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(crate) async fn query_by_keys(
         &self,
         table: &str,
@@ -376,6 +390,7 @@ impl DojoWorld {
         keys_clause: &proto::types::KeysClause,
         limit: Option<u32>,
         offset: Option<u32>,
+        dont_include_hashed_keys: bool,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         let keys_pattern = build_keys_pattern(keys_clause)?;
 
@@ -477,7 +492,9 @@ impl DojoWorld {
             .fetch_all(&self.pool)
             .await?;
 
-        let entities = self.fetch_entities(table, entity_relation_column, db_entities).await?;
+        let entities = self
+            .fetch_entities(table, entity_relation_column, db_entities, dont_include_hashed_keys)
+            .await?;
         Ok((entities, total_count))
     }
 
@@ -508,6 +525,7 @@ impl DojoWorld {
         row_events.iter().map(map_row_to_event).collect()
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(crate) async fn query_by_member(
         &self,
         table: &str,
@@ -516,6 +534,7 @@ impl DojoWorld {
         member_clause: proto::types::MemberClause,
         limit: Option<u32>,
         offset: Option<u32>,
+        dont_include_hashed_keys: bool,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         let comparison_operator = ComparisonOperator::from_repr(member_clause.operator as usize)
             .expect("invalid comparison operator");
@@ -598,18 +617,14 @@ impl DojoWorld {
             arrays_rows.insert(name, rows);
         }
 
-        let arrays_rows = Arc::new(arrays_rows);
         let entities_collection: Result<Vec<_>, Error> = db_entities
             .par_iter()
-            .map(|row| {
-                let schemas_clone = schemas.clone();
-                let arrays_rows_clone = arrays_rows.clone();
-                map_row_to_entity(row, &arrays_rows_clone, schemas_clone)
-            })
+            .map(|row| map_row_to_entity(row, &arrays_rows, &schemas, dont_include_hashed_keys))
             .collect();
         Ok((entities_collection?, total_count))
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(crate) async fn query_by_composite(
         &self,
         table: &str,
@@ -618,6 +633,7 @@ impl DojoWorld {
         composite: proto::types::CompositeClause,
         limit: Option<u32>,
         offset: Option<u32>,
+        dont_include_hashed_keys: bool,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         let (where_clause, having_clause, join_clause, bind_values) =
             build_composite_clause(table, model_relation_table, &composite)?;
@@ -665,7 +681,9 @@ impl DojoWorld {
 
         let db_entities: Vec<(String, String)> = db_query.fetch_all(&self.pool).await?;
 
-        let entities = self.fetch_entities(table, entity_relation_column, db_entities).await?;
+        let entities = self
+            .fetch_entities(table, entity_relation_column, db_entities, dont_include_hashed_keys)
+            .await?;
         Ok((entities, total_count))
     }
 
@@ -749,6 +767,7 @@ impl DojoWorld {
                     entity_relation_column,
                     query.limit,
                     query.offset,
+                    query.dont_include_hashed_keys,
                 )
                 .await?
             }
@@ -769,6 +788,7 @@ impl DojoWorld {
                             },
                             Some(query.limit),
                             Some(query.offset),
+                            query.dont_include_hashed_keys,
                         )
                         .await?
                     }
@@ -780,6 +800,7 @@ impl DojoWorld {
                             &keys,
                             Some(query.limit),
                             Some(query.offset),
+                            query.dont_include_hashed_keys,
                         )
                         .await?
                     }
@@ -791,6 +812,7 @@ impl DojoWorld {
                             member,
                             Some(query.limit),
                             Some(query.offset),
+                            query.dont_include_hashed_keys,
                         )
                         .await?
                     }
@@ -802,6 +824,7 @@ impl DojoWorld {
                             composite,
                             Some(query.limit),
                             Some(query.offset),
+                            query.dont_include_hashed_keys,
                         )
                         .await?
                     }
@@ -860,18 +883,27 @@ fn map_row_to_event(row: &(String, String, String)) -> Result<proto::types::Even
 fn map_row_to_entity(
     row: &SqliteRow,
     arrays_rows: &HashMap<String, Vec<SqliteRow>>,
-    mut schemas: Vec<Ty>,
+    schemas: &[Ty],
+    dont_include_hashed_keys: bool,
 ) -> Result<proto::types::Entity, Error> {
     let hashed_keys = Felt::from_str(&row.get::<String, _>("id")).map_err(ParseError::FromStr)?;
     let models = schemas
-        .iter_mut()
+        .iter()
         .map(|schema| {
-            map_row_to_ty("", &schema.name(), schema, row, arrays_rows)?;
-            Ok(schema.as_struct().unwrap().clone().into())
+            let mut ty = schema.clone();
+            map_row_to_ty("", &schema.name(), &mut ty, row, arrays_rows)?;
+            Ok(ty.as_struct().unwrap().clone().into())
         })
         .collect::<Result<Vec<_>, Error>>()?;
 
-    Ok(proto::types::Entity { hashed_keys: hashed_keys.to_bytes_be().to_vec(), models })
+    Ok(proto::types::Entity {
+        hashed_keys: if !dont_include_hashed_keys {
+            hashed_keys.to_bytes_be().to_vec()
+        } else {
+            vec![]
+        },
+        models,
+    })
 }
 
 // this builds a sql safe regex pattern to match against for keys
@@ -1026,6 +1058,8 @@ type SubscribeEventsResponseStream =
     Pin<Box<dyn Stream<Item = Result<SubscribeEventsResponse, Status>> + Send>>;
 type SubscribeIndexerResponseStream =
     Pin<Box<dyn Stream<Item = Result<SubscribeIndexerResponse, Status>> + Send>>;
+type RetrieveEntitiesStreamingResponseStream =
+    Pin<Box<dyn Stream<Item = Result<RetrieveEntitiesStreamingResponse, Status>> + Send>>;
 
 #[tonic::async_trait]
 impl proto::world::world_server::World for DojoWorld {
@@ -1034,6 +1068,7 @@ impl proto::world::world_server::World for DojoWorld {
     type SubscribeEventMessagesStream = SubscribeEntitiesResponseStream;
     type SubscribeEventsStream = SubscribeEventsResponseStream;
     type SubscribeIndexerStream = SubscribeIndexerResponseStream;
+    type RetrieveEntitiesStreamingStream = RetrieveEntitiesStreamingResponseStream;
 
     async fn world_metadata(
         &self,
@@ -1119,6 +1154,43 @@ impl proto::world::world_server::World for DojoWorld {
         Ok(Response::new(entities))
     }
 
+    async fn retrieve_entities_streaming(
+        &self,
+        request: Request<RetrieveEntitiesRequest>,
+    ) -> ServiceResult<Self::RetrieveEntitiesStreamingStream> {
+        let query = request
+            .into_inner()
+            .query
+            .ok_or_else(|| Status::invalid_argument("Missing query argument"))?;
+
+        let (tx, rx) = channel(100);
+        let res = self
+            .retrieve_entities(
+                ENTITIES_TABLE,
+                ENTITIES_MODEL_RELATION_TABLE,
+                ENTITIES_ENTITY_RELATION_COLUMN,
+                query,
+            )
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+        tokio::spawn(async move {
+            for (i, entity) in res.entities.iter().enumerate() {
+                tx.send(Ok(RetrieveEntitiesStreamingResponse {
+                    entity: Some(entity.clone()),
+                    remaining_count: (res.total_count - (i + 1) as u32),
+                }))
+                .await
+                .unwrap();
+            }
+        });
+
+        Ok(
+            Response::new(
+                Box::pin(ReceiverStream::new(rx)) as Self::RetrieveEntitiesStreamingStream
+            ),
+        )
+    }
+
     async fn subscribe_event_messages(
         &self,
         request: Request<SubscribeEntitiesRequest>,
@@ -1196,6 +1268,18 @@ impl proto::world::world_server::World for DojoWorld {
     }
 }
 
+const DEFAULT_MAX_AGE: Duration = Duration::from_secs(24 * 60 * 60);
+const DEFAULT_EXPOSED_HEADERS: [&str; 4] =
+    ["grpc-status", "grpc-message", "grpc-status-details-bin", "grpc-encoding"];
+const DEFAULT_ALLOW_HEADERS: [&str; 6] = [
+    "x-grpc-web",
+    "content-type",
+    "x-user-agent",
+    "grpc-timeout",
+    "grpc-accept-encoding",
+    "grpc-encoding",
+];
+
 pub async fn new(
     mut shutdown_rx: tokio::sync::broadcast::Receiver<()>,
     pool: &Pool<Sqlite>,
@@ -1215,13 +1299,36 @@ pub async fn new(
         .unwrap();
 
     let world = DojoWorld::new(pool.clone(), block_rx, world_address, provider);
-    let server = WorldServer::new(world);
+    let server = WorldServer::new(world)
+        .accept_compressed(CompressionEncoding::Gzip)
+        .send_compressed(CompressionEncoding::Gzip);
 
     let server_future = Server::builder()
         // GrpcWeb is over http1 so we must enable it.
         .accept_http1(true)
+        .layer(
+            CorsLayer::new()
+                .allow_origin(AllowOrigin::mirror_request())
+                .allow_credentials(true)
+                .max_age(DEFAULT_MAX_AGE)
+                .expose_headers(
+                    DEFAULT_EXPOSED_HEADERS
+                        .iter()
+                        .cloned()
+                        .map(HeaderName::from_static)
+                        .collect::<Vec<HeaderName>>(),
+                )
+                .allow_headers(
+                    DEFAULT_ALLOW_HEADERS
+                        .iter()
+                        .cloned()
+                        .map(HeaderName::from_static)
+                        .collect::<Vec<HeaderName>>(),
+                ),
+        )
+        .layer(GrpcWebLayer::new())
         .add_service(reflection)
-        .add_service(tonic_web::enable(server))
+        .add_service(server)
         .serve_with_incoming_shutdown(TcpListenerStream::new(listener), async move {
             shutdown_rx.recv().await.map_or((), |_| ())
         });
