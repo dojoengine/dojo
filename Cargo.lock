@@ -4677,6 +4677,7 @@ version = "1.0.0-alpha.16"
 dependencies = [
  "anyhow",
  "assert_matches",
+ "clap",
  "dojo-test-utils",
  "futures",
  "reqwest 0.12.7",
@@ -13203,6 +13204,7 @@ dependencies = [
  "notify",
  "num-bigint",
  "num-integer",
+ "num-traits 0.2.19",
  "prettytable-rs",
  "regex",
  "reqwest 0.12.7",
