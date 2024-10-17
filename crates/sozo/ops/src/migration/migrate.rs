@@ -1057,7 +1057,7 @@ where
             Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {
                 format!("{}: Deploy", contract.diff.tag)
             }
-            Ok(_) => "Already Deployed".to_string(),
+            Ok(_) => format!("{}: Already Deployed", contract.diff.tag),
             Err(_) => format!("{}: Deploy", contract.diff.tag),
         }
     } else {
