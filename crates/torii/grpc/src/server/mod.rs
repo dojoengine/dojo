@@ -196,6 +196,7 @@ impl DojoWorld {
         entity_relation_column: &str,
         limit: u32,
         offset: u32,
+        dont_include_hashed_keys: bool,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         self.query_by_hashed_keys(
             table,
@@ -204,6 +205,7 @@ impl DojoWorld {
             None,
             Some(limit),
             Some(offset),
+            dont_include_hashed_keys,
         )
         .await
     }
@@ -227,6 +229,7 @@ impl DojoWorld {
         table: &str,
         entity_relation_column: &str,
         entities: Vec<(String, String)>,
+        dont_include_hashed_keys: bool,
     ) -> Result<Vec<proto::types::Entity>, Error> {
         // Group entities by their model combinations
         let mut model_groups: HashMap<String, Vec<String>> = HashMap::new();
@@ -295,7 +298,7 @@ impl DojoWorld {
             let schemas = Arc::new(schemas);
 
             let group_entities: Result<Vec<_>, Error> =
-                rows.par_iter().map(|row| map_row_to_entity(row, &arrays_rows, &schemas)).collect();
+                rows.par_iter().map(|row| map_row_to_entity(row, &arrays_rows, &schemas, dont_include_hashed_keys)).collect();
 
             all_entities.extend(group_entities?);
         }
@@ -315,6 +318,7 @@ impl DojoWorld {
         hashed_keys: Option<proto::types::HashedKeysClause>,
         limit: Option<u32>,
         offset: Option<u32>,
+        dont_include_hashed_keys: bool,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         // TODO: use prepared statement for where clause
         let filter_ids = match hashed_keys {
@@ -368,7 +372,7 @@ impl DojoWorld {
         let db_entities: Vec<(String, String)> =
             sqlx::query_as(&query).bind(limit).bind(offset).fetch_all(&self.pool).await?;
 
-        let entities = self.fetch_entities(table, entity_relation_column, db_entities).await?;
+        let entities = self.fetch_entities(table, entity_relation_column, db_entities, dont_include_hashed_keys).await?;
         Ok((entities, total_count))
     }
 
@@ -380,6 +384,7 @@ impl DojoWorld {
         keys_clause: &proto::types::KeysClause,
         limit: Option<u32>,
         offset: Option<u32>,
+        dont_include_hashed_keys: bool,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         let keys_pattern = build_keys_pattern(keys_clause)?;
 
@@ -481,7 +486,7 @@ impl DojoWorld {
             .fetch_all(&self.pool)
             .await?;
 
-        let entities = self.fetch_entities(table, entity_relation_column, db_entities).await?;
+        let entities = self.fetch_entities(table, entity_relation_column, db_entities, dont_include_hashed_keys).await?;
         Ok((entities, total_count))
     }
 
@@ -520,6 +525,7 @@ impl DojoWorld {
         member_clause: proto::types::MemberClause,
         limit: Option<u32>,
         offset: Option<u32>,
+        dont_include_hashed_keys: bool,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         let comparison_operator = ComparisonOperator::from_repr(member_clause.operator as usize)
             .expect("invalid comparison operator");
@@ -604,7 +610,7 @@ impl DojoWorld {
 
         let entities_collection: Result<Vec<_>, Error> = db_entities
             .par_iter()
-            .map(|row| map_row_to_entity(row, &arrays_rows, &schemas))
+            .map(|row| map_row_to_entity(row, &arrays_rows, &schemas, dont_include_hashed_keys))
             .collect();
         Ok((entities_collection?, total_count))
     }
@@ -617,6 +623,7 @@ impl DojoWorld {
         composite: proto::types::CompositeClause,
         limit: Option<u32>,
         offset: Option<u32>,
+        dont_include_hashed_keys: bool,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         let (where_clause, having_clause, join_clause, bind_values) =
             build_composite_clause(table, model_relation_table, &composite)?;
@@ -664,7 +671,7 @@ impl DojoWorld {
 
         let db_entities: Vec<(String, String)> = db_query.fetch_all(&self.pool).await?;
 
-        let entities = self.fetch_entities(table, entity_relation_column, db_entities).await?;
+        let entities = self.fetch_entities(table, entity_relation_column, db_entities, dont_include_hashed_keys).await?;
         Ok((entities, total_count))
     }
 
@@ -748,6 +755,7 @@ impl DojoWorld {
                     entity_relation_column,
                     query.limit,
                     query.offset,
+                    query.dont_include_hashed_keys,
                 )
                 .await?
             }
@@ -768,6 +776,7 @@ impl DojoWorld {
                             },
                             Some(query.limit),
                             Some(query.offset),
+                            query.dont_include_hashed_keys,
                         )
                         .await?
                     }
@@ -779,6 +788,7 @@ impl DojoWorld {
                             &keys,
                             Some(query.limit),
                             Some(query.offset),
+                            query.dont_include_hashed_keys,
                         )
                         .await?
                     }
@@ -790,6 +800,7 @@ impl DojoWorld {
                             member,
                             Some(query.limit),
                             Some(query.offset),
+                            query.dont_include_hashed_keys,
                         )
                         .await?
                     }
@@ -801,6 +812,7 @@ impl DojoWorld {
                             composite,
                             Some(query.limit),
                             Some(query.offset),
+                            query.dont_include_hashed_keys,
                         )
                         .await?
                     }
@@ -860,6 +872,7 @@ fn map_row_to_entity(
     row: &SqliteRow,
     arrays_rows: &HashMap<String, Vec<SqliteRow>>,
     schemas: &[Ty],
+    dont_include_hashed_keys: bool,
 ) -> Result<proto::types::Entity, Error> {
     let hashed_keys = Felt::from_str(&row.get::<String, _>("id")).map_err(ParseError::FromStr)?;
     let models = schemas
@@ -871,7 +884,7 @@ fn map_row_to_entity(
         })
         .collect::<Result<Vec<_>, Error>>()?;
 
-    Ok(proto::types::Entity { hashed_keys: hashed_keys.to_bytes_be().to_vec(), models })
+    Ok(proto::types::Entity { hashed_keys: if !dont_include_hashed_keys { hashed_keys.to_bytes_be().to_vec() } else { vec![] }, models })
 }
 
 // this builds a sql safe regex pattern to match against for keys

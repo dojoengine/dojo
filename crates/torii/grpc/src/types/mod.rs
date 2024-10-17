@@ -40,6 +40,7 @@ pub struct Query {
     pub clause: Option<Clause>,
     pub limit: u32,
     pub offset: u32,
+    pub dont_include_hashed_keys: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
@@ -198,7 +199,7 @@ impl TryFrom<proto::types::WorldMetadata> for dojo_types::WorldMetadata {
 
 impl From<Query> for proto::types::Query {
     fn from(value: Query) -> Self {
-        Self { clause: value.clause.map(|c| c.into()), limit: value.limit, offset: value.offset }
+        Self { clause: value.clause.map(|c| c.into()), limit: value.limit, offset: value.offset, dont_include_hashed_keys: value.dont_include_hashed_keys }
     }
 }
 
