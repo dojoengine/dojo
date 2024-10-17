@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1729113650859,
+  "lastUpdate": 1729177199332,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -26431,6 +26431,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4344492,
             "range": "± 53203",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "122404722+notV4l@users.noreply.github.com",
+            "name": "notV4l",
+            "username": "notV4l"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "43e2aec84af070abd942ae009c8e0c358a9e07d2",
+          "message": "add missing contract tag in logs (#2551)",
+          "timestamp": "2024-10-17T08:43:37-06:00",
+          "tree_id": "d6a810a6157e592efe35b508d93df07f900b70c9",
+          "url": "https://github.com/dojoengine/dojo/commit/43e2aec84af070abd942ae009c8e0c358a9e07d2"
+        },
+        "date": 1729177197279,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 12838137385,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
