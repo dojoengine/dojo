@@ -6,12 +6,12 @@ use cainome::parser::tokens::{
     Composite, CompositeInner, CompositeInnerKind, CompositeType, Token,
 };
 
-use crate::plugins::typescript::TypescriptPlugin;
+use crate::plugins::recs::TypescriptRecsPlugin;
 use crate::{BuiltinPlugin, DojoData, DojoWorld};
 
 #[tokio::test]
 async fn test_typescript_plugin_generate_code() {
-    let plugin = TypescriptPlugin::new();
+    let plugin = TypescriptRecsPlugin::new();
     let data = create_mock_dojo_data();
 
     let result = plugin.generate_code(&data).await;
@@ -38,23 +38,26 @@ async fn test_typescript_plugin_generate_code() {
 fn test_map_type() {
     let bool_token =
         Token::CoreBasic(cainome::parser::tokens::CoreBasic { type_path: "bool".to_string() });
-    assert_eq!(TypescriptPlugin::map_type(&bool_token), "RecsType.Boolean");
+    assert_eq!(TypescriptRecsPlugin::map_type(&bool_token), "RecsType.Boolean");
 
     let u32_token =
         Token::CoreBasic(cainome::parser::tokens::CoreBasic { type_path: "u32".to_string() });
-    assert_eq!(TypescriptPlugin::map_type(&u32_token), "RecsType.Number");
+    assert_eq!(TypescriptRecsPlugin::map_type(&u32_token), "RecsType.Number");
 }
 
 #[test]
 fn test_formatted_contract_name() {
-    assert_eq!(TypescriptPlugin::formatted_contract_name("dojo_examples-actions"), "actions");
-    assert_eq!(TypescriptPlugin::formatted_contract_name("my-contract"), "contract");
+    assert_eq!(TypescriptRecsPlugin::formatted_contract_name("dojo_examples-actions"), "actions");
+    assert_eq!(TypescriptRecsPlugin::formatted_contract_name("my-contract"), "contract");
 }
 
 #[test]
 fn test_get_namespace_from_tag() {
-    assert_eq!(TypescriptPlugin::get_namespace_from_tag("dojo_examples-actions"), "dojo_examples");
-    assert_eq!(TypescriptPlugin::get_namespace_from_tag("my-contract"), "my");
+    assert_eq!(
+        TypescriptRecsPlugin::get_namespace_from_tag("dojo_examples-actions"),
+        "dojo_examples"
+    );
+    assert_eq!(TypescriptRecsPlugin::get_namespace_from_tag("my-contract"), "my");
 }
 
 #[test]
@@ -100,7 +103,7 @@ fn test_format_model() {
     };
 
     let namespace = "game";
-    let formatted = TypescriptPlugin::format_model(namespace, &model);
+    let formatted = TypescriptRecsPlugin::format_model(namespace, &model);
 
     let expected = r#"
     // Model definition for `game::models::Position` model
@@ -147,7 +150,7 @@ fn test_format_enum_model() {
     };
 
     let namespace = "game";
-    let formatted = TypescriptPlugin::format_model(namespace, &model);
+    let formatted = TypescriptRecsPlugin::format_model(namespace, &model);
 
     let expected = r#"
     // Model definition for `game::models::Direction` model

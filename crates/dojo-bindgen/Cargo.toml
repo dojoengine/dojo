@@ -11,6 +11,7 @@ async-trait.workspace = true
 camino.workspace = true
 chrono.workspace = true
 convert_case.workspace = true
+log.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 starknet.workspace = true
