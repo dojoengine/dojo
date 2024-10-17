@@ -1,5 +1,6 @@
-use crate::prometheus_exporter::LOG_TARGET;
 use metrics::{describe_gauge, gauge};
+
+const LOG_TARGET: &str = "metrics";
 
 #[cfg(all(feature = "jemalloc", unix))]
 pub fn collect_memory_stats() {
