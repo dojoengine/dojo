@@ -8,7 +8,6 @@ members = [
 	"bin/scheduler",
 	"bin/sozo",
 	"bin/torii",
-	#	"crates/benches",
 	"crates/dojo-bindgen",
 	"crates/dojo-core",
 	"crates/dojo-lang",
