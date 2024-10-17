@@ -297,8 +297,10 @@ impl DojoWorld {
             let arrays_rows = Arc::new(arrays_rows);
             let schemas = Arc::new(schemas);
 
-            let group_entities: Result<Vec<_>, Error> =
-                rows.par_iter().map(|row| map_row_to_entity(row, &arrays_rows, &schemas, dont_include_hashed_keys)).collect();
+            let group_entities: Result<Vec<_>, Error> = rows
+                .par_iter()
+                .map(|row| map_row_to_entity(row, &arrays_rows, &schemas, dont_include_hashed_keys))
+                .collect();
 
             all_entities.extend(group_entities?);
         }
@@ -310,6 +312,7 @@ impl DojoWorld {
         Ok(all_entities)
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(crate) async fn query_by_hashed_keys(
         &self,
         table: &str,
@@ -372,10 +375,13 @@ impl DojoWorld {
         let db_entities: Vec<(String, String)> =
             sqlx::query_as(&query).bind(limit).bind(offset).fetch_all(&self.pool).await?;
 
-        let entities = self.fetch_entities(table, entity_relation_column, db_entities, dont_include_hashed_keys).await?;
+        let entities = self
+            .fetch_entities(table, entity_relation_column, db_entities, dont_include_hashed_keys)
+            .await?;
         Ok((entities, total_count))
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(crate) async fn query_by_keys(
         &self,
         table: &str,
@@ -486,7 +492,9 @@ impl DojoWorld {
             .fetch_all(&self.pool)
             .await?;
 
-        let entities = self.fetch_entities(table, entity_relation_column, db_entities, dont_include_hashed_keys).await?;
+        let entities = self
+            .fetch_entities(table, entity_relation_column, db_entities, dont_include_hashed_keys)
+            .await?;
         Ok((entities, total_count))
     }
 
@@ -517,6 +525,7 @@ impl DojoWorld {
         row_events.iter().map(map_row_to_event).collect()
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(crate) async fn query_by_member(
         &self,
         table: &str,
@@ -615,6 +624,7 @@ impl DojoWorld {
         Ok((entities_collection?, total_count))
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(crate) async fn query_by_composite(
         &self,
         table: &str,
@@ -671,7 +681,9 @@ impl DojoWorld {
 
         let db_entities: Vec<(String, String)> = db_query.fetch_all(&self.pool).await?;
 
-        let entities = self.fetch_entities(table, entity_relation_column, db_entities, dont_include_hashed_keys).await?;
+        let entities = self
+            .fetch_entities(table, entity_relation_column, db_entities, dont_include_hashed_keys)
+            .await?;
         Ok((entities, total_count))
     }
 
@@ -884,7 +896,14 @@ fn map_row_to_entity(
         })
         .collect::<Result<Vec<_>, Error>>()?;
 
-    Ok(proto::types::Entity { hashed_keys: if !dont_include_hashed_keys { hashed_keys.to_bytes_be().to_vec() } else { vec![] }, models })
+    Ok(proto::types::Entity {
+        hashed_keys: if !dont_include_hashed_keys {
+            hashed_keys.to_bytes_be().to_vec()
+        } else {
+            vec![]
+        },
+        models,
+    })
 }
 
 // this builds a sql safe regex pattern to match against for keys

@@ -199,7 +199,12 @@ impl TryFrom<proto::types::WorldMetadata> for dojo_types::WorldMetadata {
 
 impl From<Query> for proto::types::Query {
     fn from(value: Query) -> Self {
-        Self { clause: value.clause.map(|c| c.into()), limit: value.limit, offset: value.offset, dont_include_hashed_keys: value.dont_include_hashed_keys }
+        Self {
+            clause: value.clause.map(|c| c.into()),
+            limit: value.limit,
+            offset: value.offset,
+            dont_include_hashed_keys: value.dont_include_hashed_keys,
+        }
     }
 }
 

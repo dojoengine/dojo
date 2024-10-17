@@ -153,25 +153,31 @@ impl TryFrom<proto::types::Primitive> for Primitive {
             proto::types::primitive::PrimitiveType::Bool(bool) => Primitive::Bool(Some(*bool)),
             proto::types::primitive::PrimitiveType::I8(int) => Primitive::I8(Some(*int as i8)),
             proto::types::primitive::PrimitiveType::I16(int) => Primitive::I16(Some(*int as i16)),
-            proto::types::primitive::PrimitiveType::I32(int) => Primitive::I32(Some(*int as i32)),
-            proto::types::primitive::PrimitiveType::I64(int) => Primitive::I64(Some(*int as i64)),
-            proto::types::primitive::PrimitiveType::I128(bytes) => Primitive::I128(Some(i128::from_be_bytes(bytes.as_slice().try_into().map_err(SchemaError::FromSlice)?))),
+            proto::types::primitive::PrimitiveType::I32(int) => Primitive::I32(Some(*int)),
+            proto::types::primitive::PrimitiveType::I64(int) => Primitive::I64(Some(*int)),
+            proto::types::primitive::PrimitiveType::I128(bytes) => Primitive::I128(Some(
+                i128::from_be_bytes(bytes.as_slice().try_into().map_err(SchemaError::FromSlice)?),
+            )),
             proto::types::primitive::PrimitiveType::U8(int) => Primitive::U8(Some(*int as u8)),
             proto::types::primitive::PrimitiveType::U16(int) => Primitive::U16(Some(*int as u16)),
-            proto::types::primitive::PrimitiveType::U32(int) => Primitive::U32(Some(*int as u32)),
+            proto::types::primitive::PrimitiveType::U32(int) => Primitive::U32(Some(*int)),
             proto::types::primitive::PrimitiveType::U64(int) => Primitive::U64(Some(*int)),
-            proto::types::primitive::PrimitiveType::U128(bytes) => Primitive::U128(Some(u128::from_be_bytes(bytes.as_slice().try_into().map_err(SchemaError::FromSlice)?))),
-            proto::types::primitive::PrimitiveType::Usize(int) => Primitive::USize(Some(*int as u32)),
-            proto::types::primitive::PrimitiveType::Felt252(felt) => Primitive::Felt252(Some(
-                Felt::from_bytes_be_slice(felt.as_slice()),
+            proto::types::primitive::PrimitiveType::U128(bytes) => Primitive::U128(Some(
+                u128::from_be_bytes(bytes.as_slice().try_into().map_err(SchemaError::FromSlice)?),
             )),
-            proto::types::primitive::PrimitiveType::ClassHash(felt) => Primitive::ClassHash(Some(
-                Felt::from_bytes_be_slice(felt.as_slice()),
+            proto::types::primitive::PrimitiveType::Usize(int) => Primitive::USize(Some(*int)),
+            proto::types::primitive::PrimitiveType::Felt252(felt) => {
+                Primitive::Felt252(Some(Felt::from_bytes_be_slice(felt.as_slice())))
+            }
+            proto::types::primitive::PrimitiveType::ClassHash(felt) => {
+                Primitive::ClassHash(Some(Felt::from_bytes_be_slice(felt.as_slice())))
+            }
+            proto::types::primitive::PrimitiveType::ContractAddress(felt) => {
+                Primitive::ContractAddress(Some(Felt::from_bytes_be_slice(felt.as_slice())))
+            }
+            proto::types::primitive::PrimitiveType::U256(bytes) => Primitive::U256(Some(
+                U256::from_be_bytes(bytes.as_slice().try_into().map_err(SchemaError::FromSlice)?),
             )),
-            proto::types::primitive::PrimitiveType::ContractAddress(felt) => Primitive::ContractAddress(Some(
-                Felt::from_bytes_be_slice(felt.as_slice()),
-            )),
-            proto::types::primitive::PrimitiveType::U256(bytes) => Primitive::U256(Some(U256::from_be_bytes(bytes.as_slice().try_into().map_err(SchemaError::FromSlice)?))),
         };
 
         Ok(primitive)
@@ -181,27 +187,59 @@ impl TryFrom<proto::types::Primitive> for Primitive {
 impl From<Primitive> for proto::types::Primitive {
     fn from(primitive: Primitive) -> Self {
         let value = match primitive {
-            Primitive::Bool(bool) => proto::types::primitive::PrimitiveType::Bool(bool.unwrap_or_default()),
-            Primitive::I8(i8) => proto::types::primitive::PrimitiveType::I8(i8.unwrap_or_default() as i32),
-            Primitive::I16(i16) => proto::types::primitive::PrimitiveType::I16(i16.unwrap_or_default() as i32),
-            Primitive::I32(i32) => proto::types::primitive::PrimitiveType::I32(i32.unwrap_or_default()),
-            Primitive::I64(i64) => proto::types::primitive::PrimitiveType::I64(i64.unwrap_or_default()),
-            Primitive::I128(i128) => proto::types::primitive::PrimitiveType::I128(i128.unwrap_or_default().to_be_bytes().to_vec()),
-            Primitive::U8(u8) => proto::types::primitive::PrimitiveType::U8(u8.unwrap_or_default() as u32),
-            Primitive::U16(u16) => proto::types::primitive::PrimitiveType::U16(u16.unwrap_or_default() as u32),
-            Primitive::U32(u32) => proto::types::primitive::PrimitiveType::U32(u32.unwrap_or_default()),
-            Primitive::U64(u64) => proto::types::primitive::PrimitiveType::U64(u64.unwrap_or_default()),
-            Primitive::U128(u128) => proto::types::primitive::PrimitiveType::U128(u128.unwrap_or_default().to_be_bytes().to_vec()),
-            Primitive::USize(usize) => proto::types::primitive::PrimitiveType::Usize(usize.unwrap_or_default()),
-            Primitive::Felt252(felt) => proto::types::primitive::PrimitiveType::Felt252(felt.unwrap_or_default().to_bytes_be().to_vec()),
-            Primitive::ClassHash(felt) => proto::types::primitive::PrimitiveType::ClassHash(felt.unwrap_or_default().to_bytes_be().to_vec()),
-            Primitive::ContractAddress(felt) => proto::types::primitive::PrimitiveType::ContractAddress(felt.unwrap_or_default().to_bytes_be().to_vec()),
-            Primitive::U256(u256) => proto::types::primitive::PrimitiveType::U256(u256.unwrap_or_default().to_be_bytes().to_vec()),
+            Primitive::Bool(bool) => {
+                proto::types::primitive::PrimitiveType::Bool(bool.unwrap_or_default())
+            }
+            Primitive::I8(i8) => {
+                proto::types::primitive::PrimitiveType::I8(i8.unwrap_or_default() as i32)
+            }
+            Primitive::I16(i16) => {
+                proto::types::primitive::PrimitiveType::I16(i16.unwrap_or_default() as i32)
+            }
+            Primitive::I32(i32) => {
+                proto::types::primitive::PrimitiveType::I32(i32.unwrap_or_default())
+            }
+            Primitive::I64(i64) => {
+                proto::types::primitive::PrimitiveType::I64(i64.unwrap_or_default())
+            }
+            Primitive::I128(i128) => proto::types::primitive::PrimitiveType::I128(
+                i128.unwrap_or_default().to_be_bytes().to_vec(),
+            ),
+            Primitive::U8(u8) => {
+                proto::types::primitive::PrimitiveType::U8(u8.unwrap_or_default() as u32)
+            }
+            Primitive::U16(u16) => {
+                proto::types::primitive::PrimitiveType::U16(u16.unwrap_or_default() as u32)
+            }
+            Primitive::U32(u32) => {
+                proto::types::primitive::PrimitiveType::U32(u32.unwrap_or_default())
+            }
+            Primitive::U64(u64) => {
+                proto::types::primitive::PrimitiveType::U64(u64.unwrap_or_default())
+            }
+            Primitive::U128(u128) => proto::types::primitive::PrimitiveType::U128(
+                u128.unwrap_or_default().to_be_bytes().to_vec(),
+            ),
+            Primitive::USize(usize) => {
+                proto::types::primitive::PrimitiveType::Usize(usize.unwrap_or_default())
+            }
+            Primitive::Felt252(felt) => proto::types::primitive::PrimitiveType::Felt252(
+                felt.unwrap_or_default().to_bytes_be().to_vec(),
+            ),
+            Primitive::ClassHash(felt) => proto::types::primitive::PrimitiveType::ClassHash(
+                felt.unwrap_or_default().to_bytes_be().to_vec(),
+            ),
+            Primitive::ContractAddress(felt) => {
+                proto::types::primitive::PrimitiveType::ContractAddress(
+                    felt.unwrap_or_default().to_bytes_be().to_vec(),
+                )
+            }
+            Primitive::U256(u256) => proto::types::primitive::PrimitiveType::U256(
+                u256.unwrap_or_default().to_be_bytes().to_vec(),
+            ),
         };
 
-        proto::types::Primitive {
-            primitive_type: Some(value),
-        }
+        proto::types::Primitive { primitive_type: Some(value) }
     }
 }
 
