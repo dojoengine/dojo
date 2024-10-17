@@ -18,6 +18,7 @@ metrics-derive = "0.1"
 metrics-exporter-prometheus = "0.15.3"
 metrics-process = "2.1.0"
 metrics-util = "0.17.0"
+tokio-util.workspace = true
 
 [target.'cfg(not(windows))'.dependencies]
 jemalloc-ctl = { version = "0.5.0", optional = true }
