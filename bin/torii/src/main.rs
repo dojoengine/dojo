@@ -20,7 +20,7 @@ use std::time::Duration;
 
 use anyhow::Context;
 use clap::{ArgAction, Parser};
-use dojo_metrics::{metrics_process, prometheus_exporter};
+use dojo_metrics::exporters::prometheus::PrometheusRecorder;
 use dojo_utils::parse::{parse_socket_address, parse_url};
 use dojo_world::contracts::world::WorldContractReader;
 use sqlx::sqlite::{
@@ -296,16 +296,9 @@ async fn main() -> anyhow::Result<()> {
     }
 
     if let Some(listen_addr) = args.metrics {
-        let prometheus_handle = prometheus_exporter::install_recorder("torii")?;
-
         info!(target: LOG_TARGET, addr = %listen_addr, "Starting metrics endpoint.");
-        prometheus_exporter::serve(
-            listen_addr,
-            prometheus_handle,
-            metrics_process::Collector::default(),
-            Vec::new(),
-        )
-        .await?;
+        let prometheus_handle = PrometheusRecorder::install("torii")?;
+        dojo_metrics::Server::new(prometheus_handle).start(listen_addr).await?;
     }
 
     let engine_handle = tokio::spawn(async move { engine.start().await });
