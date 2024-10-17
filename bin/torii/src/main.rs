@@ -308,18 +308,26 @@ async fn main() -> anyhow::Result<()> {
         .await?;
     }
 
-    tokio::spawn(async move {
-        proxy_server.start(shutdown_tx.subscribe()).await.unwrap();
+    let proxy_server_handle = tokio::spawn(async move {
+        proxy_server.start(shutdown_tx.subscribe()).await
     });
-    tokio::spawn(graphql_server);
-    tokio::spawn(grpc_server);
-    tokio::spawn(async move {
-        libp2p_relay_server.run().await;
+    let graphql_server_handle = tokio::spawn(async move {
+        graphql_server.await
+    });
+    let grpc_server_handle = tokio::spawn(async move {
+        grpc_server.await
+    });
+    let libp2p_relay_server_handle = tokio::spawn(async move {
+        libp2p_relay_server.run().await
     });
 
     tokio::select! {
         res = engine.start() => res?,
         _ = dojo_utils::signal::wait_signals() => {},
+        _ = proxy_server_handle => {},
+        _ = graphql_server_handle => {},
+        _ = grpc_server_handle => {},
+        _ = libp2p_relay_server_handle => {},
     };
 
     Ok(())
