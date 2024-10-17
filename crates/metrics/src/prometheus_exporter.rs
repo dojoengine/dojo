@@ -34,6 +34,7 @@ impl PrometheusRecorder {
     /// Installs Prometheus as the metrics recorder.
     ///
     /// ## Arguments
+    ///
     /// * `prefix` - Apply a prefix to all metrics keys.
     pub fn install(prefix: &str) -> Result<PrometheusHandle, Error> {
         let recorder = PrometheusBuilder::new().build_recorder();
