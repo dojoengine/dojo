@@ -4,6 +4,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Result};
+use camino::Utf8PathBuf;
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{EnumOption, Member, Struct, Ty};
 use dojo_world::contracts::abi::model::Layout;
@@ -46,6 +47,7 @@ pub struct Sql {
     model_cache: Arc<ModelCache>,
     // when SQL struct is cloned a empty local_cache is created
     local_cache: LocalCache,
+    artifacts_path: Utf8PathBuf,
 }
 
 #[derive(Debug, Clone)]
@@ -60,6 +62,7 @@ impl Sql {
         pool: Pool<Sqlite>,
         executor: UnboundedSender<QueryMessage>,
         contracts: &HashMap<Felt, ContractType>,
+        artifacts_path: Utf8PathBuf,
     ) -> Result<Self> {
         for contract in contracts {
             executor.send(QueryMessage::other(
@@ -80,6 +83,7 @@ impl Sql {
             executor,
             model_cache: Arc::new(ModelCache::new(pool.clone())),
             local_cache,
+            artifacts_path,
         };
 
         db.execute().await?;

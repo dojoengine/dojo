@@ -19,6 +19,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Context;
+use camino::Utf8PathBuf;
 use clap::{ArgAction, Parser};
 use dojo_metrics::{metrics_process, prometheus_exporter};
 use dojo_utils::parse::{parse_socket_address, parse_url};
@@ -146,6 +147,10 @@ struct Args {
     /// Configuration file
     #[arg(long)]
     config: Option<PathBuf>,
+
+    /// Path to a directory to store ERC artifacts
+    #[arg(long)]
+    artifacts_path: Utf8PathBuf,
 }
 
 #[tokio::main]
@@ -218,7 +223,8 @@ async fn main() -> anyhow::Result<()> {
         executor.run().await.unwrap();
     });
 
-    let db = Sql::new(pool.clone(), sender.clone(), &contracts).await?;
+    let db =
+        Sql::new(pool.clone(), sender.clone(), &contracts, args.artifacts_path.clone()).await?;
 
     let processors = Processors {
         transaction: vec![Box::new(StoreTransactionProcessor)],
@@ -254,10 +260,19 @@ async fn main() -> anyhow::Result<()> {
         Arc::new(contracts),
     );
 
-    let shutdown_rx = shutdown_tx.subscribe();
-    let (grpc_addr, grpc_server) =
-        torii_grpc::server::new(shutdown_rx, &pool, block_rx, world_address, Arc::clone(&provider))
-            .await?;
+    let (grpc_addr, grpc_server) = torii_grpc::server::new(
+        shutdown_tx.subscribe(),
+        &pool,
+        block_rx,
+        world_address,
+        Arc::clone(&provider),
+    )
+    .await?;
+
+    tokio::fs::create_dir_all(args.artifacts_path.clone()).await?;
+    let absolute_path = args.artifacts_path.canonicalize()?;
+    let (artifacts_addr, artifacts_server) =
+        torii_server::artifacts::new(shutdown_tx.subscribe(), absolute_path).await?;
 
     let mut libp2p_relay_server = torii_relay::server::Relay::new(
         db,
@@ -270,7 +285,13 @@ async fn main() -> anyhow::Result<()> {
     )
     .expect("Failed to start libp2p relay server");
 
-    let proxy_server = Arc::new(Proxy::new(args.addr, args.allowed_origins, Some(grpc_addr), None));
+    let proxy_server = Arc::new(Proxy::new(
+        args.addr,
+        args.allowed_origins,
+        Some(grpc_addr),
+        None,
+        Some(artifacts_addr),
+    ));
 
     let graphql_server = spawn_rebuilding_graphql_server(
         shutdown_tx.clone(),
@@ -314,6 +335,7 @@ async fn main() -> anyhow::Result<()> {
         _ = graphql_server => {},
         _ = grpc_server => {},
         _ = libp2p_relay_server.run() => {},
+        _ = artifacts_server => {},
         _ = dojo_utils::signal::wait_signals() => {},
     };
 
