@@ -1,4 +1,7 @@
-pub mod prometheus_exporter;
+mod process;
+mod prometheus_exporter;
+
+pub use prometheus_exporter::*;
 
 #[cfg(all(feature = "jemalloc", unix))]
 use jemallocator as _;
@@ -13,6 +16,16 @@ pub use metrics_process;
 #[cfg(all(feature = "jemalloc", unix))]
 #[global_allocator]
 static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
+
+/// A helper trait for defining the type for hooks that are called when the metrics are being collected
+/// by the server.
+pub trait Hook: Fn() + Send + Sync {}
+impl<T: Fn() + Send + Sync> Hook for T {}
+
+/// A boxed [`Hook`].
+pub type BoxedHook<T> = Box<dyn Hook<Output = T>>;
+/// A list of [BoxedHook].
+pub type Hooks = Vec<BoxedHook<()>>;
 
 /// A helper trait for reporting metrics.
 ///

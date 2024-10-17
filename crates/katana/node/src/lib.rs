@@ -12,24 +12,24 @@ use anyhow::Result;
 use config::metrics::MetricsConfig;
 use config::rpc::{ApiKind, RpcConfig};
 use config::{Config, SequencingConfig};
-use dojo_metrics::prometheus_exporter::PrometheusHandle;
-use dojo_metrics::{metrics_process, prometheus_exporter, Report};
+use dojo_metrics::prometheus_exporter::{PrometheusHandle, PrometheusRecorder, ServerBuilder};
+use dojo_metrics::{Report, metrics_process, prometheus_exporter};
 use hyper::{Method, Uri};
+use jsonrpsee::RpcModule;
 use jsonrpsee::server::middleware::proxy_get_request::ProxyGetRequestLayer;
 use jsonrpsee::server::{AllowHosts, ServerBuilder, ServerHandle};
-use jsonrpsee::RpcModule;
-use katana_core::backend::storage::Blockchain;
 use katana_core::backend::Backend;
+use katana_core::backend::storage::Blockchain;
 use katana_core::env::BlockContextGenerator;
 use katana_core::service::block_producer::BlockProducer;
 use katana_core::service::messaging::MessagingConfig;
 use katana_db::mdbx::DbEnv;
 use katana_executor::implementation::blockifier::BlockifierFactory;
 use katana_executor::{ExecutorFactory, SimulationFlag};
-use katana_pipeline::{stage, Pipeline};
+use katana_pipeline::{Pipeline, stage};
+use katana_pool::TxPool;
 use katana_pool::ordering::FiFo;
 use katana_pool::validation::stateful::TxValidator;
-use katana_pool::TxPool;
 use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
 use katana_provider::providers::in_memory::InMemoryProvider;
 use katana_rpc::dev::DevApi;
@@ -158,7 +158,7 @@ impl Node {
 pub async fn build(mut config: Config) -> Result<Node> {
     // Metrics recorder must be initialized before calling any of the metrics macros, in order
     // for it to be registered.
-    let prometheus_handle = prometheus_exporter::install_recorder("katana")?;
+    let metrics_server = dojo_metrics::ServerBuilder::new("katana")?;
 
     // --- build executor factory
 
@@ -223,7 +223,7 @@ pub async fn build(mut config: Config) -> Result<Node> {
         pool,
         backend,
         block_producer,
-        prometheus_handle,
+        prometheus_handle: metrics_server,
         rpc_config: config.rpc,
         metrics_config: config.metrics,
         messaging_config: config.messaging,
