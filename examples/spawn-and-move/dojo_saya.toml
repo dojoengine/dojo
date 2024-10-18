@@ -1,0 +1,14 @@
+[world]
+description = "example world"
+name = "example"
+# Change the seed to something unique to you
+seed = "saya-1"
+
+[namespace]
+default = "dojo_examples"
+mappings = { "armory-Flatbow" = "dojo_examples_weapons", "bestiary" = "dojo_examples_foes" }
+
+[migration]
+skip_contracts = ["dojo_examples-mock_token"]
+
+# Don't use env voluntarly, it's setup in the bin/saya/README.md and associated scripts.

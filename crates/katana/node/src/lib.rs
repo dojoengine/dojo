@@ -1,36 +1,38 @@
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
 
+pub mod config;
+pub mod exit;
+
+use std::future::IntoFuture;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Result;
+use config::metrics::MetricsConfig;
+use config::rpc::{ApiKind, RpcConfig};
+use config::{Config, SequencingConfig};
+use dojo_metrics::prometheus_exporter::PrometheusHandle;
 use dojo_metrics::{metrics_process, prometheus_exporter, Report};
 use hyper::{Method, Uri};
 use jsonrpsee::server::middleware::proxy_get_request::ProxyGetRequestLayer;
 use jsonrpsee::server::{AllowHosts, ServerBuilder, ServerHandle};
 use jsonrpsee::RpcModule;
-use katana_core::backend::config::StarknetConfig;
 use katana_core::backend::storage::Blockchain;
 use katana_core::backend::Backend;
 use katana_core::constants::MAX_RECURSION_DEPTH;
 use katana_core::env::BlockContextGenerator;
-#[allow(deprecated)]
-use katana_core::sequencer::SequencerConfig;
 use katana_core::service::block_producer::BlockProducer;
-#[cfg(feature = "messaging")]
-use katana_core::service::messaging::{MessagingService, MessagingTask};
-use katana_core::service::{BlockProductionTask, TransactionMiner};
+use katana_core::service::messaging::MessagingConfig;
+use katana_db::mdbx::DbEnv;
 use katana_executor::implementation::blockifier::BlockifierFactory;
 use katana_executor::{ExecutorFactory, SimulationFlag};
+use katana_pipeline::{stage, Pipeline};
 use katana_pool::ordering::FiFo;
 use katana_pool::validation::stateful::TxValidator;
-use katana_pool::{TransactionPool, TxPool};
-use katana_primitives::block::FinalityStatus;
+use katana_pool::TxPool;
 use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
-use katana_provider::providers::fork::ForkedProvider;
 use katana_provider::providers::in_memory::InMemoryProvider;
-use katana_rpc::config::ServerConfig;
 use katana_rpc::dev::DevApi;
 use katana_rpc::metrics::RpcServerMetrics;
 use katana_rpc::saya::SayaApi;
@@ -40,67 +42,141 @@ use katana_rpc_api::dev::DevApiServer;
 use katana_rpc_api::saya::SayaApiServer;
 use katana_rpc_api::starknet::{StarknetApiServer, StarknetTraceApiServer, StarknetWriteApiServer};
 use katana_rpc_api::torii::ToriiApiServer;
-use katana_rpc_api::ApiKind;
 use katana_tasks::TaskManager;
-use num_traits::ToPrimitive;
-use starknet::core::types::{BlockId, BlockStatus, MaybePendingBlockWithTxHashes};
-use starknet::core::utils::parse_cairo_short_string;
-use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::{JsonRpcClient, Provider};
 use tower_http::cors::{AllowOrigin, CorsLayer};
-use tracing::{info, trace};
+use tracing::info;
 
-/// A handle to the instantiated Katana node.
+use crate::exit::NodeStoppedFuture;
+
+/// A handle to the launched node.
 #[allow(missing_debug_implementations)]
-pub struct Handle {
-    pub pool: TxPool,
+pub struct LaunchedNode {
+    pub node: Node,
+    /// Handle to the rpc server.
     pub rpc: RpcServer,
-    pub task_manager: TaskManager,
-    pub backend: Arc<Backend<BlockifierFactory>>,
-    pub block_producer: Arc<BlockProducer<BlockifierFactory>>,
 }
 
-impl Handle {
-    /// Stops the Katana node.
-    pub async fn stop(self) -> Result<()> {
-        // TODO: wait for the rpc server to stop
+impl LaunchedNode {
+    /// Stops the node.
+    ///
+    /// This will instruct the node to stop and wait until it has actually stop.
+    pub async fn stop(&self) -> Result<()> {
+        // TODO: wait for the rpc server to stop instead of just stopping it.
         self.rpc.handle.stop()?;
-        self.task_manager.shutdown().await;
+        self.node.task_manager.shutdown().await;
         Ok(())
+    }
+
+    /// Returns a future which resolves only when the node has stopped.
+    pub fn stopped(&self) -> NodeStoppedFuture<'_> {
+        NodeStoppedFuture::new(self)
     }
 }
 
-/// Build the core Katana components from the given configurations and start running the node.
-// TODO: placeholder until we implement a dedicated class that encapsulate building the node
-// components
-//
-// Most of the logic are taken out of the `main.rs` file in `/bin/katana` crate, and combined
-// with the exact copy of the setup logic for `NodeService` from `KatanaSequencer::new`. It also
-// includes logic that was previously in `Backend::new`.
-//
-// NOTE: Don't rely on this function as it is mainly used as a placeholder for now.
-#[allow(deprecated)]
-pub async fn start(
-    server_config: ServerConfig,
-    sequencer_config: SequencerConfig,
-    mut starknet_config: StarknetConfig,
-) -> Result<Handle> {
+/// A node instance.
+///
+/// The struct contains the handle to all the components of the node.
+#[must_use = "Node does nothing unless launched."]
+#[allow(missing_debug_implementations)]
+pub struct Node {
+    pub pool: TxPool,
+    pub db: Option<DbEnv>,
+    pub task_manager: TaskManager,
+    pub prometheus_handle: PrometheusHandle,
+    pub backend: Arc<Backend<BlockifierFactory>>,
+    pub block_producer: BlockProducer<BlockifierFactory>,
+    pub rpc_config: RpcConfig,
+    pub metrics_config: Option<MetricsConfig>,
+    pub sequencing_config: SequencingConfig,
+    pub messaging_config: Option<MessagingConfig>,
+}
+
+impl Node {
+    /// Start the node.
+    ///
+    /// This method will start all the node process, running them until the node is stopped.
+    pub async fn launch(self) -> Result<LaunchedNode> {
+        let chain = self.backend.chain_spec.id;
+        info!(%chain, "Starting node.");
+
+        if let Some(ref cfg) = self.metrics_config {
+            let addr = cfg.addr;
+            let mut reports = Vec::new();
+
+            if let Some(ref db) = self.db {
+                reports.push(Box::new(db.clone()) as Box<dyn Report>);
+            }
+
+            prometheus_exporter::serve(
+                addr,
+                self.prometheus_handle.clone(),
+                metrics_process::Collector::default(),
+                reports,
+            )
+            .await?;
+
+            info!(%addr, "Metrics endpoint started.");
+        }
+
+        let pool = self.pool.clone();
+        let backend = self.backend.clone();
+        let block_producer = self.block_producer.clone();
+        let validator = self.block_producer.validator().clone();
+
+        // --- build sequencing stage
+
+        let sequencing = stage::Sequencing::new(
+            pool.clone(),
+            backend.clone(),
+            self.task_manager.task_spawner(),
+            block_producer.clone(),
+            self.messaging_config.clone(),
+        );
+
+        // --- build and start the pipeline
+
+        let mut pipeline = Pipeline::new();
+        pipeline.add_stage(Box::new(sequencing));
+
+        self.task_manager
+            .task_spawner()
+            .build_task()
+            .critical()
+            .name("Pipeline")
+            .spawn(pipeline.into_future());
+
+        let node_components = (pool, backend, block_producer, validator);
+        let rpc = spawn(node_components, self.rpc_config.clone()).await?;
+
+        Ok(LaunchedNode { node: self, rpc })
+    }
+}
+
+/// Build the node components from the given [`Config`].
+///
+/// This returns a [`Node`] instance which can be launched with the all the necessary components
+/// configured.
+pub async fn build(mut config: Config) -> Result<Node> {
+    // Metrics recorder must be initialized before calling any of the metrics macros, in order
+    // for it to be registered.
+    let prometheus_handle = prometheus_exporter::install_recorder("katana")?;
+
     // --- build executor factory
 
     let cfg_env = CfgEnv {
-        chain_id: starknet_config.env.chain_id,
-        invoke_tx_max_n_steps: starknet_config.env.invoke_max_steps,
-        validate_max_n_steps: starknet_config.env.validate_max_steps,
+        chain_id: config.chain.id,
+        invoke_tx_max_n_steps: config.starknet.env.invoke_max_steps,
+        validate_max_n_steps: config.starknet.env.validate_max_steps,
         max_recursion_depth: MAX_RECURSION_DEPTH,
         fee_token_addresses: FeeTokenAddressses {
-            eth: starknet_config.genesis.fee_token.address,
-            strk: Default::default(),
+            eth: config.chain.fee_contracts.eth,
+            strk: config.chain.fee_contracts.strk,
         },
     };
 
     let simulation_flags = SimulationFlag {
-        skip_validate: starknet_config.disable_validate,
-        skip_fee_transfer: starknet_config.disable_fee,
+        skip_validate: !config.dev.account_validation,
+        skip_fee_transfer: !config.dev.fee,
         ..Default::default()
     };
 
@@ -108,75 +184,29 @@ pub async fn start(
 
     // --- build backend
 
-    let (blockchain, db) = if let Some(forked_url) = &starknet_config.fork_rpc_url {
-        let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(forked_url.clone())));
-        let forked_chain_id = provider.chain_id().await.unwrap();
-
-        let forked_block_num = if let Some(num) = starknet_config.fork_block_number {
-            num
-        } else {
-            provider.block_number().await.expect("failed to fetch block number from forked network")
-        };
-
-        let block =
-            provider.get_block_with_tx_hashes(BlockId::Number(forked_block_num)).await.unwrap();
-        let MaybePendingBlockWithTxHashes::Block(block) = block else {
-            panic!("block to be forked is a pending block")
-        };
-
-        // adjust the genesis to match the forked block
-        starknet_config.genesis.number = block.block_number;
-        starknet_config.genesis.state_root = block.new_root;
-        starknet_config.genesis.parent_hash = block.parent_hash;
-        starknet_config.genesis.timestamp = block.timestamp;
-        starknet_config.genesis.sequencer_address = block.sequencer_address.into();
-        starknet_config.genesis.gas_prices.eth =
-            block.l1_gas_price.price_in_wei.to_u128().expect("should fit in u128");
-        starknet_config.genesis.gas_prices.strk =
-            block.l1_gas_price.price_in_fri.to_u128().expect("should fit in u128");
-
-        trace!(
-            chain = %parse_cairo_short_string(&forked_chain_id).unwrap(),
-            block_number = %block.block_number,
-            forked_url = %forked_url,
-            "Forking chain.",
-        );
-
-        let blockchain = Blockchain::new_from_forked(
-            ForkedProvider::new(provider, forked_block_num.into()).unwrap(),
-            block.block_hash,
-            &starknet_config.genesis,
-            match block.status {
-                BlockStatus::AcceptedOnL1 => FinalityStatus::AcceptedOnL1,
-                BlockStatus::AcceptedOnL2 => FinalityStatus::AcceptedOnL2,
-                _ => panic!("unable to fork for non-accepted block"),
-            },
-        )?;
-
-        starknet_config.env.chain_id = forked_chain_id.into();
-
-        (blockchain, None)
-    } else if let Some(db_path) = &starknet_config.db_dir {
+    let (blockchain, db) = if let Some(cfg) = config.forking {
+        let bc = Blockchain::new_from_forked(cfg.url.clone(), cfg.block, &mut config.chain).await?;
+        (bc, None)
+    } else if let Some(db_path) = &config.db.dir {
         let db = katana_db::init_db(db_path)?;
-        (Blockchain::new_with_db(db.clone(), &starknet_config.genesis)?, Some(db))
+        (Blockchain::new_with_db(db.clone(), &config.chain)?, Some(db))
     } else {
-        (Blockchain::new_with_genesis(InMemoryProvider::new(), &starknet_config.genesis)?, None)
+        (Blockchain::new_with_chain(InMemoryProvider::new(), &config.chain)?, None)
     };
 
-    let chain_id = starknet_config.env.chain_id;
     let block_context_generator = BlockContextGenerator::default().into();
     let backend = Arc::new(Backend {
-        chain_id,
         blockchain,
         executor_factory,
         block_context_generator,
-        config: starknet_config,
+        config: config.starknet,
+        chain_spec: config.chain,
     });
 
     // --- build block producer
 
-    let block_producer = if sequencer_config.block_time.is_some() || sequencer_config.no_mining {
-        if let Some(interval) = sequencer_config.block_time {
+    let block_producer = if config.sequencing.block_time.is_some() || config.sequencing.no_mining {
+        if let Some(interval) = config.sequencing.block_time {
             BlockProducer::interval(Arc::clone(&backend), interval)
         } else {
             BlockProducer::on_demand(Arc::clone(&backend))
@@ -185,63 +215,31 @@ pub async fn start(
         BlockProducer::instant(Arc::clone(&backend))
     };
 
-    // --- build transaction pool and miner
+    // --- build transaction pool
 
     let validator = block_producer.validator();
     let pool = TxPool::new(validator.clone(), FiFo::new());
-    let miner = TransactionMiner::new(pool.add_listener());
 
-    // --- build metrics service
+    let node = Node {
+        db,
+        pool,
+        backend,
+        block_producer,
+        prometheus_handle,
+        rpc_config: config.rpc,
+        metrics_config: config.metrics,
+        messaging_config: config.messaging,
+        sequencing_config: config.sequencing,
+        task_manager: TaskManager::current(),
+    };
 
-    // Metrics recorder must be initialized before calling any of the metrics macros, in order for
-    // it to be registered.
-    if let Some(addr) = server_config.metrics {
-        let prometheus_handle = prometheus_exporter::install_recorder("katana")?;
-        let reports = db.map(|db| vec![Box::new(db) as Box<dyn Report>]).unwrap_or_default();
-
-        prometheus_exporter::serve(
-            addr,
-            prometheus_handle,
-            metrics_process::Collector::default(),
-            reports,
-        )
-        .await?;
-
-        info!(%addr, "Metrics endpoint started.");
-    }
-
-    // --- create a TaskManager using the ambient Tokio runtime
-
-    let task_manager = TaskManager::current();
-
-    // --- build and spawn the messaging task
-
-    #[cfg(feature = "messaging")]
-    if let Some(config) = sequencer_config.messaging.clone() {
-        let messaging = MessagingService::new(config, pool.clone(), Arc::clone(&backend)).await?;
-        let task = MessagingTask::new(messaging);
-        task_manager.build_task().critical().name("Messaging").spawn(task);
-    }
-
-    let block_producer = Arc::new(block_producer);
-
-    // --- build and spawn the block production task
-
-    let task = BlockProductionTask::new(pool.clone(), miner, block_producer.clone());
-    task_manager.build_task().critical().name("BlockProduction").spawn(task);
-
-    // --- spawn rpc server
-
-    let node_components = (pool.clone(), backend.clone(), block_producer.clone(), validator);
-    let rpc = spawn(node_components, server_config).await?;
-
-    Ok(Handle { backend, block_producer, pool, rpc, task_manager })
+    Ok(node)
 }
 
 // Moved from `katana_rpc` crate
 pub async fn spawn<EF: ExecutorFactory>(
-    node_components: (TxPool, Arc<Backend<EF>>, Arc<BlockProducer<EF>>, TxValidator),
-    config: ServerConfig,
+    node_components: (TxPool, Arc<Backend<EF>>, BlockProducer<EF>, TxValidator),
+    config: RpcConfig,
 ) -> Result<RpcServer> {
     let (pool, backend, block_producer, validator) = node_components;
 
@@ -306,11 +304,13 @@ pub async fn spawn<EF: ExecutorFactory>(
         .set_host_filtering(AllowHosts::Any)
         .set_middleware(middleware)
         .max_connections(config.max_connections)
-        .build(config.addr())
+        .build(config.socket_addr())
         .await?;
 
     let addr = server.local_addr()?;
     let handle = server.start(methods)?;
+
+    info!(target: "rpc", %addr, "RPC server started.");
 
     Ok(RpcServer { handle, addr })
 }

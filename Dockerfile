@@ -1,6 +1,6 @@
 FROM debian:bookworm-slim as builder
 
-RUN apt-get update && apt install -y git libtool automake autoconf make
+RUN apt-get update && apt install -y git libtool automake autoconf make tini
 
 RUN git clone https://github.com/Comcast/Infinite-File-Curtailer.git curtailer \
     && cd curtailer \
@@ -16,9 +16,7 @@ RUN git clone https://github.com/Comcast/Infinite-File-Curtailer.git curtailer \
 
 FROM debian:bookworm-slim as base
 
-ENV TINI_VERSION v0.19.0
-ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
-RUN chmod +x /tini
+COPY --from=builder /usr/bin/tini /tini
 ENTRYPOINT ["/tini", "--"]
 
 ARG TARGETPLATFORM

@@ -49,7 +49,7 @@ use katana_primitives::fee::TxFeeInfo;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
 use katana_primitives::trace::{L1Gas, TxExecInfo, TxResources};
 use katana_primitives::transaction::{
-    DeclareTx, DeployAccountTx, ExecutableTx, ExecutableTxWithHash, InvokeTx,
+    DeclareTx, DeployAccountTx, ExecutableTx, ExecutableTxWithHash, InvokeTx, TxType,
 };
 use katana_primitives::{class, event, message, trace, Felt};
 use katana_provider::traits::contract::ContractClassProvider;
@@ -126,7 +126,7 @@ pub fn transact<S: StateReader>(
     match transact_inner(state, block_context, simulation_flags, to_executor_tx(tx.clone())) {
         Ok((info, fee)) => {
             // get the trace and receipt from the execution info
-            let trace = to_exec_info(info);
+            let trace = to_exec_info(info, tx.r#type());
             let receipt = build_receipt(tx.tx_ref(), fee, &trace);
             ExecutionResult::new_success(receipt, trace)
         }
@@ -563,8 +563,9 @@ fn starknet_api_ethaddr_to_felt(value: katana_cairo::starknet_api::core::EthAddr
     Felt::from_bytes_be(&bytes)
 }
 
-pub fn to_exec_info(exec_info: TransactionExecutionInfo) -> TxExecInfo {
+pub fn to_exec_info(exec_info: TransactionExecutionInfo, r#type: TxType) -> TxExecInfo {
     TxExecInfo {
+        r#type,
         validate_call_info: exec_info.validate_call_info.map(to_call_info),
         execute_call_info: exec_info.execute_call_info.map(to_call_info),
         fee_transfer_call_info: exec_info.fee_transfer_call_info.map(to_call_info),

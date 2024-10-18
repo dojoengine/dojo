@@ -1,9 +1,9 @@
 [package]
 name = "katana_messaging"
-version = "0.1.0"
+version.workspace = true
 
 [dependencies]
-starknet = "2.3.1"
+starknet.workspace = true
 
 [[target.starknet-contract]]
 sierra = true

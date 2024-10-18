@@ -22,11 +22,7 @@ thiserror.workspace = true
 tracing.workspace = true
 
 # codecs
-[dependencies.postcard]
-default-features = false
-features = [ "use-std" ]
-optional = true
-version = "1.0.8"
+postcard = { workspace = true, optional = true }
 
 [dependencies.libmdbx]
 git = "https://github.com/paradigmxyz/reth.git"

@@ -1,6 +1,6 @@
 use clap::Args;
 use dojo_utils::env::DOJO_WORLD_ADDRESS_ENV_VAR;
-use katana_primitives::Felt;
+use starknet::core::types::Felt;
 use url::Url;
 
 #[derive(Debug, Args, Clone)]

@@ -12,7 +12,7 @@ use katana_primitives::chain::ChainId;
 use katana_primitives::conversion::rpc as rpc_converter;
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
 use katana_primitives::transaction::TxWithHash;
-use katana_primitives::version::Version;
+use katana_primitives::version::ProtocolVersion;
 use katana_rpc_api::saya::SayaApiClient;
 use katana_rpc_types::trace::TxExecutionInfo;
 use num_traits::ToPrimitive;
@@ -93,14 +93,19 @@ impl Provider for JsonRpcProvider {
                 header: Header {
                     parent_hash: block.parent_hash,
                     number: block.block_number,
-                    gas_prices: GasPrices::new(
+                    l1_gas_prices: GasPrices::new(
                         block.l1_gas_price.price_in_wei.to_u128().unwrap(),
                         block.l1_gas_price.price_in_fri.to_u128().unwrap(),
                     ),
+                    l1_data_gas_prices: GasPrices::new(
+                        block.l1_data_gas_price.price_in_wei.to_u128().unwrap(),
+                        block.l1_data_gas_price.price_in_fri.to_u128().unwrap(),
+                    ),
+                    l1_da_mode: block.l1_da_mode,
                     timestamp: block.timestamp,
                     state_root: block.new_root,
                     sequencer_address: block.sequencer_address.into(),
-                    version: Version::parse(&block.starknet_version)?,
+                    protocol_version: ProtocolVersion::parse(&block.starknet_version).unwrap(),
                 },
             },
             body: txs,

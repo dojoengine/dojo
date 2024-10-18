@@ -4,7 +4,7 @@ use starknet::macros::short_string;
 use crate::{Felt, FromStrError};
 
 /// Known chain ids that has been assigned a name.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, strum_macros::Display)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum NamedChainId {
     Mainnet,
@@ -41,6 +41,12 @@ impl NamedChainId {
             NamedChainId::Goerli => "SN_GOERLI",
             NamedChainId::Sepolia => "SN_SEPOLIA",
         }
+    }
+}
+
+impl std::fmt::Display for NamedChainId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.name())
     }
 }
 
@@ -185,9 +191,9 @@ mod tests {
         assert_eq!(ChainId::from(sepolia_id), ChainId::SEPOLIA);
         assert_eq!(ChainId::from(felt!("0x1337")), ChainId::Id(felt!("0x1337")));
 
-        assert_eq!(ChainId::MAINNET.to_string(), "Mainnet");
-        assert_eq!(ChainId::GOERLI.to_string(), "Goerli");
-        assert_eq!(ChainId::SEPOLIA.to_string(), "Sepolia");
+        assert_eq!(ChainId::MAINNET.to_string(), "SN_MAIN");
+        assert_eq!(ChainId::GOERLI.to_string(), "SN_GOERLI");
+        assert_eq!(ChainId::SEPOLIA.to_string(), "SN_SEPOLIA");
         assert_eq!(ChainId::Id(felt!("0x1337")).to_string(), "0x1337");
     }
 

@@ -3,20 +3,18 @@ use std::fmt::Display;
 
 use async_trait::async_trait;
 use celestia_rpc::{BlobClient, Client};
-use celestia_types::blob::GasPrice;
 use celestia_types::nmt::Namespace;
-use celestia_types::Blob;
+use celestia_types::{Blob, Commitment, TxConfig};
 use serde::{Deserialize, Serialize};
 use starknet::core::types::Felt;
 use url::Url;
 
 use crate::data_availability::error::{DataAvailabilityResult, Error};
 use crate::data_availability::{DataAvailabilityClient, DataAvailabilityMode};
-use crate::url_deserializer;
+use crate::prover::persistent::PublishedStateDiff;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct CelestiaConfig {
-    #[serde(deserialize_with = "url_deserializer")]
     pub node_url: Url,
     pub node_auth_token: Option<String>,
     pub namespace: String,
@@ -55,35 +53,57 @@ impl DataAvailabilityClient for CelestiaClient {
         self.mode
     }
 
-    async fn publish_state_diff_felts(&self, state_diff: &[Felt]) -> DataAvailabilityResult<u64> {
+    async fn publish_state_diff_felts(
+        &self,
+        state_diff: &[Felt],
+    ) -> DataAvailabilityResult<(Commitment, u64)> {
         let bytes: Vec<u8> = state_diff.iter().flat_map(|fe| fe.to_bytes_be().to_vec()).collect();
-
+        let commitment = Commitment::from_blob(self.namespace, 0, &bytes)?;
         let blob = Blob::new(self.namespace, bytes)?;
 
         // TODO: we may want to use `blob_get` to ensure the state diff has been published
         // correctly.
-        self.client
-            .blob_submit(&[blob], GasPrice::default())
+
+        let height = self
+            .client
+            .blob_submit(&[blob], TxConfig::default())
             .await
-            .map_err(|e| Error::Client(format!("Celestia RPC error: {e}")))
+            .map_err(|e| Error::Client(format!("Celestia RPC error: {e}")))?;
+        Ok((commitment, height))
     }
 
     async fn publish_state_diff_and_proof_felts(
         &self,
         state_diff: &[Felt],
         state_diff_proof: &[Felt],
-    ) -> DataAvailabilityResult<u64> {
+    ) -> DataAvailabilityResult<(Commitment, u64)> {
         let bytes: Vec<u8> = state_diff.iter().flat_map(|fe| fe.to_bytes_be().to_vec()).collect();
+        let commitment = Commitment::from_blob(self.namespace, 0, &bytes)?;
         let blob = Blob::new(self.namespace, bytes)?;
-
         let proof_bytes: Vec<u8> =
             state_diff_proof.iter().flat_map(|fe| fe.to_bytes_be().to_vec()).collect();
         let proof_blob = Blob::new(self.namespace, proof_bytes)?;
 
-        self.client
-            .blob_submit(&[blob, proof_blob], GasPrice::default())
+        let height = self
+            .client
+            .blob_submit(&[blob, proof_blob], TxConfig::default())
             .await
-            .map_err(|e| Error::Client(format!("Celestia RPC error: {e}")))
+            .map_err(|e| Error::Client(format!("Celestia RPC error: {e}")))?;
+        Ok((commitment, height))
+    }
+
+    async fn publish_checkpoint(
+        &self,
+        published_state_diff: PublishedStateDiff,
+    ) -> DataAvailabilityResult<(Commitment, u64)> {
+        let bytes = serde_json::to_vec(&published_state_diff).unwrap();
+        let commitment = Commitment::from_blob(self.namespace, 0, &bytes)?;
+        let height = self
+            .client
+            .blob_submit(&[Blob::new(self.namespace, bytes)?], TxConfig::default())
+            .await
+            .map_err(|e| Error::Client(format!("Celestia RPC error: {e}")))?;
+        Ok((commitment, height))
     }
 }
 

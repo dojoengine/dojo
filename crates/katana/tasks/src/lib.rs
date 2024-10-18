@@ -22,6 +22,7 @@ use tokio::task::JoinHandle;
 #[error("Failed to initialize task spawner: {0}")]
 pub struct TaskSpawnerInitError(tokio::runtime::TryCurrentError);
 
+// TODO: replace this with TaskSpawner in manager.rs
 /// A task spawner for spawning tasks on a tokio runtime. This is simple wrapper around a tokio's
 /// runtime [Handle] to easily spawn tasks on the runtime.
 ///

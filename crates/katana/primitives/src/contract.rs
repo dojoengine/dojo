@@ -1,5 +1,6 @@
 use std::fmt;
 
+use num_bigint::BigUint;
 use starknet::core::utils::normalize_address;
 
 use crate::class::ClassHash;
@@ -47,6 +48,18 @@ impl From<Felt> for ContractAddress {
 impl From<ContractAddress> for Felt {
     fn from(value: ContractAddress) -> Self {
         value.0
+    }
+}
+
+impl From<&BigUint> for ContractAddress {
+    fn from(biguint: &BigUint) -> Self {
+        Self::new(Felt::from_bytes_le_slice(&biguint.to_bytes_le()))
+    }
+}
+
+impl From<BigUint> for ContractAddress {
+    fn from(biguint: BigUint) -> Self {
+        Self::new(Felt::from_bytes_le_slice(&biguint.to_bytes_le()))
     }
 }
 

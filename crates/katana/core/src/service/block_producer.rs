@@ -11,10 +11,10 @@ use futures::FutureExt;
 use katana_executor::{BlockExecutor, ExecutionResult, ExecutionStats, ExecutorFactory};
 use katana_pool::validation::stateful::TxValidator;
 use katana_primitives::block::{BlockHashOrNumber, ExecutableBlock, PartialHeader};
+use katana_primitives::da::L1DataAvailabilityMode;
 use katana_primitives::receipt::Receipt;
 use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{ExecutableTxWithHash, TxHash, TxWithHash};
-use katana_primitives::version::CURRENT_STARKNET_VERSION;
 use katana_provider::error::ProviderError;
 use katana_provider::traits::block::{BlockHashProvider, BlockNumberProvider};
 use katana_provider::traits::env::BlockEnvProvider;
@@ -74,28 +74,31 @@ type BlockProductionWithTxnsFuture =
 #[allow(missing_debug_implementations)]
 pub struct BlockProducer<EF: ExecutorFactory> {
     /// The inner mode of mining.
-    pub producer: RwLock<BlockProducerMode<EF>>,
+    pub producer: Arc<RwLock<BlockProducerMode<EF>>>,
 }
 
 impl<EF: ExecutorFactory> BlockProducer<EF> {
     /// Creates a block producer that mines a new block every `interval` milliseconds.
     pub fn interval(backend: Arc<Backend<EF>>, interval: u64) -> Self {
-        let prod = IntervalBlockProducer::new(backend, Some(interval));
-        Self { producer: BlockProducerMode::Interval(prod).into() }
+        let producer = IntervalBlockProducer::new(backend, Some(interval));
+        let producer = Arc::new(RwLock::new(BlockProducerMode::Interval(producer)));
+        Self { producer }
     }
 
     /// Creates a new block producer that will only be possible to mine by calling the
     /// `katana_generateBlock` RPC method.
     pub fn on_demand(backend: Arc<Backend<EF>>) -> Self {
-        let prod = IntervalBlockProducer::new(backend, None);
-        Self { producer: BlockProducerMode::Interval(prod).into() }
+        let producer = IntervalBlockProducer::new(backend, None);
+        let producer = Arc::new(RwLock::new(BlockProducerMode::Interval(producer)));
+        Self { producer }
     }
 
     /// Creates a block producer that mines a new block as soon as there are ready transactions in
     /// the transactions pool.
     pub fn instant(backend: Arc<Backend<EF>>) -> Self {
-        let prod = InstantBlockProducer::new(backend);
-        Self { producer: BlockProducerMode::Instant(prod).into() }
+        let producer = InstantBlockProducer::new(backend);
+        let producer = Arc::new(RwLock::new(BlockProducerMode::Instant(producer)));
+        Self { producer }
     }
 
     pub(super) fn queue(&self, transactions: Vec<ExecutableTxWithHash>) {
@@ -140,6 +143,12 @@ impl<EF: ExecutorFactory> BlockProducer<EF> {
             BlockProducerMode::Instant(producer) => producer.poll_next_unpin(cx),
             BlockProducerMode::Interval(producer) => producer.poll_next_unpin(cx),
         }
+    }
+}
+
+impl<EF: ExecutorFactory> Clone for BlockProducer<EF> {
+    fn clone(&self) -> Self {
+        BlockProducer { producer: self.producer.clone() }
     }
 }
 
@@ -555,6 +564,8 @@ impl<EF: ExecutorFactory> InstantBlockProducer<EF> {
 
         let provider = backend.blockchain.provider();
 
+        // TODO: don't use the previous block env, we should create on based on the current state of
+        // the l1 (to determine the proper gas prices)
         let latest_num = provider.latest_number()?;
         let mut block_env = provider.block_env_at(BlockHashOrNumber::Num(latest_num))?.unwrap();
         backend.update_block_env(&mut block_env);
@@ -570,9 +581,11 @@ impl<EF: ExecutorFactory> InstantBlockProducer<EF> {
                 parent_hash,
                 number: block_env.number,
                 timestamp: block_env.timestamp,
-                gas_prices: block_env.l1_gas_prices.clone(),
+                version: backend.chain_spec.version.clone(),
                 sequencer_address: block_env.sequencer_address,
-                version: CURRENT_STARKNET_VERSION,
+                l1_da_mode: L1DataAvailabilityMode::Calldata,
+                l1_gas_prices: block_env.l1_gas_prices.clone(),
+                l1_data_gas_prices: block_env.l1_data_gas_prices.clone(),
             },
         };
 

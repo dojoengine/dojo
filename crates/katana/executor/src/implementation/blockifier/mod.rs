@@ -102,9 +102,9 @@ impl<'a> StarknetVMProcessor<'a> {
         // TODO: should we enforce the gas price to not be 0,
         // as there's a flag to disable gas uasge instead?
         let eth_l1_gas_price =
-            NonZeroU128::new(header.gas_prices.eth).unwrap_or(NonZeroU128::new(1).unwrap());
+            NonZeroU128::new(header.l1_gas_prices.eth).unwrap_or(NonZeroU128::new(1).unwrap());
         let strk_l1_gas_price =
-            NonZeroU128::new(header.gas_prices.strk).unwrap_or(NonZeroU128::new(1).unwrap());
+            NonZeroU128::new(header.l1_gas_prices.strk).unwrap_or(NonZeroU128::new(1).unwrap());
 
         // TODO: which values is correct for those one?
         let eth_l1_data_gas_price = eth_l1_gas_price;
@@ -238,6 +238,10 @@ impl<'a> BlockExecutor<'a> for StarknetVMProcessor<'a> {
             l1_gas_prices: KatanaGasPrices {
                 eth: eth_l1_gas_price.into(),
                 strk: strk_l1_gas_price.into(),
+            },
+            l1_data_gas_prices: KatanaGasPrices {
+                eth: self.block_context.block_info().gas_prices.eth_l1_data_gas_price.into(),
+                strk: self.block_context.block_info().gas_prices.strk_l1_data_gas_price.into(),
             },
         }
     }

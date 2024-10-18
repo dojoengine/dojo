@@ -1,8 +1,8 @@
 use jsonrpsee::core::{async_trait, Error, RpcResult};
 use katana_executor::{EntryPointCall, ExecutionResult, ExecutorFactory};
 use katana_primitives::block::{BlockHashOrNumber, BlockIdOrTag, FinalityStatus, PartialHeader};
+use katana_primitives::da::L1DataAvailabilityMode;
 use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash, TxHash};
-use katana_primitives::version::CURRENT_STARKNET_VERSION;
 use katana_primitives::Felt;
 use katana_provider::traits::block::{BlockHashProvider, BlockIdReader, BlockNumberProvider};
 use katana_provider::traits::transaction::TransactionProvider;
@@ -29,7 +29,7 @@ use super::StarknetApi;
 #[async_trait]
 impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
     async fn chain_id(&self) -> RpcResult<FeltAsHex> {
-        Ok(self.inner.backend.chain_id.id().into())
+        Ok(self.inner.backend.chain_spec.id.id().into())
     }
 
     async fn get_nonce(
@@ -80,14 +80,17 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                     let block_env = executor.read().block_env();
                     let latest_hash = provider.latest_hash().map_err(StarknetApiError::from)?;
 
-                    let gas_prices = block_env.l1_gas_prices.clone();
+                    let l1_gas_prices = block_env.l1_gas_prices.clone();
+                    let l1_data_gas_prices = block_env.l1_data_gas_prices.clone();
 
                     let header = PartialHeader {
+                        l1_da_mode: L1DataAvailabilityMode::Calldata,
+                        l1_data_gas_prices,
+                        l1_gas_prices,
                         number: block_env.number,
-                        gas_prices,
                         parent_hash: latest_hash,
                         timestamp: block_env.timestamp,
-                        version: CURRENT_STARKNET_VERSION,
+                        version: this.inner.backend.chain_spec.version.clone(),
                         sequencer_address: block_env.sequencer_address,
                     };
 
@@ -168,15 +171,18 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                     let block_env = executor.read().block_env();
                     let latest_hash = provider.latest_hash().map_err(StarknetApiError::from)?;
 
-                    let gas_prices = block_env.l1_gas_prices.clone();
+                    let l1_gas_prices = block_env.l1_gas_prices.clone();
+                    let l1_data_gas_prices = block_env.l1_data_gas_prices.clone();
 
                     let header = PartialHeader {
+                        l1_da_mode: L1DataAvailabilityMode::Calldata,
+                        l1_gas_prices,
+                        l1_data_gas_prices,
                         number: block_env.number,
-                        gas_prices,
                         parent_hash: latest_hash,
-                        version: CURRENT_STARKNET_VERSION,
                         timestamp: block_env.timestamp,
                         sequencer_address: block_env.sequencer_address,
+                        version: this.inner.backend.chain_spec.version.clone(),
                     };
 
                     // TODO(kariy): create a method that can perform this filtering for us instead
@@ -225,13 +231,16 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                     let block_env = executor.read().block_env();
                     let latest_hash = provider.latest_hash().map_err(StarknetApiError::from)?;
 
-                    let gas_prices = block_env.l1_gas_prices.clone();
+                    let l1_gas_prices = block_env.l1_gas_prices.clone();
+                    let l1_data_gas_prices = block_env.l1_data_gas_prices.clone();
 
                     let header = PartialHeader {
+                        l1_da_mode: L1DataAvailabilityMode::Calldata,
+                        l1_gas_prices,
+                        l1_data_gas_prices,
                         number: block_env.number,
-                        gas_prices,
                         parent_hash: latest_hash,
-                        version: CURRENT_STARKNET_VERSION,
+                        version: this.inner.backend.chain_spec.version.clone(),
                         timestamp: block_env.timestamp,
                         sequencer_address: block_env.sequencer_address,
                     };
@@ -431,7 +440,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
         block_id: BlockIdOrTag,
     ) -> RpcResult<Vec<FeeEstimate>> {
         self.on_cpu_blocking_task(move |this| {
-            let chain_id = this.inner.backend.chain_id;
+            let chain_id = this.inner.backend.chain_spec.id;
 
             let transactions = request
                 .into_iter()
@@ -470,8 +479,8 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
 
             // If the node is run with transaction validation disabled, then we should not validate
             // transactions when estimating the fee even if the `SKIP_VALIDATE` flag is not set.
-            #[allow(deprecated)]
-            let should_validate = !(skip_validate || this.inner.backend.config.disable_validate);
+            let should_validate = !(skip_validate
+                || this.inner.backend.executor_factory.execution_flags().skip_validate);
             let flags = katana_executor::SimulationFlag {
                 skip_validate: !should_validate,
                 // We don't care about the nonce when estimating the fee as the nonce value
@@ -495,7 +504,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
         block_id: BlockIdOrTag,
     ) -> RpcResult<FeeEstimate> {
         self.on_cpu_blocking_task(move |this| {
-            let chain_id = this.inner.backend.chain_id;
+            let chain_id = this.inner.backend.chain_spec.id;
 
             let tx = message.into_tx_with_chain_id(chain_id);
             let hash = tx.calculate_hash();

@@ -6,7 +6,7 @@ use async_trait::async_trait;
 use coset::CoseKey;
 use katana_primitives::contract::{ContractAddress, StorageKey, StorageValue};
 use katana_primitives::genesis::allocation::{GenesisAllocation, GenesisContractAlloc};
-use katana_primitives::genesis::constant::CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH;
+use katana_primitives::genesis::constant::CONTROLLER_CLASS_HASH;
 use katana_primitives::genesis::Genesis;
 use katana_primitives::Felt;
 use slot::account_sdk::signers::webauthn::{CredentialID, WebauthnBackend, WebauthnSigner};
@@ -27,12 +27,16 @@ pub fn add_controller_account(genesis: &mut Genesis) -> Result<()> {
     add_controller_account_inner(genesis, credentials.account)
 }
 
-fn add_controller_account_inner(genesis: &mut Genesis, user: slot::account::Account) -> Result<()> {
-    let cred = user.credentials.webauthn.first().unwrap();
+fn add_controller_account_inner(
+    genesis: &mut Genesis,
+    user: slot::account::AccountInfo,
+) -> Result<()> {
+    let cred = user.credentials.first().unwrap();
+    let contract_address = user.controllers.first().unwrap().address;
 
     trace!(
         username = user.id,
-        address = format!("{:#x}", user.contract_address),
+        address = format!("{:#x}", contract_address),
         "Adding Cartridge Controller account to genesis."
     );
 
@@ -43,12 +47,11 @@ fn add_controller_account_inner(genesis: &mut Genesis, user: slot::account::Acco
         let account = GenesisContractAlloc {
             nonce: None,
             balance: Some(U256::from(0xfffffffffffffffu128)),
-            class_hash: Some(CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH),
+            class_hash: Some(CONTROLLER_CLASS_HASH),
             storage: Some(get_contract_storage(credential_id, public_key)?),
         };
 
-        let address =
-            ContractAddress::from(Felt::from_bytes_be(&user.contract_address.to_bytes_be()));
+        let address = ContractAddress::from(contract_address);
 
         (address, GenesisAllocation::Contract(account))
     };
@@ -57,7 +60,7 @@ fn add_controller_account_inner(genesis: &mut Genesis, user: slot::account::Acco
 
     trace!(
         username = user.id,
-        address = format!("{:#x}", user.contract_address),
+        address = format!("{:#x}", contract_address),
         "Cartridge Controller account added to genesis."
     );
 
@@ -74,7 +77,7 @@ pub mod json {
     use super::*;
 
     const CONTROLLER_SIERRA_ARTIFACT: &str =
-        include_str!("../../contracts/compiled/controller_CartridgeAccount.contract_class.json");
+        include_str!("../../contracts/build/controller_CartridgeAccount.contract_class.json");
     const CONTROLLER_CLASS_NAME: &str = "controller";
 
     // TODO(kariy): should accept the whole account struct instead of individual fields
@@ -82,7 +85,8 @@ pub mod json {
     pub fn add_controller_account_json(genesis: &mut GenesisJson) -> Result<()> {
         // bouncer that checks if there is an authenticated slot user
         let user = Credentials::load()?;
-        let cred = user.account.credentials.webauthn.first().unwrap();
+        let cred = user.account.credentials.first().unwrap();
+        let contract_address = user.account.controllers.first().unwrap().address;
 
         let credential_id = webauthn::credential::from_base64(&cred.id)?;
         let public_key = webauthn::cose_key::from_base64(&cred.public_key)?;
@@ -97,9 +101,7 @@ pub mod json {
                 storage: Some(get_contract_storage(credential_id, public_key)?),
             };
 
-            let address = ContractAddress::from(Felt::from_bytes_be(
-                &user.account.contract_address.to_bytes_be(),
-            ));
+            let address = ContractAddress::from(contract_address);
 
             (address, account)
         };
@@ -193,8 +195,9 @@ fn get_contract_storage(
 
 #[cfg(test)]
 mod tests {
+
     use assert_matches::assert_matches;
-    use slot::account::WebAuthnCredential;
+    use slot::account::{Controller, ControllerSigner, SignerType, WebAuthnCredential};
     use starknet::macros::felt;
 
     use super::*;
@@ -219,26 +222,31 @@ mod tests {
     fn test_add_controller_account() {
         let mut genesis = Genesis::default();
 
-        let account = slot::account::Account {
+        let account = slot::account::AccountInfo {
             id: "johnsmith".to_string(),
             name: None,
-            contract_address: CONTROLLER_ADDRESS,
-            credentials: slot::account::AccountCredentials {
-                webauthn: vec![WebAuthnCredential {
-                    id: WEBAUTHN_CREDENTIAL_ID.to_string(),
-                    public_key: WEBAUTHN_PUBLIC_KEY.to_string(),
+            controllers: vec![Controller {
+                id: "controller1".to_string(),
+                address: CONTROLLER_ADDRESS,
+                signers: vec![ControllerSigner {
+                    id: "signer1".to_string(),
+                    r#type: SignerType::WebAuthn,
                 }],
-            },
+            }],
+            credentials: vec![WebAuthnCredential {
+                id: WEBAUTHN_CREDENTIAL_ID.to_string(),
+                public_key: WEBAUTHN_PUBLIC_KEY.to_string(),
+            }],
         };
 
         add_controller_account_inner(&mut genesis, account.clone()).unwrap();
 
-        let address = ContractAddress::from(account.contract_address);
+        let address = ContractAddress::from(account.controllers[0].address);
         let allocation = genesis.allocations.get(&address).unwrap();
 
         assert!(genesis.allocations.contains_key(&address));
         assert_eq!(allocation.balance(), Some(U256::from(0xfffffffffffffffu128)));
-        assert_eq!(allocation.class_hash(), Some(CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH));
+        assert_eq!(allocation.class_hash(), Some(CONTROLLER_CLASS_HASH));
 
         // Check the owner storage value
         assert_matches!(allocation, GenesisAllocation::Contract(contract) => {

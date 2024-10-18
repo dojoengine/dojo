@@ -17,10 +17,30 @@ use crate::proto::{self};
 pub mod schema;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
+pub struct IndexerUpdate {
+    pub head: i64,
+    pub tps: i64,
+    pub last_block_timestamp: i64,
+    pub contract_address: Felt,
+}
+
+impl From<proto::world::SubscribeIndexerResponse> for IndexerUpdate {
+    fn from(value: proto::world::SubscribeIndexerResponse) -> Self {
+        Self {
+            head: value.head,
+            tps: value.tps,
+            last_block_timestamp: value.last_block_timestamp,
+            contract_address: Felt::from_bytes_be_slice(&value.contract_address),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct Query {
     pub clause: Option<Clause>,
     pub limit: u32,
     pub offset: u32,
+    pub dont_include_hashed_keys: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
@@ -179,7 +199,12 @@ impl TryFrom<proto::types::WorldMetadata> for dojo_types::WorldMetadata {
 
 impl From<Query> for proto::types::Query {
     fn from(value: Query) -> Self {
-        Self { clause: value.clause.map(|c| c.into()), limit: value.limit, offset: value.offset }
+        Self {
+            clause: value.clause.map(|c| c.into()),
+            limit: value.limit,
+            offset: value.offset,
+            dont_include_hashed_keys: value.dont_include_hashed_keys,
+        }
     }
 }
 
@@ -313,20 +338,6 @@ impl From<MemberValue> for member_value::ValueType {
             }
             MemberValue::String(string) => member_value::ValueType::String(string),
         }
-    }
-}
-
-impl From<Value> for proto::types::Value {
-    fn from(value: Value) -> Self {
-        let value_type = match value.value_type {
-            ValueType::String(val) => Some(proto::types::value::ValueType::StringValue(val)),
-            ValueType::Int(val) => Some(proto::types::value::ValueType::IntValue(val)),
-            ValueType::UInt(val) => Some(proto::types::value::ValueType::UintValue(val)),
-            ValueType::Bool(val) => Some(proto::types::value::ValueType::BoolValue(val)),
-            ValueType::Bytes(val) => Some(proto::types::value::ValueType::ByteValue(val)),
-        };
-
-        Self { value_type }
     }
 }
 

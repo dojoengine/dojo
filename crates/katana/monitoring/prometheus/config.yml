@@ -1,0 +1,6 @@
+scrape_configs:
+  - job_name: katana
+    metrics_path: "/"
+    scrape_interval: 5s
+    static_configs:
+      - targets: ["host.docker.internal:9001", "localhost:9100"]

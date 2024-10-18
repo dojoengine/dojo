@@ -67,6 +67,8 @@ pub struct KatanaRunnerConfig {
     pub db_dir: Option<PathBuf>,
     /// Whether to run the katana runner with the `dev` rpc endpoints.
     pub dev: bool,
+    /// The chain id to use.
+    pub chain_id: Option<Felt>,
 }
 
 impl Default for KatanaRunnerConfig {
@@ -82,6 +84,7 @@ impl Default for KatanaRunnerConfig {
             messaging: None,
             db_dir: None,
             dev: false,
+            chain_id: None,
         }
     }
 }
@@ -122,6 +125,10 @@ impl KatanaRunner {
             .max_connections(10000)
             .dev(config.dev)
             .fee(!config.disable_fee);
+
+        if let Some(id) = config.chain_id {
+            builder = builder.chain_id(id);
+        }
 
         if let Some(block_time_ms) = config.block_time {
             builder = builder.block_time(block_time_ms);

@@ -11,8 +11,6 @@ katana-core.workspace = true
 katana-db.workspace = true
 katana-node.workspace = true
 katana-primitives.workspace = true
-katana-rpc.workspace = true
-katana-rpc-api.workspace = true
 katana-slot-controller = { workspace = true, optional = true }
 
 alloy-primitives.workspace = true
@@ -35,9 +33,8 @@ url.workspace = true
 assert_matches.workspace = true
 
 [features]
-default = [ "jemalloc", "messaging", "slot" ]
+default = [ "jemalloc", "slot" ]
 
 jemalloc = [  ]
-messaging = [ "katana-node/messaging" ]
 slot = [ "dep:katana-slot-controller", "katana-primitives/slot" ]
 starknet-messaging = [ "katana-node/starknet-messaging" ]

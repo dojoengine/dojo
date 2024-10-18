@@ -12,11 +12,11 @@ use katana_rpc_types::error::dev::DevApiError;
 #[allow(missing_debug_implementations)]
 pub struct DevApi<EF: ExecutorFactory> {
     backend: Arc<Backend<EF>>,
-    block_producer: Arc<BlockProducer<EF>>,
+    block_producer: BlockProducer<EF>,
 }
 
 impl<EF: ExecutorFactory> DevApi<EF> {
-    pub fn new(backend: Arc<Backend<EF>>, block_producer: Arc<BlockProducer<EF>>) -> Self {
+    pub fn new(backend: Arc<Backend<EF>>, block_producer: BlockProducer<EF>) -> Self {
         Self { backend, block_producer }
     }
 
@@ -92,8 +92,7 @@ impl<EF: ExecutorFactory> DevApiServer for DevApi<EF> {
         Ok(())
     }
 
-    #[allow(deprecated)]
     async fn predeployed_accounts(&self) -> Result<Vec<Account>, Error> {
-        Ok(self.backend.config.genesis.accounts().map(|e| Account::new(*e.0, e.1)).collect())
+        Ok(self.backend.chain_spec.genesis.accounts().map(|e| Account::new(*e.0, e.1)).collect())
     }
 }

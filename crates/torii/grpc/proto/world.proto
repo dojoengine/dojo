@@ -7,8 +7,11 @@ import "google/protobuf/empty.proto";
 
 // The World service provides information about the world.
 service World {
+    // Subscribes to updates about the indexer. Like the head block number, tps, etc.
+    rpc SubscribeIndexer (SubscribeIndexerRequest) returns (stream SubscribeIndexerResponse);
+
     // Retrieves metadata about the World including all the registered components and systems.
-    rpc WorldMetadata (MetadataRequest) returns (MetadataResponse);
+    rpc WorldMetadata (WorldMetadataRequest) returns (WorldMetadataResponse);
    
     // Subscribes to models updates.
     rpc SubscribeModels (SubscribeModelsRequest) returns (stream SubscribeModelsResponse);
@@ -21,6 +24,9 @@ service World {
 
     // Retrieve entities
     rpc RetrieveEntities (RetrieveEntitiesRequest) returns (RetrieveEntitiesResponse);
+
+    // Retrieve entities as a stream
+    rpc RetrieveEntitiesStreaming (RetrieveEntitiesRequest) returns (stream RetrieveEntitiesStreamingResponse);
 
     // Subscribe to entity updates.
     rpc SubscribeEventMessages (SubscribeEntitiesRequest) returns (stream SubscribeEntityResponse);
@@ -38,14 +44,26 @@ service World {
     rpc SubscribeEvents (SubscribeEventsRequest) returns (stream SubscribeEventsResponse);
 }
 
+// A request to subscribe to indexer updates.
+message SubscribeIndexerRequest {
+    bytes contract_address = 1;
+}
+
+// A response containing indexer updates.
+message SubscribeIndexerResponse {
+    int64 head = 1;
+    int64 tps = 2;
+    int64 last_block_timestamp = 3;
+    bytes contract_address = 4;
+}
 
 // A request to retrieve metadata for a specific world ID.
-message MetadataRequest {
+message WorldMetadataRequest {
 
 }
 
 // The metadata response contains addresses and class hashes for the world.
-message MetadataResponse {
+message WorldMetadataResponse {
    types.WorldMetadata metadata = 1;
 }
 
@@ -81,6 +99,11 @@ message RetrieveEntitiesRequest {
 message RetrieveEntitiesResponse {
     repeated types.Entity entities = 1;
     uint32 total_count = 2;
+}
+
+message RetrieveEntitiesStreamingResponse {
+    types.Entity entity = 1;
+    uint32 remaining_count = 2;
 }
 
 message RetrieveEventsRequest {

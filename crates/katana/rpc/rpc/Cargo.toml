@@ -36,12 +36,11 @@ dojo-world.workspace = true
 indexmap.workspace = true
 jsonrpsee = { workspace = true, features = [ "client" ] }
 katana-cairo.workspace = true
-katana-node = { workspace = true, features = [ "messaging" ] }
+katana-node.workspace = true
 katana-rpc-api = { workspace = true, features = [ "client" ] }
-katana-runner.workspace = true
-rstest.workspace = true
 num-traits.workspace = true
 rand.workspace = true
+rstest.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tempfile.workspace = true

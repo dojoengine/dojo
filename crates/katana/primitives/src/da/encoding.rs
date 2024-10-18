@@ -139,7 +139,7 @@ pub fn decode_state_updates(value: &[BigUint]) -> Result<StateUpdates, EncodingE
 
     for _ in 0..total_updates {
         let address = iter.next().ok_or(EncodingError::MissingAddress)?;
-        let address: ContractAddress = Felt::from(address).into();
+        let address = ContractAddress::from(address);
 
         let metadata = iter.next().ok_or(EncodingError::MissingMetadata)?;
         let metadata = Metadata::decode(metadata)?;
@@ -308,6 +308,7 @@ mod tests {
     use starknet::macros::felt;
 
     use super::*;
+    use crate::address;
 
     macro_rules! biguint {
         ($s:expr) => {
@@ -352,9 +353,9 @@ mod tests {
         assert_eq!(state_updates.declared_classes.len(), 1);
         assert_eq!(state_updates.deployed_contracts.len(), 0);
 
-        let address: ContractAddress =
-            felt!("2019172390095051323869047481075102003731246132997057518965927979101413600827")
-                .into();
+        let address = address!(
+            "2019172390095051323869047481075102003731246132997057518965927979101413600827"
+        );
 
         assert_eq!(state_updates.nonce_updates.get(&address), Some(&Felt::ONE));
 

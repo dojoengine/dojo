@@ -1,12 +1,11 @@
+#![warn(unused_crate_dependencies)]
+
 //! Saya executable entry point.
 use clap::Parser;
 use console::Style;
 use saya_core::{Saya, SayaConfig};
 
 mod args;
-
-#[cfg(test)]
-mod tests;
 
 use args::SayaArgs;
 
@@ -19,11 +18,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     print_intro(&config);
 
     let mut saya = Saya::new(config).await?;
+    saya.start().await?;
 
-    tokio::select! {
-        res = saya.start() => res?,
-        _ = dojo_utils::signal::wait_signals() => {}
-    }
+    // Wait until Ctrl + C is pressed, then shutdown
+    // ctrl_c().await?;
+    // handle.stop()?;
 
     Ok(())
 }

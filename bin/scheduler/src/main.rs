@@ -2,11 +2,11 @@ use std::fs;
 use std::sync::Arc;
 
 use clap::Parser;
-use katana_primitives::Felt;
-use saya_core::prover::{HttpProverParams, ProgramInput, ProverIdentifier, Scheduler};
+use saya_core::prover::{HttpProverParams, ProgramInput};
 use saya_core::ProverAccessKey;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
+use starknet::core::types::Felt;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 
@@ -29,7 +29,7 @@ fn program_input_from_json(json_data: Value) -> ProgramInput {
     serde_json::from_value(json_data).unwrap()
 }
 
-async fn prove_to_json(result: Vec<String>) {
+async fn _prove_to_json(result: Vec<String>) {
     let mut file = File::create("result.json").await.expect("Failed to create file");
 
     let mut json_map = Map::new();
@@ -46,7 +46,7 @@ async fn prove_to_json(result: Vec<String>) {
 // Entry point of the program with async main function to handle I/O operations.
 
 #[tokio::main]
-async fn main() {
+async fn main() -> anyhow::Result<()> {
     use url::Url;
     let args = CliInput::parse(); // Parse CLI arguments.
     if args.files.is_empty() {
@@ -59,7 +59,7 @@ async fn main() {
     }
 
     // Process each file, converting JSON data to ProgramInput.
-    let inputs: Vec<ProgramInput> = args
+    let _inputs: Vec<ProgramInput> = args
         .files
         .iter()
         .map(|file| {
@@ -67,12 +67,19 @@ async fn main() {
             program_input_from_json(json_data)
         })
         .collect();
-    let prover_params = Arc::new(HttpProverParams {
+    let _prover_params = Arc::new(HttpProverParams {
         prover_url: Url::parse("http://localhost:3000").unwrap(),
         prover_key: ProverAccessKey::from_hex_string(&args.key).unwrap(),
     });
 
-    let result =
-        Scheduler::merge(inputs, args.world, ProverIdentifier::Http(prover_params)).await.unwrap();
-    prove_to_json(vec![result.0]).await;
+    // let (proof, _) =
+    //     Scheduler::merge(inputs, args.world,
+    // ProverIdentifier::Http(prover_params)).await.unwrap();
+
+    // let proof =
+    //     proof.to_felts().into_iter().map(|f| f.to_hex_string()).collect::<Vec<_>>().join(" ");
+
+    // println!("{}", proof);
+
+    Ok(())
 }

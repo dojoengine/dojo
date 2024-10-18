@@ -3,6 +3,7 @@ use std::sync::Arc;
 use alloy_primitives::U256;
 use katana_db::mdbx::{test_utils, DbEnvKind};
 use katana_primitives::block::{BlockHash, FinalityStatus};
+use katana_primitives::chain_spec::ChainSpec;
 use katana_primitives::class::CompiledClass;
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::genesis::allocation::{
@@ -10,6 +11,7 @@ use katana_primitives::genesis::allocation::{
 };
 use katana_primitives::genesis::{Genesis, GenesisClass};
 use katana_primitives::utils::class::parse_compiled_class_v1;
+use katana_primitives::{address, chain_spec};
 use starknet::macros::felt;
 
 use crate::providers::db::DbProvider;
@@ -32,12 +34,12 @@ pub fn test_db_provider() -> DbProvider {
 
 /// Initializes the provider with a genesis block and states.
 fn initialize_test_provider<P: BlockWriter>(provider: &P) {
-    let genesis = create_genesis_for_testing();
+    let chain = create_chain_for_testing();
 
     let hash = BlockHash::ZERO;
     let status = FinalityStatus::AcceptedOnL2;
-    let block = genesis.block().seal_with_hash_and_status(hash, status);
-    let states = genesis.state_updates();
+    let block = chain.block().seal_with_hash_and_status(hash, status);
+    let states = chain.state_updates();
 
     provider
         .insert_block_with_states_and_receipts(block, states, Vec::new(), Vec::new())
@@ -47,9 +49,11 @@ fn initialize_test_provider<P: BlockWriter>(provider: &P) {
 /// Creates a genesis config specifically for testing purposes.
 /// This includes:
 /// - An account with simple `__execute__` function, deployed at address `0x1`.
-pub fn create_genesis_for_testing() -> Genesis {
+pub fn create_chain_for_testing() -> ChainSpec {
+    let mut chain = chain_spec::DEV_UNALLOCATED.clone();
+
     let class_hash = felt!("0x111");
-    let address = ContractAddress::from(felt!("0x1"));
+    let address = address!("0x1");
 
     // TODO: we should have a genesis builder that can do all of this for us.
     let class = {
@@ -72,5 +76,7 @@ pub fn create_genesis_for_testing() -> Genesis {
     // insert test account class and contract
     genesis.classes.insert(class_hash, class);
     genesis.extend_allocations([(address, account)]);
-    genesis
+
+    chain.genesis = genesis;
+    chain
 }

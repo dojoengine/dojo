@@ -10,7 +10,8 @@ use tracing::{error, info, warn};
 
 use crate::ordering::PoolOrd;
 use crate::tx::{PendingTx, PoolTransaction, TxId};
-use crate::validation::{InvalidTransactionError, ValidationOutcome, Validator};
+use crate::validation::error::InvalidTransactionError;
+use crate::validation::{ValidationOutcome, Validator};
 use crate::{PoolError, PoolResult, TransactionPool};
 
 #[derive(Debug)]

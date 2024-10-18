@@ -6,6 +6,7 @@ mod tests {
     use async_graphql::dynamic::Schema;
     use serde_json::Value;
     use starknet::core::types::Felt;
+    use tempfile::NamedTempFile;
 
     use crate::schema::build_schema;
     use crate::tests::{
@@ -166,7 +167,9 @@ mod tests {
     #[allow(clippy::get_first)]
     #[tokio::test(flavor = "multi_thread")]
     async fn models_test() -> Result<()> {
-        let pool = spinup_types_test().await?;
+        let tempfile = NamedTempFile::new().unwrap();
+        let path = tempfile.path().to_string_lossy();
+        let pool = spinup_types_test(&path).await?;
         let schema = build_schema(&pool).await.unwrap();
 
         // we need to order all the records because insertions are done in parallel
