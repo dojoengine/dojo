@@ -18,7 +18,6 @@ serde_json.workspace = true
 serde_with.workspace = true
 starknet.workspace = true
 starknet-crypto.workspace = true
-strum_macros.workspace = true
 thiserror.workspace = true
 
 alloy-primitives.workspace = true

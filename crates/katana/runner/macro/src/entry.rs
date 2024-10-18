@@ -74,7 +74,11 @@ pub fn parse_knobs(input: ItemFn, is_test: bool, config: Configuration) -> Token
     }
 
     if let Some(value) = config.log_path {
-        cfg = quote_spanned! (last_stmt_start_span=> #cfg, log_path: Some(#value), );
+        cfg = quote_spanned! (last_stmt_start_span=> #cfg log_path: Some(#value), );
+    }
+
+    if let Some(value) = config.chain_id {
+        cfg = quote_spanned! (last_stmt_start_span=> #cfg chain_id: Some(#value), );
     }
 
     if config.dev {
