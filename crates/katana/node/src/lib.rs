@@ -96,6 +96,9 @@ impl Node {
     ///
     /// This method will start all the node process, running them until the node is stopped.
     pub async fn launch(self) -> Result<LaunchedNode> {
+        let chain = self.backend.chain_spec.id;
+        info!(%chain, "Starting node.");
+
         if let Some(ref cfg) = self.metrics_config {
             let addr = cfg.addr;
             let mut reports = Vec::new();

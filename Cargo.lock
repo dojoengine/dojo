@@ -8218,7 +8218,6 @@ dependencies = [
  "similar-asserts",
  "starknet 0.12.0",
  "starknet-crypto 0.7.2",
- "strum_macros 0.25.3",
  "thiserror",
 ]
 

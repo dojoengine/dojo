@@ -69,3 +69,12 @@ pub struct AccountInfo {
 pub struct RpcAddr {
     pub addr: SocketAddr,
 }
+
+/// {
+///     "message": "Starting node.",
+///     "chain": "SN_SEPOLIA"
+/// }
+#[derive(Deserialize, Debug)]
+pub struct ChainId {
+    pub chain: String,
+}

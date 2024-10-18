@@ -18,6 +18,7 @@ pub struct Configuration {
     pub db_dir: Option<syn::Expr>,
     pub block_time: Option<syn::Expr>,
     pub log_path: Option<syn::Expr>,
+    pub chain_id: Option<syn::Expr>,
 }
 
 impl Configuration {
@@ -32,6 +33,7 @@ impl Configuration {
             validation: None,
             block_time: None,
             crate_name: None,
+            chain_id: None,
         }
     }
 
@@ -105,6 +107,19 @@ impl Configuration {
         self.accounts = Some(accounts);
         Ok(())
     }
+
+    fn set_chain_id(
+        &mut self,
+        chain_id: syn::Expr,
+        span: proc_macro2::Span,
+    ) -> Result<(), syn::Error> {
+        if self.chain_id.is_some() {
+            return Err(syn::Error::new(span, "`chain_id` set multiple times."));
+        }
+
+        self.chain_id = Some(chain_id);
+        Ok(())
+    }
 }
 
 enum RunnerArg {
@@ -113,6 +128,7 @@ enum RunnerArg {
     Validation,
     Accounts,
     DbDir,
+    ChainId,
 }
 
 impl std::str::FromStr for RunnerArg {
@@ -125,9 +141,10 @@ impl std::str::FromStr for RunnerArg {
             "validation" => Ok(RunnerArg::Validation),
             "accounts" => Ok(RunnerArg::Accounts),
             "db_dir" => Ok(RunnerArg::DbDir),
+            "chain_id" => Ok(RunnerArg::ChainId),
             _ => Err(format!(
                 "Unknown attribute {s} is specified; expected one of: `fee`, `validation`, \
-                 `accounts`, `db_dir`, `block_time`",
+                 `accounts`, `db_dir`, `block_time`, `chain_id`",
             )),
         }
     }
@@ -172,7 +189,9 @@ pub fn build_config(
                     RunnerArg::DbDir => {
                         config.set_db_dir(expr.clone(), Spanned::span(&namevalue))?
                     }
-
+                    RunnerArg::ChainId => {
+                        config.set_chain_id(expr.clone(), Spanned::span(&namevalue))?
+                    }
                     RunnerArg::Fee => config.set_fee(expr.clone(), Spanned::span(&namevalue))?,
                 }
             }
