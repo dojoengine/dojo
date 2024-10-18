@@ -516,7 +516,6 @@ impl Katana {
             trace!(line);
 
             if self.json_log {
-                dbg!(&line);
                 // Because we using a concrete type for rpc addr log, we need to parse this first.
                 // Otherwise if we were to inverse the if statements, the else block
                 // would never be executed as all logs can be parsed as `JsonLog`.
