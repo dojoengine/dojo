@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1729266328749,
+  "lastUpdate": 1729293125720,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -26821,6 +26821,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 5352664,
             "range": "± 405465",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "valentin@pupucecorp.com",
+            "name": "valdo.carbonaboyz.stark",
+            "username": "MartianGreed"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f037f84a6571ffff9929f477bee8d47266c435aa",
+          "message": "feat: update bindgen for dojo.js sdk (#2501)\n\n* feat: update bindgen for dojo.js sdk\r\n\r\n* feat: generate models\r\n\r\n* feat: generate contracts bindings\r\n\r\n* feat: add recs for retrocompat\r\n\r\n* fix: big contracts types\r\n\r\n* refac: use specific type alias to avoid duplication\r\n\r\n* feat: add torii erc support\r\n\r\n* fix: fmt\r\n\r\n* fix: fix fmt\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-10-18T16:55:58-06:00",
+          "tree_id": "f77406c8ab456614539220161bc648f700a1d934",
+          "url": "https://github.com/dojoengine/dojo/commit/f037f84a6571ffff9929f477bee8d47266c435aa"
+        },
+        "date": 1729293124056,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 12461024080,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
