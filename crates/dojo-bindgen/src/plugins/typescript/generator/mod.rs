@@ -10,7 +10,6 @@ pub(crate) mod schema;
 /// Get the namespace and path of a model
 /// eg. dojo_examples-actions -> actions
 /// or just get the raw type name -> actions
-///
 pub(crate) fn get_namespace_and_path(token: &Composite) -> (String, String, String) {
     let ns_split = token.type_path.split("::").collect::<Vec<&str>>();
     if ns_split.len() < 2 {
@@ -36,7 +35,8 @@ pub(crate) fn generate_type_init(token: &Composite) -> String {
                         format!("\t\t\t{}: {},", i.name, JsDefaultValue::from(c))
                     }
                     Err(_) => {
-                        // this will fail on core types as `core::starknet::contract_address::ContractAddress`
+                        // this will fail on core types as
+                        // `core::starknet::contract_address::ContractAddress`
                         // `core::felt252`
                         // `core::integer::u64`
                         // and so son
@@ -174,8 +174,7 @@ mod tests {
         Tuple,
     };
 
-    use crate::plugins::typescript::generator::generate_type_init;
-    use crate::plugins::typescript::generator::{JsDefaultValue, JsType};
+    use crate::plugins::typescript::generator::{generate_type_init, JsDefaultValue, JsType};
 
     impl PartialEq<JsType> for &str {
         fn eq(&self, other: &JsType) -> bool {

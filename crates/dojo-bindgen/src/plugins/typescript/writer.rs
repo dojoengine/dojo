@@ -1,14 +1,10 @@
-use crate::{
-    plugins::{BindgenContractGenerator, Buffer},
-    DojoData,
-};
-use cainome::parser::tokens::Composite;
 use std::path::{Path, PathBuf};
 
-use crate::{
-    error::BindgenResult,
-    plugins::{BindgenModelGenerator, BindgenWriter},
-};
+use cainome::parser::tokens::Composite;
+
+use crate::error::BindgenResult;
+use crate::plugins::{BindgenContractGenerator, BindgenModelGenerator, BindgenWriter, Buffer};
+use crate::DojoData;
 
 pub struct TsFileWriter {
     path: &'static str,
@@ -143,9 +139,11 @@ impl BindgenWriter for TsFileContractWriter {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+    use std::path::PathBuf;
+
     use super::*;
     use crate::{DojoData, DojoWorld};
-    use std::{collections::HashMap, path::PathBuf};
 
     #[test]
     fn test_ts_file_writer() {

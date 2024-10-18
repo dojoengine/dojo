@@ -1,9 +1,7 @@
 use cainome::parser::tokens::{Composite, CompositeType};
 
-use crate::{
-    error::BindgenResult,
-    plugins::{BindgenModelGenerator, Buffer},
-};
+use crate::error::BindgenResult;
+use crate::plugins::{BindgenModelGenerator, Buffer};
 
 pub(crate) struct TsEnumGenerator;
 
@@ -43,9 +41,8 @@ mod tests {
         CompositeInner, CompositeInnerKind, CompositeType, CoreBasic, Token,
     };
 
-    use crate::plugins::Buffer;
-
     use super::*;
+    use crate::plugins::Buffer;
 
     #[test]
     fn test_enumeration_without_inners() {
@@ -86,14 +83,22 @@ mod tests {
         let token = create_available_theme_enum_token();
         let result = writer.generate(&token, &mut buff).unwrap();
 
-        assert_eq!(result, "// Type definition for `core::test::AvailableTheme` enum\nexport enum AvailableTheme {\n\tLight,\n\tDark,\n\tDojo,\n}\n");
+        assert_eq!(
+            result,
+            "// Type definition for `core::test::AvailableTheme` enum\nexport enum AvailableTheme \
+             {\n\tLight,\n\tDark,\n\tDojo,\n}\n"
+        );
     }
 
     #[test]
     fn test_it_does_not_duplicates_enum() {
         let mut buff = Buffer::new();
         let writer = TsEnumGenerator;
-        buff.push("// Type definition for `core::test::AvailableTheme` enum\nexport enum AvailableTheme {\n\tLight,\n\tDark,\n\tDojo,\n}\n".to_owned());
+        buff.push(
+            "// Type definition for `core::test::AvailableTheme` enum\nexport enum AvailableTheme \
+             {\n\tLight,\n\tDark,\n\tDojo,\n}\n"
+                .to_owned(),
+        );
 
         let token_dup = create_available_theme_enum_token();
         let result = writer.generate(&token_dup, &mut buff).unwrap();

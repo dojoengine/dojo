@@ -101,7 +101,6 @@ pub trait BindgenModelGenerator: Sync {
     ///
     /// # Arguments
     ///
-    ///
     fn generate(&self, token: &Composite, buffer: &mut Buffer) -> BindgenResult<String>;
 }
 

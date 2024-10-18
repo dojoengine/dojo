@@ -2,18 +2,17 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use async_trait::async_trait;
+use generator::r#enum::TsEnumGenerator;
 use generator::erc::TsErcGenerator;
 use generator::function::TsFunctionGenerator;
 use generator::interface::TsInterfaceGenerator;
-use generator::r#enum::TsEnumGenerator;
 use generator::schema::TsSchemaGenerator;
 use writer::{TsFileContractWriter, TsFileWriter};
 
+use super::BindgenWriter;
 use crate::error::BindgenResult;
 use crate::plugins::BuiltinPlugin;
 use crate::DojoData;
-
-use super::BindgenWriter;
 
 pub(crate) mod generator;
 pub(crate) mod writer;

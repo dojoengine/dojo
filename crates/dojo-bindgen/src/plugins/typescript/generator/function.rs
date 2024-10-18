@@ -2,13 +2,10 @@ use cainome::parser::tokens::{CompositeType, Function, Token};
 use convert_case::{Case, Casing};
 use dojo_world::contracts::naming;
 
-use crate::{
-    error::BindgenResult,
-    plugins::{BindgenContractGenerator, Buffer},
-    DojoContract,
-};
-
 use super::JsType;
+use crate::error::BindgenResult;
+use crate::plugins::{BindgenContractGenerator, Buffer};
+use crate::DojoContract;
 
 pub(crate) struct TsFunctionGenerator;
 impl TsFunctionGenerator {
@@ -136,17 +133,13 @@ impl BindgenContractGenerator for TsFunctionGenerator {
 
 #[cfg(test)]
 mod tests {
-    use cainome::parser::{
-        tokens::{CoreBasic, Function, Token},
-        TokenizedAbi,
-    };
+    use cainome::parser::tokens::{CoreBasic, Function, Token};
+    use cainome::parser::TokenizedAbi;
     use dojo_world::contracts::naming;
 
     use super::TsFunctionGenerator;
-    use crate::{
-        plugins::{BindgenContractGenerator, Buffer},
-        DojoContract,
-    };
+    use crate::plugins::{BindgenContractGenerator, Buffer};
+    use crate::DojoContract;
 
     #[test]
     fn test_check_imports() {

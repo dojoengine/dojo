@@ -1,11 +1,8 @@
 use cainome::parser::tokens::{Composite, CompositeType};
 
-use crate::{
-    error::BindgenResult,
-    plugins::{BindgenModelGenerator, Buffer},
-};
-
 use super::JsType;
+use crate::error::BindgenResult;
+use crate::plugins::{BindgenModelGenerator, Buffer};
 
 pub(crate) struct TsInterfaceGenerator;
 
@@ -40,9 +37,8 @@ mod tests {
         CompositeInner, CompositeInnerKind, CompositeType, CoreBasic, Token,
     };
 
-    use crate::plugins::Buffer;
-
     use super::*;
+    use crate::plugins::Buffer;
 
     #[test]
     fn test_interface_without_inners() {
@@ -83,7 +79,12 @@ mod tests {
         let token = create_test_struct_token();
         let result = writer.generate(&token, &mut buff).unwrap();
 
-        assert_eq!(result, "// Type definition for `core::test::TestStruct` struct\nexport interface TestStruct {\n\tfieldOrder: string[];\n\tfield1: number;\n\tfield2: number;\n\tfield3: number;\n}\n");
+        assert_eq!(
+            result,
+            "// Type definition for `core::test::TestStruct` struct\nexport interface TestStruct \
+             {\n\tfieldOrder: string[];\n\tfield1: number;\n\tfield2: number;\n\tfield3: \
+             number;\n}\n"
+        );
     }
 
     fn create_test_struct_token() -> Composite {

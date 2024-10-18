@@ -1,11 +1,8 @@
 use cainome::parser::tokens::{Composite, CompositeType};
 
-use crate::{
-    error::BindgenResult,
-    plugins::{BindgenModelGenerator, Buffer},
-};
-
 use super::{generate_type_init, get_namespace_and_path};
+use crate::error::BindgenResult;
+use crate::plugins::{BindgenModelGenerator, Buffer};
 
 /// This generator will build a schema based on previous generator results.
 /// first we need to generate interface of schema which will be used in dojo.js sdk to fully type
@@ -25,7 +22,11 @@ impl TsSchemaGenerator {
         let (ns, namespace, type_name) = get_namespace_and_path(token);
         let schema_type = format!("export interface {namespace}SchemaType extends SchemaType");
         if !buffer.has(&schema_type) {
-            buffer.push(format!("export interface {namespace}SchemaType extends SchemaType {{\n\t{ns}: {{\n\t\t{}: {},\n\t}},\n}}", type_name, type_name));
+            buffer.push(format!(
+                "export interface {namespace}SchemaType extends SchemaType {{\n\t{ns}: \
+                 {{\n\t\t{}: {},\n\t}},\n}}",
+                type_name, type_name
+            ));
             return;
         }
 
@@ -49,9 +50,10 @@ impl TsSchemaGenerator {
         let const_type = format!("export const schema: {namespace}SchemaType");
         if !buffer.has(&const_type) {
             buffer.push(format!(
-            "export const schema: {namespace}SchemaType = {{\n\t{ns}: {{\n\t\t{}: {},\n\t}},\n}};",
-            type_name,
-            generate_type_init(token)
+                "export const schema: {namespace}SchemaType = {{\n\t{ns}: {{\n\t\t{}: \
+                 {},\n\t}},\n}};",
+                type_name,
+                generate_type_init(token)
             ));
             return;
         }
@@ -77,8 +79,8 @@ impl BindgenModelGenerator for TsSchemaGenerator {
         // this should be hold in a buffer item
         self.handle_schema_type(token, buffer);
 
-        // in buffer search for const schema: InterfaceName =  named {pascal_case(namespace)}SchemaType extends
-        // SchemaType
+        // in buffer search for const schema: InterfaceName =  named
+        // {pascal_case(namespace)}SchemaType extends SchemaType
         // this should be hold in a buffer item
         self.handle_schema_const(token, buffer);
 
@@ -136,7 +138,11 @@ mod tests {
 
         let token = create_test_struct_token("TestStruct");
         let _result = generator.generate(&token, &mut buffer);
-        assert_eq!("export interface OnchainDashSchemaType extends SchemaType {\n\tonchain_dash: {\n\t\tTestStruct: TestStruct,\n\t},\n}", buffer[1]);
+        assert_eq!(
+            "export interface OnchainDashSchemaType extends SchemaType {\n\tonchain_dash: \
+             {\n\t\tTestStruct: TestStruct,\n\t},\n}",
+            buffer[1]
+        );
     }
 
     #[test]
@@ -148,11 +154,19 @@ mod tests {
         generator.handle_schema_type(&token, &mut buffer);
 
         assert_ne!(0, buffer.len());
-        assert_eq!("export interface OnchainDashSchemaType extends SchemaType {\n\tonchain_dash: {\n\t\tTestStruct: TestStruct,\n\t},\n}", buffer[0]);
+        assert_eq!(
+            "export interface OnchainDashSchemaType extends SchemaType {\n\tonchain_dash: \
+             {\n\t\tTestStruct: TestStruct,\n\t},\n}",
+            buffer[0]
+        );
 
         let token_2 = create_test_struct_token("AvailableTheme");
         generator.handle_schema_type(&token_2, &mut buffer);
-        assert_eq!("export interface OnchainDashSchemaType extends SchemaType {\n\tonchain_dash: {\n\t\tTestStruct: TestStruct,\n\t\tAvailableTheme: AvailableTheme,\n\t},\n}", buffer[0]);
+        assert_eq!(
+            "export interface OnchainDashSchemaType extends SchemaType {\n\tonchain_dash: \
+             {\n\t\tTestStruct: TestStruct,\n\t\tAvailableTheme: AvailableTheme,\n\t},\n}",
+            buffer[0]
+        );
     }
 
     #[test]
@@ -163,12 +177,24 @@ mod tests {
 
         generator.handle_schema_const(&token, &mut buffer);
         assert_eq!(buffer.len(), 1);
-        assert_eq!(buffer[0], "export const schema: OnchainDashSchemaType = {\n\tonchain_dash: {\n\t\tTestStruct: {\n\t\t\tfieldOrder: ['field1', 'field2', 'field3'],\n\t\t\tfield1: 0,\n\t\t\tfield2: 0,\n\t\t\tfield3: 0,\n\t\t},\n\t},\n};");
+        assert_eq!(
+            buffer[0],
+            "export const schema: OnchainDashSchemaType = {\n\tonchain_dash: {\n\t\tTestStruct: \
+             {\n\t\t\tfieldOrder: ['field1', 'field2', 'field3'],\n\t\t\tfield1: \
+             0,\n\t\t\tfield2: 0,\n\t\t\tfield3: 0,\n\t\t},\n\t},\n};"
+        );
 
         let token_2 = create_test_struct_token("AvailableTheme");
         generator.handle_schema_const(&token_2, &mut buffer);
         assert_eq!(buffer.len(), 1);
-        assert_eq!(buffer[0], "export const schema: OnchainDashSchemaType = {\n\tonchain_dash: {\n\t\tTestStruct: {\n\t\t\tfieldOrder: ['field1', 'field2', 'field3'],\n\t\t\tfield1: 0,\n\t\t\tfield2: 0,\n\t\t\tfield3: 0,\n\t\t},\n\t\tAvailableTheme: {\n\t\t\tfieldOrder: ['field1', 'field2', 'field3'],\n\t\t\tfield1: 0,\n\t\t\tfield2: 0,\n\t\t\tfield3: 0,\n\t\t},\n\t},\n};");
+        assert_eq!(
+            buffer[0],
+            "export const schema: OnchainDashSchemaType = {\n\tonchain_dash: {\n\t\tTestStruct: \
+             {\n\t\t\tfieldOrder: ['field1', 'field2', 'field3'],\n\t\t\tfield1: \
+             0,\n\t\t\tfield2: 0,\n\t\t\tfield3: 0,\n\t\t},\n\t\tAvailableTheme: \
+             {\n\t\t\tfieldOrder: ['field1', 'field2', 'field3'],\n\t\t\tfield1: \
+             0,\n\t\t\tfield2: 0,\n\t\t\tfield3: 0,\n\t\t},\n\t},\n};"
+        );
     }
 
     fn create_test_struct_token(name: &str) -> Composite {

@@ -1,11 +1,8 @@
 use cainome::parser::tokens::Composite;
 
-use crate::{
-    error::BindgenResult,
-    plugins::{BindgenModelGenerator, Buffer},
-};
-
 use super::get_namespace_and_path;
+use crate::error::BindgenResult;
+use crate::plugins::{BindgenModelGenerator, Buffer};
 
 const ERC_TORII_TPL: &str = "// Type definition for ERC__Balance struct
 export type ERC__Type = 'ERC20' | 'ERC721';
@@ -33,7 +30,8 @@ export interface ERC__Transfer {
     tokenMetadata: ERC__Token;
     transactionHash: string;
 }";
-const ERC_TORII_TYPES: &str = "\n\t\tERC__Balance: ERC__Balance,\n\t\tERC__Token: ERC__Token,\n\t\tERC__Transfer: ERC__Transfer,";
+const ERC_TORII_TYPES: &str = "\n\t\tERC__Balance: ERC__Balance,\n\t\tERC__Token: \
+                               ERC__Token,\n\t\tERC__Transfer: ERC__Transfer,";
 const ERC_TORII_INIT: &str = "
 \t\tERC__Balance: {
 \t\t\tfieldorder: ['balance', 'type', 'tokenmetadata'],
