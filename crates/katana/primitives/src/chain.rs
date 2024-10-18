@@ -191,9 +191,9 @@ mod tests {
         assert_eq!(ChainId::from(sepolia_id), ChainId::SEPOLIA);
         assert_eq!(ChainId::from(felt!("0x1337")), ChainId::Id(felt!("0x1337")));
 
-        assert_eq!(ChainId::MAINNET.to_string(), "Mainnet");
-        assert_eq!(ChainId::GOERLI.to_string(), "Goerli");
-        assert_eq!(ChainId::SEPOLIA.to_string(), "Sepolia");
+        assert_eq!(ChainId::MAINNET.to_string(), "SN_MAIN");
+        assert_eq!(ChainId::GOERLI.to_string(), "SN_GOERLI");
+        assert_eq!(ChainId::SEPOLIA.to_string(), "SN_SEPOLIA");
         assert_eq!(ChainId::Id(felt!("0x1337")).to_string(), "0x1337");
     }
 
