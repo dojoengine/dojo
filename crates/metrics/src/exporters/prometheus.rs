@@ -38,6 +38,7 @@ impl PrometheusRecorder {
         Ok(handle)
     }
 
+    /// Get the handle to the installed Prometheus recorder (if any).
     pub fn current() -> Option<Prometheus> {
         PROMETHEUS_HANDLE.get().cloned()
     }
