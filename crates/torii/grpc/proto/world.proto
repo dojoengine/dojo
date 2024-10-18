@@ -108,7 +108,7 @@ message RetrieveEventsResponse {
 }
 
 message SubscribeEventsRequest {
-    types.KeysClause keys = 1;
+    repeated types.EntityKeysClause keys = 1;
 }
 
 message SubscribeEventsResponse {

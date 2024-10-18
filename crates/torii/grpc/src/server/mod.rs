@@ -834,9 +834,11 @@ impl DojoWorld {
 
     async fn subscribe_events(
         &self,
-        clause: proto::types::KeysClause,
+        clause: Vec<proto::types::EntityKeysClause>,
     ) -> Result<Receiver<Result<proto::world::SubscribeEventsResponse, tonic::Status>>, Error> {
-        self.event_manager.add_subscriber(clause.into()).await
+        self.event_manager
+            .add_subscriber(clause.into_iter().map(|keys| keys.into()).collect())
+            .await
     }
 }
 
