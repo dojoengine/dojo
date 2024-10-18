@@ -15,9 +15,7 @@ use crate::proto::world::{
     UpdateEntitiesSubscriptionRequest, WorldMetadataRequest,
 };
 use crate::types::schema::{Entity, SchemaError};
-use crate::types::{
-    EntityKeysClause, Event, EventQuery, IndexerUpdate, KeysClause, ModelKeysClause, Query,
-};
+use crate::types::{EntityKeysClause, Event, EventQuery, IndexerUpdate, ModelKeysClause, Query};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -206,9 +204,9 @@ impl WorldClient {
     /// Subscribe to the events of a World.
     pub async fn subscribe_events(
         &mut self,
-        keys: Option<KeysClause>,
+        keys: Vec<EntityKeysClause>,
     ) -> Result<EventUpdateStreaming, Error> {
-        let keys = keys.map(|c| c.into());
+        let keys = keys.into_iter().map(|c| c.into()).collect();
 
         let stream = self
             .inner
