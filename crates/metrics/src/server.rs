@@ -18,16 +18,14 @@ impl<MetricsExporter> Server<MetricsExporter>
 where
     MetricsExporter: Exporter + 'static,
 {
+    /// Creates a new metrics server using the given exporter.
     pub fn new(exporter: MetricsExporter) -> Self {
         describe_memory_stats();
         let hooks: Hooks = vec![Box::new(collect_memory_stats)];
         Self { exporter, hooks }
     }
 
-    pub fn hooks<I>(mut self, hooks: I) -> Self
-    where
-        I: IntoIterator<Item = BoxedHook<()>>,
-    {
+    pub fn hooks<I: IntoIterator<Item = BoxedHook<()>>>(mut self, hooks: I) -> Self {
         self.hooks.extend(hooks);
         self
     }
@@ -36,21 +34,21 @@ where
     pub async fn start(self, addr: SocketAddr) -> Result<(), Error> {
         let hooks = Arc::new(move || self.hooks.iter().for_each(|hook| hook()));
 
-        let make_svc = make_service_fn(move |_| {
-            let hook = Arc::clone(&hooks);
-            let handle = self.exporter.clone();
-            async move {
-                Ok::<_, Infallible>(service_fn(move |_: Request<Body>| {
-                    (hook)();
-                    let metrics = Body::from(handle.export());
-                    async move { Ok::<_, Infallible>(Response::new(metrics)) }
-                }))
-            }
-        });
-
         hyper::Server::try_bind(&addr)
             .map_err(|_| Error::FailedToBindAddress { addr })?
-            .serve(make_svc)
+            .serve(make_service_fn(move |_| {
+                let hook = Arc::clone(&hooks);
+                let exporter = self.exporter.clone();
+                async move {
+                    Ok::<_, Infallible>(service_fn(move |_: Request<Body>| {
+                        // call the hooks to collect metrics before exporting them
+                        (hook)();
+                        // export the metrics from the installed exporter and send as response
+                        let metrics = Body::from(exporter.export());
+                        async move { Ok::<_, Infallible>(Response::new(metrics)) }
+                    }))
+                }
+            }))
             .await?;
 
         Ok(())
