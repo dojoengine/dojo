@@ -13,7 +13,7 @@ use tokio::sync::RwLock as AsyncRwLock;
 use torii_grpc::client::{EntityUpdateStreaming, EventUpdateStreaming, IndexerUpdateStreaming};
 use torii_grpc::proto::world::{RetrieveEntitiesResponse, RetrieveEventsResponse};
 use torii_grpc::types::schema::Entity;
-use torii_grpc::types::{EntityKeysClause, Event, EventQuery, KeysClause, Query};
+use torii_grpc::types::{EntityKeysClause, Event, EventQuery, Query};
 use torii_relay::client::EventLoop;
 use torii_relay::types::Message;
 
@@ -159,7 +159,7 @@ impl Client {
     /// A direct stream to grpc subscribe starknet events
     pub async fn on_starknet_event(
         &self,
-        keys: Option<KeysClause>,
+        keys: Vec<EntityKeysClause>,
     ) -> Result<EventUpdateStreaming, Error> {
         let mut grpc_client = self.inner.write().await;
         let stream = grpc_client.subscribe_events(keys).await?;

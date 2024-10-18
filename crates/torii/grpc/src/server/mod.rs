@@ -857,9 +857,11 @@ impl DojoWorld {
 
     async fn subscribe_events(
         &self,
-        clause: proto::types::KeysClause,
+        clause: Vec<proto::types::EntityKeysClause>,
     ) -> Result<Receiver<Result<proto::world::SubscribeEventsResponse, tonic::Status>>, Error> {
-        self.event_manager.add_subscriber(clause.into()).await
+        self.event_manager
+            .add_subscriber(clause.into_iter().map(|keys| keys.into()).collect())
+            .await
     }
 }
 
@@ -1260,8 +1262,7 @@ impl proto::world::world_server::World for DojoWorld {
         &self,
         request: Request<proto::world::SubscribeEventsRequest>,
     ) -> ServiceResult<Self::SubscribeEventsStream> {
-        let keys = request.into_inner().keys.unwrap_or_default();
-
+        let keys = request.into_inner().keys;
         let rx = self.subscribe_events(keys).await.map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::SubscribeEventsStream))
