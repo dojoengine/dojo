@@ -8393,6 +8393,11 @@ dependencies = [
 [[package]]
 name = "katana-trie"
 version = "1.0.0-alpha.16"
+dependencies = [
+ "anyhow",
+ "bitvec",
+ "slab",
+]
 
 [[package]]
 name = "keccak"

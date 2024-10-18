@@ -70,7 +70,6 @@ dojo-metrics = { path = "crates/metrics" }
 
 # dojo-lang
 dojo-bindgen = { path = "crates/dojo-bindgen" }
-dojo-core = { path = "crates/dojo-core" }
 dojo-lang = { path = "crates/dojo-lang" }
 dojo-test-utils = { path = "crates/dojo-test-utils" }
 dojo-types = { path = "crates/dojo-types" }
@@ -81,8 +80,6 @@ topological-sort = "0.2"
 
 # katana
 katana-cairo = { path = "crates/katana/cairo" }
-katana-codecs = { path = "crates/katana/storage/codecs" }
-katana-codecs-derive = { path = "crates/katana/storage/codecs/derive" }
 katana-core = { path = "crates/katana/core", default-features = false }
 katana-db = { path = "crates/katana/storage/db" }
 katana-executor = { path = "crates/katana/executor" }
@@ -99,9 +96,6 @@ katana-rpc-types-builder = { path = "crates/katana/rpc/rpc-types-builder" }
 katana-runner = { path = "crates/katana/runner" }
 katana-slot-controller = { path = "crates/katana/controller" }
 katana-tasks = { path = "crates/katana/tasks" }
-
-# torii
-torii-client = { path = "crates/torii/client" }
 torii-core = { path = "crates/torii/core" }
 torii-graphql = { path = "crates/torii/graphql" }
 torii-grpc = { path = "crates/torii/grpc" }
@@ -114,7 +108,6 @@ saya-provider = { path = "crates/saya/provider" }
 
 # sozo
 sozo-ops = { path = "crates/sozo/ops" }
-sozo-signers = { path = "crates/sozo/signers" }
 sozo-walnut = { path = "crates/sozo/walnut" }
 
 anyhow = "1.0.89"
@@ -132,7 +125,6 @@ cairo-lang-diagnostics = "2.7.0"
 cairo-lang-filesystem = "2.7.0"
 cairo-lang-formatter = "2.7.0"
 cairo-lang-language-server = "2.7.0"
-cairo-lang-lowering = "2.7.0"
 cairo-lang-parser = "2.7.0"
 cairo-lang-plugins = { version = "2.7.0", features = [ "testing" ] }
 cairo-lang-project = "2.7.0"
@@ -147,7 +139,6 @@ cairo-lang-test-plugin = "2.7.0"
 cairo-lang-test-runner = "2.7.0"
 cairo-lang-test-utils = "2.7.0"
 cairo-lang-utils = "2.7.0"
-cairo-vm = "1.0.0-rc4"
 camino = { version = "1.1.2", features = [ "serde1" ] }
 chrono = { version = "0.4.24", features = [ "serde" ] }
 clap = { version = "4.5.16", features = [ "derive", "env" ] }
@@ -168,13 +159,11 @@ indoc = "1.0.7"
 itertools = "0.12.1"
 jsonrpsee = { version = "0.16.2", default-features = false }
 lazy_static = "1.4.0"
-log = "0.4.21"
 metrics = "0.23.0"
 num-traits = { version = "0.2", default-features = false }
 once_cell = "1.0"
 parking_lot = "0.12.1"
 postcard = { version = "1.0.10", features = [ "use-std" ], default-features = false }
-pretty_assertions = "1.2.1"
 rand = "0.8.5"
 rayon = "1.8.0"
 regex = "1.10.3"
@@ -192,7 +181,6 @@ serde_with = "3.9.0"
 similar-asserts = "1.5.0"
 smol_str = { version = "0.2.0", features = [ "serde" ] }
 sqlx = { version = "0.7.2", features = [ "chrono", "macros", "regexp", "runtime-async-std", "runtime-tokio", "sqlite", "uuid" ] }
-starknet_api = "0.11.0"
 strum = "0.25"
 strum_macros = "0.25"
 tempfile = "3.9.0"
@@ -235,13 +223,10 @@ criterion = "0.5.1"
 slot = { git = "https://github.com/cartridge-gg/slot", rev = "1298a30" }
 
 alloy-contract = { version = "0.3", default-features = false }
-alloy-json-rpc = { version = "0.3", default-features = false }
 alloy-network = { version = "0.3", default-features = false }
 alloy-provider = { version = "0.3", default-features = false, features = [ "reqwest" ] }
 alloy-rpc-types-eth = { version = "0.3", default-features = false }
-alloy-signer = { version = "0.3", default-features = false }
 alloy-transport = { version = "0.3", default-features = false }
 
 starknet = "0.12.0"
 starknet-crypto = "0.7.1"
-starknet-types-core = "0.1.6"
