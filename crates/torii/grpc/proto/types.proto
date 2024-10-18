@@ -73,6 +73,7 @@ message Query {
     Clause clause = 1;
     uint32 limit = 2;
     uint32 offset = 3;
+    bool dont_include_hashed_keys = 4;
 }
 
 message EventQuery {

@@ -4,6 +4,7 @@ use std::num::ParseIntError;
 use futures_util::stream::MapOk;
 use futures_util::{Stream, StreamExt, TryStreamExt};
 use starknet::core::types::{Felt, FromStrError, StateDiff, StateUpdate};
+use tonic::codec::CompressionEncoding;
 #[cfg(not(target_arch = "wasm32"))]
 use tonic::transport::Endpoint;
 
@@ -55,7 +56,9 @@ impl WorldClient {
         let channel = endpoint.connect().await.map_err(Error::Transport)?;
         Ok(Self {
             _world_address: world_address,
-            inner: world_client::WorldClient::with_origin(channel, endpoint.uri().clone()),
+            inner: world_client::WorldClient::with_origin(channel, endpoint.uri().clone())
+                .accept_compressed(CompressionEncoding::Gzip)
+                .send_compressed(CompressionEncoding::Gzip),
         })
     }
 
@@ -64,7 +67,9 @@ impl WorldClient {
     pub async fn new(endpoint: String, _world_address: Felt) -> Result<Self, Error> {
         Ok(Self {
             _world_address,
-            inner: world_client::WorldClient::new(tonic_web_wasm_client::Client::new(endpoint)),
+            inner: world_client::WorldClient::new(tonic_web_wasm_client::Client::new(endpoint))
+                .accept_compressed(CompressionEncoding::Gzip)
+                .send_compressed(CompressionEncoding::Gzip),
         })
     }
 

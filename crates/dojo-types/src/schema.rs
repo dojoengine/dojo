@@ -327,7 +327,7 @@ pub struct EnumOption {
 }
 
 impl Enum {
-    pub fn option(&self) -> Result<String, EnumError> {
+    pub fn option(&self) -> Result<&EnumOption, EnumError> {
         let option: usize = if let Some(option) = self.option {
             option as usize
         } else {
@@ -338,7 +338,7 @@ impl Enum {
             return Err(EnumError::OptionInvalid);
         }
 
-        Ok(self.options[option].name.clone())
+        Ok(&self.options[option])
     }
 
     pub fn set_option(&mut self, name: &str) -> Result<(), EnumError> {
@@ -352,7 +352,7 @@ impl Enum {
     }
 
     pub fn to_sql_value(&self) -> Result<String, EnumError> {
-        self.option()
+        self.option().map(|option| option.name.clone())
     }
 }
 
@@ -448,7 +448,7 @@ fn format_member(m: &Member) -> String {
         }
     } else if let Ty::Enum(e) = &m.ty {
         match e.option() {
-            Ok(option) => str.push_str(&format!(" = {option}")),
+            Ok(option) => str.push_str(&format!(" = {}", option.name)),
             Err(_) => str.push_str(" = Invalid Option"),
         }
     }

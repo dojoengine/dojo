@@ -1,25 +1,6 @@
 syntax = "proto3";
 package types;
 
-enum PrimitiveType {
-    U8 = 0;
-    U16 = 1;
-    U32 = 2;
-    U64 = 3;
-    U128 = 4;
-    U256 = 5;
-    USIZE = 6;
-    BOOL = 7;
-    FELT252 = 8;
-    CLASS_HASH = 9;
-    CONTRACT_ADDRESS = 10;
-    I8 = 11;
-    I16 = 12;
-    I32 = 13;
-    I64 = 14;
-    I128 = 15;
-}
-
 message EnumOption {
     string name = 1;
     Ty ty = 2;
@@ -32,8 +13,24 @@ message Enum {
 }
 
 message Primitive {
-    PrimitiveType type = 1;
-    Value value = 2;
+    oneof primitive_type {
+        int32 i8 = 1;
+        int32 i16 = 2;
+        int32 i32 = 3;
+        int64 i64 = 4;
+        bytes i128 = 5;
+        uint32 u8 = 6;
+        uint32 u16 = 7;
+        uint32 u32 = 8;
+        uint64 u64 = 9;
+        bytes u128 = 10;
+        bytes u256 = 11;
+        uint32 usize = 12;
+        bool bool = 13;
+        bytes felt252 = 14;
+        bytes class_hash = 15;
+        bytes contract_address = 16;
+    }
 }
 
 message Struct {
@@ -60,14 +57,4 @@ message Member {
     string name = 1;
     Ty ty = 2;
     bool key = 3;
-}
-
-message Value {
-    oneof value_type {
-        string string_value = 2;
-        int64 int_value = 3;
-        uint64 uint_value = 4;
-        bool bool_value = 5;
-        bytes byte_value = 6;
-    }
 }
