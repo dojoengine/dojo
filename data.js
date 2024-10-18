@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1729266155981,
+  "lastUpdate": 1729266328749,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -26773,6 +26773,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 12431973903,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "90a658028cad0ceaecd8c04edd6cdabfa0d06796",
+          "message": "refactor(torii-grpc): gzip compression & query opt (#2542)",
+          "timestamp": "2024-10-18T11:25:46-04:00",
+          "tree_id": "3aef7d4da5a79bd44f3b5e1e23dea1ede7f0ef91",
+          "url": "https://github.com/dojoengine/dojo/commit/90a658028cad0ceaecd8c04edd6cdabfa0d06796"
+        },
+        "date": 1729266326615,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16320021,
+            "range": "± 243889",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 4598903,
+            "range": "± 302090",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3814491924,
+            "range": "± 724990740",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 5352664,
+            "range": "± 405465",
             "unit": "ns/iter"
           }
         ]
