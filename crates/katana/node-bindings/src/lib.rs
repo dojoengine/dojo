@@ -14,8 +14,8 @@ use std::process::{Child, Command};
 use std::str::FromStr;
 use std::time::{Duration, Instant};
 
-use json::RpcAddr;
 use starknet::core::types::{Felt, FromStrError};
+use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::macros::short_string;
 use starknet::signers::SigningKey;
 use thiserror::Error;
@@ -130,6 +130,10 @@ pub enum Error {
     #[error("missing rpc server address")]
     MissingSocketAddr,
 
+    /// A line indicating the instance address was found but the actual value was not.
+    #[error("missing chain id")]
+    MissingChainId,
+
     #[error("encountered unexpected format: {0}")]
     UnexpectedFormat(String),
 
@@ -142,6 +146,8 @@ pub enum Error {
 
 /// The string indicator from which the RPC server address can be extracted from.
 const RPC_ADDR_LOG_SUBSTR: &str = "RPC server started.";
+/// The string indicator from which the chain id can be extracted from.
+const CHAIN_ID_LOG_SUBSTR: &str = "Starting node.";
 
 /// Builder for launching `katana`.
 ///
@@ -494,10 +500,9 @@ impl Katana {
         let mut accounts = Vec::new();
         // var to store the current account being processed
         let mut current_account: Option<Account> = None;
-
-        // TODO: the chain id should be fetched from stdout as well but Katana doesn't display the
-        // chain id atm
-        let chain_id = self.chain_id.unwrap_or(short_string!("KATANA"));
+        // var to store the chain id parsed from the logs. default to KATANA (default katana chain
+        // id) if not specified
+        let mut chain_id: Felt = self.chain_id.unwrap_or(short_string!("KATANA"));
 
         loop {
             if start + Duration::from_millis(self.timeout.unwrap_or(KATANA_STARTUP_TIMEOUT_MILLIS))
@@ -511,15 +516,27 @@ impl Katana {
             trace!(line);
 
             if self.json_log {
+                dbg!(&line);
                 // Because we using a concrete type for rpc addr log, we need to parse this first.
                 // Otherwise if we were to inverse the if statements, the else block
                 // would never be executed as all logs can be parsed as `JsonLog`.
-                if let Ok(log) = serde_json::from_str::<JsonLog<RpcAddr>>(&line) {
+                if let Ok(log) = serde_json::from_str::<JsonLog<json::RpcAddr>>(&line) {
                     debug_assert!(log.fields.message.contains(RPC_ADDR_LOG_SUBSTR));
                     port = log.fields.other.addr.port();
                     // We can safely break here as we don't need any information after the rpc
                     // address
                     break;
+                }
+                // Try parsing as chain id log
+                else if let Ok(log) = serde_json::from_str::<JsonLog<json::ChainId>>(&line) {
+                    debug_assert!(log.fields.message.contains(CHAIN_ID_LOG_SUBSTR));
+                    let chain_raw = log.fields.other.chain;
+                    chain_id = if chain_raw.starts_with("0x") {
+                        Felt::from_str(&chain_raw)?
+                    } else {
+                        cairo_short_string_to_felt(&chain_raw)
+                            .map_err(|_| Error::UnexpectedFormat("invalid chain id".to_string()))?
+                    };
                 }
                 // Parse all logs as generic logs
                 else if let Ok(info) = serde_json::from_str::<JsonLog>(&line) {
@@ -541,6 +558,10 @@ impl Katana {
                     port = addr.port();
                     // The address is the last thing to be displayed so we can safely break here.
                     break;
+                }
+
+                if line.contains(CHAIN_ID_LOG_SUBSTR) {
+                    chain_id = parse_chain_id_log(&line)?;
                 }
 
                 const ACC_ADDRESS_PREFIX: &str = "| Account address |";
@@ -609,6 +630,23 @@ fn parse_rpc_addr_log(log: &str) -> Result<SocketAddr, Error> {
     Ok(SocketAddr::from_str(addr)?)
 }
 
+// Example chain ID log format (ansi color codes removed):
+// 2024-10-18T01:30:14.023880Z  INFO katana_node: Starting node. chain=0x4b4154414e41
+fn parse_chain_id_log(log: &str) -> Result<Felt, Error> {
+    // remove any ANSI escape codes from the log.
+    let cleaned = clean_ansi_escape_codes(log)?;
+
+    // This will separate the log into two parts as separated by `chain=` str and we take
+    // only the second part which is the chain ID.
+    let chain_part = cleaned.split("chain=").nth(1).ok_or(Error::MissingChainId)?.trim();
+    if chain_part.starts_with("0x") {
+        Ok(Felt::from_str(chain_part)?)
+    } else {
+        Ok(cairo_short_string_to_felt(chain_part)
+            .map_err(|_| Error::UnexpectedFormat("invalid chain id".to_string()))?)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use starknet::providers::jsonrpc::HttpTransport;
@@ -634,10 +672,10 @@ mod tests {
 
     #[test]
     fn can_launch_katana_with_json_log() {
-        let katana = Katana::new().json_log(true).spawn();
+        let katana = Katana::new().json_log(true).chain_id(short_string!("SN_SEPOLIA")).spawn();
         // Assert default values when using JSON logging
         assert_eq!(katana.accounts().len(), 10);
-        assert_eq!(katana.chain_id(), short_string!("KATANA"));
+        assert_eq!(katana.chain_id(), short_string!("SN_SEPOLIA"));
         // assert that all accounts have private key
         assert!(katana.accounts().iter().all(|a| a.private_key.is_some()));
     }
@@ -704,5 +742,18 @@ mod tests {
         let addr = parse_rpc_addr_log(log).unwrap();
         assert_eq!(addr.ip().to_string(), "127.0.0.1");
         assert_eq!(addr.port(), 60817);
+    }
+
+    #[tokio::test]
+    async fn can_launch_katana_with_custom_chain_id() {
+        let custom_chain_id = Felt::from_str("0x1234").unwrap();
+        let katana = Katana::new().chain_id(custom_chain_id).spawn();
+
+        assert_eq!(katana.chain_id(), custom_chain_id);
+
+        let provider = JsonRpcClient::new(HttpTransport::new(katana.endpoint_url()));
+        let actual_chain_id = provider.chain_id().await.unwrap();
+
+        assert_eq!(custom_chain_id, actual_chain_id);
     }
 }

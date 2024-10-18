@@ -4,7 +4,7 @@ use starknet::macros::short_string;
 use crate::{Felt, FromStrError};
 
 /// Known chain ids that has been assigned a name.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, strum_macros::Display)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum NamedChainId {
     Mainnet,
@@ -41,6 +41,12 @@ impl NamedChainId {
             NamedChainId::Goerli => "SN_GOERLI",
             NamedChainId::Sepolia => "SN_SEPOLIA",
         }
+    }
+}
+
+impl std::fmt::Display for NamedChainId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.name())
     }
 }
 
