@@ -100,7 +100,6 @@ pub trait BindgenModelGenerator: Sync {
     /// TODO: add &mut ref to what's currently generated to place specific code at specific places.
     ///
     /// # Arguments
-    ///
     fn generate(&self, token: &Composite, buffer: &mut Buffer) -> BindgenResult<String>;
 }
 
