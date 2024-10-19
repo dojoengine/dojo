@@ -72,7 +72,7 @@ impl PendingBlockWithTxs {
             l1_gas_price,
             timestamp: header.timestamp,
             parent_hash: header.parent_hash,
-            starknet_version: header.version.to_string(),
+            starknet_version: header.protocol_version.to_string(),
             sequencer_address: header.sequencer_address.into(),
 
             l1_da_mode: L1DataAvailabilityMode::Calldata,
@@ -153,7 +153,7 @@ impl PendingBlockWithTxHashes {
             l1_gas_price,
             timestamp: header.timestamp,
             parent_hash: header.parent_hash,
-            starknet_version: header.version.to_string(),
+            starknet_version: header.protocol_version.to_string(),
             sequencer_address: header.sequencer_address.into(),
             l1_da_mode: header.l1_da_mode,
             l1_data_gas_price,
@@ -268,7 +268,7 @@ impl PendingBlockWithReceipts {
             parent_hash: header.parent_hash,
             l1_da_mode: header.l1_da_mode,
             l1_data_gas_price,
-            starknet_version: header.version.to_string(),
+            starknet_version: header.protocol_version.to_string(),
         })
     }
 }

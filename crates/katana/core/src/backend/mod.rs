@@ -2,12 +2,13 @@ use std::sync::Arc;
 
 use katana_executor::{ExecutionOutput, ExecutionResult, ExecutorFactory};
 use katana_primitives::block::{
-    Block, FinalityStatus, GasPrices, Header, PartialHeader, SealedBlockWithStatus,
+    Block, FinalityStatus, GasPrices, Header, SealedBlock, SealedBlockWithStatus,
 };
 use katana_primitives::chain_spec::ChainSpec;
 use katana_primitives::da::L1DataAvailabilityMode;
 use katana_primitives::env::BlockEnv;
-use katana_primitives::transaction::TxHash;
+use katana_primitives::receipt::Receipt;
+use katana_primitives::transaction::{TxHash, TxWithHash};
 use katana_primitives::Felt;
 use katana_provider::traits::block::{BlockHashProvider, BlockWriter};
 use parking_lot::RwLock;
@@ -35,6 +36,7 @@ pub struct Backend<EF: ExecutorFactory> {
 }
 
 impl<EF: ExecutorFactory> Backend<EF> {
+    // TODO: add test for this function
     pub fn do_mine_block(
         &self,
         block_env: &BlockEnv,
@@ -54,47 +56,22 @@ impl<EF: ExecutorFactory> Backend<EF> {
             }
         }
 
-        let prev_hash = BlockHashProvider::latest_hash(self.blockchain.provider())?;
-        let block_number = block_env.number;
-        let tx_count = txs.len();
-
-        let partial_header = PartialHeader {
-            number: block_number,
-            parent_hash: prev_hash,
-            version: self.chain_spec.version.clone(),
-            timestamp: block_env.timestamp,
-            sequencer_address: block_env.sequencer_address,
-            l1_da_mode: L1DataAvailabilityMode::Calldata,
-            l1_gas_prices: GasPrices {
-                eth: block_env.l1_gas_prices.eth,
-                strk: block_env.l1_gas_prices.strk,
-            },
-            l1_data_gas_prices: GasPrices {
-                eth: block_env.l1_data_gas_prices.eth,
-                strk: block_env.l1_data_gas_prices.strk,
-            },
-        };
-
+        let tx_count = txs.len() as u32;
         let tx_hashes = txs.iter().map(|tx| tx.hash).collect::<Vec<TxHash>>();
-        let header = Header::new(partial_header, Felt::ZERO);
-        let block = Block { header, body: txs }.seal();
-        let block = SealedBlockWithStatus { block, status: FinalityStatus::AcceptedOnL2 };
 
-        BlockWriter::insert_block_with_states_and_receipts(
-            self.blockchain.provider(),
+        // create a new block and compute its commitment
+        let block = self.commit_block(block_env, txs, &receipts)?;
+        let block = SealedBlockWithStatus { block, status: FinalityStatus::AcceptedOnL2 };
+        let block_number = block.block.header.number;
+
+        self.blockchain.provider().insert_block_with_states_and_receipts(
             block,
             execution_output.states,
             receipts,
             traces,
         )?;
 
-        info!(
-            target: LOG_TARGET,
-            block_number = %block_number,
-            tx_count = %tx_count,
-            "Block mined.",
-        );
-
+        info!(target: LOG_TARGET, %block_number, %tx_count, "Block mined.");
         Ok(MinedBlockOutcome { block_number, txs: tx_hashes, stats: execution_output.stats })
     }
 
@@ -120,5 +97,45 @@ impl<EF: ExecutorFactory> Backend<EF> {
         block_env: &BlockEnv,
     ) -> Result<MinedBlockOutcome, BlockProductionError> {
         self.do_mine_block(block_env, Default::default())
+    }
+
+    fn commit_block(
+        &self,
+        block_env: &BlockEnv,
+        transactions: Vec<TxWithHash>,
+        receipts: &[Receipt],
+    ) -> Result<SealedBlock, BlockProductionError> {
+        // get the hash of the latest committed block
+        let parent_hash = self.blockchain.provider().latest_hash()?;
+        let events_count = receipts.iter().map(|r| r.events().len() as u32).sum::<u32>();
+        let transaction_count = transactions.len() as u32;
+
+        let l1_gas_prices =
+            GasPrices { eth: block_env.l1_gas_prices.eth, strk: block_env.l1_gas_prices.strk };
+        let l1_data_gas_prices = GasPrices {
+            eth: block_env.l1_data_gas_prices.eth,
+            strk: block_env.l1_data_gas_prices.strk,
+        };
+
+        let header = Header {
+            parent_hash,
+            events_count,
+            l1_gas_prices,
+            transaction_count,
+            l1_data_gas_prices,
+            state_root: Felt::ZERO,
+            number: block_env.number,
+            events_commitment: Felt::ZERO,
+            timestamp: block_env.timestamp,
+            receipts_commitment: Felt::ZERO,
+            state_diff_commitment: Felt::ZERO,
+            transactions_commitment: Felt::ZERO,
+            l1_da_mode: L1DataAvailabilityMode::Calldata,
+            sequencer_address: block_env.sequencer_address,
+            protocol_version: self.chain_spec.version.clone(),
+        };
+
+        let sealed = Block { header, body: transactions }.seal();
+        Ok(sealed)
     }
 }

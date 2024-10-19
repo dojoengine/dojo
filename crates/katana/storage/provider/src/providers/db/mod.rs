@@ -606,10 +606,10 @@ impl<Db: Database> BlockWriter for DbProvider<Db> {
         executions: Vec<TxExecInfo>,
     ) -> ProviderResult<()> {
         self.0.update(move |db_tx| -> ProviderResult<()> {
-            let block_hash = block.block.header.hash;
-            let block_number = block.block.header.header.number;
+            let block_hash = block.block.hash;
+            let block_number = block.block.header.number;
 
-            let block_header = block.block.header.header;
+            let block_header = block.block.header;
             let transactions = block.block.body;
 
             let tx_count = transactions.len() as u64;
@@ -882,7 +882,7 @@ mod tests {
 
         // get values
 
-        let block_id: BlockHashOrNumber = block.block.header.hash.into();
+        let block_id: BlockHashOrNumber = block.block.hash.into();
 
         let latest_number = provider.latest_number().unwrap();
         let latest_hash = provider.latest_hash().unwrap();
@@ -921,9 +921,9 @@ mod tests {
         assert_eq!(body_indices.tx_count, tx_count);
 
         assert_eq!(block_status, FinalityStatus::AcceptedOnL2);
-        assert_eq!(block.block.header.hash, latest_hash);
+        assert_eq!(block.block.hash, latest_hash);
         assert_eq!(block.block.body.len() as u64, tx_count);
-        assert_eq!(block.block.header.header.number, latest_number);
+        assert_eq!(block.block.header.number, latest_number);
         assert_eq!(block.block.unseal(), actual_block);
 
         assert_eq!(nonce1, felt!("1"));

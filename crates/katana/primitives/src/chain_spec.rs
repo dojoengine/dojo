@@ -55,6 +55,12 @@ impl ChainSpec {
             protocol_version: self.version.clone(),
             number: self.genesis.number,
             timestamp: self.genesis.timestamp,
+            events_count: 0,
+            transaction_count: 0,
+            events_commitment: Felt::ZERO,
+            receipts_commitment: Felt::ZERO,
+            state_diff_commitment: Felt::ZERO,
+            transactions_commitment: Felt::ZERO,
             state_root: self.genesis.state_root,
             parent_hash: self.genesis.parent_hash,
             l1_da_mode: L1DataAvailabilityMode::Calldata,
@@ -338,9 +344,12 @@ mod tests {
         };
 
         // setup expected storage values
-
         let expected_block = Block {
             header: Header {
+                events_commitment: Felt::ZERO,
+                receipts_commitment: Felt::ZERO,
+                state_diff_commitment: Felt::ZERO,
+                transactions_commitment: Felt::ZERO,
                 number: chain_spec.genesis.number,
                 timestamp: chain_spec.genesis.timestamp,
                 state_root: chain_spec.genesis.state_root,
@@ -350,6 +359,8 @@ mod tests {
                 l1_data_gas_prices: chain_spec.genesis.gas_prices.clone(),
                 l1_da_mode: L1DataAvailabilityMode::Calldata,
                 protocol_version: CURRENT_STARKNET_VERSION,
+                transaction_count: 0,
+                events_count: 0,
             },
             body: Vec::new(),
         };
@@ -361,7 +372,6 @@ mod tests {
 
         assert_eq!(actual_block.header.number, expected_block.header.number);
         assert_eq!(actual_block.header.timestamp, expected_block.header.timestamp);
-        assert_eq!(actual_block.header.state_root, expected_block.header.state_root);
         assert_eq!(actual_block.header.parent_hash, expected_block.header.parent_hash);
         assert_eq!(actual_block.header.sequencer_address, expected_block.header.sequencer_address);
         assert_eq!(actual_block.header.l1_gas_prices, expected_block.header.l1_gas_prices);
@@ -371,6 +381,8 @@ mod tests {
         );
         assert_eq!(actual_block.header.l1_da_mode, expected_block.header.l1_da_mode);
         assert_eq!(actual_block.header.protocol_version, expected_block.header.protocol_version);
+        assert_eq!(actual_block.header.transaction_count, expected_block.header.transaction_count);
+        assert_eq!(actual_block.header.events_count, expected_block.header.events_count);
         assert_eq!(actual_block.body, expected_block.body);
 
         if cfg!(feature = "slot") {

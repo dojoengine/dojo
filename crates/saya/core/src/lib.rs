@@ -151,7 +151,7 @@ impl Saya {
         let mut block = self.config.block_range.0.max(1); // Genesis block is not proven. We advance to block 1
 
         let block_before_the_first = self.provider.fetch_block(block - 1).await;
-        let mut previous_block_state_root = block_before_the_first?.header.header.state_root;
+        let mut previous_block_state_root = block_before_the_first?.header.state_root;
         let mut mock_state_hash = Felt::from(0u64);
 
         loop {
@@ -293,7 +293,7 @@ impl Saya {
         // Shift the state roots to the right by one, as proof of each block is based on the
         // previous state root
         let mut state_roots = vec![previous_block_state_root];
-        state_roots.extend(fetched_blocks.iter().map(|block| block.header.header.state_root));
+        state_roots.extend(fetched_blocks.iter().map(|block| block.header.state_root));
         let previous_block_state_root = state_roots.pop().unwrap();
 
         let mut state_updates_and_exec_info = vec![];
@@ -327,7 +327,7 @@ impl Saya {
             .zip(state_roots)
             .zip(state_updates_and_exec_info)
             .map(|((block, prev_state_root), (state_updates, exec_infos))| FetchedBlockInfo {
-                block_number: block.header.header.number,
+                block_number: block.header.number,
                 block,
                 prev_state_root,
                 state_updates,
@@ -400,7 +400,7 @@ impl Saya {
         let mut state_diff_prover_input = ProgramInput {
             prev_state_root,
             block_number,
-            block_hash: block.block.header.hash,
+            block_hash: block.block.hash,
             config_hash: Felt::from(0u64),
             message_to_starknet_segment,
             message_to_appchain_segment,

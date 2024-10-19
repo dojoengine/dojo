@@ -353,18 +353,15 @@ mod tests {
 
             let block_number = blockchain.provider().latest_number().unwrap();
             let block_hash = blockchain.provider().latest_hash().unwrap();
-            let block = blockchain
-                .provider()
-                .block_by_hash(dummy_block.block.header.hash)
-                .unwrap()
-                .unwrap();
+            let block =
+                blockchain.provider().block_by_hash(dummy_block.block.hash).unwrap().unwrap();
 
             let tx = blockchain.provider().transaction_by_hash(dummy_tx.hash).unwrap().unwrap();
             let tx_exec =
                 blockchain.provider().transaction_execution(dummy_tx.hash).unwrap().unwrap();
 
-            assert_eq!(block_hash, dummy_block.block.header.hash);
-            assert_eq!(block_number, dummy_block.block.header.header.number);
+            assert_eq!(block_hash, dummy_block.block.hash);
+            assert_eq!(block_number, dummy_block.block.header.number);
             assert_eq!(block, dummy_block.block.unseal());
             assert_eq!(tx, dummy_tx);
             assert_eq!(tx_exec, TxExecInfo::default());
