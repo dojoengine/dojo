@@ -17,7 +17,7 @@ use katana_db::tables::{self, DupSort, Table};
 use katana_db::utils::KeyValue;
 use katana_primitives::block::{
     Block, BlockHash, BlockHashOrNumber, BlockNumber, BlockWithTxHashes, FinalityStatus, Header,
-    SealedBlockWithStatus,
+    SealedBlockWithStatus, SealedHeader,
 };
 use katana_primitives::class::{ClassHash, CompiledClassHash};
 use katana_primitives::contract::{

@@ -3,7 +3,7 @@ use std::ops::{Range, RangeInclusive};
 use katana_db::models::block::StoredBlockBodyIndices;
 use katana_primitives::block::{
     Block, BlockHash, BlockHashOrNumber, BlockNumber, BlockWithTxHashes, FinalityStatus, Header,
-    SealedBlockWithStatus,
+    SealedBlockWithStatus, SealedHeader,
 };
 use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
 use katana_primitives::contract::{ContractAddress, StorageKey, StorageValue};

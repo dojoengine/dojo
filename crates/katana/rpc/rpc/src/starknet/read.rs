@@ -90,7 +90,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                         number: block_env.number,
                         parent_hash: latest_hash,
                         timestamp: block_env.timestamp,
-                        version: this.inner.backend.chain_spec.version.clone(),
+                        protocol_version: this.inner.backend.chain_spec.version.clone(),
                         sequencer_address: block_env.sequencer_address,
                     };
 
@@ -182,7 +182,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                         parent_hash: latest_hash,
                         timestamp: block_env.timestamp,
                         sequencer_address: block_env.sequencer_address,
-                        version: this.inner.backend.chain_spec.version.clone(),
+                        protocol_version: this.inner.backend.chain_spec.version.clone(),
                     };
 
                     // TODO(kariy): create a method that can perform this filtering for us instead
@@ -240,7 +240,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                         l1_data_gas_prices,
                         number: block_env.number,
                         parent_hash: latest_hash,
-                        version: this.inner.backend.chain_spec.version.clone(),
+                        protocol_version: this.inner.backend.chain_spec.version.clone(),
                         timestamp: block_env.timestamp,
                         sequencer_address: block_env.sequencer_address,
                     };

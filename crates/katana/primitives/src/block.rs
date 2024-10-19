@@ -2,6 +2,7 @@ use starknet::core::crypto::compute_hash_on_elements;
 
 use crate::contract::ContractAddress;
 use crate::da::L1DataAvailabilityMode;
+use crate::env::BlockEnv;
 use crate::transaction::{ExecutableTxWithHash, TxHash, TxWithHash};
 use crate::version::ProtocolVersion;
 use crate::Felt;
@@ -38,18 +39,18 @@ pub enum FinalityStatus {
     AcceptedOnL1,
 }
 
-/// Represents a partial block header.
+/// Represents a pending block header.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct PartialHeader {
+    pub parent_hash: BlockHash,
     pub number: BlockNumber,
-    pub parent_hash: Felt,
     pub timestamp: u64,
     pub sequencer_address: ContractAddress,
-    pub version: ProtocolVersion,
     pub l1_gas_prices: GasPrices,
     pub l1_data_gas_prices: GasPrices,
     pub l1_da_mode: L1DataAvailabilityMode,
+    pub protocol_version: ProtocolVersion,
 }
 
 // TODO: change names to wei and fri
@@ -77,51 +78,49 @@ impl GasPrices {
 pub struct Header {
     pub parent_hash: BlockHash,
     pub number: BlockNumber,
-    pub timestamp: u64,
+    pub state_diff_commitment: Felt,
+    pub transactions_commitment: Felt,
+    pub receipts_commitment: Felt,
+    pub events_commitment: Felt,
     pub state_root: Felt,
+    pub timestamp: u64,
+    pub transaction_count: u32,
+    pub events_count: u32,
     pub sequencer_address: ContractAddress,
-    pub protocol_version: ProtocolVersion,
     pub l1_gas_prices: GasPrices,
     pub l1_data_gas_prices: GasPrices,
     pub l1_da_mode: L1DataAvailabilityMode,
+    pub protocol_version: ProtocolVersion,
 }
 
 impl Default for Header {
     fn default() -> Self {
         Self {
             timestamp: 0,
+            events_count: 0,
+            transaction_count: 0,
+            state_root: Felt::ZERO,
+            events_commitment: Felt::ZERO,
             number: BlockNumber::default(),
-            state_root: Felt::default(),
+            receipts_commitment: Felt::ZERO,
+            state_diff_commitment: Felt::ZERO,
             parent_hash: BlockHash::default(),
             l1_gas_prices: GasPrices::default(),
-            protocol_version: ProtocolVersion::default(),
-            sequencer_address: ContractAddress::default(),
+            transactions_commitment: Felt::ZERO,
             l1_data_gas_prices: GasPrices::default(),
+            sequencer_address: ContractAddress::default(),
             l1_da_mode: L1DataAvailabilityMode::Calldata,
+            protocol_version: ProtocolVersion::default(),
         }
     }
 }
 
 impl Header {
-    pub fn new(partial_header: PartialHeader, state_root: Felt) -> Self {
-        Self {
-            state_root,
-            number: partial_header.number,
-            protocol_version: partial_header.version,
-            timestamp: partial_header.timestamp,
-            parent_hash: partial_header.parent_hash,
-            sequencer_address: partial_header.sequencer_address,
-            l1_gas_prices: partial_header.l1_gas_prices,
-            l1_da_mode: partial_header.l1_da_mode,
-            l1_data_gas_prices: partial_header.l1_data_gas_prices,
-        }
-    }
-
     /// Computes the hash of the header.
     pub fn compute_hash(&self) -> Felt {
         compute_hash_on_elements(&vec![
             self.number.into(),            // block number
-            self.state_root,               // state root
+            Felt::ZERO,                    // state root
             self.sequencer_address.into(), // sequencer address
             self.timestamp.into(),         // block timestamp
             Felt::ZERO,                    // transaction commitment
@@ -175,10 +174,11 @@ impl Block {
 }
 
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SealedHeader {
     /// The hash of the header.
     pub hash: BlockHash,
-    /// The block header.
+    /// The generic header info.
     pub header: Header,
 }
 
