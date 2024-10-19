@@ -19,14 +19,15 @@ use anyhow::{Context, Result};
 use clap::{Args, Parser};
 use console::Style;
 use dojo_utils::parse::parse_socket_address;
-use katana_core::backend::config::{Environment, StarknetConfig};
 use katana_core::constants::{
-    DEFAULT_ETH_L1_GAS_PRICE, DEFAULT_INVOKE_MAX_STEPS, DEFAULT_SEQUENCER_ADDRESS,
-    DEFAULT_STRK_L1_GAS_PRICE, DEFAULT_VALIDATE_MAX_STEPS,
+    DEFAULT_ETH_L1_GAS_PRICE, DEFAULT_SEQUENCER_ADDRESS, DEFAULT_STRK_L1_GAS_PRICE,
 };
 use katana_core::service::messaging::MessagingConfig;
 use katana_node::config::db::DbConfig;
 use katana_node::config::dev::DevConfig;
+use katana_node::config::execution::{
+    ExecutionConfig, DEFAULT_INVOCATION_MAX_STEPS, DEFAULT_VALIDATION_MAX_STEPS,
+};
 use katana_node::config::fork::ForkingConfig;
 use katana_node::config::metrics::MetricsConfig;
 use katana_node::config::rpc::{
@@ -188,12 +189,12 @@ pub struct EnvironmentOptions {
 
     #[arg(long)]
     #[arg(help = "The maximum number of steps available for the account validation logic.")]
-    #[arg(default_value_t = DEFAULT_VALIDATE_MAX_STEPS)]
+    #[arg(default_value_t = DEFAULT_VALIDATION_MAX_STEPS)]
     pub validate_max_steps: u32,
 
     #[arg(long)]
     #[arg(help = "The maximum number of steps available for the account execution logic.")]
-    #[arg(default_value_t = DEFAULT_INVOKE_MAX_STEPS)]
+    #[arg(default_value_t = DEFAULT_INVOCATION_MAX_STEPS)]
     pub invoke_max_steps: u32,
 
     #[arg(long = "eth-gas-price")]
@@ -282,12 +283,12 @@ impl NodeArgs {
         let dev = self.dev_config();
         let chain = self.chain_spec()?;
         let metrics = self.metrics_config();
-        let starknet = self.starknet_config()?;
         let forking = self.forking_config()?;
+        let execution = self.execution_config();
         let sequencing = self.sequencer_config();
         let messaging = self.messaging.clone();
 
-        Ok(Config { metrics, db, dev, rpc, chain, starknet, sequencing, messaging, forking })
+        Ok(Config { metrics, db, dev, rpc, chain, execution, sequencing, messaging, forking })
     }
 
     fn sequencer_config(&self) -> SequencingConfig {
@@ -347,13 +348,12 @@ impl NodeArgs {
         }
     }
 
-    fn starknet_config(&self) -> Result<StarknetConfig> {
-        Ok(StarknetConfig {
-            env: Environment {
-                invoke_max_steps: self.starknet.environment.invoke_max_steps,
-                validate_max_steps: self.starknet.environment.validate_max_steps,
-            },
-        })
+    fn execution_config(&self) -> ExecutionConfig {
+        ExecutionConfig {
+            invocation_max_steps: self.starknet.environment.invoke_max_steps,
+            validation_max_steps: self.starknet.environment.validate_max_steps,
+            ..Default::default()
+        }
     }
 
     fn forking_config(&self) -> Result<Option<ForkingConfig>> {
@@ -497,8 +497,8 @@ mod test {
         assert!(config.dev.fee);
         assert!(config.dev.account_validation);
         assert!(config.forking.is_none());
-        assert_eq!(config.starknet.env.invoke_max_steps, DEFAULT_INVOKE_MAX_STEPS);
-        assert_eq!(config.starknet.env.validate_max_steps, DEFAULT_VALIDATE_MAX_STEPS);
+        assert_eq!(config.execution.invocation_max_steps, DEFAULT_INVOCATION_MAX_STEPS);
+        assert_eq!(config.execution.validation_max_steps, DEFAULT_VALIDATION_MAX_STEPS);
         assert_eq!(config.db.dir, None);
         assert_eq!(config.chain.id, ChainId::parse("KATANA").unwrap());
         assert_eq!(config.chain.genesis.gas_prices.eth, DEFAULT_ETH_L1_GAS_PRICE);
@@ -529,8 +529,8 @@ mod test {
 
         assert!(!config.dev.fee);
         assert!(!config.dev.account_validation);
-        assert_eq!(config.starknet.env.invoke_max_steps, 200);
-        assert_eq!(config.starknet.env.validate_max_steps, 100);
+        assert_eq!(config.execution.invocation_max_steps, 200);
+        assert_eq!(config.execution.validation_max_steps, 100);
         assert_eq!(config.db.dir, Some(PathBuf::from("/path/to/db")));
         assert_eq!(config.chain.id, ChainId::GOERLI);
         assert_eq!(config.chain.genesis.gas_prices.eth, 10);

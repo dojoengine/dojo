@@ -20,7 +20,6 @@ use jsonrpsee::server::{AllowHosts, ServerBuilder, ServerHandle};
 use jsonrpsee::RpcModule;
 use katana_core::backend::storage::Blockchain;
 use katana_core::backend::Backend;
-use katana_core::constants::MAX_RECURSION_DEPTH;
 use katana_core::env::BlockContextGenerator;
 use katana_core::service::block_producer::BlockProducer;
 use katana_core::service::messaging::MessagingConfig;
@@ -165,9 +164,9 @@ pub async fn build(mut config: Config) -> Result<Node> {
 
     let cfg_env = CfgEnv {
         chain_id: config.chain.id,
-        invoke_tx_max_n_steps: config.starknet.env.invoke_max_steps,
-        validate_max_n_steps: config.starknet.env.validate_max_steps,
-        max_recursion_depth: MAX_RECURSION_DEPTH,
+        invoke_tx_max_n_steps: config.execution.invocation_max_steps,
+        validate_max_n_steps: config.execution.validation_max_steps,
+        max_recursion_depth: config.execution.max_recursion_depth,
         fee_token_addresses: FeeTokenAddressses {
             eth: config.chain.fee_contracts.eth,
             strk: config.chain.fee_contracts.strk,
@@ -199,7 +198,6 @@ pub async fn build(mut config: Config) -> Result<Node> {
         blockchain,
         executor_factory,
         block_context_generator,
-        config: config.starknet,
         chain_spec: config.chain,
     });
 
