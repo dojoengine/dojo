@@ -38,7 +38,7 @@ pub enum FinalityStatus {
     AcceptedOnL1,
 }
 
-/// Represents a pending block header.
+/// Represents a partial block header.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct PartialHeader {
