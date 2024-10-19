@@ -13,23 +13,24 @@ use config::metrics::MetricsConfig;
 use config::rpc::{ApiKind, RpcConfig};
 use config::{Config, SequencingConfig};
 use dojo_metrics::exporters::prometheus::PrometheusRecorder;
+use dojo_metrics::metrics_process::Collector;
 use dojo_metrics::{Report, Server as MetricsServer};
 use hyper::{Method, Uri};
-use jsonrpsee::RpcModule;
 use jsonrpsee::server::middleware::proxy_get_request::ProxyGetRequestLayer;
 use jsonrpsee::server::{AllowHosts, ServerBuilder, ServerHandle};
-use katana_core::backend::Backend;
+use jsonrpsee::RpcModule;
 use katana_core::backend::storage::Blockchain;
+use katana_core::backend::Backend;
 use katana_core::env::BlockContextGenerator;
 use katana_core::service::block_producer::BlockProducer;
 use katana_core::service::messaging::MessagingConfig;
 use katana_db::mdbx::DbEnv;
 use katana_executor::implementation::blockifier::BlockifierFactory;
 use katana_executor::{ExecutorFactory, SimulationFlag};
-use katana_pipeline::{Pipeline, stage};
-use katana_pool::TxPool;
+use katana_pipeline::{stage, Pipeline};
 use katana_pool::ordering::FiFo;
 use katana_pool::validation::stateful::TxValidator;
+use katana_pool::TxPool;
 use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
 use katana_provider::providers::in_memory::InMemoryProvider;
 use katana_rpc::dev::DevApi;
@@ -106,7 +107,7 @@ impl Node {
             }
 
             let exporter = PrometheusRecorder::current().expect("qed; should exist at this point");
-            let server = MetricsServer::new(exporter).with_reports(reports);
+            let server = MetricsServer::new(exporter).with_process_metrics().with_reports(reports);
 
             self.task_manager.task_spawner().build_task().spawn(server.start(cfg.addr));
             info!(addr = %cfg.addr, "Metrics server started.");

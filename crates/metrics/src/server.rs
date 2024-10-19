@@ -42,6 +42,7 @@ where
         Self { exporter, hooks }
     }
 
+    /// Add new metrics reporter to the server.
     pub fn with_reports<I>(mut self, reports: I) -> Self
     where
         I: IntoIterator<Item = Box<dyn Report>>,
@@ -49,6 +50,13 @@ where
         // convert the report types into callable hooks
         let hooks = reports.into_iter().map(|r| Box::new(move || r.report()) as BoxedHook);
         self.hooks.extend(hooks);
+        self
+    }
+
+    pub fn with_process_metrics(mut self) -> Self {
+        let process = metrics_process::Collector::default();
+        process.describe();
+        self.hooks.push(Box::new(move || process.collect()) as BoxedHook);
         self
     }
 

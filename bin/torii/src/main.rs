@@ -298,7 +298,10 @@ async fn main() -> anyhow::Result<()> {
     if let Some(listen_addr) = args.metrics {
         info!(target: LOG_TARGET, addr = %listen_addr, "Starting metrics endpoint.");
         let prometheus_handle = PrometheusRecorder::install("torii")?;
-        dojo_metrics::Server::new(prometheus_handle).start(listen_addr).await?;
+        dojo_metrics::Server::new(prometheus_handle)
+            .with_process_metrics()
+            .start(listen_addr)
+            .await?;
     }
 
     let engine_handle = tokio::spawn(async move { engine.start().await });

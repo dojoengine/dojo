@@ -38,3 +38,9 @@ pub trait Report: Send + Sync {
     /// Report the metrics.
     fn report(&self);
 }
+
+impl Report for ::metrics_process::Collector {
+    fn report(&self) {
+        self.collect();
+    }
+}
