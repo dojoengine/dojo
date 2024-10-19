@@ -98,7 +98,7 @@ impl Node {
         let chain = self.backend.chain_spec.id;
         info!(%chain, "Starting node.");
 
-        // TODO: move this to build stage
+        // TODO: maybe move this to the build stage
         if let Some(ref cfg) = self.metrics_config {
             let mut reports: Vec<Box<dyn Report>> = Vec::new();
 
