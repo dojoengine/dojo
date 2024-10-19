@@ -214,19 +214,22 @@ impl ReceiptWithTxHash {
     // prefixed by its length, and h is the Poseidon hash function.
     fn compute_messages_to_l1_hash(&self) -> Felt {
         let messages = self.messages_sent();
-        let messages_len = Felt::from(messages.len());
+        let messages_len = messages.len();
 
-        let accumulator: Vec<Felt> = vec![messages_len];
+        // Allocate all the memory in advance; times 3 because [ from, to, h(payload) ]
+        let mut accumulator: Vec<Felt> = Vec::with_capacity((messages_len * 3) + 1);
+        accumulator.push(Felt::from(messages_len));
+
         let elements = messages.iter().fold(accumulator, |mut acc, msg| {
-            acc.push(msg.from_address.into());
-            acc.push(msg.to_address);
-
             // Compute the payload hash; h(n, payload_1, ..., payload_n)
             let len = Felt::from(msg.payload.len());
             let payload = iter::once(len).chain(msg.payload.clone()).collect::<Vec<Felt>>();
             let payload_hash = hash::Poseidon::hash_array(&payload);
 
+            acc.push(msg.from_address.into());
+            acc.push(msg.to_address);
             acc.push(payload_hash);
+
             acc
         });
 

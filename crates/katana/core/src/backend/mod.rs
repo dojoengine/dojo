@@ -8,6 +8,7 @@ use katana_primitives::chain_spec::ChainSpec;
 use katana_primitives::da::L1DataAvailabilityMode;
 use katana_primitives::env::BlockEnv;
 use katana_primitives::receipt::ReceiptWithTxHash;
+use katana_primitives::state::{compute_state_diff_hash, StateUpdates};
 use katana_primitives::transaction::{TxHash, TxWithHash};
 use katana_primitives::Felt;
 use katana_provider::traits::block::{BlockHashProvider, BlockWriter};
@@ -62,12 +63,18 @@ impl<EF: ExecutorFactory> Backend<EF> {
         let tx_hashes = txs.iter().map(|tx| tx.hash).collect::<Vec<TxHash>>();
 
         // create a new block and compute its commitment
-        let block = self.commit_block(block_env, txs, &receipts)?;
+        let block = self.commit_block(
+            block_env,
+            execution_output.states.state_updates.clone(),
+            txs,
+            &receipts,
+        )?;
+
         let block = SealedBlockWithStatus { block, status: FinalityStatus::AcceptedOnL2 };
         let block_number = block.block.header.number;
 
-        // TODO: maybe should change the arguments for insert_block_with_states_and_receipts to accept
-        // ReceiptWithTxHash instead to avoid this conversion.
+        // TODO: maybe should change the arguments for insert_block_with_states_and_receipts to
+        // accept ReceiptWithTxHash instead to avoid this conversion.
         let receipts = receipts.into_iter().map(|r| r.receipt).collect::<Vec<_>>();
         self.blockchain.provider().insert_block_with_states_and_receipts(
             block,
@@ -107,6 +114,7 @@ impl<EF: ExecutorFactory> Backend<EF> {
     fn commit_block(
         &self,
         block_env: &BlockEnv,
+        state_updates: StateUpdates,
         transactions: Vec<TxWithHash>,
         receipts: &[ReceiptWithTxHash],
     ) -> Result<SealedBlock, BlockProductionError> {
@@ -127,7 +135,7 @@ impl<EF: ExecutorFactory> Backend<EF> {
         let receipts_commitment = compute_merkle_root::<hash::Poseidon>(&receipt_hashes).unwrap();
 
         // compute state diffs commitment
-        let state_diff_commitment = Felt::ZERO;
+        let state_diff_commitment = compute_state_diff_hash(state_updates);
         // compute events commitment
         let events_commitment = compute_merkle_root::<hash::Poseidon>(&[]).unwrap();
 
