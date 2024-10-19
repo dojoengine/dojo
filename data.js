@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1729295196080,
+  "lastUpdate": 1729300498482,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -26977,6 +26977,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4568527,
             "range": "± 142011",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e6bab2d0066c3cf1acfc5ee41a27294b5b23697d",
+          "message": "refactor(katana): rename starknet config to execution config (#2557)",
+          "timestamp": "2024-10-19T08:58:47+08:00",
+          "tree_id": "4858d3acac65cb36b18fb2db55da90e0d6a443ee",
+          "url": "https://github.com/dojoengine/dojo/commit/e6bab2d0066c3cf1acfc5ee41a27294b5b23697d"
+        },
+        "date": 1729300496429,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 12101236895,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
