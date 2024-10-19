@@ -8261,6 +8261,7 @@ dependencies = [
  "similar-asserts",
  "starknet 0.12.0",
  "starknet-crypto 0.7.2",
+ "starknet-types-core",
  "thiserror",
 ]
 

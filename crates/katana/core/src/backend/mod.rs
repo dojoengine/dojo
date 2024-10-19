@@ -7,7 +7,7 @@ use katana_primitives::block::{
 use katana_primitives::chain_spec::ChainSpec;
 use katana_primitives::da::L1DataAvailabilityMode;
 use katana_primitives::env::BlockEnv;
-use katana_primitives::receipt::Receipt;
+use katana_primitives::receipt::ReceiptWithTxHash;
 use katana_primitives::transaction::{TxHash, TxWithHash};
 use katana_primitives::Felt;
 use katana_provider::traits::block::{BlockHashProvider, BlockWriter};
@@ -52,9 +52,9 @@ impl<EF: ExecutorFactory> Backend<EF> {
         // only include successful transactions in the block
         for (tx, res) in execution_output.transactions {
             if let ExecutionResult::Success { receipt, trace, .. } = res {
-                txs.push(tx);
+                receipts.push(ReceiptWithTxHash::new(tx.hash, receipt));
                 traces.push(trace);
-                receipts.push(receipt);
+                txs.push(tx);
             }
         }
 
@@ -66,6 +66,9 @@ impl<EF: ExecutorFactory> Backend<EF> {
         let block = SealedBlockWithStatus { block, status: FinalityStatus::AcceptedOnL2 };
         let block_number = block.block.header.number;
 
+        // TODO: maybe should change the arguments for insert_block_with_states_and_receipts to accept
+        // ReceiptWithTxHash instead to avoid this conversion.
+        let receipts = receipts.into_iter().map(|r| r.receipt).collect::<Vec<_>>();
         self.blockchain.provider().insert_block_with_states_and_receipts(
             block,
             execution_output.states,
@@ -105,7 +108,7 @@ impl<EF: ExecutorFactory> Backend<EF> {
         &self,
         block_env: &BlockEnv,
         transactions: Vec<TxWithHash>,
-        receipts: &[Receipt],
+        receipts: &[ReceiptWithTxHash],
     ) -> Result<SealedBlock, BlockProductionError> {
         // get the hash of the latest committed block
         let parent_hash = self.blockchain.provider().latest_hash()?;
@@ -120,20 +123,8 @@ impl<EF: ExecutorFactory> Backend<EF> {
         let state_root = Felt::ZERO;
 
         // compute receipts commitment
-        let receipts_commitment = compute_merkle_root::<hash::Poseidon>(&[]).unwrap();
-
-        // receipt computation
-        // pub fn compute_hash(&self) -> Felt {
-        //     Poseidon::hash_array(&[
-        //         self.transaction_hash(),
-        //         self.actual_fee().amount,
-        //         compute_messages_sent_hash(self.messages_sent()),
-        //         self.execution_result().compute_hash(),
-        //         Felt::ZERO, // L2 gas consumption.
-        //         self.total_gas_consumed().l1_gas.into(),
-        //         self.total_gas_consumed().l1_data_gas.into(),
-        //     ])
-        // }
+        let receipt_hashes = receipts.iter().map(|r| r.compute_hash()).collect::<Vec<Felt>>();
+        let receipts_commitment = compute_merkle_root::<hash::Poseidon>(&receipt_hashes).unwrap();
 
         // compute state diffs commitment
         let state_diff_commitment = Felt::ZERO;
