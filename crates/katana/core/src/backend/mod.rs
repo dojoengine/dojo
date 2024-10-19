@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use katana_executor::{ExecutionOutput, ExecutionResult, ExecutorFactory};
-use katana_primitives::Felt;
 use katana_primitives::block::{
     Block, FinalityStatus, GasPrices, Header, SealedBlock, SealedBlockWithStatus,
 };
@@ -10,10 +9,11 @@ use katana_primitives::da::L1DataAvailabilityMode;
 use katana_primitives::env::BlockEnv;
 use katana_primitives::receipt::Receipt;
 use katana_primitives::transaction::{TxHash, TxWithHash};
+use katana_primitives::Felt;
 use katana_provider::traits::block::{BlockHashProvider, BlockWriter};
 use katana_trie::trie::compute_merkle_root;
 use parking_lot::RwLock;
-use starknet_types_core::hash::{self, Pedersen, Poseidon, StarkHash};
+use starknet_types_core::hash::{self};
 use tracing::info;
 
 pub mod contract;
@@ -57,26 +57,6 @@ impl<EF: ExecutorFactory> Backend<EF> {
                 receipts.push(receipt);
             }
         }
-
-        // compute txs commitment
-        let tx_hashes = txs.iter().map(|t| t.hash).collect::<Vec<TxHash>>();
-        let txs_commitment = compute_merkle_root::<hash::Poseidon>(&tx_hashes).unwrap();
-        // compute receipts commitment
-        let receipts_commitment = compute_merkle_root::<hash::Poseidon>(&[]).unwrap();
-        // compute state diffs commitment
-        let state_diffs = Felt::ZERO;
-        // compute events commitment
-        let events_commitment = compute_merkle_root::<hash::Poseidon>(&[]).unwrap();
-
-        // compute txs commitment
-        let tx_hashes = txs.iter().map(|t| t.hash).collect::<Vec<TxHash>>();
-        let txs_commitment = compute_merkle_root::<hash::Poseidon>(&tx_hashes).unwrap();
-        // compute receipts commitment
-        let receipts_commitment = compute_merkle_root::<hash::Poseidon>(&[]).unwrap();
-        // compute state diffs commitment
-        let state_diffs = Felt::ZERO;
-        // compute events commitment
-        let events_commitment = compute_merkle_root::<hash::Poseidon>(&[]).unwrap();
 
         let tx_count = txs.len() as u32;
         let tx_hashes = txs.iter().map(|tx| tx.hash).collect::<Vec<TxHash>>();
@@ -132,6 +112,20 @@ impl<EF: ExecutorFactory> Backend<EF> {
         let events_count = receipts.iter().map(|r| r.events().len() as u32).sum::<u32>();
         let transaction_count = transactions.len() as u32;
 
+        // compute txs commitment
+        let tx_hashes = transactions.iter().map(|t| t.hash).collect::<Vec<TxHash>>();
+        let transactions_commitment = compute_merkle_root::<hash::Poseidon>(&tx_hashes).unwrap();
+
+        // compute the new global state root
+        let state_root = Felt::ZERO;
+
+        // compute receipts commitment
+        let receipts_commitment = compute_merkle_root::<hash::Poseidon>(&[]).unwrap();
+        // compute state diffs commitment
+        let state_diff_commitment = Felt::ZERO;
+        // compute events commitment
+        let events_commitment = compute_merkle_root::<hash::Poseidon>(&[]).unwrap();
+
         let l1_gas_prices =
             GasPrices { eth: block_env.l1_gas_prices.eth, strk: block_env.l1_gas_prices.strk };
         let l1_data_gas_prices = GasPrices {
@@ -142,16 +136,16 @@ impl<EF: ExecutorFactory> Backend<EF> {
         let header = Header {
             parent_hash,
             events_count,
+            state_root,
             l1_gas_prices,
-            transaction_count,
             l1_data_gas_prices,
-            state_root: Felt::ZERO,
+            transaction_count,
+            events_commitment,
+            receipts_commitment,
+            state_diff_commitment,
+            transactions_commitment,
             number: block_env.number,
-            events_commitment: Felt::ZERO,
             timestamp: block_env.timestamp,
-            receipts_commitment: Felt::ZERO,
-            state_diff_commitment: Felt::ZERO,
-            transactions_commitment: Felt::ZERO,
             l1_da_mode: L1DataAvailabilityMode::Calldata,
             sequencer_address: block_env.sequencer_address,
             protocol_version: self.chain_spec.version.clone(),
