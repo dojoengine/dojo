@@ -6,11 +6,28 @@ use std::sync::Arc;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Request, Response};
 
+use crate::exporters::Exporter;
 use crate::process::{collect_memory_stats, describe_memory_stats};
-use crate::{BoxedHook, Error, Exporter, Hooks};
+use crate::{Error, Report};
 
+/// A helper trait for defining the type for hooks that are called when the metrics are being
+/// collected by the server.
+trait Hook: Fn() + Send + Sync {}
+impl<T: Fn() + Send + Sync> Hook for T {}
+
+/// A boxed [`Hook`].
+type BoxedHook = Box<dyn Hook<Output = ()>>;
+/// A list of [BoxedHook].
+type Hooks = Vec<BoxedHook>;
+
+/// Server for serving metrics.
 pub struct Server<MetricsExporter> {
+    /// Hooks or callable functions for collecting metrics in the cases where
+    /// the metrics are not being collected in the main program flow.
+    ///
+    /// These are called when metrics are being served through the server.
     hooks: Hooks,
+    /// The exporter that is used to export the collected metrics.
     exporter: MetricsExporter,
 }
 
@@ -25,7 +42,12 @@ where
         Self { exporter, hooks }
     }
 
-    pub fn hooks<I: IntoIterator<Item = BoxedHook<()>>>(mut self, hooks: I) -> Self {
+    pub fn with_reports<I>(mut self, reports: I) -> Self
+    where
+        I: IntoIterator<Item = Box<dyn Report>>,
+    {
+        // convert the report types into callable hooks
+        let hooks = reports.into_iter().map(|r| Box::new(move || r.report()) as BoxedHook);
         self.hooks.extend(hooks);
         self
     }

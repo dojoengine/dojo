@@ -7,7 +7,8 @@ pub use metrics_exporter_prometheus::PrometheusHandle as Prometheus;
 use metrics_util::layers::{PrefixLayer, Stack};
 use tracing::info;
 
-use crate::{Error, Exporter};
+use crate::exporters::Exporter;
+use crate::Error;
 
 static PROMETHEUS_HANDLE: OnceLock<Prometheus> = OnceLock::new();
 

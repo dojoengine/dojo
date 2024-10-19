@@ -13,7 +13,7 @@ use config::metrics::MetricsConfig;
 use config::rpc::{ApiKind, RpcConfig};
 use config::{Config, SequencingConfig};
 use dojo_metrics::exporters::prometheus::PrometheusRecorder;
-use dojo_metrics::{Hooks, Report, Server as MetricsServer};
+use dojo_metrics::{Report, Server as MetricsServer};
 use hyper::{Method, Uri};
 use jsonrpsee::RpcModule;
 use jsonrpsee::server::middleware::proxy_get_request::ProxyGetRequestLayer;
@@ -99,15 +99,14 @@ impl Node {
 
         // TODO: move this to build stage
         if let Some(ref cfg) = self.metrics_config {
-            let mut hooks: Hooks = Vec::new();
+            let mut reports: Vec<Box<dyn Report>> = Vec::new();
 
             if let Some(ref db) = self.db {
-                let db = db.clone();
-                hooks.push(Box::new(move || db.report()));
+                reports.push(Box::new(db.clone()) as Box<dyn Report>);
             }
 
             let exporter = PrometheusRecorder::current().expect("qed; should exist at this point");
-            let server = MetricsServer::new(exporter).hooks(hooks);
+            let server = MetricsServer::new(exporter).with_reports(reports);
 
             self.task_manager.task_spawner().build_task().spawn(server.start(cfg.addr));
             info!(addr = %cfg.addr, "Metrics server started.");

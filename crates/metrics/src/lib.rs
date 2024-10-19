@@ -31,20 +31,6 @@ pub enum Error {
     Server(#[from] hyper::Error),
 }
 
-/// A helper trait for defining the type for hooks that are called when the metrics are being
-/// collected by the server.
-pub trait Hook: Fn() + Send + Sync {}
-impl<T: Fn() + Send + Sync> Hook for T {}
-
-/// A boxed [`Hook`].
-pub type BoxedHook<T> = Box<dyn Hook<Output = T>>;
-/// A list of [BoxedHook].
-pub type Hooks = Vec<BoxedHook<()>>;
-
-pub trait Exporter: Clone + Send + Sync {
-    fn export(&self) -> String;
-}
-
 /// A helper trait for reporting metrics.
 ///
 /// This is meant for types that require a specific trigger to register their metrics.
