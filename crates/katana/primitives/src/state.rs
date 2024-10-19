@@ -29,6 +29,24 @@ pub struct StateUpdates {
     pub replaced_classes: BTreeMap<ContractAddress, ClassHash>,
 }
 
+impl StateUpdates {
+    pub fn len(&self) -> usize {
+        let mut len: usize = 0;
+
+        len += self.deployed_contracts.len();
+        len += self.replaced_classes.len();
+        len += self.declared_classes.len();
+        len += self.deprecated_declared_classes.len();
+        len += self.nonce_updates.len();
+
+        for (_, updates) in &self.storage_updates {
+            len += updates.len();
+        }
+
+        len
+    }
+}
+
 /// State update with declared classes definition.
 #[derive(Debug, Default, Clone)]
 pub struct StateUpdatesWithDeclaredClasses {
@@ -39,27 +57,6 @@ pub struct StateUpdatesWithDeclaredClasses {
     /// A mapping of class hashes to their compiled classes definition.
     pub declared_compiled_classes: BTreeMap<ClassHash, CompiledClass>,
 }
-
-// /// Compute the state diff commitment for a block.
-// fn state_diff_commitment(
-//     block: &UnverifiedFullBlock,
-//     _validation: &BlockValidationContext,
-// ) -> Result<Felt, BlockImportError> {
-//     let got = block.state_diff.len() as u64;
-//     if let Some(expected) = block.commitments.state_diff_length {
-//         if expected != got {
-//             return Err(BlockImportError::StateDiffLength { got, expected });
-//         }
-//     }
-
-//     let got = block.state_diff.compute_hash();
-//     if let Some(expected) = block.commitments.state_diff_commitment {
-//         if expected != got {
-//             return Err(BlockImportError::StateDiffCommitment { got, expected });
-//         }
-//     }
-//     Ok(got)
-// }
 
 pub fn compute_state_diff_hash(states: StateUpdates) -> Felt {
     let replaced_classes_len = states.replaced_classes.len();
