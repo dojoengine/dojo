@@ -13,7 +13,6 @@ use config::metrics::MetricsConfig;
 use config::rpc::{ApiKind, RpcConfig};
 use config::{Config, SequencingConfig};
 use dojo_metrics::exporters::prometheus::PrometheusRecorder;
-use dojo_metrics::metrics_process::Collector;
 use dojo_metrics::{Report, Server as MetricsServer};
 use hyper::{Method, Uri};
 use jsonrpsee::server::middleware::proxy_get_request::ProxyGetRequestLayer;
