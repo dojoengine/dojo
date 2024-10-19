@@ -21,6 +21,8 @@ type BoxedHook = Box<dyn Hook<Output = ()>>;
 type Hooks = Vec<BoxedHook>;
 
 /// Server for serving metrics.
+// TODO: allow configuring the server executor to allow cancelling on invidiual connection tasks.
+// See, [hyper::server::server::Builder::executor]
 pub struct Server<MetricsExporter> {
     /// Hooks or callable functions for collecting metrics in the cases where
     /// the metrics are not being collected in the main program flow.
