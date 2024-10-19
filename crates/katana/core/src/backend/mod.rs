@@ -121,6 +121,20 @@ impl<EF: ExecutorFactory> Backend<EF> {
 
         // compute receipts commitment
         let receipts_commitment = compute_merkle_root::<hash::Poseidon>(&[]).unwrap();
+
+        // receipt computation
+        // pub fn compute_hash(&self) -> Felt {
+        //     Poseidon::hash_array(&[
+        //         self.transaction_hash(),
+        //         self.actual_fee().amount,
+        //         compute_messages_sent_hash(self.messages_sent()),
+        //         self.execution_result().compute_hash(),
+        //         Felt::ZERO, // L2 gas consumption.
+        //         self.total_gas_consumed().l1_gas.into(),
+        //         self.total_gas_consumed().l1_data_gas.into(),
+        //     ])
+        // }
+
         // compute state diffs commitment
         let state_diff_commitment = Felt::ZERO;
         // compute events commitment
