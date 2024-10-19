@@ -17,13 +17,14 @@ use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
 use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{Tx, TxHash, TxNumber, TxWithHash};
 use parking_lot::RwLock;
-use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
+use starknet::providers::jsonrpc::HttpTransport;
 
 use self::backend::{Backend, BackendError, SharedStateProvider};
 use self::state::ForkedStateDb;
 use super::in_memory::cache::{CacheDb, CacheStateDb};
 use super::in_memory::state::HistoricalStates;
+use crate::ProviderResult;
 use crate::traits::block::{
     BlockHashProvider, BlockNumberProvider, BlockProvider, BlockStatusProvider, BlockWriter,
     HeaderProvider,
@@ -36,7 +37,6 @@ use crate::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionStatusProvider, TransactionTraceProvider,
     TransactionsProviderExt,
 };
-use crate::ProviderResult;
 
 #[derive(Debug)]
 pub struct ForkedProvider {

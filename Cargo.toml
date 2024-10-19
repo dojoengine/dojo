@@ -35,6 +35,7 @@ members = [
 	"crates/katana/storage/db",
 	"crates/katana/storage/provider",
 	"crates/katana/tasks",
+	"crates/katana/trie",
 	"crates/metrics",
 	"crates/saya/core",
 	"crates/saya/provider",
@@ -99,6 +100,7 @@ katana-rpc-types-builder = { path = "crates/katana/rpc/rpc-types-builder" }
 katana-runner = { path = "crates/katana/runner" }
 katana-slot-controller = { path = "crates/katana/controller" }
 katana-tasks = { path = "crates/katana/tasks" }
+katana-trie = { path = "crates/katana/trie" }
 
 # torii
 torii-client = { path = "crates/torii/client" }
@@ -216,7 +218,7 @@ warp = "0.3"
 
 # gRPC
 prost = "0.12"
-tonic = { version = "0.11", features = [ "tls", "tls-roots", "gzip" ] }
+tonic = { version = "0.11", features = [ "gzip", "tls", "tls-roots" ] }
 tonic-build = "0.11"
 tonic-reflection = "0.11"
 tonic-web = "0.11"
@@ -245,4 +247,4 @@ alloy-transport = { version = "0.3", default-features = false }
 
 starknet = "0.12.0"
 starknet-crypto = "0.7.1"
-starknet-types-core = { version = "0.1.6", features = [ "arbitrary" ] }
+starknet-types-core = { version = "0.1.7", features = [ "arbitrary", "hash" ] }

@@ -16,6 +16,7 @@ use katana_db::models::list::BlockList;
 use katana_db::models::storage::{ContractStorageEntry, ContractStorageKey, StorageEntry};
 use katana_db::tables::{self, DupSort, Table};
 use katana_db::utils::KeyValue;
+use katana_primitives::Felt;
 use katana_primitives::block::{
     Block, BlockHash, BlockHashOrNumber, BlockNumber, BlockWithTxHashes, FinalityStatus, Header,
     SealedBlockWithStatus,
@@ -29,8 +30,8 @@ use katana_primitives::receipt::Receipt;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
 use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{TxHash, TxNumber, TxWithHash};
-use katana_primitives::Felt;
 
+use crate::ProviderResult;
 use crate::error::ProviderError;
 use crate::traits::block::{
     BlockHashProvider, BlockNumberProvider, BlockProvider, BlockStatusProvider, BlockWriter,
@@ -43,7 +44,6 @@ use crate::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionStatusProvider, TransactionTraceProvider,
     TransactionsProviderExt,
 };
-use crate::ProviderResult;
 
 /// A provider implementation that uses a persistent database as the backend.
 // TODO: remove the default generic type
