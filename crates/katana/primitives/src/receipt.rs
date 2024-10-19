@@ -1,4 +1,5 @@
 use alloy_primitives::B256;
+use starknet::core::crypto::compute_hash_on_elements;
 
 use crate::contract::ContractAddress;
 use crate::fee::TxFeeInfo;

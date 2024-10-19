@@ -20,6 +20,7 @@ use parking_lot::RwLock;
 
 use self::cache::CacheDb;
 use self::state::{HistoricalStates, InMemoryStateDb, LatestStateProvider};
+use crate::ProviderResult;
 use crate::traits::block::{
     BlockHashProvider, BlockNumberProvider, BlockProvider, BlockStatusProvider, BlockWriter,
     HeaderProvider,
@@ -32,7 +33,6 @@ use crate::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionStatusProvider, TransactionTraceProvider,
     TransactionsProviderExt,
 };
-use crate::ProviderResult;
 
 #[derive(Debug)]
 pub struct InMemoryProvider {

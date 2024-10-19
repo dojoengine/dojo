@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use katana_executor::{ExecutionOutput, ExecutionResult, ExecutorFactory};
+use katana_primitives::Felt;
 use katana_primitives::block::{
     Block, FinalityStatus, GasPrices, Header, SealedBlock, SealedBlockWithStatus,
 };
@@ -9,9 +10,10 @@ use katana_primitives::da::L1DataAvailabilityMode;
 use katana_primitives::env::BlockEnv;
 use katana_primitives::receipt::Receipt;
 use katana_primitives::transaction::{TxHash, TxWithHash};
-use katana_primitives::Felt;
 use katana_provider::traits::block::{BlockHashProvider, BlockWriter};
+use katana_trie::trie::compute_merkle_root;
 use parking_lot::RwLock;
+use starknet_types_core::hash::{self, Pedersen, Poseidon, StarkHash};
 use tracing::info;
 
 pub mod contract;
@@ -55,6 +57,26 @@ impl<EF: ExecutorFactory> Backend<EF> {
                 receipts.push(receipt);
             }
         }
+
+        // compute txs commitment
+        let tx_hashes = txs.iter().map(|t| t.hash).collect::<Vec<TxHash>>();
+        let txs_commitment = compute_merkle_root::<hash::Poseidon>(&tx_hashes).unwrap();
+        // compute receipts commitment
+        let receipts_commitment = compute_merkle_root::<hash::Poseidon>(&[]).unwrap();
+        // compute state diffs commitment
+        let state_diffs = Felt::ZERO;
+        // compute events commitment
+        let events_commitment = compute_merkle_root::<hash::Poseidon>(&[]).unwrap();
+
+        // compute txs commitment
+        let tx_hashes = txs.iter().map(|t| t.hash).collect::<Vec<TxHash>>();
+        let txs_commitment = compute_merkle_root::<hash::Poseidon>(&tx_hashes).unwrap();
+        // compute receipts commitment
+        let receipts_commitment = compute_merkle_root::<hash::Poseidon>(&[]).unwrap();
+        // compute state diffs commitment
+        let state_diffs = Felt::ZERO;
+        // compute events commitment
+        let events_commitment = compute_merkle_root::<hash::Poseidon>(&[]).unwrap();
 
         let tx_count = txs.len() as u32;
         let tx_hashes = txs.iter().map(|tx| tx.hash).collect::<Vec<TxHash>>();
