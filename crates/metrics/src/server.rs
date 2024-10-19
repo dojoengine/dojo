@@ -7,7 +7,6 @@ use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Request, Response};
 
 use crate::exporters::Exporter;
-use crate::process::{collect_memory_stats, describe_memory_stats};
 use crate::{Error, Report};
 
 /// A helper trait for defining the type for hooks that are called when the metrics are being
@@ -39,9 +38,7 @@ where
 {
     /// Creates a new metrics server using the given exporter.
     pub fn new(exporter: MetricsExporter) -> Self {
-        describe_memory_stats();
-        let hooks: Hooks = vec![Box::new(collect_memory_stats)];
-        Self { exporter, hooks }
+        Self { exporter, hooks: Vec::new() }
     }
 
     /// Add new metrics reporter to the server.
@@ -56,9 +53,16 @@ where
     }
 
     pub fn with_process_metrics(mut self) -> Self {
+        use crate::process::{collect_memory_stats, describe_memory_stats};
+
         let process = metrics_process::Collector::default();
         process.describe();
-        self.hooks.push(Box::new(move || process.collect()) as BoxedHook);
+        describe_memory_stats();
+
+        let hooks: Hooks =
+            vec![Box::new(collect_memory_stats), Box::new(move || process.collect())];
+
+        self.hooks.extend(hooks);
         self
     }
 
