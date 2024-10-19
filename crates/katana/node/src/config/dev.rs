@@ -1,5 +1,5 @@
 /// Development configuration.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct DevConfig {
     /// Whether to enable paying fees for transactions.
     ///
@@ -20,4 +20,10 @@ pub struct DevConfig {
     /// estimation/simulation was sent with `SKIP_VALIDATE`. Using `SKIP_VALIDATE` while
     /// validation is disabled is a no-op.
     pub account_validation: bool,
+}
+
+impl std::default::Default for DevConfig {
+    fn default() -> Self {
+        Self { fee: true, account_validation: true }
+    }
 }

@@ -1,13 +1,14 @@
 pub mod db;
 pub mod dev;
+pub mod execution;
 pub mod fork;
 pub mod metrics;
 pub mod rpc;
 
 use db::DbConfig;
 use dev::DevConfig;
+use execution::ExecutionConfig;
 use fork::ForkingConfig;
-use katana_core::backend::config::StarknetConfig;
 use katana_core::service::messaging::MessagingConfig;
 use katana_primitives::chain_spec::ChainSpec;
 use metrics::MetricsConfig;
@@ -33,8 +34,8 @@ pub struct Config {
     /// Metrics options.
     pub metrics: Option<MetricsConfig>,
 
-    /// Starknet options.
-    pub starknet: StarknetConfig,
+    /// Execution options.
+    pub execution: ExecutionConfig,
 
     /// Messaging options.
     pub messaging: Option<MessagingConfig>,

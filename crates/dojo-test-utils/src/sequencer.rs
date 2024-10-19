@@ -2,13 +2,12 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use jsonrpsee::core::Error;
-pub use katana_core::backend::config::{Environment, StarknetConfig};
 use katana_core::backend::Backend;
 use katana_core::constants::DEFAULT_SEQUENCER_ADDRESS;
 use katana_executor::implementation::blockifier::BlockifierFactory;
 use katana_node::config::dev::DevConfig;
 use katana_node::config::rpc::{ApiKind, RpcConfig, DEFAULT_RPC_ADDR, DEFAULT_RPC_MAX_CONNECTIONS};
-use katana_node::config::{Config, SequencingConfig};
+pub use katana_node::config::*;
 use katana_node::LaunchedNode;
 use katana_primitives::chain::ChainId;
 use katana_primitives::chain_spec::ChainSpec;

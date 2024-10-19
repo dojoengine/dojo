@@ -13,11 +13,9 @@ use katana_provider::traits::block::{BlockHashProvider, BlockWriter};
 use parking_lot::RwLock;
 use tracing::info;
 
-pub mod config;
 pub mod contract;
 pub mod storage;
 
-use self::config::StarknetConfig;
 use self::storage::Blockchain;
 use crate::env::BlockContextGenerator;
 use crate::service::block_producer::{BlockProductionError, MinedBlockOutcome};
@@ -27,9 +25,6 @@ pub(crate) const LOG_TARGET: &str = "katana::core::backend";
 
 #[derive(Debug)]
 pub struct Backend<EF: ExecutorFactory> {
-    /// The config used to generate the backend.
-    pub config: StarknetConfig,
-
     pub chain_spec: ChainSpec,
     /// stores all block related data in memory
     pub blockchain: Blockchain,
