@@ -4627,6 +4627,7 @@ dependencies = [
  "metrics-util",
  "thiserror",
  "tokio",
+ "tokio-util",
  "tracing",
 ]
 
