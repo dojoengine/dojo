@@ -11,16 +11,16 @@ use katana_primitives::contract::ContractAddress;
 use katana_primitives::genesis::constant::{DEFAULT_LEGACY_ERC20_CASM, DEFAULT_LEGACY_UDC_CASM};
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
 use katana_primitives::utils::class::parse_compiled_class;
-use katana_provider::BlockchainProvider;
 use katana_provider::providers::db::DbProvider;
 use katana_provider::providers::fork::ForkedProvider;
 use katana_provider::traits::block::BlockWriter;
 use katana_provider::traits::state::StateFactoryProvider;
+use katana_provider::BlockchainProvider;
 use katana_runner::KatanaRunner;
 use lazy_static::lazy_static;
 use starknet::macros::felt;
-use starknet::providers::JsonRpcClient;
 use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::JsonRpcClient;
 use url::Url;
 
 lazy_static! {

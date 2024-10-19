@@ -5,7 +5,6 @@ use katana_primitives::block::{
 use katana_primitives::env::BlockEnv;
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
 use katana_primitives::transaction::TxWithHash;
-use katana_provider::BlockchainProvider;
 use katana_provider::providers::db::DbProvider;
 use katana_provider::providers::fork::ForkedProvider;
 use katana_provider::traits::block::{
@@ -17,6 +16,7 @@ use katana_provider::traits::state_update::StateUpdateProvider;
 use katana_provider::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionStatusProvider, TransactionTraceProvider,
 };
+use katana_provider::BlockchainProvider;
 use rstest_reuse::{self, *};
 
 mod fixtures;
