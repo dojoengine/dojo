@@ -346,8 +346,13 @@ mod tests {
         // setup expected storage values
         let expected_block = Block {
             header: Header {
+                events_commitment: Felt::ZERO,
+                receipts_commitment: Felt::ZERO,
+                state_diff_commitment: Felt::ZERO,
+                transactions_commitment: Felt::ZERO,
                 number: chain_spec.genesis.number,
                 timestamp: chain_spec.genesis.timestamp,
+                state_root: chain_spec.genesis.state_root,
                 parent_hash: chain_spec.genesis.parent_hash,
                 sequencer_address: chain_spec.genesis.sequencer_address,
                 l1_gas_prices: chain_spec.genesis.gas_prices.clone(),

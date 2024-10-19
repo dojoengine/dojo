@@ -4,7 +4,7 @@ use std::sync::Arc;
 use katana_db::mdbx;
 use katana_primitives::address;
 use katana_primitives::block::{
-    BlockHashOrNumber, FinalityStatus, Header, SealedBlock, SealedBlockWithStatus, SealedHeader,
+    BlockHashOrNumber, FinalityStatus, Header, SealedBlock, SealedBlockWithStatus,
 };
 use katana_primitives::class::{CompiledClass, FlattenedSierraClass, SierraClass};
 use katana_primitives::contract::ContractAddress;
@@ -188,10 +188,8 @@ where
                 SealedBlockWithStatus {
                     status: FinalityStatus::AcceptedOnL2,
                     block: SealedBlock {
-                        header: SealedHeader {
-                            hash: i.into(),
-                            header: Header { number: i, ..Default::default() },
-                        },
+                        hash: i.into(),
+                        header: Header { number: i, ..Default::default() },
                         body: Default::default(),
                     },
                 },

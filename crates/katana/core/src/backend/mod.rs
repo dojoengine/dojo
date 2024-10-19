@@ -1,9 +1,8 @@
 use std::sync::Arc;
 
-use katana_db::tables::Receipts;
 use katana_executor::{ExecutionOutput, ExecutionResult, ExecutorFactory};
 use katana_primitives::block::{
-    Block, FinalityStatus, GasPrices, Header, PartialHeader, SealedBlock, SealedBlockWithStatus,
+    Block, FinalityStatus, GasPrices, Header, SealedBlock, SealedBlockWithStatus,
 };
 use katana_primitives::chain_spec::ChainSpec;
 use katana_primitives::da::L1DataAvailabilityMode;
@@ -37,6 +36,7 @@ pub struct Backend<EF: ExecutorFactory> {
 }
 
 impl<EF: ExecutorFactory> Backend<EF> {
+    // TODO: add test for this function
     pub fn do_mine_block(
         &self,
         block_env: &BlockEnv,
@@ -62,7 +62,7 @@ impl<EF: ExecutorFactory> Backend<EF> {
         // create a new block and compute its commitment
         let block = self.commit_block(block_env, txs, &receipts)?;
         let block = SealedBlockWithStatus { block, status: FinalityStatus::AcceptedOnL2 };
-        let block_number = block.block.header.header.number;
+        let block_number = block.block.header.number;
 
         self.blockchain.provider().insert_block_with_states_and_receipts(
             block,
@@ -105,6 +105,7 @@ impl<EF: ExecutorFactory> Backend<EF> {
         transactions: Vec<TxWithHash>,
         receipts: &[Receipt],
     ) -> Result<SealedBlock, BlockProductionError> {
+        // get the hash of the latest committed block
         let parent_hash = self.blockchain.provider().latest_hash()?;
         let events_count = receipts.iter().map(|r| r.events().len() as u32).sum::<u32>();
         let transaction_count = transactions.len() as u32;
@@ -134,6 +135,7 @@ impl<EF: ExecutorFactory> Backend<EF> {
             protocol_version: self.chain_spec.version.clone(),
         };
 
-        Ok(Block { header, body: transactions }.seal())
+        let sealed = Block { header, body: transactions }.seal();
+        Ok(sealed)
     }
 }

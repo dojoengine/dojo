@@ -100,8 +100,8 @@ where
             executions.clone(),
         )?;
 
-        assert_eq!(provider.latest_number().unwrap(), block.block.header.header.number);
-        assert_eq!(provider.latest_hash().unwrap(), block.block.header.hash);
+        assert_eq!(provider.latest_number().unwrap(), block.block.header.number);
+        assert_eq!(provider.latest_hash().unwrap(), block.block.hash);
     }
 
     let actual_transactions_in_range = provider.transaction_in_range(0..total_txs).unwrap();
@@ -117,10 +117,10 @@ where
     );
 
     for (block, receipts, executions) in blocks {
-        let block_id = BlockHashOrNumber::Hash(block.block.header.hash);
+        let block_id = BlockHashOrNumber::Hash(block.block.hash);
 
-        let expected_block_num = block.block.header.header.number;
-        let expected_block_hash = block.block.header.hash;
+        let expected_block_num = block.block.header.number;
+        let expected_block_hash = block.block.hash;
         let expected_block = block.block.unseal();
 
         let expected_block_env = BlockEnv {
@@ -210,8 +210,8 @@ where
             vec![],
         )?;
 
-        assert_eq!(provider.latest_number().unwrap(), block.block.header.header.number);
-        assert_eq!(provider.latest_hash().unwrap(), block.block.header.hash);
+        assert_eq!(provider.latest_number().unwrap(), block.block.header.number);
+        assert_eq!(provider.latest_hash().unwrap(), block.block.hash);
     }
 
     let actual_blocks_in_range = provider.blocks_in_range(0..=count)?;
@@ -223,10 +223,10 @@ where
     );
 
     for block in blocks {
-        let block_id = BlockHashOrNumber::Hash(block.block.header.hash);
+        let block_id = BlockHashOrNumber::Hash(block.block.hash);
 
-        let expected_block_num = block.block.header.header.number;
-        let expected_block_hash = block.block.header.hash;
+        let expected_block_num = block.block.header.number;
+        let expected_block_hash = block.block.hash;
         let expected_block = block.block.unseal();
 
         let expected_block_env = BlockEnv {

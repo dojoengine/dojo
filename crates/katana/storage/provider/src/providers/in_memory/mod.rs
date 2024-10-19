@@ -463,10 +463,10 @@ impl BlockWriter for InMemoryProvider {
     ) -> ProviderResult<()> {
         let mut storage = self.storage.write();
 
-        let block_hash = block.block.header.hash;
-        let block_number = block.block.header.header.number;
+        let block_hash = block.block.hash;
+        let block_number = block.block.header.number;
 
-        let block_header = block.block.header.header;
+        let block_header = block.block.header;
         let txs = block.block.body;
 
         // create block body indices

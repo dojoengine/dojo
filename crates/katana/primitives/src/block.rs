@@ -2,7 +2,6 @@ use starknet::core::crypto::compute_hash_on_elements;
 
 use crate::contract::ContractAddress;
 use crate::da::L1DataAvailabilityMode;
-use crate::env::BlockEnv;
 use crate::transaction::{ExecutableTxWithHash, TxHash, TxWithHash};
 use crate::version::ProtocolVersion;
 use crate::Felt;
@@ -130,11 +129,6 @@ impl Header {
             self.parent_hash,              // parent hash
         ])
     }
-
-    fn seal(self) -> SealedHeader {
-        let hash = self.compute_hash();
-        SealedHeader { hash, header: self }
-    }
 }
 
 /// Represents a Starknet full block.
@@ -155,12 +149,13 @@ pub struct BlockWithTxHashes {
 impl Block {
     /// Seals the block. This computes the hash of the block.
     pub fn seal(self) -> SealedBlock {
-        SealedBlock { header: self.header.seal(), body: self.body }
+        let hash = self.header.compute_hash();
+        SealedBlock { hash, header: self.header, body: self.body }
     }
 
     /// Seals the block with a given hash.
     pub fn seal_with_hash(self, hash: BlockHash) -> SealedBlock {
-        SealedBlock { header: SealedHeader { hash, header: self.header }, body: self.body }
+        SealedBlock { hash, header: self.header, body: self.body }
     }
 
     /// Seals the block with a given block hash and status.
@@ -173,28 +168,21 @@ impl Block {
     }
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct SealedHeader {
-    /// The hash of the header.
-    pub hash: BlockHash,
-    /// The generic header info.
-    pub header: Header,
-}
-
 /// A full Starknet block that has been sealed.
 #[derive(Debug, Clone)]
 pub struct SealedBlock {
-    /// The sealed block header.
-    pub header: SealedHeader,
-    /// The block body.
+    /// The block hash.
+    pub hash: BlockHash,
+    /// The block header.
+    pub header: Header,
+    /// The block transactions.
     pub body: Vec<TxWithHash>,
 }
 
 impl SealedBlock {
     /// Unseal the block.
     pub fn unseal(self) -> Block {
-        Block { header: self.header.header, body: self.body }
+        Block { header: self.header, body: self.body }
     }
 }
 
