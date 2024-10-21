@@ -10,6 +10,7 @@ use crate::models::block::StoredBlockBodyIndices;
 use crate::models::contract::{ContractClassChange, ContractInfoChangeList, ContractNonceChange};
 use crate::models::list::BlockList;
 use crate::models::storage::{ContractStorageEntry, ContractStorageKey, StorageEntry};
+use crate::models::trie::{TrieDatabaseKey, TrieDatabaseValue};
 
 pub trait Key: Encode + Decode + Clone + std::fmt::Debug {}
 pub trait Value: Compress + Decompress + std::fmt::Debug {}
@@ -44,7 +45,7 @@ pub enum TableType {
     DupSort,
 }
 
-pub const NUM_TABLES: usize = 23;
+pub const NUM_TABLES: usize = 25;
 
 /// Macro to declare `libmdbx` tables.
 #[macro_export]
@@ -167,7 +168,9 @@ define_tables_enum! {[
     (NonceChangeHistory, TableType::DupSort),
     (ClassChangeHistory, TableType::DupSort),
     (StorageChangeHistory, TableType::DupSort),
-    (StorageChangeSet, TableType::Table)
+    (StorageChangeSet, TableType::Table),
+    (ClassTrie, TableType::Table),
+    (ContractTrie, TableType::Table)
 ]}
 
 tables! {
@@ -219,12 +222,15 @@ tables! {
     NonceChangeHistory: (BlockNumber, ContractAddress) => ContractNonceChange,
     /// Contract class hash changes by block.
     ClassChangeHistory: (BlockNumber, ContractAddress) => ContractClassChange,
-
     /// storage change set
     StorageChangeSet: (ContractStorageKey) => BlockList,
     /// Account storage change set
-    StorageChangeHistory: (BlockNumber, ContractStorageKey) => ContractStorageEntry
+    StorageChangeHistory: (BlockNumber, ContractStorageKey) => ContractStorageEntry,
 
+    /// Class trie
+    ClassTrie: (TrieDatabaseKey) => TrieDatabaseValue,
+    /// Contract trie
+    ContractTrie: (TrieDatabaseKey) => TrieDatabaseValue
 }
 
 #[cfg(test)]

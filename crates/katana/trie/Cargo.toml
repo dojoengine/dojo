@@ -13,6 +13,8 @@ katana-primitives.workspace = true
 anyhow.workspace = true
 bitvec = "1.0.1"
 bonsai-trie = { git = "https://github.com/madara-alliance/bonsai-trie/", rev = "56d7d62", features = [ "std" ] }
+serde.workspace = true
 slab = "0.4.9"
 starknet.workspace = true
 starknet-types-core.workspace = true
+thiserror.workspace = true
