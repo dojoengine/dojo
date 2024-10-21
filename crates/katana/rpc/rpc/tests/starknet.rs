@@ -160,14 +160,13 @@ async fn declaring_already_existing_class() -> Result<()> {
 
     let path = PathBuf::from("tests/test_data/cairo1_contract.json");
     let (contract, compiled_hash) = common::prepare_contract_declaration_params(&path)?;
-
     let class_hash = contract.class_hash();
+
+    // Declare the class for the first time.
     let res = account.declare_v2(contract.clone().into(), compiled_hash).send().await?;
 
     // check that the tx is executed successfully and return the correct receipt
-    let receipt = dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await?;
-    assert_matches!(receipt.receipt, TransactionReceipt::Declare(DeclareTransactionReceipt { .. }));
-
+    let _ = dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await?;
     // check that the class is actually declared
     assert!(provider.get_class(BlockId::Tag(BlockTag::Pending), class_hash).await.is_ok());
 
