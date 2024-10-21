@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1729372640099,
+  "lastUpdate": 1729524319016,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -27289,6 +27289,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4497183,
             "range": "± 52586",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "97b679be7f64711ce5b9f636ce7754083a2ddb98",
+          "message": "feat(katana-pool): invalidate declare tx if the class already exists (#2564)",
+          "timestamp": "2024-10-21T23:08:59+08:00",
+          "tree_id": "886aa4a9de1f8c2d57dc817843477a2bf478e661",
+          "url": "https://github.com/dojoengine/dojo/commit/97b679be7f64711ce5b9f636ce7754083a2ddb98"
+        },
+        "date": 1729524317253,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 12388700767,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
