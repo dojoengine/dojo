@@ -2,19 +2,19 @@ use std::sync::Arc;
 
 use katana_executor::{ExecutionOutput, ExecutionResult, ExecutorFactory};
 use katana_primitives::block::{
-    Block, FinalityStatus, GasPrices, Header, SealedBlock, SealedBlockWithStatus,
+    Block, FinalityStatus, GasPrices, Header, PartialHeader, SealedBlock, SealedBlockWithStatus,
 };
 use katana_primitives::chain_spec::ChainSpec;
 use katana_primitives::da::L1DataAvailabilityMode;
 use katana_primitives::env::BlockEnv;
-use katana_primitives::receipt::ReceiptWithTxHash;
+use katana_primitives::receipt::{Event, Receipt, ReceiptWithTxHash};
 use katana_primitives::state::{compute_state_diff_hash, StateUpdates};
 use katana_primitives::transaction::{TxHash, TxWithHash};
-use katana_primitives::Felt;
+use katana_primitives::{ContractAddress, Felt};
 use katana_provider::traits::block::{BlockHashProvider, BlockWriter};
 use katana_trie::trie::compute_merkle_root;
 use parking_lot::RwLock;
-use starknet_types_core::hash::{self};
+use starknet_types_core::hash::{self, StarkHash};
 use tracing::info;
 
 pub mod contract;
@@ -118,26 +118,37 @@ impl<EF: ExecutorFactory> Backend<EF> {
         transactions: Vec<TxWithHash>,
         receipts: &[ReceiptWithTxHash],
     ) -> Result<SealedBlock, BlockProductionError> {
+        let block = UncommittedBlock::new(header, transactions, &receipts, &state_updates);
+        let committed = block.commit();
+        let sealed = Block { header, body: transactions }.seal();
+        Ok(sealed)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct UncommittedBlock<'a> {
+    header: PartialHeader,
+    transactions: Vec<TxWithHash>,
+    receipts: &'a [ReceiptWithTxHash],
+    state_updates: &'a StateUpdates,
+}
+
+impl<'a> UncommittedBlock<'a> {
+    pub fn new(
+        header: PartialHeader,
+        transactions: Vec<TxWithHash>,
+        receipts: &'a [ReceiptWithTxHash],
+        states: &'a StateUpdates,
+    ) -> Self {
+        Self { header, transactions, receipts, state_updates: states }
+    }
+
+    pub fn commit(self) -> SealedBlock {
         // get the hash of the latest committed block
         let parent_hash = self.blockchain.provider().latest_hash()?;
-        let events_count = receipts.iter().map(|r| r.events().len() as u32).sum::<u32>();
-        let transaction_count = transactions.len() as u32;
-
-        // compute txs commitment
-        let tx_hashes = transactions.iter().map(|t| t.hash).collect::<Vec<TxHash>>();
-        let transactions_commitment = compute_merkle_root::<hash::Poseidon>(&tx_hashes).unwrap();
-
-        // compute the new global state root
-        let state_root = Felt::ZERO;
-
-        // compute receipts commitment
-        let receipt_hashes = receipts.iter().map(|r| r.compute_hash()).collect::<Vec<Felt>>();
-        let receipts_commitment = compute_merkle_root::<hash::Poseidon>(&receipt_hashes).unwrap();
-
-        // compute state diffs commitment
-        let state_diff_commitment = compute_state_diff_hash(state_updates);
-        // compute events commitment
-        let events_commitment = compute_merkle_root::<hash::Poseidon>(&[]).unwrap();
+        let events_count = self.receipts.iter().map(|r| r.events().len() as u32).sum::<u32>();
+        let transaction_count = self.transactions.len() as u32;
+        let state_diff_length = self.state_updates.len() as u32;
 
         let l1_gas_prices =
             GasPrices { eth: block_env.l1_gas_prices.eth, strk: block_env.l1_gas_prices.strk };
@@ -145,6 +156,63 @@ impl<EF: ExecutorFactory> Backend<EF> {
             eth: block_env.l1_data_gas_prices.eth,
             strk: block_env.l1_data_gas_prices.strk,
         };
+
+        /// Computes the block hash.
+        ///
+        /// A block hash is defined as the Poseidon hash of the header’s fields, as follows:
+        ///
+        /// h(𝐵) = h(
+        ///     "STARKNET_BLOCK_HASH0",
+        ///     block_number,
+        ///     global_state_root,
+        ///     sequencer_address,
+        ///     block_timestamp,
+        ///     transaction_count || event_count || state_diff_length || l1_da_mode,
+        ///     state_diff_commitment,
+        ///     transactions_commitment
+        ///     events_commitment,
+        ///     receipts_commitment
+        ///     l1_gas_price_in_wei,
+        ///     l1_gas_price_in_fri,
+        ///     l1_data_gas_price_in_wei,
+        ///     l1_data_gas_price_in_fri
+        ///     protocol_version,
+        ///     0,
+        ///     parent_block_hash
+        /// )
+        ///
+        /// Based on StarkWare's [Sequencer implementation].
+        ///
+        /// [Sequencer implementation]: https://github.com/starkware-libs/sequencer/blob/bb361ec67396660d5468fd088171913e11482708/crates/starknet_api/src/block_hash/block_hash_calculator.rs#L62-L93
+        let starknet_version = self.header.protocol_version.to_string();
+        let starknet_version = cairo_short_string_to_felt(&starknet_version).unwrap();
+
+        let concat = Self::concat_counts(
+            transaction_count,
+            events_count,
+            state_diff_length,
+            self.header.l1_da_mode,
+        );
+
+        let block_hash = compute_hash_on_elements(&vec![
+            short_string!("STARKNET_BLOCK_HASH0"),
+            self.header.number.into(),
+            Felt::ZERO, // self.header.state_root,
+            self.header.sequencer_address.into(),
+            self.header.timestamp.into(),
+            concat,
+            self.state_diff_commitment,
+            self.transactions_commitment,
+            self.events_commitment,
+            self.receipts_commitment,
+            self.header.l1_gas_prices.eth.into(),
+            self.header.l1_gas_prices.strk.into(),
+            self.header.l1_data_gas_prices.eth.into(),
+            self.header.l1_data_gas_prices.strk.into(),
+            starknet_version,
+            Felt::ZERO,
+            self.header.parent_hash,
+        ]);
 
         let header = Header {
             parent_hash,
@@ -164,7 +232,86 @@ impl<EF: ExecutorFactory> Backend<EF> {
             protocol_version: self.chain_spec.version.clone(),
         };
 
-        let sealed = Block { header, body: transactions }.seal();
-        Ok(sealed)
+        SealedBlock { hash: block_hash, header, body: self.transactions }
+    }
+
+    fn compute_transaction_commitment(&self) -> Felt {
+        // compute txs commitment
+        let tx_hashes = transactions.iter().map(|t| t.hash).collect::<Vec<TxHash>>();
+        let transactions_commitment = compute_merkle_root::<hash::Poseidon>(&tx_hashes).unwrap();
+    }
+
+    fn compute_receipt_commitment(&self) -> Felt {
+        let receipt_hashes = self.receipts.iter().map(|r| r.compute_hash()).collect::<Vec<Felt>>();
+        let commitment = compute_merkle_root::<hash::Poseidon>(&receipt_hashes).unwrap();
+        commitment
+    }
+
+    fn compute_state_diff_commitment(&self) -> Felt {
+        compute_state_diff_hash(self.state_updates)
+    }
+
+    fn compute_event_commitment(&self) -> Felt {
+        // h(emitter_address, tx_hash, h(keys), h(data))
+        fn event_hash(tx: TxHash, event: &Event) -> Felt {
+            let keys_hash = hash::Poseidon::hash_array(&event.keys);
+            let data_hash = hash::Poseidon::hash_array(&event.data);
+            hash::Poseidon::hash_array(&[tx, event.from_address.into(), keys_hash, data_hash])
+        }
+
+        // the iterator will yield all events from all the receipts, each one paired with the
+        // transaction hash that emitted it: (tx hash, event).
+        let events =
+            self.receipts.iter().map(|r| r.events().iter().map(|e| (r.tx_hash, e))).flatten();
+
+        let mut hashes = Vec::new();
+        for (tx, event) in events {
+            let event_hash = event_hash(tx, event);
+            hashes.push(event_hash);
+        }
+
+        // compute events commitment
+        let commitment = compute_merkle_root::<hash::Poseidon>(&hashes).unwrap();
+        commitment
+    }
+
+    // Concantenate the transaction_count, event_count and state_diff_length, and l1_da_mode into a
+    // single felt.
+    //
+    // A single felt:
+    //
+    // +-------------------+----------------+----------------------+--------------+------------+
+    // | transaction_count | event_count    | state_diff_length    | L1 DA mode   | padding    |
+    // | (64 bits)         | (64 bits)      | (64 bits)            | (1 bit)      | (63 bit)   |
+    // +-------------------+----------------+----------------------+--------------+------------+
+    //
+    // where, L1 DA mode is 0 for calldata, and 1 for blob.
+    //
+    // Taken from https://github.com/starkware-libs/sequencer/blob/bb361ec67396660d5468fd088171913e11482708/crates/starknet_api/src/block_hash/block_hash_calculator.rs#L135-L164
+    fn concat_counts(
+        transaction_count: u32,
+        event_count: u32,
+        state_diff_length: u32,
+        l1_data_availability_mode: L1DataAvailabilityMode,
+    ) -> Felt {
+        fn to_64_bits(num: u32) -> [u8; 8] {
+            (num as u64).to_be_bytes()
+        }
+
+        let l1_data_availability_byte: u8 = match l1_data_availability_mode {
+            L1DataAvailabilityMode::Calldata => 0,
+            L1DataAvailabilityMode::Blob => 0b10000000,
+        };
+
+        let concat_bytes = [
+            to_64_bits(transaction_count).as_slice(),
+            to_64_bits(event_count).as_slice(),
+            to_64_bits(state_diff_length).as_slice(),
+            &[l1_data_availability_byte],
+            &[0_u8; 7], // zero padding
+        ]
+        .concat();
+
+        Felt::from_bytes_be_slice(concat_bytes.as_slice())
     }
 }
