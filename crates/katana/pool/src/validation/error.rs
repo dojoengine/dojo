@@ -63,4 +63,9 @@ pub enum InvalidTransactionError {
         /// The nonce that the tx is using.
         tx_nonce: Nonce,
     },
+
+    /// Error when a Declare transaction is trying to declare a class that has already been
+    /// declared.
+    #[error("Class with hash {class_hash:#x} already exists.")]
+    ClassAlreadyExists { class_hash: ClassHash },
 }
