@@ -25,6 +25,7 @@ use starknet::core::types::{Call, Felt, InvokeTransactionResult};
 use starknet::macros::selector;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
+use tempfile::TempDir;
 use tokio::sync::broadcast;
 use tokio_stream::StreamExt;
 use torii_core::engine::{Engine, EngineConfig, Processors};
@@ -349,7 +350,16 @@ pub async fn spinup_types_test(path: &str) -> Result<SqlitePool> {
     let world = WorldContractReader::new(strat.world_address, Arc::clone(&provider));
 
     let (shutdown_tx, _) = broadcast::channel(1);
-    let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
+    let tempdir = TempDir::new().unwrap();
+
+    let (mut executor, sender) = Executor::new(
+        pool.clone(),
+        shutdown_tx.clone(),
+        tempdir.path().to_path_buf().try_into().unwrap(),
+        Arc::clone(&provider),
+    )
+    .await
+    .unwrap();
     tokio::spawn(async move {
         executor.run().await.unwrap();
     });

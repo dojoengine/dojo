@@ -18,7 +18,7 @@ use starknet::core::utils::{get_contract_address, get_selector_from_name};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
 use starknet_crypto::poseidon_hash_many;
-use tempfile::NamedTempFile;
+use tempfile::{NamedTempFile, TempDir};
 use tokio::sync::broadcast;
 
 use crate::engine::{Engine, EngineConfig, Processors};
@@ -130,8 +130,17 @@ async fn test_load_from_remote(sequencer: &RunnerCtx) {
     let pool = SqlitePoolOptions::new().connect_with(options).await.unwrap();
     sqlx::migrate!("../migrations").run(&pool).await.unwrap();
 
+    let tempfolder = TempDir::new().unwrap();
+
     let (shutdown_tx, _) = broadcast::channel(1);
-    let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
+    let (mut executor, sender) = Executor::new(
+        pool.clone(),
+        shutdown_tx.clone(),
+        tempfolder.path().to_path_buf().try_into().unwrap(),
+        Arc::clone(&provider),
+    )
+    .await
+    .unwrap();
     tokio::spawn(async move {
         executor.run().await.unwrap();
     });
@@ -300,7 +309,15 @@ async fn test_load_from_remote_del(sequencer: &RunnerCtx) {
     sqlx::migrate!("../migrations").run(&pool).await.unwrap();
 
     let (shutdown_tx, _) = broadcast::channel(1);
-    let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
+    let tempdir = TempDir::new().unwrap();
+    let (mut executor, sender) = Executor::new(
+        pool.clone(),
+        shutdown_tx.clone(),
+        tempdir.path().to_path_buf().try_into().unwrap(),
+        Arc::clone(&provider),
+    )
+    .await
+    .unwrap();
     tokio::spawn(async move {
         executor.run().await.unwrap();
     });
@@ -398,7 +415,15 @@ async fn test_update_with_set_record(sequencer: &RunnerCtx) {
     sqlx::migrate!("../migrations").run(&pool).await.unwrap();
 
     let (shutdown_tx, _) = broadcast::channel(1);
-    let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
+    let tempdir = TempDir::new().unwrap();
+    let (mut executor, sender) = Executor::new(
+        pool.clone(),
+        shutdown_tx.clone(),
+        tempdir.path().to_path_buf().try_into().unwrap(),
+        Arc::clone(&provider),
+    )
+    .await
+    .unwrap();
     tokio::spawn(async move {
         executor.run().await.unwrap();
     });

@@ -1,0 +1,2 @@
+ALTER TABLE tokens ADD COLUMN image_path TEXT;
+ALTER TABLE tokens ADD COLUMN metadata TEXT;

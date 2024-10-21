@@ -1,20 +1,36 @@
 use std::collections::HashMap;
+use std::io::Cursor;
 use std::mem;
 use std::str::FromStr;
+use std::sync::Arc;
 
 use anyhow::{Context, Result};
+use cainome::cairo_serde::{ByteArray, CairoSerde};
+use camino::Utf8PathBuf;
+use data_url::mime::Mime;
+use data_url::DataUrl;
 use dojo_types::schema::{Struct, Ty};
-use sqlx::query::Query;
-use sqlx::sqlite::SqliteArguments;
+use fluent_uri::Uri;
+use futures_util::stream::FuturesUnordered;
+use futures_util::StreamExt;
+use image::{DynamicImage, ImageFormat};
+use reqwest::Client;
 use sqlx::{FromRow, Pool, Sqlite, Transaction};
-use starknet::core::types::{Felt, U256};
+use starknet::core::types::{BlockId, BlockTag, Felt, FunctionCall, U256};
+use starknet::core::utils::{get_selector_from_name, parse_cairo_short_string};
+use starknet::providers::Provider;
+use tokio::fs;
+use tokio::io::AsyncWriteExt;
 use tokio::sync::broadcast::{Receiver, Sender};
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 use tokio::sync::oneshot;
+use tokio::task::JoinHandle;
 use tokio::time::Instant;
-use tracing::{debug, error};
+use tracing::{debug, error, trace}; /* Added import for data URI parsing // Uncommented to
+                                     * reuse HTTP client */
 
 use crate::simple_broker::SimpleBroker;
+use crate::sql::erc::ErcImageType;
 use crate::sql::utils::{felt_to_sql_string, sql_string_to_u256, u256_to_sql_string, I256};
 use crate::sql::FELT_DELIMITER;
 use crate::types::{
@@ -82,6 +98,31 @@ pub struct UpdateCursorsQuery {
 }
 
 #[derive(Debug, Clone)]
+pub struct RegisterErc721TokenQuery {
+    pub token_id: String,
+    pub contract_address: Felt,
+    pub name: String,
+    pub symbol: String,
+    pub actual_token_id: U256,
+}
+
+#[derive(Debug, Clone)]
+pub struct RegisterErc721TokenMetadata {
+    pub query: RegisterErc721TokenQuery,
+    pub metadata: String,
+    pub image_path: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct RegisterErc20TokenQuery {
+    pub token_id: String,
+    pub contract_address: Felt,
+    pub name: String,
+    pub symbol: String,
+    pub decimals: u8,
+}
+
+#[derive(Debug, Clone)]
 pub enum QueryType {
     SetHead(SetHeadQuery),
     ResetCursors(ResetCursorsQuery),
@@ -90,21 +131,30 @@ pub enum QueryType {
     DeleteEntity(DeleteEntityQuery),
     EventMessage(Ty),
     ApplyBalanceDiff(ApplyBalanceDiffQuery),
+    RegisterErc721Token(RegisterErc721TokenQuery),
+    RegisterErc20Token(RegisterErc20TokenQuery),
+    TokenTransfer,
     RegisterModel,
     StoreEvent,
+    // similar to execute but doesn't create a new transaction
+    Flush,
     Execute,
     Other,
 }
 
 #[derive(Debug)]
-pub struct Executor<'c> {
+pub struct Executor<'c, P: Provider + Sync + Send + 'static> {
     // Queries should use `transaction` instead of `pool`
     // This `pool` is only used to create a new `transaction`
     pool: Pool<Sqlite>,
     transaction: Transaction<'c, Sqlite>,
     publish_queue: Vec<BrokerMessage>,
+    artifacts_path: Utf8PathBuf,
     rx: UnboundedReceiver<QueryMessage>,
     shutdown_rx: Receiver<()>,
+    ongoing_futures: FuturesUnordered<JoinHandle<Result<RegisterErc721TokenMetadata>>>,
+    deferred_query_messages: Vec<QueryMessage>,
+    provider: Arc<P>,
 }
 
 #[derive(Debug)]
@@ -162,19 +212,47 @@ impl QueryMessage {
             rx,
         )
     }
+
+    pub fn flush_recv() -> (Self, oneshot::Receiver<Result<()>>) {
+        let (tx, rx) = oneshot::channel();
+        (
+            Self {
+                statement: "".to_string(),
+                arguments: vec![],
+                query_type: QueryType::Flush,
+                tx: Some(tx),
+            },
+            rx,
+        )
+    }
 }
 
-impl<'c> Executor<'c> {
+impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
     pub async fn new(
         pool: Pool<Sqlite>,
         shutdown_tx: Sender<()>,
+        artifacts_path: Utf8PathBuf,
+        provider: Arc<P>,
     ) -> Result<(Self, UnboundedSender<QueryMessage>)> {
         let (tx, rx) = unbounded_channel();
         let transaction = pool.begin().await?;
         let publish_queue = Vec::new();
         let shutdown_rx = shutdown_tx.subscribe();
 
-        Ok((Executor { pool, transaction, publish_queue, rx, shutdown_rx }, tx))
+        Ok((
+            Executor {
+                pool,
+                transaction,
+                publish_queue,
+                rx,
+                shutdown_rx,
+                artifacts_path,
+                ongoing_futures: FuturesUnordered::new(),
+                deferred_query_messages: Vec::new(),
+                provider,
+            },
+            tx,
+        ))
     }
 
     pub async fn run(&mut self) -> Result<()> {
@@ -185,20 +263,8 @@ impl<'c> Executor<'c> {
                     break Ok(());
                 }
                 Some(msg) = self.rx.recv() => {
-                    let QueryMessage { statement, arguments, query_type, tx } = msg;
-                    let mut query = sqlx::query(&statement);
-
-                    for arg in &arguments {
-                        query = match arg {
-                            Argument::Null => query.bind(None::<String>),
-                            Argument::Int(integer) => query.bind(integer),
-                            Argument::Bool(bool) => query.bind(bool),
-                            Argument::String(string) => query.bind(string),
-                            Argument::FieldElement(felt) => query.bind(format!("{:#x}", felt)),
-                        }
-                    }
-
-                    match self.handle_query_type(query, query_type.clone(), &statement, &arguments, tx).await {
+                    let query_type = msg.query_type.clone();
+                    match self.handle_query_message(msg).await {
                         Ok(()) => {},
                         Err(e) => {
                             error!(target: LOG_TARGET, r#type = ?query_type, error = %e, "Failed to execute query.");
@@ -209,17 +275,22 @@ impl<'c> Executor<'c> {
         }
     }
 
-    async fn handle_query_type<'a>(
-        &mut self,
-        query: Query<'a, Sqlite, SqliteArguments<'a>>,
-        query_type: QueryType,
-        statement: &str,
-        arguments: &[Argument],
-        sender: Option<oneshot::Sender<Result<()>>>,
-    ) -> Result<()> {
+    async fn handle_query_message(&mut self, query_message: QueryMessage) -> Result<()> {
         let tx = &mut self.transaction;
 
-        match query_type {
+        let mut query = sqlx::query(&query_message.statement);
+
+        for arg in &query_message.arguments {
+            query = match arg {
+                Argument::Null => query.bind(None::<String>),
+                Argument::Int(integer) => query.bind(integer),
+                Argument::Bool(bool) => query.bind(bool),
+                Argument::String(string) => query.bind(string),
+                Argument::FieldElement(felt) => query.bind(format!("{:#x}", felt)),
+            }
+        }
+
+        match query_message.query_type {
             QueryType::SetHead(set_head) => {
                 let previous_block_timestamp: u64 = sqlx::query_scalar::<_, i64>(
                     "SELECT last_block_timestamp FROM contracts WHERE id = ?",
@@ -237,7 +308,10 @@ impl<'c> Executor<'c> {
                 };
 
                 query.execute(&mut **tx).await.with_context(|| {
-                    format!("Failed to execute query: {:?}, args: {:?}", statement, arguments)
+                    format!(
+                        "Failed to execute query: {:?}, args: {:?}",
+                        query_message.statement, query_message.arguments
+                    )
                 })?;
 
                 let row = sqlx::query("UPDATE contracts SET tps = ? WHERE id = ? RETURNING *")
@@ -358,7 +432,10 @@ impl<'c> Executor<'c> {
             }
             QueryType::SetEntity(entity) => {
                 let row = query.fetch_one(&mut **tx).await.with_context(|| {
-                    format!("Failed to execute query: {:?}, args: {:?}", statement, arguments)
+                    format!(
+                        "Failed to execute query: {:?}, args: {:?}",
+                        query_message.statement, query_message.arguments
+                    )
                 })?;
                 let mut entity_updated = EntityUpdated::from_row(&row)?;
                 entity_updated.updated_model = Some(entity);
@@ -381,7 +458,10 @@ impl<'c> Executor<'c> {
             }
             QueryType::DeleteEntity(entity) => {
                 let delete_model = query.execute(&mut **tx).await.with_context(|| {
-                    format!("Failed to execute query: {:?}, args: {:?}", statement, arguments)
+                    format!(
+                        "Failed to execute query: {:?}, args: {:?}",
+                        query_message.statement, query_message.arguments
+                    )
                 })?;
                 if delete_model.rows_affected() == 0 {
                     return Ok(());
@@ -432,14 +512,20 @@ impl<'c> Executor<'c> {
             }
             QueryType::RegisterModel => {
                 let row = query.fetch_one(&mut **tx).await.with_context(|| {
-                    format!("Failed to execute query: {:?}, args: {:?}", statement, arguments)
+                    format!(
+                        "Failed to execute query: {:?}, args: {:?}",
+                        query_message.statement, query_message.arguments
+                    )
                 })?;
                 let model_registered = ModelRegistered::from_row(&row)?;
                 self.publish_queue.push(BrokerMessage::ModelRegistered(model_registered));
             }
             QueryType::EventMessage(entity) => {
                 let row = query.fetch_one(&mut **tx).await.with_context(|| {
-                    format!("Failed to execute query: {:?}, args: {:?}", statement, arguments)
+                    format!(
+                        "Failed to execute query: {:?}, args: {:?}",
+                        query_message.statement, query_message.arguments
+                    )
                 })?;
                 let mut event_message = EventMessageUpdated::from_row(&row)?;
                 event_message.updated_model = Some(entity);
@@ -460,7 +546,10 @@ impl<'c> Executor<'c> {
             }
             QueryType::StoreEvent => {
                 let row = query.fetch_one(&mut **tx).await.with_context(|| {
-                    format!("Failed to execute query: {:?}, args: {:?}", statement, arguments)
+                    format!(
+                        "Failed to execute query: {:?}, args: {:?}",
+                        query_message.statement, query_message.arguments
+                    )
                 })?;
                 let event = EventEmitted::from_row(&row)?;
                 self.publish_queue.push(BrokerMessage::EventEmitted(event));
@@ -471,13 +560,43 @@ impl<'c> Executor<'c> {
                 self.apply_balance_diff(apply_balance_diff).await?;
                 debug!(target: LOG_TARGET, duration = ?instant.elapsed(), "Applied balance diff.");
             }
-            QueryType::Execute => {
-                debug!(target: LOG_TARGET, "Executing query.");
-                let instant = Instant::now();
-                let res = self.execute().await;
-                debug!(target: LOG_TARGET, duration = ?instant.elapsed(), "Executed query.");
+            QueryType::RegisterErc721Token(register_erc721_token) => {
+                let artifacts_path = self.artifacts_path.clone();
+                let provider = self.provider.clone();
+                self.ongoing_futures.push(tokio::spawn(async move {
+                    Self::process_register_erc721_token_query(
+                        register_erc721_token,
+                        &artifacts_path,
+                        provider,
+                    )
+                    .await
+                }));
+            }
+            QueryType::RegisterErc20Token(register_erc20_token) => {
+                let query = sqlx::query(
+                    "INSERT INTO tokens (id, contract_address, name, symbol, decimals) VALUES (?, \
+                     ?, ?, ?, ?)",
+                )
+                .bind(&register_erc20_token.token_id)
+                .bind(felt_to_sql_string(&register_erc20_token.contract_address))
+                .bind(&register_erc20_token.name)
+                .bind(&register_erc20_token.symbol)
+                .bind(register_erc20_token.decimals);
 
-                if let Some(sender) = sender {
+                query.execute(&mut **tx).await.with_context(|| {
+                    format!(
+                        "Failed to execute RegisterErc20Token query: {:?}",
+                        register_erc20_token
+                    )
+                })?;
+            }
+            QueryType::Flush => {
+                debug!(target: LOG_TARGET, "Flushing query.");
+                let instant = Instant::now();
+                let res = self.execute(false).await;
+                debug!(target: LOG_TARGET, duration = ?instant.elapsed(), "Flushed query.");
+
+                if let Some(sender) = query_message.tx {
                     sender
                         .send(res)
                         .map_err(|_| anyhow::anyhow!("Failed to send execute result"))?;
@@ -485,9 +604,30 @@ impl<'c> Executor<'c> {
                     res?;
                 }
             }
+            QueryType::Execute => {
+                debug!(target: LOG_TARGET, "Executing query.");
+                let instant = Instant::now();
+                let res = self.execute(true).await;
+                debug!(target: LOG_TARGET, duration = ?instant.elapsed(), "Executed query.");
+
+                if let Some(sender) = query_message.tx {
+                    sender
+                        .send(res)
+                        .map_err(|_| anyhow::anyhow!("Failed to send execute result"))?;
+                } else {
+                    res?;
+                }
+            }
+            QueryType::TokenTransfer => {
+                // defer executing these queries since they depend on TokenRegister queries
+                self.deferred_query_messages.push(query_message);
+            }
             QueryType::Other => {
                 query.execute(&mut **tx).await.with_context(|| {
-                    format!("Failed to execute query: {:?}, args: {:?}", statement, arguments)
+                    format!(
+                        "Failed to execute query: {:?}, args: {:?}",
+                        query_message.statement, query_message.arguments
+                    )
                 })?;
             }
         }
@@ -495,12 +635,51 @@ impl<'c> Executor<'c> {
         Ok(())
     }
 
-    async fn execute(&mut self) -> Result<()> {
-        let transaction = mem::replace(&mut self.transaction, self.pool.begin().await?);
-        transaction.commit().await?;
+    async fn execute(&mut self, new_transaction: bool) -> Result<()> {
+        if new_transaction {
+            let transaction = mem::replace(&mut self.transaction, self.pool.begin().await?);
+            transaction.commit().await?;
+        }
 
         for message in self.publish_queue.drain(..) {
             send_broker_message(message);
+        }
+
+        while let Some(result) = self.ongoing_futures.next().await {
+            let result = result??;
+            let query = sqlx::query(
+                "INSERT INTO tokens (id, contract_address, name, symbol, decimals, metadata, \
+                 image_path) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            )
+            .bind(&result.query.token_id)
+            .bind(felt_to_sql_string(&result.query.contract_address))
+            .bind(&result.query.name)
+            .bind(&result.query.symbol)
+            .bind(0)
+            .bind(&result.metadata)
+            .bind(&result.image_path);
+
+            query
+                .execute(&mut *self.transaction)
+                .await
+                .with_context(|| format!("Failed to execute721Token query: {:?}", result))?;
+        }
+
+        let mut deferred_query_messages = mem::take(&mut self.deferred_query_messages);
+
+        for query_message in deferred_query_messages.drain(..) {
+            let mut query = sqlx::query(&query_message.statement);
+            for arg in &query_message.arguments {
+                query = match arg {
+                    Argument::Null => query.bind(None::<String>),
+                    Argument::Int(integer) => query.bind(integer),
+                    Argument::Bool(bool) => query.bind(bool),
+                    Argument::String(string) => query.bind(string),
+                    Argument::FieldElement(felt) => query.bind(format!("{:#x}", felt)),
+                };
+            }
+
+            query.execute(&mut *self.transaction).await?;
         }
 
         Ok(())
@@ -600,6 +779,306 @@ impl<'c> Executor<'c> {
         .await?;
 
         Ok(())
+    }
+
+    async fn process_register_erc721_token_query(
+        register_erc721_token: RegisterErc721TokenQuery,
+        artifacts_path: &Utf8PathBuf,
+        provider: Arc<P>,
+    ) -> Result<RegisterErc721TokenMetadata> {
+        let token_uri = if let Ok(token_uri) = provider
+            .call(
+                FunctionCall {
+                    contract_address: register_erc721_token.contract_address,
+                    entry_point_selector: get_selector_from_name("token_uri").unwrap(),
+                    calldata: vec![
+                        register_erc721_token.actual_token_id.low().into(),
+                        register_erc721_token.actual_token_id.high().into(),
+                    ],
+                },
+                BlockId::Tag(BlockTag::Pending),
+            )
+            .await
+        {
+            token_uri
+        } else if let Ok(token_uri) = provider
+            .call(
+                FunctionCall {
+                    contract_address: register_erc721_token.contract_address,
+                    entry_point_selector: get_selector_from_name("tokenURI").unwrap(),
+                    calldata: vec![
+                        register_erc721_token.actual_token_id.low().into(),
+                        register_erc721_token.actual_token_id.high().into(),
+                    ],
+                },
+                BlockId::Tag(BlockTag::Pending),
+            )
+            .await
+        {
+            token_uri
+        } else {
+            return Err(anyhow::anyhow!("Failed to fetch token_uri"));
+        };
+
+        let token_uri = if let Ok(byte_array) = ByteArray::cairo_deserialize(&token_uri, 0) {
+            byte_array.to_string().expect("Return value not String")
+        } else if let Ok(felt_array) = Vec::<Felt>::cairo_deserialize(&token_uri, 0) {
+            felt_array
+                .iter()
+                .map(parse_cairo_short_string)
+                .collect::<Result<Vec<String>, _>>()
+                .map(|strings| strings.join(""))
+                .map_err(|_| anyhow::anyhow!("Failed parsing Array<Felt> to String"))?
+        } else {
+            return Err(anyhow::anyhow!("token_uri is neither ByteArray nor Array<Felt>"));
+        };
+
+        let metadata = Self::fetch_metadata(&token_uri).await?;
+        let image_url = metadata
+            .get("image")
+            .with_context(|| "Image URL not found in metadata")?
+            .as_str()
+            .with_context(|| "Image field not a string")?
+            .to_string();
+
+        let image_path = Self::fetch_and_process_image(
+            &image_url,
+            artifacts_path,
+            &register_erc721_token.token_id,
+        )
+        .await?;
+
+        // serialized metadata as json string
+        let metadata = serde_json::to_string(&metadata).context("Failed to serialize metadata")?;
+        Ok(RegisterErc721TokenMetadata { query: register_erc721_token, metadata, image_path })
+    }
+
+    async fn fetch_and_process_image(
+        image_uri: &str,
+        artifacts_path: &Utf8PathBuf,
+        token_id: &str,
+    ) -> Result<String> {
+        // Determine the URI scheme
+        let uri = Uri::parse(image_uri).context("Invalid image URI")?;
+        let image_type = match uri.scheme().as_str() {
+            "http" | "https" => {
+                // Fetch image from HTTP/HTTPS URL
+                let client = Client::new();
+                let response = client
+                    .get(image_uri)
+                    .send()
+                    .await
+                    .context("Failed to fetch image from URL")?
+                    .bytes()
+                    .await
+                    .context("Failed to read image bytes from response")?;
+
+                // svg files typically start with <svg or <?xml
+                if response.starts_with(b"<svg") || response.starts_with(b"<?xml") {
+                    ErcImageType::Svg(response.to_vec())
+                } else {
+                    let format = image::guess_format(&response).with_context(|| {
+                        format!("Unknown file format for token_id: {}", token_id)
+                    })?;
+                    ErcImageType::DynamicImage((
+                        image::load_from_memory(&response)
+                            .context("Failed to load image from bytes")?,
+                        format,
+                    ))
+                }
+            }
+            "ipfs" => {
+                let cid = image_uri.strip_prefix("ipfs://").unwrap();
+                let gateway_url = format!("https://ipfs.io/ipfs/{}", cid);
+                let client = Client::new();
+                let response = client
+                    .get(&gateway_url)
+                    .send()
+                    .await
+                    .context("Failed to fetch image from IPFS")?
+                    .bytes()
+                    .await
+                    .context("Failed to read image bytes from IPFS response")?;
+
+                if response.starts_with(b"<svg") || response.starts_with(b"<?xml") {
+                    ErcImageType::Svg(response.to_vec())
+                } else {
+                    let format = image::guess_format(&response).with_context(|| {
+                        format!("Unknown file format for token_id: {}", token_id)
+                    })?;
+                    ErcImageType::DynamicImage((
+                        image::load_from_memory(&response)
+                            .context("Failed to load image from bytes")?,
+                        format,
+                    ))
+                }
+            }
+            "data" => {
+                // Parse and decode data URI
+                let data_url = DataUrl::process(image_uri).context("Failed to parse data URI")?;
+
+                // Check if it's an SVG
+                if data_url.mime_type() == &Mime::from_str("image/svg+xml").unwrap() {
+                    let decoded = data_url.decode_to_vec().context("Failed to decode data URI")?;
+                    ErcImageType::Svg(decoded.0)
+                } else {
+                    let decoded = data_url.decode_to_vec().context("Failed to decode data URI")?;
+                    let format = image::guess_format(&decoded.0).with_context(|| {
+                        format!("Unknown file format for token_id: {}", token_id)
+                    })?;
+                    ErcImageType::DynamicImage((
+                        image::load_from_memory(&decoded.0)
+                            .context("Failed to load image from bytes")?,
+                        format,
+                    ))
+                }
+            }
+            _ => {
+                return Err(anyhow::anyhow!("Unsupported URI scheme: {}", uri.scheme()));
+            }
+        };
+
+        // Extract contract_address and token_id from token_id
+        let parts: Vec<&str> = token_id.split(':').collect();
+        if parts.len() != 2 {
+            return Err(anyhow::anyhow!("token_id must be in format contract_address:token_id"));
+        }
+        let contract_address = parts[0];
+        let token_id_part = parts[1];
+
+        // Define directory path
+        let dir_path = artifacts_path.join(contract_address).join(token_id_part);
+
+        // Create directories if they don't exist
+        fs::create_dir_all(&dir_path)
+            .await
+            .context("Failed to create directories for image storage")?;
+
+        // Define base image name
+        let base_image_name = "image";
+
+        let relative_path = Utf8PathBuf::new().join(contract_address).join(token_id_part);
+
+        match image_type {
+            ErcImageType::DynamicImage((img, format)) => {
+                let format_ext = format.extensions_str()[0];
+
+                let scales = [1.0, 0.5, 0.25]; // 1x, 0.5x, 0.25x
+
+                for &scale in &scales {
+                    let resized_image = Self::resize_image(&img, scale)?;
+                    let file_name = if scale == 1.0 {
+                        format!("{}.{}", base_image_name, format_ext)
+                    } else {
+                        format!(
+                            "{}@{}x.{}",
+                            base_image_name,
+                            if scale == 0.5 { "0_5" } else { "0_25" },
+                            format_ext
+                        )
+                    };
+                    let file_path = dir_path.join(&file_name);
+
+                    // Save the resized image
+                    let mut file = fs::File::create(&file_path)
+                        .await
+                        .with_context(|| format!("Failed to create file: {:?}", file_path))?;
+                    let encoded_image = Self::encode_image_to_vec(&resized_image, format)
+                        .context("Failed to encode image")?;
+                    file.write_all(&encoded_image).await.with_context(|| {
+                        format!("Failed to write image to file: {:?}", file_path)
+                    })?;
+                }
+
+                Ok(format!("{}/{}.{}", relative_path, base_image_name, format_ext))
+            }
+            ErcImageType::Svg(svg_data) => {
+                let file_name = format!("{}.svg", base_image_name);
+                let file_path = dir_path.join(&file_name);
+
+                // Save the SVG file
+                let mut file = fs::File::create(&file_path)
+                    .await
+                    .with_context(|| format!("Failed to create file: {:?}", file_path))?;
+                file.write_all(&svg_data)
+                    .await
+                    .with_context(|| format!("Failed to write SVG to file: {:?}", file_path))?;
+
+                Ok(format!("{}/{}", relative_path, file_name))
+            }
+        }
+    }
+
+    // Helper function to resize image based on scale
+    fn resize_image(image: &DynamicImage, scale: f32) -> Result<DynamicImage> {
+        let width = (image.width() as f32 * scale) as u32;
+        let height = (image.height() as f32 * scale) as u32;
+        Ok(image.resize(width, height, image::imageops::FilterType::Lanczos3))
+    }
+
+    // Helper function to encode image to bytes
+    fn encode_image_to_vec(image: &DynamicImage, format: ImageFormat) -> Result<Vec<u8>> {
+        let mut buf = Vec::new();
+        image
+            .write_to(&mut Cursor::new(&mut buf), format)
+            .context("Failed to write image to buffer")?;
+        Ok(buf)
+    }
+
+    // given a uri which can be either http/https url or data uri, fetch the metadata erc721
+    // metadata json schema
+    async fn fetch_metadata(token_uri: &str) -> Result<serde_json::Value> {
+        // Parse the token_uri
+        let uri = Uri::parse(token_uri).context("Invalid token URI")?;
+
+        match uri.scheme().as_str() {
+            "http" | "https" => {
+                // Fetch metadata from HTTP/HTTPS URL
+                debug!(token_uri = %token_uri, "Fetching metadata from http/https URL");
+                let response =
+                    reqwest::get(token_uri).await.context("Failed to fetch metadata from URL")?;
+
+                let json: serde_json::Value =
+                    response.json().await.context("Failed to parse metadata JSON")?;
+
+                Ok(json)
+            }
+            "ipfs" => {
+                let cid = token_uri.strip_prefix("ipfs://").unwrap();
+                let gateway_url = format!("https://ipfs.io/ipfs/{}", cid);
+                debug!(gateway_url = %gateway_url, "Fetching metadata from IPFS");
+                let client = Client::new();
+                let response = client
+                    .get(&gateway_url)
+                    .send()
+                    .await
+                    .context("Failed to fetch metadata from IPFS")?;
+
+                let json: serde_json::Value =
+                    response.json().await.context("Failed to parse metadata JSON from IPFS")?;
+
+                Ok(json)
+            }
+            "data" => {
+                // Parse and decode data URI
+                debug!("Parsing metadata from data URI");
+                trace!(data_uri = %token_uri);
+                let data_url = DataUrl::process(token_uri).context("Failed to parse data URI")?;
+
+                // Ensure the MIME type is JSON
+                if data_url.mime_type() != &Mime::from_str("application/json").unwrap() {
+                    return Err(anyhow::anyhow!("Data URI is not of JSON type"));
+                }
+
+                let decoded = data_url.decode_to_vec().context("Failed to decode data URI")?;
+
+                let json: serde_json::Value = serde_json::from_slice(&decoded.0)
+                    .context("Failed to parse metadata JSON from data URI")?;
+
+                Ok(json)
+            }
+            _ => Err(anyhow::anyhow!("Unsupported URI scheme found in token URI: {}", uri)),
+        }
     }
 }
 

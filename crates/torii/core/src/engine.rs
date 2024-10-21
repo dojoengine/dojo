@@ -259,8 +259,9 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
 
                             match self.process(fetch_result).await {
                                 Ok(_) => {
-                                    self.db.execute().await?;
+                                    self.db.flush().await?;
                                     self.db.apply_cache_diff().await?;
+                                    self.db.execute().await?;
                                 },
                                 Err(e) => {
                                     error!(target: LOG_TARGET, error = %e, "Processing fetched data.");

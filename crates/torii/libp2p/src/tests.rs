@@ -525,6 +525,7 @@ mod test {
     #[tokio::test]
     async fn test_client_messaging() -> Result<(), Box<dyn Error>> {
         use std::collections::HashMap;
+        use std::sync::Arc;
         use std::time::Duration;
 
         use dojo_types::schema::{Member, Struct, Ty};
@@ -535,7 +536,7 @@ mod test {
         use starknet::providers::JsonRpcClient;
         use starknet::signers::SigningKey;
         use starknet_crypto::Felt;
-        use tempfile::NamedTempFile;
+        use tempfile::{NamedTempFile, TempDir};
         use tokio::select;
         use tokio::sync::broadcast;
         use tokio::time::sleep;
@@ -568,13 +569,20 @@ mod test {
 
         let sequencer = KatanaRunner::new().expect("Failed to create Katana sequencer");
 
-        let provider = JsonRpcClient::new(HttpTransport::new(sequencer.url()));
+        let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
 
         let account = sequencer.account_data(0);
+        let tempdir = TempDir::new().unwrap();
 
         let (shutdown_tx, _) = broadcast::channel(1);
-        let (mut executor, sender) =
-            Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
+        let (mut executor, sender) = Executor::new(
+            pool.clone(),
+            shutdown_tx.clone(),
+            tempdir.path().to_path_buf().try_into().unwrap(),
+            Arc::clone(&provider),
+        )
+        .await
+        .unwrap();
         tokio::spawn(async move {
             executor.run().await.unwrap();
         });
