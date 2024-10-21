@@ -34,6 +34,13 @@ use tokio::sync::Mutex;
 
 mod common;
 
+/// Macro used to assert that the given error is a Starknet error.
+macro_rules! assert_starknet_err {
+    ($err:expr, $api_err:pat) => {
+        assert_matches!($err, AccountError::Provider(ProviderError::StarknetError($api_err)))
+    };
+}
+
 #[tokio::test]
 async fn declare_and_deploy_contract() -> Result<()> {
     let sequencer =
@@ -139,6 +146,41 @@ async fn declare_and_deploy_legacy_contract() -> Result<()> {
     // make sure the contract is deployed
     let res = provider.get_class_hash_at(BlockId::Tag(BlockTag::Pending), address).await?;
     assert_eq!(res, class_hash);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn declaring_already_existing_class() -> Result<()> {
+    let config = get_default_test_config(SequencingConfig::default());
+    let sequencer = TestSequencer::start(config).await;
+
+    let account = sequencer.account();
+    let provider = sequencer.provider();
+
+    let path = PathBuf::from("tests/test_data/cairo1_contract.json");
+    let (contract, compiled_hash) = common::prepare_contract_declaration_params(&path)?;
+    let class_hash = contract.class_hash();
+
+    // Declare the class for the first time.
+    let res = account.declare_v2(contract.clone().into(), compiled_hash).send().await?;
+
+    // check that the tx is executed successfully and return the correct receipt
+    let _ = dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await?;
+    // check that the class is actually declared
+    assert!(provider.get_class(BlockId::Tag(BlockTag::Pending), class_hash).await.is_ok());
+
+    // -----------------------------------------------------------------------
+    // Declaring the same class again should fail with a ClassAlreadyDeclared error
+
+    // We set max fee manually to avoid perfoming fee estimation as we just want to test that the
+    // pool validation will reject the tx.
+    //
+    // The value of the max fee is also irrelevant here, as the validator will only perform static
+    // checks and will not run the account's validation.
+
+    let result = account.declare_v2(contract.into(), compiled_hash).max_fee(Felt::ONE).send().await;
+    assert_starknet_err!(result.unwrap_err(), StarknetError::ClassAlreadyDeclared);
 
     Ok(())
 }
@@ -341,13 +383,6 @@ async fn concurrent_transactions_submissions(
     assert_eq!(nonce, Felt::from(N), "Nonce should be incremented by {N} time");
 
     Ok(())
-}
-
-/// Macro used to assert that the given error is a Starknet error.
-macro_rules! assert_starknet_err {
-    ($err:expr, $api_err:pat) => {
-        assert_matches!($err, AccountError::Provider(ProviderError::StarknetError($api_err)))
-    };
 }
 
 #[rstest::rstest]

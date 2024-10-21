@@ -102,6 +102,19 @@ impl Validator for TxValidator {
         let tx_nonce = tx.nonce();
         let address = tx.sender();
 
+        // For declare transactions, perform a static check if there's already an existing class
+        // with the same hash.
+        if let ExecutableTx::Declare(ref declare_tx) = tx.transaction {
+            let class_hash = declare_tx.class_hash();
+            let class = this.state.class(class_hash).map_err(|e| Error::new(tx.hash, e.into()))?;
+
+            // Return an error if the class already exists.
+            if class.is_some() {
+                let error = InvalidTransactionError::ClassAlreadyDeclared { class_hash };
+                return Ok(ValidationOutcome::Invalid { tx, error });
+            }
+        }
+
         // Get the current nonce of the account from the pool or the state
         let current_nonce = if let Some(nonce) = this.pool_nonces.get(&address) {
             *nonce
@@ -125,7 +138,8 @@ impl Validator for TxValidator {
             _ => tx.nonce() == Nonce::ONE && current_nonce == Nonce::ZERO,
         };
 
-        // prepare a stateful validator and validate the transaction
+        // prepare a stateful validator and run the account validation logic (ie __validate__
+        // entrypoint)
         let result = validate(
             this.prepare(),
             tx,

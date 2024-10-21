@@ -182,6 +182,7 @@ impl From<Box<InvalidTransactionError>> for StarknetApiError {
     fn from(error: Box<InvalidTransactionError>) -> Self {
         match error.as_ref() {
             InvalidTransactionError::InsufficientFunds { .. } => Self::InsufficientAccountBalance,
+            InvalidTransactionError::ClassAlreadyDeclared { .. } => Self::ClassAlreadyDeclared,
             InvalidTransactionError::IntrinsicFeeTooLow { .. } => Self::InsufficientMaxFee,
             InvalidTransactionError::NonAccount { .. } => Self::NonAccount,
             InvalidTransactionError::InvalidNonce { .. } => {

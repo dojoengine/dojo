@@ -16,6 +16,12 @@ pub struct Error {
     pub error: Box<dyn std::error::Error>,
 }
 
+impl Error {
+    pub fn new(hash: TxHash, error: Box<dyn std::error::Error>) -> Self {
+        Self { hash, error }
+    }
+}
+
 pub type ValidationResult<T> = Result<ValidationOutcome<T>, Error>;
 
 /// A trait for validating transactions before they are added to the transaction pool.
@@ -23,6 +29,11 @@ pub trait Validator {
     type Transaction: PoolTransaction;
 
     /// Validate a transaction.
+    ///
+    /// The `Err` variant of the returned `Result` should only be used to represent unexpected
+    /// errors that occurred during the validation process ie, provider
+    /// [error](katana_provider::error::ProviderError), and not for indicating that the
+    /// transaction is invalid. For that purpose, use the [`ValidationOutcome::Invalid`] enum.
     fn validate(&self, tx: Self::Transaction) -> ValidationResult<Self::Transaction>;
 
     /// Validate a batch of transactions.
