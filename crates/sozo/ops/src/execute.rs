@@ -1,5 +1,5 @@
-use anyhow::{Context, Result};
-use dojo_utils::{TransactionExt, TxnConfig};
+use anyhow::Result;
+use dojo_utils::TxnConfig;
 use dojo_world::contracts::world::WorldContract;
 use scarb_ui::Ui;
 #[cfg(feature = "walnut")]
@@ -23,21 +23,19 @@ where
     A: ConnectedAccount + Sync + Send + 'static,
 {
     let contract_address = utils::get_contract_address(world, &tag_or_address).await?;
-    let res = world
-        .account
-        .execute_v1(vec![Call {
-            calldata,
-            to: contract_address,
-            selector: get_selector_from_name(&entrypoint)?,
-        }])
-        .send_with_cfg(txn_config)
-        .await
-        .with_context(|| "Failed to send transaction")?;
+    let call =
+        Call { calldata, to: contract_address, selector: get_selector_from_name(&entrypoint)? };
+
+    let Some(invoke_res) =
+        dojo_utils::handle_execute(txn_config.fee_setting, &world.account, vec![call]).await?
+    else {
+        todo!("handle estimate and simulate")
+    };
 
     utils::handle_transaction_result(
         ui,
         &world.account.provider(),
-        res,
+        invoke_res,
         txn_config.wait,
         txn_config.receipt,
         #[cfg(feature = "walnut")]

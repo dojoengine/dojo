@@ -2,7 +2,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::{anyhow, bail, Result};
-use dojo_utils::{TransactionExt, TransactionWaiter, TxnConfig};
+use dojo_utils::{TransactionWaiter, TxnConfig};
 use dojo_world::contracts::naming::compute_selector_from_tag;
 use dojo_world::contracts::WorldContract;
 use dojo_world::manifest::{BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR};
@@ -13,7 +13,7 @@ use scarb::core::Workspace;
 #[cfg(feature = "walnut")]
 use sozo_walnut::WalnutDebugger;
 use starknet::accounts::{ConnectedAccount, ExecutionEncoding, SingleOwnerAccount};
-use starknet::core::types::{BlockId, BlockTag, Call, Felt, InvokeTransactionResult};
+use starknet::core::types::{BlockId, BlockTag, Call, Felt};
 use starknet::core::utils::{cairo_short_string_to_felt, get_contract_address};
 use starknet::macros::selector;
 use starknet::providers::jsonrpc::HttpTransport;
@@ -136,6 +136,7 @@ where
     A::SignError: 'static,
 {
     let ui = ws.config().ui();
+    let account = Arc::new(account);
 
     #[cfg(feature = "walnut")]
     let walnut_debugger =
@@ -233,7 +234,7 @@ where
         ui.print_sub(format!("Declarers: {}", declarers_len));
 
         let migration_output = if total_diffs != 0 {
-            match apply_diff(ws, &account, txn_config, &strategy, &declarers).await {
+            match apply_diff(ws, account.clone(), txn_config, &strategy, &declarers).await {
                 Ok(migration_output) => Some(migration_output),
                 Err(e) => {
                     update_manifests_and_abis(
@@ -266,7 +267,6 @@ where
         )
         .await?;
 
-        let account = Arc::new(account);
         let world = WorldContract::new(strategy.world_address, account.clone());
 
         ui.print(" ");
@@ -362,15 +362,13 @@ where
             }
 
             if !init_calls.is_empty() {
-                let InvokeTransactionResult { transaction_hash } = account
-                    .execute_v1(init_calls)
-                    .send_with_cfg(&TxnConfig::init_wait())
-                    .await
-                    .map_err(|e| {
-                        ui.verbose(format!("{e:?}"));
-                        anyhow!("Failed to deploy contracts: {e}")
-                    })?;
-
+                let Some(invoke_res) =
+                    dojo_utils::handle_execute(txn_config.fee_setting, &account, init_calls)
+                        .await?
+                else {
+                    todo!("handle estimate and simulate");
+                };
+                let transaction_hash = invoke_res.transaction_hash;
                 TransactionWaiter::new(transaction_hash, account.provider()).await?;
                 ui.print_sub(format!("All contracts are initialized at: {transaction_hash:#x}\n"));
             } else {
@@ -385,7 +383,7 @@ where
 
         if let Some(migration_output) = &migration_output {
             if !ws.config().offline() {
-                upload_metadata(ws, &account, migration_output.clone(), txn_config).await?;
+                upload_metadata(ws, account.clone(), migration_output.clone(), txn_config).await?;
             }
         }
 
