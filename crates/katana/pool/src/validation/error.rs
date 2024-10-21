@@ -66,6 +66,6 @@ pub enum InvalidTransactionError {
 
     /// Error when a Declare transaction is trying to declare a class that has already been
     /// declared.
-    #[error("Class with hash {class_hash:#x} already exists.")]
-    ClassAlreadyExists { class_hash: ClassHash },
+    #[error("Class with hash {class_hash:#x} has already been declared.")]
+    ClassAlreadyDeclared { class_hash: ClassHash },
 }

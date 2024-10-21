@@ -110,7 +110,7 @@ impl Validator for TxValidator {
 
             // Return an error if the class already exists.
             if class.is_some() {
-                let error = InvalidTransactionError::ClassAlreadyExists { class_hash };
+                let error = InvalidTransactionError::ClassAlreadyDeclared { class_hash };
                 return Ok(ValidationOutcome::Invalid { tx, error });
             }
         }
