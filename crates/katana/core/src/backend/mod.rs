@@ -14,6 +14,9 @@ use katana_primitives::{ContractAddress, Felt};
 use katana_provider::traits::block::{BlockHashProvider, BlockWriter};
 use katana_trie::trie::compute_merkle_root;
 use parking_lot::RwLock;
+use starknet::core::crypto::compute_hash_on_elements;
+use starknet::core::utils::cairo_short_string_to_felt;
+use starknet::macros::short_string;
 use starknet_types_core::hash::{self, StarkHash};
 use tracing::info;
 
@@ -145,45 +148,45 @@ impl<'a> UncommittedBlock<'a> {
 
     pub fn commit(self) -> SealedBlock {
         // get the hash of the latest committed block
-        let parent_hash = self.blockchain.provider().latest_hash()?;
+        let parent_hash = self.header.parent_hash;
         let events_count = self.receipts.iter().map(|r| r.events().len() as u32).sum::<u32>();
         let transaction_count = self.transactions.len() as u32;
         let state_diff_length = self.state_updates.len() as u32;
 
         let l1_gas_prices =
-            GasPrices { eth: block_env.l1_gas_prices.eth, strk: block_env.l1_gas_prices.strk };
+            GasPrices { eth: self.header.l1_gas_prices.eth, strk: self.header.l1_gas_prices.strk };
         let l1_data_gas_prices = GasPrices {
-            eth: block_env.l1_data_gas_prices.eth,
-            strk: block_env.l1_data_gas_prices.strk,
+            eth: self.header.l1_data_gas_prices.eth,
+            strk: self.header.l1_data_gas_prices.strk,
         };
 
-        /// Computes the block hash.
-        ///
-        /// A block hash is defined as the Poseidon hash of the header’s fields, as follows:
-        ///
-        /// h(𝐵) = h(
-        ///     "STARKNET_BLOCK_HASH0",
-        ///     block_number,
-        ///     global_state_root,
-        ///     sequencer_address,
-        ///     block_timestamp,
-        ///     transaction_count || event_count || state_diff_length || l1_da_mode,
-        ///     state_diff_commitment,
-        ///     transactions_commitment
-        ///     events_commitment,
-        ///     receipts_commitment
-        ///     l1_gas_price_in_wei,
-        ///     l1_gas_price_in_fri,
-        ///     l1_data_gas_price_in_wei,
-        ///     l1_data_gas_price_in_fri
-        ///     protocol_version,
-        ///     0,
-        ///     parent_block_hash
-        /// )
-        ///
-        /// Based on StarkWare's [Sequencer implementation].
-        ///
-        /// [Sequencer implementation]: https://github.com/starkware-libs/sequencer/blob/bb361ec67396660d5468fd088171913e11482708/crates/starknet_api/src/block_hash/block_hash_calculator.rs#L62-L93
+        // Computes the block hash.
+        //
+        // A block hash is defined as the Poseidon hash of the header’s fields, as follows:
+        //
+        // h(𝐵) = h(
+        //     "STARKNET_BLOCK_HASH0",
+        //     block_number,
+        //     global_state_root,
+        //     sequencer_address,
+        //     block_timestamp,
+        //     transaction_count || event_count || state_diff_length || l1_da_mode,
+        //     state_diff_commitment,
+        //     transactions_commitment
+        //     events_commitment,
+        //     receipts_commitment
+        //     l1_gas_price_in_wei,
+        //     l1_gas_price_in_fri,
+        //     l1_data_gas_price_in_wei,
+        //     l1_data_gas_price_in_fri
+        //     protocol_version,
+        //     0,
+        //     parent_block_hash
+        // )
+        //
+        // Based on StarkWare's [Sequencer implementation].
+        //
+        // [Sequencer implementation]: https://github.com/starkware-libs/sequencer/blob/bb361ec67396660d5468fd088171913e11482708/crates/starknet_api/src/block_hash/block_hash_calculator.rs#L62-L93
         let starknet_version = self.header.protocol_version.to_string();
         let starknet_version = cairo_short_string_to_felt(&starknet_version).unwrap();
 
@@ -194,7 +197,7 @@ impl<'a> UncommittedBlock<'a> {
             self.header.l1_da_mode,
         );
 
-        let block_hash = compute_hash_on_elements(&vec![
+        let block_hash = hash::Poseidon::hash_array(&[
             short_string!("STARKNET_BLOCK_HASH0"),
             self.header.number.into(),
             Felt::ZERO, // self.header.state_root,
@@ -236,9 +239,9 @@ impl<'a> UncommittedBlock<'a> {
     }
 
     fn compute_transaction_commitment(&self) -> Felt {
-        // compute txs commitment
-        let tx_hashes = transactions.iter().map(|t| t.hash).collect::<Vec<TxHash>>();
-        let transactions_commitment = compute_merkle_root::<hash::Poseidon>(&tx_hashes).unwrap();
+        let tx_hashes = self.transactions.iter().map(|t| t.hash).collect::<Vec<TxHash>>();
+        let commitment = compute_merkle_root::<hash::Poseidon>(&tx_hashes).unwrap();
+        commitment
     }
 
     fn compute_receipt_commitment(&self) -> Felt {
@@ -248,7 +251,7 @@ impl<'a> UncommittedBlock<'a> {
     }
 
     fn compute_state_diff_commitment(&self) -> Felt {
-        compute_state_diff_hash(self.state_updates)
+        compute_state_diff_hash(self.state_updates.clone())
     }
 
     fn compute_event_commitment(&self) -> Felt {
