@@ -4,12 +4,19 @@ use starknet::macros::short_string;
 
 use crate::contract::ContractAddress;
 use crate::da::L1DataAvailabilityMode;
+use crate::receipt::Receipt;
+use crate::state::StateUpdates;
 use crate::transaction::{ExecutableTxWithHash, TxHash, TxWithHash};
 use crate::version::ProtocolVersion;
 use crate::Felt;
 
 pub type BlockIdOrTag = starknet::core::types::BlockId;
 pub type BlockTag = starknet::core::types::BlockTag;
+
+/// Block number type.
+pub type BlockNumber = u64;
+/// Block hash type.
+pub type BlockHash = Felt;
 
 #[derive(Debug, Copy, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -26,11 +33,6 @@ impl std::fmt::Display for BlockHashOrNumber {
         }
     }
 }
-
-/// Block number type.
-pub type BlockNumber = u64;
-/// Block hash type.
-pub type BlockHash = Felt;
 
 /// Finality status of a canonical block.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -74,6 +76,8 @@ impl GasPrices {
         Self { eth: wei_gas_price, strk: fri_gas_price }
     }
 }
+
+// uncommited header ->  header (what is stored in the database)
 
 /// Represents a block header.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -119,103 +123,6 @@ impl Default for Header {
     }
 }
 
-impl Header {
-    /// Computes the block hash.
-    ///
-    /// A block hash is defined as the Poseidon hash of the header’s fields, as follows:
-    ///
-    /// h(𝐵) = h(
-    ///     "STARKNET_BLOCK_HASH0",
-    ///     block_number,
-    ///     global_state_root,
-    ///     sequencer_address,
-    ///     block_timestamp,
-    ///     transaction_count || event_count || state_diff_length || l1_da_mode,
-    ///     state_diff_commitment,
-    ///     transactions_commitment
-    ///     events_commitment,
-    ///     receipts_commitment
-    ///     l1_gas_price_in_wei,
-    ///     l1_gas_price_in_fri,
-    ///     l1_data_gas_price_in_wei,
-    ///     l1_data_gas_price_in_fri
-    ///     protocol_version,
-    ///     0,
-    ///     parent_block_hash
-    /// )
-    ///
-    /// Based on StarkWare's [Sequencer implementation].
-    ///
-    /// [Sequencer implementation]: https://github.com/starkware-libs/sequencer/blob/bb361ec67396660d5468fd088171913e11482708/crates/starknet_api/src/block_hash/block_hash_calculator.rs#L62-L93
-    pub fn compute_hash(&self) -> Felt {
-        let starknet_version = self.protocol_version.to_string();
-        let starknet_version = cairo_short_string_to_felt(&starknet_version).unwrap();
-
-        let concat =
-            Self::concat_counts(self.transaction_count, self.events_count, 0, self.l1_da_mode);
-
-        compute_hash_on_elements(&vec![
-            short_string!("STARKNET_BLOCK_HASH0"),
-            self.number.into(),
-            self.state_root,
-            self.sequencer_address.into(),
-            self.timestamp.into(),
-            concat,
-            self.state_diff_commitment,
-            self.transactions_commitment,
-            self.events_commitment,
-            self.receipts_commitment,
-            self.l1_gas_prices.eth.into(),
-            self.l1_gas_prices.strk.into(),
-            self.l1_data_gas_prices.eth.into(),
-            self.l1_data_gas_prices.strk.into(),
-            starknet_version,
-            Felt::ZERO,
-            self.parent_hash,
-        ])
-    }
-
-    // Concantenate the transaction_count, event_count and state_diff_length, and l1_da_mode into a
-    // single felt.
-    //
-    // A single felt:
-    //
-    // +-------------------+----------------+----------------------+--------------+------------+
-    // | transaction_count | event_count    | state_diff_length    | L1 DA mode   | padding    |
-    // | (64 bits)         | (64 bits)      | (64 bits)            | (1 bit)      | (63 bit)   |
-    // +-------------------+----------------+----------------------+--------------+------------+
-    //
-    // where, L1 DA mode is 0 for calldata, and 1 for blob.
-    //
-    // Taken from https://github.com/starkware-libs/sequencer/blob/bb361ec67396660d5468fd088171913e11482708/crates/starknet_api/src/block_hash/block_hash_calculator.rs#L135-L164
-    fn concat_counts(
-        transaction_count: u32,
-        event_count: u32,
-        state_diff_length: u32,
-        l1_data_availability_mode: L1DataAvailabilityMode,
-    ) -> Felt {
-        fn to_64_bits(num: u32) -> [u8; 8] {
-            (num as u64).to_be_bytes()
-        }
-
-        let l1_data_availability_byte: u8 = match l1_data_availability_mode {
-            L1DataAvailabilityMode::Calldata => 0,
-            L1DataAvailabilityMode::Blob => 0b10000000,
-        };
-
-        let concat_bytes = [
-            to_64_bits(transaction_count).as_slice(),
-            to_64_bits(event_count).as_slice(),
-            to_64_bits(state_diff_length).as_slice(),
-            &[l1_data_availability_byte],
-            &[0_u8; 7], // zero padding
-        ]
-        .concat();
-
-        Felt::from_bytes_be_slice(concat_bytes.as_slice())
-    }
-}
-
 /// Represents a Starknet full block.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -232,11 +139,11 @@ pub struct BlockWithTxHashes {
 }
 
 impl Block {
-    /// Seals the block. This computes the hash of the block.
-    pub fn seal(self) -> SealedBlock {
-        let hash = self.header.compute_hash();
-        SealedBlock { hash, header: self.header, body: self.body }
-    }
+    // /// Seals the block. This computes the hash of the block.
+    // pub fn seal(self) -> SealedBlock {
+    //     let hash = self.header.compute_hash();
+    //     SealedBlock { hash, header: self.header, body: self.body }
+    // }
 
     /// Seals the block with a given hash.
     pub fn seal_with_hash(self, hash: BlockHash) -> SealedBlock {
@@ -310,23 +217,23 @@ pub struct ExecutableBlock {
     pub body: Vec<ExecutableTxWithHash>,
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::felt;
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
+//     use crate::felt;
 
-    #[test]
-    fn test_concat_counts() {
-        let expected = felt!("0x6400000000000000c8000000000000012c0000000000000000");
-        let actual = Header::concat_counts(100, 200, 300, L1DataAvailabilityMode::Calldata);
-        assert_eq!(actual, expected);
+//     #[test]
+//     fn test_concat_counts() {
+//         let expected = felt!("0x6400000000000000c8000000000000012c0000000000000000");
+//         let actual = Header::concat_counts(100, 200, 300, L1DataAvailabilityMode::Calldata);
+//         assert_eq!(actual, expected);
 
-        let expected = felt!("0x1000000000000000200000000000000038000000000000000");
-        let actual = Header::concat_counts(1, 2, 3, L1DataAvailabilityMode::Blob);
-        assert_eq!(actual, expected);
+//         let expected = felt!("0x1000000000000000200000000000000038000000000000000");
+//         let actual = Header::concat_counts(1, 2, 3, L1DataAvailabilityMode::Blob);
+//         assert_eq!(actual, expected);
 
-        let expected = felt!("0xffffffff000000000000000000000000000000000000000000000000");
-        let actual = Header::concat_counts(0xFFFFFFFF, 0, 0, L1DataAvailabilityMode::Calldata);
-        assert_eq!(actual, expected);
-    }
-}
+//         let expected = felt!("0xffffffff000000000000000000000000000000000000000000000000");
+//         let actual = Header::concat_counts(0xFFFFFFFF, 0, 0, L1DataAvailabilityMode::Calldata);
+//         assert_eq!(actual, expected);
+//     }
+// }
