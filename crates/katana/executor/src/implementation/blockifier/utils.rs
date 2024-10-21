@@ -704,6 +704,24 @@ mod tests {
         assert_eq!(actual_id, id)
     }
 
+    #[test]
+    #[ignore = "The blockifier chain id conversion adds bytes for chain ids which don't have a \
+                valid utf8 representation"]
+    fn failing_blockifier_chain_id_conversion() {
+        let id = felt!("0xc72dd9d5e883e");
+
+        let katana_id = katana_primitives::chain::ChainId::Id(id);
+        let blockifier_id = to_blk_chain_id(katana_id);
+
+        // Mimic how blockifier convert from ChainId to FieldElement.
+        //
+        // This is how blockifier pass the chain id to the contract through a syscall.
+        // https://github.com/dojoengine/blockifier/blob/f2246ce2862d043e4efe2ecf149a4cb7bee689cd/crates/blockifier/src/execution/syscalls/hint_processor.rs#L600-L602
+        let actual_id = FieldElement::from_hex(blockifier_id.as_hex().as_str()).unwrap();
+
+        assert_eq!(actual_id, id)
+    }
+
     fn create_blockifier_call_info() -> CallInfo {
         let top_events = vec![OrderedEvent {
             order: 0,
