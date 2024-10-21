@@ -47,7 +47,7 @@ impl IndexerManager {
         let (sender, receiver) = channel(1);
 
         let mut statement =
-            "SELECT head, tps, last_block_timestamp, contract_address FROM contracts".to_string();
+            "SELECT * FROM contracts".to_string();
 
         let contracts: Vec<ContractUpdated> = if contract_address != Felt::ZERO {
             statement += " WHERE id = ?";
