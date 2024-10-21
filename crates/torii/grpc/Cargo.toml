@@ -22,7 +22,7 @@ strum.workspace = true
 strum_macros.workspace = true
 
 # server
-dojo-world = { path = "../../dojo-world", features = [ "contracts" ] }
+dojo-world = { workspace = true, features = [ "contracts" ] }
 hyper.workspace = true
 rand.workspace = true
 serde_json.workspace = true

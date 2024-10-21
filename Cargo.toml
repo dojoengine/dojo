@@ -8,14 +8,14 @@ members = [
 	"bin/scheduler",
 	"bin/sozo",
 	"bin/torii",
-	"crates/dojo-bindgen",
-	"crates/dojo-core",
-	"crates/dojo-lang",
-	"crates/dojo-test-utils",
-	"crates/dojo-types",
-	"crates/dojo-utils",
-	"crates/dojo-world",
-	"crates/dojo-world/abigen",
+	"crates/dojo/bindgen",
+	"crates/dojo/core",
+	"crates/dojo/lang",
+	"crates/dojo/test-utils",
+	"crates/dojo/types",
+	"crates/dojo/utils",
+	"crates/dojo/world",
+	"crates/dojo/world/abigen",
 	"crates/katana/controller",
 	"crates/katana/core",
 	"crates/katana/executor",
@@ -63,18 +63,18 @@ lto = "fat"
 
 [workspace.dependencies]
 cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.4.1", features = [ "abigen-rs" ] }
-dojo-utils = { path = "crates/dojo-utils" }
+dojo-utils = { path = "crates/dojo/utils" }
 
 # metrics
 dojo-metrics = { path = "crates/metrics" }
 
 # dojo-lang
-dojo-bindgen = { path = "crates/dojo-bindgen" }
-dojo-core = { path = "crates/dojo-core" }
-dojo-lang = { path = "crates/dojo-lang" }
-dojo-test-utils = { path = "crates/dojo-test-utils" }
-dojo-types = { path = "crates/dojo-types" }
-dojo-world = { path = "crates/dojo-world" }
+dojo-bindgen = { path = "crates/dojo/bindgen" }
+dojo-core = { path = "crates/dojo/core" }
+dojo-lang = { path = "crates/dojo/lang" }
+dojo-test-utils = { path = "crates/dojo/test-utils" }
+dojo-types = { path = "crates/dojo/types" }
+dojo-world = { path = "crates/dojo/world" }
 
 # dojo-world
 topological-sort = "0.2"

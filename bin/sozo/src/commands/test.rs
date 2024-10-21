@@ -244,7 +244,7 @@ mod tests {
     #[test]
     #[ignore]
     fn test_spawn_and_move_test() {
-        let setup = CompilerTestSetup::from_examples("../../crates/dojo-core", "../../examples/");
+        let setup = CompilerTestSetup::from_examples("../../crates/dojo/core", "../../examples/");
 
         let config = setup.build_test_config("spawn-and-move", Profile::DEV);
 

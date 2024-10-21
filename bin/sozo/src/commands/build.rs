@@ -232,7 +232,7 @@ mod tests {
     #[test]
     #[ignore]
     fn build_example_with_typescript_and_unity_bindings() {
-        let setup = CompilerTestSetup::from_examples("../../crates/dojo-core", "../../examples/");
+        let setup = CompilerTestSetup::from_examples("../../crates/dojo/core", "../../examples/");
 
         let config = setup.build_test_config("spawn-and-move", Profile::DEV);
 

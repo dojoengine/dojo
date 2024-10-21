@@ -281,7 +281,7 @@ mod tests {
 
     #[test]
     fn collect_policies_from_project() {
-        let config = CompilerTestSetup::from_examples("../../crates/dojo-core", "../../examples/")
+        let config = CompilerTestSetup::from_examples("../../crates/dojo/core", "../../examples/")
             .build_test_config("spawn-and-move", Profile::DEV);
 
         let world_addr = felt!("0x74c73d35df54ddc53bcf34aab5e0dbb09c447e99e01f4d69535441253c9571a");

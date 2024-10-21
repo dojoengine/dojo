@@ -100,7 +100,7 @@ mod tests {
 
     #[test]
     fn default_clean_works() {
-        let setup = CompilerTestSetup::from_examples("../../crates/dojo-core", "../../examples/");
+        let setup = CompilerTestSetup::from_examples("../../crates/dojo/core", "../../examples/");
         let config = setup.build_test_config("spawn-and-move", Profile::DEV);
 
         let temp_project_dir = config.manifest_path().parent().unwrap().to_path_buf();
@@ -174,7 +174,7 @@ mod tests {
 
     #[test]
     fn all_profile_clean_works() {
-        let setup = CompilerTestSetup::from_examples("../../crates/dojo-core", "../../examples/");
+        let setup = CompilerTestSetup::from_examples("../../crates/dojo/core", "../../examples/");
 
         let config = setup.build_test_config("spawn-and-move", Profile::DEV);
 

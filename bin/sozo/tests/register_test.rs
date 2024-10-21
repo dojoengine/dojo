@@ -13,7 +13,7 @@ use utils::snapbox::get_snapbox;
 #[tokio::test(flavor = "multi_thread")]
 #[katana_runner::test(db_dir = copy_spawn_and_move_db().as_str())]
 async fn reregister_models(sequencer: &RunnerCtx) {
-    let setup = CompilerTestSetup::from_examples("../../crates/dojo-core", "../../examples/");
+    let setup = CompilerTestSetup::from_examples("../../crates/dojo/core", "../../examples/");
     let config = setup.build_test_config("spawn-and-move", Profile::DEV);
 
     let ws = ops::read_workspace(config.manifest_path(), &config)

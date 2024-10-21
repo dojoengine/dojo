@@ -12,7 +12,7 @@ sierra-replace-ids = true
 [dependencies]
 armory = { path = "../game-lib/armory" }
 bestiary = { path = "../game-lib/bestiary" }
-dojo = { path = "../../crates/dojo-core" }
+dojo = { path = "../../crates/dojo/core" }
 
 [[target.dojo]]
 build-external-contracts = [ "armory::Flatbow", "bestiary::RiverSkale" ]

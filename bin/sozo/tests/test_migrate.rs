@@ -12,7 +12,7 @@ mod utils;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn migrate_dry_run() {
-    let setup = CompilerTestSetup::from_examples("../../crates/dojo-core", "../../examples/");
+    let setup = CompilerTestSetup::from_examples("../../crates/dojo/core", "../../examples/");
     let config = setup.build_test_config("spawn-and-move", Profile::DEV);
 
     let sequencer = KatanaRunner::new().expect("Failed to start runner.");
@@ -53,7 +53,7 @@ async fn migrate_dry_run() {
 #[tokio::test(flavor = "multi_thread")]
 #[katana_runner::test(db_dir = copy_spawn_and_move_db().as_str())]
 async fn test_migrate_then_upgrade(sequencer: &RunnerCtx) {
-    let setup = CompilerTestSetup::from_examples("../../crates/dojo-core", "../../examples/");
+    let setup = CompilerTestSetup::from_examples("../../crates/dojo/core", "../../examples/");
     let config = setup.build_test_config("spawn-and-move", Profile::DEV);
     let tmp_dir = config.manifest_path().parent().unwrap();
 

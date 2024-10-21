@@ -16,8 +16,8 @@ rm -rf examples/spawn-and-move/manifests/
 rm -rf crates/torii/types-test/target
 rm -rf crates/torii/types-test/manifests
 
-rm -rf crates/dojo-lang/src/manifest_test_data/compiler_cairo/target
-rm -rf crates/dojo-lang/src/manifest_test_data/compiler_cairo/manifests
+rm -rf crates/dojo/lang/src/manifest_test_data/compiler_cairo/target
+rm -rf crates/dojo/lang/src/manifest_test_data/compiler_cairo/manifests
 
 cargo run --bin dojo-world-abigen
 
@@ -29,7 +29,7 @@ CAIRO_FIX_TESTS=1 cargo test --package dojo-lang semantics
 ./target/release/sozo build --manifest-path examples/spawn-and-move/Scarb.toml
 ./target/release/sozo build --manifest-path examples/spawn-and-move/Scarb.toml -P release
 ./target/release/sozo build --manifest-path crates/torii/types-test/Scarb.toml
-./target/release/sozo build --manifest-path crates/dojo-lang/src/manifest_test_data/compiler_cairo/Scarb.toml
+./target/release/sozo build --manifest-path crates/dojo/lang/src/manifest_test_data/compiler_cairo/Scarb.toml
 
 # Generates the database for testing by migrating the spawn and move example.
 cargo generate-test-db

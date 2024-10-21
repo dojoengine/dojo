@@ -8,7 +8,7 @@ version = "1.0.0-alpha.4"
 sierra-replace-ids = true
 
 [dependencies]
-dojo = { path = "../../dojo-core" }
+dojo = { path = "../../dojo/core" }
 
 [[target.dojo]]
 build-external-contracts = [  ]
