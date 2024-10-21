@@ -6,17 +6,12 @@ use bonsai_trie::{BonsaiStorage, BonsaiStorageConfig, ByteVec, DatabaseKey};
 use katana_db::abstraction::DbTxMut;
 use katana_db::models::trie::{TrieDatabaseKey, TrieDatabaseKeyType, TrieDatabaseValue};
 use katana_db::{models, tables};
-use mc_db::MadaraBackend;
-use mc_db::{bonsai_identifier, MadaraStorageError};
-use mp_block::{BlockId, BlockTag};
-use mp_state_update::{
-    ContractStorageDiffItem, DeployedContractItem, NonceUpdate, ReplacedClassItem, StorageEntry,
-};
-use rayon::prelude::*;
-use starknet::macros::short_string;
+use katana_primitives::class::ClassHash;
+use katana_primitives::contract::{Nonce, StorageKey, StorageValue};
+use katana_primitives::ContractAddress;
 use starknet_types_core::felt::Felt;
 use starknet_types_core::hash::{Pedersen, Poseidon, StarkHash};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 fn foo(key: &DatabaseKey) -> models::trie::TrieDatabaseKey {
     match key {
@@ -46,7 +41,7 @@ pub struct ContractTrie<Tx: DbTxMut> {
 }
 
 impl<Tx: DbTxMut> ContractTrie<Tx> {
-    const IDENTIFIER: &'static [u8] = b"0xclass";
+    const IDENTIFIER: &'static [u8] = b"0xcontract";
 
     pub fn new(tx: Tx) -> Self {
         let db = TrieDb { tx };
@@ -57,6 +52,87 @@ impl<Tx: DbTxMut> ContractTrie<Tx> {
         };
         Self { bonsai_storage: BonsaiStorage::new(db, config).unwrap() }
     }
+
+    pub fn apply(
+        &mut self,
+        deployed_contracts: &BTreeMap<ContractAddress, ClassHash>,
+        replaced_classes: &BTreeMap<ContractAddress, ClassHash>,
+        nonces: &BTreeMap<ContractAddress, Nonce>,
+        storage_diffs: &BTreeMap<ContractAddress, BTreeMap<StorageKey, StorageValue>>,
+        block_number: u64,
+    ) -> Felt {
+        let mut contract_leafs: HashMap<Felt, ContractLeaf> = HashMap::new();
+
+        // First we insert the contract storage changes
+        for (address, storage_entries) in storage_diffs {
+            for (key, value) in storage_entries {
+                let bytes = key.to_bytes_be();
+                let bv: BitVec<u8, Msb0> = bytes.as_bits()[5..].to_owned();
+                self.bonsai_storage.insert(&address.to_bytes_be(), &bv, value).unwrap();
+            }
+            // insert the contract address in the contract_leafs to put the storage root later
+            contract_leafs.insert((*address).into(), Default::default());
+        }
+
+        // Then we commit them
+        self.bonsai_storage.commit(BasicId::new(block_number)).unwrap();
+
+        for (address, nonce) in nonces {
+            contract_leafs.entry((*address).into()).or_default().nonce = Some(*nonce);
+        }
+
+        for (address, class_hash) in deployed_contracts {
+            contract_leafs.entry((*address).into()).or_default().class_hash = Some(*class_hash);
+        }
+
+        for (address, class_hash) in replaced_classes {
+            contract_leafs.entry((*address).into()).or_default().class_hash = Some(*class_hash);
+        }
+
+        let leaf_hashes: Vec<_> = contract_leafs
+            .into_iter()
+            .map(|(address, mut leaf)| {
+                let storage_root = self.bonsai_storage.root_hash(&address.to_bytes_be()).unwrap();
+                leaf.storage_root = Some(storage_root);
+
+                let leaf_hash = self.contract_state_leaf_hash(&address, &leaf);
+                let bytes = address.to_bytes_be();
+                let bv: BitVec<u8, Msb0> = bytes.as_bits()[5..].to_owned();
+                (bv, leaf_hash)
+            })
+            .collect::<_>();
+
+        for (k, v) in leaf_hashes {
+            self.bonsai_storage.insert(Self::IDENTIFIER, &k, &v).unwrap();
+        }
+
+        self.bonsai_storage.commit(BasicId::new(block_number)).unwrap();
+        let root_hash = self.bonsai_storage.root_hash(Self::IDENTIFIER).unwrap();
+
+        root_hash
+    }
+
+    // computes the contract state leaf hash
+    fn contract_state_leaf_hash(&self, _: &Felt, contract_leaf: &ContractLeaf) -> Felt {
+        let nonce = contract_leaf.nonce.unwrap_or(Felt::ZERO);
+        let class_hash = contract_leaf.class_hash.unwrap_or(Felt::ZERO);
+        let storage_root = contract_leaf.storage_root.unwrap();
+
+        // hPed(
+        //   hPed(
+        //     hPed(
+        //       class_hash,
+        //       storage_root
+        //     ),
+        //     nonce
+        //   ),
+        //   0
+        // )
+        Pedersen::hash(
+            &Pedersen::hash(&Pedersen::hash(&class_hash, &storage_root), &nonce),
+            &Felt::ZERO,
+        )
+    }
 }
 
 #[derive(Debug, Default)]
@@ -64,117 +140,6 @@ struct ContractLeaf {
     pub class_hash: Option<Felt>,
     pub storage_root: Option<Felt>,
     pub nonce: Option<Felt>,
-}
-
-/// Calculates the contract trie root
-///
-/// # Arguments
-///
-/// * `csd`             - Commitment state diff for the current block.
-/// * `block_number`    - The current block number.
-///
-/// # Returns
-///
-/// The contract root.
-pub fn contract_trie_root(
-    backend: &MadaraBackend,
-    deployed_contracts: &[DeployedContractItem],
-    replaced_classes: &[ReplacedClassItem],
-    nonces: &[NonceUpdate],
-    storage_diffs: &[ContractStorageDiffItem],
-    block_number: u64,
-) -> Result<Felt, MadaraStorageError> {
-    let mut contract_leafs: HashMap<Felt, ContractLeaf> = HashMap::new();
-
-    let mut contract_storage_trie = backend.contract_storage_trie();
-
-    // First we insert the contract storage changes
-    for ContractStorageDiffItem { address, storage_entries } in storage_diffs {
-        for StorageEntry { key, value } in storage_entries {
-            let bytes = key.to_bytes_be();
-            let bv: BitVec<u8, Msb0> = bytes.as_bits()[5..].to_owned();
-            contract_storage_trie.insert(&address.to_bytes_be(), &bv, value)?;
-        }
-        // insert the contract address in the contract_leafs to put the storage root later
-        contract_leafs.insert(*address, Default::default());
-    }
-
-    // Then we commit them
-    contract_storage_trie.commit(BasicId::new(block_number))?;
-
-    for NonceUpdate { contract_address, nonce } in nonces {
-        contract_leafs.entry(*contract_address).or_default().nonce = Some(*nonce);
-    }
-
-    for DeployedContractItem { address, class_hash } in deployed_contracts {
-        contract_leafs.entry(*address).or_default().class_hash = Some(*class_hash);
-    }
-
-    for ReplacedClassItem { contract_address, class_hash } in replaced_classes {
-        contract_leafs.entry(*contract_address).or_default().class_hash = Some(*class_hash);
-    }
-
-    let mut contract_trie = backend.contract_trie();
-
-    let leaf_hashes: Vec<_> = contract_leafs
-        .into_iter()
-        .map(|(contract_address, mut leaf)| {
-            let storage_root = contract_storage_trie.root_hash(&contract_address.to_bytes_be())?;
-            leaf.storage_root = Some(storage_root);
-            let leaf_hash = contract_state_leaf_hash(backend, &contract_address, &leaf)?;
-            let bytes = contract_address.to_bytes_be();
-            let bv: BitVec<u8, Msb0> = bytes.as_bits()[5..].to_owned();
-            Ok((bv, leaf_hash))
-        })
-        .collect::<Result<_, MadaraStorageError>>()?;
-
-    for (k, v) in leaf_hashes {
-        contract_trie.insert(bonsai_identifier::CONTRACT, &k, &v)?;
-    }
-
-    contract_trie.commit(BasicId::new(block_number))?;
-    let root_hash = contract_trie.root_hash(bonsai_identifier::CONTRACT)?;
-
-    Ok(root_hash)
-}
-
-/// Computes the contract state leaf hash
-///
-/// # Arguments
-///
-/// * `csd`             - Commitment state diff for the current block.
-/// * `contract_address` - The contract address.
-/// * `storage_root`     - The storage root of the contract.
-///
-/// # Returns
-///
-/// The contract state leaf hash.
-fn contract_state_leaf_hash(
-    backend: &MadaraBackend,
-    contract_address: &Felt,
-    contract_leaf: &ContractLeaf,
-) -> Result<Felt, MadaraStorageError> {
-    let nonce = contract_leaf.nonce.unwrap_or(
-        backend
-            .get_contract_nonce_at(&BlockId::Tag(BlockTag::Latest), contract_address)?
-            .unwrap_or(Felt::ZERO),
-    );
-
-    let class_hash = contract_leaf.class_hash.unwrap_or(
-        backend
-            .get_contract_class_hash_at(&BlockId::Tag(BlockTag::Latest), contract_address)?
-            .unwrap_or(Felt::ZERO), // .ok_or(MadaraStorageError::InconsistentStorage("Class hash not found".into()))?
-    );
-
-    let storage_root = contract_leaf
-        .storage_root
-        .ok_or(MadaraStorageError::InconsistentStorage("Storage root need to be set".into()))?;
-
-    // computes the contract state leaf hash
-    Ok(Pedersen::hash(
-        &Pedersen::hash(&Pedersen::hash(&class_hash, &storage_root), &nonce),
-        &Felt::ZERO,
-    ))
 }
 
 pub struct TrieDb<Tx: DbTxMut> {
