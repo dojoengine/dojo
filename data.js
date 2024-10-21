@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1729524484746,
+  "lastUpdate": 1729551615683,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -27367,6 +27367,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4491646,
             "range": "± 64755",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "76473430+edisontim@users.noreply.github.com",
+            "name": "tedison",
+            "username": "edisontim"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "467888bc5a0963f5e2004a2d6198a80f5f12c13e",
+          "message": "feat: bump sqlx to 0.8.2 (#2565)\n\nbump sqlx to 0.8.2",
+          "timestamp": "2024-10-21T16:44:00-06:00",
+          "tree_id": "1b0023a0e5aed24789a286157ea655822a7da946",
+          "url": "https://github.com/dojoengine/dojo/commit/467888bc5a0963f5e2004a2d6198a80f5f12c13e"
+        },
+        "date": 1729551613497,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 12007247050,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
