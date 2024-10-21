@@ -14,7 +14,6 @@ use katana_primitives::{ContractAddress, Felt};
 use katana_provider::traits::block::{BlockHashProvider, BlockWriter};
 use katana_trie::trie::compute_merkle_root;
 use parking_lot::RwLock;
-use starknet::core::crypto::compute_hash_on_elements;
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::macros::short_string;
 use starknet_types_core::hash::{self, StarkHash};
@@ -121,10 +120,12 @@ impl<EF: ExecutorFactory> Backend<EF> {
         transactions: Vec<TxWithHash>,
         receipts: &[ReceiptWithTxHash],
     ) -> Result<SealedBlock, BlockProductionError> {
-        let block = UncommittedBlock::new(header, transactions, &receipts, &state_updates);
-        let committed = block.commit();
-        let sealed = Block { header, body: transactions }.seal();
-        Ok(sealed)
+        // let block = UncommittedBlock::new(header, transactions, &receipts, &state_updates);
+        // let committed = block.commit();
+        // let sealed = Block { header, body: transactions }.seal();
+        // Ok(sealed)
+
+        todo!()
     }
 }
 

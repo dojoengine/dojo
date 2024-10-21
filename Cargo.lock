@@ -8456,9 +8456,11 @@ dependencies = [
  "bonsai-trie",
  "katana-db",
  "katana-primitives",
+ "serde",
  "slab",
  "starknet 0.12.0",
  "starknet-types-core",
+ "thiserror",
 ]
 
 [[package]]
