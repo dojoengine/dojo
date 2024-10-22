@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use std::sync::Arc;
 
 use jsonrpsee::core::{async_trait, Error};
@@ -5,7 +6,8 @@ use katana_core::backend::Backend;
 use katana_core::service::block_producer::{BlockProducer, BlockProducerMode, PendingExecutor};
 use katana_executor::ExecutorFactory;
 use katana_primitives::genesis::constant::ERC20_NAME_STORAGE_SLOT;
-use katana_primitives::{address, ContractAddress, Felt};
+use katana_primitives::ContractAddress;
+use starknet_crypto::Felt;
 use katana_provider::traits::state::StateFactoryProvider;
 use katana_rpc_api::dev::DevApiServer;
 use katana_rpc_types::account::Account;
@@ -95,9 +97,8 @@ impl<EF: ExecutorFactory> DevApiServer for DevApi<EF> {
     }
 
     #[allow(deprecated)]
-    async fn account_balance(&self) -> Result<u128, Error> {
-        let account_address =
-            address!("0x6b86e40118f29ebe393a75469b4d926c7a44c2e2681b6d319520b7c1156d114"); //This is temp
+    async fn account_balance(&self, address: String) -> Result<u128, Error> {
+        let account_address: ContractAddress = Felt::from_str(&address).unwrap().into();
         let provider = self.backend.blockchain.provider();
         let state = provider.latest().unwrap();
         let storage_slot =

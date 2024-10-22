@@ -11,6 +11,11 @@ anyhow.workspace = true
 dojo-metrics.workspace = true
 futures.workspace = true
 jsonrpsee = { workspace = true, features = [ "server" ] }
+jsonrpsee-core = { version = "0.16.3", features = [ "server", "soketto", "http-helpers" ] }
+jsonrpsee-types = { version = "0.16.3"}
+hyper.workspace = true
+tower = { workspace = true, features = [ "full" ] }
+http = { version = "0.2.7" }
 katana-core.workspace = true
 katana-executor.workspace = true
 katana-pool.workspace = true
@@ -24,6 +29,23 @@ metrics.workspace = true
 starknet.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+soketto = { version = "0.7.1", features = ["http"] }
+tokio = { version = "1.16", features = [
+    "net",
+    "rt-multi-thread",
+    "macros",
+    "time",
+]}
+futures-channel = { version = "0.3.14"}
+futures-util = { version = "0.3.14",  features = [
+    "io",
+    "async-await-macro",
+]}
+tokio-stream = { version = "0.1.7" }
+tokio-util = { version = "0.7", features = ["compat"]}
+starknet-crypto.workspace = true
 
 [dev-dependencies]
 alloy = { git = "https://github.com/alloy-rs/alloy", features = [ "contract", "network", "node-bindings", "provider-http", "providers", "signer-local" ] }
@@ -42,8 +64,6 @@ katana-runner.workspace = true
 rstest.workspace = true
 num-traits.workspace = true
 rand.workspace = true
-serde.workspace = true
-serde_json.workspace = true
 tempfile.workspace = true
 tokio.workspace = true
 url.workspace = true

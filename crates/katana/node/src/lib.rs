@@ -7,7 +7,8 @@ use std::time::Duration;
 use anyhow::Result;
 use dojo_metrics::{metrics_process, prometheus_exporter, Report};
 use hyper::{Method, Uri};
-use jsonrpsee::server::middleware::proxy_get_request::ProxyGetRequestLayer;
+// use jsonrpsee::server::middleware::proxy_get_request::ProxyGetRequestLayer;
+use katana_rpc::proxy_get_request::DevnetProxyLayer;
 use jsonrpsee::server::{AllowHosts, ServerBuilder, ServerHandle};
 use jsonrpsee::RpcModule;
 use katana_core::backend::config::StarknetConfig;
@@ -298,9 +299,9 @@ pub async fn spawn<EF: ExecutorFactory>(
 
     let middleware = tower::ServiceBuilder::new()
         .option_layer(cors)
-        .layer(ProxyGetRequestLayer::new("/", "health")?)
-        .layer(ProxyGetRequestLayer::new("/account_balance", "dev_accountBalance")?)
-        .layer(ProxyGetRequestLayer::new("/fee_token", "dev_feeToken")?)
+        .layer(DevnetProxyLayer::new("/", "health")?)
+        .layer(DevnetProxyLayer::new("/account_balance", "dev_accountBalance")?)
+        .layer(DevnetProxyLayer::new("/fee_token", "dev_feeToken")?)
         .timeout(Duration::from_secs(20));
 
     let server = ServerBuilder::new()
