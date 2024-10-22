@@ -1,11 +1,10 @@
 mod fixtures;
 
 use anyhow::Result;
-use fixtures::{fork_provider_with_spawned_fork_network, in_memory_provider, provider_with_states};
+use fixtures::{fork_provider_with_spawned_fork_network, provider_with_states};
 use katana_primitives::block::{BlockHashOrNumber, BlockNumber};
 use katana_primitives::contract::{ContractAddress, StorageKey, StorageValue};
 use katana_provider::providers::fork::ForkedProvider;
-use katana_provider::providers::in_memory::InMemoryProvider;
 use katana_provider::traits::state::{StateFactoryProvider, StateProvider};
 use katana_provider::BlockchainProvider;
 use rstest_reuse::{self, *};
@@ -51,14 +50,6 @@ mod latest {
         #[from(provider_with_states)] provider: BlockchainProvider<Db>,
         #[case] storage_entry: Vec<(ContractAddress, StorageKey, Option<StorageValue>)>,
     ) {
-    }
-
-    #[apply(test_latest_storage_read)]
-    fn read_storage_from_in_memory_provider(
-        #[with(in_memory_provider())] provider: BlockchainProvider<InMemoryProvider>,
-        #[case] expected_storage_entry: Vec<(ContractAddress, StorageKey, Option<StorageValue>)>,
-    ) -> Result<()> {
-        assert_latest_storage_value(provider, expected_storage_entry)
     }
 
     #[apply(test_latest_storage_read)]
@@ -143,15 +134,6 @@ mod historical {
         #[case] block_num: BlockNumber,
         #[case] expected_storage_entry: Vec<(ContractAddress, StorageKey, Option<StorageValue>)>,
     ) {
-    }
-
-    #[apply(test_historical_storage_read)]
-    fn read_storage_from_in_memory_provider(
-        #[with(in_memory_provider())] provider: BlockchainProvider<InMemoryProvider>,
-        #[case] block_num: BlockNumber,
-        #[case] expected_storage_entry: Vec<(ContractAddress, StorageKey, Option<StorageValue>)>,
-    ) -> Result<()> {
-        assert_historical_storage_value(provider, block_num, expected_storage_entry)
     }
 
     #[apply(test_historical_storage_read)]

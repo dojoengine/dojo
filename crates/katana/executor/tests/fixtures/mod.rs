@@ -24,7 +24,7 @@ use katana_primitives::transaction::{
 use katana_primitives::utils::class::{parse_compiled_class, parse_sierra_class};
 use katana_primitives::version::CURRENT_STARKNET_VERSION;
 use katana_primitives::{address, Felt};
-use katana_provider::providers::in_memory::InMemoryProvider;
+use katana_provider::providers::db::DbProvider;
 use katana_provider::traits::block::BlockWriter;
 use katana_provider::traits::state::{StateFactoryProvider, StateProvider};
 use starknet::macros::felt;
@@ -70,7 +70,7 @@ pub fn chain() -> ChainSpec {
 #[rstest::fixture]
 pub fn state_provider(chain: &ChainSpec) -> Box<dyn StateProvider> {
     let states = chain.state_updates();
-    let provider = InMemoryProvider::new();
+    let provider = DbProvider::new_ephemeral();
 
     let block = SealedBlockWithStatus {
         status: FinalityStatus::AcceptedOnL2,
@@ -81,7 +81,7 @@ pub fn state_provider(chain: &ChainSpec) -> Box<dyn StateProvider> {
         .insert_block_with_states_and_receipts(block, states, vec![], vec![])
         .expect("able to insert block");
 
-    <InMemoryProvider as StateFactoryProvider>::latest(&provider).unwrap()
+    provider.latest().unwrap()
 }
 
 // TODO: update the txs to include valid signatures

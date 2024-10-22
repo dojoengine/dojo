@@ -2,7 +2,7 @@
 
 use katana_primitives::block::{BlockHashOrNumber, BlockIdOrTag, BlockTag, SealedBlockWithStatus};
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
-use katana_provider::providers::in_memory::InMemoryProvider;
+use katana_provider::providers::db::DbProvider;
 use katana_provider::traits::block::{BlockProvider, BlockWriter};
 use katana_provider::traits::contract::ContractClassWriter;
 use katana_provider::traits::env::BlockEnvProvider;
@@ -70,7 +70,7 @@ impl Default for Blockchain {
 impl Blockchain {
     /// Initializes a new instance of [`Blockchain`].
     pub fn new() -> Self {
-        Self { inner: BlockchainProvider::new(Box::new(InMemoryProvider::new())) }
+        Self { inner: BlockchainProvider::new(Box::new(DbProvider::new_ephemeral())) }
     }
 
     /// Returns the internal provider.
