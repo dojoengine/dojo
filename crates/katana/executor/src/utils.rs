@@ -24,16 +24,6 @@ pub fn log_resources(resources: &TxResources) {
     trace!(target: LOG_TARGET, usage = mapped_strings.join(" | "), "Transaction resource usage.");
 }
 
-pub fn log_events(events: &[Event]) {
-    for e in events {
-        trace!(
-            target: LOG_TARGET,
-            keys = e.keys.iter().map(|key| format!("{key:#x}")).collect::<Vec<_>>().join(", "),
-            "Event emitted.",
-        );
-    }
-}
-
 pub(crate) fn build_receipt(tx: TxRef<'_>, fee: TxFeeInfo, info: &TxExecInfo) -> Receipt {
     let events = events_from_exec_info(info);
     let revert_error = info.revert_error.clone();
