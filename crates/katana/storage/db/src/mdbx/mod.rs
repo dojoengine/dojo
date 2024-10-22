@@ -4,6 +4,7 @@
 
 pub mod cursor;
 pub mod stats;
+pub mod temp;
 pub mod tx;
 
 use std::collections::HashMap;

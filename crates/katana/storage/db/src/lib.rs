@@ -16,6 +16,7 @@ pub mod tables;
 pub mod utils;
 pub mod version;
 
+use mdbx::temp::TempDbEnv;
 use mdbx::{DbEnv, DbEnvKind};
 use utils::is_database_empty;
 use version::{check_db_version, create_db_version_file, DatabaseVersionError, CURRENT_DB_VERSION};
@@ -57,6 +58,15 @@ pub fn open_db<P: AsRef<Path>>(path: P) -> anyhow::Result<DbEnv> {
     DbEnv::open(path.as_ref(), DbEnvKind::RW).with_context(|| {
         format!("Opening database in read-write mode at path {}", path.as_ref().display())
     })
+}
+
+/// Initialize a temporary database and return a handle to its environment.
+///
+/// This will create the default tables.
+pub fn init_temp_db() -> anyhow::Result<TempDbEnv> {
+    let env = TempDbEnv::open().context("Opening temporary database")?;
+    env.create_tables()?;
+    Ok(env)
 }
 
 #[cfg(test)]
