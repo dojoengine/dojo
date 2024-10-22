@@ -1,5 +1,7 @@
 //! Transactions related conversions.
 use katana_primitives::chain::ChainId;
+use katana_primitives::da::DataAvailabilityMode;
+use katana_primitives::fee::{ResourceBounds, ResourceBoundsMapping};
 use katana_primitives::transaction::{
     DeclareTx, DeclareTxV1, DeclareTxV2, DeclareTxV3, DeployAccountTx, DeployAccountTxV1,
     DeployAccountTxV3, InvokeTx, InvokeTxV1, InvokeTxV3, L1HandlerTx, Tx, TxWithHash,
@@ -45,12 +47,12 @@ pub fn tx_from_rpc(tx_rpc: &Transaction, chain_id: ChainId) -> ProviderResult<Tx
                     nonce: tx.nonce,
                     calldata: tx.calldata.clone(),
                     signature: tx.signature.clone(),
-                    resource_bounds: tx.resource_bounds.clone(),
+                    resource_bounds: from_rpc_resource_bounds(tx.resource_bounds.clone()),
                     tip: tx.tip,
                     paymaster_data: tx.paymaster_data.clone(),
                     account_deployment_data: tx.account_deployment_data.clone(),
-                    nonce_data_availability_mode: tx.nonce_data_availability_mode,
-                    fee_data_availability_mode: tx.fee_data_availability_mode,
+                    nonce_data_availability_mode: from_rpc_da_mode(tx.nonce_data_availability_mode),
+                    fee_data_availability_mode: from_rpc_da_mode(tx.fee_data_availability_mode),
                 })),
             }),
         },
@@ -115,12 +117,12 @@ pub fn tx_from_rpc(tx_rpc: &Transaction, chain_id: ChainId) -> ProviderResult<Tx
                     signature: tx.signature.clone(),
                     class_hash: tx.class_hash,
                     compiled_class_hash: tx.compiled_class_hash,
-                    resource_bounds: tx.resource_bounds.clone(),
+                    resource_bounds: from_rpc_resource_bounds(tx.resource_bounds.clone()),
                     tip: tx.tip,
                     paymaster_data: tx.paymaster_data.clone(),
                     account_deployment_data: tx.account_deployment_data.clone(),
-                    nonce_data_availability_mode: tx.nonce_data_availability_mode,
-                    fee_data_availability_mode: tx.fee_data_availability_mode,
+                    nonce_data_availability_mode: from_rpc_da_mode(tx.nonce_data_availability_mode),
+                    fee_data_availability_mode: from_rpc_da_mode(tx.fee_data_availability_mode),
                 })),
             }),
         },
@@ -150,16 +152,38 @@ pub fn tx_from_rpc(tx_rpc: &Transaction, chain_id: ChainId) -> ProviderResult<Tx
                     contract_address: Default::default(),
                     contract_address_salt: tx.contract_address_salt,
                     constructor_calldata: tx.constructor_calldata.clone(),
-                    resource_bounds: tx.resource_bounds.clone(),
+                    resource_bounds: from_rpc_resource_bounds(tx.resource_bounds.clone()),
                     tip: tx.tip,
                     paymaster_data: tx.paymaster_data.clone(),
-                    nonce_data_availability_mode: tx.nonce_data_availability_mode,
-                    fee_data_availability_mode: tx.fee_data_availability_mode,
+                    nonce_data_availability_mode: from_rpc_da_mode(tx.nonce_data_availability_mode),
+                    fee_data_availability_mode: from_rpc_da_mode(tx.fee_data_availability_mode),
                 })),
             }),
         },
         Transaction::Deploy(_) => {
             panic!("Deploy transaction not supported");
         }
+    }
+}
+
+fn from_rpc_da_mode(mode: starknet::core::types::DataAvailabilityMode) -> DataAvailabilityMode {
+    match mode {
+        starknet::core::types::DataAvailabilityMode::L1 => DataAvailabilityMode::L1,
+        starknet::core::types::DataAvailabilityMode::L2 => DataAvailabilityMode::L2,
+    }
+}
+
+fn from_rpc_resource_bounds(
+    rpc_bounds: starknet::core::types::ResourceBoundsMapping,
+) -> ResourceBoundsMapping {
+    ResourceBoundsMapping {
+        l1_gas: ResourceBounds {
+            max_amount: rpc_bounds.l1_gas.max_amount,
+            max_price_per_unit: rpc_bounds.l1_gas.max_price_per_unit,
+        },
+        l2_gas: ResourceBounds {
+            max_amount: rpc_bounds.l2_gas.max_amount,
+            max_price_per_unit: rpc_bounds.l2_gas.max_price_per_unit,
+        },
     }
 }

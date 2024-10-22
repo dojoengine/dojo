@@ -5,10 +5,10 @@ use fixtures::{executor_factory, state_provider};
 use katana_executor::{ExecutionOutput, ExecutorFactory, SimulationFlag};
 use katana_primitives::block::GasPrices;
 use katana_primitives::env::BlockEnv;
+use katana_primitives::fee::PriceUnit;
 use katana_primitives::transaction::ExecutableTxWithHash;
 use katana_provider::traits::state::StateProvider;
 use rstest_reuse::{self, *};
-use starknet::core::types::PriceUnit;
 use starknet::macros::felt;
 
 #[rstest::fixture]

@@ -2,7 +2,6 @@ use std::collections::BTreeMap;
 
 use alloy_primitives::U256;
 use lazy_static::lazy_static;
-use starknet::core::types::L1DataAvailabilityMode;
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet_crypto::Felt;
 
@@ -10,6 +9,7 @@ use crate::block::{Block, Header};
 use crate::chain::ChainId;
 use crate::class::ClassHash;
 use crate::contract::ContractAddress;
+use crate::da::L1DataAvailabilityMode;
 use crate::genesis::allocation::{DevAllocationsGenerator, GenesisAllocation};
 use crate::genesis::constant::{
     get_fee_token_balance_base_storage_address, DEFAULT_ACCOUNT_CLASS_PUBKEY_STORAGE_SLOT,
@@ -225,12 +225,12 @@ mod tests {
     use std::str::FromStr;
 
     use alloy_primitives::U256;
-    use starknet::core::types::L1DataAvailabilityMode;
     use starknet::macros::felt;
 
     use super::*;
     use crate::address;
     use crate::block::{Block, GasPrices, Header};
+    use crate::da::L1DataAvailabilityMode;
     use crate::genesis::allocation::{GenesisAccount, GenesisAccountAlloc, GenesisContractAlloc};
     #[cfg(feature = "slot")]
     use crate::genesis::constant::{

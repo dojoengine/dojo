@@ -5,6 +5,7 @@ use crate::{Felt, FromStrError};
 
 /// Known chain ids that has been assigned a name.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum NamedChainId {
     Mainnet,
@@ -72,6 +73,7 @@ impl TryFrom<Felt> for NamedChainId {
 
 /// Represents a chain id.
 #[derive(Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum ChainId {
     /// A chain id with a known chain name.

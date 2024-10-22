@@ -19,3 +19,8 @@ cairo-lang-starknet-classes = "2.7.0"
 cairo-lang-utils = "2.7.0"
 cairo-vm = "1.0.1"
 starknet_api = { git = "https://github.com/dojoengine/sequencer", tag = "v0.8.0-rc3.2" }
+
+[features]
+# Some types that we used from cairo-vm implements the `Arbitrary` trait,
+# only under the `test_utils` feature. So we expose through this feature.
+cairo-vm-test-utils = [ "cairo-vm/test_utils" ]
