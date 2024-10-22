@@ -126,6 +126,7 @@ pub struct CallInfo {
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[serde(transparent)]
 pub struct BuiltinCounters(HashMap<BuiltinName, usize>);
 
 impl BuiltinCounters {
