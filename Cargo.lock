@@ -8126,7 +8126,6 @@ dependencies = [
  "katana-pipeline",
  "katana-pool",
  "katana-primitives",
- "katana-provider",
  "katana-rpc",
  "katana-rpc-api",
  "katana-tasks",

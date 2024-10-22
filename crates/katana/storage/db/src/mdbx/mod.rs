@@ -236,25 +236,15 @@ impl dojo_metrics::Report for DbEnv {
 
 #[cfg(any(test, feature = "test-utils"))]
 pub mod test_utils {
-    use std::path::Path;
 
-    use super::{DbEnv, DbEnvKind};
+    use super::DbEnv;
+    use crate::init_ephemeral_db;
 
     const ERROR_DB_CREATION: &str = "Not able to create the mdbx file.";
 
-    /// Create database for testing
-    pub fn create_test_db(kind: DbEnvKind) -> DbEnv {
-        create_test_db_with_path(
-            kind,
-            &tempfile::TempDir::new().expect("Failed to create temp dir.").into_path(),
-        )
-    }
-
-    /// Create database for testing with specified path
-    pub fn create_test_db_with_path(kind: DbEnvKind, path: &Path) -> DbEnv {
-        let env = DbEnv::open(path, kind).expect(ERROR_DB_CREATION);
-        env.create_tables().expect("Failed to create tables.");
-        env
+    /// Create ephemeral database for testing
+    pub fn create_test_db() -> DbEnv {
+        init_ephemeral_db().expect(ERROR_DB_CREATION)
     }
 }
 
@@ -300,12 +290,12 @@ mod tests {
 
     #[test]
     fn db_creation() {
-        create_test_db(DbEnvKind::RW);
+        create_test_db();
     }
 
     #[test]
     fn db_stats() {
-        let env = create_test_db(DbEnvKind::RW);
+        let env = create_test_db();
 
         // Insert some data to ensure non-zero stats
         let tx = env.tx_mut().expect(ERROR_INIT_TX);
@@ -337,7 +327,7 @@ mod tests {
 
     #[test]
     fn db_manual_put_get() {
-        let env = create_test_db(DbEnvKind::RW);
+        let env = create_test_db();
 
         let value = Header::default();
         let key = 1u64;
@@ -359,7 +349,7 @@ mod tests {
 
     #[test]
     fn db_delete() {
-        let env = create_test_db(DbEnvKind::RW);
+        let env = create_test_db();
 
         let value = Header::default();
         let key = 1u64;
@@ -383,7 +373,7 @@ mod tests {
 
     #[test]
     fn db_manual_cursor_walk() {
-        let env = create_test_db(DbEnvKind::RW);
+        let env = create_test_db();
 
         let key1 = 1u64;
         let key2 = 2u64;
@@ -414,7 +404,7 @@ mod tests {
 
     #[test]
     fn db_cursor_upsert() {
-        let db = create_test_db(DbEnvKind::RW);
+        let db = create_test_db();
         let tx = db.tx_mut().expect(ERROR_INIT_TX);
 
         let mut cursor = tx.cursor::<ContractInfo>().unwrap();
@@ -449,7 +439,7 @@ mod tests {
 
     #[test]
     fn db_cursor_walk() {
-        let env = create_test_db(DbEnvKind::RW);
+        let env = create_test_db();
 
         let value = Header::default();
         let key = 1u64;
@@ -474,7 +464,7 @@ mod tests {
 
     #[test]
     fn db_walker() {
-        let db = create_test_db(DbEnvKind::RW);
+        let db = create_test_db();
 
         // PUT (0, 0), (1, 0), (2, 0)
         let tx = db.tx_mut().expect(ERROR_INIT_TX);
@@ -493,7 +483,7 @@ mod tests {
 
     #[test]
     fn db_cursor_insert() {
-        let db = create_test_db(DbEnvKind::RW);
+        let db = create_test_db();
 
         // PUT
         let tx = db.tx_mut().expect(ERROR_INIT_TX);
@@ -531,7 +521,7 @@ mod tests {
 
     #[test]
     fn db_dup_sort() {
-        let env = create_test_db(DbEnvKind::RW);
+        let env = create_test_db();
         let key = address!("0xa2c122be93b0074270ebee7f6b7292c7deb45047");
 
         // PUT (0,0)
