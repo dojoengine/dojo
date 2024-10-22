@@ -7,7 +7,7 @@ version.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-katana-primitives = { workspace = true }
+katana-primitives = { workspace = true, features = [ "arbitrary" ] }
 
 anyhow.workspace = true
 dojo-metrics.workspace = true
@@ -30,7 +30,7 @@ package = "reth-libmdbx"
 rev = "b34b0d3"
 
 [dev-dependencies]
-# cairo-lang-starknet.workspace = true
+arbitrary.workspace = true
 criterion.workspace = true
 starknet.workspace = true
 

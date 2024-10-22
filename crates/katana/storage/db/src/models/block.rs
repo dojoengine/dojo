@@ -4,6 +4,7 @@ use katana_primitives::transaction::TxNumber;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
+#[cfg_attr(test, derive(::arbitrary::Arbitrary))]
 pub struct StoredBlockBodyIndices {
     /// The offset in database of the first transaction in the block.
     ///

@@ -775,12 +775,11 @@ mod tests {
         Block, BlockHashOrNumber, FinalityStatus, Header, SealedBlockWithStatus,
     };
     use katana_primitives::contract::ContractAddress;
-    use katana_primitives::fee::TxFeeInfo;
+    use katana_primitives::fee::{PriceUnit, TxFeeInfo};
     use katana_primitives::receipt::{InvokeTxReceipt, Receipt};
     use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
     use katana_primitives::trace::TxExecInfo;
     use katana_primitives::transaction::{InvokeTx, Tx, TxHash, TxWithHash};
-    use starknet::core::types::PriceUnit;
     use starknet::macros::felt;
 
     use super::DbProvider;

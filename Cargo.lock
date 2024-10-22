@@ -483,15 +483,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "411aff151f2a73124ee473708e82ed51b2535f68928b6a1caa8bc1246ae6f7cd"
 dependencies = [
  "alloy-rlp",
+ "arbitrary",
  "bytes",
  "cfg-if",
  "const-hex",
+ "derive_arbitrary",
  "derive_more 1.0.0",
  "hex-literal",
  "itoa",
  "k256",
  "keccak-asm",
  "proptest",
+ "proptest-derive",
  "rand 0.8.5",
  "ruint",
  "serde",
@@ -959,6 +962,15 @@ name = "anyhow"
 version = "1.0.89"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "86fdf8605db99b54d3cd748a44c6d04df638eb5dafb219b135d0149bd0db01f6"
+
+[[package]]
+name = "arbitrary"
+version = "1.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7d5a26814d8dcb93b0e5a0ff3c6d80a8843bafb21b39e8e18a6f05471870e110"
+dependencies = [
+ "derive_arbitrary",
+]
 
 [[package]]
 name = "arc-swap"
@@ -3104,6 +3116,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "58363ad8065ed891e3b14a8191b707677c7c7cb5b9d10030822506786d8d8108"
 dependencies = [
  "anyhow",
+ "arbitrary",
  "bincode 2.0.0-rc.3",
  "bitvec",
  "generic-array",
@@ -4319,6 +4332,17 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "derive_arbitrary"
+version = "1.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "67e77553c4162a157adbf834ebae5b415acbecbeafc7a74b0e886657506a7611"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.77",
 ]
 
 [[package]]
@@ -8067,6 +8091,7 @@ name = "katana-db"
 version = "1.0.0-alpha.17"
 dependencies = [
  "anyhow",
+ "arbitrary",
  "criterion",
  "dojo-metrics",
  "katana-primitives",
@@ -8191,6 +8216,7 @@ version = "1.0.0-alpha.17"
 dependencies = [
  "alloy-primitives",
  "anyhow",
+ "arbitrary",
  "assert_matches",
  "base64 0.21.7",
  "derive_more 0.99.18",
@@ -8208,6 +8234,7 @@ dependencies = [
  "similar-asserts",
  "starknet 0.12.0",
  "starknet-crypto 0.7.2",
+ "starknet-types-core",
  "thiserror",
 ]
 
@@ -10843,6 +10870,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "proptest-derive"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6ff7ff745a347b87471d859a377a9a404361e7efc2a971d73424a6d183c0fc77"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.77",
+]
+
+[[package]]
 name = "prost"
 version = "0.12.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -11798,6 +11836,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2c3cc4c2511671f327125da14133d0c5c5d137f006a1017a16f557bc85b16286"
 dependencies = [
  "alloy-rlp",
+ "arbitrary",
  "ark-ff 0.3.0",
  "ark-ff 0.4.2",
  "bytes",
@@ -13873,6 +13912,7 @@ version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9b889ee5734db8b3c8a6551135c16764bf4ce1ab4955fffbb2ac5b6706542b64"
 dependencies = [
+ "arbitrary",
  "lambdaworks-crypto",
  "lambdaworks-math",
  "lazy_static",
