@@ -1,20 +1,21 @@
 //! Middleware that proxies requests at a specified URI to internal
 //! RPC method calls.
 
-use crate::transport::http;
-use hyper::body;
+use std::error::Error;
+use std::future::Future;
+use std::pin::Pin;
+use std::sync::Arc;
+use std::task::{Context, Poll};
+
 use hyper::header::{ACCEPT, CONTENT_TYPE};
 use hyper::http::HeaderValue;
 use hyper::{Body, Method, Request, Response, Uri};
 use jsonrpsee_core::error::Error as RpcError;
 use jsonrpsee_core::JsonRawValue;
 use jsonrpsee_types::{Id, RequestSer};
-use std::error::Error;
-use std::future::Future;
-use std::pin::Pin;
-use std::sync::Arc;
-use std::task::{Context, Poll};
 use tower::{Layer, Service};
+
+use crate::transport::http;
 
 /// Layer that applies [`DevnetProxy`] which proxies the `GET /path` requests to
 /// specific RPC method calls and that strips the response.
@@ -33,9 +34,7 @@ impl DevnetProxyLayer {
     pub fn new(path: impl Into<String>, method: impl Into<String>) -> Result<Self, RpcError> {
         let path = path.into();
         if !path.starts_with('/') {
-            return Err(RpcError::Custom(
-                "DevnetProxyLayer path must start with `/`".to_string(),
-            ));
+            return Err(RpcError::Custom("DevnetProxyLayer path must start with `/`".to_string()));
         }
 
         Ok(Self { path, method: method.into() })
@@ -102,7 +101,7 @@ where
     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         self.inner.poll_ready(cx).map_err(Into::into)
     }
-    
+
     fn call(&mut self, mut req: Request<Body>) -> Self::Future {
         let modify = self.path.as_ref() == req.uri() && req.method() == Method::GET;
 
@@ -118,7 +117,12 @@ where
             req.headers_mut().insert(ACCEPT, HeaderValue::from_static("application/json"));
 
             // Adjust the body to reflect the method call.
-            let raw_value = JsonRawValue::from_string("{\"address\":\"0x6b86e40118f29ebe393a75469b4d926c7a44c2e2681b6d319520b7c1156d114\", \"age\":5, \"name\":\"somename\"}".to_string()).unwrap();
+            let raw_value = JsonRawValue::from_string(
+                "{\"address\":\"0x6b86e40118f29ebe393a75469b4d926c7a44c2e2681b6d319520b7c1156d114\\
+                 ", \"age\":5, \"name\":\"somename\"}"
+                    .to_string(),
+            )
+            .unwrap();
             let param = Some(raw_value.as_ref());
 
             let body = Body::from(

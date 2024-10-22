@@ -32,23 +32,16 @@ use std::sync::Arc;
 use std::task::{Context, Poll};
 use std::time::Duration;
 
-use crate::future::{ConnectionGuard, FutureDriver, ServerHandle, StopHandle};
-use crate::logger::{Logger, TransportProtocol};
-use crate::transport::{http, ws};
-
 use futures_util::future::{BoxFuture, FutureExt};
 use futures_util::io::{BufReader, BufWriter};
-
 use hyper::body::HttpBody;
 use jsonrpsee_core::id_providers::RandomIntegerIdProvider;
-
 use jsonrpsee_core::server::helpers::MethodResponse;
 use jsonrpsee_core::server::host_filtering::AllowHosts;
 use jsonrpsee_core::server::resource_limiting::Resources;
 use jsonrpsee_core::server::rpc_module::Methods;
 use jsonrpsee_core::traits::IdProvider;
 use jsonrpsee_core::{http_helpers, Error, TEN_MB_SIZE_BYTES};
-
 use soketto::handshake::http::is_upgrade_request;
 use tokio::net::{TcpListener, TcpStream, ToSocketAddrs};
 use tokio::sync::{watch, OwnedSemaphorePermit};
@@ -56,6 +49,10 @@ use tokio_util::compat::TokioAsyncReadCompatExt;
 use tower::layer::util::Identity;
 use tower::{Layer, Service};
 use tracing::{instrument, Instrument};
+
+use crate::future::{ConnectionGuard, FutureDriver, ServerHandle, StopHandle};
+use crate::logger::{Logger, TransportProtocol};
+use crate::transport::{http, ws};
 
 /// Default maximum connections allowed.
 const MAX_CONNECTIONS: u32 = 100;
@@ -105,7 +102,8 @@ where
 {
     /// Start responding to connections requests.
     ///
-    /// This will run on the tokio runtime until the server is stopped or the `ServerHandle` is dropped.
+    /// This will run on the tokio runtime until the server is stopped or the `ServerHandle` is
+    /// dropped.
     pub fn start(mut self, methods: impl Into<Methods>) -> Result<ServerHandle, Error> {
         let methods = methods.into().initialize_resources(&self.resources)?;
         let (stop_tx, stop_rx) = watch::channel(());
@@ -289,8 +287,9 @@ impl<B, L> Builder<B, L> {
     /// Register a new resource kind. Errors if `label` is already registered, or if the number of
     /// registered resources on this server instance would exceed 8.
     ///
-    /// See the module documentation for [`resurce_limiting`](../jsonrpsee_utils/server/resource_limiting/index.html#resource-limiting)
-    /// for details.
+    /// See the module documentation for
+    /// [`resurce_limiting`](../jsonrpsee_utils/server/resource_limiting/index.html#
+    /// resource-limiting) for details.
     pub fn register_resource(
         mut self,
         label: &'static str,
@@ -304,9 +303,10 @@ impl<B, L> Builder<B, L> {
     /// Add a logger to the builder [`Logger`](../jsonrpsee_core/logger/trait.Logger.html).
     ///
     /// ```
-    /// use std::{time::Instant, net::SocketAddr};
+    /// use std::net::SocketAddr;
+    /// use std::time::Instant;
     ///
-    /// use jsonrpsee_server::logger::{Logger, HttpRequest, MethodKind, Params, TransportProtocol};
+    /// use jsonrpsee_server::logger::{HttpRequest, Logger, MethodKind, Params, TransportProtocol};
     /// use jsonrpsee_server::ServerBuilder;
     ///
     /// #[derive(Clone)]
@@ -315,28 +315,70 @@ impl<B, L> Builder<B, L> {
     /// impl Logger for MyLogger {
     ///     type Instant = Instant;
     ///
-    ///     fn on_connect(&self, remote_addr: SocketAddr, request: &HttpRequest, transport: TransportProtocol) {
-    ///          println!("[MyLogger::on_call] remote_addr: {:?}, headers: {:?}, transport: {}", remote_addr, request, transport);
+    ///     fn on_connect(
+    ///         &self,
+    ///         remote_addr: SocketAddr,
+    ///         request: &HttpRequest,
+    ///         transport: TransportProtocol,
+    ///     ) {
+    ///         println!(
+    ///             "[MyLogger::on_call] remote_addr: {:?}, headers: {:?}, transport: {}",
+    ///             remote_addr, request, transport
+    ///         );
     ///     }
     ///
     ///     fn on_request(&self, transport: TransportProtocol) -> Self::Instant {
-    ///          Instant::now()
+    ///         Instant::now()
     ///     }
     ///
-    ///     fn on_call(&self, method_name: &str, params: Params, kind: MethodKind, transport: TransportProtocol) {
-    ///          println!("[MyLogger::on_call] method: '{}' params: {:?}, kind: {:?}, transport: {}", method_name, params, kind, transport);
+    ///     fn on_call(
+    ///         &self,
+    ///         method_name: &str,
+    ///         params: Params,
+    ///         kind: MethodKind,
+    ///         transport: TransportProtocol,
+    ///     ) {
+    ///         println!(
+    ///             "[MyLogger::on_call] method: '{}' params: {:?}, kind: {:?}, transport: {}",
+    ///             method_name, params, kind, transport
+    ///         );
     ///     }
     ///
-    ///     fn on_result(&self, method_name: &str, success: bool, started_at: Self::Instant, transport: TransportProtocol) {
-    ///          println!("[MyLogger::on_result] '{}', worked? {}, time elapsed {:?}, transport: {}", method_name, success, started_at.elapsed(), transport);
+    ///     fn on_result(
+    ///         &self,
+    ///         method_name: &str,
+    ///         success: bool,
+    ///         started_at: Self::Instant,
+    ///         transport: TransportProtocol,
+    ///     ) {
+    ///         println!(
+    ///             "[MyLogger::on_result] '{}', worked? {}, time elapsed {:?}, transport: {}",
+    ///             method_name,
+    ///             success,
+    ///             started_at.elapsed(),
+    ///             transport
+    ///         );
     ///     }
     ///
-    ///     fn on_response(&self, result: &str, started_at: Self::Instant, transport: TransportProtocol) {
-    ///          println!("[MyLogger::on_response] result: {}, time elapsed {:?}, transport: {}", result, started_at.elapsed(), transport);
+    ///     fn on_response(
+    ///         &self,
+    ///         result: &str,
+    ///         started_at: Self::Instant,
+    ///         transport: TransportProtocol,
+    ///     ) {
+    ///         println!(
+    ///             "[MyLogger::on_response] result: {}, time elapsed {:?}, transport: {}",
+    ///             result,
+    ///             started_at.elapsed(),
+    ///             transport
+    ///         );
     ///     }
     ///
     ///     fn on_disconnect(&self, remote_addr: SocketAddr, transport: TransportProtocol) {
-    ///          println!("[MyLogger::on_disconnect] remote_addr: {:?}, transport: {}", remote_addr, transport);
+    ///         println!(
+    ///             "[MyLogger::on_disconnect] remote_addr: {:?}, transport: {}",
+    ///             remote_addr, transport
+    ///         );
     ///     }
     /// }
     ///
@@ -371,6 +413,7 @@ impl<B, L> Builder<B, L> {
     ///
     /// ```rust
     /// use std::time::Duration;
+    ///
     /// use jsonrpsee_server::ServerBuilder;
     ///
     /// // Set the ping interval to 10 seconds.
@@ -392,15 +435,15 @@ impl<B, L> Builder<B, L> {
     /// # Examples
     ///
     /// ```rust
-    /// use jsonrpsee_server::{ServerBuilder, RandomStringIdProvider, IdProvider};
+    /// use jsonrpsee_server::{IdProvider, RandomStringIdProvider, ServerBuilder};
     ///
     /// // static dispatch
     /// let builder1 = ServerBuilder::default().set_id_provider(RandomStringIdProvider::new(16));
     ///
     /// // or dynamic dispatch
-    /// let builder2 = ServerBuilder::default().set_id_provider(Box::new(RandomStringIdProvider::new(16)));
+    /// let builder2 =
+    ///     ServerBuilder::default().set_id_provider(Box::new(RandomStringIdProvider::new(16)));
     /// ```
-    ///
     pub fn set_id_provider<I: IdProvider + 'static>(mut self, id_provider: I) -> Self {
         self.id_provider = Arc::new(id_provider);
         self
@@ -412,16 +455,16 @@ impl<B, L> Builder<B, L> {
         self
     }
 
-    /// Configure a custom [`tower::ServiceBuilder`] middleware for composing layers to be applied to the RPC service.
+    /// Configure a custom [`tower::ServiceBuilder`] middleware for composing layers to be applied
+    /// to the RPC service.
     ///
     /// Default: No tower layers are applied to the RPC service.
     ///
     /// # Examples
     ///
     /// ```rust
-    ///
-    /// use std::time::Duration;
     /// use std::net::SocketAddr;
+    /// use std::time::Duration;
     ///
     /// #[tokio::main]
     /// async fn main() {
@@ -469,17 +512,13 @@ impl<B, L> Builder<B, L> {
     /// ```rust
     /// #[tokio::main]
     /// async fn main() {
-    ///   let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
-    ///   let occupied_addr = listener.local_addr().unwrap();
-    ///   let addrs: &[std::net::SocketAddr] = &[
-    ///       occupied_addr,
-    ///       "127.0.0.1:0".parse().unwrap(),
-    ///   ];
-    ///   assert!(jsonrpsee_server::ServerBuilder::default().build(occupied_addr).await.is_err());
-    ///   assert!(jsonrpsee_server::ServerBuilder::default().build(addrs).await.is_ok());
+    ///     let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    ///     let occupied_addr = listener.local_addr().unwrap();
+    ///     let addrs: &[std::net::SocketAddr] = &[occupied_addr, "127.0.0.1:0".parse().unwrap()];
+    ///     assert!(jsonrpsee_server::ServerBuilder::default().build(occupied_addr).await.is_err());
+    ///     assert!(jsonrpsee_server::ServerBuilder::default().build(addrs).await.is_ok());
     /// }
     /// ```
-    ///
     pub async fn build(self, addrs: impl ToSocketAddrs) -> Result<Server<B, L>, Error> {
         let listener = TcpListener::bind(addrs).await?;
 
@@ -497,23 +536,24 @@ impl<B, L> Builder<B, L> {
     ///
     ///
     /// ```rust
+    /// use std::time::Duration;
+    ///
     /// use jsonrpsee_server::ServerBuilder;
     /// use socket2::{Domain, Socket, Type};
-    /// use std::time::Duration;
     ///
     /// #[tokio::main]
     /// async fn main() {
-    ///   let addr = "127.0.0.1:0".parse().unwrap();
-    ///   let domain = Domain::for_address(addr);
-    ///   let socket = Socket::new(domain, Type::STREAM, None).unwrap();
-    ///   socket.set_nonblocking(true).unwrap();
+    ///     let addr = "127.0.0.1:0".parse().unwrap();
+    ///     let domain = Domain::for_address(addr);
+    ///     let socket = Socket::new(domain, Type::STREAM, None).unwrap();
+    ///     socket.set_nonblocking(true).unwrap();
     ///
-    ///   let address = addr.into();
-    ///   socket.bind(&address).unwrap();
+    ///     let address = addr.into();
+    ///     socket.bind(&address).unwrap();
     ///
-    ///   socket.listen(4096).unwrap();
+    ///     socket.listen(4096).unwrap();
     ///
-    ///   let server = ServerBuilder::new().build_from_tcp(socket).unwrap();
+    ///     let server = ServerBuilder::new().build_from_tcp(socket).unwrap();
     /// }
     /// ```
     pub fn build_from_tcp(
@@ -608,7 +648,8 @@ impl<L: Logger> hyper::service::Service<hyper::Request<hyper::Body>> for TowerSe
     type Response = hyper::Response<hyper::Body>;
 
     // The following associated type is required by the `impl<B, U, L: Logger> Server<B, L>` bounds.
-    // It satisfies the server's bounds when the `tower::ServiceBuilder<B>` is not set (ie `B: Identity`).
+    // It satisfies the server's bounds when the `tower::ServiceBuilder<B>` is not set (ie `B:
+    // Identity`).
     type Error = Box<dyn StdError + Send + Sync + 'static>;
 
     type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
@@ -704,7 +745,8 @@ impl<L: Logger> hyper::service::Service<hyper::Request<hyper::Body>> for TowerSe
     }
 }
 
-/// This is a glorified select listening for new messages, while also checking the `stop_receiver` signal.
+/// This is a glorified select listening for new messages, while also checking the `stop_receiver`
+/// signal.
 struct Monitored<'a, F> {
     future: F,
     stop_monitor: &'a StopHandle,

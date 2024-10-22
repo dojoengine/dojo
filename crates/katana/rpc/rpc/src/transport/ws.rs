@@ -2,10 +2,6 @@ use std::pin::Pin;
 use std::task::{Context, Poll};
 use std::time::Duration;
 
-use crate::future::{FutureDriver, StopHandle};
-use crate::logger::{self, Logger, TransportProtocol};
-use crate::server::{MethodResult, ServiceData};
-
 use futures_channel::mpsc;
 use futures_util::future::{self, Either};
 use futures_util::io::{BufReader, BufWriter};
@@ -31,6 +27,10 @@ use soketto::data::ByteSlice125;
 use tokio_stream::wrappers::IntervalStream;
 use tokio_util::compat::Compat;
 use tracing::instrument;
+
+use crate::future::{FutureDriver, StopHandle};
+use crate::logger::{self, Logger, TransportProtocol};
+use crate::server::{MethodResult, ServiceData};
 
 pub(crate) type Sender = soketto::Sender<BufReader<BufWriter<Compat<Upgraded>>>>;
 pub(crate) type Receiver = soketto::Receiver<BufReader<BufWriter<Compat<Upgraded>>>>;
@@ -71,7 +71,8 @@ pub(crate) struct CallData<'a, L: Logger> {
     pub(crate) request_start: L::Instant,
 }
 
-/// This is a glorified select listening for new messages, while also checking the `stop_receiver` signal.
+/// This is a glorified select listening for new messages, while also checking the `stop_receiver`
+/// signal.
 struct Monitored<'a, F> {
     future: F,
     stop_monitor: &'a StopHandle,
@@ -150,11 +151,7 @@ pub(crate) async fn process_batch_request<L: Logger>(b: Batch<'_, L>) -> Option<
             }
         }
 
-        if got_notif && batch_response.is_empty() {
-            None
-        } else {
-            Some(batch_response.finish())
-        }
+        if got_notif && batch_response.is_empty() { None } else { Some(batch_response.finish()) }
     } else {
         Some(BatchResponse::error(Id::Null, ErrorObject::from(ErrorCode::ParseError)))
     }
@@ -319,7 +316,8 @@ pub(crate) async fn execute_call<'a, L: Logger>(
                     TransportProtocol::WebSocket,
                 );
 
-                // Don't adhere to any resource or subscription limits; always let unsubscribing happen!
+                // Don't adhere to any resource or subscription limits; always let unsubscribing
+                // happen!
                 let result = callback(id, params, conn_id, max_response_body_size as usize);
                 MethodResult::SendAndLogger(result)
             }
@@ -381,7 +379,8 @@ pub(crate) async fn background_task<L: Logger>(
                         soketto::Incoming::Pong(_) => tracing::debug!("Received pong"),
                         soketto::Incoming::Closed(_) => {
                             // The closing reason is already logged by `soketto` trace log level.
-                            // Return the `Closed` error to avoid logging unnecessary warnings on clean shutdown.
+                            // Return the `Closed` error to avoid logging unnecessary warnings on
+                            // clean shutdown.
                             break Err(SokettoError::Closed);
                         }
                     }
@@ -414,7 +413,8 @@ pub(crate) async fn background_task<L: Logger>(
                         continue;
                     }
 
-                    // These errors can not be gracefully handled, so just log them and terminate the connection.
+                    // These errors can not be gracefully handled, so just log them and terminate
+                    // the connection.
                     MonitoredError::Selector(err) => {
                         tracing::error!(
                             "WS transport error: {}; terminate connection: {}",
@@ -572,8 +572,9 @@ async fn send_task(
     let mut futs = future::select(next_ping, stopped);
 
     loop {
-        // Ensure select is cancel-safe by fetching and storing the `rx_item` that did not finish yet.
-        // Note: Although, this is cancel-safe already, avoid using `select!` macro for future proofing.
+        // Ensure select is cancel-safe by fetching and storing the `rx_item` that did not finish
+        // yet. Note: Although, this is cancel-safe already, avoid using `select!` macro for
+        // future proofing.
         match future::select(rx_item, futs).await {
             // Received message.
             Either::Left((Some(response), not_ready)) => {

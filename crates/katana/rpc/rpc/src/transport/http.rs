@@ -2,8 +2,6 @@ use std::convert::Infallible;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-use crate::logger::{self, Logger, TransportProtocol};
-
 use futures_util::future::Either;
 use futures_util::stream::{FuturesOrdered, StreamExt};
 use http::Method;
@@ -12,14 +10,16 @@ use jsonrpsee_core::http_helpers::read_body;
 use jsonrpsee_core::server::helpers::{
     prepare_error, BatchResponse, BatchResponseBuilder, MethodResponse,
 };
-use jsonrpsee_core::server::rpc_module::MethodKind;
-use jsonrpsee_core::server::{resource_limiting::Resources, rpc_module::Methods};
+use jsonrpsee_core::server::resource_limiting::Resources;
+use jsonrpsee_core::server::rpc_module::{MethodKind, Methods};
 use jsonrpsee_core::tracing::{rx_log_from_json, tx_log_from_str};
 use jsonrpsee_core::JsonRawValue;
 use jsonrpsee_types::error::{ErrorCode, BATCHES_NOT_SUPPORTED_CODE, BATCHES_NOT_SUPPORTED_MSG};
 use jsonrpsee_types::{ErrorObject, Id, InvalidRequest, Notification, Params, Request};
 use tokio::sync::OwnedSemaphorePermit;
 use tracing::instrument;
+
+use crate::logger::{self, Logger, TransportProtocol};
 
 type Notif<'a> = Notification<'a, Option<&'a JsonRawValue>>;
 
@@ -400,8 +400,7 @@ pub(crate) async fn handle_request<L: Logger>(
 }
 
 pub(crate) mod response {
-    use jsonrpsee_types::error::reject_too_big_request;
-    use jsonrpsee_types::error::{ErrorCode, ErrorResponse};
+    use jsonrpsee_types::error::{reject_too_big_request, ErrorCode, ErrorResponse};
     use jsonrpsee_types::Id;
 
     const JSON: &str = "application/json; charset=utf-8";

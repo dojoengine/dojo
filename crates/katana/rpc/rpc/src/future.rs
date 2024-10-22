@@ -113,11 +113,7 @@ where
 
         this.drive(cx);
 
-        if this.futures.is_empty() {
-            Poll::Ready(())
-        } else {
-            Poll::Pending
-        }
+        if this.futures.is_empty() { Poll::Ready(()) } else { Poll::Pending }
     }
 }
 

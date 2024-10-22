@@ -7,12 +7,12 @@ use katana_core::service::block_producer::{BlockProducer, BlockProducerMode, Pen
 use katana_executor::ExecutorFactory;
 use katana_primitives::genesis::constant::ERC20_NAME_STORAGE_SLOT;
 use katana_primitives::ContractAddress;
-use starknet_crypto::Felt;
 use katana_provider::traits::state::StateFactoryProvider;
 use katana_rpc_api::dev::DevApiServer;
 use katana_rpc_types::account::Account;
 use katana_rpc_types::error::dev::DevApiError;
 use starknet::core::utils::get_storage_var_address;
+use starknet_crypto::Felt;
 
 #[allow(missing_debug_implementations)]
 pub struct DevApi<EF: ExecutorFactory> {

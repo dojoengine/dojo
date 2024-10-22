@@ -6,13 +6,13 @@
 pub mod config;
 pub mod dev;
 pub mod metrics;
+pub mod proxy_get_request;
 pub mod saya;
 pub mod starknet;
 pub mod torii;
-pub mod proxy_get_request;
 
-mod utils;
-mod transport;
 mod future;
 mod logger;
 mod server;
+mod transport;
+mod utils;

@@ -79,11 +79,12 @@ impl std::fmt::Display for TransportProtocol {
     }
 }
 
-/// Defines a logger specifically for WebSocket connections with callbacks during the RPC request life-cycle.
-/// The primary use case for this is to collect timings for a larger metrics collection solution.
+/// Defines a logger specifically for WebSocket connections with callbacks during the RPC request
+/// life-cycle. The primary use case for this is to collect timings for a larger metrics collection
+/// solution.
 ///
-/// See the [`ServerBuilder::set_logger`](../../jsonrpsee_server/struct.ServerBuilder.html#method.set_logger)
-/// for examples.
+/// See the [`ServerBuilder::set_logger`](../../jsonrpsee_server/struct.ServerBuilder.html#method.
+/// set_logger) for examples.
 pub trait Logger: Send + Sync + Clone + 'static {
     /// Intended to carry timestamp of a request, for example `std::time::Instant`. How the trait
     /// measures time, if at all, is entirely up to the implementation.
@@ -104,7 +105,8 @@ pub trait Logger: Send + Sync + Clone + 'static {
         transport: TransportProtocol,
     );
 
-    /// Called on each JSON-RPC method completion, batch requests will trigger `on_result` multiple times.
+    /// Called on each JSON-RPC method completion, batch requests will trigger `on_result` multiple
+    /// times.
     fn on_result(
         &self,
         method_name: &str,
