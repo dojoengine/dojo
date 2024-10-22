@@ -96,12 +96,6 @@ impl DbEnv {
 
     /// Opens an ephemeral database. Temporary database environment whose underlying directory will
     /// be deleted when the returned [`DbEnv`] is dropped.
-    ///
-    /// Thought it is useful for testing per se, but the initial motivation to implement this
-    /// variant of the mdbx environment is to be used as the backend for the in-memory storage
-    /// provider. Mainly to avoid having two separate implementations for in-memory and
-    /// persistent db. Therefore, this temporary database environment will trade off durability
-    /// for write performance.
     pub fn open_ephemeral() -> Result<Self, DatabaseError> {
         let dir =
             tempfile::Builder::new().keep(true).tempdir().expect("failed to create a temp dir");
