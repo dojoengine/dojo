@@ -20,9 +20,9 @@ pub struct ResourceBoundsMapping {
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum PriceUnit {
-    #[cfg_attr(feature = "serde", serde(rename = "WEI"))]
+    #[serde(rename = "WEI")]
     Wei,
-    #[cfg_attr(feature = "serde", serde(rename = "FRI"))]
+    #[serde(rename = "FRI")]
     Fri,
 }
 
