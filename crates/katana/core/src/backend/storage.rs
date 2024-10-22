@@ -226,7 +226,7 @@ mod tests {
     use katana_primitives::trace::TxExecInfo;
     use katana_primitives::transaction::{InvokeTx, Tx, TxWithHash};
     use katana_primitives::{chain_spec, Felt};
-    use katana_provider::providers::in_memory::InMemoryProvider;
+    use katana_provider::providers::db::DbProvider;
     use katana_provider::traits::block::{
         BlockHashProvider, BlockNumberProvider, BlockProvider, BlockWriter,
     };
@@ -239,7 +239,7 @@ mod tests {
 
     #[test]
     fn blockchain_from_genesis_states() {
-        let provider = InMemoryProvider::new();
+        let provider = DbProvider::new_ephemeral();
 
         let blockchain = Blockchain::new_with_chain(provider, &chain_spec::DEV)
             .expect("failed to create blockchain from genesis block");

@@ -6,6 +6,7 @@ use std::ops::{Range, RangeInclusive};
 
 use katana_db::abstraction::{Database, DbCursor, DbCursorMut, DbDupSortCursor, DbTx, DbTxMut};
 use katana_db::error::DatabaseError;
+use katana_db::init_ephemeral_db;
 use katana_db::mdbx::DbEnv;
 use katana_db::models::block::StoredBlockBodyIndices;
 use katana_db::models::contract::{
@@ -52,6 +53,14 @@ pub struct DbProvider<Db: Database = DbEnv>(Db);
 impl<Db: Database> DbProvider<Db> {
     /// Creates a new [`DbProvider`] from the given [`DbEnv`].
     pub fn new(db: Db) -> Self {
+        Self(db)
+    }
+}
+
+impl DbProvider<DbEnv> {
+    /// Creates a new [`DbProvider`] using an ephemeral database.
+    pub fn new_ephemeral() -> Self {
+        let db = init_ephemeral_db().expect("Failed to initialize ephemeral database");
         Self(db)
     }
 }
@@ -769,7 +778,6 @@ impl<Db: Database> BlockWriter for DbProvider<Db> {
 mod tests {
     use std::collections::BTreeMap;
 
-    use katana_db::mdbx::DbEnvKind;
     use katana_primitives::address;
     use katana_primitives::block::{
         Block, BlockHashOrNumber, FinalityStatus, Header, SealedBlockWithStatus,
@@ -850,7 +858,7 @@ mod tests {
     }
 
     fn create_db_provider() -> DbProvider {
-        DbProvider(katana_db::mdbx::test_utils::create_test_db(DbEnvKind::RW))
+        DbProvider(katana_db::mdbx::test_utils::create_test_db())
     }
 
     #[test]

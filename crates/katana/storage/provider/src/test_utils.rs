@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use alloy_primitives::U256;
-use katana_db::mdbx::{test_utils, DbEnvKind};
+use katana_db::mdbx::test_utils;
 use katana_primitives::block::{BlockHash, FinalityStatus};
 use katana_primitives::chain_spec::ChainSpec;
 use katana_primitives::class::CompiledClass;
@@ -15,19 +15,11 @@ use katana_primitives::{address, chain_spec};
 use starknet::macros::felt;
 
 use crate::providers::db::DbProvider;
-use crate::providers::in_memory::InMemoryProvider;
 use crate::traits::block::BlockWriter;
 
-/// Creates an in-memory provider with initial states loaded for testing.
-pub fn test_in_memory_provider() -> InMemoryProvider {
-    let provider = InMemoryProvider::new();
-    initialize_test_provider(&provider);
-    provider
-}
-
 /// Creates a persistent storage provider with initial states loaded for testin.
-pub fn test_db_provider() -> DbProvider {
-    let provider = DbProvider::new(test_utils::create_test_db(DbEnvKind::RW));
+pub fn test_provider() -> DbProvider {
+    let provider = DbProvider::new(test_utils::create_test_db());
     initialize_test_provider(&provider);
     provider
 }
