@@ -260,9 +260,14 @@ pub mod test_utils {
 
 impl Drop for DbEnv {
     fn drop(&mut self) {
-        if Arc::strong_count(&self.inner) == 1 && self.inner.ephemeral {
-            if let Err(e) = std::fs::remove_dir_all(&self.inner.dir) {
-                eprintln!("Failed to remove temporary directory: {e}");
+        // Try to get a mutable reference, this will return Some if there's only a single reference
+        // left.
+        if let Some(inner) = Arc::get_mut(&mut self.inner) {
+            // And if it is ephemeral, remove the directory.
+            if inner.ephemeral {
+                if let Err(e) = std::fs::remove_dir_all(&inner.dir) {
+                    eprintln!("Failed to remove temporary directory: {e}");
+                }
             }
         }
     }
