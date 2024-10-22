@@ -46,8 +46,7 @@ impl IndexerManager {
         let id = rand::thread_rng().gen::<usize>();
         let (sender, receiver) = channel(1);
 
-        let mut statement =
-            "SELECT * FROM contracts".to_string();
+        let mut statement = "SELECT * FROM contracts".to_string();
 
         let contracts: Vec<ContractUpdated> = if contract_address != Felt::ZERO {
             statement += " WHERE id = ?";
