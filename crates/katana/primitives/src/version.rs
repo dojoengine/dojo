@@ -4,6 +4,7 @@ pub const CURRENT_STARKNET_VERSION: ProtocolVersion = ProtocolVersion::new([0, 1
 // TODO: figure out the exact format of the version string.
 /// Starknet protocol version.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 pub struct ProtocolVersion {
     /// Each segments represents a part of the version number.
     segments: [u8; 4],

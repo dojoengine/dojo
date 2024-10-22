@@ -12,6 +12,7 @@ pub struct ContractInfoChangeList {
 }
 
 #[derive(Debug, Default, PartialEq, Eq)]
+#[cfg_attr(test, derive(::arbitrary::Arbitrary))]
 pub struct ContractClassChange {
     pub contract_address: ContractAddress,
     /// The updated class hash of `contract_address`.
@@ -38,6 +39,7 @@ impl Decompress for ContractClassChange {
 }
 
 #[derive(Debug, Default, PartialEq, Eq)]
+#[cfg_attr(test, derive(::arbitrary::Arbitrary))]
 pub struct ContractNonceChange {
     pub contract_address: ContractAddress,
     /// The updated nonce value of `contract_address`.

@@ -46,8 +46,12 @@ impl BlockWithTxs {
                 FinalityStatus::AcceptedOnL1 => BlockStatus::AcceptedOnL1,
                 FinalityStatus::AcceptedOnL2 => BlockStatus::AcceptedOnL2,
             },
-
-            l1_da_mode: block.header.l1_da_mode,
+            l1_da_mode: match block.header.l1_da_mode {
+                katana_primitives::da::L1DataAvailabilityMode::Blob => L1DataAvailabilityMode::Blob,
+                katana_primitives::da::L1DataAvailabilityMode::Calldata => {
+                    L1DataAvailabilityMode::Calldata
+                }
+            },
             l1_data_gas_price,
         })
     }
@@ -125,8 +129,12 @@ impl BlockWithTxHashes {
                 FinalityStatus::AcceptedOnL1 => BlockStatus::AcceptedOnL1,
                 FinalityStatus::AcceptedOnL2 => BlockStatus::AcceptedOnL2,
             },
-
-            l1_da_mode: block.header.l1_da_mode,
+            l1_da_mode: match block.header.l1_da_mode {
+                katana_primitives::da::L1DataAvailabilityMode::Blob => L1DataAvailabilityMode::Blob,
+                katana_primitives::da::L1DataAvailabilityMode::Calldata => {
+                    L1DataAvailabilityMode::Calldata
+                }
+            },
             l1_data_gas_price,
         })
     }
@@ -155,7 +163,12 @@ impl PendingBlockWithTxHashes {
             parent_hash: header.parent_hash,
             starknet_version: header.protocol_version.to_string(),
             sequencer_address: header.sequencer_address.into(),
-            l1_da_mode: header.l1_da_mode,
+            l1_da_mode: match header.l1_da_mode {
+                katana_primitives::da::L1DataAvailabilityMode::Blob => L1DataAvailabilityMode::Blob,
+                katana_primitives::da::L1DataAvailabilityMode::Calldata => {
+                    L1DataAvailabilityMode::Calldata
+                }
+            },
             l1_data_gas_price,
         })
     }
@@ -266,7 +279,12 @@ impl PendingBlockWithReceipts {
             timestamp: header.timestamp,
             sequencer_address: header.sequencer_address.into(),
             parent_hash: header.parent_hash,
-            l1_da_mode: header.l1_da_mode,
+            l1_da_mode: match header.l1_da_mode {
+                katana_primitives::da::L1DataAvailabilityMode::Blob => L1DataAvailabilityMode::Blob,
+                katana_primitives::da::L1DataAvailabilityMode::Calldata => {
+                    L1DataAvailabilityMode::Calldata
+                }
+            },
             l1_data_gas_price,
             starknet_version: header.protocol_version.to_string(),
         })

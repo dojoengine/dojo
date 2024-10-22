@@ -7,7 +7,10 @@ version.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+katana-cairo.workspace = true
+
 anyhow.workspace = true
+arbitrary = { workspace = true, optional = true }
 base64.workspace = true
 derive_more.workspace = true
 lazy_static.workspace = true
@@ -18,11 +21,11 @@ serde_json.workspace = true
 serde_with.workspace = true
 starknet.workspace = true
 starknet-crypto.workspace = true
+starknet-types-core.workspace = true
 thiserror.workspace = true
 
-alloy-primitives.workspace = true
+alloy-primitives = { workspace = true, features = [ "arbitrary" ] }
 flate2 = { workspace = true, optional = true }
-katana-cairo.workspace = true
 num-bigint = "0.4.6"
 
 [dev-dependencies]
@@ -34,6 +37,12 @@ similar-asserts.workspace = true
 [features]
 default = [ "serde" ]
 
+arbitrary = [
+	"alloy-primitives/arbitrary",
+	"dep:arbitrary",
+	# See the comment in katana-cairo/Cargo.toml for why this is needed.
+	"katana-cairo/cairo-vm-test-utils",
+]
 controller = [  ]
 rpc = [ "dep:flate2" ]
 serde = [ "alloy-primitives/serde" ]

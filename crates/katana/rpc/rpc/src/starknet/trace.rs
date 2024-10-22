@@ -14,8 +14,8 @@ use katana_rpc_types::{FeeEstimate, SimulationFlag};
 use starknet::core::types::{
     BlockTag, ComputationResources, DataAvailabilityResources, DataResources,
     DeclareTransactionTrace, DeployAccountTransactionTrace, ExecuteInvocation, ExecutionResources,
-    InvokeTransactionTrace, L1HandlerTransactionTrace, RevertedInvocation, SimulatedTransaction,
-    TransactionTrace, TransactionTraceWithHash,
+    InvokeTransactionTrace, L1HandlerTransactionTrace, PriceUnit, RevertedInvocation,
+    SimulatedTransaction, TransactionTrace, TransactionTraceWithHash,
 };
 
 use super::StarknetApi;
@@ -294,7 +294,10 @@ fn to_rpc_resources(resources: katana_primitives::trace::ExecutionResources) -> 
 
 fn to_rpc_fee_estimate(fee: TxFeeInfo) -> FeeEstimate {
     FeeEstimate {
-        unit: fee.unit,
+        unit: match fee.unit {
+            katana_primitives::fee::PriceUnit::Wei => PriceUnit::Wei,
+            katana_primitives::fee::PriceUnit::Fri => PriceUnit::Fri,
+        },
         gas_price: fee.gas_price.into(),
         overall_fee: fee.overall_fee.into(),
         gas_consumed: fee.gas_consumed.into(),

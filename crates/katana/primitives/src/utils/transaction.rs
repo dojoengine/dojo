@@ -1,8 +1,10 @@
 use alloy_primitives::B256;
 use starknet::core::crypto::compute_hash_on_elements;
-use starknet::core::types::{DataAvailabilityMode, EthAddress, MsgToL1, MsgToL2, ResourceBounds};
+use starknet::core::types::{EthAddress, MsgToL1, MsgToL2};
 use starknet_crypto::poseidon_hash_many;
 
+use crate::da::DataAvailabilityMode;
+use crate::fee::ResourceBounds;
 use crate::Felt;
 
 /// 2^ 128
