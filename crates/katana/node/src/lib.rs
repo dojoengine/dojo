@@ -31,7 +31,6 @@ use katana_pool::ordering::FiFo;
 use katana_pool::validation::stateful::TxValidator;
 use katana_pool::TxPool;
 use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
-use katana_provider::providers::in_memory::InMemoryProvider;
 use katana_rpc::dev::DevApi;
 use katana_rpc::metrics::RpcServerMetrics;
 use katana_rpc::saya::SayaApi;
@@ -187,7 +186,8 @@ pub async fn build(mut config: Config) -> Result<Node> {
         let db = katana_db::init_db(db_path)?;
         (Blockchain::new_with_db(db.clone(), &config.chain)?, Some(db))
     } else {
-        (Blockchain::new_with_chain(InMemoryProvider::new(), &config.chain)?, None)
+        let db = katana_db::init_ephemeral_db()?;
+        (Blockchain::new_with_db(db.clone(), &config.chain)?, Some(db))
     };
 
     let block_context_generator = BlockContextGenerator::default().into();

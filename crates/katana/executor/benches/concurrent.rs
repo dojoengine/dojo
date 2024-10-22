@@ -27,7 +27,7 @@ fn concurrent(c: &mut Criterion) {
     let mut group = c.benchmark_group("Concurrent.Simulate");
     group.warm_up_time(Duration::from_millis(200));
 
-    let provider = test_utils::test_in_memory_provider();
+    let provider = test_utils::test_provider();
     let flags = SimulationFlag::new().skip_validate();
 
     let tx = tx();

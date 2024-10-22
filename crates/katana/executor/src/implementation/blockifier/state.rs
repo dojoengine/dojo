@@ -239,7 +239,7 @@ mod tests {
     };
     use katana_primitives::utils::class::{parse_compiled_class, parse_sierra_class};
     use katana_primitives::{address, Felt};
-    use katana_provider::providers::in_memory::InMemoryProvider;
+    use katana_provider::providers::db::DbProvider;
     use katana_provider::traits::contract::ContractClassWriter;
     use katana_provider::traits::state::{StateFactoryProvider, StateProvider, StateWriter};
     use starknet::macros::felt;
@@ -267,7 +267,7 @@ mod tests {
         let legacy_class_hash = felt!("0x111");
         let legacy_class = DEFAULT_LEGACY_ERC20_CASM.clone();
 
-        let provider = InMemoryProvider::new();
+        let provider = katana_provider::test_utils::test_provider();
         provider.set_nonce(address, nonce).unwrap();
         provider.set_class_hash_of_contract(address, class_hash).unwrap();
         provider.set_storage(address, storage_key, storage_value).unwrap();
@@ -452,7 +452,7 @@ mod tests {
 
     #[test]
     fn fetch_non_existant_data() -> anyhow::Result<()> {
-        let db = InMemoryProvider::new();
+        let db = DbProvider::new_ephemeral();
 
         let address = address!("0x1");
         let class_hash = felt!("0x123");
