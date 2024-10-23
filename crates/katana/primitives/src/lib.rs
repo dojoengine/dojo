@@ -2,6 +2,7 @@
 
 pub mod block;
 pub mod chain;
+pub mod chain_spec;
 pub mod class;
 pub mod contract;
 pub mod da;
@@ -21,5 +22,5 @@ pub mod state;
 pub mod utils;
 
 pub use contract::ContractAddress;
-pub use starknet::core::types::{Felt, FromStrError};
 pub use starknet::macros::felt;
+pub use starknet_types_core::felt::{Felt, FromStrError};

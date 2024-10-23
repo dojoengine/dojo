@@ -32,7 +32,7 @@ use katana_rpc_types::error::starknet::StarknetApiError;
 use katana_rpc_types::FeeEstimate;
 use katana_tasks::{BlockingTaskPool, TokioTaskSpawner};
 use starknet::core::types::{
-    ContractClass, EventsPage, TransactionExecutionStatus, TransactionStatus,
+    ContractClass, EventsPage, PriceUnit, TransactionExecutionStatus, TransactionStatus,
 };
 
 use crate::utils;
@@ -53,7 +53,7 @@ struct Inner<EF: ExecutorFactory> {
     validator: TxValidator,
     pool: TxPool,
     backend: Arc<Backend<EF>>,
-    block_producer: Arc<BlockProducer<EF>>,
+    block_producer: BlockProducer<EF>,
     blocking_task_pool: BlockingTaskPool,
 }
 
@@ -61,7 +61,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
     pub fn new(
         backend: Arc<Backend<EF>>,
         pool: TxPool,
-        block_producer: Arc<BlockProducer<EF>>,
+        block_producer: BlockProducer<EF>,
         validator: TxValidator,
     ) -> Self {
         let blocking_task_pool =
@@ -111,9 +111,12 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
                     gas_price: fee.gas_price.into(),
                     gas_consumed: fee.gas_consumed.into(),
                     overall_fee: fee.overall_fee.into(),
-                    unit: fee.unit,
                     data_gas_price: Default::default(),
                     data_gas_consumed: Default::default(),
+                    unit: match fee.unit {
+                        katana_primitives::fee::PriceUnit::Wei => PriceUnit::Wei,
+                        katana_primitives::fee::PriceUnit::Fri => PriceUnit::Fri,
+                    },
                 }),
 
                 Err(err) => {

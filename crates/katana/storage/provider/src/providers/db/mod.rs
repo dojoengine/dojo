@@ -6,6 +6,7 @@ use std::ops::{Range, RangeInclusive};
 
 use katana_db::abstraction::{Database, DbCursor, DbCursorMut, DbDupSortCursor, DbTx, DbTxMut};
 use katana_db::error::DatabaseError;
+use katana_db::init_ephemeral_db;
 use katana_db::mdbx::DbEnv;
 use katana_db::models::block::StoredBlockBodyIndices;
 use katana_db::models::contract::{
@@ -52,6 +53,14 @@ pub struct DbProvider<Db: Database = DbEnv>(Db);
 impl<Db: Database> DbProvider<Db> {
     /// Creates a new [`DbProvider`] from the given [`DbEnv`].
     pub fn new(db: Db) -> Self {
+        Self(db)
+    }
+}
+
+impl DbProvider<DbEnv> {
+    /// Creates a new [`DbProvider`] using an ephemeral database.
+    pub fn new_ephemeral() -> Self {
+        let db = init_ephemeral_db().expect("Failed to initialize ephemeral database");
         Self(db)
     }
 }
@@ -590,7 +599,8 @@ impl<Db: Database> BlockEnvProvider for DbProvider<Db> {
         Ok(Some(BlockEnv {
             number: header.number,
             timestamp: header.timestamp,
-            l1_gas_prices: header.gas_prices,
+            l1_gas_prices: header.l1_gas_prices,
+            l1_data_gas_prices: header.l1_data_gas_prices,
             sequencer_address: header.sequencer_address,
         }))
     }
@@ -605,10 +615,10 @@ impl<Db: Database> BlockWriter for DbProvider<Db> {
         executions: Vec<TxExecInfo>,
     ) -> ProviderResult<()> {
         self.0.update(move |db_tx| -> ProviderResult<()> {
-            let block_hash = block.block.header.hash;
-            let block_number = block.block.header.header.number;
+            let block_hash = block.block.hash;
+            let block_number = block.block.header.number;
 
-            let block_header = block.block.header.header;
+            let block_header = block.block.header;
             let transactions = block.block.body;
 
             let tx_count = transactions.len() as u64;
@@ -768,18 +778,16 @@ impl<Db: Database> BlockWriter for DbProvider<Db> {
 mod tests {
     use std::collections::BTreeMap;
 
-    use katana_db::mdbx::DbEnvKind;
     use katana_primitives::address;
     use katana_primitives::block::{
         Block, BlockHashOrNumber, FinalityStatus, Header, SealedBlockWithStatus,
     };
     use katana_primitives::contract::ContractAddress;
-    use katana_primitives::fee::TxFeeInfo;
+    use katana_primitives::fee::{PriceUnit, TxFeeInfo};
     use katana_primitives::receipt::{InvokeTxReceipt, Receipt};
     use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
     use katana_primitives::trace::TxExecInfo;
     use katana_primitives::transaction::{InvokeTx, Tx, TxHash, TxWithHash};
-    use starknet::core::types::PriceUnit;
     use starknet::macros::felt;
 
     use super::DbProvider;
@@ -849,7 +857,7 @@ mod tests {
     }
 
     fn create_db_provider() -> DbProvider {
-        DbProvider(katana_db::mdbx::test_utils::create_test_db(DbEnvKind::RW))
+        DbProvider(katana_db::mdbx::test_utils::create_test_db())
     }
 
     #[test]
@@ -881,7 +889,7 @@ mod tests {
 
         // get values
 
-        let block_id: BlockHashOrNumber = block.block.header.hash.into();
+        let block_id: BlockHashOrNumber = block.block.hash.into();
 
         let latest_number = provider.latest_number().unwrap();
         let latest_hash = provider.latest_hash().unwrap();
@@ -920,9 +928,9 @@ mod tests {
         assert_eq!(body_indices.tx_count, tx_count);
 
         assert_eq!(block_status, FinalityStatus::AcceptedOnL2);
-        assert_eq!(block.block.header.hash, latest_hash);
+        assert_eq!(block.block.hash, latest_hash);
         assert_eq!(block.block.body.len() as u64, tx_count);
-        assert_eq!(block.block.header.header.number, latest_number);
+        assert_eq!(block.block.header.number, latest_number);
         assert_eq!(block.block.unseal(), actual_block);
 
         assert_eq!(nonce1, felt!("1"));

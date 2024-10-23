@@ -36,6 +36,7 @@ dojo-test-utils.workspace = true
 dojo-utils.workspace = true
 katana-runner.workspace = true
 scarb.workspace = true
+tempfile.workspace = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 tonic-web-wasm-client.workspace = true
@@ -44,6 +45,8 @@ wasm-tonic.workspace = true
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 prost.workspace = true
+tower-http.workspace = true
+http.workspace = true
 sqlx.workspace = true
 tokio.workspace = true
 tokio-stream = "0.1.14"

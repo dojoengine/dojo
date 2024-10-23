@@ -6,6 +6,7 @@
 
 mod json;
 
+use std::borrow::Cow;
 use std::io::{BufRead, BufReader};
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -14,13 +15,14 @@ use std::str::FromStr;
 use std::time::{Duration, Instant};
 
 use starknet::core::types::{Felt, FromStrError};
+use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::macros::short_string;
 use starknet::signers::SigningKey;
 use thiserror::Error;
 use tracing::trace;
 use url::Url;
 
-use crate::json::{JsonLogMessage, KatanaInfo};
+use crate::json::{JsonLog, KatanaInfo};
 
 /// How long we will wait for katana to indicate that it is ready.
 const KATANA_STARTUP_TIMEOUT_MILLIS: u64 = 10_000;
@@ -125,12 +127,27 @@ pub enum Error {
     MissingAccountPrivateKey,
 
     /// A line indicating the instance address was found but the actual value was not.
-    #[error("missing account private key")]
+    #[error("missing rpc server address")]
     MissingSocketAddr,
+
+    /// A line indicating the instance address was found but the actual value was not.
+    #[error("missing chain id")]
+    MissingChainId,
 
     #[error("encountered unexpected format: {0}")]
     UnexpectedFormat(String),
+
+    #[error("failed to match regex: {0}")]
+    Regex(#[from] regex::Error),
+
+    #[error("expected logs to be in JSON format: {0}")]
+    ExpectedJsonFormat(#[from] serde_json::Error),
 }
+
+/// The string indicator from which the RPC server address can be extracted from.
+const RPC_ADDR_LOG_SUBSTR: &str = "RPC server started.";
+/// The string indicator from which the chain id can be extracted from.
+const CHAIN_ID_LOG_SUBSTR: &str = "Starting node.";
 
 /// Builder for launching `katana`.
 ///
@@ -411,7 +428,6 @@ impl Katana {
         if let Some(db_dir) = self.db_dir {
             cmd.arg("--db-dir").arg(db_dir);
         }
-
         if let Some(rpc_url) = self.rpc_url {
             cmd.arg("--rpc-url").arg(rpc_url);
         }
@@ -484,10 +500,9 @@ impl Katana {
         let mut accounts = Vec::new();
         // var to store the current account being processed
         let mut current_account: Option<Account> = None;
-
-        // TODO: the chain id should be fetched from stdout as well but Katana doesn't display the
-        // chain id atm
-        let chain_id = self.chain_id.unwrap_or(short_string!("KATANA"));
+        // var to store the chain id parsed from the logs. default to KATANA (default katana chain
+        // id) if not specified
+        let mut chain_id: Felt = self.chain_id.unwrap_or(short_string!("KATANA"));
 
         loop {
             if start + Duration::from_millis(self.timeout.unwrap_or(KATANA_STARTUP_TIMEOUT_MILLIS))
@@ -501,35 +516,51 @@ impl Katana {
             trace!(line);
 
             if self.json_log {
-                if let Ok(log) = serde_json::from_str::<JsonLogMessage>(&line) {
-                    let KatanaInfo { address, accounts: account_infos, .. } = log.fields.message;
-
-                    let addr = SocketAddr::from_str(&address)?;
-                    port = addr.port();
-
-                    for (address, info) in account_infos {
-                        let address = Felt::from_str(&address)?;
-                        let private_key = Felt::from_str(&info.private_key)?;
-                        let key = SigningKey::from_secret_scalar(private_key);
-                        accounts.push(Account { address, private_key: Some(key) });
-                    }
-
+                // Because we using a concrete type for rpc addr log, we need to parse this first.
+                // Otherwise if we were to inverse the if statements, the else block
+                // would never be executed as all logs can be parsed as `JsonLog`.
+                if let Ok(log) = serde_json::from_str::<JsonLog<json::RpcAddr>>(&line) {
+                    debug_assert!(log.fields.message.contains(RPC_ADDR_LOG_SUBSTR));
+                    port = log.fields.other.addr.port();
+                    // We can safely break here as we don't need any information after the rpc
+                    // address
                     break;
                 }
+                // Try parsing as chain id log
+                else if let Ok(log) = serde_json::from_str::<JsonLog<json::ChainId>>(&line) {
+                    debug_assert!(log.fields.message.contains(CHAIN_ID_LOG_SUBSTR));
+                    let chain_raw = log.fields.other.chain;
+                    chain_id = if chain_raw.starts_with("0x") {
+                        Felt::from_str(&chain_raw)?
+                    } else {
+                        cairo_short_string_to_felt(&chain_raw)
+                            .map_err(|_| Error::UnexpectedFormat("invalid chain id".to_string()))?
+                    };
+                }
+                // Parse all logs as generic logs
+                else if let Ok(info) = serde_json::from_str::<JsonLog>(&line) {
+                    // Check if this log is a katana startup info log
+                    if let Ok(info) = KatanaInfo::try_from(info.fields.message) {
+                        for (address, info) in info.accounts {
+                            let address = Felt::from_str(&address)?;
+                            let private_key = Felt::from_str(&info.private_key)?;
+                            let key = SigningKey::from_secret_scalar(private_key);
+                            accounts.push(Account { address, private_key: Some(key) });
+                        }
+
+                        continue;
+                    }
+                }
             } else {
-                const URL_PREFIX: &str = "🚀 JSON-RPC server started:";
-                if line.starts_with(URL_PREFIX) {
-                    // <🚀 JSON-RPC server started: http://0.0.0.0:5050>
-                    let line = line.strip_prefix(URL_PREFIX).ok_or(Error::MissingSocketAddr)?;
-                    let addr = line.trim();
-
-                    // parse the actual port
-                    let addr = addr.strip_prefix("http://").unwrap_or(addr);
-                    let addr = SocketAddr::from_str(addr)?;
+                if line.contains(RPC_ADDR_LOG_SUBSTR) {
+                    let addr = parse_rpc_addr_log(&line)?;
                     port = addr.port();
-
                     // The address is the last thing to be displayed so we can safely break here.
                     break;
+                }
+
+                if line.contains(CHAIN_ID_LOG_SUBSTR) {
+                    chain_id = parse_chain_id_log(&line)?;
                 }
 
                 const ACC_ADDRESS_PREFIX: &str = "| Account address |";
@@ -577,6 +608,44 @@ impl Katana {
     }
 }
 
+/// Removes ANSI escape codes from a string.
+///
+/// This is useful for removing the color codes from the katana output.
+fn clean_ansi_escape_codes(input: &str) -> Result<Cow<'_, str>, Error> {
+    let re = regex::Regex::new(r"\x1b\[[0-9;]*[a-zA-Z]")?;
+    Ok(re.replace_all(input, ""))
+}
+
+// Example RPC address log format (ansi color codes removed):
+// 2024-10-10T14:20:53.563106Z  INFO rpc: RPC server started. addr=127.0.0.1:60373
+fn parse_rpc_addr_log(log: &str) -> Result<SocketAddr, Error> {
+    // remove any ANSI escape codes from the log.
+    let cleaned = clean_ansi_escape_codes(log)?;
+
+    // This will separate the log into two parts as separated by `addr=` str and we take
+    // only the second part which is the address.
+    let addr_part = cleaned.split("addr=").nth(1).ok_or(Error::MissingSocketAddr)?;
+    let addr = addr_part.trim();
+    Ok(SocketAddr::from_str(addr)?)
+}
+
+// Example chain ID log format (ansi color codes removed):
+// 2024-10-18T01:30:14.023880Z  INFO katana_node: Starting node. chain=0x4b4154414e41
+fn parse_chain_id_log(log: &str) -> Result<Felt, Error> {
+    // remove any ANSI escape codes from the log.
+    let cleaned = clean_ansi_escape_codes(log)?;
+
+    // This will separate the log into two parts as separated by `chain=` str and we take
+    // only the second part which is the chain ID.
+    let chain_part = cleaned.split("chain=").nth(1).ok_or(Error::MissingChainId)?.trim();
+    if chain_part.starts_with("0x") {
+        Ok(Felt::from_str(chain_part)?)
+    } else {
+        Ok(cairo_short_string_to_felt(chain_part)
+            .map_err(|_| Error::UnexpectedFormat("invalid chain id".to_string()))?)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use starknet::providers::jsonrpc::HttpTransport;
@@ -584,22 +653,28 @@ mod tests {
 
     use super::*;
 
-    #[test]
-    fn can_launch_katana() {
+    #[tokio::test]
+    async fn can_launch_katana() {
+        // this will launch katana with random ports
         let katana = Katana::new().spawn();
+
         // assert some default values
         assert_eq!(katana.accounts().len(), 10);
         assert_eq!(katana.chain_id(), short_string!("KATANA"));
         // assert that all accounts have private key
         assert!(katana.accounts().iter().all(|a| a.private_key.is_some()));
+
+        // try to connect as a provider
+        let provider = JsonRpcClient::new(HttpTransport::new(katana.endpoint_url()));
+        assert!(provider.chain_id().await.is_ok())
     }
 
     #[test]
     fn can_launch_katana_with_json_log() {
-        let katana = Katana::new().json_log(true).spawn();
+        let katana = Katana::new().json_log(true).chain_id(short_string!("SN_SEPOLIA")).spawn();
         // Assert default values when using JSON logging
         assert_eq!(katana.accounts().len(), 10);
-        assert_eq!(katana.chain_id(), short_string!("KATANA"));
+        assert_eq!(katana.chain_id(), short_string!("SN_SEPOLIA"));
         // assert that all accounts have private key
         assert!(katana.accounts().iter().all(|a| a.private_key.is_some()));
     }
@@ -622,11 +697,15 @@ mod tests {
         let _ = Katana::new().block_time(500).spawn();
     }
 
-    #[test]
-    fn can_launch_katana_with_specific_port() {
+    #[tokio::test]
+    async fn can_launch_katana_with_specific_port() {
         let specific_port = 49999;
         let katana = Katana::new().port(specific_port).spawn();
         assert_eq!(katana.port(), specific_port);
+
+        let provider = JsonRpcClient::new(HttpTransport::new(katana.endpoint_url()));
+        let result = provider.chain_id().await;
+        assert!(result.is_ok());
     }
 
     #[tokio::test]
@@ -651,5 +730,29 @@ mod tests {
         // Check that the db directory is created
         assert!(db_path.exists());
         assert!(db_path.is_dir());
+    }
+
+    #[test]
+    fn test_parse_rpc_addr_log() {
+        // actual rpc log from katana
+        let log = "\u{1b}[2m2024-10-10T14:48:55.397891Z\u{1b}[0m \u{1b}[32m INFO\u{1b}[0m \
+                   \u{1b}[2mrpc\u{1b}[0m\u{1b}[2m:\u{1b}[0m RPC server started. \
+                   \u{1b}[3maddr\u{1b}[0m\u{1b}[2m=\u{1b}[0m127.0.0.1:60817\n";
+        let addr = parse_rpc_addr_log(log).unwrap();
+        assert_eq!(addr.ip().to_string(), "127.0.0.1");
+        assert_eq!(addr.port(), 60817);
+    }
+
+    #[tokio::test]
+    async fn can_launch_katana_with_custom_chain_id() {
+        let custom_chain_id = Felt::from_str("0x1234").unwrap();
+        let katana = Katana::new().chain_id(custom_chain_id).spawn();
+
+        assert_eq!(katana.chain_id(), custom_chain_id);
+
+        let provider = JsonRpcClient::new(HttpTransport::new(katana.endpoint_url()));
+        let actual_chain_id = provider.chain_id().await.unwrap();
+
+        assert_eq!(custom_chain_id, actual_chain_id);
     }
 }

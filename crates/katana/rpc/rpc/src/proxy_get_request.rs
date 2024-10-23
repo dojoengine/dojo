@@ -117,12 +117,7 @@ where
             req.headers_mut().insert(ACCEPT, HeaderValue::from_static("application/json"));
 
             // Adjust the body to reflect the method call.
-            let raw_value = JsonRawValue::from_string(
-                "{\"address\":\"0x6b86e40118f29ebe393a75469b4d926c7a44c2e2681b6d319520b7c1156d114\\
-                 ", \"age\":5, \"name\":\"somename\"}"
-                    .to_string(),
-            )
-            .unwrap();
+            let raw_value = JsonRawValue::from_string("{\"address\":\"0x6677fe62ee39c7b07401f754138502bab7fac99d2d3c5d37df7d1c6fab10819\", \"age\":5, \"name\":\"somename\"}".to_string()).unwrap();
             let param = Some(raw_value.as_ref());
 
             let body = Body::from(

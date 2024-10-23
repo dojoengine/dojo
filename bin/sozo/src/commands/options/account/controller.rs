@@ -1,28 +1,24 @@
-use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::{bail, Context, Result};
 use camino::{Utf8Path, Utf8PathBuf};
-use dojo_utils::TransactionWaiter;
 use dojo_world::contracts::naming::get_name_from_tag;
 use dojo_world::manifest::{BaseManifest, Class, DojoContract, Manifest};
 use dojo_world::migration::strategy::generate_salt;
 use scarb::core::Config;
-use slot::account_sdk::account::session::hash::{AllowedMethod, ProvedMethod};
+use slot::account_sdk::account::session::hash::{Policy, ProvedPolicy};
 use slot::account_sdk::account::session::merkle::MerkleTree;
 use slot::account_sdk::account::session::SessionAccount;
 use slot::session::{FullSessionInfo, PolicyMethod};
 use starknet::core::types::contract::{AbiEntry, StateMutability};
-use starknet::core::types::StarknetError::ContractNotFound;
-use starknet::core::types::{BlockId, BlockTag, Felt};
+use starknet::core::types::Felt;
 use starknet::core::utils::{
     cairo_short_string_to_felt, get_contract_address, get_selector_from_name,
 };
 use starknet::macros::felt;
 use starknet::providers::Provider;
-use starknet::providers::ProviderError::StarknetError;
 use starknet_crypto::poseidon_hash_single;
-use tracing::{trace, warn};
+use tracing::trace;
 use url::Url;
 
 use super::WorldAddressOrName;
@@ -37,6 +33,16 @@ use super::WorldAddressOrName;
 pub type ControllerSessionAccount<P> = SessionAccount<Arc<P>>;
 
 /// Create a new Catridge Controller account based on session key.
+///
+/// For now, Controller guarantees that if the provided network is among one of the supported
+/// networks, then the Controller account should exist. If it doesn't yet exist, it will
+/// automatically be created when a session is created (ie during the session registration stage).
+///
+/// # Supported networks
+///
+/// * Starknet mainnet
+/// * Starknet sepolia
+/// * Slot hosted networks
 #[tracing::instrument(
     name = "create_controller",
     skip(rpc_url, provider, world_addr_or_name, config)
@@ -54,38 +60,33 @@ where
     P: Send + Sync,
 {
     let chain_id = provider.chain_id().await?;
+
+    trace!(target: "account::controller", "Loading Slot credentials.");
     let credentials = slot::credential::Credentials::load()?;
-
     let username = credentials.account.id;
-    let contract_address = credentials.account.contract_address;
 
-    trace!(
-        %username,
-        chain = format!("{chain_id:#x}"),
-        address = format!("{contract_address:#x}"),
-        "Creating Controller session account"
-    );
-
-    // make sure account exist on the provided chain, if not, we deploy it first before proceeding
-    deploy_account_if_not_exist(rpc_url.clone(), &provider, chain_id, contract_address, &username)
-        .await
-        .with_context(|| format!("Deploying Controller account on chain {chain_id}"))?;
+    // Right now, the Cartridge Controller API ensures that there's always a Controller associated
+    // with an account, but that might change in the future.
+    let Some(contract_address) = credentials.account.controllers.first().map(|c| c.address) else {
+        bail!("No Controller is associated with this account.");
+    };
 
     // Check if the session exists, if not create a new one
     let session_details = match slot::session::get(chain_id)? {
         Some(session) => {
-            trace!(expires_at = %session.session.expires_at, policies = session.session.allowed_methods.len(), "Found existing session.");
+            trace!(target: "account::controller", expires_at = %session.session.expires_at, policies = session.session.policies.len(), "Found existing session.");
 
+            // Check if the policies have changed
             let policies = collect_policies(world_addr_or_name, contract_address, config)?;
-            // check if the policies have changed
             let is_equal = is_equal_to_existing(&policies, &session);
 
             if is_equal {
                 session
             } else {
                 trace!(
+                    target: "account::controller",
                     new_policies = policies.len(),
-                    existing_policies = session.session.allowed_methods.len(),
+                    existing_policies = session.session.policies.len(),
                     "Policies have changed. Creating new session."
                 );
 
@@ -97,7 +98,7 @@ where
 
         // Create a new session if not found
         None => {
-            trace!(%username, chain = format!("{chain_id:#}"), "Creating new session.");
+            trace!(target: "account::controller", %username, chain = format!("{chain_id:#}"), "Creating new session.");
             let policies = collect_policies(world_addr_or_name, contract_address, config)?;
             let session = slot::session::create(rpc_url.clone(), &policies).await?;
             slot::session::store(chain_id, &session)?;
@@ -113,26 +114,25 @@ where
 // This function would compute the merkle root of the new policies and compare it with the root in
 // the existing SessionMetadata.
 fn is_equal_to_existing(new_policies: &[PolicyMethod], session_info: &FullSessionInfo) -> bool {
-    let allowed_methods = new_policies
+    let new_policies = new_policies
         .iter()
-        .map(|p| AllowedMethod::new(p.target, get_selector_from_name(&p.method).unwrap()))
-        .collect::<Vec<AllowedMethod>>();
+        .map(|p| Policy::new(p.target, get_selector_from_name(&p.method).unwrap()))
+        .collect::<Vec<Policy>>();
 
-    // Copied from somewhere
-    let hashes = allowed_methods.iter().map(AllowedMethod::as_merkle_leaf).collect::<Vec<Felt>>();
+    // Copied from Session::new
+    let hashes = new_policies.iter().map(Policy::as_merkle_leaf).collect::<Vec<Felt>>();
 
-    let allowed_methods = allowed_methods
+    let new_policies = new_policies
         .into_iter()
         .enumerate()
-        .map(|(i, method)| ProvedMethod {
-            method,
+        .map(|(i, policy)| ProvedPolicy {
+            policy,
             proof: MerkleTree::compute_proof(hashes.clone(), i),
         })
-        .collect::<Vec<ProvedMethod>>();
+        .collect::<Vec<ProvedPolicy>>();
 
-    let root = MerkleTree::compute_root(hashes[0], allowed_methods[0].proof.clone());
-
-    root == session_info.session.allowed_methods_root
+    let new_policies_root = MerkleTree::compute_root(hashes[0], new_policies[0].proof.clone());
+    new_policies_root == session_info.session.authorization_root
 }
 
 /// Policies are the building block of a session key. It's what defines what methods are allowed for
@@ -149,7 +149,7 @@ fn collect_policies(
     let manifest = get_project_base_manifest(root_dir, config.profile().as_str())?;
     let policies =
         collect_policies_from_base_manifest(world_addr_or_name, user_address, root_dir, manifest)?;
-    trace!(policies_count = policies.len(), "Extracted policies from project.");
+    trace!(target: "account::controller", policies_count = policies.len(), "Extracted policies from project.");
     Ok(policies)
 }
 
@@ -188,14 +188,14 @@ fn collect_policies_from_base_manifest(
     // corresponds to [account_sdk::account::DECLARATION_SELECTOR]
     let method = "__declare_transaction__".to_string();
     policies.push(PolicyMethod { target: user_address, method });
-    trace!("Adding declare transaction policy");
+    trace!(target: "account::controller", "Adding declare transaction policy");
 
     // for deploying using udc
     let method = "deployContract".to_string();
     const UDC_ADDRESS: Felt =
         felt!("0x041a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf");
     policies.push(PolicyMethod { target: UDC_ADDRESS, method });
-    trace!("Adding UDC deployment policy");
+    trace!(target: "account::controller", "Adding UDC deployment policy");
 
     Ok(policies)
 }
@@ -215,7 +215,7 @@ fn policies_from_abis(
                 if let StateMutability::External = f.state_mutability {
                     let policy =
                         PolicyMethod { target: contract_address, method: f.name.to_string() };
-                    trace!(tag = contract_tag, target = format!("{:#x}", policy.target), method = %policy.method, "Adding policy");
+                    trace!(target: "account::controller", tag = contract_tag, target = format!("{:#x}", policy.target), method = %policy.method, "Adding policy");
                     policies.push(policy);
                 }
             }
@@ -270,95 +270,6 @@ fn get_dojo_world_address(
     }
 }
 
-/// This function will call the `cartridge_deployController` method to deploy the account if it
-/// doesn't yet exist on the chain. But this JSON-RPC method is only available on Katana deployed on
-/// Slot. If the `rpc_url` is not a Slot url, it will return an error.
-///
-/// `cartridge_deployController` is not a method that Katana itself exposes. It's from a middleware
-/// layer that is deployed on top of the Katana deployment on Slot. This method will deploy the
-/// contract of a user based on the Slot deployment.
-async fn deploy_account_if_not_exist<P>(
-    rpc_url: Url,
-    provider: &P,
-    chain_id: Felt,
-    address: Felt,
-    username: &str,
-) -> Result<()>
-where
-    P: Provider + Send,
-{
-    use reqwest::Client;
-    use serde_json::json;
-
-    // Check if the account exists on the chain
-    match provider.get_class_at(BlockId::Tag(BlockTag::Pending), address).await {
-        Ok(_) => Ok(()),
-
-        // if account doesn't exist, deploy it by calling `cartridge_deployController` method
-        Err(err @ StarknetError(ContractNotFound)) => {
-            trace!(
-                %username,
-                chain = format!("{chain_id:#}"),
-                address = format!("{address:#x}"),
-                "Controller does not exist on chain. Attempting to deploy..."
-            );
-
-            // Skip deployment if the rpc_url is not a Slot instance
-            if !rpc_url.host_str().map_or(false, |host| host.contains("api.cartridge.gg")) {
-                warn!(%rpc_url, "Unable to deploy Controller on non-Slot instance.");
-                bail!("Controller with username '{username}' does not exist: {err}");
-            }
-
-            let body = json!({
-                "id": 1,
-                "jsonrpc": "2.0",
-                "params": { "id": username },
-                "method": "cartridge_deployController",
-            });
-
-            // The response object is in the form:
-            //
-            // {
-            //   "id": 1,
-            //   "jsonrpc": "2.0",
-            //   "result": {
-            //     "already_deployed": false,
-            //     "transaction_hash": "0x12345"
-            //   }
-            // }
-            let res = Client::new()
-                .post(rpc_url)
-                .json(&body)
-                .send()
-                .await?
-                .error_for_status()
-                .context("Failed to deploy controller")?;
-
-            // TODO: handle this more elegantly
-            let response = res.json::<serde_json::Value>().await?;
-            let hex = response["result"]["transaction_hash"]
-                .as_str()
-                .context("Failed to get Controller deployment transaction hash from response")?;
-
-            // wait for deployment tx to finish
-            let tx_hash = Felt::from_str(hex)?;
-            let _ = TransactionWaiter::new(tx_hash, provider).await?;
-
-            trace!(
-                %username,
-                chain = format!("{chain_id:#}"),
-                address = format!("{address:#x}"),
-                tx = format!("{tx_hash:#x}"),
-                "Controller deployed successfully.",
-            );
-
-            Ok(())
-        }
-
-        Err(e) => bail!(e),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use dojo_test_utils::compiler::CompilerTestSetup;
@@ -374,7 +285,7 @@ mod tests {
             .build_test_config("spawn-and-move", Profile::DEV);
 
         let world_addr = felt!("0x74c73d35df54ddc53bcf34aab5e0dbb09c447e99e01f4d69535441253c9571a");
-        let user_addr = felt!("0x6162896d1d7ab204c7ccac6dd5f8e9e7c25ecd5ae4fcb4ad32e57786bb46e03");
+        let user_addr = felt!("0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba");
 
         let policies =
             collect_policies(WorldAddressOrName::Address(world_addr), user_addr, &config).unwrap();

@@ -5,23 +5,22 @@ use jsonrpsee::core::{async_trait, Error};
 use katana_core::backend::Backend;
 use katana_core::service::block_producer::{BlockProducer, BlockProducerMode, PendingExecutor};
 use katana_executor::ExecutorFactory;
-use katana_primitives::genesis::constant::ERC20_NAME_STORAGE_SLOT;
+use katana_primitives::genesis::constant::{get_fee_token_balance_base_storage_address, ERC20_NAME_STORAGE_SLOT};
 use katana_primitives::ContractAddress;
 use katana_provider::traits::state::StateFactoryProvider;
 use katana_rpc_api::dev::DevApiServer;
 use katana_rpc_types::account::Account;
 use katana_rpc_types::error::dev::DevApiError;
-use starknet::core::utils::get_storage_var_address;
 use starknet_crypto::Felt;
 
 #[allow(missing_debug_implementations)]
 pub struct DevApi<EF: ExecutorFactory> {
     backend: Arc<Backend<EF>>,
-    block_producer: Arc<BlockProducer<EF>>,
+    block_producer: BlockProducer<EF>,
 }
 
 impl<EF: ExecutorFactory> DevApi<EF> {
-    pub fn new(backend: Arc<Backend<EF>>, block_producer: Arc<BlockProducer<EF>>) -> Self {
+    pub fn new(backend: Arc<Backend<EF>>, block_producer: BlockProducer<EF>) -> Self {
         Self { backend, block_producer }
     }
 
@@ -96,27 +95,26 @@ impl<EF: ExecutorFactory> DevApiServer for DevApi<EF> {
         Ok(())
     }
 
-    #[allow(deprecated)]
     async fn account_balance(&self, address: String) -> Result<u128, Error> {
         let account_address: ContractAddress = Felt::from_str(&address).unwrap().into();
         let provider = self.backend.blockchain.provider();
         let state = provider.latest().unwrap();
-        let storage_slot =
-            get_storage_var_address("ERC20_balances", &[account_address.into()]).unwrap();
+        // let storage_slot =
+        //     get_storage_var_address("ERC20_balances", &[account_address.into()]).unwrap();
+        let storage_slot = get_fee_token_balance_base_storage_address(account_address);
         let balance_felt = state
-            .storage(self.backend.config.genesis.fee_token.address, storage_slot)
+            .storage(self.backend.chain_spec.fee_contracts.eth, storage_slot)
             .unwrap()
             .unwrap();
         let balance: u128 = balance_felt.to_string().parse().unwrap();
         Ok(balance)
     }
 
-    #[allow(deprecated)]
     async fn fee_token(&self) -> Result<String, Error> {
         let provider = self.backend.blockchain.provider();
         let state = provider.latest().unwrap();
         let fee_token = state
-            .storage(self.backend.config.genesis.fee_token.address, ERC20_NAME_STORAGE_SLOT)
+            .storage(self.backend.chain_spec.fee_contracts.eth, ERC20_NAME_STORAGE_SLOT)
             .unwrap()
             .unwrap();
         Ok(fee_token.to_string())
@@ -126,8 +124,8 @@ impl<EF: ExecutorFactory> DevApiServer for DevApi<EF> {
         Ok(())
     }
 
-    #[allow(deprecated)]
     async fn predeployed_accounts(&self) -> Result<Vec<Account>, Error> {
-        Ok(self.backend.config.genesis.accounts().map(|e| Account::new(*e.0, e.1)).collect())
+        Ok(self.backend.chain_spec.genesis.accounts().map(|e| Account::new(*e.0, e.1)).collect())
+        
     }
 }

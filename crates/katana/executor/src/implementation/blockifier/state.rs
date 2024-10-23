@@ -234,12 +234,12 @@ mod tests {
     use katana_primitives::class::{CompiledClass, FlattenedSierraClass};
     use katana_primitives::contract::ContractAddress;
     use katana_primitives::genesis::constant::{
-        DEFAULT_LEGACY_ERC20_CONTRACT_CASM, DEFAULT_LEGACY_UDC_CASM, DEFAULT_OZ_ACCOUNT_CONTRACT,
-        DEFAULT_OZ_ACCOUNT_CONTRACT_CASM,
+        DEFAULT_ACCOUNT_CLASS, DEFAULT_ACCOUNT_CLASS_CASM, DEFAULT_LEGACY_ERC20_CASM,
+        DEFAULT_LEGACY_UDC_CASM,
     };
     use katana_primitives::utils::class::{parse_compiled_class, parse_sierra_class};
     use katana_primitives::{address, Felt};
-    use katana_provider::providers::in_memory::InMemoryProvider;
+    use katana_provider::providers::db::DbProvider;
     use katana_provider::traits::contract::ContractClassWriter;
     use katana_provider::traits::state::{StateFactoryProvider, StateProvider, StateWriter};
     use starknet::macros::felt;
@@ -248,7 +248,7 @@ mod tests {
     use crate::StateProviderDb;
 
     fn new_sierra_class() -> (FlattenedSierraClass, CompiledClass) {
-        let json = include_str!("../../../../contracts/compiled/cairo1_contract.json");
+        let json = include_str!("../../../../contracts/build/cairo1_contract.json");
         let artifact = serde_json::from_str(json).unwrap();
         let compiled_class = parse_compiled_class(artifact).unwrap();
         let sierra_class = parse_sierra_class(json).unwrap().flatten().unwrap();
@@ -262,12 +262,12 @@ mod tests {
         let storage_value = felt!("0x2");
         let class_hash = felt!("0x123");
         let compiled_hash = felt!("0x456");
-        let sierra_class = DEFAULT_OZ_ACCOUNT_CONTRACT.clone().flatten().unwrap();
-        let class = DEFAULT_OZ_ACCOUNT_CONTRACT_CASM.clone();
+        let sierra_class = DEFAULT_ACCOUNT_CLASS.clone().flatten().unwrap();
+        let class = DEFAULT_ACCOUNT_CLASS_CASM.clone();
         let legacy_class_hash = felt!("0x111");
-        let legacy_class = DEFAULT_LEGACY_ERC20_CONTRACT_CASM.clone();
+        let legacy_class = DEFAULT_LEGACY_ERC20_CASM.clone();
 
-        let provider = InMemoryProvider::new();
+        let provider = katana_provider::test_utils::test_provider();
         provider.set_nonce(address, nonce).unwrap();
         provider.set_class_hash_of_contract(address, class_hash).unwrap();
         provider.set_storage(address, storage_key, storage_value).unwrap();
@@ -304,11 +304,11 @@ mod tests {
         assert_eq!(actual_compiled_hash.0, felt!("0x456"));
         assert_eq!(
             actual_class,
-            utils::to_class(DEFAULT_OZ_ACCOUNT_CONTRACT_CASM.clone()).unwrap().contract_class()
+            utils::to_class(DEFAULT_ACCOUNT_CLASS_CASM.clone()).unwrap().contract_class()
         );
         assert_eq!(
             actual_legacy_class,
-            utils::to_class(DEFAULT_LEGACY_ERC20_CONTRACT_CASM.clone()).unwrap().contract_class()
+            utils::to_class(DEFAULT_LEGACY_ERC20_CASM.clone()).unwrap().contract_class()
         );
 
         Ok(())
@@ -407,9 +407,9 @@ mod tests {
         assert_eq!(actual_class_hash, Some(class_hash));
         assert_eq!(actual_storage_value, Some(felt!("0x2")));
         assert_eq!(actual_compiled_hash, Some(felt!("0x456")));
-        assert_eq!(actual_class, Some(DEFAULT_OZ_ACCOUNT_CONTRACT_CASM.clone()));
-        assert_eq!(actual_sierra_class, Some(DEFAULT_OZ_ACCOUNT_CONTRACT.clone().flatten()?));
-        assert_eq!(actual_legacy_class, Some(DEFAULT_LEGACY_ERC20_CONTRACT_CASM.clone()));
+        assert_eq!(actual_class, Some(DEFAULT_ACCOUNT_CLASS_CASM.clone()));
+        assert_eq!(actual_sierra_class, Some(DEFAULT_ACCOUNT_CLASS.clone().flatten()?));
+        assert_eq!(actual_legacy_class, Some(DEFAULT_LEGACY_ERC20_CASM.clone()));
 
         // assert that can fetch data native to the cached state from the state provider
 
@@ -452,7 +452,7 @@ mod tests {
 
     #[test]
     fn fetch_non_existant_data() -> anyhow::Result<()> {
-        let db = InMemoryProvider::new();
+        let db = DbProvider::new_ephemeral();
 
         let address = address!("0x1");
         let class_hash = felt!("0x123");

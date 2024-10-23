@@ -21,7 +21,7 @@ impl<P: Provider + Sync + std::fmt::Debug> TransactionProcessor<P> for StoreTran
         transaction: &Transaction,
     ) -> Result<(), Error> {
         let transaction_id = format!("{:#064x}:{:#x}", block_number, transaction_hash);
-        db.store_transaction(transaction, &transaction_id, block_timestamp);
+        db.store_transaction(transaction, &transaction_id, block_timestamp)?;
         Ok(())
     }
 }

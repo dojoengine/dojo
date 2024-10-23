@@ -4,17 +4,19 @@ use std::num::ParseIntError;
 use futures_util::stream::MapOk;
 use futures_util::{Stream, StreamExt, TryStreamExt};
 use starknet::core::types::{Felt, FromStrError, StateDiff, StateUpdate};
+use tonic::codec::CompressionEncoding;
 #[cfg(not(target_arch = "wasm32"))]
 use tonic::transport::Endpoint;
 
 use crate::proto::world::{
-    world_client, MetadataRequest, RetrieveEntitiesRequest, RetrieveEntitiesResponse,
-    RetrieveEventsRequest, RetrieveEventsResponse, SubscribeEntitiesRequest,
-    SubscribeEntityResponse, SubscribeEventsRequest, SubscribeEventsResponse,
-    SubscribeModelsRequest, SubscribeModelsResponse, UpdateEntitiesSubscriptionRequest,
+    world_client, RetrieveEntitiesRequest, RetrieveEntitiesResponse, RetrieveEventsRequest,
+    RetrieveEventsResponse, SubscribeEntitiesRequest, SubscribeEntityResponse,
+    SubscribeEventsRequest, SubscribeEventsResponse, SubscribeIndexerRequest,
+    SubscribeIndexerResponse, SubscribeModelsRequest, SubscribeModelsResponse,
+    UpdateEntitiesSubscriptionRequest, WorldMetadataRequest,
 };
 use crate::types::schema::{Entity, SchemaError};
-use crate::types::{EntityKeysClause, Event, EventQuery, KeysClause, ModelKeysClause, Query};
+use crate::types::{EntityKeysClause, Event, EventQuery, IndexerUpdate, ModelKeysClause, Query};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -52,7 +54,9 @@ impl WorldClient {
         let channel = endpoint.connect().await.map_err(Error::Transport)?;
         Ok(Self {
             _world_address: world_address,
-            inner: world_client::WorldClient::with_origin(channel, endpoint.uri().clone()),
+            inner: world_client::WorldClient::with_origin(channel, endpoint.uri().clone())
+                .accept_compressed(CompressionEncoding::Gzip)
+                .send_compressed(CompressionEncoding::Gzip),
         })
     }
 
@@ -61,14 +65,16 @@ impl WorldClient {
     pub async fn new(endpoint: String, _world_address: Felt) -> Result<Self, Error> {
         Ok(Self {
             _world_address,
-            inner: world_client::WorldClient::new(tonic_web_wasm_client::Client::new(endpoint)),
+            inner: world_client::WorldClient::new(tonic_web_wasm_client::Client::new(endpoint))
+                .accept_compressed(CompressionEncoding::Gzip)
+                .send_compressed(CompressionEncoding::Gzip),
         })
     }
 
     /// Retrieve the metadata of the World.
     pub async fn metadata(&mut self) -> Result<dojo_types::WorldMetadata, Error> {
         self.inner
-            .world_metadata(MetadataRequest {})
+            .world_metadata(WorldMetadataRequest {})
             .await
             .map_err(Error::Grpc)
             .and_then(|res| {
@@ -105,6 +111,22 @@ impl WorldClient {
     ) -> Result<RetrieveEventsResponse, Error> {
         let request = RetrieveEventsRequest { query: Some(query.into()) };
         self.inner.retrieve_events(request).await.map_err(Error::Grpc).map(|res| res.into_inner())
+    }
+
+    /// Subscribe to indexer updates.
+    pub async fn subscribe_indexer(
+        &mut self,
+        contract_address: Felt,
+    ) -> Result<IndexerUpdateStreaming, Error> {
+        let request =
+            SubscribeIndexerRequest { contract_address: contract_address.to_bytes_be().to_vec() };
+        let stream = self
+            .inner
+            .subscribe_indexer(request)
+            .await
+            .map_err(Error::Grpc)
+            .map(|res| res.into_inner())?;
+        Ok(IndexerUpdateStreaming(stream.map_ok(Box::new(|res| res.into()))))
     }
 
     /// Subscribe to entities updates of a World.
@@ -187,9 +209,9 @@ impl WorldClient {
     /// Subscribe to the events of a World.
     pub async fn subscribe_events(
         &mut self,
-        keys: Option<KeysClause>,
+        keys: Vec<EntityKeysClause>,
     ) -> Result<EventUpdateStreaming, Error> {
-        let keys = keys.map(|c| c.into());
+        let keys = keys.into_iter().map(|c| c.into()).collect();
 
         let stream = self
             .inner
@@ -274,6 +296,24 @@ pub struct EventUpdateStreaming(EventMappedStream);
 
 impl Stream for EventUpdateStreaming {
     type Item = <EventMappedStream as Stream>::Item;
+    fn poll_next(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        self.0.poll_next_unpin(cx)
+    }
+}
+
+type IndexerMappedStream = MapOk<
+    tonic::Streaming<SubscribeIndexerResponse>,
+    Box<dyn Fn(SubscribeIndexerResponse) -> IndexerUpdate + Send>,
+>;
+
+#[derive(Debug)]
+pub struct IndexerUpdateStreaming(IndexerMappedStream);
+
+impl Stream for IndexerUpdateStreaming {
+    type Item = <IndexerMappedStream as Stream>::Item;
     fn poll_next(
         mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,

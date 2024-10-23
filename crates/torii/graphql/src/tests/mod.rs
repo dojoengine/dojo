@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -27,11 +28,9 @@ use starknet::providers::{JsonRpcClient, Provider};
 use tokio::sync::broadcast;
 use tokio_stream::StreamExt;
 use torii_core::engine::{Engine, EngineConfig, Processors};
-use torii_core::processors::generate_event_processors_map;
-use torii_core::processors::register_model::RegisterModelProcessor;
-use torii_core::processors::store_del_record::StoreDelRecordProcessor;
-use torii_core::processors::store_set_record::StoreSetRecordProcessor;
+use torii_core::executor::Executor;
 use torii_core::sql::Sql;
+use torii_core::types::ContractType;
 
 mod entities_test;
 mod events_test;
@@ -274,11 +273,10 @@ pub async fn model_fixtures(db: &mut Sql) {
     db.execute().await.unwrap();
 }
 
-pub async fn spinup_types_test() -> Result<SqlitePool> {
-    // change sqlite::memory: to sqlite:~/.test.db to dump database to disk
+pub async fn spinup_types_test(path: &str) -> Result<SqlitePool> {
     let options =
-        SqliteConnectOptions::from_str("sqlite::memory:")?.create_if_missing(true).with_regexp();
-    let pool = SqlitePoolOptions::new().max_connections(5).connect_with(options).await.unwrap();
+        SqliteConnectOptions::from_str(path).unwrap().create_if_missing(true).with_regexp();
+    let pool = SqlitePoolOptions::new().connect_with(options).await.unwrap();
     sqlx::migrate!("../migrations").run(&pool).await.unwrap();
 
     let setup = CompilerTestSetup::from_paths("../../dojo-core", &["../types-test"]);
@@ -333,7 +331,7 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
         .await
         .unwrap();
 
-    TransactionWaiter::new(transaction_hash, &provider).await?;
+    TransactionWaiter::new(transaction_hash, &account.provider()).await?;
 
     // Execute `delete` and delete Record with id 20
     let InvokeTransactionResult { transaction_hash } = account
@@ -350,30 +348,34 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
 
     let world = WorldContractReader::new(strat.world_address, Arc::clone(&provider));
 
-    let db = Sql::new(pool.clone(), strat.world_address).await.unwrap();
+    let (shutdown_tx, _) = broadcast::channel(1);
+    let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
+    tokio::spawn(async move {
+        executor.run().await.unwrap();
+    });
+    let db = Sql::new(
+        pool.clone(),
+        sender,
+        &HashMap::from([(strat.world_address, ContractType::WORLD)]),
+    )
+    .await
+    .unwrap();
 
     let (shutdown_tx, _) = broadcast::channel(1);
     let mut engine = Engine::new(
         world,
-        db,
+        db.clone(),
         Arc::clone(&provider),
-        Processors {
-            event: generate_event_processors_map(vec![
-                Arc::new(RegisterModelProcessor),
-                Arc::new(StoreSetRecordProcessor),
-                Arc::new(StoreDelRecordProcessor),
-            ])
-            .unwrap(),
-            ..Processors::default()
-        },
+        Processors { ..Processors::default() },
         EngineConfig::default(),
         shutdown_tx,
         None,
+        Arc::new(HashMap::from([(strat.world_address, ContractType::WORLD)])),
     );
 
     let to = account.provider().block_hash_and_number().await?.block_number;
-    let data = engine.fetch_range(0, to, None).await.unwrap();
+    let data = engine.fetch_range(0, to, &HashMap::new()).await.unwrap();
     engine.process_range(data).await.unwrap();
-
+    db.execute().await.unwrap();
     Ok(pool)
 }

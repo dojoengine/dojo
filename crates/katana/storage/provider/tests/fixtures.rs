@@ -4,18 +4,15 @@ use std::sync::Arc;
 use katana_db::mdbx;
 use katana_primitives::address;
 use katana_primitives::block::{
-    BlockHashOrNumber, FinalityStatus, Header, SealedBlock, SealedBlockWithStatus, SealedHeader,
+    BlockHashOrNumber, FinalityStatus, Header, SealedBlock, SealedBlockWithStatus,
 };
 use katana_primitives::class::{CompiledClass, FlattenedSierraClass, SierraClass};
 use katana_primitives::contract::ContractAddress;
-use katana_primitives::genesis::constant::{
-    DEFAULT_LEGACY_ERC20_CONTRACT_CASM, DEFAULT_LEGACY_UDC_CASM,
-};
+use katana_primitives::genesis::constant::{DEFAULT_LEGACY_ERC20_CASM, DEFAULT_LEGACY_UDC_CASM};
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
 use katana_primitives::utils::class::parse_compiled_class;
 use katana_provider::providers::db::DbProvider;
 use katana_provider::providers::fork::ForkedProvider;
-use katana_provider::providers::in_memory::InMemoryProvider;
 use katana_provider::traits::block::BlockWriter;
 use katana_provider::traits::state::StateFactoryProvider;
 use katana_provider::BlockchainProvider;
@@ -47,11 +44,6 @@ lazy_static! {
 }
 
 #[rstest::fixture]
-pub fn in_memory_provider() -> BlockchainProvider<InMemoryProvider> {
-    BlockchainProvider::new(InMemoryProvider::new())
-}
-
-#[rstest::fixture]
 pub fn fork_provider(
     #[default("http://127.0.0.1:5050")] rpc: &str,
     #[default(0)] block_num: u64,
@@ -73,7 +65,7 @@ pub fn fork_provider_with_spawned_fork_network(
 
 #[rstest::fixture]
 pub fn db_provider() -> BlockchainProvider<DbProvider> {
-    let env = mdbx::test_utils::create_test_db(mdbx::DbEnvKind::RW);
+    let env = mdbx::test_utils::create_test_db();
     BlockchainProvider::new(DbProvider::new(env))
 }
 
@@ -113,7 +105,7 @@ pub fn mock_state_updates() -> [StateUpdatesWithDeclaredClasses; 3] {
         },
         declared_compiled_classes: BTreeMap::from([(
             class_hash_1,
-            DEFAULT_LEGACY_ERC20_CONTRACT_CASM.clone(),
+            DEFAULT_LEGACY_ERC20_CASM.clone(),
         )]),
         ..Default::default()
     };
@@ -167,9 +159,9 @@ pub fn mock_state_updates() -> [StateUpdatesWithDeclaredClasses; 3] {
 }
 
 #[rstest::fixture]
-#[default(BlockchainProvider<InMemoryProvider>)]
+#[default(BlockchainProvider<DbProvider>)]
 pub fn provider_with_states<Db>(
-    #[default(in_memory_provider())] provider: BlockchainProvider<Db>,
+    #[default(db_provider())] provider: BlockchainProvider<Db>,
     #[from(mock_state_updates)] state_updates: [StateUpdatesWithDeclaredClasses; 3],
 ) -> BlockchainProvider<Db>
 where
@@ -190,10 +182,8 @@ where
                 SealedBlockWithStatus {
                     status: FinalityStatus::AcceptedOnL2,
                     block: SealedBlock {
-                        header: SealedHeader {
-                            hash: i.into(),
-                            header: Header { number: i, ..Default::default() },
-                        },
+                        hash: i.into(),
+                        header: Header { number: i, ..Default::default() },
                         body: Default::default(),
                     },
                 },

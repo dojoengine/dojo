@@ -9,24 +9,26 @@ version.workspace = true
 katana-core.workspace = true
 katana-db.workspace = true
 katana-executor.workspace = true
+katana-pipeline.workspace = true
 katana-pool.workspace = true
 katana-primitives.workspace = true
-katana-provider.workspace = true
 katana-rpc.workspace = true
 katana-rpc-api.workspace = true
 katana-tasks.workspace = true
 
 anyhow.workspace = true
 dojo-metrics.workspace = true
+futures.workspace = true
 hyper.workspace = true
 jsonrpsee.workspace = true
-num-traits.workspace = true
 serde_json.workspace = true
 starknet.workspace = true
 tower = { workspace = true, features = [ "full" ] }
 tower-http = { workspace = true, features = [ "full" ] }
 tracing.workspace = true
 
+strum.workspace = true
+strum_macros.workspace = true
+
 [features]
-messaging = [ "katana-core/messaging" ]
-starknet-messaging = [ "katana-core/starknet-messaging", "messaging" ]
+starknet-messaging = [ "katana-core/starknet-messaging" ]

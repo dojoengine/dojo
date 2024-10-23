@@ -1,5 +1,6 @@
 pub mod connection;
 pub mod entity;
+pub mod erc;
 pub mod event;
 pub mod event_message;
 pub mod inputs;

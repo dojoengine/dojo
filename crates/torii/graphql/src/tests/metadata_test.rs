@@ -1,10 +1,15 @@
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use dojo_world::config::ProfileConfig;
     use dojo_world::metadata::WorldMetadata;
     use sqlx::SqlitePool;
     use starknet::core::types::Felt;
+    use tokio::sync::broadcast;
+    use torii_core::executor::Executor;
     use torii_core::sql::Sql;
+    use torii_core::types::ContractType;
 
     use crate::schema::build_schema;
     use crate::tests::{run_graphql_query, Connection, Content, Metadata as SqlMetadata, Social};
@@ -48,7 +53,16 @@ mod tests {
 
     #[sqlx::test(migrations = "../migrations")]
     async fn test_metadata(pool: SqlitePool) {
-        let mut db = Sql::new(pool.clone(), Felt::ZERO).await.unwrap();
+        let (shutdown_tx, _) = broadcast::channel(1);
+        let (mut executor, sender) =
+            Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
+        tokio::spawn(async move {
+            executor.run().await.unwrap();
+        });
+        let mut db =
+            Sql::new(pool.clone(), sender, &HashMap::from([(Felt::ZERO, ContractType::WORLD)]))
+                .await
+                .unwrap();
         let schema = build_schema(&pool).await.unwrap();
 
         let cover_img = "QWxsIHlvdXIgYmFzZSBiZWxvbmcgdG8gdXM=";
@@ -70,9 +84,8 @@ mod tests {
         // TODO: we may want to store here the namespace and the seed. Check the
         // implementation to actually add those to the metadata table.
         let world_metadata: WorldMetadata = profile_config.world.into();
-        db.set_metadata(&RESOURCE, URI, BLOCK_TIMESTAMP);
+        db.set_metadata(&RESOURCE, URI, BLOCK_TIMESTAMP).unwrap();
         db.update_metadata(&RESOURCE, URI, &world_metadata, &None, &Some(cover_img.to_string()))
-            .await
             .unwrap();
         db.execute().await.unwrap();
 
@@ -101,10 +114,19 @@ mod tests {
 
     #[sqlx::test(migrations = "../migrations")]
     async fn test_empty_content(pool: SqlitePool) {
-        let mut db = Sql::new(pool.clone(), Felt::ZERO).await.unwrap();
+        let (shutdown_tx, _) = broadcast::channel(1);
+        let (mut executor, sender) =
+            Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
+        tokio::spawn(async move {
+            executor.run().await.unwrap();
+        });
+        let mut db =
+            Sql::new(pool.clone(), sender, &HashMap::from([(Felt::ZERO, ContractType::WORLD)]))
+                .await
+                .unwrap();
         let schema = build_schema(&pool).await.unwrap();
 
-        db.set_metadata(&RESOURCE, URI, BLOCK_TIMESTAMP);
+        db.set_metadata(&RESOURCE, URI, BLOCK_TIMESTAMP).unwrap();
         db.execute().await.unwrap();
 
         let result = run_graphql_query(&schema, QUERY).await;

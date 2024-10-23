@@ -1,10 +1,9 @@
 use katana_primitives::block::{Block, BlockHash, FinalityStatus, Header, SealedBlockWithStatus};
-use katana_primitives::fee::TxFeeInfo;
+use katana_primitives::fee::{PriceUnit, TxFeeInfo};
 use katana_primitives::receipt::{InvokeTxReceipt, Receipt};
 use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{InvokeTx, Tx, TxHash, TxWithHash};
 use katana_primitives::Felt;
-use starknet::core::types::PriceUnit;
 
 pub fn generate_dummy_txs_and_receipts(
     count: usize,
@@ -46,7 +45,7 @@ pub fn generate_dummy_blocks_and_receipts(
         let header = Header { parent_hash, number: i, ..Default::default() };
         let block = Block { header, body }.seal_with_hash(Felt::from(rand::random::<u128>()));
 
-        parent_hash = block.header.hash;
+        parent_hash = block.hash;
 
         blocks.push((
             SealedBlockWithStatus { block, status: FinalityStatus::AcceptedOnL2 },
@@ -68,7 +67,7 @@ pub fn generate_dummy_blocks_empty(count: u64) -> Vec<SealedBlockWithStatus> {
 
         let block = Block { header, body }.seal_with_hash(Felt::from(rand::random::<u128>()));
 
-        parent_hash = block.header.hash;
+        parent_hash = block.hash;
 
         blocks.push(SealedBlockWithStatus { block, status: FinalityStatus::AcceptedOnL2 });
     }

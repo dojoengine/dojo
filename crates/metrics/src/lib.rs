@@ -1,4 +1,8 @@
-pub mod prometheus_exporter;
+pub mod exporters;
+mod process;
+mod server;
+
+use std::net::SocketAddr;
 
 #[cfg(all(feature = "jemalloc", unix))]
 use jemallocator as _;
@@ -8,11 +12,24 @@ pub use metrics;
 pub use metrics_derive::Metrics;
 /// Re-export the metrics-process crate
 pub use metrics_process;
+pub use server::*;
 
 // We use jemalloc for performance reasons
 #[cfg(all(feature = "jemalloc", unix))]
 #[global_allocator]
 static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
+
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+    #[error("global metrics recorder already installed.")]
+    GlobalRecorderAlreadyInstalled,
+
+    #[error("could not bind to address: {addr}")]
+    FailedToBindAddress { addr: SocketAddr },
+
+    #[error(transparent)]
+    Server(#[from] hyper::Error),
+}
 
 /// A helper trait for reporting metrics.
 ///
@@ -20,4 +37,10 @@ static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
 pub trait Report: Send + Sync {
     /// Report the metrics.
     fn report(&self);
+}
+
+impl Report for ::metrics_process::Collector {
+    fn report(&self) {
+        self.collect();
+    }
 }

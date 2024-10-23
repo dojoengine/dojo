@@ -275,12 +275,12 @@ mod tests {
 
     use super::{legacy_inner_to_rpc_class, legacy_rpc_to_compiled_class};
     use crate::class::{CompiledClass, DeprecatedCompiledClass};
-    use crate::genesis::constant::DEFAULT_OZ_ACCOUNT_CONTRACT;
+    use crate::genesis::constant::DEFAULT_ACCOUNT_CLASS;
     use crate::utils::class::parse_deprecated_compiled_class;
 
     #[test]
     fn legacy_rpc_to_inner_and_back() {
-        let json = include_str!("../../../contracts/compiled/account.json");
+        let json = include_str!("../../../contracts/build/account.json");
         let json = serde_json::from_str(json).unwrap();
         let class: DeprecatedCompiledClass = parse_deprecated_compiled_class(json).unwrap();
 
@@ -301,7 +301,7 @@ mod tests {
 
     #[test]
     fn flattened_sierra_class_to_compiled_class() {
-        let sierra = DEFAULT_OZ_ACCOUNT_CONTRACT.clone().flatten().unwrap();
+        let sierra = DEFAULT_ACCOUNT_CLASS.clone().flatten().unwrap();
         assert!(super::flattened_sierra_to_compiled_class(&sierra).is_ok());
     }
 }

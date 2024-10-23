@@ -1,16 +1,16 @@
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use jsonrpsee::core::Error;
-pub use katana_core::backend::config::{Environment, StarknetConfig};
 use katana_core::backend::Backend;
 use katana_core::constants::DEFAULT_SEQUENCER_ADDRESS;
-#[allow(deprecated)]
-pub use katana_core::sequencer::SequencerConfig;
 use katana_executor::implementation::blockifier::BlockifierFactory;
-use katana_node::Handle;
+use katana_node::config::dev::DevConfig;
+use katana_node::config::rpc::{ApiKind, RpcConfig, DEFAULT_RPC_ADDR, DEFAULT_RPC_MAX_CONNECTIONS};
+pub use katana_node::config::*;
+use katana_node::LaunchedNode;
 use katana_primitives::chain::ChainId;
-use katana_rpc::config::ServerConfig;
-use katana_rpc_api::ApiKind;
+use katana_primitives::chain_spec::ChainSpec;
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::chain_id;
 use starknet::core::types::{BlockId, BlockTag, Felt};
@@ -29,35 +29,28 @@ pub struct TestAccount {
 #[allow(missing_debug_implementations)]
 pub struct TestSequencer {
     url: Url,
-    handle: Handle,
+    handle: LaunchedNode,
     account: TestAccount,
 }
 
 impl TestSequencer {
-    #[allow(deprecated)]
-    pub async fn start(config: SequencerConfig, starknet_config: StarknetConfig) -> Self {
-        let server_config = ServerConfig {
-            port: 0,
-            metrics: None,
-            host: "127.0.0.1".into(),
-            max_connections: 100,
-            allowed_origins: None,
-            apis: vec![ApiKind::Starknet, ApiKind::Dev, ApiKind::Saya, ApiKind::Torii],
-        };
-
-        let node = katana_node::start(server_config, config, starknet_config)
+    pub async fn start(config: Config) -> Self {
+        let handle = katana_node::build(config)
             .await
-            .expect("Failed to build node components");
+            .expect("Failed to build node components")
+            .launch()
+            .await
+            .expect("Failed to launch node");
 
-        let url = Url::parse(&format!("http://{}", node.rpc.addr)).expect("Failed to parse URL");
+        let url = Url::parse(&format!("http://{}", handle.rpc.addr)).expect("Failed to parse URL");
 
-        let account = node.backend.config.genesis.accounts().next().unwrap();
+        let account = handle.node.backend.chain_spec.genesis.accounts().next().unwrap();
         let account = TestAccount {
             private_key: Felt::from_bytes_be(&account.1.private_key().unwrap().to_bytes_be()),
             account_address: Felt::from_bytes_be(&account.0.to_bytes_be()),
         };
 
-        TestSequencer { handle: node, account, url }
+        TestSequencer { handle, account, url }
     }
 
     pub fn account(&self) -> SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet> {
@@ -79,15 +72,15 @@ impl TestSequencer {
     }
 
     pub fn backend(&self) -> &Arc<Backend<BlockifierFactory>> {
-        &self.handle.backend
+        &self.handle.node.backend
     }
 
     pub fn account_at_index(
         &self,
         index: usize,
     ) -> SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet> {
-        #[allow(deprecated)]
-        let accounts: Vec<_> = self.handle.backend.config.genesis.accounts().collect::<_>();
+        let accounts: Vec<_> =
+            self.handle.node.backend.chain_spec.genesis.accounts().collect::<_>();
 
         let account = accounts[index];
         let private_key = Felt::from_bytes_be(&account.1.private_key().unwrap().to_bytes_be());
@@ -119,13 +112,18 @@ impl TestSequencer {
     }
 }
 
-pub fn get_default_test_starknet_config() -> StarknetConfig {
-    let mut cfg = StarknetConfig {
-        disable_fee: true,
-        env: Environment { chain_id: ChainId::SEPOLIA, ..Default::default() },
-        ..Default::default()
+pub fn get_default_test_config(sequencing: SequencingConfig) -> Config {
+    let dev = DevConfig { fee: false, account_validation: true };
+    let mut chain = ChainSpec { id: ChainId::SEPOLIA, ..Default::default() };
+    chain.genesis.sequencer_address = *DEFAULT_SEQUENCER_ADDRESS;
+
+    let rpc = RpcConfig {
+        allowed_origins: None,
+        port: 0,
+        addr: DEFAULT_RPC_ADDR,
+        max_connections: DEFAULT_RPC_MAX_CONNECTIONS,
+        apis: HashSet::from([ApiKind::Starknet, ApiKind::Dev, ApiKind::Saya, ApiKind::Torii]),
     };
 
-    cfg.genesis.sequencer_address = *DEFAULT_SEQUENCER_ADDRESS;
-    cfg
+    Config { sequencing, rpc, dev, chain, ..Default::default() }
 }

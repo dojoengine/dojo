@@ -6,6 +6,7 @@ use crate::trace::TxResources;
 use crate::Felt;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Event {
     /// The contract address that emitted the event.
@@ -18,6 +19,7 @@ pub struct Event {
 
 /// Represents a message sent to L1.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct MessageToL1 {
     /// The L2 contract address that sent the message.
@@ -30,6 +32,7 @@ pub struct MessageToL1 {
 
 /// Receipt for a `Invoke` transaction.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct InvokeTxReceipt {
     /// Information about the transaction fee.
@@ -46,6 +49,7 @@ pub struct InvokeTxReceipt {
 
 /// Receipt for a `Declare` transaction.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DeclareTxReceipt {
     /// Information about the transaction fee.
@@ -62,6 +66,7 @@ pub struct DeclareTxReceipt {
 
 /// Receipt for a `L1Handler` transaction.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct L1HandlerTxReceipt {
     /// Information about the transaction fee.
@@ -80,6 +85,7 @@ pub struct L1HandlerTxReceipt {
 
 /// Receipt for a `DeployAccount` transaction.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DeployAccountTxReceipt {
     /// Information about the transaction fee.
@@ -98,6 +104,7 @@ pub struct DeployAccountTxReceipt {
 
 /// The receipt of a transaction containing the outputs of its execution.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Receipt {
     Invoke(InvokeTxReceipt),

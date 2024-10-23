@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
 use alloy_primitives::U256;
-use katana_db::mdbx::{test_utils, DbEnvKind};
-use katana_primitives::address;
+use katana_db::mdbx::test_utils;
 use katana_primitives::block::{BlockHash, FinalityStatus};
+use katana_primitives::chain_spec::ChainSpec;
 use katana_primitives::class::CompiledClass;
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::genesis::allocation::{
@@ -11,34 +11,27 @@ use katana_primitives::genesis::allocation::{
 };
 use katana_primitives::genesis::{Genesis, GenesisClass};
 use katana_primitives::utils::class::parse_compiled_class_v1;
+use katana_primitives::{address, chain_spec};
 use starknet::macros::felt;
 
 use crate::providers::db::DbProvider;
-use crate::providers::in_memory::InMemoryProvider;
 use crate::traits::block::BlockWriter;
 
-/// Creates an in-memory provider with initial states loaded for testing.
-pub fn test_in_memory_provider() -> InMemoryProvider {
-    let provider = InMemoryProvider::new();
-    initialize_test_provider(&provider);
-    provider
-}
-
 /// Creates a persistent storage provider with initial states loaded for testin.
-pub fn test_db_provider() -> DbProvider {
-    let provider = DbProvider::new(test_utils::create_test_db(DbEnvKind::RW));
+pub fn test_provider() -> DbProvider {
+    let provider = DbProvider::new(test_utils::create_test_db());
     initialize_test_provider(&provider);
     provider
 }
 
 /// Initializes the provider with a genesis block and states.
 fn initialize_test_provider<P: BlockWriter>(provider: &P) {
-    let genesis = create_genesis_for_testing();
+    let chain = create_chain_for_testing();
 
     let hash = BlockHash::ZERO;
     let status = FinalityStatus::AcceptedOnL2;
-    let block = genesis.block().seal_with_hash_and_status(hash, status);
-    let states = genesis.state_updates();
+    let block = chain.block().seal_with_hash_and_status(hash, status);
+    let states = chain.state_updates();
 
     provider
         .insert_block_with_states_and_receipts(block, states, Vec::new(), Vec::new())
@@ -48,7 +41,9 @@ fn initialize_test_provider<P: BlockWriter>(provider: &P) {
 /// Creates a genesis config specifically for testing purposes.
 /// This includes:
 /// - An account with simple `__execute__` function, deployed at address `0x1`.
-pub fn create_genesis_for_testing() -> Genesis {
+pub fn create_chain_for_testing() -> ChainSpec {
+    let mut chain = chain_spec::DEV_UNALLOCATED.clone();
+
     let class_hash = felt!("0x111");
     let address = address!("0x1");
 
@@ -73,5 +68,7 @@ pub fn create_genesis_for_testing() -> Genesis {
     // insert test account class and contract
     genesis.classes.insert(class_hash, class);
     genesis.extend_allocations([(address, account)]);
-    genesis
+
+    chain.genesis = genesis;
+    chain
 }

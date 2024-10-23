@@ -17,8 +17,6 @@ katana-core = { path = "../katana/core" }
 katana-executor = { workspace = true, features = [ "blockifier" ] }
 katana-node.workspace = true
 katana-primitives = { path = "../katana/primitives" }
-katana-rpc = { path = "../katana/rpc/rpc" }
-katana-rpc-api = { path = "../katana/rpc/rpc-api" }
 scarb.workspace = true
 scarb-ui.workspace = true
 serde.workspace = true

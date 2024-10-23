@@ -301,10 +301,7 @@ fn finality_status_from_receipt(receipt: &TransactionReceipt) -> TransactionFina
 #[cfg(test)]
 mod tests {
     use assert_matches::assert_matches;
-    #[allow(deprecated)]
-    use dojo_test_utils::sequencer::{
-        get_default_test_starknet_config, SequencerConfig, TestSequencer,
-    };
+    use dojo_test_utils::sequencer::{get_default_test_config, TestSequencer};
     use starknet::core::types::ExecutionResult::{Reverted, Succeeded};
     use starknet::core::types::TransactionFinalityStatus::{self, AcceptedOnL1, AcceptedOnL2};
     use starknet::core::types::{
@@ -319,11 +316,8 @@ mod tests {
     use super::{Duration, TransactionWaiter};
     use crate::TransactionWaitingError;
 
-    #[allow(deprecated)]
     async fn create_test_sequencer() -> (TestSequencer, JsonRpcClient<HttpTransport>) {
-        let sequencer =
-            TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config())
-                .await;
+        let sequencer = TestSequencer::start(get_default_test_config(Default::default())).await;
         let provider = JsonRpcClient::new(HttpTransport::new(sequencer.url()));
         (sequencer, provider)
     }

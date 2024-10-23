@@ -52,6 +52,23 @@ pub fn init_db<P: AsRef<Path>>(path: P) -> anyhow::Result<DbEnv> {
     Ok(env)
 }
 
+/// Similar to [`init_db`] but will initialize a temporary database.
+///
+/// Though it is useful for testing per se, but the initial motivation to implement this
+/// variation of database is to be used as the backend for the in-memory storage
+/// provider. Mainly to avoid having two separate implementations for the in-memory and
+/// persistent db. Simplifying it to using a single solid implementation.
+///
+/// As such, this database environment will trade off durability for write performance and shouldn't
+/// be used in the case where data persistence is required. For that, use [`init_db`].
+pub fn init_ephemeral_db() -> anyhow::Result<DbEnv> {
+    // Because the underlying database will always be removed, so there's no need to include the
+    // version file.
+    let env = DbEnv::open_ephemeral().context("Opening ephemeral database")?;
+    env.create_tables()?;
+    Ok(env)
+}
+
 /// Open the database at the given `path` in read-write mode.
 pub fn open_db<P: AsRef<Path>>(path: P) -> anyhow::Result<DbEnv> {
     DbEnv::open(path.as_ref(), DbEnvKind::RW).with_context(|| {
@@ -64,8 +81,8 @@ mod tests {
 
     use std::fs;
 
-    use crate::init_db;
     use crate::version::{default_version_file_path, get_db_version, CURRENT_DB_VERSION};
+    use crate::{init_db, init_ephemeral_db};
 
     #[test]
     fn initialize_db_in_empty_dir() {
@@ -125,5 +142,36 @@ mod tests {
         init_db(path.path()).unwrap();
         let actual_version = get_db_version(path.path()).unwrap();
         assert_eq!(actual_version, CURRENT_DB_VERSION);
+    }
+
+    #[test]
+    fn ephemeral_db_deletion_on_drop() {
+        // Create an ephemeral database
+        let db = init_ephemeral_db().expect("failed to create ephemeral database");
+        let dir_path = db.path().to_path_buf();
+
+        // Ensure the directory exists
+        assert!(dir_path.exists(), "Database directory should exist");
+
+        // Create a clone of the database to increase the reference count
+        let db_clone = db.clone();
+
+        // Drop the original database
+        drop(db);
+
+        // Directory should still exist because `db_clone` is still alive
+        assert!(
+            dir_path.exists(),
+            "Database directory should still exist after dropping original reference"
+        );
+
+        // Drop the cloned database
+        drop(db_clone);
+
+        // Now the directory should be deleted
+        assert!(
+            !dir_path.exists(),
+            "Database directory should be deleted after all references are dropped"
+        );
     }
 }

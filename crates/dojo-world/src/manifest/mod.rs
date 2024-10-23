@@ -331,8 +331,7 @@ impl OverlayManifest {
 
 impl DeploymentManifest {
     pub fn load_from_path(path: &Utf8PathBuf) -> Result<Self, AbstractManifestError> {
-        let manifest: Self = toml::from_str(&fs::read_to_string(path)?).unwrap();
-
+        let manifest: Self = toml::from_str(&fs::read_to_string(path)?)?;
         Ok(manifest)
     }
 

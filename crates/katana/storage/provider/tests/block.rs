@@ -7,7 +7,6 @@ use katana_primitives::state::StateUpdatesWithDeclaredClasses;
 use katana_primitives::transaction::TxWithHash;
 use katana_provider::providers::db::DbProvider;
 use katana_provider::providers::fork::ForkedProvider;
-use katana_provider::providers::in_memory::InMemoryProvider;
 use katana_provider::traits::block::{
     BlockHashProvider, BlockNumberProvider, BlockProvider, BlockStatusProvider, BlockWriter,
 };
@@ -24,18 +23,10 @@ mod fixtures;
 mod utils;
 
 use fixtures::{
-    db_provider, fork_provider, fork_provider_with_spawned_fork_network, in_memory_provider,
-    mock_state_updates, provider_with_states,
+    db_provider, fork_provider, fork_provider_with_spawned_fork_network, mock_state_updates,
+    provider_with_states,
 };
 use katana_primitives::Felt;
-
-#[apply(insert_block_cases)]
-fn insert_block_with_in_memory_provider(
-    #[from(in_memory_provider)] provider: BlockchainProvider<InMemoryProvider>,
-    #[case] block_count: u64,
-) -> Result<()> {
-    insert_block_test_impl(provider, block_count)
-}
 
 #[apply(insert_block_cases)]
 fn insert_block_with_fork_provider(
@@ -51,14 +42,6 @@ fn insert_block_with_db_provider(
     #[case] block_count: u64,
 ) -> Result<()> {
     insert_block_test_impl(provider, block_count)
-}
-
-#[apply(insert_block_cases)]
-fn insert_block_empty_with_in_memory_provider(
-    #[from(in_memory_provider)] provider: BlockchainProvider<InMemoryProvider>,
-    #[case] block_count: u64,
-) -> Result<()> {
-    insert_block_empty_test_impl(provider, block_count)
 }
 
 #[apply(insert_block_cases)]
@@ -100,8 +83,8 @@ where
             executions.clone(),
         )?;
 
-        assert_eq!(provider.latest_number().unwrap(), block.block.header.header.number);
-        assert_eq!(provider.latest_hash().unwrap(), block.block.header.hash);
+        assert_eq!(provider.latest_number().unwrap(), block.block.header.number);
+        assert_eq!(provider.latest_hash().unwrap(), block.block.hash);
     }
 
     let actual_transactions_in_range = provider.transaction_in_range(0..total_txs).unwrap();
@@ -117,16 +100,17 @@ where
     );
 
     for (block, receipts, executions) in blocks {
-        let block_id = BlockHashOrNumber::Hash(block.block.header.hash);
+        let block_id = BlockHashOrNumber::Hash(block.block.hash);
 
-        let expected_block_num = block.block.header.header.number;
-        let expected_block_hash = block.block.header.hash;
+        let expected_block_num = block.block.header.number;
+        let expected_block_hash = block.block.hash;
         let expected_block = block.block.unseal();
 
         let expected_block_env = BlockEnv {
             number: expected_block_num,
             timestamp: expected_block.header.timestamp,
-            l1_gas_prices: expected_block.header.gas_prices.clone(),
+            l1_gas_prices: expected_block.header.l1_gas_prices.clone(),
+            l1_data_gas_prices: expected_block.header.l1_data_gas_prices.clone(),
             sequencer_address: expected_block.header.sequencer_address,
         };
 
@@ -209,8 +193,8 @@ where
             vec![],
         )?;
 
-        assert_eq!(provider.latest_number().unwrap(), block.block.header.header.number);
-        assert_eq!(provider.latest_hash().unwrap(), block.block.header.hash);
+        assert_eq!(provider.latest_number().unwrap(), block.block.header.number);
+        assert_eq!(provider.latest_hash().unwrap(), block.block.hash);
     }
 
     let actual_blocks_in_range = provider.blocks_in_range(0..=count)?;
@@ -222,16 +206,17 @@ where
     );
 
     for block in blocks {
-        let block_id = BlockHashOrNumber::Hash(block.block.header.hash);
+        let block_id = BlockHashOrNumber::Hash(block.block.hash);
 
-        let expected_block_num = block.block.header.header.number;
-        let expected_block_hash = block.block.header.hash;
+        let expected_block_num = block.block.header.number;
+        let expected_block_hash = block.block.hash;
         let expected_block = block.block.unseal();
 
         let expected_block_env = BlockEnv {
             number: expected_block_num,
             timestamp: expected_block.header.timestamp,
-            l1_gas_prices: expected_block.header.gas_prices.clone(),
+            l1_gas_prices: expected_block.header.l1_gas_prices.clone(),
+            l1_data_gas_prices: expected_block.header.l1_data_gas_prices.clone(),
             sequencer_address: expected_block.header.sequencer_address,
         };
 
@@ -285,15 +270,6 @@ where
     }
 
     Ok(())
-}
-
-#[apply(test_read_state_update)]
-fn test_read_state_update_with_in_memory_provider(
-    #[with(in_memory_provider())] provider: BlockchainProvider<InMemoryProvider>,
-    #[case] block_num: BlockNumber,
-    #[case] expected_state_update: StateUpdatesWithDeclaredClasses,
-) -> Result<()> {
-    test_read_state_update_impl(provider, block_num, expected_state_update)
 }
 
 #[apply(test_read_state_update)]

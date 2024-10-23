@@ -469,10 +469,10 @@ impl BlockWriter for ForkedProvider {
     ) -> ProviderResult<()> {
         let mut storage = self.storage.write();
 
-        let block_hash = block.block.header.hash;
-        let block_number = block.block.header.header.number;
+        let block_hash = block.block.hash;
+        let block_number = block.block.header.number;
 
-        let block_header = block.block.header.header;
+        let block_header = block.block.header;
         let txs = block.block.body;
 
         // create block body indices
@@ -576,7 +576,8 @@ impl BlockEnvProvider for ForkedProvider {
         Ok(self.header(block_id)?.map(|header| BlockEnv {
             number: header.number,
             timestamp: header.timestamp,
-            l1_gas_prices: header.gas_prices,
+            l1_gas_prices: header.l1_gas_prices,
+            l1_data_gas_prices: header.l1_data_gas_prices,
             sequencer_address: header.sequencer_address,
         }))
     }

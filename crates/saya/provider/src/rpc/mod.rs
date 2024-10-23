@@ -5,14 +5,13 @@ use std::sync::Arc;
 
 use anyhow::anyhow;
 use jsonrpsee::http_client::HttpClientBuilder;
-use katana_primitives::block::{
-    BlockIdOrTag, BlockNumber, GasPrices, Header, SealedBlock, SealedHeader,
-};
+use katana_primitives::block::{BlockIdOrTag, BlockNumber, GasPrices, Header, SealedBlock};
 use katana_primitives::chain::ChainId;
 use katana_primitives::conversion::rpc as rpc_converter;
+use katana_primitives::da::L1DataAvailabilityMode;
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
 use katana_primitives::transaction::TxWithHash;
-use katana_primitives::version::Version;
+use katana_primitives::version::ProtocolVersion;
 use katana_rpc_api::saya::SayaApiClient;
 use katana_rpc_types::trace::TxExecutionInfo;
 use num_traits::ToPrimitive;
@@ -88,20 +87,36 @@ impl Provider for JsonRpcProvider {
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(SealedBlock {
-            header: SealedHeader {
-                hash: block.block_hash,
-                header: Header {
-                    parent_hash: block.parent_hash,
-                    number: block.block_number,
-                    gas_prices: GasPrices::new(
-                        block.l1_gas_price.price_in_wei.to_u128().unwrap(),
-                        block.l1_gas_price.price_in_fri.to_u128().unwrap(),
-                    ),
-                    timestamp: block.timestamp,
-                    state_root: block.new_root,
-                    sequencer_address: block.sequencer_address.into(),
-                    version: Version::parse(&block.starknet_version)?,
+            hash: block.block_hash,
+            header: Header {
+                events_count: 0,
+                transaction_count: 0,
+                events_commitment: Felt::ZERO,
+                receipts_commitment: Felt::ZERO,
+                state_diff_commitment: Felt::ZERO,
+                transactions_commitment: Felt::ZERO,
+                parent_hash: block.parent_hash,
+                number: block.block_number,
+                l1_gas_prices: GasPrices::new(
+                    block.l1_gas_price.price_in_wei.to_u128().unwrap(),
+                    block.l1_gas_price.price_in_fri.to_u128().unwrap(),
+                ),
+                l1_data_gas_prices: GasPrices::new(
+                    block.l1_data_gas_price.price_in_wei.to_u128().unwrap(),
+                    block.l1_data_gas_price.price_in_fri.to_u128().unwrap(),
+                ),
+                l1_da_mode: match block.l1_da_mode {
+                    starknet::core::types::L1DataAvailabilityMode::Blob => {
+                        L1DataAvailabilityMode::Blob
+                    }
+                    starknet::core::types::L1DataAvailabilityMode::Calldata => {
+                        L1DataAvailabilityMode::Calldata
+                    }
                 },
+                timestamp: block.timestamp,
+                state_root: block.new_root,
+                sequencer_address: block.sequencer_address.into(),
+                protocol_version: ProtocolVersion::parse(&block.starknet_version).unwrap(),
             },
             body: txs,
         })

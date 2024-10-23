@@ -2,16 +2,13 @@ mod fixtures;
 
 use anyhow::Result;
 use fixtures::{
-    fork_provider_with_spawned_fork_network, in_memory_provider, provider_with_states,
-    DOJO_WORLD_COMPILED_CLASS, DOJO_WORLD_SIERRA_CLASS,
+    fork_provider_with_spawned_fork_network, provider_with_states, DOJO_WORLD_COMPILED_CLASS,
+    DOJO_WORLD_SIERRA_CLASS,
 };
 use katana_primitives::block::{BlockHashOrNumber, BlockNumber};
 use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
-use katana_primitives::genesis::constant::{
-    DEFAULT_LEGACY_ERC20_CONTRACT_CASM, DEFAULT_LEGACY_UDC_CASM,
-};
+use katana_primitives::genesis::constant::{DEFAULT_LEGACY_ERC20_CASM, DEFAULT_LEGACY_UDC_CASM};
 use katana_provider::providers::fork::ForkedProvider;
-use katana_provider::providers::in_memory::InMemoryProvider;
 use katana_provider::traits::state::{StateFactoryProvider, StateProvider};
 use katana_provider::BlockchainProvider;
 use rstest_reuse::{self, *};
@@ -65,7 +62,7 @@ mod latest {
     #[rstest::rstest]
     #[case(
         vec![
-            (felt!("11"), Some(felt!("1000")), Some(DEFAULT_LEGACY_ERC20_CONTRACT_CASM.clone()), None),
+            (felt!("11"), Some(felt!("1000")), Some(DEFAULT_LEGACY_ERC20_CASM.clone()), None),
             (felt!("22"), Some(felt!("2000")), Some(DEFAULT_LEGACY_UDC_CASM.clone()), None),
             (felt!("33"), Some(felt!("3000")), Some((*DOJO_WORLD_COMPILED_CLASS).clone()), Some((*DOJO_WORLD_SIERRA_CLASS).clone())),
         ]
@@ -74,14 +71,6 @@ mod latest {
         #[from(provider_with_states)] provider: BlockchainProvider<Db>,
         #[case] expected_class: Vec<ClassHashAndClasses>,
     ) {
-    }
-
-    #[apply(test_latest_class_read)]
-    fn read_class_from_in_memory_provider(
-        #[with(in_memory_provider())] provider: BlockchainProvider<InMemoryProvider>,
-        #[case] expected_class: Vec<ClassHashAndClasses>,
-    ) -> Result<()> {
-        assert_latest_class(provider, expected_class)
     }
 
     #[apply(test_latest_class_read)]
@@ -135,7 +124,7 @@ mod historical {
     #[case::class_hash_at_block_1(
         1,
         vec![
-            (felt!("11"), Some(felt!("1000")), Some(DEFAULT_LEGACY_ERC20_CONTRACT_CASM.clone()), None),
+            (felt!("11"), Some(felt!("1000")), Some(DEFAULT_LEGACY_ERC20_CASM.clone()), None),
             (felt!("22"), None, None, None),
             (felt!("33"), None, None, None),
         ])
@@ -143,7 +132,7 @@ mod historical {
     #[case::class_hash_at_block_4(
         4,
         vec![
-            (felt!("11"), Some(felt!("1000")), Some(DEFAULT_LEGACY_ERC20_CONTRACT_CASM.clone()), None),
+            (felt!("11"), Some(felt!("1000")), Some(DEFAULT_LEGACY_ERC20_CASM.clone()), None),
             (felt!("22"), Some(felt!("2000")), Some(DEFAULT_LEGACY_UDC_CASM.clone()), None),
             (felt!("33"), None, None, None),
         ])
@@ -151,7 +140,7 @@ mod historical {
     #[case::class_hash_at_block_5(
         5,
         vec![
-            (felt!("11"), Some(felt!("1000")), Some(DEFAULT_LEGACY_ERC20_CONTRACT_CASM.clone()), None),
+            (felt!("11"), Some(felt!("1000")), Some(DEFAULT_LEGACY_ERC20_CASM.clone()), None),
             (felt!("22"), Some(felt!("2000")), Some(DEFAULT_LEGACY_UDC_CASM.clone()), None),
             (felt!("33"), Some(felt!("3000")), Some((*DOJO_WORLD_COMPILED_CLASS).clone()), Some((*DOJO_WORLD_SIERRA_CLASS).clone())),
         ])
@@ -161,15 +150,6 @@ mod historical {
         #[case] block_num: BlockNumber,
         #[case] expected_class: Vec<ClassHashAndClasses>,
     ) {
-    }
-
-    #[apply(test_historical_class_read)]
-    fn read_class_from_in_memory_provider(
-        #[with(in_memory_provider())] provider: BlockchainProvider<InMemoryProvider>,
-        #[case] block_num: BlockNumber,
-        #[case] expected_class: Vec<ClassHashAndClasses>,
-    ) -> Result<()> {
-        assert_historical_class(provider, block_num, expected_class)
     }
 
     #[apply(test_historical_class_read)]
