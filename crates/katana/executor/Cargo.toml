@@ -11,16 +11,17 @@ katana-primitives.workspace = true
 katana-provider.workspace = true
 
 parking_lot = { workspace = true, optional = true }
-starknet = { workspace = true, optional = true }
 thiserror.workspace = true
 tracing.workspace = true
 
-blockifier = { git = "https://github.com/dojoengine/sequencer", tag = "v0.8.0-rc3.1", features = [ "testing" ], optional = true }
+blockifier = { git = "https://github.com/dojoengine/sequencer", tag = "v0.8.0-rc3.3", features = [ "testing" ], optional = true }
 katana-cairo = { workspace = true, optional = true }
 
 [dev-dependencies]
 alloy-primitives.workspace = true
 anyhow.workspace = true
+cainome.workspace = true
+dojo-test-utils.workspace = true
 katana-cairo.workspace = true
 katana-provider = { workspace = true, features = [ "test-utils" ] }
 katana-rpc-types.workspace = true
@@ -29,6 +30,7 @@ rstest.workspace = true
 rstest_reuse.workspace = true
 serde_json.workspace = true
 similar-asserts.workspace = true
+starknet.workspace = true
 tokio.workspace = true
 
 criterion.workspace = true
@@ -37,12 +39,7 @@ pprof = { version = "0.13.0", features = [ "criterion", "flamegraph" ] }
 rayon.workspace = true
 
 [features]
-blockifier = [
-	"dep:blockifier",
-	"dep:katana-cairo",
-	"dep:parking_lot",
-	"dep:starknet",
-]
+blockifier = [ "dep:blockifier", "dep:katana-cairo", "dep:parking_lot" ]
 default = [ "blockifier" ]
 
 [[bench]]

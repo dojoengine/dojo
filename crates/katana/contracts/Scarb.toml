@@ -1,5 +1,5 @@
 [workspace]
-members = [ "account", "messaging/cairo" ]
+members = [ "account", "messaging/cairo", "test-contracts"]
 
 [workspace.package]
 version = "0.1.0"

@@ -1,0 +1,13 @@
+[package]
+name = "katana_test_contracts"
+version.workspace = true
+edition.workspace = true
+
+# See more keys and their definitions at https://docs.swmansion.com/scarb/docs/reference/manifest.html
+
+[dependencies]
+starknet.workspace = true
+openzeppelin.workspace = true
+
+[[target.starknet-contract]]
+sierra = true
