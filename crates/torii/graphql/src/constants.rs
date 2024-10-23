@@ -9,8 +9,6 @@ pub const EVENT_MESSAGE_TABLE: &str = "event_messages";
 pub const MODEL_TABLE: &str = "models";
 pub const TRANSACTION_TABLE: &str = "transactions";
 pub const METADATA_TABLE: &str = "metadata";
-pub const ERC_BALANCE_TABLE: &str = "balances";
-pub const ERC_TRANSFER_TABLE: &str = "erc_transfers";
 
 pub const ID_COLUMN: &str = "id";
 pub const EVENT_ID_COLUMN: &str = "event_id";
@@ -35,9 +33,9 @@ pub const QUERY_TYPE_NAME: &str = "World__Query";
 pub const SUBSCRIPTION_TYPE_NAME: &str = "World__Subscription";
 pub const MODEL_ORDER_TYPE_NAME: &str = "World__ModelOrder";
 pub const MODEL_ORDER_FIELD_TYPE_NAME: &str = "World__ModelOrderField";
-pub const ERC_BALANCE_TYPE_NAME: &str = "ERC__Balance";
-pub const ERC_TRANSFER_TYPE_NAME: &str = "ERC__Transfer";
-pub const ERC_TOKEN_TYPE_NAME: &str = "ERC__Token";
+pub const TOKEN_BALANCE_TYPE_NAME: &str = "Token__Balance";
+pub const TOKEN_TRANSFER_TYPE_NAME: &str = "Token__Transfer";
+pub const TOKEN_TYPE_NAME: &str = "ERC__Token";
 
 // objects' single and plural names
 pub const ENTITY_NAMES: (&str, &str) = ("entity", "entities");
@@ -49,10 +47,9 @@ pub const CONTENT_NAMES: (&str, &str) = ("content", "contents");
 pub const METADATA_NAMES: (&str, &str) = ("metadata", "metadatas");
 pub const TRANSACTION_NAMES: (&str, &str) = ("transaction", "transactions");
 pub const PAGE_INFO_NAMES: (&str, &str) = ("pageInfo", "");
-
-pub const ERC_BALANCE_NAME: (&str, &str) = ("ercBalance", "");
-pub const ERC_TOKEN_NAME: (&str, &str) = ("ercToken", "");
-pub const ERC_TRANSFER_NAME: (&str, &str) = ("ercTransfer", "");
+pub const TOKEN_NAME: (&str, &str) = ("token", "tokens");
+pub const TOKEN_BALANCE_NAME: (&str, &str) = ("", "tokenBalances");
+pub const TOKEN_TRANSFER_NAME: (&str, &str) = ("", "tokenTransfers");
 
 // misc
 pub const ORDER_DIR_TYPE_NAME: &str = "OrderDirection";
