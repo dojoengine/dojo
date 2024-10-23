@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 
+use katana_primitives::block::BlockNumber;
 use katana_primitives::class::{ClassHash, CompiledClassHash};
 
 use crate::ProviderResult;
@@ -8,6 +9,7 @@ use crate::ProviderResult;
 pub trait ClassTrieWriter: Send + Sync {
     fn insert_updates(
         &self,
+        block_number: BlockNumber,
         updates: &BTreeMap<ClassHash, CompiledClassHash>,
     ) -> ProviderResult<()>;
 }

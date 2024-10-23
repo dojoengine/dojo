@@ -8,6 +8,7 @@ version.workspace = true
 
 [dependencies]
 katana-primitives = { workspace = true, features = [ "arbitrary" ] }
+katana-trie.workspace = true
 
 anyhow.workspace = true
 dojo-metrics.workspace = true
@@ -20,6 +21,10 @@ serde_json.workspace = true
 tempfile.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
+
+# trie
+bitvec.workspace = true
+starknet-types-core.workspace = true
 
 # codecs
 postcard = { workspace = true, optional = true }

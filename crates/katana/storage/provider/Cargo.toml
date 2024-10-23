@@ -9,6 +9,7 @@ version.workspace = true
 [dependencies]
 katana-db = { workspace = true, features = [ "test-utils" ] }
 katana-primitives = { workspace = true, features = [ "rpc" ] }
+katana-trie.workspace = true
 
 anyhow.workspace = true
 auto_impl.workspace = true
