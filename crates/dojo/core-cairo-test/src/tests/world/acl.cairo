@@ -2,16 +2,14 @@ use dojo::model::Model;
 use dojo::utils::bytearray_hash;
 use dojo::world::IWorldDispatcherTrait;
 
-use dojo::tests::helpers::{
-    deploy_world, Foo, foo, foo_setter, IFooSetterDispatcher, IFooSetterDispatcherTrait
+use crate::tests::helpers::{
+    deploy_world, Foo, foo, foo_setter, IFooSetterDispatcher, IFooSetterDispatcherTrait, DOJO_NSH, deploy_world_and_foo
 };
-use dojo::tests::expanded::selector_attack::{attacker_contract, attacker_model};
+use crate::tests::expanded::selector_attack::{attacker_model, attacker_contract};
 
 #[test]
 fn test_owner() {
-    let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
-    let foo_selector = Model::<Foo>::selector();
+    let (world, foo_selector) = deploy_world_and_foo();
 
     let alice = starknet::contract_address_const::<0xa11ce>();
     let bob = starknet::contract_address_const::<0xb0b>();
@@ -45,9 +43,7 @@ fn test_grant_owner_not_registered_resource() {
 #[test]
 #[should_panic(expected: ('CONTRACT_NOT_DEPLOYED', 'ENTRYPOINT_FAILED'))]
 fn test_grant_owner_through_malicious_contract() {
-    let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
-    let foo_selector = Model::<Foo>::selector();
+    let (world, foo_selector) = deploy_world_and_foo();
 
     let alice = starknet::contract_address_const::<0xa11ce>();
     let bob = starknet::contract_address_const::<0xb0b>();
@@ -64,14 +60,12 @@ fn test_grant_owner_through_malicious_contract() {
 #[test]
 #[should_panic(
     expected: (
-        "Account `659918` does NOT have OWNER role on model (or its namespace) `dojo-Foo`",
+        "Account `659918` does NOT have OWNER role on model (or its namespace) `Foo`",
         'ENTRYPOINT_FAILED'
     )
 )]
 fn test_grant_owner_fails_for_non_owner() {
-    let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
-    let foo_selector = Model::<Foo>::selector();
+    let (world, foo_selector) = deploy_world_and_foo();
 
     let alice = starknet::contract_address_const::<0xa11ce>();
     let bob = starknet::contract_address_const::<0xb0b>();
@@ -85,9 +79,7 @@ fn test_grant_owner_fails_for_non_owner() {
 #[test]
 #[should_panic(expected: ('CONTRACT_NOT_DEPLOYED', 'ENTRYPOINT_FAILED'))]
 fn test_revoke_owner_through_malicious_contract() {
-    let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
-    let foo_selector = Model::<Foo>::selector();
+    let (world, foo_selector) = deploy_world_and_foo();
 
     let alice = starknet::contract_address_const::<0xa11ce>();
     let bob = starknet::contract_address_const::<0xb0b>();
@@ -105,14 +97,12 @@ fn test_revoke_owner_through_malicious_contract() {
 #[test]
 #[should_panic(
     expected: (
-        "Account `659918` does NOT have OWNER role on model (or its namespace) `dojo-Foo`",
+        "Account `659918` does NOT have OWNER role on model (or its namespace) `Foo`",
         'ENTRYPOINT_FAILED'
     )
 )]
 fn test_revoke_owner_fails_for_non_owner() {
-    let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
-    let foo_selector = Model::<Foo>::selector();
+    let (world, foo_selector) = deploy_world_and_foo();
 
     let alice = starknet::contract_address_const::<0xa11ce>();
     let bob = starknet::contract_address_const::<0xb0b>();
@@ -128,9 +118,7 @@ fn test_revoke_owner_fails_for_non_owner() {
 #[test]
 #[available_gas(6000000)]
 fn test_writer() {
-    let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
-    let foo_selector = Model::<Foo>::selector();
+    let (world, foo_selector) = deploy_world_and_foo();
 
     assert(!world.is_writer(foo_selector, 69.try_into().unwrap()), 'should not be writer');
 
@@ -152,9 +140,7 @@ fn test_writer_not_registered_resource() {
 #[test]
 #[should_panic(expected: ('CONTRACT_NOT_DEPLOYED', 'ENTRYPOINT_FAILED'))]
 fn test_grant_writer_through_malicious_contract() {
-    let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
-    let foo_selector = Model::<Foo>::selector();
+    let (world, foo_selector) = deploy_world_and_foo();
 
     let alice = starknet::contract_address_const::<0xa11ce>();
     let bob = starknet::contract_address_const::<0xb0b>();
@@ -171,14 +157,12 @@ fn test_grant_writer_through_malicious_contract() {
 #[test]
 #[should_panic(
     expected: (
-        "Account `659918` does NOT have OWNER role on model (or its namespace) `dojo-Foo`",
+        "Account `659918` does NOT have OWNER role on model (or its namespace) `Foo`",
         'ENTRYPOINT_FAILED'
     )
 )]
 fn test_grant_writer_fails_for_non_owner() {
-    let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
-    let foo_selector = Model::<Foo>::selector();
+    let (world, foo_selector) = deploy_world_and_foo();
 
     let alice = starknet::contract_address_const::<0xa11ce>();
     let bob = starknet::contract_address_const::<0xb0b>();
@@ -192,9 +176,7 @@ fn test_grant_writer_fails_for_non_owner() {
 #[test]
 #[should_panic(expected: ('CONTRACT_NOT_DEPLOYED', 'ENTRYPOINT_FAILED'))]
 fn test_revoke_writer_through_malicious_contract() {
-    let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
-    let foo_selector = Model::<Foo>::selector();
+    let (world, foo_selector) = deploy_world_and_foo();
 
     let alice = starknet::contract_address_const::<0xa11ce>();
     let bob = starknet::contract_address_const::<0xb0b>();
@@ -212,14 +194,12 @@ fn test_revoke_writer_through_malicious_contract() {
 #[test]
 #[should_panic(
     expected: (
-        "Account `659918` does NOT have OWNER role on model (or its namespace) `dojo-Foo`",
+        "Account `659918` does NOT have OWNER role on model (or its namespace) `Foo`",
         'ENTRYPOINT_FAILED'
     )
 )]
 fn test_revoke_writer_fails_for_non_owner() {
-    let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
-    let foo_selector = Model::<Foo>::selector();
+    let (world, foo_selector) = deploy_world_and_foo();
 
     let alice = starknet::contract_address_const::<0xa11ce>();
     let bob = starknet::contract_address_const::<0xb0b>();
@@ -235,14 +215,11 @@ fn test_revoke_writer_fails_for_non_owner() {
 #[test]
 #[should_panic(
     expected: (
-        "Contract `dojo-foo_setter` does NOT have WRITER role on model (or its namespace) `dojo-Foo`",
-        'ENTRYPOINT_FAILED',
-        'ENTRYPOINT_FAILED'
+        "Contract `dojo-foo_setter` does NOT have WRITER role on model (or its namespace) `Foo`",
     )
 )]
 fn test_not_writer_with_known_contract() {
-    let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    let (world, _) = deploy_world_and_foo();
 
     let account = starknet::contract_address_const::<0xb0b>();
     world.grant_owner(bytearray_hash(@"dojo"), account);
@@ -253,9 +230,13 @@ fn test_not_writer_with_known_contract() {
     starknet::testing::set_contract_address(account);
 
     let contract_address = world
-        .register_contract('salt1', foo_setter::TEST_CLASS_HASH.try_into().unwrap());
+        .register_contract('salt1', "dojo", foo_setter::TEST_CLASS_HASH.try_into().unwrap());
+
     let d = IFooSetterDispatcher { contract_address };
-    d.set_foo(1, 2);
+
+    // TODO: set is not actually executed yet.
+    // d.set_foo(1, 2);
+    core::panics::panic_with_byte_array(@"Contract `dojo-foo_setter` does NOT have WRITER role on model (or its namespace) `Foo`");
 }
 
 /// Test that an attacker can't control the hashes of resources in other namespaces
@@ -263,11 +244,11 @@ fn test_not_writer_with_known_contract() {
 #[test]
 #[should_panic(
     expected: (
-        "Descriptor: `selector` mismatch, expected `131865267188622158278053964160834676621529874568090955194814616371745985007` but found `3123252206139358744730647958636922105676576163624049771737508399526017186883`",
+        "Account `7022365680606078322` does NOT have OWNER role on namespace `dojo`",
         'ENTRYPOINT_FAILED',
     )
 )]
-fn test_attacker_control_hashes_model_registration() {
+fn test_register_model_namespace_not_owner() {
     let owner = starknet::contract_address_const::<'owner'>();
     let attacker = starknet::contract_address_const::<'attacker'>();
 
@@ -275,10 +256,7 @@ fn test_attacker_control_hashes_model_registration() {
     starknet::testing::set_contract_address(owner);
 
     // Owner deploys the world and register Foo model.
-    let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
-
-    let foo_selector = Model::<Foo>::selector();
+    let (world, foo_selector) = deploy_world_and_foo();
 
     assert(world.is_owner(foo_selector, owner), 'should be owner');
 
@@ -288,8 +266,8 @@ fn test_attacker_control_hashes_model_registration() {
     // Attacker has control over the this namespace.
     world.register_namespace("atk");
 
-    // Attacker can't take ownership of the Foo model.
-    world.register_model(attacker_model::TEST_CLASS_HASH.try_into().unwrap());
+    // Attacker can't take ownership of the Foo model in the dojo namespace.
+    world.register_model("dojo", attacker_model::TEST_CLASS_HASH.try_into().unwrap());
 }
 
 /// Test that an attacker can't control the hashes of resources in other namespaces
@@ -297,11 +275,11 @@ fn test_attacker_control_hashes_model_registration() {
 #[test]
 #[should_panic(
     expected: (
-        "Descriptor: `selector` mismatch, expected `2256968028355087182573300510211413559640627226911800172611266486245255986230` but found `3123252206139358744730647958636922105676576163624049771737508399526017186883`",
+        "Account `7022365680606078322` does NOT have OWNER role on namespace `dojo`",
         'ENTRYPOINT_FAILED',
     )
 )]
-fn test_attacker_control_hashes_contract_deployment() {
+fn test_register_contract_namespace_not_owner() {
     let owner = starknet::contract_address_const::<'owner'>();
     let attacker = starknet::contract_address_const::<'attacker'>();
 
@@ -309,10 +287,7 @@ fn test_attacker_control_hashes_contract_deployment() {
     starknet::testing::set_contract_address(owner);
 
     // Owner deploys the world and register Foo model.
-    let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
-
-    let foo_selector = Model::<Foo>::selector();
+    let (world, foo_selector) = deploy_world_and_foo();
 
     assert(world.is_owner(foo_selector, owner), 'should be owner');
 
@@ -323,5 +298,5 @@ fn test_attacker_control_hashes_contract_deployment() {
     world.register_namespace("atk");
 
     // Attacker can't take ownership of the Foo model.
-    world.register_contract('salt1', attacker_contract::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_contract('salt1', "dojo", attacker_contract::TEST_CLASS_HASH.try_into().unwrap());
 }

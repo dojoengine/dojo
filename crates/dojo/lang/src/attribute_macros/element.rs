@@ -15,7 +15,6 @@ use crate::aux_data::Member;
 pub const DEFAULT_VERSION: u8 = 1;
 
 pub const PARAMETER_VERSION_NAME: &str = "version";
-pub const PARAMETER_NAMESPACE: &str = "namespace";
 
 /// `StructParameterParser` provides a general `from_struct` function to parse
 /// the parameters of a struct attribute like dojo::model or dojo::event.
@@ -97,16 +96,12 @@ pub trait StructParameterParser {
 #[derive(Debug)]
 pub struct CommonStructParameters {
     pub version: u8,
-    pub namespace: Option<String>,
-    pub nomapping: bool,
 }
 
 impl Default for CommonStructParameters {
     fn default() -> CommonStructParameters {
         CommonStructParameters {
             version: DEFAULT_VERSION,
-            namespace: Option::None,
-            nomapping: false,
         }
     }
 }
@@ -125,11 +120,6 @@ impl StructParameterParser for CommonStructParameters {
         match arg_name.as_str() {
             PARAMETER_VERSION_NAME => {
                 self.version = get_version(db, attribute_name, arg_value, diagnostics);
-            }
-            PARAMETER_NAMESPACE => {
-                self.namespace = get_namespace(db, attribute_name, arg_value, diagnostics);
-                // If the namespace is explicitly set, we don't want to allow mappings.
-                self.nomapping = true;
             }
             _ => {
                 diagnostics.push(PluginDiagnostic {
@@ -271,30 +261,6 @@ fn get_version(
                 severity: Severity::Error,
             });
             DEFAULT_VERSION
-        }
-    }
-}
-
-/// Get the namespace from the `Expr` parameter.
-fn get_namespace(
-    db: &dyn SyntaxGroup,
-    attribute_name: &str,
-    arg_value: Expr,
-    diagnostics: &mut Vec<PluginDiagnostic>,
-) -> Option<String> {
-    match arg_value {
-        Expr::ShortString(ss) => Some(ss.string_value(db).unwrap()),
-        Expr::String(s) => Some(s.string_value(db).unwrap()),
-        _ => {
-            diagnostics.push(PluginDiagnostic {
-                message: format!(
-                    "The argument '{}' of {attribute_name} must be a string",
-                    PARAMETER_NAMESPACE
-                ),
-                stable_ptr: arg_value.stable_ptr().untyped(),
-                severity: Severity::Error,
-            });
-            Option::None
         }
     }
 }

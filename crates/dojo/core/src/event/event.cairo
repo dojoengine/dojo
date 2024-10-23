@@ -20,6 +20,8 @@ pub trait Event<T> {
     fn historical() -> bool;
     fn keys(self: @T) -> Span<felt252>;
     fn values(self: @T) -> Span<felt252>;
+    /// Returns the selector of the model computed for the given namespace hash.
+    fn selector(namespace_hash: felt252) -> felt252;
 }
 
 #[cfg(target: "test")]

@@ -1,0 +1,24 @@
+[package]
+cairo-version = "=2.8.4"
+name = "sn_simple"
+version = "0.1.0"
+edition = "2024_07"
+
+[[target.starknet-contract]]
+sierra = true
+build-external-contracts = ["dojo::world::world_contract::world"]
+
+[dependencies]
+dojo = { path = "../../crates/dojo/core" }
+#dojo_macros = { path = "../../crates/macros" }
+starknet = "2.8.4"
+
+[dev-dependencies]
+snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry", tag = "v0.30.0" }
+#cairo_test = "2.8.4"
+
+[features]
+default = []
+
+[scripts]
+test = "snforge test"

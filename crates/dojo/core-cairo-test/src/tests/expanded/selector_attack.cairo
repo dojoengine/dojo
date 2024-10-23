@@ -15,29 +15,8 @@ pub mod attacker_contract {
 
     #[abi(embed_v0)]
     pub impl ContractImpl of IContract<ContractState> {
-        fn name(self: @ContractState) -> ByteArray {
+        fn dojo_name(self: @ContractState) -> ByteArray {
             "test_1"
-        }
-
-        fn namespace(self: @ContractState) -> ByteArray {
-            "ns1"
-        }
-
-        fn tag(self: @ContractState) -> ByteArray {
-            "other tag"
-        }
-
-        fn name_hash(self: @ContractState) -> felt252 {
-            'name hash'
-        }
-
-        fn namespace_hash(self: @ContractState) -> felt252 {
-            dojo::utils::bytearray_hash(@"atk")
-        }
-
-        fn selector(self: @ContractState) -> felt252 {
-            // Targetting a resource that exists in an other namespace.
-            selector_from_tag!("dojo-Foo")
         }
     }
 
@@ -56,33 +35,12 @@ pub mod attacker_model {
 
     #[abi(embed_v0)]
     impl DojoModelImpl of dojo::model::IModel<ContractState> {
-        fn name(self: @ContractState) -> ByteArray {
-            "m1"
-        }
-
-        fn namespace(self: @ContractState) -> ByteArray {
-            "ns1"
-        }
-
-        fn tag(self: @ContractState) -> ByteArray {
-            "other tag"
+        fn dojo_name(self: @ContractState) -> ByteArray {
+            "foo"
         }
 
         fn version(self: @ContractState) -> u8 {
             1
-        }
-
-        fn selector(self: @ContractState) -> felt252 {
-            // Targetting a resource that exists in an other namespace.
-            selector_from_tag!("dojo-Foo")
-        }
-
-        fn name_hash(self: @ContractState) -> felt252 {
-            'name hash'
-        }
-
-        fn namespace_hash(self: @ContractState) -> felt252 {
-            dojo::utils::bytearray_hash(@"atk")
         }
 
         fn unpacked_size(self: @ContractState) -> Option<usize> {
@@ -103,12 +61,8 @@ pub mod attacker_model {
 
         fn definition(self: @ContractState) -> dojo::model::ModelDef {
             dojo::model::ModelDef {
-                name: Self::name(self),
-                namespace: Self::namespace(self),
+                name: Self::dojo_name(self),
                 version: Self::version(self),
-                selector: Self::selector(self),
-                name_hash: Self::name_hash(self),
-                namespace_hash: Self::namespace_hash(self),
                 layout: Self::layout(self),
                 schema: Self::schema(self),
                 packed_size: Self::packed_size(self),

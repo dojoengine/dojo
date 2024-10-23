@@ -2,20 +2,6 @@
 version = 1
 
 [[package]]
-name = "armory"
-version = "0.1.0"
-dependencies = [
- "dojo",
-]
-
-[[package]]
-name = "bestiary"
-version = "0.1.0"
-dependencies = [
- "dojo",
-]
-
-[[package]]
 name = "dojo"
 version = "1.0.0-rc.0"
 dependencies = [
@@ -23,11 +9,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "dojo_examples"
-version = "1.0.0-alpha.8"
+name = "dojo_cairo_test"
+version = "1.0.0-rc.0"
 dependencies = [
- "armory",
- "bestiary",
  "dojo",
 ]
 

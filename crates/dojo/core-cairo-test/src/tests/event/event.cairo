@@ -13,8 +13,6 @@ fn test_event_definition() {
     let definition = dojo::event::Event::<FooEvent>::definition();
 
     assert_eq!(definition.name, dojo::event::Event::<FooEvent>::name());
-    assert_eq!(definition.namespace, dojo::event::Event::<FooEvent>::namespace());
-    assert_eq!(definition.namespace_selector, dojo::event::Event::<FooEvent>::namespace_hash());
     assert_eq!(definition.version, dojo::event::Event::<FooEvent>::version());
     assert_eq!(definition.layout, dojo::event::Event::<FooEvent>::layout());
     assert_eq!(definition.schema, dojo::event::Event::<FooEvent>::schema());

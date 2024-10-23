@@ -15,8 +15,9 @@ use dojo::model::{Model, ModelIndex, ModelStore};
 use dojo::storage::{database, storage};
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 
-use dojo::tests::helpers::{Foo, Sword, Case, CaseStore, case, Character, Abilities, Stats, Weapon};
-use dojo::utils::test::{spawn_test_world, GasCounterTrait};
+use crate::tests::helpers::{Foo, Sword, Case, case, Character, Abilities, Stats, Weapon, DOJO_NSH};
+use crate::world::{spawn_test_world, NamespaceDef, TestResource};
+use crate::utils::GasCounterTrait;
 
 #[derive(Drop, Serde)]
 #[dojo::model]
@@ -42,12 +43,16 @@ struct ComplexModel {
 }
 
 fn deploy_world() -> IWorldDispatcher {
-    spawn_test_world(
-        ["dojo"].span(),
-        [
-            case::TEST_CLASS_HASH, case_not_packed::TEST_CLASS_HASH, complex_model::TEST_CLASS_HASH
-        ].span()
-    )
+    let namespace_def = NamespaceDef {
+        namespace: "dojo",
+        resources: [
+            TestResource::Model(case::TEST_CLASS_HASH.try_into().unwrap()),
+            TestResource::Model(case_not_packed::TEST_CLASS_HASH.try_into().unwrap()),
+            TestResource::Model(complex_model::TEST_CLASS_HASH.try_into().unwrap()),
+        ].span(),
+    };
+    
+    spawn_test_world([namespace_def].span())
 }
 
 #[test]
@@ -462,7 +467,7 @@ fn test_benchmark_set_entity() {
     let gas = GasCounterTrait::start();
     world
         .set_entity(
-            model_selector: Model::<Case>::selector(),
+            model_selector: Model::<Case>::selector(DOJO_NSH),
             index: ModelIndex::Keys(simple_entity_packed.keys()),
             values: simple_entity_packed.values(),
             layout: Model::<Case>::layout()

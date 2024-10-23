@@ -10,7 +10,7 @@ pub impl $type_name$EventImpl of dojo::event::Event<$type_name$> {
     fn emit(self: @$type_name$, world: dojo::world::IWorldDispatcher) {
         dojo::world::IWorldDispatcherTrait::emit_event(
             world,
-            Self::selector(),
+            Self::selector('todo'),
             Self::keys(self),
             Self::values(self),
             Self::historical()
@@ -65,6 +65,11 @@ pub impl $type_name$EventImpl of dojo::event::Event<$type_name$> {
         $serialized_values$
         core::array::ArrayTrait::span(@serialized)
     }
+
+    #[inline(always)]
+    fn selector(namespace_hash: felt252) -> felt252 {
+        dojo::utils::selector_from_namespace_and_name(namespace_hash, @Self::name())
+    }
 }
 
 #[cfg(target: "test")]
@@ -75,7 +80,7 @@ pub impl $type_name$EventImplTest of dojo::event::EventTest<$type_name$> {
 
         dojo::world::IWorldTestDispatcherTrait::emit_event_test(
             world_test,
-            dojo::event::Event::<$type_name$>::selector(),
+            dojo::event::Event::<$type_name$>::selector('todo'),
             dojo::event::Event::<$type_name$>::keys(self),
             dojo::event::Event::<$type_name$>::values(self),
             dojo::event::Event::<$type_name$>::historical()

@@ -264,4 +264,7 @@ pub trait IWorldTest<T> {
         values: Span<felt252>,
         historical: bool
     );
+
+    /// Returns the address of a registered contract, panics otherwise.
+    fn dojo_contract_address(self: @T, contract_selector: felt252) -> ContractAddress;
 }

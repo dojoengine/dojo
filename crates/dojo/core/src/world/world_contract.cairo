@@ -313,6 +313,15 @@ pub mod world {
                     }
                 );
         }
+
+        fn dojo_contract_address(self: @ContractState, contract_selector: felt252) -> ContractAddress {
+            match self.resources.read(contract_selector) {
+                Resource::Contract((a, _)) => a,
+                _ => core::panics::panic_with_byte_array(
+                    @format!("Contract not registered: {}", contract_selector)
+                )
+            }
+        }
     }
 
     #[abi(embed_v0)]
