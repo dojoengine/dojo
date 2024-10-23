@@ -4,7 +4,9 @@ use async_graphql::Name;
 use dojo_types::primitive::Primitive;
 use lazy_static::lazy_static;
 
-use crate::constants::{CONTENT_TYPE_NAME, ERC_TOKEN_TYPE_NAME, SOCIAL_TYPE_NAME};
+use crate::constants::{
+    CONTENT_TYPE_NAME, ERC721_METADATA_TYPE_NAME, SOCIAL_TYPE_NAME, TOKEN_TYPE_NAME,
+};
 use crate::types::{GraphqlType, TypeData, TypeMapping};
 
 lazy_static! {
@@ -145,27 +147,39 @@ lazy_static! {
         ),
     ]);
 
-    pub static ref ERC_BALANCE_TYPE_MAPPING: TypeMapping = IndexMap::from([
+    pub static ref TOKEN_BALANCE_TYPE_MAPPING: TypeMapping = IndexMap::from([
         (Name::new("balance"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
         (Name::new("type"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
-        (Name::new("tokenMetadata"), TypeData::Simple(TypeRef::named_nn(ERC_TOKEN_TYPE_NAME))),
+        (Name::new("tokenMetadata"), TypeData::Simple(TypeRef::named_nn(TOKEN_TYPE_NAME))),
     ]);
 
-    pub static ref ERC_TRANSFER_TYPE_MAPPING: TypeMapping = IndexMap::from([
+    pub static ref TOKEN_TRANSFER_TYPE_MAPPING: TypeMapping = IndexMap::from([
         (Name::new("from"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
         (Name::new("to"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
         (Name::new("amount"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
         (Name::new("type"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
         (Name::new("executedAt"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
-        (Name::new("tokenMetadata"), TypeData::Simple(TypeRef::named_nn(ERC_TOKEN_TYPE_NAME))),
+        (Name::new("tokenMetadata"), TypeData::Simple(TypeRef::named_nn(TOKEN_TYPE_NAME))),
         (Name::new("transactionHash"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
     ]);
 
-    pub static ref ERC_TOKEN_TYPE_MAPPING: TypeMapping = IndexMap::from([
+    pub static ref TOKEN_TYPE_MAPPING: TypeMapping = IndexMap::from([
         (Name::new("name"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
         (Name::new("symbol"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
-        (Name::new("tokenId"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
-        (Name::new("decimals"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
         (Name::new("contractAddress"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
+        (Name::new("decimals"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (
+            Name::new("erc721"),
+            TypeData::Nested((TypeRef::named(ERC721_METADATA_TYPE_NAME), IndexMap::new()))
+        ),
+    ]);
+
+    pub static ref ERC721_METADATA_TYPE_MAPPING: TypeMapping = IndexMap::from([
+        (Name::new("tokenId"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
+        (Name::new("name"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
+        (Name::new("description"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
+        (Name::new("attributes"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
+        (Name::new("imagePath"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
+        (Name::new("metadata"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
     ]);
 }

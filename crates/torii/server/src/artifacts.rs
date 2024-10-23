@@ -15,6 +15,7 @@ use tokio::fs;
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::broadcast::Receiver;
+use torii_core::constants::TOKENS_TABLE;
 use torii_core::utils::{fetch_content_from_ipfs, MAX_RETRY};
 use tracing::{debug, error, trace};
 use warp::http::Response;
@@ -153,13 +154,15 @@ async fn fetch_and_process_image(
     token_id: &str,
     pool: Pool<Sqlite>,
 ) -> anyhow::Result<String> {
-    let query = sqlx::query_as::<_, (String,)>("SELECT metadata FROM tokens WHERE id = ?")
-        .bind(token_id)
-        .fetch_one(&pool)
-        .await
-        .with_context(|| {
-            format!("Failed to fetch metadata from database for token_id: {}", token_id)
-        })?;
+    let query = sqlx::query_as::<_, (String,)>(&format!(
+        "SELECT metadata FROM {TOKENS_TABLE} WHERE id = ?"
+    ))
+    .bind(token_id)
+    .fetch_one(&pool)
+    .await
+    .with_context(|| {
+        format!("Failed to fetch metadata from database for token_id: {}", token_id)
+    })?;
 
     let metadata: serde_json::Value =
         serde_json::from_str(&query.0).context("Failed to parse metadata")?;

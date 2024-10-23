@@ -1,9 +1,9 @@
 use super::connection::cursor;
 use crate::query::order::CursorDirection;
 
-pub mod erc_balance;
 pub mod erc_token;
-pub mod erc_transfer;
+pub mod token_balance;
+pub mod token_transfer;
 
 fn handle_cursor(
     cursor: &str,

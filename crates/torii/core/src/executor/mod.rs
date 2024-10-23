@@ -18,6 +18,7 @@ use tokio::task::JoinSet;
 use tokio::time::Instant;
 use tracing::{debug, error};
 
+use crate::constants::TOKENS_TABLE;
 use crate::simple_broker::SimpleBroker;
 use crate::sql::utils::{felt_to_sql_string, I256};
 use crate::types::{
@@ -603,9 +604,9 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
             QueryType::RegisterErc721Token(register_erc721_token) => {
                 let semaphore = self.semaphore.clone();
                 let provider = self.provider.clone();
-                let res = sqlx::query_as::<_, (String, String)>(
-                    "SELECT name, symbol FROM tokens WHERE contract_address = ?",
-                )
+                let res = sqlx::query_as::<_, (String, String)>(&format!(
+                    "SELECT name, symbol FROM {TOKENS_TABLE} WHERE contract_address = ?"
+                ))
                 .bind(felt_to_sql_string(&register_erc721_token.contract_address))
                 .fetch_one(&mut **tx)
                 .await;

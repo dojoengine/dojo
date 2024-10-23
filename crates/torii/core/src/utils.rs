@@ -7,7 +7,6 @@ use ipfs_api_backend_hyper::{IpfsApi, IpfsClient, TryFromUri};
 use tokio_util::bytes::Bytes;
 use tracing::info;
 
-// pub const IPFS_URL: &str = "https://cartridge.infura-ipfs.io/ipfs/";
 pub const IPFS_URL: &str = "https://ipfs.io/ipfs/";
 pub const MAX_RETRY: u8 = 3;
 
