@@ -41,7 +41,7 @@ walkdir.workspace = true
 [dev-dependencies]
 assert_fs.workspace = true
 assert_matches.workspace = true
-dojo-lang.workspace = true
+#dojo-lang.workspace = true
 dojo-test-utils.workspace = true
 katana-runner.workspace = true
 similar-asserts.workspace = true

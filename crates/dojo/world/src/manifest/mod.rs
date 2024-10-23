@@ -413,9 +413,6 @@ impl DeploymentManifest {
 
         let world = WorldContractReader::new(world_address, provider);
 
-        let base_class_hash = world.base().block_id(BLOCK_ID).call().await?;
-        let base_class_hash = base_class_hash.into();
-
         let (models, contracts) =
             get_remote_models_and_contracts(world_address, &world.provider()).await?;
 
@@ -432,9 +429,9 @@ impl DeploymentManifest {
             ),
             base: Manifest::new(
                 Class {
-                    class_hash: base_class_hash,
+                    class_hash: world_class_hash,
                     abi: None,
-                    original_class_hash: base_class_hash,
+                    original_class_hash: world_class_hash,
                     tag: BASE_CONTRACT_TAG.to_string(),
                 },
                 naming::get_filename_from_tag(BASE_CONTRACT_TAG),
