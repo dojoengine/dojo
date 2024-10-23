@@ -58,6 +58,7 @@ pub struct Proxy {
     addr: SocketAddr,
     allowed_origins: Option<Vec<String>>,
     grpc_addr: Option<SocketAddr>,
+    artifacts_addr: Option<SocketAddr>,
     graphql_addr: Arc<RwLock<Option<SocketAddr>>>,
 }
 
@@ -67,8 +68,15 @@ impl Proxy {
         allowed_origins: Option<Vec<String>>,
         grpc_addr: Option<SocketAddr>,
         graphql_addr: Option<SocketAddr>,
+        artifacts_addr: Option<SocketAddr>,
     ) -> Self {
-        Self { addr, allowed_origins, grpc_addr, graphql_addr: Arc::new(RwLock::new(graphql_addr)) }
+        Self {
+            addr,
+            allowed_origins,
+            grpc_addr,
+            graphql_addr: Arc::new(RwLock::new(graphql_addr)),
+            artifacts_addr,
+        }
     }
 
     pub async fn set_graphql_addr(&self, addr: SocketAddr) {
@@ -84,6 +92,7 @@ impl Proxy {
         let allowed_origins = self.allowed_origins.clone();
         let grpc_addr = self.grpc_addr;
         let graphql_addr = self.graphql_addr.clone();
+        let artifacts_addr = self.artifacts_addr;
 
         let make_svc = make_service_fn(move |conn: &AddrStream| {
             let remote_addr = conn.remote_addr().ip();
@@ -125,7 +134,7 @@ impl Proxy {
                 let graphql_addr = graphql_addr_clone.clone();
                 async move {
                     let graphql_addr = graphql_addr.read().await;
-                    handle(remote_addr, grpc_addr, *graphql_addr, req).await
+                    handle(remote_addr, grpc_addr, artifacts_addr, *graphql_addr, req).await
                 }
             });
 
@@ -145,9 +154,32 @@ impl Proxy {
 async fn handle(
     client_ip: IpAddr,
     grpc_addr: Option<SocketAddr>,
+    artifacts_addr: Option<SocketAddr>,
     graphql_addr: Option<SocketAddr>,
     req: Request<Body>,
 ) -> Result<Response<Body>, Infallible> {
+    if req.uri().path().starts_with("/static") {
+        if let Some(artifacts_addr) = artifacts_addr {
+            let artifacts_addr = format!("http://{}", artifacts_addr);
+
+            return match GRAPHQL_PROXY_CLIENT.call(client_ip, &artifacts_addr, req).await {
+                Ok(response) => Ok(response),
+                Err(_error) => {
+                    error!("{:?}", _error);
+                    Ok(Response::builder()
+                        .status(StatusCode::INTERNAL_SERVER_ERROR)
+                        .body(Body::empty())
+                        .unwrap())
+                }
+            };
+        } else {
+            return Ok(Response::builder()
+                .status(StatusCode::NOT_FOUND)
+                .body(Body::empty())
+                .unwrap());
+        }
+    }
+
     if req.uri().path().starts_with("/graphql") {
         if let Some(graphql_addr) = graphql_addr {
             let graphql_addr = format!("http://{}", graphql_addr);
