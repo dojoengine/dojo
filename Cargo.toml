@@ -62,7 +62,7 @@ inherits = "release"
 lto = "fat"
 
 [workspace.dependencies]
-cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.4.1", features = [ "abigen-rs" ] }
+cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.4.5", features = [ "abigen-rs" ] }
 dojo-utils = { path = "crates/dojo/utils" }
 
 # metrics
