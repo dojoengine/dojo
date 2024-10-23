@@ -61,9 +61,11 @@ where
         return Ok(());
     }
 
+    let namespace = cainome::cairo_serde::ByteArray::from_string("TODO").unwrap();
+
     let calls = models_to_register
         .iter()
-        .map(|c| world.register_model_getcall(&(*c).into()))
+        .map(|c| world.register_model_getcall(&namespace, &(*c).into()))
         .collect::<Vec<_>>();
 
     let res = world

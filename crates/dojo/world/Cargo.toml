@@ -27,7 +27,6 @@ starknet-crypto.workspace = true
 thiserror.workspace = true
 topological-sort.workspace = true
 tracing.workspace = true
-
 cainome.workspace = true
 dojo-types = { workspace = true, optional = true }
 http = { workspace = true, optional = true }

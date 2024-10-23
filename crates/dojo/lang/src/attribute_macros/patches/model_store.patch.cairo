@@ -107,7 +107,7 @@ pub mod $model_type_snake$ {
     struct Storage {}
 
     #[abi(embed_v0)]
-    impl DojoModelImpl = dojo::model::component::IModelImpl<ContractState, $model_type$>;
+    impl $model_type$__DojoModelImpl = dojo::model::component::IModelImpl<ContractState, $model_type$>;
 
     #[abi(embed_v0)]
     impl $model_type$Impl of I$model_type$<ContractState>{

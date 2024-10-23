@@ -456,7 +456,7 @@ where
     for namespace in namespaces {
         let namespace_selector = naming::compute_bytearray_hash(namespace);
 
-        if let Resource::Namespace = world.resource(&namespace_selector).call().await? {
+        if let Resource::Namespace(_) = world.resource(&namespace_selector).call().await? {
             registered_namespaces.push(namespace);
         }
     }
@@ -555,7 +555,12 @@ where
     let calls = models
         .iter()
         .filter(|m| models_to_register.contains(&m.diff.tag))
-        .map(|c| world.register_model_getcall(&c.diff.local_class_hash.into()))
+        .map(|c| {
+            world.register_model_getcall(
+                &cainome::cairo_serde::ByteArray::from_string("ns").unwrap(),
+                &c.diff.local_class_hash.into(),
+            )
+        })
         .collect::<Vec<_>>();
 
     if calls.is_empty() {
@@ -673,7 +678,12 @@ where
     let calls = models
         .iter()
         .filter(|m| models_to_register.contains(&m.diff.tag))
-        .map(|c| world.register_model_getcall(&c.diff.local_class_hash.into()))
+        .map(|c| {
+            world.register_model_getcall(
+                &cainome::cairo_serde::ByteArray::from_string("TODO").unwrap(),
+                &c.diff.local_class_hash.into(),
+            )
+        })
         .collect::<Vec<_>>();
 
     if calls.is_empty() {

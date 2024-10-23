@@ -1,23 +1,17 @@
 use std::result::Result;
 
-pub use abigen::world::{
-    ContractRegistered, ContractUpgraded, Event as WorldEvent, ModelRegistered, WorldContract,
-    WorldContractReader,
-};
 use starknet::providers::Provider;
 
 use super::model::{ModelError, ModelRPCReader};
 use super::naming;
+pub use super::abigen::world::{
+    ContractRegistered, ContractUpgraded, Event as WorldEvent, ModelRegistered, WorldContract,
+    WorldContractReader,
+};
 
 #[cfg(test)]
 #[path = "world_test.rs"]
 pub(crate) mod test;
-
-pub mod abigen {
-    pub mod world {
-        pub use crate::contracts::abi::world::*;
-    }
-}
 
 impl<P> WorldContractReader<P>
 where

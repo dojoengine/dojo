@@ -1,6 +1,5 @@
 use std::str::FromStr as _;
 
-pub use abigen::model::ModelContractReader;
 use async_trait::async_trait;
 use cainome::cairo_serde::{CairoSerde as _, ContractAddress, Error as CainomeError};
 use dojo_types::packing::{PackingError, ParseError};
@@ -13,22 +12,15 @@ use starknet::core::utils::{
 };
 use starknet::providers::{Provider, ProviderError};
 
-use super::abi::world::{Layout, ModelIndex};
-use super::naming;
 use crate::contracts::WorldContractReader;
+use super::abigen;
+use super::abigen::world::{Layout, ModelIndex};
+pub use super::abigen::model::ModelContractReader;
+use super::naming;
 
 #[cfg(test)]
 #[path = "model_test.rs"]
 mod model_test;
-
-pub mod abigen {
-    pub mod model {
-        pub use crate::contracts::abi::model::*;
-    }
-    pub mod world {
-        pub use crate::contracts::abi::world::*;
-    }
-}
 
 #[derive(Debug, thiserror::Error)]
 pub enum ModelError {

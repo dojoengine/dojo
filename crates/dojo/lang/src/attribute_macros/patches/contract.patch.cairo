@@ -14,7 +14,7 @@ pub mod $name$ {
     impl UpgradeableImpl = upgradeable_cpt::UpgradeableImpl<ContractState>;
 
     #[abi(embed_v0)]
-    pub impl ContractImpl of IContract<ContractState> {
+    pub impl $name$__ContractImpl of IContract<ContractState> {
         fn dojo_name(self: @ContractState) -> ByteArray {
             "$name$"
         }

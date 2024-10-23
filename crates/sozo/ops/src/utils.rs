@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Result};
 use bigdecimal::BigDecimal;
+use cainome::cairo_serde::ClassHash;
 use dojo_utils::{execution_status_from_receipt, TransactionWaiter};
 use dojo_world::contracts::naming::get_name_from_tag;
 use dojo_world::contracts::world::{WorldContract, WorldContractReader};
@@ -32,7 +33,9 @@ pub async fn get_contract_address<A: ConnectedAccount + Sync>(
     if tag_or_address.starts_with("0x") {
         Felt::from_hex(tag_or_address).map_err(anyhow::Error::from)
     } else {
-        let contract_class_hash = world.base().call().await?;
+        // Use contract class hash -> using the original one from the migration.
+        let contract_class_hash = ClassHash(Felt::ONE);
+
         Ok(starknet::core::utils::get_contract_address(
             generate_salt(&get_name_from_tag(tag_or_address)),
             contract_class_hash.into(),
@@ -61,10 +64,10 @@ pub async fn get_contract_address_from_reader<P: Provider + Sync + Send>(
     if tag_or_address.starts_with("0x") {
         Felt::from_hex(&tag_or_address).map_err(anyhow::Error::from)
     } else {
-        let contract_class_hash = world_reader.base().call().await?;
+        let class_hash = ClassHash(Felt::ONE);
         Ok(starknet::core::utils::get_contract_address(
             generate_salt(&get_name_from_tag(&tag_or_address)),
-            contract_class_hash.into(),
+            class_hash.into(),
             &[],
             world_reader.address,
         ))
