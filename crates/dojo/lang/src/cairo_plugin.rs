@@ -7,10 +7,10 @@ use cairo_lang_semantic::plugin::PluginSuite;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
-//use scarb::compiler::plugin::builtin::BuiltinStarkNetPlugin;
-//use scarb::compiler::plugin::{CairoPlugin, CairoPluginInstance};
-//use scarb::core::{PackageId, PackageName, SourceId};
 
+// use scarb::compiler::plugin::builtin::BuiltinStarkNetPlugin;
+// use scarb::compiler::plugin::{CairoPlugin, CairoPluginInstance};
+// use scarb::core::{PackageId, PackageName, SourceId};
 use super::attribute_macros::{
     DojoContract, DojoEvent, DojoInterface, DojoModel, DOJO_CONTRACT_ATTR, DOJO_EVENT_ATTR,
     DOJO_INTERFACE_ATTR, DOJO_MODEL_ATTR,
@@ -67,7 +67,7 @@ impl MacroPlugin for BuiltinDojoPlugin {
         // Metadata gives information from the crates from where `item_ast` was parsed.
         // During the compilation phase, we inject namespace information into the `CfgSet`
         // so that it can be used here.
-        //let namespace_config = metadata.cfg_set.into();
+        // let namespace_config = metadata.cfg_set.into();
 
         match &item_ast {
             ast::ModuleItem::Module(module_ast) => {
@@ -84,27 +84,20 @@ impl MacroPlugin for BuiltinDojoPlugin {
                     PluginResult::default()
                 }
             }
-            ast::ModuleItem::Enum(enum_ast) => dojo_derive_all(
-                db,
-                enum_ast.attributes(db).query_attr(db, "derive"),
-                &item_ast,
-            ),
+            ast::ModuleItem::Enum(enum_ast) => {
+                dojo_derive_all(db, enum_ast.attributes(db).query_attr(db, "derive"), &item_ast)
+            }
             ast::ModuleItem::Struct(struct_ast) => {
-                let n_model_attrs = struct_ast
-                    .attributes(db)
-                    .query_attr(db, DOJO_MODEL_ATTR)
-                    .len();
+                let n_model_attrs = struct_ast.attributes(db).query_attr(db, DOJO_MODEL_ATTR).len();
 
-                let n_event_attrs = struct_ast
-                    .attributes(db)
-                    .query_attr(db, DOJO_EVENT_ATTR)
-                    .len();
+                let n_event_attrs = struct_ast.attributes(db).query_attr(db, DOJO_EVENT_ATTR).len();
 
                 if n_model_attrs > 0 && n_event_attrs > 0 {
                     return PluginResult::diagnostic_only(PluginDiagnostic {
                         stable_ptr: struct_ast.stable_ptr().0,
                         message: format!(
-                            "The struct {} can only have one of the dojo::model or one dojo::event attribute.",
+                            "The struct {} can only have one of the dojo::model or one \
+                             dojo::event attribute.",
                             struct_ast.name(db).text(db)
                         ),
                         severity: Severity::Error,
@@ -116,11 +109,7 @@ impl MacroPlugin for BuiltinDojoPlugin {
                 }
 
                 // Not a model or event, but has derives.
-                dojo_derive_all(
-                    db,
-                    struct_ast.attributes(db).query_attr(db, "derive"),
-                    &item_ast,
-                )
+                dojo_derive_all(db, struct_ast.attributes(db).query_attr(db, "derive"), &item_ast)
             }
             _ => PluginResult::default(),
         }
@@ -137,9 +126,6 @@ impl MacroPlugin for BuiltinDojoPlugin {
     }
 
     fn declared_derives(&self) -> Vec<String> {
-        vec![
-            DOJO_INTROSPECT_DERIVE.to_string(),
-            DOJO_PACKED_DERIVE.to_string(),
-        ]
+        vec![DOJO_INTROSPECT_DERIVE.to_string(), DOJO_PACKED_DERIVE.to_string()]
     }
 }

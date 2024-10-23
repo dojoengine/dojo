@@ -23,9 +23,7 @@ impl DojoInterface {
         metadata: &MacroPluginMetadata<'_>,
     ) -> PluginResult {
         let name = trait_ast.name(db).text(db);
-        let mut interface = DojoInterface {
-            diagnostics: vec![],
-        };
+        let mut interface = DojoInterface { diagnostics: vec![] };
         let mut builder = PatchBuilder::new(db, trait_ast);
 
         if let ast::MaybeTraitBody::Some(body) = trait_ast.body(db) {
@@ -150,12 +148,8 @@ impl DojoInterface {
         fn_ast: ast::TraitItemFunction,
     ) -> Vec<RewriteNode> {
         let fn_name = fn_ast.declaration(db).name(db).text(db);
-        let return_type = fn_ast
-            .declaration(db)
-            .signature(db)
-            .ret_ty(db)
-            .as_syntax_node()
-            .get_text(db);
+        let return_type =
+            fn_ast.declaration(db).signature(db).ret_ty(db).as_syntax_node().get_text(db);
 
         let params_str = self.rewrite_parameters(
             db,
@@ -168,10 +162,7 @@ impl DojoInterface {
                 "fn {}({}) {};",
                 fn_name, params_str, return_type
             ))),
-            origin: fn_ast
-                .declaration(db)
-                .as_syntax_node()
-                .span_without_trivia(db),
+            origin: fn_ast.declaration(db).as_syntax_node().span_without_trivia(db),
         };
 
         vec![declaration_node]

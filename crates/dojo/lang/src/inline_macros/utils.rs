@@ -34,21 +34,20 @@ pub fn load_manifest_models_and_namespaces(
     _cfg_set: &CfgSet,
     _whitelisted_namespaces: &[String],
 ) -> anyhow::Result<(Vec<String>, Vec<String>)> {
-
     let models = HashSet::<String>::new();
     let namespaces = HashSet::<String>::new();
 
-/*     for model in annotations.models {
-        let qualified_path = model.qualified_path;
-        let namespace = naming::split_tag(&model.tag)?.0;
-
-        if !whitelisted_namespaces.is_empty() && !whitelisted_namespaces.contains(&namespace) {
-            continue;
-        }
-
-        models.insert(qualified_path);
-        namespaces.insert(namespace);
-    } */
+    //     for model in annotations.models {
+    // let qualified_path = model.qualified_path;
+    // let namespace = naming::split_tag(&model.tag)?.0;
+    //
+    // if !whitelisted_namespaces.is_empty() && !whitelisted_namespaces.contains(&namespace) {
+    // continue;
+    // }
+    //
+    // models.insert(qualified_path);
+    // namespaces.insert(namespace);
+    // }
 
     let models_vec: Vec<String> = models.into_iter().collect();
     let namespaces_vec: Vec<String> = namespaces.into_iter().collect();
@@ -67,12 +66,7 @@ pub fn extract_namespaces(
         ast::Expr::FixedSizeArray(array) => {
             for element in array.exprs(db).elements(db) {
                 if let ast::Expr::String(string_literal) = element {
-                    namespaces.push(
-                        string_literal
-                            .as_syntax_node()
-                            .get_text(db)
-                            .replace('\"', ""),
-                    );
+                    namespaces.push(string_literal.as_syntax_node().get_text(db).replace('\"', ""));
                 } else {
                     return Err(PluginDiagnostic {
                         stable_ptr: element.stable_ptr().untyped(),

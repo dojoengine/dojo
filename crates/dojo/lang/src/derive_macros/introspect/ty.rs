@@ -35,11 +35,7 @@ pub fn build_enum_ty(db: &dyn SyntaxGroup, name: &String, enum_ast: &ItemEnum) -
     let variants_ty = if variants.is_empty() {
         "".to_string()
     } else {
-        variants
-            .iter()
-            .map(|v| build_variant_ty(db, v))
-            .collect::<Vec<_>>()
-            .join(",\n")
+        variants.iter().map(|v| build_variant_ty(db, v)).collect::<Vec<_>>().join(",\n")
     };
 
     format!(
@@ -57,11 +53,7 @@ pub fn build_enum_ty(db: &dyn SyntaxGroup, name: &String, enum_ast: &ItemEnum) -
 
 pub fn build_member_ty(db: &dyn SyntaxGroup, member: &Member) -> String {
     let name = member.name(db).text(db).to_string();
-    let attrs = if member.has_attr(db, "key") {
-        vec!["'key'"]
-    } else {
-        vec![]
-    };
+    let attrs = if member.has_attr(db, "key") { vec!["'key'"] } else { vec![] };
 
     format!(
         "dojo::meta::introspect::Member {{
@@ -82,10 +74,7 @@ pub fn build_variant_ty(db: &dyn SyntaxGroup, variant: &Variant) -> String {
             format!("('{name}', dojo::meta::introspect::Ty::Tuple(array![].span()))")
         }
         OptionTypeClause::TypeClause(type_clause) => {
-            format!(
-                "('{name}', {})",
-                build_ty_from_type_clause(db, &type_clause)
-            )
+            format!("('{name}', {})", build_ty_from_type_clause(db, &type_clause))
         }
     }
 }

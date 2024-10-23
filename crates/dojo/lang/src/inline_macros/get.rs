@@ -57,10 +57,7 @@ impl InlineMacroExprPlugin for GetMacro {
         let models = match extract_models(db, &models.value(db)) {
             Ok(models) => models,
             Err(diagnostic) => {
-                return InlinePluginResult {
-                    code: None,
-                    diagnostics: vec![diagnostic],
-                };
+                return InlinePluginResult { code: None, diagnostics: vec![diagnostic] };
             }
         };
 
@@ -90,10 +87,7 @@ impl InlineMacroExprPlugin for GetMacro {
                 args,
             ));
         }
-        builder.add_str(&format!(
-            "({})}}",
-            models.iter().map(|c| format!("__{c}")).join(",")
-        ));
+        builder.add_str(&format!("({})}}", models.iter().map(|c| format!("__{c}")).join(",")));
 
         let (code, code_mappings) = builder.build();
 

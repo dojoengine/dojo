@@ -40,19 +40,9 @@ pub fn is_tuple(ty: &str) -> bool {
 
 pub fn get_array_item_type(ty: &str) -> String {
     if ty.starts_with("Array<") {
-        ty.trim()
-            .strip_prefix("Array<")
-            .unwrap()
-            .strip_suffix('>')
-            .unwrap()
-            .to_string()
+        ty.trim().strip_prefix("Array<").unwrap().strip_suffix('>').unwrap().to_string()
     } else {
-        ty.trim()
-            .strip_prefix("Span<")
-            .unwrap()
-            .strip_suffix('>')
-            .unwrap()
-            .to_string()
+        ty.trim().strip_prefix("Span<").unwrap().strip_suffix('>').unwrap().to_string()
     }
 }
 
@@ -129,10 +119,7 @@ pub fn test_get_tuple_item_types() {
         ("(u8, u16, u32)", vec!["u8", "u16", "u32"]),
         ("(u8, (u16,), u32)", vec!["u8", "(u16,)", "u32"]),
         ("(u8, (u16, (u8, u16)))", vec!["u8", "(u16,(u8,u16))"]),
-        (
-            "(Array<(Points, Damage)>, ((u16,),)))",
-            vec!["Array<(Points,Damage)>", "((u16,),))"],
-        ),
+        ("(Array<(Points, Damage)>, ((u16,),)))", vec!["Array<(Points,Damage)>", "((u16,),))"]),
         (
             "(u8, (u16, (u8, u16), Array<(Points, Damage)>), ((u16,),)))",
             vec!["u8", "(u16,(u8,u16),Array<(Points,Damage)>)", "((u16,),))"],

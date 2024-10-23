@@ -31,56 +31,48 @@ pub trait StructParameterParser {
     ) {
         let mut processed_args: HashMap<String, bool> = HashMap::new();
 
-        if let OptionArgListParenthesized::ArgListParenthesized(arguments) = struct_ast
-            .attributes(db)
-            .query_attr(db, attribute_name)
-            .first()
-            .unwrap()
-            .arguments(db)
+        if let OptionArgListParenthesized::ArgListParenthesized(arguments) =
+            struct_ast.attributes(db).query_attr(db, attribute_name).first().unwrap().arguments(db)
         {
-            arguments
-                .arguments(db)
-                .elements(db)
-                .iter()
-                .for_each(|a| match a.arg_clause(db) {
-                    ArgClause::Named(x) => {
-                        let arg_name = x.name(db).text(db).to_string();
+            arguments.arguments(db).elements(db).iter().for_each(|a| match a.arg_clause(db) {
+                ArgClause::Named(x) => {
+                    let arg_name = x.name(db).text(db).to_string();
 
-                        if processed_args.contains_key(&arg_name) {
-                            diagnostics.push(PluginDiagnostic {
-                                message: format!(
-                                    "Too many '{}' attributes for {attribute_name}",
-                                    arg_name
-                                ),
-                                stable_ptr: struct_ast.stable_ptr().untyped(),
-                                severity: Severity::Error,
-                            });
-                        } else {
-                            processed_args.insert(arg_name.clone(), true);
-                            self.process_named_parameters(db, attribute_name, x, diagnostics);
-                        }
-                    }
-                    ArgClause::Unnamed(x) => {
+                    if processed_args.contains_key(&arg_name) {
                         diagnostics.push(PluginDiagnostic {
                             message: format!(
-                                "Unexpected argument '{}' for {attribute_name}",
-                                x.as_syntax_node().get_text(db)
+                                "Too many '{}' attributes for {attribute_name}",
+                                arg_name
                             ),
-                            stable_ptr: x.stable_ptr().untyped(),
-                            severity: Severity::Warning,
+                            stable_ptr: struct_ast.stable_ptr().untyped(),
+                            severity: Severity::Error,
                         });
+                    } else {
+                        processed_args.insert(arg_name.clone(), true);
+                        self.process_named_parameters(db, attribute_name, x, diagnostics);
                     }
-                    ArgClause::FieldInitShorthand(x) => {
-                        diagnostics.push(PluginDiagnostic {
-                            message: format!(
-                                "Unexpected argument '{}' for {attribute_name}",
-                                x.name(db).name(db).text(db).to_string()
-                            ),
-                            stable_ptr: x.stable_ptr().untyped(),
-                            severity: Severity::Warning,
-                        });
-                    }
-                })
+                }
+                ArgClause::Unnamed(x) => {
+                    diagnostics.push(PluginDiagnostic {
+                        message: format!(
+                            "Unexpected argument '{}' for {attribute_name}",
+                            x.as_syntax_node().get_text(db)
+                        ),
+                        stable_ptr: x.stable_ptr().untyped(),
+                        severity: Severity::Warning,
+                    });
+                }
+                ArgClause::FieldInitShorthand(x) => {
+                    diagnostics.push(PluginDiagnostic {
+                        message: format!(
+                            "Unexpected argument '{}' for {attribute_name}",
+                            x.name(db).name(db).text(db).to_string()
+                        ),
+                        stable_ptr: x.stable_ptr().untyped(),
+                        severity: Severity::Warning,
+                    });
+                }
+            })
         }
     }
 
@@ -100,9 +92,7 @@ pub struct CommonStructParameters {
 
 impl Default for CommonStructParameters {
     fn default() -> CommonStructParameters {
-        CommonStructParameters {
-            version: DEFAULT_VERSION,
-        }
+        CommonStructParameters { version: DEFAULT_VERSION }
     }
 }
 

@@ -39,14 +39,7 @@ pub fn handle_introspect_struct(
 
     let (gen_types, gen_impls) = build_generic_types_and_impls(db, struct_ast.generic_params(db));
 
-    generate_introspect(
-        &struct_name,
-        &struct_size,
-        &gen_types,
-        gen_impls,
-        &layout,
-        &ty,
-    )
+    generate_introspect(&struct_name, &struct_size, &gen_types, gen_impls, &layout, &ty)
 }
 
 /// Generate the introspect of a Enum
@@ -121,10 +114,7 @@ impl $name$Introspect<$generics$> of dojo::meta::introspect::Introspect<$name$<$
         &UnorderedHashMap::from([
             ("name".to_string(), RewriteNode::Text(name.to_string())),
             ("generics".to_string(), RewriteNode::Text(generic_impls)),
-            (
-                "generics_types".to_string(),
-                RewriteNode::Text(generic_types.join(", ")),
-            ),
+            ("generics_types".to_string(), RewriteNode::Text(generic_types.join(", "))),
             ("size".to_string(), RewriteNode::Text(size.to_string())),
             ("layout".to_string(), RewriteNode::Text(layout.to_string())),
             ("ty".to_string(), RewriteNode::Text(ty.to_string())),

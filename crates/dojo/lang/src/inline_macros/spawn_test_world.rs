@@ -52,10 +52,7 @@ impl InlineMacroExprPlugin for SpawnTestWorld {
             match extract_namespaces(db, &expected_array.value(db)) {
                 Ok(namespaces) => namespaces,
                 Err(e) => {
-                    return InlinePluginResult {
-                        code: None,
-                        diagnostics: vec![e],
-                    };
+                    return InlinePluginResult { code: None, diagnostics: vec![e] };
                 }
             }
         } else {
@@ -71,7 +68,7 @@ impl InlineMacroExprPlugin for SpawnTestWorld {
                         diagnostics: vec![PluginDiagnostic {
                             stable_ptr: syntax.stable_ptr().untyped(),
                             message: "failed to load models and namespaces, ensure you have run \
-                                  `sozo build` first."
+                                      `sozo build` first."
                                 .to_string(),
                             severity: Severity::Error,
                         }],
@@ -85,11 +82,7 @@ impl InlineMacroExprPlugin for SpawnTestWorld {
 
         builder.add_str(&format!(
             "dojo::utils::test::spawn_test_world([{}].span(), [{}].span())",
-            namespaces
-                .iter()
-                .map(|n| format!("\"{}\"", n))
-                .collect::<Vec<String>>()
-                .join(", "),
+            namespaces.iter().map(|n| format!("\"{}\"", n)).collect::<Vec<String>>().join(", "),
             models
                 .iter()
                 .map(|m| format!("{}::TEST_CLASS_HASH", m))

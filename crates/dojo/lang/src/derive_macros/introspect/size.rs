@@ -78,9 +78,8 @@ pub fn compute_enum_layout_size(
     }
 
     let v0 = variant_sizes[0].clone();
-    let identical_variants = variant_sizes
-        .iter()
-        .all(|vs| vs.0 == v0.0 && vs.1 == v0.1 && vs.2 == v0.2);
+    let identical_variants =
+        variant_sizes.iter().all(|vs| vs.0 == v0.0 && vs.1 == v0.1 && vs.2 == v0.2);
 
     if identical_variants {
         let (mut sizes, mut cumulated_sizes, is_dynamic_size) = v0;
@@ -188,10 +187,7 @@ pub fn compute_item_size_from_type(item_type: &String) -> Vec<String> {
         if let Some(p) = primitives.get(item_type) {
             vec![p.0.to_string()]
         } else {
-            vec![format!(
-                "dojo::meta::introspect::Introspect::<{}>::size()",
-                item_type
-            )]
+            vec![format!("dojo::meta::introspect::Introspect::<{}>::size()", item_type)]
         }
     }
 }

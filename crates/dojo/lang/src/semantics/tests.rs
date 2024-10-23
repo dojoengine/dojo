@@ -34,10 +34,7 @@ pub fn test_semantics(
     let (expr, diagnostics, expr_formatter) = semantics_test_setup(inputs, &mut db);
 
     TestRunnerResult::success(OrderedHashMap::from([
-        (
-            "expected".into(),
-            format!("{:#?}", expr.debug(&expr_formatter)),
-        ),
+        ("expected".into(), format!("{:#?}", expr.debug(&expr_formatter))),
         ("semantic_diagnostics".into(), diagnostics),
     ]))
 }
@@ -50,17 +47,11 @@ pub fn semantics_test_setup<'a>(
         db,
         inputs["expression"].as_str(),
         inputs.get("setup_code").map(|s| s.as_str()).unwrap_or(""),
-        inputs
-            .get("function_code")
-            .map(|s| s.as_str())
-            .unwrap_or(""),
+        inputs.get("function_code").map(|s| s.as_str()).unwrap_or(""),
     )
     .split();
     let expr = db.expr_semantic(test_expr.function_id, test_expr.expr_id);
-    let expr_formatter = ExprFormatter {
-        db,
-        function_id: test_expr.function_id,
-    };
+    let expr_formatter = ExprFormatter { db, function_id: test_expr.function_id };
 
     (expr, diagnostics, expr_formatter)
 }

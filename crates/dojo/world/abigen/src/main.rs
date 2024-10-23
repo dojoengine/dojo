@@ -24,9 +24,10 @@ const SCARB_MANIFEST: &str = "crates/dojo/core/Scarb.toml";
 const WORLD_ARTIFACT: &str = "crates/dojo/core/target/dev/dojo_world.contract_class.json";
 const MODEL_ARTIFACT: &str =
     "crates/dojo/core/target/dev/dojo_resource_metadata.contract_class.json";
-    const OUT_DIR: &str = "crates/dojo/world/src/contracts/abi";
+const OUT_DIR: &str = "crates/dojo/world/src/contracts/abi";
 
-/// Entrypoint for the abigen program to generate or check the bindings for the world and model contracts.
+/// Entrypoint for the abigen program to generate or check the bindings for the world and model
+/// contracts.
 fn main() -> Result<()> {
     let is_check_only = define_check_only();
 
@@ -100,9 +101,7 @@ fn generate_bindings(
                 ));
             }
         } else {
-            return Err(anyhow!(
-                "No bindings found for {contract_name}, expected at {out_path}."
-            ));
+            return Err(anyhow!("No bindings found for {contract_name}, expected at {out_path}."));
         }
     } else {
         // Rename the temporary file to the output file is enough to update the bindings.
@@ -131,10 +130,8 @@ fn compile_dojo_core() -> Result<()> {
     let ws = scarb::ops::read_workspace(config.manifest_path(), &config)?;
     let packages = ws.members().map(|p| p.id).collect();
 
-    let features_opts = FeaturesOpts {
-        features: FeaturesSelector::AllFeatures,
-        no_default_features: false,
-    };
+    let features_opts =
+        FeaturesOpts { features: FeaturesSelector::AllFeatures, no_default_features: false };
 
     scarb::ops::compile(
         packages,

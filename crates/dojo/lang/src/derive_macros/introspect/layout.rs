@@ -129,10 +129,7 @@ pub fn build_array_layout_from_type(
             build_array_layout_from_type(diagnostics, diagnostic_item, &array_item_type)
         )
     } else {
-        format!(
-            "dojo::meta::introspect::Introspect::<{}>::layout()",
-            item_type
-        )
+        format!("dojo::meta::introspect::Introspect::<{}>::layout()", item_type)
     }
 }
 
@@ -179,10 +176,7 @@ pub fn build_item_layout_from_type(
             });
         }
 
-        format!(
-            "dojo::meta::introspect::Introspect::<{}>::layout()",
-            item_type
-        )
+        format!("dojo::meta::introspect::Introspect::<{}>::layout()", item_type)
     }
 }
 
@@ -204,11 +198,7 @@ pub fn build_packed_struct_layout(
                 return None;
             }
 
-            Some(get_packed_field_layout_from_type_clause(
-                db,
-                diagnostics,
-                &m.type_clause(db),
-            ))
+            Some(get_packed_field_layout_from_type_clause(db, diagnostics, &m.type_clause(db)))
         })
         .flatten()
         .collect::<Vec<_>>();
@@ -357,20 +347,12 @@ pub fn get_packed_item_layout_from_type(
         let primitives = primitive_type_introspection();
 
         if let Some(p) = primitives.get(item_type) {
-            vec![p
-                .1
-                .iter()
-                .map(|x| x.to_string())
-                .collect::<Vec<_>>()
-                .join(",")]
+            vec![p.1.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(",")]
         } else {
             // as we cannot verify that an enum/struct custom type is packable,
             // we suppose it is and let the user verify this.
             // If it's not the case, the Dojo model layout function will panic.
-            vec![format!(
-                "dojo::meta::introspect::Introspect::<{}>::layout()",
-                item_type
-            )]
+            vec![format!("dojo::meta::introspect::Introspect::<{}>::layout()", item_type)]
         }
     }
 }

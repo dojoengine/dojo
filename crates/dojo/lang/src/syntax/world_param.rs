@@ -44,63 +44,57 @@ pub fn parse_world_injection(
     let mut has_world_injected = false;
     let mut injection_kind = WorldParamInjectionKind::None;
 
-    param_list
-        .elements(db)
-        .iter()
-        .enumerate()
-        .for_each(|(idx, param)| {
-            let (name, modifiers, param_type) = syntax_utils::get_parameter_info(db, param.clone());
+    param_list.elements(db).iter().enumerate().for_each(|(idx, param)| {
+        let (name, modifiers, param_type) = syntax_utils::get_parameter_info(db, param.clone());
 
-            if !is_world_param(&name, &param_type) {
-                if name.eq(super::self_param::SELF_PARAM_NAME) && has_world_injected {
-                    diagnostics.push(PluginDiagnostic {
-                        stable_ptr: fn_diagnostic_item,
-                        message: "You cannot use `self` and `world` parameters together."
-                            .to_string(),
-                        severity: Severity::Error,
-                    });
-                }
-
-                return;
-            }
-
-            if has_world_injected {
+        if !is_world_param(&name, &param_type) {
+            if name.eq(super::self_param::SELF_PARAM_NAME) && has_world_injected {
                 diagnostics.push(PluginDiagnostic {
                     stable_ptr: fn_diagnostic_item,
-                    message: "Only one world parameter is allowed".to_string(),
+                    message: "You cannot use `self` and `world` parameters together.".to_string(),
                     severity: Severity::Error,
                 });
-
-                return;
-            } else {
-                has_world_injected = true;
             }
 
-            if idx != 0 {
+            return;
+        }
+
+        if has_world_injected {
+            diagnostics.push(PluginDiagnostic {
+                stable_ptr: fn_diagnostic_item,
+                message: "Only one world parameter is allowed".to_string(),
+                severity: Severity::Error,
+            });
+
+            return;
+        } else {
+            has_world_injected = true;
+        }
+
+        if idx != 0 {
+            diagnostics.push(PluginDiagnostic {
+                stable_ptr: fn_diagnostic_item,
+                message: "World parameter must be the first parameter.".to_string(),
+                severity: Severity::Error,
+            });
+
+            return;
+        }
+
+        if modifiers.contains(&"ref".to_string()) {
+            injection_kind = WorldParamInjectionKind::External;
+        } else {
+            injection_kind = WorldParamInjectionKind::View;
+
+            if param_type == WORLD_PARAM_TYPE {
                 diagnostics.push(PluginDiagnostic {
                     stable_ptr: fn_diagnostic_item,
-                    message: "World parameter must be the first parameter.".to_string(),
+                    message: "World parameter must be a snapshot if `ref` is not used.".to_string(),
                     severity: Severity::Error,
                 });
-
-                return;
             }
-
-            if modifiers.contains(&"ref".to_string()) {
-                injection_kind = WorldParamInjectionKind::External;
-            } else {
-                injection_kind = WorldParamInjectionKind::View;
-
-                if param_type == WORLD_PARAM_TYPE {
-                    diagnostics.push(PluginDiagnostic {
-                        stable_ptr: fn_diagnostic_item,
-                        message: "World parameter must be a snapshot if `ref` is not used."
-                            .to_string(),
-                        severity: Severity::Error,
-                    });
-                }
-            }
-        });
+        }
+    });
 
     injection_kind
 }

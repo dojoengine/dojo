@@ -42,11 +42,7 @@ impl GeneratedFileAuxData for ModelAuxData {
     }
 
     fn eq(&self, other: &dyn GeneratedFileAuxData) -> bool {
-        if let Some(other) = other.as_any().downcast_ref::<Self>() {
-            self == other
-        } else {
-            false
-        }
+        if let Some(other) = other.as_any().downcast_ref::<Self>() { self == other } else { false }
     }
 }
 
@@ -56,11 +52,7 @@ impl GeneratedFileAuxData for EventAuxData {
     }
 
     fn eq(&self, other: &dyn GeneratedFileAuxData) -> bool {
-        if let Some(other) = other.as_any().downcast_ref::<Self>() {
-            self == other
-        } else {
-            false
-        }
+        if let Some(other) = other.as_any().downcast_ref::<Self>() { self == other } else { false }
     }
 }
 
@@ -70,10 +62,6 @@ impl GeneratedFileAuxData for ContractAuxData {
     }
 
     fn eq(&self, other: &dyn GeneratedFileAuxData) -> bool {
-        if let Some(other) = other.as_any().downcast_ref::<Self>() {
-            self == other
-        } else {
-            false
-        }
+        if let Some(other) = other.as_any().downcast_ref::<Self>() { self == other } else { false }
     }
 }

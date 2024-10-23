@@ -2,16 +2,15 @@
 //!
 //! This crate contains the Dojo compiler, with a cairo plugin for the Cairo language.
 
+pub mod attribute_macros;
 pub mod aux_data;
 pub mod cairo_plugin;
-pub mod attribute_macros;
 pub mod derive_macros;
 pub mod inline_macros;
 pub mod semantics;
 pub mod syntax;
 
 pub use cairo_plugin::{dojo_plugin_suite, BuiltinDojoPlugin, DOJO_PLUGIN_PACKAGE_NAME};
-
 
 pub const CAIRO_PATH_SEPARATOR: &str = "::";
 pub const WORLD_QUALIFIED_PATH: &str = "dojo::world::world_contract::world";

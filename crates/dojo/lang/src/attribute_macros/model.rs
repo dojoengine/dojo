@@ -16,17 +16,14 @@ use convert_case::{Case, Casing};
 use dojo_types::naming;
 use starknet::core::utils::get_selector_from_name;
 
-use crate::aux_data::ModelAuxData;
+use super::element::{
+    parse_members, serialize_member_ty, CommonStructParameters, StructParameterParser,
+};
+use super::DOJO_MODEL_ATTR;
+use crate::aux_data::{Member, ModelAuxData};
 use crate::derive_macros::{
     extract_derive_attr_names, handle_derive_attrs, DOJO_INTROSPECT_DERIVE, DOJO_PACKED_DERIVE,
 };
-use crate::aux_data::Member;
-
-use super::element::{
-    parse_members, serialize_member_ty, CommonStructParameters,
-    StructParameterParser,
-};
-use super::DOJO_MODEL_ATTR;
 
 const MODEL_CODE_PATCH: &str = include_str!("./patches/model_store.patch.cairo");
 const MODEL_FIELD_CODE_PATCH: &str = include_str!("./patches/model_field_store.patch.cairo");
@@ -43,10 +40,7 @@ impl DojoModel {
     ///
     /// Returns:
     /// * A RewriteNode containing the generated code.
-    pub fn from_struct(
-        db: &dyn SyntaxGroup,
-        struct_ast: ItemStruct,
-    ) -> PluginResult {
+    pub fn from_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> PluginResult {
         let mut diagnostics = vec![];
         let mut parameters = ModelParameters::default();
 
@@ -57,12 +51,7 @@ impl DojoModel {
             &mut diagnostics,
         );
 
-        let model_type = struct_ast
-            .name(db)
-            .as_syntax_node()
-            .get_text(db)
-            .trim()
-            .to_string();
+        let model_type = struct_ast.name(db).as_syntax_node().get_text(db).trim().to_string();
 
         let model_type_snake = model_type.to_case(Case::Snake);
         let model_version = parameters.version.to_string();
@@ -110,10 +99,8 @@ impl DojoModel {
             } else {
                 values.push(member.clone());
                 serialized_values.push(serialize_member_ty(member, true));
-                members_values.push(RewriteNode::Text(format!(
-                    "pub {}: {},\n",
-                    member.name, member.ty
-                )));
+                members_values
+                    .push(RewriteNode::Text(format!("pub {}: {},\n", member.name, member.ty)));
                 field_accessors.push(generate_field_accessors(model_type.clone(), member));
 
                 if !model_member_store_impls_processed.contains(&member.ty.to_string()) {
@@ -152,22 +139,12 @@ impl DojoModel {
             });
         }
         if !diagnostics.is_empty() {
-            return PluginResult {
-                code: None,
-                diagnostics,
-                remove_original_item: false,
-            };
+            return PluginResult { code: None, diagnostics, remove_original_item: false };
         }
         let (keys_to_tuple, key_type) = if keys.len() > 1 {
-            (
-                format!("({})", key_attrs.join(", ")),
-                format!("({})", key_types.join(", ")),
-            )
+            (format!("({})", key_attrs.join(", ")), format!("({})", key_types.join(", ")))
         } else {
-            (
-                key_attrs.first().unwrap().to_string(),
-                key_types.first().unwrap().to_string(),
-            )
+            (key_attrs.first().unwrap().to_string(), key_types.first().unwrap().to_string())
         };
 
         let mut derive_attr_names = extract_derive_attr_names(
@@ -191,55 +168,30 @@ impl DojoModel {
             derive_attr_names.push(DOJO_INTROSPECT_DERIVE.to_string());
         }
 
-        let (derive_nodes, derive_diagnostics) = handle_derive_attrs(
-            db,
-            &derive_attr_names,
-            &ModuleItem::Struct(struct_ast.clone()),
-        );
+        let (derive_nodes, derive_diagnostics) =
+            handle_derive_attrs(db, &derive_attr_names, &ModuleItem::Struct(struct_ast.clone()));
 
         diagnostics.extend(derive_diagnostics);
 
         let node = RewriteNode::interpolate_patched(
             MODEL_CODE_PATCH,
             &UnorderedHashMap::from([
-                (
-                    "model_type".to_string(),
-                    RewriteNode::Text(model_type.clone()),
-                ),
-                (
-                    "model_type_snake".to_string(),
-                    RewriteNode::Text(model_type_snake.clone()),
-                ),
+                ("model_type".to_string(), RewriteNode::Text(model_type.clone())),
+                ("model_type_snake".to_string(), RewriteNode::Text(model_type_snake.clone())),
                 ("model_version".to_string(), RewriteNode::Text(model_version)),
-                (
-                    "serialized_keys".to_string(),
-                    RewriteNode::new_modified(serialized_keys),
-                ),
-                (
-                    "serialized_values".to_string(),
-                    RewriteNode::new_modified(serialized_values),
-                ),
-                (
-                    "keys_to_tuple".to_string(),
-                    RewriteNode::Text(keys_to_tuple),
-                ),
+                ("serialized_keys".to_string(), RewriteNode::new_modified(serialized_keys)),
+                ("serialized_values".to_string(), RewriteNode::new_modified(serialized_values)),
+                ("keys_to_tuple".to_string(), RewriteNode::Text(keys_to_tuple)),
                 ("key_type".to_string(), RewriteNode::Text(key_type)),
-                (
-                    "members_values".to_string(),
-                    RewriteNode::new_modified(members_values),
-                ),
-                (
-                    "field_accessors".to_string(),
-                    RewriteNode::new_modified(field_accessors),
-                ),
+                ("members_values".to_string(), RewriteNode::new_modified(members_values)),
+                ("field_accessors".to_string(), RewriteNode::new_modified(field_accessors)),
                 (
                     "model_value_derive_attr_names".to_string(),
                     RewriteNode::Text(model_value_derive_attr_names),
                 ),
                 (
                     "model_member_store_impls".to_string(),
-                    RewriteNode::Text(model_member_store_impls
-                        .join(",\n")),
+                    RewriteNode::Text(model_member_store_impls.join(",\n")),
                 ),
             ]),
         );
@@ -254,15 +206,9 @@ impl DojoModel {
 
         let (code, code_mappings) = builder.build();
 
-        crate::debug_expand(
-            &format!("MODEL PATCH: {model_type}"),
-            &code,
-        );
+        crate::debug_expand(&format!("MODEL PATCH: {model_type}"), &code);
 
-        let aux_data = ModelAuxData {
-            name: model_type.clone(),
-            members,
-        };
+        let aux_data = ModelAuxData { name: model_type.clone(), members };
 
         PluginResult {
             code: Some(PluginGeneratedFile {
@@ -297,19 +243,11 @@ fn generate_field_accessors(model_type: String, member: &Member) -> RewriteNode 
             (
                 "field_selector".to_string(),
                 RewriteNode::Text(
-                    get_selector_from_name(&member.name)
-                        .expect("invalid member name")
-                        .to_string(),
+                    get_selector_from_name(&member.name).expect("invalid member name").to_string(),
                 ),
             ),
-            (
-                "field_name".to_string(),
-                RewriteNode::Text(member.name.clone()),
-            ),
-            (
-                "field_type".to_string(),
-                RewriteNode::Text(member.ty.clone()),
-            ),
+            ("field_name".to_string(), RewriteNode::Text(member.name.clone())),
+            ("field_type".to_string(), RewriteNode::Text(member.ty.clone())),
         ]),
     )
 }

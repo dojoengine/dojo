@@ -16,11 +16,10 @@ use cairo_lang_syntax::node::{ast, ids, Terminal, TypedStablePtr, TypedSyntaxNod
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_types::naming;
 
+use super::DOJO_CONTRACT_ATTR;
 use crate::aux_data::ContractAuxData;
 use crate::syntax::world_param::{self, WorldParamInjectionKind};
 use crate::syntax::{self_param, utils as syntax_utils};
-
-use super::DOJO_CONTRACT_ATTR;
 
 const CONTRACT_PATCH: &str = include_str!("./patches/contract.patch.cairo");
 const DEFAULT_INIT_PATCH: &str = include_str!("./patches/default_init.patch.cairo");
@@ -46,14 +45,9 @@ impl DojoContract {
     ) -> PluginResult {
         let name = module_ast.name(db).text(db);
 
-        let mut contract = DojoContract {
-            diagnostics: vec![],
-            systems: vec![],
-        };
+        let mut contract = DojoContract { diagnostics: vec![], systems: vec![] };
 
-        for (id, value) in [
-            ("name", &name.to_string()),
-        ] {
+        for (id, value) in [("name", &name.to_string())] {
             if !naming::is_name_valid(value) {
                 return PluginResult {
                     code: None,
@@ -162,10 +156,7 @@ impl DojoContract {
 
             let (code, code_mappings) = builder.build();
 
-            crate::debug_expand(
-                &format!("CONTRACT PATCH: {name}"),
-                &code,
-            );
+            crate::debug_expand(&format!("CONTRACT PATCH: {name}"), &code);
 
             return PluginResult {
                 code: Some(PluginGeneratedFile {
@@ -205,10 +196,7 @@ impl DojoContract {
                 ",
                 params_str
             ))),
-            origin: fn_ast
-                .declaration(db)
-                .as_syntax_node()
-                .span_without_trivia(db),
+            origin: fn_ast.declaration(db).as_syntax_node().span_without_trivia(db),
         };
 
         let func_nodes = fn_ast
@@ -267,14 +255,8 @@ impl DojoContract {
         );
 
         let declaration_node = RewriteNode::Mapped {
-            node: Box::new(RewriteNode::Text(format!(
-                "fn {}({}) {{",
-                DOJO_INIT_FN, params_str
-            ))),
-            origin: fn_ast
-                .declaration(db)
-                .as_syntax_node()
-                .span_without_trivia(db),
+            node: Box::new(RewriteNode::Text(format!("fn {}({}) {{", DOJO_INIT_FN, params_str))),
+            origin: fn_ast.declaration(db).as_syntax_node().span_without_trivia(db),
         };
 
         let world_line_node = if was_world_injected {
@@ -302,12 +284,8 @@ impl DojoContract {
             })
             .collect::<Vec<_>>();
 
-        let mut nodes = vec![
-            impl_node,
-            declaration_node,
-            world_line_node,
-            assert_world_caller_node,
-        ];
+        let mut nodes =
+            vec![impl_node, declaration_node, world_line_node, assert_world_caller_node];
         nodes.extend(func_nodes);
         // Close the init function + close the impl block.
         nodes.push(RewriteNode::Text("}\n}".to_string()));
@@ -324,10 +302,7 @@ impl DojoContract {
 
         let elements = enum_ast.variants(db).elements(db);
 
-        let variants = elements
-            .iter()
-            .map(|e| e.as_syntax_node().get_text(db))
-            .collect::<Vec<_>>();
+        let variants = elements.iter().map(|e| e.as_syntax_node().get_text(db)).collect::<Vec<_>>();
         let variants = variants.join(",\n");
 
         rewrite_nodes.push(RewriteNode::interpolate_patched(
@@ -368,10 +343,7 @@ impl DojoContract {
 
         let elements = struct_ast.members(db).elements(db);
 
-        let members = elements
-            .iter()
-            .map(|e| e.as_syntax_node().get_text(db))
-            .collect::<Vec<_>>();
+        let members = elements.iter().map(|e| e.as_syntax_node().get_text(db)).collect::<Vec<_>>();
         let members = members.join(",\n");
 
         rewrite_nodes.push(RewriteNode::interpolate_patched(
@@ -483,10 +455,7 @@ impl DojoContract {
             }
         }
 
-        (
-            params.join(", "),
-            world_injection != WorldParamInjectionKind::None,
-        )
+        (params.join(", "), world_injection != WorldParamInjectionKind::None)
     }
 
     /// Rewrites function declaration by:
@@ -503,12 +472,8 @@ impl DojoContract {
         has_generate_trait: bool,
     ) -> Vec<RewriteNode> {
         let fn_name = fn_ast.declaration(db).name(db).text(db);
-        let return_type = fn_ast
-            .declaration(db)
-            .signature(db)
-            .ret_ty(db)
-            .as_syntax_node()
-            .get_text(db);
+        let return_type =
+            fn_ast.declaration(db).signature(db).ret_ty(db).as_syntax_node().get_text(db);
 
         // Consider the function as a system if no return type is specified.
         if return_type.is_empty() {
@@ -526,10 +491,7 @@ impl DojoContract {
                 "fn {}({}) {} {{",
                 fn_name, params_str, return_type
             ))),
-            origin: fn_ast
-                .declaration(db)
-                .as_syntax_node()
-                .span_without_trivia(db),
+            origin: fn_ast.declaration(db).as_syntax_node().span_without_trivia(db),
         };
 
         let world_line_node = if was_world_injected {
@@ -627,9 +589,7 @@ fn _get_contract_namespace(
         Expr::String(s) => Some(s.string_value(db).unwrap()),
         _ => {
             diagnostics.push(PluginDiagnostic {
-                message: format!(
-                    "The argument 'namespace' of dojo::contract must be a string",
-                ),
+                message: format!("The argument 'namespace' of dojo::contract must be a string",),
                 stable_ptr: arg_value.stable_ptr().untyped(),
                 severity: Severity::Error,
             });
@@ -656,72 +616,61 @@ fn _get_parameters(
     let mut parameters = ContractParameters::default();
     let mut processed_args: HashMap<String, bool> = HashMap::new();
 
-    if let OptionArgListParenthesized::ArgListParenthesized(arguments) = module_ast
-        .attributes(db)
-        .query_attr(db, DOJO_CONTRACT_ATTR)
-        .first()
-        .unwrap()
-        .arguments(db)
+    if let OptionArgListParenthesized::ArgListParenthesized(arguments) =
+        module_ast.attributes(db).query_attr(db, DOJO_CONTRACT_ATTR).first().unwrap().arguments(db)
     {
-        arguments
-            .arguments(db)
-            .elements(db)
-            .iter()
-            .for_each(|a| match a.arg_clause(db) {
-                ArgClause::Named(x) => {
-                    let arg_name = x.name(db).text(db).to_string();
-                    let arg_value = x.value(db);
+        arguments.arguments(db).elements(db).iter().for_each(|a| match a.arg_clause(db) {
+            ArgClause::Named(x) => {
+                let arg_name = x.name(db).text(db).to_string();
+                let arg_value = x.value(db);
 
-                    if processed_args.contains_key(&arg_name) {
-                        diagnostics.push(PluginDiagnostic {
-                            message: format!(
-                                "Too many '{}' attributes for dojo::contract",
-                                arg_name
-                            ),
-                            stable_ptr: module_ast.stable_ptr().untyped(),
-                            severity: Severity::Error,
-                        });
-                    } else {
-                        processed_args.insert(arg_name.clone(), true);
+                if processed_args.contains_key(&arg_name) {
+                    diagnostics.push(PluginDiagnostic {
+                        message: format!("Too many '{}' attributes for dojo::contract", arg_name),
+                        stable_ptr: module_ast.stable_ptr().untyped(),
+                        severity: Severity::Error,
+                    });
+                } else {
+                    processed_args.insert(arg_name.clone(), true);
 
-                        match arg_name.as_str() {
-                            CONTRACT_NAMESPACE => {
-                                parameters.namespace =
-                                    _get_contract_namespace(db, arg_value, diagnostics);
-                            }
-                            _ => {
-                                diagnostics.push(PluginDiagnostic {
-                                    message: format!(
-                                        "Unexpected argument '{}' for dojo::contract",
-                                        arg_name
-                                    ),
-                                    stable_ptr: x.stable_ptr().untyped(),
-                                    severity: Severity::Warning,
-                                });
-                            }
+                    match arg_name.as_str() {
+                        CONTRACT_NAMESPACE => {
+                            parameters.namespace =
+                                _get_contract_namespace(db, arg_value, diagnostics);
+                        }
+                        _ => {
+                            diagnostics.push(PluginDiagnostic {
+                                message: format!(
+                                    "Unexpected argument '{}' for dojo::contract",
+                                    arg_name
+                                ),
+                                stable_ptr: x.stable_ptr().untyped(),
+                                severity: Severity::Warning,
+                            });
                         }
                     }
                 }
-                ArgClause::Unnamed(arg) => {
-                    let arg_name = arg.value(db).as_syntax_node().get_text(db);
+            }
+            ArgClause::Unnamed(arg) => {
+                let arg_name = arg.value(db).as_syntax_node().get_text(db);
 
-                    diagnostics.push(PluginDiagnostic {
-                        message: format!("Unexpected argument '{}' for dojo::contract", arg_name),
-                        stable_ptr: arg.stable_ptr().untyped(),
-                        severity: Severity::Warning,
-                    });
-                }
-                ArgClause::FieldInitShorthand(x) => {
-                    diagnostics.push(PluginDiagnostic {
-                        message: format!(
-                            "Unexpected argument '{}' for dojo::contract",
-                            x.name(db).name(db).text(db).to_string()
-                        ),
-                        stable_ptr: x.stable_ptr().untyped(),
-                        severity: Severity::Warning,
-                    });
-                }
-            })
+                diagnostics.push(PluginDiagnostic {
+                    message: format!("Unexpected argument '{}' for dojo::contract", arg_name),
+                    stable_ptr: arg.stable_ptr().untyped(),
+                    severity: Severity::Warning,
+                });
+            }
+            ArgClause::FieldInitShorthand(x) => {
+                diagnostics.push(PluginDiagnostic {
+                    message: format!(
+                        "Unexpected argument '{}' for dojo::contract",
+                        x.name(db).name(db).text(db).to_string()
+                    ),
+                    stable_ptr: x.stable_ptr().untyped(),
+                    severity: Severity::Warning,
+                });
+            }
+        })
     }
 
     parameters

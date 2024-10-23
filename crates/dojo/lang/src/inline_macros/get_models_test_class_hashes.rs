@@ -52,10 +52,7 @@ impl InlineMacroExprPlugin for GetModelsTestClassHashes {
             match extract_namespaces(db, &expected_array.value(db)) {
                 Ok(namespaces) => namespaces,
                 Err(e) => {
-                    return InlinePluginResult {
-                        code: None,
-                        diagnostics: vec![e],
-                    };
+                    return InlinePluginResult { code: None, diagnostics: vec![e] };
                 }
             }
         } else {
@@ -71,7 +68,7 @@ impl InlineMacroExprPlugin for GetModelsTestClassHashes {
                         diagnostics: vec![PluginDiagnostic {
                             stable_ptr: syntax.stable_ptr().untyped(),
                             message: "Failed to load models and namespaces, ensure you have run \
-                                             `sozo build` first."
+                                      `sozo build` first."
                                 .to_string(),
                             severity: Severity::Error,
                         }],

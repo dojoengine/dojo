@@ -1,7 +1,8 @@
 //! Derive macros.
 //!
 //! A derive macros is a macro that is used to generate code generally for a struct or enum.
-//! The input of the macro consists of the AST of the struct or enum and the attributes of the derive macro.
+//! The input of the macro consists of the AST of the struct or enum and the attributes of the
+//! derive macro.
 
 use cairo_lang_defs::patcher::{PatchBuilder, RewriteNode};
 use cairo_lang_defs::plugin::{PluginDiagnostic, PluginGeneratedFile, PluginResult};
@@ -11,7 +12,6 @@ use cairo_lang_syntax::node::ast::Attribute;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::ids::SyntaxStablePtrId;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
-
 use introspect::{handle_introspect_enum, handle_introspect_struct};
 use print::{handle_print_enum, handle_print_struct};
 
@@ -126,12 +126,13 @@ pub fn handle_derive_attrs(
             }
         }
         _ => {
-            // Currently Dojo plugin doesn't support derive macros on other items than struct and enum.
+            // Currently Dojo plugin doesn't support derive macros on other items than struct and
+            // enum.
             diagnostics.push(PluginDiagnostic {
                 stable_ptr: item_ast.stable_ptr().0,
-                message:
-                    "Dojo plugin doesn't support derive macros on other items than struct and enum."
-                        .to_string(),
+                message: "Dojo plugin doesn't support derive macros on other items than struct \
+                          and enum."
+                    .to_string(),
                 severity: Severity::Error,
             });
         }

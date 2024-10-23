@@ -28,13 +28,7 @@ use scarb::compiler::Profile;
 use crate::compiler::test_utils::{build_test_config, corelib};
 use crate::plugin::dojo_plugin_suite;
 
-#[salsa::database(
-    SemanticDatabase,
-    DefsDatabase,
-    ParserDatabase,
-    SyntaxDatabase,
-    FilesDatabase
-)]
+#[salsa::database(SemanticDatabase, DefsDatabase, ParserDatabase, SyntaxDatabase, FilesDatabase)]
 #[allow(missing_debug_implementations)]
 pub struct DojoSemanticDatabase {
     storage: salsa::Storage<DojoSemanticDatabase>,
@@ -47,17 +41,13 @@ impl ExternalFiles for DojoSemanticDatabase {
 }
 impl salsa::ParallelDatabase for DojoSemanticDatabase {
     fn snapshot(&self) -> salsa::Snapshot<DojoSemanticDatabase> {
-        salsa::Snapshot::new(DojoSemanticDatabase {
-            storage: self.storage.snapshot(),
-        })
+        salsa::Snapshot::new(DojoSemanticDatabase { storage: self.storage.snapshot() })
     }
 }
 
 impl DojoSemanticDatabase {
     pub fn new_empty() -> Self {
-        let mut db = DojoSemanticDatabase {
-            storage: Default::default(),
-        };
+        let mut db = DojoSemanticDatabase { storage: Default::default() };
         init_files_group(&mut db);
 
         let mut suite = get_default_plugin_suite();
@@ -79,19 +69,14 @@ impl DojoSemanticDatabase {
             build_test_config(dojo_scarb_manifest.to_str().unwrap(), Profile::DEV).unwrap();
 
         // Ensure the crate[0] is dojo, to enable parsing of the Scarb.toml.
-        db.set_crate_config(
-            core_crate,
-            Some(CrateConfiguration::default_for_root(core_root_dir)),
-        );
+        db.set_crate_config(core_crate, Some(CrateConfiguration::default_for_root(core_root_dir)));
 
         init_dev_corelib(&mut db, corelib(&config));
         db
     }
     /// Snapshots the db for read only.
     pub fn snapshot(&self) -> DojoSemanticDatabase {
-        DojoSemanticDatabase {
-            storage: self.storage.snapshot(),
-        }
+        DojoSemanticDatabase { storage: self.storage.snapshot() }
     }
 }
 
@@ -142,11 +127,7 @@ pub struct WithStringDiagnostics<T> {
 impl<T> WithStringDiagnostics<T> {
     /// Verifies that there are no diagnostics (fails otherwise), and returns the inner value.
     pub fn unwrap(self) -> T {
-        assert!(
-            self.diagnostics.is_empty(),
-            "Unexpected diagnostics:\n{}",
-            self.diagnostics
-        );
+        assert!(self.diagnostics.is_empty(), "Unexpected diagnostics:\n{}", self.diagnostics);
         self.value
     }
 
@@ -196,19 +177,11 @@ pub fn setup_test_module(
     let module_id = ModuleId::CrateRoot(crate_id);
     let file_id = db.module_main_file(module_id).unwrap();
 
-    let syntax_diagnostics = db
-        .file_syntax_diagnostics(file_id)
-        .format(Upcast::upcast(db));
-    let semantic_diagnostics = db
-        .module_semantic_diagnostics(module_id)
-        .unwrap()
-        .format(db);
+    let syntax_diagnostics = db.file_syntax_diagnostics(file_id).format(Upcast::upcast(db));
+    let semantic_diagnostics = db.module_semantic_diagnostics(module_id).unwrap().format(db);
 
     WithStringDiagnostics {
-        value: TestModule {
-            crate_id,
-            module_id,
-        },
+        value: TestModule { crate_id, module_id },
         diagnostics: format!("{syntax_diagnostics}{semantic_diagnostics}"),
     }
 }
@@ -291,9 +264,7 @@ pub fn setup_test_expr(
         db.statement_semantic(test_function.function_id, *statements.last().unwrap()),
         cairo_lang_semantic::Statement::Expr
     );
-    let cairo_lang_semantic::ExprBlock {
-        statements, tail, ..
-    } = extract_matches!(
+    let cairo_lang_semantic::ExprBlock { statements, tail, .. } = extract_matches!(
         db.expr_semantic(test_function.function_id, statement_expr.expr),
         cairo_lang_semantic::Expr::Block
     );
@@ -322,12 +293,7 @@ pub fn setup_test_block(
     module_code: &str,
     function_body: &str,
 ) -> WithStringDiagnostics<TestExpr> {
-    setup_test_expr(
-        db,
-        &format!("{{ \n{expr_code}\n }}"),
-        module_code,
-        function_body,
-    )
+    setup_test_expr(db, &format!("{{ \n{expr_code}\n }}"), module_code, function_body)
 }
 
 pub fn test_expr_diagnostics(

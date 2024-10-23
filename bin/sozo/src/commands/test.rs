@@ -18,8 +18,9 @@ use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
 use clap::Args;
 use dojo_lang::dojo_plugin_suite;
 use itertools::Itertools;
-use scarb::compiler::ContractSelector;
-use scarb::compiler::{CairoCompilationUnit, CompilationUnit, CompilationUnitAttributes};
+use scarb::compiler::{
+    CairoCompilationUnit, CompilationUnit, CompilationUnitAttributes, ContractSelector,
+};
 use scarb::core::{Config, Package, TargetKind};
 use scarb::ops::{self, CompileOpts};
 use scarb_ui::args::{FeaturesSpec, PackagesFilter};
@@ -115,13 +116,10 @@ impl TestArgs {
         let compilation_units = ops::generate_compilation_units(&resolve, &opts.features, &ws)?
             .into_iter()
             .filter(|cu| {
-                let is_excluded = opts
-                    .exclude_target_kinds
-                    .contains(&cu.main_component().target_kind());
+                let is_excluded =
+                    opts.exclude_target_kinds.contains(&cu.main_component().target_kind());
                 let is_included = opts.include_target_kinds.is_empty()
-                    || opts
-                        .include_target_kinds
-                        .contains(&cu.main_component().target_kind());
+                    || opts.include_target_kinds.contains(&cu.main_component().target_kind());
                 let is_included = is_included
                     && (opts.include_target_names.is_empty()
                         || cu
@@ -198,10 +196,7 @@ impl TestArgs {
 pub(crate) fn build_root_database(unit: &CairoCompilationUnit) -> Result<RootDatabase> {
     let mut b = RootDatabase::builder();
     b.with_project_config(build_project_config(unit)?);
-    b.with_cfg(CfgSet::from_iter([
-        Cfg::name("test"),
-        Cfg::kv("target", "test"),
-    ]));
+    b.with_cfg(CfgSet::from_iter([Cfg::name("test"), Cfg::kv("target", "test")]));
 
     b.with_plugin_suite(test_plugin_suite());
     b.with_plugin_suite(dojo_plugin_suite());
@@ -225,28 +220,20 @@ fn build_project_config(unit: &CairoCompilationUnit) -> Result<ProjectConfig> {
         })
         .collect();
 
-    let corelib = unit
-        .core_package_component()
-        .map(|c| Directory::Real(c.targets[0].source_root().into()));
+    let corelib =
+        unit.core_package_component().map(|c| Directory::Real(c.targets[0].source_root().into()));
 
     let crates_config = crates_config_for_compilation_unit(unit);
 
-    let content = ProjectConfigContent {
-        crate_roots,
-        crates_config,
-    };
+    let content = ProjectConfigContent { crate_roots, crates_config };
 
-    let project_config = ProjectConfig {
-        base_path: unit.main_component().package.root().into(),
-        corelib,
-        content,
-    };
+    let project_config =
+        ProjectConfig { base_path: unit.main_component().package.root().into(), corelib, content };
 
     trace!(?project_config, "Project config built.");
 
     Ok(project_config)
 }
-
 
 /// Collects the main crate ids for Dojo including the core crates.
 pub fn collect_main_crate_ids(

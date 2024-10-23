@@ -57,11 +57,8 @@ pub fn split_tag(tag: &str) -> Result<(String, String)> {
 }
 
 pub fn get_filename_from_tag(tag: &str) -> String {
-    if [
-        format!("dojo{TAG_SEPARATOR}world").as_str(),
-        format!("dojo{TAG_SEPARATOR}base").as_str(),
-    ]
-    .contains(&tag)
+    if [format!("dojo{TAG_SEPARATOR}world").as_str(), format!("dojo{TAG_SEPARATOR}base").as_str()]
+        .contains(&tag)
     {
         return tag.to_string();
     }
@@ -96,10 +93,7 @@ pub fn compute_selector_from_tag(tag: &str) -> Felt {
 }
 
 pub fn compute_selector_from_names(namespace: &str, name: &str) -> Felt {
-    compute_selector_from_hashes(
-        compute_bytearray_hash(namespace),
-        compute_bytearray_hash(name),
-    )
+    compute_selector_from_hashes(compute_bytearray_hash(namespace), compute_bytearray_hash(name))
 }
 
 pub fn compute_selector_from_hashes(namespace_hash: Felt, model_hash: Felt) -> Felt {

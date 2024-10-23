@@ -10,22 +10,20 @@ use cairo_lang_defs::plugin::{
     DynGeneratedFileAuxData, PluginDiagnostic, PluginGeneratedFile, PluginResult,
 };
 use cairo_lang_diagnostics::Severity;
-use cairo_lang_syntax::node::{
-    ast, ast::ArgClauseNamed, ast::Expr, ast::ModuleItem, db::SyntaxGroup, helpers::QueryAttrs,
-    Terminal, TypedStablePtr, TypedSyntaxNode,
-};
+use cairo_lang_syntax::node::ast::{ArgClauseNamed, Expr, ModuleItem};
+use cairo_lang_syntax::node::db::SyntaxGroup;
+use cairo_lang_syntax::node::helpers::QueryAttrs;
+use cairo_lang_syntax::node::{ast, Terminal, TypedStablePtr, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
-use dojo_types::naming;
 use convert_case::{Case, Casing};
+use dojo_types::naming;
 
+use super::element::{
+    parse_members, serialize_keys_and_values, CommonStructParameters, StructParameterParser,
+};
 use crate::aux_data::EventAuxData;
 use crate::derive_macros::{
     extract_derive_attr_names, handle_derive_attrs, DOJO_INTROSPECT_DERIVE, DOJO_PACKED_DERIVE,
-};
-
-use super::element::{
-    parse_members, serialize_keys_and_values, CommonStructParameters,
-    StructParameterParser,
 };
 
 const EVENT_PATCH: &str = include_str!("./patches/event.patch.cairo");
@@ -62,8 +60,7 @@ impl StructParameterParser for EventParameters {
                 self.historical = get_historical(attribute_name, arg.value(db), diagnostics);
             }
             _ => {
-                self.common
-                    .process_named_parameters(db, attribute_name, arg, diagnostics);
+                self.common.process_named_parameters(db, attribute_name, arg, diagnostics);
             }
         }
     }
@@ -80,10 +77,7 @@ impl DojoEvent {
     ///
     /// Returns:
     /// * A RewriteNode containing the generated code.
-    pub fn from_struct(
-        db: &dyn SyntaxGroup,
-        struct_ast: ast::ItemStruct,
-    ) -> PluginResult {
+    pub fn from_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct) -> PluginResult {
         let mut diagnostics = vec![];
         let mut parameters = EventParameters::default();
 
@@ -94,12 +88,7 @@ impl DojoEvent {
             &mut diagnostics,
         );
 
-        let event_name = struct_ast
-            .name(db)
-            .as_syntax_node()
-            .get_text(db)
-            .trim()
-            .to_string();
+        let event_name = struct_ast.name(db).as_syntax_node().get_text(db).trim().to_string();
 
         for (id, value) in [("name", &event_name)] {
             if !naming::is_name_valid(value) {
@@ -171,45 +160,21 @@ impl DojoEvent {
             derive_attr_names.push(DOJO_INTROSPECT_DERIVE.to_string());
         }
 
-        let (derive_nodes, derive_diagnostics) = handle_derive_attrs(
-            db,
-            &derive_attr_names,
-            &ModuleItem::Struct(struct_ast.clone()),
-        );
+        let (derive_nodes, derive_diagnostics) =
+            handle_derive_attrs(db, &derive_attr_names, &ModuleItem::Struct(struct_ast.clone()));
 
         diagnostics.extend(derive_diagnostics);
 
         let node = RewriteNode::interpolate_patched(
             EVENT_PATCH,
             &UnorderedHashMap::from([
-                (
-                    "contract_name".to_string(),
-                    RewriteNode::Text(event_name.to_case(Case::Snake)),
-                ),
-                (
-                    "type_name".to_string(),
-                    RewriteNode::Text(event_name.clone()),
-                ),
-                (
-                    "member_names".to_string(),
-                    RewriteNode::new_modified(member_names),
-                ),
-                (
-                    "serialized_keys".to_string(),
-                    RewriteNode::new_modified(serialized_keys),
-                ),
-                (
-                    "serialized_values".to_string(),
-                    RewriteNode::new_modified(serialized_values),
-                ),
-                (
-                    "event_version".to_string(),
-                    RewriteNode::Text(event_version),
-                ),
-                (
-                    "event_historical".to_string(),
-                    RewriteNode::Text(event_historical),
-                ),
+                ("contract_name".to_string(), RewriteNode::Text(event_name.to_case(Case::Snake))),
+                ("type_name".to_string(), RewriteNode::Text(event_name.clone())),
+                ("member_names".to_string(), RewriteNode::new_modified(member_names)),
+                ("serialized_keys".to_string(), RewriteNode::new_modified(serialized_keys)),
+                ("serialized_values".to_string(), RewriteNode::new_modified(serialized_values)),
+                ("event_version".to_string(), RewriteNode::Text(event_version)),
+                ("event_historical".to_string(), RewriteNode::Text(event_historical)),
             ]),
         );
 
@@ -223,15 +188,9 @@ impl DojoEvent {
 
         let (code, code_mappings) = builder.build();
 
-        crate::debug_expand(
-            &format!("EVENT PATCH: {event_name}"),
-            &code,
-        );
+        crate::debug_expand(&format!("EVENT PATCH: {event_name}"), &code);
 
-        let aux_data = EventAuxData {
-            name: event_name.clone(),
-            members,
-        };
+        let aux_data = EventAuxData { name: event_name.clone(), members };
 
         PluginResult {
             code: Some(PluginGeneratedFile {

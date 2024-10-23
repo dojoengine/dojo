@@ -1,6 +1,7 @@
 //! Attribute macros.
 //!
-//! An attribute macros is a macro that is used to generate code generally for a struct, enum, module or trait.
+//! An attribute macros is a macro that is used to generate code generally for a struct, enum,
+//! module or trait.
 
 pub mod contract;
 pub mod element;

@@ -89,10 +89,7 @@ impl $type_name$EnumPrintImpl of core::debug::PrintTrait<$type_name$> {
 }
 ",
         &UnorderedHashMap::from([
-            (
-                "type_name".to_string(),
-                RewriteNode::new_trimmed(enum_ast.name(db).as_syntax_node()),
-            ),
+            ("type_name".to_string(), RewriteNode::new_trimmed(enum_ast.name(db).as_syntax_node())),
             ("print".to_string(), RewriteNode::Text(prints.join(",\n"))),
         ]),
     )

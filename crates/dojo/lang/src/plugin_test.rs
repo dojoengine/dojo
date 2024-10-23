@@ -37,9 +37,7 @@ impl ExternalFiles for DatabaseForTesting {
 }
 impl Default for DatabaseForTesting {
     fn default() -> Self {
-        let mut res = Self {
-            storage: Default::default(),
-        };
+        let mut res = Self { storage: Default::default() };
         init_files_group(&mut res);
         res.set_macro_plugins(get_base_plugins());
         res
@@ -86,10 +84,7 @@ pub fn test_expand_plugin(
     test_expand_plugin_inner(
         inputs,
         args,
-        &[
-            Arc::new(BuiltinDojoPlugin),
-            Arc::new(StarkNetPlugin::default()),
-        ],
+        &[Arc::new(BuiltinDojoPlugin), Arc::new(StarkNetPlugin::default())],
     )
 }
 
@@ -110,10 +105,7 @@ pub fn test_expand_plugin_inner(
         Some(cfg) => serde_json::from_str(cfg.as_str()).unwrap(),
         None => {
             let mut cfg_set = CfgSet::new();
-            cfg_set.insert(Cfg::kv(
-                DEFAULT_NAMESPACE_CFG_KEY,
-                SmolStr::from("dojo_test"),
-            ));
+            cfg_set.insert(Cfg::kv(DEFAULT_NAMESPACE_CFG_KEY, SmolStr::from("dojo_test")));
             cfg_set
         }
     };
