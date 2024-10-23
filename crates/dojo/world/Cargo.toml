@@ -28,8 +28,8 @@ thiserror.workspace = true
 topological-sort.workspace = true
 tracing.workspace = true
 cainome.workspace = true
-dojo-types = { workspace = true, optional = true }
-http = { workspace = true, optional = true }
+dojo-types.workspace = true
+http.workspace = true
 ipfs-api-backend-hyper = { git = "https://github.com/ferristseng/rust-ipfs-api", rev = "af2c17f7b19ef5b9898f458d97a90055c3605633", features = [ "with-hyper-rustls" ], optional = true }
 scarb = { workspace = true, optional = true }
 tokio = { version = "1.32.0", features = [ "time" ], default-features = false, optional = true }
@@ -48,7 +48,7 @@ tempfile.workspace = true
 tokio.workspace = true
 
 [features]
-contracts = [ "dep:dojo-types", "dep:http", "dep:num-traits" ]
-manifest = [ "contracts", "dep:dojo-types", "dep:scarb", "dep:url" ]
+contracts = [ "dep:num-traits" ]
+manifest = [ "contracts", "dep:scarb", "dep:url" ]
 metadata = [ "dep:ipfs-api-backend-hyper", "dep:scarb", "dep:url" ]
 migration = [ "dep:dojo-utils", "dep:scarb", "dep:tokio", "manifest" ]

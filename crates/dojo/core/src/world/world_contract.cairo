@@ -90,7 +90,9 @@ pub mod world {
     #[derive(Drop, starknet::Event)]
     pub struct ContractRegistered {
         #[key]
-        pub selector: felt252,
+        pub name: ByteArray,
+        #[key]
+        pub namespace: ByteArray,
         pub address: ContractAddress,
         pub class_hash: ClassHash,
         pub salt: felt252,
@@ -682,7 +684,7 @@ pub mod world {
             self
                 .emit(
                     ContractRegistered {
-                        salt, class_hash, address: contract_address, selector: contract_selector,
+                        salt, class_hash, address: contract_address, namespace, name: contract_name,
                     }
                 );
 

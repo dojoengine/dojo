@@ -1,17 +1,32 @@
 //! Fetches the events for the given world address and converts them to remote resources.
 //!
+//! The world is responsible for managing the remote resources onchain. We are expected
+//! to safely unwrap the resources lookup as they are supposed to exist.
+//!
+//! Events are also sequential, a resource is not expected to be upgraded before
+//! being registered. We take advantage of this fact to optimize the data gathering.
 
 use anyhow::Result;
+use dojo_types::naming;
 use starknet::{
     core::types::{EventFilter, Felt},
     providers::Provider,
 };
 
-use super::WorldRemote;
-use crate::contracts::abigen::world::{self, Event as WorldEvent};
+use super::permissions::PermissionsUpdateable;
+use super::{RemoteResource, WorldRemote};
+use crate::{
+    contracts::abigen::world::{self, Event as WorldEvent},
+    remote::{CommonResourceRemoteInfo, ContractRemote, EventRemote, ModelRemote},
+};
 
 impl WorldRemote {
-    pub async fn from_events<P: Provider>(&mut self, world_address: Felt, provider: &P) -> Result<Self> {
+    /// Fetch the events from the world and convert them to remote resources.
+    pub async fn from_events<P: Provider>(
+        &mut self,
+        world_address: Felt,
+        provider: &P,
+    ) -> Result<Self> {
         // We only care about management events, not resource events (set, delete, emit).
         let keys = vec![
             world::WorldSpawned::selector(),
@@ -43,8 +58,7 @@ impl WorldRemote {
         let mut events = Vec::new();
 
         while continuation_token.is_some() {
-            let page =
-                provider.get_events(filter.clone(), continuation_token, chunk_size).await?;
+            let page = provider.get_events(filter.clone(), continuation_token, chunk_size).await?;
 
             continuation_token = page.continuation_token;
             events.extend(page.events);
@@ -57,49 +71,113 @@ impl WorldRemote {
 
                     match ev {
                         WorldEvent::WorldSpawned(e) => {
-                            self.original_class_hash = e.class_hash.into();
-                        },
+                            self.class_hashes.push(e.class_hash.into());
+                        }
                         WorldEvent::WorldUpgraded(e) => {
-                            self.current_class_hash = e.class_hash.into();
-                        },
+                            self.class_hashes.push(e.class_hash.into());
+                        }
                         WorldEvent::NamespaceRegistered(e) => {
                             self.namespaces.push(e.namespace.to_string()?);
-                        },
+                        }
                         WorldEvent::ModelRegistered(e) => {
-                            let model_name = e.name.to_string()?;
+                            let model_remote = ModelRemote {
+                                common: CommonResourceRemoteInfo::new(
+                                    e.class_hash.into(),
+                                    e.name.to_string()?,
+                                    e.address.into(),
+                                ),
+                            };
+
                             let namespace = e.namespace.to_string()?;
-                        },
+                            let dojo_selector = naming::compute_selector_from_names(
+                                &namespace,
+                                &e.name.to_string()?,
+                            );
+
+                            self.models.insert(namespace, dojo_selector);
+                            self.resources
+                                .insert(dojo_selector, RemoteResource::Model(model_remote));
+                        }
                         WorldEvent::EventRegistered(e) => {
-                            
-                        },
+                            let event_remote = EventRemote {
+                                common: CommonResourceRemoteInfo::new(
+                                    e.class_hash.into(),
+                                    e.name.to_string()?,
+                                    e.address.into(),
+                                ),
+                            };
+
+                            let namespace = e.namespace.to_string()?;
+                            let dojo_selector = naming::compute_selector_from_names(
+                                &namespace,
+                                &e.name.to_string()?,
+                            );
+
+                            self.events.insert(namespace, dojo_selector);
+                            self.resources
+                                .insert(dojo_selector, RemoteResource::Event(event_remote));
+                        }
                         WorldEvent::ContractRegistered(e) => {
-                            
-                        },
+                            let contract_remote = ContractRemote {
+                                common: CommonResourceRemoteInfo::new(
+                                    e.class_hash.into(),
+                                    e.name.to_string()?,
+                                    e.address.into(),
+                                ),
+                                initialized: false,
+                            };
+
+                            let namespace = e.namespace.to_string()?;
+                            let dojo_selector = naming::compute_selector_from_names(
+                                &namespace,
+                                &e.name.to_string()?,
+                            );
+
+                            self.contracts.insert(namespace, dojo_selector);
+                            self.resources
+                                .insert(dojo_selector, RemoteResource::Contract(contract_remote));
+                        }
                         WorldEvent::ModelUpgraded(e) => {
-                            
-                        },
+                            // Unwrap is safe because the model must exist in the world.
+                            let resource = self.resources.get_mut(&e.selector).unwrap();
+                            resource.push_class_hash(e.class_hash.into());
+                        }
                         WorldEvent::EventUpgraded(e) => {
-                            
-                        },
+                            // Unwrap is safe because the event must exist in the world.
+                            let resource = self.resources.get_mut(&e.selector).unwrap();
+                            resource.push_class_hash(e.class_hash.into());
+                        }
                         WorldEvent::ContractUpgraded(e) => {
-                            
-                        },
+                            // Unwrap is safe because the contract must exist in the world.
+                            let resource = self.resources.get_mut(&e.selector).unwrap();
+                            resource.push_class_hash(e.class_hash.into());
+                        }
                         WorldEvent::ContractInitialized(e) => {
-                            
-                        },
+                            // Unwrap is safe bcause the contract must exist in the world.
+                            let resource = self.resources.get_mut(&e.selector).unwrap();
+                            let contract = resource.as_contract_mut()?;
+                            contract.initialized = true;
+                        }
                         WorldEvent::WriterUpdated(e) => {
-                            
-                        },
+                            // Unwrap is safe because the resource must exist in the world.
+                            let resource = self.resources.get_mut(&e.resource).unwrap();
+                            resource.update_writer(e.contract.into(), e.value)?;
+                        }
                         WorldEvent::OwnerUpdated(e) => {
-                            
-                        },
+                            // Unwrap is safe because the resource must exist in the world.
+                            let resource = self.resources.get_mut(&e.resource).unwrap();
+                            resource.update_owner(e.contract.into(), e.value)?;
+                        }
                         _ => {
                             // Ignore events filtered out by the event filter.
                         }
                     }
                 }
                 Err(e) => {
-                    tracing::error!(?e, "Failed to parse remote world event which is supposed to be valid.");
+                    tracing::error!(
+                        ?e,
+                        "Failed to parse remote world event which is supposed to be valid."
+                    );
                 }
             }
         }
