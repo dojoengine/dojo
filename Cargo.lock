@@ -8125,6 +8125,7 @@ dependencies = [
  "criterion",
  "dojo-test-utils",
  "katana-cairo",
+ "katana-node",
  "katana-primitives",
  "katana-provider",
  "katana-rpc-types",

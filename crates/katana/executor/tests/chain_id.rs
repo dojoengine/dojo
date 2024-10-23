@@ -4,7 +4,8 @@ mod fixtures;
 use std::sync::Arc;
 
 use cainome::rs::abigen;
-use dojo_test_utils::sequencer::{get_default_test_config, SequencingConfig, TestSequencer};
+use dojo_test_utils::sequencer::{get_default_test_config, TestSequencer};
+use katana_node::config::SequencingConfig;
 use katana_primitives::chain::ChainId;
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::genesis::allocation::{GenesisAllocation, GenesisContractAlloc};
