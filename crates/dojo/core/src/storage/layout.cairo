@@ -1,7 +1,8 @@
-use dojo::model::{Layout, FieldLayout};
+use dojo::meta::{Layout, FieldLayout};
 use dojo::utils::{combine_key, find_field_layout};
 
 use super::database;
+use super::packing;
 
 // the minimum internal size of an empty ByteArray
 const MIN_BYTE_ARRAY_SIZE: u32 = 3;
@@ -61,7 +62,7 @@ pub fn write_array_layout(
     let array_len: u32 = array_len.try_into().unwrap();
 
     // then, write the array size
-    database::set(model, key, values, offset, [251].span());
+    database::set(model, key, values, offset, [packing::PACKING_MAX_BITS].span());
     offset += 1;
 
     // and then, write array items
@@ -167,21 +168,28 @@ pub fn write_enum_layout(
     ref offset: u32,
     variant_layouts: Span<FieldLayout>
 ) {
-    // first, get the variant value from `values``
-    let variant = *values.at(offset);
-    assert(variant.into() < 256_u256, 'invalid variant value');
+    if let Option::Some(variant) = values.get(offset) {
+        // TODO: when Cairo 2.8 support is added, unboxing should be implicit.
+        let variant: felt252 = *variant.unbox();
+        // first, get the variant value from `values`
+        assert(variant.into() < 256_u256, 'invalid variant value');
 
-    // and write it
-    database::set(model, key, values, offset, [251].span());
-    offset += 1;
+        // and write it
+        database::set(model, key, values, offset, [packing::PACKING_MAX_BITS].span());
+        offset += 1;
 
-    // find the corresponding layout and then write the full variant
-    let variant_data_key = combine_key(key, variant);
+        // find the corresponding layout and then write the full variant
+        let variant_data_key = combine_key(key, variant);
 
-    match find_field_layout(variant, variant_layouts) {
-        Option::Some(layout) => write_layout(model, variant_data_key, values, ref offset, layout),
-        Option::None => panic!("Unable to find the variant layout")
-    };
+        match find_field_layout(variant, variant_layouts) {
+            Option::Some(layout) => write_layout(
+                model, variant_data_key, values, ref offset, layout
+            ),
+            Option::None => panic!("Unable to find the variant layout")
+        };
+    } else {
+        panic!("offset is out of bounds for enum layout variant");
+    }
 }
 
 /// Delete a fixed layout model record from the world storage.
@@ -201,7 +209,7 @@ pub fn delete_fixed_layout(model: felt252, key: felt252, layout: Span<u8>) {
 ///   * `key` - the model record key.
 pub fn delete_array_layout(model: felt252, key: felt252) {
     // just set the array length to 0
-    database::delete(model, key, [251].span());
+    database::delete(model, key, [packing::PACKING_MAX_BITS].span());
 }
 
 ///
@@ -215,7 +223,11 @@ pub fn delete_byte_array_layout(model: felt252, key: felt252) {
     //
 
     // So, just set the 3 first values to 0 (len(data), pending_world and pending_word_len)
-    database::delete(model, key, [251, 251, 251].span());
+    database::delete(
+        model,
+        key,
+        [packing::PACKING_MAX_BITS, packing::PACKING_MAX_BITS, packing::PACKING_MAX_BITS].span()
+    );
 }
 
 /// Delete a model record from the world storage.
@@ -281,14 +293,14 @@ pub fn delete_tuple_layout(model: felt252, key: felt252, layout: Span<Layout>) {
 
 pub fn delete_enum_layout(model: felt252, key: felt252, variant_layouts: Span<FieldLayout>) {
     // read the variant value
-    let res = database::get(model, key, [251].span());
+    let res = database::get(model, key, [packing::PACKING_MAX_BITS].span());
     assert(res.len() == 1, 'internal database error');
 
     let variant = *res.at(0);
     assert(variant.into() < 256_u256, 'invalid variant value');
 
     // reset the variant value
-    database::delete(model, key, [251].span());
+    database::delete(model, key, [packing::PACKING_MAX_BITS].span());
 
     // find the corresponding layout and the delete the full variant
     let variant_data_key = combine_key(key, variant);
@@ -342,7 +354,7 @@ pub fn read_array_layout(
     model: felt252, key: felt252, ref read_data: Array<felt252>, layout: Span<Layout>
 ) {
     // read number of array items
-    let res = database::get(model, key, [251].span());
+    let res = database::get(model, key, [packing::PACKING_MAX_BITS].span());
     assert(res.len() == 1, 'internal database error');
 
     let array_len = *res.at(0);
@@ -377,7 +389,7 @@ pub fn read_byte_array_layout(model: felt252, key: felt252, ref read_data: Array
     //
     // So, read the length of data and compute the full size to read
 
-    let res = database::get(model, key, [251].span());
+    let res = database::get(model, key, [packing::PACKING_MAX_BITS].span());
     assert(res.len() == 1, 'internal database error');
 
     let data_len = *res.at(0);

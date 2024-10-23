@@ -130,87 +130,25 @@ Block(
             Let(
                 StatementLet {
                     pattern: Variable(
-                        __get_macro_keys__,
-                    ),
-                    expr: FunctionCall(
-                        ExprFunctionCall {
-                            function: core::array::ArrayImpl::<core::felt252>::new,
-                            args: [],
-                            coupon_arg: None,
-                            ty: core::array::Array::<core::felt252>,
-                        },
-                    ),
-                },
-            ),
-            Expr(
-                StatementExpr {
-                    expr: FunctionCall(
-                        ExprFunctionCall {
-                            function: core::Felt252Serde::serialize,
-                            args: [
-                                Value(
-                                    Snapshot(
-                                        ExprSnapshot {
-                                            inner: Var(
-                                                LocalVarId(test::key),
-                                            ),
-                                            ty: @core::felt252,
-                                        },
-                                    ),
-                                ),
-                                Reference(
-                                    LocalVarId(test::__get_macro_keys__),
-                                ),
-                            ],
-                            coupon_arg: None,
-                            ty: (),
-                        },
-                    ),
-                },
-            ),
-            Let(
-                StatementLet {
-                    pattern: Variable(
-                        __get_macro_keys__,
-                    ),
-                    expr: FunctionCall(
-                        ExprFunctionCall {
-                            function: core::array::ArrayImpl::<core::felt252>::span,
-                            args: [
-                                Value(
-                                    Snapshot(
-                                        ExprSnapshot {
-                                            inner: Var(
-                                                LocalVarId(test::__get_macro_keys__),
-                                            ),
-                                            ty: @core::array::Array::<core::felt252>,
-                                        },
-                                    ),
-                                ),
-                            ],
-                            coupon_arg: None,
-                            ty: core::array::Span::<core::felt252>,
-                        },
-                    ),
-                },
-            ),
-            Let(
-                StatementLet {
-                    pattern: Variable(
                         __Health,
                     ),
                     expr: FunctionCall(
                         ExprFunctionCall {
-                            function: ?7::get,
+                            function: ?4::get::<core::felt252, core::felt252Drop, core::Felt252Serde>,
                             args: [
                                 Value(
-                                    Var(
-                                        LocalVarId(test::world),
+                                    Snapshot(
+                                        ExprSnapshot {
+                                            inner: Var(
+                                                LocalVarId(test::world),
+                                            ),
+                                            ty: @dojo::world::iworld::IWorldDispatcher,
+                                        },
                                     ),
                                 ),
                                 Value(
                                     Var(
-                                        LocalVarId(test::__get_macro_keys__),
+                                        LocalVarId(test::key),
                                     ),
                                 ),
                             ],
@@ -231,7 +169,7 @@ Block(
 )
 
 //! > semantic_diagnostics
-error: Trait has no implementation in context: dojo::model::model::Model::<test::Health>.
+error: Trait has no implementation in context: dojo::model::model::ModelStore::<test::Health>.
  --> lib.cairo:12:1
 get!(world, key, (Health))
 ^************************^

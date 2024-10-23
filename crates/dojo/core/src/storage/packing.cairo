@@ -2,9 +2,7 @@ use core::array::{ArrayTrait, SpanTrait};
 use core::option::OptionTrait;
 use core::traits::{Into, TryInto};
 
-use starknet::{ClassHash, ContractAddress};
-
-const PACKING_MAX_BITS: u8 = 251;
+pub const PACKING_MAX_BITS: u8 = 251;
 
 pub fn pack(
     ref packed: Array<felt252>, ref unpacked: Span<felt252>, offset: u32, ref layout: Span<u8>
@@ -58,7 +56,7 @@ pub fn unpack(ref unpacked: Array<felt252>, ref packed: Span<felt252>, ref layou
                 match unpack_inner(*s, ref packed, ref unpacking, ref offset) {
                     Option::Some(u) => { unpacked.append(u); },
                     Option::None(_) => {
-                        // Layout value was successfully poped,
+                        // Layout value was successfully popped,
                         // we are then expecting an unpacked value.
                         core::panic_with_felt252('Unpack inner failed');
                     }
@@ -83,12 +81,12 @@ pub fn pack_inner(
     // Cannot use all 252 bits because some bit arrangements (eg. 11111...11111) are not valid
     // felt252 values.
     // Thus only 251 bits are used.                               ^-252 times-^
-    // One could optimize by some conditional alligment mechanism, but it would be an at most 1/252
+    // One could optimize by some conditional alignment mechanism, but it would be an at most 1/252
     // space-wise improvement.
     let remaining_bits: u8 = (PACKING_MAX_BITS - packing_offset).into();
 
     // If we have less remaining bits than the current item size,
-    // Finalize the current `packing`felt and move to the next felt.
+    // Finalize the current `packing` felt and move to the next felt.
     if remaining_bits < size {
         packed.append(packing);
         packing = *self;

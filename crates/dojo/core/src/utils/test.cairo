@@ -1,13 +1,10 @@
-use core::array::{ArrayTrait, SpanTrait};
+use core::array::SpanTrait;
 use core::option::OptionTrait;
 use core::result::ResultTrait;
 use core::traits::{Into, TryInto};
 
-use starknet::{ClassHash, ContractAddress, syscalls::deploy_syscall, get_caller_address};
+use starknet::{ContractAddress, syscalls::deploy_syscall};
 
-use dojo::contract::base;
-use dojo::model::resource_metadata;
-use dojo::storage::packing::{shl, shr};
 use dojo::world::{world, IWorldDispatcher, IWorldDispatcherTrait};
 
 /// Deploy classhash with calldata for constructor
@@ -56,7 +53,7 @@ pub fn spawn_test_world(namespaces: Span<ByteArray>, models: Span<felt252>) -> I
     let (world_address, _) = deploy_syscall(
         world::TEST_CLASS_HASH.try_into().unwrap(),
         salt.into(),
-        [base::TEST_CLASS_HASH].span(),
+        [world::TEST_CLASS_HASH].span(),
         false
     )
         .unwrap();
@@ -69,13 +66,15 @@ pub fn spawn_test_world(namespaces: Span<ByteArray>, models: Span<felt252>) -> I
         world.register_namespace(namespace.clone());
     };
 
+    let dummy_ns = "dummy";
+
     // Register all models.
     let mut index = 0;
     loop {
         if index == models.len() {
             break ();
         }
-        world.register_model((*models[index]).try_into().unwrap());
+        world.register_model(dummy_ns.clone(), (*models[index]).try_into().unwrap());
         index += 1;
     };
 

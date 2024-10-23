@@ -5,10 +5,9 @@ use cairo_lang_defs::plugin::{
 };
 use cairo_lang_defs::plugin_utils::unsupported_bracket_diagnostic;
 use cairo_lang_diagnostics::Severity;
-use cairo_lang_starknet::plugin::consts::EVENT_TRAIT;
 use cairo_lang_syntax::node::{ast, TypedStablePtr, TypedSyntaxNode};
 
-use crate::inline_macros::unsupported_arg_diagnostic;
+use super::unsupported_arg_diagnostic;
 
 #[derive(Debug, Default)]
 pub struct EmitMacro;
@@ -54,17 +53,20 @@ impl InlineMacroExprPlugin for EmitMacro {
         match models.value(db) {
             ast::Expr::Parenthesized(parens) => {
                 let syntax_node = parens.expr(db).as_syntax_node();
-                bundle.push((syntax_node.get_text(db), syntax_node));
+                bundle.push(syntax_node.get_text(db));
             }
             ast::Expr::Tuple(list) => {
-                list.expressions(db).elements(db).into_iter().for_each(|expr| {
-                    let syntax_node = expr.as_syntax_node();
-                    bundle.push((syntax_node.get_text(db), syntax_node));
-                })
+                list.expressions(db)
+                    .elements(db)
+                    .into_iter()
+                    .for_each(|expr| {
+                        let syntax_node = expr.as_syntax_node();
+                        bundle.push(syntax_node.get_text(db));
+                    })
             }
             ast::Expr::StructCtorCall(ctor) => {
                 let syntax_node = ctor.as_syntax_node();
-                bundle.push((syntax_node.get_text(db), syntax_node));
+                bundle.push(syntax_node.get_text(db));
             }
             _ => {
                 return InlinePluginResult {
@@ -89,26 +91,15 @@ impl InlineMacroExprPlugin for EmitMacro {
             };
         }
 
-        for (event, _) in bundle {
-            builder.add_str("{");
-
-            builder.add_str(
-                "
-                let mut keys = Default::<core::array::Array>::default();
-                let mut data = Default::<core::array::Array>::default();",
-            );
-
+        for event in bundle {
             builder.add_str(&format!(
                 "
-                {EVENT_TRAIT}::append_keys_and_data(@{event}, ref keys, ref data);",
-                event = event
+                let __event_instance__ = {};
+                dojo::event::Event::emit(@__event_instance__, {});
+                ",
+                event,
+                world.as_syntax_node().get_text(db),
             ));
-
-            builder.add_str("\n            ");
-            builder.add_node(world.as_syntax_node());
-            builder.add_str(".emit(keys, data.span());");
-
-            builder.add_str("}");
         }
 
         builder.add_str("}");

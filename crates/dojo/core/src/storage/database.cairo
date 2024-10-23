@@ -1,9 +1,4 @@
 use core::array::{ArrayTrait, SpanTrait};
-use core::hash::LegacyHash;
-use core::option::OptionTrait;
-use core::poseidon::poseidon_hash_span;
-use core::serde::Serde;
-use core::traits::{Into, TryInto};
 
 use starknet::SyscallResultTrait;
 
@@ -52,7 +47,8 @@ fn get_storage_key(table: felt252, key: felt252) -> Span<felt252> {
 /// # Returns
 ///   A [`Span<felt252>`] containing the raw unpacked data of the read record.
 pub fn get(table: felt252, key: felt252, layout: Span<u8>) -> Span<felt252> {
-    storage::get_many(0, get_storage_key(table, key), layout).unwrap_syscall()
+    storage::get_many(storage::DEFAULT_ADDRESS_DOMAIN, get_storage_key(table, key), layout)
+        .unwrap_syscall()
 }
 
 /// Write a record with its ID, layout and new value.
@@ -61,10 +57,12 @@ pub fn get(table: felt252, key: felt252, layout: Span<u8>) -> Span<felt252> {
 ///   * `table` - the table selector
 ///   * `key` - key of the record to write
 ///   * `value` - the new raw unpacked data value of the record
+///   * `offset` - the offset in value to start writing from
 ///   * `layout` - the layout of the record to write.
 pub fn set(table: felt252, key: felt252, value: Span<felt252>, offset: u32, layout: Span<u8>) {
     let storage_key = get_storage_key(table, key);
-    storage::set_many(0, storage_key, value, offset, layout).unwrap_syscall();
+    storage::set_many(storage::DEFAULT_ADDRESS_DOMAIN, storage_key, value, offset, layout)
+        .unwrap_syscall();
 }
 
 /// delete a record from a table with its ID and layout.
@@ -89,7 +87,10 @@ pub fn delete(table: felt252, key: felt252, layout: Span<u8>) {
 ///  * `array_size` - the size of the nested array to write
 pub fn set_array(table: felt252, key: felt252, value: Span<felt252>, offset: u32, array_size: u32) {
     let storage_key = get_storage_key(table, key);
-    storage::set_packed_array(0, storage_key, value, offset, array_size).unwrap_syscall();
+    storage::set_packed_array(
+        storage::DEFAULT_ADDRESS_DOMAIN, storage_key, value, offset, array_size
+    )
+        .unwrap_syscall();
 }
 
 /// Read an array.
@@ -102,5 +103,6 @@ pub fn set_array(table: felt252, key: felt252, value: Span<felt252>, offset: u32
 /// # Returns
 pub fn get_array(table: felt252, key: felt252, array_size: u32) -> Span<felt252> {
     let storage_key = get_storage_key(table, key);
-    storage::get_packed_array(0, storage_key, array_size).unwrap_syscall()
+    storage::get_packed_array(storage::DEFAULT_ADDRESS_DOMAIN, storage_key, array_size)
+        .unwrap_syscall()
 }

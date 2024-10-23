@@ -70,10 +70,13 @@ impl InlineMacroExprPlugin for SetMacro {
                 bundle.push(syntax_node.get_text(db));
             }
             ast::Expr::Tuple(list) => {
-                list.expressions(db).elements(db).into_iter().for_each(|expr| {
-                    let syntax_node = expr.as_syntax_node();
-                    bundle.push(syntax_node.get_text(db));
-                })
+                list.expressions(db)
+                    .elements(db)
+                    .into_iter()
+                    .for_each(|expr| {
+                        let syntax_node = expr.as_syntax_node();
+                        bundle.push(syntax_node.get_text(db));
+                    })
             }
             ast::Expr::StructCtorCall(ctor) => {
                 let syntax_node = ctor.as_syntax_node();
@@ -105,11 +108,10 @@ impl InlineMacroExprPlugin for SetMacro {
         for entity in bundle {
             builder.add_str(&format!(
                 "
-                let __set_model_instance__ = {};
-                dojo::model::Model::set_model(@__set_model_instance__, {});
+                dojo::model::ModelStore::set({}, @{});
                 ",
-                entity,
                 world.as_syntax_node().get_text(db),
+                entity,
             ));
         }
         builder.add_str("}");

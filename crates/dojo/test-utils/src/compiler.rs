@@ -6,9 +6,7 @@ use std::{env, fs, io};
 
 use assert_fs::TempDir;
 use camino::{Utf8Path, Utf8PathBuf};
-use dojo_lang::compiler::DojoCompiler;
-use dojo_lang::plugin::CairoPluginRepository;
-use dojo_lang::scarb_internal::{compile_workspace, CompileInfo};
+use scarb::compiler::plugin::CairoPluginRepository;
 use scarb::compiler::{CompilationUnit, CompilerRepository, Profile};
 use scarb::core::{Config, TargetKind};
 use scarb::ops;
@@ -142,7 +140,7 @@ pub fn copy_build_project_temp(
     dojo_core_path: &str,
     do_build: bool,
     profile: Profile,
-) -> (Utf8PathBuf, Config, Option<CompileInfo>) {
+) -> (Utf8PathBuf, Config) {
     let source_project_dir = Utf8PathBuf::from(source_project_path).parent().unwrap().to_path_buf();
 
     let temp_project_dir = Utf8PathBuf::from(
@@ -166,25 +164,21 @@ pub fn copy_build_project_temp(
 
     let packages: Vec<scarb::core::PackageId> = ws.members().map(|p| p.id).collect();
 
-    let compile_info = if do_build {
-        Some(
-            compile_workspace(
-                &config,
-                CompileOpts {
-                    include_target_names: vec![],
-                    include_target_kinds: vec![],
-                    exclude_target_kinds: vec![TargetKind::TEST],
-                    features: features_opts,
-                },
-                packages,
-            )
-            .unwrap(),
+    if do_build {
+        scarb::ops::compile(
+            packages,
+            CompileOpts {
+                include_target_names: vec![],
+                include_target_kinds: vec![],
+                exclude_target_kinds: vec![TargetKind::TEST],
+                features: features_opts,
+            },
+            &ws,
         )
-    } else {
-        None
-    };
+        .unwrap();
+    }
 
-    (temp_project_dir, config, compile_info)
+    (temp_project_dir, config)
 }
 
 /// Copies a project to a new location, excluding the manifests and target directories.
@@ -270,10 +264,9 @@ pub fn copy_project_temp(
 /// * `path` - The path to the Scarb.toml file to build the config for.
 /// * `profile` - The profile to use for the config.
 pub fn build_test_config(path: &str, profile: Profile) -> anyhow::Result<Config> {
-    let mut compilers = CompilerRepository::empty();
-    compilers.add(Box::new(DojoCompiler::default())).unwrap();
+    let compilers = CompilerRepository::empty();
 
-    let cairo_plugins = CairoPluginRepository::default();
+    let cairo_plugins = CairoPluginRepository::empty();
 
     // If the cache_dir is not overriden, we can't run tests in parallel.
     let cache_dir = TempDir::new().unwrap();

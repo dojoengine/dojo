@@ -36,6 +36,7 @@ dojo-world = { workspace = true, features = [ "contracts", "metadata", "migratio
 futures.workspace = true
 hex = "0.4.3"
 hex-literal = "0.4.1"
+itertools.workspace = true
 katana-rpc-api.workspace = true
 notify = "6.0.1"
 num-bigint = "0.4.3"

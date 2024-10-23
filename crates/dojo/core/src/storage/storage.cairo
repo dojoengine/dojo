@@ -1,7 +1,5 @@
 use core::array::{ArrayTrait, SpanTrait};
-use core::option::OptionTrait;
 use core::poseidon::poseidon_hash_span;
-use core::serde::Serde;
 use core::traits::Into;
 
 use starknet::{SyscallResultTrait, SyscallResult};
@@ -12,6 +10,8 @@ use starknet::storage_access::{
 use starknet::syscalls::{storage_read_syscall, storage_write_syscall};
 
 use super::packing::{pack, unpack, calculate_packed_size};
+
+pub const DEFAULT_ADDRESS_DOMAIN: u32 = 0;
 
 pub fn get(address_domain: u32, keys: Span<felt252>) -> felt252 {
     let base = storage_base_address_from_felt252(poseidon_hash_span(keys));

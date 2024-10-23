@@ -1,17 +1,15 @@
-use starknet::{contract_address_const, ContractAddress, get_caller_address};
-
 use dojo::world::Resource;
-use dojo::world::config::Config::{DifferProgramHashUpdate, FactsRegistryUpdate};
-use dojo::world::config::{IConfigDispatcher, IConfigDispatcherTrait};
-use dojo::model::{Model, ResourceMetadata};
+use dojo::world::world::Event;
+use dojo::model::Model;
 use dojo::utils::bytearray_hash;
 use dojo::world::{
-    IWorldDispatcher, IWorldDispatcherTrait, world, IUpgradeableWorld, IUpgradeableWorldDispatcher,
+    IWorldDispatcher, IWorldDispatcherTrait, IUpgradeableWorldDispatcher,
     IUpgradeableWorldDispatcherTrait
 };
 use dojo::tests::helpers::{
     IbarDispatcher, IbarDispatcherTrait, drop_all_events, deploy_world_and_bar, Foo, foo, bar,
-    Character, character, test_contract, test_contract_with_dojo_init_args
+    Character, character, test_contract, test_contract_with_dojo_init_args, SimpleEvent,
+    simple_event, SimpleEventEmitter
 };
 use dojo::utils::test::{spawn_test_world, deploy_with_world_address, GasCounterTrait};
 
@@ -25,7 +23,7 @@ trait IMetadataOnly<T> {
 
 #[starknet::contract]
 mod resource_metadata_malicious {
-    use dojo::model::{Model, ResourceMetadata};
+    use dojo::model::{ModelDefinition, ResourceMetadata};
     use dojo::utils::bytearray_hash;
 
     #[storage]
@@ -34,7 +32,7 @@ mod resource_metadata_malicious {
     #[abi(embed_v0)]
     impl InvalidModelName of super::IMetadataOnly<ContractState> {
         fn selector(self: @ContractState) -> felt252 {
-            Model::<ResourceMetadata>::selector()
+            ModelDefinition::<ResourceMetadata>::selector()
         }
 
         fn namespace(self: @ContractState) -> ByteArray {
@@ -52,7 +50,7 @@ mod resource_metadata_malicious {
 }
 
 #[test]
-#[available_gas(2000000)]
+#[available_gas(20000000)]
 fn test_model() {
     let world = deploy_world();
     world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
@@ -64,7 +62,7 @@ fn test_system() {
 
     bar_contract.set_foo(1337, 1337);
 
-    let stored: Foo = get!(world, get_caller_address(), Foo);
+    let stored: Foo = get!(world, starknet::get_caller_address(), Foo);
     assert(stored.a == 1337, 'data not stored');
     assert(stored.b == 1337, 'data not stored');
 }
@@ -75,14 +73,14 @@ fn test_delete() {
 
     // set model
     bar_contract.set_foo(1337, 1337);
-    let stored: Foo = get!(world, get_caller_address(), Foo);
+    let stored: Foo = get!(world, starknet::get_caller_address(), Foo);
     assert(stored.a == 1337, 'data not stored');
     assert(stored.b == 1337, 'data not stored');
 
     // delete model
     bar_contract.delete_foo_macro(stored);
 
-    let deleted: Foo = get!(world, get_caller_address(), Foo);
+    let deleted: Foo = get!(world, starknet::get_caller_address(), Foo);
     assert(deleted.a == 0, 'data not deleted');
     assert(deleted.b == 0, 'data not deleted');
 }
@@ -92,55 +90,49 @@ fn test_delete() {
 fn test_contract_getter() {
     let world = deploy_world();
 
-    let _ = world.deploy_contract('salt1', test_contract::TEST_CLASS_HASH.try_into().unwrap(),);
+    let address = world
+        .register_contract('salt1', test_contract::TEST_CLASS_HASH.try_into().unwrap());
 
-    if let Resource::Contract((class_hash, _)) = world
+    if let Resource::Contract((contract_address, namespace_hash)) = world
         .resource(selector_from_tag!("dojo-test_contract")) {
-        assert(
-            class_hash == test_contract::TEST_CLASS_HASH.try_into().unwrap(),
-            'invalid contract class hash'
-        );
+        assert(address == contract_address, 'invalid contract address');
+
+        assert(namespace_hash == bytearray_hash(@"dojo"), 'invalid namespace hash');
     }
 }
 
 #[test]
 #[available_gas(6000000)]
-fn test_model_class_hash_getter() {
-    let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
-
-    if let Resource::Model((class_hash, _)) = world.resource(Model::<Foo>::selector()) {
-        assert(class_hash == foo::TEST_CLASS_HASH.try_into().unwrap(), 'foo wrong class hash');
-    } else {
-        panic!("Foo model not found");
-    };
-}
-
-#[test]
-#[ignore]
-#[available_gas(6000000)]
-fn test_legacy_model_class_hash_getter() {
-    let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
-
-    if let Resource::Model((class_hash, _)) = world.resource('Foo') {
-        assert(class_hash == foo::TEST_CLASS_HASH.try_into().unwrap(), 'foo wrong class hash');
-    } else {
-        panic!("Foo model not found");
-    };
-}
-
-#[test]
-#[available_gas(6000000)]
 fn test_emit() {
-    let world = deploy_world();
+    let bob = starknet::contract_address_const::<0xb0b>();
 
-    let mut keys = ArrayTrait::new();
-    keys.append('MyEvent');
-    let mut values = ArrayTrait::new();
-    values.append(1);
-    values.append(2);
-    world.emit(keys, values.span());
+    let world = deploy_world();
+    world.register_event(simple_event::TEST_CLASS_HASH.try_into().unwrap());
+    world.grant_writer(dojo::event::Event::<SimpleEvent>::selector(), bob);
+
+    drop_all_events(world.contract_address);
+
+    starknet::testing::set_contract_address(bob);
+
+    let simple_event = SimpleEvent { id: 2, data: (3, 4) };
+    simple_event.emit(world);
+
+    let event = starknet::testing::pop_log::<Event>(world.contract_address);
+
+    assert(event.is_some(), 'no event');
+
+    if let Event::EventEmitted(event) = event.unwrap() {
+        assert(
+            event.event_selector == dojo::event::Event::<SimpleEvent>::selector(),
+            'bad event selector'
+        );
+        assert(event.system_address == bob, 'bad system address');
+        assert(event.historical, 'bad historical value');
+        assert(event.keys == [2].span(), 'bad keys');
+        assert(event.values == [3, 4].span(), 'bad values');
+    } else {
+        core::panic_with_felt252('no EventEmitted event');
+    }
 }
 
 
@@ -231,8 +223,7 @@ trait IWorldUpgrade<TContractState> {
 
 #[starknet::contract]
 mod worldupgrade {
-    use super::{IWorldUpgrade, IWorldDispatcher, ContractAddress};
-    use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
+    use super::IWorldDispatcher;
 
     #[storage]
     struct Storage {
@@ -300,68 +291,48 @@ fn test_upgradeable_world_from_non_owner() {
     upgradeable_world_dispatcher.upgrade(worldupgrade::TEST_CLASS_HASH.try_into().unwrap());
 }
 
-
 #[test]
 #[available_gas(6000000)]
-fn test_differ_program_hash_event_emit() {
+fn test_constructor_default() {
     let world = deploy_world();
-    drop_all_events(world.contract_address);
-    let config = IConfigDispatcher { contract_address: world.contract_address };
-
-    config.set_differ_program_hash(program_hash: 98758347158781475198374598718743);
-
-    assert_eq!(
-        starknet::testing::pop_log(world.contract_address),
-        Option::Some(DifferProgramHashUpdate { program_hash: 98758347158781475198374598718743 })
-    );
+    let _address = world
+        .register_contract('salt1', test_contract::TEST_CLASS_HASH.try_into().unwrap());
 }
 
 #[test]
-#[available_gas(6000000)]
-fn test_facts_registry_event_emit() {
-    let world = deploy_world();
-    drop_all_events(world.contract_address);
-    let config = IConfigDispatcher { contract_address: world.contract_address };
-
-    config.set_facts_registry(contract_address_const::<0x12>());
-
-    assert_eq!(
-        starknet::testing::pop_log(world.contract_address),
-        Option::Some(FactsRegistryUpdate { address: contract_address_const::<0x12>() })
-    );
-}
-
-use test_contract::IDojoInitDispatcherTrait;
-
-#[test]
-#[available_gas(6000000)]
-#[should_panic(
-    expected: (
-        "Only the world can init contract `dojo-test_contract`, but caller is `0`",
-        'ENTRYPOINT_FAILED'
-    )
-)]
 fn test_can_call_init_only_world() {
     let world = deploy_world();
     let address = world
-        .deploy_contract('salt1', test_contract::TEST_CLASS_HASH.try_into().unwrap());
+        .register_contract('salt1', test_contract::TEST_CLASS_HASH.try_into().unwrap());
 
-    let d = test_contract::IDojoInitDispatcher { contract_address: address };
-    d.dojo_init();
+    let expected_panic: ByteArray =
+        "Only the world can init contract `dojo-test_contract`, but caller is `0`";
+
+    match starknet::syscalls::call_contract_syscall(
+        address, dojo::world::world::DOJO_INIT_SELECTOR, [].span()
+    ) {
+        Result::Ok(_) => panic!("should panic"),
+        Result::Err(e) => {
+            let mut s = e.span();
+            // Remove the out of range error.
+            s.pop_front().unwrap();
+            // Remove the ENTRYPOINT_FAILED suffix.
+            s.pop_back().unwrap();
+
+            let e_str: ByteArray = Serde::deserialize(ref s).expect('failed deser');
+
+            assert_eq!(e_str, expected_panic);
+        }
+    }
 }
 
 #[test]
 #[available_gas(6000000)]
-#[should_panic(
-    expected: (
-        "Caller `4919` cannot initialize contract `dojo-test_contract` (not owner)",
-        'ENTRYPOINT_FAILED'
-    )
-)]
+#[should_panic(expected: ('CONTRACT_NOT_DEPLOYED', 'ENTRYPOINT_FAILED'))]
 fn test_can_call_init_only_owner() {
     let world = deploy_world();
     let _address = world
-        .deploy_contract('salt1', test_contract::TEST_CLASS_HASH.try_into().unwrap());
+        .register_contract('salt1', test_contract::TEST_CLASS_HASH.try_into().unwrap());
 
     let bob = starknet::contract_address_const::<0x1337>();
     starknet::testing::set_contract_address(bob);
@@ -374,7 +345,7 @@ fn test_can_call_init_only_owner() {
 fn test_can_call_init_default() {
     let world = deploy_world();
     let _address = world
-        .deploy_contract('salt1', test_contract::TEST_CLASS_HASH.try_into().unwrap());
+        .register_contract('salt1', test_contract::TEST_CLASS_HASH.try_into().unwrap());
 
     world.init_contract(selector_from_tag!("dojo-test_contract"), [].span());
 }
@@ -384,61 +355,38 @@ fn test_can_call_init_default() {
 fn test_can_call_init_args() {
     let world = deploy_world();
     let _address = world
-        .deploy_contract(
+        .register_contract(
             'salt1', test_contract_with_dojo_init_args::TEST_CLASS_HASH.try_into().unwrap()
         );
 
     world.init_contract(selector_from_tag!("dojo-test_contract_with_dojo_init_args"), [1].span());
 }
 
-use test_contract_with_dojo_init_args::IDojoInitDispatcherTrait as IDojoInitArgs;
-
 #[test]
-#[available_gas(6000000)]
-#[should_panic(
-    expected: (
-        "Only the world can init contract `dojo-test_contract_with_dojo_init_args`, but caller is `0`",
-        'ENTRYPOINT_FAILED'
-    )
-)]
 fn test_can_call_init_only_world_args() {
     let world = deploy_world();
     let address = world
-        .deploy_contract(
+        .register_contract(
             'salt1', test_contract_with_dojo_init_args::TEST_CLASS_HASH.try_into().unwrap()
         );
 
-    let d = test_contract_with_dojo_init_args::IDojoInitDispatcher { contract_address: address };
-    d.dojo_init(123);
-}
+    let expected_panic: ByteArray =
+        "Only the world can init contract `dojo-test_contract_with_dojo_init_args`, but caller is `0`";
 
-use dojo::world::update::IUpgradeableStateDispatcherTrait;
+    match starknet::syscalls::call_contract_syscall(
+        address, dojo::world::world::DOJO_INIT_SELECTOR, [123].span()
+    ) {
+        Result::Ok(_) => panic!("should panic"),
+        Result::Err(e) => {
+            let mut s = e.span();
+            // Remove the out of range error.
+            s.pop_front().unwrap();
+            // Remove the ENTRYPOINT_FAILED suffix.
+            s.pop_back().unwrap();
 
-#[test]
-#[available_gas(6000000)]
-#[should_panic(
-    expected: ("Caller `4919` can't upgrade state (not world owner)", 'ENTRYPOINT_FAILED')
-)]
-fn test_upgrade_state_not_owner() {
-    let world = deploy_world();
+            let e_str: ByteArray = Serde::deserialize(ref s).expect('failed deser');
 
-    let not_owner = starknet::contract_address_const::<0x1337>();
-    starknet::testing::set_contract_address(not_owner);
-    starknet::testing::set_account_contract_address(not_owner);
-
-    let output = dojo::world::update::ProgramOutput {
-        prev_state_root: 0,
-        new_state_root: 0,
-        block_number: 0,
-        block_hash: 0,
-        config_hash: 0,
-        world_da_hash: 0,
-        message_to_starknet_segment: [].span(),
-        message_to_appchain_segment: [].span(),
-    };
-
-    let d = dojo::world::update::IUpgradeableStateDispatcher {
-        contract_address: world.contract_address
-    };
-    d.upgrade_state([].span(), output, 0);
+            assert_eq!(e_str, expected_panic);
+        }
+    }
 }

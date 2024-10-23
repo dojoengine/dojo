@@ -1,7 +1,6 @@
 use anyhow::{Context, Result};
 use clap::{Args, Parser};
 use dojo_bindgen::{BuiltinPlugins, PluginManager};
-use dojo_lang::scarb_internal::compile_workspace;
 use dojo_world::manifest::MANIFESTS_DIR;
 use prettytable::format::consts::FORMAT_NO_LINESEP_WITH_TITLE;
 use prettytable::{format, Cell, Row, Table};
@@ -73,22 +72,21 @@ impl BuildArgs {
         // Manifest path is always a file, we can unwrap safely to get the parent folder.
         let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
 
-        let profile_dir = manifest_dir.join(MANIFESTS_DIR).join(profile_name);
+        let profile_dir = manifest_dir.join(MANIFESTS_DIR).join(&profile_name);
         CleanArgs::clean_manifests(&profile_dir)?;
 
         trace!(?packages);
 
-        let compile_info = compile_workspace(
-            config,
+        scarb::ops::compile(
+            packages.iter().map(|p| p.id).collect(),
             CompileOpts {
                 include_target_names: vec![],
                 include_target_kinds: vec![],
                 exclude_target_kinds: vec![TargetKind::TEST],
                 features: self.features.try_into()?,
             },
-            packages.iter().map(|p| p.id).collect(),
+            &ws,
         )?;
-        trace!(?compile_info, "Compiled workspace.");
 
         let mut builtin_plugins = vec![];
 
@@ -105,7 +103,7 @@ impl BuildArgs {
         }
 
         if self.stats {
-            let target_dir = &compile_info.target_dir;
+            let target_dir = &ws.target_dir().to_string().into();
             let contracts_statistics = get_contract_statistics_for_dir(config.ui(), target_dir)
                 .context("Error getting contracts stats")?;
             trace!(
@@ -134,14 +132,18 @@ impl BuildArgs {
             table.printstd()
         }
 
+        let root_package_name = if let Some(package) = ws.root_package() {
+            package.id.name.to_string()
+        } else {
+            panic!("Root package not found.");
+        };
+
         // Custom plugins are always empty for now.
         let bindgen = PluginManager {
-            profile_name: compile_info.profile_name,
+            profile_name,
             output_path: self.bindings_output.into(),
-            manifest_path: compile_info.manifest_path,
-            root_package_name: compile_info
-                .root_package_name
-                .unwrap_or("NO_ROOT_PACKAGE".to_string()),
+            manifest_path: ws.manifest_path().into(),
+            root_package_name,
             plugins: vec![],
             builtin_plugins,
         };

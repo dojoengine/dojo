@@ -1,7 +1,7 @@
 use cairo_lang_syntax::node::ast;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 
-use crate::syntax::utils as syntax_utils;
+use super::utils as syntax_utils;
 
 pub const SELF_PARAM_NAME: &str = "self";
 

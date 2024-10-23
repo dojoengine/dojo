@@ -1,7 +1,6 @@
-use core::array::{ArrayTrait, SpanTrait};
+use core::array::ArrayTrait;
 use core::option::OptionTrait;
 use core::traits::{Into, TryInto};
-use starknet::{ClassHash, ContractAddress};
 
 use dojo::storage::packing::{
     shl, shr, fpow, pack, unpack, pack_inner, unpack_inner, calculate_packed_size, pow2_const

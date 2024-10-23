@@ -7,10 +7,6 @@ use cairo_lang_syntax::node::ast::{self, ExprPath, ExprStructCtorCall};
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::kind::SyntaxKind;
 use cairo_lang_syntax::node::{SyntaxNode, TypedStablePtr, TypedSyntaxNode};
-use camino::Utf8PathBuf;
-use dojo_world::config::namespace_config::DOJO_MANIFESTS_DIR_CFG_KEY;
-use dojo_world::contracts::naming;
-use dojo_world::manifest::BaseManifest;
 
 #[derive(Debug)]
 pub enum SystemRWOpRecord {
@@ -35,20 +31,16 @@ pub fn parent_of_kind(
 
 /// Reads all the models and namespaces from base manifests files.
 pub fn load_manifest_models_and_namespaces(
-    cfg_set: &CfgSet,
-    whitelisted_namespaces: &[String],
+    _cfg_set: &CfgSet,
+    _whitelisted_namespaces: &[String],
 ) -> anyhow::Result<(Vec<String>, Vec<String>)> {
-    let dojo_manifests_dir = get_dojo_manifests_dir(cfg_set.clone())?;
 
-    let base_dir = dojo_manifests_dir.join("base");
-    let base_abstract_manifest = BaseManifest::load_from_path(&base_dir)?;
+    let models = HashSet::<String>::new();
+    let namespaces = HashSet::<String>::new();
 
-    let mut models = HashSet::new();
-    let mut namespaces = HashSet::new();
-
-    for model in base_abstract_manifest.models {
-        let qualified_path = model.inner.qualified_path;
-        let namespace = naming::split_tag(&model.inner.tag)?.0;
+/*     for model in annotations.models {
+        let qualified_path = model.qualified_path;
+        let namespace = naming::split_tag(&model.tag)?.0;
 
         if !whitelisted_namespaces.is_empty() && !whitelisted_namespaces.contains(&namespace) {
             continue;
@@ -56,23 +48,12 @@ pub fn load_manifest_models_and_namespaces(
 
         models.insert(qualified_path);
         namespaces.insert(namespace);
-    }
+    } */
 
     let models_vec: Vec<String> = models.into_iter().collect();
     let namespaces_vec: Vec<String> = namespaces.into_iter().collect();
 
     Ok((namespaces_vec, models_vec))
-}
-
-/// Gets the dojo_manifests_dir from the cfg_set.
-pub fn get_dojo_manifests_dir(cfg_set: CfgSet) -> anyhow::Result<Utf8PathBuf> {
-    for cfg in cfg_set.into_iter() {
-        if cfg.key == DOJO_MANIFESTS_DIR_CFG_KEY {
-            return Ok(Utf8PathBuf::from(cfg.value.unwrap().as_str().to_string()));
-        }
-    }
-
-    Err(anyhow::anyhow!("dojo_manifests_dir not found"))
 }
 
 /// Extracts the namespaces from a fixed size array of strings.
@@ -86,7 +67,12 @@ pub fn extract_namespaces(
         ast::Expr::FixedSizeArray(array) => {
             for element in array.exprs(db).elements(db) {
                 if let ast::Expr::String(string_literal) = element {
-                    namespaces.push(string_literal.as_syntax_node().get_text(db).replace('\"', ""));
+                    namespaces.push(
+                        string_literal
+                            .as_syntax_node()
+                            .get_text(db)
+                            .replace('\"', ""),
+                    );
                 } else {
                     return Err(PluginDiagnostic {
                         stable_ptr: element.stable_ptr().untyped(),

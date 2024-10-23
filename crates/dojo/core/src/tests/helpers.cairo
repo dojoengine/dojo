@@ -6,6 +6,14 @@ use dojo::model::Model;
 use dojo::utils::test::{deploy_with_world_address, spawn_test_world};
 
 #[derive(Copy, Drop, Serde, Debug)]
+#[dojo::event]
+pub struct SimpleEvent {
+    #[key]
+    pub id: u32,
+    pub data: (felt252, felt252),
+}
+
+#[derive(Copy, Drop, Serde, Debug)]
 #[dojo::model]
 pub struct Foo {
     #[key]
@@ -14,8 +22,158 @@ pub struct Foo {
     pub b: u128,
 }
 
+#[starknet::contract]
+pub mod foo_invalid_name {
+    use dojo::model::IModel;
+
+    #[storage]
+    struct Storage {}
+
+    #[abi(embed_v0)]
+    pub impl ModelImpl of IModel<ContractState> {
+        fn name(self: @ContractState) -> ByteArray {
+            "foo-bis"
+        }
+
+        fn namespace(self: @ContractState) -> ByteArray {
+            "dojo"
+        }
+
+        fn tag(self: @ContractState) -> ByteArray {
+            "dojo-foo-bis"
+        }
+
+        fn version(self: @ContractState) -> u8 {
+            1
+        }
+
+        fn selector(self: @ContractState) -> felt252 {
+            dojo::utils::selector_from_names(@"dojo", @"foo-bis")
+        }
+
+        fn name_hash(self: @ContractState) -> felt252 {
+            dojo::utils::bytearray_hash(@"foo-bis")
+        }
+
+        fn namespace_hash(self: @ContractState) -> felt252 {
+            dojo::utils::bytearray_hash(@"dojo")
+        }
+
+        fn unpacked_size(self: @ContractState) -> Option<usize> {
+            Option::None
+        }
+
+        fn packed_size(self: @ContractState) -> Option<usize> {
+            Option::None
+        }
+
+        fn layout(self: @ContractState) -> dojo::meta::Layout {
+            dojo::meta::Layout::Fixed([].span())
+        }
+
+        fn schema(self: @ContractState) -> dojo::meta::introspect::Ty {
+            dojo::meta::introspect::Ty::Struct(
+                dojo::meta::introspect::Struct {
+                    name: 'foo', attrs: [].span(), children: [].span()
+                }
+            )
+        }
+
+        fn definition(self: @ContractState) -> dojo::model::ModelDef {
+            dojo::model::ModelDef {
+                name: Self::name(self),
+                namespace: Self::namespace(self),
+                version: Self::version(self),
+                selector: Self::selector(self),
+                name_hash: Self::name_hash(self),
+                namespace_hash: Self::namespace_hash(self),
+                layout: Self::layout(self),
+                schema: Self::schema(self),
+                packed_size: Self::packed_size(self),
+                unpacked_size: Self::unpacked_size(self),
+            }
+        }
+    }
+}
+
+
+#[starknet::contract]
+pub mod foo_invalid_namespace {
+    use dojo::model::IModel;
+
+    #[storage]
+    struct Storage {}
+
+    #[abi(embed_v0)]
+    pub impl ModelImpl of IModel<ContractState> {
+        fn name(self: @ContractState) -> ByteArray {
+            "foo"
+        }
+
+        fn namespace(self: @ContractState) -> ByteArray {
+            "inv@lid n@mesp@ce"
+        }
+
+        fn tag(self: @ContractState) -> ByteArray {
+            "inv@lid n@mesp@ce-foo"
+        }
+
+        fn version(self: @ContractState) -> u8 {
+            1
+        }
+
+        fn selector(self: @ContractState) -> felt252 {
+            dojo::utils::selector_from_names(@"inv@lid n@mesp@ce", @"foo")
+        }
+
+        fn name_hash(self: @ContractState) -> felt252 {
+            dojo::utils::bytearray_hash(@"foo")
+        }
+
+        fn namespace_hash(self: @ContractState) -> felt252 {
+            dojo::utils::bytearray_hash(@"inv@lid n@mesp@ce")
+        }
+
+        fn unpacked_size(self: @ContractState) -> Option<usize> {
+            Option::None
+        }
+
+        fn packed_size(self: @ContractState) -> Option<usize> {
+            Option::None
+        }
+
+        fn layout(self: @ContractState) -> dojo::meta::Layout {
+            dojo::meta::Layout::Fixed([].span())
+        }
+
+        fn schema(self: @ContractState) -> dojo::meta::introspect::Ty {
+            dojo::meta::introspect::Ty::Struct(
+                dojo::meta::introspect::Struct {
+                    name: 'foo', attrs: [].span(), children: [].span()
+                }
+            )
+        }
+
+        fn definition(self: @ContractState) -> dojo::model::ModelDef {
+            dojo::model::ModelDef {
+                name: Self::name(self),
+                namespace: Self::namespace(self),
+                version: Self::version(self),
+                selector: Self::selector(self),
+                name_hash: Self::name_hash(self),
+                namespace_hash: Self::namespace_hash(self),
+                layout: Self::layout(self),
+                schema: Self::schema(self),
+                packed_size: Self::packed_size(self),
+                unpacked_size: Self::unpacked_size(self),
+            }
+        }
+    }
+}
+
+
 #[derive(Copy, Drop, Serde)]
-#[dojo::model(namespace: "another_namespace", nomapping: true)]
+#[dojo::model(namespace: "another_namespace")]
 pub struct Buzz {
     #[key]
     pub caller: ContractAddress,
@@ -30,11 +188,10 @@ pub trait IFooSetter {
 
 #[dojo::contract]
 pub mod foo_setter {
-    use super::IFooSetter;
-    use super::Foo;
+    use super::{Foo, IFooSetter};
 
     #[abi(embed_v0)]
-    impl IFooSetterImpl of super::IFooSetter<ContractState> {
+    impl IFooSetterImpl of IFooSetter<ContractState> {
         fn set_foo(ref world: IWorldDispatcher, a: felt252, b: u128) {
             set!(world, (Foo { caller: starknet::get_caller_address(), a, b }));
         }
@@ -46,12 +203,14 @@ pub mod test_contract {}
 
 #[dojo::contract]
 pub mod test_contract_with_dojo_init_args {
-    fn dojo_init(world: @IWorldDispatcher, _arg1: felt252) {
-        let _u = world.uuid();
+    use dojo::world::IWorldDispatcherTrait;
+
+    fn dojo_init(ref world: IWorldDispatcher, _arg1: felt252) {
+        let _a = world.uuid();
     }
 }
 
-#[dojo::contract(namespace: "buzz_namespace", nomapping: true)]
+#[dojo::contract(namespace: "buzz_namespace")]
 pub mod buzz_contract {}
 
 #[derive(IntrospectPacked, Copy, Drop, Serde)]

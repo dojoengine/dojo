@@ -1,3 +1,7 @@
+//! Inline macros.
+//!
+//! An inline macros is a macro that is used directly within the code.
+
 use cairo_lang_defs::plugin::{InlinePluginResult, PluginDiagnostic};
 use cairo_lang_diagnostics::Severity;
 use cairo_lang_syntax::node::db::SyntaxGroup;
@@ -12,6 +16,14 @@ pub mod selector_from_tag;
 pub mod set;
 pub mod spawn_test_world;
 pub mod utils;
+
+pub use delete::DeleteMacro;
+pub use emit::EmitMacro;
+pub use get::GetMacro;
+pub use get_models_test_class_hashes::GetModelsTestClassHashes;
+pub use selector_from_tag::SelectorFromTagMacro;
+pub use set::SetMacro;
+pub use spawn_test_world::SpawnTestWorld;
 
 const CAIRO_ERR_MSG_LEN: usize = 31;
 

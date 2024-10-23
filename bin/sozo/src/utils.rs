@@ -111,7 +111,10 @@ pub fn verify_cairo_version_compatibility(manifest_path: &Utf8PathBuf) -> Result
     let version = Version::from_str(scarb_cairo_version.version).unwrap();
     if !version_req.matches(&version) {
         anyhow::bail!(
-            "Specified cairo version not supported by dojo. Please verify and update dojo."
+            "Cairo version {} found in {} is not supported by dojo (expecting {}). Please change the Cairo version in your manifest or update dojo.",
+            version_req,
+            manifest_path,
+            version,
         );
     };
 

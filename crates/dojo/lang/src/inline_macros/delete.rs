@@ -56,10 +56,13 @@ impl InlineMacroExprPlugin for DeleteMacro {
                 bundle.push(syntax_node.get_text(db));
             }
             ast::Expr::Tuple(list) => {
-                list.expressions(db).elements(db).into_iter().for_each(|expr| {
-                    let syntax_node = expr.as_syntax_node();
-                    bundle.push(syntax_node.get_text(db));
-                })
+                list.expressions(db)
+                    .elements(db)
+                    .into_iter()
+                    .for_each(|expr| {
+                        let syntax_node = expr.as_syntax_node();
+                        bundle.push(syntax_node.get_text(db));
+                    })
             }
             ast::Expr::StructCtorCall(ctor) => {
                 let syntax_node = ctor.as_syntax_node();
@@ -90,12 +93,9 @@ impl InlineMacroExprPlugin for DeleteMacro {
 
         for entity in bundle {
             builder.add_str(&format!(
-                "
-                let __delete_model_instance__ = {};
-                dojo::model::Model::delete_model(@__delete_model_instance__, {});
-                ",
-                entity,
+                "dojo::model::ModelStore::delete({}, @{})\n;",
                 world.as_syntax_node().get_text(db),
+                entity,
             ));
         }
         builder.add_str("}");

@@ -14,7 +14,7 @@ Missing(
 )
 
 //! > semantic_diagnostics
-error: Plugin diagnostic: Failed to load models and namespaces, ensure you have run `sozo build` first.
+error: Plugin diagnostic: failed to load models and namespaces, ensure you have run `sozo build` first.
  --> lib.cairo:2:1
 spawn_test_world!()
 ^*****************^
@@ -60,7 +60,7 @@ Missing(
 )
 
 //! > semantic_diagnostics
-error: Plugin diagnostic: Failed to load models and namespaces, ensure you have run `sozo build` first.
+error: Plugin diagnostic: failed to load models and namespaces, ensure you have run `sozo build` first.
  --> lib.cairo:2:1
 spawn_test_world!(["ns1", "ns2"])
 ^*******************************^

@@ -1,7 +1,7 @@
 [package]
+name = "dojo-contracts"
 edition.workspace = true
-license-file.workspace = true
-name = "dojo-core"
+license.workspace = true
 repository.workspace = true
 version.workspace = true
 

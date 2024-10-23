@@ -6,6 +6,7 @@ use cairo_lang_defs::plugin::{
 use cairo_lang_defs::plugin_utils::unsupported_bracket_diagnostic;
 use cairo_lang_diagnostics::Severity;
 use cairo_lang_syntax::node::{ast, TypedStablePtr, TypedSyntaxNode};
+use tracing::trace;
 
 use super::unsupported_arg_diagnostic;
 use super::utils::{extract_namespaces, load_manifest_models_and_namespaces};
@@ -51,7 +52,10 @@ impl InlineMacroExprPlugin for SpawnTestWorld {
             match extract_namespaces(db, &expected_array.value(db)) {
                 Ok(namespaces) => namespaces,
                 Err(e) => {
-                    return InlinePluginResult { code: None, diagnostics: vec![e] };
+                    return InlinePluginResult {
+                        code: None,
+                        diagnostics: vec![e],
+                    };
                 }
             }
         } else {
@@ -66,8 +70,8 @@ impl InlineMacroExprPlugin for SpawnTestWorld {
                         code: None,
                         diagnostics: vec![PluginDiagnostic {
                             stable_ptr: syntax.stable_ptr().untyped(),
-                            message: "Failed to load models and namespaces, ensure you have run \
-                                      `sozo build` first."
+                            message: "failed to load models and namespaces, ensure you have run \
+                                  `sozo build` first."
                                 .to_string(),
                             severity: Severity::Error,
                         }],
@@ -75,11 +79,17 @@ impl InlineMacroExprPlugin for SpawnTestWorld {
                 }
             };
 
+        trace!(?namespaces, ?models, "Spawning test world from macro.");
+
         let mut builder = PatchBuilder::new(db, syntax);
 
         builder.add_str(&format!(
             "dojo::utils::test::spawn_test_world([{}].span(), [{}].span())",
-            namespaces.iter().map(|n| format!("\"{}\"", n)).collect::<Vec<String>>().join(", "),
+            namespaces
+                .iter()
+                .map(|n| format!("\"{}\"", n))
+                .collect::<Vec<String>>()
+                .join(", "),
             models
                 .iter()
                 .map(|m| format!("{}::TEST_CLASS_HASH", m))

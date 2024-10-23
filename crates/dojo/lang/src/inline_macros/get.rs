@@ -29,10 +29,7 @@ impl InlineMacroExprPlugin for GetMacro {
             return unsupported_bracket_diagnostic(db, syntax);
         };
         let mut builder = PatchBuilder::new(db, syntax);
-        builder.add_str(
-            "{
-                let mut __get_macro_keys__ = core::array::ArrayTrait::new();\n",
-        );
+        builder.add_str("{\n");
 
         let args = arg_list.arguments(db).elements(db);
 
@@ -60,7 +57,10 @@ impl InlineMacroExprPlugin for GetMacro {
         let models = match extract_models(db, &models.value(db)) {
             Ok(models) => models,
             Err(diagnostic) => {
-                return InlinePluginResult { code: None, diagnostics: vec![diagnostic] };
+                return InlinePluginResult {
+                    code: None,
+                    diagnostics: vec![diagnostic],
+                };
             }
         };
 
@@ -80,28 +80,24 @@ impl InlineMacroExprPlugin for GetMacro {
             _ => keys.as_syntax_node().get_text(db),
         };
 
-        builder.add_str(&format!(
-            "core::serde::Serde::serialize(@{args}, ref __get_macro_keys__);
-            let __get_macro_keys__ = core::array::ArrayTrait::span(@__get_macro_keys__);\n"
-        ));
-
         for model in &models {
             let mut lookup_err_msg = format!("{} not found", model.to_string());
             lookup_err_msg.truncate(CAIRO_ERR_MSG_LEN);
 
             builder.add_str(&format!(
-                "\n
-                let __{model}: {model} = dojo::model::Model::get({}, __get_macro_keys__);\n",
+                "let __{model}: {model} = dojo::model::ModelStore::get(@{}, {});\n",
                 world.as_syntax_node().get_text(db),
+                args,
             ));
         }
         builder.add_str(&format!(
-            "({})
-        }}",
+            "({})}}",
             models.iter().map(|c| format!("__{c}")).join(",")
         ));
 
         let (code, code_mappings) = builder.build();
+
+        crate::debug_expand(&format!("GET MACRO: {args}"), &code);
 
         InlinePluginResult {
             code: Some(PluginGeneratedFile {

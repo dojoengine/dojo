@@ -5,6 +5,7 @@ use serde::Serialize;
 use starknet::core::types::Felt;
 
 pub mod event;
+pub mod naming;
 pub mod packing;
 pub mod primitive;
 pub mod primitive_conversion;

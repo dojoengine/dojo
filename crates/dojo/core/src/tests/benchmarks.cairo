@@ -3,17 +3,15 @@ use core::poseidon::poseidon_hash_span;
 use core::result::ResultTrait;
 use core::serde::Serde;
 
-use starknet::{
-    contract_address_const, ContractAddress, ClassHash, get_caller_address, SyscallResultTrait
-};
+use starknet::{ContractAddress, SyscallResultTrait};
 use starknet::storage_access::{
     storage_base_address_from_felt252, storage_address_from_base,
     storage_address_from_base_and_offset
 };
 use starknet::syscalls::{storage_read_syscall, storage_write_syscall};
 
-use dojo::model::{Model, Layout, ModelIndex};
-use dojo::model::introspect::Introspect;
+use dojo::meta::Layout;
+use dojo::model::{Model, ModelIndex, ModelStore};
 use dojo::storage::{database, storage};
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 
@@ -492,15 +490,15 @@ fn test_benchmark_set_entity() {
     gas.end("World::SetEntity::ComplexModel");
 
     let gas = GasCounterTrait::start();
-    simple_entity_packed.set(world);
+    world.set(@simple_entity_packed);
     gas.end("Model::Set::SimplePacked");
 
     let gas = GasCounterTrait::start();
-    simple_entity_not_packed.set(world);
+    world.set(@simple_entity_not_packed);
     gas.end("Model::Set::SimpleNotPacked");
 
     let gas = GasCounterTrait::start();
-    complex_entity.set(world);
+    world.set(@complex_entity);
     gas.end("Model::Set::ComplexModel");
 
     let gas = GasCounterTrait::start();

@@ -1,19 +1,11 @@
-# dojo-lang
+# Cairo compiler plugin for Dojo
 
-Cairo language plugin for compiling the Dojo Entity Component System to Starknet contracts.
+Cairo compiler plugin to compile Dojo specific macros.
 
 ## Testing
 
-Expected test outputs are defined in `crates/dojo/lang/src/plugin_test_data/model`.
-
-To run the tests, run:
+To regenerate the test data, set `CAIRO_FIX_TESTS=1`:
 
 ```
-cargo test --package dojo-lang --lib -- plugin::test::expand_contract::model --exact --nocapture
-```
-
-To regenerate, set `CAIRO_FIX_TESTS=1`:
-
-```
-CAIRO_FIX_TESTS=1 cargo test --package dojo-lang
+CAIRO_FIX_TESTS=1 cargo test -p dojo-compiler
 ```

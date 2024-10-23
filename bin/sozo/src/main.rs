@@ -4,8 +4,7 @@ use std::process::exit;
 use anyhow::Result;
 use args::SozoArgs;
 use clap::Parser;
-use dojo_lang::compiler::DojoCompiler;
-use dojo_lang::plugin::CairoPluginRepository;
+use scarb::compiler::plugin::CairoPluginRepository;
 use scarb::compiler::CompilerRepository;
 use scarb::core::Config;
 use scarb_ui::{OutputFormat, Ui};
@@ -29,22 +28,8 @@ fn main() {
 }
 
 fn cli_main(args: SozoArgs) -> Result<()> {
-    let mut compilers = CompilerRepository::std();
-    let cairo_plugins = CairoPluginRepository::default();
-
-    match &args.command {
-        Commands::Build(args) => {
-            trace!("Adding DojoCompiler to compiler repository.");
-            compilers.add(Box::new(DojoCompiler::new(args.output_debug_info))).unwrap()
-        }
-
-        Commands::Dev(_) | Commands::Migrate(_) => {
-            trace!("Adding DojoCompiler to compiler repository.");
-            compilers.add(Box::new(DojoCompiler::default())).unwrap()
-        }
-
-        _ => {}
-    }
+    let compilers = CompilerRepository::std();
+    let cairo_plugins = CairoPluginRepository::std();
 
     let manifest_path = scarb::ops::find_manifest_path(args.manifest_path.as_deref())?;
 

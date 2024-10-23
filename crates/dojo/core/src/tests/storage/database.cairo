@@ -1,15 +1,6 @@
 use core::array::{ArrayTrait, SpanTrait};
-use core::option::OptionTrait;
-use core::result::ResultTrait;
-use core::serde::Serde;
-use core::traits::{Into, TryInto};
 
-use starknet::class_hash::ClassHash;
-use starknet::syscalls::deploy_syscall;
-
-use dojo::storage::database::{get, set, MAX_ARRAY_LENGTH};
-use dojo::utils::test::assert_array;
-use dojo::world::{IWorldDispatcher};
+use dojo::storage::database::{get, set};
 
 #[test]
 #[available_gas(1000000)]

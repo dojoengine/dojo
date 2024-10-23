@@ -6,7 +6,7 @@ use cairo_lang_defs::plugin::{
 use cairo_lang_defs::plugin_utils::unsupported_bracket_diagnostic;
 use cairo_lang_diagnostics::Severity;
 use cairo_lang_syntax::node::{ast, TypedStablePtr, TypedSyntaxNode};
-use dojo_world::contracts::naming;
+use dojo_types::naming;
 
 #[derive(Debug, Default)]
 pub struct SelectorFromTagMacro;
