@@ -232,9 +232,7 @@ async fn main() -> anyhow::Result<()> {
         args.max_concurrent_tasks,
     )
     .await?;
-    tokio::spawn(async move {
-        executor.run().await.unwrap();
-    });
+    let executor_handle = tokio::spawn(async move { executor.run().await });
 
     let model_cache = Arc::new(ModelCache::new(pool.clone()));
     let db = Sql::new(pool.clone(), sender.clone(), &args.indexing.contracts, model_cache.clone())
@@ -350,6 +348,7 @@ async fn main() -> anyhow::Result<()> {
 
     tokio::select! {
         res = engine_handle => res??,
+        res = executor_handle => res??,
         res = proxy_server_handle => res??,
         res = graphql_server_handle => res?,
         res = grpc_server_handle => res??,

@@ -9,6 +9,7 @@ use starknet::providers::Provider;
 
 use super::utils::{u256_to_sql_string, I256};
 use super::{Sql, FELT_DELIMITER};
+use crate::constants::TOKEN_TRANSFER_TABLE;
 use crate::executor::{
     ApplyBalanceDiffQuery, Argument, QueryMessage, QueryType, RegisterErc20TokenQuery,
     RegisterErc721TokenQuery,
@@ -249,9 +250,10 @@ impl Sql {
         block_timestamp: u64,
         event_id: &str,
     ) -> Result<()> {
-        let insert_query = "INSERT INTO erc_transfers (id, contract_address, from_address, \
-                            to_address, amount, token_id, executed_at) VALUES (?, ?, ?, ?, ?, ?, \
-                            ?)";
+        let insert_query = format!(
+            "INSERT INTO {TOKEN_TRANSFER_TABLE} (id, contract_address, from_address, to_address, \
+             amount, token_id, executed_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+        );
 
         self.executor.send(QueryMessage::new(
             insert_query.to_string(),

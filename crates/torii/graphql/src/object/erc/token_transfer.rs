@@ -6,52 +6,50 @@ use serde::Deserialize;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{FromRow, Pool, Row, Sqlite, SqliteConnection};
 use starknet_crypto::Felt;
+use torii_core::constants::TOKEN_TRANSFER_TABLE;
+use torii_core::engine::get_transaction_hash_from_event_id;
 use torii_core::sql::utils::felt_to_sql_string;
 use tracing::warn;
 
 use super::handle_cursor;
-use crate::constants::{
-    DEFAULT_LIMIT, ERC_BALANCE_NAME, ERC_BALANCE_TABLE, ERC_BALANCE_TYPE_NAME, ID_COLUMN,
-};
-use crate::mapping::ERC_BALANCE_TYPE_MAPPING;
+use crate::constants::{DEFAULT_LIMIT, ID_COLUMN, TOKEN_TRANSFER_NAME, TOKEN_TRANSFER_TYPE_NAME};
+use crate::mapping::TOKEN_TRANSFER_TYPE_MAPPING;
 use crate::object::connection::page_info::PageInfoObject;
 use crate::object::connection::{
     connection_arguments, cursor, parse_connection_arguments, ConnectionArguments,
 };
 use crate::object::{BasicObject, ResolvableObject};
-use crate::query::data::count_rows;
-use crate::query::filter::{Comparator, Filter, FilterValue};
 use crate::query::order::{CursorDirection, Direction};
 use crate::types::{TypeMapping, ValueMapping};
 use crate::utils::extract;
 
 #[derive(Debug)]
-pub struct ErcBalanceObject;
+pub struct ErcTransferObject;
 
-impl BasicObject for ErcBalanceObject {
+impl BasicObject for ErcTransferObject {
     fn name(&self) -> (&str, &str) {
-        ERC_BALANCE_NAME
+        TOKEN_TRANSFER_NAME
     }
 
     fn type_name(&self) -> &str {
-        ERC_BALANCE_TYPE_NAME
+        TOKEN_TRANSFER_TYPE_NAME
     }
 
     fn type_mapping(&self) -> &TypeMapping {
-        &ERC_BALANCE_TYPE_MAPPING
+        &TOKEN_TRANSFER_TYPE_MAPPING
     }
 }
 
-impl ResolvableObject for ErcBalanceObject {
+impl ResolvableObject for ErcTransferObject {
     fn resolvers(&self) -> Vec<Field> {
         let account_address = "account_address";
-        let argument = InputValue::new(
+        let arg_addr = InputValue::new(
             account_address.to_case(Case::Camel),
             TypeRef::named_nn(TypeRef::STRING),
         );
 
         let mut field = Field::new(
-            self.name().0,
+            self.name().1,
             TypeRef::named(format!("{}Connection", self.type_name())),
             move |ctx| {
                 FieldFuture::new(async move {
@@ -62,48 +60,65 @@ impl ResolvableObject for ErcBalanceObject {
                         &account_address.to_case(Case::Camel),
                     )?;
 
-                    let filter = vec![Filter {
-                        field: "account_address".to_string(),
-                        comparator: Comparator::Eq,
-                        value: FilterValue::String(felt_to_sql_string(&address)),
-                    }];
-
-                    let total_count =
-                        count_rows(&mut conn, ERC_BALANCE_TABLE, &None, &Some(filter)).await?;
+                    let total_count: (i64,) = sqlx::query_as(&format!(
+                        "SELECT COUNT(*) FROM {TOKEN_TRANSFER_TABLE} WHERE from_address = ? OR \
+                         to_address = ?"
+                    ))
+                    .bind(felt_to_sql_string(&address))
+                    .bind(felt_to_sql_string(&address))
+                    .fetch_one(&mut *conn)
+                    .await?;
+                    let total_count = total_count.0;
 
                     let (data, page_info) =
-                        fetch_erc_balances(&mut conn, address, &connection, total_count).await?;
-
-                    let results = erc_balance_connection_output(&data, total_count, page_info)?;
+                        fetch_token_transfers(&mut conn, address, &connection, total_count).await?;
+                    let results = token_transfers_connection_output(&data, total_count, page_info)?;
 
                     Ok(Some(Value::Object(results)))
                 })
             },
         )
-        .argument(argument);
+        .argument(arg_addr);
 
         field = connection_arguments(field);
         vec![field]
     }
 }
 
-async fn fetch_erc_balances(
+async fn fetch_token_transfers(
     conn: &mut SqliteConnection,
     address: Felt,
     connection: &ConnectionArguments,
     total_count: i64,
 ) -> sqlx::Result<(Vec<SqliteRow>, PageInfo)> {
-    let table_name = ERC_BALANCE_TABLE;
-    let id_column = format!("b.{}", ID_COLUMN);
+    let table_name = TOKEN_TRANSFER_TABLE;
+    let id_column = format!("et.{}", ID_COLUMN);
 
     let mut query = format!(
-        "SELECT b.id, t.contract_address, t.name, t.symbol, t.decimals, b.balance, b.token_id, \
-         c.contract_type
-         FROM {table_name} b
-         JOIN tokens t ON b.token_id = t.id
-         JOIN contracts c ON t.contract_address = c.contract_address"
+        r#"
+SELECT
+    et.id,
+    et.contract_address,
+    et.from_address,
+    et.to_address,
+    et.amount,
+    et.token_id,
+    et.executed_at,
+    t.name,
+    t.symbol,
+    t.decimals,
+    c.contract_type,
+    t.metadata
+FROM
+    {table_name} et
+JOIN
+    tokens t ON et.token_id = t.id
+JOIN
+    contracts c ON t.contract_address = c.contract_address
+"#,
     );
-    let mut conditions = vec!["b.account_address = ?".to_string()];
+
+    let mut conditions = vec!["et.from_address = ? OR et.to_address = ?".to_string()];
 
     let mut cursor_param = &connection.after;
     if let Some(after_cursor) = &connection.after {
@@ -144,7 +159,12 @@ async fn fetch_erc_balances(
         query.push_str(&format!(" OFFSET {}", offset));
     }
 
-    let mut data = sqlx::query(&query).bind(felt_to_sql_string(&address)).fetch_all(conn).await?;
+    let mut data = sqlx::query(&query)
+        .bind(felt_to_sql_string(&address))
+        .bind(felt_to_sql_string(&address))
+        .fetch_all(conn)
+        .await?;
+
     let mut page_info = PageInfo {
         has_previous_page: false,
         has_next_page: false,
@@ -158,8 +178,8 @@ async fn fetch_erc_balances(
         match cursor_param {
             Some(cursor_query) => {
                 let first_cursor = cursor::encode(
-                    &data[0].try_get::<String, &str>(&id_column)?,
-                    &data[0].try_get_unchecked::<String, &str>(&id_column)?,
+                    &data[0].try_get::<String, &str>(ID_COLUMN)?,
+                    &data[0].try_get_unchecked::<String, &str>(ID_COLUMN)?,
                 );
 
                 if &first_cursor == cursor_query && data.len() != 1 {
@@ -207,17 +227,19 @@ async fn fetch_erc_balances(
     }
 }
 
-fn erc_balance_connection_output(
+fn token_transfers_connection_output(
     data: &[SqliteRow],
     total_count: i64,
     page_info: PageInfo,
 ) -> sqlx::Result<ValueMapping> {
     let mut edges = Vec::new();
+
     for row in data {
-        let row = BalanceQueryResultRaw::from_row(row)?;
+        let row = TransferQueryResultRaw::from_row(row)?;
+        let transaction_hash = get_transaction_hash_from_event_id(&row.id);
         let cursor = cursor::encode(&row.id, &row.id);
 
-        let balance_value = match row.contract_type.to_lowercase().as_str() {
+        let transfer_value = match row.contract_type.to_lowercase().as_str() {
             "erc20" => {
                 let token_metadata = Value::Object(ValueMapping::from([
                     (Name::new("name"), Value::String(row.name)),
@@ -226,12 +248,17 @@ fn erc_balance_connection_output(
                     (Name::new("tokenId"), Value::Null),
                     (Name::new("decimals"), Value::String(row.decimals.to_string())),
                     (Name::new("contractAddress"), Value::String(row.contract_address.clone())),
+                    (Name::new("erc721"), Value::Null),
                 ]));
 
                 Value::Object(ValueMapping::from([
-                    (Name::new("balance"), Value::String(row.balance)),
+                    (Name::new("from"), Value::String(row.from_address)),
+                    (Name::new("to"), Value::String(row.to_address)),
+                    (Name::new("amount"), Value::String(row.amount)),
                     (Name::new("type"), Value::String(row.contract_type)),
+                    (Name::new("executedAt"), Value::String(row.executed_at)),
                     (Name::new("tokenMetadata"), token_metadata),
+                    (Name::new("transactionHash"), Value::String(transaction_hash)),
                 ]))
             }
             "erc721" => {
@@ -239,18 +266,52 @@ fn erc_balance_connection_output(
                 let token_id = row.token_id.split(':').collect::<Vec<&str>>();
                 assert!(token_id.len() == 2);
 
+                let image_path = format!("{}/{}", token_id.join("/"), "image");
+                let metadata: serde_json::Value =
+                    serde_json::from_str(&row.metadata).expect("metadata is always json");
+                let erc721_name =
+                    metadata.get("name").map(|v| v.to_string().trim_matches('"').to_string());
+                let erc721_description = metadata
+                    .get("description")
+                    .map(|v| v.to_string().trim_matches('"').to_string());
+                let erc721_attributes =
+                    metadata.get("attributes").map(|v| v.to_string().trim_matches('"').to_string());
+
                 let token_metadata = Value::Object(ValueMapping::from([
-                    (Name::new("contractAddress"), Value::String(row.contract_address.clone())),
                     (Name::new("name"), Value::String(row.name)),
                     (Name::new("symbol"), Value::String(row.symbol)),
-                    (Name::new("tokenId"), Value::String(token_id[1].to_string())),
                     (Name::new("decimals"), Value::String(row.decimals.to_string())),
+                    (Name::new("contractAddress"), Value::String(row.contract_address.clone())),
+                    (
+                        Name::new("erc721"),
+                        Value::Object(ValueMapping::from([
+                            (Name::new("imagePath"), Value::String(image_path)),
+                            (Name::new("tokenId"), Value::String(token_id[1].to_string())),
+                            (Name::new("metadata"), Value::String(row.metadata)),
+                            (
+                                Name::new("name"),
+                                erc721_name.map(Value::String).unwrap_or(Value::Null),
+                            ),
+                            (
+                                Name::new("description"),
+                                erc721_description.map(Value::String).unwrap_or(Value::Null),
+                            ),
+                            (
+                                Name::new("attributes"),
+                                erc721_attributes.map(Value::String).unwrap_or(Value::Null),
+                            ),
+                        ])),
+                    ),
                 ]));
 
                 Value::Object(ValueMapping::from([
-                    (Name::new("balance"), Value::String(row.balance)),
+                    (Name::new("from"), Value::String(row.from_address)),
+                    (Name::new("to"), Value::String(row.to_address)),
+                    (Name::new("amount"), Value::String(row.amount)),
                     (Name::new("type"), Value::String(row.contract_type)),
+                    (Name::new("executedAt"), Value::String(row.executed_at)),
                     (Name::new("tokenMetadata"), token_metadata),
+                    (Name::new("transactionHash"), Value::String(transaction_hash)),
                 ]))
             }
             _ => {
@@ -260,7 +321,7 @@ fn erc_balance_connection_output(
         };
 
         edges.push(Value::Object(ValueMapping::from([
-            (Name::new("node"), balance_value),
+            (Name::new("node"), transfer_value),
             (Name::new("cursor"), Value::String(cursor)),
         ])));
     }
@@ -273,7 +334,7 @@ fn erc_balance_connection_output(
 }
 
 // TODO: This would be required when subscriptions are needed
-// impl ErcBalanceObject {
+// impl ErcTransferObject {
 //     pub fn value_mapping(entity: ErcBalance) -> ValueMapping {
 //         IndexMap::from([
 //         ])
@@ -282,13 +343,17 @@ fn erc_balance_connection_output(
 
 #[derive(FromRow, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
-struct BalanceQueryResultRaw {
+struct TransferQueryResultRaw {
     pub id: String,
     pub contract_address: String,
+    pub from_address: String,
+    pub to_address: String,
+    pub token_id: String,
+    pub amount: String,
+    pub executed_at: String,
     pub name: String,
     pub symbol: String,
     pub decimals: u8,
-    pub token_id: String,
-    pub balance: String,
     pub contract_type: String,
+    pub metadata: String,
 }
