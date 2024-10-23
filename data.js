@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1729631425773,
+  "lastUpdate": 1729647264902,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -27679,6 +27679,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 5566565,
             "range": "± 678889",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "distinct": true,
+          "id": "49304503f4bdced82be06372ed9bf1ac0b428622",
+          "message": "feat(katana): implement `Arbitrary` trait for all db types (#2568)\n\nimplement the [`Arbitray`](https://docs.rs/arbitrary/latest/arbitrary/trait.Arbitrary.html) trait for all types that are used in the database. this is for generating random values  of all the database types. helpful for \r\n\r\ndue to Rust's orphan rule, there are some types that we use from external crate (mainly `starknet-rs`) that don't implement the trait, so we can't directly derive it. to get around this, the simplest solution is to just own the types and define it ourselves. this approach requires that we do more marshalling between our primitives types to the rpc types (rpc we mostly use types from starknet-rs). which is not the most elegant solution. i think eventually we probably should not rely on external crate for our rpc types and maintain them ourselves for more flexibility (if the changes that we need cant be included upstream).\r\n\r\nthe idea for this PR, is to use this for generating bunch of random values for all db types and use them in a benchmark. \r\n\r\n---\r\n\r\ntest db needs to be updated because of the we define the [`ExecutionResources`](https://github.com/dojoengine/dojo/blob/a4ee208b517daead41ac1a6b855af3abb03294c3/crates/katana/primitives/src/trace.rs#L12-L20) and it doesn't serde into the same format as the one we used before (from the [cairo-vm](https://github.com/dojoengine/dojo/blob/a4ee208b517daead41ac1a6b855af3abb03294c3/crates/katana/primitives/src/trace.rs#L12-L20))\r\n\r\ni would prefer to keep the breaking serde, mainly because it doesnt de/serialize the `builtin_instance_counter` as raw strings of the builtin names. therefore more storage optimized. we're still using the builin name types from cairo-vm anyway so marshalling between them is straightforward as we dont need to convert the individual map entry.\r\n\r\nthough this changes break the db format, as we already bumped it at #2560, and it hasnt been included in a release yet, theres no need to bump it again.",
+          "timestamp": "2024-10-22T21:18:15-04:00",
+          "tree_id": "70eabf8416a71176b05282a39119aaa65ded897d",
+          "url": "https://github.com/dojoengine/dojo/commit/49304503f4bdced82be06372ed9bf1ac0b428622"
+        },
+        "date": 1729647263333,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 12043215286,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
