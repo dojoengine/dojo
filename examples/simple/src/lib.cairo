@@ -1,7 +1,5 @@
-use dojo::world::IWorldDispatcher;
-
 #[starknet::contract]
-pub mod sn_actions {
+pub mod sn_c1 {
     #[storage]
     struct Storage {}
 }
