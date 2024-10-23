@@ -3,7 +3,7 @@
 use anyhow::Result;
 use starknet::core::types::Felt;
 
-use super::{ContractRemote, EventRemote, ModelRemote, DojoSelector, WorldRemote, RemoteResource, CommonResourceRemoteInfo};
+use super::{ContractRemote, EventRemote, ModelRemote, RemoteResource, CommonResourceRemoteInfo};
 
 pub trait PermissionsUpdateable {
     fn update_writer(&mut self, contract_address: Felt, is_writer: bool) -> Result<()>;

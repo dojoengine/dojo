@@ -6,6 +6,8 @@
 //! Events are also sequential, a resource is not expected to be upgraded before
 //! being registered. We take advantage of this fact to optimize the data gathering.
 
+use std::collections::HashSet;
+
 use anyhow::Result;
 use dojo_types::naming;
 use starknet::{
@@ -94,7 +96,11 @@ impl WorldRemote {
                                 &e.name.to_string()?,
                             );
 
-                            self.models.insert(namespace, dojo_selector);
+                            self.models
+                                .entry(namespace)
+                                .or_insert_with(HashSet::new)
+                                .insert(dojo_selector);
+
                             self.resources
                                 .insert(dojo_selector, RemoteResource::Model(model_remote));
                         }
@@ -113,7 +119,11 @@ impl WorldRemote {
                                 &e.name.to_string()?,
                             );
 
-                            self.events.insert(namespace, dojo_selector);
+                            self.events
+                                .entry(namespace)
+                                .or_insert_with(HashSet::new)
+                                .insert(dojo_selector);
+
                             self.resources
                                 .insert(dojo_selector, RemoteResource::Event(event_remote));
                         }
@@ -133,7 +143,11 @@ impl WorldRemote {
                                 &e.name.to_string()?,
                             );
 
-                            self.contracts.insert(namespace, dojo_selector);
+                            self.contracts
+                                .entry(namespace)
+                                .or_insert_with(HashSet::new)
+                                .insert(dojo_selector);
+
                             self.resources
                                 .insert(dojo_selector, RemoteResource::Contract(contract_remote));
                         }

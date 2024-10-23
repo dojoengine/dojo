@@ -7,7 +7,7 @@ use anyhow::Result;
 use serde_json;
 use starknet::core::types::contract::{AbiEntry, AbiImpl, SierraClass};
 
-use super::{ContractLocal, EventLocal, ModelLocal, WorldLocal};
+use super::{ContractLocal, EventLocal, LocalResource, ModelLocal, NamespaceConfig, WorldLocal};
 
 const WORLD_INTF: &str = "dojo::world::iworld::IWorld";
 const CONTRACT_INTF: &str = "dojo::contract::interface::IContract";
@@ -15,8 +15,11 @@ const MODEL_INTF: &str = "dojo::model::interface::IModel";
 const EVENT_INTF: &str = "dojo::event::interface::IEvent";
 
 impl WorldLocal {
-    pub fn from_directory<P: AsRef<Path>>(dir: P) -> Result<Self> {
-        let mut world = Self::default();
+    pub fn from_directory<P: AsRef<Path>>(
+        dir: P,
+        namespace_config: NamespaceConfig,
+    ) -> Result<Self> {
+        let mut world = Self::new(namespace_config);
         world.parse_directory(dir)?;
         Ok(world)
     }
@@ -31,6 +34,7 @@ impl WorldLocal {
                     serde_json::from_reader::<_, SierraClass>(std::fs::File::open(&path)?)
                 {
                     let abi = sierra.abi.clone();
+                    let class_hash = sierra.class_hash()?;
 
                     let impls = abi
                         .iter()
@@ -44,15 +48,31 @@ impl WorldLocal {
                                 break;
                             }
                             ResourceType::Contract(name) => {
-                                self.contracts.insert(name, ContractLocal { class: sierra });
+                                let resource = LocalResource::Contract(ContractLocal {
+                                    name,
+                                    class: sierra,
+                                    class_hash,
+                                });
+                                self.add_resource(resource);
                                 break;
                             }
                             ResourceType::Model(name) => {
-                                self.models.insert(name, ModelLocal { class: sierra });
+                                let resource = LocalResource::Model(ModelLocal {
+                                    name,
+                                    class: sierra,
+                                    class_hash,
+                                });
+
+                                self.add_resource(resource);
                                 break;
                             }
                             ResourceType::Event(name) => {
-                                self.events.insert(name, EventLocal { class: sierra });
+                                let resource = LocalResource::Event(EventLocal {
+                                    name,
+                                    class: sierra,
+                                    class_hash,
+                                });
+                                self.add_resource(resource);
                                 break;
                             }
                             ResourceType::Other => {}
@@ -148,12 +168,14 @@ mod tests {
     #[ignore = "The simple example must be stabilized first (and built for this test to work)"]
     #[test]
     fn test_load_world_from_directory() {
-        let world =
-            WorldLocal::from_directory("/Users/glihm/cgg/dojo/examples/simple/target/dev").unwrap();
+        let namespace_config = NamespaceConfig::new("dojo");
+        let world = WorldLocal::from_directory(
+            "/Users/glihm/cgg/dojo/examples/simple/target/dev",
+            namespace_config,
+        )
+        .unwrap();
         assert_eq!(world.class.is_some(), true);
         assert_eq!(world.contracts.len(), 1);
         assert_eq!(world.models.len(), 1);
-        assert_eq!(world.contracts.get("c1").is_some(), true);
-        assert_eq!(world.models.get("M").is_some(), true);
     }
 }

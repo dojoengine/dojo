@@ -9,6 +9,9 @@ pub mod migration;
 #[cfg(feature = "metadata")]
 pub mod uri;
 
+type DojoSelector = starknet::core::types::Felt;
+type Namespace = String;
+
 pub mod local;
 pub mod remote;
 pub mod contracts;

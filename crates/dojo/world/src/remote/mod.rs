@@ -3,16 +3,14 @@
 //! A remote resource must be reconstructible form the onchain world without any additional information.
 
 use anyhow::Result;
-use std::collections::{HashMap, HashSet};
-
 use dojo_types::naming;
 use starknet::core::types::Felt;
+use std::collections::{HashMap, HashSet};
 
 mod events_to_remote;
 mod permissions;
 
-type DojoSelector = Felt;
-type Namespace = String;
+use crate::{DojoSelector, Namespace};
 
 /// A remote resource that can be fetched from the world.
 #[derive(Debug)]
@@ -20,16 +18,23 @@ pub enum RemoteResource {
     Contract(ContractRemote),
     Model(ModelRemote),
     Event(EventRemote),
+    // TODO: add starknet contract remote. Sozo needs a way to keep track of the address of this contract once deployed.
 }
 
 /// The remote world representation.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct WorldRemote {
+    /// The class hashes of the world.
     pub class_hashes: Vec<Felt>,
+    /// The namespaces registered in the world.
     pub namespaces: Vec<Namespace>,
-    pub contracts: HashMap<Namespace, DojoSelector>,
-    pub models: HashMap<Namespace, DojoSelector>,
-    pub events: HashMap<Namespace, DojoSelector>,
+    /// The contracts registered in the world, by namespace.
+    pub contracts: HashMap<Namespace, HashSet<DojoSelector>>,
+    /// The models registered in the world, by namespace.
+    pub models: HashMap<Namespace, HashSet<DojoSelector>>,
+    /// The events registered in the world, by namespace.
+    pub events: HashMap<Namespace, HashSet<DojoSelector>>,
+    /// The resources of the world, by dojo selector.
     pub resources: HashMap<DojoSelector, RemoteResource>,
 }
 
@@ -68,19 +73,6 @@ pub struct ModelRemote {
 pub struct EventRemote {
     /// Common information about the resource.
     pub common: CommonResourceRemoteInfo,
-}
-
-impl Default for WorldRemote {
-    fn default() -> Self {
-        Self {
-            class_hashes: vec![],
-            namespaces: vec![],
-            contracts: HashMap::new(),
-            models: HashMap::new(),
-            events: HashMap::new(),
-            resources: HashMap::new(),
-        }
-    }
 }
 
 impl CommonResourceRemoteInfo {
