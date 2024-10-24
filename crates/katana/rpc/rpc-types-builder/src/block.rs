@@ -2,7 +2,7 @@ use katana_primitives::block::BlockHashOrNumber;
 use katana_provider::traits::block::{BlockHashProvider, BlockProvider, BlockStatusProvider};
 use katana_provider::traits::transaction::ReceiptProvider;
 use katana_provider::ProviderResult;
-use katana_rpc_types::block::{BlockWithReceipts, BlockWithTxHashes, BlockWithTxs};
+use katana_rpc_types::block::{BlockWithTxHashes, BlockWithTxs};
 
 /// A builder for building RPC block types.
 #[derive(Debug)]

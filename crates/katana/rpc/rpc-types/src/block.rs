@@ -1,7 +1,4 @@
-use katana_cairo::cairo_vm::vm::errors::vm_exception::VmException;
-use katana_primitives::block::{
-    Block, BlockHash, BlockNumber, FinalityStatus, Header, PartialHeader,
-};
+use katana_primitives::block::{Block, BlockHash, BlockNumber, FinalityStatus, PartialHeader};
 use katana_primitives::receipt::Receipt;
 use katana_primitives::transaction::{TxHash, TxWithHash};
 use serde::{Deserialize, Serialize};

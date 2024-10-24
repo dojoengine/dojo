@@ -11,9 +11,7 @@ use katana_core::service::block_producer::{BlockProducer, BlockProducerMode, Pen
 use katana_executor::{ExecutionResult, ExecutorFactory};
 use katana_pool::validation::stateful::TxValidator;
 use katana_pool::TxPool;
-use katana_primitives::block::{
-    BlockHash, BlockHashOrNumber, BlockIdOrTag, BlockNumber, BlockTag, FinalityStatus,
-};
+use katana_primitives::block::{BlockHash, BlockHashOrNumber, BlockIdOrTag, BlockNumber, BlockTag};
 use katana_primitives::class::{ClassHash, CompiledClass};
 use katana_primitives::contract::{ContractAddress, Nonce, StorageKey, StorageValue};
 use katana_primitives::conversion::rpc::legacy_inner_to_rpc_class;
@@ -25,10 +23,8 @@ use katana_provider::traits::block::{BlockHashProvider, BlockIdReader, BlockNumb
 use katana_provider::traits::contract::ContractClassProvider;
 use katana_provider::traits::env::BlockEnvProvider;
 use katana_provider::traits::state::{StateFactoryProvider, StateProvider};
-use katana_provider::traits::transaction::{
-    ReceiptProvider, TransactionProvider, TransactionStatusProvider,
-};
-use katana_rpc_provider::StarknetApiProvider;
+use katana_provider::traits::transaction::TransactionProvider;
+use katana_rpc_provider::StarknetProvider;
 use katana_rpc_types::error::starknet::StarknetApiError;
 use katana_rpc_types::FeeEstimate;
 use katana_tasks::{BlockingTaskPool, TokioTaskSpawner};
@@ -274,11 +270,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
             BlockIdOrTag::Hash(hash) => hash.into(),
         };
 
-        let count = provider
-            .transaction_count_by_block(block_id)?
-            .ok_or(StarknetApiError::BlockNotFound)?;
-
-        Ok(count)
+        Ok(provider.block_transaction_count(block_id)?)
     }
 
     async fn latest_block_number(&self) -> Result<BlockNumber, StarknetApiError> {
@@ -467,53 +459,44 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
     ) -> Result<TransactionStatus, StarknetApiError> {
         self.on_io_blocking_task(move |this| {
             let provider = this.inner.backend.blockchain.provider();
-            let status = provider.transaction_status(hash)?;
+            let result = StarknetProvider::transaction_status(provider, hash);
 
-            if let Some(status) = status {
-                // TODO: this might not work once we allow querying for 'failed' transactions from
-                // the provider
-                let Some(receipt) = provider.receipt_by_hash(hash)? else {
-                    return Err(StarknetApiError::UnexpectedError {
-                        reason: "Transaction hash exist, but the receipt is missing".to_string(),
-                    });
-                };
+            match result {
+                Ok(status) => Ok(status),
 
-                let exec_status = if receipt.is_reverted() {
-                    TransactionExecutionStatus::Reverted
-                } else {
-                    TransactionExecutionStatus::Succeeded
-                };
+                // try to search in the pending block if the transaction is not found
+                Err(e @ StarknetApiError::TxnHashNotFound) => {
+                    if let Some(pending_executor) = this.pending_executor() {
+                        let pending_executor = pending_executor.read();
+                        let pending_txs = pending_executor.transactions();
+                        let (_, res) = pending_txs
+                            .iter()
+                            .find(|(tx, _)| tx.hash == hash)
+                            .ok_or(StarknetApiError::TxnHashNotFound)?;
 
-                return Ok(match status {
-                    FinalityStatus::AcceptedOnL1 => TransactionStatus::AcceptedOnL1(exec_status),
-                    FinalityStatus::AcceptedOnL2 => TransactionStatus::AcceptedOnL2(exec_status),
-                });
-            }
+                        // TODO: should impl From<ExecutionResult> for TransactionStatus
+                        let status = match res {
+                            ExecutionResult::Failed { .. } => TransactionStatus::Rejected,
+                            ExecutionResult::Success { receipt, .. } => {
+                                if receipt.is_reverted() {
+                                    TransactionStatus::AcceptedOnL2(
+                                        TransactionExecutionStatus::Reverted,
+                                    )
+                                } else {
+                                    TransactionStatus::AcceptedOnL2(
+                                        TransactionExecutionStatus::Succeeded,
+                                    )
+                                }
+                            }
+                        };
 
-            // seach in the pending block if the transaction is not found
-            if let Some(pending_executor) = this.pending_executor() {
-                let pending_executor = pending_executor.read();
-                let pending_txs = pending_executor.transactions();
-                let (_, res) = pending_txs
-                    .iter()
-                    .find(|(tx, _)| tx.hash == hash)
-                    .ok_or(StarknetApiError::TxnHashNotFound)?;
-
-                // TODO: should impl From<ExecutionResult> for TransactionStatus
-                let status = match res {
-                    ExecutionResult::Failed { .. } => TransactionStatus::Rejected,
-                    ExecutionResult::Success { receipt, .. } => {
-                        if receipt.is_reverted() {
-                            TransactionStatus::AcceptedOnL2(TransactionExecutionStatus::Reverted)
-                        } else {
-                            TransactionStatus::AcceptedOnL2(TransactionExecutionStatus::Succeeded)
-                        }
+                        Ok(status)
+                    } else {
+                        Err(e.into())
                     }
-                };
+                }
 
-                Ok(status)
-            } else {
-                Err(StarknetApiError::TxnHashNotFound)
+                Err(e) => Err(e.into()),
             }
         })
         .await

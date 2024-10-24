@@ -5,9 +5,8 @@ use katana_primitives::da::L1DataAvailabilityMode;
 use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash, TxHash};
 use katana_primitives::Felt;
 use katana_provider::traits::block::{BlockHashProvider, BlockIdReader, BlockNumberProvider};
-use katana_provider::traits::transaction::TransactionProvider;
 use katana_rpc_api::starknet::StarknetApiServer;
-use katana_rpc_provider::StarknetApiProvider;
+use katana_rpc_provider::StarknetProvider;
 use katana_rpc_types::block::{
     BlockHashAndNumber, MaybePendingBlockWithReceipts, MaybePendingBlockWithTxHashes,
     MaybePendingBlockWithTxs, PendingBlockWithReceipts, PendingBlockWithTxHashes,
@@ -22,7 +21,6 @@ use katana_rpc_types::transaction::{BroadcastedTx, Tx};
 use katana_rpc_types::{
     ContractClass, FeeEstimate, FeltAsHex, FunctionCall, SimulationFlagForEstimateFee,
 };
-use katana_rpc_types_builder::ReceiptBuilder;
 use starknet::core::types::{BlockTag, TransactionStatus};
 
 use super::StarknetApi;
@@ -114,16 +112,14 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                 }
             }
 
-            let block_num = BlockIdReader::convert_block_id(provider, block_id)
+            let block_num = provider
+                .convert_block_id(block_id)
                 .map_err(StarknetApiError::from)?
                 .map(BlockHashOrNumber::Num)
                 .ok_or(StarknetApiError::BlockNotFound)?;
 
-            katana_rpc_types_builder::BlockBuilder::new(block_num, provider)
-                .build_with_tx_hash()
-                .map_err(StarknetApiError::from)?
-                .map(MaybePendingBlockWithTxHashes::Block)
-                .ok_or(Error::from(StarknetApiError::BlockNotFound))
+            let block = StarknetProvider::block_with_txs_hashes(provider, block_num)?;
+            Ok(MaybePendingBlockWithTxHashes::Block(block))
         })
         .await
     }
@@ -135,27 +131,29 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
     ) -> RpcResult<Tx> {
         self.on_io_blocking_task(move |this| {
             // TEMP: have to handle pending tag independently for now
-            let tx = if BlockIdOrTag::Tag(BlockTag::Pending) == block_id {
+            if BlockIdOrTag::Tag(BlockTag::Pending) == block_id {
                 let Some(executor) = this.pending_executor() else {
                     return Err(StarknetApiError::BlockNotFound.into());
                 };
 
                 let executor = executor.read();
                 let pending_txs = executor.transactions();
-                pending_txs.get(index as usize).map(|(tx, _)| tx.clone())
+                let tx = pending_txs.get(index as usize).map(|(tx, _)| tx.clone());
+                Ok(tx.ok_or(StarknetApiError::InvalidTxnIndex)?.into())
             } else {
                 let provider = &this.inner.backend.blockchain.provider();
 
-                let block_num = BlockIdReader::convert_block_id(provider, block_id)
+                let block_id = BlockIdReader::convert_block_id(provider, block_id)
                     .map_err(StarknetApiError::from)?
                     .map(BlockHashOrNumber::Num)
                     .ok_or(StarknetApiError::BlockNotFound)?;
 
-                TransactionProvider::transaction_by_block_and_idx(provider, block_num, index)
-                    .map_err(StarknetApiError::from)?
-            };
+                let tx = StarknetProvider::transaction_by_block_id_and_index(
+                    &provider, block_id, index,
+                )?;
 
-            Ok(tx.ok_or(StarknetApiError::InvalidTxnIndex)?.into())
+                Ok(tx)
+            }
         })
         .await
     }
@@ -211,12 +209,8 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                 .map(BlockHashOrNumber::Num)
                 .ok_or(StarknetApiError::BlockNotFound)?;
 
-            let block = provider
-                .block_with_txs(block_num)?
-                .map(MaybePendingBlockWithTxs::Block)
-                .ok_or(Error::from(StarknetApiError::BlockNotFound))?;
-
-            Ok(block)
+            let block = provider.block_with_txs(block_num)?;
+            Ok(MaybePendingBlockWithTxs::Block(block))
         })
         .await
     }
@@ -270,12 +264,8 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                 .map(BlockHashOrNumber::Num)
                 .ok_or(StarknetApiError::BlockNotFound)?;
 
-            let block = provider
-                .block_with_receipts(block_num)?
-                .map(MaybePendingBlockWithReceipts::Block)
-                .ok_or(Error::from(StarknetApiError::BlockNotFound))?;
-
-            Ok(block)
+            let block = provider.block_with_receipts(block_num)?;
+            Ok(MaybePendingBlockWithReceipts::Block(block))
         })
         .await
     }
@@ -297,10 +287,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                 }
             };
 
-            let state_update = provider
-                .block_state_update(block_id)?
-                .ok_or(Error::from(StarknetApiError::BlockNotFound))?;
-
+            let state_update = provider.block_state_update(block_id)?;
             Ok(state_update)
         })
         .await
@@ -312,14 +299,11 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
     ) -> RpcResult<TxReceiptWithBlockInfo> {
         self.on_io_blocking_task(move |this| {
             let provider = this.inner.backend.blockchain.provider();
-            let receipt = ReceiptBuilder::new(transaction_hash, provider)
-                .build()
-                .map_err(|e| StarknetApiError::UnexpectedError { reason: e.to_string() })?;
+            let result = provider.receipt(transaction_hash);
 
-            match receipt {
-                Some(receipt) => Ok(receipt),
-
-                None => {
+            match result {
+                Ok(receipt) => Ok(receipt),
+                Err(StarknetApiError::TxnHashNotFound) => {
                     let executor = this.pending_executor();
                     let pending_receipt = executor
                         .and_then(|executor| {
@@ -345,6 +329,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                         pending_receipt,
                     ))
                 }
+                Err(e) => Err(e.into()),
             }
         })
         .await
