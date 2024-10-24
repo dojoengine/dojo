@@ -218,26 +218,22 @@ fn add_fee_token(
 
 fn add_default_udc(states: &mut StateUpdatesWithDeclaredClasses) {
     // declare UDC class
-    if !states.declared_compiled_classes.contains_key(&DEFAULT_LEGACY_UDC_CLASS_HASH) {
-        states
-            .declared_compiled_classes
-            .insert(DEFAULT_LEGACY_UDC_CLASS_HASH, DEFAULT_LEGACY_UDC_CASM.clone());
-    }
-
-    if !states.state_updates.declared_classes.contains_key(&DEFAULT_LEGACY_UDC_CLASS_HASH) {
-        states
-            .state_updates
-            .declared_classes
-            .insert(DEFAULT_LEGACY_UDC_CLASS_HASH, DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH);
-    }
+    states
+        .declared_compiled_classes
+        .entry(DEFAULT_LEGACY_UDC_CLASS_HASH)
+        .or_insert_with(|| DEFAULT_LEGACY_UDC_CASM.clone());
+    states
+        .state_updates
+        .declared_classes
+        .entry(DEFAULT_LEGACY_UDC_CLASS_HASH)
+        .or_insert(DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH);
 
     // deploy UDC contract
-    if !states.state_updates.deployed_contracts.contains_key(&DEFAULT_UDC_ADDRESS) {
-        states
-            .state_updates
-            .deployed_contracts
-            .insert(DEFAULT_UDC_ADDRESS, DEFAULT_LEGACY_UDC_CLASS_HASH);
-    }
+    states
+        .state_updates
+        .deployed_contracts
+        .entry(DEFAULT_UDC_ADDRESS)
+        .or_insert(DEFAULT_LEGACY_UDC_CLASS_HASH);
 }
 
 #[cfg(test)]
