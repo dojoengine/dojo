@@ -6,6 +6,7 @@
 use std::collections::{HashMap, HashSet};
 
 use compare::ComparableResource;
+use starknet::core::utils as snutils;
 use starknet_crypto::Felt;
 
 use super::local::{ResourceLocal, WorldLocal};
@@ -38,6 +39,54 @@ pub struct WorldDiff {
 }
 
 impl WorldDiff {
+    /// Creates a new world diff from a local world.
+    ///
+    /// Consumes the local world to avoid duplicating the resources.
+    pub fn from_local(mut local: WorldLocal) -> Self {
+        let mut diff = Self {
+            namespaces: vec![],
+            contracts: HashMap::new(),
+            models: HashMap::new(),
+            events: HashMap::new(),
+        };
+
+        // As the selectors are present, it's safe to unwrap the resources.
+        // TODO: may be better to abstract this in a function and making resource private.
+
+        for ns in &local.namespaces {
+            diff.namespaces.push(ResourceDiff::Created(local.resources.remove(ns).unwrap()));
+        }
+
+        for (namespace, contracts) in &local.contracts {
+            for contract in contracts {
+                diff.contracts
+                    .entry(namespace.clone())
+                    .or_default()
+                    .push(ResourceDiff::Created(local.resources.remove(contract).unwrap()));
+            }
+        }
+
+        for (namespace, models) in &local.models {
+            for model in models {
+                diff.models
+                    .entry(namespace.clone())
+                    .or_default()
+                    .push(ResourceDiff::Created(local.resources.remove(model).unwrap()));
+            }
+        }
+
+        for (namespace, events) in &local.events {
+            for event in events {
+                diff.events
+                    .entry(namespace.clone())
+                    .or_default()
+                    .push(ResourceDiff::Created(local.resources.remove(event).unwrap()));
+            }
+        }
+
+        diff
+    }
+
     /// Creates a new world diff from a local and a remote world.
     ///
     /// Consumes the local and remote worlds to avoid duplicating the resources,
@@ -52,6 +101,7 @@ impl WorldDiff {
 
         for local_ns in &local.namespaces {
             if remote.namespaces.contains(&local_ns) {
+                // The namespace is registered in the remote world, safe to unwrap.
                 diff.namespaces
                     .push(ResourceDiff::Synced(remote.resources.remove(&local_ns).unwrap()));
             } else {
@@ -145,6 +195,35 @@ impl WorldDiff {
 
         remote_owners
     }
+
+    /// Returns the deterministic addresses of the contracts based on the world address.
+    pub fn get_contracts_addresses(&self, world_address: Felt) -> HashMap<DojoSelector, Felt> {
+        let mut addresses = HashMap::new();
+
+        for (namespace, contracts) in &self.contracts {
+            for contract in contracts {
+                let (selector, class_hash) = match contract {
+                    ResourceDiff::Created(ResourceLocal::Contract(c)) => {
+                        (c.dojo_selector(namespace), c.class_hash)
+                    }
+                    ResourceDiff::Updated(_, ResourceRemote::Contract(c)) => {
+                        (c.common.dojo_selector(namespace), c.common.original_class_hash())
+                    }
+                    ResourceDiff::Synced(ResourceRemote::Contract(c)) => {
+                        (c.common.dojo_selector(namespace), c.common.original_class_hash())
+                    }
+                    _ => unreachable!(),
+                };
+
+                let address =
+                    snutils::get_contract_address(selector, class_hash.into(), &[], world_address);
+
+                addresses.insert(selector, address);
+            }
+        }
+
+        addresses
+    }
 }
 
 /// Compares the local and remote resources and consumes them into a diff.
@@ -157,6 +236,7 @@ fn compare_and_consume_resources(
 ) {
     for (namespace, local_selectors) in local {
         for ls in local_selectors {
+            // It's safe to unwrap since the resource is present if the selector is present.
             let local_resource = local_resources.remove(ls).unwrap();
 
             let remote_selectors =
@@ -222,7 +302,8 @@ mod tests {
     use starknet::core::types::Felt;
 
     use super::*;
-    use crate::local::{ContractLocal, NamespaceConfig, NamespaceLocal, ResourceLocal, WorldLocal};
+    use crate::config::NamespaceConfig;
+    use crate::local::{ContractLocal, NamespaceLocal, ResourceLocal, WorldLocal};
     use crate::remote::{CommonResourceRemoteInfo, ContractRemote, NamespaceRemote};
     use crate::test_utils::empty_sierra_class;
 

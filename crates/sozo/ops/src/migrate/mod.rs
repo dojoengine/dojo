@@ -10,17 +10,22 @@
 //!    - Declaring the classes.
 //!    - Registering the resources.
 //!    - Upgrading the resources.
-//! 3. Once resources are synced, the permissions are synced. Permissions can be in different states:
+//! 3. Once resources are synced, the permissions are synced. Permissions can be in different
+//!    states:
 //!    - For newly registered resources, the permissions are applied.
-//!    - For existing resources, the permissions are compared to the onchain state and the necessary changes are applied.
-//! 4. All contracts that are not initialized are initialized, since permissions are applied, initialization of contracts can mutate resources.
-//!
+//!    - For existing resources, the permissions are compared to the onchain state and the necessary
+//!      changes are applied.
+//! 4. All contracts that are not initialized are initialized, since permissions are applied,
+//!    initialization of contracts can mutate resources.
 
 use std::collections::{HashMap, HashSet};
+use std::str::FromStr;
 
-use cainome::cairo_serde::{ByteArray, ClassHash};
+use cainome::cairo_serde::{ByteArray, ClassHash, ContractAddress};
 use declarer::Declarer;
+use dojo_types::naming;
 use dojo_utils::{TransactionExt, TxnConfig};
+use dojo_world::config::ProfileConfig;
 use dojo_world::contracts::WorldContract;
 use dojo_world::diff::{ResourceDiff, WorldDiff};
 use dojo_world::local::ResourceLocal;
@@ -28,22 +33,12 @@ use dojo_world::remote::ResourceRemote;
 use dojo_world::DojoSelector;
 use starknet::accounts::{AccountError, ConnectedAccount};
 use starknet::core::types::contract::ComputeClassHashError;
-use starknet::core::types::Call;
+use starknet::core::types::{Call, FromStrError};
 use starknet::providers::ProviderError;
 use starknet_crypto::Felt;
 use thiserror::Error;
 
 mod declarer;
-
-#[derive(Debug)]
-pub struct Migration<A>
-where
-    A: ConnectedAccount + Sync + Send,
-{
-    diff: WorldDiff,
-    world: WorldContract<A>,
-    txn_config: TxnConfig,
-}
 
 #[derive(Debug, Error)]
 pub enum MigrationError<S> {
@@ -57,57 +52,175 @@ pub enum MigrationError<S> {
     Provider(#[from] ProviderError),
     #[error(transparent)]
     StarknetJson(#[from] starknet::core::types::contract::JsonError),
-    /* #[error("Compiling contract.")]
-    CompilingContract,
-    #[error("Class already declared.")]
-    ClassAlreadyDeclared,
-    #[error("Contract already deployed.")]
-    ContractAlreadyDeployed(Felt),
+    #[error("The selector {0} has no valid address")]
+    OrphanSelectorAddress(DojoSelector),
     #[error(transparent)]
-    Migrator(#[from] AccountError<S>),
-    #[error(transparent)]
-    CairoShortStringToFelt(#[from] CairoShortStringToFeltError),
-    #[error(transparent)]
-    WaitingError(#[from] TransactionWaitingError),
-    #[error(transparent)]o
-    ArtifactError(#[from] anyhow::Error),
-    #[error("Bad init calldata.")]
-    BadInitCalldata, */
+    FromStr(#[from] FromStrError),
+}
+
+#[derive(Debug)]
+pub struct Migration<A>
+where
+    A: ConnectedAccount + Sync + Send,
+{
+    diff: WorldDiff,
+    world: WorldContract<A>,
+    txn_config: TxnConfig,
+    profile_config: ProfileConfig,
 }
 
 impl<A> Migration<A>
 where
     A: ConnectedAccount + Sync + Send,
 {
-    pub fn new(diff: WorldDiff, world: WorldContract<A>, txn_config: TxnConfig) -> Self {
-        Self { diff, world, txn_config }
+    /// Creates a new migration.
+    pub fn new(
+        diff: WorldDiff,
+        world: WorldContract<A>,
+        txn_config: TxnConfig,
+        profile_config: ProfileConfig,
+    ) -> Self {
+        Self { diff, world, txn_config, profile_config }
     }
 
+    /// Migrates the world by syncing the namespaces, resources, permissions and initializing the
+    /// contracts.
     pub async fn migrate(&self) -> Result<(), MigrationError<A::SignError>> {
         self.sync_resources().await?;
+        self.sync_permissions().await?;
+        self.initialize_contracts().await?;
+        Ok(())
+    }
 
+    /// For all contracts that are not initialized, initialize them by using the init call arguments
+    /// found in the [`ProfileConfig`].
+    async fn initialize_contracts(&self) -> Result<(), MigrationError<A::SignError>> {
+        let mut calls = vec![];
+
+        let init_call_args = if let Some(init_call_args) = &self.profile_config.init_call_args {
+            init_call_args.clone()
+        } else {
+            HashMap::new()
+        };
+
+        for (namespace, contracts) in &self.diff.contracts {
+            for contract in contracts {
+                let (do_init, selector, init_call_args) = match contract {
+                    ResourceDiff::Created(ResourceLocal::Contract(contract)) => {
+                        let tag = naming::get_tag(namespace, &contract.name);
+                        (true, contract.dojo_selector(namespace), init_call_args.get(&tag).clone())
+                    }
+                    ResourceDiff::Updated(_, ResourceRemote::Contract(contract)) => {
+                        let tag = naming::get_tag(namespace, &contract.common.name);
+                        (
+                            contract.is_initialized,
+                            contract.dojo_selector(namespace),
+                            init_call_args.get(&tag).clone(),
+                        )
+                    }
+                    ResourceDiff::Synced(ResourceRemote::Contract(contract)) => {
+                        let tag = naming::get_tag(namespace, &contract.common.name);
+                        (
+                            contract.is_initialized,
+                            contract.dojo_selector(namespace),
+                            init_call_args.get(&tag).clone(),
+                        )
+                    }
+                    _ => (false, Felt::ZERO, None),
+                };
+
+                if do_init {
+                    // Currently, only felts are supported in the init call data.
+                    // The injection of class hash and addresses is no longer supported since the
+                    // world contains an internal DNS.
+                    let args = if let Some(args) = init_call_args {
+                        let mut parsed_args = vec![];
+                        for arg in args {
+                            parsed_args.push(Felt::from_str(arg)?);
+                        }
+                        parsed_args
+                    } else {
+                        vec![]
+                    };
+
+                    calls.push(self.world.init_contract_getcall(&selector, &args));
+                }
+            }
+        }
         Ok(())
     }
 
     /// Syncs the permissions.
     ///
-    /// TODO: for error message, we need the name + namespace (or the tag for non-namespace resources).
-    /// Change `DojoSelector` with a struct containing the local definition of an overlay resource,
-    /// which can contain also writers.
-    async fn sync_permissions(
-        &self,
-        local_writers: &HashMap<DojoSelector, HashSet<Felt>>,
-        local_owners: &HashMap<DojoSelector, HashSet<Felt>>,
-        force_local: bool,
-    ) -> Result<(), MigrationError<A::SignError>> {
+    /// This first version is naive, and only applies the local permissions to the resources, if the
+    /// permission is not already set onchain.
+    ///
+    /// TODO: An other function must be added to sync the remote permissions to the local ones,
+    /// and allow the user to reset the permissions onchain to the local ones.
+    ///
+    /// TODO: for error message, we need the name + namespace (or the tag for non-namespace
+    /// resources). Change `DojoSelector` with a struct containing the local definition of an
+    /// overlay resource, which can contain also writers.
+    async fn sync_permissions(&self) -> Result<(), MigrationError<A::SignError>> {
+        // The remote writers and owners are already containing addresses.
         let remote_writers = self.diff.get_remote_writers();
         let remote_owners = self.diff.get_remote_owners();
 
-        for (dojo_selector, writers) in local_writers {
-            let remote_writers = remote_writers.get(dojo_selector).unwrap_or(&HashSet::new());
-            if force_local {
-                self.world.set_permissions(dojo_selector, writers, HashSet::new()).await?;
+        // The local writers and owners are containing only selectors and not the addresses.
+        // A mapping is required to then give the permissions to the right addresses.
+        let local_writers = self.profile_config.get_local_writers();
+        let local_owners = self.profile_config.get_local_owners();
+
+        // For all contracts in a dojo project, addresses are deterministic.
+        let contract_addresses = self.diff.get_contracts_addresses(self.world.address);
+
+        let mut calls = vec![];
+
+        // For all local writer/owner that is not found remotely, we need to grant the permission.
+        for (target_selector, granted_selectors) in local_writers {
+            for granted_selector in granted_selectors {
+                let granted_address = contract_addresses
+                    .get(&granted_selector)
+                    .ok_or(MigrationError::OrphanSelectorAddress(granted_selector))?;
+
+                if !remote_writers
+                    .get(&target_selector)
+                    .as_ref()
+                    .unwrap_or(&&HashSet::new())
+                    .contains(granted_address)
+                {
+                    calls.push(self.world.grant_writer_getcall(
+                        &target_selector,
+                        &ContractAddress(*granted_address),
+                    ));
+                }
             }
+        }
+
+        for (target_selector, granted_selectors) in local_owners {
+            for granted_selector in granted_selectors {
+                let granted_address = contract_addresses
+                    .get(&granted_selector)
+                    .ok_or(MigrationError::OrphanSelectorAddress(granted_selector))?;
+
+                if !remote_owners
+                    .get(&target_selector)
+                    .as_ref()
+                    .unwrap_or(&&HashSet::new())
+                    .contains(granted_address)
+                {
+                    calls.push(
+                        self.world.grant_owner_getcall(
+                            &target_selector,
+                            &ContractAddress(*granted_address),
+                        ),
+                    );
+                }
+            }
+        }
+
+        if !calls.is_empty() {
+            self.world.account.execute_v1(calls).send_with_cfg(&self.txn_config).await?;
         }
 
         Ok(())
@@ -125,7 +238,10 @@ where
 
         // Sync resources.
         declarer.declare_all(&self.world.account, self.txn_config).await?;
-        self.world.account.execute_v1(calls).send_with_cfg(&self.txn_config).await?;
+
+        if !calls.is_empty() {
+            self.world.account.execute_v1(calls).send_with_cfg(&self.txn_config).await?;
+        }
 
         Ok(())
     }
@@ -151,7 +267,8 @@ where
     ///
     /// Currently, classes are cloned to be flattened, this is not ideal but the [`WorldDiff`]
     /// will be required later.
-    /// If we could extract the info before syncing the resources, then we could avoid cloning the classes.
+    /// If we could extract the info before syncing the resources, then we could avoid cloning the
+    /// classes.
     async fn contracts_getcalls(
         &self,
         calls: &mut Vec<Call>,
@@ -165,7 +282,7 @@ where
                     declarer.add_class(contract.casm_class_hash, contract.class.clone().flatten()?);
 
                     calls.push(self.world.register_contract_getcall(
-                        &contract.salt(),
+                        &contract.dojo_selector(&namespace),
                         &ns_bytearray,
                         &ClassHash(contract.class_hash),
                     ));

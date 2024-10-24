@@ -6,10 +6,10 @@
 // pub mod keystore;
 // pub mod migration;
 pub mod migrate;
-//pub mod model;
+// pub mod model;
 // pub mod register;
 // pub mod statistics;
-//pub mod utils;
+// pub mod utils;
 
 #[cfg(any(test, feature = "test-utils"))]
 pub mod test_utils;

@@ -93,6 +93,7 @@ mod tests {
             name: "model1".to_string(),
             class: empty_sierra_class(),
             class_hash: Felt::ZERO,
+            casm_class_hash: Felt::ZERO,
         };
 
         let mut remote_model = ResourceRemote::Model(ModelRemote {
@@ -121,6 +122,7 @@ mod tests {
             name: "event1".to_string(),
             class: empty_sierra_class(),
             class_hash: Felt::ZERO,
+            casm_class_hash: Felt::ZERO,
         };
 
         let mut remote_event = ResourceRemote::Event(EventRemote {
@@ -163,6 +165,7 @@ mod tests {
             name: "contract1".to_string(),
             class: empty_sierra_class(),
             class_hash: Felt::ZERO,
+            casm_class_hash: Felt::ZERO,
         };
 
         let mut remote_contract = ResourceRemote::Contract(ContractRemote {

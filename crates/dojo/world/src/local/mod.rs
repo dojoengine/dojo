@@ -131,9 +131,9 @@ impl ResourceLocal {
 }
 
 impl ContractLocal {
-    /// Returns the salt of the contract used to register the contract.
-    pub fn salt(&self) -> Felt {
-        naming::compute_bytearray_hash(&self.name)
+    /// Returns the dojo selector of the contract.
+    pub fn dojo_selector(&self, namespace: &str) -> DojoSelector {
+        naming::compute_selector_from_names(namespace, &self.name)
     }
 }
 

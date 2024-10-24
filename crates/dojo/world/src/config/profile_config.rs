@@ -1,7 +1,9 @@
+use std::collections::{HashMap, HashSet};
 use std::fs;
+use std::path::Path;
 
 use anyhow::Result;
-use camino::Utf8PathBuf;
+use dojo_types::naming;
 use serde::Deserialize;
 use toml;
 
@@ -9,53 +11,78 @@ use super::environment::Environment;
 use super::migration_config::MigrationConfig;
 use super::namespace_config::NamespaceConfig;
 use super::world_config::WorldConfig;
+use crate::DojoSelector;
 
-/// Profile configuration that is used to configure the world and the environment.
+/// Profile configuration that is used to configure the world and its environment.
 ///
-/// This [`ProfileConfig`] is expected to be loaded from a TOML file that is located
-/// next to the `Scarb.toml` file, named with the profile name.
+/// This [`ProfileConfig`] is expected to be loaded from a TOML file.
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct ProfileConfig {
     pub world: WorldConfig,
     pub namespace: NamespaceConfig,
     pub env: Option<Environment>,
     pub migration: Option<MigrationConfig>,
+    /// A mapping <name_or_tag, [tags]> of writers to be set on the world.
+    pub writers: Option<HashMap<String, HashSet<String>>>,
+    /// A mapping <name_or_tag, [tags]> of owners to be set on the world.
+    pub owners: Option<HashMap<String, HashSet<String>>>,
+    /// A mapping <tag, [values]> of init call arguments to be passed to the contract.
+    pub init_call_args: Option<HashMap<String, Vec<String>>>,
 }
 
 impl ProfileConfig {
-    /// Loads the profile configuration for the given profile.
-    ///
-    /// # Arguments
-    ///
-    /// * `manifest_dir` - The path to the directory containing the `Scarb.toml` file.
-    /// * `profile` - The profile to load the configuration for.
-    pub fn new(manifest_dir: &Utf8PathBuf, profile: Profile) -> Result<Self> {
-        let dev_config_path = manifest_dir.join("dojo_dev.toml");
-        let config_path = manifest_dir.join(format!("dojo_{}.toml", profile.as_str()));
-
-        if !dev_config_path.exists() {
-            return Err(anyhow::anyhow!(
-                "Profile configuration file not found for profile `{}`. Expected at {}.",
-                profile.as_str(),
-                dev_config_path
-            ));
-        }
-
-        // If the profile file is not found, default to `dev.toml` file that must exist.
-        let config_path = if !config_path.exists() { dev_config_path } else { config_path };
-
-        let content = fs::read_to_string(&config_path)?;
+    /// Loads the profile configuration from a TOML file.
+    pub fn from_toml<P: AsRef<Path>>(toml_path: P) -> Result<Self> {
+        let content = fs::read_to_string(&toml_path)?;
         let config: ProfileConfig = toml::from_str(&content)?;
         Ok(config)
     }
+
+    /// Extracts the local writers from the profile configuration, computing the selectors.
+    pub fn get_local_writers(&self) -> HashMap<DojoSelector, HashSet<DojoSelector>> {
+        if let Some(user_names_tags) = &self.writers {
+            from_names_tags_to_selectors(user_names_tags)
+        } else {
+            HashMap::new()
+        }
+    }
+
+    /// Extracts the local owners from the profile configuration, computing the selectors.
+    pub fn get_local_owners(&self) -> HashMap<DojoSelector, HashSet<DojoSelector>> {
+        if let Some(user_names_tags) = &self.owners {
+            from_names_tags_to_selectors(user_names_tags)
+        } else {
+            HashMap::new()
+        }
+    }
+}
+
+/// Converts a mapping of names or tags to tags into a mapping of selectors to selectors.
+fn from_names_tags_to_selectors(
+    names_tags: &HashMap<String, HashSet<String>>,
+) -> HashMap<DojoSelector, HashSet<DojoSelector>> {
+    let mut writers = HashMap::new();
+
+    for (name_or_tag, tags) in names_tags.iter() {
+        let target_selector = if naming::is_valid_tag(name_or_tag) {
+            naming::compute_selector_from_tag(name_or_tag)
+        } else {
+            naming::compute_bytearray_hash(name_or_tag)
+        };
+
+        for tag in tags {
+            let granted_selector = naming::compute_selector_from_tag(tag);
+            writers.entry(target_selector).or_insert_with(HashSet::new).insert(granted_selector);
+        }
+    }
+
+    writers
 }
 
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
 
-    use smol_str::SmolStr;
-    use tempfile::TempDir;
     use url::Url;
 
     use super::*;
@@ -108,7 +135,7 @@ mod tests {
 
         [namespace]
         default = "test"
-        mappings = { "test" = "test2" }
+        mappings = { "test" = ["test2"] }
 
         [env]
         rpc_url = "https://example.com/rpc"
@@ -121,6 +148,14 @@ mod tests {
         [migration]
         skip_contracts = [ "module::my-contract" ]
 
+        [writers]
+        "ns1" = ["ns1-actions"]
+
+        [owners]
+        "ns2" = ["ns2-blup"]
+
+        [init_call_args]
+        "ns1-actions" = [ "0x1", "0x2" ]
         "#;
 
         let config = toml::from_str::<ProfileConfig>(content).unwrap();
@@ -157,60 +192,49 @@ mod tests {
         assert_eq!(config.namespace.default, "test".to_string());
         assert_eq!(
             config.namespace.mappings,
-            Some(HashMap::from([("test".to_string(), "test2".to_string())]))
+            Some(HashMap::from([("test".to_string(), vec!["test2".to_string()])]))
+        );
+
+        assert_eq!(
+            config.writers,
+            Some(HashMap::from([("ns1".to_string(), HashSet::from(["ns1-actions".to_string()]))]))
+        );
+        assert_eq!(
+            config.owners,
+            Some(HashMap::from([("ns2".to_string(), HashSet::from(["ns2-blup".to_string()]))]))
+        );
+        assert_eq!(
+            config.init_call_args,
+            Some(HashMap::from([(
+                "ns1-actions".to_string(),
+                vec!["0x1".to_string(), "0x2".to_string()]
+            )]))
         );
     }
 
     #[test]
-    fn test_profile_config_new_dev() {
-        let tmp_dir =
-            Utf8PathBuf::from(TempDir::new().unwrap().into_path().to_string_lossy().to_string());
-        let config_path = tmp_dir.join("dojo_dev.toml");
-        println!("config_path: {:?}", config_path);
+    fn test_from_names_tags_to_selectors() {
+        let mut names_tags = HashMap::new();
 
-        let config_content = r#"
-        [world]
-        name = "test_world"
-        seed = "1234"
+        let mut tags1 = HashSet::new();
+        tags1.insert("ns1-spawner".to_string());
+        tags1.insert("ns1-mover".to_string());
+        names_tags.insert("ns1".to_string(), tags1);
 
-        [namespace]
-        default = "test_namespace"
-        "#;
-        fs::write(&config_path, config_content).unwrap();
+        let mut tags2 = HashSet::new();
+        tags2.insert("ns2-spawner".to_string());
+        names_tags.insert("ns2".to_string(), tags2);
 
-        let config = ProfileConfig::new(&tmp_dir, Profile::DEV).unwrap();
+        let result = from_names_tags_to_selectors(&names_tags);
 
-        assert_eq!(config.world.name, "test_world");
-        assert_eq!(config.world.seed, "1234");
-        assert_eq!(config.namespace.default, "test_namespace");
-    }
+        let ns1_selector = naming::compute_bytearray_hash("ns1");
+        let ns2_selector = naming::compute_bytearray_hash("ns2");
+        let ns1_spawner_selector = naming::compute_selector_from_tag("ns1-spawner");
+        let ns1_mover_selector = naming::compute_selector_from_tag("ns1-mover");
+        let ns2_spawner_selector = naming::compute_selector_from_tag("ns2-spawner");
 
-    #[test]
-    fn test_profile_config_new_custom_profile() {
-        let tmp_dir =
-            Utf8PathBuf::from(TempDir::new().unwrap().into_path().to_string_lossy().to_string());
-
-        let dev_config_path = tmp_dir.join("dojo_dev.toml");
-        let config_path = tmp_dir.join("dojo_slot.toml");
-        println!("config_path: {:?}", config_path);
-
-        let config_content = r#"
-        [world]
-        name = "test_world"
-        seed = "1234"
-
-        [namespace]
-        default = "test_namespace"
-        "#;
-        fs::write(&config_path, config_content).unwrap();
-        fs::write(&dev_config_path, config_content).unwrap();
-
-        let profile = Profile::new(SmolStr::from("slot")).unwrap();
-
-        let config = ProfileConfig::new(&tmp_dir, profile).unwrap();
-
-        assert_eq!(config.world.name, "test_world");
-        assert_eq!(config.world.seed, "1234");
-        assert_eq!(config.namespace.default, "test_namespace");
+        assert_eq!(result.get(&ns1_selector).unwrap().contains(&ns1_spawner_selector), true);
+        assert_eq!(result.get(&ns1_selector).unwrap().contains(&ns1_mover_selector), true);
+        assert_eq!(result.get(&ns2_selector).unwrap().contains(&ns2_spawner_selector), true);
     }
 }

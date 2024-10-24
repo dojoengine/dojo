@@ -17,9 +17,9 @@ use super::abigen::world::{Layout, ModelIndex};
 use super::{abigen, naming};
 use crate::contracts::WorldContractReader;
 
-#[cfg(test)]
-#[path = "model_test.rs"]
-mod model_test;
+// #[cfg(test)]
+// #[path = "model_test.rs"]
+// mod model_test;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ModelError {

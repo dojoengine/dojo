@@ -122,7 +122,7 @@ impl WorldRemote {
                         e.name.to_string()?,
                         e.address.into(),
                     ),
-                    initialized: false,
+                    is_initialized: false,
                 });
 
                 self.add_resource(e.namespace.to_string()?, r);
@@ -146,7 +146,7 @@ impl WorldRemote {
                 // Unwrap is safe bcause the contract must exist in the world.
                 let resource = self.resources.get_mut(&e.selector).unwrap();
                 let contract = resource.as_contract_mut()?;
-                contract.initialized = true;
+                contract.is_initialized = true;
             }
             WorldEvent::WriterUpdated(e) => {
                 // Unwrap is safe because the resource must exist in the world.
@@ -335,7 +335,7 @@ mod tests {
 
         let resource = ResourceRemote::Contract(ContractRemote {
             common: CommonResourceRemoteInfo::new(Felt::ONE, "c".to_string(), Felt::ONE),
-            initialized: false,
+            is_initialized: false,
         });
 
         world_remote.add_resource("ns".to_string(), resource);
@@ -360,7 +360,7 @@ mod tests {
 
         let resource = ResourceRemote::Contract(ContractRemote {
             common: CommonResourceRemoteInfo::new(Felt::ONE, "c".to_string(), Felt::ONE),
-            initialized: false,
+            is_initialized: false,
         });
 
         world_remote.add_resource("ns".to_string(), resource);

@@ -4,11 +4,11 @@ use std::fs;
 use std::path::Path;
 
 use anyhow::Result;
-use serde_json;
-use starknet::core::types::Felt;
-use starknet::core::types::contract::{AbiEntry, AbiImpl, SierraClass};
-use cairo_lang_starknet_classes::contract_class::ContractClass;
 use cairo_lang_starknet_classes::casm_contract_class::CasmContractClass;
+use cairo_lang_starknet_classes::contract_class::ContractClass;
+use serde_json;
+use starknet::core::types::contract::{AbiEntry, AbiImpl, SierraClass};
+use starknet::core::types::Felt;
 
 use super::{ContractLocal, EventLocal, ModelLocal, NamespaceConfig, ResourceLocal, WorldLocal};
 
@@ -97,8 +97,10 @@ impl WorldLocal {
 /// Computes the casm class hash from a Sierra file path.
 fn casm_class_hash_from_sierra_file<P: AsRef<Path>>(path: P) -> Result<Felt> {
     let bytecode_max_size = usize::MAX;
-    let sierra_class: ContractClass = serde_json::from_reader::<_, ContractClass>(std::fs::File::open(path)?)?;
-    let casm_class = CasmContractClass::from_contract_class(sierra_class, false, bytecode_max_size)?;
+    let sierra_class: ContractClass =
+        serde_json::from_reader::<_, ContractClass>(std::fs::File::open(path)?)?;
+    let casm_class =
+        CasmContractClass::from_contract_class(sierra_class, false, bytecode_max_size)?;
     Ok(casm_class.compiled_class_hash())
 }
 

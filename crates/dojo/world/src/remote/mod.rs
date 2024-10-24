@@ -64,7 +64,7 @@ pub struct ContractRemote {
     /// Common information about the resource.
     pub common: CommonResourceRemoteInfo,
     /// Whether the contract has been initialized.
-    pub initialized: bool,
+    pub is_initialized: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -284,7 +284,7 @@ mod tests {
 
         let contract = ContractRemote {
             common: CommonResourceRemoteInfo::new(Felt::ONE, "c".to_string(), Felt::ONE),
-            initialized: false,
+            is_initialized: false,
         };
         let resource = ResourceRemote::Contract(contract);
 

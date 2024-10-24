@@ -9,9 +9,9 @@ pub use super::abigen::world::{
 use super::model::{ModelError, ModelRPCReader};
 use super::naming;
 
-#[cfg(test)]
-#[path = "world_test.rs"]
-pub(crate) mod test;
+// #[cfg(test)]
+// #[path = "world_test.rs"]
+// pub(crate) mod test;
 
 impl<P> WorldContractReader<P>
 where

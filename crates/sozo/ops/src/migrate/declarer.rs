@@ -6,16 +6,15 @@
 //!
 //! Declare transactions can't be multicalled. The only way to do so is by having multiple accounts.
 
-use dojo_utils::{TxnConfig, TransactionExt};
-use starknet::{
-    accounts::ConnectedAccount,
-    core::types::{
-        BlockId, BlockTag, DeclareTransactionResult, Felt, FlattenedSierraClass, StarknetError
-    },
-    providers::{Provider, ProviderError},
-};
 use std::collections::HashMap;
 use std::sync::Arc;
+
+use dojo_utils::{TransactionExt, TxnConfig};
+use starknet::accounts::ConnectedAccount;
+use starknet::core::types::{
+    BlockId, BlockTag, DeclareTransactionResult, Felt, FlattenedSierraClass, StarknetError,
+};
+use starknet::providers::{Provider, ProviderError};
 
 use super::MigrationError;
 
