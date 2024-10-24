@@ -1,17 +1,18 @@
-use bitvec::order::Msb0;
-use bitvec::vec::BitVec;
-use bitvec::view::AsBits;
-use bonsai_trie::id::BasicId;
-use bonsai_trie::{BonsaiStorage, BonsaiStorageConfig, ByteVec, DatabaseKey};
+// use std::collections::{BTreeMap, HashMap};
+
+// use bitvec::order::Msb0;
+// use bitvec::vec::BitVec;
+// use bitvec::view::AsBits;
+// use bonsai_trie::id::BasicId;
+// use bonsai_trie::{BonsaiStorage, BonsaiStorageConfig, ByteVec, DatabaseKey};
 // use katana_db::abstraction::DbTxMut;
 // use katana_db::models::trie::{TrieDatabaseKey, TrieDatabaseKeyType, TrieDatabaseValue};
 // use katana_db::{models, tables};
-use katana_primitives::class::ClassHash;
-use katana_primitives::contract::{Nonce, StorageKey, StorageValue};
-use katana_primitives::ContractAddress;
-use starknet_types_core::felt::Felt;
-use starknet_types_core::hash::{Pedersen, Poseidon, StarkHash};
-use std::collections::{BTreeMap, HashMap};
+// use katana_primitives::class::ClassHash;
+// use katana_primitives::contract::{Nonce, StorageKey, StorageValue};
+// use katana_primitives::ContractAddress;
+// use starknet_types_core::felt::Felt;
+// use starknet_types_core::hash::{Pedersen, Poseidon, StarkHash};
 
 // fn foo(key: &DatabaseKey) -> models::trie::TrieDatabaseKey {
 //     match key {
@@ -92,8 +93,9 @@ use std::collections::{BTreeMap, HashMap};
 //         let leaf_hashes: Vec<_> = contract_leafs
 //             .into_iter()
 //             .map(|(address, mut leaf)| {
-//                 let storage_root = self.bonsai_storage.root_hash(&address.to_bytes_be()).unwrap();
-//                 leaf.storage_root = Some(storage_root);
+//                 let storage_root =
+// self.bonsai_storage.root_hash(&address.to_bytes_be()).unwrap();                 leaf.storage_root
+// = Some(storage_root);
 
 //                 let leaf_hash = self.contract_state_leaf_hash(&address, &leaf);
 //                 let bytes = address.to_bytes_be();
@@ -135,12 +137,12 @@ use std::collections::{BTreeMap, HashMap};
 //     }
 // }
 
-#[derive(Debug, Default)]
-struct ContractLeaf {
-    pub class_hash: Option<Felt>,
-    pub storage_root: Option<Felt>,
-    pub nonce: Option<Felt>,
-}
+// #[derive(Debug, Default)]
+// struct ContractLeaf {
+//     pub class_hash: Option<Felt>,
+//     pub storage_root: Option<Felt>,
+//     pub nonce: Option<Felt>,
+// }
 
 // pub struct TrieDb<Tx: DbTxMut> {
 //     tx: Tx,

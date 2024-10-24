@@ -24,10 +24,7 @@ where
     bonsai_storage: BonsaiStorage<BasicId, BD, Poseidon>,
 }
 
-impl<BD> ClassTrie<BD>
-where
-    BD: BonsaiDatabase + BonsaiPersistentDatabase<BasicId>,
-{
+impl<BD: BonsaiDatabase + BonsaiPersistentDatabase<BasicId>> ClassTrie<BD> {
     const IDENTIFIER: &'static [u8] = b"0xclass";
 
     pub fn new(bd: BD) -> Self {

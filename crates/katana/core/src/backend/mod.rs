@@ -2,16 +2,17 @@ use std::sync::Arc;
 
 use katana_executor::{ExecutionOutput, ExecutionResult, ExecutorFactory};
 use katana_primitives::block::{
-    Block, FinalityStatus, GasPrices, Header, PartialHeader, SealedBlock, SealedBlockWithStatus,
+    FinalityStatus, Header, PartialHeader, SealedBlock, SealedBlockWithStatus,
 };
 use katana_primitives::chain_spec::ChainSpec;
 use katana_primitives::da::L1DataAvailabilityMode;
 use katana_primitives::env::BlockEnv;
-use katana_primitives::receipt::{Event, Receipt, ReceiptWithTxHash};
+use katana_primitives::receipt::{Event, ReceiptWithTxHash};
 use katana_primitives::state::{compute_state_diff_hash, StateUpdates};
 use katana_primitives::transaction::{TxHash, TxWithHash};
-use katana_primitives::{ContractAddress, Felt};
+use katana_primitives::Felt;
 use katana_provider::traits::block::{BlockHashProvider, BlockWriter};
+use katana_provider::traits::trie::{ClassTrieWriter, ContractTrieWriter};
 use katana_trie::trie::compute_merkle_root;
 use parking_lot::RwLock;
 use starknet::core::utils::cairo_short_string_to_felt;
@@ -66,7 +67,7 @@ impl<EF: ExecutorFactory> Backend<EF> {
 
         // create a new block and compute its commitment
         let block = self.commit_block(
-            block_env,
+            block_env.clone(),
             execution_output.states.state_updates.clone(),
             txs,
             &receipts,
@@ -115,36 +116,59 @@ impl<EF: ExecutorFactory> Backend<EF> {
 
     fn commit_block(
         &self,
-        block_env: &BlockEnv,
+        block_env: BlockEnv,
         state_updates: StateUpdates,
         transactions: Vec<TxWithHash>,
         receipts: &[ReceiptWithTxHash],
     ) -> Result<SealedBlock, BlockProductionError> {
-        // let block = UncommittedBlock::new(header, transactions, &receipts, &state_updates);
-        // let committed = block.commit();
-        // let sealed = Block { header, body: transactions }.seal();
-        // Ok(sealed)
+        let parent_hash = self.blockchain.provider().latest_hash()?;
+        let partial_header = PartialHeader {
+            parent_hash,
+            number: block_env.number,
+            timestamp: block_env.timestamp,
+            protocol_version: self.chain_spec.version.clone(),
+            sequencer_address: block_env.sequencer_address,
+            l1_gas_prices: block_env.l1_gas_prices,
+            l1_data_gas_prices: block_env.l1_data_gas_prices,
+            l1_da_mode: L1DataAvailabilityMode::Calldata,
+        };
 
-        todo!()
+        let block = UncommittedBlock::new(
+            partial_header,
+            transactions,
+            &receipts,
+            &state_updates,
+            &self.blockchain.provider(),
+        )
+        .commit();
+        Ok(block)
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct UncommittedBlock<'a> {
+pub struct UncommittedBlock<'a, P>
+where
+    P: ClassTrieWriter + ContractTrieWriter,
+{
     header: PartialHeader,
     transactions: Vec<TxWithHash>,
     receipts: &'a [ReceiptWithTxHash],
     state_updates: &'a StateUpdates,
+    trie_provider: P,
 }
 
-impl<'a> UncommittedBlock<'a> {
+impl<'a, P> UncommittedBlock<'a, P>
+where
+    P: ClassTrieWriter + ContractTrieWriter,
+{
     pub fn new(
         header: PartialHeader,
         transactions: Vec<TxWithHash>,
         receipts: &'a [ReceiptWithTxHash],
-        states: &'a StateUpdates,
+        state_updates: &'a StateUpdates,
+        trie_provider: P,
     ) -> Self {
-        Self { header, transactions, receipts, state_updates: states }
+        Self { header, transactions, receipts, state_updates, trie_provider }
     }
 
     pub fn commit(self) -> SealedBlock {
@@ -154,12 +178,11 @@ impl<'a> UncommittedBlock<'a> {
         let transaction_count = self.transactions.len() as u32;
         let state_diff_length = self.state_updates.len() as u32;
 
-        let l1_gas_prices =
-            GasPrices { eth: self.header.l1_gas_prices.eth, strk: self.header.l1_gas_prices.strk };
-        let l1_data_gas_prices = GasPrices {
-            eth: self.header.l1_data_gas_prices.eth,
-            strk: self.header.l1_data_gas_prices.strk,
-        };
+        let state_root = self.compute_new_state_root();
+        let transactions_commitment = self.compute_transaction_commitment();
+        let events_commitment = self.compute_event_commitment();
+        let receipts_commitment = self.compute_receipt_commitment();
+        let state_diff_commitment = self.compute_state_diff_commitment();
 
         // Computes the block hash.
         //
@@ -187,7 +210,7 @@ impl<'a> UncommittedBlock<'a> {
         //
         // Based on StarkWare's [Sequencer implementation].
         //
-        // [Sequencer implementation]: https://github.com/starkware-libs/sequencer/blob/bb361ec67396660d5468fd088171913e11482708/crates/starknet_api/src/block_hash/block_hash_calculator.rs#L62-L93
+        // [sequencer implementation]: https://github.com/starkware-libs/sequencer/blob/bb361ec67396660d5468fd088171913e11482708/crates/starknet_api/src/block_hash/block_hash_calculator.rs#l62-l93
         let starknet_version = self.header.protocol_version.to_string();
         let starknet_version = cairo_short_string_to_felt(&starknet_version).unwrap();
 
@@ -205,10 +228,10 @@ impl<'a> UncommittedBlock<'a> {
             self.header.sequencer_address.into(),
             self.header.timestamp.into(),
             concat,
-            self.state_diff_commitment,
-            self.transactions_commitment,
-            self.events_commitment,
-            self.receipts_commitment,
+            state_diff_commitment,
+            transactions_commitment,
+            events_commitment,
+            receipts_commitment,
             self.header.l1_gas_prices.eth.into(),
             self.header.l1_gas_prices.strk.into(),
             self.header.l1_data_gas_prices.eth.into(),
@@ -219,21 +242,22 @@ impl<'a> UncommittedBlock<'a> {
         ]);
 
         let header = Header {
+            state_diff_length,
             parent_hash,
             events_count,
             state_root,
-            l1_gas_prices,
-            l1_data_gas_prices,
             transaction_count,
             events_commitment,
             receipts_commitment,
             state_diff_commitment,
             transactions_commitment,
-            number: block_env.number,
-            timestamp: block_env.timestamp,
-            l1_da_mode: L1DataAvailabilityMode::Calldata,
-            sequencer_address: block_env.sequencer_address,
-            protocol_version: self.chain_spec.version.clone(),
+            number: self.header.number,
+            timestamp: self.header.timestamp,
+            l1_da_mode: self.header.l1_da_mode,
+            l1_gas_prices: self.header.l1_gas_prices,
+            l1_data_gas_prices: self.header.l1_data_gas_prices,
+            sequencer_address: self.header.sequencer_address,
+            protocol_version: self.header.protocol_version,
         };
 
         SealedBlock { hash: block_hash, header, body: self.transactions }
@@ -277,6 +301,28 @@ impl<'a> UncommittedBlock<'a> {
         // compute events commitment
         let commitment = compute_merkle_root::<hash::Poseidon>(&hashes).unwrap();
         commitment
+    }
+
+    // state_commitment = hPos(
+    //     "STARKNET_STATE_V0",
+    //     contract_trie_root,
+    //     class_trie_root
+    // )
+    fn compute_new_state_root(&self) -> Felt {
+        let class_trie_root = ClassTrieWriter::insert_updates(
+            &self.trie_provider,
+            self.header.number,
+            &self.state_updates.declared_classes,
+        )
+        .unwrap();
+
+        let contract_trie_root = Felt::ZERO;
+
+        hash::Poseidon::hash_array(&[
+            short_string!("STARKNET_STATE_V0"),
+            contract_trie_root,
+            class_trie_root,
+        ])
     }
 
     // Concantenate the transaction_count, event_count and state_diff_length, and l1_da_mode into a

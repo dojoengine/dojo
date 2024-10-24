@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use anyhow::{Context, Result, anyhow, bail};
+use anyhow::{anyhow, bail, Context, Result};
 use katana_db::mdbx::DbEnv;
 use katana_primitives::block::{
     BlockHashOrNumber, BlockIdOrTag, FinalityStatus, SealedBlockWithStatus,
@@ -9,7 +9,6 @@ use katana_primitives::chain_spec::ChainSpec;
 use katana_primitives::da::L1DataAvailabilityMode;
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
 use katana_primitives::version::ProtocolVersion;
-use katana_provider::BlockchainProvider;
 use katana_provider::providers::db::DbProvider;
 use katana_provider::providers::fork::ForkedProvider;
 use katana_provider::traits::block::{BlockProvider, BlockWriter};
@@ -21,6 +20,8 @@ use katana_provider::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionStatusProvider, TransactionTraceProvider,
     TransactionsProviderExt,
 };
+use katana_provider::traits::trie::{ClassTrieWriter, ContractTrieWriter};
+use katana_provider::BlockchainProvider;
 use num_traits::ToPrimitive;
 use starknet::core::types::{BlockStatus, MaybePendingBlockWithTxHashes};
 use starknet::core::utils::parse_cairo_short_string;
@@ -43,6 +44,8 @@ pub trait Database:
     + ContractClassWriter
     + StateFactoryProvider
     + BlockEnvProvider
+    + ClassTrieWriter
+    + ContractTrieWriter
     + 'static
     + Send
     + Sync
@@ -64,6 +67,8 @@ impl<T> Database for T where
         + ContractClassWriter
         + StateFactoryProvider
         + BlockEnvProvider
+        + ClassTrieWriter
+        + ContractTrieWriter
         + 'static
         + Send
         + Sync
@@ -231,7 +236,7 @@ mod tests {
     use katana_primitives::state::StateUpdatesWithDeclaredClasses;
     use katana_primitives::trace::TxExecInfo;
     use katana_primitives::transaction::{InvokeTx, Tx, TxWithHash};
-    use katana_primitives::{Felt, chain_spec};
+    use katana_primitives::{chain_spec, Felt};
     use katana_provider::providers::db::DbProvider;
     use katana_provider::traits::block::{
         BlockHashProvider, BlockNumberProvider, BlockProvider, BlockWriter,

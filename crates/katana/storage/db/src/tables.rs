@@ -36,7 +36,7 @@ pub trait DupSort: Table {
     type SubKey: Key;
 }
 
-pub trait Trie: Table {}
+pub trait Trie: Table<Key = TrieDatabaseKey, Value = TrieDatabaseValue> {}
 
 /// Enum for the types of tables present in libmdbx.
 #[derive(Debug, PartialEq, Copy, Clone)]

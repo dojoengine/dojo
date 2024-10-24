@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 
 use katana_primitives::block::BlockNumber;
 use katana_primitives::class::{ClassHash, CompiledClassHash};
+use katana_primitives::Felt;
 
 use crate::ProviderResult;
 
@@ -11,10 +12,10 @@ pub trait ClassTrieWriter: Send + Sync {
         &self,
         block_number: BlockNumber,
         updates: &BTreeMap<ClassHash, CompiledClassHash>,
-    ) -> ProviderResult<()>;
+    ) -> ProviderResult<Felt>;
 }
 
 #[auto_impl::auto_impl(&, Box, Arc)]
 pub trait ContractTrieWriter: Send + Sync {
-    fn insert_updates(&self) -> ProviderResult<()>;
+    fn insert_updates(&self) -> ProviderResult<Felt>;
 }

@@ -90,6 +90,7 @@ impl Provider for JsonRpcProvider {
             hash: block.block_hash,
             header: Header {
                 events_count: 0,
+                state_diff_length: 0,
                 transaction_count: 0,
                 events_commitment: Felt::ZERO,
                 receipts_commitment: Felt::ZERO,

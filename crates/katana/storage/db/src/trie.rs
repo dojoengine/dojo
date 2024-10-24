@@ -1,12 +1,14 @@
 use std::marker::PhantomData;
 
-use crate::abstraction::DbTxMut;
+use anyhow::Result;
+use katana_trie::bonsai;
+use katana_trie::bonsai::id::BasicId;
+use katana_trie::bonsai::{BonsaiPersistentDatabase, ByteVec, DatabaseKey};
+
+use crate::abstraction::{DbCursor, DbTxMut};
 use crate::models::trie::{TrieDatabaseKey, TrieDatabaseKeyType, TrieDatabaseValue};
 use crate::models::{self};
 use crate::tables;
-use anyhow::Result;
-use katana_trie::bonsai::id::BasicId;
-use katana_trie::bonsai::{ByteVec, DatabaseKey};
 
 #[derive(Debug, thiserror::Error)]
 #[error(transparent)]
@@ -46,7 +48,7 @@ where
     }
 }
 
-impl<Tb, Tx> katana_trie::bonsai::BonsaiDatabase for TrieDb<Tb, Tx>
+impl<Tb, Tx> bonsai::BonsaiDatabase for TrieDb<Tb, Tx>
 where
     Tb: tables::Trie,
     Tx: DbTxMut,
@@ -57,32 +59,27 @@ where
     fn create_batch(&self) -> Self::Batch {}
 
     fn remove_by_prefix(&mut self, prefix: &DatabaseKey) -> Result<(), Self::DatabaseError> {
-        // let mut cursor = self.cursor_mut::<tables::ClassTrie>()?;
-        // let mut walker = cursor.walk(None)?;
+        let mut cursor = self.tx.cursor_mut::<Tb>()?;
+        let walker = cursor.walk(None)?;
 
-        // // iterate over all entries in the table
-        // for entry in walker {
-        //     let (key, value) = entry?;
-        //     if key.key.starts_with(prefix.as_slice()) {
-        //         walker.delete_current()?;
-        //     }
-        // }
+        let mut keys_to_remove = Vec::new();
+        // iterate over all entries in the table
+        for entry in walker {
+            let (key, _) = entry?;
+            if key.key.starts_with(prefix.as_slice()) {
+                keys_to_remove.push(key);
+            }
+        }
 
-        // // let mut keys_to_remove = Vec::new();
-        // // for key in db.keys() {
-        // //     if key.starts_with(prefix.as_slice()) {
-        // //         keys_to_remove.push(key.clone());
-        // //     }
-        // // }
-        // // for key in keys_to_remove {
-        // //     db.remove(&key);
-        // // }
+        for key in keys_to_remove {
+            let _ = self.tx.delete::<Tb>(key, None)?;
+        }
 
-        todo!()
+        Ok(())
     }
 
     fn get(&self, key: &DatabaseKey) -> Result<Option<ByteVec>, Self::DatabaseError> {
-        let value = self.tx.get::<tables::ClassTrie>(foo(key))?.map(ByteVec::from_const);
+        let value = self.tx.get::<Tb>(foo(key))?.map(ByteVec::from_const);
         Ok(value)
     }
 
@@ -110,8 +107,8 @@ where
     ) -> Result<Option<ByteVec>, Self::DatabaseError> {
         let key = foo(key);
         let value = unsafe { *(value.as_ptr() as *const TrieDatabaseValue) };
-        let old_value = self.tx.get::<tables::ClassTrie>(key.clone())?.map(ByteVec::from_const);
-        self.tx.put::<tables::ClassTrie>(key, value)?;
+        let old_value = self.tx.get::<Tb>(key.clone())?.map(ByteVec::from_const);
+        self.tx.put::<Tb>(key, value)?;
         Ok(old_value)
     }
 
@@ -121,14 +118,14 @@ where
         _batch: Option<&mut Self::Batch>,
     ) -> Result<Option<ByteVec>, Self::DatabaseError> {
         let key = foo(key);
-        let old_value = self.tx.get::<tables::ClassTrie>(key.clone())?.map(ByteVec::from_const);
-        self.tx.delete::<tables::ClassTrie>(key, None)?;
+        let old_value = self.tx.get::<Tb>(key.clone())?.map(ByteVec::from_const);
+        self.tx.delete::<Tb>(key, None)?;
         Ok(old_value)
     }
 
     fn contains(&self, key: &DatabaseKey) -> Result<bool, Self::DatabaseError> {
         let key = foo(key);
-        let value = self.tx.get::<tables::ClassTrie>(key)?;
+        let value = self.tx.get::<Tb>(key)?;
         Ok(value.is_some())
     }
 
@@ -137,7 +134,7 @@ where
     }
 }
 
-impl<Tb, Tx> katana_trie::bonsai::BonsaiPersistentDatabase<BasicId> for TrieDb<Tb, Tx>
+impl<Tb, Tx> bonsai::BonsaiPersistentDatabase<BasicId> for TrieDb<Tb, Tx>
 where
     Tb: tables::Trie,
     Tx: DbTxMut,
