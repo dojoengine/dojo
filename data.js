@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1729787114413,
+  "lastUpdate": 1729787301640,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -27943,6 +27943,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 12417269683,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "17f25640cb2495e0223e5844e3c98f52a7aa901c",
+          "message": "fix(katana-rpc): event idx not respecting cursor's block idx (#2578)",
+          "timestamp": "2024-10-25T00:08:26+08:00",
+          "tree_id": "9f9686de60b4cbcb36976f4fc7420ba600b6cdc0",
+          "url": "https://github.com/dojoengine/dojo/commit/17f25640cb2495e0223e5844e3c98f52a7aa901c"
+        },
+        "date": 1729787299949,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 15440698,
+            "range": "± 217907",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8713110,
+            "range": "± 263213",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3610308530,
+            "range": "± 753886496",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8619536,
+            "range": "± 319141",
             "unit": "ns/iter"
           }
         ]
