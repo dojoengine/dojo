@@ -3,7 +3,7 @@
 use anyhow::Result;
 use starknet::core::types::Felt;
 
-use super::{CommonResourceRemoteInfo, ContractRemote, EventRemote, ModelRemote, NamespaceRemote, RemoteResource};
+use super::{CommonResourceRemoteInfo, ContractRemote, EventRemote, ModelRemote, NamespaceRemote, ResourceRemote};
 
 pub trait PermissionsUpdateable {
     fn update_writer(&mut self, contract_address: Felt, is_writer: bool) -> Result<()>;
@@ -84,22 +84,22 @@ impl PermissionsUpdateable for NamespaceRemote {
     }
 }
 
-impl PermissionsUpdateable for RemoteResource {
+impl PermissionsUpdateable for ResourceRemote {
     fn update_writer(&mut self, contract_address: Felt, is_writer: bool) -> Result<()> {
         match self {
-            RemoteResource::Contract(contract) => contract.update_writer(contract_address, is_writer),
-            RemoteResource::Model(model) => model.update_writer(contract_address, is_writer),
-            RemoteResource::Event(event) => event.update_writer(contract_address, is_writer),
-            RemoteResource::Namespace(namespace) => namespace.update_writer(contract_address, is_writer),
+            ResourceRemote::Contract(contract) => contract.update_writer(contract_address, is_writer),
+            ResourceRemote::Model(model) => model.update_writer(contract_address, is_writer),
+            ResourceRemote::Event(event) => event.update_writer(contract_address, is_writer),
+            ResourceRemote::Namespace(namespace) => namespace.update_writer(contract_address, is_writer),
         }
     }
 
     fn update_owner(&mut self, contract_address: Felt, is_owner: bool) -> Result<()> {
         match self {
-            RemoteResource::Contract(contract) => contract.update_owner(contract_address, is_owner),
-            RemoteResource::Model(model) => model.update_owner(contract_address, is_owner),
-            RemoteResource::Event(event) => event.update_owner(contract_address, is_owner),
-            RemoteResource::Namespace(namespace) => namespace.update_owner(contract_address, is_owner),
+            ResourceRemote::Contract(contract) => contract.update_owner(contract_address, is_owner),
+            ResourceRemote::Model(model) => model.update_owner(contract_address, is_owner),
+            ResourceRemote::Event(event) => event.update_owner(contract_address, is_owner),
+            ResourceRemote::Namespace(namespace) => namespace.update_owner(contract_address, is_owner),
         }
     }
 }

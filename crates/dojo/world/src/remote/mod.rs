@@ -13,8 +13,8 @@ mod permissions;
 use crate::{DojoSelector, Namespace};
 
 /// A remote resource that can be fetched from the world.
-#[derive(Debug)]
-pub enum RemoteResource {
+#[derive(Debug, Clone)]
+pub enum ResourceRemote {
     Namespace(NamespaceRemote),
     Contract(ContractRemote),
     Model(ModelRemote),
@@ -36,11 +36,11 @@ pub struct WorldRemote {
     /// The events registered in the world, by namespace.
     pub events: HashMap<Namespace, HashSet<DojoSelector>>,
     /// The resources of the world, by dojo selector.
-    pub resources: HashMap<DojoSelector, RemoteResource>,
+    pub resources: HashMap<DojoSelector, ResourceRemote>,
 }
 
 /// Common information about a world's resource.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CommonResourceRemoteInfo {
     /// The class hashes of the resource during its lifecycle,
     /// always at least one if the resource has been registered.
@@ -56,7 +56,7 @@ pub struct CommonResourceRemoteInfo {
     pub writers: HashSet<Felt>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ContractRemote {
     /// Common information about the resource.
     pub common: CommonResourceRemoteInfo,
@@ -64,19 +64,19 @@ pub struct ContractRemote {
     pub initialized: bool,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ModelRemote {
     /// Common information about the resource.
     pub common: CommonResourceRemoteInfo,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct EventRemote {
     /// Common information about the resource.
     pub common: CommonResourceRemoteInfo,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct NamespaceRemote {
     pub name: String,
     /// The contract addresses that have owner permission on the contract.
@@ -146,33 +146,165 @@ impl EventRemote {
     }
 }
 
-impl RemoteResource {
+impl ResourceRemote {
     /// The dojo selector of the resource.
     pub fn dojo_selector(&self, namespace: &Namespace) -> DojoSelector {
         match self {
             // The namespace doesn't apply to have the dojo selector of a namespace resource.
-            RemoteResource::Namespace(ns) => naming::compute_bytearray_hash(&ns.name),
-            RemoteResource::Contract(contract) => contract.dojo_selector(namespace),
-            RemoteResource::Model(model) => model.dojo_selector(namespace),
-            RemoteResource::Event(event) => event.dojo_selector(namespace),
+            ResourceRemote::Namespace(ns) => naming::compute_bytearray_hash(&ns.name),
+            ResourceRemote::Contract(contract) => contract.dojo_selector(namespace),
+            ResourceRemote::Model(model) => model.dojo_selector(namespace),
+            ResourceRemote::Event(event) => event.dojo_selector(namespace),
         }
     }
 
     /// Push a new class hash to the resource meaning it has been upgraded.
     pub fn push_class_hash(&mut self, class_hash: Felt) {
         match self {
-            RemoteResource::Namespace(_) => {}
-            RemoteResource::Contract(contract) => contract.common.push_class_hash(class_hash),
-            RemoteResource::Model(model) => model.common.push_class_hash(class_hash),
-            RemoteResource::Event(event) => event.common.push_class_hash(class_hash),
+            ResourceRemote::Namespace(_) => {}
+            ResourceRemote::Contract(contract) => contract.common.push_class_hash(class_hash),
+            ResourceRemote::Model(model) => model.common.push_class_hash(class_hash),
+            ResourceRemote::Event(event) => event.common.push_class_hash(class_hash),
         }
     }
 
     /// Get the contract remote if the resource is a contract, otherwise return an error.
     pub fn as_contract_mut(&mut self) -> Result<&mut ContractRemote> {
         match self {
-            RemoteResource::Contract(contract) => Ok(contract),
+            ResourceRemote::Contract(contract) => Ok(contract),
             _ => anyhow::bail!("Resource is expected to be a contract: {:?}.", self),
         }
+    }
+
+    /// Get the contract remote if the resource is a contract, otherwise panic.
+    pub fn as_contract_or_panic(&self) -> &ContractRemote {
+        match self {
+            ResourceRemote::Contract(contract) => contract,
+            _ => panic!("Resource is expected to be a contract: {:?}.", self),
+        }
+    }
+
+    /// Get the model remote if the resource is a model, otherwise panic.
+    pub fn as_model_or_panic(&self) -> &ModelRemote {
+        match self {
+            ResourceRemote::Model(model) => model,
+            _ => panic!("Resource is expected to be a model: {:?}.", self),
+        }
+    }
+
+    /// Get the event remote if the resource is an event, otherwise panic.
+    pub fn as_event_or_panic(&self) -> &EventRemote {
+        match self {
+            ResourceRemote::Event(event) => event,
+            _ => panic!("Resource is expected to be an event: {:?}.", self),
+        }
+    }
+
+    /// Get the namespace remote if the resource is a namespace, otherwise panic.
+    pub fn as_namespace_or_panic(&self) -> &NamespaceRemote {
+        match self {
+            ResourceRemote::Namespace(namespace) => namespace,
+            _ => panic!("Resource is expected to be a namespace: {:?}.", self),
+        }
+    }
+}
+
+impl WorldRemote {
+    /// Adds a resource to the world.
+    pub fn add_resource(&mut self, namespace: Namespace, resource: ResourceRemote) {
+        match &resource {
+            ResourceRemote::Contract(contract) => {
+                let selector = contract.dojo_selector(&namespace);
+                self.contracts.entry(namespace).or_insert_with(HashSet::new).insert(selector);
+
+                self.resources.insert(selector, resource);
+            }
+            ResourceRemote::Model(model) => {
+                let selector = model.dojo_selector(&namespace);
+                self.models.entry(namespace).or_insert_with(HashSet::new).insert(selector);
+                self.resources.insert(selector, resource);
+            }
+            ResourceRemote::Event(event) => {
+                let selector = event.dojo_selector(&namespace);
+                self.events.entry(namespace).or_insert_with(HashSet::new).insert(selector);
+                self.resources.insert(selector, resource);
+            }
+            ResourceRemote::Namespace(ns) => {
+                let selector = naming::compute_bytearray_hash(&ns.name);
+                self.namespaces.insert(selector);
+                self.resources.insert(selector, resource);
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashSet;
+
+    #[test]
+    fn test_add_contract_resource() {
+        let mut world_remote = WorldRemote::default();
+        let namespace = "ns".to_string();
+
+        let contract = ContractRemote {
+            common: CommonResourceRemoteInfo::new(Felt::ONE, "c".to_string(), Felt::ONE),
+            initialized: false,
+        };
+        let resource = ResourceRemote::Contract(contract);
+
+        world_remote.add_resource(namespace.clone(), resource);
+
+        let selector = naming::compute_selector_from_names("ns", "c");
+        assert!(world_remote.contracts.get(&namespace).unwrap().contains(&selector));
+        assert!(world_remote.resources.contains_key(&selector));
+    }
+
+    #[test]
+    fn test_add_model_resource() {
+        let mut world_remote = WorldRemote::default();
+        let namespace = "ns".to_string();
+
+        let model = ModelRemote {
+            common: CommonResourceRemoteInfo::new(Felt::ONE, "m".to_string(), Felt::ONE),
+        };
+        let resource = ResourceRemote::Model(model);
+
+        world_remote.add_resource(namespace.clone(), resource);
+
+        let selector = naming::compute_selector_from_names("ns", "m");
+        assert!(world_remote.models.get(&namespace).unwrap().contains(&selector));
+        assert!(world_remote.resources.contains_key(&selector));
+    }
+
+    #[test]
+    fn test_add_event_resource() {
+        let mut world_remote = WorldRemote::default();
+        let namespace = "ns".to_string();
+
+        let event = EventRemote {
+            common: CommonResourceRemoteInfo::new(Felt::ONE, "e".to_string(), Felt::ONE),
+        };
+        let resource = ResourceRemote::Event(event);
+
+        world_remote.add_resource(namespace.clone(), resource);
+
+        let selector = naming::compute_selector_from_names("ns", "e");
+        assert!(world_remote.events.get(&namespace).unwrap().contains(&selector));
+        assert!(world_remote.resources.contains_key(&selector));
+    }
+
+    #[test]
+    fn test_add_namespace_resource() {
+        let mut world_remote = WorldRemote::default();
+        let namespace = NamespaceRemote::new("ns".to_string());
+        let resource = ResourceRemote::Namespace(namespace);
+
+        world_remote.add_resource("ns".to_string(), resource);
+
+        let selector = naming::compute_bytearray_hash("ns");
+        assert!(world_remote.namespaces.contains(&selector));
+        assert!(world_remote.resources.contains_key(&selector));
     }
 }

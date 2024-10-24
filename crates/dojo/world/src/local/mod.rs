@@ -23,8 +23,8 @@ use crate::{DojoSelector, Namespace};
 
 /// A local resource.
 #[derive(Debug, Clone)]
-pub enum LocalResource {
-    Namespace(Namespace),
+pub enum ResourceLocal {
+    Namespace(NamespaceLocal),
     Contract(ContractLocal),
     Model(ModelLocal),
     Event(EventLocal),
@@ -49,7 +49,7 @@ pub struct WorldLocal {
     /// The starknet contracts of the world.
     pub starknet_contracts: HashMap<Namespace, HashSet<DojoSelector>>,
     /// The resources of the world.
-    pub resources: HashMap<DojoSelector, LocalResource>,
+    pub resources: HashMap<DojoSelector, ResourceLocal>,
     /// The namespace configuration.
     pub namespace_config: NamespaceConfig,
 }
@@ -95,15 +95,21 @@ pub struct StarknetLocal {
     pub class_hash: Felt,
 }
 
-impl LocalResource {
+#[derive(Debug, Clone)]
+pub struct NamespaceLocal {
+    /// The name of the namespace.
+    pub name: String,
+}
+
+impl ResourceLocal {
     /// Returns the name of the resource.
     pub fn name(&self) -> String {
         match self {
-            LocalResource::Contract(c) => c.name.clone(),
-            LocalResource::Model(m) => m.name.clone(),
-            LocalResource::Event(e) => e.name.clone(),
-            LocalResource::Starknet(s) => s.name.clone(),
-            LocalResource::Namespace(n) => n.clone(),
+            ResourceLocal::Contract(c) => c.name.clone(),
+            ResourceLocal::Model(m) => m.name.clone(),
+            ResourceLocal::Event(e) => e.name.clone(),
+            ResourceLocal::Starknet(s) => s.name.clone(),
+            ResourceLocal::Namespace(n) => n.name.clone(),
         }
     }
 }
@@ -123,19 +129,21 @@ impl WorldLocal {
         };
 
         for namespace in namespace_config.list_namespaces() {
-            world.add_resource(LocalResource::Namespace(namespace.clone()));
+            world.add_resource(ResourceLocal::Namespace(NamespaceLocal {
+                name: namespace.clone(),
+            }));
         }
 
         world
     }
 
     /// Adds a resource to the world local.
-    pub fn add_resource(&mut self, resource: LocalResource) {
+    pub fn add_resource(&mut self, resource: ResourceLocal) {
         let name = resource.name();
         let namespaces = self.namespace_config.get_namespaces(&name);
 
-        if let LocalResource::Namespace(namespace) = &resource {
-            let selector = naming::compute_bytearray_hash(namespace);
+        if let ResourceLocal::Namespace(namespace) = &resource {
+            let selector = naming::compute_bytearray_hash(&namespace.name);
             self.namespaces.insert(selector);
             self.resources.insert(selector, resource.clone());
             return;
@@ -150,22 +158,22 @@ impl WorldLocal {
             self.resources.insert(selector, resource.clone());
 
             match resource {
-                LocalResource::Contract(_) => {
+                ResourceLocal::Contract(_) => {
                     self.contracts.entry(namespace).or_insert_with(HashSet::new).insert(selector);
                 }
-                LocalResource::Model(_) => {
+                ResourceLocal::Model(_) => {
                     self.models.entry(namespace).or_insert_with(HashSet::new).insert(selector);
                 }
-                LocalResource::Event(_) => {
+                ResourceLocal::Event(_) => {
                     self.events.entry(namespace).or_insert_with(HashSet::new).insert(selector);
                 }
-                LocalResource::Starknet(_) => {
+                ResourceLocal::Starknet(_) => {
                     self.starknet_contracts
                         .entry(namespace)
                         .or_insert_with(HashSet::new)
                         .insert(selector);
                 }
-                LocalResource::Namespace(_) => {
+                ResourceLocal::Namespace(_) => {
                     // Already processed earlier.
                 }
             }
@@ -207,7 +215,7 @@ mod tests {
         let n = world.resources.get(&naming::compute_bytearray_hash("dojo")).unwrap();
         assert_eq!(n.name(), "dojo");
 
-        world.add_resource(LocalResource::Contract(ContractLocal {
+        world.add_resource(ResourceLocal::Contract(ContractLocal {
             name: "c1".to_string(),
             class: empty_sierra_class(),
             class_hash: Felt::ZERO,
@@ -219,7 +227,7 @@ mod tests {
         assert_eq!(world.contracts.get("dojo").unwrap().contains(&selector), true);
         assert_eq!(world.resources.len(), 1);
 
-        world.add_resource(LocalResource::Contract(ContractLocal {
+        world.add_resource(ResourceLocal::Contract(ContractLocal {
             name: "c2".to_string(),
             class: empty_sierra_class(),
             class_hash: Felt::ZERO,

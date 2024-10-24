@@ -7,7 +7,7 @@ use anyhow::Result;
 use serde_json;
 use starknet::core::types::contract::{AbiEntry, AbiImpl, SierraClass};
 
-use super::{ContractLocal, EventLocal, LocalResource, ModelLocal, NamespaceConfig, WorldLocal};
+use super::{ContractLocal, EventLocal, ResourceLocal, ModelLocal, NamespaceConfig, WorldLocal};
 
 const WORLD_INTF: &str = "dojo::world::iworld::IWorld";
 const CONTRACT_INTF: &str = "dojo::contract::interface::IContract";
@@ -48,7 +48,7 @@ impl WorldLocal {
                                 break;
                             }
                             ResourceType::Contract(name) => {
-                                let resource = LocalResource::Contract(ContractLocal {
+                                let resource = ResourceLocal::Contract(ContractLocal {
                                     name,
                                     class: sierra,
                                     class_hash,
@@ -57,7 +57,7 @@ impl WorldLocal {
                                 break;
                             }
                             ResourceType::Model(name) => {
-                                let resource = LocalResource::Model(ModelLocal {
+                                let resource = ResourceLocal::Model(ModelLocal {
                                     name,
                                     class: sierra,
                                     class_hash,
@@ -67,7 +67,7 @@ impl WorldLocal {
                                 break;
                             }
                             ResourceType::Event(name) => {
-                                let resource = LocalResource::Event(EventLocal {
+                                let resource = ResourceLocal::Event(EventLocal {
                                     name,
                                     class: sierra,
                                     class_hash,
