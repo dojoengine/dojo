@@ -2,10 +2,9 @@
 //!
 //! The point of view is the local one.
 
+use super::DiffResource;
 use crate::local::{ContractLocal, EventLocal, ModelLocal, NamespaceLocal, ResourceLocal};
 use crate::remote::ResourceRemote;
-
-use super::DiffResource;
 
 /// A trait to compare a local resource with a remote one.
 pub trait ComparableResource {
@@ -79,29 +78,14 @@ impl ComparableResource for ResourceLocal {
 mod tests {
     use std::collections::HashSet;
 
-    use super::*;
-    use crate::local::{ContractLocal, EventLocal, ModelLocal, NamespaceConfig, WorldLocal};
-    use crate::remote::{CommonResourceRemoteInfo, ContractRemote, ModelRemote, EventRemote, NamespaceRemote};
-    use starknet::core::types::contract::{SierraClass, SierraClassDebugInfo};
-    use starknet::core::types::{EntryPointsByType, Felt};
+    use starknet::core::types::Felt;
 
-    fn empty_sierra_class() -> SierraClass {
-        SierraClass {
-            abi: vec![],
-            sierra_program: vec![],
-            sierra_program_debug_info: SierraClassDebugInfo {
-                type_names: vec![],
-                libfunc_names: vec![],
-                user_func_names: vec![],
-            },
-            contract_class_version: "0".to_string(),
-            entry_points_by_type: EntryPointsByType {
-                constructor: vec![],
-                external: vec![],
-                l1_handler: vec![],
-            },
-        }
-    }
+    use super::*;
+    use crate::local::{ContractLocal, EventLocal, ModelLocal};
+    use crate::remote::{
+        CommonResourceRemoteInfo, ContractRemote, EventRemote, ModelRemote, NamespaceRemote,
+    };
+    use crate::test_utils::empty_sierra_class;
 
     #[test]
     fn test_compare_model_local() {
@@ -161,9 +145,7 @@ mod tests {
 
     #[test]
     fn test_compare_namespace_local() {
-        let local_namespace = NamespaceLocal {
-            name: "namespace1".to_string(),
-        };
+        let local_namespace = NamespaceLocal { name: "namespace1".to_string() };
 
         let remote_namespace = ResourceRemote::Namespace(NamespaceRemote {
             name: "namespace1".to_string(),

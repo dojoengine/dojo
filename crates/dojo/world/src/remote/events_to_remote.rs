@@ -6,20 +6,15 @@
 //! Events are also sequential, a resource is not expected to be upgraded before
 //! being registered. We take advantage of this fact to optimize the data gathering.
 
-use std::collections::HashSet;
-
 use anyhow::Result;
-use dojo_types::naming;
-use starknet::{
-    core::types::{EventFilter, Felt},
-    providers::Provider,
-};
+use starknet::core::types::{EventFilter, Felt};
+use starknet::providers::Provider;
 
 use super::permissions::PermissionsUpdateable;
 use super::{ResourceRemote, WorldRemote};
-use crate::{
-    contracts::abigen::world::{self, Event as WorldEvent},
-    remote::{CommonResourceRemoteInfo, ContractRemote, EventRemote, ModelRemote, NamespaceRemote},
+use crate::contracts::abigen::world::{self, Event as WorldEvent};
+use crate::remote::{
+    CommonResourceRemoteInfo, ContractRemote, EventRemote, ModelRemote, NamespaceRemote,
 };
 
 impl WorldRemote {
@@ -174,10 +169,12 @@ impl WorldRemote {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use cainome::cairo_serde::ByteArray;
+    use dojo_types::naming;
 
     use super::*;
-    use std::collections::HashMap;
 
     #[tokio::test]
     async fn test_world_spawned_event() {

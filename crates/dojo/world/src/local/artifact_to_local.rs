@@ -7,7 +7,7 @@ use anyhow::Result;
 use serde_json;
 use starknet::core::types::contract::{AbiEntry, AbiImpl, SierraClass};
 
-use super::{ContractLocal, EventLocal, ResourceLocal, ModelLocal, NamespaceConfig, WorldLocal};
+use super::{ContractLocal, EventLocal, ModelLocal, NamespaceConfig, ResourceLocal, WorldLocal};
 
 const WORLD_INTF: &str = "dojo::world::iworld::IWorld";
 const CONTRACT_INTF: &str = "dojo::contract::interface::IContract";

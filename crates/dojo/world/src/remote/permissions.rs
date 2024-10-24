@@ -3,7 +3,10 @@
 use anyhow::Result;
 use starknet::core::types::Felt;
 
-use super::{CommonResourceRemoteInfo, ContractRemote, EventRemote, ModelRemote, NamespaceRemote, ResourceRemote};
+use super::{
+    CommonResourceRemoteInfo, ContractRemote, EventRemote, ModelRemote, NamespaceRemote,
+    ResourceRemote,
+};
 
 pub trait PermissionsUpdateable {
     fn update_writer(&mut self, contract_address: Felt, is_writer: bool) -> Result<()>;
@@ -87,10 +90,14 @@ impl PermissionsUpdateable for NamespaceRemote {
 impl PermissionsUpdateable for ResourceRemote {
     fn update_writer(&mut self, contract_address: Felt, is_writer: bool) -> Result<()> {
         match self {
-            ResourceRemote::Contract(contract) => contract.update_writer(contract_address, is_writer),
+            ResourceRemote::Contract(contract) => {
+                contract.update_writer(contract_address, is_writer)
+            }
             ResourceRemote::Model(model) => model.update_writer(contract_address, is_writer),
             ResourceRemote::Event(event) => event.update_writer(contract_address, is_writer),
-            ResourceRemote::Namespace(namespace) => namespace.update_writer(contract_address, is_writer),
+            ResourceRemote::Namespace(namespace) => {
+                namespace.update_writer(contract_address, is_writer)
+            }
         }
     }
 
@@ -99,7 +106,9 @@ impl PermissionsUpdateable for ResourceRemote {
             ResourceRemote::Contract(contract) => contract.update_owner(contract_address, is_owner),
             ResourceRemote::Model(model) => model.update_owner(contract_address, is_owner),
             ResourceRemote::Event(event) => event.update_owner(contract_address, is_owner),
-            ResourceRemote::Namespace(namespace) => namespace.update_owner(contract_address, is_owner),
+            ResourceRemote::Namespace(namespace) => {
+                namespace.update_owner(contract_address, is_owner)
+            }
         }
     }
 }

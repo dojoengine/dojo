@@ -1,22 +1,23 @@
 //! Represents the difference between a local and a remote world.
 //!
+//! The local and remote worlds are consumed to produce the diff, to avoid duplicating the
+//! resources.
 
 use std::collections::{HashMap, HashSet};
 
-use crate::{DojoSelector, Namespace};
+use compare::ComparableResource;
 
 use super::local::{ResourceLocal, WorldLocal};
 use super::remote::{ResourceRemote, WorldRemote};
-
-use compare::ComparableResource;
+use crate::{DojoSelector, Namespace};
 
 mod compare;
 
 /// The difference between a local and a remote resource.
 ///
 /// The point of view is the local one.
-/// Currently, having the remote resources that are not registered by the current project is not supported,
-/// since a world can be permissionlessly updated by anyone.
+/// Currently, having the remote resources that are not registered by the current project is not
+/// supported, since a world can be permissionlessly updated by anyone.
 #[derive(Debug)]
 pub enum DiffResource {
     /// The resource has been created locally, and is not present in the remote world.
@@ -115,5 +116,99 @@ fn compare_and_consume_resources(
                     .push(DiffResource::Created(local_resource));
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use starknet::core::types::Felt;
+
+    use super::*;
+    use crate::local::{ContractLocal, NamespaceConfig, NamespaceLocal, ResourceLocal, WorldLocal};
+    use crate::remote::{CommonResourceRemoteInfo, ContractRemote, NamespaceRemote};
+    use crate::test_utils::empty_sierra_class;
+
+    #[test]
+    fn test_world_diff_new() {
+        let ns = "ns".to_string();
+        let namespace_config = NamespaceConfig::new(&ns);
+        let mut local = WorldLocal::new(namespace_config.clone());
+        let mut remote = WorldRemote::default();
+
+        let local_contract = ResourceLocal::Contract(ContractLocal {
+            name: "c".to_string(),
+            class: empty_sierra_class(),
+            class_hash: Felt::ONE,
+        });
+
+        local.add_resource(local_contract.clone());
+
+        let diff = WorldDiff::new(local.clone(), remote.clone());
+
+        assert_eq!(diff.contracts.len(), 1);
+        assert_eq!(diff.contracts.get(&ns).unwrap().len(), 1);
+        assert!(matches!(diff.contracts.get(&ns).unwrap()[0], DiffResource::Created(_)));
+
+        let remote_contract = ResourceRemote::Contract(ContractRemote {
+            common: CommonResourceRemoteInfo::new(Felt::ONE, "c".to_string(), Felt::ONE),
+            initialized: false,
+        });
+
+        remote.add_resource(ns.clone(), remote_contract.clone());
+
+        let diff = WorldDiff::new(local.clone(), remote.clone());
+
+        assert_eq!(diff.contracts.len(), 1);
+        assert_eq!(diff.contracts.get(&ns).unwrap().len(), 1);
+        assert!(matches!(diff.contracts.get(&ns).unwrap()[0], DiffResource::Synced(_)));
+
+        let mut local = WorldLocal::new(namespace_config);
+
+        let local_contract = ResourceLocal::Contract(ContractLocal {
+            name: "c".to_string(),
+            class: empty_sierra_class(),
+            class_hash: Felt::TWO,
+        });
+
+        local.add_resource(local_contract.clone());
+
+        let diff = WorldDiff::new(local.clone(), remote.clone());
+
+        assert_eq!(diff.contracts.len(), 1);
+        assert_eq!(diff.contracts.get(&ns).unwrap().len(), 1);
+        assert!(matches!(diff.contracts.get(&ns).unwrap()[0], DiffResource::Updated(_, _)));
+    }
+
+    #[test]
+    fn test_world_diff_namespace() {
+        let ns = "ns".to_string();
+        let namespace_config = NamespaceConfig::new(&ns);
+        let mut local = WorldLocal::new(namespace_config.clone());
+        let mut remote = WorldRemote::default();
+
+        let local_namespace =
+            ResourceLocal::Namespace(NamespaceLocal { name: "namespace1".to_string() });
+
+        local.add_resource(local_namespace.clone());
+
+        let diff = WorldDiff::new(local.clone(), remote.clone());
+
+        assert_eq!(diff.namespaces.len(), 2);
+        assert!(matches!(diff.namespaces[0], DiffResource::Created(_)));
+        assert!(matches!(diff.namespaces[1], DiffResource::Created(_)));
+
+        let remote_namespace = ResourceRemote::Namespace(NamespaceRemote {
+            name: "namespace1".to_string(),
+            owners: HashSet::new(),
+            writers: HashSet::new(),
+        });
+
+        remote.add_resource(ns.clone(), remote_namespace.clone());
+
+        let diff = WorldDiff::new(local.clone(), remote.clone());
+
+        assert_eq!(diff.namespaces.len(), 2);
+        assert!(matches!(diff.namespaces[0], DiffResource::Created(_)));
+        assert!(matches!(diff.namespaces[1], DiffResource::Synced(_)));
     }
 }

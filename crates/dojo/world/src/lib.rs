@@ -12,7 +12,10 @@ pub mod uri;
 type DojoSelector = starknet::core::types::Felt;
 type Namespace = String;
 
+pub mod contracts;
 pub mod diff;
 pub mod local;
 pub mod remote;
-pub mod contracts;
+
+#[cfg(test)]
+pub mod test_utils;

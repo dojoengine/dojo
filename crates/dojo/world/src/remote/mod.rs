@@ -1,11 +1,13 @@
 //! Remote resources for the world, gathered from events emitted by the world at the given address.
 //!
-//! A remote resource must be reconstructible form the onchain world without any additional information.
+//! A remote resource must be reconstructible form the onchain world without any additional
+//! information.
+
+use std::collections::{HashMap, HashSet};
 
 use anyhow::Result;
 use dojo_types::naming;
 use starknet::core::types::Felt;
-use std::collections::{HashMap, HashSet};
 
 mod events_to_remote;
 mod permissions;
@@ -19,11 +21,12 @@ pub enum ResourceRemote {
     Contract(ContractRemote),
     Model(ModelRemote),
     Event(EventRemote),
-    // TODO: add starknet contract remote. Sozo needs a way to keep track of the address of this contract once deployed.
+    // TODO: add starknet contract remote. Sozo needs a way to keep track of the address of this
+    // contract once deployed.
 }
 
 /// The remote world representation.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct WorldRemote {
     /// The class hashes of the world.
     pub class_hashes: Vec<Felt>,
@@ -241,7 +244,6 @@ impl WorldRemote {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::HashSet;
 
     #[test]
     fn test_add_contract_resource() {

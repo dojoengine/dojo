@@ -12,11 +12,10 @@ use starknet::core::utils::{
 };
 use starknet::providers::{Provider, ProviderError};
 
-use crate::contracts::WorldContractReader;
-use super::abigen;
-use super::abigen::world::{Layout, ModelIndex};
 pub use super::abigen::model::ModelContractReader;
-use super::naming;
+use super::abigen::world::{Layout, ModelIndex};
+use super::{abigen, naming};
+use crate::contracts::WorldContractReader;
 
 #[cfg(test)]
 #[path = "model_test.rs"]

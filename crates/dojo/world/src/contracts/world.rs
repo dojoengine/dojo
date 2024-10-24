@@ -2,12 +2,12 @@ use std::result::Result;
 
 use starknet::providers::Provider;
 
-use super::model::{ModelError, ModelRPCReader};
-use super::naming;
 pub use super::abigen::world::{
     ContractRegistered, ContractUpgraded, Event as WorldEvent, ModelRegistered, WorldContract,
     WorldContractReader,
 };
+use super::model::{ModelError, ModelRPCReader};
+use super::naming;
 
 #[cfg(test)]
 #[path = "world_test.rs"]

@@ -31,7 +31,7 @@ pub enum ResourceLocal {
     Starknet(StarknetLocal),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct WorldLocal {
     /// The class hash of the world.
     /// We use an option here since [`SierraClass`] doesn't implement default
@@ -129,9 +129,8 @@ impl WorldLocal {
         };
 
         for namespace in namespace_config.list_namespaces() {
-            world.add_resource(ResourceLocal::Namespace(NamespaceLocal {
-                name: namespace.clone(),
-            }));
+            world
+                .add_resource(ResourceLocal::Namespace(NamespaceLocal { name: namespace.clone() }));
         }
 
         world
@@ -153,8 +152,9 @@ impl WorldLocal {
             let selector = naming::compute_selector_from_names(&namespace, &name);
             // Not the most efficient, but it's not the most critical path.
             // We could have done a mapping of <Name, Resource> but this adds an additional lookup
-            // with the current datastructure, since the [`DojoSelector`] doesn't contain the name in clear,
-            // we have to lookup all the resources to find out the name matching.
+            // with the current datastructure, since the [`DojoSelector`] doesn't contain the name
+            // in clear, we have to lookup all the resources to find out the name
+            // matching.
             self.resources.insert(selector, resource.clone());
 
             match resource {
@@ -184,26 +184,7 @@ impl WorldLocal {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use starknet::core::types::contract::SierraClassDebugInfo;
-    use starknet::core::types::EntryPointsByType;
-
-    fn empty_sierra_class() -> SierraClass {
-        SierraClass {
-            abi: vec![],
-            sierra_program: vec![],
-            sierra_program_debug_info: SierraClassDebugInfo {
-                type_names: vec![],
-                libfunc_names: vec![],
-                user_func_names: vec![],
-            },
-            contract_class_version: "0".to_string(),
-            entry_points_by_type: EntryPointsByType {
-                constructor: vec![],
-                external: vec![],
-                l1_handler: vec![],
-            },
-        }
-    }
+    use crate::test_utils::empty_sierra_class;
 
     #[test]
     fn test_add_resource() {
