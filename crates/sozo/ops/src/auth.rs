@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
-use anyhow::{Context, Result};
-use dojo_utils::{TransactionExt, TransactionWaiter, TxnConfig};
+use anyhow::Result;
+use dojo_utils::{handle_execute, TransactionWaiter, TxnConfig};
 use dojo_world::contracts::model::ModelError;
 use dojo_world::contracts::naming::{
     compute_bytearray_hash, compute_selector_from_tag, ensure_namespace,
@@ -115,7 +115,7 @@ pub async fn grant_writer<'a, A>(
     #[cfg(feature = "walnut")] walnut_debugger: &Option<WalnutDebugger>,
 ) -> Result<()>
 where
-    A: ConnectedAccount + Sync + Send,
+    A: ConnectedAccount + Sync + Send + 'static,
     <A as Account>::SignError: 'static,
 {
     let mut calls = Vec::new();
@@ -129,19 +129,18 @@ where
     }
 
     if !calls.is_empty() {
-        let res = world
-            .account
-            .execute_v1(calls)
-            .send_with_cfg(txn_config)
-            .await
-            .with_context(|| "Failed to send transaction")?;
+        let Some(invoke_res) =
+            dojo_utils::handle_execute(txn_config.fee_setting, &world.account, calls).await?
+        else {
+            todo!("handle estimate_only and simulate")
+        };
 
-        TransactionWaiter::new(res.transaction_hash, &world.provider()).await?;
+        TransactionWaiter::new(invoke_res.transaction_hash, &world.provider()).await?;
 
         utils::handle_transaction_result(
             ui,
             &world.account.provider(),
-            res,
+            invoke_res,
             txn_config.wait,
             txn_config.receipt,
             #[cfg(feature = "walnut")]
@@ -172,12 +171,9 @@ where
         calls.push(world.grant_owner_getcall(&resource_selector, &new_owner.owner.into()));
     }
 
-    let res = world
-        .account
-        .execute_v1(calls)
-        .send_with_cfg(txn_config)
-        .await
-        .with_context(|| "Failed to send transaction")?;
+    let Some(res) = handle_execute(txn_config.fee_setting, &world.account, calls).await? else {
+        todo!("handle estimate and simulate")
+    };
 
     TransactionWaiter::new(res.transaction_hash, &world.provider()).await?;
 
@@ -217,12 +213,11 @@ where
     }
 
     if !calls.is_empty() {
-        let res = world
-            .account
-            .execute_v1(calls)
-            .send_with_cfg(txn_config)
-            .await
-            .with_context(|| "Failed to send transaction")?;
+        let Some(res) =
+            dojo_utils::handle_execute(txn_config.fee_setting, &world.account, calls).await?
+        else {
+            todo!("handle estimate and simulate");
+        };
 
         TransactionWaiter::new(res.transaction_hash, &world.provider()).await?;
 
@@ -260,12 +255,11 @@ where
         calls.push(world.revoke_owner_getcall(&resource_selector, &new_owner.owner.into()));
     }
 
-    let res = world
-        .account
-        .execute_v1(calls)
-        .send_with_cfg(txn_config)
-        .await
-        .with_context(|| "Failed to send transaction")?;
+    let Some(res) =
+        dojo_utils::handle_execute(txn_config.fee_setting, &world.account, calls).await?
+    else {
+        todo!("handle estimate and simulate");
+    };
 
     utils::handle_transaction_result(
         ui,

@@ -167,7 +167,7 @@ pub async fn grant(
                 ui,
                 &world,
                 &models_contracts,
-                &transaction.into(),
+                &transaction.try_into()?,
                 default_namespace,
                 #[cfg(feature = "walnut")]
                 &walnut_debugger,
@@ -183,7 +183,7 @@ pub async fn grant(
                 ui,
                 &world,
                 &owners_resources,
-                &transaction.into(),
+                &transaction.try_into()?,
                 default_namespace,
                 #[cfg(feature = "walnut")]
                 &walnut_debugger,
@@ -223,7 +223,7 @@ pub async fn revoke(
                 ui,
                 &world,
                 &models_contracts,
-                &transaction.into(),
+                &transaction.try_into()?,
                 default_namespace,
                 #[cfg(feature = "walnut")]
                 &walnut_debugger,
@@ -239,7 +239,7 @@ pub async fn revoke(
                 ui,
                 &world,
                 &owners_resources,
-                &transaction.into(),
+                &transaction.try_into()?,
                 default_namespace,
                 #[cfg(feature = "walnut")]
                 &walnut_debugger,
