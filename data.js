@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1729778339323,
+  "lastUpdate": 1729787114413,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -27913,6 +27913,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8446233,
             "range": "± 53910",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "17f25640cb2495e0223e5844e3c98f52a7aa901c",
+          "message": "fix(katana-rpc): event idx not respecting cursor's block idx (#2578)",
+          "timestamp": "2024-10-25T00:08:26+08:00",
+          "tree_id": "9f9686de60b4cbcb36976f4fc7420ba600b6cdc0",
+          "url": "https://github.com/dojoengine/dojo/commit/17f25640cb2495e0223e5844e3c98f52a7aa901c"
+        },
+        "date": 1729787112398,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 12417269683,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
