@@ -29,7 +29,7 @@ console.workspace = true
 dojo-lang.workspace = true
 dojo-types.workspace = true
 dojo-utils.workspace = true
-dojo-world = { workspace = true, features = [ "contracts", "metadata", "migration" ] }
+dojo-world = { workspace = true, features = [ "contracts", "metadata" ] }
 futures.workspace = true
 itertools.workspace = true
 num-bigint = "0.4.6"

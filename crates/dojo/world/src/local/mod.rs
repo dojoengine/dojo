@@ -15,10 +15,8 @@ use starknet::core::types::contract::SierraClass;
 use starknet::core::types::Felt;
 
 mod artifact_to_local;
-mod namespace_config;
 
-pub use namespace_config::NamespaceConfig;
-
+use crate::config::NamespaceConfig;
 use crate::{DojoSelector, Namespace};
 
 /// A local resource.
@@ -38,6 +36,8 @@ pub struct WorldLocal {
     /// and it's easier to handle the option than having a default value to know
     /// if the world class has been set or not.
     pub class: Option<SierraClass>,
+    /// The casm class hash of the world.
+    pub casm_class_hash: Option<Felt>,
     /// The namespaces of the world.
     pub namespaces: HashSet<DojoSelector>,
     /// The contracts of the world.
@@ -62,6 +62,8 @@ pub struct ContractLocal {
     pub class: SierraClass,
     /// The class hash of the contract.
     pub class_hash: Felt,
+    /// The casm class hash of the contract.
+    pub casm_class_hash: Felt,
     // TODO: add systems for better debugging/more info for users.
 }
 
@@ -73,6 +75,8 @@ pub struct ModelLocal {
     pub class: SierraClass,
     /// The class hash of the model.
     pub class_hash: Felt,
+    /// The casm class hash of the model.
+    pub casm_class_hash: Felt,
 }
 
 #[derive(Debug, Clone)]
@@ -83,6 +87,8 @@ pub struct EventLocal {
     pub class: SierraClass,
     /// The class hash of the event.
     pub class_hash: Felt,
+    /// The casm class hash of the event.
+    pub casm_class_hash: Felt,
 }
 
 #[derive(Debug, Clone)]
@@ -93,6 +99,8 @@ pub struct StarknetLocal {
     pub class: SierraClass,
     /// The class hash of the starknet contract.
     pub class_hash: Felt,
+    /// The casm class hash of the starknet contract.
+    pub casm_class_hash: Felt,
 }
 
 #[derive(Debug, Clone)]
@@ -114,12 +122,20 @@ impl ResourceLocal {
     }
 }
 
+impl ContractLocal {
+    /// Returns the salt of the contract used to register the contract.
+    pub fn salt(&self) -> Felt {
+        naming::compute_bytearray_hash(&self.name)
+    }
+}
+
 impl WorldLocal {
     /// Creates a new world local with a namespace configuration.
     pub fn new(namespace_config: NamespaceConfig) -> Self {
         let mut world = Self {
             namespace_config: namespace_config.clone(),
             class: None,
+            casm_class_hash: None,
             namespaces: HashSet::new(),
             contracts: HashMap::new(),
             models: HashMap::new(),
@@ -200,6 +216,7 @@ mod tests {
             name: "c1".to_string(),
             class: empty_sierra_class(),
             class_hash: Felt::ZERO,
+            casm_class_hash: Felt::ZERO,
         }));
 
         let selector = naming::compute_selector_from_names(&"dojo".to_string(), &"c1".to_string());
@@ -212,6 +229,7 @@ mod tests {
             name: "c2".to_string(),
             class: empty_sierra_class(),
             class_hash: Felt::ZERO,
+            casm_class_hash: Felt::ZERO,
         }));
 
         let selector2 = naming::compute_selector_from_names(&"dojo".to_string(), &"c2".to_string());

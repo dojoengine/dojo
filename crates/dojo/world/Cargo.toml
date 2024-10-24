@@ -34,7 +34,7 @@ ipfs-api-backend-hyper = { git = "https://github.com/ferristseng/rust-ipfs-api",
 scarb = { workspace = true, optional = true }
 tokio = { version = "1.32.0", features = [ "time" ], default-features = false, optional = true }
 toml.workspace = true
-url = { workspace = true, optional = true }
+url.workspace = true
 walkdir.workspace = true
 
 [dev-dependencies]
@@ -49,6 +49,5 @@ tokio.workspace = true
 
 [features]
 contracts = [ "dep:num-traits" ]
-manifest = [ "contracts", "dep:scarb", "dep:url" ]
-metadata = [ "dep:ipfs-api-backend-hyper", "dep:scarb", "dep:url" ]
-migration = [ "dep:dojo-utils", "dep:scarb", "dep:tokio", "manifest" ]
+metadata = [ "dep:ipfs-api-backend-hyper" ]
+migration = [ "dep:dojo-utils", "dep:scarb", "dep:tokio" ]

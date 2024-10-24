@@ -5,7 +5,10 @@ use std::path::Path;
 
 use anyhow::Result;
 use serde_json;
+use starknet::core::types::Felt;
 use starknet::core::types::contract::{AbiEntry, AbiImpl, SierraClass};
+use cairo_lang_starknet_classes::contract_class::ContractClass;
+use cairo_lang_starknet_classes::casm_contract_class::CasmContractClass;
 
 use super::{ContractLocal, EventLocal, ModelLocal, NamespaceConfig, ResourceLocal, WorldLocal};
 
@@ -35,6 +38,7 @@ impl WorldLocal {
                 {
                     let abi = sierra.abi.clone();
                     let class_hash = sierra.class_hash()?;
+                    let casm_class_hash = casm_class_hash_from_sierra_file(&path)?;
 
                     let impls = abi
                         .iter()
@@ -45,6 +49,7 @@ impl WorldLocal {
                         match identify_resource_type(i) {
                             ResourceType::World => {
                                 self.class = Some(sierra);
+                                self.casm_class_hash = Some(casm_class_hash);
                                 break;
                             }
                             ResourceType::Contract(name) => {
@@ -52,6 +57,7 @@ impl WorldLocal {
                                     name,
                                     class: sierra,
                                     class_hash,
+                                    casm_class_hash,
                                 });
                                 self.add_resource(resource);
                                 break;
@@ -61,6 +67,7 @@ impl WorldLocal {
                                     name,
                                     class: sierra,
                                     class_hash,
+                                    casm_class_hash,
                                 });
 
                                 self.add_resource(resource);
@@ -71,6 +78,7 @@ impl WorldLocal {
                                     name,
                                     class: sierra,
                                     class_hash,
+                                    casm_class_hash,
                                 });
                                 self.add_resource(resource);
                                 break;
@@ -84,6 +92,14 @@ impl WorldLocal {
 
         Ok(())
     }
+}
+
+/// Computes the casm class hash from a Sierra file path.
+fn casm_class_hash_from_sierra_file<P: AsRef<Path>>(path: P) -> Result<Felt> {
+    let bytecode_max_size = usize::MAX;
+    let sierra_class: ContractClass = serde_json::from_reader::<_, ContractClass>(std::fs::File::open(path)?)?;
+    let casm_class = CasmContractClass::from_contract_class(sierra_class, false, bytecode_max_size)?;
+    Ok(casm_class.compiled_class_hash())
 }
 
 /// A simple enum to identify the type of resource with their name.

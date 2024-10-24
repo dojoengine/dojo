@@ -19,7 +19,7 @@ mod compare;
 /// Currently, having the remote resources that are not registered by the current project is not
 /// supported, since a world can be permissionlessly updated by anyone.
 #[derive(Debug)]
-pub enum DiffResource {
+pub enum ResourceDiff {
     /// The resource has been created locally, and is not present in the remote world.
     Created(ResourceLocal),
     /// The resource has been updated locally, and is different from the remote world.
@@ -28,18 +28,19 @@ pub enum DiffResource {
     Synced(ResourceRemote),
 }
 
+#[derive(Debug)]
 pub struct WorldDiff {
-    pub namespaces: Vec<DiffResource>,
-    pub contracts: HashMap<Namespace, Vec<DiffResource>>,
-    pub models: HashMap<Namespace, Vec<DiffResource>>,
-    pub events: HashMap<Namespace, Vec<DiffResource>>,
+    pub namespaces: Vec<ResourceDiff>,
+    pub contracts: HashMap<Namespace, Vec<ResourceDiff>>,
+    pub models: HashMap<Namespace, Vec<ResourceDiff>>,
+    pub events: HashMap<Namespace, Vec<ResourceDiff>>,
 }
 
 impl WorldDiff {
     /// Creates a new world diff from a local and a remote world.
     ///
     /// Consumes the local and remote worlds to avoid duplicating the resources,
-    /// since the [`DiffResource`] will contain one or both of the local and remote resources.
+    /// since the [`ResourceDiff`] will contain one or both of the local and remote resources.
     pub fn new(mut local: WorldLocal, mut remote: WorldRemote) -> Self {
         let mut diff = Self {
             namespaces: vec![],
@@ -51,11 +52,11 @@ impl WorldDiff {
         for local_ns in &local.namespaces {
             if remote.namespaces.contains(&local_ns) {
                 diff.namespaces
-                    .push(DiffResource::Synced(remote.resources.remove(&local_ns).unwrap()));
+                    .push(ResourceDiff::Synced(remote.resources.remove(&local_ns).unwrap()));
             } else {
                 // The namespace is registered in the local world, safe to unwrap.
                 diff.namespaces
-                    .push(DiffResource::Created(local.resources.remove(&local_ns).unwrap()));
+                    .push(ResourceDiff::Created(local.resources.remove(&local_ns).unwrap()));
             }
         }
 
@@ -93,7 +94,7 @@ fn compare_and_consume_resources(
     remote: &HashMap<Namespace, HashSet<DojoSelector>>,
     local_resources: &mut HashMap<DojoSelector, ResourceLocal>,
     remote_resources: &mut HashMap<DojoSelector, ResourceRemote>,
-    diff: &mut HashMap<Namespace, Vec<DiffResource>>,
+    diff: &mut HashMap<Namespace, Vec<ResourceDiff>>,
 ) {
     for (namespace, local_selectors) in local {
         for ls in local_selectors {
@@ -113,7 +114,7 @@ fn compare_and_consume_resources(
             } else {
                 diff.entry(namespace.clone())
                     .or_default()
-                    .push(DiffResource::Created(local_resource));
+                    .push(ResourceDiff::Created(local_resource));
             }
         }
     }
@@ -147,7 +148,7 @@ mod tests {
 
         assert_eq!(diff.contracts.len(), 1);
         assert_eq!(diff.contracts.get(&ns).unwrap().len(), 1);
-        assert!(matches!(diff.contracts.get(&ns).unwrap()[0], DiffResource::Created(_)));
+        assert!(matches!(diff.contracts.get(&ns).unwrap()[0], ResourceDiff::Created(_)));
 
         let remote_contract = ResourceRemote::Contract(ContractRemote {
             common: CommonResourceRemoteInfo::new(Felt::ONE, "c".to_string(), Felt::ONE),
@@ -160,7 +161,7 @@ mod tests {
 
         assert_eq!(diff.contracts.len(), 1);
         assert_eq!(diff.contracts.get(&ns).unwrap().len(), 1);
-        assert!(matches!(diff.contracts.get(&ns).unwrap()[0], DiffResource::Synced(_)));
+        assert!(matches!(diff.contracts.get(&ns).unwrap()[0], ResourceDiff::Synced(_)));
 
         let mut local = WorldLocal::new(namespace_config);
 
@@ -176,7 +177,7 @@ mod tests {
 
         assert_eq!(diff.contracts.len(), 1);
         assert_eq!(diff.contracts.get(&ns).unwrap().len(), 1);
-        assert!(matches!(diff.contracts.get(&ns).unwrap()[0], DiffResource::Updated(_, _)));
+        assert!(matches!(diff.contracts.get(&ns).unwrap()[0], ResourceDiff::Updated(_, _)));
     }
 
     #[test]
@@ -194,8 +195,8 @@ mod tests {
         let diff = WorldDiff::new(local.clone(), remote.clone());
 
         assert_eq!(diff.namespaces.len(), 2);
-        assert!(matches!(diff.namespaces[0], DiffResource::Created(_)));
-        assert!(matches!(diff.namespaces[1], DiffResource::Created(_)));
+        assert!(matches!(diff.namespaces[0], ResourceDiff::Created(_)));
+        assert!(matches!(diff.namespaces[1], ResourceDiff::Created(_)));
 
         let remote_namespace = ResourceRemote::Namespace(NamespaceRemote {
             name: "namespace1".to_string(),
@@ -208,7 +209,7 @@ mod tests {
         let diff = WorldDiff::new(local.clone(), remote.clone());
 
         assert_eq!(diff.namespaces.len(), 2);
-        assert!(matches!(diff.namespaces[0], DiffResource::Created(_)));
-        assert!(matches!(diff.namespaces[1], DiffResource::Synced(_)));
+        assert!(matches!(diff.namespaces[0], ResourceDiff::Created(_)));
+        assert!(matches!(diff.namespaces[1], ResourceDiff::Synced(_)));
     }
 }

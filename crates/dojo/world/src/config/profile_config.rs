@@ -2,7 +2,6 @@ use std::fs;
 
 use anyhow::Result;
 use camino::Utf8PathBuf;
-use scarb::compiler::Profile;
 use serde::Deserialize;
 use toml;
 

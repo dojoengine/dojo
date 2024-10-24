@@ -13,7 +13,6 @@ use super::contract::{ContractDiff, ContractMigration};
 use super::world::WorldDiff;
 use super::MigrationType;
 use crate::contracts::naming;
-use crate::manifest::{CONTRACTS_DIR, MODELS_DIR};
 
 #[derive(Debug, Clone)]
 pub enum MigrationMetadata {

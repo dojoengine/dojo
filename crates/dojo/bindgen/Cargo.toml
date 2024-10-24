@@ -22,7 +22,7 @@ thiserror.workspace = true
 # dojo-test-utils = { path = "../dojo-test-utils", features = [ "build-examples" ] }
 
 cainome.workspace = true
-dojo-world = { workspace = true, features = [ "manifest" ] }
+dojo-world.workspace = true
 
 [dev-dependencies]
 assert_matches.workspace = true

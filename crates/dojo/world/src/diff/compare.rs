@@ -2,7 +2,7 @@
 //!
 //! The point of view is the local one.
 
-use super::DiffResource;
+use super::ResourceDiff;
 use crate::local::{ContractLocal, EventLocal, ModelLocal, NamespaceLocal, ResourceLocal};
 use crate::remote::ResourceRemote;
 
@@ -10,52 +10,52 @@ use crate::remote::ResourceRemote;
 pub trait ComparableResource {
     /// Compares a local resource with a remote one.
     ///
-    /// Takes ownership since the [`DiffResource`] will contain one or both resources.
-    fn compare(self, remote: ResourceRemote) -> DiffResource;
+    /// Takes ownership since the [`ResourceDiff`] will contain one or both resources.
+    fn compare(self, remote: ResourceRemote) -> ResourceDiff;
 }
 
 impl ComparableResource for ContractLocal {
-    fn compare(self, remote: ResourceRemote) -> DiffResource {
+    fn compare(self, remote: ResourceRemote) -> ResourceDiff {
         let remote_contract = remote.as_contract_or_panic();
 
         if self.class_hash == remote_contract.common.current_class_hash() {
-            DiffResource::Synced(remote)
+            ResourceDiff::Synced(remote)
         } else {
-            DiffResource::Updated(ResourceLocal::Contract(self), remote)
+            ResourceDiff::Updated(ResourceLocal::Contract(self), remote)
         }
     }
 }
 
 impl ComparableResource for ModelLocal {
-    fn compare(self, remote: ResourceRemote) -> DiffResource {
+    fn compare(self, remote: ResourceRemote) -> ResourceDiff {
         let remote_model = remote.as_model_or_panic();
 
         if self.class_hash == remote_model.common.current_class_hash() {
-            DiffResource::Synced(remote)
+            ResourceDiff::Synced(remote)
         } else {
-            DiffResource::Updated(ResourceLocal::Model(self), remote)
+            ResourceDiff::Updated(ResourceLocal::Model(self), remote)
         }
     }
 }
 
 impl ComparableResource for EventLocal {
-    fn compare(self, remote: ResourceRemote) -> DiffResource {
+    fn compare(self, remote: ResourceRemote) -> ResourceDiff {
         let remote_event = remote.as_event_or_panic();
 
         if self.class_hash == remote_event.common.current_class_hash() {
-            DiffResource::Synced(remote)
+            ResourceDiff::Synced(remote)
         } else {
-            DiffResource::Updated(ResourceLocal::Event(self), remote)
+            ResourceDiff::Updated(ResourceLocal::Event(self), remote)
         }
     }
 }
 
 impl ComparableResource for NamespaceLocal {
-    fn compare(self, remote: ResourceRemote) -> DiffResource {
+    fn compare(self, remote: ResourceRemote) -> ResourceDiff {
         let remote_namespace = remote.as_namespace_or_panic();
 
         if self.name == remote_namespace.name {
-            DiffResource::Synced(remote)
+            ResourceDiff::Synced(remote)
         } else {
             unreachable!("Namespace should not be updated.")
         }
@@ -63,7 +63,7 @@ impl ComparableResource for NamespaceLocal {
 }
 
 impl ComparableResource for ResourceLocal {
-    fn compare(self, remote: ResourceRemote) -> DiffResource {
+    fn compare(self, remote: ResourceRemote) -> ResourceDiff {
         match self {
             ResourceLocal::Contract(contract) => contract.compare(remote),
             ResourceLocal::Model(model) => model.compare(remote),
@@ -106,13 +106,13 @@ mod tests {
         });
 
         let diff = local_model.clone().compare(remote_model.clone());
-        assert!(matches!(diff, DiffResource::Synced(_)));
+        assert!(matches!(diff, ResourceDiff::Synced(_)));
 
         // Upgrade the remote model.
         remote_model.push_class_hash(Felt::ONE);
 
         let diff_updated = local_model.compare(remote_model.clone());
-        assert!(matches!(diff_updated, DiffResource::Updated(_, _)));
+        assert!(matches!(diff_updated, ResourceDiff::Updated(_, _)));
     }
 
     #[test]
@@ -134,13 +134,13 @@ mod tests {
         });
 
         let diff = local_event.clone().compare(remote_event.clone());
-        assert!(matches!(diff, DiffResource::Synced(_)));
+        assert!(matches!(diff, ResourceDiff::Synced(_)));
 
         // Upgrade the remote event.
         remote_event.push_class_hash(Felt::ONE);
 
         let diff_updated = local_event.compare(remote_event.clone());
-        assert!(matches!(diff_updated, DiffResource::Updated(_, _)));
+        assert!(matches!(diff_updated, ResourceDiff::Updated(_, _)));
     }
 
     #[test]
@@ -154,7 +154,7 @@ mod tests {
         });
 
         let diff = local_namespace.compare(remote_namespace.clone());
-        assert!(matches!(diff, DiffResource::Synced(_)));
+        assert!(matches!(diff, ResourceDiff::Synced(_)));
     }
 
     #[test]
@@ -177,11 +177,11 @@ mod tests {
         });
 
         let diff = local_contract.clone().compare(remote_contract.clone());
-        assert!(matches!(diff, DiffResource::Synced(_)));
+        assert!(matches!(diff, ResourceDiff::Synced(_)));
 
         remote_contract.push_class_hash(Felt::ONE);
 
         let diff_updated = local_contract.compare(remote_contract.clone());
-        assert!(matches!(diff_updated, DiffResource::Updated(_, _)));
+        assert!(matches!(diff_updated, ResourceDiff::Updated(_, _)));
     }
 }
