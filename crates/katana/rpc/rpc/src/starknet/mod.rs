@@ -28,6 +28,7 @@ use katana_provider::traits::state::{StateFactoryProvider, StateProvider};
 use katana_provider::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionStatusProvider,
 };
+use katana_rpc_provider::StarknetApiProvider;
 use katana_rpc_types::error::starknet::StarknetApiError;
 use katana_rpc_types::FeeEstimate;
 use katana_tasks::{BlockingTaskPool, TokioTaskSpawner};

@@ -47,18 +47,18 @@ where
         Ok(Some(BlockWithTxHashes::new(hash, block, finality_status)))
     }
 
-    pub fn build_with_receipts(self) -> ProviderResult<Option<BlockWithReceipts>> {
-        let Some(block) = BlockProvider::block(&self.provider, self.block_id)? else {
-            return Ok(None);
-        };
+    // pub fn build_with_receipts(self) -> ProviderResult<Option<BlockWithReceipts>> {
+    //     let Some(block) = BlockProvider::block(&self.provider, self.block_id)? else {
+    //         return Ok(None);
+    //     };
 
-        let finality_status = BlockStatusProvider::block_status(&self.provider, self.block_id)?
-            .expect("should exist if block exists");
-        let receipts = ReceiptProvider::receipts_by_block(&self.provider, self.block_id)?
-            .expect("should exist if block exists");
+    //     let finality_status = BlockStatusProvider::block_status(&self.provider, self.block_id)?
+    //         .expect("should exist if block exists");
+    //     let receipts = ReceiptProvider::receipts_by_block(&self.provider, self.block_id)?
+    //         .expect("should exist if block exists");
 
-        let receipts_with_txs = block.body.into_iter().zip(receipts);
+    //     let receipts_with_txs = block.body.into_iter().zip(receipts);
 
-        Ok(Some(BlockWithReceipts::new(block.header, finality_status, receipts_with_txs)))
-    }
+    //     Ok(Some(BlockWithReceipts::new(block.header, finality_status, receipts_with_txs)))
+    // }
 }

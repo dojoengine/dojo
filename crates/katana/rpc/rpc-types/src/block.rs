@@ -1,3 +1,4 @@
+use katana_cairo::cairo_vm::vm::errors::vm_exception::VmException;
 use katana_primitives::block::{
     Block, BlockHash, BlockNumber, FinalityStatus, Header, PartialHeader,
 };
@@ -203,21 +204,24 @@ pub struct BlockWithReceipts(starknet::core::types::BlockWithReceipts);
 
 impl BlockWithReceipts {
     pub fn new(
-        header: Header,
+        hash: BlockHash,
+        block: Block,
         finality_status: FinalityStatus,
-        receipts: impl Iterator<Item = (TxWithHash, Receipt)>,
+        receipts: Vec<Receipt>,
     ) -> Self {
+        let receipts_with_txs = block.body.into_iter().zip(receipts);
+
         let l1_gas_price = ResourcePrice {
-            price_in_wei: header.l1_gas_prices.eth.into(),
-            price_in_fri: header.l1_gas_prices.strk.into(),
+            price_in_wei: block.header.l1_gas_prices.eth.into(),
+            price_in_fri: block.header.l1_gas_prices.strk.into(),
         };
 
         let l1_data_gas_price = ResourcePrice {
-            price_in_wei: header.l1_data_gas_prices.eth.into(),
-            price_in_fri: header.l1_data_gas_prices.strk.into(),
+            price_in_wei: block.header.l1_data_gas_prices.eth.into(),
+            price_in_fri: block.header.l1_data_gas_prices.strk.into(),
         };
 
-        let transactions = receipts
+        let transactions = receipts_with_txs
             .map(|(tx_with_hash, receipt)| {
                 let receipt = TxReceipt::new(tx_with_hash.hash, finality_status, receipt).0;
                 let transaction = Tx::from(tx_with_hash).0;
@@ -230,16 +234,16 @@ impl BlockWithReceipts {
                 FinalityStatus::AcceptedOnL1 => BlockStatus::AcceptedOnL1,
                 FinalityStatus::AcceptedOnL2 => BlockStatus::AcceptedOnL2,
             },
-            block_hash: header.parent_hash,
-            parent_hash: header.parent_hash,
-            block_number: header.number,
-            new_root: header.state_root,
-            timestamp: header.timestamp,
-            sequencer_address: header.sequencer_address.into(),
+            block_hash: hash,
+            parent_hash: block.header.parent_hash,
+            block_number: block.header.number,
+            new_root: block.header.state_root,
+            timestamp: block.header.timestamp,
+            sequencer_address: block.header.sequencer_address.into(),
             l1_gas_price,
             l1_data_gas_price,
             l1_da_mode: L1DataAvailabilityMode::Calldata,
-            starknet_version: header.protocol_version.to_string(),
+            starknet_version: block.header.protocol_version.to_string(),
             transactions,
         })
     }

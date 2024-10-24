@@ -1,0 +1,15 @@
+[package]
+edition.workspace = true
+license.workspace = true
+name = "katana-rpc-provider"
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+katana-db.workspace = true
+katana-primitives.workspace = true
+katana-provider.workspace = true
+katana-rpc-types.workspace = true
+
+auto_impl.workspace = true
+starknet.workspace = true

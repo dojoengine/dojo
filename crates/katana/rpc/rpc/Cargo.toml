@@ -17,6 +17,7 @@ katana-pool.workspace = true
 katana-primitives.workspace = true
 katana-provider.workspace = true
 katana-rpc-api.workspace = true
+katana-rpc-provider.workspace = true
 katana-rpc-types.workspace = true
 katana-rpc-types-builder.workspace = true
 katana-tasks.workspace = true

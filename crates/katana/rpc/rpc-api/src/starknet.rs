@@ -28,7 +28,8 @@ use starknet::core::types::{
 /// The currently supported version of the Starknet JSON-RPC specification.
 pub const RPC_SPEC_VERSION: &str = "0.7.1";
 
-/// Read API.
+/// --- Read API
+
 #[cfg_attr(not(feature = "client"), rpc(server, namespace = "starknet"))]
 #[cfg_attr(feature = "client", rpc(client, server, namespace = "starknet"))]
 pub trait StarknetApi {
@@ -181,7 +182,8 @@ pub trait StarknetApi {
     ) -> RpcResult<FeltAsHex>;
 }
 
-/// Write API.
+/// --- Write API
+
 #[cfg_attr(not(feature = "client"), rpc(server, namespace = "starknet"))]
 #[cfg_attr(feature = "client", rpc(client, server, namespace = "starknet"))]
 pub trait StarknetWriteApi {
@@ -207,7 +209,8 @@ pub trait StarknetWriteApi {
     ) -> RpcResult<DeployAccountTxResult>;
 }
 
-/// Trace API.
+/// --- Trace API
+
 #[cfg_attr(not(feature = "client"), rpc(server, namespace = "starknet"))]
 #[cfg_attr(feature = "client", rpc(client, server, namespace = "starknet"))]
 pub trait StarknetTraceApi {

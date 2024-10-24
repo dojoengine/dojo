@@ -24,6 +24,7 @@ members = [
 	"crates/katana/pipeline",
 	"crates/katana/pool",
 	"crates/katana/primitives",
+	"crates/katana/rpc/provider",
 	"crates/katana/rpc/rpc",
 	"crates/katana/rpc/rpc-api",
 	"crates/katana/rpc/rpc-types",
@@ -94,6 +95,7 @@ katana-primitives = { path = "crates/katana/primitives" }
 katana-provider = { path = "crates/katana/storage/provider" }
 katana-rpc = { path = "crates/katana/rpc/rpc" }
 katana-rpc-api = { path = "crates/katana/rpc/rpc-api", default-features = false }
+katana-rpc-provider = { path = "crates/katana/rpc/provider", default-features = false }
 katana-rpc-types = { path = "crates/katana/rpc/rpc-types" }
 katana-rpc-types-builder = { path = "crates/katana/rpc/rpc-types-builder" }
 katana-runner = { path = "crates/katana/runner" }
@@ -216,7 +218,7 @@ warp = "0.3"
 
 # gRPC
 prost = "0.12"
-tonic = { version = "0.11", features = [ "tls", "tls-roots", "gzip" ] }
+tonic = { version = "0.11", features = [ "gzip", "tls", "tls-roots" ] }
 tonic-build = "0.11"
 tonic-reflection = "0.11"
 tonic-web = "0.11"

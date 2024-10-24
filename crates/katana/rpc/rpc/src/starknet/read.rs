@@ -7,6 +7,7 @@ use katana_primitives::Felt;
 use katana_provider::traits::block::{BlockHashProvider, BlockIdReader, BlockNumberProvider};
 use katana_provider::traits::transaction::TransactionProvider;
 use katana_rpc_api::starknet::StarknetApiServer;
+use katana_rpc_provider::StarknetApiProvider;
 use katana_rpc_types::block::{
     BlockHashAndNumber, MaybePendingBlockWithReceipts, MaybePendingBlockWithTxHashes,
     MaybePendingBlockWithTxs, PendingBlockWithReceipts, PendingBlockWithTxHashes,
@@ -204,17 +205,18 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                     )));
                 }
             }
-
-            let block_num = BlockIdReader::convert_block_id(provider, block_id)
+            let block_num = provider
+                .convert_block_id(block_id)
                 .map_err(|e| StarknetApiError::UnexpectedError { reason: e.to_string() })?
                 .map(BlockHashOrNumber::Num)
                 .ok_or(StarknetApiError::BlockNotFound)?;
 
-            katana_rpc_types_builder::BlockBuilder::new(block_num, provider)
-                .build()
-                .map_err(|e| StarknetApiError::UnexpectedError { reason: e.to_string() })?
+            let block = provider
+                .block_with_txs(block_num)?
                 .map(MaybePendingBlockWithTxs::Block)
-                .ok_or(Error::from(StarknetApiError::BlockNotFound))
+                .ok_or(Error::from(StarknetApiError::BlockNotFound))?;
+
+            Ok(block)
         })
         .await
     }
@@ -268,12 +270,12 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                 .map(BlockHashOrNumber::Num)
                 .ok_or(StarknetApiError::BlockNotFound)?;
 
-            let block = katana_rpc_types_builder::BlockBuilder::new(block_num, provider)
-                .build_with_receipts()
-                .map_err(|e| StarknetApiError::UnexpectedError { reason: e.to_string() })?
+            let block = provider
+                .block_with_receipts(block_num)?
+                .map(MaybePendingBlockWithReceipts::Block)
                 .ok_or(Error::from(StarknetApiError::BlockNotFound))?;
 
-            Ok(MaybePendingBlockWithReceipts::Block(block))
+            Ok(block)
         })
         .await
     }
@@ -295,10 +297,11 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                 }
             };
 
-            katana_rpc_types_builder::StateUpdateBuilder::new(block_id, provider)
-                .build()
-                .map_err(|e| StarknetApiError::UnexpectedError { reason: e.to_string() })?
-                .ok_or(Error::from(StarknetApiError::BlockNotFound))
+            let state_update = provider
+                .block_state_update(block_id)?
+                .ok_or(Error::from(StarknetApiError::BlockNotFound))?;
+
+            Ok(state_update)
         })
         .await
     }

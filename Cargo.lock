@@ -8286,6 +8286,7 @@ dependencies = [
  "katana-primitives",
  "katana-provider",
  "katana-rpc-api",
+ "katana-rpc-provider",
  "katana-rpc-types",
  "katana-rpc-types-builder",
  "katana-tasks",
@@ -8310,6 +8311,18 @@ dependencies = [
  "jsonrpsee 0.16.3",
  "katana-core",
  "katana-primitives",
+ "katana-rpc-types",
+ "starknet 0.12.0",
+]
+
+[[package]]
+name = "katana-rpc-provider"
+version = "1.0.0-alpha.18"
+dependencies = [
+ "auto_impl",
+ "katana-db",
+ "katana-primitives",
+ "katana-provider",
  "katana-rpc-types",
  "starknet 0.12.0",
 ]
