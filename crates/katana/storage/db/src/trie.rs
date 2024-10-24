@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use crate::abstraction::DbTxMut;
 use crate::models::trie::{TrieDatabaseKey, TrieDatabaseKeyType, TrieDatabaseValue};
 use crate::models::{self};
@@ -29,17 +31,26 @@ fn foo(key: &DatabaseKey) -> models::trie::TrieDatabaseKey {
     }
 }
 
-pub struct TrieDb<Tx: DbTxMut> {
+pub struct TrieDb<Tb: tables::Trie, Tx: DbTxMut> {
     tx: Tx,
+    _table: PhantomData<Tb>,
 }
 
-impl<Tx: DbTxMut> TrieDb<Tx> {
+impl<Tb, Tx> TrieDb<Tb, Tx>
+where
+    Tb: tables::Trie,
+    Tx: DbTxMut,
+{
     pub fn new(tx: Tx) -> Self {
-        Self { tx }
+        Self { tx, _table: PhantomData }
     }
 }
 
-impl<Tx: DbTxMut> katana_trie::bonsai::BonsaiDatabase for TrieDb<Tx> {
+impl<Tb, Tx> katana_trie::bonsai::BonsaiDatabase for TrieDb<Tb, Tx>
+where
+    Tb: tables::Trie,
+    Tx: DbTxMut,
+{
     type Batch = ();
     type DatabaseError = Error;
 
@@ -126,9 +137,13 @@ impl<Tx: DbTxMut> katana_trie::bonsai::BonsaiDatabase for TrieDb<Tx> {
     }
 }
 
-impl<Tx: DbTxMut> katana_trie::bonsai::BonsaiPersistentDatabase<BasicId> for TrieDb<Tx> {
+impl<Tb, Tx> katana_trie::bonsai::BonsaiPersistentDatabase<BasicId> for TrieDb<Tb, Tx>
+where
+    Tb: tables::Trie,
+    Tx: DbTxMut,
+{
     type DatabaseError = Error;
-    type Transaction = TrieDb<Tx>;
+    type Transaction = TrieDb<Tb, Tx>;
 
     fn snapshot(&mut self, _: BasicId) {}
 

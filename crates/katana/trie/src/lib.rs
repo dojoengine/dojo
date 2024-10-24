@@ -1,8 +1,9 @@
-pub mod class;
-pub mod contract;
+mod class;
+mod contract;
 pub mod trie;
 
 pub use bonsai_trie as bonsai;
+pub use class::ClassTrie;
 
 // use bitvec::{order::Msb0, vec::BitVec};
 // use slab::Slab;

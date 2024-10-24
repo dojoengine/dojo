@@ -36,6 +36,8 @@ pub trait DupSort: Table {
     type SubKey: Key;
 }
 
+pub trait Trie: Table {}
+
 /// Enum for the types of tables present in libmdbx.
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum TableType {
@@ -232,6 +234,9 @@ tables! {
     /// Contract trie
     ContractTrie: (TrieDatabaseKey) => TrieDatabaseValue
 }
+
+impl Trie for ClassTrie {}
+impl Trie for ContractTrie {}
 
 #[cfg(test)]
 mod tests {
