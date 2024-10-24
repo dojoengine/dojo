@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1729647451926,
+  "lastUpdate": 1729776039388,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -27757,6 +27757,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8283476,
             "range": "± 283094",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "15114c5617ad790e6f4fcfba2f8b019a2b3c4643",
+          "message": "hotfix(katana): include missing udc class if custom genesis is specified (#2575)",
+          "timestamp": "2024-10-24T21:03:59+08:00",
+          "tree_id": "f42487003b184a9d7200c3391c05711d1c2255fc",
+          "url": "https://github.com/dojoengine/dojo/commit/15114c5617ad790e6f4fcfba2f8b019a2b3c4643"
+        },
+        "date": 1729776037859,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 12464900851,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
