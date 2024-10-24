@@ -21,6 +21,7 @@ use tokio::task::JoinSet;
 use tokio::time::Instant;
 use tracing::{debug, error, trace};
 
+use crate::constants::{TOKENS_TABLE, TOKEN_BALANCE_TABLE};
 use crate::simple_broker::SimpleBroker;
 use crate::sql::utils::{felt_to_sql_string, sql_string_to_u256, u256_to_sql_string, I256};
 use crate::sql::FELT_DELIMITER;
@@ -563,9 +564,9 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 let semaphore = self.semaphore.clone();
                 let artifacts_path = self.artifacts_path.clone();
                 let provider = self.provider.clone();
-                let res = sqlx::query_as::<_, (String, String)>(
-                    "SELECT name, symbol FROM tokens WHERE contract_address = ?",
-                )
+                let res = sqlx::query_as::<_, (String, String)>(&format!(
+                    "SELECT name, symbol FROM {TOKENS_TABLE} WHERE contract_address = ?"
+                ))
                 .bind(felt_to_sql_string(&register_erc721_token.contract_address))
                 .fetch_one(&mut **tx)
                 .await;
@@ -801,7 +802,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
     ) -> Result<()> {
         let tx = &mut self.transaction;
         let balance: Option<(String,)> =
-            sqlx::query_as("SELECT balance FROM balances WHERE id = ?")
+            sqlx::query_as(&format!("SELECT balance FROM {TOKEN_BALANCE_TABLE} WHERE id = ?"))
                 .bind(id)
                 .fetch_optional(&mut **tx)
                 .await?;
@@ -822,10 +823,10 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         }
 
         // write the new balance to the database
-        sqlx::query(
-            "INSERT OR REPLACE INTO balances (id, contract_address, account_address, token_id, \
-             balance) VALUES (?, ?, ?, ?, ?)",
-        )
+        sqlx::query(&format!(
+            "INSERT OR REPLACE INTO {TOKEN_BALANCE_TABLE} (id, contract_address, \
+             account_address, token_id, balance) VALUES (?, ?, ?, ?, ?)",
+        ))
         .bind(id)
         .bind(contract_address)
         .bind(account_address)

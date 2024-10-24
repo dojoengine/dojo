@@ -6,6 +6,7 @@ use sqlx::{Pool, Sqlite, SqlitePool};
 use starknet_crypto::Felt;
 use tokio::sync::RwLock;
 
+use crate::constants::TOKEN_BALANCE_TABLE;
 use crate::error::{Error, ParseError, QueryError};
 use crate::model::{parse_sql_model_members, SqlModelMember};
 use crate::sql::utils::I256;
@@ -140,10 +141,11 @@ impl Clone for LocalCache {
 impl LocalCache {
     pub async fn new(pool: Pool<Sqlite>) -> Self {
         // read existing token_id's from balances table and cache them
-        let token_id_registry: Vec<(String,)> = sqlx::query_as("SELECT token_id FROM balances")
-            .fetch_all(&pool)
-            .await
-            .expect("Should be able to read token_id's from blances table");
+        let token_id_registry: Vec<(String,)> =
+            sqlx::query_as(&format!("SELECT token_id FROM {TOKEN_BALANCE_TABLE}"))
+                .fetch_all(&pool)
+                .await
+                .expect("Should be able to read token_id's from blances table");
 
         let token_id_registry = token_id_registry.into_iter().map(|token_id| token_id.0).collect();
 
