@@ -24,7 +24,8 @@ pub async fn new(
     let mut conn = pool.acquire().await.unwrap();
     let num_models = count_rows(&mut conn, MODEL_TABLE, &None, &None).await.unwrap();
 
-    let routes = graphql_filter(schema, external_url, num_models == 0);
+    let routes = graphql_filter(schema, external_url, num_models == 0)
+        .with(warp::cors().allow_origins(["http://localhost:3003", "https://*.cartridge.gg"]));
     warp::serve(routes).bind_with_graceful_shutdown(([127, 0, 0, 1], 0), async move {
         shutdown_rx.recv().await.ok();
     })
