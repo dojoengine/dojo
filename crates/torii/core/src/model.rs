@@ -254,7 +254,7 @@ pub fn build_sql_query(
     ) {
         match &ty {
             Ty::Struct(s) => {
-                let table_name = 
+                let table_name =
                     if path.is_empty() { name.to_string() } else { format!("{}${}", path, name) };
 
                 tables.push(TableInfo {
@@ -396,15 +396,15 @@ pub fn build_sql_query(
         .map(|table| {
             let join_type = if table.is_optional { "LEFT JOIN" } else { "JOIN" };
             let join_condition = if table.parent_table.is_none() {
-                format!("{entities_table}.id = [{}].{entity_relation_column}", 
-                    table.table_name)
+                format!("{entities_table}.id = [{}].{entity_relation_column}", table.table_name)
             } else {
-                format!("[{}].full_array_id = [{}].full_array_id",
+                format!(
+                    "[{}].full_array_id = [{}].full_array_id",
                     table.table_name,
-                    table.parent_table.as_ref().unwrap())
+                    table.parent_table.as_ref().unwrap()
+                )
             };
-            format!(" {join_type} [{}] ON {join_condition}", 
-                table.table_name)
+            format!(" {join_type} [{}] ON {join_condition}", table.table_name)
         })
         .collect::<Vec<_>>()
         .join(" ");
@@ -426,16 +426,13 @@ pub fn build_sql_query(
                 .map(|(idx, table)| {
                     if idx == 0 {
                         format!(
-                            " JOIN [{}] ON {entities_table}.id = \
-                             [{}].{entity_relation_column}",
-                            table.table_name,
-                            table.table_name
+                            " JOIN [{}] ON {entities_table}.id = [{}].{entity_relation_column}",
+                            table.table_name, table.table_name
                         )
                     } else {
                         let join_type = if table.is_optional { "LEFT JOIN" } else { "JOIN" };
                         format!(
-                            " {join_type} [{}] ON [{}].full_array_id = \
-                             [{}].full_array_id",
+                            " {join_type} [{}] ON [{}].full_array_id = [{}].full_array_id",
                             table.table_name,
                             table.table_name,
                             table.parent_table.as_ref().unwrap()
