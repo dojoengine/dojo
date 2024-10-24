@@ -13,7 +13,8 @@ use crate::da::L1DataAvailabilityMode;
 use crate::genesis::allocation::{DevAllocationsGenerator, GenesisAllocation};
 use crate::genesis::constant::{
     get_fee_token_balance_base_storage_address, DEFAULT_ACCOUNT_CLASS_PUBKEY_STORAGE_SLOT,
-    DEFAULT_ETH_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CLASS_HASH, DEFAULT_LEGACY_UDC_CLASS_HASH,
+    DEFAULT_ETH_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CLASS_HASH, DEFAULT_LEGACY_UDC_CASM,
+    DEFAULT_LEGACY_UDC_CLASS_HASH, DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH,
     DEFAULT_PREFUNDED_ACCOUNT_BALANCE, DEFAULT_STRK_FEE_TOKEN_ADDRESS, DEFAULT_UDC_ADDRESS,
     ERC20_DECIMAL_STORAGE_SLOT, ERC20_NAME_STORAGE_SLOT, ERC20_SYMBOL_STORAGE_SLOT,
     ERC20_TOTAL_SUPPLY_STORAGE_SLOT,
@@ -130,11 +131,7 @@ impl ChainSpec {
         );
 
         // -- UDC
-
-        states
-            .state_updates
-            .deployed_contracts
-            .insert(DEFAULT_UDC_ADDRESS, DEFAULT_LEGACY_UDC_CLASS_HASH);
+        add_default_udc(&mut states);
 
         states
     }
@@ -217,6 +214,23 @@ fn add_fee_token(
 
     states.state_updates.deployed_contracts.insert(address, class_hash);
     states.state_updates.storage_updates.insert(address, storage);
+}
+
+fn add_default_udc(states: &mut StateUpdatesWithDeclaredClasses) {
+    // declare UDC class
+    states
+        .declared_compiled_classes
+        .insert(DEFAULT_LEGACY_UDC_CLASS_HASH, DEFAULT_LEGACY_UDC_CASM.clone());
+    states
+        .state_updates
+        .declared_classes
+        .insert(DEFAULT_LEGACY_UDC_CLASS_HASH, DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH);
+
+    // deploy UDC contract
+    states
+        .state_updates
+        .deployed_contracts
+        .insert(DEFAULT_UDC_ADDRESS, DEFAULT_LEGACY_UDC_CLASS_HASH);
 }
 
 #[cfg(test)]
