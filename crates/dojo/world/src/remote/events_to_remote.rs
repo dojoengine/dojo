@@ -19,7 +19,7 @@ use super::permissions::PermissionsUpdateable;
 use super::{RemoteResource, WorldRemote};
 use crate::{
     contracts::abigen::world::{self, Event as WorldEvent},
-    remote::{CommonResourceRemoteInfo, ContractRemote, EventRemote, ModelRemote},
+    remote::{CommonResourceRemoteInfo, ContractRemote, EventRemote, ModelRemote, NamespaceRemote},
 };
 
 impl WorldRemote {
@@ -66,6 +66,8 @@ impl WorldRemote {
             events.extend(page.events);
         }
 
+        // TODO: move this logic into a function to ease the testing without having to mock the
+        // event fetching.
         for event in events {
             match world::Event::try_from(event) {
                 Ok(ev) => {
@@ -79,7 +81,14 @@ impl WorldRemote {
                             self.class_hashes.push(e.class_hash.into());
                         }
                         WorldEvent::NamespaceRegistered(e) => {
-                            self.namespaces.push(e.namespace.to_string()?);
+                            self.namespaces.insert(e.hash);
+
+                            self.resources.insert(
+                                e.hash,
+                                RemoteResource::Namespace(NamespaceRemote::new(
+                                    e.namespace.to_string()?,
+                                )),
+                            );
                         }
                         WorldEvent::ModelRegistered(e) => {
                             let model_remote = ModelRemote {

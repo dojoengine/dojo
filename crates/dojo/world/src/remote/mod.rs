@@ -15,6 +15,7 @@ use crate::{DojoSelector, Namespace};
 /// A remote resource that can be fetched from the world.
 #[derive(Debug)]
 pub enum RemoteResource {
+    Namespace(NamespaceRemote),
     Contract(ContractRemote),
     Model(ModelRemote),
     Event(EventRemote),
@@ -27,7 +28,7 @@ pub struct WorldRemote {
     /// The class hashes of the world.
     pub class_hashes: Vec<Felt>,
     /// The namespaces registered in the world.
-    pub namespaces: Vec<Namespace>,
+    pub namespaces: HashSet<DojoSelector>,
     /// The contracts registered in the world, by namespace.
     pub contracts: HashMap<Namespace, HashSet<DojoSelector>>,
     /// The models registered in the world, by namespace.
@@ -73,6 +74,22 @@ pub struct ModelRemote {
 pub struct EventRemote {
     /// Common information about the resource.
     pub common: CommonResourceRemoteInfo,
+}
+
+#[derive(Debug)]
+pub struct NamespaceRemote {
+    pub name: String,
+    /// The contract addresses that have owner permission on the contract.
+    pub owners: HashSet<Felt>,
+    /// The contract addresses that have writer permission on the contract.
+    pub writers: HashSet<Felt>,
+}
+
+impl NamespaceRemote {
+    /// Create a new namespace remote.
+    pub fn new(name: String) -> Self {
+        Self { name, owners: HashSet::new(), writers: HashSet::new() }
+    }
 }
 
 impl CommonResourceRemoteInfo {
@@ -133,6 +150,8 @@ impl RemoteResource {
     /// The dojo selector of the resource.
     pub fn dojo_selector(&self, namespace: &Namespace) -> DojoSelector {
         match self {
+            // The namespace doesn't apply to have the dojo selector of a namespace resource.
+            RemoteResource::Namespace(ns) => naming::compute_bytearray_hash(&ns.name),
             RemoteResource::Contract(contract) => contract.dojo_selector(namespace),
             RemoteResource::Model(model) => model.dojo_selector(namespace),
             RemoteResource::Event(event) => event.dojo_selector(namespace),
@@ -142,6 +161,7 @@ impl RemoteResource {
     /// Push a new class hash to the resource meaning it has been upgraded.
     pub fn push_class_hash(&mut self, class_hash: Felt) {
         match self {
+            RemoteResource::Namespace(_) => {}
             RemoteResource::Contract(contract) => contract.common.push_class_hash(class_hash),
             RemoteResource::Model(model) => model.common.push_class_hash(class_hash),
             RemoteResource::Event(event) => event.common.push_class_hash(class_hash),

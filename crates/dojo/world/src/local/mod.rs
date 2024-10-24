@@ -21,8 +21,10 @@ pub use namespace_config::NamespaceConfig;
 
 use crate::{DojoSelector, Namespace};
 
+/// A local resource.
 #[derive(Debug, Clone)]
 pub enum LocalResource {
+    Namespace(Namespace),
     Contract(ContractLocal),
     Model(ModelLocal),
     Event(EventLocal),
@@ -36,6 +38,8 @@ pub struct WorldLocal {
     /// and it's easier to handle the option than having a default value to know
     /// if the world class has been set or not.
     pub class: Option<SierraClass>,
+    /// The namespaces of the world.
+    pub namespaces: HashSet<DojoSelector>,
     /// The contracts of the world.
     pub contracts: HashMap<Namespace, HashSet<DojoSelector>>,
     /// The models of the world.
@@ -99,6 +103,7 @@ impl LocalResource {
             LocalResource::Model(m) => m.name.clone(),
             LocalResource::Event(e) => e.name.clone(),
             LocalResource::Starknet(s) => s.name.clone(),
+            LocalResource::Namespace(n) => n.clone(),
         }
     }
 }
@@ -106,21 +111,35 @@ impl LocalResource {
 impl WorldLocal {
     /// Creates a new world local with a namespace configuration.
     pub fn new(namespace_config: NamespaceConfig) -> Self {
-        Self {
-            namespace_config,
+        let mut world = Self {
+            namespace_config: namespace_config.clone(),
             class: None,
+            namespaces: HashSet::new(),
             contracts: HashMap::new(),
             models: HashMap::new(),
             events: HashMap::new(),
             starknet_contracts: HashMap::new(),
             resources: HashMap::new(),
+        };
+
+        for namespace in namespace_config.list_namespaces() {
+            world.add_resource(LocalResource::Namespace(namespace.clone()));
         }
+
+        world
     }
 
     /// Adds a resource to the world local.
     pub fn add_resource(&mut self, resource: LocalResource) {
         let name = resource.name();
         let namespaces = self.namespace_config.get_namespaces(&name);
+
+        if let LocalResource::Namespace(namespace) = &resource {
+            let selector = naming::compute_bytearray_hash(namespace);
+            self.namespaces.insert(selector);
+            self.resources.insert(selector, resource.clone());
+            return;
+        }
 
         for namespace in namespaces {
             let selector = naming::compute_selector_from_names(&namespace, &name);
@@ -145,6 +164,9 @@ impl WorldLocal {
                         .entry(namespace)
                         .or_insert_with(HashSet::new)
                         .insert(selector);
+                }
+                LocalResource::Namespace(_) => {
+                    // Already processed earlier.
                 }
             }
         }
@@ -178,6 +200,13 @@ mod tests {
     #[test]
     fn test_add_resource() {
         let mut world = WorldLocal::new(NamespaceConfig::new("dojo"));
+
+        assert_eq!(world.namespaces.len(), 1);
+        assert_eq!(world.resources.len(), 1);
+
+        let n = world.resources.get(&naming::compute_bytearray_hash("dojo")).unwrap();
+        assert_eq!(n.name(), "dojo");
+
         world.add_resource(LocalResource::Contract(ContractLocal {
             name: "c1".to_string(),
             class: empty_sierra_class(),
