@@ -113,7 +113,7 @@ impl From<Enum> for proto::types::Enum {
     fn from(r#enum: Enum) -> Self {
         proto::types::Enum {
             name: r#enum.name,
-            option: r#enum.option.expect("option value") as u32,
+            option: r#enum.option.unwrap_or_default() as u32,
             options: r#enum.options.into_iter().map(Into::into).collect::<Vec<_>>(),
         }
     }
