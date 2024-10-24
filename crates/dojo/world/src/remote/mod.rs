@@ -108,7 +108,7 @@ impl CommonResourceRemoteInfo {
     }
 
     /// The dojo selector of the resource.
-    pub fn dojo_selector(&self, namespace: &Namespace) -> DojoSelector {
+    pub fn dojo_selector(&self, namespace: &str) -> DojoSelector {
         naming::compute_selector_from_names(namespace, &self.name)
     }
 
@@ -130,28 +130,28 @@ impl CommonResourceRemoteInfo {
 
 impl ContractRemote {
     /// The dojo selector of the resource.
-    pub fn dojo_selector(&self, namespace: &Namespace) -> DojoSelector {
+    pub fn dojo_selector(&self, namespace: &str) -> DojoSelector {
         self.common.dojo_selector(namespace)
     }
 }
 
 impl ModelRemote {
     /// The dojo selector of the resource.
-    pub fn dojo_selector(&self, namespace: &Namespace) -> DojoSelector {
+    pub fn dojo_selector(&self, namespace: &str) -> DojoSelector {
         self.common.dojo_selector(namespace)
     }
 }
 
 impl EventRemote {
     /// The dojo selector of the resource.
-    pub fn dojo_selector(&self, namespace: &Namespace) -> DojoSelector {
+    pub fn dojo_selector(&self, namespace: &str) -> DojoSelector {
         self.common.dojo_selector(namespace)
     }
 }
 
 impl ResourceRemote {
     /// The dojo selector of the resource.
-    pub fn dojo_selector(&self, namespace: &Namespace) -> DojoSelector {
+    pub fn dojo_selector(&self, namespace: &str) -> DojoSelector {
         match self {
             // The namespace doesn't apply to have the dojo selector of a namespace resource.
             ResourceRemote::Namespace(ns) => naming::compute_bytearray_hash(&ns.name),
@@ -168,6 +168,38 @@ impl ResourceRemote {
             ResourceRemote::Contract(contract) => contract.common.push_class_hash(class_hash),
             ResourceRemote::Model(model) => model.common.push_class_hash(class_hash),
             ResourceRemote::Event(event) => event.common.push_class_hash(class_hash),
+        }
+    }
+
+    /// Get the writers of the resource and it's dojo selector for the given namespace.
+    pub fn get_writers(&self, namespace: &str) -> (DojoSelector, HashSet<Felt>) {
+        match self {
+            ResourceRemote::Contract(contract) => {
+                (contract.dojo_selector(namespace), contract.common.writers.clone())
+            }
+            ResourceRemote::Model(model) => {
+                (model.dojo_selector(namespace), model.common.writers.clone())
+            }
+            ResourceRemote::Event(event) => {
+                (event.dojo_selector(namespace), event.common.writers.clone())
+            }
+            ResourceRemote::Namespace(ns) => (self.dojo_selector(namespace), ns.writers.clone()),
+        }
+    }
+
+    /// Get the owners of the resource and it's dojo selector for the given namespace.
+    pub fn get_owners(&self, namespace: &str) -> (DojoSelector, HashSet<Felt>) {
+        match self {
+            ResourceRemote::Contract(contract) => {
+                (contract.dojo_selector(namespace), contract.common.owners.clone())
+            }
+            ResourceRemote::Model(model) => {
+                (model.dojo_selector(namespace), model.common.owners.clone())
+            }
+            ResourceRemote::Event(event) => {
+                (event.dojo_selector(namespace), event.common.owners.clone())
+            }
+            ResourceRemote::Namespace(ns) => (self.dojo_selector(namespace), ns.owners.clone()),
         }
     }
 

@@ -11,5 +11,5 @@ pub mod uri;
 #[cfg(test)]
 pub mod test_utils;
 
-type DojoSelector = starknet::core::types::Felt;
-type Namespace = String;
+pub type DojoSelector = starknet::core::types::Felt;
+pub type Namespace = String;

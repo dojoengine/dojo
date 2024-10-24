@@ -120,6 +120,14 @@ impl ResourceLocal {
             ResourceLocal::Namespace(n) => n.name.clone(),
         }
     }
+
+    /// Returns the dojo selector of the resource for the given namespace.
+    pub fn dojo_selector(&self, namespace: &str) -> DojoSelector {
+        match self {
+            ResourceLocal::Namespace(n) => naming::compute_bytearray_hash(&n.name),
+            _ => naming::compute_selector_from_names(namespace, &self.name()),
+        }
+    }
 }
 
 impl ContractLocal {

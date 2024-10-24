@@ -6,6 +6,7 @@
 use std::collections::{HashMap, HashSet};
 
 use compare::ComparableResource;
+use starknet_crypto::Felt;
 
 use super::local::{ResourceLocal, WorldLocal};
 use super::remote::{ResourceRemote, WorldRemote};
@@ -86,6 +87,64 @@ impl WorldDiff {
 
         diff
     }
+
+    /// Returns the remote writers of the resources.
+    pub fn get_remote_writers(&self) -> HashMap<DojoSelector, HashSet<Felt>> {
+        let mut remote_writers = HashMap::new();
+
+        for resource in &self.namespaces {
+            resource.update_remote_writers("", &mut remote_writers);
+        }
+
+        for (namespace, contracts) in &self.contracts {
+            for contract in contracts {
+                contract.update_remote_writers(namespace, &mut remote_writers);
+            }
+        }
+
+        for (namespace, models) in &self.models {
+            for model in models {
+                model.update_remote_writers(namespace, &mut remote_writers);
+            }
+        }
+
+        for (namespace, events) in &self.events {
+            for event in events {
+                event.update_remote_writers(namespace, &mut remote_writers);
+            }
+        }
+
+        remote_writers
+    }
+
+    /// Returns the remote owners of the resources.
+    pub fn get_remote_owners(&self) -> HashMap<DojoSelector, HashSet<Felt>> {
+        let mut remote_owners = HashMap::new();
+
+        for resource in &self.namespaces {
+            resource.update_remote_owners("", &mut remote_owners);
+        }
+
+        for (namespace, contracts) in &self.contracts {
+            for contract in contracts {
+                contract.update_remote_owners(namespace, &mut remote_owners);
+            }
+        }
+
+        for (namespace, models) in &self.models {
+            for model in models {
+                model.update_remote_owners(namespace, &mut remote_owners);
+            }
+        }
+
+        for (namespace, events) in &self.events {
+            for event in events {
+                event.update_remote_owners(namespace, &mut remote_owners);
+            }
+        }
+
+        remote_owners
+    }
 }
 
 /// Compares the local and remote resources and consumes them into a diff.
@@ -120,6 +179,44 @@ fn compare_and_consume_resources(
     }
 }
 
+impl ResourceDiff {
+    /// Updates the remote writers with the writers of the resource.
+    pub fn update_remote_writers(
+        &self,
+        namespace: &str,
+        writers: &mut HashMap<DojoSelector, HashSet<Felt>>,
+    ) {
+        let (dojo_selector, remote_writers) = match self {
+            ResourceDiff::Created(local) => (local.dojo_selector(namespace), HashSet::new()),
+            ResourceDiff::Updated(_, remote) => remote.get_writers(namespace),
+            ResourceDiff::Synced(remote) => remote.get_writers(namespace),
+        };
+
+        writers
+            .entry(dojo_selector)
+            .and_modify(|remote: &mut HashSet<Felt>| remote.extend(remote_writers.clone()))
+            .or_insert(remote_writers);
+    }
+
+    /// Updates the remote owners with the owners of the resource.
+    pub fn update_remote_owners(
+        &self,
+        namespace: &str,
+        owners: &mut HashMap<DojoSelector, HashSet<Felt>>,
+    ) {
+        let (dojo_selector, remote_owners) = match self {
+            ResourceDiff::Created(local) => (local.dojo_selector(namespace), HashSet::new()),
+            ResourceDiff::Updated(_, remote) => remote.get_owners(namespace),
+            ResourceDiff::Synced(remote) => remote.get_owners(namespace),
+        };
+
+        owners
+            .entry(dojo_selector)
+            .and_modify(|remote: &mut HashSet<Felt>| remote.extend(remote_owners.clone()))
+            .or_insert(remote_owners);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use starknet::core::types::Felt;
@@ -140,6 +237,7 @@ mod tests {
             name: "c".to_string(),
             class: empty_sierra_class(),
             class_hash: Felt::ONE,
+            casm_class_hash: Felt::ZERO,
         });
 
         local.add_resource(local_contract.clone());
@@ -169,6 +267,7 @@ mod tests {
             name: "c".to_string(),
             class: empty_sierra_class(),
             class_hash: Felt::TWO,
+            casm_class_hash: Felt::ZERO,
         });
 
         local.add_resource(local_contract.clone());
