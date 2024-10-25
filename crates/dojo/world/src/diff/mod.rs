@@ -38,7 +38,7 @@ pub enum WorldStatus {
     /// (class_hash, casm_class_hash, sierra_class)
     NewVersion(Felt, Felt, SierraClass),
     /// The world is in sync with the remote world, same dojo version.
-    Synced,
+    Synced(Felt),
 }
 
 #[derive(Debug)]
@@ -114,7 +114,7 @@ impl WorldDiff {
             *remote.class_hashes.first().expect("Remote world must have at least one class hash.");
 
         let world_status = if local_world_class_hash == remote_world_class_hash {
-            WorldStatus::Synced
+            WorldStatus::Synced(local_world_class_hash)
         } else {
             WorldStatus::NewVersion(
                 local_world_class_hash,

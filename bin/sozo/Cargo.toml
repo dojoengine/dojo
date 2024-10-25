@@ -26,6 +26,7 @@ camino.workspace = true
 clap.workspace = true
 clap-verbosity-flag.workspace = true
 clap_complete.workspace = true
+colored = "2"
 console.workspace = true
 derive_more.workspace = true
 dojo-bindgen.workspace = true
@@ -42,6 +43,7 @@ notify = "6.0.1"
 num-bigint = "0.4.3"
 num-integer = "0.1.45"
 prettytable-rs = "0.10.0"
+tabled = { version = "0.16.0", features = [ "ansi" ] }
 regex.workspace = true
 rpassword.workspace = true
 scarb.workspace = true

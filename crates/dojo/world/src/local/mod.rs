@@ -126,6 +126,17 @@ impl ResourceLocal {
         }
     }
 
+    /// Returns the class hash of the resource.
+    pub fn class_hash(&self) -> Felt {
+        match self {
+            ResourceLocal::Contract(c) => c.class_hash,
+            ResourceLocal::Model(m) => m.class_hash,
+            ResourceLocal::Event(e) => e.class_hash,
+            ResourceLocal::Starknet(s) => s.class_hash,
+            _ => Felt::ZERO,
+        }
+    }
+
     /// Returns the dojo selector of the resource for the given namespace.
     pub fn dojo_selector(&self, namespace: &str) -> DojoSelector {
         match self {

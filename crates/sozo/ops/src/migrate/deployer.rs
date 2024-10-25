@@ -35,28 +35,6 @@ where
         Self { account, txn_config }
     }
 
-    /// Checks if a contract is deployed at the given address.
-    pub async fn is_deployed(
-        contract_address: Felt,
-        account: &A,
-    ) -> Result<bool, MigrationError<A::SignError>> {
-        match account
-            .provider()
-            .get_class_hash_at(BlockId::Tag(BlockTag::Pending), contract_address)
-            .await
-        {
-            Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => Ok(false),
-            Ok(_) => {
-                tracing::trace!(
-                    contract_address = format!("{:#066x}", contract_address),
-                    "Contract already deployed."
-                );
-                return Ok(true);
-            }
-            Err(e) => return Err(MigrationError::Provider(e)),
-        }
-    }
-
     /// Deploys a contract via the UDC.
     pub async fn deploy_via_udc(
         &self,
@@ -79,7 +57,10 @@ where
         let contract_address =
             get_contract_address(salt, class_hash, &constructor_calldata, deployer_address);
 
-        if Self::is_deployed(contract_address, &self.account).await? {
+        if is_deployed(contract_address, &self.account.provider())
+            .await
+            .map_err(MigrationError::Provider)?
+        {
             return Ok(Felt::ZERO);
         }
 
@@ -103,5 +84,23 @@ where
         }
 
         Ok(contract_address)
+    }
+}
+
+/// Checks if a contract is deployed at the given address.
+pub async fn is_deployed<P>(contract_address: Felt, provider: &P) -> Result<bool, ProviderError>
+where
+    P: Provider,
+{
+    match provider.get_class_hash_at(BlockId::Tag(BlockTag::Pending), contract_address).await {
+        Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => Ok(false),
+        Ok(_) => {
+            tracing::trace!(
+                contract_address = format!("{:#066x}", contract_address),
+                "Contract already deployed."
+            );
+            return Ok(true);
+        }
+        Err(e) => Err(e),
     }
 }

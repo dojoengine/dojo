@@ -160,6 +160,25 @@ impl ResourceRemote {
             ResourceRemote::Event(event) => event.dojo_selector(namespace),
         }
     }
+    /// The name of the resource.
+    pub fn name(&self) -> String {
+        match self {
+            ResourceRemote::Contract(c) => c.common.name.clone(),
+            ResourceRemote::Model(m) => m.common.name.clone(),
+            ResourceRemote::Event(e) => e.common.name.clone(),
+            ResourceRemote::Namespace(ns) => ns.name.clone(),
+        }
+    }
+
+    /// The address of the resource.
+    pub fn address(&self) -> Felt {
+        match self {
+            ResourceRemote::Contract(c) => c.common.address,
+            ResourceRemote::Model(m) => m.common.address,
+            ResourceRemote::Event(e) => e.common.address,
+            ResourceRemote::Namespace(_) => Felt::ZERO,
+        }
+    }
 
     /// Push a new class hash to the resource meaning it has been upgraded.
     pub fn push_class_hash(&mut self, class_hash: Felt) {
@@ -168,6 +187,16 @@ impl ResourceRemote {
             ResourceRemote::Contract(contract) => contract.common.push_class_hash(class_hash),
             ResourceRemote::Model(model) => model.common.push_class_hash(class_hash),
             ResourceRemote::Event(event) => event.common.push_class_hash(class_hash),
+        }
+    }
+
+    /// The class hash of the resource after its latest upgrade.
+    pub fn current_class_hash(&self) -> Felt {
+        match self {
+            ResourceRemote::Contract(contract) => contract.common.current_class_hash(),
+            ResourceRemote::Model(model) => model.common.current_class_hash(),
+            ResourceRemote::Event(event) => event.common.current_class_hash(),
+            ResourceRemote::Namespace(_) => Felt::ZERO,
         }
     }
 

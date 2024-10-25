@@ -8,8 +8,7 @@ use dojo_world::local::WorldLocal;
 use dojo_world::remote::WorldRemote;
 use katana_rpc_api::starknet::RPC_SPEC_VERSION;
 use scarb::core::{Config, Workspace};
-use sozo_ops::migrate::deployer::Deployer;
-use sozo_ops::migrate::{self, Migration};
+use sozo_ops::migrate::{self, deployer, Migration, MigrationError};
 use sozo_ops::scarb_extensions::WorkspaceExt;
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::types::{BlockId, BlockTag, Felt, StarknetError};
@@ -18,7 +17,7 @@ use starknet::core::utils::{
 };
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider, ProviderError};
-use tracing::trace;
+use tracing::{debug, trace};
 
 use super::options::account::{AccountOptions, SozoAccount};
 use super::options::starknet::StarknetOptions;
@@ -42,15 +41,7 @@ pub struct MigrateArgs {
 }
 
 impl MigrateArgs {
-    /// Creates a new `MigrateArgs` with the `Apply` command.
-    pub fn new_apply(
-        world: WorldOptions,
-        starknet: StarknetOptions,
-        account: AccountOptions,
-    ) -> Self {
-        Self { world, starknet, account, transaction: TransactionOptions::init_wait() }
-    }
-
+    /// Runs the migration.
     pub fn run(self, config: &Config) -> Result<()> {
         trace!(args = ?self);
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
@@ -66,14 +57,14 @@ impl MigrateArgs {
         )?;
 
         let (world_address, account) = config.tokio_handle().block_on(async {
-            setup_env(&ws, account, starknet, world, &profile_config, &world_local).await
+            setup_env(account, starknet, world, &profile_config, &world_local).await
         })?;
 
         config.tokio_handle().block_on(async {
             let mut txn_config: TxnConfig = self.transaction.into();
             txn_config.wait = true;
 
-            let world_diff = if Deployer::is_deployed(world_address, &account).await? {
+            let world_diff = if deployer::is_deployed(world_address, &account.provider()).await? {
                 let world_remote =
                     WorldRemote::from_events(world_address, &account.provider()).await?;
 
@@ -94,16 +85,13 @@ impl MigrateArgs {
     }
 }
 
-pub async fn setup_env<'a>(
-    ws: &'a Workspace<'a>,
+pub async fn setup_env(
     account: AccountOptions,
     starknet: StarknetOptions,
     world: WorldOptions,
     profile_config: &ProfileConfig,
     world_local: &WorldLocal,
 ) -> Result<(Felt, SozoAccount<JsonRpcClient<HttpTransport>>)> {
-    let ui = ws.config().ui();
-
     let env = profile_config.env.as_ref();
 
     let deterministic_world_address =
@@ -115,11 +103,12 @@ pub async fn setup_env<'a>(
     let world_address = if let Some(wa) = world.address(env)? {
         wa
     } else {
-        ui.print(format!(
+        debug!(
             "This seems to be a first deployment. If you were expecting to update your remote \
              world, please specify its address using --world, in an environment variable or in \
              the dojo configuration file.\n"
-        ));
+        );
+
         deterministic_world_address
     };
 
@@ -148,11 +137,7 @@ pub async fn setup_env<'a>(
 
         let address = account.address();
 
-        ui.print(format!("\nMigration account: {address:#x}"));
-
-        ui.print(format!("\nWorld seed: {}", profile_config.world.seed));
-
-        ui.print(format!("\nChain ID: {chain_id}\n"));
+        debug!(chain_id);
 
         match account.provider().get_class_hash_at(BlockId::Tag(BlockTag::Pending), address).await {
             Ok(_) => Ok(account),
