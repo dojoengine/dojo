@@ -9,8 +9,9 @@ use starknet::providers::ProviderError;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
-pub enum MigrationError<S> where 
-S: std::error::Error
+pub enum MigrationError<S>
+where
+    S: std::error::Error,
 {
     #[error(transparent)]
     SigningError(S),
@@ -28,7 +29,10 @@ S: std::error::Error
     TransactionExecution(String),
     #[error(transparent)]
     StarknetJson(#[from] starknet::core::types::contract::JsonError),
-    #[error("The contract `{0}` has no valid address, ensure this resource is known locally, or remove it from the profile config writers/owners.")]
+    #[error(
+        "The contract `{0}` has no valid address, ensure this resource is known locally, or \
+         remove it from the profile config writers/owners."
+    )]
     OrphanSelectorAddress(String),
     #[error(transparent)]
     FromStr(#[from] FromStrError),
@@ -42,7 +46,10 @@ S: std::error::Error
     InitCallArgs,
 }
 
-impl<S> From<AccountError<S>> for MigrationError<S> where S: std::error::Error {
+impl<S> From<AccountError<S>> for MigrationError<S>
+where
+    S: std::error::Error,
+{
     fn from(value: AccountError<S>) -> Self {
         match value {
             AccountError::Signing(e) => MigrationError::SigningError(e),
@@ -54,7 +61,10 @@ impl<S> From<AccountError<S>> for MigrationError<S> where S: std::error::Error {
     }
 }
 
-impl<S> From<ProviderError> for MigrationError<S> where S: std::error::Error {
+impl<S> From<ProviderError> for MigrationError<S>
+where
+    S: std::error::Error,
+{
     fn from(value: ProviderError) -> Self {
         match &value {
             ProviderError::StarknetError(e) => match &e {

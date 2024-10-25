@@ -74,7 +74,10 @@ fn from_names_tags_to_selectors(
 
         for tag in tags {
             let granted_selector = naming::compute_selector_from_tag(tag);
-            writers.entry(target_selector).or_insert_with(HashSet::new).insert((granted_selector, tag.clone()));
+            writers
+                .entry(target_selector)
+                .or_insert_with(HashSet::new)
+                .insert((granted_selector, tag.clone()));
         }
     }
 

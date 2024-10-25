@@ -40,10 +40,7 @@ where
 
         let tx = self.account.execute_v1(vec![call]).send_with_cfg(&self.txn_config).await?;
 
-        trace!(
-            transaction_hash = format!("{:#066x}", tx.transaction_hash),
-            "Invoke contract."
-        );
+        trace!(transaction_hash = format!("{:#066x}", tx.transaction_hash), "Invoke contract.");
 
         if self.txn_config.wait {
             TransactionWaiter::new(tx.transaction_hash, &self.account.provider()).await?;
@@ -60,7 +57,8 @@ where
 
         trace!(?self.calls, "Invoke contract multicall.");
 
-        let tx = self.account.execute_v1(self.calls.clone()).send_with_cfg(&self.txn_config).await?;
+        let tx =
+            self.account.execute_v1(self.calls.clone()).send_with_cfg(&self.txn_config).await?;
 
         trace!(
             transaction_hash = format!("{:#066x}", tx.transaction_hash),

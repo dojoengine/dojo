@@ -40,8 +40,8 @@ use tracing::trace;
 // TODO: those may be moved to dojo-utils in the tx module.
 pub mod declarer;
 pub mod deployer;
-pub mod invoker;
 pub mod error;
+pub mod invoker;
 
 pub use error::MigrationError;
 
