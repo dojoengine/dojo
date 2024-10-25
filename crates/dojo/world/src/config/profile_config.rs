@@ -39,7 +39,7 @@ impl ProfileConfig {
     }
 
     /// Extracts the local writers from the profile configuration, computing the selectors.
-    pub fn get_local_writers(&self) -> HashMap<DojoSelector, HashSet<(DojoSelector, String)>> {
+    pub fn get_local_writers(&self) -> HashMap<DojoSelector, LocalPermission> {
         if let Some(user_names_tags) = &self.writers {
             from_names_tags_to_selectors(user_names_tags)
         } else {
@@ -48,7 +48,7 @@ impl ProfileConfig {
     }
 
     /// Extracts the local owners from the profile configuration, computing the selectors.
-    pub fn get_local_owners(&self) -> HashMap<DojoSelector, HashSet<(DojoSelector, String)>> {
+    pub fn get_local_owners(&self) -> HashMap<DojoSelector, LocalPermission> {
         if let Some(user_names_tags) = &self.owners {
             from_names_tags_to_selectors(user_names_tags)
         } else {
@@ -57,15 +57,27 @@ impl ProfileConfig {
     }
 }
 
+/// A local permission, containing the tag of the resource to grant permissions to and the grantees.
+#[derive(Debug, Clone, Default)]
+pub struct LocalPermission {
+    pub target_tag: String,
+    pub grantees: HashSet<(DojoSelector, String)>,
+}
+
 /// Converts a mapping of names or tags to tags into a mapping of selectors to selectors.
 ///
 /// Returns the selectors of the resource to grant permissions to and it's tag.
 fn from_names_tags_to_selectors(
     names_tags: &HashMap<String, HashSet<String>>,
-) -> HashMap<DojoSelector, HashSet<(DojoSelector, String)>> {
-    let mut writers = HashMap::new();
+) -> HashMap<DojoSelector, LocalPermission> {
+    let mut perms = HashMap::new();
 
     for (name_or_tag, tags) in names_tags.iter() {
+        let mut local_permission = LocalPermission {
+            target_tag: name_or_tag.clone(),
+            grantees: HashSet::new(),
+        };
+
         let target_selector = if naming::is_valid_tag(name_or_tag) {
             naming::compute_selector_from_tag(name_or_tag)
         } else {
@@ -74,14 +86,13 @@ fn from_names_tags_to_selectors(
 
         for tag in tags {
             let granted_selector = naming::compute_selector_from_tag(tag);
-            writers
-                .entry(target_selector)
-                .or_insert_with(HashSet::new)
-                .insert((granted_selector, tag.clone()));
+            local_permission.grantees.insert((granted_selector, tag.clone()));
         }
+
+        perms.insert(target_selector, local_permission);
     }
 
-    writers
+    perms
 }
 
 #[cfg(test)]

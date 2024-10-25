@@ -186,43 +186,57 @@ where
 
         let mut invoker = Invoker::new(&self.world.account, self.txn_config.clone());
 
-        // For all local writer/owner that is not found remotely, we need to grant the permission.
-        for (target_selector, granted_selectors) in local_writers {
-            for (granted_selector, tag) in granted_selectors {
-                let granted_address = contract_addresses
-                    .get(&granted_selector)
-                    .ok_or(MigrationError::OrphanSelectorAddress(tag))?;
+        // For all local writer/owner permission that is not found remotely, we need to grant the permission.
+        for (target_selector, local_permission) in local_writers {
+            for (grantee_selector, tag) in local_permission.grantees {
+                let grantee_address = contract_addresses
+                    .get(&grantee_selector)
+                    .ok_or(MigrationError::OrphanSelectorAddress(tag.clone()))?;
 
                 if !remote_writers
                     .get(&target_selector)
                     .as_ref()
                     .unwrap_or(&&HashSet::new())
-                    .contains(granted_address)
+                    .contains(grantee_address)
                 {
+                    trace!(
+                        target = local_permission.target_tag,
+                        grantee_tag = tag,
+                        grantee_address = format!("{:#066x}", grantee_address),
+                        "Granting writer permission."
+                    );
+
                     invoker.add_call(self.world.grant_writer_getcall(
                         &target_selector,
-                        &ContractAddress(*granted_address),
+                        &ContractAddress(*grantee_address),
                     ));
                 }
             }
         }
 
-        for (target_selector, granted_selectors) in local_owners {
-            for (granted_selector, tag) in granted_selectors {
-                let granted_address = contract_addresses
-                    .get(&granted_selector)
-                    .ok_or(MigrationError::OrphanSelectorAddress(tag))?;
+        for (target_selector, local_permission) in local_owners {
+            for (grantee_selector, tag) in local_permission.grantees {
+                let grantee_address = contract_addresses
+                    .get(&grantee_selector)
+                    .ok_or(MigrationError::OrphanSelectorAddress(tag.clone()))?;
 
                 if !remote_owners
                     .get(&target_selector)
                     .as_ref()
                     .unwrap_or(&&HashSet::new())
-                    .contains(granted_address)
+                    .contains(grantee_address)
                 {
+                    trace!(
+                        target = local_permission.target_tag,
+                        grantee_tag = tag,
+                        grantee_address = format!("{:#066x}", grantee_address),
+                        "Granting owner permission."
+                    );
+
                     invoker.add_call(
                         self.world.grant_owner_getcall(
                             &target_selector,
-                            &ContractAddress(*granted_address),
+                            &ContractAddress(*grantee_address),
                         ),
                     );
                 }

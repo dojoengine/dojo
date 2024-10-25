@@ -7,7 +7,6 @@ use std::collections::{HashMap, HashSet};
 
 use compare::ComparableResource;
 use starknet::core::types::contract::SierraClass;
-use starknet::core::utils as snutils;
 use starknet_crypto::Felt;
 
 use super::local::{ResourceLocal, WorldLocal};
