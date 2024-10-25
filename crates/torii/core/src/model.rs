@@ -1074,10 +1074,10 @@ mod tests {
              \"Test-PlayerConfig$favorite_item.Some\", [Test-PlayerConfig].external_favorite_item \
              AS \"Test-PlayerConfig.favorite_item\" FROM entities JOIN [Test-Position] ON \
              entities.id = [Test-Position].entity_id  JOIN [Test-PlayerConfig] ON entities.id = \
-             [Test-PlayerConfig].entity_id  JOIN [Test-Position$vec] ON \
-             [Test-Position$vec].full_array_id = [Test-Position].full_array_id  LEFT JOIN \
-             [Test-PlayerConfig$favorite_item] ON [Test-PlayerConfig$favorite_item].full_array_id \
-             = [Test-PlayerConfig].full_array_id ORDER BY entities.event_id DESC";
+             [Test-PlayerConfig].entity_id  JOIN [Test-Position$vec] ON entities.id = \
+             [Test-Position$vec].entity_id  LEFT JOIN [Test-PlayerConfig$favorite_item] ON \
+             entities.id = [Test-PlayerConfig$favorite_item].entity_id ORDER BY entities.event_id \
+             DESC";
         // todo: completely tests arrays
         assert_eq!(query.0, expected_query);
     }
