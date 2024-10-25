@@ -9,6 +9,7 @@
 use anyhow::Result;
 use starknet::core::types::{BlockId, BlockTag, EventFilter, Felt, StarknetError};
 use starknet::providers::{Provider, ProviderError};
+use tracing::trace;
 
 use super::permissions::PermissionsUpdateable;
 use super::{ResourceRemote, WorldRemote};
@@ -34,7 +35,7 @@ impl WorldRemote {
         };
 
         // We only care about management events, not resource events (set, delete, emit).
-        let keys = vec![
+        let keys = vec![vec![
             world::WorldSpawned::selector(),
             world::WorldUpgraded::selector(),
             world::NamespaceRegistered::selector(),
@@ -47,24 +48,40 @@ impl WorldRemote {
             world::ContractInitialized::selector(),
             world::WriterUpdated::selector(),
             world::OwnerUpdated::selector(),
-        ];
+        ]];
 
         let filter = EventFilter {
             from_block: None,
-            to_block: None,
+            to_block: Some(BlockId::Tag(BlockTag::Pending)),
             address: Some(world_address),
-            keys: Some(vec![keys]),
+            keys: Some(keys),
         };
 
         let chunk_size = 500;
-        let mut continuation_token = None;
 
-        tracing::trace!(%world_address, ?filter, "Fetching remote world events.");
+        tracing::trace!(
+            world_address = format!("{:#066x}", world_address),
+            chunk_size,
+            ?filter,
+            "Fetching remote world events."
+        );
 
         let mut events = Vec::new();
 
+        // Initial fetch.
+        let page = provider.get_events(filter.clone(), None, chunk_size).await?;
+        events.extend(page.events);
+
+        let mut continuation_token = page.continuation_token;
+
         while continuation_token.is_some() {
+            println!("Continuation token: {:?}", continuation_token);
             let page = provider.get_events(filter.clone(), continuation_token, chunk_size).await?;
+
+            // TODO: remove this once rebased with latest katana.
+            if page.events.is_empty() {
+                break;
+            }
 
             continuation_token = page.continuation_token;
             events.extend(page.events);
@@ -93,12 +110,17 @@ impl WorldRemote {
         match event {
             WorldEvent::WorldSpawned(e) => {
                 self.class_hashes.push(e.class_hash.into());
+
+                trace!(class_hash = format!("{:#066x}", e.class_hash.0), "World spawned.");
             }
             WorldEvent::WorldUpgraded(e) => {
                 self.class_hashes.push(e.class_hash.into());
+
+                trace!(class_hash = format!("{:#066x}", e.class_hash.0), "World upgraded.");
             }
             WorldEvent::NamespaceRegistered(e) => {
                 let r = ResourceRemote::Namespace(NamespaceRemote::new(e.namespace.to_string()?));
+                trace!(?r, "Namespace registered.");
 
                 self.add_resource(e.namespace.to_string()?, r);
             }
@@ -110,6 +132,7 @@ impl WorldRemote {
                         e.address.into(),
                     ),
                 });
+                trace!(?r, "Model registered.");
 
                 self.add_resource(e.namespace.to_string()?, r);
             }
@@ -121,6 +144,7 @@ impl WorldRemote {
                         e.address.into(),
                     ),
                 });
+                trace!(?r, "Event registered.");
 
                 self.add_resource(e.namespace.to_string()?, r);
             }
@@ -133,22 +157,28 @@ impl WorldRemote {
                     ),
                     is_initialized: false,
                 });
-
+                trace!(?r, "Contract registered.");
                 self.add_resource(e.namespace.to_string()?, r);
             }
             WorldEvent::ModelUpgraded(e) => {
                 // Unwrap is safe because the model must exist in the world.
                 let resource = self.resources.get_mut(&e.selector).unwrap();
+                trace!(?resource, "Model upgraded.");
+
                 resource.push_class_hash(e.class_hash.into());
             }
             WorldEvent::EventUpgraded(e) => {
                 // Unwrap is safe because the event must exist in the world.
                 let resource = self.resources.get_mut(&e.selector).unwrap();
+                trace!(?resource, "Event upgraded.");
+
                 resource.push_class_hash(e.class_hash.into());
             }
             WorldEvent::ContractUpgraded(e) => {
                 // Unwrap is safe because the contract must exist in the world.
                 let resource = self.resources.get_mut(&e.selector).unwrap();
+                trace!(?resource, "Contract upgraded.");
+
                 resource.push_class_hash(e.class_hash.into());
             }
             WorldEvent::ContractInitialized(e) => {
@@ -156,16 +186,26 @@ impl WorldRemote {
                 let resource = self.resources.get_mut(&e.selector).unwrap();
                 let contract = resource.as_contract_mut()?;
                 contract.is_initialized = true;
+
+                trace!(
+                    selector = format!("{:#066x}", e.selector),
+                    init_calldata = format!("{:?}", e.init_calldata),
+                    "Contract initialized."
+                );
             }
             WorldEvent::WriterUpdated(e) => {
                 // Unwrap is safe because the resource must exist in the world.
                 let resource = self.resources.get_mut(&e.resource).unwrap();
                 resource.update_writer(e.contract.into(), e.value)?;
+
+                trace!(?e, "Writer updated.");
             }
             WorldEvent::OwnerUpdated(e) => {
                 // Unwrap is safe because the resource must exist in the world.
                 let resource = self.resources.get_mut(&e.resource).unwrap();
                 resource.update_owner(e.contract.into(), e.value)?;
+
+                trace!(?e, "Owner updated.");
             }
             _ => {
                 // Ignore events filtered out by the event filter.

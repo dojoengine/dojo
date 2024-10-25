@@ -485,7 +485,7 @@ where
                     *class_hash,
                     utils::world_salt(&self.profile_config.world.seed)?,
                     &[*class_hash],
-                    self.world.address,
+                    Felt::ZERO,
                 )
                 .await?;
         }

@@ -94,6 +94,7 @@ where
 
         tracing::trace!(
             transaction_hash = format!("{:#066x}", transaction_hash),
+            contract_address = format!("{:#066x}", contract_address),
             "Deployed contract via UDC."
         );
 
