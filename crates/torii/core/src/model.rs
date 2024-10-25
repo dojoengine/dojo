@@ -396,15 +396,8 @@ pub fn build_sql_query(
         .iter()
         .map(|table| {
             let join_type = if table.is_optional { "LEFT JOIN" } else { "JOIN" };
-            let join_condition = if table.parent_table.is_none() {
-                format!("{entities_table}.id = [{}].{entity_relation_column}", table.table_name)
-            } else {
-                format!(
-                    "[{}].full_array_id = [{}].full_array_id",
-                    table.table_name,
-                    table.parent_table.as_ref().unwrap()
-                )
-            };
+            let join_condition =
+                format!("{entities_table}.id = [{}].{entity_relation_column}", table.table_name);
             format!(" {join_type} [{}] ON {join_condition}", table.table_name)
         })
         .collect::<Vec<_>>()
@@ -423,9 +416,8 @@ pub fn build_sql_query(
 
             let join_clause = tables
                 .iter()
-                .enumerate()
-                .map(|(idx, table)| {
-                    if idx == 0 {
+                .map(|table| {
+                    if table.parent_table.is_none() {
                         format!(
                             " JOIN [{}] ON {entities_table}.id = [{}].{entity_relation_column}",
                             table.table_name, table.table_name
