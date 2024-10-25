@@ -49,6 +49,7 @@ impl WorldLocal {
                         match identify_resource_type(i) {
                             ResourceType::World => {
                                 self.class = Some(sierra);
+                                self.class_hash = Some(class_hash);
                                 self.casm_class_hash = Some(casm_class_hash);
                                 break;
                             }

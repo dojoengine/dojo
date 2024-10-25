@@ -1,18 +1,6 @@
-// pub mod account;
-// pub mod auth;
-// pub mod call;
-// pub mod events;
-// pub mod execute;
-// pub mod keystore;
-// pub mod migration;
+pub mod account;
 pub mod migrate;
-// pub mod model;
-// pub mod register;
-// pub mod statistics;
-// pub mod utils;
-
-#[cfg(any(test, feature = "test-utils"))]
-pub mod test_utils;
+pub mod scarb_extensions;
 
 #[cfg(test)]
 pub mod tests;

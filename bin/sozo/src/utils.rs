@@ -1,98 +1,46 @@
+use std::fs;
 use std::str::FromStr;
 
 use anyhow::{Error, Result};
 use camino::Utf8PathBuf;
-use dojo_world::config::Environment;
+use dojo_world::config::{Environment, ProfileConfig};
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::contracts::WorldContractReader;
-use dojo_world::metadata::dojo_metadata_from_workspace;
 use scarb::core::{Config, TomlManifest};
 use semver::Version;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 
-use crate::commands::options::account::{AccountOptions, SozoAccount, WorldAddressOrName};
+use crate::commands::options::account::{AccountOptions, SozoAccount};
 use crate::commands::options::starknet::StarknetOptions;
 use crate::commands::options::world::WorldOptions;
 
-/// Load metadata from the Scarb configuration.
-///
-/// # Arguments
-///
-/// * `config` - Scarb project configuration.
-///
-/// # Returns
-///
-/// A [`Environment`] on success.
-pub fn load_metadata_from_config(config: &Config) -> Result<Option<Environment>, Error> {
-    let env_metadata = if config.manifest_path().exists() {
-        let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
-        let dojo_metadata = dojo_metadata_from_workspace(&ws)?;
+/// Loads the profile config from the Scarb workspace configuration.
+pub fn load_profile_config(config: &Config) -> Result<(String, ProfileConfig), Error> {
+    let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
+    // Safe to unwrap since manifest is a file.
+    let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
+    let profile_str =
+        ws.current_profile().expect("Scarb profile expected to be defined.").to_string();
 
-        dojo_metadata.env().cloned()
-    } else {
-        None
-    };
+    let dev_config_path = manifest_dir.join("dojo_dev.toml");
+    let config_path = manifest_dir.join(format!("dojo_{}.toml", &profile_str));
 
-    Ok(env_metadata)
-}
+    if !dev_config_path.exists() {
+        return Err(anyhow::anyhow!(
+            "Profile configuration file not found for profile `{}`. Expected at {}.",
+            &profile_str,
+            dev_config_path
+        ));
+    }
 
-/// Build a world contract from the provided environment.
-///
-/// # Arguments
-///
-/// * `world` - The world options such as the world address,
-/// * `account` - The account options,
-/// * `starknet` - The Starknet options such as the RPC url,
-/// * `env_metadata` - Optional environment coming from Scarb configuration.
-///
-/// # Returns
-///
-/// A [`WorldContract`] on success.
-pub async fn world_from_env_metadata(
-    world: WorldOptions,
-    account: AccountOptions,
-    starknet: &StarknetOptions,
-    env_metadata: &Option<Environment>,
-    config: &Config,
-) -> Result<WorldContract<SozoAccount<JsonRpcClient<HttpTransport>>>, Error> {
-    let env_metadata = env_metadata.as_ref();
+    // If the profile file is not found, default to `dev.toml` file that must exist.
+    let config_path = if !config_path.exists() { dev_config_path } else { config_path };
 
-    let world_address = world.address(env_metadata)?;
-    let provider = starknet.provider(env_metadata)?;
-    let account = account
-        .account(
-            provider,
-            WorldAddressOrName::Address(world_address),
-            starknet,
-            env_metadata,
-            config,
-        )
-        .await?;
+    let content = fs::read_to_string(&config_path)?;
+    let config: ProfileConfig = toml::from_str(&content)?;
 
-    Ok(WorldContract::new(world_address, account))
-}
-
-/// Build a world contract reader from the provided environment.
-///
-/// # Arguments
-///
-/// * `world` - The world options such as the world address,
-/// * `starknet` - The Starknet options such as the RPC url,
-/// * `env_metadata` - Optional environment coming from Scarb configuration.
-///
-/// # Returns
-///
-/// A [`WorldContractReader`] on success.
-pub async fn world_reader_from_env_metadata(
-    world: WorldOptions,
-    starknet: StarknetOptions,
-    env_metadata: &Option<Environment>,
-) -> Result<WorldContractReader<JsonRpcClient<HttpTransport>>, Error> {
-    let world_address = world.address(env_metadata.as_ref())?;
-    let provider = starknet.provider(env_metadata.as_ref())?;
-
-    Ok(WorldContractReader::new(world_address, provider))
+    Ok((profile_str.to_string(), config))
 }
 
 pub fn verify_cairo_version_compatibility(manifest_path: &Utf8PathBuf) -> Result<()> {

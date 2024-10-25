@@ -13247,6 +13247,7 @@ dependencies = [
  "starknet-crypto 0.7.2",
  "thiserror",
  "tokio",
+ "toml 0.8.19",
  "tracing",
  "tracing-log 0.1.4",
  "tracing-subscriber",

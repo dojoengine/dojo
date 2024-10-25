@@ -7,8 +7,8 @@
 //! being registered. We take advantage of this fact to optimize the data gathering.
 
 use anyhow::Result;
-use starknet::core::types::{EventFilter, Felt};
-use starknet::providers::Provider;
+use starknet::core::types::{BlockId, BlockTag, EventFilter, Felt, StarknetError};
+use starknet::providers::{Provider, ProviderError};
 
 use super::permissions::PermissionsUpdateable;
 use super::{ResourceRemote, WorldRemote};
@@ -19,11 +19,20 @@ use crate::remote::{
 
 impl WorldRemote {
     /// Fetch the events from the world and convert them to remote resources.
-    pub async fn from_events<P: Provider>(
-        &mut self,
-        world_address: Felt,
-        provider: &P,
-    ) -> Result<Self> {
+    pub async fn from_events<P: Provider>(world_address: Felt, provider: &P) -> Result<Self> {
+        let mut world = Self::default();
+
+        match provider.get_class_hash_at(BlockId::Tag(BlockTag::Pending), world_address).await {
+            Ok(_) => {
+                // The world contract exists, we can continue and fetch the events.
+            }
+            Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {
+                tracing::trace!(%world_address, "No remote world contract found.");
+                return Ok(world);
+            }
+            Err(e) => return Err(e.into()),
+        };
+
         // We only care about management events, not resource events (set, delete, emit).
         let keys = vec![
             world::WorldSpawned::selector(),
@@ -65,7 +74,7 @@ impl WorldRemote {
             match world::Event::try_from(event) {
                 Ok(ev) => {
                     tracing::trace!(?ev, "Processing world event.");
-                    self.match_event(ev)?;
+                    world.match_event(ev)?;
                 }
                 Err(e) => {
                     tracing::error!(
@@ -76,7 +85,7 @@ impl WorldRemote {
             }
         }
 
-        Ok(Self::default())
+        Ok(world)
     }
 
     /// Matches the given event to the corresponding remote resource and inserts it into the world.

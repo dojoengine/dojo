@@ -55,6 +55,7 @@ sozo-walnut = { workspace = true, optional = true }
 starknet.workspace = true
 starknet-crypto.workspace = true
 thiserror.workspace = true
+toml.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 tracing-log.workspace = true

@@ -7,6 +7,7 @@ pub mod diff;
 pub mod local;
 pub mod remote;
 pub mod uri;
+pub mod utils;
 
 #[cfg(test)]
 pub mod test_utils;

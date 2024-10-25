@@ -17,18 +17,16 @@ pub struct WorldOptions {
 }
 
 impl WorldOptions {
-    pub fn address(&self, env_metadata: Option<&Environment>) -> Result<Felt> {
+    pub fn address(&self, env_metadata: Option<&Environment>) -> Result<Option<Felt>> {
         if let Some(world_address) = self.world_address {
             trace!(?world_address, "Loaded world_address.");
-            Ok(world_address)
+            Ok(Some(world_address))
         } else if let Some(world_address) = env_metadata.and_then(|env| env.world_address()) {
             trace!(world_address, "Loaded world_address from env metadata.");
-            Ok(Felt::from_str(world_address)?)
+            Ok(Some(Felt::from_str(world_address)?))
         } else {
-            Err(anyhow!(
-                "Could not find World address. Please specify it with --world, environment \
-                 variable or in the world config."
-            ))
+            trace!("No world address found.");
+            Ok(None)
         }
     }
 }

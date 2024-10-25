@@ -13,10 +13,13 @@ use std::collections::{HashMap, HashSet};
 use dojo_types::naming;
 use starknet::core::types::contract::SierraClass;
 use starknet::core::types::Felt;
+use starknet::core::utils::{self as snutils, CairoShortStringToFeltError};
+use starknet_crypto::poseidon_hash_single;
 
 mod artifact_to_local;
 
 use crate::config::NamespaceConfig;
+use crate::utils::compute_world_address;
 use crate::{DojoSelector, Namespace};
 
 /// A local resource.
@@ -29,13 +32,15 @@ pub enum ResourceLocal {
     Starknet(StarknetLocal),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct WorldLocal {
     /// The class hash of the world.
     /// We use an option here since [`SierraClass`] doesn't implement default
     /// and it's easier to handle the option than having a default value to know
     /// if the world class has been set or not.
     pub class: Option<SierraClass>,
+    /// The class hash of the world.
+    pub class_hash: Option<Felt>,
     /// The casm class hash of the world.
     pub casm_class_hash: Option<Felt>,
     /// The namespaces of the world.
@@ -128,6 +133,17 @@ impl ResourceLocal {
             _ => naming::compute_selector_from_names(namespace, &self.name()),
         }
     }
+
+    /// Returns the contract resource.
+    ///
+    /// This function panics since it must only be used where the developer
+    /// can ensure that the resource is a contract.
+    pub fn as_contract(&self) -> &ContractLocal {
+        match self {
+            ResourceLocal::Contract(c) => c,
+            _ => panic!("Resource {} is not a contract", self.name()),
+        }
+    }
 }
 
 impl ContractLocal {
@@ -143,6 +159,7 @@ impl WorldLocal {
         let mut world = Self {
             namespace_config: namespace_config.clone(),
             class: None,
+            class_hash: None,
             casm_class_hash: None,
             namespaces: HashSet::new(),
             contracts: HashMap::new(),
@@ -158,6 +175,16 @@ impl WorldLocal {
         }
 
         world
+    }
+
+    /// Computes the deterministic address of the world contract based on the given seed.
+    ///
+    /// If a project has a local world contract that is a different class hash from the one
+    /// used for the initial deployment, the address will be different. The user must explicitly
+    /// provide the world address in that case.
+    pub fn compute_world_address(&self, seed: &str) -> Result<Felt, CairoShortStringToFeltError> {
+        let class_hash = self.class_hash.expect("World must have a class hash.");
+        compute_world_address(seed, class_hash)
     }
 
     /// Adds a resource to the world local.
@@ -202,6 +229,17 @@ impl WorldLocal {
                 }
             }
         }
+    }
+
+    /// Returns the contract resource.
+    ///
+    /// This function panics since it must only be used where the developer
+    /// can ensure that the resource is a contract.
+    pub fn get_contract_resource(&self, selector: DojoSelector) -> &ContractLocal {
+        self.resources
+            .get(&selector)
+            .expect(&format!("Contract with selector {:#x} not found", selector))
+            .as_contract()
     }
 }
 

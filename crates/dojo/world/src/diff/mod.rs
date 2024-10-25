@@ -11,6 +11,7 @@ use starknet_crypto::Felt;
 
 use super::local::{ResourceLocal, WorldLocal};
 use super::remote::{ResourceRemote, WorldRemote};
+use crate::utils::compute_dojo_contract_address;
 use crate::{DojoSelector, Namespace};
 
 mod compare;
@@ -216,7 +217,7 @@ impl WorldDiff {
                 };
 
                 let address =
-                    snutils::get_contract_address(selector, class_hash.into(), &[], world_address);
+                    compute_dojo_contract_address(selector, class_hash.into(), world_address);
 
                 addresses.insert(selector, address);
             }
@@ -331,7 +332,7 @@ mod tests {
 
         let remote_contract = ResourceRemote::Contract(ContractRemote {
             common: CommonResourceRemoteInfo::new(Felt::ONE, "c".to_string(), Felt::ONE),
-            initialized: false,
+            is_initialized: false,
         });
 
         remote.add_resource(ns.clone(), remote_contract.clone());

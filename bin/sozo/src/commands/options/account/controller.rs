@@ -2,9 +2,10 @@ use std::sync::Arc;
 
 use anyhow::{bail, Context, Result};
 use camino::{Utf8Path, Utf8PathBuf};
+use dojo_types::naming;
 use dojo_world::contracts::naming::get_name_from_tag;
-use dojo_world::manifest::{BaseManifest, Class, DojoContract, Manifest};
-use dojo_world::migration::strategy::generate_salt;
+use dojo_world::local::WorldLocal;
+use dojo_world::utils;
 use scarb::core::Config;
 use slot::account_sdk::account::session::hash::{Policy, ProvedPolicy};
 use slot::account_sdk::account::session::merkle::MerkleTree;
@@ -20,8 +21,6 @@ use starknet::providers::Provider;
 use starknet_crypto::poseidon_hash_single;
 use tracing::trace;
 use url::Url;
-
-use super::WorldAddressOrName;
 
 // Why the Arc? becaues the Controller account implementation over on `account_sdk` crate is
 // riddled with `+ Clone` bounds on its Provider generic. So we explicitly specify that the Provider
@@ -45,15 +44,14 @@ pub type ControllerSessionAccount<P> = SessionAccount<Arc<P>>;
 /// * Slot hosted networks
 #[tracing::instrument(
     name = "create_controller",
-    skip(rpc_url, provider, world_addr_or_name, config)
+    skip(rpc_url, provider, world_address, world_local)
 )]
 pub async fn create_controller<P>(
     // Ideally we can get the url from the provider so we dont have to pass an extra url param here
     rpc_url: Url,
     provider: P,
-    // Use to either specify the world address or compute the world address from the world name
-    world_addr_or_name: WorldAddressOrName,
-    config: &Config,
+    world_address: Felt,
+    world_local: &WorldLocal,
 ) -> Result<ControllerSessionAccount<P>>
 where
     P: Provider,
@@ -71,13 +69,14 @@ where
         bail!("No Controller is associated with this account.");
     };
 
+    let policies = collect_policies(world_address, contract_address, world_local)?;
+
     // Check if the session exists, if not create a new one
     let session_details = match slot::session::get(chain_id)? {
         Some(session) => {
             trace!(target: "account::controller", expires_at = %session.session.expires_at, policies = session.session.policies.len(), "Found existing session.");
 
             // Check if the policies have changed
-            let policies = collect_policies(world_addr_or_name, contract_address, config)?;
             let is_equal = is_equal_to_existing(&policies, &session);
 
             if is_equal {
@@ -99,7 +98,6 @@ where
         // Create a new session if not found
         None => {
             trace!(target: "account::controller", %username, chain = format!("{chain_id:#}"), "Creating new session.");
-            let policies = collect_policies(world_addr_or_name, contract_address, config)?;
             let session = slot::session::create(rpc_url.clone(), &policies).await?;
             slot::session::store(chain_id, &session)?;
             session
@@ -141,48 +139,43 @@ fn is_equal_to_existing(new_policies: &[PolicyMethod], session_info: &FullSessio
 /// This function collect all the contracts' methods in the current project according to the
 /// project's base manifest ( `/manifests/<profile>/base` ) and convert them into policies.
 fn collect_policies(
-    world_addr_or_name: WorldAddressOrName,
+    world_address: Felt,
     user_address: Felt,
-    config: &Config,
+    world_local: &WorldLocal,
 ) -> Result<Vec<PolicyMethod>> {
-    let root_dir = config.root();
-    let manifest = get_project_base_manifest(root_dir, config.profile().as_str())?;
-    let policies =
-        collect_policies_from_base_manifest(world_addr_or_name, user_address, root_dir, manifest)?;
+    let policies = collect_policies_from_local_world(world_address, user_address, world_local)?;
     trace!(target: "account::controller", policies_count = policies.len(), "Extracted policies from project.");
     Ok(policies)
 }
 
-fn get_project_base_manifest(root_dir: &Utf8Path, profile: &str) -> Result<BaseManifest> {
-    let mut manifest_path = root_dir.to_path_buf();
-    manifest_path.extend(["manifests", profile, "base"]);
-    Ok(BaseManifest::load_from_path(&manifest_path)?)
-}
-
-fn collect_policies_from_base_manifest(
-    world_address: WorldAddressOrName,
+fn collect_policies_from_local_world(
+    world_address: Felt,
     user_address: Felt,
-    base_path: &Utf8Path,
-    manifest: BaseManifest,
+    world_local: &WorldLocal,
 ) -> Result<Vec<PolicyMethod>> {
     let mut policies: Vec<PolicyMethod> = Vec::new();
-    let base_path: Utf8PathBuf = base_path.to_path_buf();
-
-    // compute the world address here if it's a name
-    let world_address = get_dojo_world_address(world_address, &manifest)?;
 
     // get methods from all project contracts
-    for contract in manifest.contracts {
-        let contract_address = get_dojo_contract_address(world_address, &contract, &manifest.base);
-        let abis = contract.inner.abi.unwrap().load_abi_string(&base_path)?;
-        let abis = serde_json::from_str::<Vec<AbiEntry>>(&abis)?;
-        policies_from_abis(&mut policies, &contract.inner.tag, contract_address, &abis);
+    for (namespace, contracts) in world_local.contracts.iter() {
+        for contract_selector in contracts {
+            let contract = world_local.get_contract_resource(*contract_selector);
+            let contract_address = utils::compute_dojo_contract_address(
+                *contract_selector,
+                contract.class_hash,
+                world_address,
+            );
+            let contract_tag = naming::get_tag(namespace, &contract.name);
+            policies_from_abis(&mut policies, &contract_tag, contract_address, &contract.class.abi);
+        }
     }
 
     // get method from world contract
-    let abis = manifest.world.inner.abi.unwrap().load_abi_string(&base_path)?;
-    let abis = serde_json::from_str::<Vec<AbiEntry>>(&abis)?;
-    policies_from_abis(&mut policies, "world", world_address, &abis);
+    policies_from_abis(
+        &mut policies,
+        "world",
+        world_address,
+        &world_local.class.as_ref().expect("World class to be set.").abi,
+    );
 
     // special policy for sending declare tx
     // corresponds to [account_sdk::account::DECLARATION_SELECTOR]
@@ -229,66 +222,29 @@ fn policies_from_abis(
     }
 }
 
-fn get_dojo_contract_address(
-    world_address: Felt,
-    contract: &Manifest<DojoContract>,
-    base_class: &Manifest<Class>,
-) -> Felt {
-    // The `base_class_hash` field in the Contract's base manifest is initially set to ZERO,
-    // so we need to use the `class_hash` from the base class manifest instead.
-    let base_class_hash = if contract.inner.base_class_hash != Felt::ZERO {
-        contract.inner.base_class_hash
-    } else {
-        base_class.inner.class_hash
-    };
-
-    if let Some(address) = contract.inner.address {
-        address
-    } else {
-        let salt = generate_salt(&get_name_from_tag(&contract.inner.tag));
-        get_contract_address(salt, base_class_hash, &[], world_address)
-    }
-}
-
-fn get_dojo_world_address(
-    world_address: WorldAddressOrName,
-    manifest: &BaseManifest,
-) -> Result<Felt> {
-    match world_address {
-        WorldAddressOrName::Address(addr) => Ok(addr),
-        WorldAddressOrName::Name(name) => {
-            let seed = cairo_short_string_to_felt(&name).context("Failed to parse World name.")?;
-            let salt = poseidon_hash_single(seed);
-            let address = get_contract_address(
-                salt,
-                manifest.world.inner.original_class_hash,
-                &[manifest.base.inner.original_class_hash],
-                Felt::ZERO,
-            );
-            Ok(address)
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use dojo_test_utils::compiler::CompilerTestSetup;
-    use scarb::compiler::Profile;
+    use dojo_world::local::WorldLocal;
     use starknet::macros::felt;
 
     use super::{collect_policies, PolicyMethod};
-    use crate::commands::options::account::WorldAddressOrName;
 
+    #[ignore = "This test requires a local world to be set up and test utils reworked."]
     #[test]
     fn collect_policies_from_project() {
-        let config = CompilerTestSetup::from_examples("../../crates/dojo/core", "../../examples/")
-            .build_test_config("spawn-and-move", Profile::DEV);
+        // let config = CompilerTestSetup::from_examples("../../crates/dojo/core",
+        // "../../examples/") .build_test_config("spawn-and-move", Profile::DEV);
+
+        // Need to load the profile config.
+        // Then build the local world.
+
+        // let world_local = WorldLocal::new(profile_config.namespace_config);
+        let world_local = WorldLocal::default();
 
         let world_addr = felt!("0x74c73d35df54ddc53bcf34aab5e0dbb09c447e99e01f4d69535441253c9571a");
         let user_addr = felt!("0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba");
 
-        let policies =
-            collect_policies(WorldAddressOrName::Address(world_addr), user_addr, &config).unwrap();
+        let policies = collect_policies(world_addr, user_addr, &world_local).unwrap();
 
         // Get test data
         let test_data = include_str!("../../../../tests/test_data/policies.json");

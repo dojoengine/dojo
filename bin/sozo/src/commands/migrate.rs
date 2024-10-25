@@ -1,15 +1,20 @@
 use anyhow::{anyhow, Context, Result};
 use clap::{Args, Subcommand};
 use dojo_utils::TxnConfig;
-use dojo_world::config::Environment;
-use dojo_world::manifest::MANIFESTS_DIR;
-use dojo_world::metadata::dojo_metadata_from_workspace;
+use dojo_world::config::{Environment, ProfileConfig};
+use dojo_world::contracts::{WorldContract, WorldContractReader};
+use dojo_world::diff::WorldDiff;
+use dojo_world::local::WorldLocal;
+use dojo_world::remote::WorldRemote;
 use katana_rpc_api::starknet::RPC_SPEC_VERSION;
 use scarb::core::{Config, Workspace};
-use sozo_ops::migration;
+use sozo_ops::migrate::{self, Migration};
+use sozo_ops::scarb_extensions::WorkspaceExt;
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::types::{BlockId, BlockTag, Felt, StarknetError};
-use starknet::core::utils::parse_cairo_short_string;
+use starknet::core::utils::{
+    cairo_short_string_to_felt, get_contract_address, parse_cairo_short_string,
+};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider, ProviderError};
 use tracing::trace;
@@ -18,12 +23,12 @@ use super::options::account::{AccountOptions, SozoAccount};
 use super::options::starknet::StarknetOptions;
 use super::options::transaction::TransactionOptions;
 use super::options::world::WorldOptions;
-use crate::commands::options::account::WorldAddressOrName;
+use crate::utils;
 
 #[derive(Debug, Args)]
 pub struct MigrateArgs {
-    #[command(subcommand)]
-    pub command: MigrateCommand,
+    #[command(flatten)]
+    transaction: TransactionOptions,
 
     #[command(flatten)]
     world: WorldOptions,
@@ -33,17 +38,6 @@ pub struct MigrateArgs {
 
     #[command(flatten)]
     account: AccountOptions,
-}
-
-#[derive(Debug, Subcommand)]
-pub enum MigrateCommand {
-    #[command(about = "Plan the migration and output the manifests.")]
-    Plan,
-    #[command(about = "Apply the migration on-chain.")]
-    Apply {
-        #[command(flatten)]
-        transaction: TransactionOptions,
-    },
 }
 
 impl MigrateArgs {
@@ -53,79 +47,43 @@ impl MigrateArgs {
         starknet: StarknetOptions,
         account: AccountOptions,
     ) -> Self {
-        Self {
-            command: MigrateCommand::Apply { transaction: TransactionOptions::init_wait() },
-            world,
-            starknet,
-            account,
-        }
+        Self { world, starknet, account, transaction: TransactionOptions::init_wait() }
     }
 
     pub fn run(self, config: &Config) -> Result<()> {
         trace!(args = ?self);
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
-        let dojo_metadata = dojo_metadata_from_workspace(&ws)?;
+        let target_dir_profile = ws.target_dir_profile();
 
-        let env_metadata = if config.manifest_path().exists() {
-            dojo_metadata.env().cloned()
-        } else {
-            trace!("Manifest path does not exist.");
-            None
-        };
-
-        let profile_name =
-            ws.current_profile().expect("Scarb profile expected to be defined.").to_string();
-        let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
-        if !manifest_dir.join(MANIFESTS_DIR).join(profile_name).exists() {
-            return Err(anyhow!("Build project using `sozo build` first"));
-        }
+        let (_profile_name, profile_config) = utils::load_profile_config(config)?;
 
         let MigrateArgs { world, starknet, account, .. } = self;
 
-        let name = dojo_metadata.world.seed;
+        let world_local = WorldLocal::from_directory(
+            target_dir_profile.to_string(),
+            profile_config.namespace.clone(),
+        )?;
 
-        let (world_address, account, rpc_url) = config.tokio_handle().block_on(async {
-            setup_env(&ws, account, starknet, world, &name, env_metadata.as_ref()).await
+        let (world_address, account) = config.tokio_handle().block_on(async {
+            setup_env(&ws, account, starknet, world, &profile_config, &world_local).await
         })?;
 
-        match self.command {
-            MigrateCommand::Plan => config
-                .tokio_handle()
-                .block_on(async {
-                    trace!(name, "Planning migration.");
-                    migration::migrate(
-                        &ws,
-                        world_address,
-                        rpc_url,
-                        account,
-                        &name,
-                        true,
-                        TxnConfig::default(),
-                        dojo_metadata.migration.map(|m| m.skip_contracts.clone()),
-                    )
-                    .await
-                })
-                .map(|_| ()),
-            MigrateCommand::Apply { transaction } => config
-                .tokio_handle()
-                .block_on(async {
-                    trace!(name, "Applying migration.");
-                    let txn_config: TxnConfig = transaction.into();
+        config.tokio_handle().block_on(async {
+            let txn_config: TxnConfig = self.transaction.into();
 
-                    migration::migrate(
-                        &ws,
-                        world_address,
-                        rpc_url,
-                        account,
-                        &name,
-                        false,
-                        txn_config,
-                        dojo_metadata.migration.map(|m| m.skip_contracts.clone()),
-                    )
-                    .await
-                })
-                .map(|_| ()),
-        }
+            let world_remote = WorldRemote::from_events(world_address, &account.provider()).await?;
+
+            let world_diff = WorldDiff::new(world_local, world_remote);
+
+            let migration = Migration::new(
+                world_diff,
+                WorldContract::new(world_address, account),
+                txn_config,
+                profile_config,
+            );
+
+            migration.migrate().await.context("Failed to migrate world.")
+        })
     }
 }
 
@@ -134,16 +92,31 @@ pub async fn setup_env<'a>(
     account: AccountOptions,
     starknet: StarknetOptions,
     world: WorldOptions,
-    name: &str,
-    env: Option<&'a Environment>,
-) -> Result<(Option<Felt>, SozoAccount<JsonRpcClient<HttpTransport>>, String)> {
-    trace!("Setting up environment.");
+    profile_config: &ProfileConfig,
+    world_local: &WorldLocal,
+) -> Result<(Felt, SozoAccount<JsonRpcClient<HttpTransport>>)> {
     let ui = ws.config().ui();
 
-    let world_address = world.address(env).ok();
-    trace!(?world_address);
+    let env = profile_config.env.as_ref();
 
-    let (account, rpc_url) = {
+    let deterministic_world_address =
+        world_local.compute_world_address(&profile_config.world.seed)?;
+
+    // If the world address is not provided, we rely on the deterministic address of the
+    // world contract based on the seed. If the world already exists, the user must
+    // provide the world's address explicitly.
+    let world_address = if let Some(wa) = world.address(env)? {
+        wa
+    } else {
+        ui.print(format!(
+            "This seems to be a first deployment. If you were expecting to update your remote \
+             world, please specify its address using --world, in an environment variable or in \
+             the dojo configuration file.\n"
+        ));
+        deterministic_world_address
+    };
+
+    let account = {
         let provider = starknet.provider(env)?;
         trace!(?provider, "Provider initialized.");
 
@@ -158,33 +131,24 @@ pub async fn setup_env<'a>(
             ));
         }
 
-        let rpc_url = starknet.url(env)?;
-        trace!(?rpc_url);
-
         let chain_id = provider.chain_id().await?;
         let chain_id = parse_cairo_short_string(&chain_id)
             .with_context(|| "Cannot parse chain_id as string")?;
         trace!(chain_id);
 
-        let account = {
-            // This is mainly for controller account for creating policies.
-            let world_address_or_name = world_address
-                .map(WorldAddressOrName::Address)
-                .unwrap_or(WorldAddressOrName::Name(name.to_string()));
-
-            account.account(provider, world_address_or_name, &starknet, env, ws.config()).await?
-        };
+        let account =
+            { account.account(provider, world_address, &starknet, env, &world_local).await? };
 
         let address = account.address();
 
         ui.print(format!("\nMigration account: {address:#x}"));
 
-        ui.print(format!("\nWorld name: {name}"));
+        ui.print(format!("\nWorld seed: {}", profile_config.world.seed));
 
         ui.print(format!("\nChain ID: {chain_id}\n"));
 
         match account.provider().get_class_hash_at(BlockId::Tag(BlockTag::Pending), address).await {
-            Ok(_) => Ok((account, rpc_url)),
+            Ok(_) => Ok(account),
             Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {
                 Err(anyhow!("Account with address {:#x} doesn't exist.", account.address()))
             }
@@ -193,7 +157,7 @@ pub async fn setup_env<'a>(
     }
     .with_context(|| "Problem initializing account for migration.")?;
 
-    Ok((world_address, account, rpc_url.to_string()))
+    Ok((world_address, account))
 }
 
 /// Checks if the provided version string is compatible with the expected version string using
