@@ -3,7 +3,7 @@ use std::time::Duration;
 use blockifier::state::cached_state::CachedState;
 use criterion::measurement::WallTime;
 use criterion::{criterion_group, criterion_main, BatchSize, BenchmarkGroup, Criterion};
-use katana_executor::{SimulationFlag, StateProviderDb};
+use katana_executor::{ExecutionFlags, StateProviderDb};
 use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::transaction::ExecutableTxWithHash;
 use katana_provider::test_utils;
@@ -19,7 +19,7 @@ fn executor_transact(c: &mut Criterion) {
     group.warm_up_time(Duration::from_millis(200));
 
     let provider = test_utils::test_provider();
-    let flags = SimulationFlag::new();
+    let flags = ExecutionFlags::new();
 
     let tx = tx();
     let envs = envs();
@@ -30,7 +30,7 @@ fn executor_transact(c: &mut Criterion) {
 fn blockifier(
     group: &mut BenchmarkGroup<'_, WallTime>,
     provider: impl StateFactoryProvider,
-    execution_flags: &SimulationFlag,
+    execution_flags: &ExecutionFlags,
     block_envs: &(BlockEnv, CfgEnv),
     tx: ExecutableTxWithHash,
 ) {

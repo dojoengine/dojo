@@ -479,18 +479,17 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
 
             // If the node is run with transaction validation disabled, then we should not validate
             // transactions when estimating the fee even if the `SKIP_VALIDATE` flag is not set.
-            let should_validate = !(skip_validate
-                || this.inner.backend.executor_factory.execution_flags().skip_validate);
-            let flags = katana_executor::SimulationFlag {
-                skip_validate: !should_validate,
-                // We don't care about the nonce when estimating the fee as the nonce value
-                // doesn't affect transaction execution.
-                //
-                // This doesn't completely disregard the nonce as nonce < account nonce will
-                // return an error. It only 'relaxes' the check for nonce >= account nonce.
-                skip_nonce_check: true,
-                ..Default::default()
-            };
+            let should_validate = !skip_validate
+                && this.inner.backend.executor_factory.execution_flags().account_validation();
+
+            // We don't care about the nonce when estimating the fee as the nonce value
+            // doesn't affect transaction execution.
+            //
+            // This doesn't completely disregard the nonce as nonce < account nonce will
+            // return an error. It only 'relaxes' the check for nonce >= account nonce.
+            let flags = katana_executor::ExecutionFlags::new()
+                .with_account_validation(should_validate)
+                .with_nonce_check(false);
 
             let results = this.estimate_fee_with(transactions, block_id, flags)?;
             Ok(results)

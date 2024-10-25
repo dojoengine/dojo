@@ -2,7 +2,7 @@ pub mod transaction;
 
 use alloy_primitives::U256;
 use katana_executor::implementation::noop::NoopExecutorFactory;
-use katana_executor::{ExecutorFactory, SimulationFlag};
+use katana_executor::{ExecutionFlags, ExecutorFactory};
 use katana_primitives::block::{
     Block, ExecutableBlock, FinalityStatus, GasPrices, PartialHeader, SealedBlockWithStatus,
 };
@@ -249,8 +249,8 @@ pub fn cfg() -> CfgEnv {
 pub fn flags(
     #[default(false)] skip_validate: bool,
     #[default(false)] skip_fee_transfer: bool,
-) -> SimulationFlag {
-    SimulationFlag { skip_validate, skip_fee_transfer, ..Default::default() }
+) -> ExecutionFlags {
+    ExecutionFlags::new().with_account_validation(!skip_validate).with_fee(!skip_fee_transfer)
 }
 
 /// A fixture that provides a default `ExecutorFactory` implementation.
@@ -265,12 +265,12 @@ pub fn executor_factory<EF: ExecutorFactory>(
 #[cfg(feature = "blockifier")]
 pub mod blockifier {
     use katana_executor::implementation::blockifier::BlockifierFactory;
-    use katana_executor::SimulationFlag;
+    use katana_executor::ExecutionFlags;
 
     use super::{cfg, flags, CfgEnv};
 
     #[rstest::fixture]
-    pub fn factory(cfg: CfgEnv, #[with(true)] flags: SimulationFlag) -> BlockifierFactory {
+    pub fn factory(cfg: CfgEnv, #[with(true)] flags: ExecutionFlags) -> BlockifierFactory {
         BlockifierFactory::new(cfg, flags)
     }
 }
