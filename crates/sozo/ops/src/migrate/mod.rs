@@ -83,7 +83,7 @@ where
 
     /// Returns whether multicall should be used. By default, it is enabled.
     fn do_multicall(&self) -> bool {
-        self.profile_config.migration.as_ref().map_or(true, |m| m.do_multicall)
+        self.profile_config.migration.as_ref().map_or(true, |m| !m.disable_multicall)
     }
 
     /// For all contracts that are not initialized, initialize them by using the init call arguments
@@ -112,7 +112,7 @@ where
                     ResourceDiff::Updated(_, ResourceRemote::Contract(contract)) => {
                         let tag = naming::get_tag(namespace, &contract.common.name);
                         (
-                            contract.is_initialized,
+                            !contract.is_initialized,
                             contract.dojo_selector(namespace),
                             init_call_args.get(&tag).clone(),
                             tag,
@@ -121,7 +121,7 @@ where
                     ResourceDiff::Synced(ResourceRemote::Contract(contract)) => {
                         let tag = naming::get_tag(namespace, &contract.common.name);
                         (
-                            contract.is_initialized,
+                            !contract.is_initialized,
                             contract.dojo_selector(namespace),
                             init_call_args.get(&tag).clone(),
                             tag,
