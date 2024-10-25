@@ -1237,5 +1237,6 @@ abigen!(
 ]"#,
 type_aliases {
 dojo::world::config::Config::Event as DojoConfigEvent;
-},derives(Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq, Clone)
+},derives(Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq, Clone),
+contract_derives(Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq, Clone)
 );
