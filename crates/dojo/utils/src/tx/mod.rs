@@ -9,6 +9,8 @@ use starknet::core::types::{
     DeclareTransactionResult, DeployAccountTransactionResult, Felt, InvokeTransactionResult,
 };
 
+use crate::TransactionWaiter;
+
 /// The transaction configuration to use when sending a transaction.
 #[derive(Debug, Copy, Clone, Default)]
 pub struct TxnConfig {
@@ -75,6 +77,8 @@ where
             self = self.max_fee(*max_fee_r);
         }
 
+        // TODO: need to fix the wait that is not usable, since we don't have access to the account/provider.
+        // Or execution could expose it, or we need it to be stored in the configuration...
         self.send().await
     }
 }

@@ -9,9 +9,7 @@ pub fn compute_world_address(
     seed: &str,
     world_class_hash: Felt,
 ) -> Result<Felt, CairoShortStringToFeltError> {
-    let seed_felt = snutils::cairo_short_string_to_felt(seed)?;
-    let salt = poseidon_hash_single(seed_felt);
-
+    let salt = world_salt(seed)?;
     Ok(snutils::get_contract_address(salt, world_class_hash, &[world_class_hash], Felt::ZERO))
 }
 
@@ -23,4 +21,9 @@ pub fn compute_dojo_contract_address(
     world_address: Felt,
 ) -> Felt {
     snutils::get_contract_address(dojo_selector, class_hash, &[], world_address)
+}
+
+/// Computes the salt for the world contract based on the given seed.
+pub fn world_salt(seed: &str) -> Result<Felt, CairoShortStringToFeltError> {
+    Ok(poseidon_hash_single(snutils::cairo_short_string_to_felt(seed)?))
 }

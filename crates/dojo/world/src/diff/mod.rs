@@ -6,6 +6,7 @@
 use std::collections::{HashMap, HashSet};
 
 use compare::ComparableResource;
+use starknet::core::types::contract::SierraClass;
 use starknet::core::utils as snutils;
 use starknet_crypto::Felt;
 
@@ -32,7 +33,17 @@ pub enum ResourceDiff {
 }
 
 #[derive(Debug)]
+pub enum WorldStatus {
+    /// The local world is a new version, and the remote world must be updated.
+    /// (class_hash, casm_class_hash, sierra_class)
+    NewVersion(Felt, Felt, SierraClass),
+    /// The world is in sync with the remote world, same dojo version.
+    Synced,
+}
+
+#[derive(Debug)]
 pub struct WorldDiff {
+    pub world_status: WorldStatus,
     pub namespaces: Vec<ResourceDiff>,
     pub contracts: HashMap<Namespace, Vec<ResourceDiff>>,
     pub models: HashMap<Namespace, Vec<ResourceDiff>>,
@@ -45,6 +56,11 @@ impl WorldDiff {
     /// Consumes the local world to avoid duplicating the resources.
     pub fn from_local(mut local: WorldLocal) -> Self {
         let mut diff = Self {
+            world_status: WorldStatus::NewVersion(
+                local.class_hash.expect("World class hash must be set."),
+                local.casm_class_hash.expect("World casm class hash must be set."),
+                local.class.expect("World class must be set."),
+            ),
             namespaces: vec![],
             contracts: HashMap::new(),
             models: HashMap::new(),
@@ -93,7 +109,22 @@ impl WorldDiff {
     /// Consumes the local and remote worlds to avoid duplicating the resources,
     /// since the [`ResourceDiff`] will contain one or both of the local and remote resources.
     pub fn new(mut local: WorldLocal, mut remote: WorldRemote) -> Self {
+        let local_world_class_hash = local.class_hash.expect("World class hash must be set.");
+        let remote_world_class_hash =
+            *remote.class_hashes.first().expect("Remote world must have at least one class hash.");
+
+        let world_status = if local_world_class_hash == remote_world_class_hash {
+            WorldStatus::Synced
+        } else {
+            WorldStatus::NewVersion(
+                local_world_class_hash,
+                local.casm_class_hash.expect("World casm class hash must be set."),
+                local.class.expect("World class must be set."),
+            )
+        };
+
         let mut diff = Self {
+            world_status,
             namespaces: vec![],
             contracts: HashMap::new(),
             models: HashMap::new(),

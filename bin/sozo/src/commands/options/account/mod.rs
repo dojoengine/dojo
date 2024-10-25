@@ -105,7 +105,6 @@ impl AccountOptions {
         P: Send + Sync,
     {
         let account_address = self.account_address(env_metadata)?;
-        trace!(?account_address, "Account address determined.");
 
         let signer = self.signer.signer(env_metadata, false)?;
         trace!(?signer, "Signer obtained.");
