@@ -31,7 +31,7 @@ use dojo_world::contracts::WorldContract;
 use dojo_world::diff::{ResourceDiff, WorldDiff, WorldStatus};
 use dojo_world::local::ResourceLocal;
 use dojo_world::remote::ResourceRemote;
-use dojo_world::utils;
+use dojo_world::{utils, ResourceType};
 use invoker::Invoker;
 use starknet::accounts::ConnectedAccount;
 use starknet_crypto::Felt;
@@ -97,37 +97,21 @@ where
             HashMap::new()
         };
 
-        for (namespace, contracts) in &self.diff.contracts {
-            for contract in contracts {
-                let (do_init, selector, init_call_args, tag) = match contract {
-                    ResourceDiff::Created(ResourceLocal::Contract(contract)) => {
-                        let tag = naming::get_tag(namespace, &contract.name);
-                        (
-                            true,
-                            contract.dojo_selector(namespace),
-                            init_call_args.get(&tag).clone(),
-                            tag,
-                        )
+        for (selector, resource) in &self.diff.resources {
+            if resource.resource_type() == ResourceType::Contract {
+                let tag = resource.tag();
+
+                let (do_init, init_call_args) = match resource {
+                    ResourceDiff::Created(ResourceLocal::Contract(_)) => {
+                        (true, init_call_args.get(&tag).clone())
                     }
                     ResourceDiff::Updated(_, ResourceRemote::Contract(contract)) => {
-                        let tag = naming::get_tag(namespace, &contract.common.name);
-                        (
-                            !contract.is_initialized,
-                            contract.dojo_selector(namespace),
-                            init_call_args.get(&tag).clone(),
-                            tag,
-                        )
+                        (!contract.is_initialized, init_call_args.get(&tag).clone())
                     }
                     ResourceDiff::Synced(ResourceRemote::Contract(contract)) => {
-                        let tag = naming::get_tag(namespace, &contract.common.name);
-                        (
-                            !contract.is_initialized,
-                            contract.dojo_selector(namespace),
-                            init_call_args.get(&tag).clone(),
-                            tag,
-                        )
+                        (!contract.is_initialized, init_call_args.get(&tag).clone())
                     }
-                    _ => (false, Felt::ZERO, None, String::new()),
+                    _ => (false, None),
                 };
 
                 if do_init {
@@ -186,7 +170,8 @@ where
 
         let mut invoker = Invoker::new(&self.world.account, self.txn_config.clone());
 
-        // For all local writer/owner permission that is not found remotely, we need to grant the permission.
+        // For all local writer/owner permission that is not found remotely, we need to grant the
+        // permission.
         for (target_selector, local_permission) in local_writers {
             for (grantee_selector, tag) in local_permission.grantees {
                 let grantee_address = contract_addresses
@@ -257,10 +242,23 @@ where
         let mut invoker = Invoker::new(&self.world.account, self.txn_config.clone());
         let mut declarer = Declarer::new(&self.world.account, self.txn_config.clone());
 
+        // Namespaces must be synced first, since contracts, models and events are namespaced.
         self.namespaces_getcalls(&mut invoker).await?;
-        self.contracts_getcalls(&mut invoker, &mut declarer).await?;
-        self.models_getcalls(&mut invoker, &mut declarer).await?;
-        self.events_getcalls(&mut invoker, &mut declarer).await?;
+
+        for (_, resource) in &self.diff.resources {
+            match resource.resource_type() {
+                ResourceType::Contract => {
+                    self.contracts_getcalls(resource, &mut invoker, &mut declarer).await?
+                }
+                ResourceType::Model => {
+                    self.models_getcalls(resource, &mut invoker, &mut declarer).await?
+                }
+                ResourceType::Event => {
+                    self.events_getcalls(resource, &mut invoker, &mut declarer).await?
+                }
+                _ => continue,
+            }
+        }
 
         declarer.declare_all().await?;
 
@@ -278,8 +276,12 @@ where
         &self,
         invoker: &mut Invoker<&A>,
     ) -> Result<(), MigrationError<A::SignError>> {
-        for namespace in &self.diff.namespaces {
-            if let ResourceDiff::Created(ResourceLocal::Namespace(namespace)) = namespace {
+        for namespace_selector in &self.diff.namespaces {
+            // TODO: abstract this expect by having a function exposed in the diff.
+            let resource =
+                self.diff.resources.get(namespace_selector).expect("Namespace not found in diff.");
+
+            if let ResourceDiff::Created(ResourceLocal::Namespace(namespace)) = resource {
                 trace!(name = namespace.name, "Registering namespace.");
 
                 invoker.add_call(
@@ -300,53 +302,49 @@ where
     /// classes.
     async fn contracts_getcalls(
         &self,
+        resource: &ResourceDiff,
         invoker: &mut Invoker<&A>,
         declarer: &mut Declarer<&A>,
     ) -> Result<(), MigrationError<A::SignError>> {
-        for (namespace, contracts) in &self.diff.contracts {
-            let ns_bytearray = ByteArray::from_string(&namespace)?;
+        let namespace = resource.namespace();
+        let ns_bytearray = ByteArray::from_string(&namespace)?;
 
-            for contract in contracts {
-                if let ResourceDiff::Created(ResourceLocal::Contract(contract)) = contract {
-                    trace!(
-                        namespace,
-                        name = contract.name,
-                        class_hash = format!("{:#066x}", contract.class_hash),
-                        "Registering contract."
-                    );
+        if let ResourceDiff::Created(ResourceLocal::Contract(contract)) = resource {
+            trace!(
+                namespace,
+                name = contract.name,
+                class_hash = format!("{:#066x}", contract.class_hash),
+                "Registering contract."
+            );
 
-                    declarer.add_class(contract.casm_class_hash, contract.class.clone().flatten()?);
+            declarer.add_class(contract.casm_class_hash, contract.class.clone().flatten()?);
 
-                    invoker.add_call(self.world.register_contract_getcall(
-                        &contract.dojo_selector(&namespace),
-                        &ns_bytearray,
-                        &ClassHash(contract.class_hash),
-                    ));
-                }
+            invoker.add_call(self.world.register_contract_getcall(
+                &contract.dojo_selector(),
+                &ns_bytearray,
+                &ClassHash(contract.class_hash),
+            ));
+        }
 
-                if let ResourceDiff::Updated(
-                    ResourceLocal::Contract(contract_local),
-                    ResourceRemote::Contract(_contract_remote),
-                ) = contract
-                {
-                    trace!(
-                        namespace,
-                        name = contract_local.name,
-                        class_hash = format!("{:#066x}", contract_local.class_hash),
-                        "Upgrading contract."
-                    );
+        if let ResourceDiff::Updated(
+            ResourceLocal::Contract(contract_local),
+            ResourceRemote::Contract(_contract_remote),
+        ) = resource
+        {
+            trace!(
+                namespace,
+                name = contract_local.name,
+                class_hash = format!("{:#066x}", contract_local.class_hash),
+                "Upgrading contract."
+            );
 
-                    declarer.add_class(
-                        contract_local.casm_class_hash,
-                        contract_local.class.clone().flatten()?,
-                    );
+            declarer
+                .add_class(contract_local.casm_class_hash, contract_local.class.clone().flatten()?);
 
-                    invoker.add_call(self.world.upgrade_contract_getcall(
-                        &ns_bytearray,
-                        &ClassHash(contract_local.class_hash),
-                    ));
-                }
-            }
+            invoker.add_call(
+                self.world
+                    .upgrade_contract_getcall(&ns_bytearray, &ClassHash(contract_local.class_hash)),
+            );
         }
 
         Ok(())
@@ -355,54 +353,45 @@ where
     /// Returns the calls required to sync the models and add the classes to the declarer.
     async fn models_getcalls(
         &self,
+        resource: &ResourceDiff,
         invoker: &mut Invoker<&A>,
         declarer: &mut Declarer<&A>,
     ) -> Result<(), MigrationError<A::SignError>> {
-        for (namespace, models) in &self.diff.models {
-            let ns_bytearray = ByteArray::from_string(&namespace)?;
+        let namespace = resource.namespace();
+        let ns_bytearray = ByteArray::from_string(&namespace)?;
 
-            for model in models {
-                if let ResourceDiff::Created(ResourceLocal::Model(model)) = model {
-                    trace!(
-                        namespace,
-                        name = model.name,
-                        class_hash = format!("{:#066x}", model.class_hash),
-                        "Registering model."
-                    );
+        if let ResourceDiff::Created(ResourceLocal::Model(model)) = resource {
+            trace!(
+                namespace,
+                name = model.name,
+                class_hash = format!("{:#066x}", model.class_hash),
+                "Registering model."
+            );
 
-                    declarer.add_class(model.casm_class_hash, model.class.clone().flatten()?);
+            declarer.add_class(model.casm_class_hash, model.class.clone().flatten()?);
 
-                    invoker.add_call(
-                        self.world
-                            .register_model_getcall(&ns_bytearray, &ClassHash(model.class_hash)),
-                    );
-                }
+            invoker.add_call(
+                self.world.register_model_getcall(&ns_bytearray, &ClassHash(model.class_hash)),
+            );
+        }
 
-                if let ResourceDiff::Updated(
-                    ResourceLocal::Model(model_local),
-                    ResourceRemote::Model(_model_remote),
-                ) = model
-                {
-                    trace!(
-                        namespace,
-                        name = model_local.name,
-                        class_hash = format!("{:#066x}", model_local.class_hash),
-                        "Upgrading model."
-                    );
+        if let ResourceDiff::Updated(
+            ResourceLocal::Model(model_local),
+            ResourceRemote::Model(_model_remote),
+        ) = resource
+        {
+            trace!(
+                namespace,
+                name = model_local.name,
+                class_hash = format!("{:#066x}", model_local.class_hash),
+                "Upgrading model."
+            );
 
-                    declarer.add_class(
-                        model_local.casm_class_hash,
-                        model_local.class.clone().flatten()?,
-                    );
+            declarer.add_class(model_local.casm_class_hash, model_local.class.clone().flatten()?);
 
-                    invoker.add_call(
-                        self.world.upgrade_model_getcall(
-                            &ns_bytearray,
-                            &ClassHash(model_local.class_hash),
-                        ),
-                    );
-                }
-            }
+            invoker.add_call(
+                self.world.upgrade_model_getcall(&ns_bytearray, &ClassHash(model_local.class_hash)),
+            );
         }
 
         Ok(())
@@ -411,54 +400,45 @@ where
     /// Returns the calls required to sync the events and add the classes to the declarer.
     async fn events_getcalls(
         &self,
+        resource: &ResourceDiff,
         invoker: &mut Invoker<&A>,
         declarer: &mut Declarer<&A>,
     ) -> Result<(), MigrationError<A::SignError>> {
-        for (namespace, events) in &self.diff.events {
-            let ns_bytearray = ByteArray::from_string(&namespace)?;
+        let namespace = resource.namespace();
+        let ns_bytearray = ByteArray::from_string(&namespace)?;
 
-            for event in events {
-                if let ResourceDiff::Created(ResourceLocal::Event(event)) = event {
-                    trace!(
-                        namespace,
-                        name = event.name,
-                        class_hash = format!("{:#066x}", event.class_hash),
-                        "Registering event."
-                    );
+        if let ResourceDiff::Created(ResourceLocal::Event(event)) = resource {
+            trace!(
+                namespace,
+                name = event.name,
+                class_hash = format!("{:#066x}", event.class_hash),
+                "Registering event."
+            );
 
-                    declarer.add_class(event.casm_class_hash, event.class.clone().flatten()?);
+            declarer.add_class(event.casm_class_hash, event.class.clone().flatten()?);
 
-                    invoker.add_call(
-                        self.world
-                            .register_event_getcall(&ns_bytearray, &ClassHash(event.class_hash)),
-                    );
-                }
+            invoker.add_call(
+                self.world.register_event_getcall(&ns_bytearray, &ClassHash(event.class_hash)),
+            );
+        }
 
-                if let ResourceDiff::Updated(
-                    ResourceLocal::Event(event_local),
-                    ResourceRemote::Event(_event_remote),
-                ) = event
-                {
-                    trace!(
-                        namespace,
-                        name = event_local.name,
-                        class_hash = format!("{:#066x}", event_local.class_hash),
-                        "Upgrading event."
-                    );
+        if let ResourceDiff::Updated(
+            ResourceLocal::Event(event_local),
+            ResourceRemote::Event(_event_remote),
+        ) = resource
+        {
+            trace!(
+                namespace,
+                name = event_local.name,
+                class_hash = format!("{:#066x}", event_local.class_hash),
+                "Upgrading event."
+            );
 
-                    declarer.add_class(
-                        event_local.casm_class_hash,
-                        event_local.class.clone().flatten()?,
-                    );
+            declarer.add_class(event_local.casm_class_hash, event_local.class.clone().flatten()?);
 
-                    invoker.add_call(
-                        self.world.upgrade_event_getcall(
-                            &ns_bytearray,
-                            &ClassHash(event_local.class_hash),
-                        ),
-                    );
-                }
-            }
+            invoker.add_call(
+                self.world.upgrade_event_getcall(&ns_bytearray, &ClassHash(event_local.class_hash)),
+            );
         }
 
         Ok(())

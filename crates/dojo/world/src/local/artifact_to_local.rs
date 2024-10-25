@@ -45,6 +45,9 @@ impl WorldLocal {
                         .filter_map(|e| if let AbiEntry::Impl(i) = e { Some(i) } else { None })
                         .collect::<Vec<_>>();
 
+                    // As a resource may be registered in multiple namespaces, currently the
+                    // sierra class is being cloned for each namespace. Not ideal but keeping it
+                    // simple for now.
                     for i in impls {
                         match identify_resource_type(i) {
                             ResourceType::World => {
@@ -54,34 +57,50 @@ impl WorldLocal {
                                 break;
                             }
                             ResourceType::Contract(name) => {
-                                let resource = ResourceLocal::Contract(ContractLocal {
-                                    name,
-                                    class: sierra,
-                                    class_hash,
-                                    casm_class_hash,
-                                });
-                                self.add_resource(resource);
+                                let namespaces = self.namespace_config.get_namespaces(&name);
+
+                                for ns in namespaces {
+                                    let resource = ResourceLocal::Contract(ContractLocal {
+                                        namespace: ns,
+                                        name: name.clone(),
+                                        class: sierra.clone(),
+                                        class_hash,
+                                        casm_class_hash,
+                                    });
+
+                                    self.add_resource(resource);
+                                }
                                 break;
                             }
                             ResourceType::Model(name) => {
-                                let resource = ResourceLocal::Model(ModelLocal {
-                                    name,
-                                    class: sierra,
-                                    class_hash,
-                                    casm_class_hash,
-                                });
+                                let namespaces = self.namespace_config.get_namespaces(&name);
 
-                                self.add_resource(resource);
+                                for ns in namespaces {
+                                    let resource = ResourceLocal::Model(ModelLocal {
+                                        namespace: ns,
+                                        name: name.clone(),
+                                        class: sierra.clone(),
+                                        class_hash,
+                                        casm_class_hash,
+                                    });
+
+                                    self.add_resource(resource);
+                                }
                                 break;
                             }
                             ResourceType::Event(name) => {
-                                let resource = ResourceLocal::Event(EventLocal {
-                                    name,
-                                    class: sierra,
-                                    class_hash,
-                                    casm_class_hash,
-                                });
-                                self.add_resource(resource);
+                                let namespaces = self.namespace_config.get_namespaces(&name);
+
+                                for ns in namespaces {
+                                    let resource = ResourceLocal::Event(EventLocal {
+                                        namespace: ns,
+                                        name: name.clone(),
+                                        class: sierra.clone(),
+                                        class_hash,
+                                        casm_class_hash,
+                                    });
+                                    self.add_resource(resource);
+                                }
                                 break;
                             }
                             ResourceType::Other => {}

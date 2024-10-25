@@ -6,13 +6,14 @@
 use std::collections::{HashMap, HashSet};
 
 use compare::ComparableResource;
+use dojo_types::naming;
 use starknet::core::types::contract::SierraClass;
 use starknet_crypto::Felt;
 
 use super::local::{ResourceLocal, WorldLocal};
 use super::remote::{ResourceRemote, WorldRemote};
 use crate::utils::compute_dojo_contract_address;
-use crate::{DojoSelector, Namespace};
+use crate::{DojoSelector, Namespace, ResourceType};
 
 mod compare;
 
@@ -42,18 +43,21 @@ pub enum WorldStatus {
 
 #[derive(Debug)]
 pub struct WorldDiff {
+    /// The status of the world.
     pub world_status: WorldStatus,
-    pub namespaces: Vec<ResourceDiff>,
-    pub contracts: HashMap<Namespace, Vec<ResourceDiff>>,
-    pub models: HashMap<Namespace, Vec<ResourceDiff>>,
-    pub events: HashMap<Namespace, Vec<ResourceDiff>>,
+    /// The namespaces registered in the local world. A list of namespaces is kept
+    /// additionally to the resources to ensure they can be processed first,
+    /// since the all other resources are namespaced.
+    pub namespaces: Vec<DojoSelector>,
+    /// The resources registered in the local world, by dojo selector.
+    pub resources: HashMap<DojoSelector, ResourceDiff>,
 }
 
 impl WorldDiff {
     /// Creates a new world diff from a local world.
     ///
     /// Consumes the local world to avoid duplicating the resources.
-    pub fn from_local(mut local: WorldLocal) -> Self {
+    pub fn from_local(local: WorldLocal) -> Self {
         let mut diff = Self {
             world_status: WorldStatus::NewVersion(
                 local.class_hash.expect("World class hash must be set."),
@@ -61,43 +65,15 @@ impl WorldDiff {
                 local.class.expect("World class must be set."),
             ),
             namespaces: vec![],
-            contracts: HashMap::new(),
-            models: HashMap::new(),
-            events: HashMap::new(),
+            resources: HashMap::new(),
         };
 
-        // As the selectors are present, it's safe to unwrap the resources.
-        // TODO: may be better to abstract this in a function and making resource private.
-
-        for ns in &local.namespaces {
-            diff.namespaces.push(ResourceDiff::Created(local.resources.remove(ns).unwrap()));
-        }
-
-        for (namespace, contracts) in &local.contracts {
-            for contract in contracts {
-                diff.contracts
-                    .entry(namespace.clone())
-                    .or_default()
-                    .push(ResourceDiff::Created(local.resources.remove(contract).unwrap()));
+        for (selector, resource) in local.resources {
+            if let ResourceLocal::Namespace(_) = &resource {
+                diff.namespaces.push(selector);
             }
-        }
 
-        for (namespace, models) in &local.models {
-            for model in models {
-                diff.models
-                    .entry(namespace.clone())
-                    .or_default()
-                    .push(ResourceDiff::Created(local.resources.remove(model).unwrap()));
-            }
-        }
-
-        for (namespace, events) in &local.events {
-            for event in events {
-                diff.events
-                    .entry(namespace.clone())
-                    .or_default()
-                    .push(ResourceDiff::Created(local.resources.remove(event).unwrap()));
-            }
+            diff.resources.insert(selector, ResourceDiff::Created(resource));
         }
 
         diff
@@ -122,49 +98,21 @@ impl WorldDiff {
             )
         };
 
-        let mut diff = Self {
-            world_status,
-            namespaces: vec![],
-            contracts: HashMap::new(),
-            models: HashMap::new(),
-            events: HashMap::new(),
-        };
+        let mut diff = Self { world_status, namespaces: vec![], resources: HashMap::new() };
 
-        for local_ns in &local.namespaces {
-            if remote.namespaces.contains(&local_ns) {
-                // The namespace is registered in the remote world, safe to unwrap.
-                diff.namespaces
-                    .push(ResourceDiff::Synced(remote.resources.remove(&local_ns).unwrap()));
+        for (local_selector, local_resource) in local.resources {
+            if let ResourceLocal::Namespace(_) = &local_resource {
+                diff.namespaces.push(local_selector);
+            }
+
+            let remote_resource = remote.resources.remove(&local_selector);
+
+            if let Some(remote_resource) = remote_resource {
+                diff.resources.insert(local_selector, local_resource.compare(remote_resource));
             } else {
-                // The namespace is registered in the local world, safe to unwrap.
-                diff.namespaces
-                    .push(ResourceDiff::Created(local.resources.remove(&local_ns).unwrap()));
+                diff.resources.insert(local_selector, ResourceDiff::Created(local_resource));
             }
         }
-
-        compare_and_consume_resources(
-            &local.contracts,
-            &remote.contracts,
-            &mut local.resources,
-            &mut remote.resources,
-            &mut diff.contracts,
-        );
-
-        compare_and_consume_resources(
-            &local.models,
-            &remote.models,
-            &mut local.resources,
-            &mut remote.resources,
-            &mut diff.models,
-        );
-
-        compare_and_consume_resources(
-            &local.events,
-            &remote.events,
-            &mut local.resources,
-            &mut remote.resources,
-            &mut diff.events,
-        );
 
         diff
     }
@@ -173,26 +121,8 @@ impl WorldDiff {
     pub fn get_remote_writers(&self) -> HashMap<DojoSelector, HashSet<Felt>> {
         let mut remote_writers = HashMap::new();
 
-        for resource in &self.namespaces {
-            resource.update_remote_writers("", &mut remote_writers);
-        }
-
-        for (namespace, contracts) in &self.contracts {
-            for contract in contracts {
-                contract.update_remote_writers(namespace, &mut remote_writers);
-            }
-        }
-
-        for (namespace, models) in &self.models {
-            for model in models {
-                model.update_remote_writers(namespace, &mut remote_writers);
-            }
-        }
-
-        for (namespace, events) in &self.events {
-            for event in events {
-                event.update_remote_writers(namespace, &mut remote_writers);
-            }
+        for resource in self.resources.values() {
+            resource.update_remote_writers(&mut remote_writers);
         }
 
         remote_writers
@@ -202,26 +132,8 @@ impl WorldDiff {
     pub fn get_remote_owners(&self) -> HashMap<DojoSelector, HashSet<Felt>> {
         let mut remote_owners = HashMap::new();
 
-        for resource in &self.namespaces {
-            resource.update_remote_owners("", &mut remote_owners);
-        }
-
-        for (namespace, contracts) in &self.contracts {
-            for contract in contracts {
-                contract.update_remote_owners(namespace, &mut remote_owners);
-            }
-        }
-
-        for (namespace, models) in &self.models {
-            for model in models {
-                model.update_remote_owners(namespace, &mut remote_owners);
-            }
-        }
-
-        for (namespace, events) in &self.events {
-            for event in events {
-                event.update_remote_owners(namespace, &mut remote_owners);
-            }
+        for resource in self.resources.values() {
+            resource.update_remote_owners(&mut remote_owners);
         }
 
         remote_owners
@@ -231,17 +143,17 @@ impl WorldDiff {
     pub fn get_contracts_addresses(&self, world_address: Felt) -> HashMap<DojoSelector, Felt> {
         let mut addresses = HashMap::new();
 
-        for (namespace, contracts) in &self.contracts {
-            for contract in contracts {
-                let (selector, class_hash) = match contract {
+        for resource in self.resources.values() {
+            if resource.resource_type() == ResourceType::Contract {
+                let (selector, class_hash) = match resource {
                     ResourceDiff::Created(ResourceLocal::Contract(c)) => {
-                        (c.dojo_selector(namespace), c.class_hash)
+                        (c.dojo_selector(), c.class_hash)
                     }
                     ResourceDiff::Updated(_, ResourceRemote::Contract(c)) => {
-                        (c.common.dojo_selector(namespace), c.common.original_class_hash())
+                        (c.common.dojo_selector(), c.common.original_class_hash())
                     }
                     ResourceDiff::Synced(ResourceRemote::Contract(c)) => {
-                        (c.common.dojo_selector(namespace), c.common.original_class_hash())
+                        (c.common.dojo_selector(), c.common.original_class_hash())
                     }
                     _ => unreachable!(),
                 };
@@ -255,52 +167,26 @@ impl WorldDiff {
 
         addresses
     }
-}
 
-/// Compares the local and remote resources and consumes them into a diff.
-fn compare_and_consume_resources(
-    local: &HashMap<Namespace, HashSet<DojoSelector>>,
-    remote: &HashMap<Namespace, HashSet<DojoSelector>>,
-    local_resources: &mut HashMap<DojoSelector, ResourceLocal>,
-    remote_resources: &mut HashMap<DojoSelector, ResourceRemote>,
-    diff: &mut HashMap<Namespace, Vec<ResourceDiff>>,
-) {
-    for (namespace, local_selectors) in local {
-        for ls in local_selectors {
-            // It's safe to unwrap since the resource is present if the selector is present.
-            let local_resource = local_resources.remove(ls).unwrap();
+    /// Returns the resource diff from a name or tag.
+    pub fn resource_diff_from_name_or_tag(&self, name_or_tag: &str) -> Option<&ResourceDiff> {
+        let selector = if naming::is_valid_tag(name_or_tag) {
+            naming::compute_selector_from_tag(name_or_tag)
+        } else {
+            naming::compute_bytearray_hash(name_or_tag)
+        };
 
-            let remote_selectors =
-                if let Some(rss) = remote.get(namespace) { rss } else { &HashSet::new() };
-
-            if remote_selectors.contains(ls) {
-                diff.entry(namespace.clone()).or_default().push(
-                    local_resource.compare(
-                        remote_resources
-                            .remove(ls)
-                            .expect("Resource must exist if selector is present"),
-                    ),
-                );
-            } else {
-                diff.entry(namespace.clone())
-                    .or_default()
-                    .push(ResourceDiff::Created(local_resource));
-            }
-        }
+        self.resources.get(&selector)
     }
 }
 
 impl ResourceDiff {
     /// Updates the remote writers with the writers of the resource.
-    pub fn update_remote_writers(
-        &self,
-        namespace: &str,
-        writers: &mut HashMap<DojoSelector, HashSet<Felt>>,
-    ) {
+    pub fn update_remote_writers(&self, writers: &mut HashMap<DojoSelector, HashSet<Felt>>) {
         let (dojo_selector, remote_writers) = match self {
-            ResourceDiff::Created(local) => (local.dojo_selector(namespace), HashSet::new()),
-            ResourceDiff::Updated(_, remote) => remote.get_writers(namespace),
-            ResourceDiff::Synced(remote) => remote.get_writers(namespace),
+            ResourceDiff::Created(local) => (local.dojo_selector(), HashSet::new()),
+            ResourceDiff::Updated(_, remote) => remote.get_writers(),
+            ResourceDiff::Synced(remote) => remote.get_writers(),
         };
 
         writers
@@ -310,21 +196,62 @@ impl ResourceDiff {
     }
 
     /// Updates the remote owners with the owners of the resource.
-    pub fn update_remote_owners(
-        &self,
-        namespace: &str,
-        owners: &mut HashMap<DojoSelector, HashSet<Felt>>,
-    ) {
+    pub fn update_remote_owners(&self, owners: &mut HashMap<DojoSelector, HashSet<Felt>>) {
         let (dojo_selector, remote_owners) = match self {
-            ResourceDiff::Created(local) => (local.dojo_selector(namespace), HashSet::new()),
-            ResourceDiff::Updated(_, remote) => remote.get_owners(namespace),
-            ResourceDiff::Synced(remote) => remote.get_owners(namespace),
+            ResourceDiff::Created(local) => (local.dojo_selector(), HashSet::new()),
+            ResourceDiff::Updated(_, remote) => remote.get_owners(),
+            ResourceDiff::Synced(remote) => remote.get_owners(),
         };
 
         owners
             .entry(dojo_selector)
             .and_modify(|remote: &mut HashSet<Felt>| remote.extend(remote_owners.clone()))
             .or_insert(remote_owners);
+    }
+
+    /// Returns the name of the resource.
+    pub fn name(&self) -> String {
+        match self {
+            ResourceDiff::Created(local) => local.name(),
+            ResourceDiff::Updated(local, _) => local.name(),
+            ResourceDiff::Synced(remote) => remote.name(),
+        }
+    }
+
+    /// Returns the namespace of the resource.
+    pub fn namespace(&self) -> String {
+        match self {
+            ResourceDiff::Created(local) => local.namespace(),
+            ResourceDiff::Updated(local, _) => local.namespace(),
+            ResourceDiff::Synced(remote) => remote.namespace(),
+        }
+    }
+
+    /// Returns the tag of the resource.
+    pub fn tag(&self) -> String {
+        match self {
+            ResourceDiff::Created(local) => local.tag(),
+            ResourceDiff::Updated(local, _) => local.tag(),
+            ResourceDiff::Synced(remote) => remote.tag(),
+        }
+    }
+
+    /// Returns the dojo selector of the resource.
+    pub fn dojo_selector(&self) -> DojoSelector {
+        match self {
+            ResourceDiff::Created(local) => local.dojo_selector(),
+            ResourceDiff::Updated(local, _) => local.dojo_selector(),
+            ResourceDiff::Synced(remote) => remote.dojo_selector(),
+        }
+    }
+
+    /// Returns the type of the resource.
+    pub fn resource_type(&self) -> ResourceType {
+        match self {
+            ResourceDiff::Created(local) => local.resource_type(),
+            ResourceDiff::Updated(_, remote) => remote.resource_type(),
+            ResourceDiff::Synced(remote) => remote.resource_type(),
+        }
     }
 }
 
@@ -347,6 +274,7 @@ mod tests {
 
         let local_contract = ResourceLocal::Contract(ContractLocal {
             name: "c".to_string(),
+            namespace: ns.clone(),
             class: empty_sierra_class(),
             class_hash: Felt::ONE,
             casm_class_hash: Felt::ZERO,
@@ -356,27 +284,32 @@ mod tests {
 
         let diff = WorldDiff::new(local.clone(), remote.clone());
 
-        assert_eq!(diff.contracts.len(), 1);
-        assert_eq!(diff.contracts.get(&ns).unwrap().len(), 1);
-        assert!(matches!(diff.contracts.get(&ns).unwrap()[0], ResourceDiff::Created(_)));
+        assert_eq!(diff.resources.len(), 1);
+        assert!(matches!(
+            diff.resources.get(&local_contract.dojo_selector()).unwrap(),
+            ResourceDiff::Created(_)
+        ));
 
         let remote_contract = ResourceRemote::Contract(ContractRemote {
-            common: CommonResourceRemoteInfo::new(Felt::ONE, "c".to_string(), Felt::ONE),
+            common: CommonResourceRemoteInfo::new(Felt::ONE, &ns, "c", Felt::ONE),
             is_initialized: false,
         });
 
-        remote.add_resource(ns.clone(), remote_contract.clone());
+        remote.add_resource(remote_contract.clone());
 
         let diff = WorldDiff::new(local.clone(), remote.clone());
 
-        assert_eq!(diff.contracts.len(), 1);
-        assert_eq!(diff.contracts.get(&ns).unwrap().len(), 1);
-        assert!(matches!(diff.contracts.get(&ns).unwrap()[0], ResourceDiff::Synced(_)));
+        assert_eq!(diff.resources.len(), 1);
+        assert!(matches!(
+            diff.resources.get(&local_contract.dojo_selector()).unwrap(),
+            ResourceDiff::Synced(_)
+        ));
 
         let mut local = WorldLocal::new(namespace_config);
 
         let local_contract = ResourceLocal::Contract(ContractLocal {
             name: "c".to_string(),
+            namespace: ns.clone(),
             class: empty_sierra_class(),
             class_hash: Felt::TWO,
             casm_class_hash: Felt::ZERO,
@@ -386,9 +319,11 @@ mod tests {
 
         let diff = WorldDiff::new(local.clone(), remote.clone());
 
-        assert_eq!(diff.contracts.len(), 1);
-        assert_eq!(diff.contracts.get(&ns).unwrap().len(), 1);
-        assert!(matches!(diff.contracts.get(&ns).unwrap()[0], ResourceDiff::Updated(_, _)));
+        assert_eq!(diff.resources.len(), 1);
+        assert!(matches!(
+            diff.resources.get(&local_contract.dojo_selector()).unwrap(),
+            ResourceDiff::Updated(_, _)
+        ));
     }
 
     #[test]
@@ -406,8 +341,14 @@ mod tests {
         let diff = WorldDiff::new(local.clone(), remote.clone());
 
         assert_eq!(diff.namespaces.len(), 2);
-        assert!(matches!(diff.namespaces[0], ResourceDiff::Created(_)));
-        assert!(matches!(diff.namespaces[1], ResourceDiff::Created(_)));
+        assert!(matches!(
+            diff.resources.get(&naming::compute_bytearray_hash("ns")).unwrap(),
+            ResourceDiff::Created(_)
+        ));
+        assert!(matches!(
+            diff.resources.get(&local_namespace.dojo_selector()).unwrap(),
+            ResourceDiff::Created(_)
+        ));
 
         let remote_namespace = ResourceRemote::Namespace(NamespaceRemote {
             name: "namespace1".to_string(),
@@ -415,12 +356,18 @@ mod tests {
             writers: HashSet::new(),
         });
 
-        remote.add_resource(ns.clone(), remote_namespace.clone());
+        remote.add_resource(remote_namespace.clone());
 
         let diff = WorldDiff::new(local.clone(), remote.clone());
 
         assert_eq!(diff.namespaces.len(), 2);
-        assert!(matches!(diff.namespaces[0], ResourceDiff::Created(_)));
-        assert!(matches!(diff.namespaces[1], ResourceDiff::Synced(_)));
+        assert!(matches!(
+            diff.resources.get(&naming::compute_bytearray_hash("ns")).unwrap(),
+            ResourceDiff::Created(_)
+        ));
+        assert!(matches!(
+            diff.resources.get(&local_namespace.dojo_selector()).unwrap(),
+            ResourceDiff::Synced(_)
+        ));
     }
 }

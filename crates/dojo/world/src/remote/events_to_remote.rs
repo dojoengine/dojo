@@ -122,43 +122,47 @@ impl WorldRemote {
                 let r = ResourceRemote::Namespace(NamespaceRemote::new(e.namespace.to_string()?));
                 trace!(?r, "Namespace registered.");
 
-                self.add_resource(e.namespace.to_string()?, r);
+                self.add_resource(r);
             }
             WorldEvent::ModelRegistered(e) => {
                 let r = ResourceRemote::Model(ModelRemote {
                     common: CommonResourceRemoteInfo::new(
                         e.class_hash.into(),
-                        e.name.to_string()?,
+                        &e.namespace.to_string()?,
+                        &e.name.to_string()?,
                         e.address.into(),
                     ),
                 });
                 trace!(?r, "Model registered.");
 
-                self.add_resource(e.namespace.to_string()?, r);
+                self.add_resource(r);
             }
             WorldEvent::EventRegistered(e) => {
                 let r = ResourceRemote::Event(EventRemote {
                     common: CommonResourceRemoteInfo::new(
                         e.class_hash.into(),
-                        e.name.to_string()?,
+                        &e.namespace.to_string()?,
+                        &e.name.to_string()?,
                         e.address.into(),
                     ),
                 });
                 trace!(?r, "Event registered.");
 
-                self.add_resource(e.namespace.to_string()?, r);
+                self.add_resource(r);
             }
             WorldEvent::ContractRegistered(e) => {
                 let r = ResourceRemote::Contract(ContractRemote {
                     common: CommonResourceRemoteInfo::new(
                         e.class_hash.into(),
-                        e.name.to_string()?,
+                        &e.namespace.to_string()?,
+                        &e.name.to_string()?,
                         e.address.into(),
                     ),
                     is_initialized: false,
                 });
                 trace!(?r, "Contract registered.");
-                self.add_resource(e.namespace.to_string()?, r);
+
+                self.add_resource(r);
             }
             WorldEvent::ModelUpgraded(e) => {
                 // Unwrap is safe because the model must exist in the world.
@@ -329,10 +333,10 @@ mod tests {
         let selector = naming::compute_selector_from_names("ns", "m");
 
         let resource = ResourceRemote::Model(ModelRemote {
-            common: CommonResourceRemoteInfo::new(Felt::ONE, "m".to_string(), Felt::ONE),
+            common: CommonResourceRemoteInfo::new(Felt::ONE, "ns", "m", Felt::ONE),
         });
 
-        world_remote.add_resource("ns".to_string(), resource);
+        world_remote.add_resource(resource);
 
         let event = WorldEvent::ModelUpgraded(world::ModelUpgraded {
             selector,
@@ -356,10 +360,10 @@ mod tests {
         let selector = naming::compute_selector_from_names("ns", "e");
 
         let resource = ResourceRemote::Event(EventRemote {
-            common: CommonResourceRemoteInfo::new(Felt::ONE, "e".to_string(), Felt::ONE),
+            common: CommonResourceRemoteInfo::new(Felt::ONE, "ns", "e", Felt::ONE),
         });
 
-        world_remote.add_resource("ns".to_string(), resource);
+        world_remote.add_resource(resource);
 
         let event = WorldEvent::EventUpgraded(world::EventUpgraded {
             selector,
@@ -383,11 +387,11 @@ mod tests {
         let selector = naming::compute_selector_from_names("ns", "c");
 
         let resource = ResourceRemote::Contract(ContractRemote {
-            common: CommonResourceRemoteInfo::new(Felt::ONE, "c".to_string(), Felt::ONE),
+            common: CommonResourceRemoteInfo::new(Felt::ONE, "ns", "c", Felt::ONE),
             is_initialized: false,
         });
 
-        world_remote.add_resource("ns".to_string(), resource);
+        world_remote.add_resource(resource);
 
         let event = WorldEvent::ContractUpgraded(world::ContractUpgraded {
             selector,
@@ -408,11 +412,11 @@ mod tests {
         let selector = naming::compute_selector_from_names("ns", "c");
 
         let resource = ResourceRemote::Contract(ContractRemote {
-            common: CommonResourceRemoteInfo::new(Felt::ONE, "c".to_string(), Felt::ONE),
+            common: CommonResourceRemoteInfo::new(Felt::ONE, "ns", "c", Felt::ONE),
             is_initialized: false,
         });
 
-        world_remote.add_resource("ns".to_string(), resource);
+        world_remote.add_resource(resource);
 
         let event = WorldEvent::ContractInitialized(world::ContractInitialized {
             selector,
@@ -431,7 +435,7 @@ mod tests {
         let selector = naming::compute_bytearray_hash("ns");
 
         let resource = ResourceRemote::Namespace(NamespaceRemote::new("ns".to_string()));
-        world_remote.add_resource("ns".to_string(), resource);
+        world_remote.add_resource(resource);
 
         let event = WorldEvent::WriterUpdated(world::WriterUpdated {
             resource: selector,
@@ -462,7 +466,7 @@ mod tests {
         let selector = naming::compute_bytearray_hash("ns");
 
         let resource = ResourceRemote::Namespace(NamespaceRemote::new("ns".to_string()));
-        world_remote.add_resource("ns".to_string(), resource);
+        world_remote.add_resource(resource);
 
         let event = WorldEvent::OwnerUpdated(world::OwnerUpdated {
             resource: selector,

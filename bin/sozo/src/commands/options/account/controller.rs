@@ -1,24 +1,17 @@
 use std::sync::Arc;
 
-use anyhow::{bail, Context, Result};
-use camino::{Utf8Path, Utf8PathBuf};
-use dojo_types::naming;
-use dojo_world::contracts::naming::get_name_from_tag;
+use anyhow::{bail, Result};
 use dojo_world::local::WorldLocal;
-use dojo_world::utils;
-use scarb::core::Config;
+use dojo_world::{utils, ResourceType};
 use slot::account_sdk::account::session::hash::{Policy, ProvedPolicy};
 use slot::account_sdk::account::session::merkle::MerkleTree;
 use slot::account_sdk::account::session::SessionAccount;
 use slot::session::{FullSessionInfo, PolicyMethod};
 use starknet::core::types::contract::{AbiEntry, StateMutability};
 use starknet::core::types::Felt;
-use starknet::core::utils::{
-    cairo_short_string_to_felt, get_contract_address, get_selector_from_name,
-};
+use starknet::core::utils::get_selector_from_name;
 use starknet::macros::felt;
 use starknet::providers::Provider;
-use starknet_crypto::poseidon_hash_single;
 use tracing::trace;
 use url::Url;
 
@@ -156,16 +149,16 @@ fn collect_policies_from_local_world(
     let mut policies: Vec<PolicyMethod> = Vec::new();
 
     // get methods from all project contracts
-    for (namespace, contracts) in world_local.contracts.iter() {
-        for contract_selector in contracts {
-            let contract = world_local.get_contract_resource(*contract_selector);
+    for (selector, resource) in world_local.resources.iter() {
+        if resource.resource_type() == ResourceType::Contract {
+            let contract = world_local.get_contract_resource(*selector);
             let contract_address = utils::compute_dojo_contract_address(
-                *contract_selector,
+                *selector,
                 contract.class_hash,
                 world_address,
             );
-            let contract_tag = naming::get_tag(namespace, &contract.name);
-            policies_from_abis(&mut policies, &contract_tag, contract_address, &contract.class.abi);
+
+            policies_from_abis(&mut policies, &resource.tag(), contract_address, &contract.class.abi);
         }
     }
 

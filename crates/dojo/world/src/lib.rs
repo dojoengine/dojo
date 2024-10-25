@@ -14,3 +14,12 @@ pub mod test_utils;
 
 pub type DojoSelector = starknet::core::types::Felt;
 pub type Namespace = String;
+
+#[derive(Debug, PartialEq)]
+pub enum ResourceType {
+    Namespace,
+    Contract,
+    Model,
+    Event,
+    StarknetContract,
+}

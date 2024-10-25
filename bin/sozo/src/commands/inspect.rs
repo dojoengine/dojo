@@ -7,7 +7,7 @@ use dojo_world::contracts::{WorldContract, WorldContractReader};
 use dojo_world::diff::{ResourceDiff, WorldDiff, WorldStatus};
 use dojo_world::local::{ContractLocal, ResourceLocal, WorldLocal};
 use dojo_world::remote::WorldRemote;
-use dojo_world::utils as world_utils;
+use dojo_world::{utils as world_utils, ResourceType};
 use katana_rpc_api::starknet::RPC_SPEC_VERSION;
 use scarb::core::{Config, Workspace};
 use sozo_ops::migrate::{self, deployer, Migration};
@@ -72,9 +72,8 @@ impl InspectArgs {
                 WorldDiff::from_local(world_local)
             };
 
-            if let Some(_resource) = resource {
-                // inspect_resource(world_diff, resource)?;
-                // TODO: Show the different permissions, transaction hashes etc...
+            if let Some(resource) = resource {
+                inspect_resource(&resource, &world_diff, world_address);
             } else {
                 inspect_world(&world_diff, world_address);
             }
@@ -113,12 +112,102 @@ struct ResourceNameInspect {
 struct ResourceWithAddressInspect {
     #[tabled(rename = "")]
     name: String,
+    #[tabled(rename = "Status")]
+    status: ResourceStatus,
     #[tabled(rename = "Contract Address")]
     address: String,
     #[tabled(rename = "Class Hash")]
     current_class_hash: String,
+}
+
+#[derive(Debug, Tabled)]
+struct ResourceDetailInspect {
+    #[tabled(rename = "Name or Tag")]
+    name_or_tag: String,
     #[tabled(rename = "Status")]
     status: ResourceStatus,
+    #[tabled(rename = "Contract Address")]
+    address: String,
+    #[tabled(rename = "Class Hash")]
+    class_hash: String,
+}
+
+#[derive(Debug, Tabled)]
+struct GranteeDisplay {
+    name: String,
+    selector: String,
+}
+
+/// Inspects a resource.
+fn inspect_resource(resource_name_or_tag: &str, world_diff: &WorldDiff, world_address: Felt) {
+    let resource_diff = world_diff.resource_diff_from_name_or_tag(resource_name_or_tag);
+
+    if resource_diff.is_none() {
+        println!("Resource not found locally.");
+        return;
+    }
+
+    let resource_diff = resource_diff.unwrap();
+
+    let status = match resource_diff {
+        ResourceDiff::Created(_) => ResourceStatus::Created,
+        ResourceDiff::Updated(_, _) => ResourceStatus::Updated,
+        ResourceDiff::Synced(_) => ResourceStatus::Synced,
+    };
+
+    let mut selector = Felt::ZERO;
+    if !naming::is_valid_tag(resource_name_or_tag) {
+        let r = ResourceNameInspect { name: resource_name_or_tag.to_string(), status };
+
+        selector = naming::compute_bytearray_hash(resource_name_or_tag);
+
+        print_table(&[r], "");
+    } else {
+        let r = resource_diff_display(resource_diff, world_address);
+
+        selector = naming::compute_selector_from_tag(resource_name_or_tag);
+
+        print_table(&[r], "");
+    }
+
+    let remote_writers = world_diff.get_remote_writers();
+    let remote_owners = world_diff.get_remote_owners();
+
+    let remote_writers_resource = remote_writers.get(&selector);
+
+    let mut writers_disp = vec![];
+
+    if let Some(writers) = remote_writers_resource {
+        for w_selector in writers {
+            if let Some(r) = world_diff.resource_diff_from_name_or_tag(resource_name_or_tag) {
+                match r {
+                    ResourceDiff::Created(local) => {
+                        writers_disp.push(GranteeDisplay {
+                            name: local.name(),
+                            selector: format!("{:#066x}", w_selector),
+                        });
+                    }
+                    ResourceDiff::Updated(_, remote) => {
+                        writers_disp.push(GranteeDisplay {
+                            name: naming::get_tag(&remote.namespace(), &remote.name()),
+                            selector: format!("{:#066x}", w_selector),
+                        });
+                    }
+                    ResourceDiff::Synced(remote) => {
+                        writers_disp.push(GranteeDisplay {
+                            name: naming::get_tag(&remote.namespace(), &remote.name()),
+                            selector: format!("{:#066x}", w_selector),
+                        });
+                    }
+                }
+            }
+
+            writers_disp.push(GranteeDisplay {
+                name: w_selector.to_string(),
+                selector: format!("{:#066x}", w_selector),
+            });
+        }
+    }
 }
 
 /// Inspects the whole world.
@@ -127,7 +216,8 @@ fn inspect_world(world_diff: &WorldDiff, world_address: Felt) {
 
     let mut disp_namespaces = vec![];
 
-    for rns in &world_diff.namespaces {
+    for ns_selector in &world_diff.namespaces {
+        let rns = world_diff.resources.get(ns_selector).unwrap();
         match rns {
             ResourceDiff::Created(local) => {
                 disp_namespaces.push(ResourceNameInspect {
@@ -145,9 +235,9 @@ fn inspect_world(world_diff: &WorldDiff, world_address: Felt) {
         }
     }
 
-    print_table(&disp_namespaces, "Namespaces");
+    print_table(&disp_namespaces, "> Namespaces");
 
-    let mut disp_resources = vec![];
+    let mut contracts_disp = vec![];
 
     let world = match &world_diff.world_status {
         WorldStatus::NewVersion(class_hash, _, _) => ResourceWithAddressInspect {
@@ -164,38 +254,30 @@ fn inspect_world(world_diff: &WorldDiff, world_address: Felt) {
         },
     };
 
-    disp_resources.push(world);
+    contracts_disp.push(world);
 
-    for (namespace, rcs) in &world_diff.contracts {
-        for rc in rcs {
-            disp_resources.push(resource_diff_display(&rc, world_address, &namespace));
+    let mut models_disp = vec![];
+    let mut events_disp = vec![];
+
+    for (selector, resource) in &world_diff.resources {
+        match resource.resource_type() {
+            ResourceType::Contract => {
+                contracts_disp.push(resource_diff_display(resource, world_address))
+            }
+            ResourceType::Model => models_disp.push(resource_diff_display(resource, world_address)),
+            ResourceType::Event => events_disp.push(resource_diff_display(resource, world_address)),
+            _ => {}
         }
     }
 
-    print_table(&disp_resources, "Contracts");
+    print_table(&contracts_disp, "> Contracts");
 
-    disp_resources.clear();
-
-    for (namespace, rms) in &world_diff.models {
-        for rm in rms {
-            disp_resources.push(resource_diff_display(&rm, world_address, &namespace));
-        }
+    if !models_disp.is_empty() {
+        print_table(&models_disp, "> Models");
     }
 
-    if !disp_resources.is_empty() {
-        print_table(&disp_resources, "Models");
-    }
-
-    disp_resources.clear();
-
-    for (namespace, revs) in &world_diff.events {
-        for re in revs {
-            disp_resources.push(resource_diff_display(&re, world_address, &namespace));
-        }
-    }
-
-    if !disp_resources.is_empty() {
-        print_table(&disp_resources, "Events");
+    if !events_disp.is_empty() {
+        print_table(&events_disp, "> Events");
     }
 }
 
@@ -203,13 +285,12 @@ fn inspect_world(world_diff: &WorldDiff, world_address: Felt) {
 fn resource_diff_display(
     resource: &ResourceDiff,
     world_address: Felt,
-    namespace: &str,
 ) -> ResourceWithAddressInspect {
     let (name, address, class_hash, status) = match resource {
         ResourceDiff::Created(local) => (
-            naming::get_tag(namespace, &local.name()),
+            local.tag(),
             world_utils::compute_dojo_contract_address(
-                local.dojo_selector(namespace),
+                local.dojo_selector(),
                 local.class_hash(),
                 world_address,
             ),
@@ -217,13 +298,13 @@ fn resource_diff_display(
             ResourceStatus::Created,
         ),
         ResourceDiff::Updated(local, remote) => (
-            naming::get_tag(namespace, &local.name()),
+            local.tag(),
             remote.address(),
             local.class_hash(),
             ResourceStatus::Updated,
         ),
         ResourceDiff::Synced(remote) => (
-            naming::get_tag(namespace, &remote.name()),
+            remote.tag(),
             remote.address(),
             remote.current_class_hash(),
             ResourceStatus::Synced,
@@ -247,7 +328,7 @@ where
     let mut table = Table::new(data);
     table.with(Style::modern());
 
-    println!("** {title} **");
+    println!("{title}");
     println!("{table}\n");
 }
 

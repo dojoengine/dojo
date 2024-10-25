@@ -73,10 +73,8 @@ fn from_names_tags_to_selectors(
     let mut perms = HashMap::new();
 
     for (name_or_tag, tags) in names_tags.iter() {
-        let mut local_permission = LocalPermission {
-            target_tag: name_or_tag.clone(),
-            grantees: HashSet::new(),
-        };
+        let mut local_permission =
+            LocalPermission { target_tag: name_or_tag.clone(), grantees: HashSet::new() };
 
         let target_selector = if naming::is_valid_tag(name_or_tag) {
             naming::compute_selector_from_tag(name_or_tag)

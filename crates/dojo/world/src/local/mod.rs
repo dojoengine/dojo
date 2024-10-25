@@ -20,7 +20,7 @@ mod artifact_to_local;
 
 use crate::config::NamespaceConfig;
 use crate::utils::compute_world_address;
-use crate::{DojoSelector, Namespace};
+use crate::{DojoSelector, Namespace, ResourceType};
 
 /// A local resource.
 #[derive(Debug, Clone)]
@@ -43,16 +43,6 @@ pub struct WorldLocal {
     pub class_hash: Option<Felt>,
     /// The casm class hash of the world.
     pub casm_class_hash: Option<Felt>,
-    /// The namespaces of the world.
-    pub namespaces: HashSet<DojoSelector>,
-    /// The contracts of the world.
-    pub contracts: HashMap<Namespace, HashSet<DojoSelector>>,
-    /// The models of the world.
-    pub models: HashMap<Namespace, HashSet<DojoSelector>>,
-    /// The events of the world.
-    pub events: HashMap<Namespace, HashSet<DojoSelector>>,
-    /// The starknet contracts of the world.
-    pub starknet_contracts: HashMap<Namespace, HashSet<DojoSelector>>,
     /// The resources of the world.
     pub resources: HashMap<DojoSelector, ResourceLocal>,
     /// The namespace configuration.
@@ -63,6 +53,8 @@ pub struct WorldLocal {
 pub struct ContractLocal {
     /// The name of the contract.
     pub name: String,
+    /// The namespace on which the contract is willing to be registered.
+    pub namespace: String,
     /// The class of the contract.
     pub class: SierraClass,
     /// The class hash of the contract.
@@ -76,6 +68,8 @@ pub struct ContractLocal {
 pub struct ModelLocal {
     /// The name of the model.
     pub name: String,
+    /// The namespace on which the model is willing to be registered.
+    pub namespace: String,
     /// The class of the model.
     pub class: SierraClass,
     /// The class hash of the model.
@@ -88,6 +82,8 @@ pub struct ModelLocal {
 pub struct EventLocal {
     /// The name of the event.
     pub name: String,
+    /// The namespace on which the event is willing to be registered.
+    pub namespace: String,
     /// The class of the event.
     pub class: SierraClass,
     /// The class hash of the event.
@@ -100,6 +96,8 @@ pub struct EventLocal {
 pub struct StarknetLocal {
     /// The name of the starknet contract.
     pub name: String,
+    /// The namespace on which the starknet contract is willing to be registered.
+    pub namespace: String,
     /// The class of the starknet contract.
     pub class: SierraClass,
     /// The class hash of the starknet contract.
@@ -126,6 +124,17 @@ impl ResourceLocal {
         }
     }
 
+    /// Returns the namespace of the resource.
+    pub fn namespace(&self) -> String {
+        match self {
+            ResourceLocal::Namespace(n) => n.name.clone(),
+            ResourceLocal::Contract(c) => c.namespace.clone(),
+            ResourceLocal::Model(m) => m.namespace.clone(),
+            ResourceLocal::Event(e) => e.namespace.clone(),
+            ResourceLocal::Starknet(s) => s.namespace.clone(),
+        }
+    }
+
     /// Returns the class hash of the resource.
     pub fn class_hash(&self) -> Felt {
         match self {
@@ -137,12 +146,17 @@ impl ResourceLocal {
         }
     }
 
-    /// Returns the dojo selector of the resource for the given namespace.
-    pub fn dojo_selector(&self, namespace: &str) -> DojoSelector {
+    /// Returns the dojo selector of the resource.
+    pub fn dojo_selector(&self) -> DojoSelector {
         match self {
             ResourceLocal::Namespace(n) => naming::compute_bytearray_hash(&n.name),
-            _ => naming::compute_selector_from_names(namespace, &self.name()),
+            _ => naming::compute_selector_from_names(&self.namespace(), &self.name()),
         }
+    }
+
+    /// Returns the tag of the resource.
+    pub fn tag(&self) -> String {
+        naming::get_tag(&self.namespace(), &self.name())
     }
 
     /// Returns the contract resource.
@@ -155,12 +169,23 @@ impl ResourceLocal {
             _ => panic!("Resource {} is not a contract", self.name()),
         }
     }
+
+    /// Returns the type of the resource.
+    pub fn resource_type(&self) -> ResourceType {
+        match self {
+            ResourceLocal::Contract(_) => ResourceType::Contract,
+            ResourceLocal::Model(_) => ResourceType::Model,
+            ResourceLocal::Event(_) => ResourceType::Event,
+            ResourceLocal::Namespace(_) => ResourceType::Namespace,
+            ResourceLocal::Starknet(_) => ResourceType::StarknetContract,
+        }
+    }
 }
 
 impl ContractLocal {
     /// Returns the dojo selector of the contract.
-    pub fn dojo_selector(&self, namespace: &str) -> DojoSelector {
-        naming::compute_selector_from_names(namespace, &self.name)
+    pub fn dojo_selector(&self) -> DojoSelector {
+        naming::compute_selector_from_names(&self.namespace, &self.name)
     }
 }
 
@@ -172,11 +197,6 @@ impl WorldLocal {
             class: None,
             class_hash: None,
             casm_class_hash: None,
-            namespaces: HashSet::new(),
-            contracts: HashMap::new(),
-            models: HashMap::new(),
-            events: HashMap::new(),
-            starknet_contracts: HashMap::new(),
             resources: HashMap::new(),
         };
 
@@ -200,46 +220,13 @@ impl WorldLocal {
 
     /// Adds a resource to the world local.
     pub fn add_resource(&mut self, resource: ResourceLocal) {
-        let name = resource.name();
-        let namespaces = self.namespace_config.get_namespaces(&name);
-
         if let ResourceLocal::Namespace(namespace) = &resource {
             let selector = naming::compute_bytearray_hash(&namespace.name);
-            self.namespaces.insert(selector);
-            self.resources.insert(selector, resource.clone());
+            self.resources.insert(selector, resource);
             return;
         }
 
-        for namespace in namespaces {
-            let selector = naming::compute_selector_from_names(&namespace, &name);
-            // Not the most efficient, but it's not the most critical path.
-            // We could have done a mapping of <Name, Resource> but this adds an additional lookup
-            // with the current datastructure, since the [`DojoSelector`] doesn't contain the name
-            // in clear, we have to lookup all the resources to find out the name
-            // matching.
-            self.resources.insert(selector, resource.clone());
-
-            match resource {
-                ResourceLocal::Contract(_) => {
-                    self.contracts.entry(namespace).or_insert_with(HashSet::new).insert(selector);
-                }
-                ResourceLocal::Model(_) => {
-                    self.models.entry(namespace).or_insert_with(HashSet::new).insert(selector);
-                }
-                ResourceLocal::Event(_) => {
-                    self.events.entry(namespace).or_insert_with(HashSet::new).insert(selector);
-                }
-                ResourceLocal::Starknet(_) => {
-                    self.starknet_contracts
-                        .entry(namespace)
-                        .or_insert_with(HashSet::new)
-                        .insert(selector);
-                }
-                ResourceLocal::Namespace(_) => {
-                    // Already processed earlier.
-                }
-            }
-        }
+        self.resources.insert(resource.dojo_selector(), resource);
     }
 
     /// Returns the contract resource.
@@ -251,6 +238,17 @@ impl WorldLocal {
             .get(&selector)
             .expect(&format!("Contract with selector {:#x} not found", selector))
             .as_contract()
+    }
+
+    /// Returns the resource from a name or tag.
+    pub fn resource_from_name_or_tag(&self, name_or_tag: &str) -> Option<&ResourceLocal> {
+        let selector = if naming::is_valid_tag(name_or_tag) {
+            naming::compute_selector_from_tag(name_or_tag)
+        } else {
+            naming::compute_selector_from_tag(name_or_tag)
+        };
+
+        self.resources.get(&selector)
     }
 }
 
@@ -271,6 +269,7 @@ mod tests {
 
         world.add_resource(ResourceLocal::Contract(ContractLocal {
             name: "c1".to_string(),
+            namespace: "dojo".to_string(),
             class: empty_sierra_class(),
             class_hash: Felt::ZERO,
             casm_class_hash: Felt::ZERO,
@@ -284,6 +283,7 @@ mod tests {
 
         world.add_resource(ResourceLocal::Contract(ContractLocal {
             name: "c2".to_string(),
+            namespace: "dojo".to_string(),
             class: empty_sierra_class(),
             class_hash: Felt::ZERO,
             casm_class_hash: Felt::ZERO,
