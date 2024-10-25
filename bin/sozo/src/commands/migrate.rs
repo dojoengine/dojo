@@ -76,7 +76,7 @@ impl MigrateArgs {
             let world_diff = if Deployer::is_deployed(world_address, &account).await? {
                 let world_remote =
                     WorldRemote::from_events(world_address, &account.provider()).await?;
-                println!("fheihfgieh");
+
                 WorldDiff::new(world_local, world_remote)
             } else {
                 WorldDiff::from_local(world_local)

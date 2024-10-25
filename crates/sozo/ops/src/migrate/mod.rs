@@ -20,7 +20,6 @@
 
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
-use std::sync::Arc;
 
 use cainome::cairo_serde::{ByteArray, ClassHash, ContractAddress};
 use declarer::Declarer;
