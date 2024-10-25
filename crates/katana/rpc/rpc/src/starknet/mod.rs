@@ -94,7 +94,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         &self,
         transactions: Vec<ExecutableTxWithHash>,
         block_id: BlockIdOrTag,
-        flags: katana_executor::SimulationFlag,
+        flags: katana_executor::ExecutionFlags,
     ) -> Result<Vec<FeeEstimate>, StarknetApiError> {
         // get the state and block env at the specified block for execution
         let state = self.state(&block_id)?;

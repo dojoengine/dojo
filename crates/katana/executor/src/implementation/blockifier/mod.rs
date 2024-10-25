@@ -22,8 +22,8 @@ use tracing::info;
 
 use self::state::CachedState;
 use crate::{
-    BlockExecutor, EntryPointCall, ExecutionError, ExecutionOutput, ExecutionResult,
-    ExecutionStats, ExecutorExt, ExecutorFactory, ExecutorResult, ResultAndStates, SimulationFlag,
+    BlockExecutor, EntryPointCall, ExecutionError, ExecutionFlags, ExecutionOutput,
+    ExecutionResult, ExecutionStats, ExecutorExt, ExecutorFactory, ExecutorResult, ResultAndStates,
     StateProviderDb,
 };
 
@@ -32,12 +32,12 @@ pub(crate) const LOG_TARGET: &str = "katana::executor::blockifier";
 #[derive(Debug)]
 pub struct BlockifierFactory {
     cfg: CfgEnv,
-    flags: SimulationFlag,
+    flags: ExecutionFlags,
 }
 
 impl BlockifierFactory {
     /// Create a new factory with the given configuration and simulation flags.
-    pub fn new(cfg: CfgEnv, flags: SimulationFlag) -> Self {
+    pub fn new(cfg: CfgEnv, flags: ExecutionFlags) -> Self {
         Self { cfg, flags }
     }
 }
@@ -68,7 +68,7 @@ impl ExecutorFactory for BlockifierFactory {
     }
 
     /// Returns the execution flags set by the factory.
-    fn execution_flags(&self) -> &SimulationFlag {
+    fn execution_flags(&self) -> &ExecutionFlags {
         &self.flags
     }
 }
@@ -78,7 +78,7 @@ pub struct StarknetVMProcessor<'a> {
     block_context: BlockContext,
     state: CachedState<StateProviderDb<'a>>,
     transactions: Vec<(TxWithHash, ExecutionResult)>,
-    simulation_flags: SimulationFlag,
+    simulation_flags: ExecutionFlags,
     stats: ExecutionStats,
 }
 
@@ -87,7 +87,7 @@ impl<'a> StarknetVMProcessor<'a> {
         state: Box<dyn StateProvider + 'a>,
         block_env: BlockEnv,
         cfg_env: CfgEnv,
-        simulation_flags: SimulationFlag,
+        simulation_flags: ExecutionFlags,
     ) -> Self {
         let transactions = Vec::new();
         let block_context = utils::block_context_from_envs(&block_env, &cfg_env);
@@ -135,7 +135,7 @@ impl<'a> StarknetVMProcessor<'a> {
     fn simulate_with<F, T>(
         &self,
         transactions: Vec<ExecutableTxWithHash>,
-        flags: &SimulationFlag,
+        flags: &ExecutionFlags,
         mut op: F,
     ) -> Vec<T>
     where
@@ -250,7 +250,7 @@ impl ExecutorExt for StarknetVMProcessor<'_> {
     fn simulate(
         &self,
         transactions: Vec<ExecutableTxWithHash>,
-        flags: SimulationFlag,
+        flags: ExecutionFlags,
     ) -> Vec<ResultAndStates> {
         self.simulate_with(transactions, &flags, |_, (_, result)| ResultAndStates {
             result,
@@ -261,7 +261,7 @@ impl ExecutorExt for StarknetVMProcessor<'_> {
     fn estimate_fee(
         &self,
         transactions: Vec<ExecutableTxWithHash>,
-        flags: SimulationFlag,
+        flags: ExecutionFlags,
     ) -> Vec<Result<TxFeeInfo, ExecutionError>> {
         self.simulate_with(transactions, &flags, |_, (_, res)| match res {
             ExecutionResult::Success { receipt, .. } => {

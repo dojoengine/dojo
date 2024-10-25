@@ -12,7 +12,7 @@ use katana_executor::implementation::blockifier::blockifier::transaction::transa
 use katana_executor::implementation::blockifier::utils::{
     block_context_from_envs, to_address, to_executor_tx,
 };
-use katana_executor::{SimulationFlag, StateProviderDb};
+use katana_executor::{ExecutionFlags, StateProviderDb};
 use katana_primitives::contract::{ContractAddress, Nonce};
 use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash};
@@ -35,7 +35,7 @@ struct Inner {
     // execution context
     cfg_env: CfgEnv,
     block_env: BlockEnv,
-    execution_flags: SimulationFlag,
+    execution_flags: ExecutionFlags,
     state: Arc<Box<dyn StateProvider>>,
 
     pool_nonces: HashMap<ContractAddress, Nonce>,
@@ -44,7 +44,7 @@ struct Inner {
 impl TxValidator {
     pub fn new(
         state: Box<dyn StateProvider>,
-        execution_flags: SimulationFlag,
+        execution_flags: ExecutionFlags,
         cfg_env: CfgEnv,
         block_env: BlockEnv,
         permit: Arc<Mutex<()>>,
@@ -143,8 +143,8 @@ impl Validator for TxValidator {
         let result = validate(
             this.prepare(),
             tx,
-            this.execution_flags.skip_validate || skip_validate,
-            this.execution_flags.skip_fee_transfer,
+            !this.execution_flags.account_validation() || skip_validate,
+            !this.execution_flags.fee(),
         );
 
         match result {
