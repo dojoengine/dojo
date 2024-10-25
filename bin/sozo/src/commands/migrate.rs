@@ -89,7 +89,7 @@ impl MigrateArgs {
                 profile_config,
             );
 
-            migration.migrate().await.context("Failed to migrate world.")
+            migration.migrate().await.context("Migration failed.")
         })
     }
 }

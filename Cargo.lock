@@ -2312,7 +2312,7 @@ dependencies = [
 
 [[package]]
 name = "cainome"
-version = "0.4.5"
+version = "0.4.6"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -4548,7 +4548,7 @@ version = "1.0.0-alpha.17"
 dependencies = [
  "assert_matches",
  "async-trait",
- "cainome 0.4.5",
+ "cainome 0.4.6",
  "camino",
  "chrono",
  "convert_case 0.6.0",
@@ -4672,7 +4672,7 @@ name = "dojo-types"
 version = "1.0.0-alpha.17"
 dependencies = [
  "anyhow",
- "cainome 0.4.5",
+ "cainome 0.4.6",
  "crypto-bigint",
  "hex",
  "itertools 0.12.1",
@@ -4710,7 +4710,7 @@ dependencies = [
  "assert_fs",
  "assert_matches",
  "async-trait",
- "cainome 0.4.5",
+ "cainome 0.4.6",
  "cairo-lang-filesystem",
  "cairo-lang-project",
  "cairo-lang-starknet",
@@ -4748,7 +4748,7 @@ name = "dojo-world-abigen"
 version = "1.0.0-alpha.17"
 dependencies = [
  "anyhow",
- "cainome 0.4.5",
+ "cainome 0.4.6",
  "cairo-lang-starknet",
  "cairo-lang-starknet-classes",
  "camino",
@@ -8271,7 +8271,7 @@ dependencies = [
  "alloy-primitives",
  "anyhow",
  "assert_matches",
- "cainome 0.4.5",
+ "cainome 0.4.6",
  "dojo-metrics",
  "dojo-test-utils",
  "dojo-utils",
@@ -13196,7 +13196,7 @@ dependencies = [
  "assert_fs",
  "async-trait",
  "bigdecimal 0.4.5",
- "cainome 0.4.5",
+ "cainome 0.4.6",
  "cairo-lang-compiler",
  "cairo-lang-defs",
  "cairo-lang-filesystem",
@@ -13262,7 +13262,7 @@ dependencies = [
  "assert_fs",
  "async-trait",
  "bigdecimal 0.4.5",
- "cainome 0.4.5",
+ "cainome 0.4.6",
  "cairo-lang-compiler",
  "cairo-lang-defs",
  "cairo-lang-filesystem",
@@ -14883,7 +14883,7 @@ dependencies = [
  "async-trait",
  "base64 0.21.7",
  "bitflags 2.6.0",
- "cainome 0.4.5",
+ "cainome 0.4.6",
  "camino",
  "chrono",
  "crypto-bigint",
@@ -14956,7 +14956,7 @@ dependencies = [
 name = "torii-grpc"
 version = "1.0.0-alpha.17"
 dependencies = [
- "cainome 0.4.5",
+ "cainome 0.4.6",
  "camino",
  "crypto-bigint",
  "dojo-test-utils",
@@ -15003,7 +15003,7 @@ name = "torii-relay"
 version = "1.0.0-alpha.17"
 dependencies = [
  "anyhow",
- "cainome 0.4.5",
+ "cainome 0.4.6",
  "chrono",
  "crypto-bigint",
  "dojo-types",

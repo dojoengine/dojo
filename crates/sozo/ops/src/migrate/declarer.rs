@@ -98,7 +98,7 @@ where
             .declare_v2(Arc::new(class), casm_class_hash)
             .send_with_cfg(&txn_config)
             .await
-            .map_err(MigrationError::Migrator)?;
+            .map_err(MigrationError::from)?;
 
         tracing::trace!(
             transaction_hash = format!("{:#066x}", transaction_hash),

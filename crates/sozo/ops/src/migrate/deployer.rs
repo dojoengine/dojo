@@ -90,7 +90,7 @@ where
         }]);
 
         let InvokeTransactionResult { transaction_hash } =
-            txn.send_with_cfg(&self.txn_config).await.map_err(MigrationError::Migrator)?;
+            txn.send_with_cfg(&self.txn_config).await.map_err(MigrationError::from)?;
 
         tracing::trace!(
             transaction_hash = format!("{:#066x}", transaction_hash),

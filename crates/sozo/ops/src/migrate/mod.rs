@@ -25,47 +25,25 @@ use cainome::cairo_serde::{ByteArray, ClassHash, ContractAddress};
 use declarer::Declarer;
 use deployer::Deployer;
 use dojo_types::naming;
-use dojo_utils::{TransactionExt, TransactionWaiter, TransactionWaitingError, TxnConfig};
+use dojo_utils::TxnConfig;
 use dojo_world::config::ProfileConfig;
 use dojo_world::contracts::WorldContract;
 use dojo_world::diff::{ResourceDiff, WorldDiff, WorldStatus};
 use dojo_world::local::ResourceLocal;
 use dojo_world::remote::ResourceRemote;
-use dojo_world::{utils, DojoSelector};
-use starknet::accounts::{AccountError, ConnectedAccount};
-use starknet::core::types::contract::ComputeClassHashError;
-use starknet::core::types::{Call, FromStrError};
-use starknet::core::utils::CairoShortStringToFeltError;
-use starknet::providers::ProviderError;
+use dojo_world::utils;
+use invoker::Invoker;
+use starknet::accounts::ConnectedAccount;
 use starknet_crypto::Felt;
-use thiserror::Error;
 use tracing::trace;
 
 // TODO: those may be moved to dojo-utils in the tx module.
-mod declarer;
+pub mod declarer;
 pub mod deployer;
+pub mod invoker;
+pub mod error;
 
-#[derive(Debug, Error)]
-pub enum MigrationError<S> {
-    #[error(transparent)]
-    Migrator(#[from] AccountError<S>),
-    #[error(transparent)]
-    CairoSerde(#[from] cainome::cairo_serde::Error),
-    #[error(transparent)]
-    ComputeClassHash(#[from] ComputeClassHashError),
-    #[error(transparent)]
-    Provider(#[from] ProviderError),
-    #[error(transparent)]
-    StarknetJson(#[from] starknet::core::types::contract::JsonError),
-    #[error("The selector {0} has no valid address")]
-    OrphanSelectorAddress(DojoSelector),
-    #[error(transparent)]
-    FromStr(#[from] FromStrError),
-    #[error(transparent)]
-    TransactionWaiting(#[from] TransactionWaitingError),
-    #[error(transparent)]
-    CairoShortStringToFelt(#[from] CairoShortStringToFeltError),
-}
+pub use error::MigrationError;
 
 #[derive(Debug)]
 pub struct Migration<A>
@@ -103,10 +81,15 @@ where
         Ok(())
     }
 
+    /// Returns whether multicall should be used. By default, it is enabled.
+    fn do_multicall(&self) -> bool {
+        self.profile_config.migration.as_ref().map_or(true, |m| m.do_multicall)
+    }
+
     /// For all contracts that are not initialized, initialize them by using the init call arguments
     /// found in the [`ProfileConfig`].
     async fn initialize_contracts(&self) -> Result<(), MigrationError<A::SignError>> {
-        let mut calls = vec![];
+        let mut invoker = Invoker::new(&self.world.account, self.txn_config.clone());
 
         let init_call_args = if let Some(init_call_args) = &self.profile_config.init_call_args {
             init_call_args.clone()
@@ -161,12 +144,19 @@ where
                         vec![]
                     };
 
-                    trace!(tag, "Initializing contract.");
+                    trace!(tag, ?args, "Initializing contract.");
 
-                    calls.push(self.world.init_contract_getcall(&selector, &args));
+                    invoker.add_call(self.world.init_contract_getcall(&selector, &args));
                 }
             }
         }
+
+        if self.do_multicall() {
+            invoker.multicall().await?;
+        } else {
+            invoker.invoke_all_sequentially().await?;
+        }
+
         Ok(())
     }
 
@@ -194,14 +184,14 @@ where
         // For all contracts in a dojo project, addresses are deterministic.
         let contract_addresses = self.diff.get_contracts_addresses(self.world.address);
 
-        let mut calls = vec![];
+        let mut invoker = Invoker::new(&self.world.account, self.txn_config.clone());
 
         // For all local writer/owner that is not found remotely, we need to grant the permission.
         for (target_selector, granted_selectors) in local_writers {
-            for granted_selector in granted_selectors {
+            for (granted_selector, tag) in granted_selectors {
                 let granted_address = contract_addresses
                     .get(&granted_selector)
-                    .ok_or(MigrationError::OrphanSelectorAddress(granted_selector))?;
+                    .ok_or(MigrationError::OrphanSelectorAddress(tag))?;
 
                 if !remote_writers
                     .get(&target_selector)
@@ -209,7 +199,7 @@ where
                     .unwrap_or(&&HashSet::new())
                     .contains(granted_address)
                 {
-                    calls.push(self.world.grant_writer_getcall(
+                    invoker.add_call(self.world.grant_writer_getcall(
                         &target_selector,
                         &ContractAddress(*granted_address),
                     ));
@@ -218,10 +208,10 @@ where
         }
 
         for (target_selector, granted_selectors) in local_owners {
-            for granted_selector in granted_selectors {
+            for (granted_selector, tag) in granted_selectors {
                 let granted_address = contract_addresses
                     .get(&granted_selector)
-                    .ok_or(MigrationError::OrphanSelectorAddress(granted_selector))?;
+                    .ok_or(MigrationError::OrphanSelectorAddress(tag))?;
 
                 if !remote_owners
                     .get(&target_selector)
@@ -229,7 +219,7 @@ where
                     .unwrap_or(&&HashSet::new())
                     .contains(granted_address)
                 {
-                    calls.push(
+                    invoker.add_call(
                         self.world.grant_owner_getcall(
                             &target_selector,
                             &ContractAddress(*granted_address),
@@ -239,11 +229,10 @@ where
             }
         }
 
-        if !calls.is_empty() {
-            let tx = self.world.account.execute_v1(calls).send_with_cfg(&self.txn_config).await?;
-            if self.txn_config.wait {
-                TransactionWaiter::new(tx.transaction_hash, &self.world.account.provider()).await?;
-            }
+        if self.do_multicall() {
+            invoker.multicall().await?;
+        } else {
+            invoker.invoke_all_sequentially().await?;
         }
 
         Ok(())
@@ -251,22 +240,20 @@ where
 
     /// Syncs the resources by declaring the classes and registering/upgrading the resources.
     async fn sync_resources(&self) -> Result<(), MigrationError<A::SignError>> {
-        let mut calls = vec![];
+        let mut invoker = Invoker::new(&self.world.account, self.txn_config.clone());
         let mut declarer = Declarer::new(&self.world.account, self.txn_config.clone());
 
-        self.namespaces_getcalls(&mut calls).await?;
-        self.contracts_getcalls(&mut calls, &mut declarer).await?;
-        self.models_getcalls(&mut calls, &mut declarer).await?;
-        self.events_getcalls(&mut calls, &mut declarer).await?;
+        self.namespaces_getcalls(&mut invoker).await?;
+        self.contracts_getcalls(&mut invoker, &mut declarer).await?;
+        self.models_getcalls(&mut invoker, &mut declarer).await?;
+        self.events_getcalls(&mut invoker, &mut declarer).await?;
 
-        // Sync resources.
         declarer.declare_all().await?;
 
-        if !calls.is_empty() {
-            let tx = self.world.account.execute_v1(calls).send_with_cfg(&self.txn_config).await?;
-            if self.txn_config.wait {
-                TransactionWaiter::new(tx.transaction_hash, &self.world.account.provider()).await?;
-            }
+        if self.do_multicall() {
+            invoker.multicall().await?;
+        } else {
+            invoker.invoke_all_sequentially().await?;
         }
 
         Ok(())
@@ -275,13 +262,13 @@ where
     /// Returns the calls required to sync the namespaces.
     async fn namespaces_getcalls(
         &self,
-        calls: &mut Vec<Call>,
+        invoker: &mut Invoker<&A>,
     ) -> Result<(), MigrationError<A::SignError>> {
         for namespace in &self.diff.namespaces {
             if let ResourceDiff::Created(ResourceLocal::Namespace(namespace)) = namespace {
                 trace!(name = namespace.name, "Registering namespace.");
 
-                calls.push(
+                invoker.add_call(
                     self.world
                         .register_namespace_getcall(&ByteArray::from_string(&namespace.name)?),
                 );
@@ -299,7 +286,7 @@ where
     /// classes.
     async fn contracts_getcalls(
         &self,
-        calls: &mut Vec<Call>,
+        invoker: &mut Invoker<&A>,
         declarer: &mut Declarer<&A>,
     ) -> Result<(), MigrationError<A::SignError>> {
         for (namespace, contracts) in &self.diff.contracts {
@@ -316,7 +303,7 @@ where
 
                     declarer.add_class(contract.casm_class_hash, contract.class.clone().flatten()?);
 
-                    calls.push(self.world.register_contract_getcall(
+                    invoker.add_call(self.world.register_contract_getcall(
                         &contract.dojo_selector(&namespace),
                         &ns_bytearray,
                         &ClassHash(contract.class_hash),
@@ -340,7 +327,7 @@ where
                         contract_local.class.clone().flatten()?,
                     );
 
-                    calls.push(self.world.upgrade_contract_getcall(
+                    invoker.add_call(self.world.upgrade_contract_getcall(
                         &ns_bytearray,
                         &ClassHash(contract_local.class_hash),
                     ));
@@ -354,7 +341,7 @@ where
     /// Returns the calls required to sync the models and add the classes to the declarer.
     async fn models_getcalls(
         &self,
-        calls: &mut Vec<Call>,
+        invoker: &mut Invoker<&A>,
         declarer: &mut Declarer<&A>,
     ) -> Result<(), MigrationError<A::SignError>> {
         for (namespace, models) in &self.diff.models {
@@ -371,7 +358,7 @@ where
 
                     declarer.add_class(model.casm_class_hash, model.class.clone().flatten()?);
 
-                    calls.push(
+                    invoker.add_call(
                         self.world
                             .register_model_getcall(&ns_bytearray, &ClassHash(model.class_hash)),
                     );
@@ -394,7 +381,7 @@ where
                         model_local.class.clone().flatten()?,
                     );
 
-                    calls.push(
+                    invoker.add_call(
                         self.world.upgrade_model_getcall(
                             &ns_bytearray,
                             &ClassHash(model_local.class_hash),
@@ -410,7 +397,7 @@ where
     /// Returns the calls required to sync the events and add the classes to the declarer.
     async fn events_getcalls(
         &self,
-        calls: &mut Vec<Call>,
+        invoker: &mut Invoker<&A>,
         declarer: &mut Declarer<&A>,
     ) -> Result<(), MigrationError<A::SignError>> {
         for (namespace, events) in &self.diff.events {
@@ -427,7 +414,7 @@ where
 
                     declarer.add_class(event.casm_class_hash, event.class.clone().flatten()?);
 
-                    calls.push(
+                    invoker.add_call(
                         self.world
                             .register_event_getcall(&ns_bytearray, &ClassHash(event.class_hash)),
                     );
@@ -450,7 +437,7 @@ where
                         event_local.class.clone().flatten()?,
                     );
 
-                    calls.push(
+                    invoker.add_call(
                         self.world.upgrade_event_getcall(
                             &ns_bytearray,
                             &ClassHash(event_local.class_hash),
