@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1729787301640,
+  "lastUpdate": 1729897103923,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -27991,6 +27991,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8619536,
             "range": "± 319141",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d0816028e05decf65b40dbf8fc87fe5ec77d1120",
+          "message": "refactor(katana): rename simulation flags for consistency (#2581)\n\nalso removes some unused flags. the flags were introduced back in https://github.com/dojoengine/dojo/pull/1561 when we were trying to integrate both blockifier and starknet_in_rust. but some of the flags (ie `skip_execute` and `skip_max_fee`) is starknet_in_rust specific. but now that we no longer need to accomodate for starknet-in-rust due to its deprecation #2200, better to just remove it to keep things simple and clean. \r\n\r\nI decided to rename the fields and omit the `skip_*` prefix as it gets kinda confusing sometimes, esp when we need to determine the execution flag based on the rpc flags as well ie in https://github.com/dojoengine/dojo/blob/17f25640cb2495e0223e5844e3c98f52a7aa901c/crates/katana/rpc/rpc/src/starknet/read.rs#L479-L495",
+          "timestamp": "2024-10-26T06:41:31+08:00",
+          "tree_id": "caf5fe1b8fb343661421806ed49352711a13f16f",
+          "url": "https://github.com/dojoengine/dojo/commit/d0816028e05decf65b40dbf8fc87fe5ec77d1120"
+        },
+        "date": 1729897102267,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 12472023819,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
