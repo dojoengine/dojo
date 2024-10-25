@@ -85,7 +85,10 @@ where
         match account.provider().get_class(BlockId::Tag(BlockTag::Pending), class_hash).await {
             Err(ProviderError::StarknetError(StarknetError::ClassHashNotFound)) => {}
             Ok(_) => {
-                tracing::trace!(class_hash = format!("{:#066x}", class_hash), "Class already declared.");
+                tracing::trace!(
+                    class_hash = format!("{:#066x}", class_hash),
+                    "Class already declared."
+                );
                 return Ok(DeclareOutput { transaction_hash: Felt::ZERO });
             }
             Err(e) => return Err(MigrationError::Provider(e)),
@@ -100,6 +103,7 @@ where
         tracing::trace!(
             transaction_hash = format!("{:#066x}", transaction_hash),
             class_hash = format!("{:#066x}", class_hash),
+            casm_class_hash = format!("{:#066x}", casm_class_hash),
             "Declared class."
         );
 

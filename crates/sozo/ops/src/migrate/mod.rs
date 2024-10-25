@@ -18,6 +18,10 @@
 //! 4. All contracts that are not initialized are initialized, since permissions are applied,
 //!    initialization of contracts can mutate resources.
 
+use std::collections::{HashMap, HashSet};
+use std::str::FromStr;
+use std::sync::Arc;
+
 use cainome::cairo_serde::{ByteArray, ClassHash, ContractAddress};
 use declarer::Declarer;
 use deployer::Deployer;
@@ -28,17 +32,13 @@ use dojo_world::contracts::WorldContract;
 use dojo_world::diff::{ResourceDiff, WorldDiff, WorldStatus};
 use dojo_world::local::ResourceLocal;
 use dojo_world::remote::ResourceRemote;
-use dojo_world::utils;
-use dojo_world::DojoSelector;
+use dojo_world::{utils, DojoSelector};
 use starknet::accounts::{AccountError, ConnectedAccount};
 use starknet::core::types::contract::ComputeClassHashError;
 use starknet::core::types::{Call, FromStrError};
 use starknet::core::utils::CairoShortStringToFeltError;
 use starknet::providers::ProviderError;
 use starknet_crypto::Felt;
-use std::collections::{HashMap, HashSet};
-use std::str::FromStr;
-use std::sync::Arc;
 use thiserror::Error;
 use tracing::trace;
 

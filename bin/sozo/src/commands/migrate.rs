@@ -8,8 +8,8 @@ use dojo_world::local::WorldLocal;
 use dojo_world::remote::WorldRemote;
 use katana_rpc_api::starknet::RPC_SPEC_VERSION;
 use scarb::core::{Config, Workspace};
-use sozo_ops::migrate::{self, Migration};
 use sozo_ops::migrate::deployer::Deployer;
+use sozo_ops::migrate::{self, Migration};
 use sozo_ops::scarb_extensions::WorkspaceExt;
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::types::{BlockId, BlockTag, Felt, StarknetError};
@@ -70,10 +70,12 @@ impl MigrateArgs {
         })?;
 
         config.tokio_handle().block_on(async {
-            let txn_config: TxnConfig = self.transaction.into();
+            let mut txn_config: TxnConfig = self.transaction.into();
+            txn_config.wait = true;
 
             let world_diff = if Deployer::is_deployed(world_address, &account).await? {
-                let world_remote = WorldRemote::from_events(world_address, &account.provider()).await?;
+                let world_remote =
+                    WorldRemote::from_events(world_address, &account.provider()).await?;
                 WorldDiff::new(world_local, world_remote)
             } else {
                 WorldDiff::from_local(world_local)

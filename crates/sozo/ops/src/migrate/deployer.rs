@@ -1,15 +1,13 @@
 //! The deployer is in charge of deploying contracts to starknet.
 
 use dojo_utils::{TransactionExt, TransactionWaiter, TxnConfig};
-use starknet::{
-    accounts::ConnectedAccount,
-    core::{
-        types::{BlockId, BlockTag, Call, Felt, InvokeTransactionResult, StarknetError},
-        utils::get_contract_address,
-    },
-    macros::{felt, selector},
-    providers::{Provider, ProviderError},
+use starknet::accounts::ConnectedAccount;
+use starknet::core::types::{
+    BlockId, BlockTag, Call, Felt, InvokeTransactionResult, StarknetError,
 };
+use starknet::core::utils::get_contract_address;
+use starknet::macros::{felt, selector};
+use starknet::providers::{Provider, ProviderError};
 
 use super::MigrationError;
 
@@ -49,7 +47,10 @@ where
         {
             Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => Ok(false),
             Ok(_) => {
-                tracing::trace!(contract_address = format!("{:#066x}", contract_address), "Contract already deployed.");
+                tracing::trace!(
+                    contract_address = format!("{:#066x}", contract_address),
+                    "Contract already deployed."
+                );
                 return Ok(true);
             }
             Err(e) => return Err(MigrationError::Provider(e)),
@@ -88,7 +89,6 @@ where
             to: UDC_ADDRESS,
         }]);
 
-        
         let InvokeTransactionResult { transaction_hash } =
             txn.send_with_cfg(&self.txn_config).await.map_err(MigrationError::Migrator)?;
 

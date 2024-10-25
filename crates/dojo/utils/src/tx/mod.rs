@@ -77,8 +77,9 @@ where
             self = self.max_fee(*max_fee_r);
         }
 
-        // TODO: need to fix the wait that is not usable, since we don't have access to the account/provider.
-        // Or execution could expose it, or we need it to be stored in the configuration...
+        // TODO: need to fix the wait that is not usable, since we don't have access to the
+        // account/provider. Or execution could expose it, or we need it to be stored in the
+        // configuration...
         self.send().await
     }
 }
