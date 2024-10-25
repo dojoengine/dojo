@@ -242,6 +242,7 @@ pub fn build_sql_query(
         depth: usize, // Track nesting depth for proper ordering
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn parse_ty(
         path: &str,
         name: &str,
