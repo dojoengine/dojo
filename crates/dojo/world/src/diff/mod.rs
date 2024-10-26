@@ -13,7 +13,7 @@ use starknet_crypto::Felt;
 use super::local::{ResourceLocal, WorldLocal};
 use super::remote::{ResourceRemote, WorldRemote};
 use crate::utils::compute_dojo_contract_address;
-use crate::{DojoSelector, Namespace, ResourceType};
+use crate::{DojoSelector, ResourceType};
 
 mod compare;
 
@@ -83,7 +83,7 @@ impl WorldDiff {
     ///
     /// Consumes the local and remote worlds to avoid duplicating the resources,
     /// since the [`ResourceDiff`] will contain one or both of the local and remote resources.
-    pub fn new(mut local: WorldLocal, mut remote: WorldRemote) -> Self {
+    pub fn new(local: WorldLocal, mut remote: WorldRemote) -> Self {
         let local_world_class_hash = local.class_hash.expect("World class hash must be set.");
         let remote_world_class_hash =
             *remote.class_hashes.first().expect("Remote world must have at least one class hash.");
@@ -115,6 +115,12 @@ impl WorldDiff {
         }
 
         diff
+    }
+
+    /// Returns whether the whole world is in sync.
+    pub fn is_synced(&self) -> bool {
+        matches!(self.world_status, WorldStatus::Synced(_))
+            && self.resources.values().all(|resource| matches!(resource, ResourceDiff::Synced(_)))
     }
 
     /// Returns the remote writers of the resources.

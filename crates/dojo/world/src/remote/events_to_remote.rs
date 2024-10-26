@@ -75,7 +75,6 @@ impl WorldRemote {
         let mut continuation_token = page.continuation_token;
 
         while continuation_token.is_some() {
-            println!("Continuation token: {:?}", continuation_token);
             let page = provider.get_events(filter.clone(), continuation_token, chunk_size).await?;
 
             // TODO: remove this once rebased with latest katana.

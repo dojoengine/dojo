@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Context, Result};
 use clap::{Args, Subcommand};
+use colored::Colorize;
 use dojo_utils::TxnConfig;
 use dojo_world::config::{Environment, ProfileConfig};
 use dojo_world::contracts::{WorldContract, WorldContractReader};
@@ -10,6 +11,7 @@ use katana_rpc_api::starknet::RPC_SPEC_VERSION;
 use scarb::core::{Config, Workspace};
 use sozo_ops::migrate::{self, deployer, Migration, MigrationError};
 use sozo_ops::scarb_extensions::WorkspaceExt;
+use spinoff::{spinners, Color, Spinner, spinner};
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::types::{BlockId, BlockTag, Felt, StarknetError};
 use starknet::core::utils as snutils;
@@ -45,10 +47,14 @@ impl MigrateArgs {
 
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
         ws.profile_check()?;
+        ws.ensure_profile_artifacts()?;
 
         let (_profile_name, profile_config) = utils::load_profile_config(config)?;
 
         let MigrateArgs { world, starknet, account, .. } = self;
+
+        let frames = spinner!(["⛩️ ", "🥷 ", "🗡️ "], 500);
+        let mut spinner = Spinner::new(frames, "Evaluating world diff...", None);
 
         let world_local = WorldLocal::from_directory(
             ws.target_dir_profile().to_string(),
@@ -72,6 +78,18 @@ impl MigrateArgs {
                 WorldDiff::from_local(world_local)
             };
 
+            if world_diff.is_synced() {
+                spinner.stop_and_persist(
+                    "⛩️ ",
+                    &format!(
+                        "World fully synced at {}",
+                        format!("{:#066x}", world_address).green()
+                    ),
+                );
+
+                return Ok(());
+            }
+
             let migration = Migration::new(
                 world_diff,
                 WorldContract::new(world_address, account),
@@ -79,7 +97,7 @@ impl MigrateArgs {
                 profile_config,
             );
 
-            migration.migrate().await.context("Migration failed.")
+            migration.migrate(&mut spinner).await.context("Migration failed.")
         })
     }
 }

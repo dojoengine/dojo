@@ -13288,6 +13288,7 @@ dependencies = [
  "snapbox",
  "sozo-ops",
  "sozo-walnut",
+ "spinoff",
  "starknet 0.12.0",
  "starknet-crypto 0.7.2",
  "tabled",
@@ -13346,6 +13347,7 @@ dependencies = [
  "serde_with 3.9.0",
  "smol_str",
  "sozo-walnut",
+ "spinoff",
  "starknet 0.12.0",
  "starknet-crypto 0.7.2",
  "thiserror",
@@ -13395,6 +13397,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6980e8d7511241f8acf4aebddbb1ff938df5eebe98691418c4468d0b72a96a67"
 dependencies = [
  "lock_api",
+]
+
+[[package]]
+name = "spinoff"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "20aa2ed67fbb202e7b716ff8bfc6571dd9301617767380197d701c31124e88f6"
+dependencies = [
+ "colored",
+ "once_cell",
+ "paste",
 ]
 
 [[package]]

@@ -22,9 +22,9 @@ use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 
 use cainome::cairo_serde::{ByteArray, ClassHash, ContractAddress};
+use colored::Colorize;
 use declarer::Declarer;
 use deployer::Deployer;
-use dojo_types::naming;
 use dojo_utils::TxnConfig;
 use dojo_world::config::ProfileConfig;
 use dojo_world::contracts::WorldContract;
@@ -33,6 +33,7 @@ use dojo_world::local::ResourceLocal;
 use dojo_world::remote::ResourceRemote;
 use dojo_world::{utils, ResourceType};
 use invoker::Invoker;
+use spinoff::{spinners, Color, Spinner};
 use starknet::accounts::ConnectedAccount;
 use starknet_crypto::Felt;
 use tracing::trace;
@@ -72,11 +73,29 @@ where
 
     /// Migrates the world by syncing the namespaces, resources, permissions and initializing the
     /// contracts.
-    pub async fn migrate(&self) -> Result<(), MigrationError<A::SignError>> {
+    ///
+    /// TODO: find a more elegant way to pass an UI printer to the ops library than a hard coded
+    /// spinner.
+    pub async fn migrate(&self, spinner: &mut Spinner) -> Result<(), MigrationError<A::SignError>> {
+        spinner.update_text("Deploying world...");
         self.ensure_world().await?;
+
+        spinner.update_text("Syncing resources...");
         self.sync_resources().await?;
+
+        spinner.update_text("Syncing permissions...");
         self.sync_permissions().await?;
+
+        spinner.update_text("Initializing contracts...");
         self.initialize_contracts().await?;
+
+        spinner.stop_and_persist(
+            "⛩️ ",
+            &format!(
+                "Migration successful with world at address {}",
+                format!("{:#066x}", self.world.address).green()
+            ),
+        );
 
         Ok(())
     }

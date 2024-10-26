@@ -49,7 +49,7 @@ impl BuildArgs {
 
         // Ensure we don't have old contracts in the build dir, since the local artifacts
         // guides the migration.
-        ws.clean_dir_profile()?;
+        ws.clean_dir_profile();
 
         let packages: Vec<Package> = if let Some(filter) = self.packages {
             filter.match_many(&ws)?.into_iter().collect()

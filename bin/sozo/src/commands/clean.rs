@@ -15,9 +15,9 @@ impl CleanArgs {
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
 
         if self.all_profiles {
-            ws.clean_dir_all_profiles()?;
+            ws.clean_dir_all_profiles();
         } else {
-            ws.clean_dir_profile()?;
+            ws.clean_dir_profile();
         }
 
         Ok(())

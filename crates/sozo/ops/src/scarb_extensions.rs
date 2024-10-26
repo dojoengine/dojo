@@ -61,9 +61,11 @@ pub trait WorkspaceExt {
     /// Checks if the current profile is valid for the workspace.
     fn profile_check(&self) -> Result<()>;
     /// Cleans the target directory for the current profile.
-    fn clean_dir_profile(&self) -> Result<()>;
+    fn clean_dir_profile(&self);
     /// Cleans the target directory for all profiles.
-    fn clean_dir_all_profiles(&self) -> Result<()>;
+    fn clean_dir_all_profiles(&self);
+    /// Checks if the current profile has generated artifacts.
+    fn ensure_profile_artifacts(&self) -> Result<()>;
 }
 
 impl WorkspaceExt for Workspace<'_> {
@@ -91,13 +93,34 @@ impl WorkspaceExt for Workspace<'_> {
         Ok(())
     }
 
-    fn clean_dir_profile(&self) -> Result<()> {
+    fn clean_dir_profile(&self) {
         let target_dir = self.target_dir_profile();
-        fs::remove_dir_all(target_dir.to_string()).context("failed to clean generated artifacts")
+        // Ignore errors since the directory might not exist.
+        let _ = fs::remove_dir_all(target_dir.to_string());
     }
 
-    fn clean_dir_all_profiles(&self) -> Result<()> {
+    fn clean_dir_all_profiles(&self) {
         let target_dir = self.target_dir();
-        fs::remove_dir_all(target_dir.to_string()).context("failed to clean generated artifacts")
+        // Ignore errors since the directory might not exist.
+        let _ = fs::remove_dir_all(target_dir.to_string());
+    }
+
+    fn ensure_profile_artifacts(&self) -> Result<()> {
+        let profile_name = self.current_profile()?.to_string();
+
+        if !self.target_dir_profile().exists() || self.target_dir_profile().list_files()?.is_empty()
+        {
+            if profile_name == "dev" {
+                anyhow::bail!("No artifacts generated for the 'dev' profile. Run `sozo build` to generate them since it's the default profile.");
+            } else {
+                anyhow::bail!(
+                "Target directory for profile '{}' does not exist or is empty, run `sozo build --profile {}` to generate it.",
+                profile_name,
+                profile_name
+            );
+            }
+        }
+
+        Ok(())
     }
 }

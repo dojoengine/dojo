@@ -26,7 +26,7 @@ camino.workspace = true
 clap.workspace = true
 clap-verbosity-flag.workspace = true
 clap_complete.workspace = true
-colored = "2"
+colored.workspace = true
 console.workspace = true
 derive_more.workspace = true
 dojo-bindgen.workspace = true
@@ -54,6 +54,7 @@ serde_json.workspace = true
 smol_str.workspace = true
 sozo-ops.workspace = true
 sozo-walnut = { workspace = true, optional = true }
+spinoff.workspace = true
 starknet.workspace = true
 starknet-crypto.workspace = true
 thiserror.workspace = true
