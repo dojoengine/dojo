@@ -34,6 +34,8 @@ pub enum ResourceDiff {
 
 #[derive(Debug)]
 pub enum WorldStatus {
+    /// The world is not deployed, it's the first migration with the given seed.
+    NotDeployed(Felt, Felt, SierraClass),
     /// The local world is a new version, and the remote world must be updated.
     /// (class_hash, casm_class_hash, sierra_class)
     NewVersion(Felt, Felt, SierraClass),
@@ -59,7 +61,7 @@ impl WorldDiff {
     /// Consumes the local world to avoid duplicating the resources.
     pub fn from_local(local: WorldLocal) -> Self {
         let mut diff = Self {
-            world_status: WorldStatus::NewVersion(
+            world_status: WorldStatus::NotDeployed(
                 local.class_hash.expect("World class hash must be set."),
                 local.casm_class_hash.expect("World casm class hash must be set."),
                 local.class.expect("World class must be set."),
@@ -86,7 +88,7 @@ impl WorldDiff {
     pub fn new(local: WorldLocal, mut remote: WorldRemote) -> Self {
         let local_world_class_hash = local.class_hash.expect("World class hash must be set.");
         let remote_world_class_hash =
-            *remote.class_hashes.first().expect("Remote world must have at least one class hash.");
+            *remote.class_hashes.last().expect("Remote world must have at least one class hash.");
 
         let world_status = if local_world_class_hash == remote_world_class_hash {
             WorldStatus::Synced(local_world_class_hash)

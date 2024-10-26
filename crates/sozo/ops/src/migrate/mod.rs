@@ -465,29 +465,46 @@ where
 
     /// Ensures the world is declared and deployed if necessary.
     async fn ensure_world(&self) -> Result<(), MigrationError<A::SignError>> {
-        if let WorldStatus::NewVersion(class_hash, casm_class_hash, class) = &self.diff.world_status
-        {
-            trace!("Declaring and deploying world.");
+        match &self.diff.world_status {
+            WorldStatus::Synced(_) => return Ok(()),
+            WorldStatus::NotDeployed(class_hash, casm_class_hash, class) => {
+                trace!("Deploying the first world.");
 
-            Declarer::declare(
-                *casm_class_hash,
-                class.clone().flatten()?,
-                &self.world.account,
-                &self.txn_config,
-            )
-            .await?;
-
-            let deployer = Deployer::new(&self.world.account, self.txn_config.clone());
-
-            deployer
-                .deploy_via_udc(
-                    *class_hash,
-                    utils::world_salt(&self.profile_config.world.seed)?,
-                    &[*class_hash],
-                    Felt::ZERO,
+                Declarer::declare(
+                    *casm_class_hash,
+                    class.clone().flatten()?,
+                    &self.world.account,
+                    &self.txn_config,
                 )
                 .await?;
-        }
+
+                let deployer = Deployer::new(&self.world.account, self.txn_config.clone());
+
+                deployer
+                    .deploy_via_udc(
+                        *class_hash,
+                        utils::world_salt(&self.profile_config.world.seed)?,
+                        &[*class_hash],
+                        Felt::ZERO,
+                    )
+                    .await?;
+            }
+            WorldStatus::NewVersion(class_hash, casm_class_hash, class) => {
+                trace!("Upgrading the world.");
+
+                Declarer::declare(
+                    *casm_class_hash,
+                    class.clone().flatten()?,
+                    &self.world.account,
+                    &self.txn_config,
+                )
+                .await?;
+
+                let mut invoker = Invoker::new(&self.world.account, self.txn_config.clone());
+                invoker.add_call(self.world.upgrade_getcall(&ClassHash(*class_hash)));
+                invoker.multicall().await?;
+            }
+        };
 
         Ok(())
     }

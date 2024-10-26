@@ -69,7 +69,10 @@ mod tests {
         };
 
         let cmd = Command::parse_from([""]);
-        assert_eq!(cmd.inner.address(Some(&env_metadata)).unwrap(), Some(Felt::from_hex("0x0").unwrap()));
+        assert_eq!(
+            cmd.inner.address(Some(&env_metadata)).unwrap(),
+            Some(Felt::from_hex("0x0").unwrap())
+        );
     }
 
     #[test]
@@ -80,7 +83,10 @@ mod tests {
         };
 
         let cmd = Command::parse_from(["sozo", "--world", "0x1"]);
-        assert_eq!(cmd.inner.address(Some(&env_metadata)).unwrap(), Some(Felt::from_hex("0x1").unwrap()));
+        assert_eq!(
+            cmd.inner.address(Some(&env_metadata)).unwrap(),
+            Some(Felt::from_hex("0x1").unwrap())
+        );
     }
 
     #[test]

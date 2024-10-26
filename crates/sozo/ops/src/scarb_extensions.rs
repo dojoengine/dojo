@@ -111,13 +111,17 @@ impl WorkspaceExt for Workspace<'_> {
         if !self.target_dir_profile().exists() || self.target_dir_profile().list_files()?.is_empty()
         {
             if profile_name == "dev" {
-                anyhow::bail!("No artifacts generated for the 'dev' profile. Run `sozo build` to generate them since it's the default profile.");
+                anyhow::bail!(
+                    "No artifacts generated for the 'dev' profile. Run `sozo build` to generate \
+                     them since it's the default profile."
+                );
             } else {
                 anyhow::bail!(
-                "Target directory for profile '{}' does not exist or is empty, run `sozo build --profile {}` to generate it.",
-                profile_name,
-                profile_name
-            );
+                    "Target directory for profile '{}' does not exist or is empty, run `sozo \
+                     build --profile {}` to generate it.",
+                    profile_name,
+                    profile_name
+                );
             }
         }
 

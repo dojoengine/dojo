@@ -11,7 +11,7 @@ use katana_rpc_api::starknet::RPC_SPEC_VERSION;
 use scarb::core::{Config, Workspace};
 use sozo_ops::migrate::{self, deployer, Migration, MigrationError};
 use sozo_ops::scarb_extensions::WorkspaceExt;
-use spinoff::{spinners, Color, Spinner, spinner};
+use spinoff::{spinner, spinners, Color, Spinner};
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::types::{BlockId, BlockTag, Felt, StarknetError};
 use starknet::core::utils as snutils;

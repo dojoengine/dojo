@@ -230,11 +230,17 @@ fn inspect_world(world_diff: &WorldDiff, world_address: Felt) {
     let mut contracts_disp = vec![];
 
     let world = match &world_diff.world_status {
-        WorldStatus::NewVersion(class_hash, _, _) => ResourceWithAddressInspect {
+        WorldStatus::NotDeployed(class_hash, _, _) => ResourceWithAddressInspect {
             name: "World".to_string(),
             address: format!("{:#066x}", world_address),
             current_class_hash: format!("{:#066x}", class_hash),
             status: ResourceStatus::Created,
+        },
+        WorldStatus::NewVersion(class_hash, _, _) => ResourceWithAddressInspect {
+            name: "World".to_string(),
+            address: format!("{:#066x}", world_address),
+            current_class_hash: format!("{:#066x}", class_hash),
+            status: ResourceStatus::Updated,
         },
         WorldStatus::Synced(class_hash) => ResourceWithAddressInspect {
             name: "World".to_string(),
