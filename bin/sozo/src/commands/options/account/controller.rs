@@ -152,13 +152,15 @@ fn collect_policies_from_local_world(
     for (selector, resource) in world_local.resources.iter() {
         if resource.resource_type() == ResourceType::Contract {
             let contract = world_local.get_contract_resource(*selector);
-            let contract_address = utils::compute_dojo_contract_address(
-                *selector,
-                contract.class_hash,
-                world_address,
-            );
+            let contract_address =
+                utils::compute_dojo_contract_address(*selector, contract.class_hash, world_address);
 
-            policies_from_abis(&mut policies, &resource.tag(), contract_address, &contract.class.abi);
+            policies_from_abis(
+                &mut policies,
+                &resource.tag(),
+                contract_address,
+                &contract.class.abi,
+            );
         }
     }
 

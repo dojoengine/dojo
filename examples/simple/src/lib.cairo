@@ -12,6 +12,14 @@ pub struct M {
     pub b: felt252,
 }
 
+#[derive(Introspect, Drop, Serde)]
+#[dojo::model]
+pub struct M2 {
+    #[key]
+    pub a: u32,
+    pub b: u256,
+}
+
 #[dojo::interface]
 pub trait MyInterface {
     fn system_1(ref world: IWorldDispatcher, data: felt252) -> felt252;
@@ -27,7 +35,7 @@ pub mod c1 {
     impl MyInterfaceImpl of MyInterface<ContractState> {
         fn system_1(ref world: IWorldDispatcher, data: felt252) -> felt252 {
             let _world = world;
-            42
+            55
         }
 
         fn system_2(ref world: IWorldDispatcher) {

@@ -254,8 +254,6 @@ fn inspect_world(world_diff: &WorldDiff, world_address: Felt) {
         },
     };
 
-    contracts_disp.push(world);
-
     let mut models_disp = vec![];
     let mut events_disp = vec![];
 
@@ -270,13 +268,23 @@ fn inspect_world(world_diff: &WorldDiff, world_address: Felt) {
         }
     }
 
+    if !contracts_disp.is_empty() {
+        contracts_disp.sort_by_key(|m| m.name.clone());
+    }
+
+    // Keep world at the top.
+    contracts_disp.insert(0, world);
     print_table(&contracts_disp, "> Contracts");
 
     if !models_disp.is_empty() {
+        models_disp.sort_by_key(|m| m.name.clone());
+
         print_table(&models_disp, "> Models");
     }
 
     if !events_disp.is_empty() {
+        events_disp.sort_by_key(|m| m.name.clone());
+
         print_table(&events_disp, "> Events");
     }
 }
@@ -297,18 +305,12 @@ fn resource_diff_display(
             local.class_hash(),
             ResourceStatus::Created,
         ),
-        ResourceDiff::Updated(local, remote) => (
-            local.tag(),
-            remote.address(),
-            local.class_hash(),
-            ResourceStatus::Updated,
-        ),
-        ResourceDiff::Synced(remote) => (
-            remote.tag(),
-            remote.address(),
-            remote.current_class_hash(),
-            ResourceStatus::Synced,
-        ),
+        ResourceDiff::Updated(local, remote) => {
+            (local.tag(), remote.address(), local.class_hash(), ResourceStatus::Updated)
+        }
+        ResourceDiff::Synced(remote) => {
+            (remote.tag(), remote.address(), remote.current_class_hash(), ResourceStatus::Synced)
+        }
     };
 
     ResourceWithAddressInspect {
