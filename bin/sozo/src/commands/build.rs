@@ -52,6 +52,8 @@ impl BuildArgs {
     pub fn run(self, config: &Config) -> Result<()> {
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
 
+        // TODO: important, we need to clean on build to ensure we don't have old contracts in the build dir.
+
         let packages: Vec<Package> = if let Some(filter) = self.packages {
             filter.match_many(&ws)?.into_iter().collect()
         } else {
