@@ -13,7 +13,7 @@ use sozo_ops::scarb_extensions::WorkspaceExt;
 use starknet::core::types::Felt;
 use tabled::settings::Style;
 use tabled::{Table, Tabled};
-use tracing::trace;
+use tracing::{trace, warn};
 
 use super::options::starknet::StarknetOptions;
 use super::options::world::WorldOptions;
@@ -47,7 +47,7 @@ impl InspectArgs {
             profile_config.namespace.clone(),
         )?;
 
-        let world_address = get_world_address(&profile_config, &world, &world_local)?;
+        let world_address = utils::get_world_address(&profile_config, &world, &world_local)?;
 
         config.tokio_handle().block_on(async {
             let env = profile_config.env.as_ref();
@@ -328,18 +328,4 @@ where
 
     println!("{title}");
     println!("{table}\n");
-}
-
-/// Computes the world address based on the provided options.
-fn get_world_address(
-    profile_config: &ProfileConfig,
-    world: &WorldOptions,
-    world_local: &WorldLocal,
-) -> Result<Felt> {
-    let env = profile_config.env.as_ref();
-
-    let deterministic_world_address =
-        world_local.compute_world_address(&profile_config.world.seed)?;
-
-    if let Some(wa) = world.address(env)? { Ok(wa) } else { Ok(deterministic_world_address) }
 }

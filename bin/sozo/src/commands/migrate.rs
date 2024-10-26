@@ -17,7 +17,7 @@ use starknet::core::types::{BlockId, BlockTag, Felt, StarknetError};
 use starknet::core::utils as snutils;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider, ProviderError};
-use tracing::{debug, trace};
+use tracing::{debug, trace, warn};
 
 use super::options::account::{AccountOptions, SozoAccount};
 use super::options::starknet::StarknetOptions;
@@ -111,23 +111,7 @@ pub async fn setup_env(
 ) -> Result<(Felt, SozoAccount<JsonRpcClient<HttpTransport>>)> {
     let env = profile_config.env.as_ref();
 
-    let deterministic_world_address =
-        world_local.compute_world_address(&profile_config.world.seed)?;
-
-    // If the world address is not provided, we rely on the deterministic address of the
-    // world contract based on the seed. If the world already exists, the user must
-    // provide the world's address explicitly.
-    let world_address = if let Some(wa) = world.address(env)? {
-        wa
-    } else {
-        debug!(
-            "This seems to be a first deployment. If you were expecting to update your remote \
-             world, please specify its address using --world, in an environment variable or in \
-             the dojo configuration file.\n"
-        );
-
-        deterministic_world_address
-    };
+    let world_address = utils::get_world_address(profile_config, &world, world_local)?;
 
     let account = {
         let provider = starknet.provider(env)?;

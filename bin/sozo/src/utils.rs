@@ -3,9 +3,46 @@ use std::str::FromStr;
 
 use anyhow::{Error, Result};
 use camino::Utf8PathBuf;
+use colored::*;
 use dojo_world::config::ProfileConfig;
+use dojo_world::local::WorldLocal;
 use scarb::core::{Config, TomlManifest};
 use semver::Version;
+use starknet::core::types::Felt;
+
+use crate::commands::options::world::WorldOptions;
+
+/// Computes the world address based on the provided options.
+pub fn get_world_address(
+    profile_config: &ProfileConfig,
+    world: &WorldOptions,
+    world_local: &WorldLocal,
+) -> Result<Felt> {
+    let env = profile_config.env.as_ref();
+
+    let deterministic_world_address =
+        world_local.compute_world_address(&profile_config.world.seed)?;
+
+    if let Some(wa) = world.address(env)? {
+        if wa != deterministic_world_address {
+            println!(
+                "{}",
+                format!(
+                    "The world address computed from the seed is different from the address \
+                     provided in config:\n\ndeterministic address: {:#x}\nconfig address: \
+                     {:#x}\n\nThe address in the config file is preferred, consider commenting it \
+                     out if you attempt to migrate the world with a new seed.",
+                    deterministic_world_address, wa
+                )
+                .yellow()
+            );
+        }
+
+        Ok(wa)
+    } else {
+        Ok(deterministic_world_address)
+    }
+}
 
 /// Loads the profile config from the Scarb workspace configuration.
 pub fn load_profile_config(config: &Config) -> Result<(String, ProfileConfig), Error> {
