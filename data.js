@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1729912343134,
+  "lastUpdate": 1729913173997,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -28147,6 +28147,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 9003041,
             "range": "± 762942",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "51b0297e2821206fd96d0f64fe5fbb1b000d54fb",
+          "message": "fix(torii-grpc): sql query for typed enums in nested arrays (#2579)",
+          "timestamp": "2024-10-25T21:09:56-06:00",
+          "tree_id": "080299b3cc9ca82ec69f08738f2667648b12154b",
+          "url": "https://github.com/dojoengine/dojo/commit/51b0297e2821206fd96d0f64fe5fbb1b000d54fb"
+        },
+        "date": 1729913172193,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 12296930682,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
