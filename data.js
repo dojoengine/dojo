@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1729912093819,
+  "lastUpdate": 1729912343134,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -28099,6 +28099,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 12009777009,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e54c4c2a171547f37a604a4030f8d98abf33797f",
+          "message": "hotfix(katana): missing erc20 class on custom genesis (#2582)",
+          "timestamp": "2024-10-26T10:52:14+08:00",
+          "tree_id": "2b6be2981a10149a6f4bb9d9e13e559006df0a75",
+          "url": "https://github.com/dojoengine/dojo/commit/e54c4c2a171547f37a604a4030f8d98abf33797f"
+        },
+        "date": 1729912341494,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16029569,
+            "range": "± 573107",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8642629,
+            "range": "± 571359",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3771561774,
+            "range": "± 808482607",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 9003041,
+            "range": "± 762942",
             "unit": "ns/iter"
           }
         ]
