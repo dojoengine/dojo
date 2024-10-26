@@ -4,8 +4,9 @@ use prettytable::format::consts::FORMAT_NO_LINESEP_WITH_TITLE;
 use prettytable::{format, Cell, Row, Table};
 use scarb::core::{Config, Package, TargetKind};
 use scarb::ops::CompileOpts;
+use sozo_ops::scarb_extensions::WorkspaceExt;
 use scarb_ui::args::{FeaturesSpec, PackagesFilter};
-use tracing::trace;
+use tracing::debug;
 
 use crate::commands::check_package_dojo_version;
 
@@ -51,8 +52,11 @@ pub struct BuildArgs {
 impl BuildArgs {
     pub fn run(self, config: &Config) -> Result<()> {
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
+        ws.profile_check()?;
 
-        // TODO: important, we need to clean on build to ensure we don't have old contracts in the build dir.
+        // Ensure we don't have old contracts in the build dir, since the local artifacts
+        // guides the migration.
+        ws.clean_dir_profile()?;
 
         let packages: Vec<Package> = if let Some(filter) = self.packages {
             filter.match_many(&ws)?.into_iter().collect()
@@ -64,10 +68,7 @@ impl BuildArgs {
             check_package_dojo_version(&ws, p)?;
         }
 
-        let profile_name =
-            ws.current_profile().expect("Scarb profile is expected at this point.").to_string();
-
-        trace!(?packages);
+        debug!(?packages);
 
         scarb::ops::compile(
             packages.iter().map(|p| p.id).collect(),

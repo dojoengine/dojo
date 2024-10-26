@@ -5,11 +5,13 @@ use clap::Subcommand;
 use scarb::core::{Config, Package, Workspace};
 
 pub(crate) mod build;
+pub(crate) mod clean;
 pub(crate) mod inspect;
 pub(crate) mod migrate;
 pub(crate) mod options;
 
 use build::BuildArgs;
+use clean::CleanArgs;
 use inspect::InspectArgs;
 use migrate::MigrateArgs;
 use tracing::info_span;
@@ -23,6 +25,8 @@ pub enum Commands {
     Migrate(Box<MigrateArgs>),
     #[command(about = "Inspect the world")]
     Inspect(Box<InspectArgs>),
+    #[command(about = "Clean the build directory")]
+    Clean(Box<CleanArgs>),
 }
 
 impl fmt::Display for Commands {
@@ -31,6 +35,7 @@ impl fmt::Display for Commands {
             Commands::Build(_) => write!(f, "Build"),
             Commands::Migrate(_) => write!(f, "Migrate"),
             Commands::Inspect(_) => write!(f, "Inspect"),
+            Commands::Clean(_) => write!(f, "Clean"),
         }
     }
 }
@@ -47,6 +52,7 @@ pub fn run(command: Commands, config: &Config) -> Result<()> {
         Commands::Build(args) => args.run(config),
         Commands::Migrate(args) => args.run(config),
         Commands::Inspect(args) => args.run(config),
+        Commands::Clean(args) => args.run(config),
     }
 }
 

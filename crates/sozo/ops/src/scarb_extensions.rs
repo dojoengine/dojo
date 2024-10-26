@@ -1,4 +1,6 @@
-use anyhow::Result;
+use std::fs;
+
+use anyhow::{Context, Result};
 use camino::Utf8Path;
 use scarb::core::Workspace;
 use scarb::flock::Filesystem;
@@ -58,6 +60,10 @@ pub trait WorkspaceExt {
     fn target_dir_profile(&self) -> Filesystem;
     /// Checks if the current profile is valid for the workspace.
     fn profile_check(&self) -> Result<()>;
+    /// Cleans the target directory for the current profile.
+    fn clean_dir_profile(&self) -> Result<()>;
+    /// Cleans the target directory for all profiles.
+    fn clean_dir_all_profiles(&self) -> Result<()>;
 }
 
 impl WorkspaceExt for Workspace<'_> {
@@ -83,5 +89,15 @@ impl WorkspaceExt for Workspace<'_> {
         }
 
         Ok(())
+    }
+
+    fn clean_dir_profile(&self) -> Result<()> {
+        let target_dir = self.target_dir_profile();
+        fs::remove_dir_all(target_dir.to_string()).context("failed to clean generated artifacts")
+    }
+
+    fn clean_dir_all_profiles(&self) -> Result<()> {
+        let target_dir = self.target_dir();
+        fs::remove_dir_all(target_dir.to_string()).context("failed to clean generated artifacts")
     }
 }

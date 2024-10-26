@@ -12,9 +12,7 @@ use sozo_ops::migrate::{self, deployer, Migration, MigrationError};
 use sozo_ops::scarb_extensions::WorkspaceExt;
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::types::{BlockId, BlockTag, Felt, StarknetError};
-use starknet::core::utils::{
-    cairo_short_string_to_felt, get_contract_address, parse_cairo_short_string,
-};
+use starknet::core::utils as snutils;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider, ProviderError};
 use tracing::{debug, trace};
@@ -44,15 +42,16 @@ impl MigrateArgs {
     /// Runs the migration.
     pub fn run(self, config: &Config) -> Result<()> {
         trace!(args = ?self);
+
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
-        let target_dir_profile = ws.target_dir_profile();
+        ws.profile_check()?;
 
         let (_profile_name, profile_config) = utils::load_profile_config(config)?;
 
         let MigrateArgs { world, starknet, account, .. } = self;
 
         let world_local = WorldLocal::from_directory(
-            target_dir_profile.to_string(),
+            ws.target_dir_profile().to_string(),
             profile_config.namespace.clone(),
         )?;
 
@@ -128,7 +127,7 @@ pub async fn setup_env(
         }
 
         let chain_id = provider.chain_id().await?;
-        let chain_id = parse_cairo_short_string(&chain_id)
+        let chain_id = snutils::parse_cairo_short_string(&chain_id)
             .with_context(|| "Cannot parse chain_id as string")?;
         trace!(chain_id);
 
