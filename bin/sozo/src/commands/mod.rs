@@ -5,13 +5,16 @@ use clap::Subcommand;
 use scarb::core::{Config, Package, Workspace};
 
 pub(crate) mod build;
+pub(crate) mod calldata_decoder;
 pub(crate) mod clean;
+pub(crate) mod execute;
 pub(crate) mod inspect;
 pub(crate) mod migrate;
 pub(crate) mod options;
 
 use build::BuildArgs;
 use clean::CleanArgs;
+use execute::ExecuteArgs;
 use inspect::InspectArgs;
 use migrate::MigrateArgs;
 use tracing::info_span;
@@ -23,6 +26,8 @@ pub enum Commands {
     #[command(about = "Run a migration, declaring and deploying contracts as necessary to update \
                        the world")]
     Migrate(Box<MigrateArgs>),
+    #[command(about = "Execute a system with the given calldata.")]
+    Execute(Box<ExecuteArgs>),
     #[command(about = "Inspect the world")]
     Inspect(Box<InspectArgs>),
     #[command(about = "Clean the build directory")]
@@ -33,9 +38,10 @@ impl fmt::Display for Commands {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Commands::Build(_) => write!(f, "Build"),
-            Commands::Migrate(_) => write!(f, "Migrate"),
-            Commands::Inspect(_) => write!(f, "Inspect"),
             Commands::Clean(_) => write!(f, "Clean"),
+            Commands::Execute(_) => write!(f, "Execute"),
+            Commands::Inspect(_) => write!(f, "Inspect"),
+            Commands::Migrate(_) => write!(f, "Migrate"),
         }
     }
 }
@@ -51,6 +57,7 @@ pub fn run(command: Commands, config: &Config) -> Result<()> {
     match command {
         Commands::Build(args) => args.run(config),
         Commands::Migrate(args) => args.run(config),
+        Commands::Execute(args) => args.run(config),
         Commands::Inspect(args) => args.run(config),
         Commands::Clean(args) => args.run(config),
     }

@@ -1,7 +1,7 @@
 use anyhow::Result;
 use clap::Args;
 use scarb::core::Config;
-use sozo_ops::scarb_extensions::WorkspaceExt;
+use sozo_scarbext::WorkspaceExt;
 
 #[derive(Debug, Args)]
 pub struct CleanArgs {

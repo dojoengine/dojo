@@ -23,27 +23,19 @@ use std::str::FromStr;
 
 use cainome::cairo_serde::{ByteArray, ClassHash, ContractAddress};
 use colored::Colorize;
-use declarer::Declarer;
-use deployer::Deployer;
-use dojo_utils::TxnConfig;
+use dojo_utils::{Declarer, Deployer, Invoker, TxnConfig};
 use dojo_world::config::ProfileConfig;
 use dojo_world::contracts::WorldContract;
 use dojo_world::diff::{ResourceDiff, WorldDiff, WorldStatus};
 use dojo_world::local::ResourceLocal;
 use dojo_world::remote::ResourceRemote;
 use dojo_world::{utils, ResourceType};
-use invoker::Invoker;
-use spinoff::{spinners, Color, Spinner};
+use spinoff::Spinner;
 use starknet::accounts::ConnectedAccount;
 use starknet_crypto::Felt;
 use tracing::trace;
 
-// TODO: those may be moved to dojo-utils in the tx module.
-pub mod declarer;
-pub mod deployer;
 pub mod error;
-pub mod invoker;
-
 pub use error::MigrationError;
 
 #[derive(Debug)]
@@ -80,8 +72,10 @@ where
         spinner.update_text("Deploying world...");
         self.ensure_world().await?;
 
-        spinner.update_text("Syncing resources...");
-        self.sync_resources().await?;
+        if !self.diff.is_synced() {
+            spinner.update_text("Syncing resources...");
+            self.sync_resources().await?;
+        }
 
         spinner.update_text("Syncing permissions...");
         self.sync_permissions().await?;
@@ -127,7 +121,7 @@ where
                     ResourceDiff::Updated(_, ResourceRemote::Contract(contract)) => {
                         (!contract.is_initialized, init_call_args.get(&tag).clone())
                     }
-                    ResourceDiff::Synced(ResourceRemote::Contract(contract)) => {
+                    ResourceDiff::Synced(_, ResourceRemote::Contract(contract)) => {
                         (!contract.is_initialized, init_call_args.get(&tag).clone())
                     }
                     _ => (false, None),
@@ -466,7 +460,7 @@ where
     /// Ensures the world is declared and deployed if necessary.
     async fn ensure_world(&self) -> Result<(), MigrationError<A::SignError>> {
         match &self.diff.world_status {
-            WorldStatus::Synced(_) => return Ok(()),
+            WorldStatus::Synced(_, _) => return Ok(()),
             WorldStatus::NotDeployed(class_hash, casm_class_hash, class) => {
                 trace!("Deploying the first world.");
 

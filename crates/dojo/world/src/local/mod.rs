@@ -163,10 +163,10 @@ impl ResourceLocal {
     ///
     /// This function panics since it must only be used where the developer
     /// can ensure that the resource is a contract.
-    pub fn as_contract(&self) -> &ContractLocal {
+    pub fn as_contract(&self) -> Option<&ContractLocal> {
         match self {
-            ResourceLocal::Contract(c) => c,
-            _ => panic!("Resource {} is not a contract", self.name()),
+            ResourceLocal::Contract(c) => Some(c),
+            _ => None,
         }
     }
 
@@ -229,15 +229,9 @@ impl WorldLocal {
         self.resources.insert(resource.dojo_selector(), resource);
     }
 
-    /// Returns the contract resource.
-    ///
-    /// This function panics since it must only be used where the developer
-    /// can ensure that the resource is a contract.
-    pub fn get_contract_resource(&self, selector: DojoSelector) -> &ContractLocal {
-        self.resources
-            .get(&selector)
-            .expect(&format!("Contract with selector {:#x} not found", selector))
-            .as_contract()
+    /// Returns the contract resource, if any.
+    pub fn get_contract_resource(&self, selector: DojoSelector) -> Option<&ContractLocal> {
+        self.resources.get(&selector).and_then(|r| r.as_contract())
     }
 
     /// Returns the resource from a name or tag.
@@ -261,7 +255,6 @@ mod tests {
     fn test_add_resource() {
         let mut world = WorldLocal::new(NamespaceConfig::new("dojo"));
 
-        assert_eq!(world.namespaces.len(), 1);
         assert_eq!(world.resources.len(), 1);
 
         let n = world.resources.get(&naming::compute_bytearray_hash("dojo")).unwrap();
@@ -277,9 +270,8 @@ mod tests {
 
         let selector = naming::compute_selector_from_names(&"dojo".to_string(), &"c1".to_string());
 
-        assert_eq!(world.contracts.get("dojo").unwrap().len(), 1);
-        assert_eq!(world.contracts.get("dojo").unwrap().contains(&selector), true);
         assert_eq!(world.resources.len(), 1);
+        assert_eq!(world.get_contract_resource(selector).is_some(), true);
 
         world.add_resource(ResourceLocal::Contract(ContractLocal {
             name: "c2".to_string(),
@@ -291,9 +283,8 @@ mod tests {
 
         let selector2 = naming::compute_selector_from_names(&"dojo".to_string(), &"c2".to_string());
 
-        assert_eq!(world.contracts.get("dojo").unwrap().len(), 2);
         assert_eq!(world.resources.len(), 2);
-        assert_eq!(world.contracts.get("dojo").unwrap().contains(&selector), true);
-        assert_eq!(world.contracts.get("dojo").unwrap().contains(&selector2), true);
+        assert_eq!(world.get_contract_resource(selector).is_some(), true);
+        assert_eq!(world.get_contract_resource(selector2).is_some(), true);
     }
 }

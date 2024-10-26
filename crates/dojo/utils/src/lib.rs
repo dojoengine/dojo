@@ -3,6 +3,10 @@
 pub mod parse;
 mod tx;
 
+pub use tx::declarer::*;
+pub use tx::deployer::*;
+pub use tx::error::TransactionError;
+pub use tx::invoker::*;
 pub use tx::waiter::*;
 pub use tx::{TransactionExt, TxnAction, TxnConfig};
 

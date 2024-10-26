@@ -1,6 +1,5 @@
 //! The deployer is in charge of deploying contracts to starknet.
 
-use dojo_utils::{TransactionExt, TransactionWaiter, TxnConfig};
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{
     BlockId, BlockTag, Call, Felt, InvokeTransactionResult, StarknetError,
@@ -8,8 +7,9 @@ use starknet::core::types::{
 use starknet::core::utils::get_contract_address;
 use starknet::macros::{felt, selector};
 use starknet::providers::{Provider, ProviderError};
+use tracing::trace;
 
-use super::MigrationError;
+use crate::{TransactionError, TransactionExt, TransactionWaiter, TxnConfig};
 
 const UDC_DEPLOY_SELECTOR: Felt = selector!("deployContract");
 const UDC_ADDRESS: Felt =
@@ -42,14 +42,9 @@ where
         salt: Felt,
         constructor_calldata: &[Felt],
         deployer_address: Felt,
-    ) -> Result<Felt, MigrationError<A::SignError>> {
+    ) -> Result<Felt, TransactionError<A::SignError>> {
         let udc_calldata = [
-            vec![
-                class_hash,                             // class hash
-                salt,                                   // salt
-                deployer_address,                       // unique
-                Felt::from(constructor_calldata.len()), // constructor calldata len
-            ],
+            vec![class_hash, salt, deployer_address, Felt::from(constructor_calldata.len())],
             constructor_calldata.to_vec(),
         ]
         .concat();
@@ -57,10 +52,7 @@ where
         let contract_address =
             get_contract_address(salt, class_hash, &constructor_calldata, deployer_address);
 
-        if is_deployed(contract_address, &self.account.provider())
-            .await
-            .map_err(MigrationError::Provider)?
-        {
+        if is_deployed(contract_address, &self.account.provider()).await? {
             return Ok(Felt::ZERO);
         }
 
@@ -71,9 +63,9 @@ where
         }]);
 
         let InvokeTransactionResult { transaction_hash } =
-            txn.send_with_cfg(&self.txn_config).await.map_err(MigrationError::from)?;
+            txn.send_with_cfg(&self.txn_config).await?;
 
-        tracing::trace!(
+        trace!(
             transaction_hash = format!("{:#066x}", transaction_hash),
             contract_address = format!("{:#066x}", contract_address),
             "Deployed contract via UDC."

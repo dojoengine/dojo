@@ -4,6 +4,7 @@ use anyhow::{anyhow, Context, Result};
 use clap::Args;
 use dojo_utils::env::DOJO_ACCOUNT_ADDRESS_ENV_VAR;
 use dojo_world::config::Environment;
+use dojo_world::diff::WorldDiff;
 use dojo_world::local::WorldLocal;
 use scarb::core::Config;
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
@@ -61,13 +62,13 @@ impl AccountOptions {
         rpc_url: Url,
         provider: P,
         world_address: Felt,
-        world_local: &WorldLocal,
+        world_diff: &WorldDiff,
     ) -> Result<ControllerSessionAccount<P>>
     where
         P: Provider,
         P: Send + Sync,
     {
-        controller::create_controller(rpc_url, provider, world_address, world_local)
+        controller::create_controller(rpc_url, provider, world_address, &world_diff)
             .await
             .context("Failed to create a Controller account")
     }
@@ -78,7 +79,7 @@ impl AccountOptions {
         world_address: Felt,
         starknet: &StarknetOptions,
         env_metadata: Option<&Environment>,
-        world_local: &WorldLocal,
+        world_diff: &WorldDiff,
     ) -> Result<SozoAccount<P>>
     where
         P: Provider,
@@ -87,7 +88,7 @@ impl AccountOptions {
         #[cfg(feature = "controller")]
         if self.controller {
             let url = starknet.url(env_metadata)?;
-            let account = self.controller(url, provider, world_address, world_local).await?;
+            let account = self.controller(url, provider, world_address, world_diff).await?;
             return Ok(SozoAccount::Controller(account));
         }
 

@@ -1,11 +1,10 @@
 //! Invoker to invoke contracts.
 
-use dojo_utils::{TransactionExt, TransactionWaiter, TxnConfig};
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::Call;
 use tracing::trace;
 
-use super::MigrationError;
+use crate::{TransactionError, TransactionExt, TransactionWaiter, TxnConfig};
 
 #[derive(Debug)]
 pub struct Invoker<A>
@@ -35,7 +34,7 @@ where
     }
 
     /// Invokes a single call.
-    pub async fn invoke(&self, call: Call) -> Result<(), MigrationError<A::SignError>> {
+    pub async fn invoke(&self, call: Call) -> Result<(), TransactionError<A::SignError>> {
         trace!(?call, "Invoke contract.");
 
         let tx = self.account.execute_v1(vec![call]).send_with_cfg(&self.txn_config).await?;
@@ -50,15 +49,19 @@ where
     }
 
     /// Invokes all the calls in one single transaction.
-    pub async fn multicall(&self) -> Result<(), MigrationError<A::SignError>> {
+    pub async fn multicall(&self) -> Result<(), TransactionError<A::SignError>> {
         if self.calls.is_empty() {
             return Ok(());
         }
 
         trace!(?self.calls, "Invoke contract multicall.");
 
-        let tx =
-            self.account.execute_v1(self.calls.clone()).send_with_cfg(&self.txn_config).await?;
+        let tx = self
+            .account
+            .execute_v1(self.calls.clone())
+            .send_with_cfg(&self.txn_config)
+            .await
+            .map_err(TransactionError::from)?;
 
         trace!(
             transaction_hash = format!("{:#066x}", tx.transaction_hash),
@@ -75,7 +78,7 @@ where
     /// Invokes all the calls individually, usually used for debugging if a multicall failed.
     ///
     /// The order of the calls is the same as the order of the calls added to the invoker.
-    pub async fn invoke_all_sequentially(&self) -> Result<(), MigrationError<A::SignError>> {
+    pub async fn invoke_all_sequentially(&self) -> Result<(), TransactionError<A::SignError>> {
         if !self.calls.is_empty() {
             for call in self.calls.iter() {
                 self.invoke(call.clone()).await?;

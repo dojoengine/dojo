@@ -3,12 +3,15 @@ use std::io;
 use std::path::Path;
 
 use console::{pad_str, Alignment, Style, StyledObject};
-use dojo_world::metadata::get_default_namespace_from_ws;
-use dojo_world::migration::strategy::MigrationStrategy;
+use dojo_world::diff::{ResourceDiff, WorldDiff};
+use dojo_world::local::ResourceLocal;
+use dojo_world::remote::ResourceRemote;
+use dojo_world::ResourceType;
 use reqwest::StatusCode;
 use scarb::core::Workspace;
 use serde::Serialize;
 use serde_json::Value;
+use sozo_scarbext::WorkspaceExt;
 use walkdir::WalkDir;
 
 use crate::utils::{walnut_get_api_key, walnut_get_api_url};
@@ -25,7 +28,7 @@ use crate::Error;
 pub async fn walnut_verify_migration_strategy(
     ws: &Workspace<'_>,
     rpc_url: String,
-    migration_strategy: &MigrationStrategy,
+    world_diff: &WorldDiff,
 ) -> anyhow::Result<()> {
     let ui = ws.config().ui();
     // Check if rpc_url is localhost
@@ -36,16 +39,30 @@ pub async fn walnut_verify_migration_strategy(
         return Ok(());
     }
 
-    // its path to a file so `parent` should never return `None`
-    let root_dir: &Path = ws.manifest_path().parent().unwrap().as_std_path();
-    let default_namespace = get_default_namespace_from_ws(ws)?;
-
     // Check if there are any contracts or models in the strategy
-    if migration_strategy.contracts.is_empty() && migration_strategy.models.is_empty() {
+    if world_diff.is_synced() {
         ui.print(" ");
         ui.print("🌰 No contracts or models to verify.");
         ui.print(" ");
         return Ok(());
+    }
+
+    let _profile_config = ws.load_profile_config()?;
+
+    for (_selector, resource) in world_diff.resources.iter() {
+        if resource.resource_type() == ResourceType::Contract {
+            match resource {
+                ResourceDiff::Created(ResourceLocal::Contract(_contract)) => {
+                    // Need to verify created.
+                }
+                ResourceDiff::Updated(_, ResourceRemote::Contract(_contract)) => {
+                    // Need to verify updated.
+                }
+                _ => {
+                    // Synced, we don't need to verify.
+                }
+            }
+        }
     }
 
     // Notify start of verification
@@ -54,39 +71,12 @@ pub async fn walnut_verify_migration_strategy(
     ui.print(" ");
 
     // Retrieve the API key and URL from environment variables
-    let api_key = walnut_get_api_key()?;
-    let api_url = walnut_get_api_url();
+    let _api_key = walnut_get_api_key()?;
+    let _api_url = walnut_get_api_url();
 
     // Collect source code
-    let source_code = collect_source_code(root_dir)?;
-
-    let mut class_names = Vec::new();
-    let mut class_hashes = Vec::new();
-
-    for contract_migration in &migration_strategy.contracts {
-        let class_name = get_class_name_from_artifact_path(
-            &contract_migration.artifact_path,
-            &default_namespace,
-        )?;
-        class_names.push(class_name);
-        class_hashes.push(contract_migration.diff.local_class_hash.to_hex_string());
-    }
-
-    for class_migration in &migration_strategy.models {
-        let class_name =
-            get_class_name_from_artifact_path(&class_migration.artifact_path, &default_namespace)?;
-        class_names.push(class_name);
-        class_hashes.push(class_migration.diff.local_class_hash.to_hex_string());
-    }
-
-    let verification_payload =
-        VerificationPayload { class_names, class_hashes, rpc_url, source_code };
-
-    // Send verification request
-    match verify_classes(verification_payload, &api_url, &api_key).await {
-        Ok(message) => ui.print(subtitle(message)),
-        Err(e) => ui.print(subtitle(e.to_string())),
-    }
+    // TODO: now it's the same output as scarb, need to update the dojo fork to output the source
+    // code, or does scarb supports it already?
 
     Ok(())
 }

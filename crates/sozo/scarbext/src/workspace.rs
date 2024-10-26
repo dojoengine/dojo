@@ -1,58 +1,12 @@
 use std::fs;
 
-use anyhow::{Context, Result};
-use camino::Utf8Path;
+use anyhow::Result;
+use dojo_world::config::ProfileConfig;
+use dojo_world::local::WorldLocal;
 use scarb::core::Workspace;
 use scarb::flock::Filesystem;
 
-/// Handy enum for selecting the current profile or all profiles.
-#[derive(Debug)]
-pub enum ProfileSpec {
-    WorkspaceCurrent,
-    All,
-}
-
-/// Extension trait for the [`Filesystem`] type.
-pub trait FilesystemExt {
-    /// Returns a new Filesystem with the given subdirectories.
-    ///
-    /// This is a helper function since flock [`Filesystem`] only has a child method.
-    fn children(&self, sub_dirs: &[impl AsRef<Utf8Path>]) -> Filesystem;
-
-    /// Lists all the files in the filesystem root, not recursively.
-    fn list_files(&self) -> Result<Vec<String>>;
-}
-
-impl FilesystemExt for Filesystem {
-    fn children(&self, sub_dirs: &[impl AsRef<Utf8Path>]) -> Self {
-        if sub_dirs.is_empty() {
-            return self.clone();
-        }
-
-        let mut result = self.clone();
-
-        for sub_dir in sub_dirs {
-            result = result.child(sub_dir);
-        }
-
-        result
-    }
-
-    fn list_files(&self) -> Result<Vec<String>> {
-        let mut files = Vec::new();
-
-        let path = self.to_string();
-
-        for entry in std::fs::read_dir(path)? {
-            let entry = entry?;
-            if entry.file_type()?.is_file() {
-                files.push(entry.file_name().to_string_lossy().to_string());
-            }
-        }
-
-        Ok(files)
-    }
-}
+use crate::filesystem::FilesystemExt;
 
 /// Extension trait for the [`Workspace`] type.
 pub trait WorkspaceExt {
@@ -66,6 +20,10 @@ pub trait WorkspaceExt {
     fn clean_dir_all_profiles(&self);
     /// Checks if the current profile has generated artifacts.
     fn ensure_profile_artifacts(&self) -> Result<()>;
+    /// Loads the profile config for the current profile.
+    fn load_profile_config(&self) -> Result<ProfileConfig>;
+    /// Loads the local world from the workspace configuration.
+    fn load_world_local(&self) -> Result<WorldLocal>;
 }
 
 impl WorkspaceExt for Workspace<'_> {
@@ -126,5 +84,38 @@ impl WorkspaceExt for Workspace<'_> {
         }
 
         Ok(())
+    }
+
+    fn load_profile_config(&self) -> Result<ProfileConfig> {
+        // Safe to unwrap since manifest is a file.
+        let manifest_dir = self.manifest_path().parent().unwrap().to_path_buf();
+        let profile_str =
+            self.current_profile().expect("Scarb profile expected to be defined.").to_string();
+
+        let dev_config_path = manifest_dir.join("dojo_dev.toml");
+        let config_path = manifest_dir.join(format!("dojo_{}.toml", &profile_str));
+
+        if !dev_config_path.exists() {
+            return Err(anyhow::anyhow!(
+                "Profile configuration file not found for profile `{}`. Expected at {}.",
+                &profile_str,
+                dev_config_path
+            ));
+        }
+
+        // If the profile file is not found, default to `dev.toml` file that must exist.
+        let config_path = if !config_path.exists() { dev_config_path } else { config_path };
+
+        let content = fs::read_to_string(&config_path)?;
+        let config: ProfileConfig = toml::from_str(&content)?;
+
+        Ok(config)
+    }
+
+    fn load_world_local(&self) -> Result<WorldLocal> {
+        WorldLocal::from_directory(
+            self.target_dir_profile().to_string(),
+            self.load_profile_config()?.namespace.clone(),
+        )
     }
 }

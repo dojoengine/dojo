@@ -19,7 +19,7 @@ impl ComparableResource for ContractLocal {
         let remote_contract = remote.as_contract_or_panic();
 
         if self.class_hash == remote_contract.common.current_class_hash() {
-            ResourceDiff::Synced(remote)
+            ResourceDiff::Synced(ResourceLocal::Contract(self), remote)
         } else {
             ResourceDiff::Updated(ResourceLocal::Contract(self), remote)
         }
@@ -31,7 +31,7 @@ impl ComparableResource for ModelLocal {
         let remote_model = remote.as_model_or_panic();
 
         if self.class_hash == remote_model.common.current_class_hash() {
-            ResourceDiff::Synced(remote)
+            ResourceDiff::Synced(ResourceLocal::Model(self), remote)
         } else {
             ResourceDiff::Updated(ResourceLocal::Model(self), remote)
         }
@@ -43,7 +43,7 @@ impl ComparableResource for EventLocal {
         let remote_event = remote.as_event_or_panic();
 
         if self.class_hash == remote_event.common.current_class_hash() {
-            ResourceDiff::Synced(remote)
+            ResourceDiff::Synced(ResourceLocal::Event(self), remote)
         } else {
             ResourceDiff::Updated(ResourceLocal::Event(self), remote)
         }
@@ -55,7 +55,7 @@ impl ComparableResource for NamespaceLocal {
         let remote_namespace = remote.as_namespace_or_panic();
 
         if self.name == remote_namespace.name {
-            ResourceDiff::Synced(remote)
+            ResourceDiff::Synced(ResourceLocal::Namespace(self), remote)
         } else {
             unreachable!("Namespace should not be updated.")
         }
@@ -109,7 +109,7 @@ mod tests {
         });
 
         let diff = local_model.clone().compare(remote_model.clone());
-        assert!(matches!(diff, ResourceDiff::Synced(_)));
+        assert!(matches!(diff, ResourceDiff::Synced(_, _)));
 
         // Upgrade the remote model.
         remote_model.push_class_hash(Felt::ONE);
@@ -140,7 +140,7 @@ mod tests {
         });
 
         let diff = local_event.clone().compare(remote_event.clone());
-        assert!(matches!(diff, ResourceDiff::Synced(_)));
+        assert!(matches!(diff, ResourceDiff::Synced(_, _)));
 
         // Upgrade the remote event.
         remote_event.push_class_hash(Felt::ONE);
@@ -160,7 +160,7 @@ mod tests {
         });
 
         let diff = local_namespace.compare(remote_namespace.clone());
-        assert!(matches!(diff, ResourceDiff::Synced(_)));
+        assert!(matches!(diff, ResourceDiff::Synced(_, _)));
     }
 
     #[test]
@@ -186,7 +186,7 @@ mod tests {
         });
 
         let diff = local_contract.clone().compare(remote_contract.clone());
-        assert!(matches!(diff, ResourceDiff::Synced(_)));
+        assert!(matches!(diff, ResourceDiff::Synced(_, _)));
 
         remote_contract.push_class_hash(Felt::ONE);
 

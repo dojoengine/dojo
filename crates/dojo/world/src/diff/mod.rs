@@ -5,15 +5,16 @@
 
 use std::collections::{HashMap, HashSet};
 
+use anyhow::Result;
 use compare::ComparableResource;
 use dojo_types::naming;
 use starknet::core::types::contract::SierraClass;
+use starknet::providers::Provider;
 use starknet_crypto::Felt;
 
 use super::local::{ResourceLocal, WorldLocal};
 use super::remote::{ResourceRemote, WorldRemote};
-use crate::utils::compute_dojo_contract_address;
-use crate::{DojoSelector, ResourceType};
+use crate::{utils, DojoSelector, ResourceType};
 
 mod compare;
 
@@ -29,7 +30,7 @@ pub enum ResourceDiff {
     /// The resource has been updated locally, and is different from the remote world.
     Updated(ResourceLocal, ResourceRemote),
     /// The local resource is in sync with the remote world.
-    Synced(ResourceRemote),
+    Synced(ResourceLocal, ResourceRemote),
 }
 
 #[derive(Debug)]
@@ -40,7 +41,8 @@ pub enum WorldStatus {
     /// (class_hash, casm_class_hash, sierra_class)
     NewVersion(Felt, Felt, SierraClass),
     /// The world is in sync with the remote world, same dojo version.
-    Synced(Felt),
+    /// (class_hash, sierra_class)
+    Synced(Felt, SierraClass),
 }
 
 #[derive(Debug)]
@@ -91,7 +93,10 @@ impl WorldDiff {
             *remote.class_hashes.last().expect("Remote world must have at least one class hash.");
 
         let world_status = if local_world_class_hash == remote_world_class_hash {
-            WorldStatus::Synced(local_world_class_hash)
+            WorldStatus::Synced(
+                local_world_class_hash,
+                local.class.expect("World class must be set."),
+            )
         } else {
             WorldStatus::NewVersion(
                 local_world_class_hash,
@@ -119,10 +124,33 @@ impl WorldDiff {
         diff
     }
 
+    pub async fn new_from_chain<P>(
+        world_address: Felt,
+        world_local: WorldLocal,
+        provider: P,
+    ) -> Result<Self>
+    where
+        P: Provider,
+    {
+        if dojo_utils::is_deployed(world_address, &provider).await? {
+            let world_remote = WorldRemote::from_events(world_address, &provider).await?;
+
+            Ok(Self::new(world_local, world_remote))
+        } else {
+            Ok(Self::from_local(world_local))
+        }
+    }
+
     /// Returns whether the whole world is in sync.
+    ///
+    /// This only concerns the resources status, and not the initialization of contracts
+    /// or the permissions.
     pub fn is_synced(&self) -> bool {
-        matches!(self.world_status, WorldStatus::Synced(_))
-            && self.resources.values().all(|resource| matches!(resource, ResourceDiff::Synced(_)))
+        matches!(self.world_status, WorldStatus::Synced(_, _))
+            && self
+                .resources
+                .values()
+                .all(|resource| matches!(resource, ResourceDiff::Synced(_, _)))
     }
 
     /// Returns the remote writers of the resources.
@@ -147,33 +175,66 @@ impl WorldDiff {
         remote_owners
     }
 
+    /// Returns the class of the contract, if any.
+    pub fn get_class(&self, selector: DojoSelector) -> Option<&SierraClass> {
+        let resource = self.resources.get(&selector)?;
+
+        match resource {
+            ResourceDiff::Created(ResourceLocal::Contract(c)) => Some(&c.class),
+            ResourceDiff::Updated(ResourceLocal::Contract(c), _) => Some(&c.class),
+            ResourceDiff::Synced(ResourceLocal::Contract(c), _) => Some(&c.class),
+            _ => None,
+        }
+    }
+
+    /// Returns the class of the world.
+    pub fn get_world_class(&self) -> &SierraClass {
+        match &self.world_status {
+            WorldStatus::Synced(_, c) => c,
+            WorldStatus::NewVersion(_, _, c) => c,
+            WorldStatus::NotDeployed(_, _, c) => c,
+        }
+    }
+
     /// Returns the deterministic addresses of the contracts based on the world address.
     pub fn get_contracts_addresses(&self, world_address: Felt) -> HashMap<DojoSelector, Felt> {
         let mut addresses = HashMap::new();
 
-        for resource in self.resources.values() {
-            if resource.resource_type() == ResourceType::Contract {
-                let (selector, class_hash) = match resource {
-                    ResourceDiff::Created(ResourceLocal::Contract(c)) => {
-                        (c.dojo_selector(), c.class_hash)
-                    }
-                    ResourceDiff::Updated(_, ResourceRemote::Contract(c)) => {
-                        (c.common.dojo_selector(), c.common.original_class_hash())
-                    }
-                    ResourceDiff::Synced(ResourceRemote::Contract(c)) => {
-                        (c.common.dojo_selector(), c.common.original_class_hash())
-                    }
-                    _ => unreachable!(),
-                };
-
-                let address =
-                    compute_dojo_contract_address(selector, class_hash.into(), world_address);
-
-                addresses.insert(selector, address);
+        for (selector, _) in self.resources.iter() {
+            if let Some(address) = self.get_contract_address(world_address, *selector) {
+                addresses.insert(*selector, address);
             }
         }
 
         addresses
+    }
+
+    /// Returns the address of the contract.
+    pub fn get_contract_address(
+        &self,
+        world_address: Felt,
+        selector: DojoSelector,
+    ) -> Option<Felt> {
+        let contract_resource = self.resources.get(&selector)?;
+
+        if contract_resource.resource_type() == ResourceType::Contract {
+            let (selector, class_hash) = match contract_resource {
+                ResourceDiff::Created(ResourceLocal::Contract(c)) => {
+                    (c.dojo_selector(), c.class_hash)
+                }
+                ResourceDiff::Updated(_, ResourceRemote::Contract(c)) => {
+                    (c.common.dojo_selector(), c.common.original_class_hash())
+                }
+                ResourceDiff::Synced(_, ResourceRemote::Contract(c)) => {
+                    (c.common.dojo_selector(), c.common.original_class_hash())
+                }
+                _ => unreachable!(),
+            };
+
+            Some(utils::compute_dojo_contract_address(selector, class_hash.into(), world_address))
+        } else {
+            None
+        }
     }
 
     /// Returns the resource diff from a name or tag.
@@ -194,7 +255,7 @@ impl ResourceDiff {
         let (dojo_selector, remote_writers) = match self {
             ResourceDiff::Created(local) => (local.dojo_selector(), HashSet::new()),
             ResourceDiff::Updated(_, remote) => remote.get_writers(),
-            ResourceDiff::Synced(remote) => remote.get_writers(),
+            ResourceDiff::Synced(_, remote) => remote.get_writers(),
         };
 
         writers
@@ -208,7 +269,7 @@ impl ResourceDiff {
         let (dojo_selector, remote_owners) = match self {
             ResourceDiff::Created(local) => (local.dojo_selector(), HashSet::new()),
             ResourceDiff::Updated(_, remote) => remote.get_owners(),
-            ResourceDiff::Synced(remote) => remote.get_owners(),
+            ResourceDiff::Synced(_, remote) => remote.get_owners(),
         };
 
         owners
@@ -222,7 +283,7 @@ impl ResourceDiff {
         match self {
             ResourceDiff::Created(local) => local.name(),
             ResourceDiff::Updated(local, _) => local.name(),
-            ResourceDiff::Synced(remote) => remote.name(),
+            ResourceDiff::Synced(local, _) => local.name(),
         }
     }
 
@@ -231,7 +292,7 @@ impl ResourceDiff {
         match self {
             ResourceDiff::Created(local) => local.namespace(),
             ResourceDiff::Updated(local, _) => local.namespace(),
-            ResourceDiff::Synced(remote) => remote.namespace(),
+            ResourceDiff::Synced(local, _) => local.namespace(),
         }
     }
 
@@ -240,7 +301,7 @@ impl ResourceDiff {
         match self {
             ResourceDiff::Created(local) => local.tag(),
             ResourceDiff::Updated(local, _) => local.tag(),
-            ResourceDiff::Synced(remote) => remote.tag(),
+            ResourceDiff::Synced(local, _) => local.tag(),
         }
     }
 
@@ -249,7 +310,7 @@ impl ResourceDiff {
         match self {
             ResourceDiff::Created(local) => local.dojo_selector(),
             ResourceDiff::Updated(local, _) => local.dojo_selector(),
-            ResourceDiff::Synced(remote) => remote.dojo_selector(),
+            ResourceDiff::Synced(local, _) => local.dojo_selector(),
         }
     }
 
@@ -257,8 +318,8 @@ impl ResourceDiff {
     pub fn resource_type(&self) -> ResourceType {
         match self {
             ResourceDiff::Created(local) => local.resource_type(),
-            ResourceDiff::Updated(_, remote) => remote.resource_type(),
-            ResourceDiff::Synced(remote) => remote.resource_type(),
+            ResourceDiff::Updated(local, _) => local.resource_type(),
+            ResourceDiff::Synced(local, _) => local.resource_type(),
         }
     }
 }
@@ -310,7 +371,7 @@ mod tests {
         assert_eq!(diff.resources.len(), 1);
         assert!(matches!(
             diff.resources.get(&local_contract.dojo_selector()).unwrap(),
-            ResourceDiff::Synced(_)
+            ResourceDiff::Synced(_, _)
         ));
 
         let mut local = WorldLocal::new(namespace_config);
@@ -375,7 +436,7 @@ mod tests {
         ));
         assert!(matches!(
             diff.resources.get(&local_namespace.dojo_selector()).unwrap(),
-            ResourceDiff::Synced(_)
+            ResourceDiff::Synced(_, _)
         ));
     }
 }

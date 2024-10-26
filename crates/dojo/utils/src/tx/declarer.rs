@@ -9,14 +9,13 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use dojo_utils::{TransactionExt, TransactionWaiter, TxnConfig};
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{
     BlockId, BlockTag, DeclareTransactionResult, Felt, FlattenedSierraClass, StarknetError,
 };
 use starknet::providers::{Provider, ProviderError};
 
-use super::MigrationError;
+use crate::{TransactionError, TransactionExt, TransactionWaiter, TxnConfig};
 
 /// A declarer is in charge of declaring contracts.
 #[derive(Debug)]
@@ -65,7 +64,7 @@ where
     /// Takes ownership of the declarer to avoid cloning the classes.
     ///
     /// The order of the declarations is not guaranteed.
-    pub async fn declare_all(self) -> Result<(), MigrationError<A::SignError>> {
+    pub async fn declare_all(self) -> Result<(), TransactionError<A::SignError>> {
         for (casm_class_hash, class) in self.classes {
             Self::declare(casm_class_hash, class, &self.account, &self.txn_config).await?;
         }
@@ -79,7 +78,7 @@ where
         class: FlattenedSierraClass,
         account: &A,
         txn_config: &TxnConfig,
-    ) -> Result<DeclareOutput, MigrationError<A::SignError>> {
+    ) -> Result<DeclareOutput, TransactionError<A::SignError>> {
         let class_hash = class.class_hash();
 
         match account.provider().get_class(BlockId::Tag(BlockTag::Pending), class_hash).await {
@@ -91,14 +90,11 @@ where
                 );
                 return Ok(DeclareOutput { transaction_hash: Felt::ZERO });
             }
-            Err(e) => return Err(MigrationError::Provider(e)),
+            Err(e) => return Err(TransactionError::Provider(e)),
         }
 
-        let DeclareTransactionResult { transaction_hash, class_hash } = account
-            .declare_v2(Arc::new(class), casm_class_hash)
-            .send_with_cfg(&txn_config)
-            .await
-            .map_err(MigrationError::from)?;
+        let DeclareTransactionResult { transaction_hash, class_hash } =
+            account.declare_v2(Arc::new(class), casm_class_hash).send_with_cfg(&txn_config).await?;
 
         tracing::trace!(
             transaction_hash = format!("{:#066x}", transaction_hash),

@@ -39,6 +39,7 @@ members = [
 	"crates/saya/core",
 	"crates/saya/provider",
 	"crates/sozo/signers",
+	"crates/sozo/scarbext",
 	"crates/sozo/walnut",
 	"crates/torii/client",
 	"crates/torii/server",
@@ -115,6 +116,7 @@ saya-provider = { path = "crates/saya/provider" }
 
 # sozo
 sozo-ops = { path = "crates/sozo/ops" }
+sozo-scarbext = { path = "crates/sozo/scarbext" }
 sozo-signers = { path = "crates/sozo/signers" }
 sozo-walnut = { path = "crates/sozo/walnut" }
 

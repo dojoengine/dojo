@@ -13,6 +13,7 @@ rpassword.workspace = true
 starknet.workspace = true
 thiserror.workspace = true
 tokio = { version = "1", features = [ "signal", "time" ], default-features = false }
+tracing.workspace = true
 
 [dev-dependencies]
 assert_matches.workspace = true

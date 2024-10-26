@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use anyhow::{bail, Result};
+use dojo_world::diff::WorldDiff;
 use dojo_world::local::WorldLocal;
 use dojo_world::{utils, ResourceType};
 use slot::account_sdk::account::session::hash::{Policy, ProvedPolicy};
@@ -37,14 +38,14 @@ pub type ControllerSessionAccount<P> = SessionAccount<Arc<P>>;
 /// * Slot hosted networks
 #[tracing::instrument(
     name = "create_controller",
-    skip(rpc_url, provider, world_address, world_local)
+    skip(rpc_url, provider, world_address, world_diff)
 )]
 pub async fn create_controller<P>(
     // Ideally we can get the url from the provider so we dont have to pass an extra url param here
     rpc_url: Url,
     provider: P,
     world_address: Felt,
-    world_local: &WorldLocal,
+    world_diff: &WorldDiff,
 ) -> Result<ControllerSessionAccount<P>>
 where
     P: Provider,
@@ -62,7 +63,7 @@ where
         bail!("No Controller is associated with this account.");
     };
 
-    let policies = collect_policies(world_address, contract_address, world_local)?;
+    let policies = collect_policies(world_address, contract_address, world_diff)?;
 
     // Check if the session exists, if not create a new one
     let session_details = match slot::session::get(chain_id)? {
@@ -134,9 +135,9 @@ fn is_equal_to_existing(new_policies: &[PolicyMethod], session_info: &FullSessio
 fn collect_policies(
     world_address: Felt,
     user_address: Felt,
-    world_local: &WorldLocal,
+    world_diff: &WorldDiff,
 ) -> Result<Vec<PolicyMethod>> {
-    let policies = collect_policies_from_local_world(world_address, user_address, world_local)?;
+    let policies = collect_policies_from_local_world(world_address, user_address, world_diff)?;
     trace!(target: "account::controller", policies_count = policies.len(), "Extracted policies from project.");
     Ok(policies)
 }
@@ -144,33 +145,25 @@ fn collect_policies(
 fn collect_policies_from_local_world(
     world_address: Felt,
     user_address: Felt,
-    world_local: &WorldLocal,
+    world_diff: &WorldDiff,
 ) -> Result<Vec<PolicyMethod>> {
     let mut policies: Vec<PolicyMethod> = Vec::new();
 
     // get methods from all project contracts
-    for (selector, resource) in world_local.resources.iter() {
+    for (selector, resource) in world_diff.resources.iter() {
         if resource.resource_type() == ResourceType::Contract {
-            let contract = world_local.get_contract_resource(*selector);
+            // Safe to unwrap the two methods since the selector comes from the resources registry
+            // in the local world.
             let contract_address =
-                utils::compute_dojo_contract_address(*selector, contract.class_hash, world_address);
+                world_diff.get_contract_address(*selector, world_address).unwrap();
+            let sierra_class = world_diff.get_class(*selector).unwrap();
 
-            policies_from_abis(
-                &mut policies,
-                &resource.tag(),
-                contract_address,
-                &contract.class.abi,
-            );
+            policies_from_abis(&mut policies, &resource.tag(), contract_address, &sierra_class.abi);
         }
     }
 
     // get method from world contract
-    policies_from_abis(
-        &mut policies,
-        "world",
-        world_address,
-        &world_local.class.as_ref().expect("World class to be set.").abi,
-    );
+    policies_from_abis(&mut policies, "world", world_address, &world_diff.get_world_class().abi);
 
     // special policy for sending declare tx
     // corresponds to [account_sdk::account::DECLARATION_SELECTOR]

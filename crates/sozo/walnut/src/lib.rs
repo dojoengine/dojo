@@ -19,49 +19,49 @@
 //! - Classes should be verified with `sozo migrate apply --walnut` before debugging transactions.
 //! - This feature is only supported on hosted networks.
 
-// #![cfg_attr(not(test), warn(unused_crate_dependencies))]
-//
-// mod debugger;
-// mod transaction;
-// mod utils;
-// mod verification;
-//
-// pub use debugger::WalnutDebugger;
-//
-// pub const WALNUT_APP_URL: &str = "https://app.walnut.dev";
-// pub const WALNUT_API_URL: &str = "https://api.walnut.dev";
-// pub const WALNUT_API_KEY_ENV_VAR: &str = "WALNUT_API_KEY";
-// pub const WALNUT_API_URL_ENV_VAR: &str = "WALNUT_API_URL";
-//
-// #[derive(Debug, thiserror::Error)]
-// pub enum Error {
-// #[error("Debugging transactions with Walnut is only supported on hosted networks")]
-// UnsupportedNetwork,
-//
-// #[error(transparent)]
-// UrlParseError(#[from] url::ParseError),
-//
-// #[error("Invalid file name")]
-// InvalidFileName,
-//
-// #[error("Namespace prefix not found in file name")]
-// NamespacePrefixNotFound,
-//
-// #[error("Failed to serialize payload: {0}")]
-// SerializationError(#[from] serde_json::Error),
-//
-// #[error(transparent)]
-// RequestError(#[from] reqwest::Error),
-//
-// #[error("Failed to verify contract: {0}")]
-// VerificationError(String),
-//
-// #[error(transparent)]
-// Io(#[from] std::io::Error),
-//
-// #[error(
-// "Environment variable '{WALNUT_API_KEY_ENV_VAR}' is not set. Please set it to your Walnut \
-// API key."
-// )]
-// MissingApiKey,
-// }
+#![cfg_attr(not(test), warn(unused_crate_dependencies))]
+
+mod debugger;
+mod transaction;
+mod utils;
+mod verification;
+
+pub use debugger::WalnutDebugger;
+
+pub const WALNUT_APP_URL: &str = "https://app.walnut.dev";
+pub const WALNUT_API_URL: &str = "https://api.walnut.dev";
+pub const WALNUT_API_KEY_ENV_VAR: &str = "WALNUT_API_KEY";
+pub const WALNUT_API_URL_ENV_VAR: &str = "WALNUT_API_URL";
+
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+    #[error("Debugging transactions with Walnut is only supported on hosted networks")]
+    UnsupportedNetwork,
+
+    #[error(transparent)]
+    UrlParseError(#[from] url::ParseError),
+
+    #[error("Invalid file name")]
+    InvalidFileName,
+
+    #[error("Namespace prefix not found in file name")]
+    NamespacePrefixNotFound,
+
+    #[error("Failed to serialize payload: {0}")]
+    SerializationError(#[from] serde_json::Error),
+
+    #[error(transparent)]
+    RequestError(#[from] reqwest::Error),
+
+    #[error("Failed to verify contract: {0}")]
+    VerificationError(String),
+
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
+
+    #[error(
+        "Environment variable '{WALNUT_API_KEY_ENV_VAR}' is not set. Please set it to your Walnut \
+         API key."
+    )]
+    MissingApiKey,
+}

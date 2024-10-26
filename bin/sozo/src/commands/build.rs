@@ -3,7 +3,7 @@ use clap::{Args, Parser};
 use scarb::core::{Config, Package, TargetKind};
 use scarb::ops::CompileOpts;
 use scarb_ui::args::{FeaturesSpec, PackagesFilter};
-use sozo_ops::scarb_extensions::WorkspaceExt;
+use sozo_scarbext::WorkspaceExt;
 use tracing::debug;
 
 use crate::commands::check_package_dojo_version;

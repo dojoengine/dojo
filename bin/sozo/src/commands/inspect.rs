@@ -2,14 +2,12 @@ use anyhow::Result;
 use clap::Args;
 use colored::*;
 use dojo_types::naming;
-use dojo_world::config::ProfileConfig;
 use dojo_world::diff::{ResourceDiff, WorldDiff, WorldStatus};
 use dojo_world::local::WorldLocal;
 use dojo_world::remote::WorldRemote;
 use dojo_world::{utils as world_utils, ResourceType};
 use scarb::core::Config;
-use sozo_ops::migrate::deployer;
-use sozo_ops::scarb_extensions::WorkspaceExt;
+use sozo_scarbext::WorkspaceExt;
 use starknet::core::types::Felt;
 use tabled::settings::Style;
 use tabled::{Table, Tabled};
@@ -36,31 +34,12 @@ impl InspectArgs {
     pub fn run(self, config: &Config) -> Result<()> {
         trace!(args = ?self);
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
-        let target_dir_profile = ws.target_dir_profile();
-
-        let (_profile_name, profile_config) = utils::load_profile_config(config)?;
 
         let InspectArgs { world, starknet, resource } = self;
 
-        let world_local = WorldLocal::from_directory(
-            target_dir_profile.to_string(),
-            profile_config.namespace.clone(),
-        )?;
-
-        let world_address = utils::get_world_address(&profile_config, &world, &world_local)?;
-
         config.tokio_handle().block_on(async {
-            let env = profile_config.env.as_ref();
-
-            let provider = starknet.provider(env)?;
-
-            let world_diff = if deployer::is_deployed(world_address, &provider).await? {
-                let world_remote = WorldRemote::from_events(world_address, &provider).await?;
-
-                WorldDiff::new(world_local, world_remote)
-            } else {
-                WorldDiff::from_local(world_local)
-            };
+            let (world_address, world_diff, _) =
+                utils::get_world_diff_and_provider(starknet.clone(), world, &ws).await?;
 
             if let Some(resource) = resource {
                 inspect_resource(&resource, &world_diff, world_address);
@@ -111,18 +90,6 @@ struct ResourceWithAddressInspect {
 }
 
 #[derive(Debug, Tabled)]
-struct ResourceDetailInspect {
-    #[tabled(rename = "Name or Tag")]
-    name_or_tag: String,
-    #[tabled(rename = "Status")]
-    status: ResourceStatus,
-    #[tabled(rename = "Contract Address")]
-    address: String,
-    #[tabled(rename = "Class Hash")]
-    class_hash: String,
-}
-
-#[derive(Debug, Tabled)]
 struct GranteeDisplay {
     name: String,
     selector: String,
@@ -142,7 +109,7 @@ fn inspect_resource(resource_name_or_tag: &str, world_diff: &WorldDiff, world_ad
     let status = match resource_diff {
         ResourceDiff::Created(_) => ResourceStatus::Created,
         ResourceDiff::Updated(_, _) => ResourceStatus::Updated,
-        ResourceDiff::Synced(_) => ResourceStatus::Synced,
+        ResourceDiff::Synced(_, _) => ResourceStatus::Synced,
     };
 
     let mut selector = Felt::ZERO;
@@ -183,7 +150,7 @@ fn inspect_resource(resource_name_or_tag: &str, world_diff: &WorldDiff, world_ad
                             selector: format!("{:#066x}", w_selector),
                         });
                     }
-                    ResourceDiff::Synced(remote) => {
+                    ResourceDiff::Synced(_, remote) => {
                         writers_disp.push(GranteeDisplay {
                             name: naming::get_tag(&remote.namespace(), &remote.name()),
                             selector: format!("{:#066x}", w_selector),
@@ -215,7 +182,7 @@ fn inspect_world(world_diff: &WorldDiff, world_address: Felt) {
                     status: ResourceStatus::Created,
                 });
             }
-            ResourceDiff::Synced(remote) => {
+            ResourceDiff::Synced(_, remote) => {
                 disp_namespaces.push(ResourceNameInspect {
                     name: remote.name(),
                     status: ResourceStatus::Synced,
@@ -242,7 +209,7 @@ fn inspect_world(world_diff: &WorldDiff, world_address: Felt) {
             current_class_hash: format!("{:#066x}", class_hash),
             status: ResourceStatus::Updated,
         },
-        WorldStatus::Synced(class_hash) => ResourceWithAddressInspect {
+        WorldStatus::Synced(class_hash, _) => ResourceWithAddressInspect {
             name: "World".to_string(),
             address: format!("{:#066x}", world_address),
             current_class_hash: format!("{:#066x}", class_hash),
@@ -304,7 +271,7 @@ fn resource_diff_display(
         ResourceDiff::Updated(local, remote) => {
             (local.tag(), remote.address(), local.class_hash(), ResourceStatus::Updated)
         }
-        ResourceDiff::Synced(remote) => {
+        ResourceDiff::Synced(_, remote) => {
             (remote.tag(), remote.address(), remote.current_class_hash(), ResourceStatus::Synced)
         }
     };
