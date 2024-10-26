@@ -91,6 +91,7 @@ mod tests {
     fn test_compare_model_local() {
         let local_model = ModelLocal {
             name: "model1".to_string(),
+            namespace: "ns1".to_string(),
             class: empty_sierra_class(),
             class_hash: Felt::ZERO,
             casm_class_hash: Felt::ZERO,
@@ -100,6 +101,7 @@ mod tests {
             common: CommonResourceRemoteInfo {
                 class_hashes: vec![Felt::ZERO],
                 name: "model1".to_string(),
+                namespace: "ns1".to_string(),
                 address: Felt::ZERO,
                 owners: HashSet::new(),
                 writers: HashSet::new(),
@@ -120,6 +122,7 @@ mod tests {
     fn test_compare_event_local() {
         let local_event = EventLocal {
             name: "event1".to_string(),
+            namespace: "ns1".to_string(),
             class: empty_sierra_class(),
             class_hash: Felt::ZERO,
             casm_class_hash: Felt::ZERO,
@@ -129,6 +132,7 @@ mod tests {
             common: CommonResourceRemoteInfo {
                 class_hashes: vec![Felt::ZERO],
                 name: "event1".to_string(),
+                namespace: "ns1".to_string(),
                 address: Felt::ZERO,
                 owners: HashSet::new(),
                 writers: HashSet::new(),
@@ -163,6 +167,7 @@ mod tests {
     fn test_compare_contract_local() {
         let local_contract = ContractLocal {
             name: "contract1".to_string(),
+            namespace: "ns1".to_string(),
             class: empty_sierra_class(),
             class_hash: Felt::ZERO,
             casm_class_hash: Felt::ZERO,
@@ -172,11 +177,12 @@ mod tests {
             common: CommonResourceRemoteInfo {
                 class_hashes: vec![Felt::ZERO],
                 name: "contract1".to_string(),
+                namespace: "ns1".to_string(),
                 address: Felt::ZERO,
                 owners: HashSet::new(),
                 writers: HashSet::new(),
             },
-            initialized: true,
+            is_initialized: true,
         });
 
         let diff = local_contract.clone().compare(remote_contract.clone());
