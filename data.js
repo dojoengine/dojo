@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1729913173997,
+  "lastUpdate": 1729913369538,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -28177,6 +28177,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 12296930682,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "51b0297e2821206fd96d0f64fe5fbb1b000d54fb",
+          "message": "fix(torii-grpc): sql query for typed enums in nested arrays (#2579)",
+          "timestamp": "2024-10-25T21:09:56-06:00",
+          "tree_id": "080299b3cc9ca82ec69f08738f2667648b12154b",
+          "url": "https://github.com/dojoengine/dojo/commit/51b0297e2821206fd96d0f64fe5fbb1b000d54fb"
+        },
+        "date": 1729913367854,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 15557346,
+            "range": "± 853802",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8540391,
+            "range": "± 215004",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3629089074,
+            "range": "± 733952534",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8510183,
+            "range": "± 147010",
             "unit": "ns/iter"
           }
         ]
