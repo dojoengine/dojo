@@ -1,19 +1,12 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use clap::{Args, Parser};
-use prettytable::format::consts::FORMAT_NO_LINESEP_WITH_TITLE;
-use prettytable::{format, Cell, Row, Table};
 use scarb::core::{Config, Package, TargetKind};
 use scarb::ops::CompileOpts;
-use sozo_ops::scarb_extensions::WorkspaceExt;
 use scarb_ui::args::{FeaturesSpec, PackagesFilter};
+use sozo_ops::scarb_extensions::WorkspaceExt;
 use tracing::debug;
 
 use crate::commands::check_package_dojo_version;
-
-const BYTECODE_SIZE_LABEL: &str = "Bytecode size [in felts]\n(Sierra, Casm)";
-const CONTRACT_CLASS_SIZE_LABEL: &str = "Contract Class size [in bytes]\n(Sierra, Casm)";
-
-const CONTRACT_NAME_LABEL: &str = "Contract";
 
 #[derive(Debug, Args)]
 pub struct BuildArgs {

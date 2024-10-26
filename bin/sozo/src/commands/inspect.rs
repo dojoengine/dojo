@@ -1,31 +1,21 @@
-use anyhow::{anyhow, Context, Result};
-use clap::{Args, Subcommand};
+use anyhow::Result;
+use clap::Args;
 use colored::*;
 use dojo_types::naming;
-use dojo_world::config::{Environment, ProfileConfig};
-use dojo_world::contracts::{WorldContract, WorldContractReader};
+use dojo_world::config::ProfileConfig;
 use dojo_world::diff::{ResourceDiff, WorldDiff, WorldStatus};
-use dojo_world::local::{ContractLocal, ResourceLocal, WorldLocal};
+use dojo_world::local::WorldLocal;
 use dojo_world::remote::WorldRemote;
 use dojo_world::{utils as world_utils, ResourceType};
-use katana_rpc_api::starknet::RPC_SPEC_VERSION;
-use scarb::core::{Config, Workspace};
-use sozo_ops::migrate::{self, deployer, Migration};
+use scarb::core::Config;
+use sozo_ops::migrate::deployer;
 use sozo_ops::scarb_extensions::WorkspaceExt;
-use starknet::accounts::{Account, ConnectedAccount};
-use starknet::core::types::{BlockId, BlockTag, Felt, StarknetError};
-use starknet::core::utils::{
-    cairo_short_string_to_felt, get_contract_address, parse_cairo_short_string,
-};
-use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::{JsonRpcClient, Provider, ProviderError};
+use starknet::core::types::Felt;
 use tabled::settings::Style;
 use tabled::{Table, Tabled};
 use tracing::trace;
 
-use super::options::account::{AccountOptions, SozoAccount};
 use super::options::starknet::StarknetOptions;
-use super::options::transaction::TransactionOptions;
 use super::options::world::WorldOptions;
 use crate::utils;
 
@@ -257,7 +247,7 @@ fn inspect_world(world_diff: &WorldDiff, world_address: Felt) {
     let mut models_disp = vec![];
     let mut events_disp = vec![];
 
-    for (selector, resource) in &world_diff.resources {
+    for (_selector, resource) in &world_diff.resources {
         match resource.resource_type() {
             ResourceType::Contract => {
                 contracts_disp.push(resource_diff_display(resource, world_address))

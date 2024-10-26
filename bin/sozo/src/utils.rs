@@ -3,17 +3,9 @@ use std::str::FromStr;
 
 use anyhow::{Error, Result};
 use camino::Utf8PathBuf;
-use dojo_world::config::{Environment, ProfileConfig};
-use dojo_world::contracts::world::WorldContract;
-use dojo_world::contracts::WorldContractReader;
+use dojo_world::config::ProfileConfig;
 use scarb::core::{Config, TomlManifest};
 use semver::Version;
-use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::JsonRpcClient;
-
-use crate::commands::options::account::{AccountOptions, SozoAccount};
-use crate::commands::options::starknet::StarknetOptions;
-use crate::commands::options::world::WorldOptions;
 
 /// Loads the profile config from the Scarb workspace configuration.
 pub fn load_profile_config(config: &Config) -> Result<(String, ProfileConfig), Error> {

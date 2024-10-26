@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use clap::Args;
 use dojo_utils::env::DOJO_WORLD_ADDRESS_ENV_VAR;
 use dojo_world::config::Environment;
@@ -34,6 +34,8 @@ impl WorldOptions {
 #[cfg(test)]
 mod tests {
 
+    use std::str::FromStr;
+
     use clap::Parser;
     use starknet_crypto::Felt;
 
@@ -50,13 +52,13 @@ mod tests {
         std::env::set_var(DOJO_WORLD_ADDRESS_ENV_VAR, "0x0");
 
         let cmd = Command::parse_from([""]);
-        assert_eq!(cmd.inner.world_address, Some(Felt::from_hex("0x0").unwrap()));
+        assert_eq!(cmd.inner.world_address, Some(Felt::from_str("0x0").unwrap()));
     }
 
     #[test]
     fn world_address_from_args() {
         let cmd = Command::parse_from(["sozo", "--world", "0x0"]);
-        assert_eq!(cmd.inner.address(None).unwrap(), Felt::from_hex("0x0").unwrap());
+        assert_eq!(cmd.inner.address(None).unwrap(), Some(Felt::from_str("0x0").unwrap()));
     }
 
     #[test]
@@ -67,7 +69,7 @@ mod tests {
         };
 
         let cmd = Command::parse_from([""]);
-        assert_eq!(cmd.inner.address(Some(&env_metadata)).unwrap(), Felt::from_hex("0x0").unwrap());
+        assert_eq!(cmd.inner.address(Some(&env_metadata)).unwrap(), Some(Felt::from_hex("0x0").unwrap()));
     }
 
     #[test]
@@ -78,7 +80,7 @@ mod tests {
         };
 
         let cmd = Command::parse_from(["sozo", "--world", "0x1"]);
-        assert_eq!(cmd.inner.address(Some(&env_metadata)).unwrap(), Felt::from_hex("0x1").unwrap());
+        assert_eq!(cmd.inner.address(Some(&env_metadata)).unwrap(), Some(Felt::from_hex("0x1").unwrap()));
     }
 
     #[test]
