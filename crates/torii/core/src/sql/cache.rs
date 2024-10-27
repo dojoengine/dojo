@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use dojo_types::schema::Ty;
-use dojo_world::contracts::abi::model::Layout;
+use dojo_world::contracts::abigen::model::Layout;
 use sqlx::{Pool, Sqlite, SqlitePool};
 use starknet_crypto::Felt;
 use tokio::sync::RwLock;

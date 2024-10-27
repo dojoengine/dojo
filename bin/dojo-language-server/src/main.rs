@@ -1,6 +1,6 @@
 use cairo_lang_language_server::Tricks;
 use clap::Parser;
-use dojo_lang::plugin::dojo_plugin_suite;
+use dojo_lang::dojo_plugin_suite;
 
 /// Dojo Language Server
 #[derive(Parser, Debug)]

@@ -18,11 +18,10 @@
 //! 4. All contracts that are not initialized are initialized, since permissions are applied,
 //!    initialization of contracts can mutate resources.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::str::FromStr;
 
 use cainome::cairo_serde::{ByteArray, ClassHash, ContractAddress};
-use colored::Colorize;
 use dojo_utils::{Declarer, Deployer, Invoker, TxnConfig};
 use dojo_world::config::ProfileConfig;
 use dojo_world::contracts::WorldContract;
@@ -49,6 +48,27 @@ where
     profile_config: ProfileConfig,
 }
 
+pub enum MigrationUi {
+    Spinner(Spinner),
+    None,
+}
+
+impl MigrationUi {
+    pub fn update_text(&mut self, text: &'static str) {
+        match self {
+            Self::Spinner(s) => s.update_text(text),
+            Self::None => (),
+        }
+    }
+
+    pub fn stop_and_persist(&mut self, symbol: &'static str, text: &'static str) {
+        match self {
+            Self::Spinner(s) => s.stop_and_persist(symbol, text),
+            Self::None => (),
+        }
+    }
+}
+
 impl<A> Migration<A>
 where
     A: ConnectedAccount + Sync + Send,
@@ -70,7 +90,7 @@ where
     /// spinner.
     pub async fn migrate(
         &self,
-        spinner: &mut Spinner,
+        spinner: &mut MigrationUi,
     ) -> Result<Manifest, MigrationError<A::SignError>> {
         spinner.update_text("Deploying world...");
         self.ensure_world().await?;

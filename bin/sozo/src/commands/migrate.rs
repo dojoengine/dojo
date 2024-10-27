@@ -4,7 +4,7 @@ use colored::Colorize;
 use dojo_utils::{self, TxnConfig};
 use dojo_world::contracts::{WorldContract, WorldContractReader};
 use scarb::core::{Config, Workspace};
-use sozo_ops::migrate::Migration;
+use sozo_ops::migrate::{Migration, MigrationUi};
 use sozo_scarbext::WorkspaceExt;
 use spinoff::{spinner, spinners, Spinner};
 use tracing::trace;
@@ -42,7 +42,8 @@ impl MigrateArgs {
         let MigrateArgs { world, starknet, account, .. } = self;
 
         let frames = spinner!(["⛩️ ", "🥷 ", "🗡️ "], 500);
-        let mut spinner = Spinner::new(frames, "Evaluating world diff...", None);
+        let mut spinner =
+            MigrationUi::Spinner(Spinner::new(frames, "Evaluating world diff...", None));
 
         config.tokio_handle().block_on(async {
             let mut txn_config: TxnConfig = self.transaction.into();
@@ -65,13 +66,11 @@ impl MigrateArgs {
             spinner.update_text("Writing manifest...");
             ws.write_manifest_profile(manifest).context("Failed to write manifest.")?;
 
-            spinner.stop_and_persist(
-                "⛩️ ",
-                &format!(
-                    "Migration successful with world at address {}",
-                    format!("{:#066x}", world_address).green()
-                ),
-            );
+            let colored_address = format!("{:#066x}", world_address).green();
+            let end_text =
+                format!("Migration successful with world at address {}", colored_address);
+
+            spinner.stop_and_persist("⛩️ ", Box::leak(end_text.into_boxed_str()));
 
             Ok(())
         })

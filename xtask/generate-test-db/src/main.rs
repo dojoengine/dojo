@@ -1,16 +1,20 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::str::FromStr;
 
+use anyhow::Result;
 use dojo_test_utils::compiler::CompilerTestSetup;
 use dojo_utils::TxnConfig;
+use dojo_world::contracts::WorldContract;
+use dojo_world::diff::{Manifest, WorldDiff};
 use katana_runner::{KatanaRunner, KatanaRunnerConfig};
 use scarb::compiler::Profile;
-use sozo_ops::migration::MigrationOutput;
+use sozo_ops::migrate::{Migration, MigrationUi};
+use sozo_scarbext::WorkspaceExt;
+use starknet::core::types::Felt;
 
-type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
-
-async fn migrate_spawn_and_move(db_path: &Path) -> Result<MigrationOutput> {
+async fn migrate_spawn_and_move(db_path: &Path) -> Result<Manifest> {
     let cfg = KatanaRunnerConfig {
         db_dir: Some(db_path.to_path_buf()),
         n_accounts: 10,
@@ -24,23 +28,38 @@ async fn migrate_spawn_and_move(db_path: &Path) -> Result<MigrationOutput> {
     let cfg = setup.build_test_config("spawn-and-move", Profile::DEV);
     let ws = scarb::ops::read_workspace(cfg.manifest_path(), &cfg)?;
 
-    let output = sozo_ops::migration::migrate(
-        &ws,
-        None,
-        runner.url().to_string(),
-        runner.account(0),
-        "dojo_examples",
-        false,
-        TxnConfig::init_wait(),
-        None,
+    let mut txn_config: TxnConfig = TxnConfig::init_wait();
+    txn_config.wait = true;
+
+    let profile_config = ws.load_profile_config()?;
+
+    let world_local = ws.load_world_local()?;
+    let world_address = if let Some(env) = &profile_config.env {
+        env.world_address().map_or_else(
+            || world_local.deterministic_world_address(),
+            |wa| Ok(Felt::from_str(wa).unwrap()),
+        )
+    } else {
+        world_local.deterministic_world_address()
+    }
+    .unwrap();
+
+    let world_diff =
+        WorldDiff::new_from_chain(world_address, world_local, &runner.provider()).await?;
+
+    let manifest = Migration::new(
+        world_diff,
+        WorldContract::new(world_address, &runner.account(0)),
+        txn_config,
+        profile_config,
     )
+    .migrate(&mut MigrationUi::None)
     .await?;
 
-    // We know it's always successful as the migration is applied with dry-run set to false.
-    Ok(output.unwrap())
+    Ok(manifest)
 }
 
-async fn migrate_types_test(db_path: &Path) -> Result<MigrationOutput> {
+async fn migrate_types_test(db_path: &Path) -> Result<Manifest> {
     let cfg = KatanaRunnerConfig {
         db_dir: Some(db_path.to_path_buf()),
         n_accounts: 10,
@@ -54,20 +73,35 @@ async fn migrate_types_test(db_path: &Path) -> Result<MigrationOutput> {
     let cfg = setup.build_test_config("types-test", Profile::DEV);
     let ws = scarb::ops::read_workspace(cfg.manifest_path(), &cfg)?;
 
-    let output = sozo_ops::migration::migrate(
-        &ws,
-        None,
-        runner.url().to_string(),
-        runner.account(0),
-        "types_test",
-        false,
-        TxnConfig::init_wait(),
-        None,
+    let mut txn_config: TxnConfig = TxnConfig::init_wait();
+    txn_config.wait = true;
+
+    let profile_config = ws.load_profile_config()?;
+
+    let world_local = ws.load_world_local()?;
+    let world_address = if let Some(env) = &profile_config.env {
+        env.world_address().map_or_else(
+            || world_local.deterministic_world_address(),
+            |wa| Ok(Felt::from_str(wa).unwrap()),
+        )
+    } else {
+        world_local.deterministic_world_address()
+    }
+    .unwrap();
+
+    let world_diff =
+        WorldDiff::new_from_chain(world_address, world_local, &runner.provider()).await?;
+
+    let manifest = Migration::new(
+        world_diff,
+        WorldContract::new(world_address, &runner.account(0)),
+        txn_config,
+        profile_config,
     )
+    .migrate(&mut MigrationUi::None)
     .await?;
 
-    // We know it's always successful as the migration is applied with dry-run set to false.
-    Ok(output.unwrap())
+    Ok(manifest)
 }
 
 #[tokio::main]
