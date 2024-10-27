@@ -26,7 +26,7 @@ use colored::Colorize;
 use dojo_utils::{Declarer, Deployer, Invoker, TxnConfig};
 use dojo_world::config::ProfileConfig;
 use dojo_world::contracts::WorldContract;
-use dojo_world::diff::{ResourceDiff, WorldDiff, WorldStatus};
+use dojo_world::diff::{Manifest, ResourceDiff, WorldDiff, WorldStatus};
 use dojo_world::local::ResourceLocal;
 use dojo_world::remote::ResourceRemote;
 use dojo_world::{utils, ResourceType};
@@ -68,7 +68,10 @@ where
     ///
     /// TODO: find a more elegant way to pass an UI printer to the ops library than a hard coded
     /// spinner.
-    pub async fn migrate(&self, spinner: &mut Spinner) -> Result<(), MigrationError<A::SignError>> {
+    pub async fn migrate(
+        &self,
+        spinner: &mut Spinner,
+    ) -> Result<Manifest, MigrationError<A::SignError>> {
         spinner.update_text("Deploying world...");
         self.ensure_world().await?;
 
@@ -83,15 +86,7 @@ where
         spinner.update_text("Initializing contracts...");
         self.initialize_contracts().await?;
 
-        spinner.stop_and_persist(
-            "⛩️ ",
-            &format!(
-                "Migration successful with world at address {}",
-                format!("{:#066x}", self.world.address).green()
-            ),
-        );
-
-        Ok(())
+        Ok(Manifest::new(&self.diff))
     }
 
     /// Returns whether multicall should be used. By default, it is enabled.

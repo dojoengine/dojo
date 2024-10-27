@@ -65,6 +65,7 @@ impl WorldLocal {
                                             class_hash,
                                             casm_class_hash,
                                         },
+                                        systems: vec![],
                                     });
 
                                     resources.push(resource);
@@ -83,6 +84,7 @@ impl WorldLocal {
                                             class_hash,
                                             casm_class_hash,
                                         },
+                                        members: vec![],
                                     });
 
                                     resources.push(resource);
@@ -101,6 +103,7 @@ impl WorldLocal {
                                             class_hash,
                                             casm_class_hash,
                                         },
+                                        members: vec![],
                                     });
 
                                     resources.push(resource);

@@ -34,24 +34,41 @@ pub struct CommonLocalInfo {
 pub struct ContractLocal {
     /// Common information about the resource.
     pub common: CommonLocalInfo,
+    /// The systems of the contract.
+    pub systems: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
 pub struct ModelLocal {
     /// Common information about the resource.
     pub common: CommonLocalInfo,
+    /// The members of the model.
+    pub members: Vec<Member>,
 }
 
 #[derive(Debug, Clone)]
 pub struct EventLocal {
     /// Common information about the resource.
     pub common: CommonLocalInfo,
+    /// The members of the event.
+    pub members: Vec<Member>,
 }
 
 #[derive(Debug, Clone)]
 pub struct NamespaceLocal {
     /// The name of the namespace.
     pub name: String,
+}
+
+/// Represents a struct resource like member and event.
+#[derive(Debug, Clone)]
+pub struct Member {
+    /// Name of the member.
+    pub name: String,
+    /// Type of the member.
+    pub ty: String,
+    /// Whether the member is a key.
+    pub key: bool,
 }
 
 impl ResourceLocal {

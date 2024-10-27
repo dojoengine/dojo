@@ -9,7 +9,6 @@ use anyhow::Result;
 use compare::ComparableResource;
 use dojo_types::naming;
 use starknet::core::types::contract::SierraClass;
-use starknet::core::utils::CairoShortStringToFeltError;
 use starknet::providers::Provider;
 use starknet_crypto::Felt;
 
@@ -19,8 +18,10 @@ use crate::config::ProfileConfig;
 use crate::{utils, ContractAddress, DojoSelector, ResourceType};
 
 mod compare;
+mod manifest;
 mod resource;
 
+pub use manifest::*;
 pub use resource::*;
 
 #[derive(Debug)]
@@ -344,6 +345,7 @@ mod tests {
                 class_hash: Felt::ONE,
                 casm_class_hash: Felt::ZERO,
             },
+            systems: vec![],
         });
 
         local.add_resource(local_contract.clone());
@@ -381,6 +383,7 @@ mod tests {
                 class_hash: Felt::TWO,
                 casm_class_hash: Felt::ZERO,
             },
+            systems: vec![],
         });
 
         local.add_resource(local_contract.clone());

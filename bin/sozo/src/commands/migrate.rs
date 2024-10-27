@@ -60,7 +60,20 @@ impl MigrateArgs {
                 ws.load_profile_config()?,
             );
 
-            migration.migrate(&mut spinner).await.context("Migration failed.")
+            let manifest = migration.migrate(&mut spinner).await.context("Migration failed.")?;
+
+            spinner.update_text("Writing manifest...");
+            ws.write_manifest_profile(manifest).context("Failed to write manifest.")?;
+
+            spinner.stop_and_persist(
+                "⛩️ ",
+                &format!(
+                    "Migration successful with world at address {}",
+                    format!("{:#066x}", world_address).green()
+                ),
+            );
+
+            Ok(())
         })
     }
 }

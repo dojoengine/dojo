@@ -11,8 +11,8 @@
 use std::collections::HashMap;
 
 use dojo_types::naming;
-use starknet::core::types::contract::{SierraClass, SierraClassDebugInfo};
-use starknet::core::types::{EntryPointsByType, Felt};
+use starknet::core::types::contract::SierraClass;
+use starknet::core::types::Felt;
 use starknet::core::utils::CairoShortStringToFeltError;
 
 mod artifact_to_local;
@@ -41,6 +41,9 @@ pub struct WorldLocal {
 #[cfg(test)]
 impl Default for WorldLocal {
     fn default() -> Self {
+        use starknet::core::types::contract::{SierraClass, SierraClassDebugInfo};
+        use starknet::core::types::EntryPointsByType;
+
         Self {
             class: SierraClass {
                 sierra_program: Vec::new(),
@@ -129,6 +132,7 @@ mod tests {
                 class_hash: Felt::ZERO,
                 casm_class_hash: Felt::ZERO,
             },
+            systems: vec![],
         }));
 
         let selector = naming::compute_selector_from_names(&"dojo".to_string(), &"c1".to_string());
@@ -144,6 +148,7 @@ mod tests {
                 class_hash: Felt::ZERO,
                 casm_class_hash: Felt::ZERO,
             },
+            systems: vec![],
         }));
 
         let selector2 = naming::compute_selector_from_names(&"dojo".to_string(), &"c2".to_string());

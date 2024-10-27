@@ -11,3 +11,5 @@ camino.workspace = true
 dojo-world = { workspace = true, features = [ "contracts", "metadata" ] }
 scarb.workspace = true
 toml.workspace = true
+serde.workspace = true
+serde_json.workspace = true

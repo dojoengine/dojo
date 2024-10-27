@@ -13370,6 +13370,8 @@ dependencies = [
  "camino",
  "dojo-world",
  "scarb",
+ "serde",
+ "serde_json",
  "toml 0.8.19",
 ]
 

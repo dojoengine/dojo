@@ -1,10 +1,13 @@
 use std::fs;
+use std::io::{BufWriter, Write};
+use std::ops::DerefMut;
 
 use anyhow::Result;
 use dojo_world::config::ProfileConfig;
 use dojo_world::local::WorldLocal;
 use scarb::core::Workspace;
 use scarb::flock::Filesystem;
+use serde::Serialize;
 
 use crate::filesystem::FilesystemExt;
 
@@ -24,6 +27,8 @@ pub trait WorkspaceExt {
     fn load_profile_config(&self) -> Result<ProfileConfig>;
     /// Loads the local world from the workspace configuration.
     fn load_world_local(&self) -> Result<WorldLocal>;
+    /// Writes the manifest for the current profile.
+    fn write_manifest_profile(&self, manifest: impl Serialize) -> Result<()>;
 }
 
 impl WorkspaceExt for Workspace<'_> {
@@ -117,5 +122,18 @@ impl WorkspaceExt for Workspace<'_> {
             self.target_dir_profile().to_string(),
             self.load_profile_config()?,
         )
+    }
+
+    fn write_manifest_profile(&self, manifest: impl Serialize) -> Result<()> {
+        let profile_name = self.current_profile()?.to_string();
+        let manifest_name = format!("manifest_{}.json", &profile_name);
+
+        let manifest_dir = self.manifest_path().parent().unwrap();
+        let manifest_dir = Filesystem::new(manifest_dir.into());
+
+        let mut file =
+            manifest_dir.create_rw(manifest_name, "Dojo manifest file", self.config())?;
+
+        Ok(serde_json::to_writer_pretty(file.deref_mut(), &manifest)?)
     }
 }
