@@ -1,7 +1,7 @@
 //! Invoker to invoke contracts.
 
 use starknet::accounts::ConnectedAccount;
-use starknet::core::types::{Call, Felt};
+use starknet::core::types::Call;
 use tracing::trace;
 
 use super::TransactionResult;

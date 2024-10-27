@@ -93,15 +93,10 @@ of $model_type$MembersStore<S> {
 $field_accessors$
 }
 
-#[starknet::interface]
-pub trait I$model_type$<T> {
-    fn ensure_abi(self: @T, model: $model_type$);
-}
-
 #[starknet::contract]
 pub mod $model_type_snake$ {
     use super::$model_type$;
-    use super::I$model_type$;
+    use super::$model_type$Value;
 
     #[storage]
     struct Storage {}
@@ -109,9 +104,21 @@ pub mod $model_type_snake$ {
     #[abi(embed_v0)]
     impl $model_type$__DojoModelImpl = dojo::model::component::IModelImpl<ContractState, $model_type$>;
 
-    #[abi(embed_v0)]
-    impl $model_type$Impl of I$model_type$<ContractState>{
+    #[abi(per_item)]
+    #[generate_trait]
+    impl $model_type$Impl of I$model_type${
+        // Ensures the ABI contains the Model struct, even if never used
+        // into as a system input.
+        #[external(v0)]
         fn ensure_abi(self: @ContractState, model: $model_type$) {
+            let _model = model;
+        }
+
+        // Outputs ModelValue to allow a simple diff from the ABI compared to the
+        // model to retrieved the keys of a model.
+        #[external(v0)]
+        fn ensure_values(self: @ContractState, value: $model_type$Value) {
+            let _value = value;
         }
     }
 }
