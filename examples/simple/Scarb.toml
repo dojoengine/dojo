@@ -12,5 +12,8 @@ build-external-contracts = ["dojo::world::world_contract::world"]
 dojo = { path = "../../crates/dojo/core" }
 starknet = "2.8.4"
 
+[dev-dependencies]
+dojo_cairo_test = { path = "../../crates/dojo/core-cairo-test" }
+
 [features]
 default = []

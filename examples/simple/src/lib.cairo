@@ -20,19 +20,25 @@ pub struct M2 {
     pub b: u256,
 }
 
-#[dojo::interface]
-pub trait MyInterface {
+#[starknet::interface]
+pub trait MyInterface<T> {
     fn system_1(ref self: T, a: felt252, b: felt252);
     fn system_2(self: @T, a: felt252) -> felt252;
 }
 
 #[dojo::contract]
 pub mod c1 {
-    use super::{MyInterface, M, M2};
+    use super::{MyInterface, M};
     use dojo::model::ModelStorage;
 
     fn dojo_init(self: @ContractState, arg1: felt252) {
-        let _arg1 = arg1;
+        let m = M {
+            a: 0,
+            b: arg1,
+        };
+
+        let mut world = self.world("ns");
+        world.write_model(@m);
     }
 
     #[abi(embed_v0)]
@@ -61,3 +67,22 @@ pub mod c1 {
 #[dojo::contract]
 pub mod c2 {}
 
+#[cfg(test)]
+mod tests {
+    use dojo::world::{WorldStorage, WorldStorageTrait};
+    use dojo_cairo_test::{spawn_test_world, NamespaceDef, TestResource, deploy_with_world_address};
+    use super::{c1, c2, m, M};
+
+    #[test]
+    fn test_1() {
+        let ndef = NamespaceDef {
+            namespace: "ns".into(),
+            resources: [TestResource::Model(m::TEST_CLASS_HASH.try_into().unwrap())].span(),
+        };
+
+        let world = spawn_test_world([ndef].span());
+        let world_storage = WorldStorageTrait::new(world, "ns".into());
+
+        let contract = deploy_with_world_address(c1::TEST_CLASS_HASH.try_into().unwrap(), world);
+    }
+}

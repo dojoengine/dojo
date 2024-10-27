@@ -3,15 +3,15 @@
 use core::panic_with_felt252;
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 use dojo::model::{
-    Model, ModelIndex, ModelDefinition, MemberModelStorage, ModelStorageTest,
-    ModelValueStorage, ModelValueStorageTest, ModelValueKey, MemberStore, ModelValue, ModelStorage,
+    Model, ModelIndex, ModelDefinition, MemberModelStorage, ModelStorageTest, ModelValueStorage,
+    ModelValueStorageTest, ModelValueKey, MemberStore, ModelValue, ModelStorage
 };
+use dojo::event::{Event, EventStorage, EventStorageTest};
 use dojo::meta::Layout;
 use dojo::utils::{
-    entity_id_from_key, serialize_inline, entity_id_from_keys, deserialize_unwrap,
+    entity_id_from_key, serialize_inline, deserialize_unwrap,
     find_model_field_layout
 };
-
 
 #[derive(Drop)]
 pub struct WorldStorage {
@@ -31,6 +31,18 @@ pub impl WorldStorageInternalImpl of WorldStorageTrait {
     fn set_namespace(ref self: WorldStorage, namespace: ByteArray) {
         self.namespace = namespace.clone();
         self.namespace_hash = dojo::utils::bytearray_hash(@namespace);
+    }
+}
+
+pub impl EventStorageWorldStorageImpl<E, +Event<E>> of EventStorage<WorldStorage, E> {
+    fn emit(ref self: WorldStorage, event: @E) {
+        dojo::world::IWorldDispatcherTrait::emit_event(
+            self.world,
+            Event::<E>::selector(self.namespace_hash),
+            Event::<E>::keys(event),
+            Event::<E>::values(event),
+            Event::<E>::historical()
+        );
     }
 }
 
@@ -84,13 +96,17 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
     fn read_member<T, K, +MemberModelStorage<WorldStorage, M, T>, +Drop<T>, +Drop<K>, +Serde<K>>(
         self: @WorldStorage, key: K, member_id: felt252
     ) -> T {
-        MemberModelStorage::<WorldStorage, M, T>::read_member(self, entity_id_from_key::<K>(@key), member_id)
+        MemberModelStorage::<
+            WorldStorage, M, T
+        >::read_member(self, entity_id_from_key::<K>(@key), member_id)
     }
 
     fn write_member<T, K, +MemberModelStorage<WorldStorage, M, T>, +Drop<T>, +Drop<K>, +Serde<K>>(
         ref self: WorldStorage, key: K, member_id: felt252, value: T
     ) {
-        MemberModelStorage::<WorldStorage, M, T>::write_member(ref self, entity_id_from_key::<K>(@key), member_id, value);
+        MemberModelStorage::<
+            WorldStorage, M, T
+        >::write_member(ref self, entity_id_from_key::<K>(@key), member_id, value);
     }
 
     fn namespace_hash(self: @WorldStorage) -> felt252 {
@@ -155,18 +171,14 @@ impl ModelValueStorageWorldStorageImpl<V, +ModelValue<V>> of ModelValueStorage<W
         }
     }
 
-    fn write_model_value(ref self: WorldStorage, value: @V) {
+    fn write_model_value(ref self: WorldStorage, entity_id: felt252, value: @V) {
         IWorldDispatcherTrait::set_entity(
             self.world,
             ModelValue::<V>::selector(self.namespace_hash),
-            ModelIndex::Id(ModelValue::<V>::id(value)),
+            ModelIndex::Id(entity_id),
             ModelValue::<V>::values(value),
             ModelValue::<V>::layout()
         );
-    }
-
-    fn erase_model_value(ref self: WorldStorage, value: @V) {
-        Self::erase_model_value_from_id(ref self, ModelValue::<V>::id(value));
     }
 
     fn erase_model_value_from_id(ref self: WorldStorage, entity_id: felt252) {
@@ -188,6 +200,22 @@ impl ModelValueStorageWorldStorageImpl<V, +ModelValue<V>> of ModelValueStorage<W
         ref self: WorldStorage, entity_id: felt252, member_id: felt252, value: T
     ) {
         MemberStore::<WorldStorage, V, T>::update_member(ref self, entity_id, member_id, value);
+    }
+}
+
+#[cfg(target: "test")]
+pub impl EventStorageTestWorldStorageImpl<E, +Event<E>> of EventStorageTest<WorldStorage, E> {
+    fn emit_test(ref self: WorldStorage, event: @E) {
+        let world_test = dojo::world::IWorldTestDispatcher {
+            contract_address: self.world.contract_address
+        };
+        dojo::world::IWorldTestDispatcherTrait::emit_event_test(
+            world_test,
+            Event::<E>::selector(self.namespace_hash),
+            Event::<E>::keys(event),
+            Event::<E>::values(event),
+            Event::<E>::historical()
+        );
     }
 }
 
@@ -228,7 +256,7 @@ pub impl ModelStorageTestWorldStorageImpl<M, +Model<M>> of ModelStorageTest<Worl
 pub impl ModelValueStorageTestWorldStorageImpl<
     V, +ModelValue<V>
 > of ModelValueStorageTest<WorldStorage, V> {
-    fn write_model_value_test(ref self: WorldStorage, value: @V) {
+    fn write_model_value_test(ref self: WorldStorage, entity_id: felt252, value: @V) {
         let world_test = dojo::world::IWorldTestDispatcher {
             contract_address: self.world.contract_address
         };
@@ -236,13 +264,13 @@ pub impl ModelValueStorageTestWorldStorageImpl<
         dojo::world::IWorldTestDispatcherTrait::set_entity_test(
             world_test,
             ModelValue::<V>::selector(self.namespace_hash),
-            ModelIndex::Id(ModelValue::<V>::id(value)),
+            ModelIndex::Id(entity_id),
             ModelValue::<V>::values(value),
             ModelValue::<V>::layout()
         );
     }
 
-    fn erase_model_value_test(ref self: WorldStorage, value: @V) {
+    fn erase_model_value_test(ref self: WorldStorage, entity_id: felt252) {
         let world_test = dojo::world::IWorldTestDispatcher {
             contract_address: self.world.contract_address
         };
@@ -250,7 +278,7 @@ pub impl ModelValueStorageTestWorldStorageImpl<
         dojo::world::IWorldTestDispatcherTrait::delete_entity_test(
             world_test,
             ModelValue::<V>::selector(self.namespace_hash),
-            ModelIndex::Id(ModelValue::<V>::id(value)),
+            ModelIndex::Id(entity_id),
             ModelValue::<V>::layout()
         );
     }

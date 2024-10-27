@@ -1,22 +1,4 @@
-#[generate_trait]
-pub impl $type_name$EmitterImpl of $type_name$Emitter {
-    fn emit(self: @$type_name$, world: dojo::world::IWorldDispatcher) {
-        dojo::event::Event::<$type_name$>::emit(self, world);
-    }
-}
-
 pub impl $type_name$EventImpl of dojo::event::Event<$type_name$> {
-
-    fn emit(self: @$type_name$, world: dojo::world::IWorldDispatcher) {
-        dojo::world::IWorldDispatcherTrait::emit_event(
-            world,
-            Self::selector('todo'),
-            Self::keys(self),
-            Self::values(self),
-            Self::historical()
-        );
-    }
-
     #[inline(always)]
     fn name() -> ByteArray {
         "$type_name$"

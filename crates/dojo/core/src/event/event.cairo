@@ -11,7 +11,6 @@ pub struct EventDefinition {
 }
 
 pub trait Event<T> {
-    fn emit(self: @T, world: IWorldDispatcher);
     fn name() -> ByteArray;
     fn version() -> u8;
     fn definition() -> EventDefinition;
@@ -22,9 +21,4 @@ pub trait Event<T> {
     fn values(self: @T) -> Span<felt252>;
     /// Returns the selector of the model computed for the given namespace hash.
     fn selector(namespace_hash: felt252) -> felt252;
-}
-
-#[cfg(target: "test")]
-pub trait EventTest<T> {
-    fn emit_test(self: @T, world: IWorldDispatcher);
 }

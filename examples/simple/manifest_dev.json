@@ -7,8 +7,8 @@
   },
   "contracts": [
     {
-      "address": "0x509930c4e13774467f1d7e06d8705e05ce504967ac5be2d29cdd5acc13efd1e",
-      "class_hash": "0x12dd56138e9e810ed6e56ff759ee48b13e5772f1f9b305a9dc5cdba2e916682",
+      "address": "0x376121fbda2f5ea0aa2e26749c4a192f5ad5fa49dc71524e78633f29ad3a7d7",
+      "class_hash": "0x64d905fcd83465490cbe190328b39fa3925ca59fa4adf53cc0b6507f664de24",
       "abi": [
         {
           "type": "impl",
@@ -214,7 +214,7 @@
         }
       ],
       "init_calldata": [
-        "1"
+        "0xfffe"
       ],
       "tag": "c1",
       "systems": []

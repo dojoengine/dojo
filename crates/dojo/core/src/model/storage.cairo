@@ -65,10 +65,7 @@ pub trait ModelValueStorage<S, V> {
     fn read_model_value_from_id(self: @S, entity_id: felt252) -> V;
 
     /// Updates a model value of type `V`.
-    fn write_model_value(ref self: S, value: @V);
-
-    /// Deletes a model value of type `V`.
-    fn erase_model_value(ref self: S, value: @V);
+    fn write_model_value(ref self: S, entity_id: felt252, value: @V);
 
     /// Deletes a model value of type `V` using the provided entity id.
     fn erase_model_value_from_id(ref self: S, entity_id: felt252);
@@ -88,7 +85,7 @@ pub trait ModelValueStorage<S, V> {
 /// checks.
 pub trait ModelValueStorageTest<S, V> {
     /// Updates a model value of type `V`.
-    fn write_model_value_test(ref self: S, value: @V);
+    fn write_model_value_test(ref self: S, entity_id: felt252, value: @V);
     /// Deletes a model value of type `V`.
-    fn erase_model_value_test(ref self: S, value: @V);
+    fn erase_model_value_test(ref self: S, entity_id: felt252);
 }

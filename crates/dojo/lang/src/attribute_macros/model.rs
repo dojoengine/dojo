@@ -189,10 +189,6 @@ impl DojoModel {
                     "model_value_derive_attr_names".to_string(),
                     RewriteNode::Text(model_value_derive_attr_names),
                 ),
-                (
-                    "model_member_store_impls".to_string(),
-                    RewriteNode::Text(model_member_store_impls.join(",\n")),
-                ),
             ]),
         );
 

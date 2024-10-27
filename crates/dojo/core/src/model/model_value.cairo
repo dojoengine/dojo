@@ -9,19 +9,13 @@ pub trait ModelValueKey<V, K> {}
 
 /// Trait `ModelValueParser` defines the interface for parsing and serializing entities of type `V`.
 pub trait ModelValueParser<V> {
-    /// Parses and returns the id of the entity as a `felt252`.
-    fn parse_id(self: @V) -> felt252;
     /// Serializes the values of the model and returns them as a `Span<felt252>`.
     fn serialize_values(self: @V) -> Span<felt252>;
 }
 
 /// The `ModelValue` trait defines a set of methods that must be implemented by any model value type
 /// `V`.
-/// This trait provides a standardized way to interact with model values, including retrieving their
-/// identifiers, values, and metadata, as well as constructing entities from values.
 pub trait ModelValue<V> {
-    /// Returns the unique identifier of the entity, being a hash derived from the keys.
-    fn id(self: @V) -> felt252;
     /// Returns a span of values associated with the entity, every field of a model
     /// that is not a key.
     fn values(self: @V) -> Span<felt252>;
@@ -40,10 +34,6 @@ pub trait ModelValue<V> {
 }
 
 pub impl ModelValueImpl<V, +Serde<V>, +ModelDefinition<V>, +ModelValueParser<V>> of ModelValue<V> {
-    fn id(self: @V) -> felt252 {
-        ModelValueParser::<V>::parse_id(self)
-    }
-
     fn values(self: @V) -> Span<felt252> {
         ModelValueParser::<V>::serialize_values(self)
     }

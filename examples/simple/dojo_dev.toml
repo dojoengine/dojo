@@ -14,7 +14,7 @@ private_key = "0xc5b2fcab997346f3ea1c00b002ecf6f382c5f9c9659a3894eb783c5320f912"
 world_address = "0x077c0dc7c1aba7f8842aff393ce6aa71fa675b4ced1bc927f7fc971b6acd92fc"
 
 [init_call_args]
-"ns-c1" = ["1"]
+"ns-c1" = ["0xfffe"]
 
 [writers]
 "ns" = ["ns-c1", "ns-c2"]

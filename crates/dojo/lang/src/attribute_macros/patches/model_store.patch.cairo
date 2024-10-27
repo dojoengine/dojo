@@ -1,6 +1,5 @@
 #[derive($model_value_derive_attr_names$)]
 pub struct $model_type$Value {
-    __id: felt252, // private field
     $members_values$
 } 
 
@@ -64,9 +63,6 @@ pub impl $model_type$ModelParser of dojo::model::model::ModelParser<$model_type$
 } 
 
 pub impl $model_type$ModelValueParser of dojo::model::model_value::ModelValueParser<$model_type$Value>{
-    fn parse_id(self: @$model_type$Value) -> felt252 {
-        *self.__id
-    }
     fn serialize_values(self: @$model_type$Value) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         $serialized_values$

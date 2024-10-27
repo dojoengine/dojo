@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use cairo_lang_defs::patcher::{PatchBuilder, RewriteNode};
 use cairo_lang_defs::plugin::{
     DynGeneratedFileAuxData, MacroPluginMetadata, PluginDiagnostic, PluginGeneratedFile,
@@ -7,19 +5,13 @@ use cairo_lang_defs::plugin::{
 };
 use cairo_lang_diagnostics::Severity;
 use cairo_lang_plugins::plugins::HasItemsInCfgEx;
-use cairo_lang_syntax::node::ast::{
-    ArgClause, Expr, MaybeModuleBody, OptionArgListParenthesized, OptionReturnTypeClause,
-};
+use cairo_lang_syntax::node::ast::{MaybeModuleBody, OptionReturnTypeClause};
 use cairo_lang_syntax::node::db::SyntaxGroup;
-use cairo_lang_syntax::node::helpers::QueryAttrs;
-use cairo_lang_syntax::node::{ast, ids, Terminal, TypedStablePtr, TypedSyntaxNode};
+use cairo_lang_syntax::node::{ast, Terminal, TypedStablePtr, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_types::naming;
 
-use super::DOJO_CONTRACT_ATTR;
 use crate::aux_data::ContractAuxData;
-use crate::syntax::world_param::{self, WorldParamInjectionKind};
-use crate::syntax::{self_param, utils as syntax_utils};
 
 const CONTRACT_PATCH: &str = include_str!("./patches/contract.patch.cairo");
 const DEFAULT_INIT_PATCH: &str = include_str!("./patches/default_init.patch.cairo");
@@ -82,13 +74,6 @@ impl DojoContract {
                         if struct_ast.name(db).text(db).to_string() == "Storage" {
                             has_storage = true;
                             return contract.merge_storage(db, struct_ast.clone());
-                        }
-                    } else if let ast::ModuleItem::Impl(ref impl_ast) = el {
-                        // If an implementation is not targetting the ContractState,
-                        // the auto injection of self and world is not applied.
-                        let trait_path = impl_ast.trait_path(db).node.get_text(db);
-                        if trait_path.contains("<ContractState>") {
-                            return contract.rewrite_impl(db, impl_ast.clone(), metadata);
                         }
                     } else if let ast::ModuleItem::FreeFunction(ref fn_ast) = el {
                         let fn_decl = fn_ast.declaration(db);
@@ -236,11 +221,15 @@ impl DojoContract {
             });
         }
 
-        let (params_str, was_world_injected) = self.rewrite_parameters(
-            db,
-            fn_decl.signature(db).parameters(db),
-            fn_ast.stable_ptr().untyped(),
-        );
+        let params: Vec<String> = fn_decl
+            .signature(db)
+            .parameters(db)
+            .elements(db)
+            .iter()
+            .map(|p| p.as_syntax_node().get_text(db))
+            .collect::<Vec<_>>();
+
+        let params_str = params.join(", ");
 
         // Since the dojo init is meant to be called by the world, we don't need an
         // interface to be generated (which adds a considerable amount of code).
@@ -257,12 +246,6 @@ impl DojoContract {
         let declaration_node = RewriteNode::Mapped {
             node: Box::new(RewriteNode::Text(format!("fn {}({}) {{", DOJO_INIT_FN, params_str))),
             origin: fn_ast.declaration(db).as_syntax_node().span_without_trivia(db),
-        };
-
-        let world_line_node = if was_world_injected {
-            RewriteNode::Text("let world = self.world_provider.world_dispatcher();".to_string())
-        } else {
-            RewriteNode::empty()
         };
 
         // Asserts the caller is the world, and close the init function.
@@ -285,8 +268,7 @@ impl DojoContract {
             })
             .collect::<Vec<_>>();
 
-        let mut nodes =
-            vec![impl_node, declaration_node, world_line_node, assert_world_caller_node];
+        let mut nodes = vec![impl_node, declaration_node, assert_world_caller_node];
         nodes.extend(func_nodes);
         // Close the init function + close the impl block.
         nodes.push(RewriteNode::Text("}\n}".to_string()));
@@ -388,291 +370,4 @@ impl DojoContract {
 
         params.join(", ")
     }
-
-    /// Rewrites parameter list by:
-    ///  * adding `self` parameter based on the `world` parameter mutability. If `world` is not
-    ///    provided, a `View` is assumed.
-    ///  * removing `world` if present as first parameter, as it will be read from the first
-    ///    function statement.
-    ///
-    /// Reports an error in case of:
-    ///  * `self` used explicitly,
-    ///  * multiple world parameters,
-    ///  * the `world` parameter is not the first parameter and named 'world'.
-    ///
-    /// Returns
-    ///  * the list of parameters in a String.
-    ///  * true if the world has to be injected (found as the first param).
-    pub fn rewrite_parameters(
-        &mut self,
-        db: &dyn SyntaxGroup,
-        param_list: ast::ParamList,
-        fn_diagnostic_item: ids::SyntaxStablePtrId,
-    ) -> (String, bool) {
-        let is_self_used = self_param::check_parameter(db, &param_list);
-
-        let world_injection = world_param::parse_world_injection(
-            db,
-            param_list.clone(),
-            fn_diagnostic_item,
-            &mut self.diagnostics,
-        );
-
-        if is_self_used && world_injection != WorldParamInjectionKind::None {
-            self.diagnostics.push(PluginDiagnostic {
-                stable_ptr: fn_diagnostic_item,
-                message: "You cannot use `self` and `world` parameters together.".to_string(),
-                severity: Severity::Error,
-            });
-        }
-
-        let mut params = param_list
-            .elements(db)
-            .iter()
-            .filter_map(|param| {
-                let (name, _, param_type) = syntax_utils::get_parameter_info(db, param.clone());
-
-                // If the param is `IWorldDispatcher`, we don't need to keep it in the param list
-                // as it is flatten in the first statement.
-                if world_param::is_world_param(&name, &param_type) {
-                    None
-                } else {
-                    Some(param.as_syntax_node().get_text(db))
-                }
-            })
-            .collect::<Vec<_>>();
-
-        match world_injection {
-            WorldParamInjectionKind::None => {
-                if !is_self_used {
-                    params.insert(0, "self: @ContractState".to_string());
-                }
-            }
-            WorldParamInjectionKind::View => {
-                params.insert(0, "self: @ContractState".to_string());
-            }
-            WorldParamInjectionKind::External => {
-                params.insert(0, "ref self: ContractState".to_string());
-            }
-        }
-
-        (params.join(", "), world_injection != WorldParamInjectionKind::None)
-    }
-
-    /// Rewrites function declaration by:
-    ///  * adding `self` parameter if missing,
-    ///  * removing `world` if present as first parameter (self excluded),
-    ///  * adding `let world = self.world_provider.world();` statement at the beginning of the
-    ///    function to restore the removed `world` parameter.
-    ///  * if `has_generate_trait` is true, the implementation containing the function has the
-    ///    `#[generate_trait]` attribute.
-    pub fn rewrite_function(
-        &mut self,
-        db: &dyn SyntaxGroup,
-        fn_ast: ast::FunctionWithBody,
-        has_generate_trait: bool,
-    ) -> Vec<RewriteNode> {
-        let fn_name = fn_ast.declaration(db).name(db).text(db);
-        let return_type =
-            fn_ast.declaration(db).signature(db).ret_ty(db).as_syntax_node().get_text(db);
-
-        // Consider the function as a system if no return type is specified.
-        if return_type.is_empty() {
-            self.systems.push(fn_name.to_string());
-        }
-
-        let (params_str, was_world_injected) = self.rewrite_parameters(
-            db,
-            fn_ast.declaration(db).signature(db).parameters(db),
-            fn_ast.stable_ptr().untyped(),
-        );
-
-        let declaration_node = RewriteNode::Mapped {
-            node: Box::new(RewriteNode::Text(format!(
-                "fn {}({}) {} {{",
-                fn_name, params_str, return_type
-            ))),
-            origin: fn_ast.declaration(db).as_syntax_node().span_without_trivia(db),
-        };
-
-        let world_line_node = if was_world_injected {
-            RewriteNode::Text("let world = self.world_provider.world_dispatcher();".to_string())
-        } else {
-            RewriteNode::empty()
-        };
-
-        let func_nodes = fn_ast
-            .body(db)
-            .statements(db)
-            .elements(db)
-            .iter()
-            .map(|e| RewriteNode::Mapped {
-                node: Box::new(RewriteNode::from(e.as_syntax_node())),
-                origin: e.as_syntax_node().span_without_trivia(db),
-            })
-            .collect::<Vec<_>>();
-
-        if has_generate_trait && was_world_injected {
-            self.diagnostics.push(PluginDiagnostic {
-                stable_ptr: fn_ast.stable_ptr().untyped(),
-                message: "You cannot use `world` and `#[generate_trait]` together. Use `self` \
-                          instead."
-                    .to_string(),
-                severity: Severity::Error,
-            });
-        }
-
-        let mut nodes = vec![declaration_node, world_line_node];
-        nodes.extend(func_nodes);
-        nodes.push(RewriteNode::Text("}".to_string()));
-
-        nodes
-    }
-
-    /// Rewrites all the functions of a Impl block.
-    fn rewrite_impl(
-        &mut self,
-        db: &dyn SyntaxGroup,
-        impl_ast: ast::ItemImpl,
-        metadata: &MacroPluginMetadata<'_>,
-    ) -> Vec<RewriteNode> {
-        let generate_attrs = impl_ast.attributes(db).query_attr(db, "generate_trait");
-        let has_generate_trait = !generate_attrs.is_empty();
-
-        if let ast::MaybeImplBody::Some(body) = impl_ast.body(db) {
-            // We shouldn't have generic param in the case of contract's endpoints.
-            let impl_node = RewriteNode::Mapped {
-                node: Box::new(RewriteNode::Text(format!(
-                    "{} impl {} of {} {{",
-                    impl_ast.attributes(db).as_syntax_node().get_text(db),
-                    impl_ast.name(db).as_syntax_node().get_text(db),
-                    impl_ast.trait_path(db).as_syntax_node().get_text(db),
-                ))),
-                origin: impl_ast.as_syntax_node().span_without_trivia(db),
-            };
-
-            let body_nodes: Vec<_> = body
-                .iter_items_in_cfg(db, metadata.cfg_set)
-                .flat_map(|el| {
-                    if let ast::ImplItem::Function(ref fn_ast) = el {
-                        return self.rewrite_function(db, fn_ast.clone(), has_generate_trait);
-                    }
-                    vec![RewriteNode::Copied(el.as_syntax_node())]
-                })
-                .collect();
-
-            let body_node = RewriteNode::Mapped {
-                node: Box::new(RewriteNode::interpolate_patched(
-                    "$body$",
-                    &UnorderedHashMap::from([(
-                        "body".to_string(),
-                        RewriteNode::new_modified(body_nodes),
-                    )]),
-                )),
-                origin: impl_ast.as_syntax_node().span_without_trivia(db),
-            };
-
-            return vec![impl_node, body_node, RewriteNode::Text("}".to_string())];
-        }
-
-        vec![RewriteNode::Copied(impl_ast.as_syntax_node())]
-    }
-}
-
-/// Get the contract namespace from the `Expr` parameter.
-fn _get_contract_namespace(
-    db: &dyn SyntaxGroup,
-    arg_value: Expr,
-    diagnostics: &mut Vec<PluginDiagnostic>,
-) -> Option<String> {
-    match arg_value {
-        Expr::ShortString(ss) => Some(ss.string_value(db).unwrap()),
-        Expr::String(s) => Some(s.string_value(db).unwrap()),
-        _ => {
-            diagnostics.push(PluginDiagnostic {
-                message: format!("The argument 'namespace' of dojo::contract must be a string",),
-                stable_ptr: arg_value.stable_ptr().untyped(),
-                severity: Severity::Error,
-            });
-            Option::None
-        }
-    }
-}
-
-/// Get parameters of the dojo::contract attribute.
-///
-/// Parameters:
-/// * db: The semantic database.
-/// * module_ast: The AST of the contract module.
-/// * diagnostics: vector of compiler diagnostics.
-///
-/// Returns:
-/// * A [`ContractParameters`] object containing all the dojo::contract parameters with their
-///   default values if not set in the code.
-fn _get_parameters(
-    db: &dyn SyntaxGroup,
-    module_ast: &ast::ItemModule,
-    diagnostics: &mut Vec<PluginDiagnostic>,
-) -> ContractParameters {
-    let mut parameters = ContractParameters::default();
-    let mut processed_args: HashMap<String, bool> = HashMap::new();
-
-    if let OptionArgListParenthesized::ArgListParenthesized(arguments) =
-        module_ast.attributes(db).query_attr(db, DOJO_CONTRACT_ATTR).first().unwrap().arguments(db)
-    {
-        arguments.arguments(db).elements(db).iter().for_each(|a| match a.arg_clause(db) {
-            ArgClause::Named(x) => {
-                let arg_name = x.name(db).text(db).to_string();
-                let arg_value = x.value(db);
-
-                if processed_args.contains_key(&arg_name) {
-                    diagnostics.push(PluginDiagnostic {
-                        message: format!("Too many '{}' attributes for dojo::contract", arg_name),
-                        stable_ptr: module_ast.stable_ptr().untyped(),
-                        severity: Severity::Error,
-                    });
-                } else {
-                    processed_args.insert(arg_name.clone(), true);
-
-                    match arg_name.as_str() {
-                        CONTRACT_NAMESPACE => {
-                            parameters.namespace =
-                                _get_contract_namespace(db, arg_value, diagnostics);
-                        }
-                        _ => {
-                            diagnostics.push(PluginDiagnostic {
-                                message: format!(
-                                    "Unexpected argument '{}' for dojo::contract",
-                                    arg_name
-                                ),
-                                stable_ptr: x.stable_ptr().untyped(),
-                                severity: Severity::Warning,
-                            });
-                        }
-                    }
-                }
-            }
-            ArgClause::Unnamed(arg) => {
-                let arg_name = arg.value(db).as_syntax_node().get_text(db);
-
-                diagnostics.push(PluginDiagnostic {
-                    message: format!("Unexpected argument '{}' for dojo::contract", arg_name),
-                    stable_ptr: arg.stable_ptr().untyped(),
-                    severity: Severity::Warning,
-                });
-            }
-            ArgClause::FieldInitShorthand(x) => {
-                diagnostics.push(PluginDiagnostic {
-                    message: format!(
-                        "Unexpected argument '{}' for dojo::contract",
-                        x.name(db).name(db).text(db).to_string()
-                    ),
-                    stable_ptr: x.stable_ptr().untyped(),
-                    severity: Severity::Warning,
-                });
-            }
-        })
-    }
-
-    parameters
 }

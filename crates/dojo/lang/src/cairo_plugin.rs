@@ -33,15 +33,7 @@ pub struct BuiltinDojoPlugin;
 pub fn dojo_plugin_suite() -> PluginSuite {
     let mut suite = PluginSuite::default();
 
-    suite
-        .add_plugin::<BuiltinDojoPlugin>()
-        .add_inline_macro_plugin::<DeleteMacro>()
-        .add_inline_macro_plugin::<GetMacro>()
-        .add_inline_macro_plugin::<SetMacro>()
-        .add_inline_macro_plugin::<EmitMacro>()
-        .add_inline_macro_plugin::<SelectorFromTagMacro>()
-        .add_inline_macro_plugin::<GetModelsTestClassHashes>()
-        .add_inline_macro_plugin::<SpawnTestWorld>();
+    suite.add_plugin::<BuiltinDojoPlugin>().add_inline_macro_plugin::<SelectorFromTagMacro>();
 
     suite
 }
@@ -73,13 +65,6 @@ impl MacroPlugin for BuiltinDojoPlugin {
             ast::ModuleItem::Module(module_ast) => {
                 if module_ast.has_attr(db, DOJO_CONTRACT_ATTR) {
                     DojoContract::from_module(db, module_ast, metadata)
-                } else {
-                    PluginResult::default()
-                }
-            }
-            ast::ModuleItem::Trait(trait_ast) => {
-                if trait_ast.has_attr(db, DOJO_INTERFACE_ATTR) {
-                    DojoInterface::from_trait(db, trait_ast, metadata)
                 } else {
                     PluginResult::default()
                 }
@@ -117,7 +102,6 @@ impl MacroPlugin for BuiltinDojoPlugin {
 
     fn declared_attributes(&self) -> Vec<String> {
         vec![
-            DOJO_INTERFACE_ATTR.to_string(),
             DOJO_CONTRACT_ATTR.to_string(),
             DOJO_EVENT_ATTR.to_string(),
             DOJO_MODEL_ATTR.to_string(),

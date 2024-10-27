@@ -15,8 +15,8 @@ pub mod event {
     pub mod interface;
     pub use interface::{IEvent, IEventDispatcher, IEventDispatcherTrait};
 
-    #[cfg(target: "test")]
-    pub use event::{EventTest};
+    pub mod storage;
+    pub use storage::{EventStorage, EventStorageTest};
 }
 
 pub mod meta {
