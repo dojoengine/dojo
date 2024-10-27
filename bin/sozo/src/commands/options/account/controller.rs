@@ -154,8 +154,7 @@ fn collect_policies_from_local_world(
         if resource.resource_type() == ResourceType::Contract {
             // Safe to unwrap the two methods since the selector comes from the resources registry
             // in the local world.
-            let contract_address =
-                world_diff.get_contract_address(*selector, world_address).unwrap();
+            let contract_address = world_diff.get_contract_address(*selector).unwrap();
             let sierra_class = world_diff.get_class(*selector).unwrap();
 
             policies_from_abis(&mut policies, &resource.tag(), contract_address, &sierra_class.abi);
@@ -163,7 +162,7 @@ fn collect_policies_from_local_world(
     }
 
     // get method from world contract
-    policies_from_abis(&mut policies, "world", world_address, &world_diff.get_world_class().abi);
+    policies_from_abis(&mut policies, "world", world_address, &world_diff.world_info.class.abi);
 
     // special policy for sending declare tx
     // corresponds to [account_sdk::account::DECLARATION_SELECTOR]
@@ -212,6 +211,7 @@ fn policies_from_abis(
 
 #[cfg(test)]
 mod tests {
+    use dojo_world::config::{NamespaceConfig, ProfileConfig};
     use dojo_world::local::WorldLocal;
     use starknet::macros::felt;
 
@@ -227,7 +227,8 @@ mod tests {
         // Then build the local world.
 
         // let world_local = WorldLocal::new(profile_config.namespace_config);
-        let world_local = WorldLocal::default();
+        let profile_config = ProfileConfig::new("test", "seed", NamespaceConfig::default());
+        let world_local = WorldLocal::new(profile_config);
 
         let world_addr = felt!("0x74c73d35df54ddc53bcf34aab5e0dbb09c447e99e01f4d69535441253c9571a");
         let user_addr = felt!("0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba");

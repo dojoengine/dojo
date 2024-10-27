@@ -2,11 +2,14 @@ use anyhow::Result;
 use clap::Args;
 use colored::*;
 use dojo_types::naming;
+use dojo_world::config::ProfileConfig;
 use dojo_world::diff::{ResourceDiff, WorldDiff, WorldStatus};
 use dojo_world::local::WorldLocal;
 use dojo_world::remote::WorldRemote;
 use dojo_world::{utils as world_utils, ResourceType};
+use scarb::compiler::Profile;
 use scarb::core::Config;
+use serde::Serialize;
 use sozo_scarbext::WorkspaceExt;
 use starknet::core::types::Felt;
 use tabled::settings::Style;
@@ -38,13 +41,13 @@ impl InspectArgs {
         let InspectArgs { world, starknet, resource } = self;
 
         config.tokio_handle().block_on(async {
-            let (world_address, world_diff, _) =
+            let (world_diff, _) =
                 utils::get_world_diff_and_provider(starknet.clone(), world, &ws).await?;
 
             if let Some(resource) = resource {
-                inspect_resource(&resource, &world_diff, world_address);
+                inspect_resource(&resource, &world_diff);
             } else {
-                inspect_world(&world_diff, world_address);
+                inspect_world(&world_diff);
             }
 
             Ok(())
@@ -52,11 +55,12 @@ impl InspectArgs {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 enum ResourceStatus {
     Created,
     Updated,
     Synced,
+    DirtyLocalPerms,
 }
 
 impl std::fmt::Display for ResourceStatus {
@@ -65,22 +69,31 @@ impl std::fmt::Display for ResourceStatus {
             ResourceStatus::Created => write!(f, "{}", "Created".blue()),
             ResourceStatus::Updated => write!(f, "{}", "Updated".yellow()),
             ResourceStatus::Synced => write!(f, "{}", "Synced".green()),
+            ResourceStatus::DirtyLocalPerms => write!(f, "{}", "Dirty local perms".yellow()),
         }
     }
 }
 
-#[derive(Debug, Tabled)]
-struct ResourceNameInspect {
+#[derive(Debug, Tabled, Serialize)]
+enum ResourceInspect {
+    Namespace(NamespaceInspect),
+    Contract(ContractInspect),
+    Model(ModelInspect),
+    Event(EventInspect),
+}
+
+#[derive(Debug, Tabled, Serialize)]
+struct NamespaceInspect {
     #[tabled(rename = "")]
     name: String,
     #[tabled(rename = "Status")]
     status: ResourceStatus,
+    #[tabled(rename = "Dojo Selector")]
+    selector: String,
 }
 
-#[derive(Debug, Tabled)]
-struct ResourceWithAddressInspect {
-    #[tabled(rename = "")]
-    name: String,
+#[derive(Debug, Tabled, Serialize)]
+struct WorldInspect {
     #[tabled(rename = "Status")]
     status: ResourceStatus,
     #[tabled(rename = "Contract Address")]
@@ -89,15 +102,81 @@ struct ResourceWithAddressInspect {
     current_class_hash: String,
 }
 
-#[derive(Debug, Tabled)]
-struct GranteeDisplay {
-    name: String,
+#[derive(Debug, Tabled, Serialize)]
+struct ContractInspect {
+    #[tabled(rename = "")]
+    tag: String,
+    #[tabled(rename = "Status")]
+    status: ResourceStatus,
+    #[tabled(rename = "Is Initialized")]
+    is_initialized: bool,
+    #[tabled(rename = "Dojo Selector")]
+    selector: String,
+    #[tabled(rename = "Contract Address")]
+    address: String,
+    #[tabled(skip)]
+    current_class_hash: String,
+}
+
+#[derive(Debug, Tabled, Serialize)]
+struct ModelInspect {
+    #[tabled(rename = "")]
+    tag: String,
+    #[tabled(rename = "Status")]
+    status: ResourceStatus,
+    #[tabled(rename = "Dojo Selector")]
     selector: String,
 }
 
+#[derive(Debug, Tabled, Serialize)]
+struct EventInspect {
+    #[tabled(rename = "")]
+    tag: String,
+    #[tabled(rename = "Status")]
+    status: ResourceStatus,
+    #[tabled(rename = "Dojo Selector")]
+    selector: String,
+}
+
+#[derive(Debug, Tabled)]
+enum GranteeSource {
+    #[tabled(rename = "Local")]
+    Local,
+    #[tabled(rename = "Remote")]
+    Remote,
+    #[tabled(rename = "Synced")]
+    Synced,
+}
+
+impl std::fmt::Display for GranteeSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            GranteeSource::Local => write!(f, "{}", "Local".blue()),
+            GranteeSource::Remote => write!(f, "{}", "Remote".black()),
+            GranteeSource::Synced => write!(f, "{}", "Synced".green()),
+        }
+    }
+}
+
+#[derive(Debug, Tabled)]
+struct GranteeDisplay {
+    #[tabled(rename = "Tag")]
+    tag: String,
+    #[tabled(rename = "Contract Address")]
+    address: String,
+    #[tabled(rename = "Source")]
+    source: GranteeSource,
+}
+
 /// Inspects a resource.
-fn inspect_resource(resource_name_or_tag: &str, world_diff: &WorldDiff, world_address: Felt) {
-    let resource_diff = world_diff.resource_diff_from_name_or_tag(resource_name_or_tag);
+fn inspect_resource(resource_name_or_tag: &str, world_diff: &WorldDiff) {
+    let selector = if naming::is_valid_tag(resource_name_or_tag) {
+        naming::compute_selector_from_tag(resource_name_or_tag)
+    } else {
+        naming::compute_bytearray_hash(resource_name_or_tag)
+    };
+
+    let resource_diff = world_diff.resources.get(&selector);
 
     if resource_diff.is_none() {
         println!("Resource not found locally.");
@@ -106,193 +185,279 @@ fn inspect_resource(resource_name_or_tag: &str, world_diff: &WorldDiff, world_ad
 
     let resource_diff = resource_diff.unwrap();
 
-    let status = match resource_diff {
-        ResourceDiff::Created(_) => ResourceStatus::Created,
-        ResourceDiff::Updated(_, _) => ResourceStatus::Updated,
-        ResourceDiff::Synced(_, _) => ResourceStatus::Synced,
-    };
+    let inspect = resource_diff_display(world_diff, &resource_diff);
+    pretty_print_toml(&toml::to_string_pretty(&inspect).unwrap());
 
-    let mut selector = Felt::ZERO;
-    if !naming::is_valid_tag(resource_name_or_tag) {
-        let r = ResourceNameInspect { name: resource_name_or_tag.to_string(), status };
-
-        selector = naming::compute_bytearray_hash(resource_name_or_tag);
-
-        print_table(&[r], "");
-    } else {
-        let r = resource_diff_display(resource_diff, world_address);
-
-        selector = naming::compute_selector_from_tag(resource_name_or_tag);
-
-        print_table(&[r], "");
-    }
-
-    let remote_writers = world_diff.get_remote_writers();
-    let remote_owners = world_diff.get_remote_owners();
-
-    let remote_writers_resource = remote_writers.get(&selector);
-
+    let writers = world_diff.get_writers(resource_diff.dojo_selector());
     let mut writers_disp = vec![];
 
-    if let Some(writers) = remote_writers_resource {
-        for w_selector in writers {
-            if let Some(r) = world_diff.resource_diff_from_name_or_tag(resource_name_or_tag) {
-                match r {
-                    ResourceDiff::Created(local) => {
-                        writers_disp.push(GranteeDisplay {
-                            name: local.name(),
-                            selector: format!("{:#066x}", w_selector),
-                        });
-                    }
-                    ResourceDiff::Updated(_, remote) => {
-                        writers_disp.push(GranteeDisplay {
-                            name: naming::get_tag(&remote.namespace(), &remote.name()),
-                            selector: format!("{:#066x}", w_selector),
-                        });
-                    }
-                    ResourceDiff::Synced(_, remote) => {
-                        writers_disp.push(GranteeDisplay {
-                            name: naming::get_tag(&remote.namespace(), &remote.name()),
-                            selector: format!("{:#066x}", w_selector),
-                        });
-                    }
-                }
-            }
-
-            writers_disp.push(GranteeDisplay {
-                name: w_selector.to_string(),
-                selector: format!("{:#066x}", w_selector),
-            });
-        }
+    for pdiff in writers.only_local() {
+        writers_disp.push(GranteeDisplay {
+            tag: pdiff.tag.unwrap_or("external".to_string()),
+            address: format!("{:#066x}", pdiff.address),
+            source: GranteeSource::Local,
+        });
     }
+
+    for pdiff in writers.only_remote() {
+        writers_disp.push(GranteeDisplay {
+            tag: pdiff.tag.unwrap_or("external".to_string()),
+            address: format!("{:#066x}", pdiff.address),
+            source: GranteeSource::Remote,
+        });
+    }
+
+    for pdiff in writers.synced() {
+        writers_disp.push(GranteeDisplay {
+            tag: pdiff.tag.unwrap_or("external".to_string()),
+            address: format!("{:#066x}", pdiff.address),
+            source: GranteeSource::Synced,
+        });
+    }
+
+    let owners = world_diff.get_owners(resource_diff.dojo_selector());
+    let mut owners_disp = vec![];
+
+    for pdiff in owners.only_local() {
+        owners_disp.push(GranteeDisplay {
+            tag: pdiff.tag.unwrap_or("external".to_string()),
+            address: format!("{:#066x}", pdiff.address),
+            source: GranteeSource::Local,
+        });
+    }
+
+    for pdiff in owners.only_remote() {
+        owners_disp.push(GranteeDisplay {
+            tag: pdiff.tag.unwrap_or("external".to_string()),
+            address: format!("{:#066x}", pdiff.address),
+            source: GranteeSource::Remote,
+        });
+    }
+
+    for pdiff in owners.synced() {
+        owners_disp.push(GranteeDisplay {
+            tag: pdiff.tag.unwrap_or("external".to_string()),
+            address: format!("{:#066x}", pdiff.address),
+            source: GranteeSource::Synced,
+        });
+    }
+
+    print_table(&writers_disp, "\n> Writers");
+    print_table(&owners_disp, "\n> Owners");
 }
 
 /// Inspects the whole world.
-fn inspect_world(world_diff: &WorldDiff, world_address: Felt) {
+fn inspect_world(world_diff: &WorldDiff) {
     println!("");
 
-    let mut disp_namespaces = vec![];
-
-    for ns_selector in &world_diff.namespaces {
-        let rns = world_diff.resources.get(ns_selector).unwrap();
-        match rns {
-            ResourceDiff::Created(local) => {
-                disp_namespaces.push(ResourceNameInspect {
-                    name: local.name(),
-                    status: ResourceStatus::Created,
-                });
-            }
-            ResourceDiff::Synced(_, remote) => {
-                disp_namespaces.push(ResourceNameInspect {
-                    name: remote.name(),
-                    status: ResourceStatus::Synced,
-                });
-            }
-            _ => {}
-        }
-    }
-
-    print_table(&disp_namespaces, "> Namespaces");
-
-    let mut contracts_disp = vec![];
-
-    let world = match &world_diff.world_status {
-        WorldStatus::NotDeployed(class_hash, _, _) => ResourceWithAddressInspect {
-            name: "World".to_string(),
-            address: format!("{:#066x}", world_address),
-            current_class_hash: format!("{:#066x}", class_hash),
-            status: ResourceStatus::Created,
-        },
-        WorldStatus::NewVersion(class_hash, _, _) => ResourceWithAddressInspect {
-            name: "World".to_string(),
-            address: format!("{:#066x}", world_address),
-            current_class_hash: format!("{:#066x}", class_hash),
-            status: ResourceStatus::Updated,
-        },
-        WorldStatus::Synced(class_hash, _) => ResourceWithAddressInspect {
-            name: "World".to_string(),
-            address: format!("{:#066x}", world_address),
-            current_class_hash: format!("{:#066x}", class_hash),
-            status: ResourceStatus::Synced,
-        },
+    let status = match &world_diff.world_info.status {
+        WorldStatus::NotDeployed => ResourceStatus::Created,
+        WorldStatus::NewVersion => ResourceStatus::Updated,
+        WorldStatus::Synced => ResourceStatus::Synced,
     };
 
+    let world = WorldInspect {
+        address: format!("{:#066x}", world_diff.world_info.address),
+        current_class_hash: format!("{:#066x}", world_diff.world_info.class_hash),
+        status,
+    };
+
+    print_table(&[world], "> World");
+
+    let mut namespaces_disp = vec![];
+    let mut contracts_disp = vec![];
     let mut models_disp = vec![];
     let mut events_disp = vec![];
 
     for (_selector, resource) in &world_diff.resources {
         match resource.resource_type() {
-            ResourceType::Contract => {
-                contracts_disp.push(resource_diff_display(resource, world_address))
-            }
-            ResourceType::Model => models_disp.push(resource_diff_display(resource, world_address)),
-            ResourceType::Event => events_disp.push(resource_diff_display(resource, world_address)),
+            ResourceType::Namespace => match resource_diff_display(world_diff, resource) {
+                ResourceInspect::Namespace(n) => namespaces_disp.push(n),
+                _ => unreachable!(),
+            },
+            ResourceType::Contract => match resource_diff_display(world_diff, resource) {
+                ResourceInspect::Contract(c) => contracts_disp.push(c),
+                _ => unreachable!(),
+            },
+            ResourceType::Model => match resource_diff_display(world_diff, resource) {
+                ResourceInspect::Model(m) => models_disp.push(m),
+                _ => unreachable!(),
+            },
+            ResourceType::Event => match resource_diff_display(world_diff, resource) {
+                ResourceInspect::Event(e) => events_disp.push(e),
+                _ => unreachable!(),
+            },
             _ => {}
         }
     }
 
-    if !contracts_disp.is_empty() {
-        contracts_disp.sort_by_key(|m| m.name.clone());
-    }
+    namespaces_disp.sort_by_key(|m| m.name.to_string());
+    contracts_disp.sort_by_key(|m| m.tag.to_string());
+    models_disp.sort_by_key(|m| m.tag.to_string());
+    events_disp.sort_by_key(|m| m.tag.to_string());
 
-    // Keep world at the top.
-    contracts_disp.insert(0, world);
+    print_table(&namespaces_disp, "> Namespaces");
     print_table(&contracts_disp, "> Contracts");
-
-    if !models_disp.is_empty() {
-        models_disp.sort_by_key(|m| m.name.clone());
-
-        print_table(&models_disp, "> Models");
-    }
-
-    if !events_disp.is_empty() {
-        events_disp.sort_by_key(|m| m.name.clone());
-
-        print_table(&events_disp, "> Events");
-    }
+    print_table(&models_disp, "> Models");
+    print_table(&events_disp, "> Events");
 }
 
 /// Displays the resource diff with the address and class hash.
-fn resource_diff_display(
-    resource: &ResourceDiff,
-    world_address: Felt,
-) -> ResourceWithAddressInspect {
-    let (name, address, class_hash, status) = match resource {
-        ResourceDiff::Created(local) => (
-            local.tag(),
-            world_utils::compute_dojo_contract_address(
-                local.dojo_selector(),
-                local.class_hash(),
-                world_address,
-            ),
-            local.class_hash(),
-            ResourceStatus::Created,
-        ),
-        ResourceDiff::Updated(local, remote) => {
-            (local.tag(), remote.address(), local.class_hash(), ResourceStatus::Updated)
-        }
-        ResourceDiff::Synced(_, remote) => {
-            (remote.tag(), remote.address(), remote.current_class_hash(), ResourceStatus::Synced)
-        }
-    };
+fn resource_diff_display(world_diff: &WorldDiff, resource: &ResourceDiff) -> ResourceInspect {
+    let n_local_writers_only = world_diff.get_writers(resource.dojo_selector()).only_local().len();
+    let n_local_owners_only = world_diff.get_owners(resource.dojo_selector()).only_local().len();
+    // Dirty perms is pertinent only when the status is synced.
+    let has_dirty_perms = n_local_writers_only > 0 || n_local_owners_only > 0;
 
-    ResourceWithAddressInspect {
-        name,
-        address: format!("{:#066x}", address),
-        current_class_hash: format!("{:#066x}", class_hash),
-        status,
+    match resource.resource_type() {
+        ResourceType::Namespace => {
+            let status = match resource {
+                ResourceDiff::Created(_) => ResourceStatus::Created,
+                ResourceDiff::Synced(_, _) => {
+                    if has_dirty_perms {
+                        ResourceStatus::DirtyLocalPerms
+                    } else {
+                        ResourceStatus::Synced
+                    }
+                }
+                _ => unreachable!(),
+            };
+
+            ResourceInspect::Namespace(NamespaceInspect {
+                name: resource.name(),
+                status,
+                selector: format!("{:#066x}", resource.dojo_selector()),
+            })
+        }
+        ResourceType::Contract => {
+            let (is_initialized, contract_address, status) = match resource {
+                ResourceDiff::Created(_) => (
+                    false,
+                    world_diff.get_contract_address(resource.dojo_selector()).unwrap(),
+                    ResourceStatus::Created,
+                ),
+                ResourceDiff::Updated(_, remote) => (
+                    remote.as_contract_or_panic().is_initialized,
+                    remote.address(),
+                    ResourceStatus::Updated,
+                ),
+                ResourceDiff::Synced(_, remote) => (
+                    remote.as_contract_or_panic().is_initialized,
+                    remote.address(),
+                    if has_dirty_perms {
+                        ResourceStatus::DirtyLocalPerms
+                    } else {
+                        ResourceStatus::Synced
+                    },
+                ),
+            };
+
+            ResourceInspect::Contract(ContractInspect {
+                tag: resource.tag(),
+                status,
+                is_initialized,
+                address: format!("{:#066x}", contract_address),
+                current_class_hash: format!("{:#066x}", resource.current_class_hash()),
+                selector: format!("{:#066x}", resource.dojo_selector()),
+            })
+        }
+        ResourceType::Model => {
+            let status = match resource {
+                ResourceDiff::Created(_) => ResourceStatus::Created,
+                ResourceDiff::Updated(_, _) => ResourceStatus::Updated,
+                ResourceDiff::Synced(_, _) => {
+                    if has_dirty_perms {
+                        ResourceStatus::DirtyLocalPerms
+                    } else {
+                        ResourceStatus::Synced
+                    }
+                }
+            };
+
+            ResourceInspect::Model(ModelInspect {
+                tag: resource.tag(),
+                status,
+                selector: format!("{:#066x}", resource.dojo_selector()),
+            })
+        }
+        ResourceType::Event => {
+            let status = match resource {
+                ResourceDiff::Created(_) => ResourceStatus::Created,
+                ResourceDiff::Updated(_, _) => ResourceStatus::Updated,
+                ResourceDiff::Synced(_, _) => {
+                    if has_dirty_perms {
+                        ResourceStatus::DirtyLocalPerms
+                    } else {
+                        ResourceStatus::Synced
+                    }
+                }
+            };
+
+            ResourceInspect::Event(EventInspect {
+                tag: resource.tag(),
+                status,
+                selector: format!("{:#066x}", resource.dojo_selector()),
+            })
+        }
+        ResourceType::StarknetContract => {
+            todo!()
+        }
     }
 }
 
 /// Prints a table.
 fn print_table<T>(data: T, title: &str)
 where
-    T: IntoIterator,
+    T: IntoIterator + Clone,
     <T as IntoIterator>::Item: Tabled,
 {
+    if data.clone().into_iter().count() == 0 {
+        return;
+    }
+
     let mut table = Table::new(data);
     table.with(Style::modern());
 
     println!("{title}");
     println!("{table}\n");
+}
+
+/// Pretty prints a TOML string.
+fn pretty_print_toml(str: &str) {
+    for line in str.lines() {
+        if line.starts_with("[") {
+            // Print section headers.
+            println!("\n{}", line.blue());
+        } else if line.contains('=') {
+            // Print key-value pairs with keys in green and values.
+            let parts: Vec<&str> = line.splitn(2, '=').collect();
+            if parts.len() == 2 {
+                let key = parts[0].trim();
+                let value = parts[1].trim().replace("\"", "");
+
+                let colored_values = match key {
+                    "status" => match value.to_string().as_str() {
+                        "Created" => value.green(),
+                        "Updated" => value.yellow(),
+                        "Synced" => value.green(),
+                        "DirtyLocalPerms" => "Dirty local permissions".yellow(),
+                        _ => value.white(),
+                    },
+                    "is_initialized" => match value.to_string().as_str() {
+                        "true" => value.green(),
+                        "false" => value.red(),
+                        _ => value.white(),
+                    },
+                    _ => value.white(),
+                };
+
+                println!("{}: {}", key.black(), colored_values);
+            } else {
+                println!("{}", line);
+            }
+        } else {
+            // Print other lines normally.
+            println!("{}", line);
+        }
+    }
 }

@@ -10,7 +10,8 @@ use serde_json;
 use starknet::core::types::contract::{AbiEntry, AbiImpl, SierraClass};
 use starknet::core::types::Felt;
 
-use super::{ContractLocal, EventLocal, ModelLocal, NamespaceConfig, ResourceLocal, WorldLocal};
+use super::*;
+use crate::config::ProfileConfig;
 
 const WORLD_INTF: &str = "dojo::world::iworld::IWorld";
 const CONTRACT_INTF: &str = "dojo::contract::interface::IContract";
@@ -18,17 +19,13 @@ const MODEL_INTF: &str = "dojo::model::interface::IModel";
 const EVENT_INTF: &str = "dojo::event::interface::IEvent";
 
 impl WorldLocal {
-    pub fn from_directory<P: AsRef<Path>>(
-        dir: P,
-        namespace_config: NamespaceConfig,
-    ) -> Result<Self> {
-        let mut world = Self::new(namespace_config);
-        world.parse_directory(dir)?;
-        Ok(world)
-    }
+    pub fn from_directory<P: AsRef<Path>>(dir: P, profile_config: ProfileConfig) -> Result<Self> {
+        let mut resources = vec![];
 
-    /// Parses a directory and processes each file to identify it a Dojo resource.
-    fn parse_directory<P: AsRef<Path>>(&mut self, dir: P) -> Result<()> {
+        let mut world_class = None;
+        let mut world_class_hash = None;
+        let mut world_casm_class_hash = None;
+
         for entry in fs::read_dir(dir)? {
             let entry = entry?;
             let path = entry.path();
@@ -51,55 +48,62 @@ impl WorldLocal {
                     for i in impls {
                         match identify_resource_type(i) {
                             ResourceType::World => {
-                                self.class = Some(sierra);
-                                self.class_hash = Some(class_hash);
-                                self.casm_class_hash = Some(casm_class_hash);
+                                world_class = Some(sierra);
+                                world_class_hash = Some(class_hash);
+                                world_casm_class_hash = Some(casm_class_hash);
                                 break;
                             }
                             ResourceType::Contract(name) => {
-                                let namespaces = self.namespace_config.get_namespaces(&name);
+                                let namespaces = profile_config.namespace.get_namespaces(&name);
 
                                 for ns in namespaces {
                                     let resource = ResourceLocal::Contract(ContractLocal {
-                                        namespace: ns,
-                                        name: name.clone(),
-                                        class: sierra.clone(),
-                                        class_hash,
-                                        casm_class_hash,
+                                        common: CommonLocalInfo {
+                                            namespace: ns,
+                                            name: name.clone(),
+                                            class: sierra.clone(),
+                                            class_hash,
+                                            casm_class_hash,
+                                        },
                                     });
 
-                                    self.add_resource(resource);
+                                    resources.push(resource);
                                 }
                                 break;
                             }
                             ResourceType::Model(name) => {
-                                let namespaces = self.namespace_config.get_namespaces(&name);
+                                let namespaces = profile_config.namespace.get_namespaces(&name);
 
                                 for ns in namespaces {
                                     let resource = ResourceLocal::Model(ModelLocal {
-                                        namespace: ns,
-                                        name: name.clone(),
-                                        class: sierra.clone(),
-                                        class_hash,
-                                        casm_class_hash,
+                                        common: CommonLocalInfo {
+                                            namespace: ns,
+                                            name: name.clone(),
+                                            class: sierra.clone(),
+                                            class_hash,
+                                            casm_class_hash,
+                                        },
                                     });
 
-                                    self.add_resource(resource);
+                                    resources.push(resource);
                                 }
                                 break;
                             }
                             ResourceType::Event(name) => {
-                                let namespaces = self.namespace_config.get_namespaces(&name);
+                                let namespaces = profile_config.namespace.get_namespaces(&name);
 
                                 for ns in namespaces {
                                     let resource = ResourceLocal::Event(EventLocal {
-                                        namespace: ns,
-                                        name: name.clone(),
-                                        class: sierra.clone(),
-                                        class_hash,
-                                        casm_class_hash,
+                                        common: CommonLocalInfo {
+                                            namespace: ns,
+                                            name: name.clone(),
+                                            class: sierra.clone(),
+                                            class_hash,
+                                            casm_class_hash,
+                                        },
                                     });
-                                    self.add_resource(resource);
+
+                                    resources.push(resource);
                                 }
                                 break;
                             }
@@ -110,7 +114,42 @@ impl WorldLocal {
             }
         }
 
-        Ok(())
+        resources.push(ResourceLocal::Namespace(NamespaceLocal {
+            name: profile_config.namespace.default.clone(),
+        }));
+
+        if let Some(mappings) = &profile_config.namespace.mappings {
+            for ns in mappings.keys() {
+                resources.push(ResourceLocal::Namespace(NamespaceLocal { name: ns.clone() }));
+            }
+        }
+
+        let mut world = match (world_class, world_class_hash, world_casm_class_hash) {
+            (Some(class), Some(class_hash), Some(casm_class_hash)) => Self {
+                class,
+                class_hash,
+                casm_class_hash,
+                resources: HashMap::new(),
+                profile_config,
+            },
+            _ => {
+                return Err(anyhow::anyhow!(
+                    "World artifact is missing, and required to deploy the world. Ensure you have \
+                     added the contract to your Scarb.toml file:\n\n
+
+                    [[target.starknet-contract]]\n
+                    sierra = true\n
+                    build-external-contracts = [\"dojo::world::world_contract::world\"]\n
+                    "
+                ));
+            }
+        };
+
+        for resource in resources {
+            world.add_resource(resource);
+        }
+
+        Ok(world)
     }
 }
 
@@ -160,6 +199,7 @@ fn name_from_impl(impl_name: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::NamespaceConfig;
 
     #[test]
     fn test_name_from_impl() {
@@ -207,13 +247,15 @@ mod tests {
     #[test]
     fn test_load_world_from_directory() {
         let namespace_config = NamespaceConfig::new("dojo");
+        let profile_config = ProfileConfig::new("test", "seed", namespace_config);
+
         let world = WorldLocal::from_directory(
             "/Users/glihm/cgg/dojo/examples/simple/target/dev",
-            namespace_config,
+            profile_config,
         )
         .unwrap();
-        assert_eq!(world.class.is_some(), true);
-        assert_eq!(world.contracts.len(), 1);
-        assert_eq!(world.models.len(), 1);
+
+        assert!(world.class_hash != Felt::ZERO);
+        assert_eq!(world.resources.len(), 3);
     }
 }

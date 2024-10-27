@@ -4,13 +4,17 @@ pub mod error;
 pub mod invoker;
 pub mod waiter;
 
+use std::fmt;
+
 use anyhow::Result;
+use colored_json::ToColoredJson;
 use starknet::accounts::{
     AccountDeploymentV1, AccountError, AccountFactory, AccountFactoryError, ConnectedAccount,
     DeclarationV2, ExecutionV1,
 };
 use starknet::core::types::{
     DeclareTransactionResult, DeployAccountTransactionResult, Felt, InvokeTransactionResult,
+    TransactionReceiptWithBlockInfo,
 };
 
 /// The transaction configuration to use when sending a transaction.
@@ -38,6 +42,36 @@ pub enum TxnAction {
     },
     Estimate,
     Simulate,
+}
+
+#[derive(Debug)]
+pub enum TransactionResult {
+    /// In some occasions, the transaction is not sent and it's not an error.
+    /// Typically for the deployer/declarer/invoker that have internal logic to check if the
+    /// transaction is needed or not.
+    Noop,
+    /// The transaction hash.
+    Hash(Felt),
+    /// The transaction hash and it's receipt.
+    HashReceipt(Felt, TransactionReceiptWithBlockInfo),
+}
+
+impl fmt::Display for TransactionResult {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TransactionResult::Hash(hash) => write!(f, "Transaction hash: {:#066x}", hash),
+            TransactionResult::HashReceipt(hash, receipt) => write!(
+                f,
+                "Transaction hash: {:#066x}\nReceipt: {}",
+                hash,
+                serde_json::to_string_pretty(&receipt)
+                    .expect("Failed to serialize receipt")
+                    .to_colored_json_auto()
+                    .expect("Failed to colorize receipt")
+            ),
+            TransactionResult::Noop => write!(f, "Transaction was not sent"),
+        }
+    }
 }
 
 impl TxnConfig {

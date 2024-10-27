@@ -30,8 +30,7 @@ pub fn get_world_address(
 ) -> Result<Felt> {
     let env = profile_config.env.as_ref();
 
-    let deterministic_world_address =
-        world_local.compute_world_address(&profile_config.world.seed)?;
+    let deterministic_world_address = world_local.deterministic_world_address()?;
 
     if let Some(wa) = world.address(env)? {
         if wa != deterministic_world_address {
@@ -105,7 +104,7 @@ pub async fn get_world_diff_and_provider(
     starknet: StarknetOptions,
     world: WorldOptions,
     ws: &Workspace<'_>,
-) -> Result<(Felt, WorldDiff, JsonRpcClient<HttpTransport>)> {
+) -> Result<(WorldDiff, JsonRpcClient<HttpTransport>)> {
     let world_local = ws.load_world_local()?;
     let profile_config = ws.load_profile_config()?;
 
@@ -134,7 +133,7 @@ pub async fn get_world_diff_and_provider(
 
     let world_diff = WorldDiff::new_from_chain(world_address, world_local, &provider).await?;
 
-    Ok((world_address, world_diff, provider))
+    Ok((world_diff, provider))
 }
 
 /// Sets up the world diff from the environment and returns associated starknet account.
@@ -145,20 +144,23 @@ pub async fn get_world_diff_and_account(
     starknet: StarknetOptions,
     world: WorldOptions,
     ws: &Workspace<'_>,
-) -> Result<(Felt, WorldDiff, SozoAccount<JsonRpcClient<HttpTransport>>)> {
+) -> Result<(WorldDiff, SozoAccount<JsonRpcClient<HttpTransport>>)> {
     let profile_config = ws.load_profile_config()?;
     let env = profile_config.env.as_ref();
 
-    let (world_address, world_diff, provider) =
-        get_world_diff_and_provider(starknet.clone(), world, ws).await?;
+    let (world_diff, provider) = get_world_diff_and_provider(starknet.clone(), world, ws).await?;
 
-    let account = { account.account(provider, world_address, &starknet, env, &world_diff).await? };
+    let account = {
+        account
+            .account(provider, world_diff.world_info.address, &starknet, env, &world_diff)
+            .await?
+    };
 
     if !dojo_utils::is_deployed(account.address(), &account.provider()).await? {
         return Err(anyhow!("Account with address {:#x} doesn't exist.", account.address()));
     }
 
-    Ok((world_address, world_diff, account))
+    Ok((world_diff, account))
 }
 
 /// Checks if the provided version string is compatible with the expected version string using

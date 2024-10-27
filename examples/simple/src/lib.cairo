@@ -31,6 +31,10 @@ pub trait MyInterface {
 pub mod c1 {
     use super::MyInterface;
 
+    fn dojo_init(self: @ContractState, arg1: felt252) {
+        let _arg1 = arg1;
+    }
+
     #[abi(embed_v0)]
     impl MyInterfaceImpl of MyInterface<ContractState> {
         fn system_1(ref world: IWorldDispatcher, data: felt252) -> felt252 {
@@ -48,3 +52,6 @@ pub mod c1 {
         }
     }
 }
+
+#[dojo::contract]
+pub mod c2 {}

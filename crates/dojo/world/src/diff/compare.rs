@@ -18,7 +18,7 @@ impl ComparableResource for ContractLocal {
     fn compare(self, remote: ResourceRemote) -> ResourceDiff {
         let remote_contract = remote.as_contract_or_panic();
 
-        if self.class_hash == remote_contract.common.current_class_hash() {
+        if self.common.class_hash == remote_contract.common.current_class_hash() {
             ResourceDiff::Synced(ResourceLocal::Contract(self), remote)
         } else {
             ResourceDiff::Updated(ResourceLocal::Contract(self), remote)
@@ -30,7 +30,7 @@ impl ComparableResource for ModelLocal {
     fn compare(self, remote: ResourceRemote) -> ResourceDiff {
         let remote_model = remote.as_model_or_panic();
 
-        if self.class_hash == remote_model.common.current_class_hash() {
+        if self.common.class_hash == remote_model.common.current_class_hash() {
             ResourceDiff::Synced(ResourceLocal::Model(self), remote)
         } else {
             ResourceDiff::Updated(ResourceLocal::Model(self), remote)
@@ -42,7 +42,7 @@ impl ComparableResource for EventLocal {
     fn compare(self, remote: ResourceRemote) -> ResourceDiff {
         let remote_event = remote.as_event_or_panic();
 
-        if self.class_hash == remote_event.common.current_class_hash() {
+        if self.common.class_hash == remote_event.common.current_class_hash() {
             ResourceDiff::Synced(ResourceLocal::Event(self), remote)
         } else {
             ResourceDiff::Updated(ResourceLocal::Event(self), remote)
@@ -69,7 +69,6 @@ impl ComparableResource for ResourceLocal {
             ResourceLocal::Model(model) => model.compare(remote),
             ResourceLocal::Event(event) => event.compare(remote),
             ResourceLocal::Namespace(ns) => ns.compare(remote),
-            ResourceLocal::Starknet(_) => todo!("Starknet resources comparison."),
         }
     }
 }
@@ -83,22 +82,25 @@ mod tests {
     use super::*;
     use crate::local::{ContractLocal, EventLocal, ModelLocal};
     use crate::remote::{
-        CommonResourceRemoteInfo, ContractRemote, EventRemote, ModelRemote, NamespaceRemote,
+        CommonRemoteInfo, CommonResourceRemoteInfo, ContractRemote, EventRemote, ModelRemote,
+        NamespaceRemote,
     };
     use crate::test_utils::empty_sierra_class;
 
     #[test]
     fn test_compare_model_local() {
         let local_model = ModelLocal {
-            name: "model1".to_string(),
-            namespace: "ns1".to_string(),
-            class: empty_sierra_class(),
-            class_hash: Felt::ZERO,
-            casm_class_hash: Felt::ZERO,
+            common: CommonLocalInfo {
+                name: "model1".to_string(),
+                namespace: "ns1".to_string(),
+                class: empty_sierra_class(),
+                class_hash: Felt::ZERO,
+                casm_class_hash: Felt::ZERO,
+            },
         };
 
         let mut remote_model = ResourceRemote::Model(ModelRemote {
-            common: CommonResourceRemoteInfo {
+            common: CommonRemoteInfo {
                 class_hashes: vec![Felt::ZERO],
                 name: "model1".to_string(),
                 namespace: "ns1".to_string(),
@@ -121,15 +123,17 @@ mod tests {
     #[test]
     fn test_compare_event_local() {
         let local_event = EventLocal {
-            name: "event1".to_string(),
-            namespace: "ns1".to_string(),
-            class: empty_sierra_class(),
-            class_hash: Felt::ZERO,
-            casm_class_hash: Felt::ZERO,
+            common: CommonLocalInfo {
+                name: "event1".to_string(),
+                namespace: "ns1".to_string(),
+                class: empty_sierra_class(),
+                class_hash: Felt::ZERO,
+                casm_class_hash: Felt::ZERO,
+            },
         };
 
         let mut remote_event = ResourceRemote::Event(EventRemote {
-            common: CommonResourceRemoteInfo {
+            common: CommonRemoteInfo {
                 class_hashes: vec![Felt::ZERO],
                 name: "event1".to_string(),
                 namespace: "ns1".to_string(),
@@ -166,15 +170,17 @@ mod tests {
     #[test]
     fn test_compare_contract_local() {
         let local_contract = ContractLocal {
-            name: "contract1".to_string(),
-            namespace: "ns1".to_string(),
-            class: empty_sierra_class(),
-            class_hash: Felt::ZERO,
-            casm_class_hash: Felt::ZERO,
+            common: CommonLocalInfo {
+                name: "contract1".to_string(),
+                namespace: "ns1".to_string(),
+                class: empty_sierra_class(),
+                class_hash: Felt::ZERO,
+                casm_class_hash: Felt::ZERO,
+            },
         };
 
         let mut remote_contract = ResourceRemote::Contract(ContractRemote {
-            common: CommonResourceRemoteInfo {
+            common: CommonRemoteInfo {
                 class_hashes: vec![Felt::ZERO],
                 name: "contract1".to_string(),
                 namespace: "ns1".to_string(),

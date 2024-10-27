@@ -15,7 +15,7 @@ use starknet::core::types::{
 };
 use starknet::providers::{Provider, ProviderError};
 
-use crate::{TransactionError, TransactionExt, TransactionWaiter, TxnConfig};
+use crate::{TransactionError, TransactionExt, TransactionResult, TransactionWaiter, TxnConfig};
 
 /// A declarer is in charge of declaring contracts.
 #[derive(Debug)]
@@ -29,20 +29,6 @@ where
     pub txn_config: TxnConfig,
     /// The classes to declare,  identified by their casm class hash.
     pub classes: HashMap<Felt, FlattenedSierraClass>,
-}
-
-/// The output of a declaration.
-#[derive(Debug)]
-pub struct DeclareOutput {
-    /// The transaction hash of the declaration.
-    pub transaction_hash: Felt,
-}
-
-impl DeclareOutput {
-    /// Returns true if the class was already declared.
-    pub fn already_declared(&self) -> bool {
-        self.transaction_hash == Felt::ZERO
-    }
 }
 
 impl<A> Declarer<A>
@@ -64,12 +50,18 @@ where
     /// Takes ownership of the declarer to avoid cloning the classes.
     ///
     /// The order of the declarations is not guaranteed.
-    pub async fn declare_all(self) -> Result<(), TransactionError<A::SignError>> {
+    pub async fn declare_all(
+        self,
+    ) -> Result<Vec<TransactionResult>, TransactionError<A::SignError>> {
+        let mut results = vec![];
+
         for (casm_class_hash, class) in self.classes {
-            Self::declare(casm_class_hash, class, &self.account, &self.txn_config).await?;
+            results.push(
+                Self::declare(casm_class_hash, class, &self.account, &self.txn_config).await?,
+            );
         }
 
-        Ok(())
+        Ok(results)
     }
 
     /// Declares a class.
@@ -78,7 +70,7 @@ where
         class: FlattenedSierraClass,
         account: &A,
         txn_config: &TxnConfig,
-    ) -> Result<DeclareOutput, TransactionError<A::SignError>> {
+    ) -> Result<TransactionResult, TransactionError<A::SignError>> {
         let class_hash = class.class_hash();
 
         match account.provider().get_class(BlockId::Tag(BlockTag::Pending), class_hash).await {
@@ -88,7 +80,7 @@ where
                     class_hash = format!("{:#066x}", class_hash),
                     "Class already declared."
                 );
-                return Ok(DeclareOutput { transaction_hash: Felt::ZERO });
+                return Ok(TransactionResult::Noop);
             }
             Err(e) => return Err(TransactionError::Provider(e)),
         }
@@ -105,9 +97,13 @@ where
 
         // Since TxnConfig::wait doesn't work for now, we wait for the transaction manually.
         if txn_config.wait {
-            TransactionWaiter::new(transaction_hash, &account.provider()).await?;
+            let receipt = TransactionWaiter::new(transaction_hash, &account.provider()).await?;
+
+            if txn_config.receipt {
+                return Ok(TransactionResult::HashReceipt(transaction_hash, receipt));
+            }
         }
 
-        Ok(DeclareOutput { transaction_hash })
+        Ok(TransactionResult::Hash(transaction_hash))
     }
 }

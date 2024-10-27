@@ -169,75 +169,34 @@ where
     /// resources). Change `DojoSelector` with a struct containing the local definition of an
     /// overlay resource, which can contain also writers.
     async fn sync_permissions(&self) -> Result<(), MigrationError<A::SignError>> {
-        // The remote writers and owners are already containing addresses.
-        let remote_writers = self.diff.get_remote_writers();
-        let remote_owners = self.diff.get_remote_owners();
-
-        // The local writers and owners are containing only selectors and not the addresses.
-        // A mapping is required to then give the permissions to the right addresses.
-        let local_writers = self.profile_config.get_local_writers();
-        let local_owners = self.profile_config.get_local_owners();
-
-        // For all contracts in a dojo project, addresses are deterministic.
-        let contract_addresses = self.diff.get_contracts_addresses(self.world.address);
-
         let mut invoker = Invoker::new(&self.world.account, self.txn_config.clone());
 
-        // For all local writer/owner permission that is not found remotely, we need to grant the
-        // permission.
-        for (target_selector, local_permission) in local_writers {
-            for (grantee_selector, tag) in local_permission.grantees {
-                let grantee_address = contract_addresses
-                    .get(&grantee_selector)
-                    .ok_or(MigrationError::OrphanSelectorAddress(tag.clone()))?;
+        // Only takes the local permissions that are not already set onchain to apply them.
+        for (selector, resource) in &self.diff.resources {
+            for pdiff in self.diff.get_writers(*selector).only_local() {
+                trace!(
+                    target = resource.tag(),
+                    grantee_tag = pdiff.tag.unwrap_or_default(),
+                    grantee_address = format!("{:#066x}", pdiff.address),
+                    "Granting writer permission."
+                );
 
-                if !remote_writers
-                    .get(&target_selector)
-                    .as_ref()
-                    .unwrap_or(&&HashSet::new())
-                    .contains(grantee_address)
-                {
-                    trace!(
-                        target = local_permission.target_tag,
-                        grantee_tag = tag,
-                        grantee_address = format!("{:#066x}", grantee_address),
-                        "Granting writer permission."
-                    );
-
-                    invoker.add_call(self.world.grant_writer_getcall(
-                        &target_selector,
-                        &ContractAddress(*grantee_address),
-                    ));
-                }
+                invoker.add_call(
+                    self.world.grant_writer_getcall(&selector, &ContractAddress(pdiff.address)),
+                );
             }
-        }
 
-        for (target_selector, local_permission) in local_owners {
-            for (grantee_selector, tag) in local_permission.grantees {
-                let grantee_address = contract_addresses
-                    .get(&grantee_selector)
-                    .ok_or(MigrationError::OrphanSelectorAddress(tag.clone()))?;
+            for pdiff in self.diff.get_owners(*selector).only_local() {
+                trace!(
+                    target = resource.tag(),
+                    grantee_tag = pdiff.tag.unwrap_or_default(),
+                    grantee_address = format!("{:#066x}", pdiff.address),
+                    "Granting owner permission."
+                );
 
-                if !remote_owners
-                    .get(&target_selector)
-                    .as_ref()
-                    .unwrap_or(&&HashSet::new())
-                    .contains(grantee_address)
-                {
-                    trace!(
-                        target = local_permission.target_tag,
-                        grantee_tag = tag,
-                        grantee_address = format!("{:#066x}", grantee_address),
-                        "Granting owner permission."
-                    );
-
-                    invoker.add_call(
-                        self.world.grant_owner_getcall(
-                            &target_selector,
-                            &ContractAddress(*grantee_address),
-                        ),
-                    );
-                }
+                invoker.add_call(
+                    self.world.grant_owner_getcall(&selector, &ContractAddress(pdiff.address)),
+                );
             }
         }
 
@@ -325,17 +284,20 @@ where
         if let ResourceDiff::Created(ResourceLocal::Contract(contract)) = resource {
             trace!(
                 namespace,
-                name = contract.name,
-                class_hash = format!("{:#066x}", contract.class_hash),
+                name = contract.common.name,
+                class_hash = format!("{:#066x}", contract.common.class_hash),
                 "Registering contract."
             );
 
-            declarer.add_class(contract.casm_class_hash, contract.class.clone().flatten()?);
+            declarer.add_class(
+                contract.common.casm_class_hash,
+                contract.common.class.clone().flatten()?,
+            );
 
             invoker.add_call(self.world.register_contract_getcall(
                 &contract.dojo_selector(),
                 &ns_bytearray,
-                &ClassHash(contract.class_hash),
+                &ClassHash(contract.common.class_hash),
             ));
         }
 
@@ -346,18 +308,20 @@ where
         {
             trace!(
                 namespace,
-                name = contract_local.name,
-                class_hash = format!("{:#066x}", contract_local.class_hash),
+                name = contract_local.common.name,
+                class_hash = format!("{:#066x}", contract_local.common.class_hash),
                 "Upgrading contract."
             );
 
-            declarer
-                .add_class(contract_local.casm_class_hash, contract_local.class.clone().flatten()?);
-
-            invoker.add_call(
-                self.world
-                    .upgrade_contract_getcall(&ns_bytearray, &ClassHash(contract_local.class_hash)),
+            declarer.add_class(
+                contract_local.common.casm_class_hash,
+                contract_local.common.class.clone().flatten()?,
             );
+
+            invoker.add_call(self.world.upgrade_contract_getcall(
+                &ns_bytearray,
+                &ClassHash(contract_local.common.class_hash),
+            ));
         }
 
         Ok(())
@@ -376,15 +340,16 @@ where
         if let ResourceDiff::Created(ResourceLocal::Model(model)) = resource {
             trace!(
                 namespace,
-                name = model.name,
-                class_hash = format!("{:#066x}", model.class_hash),
+                name = model.common.name,
+                class_hash = format!("{:#066x}", model.common.class_hash),
                 "Registering model."
             );
 
-            declarer.add_class(model.casm_class_hash, model.class.clone().flatten()?);
+            declarer.add_class(model.common.casm_class_hash, model.common.class.clone().flatten()?);
 
             invoker.add_call(
-                self.world.register_model_getcall(&ns_bytearray, &ClassHash(model.class_hash)),
+                self.world
+                    .register_model_getcall(&ns_bytearray, &ClassHash(model.common.class_hash)),
             );
         }
 
@@ -395,15 +360,21 @@ where
         {
             trace!(
                 namespace,
-                name = model_local.name,
-                class_hash = format!("{:#066x}", model_local.class_hash),
+                name = model_local.common.name,
+                class_hash = format!("{:#066x}", model_local.common.class_hash),
                 "Upgrading model."
             );
 
-            declarer.add_class(model_local.casm_class_hash, model_local.class.clone().flatten()?);
+            declarer.add_class(
+                model_local.common.casm_class_hash,
+                model_local.common.class.clone().flatten()?,
+            );
 
             invoker.add_call(
-                self.world.upgrade_model_getcall(&ns_bytearray, &ClassHash(model_local.class_hash)),
+                self.world.upgrade_model_getcall(
+                    &ns_bytearray,
+                    &ClassHash(model_local.common.class_hash),
+                ),
             );
         }
 
@@ -423,15 +394,16 @@ where
         if let ResourceDiff::Created(ResourceLocal::Event(event)) = resource {
             trace!(
                 namespace,
-                name = event.name,
-                class_hash = format!("{:#066x}", event.class_hash),
+                name = event.common.name,
+                class_hash = format!("{:#066x}", event.common.class_hash),
                 "Registering event."
             );
 
-            declarer.add_class(event.casm_class_hash, event.class.clone().flatten()?);
+            declarer.add_class(event.common.casm_class_hash, event.common.class.clone().flatten()?);
 
             invoker.add_call(
-                self.world.register_event_getcall(&ns_bytearray, &ClassHash(event.class_hash)),
+                self.world
+                    .register_event_getcall(&ns_bytearray, &ClassHash(event.common.class_hash)),
             );
         }
 
@@ -442,15 +414,21 @@ where
         {
             trace!(
                 namespace,
-                name = event_local.name,
-                class_hash = format!("{:#066x}", event_local.class_hash),
+                name = event_local.common.name,
+                class_hash = format!("{:#066x}", event_local.common.class_hash),
                 "Upgrading event."
             );
 
-            declarer.add_class(event_local.casm_class_hash, event_local.class.clone().flatten()?);
+            declarer.add_class(
+                event_local.common.casm_class_hash,
+                event_local.common.class.clone().flatten()?,
+            );
 
             invoker.add_call(
-                self.world.upgrade_event_getcall(&ns_bytearray, &ClassHash(event_local.class_hash)),
+                self.world.upgrade_event_getcall(
+                    &ns_bytearray,
+                    &ClassHash(event_local.common.class_hash),
+                ),
             );
         }
 
@@ -459,14 +437,14 @@ where
 
     /// Ensures the world is declared and deployed if necessary.
     async fn ensure_world(&self) -> Result<(), MigrationError<A::SignError>> {
-        match &self.diff.world_status {
-            WorldStatus::Synced(_, _) => return Ok(()),
-            WorldStatus::NotDeployed(class_hash, casm_class_hash, class) => {
+        match &self.diff.world_info.status {
+            WorldStatus::Synced => return Ok(()),
+            WorldStatus::NotDeployed => {
                 trace!("Deploying the first world.");
 
                 Declarer::declare(
-                    *casm_class_hash,
-                    class.clone().flatten()?,
+                    self.diff.world_info.casm_class_hash,
+                    self.diff.world_info.class.clone().flatten()?,
                     &self.world.account,
                     &self.txn_config,
                 )
@@ -476,26 +454,30 @@ where
 
                 deployer
                     .deploy_via_udc(
-                        *class_hash,
+                        self.diff.world_info.class_hash,
                         utils::world_salt(&self.profile_config.world.seed)?,
-                        &[*class_hash],
+                        &[self.diff.world_info.class_hash],
                         Felt::ZERO,
                     )
                     .await?;
             }
-            WorldStatus::NewVersion(class_hash, casm_class_hash, class) => {
+            WorldStatus::NewVersion => {
                 trace!("Upgrading the world.");
 
                 Declarer::declare(
-                    *casm_class_hash,
-                    class.clone().flatten()?,
+                    self.diff.world_info.casm_class_hash,
+                    self.diff.world_info.class.clone().flatten()?,
                     &self.world.account,
                     &self.txn_config,
                 )
                 .await?;
 
                 let mut invoker = Invoker::new(&self.world.account, self.txn_config.clone());
-                invoker.add_call(self.world.upgrade_getcall(&ClassHash(*class_hash)));
+
+                invoker.add_call(
+                    self.world.upgrade_getcall(&ClassHash(self.diff.world_info.class_hash)),
+                );
+
                 invoker.multicall().await?;
             }
         };

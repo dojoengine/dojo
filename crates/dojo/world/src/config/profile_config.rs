@@ -3,7 +3,6 @@ use std::fs;
 use std::path::Path;
 
 use anyhow::Result;
-use dojo_types::naming;
 use serde::Deserialize;
 use toml;
 
@@ -11,7 +10,6 @@ use super::environment::Environment;
 use super::migration_config::MigrationConfig;
 use super::namespace_config::NamespaceConfig;
 use super::world_config::WorldConfig;
-use crate::DojoSelector;
 
 /// Profile configuration that is used to configure the world and its environment.
 ///
@@ -31,6 +29,18 @@ pub struct ProfileConfig {
 }
 
 impl ProfileConfig {
+    pub fn new(name: &str, seed: &str, namespace: NamespaceConfig) -> Self {
+        Self {
+            world: WorldConfig {
+                name: name.to_string(),
+                seed: seed.to_string(),
+                ..Default::default()
+            },
+            namespace,
+            ..Default::default()
+        }
+    }
+
     /// Loads the profile configuration from a TOML file.
     pub fn from_toml<P: AsRef<Path>>(toml_path: P) -> Result<Self> {
         let content = fs::read_to_string(&toml_path)?;
@@ -38,59 +48,23 @@ impl ProfileConfig {
         Ok(config)
     }
 
-    /// Extracts the local writers from the profile configuration, computing the selectors.
-    pub fn get_local_writers(&self) -> HashMap<DojoSelector, LocalPermission> {
-        if let Some(user_names_tags) = &self.writers {
-            from_names_tags_to_selectors(user_names_tags)
+    /// Returns the local writers for a given tag.
+    pub fn get_local_writers(&self, tag: &str) -> HashSet<String> {
+        if let Some(writers) = &self.writers {
+            writers.get(tag).unwrap_or(&HashSet::new()).clone()
         } else {
-            HashMap::new()
+            HashSet::new()
         }
     }
 
-    /// Extracts the local owners from the profile configuration, computing the selectors.
-    pub fn get_local_owners(&self) -> HashMap<DojoSelector, LocalPermission> {
-        if let Some(user_names_tags) = &self.owners {
-            from_names_tags_to_selectors(user_names_tags)
+    /// Returns the local owners for a given tag.
+    pub fn get_local_owners(&self, tag: &str) -> HashSet<String> {
+        if let Some(owners) = &self.owners {
+            owners.get(tag).unwrap_or(&HashSet::new()).clone()
         } else {
-            HashMap::new()
+            HashSet::new()
         }
     }
-}
-
-/// A local permission, containing the tag of the resource to grant permissions to and the grantees.
-#[derive(Debug, Clone, Default)]
-pub struct LocalPermission {
-    pub target_tag: String,
-    pub grantees: HashSet<(DojoSelector, String)>,
-}
-
-/// Converts a mapping of names or tags to tags into a mapping of selectors to selectors.
-///
-/// Returns the selectors of the resource to grant permissions to and it's tag.
-fn from_names_tags_to_selectors(
-    names_tags: &HashMap<String, HashSet<String>>,
-) -> HashMap<DojoSelector, LocalPermission> {
-    let mut perms = HashMap::new();
-
-    for (name_or_tag, tags) in names_tags.iter() {
-        let mut local_permission =
-            LocalPermission { target_tag: name_or_tag.clone(), grantees: HashSet::new() };
-
-        let target_selector = if naming::is_valid_tag(name_or_tag) {
-            naming::compute_selector_from_tag(name_or_tag)
-        } else {
-            naming::compute_bytearray_hash(name_or_tag)
-        };
-
-        for tag in tags {
-            let granted_selector = naming::compute_selector_from_tag(tag);
-            local_permission.grantees.insert((granted_selector, tag.clone()));
-        }
-
-        perms.insert(target_selector, local_permission);
-    }
-
-    perms
 }
 
 #[cfg(test)]
@@ -224,31 +198,5 @@ mod tests {
                 vec!["0x1".to_string(), "0x2".to_string()]
             )]))
         );
-    }
-
-    #[test]
-    fn test_from_names_tags_to_selectors() {
-        let mut names_tags = HashMap::new();
-
-        let mut tags1 = HashSet::new();
-        tags1.insert("ns1-spawner".to_string());
-        tags1.insert("ns1-mover".to_string());
-        names_tags.insert("ns1".to_string(), tags1);
-
-        let mut tags2 = HashSet::new();
-        tags2.insert("ns2-spawner".to_string());
-        names_tags.insert("ns2".to_string(), tags2);
-
-        let result = from_names_tags_to_selectors(&names_tags);
-
-        let ns1_selector = naming::compute_bytearray_hash("ns1");
-        let ns2_selector = naming::compute_bytearray_hash("ns2");
-        let ns1_spawner_selector = naming::compute_selector_from_tag("ns1-spawner");
-        let ns1_mover_selector = naming::compute_selector_from_tag("ns1-mover");
-        let ns2_spawner_selector = naming::compute_selector_from_tag("ns2-spawner");
-
-        assert_eq!(result.get(&ns1_selector).unwrap().contains(&ns1_spawner_selector), true);
-        assert_eq!(result.get(&ns1_selector).unwrap().contains(&ns1_mover_selector), true);
-        assert_eq!(result.get(&ns2_selector).unwrap().contains(&ns2_spawner_selector), true);
     }
 }

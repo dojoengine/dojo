@@ -8,214 +8,73 @@
 //! Class hashes are cached into the resource to avoid recomputing them when
 //! requesting it.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use dojo_types::naming;
-use starknet::core::types::contract::SierraClass;
-use starknet::core::types::Felt;
-use starknet::core::utils::{self as snutils, CairoShortStringToFeltError};
-use starknet_crypto::poseidon_hash_single;
+use starknet::core::types::contract::{SierraClass, SierraClassDebugInfo};
+use starknet::core::types::{EntryPointsByType, Felt};
+use starknet::core::utils::CairoShortStringToFeltError;
 
 mod artifact_to_local;
+mod resource;
 
-use crate::config::NamespaceConfig;
+pub use resource::*;
+
+use crate::config::ProfileConfig;
 use crate::utils::compute_world_address;
-use crate::{DojoSelector, Namespace, ResourceType};
+use crate::DojoSelector;
 
-/// A local resource.
 #[derive(Debug, Clone)]
-pub enum ResourceLocal {
-    Namespace(NamespaceLocal),
-    Contract(ContractLocal),
-    Model(ModelLocal),
-    Event(EventLocal),
-    Starknet(StarknetLocal),
-}
-
-#[derive(Debug, Clone, Default)]
 pub struct WorldLocal {
+    /// The class of the world.
+    pub class: SierraClass,
     /// The class hash of the world.
-    /// We use an option here since [`SierraClass`] doesn't implement default
-    /// and it's easier to handle the option than having a default value to know
-    /// if the world class has been set or not.
-    pub class: Option<SierraClass>,
-    /// The class hash of the world.
-    pub class_hash: Option<Felt>,
+    pub class_hash: Felt,
     /// The casm class hash of the world.
-    pub casm_class_hash: Option<Felt>,
+    pub casm_class_hash: Felt,
     /// The resources of the world.
     pub resources: HashMap<DojoSelector, ResourceLocal>,
-    /// The namespace configuration.
-    pub namespace_config: NamespaceConfig,
+    /// The profile configuration of the local world.
+    pub profile_config: ProfileConfig,
 }
 
-#[derive(Debug, Clone)]
-pub struct ContractLocal {
-    /// The name of the contract.
-    pub name: String,
-    /// The namespace on which the contract is willing to be registered.
-    pub namespace: String,
-    /// The class of the contract.
-    pub class: SierraClass,
-    /// The class hash of the contract.
-    pub class_hash: Felt,
-    /// The casm class hash of the contract.
-    pub casm_class_hash: Felt,
-    // TODO: add systems for better debugging/more info for users.
-}
-
-#[derive(Debug, Clone)]
-pub struct ModelLocal {
-    /// The name of the model.
-    pub name: String,
-    /// The namespace on which the model is willing to be registered.
-    pub namespace: String,
-    /// The class of the model.
-    pub class: SierraClass,
-    /// The class hash of the model.
-    pub class_hash: Felt,
-    /// The casm class hash of the model.
-    pub casm_class_hash: Felt,
-}
-
-#[derive(Debug, Clone)]
-pub struct EventLocal {
-    /// The name of the event.
-    pub name: String,
-    /// The namespace on which the event is willing to be registered.
-    pub namespace: String,
-    /// The class of the event.
-    pub class: SierraClass,
-    /// The class hash of the event.
-    pub class_hash: Felt,
-    /// The casm class hash of the event.
-    pub casm_class_hash: Felt,
-}
-
-#[derive(Debug, Clone)]
-pub struct StarknetLocal {
-    /// The name of the starknet contract.
-    pub name: String,
-    /// The namespace on which the starknet contract is willing to be registered.
-    pub namespace: String,
-    /// The class of the starknet contract.
-    pub class: SierraClass,
-    /// The class hash of the starknet contract.
-    pub class_hash: Felt,
-    /// The casm class hash of the starknet contract.
-    pub casm_class_hash: Felt,
-}
-
-#[derive(Debug, Clone)]
-pub struct NamespaceLocal {
-    /// The name of the namespace.
-    pub name: String,
-}
-
-impl ResourceLocal {
-    /// Returns the name of the resource.
-    pub fn name(&self) -> String {
-        match self {
-            ResourceLocal::Contract(c) => c.name.clone(),
-            ResourceLocal::Model(m) => m.name.clone(),
-            ResourceLocal::Event(e) => e.name.clone(),
-            ResourceLocal::Starknet(s) => s.name.clone(),
-            ResourceLocal::Namespace(n) => n.name.clone(),
+#[cfg(test)]
+impl Default for WorldLocal {
+    fn default() -> Self {
+        Self {
+            class: SierraClass {
+                sierra_program: Vec::new(),
+                sierra_program_debug_info: SierraClassDebugInfo {
+                    type_names: Vec::new(),
+                    libfunc_names: Vec::new(),
+                    user_func_names: Vec::new(),
+                },
+                contract_class_version: "".to_string(),
+                entry_points_by_type: EntryPointsByType {
+                    constructor: Vec::new(),
+                    external: Vec::new(),
+                    l1_handler: Vec::new(),
+                },
+                abi: Vec::new(),
+            },
+            class_hash: Felt::ZERO,
+            casm_class_hash: Felt::ZERO,
+            resources: HashMap::new(),
+            profile_config: ProfileConfig::default(),
         }
-    }
-
-    /// Returns the namespace of the resource.
-    pub fn namespace(&self) -> String {
-        match self {
-            ResourceLocal::Namespace(n) => n.name.clone(),
-            ResourceLocal::Contract(c) => c.namespace.clone(),
-            ResourceLocal::Model(m) => m.namespace.clone(),
-            ResourceLocal::Event(e) => e.namespace.clone(),
-            ResourceLocal::Starknet(s) => s.namespace.clone(),
-        }
-    }
-
-    /// Returns the class hash of the resource.
-    pub fn class_hash(&self) -> Felt {
-        match self {
-            ResourceLocal::Contract(c) => c.class_hash,
-            ResourceLocal::Model(m) => m.class_hash,
-            ResourceLocal::Event(e) => e.class_hash,
-            ResourceLocal::Starknet(s) => s.class_hash,
-            _ => Felt::ZERO,
-        }
-    }
-
-    /// Returns the dojo selector of the resource.
-    pub fn dojo_selector(&self) -> DojoSelector {
-        match self {
-            ResourceLocal::Namespace(n) => naming::compute_bytearray_hash(&n.name),
-            _ => naming::compute_selector_from_names(&self.namespace(), &self.name()),
-        }
-    }
-
-    /// Returns the tag of the resource.
-    pub fn tag(&self) -> String {
-        naming::get_tag(&self.namespace(), &self.name())
-    }
-
-    /// Returns the contract resource.
-    ///
-    /// This function panics since it must only be used where the developer
-    /// can ensure that the resource is a contract.
-    pub fn as_contract(&self) -> Option<&ContractLocal> {
-        match self {
-            ResourceLocal::Contract(c) => Some(c),
-            _ => None,
-        }
-    }
-
-    /// Returns the type of the resource.
-    pub fn resource_type(&self) -> ResourceType {
-        match self {
-            ResourceLocal::Contract(_) => ResourceType::Contract,
-            ResourceLocal::Model(_) => ResourceType::Model,
-            ResourceLocal::Event(_) => ResourceType::Event,
-            ResourceLocal::Namespace(_) => ResourceType::Namespace,
-            ResourceLocal::Starknet(_) => ResourceType::StarknetContract,
-        }
-    }
-}
-
-impl ContractLocal {
-    /// Returns the dojo selector of the contract.
-    pub fn dojo_selector(&self) -> DojoSelector {
-        naming::compute_selector_from_names(&self.namespace, &self.name)
     }
 }
 
 impl WorldLocal {
-    /// Creates a new world local with a namespace configuration.
-    pub fn new(namespace_config: NamespaceConfig) -> Self {
-        let mut world = Self {
-            namespace_config: namespace_config.clone(),
-            class: None,
-            class_hash: None,
-            casm_class_hash: None,
-            resources: HashMap::new(),
-        };
-
-        for namespace in namespace_config.list_namespaces() {
-            world
-                .add_resource(ResourceLocal::Namespace(NamespaceLocal { name: namespace.clone() }));
-        }
-
-        world
+    #[cfg(test)]
+    pub fn new(profile_config: ProfileConfig) -> Self {
+        Self { profile_config, ..Default::default() }
     }
 
-    /// Computes the deterministic address of the world contract based on the given seed.
-    ///
-    /// If a project has a local world contract that is a different class hash from the one
-    /// used for the initial deployment, the address will be different. The user must explicitly
-    /// provide the world address in that case.
-    pub fn compute_world_address(&self, seed: &str) -> Result<Felt, CairoShortStringToFeltError> {
-        let class_hash = self.class_hash.expect("World must have a class hash.");
-        compute_world_address(seed, class_hash)
+    /// Computes the deterministic address of the world contract.
+    pub fn deterministic_world_address(&self) -> Result<Felt, CairoShortStringToFeltError> {
+        let class_hash = self.class_hash;
+        compute_world_address(&self.profile_config.world.seed, class_hash)
     }
 
     /// Adds a resource to the world local.
@@ -249,11 +108,13 @@ impl WorldLocal {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::NamespaceConfig;
     use crate::test_utils::empty_sierra_class;
 
     #[test]
     fn test_add_resource() {
-        let mut world = WorldLocal::new(NamespaceConfig::new("dojo"));
+        let profile_config = ProfileConfig::new("test", "seed", NamespaceConfig::new("dojo"));
+        let mut world = WorldLocal::new(profile_config);
 
         assert_eq!(world.resources.len(), 1);
 
@@ -261,11 +122,13 @@ mod tests {
         assert_eq!(n.name(), "dojo");
 
         world.add_resource(ResourceLocal::Contract(ContractLocal {
-            name: "c1".to_string(),
-            namespace: "dojo".to_string(),
-            class: empty_sierra_class(),
-            class_hash: Felt::ZERO,
-            casm_class_hash: Felt::ZERO,
+            common: CommonLocalInfo {
+                name: "c1".to_string(),
+                namespace: "dojo".to_string(),
+                class: empty_sierra_class(),
+                class_hash: Felt::ZERO,
+                casm_class_hash: Felt::ZERO,
+            },
         }));
 
         let selector = naming::compute_selector_from_names(&"dojo".to_string(), &"c1".to_string());
@@ -274,11 +137,13 @@ mod tests {
         assert_eq!(world.get_contract_resource(selector).is_some(), true);
 
         world.add_resource(ResourceLocal::Contract(ContractLocal {
-            name: "c2".to_string(),
-            namespace: "dojo".to_string(),
-            class: empty_sierra_class(),
-            class_hash: Felt::ZERO,
-            casm_class_hash: Felt::ZERO,
+            common: CommonLocalInfo {
+                name: "c2".to_string(),
+                namespace: "dojo".to_string(),
+                class: empty_sierra_class(),
+                class_hash: Felt::ZERO,
+                casm_class_hash: Felt::ZERO,
+            },
         }));
 
         let selector2 = naming::compute_selector_from_names(&"dojo".to_string(), &"c2".to_string());

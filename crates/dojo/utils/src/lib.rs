@@ -8,7 +8,7 @@ pub use tx::deployer::*;
 pub use tx::error::TransactionError;
 pub use tx::invoker::*;
 pub use tx::waiter::*;
-pub use tx::{TransactionExt, TxnAction, TxnConfig};
+pub use tx::{TransactionExt, TransactionResult, TxnAction, TxnConfig};
 
 pub mod env;
 pub mod keystore;

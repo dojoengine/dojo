@@ -115,7 +115,7 @@ impl WorkspaceExt for Workspace<'_> {
     fn load_world_local(&self) -> Result<WorldLocal> {
         WorldLocal::from_directory(
             self.target_dir_profile().to_string(),
-            self.load_profile_config()?.namespace.clone(),
+            self.load_profile_config()?,
         )
     }
 }

@@ -80,7 +80,7 @@ impl ExecuteArgs {
         );
 
         config.tokio_handle().block_on(async {
-            let (world_address, world_diff, account) = utils::get_world_diff_and_account(
+            let (world_diff, account) = utils::get_world_diff_and_account(
                 self.account,
                 self.starknet.clone(),
                 self.world,
@@ -92,7 +92,7 @@ impl ExecuteArgs {
                 ContractDescriptor::Address(address) => Some(*address),
                 ContractDescriptor::Tag(tag) => {
                     let selector = naming::compute_selector_from_tag(&tag);
-                    world_diff.get_contract_address(world_address, selector)
+                    world_diff.get_contract_address(selector)
                 }
             };
 
@@ -122,7 +122,10 @@ impl ExecuteArgs {
 
             let invoker = Invoker::new(&account, tx_config);
             // TODO: add walnut back, perhaps at the invoker level.
-            Ok(invoker.invoke(call).await?)
+            let tx_result = invoker.invoke(call).await?;
+
+            println!("{}", tx_result);
+            Ok(())
         })
     }
 }

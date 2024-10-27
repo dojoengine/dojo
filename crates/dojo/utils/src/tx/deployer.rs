@@ -9,7 +9,7 @@ use starknet::macros::{felt, selector};
 use starknet::providers::{Provider, ProviderError};
 use tracing::trace;
 
-use crate::{TransactionError, TransactionExt, TransactionWaiter, TxnConfig};
+use crate::{TransactionError, TransactionExt, TransactionResult, TransactionWaiter, TxnConfig};
 
 const UDC_DEPLOY_SELECTOR: Felt = selector!("deployContract");
 const UDC_ADDRESS: Felt =
@@ -42,7 +42,7 @@ where
         salt: Felt,
         constructor_calldata: &[Felt],
         deployer_address: Felt,
-    ) -> Result<Felt, TransactionError<A::SignError>> {
+    ) -> Result<TransactionResult, TransactionError<A::SignError>> {
         let udc_calldata = [
             vec![class_hash, salt, deployer_address, Felt::from(constructor_calldata.len())],
             constructor_calldata.to_vec(),
@@ -53,7 +53,7 @@ where
             get_contract_address(salt, class_hash, &constructor_calldata, deployer_address);
 
         if is_deployed(contract_address, &self.account.provider()).await? {
-            return Ok(Felt::ZERO);
+            return Ok(TransactionResult::Noop);
         }
 
         let txn = self.account.execute_v1(vec![Call {
@@ -72,10 +72,15 @@ where
         );
 
         if self.txn_config.wait {
-            TransactionWaiter::new(transaction_hash, &self.account.provider()).await?;
+            let receipt =
+                TransactionWaiter::new(transaction_hash, &self.account.provider()).await?;
+
+            if self.txn_config.receipt {
+                return Ok(TransactionResult::HashReceipt(transaction_hash, receipt));
+            }
         }
 
-        Ok(contract_address)
+        Ok(TransactionResult::Hash(transaction_hash))
     }
 }
 

@@ -6,6 +6,8 @@
 //! Events are also sequential, a resource is not expected to be upgraded before
 //! being registered. We take advantage of this fact to optimize the data gathering.
 
+use std::collections::HashSet;
+
 use anyhow::Result;
 use starknet::core::types::{BlockId, BlockTag, EventFilter, Felt, StarknetError};
 use starknet::providers::{Provider, ProviderError};
@@ -14,14 +16,14 @@ use tracing::trace;
 use super::permissions::PermissionsUpdateable;
 use super::{ResourceRemote, WorldRemote};
 use crate::contracts::abigen::world::{self, Event as WorldEvent};
-use crate::remote::{
-    CommonResourceRemoteInfo, ContractRemote, EventRemote, ModelRemote, NamespaceRemote,
-};
+use crate::remote::{CommonRemoteInfo, ContractRemote, EventRemote, ModelRemote, NamespaceRemote};
 
 impl WorldRemote {
     /// Fetch the events from the world and convert them to remote resources.
     pub async fn from_events<P: Provider>(world_address: Felt, provider: &P) -> Result<Self> {
         let mut world = Self::default();
+
+        world.address = world_address;
 
         match provider.get_class_hash_at(BlockId::Tag(BlockTag::Pending), world_address).await {
             Ok(_) => {
@@ -125,7 +127,7 @@ impl WorldRemote {
             }
             WorldEvent::ModelRegistered(e) => {
                 let r = ResourceRemote::Model(ModelRemote {
-                    common: CommonResourceRemoteInfo::new(
+                    common: CommonRemoteInfo::new(
                         e.class_hash.into(),
                         &e.namespace.to_string()?,
                         &e.name.to_string()?,
@@ -138,7 +140,7 @@ impl WorldRemote {
             }
             WorldEvent::EventRegistered(e) => {
                 let r = ResourceRemote::Event(EventRemote {
-                    common: CommonResourceRemoteInfo::new(
+                    common: CommonRemoteInfo::new(
                         e.class_hash.into(),
                         &e.namespace.to_string()?,
                         &e.name.to_string()?,
@@ -151,7 +153,7 @@ impl WorldRemote {
             }
             WorldEvent::ContractRegistered(e) => {
                 let r = ResourceRemote::Contract(ContractRemote {
-                    common: CommonResourceRemoteInfo::new(
+                    common: CommonRemoteInfo::new(
                         e.class_hash.into(),
                         &e.namespace.to_string()?,
                         &e.name.to_string()?,
@@ -197,16 +199,35 @@ impl WorldRemote {
                 );
             }
             WorldEvent::WriterUpdated(e) => {
-                // Unwrap is safe because the resource must exist in the world.
-                let resource = self.resources.get_mut(&e.resource).unwrap();
-                resource.update_writer(e.contract.into(), e.value)?;
+                // The resource may not be managed by the local project.
+                if let Some(resource) = self.resources.get_mut(&e.resource) {
+                    resource.update_writer(e.contract.into(), e.value)?;
+                } else {
+                    let entry =
+                        self.external_writers.entry(e.resource).or_insert_with(HashSet::new);
+
+                    if e.value {
+                        entry.insert(e.contract.into());
+                    } else {
+                        entry.remove(&e.contract.into());
+                    }
+                }
 
                 trace!(?e, "Writer updated.");
             }
             WorldEvent::OwnerUpdated(e) => {
-                // Unwrap is safe because the resource must exist in the world.
-                let resource = self.resources.get_mut(&e.resource).unwrap();
-                resource.update_owner(e.contract.into(), e.value)?;
+                // The resource may not be managed by the local project.
+                if let Some(resource) = self.resources.get_mut(&e.resource) {
+                    resource.update_owner(e.contract.into(), e.value)?;
+                } else {
+                    let entry = self.external_owners.entry(e.resource).or_insert_with(HashSet::new);
+
+                    if e.value {
+                        entry.insert(e.contract.into());
+                    } else {
+                        entry.remove(&e.contract.into());
+                    }
+                }
 
                 trace!(?e, "Owner updated.");
             }

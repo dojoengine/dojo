@@ -32,7 +32,6 @@ where
     S: std::error::Error,
 {
     fn from(value: AccountError<S>) -> Self {
-        println!("FROM A: {:?}", value);
         match value {
             AccountError::Signing(e) => TransactionError::SigningError(e),
             AccountError::Provider(e) => Self::from(e),
@@ -48,7 +47,6 @@ where
     S: std::error::Error,
 {
     fn from(value: ProviderError) -> Self {
-        println!("FROM: {:?}", value);
         match &value {
             ProviderError::StarknetError(e) => match &e {
                 StarknetError::TransactionExecutionError(te) => {
