@@ -94,10 +94,8 @@ impl ExecuteArgs {
                     let selector = naming::compute_selector_from_tag(&tag);
                     world_diff.get_contract_address(selector)
                 }
-            };
-
-            let contract_address = contract_address
-                .ok_or_else(|| anyhow!("Contract {descriptor} not found in the world diff."))?;
+            }
+            .ok_or_else(|| anyhow!("Contract {descriptor} not found in the world diff."))?;
 
             let tx_config = self.transaction.into();
 
@@ -131,7 +129,7 @@ impl ExecuteArgs {
 }
 
 #[derive(Debug)]
-enum ContractDescriptor {
+pub enum ContractDescriptor {
     Address(Felt),
     Tag(String),
 }

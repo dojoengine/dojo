@@ -267,7 +267,8 @@ impl DojoContract {
 
         // Asserts the caller is the world, and close the init function.
         let assert_world_caller_node = RewriteNode::Text(
-            "if starknet::get_caller_address() != self.world_provider.world_dispatcher().contract_address { \
+            "if starknet::get_caller_address() != \
+             self.world_provider.world_dispatcher().contract_address { \
              core::panics::panic_with_byte_array(@format!(\"Only the world can init contract \
              `{}`, but caller is `{:?}`\", self.dojo_name(), starknet::get_caller_address())); }"
                 .to_string(),

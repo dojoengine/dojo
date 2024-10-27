@@ -6,15 +6,15 @@ pub mod waiter;
 
 use std::fmt;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use colored_json::ToColoredJson;
 use starknet::accounts::{
     AccountDeploymentV1, AccountError, AccountFactory, AccountFactoryError, ConnectedAccount,
     DeclarationV2, ExecutionV1,
 };
 use starknet::core::types::{
-    DeclareTransactionResult, DeployAccountTransactionResult, Felt, InvokeTransactionResult,
-    TransactionReceiptWithBlockInfo,
+    BlockId, BlockTag, DeclareTransactionResult, DeployAccountTransactionResult, Felt,
+    InvokeTransactionResult, TransactionReceiptWithBlockInfo,
 };
 
 /// The transaction configuration to use when sending a transaction.
@@ -163,5 +163,32 @@ where
         }
 
         self.send().await
+    }
+}
+
+/// Parses a string into a [`BlockId`].
+///
+/// # Arguments
+///
+/// * `block_str` - a string representing a block ID. It could be a block hash starting with 0x, a
+///   block number, 'pending' or 'latest'.
+///
+/// # Returns
+///
+/// The parsed [`BlockId`] on success.
+pub fn parse_block_id(block_str: String) -> Result<BlockId> {
+    if block_str.starts_with("0x") {
+        let hash = Felt::from_hex(&block_str)
+            .map_err(|_| anyhow!("Unable to parse block hash: {}", block_str))?;
+        Ok(BlockId::Hash(hash))
+    } else if block_str.eq("pending") {
+        Ok(BlockId::Tag(BlockTag::Pending))
+    } else if block_str.eq("latest") {
+        Ok(BlockId::Tag(BlockTag::Latest))
+    } else {
+        match block_str.parse::<u64>() {
+            Ok(n) => Ok(BlockId::Number(n)),
+            Err(_) => Err(anyhow!("Unable to parse block ID: {}", block_str)),
+        }
     }
 }

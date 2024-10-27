@@ -5,6 +5,7 @@ use clap::Subcommand;
 use scarb::core::{Config, Package, Workspace};
 
 pub(crate) mod build;
+pub(crate) mod call;
 pub(crate) mod calldata_decoder;
 pub(crate) mod clean;
 pub(crate) mod execute;
@@ -13,6 +14,7 @@ pub(crate) mod migrate;
 pub(crate) mod options;
 
 use build::BuildArgs;
+use call::CallArgs;
 use clean::CleanArgs;
 use execute::ExecuteArgs;
 use inspect::InspectArgs;
@@ -32,6 +34,8 @@ pub enum Commands {
     Inspect(Box<InspectArgs>),
     #[command(about = "Clean the build directory")]
     Clean(Box<CleanArgs>),
+    #[command(about = "Call a contract")]
+    Call(Box<CallArgs>),
 }
 
 impl fmt::Display for Commands {
@@ -42,6 +46,7 @@ impl fmt::Display for Commands {
             Commands::Execute(_) => write!(f, "Execute"),
             Commands::Inspect(_) => write!(f, "Inspect"),
             Commands::Migrate(_) => write!(f, "Migrate"),
+            Commands::Call(_) => write!(f, "Call"),
         }
     }
 }
@@ -60,6 +65,7 @@ pub fn run(command: Commands, config: &Config) -> Result<()> {
         Commands::Execute(args) => args.run(config),
         Commands::Inspect(args) => args.run(config),
         Commands::Clean(args) => args.run(config),
+        Commands::Call(args) => args.run(config),
     }
 }
 
