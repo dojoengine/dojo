@@ -37,10 +37,10 @@ pub mod model {
     pub use members::{MemberStore};
 
     pub mod model;
-    pub use model::{Model, ModelStore};
+    pub use model::{Model, KeyParser};
 
     pub mod model_value;
-    pub use model_value::{ModelValue, ModelValueStore, ModelValueKey};
+    pub use model_value::{ModelValue, ModelValueKey};
 
     pub mod interface;
     pub use interface::{IModel, IModelDispatcher, IModelDispatcherTrait};
@@ -69,11 +69,6 @@ pub mod storage {
 }
 
 pub mod utils {
-    pub mod descriptor;
-    pub use descriptor::{
-        Descriptor, DescriptorTrait, IDescriptorDispatcher, IDescriptorDispatcherTrait
-    };
-
     pub mod hash;
     pub use hash::{bytearray_hash, selector_from_names, selector_from_namespace_and_name};
 

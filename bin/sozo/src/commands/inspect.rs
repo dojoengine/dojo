@@ -437,7 +437,7 @@ fn pretty_print_toml(str: &str) {
 
                 let colored_values = match key {
                     "status" => match value.to_string().as_str() {
-                        "Created" => value.green(),
+                        "Created" => value.blue(),
                         "Updated" => value.yellow(),
                         "Synced" => value.green(),
                         "DirtyLocalPerms" => "Dirty local permissions".yellow(),

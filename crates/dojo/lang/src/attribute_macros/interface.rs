@@ -50,7 +50,7 @@ impl DojoInterface {
                 node: Box::new(RewriteNode::interpolate_patched(
                     "
                 #[starknet::interface]
-                pub trait $name$<TContractState> {
+                pub trait $name$<T> {
                     $body$
                 }
                 ",
@@ -67,7 +67,7 @@ impl DojoInterface {
                 node: Box::new(RewriteNode::interpolate_patched(
                     "
                 #[starknet::interface]
-                pub trait $name$<TContractState> {}
+                pub trait $name$<T> {}
                 ",
                     &UnorderedHashMap::from([(
                         "name".to_string(),
@@ -125,16 +125,16 @@ impl DojoInterface {
         match world_injection {
             WorldParamInjectionKind::None => {
                 if !is_self_used {
-                    params.insert(0, "self: @TContractState".to_string());
+                    params.insert(0, "self: @T".to_string());
                 }
             }
             WorldParamInjectionKind::View => {
                 params.remove(0);
-                params.insert(0, "self: @TContractState".to_string());
+                params.insert(0, "self: @T".to_string());
             }
             WorldParamInjectionKind::External => {
                 params.remove(0);
-                params.insert(0, "ref self: TContractState".to_string());
+                params.insert(0, "ref self: T".to_string());
             }
         };
 

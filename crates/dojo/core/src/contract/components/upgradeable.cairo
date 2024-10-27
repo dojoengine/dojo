@@ -41,11 +41,11 @@ pub mod upgradeable_cpt {
     > of super::IUpgradeable<ComponentState<TContractState>> {
         fn upgrade(ref self: ComponentState<TContractState>, new_class_hash: ClassHash) {
             assert(
-                self.get_contract().world().contract_address.is_non_zero(),
+                self.get_contract().world_dispatcher().contract_address.is_non_zero(),
                 Errors::INVALID_WORLD_ADDRESS
             );
             assert(
-                get_caller_address() == self.get_contract().world().contract_address,
+                get_caller_address() == self.get_contract().world_dispatcher().contract_address,
                 Errors::INVALID_CALLER
             );
             assert(new_class_hash.is_non_zero(), Errors::INVALID_CLASS);

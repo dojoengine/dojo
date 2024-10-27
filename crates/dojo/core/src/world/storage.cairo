@@ -3,8 +3,8 @@
 use core::panic_with_felt252;
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 use dojo::model::{
-    Model, ModelIndex, ModelDefinition, ModelStorage, MemberModelStorage, ModelStorageTest,
-    ModelValueStorage, ModelValueStorageTest, ModelValueKey, MemberStore, ModelValue
+    Model, ModelIndex, ModelDefinition, MemberModelStorage, ModelStorageTest,
+    ModelValueStorage, ModelValueStorageTest, ModelValueKey, MemberStore, ModelValue, ModelStorage,
 };
 use dojo::meta::Layout;
 use dojo::utils::{
@@ -35,7 +35,7 @@ pub impl WorldStorageInternalImpl of WorldStorageTrait {
 }
 
 pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<WorldStorage, M> {
-    fn get<K, +Drop<K>, +Serde<K>>(self: @WorldStorage, key: K) -> M {
+    fn read_model<K, +Drop<K>, +Serde<K>>(self: @WorldStorage, key: K) -> M {
         let mut keys = serialize_inline::<K>(@key);
         let mut values = IWorldDispatcherTrait::entity(
             *self.world,
@@ -53,7 +53,7 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
         }
     }
 
-    fn set(ref self: WorldStorage, model: @M) {
+    fn write_model(ref self: WorldStorage, model: @M) {
         IWorldDispatcherTrait::set_entity(
             self.world,
             Model::<M>::selector(self.namespace_hash),
@@ -63,7 +63,7 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
         );
     }
 
-    fn delete(ref self: WorldStorage, model: @M) {
+    fn erase_model(ref self: WorldStorage, model: @M) {
         IWorldDispatcherTrait::delete_entity(
             self.world,
             Model::<M>::selector(self.namespace_hash),
@@ -72,7 +72,7 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
         );
     }
 
-    fn delete_from_key<K, +Drop<K>, +Serde<K>>(ref self: WorldStorage, key: K) {
+    fn erase_model_from_key<K, +Drop<K>, +Serde<K>>(ref self: WorldStorage, key: K) {
         IWorldDispatcherTrait::delete_entity(
             self.world,
             Model::<M>::selector(self.namespace_hash),
@@ -81,20 +81,16 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
         );
     }
 
-    fn get_member<T, K, +MemberModelStorage<WorldStorage, M, T>, +Drop<T>, +Drop<K>, +Serde<K>>(
+    fn read_member<T, K, +MemberModelStorage<WorldStorage, M, T>, +Drop<T>, +Drop<K>, +Serde<K>>(
         self: @WorldStorage, key: K, member_id: felt252
     ) -> T {
-        MemberModelStorage::<
-            WorldStorage, M, T
-        >::get_member(self, entity_id_from_key::<K>(@key), member_id)
+        MemberModelStorage::<WorldStorage, M, T>::read_member(self, entity_id_from_key::<K>(@key), member_id)
     }
 
-    fn update_member<T, K, +MemberModelStorage<WorldStorage, M, T>, +Drop<T>, +Drop<K>, +Serde<K>>(
+    fn write_member<T, K, +MemberModelStorage<WorldStorage, M, T>, +Drop<T>, +Drop<K>, +Serde<K>>(
         ref self: WorldStorage, key: K, member_id: felt252, value: T
     ) {
-        MemberModelStorage::<
-            WorldStorage, M, T
-        >::update_member(ref self, entity_id_from_key::<K>(@key), member_id, value);
+        MemberModelStorage::<WorldStorage, M, T>::write_member(ref self, entity_id_from_key::<K>(@key), member_id, value);
     }
 
     fn namespace_hash(self: @WorldStorage) -> felt252 {
@@ -105,7 +101,7 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
 pub impl MemberModelStorageWorldStorageImpl<
     M, T, +Model<M>, +ModelDefinition<M>, +Serde<T>, +Drop<T>
 > of MemberModelStorage<WorldStorage, M, T> {
-    fn get_member(self: @WorldStorage, entity_id: felt252, member_id: felt252) -> T {
+    fn read_member(self: @WorldStorage, entity_id: felt252, member_id: felt252) -> T {
         deserialize_unwrap::<
             T
         >(
@@ -119,7 +115,7 @@ pub impl MemberModelStorageWorldStorageImpl<
         )
     }
 
-    fn update_member(ref self: WorldStorage, entity_id: felt252, member_id: felt252, value: T,) {
+    fn write_member(ref self: WorldStorage, entity_id: felt252, member_id: felt252, value: T,) {
         update_serialized_member(
             self.world,
             Model::<M>::selector(self.namespace_hash),
@@ -136,13 +132,13 @@ pub impl MemberModelStorageWorldStorageImpl<
 }
 
 impl ModelValueStorageWorldStorageImpl<V, +ModelValue<V>> of ModelValueStorage<WorldStorage, V> {
-    fn get_model_value<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(
+    fn read_model_value<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(
         self: @WorldStorage, key: K
     ) -> V {
-        Self::get_model_value_from_id(self, entity_id_from_key(@key))
+        Self::read_model_value_from_id(self, entity_id_from_key(@key))
     }
 
-    fn get_model_value_from_id(self: @WorldStorage, entity_id: felt252) -> V {
+    fn read_model_value_from_id(self: @WorldStorage, entity_id: felt252) -> V {
         let mut values = IWorldDispatcherTrait::entity(
             *self.world,
             ModelValue::<V>::selector(*self.namespace_hash),
@@ -159,7 +155,7 @@ impl ModelValueStorageWorldStorageImpl<V, +ModelValue<V>> of ModelValueStorage<W
         }
     }
 
-    fn update(ref self: WorldStorage, value: @V) {
+    fn write_model_value(ref self: WorldStorage, value: @V) {
         IWorldDispatcherTrait::set_entity(
             self.world,
             ModelValue::<V>::selector(self.namespace_hash),
@@ -169,11 +165,11 @@ impl ModelValueStorageWorldStorageImpl<V, +ModelValue<V>> of ModelValueStorage<W
         );
     }
 
-    fn delete_model_value(ref self: WorldStorage, value: @V) {
-        Self::delete_from_id(ref self, ModelValue::<V>::id(value));
+    fn erase_model_value(ref self: WorldStorage, value: @V) {
+        Self::erase_model_value_from_id(ref self, ModelValue::<V>::id(value));
     }
 
-    fn delete_from_id(ref self: WorldStorage, entity_id: felt252) {
+    fn erase_model_value_from_id(ref self: WorldStorage, entity_id: felt252) {
         IWorldDispatcherTrait::delete_entity(
             self.world,
             ModelValue::<V>::selector(self.namespace_hash),
@@ -182,13 +178,13 @@ impl ModelValueStorageWorldStorageImpl<V, +ModelValue<V>> of ModelValueStorage<W
         );
     }
 
-    fn get_member_from_id<T, +MemberStore<WorldStorage, V, T>>(
+    fn read_member_from_id<T, +MemberStore<WorldStorage, V, T>>(
         self: @WorldStorage, entity_id: felt252, member_id: felt252
     ) -> T {
         MemberStore::<WorldStorage, V, T>::get_member(self, entity_id, member_id)
     }
 
-    fn update_member_from_id<T, +MemberStore<WorldStorage, V, T>>(
+    fn write_member_from_id<T, +MemberStore<WorldStorage, V, T>>(
         ref self: WorldStorage, entity_id: felt252, member_id: felt252, value: T
     ) {
         MemberStore::<WorldStorage, V, T>::update_member(ref self, entity_id, member_id, value);
@@ -199,7 +195,7 @@ impl ModelValueStorageWorldStorageImpl<V, +ModelValue<V>> of ModelValueStorage<W
 /// checks.
 #[cfg(target: "test")]
 pub impl ModelStorageTestWorldStorageImpl<M, +Model<M>> of ModelStorageTest<WorldStorage, M> {
-    fn set_test(ref self: WorldStorage, model: @M) {
+    fn write_model_test(ref self: WorldStorage, model: @M) {
         let world_test = dojo::world::IWorldTestDispatcher {
             contract_address: self.world.contract_address
         };
@@ -212,7 +208,7 @@ pub impl ModelStorageTestWorldStorageImpl<M, +Model<M>> of ModelStorageTest<Worl
         );
     }
 
-    fn delete_test(ref self: WorldStorage, model: @M) {
+    fn erase_model_test(ref self: WorldStorage, model: @M) {
         let world_test = dojo::world::IWorldTestDispatcher {
             contract_address: self.world.contract_address
         };
@@ -232,7 +228,7 @@ pub impl ModelStorageTestWorldStorageImpl<M, +Model<M>> of ModelStorageTest<Worl
 pub impl ModelValueStorageTestWorldStorageImpl<
     V, +ModelValue<V>
 > of ModelValueStorageTest<WorldStorage, V> {
-    fn update_test(ref self: WorldStorage, value: @V) {
+    fn write_model_value_test(ref self: WorldStorage, value: @V) {
         let world_test = dojo::world::IWorldTestDispatcher {
             contract_address: self.world.contract_address
         };
@@ -246,7 +242,7 @@ pub impl ModelValueStorageTestWorldStorageImpl<
         );
     }
 
-    fn delete_test(ref self: WorldStorage, value: @V) {
+    fn erase_model_value_test(ref self: WorldStorage, value: @V) {
         let world_test = dojo::world::IWorldTestDispatcher {
             contract_address: self.world.contract_address
         };

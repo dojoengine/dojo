@@ -2,7 +2,7 @@ use dojo::world::IWorldDispatcher;
 
 #[starknet::interface]
 pub trait IWorldProvider<T> {
-    fn world(self: @T) -> IWorldDispatcher;
+    fn world_dispatcher(self: @T) -> IWorldDispatcher;
 }
 
 #[starknet::component]
@@ -21,7 +21,7 @@ pub mod world_provider_cpt {
     pub impl WorldProvider<
         TContractState, +HasComponent<TContractState>
     > of super::IWorldProvider<ComponentState<TContractState>> {
-        fn world(self: @ComponentState<TContractState>) -> IWorldDispatcher {
+        fn world_dispatcher(self: @ComponentState<TContractState>) -> IWorldDispatcher {
             self.world_dispatcher.read()
         }
     }

@@ -39,30 +39,6 @@ pub trait ModelValue<V> {
     fn selector(namespace_hash: felt252) -> felt252;
 }
 
-/// Trait `ModelValueStore` provides an interface for managing model values through a world
-/// dispatcher.
-pub trait ModelValueStore<S, V> {
-    /// Retrieves a model value based on a given key. The key in this context is a types containing
-    /// all the model keys.
-    fn get_model_value<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(self: @S, key: K) -> V;
-    /// Retrieves a model value based on its id.
-    fn get_model_value_from_id(self: @S, entity_id: felt252) -> V;
-    /// Updates a model value in the store.
-    fn update(ref self: S, entity: @V);
-    /// Deletes a model value from the store.
-    fn delete_model_value(ref self: S, entity: @V);
-    /// Deletes a model value based on its id.
-    fn delete_from_id(ref self: S, entity_id: felt252);
-    /// Retrieves a member from a model value based on its id and the member's id.
-    fn get_member_from_id<T, +MemberStore<S, V, T>>(
-        self: @S, entity_id: felt252, member_id: felt252
-    ) -> T;
-    /// Updates a member of a model value based on its id and the member's id.
-    fn update_member_from_id<T, +MemberStore<S, V, T>>(
-        ref self: S, entity_id: felt252, member_id: felt252, value: T
-    );
-}
-
 pub impl ModelValueImpl<V, +Serde<V>, +ModelDefinition<V>, +ModelValueParser<V>> of ModelValue<V> {
     fn id(self: @V) -> felt252 {
         ModelValueParser::<V>::parse_id(self)
@@ -100,41 +76,6 @@ pub impl ModelValueImpl<V, +Serde<V>, +ModelDefinition<V>, +ModelValueParser<V>>
     }
 }
 
-pub impl ModelValueStoreImpl<
-    S, V, +ModelValueStorage<S, V>, +ModelValue<V>, +Drop<V>
-> of ModelValueStore<S, V> {
-    fn get_model_value<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(self: @S, key: K) -> V {
-        ModelValueStorage::<S, V>::get_model_value(self, key)
-    }
-
-    fn get_model_value_from_id(self: @S, entity_id: felt252) -> V {
-        ModelValueStorage::<S, V>::get_model_value_from_id(self, entity_id)
-    }
-
-    fn update(ref self: S, entity: @V) {
-        ModelValueStorage::<S, V>::update(ref self, entity)
-    }
-
-    fn delete_model_value(ref self: S, entity: @V) {
-        ModelValueStorage::<S, V>::delete_model_value(ref self, entity)
-    }
-
-    fn delete_from_id(ref self: S, entity_id: felt252) {
-        ModelValueStorage::<S, V>::delete_from_id(ref self, entity_id)
-    }
-
-    fn get_member_from_id<T, +MemberModelStorage<S, V, T>>(
-        self: @S, entity_id: felt252, member_id: felt252
-    ) -> T {
-        MemberModelStorage::<S, V, T>::get_member(self, entity_id, member_id)
-    }
-
-    fn update_member_from_id<T, +MemberModelStorage<S, V, T>>(
-        ref self: S, entity_id: felt252, member_id: felt252, value: T
-    ) {
-        MemberModelStorage::<S, V, T>::update_member(ref self, entity_id, member_id, value);
-    }
-}
 
 /// Test implementation of the `ModelValueTest` trait to bypass permission checks.
 #[cfg(target: "test")]
@@ -149,10 +90,10 @@ pub impl ModelValueTestImpl<
     S, V, +ModelValueStorageTest<S, V>, +ModelValue<V>
 > of ModelValueTest<S, V> {
     fn update_test(ref self: S, value: @V) {
-        ModelValueStorageTest::<S, V>::update_test(ref self, value)
+        ModelValueStorageTest::<S, V>::write_model_value_test(ref self, value)
     }
 
     fn delete_test(ref self: S, value: @V) {
-        ModelValueStorageTest::<S, V>::delete_test(ref self, value)
+        ModelValueStorageTest::<S, V>::erase_model_value_test(ref self, value)
     }
 }

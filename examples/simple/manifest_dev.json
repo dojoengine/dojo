@@ -7,8 +7,8 @@
   },
   "contracts": [
     {
-      "address": "0x7e90e110a3374cbb431b95e185a58e83dfb8aee686ec98ef0272a5cebd542a8",
-      "class_hash": "0x544e44757b58727547066a32f9c64aa43dba7e82ea499cc9384c89d3c4e97f0",
+      "address": "0x509930c4e13774467f1d7e06d8705e05ce504967ac5be2d29cdd5acc13efd1e",
+      "class_hash": "0x12dd56138e9e810ed6e56ff759ee48b13e5772f1f9b305a9dc5cdba2e916682",
       "abi": [
         {
           "type": "impl",
@@ -76,28 +76,26 @@
               "name": "system_1",
               "inputs": [
                 {
-                  "name": "data",
+                  "name": "a",
                   "type": "core::felt252"
-                }
-              ],
-              "outputs": [
+                },
                 {
+                  "name": "b",
                   "type": "core::felt252"
                 }
               ],
-              "state_mutability": "external"
-            },
-            {
-              "type": "function",
-              "name": "system_2",
-              "inputs": [],
               "outputs": [],
               "state_mutability": "external"
             },
             {
               "type": "function",
-              "name": "view_1",
-              "inputs": [],
+              "name": "system_2",
+              "inputs": [
+                {
+                  "name": "a",
+                  "type": "core::felt252"
+                }
+              ],
               "outputs": [
                 {
                   "type": "core::felt252"
@@ -128,7 +126,7 @@
           "items": [
             {
               "type": "function",
-              "name": "world",
+              "name": "world_dispatcher",
               "inputs": [],
               "outputs": [
                 {
@@ -222,8 +220,8 @@
       "systems": []
     },
     {
-      "address": "0x522f594d558034dc788a4975d371d24e1cf98d119833343c6637c19843e01ac",
-      "class_hash": "0x162429b39f3d4f686c5ad7361b855e71a5daf1960e60faf4e86592a9e69c8a8",
+      "address": "0x13cf978670ffc1af20ad87c2890696899a243740113c1933ece1c6d2b6e80bd",
+      "class_hash": "0x3f62598626677ad8743348368b936fea3ab2a938f518c74dac22450e52d5b9",
       "abi": [
         {
           "type": "impl",
@@ -293,7 +291,7 @@
           "items": [
             {
               "type": "function",
-              "name": "world",
+              "name": "world_dispatcher",
               "inputs": [],
               "outputs": [
                 {

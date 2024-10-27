@@ -75,23 +75,7 @@ pub impl $model_type$ModelValueParser of dojo::model::model_value::ModelValuePar
 }
 
 pub impl $model_type$ModelImpl = dojo::model::model::ModelImpl<$model_type$>;
-pub impl $model_type$Store<S, +dojo::model::storage::ModelStorage<S, $model_type$>> = dojo::model::model::ModelStoreImpl<S, $model_type$>;
-
 pub impl $model_type$ModelValueImpl = dojo::model::model_value::ModelValueImpl<$model_type$Value>;
-pub impl $model_type$ModelValueStore<S, +dojo::model::storage::ModelValueStorage<S, $model_type$Value>> = dojo::model::model_value::ModelValueStoreImpl<S, $model_type$Value>;
-
-#[generate_trait]
-pub impl $model_type$MembersStoreImpl<
-    S,
-    +Drop<S>,
-    +dojo::model::storage::ModelStorage<S, $model_type$>,
-    +dojo::model::storage::ModelValueStorage<S, $model_type$Value>,
-    +dojo::model::storage::ModelStorage<S, $model_type$Value>,
-    $model_member_store_impls$
->
-of $model_type$MembersStore<S> {
-$field_accessors$
-}
 
 #[starknet::contract]
 pub mod $model_type_snake$ {

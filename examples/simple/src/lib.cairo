@@ -22,14 +22,14 @@ pub struct M2 {
 
 #[dojo::interface]
 pub trait MyInterface {
-    fn system_1(ref world: IWorldDispatcher, data: felt252) -> felt252;
-    fn system_2(ref world: IWorldDispatcher);
-    fn view_1(world: @IWorldDispatcher) -> felt252;
+    fn system_1(ref self: T, a: felt252, b: felt252);
+    fn system_2(self: @T, a: felt252) -> felt252;
 }
 
 #[dojo::contract]
 pub mod c1 {
-    use super::MyInterface;
+    use super::{MyInterface, M, M2};
+    use dojo::model::ModelStorage;
 
     fn dojo_init(self: @ContractState, arg1: felt252) {
         let _arg1 = arg1;
@@ -37,21 +37,27 @@ pub mod c1 {
 
     #[abi(embed_v0)]
     impl MyInterfaceImpl of MyInterface<ContractState> {
-        fn system_1(ref world: IWorldDispatcher, data: felt252) -> felt252 {
-            let _world = world;
-            55
+        fn system_1(ref self: ContractState, a: felt252, b: felt252) {
+            let mut world = self.world("ns");
+
+            let m = M {
+                a,
+                b,
+            };
+
+            world.write_model(@m)
         }
 
-        fn system_2(ref world: IWorldDispatcher) {
-            let _world = world;
-        }
+        fn system_2(self: @ContractState, a: felt252) -> felt252 {
+            let world = self.world("ns");
 
-        fn view_1(world: @IWorldDispatcher) -> felt252 {
-            let _world = world;
-            89
+            let m: M = world.read_model(a);
+
+            m.b
         }
     }
 }
 
 #[dojo::contract]
 pub mod c2 {}
+
