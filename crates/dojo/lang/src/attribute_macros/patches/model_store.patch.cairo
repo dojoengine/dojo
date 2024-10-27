@@ -103,7 +103,6 @@ pub mod $model_type_snake$ {
     }
 }
 
-
 #[cfg(target: "test")]
 pub impl $model_type$ModelTestImpl<S, +dojo::model::storage::ModelStorageTest<S, $model_type$>> = dojo::model::model::ModelTestImpl<S, $model_type$>;
 

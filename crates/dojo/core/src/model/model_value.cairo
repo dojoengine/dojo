@@ -70,8 +70,8 @@ pub impl ModelValueImpl<V, +Serde<V>, +ModelDefinition<V>, +ModelValueParser<V>>
 /// Test implementation of the `ModelValueTest` trait to bypass permission checks.
 #[cfg(target: "test")]
 pub trait ModelValueTest<S, V> {
-    fn update_test(ref self: S, value: @V);
-    fn delete_test(ref self: S, value: @V);
+    fn update_test(ref self: S, entity_id: felt252, value: @V);
+    fn delete_test(ref self: S, entity_id: felt252);
 }
 
 /// Implementation of the `ModelValueTest` trait for testing purposes, bypassing permission checks.
@@ -79,11 +79,11 @@ pub trait ModelValueTest<S, V> {
 pub impl ModelValueTestImpl<
     S, V, +ModelValueStorageTest<S, V>, +ModelValue<V>
 > of ModelValueTest<S, V> {
-    fn update_test(ref self: S, value: @V) {
-        ModelValueStorageTest::<S, V>::write_model_value_test(ref self, value)
+    fn update_test(ref self: S, entity_id: felt252, value: @V) {
+        ModelValueStorageTest::<S, V>::write_model_value_test(ref self, entity_id, value)
     }
 
-    fn delete_test(ref self: S, value: @V) {
-        ModelValueStorageTest::<S, V>::erase_model_value_test(ref self, value)
+    fn delete_test(ref self: S, entity_id: felt252) {
+        ModelValueStorageTest::<S, V>::erase_model_value_test(ref self, entity_id)
     }
 }

@@ -32,10 +32,7 @@ pub mod c1 {
     use dojo::model::ModelStorage;
 
     fn dojo_init(self: @ContractState, arg1: felt252) {
-        let m = M {
-            a: 0,
-            b: arg1,
-        };
+        let m = M { a: 0, b: arg1, };
 
         let mut world = self.world("ns");
         world.write_model(@m);
@@ -46,10 +43,7 @@ pub mod c1 {
         fn system_1(ref self: ContractState, a: felt252, b: felt252) {
             let mut world = self.world("ns");
 
-            let m = M {
-                a,
-                b,
-            };
+            let m = M { a, b, };
 
             world.write_model(@m)
         }
@@ -69,20 +63,35 @@ pub mod c2 {}
 
 #[cfg(test)]
 mod tests {
-    use dojo::world::{WorldStorage, WorldStorageTrait};
-    use dojo_cairo_test::{spawn_test_world, NamespaceDef, TestResource, deploy_with_world_address};
-    use super::{c1, c2, m, M};
+    use dojo::world::WorldStorageTrait;
+    use dojo::model::{ModelStorage, ModelStorageTest};
+    use dojo_cairo_test::{spawn_test_world, NamespaceDef, TestResource, ContractDefTrait};
+    use super::{c1, m, M};
 
     #[test]
     fn test_1() {
         let ndef = NamespaceDef {
-            namespace: "ns".into(),
-            resources: [TestResource::Model(m::TEST_CLASS_HASH.try_into().unwrap())].span(),
+            namespace: "ns", resources: [
+                TestResource::Model(m::TEST_CLASS_HASH.try_into().unwrap()),
+                TestResource::Contract(
+                    ContractDefTrait::new(c1::TEST_CLASS_HASH, "c1")
+                        .with_init_calldata([0xff].span())
+                        .with_writer_of([dojo::utils::bytearray_hash(@"ns")].span())
+                )
+            ].span()
         };
 
         let world = spawn_test_world([ndef].span());
-        let world_storage = WorldStorageTrait::new(world, "ns".into());
 
-        let contract = deploy_with_world_address(c1::TEST_CLASS_HASH.try_into().unwrap(), world);
+        let mut world = WorldStorageTrait::new(world, "ns");
+
+        let m: M = world.read_model(0);
+        assert!(m.b == 0xff, "invalid b");
+
+        let m2 = M { a: 120, b: 244, };
+
+        // `write_model_test` goes over permissions checks.
+        starknet::testing::set_contract_address(123.try_into().unwrap());
+        world.write_model_test(@m2);
     }
 }

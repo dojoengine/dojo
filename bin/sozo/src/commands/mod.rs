@@ -3,6 +3,7 @@ use core::fmt;
 use anyhow::Result;
 use clap::Subcommand;
 use scarb::core::{Config, Package, Workspace};
+use tracing::info_span;
 
 pub(crate) mod build;
 pub(crate) mod call;
@@ -12,6 +13,7 @@ pub(crate) mod execute;
 pub(crate) mod inspect;
 pub(crate) mod migrate;
 pub(crate) mod options;
+pub(crate) mod test;
 
 use build::BuildArgs;
 use call::CallArgs;
@@ -19,7 +21,7 @@ use clean::CleanArgs;
 use execute::ExecuteArgs;
 use inspect::InspectArgs;
 use migrate::MigrateArgs;
-use tracing::info_span;
+use test::TestArgs;
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {
@@ -36,6 +38,8 @@ pub enum Commands {
     Clean(Box<CleanArgs>),
     #[command(about = "Call a contract")]
     Call(Box<CallArgs>),
+    #[command(about = "Runs cairo tests")]
+    Test(Box<TestArgs>),
 }
 
 impl fmt::Display for Commands {
@@ -47,6 +51,7 @@ impl fmt::Display for Commands {
             Commands::Inspect(_) => write!(f, "Inspect"),
             Commands::Migrate(_) => write!(f, "Migrate"),
             Commands::Call(_) => write!(f, "Call"),
+            Commands::Test(_) => write!(f, "Test"),
         }
     }
 }
@@ -66,6 +71,7 @@ pub fn run(command: Commands, config: &Config) -> Result<()> {
         Commands::Inspect(args) => args.run(config),
         Commands::Clean(args) => args.run(config),
         Commands::Call(args) => args.run(config),
+        Commands::Test(args) => args.run(config),
     }
 }
 

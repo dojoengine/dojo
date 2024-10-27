@@ -9,8 +9,7 @@ use dojo::model::{
 use dojo::event::{Event, EventStorage, EventStorageTest};
 use dojo::meta::Layout;
 use dojo::utils::{
-    entity_id_from_key, serialize_inline, deserialize_unwrap,
-    find_model_field_layout
+    entity_id_from_key, serialize_inline, deserialize_unwrap, find_model_field_layout
 };
 
 #[derive(Drop)]

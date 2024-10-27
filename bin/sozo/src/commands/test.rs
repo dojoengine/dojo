@@ -32,8 +32,6 @@ pub const WORLD_QUALIFIED_PATH: &str = "dojo::world::world_contract::world";
 
 use super::check_package_dojo_version;
 
-pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::test";
-
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct Props {
