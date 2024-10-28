@@ -4,9 +4,10 @@ mod node;
 use anyhow::Result;
 use clap::{Args, CommandFactory, Parser, Subcommand};
 use clap_complete::Shell;
+use katana_node::version::VERSION;
 
 #[derive(Parser)]
-#[command(name = "katana", author, version, about, long_about = None)]
+#[command(name = "katana", author, version = VERSION, about, long_about = None)]
 pub struct Cli {
     #[command(subcommand)]
     commands: Option<Commands>,
