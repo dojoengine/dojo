@@ -22,3 +22,6 @@ world_address = "0x077c0dc7c1aba7f8842aff393ce6aa71fa675b4ced1bc927f7fc971b6acd9
 
 [owners]
 "ns" = ["ns-c1"]
+
+[migration]
+order_inits = ["ns-c2", "ns-c1"]

@@ -111,7 +111,10 @@ where
 
     /// Returns whether multicall should be used. By default, it is enabled.
     fn do_multicall(&self) -> bool {
-        self.profile_config.migration.as_ref().map_or(true, |m| !m.disable_multicall)
+        self.profile_config
+            .migration
+            .as_ref()
+            .map_or(true, |m| !m.disable_multicall.unwrap_or(false))
     }
 
     /// For all contracts that are not initialized, initialize them by using the init call arguments
@@ -124,6 +127,17 @@ where
         } else {
             HashMap::new()
         };
+
+        // Ensure we can order the contracts to initialize, if specified.
+        // Keeps the tag matched to the call to initialize.
+        let ordered_init_tags = self
+            .profile_config
+            .migration
+            .as_ref()
+            .map_or(vec![], |m| m.order_inits.clone().unwrap_or(vec![]));
+
+        // Keeps map between the order index and the call to initialize.
+        let mut ordered_init_calls = HashMap::new();
 
         for (selector, resource) in &self.diff.resources {
             if resource.resource_type() == ResourceType::Contract {
@@ -158,9 +172,28 @@ where
 
                     trace!(tag, ?args, "Initializing contract.");
 
-                    invoker.add_call(self.world.init_contract_getcall(&selector, &args));
+                    if let Some(order_index) = ordered_init_tags.iter().position(|t| *t == tag) {
+                        ordered_init_calls.insert(
+                            order_index,
+                            self.world.init_contract_getcall(&selector, &args),
+                        );
+                    } else {
+                        invoker.add_call(self.world.init_contract_getcall(&selector, &args));
+                    }
                 }
             }
+        }
+
+        if !ordered_init_calls.is_empty() {
+            let mut ordered_keys: Vec<_> = ordered_init_calls.keys().cloned().collect();
+            ordered_keys.sort();
+
+            let ordered_calls: Vec<_> = ordered_keys
+                .into_iter()
+                .map(|k| ordered_init_calls.get(&k).expect("Ordered call must exist.").clone())
+                .collect();
+
+            invoker.extends_ordered(ordered_calls);
         }
 
         if self.do_multicall() {

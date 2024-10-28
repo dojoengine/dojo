@@ -34,6 +34,14 @@ where
         self.calls.push(call);
     }
 
+    /// First uses the ordered calls, and then extends with the
+    /// calls already added (considered as non-ordered).
+    pub fn extends_ordered(&mut self, ordered_calls: Vec<Call>) {
+        for call in ordered_calls.into_iter().rev() {
+            self.calls.insert(0, call);
+        }
+    }
+
     /// Invokes a single call.
     pub async fn invoke(
         &self,
