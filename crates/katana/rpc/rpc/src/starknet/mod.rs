@@ -46,7 +46,6 @@ use katana_tasks::{BlockingTaskPool, TokioTaskSpawner};
 use starknet::core::types::{
     ContractClass, EventsPage, PriceUnit, TransactionExecutionStatus, TransactionStatus,
 };
-use starknet::providers::Provider;
 
 use crate::utils;
 use crate::utils::events::{Cursor, EventBlockId};
@@ -321,7 +320,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         if let Some(count) = count {
             Ok(count)
         } else if let Some(client) = &self.inner.forked_client {
-            let status = client.inner.get_block_transaction_count(block_id).await?;
+            let status = client.get_block_transaction_count(block_id).await?;
             Ok(status)
         } else {
             Err(StarknetApiError::BlockNotFound)
@@ -391,8 +390,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         if let Some(tx) = tx {
             Ok(tx.into())
         } else if let Some(client) = &self.inner.forked_client {
-            let tx = client.inner.get_transaction_by_block_id_and_index(block_id, index).await?;
-            Ok(tx.into())
+            Ok(client.get_transaction_by_block_id_and_index(block_id, index).await?)
         } else {
             Err(StarknetApiError::InvalidTxnIndex)
         }
@@ -430,8 +428,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         if let Some(tx) = tx {
             Ok(tx)
         } else if let Some(client) = &self.inner.forked_client {
-            let tx = client.inner.get_transaction_by_hash(hash).await?;
-            Ok(tx.into())
+            Ok(client.get_transaction_by_hash(hash).await?)
         } else {
             Err(StarknetApiError::TxnHashNotFound)
         }
@@ -480,8 +477,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         if let Some(receipt) = receipt {
             Ok(receipt)
         } else if let Some(client) = &self.inner.forked_client {
-            let receipt = client.inner.get_transaction_receipt(hash).await?;
-            Ok(receipt.into())
+            Ok(client.get_transaction_receipt(hash).await?)
         } else {
             Err(StarknetApiError::TxnHashNotFound)
         }
@@ -684,8 +680,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         if let Some(status) = status {
             Ok(status)
         } else if let Some(client) = &self.inner.forked_client {
-            let status = client.inner.get_transaction_status(hash).await?;
-            Ok(status)
+            Ok(client.get_transaction_status(hash).await?)
         } else {
             Err(StarknetApiError::TxnHashNotFound)
         }
@@ -753,8 +748,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         if let Some(block) = block {
             Ok(block)
         } else if let Some(client) = &self.inner.forked_client {
-            let block = client.inner.get_block_with_txs(block_id).await?;
-            Ok(block.into())
+            Ok(client.get_block_with_txs(block_id).await?)
         } else {
             Err(StarknetApiError::BlockNotFound)
         }
@@ -819,8 +813,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         if let Some(block) = block {
             Ok(block)
         } else if let Some(client) = &self.inner.forked_client {
-            let block = client.inner.get_block_with_receipts(block_id).await?;
-            Ok(block.into())
+            Ok(client.get_block_with_receipts(block_id).await?)
         } else {
             Err(StarknetApiError::BlockNotFound)
         }
@@ -887,8 +880,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         if let Some(block) = block {
             Ok(block)
         } else if let Some(client) = &self.inner.forked_client {
-            let block = client.inner.get_block_with_tx_hashes(block_id).await?;
-            Ok(block.into())
+            Ok(client.get_block_with_tx_hashes(block_id).await?)
         } else {
             Err(StarknetApiError::BlockNotFound)
         }
@@ -927,8 +919,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         if let Some(state_update) = state_update {
             Ok(state_update)
         } else if let Some(client) = &self.inner.forked_client {
-            let state_update = client.inner.get_state_update(block_id).await?;
-            Ok(state_update.into())
+            Ok(client.get_state_update(block_id).await?)
         } else {
             Err(StarknetApiError::BlockNotFound)
         }

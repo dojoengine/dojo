@@ -10,7 +10,6 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Result;
-use config::fork::ForkingConfig;
 use config::metrics::MetricsConfig;
 use config::rpc::{ApiKind, RpcConfig};
 use config::{Config, SequencingConfig};
@@ -89,14 +88,14 @@ pub struct Node {
     pub metrics_config: Option<MetricsConfig>,
     pub sequencing_config: SequencingConfig,
     pub messaging_config: Option<MessagingConfig>,
-    pub forking_config: Option<ForkingConfig>,
+    forked_client: Option<ForkedClient>,
 }
 
 impl Node {
     /// Start the node.
     ///
     /// This method will start all the node process, running them until the node is stopped.
-    pub async fn launch(self) -> Result<LaunchedNode> {
+    pub async fn launch(mut self) -> Result<LaunchedNode> {
         let chain = self.backend.chain_spec.id;
         info!(%chain, "Starting node.");
 
@@ -142,13 +141,7 @@ impl Node {
             .name("Pipeline")
             .spawn(pipeline.into_future());
 
-        let forked_client = if let Some(cfg) = &self.forking_config {
-            Some(ForkedClient::new(cfg.url.clone()))
-        } else {
-            None
-        };
-
-        let node_components = (pool, backend, block_producer, validator, forked_client);
+        let node_components = (pool, backend, block_producer, validator, self.forked_client.take());
         let rpc = spawn(node_components, self.rpc_config.clone()).await?;
 
         Ok(LaunchedNode { node: self, rpc })
@@ -187,15 +180,20 @@ pub async fn build(mut config: Config) -> Result<Node> {
 
     // --- build backend
 
-    let (blockchain, db) = if let Some(cfg) = &config.forking {
-        let bc = Blockchain::new_from_forked(cfg.url.clone(), cfg.block, &mut config.chain).await?;
-        (bc, None)
+    let (blockchain, db, forked_client) = if let Some(cfg) = &config.forking {
+        let (bc, block_num) =
+            Blockchain::new_from_forked(cfg.url.clone(), cfg.block, &mut config.chain).await?;
+
+        // TODO: it'd bee nice if the client can be shared on both the rpc and forked backend side
+        let forked_client = ForkedClient::new_http(cfg.url.clone(), block_num);
+
+        (bc, None, Some(forked_client))
     } else if let Some(db_path) = &config.db.dir {
         let db = katana_db::init_db(db_path)?;
-        (Blockchain::new_with_db(db.clone(), &config.chain)?, Some(db))
+        (Blockchain::new_with_db(db.clone(), &config.chain)?, Some(db), None)
     } else {
         let db = katana_db::init_ephemeral_db()?;
-        (Blockchain::new_with_db(db.clone(), &config.chain)?, Some(db))
+        (Blockchain::new_with_db(db.clone(), &config.chain)?, Some(db), None)
     };
 
     let block_context_generator = BlockContextGenerator::default().into();
@@ -227,9 +225,9 @@ pub async fn build(mut config: Config) -> Result<Node> {
         db,
         pool,
         backend,
+        forked_client,
         block_producer,
         rpc_config: config.rpc,
-        forking_config: config.forking,
         metrics_config: config.metrics,
         messaging_config: config.messaging,
         sequencing_config: config.sequencing,
