@@ -96,7 +96,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
 
                 ExecutionResult::Failed { error } => {
                     let error = StarknetApiError::TransactionExecutionError {
-                        transaction_index: i,
+                        transaction_index: i as u64,
                         execution_error: error.to_string(),
                     };
                     return Err(error);

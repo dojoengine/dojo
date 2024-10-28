@@ -45,11 +45,11 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
     }
 
     async fn get_transaction_by_hash(&self, transaction_hash: Felt) -> RpcResult<Tx> {
-        Ok(self.transaction(transaction_hash).await?.into())
+        Ok(self.transaction(transaction_hash).await?)
     }
 
     async fn get_block_transaction_count(&self, block_id: BlockIdOrTag) -> RpcResult<u64> {
-        self.on_io_blocking_task(move |this| Ok(this.block_tx_count(block_id)?)).await
+        Ok(self.block_tx_count(block_id).await?)
     }
 
     async fn get_class_at(
