@@ -5,15 +5,9 @@ pub impl $type_name$DojoEventImpl of dojo::event::Event<$type_name$> {
     }
 
     #[inline(always)]
-    fn version() -> u8 {
-        $event_version$
-    }
-
-    #[inline(always)]
     fn definition() -> dojo::event::EventDefinition {
         dojo::event::EventDefinition {
             name: Self::name(),
-            version: Self::version(),
             layout: Self::layout(),
             schema: Self::schema()
         }
@@ -25,8 +19,13 @@ pub impl $type_name$DojoEventImpl of dojo::event::Event<$type_name$> {
     }
 
     #[inline(always)]
-    fn schema() -> dojo::meta::introspect::Ty {
-        dojo::meta::introspect::Introspect::<$type_name$>::ty()
+    fn schema() -> dojo::meta::introspect::Struct {
+        if let dojo::meta::introspect::Ty::Struct(s) = dojo::meta::introspect::Introspect::<$type_name$>::ty() {
+            s
+        }
+        else {
+            panic!("Event `$type_name$`: invalid schema.")
+        }
     }
 
     #[inline(always)]
@@ -62,25 +61,11 @@ pub mod e_$type_name$ {
     struct Storage {}
 
     #[abi(embed_v0)]
-    impl $type_name$__DojoEventImpl of dojo::event::IEvent<ContractState>{
-        fn dojo_name(self: @ContractState) -> ByteArray {
-           "$type_name$"
-        }
+    impl $type_name$__DeployedEventImpl = dojo::event::component::IDeployedEventImpl<ContractState, $type_name$>;
 
-        fn version(self: @ContractState) -> u8 {
-           $event_version$
-        }
+    #[abi(embed_v0)]
+    impl $type_name$__StoredEventImpl = dojo::event::component::IStoredEventImpl<ContractState, $type_name$>;
 
-        fn definition(self: @ContractState) -> dojo::event::EventDefinition {
-            dojo::event::Event::<$type_name$>::definition()
-        }
-
-        fn layout(self: @ContractState) -> dojo::meta::Layout {
-            dojo::event::Event::<$type_name$>::layout()
-        }
-
-        fn schema(self: @ContractState) -> dojo::meta::introspect::Ty {
-            dojo::meta::introspect::Introspect::<$type_name$>::ty()
-        }
-    }
+    #[abi(embed_v0)]
+    impl $type_name$__EventImpl = dojo::event::component::IEventImpl<ContractState, $type_name$>;
 }

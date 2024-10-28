@@ -30,7 +30,7 @@ pub mod upgradeable_cpt {
 
     pub mod Errors {
         pub const INVALID_CLASS: felt252 = 'class_hash cannot be zero';
-        pub const INVALID_CLASS_CONTENT: felt252 = 'class_hash not Dojo IContract';
+        pub const INVALID_CLASS_CONTENT: felt252 = 'class_hash not Dojo contract';
         pub const INVALID_CALLER: felt252 = 'must be called by world';
         pub const INVALID_WORLD_ADDRESS: felt252 = 'invalid world address';
     }

@@ -1,7 +1,4 @@
 pub mod contract {
-    pub mod interface;
-    pub use interface::{IContract, IContractDispatcher, IContractDispatcherTrait};
-
     pub mod components {
         pub mod upgradeable;
         pub mod world_provider;
@@ -9,6 +6,8 @@ pub mod contract {
 }
 
 pub mod event {
+    pub mod component;
+
     pub mod event;
     pub use event::{Event, EventDefinition};
 
@@ -20,11 +19,17 @@ pub mod event {
 }
 
 pub mod meta {
+    pub mod interface;
+    pub use interface::{
+        IDeployedResource, IDeployedResourceDispatcher, IDeployedResourceDispatcherTrait,
+        IStoredResource, IStoredResourceDispatcher, IStoredResourceDispatcherTrait
+    };
+
     pub mod introspect;
-    pub use introspect::{Introspect, Ty};
+    pub use introspect::{Introspect, Ty, StructCompareTrait};
 
     pub mod layout;
-    pub use layout::{Layout, FieldLayout};
+    pub use layout::{Layout, FieldLayout, LayoutCompareTrait};
 }
 
 pub mod model {

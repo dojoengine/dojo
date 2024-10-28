@@ -5,7 +5,6 @@
 pub mod attacker_contract {
     use dojo::world::IWorldDispatcher;
     use dojo::contract::components::world_provider::IWorldProvider;
-    use dojo::contract::IContract;
     use starknet::storage::StoragePointerReadAccess;
 
     #[storage]
@@ -14,7 +13,7 @@ pub mod attacker_contract {
     }
 
     #[abi(embed_v0)]
-    pub impl ContractImpl of IContract<ContractState> {
+    pub impl ContractImpl of dojo::meta::interface::IDeployedResource<ContractState> {
         fn dojo_name(self: @ContractState) -> ByteArray {
             "test_1"
         }
@@ -34,15 +33,26 @@ pub mod attacker_model {
     struct Storage {}
 
     #[abi(embed_v0)]
-    impl DojoModelImpl of dojo::model::IModel<ContractState> {
+    impl DojoDeployedModelImpl of dojo::meta::interface::IDeployedResource<ContractState> {
         fn dojo_name(self: @ContractState) -> ByteArray {
             "foo"
         }
+    }
 
-        fn version(self: @ContractState) -> u8 {
-            1
+    #[abi(embed_v0)]
+    impl DojoStoredModelImpl of dojo::meta::interface::IStoredResource<ContractState> {
+        fn layout(self: @ContractState) -> dojo::meta::Layout {
+            dojo::meta::Layout::Fixed([].span())
         }
 
+        fn schema(self: @ContractState) -> dojo::meta::introspect::Struct {
+            dojo::meta::introspect::Struct { name: 'm1', attrs: [].span(), children: [].span() }
+        }
+    }
+
+
+    #[abi(embed_v0)]
+    impl DojoModelImpl of dojo::model::IModel<ContractState> {
         fn unpacked_size(self: @ContractState) -> Option<usize> {
             Option::None
         }
@@ -51,20 +61,11 @@ pub mod attacker_model {
             Option::None
         }
 
-        fn layout(self: @ContractState) -> dojo::meta::Layout {
-            dojo::meta::Layout::Fixed([].span())
-        }
-
-        fn schema(self: @ContractState) -> dojo::meta::introspect::Ty {
-            dojo::meta::introspect::Ty::Primitive('felt252')
-        }
-
         fn definition(self: @ContractState) -> dojo::model::ModelDef {
             dojo::model::ModelDef {
-                name: Self::dojo_name(self),
-                version: Self::version(self),
-                layout: Self::layout(self),
-                schema: Self::schema(self),
+                name: DojoDeployedModelImpl::dojo_name(self),
+                layout: DojoStoredModelImpl::layout(self),
+                schema: DojoStoredModelImpl::schema(self),
                 packed_size: Self::packed_size(self),
                 unpacked_size: Self::unpacked_size(self),
             }

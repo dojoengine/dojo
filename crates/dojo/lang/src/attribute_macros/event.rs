@@ -17,9 +17,7 @@ use cairo_lang_syntax::node::{ast, Terminal, TypedStablePtr, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_types::naming;
 
-use super::element::{
-    parse_members, serialize_keys_and_values, CommonStructParameters, StructParameterParser,
-};
+use super::element::{parse_members, serialize_keys_and_values, StructParameterParser};
 use crate::aux_data::EventAuxData;
 use crate::derive_macros::{
     extract_derive_attr_names, handle_derive_attrs, DOJO_INTROSPECT_DERIVE, DOJO_PACKED_DERIVE,
@@ -33,16 +31,12 @@ pub const DEFAULT_HISTORICAL_VALUE: bool = false;
 
 #[derive(Debug)]
 struct EventParameters {
-    common: CommonStructParameters,
     historical: bool,
 }
 
 impl Default for EventParameters {
     fn default() -> EventParameters {
-        EventParameters {
-            common: CommonStructParameters::default(),
-            historical: DEFAULT_HISTORICAL_VALUE,
-        }
+        EventParameters { historical: DEFAULT_HISTORICAL_VALUE }
     }
 }
 
@@ -59,7 +53,14 @@ impl StructParameterParser for EventParameters {
                 self.historical = get_historical(attribute_name, arg.value(db), diagnostics);
             }
             _ => {
-                self.common.process_named_parameters(db, attribute_name, arg, diagnostics);
+                diagnostics.push(PluginDiagnostic {
+                    stable_ptr: arg.stable_ptr().0,
+                    message: format!(
+                        "Unexpected parameter {} for {attribute_name}.",
+                        arg.as_syntax_node().get_text(db)
+                    ),
+                    severity: Severity::Warning,
+                });
             }
         }
     }
@@ -106,7 +107,6 @@ impl DojoEvent {
             }
         }
 
-        let event_version = parameters.common.version.to_string();
         let event_historical = parameters.historical.to_string();
 
         let members = parse_members(db, &struct_ast.members(db).elements(db), &mut diagnostics);
@@ -171,7 +171,6 @@ impl DojoEvent {
                 ("member_names".to_string(), RewriteNode::new_modified(member_names)),
                 ("serialized_keys".to_string(), RewriteNode::new_modified(serialized_keys)),
                 ("serialized_values".to_string(), RewriteNode::new_modified(serialized_values)),
-                ("event_version".to_string(), RewriteNode::Text(event_version)),
                 ("event_historical".to_string(), RewriteNode::Text(event_historical)),
             ]),
         );

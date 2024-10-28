@@ -2,7 +2,7 @@
 pub mod $name$ {
     use dojo::contract::components::world_provider::{world_provider_cpt, world_provider_cpt::InternalTrait as WorldProviderInternal, IWorldProvider};
     use dojo::contract::components::upgradeable::upgradeable_cpt;
-    use dojo::contract::IContract;
+    use dojo::meta::IDeployedResource;
 
     component!(path: world_provider_cpt, storage: world_provider, event: WorldProviderEvent);
     component!(path: upgradeable_cpt, storage: upgradeable, event: UpgradeableEvent);
@@ -11,10 +11,10 @@ pub mod $name$ {
     impl WorldProviderImpl = world_provider_cpt::WorldProviderImpl<ContractState>;
     
     #[abi(embed_v0)]
-    impl UpgradeableImpl = upgradeable_cpt::UpgradeableImpl<ContractState>;
+    impl $name$__UpgradeableImpl = upgradeable_cpt::UpgradeableImpl<ContractState>;
 
     #[abi(embed_v0)]
-    pub impl $name$__ContractImpl of IContract<ContractState> {
+    pub impl $name$__ContractImpl of IDeployedResource<ContractState> {
         fn dojo_name(self: @ContractState) -> ByteArray {
             "$name$"
         }

@@ -1,4 +1,4 @@
-use starknet::ContractAddress;
+use starknet::{ContractAddress};
 
 use dojo::world::{
     IWorldDispatcher, IWorldDispatcherTrait, IWorldTestDispatcher, IWorldTestDispatcherTrait
@@ -34,15 +34,25 @@ pub mod foo_invalid_name {
     struct Storage {}
 
     #[abi(embed_v0)]
-    pub impl ModelImpl of IModel<ContractState> {
+    pub impl DeployedModelImpl of dojo::meta::interface::IDeployedResource<ContractState> {
         fn dojo_name(self: @ContractState) -> ByteArray {
             "foo-bis"
         }
+    }
 
-        fn version(self: @ContractState) -> u8 {
-            1
+    #[abi(embed_v0)]
+    pub impl StoredModelImpl of dojo::meta::interface::IStoredResource<ContractState> {
+        fn layout(self: @ContractState) -> dojo::meta::Layout {
+            dojo::meta::Layout::Fixed([].span())
         }
 
+        fn schema(self: @ContractState) -> dojo::meta::introspect::Struct {
+            dojo::meta::introspect::Struct { name: 'foo', attrs: [].span(), children: [].span() }
+        }
+    }
+
+    #[abi(embed_v0)]
+    pub impl ModelImpl of IModel<ContractState> {
         fn unpacked_size(self: @ContractState) -> Option<usize> {
             Option::None
         }
@@ -51,24 +61,11 @@ pub mod foo_invalid_name {
             Option::None
         }
 
-        fn layout(self: @ContractState) -> dojo::meta::Layout {
-            dojo::meta::Layout::Fixed([].span())
-        }
-
-        fn schema(self: @ContractState) -> dojo::meta::introspect::Ty {
-            dojo::meta::introspect::Ty::Struct(
-                dojo::meta::introspect::Struct {
-                    name: 'foo', attrs: [].span(), children: [].span()
-                }
-            )
-        }
-
         fn definition(self: @ContractState) -> dojo::model::ModelDef {
             dojo::model::ModelDef {
-                name: Self::dojo_name(self),
-                version: Self::version(self),
-                layout: Self::layout(self),
-                schema: Self::schema(self),
+                name: DeployedModelImpl::dojo_name(self),
+                layout: StoredModelImpl::layout(self),
+                schema: StoredModelImpl::schema(self),
                 packed_size: Self::packed_size(self),
                 unpacked_size: Self::unpacked_size(self),
             }

@@ -18,8 +18,6 @@ pub trait ModelValue<V> {
     fn from_values(entity_id: felt252, ref values: Span<felt252>) -> Option<V>;
     /// Returns the name of the model value type.
     fn name() -> ByteArray;
-    /// Returns the version of the model value type.
-    fn version() -> u8;
     /// Returns the layout of the model value type.
     fn layout() -> Layout;
     /// Returns the layout of the model value.
@@ -42,10 +40,6 @@ pub impl ModelValueImpl<V, +Serde<V>, +ModelDefinition<V>, +ModelValueParser<V>>
 
     fn name() -> ByteArray {
         ModelDefinition::<V>::name()
-    }
-
-    fn version() -> u8 {
-        ModelDefinition::<V>::version()
     }
 
     fn layout() -> Layout {

@@ -4,17 +4,13 @@ use cairo_lang_defs::patcher::RewriteNode;
 use cairo_lang_defs::plugin::PluginDiagnostic;
 use cairo_lang_diagnostics::Severity;
 use cairo_lang_syntax::node::ast::{
-    ArgClause, ArgClauseNamed, Expr, ItemStruct, Member as MemberAst, OptionArgListParenthesized,
+    ArgClause, ArgClauseNamed, ItemStruct, Member as MemberAst, OptionArgListParenthesized,
 };
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{Terminal, TypedStablePtr, TypedSyntaxNode};
 
 use crate::aux_data::Member;
-
-pub const DEFAULT_VERSION: u8 = 1;
-
-pub const PARAMETER_VERSION_NAME: &str = "version";
 
 /// `StructParameterParser` provides a general `from_struct` function to parse
 /// the parameters of a struct attribute like dojo::model or dojo::event.
@@ -83,43 +79,6 @@ pub trait StructParameterParser {
         arg: ArgClauseNamed,
         diagnostics: &mut Vec<PluginDiagnostic>,
     );
-}
-
-#[derive(Debug)]
-pub struct CommonStructParameters {
-    pub version: u8,
-}
-
-impl Default for CommonStructParameters {
-    fn default() -> CommonStructParameters {
-        CommonStructParameters { version: DEFAULT_VERSION }
-    }
-}
-
-impl StructParameterParser for CommonStructParameters {
-    fn process_named_parameters(
-        &mut self,
-        db: &dyn SyntaxGroup,
-        attribute_name: &str,
-        arg: ArgClauseNamed,
-        diagnostics: &mut Vec<PluginDiagnostic>,
-    ) {
-        let arg_name = arg.name(db).text(db).to_string();
-        let arg_value = arg.value(db);
-
-        match arg_name.as_str() {
-            PARAMETER_VERSION_NAME => {
-                self.version = get_version(db, attribute_name, arg_value, diagnostics);
-            }
-            _ => {
-                diagnostics.push(PluginDiagnostic {
-                    message: format!("Unexpected argument '{}' for {attribute_name}", arg_name),
-                    stable_ptr: arg.stable_ptr().untyped(),
-                    severity: Severity::Warning,
-                });
-            }
-        }
-    }
 }
 
 pub fn parse_members(
@@ -207,50 +166,4 @@ pub fn deserialize_member_ty(member: &Member, input_name: &str) -> RewriteNode {
         "let {} = core::serde::Serde::<{}>::deserialize(ref {input_name})?;\n",
         member.name, member.ty
     ))
-}
-
-/// Get the version from the `Expr` parameter.
-fn get_version(
-    db: &dyn SyntaxGroup,
-    attribute_name: &str,
-    arg_value: Expr,
-    diagnostics: &mut Vec<PluginDiagnostic>,
-) -> u8 {
-    match arg_value {
-        Expr::Literal(ref value) => {
-            if let Ok(value) = value.text(db).parse::<u8>() {
-                if value <= DEFAULT_VERSION {
-                    value
-                } else {
-                    diagnostics.push(PluginDiagnostic {
-                        message: format!("{attribute_name} version {} not supported", value),
-                        stable_ptr: arg_value.stable_ptr().untyped(),
-                        severity: Severity::Error,
-                    });
-                    DEFAULT_VERSION
-                }
-            } else {
-                diagnostics.push(PluginDiagnostic {
-                    message: format!(
-                        "The argument '{}' of {attribute_name} must be an integer",
-                        PARAMETER_VERSION_NAME
-                    ),
-                    stable_ptr: arg_value.stable_ptr().untyped(),
-                    severity: Severity::Error,
-                });
-                DEFAULT_VERSION
-            }
-        }
-        _ => {
-            diagnostics.push(PluginDiagnostic {
-                message: format!(
-                    "The argument '{}' of {attribute_name} must be an integer",
-                    PARAMETER_VERSION_NAME
-                ),
-                stable_ptr: arg_value.stable_ptr().untyped(),
-                severity: Severity::Error,
-            });
-            DEFAULT_VERSION
-        }
-    }
 }

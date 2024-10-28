@@ -15,7 +15,7 @@ use super::*;
 use crate::config::ProfileConfig;
 
 const WORLD_INTF: &str = "dojo::world::iworld::IWorld";
-const CONTRACT_INTF: &str = "dojo::contract::interface::IContract";
+const DEPLOYED_RESOURCE_INTF: &str = "dojo::meta::interface::IDeployedResource";
 const MODEL_INTF: &str = "dojo::model::interface::IModel";
 const EVENT_INTF: &str = "dojo::event::interface::IEvent";
 
@@ -203,12 +203,12 @@ enum ResourceType {
 fn identify_resource_type(implem: &AbiImpl) -> ResourceType {
     if implem.interface_name == WORLD_INTF {
         ResourceType::World
-    } else if implem.interface_name == CONTRACT_INTF {
-        ResourceType::Contract(name_from_impl(&implem.name))
     } else if implem.interface_name == MODEL_INTF {
         ResourceType::Model(name_from_impl(&implem.name))
     } else if implem.interface_name == EVENT_INTF {
         ResourceType::Event(name_from_impl(&implem.name))
+    } else if implem.interface_name == DEPLOYED_RESOURCE_INTF {
+        ResourceType::Contract(name_from_impl(&implem.name))
     } else {
         ResourceType::Other
     }
@@ -246,7 +246,7 @@ mod tests {
 
         assert_eq!(
             identify_resource_type(&AbiImpl {
-                interface_name: CONTRACT_INTF.to_string(),
+                interface_name: DEPLOYED_RESOURCE_INTF.to_string(),
                 name: "contract__DojoModelImpl".to_string()
             }),
             ResourceType::Contract("contract".to_string())
