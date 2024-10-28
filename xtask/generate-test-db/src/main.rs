@@ -52,6 +52,7 @@ async fn migrate_spawn_and_move(db_path: &Path) -> Result<Manifest> {
         WorldContract::new(world_address, &runner.account(0)),
         txn_config,
         profile_config,
+        runner.url().to_string(),
     )
     .migrate(&mut MigrationUi::None)
     .await?;
@@ -97,6 +98,7 @@ async fn migrate_types_test(db_path: &Path) -> Result<Manifest> {
         WorldContract::new(world_address, &runner.account(0)),
         txn_config,
         profile_config,
+        runner.url().to_string(),
     )
     .migrate(&mut MigrationUi::None)
     .await?;
