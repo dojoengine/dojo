@@ -22,7 +22,7 @@ use std::collections::HashMap;
 use std::str::FromStr;
 
 use cainome::cairo_serde::{ByteArray, ClassHash, ContractAddress};
-use dojo_utils::{Declarer, Deployer, Invoker, TxnConfig};
+use dojo_utils::{Declarer, Deployer, Invoker, TransactionError, TxnConfig};
 use dojo_world::config::ProfileConfig;
 use dojo_world::contracts::WorldContract;
 use dojo_world::diff::{Manifest, ResourceDiff, WorldDiff, WorldStatus};
@@ -30,7 +30,10 @@ use dojo_world::local::ResourceLocal;
 use dojo_world::remote::ResourceRemote;
 use dojo_world::{utils, ResourceType};
 use spinoff::Spinner;
-use starknet::accounts::ConnectedAccount;
+use starknet::accounts::{ConnectedAccount, SingleOwnerAccount};
+use starknet::core::types::{Call, FlattenedSierraClass};
+use starknet::providers::AnyProvider;
+use starknet::signers::LocalWallet;
 use starknet_crypto::Felt;
 use tracing::trace;
 
@@ -46,6 +49,9 @@ where
     world: WorldContract<A>,
     txn_config: TxnConfig,
     profile_config: ProfileConfig,
+    // This is only to retrieve the declarers or make custom calls.
+    // Ideally, we want this rpc url to be exposed from the world.account.provider().
+    rpc_url: String,
 }
 
 pub enum MigrationUi {
@@ -79,8 +85,9 @@ where
         world: WorldContract<A>,
         txn_config: TxnConfig,
         profile_config: ProfileConfig,
+        rpc_url: String,
     ) -> Self {
-        Self { diff, world, txn_config, profile_config }
+        Self { diff, world, txn_config, profile_config, rpc_url }
     }
 
     /// Migrates the world by syncing the namespaces, resources, permissions and initializing the
@@ -260,27 +267,68 @@ where
     /// Syncs the resources by declaring the classes and registering/upgrading the resources.
     async fn sync_resources(&self) -> Result<(), MigrationError<A::SignError>> {
         let mut invoker = Invoker::new(&self.world.account, self.txn_config.clone());
-        let mut declarer = Declarer::new(&self.world.account, self.txn_config.clone());
 
         // Namespaces must be synced first, since contracts, models and events are namespaced.
         self.namespaces_getcalls(&mut invoker).await?;
 
-        for (_, resource) in &self.diff.resources {
+        let mut classes: Vec<(Felt, FlattenedSierraClass)> = vec![];
+
+        // Collects the calls and classes to be declared to sync the resources.
+        for (_selector, resource) in &self.diff.resources {
             match resource.resource_type() {
                 ResourceType::Contract => {
-                    self.contracts_getcalls(resource, &mut invoker, &mut declarer).await?
+                    let (contract_calls, contract_classes) =
+                        self.contracts_calls_classes(resource).await?;
+                    invoker.extend_calls(contract_calls);
+                    classes.extend(contract_classes);
                 }
                 ResourceType::Model => {
-                    self.models_getcalls(resource, &mut invoker, &mut declarer).await?
+                    let (model_calls, model_classes) = self.models_calls_classes(resource).await?;
+                    invoker.extend_calls(model_calls);
+                    classes.extend(model_classes);
                 }
                 ResourceType::Event => {
-                    self.events_getcalls(resource, &mut invoker, &mut declarer).await?
+                    let (event_calls, event_classes) = self.events_calls_classes(resource).await?;
+                    invoker.extend_calls(event_calls);
+                    classes.extend(event_classes);
                 }
                 _ => continue,
             }
         }
 
-        declarer.declare_all().await?;
+        // Declaration can be slow, and can be speed up by using multiple accounts.
+        // Since migrator account from `self.world.account` is under the [`ConnectedAccount`] trait,
+        // we can group it with the predeployed accounts which are concrete types.
+        let accounts = self.get_accounts().await;
+
+        if accounts.is_empty() {
+            trace!("Declaring classes with migrator account.");
+            let mut declarer = Declarer::new(&self.world.account, self.txn_config.clone());
+            declarer.extend_classes(classes);
+            declarer.declare_all().await?;
+        } else {
+            trace!("Declaring classes with {} accounts.", accounts.len());
+            let mut declarers = vec![];
+            for account in accounts {
+                declarers.push(Declarer::new(account, self.txn_config.clone()));
+            }
+
+            for (idx, (casm_class_hash, class)) in classes.into_iter().enumerate() {
+                declarers[idx].add_class(casm_class_hash, class);
+            }
+
+            let declarers_futures =
+                futures::future::join_all(declarers.into_iter().map(|d| d.declare_all())).await;
+
+            for declarer_results in declarers_futures {
+                if let Err(e) = declarer_results {
+                    // The issue is that `e` is bound to concrete type `SingleOwnerAccount`.
+                    // Thus, we can't return `e` directly.
+                    // Might have a better solution by addind a new variant?
+                    return Err(MigrationError::DeclareClassError(e.to_string()));
+                }
+            }
+        }
 
         if self.do_multicall() {
             invoker.multicall().await?;
@@ -314,18 +362,21 @@ where
         Ok(())
     }
 
-    /// Returns the calls required to sync the contracts and add the classes to the declarer.
+    /// Gathers the calls required to sync the contracts and classes to be declared.
     ///
     /// Currently, classes are cloned to be flattened, this is not ideal but the [`WorldDiff`]
     /// will be required later.
     /// If we could extract the info before syncing the resources, then we could avoid cloning the
     /// classes.
-    async fn contracts_getcalls(
+    ///
+    /// Returns a tuple of calls and (casm_class_hash, class) to be declared.
+    async fn contracts_calls_classes(
         &self,
         resource: &ResourceDiff,
-        invoker: &mut Invoker<&A>,
-        declarer: &mut Declarer<&A>,
-    ) -> Result<(), MigrationError<A::SignError>> {
+    ) -> Result<(Vec<Call>, Vec<(Felt, FlattenedSierraClass)>), MigrationError<A::SignError>> {
+        let mut calls = vec![];
+        let mut classes = vec![];
+
         let namespace = resource.namespace();
         let ns_bytearray = ByteArray::from_string(&namespace)?;
 
@@ -337,12 +388,10 @@ where
                 "Registering contract."
             );
 
-            declarer.add_class(
-                contract.common.casm_class_hash,
-                contract.common.class.clone().flatten()?,
-            );
+            classes
+                .push((contract.common.casm_class_hash, contract.common.class.clone().flatten()?));
 
-            invoker.add_call(self.world.register_contract_getcall(
+            calls.push(self.world.register_contract_getcall(
                 &contract.dojo_selector(),
                 &ns_bytearray,
                 &ClassHash(contract.common.class_hash),
@@ -361,27 +410,30 @@ where
                 "Upgrading contract."
             );
 
-            declarer.add_class(
+            classes.push((
                 contract_local.common.casm_class_hash,
                 contract_local.common.class.clone().flatten()?,
-            );
+            ));
 
-            invoker.add_call(self.world.upgrade_contract_getcall(
+            calls.push(self.world.upgrade_contract_getcall(
                 &ns_bytearray,
                 &ClassHash(contract_local.common.class_hash),
             ));
         }
 
-        Ok(())
+        Ok((calls, classes))
     }
 
-    /// Returns the calls required to sync the models and add the classes to the declarer.
-    async fn models_getcalls(
+    /// Returns the calls required to sync the models and gather the classes to be declared.
+    ///
+    /// Returns a tuple of calls and (casm_class_hash, class) to be declared.
+    async fn models_calls_classes(
         &self,
         resource: &ResourceDiff,
-        invoker: &mut Invoker<&A>,
-        declarer: &mut Declarer<&A>,
-    ) -> Result<(), MigrationError<A::SignError>> {
+    ) -> Result<(Vec<Call>, Vec<(Felt, FlattenedSierraClass)>), MigrationError<A::SignError>> {
+        let mut calls = vec![];
+        let mut classes = vec![];
+
         let namespace = resource.namespace();
         let ns_bytearray = ByteArray::from_string(&namespace)?;
 
@@ -393,9 +445,9 @@ where
                 "Registering model."
             );
 
-            declarer.add_class(model.common.casm_class_hash, model.common.class.clone().flatten()?);
+            classes.push((model.common.casm_class_hash, model.common.class.clone().flatten()?));
 
-            invoker.add_call(
+            calls.push(
                 self.world
                     .register_model_getcall(&ns_bytearray, &ClassHash(model.common.class_hash)),
             );
@@ -413,12 +465,12 @@ where
                 "Upgrading model."
             );
 
-            declarer.add_class(
+            classes.push((
                 model_local.common.casm_class_hash,
                 model_local.common.class.clone().flatten()?,
-            );
+            ));
 
-            invoker.add_call(
+            calls.push(
                 self.world.upgrade_model_getcall(
                     &ns_bytearray,
                     &ClassHash(model_local.common.class_hash),
@@ -426,16 +478,19 @@ where
             );
         }
 
-        Ok(())
+        Ok((calls, classes))
     }
 
-    /// Returns the calls required to sync the events and add the classes to the declarer.
-    async fn events_getcalls(
+    /// Returns the calls required to sync the events and gather the classes to be declared.
+    ///
+    /// Returns a tuple of calls and (casm_class_hash, class) to be declared.
+    async fn events_calls_classes(
         &self,
         resource: &ResourceDiff,
-        invoker: &mut Invoker<&A>,
-        declarer: &mut Declarer<&A>,
-    ) -> Result<(), MigrationError<A::SignError>> {
+    ) -> Result<(Vec<Call>, Vec<(Felt, FlattenedSierraClass)>), MigrationError<A::SignError>> {
+        let mut calls = vec![];
+        let mut classes = vec![];
+
         let namespace = resource.namespace();
         let ns_bytearray = ByteArray::from_string(&namespace)?;
 
@@ -447,9 +502,9 @@ where
                 "Registering event."
             );
 
-            declarer.add_class(event.common.casm_class_hash, event.common.class.clone().flatten()?);
+            classes.push((event.common.casm_class_hash, event.common.class.clone().flatten()?));
 
-            invoker.add_call(
+            calls.push(
                 self.world
                     .register_event_getcall(&ns_bytearray, &ClassHash(event.common.class_hash)),
             );
@@ -467,12 +522,12 @@ where
                 "Upgrading event."
             );
 
-            declarer.add_class(
+            classes.push((
                 event_local.common.casm_class_hash,
                 event_local.common.class.clone().flatten()?,
-            );
+            ));
 
-            invoker.add_call(
+            calls.push(
                 self.world.upgrade_event_getcall(
                     &ns_bytearray,
                     &ClassHash(event_local.common.class_hash),
@@ -480,7 +535,7 @@ where
             );
         }
 
-        Ok(())
+        Ok((calls, classes))
     }
 
     /// Ensures the world is declared and deployed if necessary.
@@ -531,5 +586,21 @@ where
         };
 
         Ok(())
+    }
+
+    /// Returns the accounts to use for the migration.
+    ///
+    /// This is useful to use multiple accounts since the declare transaction is nonce-based,
+    /// and can only be parallelized by using different accounts.
+    ///
+    /// Accounts can come from the profile config, otherwise we fallback to the predeployed
+    /// accounts.
+    async fn get_accounts(&self) -> Vec<SingleOwnerAccount<AnyProvider, LocalWallet>> {
+        // TODO: if profile config have some migrators, use them instead.
+
+        // If the RPC provider does not support the predeployed accounts, this will fail silently.
+        dojo_utils::get_predeployed_accounts(&self.world.account, &self.rpc_url)
+            .await
+            .unwrap_or_default()
     }
 }

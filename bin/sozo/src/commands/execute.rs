@@ -80,7 +80,7 @@ impl ExecuteArgs {
         );
 
         config.tokio_handle().block_on(async {
-            let (world_diff, account) = utils::get_world_diff_and_account(
+            let (world_diff, account, _) = utils::get_world_diff_and_account(
                 self.account,
                 self.starknet.clone(),
                 self.world,

@@ -49,7 +49,7 @@ impl MigrateArgs {
             let mut txn_config: TxnConfig = self.transaction.into();
             txn_config.wait = true;
 
-            let (world_diff, account) =
+            let (world_diff, account, rpc_url) =
                 utils::get_world_diff_and_account(account, starknet, world, &ws).await?;
 
             let world_address = world_diff.world_info.address;
@@ -59,6 +59,7 @@ impl MigrateArgs {
                 WorldContract::new(world_address, &account),
                 txn_config,
                 ws.load_profile_config()?,
+                rpc_url,
             );
 
             let manifest = migration.migrate(&mut spinner).await.context("Migration failed.")?;

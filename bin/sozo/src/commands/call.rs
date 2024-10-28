@@ -67,7 +67,7 @@ impl CallArgs {
         };
 
         config.tokio_handle().block_on(async {
-            let (world_diff, provider) =
+            let (world_diff, provider, _) =
                 utils::get_world_diff_and_provider(self.starknet.clone(), self.world, &ws).await?;
 
             let calldata = if let Some(cd) = self.calldata {

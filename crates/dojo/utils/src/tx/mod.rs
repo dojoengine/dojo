@@ -8,14 +8,18 @@ use std::fmt;
 
 use anyhow::{anyhow, Result};
 use colored_json::ToColoredJson;
+use reqwest::Url;
 use starknet::accounts::{
     AccountDeploymentV1, AccountError, AccountFactory, AccountFactoryError, ConnectedAccount,
-    DeclarationV2, ExecutionV1,
+    DeclarationV2, ExecutionEncoding, ExecutionV1, SingleOwnerAccount,
 };
 use starknet::core::types::{
     BlockId, BlockTag, DeclareTransactionResult, DeployAccountTransactionResult, Felt,
     InvokeTransactionResult, TransactionReceiptWithBlockInfo,
 };
+use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::{AnyProvider, JsonRpcClient, Provider};
+use starknet::signers::{LocalWallet, SigningKey};
 
 /// The transaction configuration to use when sending a transaction.
 #[derive(Debug, Copy, Clone, Default)]
@@ -191,4 +195,67 @@ pub fn parse_block_id(block_str: String) -> Result<BlockId> {
             Err(_) => Err(anyhow!("Unable to parse block ID: {}", block_str)),
         }
     }
+}
+
+/// Get predeployed accounts from the RPC provider.
+pub async fn get_predeployed_accounts<A: ConnectedAccount>(
+    migrator: A,
+    rpc_url: &str,
+) -> anyhow::Result<Vec<SingleOwnerAccount<AnyProvider, LocalWallet>>> {
+    let client = reqwest::Client::new();
+    let response = client
+        .post(rpc_url)
+        .json(&serde_json::json!({
+            "jsonrpc": "2.0",
+            "method": "dev_predeployedAccounts",
+            "params": [],
+            "id": 1
+        }))
+        .send()
+        .await;
+
+    if response.is_err() {
+        return Ok(vec![]);
+    }
+
+    let result: serde_json::Value = response.unwrap().json().await?;
+
+    let mut declarers = vec![];
+
+    if let Some(vals) = result.get("result").and_then(|v| v.as_array()) {
+        let chain_id = migrator.provider().chain_id().await?;
+
+        for a in vals {
+            let address = a["address"].as_str().unwrap();
+
+            // On slot, some accounts are hidden, we skip them.
+            let private_key = if let Some(pk) = a["privateKey"].as_str() {
+                pk
+            } else {
+                continue;
+            };
+
+            let provider = AnyProvider::JsonRpcHttp(JsonRpcClient::new(HttpTransport::new(
+                Url::parse(rpc_url).unwrap(),
+            )));
+
+            let signer = LocalWallet::from(SigningKey::from_secret_scalar(
+                Felt::from_hex(private_key).unwrap(),
+            ));
+
+            let mut account = SingleOwnerAccount::new(
+                provider,
+                signer,
+                Felt::from_hex(address).unwrap(),
+                chain_id,
+                ExecutionEncoding::New,
+            );
+
+            account.set_block_id(BlockId::Tag(BlockTag::Pending));
+
+            declarers.push(account);
+        }
+    }
+
+    Ok(declarers)
 }

@@ -35,4 +35,6 @@ where
     InitCallArgs,
     #[error(transparent)]
     TransactionError(#[from] TransactionError<S>),
+    #[error("Declaration of class failed: {0}")]
+    DeclareClassError(String),
 }

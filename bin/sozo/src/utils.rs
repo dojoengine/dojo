@@ -99,12 +99,12 @@ pub fn is_address(tag_or_address: &str) -> bool {
 
 /// Sets up the world diff from the environment and returns associated starknet account.
 ///
-/// Returns the world address, the world diff and the starknet provider.
+/// Returns the world address, the world diff, the starknet provider and the rpc url.
 pub async fn get_world_diff_and_provider(
     starknet: StarknetOptions,
     world: WorldOptions,
     ws: &Workspace<'_>,
-) -> Result<(WorldDiff, JsonRpcClient<HttpTransport>)> {
+) -> Result<(WorldDiff, JsonRpcClient<HttpTransport>, String)> {
     let world_local = ws.load_world_local()?;
     let profile_config = ws.load_profile_config()?;
 
@@ -112,7 +112,7 @@ pub async fn get_world_diff_and_provider(
 
     let world_address = get_world_address(&profile_config, &world, &world_local)?;
 
-    let provider = starknet.provider(env)?;
+    let (provider, rpc_url) = starknet.provider(env)?;
     trace!(?provider, "Provider initialized.");
 
     let spec_version = provider.spec_version().await?;
@@ -133,22 +133,24 @@ pub async fn get_world_diff_and_provider(
 
     let world_diff = WorldDiff::new_from_chain(world_address, world_local, &provider).await?;
 
-    Ok((world_diff, provider))
+    Ok((world_diff, provider, rpc_url))
 }
 
 /// Sets up the world diff from the environment and returns associated starknet account.
 ///
-/// Returns the world address, the world diff and the starknet provider.
+/// Returns the world address, the world diff, the account and the rpc url.
+/// This would be convenient to have the rpc url retrievable from the [`Provider`] trait.
 pub async fn get_world_diff_and_account(
     account: AccountOptions,
     starknet: StarknetOptions,
     world: WorldOptions,
     ws: &Workspace<'_>,
-) -> Result<(WorldDiff, SozoAccount<JsonRpcClient<HttpTransport>>)> {
+) -> Result<(WorldDiff, SozoAccount<JsonRpcClient<HttpTransport>>, String)> {
     let profile_config = ws.load_profile_config()?;
     let env = profile_config.env.as_ref();
 
-    let (world_diff, provider) = get_world_diff_and_provider(starknet.clone(), world, ws).await?;
+    let (world_diff, provider, rpc_url) =
+        get_world_diff_and_provider(starknet.clone(), world, ws).await?;
 
     let account = {
         account
@@ -160,7 +162,7 @@ pub async fn get_world_diff_and_account(
         return Err(anyhow!("Account with address {:#x} doesn't exist.", account.address()));
     }
 
-    Ok((world_diff, account))
+    Ok((world_diff, account, rpc_url))
 }
 
 /// Checks if the provided version string is compatible with the expected version string using

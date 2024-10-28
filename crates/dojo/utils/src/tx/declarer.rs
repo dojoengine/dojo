@@ -45,6 +45,13 @@ where
         self.classes.entry(casm_class_hash).or_insert(class);
     }
 
+    /// Extends the classes to the declarer.
+    pub fn extend_classes(&mut self, classes: Vec<(Felt, FlattenedSierraClass)>) {
+        for (casm_class_hash, class) in classes {
+            self.classes.entry(casm_class_hash).or_insert(class);
+        }
+    }
+
     /// Declares all the classes registered in the declarer with a single account.
     ///
     /// Takes ownership of the declarer to avoid cloning the classes.
