@@ -316,23 +316,23 @@ pub struct ExecutableBlock {
     pub body: Vec<ExecutableTxWithHash>,
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use crate::felt;
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::felt;
 
-//     #[test]
-//     fn test_concat_counts() {
-//         let expected = felt!("0x6400000000000000c8000000000000012c0000000000000000");
-//         let actual = Header::concat_counts(100, 200, 300, L1DataAvailabilityMode::Calldata);
-//         assert_eq!(actual, expected);
+    #[test]
+    fn header_concat_counts() {
+        let expected = felt!("0x6400000000000000c8000000000000012c0000000000000000");
+        let actual = Header::concat_counts(100, 200, 300, L1DataAvailabilityMode::Calldata);
+        assert_eq!(actual, expected);
 
-//         let expected = felt!("0x1000000000000000200000000000000038000000000000000");
-//         let actual = Header::concat_counts(1, 2, 3, L1DataAvailabilityMode::Blob);
-//         assert_eq!(actual, expected);
+        let expected = felt!("0x1000000000000000200000000000000038000000000000000");
+        let actual = Header::concat_counts(1, 2, 3, L1DataAvailabilityMode::Blob);
+        assert_eq!(actual, expected);
 
-//         let expected = felt!("0xffffffff000000000000000000000000000000000000000000000000");
-//         let actual = Header::concat_counts(0xFFFFFFFF, 0, 0, L1DataAvailabilityMode::Calldata);
-//         assert_eq!(actual, expected);
-//     }
-// }
+        let expected = felt!("0xffffffff000000000000000000000000000000000000000000000000");
+        let actual = Header::concat_counts(0xFFFFFFFF, 0, 0, L1DataAvailabilityMode::Calldata);
+        assert_eq!(actual, expected);
+    }
+}

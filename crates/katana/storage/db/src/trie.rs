@@ -72,17 +72,6 @@ where
         &self,
         prefix: &DatabaseKey<'_>,
     ) -> Result<Vec<(ByteVec, ByteVec)>, Self::DatabaseError> {
-        let _ = prefix;
-
-        // let mut result = Vec::new();
-        // let db = self.tx.get_map(prefix);
-        // for (key, value) in db.iter() {
-        //     if key.starts_with(prefix.as_slice()) {
-        //         result.push((key.clone(), value.clone()));
-        //     }
-        // }
-        // Ok(result)
-
         todo!()
     }
 
