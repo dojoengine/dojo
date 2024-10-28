@@ -1,7 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
 use katana_cairo::cairo_vm::types::builtin_name::BuiltinName;
-use katana_cairo::cairo_vm::vm;
 
 use crate::class::ClassHash;
 use crate::contract::ContractAddress;
@@ -10,9 +9,17 @@ use crate::message::OrderedL2ToL1Message;
 use crate::transaction::TxType;
 use crate::Felt;
 
-pub type ExecutionResources = vm::runners::cairo_runner::ExecutionResources;
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct ExecutionResources {
+    pub n_steps: usize,
+    pub n_memory_holes: usize,
+    pub builtin_instance_counter: HashMap<BuiltinName, usize>,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct TxExecInfo {
     /// Transaction validation call info; [None] for `L1Handler`.
@@ -33,6 +40,7 @@ pub struct TxExecInfo {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct TxResources {
     pub n_reverted_steps: usize,
@@ -42,6 +50,7 @@ pub struct TxResources {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct L1Gas {
     pub l1_gas: u128,
@@ -50,6 +59,7 @@ pub struct L1Gas {
 
 /// The call type.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum CallType {
     #[default]
@@ -60,6 +70,7 @@ pub enum CallType {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum EntryPointType {
     #[default]
@@ -69,6 +80,7 @@ pub enum EntryPointType {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct CallInfo {
     /// The contract address which the call is initiated from.
@@ -114,6 +126,7 @@ pub struct CallInfo {
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[serde(transparent)]
 pub struct BuiltinCounters(HashMap<BuiltinName, usize>);
 
 impl BuiltinCounters {

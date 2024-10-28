@@ -6,6 +6,7 @@ use katana_primitives::block::{
     BlockHashOrNumber, BlockIdOrTag, FinalityStatus, SealedBlockWithStatus,
 };
 use katana_primitives::chain_spec::ChainSpec;
+use katana_primitives::da::L1DataAvailabilityMode;
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
 use katana_primitives::version::ProtocolVersion;
 use katana_provider::providers::db::DbProvider;
@@ -182,7 +183,12 @@ impl Blockchain {
             forked_block.l1_data_gas_price.price_in_wei.to_u128().expect("should fit in u128");
         block.header.l1_data_gas_prices.strk =
             forked_block.l1_data_gas_price.price_in_fri.to_u128().expect("should fit in u128");
-        block.header.l1_da_mode = forked_block.l1_da_mode;
+        block.header.l1_da_mode = match forked_block.l1_da_mode {
+            starknet::core::types::L1DataAvailabilityMode::Blob => L1DataAvailabilityMode::Blob,
+            starknet::core::types::L1DataAvailabilityMode::Calldata => {
+                L1DataAvailabilityMode::Calldata
+            }
+        };
 
         let block = block.seal_with_hash_and_status(forked_block.block_hash, status);
         let state_updates = chain.state_updates();
@@ -216,7 +222,7 @@ mod tests {
         Block, FinalityStatus, GasPrices, Header, SealedBlockWithStatus,
     };
     use katana_primitives::da::L1DataAvailabilityMode;
-    use katana_primitives::fee::TxFeeInfo;
+    use katana_primitives::fee::{PriceUnit, TxFeeInfo};
     use katana_primitives::genesis::constant::{
         DEFAULT_ETH_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CASM, DEFAULT_LEGACY_ERC20_CLASS_HASH,
         DEFAULT_LEGACY_UDC_CASM, DEFAULT_LEGACY_UDC_CLASS_HASH, DEFAULT_UDC_ADDRESS,
@@ -226,20 +232,19 @@ mod tests {
     use katana_primitives::trace::TxExecInfo;
     use katana_primitives::transaction::{InvokeTx, Tx, TxWithHash};
     use katana_primitives::{chain_spec, Felt};
-    use katana_provider::providers::in_memory::InMemoryProvider;
+    use katana_provider::providers::db::DbProvider;
     use katana_provider::traits::block::{
         BlockHashProvider, BlockNumberProvider, BlockProvider, BlockWriter,
     };
     use katana_provider::traits::state::StateFactoryProvider;
     use katana_provider::traits::transaction::{TransactionProvider, TransactionTraceProvider};
-    use starknet::core::types::PriceUnit;
     use starknet::macros::felt;
 
     use super::Blockchain;
 
     #[test]
     fn blockchain_from_genesis_states() {
-        let provider = InMemoryProvider::new();
+        let provider = DbProvider::new_ephemeral();
 
         let blockchain = Blockchain::new_with_chain(provider, &chain_spec::DEV)
             .expect("failed to create blockchain from genesis block");

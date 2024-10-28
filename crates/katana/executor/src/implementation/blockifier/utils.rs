@@ -45,7 +45,7 @@ use katana_cairo::starknet_api::transaction::{
 };
 use katana_primitives::chain::NamedChainId;
 use katana_primitives::env::{BlockEnv, CfgEnv};
-use katana_primitives::fee::TxFeeInfo;
+use katana_primitives::fee::{PriceUnit, TxFeeInfo};
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
 use katana_primitives::trace::{L1Gas, TxExecInfo, TxResources};
 use katana_primitives::transaction::{
@@ -53,34 +53,33 @@ use katana_primitives::transaction::{
 };
 use katana_primitives::{class, event, message, trace, Felt};
 use katana_provider::traits::contract::ContractClassProvider;
-use starknet::core::types::PriceUnit;
 use starknet::core::utils::parse_cairo_short_string;
 
 use super::state::{CachedState, StateDb};
-use crate::abstraction::{EntryPointCall, SimulationFlag};
+use crate::abstraction::{EntryPointCall, ExecutionFlags};
 use crate::utils::build_receipt;
 use crate::{ExecutionError, ExecutionResult};
 
 pub fn transact<S: StateReader>(
     state: &mut cached_state::CachedState<S>,
     block_context: &BlockContext,
-    simulation_flags: &SimulationFlag,
+    simulation_flags: &ExecutionFlags,
     tx: ExecutableTxWithHash,
 ) -> ExecutionResult {
     fn transact_inner<S: StateReader>(
         state: &mut cached_state::CachedState<S>,
         block_context: &BlockContext,
-        simulation_flags: &SimulationFlag,
+        simulation_flags: &ExecutionFlags,
         tx: Transaction,
     ) -> Result<(TransactionExecutionInfo, TxFeeInfo), ExecutionError> {
-        let validate = !simulation_flags.skip_validate;
-        let charge_fee = !simulation_flags.skip_fee_transfer;
+        let validate = simulation_flags.account_validation();
+        let charge_fee = simulation_flags.fee();
         // Blockifier doesn't provide a way to fully skip nonce check during the tx validation
         // stage. The `nonce_check` flag in `tx.execute()` only 'relaxes' the check for
         // nonce that is equal or higher than the current (expected) account nonce.
         //
         // Related commit on Blockifier: https://github.com/dojoengine/blockifier/commit/2410b6055453f247d48759f223c34b3fb5fa777
-        let nonce_check = !simulation_flags.skip_nonce_check;
+        let nonce_check = simulation_flags.nonce_check();
 
         let fee_type = get_fee_type_from_tx(&tx);
         let info = match tx {
@@ -480,15 +479,15 @@ pub(super) fn state_update_from_cached_state<S: StateDb>(
     }
 }
 
-fn to_api_da_mode(mode: starknet::core::types::DataAvailabilityMode) -> DataAvailabilityMode {
+fn to_api_da_mode(mode: katana_primitives::da::DataAvailabilityMode) -> DataAvailabilityMode {
     match mode {
-        starknet::core::types::DataAvailabilityMode::L1 => DataAvailabilityMode::L1,
-        starknet::core::types::DataAvailabilityMode::L2 => DataAvailabilityMode::L2,
+        katana_primitives::da::DataAvailabilityMode::L1 => DataAvailabilityMode::L1,
+        katana_primitives::da::DataAvailabilityMode::L2 => DataAvailabilityMode::L2,
     }
 }
 
 fn to_api_resource_bounds(
-    resource_bounds: starknet::core::types::ResourceBoundsMapping,
+    resource_bounds: katana_primitives::fee::ResourceBoundsMapping,
 ) -> ResourceBoundsMapping {
     let l1_gas = ResourceBounds {
         max_amount: resource_bounds.l1_gas.max_amount,
@@ -572,7 +571,9 @@ pub fn to_exec_info(exec_info: TransactionExecutionInfo, r#type: TxType) -> TxEx
         actual_fee: exec_info.transaction_receipt.fee.0,
         revert_error: exec_info.revert_error.clone(),
         actual_resources: TxResources {
-            vm_resources: exec_info.transaction_receipt.resources.vm_resources,
+            vm_resources: to_execution_resources(
+                exec_info.transaction_receipt.resources.vm_resources,
+            ),
             n_reverted_steps: exec_info.transaction_receipt.resources.n_reverted_steps,
             data_availability: L1Gas {
                 l1_gas: exec_info.transaction_receipt.da_gas.l1_data_gas,
@@ -626,7 +627,7 @@ fn to_call_info(call: CallInfo) -> trace::CallInfo {
         entry_point_type,
         calldata,
         retdata,
-        execution_resources: call.resources,
+        execution_resources: to_execution_resources(call.resources),
         events,
         l2_to_l1_messages: l1_msg,
         storage_read_values,
@@ -653,6 +654,16 @@ fn to_l2_l1_messages(
     let payload = m.message.payload.0;
     let to_address = starknet_api_ethaddr_to_felt(m.message.to_address);
     message::OrderedL2ToL1Message { order, from_address, to_address, payload }
+}
+
+fn to_execution_resources(
+    resources: ExecutionResources,
+) -> katana_primitives::trace::ExecutionResources {
+    katana_primitives::trace::ExecutionResources {
+        n_steps: resources.n_steps,
+        n_memory_holes: resources.n_memory_holes,
+        builtin_instance_counter: resources.builtin_instance_counter,
+    }
 }
 
 #[cfg(test)]

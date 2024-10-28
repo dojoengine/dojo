@@ -2,13 +2,13 @@ mod fixtures;
 
 use fixtures::transaction::executable_tx;
 use fixtures::{executor_factory, state_provider};
-use katana_executor::{ExecutionOutput, ExecutorFactory, SimulationFlag};
+use katana_executor::{ExecutionFlags, ExecutionOutput, ExecutorFactory};
 use katana_primitives::block::GasPrices;
 use katana_primitives::env::BlockEnv;
+use katana_primitives::fee::PriceUnit;
 use katana_primitives::transaction::ExecutableTxWithHash;
 use katana_provider::traits::state::StateProvider;
 use rstest_reuse::{self, *};
-use starknet::core::types::PriceUnit;
 use starknet::macros::felt;
 
 #[rstest::fixture]
@@ -19,17 +19,17 @@ fn block_env() -> BlockEnv {
 
 #[template]
 #[rstest::rstest]
-#[case::tx(executable_tx::default(), SimulationFlag::new())]
-#[case::tx_skip_validate(executable_tx::default(), SimulationFlag::new().skip_validate())]
-#[case::tx_no_signature_skip_validate(executable_tx::partial_1(false), SimulationFlag::new().skip_validate())]
+#[case::tx(executable_tx::default(), ExecutionFlags::new())]
+#[case::tx_skip_validate(executable_tx::default(), ExecutionFlags::new().with_account_validation(false))]
+#[case::tx_no_signature_skip_validate(executable_tx::partial_1(false), ExecutionFlags::new().with_account_validation(false))]
 #[should_panic]
-#[case::tx_no_signature(executable_tx::partial_1(false), SimulationFlag::new())]
+#[case::tx_no_signature(executable_tx::partial_1(false), ExecutionFlags::new())]
 fn simulate_tx<EF: ExecutorFactory>(
     executor_factory: EF,
     block_env: BlockEnv,
     state_provider: Box<dyn StateProvider>,
     #[case] tx: ExecutableTxWithHash,
-    #[case] flags: SimulationFlag,
+    #[case] flags: ExecutionFlags,
 ) {
 }
 
@@ -39,7 +39,7 @@ fn test_simulate_tx_impl<EF: ExecutorFactory>(
     block_env: BlockEnv,
     state_provider: Box<dyn StateProvider>,
     tx: ExecutableTxWithHash,
-    flags: SimulationFlag,
+    flags: ExecutionFlags,
 ) {
     let transactions = vec![tx];
     let mut executor = executor_factory.with_state_and_block_env(state_provider, block_env);
@@ -91,7 +91,7 @@ mod blockifier {
         block_env: BlockEnv,
         state_provider: Box<dyn StateProvider>,
         #[case] tx: ExecutableTxWithHash,
-        #[case] flags: SimulationFlag,
+        #[case] flags: ExecutionFlags,
     ) {
         test_simulate_tx_impl(executor_factory, block_env, state_provider, tx, flags);
     }

@@ -54,7 +54,7 @@ edition = "2021"
 license = "Apache-2.0"
 license-file = "LICENSE"
 repository = "https://github.com/dojoengine/dojo/"
-version = "1.0.0-alpha.17"
+version = "1.0.0-alpha.19"
 
 [profile.performance]
 codegen-units = 1
@@ -121,6 +121,7 @@ sozo-signers = { path = "crates/sozo/signers" }
 sozo-walnut = { path = "crates/sozo/walnut" }
 
 anyhow = "1.0.89"
+arbitrary = { version = "1.3.2", features = [ "derive" ] }
 assert_fs = "1.1"
 assert_matches = "1.5.0"
 async-trait = "0.1.82"
@@ -199,7 +200,7 @@ serde_with = "3.9.0"
 similar-asserts = "1.5.0"
 smol_str = { version = "0.2.0", features = [ "serde" ] }
 spinoff = "0.8.0"
-sqlx = { version = "0.7.2", features = [ "chrono", "macros", "regexp", "runtime-async-std", "runtime-tokio", "sqlite", "uuid" ] }
+sqlx = { version = "0.8.2", features = [ "chrono", "macros", "regexp", "runtime-async-std", "runtime-tokio", "sqlite", "uuid" ] }
 starknet_api = "0.11.0"
 strum = "0.25"
 strum_macros = "0.25"
@@ -252,4 +253,4 @@ alloy-transport = { version = "0.3", default-features = false }
 
 starknet = "0.12.0"
 starknet-crypto = "0.7.1"
-starknet-types-core = "0.1.6"
+starknet-types-core = { version = "0.1.6", features = [ "arbitrary" ] }

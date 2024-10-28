@@ -14,8 +14,8 @@ use katana_rpc_types::{FeeEstimate, SimulationFlag};
 use starknet::core::types::{
     BlockTag, ComputationResources, DataAvailabilityResources, DataResources,
     DeclareTransactionTrace, DeployAccountTransactionTrace, ExecuteInvocation, ExecutionResources,
-    InvokeTransactionTrace, L1HandlerTransactionTrace, RevertedInvocation, SimulatedTransaction,
-    TransactionTrace, TransactionTraceWithHash,
+    InvokeTransactionTrace, L1HandlerTransactionTrace, PriceUnit, RevertedInvocation,
+    SimulatedTransaction, TransactionTrace, TransactionTraceWithHash,
 };
 
 use super::StarknetApi;
@@ -64,19 +64,17 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
 
         // If the node is run with transaction validation disabled, then we should not validate
         // even if the `SKIP_VALIDATE` flag is not set.
-        let should_validate = !(simulation_flags.contains(&SimulationFlag::SkipValidate)
-            || self.inner.backend.executor_factory.execution_flags().skip_validate);
+        let should_validate = !simulation_flags.contains(&SimulationFlag::SkipValidate)
+            && self.inner.backend.executor_factory.execution_flags().account_validation();
 
         // If the node is run with fee charge disabled, then we should disable charing fees even
         // if the `SKIP_FEE_CHARGE` flag is not set.
-        let should_skip_fee = !(simulation_flags.contains(&SimulationFlag::SkipFeeCharge)
-            || self.inner.backend.executor_factory.execution_flags().skip_fee_transfer);
+        let should_skip_fee = !simulation_flags.contains(&SimulationFlag::SkipFeeCharge)
+            && self.inner.backend.executor_factory.execution_flags().fee();
 
-        let flags = katana_executor::SimulationFlag {
-            skip_validate: !should_validate,
-            skip_fee_transfer: !should_skip_fee,
-            ..Default::default()
-        };
+        let flags = katana_executor::ExecutionFlags::new()
+            .with_account_validation(should_validate)
+            .with_fee(!should_skip_fee);
 
         // get the state and block env at the specified block for execution
         let state = self.state(&block_id)?;
@@ -294,7 +292,10 @@ fn to_rpc_resources(resources: katana_primitives::trace::ExecutionResources) -> 
 
 fn to_rpc_fee_estimate(fee: TxFeeInfo) -> FeeEstimate {
     FeeEstimate {
-        unit: fee.unit,
+        unit: match fee.unit {
+            katana_primitives::fee::PriceUnit::Wei => PriceUnit::Wei,
+            katana_primitives::fee::PriceUnit::Fri => PriceUnit::Fri,
+        },
         gas_price: fee.gas_price.into(),
         overall_fee: fee.overall_fee.into(),
         gas_consumed: fee.gas_consumed.into(),

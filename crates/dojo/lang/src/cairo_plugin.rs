@@ -8,18 +8,12 @@ use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 
-// use scarb::compiler::plugin::builtin::BuiltinStarkNetPlugin;
-// use scarb::compiler::plugin::{CairoPlugin, CairoPluginInstance};
-// use scarb::core::{PackageId, PackageName, SourceId};
 use super::attribute_macros::{
-    DojoContract, DojoEvent, DojoInterface, DojoModel, DOJO_CONTRACT_ATTR, DOJO_EVENT_ATTR,
-    DOJO_INTERFACE_ATTR, DOJO_MODEL_ATTR,
+    DojoContract, DojoEvent, DojoModel, DOJO_CONTRACT_ATTR, DOJO_EVENT_ATTR,
+    DOJO_MODEL_ATTR,
 };
 use super::derive_macros::{dojo_derive_all, DOJO_INTROSPECT_DERIVE, DOJO_PACKED_DERIVE};
-use super::inline_macros::{
-    DeleteMacro, EmitMacro, GetMacro, GetModelsTestClassHashes, SelectorFromTagMacro, SetMacro,
-    SpawnTestWorld,
-};
+use super::inline_macros::SelectorFromTagMacro;
 
 #[cfg(test)]
 #[path = "plugin_test.rs"]

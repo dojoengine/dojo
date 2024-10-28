@@ -32,7 +32,7 @@ use katana_rpc_types::error::starknet::StarknetApiError;
 use katana_rpc_types::FeeEstimate;
 use katana_tasks::{BlockingTaskPool, TokioTaskSpawner};
 use starknet::core::types::{
-    ContractClass, EventsPage, TransactionExecutionStatus, TransactionStatus,
+    ContractClass, EventsPage, PriceUnit, TransactionExecutionStatus, TransactionStatus,
 };
 
 use crate::utils;
@@ -94,7 +94,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         &self,
         transactions: Vec<ExecutableTxWithHash>,
         block_id: BlockIdOrTag,
-        flags: katana_executor::SimulationFlag,
+        flags: katana_executor::ExecutionFlags,
     ) -> Result<Vec<FeeEstimate>, StarknetApiError> {
         // get the state and block env at the specified block for execution
         let state = self.state(&block_id)?;
@@ -111,9 +111,12 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
                     gas_price: fee.gas_price.into(),
                     gas_consumed: fee.gas_consumed.into(),
                     overall_fee: fee.overall_fee.into(),
-                    unit: fee.unit,
                     data_gas_price: Default::default(),
                     data_gas_consumed: Default::default(),
+                    unit: match fee.unit {
+                        katana_primitives::fee::PriceUnit::Wei => PriceUnit::Wei,
+                        katana_primitives::fee::PriceUnit::Fri => PriceUnit::Fri,
+                    },
                 }),
 
                 Err(err) => {

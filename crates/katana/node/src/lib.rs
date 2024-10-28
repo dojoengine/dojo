@@ -25,13 +25,12 @@ use katana_core::service::block_producer::BlockProducer;
 use katana_core::service::messaging::MessagingConfig;
 use katana_db::mdbx::DbEnv;
 use katana_executor::implementation::blockifier::BlockifierFactory;
-use katana_executor::{ExecutorFactory, SimulationFlag};
+use katana_executor::{ExecutionFlags, ExecutorFactory};
 use katana_pipeline::{stage, Pipeline};
 use katana_pool::ordering::FiFo;
 use katana_pool::validation::stateful::TxValidator;
 use katana_pool::TxPool;
 use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
-use katana_provider::providers::in_memory::InMemoryProvider;
 use katana_rpc::dev::DevApi;
 use katana_rpc::metrics::RpcServerMetrics;
 use katana_rpc::saya::SayaApi;
@@ -170,13 +169,11 @@ pub async fn build(mut config: Config) -> Result<Node> {
         },
     };
 
-    let simulation_flags = SimulationFlag {
-        skip_validate: !config.dev.account_validation,
-        skip_fee_transfer: !config.dev.fee,
-        ..Default::default()
-    };
+    let execution_flags = ExecutionFlags::new()
+        .with_account_validation(config.dev.account_validation)
+        .with_fee(config.dev.fee);
 
-    let executor_factory = Arc::new(BlockifierFactory::new(cfg_env, simulation_flags));
+    let executor_factory = Arc::new(BlockifierFactory::new(cfg_env, execution_flags));
 
     // --- build backend
 
@@ -187,7 +184,8 @@ pub async fn build(mut config: Config) -> Result<Node> {
         let db = katana_db::init_db(db_path)?;
         (Blockchain::new_with_db(db.clone(), &config.chain)?, Some(db))
     } else {
-        (Blockchain::new_with_chain(InMemoryProvider::new(), &config.chain)?, None)
+        let db = katana_db::init_ephemeral_db()?;
+        (Blockchain::new_with_db(db.clone(), &config.chain)?, Some(db))
     };
 
     let block_context_generator = BlockContextGenerator::default().into();

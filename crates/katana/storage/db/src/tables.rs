@@ -288,11 +288,10 @@ mod tests {
     use katana_primitives::block::{BlockHash, BlockNumber, FinalityStatus, Header};
     use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash};
     use katana_primitives::contract::{ContractAddress, GenericContractInfo};
-    use katana_primitives::fee::TxFeeInfo;
+    use katana_primitives::fee::{PriceUnit, TxFeeInfo};
     use katana_primitives::receipt::{InvokeTxReceipt, Receipt};
     use katana_primitives::trace::TxExecInfo;
     use katana_primitives::transaction::{InvokeTx, Tx, TxHash, TxNumber};
-    use starknet::core::types::PriceUnit;
     use starknet::macros::felt;
 
     use crate::codecs::{Compress, Decode, Decompress, Encode};
