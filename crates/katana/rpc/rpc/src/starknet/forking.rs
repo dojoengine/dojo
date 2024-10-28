@@ -242,9 +242,7 @@ impl From<Error> for StarknetApiError {
     fn from(value: Error) -> Self {
         match value {
             Error::Provider(provider_error) => provider_error.into(),
-            Error::BlockOutOfRange => {
-                StarknetApiError::UnexpectedError { reason: value.to_string() }
-            }
+            Error::BlockOutOfRange => StarknetApiError::BlockNotFound,
         }
     }
 }
