@@ -119,7 +119,7 @@ impl TxReceipt {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
-pub struct TxReceiptWithBlockInfo(starknet::core::types::TransactionReceiptWithBlockInfo);
+pub struct TxReceiptWithBlockInfo(pub starknet::core::types::TransactionReceiptWithBlockInfo);
 
 impl From<starknet::core::types::TransactionReceiptWithBlockInfo> for TxReceiptWithBlockInfo {
     fn from(value: starknet::core::types::TransactionReceiptWithBlockInfo) -> Self {
