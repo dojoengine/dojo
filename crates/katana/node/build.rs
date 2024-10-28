@@ -12,7 +12,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Emit the instructions
     Emitter::default().add_instructions(&build)?.add_instructions(&gitcl)?.emit_and_set()?;
 
-    let sha = dbg!(env::var("VERGEN_GIT_SHA"))?;
+    let sha = env::var("VERGEN_GIT_SHA")?;
     let is_dirty = env::var("VERGEN_GIT_DIRTY")? == "true";
 
     // > git describe --always --tags
