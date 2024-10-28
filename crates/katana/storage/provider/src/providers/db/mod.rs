@@ -1,4 +1,5 @@
 pub mod state;
+pub mod trie;
 
 use std::collections::BTreeMap;
 use std::fmt::Debug;

@@ -1,4 +1,5 @@
-use starknet::core::crypto::compute_hash_on_elements;
+use starknet::core::utils::cairo_short_string_to_felt;
+use starknet::macros::short_string;
 
 use crate::contract::ContractAddress;
 use crate::da::L1DataAvailabilityMode;
@@ -8,6 +9,11 @@ use crate::Felt;
 
 pub type BlockIdOrTag = starknet::core::types::BlockId;
 pub type BlockTag = starknet::core::types::BlockTag;
+
+/// Block number type.
+pub type BlockNumber = u64;
+/// Block hash type.
+pub type BlockHash = Felt;
 
 #[derive(Debug, Copy, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -24,11 +30,6 @@ impl std::fmt::Display for BlockHashOrNumber {
         }
     }
 }
-
-/// Block number type.
-pub type BlockNumber = u64;
-/// Block hash type.
-pub type BlockHash = Felt;
 
 /// Finality status of a canonical block.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -73,6 +74,8 @@ impl GasPrices {
     }
 }
 
+// uncommited header ->  header (what is stored in the database)
+
 /// Represents a block header.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
@@ -85,14 +88,115 @@ pub struct Header {
     pub receipts_commitment: Felt,
     pub events_commitment: Felt,
     pub state_root: Felt,
-    pub timestamp: u64,
     pub transaction_count: u32,
     pub events_count: u32,
+    pub state_diff_length: u32,
+    pub timestamp: u64,
     pub sequencer_address: ContractAddress,
     pub l1_gas_prices: GasPrices,
     pub l1_data_gas_prices: GasPrices,
     pub l1_da_mode: L1DataAvailabilityMode,
     pub protocol_version: ProtocolVersion,
+}
+
+impl Header {
+    /// Computes the block hash.
+    ///
+    /// A block hash is defined as the Poseidon hash of the header’s fields, as follows:
+    ///
+    /// h(𝐵) = h(
+    ///     "STARKNET_BLOCK_HASH0",
+    ///     block_number,
+    ///     global_state_root,
+    ///     sequencer_address,
+    ///     block_timestamp,
+    ///     transaction_count || event_count || state_diff_length || l1_da_mode,
+    ///     state_diff_commitment,
+    ///     transactions_commitment
+    ///     events_commitment,
+    ///     receipts_commitment
+    ///     l1_gas_price_in_wei,
+    ///     l1_gas_price_in_fri,
+    ///     l1_data_gas_price_in_wei,
+    ///     l1_data_gas_price_in_fri
+    ///     protocol_version,
+    ///     0,
+    ///     parent_block_hash
+    /// )
+    ///
+    /// Based on StarkWare's [Sequencer implementation].
+    ///
+    /// [sequencer implementation]: https://github.com/starkware-libs/sequencer/blob/bb361ec67396660d5468fd088171913e11482708/crates/starknet_api/src/block_hash/block_hash_calculator.rs#l62-l93
+    pub fn compute_hash(&self) -> Felt {
+        use starknet_types_core::hash::{Poseidon, StarkHash};
+
+        let concant = Self::concat_counts(
+            self.transaction_count,
+            self.events_count,
+            self.state_diff_length,
+            self.l1_da_mode,
+        );
+
+        Poseidon::hash_array(&[
+            short_string!("STARKNET_BLOCK_HASH0"),
+            self.number.into(),
+            self.state_root,
+            self.sequencer_address.into(),
+            self.timestamp.into(),
+            concant,
+            self.state_diff_commitment,
+            self.transactions_commitment,
+            self.events_commitment,
+            self.receipts_commitment,
+            self.l1_gas_prices.eth.into(),
+            self.l1_gas_prices.strk.into(),
+            self.l1_data_gas_prices.eth.into(),
+            self.l1_data_gas_prices.strk.into(),
+            cairo_short_string_to_felt(&self.protocol_version.to_string()).unwrap(),
+            Felt::ZERO,
+            self.parent_hash,
+        ])
+    }
+
+    // Concantenate the transaction_count, event_count and state_diff_length, and l1_da_mode into a
+    // single felt.
+    //
+    // A single felt:
+    //
+    // +-------------------+----------------+----------------------+--------------+------------+
+    // | transaction_count | event_count    | state_diff_length    | L1 DA mode   | padding    |
+    // | (64 bits)         | (64 bits)      | (64 bits)            | (1 bit)      | (63 bit)   |
+    // +-------------------+----------------+----------------------+--------------+------------+
+    //
+    // where, L1 DA mode is 0 for calldata, and 1 for blob.
+    //
+    // Based on https://github.com/starkware-libs/sequencer/blob/bb361ec67396660d5468fd088171913e11482708/crates/starknet_api/src/block_hash/block_hash_calculator.rs#L135-L164
+    fn concat_counts(
+        transaction_count: u32,
+        event_count: u32,
+        state_diff_length: u32,
+        l1_data_availability_mode: L1DataAvailabilityMode,
+    ) -> Felt {
+        fn to_64_bits(num: u32) -> [u8; 8] {
+            (num as u64).to_be_bytes()
+        }
+
+        let l1_data_availability_byte: u8 = match l1_data_availability_mode {
+            L1DataAvailabilityMode::Calldata => 0,
+            L1DataAvailabilityMode::Blob => 0b_1000_0000,
+        };
+
+        let concat_bytes = [
+            to_64_bits(transaction_count).as_slice(),
+            to_64_bits(event_count).as_slice(),
+            to_64_bits(state_diff_length).as_slice(),
+            &[l1_data_availability_byte],
+            &[0_u8; 7], // zero padding
+        ]
+        .concat();
+
+        Felt::from_bytes_be_slice(concat_bytes.as_slice())
+    }
 }
 
 impl Default for Header {
@@ -101,6 +205,7 @@ impl Default for Header {
             timestamp: 0,
             events_count: 0,
             transaction_count: 0,
+            state_diff_length: 0,
             state_root: Felt::ZERO,
             events_commitment: Felt::ZERO,
             number: BlockNumber::default(),
@@ -114,23 +219,6 @@ impl Default for Header {
             l1_da_mode: L1DataAvailabilityMode::Calldata,
             protocol_version: ProtocolVersion::default(),
         }
-    }
-}
-
-impl Header {
-    /// Computes the hash of the header.
-    pub fn compute_hash(&self) -> Felt {
-        compute_hash_on_elements(&vec![
-            self.number.into(),            // block number
-            Felt::ZERO,                    // state root
-            self.sequencer_address.into(), // sequencer address
-            self.timestamp.into(),         // block timestamp
-            Felt::ZERO,                    // transaction commitment
-            Felt::ZERO,                    // event commitment
-            Felt::ZERO,                    // protocol version
-            Felt::ZERO,                    // extra data
-            self.parent_hash,              // parent hash
-        ])
     }
 }
 
@@ -227,3 +315,24 @@ pub struct ExecutableBlock {
     pub header: PartialHeader,
     pub body: Vec<ExecutableTxWithHash>,
 }
+
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
+//     use crate::felt;
+
+//     #[test]
+//     fn test_concat_counts() {
+//         let expected = felt!("0x6400000000000000c8000000000000012c0000000000000000");
+//         let actual = Header::concat_counts(100, 200, 300, L1DataAvailabilityMode::Calldata);
+//         assert_eq!(actual, expected);
+
+//         let expected = felt!("0x1000000000000000200000000000000038000000000000000");
+//         let actual = Header::concat_counts(1, 2, 3, L1DataAvailabilityMode::Blob);
+//         assert_eq!(actual, expected);
+
+//         let expected = felt!("0xffffffff000000000000000000000000000000000000000000000000");
+//         let actual = Header::concat_counts(0xFFFFFFFF, 0, 0, L1DataAvailabilityMode::Calldata);
+//         assert_eq!(actual, expected);
+//     }
+// }

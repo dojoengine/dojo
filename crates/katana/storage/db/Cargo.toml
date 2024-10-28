@@ -8,6 +8,7 @@ version.workspace = true
 
 [dependencies]
 katana-primitives = { workspace = true, features = [ "arbitrary" ] }
+katana-trie.workspace = true
 
 anyhow.workspace = true
 dojo-metrics.workspace = true
@@ -23,6 +24,7 @@ tracing.workspace = true
 
 # codecs
 postcard = { workspace = true, optional = true }
+smallvec = "1.13.2"
 
 [dependencies.libmdbx]
 git = "https://github.com/paradigmxyz/reth.git"
