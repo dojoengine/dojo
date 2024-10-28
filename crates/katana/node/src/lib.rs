@@ -2,6 +2,7 @@
 
 pub mod config;
 pub mod exit;
+pub mod version;
 
 use std::future::IntoFuture;
 use std::net::SocketAddr;
