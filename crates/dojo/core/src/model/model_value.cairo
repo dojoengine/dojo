@@ -1,9 +1,6 @@
 use dojo::{
-    meta::{Layout}, model::{ModelDefinition, ModelIndex, members::{MemberStore},},
-    world::{IWorldDispatcher, IWorldDispatcherTrait}, utils::entity_id_from_key,
+    meta::{Layout}, model::{ModelDefinition},
 };
-
-use super::storage::{ModelValueStorage, MemberModelStorage, ModelValueStorageTest};
 
 pub trait ModelValueKey<V, K> {}
 
@@ -77,13 +74,13 @@ pub trait ModelValueTest<S, V> {
 /// Implementation of the `ModelValueTest` trait for testing purposes, bypassing permission checks.
 #[cfg(target: "test")]
 pub impl ModelValueTestImpl<
-    S, V, +ModelValueStorageTest<S, V>, +ModelValue<V>
+    S, V, +super::storage::ModelValueStorageTest<S, V>, +ModelValue<V>
 > of ModelValueTest<S, V> {
     fn update_test(ref self: S, entity_id: felt252, value: @V) {
-        ModelValueStorageTest::<S, V>::write_model_value_test(ref self, entity_id, value)
+        super::storage::ModelValueStorageTest::<S, V>::write_model_value_test(ref self, entity_id, value)
     }
 
     fn delete_test(ref self: S, entity_id: felt252) {
-        ModelValueStorageTest::<S, V>::erase_model_value_test(ref self, entity_id)
+        super::storage::ModelValueStorageTest::<S, V>::erase_model_value_test(ref self, entity_id)
     }
 }

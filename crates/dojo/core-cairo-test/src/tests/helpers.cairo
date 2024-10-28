@@ -1,9 +1,9 @@
 use starknet::ContractAddress;
 
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, IWorldTestDispatcher, IWorldTestDispatcherTrait};
-use dojo::model::Model;
+use dojo::model::{Model, ModelStorage};
 
-use crate::world::{deploy_with_world_address, spawn_test_world, NamespaceDef, TestResource};
+use crate::world::{deploy_with_world_address, spawn_test_world, NamespaceDef, TestResource, ContractDefTrait};
 
 pub const DOJO_NSH: felt252 = 0x309e09669bc1fdc1dd6563a7ef862aa6227c97d099d08cc7b81bad58a7443fa;
 
@@ -74,19 +74,21 @@ pub mod foo_invalid_name {
     }
 }
 
-#[dojo::interface]
-pub trait IFooSetter {
-    fn set_foo(ref world: IWorldDispatcher, a: felt252, b: u128);
+#[starknet::interface]
+pub trait IFooSetter<T> {
+    fn set_foo(ref self: T, a: felt252, b: u128);
 }
 
 #[dojo::contract]
 pub mod foo_setter {
     use super::{Foo, IFooSetter};
+    use dojo::model::ModelStorage;
 
     #[abi(embed_v0)]
     impl IFooSetterImpl of IFooSetter<ContractState> {
-        fn set_foo(ref world: IWorldDispatcher, a: felt252, b: u128) {
-            // set!(world, (Foo { caller: starknet::get_caller_address(), a, b }));
+        fn set_foo(ref self: ContractState, a: felt252, b: u128) {
+            let mut world = self.world("dojo");
+            world.write_model(@Foo { caller: starknet::get_caller_address(), a, b });
         }
     }
 }
@@ -96,10 +98,8 @@ pub mod test_contract {}
 
 #[dojo::contract]
 pub mod test_contract_with_dojo_init_args {
-    use dojo::world::IWorldDispatcherTrait;
-
-    fn dojo_init(ref world: IWorldDispatcher, _arg1: felt252) {
-        let _a = world.uuid();
+    fn dojo_init(ref self: ContractState, arg1: felt252) {
+        let _a = arg1;
     }
 }
 
@@ -240,7 +240,7 @@ pub fn deploy_world_and_bar() -> (IWorldDispatcher, IbarDispatcher) {
         namespace: "dojo",
         resources: [
             TestResource::Model(foo::TEST_CLASS_HASH.try_into().unwrap()),
-            TestResource::Contract(bar::TEST_CLASS_HASH.try_into().unwrap()),
+            TestResource::Contract(ContractDefTrait::new(bar::TEST_CLASS_HASH, "bar")),
         ].span(),
     };
 

@@ -1,6 +1,5 @@
 use dojo::meta::Layout;
 use dojo::meta::introspect::Ty;
-use dojo::world::IWorldDispatcher;
 
 #[derive(Drop, Serde, Debug, PartialEq)]
 pub struct EventDefinition {

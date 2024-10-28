@@ -1,7 +1,7 @@
-use dojo::model::{Model, ModelValue, ModelStore};
-use dojo::world::{IWorldDispatcherTrait};
+use dojo::model::{Model, ModelValue, ModelStorage, ModelValueStorage, ModelMemberStorage};
+use dojo::world::{IWorldDispatcherTrait, WorldStorageTrait, WorldStorage};
 
-use dojo::tests::helpers::{deploy_world};
+use crate::tests::helpers::{deploy_world};
 
 #[derive(Copy, Drop, Serde, Debug)]
 #[dojo::model]
@@ -39,14 +39,8 @@ fn test_model_definition() {
 }
 
 #[test]
-fn test_id() {
-    let mvalues = FooModelValue { __id: 1, v1: 3, v2: 4 };
-    assert!(mvalues.id() == 1);
-}
-
-#[test]
 fn test_values() {
-    let mvalues = FooModelValue { __id: 1, v1: 3, v2: 4 };
+    let mvalues = FooValue { v1: 3, v2: 4 };
     let expected_values = [3, 4].span();
 
     let values = mvalues.values();
@@ -57,165 +51,157 @@ fn test_values() {
 fn test_from_values() {
     let mut values = [3, 4].span();
 
-    let model_entity: Option<FooEntity> = Entity::from_values(1, ref values);
-    assert!(model_entity.is_some());
-    let model_entity = model_entity.unwrap();
-    assert!(model_entity.__id == 1 && model_entity.v1 == 3 && model_entity.v2 == 4);
+    let model_values: Option<FooValue> = ModelValue::<FooValue>::from_values(1, ref values);
+    assert!(model_values.is_some());
+    let model_values = model_values.unwrap();
+    assert!(model_values.v1 == 3 && model_values.v2 == 4);
 }
 
 #[test]
 fn test_from_values_bad_data() {
     let mut values = [3].span();
-    let res: Option<FooEntity> = Entity::from_values(1, ref values);
+    let res: Option<FooValue> = ModelValue::<FooValue>::from_values(1, ref values);
     assert!(res.is_none());
 }
 
 #[test]
-fn test_get_and_update_entity() {
+fn test_get_and_update_model_value() {
     let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model("dojo", foo::TEST_CLASS_HASH.try_into().unwrap());
+
+    let mut world = WorldStorageTrait::new(world, "dojo");
 
     let foo = Foo { k1: 1, k2: 2, v1: 3, v2: 4 };
-    world.set(@foo);
+    world.write_model(@foo);
 
     let entity_id = foo.entity_id();
-    let mut entity: FooEntity = world.get_entity(foo.key());
-    assert_eq!(entity.__id, entity_id);
-    assert_eq!(entity.v1, entity.v1);
-    assert_eq!(entity.v2, entity.v2);
+    let mut model_value: FooValue = world.read_model_value(foo.key());
+    assert_eq!(model_value.v1, foo.v1);
+    assert_eq!(model_value.v2, foo.v2);
 
-    entity.v1 = 12;
-    entity.v2 = 18;
+    model_value.v1 = 12;
+    model_value.v2 = 18;
 
-    world.update(@entity);
+    world.write_model_value_from_id(entity_id, @model_value);
 
-    let read_values: FooEntity = world.get_entity_from_id(entity_id);
-    assert!(read_values.v1 == entity.v1 && read_values.v2 == entity.v2);
+    let read_values: FooValue = world.read_model_value(foo.key());
+    assert!(read_values.v1 == model_value.v1 && read_values.v2 == model_value.v2);
 }
 
 #[test]
-fn test_delete_entity() {
+fn test_delete_model_value() {
     let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model("dojo", foo::TEST_CLASS_HASH.try_into().unwrap());
+
+    let mut world = WorldStorageTrait::new(world, "dojo");
 
     let foo = Foo { k1: 1, k2: 2, v1: 3, v2: 4 };
-    world.set(@foo);
+    world.write_model(@foo);
 
     let entity_id = foo.entity_id();
-    let mut entity: FooEntity = world.get_entity_from_id(entity_id);
-    EntityStore::delete_entity(world, @entity);
+    ModelStorage::<WorldStorage, Foo>::erase_model(ref world, @foo);
 
-    let read_values: FooEntity = world.get_entity_from_id(entity_id);
+    let read_values: FooValue = world.read_model_value_from_id(entity_id);
     assert!(read_values.v1 == 0 && read_values.v2 == 0);
-}
-
-#[test]
-fn test_get_and_set_member_from_entity() {
-    let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
-
-    let foo = Foo { k1: 1, k2: 2, v1: 3, v2: 4 };
-    world.set(@foo);
-
-    let v1: u128 = EntityStore::<
-        FooEntity
-    >::get_member_from_id(@world, foo.entity_id(), selector!("v1"));
-
-    assert_eq!(v1, 3);
-
-    let entity: FooEntity = world.get_entity_from_id(foo.entity_id());
-    EntityStore::<FooEntity>::update_member_from_id(world, entity.id(), selector!("v1"), 42);
-
-    let entity: FooEntity = world.get_entity_from_id(foo.entity_id());
-    assert_eq!(entity.v1, 42);
 }
 
 #[test]
 fn test_get_and_set_field_name() {
     let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model("dojo", foo::TEST_CLASS_HASH.try_into().unwrap());
+
+    let mut world = WorldStorageTrait::new(world, "dojo");
 
     let foo = Foo { k1: 1, k2: 2, v1: 3, v2: 4 };
-    world.set(@foo);
+    world.write_model(@foo);
 
-    let v1 = FooMembersStore::get_v1_from_id(@world, foo.entity_id());
+    // Inference fails here, we need something better without too generics
+    // which also fails.
+    let v1 = world.read_member(foo.key(), selector!("v1"));
     assert!(foo.v1 == v1);
 
-    let _entity: FooEntity = world.get_entity_from_id(foo.entity_id());
+    world.write_member_from_id(foo.entity_id(), selector!("v1"), 42);
 
-    FooMembersStore::update_v1_from_id(world, foo.entity_id(), 42);
-
-    let v1 = FooMembersStore::get_v1_from_id(@world, foo.entity_id());
+    let v1 = world.read_member_from_id(foo.key(), selector!("v1"));
     assert!(v1 == 42);
 }
 
 #[test]
 fn test_get_and_set_from_model() {
     let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model("dojo", foo::TEST_CLASS_HASH.try_into().unwrap());
+
+    let mut world = WorldStorageTrait::new(world, "dojo");
 
     let foo = Foo { k1: 1, k2: 2, v1: 3, v2: 4 };
-    world.set(@foo);
+    world.write_model(@foo);
 
-    let read_entity: Foo = world.get((foo.k1, foo.k2));
+    let foo2: Foo = world.read_model((foo.k1, foo.k2));
 
     assert!(
-        foo.k1 == read_entity.k1
-            && foo.k2 == read_entity.k2
-            && foo.v1 == read_entity.v1
-            && foo.v2 == read_entity.v2
+        foo.k1 == foo2.k1
+            && foo.k2 == foo2.k2
+            && foo.v1 == foo2.v1
+            && foo.v2 == foo2.v2
     );
 }
 
 #[test]
 fn test_delete_from_model() {
     let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model("dojo", foo::TEST_CLASS_HASH.try_into().unwrap());
+
+    let mut world = WorldStorageTrait::new(world, "dojo");
 
     let foo = Foo { k1: 1, k2: 2, v1: 3, v2: 4 };
-    world.set(@foo);
-    world.delete(@foo);
+    world.write_model(@foo);
+    world.erase_model(@foo);
 
-    let read_entity: Foo = world.get((foo.k1, foo.k2));
+    let foo2: Foo = world.read_model((foo.k1, foo.k2));
     assert!(
-        read_entity.k1 == foo.k1
-            && read_entity.k2 == foo.k2
-            && read_entity.v1 == 0
-            && read_entity.v2 == 0
+        foo2.k1 == foo.k1
+            && foo2.k2 == foo.k2
+            && foo2.v1 == 0
+            && foo2.v2 == 0
     );
 }
 
 #[test]
 fn test_get_and_set_member_from_model() {
     let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model("dojo", foo::TEST_CLASS_HASH.try_into().unwrap());
+
+    let mut world = WorldStorageTrait::new(world, "dojo");
 
     let foo = Foo { k1: 1, k2: 2, v1: 3, v2: 4 };
-    world.set(@foo);
+    world.write_model(@foo);
+
     let key: (u8, felt252) = foo.key();
-    let v1: u128 = ModelStore::<Foo>::get_member(@world, key, selector!("v1"));
+    let v1: u128 = world.read_member(key, selector!("v1"));
 
     assert!(v1 == 3);
 
-    ModelStore::<Foo>::update_member(world, key, selector!("v1"), 42);
-    let foo: Foo = world.get((foo.k1, foo.k2));
+    world.write_member(key, selector!("v1"), 42);
+    let foo: Foo = world.read_model(key);
     assert!(foo.v1 == 42);
 }
 
 #[test]
 fn test_get_and_set_field_name_from_model() {
     let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model("dojo", foo::TEST_CLASS_HASH.try_into().unwrap());
+
+    let mut world = WorldStorageTrait::new(world, "dojo");
 
     let foo = Foo { k1: 1, k2: 2, v1: 3, v2: 4 };
-    world.set(@foo);
+    world.write_model(@foo);
 
-    let v1 = FooMembersStore::get_v1(@world, (foo.k1, foo.k2));
+    // Currently we don't have automatic field id computation. To be done.
+    // @remy/@ben.
+
+    let v1 = world.read_member((foo.k1, foo.k2), selector!("v1"));
     assert!(v1 == 3);
 
-    FooMembersStore::update_v1(world, (foo.k1, foo.k2), 42);
-
-    let v1 = FooMembersStore::get_v1(@world, (foo.k1, foo.k2));
+    world.write_member((foo.k1, foo.k2), selector!("v1"), 42);
     assert!(v1 == 42);
 }
-

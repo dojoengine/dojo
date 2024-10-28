@@ -54,22 +54,6 @@ pub impl $type_name$DojoEventImpl of dojo::event::Event<$type_name$> {
     }
 }
 
-#[cfg(target: "test")]
-pub impl $type_name$EventImplTest of dojo::event::EventTest<$type_name$> {
-    fn emit_test(self: @$type_name$, world: dojo::world::IWorldDispatcher) {
-        let world_test = dojo::world::IWorldTestDispatcher { contract_address: 
-             world.contract_address };
-
-        dojo::world::IWorldTestDispatcherTrait::emit_event_test(
-            world_test,
-            dojo::event::Event::<$type_name$>::selector('todo'),
-            dojo::event::Event::<$type_name$>::keys(self),
-            dojo::event::Event::<$type_name$>::values(self),
-            dojo::event::Event::<$type_name$>::historical()
-        );
-    }
-}
-
 #[starknet::contract]
 pub mod $contract_name$ {
     use super::$type_name$;

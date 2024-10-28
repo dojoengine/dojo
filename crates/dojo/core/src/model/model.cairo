@@ -1,10 +1,9 @@
 use dojo::{
     meta::{Layout, introspect::Ty, layout::compute_packed_size},
-    utils::{entity_id_from_key, serialize_inline, entity_id_from_keys}
+    utils::entity_id_from_keys
 };
 
-use super::{ModelDefinition, ModelDef, members::MemberStore};
-use super::storage::{ModelStorage, MemberModelStorage, ModelStorageTest};
+use super::{ModelDefinition, ModelDef};
 
 /// Trait `KeyParser` defines a trait for parsing keys from a given model.
 pub trait KeyParser<M, K> {
@@ -136,12 +135,12 @@ pub trait ModelTest<S, M> {
 
 /// The `ModelTestImpl` implementation for testing purposes.
 #[cfg(target: "test")]
-pub impl ModelTestImpl<S, M, +ModelStorageTest<S, M>, +Model<M>> of ModelTest<S, M> {
+pub impl ModelTestImpl<S, M, +dojo::model::ModelStorageTest<S, M>, +Model<M>> of ModelTest<S, M> {
     fn set_model_test(ref self: S, model: @M) {
-        ModelStorageTest::<S, M>::write_model_test(ref self, model);
+        dojo::model::ModelStorageTest::<S, M>::write_model_test(ref self, model);
     }
 
     fn delete_model_test(ref self: S, model: @M) {
-        ModelStorageTest::<S, M>::erase_model_test(ref self, model);
+        dojo::model::ModelStorageTest::<S, M>::erase_model_test(ref self, model);
     }
 }

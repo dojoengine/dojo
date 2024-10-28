@@ -22,7 +22,7 @@ pub mod attacker_contract {
 
     #[abi(embed_v0)]
     impl WorldProviderImpl of IWorldProvider<ContractState> {
-        fn world(self: @ContractState) -> IWorldDispatcher {
+        fn world_dispatcher(self: @ContractState) -> IWorldDispatcher {
             self.world_dispatcher.read()
         }
     }

@@ -4,21 +4,21 @@ use core::traits::TryInto;
 use starknet::ClassHash;
 
 use dojo::contract::components::upgradeable::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
-use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
+use dojo::world::IWorldDispatcherTrait;
 
 use crate::world::spawn_test_world;
 use crate::tests::helpers::deploy_world;
 
 #[starknet::contract]
 pub mod contract_invalid_upgrade {
-    use dojo::contract::IContract;
-
     #[storage]
     struct Storage {}
 
-    #[abi(embed_v0)]
-    pub impl ContractImpl of IContract<ContractState> {
-        fn dojo_name(self: @ContractState) -> ByteArray {
+    #[abi(per_item)]
+    #[generate_trait]
+    pub impl InvalidImpl of InvalidContractTrait {
+        #[external(v0)]
+        fn no_dojo_name(self: @ContractState) -> ByteArray {
             "test_contract"
         }
     }
@@ -53,7 +53,7 @@ pub mod test_contract_upgrade {
 
     #[abi(embed_v0)]
     pub impl WorldProviderImpl of IWorldProvider<ContractState> {
-        fn world(self: @ContractState) -> IWorldDispatcher {
+        fn world_dispatcher(self: @ContractState) -> IWorldDispatcher {
             IWorldDispatcher { contract_address: starknet::contract_address_const::<'world'>() }
         }
     }
@@ -84,7 +84,7 @@ fn test_upgrade_from_world() {
 #[test]
 #[available_gas(7000000)]
 #[should_panic(
-    expected: ('class_hash not world provider', 'ENTRYPOINT_FAILED', 'ENTRYPOINT_FAILED')
+    expected: ('ENTRYPOINT_NOT_FOUND', 'ENTRYPOINT_FAILED')
 )]
 fn test_upgrade_from_world_not_world_provider() {
     let world = deploy_world();

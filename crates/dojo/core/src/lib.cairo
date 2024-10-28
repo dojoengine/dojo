@@ -33,9 +33,6 @@ pub mod model {
     pub mod definition;
     pub use definition::{ModelIndex, ModelDefinition, ModelDef};
 
-    pub mod members;
-    pub use members::{MemberStore};
-
     pub mod model;
     pub use model::{Model, KeyParser};
 
@@ -50,7 +47,7 @@ pub mod model {
 
     pub mod storage;
     pub use storage::{
-        ModelStorage, MemberModelStorage, ModelStorageTest, ModelValueStorage, ModelValueStorageTest
+        ModelStorage, ModelMemberStorage, ModelStorageTest, ModelValueStorage, ModelValueStorageTest
     };
 
     #[cfg(target: "test")]

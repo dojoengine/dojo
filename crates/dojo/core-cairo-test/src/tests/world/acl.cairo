@@ -1,4 +1,5 @@
-use dojo::model::Model;
+use dojo::model::{Model, ModelStorage};
+use dojo::event::EventStorage;
 use dojo::utils::bytearray_hash;
 use dojo::world::IWorldDispatcherTrait;
 
@@ -215,7 +216,9 @@ fn test_revoke_writer_fails_for_non_owner() {
 #[test]
 #[should_panic(
     expected: (
-        "Contract `dojo-foo_setter` does NOT have WRITER role on model (or its namespace) `Foo`",
+        "Contract `foo_setter` does NOT have WRITER role on model (or its namespace) `Foo`",
+        'ENTRYPOINT_FAILED',
+        'ENTRYPOINT_FAILED'
     )
 )]
 fn test_not_writer_with_known_contract() {
@@ -233,9 +236,8 @@ fn test_not_writer_with_known_contract() {
         .register_contract('salt1', "dojo", foo_setter::TEST_CLASS_HASH.try_into().unwrap());
 
     let d = IFooSetterDispatcher { contract_address };
+    d.set_foo(1, 2);
 
-    // TODO: set is not actually executed yet.
-    // d.set_foo(1, 2);
     core::panics::panic_with_byte_array(@"Contract `dojo-foo_setter` does NOT have WRITER role on model (or its namespace) `Foo`");
 }
 

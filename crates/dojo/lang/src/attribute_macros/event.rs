@@ -30,7 +30,7 @@ const EVENT_PATCH: &str = include_str!("./patches/event.patch.cairo");
 use super::DOJO_EVENT_ATTR;
 
 pub const PARAMETER_HISTORICAL: &str = "historical";
-pub const DEFAULT_HISTORICAL_VALUE: bool = true;
+pub const DEFAULT_HISTORICAL_VALUE: bool = false;
 
 #[derive(Debug)]
 struct EventParameters {
