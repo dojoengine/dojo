@@ -38,18 +38,18 @@ impl WorldRemote {
 
         // We only care about management events, not resource events (set, delete, emit).
         let keys = vec![vec![
-            world::WorldSpawned::selector(),
-            world::WorldUpgraded::selector(),
-            world::NamespaceRegistered::selector(),
-            world::ModelRegistered::selector(),
-            world::EventRegistered::selector(),
-            world::ContractRegistered::selector(),
-            world::ModelUpgraded::selector(),
-            world::EventUpgraded::selector(),
-            world::ContractUpgraded::selector(),
-            world::ContractInitialized::selector(),
-            world::WriterUpdated::selector(),
-            world::OwnerUpdated::selector(),
+            world::WorldSpawned::event_selector(),
+            world::WorldUpgraded::event_selector(),
+            world::NamespaceRegistered::event_selector(),
+            world::ModelRegistered::event_selector(),
+            world::EventRegistered::event_selector(),
+            world::ContractRegistered::event_selector(),
+            world::ModelUpgraded::event_selector(),
+            world::EventUpgraded::event_selector(),
+            world::ContractUpgraded::event_selector(),
+            world::ContractInitialized::event_selector(),
+            world::WriterUpdated::event_selector(),
+            world::OwnerUpdated::event_selector(),
         ]];
 
         let filter = EventFilter {

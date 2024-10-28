@@ -93,6 +93,14 @@ impl cainome::cairo_serde::CairoSerde for ContractInitialized {
         Ok(ContractInitialized { selector, init_calldata })
     }
 }
+impl ContractInitialized {
+    pub fn event_selector() -> starknet::core::types::Felt {
+        starknet::core::utils::get_selector_from_name("ContractInitialized").unwrap()
+    }
+    pub fn event_name() -> &'static str {
+        "ContractInitialized"
+    }
+}
 #[derive(Clone, serde::Serialize, serde::Deserialize, PartialEq, Debug)]
 pub struct ContractRegistered {
     pub name: cainome::cairo_serde::ByteArray,
@@ -141,6 +149,14 @@ impl cainome::cairo_serde::CairoSerde for ContractRegistered {
         Ok(ContractRegistered { name, namespace, address, class_hash, salt })
     }
 }
+impl ContractRegistered {
+    pub fn event_selector() -> starknet::core::types::Felt {
+        starknet::core::utils::get_selector_from_name("ContractRegistered").unwrap()
+    }
+    pub fn event_name() -> &'static str {
+        "ContractRegistered"
+    }
+}
 #[derive(Clone, serde::Serialize, serde::Deserialize, PartialEq, Debug)]
 pub struct ContractUpgraded {
     pub selector: starknet::core::types::Felt,
@@ -172,6 +188,14 @@ impl cainome::cairo_serde::CairoSerde for ContractUpgraded {
         let class_hash = cainome::cairo_serde::ClassHash::cairo_deserialize(__felts, __offset)?;
         __offset += cainome::cairo_serde::ClassHash::cairo_serialized_size(&class_hash);
         Ok(ContractUpgraded { selector, class_hash })
+    }
+}
+impl ContractUpgraded {
+    pub fn event_selector() -> starknet::core::types::Felt {
+        starknet::core::utils::get_selector_from_name("ContractUpgraded").unwrap()
+    }
+    pub fn event_name() -> &'static str {
+        "ContractUpgraded"
     }
 }
 #[derive(Clone, serde::Serialize, serde::Deserialize, PartialEq, Debug)]
@@ -225,6 +249,14 @@ impl cainome::cairo_serde::CairoSerde for EventEmitted {
         Ok(EventEmitted { event_selector, system_address, historical, keys, values })
     }
 }
+impl EventEmitted {
+    pub fn event_selector() -> starknet::core::types::Felt {
+        starknet::core::utils::get_selector_from_name("EventEmitted").unwrap()
+    }
+    pub fn event_name() -> &'static str {
+        "EventEmitted"
+    }
+}
 #[derive(Clone, serde::Serialize, serde::Deserialize, PartialEq, Debug)]
 pub struct EventRegistered {
     pub name: cainome::cairo_serde::ByteArray,
@@ -266,6 +298,14 @@ impl cainome::cairo_serde::CairoSerde for EventRegistered {
         let address = cainome::cairo_serde::ContractAddress::cairo_deserialize(__felts, __offset)?;
         __offset += cainome::cairo_serde::ContractAddress::cairo_serialized_size(&address);
         Ok(EventRegistered { name, namespace, class_hash, address })
+    }
+}
+impl EventRegistered {
+    pub fn event_selector() -> starknet::core::types::Felt {
+        starknet::core::utils::get_selector_from_name("EventRegistered").unwrap()
+    }
+    pub fn event_name() -> &'static str {
+        "EventRegistered"
     }
 }
 #[derive(Clone, serde::Serialize, serde::Deserialize, PartialEq, Debug)]
@@ -311,6 +351,14 @@ impl cainome::cairo_serde::CairoSerde for EventUpgraded {
             cainome::cairo_serde::ContractAddress::cairo_deserialize(__felts, __offset)?;
         __offset += cainome::cairo_serde::ContractAddress::cairo_serialized_size(&prev_address);
         Ok(EventUpgraded { selector, class_hash, address, prev_address })
+    }
+}
+impl EventUpgraded {
+    pub fn event_selector() -> starknet::core::types::Felt {
+        starknet::core::utils::get_selector_from_name("EventUpgraded").unwrap()
+    }
+    pub fn event_name() -> &'static str {
+        "EventUpgraded"
     }
 }
 #[derive(Clone, serde::Serialize, serde::Deserialize, PartialEq, Debug)]
@@ -379,6 +427,14 @@ impl cainome::cairo_serde::CairoSerde for MetadataUpdate {
         Ok(MetadataUpdate { resource, uri })
     }
 }
+impl MetadataUpdate {
+    pub fn event_selector() -> starknet::core::types::Felt {
+        starknet::core::utils::get_selector_from_name("MetadataUpdate").unwrap()
+    }
+    pub fn event_name() -> &'static str {
+        "MetadataUpdate"
+    }
+}
 #[derive(Clone, serde::Serialize, serde::Deserialize, PartialEq, Debug)]
 pub struct ModelRegistered {
     pub name: cainome::cairo_serde::ByteArray,
@@ -420,6 +476,14 @@ impl cainome::cairo_serde::CairoSerde for ModelRegistered {
         let address = cainome::cairo_serde::ContractAddress::cairo_deserialize(__felts, __offset)?;
         __offset += cainome::cairo_serde::ContractAddress::cairo_serialized_size(&address);
         Ok(ModelRegistered { name, namespace, class_hash, address })
+    }
+}
+impl ModelRegistered {
+    pub fn event_selector() -> starknet::core::types::Felt {
+        starknet::core::utils::get_selector_from_name("ModelRegistered").unwrap()
+    }
+    pub fn event_name() -> &'static str {
+        "ModelRegistered"
     }
 }
 #[derive(Clone, serde::Serialize, serde::Deserialize, PartialEq, Debug)]
@@ -467,6 +531,14 @@ impl cainome::cairo_serde::CairoSerde for ModelUpgraded {
         Ok(ModelUpgraded { selector, class_hash, address, prev_address })
     }
 }
+impl ModelUpgraded {
+    pub fn event_selector() -> starknet::core::types::Felt {
+        starknet::core::utils::get_selector_from_name("ModelUpgraded").unwrap()
+    }
+    pub fn event_name() -> &'static str {
+        "ModelUpgraded"
+    }
+}
 #[derive(Clone, serde::Serialize, serde::Deserialize, PartialEq, Debug)]
 pub struct NamespaceRegistered {
     pub namespace: cainome::cairo_serde::ByteArray,
@@ -498,6 +570,14 @@ impl cainome::cairo_serde::CairoSerde for NamespaceRegistered {
         let hash = starknet::core::types::Felt::cairo_deserialize(__felts, __offset)?;
         __offset += starknet::core::types::Felt::cairo_serialized_size(&hash);
         Ok(NamespaceRegistered { namespace, hash })
+    }
+}
+impl NamespaceRegistered {
+    pub fn event_selector() -> starknet::core::types::Felt {
+        starknet::core::utils::get_selector_from_name("NamespaceRegistered").unwrap()
+    }
+    pub fn event_name() -> &'static str {
+        "NamespaceRegistered"
     }
 }
 #[derive(Clone, serde::Serialize, serde::Deserialize, PartialEq, Debug)]
@@ -536,6 +616,14 @@ impl cainome::cairo_serde::CairoSerde for OwnerUpdated {
         let value = bool::cairo_deserialize(__felts, __offset)?;
         __offset += bool::cairo_serialized_size(&value);
         Ok(OwnerUpdated { resource, contract, value })
+    }
+}
+impl OwnerUpdated {
+    pub fn event_selector() -> starknet::core::types::Felt {
+        starknet::core::utils::get_selector_from_name("OwnerUpdated").unwrap()
+    }
+    pub fn event_name() -> &'static str {
+        "OwnerUpdated"
     }
 }
 #[derive(Clone, serde::Serialize, serde::Deserialize, PartialEq, Debug)]
@@ -604,6 +692,14 @@ impl cainome::cairo_serde::CairoSerde for StoreDelRecord {
         Ok(StoreDelRecord { table, entity_id })
     }
 }
+impl StoreDelRecord {
+    pub fn event_selector() -> starknet::core::types::Felt {
+        starknet::core::utils::get_selector_from_name("StoreDelRecord").unwrap()
+    }
+    pub fn event_name() -> &'static str {
+        "StoreDelRecord"
+    }
+}
 #[derive(Clone, serde::Serialize, serde::Deserialize, PartialEq, Debug)]
 pub struct StoreSetRecord {
     pub table: starknet::core::types::Felt,
@@ -645,6 +741,14 @@ impl cainome::cairo_serde::CairoSerde for StoreSetRecord {
         let values = Vec::<starknet::core::types::Felt>::cairo_deserialize(__felts, __offset)?;
         __offset += Vec::<starknet::core::types::Felt>::cairo_serialized_size(&values);
         Ok(StoreSetRecord { table, entity_id, keys, values })
+    }
+}
+impl StoreSetRecord {
+    pub fn event_selector() -> starknet::core::types::Felt {
+        starknet::core::utils::get_selector_from_name("StoreSetRecord").unwrap()
+    }
+    pub fn event_name() -> &'static str {
+        "StoreSetRecord"
     }
 }
 #[derive(Clone, serde::Serialize, serde::Deserialize, PartialEq, Debug)]
@@ -690,6 +794,14 @@ impl cainome::cairo_serde::CairoSerde for StoreUpdateMember {
         Ok(StoreUpdateMember { table, entity_id, member_selector, values })
     }
 }
+impl StoreUpdateMember {
+    pub fn event_selector() -> starknet::core::types::Felt {
+        starknet::core::utils::get_selector_from_name("StoreUpdateMember").unwrap()
+    }
+    pub fn event_name() -> &'static str {
+        "StoreUpdateMember"
+    }
+}
 #[derive(Clone, serde::Serialize, serde::Deserialize, PartialEq, Debug)]
 pub struct StoreUpdateRecord {
     pub table: starknet::core::types::Felt,
@@ -728,6 +840,14 @@ impl cainome::cairo_serde::CairoSerde for StoreUpdateRecord {
         Ok(StoreUpdateRecord { table, entity_id, values })
     }
 }
+impl StoreUpdateRecord {
+    pub fn event_selector() -> starknet::core::types::Felt {
+        starknet::core::utils::get_selector_from_name("StoreUpdateRecord").unwrap()
+    }
+    pub fn event_name() -> &'static str {
+        "StoreUpdateRecord"
+    }
+}
 #[derive(Clone, serde::Serialize, serde::Deserialize, PartialEq, Debug)]
 pub struct WorldSpawned {
     pub creator: cainome::cairo_serde::ContractAddress,
@@ -761,6 +881,14 @@ impl cainome::cairo_serde::CairoSerde for WorldSpawned {
         Ok(WorldSpawned { creator, class_hash })
     }
 }
+impl WorldSpawned {
+    pub fn event_selector() -> starknet::core::types::Felt {
+        starknet::core::utils::get_selector_from_name("WorldSpawned").unwrap()
+    }
+    pub fn event_name() -> &'static str {
+        "WorldSpawned"
+    }
+}
 #[derive(Clone, serde::Serialize, serde::Deserialize, PartialEq, Debug)]
 pub struct WorldUpgraded {
     pub class_hash: cainome::cairo_serde::ClassHash,
@@ -787,6 +915,14 @@ impl cainome::cairo_serde::CairoSerde for WorldUpgraded {
         let class_hash = cainome::cairo_serde::ClassHash::cairo_deserialize(__felts, __offset)?;
         __offset += cainome::cairo_serde::ClassHash::cairo_serialized_size(&class_hash);
         Ok(WorldUpgraded { class_hash })
+    }
+}
+impl WorldUpgraded {
+    pub fn event_selector() -> starknet::core::types::Felt {
+        starknet::core::utils::get_selector_from_name("WorldUpgraded").unwrap()
+    }
+    pub fn event_name() -> &'static str {
+        "WorldUpgraded"
     }
 }
 #[derive(Clone, serde::Serialize, serde::Deserialize, PartialEq, Debug)]
@@ -825,6 +961,14 @@ impl cainome::cairo_serde::CairoSerde for WriterUpdated {
         let value = bool::cairo_deserialize(__felts, __offset)?;
         __offset += bool::cairo_serialized_size(&value);
         Ok(WriterUpdated { resource, contract, value })
+    }
+}
+impl WriterUpdated {
+    pub fn event_selector() -> starknet::core::types::Felt {
+        starknet::core::utils::get_selector_from_name("WriterUpdated").unwrap()
+    }
+    pub fn event_name() -> &'static str {
+        "WriterUpdated"
     }
 }
 #[derive(Clone, serde::Serialize, serde::Deserialize, PartialEq, Debug)]
