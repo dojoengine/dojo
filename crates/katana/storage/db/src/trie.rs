@@ -72,6 +72,7 @@ where
         &self,
         prefix: &DatabaseKey<'_>,
     ) -> Result<Vec<(ByteVec, ByteVec)>, Self::DatabaseError> {
+        let _ = prefix;
         todo!()
     }
 
