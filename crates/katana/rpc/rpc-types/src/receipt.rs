@@ -121,6 +121,12 @@ impl TxReceipt {
 #[serde(transparent)]
 pub struct TxReceiptWithBlockInfo(starknet::core::types::TransactionReceiptWithBlockInfo);
 
+impl From<starknet::core::types::TransactionReceiptWithBlockInfo> for TxReceiptWithBlockInfo {
+    fn from(value: starknet::core::types::TransactionReceiptWithBlockInfo) -> Self {
+        Self(value)
+    }
+}
+
 impl TxReceiptWithBlockInfo {
     pub fn new(
         block: ReceiptBlock,

@@ -10,6 +10,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Result;
+use config::fork::ForkingConfig;
 use config::metrics::MetricsConfig;
 use config::rpc::{ApiKind, RpcConfig};
 use config::{Config, SequencingConfig};
@@ -35,6 +36,7 @@ use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
 use katana_rpc::dev::DevApi;
 use katana_rpc::metrics::RpcServerMetrics;
 use katana_rpc::saya::SayaApi;
+use katana_rpc::starknet::forking::ForkedClient;
 use katana_rpc::starknet::StarknetApi;
 use katana_rpc::torii::ToriiApi;
 use katana_rpc_api::dev::DevApiServer;
@@ -87,6 +89,7 @@ pub struct Node {
     pub metrics_config: Option<MetricsConfig>,
     pub sequencing_config: SequencingConfig,
     pub messaging_config: Option<MessagingConfig>,
+    pub forking_config: Option<ForkingConfig>,
 }
 
 impl Node {
@@ -139,7 +142,13 @@ impl Node {
             .name("Pipeline")
             .spawn(pipeline.into_future());
 
-        let node_components = (pool, backend, block_producer, validator);
+        let forked_client = if let Some(cfg) = &self.forking_config {
+            Some(ForkedClient::new(cfg.url.clone()))
+        } else {
+            None
+        };
+
+        let node_components = (pool, backend, block_producer, validator, forked_client);
         let rpc = spawn(node_components, self.rpc_config.clone()).await?;
 
         Ok(LaunchedNode { node: self, rpc })
@@ -178,7 +187,7 @@ pub async fn build(mut config: Config) -> Result<Node> {
 
     // --- build backend
 
-    let (blockchain, db) = if let Some(cfg) = config.forking {
+    let (blockchain, db) = if let Some(cfg) = &config.forking {
         let bc = Blockchain::new_from_forked(cfg.url.clone(), cfg.block, &mut config.chain).await?;
         (bc, None)
     } else if let Some(db_path) = &config.db.dir {
@@ -220,6 +229,7 @@ pub async fn build(mut config: Config) -> Result<Node> {
         backend,
         block_producer,
         rpc_config: config.rpc,
+        forking_config: config.forking,
         metrics_config: config.metrics,
         messaging_config: config.messaging,
         sequencing_config: config.sequencing,
@@ -231,40 +241,50 @@ pub async fn build(mut config: Config) -> Result<Node> {
 
 // Moved from `katana_rpc` crate
 pub async fn spawn<EF: ExecutorFactory>(
-    node_components: (TxPool, Arc<Backend<EF>>, BlockProducer<EF>, TxValidator),
+    node_components: (
+        TxPool,
+        Arc<Backend<EF>>,
+        BlockProducer<EF>,
+        TxValidator,
+        Option<ForkedClient>,
+    ),
     config: RpcConfig,
 ) -> Result<RpcServer> {
-    let (pool, backend, block_producer, validator) = node_components;
+    let (pool, backend, block_producer, validator, forked_client) = node_components;
 
     let mut methods = RpcModule::new(());
     methods.register_method("health", |_, _| Ok(serde_json::json!({ "health": true })))?;
 
-    for api in &config.apis {
-        match api {
-            ApiKind::Starknet => {
-                // TODO: merge these into a single logic.
-                let server = StarknetApi::new(
-                    backend.clone(),
-                    pool.clone(),
-                    block_producer.clone(),
-                    validator.clone(),
-                );
-                methods.merge(StarknetApiServer::into_rpc(server.clone()))?;
-                methods.merge(StarknetWriteApiServer::into_rpc(server.clone()))?;
-                methods.merge(StarknetTraceApiServer::into_rpc(server))?;
-            }
-            ApiKind::Dev => {
-                methods.merge(DevApi::new(backend.clone(), block_producer.clone()).into_rpc())?;
-            }
-            ApiKind::Torii => {
-                methods.merge(
-                    ToriiApi::new(backend.clone(), pool.clone(), block_producer.clone()).into_rpc(),
-                )?;
-            }
-            ApiKind::Saya => {
-                methods.merge(SayaApi::new(backend.clone(), block_producer.clone()).into_rpc())?;
-            }
-        }
+    if config.apis.contains(&ApiKind::Starknet) {
+        let server = if let Some(client) = forked_client {
+            StarknetApi::new_forked(
+                backend.clone(),
+                pool.clone(),
+                block_producer.clone(),
+                validator,
+                client,
+            )
+        } else {
+            StarknetApi::new(backend.clone(), pool.clone(), block_producer.clone(), validator)
+        };
+
+        methods.merge(StarknetApiServer::into_rpc(server.clone()))?;
+        methods.merge(StarknetWriteApiServer::into_rpc(server.clone()))?;
+        methods.merge(StarknetTraceApiServer::into_rpc(server))?;
+    }
+
+    if config.apis.contains(&ApiKind::Dev) {
+        methods.merge(DevApi::new(backend.clone(), block_producer.clone()).into_rpc())?;
+    }
+
+    if config.apis.contains(&ApiKind::Torii) {
+        methods.merge(
+            ToriiApi::new(backend.clone(), pool.clone(), block_producer.clone()).into_rpc(),
+        )?;
+    }
+
+    if config.apis.contains(&ApiKind::Saya) {
+        methods.merge(SayaApi::new(backend.clone(), block_producer.clone()).into_rpc())?;
     }
 
     let cors = CorsLayer::new()

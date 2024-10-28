@@ -1,6 +1,6 @@
 //! Server implementation for the Starknet JSON-RPC API.
 
-mod forking;
+pub mod forking;
 mod read;
 mod trace;
 mod write;
@@ -15,10 +15,12 @@ use katana_pool::validation::stateful::TxValidator;
 use katana_pool::TxPool;
 use katana_primitives::block::{
     BlockHash, BlockHashOrNumber, BlockIdOrTag, BlockNumber, BlockTag, FinalityStatus,
+    PartialHeader,
 };
 use katana_primitives::class::{ClassHash, CompiledClass};
 use katana_primitives::contract::{ContractAddress, Nonce, StorageKey, StorageValue};
 use katana_primitives::conversion::rpc::legacy_inner_to_rpc_class;
+use katana_primitives::da::L1DataAvailabilityMode;
 use katana_primitives::env::BlockEnv;
 use katana_primitives::event::ContinuationToken;
 use katana_primitives::transaction::{ExecutableTxWithHash, TxHash};
@@ -30,9 +32,16 @@ use katana_provider::traits::state::{StateFactoryProvider, StateProvider};
 use katana_provider::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionStatusProvider,
 };
+use katana_rpc_types::block::{
+    MaybePendingBlockWithReceipts, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
+    PendingBlockWithReceipts, PendingBlockWithTxHashes, PendingBlockWithTxs,
+};
 use katana_rpc_types::error::starknet::StarknetApiError;
+use katana_rpc_types::receipt::{ReceiptBlock, TxReceiptWithBlockInfo};
+use katana_rpc_types::state_update::MaybePendingStateUpdate;
 use katana_rpc_types::transaction::Tx;
 use katana_rpc_types::FeeEstimate;
+use katana_rpc_types_builder::ReceiptBuilder;
 use katana_tasks::{BlockingTaskPool, TokioTaskSpawner};
 use starknet::core::types::{
     ContractClass, EventsPage, PriceUnit, TransactionExecutionStatus, TransactionStatus,
@@ -41,6 +50,8 @@ use starknet::providers::Provider;
 
 use crate::utils;
 use crate::utils::events::{Cursor, EventBlockId};
+
+pub type StarknetApiResult<T> = Result<T, StarknetApiError>;
 
 #[allow(missing_debug_implementations)]
 pub struct StarknetApi<EF: ExecutorFactory> {
@@ -119,7 +130,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         transactions: Vec<ExecutableTxWithHash>,
         block_id: BlockIdOrTag,
         flags: katana_executor::ExecutionFlags,
-    ) -> Result<Vec<FeeEstimate>, StarknetApiError> {
+    ) -> StarknetApiResult<Vec<FeeEstimate>> {
         // get the state and block env at the specified block for execution
         let state = self.state(&block_id)?;
         let env = self.block_env_at(&block_id)?;
@@ -163,7 +174,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         }
     }
 
-    fn state(&self, block_id: &BlockIdOrTag) -> Result<Box<dyn StateProvider>, StarknetApiError> {
+    fn state(&self, block_id: &BlockIdOrTag) -> StarknetApiResult<Box<dyn StateProvider>> {
         let provider = self.inner.backend.blockchain.provider();
 
         let state = match block_id {
@@ -184,7 +195,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         state.ok_or(StarknetApiError::BlockNotFound)
     }
 
-    fn block_env_at(&self, block_id: &BlockIdOrTag) -> Result<BlockEnv, StarknetApiError> {
+    fn block_env_at(&self, block_id: &BlockIdOrTag) -> StarknetApiResult<BlockEnv> {
         let provider = self.inner.backend.blockchain.provider();
 
         let env = match block_id {
@@ -209,7 +220,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         env.ok_or(StarknetApiError::BlockNotFound)
     }
 
-    fn block_hash_and_number(&self) -> Result<(BlockHash, BlockNumber), StarknetApiError> {
+    fn block_hash_and_number(&self) -> StarknetApiResult<(BlockHash, BlockNumber)> {
         let provider = self.inner.backend.blockchain.provider();
         let hash = provider.latest_hash()?;
         let number = provider.latest_number()?;
@@ -220,7 +231,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         &self,
         block_id: BlockIdOrTag,
         class_hash: ClassHash,
-    ) -> Result<ContractClass, StarknetApiError> {
+    ) -> StarknetApiResult<ContractClass> {
         self.on_io_blocking_task(move |this| {
             let state = this.state(&block_id)?;
 
@@ -248,7 +259,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         &self,
         block_id: BlockIdOrTag,
         contract_address: ContractAddress,
-    ) -> Result<ClassHash, StarknetApiError> {
+    ) -> StarknetApiResult<ClassHash> {
         self.on_io_blocking_task(move |this| {
             let state = this.state(&block_id)?;
             let class_hash = state.class_hash_of_contract(contract_address)?;
@@ -261,7 +272,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         &self,
         block_id: BlockIdOrTag,
         contract_address: ContractAddress,
-    ) -> Result<ContractClass, StarknetApiError> {
+    ) -> StarknetApiResult<ContractClass> {
         let hash = self.class_hash_at_address(block_id, contract_address).await?;
         let class = self.class_at_hash(block_id, hash).await?;
         Ok(class)
@@ -272,7 +283,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         contract_address: ContractAddress,
         storage_key: StorageKey,
         block_id: BlockIdOrTag,
-    ) -> Result<StorageValue, StarknetApiError> {
+    ) -> StarknetApiResult<StorageValue> {
         let state = self.state(&block_id)?;
 
         // check that contract exist by checking the class hash of the contract
@@ -284,7 +295,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         Ok(value.unwrap_or_default())
     }
 
-    async fn block_tx_count(&self, block_id: BlockIdOrTag) -> Result<u64, StarknetApiError> {
+    async fn block_tx_count(&self, block_id: BlockIdOrTag) -> StarknetApiResult<u64> {
         let count = self
             .on_io_blocking_task(move |this| {
                 let provider = this.inner.backend.blockchain.provider();
@@ -310,14 +321,14 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         if let Some(count) = count {
             Ok(count)
         } else if let Some(client) = &self.inner.forked_client {
-            let status = client.client.get_block_transaction_count(block_id).await?;
+            let status = client.inner.get_block_transaction_count(block_id).await?;
             Ok(status)
         } else {
             Err(StarknetApiError::BlockNotFound)
         }
     }
 
-    async fn latest_block_number(&self) -> Result<BlockNumber, StarknetApiError> {
+    async fn latest_block_number(&self) -> StarknetApiResult<BlockNumber> {
         self.on_io_blocking_task(move |this| {
             Ok(this.inner.backend.blockchain.provider().latest_number()?)
         })
@@ -328,7 +339,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         &self,
         block_id: BlockIdOrTag,
         contract_address: ContractAddress,
-    ) -> Result<Nonce, StarknetApiError> {
+    ) -> StarknetApiResult<Nonce> {
         self.on_io_blocking_task(move |this| {
             // read from the pool state if pending block
             //
@@ -347,7 +358,47 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         .await
     }
 
-    async fn transaction(&self, hash: TxHash) -> Result<Tx, StarknetApiError> {
+    async fn transaction_by_block_id_and_index(
+        &self,
+        block_id: BlockIdOrTag,
+        index: u64,
+    ) -> StarknetApiResult<Tx> {
+        let tx = self
+            .on_io_blocking_task(move |this| {
+                // TEMP: have to handle pending tag independently for now
+                let tx = if BlockIdOrTag::Tag(BlockTag::Pending) == block_id {
+                    let Some(executor) = this.pending_executor() else {
+                        return Err(StarknetApiError::BlockNotFound);
+                    };
+
+                    let executor = executor.read();
+                    let pending_txs = executor.transactions();
+                    pending_txs.get(index as usize).map(|(tx, _)| tx.clone())
+                } else {
+                    let provider = &this.inner.backend.blockchain.provider();
+
+                    let block_num = BlockIdReader::convert_block_id(provider, block_id)?
+                        .map(BlockHashOrNumber::Num)
+                        .ok_or(StarknetApiError::BlockNotFound)?;
+
+                    provider.transaction_by_block_and_idx(block_num, index)?
+                };
+
+                StarknetApiResult::Ok(tx)
+            })
+            .await?;
+
+        if let Some(tx) = tx {
+            Ok(tx.into())
+        } else if let Some(client) = &self.inner.forked_client {
+            let tx = client.inner.get_transaction_by_block_id_and_index(block_id, index).await?;
+            Ok(tx.into())
+        } else {
+            Err(StarknetApiError::InvalidTxnIndex)
+        }
+    }
+
+    async fn transaction(&self, hash: TxHash) -> StarknetApiResult<Tx> {
         let tx = self
             .on_io_blocking_task(move |this| {
                 let tx = this
@@ -379,8 +430,58 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         if let Some(tx) = tx {
             Ok(tx)
         } else if let Some(client) = &self.inner.forked_client {
-            let tx = client.client.get_transaction_by_hash(hash).await?;
-            Ok(Tx(tx))
+            let tx = client.inner.get_transaction_by_hash(hash).await?;
+            Ok(tx.into())
+        } else {
+            Err(StarknetApiError::TxnHashNotFound)
+        }
+    }
+
+    async fn receipt(&self, hash: Felt) -> StarknetApiResult<TxReceiptWithBlockInfo> {
+        let receipt = self
+            .on_io_blocking_task(move |this| {
+                let provider = this.inner.backend.blockchain.provider();
+                let receipt = ReceiptBuilder::new(hash, provider).build()?;
+
+                match receipt {
+                    Some(receipt) => Ok(Some(receipt)),
+                    None => {
+                        let executor = this.pending_executor();
+                        let pending_receipt = executor
+                            .and_then(|executor| {
+                                executor.read().transactions().iter().find_map(|(tx, res)| {
+                                    if tx.hash == hash {
+                                        match res {
+                                            ExecutionResult::Failed { .. } => None,
+                                            ExecutionResult::Success { receipt, .. } => {
+                                                Some(receipt.clone())
+                                            }
+                                        }
+                                    } else {
+                                        None
+                                    }
+                                })
+                            })
+                            .ok_or(StarknetApiError::TxnHashNotFound)?;
+
+                        let receipt = TxReceiptWithBlockInfo::new(
+                            ReceiptBlock::Pending,
+                            hash,
+                            FinalityStatus::AcceptedOnL2,
+                            pending_receipt,
+                        );
+
+                        StarknetApiResult::Ok(Some(receipt))
+                    }
+                }
+            })
+            .await?;
+
+        if let Some(receipt) = receipt {
+            Ok(receipt)
+        } else if let Some(client) = &self.inner.forked_client {
+            let receipt = client.inner.get_transaction_receipt(hash).await?;
+            Ok(receipt.into())
         } else {
             Err(StarknetApiError::TxnHashNotFound)
         }
@@ -395,7 +496,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         keys: Option<Vec<Vec<Felt>>>,
         continuation_token: Option<String>,
         chunk_size: u64,
-    ) -> Result<EventsPage, StarknetApiError> {
+    ) -> StarknetApiResult<EventsPage> {
         let provider = self.inner.backend.blockchain.provider();
 
         let from = if BlockIdOrTag::Tag(BlockTag::Pending) == from_block {
@@ -513,10 +614,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         }
     }
 
-    async fn transaction_status(
-        &self,
-        hash: TxHash,
-    ) -> Result<TransactionStatus, StarknetApiError> {
+    async fn transaction_status(&self, hash: TxHash) -> StarknetApiResult<TransactionStatus> {
         let status = self
             .on_io_blocking_task(move |this| {
                 let provider = this.inner.backend.blockchain.provider();
@@ -586,10 +684,253 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         if let Some(status) = status {
             Ok(status)
         } else if let Some(client) = &self.inner.forked_client {
-            let status = client.client.get_transaction_status(hash).await?;
+            let status = client.inner.get_transaction_status(hash).await?;
             Ok(status)
         } else {
             Err(StarknetApiError::TxnHashNotFound)
+        }
+    }
+
+    async fn block_with_txs(
+        &self,
+        block_id: BlockIdOrTag,
+    ) -> StarknetApiResult<MaybePendingBlockWithTxs> {
+        let block = self
+            .on_io_blocking_task(move |this| {
+                let provider = this.inner.backend.blockchain.provider();
+
+                if BlockIdOrTag::Tag(BlockTag::Pending) == block_id {
+                    if let Some(executor) = this.pending_executor() {
+                        let block_env = executor.read().block_env();
+                        let latest_hash = provider.latest_hash().map_err(StarknetApiError::from)?;
+
+                        let l1_gas_prices = block_env.l1_gas_prices.clone();
+                        let l1_data_gas_prices = block_env.l1_data_gas_prices.clone();
+
+                        let header = PartialHeader {
+                            l1_da_mode: L1DataAvailabilityMode::Calldata,
+                            l1_gas_prices,
+                            l1_data_gas_prices,
+                            number: block_env.number,
+                            parent_hash: latest_hash,
+                            timestamp: block_env.timestamp,
+                            sequencer_address: block_env.sequencer_address,
+                            protocol_version: this.inner.backend.chain_spec.version.clone(),
+                        };
+
+                        // TODO(kariy): create a method that can perform this filtering for us
+                        // instead of doing it manually.
+
+                        // A block should only include successful transactions, we filter out the
+                        // failed ones (didn't pass validation stage).
+                        let transactions = executor
+                            .read()
+                            .transactions()
+                            .iter()
+                            .filter(|(_, receipt)| receipt.is_success())
+                            .map(|(tx, _)| tx.clone())
+                            .collect::<Vec<_>>();
+
+                        let block = PendingBlockWithTxs::new(header, transactions);
+                        return Ok(Some(MaybePendingBlockWithTxs::Pending(block)));
+                    }
+                }
+
+                if let Some(num) =
+                    BlockIdReader::convert_block_id(provider, block_id)?.map(BlockHashOrNumber::Num)
+                {
+                    let block = katana_rpc_types_builder::BlockBuilder::new(num, provider)
+                        .build()?
+                        .map(MaybePendingBlockWithTxs::Block);
+
+                    StarknetApiResult::Ok(block)
+                } else {
+                    StarknetApiResult::Ok(None)
+                }
+            })
+            .await?;
+
+        if let Some(block) = block {
+            Ok(block)
+        } else if let Some(client) = &self.inner.forked_client {
+            let block = client.inner.get_block_with_txs(block_id).await?;
+            Ok(block.into())
+        } else {
+            Err(StarknetApiError::BlockNotFound)
+        }
+    }
+
+    async fn block_with_receipts(
+        &self,
+        block_id: BlockIdOrTag,
+    ) -> StarknetApiResult<MaybePendingBlockWithReceipts> {
+        let block = self
+            .on_io_blocking_task(move |this| {
+                let provider = this.inner.backend.blockchain.provider();
+
+                if BlockIdOrTag::Tag(BlockTag::Pending) == block_id {
+                    if let Some(executor) = this.pending_executor() {
+                        let block_env = executor.read().block_env();
+                        let latest_hash = provider.latest_hash()?;
+
+                        let l1_gas_prices = block_env.l1_gas_prices.clone();
+                        let l1_data_gas_prices = block_env.l1_data_gas_prices.clone();
+
+                        let header = PartialHeader {
+                            l1_gas_prices,
+                            l1_data_gas_prices,
+                            number: block_env.number,
+                            parent_hash: latest_hash,
+                            timestamp: block_env.timestamp,
+                            l1_da_mode: L1DataAvailabilityMode::Calldata,
+                            sequencer_address: block_env.sequencer_address,
+                            protocol_version: this.inner.backend.chain_spec.version.clone(),
+                        };
+
+                        let receipts = executor
+                            .read()
+                            .transactions()
+                            .iter()
+                            .filter_map(|(tx, result)| match result {
+                                ExecutionResult::Success { receipt, .. } => {
+                                    Some((tx.clone(), receipt.clone()))
+                                }
+                                ExecutionResult::Failed { .. } => None,
+                            })
+                            .collect::<Vec<_>>();
+
+                        let block = PendingBlockWithReceipts::new(header, receipts.into_iter());
+                        return Ok(Some(MaybePendingBlockWithReceipts::Pending(block)));
+                    }
+                }
+
+                let block_num = BlockIdReader::convert_block_id(provider, block_id)?
+                    .map(BlockHashOrNumber::Num)
+                    .ok_or(StarknetApiError::BlockNotFound)?;
+
+                let block = katana_rpc_types_builder::BlockBuilder::new(block_num, provider)
+                    .build_with_receipts()?
+                    .ok_or(StarknetApiError::BlockNotFound)?;
+
+                StarknetApiResult::Ok(Some(MaybePendingBlockWithReceipts::Block(block)))
+            })
+            .await?;
+
+        if let Some(block) = block {
+            Ok(block)
+        } else if let Some(client) = &self.inner.forked_client {
+            let block = client.inner.get_block_with_receipts(block_id).await?;
+            Ok(block.into())
+        } else {
+            Err(StarknetApiError::BlockNotFound)
+        }
+    }
+
+    async fn block_with_tx_hashes(
+        &self,
+        block_id: BlockIdOrTag,
+    ) -> StarknetApiResult<MaybePendingBlockWithTxHashes> {
+        let block = self
+            .on_io_blocking_task(move |this| {
+                let provider = this.inner.backend.blockchain.provider();
+
+                if BlockIdOrTag::Tag(BlockTag::Pending) == block_id {
+                    if let Some(executor) = this.pending_executor() {
+                        let block_env = executor.read().block_env();
+                        let latest_hash = provider.latest_hash().map_err(StarknetApiError::from)?;
+
+                        let l1_gas_prices = block_env.l1_gas_prices.clone();
+                        let l1_data_gas_prices = block_env.l1_data_gas_prices.clone();
+
+                        let header = PartialHeader {
+                            l1_da_mode: L1DataAvailabilityMode::Calldata,
+                            l1_data_gas_prices,
+                            l1_gas_prices,
+                            number: block_env.number,
+                            parent_hash: latest_hash,
+                            timestamp: block_env.timestamp,
+                            protocol_version: this.inner.backend.chain_spec.version.clone(),
+                            sequencer_address: block_env.sequencer_address,
+                        };
+
+                        // TODO(kariy): create a method that can perform this filtering for us
+                        // instead of doing it manually.
+
+                        // A block should only include successful transactions, we filter out the
+                        // failed ones (didn't pass validation stage).
+                        let transactions = executor
+                            .read()
+                            .transactions()
+                            .iter()
+                            .filter(|(_, receipt)| receipt.is_success())
+                            .map(|(tx, _)| tx.hash)
+                            .collect::<Vec<_>>();
+
+                        let block = PendingBlockWithTxHashes::new(header, transactions);
+                        return Ok(Some(MaybePendingBlockWithTxHashes::Pending(block)));
+                    }
+                }
+
+                let block_num = provider
+                    .convert_block_id(block_id)?
+                    .map(BlockHashOrNumber::Num)
+                    .ok_or(StarknetApiError::BlockNotFound)?;
+
+                let block = katana_rpc_types_builder::BlockBuilder::new(block_num, provider)
+                    .build_with_tx_hash()?
+                    .map(MaybePendingBlockWithTxHashes::Block);
+
+                StarknetApiResult::Ok(block)
+            })
+            .await?;
+
+        if let Some(block) = block {
+            Ok(block)
+        } else if let Some(client) = &self.inner.forked_client {
+            let block = client.inner.get_block_with_tx_hashes(block_id).await?;
+            Ok(block.into())
+        } else {
+            Err(StarknetApiError::BlockNotFound)
+        }
+    }
+
+    async fn state_update(
+        &self,
+        block_id: BlockIdOrTag,
+    ) -> StarknetApiResult<MaybePendingStateUpdate> {
+        let state_update = self
+            .on_io_blocking_task(move |this| {
+                let provider = this.inner.backend.blockchain.provider();
+
+                let block_id = match block_id {
+                    BlockIdOrTag::Number(num) => BlockHashOrNumber::Num(num),
+                    BlockIdOrTag::Hash(hash) => BlockHashOrNumber::Hash(hash),
+
+                    BlockIdOrTag::Tag(BlockTag::Latest) => {
+                        provider.latest_number().map(BlockHashOrNumber::Num)?
+                    }
+
+                    BlockIdOrTag::Tag(BlockTag::Pending) => {
+                        return Err(StarknetApiError::BlockNotFound);
+                    }
+                };
+
+                let state_update =
+                    katana_rpc_types_builder::StateUpdateBuilder::new(block_id, provider)
+                        .build()?
+                        .map(MaybePendingStateUpdate::Update);
+
+                StarknetApiResult::Ok(state_update)
+            })
+            .await?;
+
+        if let Some(state_update) = state_update {
+            Ok(state_update)
+        } else if let Some(client) = &self.inner.forked_client {
+            let state_update = client.inner.get_state_update(block_id).await?;
+            Ok(state_update.into())
+        } else {
+            Err(StarknetApiError::BlockNotFound)
         }
     }
 }

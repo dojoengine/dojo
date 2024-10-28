@@ -95,6 +95,19 @@ pub enum MaybePendingBlockWithTxs {
     Block(BlockWithTxs),
 }
 
+impl From<starknet::core::types::MaybePendingBlockWithTxs> for MaybePendingBlockWithTxs {
+    fn from(value: starknet::core::types::MaybePendingBlockWithTxs) -> Self {
+        match value {
+            starknet::core::types::MaybePendingBlockWithTxs::PendingBlock(block) => {
+                MaybePendingBlockWithTxs::Pending(PendingBlockWithTxs(block))
+            }
+            starknet::core::types::MaybePendingBlockWithTxs::Block(block) => {
+                MaybePendingBlockWithTxs::Block(BlockWithTxs(block))
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct BlockWithTxHashes(starknet::core::types::BlockWithTxHashes);
@@ -179,6 +192,19 @@ impl PendingBlockWithTxHashes {
 pub enum MaybePendingBlockWithTxHashes {
     Pending(PendingBlockWithTxHashes),
     Block(BlockWithTxHashes),
+}
+
+impl From<starknet::core::types::MaybePendingBlockWithTxHashes> for MaybePendingBlockWithTxHashes {
+    fn from(value: starknet::core::types::MaybePendingBlockWithTxHashes) -> Self {
+        match value {
+            starknet::core::types::MaybePendingBlockWithTxHashes::PendingBlock(block) => {
+                MaybePendingBlockWithTxHashes::Pending(PendingBlockWithTxHashes(block))
+            }
+            starknet::core::types::MaybePendingBlockWithTxHashes::Block(block) => {
+                MaybePendingBlockWithTxHashes::Block(BlockWithTxHashes(block))
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -296,4 +322,17 @@ impl PendingBlockWithReceipts {
 pub enum MaybePendingBlockWithReceipts {
     Pending(PendingBlockWithReceipts),
     Block(BlockWithReceipts),
+}
+
+impl From<starknet::core::types::MaybePendingBlockWithReceipts> for MaybePendingBlockWithReceipts {
+    fn from(value: starknet::core::types::MaybePendingBlockWithReceipts) -> Self {
+        match value {
+            starknet::core::types::MaybePendingBlockWithReceipts::PendingBlock(block) => {
+                MaybePendingBlockWithReceipts::Pending(PendingBlockWithReceipts(block))
+            }
+            starknet::core::types::MaybePendingBlockWithReceipts::Block(block) => {
+                MaybePendingBlockWithReceipts::Block(BlockWithReceipts(block))
+            }
+        }
+    }
 }
