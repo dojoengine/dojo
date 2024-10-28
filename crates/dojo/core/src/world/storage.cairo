@@ -34,7 +34,7 @@ pub impl WorldStorageInternalImpl of WorldStorageTrait {
 }
 
 pub impl EventStorageWorldStorageImpl<E, +Event<E>> of EventStorage<WorldStorage, E> {
-    fn emit(ref self: WorldStorage, event: @E) {
+    fn emit_event(ref self: WorldStorage, event: @E) {
         dojo::world::IWorldDispatcherTrait::emit_event(
             self.world,
             Event::<E>::selector(self.namespace_hash),
@@ -204,7 +204,7 @@ impl ModelValueStorageWorldStorageImpl<V, +ModelValue<V>> of ModelValueStorage<W
 
 #[cfg(target: "test")]
 pub impl EventStorageTestWorldStorageImpl<E, +Event<E>> of EventStorageTest<WorldStorage, E> {
-    fn emit_test(ref self: WorldStorage, event: @E) {
+    fn emit_event_test(ref self: WorldStorage, event: @E) {
         let world_test = dojo::world::IWorldTestDispatcher {
             contract_address: self.world.contract_address
         };

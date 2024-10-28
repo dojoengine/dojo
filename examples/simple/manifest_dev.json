@@ -7,8 +7,8 @@
   },
   "contracts": [
     {
-      "address": "0x376121fbda2f5ea0aa2e26749c4a192f5ad5fa49dc71524e78633f29ad3a7d7",
-      "class_hash": "0x64d905fcd83465490cbe190328b39fa3925ca59fa4adf53cc0b6507f664de24",
+      "address": "0x7df3f004604c52f65d0fc768eda8869ed721c75ce277ca799ce399bebd5e153",
+      "class_hash": "0x3a99a50b2e51146842d0b67d93c2e6f9edebcfe62b21f092434ab2ad7c91b1c",
       "abi": [
         {
           "type": "impl",
@@ -101,6 +101,22 @@
                   "type": "core::felt252"
                 }
               ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "system_3",
+              "inputs": [
+                {
+                  "name": "a",
+                  "type": "core::felt252"
+                },
+                {
+                  "name": "b",
+                  "type": "core::integer::u32"
+                }
+              ],
+              "outputs": [],
               "state_mutability": "view"
             }
           ]
@@ -220,8 +236,8 @@
       "systems": []
     },
     {
-      "address": "0x13cf978670ffc1af20ad87c2890696899a243740113c1933ece1c6d2b6e80bd",
-      "class_hash": "0x3f62598626677ad8743348368b936fea3ab2a938f518c74dac22450e52d5b9",
+      "address": "0x39847e412de18336f8bfc4b4c3c09e0a13748ab6c90ef50d7c355728f7d2f73",
+      "class_hash": "0x5aefe08a4cb70f3e1c698461da52627521d546f2b7924de025e5e71e91a7e70",
       "abi": [
         {
           "type": "impl",
@@ -386,14 +402,20 @@
   "models": [
     {
       "members": [],
-      "class_hash": "0x29b7a355859c9cf0819267adccfdb22ee5369c06a3dc82ae300809960db1295",
+      "class_hash": "0x197e4e61b66fb3e155fbed747b2601e8a582e1d6df85fa984da79b0e131426a",
       "tag": "M"
     },
     {
       "members": [],
-      "class_hash": "0x34890588a2c170ea35cd45852c34611f5c356ebb3bb4d69f2329736d7fafecd",
+      "class_hash": "0x1d0ffd1e1f536860e3360d84423cf5afc6332507d0b3e6913143718d8f313b",
       "tag": "M2"
     }
   ],
-  "events": []
+  "events": [
+    {
+      "members": [],
+      "class_hash": "0x3dad17a44f8f9f497b5d16a971c3800ab8a6481b0ec5a26bd8114eebd64016a",
+      "tag": "E"
+    }
+  ]
 }

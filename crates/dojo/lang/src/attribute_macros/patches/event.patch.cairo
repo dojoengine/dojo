@@ -1,4 +1,4 @@
-pub impl $type_name$EventImpl of dojo::event::Event<$type_name$> {
+pub impl $type_name$DojoEventImpl of dojo::event::Event<$type_name$> {
     #[inline(always)]
     fn name() -> ByteArray {
         "$type_name$"
@@ -78,7 +78,7 @@ pub mod $contract_name$ {
     struct Storage {}
 
     #[abi(embed_v0)]
-    impl DojoEventImpl of dojo::event::IEvent<ContractState>{
+    impl $type_name$__DojoEventImpl of dojo::event::IEvent<ContractState>{
         fn dojo_name(self: @ContractState) -> ByteArray {
            "$type_name$"
         }

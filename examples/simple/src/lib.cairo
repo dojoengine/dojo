@@ -20,16 +20,26 @@ pub struct M2 {
     pub b: u256,
 }
 
+#[derive(Introspect, Drop, Serde)]
+#[dojo::event]
+pub struct E {
+    #[key]
+    pub a: felt252,
+    pub b: u32,
+}
+
 #[starknet::interface]
 pub trait MyInterface<T> {
     fn system_1(ref self: T, a: felt252, b: felt252);
     fn system_2(self: @T, a: felt252) -> felt252;
+    fn system_3(self: @T, a: felt252, b: u32);
 }
 
 #[dojo::contract]
 pub mod c1 {
-    use super::{MyInterface, M};
+    use super::{MyInterface, M, E};
     use dojo::model::ModelStorage;
+    use dojo::event::EventStorage;
 
     fn dojo_init(self: @ContractState, arg1: felt252) {
         let m = M { a: 0, b: arg1, };
@@ -54,6 +64,14 @@ pub mod c1 {
             let m: M = world.read_model(a);
 
             m.b
+        }
+
+        fn system_3(self: @ContractState, a: felt252, b: u32) {
+            let mut world = self.world("ns");
+
+            let e = E { a, b, };
+
+            world.emit_event(@e);
         }
     }
 }
