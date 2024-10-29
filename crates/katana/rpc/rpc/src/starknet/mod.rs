@@ -869,16 +869,15 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
                     }
                 }
 
-                let block_num = provider
-                    .convert_block_id(block_id)?
-                    .map(BlockHashOrNumber::Num)
-                    .ok_or(StarknetApiError::BlockNotFound)?;
+                if let Some(num) = provider.convert_block_id(block_id)? {
+                    let block = katana_rpc_types_builder::BlockBuilder::new(num.into(), provider)
+                        .build_with_tx_hash()?
+                        .map(MaybePendingBlockWithTxHashes::Block);
 
-                let block = katana_rpc_types_builder::BlockBuilder::new(block_num, provider)
-                    .build_with_tx_hash()?
-                    .map(MaybePendingBlockWithTxHashes::Block);
-
-                StarknetApiResult::Ok(block)
+                    StarknetApiResult::Ok(block)
+                } else {
+                    StarknetApiResult::Ok(None)
+                }
             })
             .await?;
 

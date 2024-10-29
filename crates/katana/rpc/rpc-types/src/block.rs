@@ -229,6 +229,7 @@ pub struct BlockWithReceipts(starknet::core::types::BlockWithReceipts);
 
 impl BlockWithReceipts {
     pub fn new(
+        hash: BlockHash,
         header: Header,
         finality_status: FinalityStatus,
         receipts: impl Iterator<Item = (TxWithHash, Receipt)>,
@@ -256,7 +257,7 @@ impl BlockWithReceipts {
                 FinalityStatus::AcceptedOnL1 => BlockStatus::AcceptedOnL1,
                 FinalityStatus::AcceptedOnL2 => BlockStatus::AcceptedOnL2,
             },
-            block_hash: header.parent_hash,
+            block_hash: hash,
             parent_hash: header.parent_hash,
             block_number: header.number,
             new_root: header.state_root,
