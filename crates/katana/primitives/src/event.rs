@@ -12,6 +12,49 @@ pub struct OrderedEvent {
     pub data: Vec<Felt>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum MaybeForkedContinuationToken {
+    Token(ContinuationToken),
+    Forked(String),
+}
+
+impl MaybeForkedContinuationToken {
+    pub fn into_token(self) -> Option<ContinuationToken> {
+        match self {
+            MaybeForkedContinuationToken::Token(token) => Some(token),
+            _ => None,
+        }
+    }
+}
+
+impl std::fmt::Display for MaybeForkedContinuationToken {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            MaybeForkedContinuationToken::Token(token) => write!(f, "{token}"),
+            MaybeForkedContinuationToken::Forked(token) => write!(f, "FK_{token}"),
+        }
+    }
+}
+
+impl MaybeForkedContinuationToken {
+    pub fn parse(value: &str) -> Result<Self, ContinuationTokenError> {
+        const FORKED_TOKEN_PREFIX: &str = "FK_";
+        if let Some(token) = value.strip_prefix(FORKED_TOKEN_PREFIX) {
+            Ok(MaybeForkedContinuationToken::Forked(token.to_string()))
+        } else {
+            let token = ContinuationToken::parse(value)?;
+            Ok(MaybeForkedContinuationToken::Token(token))
+        }
+    }
+}
+
+impl<'de> ::serde::Deserialize<'de> for MaybeForkedContinuationToken {
+    fn deserialize<D: ::serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let s = String::deserialize(deserializer)?;
+        Self::parse(&s).map_err(::serde::de::Error::custom)
+    }
+}
+
 /// Represents a continuation token for implementing paging in event queries.
 ///
 /// This struct stores the necessary information to resume fetching events
@@ -20,7 +63,7 @@ pub struct OrderedEvent {
 ///
 /// There JSON-RPC specification does not specify the format of the continuation token,
 /// so how the node should handle it is implementation specific.
-#[derive(PartialEq, Eq, Debug, Default)]
+#[derive(PartialEq, Eq, Debug, Clone, Default)]
 pub struct ContinuationToken {
     /// The block number to continue from.
     pub block_n: u64,

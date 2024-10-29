@@ -1,13 +1,16 @@
 use katana_primitives::block::{BlockIdOrTag, BlockNumber};
+use katana_primitives::contract::ContractAddress;
 use katana_primitives::transaction::TxHash;
+use katana_primitives::Felt;
 use katana_rpc_types::block::{
     MaybePendingBlockWithReceipts, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
 };
 use katana_rpc_types::error::starknet::StarknetApiError;
+use katana_rpc_types::event::EventsPage;
 use katana_rpc_types::receipt::TxReceiptWithBlockInfo;
 use katana_rpc_types::state_update::MaybePendingStateUpdate;
 use katana_rpc_types::transaction::Tx;
-use starknet::core::types::TransactionStatus;
+use starknet::core::types::{BlockId, EventFilter, TransactionStatus};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider, ProviderError};
 use url::Url;
@@ -20,6 +23,12 @@ pub enum Error {
 
     #[error("Block out of range")]
     BlockOutOfRange,
+
+    #[error("Not allowed to use block tag as a block identifier")]
+    BlockTagNotAllowed,
+
+    #[error("Unexpected pending data")]
+    UnexpectedPendingData,
 }
 
 #[derive(Debug)]
@@ -108,7 +117,7 @@ impl<P: Provider> ForkedClient<P> {
                         block.block_number
                     }
                     starknet::core::types::MaybePendingBlockWithTxHashes::PendingBlock(_) => {
-                        panic!("shouldn't be possible to be pending")
+                        return Err(Error::UnexpectedPendingData);
                     }
                 };
 
@@ -119,9 +128,7 @@ impl<P: Provider> ForkedClient<P> {
                 Ok(tx?.into())
             }
 
-            BlockIdOrTag::Tag(_) => {
-                panic!("shouldn't be possible to be tag")
-            }
+            BlockIdOrTag::Tag(_) => Err(Error::BlockTagNotAllowed),
         }
     }
 
@@ -141,7 +148,7 @@ impl<P: Provider> ForkedClient<P> {
             }
 
             starknet::core::types::MaybePendingBlockWithTxs::PendingBlock(_) => {
-                panic!("shouldn't be possible to be pending")
+                Err(Error::UnexpectedPendingData)
             }
         }
     }
@@ -159,7 +166,7 @@ impl<P: Provider> ForkedClient<P> {
                 }
             }
             starknet::core::types::MaybePendingBlockWithReceipts::PendingBlock(_) => {
-                panic!("shouldn't be possible to be pending")
+                return Err(Error::UnexpectedPendingData);
             }
         }
 
@@ -179,7 +186,7 @@ impl<P: Provider> ForkedClient<P> {
                 }
             }
             starknet::core::types::MaybePendingBlockWithTxHashes::PendingBlock(_) => {
-                panic!("shouldn't be possible to be pending")
+                return Err(Error::UnexpectedPendingData);
             }
         }
 
@@ -201,7 +208,7 @@ impl<P: Provider> ForkedClient<P> {
                 }
             }
             BlockIdOrTag::Tag(_) => {
-                panic!("shouldn't be possible to be tag")
+                return Err(Error::BlockTagNotAllowed);
             }
             _ => {}
         }
@@ -228,13 +235,55 @@ impl<P: Provider> ForkedClient<P> {
                 }
             }
             BlockIdOrTag::Tag(_) => {
-                panic!("shouldn't be possible to be tag")
+                return Err(Error::BlockTagNotAllowed);
             }
             _ => {}
         }
 
         let state_update = self.provider.get_state_update(block_id).await?;
         Ok(state_update.into())
+    }
+
+    pub async fn get_events(
+        &self,
+        // mut filter: EventFilter,
+        from: BlockNumber,
+        to: BlockNumber,
+        address: Option<ContractAddress>,
+        keys: Option<Vec<Vec<Felt>>>,
+        continuation_token: Option<String>,
+        chunk_size: u64,
+    ) -> Result<EventsPage, Error> {
+        // // If from_block is given, ensure that it is below the forked block.
+        // if let Some(id) = filter.from_block {
+        //     match id {
+        //         BlockId::Tag(_) => return Err(Error::BlockTagNotAllowed),
+        //         BlockId::Number(num) if num > self.block => return Err(Error::BlockOutOfRange),
+        //         _ => {}
+        //     }
+        // }
+
+        // // If to_block is given, ensure that it is below the forked block.
+        // if let Some(id) = filter.to_block {
+        //     match id {
+        //         BlockId::Tag(_) => return Err(Error::BlockTagNotAllowed),
+        //         BlockId::Number(num) if num > self.block => return Err(Error::BlockOutOfRange),
+        //         _ => {}
+        //     }
+        // }
+        // // else if not specified, we limit to the forked block
+        // else {
+        //     filter.to_block = Some(BlockId::Number(self.block));
+        // }
+
+        let from_block = Some(BlockIdOrTag::Number(from));
+        let to_block = Some(BlockIdOrTag::Number(to));
+        let address = address.map(Felt::from);
+        let filter = EventFilter { from_block, to_block, address, keys };
+
+        let events = self.provider.get_events(filter, continuation_token, chunk_size).await?;
+
+        Ok(events)
     }
 }
 
@@ -243,6 +292,81 @@ impl From<Error> for StarknetApiError {
         match value {
             Error::Provider(provider_error) => provider_error.into(),
             Error::BlockOutOfRange => StarknetApiError::BlockNotFound,
+            Error::BlockTagNotAllowed | Error::UnexpectedPendingData => {
+                StarknetApiError::UnexpectedError { reason: value.to_string() }
+            }
         }
     }
 }
+
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
+//     use katana_primitives::block::{BlockNumber, BlockTag};
+
+//     const SEPOLIA_URL: &str = "https://api.cartridge.gg/x/starknet/sepolia";
+//     const FORK_BLOCK_NUMBER: BlockNumber = 268_471;
+
+//     fn forked_client() -> ForkedClient {
+//         let url = Url::parse(SEPOLIA_URL).unwrap();
+//         ForkedClient::new_http(url, FORK_BLOCK_NUMBER)
+//     }
+
+//     #[tokio::test]
+//     async fn get_events_after_forked_block() {
+//         let client = forked_client();
+
+//         // -----------------------------------------------------------------------
+//         // Get events where the from_block is after the forked block.
+
+//         let from = FORK_BLOCK_NUMBER + 1;
+//         let filter = EventFilter {
+//             keys: None,
+//             address: None,
+//             to_block: None,
+//             from_block: Some(BlockId::Number(from)),
+//         };
+
+//         let result = client.get_events(filter, None, 1).await;
+//         assert!(matches!(result, Err(Error::BlockOutOfRange)));
+
+//         // -----------------------------------------------------------------------
+//         // Get events where the to_block is after the forked block.
+
+//         let to = FORK_BLOCK_NUMBER + 1;
+//         let filter = EventFilter {
+//             keys: None,
+//             address: None,
+//             from_block: None,
+//             to_block: Some(BlockId::Number(to)),
+//         };
+
+//         let result = client.get_events(filter, None, 1).await;
+//         assert!(matches!(result, Err(Error::BlockOutOfRange)));
+//     }
+
+//     #[tokio::test]
+//     async fn get_events_using_block_tag() {
+//         let client = forked_client();
+
+//         let filter = EventFilter {
+//             keys: None,
+//             address: None,
+//             to_block: None,
+//             from_block: Some(BlockId::Tag(BlockTag::Latest)),
+//         };
+
+//         let result = client.get_events(filter, None, 1).await;
+//         assert!(matches!(result, Err(Error::BlockTagNotAllowed)));
+
+//         let filter = EventFilter {
+//             keys: None,
+//             address: None,
+//             from_block: None,
+//             to_block: Some(BlockId::Tag(BlockTag::Latest)),
+//         };
+
+//         let result = client.get_events(filter, None, 1).await;
+//         assert!(matches!(result, Err(Error::BlockTagNotAllowed)));
+//     }
+// }

@@ -17,7 +17,7 @@ use katana_rpc_types::transaction::{BroadcastedTx, Tx};
 use katana_rpc_types::{
     ContractClass, FeeEstimate, FeltAsHex, FunctionCall, SimulationFlagForEstimateFee,
 };
-use starknet::core::types::{BlockTag, TransactionStatus};
+use starknet::core::types::TransactionStatus;
 
 use super::StarknetApi;
 
@@ -120,33 +120,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
     }
 
     async fn get_events(&self, filter: EventFilterWithPage) -> RpcResult<EventsPage> {
-        self.on_io_blocking_task(move |this| {
-            let EventFilterWithPage { event_filter, result_page_request } = filter;
-
-            let from = match event_filter.from_block {
-                Some(id) => id,
-                None => BlockIdOrTag::Number(0),
-            };
-
-            let to = match event_filter.to_block {
-                Some(id) => id,
-                None => BlockIdOrTag::Tag(BlockTag::Pending),
-            };
-
-            let keys = event_filter.keys.filter(|keys| !(keys.len() == 1 && keys.is_empty()));
-
-            let events = this.events(
-                from,
-                to,
-                event_filter.address.map(|f| f.into()),
-                keys,
-                result_page_request.continuation_token,
-                result_page_request.chunk_size,
-            )?;
-
-            Ok(events)
-        })
-        .await
+        Ok(self.events(filter).await?)
     }
 
     async fn call(
