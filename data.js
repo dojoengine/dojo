@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1730139674556,
+  "lastUpdate": 1730228550203,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -28381,6 +28381,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8247598,
             "range": "± 144938",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1914a4a6f4e1682c709507e0e12d56ed3c73804f",
+          "message": "fix(torii-grpc): building sql query for array idx (#2593)\n\n* fix(torii-grpc): building sql query for array idx\r\n\r\n* chore",
+          "timestamp": "2024-10-29T12:46:20-06:00",
+          "tree_id": "ac2212213caf1cbaba1444a1e2d59a3abba0a61a",
+          "url": "https://github.com/dojoengine/dojo/commit/1914a4a6f4e1682c709507e0e12d56ed3c73804f"
+        },
+        "date": 1730228549172,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11953309127,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
