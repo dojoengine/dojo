@@ -10,7 +10,7 @@ use katana_primitives::block::BlockHashOrNumber;
 use katana_primitives::receipt::MessageToL1;
 use katana_primitives::transaction::{ExecutableTxWithHash, L1HandlerTx, TxHash};
 use katana_provider::traits::block::BlockNumberProvider;
-use katana_provider::traits::messaging::MessagingProvider;
+use katana_provider::traits::messaging::{MessagingCheckpointProvider};
 use katana_provider::traits::transaction::ReceiptProvider;
 use tokio::time::{interval_at, Instant, Interval};
 use tracing::{error, info};
@@ -54,7 +54,7 @@ impl<EF: ExecutorFactory> MessagingService<EF> {
         backend: Arc<Backend<EF>>,
     ) -> anyhow::Result<Self> {
         let provider = backend.blockchain.provider();
-        let gather_from_block = match provider.get_gather_from_block() {
+        let gather_from_block = match provider.get_inbound_block() {
             Ok(Some(block)) => block,
             Ok(None) => 0,
             Err(_) => {
@@ -64,7 +64,7 @@ impl<EF: ExecutorFactory> MessagingService<EF> {
                 )
             }
         };
-        let send_from_block = match provider.get_send_from_block() {
+        let send_from_block = match provider.get_outbound_block() {
             Ok(Some(block)) => block,
             Ok(None) => 0,
             Err(_) => {
@@ -245,7 +245,7 @@ impl<EF: ExecutorFactory> Stream for MessagingService<EF> {
                         .backend
                         .blockchain
                         .provider()
-                        .set_gather_from_block(pin.gather_from_block);
+                        .set_inbound_block(pin.gather_from_block);
                     return Poll::Ready(Some(MessagingOutcome::Gather {
                         lastest_block: last_block,
                         msg_count,
@@ -272,7 +272,7 @@ impl<EF: ExecutorFactory> Stream for MessagingService<EF> {
                     // sent on the settlement chain.
                     pin.send_from_block += 1;
                     let _ =
-                        pin.backend.blockchain.provider().set_send_from_block(pin.send_from_block);
+                        pin.backend.blockchain.provider().set_outbound_block(pin.send_from_block);
                     return Poll::Ready(Some(MessagingOutcome::Send { block_num, msg_count }));
                 }
                 Poll::Ready(Err(e)) => {

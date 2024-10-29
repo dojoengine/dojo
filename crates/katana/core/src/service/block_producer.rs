@@ -324,7 +324,7 @@ impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
 
                         let message_hash = Felt::from_bytes_be(&message_hash_bytes);
                         match provider.get_nonce_from_message_hash(message_hash) {
-                            Ok(Some(nonce)) => provider.set_gather_message_nonce(nonce),
+                            Ok(Some(nonce)) => provider.set_inbound_nonce(nonce),
                             Ok(None) => Ok(()),
                             Err(_e) => Ok(()),
                         }

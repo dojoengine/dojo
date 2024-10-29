@@ -584,30 +584,30 @@ impl BlockEnvProvider for ForkedProvider {
 }
 
 impl MessagingCheckpointProvider for ForkedProvider {
-    fn set_send_from_block(&self, send_from_block: BlockNumber) -> ProviderResult<()> {
-        self.storage.write().messaging_info.send_block = Some(send_from_block);
+    fn set_outbound_block(&self, outbound_block: BlockNumber) -> ProviderResult<()> {
+        self.storage.write().messaging_info.send_block = Some(outbound_block);
         Ok(())
     }
 
-    fn get_send_from_block(&self) -> ProviderResult<Option<BlockNumber>> {
+    fn get_outbound_block(&self) -> ProviderResult<Option<BlockNumber>> {
         Ok(self.storage.read().messaging_info.send_block)
     }
 
-    fn set_gather_from_block(&self, gather_from_block: BlockNumber) -> ProviderResult<()> {
-        self.storage.write().messaging_info.send_block = Some(gather_from_block);
+    fn set_inbound_block(&self, inbound_block: BlockNumber) -> ProviderResult<()> {
+        self.storage.write().messaging_info.gather_block = Some(inbound_block);
         Ok(())
     }
 
-    fn get_gather_from_block(&self) -> ProviderResult<Option<BlockNumber>> {
+    fn get_inbound_block(&self) -> ProviderResult<Option<BlockNumber>> {
         Ok(self.storage.read().messaging_info.gather_block)
     }
 
-    fn set_gather_message_nonce(&self, nonce: Nonce) -> ProviderResult<()> {
+    fn set_inbound_nonce(&self, nonce: Nonce) -> ProviderResult<()> {
         self.storage.write().messaging_info.gather_nonce = Some(nonce);
         Ok(())
     }
 
-    fn get_gather_message_nonce(&self) -> ProviderResult<Option<Nonce>> {
+    fn get_inbound_nonce(&self) -> ProviderResult<Option<Nonce>> {
         Ok(self.storage.read().messaging_info.gather_nonce)
     }
 
@@ -620,13 +620,12 @@ impl MessagingCheckpointProvider for ForkedProvider {
         Ok(self.storage.read().messaging_message_nonce_mapping.get(&message_hash).cloned())
     }
 
-    fn set_send_from_index(&self, index: u64) -> ProviderResult<()> {
-        self.storage.write().messaging_info.send_index = Some(index);
+    fn set_outbound_index(&self, outbound_index: u64) -> ProviderResult<()> {
+        self.storage.write().messaging_info.send_index = Some(outbound_index);
         Ok(())
     }
 
-    fn get_send_from_index(&self) -> ProviderResult<Option<u64>> {
+    fn get_outbound_index(&self) -> ProviderResult<Option<u64>> {
         Ok(self.storage.read().messaging_info.send_index)
     }
-
 }

@@ -764,42 +764,42 @@ impl<Db: Database> BlockWriter for DbProvider<Db> {
 }
 
 impl MessagingCheckpointProvider for DbProvider {
-    fn set_send_from_block(&self, send_from_block: BlockNumber) -> ProviderResult<()> {
+    fn set_outbound_block(&self, send_from_block: BlockNumber) -> ProviderResult<()> {
         self.0.update(|db_tx| {
             db_tx.put::<tables::MessagingCheckpointBlock>(MessagingCheckpointId::SendBlock, send_from_block)?;
             Ok(())
         })?
     }
 
-    fn get_send_from_block(&self) -> ProviderResult<Option<BlockNumber>> {
+    fn get_outbound_block(&self) -> ProviderResult<Option<BlockNumber>> {
         let db_tx = self.0.tx()?;
         let block_num = db_tx.get::<tables::MessagingCheckpointBlock>(MessagingCheckpointId::SendBlock)?;
         db_tx.commit()?;
         Ok(block_num)
     }
 
-    fn set_gather_from_block(&self, gather_from_block: BlockNumber) -> ProviderResult<()> {
+    fn set_inbound_block(&self, gather_from_block: BlockNumber) -> ProviderResult<()> {
         self.0.update(|db_tx| {
             db_tx.put::<tables::MessagingCheckpointBlock>(MessagingCheckpointId::GatherBlock, gather_from_block)?;
             Ok(())
         })?
     }
 
-    fn get_gather_from_block(&self) -> ProviderResult<Option<BlockNumber>> {
+    fn get_inbound_block(&self) -> ProviderResult<Option<BlockNumber>> {
         let db_tx = self.0.tx()?;
         let block_num = db_tx.get::<tables::MessagingCheckpointBlock>(MessagingCheckpointId::GatherBlock)?;
         db_tx.commit()?;
         Ok(block_num)
     }
 
-    fn set_gather_message_nonce(&self, nonce: Nonce) -> ProviderResult<()> {
+    fn set_inbound_nonce(&self, nonce: Nonce) -> ProviderResult<()> {
         self.0.update(|db_tx| {
             db_tx.put::<tables::MessagingCheckpointNonce>(MessagingCheckpointId::GatherNonce, nonce)?;
             Ok(())
         })?
     }
 
-    fn get_gather_message_nonce(&self) -> ProviderResult<Option<Nonce>> {
+    fn get_inbound_nonce(&self) -> ProviderResult<Option<Nonce>> {
         let db_tx = self.0.tx()?;
         let nonce = db_tx.get::<tables::MessagingCheckpointNonce>(MessagingCheckpointId::GatherNonce)?;
         db_tx.commit()?;
@@ -820,14 +820,14 @@ impl MessagingCheckpointProvider for DbProvider {
         Ok(nonce)
     }
 
-    fn set_send_from_index(&self, send_from_index: u64) -> ProviderResult<()> {
+    fn set_outbound_index(&self, send_from_index: u64) -> ProviderResult<()> {
         self.0.update(|db_tx| {
             db_tx.put::<tables::MessagingCheckpointIndex>(MessagingCheckpointId::SendIndex, send_from_index)?;
             Ok(())
         })?
     }
 
-    fn get_send_from_index(&self) -> ProviderResult<Option<u64>> {
+    fn get_outbound_index(&self) -> ProviderResult<Option<u64>> {
         let db_tx = self.0.tx()?;
         let index = db_tx.get::<tables::MessagingCheckpointIndex>(MessagingCheckpointId::SendIndex)?;
         db_tx.commit()?;

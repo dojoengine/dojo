@@ -386,28 +386,28 @@ impl<Db> MessagingCheckpointProvider for BlockchainProvider<Db>
 where
     Db: MessagingCheckpointProvider,
 {
-    fn get_send_from_block(&self) -> ProviderResult<Option<BlockNumber>> {
-        self.provider.get_send_from_block()
+    fn get_outbound_block(&self) -> ProviderResult<Option<BlockNumber>> {
+        self.provider.get_outbound_block()
     }
 
-    fn set_send_from_block(&self, send_from_block: BlockNumber) -> ProviderResult<()> {
-        self.provider.set_send_from_block(send_from_block)
+    fn set_outbound_block(&self, outbound_block: BlockNumber) -> ProviderResult<()> {
+        self.provider.set_outbound_block(outbound_block)
     }
 
-    fn get_gather_from_block(&self) -> ProviderResult<Option<BlockNumber>> {
-        self.provider.get_gather_from_block()
+    fn get_inbound_block(&self) -> ProviderResult<Option<BlockNumber>> {
+        self.provider.get_inbound_block()
     }
 
-    fn set_gather_from_block(&self, gather_from_block: BlockNumber) -> ProviderResult<()> {
-        self.provider.set_gather_from_block(gather_from_block)
+    fn set_inbound_block(&self, inbound_block: BlockNumber) -> ProviderResult<()> {
+        self.provider.set_inbound_block(inbound_block)
     }
 
-    fn get_gather_message_nonce(&self) -> ProviderResult<Option<Nonce>> {
-        self.provider.get_gather_message_nonce()
+    fn get_inbound_nonce(&self) -> ProviderResult<Option<Nonce>> {
+        self.provider.get_inbound_nonce()
     }
 
-    fn set_gather_message_nonce(&self, nonce: Nonce) -> ProviderResult<()> {
-        self.provider.set_gather_message_nonce(nonce)
+    fn set_inbound_nonce(&self, nonce: Nonce) -> ProviderResult<()> {
+        self.provider.set_inbound_nonce(nonce)
     }
 
     fn get_nonce_from_message_hash(&self, message_hash: MessageHash) -> ProviderResult<Option<Nonce>> {
@@ -418,11 +418,11 @@ where
         self.provider.set_nonce_from_message_hash(message_hash, nonce)
     }
 
-    fn get_send_from_index(&self) -> ProviderResult<Option<u64>> {
-        self.provider.get_send_from_index()
+    fn get_outbound_index(&self) -> ProviderResult<Option<u64>> {
+        self.provider.get_outbound_index()
     }
 
-    fn set_send_from_index(&self, send_from_index: u64) -> ProviderResult<()> {
-        self.provider.set_send_from_index(send_from_index)
+    fn set_outbound_index(&self, outbound_index: u64) -> ProviderResult<()> {
+        self.provider.set_outbound_index(outbound_index)
     }
 }
