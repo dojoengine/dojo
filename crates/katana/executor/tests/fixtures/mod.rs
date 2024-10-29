@@ -2,7 +2,7 @@ pub mod transaction;
 
 use alloy_primitives::U256;
 use katana_executor::implementation::noop::NoopExecutorFactory;
-use katana_executor::{ExecutorFactory, SimulationFlag};
+use katana_executor::{ExecutionFlags, ExecutorFactory};
 use katana_primitives::block::{
     Block, ExecutableBlock, FinalityStatus, GasPrices, PartialHeader, SealedBlockWithStatus,
 };
@@ -24,7 +24,7 @@ use katana_primitives::transaction::{
 use katana_primitives::utils::class::{parse_compiled_class, parse_sierra_class};
 use katana_primitives::version::CURRENT_STARKNET_VERSION;
 use katana_primitives::{address, Felt};
-use katana_provider::providers::in_memory::InMemoryProvider;
+use katana_provider::providers::db::DbProvider;
 use katana_provider::traits::block::BlockWriter;
 use katana_provider::traits::state::{StateFactoryProvider, StateProvider};
 use starknet::macros::felt;
@@ -70,7 +70,7 @@ pub fn chain() -> ChainSpec {
 #[rstest::fixture]
 pub fn state_provider(chain: &ChainSpec) -> Box<dyn StateProvider> {
     let states = chain.state_updates();
-    let provider = InMemoryProvider::new();
+    let provider = DbProvider::new_ephemeral();
 
     let block = SealedBlockWithStatus {
         status: FinalityStatus::AcceptedOnL2,
@@ -81,7 +81,7 @@ pub fn state_provider(chain: &ChainSpec) -> Box<dyn StateProvider> {
         .insert_block_with_states_and_receipts(block, states, vec![], vec![])
         .expect("able to insert block");
 
-    <InMemoryProvider as StateFactoryProvider>::latest(&provider).unwrap()
+    provider.latest().unwrap()
 }
 
 // TODO: update the txs to include valid signatures
@@ -249,8 +249,8 @@ pub fn cfg() -> CfgEnv {
 pub fn flags(
     #[default(false)] skip_validate: bool,
     #[default(false)] skip_fee_transfer: bool,
-) -> SimulationFlag {
-    SimulationFlag { skip_validate, skip_fee_transfer, ..Default::default() }
+) -> ExecutionFlags {
+    ExecutionFlags::new().with_account_validation(!skip_validate).with_fee(!skip_fee_transfer)
 }
 
 /// A fixture that provides a default `ExecutorFactory` implementation.
@@ -265,12 +265,12 @@ pub fn executor_factory<EF: ExecutorFactory>(
 #[cfg(feature = "blockifier")]
 pub mod blockifier {
     use katana_executor::implementation::blockifier::BlockifierFactory;
-    use katana_executor::SimulationFlag;
+    use katana_executor::ExecutionFlags;
 
     use super::{cfg, flags, CfgEnv};
 
     #[rstest::fixture]
-    pub fn factory(cfg: CfgEnv, #[with(true)] flags: SimulationFlag) -> BlockifierFactory {
+    pub fn factory(cfg: CfgEnv, #[with(true)] flags: ExecutionFlags) -> BlockifierFactory {
         BlockifierFactory::new(cfg, flags)
     }
 }

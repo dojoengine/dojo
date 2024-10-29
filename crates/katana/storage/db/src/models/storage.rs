@@ -7,6 +7,7 @@ use crate::error::CodecError;
 ///
 /// `key` is the subkey for the dupsort table.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Default)]
+#[cfg_attr(test, derive(::arbitrary::Arbitrary))]
 pub struct StorageEntry {
     /// The storage key.
     pub key: StorageKey,
@@ -34,6 +35,7 @@ impl Decompress for StorageEntry {
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[cfg_attr(test, derive(::arbitrary::Arbitrary))]
 pub struct ContractStorageKey {
     pub contract_address: ContractAddress,
     pub key: StorageKey,
@@ -59,6 +61,7 @@ impl Decode for ContractStorageKey {
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[cfg_attr(test, derive(::arbitrary::Arbitrary))]
 pub struct ContractStorageEntry {
     pub key: ContractStorageKey,
     pub value: StorageValue,

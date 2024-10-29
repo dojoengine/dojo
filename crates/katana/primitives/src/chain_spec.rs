@@ -2,7 +2,6 @@ use std::collections::BTreeMap;
 
 use alloy_primitives::U256;
 use lazy_static::lazy_static;
-use starknet::core::types::L1DataAvailabilityMode;
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet_crypto::Felt;
 
@@ -10,10 +9,12 @@ use crate::block::{Block, Header};
 use crate::chain::ChainId;
 use crate::class::ClassHash;
 use crate::contract::ContractAddress;
+use crate::da::L1DataAvailabilityMode;
 use crate::genesis::allocation::{DevAllocationsGenerator, GenesisAllocation};
 use crate::genesis::constant::{
     get_fee_token_balance_base_storage_address, DEFAULT_ACCOUNT_CLASS_PUBKEY_STORAGE_SLOT,
-    DEFAULT_ETH_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CLASS_HASH, DEFAULT_LEGACY_UDC_CLASS_HASH,
+    DEFAULT_ETH_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CASM, DEFAULT_LEGACY_ERC20_CLASS_HASH,
+    DEFAULT_LEGACY_UDC_CASM, DEFAULT_LEGACY_UDC_CLASS_HASH, DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH,
     DEFAULT_PREFUNDED_ACCOUNT_BALANCE, DEFAULT_STRK_FEE_TOKEN_ADDRESS, DEFAULT_UDC_ADDRESS,
     ERC20_DECIMAL_STORAGE_SLOT, ERC20_NAME_STORAGE_SLOT, ERC20_SYMBOL_STORAGE_SLOT,
     ERC20_TOTAL_SUPPLY_STORAGE_SLOT,
@@ -106,35 +107,9 @@ impl ChainSpec {
         }
 
         //-- Fee tokens
-
-        // -- ETH
-        add_fee_token(
-            &mut states,
-            "Ether",
-            "ETH",
-            18,
-            DEFAULT_ETH_FEE_TOKEN_ADDRESS,
-            DEFAULT_LEGACY_ERC20_CLASS_HASH,
-            &self.genesis.allocations,
-        );
-
-        // -- STRK
-        add_fee_token(
-            &mut states,
-            "Starknet Token",
-            "STRK",
-            18,
-            DEFAULT_STRK_FEE_TOKEN_ADDRESS,
-            DEFAULT_LEGACY_ERC20_CLASS_HASH,
-            &self.genesis.allocations,
-        );
-
+        add_default_fee_tokens(&mut states, &self.genesis);
         // -- UDC
-
-        states
-            .state_updates
-            .deployed_contracts
-            .insert(DEFAULT_UDC_ADDRESS, DEFAULT_LEGACY_UDC_CLASS_HASH);
+        add_default_udc(&mut states);
 
         states
     }
@@ -168,6 +143,36 @@ lazy_static! {
         let fee_contracts = FeeContracts { eth: DEFAULT_ETH_FEE_TOKEN_ADDRESS, strk: DEFAULT_STRK_FEE_TOKEN_ADDRESS };
         ChainSpec { id, genesis, fee_contracts, version: CURRENT_STARKNET_VERSION }
     };
+}
+
+fn add_default_fee_tokens(states: &mut StateUpdatesWithDeclaredClasses, genesis: &Genesis) {
+    // declare erc20 token contract
+    states
+        .declared_compiled_classes
+        .entry(DEFAULT_LEGACY_ERC20_CLASS_HASH)
+        .or_insert_with(|| DEFAULT_LEGACY_ERC20_CASM.clone());
+
+    // -- ETH
+    add_fee_token(
+        states,
+        "Ether",
+        "ETH",
+        18,
+        DEFAULT_ETH_FEE_TOKEN_ADDRESS,
+        DEFAULT_LEGACY_ERC20_CLASS_HASH,
+        &genesis.allocations,
+    );
+
+    // -- STRK
+    add_fee_token(
+        states,
+        "Starknet Token",
+        "STRK",
+        18,
+        DEFAULT_STRK_FEE_TOKEN_ADDRESS,
+        DEFAULT_LEGACY_ERC20_CLASS_HASH,
+        &genesis.allocations,
+    );
 }
 
 fn add_fee_token(
@@ -219,18 +224,38 @@ fn add_fee_token(
     states.state_updates.storage_updates.insert(address, storage);
 }
 
+fn add_default_udc(states: &mut StateUpdatesWithDeclaredClasses) {
+    // declare UDC class
+    states
+        .declared_compiled_classes
+        .entry(DEFAULT_LEGACY_UDC_CLASS_HASH)
+        .or_insert_with(|| DEFAULT_LEGACY_UDC_CASM.clone());
+    states
+        .state_updates
+        .declared_classes
+        .entry(DEFAULT_LEGACY_UDC_CLASS_HASH)
+        .or_insert(DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH);
+
+    // deploy UDC contract
+    states
+        .state_updates
+        .deployed_contracts
+        .entry(DEFAULT_UDC_ADDRESS)
+        .or_insert(DEFAULT_LEGACY_UDC_CLASS_HASH);
+}
+
 #[cfg(test)]
 mod tests {
 
     use std::str::FromStr;
 
     use alloy_primitives::U256;
-    use starknet::core::types::L1DataAvailabilityMode;
     use starknet::macros::felt;
 
     use super::*;
     use crate::address;
     use crate::block::{Block, GasPrices, Header};
+    use crate::da::L1DataAvailabilityMode;
     use crate::genesis::allocation::{GenesisAccount, GenesisAccountAlloc, GenesisContractAlloc};
     #[cfg(feature = "slot")]
     use crate::genesis::constant::{

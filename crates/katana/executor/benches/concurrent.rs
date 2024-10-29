@@ -9,7 +9,7 @@ use std::time::Duration;
 use criterion::measurement::WallTime;
 use criterion::{criterion_group, criterion_main, BatchSize, BenchmarkGroup, Criterion};
 use katana_executor::implementation::blockifier::BlockifierFactory;
-use katana_executor::{ExecutorFactory, SimulationFlag};
+use katana_executor::{ExecutionFlags, ExecutorFactory};
 use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::transaction::ExecutableTxWithHash;
 use katana_provider::test_utils;
@@ -27,8 +27,8 @@ fn concurrent(c: &mut Criterion) {
     let mut group = c.benchmark_group("Concurrent.Simulate");
     group.warm_up_time(Duration::from_millis(200));
 
-    let provider = test_utils::test_in_memory_provider();
-    let flags = SimulationFlag::new().skip_validate();
+    let provider = test_utils::test_provider();
+    let flags = ExecutionFlags::new().with_account_validation(false);
 
     let tx = tx();
     let envs = envs();
@@ -40,7 +40,7 @@ fn blockifier(
     group: &mut BenchmarkGroup<'_, WallTime>,
     concurrency_size: usize,
     provider: impl StateFactoryProvider,
-    flags: SimulationFlag,
+    flags: ExecutionFlags,
     (block_env, cfg_env): (BlockEnv, CfgEnv),
     tx: ExecutableTxWithHash,
 ) {

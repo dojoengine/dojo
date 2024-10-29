@@ -9,6 +9,8 @@ use katana_primitives::conversion::rpc::{
     compiled_class_hash_from_flattened_sierra_class, flattened_sierra_to_compiled_class,
     legacy_rpc_to_compiled_class,
 };
+use katana_primitives::da::DataAvailabilityMode;
+use katana_primitives::fee::{ResourceBounds, ResourceBoundsMapping};
 use katana_primitives::transaction::{
     DeclareTx, DeclareTxV1, DeclareTxV2, DeclareTxV3, DeclareTxWithClass, DeployAccountTx,
     DeployAccountTxV1, DeployAccountTxV3, InvokeTx, InvokeTxV1, InvokeTxV3, TxHash, TxWithHash,
@@ -57,10 +59,10 @@ impl BroadcastedInvokeTx {
                 signature: tx.signature,
                 sender_address: tx.sender_address.into(),
                 account_deployment_data: tx.account_deployment_data,
-                fee_data_availability_mode: tx.fee_data_availability_mode,
-                nonce_data_availability_mode: tx.nonce_data_availability_mode,
+                fee_data_availability_mode: from_rpc_da_mode(tx.fee_data_availability_mode),
+                nonce_data_availability_mode: from_rpc_da_mode(tx.nonce_data_availability_mode),
                 paymaster_data: tx.paymaster_data,
-                resource_bounds: tx.resource_bounds,
+                resource_bounds: from_rpc_resource_bounds(tx.resource_bounds),
                 tip: tx.tip,
             }),
         }
@@ -151,9 +153,11 @@ impl BroadcastedDeclareTx {
                         tip: tx.tip,
                         paymaster_data: tx.paymaster_data,
                         account_deployment_data: tx.account_deployment_data,
-                        resource_bounds: tx.resource_bounds,
-                        fee_data_availability_mode: tx.fee_data_availability_mode,
-                        nonce_data_availability_mode: tx.nonce_data_availability_mode,
+                        resource_bounds: from_rpc_resource_bounds(tx.resource_bounds),
+                        fee_data_availability_mode: from_rpc_da_mode(tx.fee_data_availability_mode),
+                        nonce_data_availability_mode: from_rpc_da_mode(
+                            tx.nonce_data_availability_mode,
+                        ),
                     }),
                 })
             }
@@ -219,10 +223,10 @@ impl BroadcastedDeployAccountTx {
                     contract_address: contract_address.into(),
                     constructor_calldata: tx.constructor_calldata,
                     contract_address_salt: tx.contract_address_salt,
-                    fee_data_availability_mode: tx.fee_data_availability_mode,
-                    nonce_data_availability_mode: tx.nonce_data_availability_mode,
+                    fee_data_availability_mode: from_rpc_da_mode(tx.fee_data_availability_mode),
+                    nonce_data_availability_mode: from_rpc_da_mode(tx.nonce_data_availability_mode),
                     paymaster_data: tx.paymaster_data,
-                    resource_bounds: tx.resource_bounds,
+                    resource_bounds: from_rpc_resource_bounds(tx.resource_bounds),
                     tip: tx.tip,
                 })
             }
@@ -283,10 +287,14 @@ impl From<TxWithHash> for Tx {
                             signature: tx.signature,
                             sender_address: tx.sender_address.into(),
                             account_deployment_data: tx.account_deployment_data,
-                            fee_data_availability_mode: tx.fee_data_availability_mode,
-                            nonce_data_availability_mode: tx.nonce_data_availability_mode,
+                            fee_data_availability_mode: to_rpc_da_mode(
+                                tx.fee_data_availability_mode,
+                            ),
+                            nonce_data_availability_mode: to_rpc_da_mode(
+                                tx.nonce_data_availability_mode,
+                            ),
                             paymaster_data: tx.paymaster_data,
-                            resource_bounds: tx.resource_bounds,
+                            resource_bounds: to_rpc_resource_bounds(tx.resource_bounds),
                             tip: tx.tip,
                         },
                     ),
@@ -326,10 +334,12 @@ impl From<TxWithHash> for Tx {
                         sender_address: tx.sender_address.into(),
                         compiled_class_hash: tx.compiled_class_hash,
                         account_deployment_data: tx.account_deployment_data,
-                        fee_data_availability_mode: tx.fee_data_availability_mode,
-                        nonce_data_availability_mode: tx.nonce_data_availability_mode,
+                        fee_data_availability_mode: to_rpc_da_mode(tx.fee_data_availability_mode),
+                        nonce_data_availability_mode: to_rpc_da_mode(
+                            tx.nonce_data_availability_mode,
+                        ),
                         paymaster_data: tx.paymaster_data,
-                        resource_bounds: tx.resource_bounds,
+                        resource_bounds: to_rpc_resource_bounds(tx.resource_bounds),
                         tip: tx.tip,
                     },
                 ),
@@ -368,10 +378,14 @@ impl From<TxWithHash> for Tx {
                             class_hash: tx.class_hash,
                             constructor_calldata: tx.constructor_calldata,
                             contract_address_salt: tx.contract_address_salt,
-                            fee_data_availability_mode: tx.fee_data_availability_mode,
-                            nonce_data_availability_mode: tx.nonce_data_availability_mode,
+                            fee_data_availability_mode: to_rpc_da_mode(
+                                tx.fee_data_availability_mode,
+                            ),
+                            nonce_data_availability_mode: to_rpc_da_mode(
+                                tx.nonce_data_availability_mode,
+                            ),
                             paymaster_data: tx.paymaster_data,
-                            resource_bounds: tx.resource_bounds,
+                            resource_bounds: to_rpc_resource_bounds(tx.resource_bounds),
                             tip: tx.tip,
                         },
                     ),
@@ -380,6 +394,12 @@ impl From<TxWithHash> for Tx {
         };
 
         Tx(tx)
+    }
+}
+
+impl From<starknet::core::types::Transaction> for Tx {
+    fn from(value: starknet::core::types::Transaction) -> Self {
+        Self(value)
     }
 }
 
@@ -441,10 +461,10 @@ impl From<BroadcastedInvokeTx> for InvokeTx {
                 chain_id: ChainId::default(),
                 sender_address: tx.sender_address.into(),
                 account_deployment_data: tx.account_deployment_data,
-                fee_data_availability_mode: tx.fee_data_availability_mode,
-                nonce_data_availability_mode: tx.nonce_data_availability_mode,
+                fee_data_availability_mode: from_rpc_da_mode(tx.fee_data_availability_mode),
+                nonce_data_availability_mode: from_rpc_da_mode(tx.nonce_data_availability_mode),
                 paymaster_data: tx.paymaster_data,
-                resource_bounds: tx.resource_bounds,
+                resource_bounds: from_rpc_resource_bounds(tx.resource_bounds),
                 tip: tx.tip,
             }),
         }
@@ -490,10 +510,10 @@ impl From<BroadcastedDeployAccountTx> for DeployAccountTx {
                     contract_address: contract_address.into(),
                     constructor_calldata: tx.constructor_calldata,
                     contract_address_salt: tx.contract_address_salt,
-                    fee_data_availability_mode: tx.fee_data_availability_mode,
-                    nonce_data_availability_mode: tx.nonce_data_availability_mode,
+                    fee_data_availability_mode: from_rpc_da_mode(tx.fee_data_availability_mode),
+                    nonce_data_availability_mode: from_rpc_da_mode(tx.nonce_data_availability_mode),
                     paymaster_data: tx.paymaster_data,
-                    resource_bounds: tx.resource_bounds,
+                    resource_bounds: from_rpc_resource_bounds(tx.resource_bounds),
                     tip: tx.tip,
                 })
             }
@@ -518,4 +538,53 @@ impl Default for TransactionsPageCursor {
 pub struct TransactionsPage {
     pub transactions: Vec<(TxWithHash, TxReceiptWithBlockInfo)>,
     pub cursor: TransactionsPageCursor,
+}
+
+// TODO: find a solution to avoid doing this conversion, this is not pretty at all. the reason why
+// we had to do this in the first place is because of the orphan rule. i think eventually we should
+// not rely on `starknet-rs` rpc types anymore and should instead define the types ourselves to have
+// more flexibility.
+
+fn from_rpc_da_mode(mode: starknet::core::types::DataAvailabilityMode) -> DataAvailabilityMode {
+    match mode {
+        starknet::core::types::DataAvailabilityMode::L1 => DataAvailabilityMode::L1,
+        starknet::core::types::DataAvailabilityMode::L2 => DataAvailabilityMode::L2,
+    }
+}
+
+fn to_rpc_da_mode(mode: DataAvailabilityMode) -> starknet::core::types::DataAvailabilityMode {
+    match mode {
+        DataAvailabilityMode::L1 => starknet::core::types::DataAvailabilityMode::L1,
+        DataAvailabilityMode::L2 => starknet::core::types::DataAvailabilityMode::L2,
+    }
+}
+
+fn from_rpc_resource_bounds(
+    rpc_bounds: starknet::core::types::ResourceBoundsMapping,
+) -> ResourceBoundsMapping {
+    ResourceBoundsMapping {
+        l1_gas: ResourceBounds {
+            max_amount: rpc_bounds.l1_gas.max_amount,
+            max_price_per_unit: rpc_bounds.l1_gas.max_price_per_unit,
+        },
+        l2_gas: ResourceBounds {
+            max_amount: rpc_bounds.l2_gas.max_amount,
+            max_price_per_unit: rpc_bounds.l2_gas.max_price_per_unit,
+        },
+    }
+}
+
+fn to_rpc_resource_bounds(
+    bounds: ResourceBoundsMapping,
+) -> starknet::core::types::ResourceBoundsMapping {
+    starknet::core::types::ResourceBoundsMapping {
+        l1_gas: starknet::core::types::ResourceBounds {
+            max_amount: bounds.l1_gas.max_amount,
+            max_price_per_unit: bounds.l1_gas.max_price_per_unit,
+        },
+        l2_gas: starknet::core::types::ResourceBounds {
+            max_amount: bounds.l2_gas.max_amount,
+            max_price_per_unit: bounds.l2_gas.max_price_per_unit,
+        },
+    }
 }

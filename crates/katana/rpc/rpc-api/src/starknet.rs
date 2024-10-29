@@ -12,7 +12,7 @@ use katana_rpc_types::block::{
 use katana_rpc_types::event::{EventFilterWithPage, EventsPage};
 use katana_rpc_types::message::MsgFromL1;
 use katana_rpc_types::receipt::TxReceiptWithBlockInfo;
-use katana_rpc_types::state_update::StateUpdate;
+use katana_rpc_types::state_update::MaybePendingStateUpdate;
 use katana_rpc_types::transaction::{
     BroadcastedDeclareTx, BroadcastedDeployAccountTx, BroadcastedInvokeTx, BroadcastedTx,
     DeclareTxResult, DeployAccountTxResult, InvokeTxResult, Tx,
@@ -61,7 +61,7 @@ pub trait StarknetApi {
 
     /// Get the information about the result of executing the requested block.
     #[method(name = "getStateUpdate")]
-    async fn get_state_update(&self, block_id: BlockIdOrTag) -> RpcResult<StateUpdate>;
+    async fn get_state_update(&self, block_id: BlockIdOrTag) -> RpcResult<MaybePendingStateUpdate>;
 
     /// Get the value of the storage at the given address and key
     #[method(name = "getStorageAt")]

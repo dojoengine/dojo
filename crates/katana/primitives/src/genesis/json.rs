@@ -233,8 +233,6 @@ pub struct GenesisJson {
     pub gas_prices: GasPrices,
     #[serde(default)]
     pub classes: Vec<GenesisClassJson>,
-    // pub fee_token: FeeTokenConfigJson,
-    // pub universal_deployer: Option<UniversalDeployerConfigJson>,
     #[serde(default)]
     pub accounts: BTreeMap<ContractAddress, GenesisAccountJson>,
     #[serde(default)]

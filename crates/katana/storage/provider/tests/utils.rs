@@ -1,10 +1,9 @@
 use katana_primitives::block::{Block, BlockHash, FinalityStatus, Header, SealedBlockWithStatus};
-use katana_primitives::fee::TxFeeInfo;
+use katana_primitives::fee::{PriceUnit, TxFeeInfo};
 use katana_primitives::receipt::{InvokeTxReceipt, Receipt};
 use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{InvokeTx, Tx, TxHash, TxWithHash};
 use katana_primitives::Felt;
-use starknet::core::types::PriceUnit;
 
 pub fn generate_dummy_txs_and_receipts(
     count: usize,

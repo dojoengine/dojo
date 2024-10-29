@@ -1,10 +1,11 @@
 use alloy_primitives::B256;
 use derive_more::{AsRef, Deref, From};
-use starknet::core::types::{DataAvailabilityMode, ResourceBoundsMapping};
 
 use crate::chain::ChainId;
 use crate::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
 use crate::contract::{ContractAddress, Nonce};
+use crate::da::DataAvailabilityMode;
+use crate::fee::ResourceBoundsMapping;
 use crate::utils::transaction::{
     compute_declare_v1_tx_hash, compute_declare_v2_tx_hash, compute_declare_v3_tx_hash,
     compute_deploy_account_v1_tx_hash, compute_deploy_account_v3_tx_hash,
@@ -21,6 +22,7 @@ pub type TxNumber = u64;
 ///
 /// [Starknet API]: https://github.com/starkware-libs/starknet-specs/blob/b5c43955b1868b8e19af6d1736178e02ec84e678/api/starknet_api_openrpc.json
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum TxType {
     /// Invokes a function of a contract.
@@ -41,6 +43,7 @@ pub enum TxType {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Tx {
     Invoke(InvokeTx),
@@ -152,6 +155,7 @@ impl DeclareTxWithClass {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum InvokeTx {
     V1(InvokeTxV1),
@@ -159,6 +163,7 @@ pub enum InvokeTx {
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct InvokeTxV1 {
     /// The chain id of the chain on which the transaction is initiated.
@@ -179,6 +184,7 @@ pub struct InvokeTxV1 {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct InvokeTxV3 {
     /// The chain id of the chain on which the transaction is initiated.
@@ -218,7 +224,7 @@ impl InvokeTx {
     pub fn calculate_hash(&self, is_query: bool) -> TxHash {
         match self {
             InvokeTx::V1(tx) => compute_invoke_v1_tx_hash(
-                tx.sender_address.into(),
+                Felt::from(tx.sender_address),
                 &tx.calldata,
                 tx.max_fee,
                 tx.chain_id.into(),
@@ -227,7 +233,7 @@ impl InvokeTx {
             ),
 
             InvokeTx::V3(tx) => utils::transaction::compute_invoke_v3_tx_hash(
-                tx.sender_address.into(),
+                Felt::from(tx.sender_address),
                 &tx.calldata,
                 tx.tip,
                 &tx.resource_bounds.l1_gas,
@@ -245,6 +251,7 @@ impl InvokeTx {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum DeclareTx {
     V1(DeclareTxV1),
@@ -264,6 +271,7 @@ impl DeclareTx {
 
 /// Represents a declare transaction type.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DeclareTxV1 {
     /// The chain id of the chain on which the transaction is initiated.
@@ -285,6 +293,7 @@ pub struct DeclareTxV1 {
 
 /// Represents a declare transaction type.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DeclareTxV2 {
     /// The chain id of the chain on which the transaction is initiated.
@@ -308,6 +317,7 @@ pub struct DeclareTxV2 {
 
 /// Represents a declare transaction type.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DeclareTxV3 {
     /// The chain id of the chain on which the transaction is initiated.
@@ -344,7 +354,7 @@ impl DeclareTx {
     pub fn calculate_hash(&self, is_query: bool) -> TxHash {
         match self {
             DeclareTx::V1(tx) => compute_declare_v1_tx_hash(
-                tx.sender_address.into(),
+                Felt::from(tx.sender_address),
                 tx.class_hash,
                 tx.max_fee,
                 tx.chain_id.into(),
@@ -353,7 +363,7 @@ impl DeclareTx {
             ),
 
             DeclareTx::V2(tx) => compute_declare_v2_tx_hash(
-                tx.sender_address.into(),
+                Felt::from(tx.sender_address),
                 tx.class_hash,
                 tx.max_fee,
                 tx.chain_id.into(),
@@ -363,7 +373,7 @@ impl DeclareTx {
             ),
 
             DeclareTx::V3(tx) => compute_declare_v3_tx_hash(
-                tx.sender_address.into(),
+                Felt::from(tx.sender_address),
                 tx.class_hash,
                 tx.compiled_class_hash,
                 tx.tip,
@@ -383,6 +393,7 @@ impl DeclareTx {
 
 /// The transaction type for L1 handler invocation.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct L1HandlerTx {
     /// The L1 to L2 message nonce.
@@ -408,7 +419,7 @@ impl L1HandlerTx {
     pub fn calculate_hash(&self) -> TxHash {
         compute_l1_handler_tx_hash(
             self.version,
-            self.contract_address.into(),
+            Felt::from(self.contract_address),
             self.entry_point_selector,
             &self.calldata,
             self.chain_id.into(),
@@ -418,6 +429,7 @@ impl L1HandlerTx {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum DeployAccountTx {
     V1(DeployAccountTxV1),
@@ -434,6 +446,7 @@ impl DeployAccountTx {
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DeployAccountTxV1 {
     /// The chain id of the chain on which the transaction is initiated.
@@ -458,6 +471,7 @@ pub struct DeployAccountTxV1 {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DeployAccountTxV3 {
     /// The chain id of the chain on which the transaction is initiated.
@@ -494,7 +508,7 @@ impl DeployAccountTx {
     pub fn calculate_hash(&self, is_query: bool) -> TxHash {
         match self {
             DeployAccountTx::V1(tx) => compute_deploy_account_v1_tx_hash(
-                tx.contract_address.into(),
+                Felt::from(tx.contract_address),
                 &tx.constructor_calldata,
                 tx.class_hash,
                 tx.contract_address_salt,
@@ -505,7 +519,7 @@ impl DeployAccountTx {
             ),
 
             DeployAccountTx::V3(tx) => compute_deploy_account_v3_tx_hash(
-                tx.contract_address.into(),
+                Felt::from(tx.contract_address),
                 &tx.constructor_calldata,
                 tx.class_hash,
                 tx.contract_address_salt,

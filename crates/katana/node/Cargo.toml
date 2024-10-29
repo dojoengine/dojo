@@ -12,7 +12,6 @@ katana-executor.workspace = true
 katana-pipeline.workspace = true
 katana-pool.workspace = true
 katana-primitives.workspace = true
-katana-provider.workspace = true
 katana-rpc.workspace = true
 katana-rpc-api.workspace = true
 katana-tasks.workspace = true
@@ -30,6 +29,11 @@ tracing.workspace = true
 
 strum.workspace = true
 strum_macros.workspace = true
+const_format = "0.2.33"
+
+[build-dependencies]
+vergen = { version = "9.0.0", features = [ "build", "cargo", "emit_and_set" ] }
+vergen-gitcl = { version = "1.0.0", features = [ "build", "cargo", "rustc", "si" ] }
 
 [features]
 starknet-messaging = [ "katana-core/starknet-messaging" ]

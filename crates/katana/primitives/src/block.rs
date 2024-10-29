@@ -32,6 +32,7 @@ pub type BlockHash = Felt;
 
 /// Finality status of a canonical block.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum FinalityStatus {
     AcceptedOnL2,
@@ -55,6 +56,7 @@ pub struct PartialHeader {
 // TODO: change names to wei and fri
 /// The L1 gas prices.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(rename_all = "UPPERCASE"))]
 pub struct GasPrices {
@@ -73,6 +75,7 @@ impl GasPrices {
 
 /// Represents a block header.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Header {
     pub parent_hash: BlockHash,

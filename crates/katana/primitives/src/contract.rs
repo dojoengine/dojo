@@ -16,6 +16,7 @@ pub type Nonce = Felt;
 
 /// Represents a contract address.
 #[derive(Default, Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
+#[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ContractAddress(pub Felt);
 
@@ -72,6 +73,7 @@ macro_rules! address {
 
 /// Represents a generic contract instance information.
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct GenericContractInfo {
     /// The nonce of the contract.

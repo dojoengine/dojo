@@ -46,8 +46,12 @@ impl BlockWithTxs {
                 FinalityStatus::AcceptedOnL1 => BlockStatus::AcceptedOnL1,
                 FinalityStatus::AcceptedOnL2 => BlockStatus::AcceptedOnL2,
             },
-
-            l1_da_mode: block.header.l1_da_mode,
+            l1_da_mode: match block.header.l1_da_mode {
+                katana_primitives::da::L1DataAvailabilityMode::Blob => L1DataAvailabilityMode::Blob,
+                katana_primitives::da::L1DataAvailabilityMode::Calldata => {
+                    L1DataAvailabilityMode::Calldata
+                }
+            },
             l1_data_gas_price,
         })
     }
@@ -91,6 +95,19 @@ pub enum MaybePendingBlockWithTxs {
     Block(BlockWithTxs),
 }
 
+impl From<starknet::core::types::MaybePendingBlockWithTxs> for MaybePendingBlockWithTxs {
+    fn from(value: starknet::core::types::MaybePendingBlockWithTxs) -> Self {
+        match value {
+            starknet::core::types::MaybePendingBlockWithTxs::PendingBlock(block) => {
+                MaybePendingBlockWithTxs::Pending(PendingBlockWithTxs(block))
+            }
+            starknet::core::types::MaybePendingBlockWithTxs::Block(block) => {
+                MaybePendingBlockWithTxs::Block(BlockWithTxs(block))
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct BlockWithTxHashes(starknet::core::types::BlockWithTxHashes);
@@ -125,8 +142,12 @@ impl BlockWithTxHashes {
                 FinalityStatus::AcceptedOnL1 => BlockStatus::AcceptedOnL1,
                 FinalityStatus::AcceptedOnL2 => BlockStatus::AcceptedOnL2,
             },
-
-            l1_da_mode: block.header.l1_da_mode,
+            l1_da_mode: match block.header.l1_da_mode {
+                katana_primitives::da::L1DataAvailabilityMode::Blob => L1DataAvailabilityMode::Blob,
+                katana_primitives::da::L1DataAvailabilityMode::Calldata => {
+                    L1DataAvailabilityMode::Calldata
+                }
+            },
             l1_data_gas_price,
         })
     }
@@ -155,7 +176,12 @@ impl PendingBlockWithTxHashes {
             parent_hash: header.parent_hash,
             starknet_version: header.protocol_version.to_string(),
             sequencer_address: header.sequencer_address.into(),
-            l1_da_mode: header.l1_da_mode,
+            l1_da_mode: match header.l1_da_mode {
+                katana_primitives::da::L1DataAvailabilityMode::Blob => L1DataAvailabilityMode::Blob,
+                katana_primitives::da::L1DataAvailabilityMode::Calldata => {
+                    L1DataAvailabilityMode::Calldata
+                }
+            },
             l1_data_gas_price,
         })
     }
@@ -166,6 +192,19 @@ impl PendingBlockWithTxHashes {
 pub enum MaybePendingBlockWithTxHashes {
     Pending(PendingBlockWithTxHashes),
     Block(BlockWithTxHashes),
+}
+
+impl From<starknet::core::types::MaybePendingBlockWithTxHashes> for MaybePendingBlockWithTxHashes {
+    fn from(value: starknet::core::types::MaybePendingBlockWithTxHashes) -> Self {
+        match value {
+            starknet::core::types::MaybePendingBlockWithTxHashes::PendingBlock(block) => {
+                MaybePendingBlockWithTxHashes::Pending(PendingBlockWithTxHashes(block))
+            }
+            starknet::core::types::MaybePendingBlockWithTxHashes::Block(block) => {
+                MaybePendingBlockWithTxHashes::Block(BlockWithTxHashes(block))
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -190,6 +229,7 @@ pub struct BlockWithReceipts(starknet::core::types::BlockWithReceipts);
 
 impl BlockWithReceipts {
     pub fn new(
+        hash: BlockHash,
         header: Header,
         finality_status: FinalityStatus,
         receipts: impl Iterator<Item = (TxWithHash, Receipt)>,
@@ -217,7 +257,7 @@ impl BlockWithReceipts {
                 FinalityStatus::AcceptedOnL1 => BlockStatus::AcceptedOnL1,
                 FinalityStatus::AcceptedOnL2 => BlockStatus::AcceptedOnL2,
             },
-            block_hash: header.parent_hash,
+            block_hash: hash,
             parent_hash: header.parent_hash,
             block_number: header.number,
             new_root: header.state_root,
@@ -266,7 +306,12 @@ impl PendingBlockWithReceipts {
             timestamp: header.timestamp,
             sequencer_address: header.sequencer_address.into(),
             parent_hash: header.parent_hash,
-            l1_da_mode: header.l1_da_mode,
+            l1_da_mode: match header.l1_da_mode {
+                katana_primitives::da::L1DataAvailabilityMode::Blob => L1DataAvailabilityMode::Blob,
+                katana_primitives::da::L1DataAvailabilityMode::Calldata => {
+                    L1DataAvailabilityMode::Calldata
+                }
+            },
             l1_data_gas_price,
             starknet_version: header.protocol_version.to_string(),
         })
@@ -278,4 +323,17 @@ impl PendingBlockWithReceipts {
 pub enum MaybePendingBlockWithReceipts {
     Pending(PendingBlockWithReceipts),
     Block(BlockWithReceipts),
+}
+
+impl From<starknet::core::types::MaybePendingBlockWithReceipts> for MaybePendingBlockWithReceipts {
+    fn from(value: starknet::core::types::MaybePendingBlockWithReceipts) -> Self {
+        match value {
+            starknet::core::types::MaybePendingBlockWithReceipts::PendingBlock(block) => {
+                MaybePendingBlockWithReceipts::Pending(PendingBlockWithReceipts(block))
+            }
+            starknet::core::types::MaybePendingBlockWithReceipts::Block(block) => {
+                MaybePendingBlockWithReceipts::Block(BlockWithReceipts(block))
+            }
+        }
+    }
 }

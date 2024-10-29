@@ -1,6 +1,6 @@
 use katana_cairo::cairo_vm::types::builtin_name::BuiltinName;
 use katana_primitives::block::FinalityStatus;
-use katana_primitives::fee::TxFeeInfo;
+use katana_primitives::fee::{PriceUnit, TxFeeInfo};
 use katana_primitives::receipt::{MessageToL1, Receipt};
 use katana_primitives::transaction::TxHash;
 use serde::{Deserialize, Serialize};
@@ -119,7 +119,13 @@ impl TxReceipt {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
-pub struct TxReceiptWithBlockInfo(starknet::core::types::TransactionReceiptWithBlockInfo);
+pub struct TxReceiptWithBlockInfo(pub starknet::core::types::TransactionReceiptWithBlockInfo);
+
+impl From<starknet::core::types::TransactionReceiptWithBlockInfo> for TxReceiptWithBlockInfo {
+    fn from(value: starknet::core::types::TransactionReceiptWithBlockInfo) -> Self {
+        Self(value)
+    }
+}
 
 impl TxReceiptWithBlockInfo {
     pub fn new(
@@ -209,5 +215,10 @@ impl From<katana_primitives::trace::TxResources> for ExecutionResources {
 }
 
 fn to_rpc_fee(fee: TxFeeInfo) -> FeePayment {
-    FeePayment { amount: fee.overall_fee.into(), unit: fee.unit }
+    let unit = match fee.unit {
+        PriceUnit::Wei => starknet::core::types::PriceUnit::Wei,
+        PriceUnit::Fri => starknet::core::types::PriceUnit::Fri,
+    };
+
+    FeePayment { amount: fee.overall_fee.into(), unit }
 }

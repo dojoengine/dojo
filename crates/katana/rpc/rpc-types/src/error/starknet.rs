@@ -7,6 +7,8 @@ use katana_primitives::event::ContinuationTokenError;
 use katana_provider::error::ProviderError;
 use serde::Serialize;
 use serde_json::Value;
+use starknet::core::types::StarknetError as StarknetRsError;
+use starknet::providers::ProviderError as StarknetRsProviderError;
 
 /// Possible list of errors that can be returned by the Starknet API according to the spec: <https://github.com/starkware-libs/starknet-specs>.
 #[derive(Debug, thiserror::Error, Clone, Serialize)]
@@ -40,7 +42,7 @@ pub enum StarknetApiError {
     #[error("Transaction execution error")]
     TransactionExecutionError {
         /// The index of the first transaction failing in a sequence of given transactions.
-        transaction_index: usize,
+        transaction_index: u64,
         /// The revert error with the execution trace up to the point of failure.
         execution_error: String,
     },
@@ -190,6 +192,69 @@ impl From<Box<InvalidTransactionError>> for StarknetApiError {
             }
             InvalidTransactionError::ValidationFailure { error, .. } => {
                 Self::ValidationFailure { reason: error.to_string() }
+            }
+        }
+    }
+}
+
+// ---- Forking client error conversion
+
+impl From<StarknetRsError> for StarknetApiError {
+    fn from(value: StarknetRsError) -> Self {
+        match value {
+            StarknetRsError::FailedToReceiveTransaction => Self::FailedToReceiveTxn,
+            StarknetRsError::NoBlocks => Self::NoBlocks,
+            StarknetRsError::NonAccount => Self::NonAccount,
+            StarknetRsError::BlockNotFound => Self::BlockNotFound,
+            StarknetRsError::PageSizeTooBig => Self::PageSizeTooBig,
+            StarknetRsError::DuplicateTx => Self::DuplicateTransaction,
+            StarknetRsError::ContractNotFound => Self::ContractNotFound,
+            StarknetRsError::CompilationFailed => Self::CompilationFailed,
+            StarknetRsError::ClassHashNotFound => Self::ClassHashNotFound,
+            StarknetRsError::InsufficientMaxFee => Self::InsufficientMaxFee,
+            StarknetRsError::TooManyKeysInFilter => Self::TooManyKeysInFilter,
+            StarknetRsError::InvalidTransactionIndex => Self::InvalidTxnIndex,
+            StarknetRsError::TransactionHashNotFound => Self::TxnHashNotFound,
+            StarknetRsError::ClassAlreadyDeclared => Self::ClassAlreadyDeclared,
+            StarknetRsError::UnexpectedError(reason) => Self::UnexpectedError { reason },
+            StarknetRsError::InvalidContinuationToken => Self::InvalidContinuationToken,
+            StarknetRsError::UnsupportedTxVersion => Self::UnsupportedTransactionVersion,
+            StarknetRsError::CompiledClassHashMismatch => Self::CompiledClassHashMismatch,
+            StarknetRsError::InsufficientAccountBalance => Self::InsufficientAccountBalance,
+            StarknetRsError::ValidationFailure(reason) => Self::ValidationFailure { reason },
+            StarknetRsError::ContractClassSizeIsTooLarge => Self::ContractClassSizeIsTooLarge,
+            StarknetRsError::ContractError(data) => {
+                Self::ContractError { revert_error: data.revert_error }
+            }
+            StarknetRsError::TransactionExecutionError(data) => Self::TransactionExecutionError {
+                execution_error: data.execution_error,
+                transaction_index: data.transaction_index,
+            },
+            StarknetRsError::InvalidTransactionNonce => {
+                Self::InvalidTransactionNonce { reason: "".to_string() }
+            }
+            StarknetRsError::UnsupportedContractClassVersion => {
+                Self::UnsupportedContractClassVersion
+            }
+            StarknetRsError::NoTraceAvailable(_) => {
+                Self::UnexpectedError { reason: "No trace available".to_string() }
+            }
+        }
+    }
+}
+
+impl From<StarknetRsProviderError> for StarknetApiError {
+    fn from(value: StarknetRsProviderError) -> Self {
+        match value {
+            StarknetRsProviderError::StarknetError(error) => error.into(),
+            StarknetRsProviderError::Other(error) => {
+                Self::UnexpectedError { reason: error.to_string() }
+            }
+            StarknetRsProviderError::ArrayLengthMismatch { .. } => Self::UnexpectedError {
+                reason: "Forking client: Array length mismatch".to_string(),
+            },
+            StarknetRsProviderError::RateLimited { .. } => {
+                Self::UnexpectedError { reason: "Forking client: Rate limited".to_string() }
             }
         }
     }
