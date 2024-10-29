@@ -416,8 +416,9 @@ pub fn build_sql_query(
 
             let join_clause = tables
                 .iter()
-                .map(|table| {
-                    if table.parent_table.is_none() {
+                .enumerate()
+                .map(|(i, table)| {
+                    if i == 0 {
                         format!(
                             " JOIN [{}] ON {entities_table}.id = [{}].{entity_relation_column}",
                             table.table_name, table.table_name

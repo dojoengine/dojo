@@ -284,11 +284,13 @@ impl DojoWorld {
                 None,
                 None,
             )?;
+            println!("entity_query: {}", entity_query);
 
             let rows = sqlx::query(&entity_query).bind(&models_str).fetch_all(&mut *tx).await?;
 
             let mut arrays_rows = HashMap::new();
             for (name, array_query) in arrays_queries {
+                println!("array_query: {}", array_query);
                 let array_rows =
                     sqlx::query(&array_query).bind(&models_str).fetch_all(&mut *tx).await?;
                 arrays_rows.insert(name, array_rows);
