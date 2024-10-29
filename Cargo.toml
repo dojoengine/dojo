@@ -62,7 +62,7 @@ inherits = "release"
 lto = "fat"
 
 [workspace.dependencies]
-cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.4.1", features = [ "abigen-rs" ] }
+cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.4.6", features = [ "abigen-rs" ] }
 dojo-utils = { path = "crates/dojo-utils" }
 
 # metrics
@@ -216,7 +216,7 @@ warp = "0.3"
 
 # gRPC
 prost = "0.12"
-tonic = { version = "0.11", features = [ "tls", "tls-roots", "gzip" ] }
+tonic = { version = "0.11", features = [ "gzip", "tls", "tls-roots" ] }
 tonic-build = "0.11"
 tonic-reflection = "0.11"
 tonic-web = "0.11"
