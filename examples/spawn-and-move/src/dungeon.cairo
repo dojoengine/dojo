@@ -7,7 +7,6 @@ pub trait IDungeon<T> {
 pub mod dungeon {
     #[abi(embed_v0)]
     pub impl IDungeonImpl of super::IDungeon<ContractState> {
-        fn enter(self: @ContractState) {
-        }
+        fn enter(self: @ContractState) {}
     }
 }

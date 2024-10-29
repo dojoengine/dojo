@@ -39,7 +39,9 @@ pub struct ContractDef {
 #[generate_trait]
 pub impl ContractDefImpl of ContractDefTrait {
     fn new(class_hash: felt252, name: ByteArray) -> ContractDef {
-        ContractDef { class_hash, name, init_calldata: [].span(), writer_of: [].span(), owner_of: [].span() }
+        ContractDef {
+            class_hash, name, init_calldata: [].span(), writer_of: [].span(), owner_of: [].span()
+        }
     }
 
     fn with_init_calldata(mut self: ContractDef, init_calldata: Span<felt252>) -> ContractDef {
@@ -126,25 +128,26 @@ pub fn spawn_test_world(namespaces_defs: Span<NamespaceDef>) -> WorldStorage {
             .resources
             .clone() {
                 match r {
-                    TestResource::Event(ch) => {
-                        world.register_event(namespace.clone(), *ch);
-                    },
-                    TestResource::Model(ch) => {
-                        world.register_model(namespace.clone(), *ch);
-                    },
+                    TestResource::Event(ch) => { world.register_event(namespace.clone(), *ch); },
+                    TestResource::Model(ch) => { world.register_model(namespace.clone(), *ch); },
                     TestResource::Contract(def) => {
                         let class_hash: ClassHash = (*def.class_hash).try_into().unwrap();
-                        let contract_address = world.register_contract(*def.class_hash, namespace.clone(), class_hash);
+                        let contract_address = world
+                            .register_contract(*def.class_hash, namespace.clone(), class_hash);
 
-                        for target in *def.writer_of {
-                            world.grant_writer(*target, contract_address);
-                        };
+                        for target in *def
+                            .writer_of {
+                                world.grant_writer(*target, contract_address);
+                            };
 
-                        for target in *def.owner_of {
-                            world.grant_owner(*target, contract_address);
-                        };
+                        for target in *def
+                            .owner_of {
+                                world.grant_owner(*target, contract_address);
+                            };
 
-                        let selector = dojo::utils::selector_from_namespace_and_name(namespace_hash, def.name);
+                        let selector = dojo::utils::selector_from_namespace_and_name(
+                            namespace_hash, def.name
+                        );
                         world.init_contract(selector, *def.init_calldata);
                     },
                 }

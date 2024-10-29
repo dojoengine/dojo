@@ -66,7 +66,9 @@ pub trait ModelStorageTest<S, M> {
 /// checks.
 pub trait ModelValueStorageTest<S, V> {
     /// Updates a model value of type `V`.
-    fn write_value_test<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(ref self: S, key: K, value: @V);
+    fn write_value_test<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(
+        ref self: S, key: K, value: @V
+    );
     /// Updates a model value of type `V`.
     fn write_value_from_id_test(ref self: S, entity_id: felt252, value: @V);
     /// Deletes a model value of type `V`.

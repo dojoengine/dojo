@@ -80,10 +80,7 @@ pub mod c1 {
         fn system_4(ref self: ContractState, k: felt252) {
             let mut world = self.world_default();
 
-            let m = M {
-                k,
-                v: 288,
-            };
+            let m = M { k, v: 288, };
 
             let entity_id = Model::<M>::entity_id(@m);
 
@@ -101,7 +98,8 @@ pub mod c1 {
     #[generate_trait]
     impl InternalImpl of InternalTrait {
         // Need a function since byte array can't be const.
-        // We could have a self.world with an other function to init from hash, that can be constant.
+        // We could have a self.world with an other function to init from hash, that can be
+        // constant.
         fn world_default(self: @ContractState) -> dojo::world::WorldStorage {
             self.world("ns")
         }
@@ -134,11 +132,10 @@ mod tests {
 
         let m: M = world.read_model(0);
         assert!(m.v == 0xff, "invalid b");
-
         //let m2 = M { a: 120, b: 244, };
 
         // `write_model_test` goes over permissions checks.
-        //starknet::testing::set_contract_address(123.try_into().unwrap());
-        //world.write_model_test(@m2);
+    //starknet::testing::set_contract_address(123.try_into().unwrap());
+    //world.write_model_test(@m2);
     }
 }

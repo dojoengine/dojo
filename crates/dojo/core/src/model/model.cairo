@@ -1,7 +1,4 @@
-use dojo::{
-    meta::{Layout, introspect::Ty, layout::compute_packed_size},
-    utils::entity_id_from_keys
-};
+use dojo::{meta::{Layout, introspect::Ty, layout::compute_packed_size}, utils::entity_id_from_keys};
 
 use super::{ModelDefinition, ModelDef};
 

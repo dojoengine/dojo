@@ -191,15 +191,11 @@ pub mod actions {
     // Hence, the use of `self` to access the contract state.
     #[generate_trait]
     impl InternalImpl of InternalUtils {
-        fn set_default_position(
-            self: @ContractState, player: ContractAddress
-        ) {
+        fn set_default_position(self: @ContractState, player: ContractAddress) {
             let mut world = self.world_default();
 
             world.write_model(@Moves { player, remaining: 99, last_direction: Direction::None });
-            world.write_model(
-                @Position { player, vec: Vec2 { x: 10, y: 10 } },
-            );
+            world.write_model(@Position { player, vec: Vec2 { x: 10, y: 10 } },);
         }
 
         /// Use the default namespace "ns". A function is handy since the ByteArray
@@ -217,9 +213,7 @@ mod tests {
     use dojo_cairo_test::{spawn_test_world, NamespaceDef, TestResource, ContractDefTrait};
 
     use super::{actions, actions::moved, IActionsDispatcher, IActionsDispatcherTrait};
-    use dojo_examples::models::{
-        Position, PositionValue, position, Moves, moves, Direction,
-    };
+    use dojo_examples::models::{Position, PositionValue, position, Moves, moves, Direction,};
 
     fn namespace_def() -> NamespaceDef {
         let ndef = NamespaceDef {

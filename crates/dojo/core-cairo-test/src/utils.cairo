@@ -1,4 +1,3 @@
-
 #[derive(Drop)]
 pub struct GasCounter {
     pub start: u128,

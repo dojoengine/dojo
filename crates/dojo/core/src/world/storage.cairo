@@ -2,10 +2,7 @@
 
 use core::panic_with_felt252;
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, Resource};
-use dojo::model::{
-    Model, ModelIndex,
-    ModelValueKey, ModelValue, ModelStorage, ModelPtr
-};
+use dojo::model::{Model, ModelIndex, ModelValueKey, ModelValue, ModelStorage, ModelPtr};
 use dojo::event::{Event, EventStorage};
 use dojo::meta::Layout;
 use dojo::utils::{
@@ -33,8 +30,11 @@ pub impl WorldStorageInternalImpl of WorldStorageTrait {
         self.namespace_hash = dojo::utils::bytearray_hash(@namespace);
     }
 
-    fn dns(self: @WorldStorage, namespace: @ByteArray, contract_name: @ByteArray) -> Option<ContractAddress> {
-        match (*self.dispatcher).resource(dojo::utils::selector_from_names(namespace, contract_name)) {
+    fn dns(
+        self: @WorldStorage, namespace: @ByteArray, contract_name: @ByteArray
+    ) -> Option<ContractAddress> {
+        match (*self.dispatcher)
+            .resource(dojo::utils::selector_from_names(namespace, contract_name)) {
             Resource::Contract((contract_address, _class_hash)) => Option::Some(contract_address),
             _ => Option::None
         }
@@ -110,10 +110,10 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
     }
 }
 
-impl ModelValueStorageWorldStorageImpl<V, +ModelValue<V>> of dojo::model::ModelValueStorage<WorldStorage, V> {
-    fn read_value<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(
-        self: @WorldStorage, key: K
-    ) -> V {
+impl ModelValueStorageWorldStorageImpl<
+    V, +ModelValue<V>
+> of dojo::model::ModelValueStorage<WorldStorage, V> {
+    fn read_value<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(self: @WorldStorage, key: K) -> V {
         Self::read_value_from_id(self, entity_id_from_key(@key))
     }
 
@@ -134,7 +134,9 @@ impl ModelValueStorageWorldStorageImpl<V, +ModelValue<V>> of dojo::model::ModelV
         }
     }
 
-    fn write_value<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(ref self: WorldStorage, key: K, value: @V) {
+    fn write_value<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(
+        ref self: WorldStorage, key: K, value: @V
+    ) {
         IWorldDispatcherTrait::set_entity(
             self.dispatcher,
             ModelValue::<V>::selector(self.namespace_hash),
@@ -157,7 +159,9 @@ impl ModelValueStorageWorldStorageImpl<V, +ModelValue<V>> of dojo::model::ModelV
 }
 
 #[cfg(target: "test")]
-pub impl EventStorageTestWorldStorageImpl<E, +Event<E>> of dojo::event::EventStorageTest<WorldStorage, E> {
+pub impl EventStorageTestWorldStorageImpl<
+    E, +Event<E>
+> of dojo::event::EventStorageTest<WorldStorage, E> {
     fn emit_event_test(ref self: WorldStorage, event: @E) {
         let world_test = dojo::world::IWorldTestDispatcher {
             contract_address: self.dispatcher.contract_address
@@ -175,7 +179,9 @@ pub impl EventStorageTestWorldStorageImpl<E, +Event<E>> of dojo::event::EventSto
 /// Implementation of the `ModelStorageTest` trait for testing purposes, bypassing permission
 /// checks.
 #[cfg(target: "test")]
-pub impl ModelStorageTestWorldStorageImpl<M, +Model<M>> of dojo::model::ModelStorageTest<WorldStorage, M> {
+pub impl ModelStorageTestWorldStorageImpl<
+    M, +Model<M>
+> of dojo::model::ModelStorageTest<WorldStorage, M> {
     fn write_model_test(ref self: WorldStorage, model: @M) {
         let world_test = dojo::world::IWorldTestDispatcher {
             contract_address: self.dispatcher.contract_address
@@ -227,7 +233,9 @@ pub impl ModelStorageTestWorldStorageImpl<M, +Model<M>> of dojo::model::ModelSto
 pub impl ModelValueStorageTestWorldStorageImpl<
     V, +ModelValue<V>
 > of dojo::model::ModelValueStorageTest<WorldStorage, V> {
-    fn write_value_test<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(ref self: WorldStorage, key: K, value: @V) {
+    fn write_value_test<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(
+        ref self: WorldStorage, key: K, value: @V
+    ) {
         let keys = serialize_inline::<K>(@key);
         Self::write_value_from_id_test(ref self, dojo::utils::entity_id_from_keys(keys), value);
     }

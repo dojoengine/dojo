@@ -11,16 +11,9 @@ pub mod others {
         value: u8,
     }
 
-    fn dojo_init(
-        self: @ContractState,
-        value: u8
-    ) {
+    fn dojo_init(self: @ContractState, value: u8) {
         let mut world = self.world("ns");
 
-        world.emit_event(@
-            ContractInitialized {
-                caller: get_caller_address(), value
-            }
-        );
+        world.emit_event(@ContractInitialized { caller: get_caller_address(), value });
     }
 }

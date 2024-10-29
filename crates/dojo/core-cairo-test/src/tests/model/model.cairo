@@ -138,12 +138,7 @@ fn test_get_and_set_from_model() {
 
     let foo2: Foo = world.read_model((foo.k1, foo.k2));
 
-    assert!(
-        foo.k1 == foo2.k1
-            && foo.k2 == foo2.k2
-            && foo.v1 == foo2.v1
-            && foo.v2 == foo2.v2
-    );
+    assert!(foo.k1 == foo2.k1 && foo.k2 == foo2.k2 && foo.v1 == foo2.v1 && foo.v2 == foo2.v2);
 }
 
 #[test]
@@ -158,12 +153,7 @@ fn test_delete_from_model() {
     world.erase_model(@foo);
 
     let foo2: Foo = world.read_model((foo.k1, foo.k2));
-    assert!(
-        foo2.k1 == foo.k1
-            && foo2.k2 == foo.k2
-            && foo2.v1 == 0
-            && foo2.v2 == 0
-    );
+    assert!(foo2.k1 == foo.k1 && foo2.k2 == foo.k2 && foo2.v1 == 0 && foo2.v2 == 0);
 }
 
 #[test]

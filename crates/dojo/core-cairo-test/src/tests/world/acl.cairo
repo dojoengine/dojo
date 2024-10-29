@@ -4,7 +4,8 @@ use dojo::utils::bytearray_hash;
 use dojo::world::IWorldDispatcherTrait;
 
 use crate::tests::helpers::{
-    deploy_world, Foo, foo, foo_setter, IFooSetterDispatcher, IFooSetterDispatcherTrait, DOJO_NSH, deploy_world_and_foo
+    deploy_world, Foo, foo, foo_setter, IFooSetterDispatcher, IFooSetterDispatcherTrait, DOJO_NSH,
+    deploy_world_and_foo
 };
 use crate::tests::expanded::selector_attack::{attacker_model, attacker_contract};
 
@@ -238,7 +239,9 @@ fn test_not_writer_with_known_contract() {
     let d = IFooSetterDispatcher { contract_address };
     d.set_foo(1, 2);
 
-    core::panics::panic_with_byte_array(@"Contract `dojo-foo_setter` does NOT have WRITER role on model (or its namespace) `Foo`");
+    core::panics::panic_with_byte_array(
+        @"Contract `dojo-foo_setter` does NOT have WRITER role on model (or its namespace) `Foo`"
+    );
 }
 
 /// Test that an attacker can't control the hashes of resources in other namespaces
@@ -300,5 +303,6 @@ fn test_register_contract_namespace_not_owner() {
     world.register_namespace("atk");
 
     // Attacker can't take ownership of the Foo model.
-    world.register_contract('salt1', "dojo", attacker_contract::TEST_CLASS_HASH.try_into().unwrap());
+    world
+        .register_contract('salt1', "dojo", attacker_contract::TEST_CLASS_HASH.try_into().unwrap());
 }

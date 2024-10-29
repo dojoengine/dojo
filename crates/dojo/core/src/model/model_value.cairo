@@ -1,6 +1,4 @@
-use dojo::{
-    meta::{Layout}, model::{ModelDefinition},
-};
+use dojo::{meta::{Layout}, model::{ModelDefinition},};
 
 pub trait ModelValueKey<V, K> {}
 
@@ -77,7 +75,9 @@ pub impl ModelValueTestImpl<
     S, V, +super::storage::ModelValueStorageTest<S, V>, +ModelValue<V>
 > of ModelValueTest<S, V> {
     fn update_test(ref self: S, entity_id: felt252, value: @V) {
-        super::storage::ModelValueStorageTest::<S, V>::write_value_from_id_test(ref self, entity_id, value)
+        super::storage::ModelValueStorageTest::<
+            S, V
+        >::write_value_from_id_test(ref self, entity_id, value)
     }
 
     fn delete_test(ref self: S, entity_id: felt252) {

@@ -83,13 +83,12 @@ fn test_upgrade_from_world() {
 
 #[test]
 #[available_gas(7000000)]
-#[should_panic(
-    expected: ('ENTRYPOINT_NOT_FOUND', 'ENTRYPOINT_FAILED')
-)]
+#[should_panic(expected: ('ENTRYPOINT_NOT_FOUND', 'ENTRYPOINT_FAILED'))]
 fn test_upgrade_from_world_not_world_provider() {
     let world = deploy_world();
 
-    let _ = world.register_contract('salt', "dojo", test_contract::TEST_CLASS_HASH.try_into().unwrap());
+    let _ = world
+        .register_contract('salt', "dojo", test_contract::TEST_CLASS_HASH.try_into().unwrap());
     let new_class_hash: ClassHash = contract_invalid_upgrade::TEST_CLASS_HASH.try_into().unwrap();
 
     world.upgrade_contract("dojo", new_class_hash);
@@ -168,7 +167,12 @@ mod invalid_model_world {
 
 #[test]
 #[available_gas(6000000)]
-#[should_panic(expected: ("Namespace `` is invalid according to Dojo naming rules: ^[a-zA-Z0-9_]+$", 'ENTRYPOINT_FAILED',))]
+#[should_panic(
+    expected: (
+        "Namespace `` is invalid according to Dojo naming rules: ^[a-zA-Z0-9_]+$",
+        'ENTRYPOINT_FAILED',
+    )
+)]
 fn test_register_namespace_empty_name() {
     let world = deploy_world();
 

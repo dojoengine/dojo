@@ -1,9 +1,13 @@
 use starknet::ContractAddress;
 
-use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, IWorldTestDispatcher, IWorldTestDispatcherTrait};
+use dojo::world::{
+    IWorldDispatcher, IWorldDispatcherTrait, IWorldTestDispatcher, IWorldTestDispatcherTrait
+};
 use dojo::model::{Model, ModelStorage};
 
-use crate::world::{deploy_with_world_address, spawn_test_world, NamespaceDef, TestResource, ContractDefTrait};
+use crate::world::{
+    deploy_with_world_address, spawn_test_world, NamespaceDef, TestResource, ContractDefTrait
+};
 
 pub const DOJO_NSH: felt252 = 0x309e09669bc1fdc1dd6563a7ef862aa6227c97d099d08cc7b81bad58a7443fa;
 
@@ -189,8 +193,7 @@ pub mod bar {
 
     #[abi(embed_v0)]
     impl IbarImpl of super::Ibar<ContractState> {
-        fn set_foo(self: @ContractState, a: felt252, b: u128) {
-            // set!(self.world.read(), Foo { caller: get_caller_address(), a, b });
+        fn set_foo(self: @ContractState, a: felt252, b: u128) {// set!(self.world.read(), Foo { caller: get_caller_address(), a, b });
         }
 
         fn delete_foo(self: @ContractState) {
@@ -204,21 +207,16 @@ pub mod bar {
                 );
         }
 
-        fn delete_foo_macro(self: @ContractState, foo: Foo) {
-            //delete!(self.world.read(), Foo { caller: foo.caller, a: foo.a, b: foo.b });
+        fn delete_foo_macro(self: @ContractState, foo: Foo) {//delete!(self.world.read(), Foo { caller: foo.caller, a: foo.a, b: foo.b });
         }
 
-        fn set_char(self: @ContractState, a: felt252, b: u32) {
-        }
+        fn set_char(self: @ContractState, a: felt252, b: u32) {}
     }
 }
 
 /// Deploys an empty world with the `dojo` namespace.
 pub fn deploy_world() -> IWorldDispatcher {
-    let namespace_def = NamespaceDef {
-        namespace: "dojo",
-        resources: [].span(),
-    };
+    let namespace_def = NamespaceDef { namespace: "dojo", resources: [].span(), };
 
     spawn_test_world([namespace_def].span()).dispatcher
 }
@@ -237,15 +235,15 @@ pub fn deploy_world_and_foo() -> (IWorldDispatcher, felt252) {
 /// Grants the `bar` contract writer permissions to the `foo` model.
 pub fn deploy_world_and_bar() -> (IWorldDispatcher, IbarDispatcher) {
     let namespace_def = NamespaceDef {
-        namespace: "dojo",
-        resources: [
+        namespace: "dojo", resources: [
             TestResource::Model(foo::TEST_CLASS_HASH.try_into().unwrap()),
             TestResource::Contract(ContractDefTrait::new(bar::TEST_CLASS_HASH, "bar")),
         ].span(),
     };
 
     let world = spawn_test_world([namespace_def].span()).dispatcher;
-    let bar_address = IWorldTestDispatcher { contract_address: world.contract_address }.dojo_contract_address(selector_from_tag!("dojo-bar"));
+    let bar_address = IWorldTestDispatcher { contract_address: world.contract_address }
+        .dojo_contract_address(selector_from_tag!("dojo-bar"));
 
     let bar_contract = IbarDispatcher { contract_address: bar_address };
 
