@@ -89,9 +89,12 @@ where
     ) -> Result<ModelRPCReader<'a, P>, ModelError> {
         let model_selector = naming::compute_selector_from_names(namespace, name);
 
-        let (class_hash, contract_address) =
+        // Events are also considered like models from a off-chain perspective. They both have
+        // introspection and convey type information.
+        let (contract_address, class_hash) =
             match world.resource(&model_selector).block_id(world.block_id).call().await? {
-                abigen::world::Resource::Model((hash, address)) => (hash, address),
+                abigen::world::Resource::Model((address, hash)) => (address, hash),
+                abigen::world::Resource::Event((address, hash)) => (address, hash),
                 _ => return Err(ModelError::ModelNotFound),
             };
 

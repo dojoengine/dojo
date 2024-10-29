@@ -1,4 +1,5 @@
 use dojo::model::model_value::ModelValueKey;
+use dojo::model::EraseMarker;
 
 /// A `ModelStorage` trait that abstracts where the storage is.
 ///
@@ -14,11 +15,9 @@ pub trait ModelStorage<S, M> {
     /// Deletes a model of type `M`.
     fn erase_model(ref self: S, model: @M);
 
-    /// Deletes a model of type `M` using the provided key of type `K`.
-    fn erase_model_from_key<K, +Drop<K>, +Serde<K>>(ref self: S, key: K);
-
     /// Deletes a model of type `M` using the provided entity id.
-    fn erase_model_from_id(ref self: S, entity_id: felt252);
+    /// The return value must be ignored, only used for type inferrence.
+    fn erase_model_from_id(ref self: S, marker: EraseMarker<M>);
 
     /// Retrieves a member of type `T` from a model of type `M` using the provided member id and key
     /// of type `K`.

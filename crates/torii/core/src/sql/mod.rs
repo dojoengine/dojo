@@ -392,6 +392,7 @@ impl Sql {
         entity: Ty,
         event_id: &str,
         block_timestamp: u64,
+        historical: bool,
     ) -> Result<()> {
         let keys = if let Ty::Struct(s) = &entity {
             let mut keys = Vec::new();
@@ -408,6 +409,9 @@ impl Sql {
 
         let entity_id = format!("{:#x}", poseidon_hash_many(&keys));
         let model_id = format!("{:#x}", compute_selector_from_names(model_namespace, model_name));
+
+        // If historical, get a counter from somewhere to increment it and include is in some computation.
+        // We need a new column to store this id. Will be best for perfs to have the counter somewhere else.
 
         let keys_str = felts_to_sql_string(&keys);
         let insert_entities = "INSERT INTO event_messages (id, keys, event_id, executed_at) \

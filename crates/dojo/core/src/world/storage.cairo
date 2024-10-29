@@ -4,12 +4,12 @@ use core::panic_with_felt252;
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 use dojo::model::{
     Model, ModelIndex, ModelDefinition, ModelMemberStorage,
-    ModelValueKey, ModelValue, ModelStorage
+    ModelValueKey, ModelValue, ModelStorage, EraseMarker
 };
 use dojo::event::{Event, EventStorage};
 use dojo::meta::Layout;
 use dojo::utils::{
-    entity_id_from_key, serialize_inline, deserialize_unwrap, find_model_field_layout
+    entity_id_from_key, entity_id_from_keys, serialize_inline, deserialize_unwrap, find_model_field_layout
 };
 
 #[derive(Drop)]
@@ -83,16 +83,12 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
         );
     }
 
-    fn erase_model_from_key<K, +Drop<K>, +Serde<K>>(ref self: WorldStorage, key: K) {
-        IWorldDispatcherTrait::delete_entity(
-            self.world,
-            Model::<M>::selector(self.namespace_hash),
-            ModelIndex::Keys(serialize_inline::<K>(@key)),
-            Model::<M>::layout()
-        );
-    }
+    fn erase_model_from_id(ref self: WorldStorage, marker: EraseMarker<M>) {
+        let entity_id = match marker {
+            EraseMarker::Id(id) => id,
+            EraseMarker::Keys(keys) => entity_id_from_keys(keys),
+        };
 
-    fn erase_model_from_id(ref self: WorldStorage, entity_id: felt252) {
         IWorldDispatcherTrait::delete_entity(
             self.world,
             Model::<M>::selector(self.namespace_hash),
@@ -183,7 +179,8 @@ impl ModelValueStorageWorldStorageImpl<V, +ModelValue<V>> of dojo::model::ModelV
         IWorldDispatcherTrait::set_entity(
             self.world,
             ModelValue::<V>::selector(self.namespace_hash),
-            ModelIndex::Keys(serialize_inline::<K>(@key)),
+            // We need Id here to trigger the store update event.
+            ModelIndex::Id(entity_id_from_keys(serialize_inline::<K>(@key))),
             ModelValue::<V>::values(value),
             ModelValue::<V>::layout()
         );

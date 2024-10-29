@@ -1,6 +1,7 @@
 use anyhow::{Error, Ok, Result};
 use async_trait::async_trait;
 use dojo_world::contracts::world::WorldContractReader;
+use dojo_world::contracts::abigen::world::Event as WorldEvent;
 use starknet::core::types::Event;
 use starknet::providers::Provider;
 use tracing::info;
@@ -23,16 +24,7 @@ where
         "StoreDelRecord".to_string()
     }
 
-    fn validate(&self, event: &Event) -> bool {
-        if event.keys.len() > 1 {
-            info!(
-                target: LOG_TARGET,
-                event_key = %<StoreDelRecordProcessor as EventProcessor<P>>::event_key(self),
-                invalid_keys = %<StoreDelRecordProcessor as EventProcessor<P>>::event_keys_as_string(self, event),
-                "Invalid event keys."
-            );
-            return false;
-        }
+    fn validate(&self, _event: &Event) -> bool {
         true
     }
 
@@ -45,20 +37,33 @@ where
         event_id: &str,
         event: &Event,
     ) -> Result<(), Error> {
-        let selector = event.data[MODEL_INDEX];
+        // Torii version is coupled to the world version, so we can expect the event to be well
+        // formed.
+        let event = match WorldEvent::try_from(event)
+            .expect(&format!(
+                "Expected {} event to be well formed.",
+                <StoreDelRecordProcessor as EventProcessor<P>>::event_key(self)
+            ))
+        {
+            WorldEvent::StoreDelRecord(e) => e,
+            _ => {
+                unreachable!()
+            }
+        };
 
-        let model = db.model(selector).await?;
+        let model = db.model(event.selector).await?;
 
         info!(
             target: LOG_TARGET,
+            namespace = %model.namespace,
             name = %model.name,
+            entity_id = format!("{:#x}", event.entity_id),
             "Store delete record."
         );
 
-        let entity_id = event.data[ENTITY_ID_INDEX];
         let entity = model.schema;
 
-        db.delete_entity(entity_id, selector, entity, event_id, block_timestamp).await?;
+        db.delete_entity(event.entity_id, event.selector, entity, event_id, block_timestamp).await?;
 
         Ok(())
     }

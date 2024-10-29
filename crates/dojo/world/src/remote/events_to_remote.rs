@@ -88,7 +88,7 @@ impl WorldRemote {
             events.extend(page.events);
         }
 
-        for event in events {
+        for event in &events {
             match world::Event::try_from(event) {
                 Ok(ev) => {
                     tracing::trace!(?ev, "Processing world event.");

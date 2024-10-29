@@ -160,7 +160,7 @@ pub mod world {
     #[derive(Drop, starknet::Event)]
     pub struct StoreSetRecord {
         #[key]
-        pub table: felt252,
+        pub selector: felt252,
         #[key]
         pub entity_id: felt252,
         pub keys: Span<felt252>,
@@ -170,7 +170,7 @@ pub mod world {
     #[derive(Drop, starknet::Event)]
     pub struct StoreUpdateRecord {
         #[key]
-        pub table: felt252,
+        pub selector: felt252,
         #[key]
         pub entity_id: felt252,
         pub values: Span<felt252>,
@@ -179,7 +179,7 @@ pub mod world {
     #[derive(Drop, starknet::Event)]
     pub struct StoreUpdateMember {
         #[key]
-        pub table: felt252,
+        pub selector: felt252,
         #[key]
         pub entity_id: felt252,
         #[key]
@@ -190,7 +190,7 @@ pub mod world {
     #[derive(Drop, starknet::Event)]
     pub struct StoreDelRecord {
         #[key]
-        pub table: felt252,
+        pub selector: felt252,
         #[key]
         pub entity_id: felt252,
     }
@@ -223,7 +223,7 @@ pub mod world {
     #[derive(Drop, starknet::Event)]
     pub struct EventEmitted {
         #[key]
-        pub event_selector: felt252,
+        pub selector: felt252,
         #[key]
         pub system_address: ContractAddress,
         #[key]
@@ -307,7 +307,7 @@ pub mod world {
             self
                 .emit(
                     EventEmitted {
-                        event_selector,
+                        selector: event_selector,
                         system_address: get_caller_address(),
                         historical,
                         keys,
@@ -783,7 +783,7 @@ pub mod world {
                 self
                     .emit(
                         EventEmitted {
-                            event_selector,
+                            selector: event_selector,
                             system_address: get_caller_address(),
                             historical,
                             keys,
@@ -920,6 +920,7 @@ pub mod world {
             let namespace_hash = match self.resources.read(resource_selector) {
                 Resource::Contract((_, namespace_hash)) => { namespace_hash },
                 Resource::Model((_, namespace_hash)) => { namespace_hash },
+                Resource::Event((_, namespace_hash)) => { namespace_hash },
                 Resource::Unregistered => {
                     panic_with_byte_array(@errors::resource_not_registered(resource_selector))
                 },
@@ -1042,13 +1043,13 @@ pub mod world {
                     storage::entity_model::write_model_entity(
                         model_selector, entity_id, values, layout
                     );
-                    self.emit(StoreSetRecord { table: model_selector, keys, values, entity_id });
+                    self.emit(StoreSetRecord { selector: model_selector, keys, values, entity_id });
                 },
                 ModelIndex::Id(entity_id) => {
                     storage::entity_model::write_model_entity(
                         model_selector, entity_id, values, layout
                     );
-                    self.emit(StoreUpdateRecord { table: model_selector, entity_id, values });
+                    self.emit(StoreUpdateRecord { selector: model_selector, entity_id, values });
                 },
                 ModelIndex::MemberId((
                     entity_id, member_selector
@@ -1059,7 +1060,7 @@ pub mod world {
                     self
                         .emit(
                             StoreUpdateMember {
-                                table: model_selector, entity_id, member_selector, values
+                                selector: model_selector, entity_id, member_selector, values
                             }
                         );
                 }
@@ -1080,11 +1081,11 @@ pub mod world {
                 ModelIndex::Keys(keys) => {
                     let entity_id = entity_id_from_keys(keys);
                     storage::entity_model::delete_model_entity(model_selector, entity_id, layout);
-                    self.emit(StoreDelRecord { table: model_selector, entity_id });
+                    self.emit(StoreDelRecord { selector: model_selector, entity_id });
                 },
                 ModelIndex::Id(entity_id) => {
                     storage::entity_model::delete_model_entity(model_selector, entity_id, layout);
-                    self.emit(StoreDelRecord { table: model_selector, entity_id });
+                    self.emit(StoreDelRecord { selector: model_selector, entity_id });
                 },
                 ModelIndex::MemberId(_) => { panic_with_felt252(errors::DELETE_ENTITY_MEMBER); }
             }

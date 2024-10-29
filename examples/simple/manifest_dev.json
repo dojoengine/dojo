@@ -1,14 +1,14 @@
 {
   "world": {
-    "class_hash": "0x1ebfeba7840a6308aa6676398c921ecbc1dcef75dbcbffdbd1bc0a1463fe7ed",
-    "address": "0x77c0dc7c1aba7f8842aff393ce6aa71fa675b4ced1bc927f7fc971b6acd92fc",
+    "class_hash": "0x784e409df10dbe83eb29e7de843534f2a3462d54ce14fc3ca051522080e386",
+    "address": "0x2fdc33a696a1354f18580fe4a695c3b78f81a8b56b2c3c8400bba1541488a47",
     "seed": "simple",
     "name": "simple"
   },
   "contracts": [
     {
-      "address": "0x77762cce8276fce1945c201670882df9731e7663c062dd26553d48c24203469",
-      "class_hash": "0x7b3587958f67a798d004a7b51a56de74a325c25e63330f52cbc735670abbfa2",
+      "address": "0x4912de991f0bdbff649f468d46a4840a31c4f7a8f4d93fbe7511dfd88d2a8e3",
+      "class_hash": "0x605ac2e8151f93e51460ce7bacfffd9d2ec0bbdbe353b628674a2c57656680",
       "abi": [
         {
           "type": "impl",
@@ -55,7 +55,7 @@
           "name": "dojo_init",
           "inputs": [
             {
-              "name": "arg1",
+              "name": "v",
               "type": "core::felt252"
             }
           ],
@@ -76,11 +76,11 @@
               "name": "system_1",
               "inputs": [
                 {
-                  "name": "a",
+                  "name": "k",
                   "type": "core::felt252"
                 },
                 {
-                  "name": "b",
+                  "name": "v",
                   "type": "core::felt252"
                 }
               ],
@@ -92,7 +92,7 @@
               "name": "system_2",
               "inputs": [
                 {
-                  "name": "a",
+                  "name": "k",
                   "type": "core::felt252"
                 }
               ],
@@ -101,23 +101,35 @@
                   "type": "core::felt252"
                 }
               ],
-              "state_mutability": "view"
+              "state_mutability": "external"
             },
             {
               "type": "function",
               "name": "system_3",
               "inputs": [
                 {
-                  "name": "a",
+                  "name": "k",
                   "type": "core::felt252"
                 },
                 {
-                  "name": "b",
+                  "name": "v",
                   "type": "core::integer::u32"
                 }
               ],
               "outputs": [],
-              "state_mutability": "view"
+              "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "system_4",
+              "inputs": [
+                {
+                  "name": "k",
+                  "type": "core::felt252"
+                }
+              ],
+              "outputs": [],
+              "state_mutability": "external"
             }
           ]
         },
@@ -236,7 +248,7 @@
       "systems": []
     },
     {
-      "address": "0x4d68cd65198d01b1fafb81fd7181c9b65c1b6d094a5719fce7c687ebe9fb9b",
+      "address": "0x232cdd536d8f45538e714329b325af50412b5fb09a20b27564bdac2964402a9",
       "class_hash": "0x1eef253239f61c49444c41990940fa8fee51b021d19e48c20d31f45bc465d46",
       "abi": [
         {
@@ -402,19 +414,14 @@
   "models": [
     {
       "members": [],
-      "class_hash": "0x197e4e61b66fb3e155fbed747b2601e8a582e1d6df85fa984da79b0e131426a",
+      "class_hash": "0x3177bb75806f3ec4093682f763d4f71eb45c925f01b30d8ce6cc95b84afa60f",
       "tag": "M"
-    },
-    {
-      "members": [],
-      "class_hash": "0x1d0ffd1e1f536860e3360d84423cf5afc6332507d0b3e6913143718d8f313b",
-      "tag": "M2"
     }
   ],
   "events": [
     {
       "members": [],
-      "class_hash": "0x3dad17a44f8f9f497b5d16a971c3800ab8a6481b0ec5a26bd8114eebd64016a",
+      "class_hash": "0x10a5301f73cce93f7f666e2e1d9310d49e6c2f4ecaef1b6126d4a4e393d6d50",
       "tag": "E"
     }
   ]

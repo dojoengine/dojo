@@ -1,5 +1,12 @@
 use dojo::meta::{Layout, introspect::Ty};
 
+/// A marker to indicate how a model should be erased, by conveying the type info.
+#[derive(Copy, Drop, Serde, Debug)]
+pub enum EraseMarker<M> {
+    Id: felt252,
+    Keys: Span<felt252>,
+}
+
 /// The `ModelIndex` provides encapsulation for different ways to access
 /// a model's data.
 ///

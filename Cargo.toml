@@ -63,7 +63,7 @@ inherits = "release"
 lto = "fat"
 
 [workspace.dependencies]
-cainome = { git = "https://github.com/cartridge-gg/cainome", rev = "7adc7d5", features = [ "abigen-rs" ] }
+cainome = { git = "https://github.com/cartridge-gg/cainome", rev = "5c2616c273faca7700d2ba565503fcefb5b9d720", features = [ "abigen-rs" ] }
 dojo-utils = { path = "crates/dojo/utils" }
 
 # metrics
@@ -190,8 +190,10 @@ rstest_reuse = "0.6.0"
 salsa = "0.16.1"
 #scarb = { git = "https://github.com/software-mansion/scarb", tag = "v2.8.4" }
 #scarb-ui = { git = "https://github.com/software-mansion/scarb", tag = "v2.8.4" }
-scarb = { git = "https://github.com/dojoengine/scarb", rev = "5f2a18572e2b2ed4d11b6e85f5713048cf6c574b" }
-scarb-ui = { git = "https://github.com/dojoengine/scarb", rev = "5f2a18572e2b2ed4d11b6e85f5713048cf6c574b" }
+#scarb = { git = "https://github.com/dojoengine/scarb", rev = "5f2a18572e2b2ed4d11b6e85f5713048cf6c574b" }
+#scarb-ui = { git = "https://github.com/dojoengine/scarb", rev = "5f2a18572e2b2ed4d11b6e85f5713048cf6c574b" }
+scarb = { path = "/Users/glihm/swm/scarb/scarb" }
+scarb-ui = { path = "/Users/glihm/swm/scarb/utils/scarb-ui" }
 semver = "1.0.5"
 serde = { version = "1.0", features = [ "derive" ] }
 serde_json = { version = "1.0", features = [ "arbitrary_precision" ] }

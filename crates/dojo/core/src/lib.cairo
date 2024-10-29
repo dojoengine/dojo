@@ -31,7 +31,7 @@ pub mod model {
     pub mod component;
 
     pub mod definition;
-    pub use definition::{ModelIndex, ModelDefinition, ModelDef};
+    pub use definition::{ModelIndex, ModelDefinition, ModelDef, EraseMarker};
 
     pub mod model;
     pub use model::{Model, KeyParser};
