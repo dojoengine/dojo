@@ -36,7 +36,7 @@ pub impl ModelValueImpl<V, +Serde<V>, +ModelDefinition<V>, +ModelValueParser<V>>
     }
 
     fn from_values(entity_id: felt252, ref values: Span<felt252>) -> Option<V> {
-        let mut serialized: Array<felt252> = array![entity_id];
+        let mut serialized: Array<felt252> = array![];
         serialized.append_span(values);
         let mut span = serialized.span();
         Serde::<V>::deserialize(ref span)
@@ -77,10 +77,10 @@ pub impl ModelValueTestImpl<
     S, V, +super::storage::ModelValueStorageTest<S, V>, +ModelValue<V>
 > of ModelValueTest<S, V> {
     fn update_test(ref self: S, entity_id: felt252, value: @V) {
-        super::storage::ModelValueStorageTest::<S, V>::write_model_value_test(ref self, entity_id, value)
+        super::storage::ModelValueStorageTest::<S, V>::write_value_from_id_test(ref self, entity_id, value)
     }
 
     fn delete_test(ref self: S, entity_id: felt252) {
-        super::storage::ModelValueStorageTest::<S, V>::erase_model_value_test(ref self, entity_id)
+        super::storage::ModelValueStorageTest::<S, V>::erase_value_from_id_test(ref self, entity_id)
     }
 }

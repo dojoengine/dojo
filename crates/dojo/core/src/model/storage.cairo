@@ -1,5 +1,16 @@
 use dojo::model::model_value::ModelValueKey;
-use dojo::model::EraseMarker;
+
+// TODO: define the right interface for member accesses.
+
+/// A pointer to a model, which can be expressed by an entity id.
+/// It's different from `ModelIndex` which is used for low level accesses.
+#[derive(Copy, Drop, Serde, Debug, PartialEq)]
+pub enum ModelPtr<M> {
+    // The id of the model.
+    Id: felt252,
+    // The keys of the model as span.
+    Keys: Span<felt252>,
+}
 
 /// A `ModelStorage` trait that abstracts where the storage is.
 ///
@@ -16,32 +27,8 @@ pub trait ModelStorage<S, M> {
     fn erase_model(ref self: S, model: @M);
 
     /// Deletes a model of type `M` using the provided entity id.
-    /// The return value must be ignored, only used for type inferrence.
-    fn erase_model_from_id(ref self: S, marker: EraseMarker<M>);
-
-    /// Retrieves a member of type `T` from a model of type `M` using the provided member id and key
-    /// of type `K`.
-    fn read_member<T, K, +ModelMemberStorage<S, M, T>, +Drop<T>, +Drop<K>, +Serde<K>>(
-        self: @S, key: K, member_id: felt252
-    ) -> T;
-
-    /// Updates a member of type `T` within a model of type `M` using the provided member id, key of
-    /// type `K`, and new value of type `T`.
-    fn write_member<T, K, +ModelMemberStorage<S, M, T>, +Drop<T>, +Drop<K>, +Serde<K>>(
-        ref self: S, key: K, member_id: felt252, value: T
-    );
-
-    /// Returns the current namespace hash.
-    fn namespace_hash(self: @S) -> felt252;
-}
-
-/// A `ModelMemberStorage` trait that abstracts where the storage is.
-pub trait ModelMemberStorage<S, M, T> {
-    /// Retrieves a member of type `T` for the given entity id and member id.
-    fn read_member_from_id(self: @S, entity_id: felt252, member_id: felt252) -> T;
-
-    /// Updates a member of type `T` for the given entity id and member id.
-    fn write_member_from_id(ref self: S, entity_id: felt252, member_id: felt252, value: T);
+    /// The ptr is mostly used for type inferrence.
+    fn erase_model_ptr(ref self: S, ptr: ModelPtr<M>);
 
     /// Returns the current namespace hash.
     fn namespace_hash(self: @S) -> felt252;
@@ -50,16 +37,16 @@ pub trait ModelMemberStorage<S, M, T> {
 /// A `ModelValueStorage` trait that abstracts where the storage is.
 pub trait ModelValueStorage<S, V> {
     /// Retrieves a model value of type `V` using the provided key of type `K`.
-    fn read_model_value<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(self: @S, key: K) -> V;
+    fn read_value<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(self: @S, key: K) -> V;
 
     /// Retrieves a model value of type `V` using the provided entity id.
-    fn read_model_value_from_id(self: @S, entity_id: felt252) -> V;
+    fn read_value_from_id(self: @S, entity_id: felt252) -> V;
 
     /// Updates a model value of type `V`.
-    fn write_model_value<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(ref self: S, key: K, value: @V);
+    fn write_value<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(ref self: S, key: K, value: @V);
 
     /// Updates a model value of type `V`.
-    fn write_model_value_from_id(ref self: S, entity_id: felt252, value: @V);
+    fn write_value_from_id(ref self: S, entity_id: felt252, value: @V);
 }
 
 /// A `ModelStorage` trait that abstracts where the storage is.
@@ -71,13 +58,17 @@ pub trait ModelStorageTest<S, M> {
     fn write_model_test(ref self: S, model: @M);
     /// Deletes a model of type `M`.
     fn erase_model_test(ref self: S, model: @M);
+    /// Deletes a model of type `M` using the provided entity id.
+    fn erase_model_ptr_test(ref self: S, ptr: ModelPtr<M>);
 }
 
 /// A `ModelValueStorageTest` trait that abstracts where the storage is and bypass the permission
 /// checks.
 pub trait ModelValueStorageTest<S, V> {
     /// Updates a model value of type `V`.
-    fn write_model_value_test(ref self: S, entity_id: felt252, value: @V);
+    fn write_value_test<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(ref self: S, key: K, value: @V);
+    /// Updates a model value of type `V`.
+    fn write_value_from_id_test(ref self: S, entity_id: felt252, value: @V);
     /// Deletes a model value of type `V`.
-    fn erase_model_value_test(ref self: S, entity_id: felt252);
+    fn erase_value_from_id_test(ref self: S, entity_id: felt252);
 }

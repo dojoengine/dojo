@@ -1,5 +1,5 @@
 use dojo::model::Model;
-use dojo::utils::{bytearray_hash, selector_from_names};
+use dojo::utils::{selector_from_names};
 
 use crate::tests::helpers::DOJO_NSH;
 

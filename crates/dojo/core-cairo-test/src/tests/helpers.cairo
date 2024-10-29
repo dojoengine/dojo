@@ -220,7 +220,7 @@ pub fn deploy_world() -> IWorldDispatcher {
         resources: [].span(),
     };
 
-    spawn_test_world([namespace_def].span())
+    spawn_test_world([namespace_def].span()).dispatcher
 }
 
 /// Deploys an empty world with the `dojo` namespace and registers the `foo` model.
@@ -244,7 +244,7 @@ pub fn deploy_world_and_bar() -> (IWorldDispatcher, IbarDispatcher) {
         ].span(),
     };
 
-    let world = spawn_test_world([namespace_def].span());
+    let world = spawn_test_world([namespace_def].span()).dispatcher;
     let bar_address = IWorldTestDispatcher { contract_address: world.contract_address }.dojo_contract_address(selector_from_tag!("dojo-bar"));
 
     let bar_contract = IbarDispatcher { contract_address: bar_address };

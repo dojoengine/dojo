@@ -4,7 +4,7 @@ use core::traits::{Into, TryInto};
 
 use starknet::{ContractAddress, ClassHash, syscalls::deploy_syscall};
 
-use dojo::world::{world, IWorldDispatcher, IWorldDispatcherTrait};
+use dojo::world::{world, IWorldDispatcher, IWorldDispatcherTrait, WorldStorageTrait, WorldStorage};
 
 /// In Cairo test runner, all the classes are expected to be declared already.
 /// If a contract belong to an other crate, it must be added to the `build-external-contract`,
@@ -97,7 +97,7 @@ pub fn deploy_with_world_address(class_hash: felt252, world: IWorldDispatcher) -
 /// # Returns
 ///
 /// * World dispatcher
-pub fn spawn_test_world(namespaces_defs: Span<NamespaceDef>) -> IWorldDispatcher {
+pub fn spawn_test_world(namespaces_defs: Span<NamespaceDef>) -> WorldStorage {
     let salt = core::testing::get_available_gas();
 
     let (world_address, _) = deploy_syscall(
@@ -110,9 +110,15 @@ pub fn spawn_test_world(namespaces_defs: Span<NamespaceDef>) -> IWorldDispatcher
 
     let world = IWorldDispatcher { contract_address: world_address };
 
+    let mut first_namespace = Option::None;
+
     for ns in namespaces_defs {
         let namespace = ns.namespace.clone();
         world.register_namespace(namespace.clone());
+
+        if first_namespace.is_none() {
+            first_namespace = Option::Some(namespace.clone());
+        }
 
         let namespace_hash = dojo::utils::bytearray_hash(@namespace);
 
@@ -145,5 +151,5 @@ pub fn spawn_test_world(namespaces_defs: Span<NamespaceDef>) -> IWorldDispatcher
             }
     };
 
-    world
+    WorldStorageTrait::new(world, first_namespace.unwrap())
 }

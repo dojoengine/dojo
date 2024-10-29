@@ -1,30 +1,25 @@
 #[dojo::contract]
 pub mod others {
-    use starknet::{ContractAddress, ClassHash, get_caller_address};
-    use dojo_examples::models::{Position, Moves, Direction, Vec2};
-    use dojo_examples::utils::next_position;
+    use starknet::{ContractAddress, get_caller_address};
+    use dojo::event::EventStorage;
 
     #[derive(Copy, Drop, Serde)]
     #[dojo::event]
-    #[dojo::model]
     struct ContractInitialized {
         #[key]
-        contract_address: ContractAddress,
-        contract_class: ClassHash,
+        caller: ContractAddress,
         value: u8,
     }
 
-
     fn dojo_init(
-        world: @IWorldDispatcher,
-        actions_address: ContractAddress,
-        actions_class: ClassHash,
+        self: @ContractState,
         value: u8
     ) {
-        emit!(
-            world,
+        let mut world = self.world("ns");
+
+        world.emit_event(@
             ContractInitialized {
-                contract_address: actions_address, contract_class: actions_class, value
+                caller: get_caller_address(), value
             }
         );
     }

@@ -1,7 +1,7 @@
 [package]
 cairo-version = "=2.8.4"
 name = "dojo_examples"
-version = "1.0.0-alpha.8"
+version = "1.0.0-rc.0"
 # Use the prelude with the less imports as possible
 # from corelib.
 edition = "2024_07"
@@ -10,13 +10,16 @@ edition = "2024_07"
 sierra-replace-ids = true
 
 [[target.starknet-contract]]
-build-external-contracts = [ "armory::Flatbow", "bestiary::RiverSkale" ]
+build-external-contracts = [ "armory::Flatbow", "bestiary::RiverSkale", "dojo::world::world_contract::world" ]
 
 [dependencies]
 armory = { path = "../game-lib/armory" }
 bestiary = { path = "../game-lib/bestiary" }
 dojo = { path = "../../crates/dojo/core" }
-#dojo_plugin = { path = "../../crates/dojo/lang" }
+starknet = "2.8.4"
+
+[dev-dependencies]
+dojo_cairo_test = { path = "../../crates/dojo/core-cairo-test" }
 
 [features]
 default = [ "dungeon" ]

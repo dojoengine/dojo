@@ -63,7 +63,7 @@ pub fn invalid_resource_selector(selector: felt252) -> ByteArray {
 }
 
 pub fn resource_conflict(name: @ByteArray, expected_type: @ByteArray) -> ByteArray {
-    format!("Resource `{}` is registered but not as a {}", name, expected_type)
+    format!("Resource `{}` is registered but not as {}", name, expected_type)
 }
 
 pub fn no_model_write_access(tag: @ByteArray, caller: ContractAddress) -> ByteArray {

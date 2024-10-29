@@ -133,8 +133,6 @@ mod tests {
 
         let world = spawn_test_world([ndef].span());
 
-        let mut world = WorldStorageTrait::new(world, "ns");
-
         let m: M = world.read_model(0);
         assert!(m.b == 0xff, "invalid b");
 
