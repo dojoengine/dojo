@@ -34,13 +34,6 @@ use tokio::sync::Mutex;
 
 mod common;
 
-/// Macro used to assert that the given error is a Starknet error.
-macro_rules! assert_starknet_err {
-    ($err:expr, $api_err:pat) => {
-        assert_matches!($err, AccountError::Provider(ProviderError::StarknetError($api_err)))
-    };
-}
-
 #[tokio::test]
 async fn declare_and_deploy_contract() -> Result<()> {
     let sequencer =
@@ -180,7 +173,7 @@ async fn declaring_already_existing_class() -> Result<()> {
     // checks and will not run the account's validation.
 
     let result = account.declare_v2(contract.into(), compiled_hash).max_fee(Felt::ONE).send().await;
-    assert_starknet_err!(result.unwrap_err(), StarknetError::ClassAlreadyDeclared);
+    assert_account_starknet_err!(result.unwrap_err(), StarknetError::ClassAlreadyDeclared);
 
     Ok(())
 }
@@ -411,7 +404,7 @@ async fn ensure_validator_have_valid_state(
     // actual balance that we have now.
     let fee = Felt::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE);
     let err = contract.transfer(&recipient, &amount).max_fee(fee).send().await.unwrap_err();
-    assert_starknet_err!(err, StarknetError::InsufficientAccountBalance);
+    assert_account_starknet_err!(err, StarknetError::InsufficientAccountBalance);
 
     Ok(())
 }
@@ -453,7 +446,7 @@ async fn send_txs_with_insufficient_fee(
         let nonce = sequencer.account().get_nonce().await?;
         assert_eq!(initial_nonce + 1, nonce, "Nonce should change in fee-disabled mode");
     } else {
-        assert_starknet_err!(res.unwrap_err(), StarknetError::InsufficientMaxFee);
+        assert_account_starknet_err!(res.unwrap_err(), StarknetError::InsufficientMaxFee);
         let nonce = sequencer.account().get_nonce().await?;
         assert_eq!(initial_nonce, nonce, "Nonce shouldn't change in fee-enabled mode");
     }
@@ -474,7 +467,7 @@ async fn send_txs_with_insufficient_fee(
         let nonce = sequencer.account().get_nonce().await?;
         assert_eq!(initial_nonce + 2, nonce, "Nonce should change in fee-disabled mode");
     } else {
-        assert_starknet_err!(res.unwrap_err(), StarknetError::InsufficientAccountBalance);
+        assert_account_starknet_err!(res.unwrap_err(), StarknetError::InsufficientAccountBalance);
 
         // nonce shouldn't change for an invalid tx.
         let nonce = sequencer.account().get_nonce().await?;
@@ -530,7 +523,7 @@ async fn send_txs_with_invalid_signature(
         let nonce = sequencer.account().get_nonce().await?;
         assert_eq!(initial_nonce + 1, nonce);
     } else {
-        assert_starknet_err!(res.unwrap_err(), StarknetError::ValidationFailure(_));
+        assert_account_starknet_err!(res.unwrap_err(), StarknetError::ValidationFailure(_));
 
         // nonce shouldn't change for an invalid tx.
         let nonce = sequencer.account().get_nonce().await?;
@@ -576,7 +569,7 @@ async fn send_txs_with_invalid_nonces(
 
     let old_nonce = initial_nonce - Felt::ONE;
     let res = contract.transfer(&recipient, &amount).nonce(old_nonce).max_fee(fee).send().await;
-    assert_starknet_err!(res.unwrap_err(), StarknetError::InvalidTransactionNonce);
+    assert_account_starknet_err!(res.unwrap_err(), StarknetError::InvalidTransactionNonce);
 
     let nonce = account.get_nonce().await?;
     assert_eq!(nonce, initial_nonce, "Nonce shouldn't change on invalid tx.");
@@ -601,7 +594,7 @@ async fn send_txs_with_invalid_nonces(
 
     let new_nonce = felt!("0x100");
     let res = contract.transfer(&recipient, &amount).nonce(new_nonce).max_fee(fee).send().await;
-    assert_starknet_err!(res.unwrap_err(), StarknetError::InvalidTransactionNonce);
+    assert_account_starknet_err!(res.unwrap_err(), StarknetError::InvalidTransactionNonce);
 
     let nonce = account.get_nonce().await?;
     assert_eq!(nonce, Felt::TWO, "Nonce shouldn't change bcs the tx is still invalid.");

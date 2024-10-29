@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use assert_matches::assert_matches;
 use cainome::rs::abigen_legacy;
 use dojo_test_utils::sequencer::{get_default_test_config, TestSequencer};
@@ -11,10 +11,12 @@ use katana_primitives::genesis::constant::DEFAULT_ETH_FEE_TOKEN_ADDRESS;
 use katana_primitives::transaction::TxHash;
 use katana_primitives::{felt, Felt};
 use katana_rpc_api::dev::DevApiClient;
-use starknet::core::types::MaybePendingBlockWithTxs;
+use starknet::core::types::{MaybePendingBlockWithTxs, StarknetError};
 use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::{JsonRpcClient, Provider};
+use starknet::providers::{JsonRpcClient, Provider, ProviderError};
 use url::Url;
+
+mod common;
 
 const SEPOLIA_CHAIN_ID: Felt = NamedChainId::SN_SEPOLIA;
 const SEPOLIA_URL: &str = "https://api.cartridge.gg/x/starknet/sepolia";
@@ -33,7 +35,12 @@ fn provider(url: Url) -> JsonRpcClient<HttpTransport> {
 
 type LocalTestVector = Vec<(BlockNumber, TxHash)>;
 
-async fn forked_sequencer() -> (TestSequencer, impl Provider, LocalTestVector) {
+/// A helper function for setting a test environment, forked from the SN_SEPOLIA chain.
+/// This function will forked Sepolia at block [`FORK_BLOCK_NUMBER`] and create 10 blocks, each has
+/// a single transaction.
+///
+/// The returned [`TestVector`] is a list of all the locally created blocks and transactions.
+async fn setup_test() -> (TestSequencer, impl Provider, LocalTestVector) {
     let mut config = get_default_test_config(SequencingConfig::default());
     config.forking = Some(forking_cfg());
 
@@ -61,7 +68,7 @@ async fn forked_sequencer() -> (TestSequencer, impl Provider, LocalTestVector) {
 
 #[tokio::test]
 async fn can_fork() -> Result<()> {
-    let (_sequencer, provider, _) = forked_sequencer().await;
+    let (_sequencer, provider, _) = setup_test().await;
 
     let block = provider.block_number().await?;
     let chain = provider.chain_id().await?;
@@ -95,7 +102,7 @@ async fn assert_get_block_methods(provider: &impl Provider, num: BlockNumber) ->
 
 #[tokio::test]
 async fn forked_blocks() -> Result<()> {
-    let (_sequencer, provider, _) = forked_sequencer().await;
+    let (_sequencer, provider, _) = setup_test().await;
 
     let block_num = FORK_BLOCK_NUMBER;
     assert_get_block_methods(&provider, block_num).await?;
@@ -106,14 +113,41 @@ async fn forked_blocks() -> Result<()> {
     let block_num = FORK_BLOCK_NUMBER + 5;
     assert_get_block_methods(&provider, block_num).await?;
 
+    // -----------------------------------------------------------------------
+    // Get block that doesn't exist on the both the forked and local chain
+
+    let id = BlockIdOrTag::Number(BlockNumber::MAX);
+    let result = provider.get_block_with_txs(id).await.unwrap_err();
+    assert_provider_starknet_err!(result, StarknetError::BlockNotFound);
+
+    let result = provider.get_block_with_receipts(id).await.unwrap_err();
+    assert_provider_starknet_err!(result, StarknetError::BlockNotFound);
+
+    let result = provider.get_block_with_tx_hashes(id).await.unwrap_err();
+    assert_provider_starknet_err!(result, StarknetError::BlockNotFound);
+
+    let result = provider.get_block_transaction_count(id).await.unwrap_err();
+    assert_provider_starknet_err!(result, StarknetError::BlockNotFound);
+
+    let result = provider.get_state_update(id).await.unwrap_err();
+    assert_provider_starknet_err!(result, StarknetError::BlockNotFound);
+
     Ok(())
 }
 
 async fn assert_get_transaction_methods(provider: &impl Provider, tx_hash: TxHash) -> Result<()> {
-    let tx = provider.get_transaction_by_hash(tx_hash).await?;
+    let tx = provider
+        .get_transaction_by_hash(tx_hash)
+        .await
+        .with_context(|| format!("failed to get tx {tx_hash:#x}"))?;
     assert_eq!(*tx.transaction_hash(), tx_hash);
-    let tx = provider.get_transaction_receipt(tx_hash).await?;
+
+    let tx = provider
+        .get_transaction_receipt(tx_hash)
+        .await
+        .with_context(|| format!("failed to get receipt {tx_hash:#x}"))?;
     assert_eq!(*tx.receipt.transaction_hash(), tx_hash);
+
     let result = provider.get_transaction_status(tx_hash).await;
     assert!(result.is_ok());
     Ok(())
@@ -121,21 +155,42 @@ async fn assert_get_transaction_methods(provider: &impl Provider, tx_hash: TxHas
 
 #[tokio::test]
 async fn forked_transactions() -> Result<()> {
-    let (_sequencer, provider, local_only_data) = forked_sequencer().await;
+    let (_sequencer, provider, local_only_data) = setup_test().await;
 
-    // https://sepolia.voyager.online/tx/0x5ae12c42a01c71cff20e1ce5bdeeb07cd2d5ddbc86e1157d4bdf2e71dc2d866
-    // transaction in block num 268_533
-    let tx_hash = felt!("0x5ae12c42a01c71cff20e1ce5bdeeb07cd2d5ddbc86e1157d4bdf2e71dc2d866");
+    // -----------------------------------------------------------------------
+    // Get txs before the forked block.
+
+    // https://sepolia.voyager.online/tx/0x81207d4244596678e186f6ab9c833fe40a4b35291e8a90b9a163f7f643df9f
+    // Transaction in block num FORK_BLOCK_NUMBER - 1
+    let tx_hash = felt!("0x81207d4244596678e186f6ab9c833fe40a4b35291e8a90b9a163f7f643df9f");
     assert_get_transaction_methods(&provider, tx_hash).await?;
 
-    // get local only transactions
+    // https://sepolia.voyager.online/tx/0x1b18d62544d4ef749befadabcec019d83218d3905abd321b4c1b1fc948d5710
+    // Transaction in block num FORK_BLOCK_NUMBER - 2
+    let tx_hash = felt!("0x1b18d62544d4ef749befadabcec019d83218d3905abd321b4c1b1fc948d5710");
+    assert_get_transaction_methods(&provider, tx_hash).await?;
+
+    // -----------------------------------------------------------------------
+    // Get the locally created transactions.
+
     for (_, tx_hash) in local_only_data {
         assert_get_transaction_methods(&provider, tx_hash).await?;
     }
 
-    // https://sepolia.voyager.online/tx/0x3e336c36a1cba6f3a69d8b5aeed95f81ea0499edbdf2762d00ff641310ecc10
-    // transaction in block num 268_473 (plus 3 after the fork block number)
-    let tx_hash = felt!("0x3e336c36a1cba6f3a69d8b5aeed95f81ea0499edbdf2762d00ff641310ecc10");
+    // -----------------------------------------------------------------------
+    // Get a tx that exists in the forked chain but is included in a block past the forked block.
+
+    // https://sepolia.voyager.online/block/0x335a605f2c91873f8f830a6e5285e704caec18503ca28c18485ea6f682eb65e
+    // transaction in block num 268,474 (FORK_BLOCK_NUMBER + 3)
+    let tx_hash = felt!("0x335a605f2c91873f8f830a6e5285e704caec18503ca28c18485ea6f682eb65e");
+    let result = provider.get_transaction_by_hash(tx_hash).await.unwrap_err();
+    assert_provider_starknet_err!(result, StarknetError::TransactionHashNotFound);
+
+    let result = provider.get_transaction_receipt(tx_hash).await.unwrap_err();
+    assert_provider_starknet_err!(result, StarknetError::TransactionHashNotFound);
+
+    let result = provider.get_transaction_status(tx_hash).await.unwrap_err();
+    assert_provider_starknet_err!(result, StarknetError::TransactionHashNotFound);
 
     Ok(())
 }

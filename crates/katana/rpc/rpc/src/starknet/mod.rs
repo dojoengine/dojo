@@ -440,35 +440,42 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
                 let provider = this.inner.backend.blockchain.provider();
                 let receipt = ReceiptBuilder::new(hash, provider).build()?;
 
+                // If receipt is not found, check the pending block.
                 match receipt {
                     Some(receipt) => Ok(Some(receipt)),
                     None => {
                         let executor = this.pending_executor();
-                        let pending_receipt = executor
-                            .and_then(|executor| {
-                                executor.read().transactions().iter().find_map(|(tx, res)| {
-                                    if tx.hash == hash {
-                                        match res {
-                                            ExecutionResult::Failed { .. } => None,
-                                            ExecutionResult::Success { receipt, .. } => {
-                                                Some(receipt.clone())
-                                            }
+                        // If there's a pending executor
+                        let pending_receipt = executor.and_then(|executor| {
+                            // Find the transaction in the pending block that matches the hash
+                            executor.read().transactions().iter().find_map(|(tx, res)| {
+                                if tx.hash == hash {
+                                    // If the transaction is found, only return the receipt if it's
+                                    // successful
+                                    match res {
+                                        ExecutionResult::Success { receipt, .. } => {
+                                            Some(receipt.clone())
                                         }
-                                    } else {
-                                        None
+                                        ExecutionResult::Failed { .. } => None,
                                     }
-                                })
+                                } else {
+                                    None
+                                }
                             })
-                            .ok_or(StarknetApiError::TxnHashNotFound)?;
+                        });
 
-                        let receipt = TxReceiptWithBlockInfo::new(
-                            ReceiptBlock::Pending,
-                            hash,
-                            FinalityStatus::AcceptedOnL2,
-                            pending_receipt,
-                        );
+                        if let Some(receipt) = pending_receipt {
+                            let receipt = TxReceiptWithBlockInfo::new(
+                                ReceiptBlock::Pending,
+                                hash,
+                                FinalityStatus::AcceptedOnL2,
+                                receipt,
+                            );
 
-                        StarknetApiResult::Ok(Some(receipt))
+                            StarknetApiResult::Ok(Some(receipt))
+                        } else {
+                            StarknetApiResult::Ok(None)
+                        }
                     }
                 }
             })
