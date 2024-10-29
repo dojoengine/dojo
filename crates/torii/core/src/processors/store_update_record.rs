@@ -1,8 +1,8 @@
 use anyhow::{Context, Error, Ok, Result};
 use async_trait::async_trait;
 use dojo_types::schema::Ty;
-use dojo_world::contracts::world::WorldContractReader;
 use dojo_world::contracts::abigen::world::Event as WorldEvent;
+use dojo_world::contracts::world::WorldContractReader;
 use num_traits::ToPrimitive;
 use starknet::core::types::Event;
 use starknet::providers::Provider;
@@ -41,12 +41,10 @@ where
     ) -> Result<(), Error> {
         // Torii version is coupled to the world version, so we can expect the event to be well
         // formed.
-        let event = match WorldEvent::try_from(event)
-            .expect(&format!(
-                "Expected {} event to be well formed.",
-                <StoreUpdateRecordProcessor as EventProcessor<P>>::event_key(self)
-            ))
-        {
+        let event = match WorldEvent::try_from(event).expect(&format!(
+            "Expected {} event to be well formed.",
+            <StoreUpdateRecordProcessor as EventProcessor<P>>::event_key(self)
+        )) {
             WorldEvent::StoreUpdateRecord(e) => e,
             _ => {
                 unreachable!()

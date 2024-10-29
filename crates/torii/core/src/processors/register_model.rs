@@ -41,12 +41,10 @@ where
     ) -> Result<(), Error> {
         // Torii version is coupled to the world version, so we can expect the event to be well
         // formed.
-        let event = match WorldEvent::try_from(event)
-            .expect(&format!(
-                "Expected {} event to be well formed.",
-                <RegisterModelProcessor as EventProcessor<P>>::event_key(self)
-            ))
-        {
+        let event = match WorldEvent::try_from(event).expect(&format!(
+            "Expected {} event to be well formed.",
+            <RegisterModelProcessor as EventProcessor<P>>::event_key(self)
+        )) {
             WorldEvent::ModelRegistered(e) => e,
             _ => {
                 unreachable!()

@@ -41,12 +41,10 @@ where
     ) -> Result<(), Error> {
         // Torii version is coupled to the world version, so we can expect the event to be well
         // formed.
-        let event = match WorldEvent::try_from(event)
-            .expect(&format!(
-                "Expected {} event to be well formed.",
-                <RegisterEventProcessor as EventProcessor<P>>::event_key(self)
-            ))
-        {
+        let event = match WorldEvent::try_from(event).expect(&format!(
+            "Expected {} event to be well formed.",
+            <RegisterEventProcessor as EventProcessor<P>>::event_key(self)
+        )) {
             WorldEvent::EventRegistered(e) => e,
             _ => {
                 unreachable!()
@@ -57,7 +55,8 @@ where
         let namespace = event.namespace.to_string().unwrap();
         let name = event.name.to_string().unwrap();
 
-        // Called model here by language, but it's an event. Torii rework will make clear distinction.
+        // Called model here by language, but it's an event. Torii rework will make clear
+        // distinction.
         let model = world.model_reader(&namespace, &name).await?;
         let schema = model.schema().await?;
         let layout = model.layout().await?;

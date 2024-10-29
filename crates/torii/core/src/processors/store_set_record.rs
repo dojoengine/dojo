@@ -1,7 +1,7 @@
 use anyhow::{Error, Ok, Result};
 use async_trait::async_trait;
-use dojo_world::contracts::world::WorldContractReader;
 use dojo_world::contracts::abigen::world::Event as WorldEvent;
+use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::Event;
 use starknet::providers::Provider;
 use tracing::info;
@@ -39,12 +39,10 @@ where
     ) -> Result<(), Error> {
         // Torii version is coupled to the world version, so we can expect the event to be well
         // formed.
-        let event = match WorldEvent::try_from(event)
-            .expect(&format!(
-                "Expected {} event to be well formed.",
-                <StoreSetRecordProcessor as EventProcessor<P>>::event_key(self)
-            ))
-        {
+        let event = match WorldEvent::try_from(event).expect(&format!(
+            "Expected {} event to be well formed.",
+            <StoreSetRecordProcessor as EventProcessor<P>>::event_key(self)
+        )) {
             WorldEvent::StoreSetRecord(e) => e,
             _ => {
                 unreachable!()
@@ -68,8 +66,15 @@ where
         let mut entity = model.schema;
         entity.deserialize(&mut keys_and_unpacked)?;
 
-        db.set_entity(entity, event_id, block_timestamp, event.entity_id, event.selector, Some(&keys_str))
-            .await?;
+        db.set_entity(
+            entity,
+            event_id,
+            block_timestamp,
+            event.entity_id,
+            event.selector,
+            Some(&keys_str),
+        )
+        .await?;
         Ok(())
     }
 }

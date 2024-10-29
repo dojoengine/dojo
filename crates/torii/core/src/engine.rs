@@ -28,11 +28,11 @@ use crate::processors::erc20_legacy_transfer::Erc20LegacyTransferProcessor;
 use crate::processors::erc20_transfer::Erc20TransferProcessor;
 use crate::processors::erc721_legacy_transfer::Erc721LegacyTransferProcessor;
 use crate::processors::erc721_transfer::Erc721TransferProcessor;
-use crate::processors::raw_event::RawEventProcessor;
 use crate::processors::event_message::EventMessageProcessor;
 use crate::processors::metadata_update::MetadataUpdateProcessor;
-use crate::processors::register_model::RegisterModelProcessor;
+use crate::processors::raw_event::RawEventProcessor;
 use crate::processors::register_event::RegisterEventProcessor;
+use crate::processors::register_model::RegisterModelProcessor;
 use crate::processors::store_del_record::StoreDelRecordProcessor;
 use crate::processors::store_set_record::StoreSetRecordProcessor;
 use crate::processors::store_update_member::StoreUpdateMemberProcessor;
@@ -56,7 +56,8 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Default for Processo
         Self {
             block: vec![],
             transaction: vec![],
-            // We shouldn't have a catch all for now since the world doesn't forward raw events anymore.
+            // We shouldn't have a catch all for now since the world doesn't forward raw events
+            // anymore.
             catch_all_event: Box::new(RawEventProcessor) as Box<dyn EventProcessor<P>>,
             event_processors: Self::initialize_event_processors(),
         }

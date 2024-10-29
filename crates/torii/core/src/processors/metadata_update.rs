@@ -5,9 +5,9 @@ use async_trait::async_trait;
 use base64::engine::general_purpose;
 use base64::Engine as _;
 use cainome::cairo_serde::{ByteArray, CairoSerde, Zeroable};
+use dojo_world::contracts::abigen::world::Event as WorldEvent;
 use dojo_world::contracts::world::WorldContractReader;
 use dojo_world::metadata::world::WorldMetadata;
-use dojo_world::contracts::abigen::world::Event as WorldEvent;
 use dojo_world::uri::Uri;
 use reqwest::Client;
 use starknet::core::types::{Event, Felt};
@@ -50,12 +50,10 @@ where
     ) -> Result<(), Error> {
         // Torii version is coupled to the world version, so we can expect the event to be well
         // formed.
-        let event = match WorldEvent::try_from(event)
-            .expect(&format!(
-                "Expected {} event to be well formed.",
-                <MetadataUpdateProcessor as EventProcessor<P>>::event_key(self)
-            ))
-        {
+        let event = match WorldEvent::try_from(event).expect(&format!(
+            "Expected {} event to be well formed.",
+            <MetadataUpdateProcessor as EventProcessor<P>>::event_key(self)
+        )) {
             WorldEvent::MetadataUpdate(e) => e,
             _ => {
                 unreachable!()
