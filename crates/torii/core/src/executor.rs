@@ -82,13 +82,24 @@ pub struct UpdateCursorsQuery {
 }
 
 #[derive(Debug, Clone)]
+pub struct EventMessageQuery {
+    pub entity_id: String,
+    pub model_id: String,
+    pub keys_str: String,
+    pub event_id: String,
+    pub block_timestamp: String,
+    pub is_historical: bool,
+    pub ty: Ty,
+}
+
+#[derive(Debug, Clone)]
 pub enum QueryType {
     SetHead(SetHeadQuery),
     ResetCursors(ResetCursorsQuery),
     UpdateCursors(UpdateCursorsQuery),
     SetEntity(Ty),
     DeleteEntity(DeleteEntityQuery),
-    EventMessage(Ty),
+    EventMessage(EventMessageQuery),
     ApplyBalanceDiff(ApplyBalanceDiffQuery),
     RegisterModel,
     StoreEvent,
@@ -437,12 +448,60 @@ impl<'c> Executor<'c> {
                 let model_registered = ModelRegistered::from_row(&row)?;
                 self.publish_queue.push(BrokerMessage::ModelRegistered(model_registered));
             }
-            QueryType::EventMessage(entity) => {
-                let row = query.fetch_one(&mut **tx).await.with_context(|| {
+            QueryType::EventMessage(em_query) => {
+                // Must be executed first since other tables have foreign keys on event_messages.id.
+                let event_messages_row = query.fetch_one(&mut **tx).await.with_context(|| {
                     format!("Failed to execute query: {:?}, args: {:?}", statement, arguments)
                 })?;
-                let mut event_message = EventMessageUpdated::from_row(&row)?;
-                event_message.updated_model = Some(entity);
+
+                let mut event_counter: i64 = sqlx::query_scalar::<_, i64>(
+                    "SELECT historical_counter FROM event_model WHERE entity_id = ? AND model_id \
+                     = ?",
+                )
+                .bind(em_query.entity_id.clone())
+                .bind(em_query.model_id.clone())
+                .fetch_optional(&mut **tx)
+                .await
+                .map_or(0, |counter| counter.unwrap_or(0));
+
+                if em_query.is_historical {
+                    event_counter += 1;
+
+                    let data = em_query
+                        .ty
+                        .serialize()?
+                        .iter()
+                        .map(|felt| format!("{:#x}", felt))
+                        .collect::<Vec<String>>()
+                        .join("/");
+
+                    sqlx::query(
+                        "INSERT INTO event_messages_historical (id, keys, event_id, data, \
+                         executed_at) VALUES (?, ?, ?, ?, ?) RETURNING *",
+                    )
+                    .bind(em_query.entity_id.clone())
+                    .bind(em_query.keys_str.clone())
+                    .bind(em_query.event_id.clone())
+                    .bind(data)
+                    .bind(em_query.block_timestamp.clone())
+                    .fetch_one(&mut **tx)
+                    .await?;
+                } else {
+                };
+
+                sqlx::query(
+                    "INSERT INTO event_model (entity_id, model_id, historical_counter) VALUES (?, \
+                     ?, ?) ON CONFLICT(entity_id, model_id) DO UPDATE SET \
+                     historical_counter=EXCLUDED.historical_counter",
+                )
+                .bind(em_query.entity_id.clone())
+                .bind(em_query.model_id.clone())
+                .bind(event_counter)
+                .execute(&mut **tx)
+                .await?;
+
+                let mut event_message = EventMessageUpdated::from_row(&event_messages_row)?;
+                event_message.updated_model = Some(em_query.ty);
 
                 let optimistic_event_message = OptimisticEventMessage {
                     id: event_message.id.clone(),
