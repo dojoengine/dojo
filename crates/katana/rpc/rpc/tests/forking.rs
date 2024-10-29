@@ -2,7 +2,6 @@ use anyhow::{Context, Result};
 use assert_matches::assert_matches;
 use cainome::rs::abigen_legacy;
 use dojo_test_utils::sequencer::{get_default_test_config, TestSequencer};
-use jsonrpsee::http_client::HttpClientBuilder;
 use katana_node::config::fork::ForkingConfig;
 use katana_node::config::SequencingConfig;
 use katana_primitives::block::{BlockHashOrNumber, BlockIdOrTag, BlockNumber};
@@ -10,7 +9,6 @@ use katana_primitives::chain::NamedChainId;
 use katana_primitives::genesis::constant::DEFAULT_ETH_FEE_TOKEN_ADDRESS;
 use katana_primitives::transaction::TxHash;
 use katana_primitives::{felt, Felt};
-use katana_rpc_api::dev::DevApiClient;
 use starknet::core::types::{MaybePendingBlockWithTxs, StarknetError};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider, ProviderError};
@@ -29,10 +27,6 @@ fn forking_cfg() -> ForkingConfig {
     }
 }
 
-fn provider(url: Url) -> JsonRpcClient<HttpTransport> {
-    JsonRpcClient::new(HttpTransport::new(url))
-}
-
 type LocalTestVector = Vec<(BlockNumber, TxHash)>;
 
 /// A helper function for setting a test environment, forked from the SN_SEPOLIA chain.
@@ -45,22 +39,21 @@ async fn setup_test() -> (TestSequencer, impl Provider, LocalTestVector) {
     config.forking = Some(forking_cfg());
 
     let sequencer = TestSequencer::start(config).await;
-    let provider = provider(sequencer.url());
+    let provider = JsonRpcClient::new(HttpTransport::new(sequencer.url()));
 
     let mut txs_vector: LocalTestVector = Vec::new();
 
-    {
-        // create some emtpy blocks and dummy transactions
-        abigen_legacy!(FeeToken, "crates/katana/rpc/rpc/tests/test_data/erc20.json");
-        let contract = FeeToken::new(DEFAULT_ETH_FEE_TOKEN_ADDRESS.into(), sequencer.account());
-        let client = HttpClientBuilder::default().build(sequencer.url()).unwrap();
+    // create some emtpy blocks and dummy transactions
+    abigen_legacy!(FeeToken, "crates/katana/rpc/rpc/tests/test_data/erc20.json");
+    let contract = FeeToken::new(DEFAULT_ETH_FEE_TOKEN_ADDRESS.into(), sequencer.account());
 
-        for i in 0..10 {
-            let amount = Uint256 { low: Felt::ONE, high: Felt::ZERO };
-            let res = contract.transfer(&Felt::ONE, &amount).send().await.unwrap();
-            client.generate_block().await.expect("failed to create block");
-            txs_vector.push((FORK_BLOCK_NUMBER + i, res.transaction_hash));
-        }
+    // we're in auto mining, each transaction will create a new block
+    for i in 1..=10 {
+        let amount = Uint256 { low: Felt::ONE, high: Felt::ZERO };
+        let res = contract.transfer(&Felt::ONE, &amount).send().await.unwrap();
+        let _ = dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
+
+        txs_vector.push((FORK_BLOCK_NUMBER + i, res.transaction_hash));
     }
 
     (sequencer, provider, txs_vector)
