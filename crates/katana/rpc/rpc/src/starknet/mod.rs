@@ -492,189 +492,6 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         }
     }
 
-    // TODO: should document more and possible find a simpler solution(?)
-    fn events_inner(
-        &self,
-        from_block: BlockIdOrTag,
-        to_block: BlockIdOrTag,
-        address: Option<ContractAddress>,
-        keys: Option<Vec<Vec<Felt>>>,
-        // filter: EventFilter,
-        continuation_token: Option<MaybeForkedContinuationToken>,
-        chunk_size: u64,
-    ) -> StarknetApiResult<EventsPage> {
-        let provider = self.inner.backend.blockchain.provider();
-
-        let from = if BlockIdOrTag::Tag(BlockTag::Pending) == from_block {
-            EventBlockId::Pending
-        } else {
-            let num = provider.convert_block_id(from_block)?;
-            EventBlockId::Num(num.ok_or(StarknetApiError::BlockNotFound)?)
-        };
-
-        let to = if BlockIdOrTag::Tag(BlockTag::Pending) == to_block {
-            EventBlockId::Pending
-        } else {
-            let num = provider.convert_block_id(to_block)?;
-            EventBlockId::Num(num.ok_or(StarknetApiError::BlockNotFound)?)
-        };
-
-        // let token: Option<Cursor> = match continuation_token {
-        //     Some(token) => Some(ContinuationToken::parse(&token)?.into()),
-        //     None => None,
-        // };
-
-        // reserved buffer to fill up with events to avoid reallocations
-        let mut events = Vec::with_capacity(chunk_size as usize);
-        let filter = utils::events::Filter { address, keys: keys.clone() };
-
-        match (from, to) {
-            (EventBlockId::Num(from), EventBlockId::Num(to)) => {
-                // 1. check if the from and to block is lower than the forked block
-                // 2. if both are lower, then we can fetch the events from the provider
-
-                // first determine whether the continuation token is from the forked client
-                let from_after_forked_if_any = if let Some(client) = &self.inner.forked_client {
-                    let forked_block = *client.block();
-
-                    // if the from block is lower than the forked block, we fetch events from the
-                    // forked client
-                    if from <= forked_block {
-                        // if the to_block is greater than the forked block, we limit the to_block
-                        // up until the forked block
-                        let to = if to <= forked_block { to } else { forked_block };
-
-                        let forked_token = Some(continuation_token.clone()).and_then(|t| match t {
-                            None => Some(None),
-                            Some(t) => match t {
-                                MaybeForkedContinuationToken::Token(_) => None,
-                                MaybeForkedContinuationToken::Forked(t) => {
-                                    Some(Some(t.to_string()))
-                                }
-                            },
-                        });
-
-                        // check if the continuation token is a forked continuation token
-                        // if not we skip fetching from forked network
-                        if let Some(token) = forked_token {
-                            let forked_result = futures::executor::block_on(
-                                client.get_events(from, to, address, keys, token, chunk_size),
-                            )?;
-
-                            events.extend(forked_result.events);
-
-                            // return early if a token is present
-                            if let Some(token) = forked_result.continuation_token {
-                                let token = MaybeForkedContinuationToken::Forked(token);
-                                let continuation_token = Some(token.to_string());
-                                return Ok(EventsPage { events, continuation_token });
-                            }
-                        }
-                    }
-
-                    // we start from block + 1 because we dont have the events locally and we may
-                    // have fetched it from the forked network earlier
-                    *client.block() + 1
-                } else {
-                    from
-                };
-
-                let cursor = continuation_token.and_then(|t| t.into_token().map(|t| t.into()));
-                let block_range = from_after_forked_if_any..=to;
-
-                let cursor = utils::events::fetch_events_at_blocks(
-                    provider,
-                    block_range,
-                    &filter,
-                    chunk_size,
-                    cursor,
-                    &mut events,
-                )?;
-
-                Ok(EventsPage {
-                    events,
-                    continuation_token: cursor.map(|c| c.into_rpc_cursor().to_string()),
-                })
-            }
-
-            (EventBlockId::Num(from), EventBlockId::Pending) => {
-                let cursor = continuation_token.and_then(|t| t.into_token().map(|t| t.into()));
-                let latest = provider.latest_number()?;
-
-                let int_cursor = utils::events::fetch_events_at_blocks(
-                    provider,
-                    from..=latest,
-                    &filter,
-                    chunk_size,
-                    cursor.clone(),
-                    &mut events,
-                )?;
-
-                // if the internal cursor is Some, meaning the buffer is full and we havent
-                // reached the latest block.
-                if let Some(c) = int_cursor {
-                    return Ok(EventsPage {
-                        events,
-                        continuation_token: Some(c.into_rpc_cursor().to_string()),
-                    });
-                }
-
-                if let Some(executor) = self.pending_executor() {
-                    let cursor = utils::events::fetch_pending_events(
-                        &executor,
-                        &filter,
-                        chunk_size,
-                        cursor,
-                        &mut events,
-                    )?;
-
-                    Ok(EventsPage {
-                        events,
-                        continuation_token: Some(cursor.into_rpc_cursor().to_string()),
-                    })
-                } else {
-                    let cursor = Cursor::new_block(latest + 1);
-                    Ok(EventsPage {
-                        events,
-                        continuation_token: Some(cursor.into_rpc_cursor().to_string()),
-                    })
-                }
-            }
-
-            (EventBlockId::Pending, EventBlockId::Pending) => {
-                if let Some(executor) = self.pending_executor() {
-                    let cursor = continuation_token.and_then(|t| t.into_token().map(|t| t.into()));
-                    let new_cursor = utils::events::fetch_pending_events(
-                        &executor,
-                        &filter,
-                        chunk_size,
-                        cursor,
-                        &mut events,
-                    )?;
-
-                    let continuation_token = Some(new_cursor.into_rpc_cursor().to_string());
-                    let result = EventsPage { events, continuation_token };
-
-                    Ok(result)
-                } else {
-                    let latest = provider.latest_number()?;
-                    let new_cursor = Cursor::new_block(latest);
-
-                    let continuation_token = Some(new_cursor.into_rpc_cursor().to_string());
-                    let result = EventsPage { events, continuation_token };
-
-                    Ok(result)
-                }
-            }
-
-            (EventBlockId::Pending, EventBlockId::Num(_)) => {
-                Err(StarknetApiError::UnexpectedError {
-                    reason: "Invalid block range; `from` block must be lower than `to`".to_string(),
-                })
-            }
-        }
-    }
-
     async fn transaction_status(&self, hash: TxHash) -> StarknetApiResult<TransactionStatus> {
         let status = self
             .on_io_blocking_task(move |this| {
@@ -1030,5 +847,182 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
             Ok(events)
         })
         .await
+    }
+
+    // TODO: should document more and possible find a simpler solution(?)
+    fn events_inner(
+        &self,
+        from_block: BlockIdOrTag,
+        to_block: BlockIdOrTag,
+        address: Option<ContractAddress>,
+        keys: Option<Vec<Vec<Felt>>>,
+        continuation_token: Option<MaybeForkedContinuationToken>,
+        chunk_size: u64,
+    ) -> StarknetApiResult<EventsPage> {
+        let provider = self.inner.backend.blockchain.provider();
+
+        let from = if BlockIdOrTag::Tag(BlockTag::Pending) == from_block {
+            EventBlockId::Pending
+        } else {
+            let num = provider.convert_block_id(from_block)?;
+            EventBlockId::Num(num.ok_or(StarknetApiError::BlockNotFound)?)
+        };
+
+        let to = if BlockIdOrTag::Tag(BlockTag::Pending) == to_block {
+            EventBlockId::Pending
+        } else {
+            let num = provider.convert_block_id(to_block)?;
+            EventBlockId::Num(num.ok_or(StarknetApiError::BlockNotFound)?)
+        };
+
+        // reserved buffer to fill up with events to avoid reallocations
+        let mut events = Vec::with_capacity(chunk_size as usize);
+        let filter = utils::events::Filter { address, keys: keys.clone() };
+
+        match (from, to) {
+            (EventBlockId::Num(from), EventBlockId::Num(to)) => {
+                // 1. check if the from and to block is lower than the forked block
+                // 2. if both are lower, then we can fetch the events from the provider
+
+                // first determine whether the continuation token is from the forked client
+                let from_after_forked_if_any = if let Some(client) = &self.inner.forked_client {
+                    let forked_block = *client.block();
+
+                    // if the from block is lower than the forked block, we fetch events from the
+                    // forked client
+                    if from <= forked_block {
+                        // if the to_block is greater than the forked block, we limit the to_block
+                        // up until the forked block
+                        let to = if to <= forked_block { to } else { forked_block };
+
+                        let forked_token = Some(continuation_token.clone()).and_then(|t| match t {
+                            None => Some(None),
+                            Some(t) => match t {
+                                MaybeForkedContinuationToken::Token(_) => None,
+                                MaybeForkedContinuationToken::Forked(t) => {
+                                    Some(Some(t.to_string()))
+                                }
+                            },
+                        });
+
+                        // check if the continuation token is a forked continuation token
+                        // if not we skip fetching from forked network
+                        if let Some(token) = forked_token {
+                            let forked_result = futures::executor::block_on(
+                                client.get_events(from, to, address, keys, token, chunk_size),
+                            )?;
+
+                            events.extend(forked_result.events);
+
+                            // return early if a token is present
+                            if let Some(token) = forked_result.continuation_token {
+                                let token = MaybeForkedContinuationToken::Forked(token);
+                                let continuation_token = Some(token.to_string());
+                                return Ok(EventsPage { events, continuation_token });
+                            }
+                        }
+                    }
+
+                    // we start from block + 1 because we dont have the events locally and we may
+                    // have fetched it from the forked network earlier
+                    *client.block() + 1
+                } else {
+                    from
+                };
+
+                let cursor = continuation_token.and_then(|t| t.into_token().map(|t| t.into()));
+                let block_range = from_after_forked_if_any..=to;
+
+                let cursor = utils::events::fetch_events_at_blocks(
+                    provider,
+                    block_range,
+                    &filter,
+                    chunk_size,
+                    cursor,
+                    &mut events,
+                )?;
+
+                Ok(EventsPage {
+                    events,
+                    continuation_token: cursor.map(|c| c.into_rpc_cursor().to_string()),
+                })
+            }
+
+            (EventBlockId::Num(from), EventBlockId::Pending) => {
+                let cursor = continuation_token.and_then(|t| t.into_token().map(|t| t.into()));
+                let latest = provider.latest_number()?;
+
+                let int_cursor = utils::events::fetch_events_at_blocks(
+                    provider,
+                    from..=latest,
+                    &filter,
+                    chunk_size,
+                    cursor.clone(),
+                    &mut events,
+                )?;
+
+                // if the internal cursor is Some, meaning the buffer is full and we havent
+                // reached the latest block.
+                if let Some(c) = int_cursor {
+                    return Ok(EventsPage {
+                        events,
+                        continuation_token: Some(c.into_rpc_cursor().to_string()),
+                    });
+                }
+
+                if let Some(executor) = self.pending_executor() {
+                    let cursor = utils::events::fetch_pending_events(
+                        &executor,
+                        &filter,
+                        chunk_size,
+                        cursor,
+                        &mut events,
+                    )?;
+
+                    Ok(EventsPage {
+                        events,
+                        continuation_token: Some(cursor.into_rpc_cursor().to_string()),
+                    })
+                } else {
+                    let cursor = Cursor::new_block(latest + 1);
+                    Ok(EventsPage {
+                        events,
+                        continuation_token: Some(cursor.into_rpc_cursor().to_string()),
+                    })
+                }
+            }
+
+            (EventBlockId::Pending, EventBlockId::Pending) => {
+                if let Some(executor) = self.pending_executor() {
+                    let cursor = continuation_token.and_then(|t| t.into_token().map(|t| t.into()));
+                    let new_cursor = utils::events::fetch_pending_events(
+                        &executor,
+                        &filter,
+                        chunk_size,
+                        cursor,
+                        &mut events,
+                    )?;
+
+                    let continuation_token = Some(new_cursor.into_rpc_cursor().to_string());
+                    let result = EventsPage { events, continuation_token };
+
+                    Ok(result)
+                } else {
+                    let latest = provider.latest_number()?;
+                    let new_cursor = Cursor::new_block(latest);
+
+                    let continuation_token = Some(new_cursor.into_rpc_cursor().to_string());
+                    let result = EventsPage { events, continuation_token };
+
+                    Ok(result)
+                }
+            }
+
+            (EventBlockId::Pending, EventBlockId::Num(_)) => {
+                Err(StarknetApiError::UnexpectedError {
+                    reason: "Invalid block range; `from` block must be lower than `to`".to_string(),
+                })
+            }
+        }
     }
 }
