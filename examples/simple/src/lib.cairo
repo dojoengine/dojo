@@ -39,7 +39,7 @@ pub trait MyInterface<T> {
 #[dojo::contract]
 pub mod c1 {
     use super::{MyInterface, M, E, EH, MValue};
-    use dojo::model::{ModelStorage, ModelValueStorage, Model, EraseMarker};
+    use dojo::model::{ModelStorage, ModelValueStorage, Model, ModelPtr};
     use dojo::event::EventStorage;
 
     fn dojo_init(self: @ContractState, v: felt252) {
@@ -90,11 +90,11 @@ pub mod c1 {
             world.write_model(@m);
             world.erase_model(@m);
 
-            let mut mv: MValue = world.read_model_value_from_id(entity_id);
+            let mut mv: MValue = world.read_value_from_id(entity_id);
             mv.v = 12;
-            world.write_model_value_from_id(entity_id, @mv);
+            world.write_value_from_id(entity_id, @mv);
 
-            world.erase_model_from_id(EraseMarker::<M>::Id(entity_id));
+            world.erase_model_ptr(ModelPtr::<M>::Id(entity_id));
         }
     }
 
@@ -113,8 +113,7 @@ pub mod c2 {}
 
 #[cfg(test)]
 mod tests {
-    use dojo::world::WorldStorageTrait;
-    use dojo::model::{ModelStorage, ModelStorageTest};
+    use dojo::model::ModelStorage;
     use dojo_cairo_test::{spawn_test_world, NamespaceDef, TestResource, ContractDefTrait};
     use super::{c1, m, M};
 
@@ -134,7 +133,7 @@ mod tests {
         let world = spawn_test_world([ndef].span());
 
         let m: M = world.read_model(0);
-        assert!(m.b == 0xff, "invalid b");
+        assert!(m.v == 0xff, "invalid b");
 
         //let m2 = M { a: 120, b: 244, };
 
