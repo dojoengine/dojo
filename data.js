@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1730230134507,
+  "lastUpdate": 1730241369852,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -28537,6 +28537,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8346751,
             "range": "± 146851",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "valentin@pupucecorp.com",
+            "name": "valdo.carbonaboyz.stark",
+            "username": "MartianGreed"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8a9dc0cd874b65d4aeafd1b45b2108a44d954385",
+          "message": "fix: bindgen nested types init generation (#2580)\n\n* fix: bindgen nested types init generation\r\n\r\n* bump: cainome-0.4.6\r\n\r\n* fix: fix tests\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-10-29T16:19:57-06:00",
+          "tree_id": "08dca3acb1eaa5b11e0d4bd4674aff494a48a16c",
+          "url": "https://github.com/dojoengine/dojo/commit/8a9dc0cd874b65d4aeafd1b45b2108a44d954385"
+        },
+        "date": 1730241368229,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11822864875,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
