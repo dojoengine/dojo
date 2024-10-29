@@ -85,7 +85,7 @@ fn get_bindings_file_content(contract_name: &str, contract_class: ContractClass)
          --bin dojo-world-abigen` instead.\nuse cainome::rs::abigen;\n\nabigen!(\n    {},\n    \
          r#\"{}\"#,\ntype_aliases {{\ndojo::world::config::Config::Event as \
          DojoConfigEvent;\n}},derives(Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq, \
-         Clone)\n);",
+         Clone),contract_derives(Debug)\n);",
         contract_name,
         serde_json::to_string_pretty(&contract_class.abi).unwrap()
     )
