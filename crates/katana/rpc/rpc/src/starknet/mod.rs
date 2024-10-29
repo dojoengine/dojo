@@ -738,10 +738,8 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
                     }
                 }
 
-                if let Some(num) =
-                    BlockIdReader::convert_block_id(provider, block_id)?.map(BlockHashOrNumber::Num)
-                {
-                    let block = katana_rpc_types_builder::BlockBuilder::new(num, provider)
+                if let Some(num) = provider.convert_block_id(block_id)? {
+                    let block = katana_rpc_types_builder::BlockBuilder::new(num.into(), provider)
                         .build()?
                         .map(MaybePendingBlockWithTxs::Block);
 
@@ -805,15 +803,15 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
                     }
                 }
 
-                let block_num = BlockIdReader::convert_block_id(provider, block_id)?
-                    .map(BlockHashOrNumber::Num)
-                    .ok_or(StarknetApiError::BlockNotFound)?;
+                if let Some(num) = provider.convert_block_id(block_id)? {
+                    let block = katana_rpc_types_builder::BlockBuilder::new(num.into(), provider)
+                        .build_with_receipts()?
+                        .map(MaybePendingBlockWithReceipts::Block);
 
-                let block = katana_rpc_types_builder::BlockBuilder::new(block_num, provider)
-                    .build_with_receipts()?
-                    .ok_or(StarknetApiError::BlockNotFound)?;
-
-                StarknetApiResult::Ok(Some(MaybePendingBlockWithReceipts::Block(block)))
+                    StarknetApiResult::Ok(block)
+                } else {
+                    StarknetApiResult::Ok(None)
+                }
             })
             .await?;
 
