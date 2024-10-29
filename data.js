@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1730229966639,
+  "lastUpdate": 1730230134507,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -28489,6 +28489,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 12232079858,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6f845a7e374ec8383775d6f3c40b394ed5758cc1",
+          "message": "feat(katana): fetch forked block data (#2592)\n\nEnable fetching block data from the forked chain. current forking feature only covers up to state data only. meaning doing any operations that requires only doing contract executions - estimate fee, tx execution - are allowed.\r\n\r\nThis is a pretty simple solution as it just forwards the request to the forked network provider but doesn't do any caching of the requested data.",
+          "timestamp": "2024-10-30T03:09:30+08:00",
+          "tree_id": "96e3cdf7af465958e0890b261bf3232024a24d9b",
+          "url": "https://github.com/dojoengine/dojo/commit/6f845a7e374ec8383775d6f3c40b394ed5758cc1"
+        },
+        "date": 1730230133397,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16468160,
+            "range": "± 307825",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8543080,
+            "range": "± 158621",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3783729589,
+            "range": "± 739267679",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8346751,
+            "range": "± 146851",
             "unit": "ns/iter"
           }
         ]
