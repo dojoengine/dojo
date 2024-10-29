@@ -1,6 +1,6 @@
 use katana_primitives::block::BlockNumber;
 use katana_primitives::contract::{Nonce, MessageHash};
-
+use katana_primitives::transaction::L1HandlerTx;
 use crate::ProviderResult;
 
 #[auto_impl::auto_impl(&, Box, Arc)]
@@ -26,4 +26,6 @@ pub trait MessagingCheckpointProvider: Send + Sync {
     fn set_outbound_index(&self, index: u64) -> ProviderResult<()>;
     /// Returns the outbound index.
     fn get_outbound_index(&self) -> ProviderResult<Option<u64>>;
+    /// Processes the nonce in the provided L1HandlerTx and updates the inbound nonce within the provider.
+    fn process_message_nonce(&self, l1_tx: &L1HandlerTx) -> ProviderResult<()>;
 }

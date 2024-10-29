@@ -27,7 +27,7 @@ use katana_primitives::env::BlockEnv;
 use katana_primitives::receipt::Receipt;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
 use katana_primitives::trace::TxExecInfo;
-use katana_primitives::transaction::{TxHash, TxNumber, TxWithHash};
+use katana_primitives::transaction::{L1HandlerTx, TxHash, TxNumber, TxWithHash};
 use katana_primitives::Felt;
 
 use crate::error::ProviderError;
@@ -832,6 +832,22 @@ impl MessagingCheckpointProvider for DbProvider {
         let index = db_tx.get::<tables::MessagingCheckpointIndex>(MessagingCheckpointId::SendIndex)?;
         db_tx.commit()?;
         Ok(index)
+    }
+
+    fn process_message_nonce(&self, l1_tx: &L1HandlerTx) -> ProviderResult<()>{
+        // Get stored nonce from message hash
+        let message_hash_bytes = l1_tx.message_hash;
+        let message_hash_bytes: [u8; 32] = *message_hash_bytes;
+        let message_hash = Felt::from_bytes_be(&message_hash_bytes);
+
+        // Attempt to get the nonce from the message hash
+        match self.get_nonce_from_message_hash(message_hash) {
+            Ok(Some(nonce)) =>
+            // Set the inbound nonce if a nonce is retrieved
+                self.set_inbound_nonce(nonce),
+            Ok(None) => Ok(()),
+            Err(_e) => Ok(()),
+        }
     }
 }
 

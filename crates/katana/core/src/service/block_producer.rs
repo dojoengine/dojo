@@ -16,7 +16,6 @@ use katana_primitives::receipt::Receipt;
 use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{ExecutableTxWithHash, Tx, TxHash, TxWithHash};
 use katana_primitives::version::CURRENT_STARKNET_VERSION;
-use katana_primitives::Felt;
 use katana_provider::error::ProviderError;
 use katana_provider::traits::block::{BlockHashProvider, BlockNumberProvider};
 use katana_provider::traits::env::BlockEnvProvider;
@@ -318,16 +317,7 @@ impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
                 trace!(target: LOG_TARGET, "Executed transaction: {:?}", tx);
                 let _ = match tx_ref {
                     Tx::L1Handler(l1_tx) => {
-                        // get stored nonce from message hash
-                        let message_hash_bytes = l1_tx.message_hash;
-                        let message_hash_bytes: [u8; 32] = *message_hash_bytes;
-
-                        let message_hash = Felt::from_bytes_be(&message_hash_bytes);
-                        match provider.get_nonce_from_message_hash(message_hash) {
-                            Ok(Some(nonce)) => provider.set_inbound_nonce(nonce),
-                            Ok(None) => Ok(()),
-                            Err(_e) => Ok(()),
-                        }
+                        provider.process_message_nonce(l1_tx)
                     }
                     _ => Ok(()),
                 };
