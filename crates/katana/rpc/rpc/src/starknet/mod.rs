@@ -22,7 +22,7 @@ use katana_primitives::contract::{ContractAddress, Nonce, StorageKey, StorageVal
 use katana_primitives::conversion::rpc::legacy_inner_to_rpc_class;
 use katana_primitives::da::L1DataAvailabilityMode;
 use katana_primitives::env::BlockEnv;
-use katana_primitives::event::{ContinuationToken, MaybeForkedContinuationToken};
+use katana_primitives::event::MaybeForkedContinuationToken;
 use katana_primitives::transaction::{ExecutableTxWithHash, TxHash};
 use katana_primitives::Felt;
 use katana_provider::traits::block::{BlockHashProvider, BlockIdReader, BlockNumberProvider};
@@ -45,8 +45,7 @@ use katana_rpc_types::FeeEstimate;
 use katana_rpc_types_builder::ReceiptBuilder;
 use katana_tasks::{BlockingTaskPool, TokioTaskSpawner};
 use starknet::core::types::{
-    ContractClass, EventFilter, PriceUnit, ResultPageRequest, TransactionExecutionStatus,
-    TransactionStatus,
+    ContractClass, PriceUnit, ResultPageRequest, TransactionExecutionStatus, TransactionStatus,
 };
 
 use crate::utils;
@@ -839,7 +838,6 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
                 to,
                 event_filter.address.map(|f| f.into()),
                 keys,
-                // event_filter,
                 continuation_token,
                 chunk_size,
             )?;
@@ -895,6 +893,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
                         // up until the forked block
                         let to = if to <= forked_block { to } else { forked_block };
 
+                        // TODO: simplify this
                         let forked_token = Some(continuation_token.clone()).and_then(|t| match t {
                             None => Some(None),
                             Some(t) => match t {
@@ -963,6 +962,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
                         // pointing to a locally block
                         let to = forked_block;
 
+                        // TODO: simplify this
                         let forked_token = Some(continuation_token.clone()).and_then(|t| match t {
                             None => Some(None),
                             Some(t) => match t {
