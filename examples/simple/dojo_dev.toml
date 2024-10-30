@@ -27,3 +27,4 @@ mappings = { "ns" = ["c1", "M"], "ns2" = ["c1", "M"] }
 
 [migration]
 order_inits = ["ns-c2", "ns-c1"]
+skip_contracts = ["ns-c3"]

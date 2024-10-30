@@ -65,6 +65,19 @@ impl ProfileConfig {
             HashSet::new()
         }
     }
+
+    /// Returns true if the tag has to be skipped during migration.
+    pub fn is_skipped(&self, tag: &str) -> bool {
+        if let Some(migration) = &self.migration {
+            if let Some(skip_contracts) = &migration.skip_contracts {
+                skip_contracts.contains(&tag.to_string())
+            } else {
+                false
+            }
+        } else {
+            false
+        }
+    }
 }
 
 #[cfg(test)]

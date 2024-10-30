@@ -1,5 +1,7 @@
 //! Invoker to invoke contracts.
 
+use std::time::Duration;
+
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::Call;
 use tracing::trace;
@@ -59,8 +61,13 @@ where
         trace!(transaction_hash = format!("{:#066x}", tx.transaction_hash), "Invoke contract.");
 
         if self.txn_config.wait {
-            let receipt =
-                TransactionWaiter::new(tx.transaction_hash, &self.account.provider()).await?;
+            let receipt = if let Some(timeout_ms) = self.txn_config.timeout_ms {
+                TransactionWaiter::new(tx.transaction_hash, &self.account.provider())
+                    .with_timeout(Duration::from_millis(timeout_ms))
+                    .await?
+            } else {
+                TransactionWaiter::new(tx.transaction_hash, &self.account.provider()).await?
+            };
 
             if self.txn_config.receipt {
                 return Ok(TransactionResult::HashReceipt(tx.transaction_hash, Box::new(receipt)));
@@ -87,8 +94,13 @@ where
         );
 
         if self.txn_config.wait {
-            let receipt =
-                TransactionWaiter::new(tx.transaction_hash, &self.account.provider()).await?;
+            let receipt = if let Some(timeout_ms) = self.txn_config.timeout_ms {
+                TransactionWaiter::new(tx.transaction_hash, &self.account.provider())
+                    .with_timeout(Duration::from_millis(timeout_ms))
+                    .await?
+            } else {
+                TransactionWaiter::new(tx.transaction_hash, &self.account.provider()).await?
+            };
 
             if self.txn_config.receipt {
                 return Ok(TransactionResult::HashReceipt(tx.transaction_hash, Box::new(receipt)));

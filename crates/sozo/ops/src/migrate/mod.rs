@@ -160,6 +160,12 @@ where
             if resource.resource_type() == ResourceType::Contract {
                 let tag = resource.tag();
 
+                // TODO: maybe we want a resource diff with a new variant. Where the migration
+                // is skipped, but we still have the local resource.
+                if self.profile_config.is_skipped(&tag) {
+                    continue;
+                }
+
                 let (do_init, init_call_args) = match resource {
                     ResourceDiff::Created(ResourceLocal::Contract(_)) => {
                         (true, init_call_args.get(&tag))
@@ -236,6 +242,10 @@ where
 
         // Only takes the local permissions that are not already set onchain to apply them.
         for (selector, resource) in &self.diff.resources {
+            if self.profile_config.is_skipped(&resource.tag()) {
+                continue;
+            }
+
             for pdiff in self.diff.get_writers(*selector).only_local() {
                 trace!(
                     target = resource.tag(),
@@ -279,10 +289,14 @@ where
         // Namespaces must be synced first, since contracts, models and events are namespaced.
         self.namespaces_getcalls(&mut invoker).await?;
 
-        let mut classes: Vec<(Felt, FlattenedSierraClass)> = vec![];
+        let mut classes: HashMap<Felt, FlattenedSierraClass> = HashMap::new();
 
         // Collects the calls and classes to be declared to sync the resources.
         for resource in self.diff.resources.values() {
+            if self.profile_config.is_skipped(&resource.tag()) {
+                continue;
+            }
+
             match resource.resource_type() {
                 ResourceType::Contract => {
                     let (contract_calls, contract_classes) =
@@ -312,7 +326,7 @@ where
         if accounts.is_empty() {
             trace!("Declaring classes with migrator account.");
             let mut declarer = Declarer::new(&self.world.account, self.txn_config);
-            declarer.extend_classes(classes);
+            declarer.extend_classes(classes.into_iter().collect());
             declarer.declare_all().await?;
         } else {
             trace!("Declaring classes with {} accounts.", accounts.len());
@@ -388,9 +402,10 @@ where
     async fn contracts_calls_classes(
         &self,
         resource: &ResourceDiff,
-    ) -> Result<(Vec<Call>, Vec<(Felt, FlattenedSierraClass)>), MigrationError<A::SignError>> {
+    ) -> Result<(Vec<Call>, HashMap<Felt, FlattenedSierraClass>), MigrationError<A::SignError>>
+    {
         let mut calls = vec![];
-        let mut classes = vec![];
+        let mut classes = HashMap::new();
 
         let namespace = resource.namespace();
         let ns_bytearray = ByteArray::from_string(&namespace)?;
@@ -404,7 +419,7 @@ where
             );
 
             classes
-                .push((contract.common.casm_class_hash, contract.common.class.clone().flatten()?));
+                .insert(contract.common.casm_class_hash, contract.common.class.clone().flatten()?);
 
             calls.push(self.world.register_contract_getcall(
                 &contract.dojo_selector(),
@@ -425,10 +440,10 @@ where
                 "Upgrading contract."
             );
 
-            classes.push((
+            classes.insert(
                 contract_local.common.casm_class_hash,
                 contract_local.common.class.clone().flatten()?,
-            ));
+            );
 
             calls.push(self.world.upgrade_contract_getcall(
                 &ns_bytearray,
@@ -445,9 +460,10 @@ where
     async fn models_calls_classes(
         &self,
         resource: &ResourceDiff,
-    ) -> Result<(Vec<Call>, Vec<(Felt, FlattenedSierraClass)>), MigrationError<A::SignError>> {
+    ) -> Result<(Vec<Call>, HashMap<Felt, FlattenedSierraClass>), MigrationError<A::SignError>>
+    {
         let mut calls = vec![];
-        let mut classes = vec![];
+        let mut classes = HashMap::new();
 
         let namespace = resource.namespace();
         let ns_bytearray = ByteArray::from_string(&namespace)?;
@@ -460,7 +476,7 @@ where
                 "Registering model."
             );
 
-            classes.push((model.common.casm_class_hash, model.common.class.clone().flatten()?));
+            classes.insert(model.common.casm_class_hash, model.common.class.clone().flatten()?);
 
             calls.push(
                 self.world
@@ -480,10 +496,10 @@ where
                 "Upgrading model."
             );
 
-            classes.push((
+            classes.insert(
                 model_local.common.casm_class_hash,
                 model_local.common.class.clone().flatten()?,
-            ));
+            );
 
             calls.push(
                 self.world.upgrade_model_getcall(
@@ -502,9 +518,10 @@ where
     async fn events_calls_classes(
         &self,
         resource: &ResourceDiff,
-    ) -> Result<(Vec<Call>, Vec<(Felt, FlattenedSierraClass)>), MigrationError<A::SignError>> {
+    ) -> Result<(Vec<Call>, HashMap<Felt, FlattenedSierraClass>), MigrationError<A::SignError>>
+    {
         let mut calls = vec![];
-        let mut classes = vec![];
+        let mut classes = HashMap::new();
 
         let namespace = resource.namespace();
         let ns_bytearray = ByteArray::from_string(&namespace)?;
@@ -517,7 +534,7 @@ where
                 "Registering event."
             );
 
-            classes.push((event.common.casm_class_hash, event.common.class.clone().flatten()?));
+            classes.insert(event.common.casm_class_hash, event.common.class.clone().flatten()?);
 
             calls.push(
                 self.world
@@ -537,10 +554,10 @@ where
                 "Upgrading event."
             );
 
-            classes.push((
+            classes.insert(
                 event_local.common.casm_class_hash,
                 event_local.common.class.clone().flatten()?,
-            ));
+            );
 
             calls.push(
                 self.world.upgrade_event_getcall(

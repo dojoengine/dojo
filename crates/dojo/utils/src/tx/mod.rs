@@ -31,6 +31,7 @@ pub struct TxnConfig {
     pub receipt: bool,
     pub max_fee_raw: Option<Felt>,
     pub walnut: bool,
+    pub timeout_ms: Option<u64>,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -43,6 +44,7 @@ pub enum TxnAction {
         /// estimated fee. If `None` is provided, the multiplier is set to `1.1`.
         fee_estimate_multiplier: Option<f64>,
         walnut: bool,
+        timeout_ms: Option<u64>,
     },
     Estimate,
     Simulate,

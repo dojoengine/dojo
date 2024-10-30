@@ -1,5 +1,7 @@
 //! The deployer is in charge of deploying contracts to starknet.
 
+use std::time::Duration;
+
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{
     BlockId, BlockTag, Call, Felt, InvokeTransactionResult, StarknetError,
@@ -72,8 +74,13 @@ where
         );
 
         if self.txn_config.wait {
-            let receipt =
-                TransactionWaiter::new(transaction_hash, &self.account.provider()).await?;
+            let receipt = if let Some(timeout_ms) = self.txn_config.timeout_ms {
+                TransactionWaiter::new(transaction_hash, &self.account.provider())
+                    .with_timeout(Duration::from_millis(timeout_ms))
+                    .await?
+            } else {
+                TransactionWaiter::new(transaction_hash, &self.account.provider()).await?
+            };
 
             if self.txn_config.receipt {
                 return Ok(TransactionResult::HashReceipt(transaction_hash, Box::new(receipt)));

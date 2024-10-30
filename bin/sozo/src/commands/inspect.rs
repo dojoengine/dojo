@@ -55,6 +55,7 @@ enum ResourceStatus {
     Updated,
     Synced,
     DirtyLocalPerms,
+    MigrationSkipped,
 }
 
 impl std::fmt::Display for ResourceStatus {
@@ -64,6 +65,7 @@ impl std::fmt::Display for ResourceStatus {
             ResourceStatus::Updated => write!(f, "{}", "Updated".yellow()),
             ResourceStatus::Synced => write!(f, "{}", "Synced".green()),
             ResourceStatus::DirtyLocalPerms => write!(f, "{}", "Dirty local perms".yellow()),
+            ResourceStatus::MigrationSkipped => write!(f, "{}", "Migration skipped".black()),
         }
     }
 }
@@ -320,6 +322,12 @@ fn resource_diff_display(world_diff: &WorldDiff, resource: &ResourceDiff) -> Res
                 _ => unreachable!(),
             };
 
+            let status = if world_diff.profile_config.is_skipped(&resource.tag()) {
+                ResourceStatus::MigrationSkipped
+            } else {
+                status
+            };
+
             ResourceInspect::Namespace(NamespaceInspect {
                 name: resource.name(),
                 status,
@@ -349,6 +357,12 @@ fn resource_diff_display(world_diff: &WorldDiff, resource: &ResourceDiff) -> Res
                 ),
             };
 
+            let status = if world_diff.profile_config.is_skipped(&resource.tag()) {
+                ResourceStatus::MigrationSkipped
+            } else {
+                status
+            };
+
             ResourceInspect::Contract(ContractInspect {
                 tag: resource.tag(),
                 status,
@@ -371,6 +385,12 @@ fn resource_diff_display(world_diff: &WorldDiff, resource: &ResourceDiff) -> Res
                 }
             };
 
+            let status = if world_diff.profile_config.is_skipped(&resource.tag()) {
+                ResourceStatus::MigrationSkipped
+            } else {
+                status
+            };
+
             ResourceInspect::Model(ModelInspect {
                 tag: resource.tag(),
                 status,
@@ -388,6 +408,12 @@ fn resource_diff_display(world_diff: &WorldDiff, resource: &ResourceDiff) -> Res
                         ResourceStatus::Synced
                     }
                 }
+            };
+
+            let status = if world_diff.profile_config.is_skipped(&resource.tag()) {
+                ResourceStatus::MigrationSkipped
+            } else {
+                status
             };
 
             ResourceInspect::Event(EventInspect {

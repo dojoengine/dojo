@@ -109,6 +109,9 @@ pub mod c1 {
 #[dojo::contract]
 pub mod c2 {}
 
+#[dojo::contract]
+pub mod c3 {}
+
 #[cfg(test)]
 mod tests {
     use dojo::model::ModelStorage;
