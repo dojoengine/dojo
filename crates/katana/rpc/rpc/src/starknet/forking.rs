@@ -256,6 +256,10 @@ impl<P: Provider> ForkedClient<P> {
         continuation_token: Option<String>,
         chunk_size: u64,
     ) -> Result<EventsPage, Error> {
+        if from > self.block || to > self.block {
+            return Err(Error::BlockOutOfRange);
+        }
+
         let from_block = Some(BlockIdOrTag::Number(from));
         let to_block = Some(BlockIdOrTag::Number(to));
         let address = address.map(Felt::from);
