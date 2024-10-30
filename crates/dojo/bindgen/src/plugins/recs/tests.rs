@@ -182,5 +182,6 @@ fn create_mock_dojo_data() -> DojoData {
         world: DojoWorld { name: 0x01.to_string() },
         models: HashMap::new(),
         contracts: HashMap::new(),
+        events: HashMap::new(),
     }
 }

@@ -101,7 +101,7 @@ pub mod c1 {
         // We could have a self.world with an other function to init from hash, that can be
         // constant.
         fn world_default(self: @ContractState) -> dojo::world::WorldStorage {
-            self.world("ns")
+            self.world(@"ns")
         }
     }
 }

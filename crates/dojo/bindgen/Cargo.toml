@@ -7,6 +7,7 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
+anyhow.workspace = true
 async-trait.workspace = true
 camino.workspace = true
 chrono.workspace = true
@@ -29,3 +30,4 @@ assert_matches.workspace = true
 dojo-test-utils = { workspace = true, features = [ "build-examples" ] }
 scarb = { workspace = true }
 tokio.workspace = true
+sozo-scarbext = { workspace = true }

@@ -153,6 +153,7 @@ mod tests {
             models: HashMap::new(),
             contracts: HashMap::new(),
             world: DojoWorld { name: "0x01".to_string() },
+            events: HashMap::new(),
         };
 
         let (path, code) = writer.write("models.gen.ts", &data).unwrap();

@@ -627,8 +627,8 @@ mod tests {
     use std::io::Read;
 
     use dojo_test_utils::compiler::CompilerTestSetup;
-    use dojo_world::metadata::dojo_metadata_from_workspace;
     use scarb::compiler::Profile;
+    use sozo_scarbext::WorkspaceExt;
 
     use super::*;
     use crate::gather_dojo_data;
@@ -649,15 +649,23 @@ mod tests {
         let config = setup.build_test_config("spawn-and-move", Profile::DEV);
 
         let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
-        let dojo_metadata = dojo_metadata_from_workspace(&ws).expect(
-            "No current package with dojo metadata found, bindgen is not yet support for \
-             workspaces.",
-        );
+        let profile_config = ws.load_profile_config().unwrap();
+
+        let skip_migrations = if let Some(migration) = profile_config.migration {
+            let mut skip_migration = vec![];
+            if let Some(skip_contracts) = migration.skip_contracts {
+                skip_migration.extend(skip_contracts);
+            }
+            Some(skip_migration)
+        } else {
+            None
+        };
+
         let data = gather_dojo_data(
             &config.manifest_path().to_path_buf(),
             "dojo_examples",
             "dev",
-            dojo_metadata.migration.map(|m| m.skip_contracts),
+            skip_migrations,
         )
         .unwrap();
 

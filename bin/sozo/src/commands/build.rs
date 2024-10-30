@@ -1,5 +1,6 @@
 use anyhow::Result;
 use clap::{Args, Parser};
+use dojo_bindgen::{BuiltinPlugins, PluginManager};
 use scarb::core::{Config, Package, TargetKind};
 use scarb::ops::CompileOpts;
 use scarb_ui::args::{FeaturesSpec, PackagesFilter};
@@ -73,6 +74,40 @@ impl BuildArgs {
             },
             &ws,
         )?;
+
+        let mut builtin_plugins = vec![];
+
+        if self.typescript {
+            builtin_plugins.push(BuiltinPlugins::Typescript);
+        }
+
+        if self.typescript_v2 {
+            builtin_plugins.push(BuiltinPlugins::TypeScriptV2);
+        }
+
+        if self.unity {
+            builtin_plugins.push(BuiltinPlugins::Unity);
+        }
+
+        // Custom plugins are always empty for now.
+        let bindgen = PluginManager {
+            profile_name: ws.current_profile().expect("Profile expected").to_string(),
+            root_package_name: ws
+                .root_package()
+                .map(|p| p.id.name.to_string())
+                .unwrap_or("NO_ROOT_PACKAGE".to_string()),
+            output_path: self.bindings_output.into(),
+            manifest_path: config.manifest_path().to_path_buf(),
+            plugins: vec![],
+            builtin_plugins,
+        };
+
+        // TODO: check about the skip migration as now we process the metadata
+        // directly during the compilation to get the data we need from it.
+        tokio::runtime::Runtime::new()
+            .unwrap()
+            .block_on(bindgen.generate(None))
+            .expect("Error generating bindings");
 
         Ok(())
     }
