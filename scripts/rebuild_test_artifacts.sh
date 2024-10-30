@@ -4,6 +4,8 @@
 # cairo artifacts ONLY if they don't exist.
 # This script gives an easy way to remove those artifacts.
 
+cargo build -r --bin katana
+
 # some formatting:
 cargo +nightly-2024-08-28 fmt --all -- "$@"
 

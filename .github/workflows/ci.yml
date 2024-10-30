@@ -132,7 +132,7 @@ jobs:
       - uses: actions/checkout@v3
       - run: |
           chmod +x /tmp/bins/sozo
-          /tmp/bins/sozo --manifest-path crates/dojo-core/Scarb.toml test
+          /tmp/bins/sozo --manifest-path crates/dojo/core/Scarb.toml test
 
   dojo-spawn-and-move-example-test:
     needs: build
@@ -203,5 +203,5 @@ jobs:
           nohup /tmp/bins/katana --accounts 2 --disable-fee &
       - run: |
           /tmp/bins/sozo --manifest-path examples/spawn-and-move/Scarb.toml build
-          /tmp/bins/sozo --manifest-path examples/spawn-and-move/Scarb.toml migrate apply
+          /tmp/bins/sozo --manifest-path examples/spawn-and-move/Scarb.toml migrate
       - run: hurl --test examples/rpc/**/*.hurl

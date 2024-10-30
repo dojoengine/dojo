@@ -9,7 +9,8 @@ use anyhow::Result;
 use compare::ComparableResource;
 use dojo_types::naming;
 use starknet::core::types::contract::SierraClass;
-use starknet::providers::Provider;
+use starknet::core::types::{BlockId, BlockTag, StarknetError};
+use starknet::providers::{Provider, ProviderError};
 use starknet_crypto::Felt;
 
 use super::local::{ResourceLocal, WorldLocal};
@@ -144,7 +145,22 @@ impl WorldDiff {
     where
         P: Provider,
     {
-        if dojo_utils::is_deployed(world_address, &provider).await? {
+        let is_deployed = match provider
+            .get_class_hash_at(BlockId::Tag(BlockTag::Pending), world_address)
+            .await
+        {
+            Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => Ok(false),
+            Ok(_) => {
+                tracing::trace!(
+                    contract_address = format!("{:#066x}", world_address),
+                    "World already deployed."
+                );
+                Ok(true)
+            }
+            Err(e) => Err(e),
+        }?;
+
+        if is_deployed {
             let world_remote = WorldRemote::from_events(world_address, &provider).await?;
 
             Ok(Self::new(world_local, world_remote))

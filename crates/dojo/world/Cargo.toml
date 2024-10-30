@@ -10,7 +10,7 @@ version.workspace = true
 anyhow.workspace = true
 async-trait.workspace = true
 cairo-lang-starknet-classes.workspace = true
-dojo-utils.workspace = true
+#dojo-utils.workspace = true
 regex.workspace = true
 serde.workspace = true
 serde_json.workspace = true
@@ -21,9 +21,7 @@ thiserror.workspace = true
 tracing.workspace = true
 cainome.workspace = true
 dojo-types.workspace = true
-http.workspace = true
 ipfs-api-backend-hyper = { git = "https://github.com/ferristseng/rust-ipfs-api", rev = "af2c17f7b19ef5b9898f458d97a90055c3605633", features = [ "with-hyper-rustls" ], optional = true }
-scarb = { workspace = true, optional = true }
 toml.workspace = true
 url.workspace = true
 

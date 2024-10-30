@@ -12,7 +12,7 @@ reqwest.workspace = true
 rpassword.workspace = true
 starknet.workspace = true
 thiserror.workspace = true
-tokio = { version = "1", features = [ "signal", "time" ], default-features = false }
+tokio = { version = "1.39.2", features = [ "signal", "time", "macros" ], default-features = false }
 tracing.workspace = true
 serde_json.workspace = true
 colored_json.workspace = true

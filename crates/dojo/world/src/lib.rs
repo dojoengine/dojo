@@ -1,4 +1,4 @@
-// #![cfg_attr(not(test), warn(unused_crate_dependencies))]
+#![warn(unused_crate_dependencies)]
 
 #[cfg(feature = "metadata")]
 pub mod metadata;
