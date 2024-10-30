@@ -512,8 +512,10 @@ async fn get_events_local() -> Result<()> {
 #[tokio::test]
 #[rstest::rstest]
 #[case(BlockIdOrTag::Number(FORK_BLOCK_NUMBER))]
-#[case(BlockIdOrTag::Hash(felt!("0x208950cfcbba73ecbda1c14e4d58d66a8d60655ea1b9dcf07c16014ae8a93cd")))]
-async fn get_events_forked_and_local_boundary(#[case] block_id: BlockIdOrTag) -> Result<()> {
+#[case(BlockIdOrTag::Hash(felt!("0x208950cfcbba73ecbda1c14e4d58d66a8d60655ea1b9dcf07c16014ae8a93cd")))] // FORK_BLOCK_NUMBER hash
+async fn get_events_forked_and_local_boundary_exhaustive(
+    #[case] block_id: BlockIdOrTag,
+) -> Result<()> {
     let (_sequencer, provider, local_only_data) = setup_test().await;
     let forked_provider = JsonRpcClient::new(HttpTransport::new(Url::parse(SEPOLIA_URL)?));
 
@@ -559,6 +561,48 @@ async fn get_events_forked_and_local_boundary(#[case] block_id: BlockIdOrTag) ->
         assert_eq!(event.block_hash, Some(*block_hash));
         assert_eq!(event.block_number, Some(*block_number));
     }
+
+    Ok(())
+}
+
+#[tokio::test]
+#[rstest::rstest]
+#[case(BlockIdOrTag::Number(FORK_BLOCK_NUMBER - 1))]
+#[case(BlockIdOrTag::Hash(felt!("0x4a6a79bfefceb03af4f78758785b0c40ddf9f757e9a8f72f01ecb0aad11e298")))] // FORK_BLOCK_NUMBER - 1 hash
+async fn get_events_forked_and_local_boundary_non_exhaustive(
+    #[case] block_id: BlockIdOrTag,
+) -> Result<()> {
+    let (_sequencer, provider, _) = setup_test().await;
+    let forked_provider = JsonRpcClient::new(HttpTransport::new(Url::parse(SEPOLIA_URL)?));
+
+    // -----------------------------------------------------------------------
+    // Get events that cross the boundaries between forked and local chain block, but
+    // not all events from the forked range is fetched.
+
+    let filter = EventFilter {
+        keys: None,
+        address: None,
+        to_block: Some(block_id),
+        from_block: Some(block_id),
+    };
+
+    // events fetched directly from the forked chain.
+    let result = forked_provider.get_events(filter.clone(), None, 50).await?;
+    let forked_events = result.events;
+
+    let filter = EventFilter {
+        keys: None,
+        address: None,
+        to_block: Some(BlockIdOrTag::Tag(BlockTag::Pending)),
+        from_block: Some(block_id),
+    };
+
+    let result = provider.get_events(filter, None, 50).await?;
+    let katana_events = result.events;
+
+    let token = MaybeForkedContinuationToken::parse(&result.continuation_token.unwrap())?;
+    assert_matches!(token, MaybeForkedContinuationToken::Forked(_));
+    similar_asserts::assert_eq!(katana_events, forked_events);
 
     Ok(())
 }
