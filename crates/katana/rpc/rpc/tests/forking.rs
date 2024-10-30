@@ -37,8 +37,9 @@ type LocalTestVector = Vec<((BlockNumber, BlockHash), TxHash)>;
 /// a single transaction.
 ///
 /// The returned [`TestVector`] is a list of all the locally created blocks and transactions.
-async fn setup_test() -> (TestSequencer, impl Provider, LocalTestVector) {
+async fn setup_test_inner(no_mining: bool) -> (TestSequencer, impl Provider, LocalTestVector) {
     let mut config = get_default_test_config(SequencingConfig::default());
+    config.sequencing.no_mining = no_mining;
     config.forking = Some(forking_cfg());
 
     let sequencer = TestSequencer::start(config).await;
@@ -50,25 +51,48 @@ async fn setup_test() -> (TestSequencer, impl Provider, LocalTestVector) {
     abigen_legacy!(FeeToken, "crates/katana/rpc/rpc/tests/test_data/erc20.json");
     let contract = FeeToken::new(DEFAULT_ETH_FEE_TOKEN_ADDRESS.into(), sequencer.account());
 
-    // we're in auto mining, each transaction will create a new block
-    for i in 1..=10 {
-        let amount = Uint256 { low: Felt::ONE, high: Felt::ZERO };
-        let res = contract.transfer(&Felt::ONE, &amount).send().await.unwrap();
-        let _ = dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
+    if no_mining {
+        // In no mining mode, bcs we're not producing any blocks, the transactions that we send
+        // will all be included in the same block (pending).
+        for _ in 1..=10 {
+            let amount = Uint256 { low: Felt::ONE, high: Felt::ZERO };
+            let res = contract.transfer(&Felt::ONE, &amount).send().await.unwrap();
+            dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
 
-        let block_num = FORK_BLOCK_NUMBER + i;
+            // events in pending block doesn't have block hash and number, so we can safely put
+            // dummy values here.
+            txs_vector.push(((0, Felt::ZERO), res.transaction_hash));
+        }
+    } else {
+        // We're in auto mining, each transaction will create a new block
+        for i in 1..=10 {
+            let amount = Uint256 { low: Felt::ONE, high: Felt::ZERO };
+            let res = contract.transfer(&Felt::ONE, &amount).send().await.unwrap();
+            let _ =
+                dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
 
-        let block_id = BlockIdOrTag::Number(block_num);
-        let block = provider.get_block_with_tx_hashes(block_id).await.unwrap();
-        let block_hash = match block {
-            MaybePendingBlockWithTxHashes::Block(b) => b.block_hash,
-            _ => panic!("Expected a block"),
-        };
+            let block_num = FORK_BLOCK_NUMBER + i;
 
-        txs_vector.push(((FORK_BLOCK_NUMBER + i, block_hash), res.transaction_hash));
+            let block_id = BlockIdOrTag::Number(block_num);
+            let block = provider.get_block_with_tx_hashes(block_id).await.unwrap();
+            let block_hash = match block {
+                MaybePendingBlockWithTxHashes::Block(b) => b.block_hash,
+                _ => panic!("Expected a block"),
+            };
+
+            txs_vector.push(((FORK_BLOCK_NUMBER + i, block_hash), res.transaction_hash));
+        }
     }
 
     (sequencer, provider, txs_vector)
+}
+
+async fn setup_test() -> (TestSequencer, impl Provider, LocalTestVector) {
+    setup_test_inner(false).await
+}
+
+async fn setup_test_pending() -> (TestSequencer, impl Provider, LocalTestVector) {
+    setup_test_inner(true).await
 }
 
 #[tokio::test]
@@ -504,6 +528,37 @@ async fn get_events_local() -> Result<()> {
         assert_eq!(event.transaction_hash, *tx);
         assert_eq!(event.block_hash, Some(*block_hash));
         assert_eq!(event.block_number, Some(*block_number));
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn get_events_pending_exhaustive() -> Result<()> {
+    let (_sequencer, provider, local_only_data) = setup_test_pending().await;
+
+    // -----------------------------------------------------------------------
+    // Get events from the local chain pending block.
+
+    let filter = EventFilter {
+        keys: None,
+        address: None,
+        to_block: Some(BlockIdOrTag::Tag(BlockTag::Pending)),
+        from_block: Some(BlockIdOrTag::Tag(BlockTag::Pending)),
+    };
+
+    let result = provider.get_events(filter, None, 10).await?;
+    let events = result.events;
+
+    // This is expected behaviour, as the pending block is not yet closed.
+    // so there may still more events to come.
+    assert!(result.continuation_token.is_some());
+
+    for (event, (_, tx)) in events.iter().zip(local_only_data.iter()) {
+        assert_eq!(event.transaction_hash, *tx);
+        // pending events should not have block number and block hash.
+        assert_eq!(event.block_hash, None);
+        assert_eq!(event.block_number, None);
     }
 
     Ok(())
