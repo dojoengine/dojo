@@ -6,10 +6,11 @@ use katana_node::config::fork::ForkingConfig;
 use katana_node::config::SequencingConfig;
 use katana_primitives::block::{BlockHash, BlockHashOrNumber, BlockIdOrTag, BlockNumber};
 use katana_primitives::chain::NamedChainId;
+use katana_primitives::event::MaybeForkedContinuationToken;
 use katana_primitives::genesis::constant::DEFAULT_ETH_FEE_TOKEN_ADDRESS;
 use katana_primitives::transaction::TxHash;
 use katana_primitives::{felt, Felt};
-use starknet::core::types::{MaybePendingBlockWithTxHashes, StarknetError};
+use starknet::core::types::{EventFilter, MaybePendingBlockWithTxHashes, StarknetError};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider, ProviderError};
 use url::Url;
@@ -382,6 +383,66 @@ async fn forked_transactions() -> Result<()> {
 
     let result = provider.get_transaction_status(tx_hash).await.unwrap_err();
     assert_provider_starknet_err!(result, StarknetError::TransactionHashNotFound);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn forked_events() -> Result<()> {
+    let (_sequencer, provider, local_only_data) = setup_test().await;
+    let forked_provider = JsonRpcClient::new(HttpTransport::new(Url::parse(SEPOLIA_URL)?));
+
+    // -----------------------------------------------------------------------
+
+    let filter = EventFilter {
+        keys: None,
+        address: None,
+        to_block: Some(BlockIdOrTag::Number(FORK_BLOCK_NUMBER - 2)),
+        from_block: Some(BlockIdOrTag::Number(FORK_BLOCK_NUMBER - 2)),
+    };
+
+    // events fetched directly from the forked chain.
+    let result = forked_provider.get_events(filter.clone(), None, 5).await?;
+    let events = result.events;
+
+    // events fetched through the forked katana.
+    let result = provider.get_events(filter, None, 5).await?;
+    let forked_events = result.events;
+
+    let token = MaybeForkedContinuationToken::parse(&result.continuation_token.unwrap())?;
+    assert_matches!(token, MaybeForkedContinuationToken::Forked(_));
+
+    for (a, b) in events.iter().zip(forked_events) {
+        assert_eq!(a.block_number, Some(FORK_BLOCK_NUMBER - 2));
+        assert_eq!(a.block_number, b.block_number);
+        assert_eq!(a.block_hash, b.block_hash);
+        assert_eq!(a.transaction_hash, b.transaction_hash);
+        assert_eq!(a.from_address, b.from_address);
+        assert_eq!(a.keys, b.keys);
+        assert_eq!(a.data, b.data);
+    }
+
+    // -----------------------------------------------------------------------
+
+    let filter = EventFilter {
+        keys: None,
+        address: None,
+        to_block: None,
+        from_block: Some(BlockIdOrTag::Number(FORK_BLOCK_NUMBER + 1)),
+    };
+
+    let result = provider.get_events(filter, None, 10).await?;
+    let forked_events = result.events;
+
+    // compare the events
+
+    for (event, (block, tx)) in forked_events.iter().zip(local_only_data) {
+        let (block_number, block_hash) = block;
+
+        assert_eq!(event.transaction_hash, tx);
+        assert_eq!(event.block_hash, Some(block_hash));
+        assert_eq!(event.block_number, Some(block_number));
+    }
 
     Ok(())
 }

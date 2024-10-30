@@ -19,7 +19,17 @@ pub enum MaybeForkedContinuationToken {
 }
 
 impl MaybeForkedContinuationToken {
-    pub fn into_token(self) -> Option<ContinuationToken> {
+    pub fn parse(value: &str) -> Result<Self, ContinuationTokenError> {
+        const FORKED_TOKEN_PREFIX: &str = "FK_";
+        if let Some(token) = value.strip_prefix(FORKED_TOKEN_PREFIX) {
+            Ok(MaybeForkedContinuationToken::Forked(token.to_string()))
+        } else {
+            let token = ContinuationToken::parse(value)?;
+            Ok(MaybeForkedContinuationToken::Token(token))
+        }
+    }
+
+    pub fn to_token(self) -> Option<ContinuationToken> {
         match self {
             MaybeForkedContinuationToken::Token(token) => Some(token),
             _ => None,
@@ -32,18 +42,6 @@ impl std::fmt::Display for MaybeForkedContinuationToken {
         match self {
             MaybeForkedContinuationToken::Token(token) => write!(f, "{token}"),
             MaybeForkedContinuationToken::Forked(token) => write!(f, "FK_{token}"),
-        }
-    }
-}
-
-impl MaybeForkedContinuationToken {
-    pub fn parse(value: &str) -> Result<Self, ContinuationTokenError> {
-        const FORKED_TOKEN_PREFIX: &str = "FK_";
-        if let Some(token) = value.strip_prefix(FORKED_TOKEN_PREFIX) {
-            Ok(MaybeForkedContinuationToken::Forked(token.to_string()))
-        } else {
-            let token = ContinuationToken::parse(value)?;
-            Ok(MaybeForkedContinuationToken::Token(token))
         }
     }
 }
