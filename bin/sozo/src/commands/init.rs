@@ -63,6 +63,8 @@ impl InitArgs {
             Err(e) => return Err(e.context("Failed to get Sozo version")),
         };
 
+        trace!(repo_url = repo_url, sozo_version = sozo_version);
+
         clone_repo(&repo_url, &target_dir, &sozo_version, config)?;
 
         // Navigate to the newly cloned repo.
@@ -107,6 +109,7 @@ fn get_sozo_version() -> Result<String> {
 }
 
 fn check_tag_exists(url: &str, version: &str) -> Result<bool> {
+    trace!(url = url, version = version, "Checking tag.");
     let output = Command::new("git").args(["ls-remote", "--tags", url]).output()?;
 
     let output_str = String::from_utf8(output.stdout)?;

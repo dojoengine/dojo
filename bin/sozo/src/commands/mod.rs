@@ -15,6 +15,7 @@ pub(crate) mod inspect;
 pub(crate) mod migrate;
 pub(crate) mod options;
 pub(crate) mod test;
+pub(crate) mod init;
 
 use build::BuildArgs;
 use call::CallArgs;
@@ -24,6 +25,7 @@ use hash::HashArgs;
 use inspect::InspectArgs;
 use migrate::MigrateArgs;
 use test::TestArgs;
+use init::InitArgs;
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {
@@ -44,6 +46,8 @@ pub enum Commands {
     Test(Box<TestArgs>),
     #[command(about = "Computes hash with different hash functions")]
     Hash(Box<HashArgs>),
+    #[command(about = "Initialize a new dojo project")]
+    Init(Box<InitArgs>),
 }
 
 impl fmt::Display for Commands {
@@ -57,6 +61,7 @@ impl fmt::Display for Commands {
             Commands::Call(_) => write!(f, "Call"),
             Commands::Test(_) => write!(f, "Test"),
             Commands::Hash(_) => write!(f, "Hash"),
+            Commands::Init(_) => write!(f, "Init"),
         }
     }
 }
@@ -78,6 +83,7 @@ pub fn run(command: Commands, config: &Config) -> Result<()> {
         Commands::Call(args) => args.run(config),
         Commands::Test(args) => args.run(config),
         Commands::Hash(args) => args.run().map(|_| ()),
+        Commands::Init(args) => args.run(config),
     }
 }
 
