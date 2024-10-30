@@ -99,10 +99,14 @@ impl Client {
     }
 
     /// Similary to entities, this function retrieves event messages matching the query parameter.
-    pub async fn event_messages(&self, query: Query) -> Result<Vec<Entity>, Error> {
+    pub async fn event_messages(
+        &self,
+        query: Query,
+        historical: bool,
+    ) -> Result<Vec<Entity>, Error> {
         let mut grpc_client = self.inner.write().await;
         let RetrieveEntitiesResponse { entities, total_count: _ } =
-            grpc_client.retrieve_event_messages(query).await?;
+            grpc_client.retrieve_event_messages(query, historical).await?;
         Ok(entities.into_iter().map(TryInto::try_into).collect::<Result<Vec<Entity>, _>>()?)
     }
 
@@ -139,9 +143,10 @@ impl Client {
     pub async fn on_event_message_updated(
         &self,
         clauses: Vec<EntityKeysClause>,
+        historical: bool,
     ) -> Result<EntityUpdateStreaming, Error> {
         let mut grpc_client = self.inner.write().await;
-        let stream = grpc_client.subscribe_event_messages(clauses).await?;
+        let stream = grpc_client.subscribe_event_messages(clauses, historical).await?;
         Ok(stream)
     }
 
@@ -150,9 +155,12 @@ impl Client {
         &self,
         subscription_id: u64,
         clauses: Vec<EntityKeysClause>,
+        historical: bool,
     ) -> Result<(), Error> {
         let mut grpc_client = self.inner.write().await;
-        grpc_client.update_event_messages_subscription(subscription_id, clauses).await?;
+        grpc_client
+            .update_event_messages_subscription(subscription_id, clauses, historical)
+            .await?;
         Ok(())
     }
 
