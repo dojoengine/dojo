@@ -477,12 +477,13 @@ impl<'c> Executor<'c> {
 
                     sqlx::query(
                         "INSERT INTO event_messages_historical (id, keys, event_id, data, \
-                         executed_at) VALUES (?, ?, ?, ?, ?) RETURNING *",
+                         model_id, executed_at) VALUES (?, ?, ?, ?, ?, ?) RETURNING *",
                     )
                     .bind(em_query.entity_id.clone())
                     .bind(em_query.keys_str.clone())
                     .bind(em_query.event_id.clone())
                     .bind(data)
+                    .bind(em_query.model_id.clone())
                     .bind(em_query.block_timestamp.clone())
                     .fetch_one(&mut **tx)
                     .await?;
@@ -501,6 +502,7 @@ impl<'c> Executor<'c> {
 
                 let mut event_message = EventMessageUpdated::from_row(&event_messages_row)?;
                 event_message.updated_model = Some(em_query.ty);
+                event_message.historical = em_query.is_historical;
 
                 let optimistic_event_message = OptimisticEventMessage {
                     id: event_message.id.clone(),
@@ -510,6 +512,7 @@ impl<'c> Executor<'c> {
                     created_at: event_message.created_at,
                     updated_at: event_message.updated_at,
                     updated_model: event_message.updated_model.clone(),
+                    historical: event_message.historical,
                 };
                 SimpleBroker::publish(optimistic_event_message);
 

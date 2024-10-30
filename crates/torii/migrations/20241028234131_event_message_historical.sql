@@ -8,6 +8,8 @@ CREATE TABLE event_messages_historical (
     event_id TEXT NOT NULL,
     -- The serialized data of the event, which contains the Ty.
     data TEXT NOT NULL,
+    -- The model id of the serialized data.
+    model_id TEXT NOT NULL,
     executed_at DATETIME NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP

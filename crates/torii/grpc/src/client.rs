@@ -9,11 +9,12 @@ use tonic::codec::CompressionEncoding;
 use tonic::transport::Endpoint;
 
 use crate::proto::world::{
-    world_client, RetrieveEntitiesRequest, RetrieveEntitiesResponse, RetrieveEventsRequest,
-    RetrieveEventsResponse, SubscribeEntitiesRequest, SubscribeEntityResponse,
-    SubscribeEventsRequest, SubscribeEventsResponse, SubscribeIndexerRequest,
-    SubscribeIndexerResponse, SubscribeModelsRequest, SubscribeModelsResponse,
-    UpdateEntitiesSubscriptionRequest, WorldMetadataRequest,
+    world_client, RetrieveEntitiesRequest, RetrieveEntitiesResponse, RetrieveEventMessagesRequest,
+    RetrieveEventsRequest, RetrieveEventsResponse, SubscribeEntitiesRequest,
+    SubscribeEntityResponse, SubscribeEventMessagesRequest, SubscribeEventsRequest,
+    SubscribeEventsResponse, SubscribeIndexerRequest, SubscribeIndexerResponse,
+    SubscribeModelsRequest, SubscribeModelsResponse, UpdateEntitiesSubscriptionRequest,
+    UpdateEventMessagesSubscriptionRequest, WorldMetadataRequest,
 };
 use crate::types::schema::{Entity, SchemaError};
 use crate::types::{EntityKeysClause, Event, EventQuery, IndexerUpdate, ModelKeysClause, Query};
@@ -96,8 +97,9 @@ impl WorldClient {
     pub async fn retrieve_event_messages(
         &mut self,
         query: Query,
+        historical: bool,
     ) -> Result<RetrieveEntitiesResponse, Error> {
-        let request = RetrieveEntitiesRequest { query: Some(query.into()) };
+        let request = RetrieveEventMessagesRequest { query: Some(query.into()), historical };
         self.inner
             .retrieve_event_messages(request)
             .await
@@ -172,11 +174,12 @@ impl WorldClient {
     pub async fn subscribe_event_messages(
         &mut self,
         clauses: Vec<EntityKeysClause>,
+        historical: bool,
     ) -> Result<EntityUpdateStreaming, Error> {
         let clauses = clauses.into_iter().map(|c| c.into()).collect();
         let stream = self
             .inner
-            .subscribe_event_messages(SubscribeEntitiesRequest { clauses })
+            .subscribe_event_messages(SubscribeEventMessagesRequest { clauses, historical })
             .await
             .map_err(Error::Grpc)
             .map(|res| res.into_inner())?;
@@ -194,12 +197,14 @@ impl WorldClient {
         &mut self,
         subscription_id: u64,
         clauses: Vec<EntityKeysClause>,
+        historical: bool,
     ) -> Result<(), Error> {
         let clauses = clauses.into_iter().map(|c| c.into()).collect();
         self.inner
-            .update_event_messages_subscription(UpdateEntitiesSubscriptionRequest {
+            .update_event_messages_subscription(UpdateEventMessagesSubscriptionRequest {
                 subscription_id,
                 clauses,
+                historical,
             })
             .await
             .map_err(Error::Grpc)
