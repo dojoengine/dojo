@@ -31,14 +31,13 @@ sqlx.workspace = true
 starknet-crypto.workspace = true
 starknet.workspace = true
 thiserror.workspace = true
-tokio = { version = "1.32.0", features = [ "sync" ], default-features = true }
+tokio = { version = "1.32.0", features = [ "sync", "macros" ], default-features = true }
 # tokio-stream = "0.1.11"
 tokio-util.workspace = true
 toml.workspace = true
 tracing.workspace = true
 
 [dev-dependencies]
-camino.workspace = true
 dojo-test-utils.workspace = true
 dojo-utils.workspace = true
 katana-runner.workspace = true

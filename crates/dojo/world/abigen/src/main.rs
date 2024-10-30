@@ -94,7 +94,7 @@ fn generate_bindings(
         let generated_bindings = fs::read_to_string(tmp_file)?;
         fs::write("/tmp/generated_bindings.rs", generated_bindings.clone())?;
 
-        let generated_bindings = fs::read_to_string(format!("/tmp/generated_bindings.rs"))?
+        let generated_bindings = fs::read_to_string("/tmp/generated_bindings.rs")?
             .replace(char::is_whitespace, "");
 
         if Path::new(&out_path).exists() {
@@ -103,11 +103,11 @@ fn generate_bindings(
 
             Command::new("rustfmt")
                 .arg("+nightly-2024-08-28")
-                .arg(&format!("/tmp/existing_bindings.rs"))
+                .arg("/tmp/existing_bindings.rs")
                 .status()
                 .expect("Failed to run rustfmt on generated bindings");
 
-            let existing_bindings = fs::read_to_string(format!("/tmp/existing_bindings.rs"))?
+            let existing_bindings = fs::read_to_string("/tmp/existing_bindings.rs")?
                 .replace(char::is_whitespace, "");
 
             let mut first_diff_index = None;

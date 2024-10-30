@@ -75,7 +75,7 @@ dojo-core = { path = "crates/dojo/core" }
 dojo-lang = { path = "crates/dojo/lang" }
 dojo-test-utils = { path = "crates/dojo/test-utils" }
 dojo-types = { path = "crates/dojo/types" }
-dojo-world = { path = "crates/dojo/world", features = [ "metadata" ] }
+dojo-world = { path = "crates/dojo/world" }
 
 # dojo-world
 topological-sort = "0.2"

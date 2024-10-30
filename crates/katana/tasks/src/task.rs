@@ -29,7 +29,7 @@ impl<T> TaskResult<T> {
 
 /// A builder for building tasks to be spawned on the associated task manager.
 ///
-/// Can only be created using [`TaskManager::build_task`].
+/// Can only be created using [`super::TaskSpawner::build_task`].
 #[derive(Debug)]
 pub struct TaskBuilder<'a> {
     /// The task manager that the task will be spawned on.

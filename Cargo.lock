@@ -15067,7 +15067,6 @@ dependencies = [
  "base64 0.21.7",
  "bitflags 2.6.0",
  "cainome 0.4.6",
- "camino",
  "chrono",
  "crypto-bigint",
  "dojo-test-utils",
