@@ -807,14 +807,6 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         let EventFilterWithPage { event_filter, result_page_request } = filter;
         let ResultPageRequest { continuation_token, chunk_size } = result_page_request;
 
-        // if event_filter.from_block.is_none() {
-        //     event_filter.from_block = Some(BlockIdOrTag::Number(0));
-        // }
-
-        // if event_filter.to_block.is_none() {
-        //     event_filter.to_block = Some(BlockIdOrTag::Tag(BlockTag::Pending));
-        // }
-
         self.on_io_blocking_task(move |this| {
             let from = match event_filter.from_block {
                 Some(id) => id,
