@@ -22,7 +22,6 @@ pub struct Manifest {
 
 #[serde_as]
 #[derive(Clone, Default, Debug, Serialize, Deserialize)]
-#[cfg_attr(test, derive(PartialEq))]
 pub struct WorldContract {
     /// Class hash of the contract.
     #[serde_as(as = "UfeHex")]
@@ -34,6 +33,8 @@ pub struct WorldContract {
     pub seed: String,
     /// Name of the world.
     pub name: String,
+    /// Abi of the world.
+    pub abi: Vec<AbiEntry>,
 }
 
 #[serde_as]
@@ -101,6 +102,7 @@ impl Manifest {
             address: diff.world_info.address,
             seed: diff.profile_config.world.seed.clone(),
             name: diff.profile_config.world.name.clone(),
+            abi: diff.world_info.class.abi.clone(),
         };
 
         let mut contracts = Vec::new();
