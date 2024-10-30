@@ -7,7 +7,7 @@ use dojo_world::ResourceType;
 use scarb::core::Config;
 use serde::Serialize;
 use tabled::settings::object::Cell;
-use tabled::settings::{Color, Style};
+use tabled::settings::{Color, Theme};
 use tabled::{Table, Tabled};
 use tracing::trace;
 
@@ -440,7 +440,7 @@ where
     }
 
     let mut table = Table::new(data);
-    table.with(Style::psql());
+    table.with(halloween());
 
     if let Some(color) = color {
         table.modify(Cell::new(0, 0), color);
@@ -451,6 +451,17 @@ where
     }
 
     println!("{table}\n");
+}
+
+pub fn halloween() -> Theme {
+    let mut style = Theme::default();
+    style.set_borders_vertical('💀');
+    style.set_borders_left('💀');
+    style.set_borders_right('💀');
+
+    style.set_borders_corner_top_left('🎃');
+
+    style
 }
 
 /// Pretty prints a TOML string.

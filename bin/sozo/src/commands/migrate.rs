@@ -71,10 +71,10 @@ impl MigrateArgs {
             );
 
             let MigrationResult { manifest, has_changes } =
-                migration.migrate(&mut spinner).await.context("Migration failed.")?;
+                migration.migrate(&mut spinner).await.context("💀 Migration failed.")?;
 
             spinner.update_text("Writing manifest...");
-            ws.write_manifest_profile(manifest).context("Failed to write manifest.")?;
+            ws.write_manifest_profile(manifest).context("🪦 Failed to write manifest.")?;
 
             let colored_address = format!("{:#066x}", world_address).green();
 
@@ -104,10 +104,10 @@ async fn print_banner(ws: &Workspace<'_>, starknet: &StarknetOptions) -> Result<
 
     let chain_id = provider.chain_id().await?;
     let chain_id =
-        parse_cairo_short_string(&chain_id).with_context(|| "Cannot parse chain_id as string")?;
+        parse_cairo_short_string(&chain_id).with_context(|| "💀 Cannot parse chain_id as string")?;
 
     let banner = Banner {
-        profile: ws.current_profile().expect("Scarb profile should be set.").to_string(),
+        profile: ws.current_profile().expect("💀 Scarb profile should be set.").to_string(),
         chain_id,
         rpc_url,
     };
