@@ -10,6 +10,19 @@ pub enum MaybePendingStateUpdate {
     Update(StateUpdate),
 }
 
+impl From<starknet::core::types::MaybePendingStateUpdate> for MaybePendingStateUpdate {
+    fn from(value: starknet::core::types::MaybePendingStateUpdate) -> Self {
+        match value {
+            starknet::core::types::MaybePendingStateUpdate::PendingUpdate(pending) => {
+                MaybePendingStateUpdate::Pending(pending.into())
+            }
+            starknet::core::types::MaybePendingStateUpdate::Update(update) => {
+                MaybePendingStateUpdate::Update(update.into())
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct StateUpdate(starknet::core::types::StateUpdate);
@@ -24,7 +37,7 @@ pub struct StateDiff(pub starknet::core::types::StateDiff);
 
 impl From<starknet::core::types::StateUpdate> for StateUpdate {
     fn from(value: starknet::core::types::StateUpdate) -> Self {
-        StateUpdate(value)
+        Self(value)
     }
 }
 
@@ -63,7 +76,7 @@ impl From<katana_primitives::state::StateUpdates> for StateDiff {
             })
             .collect();
 
-        StateDiff(starknet::core::types::StateDiff {
+        Self(starknet::core::types::StateDiff {
             nonces,
             storage_diffs,
             declared_classes,
@@ -71,5 +84,11 @@ impl From<katana_primitives::state::StateUpdates> for StateDiff {
             replaced_classes: Default::default(),
             deprecated_declared_classes: Default::default(),
         })
+    }
+}
+
+impl From<starknet::core::types::PendingStateUpdate> for PendingStateUpdate {
+    fn from(value: starknet::core::types::PendingStateUpdate) -> Self {
+        Self(value)
     }
 }

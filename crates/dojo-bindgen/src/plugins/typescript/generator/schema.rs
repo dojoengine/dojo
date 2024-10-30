@@ -197,6 +197,15 @@ mod tests {
         );
     }
 
+    #[test]
+    fn test_handle_nested_struct() {
+        let generator = TsSchemaGenerator {};
+        let mut buffer = Buffer::new();
+        let nested_struct = create_test_nested_struct_token("TestNestedStruct");
+        let _res = generator.generate(&nested_struct, &mut buffer);
+        assert_eq!(buffer.len(), 3);
+    }
+
     fn create_test_struct_token(name: &str) -> Composite {
         Composite {
             type_path: format!("onchain_dash::{name}"),
@@ -218,6 +227,82 @@ mod tests {
                     name: "field3".to_owned(),
                     kind: CompositeInnerKind::Key,
                     token: Token::CoreBasic(CoreBasic { type_path: "core::felt252".to_owned() }),
+                },
+            ],
+            generic_args: vec![],
+            r#type: CompositeType::Struct,
+            is_event: false,
+            alias: None,
+        }
+    }
+
+    pub fn create_test_nested_struct_token(name: &str) -> Composite {
+        Composite {
+            type_path: format!("onchain_dash::{name}"),
+            inners: vec![
+                CompositeInner {
+                    index: 0,
+                    name: "field1".to_owned(),
+                    kind: CompositeInnerKind::Key,
+                    token: Token::Array(cainome::parser::tokens::Array {
+                        type_path: "core::array::Array::<onchain_dah::Direction>".to_owned(),
+                        inner: Box::new(Token::Composite(Composite {
+                            type_path: "onchain_dah::Direction".to_owned(),
+                            inners: vec![
+                                CompositeInner {
+                                    index: 0,
+                                    name: "None".to_owned(),
+                                    kind: CompositeInnerKind::Key,
+                                    token: Token::CoreBasic(CoreBasic {
+                                        type_path: "core::fetl252".to_owned(),
+                                    }),
+                                },
+                                CompositeInner {
+                                    index: 1,
+                                    name: "North".to_owned(),
+                                    kind: CompositeInnerKind::Key,
+                                    token: Token::CoreBasic(CoreBasic {
+                                        type_path: "core::fetl252".to_owned(),
+                                    }),
+                                },
+                                CompositeInner {
+                                    index: 2,
+                                    name: "South".to_owned(),
+                                    kind: CompositeInnerKind::Key,
+                                    token: Token::CoreBasic(CoreBasic {
+                                        type_path: "core::fetl252".to_owned(),
+                                    }),
+                                },
+                                CompositeInner {
+                                    index: 3,
+                                    name: "West".to_owned(),
+                                    kind: CompositeInnerKind::Key,
+                                    token: Token::CoreBasic(CoreBasic {
+                                        type_path: "core::fetl252".to_owned(),
+                                    }),
+                                },
+                                CompositeInner {
+                                    index: 4,
+                                    name: "East".to_owned(),
+                                    kind: CompositeInnerKind::Key,
+                                    token: Token::CoreBasic(CoreBasic {
+                                        type_path: "core::fetl252".to_owned(),
+                                    }),
+                                },
+                            ],
+                            generic_args: vec![],
+                            r#type: CompositeType::Enum,
+                            is_event: false,
+                            alias: None,
+                        })),
+                        is_legacy: false,
+                    }),
+                },
+                CompositeInner {
+                    index: 1,
+                    name: "field2".to_owned(),
+                    kind: CompositeInnerKind::Key,
+                    token: Token::Composite(create_test_struct_token("Position")),
                 },
             ],
             generic_args: vec![],

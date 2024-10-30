@@ -64,19 +64,17 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
 
         // If the node is run with transaction validation disabled, then we should not validate
         // even if the `SKIP_VALIDATE` flag is not set.
-        let should_validate = !(simulation_flags.contains(&SimulationFlag::SkipValidate)
-            || self.inner.backend.executor_factory.execution_flags().skip_validate);
+        let should_validate = !simulation_flags.contains(&SimulationFlag::SkipValidate)
+            && self.inner.backend.executor_factory.execution_flags().account_validation();
 
         // If the node is run with fee charge disabled, then we should disable charing fees even
         // if the `SKIP_FEE_CHARGE` flag is not set.
-        let should_skip_fee = !(simulation_flags.contains(&SimulationFlag::SkipFeeCharge)
-            || self.inner.backend.executor_factory.execution_flags().skip_fee_transfer);
+        let should_skip_fee = !simulation_flags.contains(&SimulationFlag::SkipFeeCharge)
+            && self.inner.backend.executor_factory.execution_flags().fee();
 
-        let flags = katana_executor::SimulationFlag {
-            skip_validate: !should_validate,
-            skip_fee_transfer: !should_skip_fee,
-            ..Default::default()
-        };
+        let flags = katana_executor::ExecutionFlags::new()
+            .with_account_validation(should_validate)
+            .with_fee(!should_skip_fee);
 
         // get the state and block env at the specified block for execution
         let state = self.state(&block_id)?;
@@ -98,7 +96,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
 
                 ExecutionResult::Failed { error } => {
                     let error = StarknetApiError::TransactionExecutionError {
-                        transaction_index: i,
+                        transaction_index: i as u64,
                         execution_error: error.to_string(),
                     };
                     return Err(error);

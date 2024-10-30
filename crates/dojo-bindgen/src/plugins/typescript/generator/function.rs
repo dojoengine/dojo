@@ -18,7 +18,7 @@ impl TsFunctionGenerator {
     }
 
     fn setup_function_wrapper_start(&self, buffer: &mut Buffer) -> usize {
-        let fn_wrapper = "export async function setupWorld(provider: DojoProvider) {{\n";
+        let fn_wrapper = "export async function setupWorld(provider: DojoProvider) {\n";
 
         if !buffer.has(fn_wrapper) {
             buffer.push(fn_wrapper.to_owned());

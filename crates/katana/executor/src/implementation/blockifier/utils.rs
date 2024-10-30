@@ -56,30 +56,30 @@ use katana_provider::traits::contract::ContractClassProvider;
 use starknet::core::utils::parse_cairo_short_string;
 
 use super::state::{CachedState, StateDb};
-use crate::abstraction::{EntryPointCall, SimulationFlag};
+use crate::abstraction::{EntryPointCall, ExecutionFlags};
 use crate::utils::build_receipt;
 use crate::{ExecutionError, ExecutionResult};
 
 pub fn transact<S: StateReader>(
     state: &mut cached_state::CachedState<S>,
     block_context: &BlockContext,
-    simulation_flags: &SimulationFlag,
+    simulation_flags: &ExecutionFlags,
     tx: ExecutableTxWithHash,
 ) -> ExecutionResult {
     fn transact_inner<S: StateReader>(
         state: &mut cached_state::CachedState<S>,
         block_context: &BlockContext,
-        simulation_flags: &SimulationFlag,
+        simulation_flags: &ExecutionFlags,
         tx: Transaction,
     ) -> Result<(TransactionExecutionInfo, TxFeeInfo), ExecutionError> {
-        let validate = !simulation_flags.skip_validate;
-        let charge_fee = !simulation_flags.skip_fee_transfer;
+        let validate = simulation_flags.account_validation();
+        let charge_fee = simulation_flags.fee();
         // Blockifier doesn't provide a way to fully skip nonce check during the tx validation
         // stage. The `nonce_check` flag in `tx.execute()` only 'relaxes' the check for
         // nonce that is equal or higher than the current (expected) account nonce.
         //
         // Related commit on Blockifier: https://github.com/dojoengine/blockifier/commit/2410b6055453f247d48759f223c34b3fb5fa777
-        let nonce_check = !simulation_flags.skip_nonce_check;
+        let nonce_check = simulation_flags.nonce_check();
 
         let fee_type = get_fee_type_from_tx(&tx);
         let info = match tx {

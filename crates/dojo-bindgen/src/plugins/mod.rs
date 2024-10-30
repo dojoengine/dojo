@@ -33,6 +33,7 @@ impl fmt::Display for BuiltinPlugins {
     }
 }
 
+#[derive(Debug)]
 pub struct Buffer(Vec<String>);
 impl Buffer {
     pub fn new() -> Self {

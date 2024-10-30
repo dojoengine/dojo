@@ -124,13 +124,14 @@ impl From<&Composite> for JsDefaultValue {
                 JsDefaultValue(format!("{}.{}", value.type_name(), value.inners[0].name))
             }
             cainome::parser::tokens::CompositeType::Struct => JsDefaultValue(format!(
-                "{{ {} }}",
+                "{{ fieldOrder: [{}], {} }}",
+                value.inners.iter().map(|i| format!("'{}'", i.name)).collect::<Vec<_>>().join(", "),
                 value
                     .inners
                     .iter()
                     .map(|i| format!("{}: {},", i.name, JsDefaultValue::from(&i.token)))
                     .collect::<Vec<_>>()
-                    .join("\n")
+                    .join(" ")
             )),
             _ => JsDefaultValue::from(value.type_name().as_str()),
         }
