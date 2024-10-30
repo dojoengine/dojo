@@ -8397,6 +8397,7 @@ dependencies = [
  "rstest 0.18.2",
  "serde",
  "serde_json",
+ "similar-asserts",
  "starknet 0.12.0",
  "tempfile",
  "thiserror",
