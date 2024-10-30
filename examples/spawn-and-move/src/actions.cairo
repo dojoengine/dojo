@@ -67,7 +67,7 @@ pub mod actions {
                 favorite_item: Option::None
             };
 
-            let mut world = self.world(@"ns");
+            let mut world = self.world_default();
 
             if n_models == 4 {
                 world.write_model(@moves);

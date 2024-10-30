@@ -30,7 +30,7 @@ mod records {
     impl RecordsImpl of IRecords<ContractState> {
         fn create(ref self: ContractState, num_records: u8) {
             let mut record_idx = 0;
-            let mut world = self.world("types_test");
+            let mut world = self.world(@"types_test");
 
             loop {
                 if record_idx == num_records {
@@ -119,7 +119,7 @@ mod records {
 
         // Implemment fn delete, input param: record_id
         fn delete(ref self: ContractState, record_id: u32) {
-            let mut world = self.world("types_test");
+            let mut world = self.world(@"types_test");
 
             let record: Record = world.read_model(record_id);
             let record_sibling: RecordSibling = world.read_model(record_id);

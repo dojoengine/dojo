@@ -26,12 +26,6 @@ toml.workspace = true
 url.workspace = true
 
 [dev-dependencies]
-assert_fs.workspace = true
-assert_matches.workspace = true
-dojo-test-utils.workspace = true
-katana-runner.workspace = true
-similar-asserts.workspace = true
-tempfile.workspace = true
 tokio.workspace = true
 
 [features]
