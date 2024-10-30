@@ -79,7 +79,7 @@ impl CallArgs {
             let contract_address = match &descriptor {
                 ContractDescriptor::Address(address) => Some(*address),
                 ContractDescriptor::Tag(tag) => {
-                    let selector = naming::compute_selector_from_tag(&tag);
+                    let selector = naming::compute_selector_from_tag(tag);
                     world_diff.get_contract_address(selector)
                 }
             }
@@ -102,7 +102,7 @@ impl CallArgs {
                 )
                 .await;
 
-            Ok(match res {
+            match res {
                 Ok(output) => {
                     println!(
                         "[ {} ]",
@@ -122,7 +122,9 @@ impl CallArgs {
                         }
                     ));
                 }
-            })
+            };
+
+            Ok(())
         })
     }
 }

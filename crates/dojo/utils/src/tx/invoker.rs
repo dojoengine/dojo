@@ -63,7 +63,7 @@ where
                 TransactionWaiter::new(tx.transaction_hash, &self.account.provider()).await?;
 
             if self.txn_config.receipt {
-                return Ok(TransactionResult::HashReceipt(tx.transaction_hash, receipt));
+                return Ok(TransactionResult::HashReceipt(tx.transaction_hash, Box::new(receipt)));
             }
         }
 
@@ -91,7 +91,7 @@ where
                 TransactionWaiter::new(tx.transaction_hash, &self.account.provider()).await?;
 
             if self.txn_config.receipt {
-                return Ok(TransactionResult::HashReceipt(tx.transaction_hash, receipt));
+                return Ok(TransactionResult::HashReceipt(tx.transaction_hash, Box::new(receipt)));
             }
         }
 

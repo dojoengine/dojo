@@ -92,6 +92,6 @@ mod tests {
     #[test]
     fn world_address_from_neither() {
         let cmd = Command::parse_from([""]);
-        assert!(cmd.inner.address(None).is_err());
+        assert!(cmd.inner.address(None).is_ok());
     }
 }

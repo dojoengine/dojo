@@ -1,4 +1,4 @@
-#![cfg_attr(not(test), warn(unused_crate_dependencies))]
+// #![cfg_attr(not(test), warn(unused_crate_dependencies))]
 
 use std::env;
 use std::process::exit;
@@ -39,7 +39,7 @@ fn cli_main(args: SozoArgs) -> Result<()> {
         .log_filter_directive(env::var_os("SCARB_LOG"))
         .profile(args.profile_spec.determine()?)
         .offline(args.offline)
-        .cairo_plugins(cairo_plugins.into())
+        .cairo_plugins(cairo_plugins)
         .ui_verbosity(args.ui_verbosity())
         .compilers(compilers)
         .build()?;

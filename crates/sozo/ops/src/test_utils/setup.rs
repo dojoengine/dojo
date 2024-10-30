@@ -52,7 +52,7 @@ pub async fn get_declarers_from_sequencer(
 ///
 /// A [`Config`] object loaded from the spawn-and-moves Scarb.toml file.
 pub fn load_config() -> Config {
-    let setup = CompilerTestSetup::from_examples("../../dojo-core", "../../../examples/");
+    let setup = CompilerTestSetup::from_examples("../../dojo/core", "../../../examples/");
     setup.build_test_config("spawn-and-move", Profile::DEV)
 }
 

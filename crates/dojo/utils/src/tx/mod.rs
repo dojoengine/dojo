@@ -57,7 +57,7 @@ pub enum TransactionResult {
     /// The transaction hash.
     Hash(Felt),
     /// The transaction hash and it's receipt.
-    HashReceipt(Felt, TransactionReceiptWithBlockInfo),
+    HashReceipt(Felt, Box<TransactionReceiptWithBlockInfo>),
 }
 
 impl fmt::Display for TransactionResult {

@@ -210,36 +210,42 @@ fn policies_from_abis(
 
 #[cfg(test)]
 mod tests {
-    use dojo_world::config::{NamespaceConfig, ProfileConfig};
-    use dojo_world::local::WorldLocal;
+    use dojo_test_utils::compiler::CompilerTestSetup;
+    use dojo_world::diff::WorldDiff;
+    use scarb::compiler::Profile;
+    use sozo_scarbext::WorkspaceExt;
     use starknet::macros::felt;
 
     use super::{collect_policies, PolicyMethod};
 
-    #[ignore = "This test requires a local world to be set up and test utils reworked."]
     #[test]
     fn collect_policies_from_project() {
-        // let config = CompilerTestSetup::from_examples("../../crates/dojo/core",
-        // "../../examples/") .build_test_config("spawn-and-move", Profile::DEV);
+        let current_dir = std::env::current_dir().unwrap();
+        println!("Current directory: {:?}", current_dir);
+        let setup = CompilerTestSetup::from_examples("../../crates/dojo/core", "../../examples/");
+        let config = setup.build_test_config("spawn-and-move", Profile::DEV);
 
-        // Need to load the profile config.
-        // Then build the local world.
+        let ws = scarb::ops::read_workspace(config.manifest_path(), &config)
+            .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
 
-        // let world_local = WorldLocal::new(profile_config.namespace_config);
-        let profile_config = ProfileConfig::new("test", "seed", NamespaceConfig::default());
-        let world_local = WorldLocal::new(profile_config);
+        let world_local = ws.load_world_local().unwrap();
+        let world_diff = WorldDiff::from_local(world_local).unwrap();
 
-        let world_addr = felt!("0x74c73d35df54ddc53bcf34aab5e0dbb09c447e99e01f4d69535441253c9571a");
         let user_addr = felt!("0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba");
 
-        let policies = collect_policies(world_addr, user_addr, &world_local).unwrap();
+        let policies =
+            collect_policies(world_diff.world_info.address, user_addr, &world_diff).unwrap();
 
-        // Get test data
-        let test_data = include_str!("../../../../tests/test_data/policies.json");
-        let expected_policies: Vec<PolicyMethod> = serde_json::from_str(test_data).unwrap();
+        if std::env::var("POLICIES_FIX").is_ok() {
+            let policies_json = serde_json::to_string_pretty(&policies).unwrap();
+            println!("{}", policies_json);
+        } else {
+            let test_data = include_str!("../../../../tests/test_data/policies.json");
+            let expected_policies: Vec<PolicyMethod> = serde_json::from_str(test_data).unwrap();
 
-        // Compare the collected policies with the test data
-        assert_eq!(policies.len(), expected_policies.len());
-        expected_policies.iter().for_each(|p| assert!(policies.contains(p)));
+            // Compare the collected policies with the test data.
+            assert_eq!(policies.len(), expected_policies.len());
+            expected_policies.iter().for_each(|p| assert!(policies.contains(p)));
+        }
     }
 }

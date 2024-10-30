@@ -40,7 +40,6 @@ impl From<WorldConfig> for WorldMetadata {
             icon_uri: config.icon_uri,
             website: config.website,
             socials: config.socials,
-            ..Default::default()
         }
     }
 }

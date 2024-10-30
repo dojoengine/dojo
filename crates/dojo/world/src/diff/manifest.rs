@@ -107,13 +107,13 @@ impl Manifest {
         let mut models = Vec::new();
         let mut events = Vec::new();
 
-        for (_, resource) in &diff.resources {
+        for resource in diff.resources.values() {
             match resource.resource_type() {
                 ResourceType::Contract => {
-                    contracts.push(resource_diff_to_dojo_contract(diff, &resource))
+                    contracts.push(resource_diff_to_dojo_contract(diff, resource))
                 }
-                ResourceType::Model => models.push(resource_diff_to_dojo_model(&resource)),
-                ResourceType::Event => events.push(resource_diff_to_dojo_event(&resource)),
+                ResourceType::Model => models.push(resource_diff_to_dojo_model(resource)),
+                ResourceType::Event => events.push(resource_diff_to_dojo_event(resource)),
                 ResourceType::Namespace => {}
                 ResourceType::StarknetContract => {}
             }

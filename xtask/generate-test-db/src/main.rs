@@ -15,6 +15,7 @@ use sozo_scarbext::WorkspaceExt;
 use starknet::core::types::Felt;
 
 async fn migrate_spawn_and_move(db_path: &Path) -> Result<Manifest> {
+    println!("migrate spawn_and_move");
     let cfg = KatanaRunnerConfig {
         db_dir: Some(db_path.to_path_buf()),
         n_accounts: 10,
@@ -24,7 +25,7 @@ async fn migrate_spawn_and_move(db_path: &Path) -> Result<Manifest> {
     let runner = KatanaRunner::new_with_config(cfg)?;
 
     // setup scarb workspace
-    let setup = CompilerTestSetup::from_examples("crates/dojo-core", "examples/");
+    let setup = CompilerTestSetup::from_examples("crates/dojo/core", "examples/");
     let cfg = setup.build_test_config("spawn-and-move", Profile::DEV);
     let ws = scarb::ops::read_workspace(cfg.manifest_path(), &cfg)?;
 
@@ -61,6 +62,7 @@ async fn migrate_spawn_and_move(db_path: &Path) -> Result<Manifest> {
 }
 
 async fn migrate_types_test(db_path: &Path) -> Result<Manifest> {
+    println!("migrate types_test");
     let cfg = KatanaRunnerConfig {
         db_dir: Some(db_path.to_path_buf()),
         n_accounts: 10,
@@ -70,7 +72,7 @@ async fn migrate_types_test(db_path: &Path) -> Result<Manifest> {
     let runner = KatanaRunner::new_with_config(cfg)?;
 
     // setup scarb workspace
-    let setup = CompilerTestSetup::from_paths("crates/dojo-core", &["crates/torii/types-test"]);
+    let setup = CompilerTestSetup::from_paths("crates/dojo/core", &["crates/torii/types-test"]);
     let cfg = setup.build_test_config("types-test", Profile::DEV);
     let ws = scarb::ops::read_workspace(cfg.manifest_path(), &cfg)?;
 

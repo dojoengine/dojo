@@ -48,12 +48,9 @@ where
 {
     fn from(value: ProviderError) -> Self {
         match &value {
-            ProviderError::StarknetError(e) => match &e {
-                StarknetError::TransactionExecutionError(te) => {
-                    TransactionError::TransactionExecution(te.execution_error.clone())
-                }
-                _ => TransactionError::Provider(value),
-            },
+            ProviderError::StarknetError(StarknetError::TransactionExecutionError(te)) => {
+                TransactionError::TransactionExecution(te.execution_error.clone())
+            }
             _ => TransactionError::Provider(value),
         }
     }

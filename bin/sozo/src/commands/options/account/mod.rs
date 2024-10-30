@@ -66,7 +66,7 @@ impl AccountOptions {
         P: Provider,
         P: Send + Sync,
     {
-        controller::create_controller(rpc_url, provider, world_address, &world_diff)
+        controller::create_controller(rpc_url, provider, world_address, world_diff)
             .await
             .context("Failed to create a Controller account")
     }

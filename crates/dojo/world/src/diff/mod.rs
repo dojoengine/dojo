@@ -240,11 +240,13 @@ impl WorldDiff {
         let selector = naming::compute_selector_from_tag(tag);
 
         // TODO: see how we can elegantly have an error from this deep resolve.
-        let address = self.get_contract_address(selector).expect(&format!(
-            "Tag `{}` is not found locally. Local grantee must be managed locally, it's not \
-             supported to manage external resources permissions without a local resource.",
-            tag
-        ));
+        let address = self.get_contract_address(selector).unwrap_or_else(|| {
+            panic!(
+                "Tag `{}` is not found locally. Local grantee must be managed locally, it's not \
+                 supported to manage external resources permissions without a local resource.",
+                tag
+            )
+        });
 
         PermissionGrantee { tag: Some(tag.to_string()), address }
     }
@@ -256,7 +258,7 @@ impl WorldDiff {
         let mut tag = None;
         for (selector, address) in &known_addresses {
             if address == &contract_address {
-                tag = Some(self.resources.get(&selector).unwrap().tag());
+                tag = Some(self.resources.get(selector).unwrap().tag());
                 break;
             }
         }
@@ -305,7 +307,7 @@ impl WorldDiff {
                 ResourceDiff::Created(ResourceLocal::Contract(c)) => {
                     Some(utils::compute_dojo_contract_address(
                         selector,
-                        c.common.class_hash.into(),
+                        c.common.class_hash,
                         self.world_info.address,
                     ))
                 }
@@ -336,6 +338,8 @@ mod tests {
         let profile_config = ProfileConfig::new("test", "seed", namespace_config.clone());
         let mut local = WorldLocal::new(profile_config.clone());
         let mut remote = WorldRemote::default();
+        // Add one class to the default remote as we simulate it already has some migrations.
+        remote.class_hashes.push(Felt::ONE);
 
         let local_contract = ResourceLocal::Contract(ContractLocal {
             common: CommonLocalInfo {
@@ -352,7 +356,7 @@ mod tests {
 
         let diff = WorldDiff::new(local.clone(), remote.clone());
 
-        assert_eq!(diff.resources.len(), 1);
+        assert_eq!(diff.resources.len(), 2);
         assert!(matches!(
             diff.resources.get(&local_contract.dojo_selector()).unwrap(),
             ResourceDiff::Created(_)
@@ -367,7 +371,7 @@ mod tests {
 
         let diff = WorldDiff::new(local.clone(), remote.clone());
 
-        assert_eq!(diff.resources.len(), 1);
+        assert_eq!(diff.resources.len(), 2);
         assert!(matches!(
             diff.resources.get(&local_contract.dojo_selector()).unwrap(),
             ResourceDiff::Synced(_, _)
@@ -390,7 +394,7 @@ mod tests {
 
         let diff = WorldDiff::new(local.clone(), remote.clone());
 
-        assert_eq!(diff.resources.len(), 1);
+        assert_eq!(diff.resources.len(), 2);
         assert!(matches!(
             diff.resources.get(&local_contract.dojo_selector()).unwrap(),
             ResourceDiff::Updated(_, _)
@@ -404,6 +408,8 @@ mod tests {
         let profile_config = ProfileConfig::new("test", "seed", namespace_config.clone());
         let mut local = WorldLocal::new(profile_config.clone());
         let mut remote = WorldRemote::default();
+        // Add one class to the default remote as we simulate it already has some migrations.
+        remote.class_hashes.push(Felt::ONE);
 
         let local_namespace =
             ResourceLocal::Namespace(NamespaceLocal { name: "namespace1".to_string() });
@@ -411,6 +417,10 @@ mod tests {
         local.add_resource(local_namespace.clone());
 
         let diff = WorldDiff::new(local.clone(), remote.clone());
+
+        for r in diff.resources.values() {
+            println!("{:?} {:?}", r.resource_type(), r.tag());
+        }
 
         assert_eq!(diff.namespaces.len(), 2);
         assert!(matches!(

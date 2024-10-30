@@ -22,7 +22,7 @@ pub use resource::*;
 
 use crate::config::ProfileConfig;
 use crate::utils::compute_world_address;
-use crate::DojoSelector;
+use crate::{ContractAddress, DojoSelector};
 
 #[derive(Debug, Clone)]
 pub struct WorldLocal {
@@ -70,8 +70,21 @@ impl Default for WorldLocal {
 
 impl WorldLocal {
     #[cfg(test)]
+    /// Initializes a new world with namespaces from the profile configuration.
     pub fn new(profile_config: ProfileConfig) -> Self {
-        Self { profile_config, ..Default::default() }
+        let mut world = Self { profile_config: profile_config.clone(), ..Default::default() };
+
+        world.add_resource(ResourceLocal::Namespace(NamespaceLocal {
+            name: profile_config.namespace.default,
+        }));
+
+        if let Some(mappings) = &profile_config.namespace.mappings {
+            for ns in mappings.keys() {
+                world.add_resource(ResourceLocal::Namespace(NamespaceLocal { name: ns.clone() }));
+            }
+        }
+
+        world
     }
 
     /// Computes the deterministic address of the world contract.
@@ -96,12 +109,22 @@ impl WorldLocal {
         self.resources.get(&selector).and_then(|r| r.as_contract())
     }
 
+    /// Gets the deterministic contract address only based on local information.
+    pub fn get_contract_address_local(&self, selector: DojoSelector) -> Option<ContractAddress> {
+        let contract = self.get_contract_resource(selector)?;
+        Some(crate::utils::compute_dojo_contract_address(
+            selector,
+            contract.common.class_hash,
+            self.deterministic_world_address().unwrap(),
+        ))
+    }
+
     /// Returns the resource from a name or tag.
     pub fn resource_from_name_or_tag(&self, name_or_tag: &str) -> Option<&ResourceLocal> {
         let selector = if naming::is_valid_tag(name_or_tag) {
             naming::compute_selector_from_tag(name_or_tag)
         } else {
-            naming::compute_selector_from_tag(name_or_tag)
+            naming::compute_bytearray_hash(name_or_tag)
         };
 
         self.resources.get(&selector)
@@ -135,10 +158,10 @@ mod tests {
             systems: vec![],
         }));
 
-        let selector = naming::compute_selector_from_names(&"dojo".to_string(), &"c1".to_string());
+        let selector = naming::compute_selector_from_names("dojo", "c1");
 
-        assert_eq!(world.resources.len(), 1);
-        assert_eq!(world.get_contract_resource(selector).is_some(), true);
+        assert_eq!(world.resources.len(), 2);
+        assert!(world.get_contract_resource(selector).is_some());
 
         world.add_resource(ResourceLocal::Contract(ContractLocal {
             common: CommonLocalInfo {
@@ -151,10 +174,10 @@ mod tests {
             systems: vec![],
         }));
 
-        let selector2 = naming::compute_selector_from_names(&"dojo".to_string(), &"c2".to_string());
+        let selector2 = naming::compute_selector_from_names("dojo", "c2");
 
-        assert_eq!(world.resources.len(), 2);
-        assert_eq!(world.get_contract_resource(selector).is_some(), true);
-        assert_eq!(world.get_contract_resource(selector2).is_some(), true);
+        assert_eq!(world.resources.len(), 3);
+        assert!(world.get_contract_resource(selector).is_some());
+        assert!(world.get_contract_resource(selector2).is_some());
     }
 }

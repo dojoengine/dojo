@@ -149,7 +149,7 @@ mod tests {
         let config = toml::from_str::<ProfileConfig>(content).unwrap();
 
         let migration = config.migration.unwrap();
-        assert_eq!(migration.skip_contracts, vec!["module::my-contract".to_string()]);
+        assert_eq!(migration.skip_contracts.unwrap(), vec!["module::my-contract".to_string()]);
 
         let env = config.env.unwrap();
         assert_eq!(env.rpc_url, Some("https://example.com/rpc".to_string()));

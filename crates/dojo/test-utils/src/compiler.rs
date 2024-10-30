@@ -196,6 +196,9 @@ pub fn copy_project_temp(
         fs::create_dir_all(destination_dir)?;
     }
 
+    let dojo_cairo_test_path =
+        Utf8PathBuf::from(dojo_core_path.to_string().replace("core", "core-cairo-test"));
+
     for entry in fs::read_dir(source_dir)? {
         let entry = entry?;
         let path = entry.path();
@@ -245,6 +248,36 @@ pub fn copy_project_temp(
                     fs::write(dest_path.to_path_buf(), table.to_string().as_bytes())
                         .expect("Failed to write to Scab.toml");
                 }
+
+                let dojo_cairo_test = if table.contains_key("workspace") {
+                    if table["workspace"].as_table().unwrap().contains_key("dev-dependencies") {
+                        Some(
+                            table["workspace"]["dev-dependencies"]["dojo_cairo_test"]
+                                .as_table_mut()
+                                .unwrap(),
+                        )
+                    } else {
+                        None
+                    }
+                } else if table.contains_key("dev-dependencies") {
+                    Some(table["dev-dependencies"]["dojo_cairo_test"].as_table_mut().unwrap())
+                } else {
+                    None
+                };
+
+                if let Some(dojo_cairo_test) = dojo_cairo_test {
+                    if dojo_cairo_test.contains_key("path") {
+                        dojo_cairo_test["path"] = Value::String(
+                            fs::canonicalize(dojo_cairo_test_path.clone())
+                                .unwrap()
+                                .to_string_lossy()
+                                .to_string(),
+                        );
+
+                        fs::write(dest_path.to_path_buf(), table.to_string().as_bytes())
+                            .expect("Failed to write to Scab.toml");
+                    }
+                }
             }
         }
     }
@@ -279,7 +312,7 @@ pub fn build_test_config(path: &str, profile: Profile) -> anyhow::Result<Config>
         .log_filter_directive(env::var_os("SCARB_LOG"))
         .compilers(compilers)
         .profile(profile)
-        .cairo_plugins(cairo_plugins.into())
+        .cairo_plugins(cairo_plugins)
         .build()
 }
 

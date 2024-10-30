@@ -3,7 +3,7 @@ mod tests {
     use std::collections::HashMap;
 
     use dojo_world::config::ProfileConfig;
-    use dojo_world::metadata::WorldMetadata;
+    use dojo_world::metadata::world::WorldMetadata;
     use sqlx::SqlitePool;
     use starknet::core::types::Felt;
     use tokio::sync::broadcast;

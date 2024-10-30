@@ -100,7 +100,7 @@ where
 
         // World Cairo contract won't raise an error in case of unknown/unregistered
         // model so raise an error here in case of zero address.
-        if contract_address == ContractAddress(Felt::ZERO).into() {
+        if contract_address == ContractAddress(Felt::ZERO) {
             return Err(ModelError::ModelNotFound);
         }
 
@@ -110,7 +110,7 @@ where
             namespace: namespace.into(),
             name: name.into(),
             world_reader: world,
-            class_hash: class_hash.into(),
+            class_hash,
             contract_address: contract_address.into(),
             selector: model_selector,
             model_reader,

@@ -645,7 +645,7 @@ mod tests {
         let expected_output_without_header =
             expected_output.lines().skip(1).collect::<Vec<&str>>().join("\n");
 
-        let setup = CompilerTestSetup::from_examples("../dojo-core", "../../examples/");
+        let setup = CompilerTestSetup::from_examples("../dojo/core", "../../examples/");
         let config = setup.build_test_config("spawn-and-move", Profile::DEV);
 
         let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();

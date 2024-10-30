@@ -44,3 +44,4 @@ dojo-utils.workspace = true
 katana-runner.workspace = true
 scarb.workspace = true
 tempfile.workspace = true
+sozo-scarbext.workspace = true

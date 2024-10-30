@@ -17,7 +17,7 @@ async fn test_model(sequencer: &RunnerCtx) {
     let account = sequencer.account(0);
     let provider = account.provider();
 
-    let setup = CompilerTestSetup::from_examples("../dojo-core", "../../examples/");
+    let setup = CompilerTestSetup::from_examples("../dojo/core", "../../examples/");
     let config = setup.build_test_config("spawn-and-move", Profile::DEV);
 
     let manifest_dir = config.manifest_path().parent().unwrap();

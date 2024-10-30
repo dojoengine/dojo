@@ -50,7 +50,7 @@ where
         .concat();
 
         let contract_address =
-            get_contract_address(salt, class_hash, &constructor_calldata, deployer_address);
+            get_contract_address(salt, class_hash, constructor_calldata, deployer_address);
 
         if is_deployed(contract_address, &self.account.provider()).await? {
             return Ok(TransactionResult::Noop);
@@ -76,7 +76,7 @@ where
                 TransactionWaiter::new(transaction_hash, &self.account.provider()).await?;
 
             if self.txn_config.receipt {
-                return Ok(TransactionResult::HashReceipt(transaction_hash, receipt));
+                return Ok(TransactionResult::HashReceipt(transaction_hash, Box::new(receipt)));
             }
         }
 
@@ -96,7 +96,7 @@ where
                 contract_address = format!("{:#066x}", contract_address),
                 "Contract already deployed."
             );
-            return Ok(true);
+            Ok(true)
         }
         Err(e) => Err(e),
     }

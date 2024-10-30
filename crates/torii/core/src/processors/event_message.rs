@@ -38,10 +38,12 @@ where
     ) -> Result<(), Error> {
         // Torii version is coupled to the world version, so we can expect the event to be well
         // formed.
-        let event = match WorldEvent::try_from(event).expect(&format!(
-            "Expected {} event to be well formed.",
-            <EventMessageProcessor as EventProcessor<P>>::event_key(self)
-        )) {
+        let event = match WorldEvent::try_from(event).unwrap_or_else(|_| {
+            panic!(
+                "Expected {} event to be well formed.",
+                <EventMessageProcessor as EventProcessor<P>>::event_key(self)
+            )
+        }) {
             WorldEvent::EventEmitted(e) => e,
             _ => {
                 unreachable!()

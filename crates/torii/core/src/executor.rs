@@ -486,8 +486,7 @@ impl<'c> Executor<'c> {
                     .bind(em_query.block_timestamp.clone())
                     .fetch_one(&mut **tx)
                     .await?;
-                } else {
-                };
+                }
 
                 sqlx::query(
                     "INSERT INTO event_model (entity_id, model_id, historical_counter) VALUES (?, \

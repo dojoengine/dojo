@@ -80,10 +80,9 @@ mod tests {
     use starknet::core::types::Felt;
 
     use super::*;
-    use crate::local::{ContractLocal, EventLocal, ModelLocal};
+    use crate::local::{CommonLocalInfo, ContractLocal, EventLocal, ModelLocal};
     use crate::remote::{
-        CommonRemoteInfo, CommonResourceRemoteInfo, ContractRemote, EventRemote, ModelRemote,
-        NamespaceRemote,
+        CommonRemoteInfo, ContractRemote, EventRemote, ModelRemote, NamespaceRemote,
     };
     use crate::test_utils::empty_sierra_class;
 
@@ -97,6 +96,7 @@ mod tests {
                 class_hash: Felt::ZERO,
                 casm_class_hash: Felt::ZERO,
             },
+            members: vec![],
         };
 
         let mut remote_model = ResourceRemote::Model(ModelRemote {
@@ -130,6 +130,7 @@ mod tests {
                 class_hash: Felt::ZERO,
                 casm_class_hash: Felt::ZERO,
             },
+            members: vec![],
         };
 
         let mut remote_event = ResourceRemote::Event(EventRemote {
@@ -177,6 +178,7 @@ mod tests {
                 class_hash: Felt::ZERO,
                 casm_class_hash: Felt::ZERO,
             },
+            systems: vec![],
         };
 
         let mut remote_contract = ResourceRemote::Contract(ContractRemote {

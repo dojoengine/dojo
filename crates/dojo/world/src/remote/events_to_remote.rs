@@ -6,8 +6,6 @@
 //! Events are also sequential, a resource is not expected to be upgraded before
 //! being registered. We take advantage of this fact to optimize the data gathering.
 
-use std::collections::HashSet;
-
 use anyhow::Result;
 use starknet::core::types::{BlockId, BlockTag, EventFilter, Felt, StarknetError};
 use starknet::providers::{Provider, ProviderError};
@@ -20,6 +18,7 @@ use crate::remote::{CommonRemoteInfo, ContractRemote, EventRemote, ModelRemote, 
 
 impl WorldRemote {
     /// Fetch the events from the world and convert them to remote resources.
+    #[allow(clippy::field_reassign_with_default)]
     pub async fn from_events<P: Provider>(world_address: Felt, provider: &P) -> Result<Self> {
         let mut world = Self::default();
 
@@ -203,8 +202,7 @@ impl WorldRemote {
                 if let Some(resource) = self.resources.get_mut(&e.resource) {
                     resource.update_writer(e.contract.into(), e.value)?;
                 } else {
-                    let entry =
-                        self.external_writers.entry(e.resource).or_insert_with(HashSet::new);
+                    let entry = self.external_writers.entry(e.resource).or_default();
 
                     if e.value {
                         entry.insert(e.contract.into());
@@ -220,7 +218,7 @@ impl WorldRemote {
                 if let Some(resource) = self.resources.get_mut(&e.resource) {
                     resource.update_owner(e.contract.into(), e.value)?;
                 } else {
-                    let entry = self.external_owners.entry(e.resource).or_insert_with(HashSet::new);
+                    let entry = self.external_owners.entry(e.resource).or_default();
 
                     if e.value {
                         entry.insert(e.contract.into());
@@ -282,7 +280,6 @@ mod tests {
         world_remote.match_event(event).unwrap();
 
         let selector = naming::compute_bytearray_hash("ns");
-        assert!(world_remote.namespaces.contains(&selector));
         assert!(world_remote.resources.contains_key(&selector));
 
         let resource = world_remote.resources.get(&selector).unwrap();
@@ -301,7 +298,6 @@ mod tests {
 
         world_remote.match_event(event).unwrap();
         let selector = naming::compute_selector_from_names("ns", "m");
-        assert!(world_remote.models.get("ns").unwrap().contains(&selector));
         assert!(world_remote.resources.contains_key(&selector));
 
         let resource = world_remote.resources.get(&selector).unwrap();
@@ -320,7 +316,6 @@ mod tests {
 
         world_remote.match_event(event).unwrap();
         let selector = naming::compute_selector_from_names("ns", "e");
-        assert!(world_remote.events.get("ns").unwrap().contains(&selector));
         assert!(world_remote.resources.contains_key(&selector));
 
         let resource = world_remote.resources.get(&selector).unwrap();
@@ -335,12 +330,11 @@ mod tests {
             name: ByteArray::from_string("c").unwrap(),
             address: Felt::ONE.into(),
             namespace: ByteArray::from_string("ns").unwrap(),
-            salt: Felt::ONE.into(),
+            salt: Felt::ONE,
         });
 
         world_remote.match_event(event).unwrap();
         let selector = naming::compute_selector_from_names("ns", "c");
-        assert!(world_remote.contracts.get("ns").unwrap().contains(&selector));
         assert!(world_remote.resources.contains_key(&selector));
 
         let resource = world_remote.resources.get(&selector).unwrap();
@@ -353,7 +347,7 @@ mod tests {
         let selector = naming::compute_selector_from_names("ns", "m");
 
         let resource = ResourceRemote::Model(ModelRemote {
-            common: CommonResourceRemoteInfo::new(Felt::ONE, "ns", "m", Felt::ONE),
+            common: CommonRemoteInfo::new(Felt::ONE, "ns", "m", Felt::ONE),
         });
 
         world_remote.add_resource(resource);
@@ -368,10 +362,7 @@ mod tests {
         world_remote.match_event(event).unwrap();
 
         let resource = world_remote.resources.get(&selector).unwrap();
-        assert_eq!(
-            resource.as_model_or_panic().common.class_hashes,
-            vec![Felt::ONE.into(), Felt::TWO.into()]
-        );
+        assert_eq!(resource.as_model_or_panic().common.class_hashes, vec![Felt::ONE, Felt::TWO]);
     }
 
     #[tokio::test]
@@ -380,7 +371,7 @@ mod tests {
         let selector = naming::compute_selector_from_names("ns", "e");
 
         let resource = ResourceRemote::Event(EventRemote {
-            common: CommonResourceRemoteInfo::new(Felt::ONE, "ns", "e", Felt::ONE),
+            common: CommonRemoteInfo::new(Felt::ONE, "ns", "e", Felt::ONE),
         });
 
         world_remote.add_resource(resource);
@@ -395,10 +386,7 @@ mod tests {
         world_remote.match_event(event).unwrap();
 
         let resource = world_remote.resources.get(&selector).unwrap();
-        assert_eq!(
-            resource.as_event_or_panic().common.class_hashes,
-            vec![Felt::ONE.into(), Felt::TWO.into()]
-        );
+        assert_eq!(resource.as_event_or_panic().common.class_hashes, vec![Felt::ONE, Felt::TWO]);
     }
 
     #[tokio::test]
@@ -407,7 +395,7 @@ mod tests {
         let selector = naming::compute_selector_from_names("ns", "c");
 
         let resource = ResourceRemote::Contract(ContractRemote {
-            common: CommonResourceRemoteInfo::new(Felt::ONE, "ns", "c", Felt::ONE),
+            common: CommonRemoteInfo::new(Felt::ONE, "ns", "c", Felt::ONE),
             is_initialized: false,
         });
 
@@ -420,10 +408,7 @@ mod tests {
 
         world_remote.match_event(event).unwrap();
         let resource = world_remote.resources.get(&selector).unwrap();
-        assert_eq!(
-            resource.as_contract_or_panic().common.class_hashes,
-            vec![Felt::ONE.into(), Felt::TWO.into()]
-        );
+        assert_eq!(resource.as_contract_or_panic().common.class_hashes, vec![Felt::ONE, Felt::TWO]);
     }
 
     #[tokio::test]
@@ -432,7 +417,7 @@ mod tests {
         let selector = naming::compute_selector_from_names("ns", "c");
 
         let resource = ResourceRemote::Contract(ContractRemote {
-            common: CommonResourceRemoteInfo::new(Felt::ONE, "ns", "c", Felt::ONE),
+            common: CommonRemoteInfo::new(Felt::ONE, "ns", "c", Felt::ONE),
             is_initialized: false,
         });
 
@@ -446,7 +431,7 @@ mod tests {
         world_remote.match_event(event).unwrap();
 
         let resource = world_remote.resources.get(&selector).unwrap();
-        assert!(resource.as_contract_or_panic().initialized);
+        assert!(resource.as_contract_or_panic().is_initialized);
     }
 
     #[tokio::test]
@@ -466,7 +451,7 @@ mod tests {
         world_remote.match_event(event).unwrap();
 
         let resource = world_remote.resources.get(&selector).unwrap();
-        assert_eq!(resource.as_namespace_or_panic().writers, HashSet::from([Felt::ONE.into()]));
+        assert_eq!(resource.as_namespace_or_panic().writers, HashSet::from([Felt::ONE]));
 
         let event = WorldEvent::WriterUpdated(world::WriterUpdated {
             resource: selector,
@@ -497,7 +482,7 @@ mod tests {
         world_remote.match_event(event).unwrap();
 
         let resource = world_remote.resources.get(&selector).unwrap();
-        assert_eq!(resource.as_namespace_or_panic().owners, HashSet::from([Felt::ONE.into()]));
+        assert_eq!(resource.as_namespace_or_panic().owners, HashSet::from([Felt::ONE]));
 
         let event = WorldEvent::OwnerUpdated(world::OwnerUpdated {
             resource: selector,

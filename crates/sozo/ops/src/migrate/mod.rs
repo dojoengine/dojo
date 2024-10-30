@@ -19,6 +19,7 @@
 //!    initialization of contracts can mutate resources.
 
 use std::collections::HashMap;
+use std::fmt;
 use std::str::FromStr;
 
 use cainome::cairo_serde::{ByteArray, ClassHash, ContractAddress};
@@ -57,6 +58,15 @@ where
 pub enum MigrationUi {
     Spinner(Spinner),
     None,
+}
+
+impl fmt::Debug for MigrationUi {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Spinner(_) => write!(f, "Spinner"),
+            Self::None => write!(f, "None"),
+        }
+    }
 }
 
 impl MigrationUi {
@@ -127,7 +137,7 @@ where
     /// For all contracts that are not initialized, initialize them by using the init call arguments
     /// found in the [`ProfileConfig`].
     async fn initialize_contracts(&self) -> Result<(), MigrationError<A::SignError>> {
-        let mut invoker = Invoker::new(&self.world.account, self.txn_config.clone());
+        let mut invoker = Invoker::new(&self.world.account, self.txn_config);
 
         let init_call_args = if let Some(init_call_args) = &self.profile_config.init_call_args {
             init_call_args.clone()
@@ -141,7 +151,7 @@ where
             .profile_config
             .migration
             .as_ref()
-            .map_or(vec![], |m| m.order_inits.clone().unwrap_or(vec![]));
+            .map_or(vec![], |m| m.order_inits.clone().unwrap_or_default());
 
         // Keeps map between the order index and the call to initialize.
         let mut ordered_init_calls = HashMap::new();
@@ -152,13 +162,13 @@ where
 
                 let (do_init, init_call_args) = match resource {
                     ResourceDiff::Created(ResourceLocal::Contract(_)) => {
-                        (true, init_call_args.get(&tag).clone())
+                        (true, init_call_args.get(&tag))
                     }
                     ResourceDiff::Updated(_, ResourceRemote::Contract(contract)) => {
-                        (!contract.is_initialized, init_call_args.get(&tag).clone())
+                        (!contract.is_initialized, init_call_args.get(&tag))
                     }
                     ResourceDiff::Synced(_, ResourceRemote::Contract(contract)) => {
-                        (!contract.is_initialized, init_call_args.get(&tag).clone())
+                        (!contract.is_initialized, init_call_args.get(&tag))
                     }
                     _ => (false, None),
                 };
@@ -180,12 +190,10 @@ where
                     trace!(tag, ?args, "Initializing contract.");
 
                     if let Some(order_index) = ordered_init_tags.iter().position(|t| *t == tag) {
-                        ordered_init_calls.insert(
-                            order_index,
-                            self.world.init_contract_getcall(&selector, &args),
-                        );
+                        ordered_init_calls
+                            .insert(order_index, self.world.init_contract_getcall(selector, &args));
                     } else {
-                        invoker.add_call(self.world.init_contract_getcall(&selector, &args));
+                        invoker.add_call(self.world.init_contract_getcall(selector, &args));
                     }
                 }
             }
@@ -224,7 +232,7 @@ where
     /// resources). Change `DojoSelector` with a struct containing the local definition of an
     /// overlay resource, which can contain also writers.
     async fn sync_permissions(&self) -> Result<(), MigrationError<A::SignError>> {
-        let mut invoker = Invoker::new(&self.world.account, self.txn_config.clone());
+        let mut invoker = Invoker::new(&self.world.account, self.txn_config);
 
         // Only takes the local permissions that are not already set onchain to apply them.
         for (selector, resource) in &self.diff.resources {
@@ -237,7 +245,7 @@ where
                 );
 
                 invoker.add_call(
-                    self.world.grant_writer_getcall(&selector, &ContractAddress(pdiff.address)),
+                    self.world.grant_writer_getcall(selector, &ContractAddress(pdiff.address)),
                 );
             }
 
@@ -250,7 +258,7 @@ where
                 );
 
                 invoker.add_call(
-                    self.world.grant_owner_getcall(&selector, &ContractAddress(pdiff.address)),
+                    self.world.grant_owner_getcall(selector, &ContractAddress(pdiff.address)),
                 );
             }
         }
@@ -266,7 +274,7 @@ where
 
     /// Syncs the resources by declaring the classes and registering/upgrading the resources.
     async fn sync_resources(&self) -> Result<(), MigrationError<A::SignError>> {
-        let mut invoker = Invoker::new(&self.world.account, self.txn_config.clone());
+        let mut invoker = Invoker::new(&self.world.account, self.txn_config);
 
         // Namespaces must be synced first, since contracts, models and events are namespaced.
         self.namespaces_getcalls(&mut invoker).await?;
@@ -274,7 +282,7 @@ where
         let mut classes: Vec<(Felt, FlattenedSierraClass)> = vec![];
 
         // Collects the calls and classes to be declared to sync the resources.
-        for (_selector, resource) in &self.diff.resources {
+        for resource in self.diff.resources.values() {
             match resource.resource_type() {
                 ResourceType::Contract => {
                     let (contract_calls, contract_classes) =
@@ -303,14 +311,14 @@ where
 
         if accounts.is_empty() {
             trace!("Declaring classes with migrator account.");
-            let mut declarer = Declarer::new(&self.world.account, self.txn_config.clone());
+            let mut declarer = Declarer::new(&self.world.account, self.txn_config);
             declarer.extend_classes(classes);
             declarer.declare_all().await?;
         } else {
             trace!("Declaring classes with {} accounts.", accounts.len());
             let mut declarers = vec![];
             for account in accounts {
-                declarers.push(Declarer::new(account, self.txn_config.clone()));
+                declarers.push(Declarer::new(account, self.txn_config));
             }
 
             for (idx, (casm_class_hash, class)) in classes.into_iter().enumerate() {
@@ -554,7 +562,7 @@ where
                 )
                 .await?;
 
-                let deployer = Deployer::new(&self.world.account, self.txn_config.clone());
+                let deployer = Deployer::new(&self.world.account, self.txn_config);
 
                 deployer
                     .deploy_via_udc(
@@ -576,7 +584,7 @@ where
                 )
                 .await?;
 
-                let mut invoker = Invoker::new(&self.world.account, self.txn_config.clone());
+                let mut invoker = Invoker::new(&self.world.account, self.txn_config);
 
                 invoker.add_call(
                     self.world.upgrade_getcall(&ClassHash(self.diff.world_info.class_hash)),

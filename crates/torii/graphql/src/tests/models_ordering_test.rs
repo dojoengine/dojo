@@ -71,9 +71,11 @@ mod tests {
         let connection: Connection<WorldModel> = serde_json::from_value(world_model).unwrap();
         let first_model = connection.edges.first().unwrap();
         let second_model = connection.edges.get(1).unwrap();
-        let last_model = connection.edges.get(2).unwrap();
+        let third_model = connection.edges.get(2).unwrap();
+        let last_model = connection.edges.get(3).unwrap();
         assert_eq!(&first_model.node.name, "Record");
-        assert_eq!(&second_model.node.name, "RecordSibling");
+        assert_eq!(&second_model.node.name, "RecordLogged");
+        assert_eq!(&third_model.node.name, "RecordSibling");
         assert_eq!(&last_model.node.name, "Subrecord");
         Ok(())
     }

@@ -179,7 +179,7 @@ fn inspect_resource(resource_name_or_tag: &str, world_diff: &WorldDiff) {
 
     let resource_diff = resource_diff.unwrap();
 
-    let inspect = resource_diff_display(world_diff, &resource_diff);
+    let inspect = resource_diff_display(world_diff, resource_diff);
     pretty_print_toml(&toml::to_string_pretty(&inspect).unwrap());
 
     let writers = world_diff.get_writers(resource_diff.dojo_selector());
@@ -242,7 +242,7 @@ fn inspect_resource(resource_name_or_tag: &str, world_diff: &WorldDiff) {
 
 /// Inspects the whole world.
 fn inspect_world(world_diff: &WorldDiff) {
-    println!("");
+    println!();
 
     let status = match &world_diff.world_info.status {
         WorldStatus::NotDeployed => ResourceStatus::Created,
@@ -263,7 +263,7 @@ fn inspect_world(world_diff: &WorldDiff) {
     let mut models_disp = vec![];
     let mut events_disp = vec![];
 
-    for (_selector, resource) in &world_diff.resources {
+    for resource in world_diff.resources.values() {
         match resource.resource_type() {
             ResourceType::Namespace => match resource_diff_display(world_diff, resource) {
                 ResourceInspect::Namespace(n) => namespaces_disp.push(n),

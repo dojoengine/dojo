@@ -528,7 +528,7 @@ mod test {
         use std::time::Duration;
 
         use dojo_types::schema::{Member, Struct, Ty};
-        use dojo_world::contracts::abi::model::Layout;
+        use dojo_world::contracts::abigen::model::Layout;
         use indexmap::IndexMap;
         use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
         use starknet::providers::jsonrpc::HttpTransport;

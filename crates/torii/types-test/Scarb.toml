@@ -11,4 +11,4 @@ sierra-replace-ids = true
 dojo = { path = "../../dojo/core" }
 
 [[target.starknet-contract]]
-build-external-contracts = [  ]
+build-external-contracts = ["dojo::world::world_contract::world"]

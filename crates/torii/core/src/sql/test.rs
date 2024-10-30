@@ -3,18 +3,18 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use cainome::cairo_serde::ContractAddress;
-use camino::Utf8PathBuf;
 use dojo_test_utils::compiler::CompilerTestSetup;
-use dojo_test_utils::migration::{copy_spawn_and_move_db, prepare_migration_with_world_and_seed};
+use dojo_test_utils::migration::copy_spawn_and_move_db;
 use dojo_utils::{TransactionExt, TransactionWaiter, TxnConfig};
 use dojo_world::contracts::naming::{compute_bytearray_hash, compute_selector_from_names};
 use dojo_world::contracts::world::{WorldContract, WorldContractReader};
 use katana_runner::RunnerCtx;
 use scarb::compiler::Profile;
+use sozo_scarbext::WorkspaceExt;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use starknet::accounts::Account;
 use starknet::core::types::{Call, Felt};
-use starknet::core::utils::{get_contract_address, get_selector_from_name};
+use starknet::core::utils::get_selector_from_name;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
 use starknet_crypto::poseidon_hash_many;
@@ -59,37 +59,25 @@ where
 #[tokio::test(flavor = "multi_thread")]
 #[katana_runner::test(accounts = 10, db_dir = copy_spawn_and_move_db().as_str())]
 async fn test_load_from_remote(sequencer: &RunnerCtx) {
-    let setup = CompilerTestSetup::from_examples("../../dojo-core", "../../../examples/");
+    let setup = CompilerTestSetup::from_examples("../../dojo/core", "../../../examples/");
     let config = setup.build_test_config("spawn-and-move", Profile::DEV);
 
     let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
-    let manifest_path = Utf8PathBuf::from(config.manifest_path().parent().unwrap());
-    let target_dir = Utf8PathBuf::from(ws.target_dir().to_string()).join("dev");
 
     let account = sequencer.account(0);
     let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
 
-    let (strat, _) = prepare_migration_with_world_and_seed(
-        manifest_path,
-        target_dir,
-        None,
-        "dojo_examples",
-        "dojo_examples",
-    )
-    .unwrap();
+    let world_local = ws.load_world_local().unwrap();
+    let world_address = world_local.deterministic_world_address().unwrap();
 
-    let actions = strat.contracts.first().unwrap();
-    let actions_address = get_contract_address(
-        actions.salt,
-        strat.base.as_ref().unwrap().diff.local_class_hash,
-        &[],
-        strat.world_address,
-    );
+    let actions_address = world_local
+        .get_contract_address_local(compute_selector_from_names("ns", "actions"))
+        .unwrap();
 
-    let world = WorldContract::new(strat.world_address, &account);
+    let world = WorldContract::new(world_address, &account);
 
     let res = world
-        .grant_writer(&compute_bytearray_hash("dojo_examples"), &ContractAddress(actions_address))
+        .grant_writer(&compute_bytearray_hash("ns"), &ContractAddress(actions_address))
         .send_with_cfg(&TxnConfig::init_wait())
         .await
         .unwrap();
@@ -122,7 +110,7 @@ async fn test_load_from_remote(sequencer: &RunnerCtx) {
 
     TransactionWaiter::new(tx.transaction_hash, &provider).await.unwrap();
 
-    let world_reader = WorldContractReader::new(strat.world_address, Arc::clone(&provider));
+    let world_reader = WorldContractReader::new(world_address, Arc::clone(&provider));
 
     let tempfile = NamedTempFile::new().unwrap();
     let path = tempfile.path().to_string_lossy();
@@ -148,7 +136,7 @@ async fn test_load_from_remote(sequencer: &RunnerCtx) {
 
     let _block_timestamp = 1710754478_u64;
     let models = sqlx::query("SELECT * FROM models").fetch_all(&pool).await.unwrap();
-    assert_eq!(models.len(), 10);
+    assert_eq!(models.len(), 8);
 
     let (id, name, namespace, packed_size, unpacked_size): (String, String, String, u8, u8) =
         sqlx::query_as(
@@ -159,9 +147,9 @@ async fn test_load_from_remote(sequencer: &RunnerCtx) {
         .await
         .unwrap();
 
-    assert_eq!(id, format!("{:#x}", compute_selector_from_names("dojo_examples", "Position")));
+    assert_eq!(id, format!("{:#x}", compute_selector_from_names("ns", "Position")));
     assert_eq!(name, "Position");
-    assert_eq!(namespace, "dojo_examples");
+    assert_eq!(namespace, "ns");
     assert_eq!(packed_size, 1);
     assert_eq!(unpacked_size, 2);
 
@@ -174,9 +162,9 @@ async fn test_load_from_remote(sequencer: &RunnerCtx) {
         .await
         .unwrap();
 
-    assert_eq!(id, format!("{:#x}", compute_selector_from_names("dojo_examples", "Moves")));
+    assert_eq!(id, format!("{:#x}", compute_selector_from_names("ns", "Moves")));
     assert_eq!(name, "Moves");
-    assert_eq!(namespace, "dojo_examples");
+    assert_eq!(namespace, "ns");
     assert_eq!(packed_size, 0);
     assert_eq!(unpacked_size, 2);
 
@@ -189,9 +177,9 @@ async fn test_load_from_remote(sequencer: &RunnerCtx) {
         .await
         .unwrap();
 
-    assert_eq!(id, format!("{:#x}", compute_selector_from_names("dojo_examples", "PlayerConfig")));
+    assert_eq!(id, format!("{:#x}", compute_selector_from_names("ns", "PlayerConfig")));
     assert_eq!(name, "PlayerConfig");
-    assert_eq!(namespace, "dojo_examples");
+    assert_eq!(namespace, "ns");
     assert_eq!(packed_size, 0);
     assert_eq!(unpacked_size, 0);
 
@@ -216,36 +204,24 @@ async fn test_load_from_remote(sequencer: &RunnerCtx) {
 #[tokio::test(flavor = "multi_thread")]
 #[katana_runner::test(accounts = 10, db_dir = copy_spawn_and_move_db().as_str())]
 async fn test_load_from_remote_del(sequencer: &RunnerCtx) {
-    let setup = CompilerTestSetup::from_examples("../../dojo-core", "../../../examples/");
+    let setup = CompilerTestSetup::from_examples("../../dojo/core", "../../../examples/");
     let config = setup.build_test_config("spawn-and-move", Profile::DEV);
 
     let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
-    let manifest_path = Utf8PathBuf::from(config.manifest_path().parent().unwrap());
-    let target_dir = Utf8PathBuf::from(ws.target_dir().to_string()).join("dev");
 
     let account = sequencer.account(0);
     let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
 
-    let (strat, _) = prepare_migration_with_world_and_seed(
-        manifest_path,
-        target_dir,
-        None,
-        "dojo_examples",
-        "dojo_examples",
-    )
-    .unwrap();
-    let actions = strat.contracts.first().unwrap();
-    let actions_address = get_contract_address(
-        actions.salt,
-        strat.base.as_ref().unwrap().diff.local_class_hash,
-        &[],
-        strat.world_address,
-    );
+    let world_local = ws.load_world_local().unwrap();
+    let world_address = world_local.deterministic_world_address().unwrap();
+    let actions_address = world_local
+        .get_contract_address_local(compute_selector_from_names("ns", "actions"))
+        .unwrap();
 
-    let world = WorldContract::new(strat.world_address, &account);
+    let world = WorldContract::new(world_address, &account);
 
     let res = world
-        .grant_writer(&compute_bytearray_hash("dojo_examples"), &ContractAddress(actions_address))
+        .grant_writer(&compute_bytearray_hash("ns"), &ContractAddress(actions_address))
         .send_with_cfg(&TxnConfig::init_wait())
         .await
         .unwrap();
@@ -291,7 +267,7 @@ async fn test_load_from_remote_del(sequencer: &RunnerCtx) {
 
     TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
 
-    let world_reader = WorldContractReader::new(strat.world_address, Arc::clone(&provider));
+    let world_reader = WorldContractReader::new(world_address, Arc::clone(&provider));
 
     let tempfile = NamedTempFile::new().unwrap();
     let path = tempfile.path().to_string_lossy();
@@ -315,9 +291,9 @@ async fn test_load_from_remote_del(sequencer: &RunnerCtx) {
 
     let _ = bootstrap_engine(world_reader, db.clone(), provider).await;
 
-    assert_eq!(count_table("dojo_examples-PlayerConfig", &pool).await, 0);
-    assert_eq!(count_table("dojo_examples-PlayerConfig$favorite_item", &pool).await, 0);
-    assert_eq!(count_table("dojo_examples-PlayerConfig$items", &pool).await, 0);
+    assert_eq!(count_table("ns-PlayerConfig", &pool).await, 0);
+    assert_eq!(count_table("ns-PlayerConfig$favorite_item", &pool).await, 0);
+    assert_eq!(count_table("ns-PlayerConfig$items", &pool).await, 0);
 
     // TODO: check how we can have a test that is more chronological with Torii re-syncing
     // to ensure we can test intermediate states.
@@ -326,37 +302,24 @@ async fn test_load_from_remote_del(sequencer: &RunnerCtx) {
 #[tokio::test(flavor = "multi_thread")]
 #[katana_runner::test(accounts = 10, db_dir = copy_spawn_and_move_db().as_str())]
 async fn test_update_with_set_record(sequencer: &RunnerCtx) {
-    let setup = CompilerTestSetup::from_examples("../../dojo-core", "../../../examples/");
+    let setup = CompilerTestSetup::from_examples("../../dojo/core", "../../../examples/");
     let config = setup.build_test_config("spawn-and-move", Profile::DEV);
 
     let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
-    let manifest_path = Utf8PathBuf::from(config.manifest_path().parent().unwrap());
-    let target_dir = Utf8PathBuf::from(ws.target_dir().to_string()).join("dev");
 
-    let (strat, _) = prepare_migration_with_world_and_seed(
-        manifest_path,
-        target_dir,
-        None,
-        "dojo_examples",
-        "dojo_examples",
-    )
-    .unwrap();
-
-    let actions = strat.contracts.first().unwrap();
-    let actions_address = get_contract_address(
-        actions.salt,
-        strat.base.as_ref().unwrap().diff.local_class_hash,
-        &[],
-        strat.world_address,
-    );
+    let world_local = ws.load_world_local().unwrap();
+    let world_address = world_local.deterministic_world_address().unwrap();
+    let actions_address = world_local
+        .get_contract_address_local(compute_selector_from_names("ns", "actions"))
+        .unwrap();
 
     let account = sequencer.account(0);
     let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
 
-    let world = WorldContract::new(strat.world_address, &account);
+    let world = WorldContract::new(world_address, &account);
 
     let res = world
-        .grant_writer(&compute_bytearray_hash("dojo_examples"), &ContractAddress(actions_address))
+        .grant_writer(&compute_bytearray_hash("ns"), &ContractAddress(actions_address))
         .send_with_cfg(&TxnConfig::init_wait())
         .await
         .unwrap();
@@ -389,7 +352,7 @@ async fn test_update_with_set_record(sequencer: &RunnerCtx) {
 
     TransactionWaiter::new(move_res.transaction_hash, &provider).await.unwrap();
 
-    let world_reader = WorldContractReader::new(strat.world_address, Arc::clone(&provider));
+    let world_reader = WorldContractReader::new(world_address, Arc::clone(&provider));
 
     let tempfile = NamedTempFile::new().unwrap();
     let path = tempfile.path().to_string_lossy();

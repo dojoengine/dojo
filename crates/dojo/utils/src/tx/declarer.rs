@@ -93,7 +93,7 @@ where
         }
 
         let DeclareTransactionResult { transaction_hash, class_hash } =
-            account.declare_v2(Arc::new(class), casm_class_hash).send_with_cfg(&txn_config).await?;
+            account.declare_v2(Arc::new(class), casm_class_hash).send_with_cfg(txn_config).await?;
 
         tracing::trace!(
             transaction_hash = format!("{:#066x}", transaction_hash),
@@ -107,7 +107,7 @@ where
             let receipt = TransactionWaiter::new(transaction_hash, &account.provider()).await?;
 
             if txn_config.receipt {
-                return Ok(TransactionResult::HashReceipt(transaction_hash, receipt));
+                return Ok(TransactionResult::HashReceipt(transaction_hash, Box::new(receipt)));
             }
         }
 

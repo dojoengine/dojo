@@ -47,6 +47,8 @@ impl WorldRemote {
 
 #[cfg(test)]
 mod tests {
+    use dojo_types::naming;
+
     use super::*;
 
     #[test]
@@ -55,7 +57,7 @@ mod tests {
         let namespace = "ns".to_string();
 
         let contract = ContractRemote {
-            common: CommonResourceRemoteInfo::new(Felt::ONE, &namespace, "c", Felt::ONE),
+            common: CommonRemoteInfo::new(Felt::ONE, &namespace, "c", Felt::ONE),
             is_initialized: false,
         };
         let resource = ResourceRemote::Contract(contract);
@@ -71,9 +73,8 @@ mod tests {
         let mut world_remote = WorldRemote::default();
         let namespace = "ns".to_string();
 
-        let model = ModelRemote {
-            common: CommonResourceRemoteInfo::new(Felt::ONE, &namespace, "m", Felt::ONE),
-        };
+        let model =
+            ModelRemote { common: CommonRemoteInfo::new(Felt::ONE, &namespace, "m", Felt::ONE) };
         let resource = ResourceRemote::Model(model);
 
         world_remote.add_resource(resource);
@@ -87,9 +88,8 @@ mod tests {
         let mut world_remote = WorldRemote::default();
         let namespace = "ns".to_string();
 
-        let event = EventRemote {
-            common: CommonResourceRemoteInfo::new(Felt::ONE, &namespace, "e", Felt::ONE),
-        };
+        let event =
+            EventRemote { common: CommonRemoteInfo::new(Felt::ONE, &namespace, "e", Felt::ONE) };
         let resource = ResourceRemote::Event(event);
 
         world_remote.add_resource(resource);

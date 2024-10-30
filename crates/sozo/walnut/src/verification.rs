@@ -81,14 +81,14 @@ pub async fn walnut_verify_migration_strategy(
     Ok(())
 }
 
-fn get_class_name_from_artifact_path(path: &Path, namespace: &str) -> Result<String, Error> {
+fn _get_class_name_from_artifact_path(path: &Path, namespace: &str) -> Result<String, Error> {
     let file_name = path.file_stem().and_then(OsStr::to_str).ok_or(Error::InvalidFileName)?;
     let class_name = file_name.strip_prefix(namespace).ok_or(Error::NamespacePrefixNotFound)?;
     Ok(class_name.to_string())
 }
 
 #[derive(Debug, Serialize)]
-struct VerificationPayload {
+struct _VerificationPayload {
     /// The names of the classes we want to verify together with the selector.
     pub class_names: Vec<String>,
     /// The hashes of the Sierra classes.
@@ -100,8 +100,8 @@ struct VerificationPayload {
     pub source_code: Value,
 }
 
-async fn verify_classes(
-    payload: VerificationPayload,
+async fn _verify_classes(
+    payload: _VerificationPayload,
     api_url: &str,
     api_key: &str,
 ) -> Result<String, Error> {
@@ -119,7 +119,7 @@ async fn verify_classes(
     }
 }
 
-fn collect_source_code(root_dir: &Path) -> Result<Value, Error> {
+fn _collect_source_code(root_dir: &Path) -> Result<Value, Error> {
     fn collect_files(
         root_dir: &Path,
         search_dir: &Path,
@@ -160,11 +160,11 @@ fn collect_source_code(root_dir: &Path) -> Result<Value, Error> {
     Ok(serde_json::Value::Object(file_data))
 }
 
-fn subtitle<D: AsRef<str>>(message: D) -> String {
-    dimmed_message(format!("{} {}", pad_str(">", 3, Alignment::Right, None), message.as_ref()))
+fn _subtitle<D: AsRef<str>>(message: D) -> String {
+    _dimmed_message(format!("{} {}", pad_str(">", 3, Alignment::Right, None), message.as_ref()))
         .to_string()
 }
 
-fn dimmed_message<D>(message: D) -> StyledObject<D> {
+fn _dimmed_message<D>(message: D) -> StyledObject<D> {
     Style::new().dim().apply_to(message)
 }
