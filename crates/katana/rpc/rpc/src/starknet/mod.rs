@@ -1061,8 +1061,9 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         }
     }
 
-    // Determine the block number based on its Id. In the case where the block id is a hash, we need to check
-    // if the block is in the forked client AND within the valid range (ie lower than forked block).
+    // Determine the block number based on its Id. In the case where the block id is a hash, we need
+    // to check if the block is in the forked client AND within the valid range (ie lower than
+    // forked block).
     fn resolve_event_block_id_if_forked(
         &self,
         id: BlockIdOrTag,
