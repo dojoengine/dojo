@@ -839,6 +839,10 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         .await
     }
 
+    fn forked_client(&self) -> Option<&ForkedClient> {
+        self.inner.forked_client.as_ref()
+    }
+
     // TODO: should document more and possible find a simpler solution(?)
     fn events_inner(
         &self,
@@ -851,21 +855,8 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
     ) -> StarknetApiResult<EventsPage> {
         let provider = self.inner.backend.blockchain.provider();
 
-        // TODO: handle block hash
-
-        let from = if BlockIdOrTag::Tag(BlockTag::Pending) == from_block {
-            EventBlockId::Pending
-        } else {
-            let num = provider.convert_block_id(from_block)?;
-            EventBlockId::Num(num.ok_or(StarknetApiError::BlockNotFound)?)
-        };
-
-        let to = if BlockIdOrTag::Tag(BlockTag::Pending) == to_block {
-            EventBlockId::Pending
-        } else {
-            let num = provider.convert_block_id(to_block)?;
-            EventBlockId::Num(num.ok_or(StarknetApiError::BlockNotFound)?)
-        };
+        let from = self.resolve_event_block_id_if_forked(from_block)?;
+        let to = self.resolve_event_block_id_if_forked(to_block)?;
 
         // reserved buffer to fill up with events to avoid reallocations
         let mut events = Vec::with_capacity(chunk_size as usize);
@@ -1068,5 +1059,42 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
                 })
             }
         }
+    }
+
+    // Determine the block number based on its Id. In the case where the block id is a hash, we need to check
+    // if the block is in the forked client AND within the valid range (ie lower than forked block).
+    fn resolve_event_block_id_if_forked(
+        &self,
+        id: BlockIdOrTag,
+    ) -> StarknetApiResult<EventBlockId> {
+        let provider = self.inner.backend.blockchain.provider();
+
+        let id = match id {
+            BlockIdOrTag::Tag(BlockTag::Pending) => EventBlockId::Pending,
+            BlockIdOrTag::Number(num) => EventBlockId::Num(num),
+
+            BlockIdOrTag::Tag(BlockTag::Latest) => {
+                let num = provider.convert_block_id(id)?;
+                EventBlockId::Num(num.ok_or(StarknetApiError::BlockNotFound)?)
+            }
+
+            BlockIdOrTag::Hash(hash) => {
+                // Check first if the block hash belongs to a local block.
+                if let Some(num) = provider.convert_block_id(id)? {
+                    EventBlockId::Num(num)
+                }
+                // If not, check if the block hash belongs to a forked block.
+                else if let Some(client) = self.forked_client() {
+                    let num = futures::executor::block_on(client.get_block_number_by_hash(hash))?;
+                    EventBlockId::Num(num)
+                }
+                // Otherwise the block hash is not found.
+                else {
+                    return Err(StarknetApiError::BlockNotFound);
+                }
+            }
+        };
+
+        Ok(id)
     }
 }

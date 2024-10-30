@@ -59,10 +59,11 @@ impl ForkedClient {
 }
 
 impl<P: Provider> ForkedClient<P> {
-    pub async fn block_number_by_hash(&self, hash: BlockHash) -> Result<BlockNumber, Error> {
+    pub async fn get_block_number_by_hash(&self, hash: BlockHash) -> Result<BlockNumber, Error> {
         use starknet::core::types::MaybePendingBlockWithTxHashes as StarknetRsMaybePendingBlockWithTxHashes;
 
         let block = self.provider.get_block_with_tx_hashes(BlockIdOrTag::Hash(hash)).await?;
+        // Pending block doesn't have a hash yet, so if we get a pending block, we return an error.
         let StarknetRsMaybePendingBlockWithTxHashes::Block(block) = block else {
             return Err(Error::UnexpectedPendingData);
         };
@@ -318,7 +319,8 @@ mod tests {
 
         // https://sepolia.voyager.online/block/0x4dfd88ba652622450c7758b49ac4a2f23b1fa8e6676297333ea9c97d0756c7a
         let hash = felt!("0x4dfd88ba652622450c7758b49ac4a2f23b1fa8e6676297333ea9c97d0756c7a");
-        let number = client.block_number_by_hash(hash).await.expect("failed to get block number");
+        let number =
+            client.get_block_number_by_hash(hash).await.expect("failed to get block number");
         assert_eq!(number, 268469);
 
         // -----------------------------------------------------------------------
@@ -326,7 +328,7 @@ mod tests {
 
         // https://sepolia.voyager.online/block/0x335a605f2c91873f8f830a6e5285e704caec18503ca28c18485ea6f682eb65e
         let hash = felt!("0x335a605f2c91873f8f830a6e5285e704caec18503ca28c18485ea6f682eb65e");
-        let err = client.block_number_by_hash(hash).await.expect_err("should return an error");
+        let err = client.get_block_number_by_hash(hash).await.expect_err("should return an error");
         assert!(matches!(err, Error::BlockOutOfRange));
     }
 }
