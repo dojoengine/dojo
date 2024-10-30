@@ -236,6 +236,9 @@ fn inspect_resource(resource_name_or_tag: &str, world_diff: &WorldDiff) {
         });
     }
 
+    writers_disp.sort_by_key(|m| m.tag.to_string());
+    owners_disp.sort_by_key(|m| m.tag.to_string());
+
     print_table(&writers_disp, "\n> Writers");
     print_table(&owners_disp, "\n> Owners");
 }

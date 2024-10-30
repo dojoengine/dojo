@@ -334,6 +334,12 @@ where
                     // The issue is that `e` is bound to concrete type `SingleOwnerAccount`.
                     // Thus, we can't return `e` directly.
                     // Might have a better solution by addind a new variant?
+                    if e.to_string().contains("Class already declared") {
+                        // If the class is already declared, it might be because it was already
+                        // declared in a previous run or an other declarer.
+                        continue;
+                    }
+
                     return Err(MigrationError::DeclareClassError(e.to_string()));
                 }
             }

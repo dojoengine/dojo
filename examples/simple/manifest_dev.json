@@ -1,14 +1,14 @@
 {
   "world": {
-    "class_hash": "0x784e409df10dbe83eb29e7de843534f2a3462d54ce14fc3ca051522080e386",
-    "address": "0x2fdc33a696a1354f18580fe4a695c3b78f81a8b56b2c3c8400bba1541488a47",
+    "class_hash": "0x139239a99d627697b19b9856beaef7896fc75375caf3d750dd76982a7afeb78",
+    "address": "0x4bb1b5116e5ed181392417f0c18ade13246cb30447e4dba0f8421c80bb77e2e",
     "seed": "simple",
     "name": "simple"
   },
   "contracts": [
     {
-      "address": "0x573eb52c235446ebac25117d7deb4813ebb861d836f6fd9b2f59b9c87cf1a20",
-      "class_hash": "0xf2f8563c92c7cfa83ae7fcc702b0f047de8f63ae1d816d394d630cb747f4b5",
+      "address": "0x16501c6eeae49a38af2a34e8c50a5ba6ac08c655e9c9b77b1306aad73aaca9d",
+      "class_hash": "0x13767b87a8459556babbcf8cbdf2800181b462ef47f6fdafc14fc14fc1dae57",
       "abi": [
         {
           "type": "impl",
@@ -248,7 +248,248 @@
       "systems": []
     },
     {
-      "address": "0x232cdd536d8f45538e714329b325af50412b5fb09a20b27564bdac2964402a9",
+      "address": "0x5d52f8c5bd309ba73977008086d7c7f9c0d2991d2e29e96f01f99bf2065f88e",
+      "class_hash": "0x13767b87a8459556babbcf8cbdf2800181b462ef47f6fdafc14fc14fc1dae57",
+      "abi": [
+        {
+          "type": "impl",
+          "name": "c1__ContractImpl",
+          "interface_name": "dojo::contract::interface::IContract"
+        },
+        {
+          "type": "struct",
+          "name": "core::byte_array::ByteArray",
+          "members": [
+            {
+              "name": "data",
+              "type": "core::array::Array::<core::bytes_31::bytes31>"
+            },
+            {
+              "name": "pending_word",
+              "type": "core::felt252"
+            },
+            {
+              "name": "pending_word_len",
+              "type": "core::integer::u32"
+            }
+          ]
+        },
+        {
+          "type": "interface",
+          "name": "dojo::contract::interface::IContract",
+          "items": [
+            {
+              "type": "function",
+              "name": "dojo_name",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::byte_array::ByteArray"
+                }
+              ],
+              "state_mutability": "view"
+            }
+          ]
+        },
+        {
+          "type": "function",
+          "name": "dojo_init",
+          "inputs": [
+            {
+              "name": "v",
+              "type": "core::felt252"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "view"
+        },
+        {
+          "type": "impl",
+          "name": "MyInterfaceImpl",
+          "interface_name": "dojo_simple::MyInterface"
+        },
+        {
+          "type": "interface",
+          "name": "dojo_simple::MyInterface",
+          "items": [
+            {
+              "type": "function",
+              "name": "system_1",
+              "inputs": [
+                {
+                  "name": "k",
+                  "type": "core::felt252"
+                },
+                {
+                  "name": "v",
+                  "type": "core::felt252"
+                }
+              ],
+              "outputs": [],
+              "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "system_2",
+              "inputs": [
+                {
+                  "name": "k",
+                  "type": "core::felt252"
+                }
+              ],
+              "outputs": [
+                {
+                  "type": "core::felt252"
+                }
+              ],
+              "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "system_3",
+              "inputs": [
+                {
+                  "name": "k",
+                  "type": "core::felt252"
+                },
+                {
+                  "name": "v",
+                  "type": "core::integer::u32"
+                }
+              ],
+              "outputs": [],
+              "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "system_4",
+              "inputs": [
+                {
+                  "name": "k",
+                  "type": "core::felt252"
+                }
+              ],
+              "outputs": [],
+              "state_mutability": "external"
+            }
+          ]
+        },
+        {
+          "type": "impl",
+          "name": "WorldProviderImpl",
+          "interface_name": "dojo::contract::components::world_provider::IWorldProvider"
+        },
+        {
+          "type": "struct",
+          "name": "dojo::world::iworld::IWorldDispatcher",
+          "members": [
+            {
+              "name": "contract_address",
+              "type": "core::starknet::contract_address::ContractAddress"
+            }
+          ]
+        },
+        {
+          "type": "interface",
+          "name": "dojo::contract::components::world_provider::IWorldProvider",
+          "items": [
+            {
+              "type": "function",
+              "name": "world_dispatcher",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "dojo::world::iworld::IWorldDispatcher"
+                }
+              ],
+              "state_mutability": "view"
+            }
+          ]
+        },
+        {
+          "type": "impl",
+          "name": "UpgradeableImpl",
+          "interface_name": "dojo::contract::components::upgradeable::IUpgradeable"
+        },
+        {
+          "type": "interface",
+          "name": "dojo::contract::components::upgradeable::IUpgradeable",
+          "items": [
+            {
+              "type": "function",
+              "name": "upgrade",
+              "inputs": [
+                {
+                  "name": "new_class_hash",
+                  "type": "core::starknet::class_hash::ClassHash"
+                }
+              ],
+              "outputs": [],
+              "state_mutability": "external"
+            }
+          ]
+        },
+        {
+          "type": "constructor",
+          "name": "constructor",
+          "inputs": []
+        },
+        {
+          "type": "event",
+          "name": "dojo::contract::components::upgradeable::upgradeable_cpt::Upgraded",
+          "kind": "struct",
+          "members": [
+            {
+              "name": "class_hash",
+              "type": "core::starknet::class_hash::ClassHash",
+              "kind": "data"
+            }
+          ]
+        },
+        {
+          "type": "event",
+          "name": "dojo::contract::components::upgradeable::upgradeable_cpt::Event",
+          "kind": "enum",
+          "variants": [
+            {
+              "name": "Upgraded",
+              "type": "dojo::contract::components::upgradeable::upgradeable_cpt::Upgraded",
+              "kind": "nested"
+            }
+          ]
+        },
+        {
+          "type": "event",
+          "name": "dojo::contract::components::world_provider::world_provider_cpt::Event",
+          "kind": "enum",
+          "variants": []
+        },
+        {
+          "type": "event",
+          "name": "dojo_simple::c1::Event",
+          "kind": "enum",
+          "variants": [
+            {
+              "name": "UpgradeableEvent",
+              "type": "dojo::contract::components::upgradeable::upgradeable_cpt::Event",
+              "kind": "nested"
+            },
+            {
+              "name": "WorldProviderEvent",
+              "type": "dojo::contract::components::world_provider::world_provider_cpt::Event",
+              "kind": "nested"
+            }
+          ]
+        }
+      ],
+      "init_calldata": [
+        "0xfffe"
+      ],
+      "tag": "c1",
+      "systems": []
+    },
+    {
+      "address": "0x707ff87e1260619aa7c41ebd7f12a32d8cc358565e539c9f7b85140af3ca285",
       "class_hash": "0x1eef253239f61c49444c41990940fa8fee51b021d19e48c20d31f45bc465d46",
       "abi": [
         {
@@ -414,19 +655,19 @@
   "models": [
     {
       "members": [],
-      "class_hash": "0x3177bb75806f3ec4093682f763d4f71eb45c925f01b30d8ce6cc95b84afa60f",
+      "class_hash": "0xb35ce9998d1524acfc8b0318aed7375b0d977b6362a2f7af23be2950aa96fd",
       "tag": "M"
     }
   ],
   "events": [
     {
       "members": [],
-      "class_hash": "0x10a5301f73cce93f7f666e2e1d9310d49e6c2f4ecaef1b6126d4a4e393d6d50",
+      "class_hash": "0x65aa33d998d733abc890ee36503fe1df8e7c01f2cf1a92b147bd424a1af56d7",
       "tag": "E"
     },
     {
       "members": [],
-      "class_hash": "0x7e5eeb2cd51eec9a634f4e837b0ec2c2c15f278f98392764557a6ce051d5516",
+      "class_hash": "0x58568a90180a44515609dbaf69bb0c1aa56f29e93688f4bfdab10268fe68ce1",
       "tag": "EH"
     }
   ]

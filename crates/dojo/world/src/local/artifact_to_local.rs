@@ -9,6 +9,7 @@ use cairo_lang_starknet_classes::contract_class::ContractClass;
 use serde_json;
 use starknet::core::types::contract::{AbiEntry, AbiImpl, SierraClass};
 use starknet::core::types::Felt;
+use tracing::trace;
 
 use super::*;
 use crate::config::ProfileConfig;
@@ -57,6 +58,12 @@ impl WorldLocal {
                                 let namespaces = profile_config.namespace.get_namespaces(&name);
 
                                 for ns in namespaces {
+                                    trace!(
+                                        name,
+                                        namespace = ns,
+                                        "Adding local contract from artifact."
+                                    );
+
                                     let resource = ResourceLocal::Contract(ContractLocal {
                                         common: CommonLocalInfo {
                                             namespace: ns,
@@ -76,6 +83,12 @@ impl WorldLocal {
                                 let namespaces = profile_config.namespace.get_namespaces(&name);
 
                                 for ns in namespaces {
+                                    trace!(
+                                        name,
+                                        namespace = ns,
+                                        "Adding local model from artifact."
+                                    );
+
                                     let resource = ResourceLocal::Model(ModelLocal {
                                         common: CommonLocalInfo {
                                             namespace: ns,
@@ -95,6 +108,12 @@ impl WorldLocal {
                                 let namespaces = profile_config.namespace.get_namespaces(&name);
 
                                 for ns in namespaces {
+                                    trace!(
+                                        name,
+                                        namespace = ns,
+                                        "Adding local event from artifact."
+                                    );
+
                                     let resource = ResourceLocal::Event(EventLocal {
                                         common: CommonLocalInfo {
                                             namespace: ns,
@@ -121,9 +140,13 @@ impl WorldLocal {
             name: profile_config.namespace.default.clone(),
         }));
 
+        // Ensures all namespaces used as mapping key are registered as resources,
+        // if it's not the default namespace.
         if let Some(mappings) = &profile_config.namespace.mappings {
             for ns in mappings.keys() {
-                resources.push(ResourceLocal::Namespace(NamespaceLocal { name: ns.clone() }));
+                if ns != &profile_config.namespace.default {
+                    resources.push(ResourceLocal::Namespace(NamespaceLocal { name: ns.clone() }));
+                }
             }
         }
 
