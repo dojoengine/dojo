@@ -851,6 +851,8 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
     ) -> StarknetApiResult<EventsPage> {
         let provider = self.inner.backend.blockchain.provider();
 
+        // TODO: handle block hash
+
         let from = if BlockIdOrTag::Tag(BlockTag::Pending) == from_block {
             EventBlockId::Pending
         } else {

@@ -1,4 +1,4 @@
-use katana_primitives::block::{BlockIdOrTag, BlockNumber};
+use katana_primitives::block::{BlockHash, BlockIdOrTag, BlockNumber};
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::transaction::TxHash;
 use katana_primitives::Felt;
@@ -59,6 +59,21 @@ impl ForkedClient {
 }
 
 impl<P: Provider> ForkedClient<P> {
+    pub async fn block_number_by_hash(&self, hash: BlockHash) -> Result<BlockNumber, Error> {
+        use starknet::core::types::MaybePendingBlockWithTxHashes as StarknetRsMaybePendingBlockWithTxHashes;
+
+        let block = self.provider.get_block_with_tx_hashes(BlockIdOrTag::Hash(hash)).await?;
+        let StarknetRsMaybePendingBlockWithTxHashes::Block(block) = block else {
+            return Err(Error::UnexpectedPendingData);
+        };
+
+        if block.block_number > self.block {
+            Err(Error::BlockOutOfRange)
+        } else {
+            Ok(block.block_number)
+        }
+    }
+
     pub async fn get_transaction_by_hash(&self, hash: TxHash) -> Result<Tx, Error> {
         let tx = self.provider.get_transaction_by_hash(hash).await?;
         Ok(tx.into())
@@ -280,5 +295,38 @@ impl From<Error> for StarknetApiError {
                 StarknetApiError::UnexpectedError { reason: value.to_string() }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use katana_primitives::felt;
+    use url::Url;
+
+    use super::*;
+
+    const SEPOLIA_URL: &str = "https://api.cartridge.gg/x/starknet/sepolia";
+    const FORK_BLOCK_NUMBER: BlockNumber = 268_471;
+
+    #[tokio::test]
+    async fn get_block_hash() {
+        let url = Url::parse(SEPOLIA_URL).unwrap();
+        let client = ForkedClient::new_http(url, FORK_BLOCK_NUMBER);
+
+        // -----------------------------------------------------------------------
+        // Block before the forked block
+
+        // https://sepolia.voyager.online/block/0x4dfd88ba652622450c7758b49ac4a2f23b1fa8e6676297333ea9c97d0756c7a
+        let hash = felt!("0x4dfd88ba652622450c7758b49ac4a2f23b1fa8e6676297333ea9c97d0756c7a");
+        let number = client.block_number_by_hash(hash).await.expect("failed to get block number");
+        assert_eq!(number, 268469);
+
+        // -----------------------------------------------------------------------
+        // Block after the forked block (exists only in the forked chain)
+
+        // https://sepolia.voyager.online/block/0x335a605f2c91873f8f830a6e5285e704caec18503ca28c18485ea6f682eb65e
+        let hash = felt!("0x335a605f2c91873f8f830a6e5285e704caec18503ca28c18485ea6f682eb65e");
+        let err = client.block_number_by_hash(hash).await.expect_err("should return an error");
+        assert!(matches!(err, Error::BlockOutOfRange));
     }
 }
