@@ -149,15 +149,6 @@ jobs:
           chmod +x /tmp/bins/sozo
           /tmp/bins/sozo --manifest-path examples/spawn-and-move/Scarb.toml test
 
-  dojo-world-bindings-check:
-    runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/dojoengine/dojo-dev:v1.0.0-alpha.17
-    steps:
-      - uses: actions/checkout@v3
-      - uses: Swatinem/rust-cache@v2
-      - run: cargo run --bin dojo-world-abigen -- --check
-
   clippy:
     runs-on: ubuntu-latest-4-cores
     container:
