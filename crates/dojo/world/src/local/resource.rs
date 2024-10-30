@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use dojo_types::naming;
 use starknet::core::types::contract::SierraClass;
 use starknet::core::types::Felt;

@@ -12,8 +12,6 @@ use scarb::core::Config;
 use scarb_ui::{OutputFormat, Ui};
 use tracing::trace;
 
-use crate::commands::Commands;
-
 mod args;
 mod commands;
 mod utils;

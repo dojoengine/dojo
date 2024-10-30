@@ -6,7 +6,6 @@ use clap::Args;
 use dojo_types::naming;
 use dojo_utils::Invoker;
 use dojo_world::contracts::naming::ensure_namespace;
-use dojo_world::local::WorldLocal;
 use scarb::core::Config;
 use sozo_scarbext::WorkspaceExt;
 use sozo_walnut::WalnutDebugger;

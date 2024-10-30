@@ -17,7 +17,7 @@ cainome.workspace = true
 chrono.workspace = true
 crypto-bigint.workspace = true
 dojo-types.workspace = true
-dojo-world = { workspace = true, features = [ "contracts" ] }
+dojo-world.workspace = true
 futures-channel = "0.3.0"
 futures-util.workspace = true
 hashlink.workspace = true

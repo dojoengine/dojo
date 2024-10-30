@@ -3,10 +3,10 @@ use starknet::ContractAddress;
 use dojo::world::{
     IWorldDispatcher, IWorldDispatcherTrait, IWorldTestDispatcher, IWorldTestDispatcherTrait
 };
-use dojo::model::{Model, ModelStorage};
+use dojo::model::Model;
 
 use crate::world::{
-    deploy_with_world_address, spawn_test_world, NamespaceDef, TestResource, ContractDefTrait
+    spawn_test_world, NamespaceDef, TestResource, ContractDefTrait
 };
 
 pub const DOJO_NSH: felt252 = 0x309e09669bc1fdc1dd6563a7ef862aa6227c97d099d08cc7b81bad58a7443fa;
@@ -180,7 +180,6 @@ pub mod bar {
     use super::DOJO_NSH;
 
     use super::{Foo, IWorldDispatcher, IWorldDispatcherTrait};
-    use super::{Character, Abilities, Stats, Weapon, Sword};
 
     #[storage]
     struct Storage {

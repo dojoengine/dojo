@@ -1,22 +1,21 @@
-use std::fs;
 use std::str::FromStr;
 
-use anyhow::{anyhow, Context, Error, Result};
+use anyhow::{anyhow, Context, Result};
 use camino::Utf8PathBuf;
 use colored::*;
 use dojo_world::config::ProfileConfig;
 use dojo_world::diff::WorldDiff;
 use dojo_world::local::WorldLocal;
 use katana_rpc_api::starknet::RPC_SPEC_VERSION;
-use scarb::core::{Config, TomlManifest, Workspace};
+use scarb::core::{TomlManifest, Workspace};
 use semver::Version;
 use sozo_scarbext::WorkspaceExt;
 use starknet::accounts::{Account, ConnectedAccount};
-use starknet::core::types::{BlockId, BlockTag, Felt, StarknetError};
+use starknet::core::types::Felt;
 use starknet::core::utils as snutils;
 use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::{JsonRpcClient, Provider, ProviderError};
-use tracing::{debug, trace};
+use starknet::providers::{JsonRpcClient, Provider};
+use tracing::trace;
 
 use crate::commands::options::account::{AccountOptions, SozoAccount};
 use crate::commands::options::starknet::StarknetOptions;

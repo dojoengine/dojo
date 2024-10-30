@@ -9,38 +9,27 @@ version.workspace = true
 [dependencies]
 anyhow.workspace = true
 async-trait.workspace = true
-cairo-lang-filesystem.workspace = true
-cairo-lang-project.workspace = true
-cairo-lang-starknet.workspace = true
 cairo-lang-starknet-classes.workspace = true
-camino.workspace = true
-convert_case.workspace = true
-dojo-utils = { workspace = true, optional = true }
-num-traits = { workspace = true, optional = true }
+dojo-utils.workspace = true
 regex.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 serde_with.workspace = true
-smol_str.workspace = true
 starknet.workspace = true
 starknet-crypto.workspace = true
 thiserror.workspace = true
-topological-sort.workspace = true
 tracing.workspace = true
 cainome.workspace = true
 dojo-types.workspace = true
 http.workspace = true
 ipfs-api-backend-hyper = { git = "https://github.com/ferristseng/rust-ipfs-api", rev = "af2c17f7b19ef5b9898f458d97a90055c3605633", features = [ "with-hyper-rustls" ], optional = true }
 scarb = { workspace = true, optional = true }
-tokio = { version = "1.32.0", features = [ "time" ], default-features = false, optional = true }
 toml.workspace = true
 url.workspace = true
-walkdir.workspace = true
 
 [dev-dependencies]
 assert_fs.workspace = true
 assert_matches.workspace = true
-#dojo-lang.workspace = true
 dojo-test-utils.workspace = true
 katana-runner.workspace = true
 similar-asserts.workspace = true
@@ -48,6 +37,4 @@ tempfile.workspace = true
 tokio.workspace = true
 
 [features]
-contracts = [ "dep:num-traits" ]
 metadata = [ "dep:ipfs-api-backend-hyper" ]
-migration = [ "dep:dojo-utils", "dep:scarb", "dep:tokio" ]

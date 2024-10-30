@@ -2,8 +2,7 @@ use std::sync::Arc;
 
 use anyhow::{bail, Result};
 use dojo_world::diff::WorldDiff;
-use dojo_world::local::WorldLocal;
-use dojo_world::{utils, ResourceType};
+use dojo_world::ResourceType;
 use slot::account_sdk::account::session::hash::{Policy, ProvedPolicy};
 use slot::account_sdk::account::session::merkle::MerkleTree;
 use slot::account_sdk::account::session::SessionAccount;

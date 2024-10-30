@@ -11,7 +11,7 @@ assert_fs.workspace = true
 async-trait.workspace = true
 camino.workspace = true
 dojo-lang.workspace = true
-dojo-world = { workspace = true, features = [ "migration" ] }
+dojo-world.workspace = true
 jsonrpsee = { workspace = true, features = [ "server" ] }
 katana-core = { workspace = true }
 katana-executor = { workspace = true, features = [ "blockifier" ] }

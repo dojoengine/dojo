@@ -8,7 +8,7 @@ version.workspace = true
 [dependencies]
 anyhow.workspace = true
 camino.workspace = true
-dojo-world = { workspace = true, features = [ "contracts", "metadata" ] }
+dojo-world.workspace = true
 scarb.workspace = true
 toml.workspace = true
 serde.workspace = true

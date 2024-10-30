@@ -22,7 +22,7 @@ use std::collections::HashMap;
 use std::str::FromStr;
 
 use cainome::cairo_serde::{ByteArray, ClassHash, ContractAddress};
-use dojo_utils::{Declarer, Deployer, Invoker, TransactionError, TxnConfig};
+use dojo_utils::{Declarer, Deployer, Invoker, TxnConfig};
 use dojo_world::config::ProfileConfig;
 use dojo_world::contracts::WorldContract;
 use dojo_world::diff::{Manifest, ResourceDiff, WorldDiff, WorldStatus};

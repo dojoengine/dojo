@@ -2,7 +2,6 @@ use anyhow::{bail, Result};
 use clap::Args;
 use dojo_utils::{TxnAction, TxnConfig};
 use starknet::core::types::Felt;
-use tracing::trace;
 
 #[derive(Debug, Args, Default)]
 #[command(next_help_heading = "Transaction options")]

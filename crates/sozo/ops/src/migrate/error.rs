@@ -1,7 +1,6 @@
 //! The migration related errors.
 
 use dojo_utils::{TransactionError, TransactionWaitingError};
-use starknet::core::types::contract::{CompressProgramError, ComputeClassHashError};
 use starknet::core::types::FromStrError;
 use starknet::core::utils::CairoShortStringToFeltError;
 use starknet::providers::ProviderError;

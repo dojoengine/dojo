@@ -1,6 +1,5 @@
 //! Manifest data to store the diff result in files.
 
-use scarb::compiler::Profile;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use starknet::core::serde::unsigned_field_element::UfeHex;

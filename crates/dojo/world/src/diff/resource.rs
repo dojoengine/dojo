@@ -1,16 +1,10 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
-use anyhow::Result;
-use dojo_types::naming;
-use starknet::core::types::contract::SierraClass;
-use starknet::core::utils::CairoShortStringToFeltError;
-use starknet::providers::Provider;
 use starknet_crypto::Felt;
 
-use crate::config::ProfileConfig;
-use crate::local::{ResourceLocal, WorldLocal};
-use crate::remote::{ResourceRemote, WorldRemote};
-use crate::{utils, ContractAddress, DojoSelector, ResourceType};
+use crate::local::ResourceLocal;
+use crate::remote::ResourceRemote;
+use crate::{ContractAddress, DojoSelector, ResourceType};
 
 /// The difference between a local and a remote resource.
 ///

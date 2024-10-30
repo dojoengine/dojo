@@ -6,7 +6,6 @@ use starknet::ClassHash;
 use dojo::contract::components::upgradeable::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
 use dojo::world::IWorldDispatcherTrait;
 
-use crate::world::spawn_test_world;
 use crate::tests::helpers::deploy_world;
 
 #[starknet::contract]

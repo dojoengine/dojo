@@ -1,10 +1,8 @@
-use dojo::model::{Model, ModelStorage};
-use dojo::event::EventStorage;
 use dojo::utils::bytearray_hash;
 use dojo::world::IWorldDispatcherTrait;
 
 use crate::tests::helpers::{
-    deploy_world, Foo, foo, foo_setter, IFooSetterDispatcher, IFooSetterDispatcherTrait, DOJO_NSH,
+    deploy_world, foo_setter, IFooSetterDispatcher, IFooSetterDispatcherTrait,
     deploy_world_and_foo
 };
 use crate::tests::expanded::selector_attack::{attacker_model, attacker_contract};

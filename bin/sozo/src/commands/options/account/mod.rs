@@ -5,8 +5,6 @@ use clap::Args;
 use dojo_utils::env::DOJO_ACCOUNT_ADDRESS_ENV_VAR;
 use dojo_world::config::Environment;
 use dojo_world::diff::WorldDiff;
-use dojo_world::local::WorldLocal;
-use scarb::core::Config;
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::types::{BlockId, BlockTag, Felt};
 use starknet::providers::Provider;
