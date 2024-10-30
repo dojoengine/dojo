@@ -226,7 +226,7 @@ pub fn deploy_world() -> IWorldDispatcher {
 /// No permissions are granted.
 pub fn deploy_world_and_foo() -> (IWorldDispatcher, felt252) {
     let world = deploy_world();
-    world.register_model("dojo", foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model("dojo", m_Foo::TEST_CLASS_HASH.try_into().unwrap());
     let foo_selector = Model::<Foo>::selector(DOJO_NSH);
 
     (world, foo_selector)
@@ -237,7 +237,7 @@ pub fn deploy_world_and_foo() -> (IWorldDispatcher, felt252) {
 pub fn deploy_world_and_bar() -> (IWorldDispatcher, IbarDispatcher) {
     let namespace_def = NamespaceDef {
         namespace: "dojo", resources: [
-            TestResource::Model(foo::TEST_CLASS_HASH.try_into().unwrap()),
+            TestResource::Model(m_Foo::TEST_CLASS_HASH.try_into().unwrap()),
             TestResource::Contract(ContractDefTrait::new(bar::TEST_CLASS_HASH, "bar")),
         ].span(),
     };

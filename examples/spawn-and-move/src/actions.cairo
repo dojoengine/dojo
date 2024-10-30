@@ -212,15 +212,15 @@ mod tests {
     use dojo::world::WorldStorageTrait;
     use dojo_cairo_test::{spawn_test_world, NamespaceDef, TestResource, ContractDefTrait};
 
-    use super::{actions, actions::moved, IActionsDispatcher, IActionsDispatcherTrait};
-    use dojo_examples::models::{Position, PositionValue, position, Moves, moves, Direction,};
+    use super::{actions, IActionsDispatcher, IActionsDispatcherTrait};
+    use dojo_examples::models::{Position, PositionValue, m_Position, Moves, m_Moves, Direction,};
 
     fn namespace_def() -> NamespaceDef {
         let ndef = NamespaceDef {
             namespace: "ns", resources: [
-                TestResource::Model(position::TEST_CLASS_HASH.try_into().unwrap()),
-                TestResource::Model(moves::TEST_CLASS_HASH.try_into().unwrap()),
-                TestResource::Event(moved::TEST_CLASS_HASH.try_into().unwrap()),
+                TestResource::Model(m_Position::TEST_CLASS_HASH.try_into().unwrap()),
+                TestResource::Model(m_Moves::TEST_CLASS_HASH.try_into().unwrap()),
+                TestResource::Event(actions::e_Moved::TEST_CLASS_HASH.try_into().unwrap()),
                 TestResource::Contract(
                     ContractDefTrait::new(actions::TEST_CLASS_HASH, "actions")
                         .with_writer_of([dojo::utils::bytearray_hash(@"ns")].span())

@@ -16,7 +16,7 @@ impl $model_type$ModelValueKey of dojo::model::model_value::ModelValueKey<$model
 }
 
 // Impl to get the static definition of a model
-pub mod $model_type_snake$_definition {
+pub mod m_$model_type$_definition {
     use super::$model_type$;
     pub impl $model_type$DefinitionImpl<T> of dojo::model::ModelDefinition<T>{
         #[inline(always)]
@@ -46,8 +46,8 @@ pub mod $model_type_snake$_definition {
     }
 }
 
-pub impl $model_type$Definition = $model_type_snake$_definition::$model_type$DefinitionImpl<$model_type$>;
-pub impl $model_type$ModelValueDefinition = $model_type_snake$_definition::$model_type$DefinitionImpl<$model_type$Value>;
+pub impl $model_type$Definition = m_$model_type$_definition::$model_type$DefinitionImpl<$model_type$>;
+pub impl $model_type$ModelValueDefinition = m_$model_type$_definition::$model_type$DefinitionImpl<$model_type$Value>;
 
 pub impl $model_type$ModelParser of dojo::model::model::ModelParser<$model_type$>{
     fn serialize_keys(self: @$model_type$) -> Span<felt252> {
@@ -74,7 +74,7 @@ pub impl $model_type$ModelImpl = dojo::model::model::ModelImpl<$model_type$>;
 pub impl $model_type$ModelValueImpl = dojo::model::model_value::ModelValueImpl<$model_type$Value>;
 
 #[starknet::contract]
-pub mod $model_type_snake$ {
+pub mod m_$model_type$ {
     use super::$model_type$;
     use super::$model_type$Value;
 

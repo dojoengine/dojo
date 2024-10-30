@@ -15,7 +15,6 @@ use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, Terminal, TypedStablePtr, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
-use convert_case::{Case, Casing};
 use dojo_types::naming;
 
 use super::element::{
@@ -168,7 +167,6 @@ impl DojoEvent {
         let node = RewriteNode::interpolate_patched(
             EVENT_PATCH,
             &UnorderedHashMap::from([
-                ("contract_name".to_string(), RewriteNode::Text(event_name.to_case(Case::Snake))),
                 ("type_name".to_string(), RewriteNode::Text(event_name.clone())),
                 ("member_names".to_string(), RewriteNode::new_modified(member_names)),
                 ("serialized_keys".to_string(), RewriteNode::new_modified(serialized_keys)),

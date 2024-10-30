@@ -55,7 +55,7 @@ pub impl $type_name$DojoEventImpl of dojo::event::Event<$type_name$> {
 }
 
 #[starknet::contract]
-pub mod $contract_name$ {
+pub mod e_$type_name$ {
     use super::$type_name$;
 
     #[storage]

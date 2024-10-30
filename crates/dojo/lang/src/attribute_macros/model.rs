@@ -12,7 +12,6 @@ use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{TypedStablePtr, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
-use convert_case::{Case, Casing};
 use dojo_types::naming;
 use starknet::core::utils::get_selector_from_name;
 
@@ -25,7 +24,7 @@ use crate::derive_macros::{
     extract_derive_attr_names, handle_derive_attrs, DOJO_INTROSPECT_DERIVE, DOJO_PACKED_DERIVE,
 };
 
-const MODEL_CODE_PATCH: &str = include_str!("./patches/model_store.patch.cairo");
+const MODEL_CODE_PATCH: &str = include_str!("./patches/model.patch.cairo");
 const MODEL_FIELD_CODE_PATCH: &str = include_str!("./patches/model_field_store.patch.cairo");
 type ModelParameters = CommonStructParameters;
 
@@ -53,7 +52,6 @@ impl DojoModel {
 
         let model_type = struct_ast.name(db).as_syntax_node().get_text(db).trim().to_string();
 
-        let model_type_snake = model_type.to_case(Case::Snake);
         let model_version = parameters.version.to_string();
 
         for (id, value) in [("name", &model_type)] {
@@ -177,7 +175,6 @@ impl DojoModel {
             MODEL_CODE_PATCH,
             &UnorderedHashMap::from([
                 ("model_type".to_string(), RewriteNode::Text(model_type.clone())),
-                ("model_type_snake".to_string(), RewriteNode::Text(model_type_snake.clone())),
                 ("model_version".to_string(), RewriteNode::Text(model_version)),
                 ("serialized_keys".to_string(), RewriteNode::new_modified(serialized_keys)),
                 ("serialized_values".to_string(), RewriteNode::new_modified(serialized_values)),
