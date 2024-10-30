@@ -16,6 +16,7 @@ use config::{Config, SequencingConfig};
 use dojo_metrics::exporters::prometheus::PrometheusRecorder;
 use dojo_metrics::{Report, Server as MetricsServer};
 use hyper::{Method, Uri};
+use jsonrpsee::server::middleware::proxy_get_request::ProxyGetRequestLayer;
 use jsonrpsee::server::{AllowHosts, ServerBuilder, ServerHandle};
 use jsonrpsee::RpcModule;
 use katana_core::backend::storage::Blockchain;
@@ -33,7 +34,6 @@ use katana_pool::TxPool;
 use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
 use katana_rpc::dev::DevApi;
 use katana_rpc::metrics::RpcServerMetrics;
-// use jsonrpsee::server::middleware::proxy_get_request::ProxyGetRequestLayer;
 use katana_rpc::proxy_get_request::DevnetProxyLayer;
 use katana_rpc::saya::SayaApi;
 use katana_rpc::starknet::forking::ForkedClient;
@@ -308,7 +308,7 @@ pub async fn spawn<EF: ExecutorFactory>(
 
     let middleware = tower::ServiceBuilder::new()
         .option_layer(cors)
-        .layer(DevnetProxyLayer::new("/", "health")?)
+        .layer(ProxyGetRequestLayer::new("/", "health")?)
         .layer(DevnetProxyLayer::new("/account_balance", "dev_accountBalance")?)
         .layer(DevnetProxyLayer::new("/fee_token", "dev_feeToken")?)
         .timeout(Duration::from_secs(20));
