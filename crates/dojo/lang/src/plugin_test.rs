@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use cairo_lang_defs::db::{ext_as_virtual_impl, DefsDatabase, DefsGroup};
+use cairo_lang_defs::db::{DefsDatabase, DefsGroup};
 use cairo_lang_defs::ids::ModuleId;
 use cairo_lang_defs::plugin::MacroPlugin;
 use cairo_lang_filesystem::cfg::{Cfg, CfgSet};
@@ -22,24 +22,26 @@ use cairo_lang_utils::Upcast;
 use smol_str::SmolStr;
 
 use super::BuiltinDojoPlugin;
-use crate::namespace_config::DEFAULT_NAMESPACE_CFG_KEY;
 
 #[salsa::database(DefsDatabase, ParserDatabase, SyntaxDatabase, FilesDatabase)]
-#[allow(missing_debug_implementations)]
 pub struct DatabaseForTesting {
     storage: salsa::Storage<DatabaseForTesting>,
 }
 impl salsa::Database for DatabaseForTesting {}
 impl ExternalFiles for DatabaseForTesting {
-    fn ext_as_virtual(&self, external_id: salsa::InternId) -> VirtualFile {
-        ext_as_virtual_impl(self.upcast(), external_id)
+    fn try_ext_as_virtual(&self, external_id: salsa::InternId) -> Option<VirtualFile> {
+        try_ext_as_virtual_impl(self.upcast(), external_id)
     }
 }
 impl Default for DatabaseForTesting {
     fn default() -> Self {
         let mut res = Self { storage: Default::default() };
         init_files_group(&mut res);
-        res.set_macro_plugins(get_base_plugins());
+        res.set_macro_plugins(vec![
+            Arc::new(FooToBarPlugin),
+            Arc::new(RemoveOrigPlugin),
+            Arc::new(DummyPlugin),
+        ]);
         res
     }
 }

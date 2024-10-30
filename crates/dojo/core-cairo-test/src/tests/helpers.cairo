@@ -5,9 +5,7 @@ use dojo::world::{
 };
 use dojo::model::Model;
 
-use crate::world::{
-    spawn_test_world, NamespaceDef, TestResource, ContractDefTrait
-};
+use crate::world::{spawn_test_world, NamespaceDef, TestResource, ContractDefTrait};
 
 pub const DOJO_NSH: felt252 = 0x309e09669bc1fdc1dd6563a7ef862aa6227c97d099d08cc7b81bad58a7443fa;
 
@@ -192,7 +190,9 @@ pub mod bar {
 
     #[abi(embed_v0)]
     impl IbarImpl of super::Ibar<ContractState> {
-        fn set_foo(self: @ContractState, a: felt252, b: u128) {// set!(self.world.read(), Foo { caller: get_caller_address(), a, b });
+        fn set_foo(
+            self: @ContractState, a: felt252, b: u128
+        ) { // set!(self.world.read(), Foo { caller: get_caller_address(), a, b });
         }
 
         fn delete_foo(self: @ContractState) {
@@ -206,7 +206,9 @@ pub mod bar {
                 );
         }
 
-        fn delete_foo_macro(self: @ContractState, foo: Foo) {//delete!(self.world.read(), Foo { caller: foo.caller, a: foo.a, b: foo.b });
+        fn delete_foo_macro(
+            self: @ContractState, foo: Foo
+        ) { //delete!(self.world.read(), Foo { caller: foo.caller, a: foo.a, b: foo.b });
         }
 
         fn set_char(self: @ContractState, a: felt252, b: u32) {}

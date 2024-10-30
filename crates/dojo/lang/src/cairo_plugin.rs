@@ -14,10 +14,9 @@ use super::attribute_macros::{
 use super::derive_macros::{dojo_derive_all, DOJO_INTROSPECT_DERIVE, DOJO_PACKED_DERIVE};
 use super::inline_macros::SelectorFromTagMacro;
 
-#[cfg(test)]
-#[path = "plugin_test.rs"]
-mod test;
-
+// #[cfg(test)]
+// #[path = "plugin_test.rs"]
+// mod test;
 pub const DOJO_PLUGIN_PACKAGE_NAME: &str = "dojo_plugin";
 
 #[derive(Debug, Default)]

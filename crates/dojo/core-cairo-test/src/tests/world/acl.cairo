@@ -2,8 +2,7 @@ use dojo::utils::bytearray_hash;
 use dojo::world::IWorldDispatcherTrait;
 
 use crate::tests::helpers::{
-    deploy_world, foo_setter, IFooSetterDispatcher, IFooSetterDispatcherTrait,
-    deploy_world_and_foo
+    deploy_world, foo_setter, IFooSetterDispatcher, IFooSetterDispatcherTrait, deploy_world_and_foo
 };
 use crate::tests::expanded::selector_attack::{attacker_model, attacker_contract};
 

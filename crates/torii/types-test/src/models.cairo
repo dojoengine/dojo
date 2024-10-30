@@ -1,4 +1,3 @@
-use core::array::ArrayTrait;
 use starknet::{ContractAddress, ClassHash};
 
 #[derive(Introspect, Drop, Serde)]

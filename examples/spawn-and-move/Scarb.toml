@@ -10,7 +10,7 @@ edition = "2024_07"
 sierra-replace-ids = true
 
 [[target.starknet-contract]]
-build-external-contracts = [ "armory::Flatbow", "bestiary::RiverSkale", "dojo::world::world_contract::world" ]
+build-external-contracts = [ "dojo::world::world_contract::world" ]
 
 [dependencies]
 armory = { path = "../game-lib/armory" }

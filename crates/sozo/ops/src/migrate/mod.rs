@@ -314,7 +314,8 @@ where
             }
 
             for (idx, (casm_class_hash, class)) in classes.into_iter().enumerate() {
-                declarers[idx].add_class(casm_class_hash, class);
+                let declarer_idx = idx % declarers.len();
+                declarers[declarer_idx].add_class(casm_class_hash, class);
             }
 
             let declarers_futures =

@@ -7,7 +7,7 @@ description = "Graphql types testing"
 # website = "https://dojoengine.org"
 # socials.x = "https://twitter.com/dojostarknet"
 
-[namespace]
+[namespaces]
 default = "types_test"
 
 [env]
