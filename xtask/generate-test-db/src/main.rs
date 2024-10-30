@@ -48,7 +48,7 @@ async fn migrate_spawn_and_move(db_path: &Path) -> Result<Manifest> {
     let world_diff =
         WorldDiff::new_from_chain(world_address, world_local, &runner.provider()).await?;
 
-    let manifest = Migration::new(
+    let result = Migration::new(
         world_diff,
         WorldContract::new(world_address, &runner.account(0)),
         txn_config,
@@ -58,7 +58,7 @@ async fn migrate_spawn_and_move(db_path: &Path) -> Result<Manifest> {
     .migrate(&mut MigrationUi::None)
     .await?;
 
-    Ok(manifest)
+    Ok(result.manifest)
 }
 
 async fn migrate_types_test(db_path: &Path) -> Result<Manifest> {
@@ -95,7 +95,7 @@ async fn migrate_types_test(db_path: &Path) -> Result<Manifest> {
     let world_diff =
         WorldDiff::new_from_chain(world_address, world_local, &runner.provider()).await?;
 
-    let manifest = Migration::new(
+    let result = Migration::new(
         world_diff,
         WorldContract::new(world_address, &runner.account(0)),
         txn_config,
@@ -105,7 +105,7 @@ async fn migrate_types_test(db_path: &Path) -> Result<Manifest> {
     .migrate(&mut MigrationUi::None)
     .await?;
 
-    Ok(manifest)
+    Ok(result.manifest)
 }
 
 #[tokio::main]

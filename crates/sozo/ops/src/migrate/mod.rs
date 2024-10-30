@@ -55,6 +55,12 @@ where
     rpc_url: String,
 }
 
+#[derive(Debug)]
+pub struct MigrationResult {
+    pub has_changes: bool,
+    pub manifest: Manifest,
+}
+
 pub enum MigrationUi {
     Spinner(Spinner),
     None,
@@ -108,22 +114,30 @@ where
     pub async fn migrate(
         &self,
         spinner: &mut MigrationUi,
-    ) -> Result<Manifest, MigrationError<A::SignError>> {
+    ) -> Result<MigrationResult, MigrationError<A::SignError>> {
         spinner.update_text("Deploying world...");
-        self.ensure_world().await?;
+        let world_has_changed = self.ensure_world().await?;
 
-        if !self.diff.is_synced() {
+        let resources_have_changed = if !self.diff.is_synced() {
             spinner.update_text("Syncing resources...");
-            self.sync_resources().await?;
-        }
+            self.sync_resources().await?
+        } else {
+            false
+        };
 
         spinner.update_text("Syncing permissions...");
-        self.sync_permissions().await?;
+        let permissions_have_changed = self.sync_permissions().await?;
 
         spinner.update_text("Initializing contracts...");
-        self.initialize_contracts().await?;
+        let contracts_have_changed = self.initialize_contracts().await?;
 
-        Ok(Manifest::new(&self.diff))
+        Ok(MigrationResult {
+            has_changes: world_has_changed
+                || resources_have_changed
+                || permissions_have_changed
+                || contracts_have_changed,
+            manifest: Manifest::new(&self.diff),
+        })
     }
 
     /// Returns whether multicall should be used. By default, it is enabled.
@@ -136,7 +150,9 @@ where
 
     /// For all contracts that are not initialized, initialize them by using the init call arguments
     /// found in the [`ProfileConfig`].
-    async fn initialize_contracts(&self) -> Result<(), MigrationError<A::SignError>> {
+    ///
+    /// Returns true if at least one contract has been initialized, false otherwise.
+    async fn initialize_contracts(&self) -> Result<bool, MigrationError<A::SignError>> {
         let mut invoker = Invoker::new(&self.world.account, self.txn_config);
 
         let init_call_args = if let Some(init_call_args) = &self.profile_config.init_call_args {
@@ -217,13 +233,15 @@ where
             invoker.extends_ordered(ordered_calls);
         }
 
+        let has_changed = !invoker.calls.is_empty();
+
         if self.do_multicall() {
             invoker.multicall().await?;
         } else {
             invoker.invoke_all_sequentially().await?;
         }
 
-        Ok(())
+        Ok(has_changed)
     }
 
     /// Syncs the permissions.
@@ -237,7 +255,9 @@ where
     /// TODO: for error message, we need the name + namespace (or the tag for non-namespace
     /// resources). Change `DojoSelector` with a struct containing the local definition of an
     /// overlay resource, which can contain also writers.
-    async fn sync_permissions(&self) -> Result<(), MigrationError<A::SignError>> {
+    ///
+    /// Returns true if at least one permission has changed, false otherwise.
+    async fn sync_permissions(&self) -> Result<bool, MigrationError<A::SignError>> {
         let mut invoker = Invoker::new(&self.world.account, self.txn_config);
 
         // Only takes the local permissions that are not already set onchain to apply them.
@@ -273,17 +293,21 @@ where
             }
         }
 
+        let has_changed = !invoker.calls.is_empty();
+
         if self.do_multicall() {
             invoker.multicall().await?;
         } else {
             invoker.invoke_all_sequentially().await?;
         }
 
-        Ok(())
+        Ok(has_changed)
     }
 
     /// Syncs the resources by declaring the classes and registering/upgrading the resources.
-    async fn sync_resources(&self) -> Result<(), MigrationError<A::SignError>> {
+    ///
+    /// Returns true if at least one resource has changed, false otherwise.
+    async fn sync_resources(&self) -> Result<bool, MigrationError<A::SignError>> {
         let mut invoker = Invoker::new(&self.world.account, self.txn_config);
 
         // Namespaces must be synced first, since contracts, models and events are namespaced.
@@ -317,6 +341,10 @@ where
                 _ => continue,
             }
         }
+
+        let has_classes = !classes.is_empty();
+        let has_calls = !invoker.calls.is_empty();
+        let has_changed = has_classes || has_calls;
 
         // Declaration can be slow, and can be speed up by using multiple accounts.
         // Since migrator account from `self.world.account` is under the [`ConnectedAccount`] trait,
@@ -365,7 +393,7 @@ where
             invoker.invoke_all_sequentially().await?;
         }
 
-        Ok(())
+        Ok(has_changed)
     }
 
     /// Returns the calls required to sync the namespaces.
@@ -571,9 +599,11 @@ where
     }
 
     /// Ensures the world is declared and deployed if necessary.
-    async fn ensure_world(&self) -> Result<(), MigrationError<A::SignError>> {
+    ///
+    /// Returns true if the world has to be deployed/updated, false otherwise.
+    async fn ensure_world(&self) -> Result<bool, MigrationError<A::SignError>> {
         match &self.diff.world_info.status {
-            WorldStatus::Synced => return Ok(()),
+            WorldStatus::Synced => return Ok(false),
             WorldStatus::NotDeployed => {
                 trace!("Deploying the first world.");
 
@@ -617,7 +647,7 @@ where
             }
         };
 
-        Ok(())
+        Ok(true)
     }
 
     /// Returns the accounts to use for the migration.

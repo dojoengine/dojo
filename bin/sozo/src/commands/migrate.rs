@@ -4,7 +4,7 @@ use colored::Colorize;
 use dojo_utils::{self, TxnConfig};
 use dojo_world::contracts::WorldContract;
 use scarb::core::Config;
-use sozo_ops::migrate::{Migration, MigrationUi};
+use sozo_ops::migrate::{Migration, MigrationResult, MigrationUi};
 use sozo_scarbext::WorkspaceExt;
 use spinoff::{spinner, spinners, Spinner};
 use tracing::trace;
@@ -41,7 +41,8 @@ impl MigrateArgs {
 
         let MigrateArgs { world, starknet, account, .. } = self;
 
-        let frames = spinner!(["⛩️ ", "🥷 ", "🗡️ "], 500);
+        let frames = spinner!(["⛩️ ", "🎃", "👻", "🧟", "💀"], 500);
+        // let frames = spinner!(["⛩️ ", "🥷 ", "🗡️ "], 500);
         let mut spinner =
             MigrationUi::Spinner(Spinner::new(frames, "Evaluating world diff...", None));
 
@@ -62,16 +63,21 @@ impl MigrateArgs {
                 rpc_url,
             );
 
-            let manifest = migration.migrate(&mut spinner).await.context("Migration failed.")?;
+            let MigrationResult { manifest, has_changes } =
+                migration.migrate(&mut spinner).await.context("Migration failed.")?;
 
             spinner.update_text("Writing manifest...");
             ws.write_manifest_profile(manifest).context("Failed to write manifest.")?;
 
             let colored_address = format!("{:#066x}", world_address).green();
-            let end_text =
-                format!("Migration successful with world at address {}", colored_address);
 
-            spinner.stop_and_persist("⛩️ ", Box::leak(end_text.into_boxed_str()));
+            let (symbol, end_text) = if has_changes {
+                ("⛩️ ", format!("Migration successful with world at address {}", colored_address))
+            } else {
+                ("🎃", format!("No changes for world at address {:#066x}", world_address))
+            };
+
+            spinner.stop_and_persist(symbol, Box::leak(end_text.into_boxed_str()));
 
             Ok(())
         })
