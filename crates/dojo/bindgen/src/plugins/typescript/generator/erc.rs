@@ -34,11 +34,11 @@ const ERC_TORII_TYPES: &str = "\n\t\tERC__Balance: ERC__Balance,\n\t\tERC__Token
                                ERC__Token,\n\t\tERC__Transfer: ERC__Transfer,";
 const ERC_TORII_INIT: &str = "
 \t\tERC__Balance: {
-\t\t\tfieldorder: ['balance', 'type', 'tokenmetadata'],
+\t\t\tfieldOrder: ['balance', 'type', 'tokenmetadata'],
 \t\t\tbalance: '',
 \t\t\ttype: 'ERC20',
 \t\t\ttokenMetadata: {
-\t\t\t\tfieldorder: ['name', 'symbol', 'tokenId', 'decimals', 'contractAddress'],
+\t\t\t\tfieldOrder: ['name', 'symbol', 'tokenId', 'decimals', 'contractAddress'],
 \t\t\t\tname: '',
 \t\t\t\tsymbol: '',
 \t\t\t\ttokenId: '',

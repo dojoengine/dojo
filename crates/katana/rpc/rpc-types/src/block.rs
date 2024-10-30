@@ -95,6 +95,19 @@ pub enum MaybePendingBlockWithTxs {
     Block(BlockWithTxs),
 }
 
+impl From<starknet::core::types::MaybePendingBlockWithTxs> for MaybePendingBlockWithTxs {
+    fn from(value: starknet::core::types::MaybePendingBlockWithTxs) -> Self {
+        match value {
+            starknet::core::types::MaybePendingBlockWithTxs::PendingBlock(block) => {
+                MaybePendingBlockWithTxs::Pending(PendingBlockWithTxs(block))
+            }
+            starknet::core::types::MaybePendingBlockWithTxs::Block(block) => {
+                MaybePendingBlockWithTxs::Block(BlockWithTxs(block))
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct BlockWithTxHashes(starknet::core::types::BlockWithTxHashes);
@@ -181,6 +194,19 @@ pub enum MaybePendingBlockWithTxHashes {
     Block(BlockWithTxHashes),
 }
 
+impl From<starknet::core::types::MaybePendingBlockWithTxHashes> for MaybePendingBlockWithTxHashes {
+    fn from(value: starknet::core::types::MaybePendingBlockWithTxHashes) -> Self {
+        match value {
+            starknet::core::types::MaybePendingBlockWithTxHashes::PendingBlock(block) => {
+                MaybePendingBlockWithTxHashes::Pending(PendingBlockWithTxHashes(block))
+            }
+            starknet::core::types::MaybePendingBlockWithTxHashes::Block(block) => {
+                MaybePendingBlockWithTxHashes::Block(BlockWithTxHashes(block))
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct BlockHashAndNumber(starknet::core::types::BlockHashAndNumber);
@@ -203,6 +229,7 @@ pub struct BlockWithReceipts(starknet::core::types::BlockWithReceipts);
 
 impl BlockWithReceipts {
     pub fn new(
+        hash: BlockHash,
         header: Header,
         finality_status: FinalityStatus,
         receipts: impl Iterator<Item = (TxWithHash, Receipt)>,
@@ -230,7 +257,7 @@ impl BlockWithReceipts {
                 FinalityStatus::AcceptedOnL1 => BlockStatus::AcceptedOnL1,
                 FinalityStatus::AcceptedOnL2 => BlockStatus::AcceptedOnL2,
             },
-            block_hash: header.parent_hash,
+            block_hash: hash,
             parent_hash: header.parent_hash,
             block_number: header.number,
             new_root: header.state_root,
@@ -296,4 +323,17 @@ impl PendingBlockWithReceipts {
 pub enum MaybePendingBlockWithReceipts {
     Pending(PendingBlockWithReceipts),
     Block(BlockWithReceipts),
+}
+
+impl From<starknet::core::types::MaybePendingBlockWithReceipts> for MaybePendingBlockWithReceipts {
+    fn from(value: starknet::core::types::MaybePendingBlockWithReceipts) -> Self {
+        match value {
+            starknet::core::types::MaybePendingBlockWithReceipts::PendingBlock(block) => {
+                MaybePendingBlockWithReceipts::Pending(PendingBlockWithReceipts(block))
+            }
+            starknet::core::types::MaybePendingBlockWithReceipts::Block(block) => {
+                MaybePendingBlockWithReceipts::Block(BlockWithReceipts(block))
+            }
+        }
+    }
 }

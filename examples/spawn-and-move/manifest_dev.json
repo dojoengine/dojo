@@ -845,44 +845,44 @@
   "models": [
     {
       "members": [],
-      "class_hash": "0x7c302cf579cfd99ea6da86438b76d6fedb9f946a5db9dbb72fa0fa2f8dd414c",
+      "class_hash": "0x51b0ffe6e8ece3d15b6fabce1f07dab1a1233e220da151375a2df149337be02",
       "tag": "Message"
     },
     {
       "members": [],
-      "class_hash": "0x31c53700cd15093d13caf92b242165ddb944e1e5401f59d0018a7520f596e8e",
+      "class_hash": "0x1fd7e174290df3e0526cfaaad57d42830221fa18bb95ff2758efc669994bfb9",
       "tag": "MockToken"
     },
     {
       "members": [],
-      "class_hash": "0x7b5e031588dd6afb39a2e4058e6c7e2ebc3c7f5e0c4837af59f4079845f92c2",
+      "class_hash": "0x3f64a8d029dd11345095690578548dd96502e39a7df92f3ccc32d3bb9fd76e7",
       "tag": "Moves"
     },
     {
       "members": [],
-      "class_hash": "0x167c0922bf6a30f9ef82bab31631d91bfa06dfea998c20fcc724ce0246db9a7",
+      "class_hash": "0x725eafc8b33454db8df462f4dda1509ab6183b6b075e04467e1629cc5f0c047",
       "tag": "PlayerConfig"
     },
     {
       "members": [],
-      "class_hash": "0x4865781f4cad5234cd533d0b92c369096e5c44491bf70d599d1a362f188dc3d",
+      "class_hash": "0x6be5880fe4240c8ddf9d5db79c004e46c17aa7804df1f4aa2824d0748fa7056",
       "tag": "Position"
     },
     {
       "members": [],
-      "class_hash": "0xa66b51c1f2f85bc757b1d6c4b9b30e78c6c6b145c954e39fd8200c5c5b0ad9",
+      "class_hash": "0x5b6daaed2b92e067b3d7c8bef42c5920ba35d13dfc35bf3de6a89953c7fceb0",
       "tag": "ServerProfile"
     }
   ],
   "events": [
     {
       "members": [],
-      "class_hash": "0x5ea8e911dc72cefcba51b5db68d16c59e5fc2393e49772002cad032fd97df57",
+      "class_hash": "0x37920709310be24ce9be9993d3f17b632a080eef9d4383b03fe251189696cc2",
       "tag": "ContractInitialized"
     },
     {
       "members": [],
-      "class_hash": "0x2c9386db106e05c4a6db2476ce16bca166def16218a9e2890d3ecbc7e5cf525",
+      "class_hash": "0x22c33f3c7e525a21cd3651326f74c61deff6d75e26e06725f53ac2dfd4646fa",
       "tag": "Moved"
     }
   ]

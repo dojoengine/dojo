@@ -48,10 +48,12 @@ where
     }
 
     pub fn build_with_receipts(self) -> ProviderResult<Option<BlockWithReceipts>> {
-        let Some(block) = BlockProvider::block(&self.provider, self.block_id)? else {
+        let Some(hash) = BlockHashProvider::block_hash_by_id(&self.provider, self.block_id)? else {
             return Ok(None);
         };
 
+        let block = BlockProvider::block(&self.provider, self.block_id)?
+            .expect("should exist if block exists");
         let finality_status = BlockStatusProvider::block_status(&self.provider, self.block_id)?
             .expect("should exist if block exists");
         let receipts = ReceiptProvider::receipts_by_block(&self.provider, self.block_id)?
@@ -59,6 +61,6 @@ where
 
         let receipts_with_txs = block.body.into_iter().zip(receipts);
 
-        Ok(Some(BlockWithReceipts::new(block.header, finality_status, receipts_with_txs)))
+        Ok(Some(BlockWithReceipts::new(hash, block.header, finality_status, receipts_with_txs)))
     }
 }

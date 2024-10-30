@@ -397,6 +397,12 @@ impl From<TxWithHash> for Tx {
     }
 }
 
+impl From<starknet::core::types::Transaction> for Tx {
+    fn from(value: starknet::core::types::Transaction) -> Self {
+        Self(value)
+    }
+}
+
 impl DeployAccountTxResult {
     pub fn new(transaction_hash: TxHash, contract_address: ContractAddress) -> Self {
         Self(DeployAccountTransactionResult {
