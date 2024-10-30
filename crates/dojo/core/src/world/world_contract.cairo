@@ -818,6 +818,8 @@ pub mod world {
             }
         }
 
+        // set_entities_batch. (check acl once, set batch).
+
         fn set_entity(
             ref self: ContractState,
             model_selector: felt252,

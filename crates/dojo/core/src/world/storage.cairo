@@ -8,12 +8,11 @@ use dojo::meta::Layout;
 use dojo::utils::{
     entity_id_from_key, entity_id_from_keys, serialize_inline, find_model_field_layout
 };
-use starknet::ContractAddress;
+use starknet::{ContractAddress, ClassHash};
 
-#[derive(Drop)]
+#[derive(Drop, Copy)]
 pub struct WorldStorage {
     pub dispatcher: IWorldDispatcher,
-    pub namespace: ByteArray,
     pub namespace_hash: felt252,
 }
 
@@ -22,20 +21,19 @@ pub impl WorldStorageInternalImpl of WorldStorageTrait {
     fn new(world: IWorldDispatcher, namespace: ByteArray) -> WorldStorage {
         let namespace_hash = dojo::utils::bytearray_hash(@namespace);
 
-        WorldStorage { dispatcher: world, namespace, namespace_hash }
+        WorldStorage { dispatcher: world, namespace_hash }
     }
 
-    fn set_namespace(ref self: WorldStorage, namespace: ByteArray) {
-        self.namespace = namespace.clone();
-        self.namespace_hash = dojo::utils::bytearray_hash(@namespace);
+    fn set_namespace(ref self: WorldStorage, namespace: @ByteArray) {
+        self.namespace_hash = dojo::utils::bytearray_hash(namespace);
     }
 
     fn dns(
-        self: @WorldStorage, namespace: @ByteArray, contract_name: @ByteArray
-    ) -> Option<ContractAddress> {
+        self: @WorldStorage, contract_name: @ByteArray
+    ) -> Option<(ContractAddress, ClassHash)> {
         match (*self.dispatcher)
-            .resource(dojo::utils::selector_from_names(namespace, contract_name)) {
-            Resource::Contract((contract_address, _class_hash)) => Option::Some(contract_address),
+            .resource(dojo::utils::selector_from_namespace_and_name(*self.namespace_hash, contract_name)) {
+            Resource::Contract((contract_address, class_hash)) => Option::Some((contract_address, class_hash.try_into().unwrap())),
             _ => Option::None
         }
     }
