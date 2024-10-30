@@ -3180,34 +3180,28 @@ impl cainome::cairo_serde::CairoSerde for Resource {
             Resource::Model(val) => {
                 let mut temp = vec![];
                 temp.extend(usize::cairo_serialize(&0usize));
-                temp.extend(
-                    <(
-                        cainome::cairo_serde::ContractAddress,
-                        starknet::core::types::Felt,
-                    )>::cairo_serialize(val),
-                );
+                temp.extend(<(
+                    cainome::cairo_serde::ContractAddress,
+                    starknet::core::types::Felt,
+                )>::cairo_serialize(val));
                 temp
             }
             Resource::Event(val) => {
                 let mut temp = vec![];
                 temp.extend(usize::cairo_serialize(&1usize));
-                temp.extend(
-                    <(
-                        cainome::cairo_serde::ContractAddress,
-                        starknet::core::types::Felt,
-                    )>::cairo_serialize(val),
-                );
+                temp.extend(<(
+                    cainome::cairo_serde::ContractAddress,
+                    starknet::core::types::Felt,
+                )>::cairo_serialize(val));
                 temp
             }
             Resource::Contract(val) => {
                 let mut temp = vec![];
                 temp.extend(usize::cairo_serialize(&2usize));
-                temp.extend(
-                    <(
-                        cainome::cairo_serde::ContractAddress,
-                        starknet::core::types::Felt,
-                    )>::cairo_serialize(val),
-                );
+                temp.extend(<(
+                    cainome::cairo_serde::ContractAddress,
+                    starknet::core::types::Felt,
+                )>::cairo_serialize(val));
                 temp
             }
             Resource::Namespace(val) => {

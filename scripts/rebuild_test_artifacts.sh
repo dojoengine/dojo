@@ -4,17 +4,6 @@
 # cairo artifacts ONLY if they don't exist.
 # This script gives an easy way to remove those artifacts.
 
-# some formatting:
-cargo +nightly-2024-08-28 fmt --all -- "$@"
-
-scarb --manifest-path examples/spawn-and-move/Scarb.toml fmt
-scarb --manifest-path examples/simple/Scarb.toml fmt
-scarb --manifest-path crates/dojo/core/Scarb.toml fmt
-scarb --manifest-path crates/dojo/core-cairo-test/Scarb.toml fmt
-
-# A Katana instance must be running on http://localhost:8000.
-# cargo run --bin katana
-
 cargo build -r --bin sozo
 
 # Cleanup
@@ -23,7 +12,7 @@ rm -rf crates/torii/types-test/target
 rm -rf crates/dojo/lang/src/manifest_test_data/compiler_cairo/target
 
 # Ensure the world bindings are up to date.
-cargo run --bin dojo-world-abigen -r
+    cargo run --bin dojo-world-abigen -r
 
 # Fix the cairo test to re-generate the code that is expected to be tested.
 # CAIRO_FIX_TESTS=1 cargo test --package dojo-lang plugin && \
@@ -41,3 +30,11 @@ rm -rf /tmp/spawn-and-move-db
 rm -rf /tmp/types-test-db
 tar xzf spawn-and-move-db.tar.gz -C /tmp/
 tar xzf types-test-db.tar.gz -C /tmp/
+
+# some formatting:
+cargo +nightly-2024-08-28 fmt --all -- "$@"
+
+scarb --manifest-path examples/spawn-and-move/Scarb.toml fmt
+scarb --manifest-path examples/simple/Scarb.toml fmt
+scarb --manifest-path crates/dojo/core/Scarb.toml fmt
+scarb --manifest-path crates/dojo/core-cairo-test/Scarb.toml fmt

@@ -81,18 +81,50 @@ fn generate_bindings(
 
     abigen.generate()?.write_to_file(&tmp_file)?;
 
+    // The formatting is not the same we need nighty.
+    Command::new("rustfmt")
+        .arg("+nightly-2024-08-28")
+        .arg(&tmp_file)
+        .status()
+        .expect("Failed to run rustfmt on generated bindings");
+
     let out_path = format!("{OUT_DIR}/{bindings_filename}");
 
     if is_check_only {
-        Command::new("rustfmt")
-            .arg(&tmp_file)
-            .status()
-            .expect("Failed to run rustfmt on generated bindings");
+        let generated_bindings = fs::read_to_string(tmp_file)?;
+        fs::write("/tmp/generated_bindings.rs", generated_bindings.clone())?;
 
-        let generated_bindings = fs::read_to_string(tmp_file)?.replace(char::is_whitespace, "");
+        let generated_bindings = fs::read_to_string(format!("/tmp/generated_bindings.rs"))?
+            .replace(char::is_whitespace, "");
 
         if Path::new(&out_path).exists() {
-            let existing_bindings = fs::read_to_string(out_path)?.replace(char::is_whitespace, "");
+            let existing_bindings = fs::read_to_string(out_path)?;
+            fs::write("/tmp/existing_bindings.rs", existing_bindings.clone())?;
+
+            Command::new("rustfmt")
+                .arg("+nightly-2024-08-28")
+                .arg(&format!("/tmp/existing_bindings.rs"))
+                .status()
+                .expect("Failed to run rustfmt on generated bindings");
+
+            let existing_bindings = fs::read_to_string(format!("/tmp/existing_bindings.rs"))?
+                .replace(char::is_whitespace, "");
+
+            let mut first_diff_index = None;
+            for (i, (existing_char, generated_char)) in
+                existing_bindings.chars().zip(generated_bindings.chars()).enumerate()
+            {
+                if existing_char != generated_char {
+                    first_diff_index = Some(i);
+                    break;
+                }
+            }
+
+            if let Some(index) = first_diff_index {
+                println!("First differing character is at index: {}", index);
+            } else {
+                println!("No differing characters found.");
+            }
 
             if existing_bindings != generated_bindings {
                 return Err(anyhow!(
