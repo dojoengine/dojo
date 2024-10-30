@@ -4,7 +4,7 @@ use cainome::rs::abigen_legacy;
 use dojo_test_utils::sequencer::{get_default_test_config, TestSequencer};
 use katana_node::config::fork::ForkingConfig;
 use katana_node::config::SequencingConfig;
-use katana_primitives::block::{BlockHash, BlockHashOrNumber, BlockIdOrTag, BlockNumber};
+use katana_primitives::block::{BlockHash, BlockHashOrNumber, BlockIdOrTag, BlockNumber, BlockTag};
 use katana_primitives::chain::NamedChainId;
 use katana_primitives::event::MaybeForkedContinuationToken;
 use katana_primitives::genesis::constant::DEFAULT_ETH_FEE_TOKEN_ADDRESS;
@@ -83,7 +83,7 @@ async fn can_fork() -> Result<()> {
 }
 
 #[tokio::test]
-async fn forked_blocks_from_num() -> Result<()> {
+async fn get_blocks_from_num() -> Result<()> {
     use starknet::core::types::{
         MaybePendingBlockWithReceipts, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
     };
@@ -203,7 +203,7 @@ async fn forked_blocks_from_num() -> Result<()> {
 }
 
 #[tokio::test]
-async fn forked_blocks_from_hash() -> Result<()> {
+async fn get_blocks_from_hash() -> Result<()> {
     use starknet::core::types::{
         MaybePendingBlockWithReceipts, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
     };
@@ -323,7 +323,7 @@ async fn forked_blocks_from_hash() -> Result<()> {
 }
 
 #[tokio::test]
-async fn forked_transactions() -> Result<()> {
+async fn get_transactions() -> Result<()> {
     let (_sequencer, provider, local_only_data) = setup_test().await;
 
     // -----------------------------------------------------------------------
@@ -388,17 +388,20 @@ async fn forked_transactions() -> Result<()> {
 }
 
 #[tokio::test]
-async fn forked_events() -> Result<()> {
-    let (_sequencer, provider, local_only_data) = setup_test().await;
+async fn get_events_partially_from_forked() -> Result<()> {
+    let (_sequencer, provider, _) = setup_test().await;
     let forked_provider = JsonRpcClient::new(HttpTransport::new(Url::parse(SEPOLIA_URL)?));
 
     // -----------------------------------------------------------------------
+    // Fetch events partially from forked block.
+    //
+    // Here we want to make sure the continuation token is working as expected.
 
     let filter = EventFilter {
         keys: None,
         address: None,
-        to_block: Some(BlockIdOrTag::Number(FORK_BLOCK_NUMBER - 2)),
-        from_block: Some(BlockIdOrTag::Number(FORK_BLOCK_NUMBER - 2)),
+        to_block: Some(BlockIdOrTag::Number(FORK_BLOCK_NUMBER)),
+        from_block: Some(BlockIdOrTag::Number(FORK_BLOCK_NUMBER)),
     };
 
     // events fetched directly from the forked chain.
@@ -413,7 +416,7 @@ async fn forked_events() -> Result<()> {
     assert_matches!(token, MaybeForkedContinuationToken::Forked(_));
 
     for (a, b) in events.iter().zip(forked_events) {
-        assert_eq!(a.block_number, Some(FORK_BLOCK_NUMBER - 2));
+        assert_eq!(a.block_number, Some(FORK_BLOCK_NUMBER));
         assert_eq!(a.block_number, b.block_number);
         assert_eq!(a.block_hash, b.block_hash);
         assert_eq!(a.transaction_hash, b.transaction_hash);
@@ -422,7 +425,56 @@ async fn forked_events() -> Result<()> {
         assert_eq!(a.data, b.data);
     }
 
+    Ok(())
+}
+
+#[tokio::test]
+async fn get_events_all_from_forked() -> Result<()> {
+    let (_sequencer, provider, _) = setup_test().await;
+    let forked_provider = JsonRpcClient::new(HttpTransport::new(Url::parse(SEPOLIA_URL)?));
+
     // -----------------------------------------------------------------------
+    // Fetch events from the forked block (ie `FORK_BLOCK_NUMBER`) only.
+    //
+    // Based on https://sepolia.voyager.online/block/0x208950cfcbba73ecbda1c14e4d58d66a8d60655ea1b9dcf07c16014ae8a93cd, there are only 89 events in the `FORK_BLOCK_NUMBER` block.
+    // So we set the chunk size to 100 to ensure we get all the events in one request.
+
+    let filter = EventFilter {
+        keys: None,
+        address: None,
+        to_block: Some(BlockIdOrTag::Number(FORK_BLOCK_NUMBER)),
+        from_block: Some(BlockIdOrTag::Number(FORK_BLOCK_NUMBER)),
+    };
+
+    // events fetched directly from the forked chain.
+    let result = forked_provider.get_events(filter.clone(), None, 100).await?;
+    let events = result.events;
+
+    // events fetched through the forked katana.
+    let result = provider.get_events(filter, None, 100).await?;
+    let forked_events = result.events;
+
+    assert!(result.continuation_token.is_none());
+
+    for (a, b) in events.iter().zip(forked_events) {
+        assert_eq!(a.block_number, Some(FORK_BLOCK_NUMBER));
+        assert_eq!(a.block_number, b.block_number);
+        assert_eq!(a.block_hash, b.block_hash);
+        assert_eq!(a.transaction_hash, b.transaction_hash);
+        assert_eq!(a.from_address, b.from_address);
+        assert_eq!(a.keys, b.keys);
+        assert_eq!(a.data, b.data);
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn get_events_local() -> Result<()> {
+    let (_sequencer, provider, local_only_data) = setup_test().await;
+
+    // -----------------------------------------------------------------------
+    // Get events from the local chain block.
 
     let filter = EventFilter {
         keys: None,
@@ -436,12 +488,63 @@ async fn forked_events() -> Result<()> {
 
     // compare the events
 
-    for (event, (block, tx)) in forked_events.iter().zip(local_only_data) {
+    for (event, (block, tx)) in forked_events.iter().zip(local_only_data.iter()) {
         let (block_number, block_hash) = block;
 
-        assert_eq!(event.transaction_hash, tx);
-        assert_eq!(event.block_hash, Some(block_hash));
-        assert_eq!(event.block_number, Some(block_number));
+        assert_eq!(event.transaction_hash, *tx);
+        assert_eq!(event.block_hash, Some(*block_hash));
+        assert_eq!(event.block_number, Some(*block_number));
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn get_events_forked_and_local_boundary() -> Result<()> {
+    let (_sequencer, provider, local_only_data) = setup_test().await;
+    let forked_provider = JsonRpcClient::new(HttpTransport::new(Url::parse(SEPOLIA_URL)?));
+
+    // -----------------------------------------------------------------------
+    // Get events from that cross the boundaries between forked and local chain block.
+    //
+    // Total events in `FORK_BLOCK_NUMBER` block is 89. While `FORK_BLOCK_NUMBER` + 1 is 1 ∴ 89 + 1
+    // = 90 events.
+
+    let filter = EventFilter {
+        keys: None,
+        address: None,
+        to_block: Some(BlockIdOrTag::Number(FORK_BLOCK_NUMBER)),
+        from_block: Some(BlockIdOrTag::Number(FORK_BLOCK_NUMBER)),
+    };
+
+    // events fetched directly from the forked chain.
+    let result = forked_provider.get_events(filter.clone(), None, 100).await?;
+    let events = result.events;
+
+    let filter = EventFilter {
+        keys: None,
+        address: None,
+        to_block: Some(BlockIdOrTag::Tag(BlockTag::Latest)),
+        from_block: Some(BlockIdOrTag::Number(FORK_BLOCK_NUMBER)),
+    };
+
+    let result = provider.get_events(filter, None, 100).await?;
+    let boundary_events = result.events;
+
+    // because we're pointing to latest block, we should not have anymore continuation token.
+    assert!(result.continuation_token.is_none());
+
+    let forked_events = &boundary_events[..89];
+    let local_events = &boundary_events[89..];
+
+    similar_asserts::assert_eq!(forked_events, events);
+
+    for (event, (block, tx)) in local_events.iter().zip(local_only_data.iter()) {
+        let (block_number, block_hash) = block;
+
+        assert_eq!(event.transaction_hash, *tx);
+        assert_eq!(event.block_hash, Some(*block_hash));
+        assert_eq!(event.block_number, Some(*block_number));
     }
 
     Ok(())
