@@ -103,8 +103,8 @@ async fn print_banner(ws: &Workspace<'_>, starknet: &StarknetOptions) -> Result<
     let (provider, rpc_url) = starknet.provider(None)?;
 
     let chain_id = provider.chain_id().await?;
-    let chain_id =
-        parse_cairo_short_string(&chain_id).with_context(|| "💀 Cannot parse chain_id as string")?;
+    let chain_id = parse_cairo_short_string(&chain_id)
+        .with_context(|| "💀 Cannot parse chain_id as string")?;
 
     let banner = Banner {
         profile: ws.current_profile().expect("💀 Scarb profile should be set.").to_string(),
