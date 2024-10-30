@@ -22,7 +22,7 @@ pub mod $name$ {
 
     #[generate_trait]
     impl $name$InternalImpl of $name$InternalTrait {
-        fn world(self: @ContractState, namespace: ByteArray) -> dojo::world::storage::WorldStorage {
+        fn world(self: @ContractState, namespace: @ByteArray) -> dojo::world::storage::WorldStorage {
             dojo::world::WorldStorageTrait::new(self.world_provider.world_dispatcher(), namespace)
         }
     }

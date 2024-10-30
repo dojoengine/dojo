@@ -18,8 +18,8 @@ pub struct WorldStorage {
 
 #[generate_trait]
 pub impl WorldStorageInternalImpl of WorldStorageTrait {
-    fn new(world: IWorldDispatcher, namespace: ByteArray) -> WorldStorage {
-        let namespace_hash = dojo::utils::bytearray_hash(@namespace);
+    fn new(world: IWorldDispatcher, namespace: @ByteArray) -> WorldStorage {
+        let namespace_hash = dojo::utils::bytearray_hash(namespace);
 
         WorldStorage { dispatcher: world, namespace_hash }
     }
@@ -28,14 +28,20 @@ pub impl WorldStorageInternalImpl of WorldStorageTrait {
         self.namespace_hash = dojo::utils::bytearray_hash(namespace);
     }
 
-    fn dns(
-        self: @WorldStorage, contract_name: @ByteArray
-    ) -> Option<(ContractAddress, ClassHash)> {
+    fn dns(self: @WorldStorage, contract_name: @ByteArray) -> Option<(ContractAddress, ClassHash)> {
         match (*self.dispatcher)
-            .resource(dojo::utils::selector_from_namespace_and_name(*self.namespace_hash, contract_name)) {
-            Resource::Contract((contract_address, class_hash)) => Option::Some((contract_address, class_hash.try_into().unwrap())),
+            .resource(
+                dojo::utils::selector_from_namespace_and_name(*self.namespace_hash, contract_name)
+            ) {
+            Resource::Contract((
+                contract_address, class_hash
+            )) => Option::Some((contract_address, class_hash.try_into().unwrap())),
             _ => Option::None
         }
+    }
+
+    fn contract_selector(self: @WorldStorage, contract_name: @ByteArray) -> felt252 {
+        dojo::utils::selector_from_namespace_and_name(*self.namespace_hash, contract_name)
     }
 }
 

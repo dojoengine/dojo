@@ -67,7 +67,7 @@ pub mod actions {
                 favorite_item: Option::None
             };
 
-            let mut world = self.world("ns");
+            let mut world = self.world(@"ns");
 
             if n_models == 4 {
                 world.write_model(@moves);
@@ -201,7 +201,7 @@ pub mod actions {
         /// Use the default namespace "ns". A function is handy since the ByteArray
         /// can't be const.
         fn world_default(self: @ContractState) -> dojo::world::WorldStorage {
-            self.world("ns")
+            self.world(@"ns")
         }
     }
 }
@@ -273,7 +273,7 @@ mod tests {
         let ndef = namespace_def();
         let mut world = spawn_test_world([ndef].span());
 
-        let actions_system_addr = world.dns(@"ns", @"actions").unwrap();
+        let (actions_system_addr, _) = world.dns(@"actions").unwrap();
         let actions_system = IActionsDispatcher { contract_address: actions_system_addr };
 
         actions_system.spawn();

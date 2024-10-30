@@ -154,5 +154,5 @@ pub fn spawn_test_world(namespaces_defs: Span<NamespaceDef>) -> WorldStorage {
             }
     };
 
-    WorldStorageTrait::new(world, first_namespace.unwrap())
+    WorldStorageTrait::new(world, @first_namespace.unwrap())
 }

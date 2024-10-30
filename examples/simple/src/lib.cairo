@@ -113,13 +113,13 @@ pub mod c2 {}
 mod tests {
     use dojo::model::ModelStorage;
     use dojo_cairo_test::{spawn_test_world, NamespaceDef, TestResource, ContractDefTrait};
-    use super::{c1, m, M};
+    use super::{c1, m_M, M};
 
     #[test]
     fn test_1() {
         let ndef = NamespaceDef {
             namespace: "ns", resources: [
-                TestResource::Model(m::TEST_CLASS_HASH.try_into().unwrap()),
+                TestResource::Model(m_M::TEST_CLASS_HASH.try_into().unwrap()),
                 TestResource::Contract(
                     ContractDefTrait::new(c1::TEST_CLASS_HASH, "c1")
                         .with_init_calldata([0xff].span())

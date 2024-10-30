@@ -89,7 +89,7 @@ pub mod foo_setter {
     #[abi(embed_v0)]
     impl IFooSetterImpl of IFooSetter<ContractState> {
         fn set_foo(ref self: ContractState, a: felt252, b: u128) {
-            let mut world = self.world("dojo");
+            let mut world = self.world(@"dojo");
             world.write_model(@Foo { caller: starknet::get_caller_address(), a, b });
         }
     }
