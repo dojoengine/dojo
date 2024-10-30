@@ -885,6 +885,11 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
                         // up until the forked block
                         let to = if to <= forked_block { to } else { forked_block };
 
+                        // basically this is to determine that if the token is a katana native
+                        // token, then we can skip fetching from the forked
+                        // network. but if theres no token at all, or the
+                        // token is a forked token, then we need to fetch from the forked network.
+                        //
                         // TODO: simplify this
                         let forked_token = Some(continuation_token.clone()).and_then(|t| match t {
                             None => Some(None),
@@ -954,6 +959,11 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
                         // pointing to a locally block
                         let to = forked_block;
 
+                        // basically this is to determine that if the token is a katana native
+                        // token, then we can skip fetching from the forked
+                        // network. but if theres no token at all, or the
+                        // token is a forked token, then we need to fetch from the forked network.
+                        //
                         // TODO: simplify this
                         let forked_token = Some(continuation_token.clone()).and_then(|t| match t {
                             None => Some(None),
