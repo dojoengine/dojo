@@ -6,9 +6,9 @@ use std::sync::Arc;
 use anyhow::{anyhow, Context, Result};
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{EnumOption, Member, Struct, Ty};
-use dojo_world::contracts::abi::model::Layout;
+use dojo_world::config::WorldMetadata;
+use dojo_world::contracts::abigen::model::Layout;
 use dojo_world::contracts::naming::compute_selector_from_names;
-use dojo_world::metadata::WorldMetadata;
 use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Sqlite};
 use starknet::core::types::{Event, Felt, InvokeTransaction, Transaction};
@@ -17,8 +17,8 @@ use tokio::sync::mpsc::UnboundedSender;
 use utils::felts_to_sql_string;
 
 use crate::executor::{
-    Argument, DeleteEntityQuery, QueryMessage, QueryType, ResetCursorsQuery, SetHeadQuery,
-    UpdateCursorsQuery,
+    Argument, DeleteEntityQuery, EventMessageQuery, QueryMessage, QueryType, ResetCursorsQuery,
+    SetHeadQuery, UpdateCursorsQuery,
 };
 use crate::types::ContractType;
 use crate::utils::utc_dt_string_from_timestamp;
@@ -392,6 +392,7 @@ impl Sql {
         entity: Ty,
         event_id: &str,
         block_timestamp: u64,
+        is_historical: bool,
     ) -> Result<()> {
         let keys = if let Ty::Struct(s) = &entity {
             let mut keys = Vec::new();
@@ -410,6 +411,8 @@ impl Sql {
         let model_id = format!("{:#x}", compute_selector_from_names(model_namespace, model_name));
 
         let keys_str = felts_to_sql_string(&keys);
+        let block_timestamp_str = utc_dt_string_from_timestamp(block_timestamp);
+
         let insert_entities = "INSERT INTO event_messages (id, keys, event_id, executed_at) \
                                VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET \
                                updated_at=CURRENT_TIMESTAMP, executed_at=EXCLUDED.executed_at, \
@@ -418,17 +421,19 @@ impl Sql {
             insert_entities.to_string(),
             vec![
                 Argument::String(entity_id.clone()),
-                Argument::String(keys_str),
+                Argument::String(keys_str.clone()),
                 Argument::String(event_id.to_string()),
-                Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
+                Argument::String(block_timestamp_str.clone()),
             ],
-            QueryType::EventMessage(entity.clone()),
-        ))?;
-        self.executor.send(QueryMessage::other(
-            "INSERT INTO event_model (entity_id, model_id) VALUES (?, ?) ON CONFLICT(entity_id, \
-             model_id) DO NOTHING"
-                .to_string(),
-            vec![Argument::String(entity_id.clone()), Argument::String(model_id.clone())],
+            QueryType::EventMessage(EventMessageQuery {
+                entity_id: entity_id.clone(),
+                model_id: model_id.clone(),
+                keys_str: keys_str.clone(),
+                event_id: event_id.to_string(),
+                block_timestamp: block_timestamp_str.clone(),
+                ty: entity.clone(),
+                is_historical,
+            }),
         ))?;
 
         let path = vec![namespaced_name];

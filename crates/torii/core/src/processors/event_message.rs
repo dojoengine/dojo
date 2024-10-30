@@ -1,12 +1,12 @@
 use anyhow::{Error, Result};
 use async_trait::async_trait;
+use dojo_world::contracts::abigen::world::Event as WorldEvent;
 use dojo_world::contracts::world::WorldContractReader;
-use starknet::core::types::Event;
+use starknet::core::types::{Event, Felt};
 use starknet::providers::Provider;
 use tracing::info;
 
 use super::EventProcessor;
-use crate::processors::MODEL_INDEX;
 use crate::sql::Sql;
 
 pub(crate) const LOG_TARGET: &str = "torii_core::processors::event_message";
@@ -20,18 +20,10 @@ where
     P: Provider + Send + Sync + std::fmt::Debug,
 {
     fn event_key(&self) -> String {
-        "".to_string()
+        "EventEmitted".to_string()
     }
 
-    fn validate(&self, event: &Event) -> bool {
-        // we expect at least 3 keys
-        // 1: event selector
-        // 2: model keys, arbitrary length
-        // last key: system key
-        if event.keys.len() < 3 {
-            return false;
-        }
-
+    fn validate(&self, _event: &Event) -> bool {
         true
     }
 
@@ -44,27 +36,42 @@ where
         event_id: &str,
         event: &Event,
     ) -> Result<(), Error> {
+        // Torii version is coupled to the world version, so we can expect the event to be well
+        // formed.
+        let event = match WorldEvent::try_from(event).unwrap_or_else(|_| {
+            panic!(
+                "Expected {} event to be well formed.",
+                <EventMessageProcessor as EventProcessor<P>>::event_key(self)
+            )
+        }) {
+            WorldEvent::EventEmitted(e) => e,
+            _ => {
+                unreachable!()
+            }
+        };
+
         // silently ignore if the model is not found
-        let model = match db.model(event.keys[MODEL_INDEX]).await {
+        let model = match db.model(event.selector).await {
             Ok(model) => model,
             Err(_) => return Ok(()),
         };
 
         info!(
             target: LOG_TARGET,
-            model = %model.name,
+            namespace = %model.namespace,
+            name = %model.name,
+            system = %format!("{:#x}", Felt::from(event.system_address)),
             "Store event message."
         );
 
-        // skip the first key, as its the event selector
-        // and dont include last key as its the system key
-        let mut keys_and_unpacked =
-            [event.keys[1..event.keys.len() - 1].to_vec(), event.data.clone()].concat();
+        // TODO: check historical and keep the internal counter.
+
+        let mut keys_and_unpacked = [event.keys, event.values].concat();
 
         let mut entity = model.schema.clone();
         entity.deserialize(&mut keys_and_unpacked)?;
 
-        db.set_event_message(entity, event_id, block_timestamp).await?;
+        db.set_event_message(entity, event_id, block_timestamp, event.historical).await?;
         Ok(())
     }
 }

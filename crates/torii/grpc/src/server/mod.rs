@@ -42,6 +42,7 @@ use tonic_web::GrpcWebLayer;
 use torii_core::error::{Error, ParseError, QueryError};
 use torii_core::model::{build_sql_query, map_row_to_ty};
 use torii_core::sql::cache::ModelCache;
+use torii_core::sql::utils::sql_string_to_felts;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 
 use self::subscriptions::entity::EntityManager;
@@ -52,8 +53,9 @@ use crate::proto::types::member_value::ValueType;
 use crate::proto::types::LogicalOperator;
 use crate::proto::world::world_server::WorldServer;
 use crate::proto::world::{
-    RetrieveEntitiesStreamingResponse, SubscribeEntitiesRequest, SubscribeEntityResponse,
-    SubscribeEventsResponse, SubscribeIndexerRequest, SubscribeIndexerResponse,
+    RetrieveEntitiesStreamingResponse, RetrieveEventMessagesRequest, SubscribeEntitiesRequest,
+    SubscribeEntityResponse, SubscribeEventMessagesRequest, SubscribeEventsResponse,
+    SubscribeIndexerRequest, SubscribeIndexerResponse, UpdateEventMessagesSubscriptionRequest,
     WorldMetadataRequest, WorldMetadataResponse,
 };
 use crate::proto::{self};
@@ -67,6 +69,8 @@ pub(crate) static ENTITIES_ENTITY_RELATION_COLUMN: &str = "entity_id";
 pub(crate) static EVENT_MESSAGES_TABLE: &str = "event_messages";
 pub(crate) static EVENT_MESSAGES_MODEL_RELATION_TABLE: &str = "event_model";
 pub(crate) static EVENT_MESSAGES_ENTITY_RELATION_COLUMN: &str = "event_message_id";
+
+pub(crate) static EVENT_MESSAGES_HISTORICAL_TABLE: &str = "event_messages_historical";
 
 impl From<SchemaError> for Error {
     fn from(err: SchemaError) -> Self {
@@ -312,6 +316,44 @@ impl DojoWorld {
         Ok(all_entities)
     }
 
+    async fn fetch_historical_event_messages(
+        &self,
+        query: &str,
+        keys_pattern: Option<&str>,
+        limit: Option<u32>,
+        offset: Option<u32>,
+    ) -> Result<Vec<proto::types::Entity>, Error> {
+        let db_entities: Vec<(String, String, String, String)> = if keys_pattern.is_some() {
+            sqlx::query_as(query)
+                .bind(keys_pattern.unwrap())
+                .bind(limit)
+                .bind(offset)
+                .fetch_all(&self.pool)
+                .await?
+        } else {
+            sqlx::query_as(query).bind(limit).bind(offset).fetch_all(&self.pool).await?
+        };
+
+        let mut entities = HashMap::new();
+        for (id, data, model_id, _) in db_entities {
+            let hashed_keys =
+                Felt::from_str(&id).map_err(ParseError::FromStr)?.to_bytes_be().to_vec();
+            let model = self
+                .model_cache
+                .model(&Felt::from_str(&model_id).map_err(ParseError::FromStr)?)
+                .await?;
+            let mut schema = model.schema;
+            schema.deserialize(&mut sql_string_to_felts(&data))?;
+
+            let entity = entities
+                .entry(id)
+                .or_insert_with(|| proto::types::Entity { hashed_keys, models: vec![] });
+            entity.models.push(schema.as_struct().unwrap().clone().into());
+        }
+
+        Ok(entities.into_values().collect())
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub(crate) async fn query_by_hashed_keys(
         &self,
@@ -353,8 +395,20 @@ impl DojoWorld {
         }
 
         // Query to get entity IDs and their model IDs
-        let mut query = format!(
-            r#"
+        let mut query = if table == EVENT_MESSAGES_HISTORICAL_TABLE {
+            format!(
+                r#"
+            SELECT {table}.id, {table}.data, {table}.model_id, group_concat({model_relation_table}.model_id) as model_ids
+            FROM {table}
+            JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
+            {filter_ids}
+            GROUP BY {table}.event_id
+            ORDER BY {table}.event_id DESC
+         "#
+            )
+        } else {
+            format!(
+                r#"
             SELECT {table}.id, group_concat({model_relation_table}.model_id) as model_ids
             FROM {table}
             JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
@@ -362,7 +416,8 @@ impl DojoWorld {
             GROUP BY {table}.id
             ORDER BY {table}.event_id DESC
          "#
-        );
+            )
+        };
 
         if limit.is_some() {
             query += " LIMIT ?"
@@ -370,6 +425,12 @@ impl DojoWorld {
 
         if offset.is_some() {
             query += " OFFSET ?"
+        }
+
+        if table == EVENT_MESSAGES_HISTORICAL_TABLE {
+            let entities =
+                self.fetch_historical_event_messages(&query, None, limit, offset).await?;
+            return Ok((entities, total_count));
         }
 
         let db_entities: Vec<(String, String)> =
@@ -446,15 +507,27 @@ impl DojoWorld {
             return Ok((Vec::new(), 0));
         }
 
-        let mut models_query = format!(
-            r#"
-            SELECT {table}.id, group_concat({model_relation_table}.model_id) as model_ids
-            FROM {table}
-            JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
-            WHERE {table}.keys REGEXP ?
-            GROUP BY {table}.id
-        "#
-        );
+        let mut models_query = if table == EVENT_MESSAGES_HISTORICAL_TABLE {
+            format!(
+                r#"
+                SELECT {table}.id, {table}.data, {table}.model_id, group_concat({model_relation_table}.model_id) as model_ids
+                FROM {table}
+                JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
+                WHERE {table}.keys REGEXP ?
+                GROUP BY {table}.event_id
+            "#
+            )
+        } else {
+            format!(
+                r#"
+                SELECT {table}.id, group_concat({model_relation_table}.model_id) as model_ids
+                FROM {table}
+                JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
+                WHERE {table}.keys REGEXP ?
+                GROUP BY {table}.id
+            "#
+            )
+        };
 
         if !keys_clause.models.is_empty() {
             // filter by models
@@ -483,6 +556,13 @@ impl DojoWorld {
         }
         if offset.is_some() {
             models_query += " OFFSET ?";
+        }
+
+        if table == EVENT_MESSAGES_HISTORICAL_TABLE {
+            let entities = self
+                .fetch_historical_event_messages(&models_query, Some(&keys_pattern), limit, offset)
+                .await?;
+            return Ok((entities, total_count));
         }
 
         let db_entities: Vec<(String, String)> = sqlx::query_as(&models_query)
@@ -838,9 +918,10 @@ impl DojoWorld {
     async fn subscribe_event_messages(
         &self,
         clauses: Vec<proto::types::EntityKeysClause>,
+        historical: bool,
     ) -> Result<Receiver<Result<proto::world::SubscribeEntityResponse, tonic::Status>>, Error> {
         self.event_message_manager
-            .add_subscriber(clauses.into_iter().map(|keys| keys.into()).collect())
+            .add_subscriber(clauses.into_iter().map(|keys| keys.into()).collect(), historical)
             .await
     }
 
@@ -1195,11 +1276,11 @@ impl proto::world::world_server::World for DojoWorld {
 
     async fn subscribe_event_messages(
         &self,
-        request: Request<SubscribeEntitiesRequest>,
+        request: Request<SubscribeEventMessagesRequest>,
     ) -> ServiceResult<Self::SubscribeEntitiesStream> {
-        let SubscribeEntitiesRequest { clauses } = request.into_inner();
+        let SubscribeEventMessagesRequest { clauses, historical } = request.into_inner();
         let rx = self
-            .subscribe_event_messages(clauses)
+            .subscribe_event_messages(clauses, historical)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
@@ -1208,13 +1289,15 @@ impl proto::world::world_server::World for DojoWorld {
 
     async fn update_event_messages_subscription(
         &self,
-        request: Request<UpdateEntitiesSubscriptionRequest>,
+        request: Request<UpdateEventMessagesSubscriptionRequest>,
     ) -> ServiceResult<()> {
-        let UpdateEntitiesSubscriptionRequest { subscription_id, clauses } = request.into_inner();
+        let UpdateEventMessagesSubscriptionRequest { subscription_id, clauses, historical } =
+            request.into_inner();
         self.event_message_manager
             .update_subscriber(
                 subscription_id,
                 clauses.into_iter().map(|keys| keys.into()).collect(),
+                historical,
             )
             .await;
 
@@ -1223,16 +1306,14 @@ impl proto::world::world_server::World for DojoWorld {
 
     async fn retrieve_event_messages(
         &self,
-        request: Request<RetrieveEntitiesRequest>,
+        request: Request<RetrieveEventMessagesRequest>,
     ) -> Result<Response<RetrieveEntitiesResponse>, Status> {
-        let query = request
-            .into_inner()
-            .query
-            .ok_or_else(|| Status::invalid_argument("Missing query argument"))?;
+        let RetrieveEventMessagesRequest { query, historical } = request.into_inner();
+        let query = query.ok_or_else(|| Status::invalid_argument("Missing query argument"))?;
 
         let entities = self
             .retrieve_entities(
-                EVENT_MESSAGES_TABLE,
+                if historical { EVENT_MESSAGES_HISTORICAL_TABLE } else { EVENT_MESSAGES_TABLE },
                 EVENT_MESSAGES_MODEL_RELATION_TABLE,
                 EVENT_MESSAGES_ENTITY_RELATION_COLUMN,
                 query,

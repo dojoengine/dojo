@@ -30,6 +30,8 @@ use crate::processors::erc721_legacy_transfer::Erc721LegacyTransferProcessor;
 use crate::processors::erc721_transfer::Erc721TransferProcessor;
 use crate::processors::event_message::EventMessageProcessor;
 use crate::processors::metadata_update::MetadataUpdateProcessor;
+use crate::processors::raw_event::RawEventProcessor;
+use crate::processors::register_event::RegisterEventProcessor;
 use crate::processors::register_model::RegisterModelProcessor;
 use crate::processors::store_del_record::StoreDelRecordProcessor;
 use crate::processors::store_set_record::StoreSetRecordProcessor;
@@ -54,7 +56,9 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Default for Processo
         Self {
             block: vec![],
             transaction: vec![],
-            catch_all_event: Box::new(EventMessageProcessor) as Box<dyn EventProcessor<P>>,
+            // We shouldn't have a catch all for now since the world doesn't forward raw events
+            // anymore.
+            catch_all_event: Box::new(RawEventProcessor) as Box<dyn EventProcessor<P>>,
             event_processors: Self::initialize_event_processors(),
         }
     }
@@ -69,11 +73,13 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Processors<P> {
                 ContractType::WORLD,
                 vec![
                     Box::new(RegisterModelProcessor) as Box<dyn EventProcessor<P>>,
+                    Box::new(RegisterEventProcessor) as Box<dyn EventProcessor<P>>,
                     Box::new(StoreSetRecordProcessor),
-                    Box::new(MetadataUpdateProcessor),
                     Box::new(StoreDelRecordProcessor),
                     Box::new(StoreUpdateRecordProcessor),
                     Box::new(StoreUpdateMemberProcessor),
+                    Box::new(MetadataUpdateProcessor),
+                    Box::new(EventMessageProcessor),
                 ],
             ),
             (
@@ -820,8 +826,8 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         let task_identifier = match processor.event_key().as_str() {
             "StoreSetRecord" | "StoreUpdateRecord" | "StoreUpdateMember" | "StoreDelRecord" => {
                 let mut hasher = DefaultHasher::new();
-                event.data[0].hash(&mut hasher);
-                event.data[1].hash(&mut hasher);
+                event.keys[0].hash(&mut hasher);
+                event.keys[1].hash(&mut hasher);
                 hasher.finish()
             }
             _ => 0,

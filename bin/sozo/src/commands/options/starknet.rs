@@ -18,13 +18,16 @@ pub struct StarknetOptions {
 }
 
 impl StarknetOptions {
+    /// Returns a [`JsonRpcClient`] and the rpc url.
+    ///
+    /// It would be convenient to have the rpc url retrievable from the Provider trait instead.
     pub fn provider(
         &self,
         env_metadata: Option<&Environment>,
-    ) -> Result<JsonRpcClient<HttpTransport>> {
+    ) -> Result<(JsonRpcClient<HttpTransport>, String)> {
         let url = self.url(env_metadata)?;
         trace!(?url, "Creating JsonRpcClient with given RPC URL.");
-        Ok(JsonRpcClient::new(HttpTransport::new(url)))
+        Ok((JsonRpcClient::new(HttpTransport::new(url.clone())), url.to_string()))
     }
 
     // We dont check the env var because that would be handled by `clap`.

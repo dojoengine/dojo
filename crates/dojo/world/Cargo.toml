@@ -1,0 +1,32 @@
+[package]
+description = "Dojo world specification. For example, crates and flags used for compilation."
+edition.workspace = true
+license-file.workspace = true
+name = "dojo-world"
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+async-trait.workspace = true
+cairo-lang-starknet-classes.workspace = true
+#dojo-utils.workspace = true
+regex.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde_with.workspace = true
+starknet.workspace = true
+starknet-crypto.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+cainome.workspace = true
+dojo-types.workspace = true
+ipfs-api-backend-hyper = { git = "https://github.com/ferristseng/rust-ipfs-api", rev = "af2c17f7b19ef5b9898f458d97a90055c3605633", features = [ "with-hyper-rustls" ], optional = true }
+toml.workspace = true
+url.workspace = true
+
+[dev-dependencies]
+tokio.workspace = true
+
+[features]
+metadata = [ "dep:ipfs-api-backend-hyper" ]

@@ -1,4 +1,4 @@
-use dojo_world::migration::strategy::MigrationStrategy;
+use dojo_world::diff::WorldDiff;
 use scarb::core::Workspace;
 use scarb_ui::Ui;
 use starknet::core::types::Felt;
@@ -37,9 +37,9 @@ impl WalnutDebugger {
     pub async fn verify_migration_strategy(
         &self,
         ws: &Workspace<'_>,
-        strategy: &MigrationStrategy,
+        world_diff: &WorldDiff,
     ) -> anyhow::Result<()> {
-        walnut_verify_migration_strategy(ws, self.rpc_url.to_string(), strategy).await
+        walnut_verify_migration_strategy(ws, self.rpc_url.to_string(), world_diff).await
     }
 
     /// Checks if the Walnut API key is set.

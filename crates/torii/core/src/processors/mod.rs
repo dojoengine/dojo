@@ -12,6 +12,8 @@ pub mod erc721_legacy_transfer;
 pub mod erc721_transfer;
 pub mod event_message;
 pub mod metadata_update;
+pub mod raw_event;
+pub mod register_event;
 pub mod register_model;
 pub mod store_del_record;
 pub mod store_set_record;
@@ -21,7 +23,6 @@ pub mod store_update_record;
 
 const MODEL_INDEX: usize = 0;
 const ENTITY_ID_INDEX: usize = 1;
-const NUM_KEYS_INDEX: usize = 2;
 
 #[async_trait]
 pub trait EventProcessor<P>: Send + Sync

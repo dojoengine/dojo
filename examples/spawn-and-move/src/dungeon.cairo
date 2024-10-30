@@ -1,12 +1,12 @@
-#[dojo::interface]
-pub trait IDungeon {
-    fn enter();
+#[starknet::interface]
+pub trait IDungeon<T> {
+    fn enter(self: @T);
 }
 
 #[dojo::contract]
 pub mod dungeon {
     #[abi(embed_v0)]
     pub impl IDungeonImpl of super::IDungeon<ContractState> {
-        fn enter() {}
+        fn enter(self: @ContractState) {}
     }
 }

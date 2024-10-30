@@ -3,12 +3,15 @@ use std::io;
 use std::path::Path;
 
 use console::{pad_str, Alignment, Style, StyledObject};
-use dojo_world::metadata::get_default_namespace_from_ws;
-use dojo_world::migration::strategy::MigrationStrategy;
+use dojo_world::diff::{ResourceDiff, WorldDiff};
+use dojo_world::local::ResourceLocal;
+use dojo_world::remote::ResourceRemote;
+use dojo_world::ResourceType;
 use reqwest::StatusCode;
 use scarb::core::Workspace;
 use serde::Serialize;
 use serde_json::Value;
+use sozo_scarbext::WorkspaceExt;
 use walkdir::WalkDir;
 
 use crate::utils::{walnut_get_api_key, walnut_get_api_url};
@@ -25,7 +28,7 @@ use crate::Error;
 pub async fn walnut_verify_migration_strategy(
     ws: &Workspace<'_>,
     rpc_url: String,
-    migration_strategy: &MigrationStrategy,
+    world_diff: &WorldDiff,
 ) -> anyhow::Result<()> {
     let ui = ws.config().ui();
     // Check if rpc_url is localhost
@@ -36,16 +39,30 @@ pub async fn walnut_verify_migration_strategy(
         return Ok(());
     }
 
-    // its path to a file so `parent` should never return `None`
-    let root_dir: &Path = ws.manifest_path().parent().unwrap().as_std_path();
-    let default_namespace = get_default_namespace_from_ws(ws)?;
-
     // Check if there are any contracts or models in the strategy
-    if migration_strategy.contracts.is_empty() && migration_strategy.models.is_empty() {
+    if world_diff.is_synced() {
         ui.print(" ");
         ui.print("🌰 No contracts or models to verify.");
         ui.print(" ");
         return Ok(());
+    }
+
+    let _profile_config = ws.load_profile_config()?;
+
+    for (_selector, resource) in world_diff.resources.iter() {
+        if resource.resource_type() == ResourceType::Contract {
+            match resource {
+                ResourceDiff::Created(ResourceLocal::Contract(_contract)) => {
+                    // Need to verify created.
+                }
+                ResourceDiff::Updated(_, ResourceRemote::Contract(_contract)) => {
+                    // Need to verify updated.
+                }
+                _ => {
+                    // Synced, we don't need to verify.
+                }
+            }
+        }
     }
 
     // Notify start of verification
@@ -54,51 +71,24 @@ pub async fn walnut_verify_migration_strategy(
     ui.print(" ");
 
     // Retrieve the API key and URL from environment variables
-    let api_key = walnut_get_api_key()?;
-    let api_url = walnut_get_api_url();
+    let _api_key = walnut_get_api_key()?;
+    let _api_url = walnut_get_api_url();
 
     // Collect source code
-    let source_code = collect_source_code(root_dir)?;
-
-    let mut class_names = Vec::new();
-    let mut class_hashes = Vec::new();
-
-    for contract_migration in &migration_strategy.contracts {
-        let class_name = get_class_name_from_artifact_path(
-            &contract_migration.artifact_path,
-            &default_namespace,
-        )?;
-        class_names.push(class_name);
-        class_hashes.push(contract_migration.diff.local_class_hash.to_hex_string());
-    }
-
-    for class_migration in &migration_strategy.models {
-        let class_name =
-            get_class_name_from_artifact_path(&class_migration.artifact_path, &default_namespace)?;
-        class_names.push(class_name);
-        class_hashes.push(class_migration.diff.local_class_hash.to_hex_string());
-    }
-
-    let verification_payload =
-        VerificationPayload { class_names, class_hashes, rpc_url, source_code };
-
-    // Send verification request
-    match verify_classes(verification_payload, &api_url, &api_key).await {
-        Ok(message) => ui.print(subtitle(message)),
-        Err(e) => ui.print(subtitle(e.to_string())),
-    }
+    // TODO: now it's the same output as scarb, need to update the dojo fork to output the source
+    // code, or does scarb supports it already?
 
     Ok(())
 }
 
-fn get_class_name_from_artifact_path(path: &Path, namespace: &str) -> Result<String, Error> {
+fn _get_class_name_from_artifact_path(path: &Path, namespace: &str) -> Result<String, Error> {
     let file_name = path.file_stem().and_then(OsStr::to_str).ok_or(Error::InvalidFileName)?;
     let class_name = file_name.strip_prefix(namespace).ok_or(Error::NamespacePrefixNotFound)?;
     Ok(class_name.to_string())
 }
 
 #[derive(Debug, Serialize)]
-struct VerificationPayload {
+struct _VerificationPayload {
     /// The names of the classes we want to verify together with the selector.
     pub class_names: Vec<String>,
     /// The hashes of the Sierra classes.
@@ -110,8 +100,8 @@ struct VerificationPayload {
     pub source_code: Value,
 }
 
-async fn verify_classes(
-    payload: VerificationPayload,
+async fn _verify_classes(
+    payload: _VerificationPayload,
     api_url: &str,
     api_key: &str,
 ) -> Result<String, Error> {
@@ -129,7 +119,7 @@ async fn verify_classes(
     }
 }
 
-fn collect_source_code(root_dir: &Path) -> Result<Value, Error> {
+fn _collect_source_code(root_dir: &Path) -> Result<Value, Error> {
     fn collect_files(
         root_dir: &Path,
         search_dir: &Path,
@@ -170,11 +160,11 @@ fn collect_source_code(root_dir: &Path) -> Result<Value, Error> {
     Ok(serde_json::Value::Object(file_data))
 }
 
-fn subtitle<D: AsRef<str>>(message: D) -> String {
-    dimmed_message(format!("{} {}", pad_str(">", 3, Alignment::Right, None), message.as_ref()))
+fn _subtitle<D: AsRef<str>>(message: D) -> String {
+    _dimmed_message(format!("{} {}", pad_str(">", 3, Alignment::Right, None), message.as_ref()))
         .to_string()
 }
 
-fn dimmed_message<D>(message: D) -> StyledObject<D> {
+fn _dimmed_message<D>(message: D) -> StyledObject<D> {
     Style::new().dim().apply_to(message)
 }

@@ -29,13 +29,13 @@ service World {
     rpc RetrieveEntitiesStreaming (RetrieveEntitiesRequest) returns (stream RetrieveEntitiesStreamingResponse);
 
     // Subscribe to entity updates.
-    rpc SubscribeEventMessages (SubscribeEntitiesRequest) returns (stream SubscribeEntityResponse);
+    rpc SubscribeEventMessages (SubscribeEventMessagesRequest) returns (stream SubscribeEntityResponse);
 
     // Update entity subscription
-    rpc UpdateEventMessagesSubscription (UpdateEntitiesSubscriptionRequest) returns (google.protobuf.Empty);
+    rpc UpdateEventMessagesSubscription (UpdateEventMessagesSubscriptionRequest) returns (google.protobuf.Empty);
 
     // Retrieve entities
-    rpc RetrieveEventMessages (RetrieveEntitiesRequest) returns (RetrieveEntitiesResponse);
+    rpc RetrieveEventMessages (RetrieveEventMessagesRequest) returns (RetrieveEntitiesResponse);
 
     // Retrieve events
     rpc RetrieveEvents (RetrieveEventsRequest) returns (RetrieveEventsResponse);
@@ -81,9 +81,20 @@ message SubscribeEntitiesRequest {
     repeated types.EntityKeysClause clauses = 1;
 }
 
+message SubscribeEventMessagesRequest {
+    repeated types.EntityKeysClause clauses = 1;
+    bool historical = 2;
+}
+
 message UpdateEntitiesSubscriptionRequest {
     uint64 subscription_id = 1;
     repeated types.EntityKeysClause clauses = 2;
+}
+
+message UpdateEventMessagesSubscriptionRequest {
+    uint64 subscription_id = 1;
+    repeated types.EntityKeysClause clauses = 2;
+    bool historical = 3;
 }
 
 message SubscribeEntityResponse {
@@ -94,6 +105,13 @@ message SubscribeEntityResponse {
 message RetrieveEntitiesRequest {
     // The entities to retrieve
     types.Query query = 1;
+}
+
+message RetrieveEventMessagesRequest {
+    // The event messages to retrieve
+    types.Query query = 1;
+    // Should we retrieve historical event messages?
+    bool historical = 2;
 }
 
 message RetrieveEntitiesResponse {

@@ -5,7 +5,7 @@ use starknet::core::types::{BlockId, BlockTag, Felt, FunctionCall};
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
 
-use crate::migration::ui::MigrationUi;
+// use crate::migration::ui::MigrationUi;
 use crate::utils::{get_contract_address_from_reader, parse_block_id};
 
 pub async fn call<P: Provider + Sync + Send>(
@@ -43,7 +43,7 @@ pub async fn call<P: Provider + Sync + Send>(
             );
         }
         Err(e) => {
-            ui.print_hidden_sub(format!("{:?}", e));
+            //ui.print_hidden_sub(format!("{:?}", e));
             anyhow::bail!(format!(
                 "Error calling entrypoint `{}` on address: {:#066x}",
                 entrypoint, contract_address

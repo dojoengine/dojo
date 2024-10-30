@@ -4,20 +4,20 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use async_graphql::dynamic::Schema;
-use camino::Utf8PathBuf;
 use dojo_test_utils::compiler::CompilerTestSetup;
-use dojo_test_utils::migration::{copy_types_test_db, prepare_migration_with_world_and_seed};
+use dojo_test_utils::migration::copy_types_test_db;
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 use dojo_utils::{TransactionExt, TransactionWaiter, TxnConfig};
-use dojo_world::contracts::abi::model::Layout;
-use dojo_world::contracts::abi::world::Resource;
+use dojo_world::contracts::abigen::model::Layout;
+use dojo_world::contracts::abigen::world::Resource;
 use dojo_world::contracts::naming::{compute_bytearray_hash, compute_selector_from_tag};
 use dojo_world::contracts::{WorldContract, WorldContractReader};
 use katana_runner::{KatanaRunner, KatanaRunnerConfig};
 use scarb::compiler::Profile;
 use serde::Deserialize;
 use serde_json::Value;
+use sozo_scarbext::WorkspaceExt;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::SqlitePool;
 use starknet::accounts::{Account, ConnectedAccount};
@@ -279,12 +279,10 @@ pub async fn spinup_types_test(path: &str) -> Result<SqlitePool> {
     let pool = SqlitePoolOptions::new().connect_with(options).await.unwrap();
     sqlx::migrate!("../migrations").run(&pool).await.unwrap();
 
-    let setup = CompilerTestSetup::from_paths("../../dojo-core", &["../types-test"]);
+    let setup = CompilerTestSetup::from_paths("../../dojo/core", &["../types-test"]);
     let config = setup.build_test_config("types-test", Profile::DEV);
 
     let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
-    let manifest_path = Utf8PathBuf::from(config.manifest_path().parent().unwrap());
-    let target_dir = Utf8PathBuf::from(ws.target_dir().to_string()).join("dev");
 
     let seq_config = KatanaRunnerConfig { n_accounts: 10, ..Default::default() }
         .with_db_dir(copy_types_test_db().as_str());
@@ -294,18 +292,12 @@ pub async fn spinup_types_test(path: &str) -> Result<SqlitePool> {
     let account = sequencer.account(0);
     let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
 
-    let (strat, _) = prepare_migration_with_world_and_seed(
-        manifest_path,
-        target_dir,
-        None,
-        "types_test",
-        "types_test",
-    )
-    .unwrap();
+    let world_local = ws.load_world_local().unwrap();
+    let world_address = world_local.deterministic_world_address().unwrap();
 
-    let world = WorldContract::new(strat.world_address, &account);
+    let world = WorldContract::new(world_address, &account);
 
-    let records_address = if let Resource::Contract((_, records_address)) =
+    let records_address = if let Resource::Contract((records_address, _)) =
         world.resource(&compute_selector_from_tag("types_test-records")).call().await.unwrap()
     {
         records_address
@@ -346,20 +338,16 @@ pub async fn spinup_types_test(path: &str) -> Result<SqlitePool> {
 
     TransactionWaiter::new(transaction_hash, &provider).await?;
 
-    let world = WorldContractReader::new(strat.world_address, Arc::clone(&provider));
+    let world = WorldContractReader::new(world_address, Arc::clone(&provider));
 
     let (shutdown_tx, _) = broadcast::channel(1);
     let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
     tokio::spawn(async move {
         executor.run().await.unwrap();
     });
-    let db = Sql::new(
-        pool.clone(),
-        sender,
-        &HashMap::from([(strat.world_address, ContractType::WORLD)]),
-    )
-    .await
-    .unwrap();
+    let db = Sql::new(pool.clone(), sender, &HashMap::from([(world_address, ContractType::WORLD)]))
+        .await
+        .unwrap();
 
     let (shutdown_tx, _) = broadcast::channel(1);
     let mut engine = Engine::new(
@@ -370,7 +358,7 @@ pub async fn spinup_types_test(path: &str) -> Result<SqlitePool> {
         EngineConfig::default(),
         shutdown_tx,
         None,
-        Arc::new(HashMap::from([(strat.world_address, ContractType::WORLD)])),
+        Arc::new(HashMap::from([(world_address, ContractType::WORLD)])),
     );
 
     let to = account.provider().block_hash_and_number().await?.block_number;

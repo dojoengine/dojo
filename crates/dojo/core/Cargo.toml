@@ -1,0 +1,15 @@
+[package]
+name = "dojo-contracts"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[package.metadata.release]
+pre-release-replacements = [
+	{ file = "Scarb.lock", search = "^name = \"dojo\"\nversion = \".*\"$", replace = "name = \"dojo\"\nversion = \"{{version}}\"", min = 1 },
+	{ file = "Scarb.toml", search = "^version = \".*\"$", replace = "version = \"{{version}}\"", min = 1 },
+]
+
+[lib]
+path = "src/lib.rs"

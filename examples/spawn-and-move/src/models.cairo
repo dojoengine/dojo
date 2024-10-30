@@ -117,7 +117,7 @@ impl Vec2Impl of Vec2Trait {
 
 #[cfg(test)]
 mod tests {
-    use super::{Position, Vec2, Vec2Trait};
+    use super::{Vec2, Vec2Trait};
 
     #[test]
     #[available_gas(100000)]

@@ -1,6 +1,5 @@
 use std::time::Instant;
 
-use dojo_lang::scarb_internal::compile_workspace;
 use dojo_test_utils::compiler::CompilerTestSetup;
 use scarb::compiler::Profile;
 use scarb::core::TargetKind;
@@ -12,7 +11,7 @@ use scarb::ops::{CompileOpts, FeaturesOpts, FeaturesSelector};
 // `bench.yml` action.
 
 fn build_spawn_and_move() {
-    let setup = CompilerTestSetup::from_examples("../../crates/dojo-core", "../../examples/");
+    let setup = CompilerTestSetup::from_examples("../../crates/dojo/core", "../../examples/");
 
     let config = setup.build_test_config("spawn-and-move", Profile::DEV);
 
@@ -21,8 +20,8 @@ fn build_spawn_and_move() {
 
     let packages: Vec<_> = ws.members().collect();
 
-    let _compile_info = compile_workspace(
-        &config,
+    scarb::ops::compile(
+        packages.iter().map(|p| p.id).collect(),
         CompileOpts {
             include_target_names: vec![],
             include_target_kinds: vec![],
@@ -32,7 +31,7 @@ fn build_spawn_and_move() {
                 no_default_features: false,
             },
         },
-        packages.iter().map(|p| p.id).collect(),
+        &ws,
     )
     .expect("Failed to build spawn and move");
 }
