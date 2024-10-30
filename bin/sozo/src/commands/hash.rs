@@ -41,9 +41,11 @@ impl HashArgs {
         if !self.input.contains(',') {
             let felt = felt_from_str(&self.input)?;
             let poseidon = format!("{:#066x}", poseidon_hash_single(felt));
+            let poseidon_array = format!("{:#066x}", poseidon_hash_many(&[felt]));
             let snkeccak = format!("{:#066x}", starknet_keccak(&felt.to_bytes_le()));
 
-            println!("Poseidon: {}", poseidon);
+            println!("Poseidon single: {}", poseidon);
+            println!("Poseidon array 1 value: {}", poseidon_array);
             println!("SnKeccak: {}", snkeccak);
 
             return Ok(vec![poseidon.to_string(), snkeccak.to_string()]);

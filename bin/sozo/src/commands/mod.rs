@@ -10,6 +10,7 @@ pub(crate) mod call;
 pub(crate) mod calldata_decoder;
 pub(crate) mod clean;
 pub(crate) mod execute;
+pub(crate) mod hash;
 pub(crate) mod inspect;
 pub(crate) mod migrate;
 pub(crate) mod options;
@@ -19,6 +20,7 @@ use build::BuildArgs;
 use call::CallArgs;
 use clean::CleanArgs;
 use execute::ExecuteArgs;
+use hash::HashArgs;
 use inspect::InspectArgs;
 use migrate::MigrateArgs;
 use test::TestArgs;
@@ -40,6 +42,8 @@ pub enum Commands {
     Call(Box<CallArgs>),
     #[command(about = "Runs cairo tests")]
     Test(Box<TestArgs>),
+    #[command(about = "Computes hash with different hash functions")]
+    Hash(Box<HashArgs>),
 }
 
 impl fmt::Display for Commands {
@@ -52,6 +56,7 @@ impl fmt::Display for Commands {
             Commands::Migrate(_) => write!(f, "Migrate"),
             Commands::Call(_) => write!(f, "Call"),
             Commands::Test(_) => write!(f, "Test"),
+            Commands::Hash(_) => write!(f, "Hash"),
         }
     }
 }
@@ -72,6 +77,7 @@ pub fn run(command: Commands, config: &Config) -> Result<()> {
         Commands::Clean(args) => args.run(config),
         Commands::Call(args) => args.run(config),
         Commands::Test(args) => args.run(config),
+        Commands::Hash(args) => args.run().map(|_| ()),
     }
 }
 
