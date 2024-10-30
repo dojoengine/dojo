@@ -6,7 +6,8 @@ use dojo_world::diff::{ResourceDiff, WorldDiff, WorldStatus};
 use dojo_world::ResourceType;
 use scarb::core::Config;
 use serde::Serialize;
-use tabled::settings::Style;
+use tabled::settings::object::Cell;
+use tabled::settings::{Color, Style};
 use tabled::{Table, Tabled};
 use tracing::trace;
 
@@ -80,7 +81,7 @@ enum ResourceInspect {
 
 #[derive(Debug, Tabled, Serialize)]
 struct NamespaceInspect {
-    #[tabled(rename = "")]
+    #[tabled(rename = "Namespaces")]
     name: String,
     #[tabled(rename = "Status")]
     status: ResourceStatus,
@@ -90,7 +91,7 @@ struct NamespaceInspect {
 
 #[derive(Debug, Tabled, Serialize)]
 struct WorldInspect {
-    #[tabled(rename = "Status")]
+    #[tabled(rename = "World")]
     status: ResourceStatus,
     #[tabled(rename = "Contract Address")]
     address: String,
@@ -100,7 +101,7 @@ struct WorldInspect {
 
 #[derive(Debug, Tabled, Serialize)]
 struct ContractInspect {
-    #[tabled(rename = "")]
+    #[tabled(rename = "Contracts")]
     tag: String,
     #[tabled(rename = "Status")]
     status: ResourceStatus,
@@ -116,7 +117,7 @@ struct ContractInspect {
 
 #[derive(Debug, Tabled, Serialize)]
 struct ModelInspect {
-    #[tabled(rename = "")]
+    #[tabled(rename = "Models")]
     tag: String,
     #[tabled(rename = "Status")]
     status: ResourceStatus,
@@ -126,7 +127,7 @@ struct ModelInspect {
 
 #[derive(Debug, Tabled, Serialize)]
 struct EventInspect {
-    #[tabled(rename = "")]
+    #[tabled(rename = "Events")]
     tag: String,
     #[tabled(rename = "Status")]
     status: ResourceStatus,
@@ -241,8 +242,8 @@ fn inspect_resource(resource_name_or_tag: &str, world_diff: &WorldDiff) {
     writers_disp.sort_by_key(|m| m.tag.to_string());
     owners_disp.sort_by_key(|m| m.tag.to_string());
 
-    print_table(&writers_disp, "\n> Writers");
-    print_table(&owners_disp, "\n> Owners");
+    print_table(&writers_disp, Some(Color::FG_BRIGHT_CYAN), Some("\n> Writers"));
+    print_table(&owners_disp, Some(Color::FG_BRIGHT_MAGENTA), Some("\n> Owners"));
 }
 
 /// Inspects the whole world.
@@ -261,7 +262,7 @@ fn inspect_world(world_diff: &WorldDiff) {
         status,
     };
 
-    print_table(&[world], "> World");
+    print_table(&[world], Some(Color::FG_BRIGHT_BLACK), None);
 
     let mut namespaces_disp = vec![];
     let mut contracts_disp = vec![];
@@ -295,10 +296,10 @@ fn inspect_world(world_diff: &WorldDiff) {
     models_disp.sort_by_key(|m| m.tag.to_string());
     events_disp.sort_by_key(|m| m.tag.to_string());
 
-    print_table(&namespaces_disp, "> Namespaces");
-    print_table(&contracts_disp, "> Contracts");
-    print_table(&models_disp, "> Models");
-    print_table(&events_disp, "> Events");
+    print_table(&namespaces_disp, Some(Color::FG_BRIGHT_BLACK), None);
+    print_table(&contracts_disp, Some(Color::FG_BRIGHT_BLACK), None);
+    print_table(&models_disp, Some(Color::FG_BRIGHT_BLACK), None);
+    print_table(&events_disp, Some(Color::FG_BRIGHT_BLACK), None);
 }
 
 /// Displays the resource diff with the address and class hash.
@@ -429,7 +430,7 @@ fn resource_diff_display(world_diff: &WorldDiff, resource: &ResourceDiff) -> Res
 }
 
 /// Prints a table.
-fn print_table<T>(data: T, title: &str)
+fn print_table<T>(data: T, color: Option<Color>, title: Option<&str>)
 where
     T: IntoIterator + Clone,
     <T as IntoIterator>::Item: Tabled,
@@ -439,9 +440,16 @@ where
     }
 
     let mut table = Table::new(data);
-    table.with(Style::modern());
+    table.with(Style::psql());
 
-    println!("{title}");
+    if let Some(color) = color {
+        table.modify(Cell::new(0, 0), color);
+    }
+
+    if let Some(title) = title {
+        println!("{title}");
+    }
+
     println!("{table}\n");
 }
 

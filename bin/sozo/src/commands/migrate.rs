@@ -3,10 +3,14 @@ use clap::Args;
 use colored::Colorize;
 use dojo_utils::{self, TxnConfig};
 use dojo_world::contracts::WorldContract;
-use scarb::core::Config;
+use scarb::core::{Config, Workspace};
 use sozo_ops::migrate::{Migration, MigrationResult, MigrationUi};
 use sozo_scarbext::WorkspaceExt;
 use spinoff::{spinner, spinners, Spinner};
+use starknet::core::utils::parse_cairo_short_string;
+use starknet::providers::Provider;
+use tabled::settings::Style;
+use tabled::{Table, Tabled};
 use tracing::trace;
 
 use super::options::account::AccountOptions;
@@ -43,10 +47,13 @@ impl MigrateArgs {
 
         let frames = spinner!(["⛩️ ", "🎃", "👻", "🧟", "💀"], 500);
         // let frames = spinner!(["⛩️ ", "🥷 ", "🗡️ "], 500);
-        let mut spinner =
-            MigrationUi::Spinner(Spinner::new(frames, "Evaluating world diff...", None));
 
         config.tokio_handle().block_on(async {
+            print_banner(&ws, &starknet).await?;
+
+            let mut spinner =
+                MigrationUi::Spinner(Spinner::new(frames, "Evaluating world diff...", None));
+
             let mut txn_config: TxnConfig = self.transaction.into();
             txn_config.wait = true;
 
@@ -82,4 +89,32 @@ impl MigrateArgs {
             Ok(())
         })
     }
+}
+
+#[derive(Debug, Tabled)]
+pub struct Banner {
+    pub profile: String,
+    pub chain_id: String,
+    pub rpc_url: String,
+}
+
+/// Prints the migration banner.
+async fn print_banner(ws: &Workspace<'_>, starknet: &StarknetOptions) -> Result<()> {
+    let (provider, rpc_url) = starknet.provider(None)?;
+
+    let chain_id = provider.chain_id().await?;
+    let chain_id =
+        parse_cairo_short_string(&chain_id).with_context(|| "Cannot parse chain_id as string")?;
+
+    let banner = Banner {
+        profile: ws.current_profile().expect("Scarb profile should be set.").to_string(),
+        chain_id,
+        rpc_url,
+    };
+
+    println!();
+    println!("{}", Table::new(&[banner]).with(Style::psql()));
+    println!();
+
+    Ok(())
 }

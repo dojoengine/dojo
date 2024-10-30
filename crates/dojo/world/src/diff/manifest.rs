@@ -137,13 +137,15 @@ fn resource_diff_to_dojo_contract(diff: &WorldDiff, resource: &ResourceDiff) -> 
         vec![]
     };
 
+    let tag = resource.tag();
+
     match &resource {
         ResourceDiff::Created(ResourceLocal::Contract(l)) => DojoContract {
             address: diff.get_contract_address(resource.dojo_selector()).unwrap(),
             class_hash: l.common.class_hash,
             abi: l.common.class.abi.clone(),
             init_calldata,
-            tag: l.common.name.clone(),
+            tag,
             systems: l.systems.clone(),
         },
         ResourceDiff::Updated(ResourceLocal::Contract(l), ResourceRemote::Contract(r))
@@ -153,7 +155,7 @@ fn resource_diff_to_dojo_contract(diff: &WorldDiff, resource: &ResourceDiff) -> 
                 class_hash: l.common.class_hash,
                 abi: l.common.class.abi.clone(),
                 init_calldata,
-                tag: l.common.name.clone(),
+                tag,
                 systems: l.systems.clone(),
             }
         }
