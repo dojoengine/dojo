@@ -11,21 +11,21 @@ pub(crate) mod calldata_decoder;
 pub(crate) mod clean;
 pub(crate) mod execute;
 pub(crate) mod hash;
+pub(crate) mod init;
 pub(crate) mod inspect;
 pub(crate) mod migrate;
 pub(crate) mod options;
 pub(crate) mod test;
-pub(crate) mod init;
 
 use build::BuildArgs;
 use call::CallArgs;
 use clean::CleanArgs;
 use execute::ExecuteArgs;
 use hash::HashArgs;
+use init::InitArgs;
 use inspect::InspectArgs;
 use migrate::MigrateArgs;
 use test::TestArgs;
-use init::InitArgs;
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {
