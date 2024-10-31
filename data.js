@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1730404394341,
+  "lastUpdate": 1730404613340,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -28915,6 +28915,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 9958817048,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "distinct": true,
+          "id": "a49b532ef66ae0cee01fea3b2a89106134578646",
+          "message": "fix: remove output_sozo.txt from .git",
+          "timestamp": "2024-10-31T13:36:49-06:00",
+          "tree_id": "c8d39892c3b96911ab7705f6153871533eb960fa",
+          "url": "https://github.com/dojoengine/dojo/commit/a49b532ef66ae0cee01fea3b2a89106134578646"
+        },
+        "date": 1730404612234,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16249840,
+            "range": "± 236005",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8644504,
+            "range": "± 719585",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3700513746,
+            "range": "± 822100198",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8753809,
+            "range": "± 622162",
             "unit": "ns/iter"
           }
         ]
