@@ -6,8 +6,7 @@ use std::{env, fs, io};
 
 use assert_fs::TempDir;
 use camino::{Utf8Path, Utf8PathBuf};
-use scarb::compiler::plugin::CairoPluginRepository;
-use scarb::compiler::{CompilationUnit, CompilerRepository, Profile};
+use scarb::compiler::{CompilationUnit, Profile};
 use scarb::core::{Config, TargetKind};
 use scarb::ops;
 use scarb::ops::{CompileOpts, FeaturesOpts, FeaturesSelector};
@@ -297,10 +296,6 @@ pub fn copy_project_temp(
 /// * `path` - The path to the Scarb.toml file to build the config for.
 /// * `profile` - The profile to use for the config.
 pub fn build_test_config(path: &str, profile: Profile) -> anyhow::Result<Config> {
-    let compilers = CompilerRepository::empty();
-
-    let cairo_plugins = CairoPluginRepository::empty();
-
     // If the cache_dir is not overriden, we can't run tests in parallel.
     let cache_dir = TempDir::new().unwrap();
 
@@ -310,9 +305,7 @@ pub fn build_test_config(path: &str, profile: Profile) -> anyhow::Result<Config>
         .global_cache_dir_override(Some(Utf8Path::from_path(cache_dir.path()).unwrap()))
         .ui_verbosity(Verbosity::Verbose)
         .log_filter_directive(env::var_os("SCARB_LOG"))
-        .compilers(compilers)
         .profile(profile)
-        .cairo_plugins(cairo_plugins)
         .build()
 }
 

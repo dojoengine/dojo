@@ -1,1 +1,1 @@
-   Compiling dojo_examples v1.0.0-rc.0 (/private/var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpa2vKjW/spawn-and-move/Scarb.toml)
+test build/Sozo.Cold ... bench:     4521852125 ns/iter (+/- 0)
