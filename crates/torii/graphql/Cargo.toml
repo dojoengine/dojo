@@ -37,7 +37,7 @@ warp.workspace = true
 camino.workspace = true
 dojo-test-utils = { workspace = true, features = [ "build-examples" ] }
 dojo-utils.workspace = true
-dojo-world.workspace = true
+dojo-world = { workspace = true, features = [ "metadata" ] }
 katana-runner.workspace = true
 scarb.workspace = true
 serial_test = "2.0.0"
@@ -45,3 +45,4 @@ starknet.workspace = true
 starknet-crypto.workspace = true
 tempfile.workspace = true
 toml.workspace = true
+sozo-scarbext.workspace = true

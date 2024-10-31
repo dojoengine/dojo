@@ -6,6 +6,7 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
+anyhow.workspace = true
 dojo-test-utils.workspace = true
 dojo-utils.workspace = true
 katana-runner.workspace = true
@@ -14,3 +15,5 @@ scarb.workspace = true
 sozo-ops = { workspace = true, features = [ "test-utils" ] }
 starknet.workspace = true
 tokio.workspace = true
+sozo-scarbext.workspace = true
+dojo-world.workspace = true

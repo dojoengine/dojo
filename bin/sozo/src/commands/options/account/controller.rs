@@ -1,27 +1,19 @@
 use std::sync::Arc;
 
-use anyhow::{bail, Context, Result};
-use camino::{Utf8Path, Utf8PathBuf};
-use dojo_world::contracts::naming::get_name_from_tag;
-use dojo_world::manifest::{BaseManifest, Class, DojoContract, Manifest};
-use dojo_world::migration::strategy::generate_salt;
-use scarb::core::Config;
+use anyhow::{bail, Result};
+use dojo_world::diff::WorldDiff;
+use dojo_world::ResourceType;
 use slot::account_sdk::account::session::hash::{Policy, ProvedPolicy};
 use slot::account_sdk::account::session::merkle::MerkleTree;
 use slot::account_sdk::account::session::SessionAccount;
 use slot::session::{FullSessionInfo, PolicyMethod};
 use starknet::core::types::contract::{AbiEntry, StateMutability};
 use starknet::core::types::Felt;
-use starknet::core::utils::{
-    cairo_short_string_to_felt, get_contract_address, get_selector_from_name,
-};
+use starknet::core::utils::get_selector_from_name;
 use starknet::macros::felt;
 use starknet::providers::Provider;
-use starknet_crypto::poseidon_hash_single;
 use tracing::trace;
 use url::Url;
-
-use super::WorldAddressOrName;
 
 // Why the Arc? becaues the Controller account implementation over on `account_sdk` crate is
 // riddled with `+ Clone` bounds on its Provider generic. So we explicitly specify that the Provider
@@ -45,15 +37,14 @@ pub type ControllerSessionAccount<P> = SessionAccount<Arc<P>>;
 /// * Slot hosted networks
 #[tracing::instrument(
     name = "create_controller",
-    skip(rpc_url, provider, world_addr_or_name, config)
+    skip(rpc_url, provider, world_address, world_diff)
 )]
 pub async fn create_controller<P>(
     // Ideally we can get the url from the provider so we dont have to pass an extra url param here
     rpc_url: Url,
     provider: P,
-    // Use to either specify the world address or compute the world address from the world name
-    world_addr_or_name: WorldAddressOrName,
-    config: &Config,
+    world_address: Felt,
+    world_diff: &WorldDiff,
 ) -> Result<ControllerSessionAccount<P>>
 where
     P: Provider,
@@ -71,13 +62,14 @@ where
         bail!("No Controller is associated with this account.");
     };
 
+    let policies = collect_policies(world_address, contract_address, world_diff)?;
+
     // Check if the session exists, if not create a new one
     let session_details = match slot::session::get(chain_id)? {
         Some(session) => {
             trace!(target: "account::controller", expires_at = %session.session.expires_at, policies = session.session.policies.len(), "Found existing session.");
 
             // Check if the policies have changed
-            let policies = collect_policies(world_addr_or_name, contract_address, config)?;
             let is_equal = is_equal_to_existing(&policies, &session);
 
             if is_equal {
@@ -99,7 +91,6 @@ where
         // Create a new session if not found
         None => {
             trace!(target: "account::controller", %username, chain = format!("{chain_id:#}"), "Creating new session.");
-            let policies = collect_policies(world_addr_or_name, contract_address, config)?;
             let session = slot::session::create(rpc_url.clone(), &policies).await?;
             slot::session::store(chain_id, &session)?;
             session
@@ -141,48 +132,36 @@ fn is_equal_to_existing(new_policies: &[PolicyMethod], session_info: &FullSessio
 /// This function collect all the contracts' methods in the current project according to the
 /// project's base manifest ( `/manifests/<profile>/base` ) and convert them into policies.
 fn collect_policies(
-    world_addr_or_name: WorldAddressOrName,
+    world_address: Felt,
     user_address: Felt,
-    config: &Config,
+    world_diff: &WorldDiff,
 ) -> Result<Vec<PolicyMethod>> {
-    let root_dir = config.root();
-    let manifest = get_project_base_manifest(root_dir, config.profile().as_str())?;
-    let policies =
-        collect_policies_from_base_manifest(world_addr_or_name, user_address, root_dir, manifest)?;
+    let policies = collect_policies_from_local_world(world_address, user_address, world_diff)?;
     trace!(target: "account::controller", policies_count = policies.len(), "Extracted policies from project.");
     Ok(policies)
 }
 
-fn get_project_base_manifest(root_dir: &Utf8Path, profile: &str) -> Result<BaseManifest> {
-    let mut manifest_path = root_dir.to_path_buf();
-    manifest_path.extend(["manifests", profile, "base"]);
-    Ok(BaseManifest::load_from_path(&manifest_path)?)
-}
-
-fn collect_policies_from_base_manifest(
-    world_address: WorldAddressOrName,
+fn collect_policies_from_local_world(
+    world_address: Felt,
     user_address: Felt,
-    base_path: &Utf8Path,
-    manifest: BaseManifest,
+    world_diff: &WorldDiff,
 ) -> Result<Vec<PolicyMethod>> {
     let mut policies: Vec<PolicyMethod> = Vec::new();
-    let base_path: Utf8PathBuf = base_path.to_path_buf();
-
-    // compute the world address here if it's a name
-    let world_address = get_dojo_world_address(world_address, &manifest)?;
 
     // get methods from all project contracts
-    for contract in manifest.contracts {
-        let contract_address = get_dojo_contract_address(world_address, &contract, &manifest.base);
-        let abis = contract.inner.abi.unwrap().load_abi_string(&base_path)?;
-        let abis = serde_json::from_str::<Vec<AbiEntry>>(&abis)?;
-        policies_from_abis(&mut policies, &contract.inner.tag, contract_address, &abis);
+    for (selector, resource) in world_diff.resources.iter() {
+        if resource.resource_type() == ResourceType::Contract {
+            // Safe to unwrap the two methods since the selector comes from the resources registry
+            // in the local world.
+            let contract_address = world_diff.get_contract_address(*selector).unwrap();
+            let sierra_class = world_diff.get_class(*selector).unwrap();
+
+            policies_from_abis(&mut policies, &resource.tag(), contract_address, &sierra_class.abi);
+        }
     }
 
     // get method from world contract
-    let abis = manifest.world.inner.abi.unwrap().load_abi_string(&base_path)?;
-    let abis = serde_json::from_str::<Vec<AbiEntry>>(&abis)?;
-    policies_from_abis(&mut policies, "world", world_address, &abis);
+    policies_from_abis(&mut policies, "world", world_address, &world_diff.world_info.class.abi);
 
     // special policy for sending declare tx
     // corresponds to [account_sdk::account::DECLARATION_SELECTOR]
@@ -229,73 +208,44 @@ fn policies_from_abis(
     }
 }
 
-fn get_dojo_contract_address(
-    world_address: Felt,
-    contract: &Manifest<DojoContract>,
-    base_class: &Manifest<Class>,
-) -> Felt {
-    // The `base_class_hash` field in the Contract's base manifest is initially set to ZERO,
-    // so we need to use the `class_hash` from the base class manifest instead.
-    let base_class_hash = if contract.inner.base_class_hash != Felt::ZERO {
-        contract.inner.base_class_hash
-    } else {
-        base_class.inner.class_hash
-    };
-
-    if let Some(address) = contract.inner.address {
-        address
-    } else {
-        let salt = generate_salt(&get_name_from_tag(&contract.inner.tag));
-        get_contract_address(salt, base_class_hash, &[], world_address)
-    }
-}
-
-fn get_dojo_world_address(
-    world_address: WorldAddressOrName,
-    manifest: &BaseManifest,
-) -> Result<Felt> {
-    match world_address {
-        WorldAddressOrName::Address(addr) => Ok(addr),
-        WorldAddressOrName::Name(name) => {
-            let seed = cairo_short_string_to_felt(&name).context("Failed to parse World name.")?;
-            let salt = poseidon_hash_single(seed);
-            let address = get_contract_address(
-                salt,
-                manifest.world.inner.original_class_hash,
-                &[manifest.base.inner.original_class_hash],
-                Felt::ZERO,
-            );
-            Ok(address)
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use dojo_test_utils::compiler::CompilerTestSetup;
+    use dojo_world::diff::WorldDiff;
     use scarb::compiler::Profile;
+    use sozo_scarbext::WorkspaceExt;
     use starknet::macros::felt;
 
     use super::{collect_policies, PolicyMethod};
-    use crate::commands::options::account::WorldAddressOrName;
 
     #[test]
     fn collect_policies_from_project() {
-        let config = CompilerTestSetup::from_examples("../../crates/dojo-core", "../../examples/")
-            .build_test_config("spawn-and-move", Profile::DEV);
+        let current_dir = std::env::current_dir().unwrap();
+        println!("Current directory: {:?}", current_dir);
+        let setup = CompilerTestSetup::from_examples("../../crates/dojo/core", "../../examples/");
+        let config = setup.build_test_config("spawn-and-move", Profile::DEV);
 
-        let world_addr = felt!("0x74c73d35df54ddc53bcf34aab5e0dbb09c447e99e01f4d69535441253c9571a");
+        let ws = scarb::ops::read_workspace(config.manifest_path(), &config)
+            .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
+
+        let world_local = ws.load_world_local().unwrap();
+        let world_diff = WorldDiff::from_local(world_local).unwrap();
+
         let user_addr = felt!("0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba");
 
         let policies =
-            collect_policies(WorldAddressOrName::Address(world_addr), user_addr, &config).unwrap();
+            collect_policies(world_diff.world_info.address, user_addr, &world_diff).unwrap();
 
-        // Get test data
-        let test_data = include_str!("../../../../tests/test_data/policies.json");
-        let expected_policies: Vec<PolicyMethod> = serde_json::from_str(test_data).unwrap();
+        if std::env::var("POLICIES_FIX").is_ok() {
+            let policies_json = serde_json::to_string_pretty(&policies).unwrap();
+            println!("{}", policies_json);
+        } else {
+            let test_data = include_str!("../../../../tests/test_data/policies.json");
+            let expected_policies: Vec<PolicyMethod> = serde_json::from_str(test_data).unwrap();
 
-        // Compare the collected policies with the test data
-        assert_eq!(policies.len(), expected_policies.len());
-        expected_policies.iter().for_each(|p| assert!(policies.contains(p)));
+            // Compare the collected policies with the test data.
+            assert_eq!(policies.len(), expected_policies.len());
+            expected_policies.iter().for_each(|p| assert!(policies.contains(p)));
+        }
     }
 }

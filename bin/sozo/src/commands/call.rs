@@ -1,10 +1,17 @@
-use anyhow::Result;
+use std::str::FromStr;
+
+use anyhow::{anyhow, Result};
 use clap::Args;
+use dojo_types::naming;
 use dojo_world::contracts::naming::ensure_namespace;
-use dojo_world::metadata::get_default_namespace_from_ws;
 use scarb::core::Config;
+use sozo_scarbext::WorkspaceExt;
+use starknet::core::types::{BlockId, BlockTag, Felt, FunctionCall, StarknetError};
+use starknet::core::utils as snutils;
+use starknet::providers::{Provider, ProviderError};
 use tracing::trace;
 
+use super::execute::ContractDescriptor;
 use super::options::starknet::StarknetOptions;
 use super::options::world::WorldOptions;
 use crate::commands::calldata_decoder;
@@ -46,22 +53,22 @@ impl CallArgs {
     pub fn run(self, config: &Config) -> Result<()> {
         trace!(args = ?self);
 
-        let env_metadata = utils::load_metadata_from_config(config)?;
-        trace!(?env_metadata, "Loaded metadata from config.");
+        let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
 
-        let tag_or_address = if utils::is_address(&self.tag_or_address) {
-            self.tag_or_address
+        let profile_config = ws.load_profile_config()?;
+
+        let descriptor = if utils::is_address(&self.tag_or_address) {
+            ContractDescriptor::Address(Felt::from_str(&self.tag_or_address)?)
         } else {
-            let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
-            let default_namespace = get_default_namespace_from_ws(&ws)?;
-            ensure_namespace(&self.tag_or_address, &default_namespace)
+            ContractDescriptor::Tag(ensure_namespace(
+                &self.tag_or_address,
+                &profile_config.namespace.default,
+            ))
         };
 
         config.tokio_handle().block_on(async {
-            let world_reader =
-                utils::world_reader_from_env_metadata(self.world, self.starknet, &env_metadata)
-                    .await
-                    .unwrap();
+            let (world_diff, provider, _) =
+                utils::get_world_diff_and_provider(self.starknet.clone(), self.world, &ws).await?;
 
             let calldata = if let Some(cd) = self.calldata {
                 calldata_decoder::decode_calldata(&cd)?
@@ -69,15 +76,55 @@ impl CallArgs {
                 vec![]
             };
 
-            sozo_ops::call::call(
-                &config.ui(),
-                world_reader,
-                tag_or_address,
-                self.entrypoint,
-                calldata,
-                self.block_id,
-            )
-            .await
+            let contract_address = match &descriptor {
+                ContractDescriptor::Address(address) => Some(*address),
+                ContractDescriptor::Tag(tag) => {
+                    let selector = naming::compute_selector_from_tag(tag);
+                    world_diff.get_contract_address(selector)
+                }
+            }
+            .ok_or_else(|| anyhow!("Contract {descriptor} not found in the world diff."))?;
+
+            let block_id = if let Some(block_id) = self.block_id {
+                dojo_utils::parse_block_id(block_id)?
+            } else {
+                BlockId::Tag(BlockTag::Pending)
+            };
+
+            let res = provider
+                .call(
+                    FunctionCall {
+                        contract_address,
+                        entry_point_selector: snutils::get_selector_from_name(&self.entrypoint)?,
+                        calldata,
+                    },
+                    block_id,
+                )
+                .await;
+
+            match res {
+                Ok(output) => {
+                    println!(
+                        "[ {} ]",
+                        output.iter().map(|o| format!("0x{:x}", o)).collect::<Vec<_>>().join(" ")
+                    );
+                }
+                Err(e) => {
+                    anyhow::bail!(format!(
+                        "Error calling entrypoint `{}` on address: {:#066x}\n{}",
+                        self.entrypoint,
+                        contract_address,
+                        match &e {
+                            ProviderError::StarknetError(StarknetError::ContractError(e)) => {
+                                format!("Contract error: {}", e.revert_error.clone())
+                            }
+                            _ => e.to_string(),
+                        }
+                    ));
+                }
+            };
+
+            Ok(())
         })
     }
 }

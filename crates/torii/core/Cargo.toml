@@ -17,7 +17,7 @@ cainome.workspace = true
 chrono.workspace = true
 crypto-bigint.workspace = true
 dojo-types.workspace = true
-dojo-world = { workspace = true, features = [ "contracts", "manifest" ] }
+dojo-world.workspace = true
 futures-channel = "0.3.0"
 futures-util.workspace = true
 hashlink.workspace = true
@@ -31,16 +31,16 @@ sqlx.workspace = true
 starknet-crypto.workspace = true
 starknet.workspace = true
 thiserror.workspace = true
-tokio = { version = "1.32.0", features = [ "sync" ], default-features = true }
+tokio = { version = "1.32.0", features = [ "sync", "macros" ], default-features = true }
 # tokio-stream = "0.1.11"
 tokio-util.workspace = true
 toml.workspace = true
 tracing.workspace = true
 
 [dev-dependencies]
-camino.workspace = true
 dojo-test-utils.workspace = true
 dojo-utils.workspace = true
 katana-runner.workspace = true
 scarb.workspace = true
 tempfile.workspace = true
+sozo-scarbext.workspace = true

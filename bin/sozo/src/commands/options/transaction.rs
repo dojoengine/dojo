@@ -2,7 +2,6 @@ use anyhow::{bail, Result};
 use clap::Args;
 use dojo_utils::{TxnAction, TxnConfig};
 use starknet::core::types::Felt;
-use tracing::trace;
 
 #[derive(Debug, Args, Default)]
 #[command(next_help_heading = "Transaction options")]
@@ -42,6 +41,12 @@ pub struct TransactionOptions {
     #[arg(help = "Display the link to debug the transaction with Walnut.")]
     #[arg(global = true)]
     pub walnut: bool,
+
+    #[arg(long)]
+    #[arg(help = "The timeout in milliseconds for the transaction wait.")]
+    #[arg(value_name = "TIMEOUT-MS")]
+    #[arg(global = true)]
+    pub timeout: Option<u64>,
 }
 
 impl TransactionOptions {
@@ -62,6 +67,7 @@ impl TransactionOptions {
                 max_fee_raw: self.max_fee_raw,
                 fee_estimate_multiplier: self.fee_estimate_multiplier,
                 walnut: self.walnut,
+                timeout_ms: self.timeout,
             }),
         }
     }
@@ -69,18 +75,13 @@ impl TransactionOptions {
 
 impl From<TransactionOptions> for TxnConfig {
     fn from(value: TransactionOptions) -> Self {
-        trace!(
-            fee_estimate_multiplier = value.fee_estimate_multiplier,
-            wait = value.wait,
-            receipt = value.receipt,
-            "Converting TransactionOptions to TxnConfig."
-        );
         Self {
             fee_estimate_multiplier: value.fee_estimate_multiplier,
             wait: value.wait || value.walnut,
             receipt: value.receipt,
             max_fee_raw: value.max_fee_raw,
             walnut: value.walnut,
+            timeout_ms: value.timeout,
         }
     }
 }

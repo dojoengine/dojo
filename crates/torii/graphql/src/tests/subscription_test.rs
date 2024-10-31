@@ -7,7 +7,7 @@ mod tests {
     use async_graphql::value;
     use dojo_types::primitive::Primitive;
     use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
-    use dojo_world::contracts::abi::model::Layout;
+    use dojo_world::contracts::abigen::model::Layout;
     use dojo_world::contracts::naming::{compute_selector_from_names, compute_selector_from_tag};
     use serial_test::serial;
     use sqlx::SqlitePool;

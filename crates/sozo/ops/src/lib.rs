@@ -1,17 +1,7 @@
-pub mod account;
-pub mod auth;
-pub mod call;
-pub mod events;
-pub mod execute;
-pub mod keystore;
-pub mod migration;
-pub mod model;
-pub mod register;
-pub mod statistics;
-pub mod utils;
+// #![cfg_attr(not(test), warn(unused_crate_dependencies))]
 
-#[cfg(any(test, feature = "test-utils"))]
-pub mod test_utils;
+pub mod account;
+pub mod migrate;
 
 #[cfg(test)]
 pub mod tests;

@@ -1,5 +1,6 @@
 use std::cmp::Ordering;
 use std::ops::{Add, AddAssign, Sub, SubAssign};
+use std::str::FromStr;
 
 use starknet::core::types::U256;
 use starknet_crypto::Felt;
@@ -26,6 +27,10 @@ pub fn u256_to_sql_string(u256: &U256) -> String {
 pub fn sql_string_to_u256(sql_string: &str) -> U256 {
     let sql_string = sql_string.strip_prefix("0x").unwrap_or(sql_string);
     U256::from(crypto_bigint::U256::from_be_hex(sql_string))
+}
+
+pub fn sql_string_to_felts(sql_string: &str) -> Vec<Felt> {
+    sql_string.split(FELT_DELIMITER).map(|felt| Felt::from_str(felt).unwrap()).collect()
 }
 
 // type used to do calculation on inmemory balances

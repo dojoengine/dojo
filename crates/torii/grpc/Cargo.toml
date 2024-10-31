@@ -22,7 +22,7 @@ strum.workspace = true
 strum_macros.workspace = true
 
 # server
-dojo-world = { path = "../../dojo-world", features = [ "contracts" ] }
+dojo-world.workspace = true
 hyper.workspace = true
 rand.workspace = true
 serde_json.workspace = true
@@ -37,6 +37,7 @@ dojo-utils.workspace = true
 katana-runner.workspace = true
 scarb.workspace = true
 tempfile.workspace = true
+sozo-scarbext.workspace = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 tonic-web-wasm-client.workspace = true

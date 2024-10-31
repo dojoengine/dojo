@@ -1,0 +1,2944 @@
+//! > Test expansion of the derive(Introspect).
+
+//! > test_runner_name
+test_expand_plugin
+
+//! > test_id
+introspect
+
+//! > cairo_code
+use core::serde::Serde;
+
+#[derive(Copy, Drop, Serde, Introspect)]
+struct Vec2 {
+    x: u32,
+    y: u32
+}
+
+#[derive(Serde, Copy, Drop, Introspect)]
+enum PlainEnum {
+    Left,
+    Right,
+}
+
+#[derive(Serde, Copy, Drop, Introspect)]
+enum EnumWithPrimitive {
+    Left: u32,
+    Right: u32,
+}
+
+#[derive(Serde, Copy, Drop, Introspect)]
+enum EnumWithStruct {
+    Left: Vec2,
+    Right: Vec2,
+}
+
+#[derive(Serde, Copy, Drop, Introspect)]
+enum EnumWithSimpleArray {
+    Left: Array<u32>,
+    Right: Array<u32>,
+}
+
+#[derive(Serde, Copy, Drop, Introspect)]
+enum EnumWithByteArray {
+    Left: ByteArray,
+    Right: ByteArray,
+}
+
+#[derive(Serde, Copy, Drop, Introspect)]
+enum EnumWithSimpleTuple {
+    Left: (u8, u256),
+    Right: (u8, u256),
+}
+
+#[derive(Serde, Copy, Drop, Introspect)]
+enum EnumWithComplexTuple {
+    Left: (u8, Vec2),
+    Right: (u8, Vec2),
+}
+
+#[derive(Serde, Copy, Drop, Introspect)]
+enum EnumWithPrimitive {
+    Left: u32,
+    Right: u32,
+}
+
+#[derive(Serde, Copy, Drop, Introspect)]
+enum EnumCustom {
+    Left: Vec2,
+    Right: Vec2,
+}
+
+#[derive(Serde, Copy, Drop, Introspect)]
+enum EnumTupleMix {
+    Left: (Vec2, u64, EnumCustom),
+    Right: (Vec2, u64, EnumCustom),
+}
+
+#[derive(Serde, Copy, Drop, Introspect)]
+enum EnumWithDifferentVariantData {
+    One,
+    Two: u32,
+    Three: (Vec2, u64),
+}
+
+#[derive(Copy, Drop, Introspect)]
+struct StructWithPrimitives {
+    #[key]
+    player: ContractAddress,
+    before: u8,
+    after: u16,
+}
+
+#[derive(Copy, Drop, Introspect)]
+struct StructWithStruct {
+    #[key]
+    player: ContractAddress,
+    before: u8,
+    after: Vec2,
+}
+
+#[derive(Copy, Drop, Introspect)]
+struct StructWithSimpleArray {
+    #[key]
+    player: ContractAddress,
+    before: u8,
+    after: Array<u32>,
+}
+
+#[derive(Copy, Drop, Introspect)]
+struct StructWithByteArray {
+    #[key]
+    player: ContractAddress,
+    before: u8,
+    after: ByteArray,
+}
+
+#[derive(Copy, Drop, Introspect)]
+struct StructWithComplexArray {
+    #[key]
+    player: ContractAddress,
+    before: u8,
+    after: Array<Vec2>,
+}
+
+#[derive(Copy, Drop, Introspect)]
+struct StructWithSimpleTuple {
+    #[key]
+    player: ContractAddress,
+    before: u8,
+    after: (u8, u256),
+}
+
+#[derive(Copy, Drop, Introspect)]
+struct StructWithComplexTuple {
+    #[key]
+    player: ContractAddress,
+    before: u8,
+    after: (u8, Vec2, EnumCustom),
+}
+
+#[derive(Copy, Drop, Introspect)]
+struct StructWithNestedArrays {
+    #[key]
+    player: ContractAddress,
+    before: u8,
+    after: Array<Array<Array<Vec2>>>,
+}
+
+#[derive(Copy, Drop, Introspect)]
+struct StructWithNestedTuples {
+    #[key]
+    player: ContractAddress,
+    before: u8,
+    after: ((u8, u32), (Vec2, EnumCustom)),
+}
+
+#[derive(Copy, Drop, Introspect)]
+struct StructWithNestedTuplesAndByteArray {
+    #[key]
+    player: ContractAddress,
+    before: u8,
+    after: ((u8, u32), (Vec2, ByteArray)),
+}
+
+#[derive(Copy, Drop, Introspect)]
+struct StructWithNestedEverything {
+    #[key]
+    player: ContractAddress,
+    before: u8,
+    after: ((u8, u32), (Vec2, EnumCustom), (Array<(u32, Vec2)>, EnumCustom), (u16,))
+}
+
+#[derive(Copy, Drop, Serde, Introspect)]
+struct GenericStruct<T> {
+    t: T,
+}
+
+#[derive(Copy, Drop, Serde, Introspect)]
+struct StructWithBadOption {
+    x: Option<(u8, u16)>
+}
+
+#[derive(Copy, Drop, Serde, Introspect)]
+enum EnumWithBadOption {
+    first: Option<(u8, u16)>,
+}
+
+#[derive(Introspect, IntrospectPacked)]
+enum EnumIncompatibleAttrs {}
+
+#[derive(Introspect, IntrospectPacked)]
+struct StructIncompatibleAttrs {}
+
+#[derive(Introspect)]
+#[derive(IntrospectPacked)]
+struct StructIncompatibleAttrs2 {}
+
+#[derive(Introspect)]
+#[derive(IntrospectPacked)]
+enum EnumIncompatibleAttrs2 {}
+
+#[derive(IntrospectPacked)]
+struct StructPacked1 {
+    x: u8
+}
+
+#[derive(IntrospectPacked)]
+struct StructPacked2 {
+    x: u8,
+    y: u256
+}
+
+#[derive(IntrospectPacked)]
+struct StructPacked3 {
+    x: u256,
+    y: (u8, u32)
+}
+
+#[derive(IntrospectPacked)]
+struct StructNotPackable1 {
+    x: u8,
+    y: Array<u32>
+}
+
+#[derive(IntrospectPacked)]
+struct StructPackableWithInnerPacked {
+    x: u8,
+    y: StructPacked1
+}
+
+#[derive(IntrospectPacked)]
+enum EnumPacked1 {
+    a,
+    b,
+    c
+}
+
+#[derive(IntrospectPacked)]
+enum EnumPacked2 {
+    a: u8,
+    b: u8,
+    c: u8
+}
+
+#[derive(IntrospectPacked)]
+enum EnumPacked3 {
+    a: (u128, u128),
+    b: u256,
+}
+
+
+#[derive(IntrospectPacked)]
+enum EnumPackableWithInnerPacked {
+    a: StructPacked1,
+    b: StructPacked1,
+}
+
+#[derive(IntrospectPacked)]
+enum EnumNotPackable1 {
+    a: u8,
+    b: u256,
+}
+
+//! > expanded_cairo_code
+use core::serde::Serde;
+
+#[derive(Copy, Drop, Serde, Introspect)]
+struct Vec2 {
+    x: u32,
+    y: u32
+}
+
+#[derive(Serde, Copy, Drop, Introspect)]
+enum PlainEnum {
+    Left,
+    Right,
+}
+
+#[derive(Serde, Copy, Drop, Introspect)]
+enum EnumWithPrimitive {
+    Left: u32,
+    Right: u32,
+}
+
+#[derive(Serde, Copy, Drop, Introspect)]
+enum EnumWithStruct {
+    Left: Vec2,
+    Right: Vec2,
+}
+
+#[derive(Serde, Copy, Drop, Introspect)]
+enum EnumWithSimpleArray {
+    Left: Array<u32>,
+    Right: Array<u32>,
+}
+
+#[derive(Serde, Copy, Drop, Introspect)]
+enum EnumWithByteArray {
+    Left: ByteArray,
+    Right: ByteArray,
+}
+
+#[derive(Serde, Copy, Drop, Introspect)]
+enum EnumWithSimpleTuple {
+    Left: (u8, u256),
+    Right: (u8, u256),
+}
+
+#[derive(Serde, Copy, Drop, Introspect)]
+enum EnumWithComplexTuple {
+    Left: (u8, Vec2),
+    Right: (u8, Vec2),
+}
+
+#[derive(Serde, Copy, Drop, Introspect)]
+enum EnumWithPrimitive {
+    Left: u32,
+    Right: u32,
+}
+
+#[derive(Serde, Copy, Drop, Introspect)]
+enum EnumCustom {
+    Left: Vec2,
+    Right: Vec2,
+}
+
+#[derive(Serde, Copy, Drop, Introspect)]
+enum EnumTupleMix {
+    Left: (Vec2, u64, EnumCustom),
+    Right: (Vec2, u64, EnumCustom),
+}
+
+#[derive(Serde, Copy, Drop, Introspect)]
+enum EnumWithDifferentVariantData {
+    One,
+    Two: u32,
+    Three: (Vec2, u64),
+}
+
+#[derive(Copy, Drop, Introspect)]
+struct StructWithPrimitives {
+    #[key]
+    player: ContractAddress,
+    before: u8,
+    after: u16,
+}
+
+#[derive(Copy, Drop, Introspect)]
+struct StructWithStruct {
+    #[key]
+    player: ContractAddress,
+    before: u8,
+    after: Vec2,
+}
+
+#[derive(Copy, Drop, Introspect)]
+struct StructWithSimpleArray {
+    #[key]
+    player: ContractAddress,
+    before: u8,
+    after: Array<u32>,
+}
+
+#[derive(Copy, Drop, Introspect)]
+struct StructWithByteArray {
+    #[key]
+    player: ContractAddress,
+    before: u8,
+    after: ByteArray,
+}
+
+#[derive(Copy, Drop, Introspect)]
+struct StructWithComplexArray {
+    #[key]
+    player: ContractAddress,
+    before: u8,
+    after: Array<Vec2>,
+}
+
+#[derive(Copy, Drop, Introspect)]
+struct StructWithSimpleTuple {
+    #[key]
+    player: ContractAddress,
+    before: u8,
+    after: (u8, u256),
+}
+
+#[derive(Copy, Drop, Introspect)]
+struct StructWithComplexTuple {
+    #[key]
+    player: ContractAddress,
+    before: u8,
+    after: (u8, Vec2, EnumCustom),
+}
+
+#[derive(Copy, Drop, Introspect)]
+struct StructWithNestedArrays {
+    #[key]
+    player: ContractAddress,
+    before: u8,
+    after: Array<Array<Array<Vec2>>>,
+}
+
+#[derive(Copy, Drop, Introspect)]
+struct StructWithNestedTuples {
+    #[key]
+    player: ContractAddress,
+    before: u8,
+    after: ((u8, u32), (Vec2, EnumCustom)),
+}
+
+#[derive(Copy, Drop, Introspect)]
+struct StructWithNestedTuplesAndByteArray {
+    #[key]
+    player: ContractAddress,
+    before: u8,
+    after: ((u8, u32), (Vec2, ByteArray)),
+}
+
+#[derive(Copy, Drop, Introspect)]
+struct StructWithNestedEverything {
+    #[key]
+    player: ContractAddress,
+    before: u8,
+    after: ((u8, u32), (Vec2, EnumCustom), (Array<(u32, Vec2)>, EnumCustom), (u16,))
+}
+
+#[derive(Copy, Drop, Serde, Introspect)]
+struct GenericStruct<T> {
+    t: T,
+}
+
+#[derive(Copy, Drop, Serde, Introspect)]
+struct StructWithBadOption {
+    x: Option<(u8, u16)>
+}
+
+#[derive(Copy, Drop, Serde, Introspect)]
+enum EnumWithBadOption {
+    first: Option<(u8, u16)>,
+}
+
+#[derive(Introspect, IntrospectPacked)]
+enum EnumIncompatibleAttrs {}
+
+#[derive(Introspect, IntrospectPacked)]
+struct StructIncompatibleAttrs {}
+
+#[derive(Introspect)]
+#[derive(IntrospectPacked)]
+struct StructIncompatibleAttrs2 {}
+
+#[derive(Introspect)]
+#[derive(IntrospectPacked)]
+enum EnumIncompatibleAttrs2 {}
+
+#[derive(IntrospectPacked)]
+struct StructPacked1 {
+    x: u8
+}
+
+#[derive(IntrospectPacked)]
+struct StructPacked2 {
+    x: u8,
+    y: u256
+}
+
+#[derive(IntrospectPacked)]
+struct StructPacked3 {
+    x: u256,
+    y: (u8, u32)
+}
+
+#[derive(IntrospectPacked)]
+struct StructNotPackable1 {
+    x: u8,
+    y: Array<u32>
+}
+
+#[derive(IntrospectPacked)]
+struct StructPackableWithInnerPacked {
+    x: u8,
+    y: StructPacked1
+}
+
+#[derive(IntrospectPacked)]
+enum EnumPacked1 {
+    a,
+    b,
+    c
+}
+
+#[derive(IntrospectPacked)]
+enum EnumPacked2 {
+    a: u8,
+    b: u8,
+    c: u8
+}
+
+#[derive(IntrospectPacked)]
+enum EnumPacked3 {
+    a: (u128, u128),
+    b: u256,
+}
+
+
+#[derive(IntrospectPacked)]
+enum EnumPackableWithInnerPacked {
+    a: StructPacked1,
+    b: StructPacked1,
+}
+
+#[derive(IntrospectPacked)]
+enum EnumNotPackable1 {
+    a: u8,
+    b: u256,
+}impl Vec2Copy of core::traits::Copy::<Vec2>;
+impl Vec2Drop of core::traits::Drop::<Vec2>;
+impl Vec2Serde of core::serde::Serde::<Vec2> {
+    fn serialize(self: @Vec2, ref output: core::array::Array<felt252>) {
+        core::serde::Serde::serialize(self.x, ref output);
+        core::serde::Serde::serialize(self.y, ref output)
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<Vec2> {
+        core::option::Option::Some(Vec2 {
+            x: core::serde::Serde::deserialize(ref serialized)?,
+            y: core::serde::Serde::deserialize(ref serialized)?,
+        })
+    }
+}
+
+impl Vec2Introspect<> of dojo::meta::introspect::Introspect<Vec2<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::Some(2)
+    }
+
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Struct(
+            array![
+            dojo::meta::FieldLayout {
+                    selector: 512066735765477566404754172672287371265995314501343422459174036873487219331,
+                    layout: dojo::meta::introspect::Introspect::<u32>::layout()
+                },
+dojo::meta::FieldLayout {
+                    selector: 1591024729085637502504777720563487898377940395575083379770417352976841400819,
+                    layout: dojo::meta::introspect::Introspect::<u32
+>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
+                name: 'Vec2',
+                attrs: array![].span(),
+                children: array![
+                dojo::meta::introspect::Member {
+            name: 'x',
+            attrs: array![].span(),
+            ty: dojo::meta::introspect::Introspect::<u32>::ty()
+        },
+dojo::meta::introspect::Member {
+            name: 'y',
+            attrs: array![].span(),
+            ty: dojo::meta::introspect::Introspect::<u32>::ty()
+        }
+
+                ].span()
+            }
+        )
+    }
+}
+impl PlainEnumSerde of core::serde::Serde::<PlainEnum> {
+    fn serialize(self: @PlainEnum, ref output: core::array::Array<felt252>) {
+        match self {
+            PlainEnum::Left(x) => { core::serde::Serde::serialize(@0, ref output); core::serde::Serde::serialize(x, ref output); },
+            PlainEnum::Right(x) => { core::serde::Serde::serialize(@1, ref output); core::serde::Serde::serialize(x, ref output); },
+        }
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<PlainEnum> {
+        let idx: felt252 = core::serde::Serde::deserialize(ref serialized)?;
+        core::option::Option::Some(
+            match idx {
+                0 => PlainEnum::Left(core::serde::Serde::deserialize(ref serialized)?),
+                1 => PlainEnum::Right(core::serde::Serde::deserialize(ref serialized)?),
+                _ => { return core::option::Option::None; }
+            }
+        )
+    }
+}
+impl PlainEnumCopy of core::traits::Copy::<PlainEnum>;
+impl PlainEnumDrop of core::traits::Drop::<PlainEnum>;
+
+impl PlainEnumIntrospect<> of dojo::meta::introspect::Introspect<PlainEnum<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::Some(1)
+    }
+
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Enum(
+            array![
+            dojo::meta::FieldLayout {
+                    selector: 0,
+                    layout: dojo::meta::Layout::Fixed(array![].span())
+                },
+dojo::meta::FieldLayout {
+                    selector: 1,
+                    layout: dojo::meta::Layout::Fixed(array![].span())
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Enum(
+            dojo::meta::introspect::Enum {
+                name: 'PlainEnum',
+                attrs: array![].span(),
+                children: array![
+                ('Left', dojo::meta::introspect::Ty::Tuple(array![].span())),
+('Right', dojo::meta::introspect::Ty::Tuple(array![].span()))
+
+                ].span()
+            }
+        )
+    }
+}
+impl EnumWithPrimitiveSerde of core::serde::Serde::<EnumWithPrimitive> {
+    fn serialize(self: @EnumWithPrimitive, ref output: core::array::Array<felt252>) {
+        match self {
+            EnumWithPrimitive::Left(x) => { core::serde::Serde::serialize(@0, ref output); core::serde::Serde::serialize(x, ref output); },
+            EnumWithPrimitive::Right(x) => { core::serde::Serde::serialize(@1, ref output); core::serde::Serde::serialize(x, ref output); },
+        }
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<EnumWithPrimitive> {
+        let idx: felt252 = core::serde::Serde::deserialize(ref serialized)?;
+        core::option::Option::Some(
+            match idx {
+                0 => EnumWithPrimitive::Left(core::serde::Serde::deserialize(ref serialized)?),
+                1 => EnumWithPrimitive::Right(core::serde::Serde::deserialize(ref serialized)?),
+                _ => { return core::option::Option::None; }
+            }
+        )
+    }
+}
+impl EnumWithPrimitiveCopy of core::traits::Copy::<EnumWithPrimitive>;
+impl EnumWithPrimitiveDrop of core::traits::Drop::<EnumWithPrimitive>;
+
+impl EnumWithPrimitiveIntrospect<> of dojo::meta::introspect::Introspect<EnumWithPrimitive<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::Some(2)
+    }
+
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Enum(
+            array![
+            dojo::meta::FieldLayout {
+                    selector: 0,
+                    layout: dojo::meta::introspect::Introspect::<u32>::layout()
+                },
+dojo::meta::FieldLayout {
+                    selector: 1,
+                    layout: dojo::meta::introspect::Introspect::<u32>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Enum(
+            dojo::meta::introspect::Enum {
+                name: 'EnumWithPrimitive',
+                attrs: array![].span(),
+                children: array![
+                ('Left', dojo::meta::introspect::Introspect::<u32>::ty()),
+('Right', dojo::meta::introspect::Introspect::<u32>::ty())
+
+                ].span()
+            }
+        )
+    }
+}
+impl EnumWithStructSerde of core::serde::Serde::<EnumWithStruct> {
+    fn serialize(self: @EnumWithStruct, ref output: core::array::Array<felt252>) {
+        match self {
+            EnumWithStruct::Left(x) => { core::serde::Serde::serialize(@0, ref output); core::serde::Serde::serialize(x, ref output); },
+            EnumWithStruct::Right(x) => { core::serde::Serde::serialize(@1, ref output); core::serde::Serde::serialize(x, ref output); },
+        }
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<EnumWithStruct> {
+        let idx: felt252 = core::serde::Serde::deserialize(ref serialized)?;
+        core::option::Option::Some(
+            match idx {
+                0 => EnumWithStruct::Left(core::serde::Serde::deserialize(ref serialized)?),
+                1 => EnumWithStruct::Right(core::serde::Serde::deserialize(ref serialized)?),
+                _ => { return core::option::Option::None; }
+            }
+        )
+    }
+}
+impl EnumWithStructCopy of core::traits::Copy::<EnumWithStruct>;
+impl EnumWithStructDrop of core::traits::Drop::<EnumWithStruct>;
+
+impl EnumWithStructIntrospect<> of dojo::meta::introspect::Introspect<EnumWithStruct<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        let sizes : Array<Option<usize>> = array![
+                    dojo::meta::introspect::Introspect::<Vec2>::size(),
+Option::Some(1)
+                ];
+
+                if dojo::utils::any_none(@sizes) {
+                    return Option::None;
+                }
+                Option::Some(dojo::utils::sum(sizes))
+                
+    }
+
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Enum(
+            array![
+            dojo::meta::FieldLayout {
+                    selector: 0,
+                    layout: dojo::meta::introspect::Introspect::<Vec2>::layout()
+                },
+dojo::meta::FieldLayout {
+                    selector: 1,
+                    layout: dojo::meta::introspect::Introspect::<Vec2>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Enum(
+            dojo::meta::introspect::Enum {
+                name: 'EnumWithStruct',
+                attrs: array![].span(),
+                children: array![
+                ('Left', dojo::meta::introspect::Introspect::<Vec2>::ty()),
+('Right', dojo::meta::introspect::Introspect::<Vec2>::ty())
+
+                ].span()
+            }
+        )
+    }
+}
+impl EnumWithSimpleArraySerde of core::serde::Serde::<EnumWithSimpleArray> {
+    fn serialize(self: @EnumWithSimpleArray, ref output: core::array::Array<felt252>) {
+        match self {
+            EnumWithSimpleArray::Left(x) => { core::serde::Serde::serialize(@0, ref output); core::serde::Serde::serialize(x, ref output); },
+            EnumWithSimpleArray::Right(x) => { core::serde::Serde::serialize(@1, ref output); core::serde::Serde::serialize(x, ref output); },
+        }
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<EnumWithSimpleArray> {
+        let idx: felt252 = core::serde::Serde::deserialize(ref serialized)?;
+        core::option::Option::Some(
+            match idx {
+                0 => EnumWithSimpleArray::Left(core::serde::Serde::deserialize(ref serialized)?),
+                1 => EnumWithSimpleArray::Right(core::serde::Serde::deserialize(ref serialized)?),
+                _ => { return core::option::Option::None; }
+            }
+        )
+    }
+}
+impl EnumWithSimpleArrayCopy of core::traits::Copy::<EnumWithSimpleArray>;
+impl EnumWithSimpleArrayDrop of core::traits::Drop::<EnumWithSimpleArray>;
+
+impl EnumWithSimpleArrayIntrospect<> of dojo::meta::introspect::Introspect<EnumWithSimpleArray<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Enum(
+            array![
+            dojo::meta::FieldLayout {
+                    selector: 0,
+                    layout: dojo::meta::introspect::Introspect::<Array<u32>>::layout()
+                },
+dojo::meta::FieldLayout {
+                    selector: 1,
+                    layout: dojo::meta::introspect::Introspect::<Array<u32>>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Enum(
+            dojo::meta::introspect::Enum {
+                name: 'EnumWithSimpleArray',
+                attrs: array![].span(),
+                children: array![
+                ('Left', dojo::meta::introspect::Ty::Array(
+                array![
+                dojo::meta::introspect::Introspect::<u32>::ty()
+                ].span()
+            )),
+('Right', dojo::meta::introspect::Ty::Array(
+                array![
+                dojo::meta::introspect::Introspect::<u32>::ty()
+                ].span()
+            ))
+
+                ].span()
+            }
+        )
+    }
+}
+impl EnumWithByteArraySerde of core::serde::Serde::<EnumWithByteArray> {
+    fn serialize(self: @EnumWithByteArray, ref output: core::array::Array<felt252>) {
+        match self {
+            EnumWithByteArray::Left(x) => { core::serde::Serde::serialize(@0, ref output); core::serde::Serde::serialize(x, ref output); },
+            EnumWithByteArray::Right(x) => { core::serde::Serde::serialize(@1, ref output); core::serde::Serde::serialize(x, ref output); },
+        }
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<EnumWithByteArray> {
+        let idx: felt252 = core::serde::Serde::deserialize(ref serialized)?;
+        core::option::Option::Some(
+            match idx {
+                0 => EnumWithByteArray::Left(core::serde::Serde::deserialize(ref serialized)?),
+                1 => EnumWithByteArray::Right(core::serde::Serde::deserialize(ref serialized)?),
+                _ => { return core::option::Option::None; }
+            }
+        )
+    }
+}
+impl EnumWithByteArrayCopy of core::traits::Copy::<EnumWithByteArray>;
+impl EnumWithByteArrayDrop of core::traits::Drop::<EnumWithByteArray>;
+
+impl EnumWithByteArrayIntrospect<> of dojo::meta::introspect::Introspect<EnumWithByteArray<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Enum(
+            array![
+            dojo::meta::FieldLayout {
+                    selector: 0,
+                    layout: dojo::meta::introspect::Introspect::<ByteArray>::layout()
+                },
+dojo::meta::FieldLayout {
+                    selector: 1,
+                    layout: dojo::meta::introspect::Introspect::<ByteArray>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Enum(
+            dojo::meta::introspect::Enum {
+                name: 'EnumWithByteArray',
+                attrs: array![].span(),
+                children: array![
+                ('Left', dojo::meta::introspect::Ty::ByteArray),
+('Right', dojo::meta::introspect::Ty::ByteArray)
+
+                ].span()
+            }
+        )
+    }
+}
+impl EnumWithSimpleTupleSerde of core::serde::Serde::<EnumWithSimpleTuple> {
+    fn serialize(self: @EnumWithSimpleTuple, ref output: core::array::Array<felt252>) {
+        match self {
+            EnumWithSimpleTuple::Left(x) => { core::serde::Serde::serialize(@0, ref output); core::serde::Serde::serialize(x, ref output); },
+            EnumWithSimpleTuple::Right(x) => { core::serde::Serde::serialize(@1, ref output); core::serde::Serde::serialize(x, ref output); },
+        }
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<EnumWithSimpleTuple> {
+        let idx: felt252 = core::serde::Serde::deserialize(ref serialized)?;
+        core::option::Option::Some(
+            match idx {
+                0 => EnumWithSimpleTuple::Left(core::serde::Serde::deserialize(ref serialized)?),
+                1 => EnumWithSimpleTuple::Right(core::serde::Serde::deserialize(ref serialized)?),
+                _ => { return core::option::Option::None; }
+            }
+        )
+    }
+}
+impl EnumWithSimpleTupleCopy of core::traits::Copy::<EnumWithSimpleTuple>;
+impl EnumWithSimpleTupleDrop of core::traits::Drop::<EnumWithSimpleTuple>;
+
+impl EnumWithSimpleTupleIntrospect<> of dojo::meta::introspect::Introspect<EnumWithSimpleTuple<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::Some(4)
+    }
+
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Enum(
+            array![
+            dojo::meta::FieldLayout {
+                    selector: 0,
+                    layout: dojo::meta::Layout::Tuple(
+            array![
+            dojo::meta::introspect::Introspect::<u8>::layout(),
+dojo::meta::introspect::Introspect::<u256>::layout()
+            ].span()
+        )
+                },
+dojo::meta::FieldLayout {
+                    selector: 1,
+                    layout: dojo::meta::Layout::Tuple(
+            array![
+            dojo::meta::introspect::Introspect::<u8>::layout(),
+dojo::meta::introspect::Introspect::<u256>::layout()
+            ].span()
+        )
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Enum(
+            dojo::meta::introspect::Enum {
+                name: 'EnumWithSimpleTuple',
+                attrs: array![].span(),
+                children: array![
+                ('Left', dojo::meta::introspect::Ty::Tuple(
+            array![
+            dojo::meta::introspect::Introspect::<u8>::ty(),
+dojo::meta::introspect::Introspect::<u256>::ty()
+            ].span()
+        )),
+('Right', dojo::meta::introspect::Ty::Tuple(
+            array![
+            dojo::meta::introspect::Introspect::<u8>::ty(),
+dojo::meta::introspect::Introspect::<u256>::ty()
+            ].span()
+        ))
+
+                ].span()
+            }
+        )
+    }
+}
+impl EnumWithComplexTupleSerde of core::serde::Serde::<EnumWithComplexTuple> {
+    fn serialize(self: @EnumWithComplexTuple, ref output: core::array::Array<felt252>) {
+        match self {
+            EnumWithComplexTuple::Left(x) => { core::serde::Serde::serialize(@0, ref output); core::serde::Serde::serialize(x, ref output); },
+            EnumWithComplexTuple::Right(x) => { core::serde::Serde::serialize(@1, ref output); core::serde::Serde::serialize(x, ref output); },
+        }
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<EnumWithComplexTuple> {
+        let idx: felt252 = core::serde::Serde::deserialize(ref serialized)?;
+        core::option::Option::Some(
+            match idx {
+                0 => EnumWithComplexTuple::Left(core::serde::Serde::deserialize(ref serialized)?),
+                1 => EnumWithComplexTuple::Right(core::serde::Serde::deserialize(ref serialized)?),
+                _ => { return core::option::Option::None; }
+            }
+        )
+    }
+}
+impl EnumWithComplexTupleCopy of core::traits::Copy::<EnumWithComplexTuple>;
+impl EnumWithComplexTupleDrop of core::traits::Drop::<EnumWithComplexTuple>;
+
+impl EnumWithComplexTupleIntrospect<> of dojo::meta::introspect::Introspect<EnumWithComplexTuple<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        let sizes : Array<Option<usize>> = array![
+                    dojo::meta::introspect::Introspect::<Vec2>::size(),
+Option::Some(2)
+                ];
+
+                if dojo::utils::any_none(@sizes) {
+                    return Option::None;
+                }
+                Option::Some(dojo::utils::sum(sizes))
+                
+    }
+
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Enum(
+            array![
+            dojo::meta::FieldLayout {
+                    selector: 0,
+                    layout: dojo::meta::Layout::Tuple(
+            array![
+            dojo::meta::introspect::Introspect::<u8>::layout(),
+dojo::meta::introspect::Introspect::<Vec2>::layout()
+            ].span()
+        )
+                },
+dojo::meta::FieldLayout {
+                    selector: 1,
+                    layout: dojo::meta::Layout::Tuple(
+            array![
+            dojo::meta::introspect::Introspect::<u8>::layout(),
+dojo::meta::introspect::Introspect::<Vec2>::layout()
+            ].span()
+        )
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Enum(
+            dojo::meta::introspect::Enum {
+                name: 'EnumWithComplexTuple',
+                attrs: array![].span(),
+                children: array![
+                ('Left', dojo::meta::introspect::Ty::Tuple(
+            array![
+            dojo::meta::introspect::Introspect::<u8>::ty(),
+dojo::meta::introspect::Introspect::<Vec2>::ty()
+            ].span()
+        )),
+('Right', dojo::meta::introspect::Ty::Tuple(
+            array![
+            dojo::meta::introspect::Introspect::<u8>::ty(),
+dojo::meta::introspect::Introspect::<Vec2>::ty()
+            ].span()
+        ))
+
+                ].span()
+            }
+        )
+    }
+}
+impl EnumWithPrimitiveSerde of core::serde::Serde::<EnumWithPrimitive> {
+    fn serialize(self: @EnumWithPrimitive, ref output: core::array::Array<felt252>) {
+        match self {
+            EnumWithPrimitive::Left(x) => { core::serde::Serde::serialize(@0, ref output); core::serde::Serde::serialize(x, ref output); },
+            EnumWithPrimitive::Right(x) => { core::serde::Serde::serialize(@1, ref output); core::serde::Serde::serialize(x, ref output); },
+        }
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<EnumWithPrimitive> {
+        let idx: felt252 = core::serde::Serde::deserialize(ref serialized)?;
+        core::option::Option::Some(
+            match idx {
+                0 => EnumWithPrimitive::Left(core::serde::Serde::deserialize(ref serialized)?),
+                1 => EnumWithPrimitive::Right(core::serde::Serde::deserialize(ref serialized)?),
+                _ => { return core::option::Option::None; }
+            }
+        )
+    }
+}
+impl EnumWithPrimitiveCopy of core::traits::Copy::<EnumWithPrimitive>;
+impl EnumWithPrimitiveDrop of core::traits::Drop::<EnumWithPrimitive>;
+
+impl EnumWithPrimitiveIntrospect<> of dojo::meta::introspect::Introspect<EnumWithPrimitive<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::Some(2)
+    }
+
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Enum(
+            array![
+            dojo::meta::FieldLayout {
+                    selector: 0,
+                    layout: dojo::meta::introspect::Introspect::<u32>::layout()
+                },
+dojo::meta::FieldLayout {
+                    selector: 1,
+                    layout: dojo::meta::introspect::Introspect::<u32>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Enum(
+            dojo::meta::introspect::Enum {
+                name: 'EnumWithPrimitive',
+                attrs: array![].span(),
+                children: array![
+                ('Left', dojo::meta::introspect::Introspect::<u32>::ty()),
+('Right', dojo::meta::introspect::Introspect::<u32>::ty())
+
+                ].span()
+            }
+        )
+    }
+}
+impl EnumCustomSerde of core::serde::Serde::<EnumCustom> {
+    fn serialize(self: @EnumCustom, ref output: core::array::Array<felt252>) {
+        match self {
+            EnumCustom::Left(x) => { core::serde::Serde::serialize(@0, ref output); core::serde::Serde::serialize(x, ref output); },
+            EnumCustom::Right(x) => { core::serde::Serde::serialize(@1, ref output); core::serde::Serde::serialize(x, ref output); },
+        }
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<EnumCustom> {
+        let idx: felt252 = core::serde::Serde::deserialize(ref serialized)?;
+        core::option::Option::Some(
+            match idx {
+                0 => EnumCustom::Left(core::serde::Serde::deserialize(ref serialized)?),
+                1 => EnumCustom::Right(core::serde::Serde::deserialize(ref serialized)?),
+                _ => { return core::option::Option::None; }
+            }
+        )
+    }
+}
+impl EnumCustomCopy of core::traits::Copy::<EnumCustom>;
+impl EnumCustomDrop of core::traits::Drop::<EnumCustom>;
+
+impl EnumCustomIntrospect<> of dojo::meta::introspect::Introspect<EnumCustom<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        let sizes : Array<Option<usize>> = array![
+                    dojo::meta::introspect::Introspect::<Vec2>::size(),
+Option::Some(1)
+                ];
+
+                if dojo::utils::any_none(@sizes) {
+                    return Option::None;
+                }
+                Option::Some(dojo::utils::sum(sizes))
+                
+    }
+
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Enum(
+            array![
+            dojo::meta::FieldLayout {
+                    selector: 0,
+                    layout: dojo::meta::introspect::Introspect::<Vec2>::layout()
+                },
+dojo::meta::FieldLayout {
+                    selector: 1,
+                    layout: dojo::meta::introspect::Introspect::<Vec2>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Enum(
+            dojo::meta::introspect::Enum {
+                name: 'EnumCustom',
+                attrs: array![].span(),
+                children: array![
+                ('Left', dojo::meta::introspect::Introspect::<Vec2>::ty()),
+('Right', dojo::meta::introspect::Introspect::<Vec2>::ty())
+
+                ].span()
+            }
+        )
+    }
+}
+impl EnumTupleMixSerde of core::serde::Serde::<EnumTupleMix> {
+    fn serialize(self: @EnumTupleMix, ref output: core::array::Array<felt252>) {
+        match self {
+            EnumTupleMix::Left(x) => { core::serde::Serde::serialize(@0, ref output); core::serde::Serde::serialize(x, ref output); },
+            EnumTupleMix::Right(x) => { core::serde::Serde::serialize(@1, ref output); core::serde::Serde::serialize(x, ref output); },
+        }
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<EnumTupleMix> {
+        let idx: felt252 = core::serde::Serde::deserialize(ref serialized)?;
+        core::option::Option::Some(
+            match idx {
+                0 => EnumTupleMix::Left(core::serde::Serde::deserialize(ref serialized)?),
+                1 => EnumTupleMix::Right(core::serde::Serde::deserialize(ref serialized)?),
+                _ => { return core::option::Option::None; }
+            }
+        )
+    }
+}
+impl EnumTupleMixCopy of core::traits::Copy::<EnumTupleMix>;
+impl EnumTupleMixDrop of core::traits::Drop::<EnumTupleMix>;
+
+impl EnumTupleMixIntrospect<> of dojo::meta::introspect::Introspect<EnumTupleMix<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        let sizes : Array<Option<usize>> = array![
+                    dojo::meta::introspect::Introspect::<Vec2>::size(),
+dojo::meta::introspect::Introspect::<EnumCustom>::size(),
+Option::Some(2)
+                ];
+
+                if dojo::utils::any_none(@sizes) {
+                    return Option::None;
+                }
+                Option::Some(dojo::utils::sum(sizes))
+                
+    }
+
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Enum(
+            array![
+            dojo::meta::FieldLayout {
+                    selector: 0,
+                    layout: dojo::meta::Layout::Tuple(
+            array![
+            dojo::meta::introspect::Introspect::<Vec2>::layout(),
+dojo::meta::introspect::Introspect::<u64>::layout(),
+dojo::meta::introspect::Introspect::<EnumCustom>::layout()
+            ].span()
+        )
+                },
+dojo::meta::FieldLayout {
+                    selector: 1,
+                    layout: dojo::meta::Layout::Tuple(
+            array![
+            dojo::meta::introspect::Introspect::<Vec2>::layout(),
+dojo::meta::introspect::Introspect::<u64>::layout(),
+dojo::meta::introspect::Introspect::<EnumCustom>::layout()
+            ].span()
+        )
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Enum(
+            dojo::meta::introspect::Enum {
+                name: 'EnumTupleMix',
+                attrs: array![].span(),
+                children: array![
+                ('Left', dojo::meta::introspect::Ty::Tuple(
+            array![
+            dojo::meta::introspect::Introspect::<Vec2>::ty(),
+dojo::meta::introspect::Introspect::<u64>::ty(),
+dojo::meta::introspect::Introspect::<EnumCustom>::ty()
+            ].span()
+        )),
+('Right', dojo::meta::introspect::Ty::Tuple(
+            array![
+            dojo::meta::introspect::Introspect::<Vec2>::ty(),
+dojo::meta::introspect::Introspect::<u64>::ty(),
+dojo::meta::introspect::Introspect::<EnumCustom>::ty()
+            ].span()
+        ))
+
+                ].span()
+            }
+        )
+    }
+}
+impl EnumWithDifferentVariantDataSerde of core::serde::Serde::<EnumWithDifferentVariantData> {
+    fn serialize(self: @EnumWithDifferentVariantData, ref output: core::array::Array<felt252>) {
+        match self {
+            EnumWithDifferentVariantData::One(x) => { core::serde::Serde::serialize(@0, ref output); core::serde::Serde::serialize(x, ref output); },
+            EnumWithDifferentVariantData::Two(x) => { core::serde::Serde::serialize(@1, ref output); core::serde::Serde::serialize(x, ref output); },
+            EnumWithDifferentVariantData::Three(x) => { core::serde::Serde::serialize(@2, ref output); core::serde::Serde::serialize(x, ref output); },
+        }
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<EnumWithDifferentVariantData> {
+        let idx: felt252 = core::serde::Serde::deserialize(ref serialized)?;
+        core::option::Option::Some(
+            match idx {
+                0 => EnumWithDifferentVariantData::One(core::serde::Serde::deserialize(ref serialized)?),
+                1 => EnumWithDifferentVariantData::Two(core::serde::Serde::deserialize(ref serialized)?),
+                2 => EnumWithDifferentVariantData::Three(core::serde::Serde::deserialize(ref serialized)?),
+                _ => { return core::option::Option::None; }
+            }
+        )
+    }
+}
+impl EnumWithDifferentVariantDataCopy of core::traits::Copy::<EnumWithDifferentVariantData>;
+impl EnumWithDifferentVariantDataDrop of core::traits::Drop::<EnumWithDifferentVariantData>;
+
+impl EnumWithDifferentVariantDataIntrospect<> of dojo::meta::introspect::Introspect<EnumWithDifferentVariantData<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Enum(
+            array![
+            dojo::meta::FieldLayout {
+                    selector: 0,
+                    layout: dojo::meta::Layout::Fixed(array![].span())
+                },
+dojo::meta::FieldLayout {
+                    selector: 1,
+                    layout: dojo::meta::introspect::Introspect::<u32>::layout()
+                },
+dojo::meta::FieldLayout {
+                    selector: 2,
+                    layout: dojo::meta::Layout::Tuple(
+            array![
+            dojo::meta::introspect::Introspect::<Vec2>::layout(),
+dojo::meta::introspect::Introspect::<u64>::layout()
+            ].span()
+        )
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Enum(
+            dojo::meta::introspect::Enum {
+                name: 'EnumWithDifferentVariantData',
+                attrs: array![].span(),
+                children: array![
+                ('One', dojo::meta::introspect::Ty::Tuple(array![].span())),
+('Two', dojo::meta::introspect::Introspect::<u32>::ty()),
+('Three', dojo::meta::introspect::Ty::Tuple(
+            array![
+            dojo::meta::introspect::Introspect::<Vec2>::ty(),
+dojo::meta::introspect::Introspect::<u64>::ty()
+            ].span()
+        ))
+
+                ].span()
+            }
+        )
+    }
+}
+impl StructWithPrimitivesCopy of core::traits::Copy::<StructWithPrimitives>;
+impl StructWithPrimitivesDrop of core::traits::Drop::<StructWithPrimitives>;
+
+impl StructWithPrimitivesIntrospect<> of dojo::meta::introspect::Introspect<StructWithPrimitives<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::Some(2)
+    }
+
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Struct(
+            array![
+            dojo::meta::FieldLayout {
+                    selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
+                    layout: dojo::meta::introspect::Introspect::<u8>::layout()
+                },
+dojo::meta::FieldLayout {
+                    selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
+                    layout: dojo::meta::introspect::Introspect::<u16>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
+                name: 'StructWithPrimitives',
+                attrs: array![].span(),
+                children: array![
+                dojo::meta::introspect::Member {
+            name: 'player',
+            attrs: array!['key'].span(),
+            ty: dojo::meta::introspect::Introspect::<ContractAddress>::ty()
+        },
+dojo::meta::introspect::Member {
+            name: 'before',
+            attrs: array![].span(),
+            ty: dojo::meta::introspect::Introspect::<u8>::ty()
+        },
+dojo::meta::introspect::Member {
+            name: 'after',
+            attrs: array![].span(),
+            ty: dojo::meta::introspect::Introspect::<u16>::ty()
+        }
+
+                ].span()
+            }
+        )
+    }
+}
+impl StructWithStructCopy of core::traits::Copy::<StructWithStruct>;
+impl StructWithStructDrop of core::traits::Drop::<StructWithStruct>;
+
+impl StructWithStructIntrospect<> of dojo::meta::introspect::Introspect<StructWithStruct<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        let sizes : Array<Option<usize>> = array![
+                    dojo::meta::introspect::Introspect::<Vec2>::size(),
+Option::Some(1)
+                ];
+
+                if dojo::utils::any_none(@sizes) {
+                    return Option::None;
+                }
+                Option::Some(dojo::utils::sum(sizes))
+                
+    }
+
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Struct(
+            array![
+            dojo::meta::FieldLayout {
+                    selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
+                    layout: dojo::meta::introspect::Introspect::<u8>::layout()
+                },
+dojo::meta::FieldLayout {
+                    selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
+                    layout: dojo::meta::introspect::Introspect::<Vec2>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
+                name: 'StructWithStruct',
+                attrs: array![].span(),
+                children: array![
+                dojo::meta::introspect::Member {
+            name: 'player',
+            attrs: array!['key'].span(),
+            ty: dojo::meta::introspect::Introspect::<ContractAddress>::ty()
+        },
+dojo::meta::introspect::Member {
+            name: 'before',
+            attrs: array![].span(),
+            ty: dojo::meta::introspect::Introspect::<u8>::ty()
+        },
+dojo::meta::introspect::Member {
+            name: 'after',
+            attrs: array![].span(),
+            ty: dojo::meta::introspect::Introspect::<Vec2>::ty()
+        }
+
+                ].span()
+            }
+        )
+    }
+}
+impl StructWithSimpleArrayCopy of core::traits::Copy::<StructWithSimpleArray>;
+impl StructWithSimpleArrayDrop of core::traits::Drop::<StructWithSimpleArray>;
+
+impl StructWithSimpleArrayIntrospect<> of dojo::meta::introspect::Introspect<StructWithSimpleArray<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Struct(
+            array![
+            dojo::meta::FieldLayout {
+                    selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
+                    layout: dojo::meta::introspect::Introspect::<u8>::layout()
+                },
+dojo::meta::FieldLayout {
+                    selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
+                    layout: dojo::meta::introspect::Introspect::<Array<u32>>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
+                name: 'StructWithSimpleArray',
+                attrs: array![].span(),
+                children: array![
+                dojo::meta::introspect::Member {
+            name: 'player',
+            attrs: array!['key'].span(),
+            ty: dojo::meta::introspect::Introspect::<ContractAddress>::ty()
+        },
+dojo::meta::introspect::Member {
+            name: 'before',
+            attrs: array![].span(),
+            ty: dojo::meta::introspect::Introspect::<u8>::ty()
+        },
+dojo::meta::introspect::Member {
+            name: 'after',
+            attrs: array![].span(),
+            ty: dojo::meta::introspect::Ty::Array(
+                array![
+                dojo::meta::introspect::Introspect::<u32>::ty()
+                ].span()
+            )
+        }
+
+                ].span()
+            }
+        )
+    }
+}
+impl StructWithByteArrayCopy of core::traits::Copy::<StructWithByteArray>;
+impl StructWithByteArrayDrop of core::traits::Drop::<StructWithByteArray>;
+
+impl StructWithByteArrayIntrospect<> of dojo::meta::introspect::Introspect<StructWithByteArray<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Struct(
+            array![
+            dojo::meta::FieldLayout {
+                    selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
+                    layout: dojo::meta::introspect::Introspect::<u8>::layout()
+                },
+dojo::meta::FieldLayout {
+                    selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
+                    layout: dojo::meta::introspect::Introspect::<ByteArray>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
+                name: 'StructWithByteArray',
+                attrs: array![].span(),
+                children: array![
+                dojo::meta::introspect::Member {
+            name: 'player',
+            attrs: array!['key'].span(),
+            ty: dojo::meta::introspect::Introspect::<ContractAddress>::ty()
+        },
+dojo::meta::introspect::Member {
+            name: 'before',
+            attrs: array![].span(),
+            ty: dojo::meta::introspect::Introspect::<u8>::ty()
+        },
+dojo::meta::introspect::Member {
+            name: 'after',
+            attrs: array![].span(),
+            ty: dojo::meta::introspect::Ty::ByteArray
+        }
+
+                ].span()
+            }
+        )
+    }
+}
+impl StructWithComplexArrayCopy of core::traits::Copy::<StructWithComplexArray>;
+impl StructWithComplexArrayDrop of core::traits::Drop::<StructWithComplexArray>;
+
+impl StructWithComplexArrayIntrospect<> of dojo::meta::introspect::Introspect<StructWithComplexArray<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Struct(
+            array![
+            dojo::meta::FieldLayout {
+                    selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
+                    layout: dojo::meta::introspect::Introspect::<u8>::layout()
+                },
+dojo::meta::FieldLayout {
+                    selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
+                    layout: dojo::meta::introspect::Introspect::<Array<Vec2>>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
+                name: 'StructWithComplexArray',
+                attrs: array![].span(),
+                children: array![
+                dojo::meta::introspect::Member {
+            name: 'player',
+            attrs: array!['key'].span(),
+            ty: dojo::meta::introspect::Introspect::<ContractAddress>::ty()
+        },
+dojo::meta::introspect::Member {
+            name: 'before',
+            attrs: array![].span(),
+            ty: dojo::meta::introspect::Introspect::<u8>::ty()
+        },
+dojo::meta::introspect::Member {
+            name: 'after',
+            attrs: array![].span(),
+            ty: dojo::meta::introspect::Ty::Array(
+                array![
+                dojo::meta::introspect::Introspect::<Vec2>::ty()
+                ].span()
+            )
+        }
+
+                ].span()
+            }
+        )
+    }
+}
+impl StructWithSimpleTupleCopy of core::traits::Copy::<StructWithSimpleTuple>;
+impl StructWithSimpleTupleDrop of core::traits::Drop::<StructWithSimpleTuple>;
+
+impl StructWithSimpleTupleIntrospect<> of dojo::meta::introspect::Introspect<StructWithSimpleTuple<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::Some(4)
+    }
+
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Struct(
+            array![
+            dojo::meta::FieldLayout {
+                    selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
+                    layout: dojo::meta::introspect::Introspect::<u8>::layout()
+                },
+dojo::meta::FieldLayout {
+                    selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
+                    layout: dojo::meta::Layout::Tuple(
+            array![
+            dojo::meta::introspect::Introspect::<u8>::layout(),
+dojo::meta::introspect::Introspect::<u256>::layout()
+            ].span()
+        )
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
+                name: 'StructWithSimpleTuple',
+                attrs: array![].span(),
+                children: array![
+                dojo::meta::introspect::Member {
+            name: 'player',
+            attrs: array!['key'].span(),
+            ty: dojo::meta::introspect::Introspect::<ContractAddress>::ty()
+        },
+dojo::meta::introspect::Member {
+            name: 'before',
+            attrs: array![].span(),
+            ty: dojo::meta::introspect::Introspect::<u8>::ty()
+        },
+dojo::meta::introspect::Member {
+            name: 'after',
+            attrs: array![].span(),
+            ty: dojo::meta::introspect::Ty::Tuple(
+            array![
+            dojo::meta::introspect::Introspect::<u8>::ty(),
+dojo::meta::introspect::Introspect::<u256>::ty()
+            ].span()
+        )
+        }
+
+                ].span()
+            }
+        )
+    }
+}
+impl StructWithComplexTupleCopy of core::traits::Copy::<StructWithComplexTuple>;
+impl StructWithComplexTupleDrop of core::traits::Drop::<StructWithComplexTuple>;
+
+impl StructWithComplexTupleIntrospect<> of dojo::meta::introspect::Introspect<StructWithComplexTuple<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        let sizes : Array<Option<usize>> = array![
+                    dojo::meta::introspect::Introspect::<Vec2>::size(),
+dojo::meta::introspect::Introspect::<EnumCustom>::size(),
+Option::Some(2)
+                ];
+
+                if dojo::utils::any_none(@sizes) {
+                    return Option::None;
+                }
+                Option::Some(dojo::utils::sum(sizes))
+                
+    }
+
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Struct(
+            array![
+            dojo::meta::FieldLayout {
+                    selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
+                    layout: dojo::meta::introspect::Introspect::<u8>::layout()
+                },
+dojo::meta::FieldLayout {
+                    selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
+                    layout: dojo::meta::Layout::Tuple(
+            array![
+            dojo::meta::introspect::Introspect::<u8>::layout(),
+dojo::meta::introspect::Introspect::<Vec2>::layout(),
+dojo::meta::introspect::Introspect::<EnumCustom>::layout()
+            ].span()
+        )
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
+                name: 'StructWithComplexTuple',
+                attrs: array![].span(),
+                children: array![
+                dojo::meta::introspect::Member {
+            name: 'player',
+            attrs: array!['key'].span(),
+            ty: dojo::meta::introspect::Introspect::<ContractAddress>::ty()
+        },
+dojo::meta::introspect::Member {
+            name: 'before',
+            attrs: array![].span(),
+            ty: dojo::meta::introspect::Introspect::<u8>::ty()
+        },
+dojo::meta::introspect::Member {
+            name: 'after',
+            attrs: array![].span(),
+            ty: dojo::meta::introspect::Ty::Tuple(
+            array![
+            dojo::meta::introspect::Introspect::<u8>::ty(),
+dojo::meta::introspect::Introspect::<Vec2>::ty(),
+dojo::meta::introspect::Introspect::<EnumCustom>::ty()
+            ].span()
+        )
+        }
+
+                ].span()
+            }
+        )
+    }
+}
+impl StructWithNestedArraysCopy of core::traits::Copy::<StructWithNestedArrays>;
+impl StructWithNestedArraysDrop of core::traits::Drop::<StructWithNestedArrays>;
+
+impl StructWithNestedArraysIntrospect<> of dojo::meta::introspect::Introspect<StructWithNestedArrays<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Struct(
+            array![
+            dojo::meta::FieldLayout {
+                    selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
+                    layout: dojo::meta::introspect::Introspect::<u8>::layout()
+                },
+dojo::meta::FieldLayout {
+                    selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
+                    layout: dojo::meta::Layout::Array(
+                array![
+                    dojo::meta::Layout::Array(
+                array![
+                    dojo::meta::introspect::Introspect::<Array<Vec2>>::layout()
+                ].span()
+            )
+                ].span()
+            )
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
+                name: 'StructWithNestedArrays',
+                attrs: array![].span(),
+                children: array![
+                dojo::meta::introspect::Member {
+            name: 'player',
+            attrs: array!['key'].span(),
+            ty: dojo::meta::introspect::Introspect::<ContractAddress>::ty()
+        },
+dojo::meta::introspect::Member {
+            name: 'before',
+            attrs: array![].span(),
+            ty: dojo::meta::introspect::Introspect::<u8>::ty()
+        },
+dojo::meta::introspect::Member {
+            name: 'after',
+            attrs: array![].span(),
+            ty: dojo::meta::introspect::Ty::Array(
+                array![
+                dojo::meta::introspect::Ty::Array(
+                array![
+                dojo::meta::introspect::Ty::Array(
+                array![
+                dojo::meta::introspect::Introspect::<Vec2>::ty()
+                ].span()
+            )
+                ].span()
+            )
+                ].span()
+            )
+        }
+
+                ].span()
+            }
+        )
+    }
+}
+impl StructWithNestedTuplesCopy of core::traits::Copy::<StructWithNestedTuples>;
+impl StructWithNestedTuplesDrop of core::traits::Drop::<StructWithNestedTuples>;
+
+impl StructWithNestedTuplesIntrospect<> of dojo::meta::introspect::Introspect<StructWithNestedTuples<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        let sizes : Array<Option<usize>> = array![
+                    dojo::meta::introspect::Introspect::<Vec2>::size(),
+dojo::meta::introspect::Introspect::<EnumCustom>::size(),
+Option::Some(3)
+                ];
+
+                if dojo::utils::any_none(@sizes) {
+                    return Option::None;
+                }
+                Option::Some(dojo::utils::sum(sizes))
+                
+    }
+
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Struct(
+            array![
+            dojo::meta::FieldLayout {
+                    selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
+                    layout: dojo::meta::introspect::Introspect::<u8>::layout()
+                },
+dojo::meta::FieldLayout {
+                    selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
+                    layout: dojo::meta::Layout::Tuple(
+            array![
+            dojo::meta::Layout::Tuple(
+            array![
+            dojo::meta::introspect::Introspect::<u8>::layout(),
+dojo::meta::introspect::Introspect::<u32>::layout()
+            ].span()
+        ),
+dojo::meta::Layout::Tuple(
+            array![
+            dojo::meta::introspect::Introspect::<Vec2>::layout(),
+dojo::meta::introspect::Introspect::<EnumCustom>::layout()
+            ].span()
+        )
+            ].span()
+        )
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
+                name: 'StructWithNestedTuples',
+                attrs: array![].span(),
+                children: array![
+                dojo::meta::introspect::Member {
+            name: 'player',
+            attrs: array!['key'].span(),
+            ty: dojo::meta::introspect::Introspect::<ContractAddress>::ty()
+        },
+dojo::meta::introspect::Member {
+            name: 'before',
+            attrs: array![].span(),
+            ty: dojo::meta::introspect::Introspect::<u8>::ty()
+        },
+dojo::meta::introspect::Member {
+            name: 'after',
+            attrs: array![].span(),
+            ty: dojo::meta::introspect::Ty::Tuple(
+            array![
+            dojo::meta::introspect::Ty::Tuple(
+            array![
+            dojo::meta::introspect::Introspect::<u8>::ty(),
+dojo::meta::introspect::Introspect::<u32>::ty()
+            ].span()
+        ),
+dojo::meta::introspect::Ty::Tuple(
+            array![
+            dojo::meta::introspect::Introspect::<Vec2>::ty(),
+dojo::meta::introspect::Introspect::<EnumCustom>::ty()
+            ].span()
+        )
+            ].span()
+        )
+        }
+
+                ].span()
+            }
+        )
+    }
+}
+impl StructWithNestedTuplesAndByteArrayCopy of core::traits::Copy::<StructWithNestedTuplesAndByteArray>;
+impl StructWithNestedTuplesAndByteArrayDrop of core::traits::Drop::<StructWithNestedTuplesAndByteArray>;
+
+impl StructWithNestedTuplesAndByteArrayIntrospect<> of dojo::meta::introspect::Introspect<StructWithNestedTuplesAndByteArray<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Struct(
+            array![
+            dojo::meta::FieldLayout {
+                    selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
+                    layout: dojo::meta::introspect::Introspect::<u8>::layout()
+                },
+dojo::meta::FieldLayout {
+                    selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
+                    layout: dojo::meta::Layout::Tuple(
+            array![
+            dojo::meta::Layout::Tuple(
+            array![
+            dojo::meta::introspect::Introspect::<u8>::layout(),
+dojo::meta::introspect::Introspect::<u32>::layout()
+            ].span()
+        ),
+dojo::meta::Layout::Tuple(
+            array![
+            dojo::meta::introspect::Introspect::<Vec2>::layout(),
+dojo::meta::introspect::Introspect::<ByteArray>::layout()
+            ].span()
+        )
+            ].span()
+        )
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
+                name: 'StructWithNestedTuplesAndByteArray',
+                attrs: array![].span(),
+                children: array![
+                dojo::meta::introspect::Member {
+            name: 'player',
+            attrs: array!['key'].span(),
+            ty: dojo::meta::introspect::Introspect::<ContractAddress>::ty()
+        },
+dojo::meta::introspect::Member {
+            name: 'before',
+            attrs: array![].span(),
+            ty: dojo::meta::introspect::Introspect::<u8>::ty()
+        },
+dojo::meta::introspect::Member {
+            name: 'after',
+            attrs: array![].span(),
+            ty: dojo::meta::introspect::Ty::Tuple(
+            array![
+            dojo::meta::introspect::Ty::Tuple(
+            array![
+            dojo::meta::introspect::Introspect::<u8>::ty(),
+dojo::meta::introspect::Introspect::<u32>::ty()
+            ].span()
+        ),
+dojo::meta::introspect::Ty::Tuple(
+            array![
+            dojo::meta::introspect::Introspect::<Vec2>::ty(),
+dojo::meta::introspect::Ty::ByteArray
+            ].span()
+        )
+            ].span()
+        )
+        }
+
+                ].span()
+            }
+        )
+    }
+}
+impl StructWithNestedEverythingCopy of core::traits::Copy::<StructWithNestedEverything>;
+impl StructWithNestedEverythingDrop of core::traits::Drop::<StructWithNestedEverything>;
+
+impl StructWithNestedEverythingIntrospect<> of dojo::meta::introspect::Introspect<StructWithNestedEverything<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Struct(
+            array![
+            dojo::meta::FieldLayout {
+                    selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
+                    layout: dojo::meta::introspect::Introspect::<u8>::layout()
+                },
+dojo::meta::FieldLayout {
+                    selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
+                    layout: dojo::meta::Layout::Tuple(
+            array![
+            dojo::meta::Layout::Tuple(
+            array![
+            dojo::meta::introspect::Introspect::<u8>::layout(),
+dojo::meta::introspect::Introspect::<u32>::layout()
+            ].span()
+        ),
+dojo::meta::Layout::Tuple(
+            array![
+            dojo::meta::introspect::Introspect::<Vec2>::layout(),
+dojo::meta::introspect::Introspect::<EnumCustom>::layout()
+            ].span()
+        ),
+dojo::meta::Layout::Tuple(
+            array![
+            dojo::meta::Layout::Array(
+                array![
+                    dojo::meta::Layout::Tuple(
+            array![
+            dojo::meta::introspect::Introspect::<u32>::layout(),
+dojo::meta::introspect::Introspect::<Vec2>::layout()
+            ].span()
+        )
+                ].span()
+            ),
+dojo::meta::introspect::Introspect::<EnumCustom>::layout()
+            ].span()
+        ),
+dojo::meta::Layout::Tuple(
+            array![
+            dojo::meta::introspect::Introspect::<u16>::layout()
+            ].span()
+        )
+            ].span()
+        )
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
+                name: 'StructWithNestedEverything',
+                attrs: array![].span(),
+                children: array![
+                dojo::meta::introspect::Member {
+            name: 'player',
+            attrs: array!['key'].span(),
+            ty: dojo::meta::introspect::Introspect::<ContractAddress>::ty()
+        },
+dojo::meta::introspect::Member {
+            name: 'before',
+            attrs: array![].span(),
+            ty: dojo::meta::introspect::Introspect::<u8>::ty()
+        },
+dojo::meta::introspect::Member {
+            name: 'after',
+            attrs: array![].span(),
+            ty: dojo::meta::introspect::Ty::Tuple(
+            array![
+            dojo::meta::introspect::Ty::Tuple(
+            array![
+            dojo::meta::introspect::Introspect::<u8>::ty(),
+dojo::meta::introspect::Introspect::<u32>::ty()
+            ].span()
+        ),
+dojo::meta::introspect::Ty::Tuple(
+            array![
+            dojo::meta::introspect::Introspect::<Vec2>::ty(),
+dojo::meta::introspect::Introspect::<EnumCustom>::ty()
+            ].span()
+        ),
+dojo::meta::introspect::Ty::Tuple(
+            array![
+            dojo::meta::introspect::Ty::Array(
+                array![
+                dojo::meta::introspect::Ty::Tuple(
+            array![
+            dojo::meta::introspect::Introspect::<u32>::ty(),
+dojo::meta::introspect::Introspect::<Vec2>::ty()
+            ].span()
+        )
+                ].span()
+            ),
+dojo::meta::introspect::Introspect::<EnumCustom>::ty()
+            ].span()
+        ),
+dojo::meta::introspect::Ty::Tuple(
+            array![
+            dojo::meta::introspect::Introspect::<u16>::ty()
+            ].span()
+        )
+            ].span()
+        )
+        }
+
+                ].span()
+            }
+        )
+    }
+}
+impl GenericStructCopy<T, +core::traits::Copy<T>> of core::traits::Copy::<GenericStruct<T>>;
+impl GenericStructDrop<T, +core::traits::Drop<T>> of core::traits::Drop::<GenericStruct<T>>;
+impl GenericStructSerde<T, +core::serde::Serde<T>, +core::traits::Destruct<T>> of core::serde::Serde::<GenericStruct<T>> {
+    fn serialize(self: @GenericStruct<T>, ref output: core::array::Array<felt252>) {
+        core::serde::Serde::serialize(self.t, ref output)
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<GenericStruct<T>> {
+        core::option::Option::Some(GenericStruct {
+            t: core::serde::Serde::deserialize(ref serialized)?,
+        })
+    }
+}
+
+impl GenericStructIntrospect<T, impl TIntrospect: dojo::meta::introspect::Introspect<T>> of dojo::meta::introspect::Introspect<GenericStruct<T>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        dojo::meta::introspect::Introspect::<T>::size()
+    }
+
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Struct(
+            array![
+            dojo::meta::FieldLayout {
+                    selector: 1246920879054256875300693562709339669009726288543267794550465531256469553289,
+                    layout: dojo::meta::introspect::Introspect::<T>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
+                name: 'GenericStruct',
+                attrs: array![].span(),
+                children: array![
+                dojo::meta::introspect::Member {
+            name: 't',
+            attrs: array![].span(),
+            ty: dojo::meta::introspect::Introspect::<T>::ty()
+        }
+
+                ].span()
+            }
+        )
+    }
+}
+impl StructWithBadOptionCopy of core::traits::Copy::<StructWithBadOption>;
+impl StructWithBadOptionDrop of core::traits::Drop::<StructWithBadOption>;
+impl StructWithBadOptionSerde of core::serde::Serde::<StructWithBadOption> {
+    fn serialize(self: @StructWithBadOption, ref output: core::array::Array<felt252>) {
+        core::serde::Serde::serialize(self.x, ref output)
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<StructWithBadOption> {
+        core::option::Option::Some(StructWithBadOption {
+            x: core::serde::Serde::deserialize(ref serialized)?,
+        })
+    }
+}
+
+impl StructWithBadOptionIntrospect<> of dojo::meta::introspect::Introspect<StructWithBadOption<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        dojo::meta::introspect::Introspect::<Option<(u8, u16)>>::size()
+    }
+
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Struct(
+            array![
+            dojo::meta::FieldLayout {
+                    selector: 512066735765477566404754172672287371265995314501343422459174036873487219331,
+                    layout: dojo::meta::introspect::Introspect::<Option<(u8, u16)>
+>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
+                name: 'StructWithBadOption',
+                attrs: array![].span(),
+                children: array![
+                dojo::meta::introspect::Member {
+            name: 'x',
+            attrs: array![].span(),
+            ty: dojo::meta::introspect::Introspect::<Option<(u8, u16)>>::ty()
+        }
+
+                ].span()
+            }
+        )
+    }
+}
+impl EnumWithBadOptionCopy of core::traits::Copy::<EnumWithBadOption>;
+impl EnumWithBadOptionDrop of core::traits::Drop::<EnumWithBadOption>;
+impl EnumWithBadOptionSerde of core::serde::Serde::<EnumWithBadOption> {
+    fn serialize(self: @EnumWithBadOption, ref output: core::array::Array<felt252>) {
+        match self {
+            EnumWithBadOption::first(x) => { core::serde::Serde::serialize(@0, ref output); core::serde::Serde::serialize(x, ref output); },
+        }
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<EnumWithBadOption> {
+        let idx: felt252 = core::serde::Serde::deserialize(ref serialized)?;
+        core::option::Option::Some(
+            match idx {
+                0 => EnumWithBadOption::first(core::serde::Serde::deserialize(ref serialized)?),
+                _ => { return core::option::Option::None; }
+            }
+        )
+    }
+}
+
+impl EnumWithBadOptionIntrospect<> of dojo::meta::introspect::Introspect<EnumWithBadOption<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        let sizes : Array<Option<usize>> = array![
+                    dojo::meta::introspect::Introspect::<Option<(u8, u16)>>::size(),
+Option::Some(1)
+                ];
+
+                if dojo::utils::any_none(@sizes) {
+                    return Option::None;
+                }
+                Option::Some(dojo::utils::sum(sizes))
+                
+    }
+
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Enum(
+            array![
+            dojo::meta::FieldLayout {
+                    selector: 0,
+                    layout: dojo::meta::introspect::Introspect::<Option<(u8, u16)>>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Enum(
+            dojo::meta::introspect::Enum {
+                name: 'EnumWithBadOption',
+                attrs: array![].span(),
+                children: array![
+                ('first', dojo::meta::introspect::Introspect::<Option<(u8, u16)>>::ty())
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl EnumIncompatibleAttrsIntrospect<> of dojo::meta::introspect::Introspect<EnumIncompatibleAttrs<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Enum(
+            array![
+            
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Enum(
+            dojo::meta::introspect::Enum {
+                name: 'EnumIncompatibleAttrs',
+                attrs: array![].span(),
+                children: array![
+                
+
+                ].span()
+            }
+        )
+    }
+}
+        
+impl EnumIncompatibleAttrsIntrospect<> of dojo::meta::introspect::Introspect<EnumIncompatibleAttrs<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Fixed(
+                array![
+                8
+                ].span()
+            )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Enum(
+            dojo::meta::introspect::Enum {
+                name: 'EnumIncompatibleAttrs',
+                attrs: array![].span(),
+                children: array![
+                
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl StructIncompatibleAttrsIntrospect<> of dojo::meta::introspect::Introspect<StructIncompatibleAttrs<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Struct(
+            array![
+            
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
+                name: 'StructIncompatibleAttrs',
+                attrs: array![].span(),
+                children: array![
+                
+
+                ].span()
+            }
+        )
+    }
+}
+        
+impl StructIncompatibleAttrsIntrospect<> of dojo::meta::introspect::Introspect<StructIncompatibleAttrs<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Fixed(
+            array![
+            
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
+                name: 'StructIncompatibleAttrs',
+                attrs: array![].span(),
+                children: array![
+                
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl StructIncompatibleAttrs2Introspect<> of dojo::meta::introspect::Introspect<StructIncompatibleAttrs2<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Struct(
+            array![
+            
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
+                name: 'StructIncompatibleAttrs2',
+                attrs: array![].span(),
+                children: array![
+                
+
+                ].span()
+            }
+        )
+    }
+}
+        
+impl StructIncompatibleAttrs2Introspect<> of dojo::meta::introspect::Introspect<StructIncompatibleAttrs2<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Fixed(
+            array![
+            
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
+                name: 'StructIncompatibleAttrs2',
+                attrs: array![].span(),
+                children: array![
+                
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl EnumIncompatibleAttrs2Introspect<> of dojo::meta::introspect::Introspect<EnumIncompatibleAttrs2<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Enum(
+            array![
+            
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Enum(
+            dojo::meta::introspect::Enum {
+                name: 'EnumIncompatibleAttrs2',
+                attrs: array![].span(),
+                children: array![
+                
+
+                ].span()
+            }
+        )
+    }
+}
+        
+impl EnumIncompatibleAttrs2Introspect<> of dojo::meta::introspect::Introspect<EnumIncompatibleAttrs2<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Fixed(
+                array![
+                8
+                ].span()
+            )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Enum(
+            dojo::meta::introspect::Enum {
+                name: 'EnumIncompatibleAttrs2',
+                attrs: array![].span(),
+                children: array![
+                
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl StructPacked1Introspect<> of dojo::meta::introspect::Introspect<StructPacked1<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::Some(1)
+    }
+
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Fixed(
+            array![
+            8
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
+                name: 'StructPacked1',
+                attrs: array![].span(),
+                children: array![
+                dojo::meta::introspect::Member {
+            name: 'x',
+            attrs: array![].span(),
+            ty: dojo::meta::introspect::Introspect::<u8>::ty()
+        }
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl StructPacked2Introspect<> of dojo::meta::introspect::Introspect<StructPacked2<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::Some(3)
+    }
+
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Fixed(
+            array![
+            8,128,128
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
+                name: 'StructPacked2',
+                attrs: array![].span(),
+                children: array![
+                dojo::meta::introspect::Member {
+            name: 'x',
+            attrs: array![].span(),
+            ty: dojo::meta::introspect::Introspect::<u8>::ty()
+        },
+dojo::meta::introspect::Member {
+            name: 'y',
+            attrs: array![].span(),
+            ty: dojo::meta::introspect::Introspect::<u256>::ty()
+        }
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl StructPacked3Introspect<> of dojo::meta::introspect::Introspect<StructPacked3<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::Some(4)
+    }
+
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Fixed(
+            array![
+            128,128,8,32
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
+                name: 'StructPacked3',
+                attrs: array![].span(),
+                children: array![
+                dojo::meta::introspect::Member {
+            name: 'x',
+            attrs: array![].span(),
+            ty: dojo::meta::introspect::Introspect::<u256>::ty()
+        },
+dojo::meta::introspect::Member {
+            name: 'y',
+            attrs: array![].span(),
+            ty: dojo::meta::introspect::Ty::Tuple(
+            array![
+            dojo::meta::introspect::Introspect::<u8>::ty(),
+dojo::meta::introspect::Introspect::<u32>::ty()
+            ].span()
+        )
+        }
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl StructNotPackable1Introspect<> of dojo::meta::introspect::Introspect<StructNotPackable1<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Fixed(
+            array![
+            8,ERROR
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
+                name: 'StructNotPackable1',
+                attrs: array![].span(),
+                children: array![
+                dojo::meta::introspect::Member {
+            name: 'x',
+            attrs: array![].span(),
+            ty: dojo::meta::introspect::Introspect::<u8>::ty()
+        },
+dojo::meta::introspect::Member {
+            name: 'y',
+            attrs: array![].span(),
+            ty: dojo::meta::introspect::Ty::Array(
+                array![
+                dojo::meta::introspect::Introspect::<u32>::ty()
+                ].span()
+            )
+        }
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl StructPackableWithInnerPackedIntrospect<> of dojo::meta::introspect::Introspect<StructPackableWithInnerPacked<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        let sizes : Array<Option<usize>> = array![
+                    dojo::meta::introspect::Introspect::<StructPacked1>::size(),
+Option::Some(1)
+                ];
+
+                
+                Option::Some(dojo::utils::sum(sizes))
+                
+    }
+
+    fn layout() -> dojo::meta::Layout {
+        let mut layouts = array![
+            dojo::meta::Layout::Fixed(array![8].span()),
+dojo::meta::introspect::Introspect::<StructPacked1>::layout()
+        ];
+        let mut merged_layout = ArrayTrait::<u8>::new();
+
+        loop {
+            match ArrayTrait::pop_front(ref layouts) {
+                Option::Some(mut layout) => {
+                    match layout {
+                        dojo::meta::Layout::Fixed(mut l) => {
+                            loop {
+                                match SpanTrait::pop_front(ref l) {
+                                    Option::Some(x) => merged_layout.append(*x),
+                                    Option::None(_) => { break; }
+                                };
+                            };
+                        },
+                        _ => panic!("A packed model layout must contain Fixed layouts only."),
+                    };
+                },
+                Option::None(_) => { break; }
+            };
+        };
+
+        dojo::meta::Layout::Fixed(merged_layout.span())
+        
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Struct(
+            dojo::meta::introspect::Struct {
+                name: 'StructPackableWithInnerPacked',
+                attrs: array![].span(),
+                children: array![
+                dojo::meta::introspect::Member {
+            name: 'x',
+            attrs: array![].span(),
+            ty: dojo::meta::introspect::Introspect::<u8>::ty()
+        },
+dojo::meta::introspect::Member {
+            name: 'y',
+            attrs: array![].span(),
+            ty: dojo::meta::introspect::Introspect::<StructPacked1>::ty()
+        }
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl EnumPacked1Introspect<> of dojo::meta::introspect::Introspect<EnumPacked1<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::Some(1)
+    }
+
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Fixed(
+                array![
+                8
+                ].span()
+            )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Enum(
+            dojo::meta::introspect::Enum {
+                name: 'EnumPacked1',
+                attrs: array![].span(),
+                children: array![
+                ('a', dojo::meta::introspect::Ty::Tuple(array![].span())),
+('b', dojo::meta::introspect::Ty::Tuple(array![].span())),
+('c', dojo::meta::introspect::Ty::Tuple(array![].span()))
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl EnumPacked2Introspect<> of dojo::meta::introspect::Introspect<EnumPacked2<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::Some(2)
+    }
+
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Fixed(
+                array![
+                8,8
+                ].span()
+            )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Enum(
+            dojo::meta::introspect::Enum {
+                name: 'EnumPacked2',
+                attrs: array![].span(),
+                children: array![
+                ('a', dojo::meta::introspect::Introspect::<u8>::ty()),
+('b', dojo::meta::introspect::Introspect::<u8>::ty()),
+('c', dojo::meta::introspect::Introspect::<u8>::ty())
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl EnumPacked3Introspect<> of dojo::meta::introspect::Introspect<EnumPacked3<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::Some(3)
+    }
+
+    fn layout() -> dojo::meta::Layout {
+        dojo::meta::Layout::Fixed(
+                array![
+                8,128,128
+                ].span()
+            )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Enum(
+            dojo::meta::introspect::Enum {
+                name: 'EnumPacked3',
+                attrs: array![].span(),
+                children: array![
+                ('a', dojo::meta::introspect::Ty::Tuple(
+            array![
+            dojo::meta::introspect::Introspect::<u128>::ty(),
+dojo::meta::introspect::Introspect::<u128>::ty()
+            ].span()
+        )),
+('b', dojo::meta::introspect::Introspect::<u256>::ty())
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl EnumPackableWithInnerPackedIntrospect<> of dojo::meta::introspect::Introspect<EnumPackableWithInnerPacked<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        let sizes : Array<Option<usize>> = array![
+                    dojo::meta::introspect::Introspect::<StructPacked1>::size(),
+Option::Some(1)
+                ];
+
+                
+                Option::Some(dojo::utils::sum(sizes))
+                
+    }
+
+    fn layout() -> dojo::meta::Layout {
+        let mut layouts = array![
+            dojo::meta::Layout::Fixed(array![8].span()),
+dojo::meta::introspect::Introspect::<StructPacked1>::layout()
+        ];
+        let mut merged_layout = ArrayTrait::<u8>::new();
+
+        loop {
+            match ArrayTrait::pop_front(ref layouts) {
+                Option::Some(mut layout) => {
+                    match layout {
+                        dojo::meta::Layout::Fixed(mut l) => {
+                            loop {
+                                match SpanTrait::pop_front(ref l) {
+                                    Option::Some(x) => merged_layout.append(*x),
+                                    Option::None(_) => { break; }
+                                };
+                            };
+                        },
+                        _ => panic!("A packed model layout must contain Fixed layouts only."),
+                    };
+                },
+                Option::None(_) => { break; }
+            };
+        };
+
+        dojo::meta::Layout::Fixed(merged_layout.span())
+        
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Enum(
+            dojo::meta::introspect::Enum {
+                name: 'EnumPackableWithInnerPacked',
+                attrs: array![].span(),
+                children: array![
+                ('a', dojo::meta::introspect::Introspect::<StructPacked1>::ty()),
+('b', dojo::meta::introspect::Introspect::<StructPacked1>::ty())
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl EnumNotPackable1Introspect<> of dojo::meta::introspect::Introspect<EnumNotPackable1<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    fn layout() -> dojo::meta::Layout {
+        ERROR
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::meta::introspect::Ty {
+        dojo::meta::introspect::Ty::Enum(
+            dojo::meta::introspect::Enum {
+                name: 'EnumNotPackable1',
+                attrs: array![].span(),
+                children: array![
+                ('a', dojo::meta::introspect::Introspect::<u8>::ty()),
+('b', dojo::meta::introspect::Introspect::<u256>::ty())
+
+                ].span()
+            }
+        )
+    }
+}
+
+//! > expected_diagnostics
+error: Option<T> cannot be used with tuples. Prefer using a struct.
+ --> /tmp/plugin_test/introspect/src/lib.cairo:171:6
+    x: Option<(u8, u16)>
+     ^*****************^
+
+error: Option<T> cannot be used with tuples. Prefer using a struct.
+ --> /tmp/plugin_test/introspect/src/lib.cairo:176:10
+    first: Option<(u8, u16)>,
+         ^*****************^
+
+error: Introspect and IntrospectPacked attributes cannot be used at a same time.
+ --> /tmp/plugin_test/introspect/src/lib.cairo:179:1
+#[derive(Introspect, IntrospectPacked)]
+^*************************************^
+
+error: Introspect and IntrospectPacked attributes cannot be used at a same time.
+ --> /tmp/plugin_test/introspect/src/lib.cairo:182:1
+#[derive(Introspect, IntrospectPacked)]
+^*************************************^
+
+error: Introspect and IntrospectPacked attributes cannot be used at a same time.
+ --> /tmp/plugin_test/introspect/src/lib.cairo:185:1
+#[derive(Introspect)]
+^*******************^
+
+error: Introspect and IntrospectPacked attributes cannot be used at a same time.
+ --> /tmp/plugin_test/introspect/src/lib.cairo:189:1
+#[derive(Introspect)]
+^*******************^
+
+error: Array field cannot be packed.
+ --> /tmp/plugin_test/introspect/src/lib.cairo:213:6
+    y: Array<u32>
+     ^**********^
+
+error: To be packed, all variants must have fixed layout of same size.
+ --> /tmp/plugin_test/introspect/src/lib.cairo:250:6
+enum EnumNotPackable1 {
+     ^**************^

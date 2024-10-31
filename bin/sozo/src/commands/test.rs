@@ -1,28 +1,42 @@
 //! Compiles and runs tests for a Dojo project.
+//!
+//! We can't use scarb to run tests since our injection will not work.
+//! Scarb uses other binaries to run tests. Dojo plugin injection is done in scarb itself.
+//! When proc macro will be fully supported, we can switch back to scarb.
 use anyhow::{bail, Result};
 use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_compiler::diagnostics::DiagnosticsReporter;
 use cairo_lang_compiler::project::{ProjectConfig, ProjectConfigContent};
 use cairo_lang_filesystem::cfg::{Cfg, CfgSet};
-use cairo_lang_filesystem::ids::Directory;
+use cairo_lang_filesystem::db::{CrateSettings, ExperimentalFeaturesConfig, FilesGroup};
+use cairo_lang_filesystem::ids::{CrateId, CrateLongId, Directory};
+use cairo_lang_project::AllCratesConfig;
 use cairo_lang_starknet::starknet_plugin_suite;
-use cairo_lang_test_plugin::test_plugin_suite;
+use cairo_lang_test_plugin::{test_plugin_suite, TestsCompilationConfig};
 use cairo_lang_test_runner::{CompiledTestRunner, RunProfilerConfig, TestCompiler, TestRunConfig};
+use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
 use clap::Args;
-use dojo_lang::compiler::{collect_core_crate_ids, collect_external_crate_ids, Props};
-use dojo_lang::plugin::dojo_plugin_suite;
-use dojo_lang::scarb_internal::{cfg_set_from_component, crates_config_for_compilation_unit};
-use dojo_world::metadata::dojo_metadata_from_package;
-use scarb::compiler::helpers::{collect_all_crate_ids, collect_main_crate_ids};
-use scarb::compiler::{CairoCompilationUnit, CompilationUnit, CompilationUnitAttributes};
+use dojo_lang::dojo_plugin_suite;
+use itertools::Itertools;
+use scarb::compiler::{
+    CairoCompilationUnit, CompilationUnit, CompilationUnitAttributes, ContractSelector,
+};
 use scarb::core::{Config, Package, TargetKind};
 use scarb::ops::{self, CompileOpts};
 use scarb_ui::args::{FeaturesSpec, PackagesFilter};
+use serde::{Deserialize, Serialize};
+use smol_str::SmolStr;
 use tracing::trace;
+
+pub const WORLD_QUALIFIED_PATH: &str = "dojo::world::world_contract::world";
 
 use super::check_package_dojo_version;
 
-pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::test";
+#[derive(Debug, Default, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct Props {
+    pub build_external_contracts: Option<Vec<ContractSelector>>,
+}
 
 #[derive(Debug, Clone, PartialEq, clap::ValueEnum)]
 pub enum ProfilerMode {
@@ -71,6 +85,7 @@ pub struct TestArgs {
 }
 
 impl TestArgs {
+    // TODO: move this into the DojoCompiler.
     pub fn run(self, config: &Config) -> anyhow::Result<()> {
         let ws = ops::read_workspace(config.manifest_path(), config).unwrap_or_else(|err| {
             eprintln!("error: {err}");
@@ -119,37 +134,13 @@ impl TestArgs {
             .collect::<Vec<_>>();
 
         for unit in compilation_units {
-            let mut unit = if let CompilationUnit::Cairo(unit) = unit {
+            let unit = if let CompilationUnit::Cairo(unit) = unit {
                 unit
             } else {
                 continue;
             };
 
             config.ui().print(format!("testing {}", unit.name()));
-
-            let root_dojo_metadata = dojo_metadata_from_package(&unit.components[0].package, &ws)?;
-
-            // For each component in the compilation unit (namely, the dependencies being
-            // compiled) we inject into the `CfgSet` the component name and
-            // namespace configuration. Doing this here ensures the parsing of
-            // of the manifest is done once at compile time, and not everytime
-            // the plugin is called.
-            for c in unit.components.iter_mut() {
-                c.cfg_set = Some(cfg_set_from_component(
-                    c,
-                    &root_dojo_metadata.namespace,
-                    &config.ui(),
-                    &ws,
-                )?);
-
-                // As we override all the components CfgSet to ensure the namespace mapping
-                // is effective for all of them, we must also insert the "test" and "target"
-                // configs here to ensure correct testing configuration.
-                if let Some(cfg_set) = c.cfg_set.as_mut() {
-                    cfg_set.insert(Cfg::name("test"));
-                    cfg_set.insert(Cfg::kv("target", "test"));
-                }
-            }
 
             let props: Props = unit.main_component().target_props()?;
             let db = build_root_database(&unit)?;
@@ -158,16 +149,12 @@ impl TestArgs {
                 bail!("failed to compile");
             }
 
-            let mut main_crate_ids = collect_all_crate_ids(&unit, &db);
-            let test_crate_ids = collect_main_crate_ids(&unit, &db);
+            let test_crate_ids = collect_main_crate_ids(&unit, &db, false);
 
-            if unit.main_package_id.name.to_string() != "dojo" {
-                let core_crate_ids = collect_core_crate_ids(&db);
-                main_crate_ids.extend(core_crate_ids);
-            }
+            let mut main_crate_ids = collect_all_crate_ids(&unit, &db);
 
             if let Some(external_contracts) = props.build_external_contracts {
-                main_crate_ids.extend(collect_external_crate_ids(&db, external_contracts));
+                main_crate_ids.extend(collect_crates_ids_from_selectors(&db, &external_contracts));
             }
 
             let config = TestRunConfig {
@@ -179,8 +166,17 @@ impl TestArgs {
                 print_resource_usage: self.print_resource_usage,
             };
 
-            let compiler =
-                TestCompiler { db: db.snapshot(), main_crate_ids, test_crate_ids, starknet: true };
+            let compiler = TestCompiler {
+                db: db.snapshot(),
+                main_crate_ids,
+                test_crate_ids,
+                allow_warnings: true,
+                config: TestsCompilationConfig {
+                    starknet: true,
+                    add_statements_functions: false,
+                    add_statements_code_locations: false,
+                },
+            };
 
             let compiled = compiler.build()?;
             let runner = CompiledTestRunner { compiled, config };
@@ -214,7 +210,12 @@ fn build_project_config(unit: &CairoCompilationUnit) -> Result<ProjectConfig> {
         .filter(|c| !c.package.id.is_core())
         // NOTE: We're taking the first target of each compilation unit, which should always be the
         //       main package source root due to the order maintained by scarb.
-        .map(|c| (c.cairo_package_name(), c.targets[0].source_root().into()))
+        .map(|c| {
+            (
+                c.cairo_package_name(),
+                c.first_target().source_root().into(),
+            )
+        })
         .collect();
 
     let corelib =
@@ -227,43 +228,75 @@ fn build_project_config(unit: &CairoCompilationUnit) -> Result<ProjectConfig> {
     let project_config =
         ProjectConfig { base_path: unit.main_component().package.root().into(), corelib, content };
 
-    trace!(target: LOG_TARGET, ?project_config);
+    trace!(?project_config, "Project config built.");
 
     Ok(project_config)
 }
 
-#[cfg(test)]
-mod tests {
-    use dojo_test_utils::compiler::CompilerTestSetup;
-    use scarb::compiler::Profile;
+/// Collects the main crate ids for Dojo including the core crates.
+pub fn collect_main_crate_ids(
+    unit: &CairoCompilationUnit,
+    db: &RootDatabase,
+    with_dojo_core: bool,
+) -> Vec<CrateId> {
+    let mut main_crate_ids = scarb::compiler::helpers::collect_main_crate_ids(unit, db);
 
-    use super::*;
+    if unit.main_package_id.name.to_string() != "dojo" && with_dojo_core {
+        let core_crate_ids: Vec<CrateId> = collect_crates_ids_from_selectors(
+            db,
+            &[ContractSelector(WORLD_QUALIFIED_PATH.to_string())],
+        );
 
-    // Ignored as scarb takes too much time to compile in debug mode.
-    // It's anyway run in the CI in the `test` job.
-    #[test]
-    #[ignore]
-    fn test_spawn_and_move_test() {
-        let setup = CompilerTestSetup::from_examples("../../crates/dojo-core", "../../examples/");
-
-        let config = setup.build_test_config("spawn-and-move", Profile::DEV);
-
-        let test_args = TestArgs {
-            filter: String::new(),
-            include_ignored: false,
-            ignored: false,
-            profiler_mode: ProfilerMode::None,
-            gas_enabled: true,
-            print_resource_usage: false,
-            features: FeaturesSpec {
-                features: vec![],
-                all_features: true,
-                no_default_features: false,
-            },
-            packages: None,
-        };
-
-        let result = test_args.run(&config);
-        assert!(result.is_ok());
+        main_crate_ids.extend(core_crate_ids);
     }
+
+    main_crate_ids
+}
+
+/// Collects the crate ids containing the given contract selectors.
+pub fn collect_crates_ids_from_selectors(
+    db: &RootDatabase,
+    contract_selectors: &[ContractSelector],
+) -> Vec<CrateId> {
+    contract_selectors
+        .iter()
+        .map(|selector| selector.package().into())
+        .unique()
+        .map(|package_name: SmolStr| db.intern_crate(CrateLongId::Real(package_name)))
+        .collect::<Vec<_>>()
+}
+
+pub fn collect_all_crate_ids(unit: &CairoCompilationUnit, db: &RootDatabase) -> Vec<CrateId> {
+    unit.components
+        .iter()
+        .map(|component| db.intern_crate(CrateLongId::Real(component.cairo_package_name())))
+        .collect()
+}
+
+pub fn crates_config_for_compilation_unit(unit: &CairoCompilationUnit) -> AllCratesConfig {
+    let crates_config: OrderedHashMap<SmolStr, CrateSettings> = unit
+        .components()
+        .iter()
+        .map(|component| {
+            // Ensure experimental features are only enable if required.
+            let experimental_features = component.package.manifest.experimental_features.clone();
+            let experimental_features = experimental_features.unwrap_or_default();
+
+            (
+                component.cairo_package_name(),
+                CrateSettings {
+                    version: Some(component.package.id.version.clone()),
+                    edition: component.package.manifest.edition,
+                    experimental_features: ExperimentalFeaturesConfig {
+                        negative_impls: experimental_features
+                            .contains(&SmolStr::new_inline("negative_impls")),
+                        coupons: experimental_features.contains(&SmolStr::new_inline("coupons")),
+                    },
+                    cfg_set: component.cfg_set.clone(),
+                },
+            )
+        })
+        .collect();
+
+    AllCratesConfig { override_map: crates_config, ..Default::default() }
 }

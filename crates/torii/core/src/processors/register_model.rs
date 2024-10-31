@@ -1,6 +1,6 @@
 use anyhow::{Error, Ok, Result};
 use async_trait::async_trait;
-use cainome::cairo_serde::{ByteArray, CairoSerde};
+use dojo_world::contracts::abigen::world::Event as WorldEvent;
 use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::Event;
@@ -24,16 +24,9 @@ where
         "ModelRegistered".to_string()
     }
 
-    fn validate(&self, event: &Event) -> bool {
-        if event.keys.len() > 1 {
-            info!(
-                target: LOG_TARGET,
-                event_key = %<RegisterModelProcessor as EventProcessor<P>>::event_key(self),
-                invalid_keys = %<RegisterModelProcessor as EventProcessor<P>>::event_keys_as_string(self, event),
-                "Invalid event keys."
-            );
-            return false;
-        }
+    // We might not need this anymore, since we don't have fallback and all world events must
+    // be handled.
+    fn validate(&self, _event: &Event) -> bool {
         true
     }
 
@@ -46,13 +39,23 @@ where
         _event_id: &str,
         event: &Event,
     ) -> Result<(), Error> {
-        let name = ByteArray::cairo_deserialize(&event.data, 0)?;
-        let mut offset = ByteArray::cairo_serialized_size(&name);
-        let namespace = ByteArray::cairo_deserialize(&event.data, offset)?;
-        offset += ByteArray::cairo_serialized_size(&namespace);
+        // Torii version is coupled to the world version, so we can expect the event to be well
+        // formed.
+        let event = match WorldEvent::try_from(event).unwrap_or_else(|_| {
+            panic!(
+                "Expected {} event to be well formed.",
+                <RegisterModelProcessor as EventProcessor<P>>::event_key(self)
+            )
+        }) {
+            WorldEvent::ModelRegistered(e) => e,
+            _ => {
+                unreachable!()
+            }
+        };
 
-        let name = name.to_string()?;
-        let namespace = namespace.to_string()?;
+        // Safe to unwrap, since it's coming from the chain.
+        let namespace = event.namespace.to_string().unwrap();
+        let name = event.name.to_string().unwrap();
 
         let model = world.model_reader(&namespace, &name).await?;
         let schema = model.schema().await?;
@@ -61,21 +64,20 @@ where
         let unpacked_size: u32 = model.unpacked_size().await?;
         let packed_size: u32 = model.packed_size().await?;
 
-        let class_hash = event.data[offset];
-        let contract_address = event.data[offset + 1];
-
         info!(
             target: LOG_TARGET,
+            namespace = %namespace,
             name = %name,
             "Registered model."
         );
+
         debug!(
             target: LOG_TARGET,
-            name = %name,
+            name,
             schema = ?schema,
             layout = ?layout,
-            class_hash = ?class_hash,
-            contract_address = ?contract_address,
+            class_hash = ?event.class_hash,
+            contract_address = ?event.address,
             packed_size = %packed_size,
             unpacked_size = %unpacked_size,
             "Registered model content."
@@ -85,8 +87,8 @@ where
             &namespace,
             schema,
             layout,
-            class_hash,
-            contract_address,
+            event.class_hash.into(),
+            event.address.into(),
             packed_size,
             unpacked_size,
             block_timestamp,

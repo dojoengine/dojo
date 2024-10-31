@@ -8,12 +8,13 @@ version.workspace = true
 [dependencies]
 anyhow.workspace = true
 console.workspace = true
-dojo-world = { workspace = true, features = [ "contracts", "metadata", "migration" ] }
+dojo-world.workspace = true
 reqwest.workspace = true
 scarb.workspace = true
 scarb-ui.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+sozo-scarbext.workspace = true
 starknet.workspace = true
 thiserror.workspace = true
 url.workspace = true

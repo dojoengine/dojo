@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use crypto_bigint::U256;
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
-use dojo_world::contracts::abi::model::Layout;
+use dojo_world::contracts::abigen::model::Layout;
 use dojo_world::contracts::model::ModelReader;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Pool, Row, Sqlite};

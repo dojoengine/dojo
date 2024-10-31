@@ -52,7 +52,8 @@ impl SozoArgs {
     }
 
     pub fn init_logging(&self) -> Result<(), Box<dyn std::error::Error>> {
-        const DEFAULT_LOG_FILTER: &str = "info,hyper=off,scarb=off,salsa=off";
+        const DEFAULT_LOG_FILTER: &str =
+            "info,hyper=off,scarb=off,salsa=off,sozo=info,dojo_world=info";
 
         LogTracer::init()?;
 

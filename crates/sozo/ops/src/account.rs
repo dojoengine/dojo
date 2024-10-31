@@ -3,6 +3,7 @@ use std::io::Write;
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
+use bigdecimal::BigDecimal;
 use colored::Colorize;
 use colored_json::{ColorMode, Output};
 use dojo_utils::{TransactionExt, TransactionWaiter, TxnAction, TxnConfig};
@@ -21,7 +22,14 @@ use starknet::providers::{JsonRpcClient, Provider, ProviderError};
 use starknet::signers::{LocalWallet, Signer, SigningKey};
 use starknet_crypto::Felt;
 
-use crate::utils;
+/// Convert a [`Felt`] into a [`BigDecimal`] with a given number of decimals.
+pub fn felt_to_bigdecimal<F, D>(felt: F, decimals: D) -> BigDecimal
+where
+    F: AsRef<Felt>,
+    D: Into<i64>,
+{
+    BigDecimal::from((felt.as_ref().to_bigint(), decimals.into()))
+}
 
 /// The canonical hash of a contract class. This is the class hash value of a contract instance.
 pub type ClassHash = Felt;
@@ -248,7 +256,14 @@ pub async fn deploy(
     };
 
     match txn_action {
-        TxnAction::Send { wait, receipt, max_fee_raw, fee_estimate_multiplier, walnut } => {
+        TxnAction::Send {
+            wait,
+            receipt,
+            max_fee_raw,
+            fee_estimate_multiplier,
+            walnut,
+            timeout_ms,
+        } => {
             let max_fee = if let Some(max_fee_raw) = max_fee_raw {
                 MaxFeeType::Manual { max_fee: max_fee_raw }
             } else {
@@ -277,8 +292,14 @@ pub async fn deploy(
             };
 
             let account_deployment = account_deployment.max_fee(max_fee.max_fee());
-            let txn_config =
-                TxnConfig { fee_estimate_multiplier, wait, receipt, max_fee_raw, walnut };
+            let txn_config = TxnConfig {
+                fee_estimate_multiplier,
+                wait,
+                receipt,
+                max_fee_raw,
+                walnut,
+                timeout_ms,
+            };
             do_account_deploy(
                 max_fee,
                 txn_config,
@@ -306,7 +327,7 @@ pub async fn deploy(
                 })?
                 .overall_fee;
 
-            let decimal = utils::felt_to_bigdecimal(estimated_fee, 18);
+            let decimal = felt_to_bigdecimal(estimated_fee, 18);
             println!("{} ETH", format!("{decimal}").bright_yellow());
 
             Ok(())
@@ -337,17 +358,16 @@ async fn do_account_deploy(
             eprintln!(
                 "You've manually specified the account deployment fee to be {}. Therefore, fund \
                  at least:\n    {}",
-                format!("{} ETH", utils::felt_to_bigdecimal(max_fee, 18)).bright_yellow(),
-                format!("{} ETH", utils::felt_to_bigdecimal(max_fee, 18)).bright_yellow(),
+                format!("{} ETH", felt_to_bigdecimal(max_fee, 18)).bright_yellow(),
+                format!("{} ETH", felt_to_bigdecimal(max_fee, 18)).bright_yellow(),
             );
         }
         MaxFeeType::Estimated { estimate, estimate_with_buffer } => {
             eprintln!(
                 "The estimated account deployment fee is {}. However, to avoid failure, fund at \
                  least:\n    {}",
-                format!("{} ETH", utils::felt_to_bigdecimal(estimate, 18)).bright_yellow(),
-                format!("{} ETH", utils::felt_to_bigdecimal(estimate_with_buffer, 18))
-                    .bright_yellow()
+                format!("{} ETH", felt_to_bigdecimal(estimate, 18)).bright_yellow(),
+                format!("{} ETH", felt_to_bigdecimal(estimate_with_buffer, 18)).bright_yellow()
             );
         }
     }

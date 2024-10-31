@@ -124,7 +124,7 @@ impl SignerOptions {
     }
 
     /// Retrieves the private key from the CLI or environment metadata.
-    pub fn private_key(&self, env_metadata: Option<&Environment>) -> Option<String> {
+    pub fn _private_key(&self, env_metadata: Option<&Environment>) -> Option<String> {
         if let Some(s) = &self.private_key {
             Some(s.to_owned())
         } else {
@@ -133,7 +133,7 @@ impl SignerOptions {
     }
 
     /// Retrieves the keystore path from the CLI or environment metadata.
-    pub fn keystore_path(&self, env_metadata: Option<&Environment>) -> Option<String> {
+    pub fn _keystore_path(&self, env_metadata: Option<&Environment>) -> Option<String> {
         if let Some(s) = &self.keystore_path {
             Some(s.to_owned())
         } else {

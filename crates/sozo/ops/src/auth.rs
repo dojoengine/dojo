@@ -14,7 +14,7 @@ use sozo_walnut::WalnutDebugger;
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::types::{BlockId, BlockTag, Felt};
 
-use crate::migration::ui::MigrationUi;
+//use crate::migration::ui::MigrationUi;
 use crate::utils;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -312,7 +312,7 @@ where
             // be sure that the model exists
             match world_reader.model_reader_with_tag(&tag).await {
                 Err(ModelError::ModelNotFound) => {
-                    ui.print_sub(format!("Unknown model '{}' => IGNORED", tag));
+                    //ui.print_sub(format!("Unknown model '{}' => IGNORED", tag));
                 }
                 Err(err) => {
                     return Err(err.into());
