@@ -1,7 +1,10 @@
+use std::time::Duration;
+
 use anyhow::Result;
 use clap::Args;
 use dojo_utils::env::STARKNET_RPC_URL_ENV_VAR;
 use dojo_world::config::Environment;
+use reqwest::ClientBuilder;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use tracing::trace;
@@ -24,10 +27,22 @@ impl StarknetOptions {
     pub fn provider(
         &self,
         env_metadata: Option<&Environment>,
+        request_timeout_ms: Option<u64>,
     ) -> Result<(JsonRpcClient<HttpTransport>, String)> {
         let url = self.url(env_metadata)?;
-        trace!(?url, "Creating JsonRpcClient with given RPC URL.");
-        Ok((JsonRpcClient::new(HttpTransport::new(url.clone())), url.to_string()))
+        trace!(?url, "Creating JsonRpcClient with given RPC URL and timeout.");
+
+        let client = if let Some(request_timeout_ms) = request_timeout_ms {
+            ClientBuilder::default()
+                .timeout(Duration::from_millis(request_timeout_ms))
+                .build()
+                .unwrap()
+        } else {
+            ClientBuilder::default().build().unwrap()
+        };
+
+        let transport = HttpTransport::new_with_client(url.clone(), client);
+        Ok((JsonRpcClient::new(transport), url.to_string()))
     }
 
     // We dont check the env var because that would be handled by `clap`.

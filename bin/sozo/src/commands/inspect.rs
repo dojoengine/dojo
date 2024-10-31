@@ -2,6 +2,7 @@ use anyhow::Result;
 use clap::Args;
 use colored::*;
 use dojo_types::naming;
+use dojo_utils::TxnConfig;
 use dojo_world::diff::{ResourceDiff, WorldDiff, WorldStatus};
 use dojo_world::ResourceType;
 use scarb::core::Config;
@@ -37,7 +38,7 @@ impl InspectArgs {
 
         config.tokio_handle().block_on(async {
             let (world_diff, _, _) =
-                utils::get_world_diff_and_provider(starknet.clone(), world, &ws).await?;
+                utils::get_world_diff_and_provider(starknet.clone(), world, None, &ws).await?;
 
             if let Some(resource) = resource {
                 inspect_resource(&resource, &world_diff);
