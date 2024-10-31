@@ -1,6 +1,7 @@
 //! Middleware that proxies requests at a specified URI to internal
 //! RPC method calls.
 
+use std::collections::HashMap;
 use std::error::Error;
 use std::future::Future;
 use std::pin::Pin;
@@ -14,6 +15,7 @@ use jsonrpsee_core::error::Error as RpcError;
 use jsonrpsee_core::JsonRawValue;
 use jsonrpsee_types::{Id, RequestSer};
 use tower::{Layer, Service};
+use url::form_urlencoded;
 
 use crate::transport::http;
 
@@ -103,10 +105,25 @@ where
     }
 
     fn call(&mut self, mut req: Request<Body>) -> Self::Future {
-        let modify = self.path.as_ref() == req.uri() && req.method() == Method::GET;
+        // let modify = self.path.as_ref() == req.uri() && req.method() == Method::GET;
+        let modify = req.method() == Method::GET;
 
         // Proxy the request to the appropriate method call.
         if modify {
+            let mut raw_value = None;
+
+            //If method is dev_accountBalance then get the contract_address query param and assign it to raw_value
+            if self.method.to_string() == "dev_accountBalance".to_string() {
+                if let Some(query) = req.uri().query() {
+                    let params: HashMap<_, _> =
+                        form_urlencoded::parse(query.as_bytes()).into_owned().collect();
+                    if let Some(address) = params.get("contract_address") {
+                        let json_string = format!(r#"{{"address":"{}"}}"#, address);
+                        raw_value = Some(JsonRawValue::from_string(json_string).unwrap());
+                    }
+                }
+            }
+
             // RPC methods are accessed with `POST`.
             *req.method_mut() = Method::POST;
             // Precautionary remove the URI.
@@ -117,9 +134,7 @@ where
             req.headers_mut().insert(ACCEPT, HeaderValue::from_static("application/json"));
 
             // Adjust the body to reflect the method call.
-            let raw_value = JsonRawValue::from_string("{\"address\":\"0x6677fe62ee39c7b07401f754138502bab7fac99d2d3c5d37df7d1c6fab10819\", \"age\":5, \"name\":\"somename\"}".to_string()).unwrap();
-            let param = Some(raw_value.as_ref());
-
+            let param = raw_value.as_ref().map(|value| value.as_ref());
             let body = Body::from(
                 serde_json::to_string(&RequestSer::borrowed(&Id::Number(0), &self.method, param))
                     .expect("Valid request; qed"),
