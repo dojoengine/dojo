@@ -37,8 +37,8 @@ use crate::errors::Error;
 mod events;
 
 use crate::server::events::ServerEvent;
-use crate::typed_data::{parse_value_to_ty, PrimitiveType, TypedData};
-use crate::types::{Message, Signature, TypedDataHash};
+use crate::typed_data::{encode_type, parse_value_to_ty, PrimitiveType, TypedData};
+use crate::types::{Message, Signature};
 
 pub(crate) const LOG_TARGET: &str = "torii::relay::server";
 
@@ -416,6 +416,8 @@ async fn validate_signature<P: Provider + Sync>(
     message: &TypedData,
     signature: &Signature,
 ) -> Result<bool, Error> {
+    let message_hash = message.encode(entity_identity)?;
+
     match signature {
         Signature::Starknet(signature) => {
             let message_hash = message.encode(entity_identity)?;
@@ -435,7 +437,6 @@ async fn validate_signature<P: Provider + Sync>(
                 .map(|res| res[0] != Felt::ZERO)
         }
         Signature::Webauthn(signature) => {
-            let message_hash = message.encode(entity_identity)?;
             let mut calldata = vec![message_hash, Felt::from(signature.len())];
             calldata.extend(signature);
             provider
@@ -452,11 +453,13 @@ async fn validate_signature<P: Provider + Sync>(
                 .map(|res| res[0] != Felt::ZERO)
         }
         Signature::Session(signature) => {
-            let mut calldata = vec![];
-            signature.0.iter().for_each(|TypedDataHash { type_hash, typed_data_hash }| {
-                calldata.extend_from_slice(&[*type_hash, *typed_data_hash]);
-            });
-            calldata.extend_from_slice(&signature.1);
+            let mut calldata = vec![
+                get_selector_from_name(&encode_type(&message.primary_type, &message.types)?).map_err(
+                    |e| Error::InvalidMessageError(e.to_string()),
+                )?,
+                message_hash,
+            ];
+            calldata.extend_from_slice(&signature);
             provider
                 .call(
                     FunctionCall {
