@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1730324832616,
+  "lastUpdate": 1730332988249,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -28693,6 +28693,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8392767,
             "range": "± 196164",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f4199aec570a395278b8c8748bc46e2f6be3d0c7",
+          "message": "dojo `1.0.0-rc.0` (#2595)\n\n* chore: add new dojo folder into crates\r\n\r\n* wip\r\n\r\n* fix: wip tests\r\n\r\n* fix: rename simple example\r\n\r\n* fix: rework abigen\r\n\r\n* fmt\r\n\r\n* wip\r\n\r\n* wip\r\n\r\n* fix: rework remote world fetching\r\n\r\n* fix: ensure namespaces are mapped correctly\r\n\r\n* feat: add namespaces as resource too for the diff\r\n\r\n* feat: complete the diff computation\r\n\r\n* fix: fmt\r\n\r\n* feat: add declarer and migration flow again\r\n\r\n* wip\r\n\r\n* fix: fix migration flow\r\n\r\n* fix: adjust controller account and migrate\r\n\r\n* wip\r\n\r\n* wip: migration\r\n\r\n* fix\r\n\r\n* fix\r\n\r\n* fix: rework txs + error message on tx failed\r\n\r\n* fmt\r\n\r\n* fix: use disable_multicall\r\n\r\n* fix: add inspect command for world\r\n\r\n* fix: add perms names and tag\r\n\r\n* fix: simplify resource management\r\n\r\n* fix wip\r\n\r\n* add comment to not forget cleaning on build\r\n\r\n* fix: add clean back\r\n\r\n* clean\r\n\r\n* fix: migration output clean and simple\r\n\r\n* fix: world upgrade\r\n\r\n* fix: test\r\n\r\n* fix: ensure warning if world address/seed differ\r\n\r\n* fix: refacto\r\n\r\n* fix: big refactor\r\n\r\n* fix: ensure model and modelvalue are in the ABI\r\n\r\n* fix: add manifests back\r\n\r\n* fix: compiling workspace ok\r\n\r\n* fix: simplify storage trait\r\n\r\n* fix: add call again\r\n\r\n* wip: cairo test\r\n\r\n* wip: tests\r\n\r\n* fix: fix upgrade with dojo_name now\r\n\r\n* fix: fix core tests\r\n\r\n* fix: order init contract\r\n\r\n* chore: use scarb from dojo fork\r\n\r\n* fix: use cainome from remote branch\r\n\r\n* feat: add multi-declarers\r\n\r\n* fix: fix missing generate task migration\r\n\r\n* chore: use fix rev for scarb\r\n\r\n* fix: regenerate world ABI\r\n\r\n* fix: regenerate world ABI\r\n\r\n* fix: use new cainome rev for event selector\r\n\r\n* feat: adjust torii for new events structure\r\n\r\n* fix: fmt\r\n\r\n* chore: bump scarb\r\n\r\n* feat(torii): add support for new events historical\r\n\r\n* fix: migrate spawn and move\r\n\r\n* fix: tests\r\n\r\n* fix: fmt\r\n\r\n* fix: cleanup\r\n\r\n* fix: cairo test compilation\r\n\r\n* fix: rename generated contracts for models and events for easier testing\r\n\r\n* chore: bump scarb\r\n\r\n* fix: complete workspace tests + clippy\r\n\r\n* add metadata feature on dojo-world\r\n\r\n* fix: fix CI path and scarb version + abigen check\r\n\r\n* fix: replace WorldMetadata to avoid using metadata feature\r\n\r\n* fix: format check and tests\r\n\r\n* fix: remove namespace bytearray from WorldStorage\r\n\r\n* fix: change namespaces to snapshot\r\n\r\n* fix: update db\r\n\r\n* fix: world storage API update\r\n\r\n* fix: tests\r\n\r\n* ci: remove bindgen check due to formatting\r\n\r\n* fix: add bindgen back with new world representation\r\n\r\n* chore: bump scarb\r\n\r\n* fix: ensure namespaces are correctly mapped for default, and add traces\r\n\r\n* fix: ensure multi declaration works + added timeout\r\n\r\n* fix: add back the world abi in the final manifest\r\n\r\n* feat: historical event messages\r\n\r\n* fix: ensure we have 2 outputs based on changes\r\n\r\n* fix: display inspect\r\n\r\n* fix: ensure the tag is correctly output in the manifest\r\n\r\n* torii clietn evnet messages\r\n\r\n* fix: merge main + update tests\r\n\r\n* spookyfy\r\n\r\n* feat: add sozo hash back\r\n\r\n* fix: fix fmt\r\n\r\n* fix: add sozo init back\r\n\r\n* fix: fmt\r\n\r\n---------\r\n\r\nCo-authored-by: notV4l <imV4l@proton.me>\r\nCo-authored-by: Nasr <larko236@outlook.com>",
+          "timestamp": "2024-10-30T17:43:23-06:00",
+          "tree_id": "443e7ef775167249faeef73d214b654eb21a2a55",
+          "url": "https://github.com/dojoengine/dojo/commit/f4199aec570a395278b8c8748bc46e2f6be3d0c7"
+        },
+        "date": 1730332987072,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16168902,
+            "range": "± 236587",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8897761,
+            "range": "± 784374",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3908938051,
+            "range": "± 854256740",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8385838,
+            "range": "± 152405",
             "unit": "ns/iter"
           }
         ]
