@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1730332988249,
+  "lastUpdate": 1730337994137,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -28741,6 +28741,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8385838,
             "range": "± 152405",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "90423308+ponderingdemocritus@users.noreply.github.com",
+            "name": "Loaf",
+            "username": "ponderingdemocritus"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "126292e64afb0a1d507800b42cf0e6582e6c13cb",
+          "message": "fix release (#2598)",
+          "timestamp": "2024-10-31T12:06:50+11:00",
+          "tree_id": "dbf3be8101cce176da64ca44ab1cd5ec82651e88",
+          "url": "https://github.com/dojoengine/dojo/commit/126292e64afb0a1d507800b42cf0e6582e6c13cb"
+        },
+        "date": 1730337992422,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16240962,
+            "range": "± 191481",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8807021,
+            "range": "± 355201",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3693352739,
+            "range": "± 815454320",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8433421,
+            "range": "± 290043",
             "unit": "ns/iter"
           }
         ]
