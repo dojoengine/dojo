@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1730404613340,
+  "lastUpdate": 1730410122929,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -28963,6 +28963,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8753809,
             "range": "± 622162",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "66b76e673b8c7ad6ce613804bc9cd401cc2bbf38",
+          "message": "feat(libp2p): multi signature schemes & session signing (#2599)\n\n* feat(libp2p): multi signature schemes & session signing\r\n\r\n* clean up session sig scheme\r\n\r\n* fmt\r\n\r\n* chore\r\n\r\n* fix: tests\r\n\r\n* fix: session sig",
+          "timestamp": "2024-10-31T15:12:54-06:00",
+          "tree_id": "ecca6582ef74aed6953355e905975efaac618b97",
+          "url": "https://github.com/dojoengine/dojo/commit/66b76e673b8c7ad6ce613804bc9cd401cc2bbf38"
+        },
+        "date": 1730410121672,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 9628482893,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
