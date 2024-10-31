@@ -437,9 +437,11 @@ async fn validate_signature<P: Provider + Sync>(
         }
         Signature::Session(signature) => {
             let mut calldata = vec![
+                Felt::ONE,
                 get_selector_from_name(&encode_type(&message.primary_type, &message.types)?)
                     .map_err(|e| Error::InvalidMessageError(e.to_string()))?,
                 message_hash,
+                signature.len().into(),
             ];
             calldata.extend(signature);
             provider
