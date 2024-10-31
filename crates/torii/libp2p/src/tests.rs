@@ -683,7 +683,10 @@ mod test {
 
         client
             .command_sender
-            .publish(Message { message: typed_data, signature: Signature::Starknet((signature.r, signature.s)) })
+            .publish(Message {
+                message: typed_data,
+                signature: Signature::Starknet((signature.r, signature.s)),
+            })
             .await?;
 
         sleep(std::time::Duration::from_secs(2)).await;

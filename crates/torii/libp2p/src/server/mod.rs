@@ -454,9 +454,8 @@ async fn validate_signature<P: Provider + Sync>(
         }
         Signature::Session(signature) => {
             let mut calldata = vec![
-                get_selector_from_name(&encode_type(&message.primary_type, &message.types)?).map_err(
-                    |e| Error::InvalidMessageError(e.to_string()),
-                )?,
+                get_selector_from_name(&encode_type(&message.primary_type, &message.types)?)
+                    .map_err(|e| Error::InvalidMessageError(e.to_string()))?,
                 message_hash,
             ];
             calldata.extend_from_slice(&signature);
