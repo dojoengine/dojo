@@ -108,7 +108,7 @@ main() {
         | grep -oE '"tag_name": "[^"]*"|"prerelease": (true|false)' \
         | grep -B1 '"prerelease": false' \
         | grep '"tag_name":' \
-        | grep -oE '"v[0-9]*\.[0-9]*\.[0-9]*"' \
+        | grep -oE '"v[0-9]*\.[0-9]*\.[0-9]*(-rc\.[0-9]*)?"' \
         | tr -d '"' \
         | head -n 1)
       DOJOUP_VERSION=$DOJOUP_TAG
