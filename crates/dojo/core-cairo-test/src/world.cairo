@@ -135,6 +135,8 @@ pub fn spawn_test_world(namespaces_defs: Span<NamespaceDef>) -> WorldStorage {
                         let contract_address = world
                             .register_contract(*def.class_hash, namespace.clone(), class_hash);
 
+                        let name = starknet::syscalls::library_call_syscall(class_hash, selector!("dojo_name"), [].span()).unwrap();
+
                         for target in *def
                             .writer_of {
                                 world.grant_writer(*target, contract_address);
@@ -146,7 +148,7 @@ pub fn spawn_test_world(namespaces_defs: Span<NamespaceDef>) -> WorldStorage {
                             };
 
                         let selector = dojo::utils::selector_from_namespace_and_name(
-                            namespace_hash, def.name
+                            namespace_hash, name
                         );
                         world.init_contract(selector, *def.init_calldata);
                     },
