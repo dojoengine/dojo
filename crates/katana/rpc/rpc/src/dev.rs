@@ -5,7 +5,9 @@ use jsonrpsee::core::{async_trait, Error};
 use katana_core::backend::Backend;
 use katana_core::service::block_producer::{BlockProducer, BlockProducerMode, PendingExecutor};
 use katana_executor::ExecutorFactory;
-use katana_primitives::genesis::constant::{get_fee_token_balance_base_storage_address, ERC20_NAME_STORAGE_SLOT};
+use katana_primitives::genesis::constant::{
+    get_fee_token_balance_base_storage_address, ERC20_NAME_STORAGE_SLOT,
+};
 use katana_primitives::ContractAddress;
 use katana_provider::traits::state::StateFactoryProvider;
 use katana_rpc_api::dev::DevApiServer;
@@ -126,6 +128,5 @@ impl<EF: ExecutorFactory> DevApiServer for DevApi<EF> {
 
     async fn predeployed_accounts(&self) -> Result<Vec<Account>, Error> {
         Ok(self.backend.chain_spec.genesis.accounts().map(|e| Account::new(*e.0, e.1)).collect())
-        
     }
 }

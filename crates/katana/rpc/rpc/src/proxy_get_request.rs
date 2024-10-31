@@ -112,7 +112,8 @@ where
         if modify {
             let mut raw_value = None;
 
-            //If method is dev_accountBalance then get the contract_address query param and assign it to raw_value
+            // If method is dev_accountBalance then get the contract_address query param and assign
+            // it to raw_value
             if self.method.to_string() == "dev_accountBalance".to_string() {
                 if let Some(query) = req.uri().query() {
                     let params: HashMap<_, _> =
