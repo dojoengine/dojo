@@ -5,8 +5,7 @@ use crate::typed_data::TypedData;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Signature {
-    Webauthn(Vec<Felt>),
-    Starknet((Felt, Felt)),
+    Account(Vec<Felt>),
     Session(Vec<Felt>),
 }
 

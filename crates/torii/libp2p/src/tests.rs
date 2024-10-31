@@ -685,7 +685,7 @@ mod test {
             .command_sender
             .publish(Message {
                 message: typed_data,
-                signature: Signature::Starknet((signature.r, signature.s)),
+                signature: Signature::Account(vec![signature.r, signature.s]),
             })
             .await?;
 

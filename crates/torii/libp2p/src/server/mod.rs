@@ -419,24 +419,7 @@ async fn validate_signature<P: Provider + Sync>(
     let message_hash = message.encode(entity_identity)?;
 
     match signature {
-        Signature::Starknet(signature) => {
-            let message_hash = message.encode(entity_identity)?;
-
-            let calldata = vec![message_hash, signature.0, signature.1];
-            provider
-                .call(
-                    FunctionCall {
-                        contract_address: entity_identity,
-                        entry_point_selector: get_selector_from_name("is_valid_signature").unwrap(),
-                        calldata,
-                    },
-                    BlockId::Tag(BlockTag::Pending),
-                )
-                .await
-                .map_err(Error::ProviderError)
-                .map(|res| res[0] != Felt::ZERO)
-        }
-        Signature::Webauthn(signature) => {
+        Signature::Account(signature) => {
             let mut calldata = vec![message_hash, Felt::from(signature.len())];
             calldata.extend(signature);
             provider
