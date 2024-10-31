@@ -122,11 +122,11 @@ where
     fn snapshot(&mut self, _: BasicId) {}
 
     fn merge(&mut self, _: Self::Transaction) -> Result<(), Self::DatabaseError> {
-        Ok(())
+        todo!();
     }
 
     fn transaction(&self, _: BasicId) -> Option<Self::Transaction> {
-        None
+        todo!();
     }
 }
 

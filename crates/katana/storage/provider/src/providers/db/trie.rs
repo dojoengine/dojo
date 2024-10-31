@@ -62,9 +62,9 @@ impl<Db: Database> ContractTrieWriter for DbProvider<Db> {
             // First we insert the contract storage changes
             for (address, storage_entries) in &state_updates.storage_updates {
                 for (key, value) in storage_entries {
-                    let keys = key.to_bytes_be();
-                    let keys: BitVec<u8, Msb0> = keys.as_bits().to_owned();
-                    storage_trie_db.insert(&address.to_bytes_be(), &keys, value).unwrap();
+                    let bytes = key.to_bytes_be();
+                    let bv: BitVec<u8, Msb0> = bytes.as_bits()[5..].to_owned();
+                    storage_trie_db.insert(&address.to_bytes_be(), &bv, value).unwrap();
                 }
                 // insert the contract address in the contract_leafs to put the storage root later
                 contract_leafs.insert(*address, Default::default());

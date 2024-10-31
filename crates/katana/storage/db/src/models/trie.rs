@@ -5,14 +5,14 @@ use crate::codecs::{Decode, Encode};
 use crate::error::CodecError;
 
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub enum TrieDatabaseKeyType {
-    Trie,
+    Trie = 0,
     Flat,
     TrieLog,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TrieDatabaseKey {
     pub r#type: TrieDatabaseKeyType,
     pub key: Vec<u8>,
@@ -48,5 +48,34 @@ impl Decode for TrieDatabaseKey {
         let key = bytes[1..].to_vec();
 
         Ok(TrieDatabaseKey { r#type, key })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_trie_key_roundtrip() {
+        let key = TrieDatabaseKey { r#type: TrieDatabaseKeyType::Trie, key: vec![1, 2, 3] };
+        let encoded = key.clone().encode();
+        let decoded = TrieDatabaseKey::decode(encoded).unwrap();
+        assert_eq!(key, decoded);
+    }
+
+    #[test]
+    fn test_flat_key_roundtrip() {
+        let key = TrieDatabaseKey { r#type: TrieDatabaseKeyType::Flat, key: vec![4, 5, 6] };
+        let encoded = key.clone().encode();
+        let decoded = TrieDatabaseKey::decode(encoded).unwrap();
+        assert_eq!(key, decoded);
+    }
+
+    #[test]
+    fn test_trielog_key_roundtrip() {
+        let key = TrieDatabaseKey { r#type: TrieDatabaseKeyType::TrieLog, key: vec![7, 8, 9] };
+        let encoded = key.clone().encode();
+        let decoded = TrieDatabaseKey::decode(encoded).unwrap();
+        assert_eq!(key, decoded);
     }
 }
