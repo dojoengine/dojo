@@ -458,7 +458,7 @@ async fn validate_signature<P: Provider + Sync>(
                     .map_err(|e| Error::InvalidMessageError(e.to_string()))?,
                 message_hash,
             ];
-            calldata.extend_from_slice(&signature);
+            calldata.extend(signature);
             provider
                 .call(
                     FunctionCall {
