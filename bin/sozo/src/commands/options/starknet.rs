@@ -30,7 +30,7 @@ impl StarknetOptions {
         request_timeout_ms: Option<u64>,
     ) -> Result<(JsonRpcClient<HttpTransport>, String)> {
         let url = self.url(env_metadata)?;
-        trace!(?url, "Creating JsonRpcClient with given RPC URL and timeout.");
+        trace!(?url, timeout = ?request_timeout_ms, "Creating JsonRpcClient.");
 
         let client = if let Some(request_timeout_ms) = request_timeout_ms {
             ClientBuilder::default()
