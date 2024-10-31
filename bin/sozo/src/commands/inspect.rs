@@ -2,7 +2,6 @@ use anyhow::Result;
 use clap::Args;
 use colored::*;
 use dojo_types::naming;
-use dojo_utils::TxnConfig;
 use dojo_world::diff::{ResourceDiff, WorldDiff, WorldStatus};
 use dojo_world::ResourceType;
 use scarb::core::Config;

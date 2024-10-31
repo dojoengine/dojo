@@ -3689,7 +3689,7 @@ dependencies = [
 [[package]]
 name = "common"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/http-prover?rev=24256d5#24256d530e60de5458956a858106cc6be1cbee17"
+source = "git+https://github.com/cartridge-gg/http-prover?rev=f239ade#f239ade2f7ed363fbf99c9726b998fe6b0ab887b"
 dependencies = [
  "ed25519-dalek",
  "serde",
@@ -11113,7 +11113,7 @@ dependencies = [
 [[package]]
 name = "prover-sdk"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/http-prover?rev=24256d5#24256d530e60de5458956a858106cc6be1cbee17"
+source = "git+https://github.com/cartridge-gg/http-prover?rev=f239ade#f239ade2f7ed363fbf99c9726b998fe6b0ab887b"
 dependencies = [
  "base64 0.22.1",
  "common",
@@ -11121,7 +11121,7 @@ dependencies = [
  "futures",
  "prefix-hex",
  "rand 0.8.5",
- "reqwest 0.12.7",
+ "reqwest 0.11.27",
  "reqwest_cookie_store",
  "serde",
  "serde_json",
@@ -11548,6 +11548,8 @@ dependencies = [
  "async-compression",
  "base64 0.21.7",
  "bytes",
+ "cookie 0.17.0",
+ "cookie_store 0.20.0",
  "encoding_rs",
  "futures-core",
  "futures-util",
@@ -11598,7 +11600,6 @@ dependencies = [
  "bytes",
  "cookie 0.18.1",
  "cookie_store 0.21.0",
- "futures-channel",
  "futures-core",
  "futures-util",
  "http 1.1.0",
@@ -11628,12 +11629,10 @@ dependencies = [
  "tokio",
  "tokio-native-tls",
  "tokio-rustls 0.26.0",
- "tokio-util",
  "tower-service",
  "url",
  "wasm-bindgen",
  "wasm-bindgen-futures",
- "wasm-streams",
  "web-sys",
  "webpki-roots 0.26.6",
  "windows-registry",
