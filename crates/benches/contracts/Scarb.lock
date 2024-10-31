@@ -3,20 +3,20 @@ version = 1
 
 [[package]]
 name = "benches"
-version = "0.4.4"
+version = "1.0.0-rc.0"
 dependencies = [
  "dojo",
 ]
 
 [[package]]
 name = "dojo"
-version = "0.4.4"
-source = "git+https://github.com/dojoengine/dojo#37f41d585f549013a73ca189034b0471f1e81731"
+version = "1.0.0-rc.0"
+source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-rc.0#f4199aec570a395278b8c8748bc46e2f6be3d0c7"
 dependencies = [
  "dojo_plugin",
 ]
 
 [[package]]
 name = "dojo_plugin"
-version = "0.3.11"
-source = "git+https://github.com/dojoengine/dojo?tag=v0.3.11#1e651b5d4d3b79b14a7d8aa29a92062fcb9e6659"
+version = "2.8.4"
+source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-rc.0#f4199aec570a395278b8c8748bc46e2f6be3d0c7"
