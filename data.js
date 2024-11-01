@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1730498365535,
+  "lastUpdate": 1730505478694,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -29587,6 +29587,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8296781,
             "range": "± 92828",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9f3f5018c65beb00a3f702d4e841113fff4f0524",
+          "message": "fix: ensure we init rpc client with timeout (#2602)\n\n* fix: ensure we init rpc client with timeout\r\n\r\n* fix: update prover sdk to compatible version\r\n\r\n* Update bin/sozo/src/commands/options/starknet.rs\r\n\r\nCo-authored-by: Ammar Arif <evergreenkary@gmail.com>\r\n\r\n* chore: remove unused dep\r\n\r\n* fix: internalise request timeout and lower l2 inclusion timeout\r\n\r\n* fix: add comments and cleanup\r\n\r\n---------\r\n\r\nCo-authored-by: Ammar Arif <evergreenkary@gmail.com>",
+          "timestamp": "2024-11-01T17:40:17-06:00",
+          "tree_id": "720b29ed843fe8b46400f3f26d99474734f5d3e3",
+          "url": "https://github.com/dojoengine/dojo/commit/9f3f5018c65beb00a3f702d4e841113fff4f0524"
+        },
+        "date": 1730505477029,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 9454723959,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
