@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1730487344657,
+  "lastUpdate": 1730490014919,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -29353,6 +29353,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8452584,
             "range": "± 51339",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "contact@luca-steeb.com",
+            "name": "Luca Steeb",
+            "username": "steebchen"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0f3f796cfe96107c2f70ba834907dbdff847c980",
+          "message": "ci(release): switch to performance profile for cargo build (#2608)",
+          "timestamp": "2024-11-02T03:23:59+08:00",
+          "tree_id": "d22371997204695be31a44cbfdd3d773fb1d9756",
+          "url": "https://github.com/dojoengine/dojo/commit/0f3f796cfe96107c2f70ba834907dbdff847c980"
+        },
+        "date": 1730490013208,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 9521128467,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
