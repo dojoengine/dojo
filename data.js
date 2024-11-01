@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1730498113560,
+  "lastUpdate": 1730498365535,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -29539,6 +29539,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 9557101296,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "05fb95b95e81608ef3216253d95ce2c7ccb7b2cd",
+          "message": "refactor: use now as timestamp for delta calc for pending blocks (#2586)",
+          "timestamp": "2024-11-01T15:39:22-06:00",
+          "tree_id": "fa6c185e7c60cada2693268d8cd1963dbe1cfec6",
+          "url": "https://github.com/dojoengine/dojo/commit/05fb95b95e81608ef3216253d95ce2c7ccb7b2cd"
+        },
+        "date": 1730498363782,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16479464,
+            "range": "± 281042",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8663484,
+            "range": "± 248309",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3671674121,
+            "range": "± 760540346",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8296781,
+            "range": "± 92828",
             "unit": "ns/iter"
           }
         ]
