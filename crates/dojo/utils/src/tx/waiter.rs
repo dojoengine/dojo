@@ -89,7 +89,8 @@ impl<'a, P> TransactionWaiter<'a, P>
 where
     P: Provider + Send,
 {
-    const DEFAULT_TIMEOUT: Duration = Duration::from_secs(300);
+    /// The default timeout for a transaction to be accepted or reverted on L2.
+    const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30);
     /// Interval for use with 3rd party provider without burning the API rate limit.
     const DEFAULT_INTERVAL: Duration = Duration::from_millis(2500);
 

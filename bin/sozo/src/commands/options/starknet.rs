@@ -21,25 +21,21 @@ pub struct StarknetOptions {
 }
 
 impl StarknetOptions {
+    const DEFAULT_REQUEST_TIMEOUT_MS: u64 = 20_000;
+
     /// Returns a [`JsonRpcClient`] and the rpc url.
     ///
     /// It would be convenient to have the rpc url retrievable from the Provider trait instead.
     pub fn provider(
         &self,
         env_metadata: Option<&Environment>,
-        request_timeout_ms: Option<u64>,
     ) -> Result<(JsonRpcClient<HttpTransport>, String)> {
         let url = self.url(env_metadata)?;
-        trace!(?url, timeout = ?request_timeout_ms, "Creating JsonRpcClient.");
 
-        let client = if let Some(request_timeout_ms) = request_timeout_ms {
-            ClientBuilder::default()
-                .timeout(Duration::from_millis(request_timeout_ms))
-                .build()
-                .unwrap()
-        } else {
-            ClientBuilder::default().build().unwrap()
-        };
+        let client = ClientBuilder::default()
+            .timeout(Duration::from_millis(Self::DEFAULT_REQUEST_TIMEOUT_MS))
+            .build()
+            .unwrap();
 
         let transport = HttpTransport::new_with_client(url.clone(), client);
         Ok((JsonRpcClient::new(transport), url.to_string()))

@@ -41,12 +41,6 @@ pub struct TransactionOptions {
     #[arg(help = "Display the link to debug the transaction with Walnut.")]
     #[arg(global = true)]
     pub walnut: bool,
-
-    #[arg(long)]
-    #[arg(help = "The timeout in milliseconds for the transaction wait.")]
-    #[arg(value_name = "TIMEOUT-MS")]
-    #[arg(global = true)]
-    pub timeout: Option<u64>,
 }
 
 impl TransactionOptions {
@@ -67,7 +61,6 @@ impl TransactionOptions {
                 max_fee_raw: self.max_fee_raw,
                 fee_estimate_multiplier: self.fee_estimate_multiplier,
                 walnut: self.walnut,
-                timeout_ms: self.timeout,
             }),
         }
     }
@@ -81,7 +74,6 @@ impl From<TransactionOptions> for TxnConfig {
             receipt: value.receipt,
             max_fee_raw: value.max_fee_raw,
             walnut: value.walnut,
-            timeout_ms: value.timeout,
         }
     }
 }

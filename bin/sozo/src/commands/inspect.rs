@@ -37,7 +37,7 @@ impl InspectArgs {
 
         config.tokio_handle().block_on(async {
             let (world_diff, _, _) =
-                utils::get_world_diff_and_provider(starknet.clone(), world, None, &ws).await?;
+                utils::get_world_diff_and_provider(starknet.clone(), world, &ws).await?;
 
             if let Some(resource) = resource {
                 inspect_resource(&resource, &world_diff);

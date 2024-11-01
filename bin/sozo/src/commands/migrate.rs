@@ -54,14 +54,13 @@ impl MigrateArgs {
             let mut spinner =
                 MigrationUi::Spinner(Spinner::new(frames, "Evaluating world diff...", None));
 
-            let mut txn_config: TxnConfig = self.transaction.into();
-            txn_config.wait = true;
-
             let (world_diff, account, rpc_url) =
-                utils::get_world_diff_and_account(account, starknet, world, txn_config, &ws)
-                    .await?;
+                utils::get_world_diff_and_account(account, starknet, world, &ws).await?;
 
             let world_address = world_diff.world_info.address;
+
+            let mut txn_config: TxnConfig = self.transaction.into();
+            txn_config.wait = true;
 
             let migration = Migration::new(
                 world_diff,
@@ -101,7 +100,7 @@ pub struct Banner {
 
 /// Prints the migration banner.
 async fn print_banner(ws: &Workspace<'_>, starknet: &StarknetOptions) -> Result<()> {
-    let (provider, rpc_url) = starknet.provider(None, None)?;
+    let (provider, rpc_url) = starknet.provider(None)?;
 
     let chain_id = provider.chain_id().await?;
     let chain_id = parse_cairo_short_string(&chain_id)

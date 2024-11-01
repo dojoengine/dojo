@@ -3,7 +3,6 @@ use std::str::FromStr;
 use anyhow::{anyhow, Context, Result};
 use camino::Utf8PathBuf;
 use colored::*;
-use dojo_utils::TxnConfig;
 use dojo_world::config::ProfileConfig;
 use dojo_world::diff::WorldDiff;
 use dojo_world::local::WorldLocal;
@@ -103,7 +102,6 @@ pub fn is_address(tag_or_address: &str) -> bool {
 pub async fn get_world_diff_and_provider(
     starknet: StarknetOptions,
     world: WorldOptions,
-    provider_request_timeout_ms: Option<u64>,
     ws: &Workspace<'_>,
 ) -> Result<(WorldDiff, JsonRpcClient<HttpTransport>, String)> {
     let world_local = ws.load_world_local()?;
@@ -113,7 +111,7 @@ pub async fn get_world_diff_and_provider(
 
     let world_address = get_world_address(&profile_config, &world, &world_local)?;
 
-    let (provider, rpc_url) = starknet.provider(env, provider_request_timeout_ms)?;
+    let (provider, rpc_url) = starknet.provider(env)?;
     trace!(?provider, "Provider initialized.");
 
     let spec_version = provider.spec_version().await?;
@@ -145,14 +143,13 @@ pub async fn get_world_diff_and_account(
     account: AccountOptions,
     starknet: StarknetOptions,
     world: WorldOptions,
-    txn_config: TxnConfig,
     ws: &Workspace<'_>,
 ) -> Result<(WorldDiff, SozoAccount<JsonRpcClient<HttpTransport>>, String)> {
     let profile_config = ws.load_profile_config()?;
     let env = profile_config.env.as_ref();
 
     let (world_diff, provider, rpc_url) =
-        get_world_diff_and_provider(starknet.clone(), world, txn_config.timeout_ms, ws).await?;
+        get_world_diff_and_provider(starknet.clone(), world, ws).await?;
 
     let account = {
         account
