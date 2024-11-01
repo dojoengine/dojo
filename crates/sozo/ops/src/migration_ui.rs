@@ -24,11 +24,11 @@ impl MigrationUi {
         if let Some(text) = text {
             let frames = spinner!(["⛩️ ", "🎃", "👻", "🧟", "💀"], 500);
             let spinner = Spinner::new(frames.clone(), text, None);
-            return Self { spinner, default_frames: frames, silent: false };
+            Self { spinner, default_frames: frames, silent: false }
         } else {
             let frames = spinner!([""], 5000);
             let spinner = Spinner::new(frames.clone(), "", None);
-            return Self { spinner, default_frames: frames, silent: false };
+            Self { spinner, default_frames: frames, silent: false }
         }
     }
 

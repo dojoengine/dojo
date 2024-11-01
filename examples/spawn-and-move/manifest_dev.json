@@ -1786,8 +1786,8 @@
       "systems": []
     },
     {
-      "address": "0x79e0653fbebdbdb864ca69d1470b263f2efdfce9cf355cfe9c7719627eff792",
-      "class_hash": "0x3356ff99134a997be6f9366c47ad18993aac3e29803819cc80309a57fa23f88",
+      "address": "0x200cd8070a7dbe0894c74426d2f4c9d778b13042ce955203cb189d85cfb43d1",
+      "class_hash": "0x4f290c42a0a2e342bf8da74103a31c6e3f2ebca2c72054da9d6d24754c3cc7e",
       "abi": [
         {
           "type": "impl",
@@ -1991,13 +1991,13 @@
   "events": [
     {
       "members": [],
-      "class_hash": "0x37920709310be24ce9be9993d3f17b632a080eef9d4383b03fe251189696cc2",
-      "tag": "ContractInitialized"
+      "class_hash": "0x22c33f3c7e525a21cd3651326f74c61deff6d75e26e06725f53ac2dfd4646fa",
+      "tag": "Moved"
     },
     {
       "members": [],
-      "class_hash": "0x22c33f3c7e525a21cd3651326f74c61deff6d75e26e06725f53ac2dfd4646fa",
-      "tag": "Moved"
+      "class_hash": "0x2c78ad5ec05d05be24a1cbace308ad15bff9375b56be8a8fa892ff5fc79eb23",
+      "tag": "MyInit"
     }
   ]
 }
