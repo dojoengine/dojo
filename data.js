@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1730410580378,
+  "lastUpdate": 1730483540871,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -29041,6 +29041,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 9173162,
             "range": "± 235589",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "contact@luca-steeb.com",
+            "name": "Luca Steeb",
+            "username": "steebchen"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "712422fc58b87aa1782220151ba33c057e4313e5",
+          "message": "ci(docker): streamline file permissions handling (#2604)",
+          "timestamp": "2024-11-01T11:36:18-06:00",
+          "tree_id": "a328b8a7acb1ef589ac20658666ce7ac14cb91b8",
+          "url": "https://github.com/dojoengine/dojo/commit/712422fc58b87aa1782220151ba33c057e4313e5"
+        },
+        "date": 1730483539240,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 9599304190,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
