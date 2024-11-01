@@ -1,4 +1,4 @@
-use dojo::model::{Model, ModelValue, ModelStorage, ModelValueStorage, ModelPtr};
+use dojo::model::{Model, ModelValue, ModelStorage, ModelValueStorage};
 use dojo::world::WorldStorage;
 use dojo_cairo_test::{spawn_test_world, NamespaceDef, TestResource};
 
