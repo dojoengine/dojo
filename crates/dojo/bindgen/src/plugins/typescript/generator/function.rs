@@ -215,7 +215,8 @@ mod tests {
     fn test_generate_system_function() {
         let generator = TsFunctionGenerator {};
         let function = create_change_theme_function();
-        let expected = "\tconst actions_changeTheme = async (account: Account, value: number) => {
+        let expected = "\tconst actions_changeTheme = async (account: Account, value: number) => \
+                        {
 \t\ttry {
 \t\t\treturn await provider.execute(
 \t\t\t\taccount,

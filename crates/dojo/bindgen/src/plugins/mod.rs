@@ -54,7 +54,6 @@ impl Buffer {
     /// * `pos` - The string inside inner vec to search position for.
     /// * `sep` - The separator to search for.
     /// * `idx` - The index of the separator to insert after.
-    ///
     pub fn insert_after(&mut self, s: String, pos: &str, sep: &str, idx: usize) {
         let pos = self.pos(pos).unwrap();
         if let Some(st) = self.0.get_mut(pos) {
@@ -69,7 +68,6 @@ impl Buffer {
     /// * `s` - The string to insert.
     /// * `pos` - The position to insert the string at.
     /// * `idx` - The index of the string to insert at.
-    ///
     pub fn insert_at(&mut self, s: String, pos: usize, idx: usize) {
         if let Some(st) = self.0.get_mut(idx) {
             st.insert_str(pos + 1, &s);
@@ -79,7 +77,6 @@ impl Buffer {
     /// Finds position of the given string in the inner vec.
     ///
     /// * `pos` - The string to search for.
-    ///
     pub fn pos(&self, pos: &str) -> Option<usize> {
         self.0.iter().position(|b| b.contains(pos))
     }
@@ -93,7 +90,6 @@ impl Buffer {
     /// * `needle` - The string to search for.
     /// * `search` - The string to search after.
     /// * `idx` - The index to search at.
-    ///
     pub fn get_first_after(&self, needle: &str, search: &str, idx: usize) -> Option<usize> {
         if let Some(st) = self.0.get(idx) {
             let indices = st.match_indices(needle).map(|(i, _)| i).collect::<Vec<usize>>();
@@ -114,7 +110,6 @@ impl Buffer {
     /// * `search` - The token to search for.
     /// * `pos` - Starting position of the search.
     /// * `idx` - The index to search at.
-    ///
     pub fn get_first_before_pos(&self, search: &str, pos: usize, idx: usize) -> Option<usize> {
         if let Some(st) = self.0.get(idx) {
             let indices = st.match_indices(search).map(|(i, _)| i).collect::<Vec<usize>>();
