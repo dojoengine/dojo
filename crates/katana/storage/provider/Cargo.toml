@@ -9,12 +9,16 @@ version.workspace = true
 [dependencies]
 katana-db = { workspace = true, features = [ "test-utils" ] }
 katana-primitives = { workspace = true, features = [ "rpc" ] }
+katana-trie.workspace = true
 
 anyhow.workspace = true
 auto_impl.workspace = true
 parking_lot.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
+
+bitvec.workspace = true
+starknet-types-core.workspace = true
 
 # fork provider deps
 futures = { workspace = true, optional = true }
