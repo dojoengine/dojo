@@ -1,2 +1,0 @@
-tag = "types_test-records"
-writes = [ "types_test-Record", "types_test-RecordSibling", "types_test-Subrecord" ]
