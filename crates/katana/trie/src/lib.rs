@@ -7,8 +7,6 @@ use katana_primitives::class::ClassHash;
 use katana_primitives::Felt;
 use starknet_types_core::hash::{Pedersen, StarkHash};
 
-mod class;
-
 /// A helper trait to define a database that can be used as a Bonsai Trie.
 ///
 /// Basically a short hand for `BonsaiDatabase + BonsaiPersistentDatabase<BasicId>`.
