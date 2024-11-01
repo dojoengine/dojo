@@ -1,4 +1,4 @@
-use dojo::model::{Model, ModelValue, ModelStorage, ModelValueStorage, ModelPtr};
+use dojo::model::{Model, ModelValue, ModelStorage, ModelValueStorage};
 use dojo::world::WorldStorage;
 use dojo_cairo_test::{spawn_test_world, NamespaceDef, TestResource};
 
@@ -120,12 +120,12 @@ fn test_read_and_write_field_name() {
 
     // Inference fails here, we need something better without too generics
     // which also fails.
-    let v1 = world.read_member(ModelPtr::<Foo>::Id(foo.entity_id()), selector!("v1"));
+    let v1 = world.read_member(foo.instance_ptr(), selector!("v1"));
     assert!(foo.v1 == v1);
 
-    world.write_member(ModelPtr::<Foo>::Id(foo.entity_id()), selector!("v1"), 42);
+    world.write_member(foo.instance_ptr(), selector!("v1"), 42);
 
-    let v1 = world.read_member(ModelPtr::<Foo>::Keys(foo.keys()), selector!("v1"));
+    let v1 = world.read_member(foo.instance_ptr(), selector!("v1"));
     assert!(v1 == 42);
 }
 

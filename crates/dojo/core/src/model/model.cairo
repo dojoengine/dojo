@@ -1,10 +1,16 @@
 use dojo::{
     meta::{Layout, introspect::Ty, layout::compute_packed_size},
-    utils::{entity_id_from_keys, find_model_field_layout}
+    utils::{entity_id_from_keys, find_model_field_layout, entity_id_from_key}
 };
-
 use super::{ModelDefinition, ModelDef};
 /// Trait `KeyParser` defines a trait for parsing keys from a given model.
+///
+/// A pointer to a model, which can be expressed by an entity id.
+#[derive(Copy, Drop, Serde, Debug, PartialEq)]
+pub struct ModelPtr<M> {
+    pub id: felt252,
+}
+
 pub trait KeyParser<M, K> {
     /// Parses the key from the given model.
     fn parse_key(self: @M) -> K;
@@ -53,10 +59,12 @@ pub trait Model<M> {
     fn definition() -> ModelDef;
     /// Returns the selector of the model computed for the given namespace hash.
     fn selector(namespace_hash: felt252) -> felt252;
-
-    fn ptr(entity_id: felt252) -> ModelPtr<M> {
-        ModelPtr { id: entity_id }
-    }
+    /// Returns the pointer to the model from the key.
+    fn ptr<K, +Serde<K>, +Drop<K>>(key: K) -> ModelPtr<M>;
+    /// Returns the pointer to the model from the entity id.
+    fn ptr_from_id(entity_id: felt252) -> ModelPtr<M>;
+    /// Returns the ptr of the model.
+    fn instance_ptr(self: @M) -> ModelPtr<M>;
 }
 
 pub impl ModelImpl<M, +ModelParser<M>, +ModelDefinition<M>, +Serde<M>> of Model<M> {
@@ -129,6 +137,15 @@ pub impl ModelImpl<M, +ModelParser<M>, +ModelDefinition<M>, +Serde<M>> of Model<
             packed_size: Self::packed_size(),
             unpacked_size: Self::unpacked_size()
         }
+    }
+    fn ptr<K, +Serde<K>, +Drop<K>>(key: K) -> ModelPtr<M> {
+        ModelPtr { id: entity_id_from_key(@key) }
+    }
+    fn ptr_from_id(entity_id: felt252) -> ModelPtr<M> {
+        ModelPtr::<M> { id: entity_id }
+    }
+    fn instance_ptr(self: @M) -> ModelPtr<M> {
+        ModelPtr::<M> { id: self.entity_id() }
     }
 }
 

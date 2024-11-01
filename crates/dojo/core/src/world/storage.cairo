@@ -2,9 +2,7 @@
 
 use core::panic_with_felt252;
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, Resource};
-use dojo::model::{
-    Model, ModelIndex, ModelValueKey, ModelValue, ModelStorage, ModelPtr, storage::ModelPtrTrait
-};
+use dojo::model::{Model, ModelIndex, ModelValueKey, ModelValue, ModelStorage, ModelPtr};
 use dojo::event::{Event, EventStorage};
 use dojo::meta::Layout;
 use dojo::utils::{
@@ -106,15 +104,10 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
     }
 
     fn erase_model_ptr(ref self: WorldStorage, ptr: ModelPtr<M>) {
-        let entity_id = match ptr {
-            ModelPtr::Id(id) => id,
-            ModelPtr::Keys(keys) => entity_id_from_keys(keys),
-        };
-
         IWorldDispatcherTrait::delete_entity(
             self.dispatcher,
             Model::<M>::selector(self.namespace_hash),
-            ModelIndex::Id(entity_id),
+            ModelIndex::Id(ptr.id),
             Model::<M>::layout()
         );
     }
@@ -125,7 +118,7 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
             IWorldDispatcherTrait::entity(
                 *self.dispatcher,
                 Model::<M>::selector(*self.namespace_hash),
-                ModelIndex::MemberId((ptr.entity_id(), field_selector)),
+                ModelIndex::MemberId((ptr.id, field_selector)),
                 field_layout_unwrap::<M>(field_selector)
             )
         )
@@ -136,7 +129,7 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
         IWorldDispatcherTrait::set_entity(
             self.dispatcher,
             Model::<M>::selector(self.namespace_hash),
-            ModelIndex::MemberId((ptr.entity_id(), field_selector)),
+            ModelIndex::MemberId((ptr.id, field_selector)),
             serialize_inline(@value),
             field_layout_unwrap::<M>(field_selector)
         );
@@ -217,7 +210,7 @@ pub impl EventStorageTestWorldStorageImpl<
 /// checks.
 #[cfg(target: "test")]
 pub impl ModelStorageTestWorldStorageImpl<
-    M, +Model<M>
+    M, +Model<M>, +Drop<M>
 > of dojo::model::ModelStorageTest<WorldStorage, M> {
     fn write_model_test(ref self: WorldStorage, model: @M) {
         let world_test = dojo::world::IWorldTestDispatcher {
@@ -246,11 +239,6 @@ pub impl ModelStorageTestWorldStorageImpl<
     }
 
     fn erase_model_ptr_test(ref self: WorldStorage, ptr: ModelPtr<M>) {
-        let entity_id = match ptr {
-            ModelPtr::Id(id) => id,
-            ModelPtr::Keys(keys) => entity_id_from_keys(keys),
-        };
-
         let world_test = dojo::world::IWorldTestDispatcher {
             contract_address: self.dispatcher.contract_address
         };
@@ -258,7 +246,7 @@ pub impl ModelStorageTestWorldStorageImpl<
         dojo::world::IWorldTestDispatcherTrait::delete_entity_test(
             world_test,
             Model::<M>::selector(self.namespace_hash),
-            ModelIndex::Id(entity_id),
+            ModelIndex::Id(ptr.id),
             Model::<M>::layout()
         );
     }
@@ -341,3 +329,4 @@ fn get_serialized_member(
         Option::None => panic_with_felt252('bad member id')
     }
 }
+

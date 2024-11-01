@@ -1,13 +1,6 @@
-use dojo::{model::model_value::ModelValueKey, utils::entity_id_from_keys};
+use dojo::{model::{ModelPtr, model_value::ModelValueKey}};
 
 // TODO: define the right interface for member accesses.
-
-/// A pointer to a model, which can be expressed by an entity id.
-/// It's different from `ModelIndex` which is used for low level accesses.
-#[derive(Copy, Drop, Serde, Debug, PartialEq)]
-pub struct ModelPtr<M> {
-    id: felt252,
-}
 
 /// A `ModelStorage` trait that abstracts where the storage is.
 ///
