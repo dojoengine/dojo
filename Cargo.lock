@@ -1943,7 +1943,7 @@ dependencies = [
  "bitflags 2.6.0",
  "cexpr",
  "clang-sys",
- "itertools 0.10.5",
+ "itertools 0.12.1",
  "lazy_static",
  "lazycell",
  "log",
@@ -2111,6 +2111,22 @@ dependencies = [
  "glob",
  "threadpool",
  "zeroize",
+]
+
+[[package]]
+name = "bonsai-trie"
+version = "0.1.0"
+source = "git+https://github.com/madara-alliance/bonsai-trie/?rev=56d7d62#56d7d62232fd72419f1d50de8bc747b70a9db68f"
+dependencies = [
+ "bitvec",
+ "derive_more 0.99.18",
+ "hashbrown 0.14.5",
+ "log",
+ "parity-scale-codec",
+ "rayon",
+ "serde",
+ "smallvec",
+ "starknet-types-core",
 ]
 
 [[package]]
@@ -6726,6 +6742,7 @@ checksum = "e5274423e17b7c9fc20b6e7e208532f9b19825d82dfd615708b70edd83df41f1"
 dependencies = [
  "ahash 0.8.11",
  "allocator-api2",
+ "rayon",
  "serde",
 ]
 
@@ -7208,7 +7225,7 @@ dependencies = [
  "iana-time-zone-haiku",
  "js-sys",
  "wasm-bindgen",
- "windows-core 0.51.1",
+ "windows-core 0.52.0",
 ]
 
 [[package]]
@@ -8170,6 +8187,7 @@ dependencies = [
  "katana-primitives",
  "katana-provider",
  "katana-tasks",
+ "katana-trie",
  "lazy_static",
  "metrics",
  "num-traits 0.2.19",
@@ -8178,6 +8196,7 @@ dependencies = [
  "serde",
  "serde_json",
  "starknet 0.12.0",
+ "starknet-types-core",
  "tempfile",
  "thiserror",
  "tokio",
@@ -8191,9 +8210,11 @@ version = "1.0.0-rc.0"
 dependencies = [
  "anyhow",
  "arbitrary",
+ "bitvec",
  "criterion",
  "dojo-metrics",
  "katana-primitives",
+ "katana-trie",
  "metrics",
  "page_size",
  "parking_lot 0.12.3",
@@ -8202,7 +8223,9 @@ dependencies = [
  "roaring",
  "serde",
  "serde_json",
+ "smallvec",
  "starknet 0.12.0",
+ "starknet-types-core",
  "tempfile",
  "thiserror",
  "tracing",
@@ -8346,10 +8369,12 @@ dependencies = [
  "alloy-primitives",
  "anyhow",
  "auto_impl",
+ "bitvec",
  "futures",
  "katana-db",
  "katana-primitives",
  "katana-runner",
+ "katana-trie",
  "lazy_static",
  "parking_lot 0.12.3",
  "rand 0.8.5",
@@ -8357,6 +8382,7 @@ dependencies = [
  "rstest_reuse",
  "serde_json",
  "starknet 0.12.0",
+ "starknet-types-core",
  "tempfile",
  "thiserror",
  "tokio",
@@ -8510,6 +8536,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "katana-trie"
+version = "1.0.0-rc.0"
+dependencies = [
+ "anyhow",
+ "bitvec",
+ "bonsai-trie",
+ "katana-primitives",
+ "serde",
+ "slab",
+ "starknet 0.12.0",
+ "starknet-types-core",
+ "thiserror",
+]
+
+[[package]]
 name = "keccak"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8599,9 +8640,9 @@ dependencies = [
 
 [[package]]
 name = "lambdaworks-crypto"
-version = "0.7.0"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7fb5d4f22241504f7c7b8d2c3a7d7835d7c07117f10bff2a7d96a9ef6ef217c3"
+checksum = "bbc2a4da0d9e52ccfe6306801a112e81a8fc0c76aa3e4449fefeda7fef72bb34"
 dependencies = [
  "lambdaworks-math",
  "serde",
@@ -8611,9 +8652,9 @@ dependencies = [
 
 [[package]]
 name = "lambdaworks-math"
-version = "0.7.0"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "358e172628e713b80a530a59654154bfc45783a6ed70ea284839800cebdf8f97"
+checksum = "d1bd2632acbd9957afc5aeec07ad39f078ae38656654043bf16e046fa2730e23"
 dependencies = [
  "serde",
  "serde_json",
@@ -11032,7 +11073,7 @@ checksum = "22505a5c94da8e3b7c2996394d1c933236c4d743e81a410bcca4e6989fc066a4"
 dependencies = [
  "bytes",
  "heck 0.5.0",
- "itertools 0.10.5",
+ "itertools 0.12.1",
  "log",
  "multimap",
  "once_cell",
@@ -11073,7 +11114,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "81bddcdb20abf9501610992b6759a4c888aef7d1a7247ef75e2404275ac24af1"
 dependencies = [
  "anyhow",
- "itertools 0.10.5",
+ "itertools 0.12.1",
  "proc-macro2",
  "quote",
  "syn 2.0.77",
@@ -14063,9 +14104,9 @@ dependencies = [
 
 [[package]]
 name = "starknet-types-core"
-version = "0.1.6"
+version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9b889ee5734db8b3c8a6551135c16764bf4ce1ab4955fffbb2ac5b6706542b64"
+checksum = "fa1b9e01ccb217ab6d475c5cda05dbb22c30029f7bb52b192a010a00d77a3d74"
 dependencies = [
  "arbitrary",
  "lambdaworks-crypto",
@@ -14074,6 +14115,7 @@ dependencies = [
  "num-bigint",
  "num-integer",
  "num-traits 0.2.19",
+ "parity-scale-codec",
  "serde",
 ]
 
@@ -16522,6 +16564,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f1f8cf84f35d2db49a46868f947758c7a1138116f7fac3bc844f43ade1292e64"
 dependencies = [
  "windows-targets 0.48.5",
+]
+
+[[package]]
+name = "windows-core"
+version = "0.52.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "33ab640c8d7e35bf8ba19b884ba838ceb4fba93a4e8c65a9059d08afcfc683d9"
+dependencies = [
+ "windows-targets 0.52.6",
 ]
 
 [[package]]

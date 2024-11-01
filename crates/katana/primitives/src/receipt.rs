@@ -1,8 +1,14 @@
+use std::iter;
+
 use alloy_primitives::B256;
+use derive_more::{AsRef, Deref};
+use starknet::core::utils::starknet_keccak;
+use starknet_types_core::hash::{self, StarkHash};
 
 use crate::contract::ContractAddress;
 use crate::fee::TxFeeInfo;
 use crate::trace::TxResources;
+use crate::transaction::TxHash;
 use crate::Felt;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -168,5 +174,72 @@ impl Receipt {
             Receipt::L1Handler(rct) => &rct.fee,
             Receipt::DeployAccount(rct) => &rct.fee,
         }
+    }
+}
+
+#[derive(Debug, Clone, AsRef, Deref, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct ReceiptWithTxHash {
+    /// The hash of the transaction.
+    pub tx_hash: TxHash,
+    /// The raw transaction.
+    #[deref]
+    #[as_ref]
+    pub receipt: Receipt,
+}
+
+impl ReceiptWithTxHash {
+    pub fn new(hash: TxHash, receipt: Receipt) -> Self {
+        Self { tx_hash: hash, receipt }
+    }
+
+    /// Computes the hash of the receipt. This is used for computing the receipts commitment.
+    ///
+    /// See the Starknet [docs] for reference.
+    ///
+    /// [docs]: https://docs.starknet.io/architecture-and-concepts/network-architecture/block-structure/#receipt_hash
+    pub fn compute_hash(&self) -> Felt {
+        let messages_hash = self.compute_messages_to_l1_hash();
+        let revert_reason_hash = if let Some(reason) = self.revert_reason() {
+            starknet_keccak(reason.as_bytes())
+        } else {
+            Felt::ZERO
+        };
+
+        hash::Poseidon::hash_array(&[
+            self.tx_hash,
+            self.receipt.fee().overall_fee.into(),
+            messages_hash,
+            revert_reason_hash,
+            Felt::ZERO, // L2 gas consumption.
+            self.receipt.fee().gas_consumed.into(),
+            // self.receipt.fee().l1_data_gas.into(),
+        ])
+    }
+
+    // H(n, from, to, H(payload), ...), where n, is the total number of messages, the payload is
+    // prefixed by its length, and h is the Poseidon hash function.
+    fn compute_messages_to_l1_hash(&self) -> Felt {
+        let messages = self.messages_sent();
+        let messages_len = messages.len();
+
+        // Allocate all the memory in advance; times 3 because [ from, to, h(payload) ]
+        let mut accumulator: Vec<Felt> = Vec::with_capacity((messages_len * 3) + 1);
+        accumulator.push(Felt::from(messages_len));
+
+        let elements = messages.iter().fold(accumulator, |mut acc, msg| {
+            // Compute the payload hash; h(n, payload_1, ..., payload_n)
+            let len = Felt::from(msg.payload.len());
+            let payload = iter::once(len).chain(msg.payload.clone()).collect::<Vec<Felt>>();
+            let payload_hash = hash::Poseidon::hash_array(&payload);
+
+            acc.push(msg.from_address.into());
+            acc.push(msg.to_address);
+            acc.push(payload_hash);
+
+            acc
+        });
+
+        hash::Poseidon::hash_array(&elements)
     }
 }

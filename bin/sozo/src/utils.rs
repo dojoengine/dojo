@@ -9,6 +9,7 @@ use dojo_world::local::WorldLocal;
 use katana_rpc_api::starknet::RPC_SPEC_VERSION;
 use scarb::core::{TomlManifest, Workspace};
 use semver::Version;
+use sozo_ops::migration_ui::MigrationUi;
 use sozo_scarbext::WorkspaceExt;
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::types::Felt;
@@ -144,6 +145,7 @@ pub async fn get_world_diff_and_account(
     starknet: StarknetOptions,
     world: WorldOptions,
     ws: &Workspace<'_>,
+    ui: &mut Option<&mut MigrationUi>,
 ) -> Result<(WorldDiff, SozoAccount<JsonRpcClient<HttpTransport>>, String)> {
     let profile_config = ws.load_profile_config()?;
     let env = profile_config.env.as_ref();
@@ -151,11 +153,20 @@ pub async fn get_world_diff_and_account(
     let (world_diff, provider, rpc_url) =
         get_world_diff_and_provider(starknet.clone(), world, ws).await?;
 
+    // Ensures we don't interfere with the spinner if a password must be prompted.
+    if let Some(ui) = ui {
+        ui.stop();
+    }
+
     let account = {
         account
             .account(provider, world_diff.world_info.address, &starknet, env, &world_diff)
             .await?
     };
+
+    if let Some(ui) = ui {
+        ui.restart("Verifying account...");
+    }
 
     if !dojo_utils::is_deployed(account.address(), &account.provider()).await? {
         return Err(anyhow!("Account with address {:#x} doesn't exist.", account.address()));

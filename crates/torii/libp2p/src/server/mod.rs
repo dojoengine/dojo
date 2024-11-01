@@ -37,8 +37,8 @@ use crate::errors::Error;
 mod events;
 
 use crate::server::events::ServerEvent;
-use crate::typed_data::{parse_value_to_ty, PrimitiveType, TypedData};
-use crate::types::Message;
+use crate::typed_data::{encode_type, parse_value_to_ty, PrimitiveType, TypedData};
+use crate::types::{Message, Signature};
 
 pub(crate) const LOG_TARGET: &str = "torii::relay::server";
 
@@ -302,37 +302,15 @@ impl<P: Provider + Sync> Relay<P> {
                             // to prevent replay attacks.
 
                             // Verify the signature
-                            let message_hash =
-                                if let Ok(message) = data.message.encode(entity_identity) {
-                                    message
-                                } else {
-                                    info!(
-                                        target: LOG_TARGET,
-                                        "Encoding message."
-                                    );
-                                    continue;
-                                };
-
-                            let mut calldata = vec![message_hash];
-                            calldata.push(Felt::from(data.signature.len()));
-
-                            calldata.extend(data.signature);
-                            if !match self
-                                .provider
-                                .call(
-                                    FunctionCall {
-                                        contract_address: entity_identity,
-                                        entry_point_selector: get_selector_from_name(
-                                            "is_valid_signature",
-                                        )
-                                        .unwrap(),
-                                        calldata,
-                                    },
-                                    BlockId::Tag(BlockTag::Pending),
-                                )
-                                .await
+                            if !match validate_signature(
+                                &self.provider,
+                                entity_identity,
+                                &data.message,
+                                &data.signature,
+                            )
+                            .await
                             {
-                                Ok(res) => res[0] != Felt::ZERO,
+                                Ok(res) => res,
                                 Err(e) => {
                                     warn!(
                                         target: LOG_TARGET,
@@ -428,6 +406,57 @@ impl<P: Provider + Sync> Relay<P> {
                     info!(target: LOG_TARGET, event = ?event, "Unhandled event.");
                 }
             }
+        }
+    }
+}
+
+async fn validate_signature<P: Provider + Sync>(
+    provider: &P,
+    entity_identity: Felt,
+    message: &TypedData,
+    signature: &Signature,
+) -> Result<bool, Error> {
+    let message_hash = message.encode(entity_identity)?;
+
+    match signature {
+        Signature::Account(signature) => {
+            let mut calldata = vec![message_hash, Felt::from(signature.len())];
+            calldata.extend(signature);
+            provider
+                .call(
+                    FunctionCall {
+                        contract_address: entity_identity,
+                        entry_point_selector: get_selector_from_name("is_valid_signature").unwrap(),
+                        calldata,
+                    },
+                    BlockId::Tag(BlockTag::Pending),
+                )
+                .await
+                .map_err(Error::ProviderError)
+                .map(|res| res[0] != Felt::ZERO)
+        }
+        Signature::Session(signature) => {
+            let mut calldata = vec![
+                Felt::ONE,
+                get_selector_from_name(&encode_type(&message.primary_type, &message.types)?)
+                    .map_err(|e| Error::InvalidMessageError(e.to_string()))?,
+                message_hash,
+                signature.len().into(),
+            ];
+            calldata.extend(signature);
+            provider
+                .call(
+                    FunctionCall {
+                        contract_address: entity_identity,
+                        entry_point_selector: get_selector_from_name("is_session_sigature_valid")
+                            .unwrap(),
+                        calldata,
+                    },
+                    BlockId::Tag(BlockTag::Pending),
+                )
+                .await
+                .map_err(Error::ProviderError)
+                .map(|res| res[0] != Felt::ZERO)
         }
     }
 }

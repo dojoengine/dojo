@@ -107,6 +107,9 @@ impl BindgenWriter for TsFileContractWriter {
                                 "dojo_init",
                                 "namespace_hash",
                                 "world",
+                                "dojo_name",
+                                "upgrade",
+                                "world_dispatcher",
                             ]
                             .contains(&name)
                         })

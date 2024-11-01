@@ -17,3 +17,5 @@ dojo_cairo_test = { path = "../../crates/dojo/core-cairo-test" }
 
 [features]
 default = []
+
+[profile.sepolia]

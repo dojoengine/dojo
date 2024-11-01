@@ -104,7 +104,7 @@ jobs:
           echo "JEMALLOC_SYS_WITH_LG_PAGE=16" >> $GITHUB_ENV
 
       - name: Build binaries
-        run: cargo build --release --bins --target ${{ matrix.job.target }}
+        run: cargo build --profile performance --bins --target ${{ matrix.job.target }}
 
       - name: Archive binaries
         id: artifacts

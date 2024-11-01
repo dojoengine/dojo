@@ -81,9 +81,16 @@ impl ExecuteArgs {
         let txn_config: TxnConfig = self.transaction.into();
 
         config.tokio_handle().block_on(async {
-            let (world_diff, account, _) =
-                utils::get_world_diff_and_account(self.account, self.starknet, self.world, &ws)
-                    .await?;
+            // We could save the world diff computation extracting the account directly from the
+            // options.
+            let (world_diff, account, _) = utils::get_world_diff_and_account(
+                self.account,
+                self.starknet.clone(),
+                self.world,
+                &ws,
+                &mut None,
+            )
+            .await?;
 
             let contract_address = match &descriptor {
                 ContractDescriptor::Address(address) => Some(*address),

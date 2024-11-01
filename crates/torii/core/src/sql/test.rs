@@ -183,8 +183,9 @@ async fn test_load_from_remote(sequencer: &RunnerCtx) {
     assert_eq!(packed_size, 0);
     assert_eq!(unpacked_size, 0);
 
-    assert_eq!(count_table("entities", &pool).await, 2);
-    assert_eq!(count_table("event_messages", &pool).await, 2);
+    // Must only have one entity since Moves and Positions have the same keys.
+    assert_eq!(count_table("entities", &pool).await, 1);
+    assert_eq!(count_table("event_messages", &pool).await, 1);
 
     let (id, keys): (String, String) = sqlx::query_as(
         format!(

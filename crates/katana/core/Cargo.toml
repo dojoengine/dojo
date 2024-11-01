@@ -13,6 +13,7 @@ katana-pool.workspace = true
 katana-primitives.workspace = true
 katana-provider.workspace = true
 katana-tasks.workspace = true
+katana-trie.workspace = true
 
 anyhow.workspace = true
 async-trait.workspace = true
@@ -27,6 +28,7 @@ reqwest.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 starknet.workspace = true
+starknet-types-core.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 tracing.workspace = true

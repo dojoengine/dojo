@@ -2,16 +2,21 @@ use std::sync::Arc;
 
 use katana_executor::{ExecutionOutput, ExecutionResult, ExecutorFactory};
 use katana_primitives::block::{
-    Block, FinalityStatus, GasPrices, Header, SealedBlock, SealedBlockWithStatus,
+    FinalityStatus, Header, PartialHeader, SealedBlock, SealedBlockWithStatus,
 };
 use katana_primitives::chain_spec::ChainSpec;
 use katana_primitives::da::L1DataAvailabilityMode;
 use katana_primitives::env::BlockEnv;
-use katana_primitives::receipt::Receipt;
+use katana_primitives::receipt::{Event, ReceiptWithTxHash};
+use katana_primitives::state::{compute_state_diff_hash, StateUpdates};
 use katana_primitives::transaction::{TxHash, TxWithHash};
 use katana_primitives::Felt;
 use katana_provider::traits::block::{BlockHashProvider, BlockWriter};
+use katana_provider::traits::trie::{ClassTrieWriter, ContractTrieWriter};
+use katana_trie::compute_merkle_root;
 use parking_lot::RwLock;
+use starknet::macros::short_string;
+use starknet_types_core::hash::{self, StarkHash};
 use tracing::info;
 
 pub mod contract;
@@ -50,9 +55,9 @@ impl<EF: ExecutorFactory> Backend<EF> {
         // only include successful transactions in the block
         for (tx, res) in execution_output.transactions {
             if let ExecutionResult::Success { receipt, trace, .. } = res {
-                txs.push(tx);
+                receipts.push(ReceiptWithTxHash::new(tx.hash, receipt));
                 traces.push(trace);
-                receipts.push(receipt);
+                txs.push(tx);
             }
         }
 
@@ -60,10 +65,19 @@ impl<EF: ExecutorFactory> Backend<EF> {
         let tx_hashes = txs.iter().map(|tx| tx.hash).collect::<Vec<TxHash>>();
 
         // create a new block and compute its commitment
-        let block = self.commit_block(block_env, txs, &receipts)?;
+        let block = self.commit_block(
+            block_env.clone(),
+            execution_output.states.state_updates.clone(),
+            txs,
+            &receipts,
+        )?;
+
         let block = SealedBlockWithStatus { block, status: FinalityStatus::AcceptedOnL2 };
         let block_number = block.block.header.number;
 
+        // TODO: maybe should change the arguments for insert_block_with_states_and_receipts to
+        // accept ReceiptWithTxHash instead to avoid this conversion.
+        let receipts = receipts.into_iter().map(|r| r.receipt).collect::<Vec<_>>();
         self.blockchain.provider().insert_block_with_states_and_receipts(
             block,
             execution_output.states,
@@ -101,41 +115,154 @@ impl<EF: ExecutorFactory> Backend<EF> {
 
     fn commit_block(
         &self,
-        block_env: &BlockEnv,
+        block_env: BlockEnv,
+        state_updates: StateUpdates,
         transactions: Vec<TxWithHash>,
-        receipts: &[Receipt],
+        receipts: &[ReceiptWithTxHash],
     ) -> Result<SealedBlock, BlockProductionError> {
-        // get the hash of the latest committed block
         let parent_hash = self.blockchain.provider().latest_hash()?;
-        let events_count = receipts.iter().map(|r| r.events().len() as u32).sum::<u32>();
-        let transaction_count = transactions.len() as u32;
-
-        let l1_gas_prices =
-            GasPrices { eth: block_env.l1_gas_prices.eth, strk: block_env.l1_gas_prices.strk };
-        let l1_data_gas_prices = GasPrices {
-            eth: block_env.l1_data_gas_prices.eth,
-            strk: block_env.l1_data_gas_prices.strk,
+        let partial_header = PartialHeader {
+            parent_hash,
+            number: block_env.number,
+            timestamp: block_env.timestamp,
+            protocol_version: self.chain_spec.version.clone(),
+            sequencer_address: block_env.sequencer_address,
+            l1_gas_prices: block_env.l1_gas_prices,
+            l1_data_gas_prices: block_env.l1_data_gas_prices,
+            l1_da_mode: L1DataAvailabilityMode::Calldata,
         };
+
+        let block = UncommittedBlock::new(
+            partial_header,
+            transactions,
+            receipts,
+            &state_updates,
+            &self.blockchain.provider(),
+        )
+        .commit();
+        Ok(block)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct UncommittedBlock<'a, P>
+where
+    P: ClassTrieWriter + ContractTrieWriter,
+{
+    header: PartialHeader,
+    transactions: Vec<TxWithHash>,
+    receipts: &'a [ReceiptWithTxHash],
+    state_updates: &'a StateUpdates,
+    trie_provider: P,
+}
+
+impl<'a, P> UncommittedBlock<'a, P>
+where
+    P: ClassTrieWriter + ContractTrieWriter,
+{
+    pub fn new(
+        header: PartialHeader,
+        transactions: Vec<TxWithHash>,
+        receipts: &'a [ReceiptWithTxHash],
+        state_updates: &'a StateUpdates,
+        trie_provider: P,
+    ) -> Self {
+        Self { header, transactions, receipts, state_updates, trie_provider }
+    }
+
+    pub fn commit(self) -> SealedBlock {
+        // get the hash of the latest committed block
+        let parent_hash = self.header.parent_hash;
+        let events_count = self.receipts.iter().map(|r| r.events().len() as u32).sum::<u32>();
+        let transaction_count = self.transactions.len() as u32;
+        let state_diff_length = self.state_updates.len() as u32;
+
+        let state_root = self.compute_new_state_root();
+        let transactions_commitment = self.compute_transaction_commitment();
+        let events_commitment = self.compute_event_commitment();
+        let receipts_commitment = self.compute_receipt_commitment();
+        let state_diff_commitment = self.compute_state_diff_commitment();
 
         let header = Header {
+            state_root,
             parent_hash,
             events_count,
-            l1_gas_prices,
+            state_diff_length,
             transaction_count,
-            l1_data_gas_prices,
-            state_root: Felt::ZERO,
-            number: block_env.number,
-            events_commitment: Felt::ZERO,
-            timestamp: block_env.timestamp,
-            receipts_commitment: Felt::ZERO,
-            state_diff_commitment: Felt::ZERO,
-            transactions_commitment: Felt::ZERO,
-            l1_da_mode: L1DataAvailabilityMode::Calldata,
-            sequencer_address: block_env.sequencer_address,
-            protocol_version: self.chain_spec.version.clone(),
+            events_commitment,
+            receipts_commitment,
+            state_diff_commitment,
+            transactions_commitment,
+            number: self.header.number,
+            timestamp: self.header.timestamp,
+            l1_da_mode: self.header.l1_da_mode,
+            l1_gas_prices: self.header.l1_gas_prices,
+            l1_data_gas_prices: self.header.l1_data_gas_prices,
+            sequencer_address: self.header.sequencer_address,
+            protocol_version: self.header.protocol_version,
         };
 
-        let sealed = Block { header, body: transactions }.seal();
-        Ok(sealed)
+        let hash = header.compute_hash();
+
+        SealedBlock { hash, header, body: self.transactions }
+    }
+
+    fn compute_transaction_commitment(&self) -> Felt {
+        let tx_hashes = self.transactions.iter().map(|t| t.hash).collect::<Vec<TxHash>>();
+        compute_merkle_root::<hash::Poseidon>(&tx_hashes).unwrap()
+    }
+
+    fn compute_receipt_commitment(&self) -> Felt {
+        let receipt_hashes = self.receipts.iter().map(|r| r.compute_hash()).collect::<Vec<Felt>>();
+        compute_merkle_root::<hash::Poseidon>(&receipt_hashes).unwrap()
+    }
+
+    fn compute_state_diff_commitment(&self) -> Felt {
+        compute_state_diff_hash(self.state_updates.clone())
+    }
+
+    fn compute_event_commitment(&self) -> Felt {
+        // h(emitter_address, tx_hash, h(keys), h(data))
+        fn event_hash(tx: TxHash, event: &Event) -> Felt {
+            let keys_hash = hash::Poseidon::hash_array(&event.keys);
+            let data_hash = hash::Poseidon::hash_array(&event.data);
+            hash::Poseidon::hash_array(&[tx, event.from_address.into(), keys_hash, data_hash])
+        }
+
+        // the iterator will yield all events from all the receipts, each one paired with the
+        // transaction hash that emitted it: (tx hash, event).
+        let events = self.receipts.iter().flat_map(|r| r.events().iter().map(|e| (r.tx_hash, e)));
+
+        let mut hashes = Vec::new();
+        for (tx, event) in events {
+            let event_hash = event_hash(tx, event);
+            hashes.push(event_hash);
+        }
+
+        // compute events commitment
+        compute_merkle_root::<hash::Poseidon>(&hashes).unwrap()
+    }
+
+    // state_commitment = hPos("STARKNET_STATE_V0", contract_trie_root, class_trie_root)
+    fn compute_new_state_root(&self) -> Felt {
+        let class_trie_root = ClassTrieWriter::insert_updates(
+            &self.trie_provider,
+            self.header.number,
+            &self.state_updates.declared_classes,
+        )
+        .unwrap();
+
+        let contract_trie_root = ContractTrieWriter::insert_updates(
+            &self.trie_provider,
+            self.header.number,
+            self.state_updates,
+        )
+        .unwrap();
+
+        hash::Poseidon::hash_array(&[
+            short_string!("STARKNET_STATE_V0"),
+            contract_trie_root,
+            class_trie_root,
+        ])
     }
 }
