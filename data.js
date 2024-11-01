@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1730490459796,
+  "lastUpdate": 1730498113560,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -29509,6 +29509,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8356605,
             "range": "± 186724",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "05fb95b95e81608ef3216253d95ce2c7ccb7b2cd",
+          "message": "refactor: use now as timestamp for delta calc for pending blocks (#2586)",
+          "timestamp": "2024-11-01T15:39:22-06:00",
+          "tree_id": "fa6c185e7c60cada2693268d8cd1963dbe1cfec6",
+          "url": "https://github.com/dojoengine/dojo/commit/05fb95b95e81608ef3216253d95ce2c7ccb7b2cd"
+        },
+        "date": 1730498111899,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 9557101296,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
