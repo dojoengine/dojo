@@ -53,6 +53,7 @@ pub struct FeeContracts {
 impl ChainSpec {
     pub fn block(&self) -> Block {
         let header = Header {
+            state_diff_length: 0,
             protocol_version: self.version.clone(),
             number: self.genesis.number,
             timestamp: self.genesis.timestamp,
@@ -371,6 +372,7 @@ mod tests {
         // setup expected storage values
         let expected_block = Block {
             header: Header {
+                state_diff_length: 0,
                 events_commitment: Felt::ZERO,
                 receipts_commitment: Felt::ZERO,
                 state_diff_commitment: Felt::ZERO,
