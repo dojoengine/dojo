@@ -5,27 +5,8 @@ use dojo::{model::model_value::ModelValueKey, utils::entity_id_from_keys};
 /// A pointer to a model, which can be expressed by an entity id.
 /// It's different from `ModelIndex` which is used for low level accesses.
 #[derive(Copy, Drop, Serde, Debug, PartialEq)]
-pub enum ModelPtr<M> {
-    // The id of the model.
-    Id: felt252,
-    // The keys of the model as span.
-    Keys: Span<felt252>,
-}
-
-
-pub trait ModelPtrTrait<M> {
-    /// Returns the entity id of the model.
-    fn entity_id(self: @ModelPtr<M>) -> felt252;
-}
-
-pub impl ModelPtrImpl<M> of ModelPtrTrait<M> {
-    /// Returns the entity id of the model.
-    fn entity_id(self: @ModelPtr<M>) -> felt252 {
-        match self {
-            ModelPtr::Id(id) => *id,
-            ModelPtr::Keys(keys) => entity_id_from_keys(*keys),
-        }
-    }
+pub struct ModelPtr<M> {
+    id: felt252,
 }
 
 /// A `ModelStorage` trait that abstracts where the storage is.

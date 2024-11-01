@@ -53,6 +53,10 @@ pub trait Model<M> {
     fn definition() -> ModelDef;
     /// Returns the selector of the model computed for the given namespace hash.
     fn selector(namespace_hash: felt252) -> felt252;
+
+    fn ptr(entity_id: felt252) -> ModelPtr<M> {
+        ModelPtr { id: entity_id }
+    }
 }
 
 pub impl ModelImpl<M, +ModelParser<M>, +ModelDefinition<M>, +Serde<M>> of Model<M> {
