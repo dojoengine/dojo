@@ -48,7 +48,7 @@ impl MigrateArgs {
         config.tokio_handle().block_on(async {
             print_banner(&ws, &starknet).await?;
 
-            let mut spinner = MigrationUi::new("Evaluating world diff...");
+            let mut spinner = MigrationUi::new(Some("Evaluating world diff..."));
 
             let mut txn_config: TxnConfig = self.transaction.into();
             txn_config.wait = true;

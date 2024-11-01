@@ -80,7 +80,7 @@ impl ExecuteArgs {
         );
 
         config.tokio_handle().block_on(async {
-            let mut spinner = MigrationUi::new("").with_silent();
+            let mut spinner = MigrationUi::new(None).with_silent();
 
             let (world_diff, account, _) = utils::get_world_diff_and_account(
                 self.account,

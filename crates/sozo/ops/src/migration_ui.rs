@@ -20,10 +20,16 @@ impl fmt::Debug for MigrationUi {
 
 impl MigrationUi {
     /// Returns a new instance with the default frames.
-    pub fn new(text: &'static str) -> Self {
-        let frames = spinner!(["⛩️ ", "🎃", "👻", "🧟", "💀"], 500);
-        let spinner = Spinner::new(frames.clone(), text, None);
-        Self { spinner, default_frames: frames, silent: false }
+    pub fn new(text: Option<&'static str>) -> Self {
+        if let Some(text) = text {
+            let frames = spinner!(["⛩️ ", "🎃", "👻", "🧟", "💀"], 500);
+            let spinner = Spinner::new(frames.clone(), text, None);
+            return Self { spinner, default_frames: frames, silent: false };
+        } else {
+            let frames = spinner!([""], 5000);
+            let spinner = Spinner::new(frames.clone(), "", None);
+            return Self { spinner, default_frames: frames, silent: false };
+        }
     }
 
     /// Returns a new instance with the silent flag set.
