@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1730486892905,
+  "lastUpdate": 1730487052737,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -29197,6 +29197,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8540669,
             "range": "± 483090",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "valentin@pupucecorp.com",
+            "name": "valdo.carbonaboyz.stark",
+            "username": "MartianGreed"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e5537743ee32fc59a98134b70e27443ea16eace6",
+          "message": "fix: contracts function name clashing (#2603)\n\n* fix: contracts function name clashing\r\n\r\n* fix: formatting\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-11-01T12:35:05-06:00",
+          "tree_id": "12b60ffecc864df915dde198e0235af880c20b9f",
+          "url": "https://github.com/dojoengine/dojo/commit/e5537743ee32fc59a98134b70e27443ea16eace6"
+        },
+        "date": 1730487051732,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 9452257556,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
