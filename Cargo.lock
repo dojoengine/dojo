@@ -13362,7 +13362,6 @@ dependencies = [
  "hex",
  "hex-literal",
  "itertools 0.12.1",
- "jsonrpsee 0.16.3",
  "katana-rpc-api",
  "katana-runner",
  "notify",

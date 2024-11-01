@@ -32,7 +32,6 @@ dojo-world.workspace = true
 hex = "0.4.3"
 hex-literal = "0.4.1"
 itertools.workspace = true
-jsonrpsee = { version = "0.16.2", default-features = false }
 katana-rpc-api.workspace = true
 notify = "6.0.1"
 num-bigint = "0.4.3"
