@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1730487052737,
+  "lastUpdate": 1730487140764,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -29226,6 +29226,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 9452257556,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b93f761ceaf4c437d7adfbc49c0eb82ed3cbfde7",
+          "message": "fix(sozo): fix profile detection and UI rework (#2606)\n\n* fix: ensures the banner chain_id printing takes in account the profile\r\n\r\n* fix: rework MigrationUi for something easier to use\r\n\r\n* fix: change the seed",
+          "timestamp": "2024-11-01T12:35:40-06:00",
+          "tree_id": "865428bc83548ece6e0323450b4c39c7f8195d8f",
+          "url": "https://github.com/dojoengine/dojo/commit/b93f761ceaf4c437d7adfbc49c0eb82ed3cbfde7"
+        },
+        "date": 1730487139027,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 9988701128,
             "range": "± 0",
             "unit": "ns/iter"
           }
