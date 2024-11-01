@@ -8210,6 +8210,7 @@ version = "1.0.0-rc.0"
 dependencies = [
  "anyhow",
  "arbitrary",
+ "bitvec",
  "criterion",
  "dojo-metrics",
  "katana-primitives",
@@ -8224,6 +8225,7 @@ dependencies = [
  "serde_json",
  "smallvec",
  "starknet 0.12.0",
+ "starknet-types-core",
  "tempfile",
  "thiserror",
  "tracing",

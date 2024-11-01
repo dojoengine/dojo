@@ -1,15 +1,20 @@
 use std::marker::PhantomData;
 
 use anyhow::Result;
-use katana_trie::bonsai;
 use katana_trie::bonsai::id::BasicId;
-use katana_trie::bonsai::{ByteVec, DatabaseKey};
+use katana_trie::bonsai::{self, ByteVec, DatabaseKey};
 use smallvec::ToSmallVec;
 
 use crate::abstraction::{DbCursor, DbTxMut};
 use crate::models::trie::{TrieDatabaseKey, TrieDatabaseKeyType};
 use crate::models::{self};
 use crate::tables;
+
+mod class;
+mod contract;
+
+pub use class::ClassTrie;
+pub use contract::{ContractTrie, StorageTrie};
 
 #[derive(Debug, thiserror::Error)]
 #[error(transparent)]
