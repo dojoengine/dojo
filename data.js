@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1730490014919,
+  "lastUpdate": 1730490212716,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -29382,6 +29382,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 9521128467,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "af63e5f3bf549da0a9e357f5ff87a778b15b5635",
+          "message": "feat(katana): compute block commitments (#2609)",
+          "timestamp": "2024-11-02T03:27:44+08:00",
+          "tree_id": "86661256bd45f5e698167dd48667305047d6a0d9",
+          "url": "https://github.com/dojoengine/dojo/commit/af63e5f3bf549da0a9e357f5ff87a778b15b5635"
+        },
+        "date": 1730490211659,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 9611893638,
             "range": "± 0",
             "unit": "ns/iter"
           }
