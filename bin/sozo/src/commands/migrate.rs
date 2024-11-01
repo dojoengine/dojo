@@ -100,7 +100,8 @@ pub struct Banner {
 
 /// Prints the migration banner.
 async fn print_banner(ws: &Workspace<'_>, starknet: &StarknetOptions) -> Result<()> {
-    let (provider, rpc_url) = starknet.provider(None)?;
+    let profile_config = ws.load_profile_config()?;
+    let (provider, rpc_url) = starknet.provider(profile_config.env.as_ref())?;
 
     let chain_id = provider.chain_id().await?;
     let chain_id = parse_cairo_short_string(&chain_id)
