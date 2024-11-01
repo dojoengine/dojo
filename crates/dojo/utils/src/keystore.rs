@@ -8,6 +8,6 @@ pub fn prompt_password_if_needed(maybe_password: Option<&str>, no_wait: bool) ->
     } else if no_wait {
         Err(anyhow!("Could not find password. Please specify the password."))
     } else {
-        Ok(rpassword::prompt_password("Enter password: ")?.to_owned())
+        Ok(rpassword::prompt_password("Enter the keystore password: ")?.to_owned())
     }
 }
