@@ -7,6 +7,7 @@ use dojo_types::naming;
 use dojo_utils::Invoker;
 use dojo_world::contracts::naming::ensure_namespace;
 use scarb::core::Config;
+use sozo_ops::migration_ui::MigrationUi;
 use sozo_scarbext::WorkspaceExt;
 use sozo_walnut::WalnutDebugger;
 use starknet::core::types::{Call, Felt};
@@ -79,11 +80,14 @@ impl ExecuteArgs {
         );
 
         config.tokio_handle().block_on(async {
+            let mut spinner = MigrationUi::new("").with_silent();
+
             let (world_diff, account, _) = utils::get_world_diff_and_account(
                 self.account,
                 self.starknet.clone(),
                 self.world,
                 &ws,
+                &mut spinner,
             )
             .await?;
 

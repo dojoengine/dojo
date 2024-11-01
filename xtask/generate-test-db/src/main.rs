@@ -10,7 +10,8 @@ use dojo_world::contracts::WorldContract;
 use dojo_world::diff::{Manifest, WorldDiff};
 use katana_runner::{KatanaRunner, KatanaRunnerConfig};
 use scarb::compiler::Profile;
-use sozo_ops::migrate::{Migration, MigrationUi};
+use sozo_ops::migrate::Migration;
+use sozo_ops::migration_ui::MigrationUi;
 use sozo_scarbext::WorkspaceExt;
 use starknet::core::types::Felt;
 
@@ -55,7 +56,7 @@ async fn migrate_spawn_and_move(db_path: &Path) -> Result<Manifest> {
         profile_config,
         runner.url().to_string(),
     )
-    .migrate(&mut MigrationUi::None)
+    .migrate(&mut MigrationUi::new("").with_silent())
     .await?;
 
     Ok(result.manifest)
@@ -102,7 +103,7 @@ async fn migrate_types_test(db_path: &Path) -> Result<Manifest> {
         profile_config,
         runner.url().to_string(),
     )
-    .migrate(&mut MigrationUi::None)
+    .migrate(&mut MigrationUi::new("").with_silent())
     .await?;
 
     Ok(result.manifest)

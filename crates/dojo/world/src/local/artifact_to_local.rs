@@ -21,6 +21,11 @@ const EVENT_INTF: &str = "dojo::event::interface::IEvent";
 
 impl WorldLocal {
     pub fn from_directory<P: AsRef<Path>>(dir: P, profile_config: ProfileConfig) -> Result<Self> {
+        trace!(
+            ?profile_config,
+            directory = %dir.as_ref().to_string_lossy(),
+            "Loading world from directory."
+        );
         let mut resources = vec![];
 
         let mut world_class = None;
