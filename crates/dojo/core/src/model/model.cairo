@@ -60,11 +60,13 @@ pub trait Model<M> {
     /// Returns the selector of the model computed for the given namespace hash.
     fn selector(namespace_hash: felt252) -> felt252;
     /// Returns the pointer to the model from the key.
-    fn ptr<K, +Serde<K>, +Drop<K>>(key: K) -> ModelPtr<M>;
+    fn ptr_from_key<K, +Serde<K>, +Drop<K>>(key: K) -> ModelPtr<M>;
+    /// Returns the pointer to the model from the keys.
+    fn ptr_from_keys(keys: Span<felt252>) -> ModelPtr<M>;
     /// Returns the pointer to the model from the entity id.
     fn ptr_from_id(entity_id: felt252) -> ModelPtr<M>;
     /// Returns the ptr of the model.
-    fn instance_ptr(self: @M) -> ModelPtr<M>;
+    fn ptr(self: @M) -> ModelPtr<M>;
 }
 
 pub impl ModelImpl<M, +ModelParser<M>, +ModelDefinition<M>, +Serde<M>> of Model<M> {
@@ -138,13 +140,16 @@ pub impl ModelImpl<M, +ModelParser<M>, +ModelDefinition<M>, +Serde<M>> of Model<
             unpacked_size: Self::unpacked_size()
         }
     }
-    fn ptr<K, +Serde<K>, +Drop<K>>(key: K) -> ModelPtr<M> {
+    fn ptr_from_key<K, +Serde<K>, +Drop<K>>(key: K) -> ModelPtr<M> {
         ModelPtr { id: entity_id_from_key(@key) }
+    }
+    fn ptr_from_keys(keys: Span<felt252>) -> ModelPtr<M> {
+        ModelPtr { id: entity_id_from_keys(keys) }
     }
     fn ptr_from_id(entity_id: felt252) -> ModelPtr<M> {
         ModelPtr::<M> { id: entity_id }
     }
-    fn instance_ptr(self: @M) -> ModelPtr<M> {
+    fn ptr(self: @M) -> ModelPtr<M> {
         ModelPtr::<M> { id: self.entity_id() }
     }
 }
