@@ -50,14 +50,19 @@ impl MigrateArgs {
 
             let mut spinner = MigrationUi::new("Evaluating world diff...");
 
-            let mut txn_config: TxnConfig = self.transaction.into();
-            txn_config.wait = true;
-
-            let (world_diff, account, rpc_url) =
-                utils::get_world_diff_and_account(account, starknet, world, &ws, &mut spinner)
-                    .await?;
+            let (world_diff, account, rpc_url) = utils::get_world_diff_and_account(
+                account,
+                starknet,
+                world,
+                &ws,
+                &mut Some(&mut spinner),
+            )
+            .await?;
 
             let world_address = world_diff.world_info.address;
+
+            let mut txn_config: TxnConfig = self.transaction.into();
+            txn_config.wait = true;
 
             let migration = Migration::new(
                 world_diff,

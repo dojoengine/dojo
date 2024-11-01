@@ -27,11 +27,14 @@ pub struct TxnConfig {
     /// The multiplier for how much the actual transaction max fee should be relative to the
     /// estimated fee. If `None` is provided, the multiplier is set to `1.1`.
     pub fee_estimate_multiplier: Option<f64>,
+    /// Whether to wait for the transaction to be accepted or reverted on L2.
     pub wait: bool,
+    /// Whether to display the transaction receipt.
     pub receipt: bool,
+    /// The maximum fee to pay for the transaction.
     pub max_fee_raw: Option<Felt>,
+    /// Whether to use the `walnut` fee estimation strategy.
     pub walnut: bool,
-    pub timeout_ms: Option<u64>,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -40,11 +43,8 @@ pub enum TxnAction {
         wait: bool,
         receipt: bool,
         max_fee_raw: Option<Felt>,
-        /// The multiplier for how much the actual transaction max fee should be relative to the
-        /// estimated fee. If `None` is provided, the multiplier is set to `1.1`.
         fee_estimate_multiplier: Option<f64>,
         walnut: bool,
-        timeout_ms: Option<u64>,
     },
     Estimate,
     Simulate,

@@ -8,7 +8,6 @@
 
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::time::Duration;
 
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{
@@ -103,15 +102,8 @@ where
             "Declared class."
         );
 
-        // Since TxnConfig::wait doesn't work for now, we wait for the transaction manually.
         if txn_config.wait {
-            let receipt = if let Some(timeout_ms) = txn_config.timeout_ms {
-                TransactionWaiter::new(transaction_hash, &account.provider())
-                    .with_timeout(Duration::from_millis(timeout_ms))
-                    .await?
-            } else {
-                TransactionWaiter::new(transaction_hash, &account.provider()).await?
-            };
+            let receipt = TransactionWaiter::new(transaction_hash, &account.provider()).await?;
 
             if txn_config.receipt {
                 return Ok(TransactionResult::HashReceipt(transaction_hash, Box::new(receipt)));

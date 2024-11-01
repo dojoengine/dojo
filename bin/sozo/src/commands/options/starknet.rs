@@ -1,7 +1,10 @@
+use std::time::Duration;
+
 use anyhow::Result;
 use clap::Args;
 use dojo_utils::env::STARKNET_RPC_URL_ENV_VAR;
 use dojo_world::config::Environment;
+use reqwest::ClientBuilder;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use tracing::trace;
@@ -18,6 +21,11 @@ pub struct StarknetOptions {
 }
 
 impl StarknetOptions {
+    /// The default request timeout in milliseconds. This is not the transaction inclusion timeout.
+    /// Refer to [`dojo_utils::tx::waiter::TransactionWaiter::DEFAULT_TIMEOUT`] for the transaction
+    /// inclusion timeout.
+    const DEFAULT_REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
+
     /// Returns a [`JsonRpcClient`] and the rpc url.
     ///
     /// It would be convenient to have the rpc url retrievable from the Provider trait instead.
@@ -26,8 +34,12 @@ impl StarknetOptions {
         env_metadata: Option<&Environment>,
     ) -> Result<(JsonRpcClient<HttpTransport>, String)> {
         let url = self.url(env_metadata)?;
-        trace!(?url, "Creating JsonRpcClient with given RPC URL.");
-        Ok((JsonRpcClient::new(HttpTransport::new(url.clone())), url.to_string()))
+
+        let client =
+            ClientBuilder::default().timeout(Self::DEFAULT_REQUEST_TIMEOUT).build().unwrap();
+
+        let transport = HttpTransport::new_with_client(url.clone(), client);
+        Ok((JsonRpcClient::new(transport), url.to_string()))
     }
 
     // We dont check the env var because that would be handled by `clap`.
