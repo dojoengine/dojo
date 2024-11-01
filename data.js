@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1730483785451,
+  "lastUpdate": 1730486613854,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -29119,6 +29119,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8361146,
             "range": "± 84644",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "218cac9c7677e7e41f31c47c9ec22e3d2477562e",
+          "message": "feat(katana): state trie (#2607)",
+          "timestamp": "2024-11-02T02:27:49+08:00",
+          "tree_id": "b9524c57fe3b9a86e9d9c81cb072032c85aa76c1",
+          "url": "https://github.com/dojoengine/dojo/commit/218cac9c7677e7e41f31c47c9ec22e3d2477562e"
+        },
+        "date": 1730486612873,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 9542479707,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
