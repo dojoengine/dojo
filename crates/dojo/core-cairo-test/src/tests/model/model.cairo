@@ -152,3 +152,14 @@ fn test_delete_from_model() {
     let foo2: Foo = world.read_model((foo.k1, foo.k2));
     assert!(foo2.k1 == foo.k1 && foo2.k2 == foo.k2 && foo2.v1 == 0 && foo2.v2 == 0);
 }
+
+#[test]
+fn test_model_ptr() {
+    let mut world = spawn_foo_world();
+    let foo = Foo { k1: 1, k2: 2, v1: 3, v2: 4 };
+    let key = (foo.k1, foo.k2);
+    let ptr = Model::<Foo>::ptr(key);
+    world.write_model(@foo);
+    let v1 = world.read_member(ptr, selector!("v1"));
+    assert!(foo.v1 == v1);
+}
