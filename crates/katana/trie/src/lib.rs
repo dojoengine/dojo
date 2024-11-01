@@ -75,7 +75,7 @@ mod tests {
 
     // Taken from Pathfinder: https://github.com/eqlabs/pathfinder/blob/29f93d0d6ad8758fdcf5ae3a8bd2faad2a3bc92b/crates/merkle-tree/src/contract_state.rs#L236C5-L252C6
     #[test]
-    fn hash() {
+    fn test_compute_contract_state_hash() {
         let root = felt!("0x4fb440e8ca9b74fc12a22ebffe0bc0658206337897226117b985434c239c028");
         let class_hash = felt!("0x2ff4903e17f87b298ded00c44bfeb22874c5f73be2ced8f1d9d9556fb509779");
         let nonce = Nonce::ZERO;
