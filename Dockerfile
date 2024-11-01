@@ -14,7 +14,7 @@ RUN git clone https://github.com/Comcast/Infinite-File-Curtailer.git curtailer \
     && make install \
     && curtail --version
 
-FROM debian:bookworm-slim as base
+FROM busybox as base
 
 COPY --from=builder /usr/bin/tini /tini
 ENTRYPOINT ["/tini", "--"]
