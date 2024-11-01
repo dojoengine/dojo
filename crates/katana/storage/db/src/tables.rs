@@ -10,6 +10,7 @@ use crate::models::block::StoredBlockBodyIndices;
 use crate::models::contract::{ContractClassChange, ContractInfoChangeList, ContractNonceChange};
 use crate::models::list::BlockList;
 use crate::models::storage::{ContractStorageEntry, ContractStorageKey, StorageEntry};
+use crate::models::trie::{TrieDatabaseKey, TrieDatabaseValue};
 
 pub trait Key: Encode + Decode + Clone + std::fmt::Debug {}
 pub trait Value: Compress + Decompress + std::fmt::Debug {}
@@ -35,6 +36,8 @@ pub trait DupSort: Table {
     type SubKey: Key;
 }
 
+pub trait Trie: Table<Key = TrieDatabaseKey, Value = TrieDatabaseValue> {}
+
 /// Enum for the types of tables present in libmdbx.
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum TableType {
@@ -44,7 +47,7 @@ pub enum TableType {
     DupSort,
 }
 
-pub const NUM_TABLES: usize = 23;
+pub const NUM_TABLES: usize = 26;
 
 /// Macro to declare `libmdbx` tables.
 #[macro_export]
@@ -167,7 +170,10 @@ define_tables_enum! {[
     (NonceChangeHistory, TableType::DupSort),
     (ClassChangeHistory, TableType::DupSort),
     (StorageChangeHistory, TableType::DupSort),
-    (StorageChangeSet, TableType::Table)
+    (StorageChangeSet, TableType::Table),
+    (ClassTrie, TableType::Table),
+    (ContractTrie, TableType::Table),
+    (ContractStorageTrie, TableType::Table)
 ]}
 
 tables! {
@@ -219,13 +225,22 @@ tables! {
     NonceChangeHistory: (BlockNumber, ContractAddress) => ContractNonceChange,
     /// Contract class hash changes by block.
     ClassChangeHistory: (BlockNumber, ContractAddress) => ContractClassChange,
-
     /// storage change set
     StorageChangeSet: (ContractStorageKey) => BlockList,
     /// Account storage change set
-    StorageChangeHistory: (BlockNumber, ContractStorageKey) => ContractStorageEntry
+    StorageChangeHistory: (BlockNumber, ContractStorageKey) => ContractStorageEntry,
 
+    /// Class trie
+    ClassTrie: (TrieDatabaseKey) => TrieDatabaseValue,
+    /// Contract trie
+    ContractTrie: (TrieDatabaseKey) => TrieDatabaseValue,
+    /// Contract storage trie
+    ContractStorageTrie: (TrieDatabaseKey) => TrieDatabaseValue
 }
+
+impl Trie for ClassTrie {}
+impl Trie for ContractTrie {}
+impl Trie for ContractStorageTrie {}
 
 #[cfg(test)]
 mod tests {
@@ -258,6 +273,8 @@ mod tests {
         assert_eq!(Tables::ALL[20].name(), ClassChangeHistory::NAME);
         assert_eq!(Tables::ALL[21].name(), StorageChangeHistory::NAME);
         assert_eq!(Tables::ALL[22].name(), StorageChangeSet::NAME);
+        assert_eq!(Tables::ALL[23].name(), ClassTrie::NAME);
+        assert_eq!(Tables::ALL[24].name(), ContractTrie::NAME);
 
         assert_eq!(Tables::Headers.table_type(), TableType::Table);
         assert_eq!(Tables::BlockHashes.table_type(), TableType::Table);
@@ -282,6 +299,8 @@ mod tests {
         assert_eq!(Tables::ClassChangeHistory.table_type(), TableType::DupSort);
         assert_eq!(Tables::StorageChangeHistory.table_type(), TableType::DupSort);
         assert_eq!(Tables::StorageChangeSet.table_type(), TableType::Table);
+        assert_eq!(Tables::ClassTrie.table_type(), TableType::Table);
+        assert_eq!(Tables::ContractTrie.table_type(), TableType::Table);
     }
 
     use katana_primitives::address;

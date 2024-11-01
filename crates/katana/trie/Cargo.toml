@@ -1,0 +1,23 @@
+[package]
+edition.workspace = true
+license.workspace = true
+name = "katana-trie"
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+katana-primitives.workspace = true
+
+anyhow.workspace = true
+bitvec.workspace = true
+serde.workspace = true
+slab = "0.4.9"
+starknet.workspace = true
+starknet-types-core.workspace = true
+thiserror.workspace = true
+
+[dependencies.bonsai-trie]
+default-features = false
+features = [ "std" ]
+git = "https://github.com/madara-alliance/bonsai-trie/"
+rev = "56d7d62"

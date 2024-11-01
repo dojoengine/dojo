@@ -1,6 +1,7 @@
 pub mod backend;
 pub mod state;
 
+use std::collections::BTreeMap;
 use std::ops::{Range, RangeInclusive};
 use std::sync::Arc;
 
@@ -16,6 +17,7 @@ use katana_primitives::receipt::Receipt;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
 use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{Tx, TxHash, TxNumber, TxWithHash};
+use katana_primitives::Felt;
 use parking_lot::RwLock;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
@@ -36,6 +38,7 @@ use crate::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionStatusProvider, TransactionTraceProvider,
     TransactionsProviderExt,
 };
+use crate::traits::trie::{ClassTrieWriter, ContractTrieWriter};
 use crate::ProviderResult;
 
 #[derive(Debug)]
@@ -580,5 +583,29 @@ impl BlockEnvProvider for ForkedProvider {
             l1_data_gas_prices: header.l1_data_gas_prices,
             sequencer_address: header.sequencer_address,
         }))
+    }
+}
+
+impl ClassTrieWriter for ForkedProvider {
+    fn insert_updates(
+        &self,
+        block_number: BlockNumber,
+        updates: &BTreeMap<ClassHash, CompiledClassHash>,
+    ) -> ProviderResult<Felt> {
+        let _ = block_number;
+        let _ = updates;
+        Ok(Felt::ZERO)
+    }
+}
+
+impl ContractTrieWriter for ForkedProvider {
+    fn insert_updates(
+        &self,
+        block_number: BlockNumber,
+        state_updates: &StateUpdates,
+    ) -> ProviderResult<Felt> {
+        let _ = block_number;
+        let _ = state_updates;
+        Ok(Felt::ZERO)
     }
 }
