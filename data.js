@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1730487140764,
+  "lastUpdate": 1730487314676,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -29257,6 +29257,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 9988701128,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "valentin@pupucecorp.com",
+            "name": "valdo.carbonaboyz.stark",
+            "username": "MartianGreed"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e5537743ee32fc59a98134b70e27443ea16eace6",
+          "message": "fix: contracts function name clashing (#2603)\n\n* fix: contracts function name clashing\r\n\r\n* fix: formatting\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-11-01T12:35:05-06:00",
+          "tree_id": "12b60ffecc864df915dde198e0235af880c20b9f",
+          "url": "https://github.com/dojoengine/dojo/commit/e5537743ee32fc59a98134b70e27443ea16eace6"
+        },
+        "date": 1730487313341,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16094489,
+            "range": "± 266916",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 9049096,
+            "range": "± 645351",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3746512986,
+            "range": "± 800248298",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8539947,
+            "range": "± 291246",
             "unit": "ns/iter"
           }
         ]
