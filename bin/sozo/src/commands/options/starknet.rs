@@ -21,7 +21,10 @@ pub struct StarknetOptions {
 }
 
 impl StarknetOptions {
-    const DEFAULT_REQUEST_TIMEOUT_MS: u64 = 20_000;
+    /// The default request timeout in milliseconds. This is not the transaction inclusion timeout.
+    /// Refer to [`dojo_utils::tx::waiter::TransactionWaiter::DEFAULT_TIMEOUT`] for the transaction inclusion
+    /// timeout.
+    const DEFAULT_REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
 
     /// Returns a [`JsonRpcClient`] and the rpc url.
     ///
@@ -32,10 +35,8 @@ impl StarknetOptions {
     ) -> Result<(JsonRpcClient<HttpTransport>, String)> {
         let url = self.url(env_metadata)?;
 
-        let client = ClientBuilder::default()
-            .timeout(Duration::from_millis(Self::DEFAULT_REQUEST_TIMEOUT_MS))
-            .build()
-            .unwrap();
+        let client =
+            ClientBuilder::default().timeout(Self::DEFAULT_REQUEST_TIMEOUT).build().unwrap();
 
         let transport = HttpTransport::new_with_client(url.clone(), client);
         Ok((JsonRpcClient::new(transport), url.to_string()))
