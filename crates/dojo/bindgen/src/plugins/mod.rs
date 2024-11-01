@@ -48,16 +48,83 @@ impl Buffer {
         self.0.push(s.clone());
     }
 
+    /// Inserts string after the first occurrence of the separator.
+    ///
+    /// * `s` - The string to insert.
+    /// * `pos` - The string inside inner vec to search position for.
+    /// * `sep` - The separator to search for.
+    /// * `idx` - The index of the separator to insert after.
+    ///
     pub fn insert_after(&mut self, s: String, pos: &str, sep: &str, idx: usize) {
-        let pos = self.0.iter().position(|b| b.contains(pos)).unwrap();
+        let pos = self.pos(pos).unwrap();
         if let Some(st) = self.0.get_mut(pos) {
             let indices = st.match_indices(sep).map(|(i, _)| i).collect::<Vec<usize>>();
             let append_after = indices[indices.len() - idx] + 1;
             st.insert_str(append_after, &s);
         }
     }
+
+    /// Inserts string at the specified position.
+    ///
+    /// * `s` - The string to insert.
+    /// * `pos` - The position to insert the string at.
+    /// * `idx` - The index of the string to insert at.
+    ///
+    pub fn insert_at(&mut self, s: String, pos: usize, idx: usize) {
+        if let Some(st) = self.0.get_mut(idx) {
+            st.insert_str(pos + 1, &s);
+        }
+    }
+
+    /// Finds position of the given string in the inner vec.
+    ///
+    /// * `pos` - The string to search for.
+    ///
+    pub fn pos(&self, pos: &str) -> Option<usize> {
+        self.0.iter().position(|b| b.contains(pos))
+    }
+
     pub fn join(&mut self, sep: &str) -> String {
         self.0.join(sep)
+    }
+
+    /// At given index, finds the first occurrence of the needle string after the search string.
+    ///
+    /// * `needle` - The string to search for.
+    /// * `search` - The string to search after.
+    /// * `idx` - The index to search at.
+    ///
+    pub fn get_first_after(&self, needle: &str, search: &str, idx: usize) -> Option<usize> {
+        if let Some(st) = self.0.get(idx) {
+            let indices = st.match_indices(needle).map(|(i, _)| i).collect::<Vec<usize>>();
+            if indices.is_empty() {
+                return None;
+            }
+
+            let start = indices[indices.len() - 1] + 1;
+            let search_indices = st.match_indices(search).map(|(i, _)| i).collect::<Vec<usize>>();
+            return search_indices.iter().filter(|&&i| i > start).min().copied();
+        }
+        None
+    }
+
+    /// At given index, finds the first occurrence of the needle string before the position in
+    /// string
+    ///
+    /// * `search` - The token to search for.
+    /// * `pos` - Starting position of the search.
+    /// * `idx` - The index to search at.
+    ///
+    pub fn get_first_before_pos(&self, search: &str, pos: usize, idx: usize) -> Option<usize> {
+        if let Some(st) = self.0.get(idx) {
+            let indices = st.match_indices(search).map(|(i, _)| i).collect::<Vec<usize>>();
+            if indices.is_empty() {
+                return None;
+            }
+
+            return indices.iter().filter(|&&i| i < pos).max().copied();
+        }
+        None
     }
 }
 
@@ -111,4 +178,29 @@ pub trait BindgenContractGenerator: Sync {
         token: &Function,
         buffer: &mut Buffer,
     ) -> BindgenResult<String>;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_buffer_get_first_after() {
+        let mut buff = Buffer::new();
+        buff.push("import { DojoProvider } from \"@dojoengine/core\";".to_owned());
+        buff.push("return { actions: { changeTheme, increaseGlobalCounter, } };".to_owned());
+        let pos = buff.get_first_after("actions: {", "}", 1);
+
+        assert_eq!(pos, Some(56));
+    }
+
+    #[test]
+    fn test_buffer_get_first_before() {
+        let mut buff = Buffer::new();
+        buff.push("import { DojoProvider } from \"@dojoengine/core\";".to_owned());
+        buff.push("return { actions: { changeTheme, increaseGlobalCounter, } };".to_owned());
+        let pos = buff.get_first_before_pos(",", 56, 1);
+
+        assert_eq!(pos, Some(54));
+    }
 }
