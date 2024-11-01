@@ -1,4 +1,4 @@
-use dojo::model::model_value::ModelValueKey;
+use dojo::{model::model_value::ModelValueKey, utils::entity_id_from_keys};
 
 // TODO: define the right interface for member accesses.
 
@@ -12,6 +12,22 @@ pub enum ModelPtr<M> {
     Keys: Span<felt252>,
 }
 
+
+pub trait ModelPtrTrait<M> {
+    /// Returns the entity id of the model.
+    fn entity_id(self: @ModelPtr<M>) -> felt252;
+}
+
+pub impl ModelPtrImpl<M> of ModelPtrTrait<M> {
+    /// Returns the entity id of the model.
+    fn entity_id(self: @ModelPtr<M>) -> felt252 {
+        match self {
+            ModelPtr::Id(id) => *id,
+            ModelPtr::Keys(keys) => entity_id_from_keys(*keys),
+        }
+    }
+}
+
 /// A `ModelStorage` trait that abstracts where the storage is.
 ///
 /// Currently it's only world storage, but this will be useful when we have other
@@ -19,17 +35,19 @@ pub enum ModelPtr<M> {
 pub trait ModelStorage<S, M> {
     /// Sets a model of type `M`.
     fn write_model(ref self: S, model: @M);
-
     /// Retrieves a model of type `M` using the provided key of type `K`.
     fn read_model<K, +Drop<K>, +Serde<K>>(self: @S, key: K) -> M;
-
     /// Deletes a model of type `M`.
     fn erase_model(ref self: S, model: @M);
-
     /// Deletes a model of type `M` using the provided entity id.
     /// The ptr is mostly used for type inferrence.
     fn erase_model_ptr(ref self: S, ptr: ModelPtr<M>);
-
+    /// Retrieves a model of type `M` using the provided entity idref .
+    fn read_member<T, +Serde<T>>(self: @S, ptr: ModelPtr<M>, field_selector: felt252) -> T;
+    /// Retrieves a model of type `M` using the provided entity id.
+    fn write_member<T, +Serde<T>, +Drop<T>>(
+        ref self: S, ptr: ModelPtr<M>, field_selector: felt252, value: T
+    );
     /// Returns the current namespace hash.
     fn namespace_hash(self: @S) -> felt252;
 }

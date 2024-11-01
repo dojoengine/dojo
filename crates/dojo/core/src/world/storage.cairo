@@ -2,11 +2,14 @@
 
 use core::panic_with_felt252;
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, Resource};
-use dojo::model::{Model, ModelIndex, ModelValueKey, ModelValue, ModelStorage, ModelPtr};
+use dojo::model::{
+    Model, ModelIndex, ModelValueKey, ModelValue, ModelStorage, ModelPtr, storage::ModelPtrTrait
+};
 use dojo::event::{Event, EventStorage};
 use dojo::meta::Layout;
 use dojo::utils::{
-    entity_id_from_key, entity_id_from_keys, serialize_inline, find_model_field_layout
+    entity_id_from_key, entity_id_from_keys, serialize_inline, find_model_field_layout,
+    deserialize_unwrap
 };
 use starknet::{ContractAddress, ClassHash};
 
@@ -14,6 +17,13 @@ use starknet::{ContractAddress, ClassHash};
 pub struct WorldStorage {
     pub dispatcher: IWorldDispatcher,
     pub namespace_hash: felt252,
+}
+
+fn field_layout_unwrap<M, +Model<M>>(field_selector: felt252) -> Layout {
+    match Model::<M>::field_layout(field_selector) {
+        Option::Some(layout) => layout,
+        Option::None => panic_with_felt252('bad member id')
+    }
 }
 
 #[generate_trait]
@@ -106,6 +116,29 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
             Model::<M>::selector(self.namespace_hash),
             ModelIndex::Id(entity_id),
             Model::<M>::layout()
+        );
+    }
+    fn read_member<T, +Serde<T>>(
+        self: @WorldStorage, ptr: ModelPtr<M>, field_selector: felt252
+    ) -> T {
+        deserialize_unwrap(
+            IWorldDispatcherTrait::entity(
+                *self.dispatcher,
+                Model::<M>::selector(*self.namespace_hash),
+                ModelIndex::MemberId((ptr.entity_id(), field_selector)),
+                field_layout_unwrap::<M>(field_selector)
+            )
+        )
+    }
+    fn write_member<T, +Serde<T>, +Drop<T>>(
+        ref self: WorldStorage, ptr: ModelPtr<M>, field_selector: felt252, value: T
+    ) {
+        IWorldDispatcherTrait::set_entity(
+            self.dispatcher,
+            Model::<M>::selector(self.namespace_hash),
+            ModelIndex::MemberId((ptr.entity_id(), field_selector)),
+            serialize_inline(@value),
+            field_layout_unwrap::<M>(field_selector)
         );
     }
 

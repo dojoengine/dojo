@@ -1,7 +1,9 @@
-use dojo::{meta::{Layout, introspect::Ty, layout::compute_packed_size}, utils::entity_id_from_keys};
+use dojo::{
+    meta::{Layout, introspect::Ty, layout::compute_packed_size},
+    utils::{entity_id_from_keys, find_model_field_layout}
+};
 
 use super::{ModelDefinition, ModelDef};
-
 /// Trait `KeyParser` defines a trait for parsing keys from a given model.
 pub trait KeyParser<M, K> {
     /// Parses the key from the given model.
@@ -39,6 +41,8 @@ pub trait Model<M> {
     fn schema() -> Ty;
     /// Returns the memory layout of the model.
     fn layout() -> Layout;
+    /// Returns the layout of a field in the model.
+    fn field_layout(field_selector: felt252) -> Option<Layout>;
     /// Returns the unpacked size of the model. Only applicable for fixed size models.
     fn unpacked_size() -> Option<usize>;
     /// Returns the packed size of the model. Only applicable for fixed size models.
@@ -90,6 +94,10 @@ pub impl ModelImpl<M, +ModelParser<M>, +ModelDefinition<M>, +Serde<M>> of Model<
 
     fn layout() -> Layout {
         ModelDefinition::<M>::layout()
+    }
+
+    fn field_layout(field_selector: felt252) -> Option<Layout> {
+        find_model_field_layout(Self::layout(), field_selector)
     }
 
     fn schema() -> Ty {
