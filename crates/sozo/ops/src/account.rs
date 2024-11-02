@@ -256,14 +256,7 @@ pub async fn deploy(
     };
 
     match txn_action {
-        TxnAction::Send {
-            wait,
-            receipt,
-            max_fee_raw,
-            fee_estimate_multiplier,
-            walnut,
-            timeout_ms,
-        } => {
+        TxnAction::Send { wait, receipt, max_fee_raw, fee_estimate_multiplier, walnut } => {
             let max_fee = if let Some(max_fee_raw) = max_fee_raw {
                 MaxFeeType::Manual { max_fee: max_fee_raw }
             } else {
@@ -292,14 +285,8 @@ pub async fn deploy(
             };
 
             let account_deployment = account_deployment.max_fee(max_fee.max_fee());
-            let txn_config = TxnConfig {
-                fee_estimate_multiplier,
-                wait,
-                receipt,
-                max_fee_raw,
-                walnut,
-                timeout_ms,
-            };
+            let txn_config =
+                TxnConfig { fee_estimate_multiplier, wait, receipt, max_fee_raw, walnut };
             do_account_deploy(
                 max_fee,
                 txn_config,

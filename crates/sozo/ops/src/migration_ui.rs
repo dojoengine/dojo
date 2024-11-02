@@ -72,7 +72,7 @@ impl MigrationUi {
             return;
         }
 
-        self.spinner.stop();
+        self.spinner.stop_with_message("");
     }
 
     /// Restarts the spinner with the default frames if it has been stopped.

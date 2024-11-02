@@ -4,10 +4,9 @@ use std::str::FromStr;
 use anyhow::{anyhow, Result};
 use clap::Args;
 use dojo_types::naming;
-use dojo_utils::Invoker;
+use dojo_utils::{Invoker, TxnConfig};
 use dojo_world::contracts::naming::ensure_namespace;
 use scarb::core::Config;
-use sozo_ops::migration_ui::MigrationUi;
 use sozo_scarbext::WorkspaceExt;
 use sozo_walnut::WalnutDebugger;
 use starknet::core::types::{Call, Felt};
@@ -79,15 +78,17 @@ impl ExecuteArgs {
             self.starknet.url(profile_config.env.as_ref())?,
         );
 
-        config.tokio_handle().block_on(async {
-            let mut spinner = MigrationUi::new(None).with_silent();
+        let txn_config: TxnConfig = self.transaction.into();
 
+        config.tokio_handle().block_on(async {
+            // We could save the world diff computation extracting the account directly from the
+            // options.
             let (world_diff, account, _) = utils::get_world_diff_and_account(
                 self.account,
                 self.starknet.clone(),
                 self.world,
                 &ws,
-                &mut spinner,
+                &mut None,
             )
             .await?;
 
@@ -99,8 +100,6 @@ impl ExecuteArgs {
                 }
             }
             .ok_or_else(|| anyhow!("Contract {descriptor} not found in the world diff."))?;
-
-            let tx_config = self.transaction.into();
 
             trace!(
                 contract=?descriptor,
@@ -121,7 +120,7 @@ impl ExecuteArgs {
                 selector: snutils::get_selector_from_name(&self.entrypoint)?,
             };
 
-            let invoker = Invoker::new(&account, tx_config);
+            let invoker = Invoker::new(&account, txn_config);
             // TODO: add walnut back, perhaps at the invoker level.
             let tx_result = invoker.invoke(call).await?;
 

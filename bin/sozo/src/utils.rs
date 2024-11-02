@@ -145,7 +145,7 @@ pub async fn get_world_diff_and_account(
     starknet: StarknetOptions,
     world: WorldOptions,
     ws: &Workspace<'_>,
-    ui: &mut MigrationUi,
+    ui: &mut Option<&mut MigrationUi>,
 ) -> Result<(WorldDiff, SozoAccount<JsonRpcClient<HttpTransport>>, String)> {
     let profile_config = ws.load_profile_config()?;
     let env = profile_config.env.as_ref();
@@ -154,7 +154,9 @@ pub async fn get_world_diff_and_account(
         get_world_diff_and_provider(starknet.clone(), world, ws).await?;
 
     // Ensures we don't interfere with the spinner if a password must be prompted.
-    ui.stop();
+    if let Some(ui) = ui {
+        ui.stop();
+    }
 
     let account = {
         account
@@ -162,7 +164,9 @@ pub async fn get_world_diff_and_account(
             .await?
     };
 
-    ui.restart("Verifying account...");
+    if let Some(ui) = ui {
+        ui.restart("Verifying account...");
+    }
 
     if !dojo_utils::is_deployed(account.address(), &account.provider()).await? {
         return Err(anyhow!("Account with address {:#x} doesn't exist.", account.address()));
