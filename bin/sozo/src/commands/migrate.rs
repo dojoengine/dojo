@@ -48,7 +48,7 @@ impl MigrateArgs {
         config.tokio_handle().block_on(async {
             print_banner(&ws, &starknet).await?;
 
-            let mut spinner = MigrationUi::new("Evaluating world diff...");
+            let mut spinner = MigrationUi::new(Some("Evaluating world diff..."));
 
             let (world_diff, account, rpc_url) = utils::get_world_diff_and_account(
                 account,

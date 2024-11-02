@@ -36,7 +36,7 @@ cargo +nightly-2024-08-28 fmt --all -- "$@"
 ./target/release/sozo build --manifest-path crates/torii/types-test/Scarb.toml
 
 # Generates the database for testing by migrating the spawn and move example.
-cargo generate-test-db
+KATANA_RUNNER_BIN=./target/release/katana cargo generate-test-db
 # Ensure the user has locally the db dir in /tmp.
 rm -rf /tmp/spawn-and-move-db
 rm -rf /tmp/types-test-db

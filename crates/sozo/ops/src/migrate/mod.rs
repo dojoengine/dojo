@@ -204,17 +204,15 @@ where
 
         let has_changed = !invoker.calls.is_empty();
 
-        if !ordered_init_calls.is_empty() {
+        if !invoker.calls.is_empty() {
             if self.do_multicall() {
-                let ui_text = format!("Initializing {} contracts...", ordered_init_calls.len());
+                let ui_text = format!("Initializing {} contracts...", invoker.calls.len());
                 ui.update_text_boxed(ui_text);
 
                 invoker.multicall().await?;
             } else {
-                let ui_text = format!(
-                    "Initializing {} contracts (sequentially)...",
-                    ordered_init_calls.len()
-                );
+                let ui_text =
+                    format!("Initializing {} contracts (sequentially)...", invoker.calls.len());
                 ui.update_text_boxed(ui_text);
 
                 invoker.invoke_all_sequentially().await?;

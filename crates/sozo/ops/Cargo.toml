@@ -36,6 +36,9 @@ dojo-test-utils = { workspace = true, features = [ "build-examples" ] }
 ipfs-api-backend-hyper = { git = "https://github.com/ferristseng/rust-ipfs-api", rev = "af2c17f7b19ef5b9898f458d97a90055c3605633", features = [ "with-hyper-rustls" ] }
 katana-runner.workspace = true
 dojo-types.workspace = true
+tokio.workspace = true
+scarb.workspace = true
+sozo-scarbext.workspace = true
 
 [features]
 test-utils = [ "dep:dojo-test-utils", "dep:katana-runner" ]
