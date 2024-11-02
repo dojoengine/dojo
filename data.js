@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1730505595367,
+  "lastUpdate": 1730562708348,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -29665,6 +29665,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8410774,
             "range": "± 72428",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "301706a2bf0f5dab690d7b455d3d671b6569132e",
+          "message": "tests: add tests for migration (#2614)",
+          "timestamp": "2024-11-02T09:35:05-06:00",
+          "tree_id": "26a04ceed2661484eaea88090ea46b2cf1aa4a8c",
+          "url": "https://github.com/dojoengine/dojo/commit/301706a2bf0f5dab690d7b455d3d671b6569132e"
+        },
+        "date": 1730562707296,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 9868208347,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
