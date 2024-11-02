@@ -104,7 +104,7 @@ jobs:
           echo "JEMALLOC_SYS_WITH_LG_PAGE=16" >> $GITHUB_ENV
 
       - name: Build binaries
-        run: cargo build --profile performance --bins --target ${{ matrix.job.target }}
+        run: cargo build --release --bins --target ${{ matrix.job.target }}
 
       - name: Archive binaries
         id: artifacts
@@ -112,15 +112,15 @@ jobs:
           VERSION_NAME: v${{ needs.prepare.outputs.tag_name }}
         run: |
           if [ "$PLATFORM_NAME" == "linux" ]; then
-            tar -czvf "dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" -C ./target/${TARGET}/performance katana sozo torii dojo-language-server
+            tar -czvf "dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" -C ./target/${TARGET}/release katana sozo torii dojo-language-server
             echo "file_name=dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" >> $GITHUB_OUTPUT
           elif [ "$PLATFORM_NAME" == "darwin" ]; then
             # We need to use gtar here otherwise the archive is corrupt.
             # See: https://github.com/actions/virtual-environments/issues/2619
-            gtar -czvf "dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" -C ./target/${TARGET}/performance katana sozo torii dojo-language-server
+            gtar -czvf "dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" -C ./target/${TARGET}/release katana sozo torii dojo-language-server
             echo "file_name=dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" >> $GITHUB_OUTPUT
           else
-            cd ./target/${TARGET}/performance
+            cd ./target/${TARGET}/release
             7z a -tzip "dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.zip" katana.exe sozo.exe torii.exe dojo-language-server.exe
             mv "dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.zip" ../../../
             echo "file_name=dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" >> $GITHUB_OUTPUT
@@ -132,9 +132,9 @@ jobs:
         if: ${{ env.PLATFORM_NAME == 'linux' }}
         run: |
           mkdir -p $PLATFORM_NAME/$ARCH
-          mv target/$TARGET/performance/katana $PLATFORM_NAME/$ARCH
-          mv target/$TARGET/performance/sozo $PLATFORM_NAME/$ARCH
-          mv target/$TARGET/performance/torii $PLATFORM_NAME/$ARCH
+          mv target/$TARGET/release/katana $PLATFORM_NAME/$ARCH
+          mv target/$TARGET/release/sozo $PLATFORM_NAME/$ARCH
+          mv target/$TARGET/release/torii $PLATFORM_NAME/$ARCH
         shell: bash
 
       # Upload these for use with the Docker build later
