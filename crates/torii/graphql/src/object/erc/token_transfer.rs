@@ -1,6 +1,5 @@
 use async_graphql::connection::PageInfo;
-use async_graphql::dynamic::{Field, FieldFuture, InputValue, TypeRef};
-use async_graphql::{Name, Value};
+use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef};
 use convert_case::{Case, Casing};
 use serde::Deserialize;
 use sqlx::sqlite::SqliteRow;
@@ -11,16 +10,18 @@ use torii_core::engine::get_transaction_hash_from_event_id;
 use torii_core::sql::utils::felt_to_sql_string;
 use tracing::warn;
 
-use super::handle_cursor;
+use super::erc_token::{Erc20Token, ErcTokenType};
+use super::{handle_cursor, Connection, ConnectionEdge};
 use crate::constants::{DEFAULT_LIMIT, ID_COLUMN, TOKEN_TRANSFER_NAME, TOKEN_TRANSFER_TYPE_NAME};
 use crate::mapping::TOKEN_TRANSFER_TYPE_MAPPING;
 use crate::object::connection::page_info::PageInfoObject;
 use crate::object::connection::{
     connection_arguments, cursor, parse_connection_arguments, ConnectionArguments,
 };
+use crate::object::erc::erc_token::Erc721Token;
 use crate::object::{BasicObject, ResolvableObject};
 use crate::query::order::{CursorDirection, Direction};
-use crate::types::{TypeMapping, ValueMapping};
+use crate::types::TypeMapping;
 use crate::utils::extract;
 
 #[derive(Debug)]
@@ -74,7 +75,7 @@ impl ResolvableObject for ErcTransferObject {
                         fetch_token_transfers(&mut conn, address, &connection, total_count).await?;
                     let results = token_transfers_connection_output(&data, total_count, page_info)?;
 
-                    Ok(Some(Value::Object(results)))
+                    Ok(Some(results))
                 })
             },
         )
@@ -227,11 +228,11 @@ JOIN
     }
 }
 
-fn token_transfers_connection_output(
+fn token_transfers_connection_output<'a>(
     data: &[SqliteRow],
     total_count: i64,
     page_info: PageInfo,
-) -> sqlx::Result<ValueMapping> {
+) -> sqlx::Result<FieldValue<'a>> {
     let mut edges = Vec::new();
 
     for row in data {
@@ -239,80 +240,60 @@ fn token_transfers_connection_output(
         let transaction_hash = get_transaction_hash_from_event_id(&row.id);
         let cursor = cursor::encode(&row.id, &row.id);
 
-        let transfer_value = match row.contract_type.to_lowercase().as_str() {
+        let transfer_node = match row.contract_type.to_lowercase().as_str() {
             "erc20" => {
-                let token_metadata = Value::Object(ValueMapping::from([
-                    (Name::new("name"), Value::String(row.name)),
-                    (Name::new("symbol"), Value::String(row.symbol)),
-                    // for erc20 there is no token_id
-                    (Name::new("tokenId"), Value::Null),
-                    (Name::new("decimals"), Value::String(row.decimals.to_string())),
-                    (Name::new("contractAddress"), Value::String(row.contract_address.clone())),
-                    (Name::new("erc721"), Value::Null),
-                ]));
+                let token_metadata = ErcTokenType::Erc20(Erc20Token {
+                    contract_address: row.contract_address,
+                    name: row.name,
+                    symbol: row.symbol,
+                    decimals: row.decimals,
+                    amount: row.amount,
+                });
 
-                Value::Object(ValueMapping::from([
-                    (Name::new("from"), Value::String(row.from_address)),
-                    (Name::new("to"), Value::String(row.to_address)),
-                    (Name::new("amount"), Value::String(row.amount)),
-                    (Name::new("type"), Value::String(row.contract_type)),
-                    (Name::new("executedAt"), Value::String(row.executed_at)),
-                    (Name::new("tokenMetadata"), token_metadata),
-                    (Name::new("transactionHash"), Value::String(transaction_hash)),
-                ]))
+                TokenTransferNode {
+                    from: row.from_address,
+                    to: row.to_address,
+                    executed_at: row.executed_at,
+                    token_metadata,
+                    transaction_hash,
+                }
             }
             "erc721" => {
                 // contract_address:token_id
                 let token_id = row.token_id.split(':').collect::<Vec<&str>>();
                 assert!(token_id.len() == 2);
 
-                let image_path = format!("{}/{}", token_id.join("/"), "image");
                 let metadata: serde_json::Value =
                     serde_json::from_str(&row.metadata).expect("metadata is always json");
-                let erc721_name =
+                let metadata_name =
                     metadata.get("name").map(|v| v.to_string().trim_matches('"').to_string());
-                let erc721_description = metadata
+                let metadata_description = metadata
                     .get("description")
                     .map(|v| v.to_string().trim_matches('"').to_string());
-                let erc721_attributes =
+                let metadata_attributes =
                     metadata.get("attributes").map(|v| v.to_string().trim_matches('"').to_string());
 
-                let token_metadata = Value::Object(ValueMapping::from([
-                    (Name::new("name"), Value::String(row.name)),
-                    (Name::new("symbol"), Value::String(row.symbol)),
-                    (Name::new("decimals"), Value::String(row.decimals.to_string())),
-                    (Name::new("contractAddress"), Value::String(row.contract_address.clone())),
-                    (
-                        Name::new("erc721"),
-                        Value::Object(ValueMapping::from([
-                            (Name::new("imagePath"), Value::String(image_path)),
-                            (Name::new("tokenId"), Value::String(token_id[1].to_string())),
-                            (Name::new("metadata"), Value::String(row.metadata)),
-                            (
-                                Name::new("name"),
-                                erc721_name.map(Value::String).unwrap_or(Value::Null),
-                            ),
-                            (
-                                Name::new("description"),
-                                erc721_description.map(Value::String).unwrap_or(Value::Null),
-                            ),
-                            (
-                                Name::new("attributes"),
-                                erc721_attributes.map(Value::String).unwrap_or(Value::Null),
-                            ),
-                        ])),
-                    ),
-                ]));
+                let image_path = format!("{}/{}", token_id.join("/"), "image");
 
-                Value::Object(ValueMapping::from([
-                    (Name::new("from"), Value::String(row.from_address)),
-                    (Name::new("to"), Value::String(row.to_address)),
-                    (Name::new("amount"), Value::String(row.amount)),
-                    (Name::new("type"), Value::String(row.contract_type)),
-                    (Name::new("executedAt"), Value::String(row.executed_at)),
-                    (Name::new("tokenMetadata"), token_metadata),
-                    (Name::new("transactionHash"), Value::String(transaction_hash)),
-                ]))
+                let token_metadata = ErcTokenType::Erc721(Erc721Token {
+                    name: row.name,
+                    metadata: row.metadata,
+                    contract_address: row.contract_address,
+                    symbol: row.symbol,
+                    token_id: token_id[1].to_string(),
+                    metadata_name,
+                    metadata_description,
+                    metadata_attributes,
+                    image_path,
+                });
+
+                TokenTransferNode {
+                    from: row.from_address,
+                    to: row.to_address,
+                    executed_at: row.executed_at,
+                    token_metadata,
+                    transaction_hash,
+                }
             }
             _ => {
                 warn!("Unknown contract type: {}", row.contract_type);
@@ -320,17 +301,14 @@ fn token_transfers_connection_output(
             }
         };
 
-        edges.push(Value::Object(ValueMapping::from([
-            (Name::new("node"), transfer_value),
-            (Name::new("cursor"), Value::String(cursor)),
-        ])));
+        edges.push(ConnectionEdge { node: transfer_node, cursor });
     }
 
-    Ok(ValueMapping::from([
-        (Name::new("totalCount"), Value::from(total_count)),
-        (Name::new("edges"), Value::List(edges)),
-        (Name::new("pageInfo"), PageInfoObject::value(page_info)),
-    ]))
+    Ok(FieldValue::owned_any(Connection {
+        total_count,
+        edges,
+        page_info: PageInfoObject::value(page_info),
+    }))
 }
 
 // TODO: This would be required when subscriptions are needed
@@ -356,4 +334,13 @@ struct TransferQueryResultRaw {
     pub decimals: u8,
     pub contract_type: String,
     pub metadata: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct TokenTransferNode {
+    pub from: String,
+    pub to: String,
+    pub executed_at: String,
+    pub token_metadata: ErcTokenType,
+    pub transaction_hash: String,
 }

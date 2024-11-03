@@ -10,10 +10,14 @@ pub mod model_data;
 pub mod transaction;
 
 use async_graphql::dynamic::{
-    Enum, Field, FieldFuture, InputObject, InputValue, Object, SubscriptionField, TypeRef,
+    Enum, Field, FieldFuture, FieldValue, InputObject, InputValue, Object, SubscriptionField,
+    TypeRef,
 };
 use async_graphql::Value;
 use convert_case::{Case, Casing};
+use erc::erc_token::ErcTokenType;
+use erc::token_transfer::TokenTransferNode;
+use erc::{Connection, ConnectionEdge};
 use sqlx::{Pool, Sqlite};
 
 use self::connection::edge::EdgeObject;
@@ -57,12 +61,133 @@ pub trait BasicObject: Send + Sync {
                 let field_name = field_name.clone();
 
                 FieldFuture::new(async move {
-                    match ctx.parent_value.try_to_value()? {
-                        Value::Object(values) => {
-                            Ok(Some(values.get(&field_name).unwrap().clone())) // safe unwrap
+                    match ctx.parent_value.try_to_value() {
+                        Ok(Value::Object(values)) => {
+                            // safe unwrap
+                            return Ok(Some(FieldValue::value(
+                                values.get(&field_name).unwrap().clone(),
+                            )));
                         }
-                        _ => Err("incorrect value, requires Value::Object".into()),
+                        // if the parent is `Value` then it must be a Object
+                        Ok(_) => return Err("incorrect value, requires Value::Object".into()),
+                        _ => {}
+                    };
+
+                    // if its not we try to downcast to known types which is a special case for
+                    // tokenBalances and tokenTransfers queries
+
+                    if let Ok(values) =
+                        ctx.parent_value.try_downcast_ref::<Connection<ErcTokenType>>()
+                    {
+                        match field_name.as_str() {
+                            "edges" => {
+                                return Ok(Some(FieldValue::list(
+                                    values
+                                        .edges
+                                        .iter()
+                                        .map(|v| FieldValue::owned_any(v.clone()))
+                                        .collect::<Vec<FieldValue<'_>>>(),
+                                )));
+                            }
+                            "pageInfo" => {
+                                return Ok(Some(FieldValue::value(values.page_info.clone())));
+                            }
+                            "totalCount" => {
+                                return Ok(Some(FieldValue::value(Value::from(
+                                    values.total_count,
+                                ))));
+                            }
+                            _ => return Err("incorrect value, requires Value::Object".into()),
+                        }
                     }
+
+                    if let Ok(values) =
+                        ctx.parent_value.try_downcast_ref::<ConnectionEdge<ErcTokenType>>()
+                    {
+                        match field_name.as_str() {
+                            "node" => return Ok(Some(FieldValue::owned_any(values.node.clone()))),
+                            "cursor" => {
+                                return Ok(Some(FieldValue::value(Value::String(
+                                    values.cursor.clone(),
+                                ))));
+                            }
+                            _ => return Err("incorrect value, requires Value::Object".into()),
+                        }
+                    }
+
+                    if let Ok(values) =
+                        ctx.parent_value.try_downcast_ref::<Connection<TokenTransferNode>>()
+                    {
+                        match field_name.as_str() {
+                            "edges" => {
+                                return Ok(Some(FieldValue::list(
+                                    values
+                                        .edges
+                                        .iter()
+                                        .map(|v| FieldValue::owned_any(v.clone()))
+                                        .collect::<Vec<FieldValue<'_>>>(),
+                                )));
+                            }
+                            "pageInfo" => {
+                                return Ok(Some(FieldValue::value(values.page_info.clone())));
+                            }
+                            "totalCount" => {
+                                return Ok(Some(FieldValue::value(Value::from(
+                                    values.total_count,
+                                ))));
+                            }
+                            _ => return Err("incorrect value, requires Value::Object".into()),
+                        }
+                    }
+
+                    if let Ok(values) =
+                        ctx.parent_value.try_downcast_ref::<ConnectionEdge<TokenTransferNode>>()
+                    {
+                        match field_name.as_str() {
+                            "node" => return Ok(Some(FieldValue::owned_any(values.node.clone()))),
+                            "cursor" => {
+                                return Ok(Some(FieldValue::value(Value::String(
+                                    values.cursor.clone(),
+                                ))));
+                            }
+                            _ => return Err("incorrect value, requires Value::Object".into()),
+                        }
+                    }
+
+                    if let Ok(values) = ctx.parent_value.try_downcast_ref::<TokenTransferNode>() {
+                        match field_name.as_str() {
+                            "from" => {
+                                return Ok(Some(FieldValue::value(Value::String(
+                                    values.from.clone(),
+                                ))));
+                            }
+                            "to" => {
+                                return Ok(Some(FieldValue::value(Value::String(
+                                    values.to.clone(),
+                                ))));
+                            }
+                            "executedAt" => {
+                                return Ok(Some(FieldValue::value(Value::String(
+                                    values.executed_at.clone(),
+                                ))));
+                            }
+                            "tokenMetadata" => {
+                                return Ok(Some(values.clone().token_metadata.to_field_value()));
+                            }
+                            "transactionHash" => {
+                                return Ok(Some(FieldValue::value(Value::String(
+                                    values.transaction_hash.clone(),
+                                ))));
+                            }
+                            _ => return Err("incorrect value, requires Value::Object".into()),
+                        }
+                    }
+
+                    if let Ok(values) = ctx.parent_value.try_downcast_ref::<ErcTokenType>() {
+                        return Ok(Some(values.clone().to_field_value()));
+                    }
+
+                    Err("unexpected parent value".into())
                 })
             });
 

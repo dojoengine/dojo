@@ -1,6 +1,5 @@
 use async_graphql::connection::PageInfo;
-use async_graphql::dynamic::{Field, FieldFuture, InputValue, TypeRef};
-use async_graphql::{Name, Value};
+use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef};
 use convert_case::{Case, Casing};
 use serde::Deserialize;
 use sqlx::sqlite::SqliteRow;
@@ -10,18 +9,20 @@ use torii_core::constants::TOKEN_BALANCE_TABLE;
 use torii_core::sql::utils::felt_to_sql_string;
 use tracing::warn;
 
-use super::handle_cursor;
+use super::erc_token::{Erc20Token, ErcTokenType};
+use super::{handle_cursor, Connection, ConnectionEdge};
 use crate::constants::{DEFAULT_LIMIT, ID_COLUMN, TOKEN_BALANCE_NAME, TOKEN_BALANCE_TYPE_NAME};
 use crate::mapping::TOKEN_BALANCE_TYPE_MAPPING;
 use crate::object::connection::page_info::PageInfoObject;
 use crate::object::connection::{
     connection_arguments, cursor, parse_connection_arguments, ConnectionArguments,
 };
+use crate::object::erc::erc_token::Erc721Token;
 use crate::object::{BasicObject, ResolvableObject};
 use crate::query::data::count_rows;
 use crate::query::filter::{Comparator, Filter, FilterValue};
 use crate::query::order::{CursorDirection, Direction};
-use crate::types::{TypeMapping, ValueMapping};
+use crate::types::TypeMapping;
 use crate::utils::extract;
 
 #[derive(Debug)]
@@ -75,7 +76,7 @@ impl ResolvableObject for ErcBalanceObject {
 
                     let results = token_balances_connection_output(&data, total_count, page_info)?;
 
-                    Ok(Some(Value::Object(results)))
+                    Ok(Some(results))
                 })
             },
         )
@@ -206,11 +207,11 @@ async fn fetch_token_balances(
     }
 }
 
-fn token_balances_connection_output(
+fn token_balances_connection_output<'a>(
     data: &[SqliteRow],
     total_count: i64,
     page_info: PageInfo,
-) -> sqlx::Result<ValueMapping> {
+) -> sqlx::Result<FieldValue<'a>> {
     let mut edges = Vec::new();
     for row in data {
         let row = BalanceQueryResultRaw::from_row(row)?;
@@ -218,19 +219,15 @@ fn token_balances_connection_output(
 
         let balance_value = match row.contract_type.to_lowercase().as_str() {
             "erc20" => {
-                let token_metadata = Value::Object(ValueMapping::from([
-                    (Name::new("name"), Value::String(row.name)),
-                    (Name::new("symbol"), Value::String(row.symbol)),
-                    (Name::new("decimals"), Value::String(row.decimals.to_string())),
-                    (Name::new("contractAddress"), Value::String(row.contract_address.clone())),
-                    (Name::new("erc721"), Value::Null),
-                ]));
+                let token_metadata = Erc20Token {
+                    contract_address: row.contract_address,
+                    name: row.name,
+                    symbol: row.symbol,
+                    decimals: row.decimals,
+                    amount: row.balance,
+                };
 
-                Value::Object(ValueMapping::from([
-                    (Name::new("balance"), Value::String(row.balance)),
-                    (Name::new("type"), Value::String(row.contract_type)),
-                    (Name::new("tokenMetadata"), token_metadata),
-                ]))
+                ErcTokenType::Erc20(token_metadata)
             }
             "erc721" => {
                 // contract_address:token_id
@@ -239,47 +236,29 @@ fn token_balances_connection_output(
 
                 let metadata: serde_json::Value =
                     serde_json::from_str(&row.metadata).expect("metadata is always json");
-                let erc721_name =
+                let metadata_name =
                     metadata.get("name").map(|v| v.to_string().trim_matches('"').to_string());
-                let erc721_description = metadata
+                let metadata_description = metadata
                     .get("description")
                     .map(|v| v.to_string().trim_matches('"').to_string());
-                let erc721_attributes =
+                let metadata_attributes =
                     metadata.get("attributes").map(|v| v.to_string().trim_matches('"').to_string());
 
                 let image_path = format!("{}/{}", token_id.join("/"), "image");
-                let token_metadata = Value::Object(ValueMapping::from([
-                    (Name::new("contractAddress"), Value::String(row.contract_address.clone())),
-                    (Name::new("name"), Value::String(row.name)),
-                    (Name::new("symbol"), Value::String(row.symbol)),
-                    (Name::new("decimals"), Value::String(row.decimals.to_string())),
-                    (
-                        Name::new("erc721"),
-                        Value::Object(ValueMapping::from([
-                            (Name::new("imagePath"), Value::String(image_path)),
-                            (Name::new("tokenId"), Value::String(token_id[1].to_string())),
-                            (Name::new("metadata"), Value::String(row.metadata)),
-                            (
-                                Name::new("name"),
-                                erc721_name.map(Value::String).unwrap_or(Value::Null),
-                            ),
-                            (
-                                Name::new("description"),
-                                erc721_description.map(Value::String).unwrap_or(Value::Null),
-                            ),
-                            (
-                                Name::new("attributes"),
-                                erc721_attributes.map(Value::String).unwrap_or(Value::Null),
-                            ),
-                        ])),
-                    ),
-                ]));
 
-                Value::Object(ValueMapping::from([
-                    (Name::new("balance"), Value::String(row.balance)),
-                    (Name::new("type"), Value::String(row.contract_type)),
-                    (Name::new("tokenMetadata"), token_metadata),
-                ]))
+                let token_metadata = Erc721Token {
+                    name: row.name,
+                    metadata: row.metadata,
+                    contract_address: row.contract_address,
+                    symbol: row.symbol,
+                    token_id: token_id[1].to_string(),
+                    metadata_name,
+                    metadata_description,
+                    metadata_attributes,
+                    image_path,
+                };
+
+                ErcTokenType::Erc721(token_metadata)
             }
             _ => {
                 warn!("Unknown contract type: {}", row.contract_type);
@@ -287,17 +266,14 @@ fn token_balances_connection_output(
             }
         };
 
-        edges.push(Value::Object(ValueMapping::from([
-            (Name::new("node"), balance_value),
-            (Name::new("cursor"), Value::String(cursor)),
-        ])));
+        edges.push(ConnectionEdge { node: balance_value, cursor });
     }
 
-    Ok(ValueMapping::from([
-        (Name::new("totalCount"), Value::from(total_count)),
-        (Name::new("edges"), Value::List(edges)),
-        (Name::new("pageInfo"), PageInfoObject::value(page_info)),
-    ]))
+    Ok(FieldValue::owned_any(Connection {
+        total_count,
+        edges,
+        page_info: PageInfoObject::value(page_info),
+    }))
 }
 
 // TODO: This would be required when subscriptions are needed
