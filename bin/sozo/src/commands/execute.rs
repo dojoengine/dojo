@@ -25,7 +25,7 @@ pub struct ExecuteArgs {
         help = "The calls to be executed. Each call should include the address or tag, entrypoint, and calldata."
     )]
 
-    pub calls: Vec<String>,
+    pub calls: Vec<CallArgs>,
 
     #[command(flatten)]
     pub starknet: StarknetOptions,
@@ -40,6 +40,7 @@ pub struct ExecuteArgs {
     pub transaction: TransactionOptions,
 }
 
+#[derive(Debug, Args)]
 pub struct CallArgs {
     #[arg(
         help = "The address or the tag (ex: dojo_examples:actions) of the contract to be executed."
