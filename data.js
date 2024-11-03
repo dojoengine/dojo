@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1730595618052,
+  "lastUpdate": 1730608069931,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -30133,6 +30133,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8537994,
             "range": "± 163146",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2c97d566ed87739fc9a116b9e6c1c5b20e73133f",
+          "message": "fix(lang): change the upgrade contract salt to allow multicall (#2617)\n\n* fix(lang): ensure multicall can upgrade same contract in multiple namespaces\r\n\r\n* fix(sozo): correct the number of registered resources and upgrade world message\r\n\r\n* fix(sozo-ops): displays correct ui messgae on world upgrade\r\n\r\n* fix(sozo-ops): fix typo world deploy ui message\r\n\r\n* fix(tests): udpate policies and fix spawn and move migration",
+          "timestamp": "2024-11-02T22:11:49-06:00",
+          "tree_id": "b74febc52e879fec7ce8421f9ab5644edf218d57",
+          "url": "https://github.com/dojoengine/dojo/commit/2c97d566ed87739fc9a116b9e6c1c5b20e73133f"
+        },
+        "date": 1730608068876,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 9300273476,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
