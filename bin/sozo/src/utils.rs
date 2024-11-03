@@ -40,7 +40,8 @@ pub fn get_world_address(
                     "The world address computed from the seed is different from the address \
                      provided in config:\n\ndeterministic address: {:#x}\nconfig address: \
                      {:#x}\n\nThe address in the config file is preferred, consider commenting it \
-                     out if you attempt to migrate the world with a new seed.",
+                     out from the config file if you attempt to migrate the world with a new \
+                     seed.\n\nIf you are upgrading the world, you can ignore this message.",
                     deterministic_world_address, wa
                 )
                 .yellow()

@@ -36,8 +36,8 @@ Inside `bin` and `crates` you will find source code related to Dojo stack compon
 - `katana`: The Starknet sequencer tailored for gaming.
 - `sozo`: The contract manager and Dojo compiler.
 - `torii`: The indexer that store the state of your World.
-- `dojo-core`: The core contract of Dojo written in Cairo.
-- `dojo-lang`: The Dojo plugin for the Cairo compiler.
+- `dojo/core`: The core contract of Dojo written in Cairo.
+- `dojo/lang`: The Dojo plugin for the Cairo compiler.
 
 It is important to note that `bin` should only contain applications that gathers user inputs and delegates the work to the libraries present into the crates.
 
@@ -50,6 +50,37 @@ When you're ready to start coding, create a new branch on your cloned repo. It's
 Please use meaningful names for your branches. For example, if you're working on a bug with the ECS, you might name your branch `fix-ecs-bug`.
 
 As you're making changes, make sure you follow the coding conventions used throughout the Dojo project. Consistent code style makes it easier for others to read and understand your code.
+
+## Testing the changes
+
+To speed the test suite and avoid migrating dojo projects again, `katana` databases are compressed and stored in the repo.
+
+If you don't have any change in the `dojo/core` crate or any cairo example, you only have to extract the databases:
+
+```bash
+bash scripts/extract_test_db.sh
+```
+
+To test your changes, if you have modified the `dojo/core` crate or any cairo example, you will need to regenerate the databases:
+
+```bash
+# Prints the policies to then be copied into the `sozo/tests/test_data/policies.json` test file to ensure entrypoints and addresses are up to date.
+POLICIES_FIX=1 cargo nextest run --all-features --build-jobs 20 --workspace --nocapture policies
+
+# Ensures the test databases are up to date.
+bash scripts/rebuild_test_artifacts.sh
+```
+
+Then you can run the tests:
+
+```bash
+# If you don't have any change in Katana:
+cargo nextest run --all-features --build-jobs 20 --workspace
+
+# If you have changes in Katana, you must use local Katana to test.
+cargo build -r --bin katana
+KATANA_RUNNER_BIN=./target/release/katana cargo nextest run --all-features --build-jobs 20 --workspace
+```
 
 ## Submitting a Pull Request
 
