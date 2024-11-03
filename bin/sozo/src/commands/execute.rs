@@ -19,6 +19,27 @@ use crate::utils;
 #[derive(Debug, Args)]
 #[command(about = "Execute a system with the given calldata.")]
 pub struct ExecuteArgs {
+
+    #[arg(
+        help = "The calls to be executed. Each call should include the address or tag, entrypoint, and calldata."
+    )]
+
+    pub calls: Vec<String>,
+
+    #[command(flatten)]
+    pub starknet: StarknetOptions,
+
+    #[command(flatten)]
+    pub account: AccountOptions,
+
+    #[command(flatten)]
+    pub world: WorldOptions,
+
+    #[command(flatten)]
+    pub transaction: TransactionOptions,
+}
+
+pub struct CallArgs {
     #[arg(
         help = "The address or the tag (ex: dojo_examples:actions) of the contract to be executed."
     )]
@@ -75,67 +96,55 @@ impl ExecuteArgs {
         let txn_config: TxnConfig = self.transaction.try_into()?;
 
         config.tokio_handle().block_on(async {
-            let (contract_address, contracts) = match &descriptor {
-                ResourceDescriptor::Address(address) => (Some(*address), Default::default()),
-                ResourceDescriptor::Tag(tag) => {
-                    let contracts = utils::contracts_from_manifest_or_diff(
-                        self.account.clone(),
-                        self.starknet.clone(),
-                        self.world,
-                        &ws,
-                        self.diff,
-                    )
-                    .await?;
+            // We could save the world diff computation extracting the account directly from the
+            // options.
+            let (world_diff, account, _) = utils::get_world_diff_and_account(
+                self.account,
+                self.starknet.clone(),
+                self.world,
+                &ws,
+                &mut None,
+            )
+            .await?;
 
-                    (contracts.get(tag).map(|c| c.address), contracts)
+            for call_args in self.calls {
+                let descriptor = call_args.tag_or_address.ensure_namespace(&profile_config.namespace.default);
+
+                let contract_address = match &descriptor {
+                    ResourceDescriptor::Address(address) => Some(*address),
+                    ResourceDescriptor::Tag(tag) => {
+                        let selector = naming::compute_selector_from_tag(tag);
+                        world_diff.get_contract_address(selector)
+                    }
+                    ResourceDescriptor::Name(_) => {
+                        unimplemented!("Expected to be a resolved tag with default namespace.")
+                    }
                 }
-                ResourceDescriptor::Name(_) => {
-                    unimplemented!("Expected to be a resolved tag with default namespace.")
-                }
-            };
+                .ok_or_else(|| anyhow!("Contract {descriptor} not found in the world diff."))?;
 
-            let contract_address = contract_address.ok_or_else(|| {
-                let mut message = format!("Contract {descriptor} not found in the manifest.");
-                if self.diff {
-                    message.push_str(
-                        " Run the command again with `--diff` to force the fetch of data from the \
-                         chain.",
-                    );
-                }
-                anyhow!(message)
-            })?;
+                trace!(
+                    contract=?descriptor,
+                    entrypoint=call_args.entrypoint,
+                    calldata=?call_args.calldata,
+                    "Executing Execute command."
+                );
 
-            trace!(
-                contract=?descriptor,
-                entrypoint=self.entrypoint,
-                calldata=?self.calldata,
-                "Executing Execute command."
-            );
+                let calldata = if let Some(cd) = call_args.calldata {
+                    calldata_decoder::decode_calldata(&cd)?
+                } else {
+                    vec![]
+                };
+                let call = Call {
+                    calldata,
+                    to: contract_address,
+                    selector: snutils::get_selector_from_name(&call_args.entrypoint)?,
+                };
 
-            let calldata = if let Some(cd) = self.calldata {
-                calldata_decoder::decode_calldata(&cd)?
-            } else {
-                vec![]
-            };
+                let invoker = Invoker::new(&account, txn_config);
+                let tx_result = invoker.invoke(call).await?;
 
-            let call = Call {
-                calldata,
-                to: contract_address,
-                selector: snutils::get_selector_from_name(&self.entrypoint)?,
-            };
-
-            let (provider, _) = self.starknet.provider(profile_config.env.as_ref())?;
-
-            let account = self
-                .account
-                .account(provider, profile_config.env.as_ref(), &self.starknet, &contracts)
-                .await?;
-
-            let invoker = Invoker::new(&account, txn_config);
-            // TODO: add walnut back, perhaps at the invoker level.
-            let tx_result = invoker.invoke(call).await?;
-
-            println!("{}", tx_result);
+                println!("{}", tx_result);
+            }
             Ok(())
         })
     }
