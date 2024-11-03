@@ -85,8 +85,7 @@ where
         &self,
         ui: &mut MigrationUi,
     ) -> Result<MigrationResult, MigrationError<A::SignError>> {
-        ui.update_text("Deploying world...");
-        let world_has_changed = self.ensure_world().await?;
+        let world_has_changed = self.ensure_world(ui).await?;
 
         let resources_have_changed =
             if !self.diff.is_synced() { self.sync_resources(ui).await? } else { false };
@@ -626,10 +625,14 @@ where
     /// Ensures the world is declared and deployed if necessary.
     ///
     /// Returns true if the world has to be deployed/updated, false otherwise.
-    async fn ensure_world(&self) -> Result<bool, MigrationError<A::SignError>> {
+    async fn ensure_world(
+        &self,
+        ui: &mut MigrationUi,
+    ) -> Result<bool, MigrationError<A::SignError>> {
         match &self.diff.world_info.status {
             WorldStatus::Synced => return Ok(false),
             WorldStatus::NotDeployed => {
+                ui.update_text("Deploying world for the first time...");
                 trace!("Deploying the first world.");
 
                 Declarer::declare(
@@ -653,6 +656,7 @@ where
             }
             WorldStatus::NewVersion => {
                 trace!("Upgrading the world.");
+                ui.update_text("Upgrading the world...");
 
                 Declarer::declare(
                     self.diff.world_info.casm_class_hash,
