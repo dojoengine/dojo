@@ -36,7 +36,10 @@ pub const MODEL_ORDER_FIELD_TYPE_NAME: &str = "World__ModelOrderField";
 pub const TOKEN_BALANCE_TYPE_NAME: &str = "Token__Balance";
 pub const TOKEN_TRANSFER_TYPE_NAME: &str = "Token__Transfer";
 pub const TOKEN_TYPE_NAME: &str = "ERC__Token";
-pub const ERC721_METADATA_TYPE_NAME: &str = "ERC721__Metadata";
+// pub const ERC721_METADATA_TYPE_NAME: &str = "ERC721__Metadata";
+
+pub const ERC20_TYPE_NAME: &str = "ERC20__Token";
+pub const ERC721_TYPE_NAME: &str = "ERC721__Token";
 
 // objects' single and plural names
 pub const ENTITY_NAMES: (&str, &str) = ("entity", "entities");
@@ -48,11 +51,14 @@ pub const CONTENT_NAMES: (&str, &str) = ("content", "contents");
 pub const METADATA_NAMES: (&str, &str) = ("metadata", "metadatas");
 pub const TRANSACTION_NAMES: (&str, &str) = ("transaction", "transactions");
 pub const PAGE_INFO_NAMES: (&str, &str) = ("pageInfo", "");
-pub const TOKEN_NAME: (&str, &str) = ("token", "tokens");
+
+pub const ERC20_TOKEN_NAME: (&str, &str) = ("erc20Token", "");
+pub const ERC721_TOKEN_NAME: (&str, &str) = ("erc721Token", "");
+
 pub const TOKEN_BALANCE_NAME: (&str, &str) = ("", "tokenBalances");
 pub const TOKEN_TRANSFER_NAME: (&str, &str) = ("", "tokenTransfers");
 
-pub const ERC721_METADATA_NAME: (&str, &str) = ("erc721Metadata", "");
+// pub const ERC721_METADATA_NAME: (&str, &str) = ("erc721Metadata", "");
 
 // misc
 pub const ORDER_DIR_TYPE_NAME: &str = "OrderDirection";
