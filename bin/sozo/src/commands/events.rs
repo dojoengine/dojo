@@ -24,6 +24,7 @@ pub struct EventsArgs {
 
     #[arg(short, long)]
     #[arg(help = "Number of events to return per page")]
+    #[arg(default_value_t = 100)]
     pub chunk_size: u64,
 
     #[arg(long)]
@@ -43,45 +44,30 @@ pub struct EventsArgs {
 
 impl EventsArgs {
     pub fn run(self, config: &Config) -> Result<()> {
-        let env_metadata = utils::load_metadata_from_config(config)?;
-        trace!(?env_metadata, "Metadata loaded from config.");
-
-        let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
-        trace!(ws_members_count = ws.members().count(), "Read workspace.");
-
-        let project_dir = ws.manifest_path().parent().unwrap().to_path_buf();
-        trace!(?project_dir, "Project directory defined from workspace.");
-
-        let provider = self.starknet.provider(env_metadata.as_ref())?;
-        trace!(?provider, "Starknet RPC client provider.");
-
-        let world_address = self.world.address(env_metadata.as_ref())?;
-        let event_filter = events::get_event_filter(
-            self.from_block,
-            self.to_block,
-            self.events,
-            Some(world_address),
-        );
-        trace!(
-            from_block = self.from_block,
-            to_block = self.to_block,
-            chunk_size = self.chunk_size,
-            "Created event filter."
-        );
-        let profile_name =
-            ws.current_profile().expect("Scarb profile expected at this point.").to_string();
-        trace!(profile_name, "Current profile.");
-
         config.tokio_handle().block_on(async {
+            let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
+
+            let (world_diff, provider, _) = utils::get_world_diff_and_provider(
+                self.starknet,
+                self.world,
+                &ws,
+            )
+            .await?;
+
+            let event_filter = events::get_event_filter(
+                self.from_block,
+                self.to_block,
+                self.events,
+                Some(world_diff.world_info.address),
+            );
+
             trace!("Starting async event parsing.");
             events::parse(
+                &world_diff,
+                &provider,
                 self.chunk_size,
-                provider,
                 self.continuation_token,
                 event_filter,
-                self.json,
-                &project_dir,
-                &profile_name,
             )
             .await
         })

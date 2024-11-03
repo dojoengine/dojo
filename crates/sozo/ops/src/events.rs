@@ -1,21 +1,17 @@
 use std::collections::{HashMap, VecDeque};
-use std::fs;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Result};
 use cainome::cairo_serde::{ByteArray, CairoSerde};
 use cainome::parser::tokens::{CompositeInner, CompositeInnerKind, CoreBasic, Token};
 use cainome::parser::AbiParser;
-use camino::Utf8PathBuf;
-use dojo_world::contracts::naming::get_filename_from_tag;
-use dojo_world::manifest::{
-    AbiFormat, DeploymentManifest, ManifestMethods, BASE_CONTRACT_TAG, DEPLOYMENT_DIR,
-    MANIFESTS_DIR, TARGET_DIR, WORLD_CONTRACT_TAG,
-};
+use dojo_world::diff::WorldDiff;
+use starknet::core::types::contract::AbiEntry;
 use starknet::core::types::{BlockId, EventFilter, Felt};
 use starknet::core::utils::{parse_cairo_short_string, starknet_keccak};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
 
+/// Returns an event filter for the world with the given parameters.
 pub fn get_event_filter(
     from_block: Option<u64>,
     to_block: Option<u64>,
@@ -32,41 +28,19 @@ pub fn get_event_filter(
     EventFilter { from_block, to_block, address: world_address, keys }
 }
 
+/// Parses and prints events of the world.
 pub async fn parse(
+    world_diff: &WorldDiff,
+    provider: &JsonRpcClient<HttpTransport>,
     chunk_size: u64,
-    provider: JsonRpcClient<HttpTransport>,
     continuation_token: Option<String>,
     event_filter: EventFilter,
-    json: bool,
-    project_dir: &Utf8PathBuf,
-    profile_name: &str,
 ) -> Result<()> {
-    let events_map = if !json {
-        let manifest_dir = project_dir.join(MANIFESTS_DIR).join(profile_name);
-        let target_dir = project_dir.join(TARGET_DIR).join(profile_name);
-        let deployed_manifest =
-            manifest_dir.join(DEPLOYMENT_DIR).join("manifest").with_extension("toml");
-
-        if !deployed_manifest.exists() {
-            return Err(anyhow!("Run scarb migrate before running this command"));
-        }
-
-        Some(extract_events(
-            &DeploymentManifest::load_from_path(&deployed_manifest)?,
-            project_dir,
-            &target_dir,
-        )?)
-    } else {
-        None
-    };
-
+    let events_map = extract_events(world_diff)?;
     let res = provider.get_events(event_filter, continuation_token, chunk_size).await?;
 
-    if let Some(events_map) = events_map {
-        parse_and_print_events(res, events_map)?;
-    } else {
-        println!("{}", serde_json::to_string_pretty(&res).unwrap());
-    }
+    parse_and_print_events(res, events_map)?;
+
     Ok(())
 }
 
@@ -77,20 +51,9 @@ fn is_event(token: &Token) -> bool {
     }
 }
 
-fn extract_events(
-    manifest: &DeploymentManifest,
-    project_dir: &Utf8PathBuf,
-    target_dir: &Utf8PathBuf,
-) -> Result<HashMap<String, Vec<Token>>> {
-    fn process_abi(
-        events: &mut HashMap<String, Vec<Token>>,
-        full_abi_path: &Utf8PathBuf,
-    ) -> Result<()> {
-        let abi_str = fs::read_to_string(full_abi_path)
-            .with_context(|| format!("Failed to read ABI file at path: {}", full_abi_path))?;
-
-        // TODO: add support for events emitted by world once its present in ABI
-        match AbiParser::tokens_from_abi_string(&abi_str, &HashMap::new()) {
+fn extract_events(world_diff: &WorldDiff) -> Result<HashMap<String, Vec<Token>>> {
+    fn process_abi(events: &mut HashMap<String, Vec<Token>>, abi: &Vec<AbiEntry>) -> Result<()> {
+        match AbiParser::collect_tokens(abi, &HashMap::new()) {
             Ok(tokens) => {
                 for token in tokens.structs {
                     if is_event(&token) {
@@ -108,29 +71,11 @@ fn extract_events(
 
     let mut events_map = HashMap::new();
 
-    for contract in &manifest.contracts {
-        if let Some(AbiFormat::Path(abi_path)) = contract.inner.abi() {
-            let full_abi_path = project_dir.join(abi_path);
-            process_abi(&mut events_map, &full_abi_path)?;
-        }
+    process_abi(&mut events_map, &world_diff.world_info.class.abi)?;
+
+    for r in world_diff.resources.values() {
+        process_abi(&mut events_map, &r.abi())?;
     }
-
-    for model in &manifest.models {
-        if let Some(AbiFormat::Path(abi_path)) = model.inner.abi() {
-            let full_abi_path = project_dir.join(abi_path);
-            process_abi(&mut events_map, &full_abi_path)?;
-        }
-    }
-
-    // Read the world and base ABI from scarb artifacts as the
-    // manifest does not include them (at least base is not included).
-    let world_abi_path =
-        target_dir.join(format!("{}.json", get_filename_from_tag(WORLD_CONTRACT_TAG)));
-    process_abi(&mut events_map, &world_abi_path)?;
-
-    let base_abi_path =
-        target_dir.join(format!("{}.json", get_filename_from_tag(BASE_CONTRACT_TAG)));
-    process_abi(&mut events_map, &base_abi_path)?;
 
     Ok(events_map)
 }
@@ -269,26 +214,26 @@ fn process_inners(
 #[cfg(test)]
 mod tests {
     use cainome::parser::tokens::{Array, Composite, CompositeInner, CompositeType};
-    use camino::Utf8Path;
-    use dojo_world::manifest::WORLD_QUALIFIED_PATH;
+    use dojo_test_utils::compiler::CompilerTestSetup;
+    use scarb::compiler::Profile;
+    use sozo_scarbext::WorkspaceExt;
     use starknet::core::types::EmittedEvent;
 
     use super::*;
 
+    const WORLD_QUALIFIED_PATH: &str = "dojo::world::world_contract::world";
+
     #[test]
     fn extract_events_work_as_expected() {
-        let profile_name = "dev";
-        let project_dir = Utf8Path::new("../../../examples/spawn-and-move").to_path_buf();
-        let manifest_dir = project_dir.join(MANIFESTS_DIR).join(profile_name);
-        println!("manifest_dir {:?}", manifest_dir);
-        let target_dir = project_dir.join(TARGET_DIR).join(profile_name);
-        println!("target dir {:?}", target_dir);
-        let manifest = DeploymentManifest::load_from_path(
-            &manifest_dir.join(DEPLOYMENT_DIR).join("manifest").with_extension("toml"),
-        )
-        .unwrap();
+        let setup = CompilerTestSetup::from_examples("../../dojo/core", "../../../examples/");
+        let config = setup.build_test_config("spawn-and-move", Profile::DEV);
 
-        let result = extract_events(&manifest, &project_dir, &target_dir).unwrap();
+        let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
+
+        let world_local = ws.load_world_local().unwrap();
+        let world_diff = WorldDiff::from_local(world_local).unwrap();
+
+        let result = extract_events(&world_diff).unwrap();
 
         // we are just collecting all events from manifest file so just verifying count should work
         assert_eq!(result.len(), 20);

@@ -2,6 +2,7 @@ use core::fmt;
 
 use anyhow::Result;
 use clap::Subcommand;
+use events::EventsArgs;
 use scarb::core::{Config, Package, Workspace};
 use tracing::info_span;
 
@@ -16,6 +17,7 @@ pub(crate) mod inspect;
 pub(crate) mod migrate;
 pub(crate) mod options;
 pub(crate) mod test;
+pub(crate) mod events;
 
 use build::BuildArgs;
 use call::CallArgs;
@@ -48,6 +50,8 @@ pub enum Commands {
     Hash(Box<HashArgs>),
     #[command(about = "Initialize a new dojo project")]
     Init(Box<InitArgs>),
+    #[command(about = "Inspect events emitted by the world")]
+    Events(Box<EventsArgs>),
 }
 
 impl fmt::Display for Commands {
@@ -62,6 +66,7 @@ impl fmt::Display for Commands {
             Commands::Test(_) => write!(f, "Test"),
             Commands::Hash(_) => write!(f, "Hash"),
             Commands::Init(_) => write!(f, "Init"),
+            Commands::Events(_) => write!(f, "Event"),
         }
     }
 }
@@ -84,6 +89,7 @@ pub fn run(command: Commands, config: &Config) -> Result<()> {
         Commands::Test(args) => args.run(config),
         Commands::Hash(args) => args.run().map(|_| ()),
         Commands::Init(args) => args.run(config),
+        Commands::Events(args) => args.run(config),
     }
 }
 

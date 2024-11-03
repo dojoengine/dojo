@@ -1,5 +1,5 @@
 use dojo_types::naming;
-use starknet::core::types::contract::SierraClass;
+use starknet::core::types::contract::{AbiEntry, SierraClass};
 use starknet::core::types::Felt;
 
 use crate::{DojoSelector, ResourceType};
@@ -97,6 +97,16 @@ impl ResourceLocal {
             ResourceLocal::Model(m) => m.common.class_hash,
             ResourceLocal::Event(e) => e.common.class_hash,
             _ => Felt::ZERO,
+        }
+    }
+
+    /// Returns the ABI of the resource.
+    pub fn abi(&self) -> Vec<AbiEntry> {
+        match self {
+            ResourceLocal::Contract(c) => c.common.class.abi.clone(),
+            ResourceLocal::Model(m) => m.common.class.abi.clone(),
+            ResourceLocal::Event(e) => e.common.class.abi.clone(),
+            _ => Vec::new(),
         }
     }
 
