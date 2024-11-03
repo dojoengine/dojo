@@ -20,6 +20,27 @@ use crate::utils;
 #[derive(Debug, Args)]
 #[command(about = "Execute a system with the given calldata.")]
 pub struct ExecuteArgs {
+
+    #[arg(
+        help = "The calls to be executed. Each call should include the address or tag, entrypoint, and calldata."
+    )]
+
+    pub calls: Vec<String>,
+
+    #[command(flatten)]
+    pub starknet: StarknetOptions,
+
+    #[command(flatten)]
+    pub account: AccountOptions,
+
+    #[command(flatten)]
+    pub world: WorldOptions,
+
+    #[command(flatten)]
+    pub transaction: TransactionOptions,
+}
+
+pub struct CallArgs {
     #[arg(
         help = "The address or the tag (ex: dojo_examples:actions) of the contract to be executed."
     )]
@@ -38,18 +59,6 @@ pub struct ExecuteArgs {
                   - int: A signed integer.
                   - no prefix: A cairo felt or any type that fit into one felt.")]
     pub calldata: Option<String>,
-
-    #[command(flatten)]
-    pub starknet: StarknetOptions,
-
-    #[command(flatten)]
-    pub account: AccountOptions,
-
-    #[command(flatten)]
-    pub world: WorldOptions,
-
-    #[command(flatten)]
-    pub transaction: TransactionOptions,
 }
 
 impl ExecuteArgs {
@@ -82,42 +91,44 @@ impl ExecuteArgs {
             )
             .await?;
 
-            let contract_address = match &descriptor {
-                ResourceDescriptor::Address(address) => Some(*address),
-                ResourceDescriptor::Tag(tag) => {
-                    let selector = naming::compute_selector_from_tag(tag);
-                    world_diff.get_contract_address(selector)
+            for call_args in self.calls {
+                let descriptor = call_args.tag_or_address.ensure_namespace(&profile_config.namespace.default);
+
+                let contract_address = match &descriptor {
+                    ResourceDescriptor::Address(address) => Some(*address),
+                    ResourceDescriptor::Tag(tag) => {
+                        let selector = naming::compute_selector_from_tag(tag);
+                        world_diff.get_contract_address(selector)
+                    }
+                    ResourceDescriptor::Name(_) => {
+                        unimplemented!("Expected to be a resolved tag with default namespace.")
+                    }
                 }
-                ResourceDescriptor::Name(_) => {
-                    unimplemented!("Expected to be a resolved tag with default namespace.")
-                }
+                .ok_or_else(|| anyhow!("Contract {descriptor} not found in the world diff."))?;
+
+                trace!(
+                    contract=?descriptor,
+                    entrypoint=call_args.entrypoint,
+                    calldata=?call_args.calldata,
+                    "Executing Execute command."
+                );
+
+                let calldata = if let Some(cd) = call_args.calldata {
+                    calldata_decoder::decode_calldata(&cd)?
+                } else {
+                    vec![]
+                };
+                let call = Call {
+                    calldata,
+                    to: contract_address,
+                    selector: snutils::get_selector_from_name(&call_args.entrypoint)?,
+                };
+
+                let invoker = Invoker::new(&account, txn_config);
+                let tx_result = invoker.invoke(call).await?;
+
+                println!("{}", tx_result);
             }
-            .ok_or_else(|| anyhow!("Contract {descriptor} not found in the world diff."))?;
-
-            trace!(
-                contract=?descriptor,
-                entrypoint=self.entrypoint,
-                calldata=?self.calldata,
-                "Executing Execute command."
-            );
-
-            let calldata = if let Some(cd) = self.calldata {
-                calldata_decoder::decode_calldata(&cd)?
-            } else {
-                vec![]
-            };
-
-            let call = Call {
-                calldata,
-                to: contract_address,
-                selector: snutils::get_selector_from_name(&self.entrypoint)?,
-            };
-
-            let invoker = Invoker::new(&account, txn_config);
-            // TODO: add walnut back, perhaps at the invoker level.
-            let tx_result = invoker.invoke(call).await?;
-
-            println!("{}", tx_result);
             Ok(())
         })
     }
