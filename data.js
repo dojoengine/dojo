@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1730610634262,
+  "lastUpdate": 1730610763269,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -30259,6 +30259,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8451725,
             "range": "± 298570",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "32af19e96f60d5af18d7825454f7f8ddc2ec892d",
+          "message": "feat(sozo): add model command back (#2618)",
+          "timestamp": "2024-11-02T22:51:05-06:00",
+          "tree_id": "a14e88e29848909b784f096e938fdb8a491f923b",
+          "url": "https://github.com/dojoengine/dojo/commit/32af19e96f60d5af18d7825454f7f8ddc2ec892d"
+        },
+        "date": 1730610761611,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 9433005088,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
