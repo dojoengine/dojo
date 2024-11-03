@@ -694,9 +694,18 @@ pub mod world {
         fn upgrade_contract(
             ref self: ContractState, namespace: ByteArray, class_hash: ClassHash
         ) -> ClassHash {
-            let (new_contract_address, _) = deploy_syscall(
-                class_hash, starknet::get_tx_info().unbox().transaction_hash, [].span(), false
-            )
+            // Only contracts use an external salt during registration. To ensure the
+            // upgrade can also be done into a multicall, we combine the transaction hash
+            // and the namespace hash since we can't have the same class hash registered more than
+            // once in the same namespace.
+            let salt = core::poseidon::poseidon_hash_span(
+                [
+                    starknet::get_tx_info().unbox().transaction_hash,
+                    dojo::utils::bytearray_hash(@namespace),
+                ].span()
+            );
+
+            let (new_contract_address, _) = deploy_syscall(class_hash, salt, [].span(), false)
                 .unwrap_syscall();
 
             let namespace_hash = bytearray_hash(@namespace);

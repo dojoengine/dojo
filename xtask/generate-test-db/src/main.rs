@@ -36,15 +36,29 @@ async fn migrate_spawn_and_move(db_path: &Path) -> Result<Manifest> {
     let profile_config = ws.load_profile_config()?;
 
     let world_local = ws.load_world_local()?;
-    let world_address = if let Some(env) = &profile_config.env {
-        env.world_address().map_or_else(
-            || world_local.deterministic_world_address(),
-            |wa| Ok(Felt::from_str(wa).unwrap()),
-        )
+
+    // In the case of testing, if the addresses are different it means that the example hasn't been
+    // migrated correctly.
+    let deterministic_world_address = world_local.deterministic_world_address().unwrap();
+    let config_world_address = if let Some(env) = &profile_config.env {
+        env.world_address()
+            .map_or_else(
+                || world_local.deterministic_world_address(),
+                |wa| Ok(Felt::from_str(wa).unwrap()),
+            )
+            .unwrap()
     } else {
-        world_local.deterministic_world_address()
+        deterministic_world_address
+    };
+
+    if deterministic_world_address != config_world_address {
+        panic!(
+            "The deterministic world address is different from the config world address. Please \
+             review the `dojo_dev.toml` file of spawn-and-move example."
+        );
     }
-    .unwrap();
+
+    let world_address = deterministic_world_address;
 
     let world_diff =
         WorldDiff::new_from_chain(world_address, world_local, &runner.provider()).await?;
@@ -82,6 +96,7 @@ async fn migrate_types_test(db_path: &Path) -> Result<Manifest> {
 
     let profile_config = ws.load_profile_config()?;
 
+    // No world address in config, so it should always pick the deterministic one.
     let world_local = ws.load_world_local()?;
     let world_address = if let Some(env) = &profile_config.env {
         env.world_address().map_or_else(
