@@ -14,6 +14,7 @@ pub(crate) mod hash;
 pub(crate) mod init;
 pub(crate) mod inspect;
 pub(crate) mod migrate;
+pub(crate) mod model;
 pub(crate) mod options;
 pub(crate) mod test;
 
@@ -25,6 +26,7 @@ use hash::HashArgs;
 use init::InitArgs;
 use inspect::InspectArgs;
 use migrate::MigrateArgs;
+use model::ModelArgs;
 use test::TestArgs;
 
 #[derive(Debug, Subcommand)]
@@ -48,6 +50,8 @@ pub enum Commands {
     Hash(Box<HashArgs>),
     #[command(about = "Initialize a new dojo project")]
     Init(Box<InitArgs>),
+    #[command(about = "Inspect a model")]
+    Model(Box<ModelArgs>),
 }
 
 impl fmt::Display for Commands {
@@ -62,6 +66,7 @@ impl fmt::Display for Commands {
             Commands::Test(_) => write!(f, "Test"),
             Commands::Hash(_) => write!(f, "Hash"),
             Commands::Init(_) => write!(f, "Init"),
+            Commands::Model(_) => write!(f, "Model"),
         }
     }
 }
@@ -84,6 +89,7 @@ pub fn run(command: Commands, config: &Config) -> Result<()> {
         Commands::Test(args) => args.run(config),
         Commands::Hash(args) => args.run().map(|_| ()),
         Commands::Init(args) => args.run(config),
+        Commands::Model(args) => args.run(config),
     }
 }
 

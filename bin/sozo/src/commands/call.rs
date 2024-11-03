@@ -1,17 +1,14 @@
-use std::str::FromStr;
-
 use anyhow::{anyhow, Result};
 use clap::Args;
 use dojo_types::naming;
-use dojo_world::contracts::naming::ensure_namespace;
 use scarb::core::Config;
+use sozo_ops::resource_descriptor::ResourceDescriptor;
 use sozo_scarbext::WorkspaceExt;
-use starknet::core::types::{BlockId, BlockTag, Felt, FunctionCall, StarknetError};
+use starknet::core::types::{BlockId, BlockTag, FunctionCall, StarknetError};
 use starknet::core::utils as snutils;
 use starknet::providers::{Provider, ProviderError};
 use tracing::trace;
 
-use super::execute::ContractDescriptor;
 use super::options::starknet::StarknetOptions;
 use super::options::world::WorldOptions;
 use crate::commands::calldata_decoder;
@@ -21,7 +18,7 @@ use crate::utils;
 #[command(about = "Call a system with the given calldata.")]
 pub struct CallArgs {
     #[arg(help = "The tag or address of the contract to call.")]
-    pub tag_or_address: String,
+    pub tag_or_address: ResourceDescriptor,
 
     #[arg(help = "The name of the entrypoint to call.")]
     pub entrypoint: String,
@@ -57,14 +54,7 @@ impl CallArgs {
 
         let profile_config = ws.load_profile_config()?;
 
-        let descriptor = if utils::is_address(&self.tag_or_address) {
-            ContractDescriptor::Address(Felt::from_str(&self.tag_or_address)?)
-        } else {
-            ContractDescriptor::Tag(ensure_namespace(
-                &self.tag_or_address,
-                &profile_config.namespace.default,
-            ))
-        };
+        let descriptor = self.tag_or_address.ensure_namespace(&profile_config.namespace.default);
 
         config.tokio_handle().block_on(async {
             let (world_diff, provider, _) =
@@ -77,10 +67,13 @@ impl CallArgs {
             };
 
             let contract_address = match &descriptor {
-                ContractDescriptor::Address(address) => Some(*address),
-                ContractDescriptor::Tag(tag) => {
+                ResourceDescriptor::Address(address) => Some(*address),
+                ResourceDescriptor::Tag(tag) => {
                     let selector = naming::compute_selector_from_tag(tag);
                     world_diff.get_contract_address(selector)
+                }
+                ResourceDescriptor::Name(_) => {
+                    unimplemented!("Expected to be a resolved tag with default namespace.")
                 }
             }
             .ok_or_else(|| anyhow!("Contract {descriptor} not found in the world diff."))?;
