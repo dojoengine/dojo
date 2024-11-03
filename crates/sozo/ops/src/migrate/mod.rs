@@ -320,21 +320,33 @@ where
                 ResourceType::Contract => {
                     let (contract_calls, contract_classes) =
                         self.contracts_calls_classes(resource).await?;
+
+                    if !contract_calls.is_empty() {
+                        n_resources += 1;
+                    }
+
                     invoker.extend_calls(contract_calls);
                     classes.extend(contract_classes);
-                    n_resources += 1;
                 }
                 ResourceType::Model => {
                     let (model_calls, model_classes) = self.models_calls_classes(resource).await?;
+
+                    if !model_calls.is_empty() {
+                        n_resources += 1;
+                    }
+
                     invoker.extend_calls(model_calls);
                     classes.extend(model_classes);
-                    n_resources += 1;
                 }
                 ResourceType::Event => {
                     let (event_calls, event_classes) = self.events_calls_classes(resource).await?;
+
+                    if !event_calls.is_empty() {
+                        n_resources += 1;
+                    }
+
                     invoker.extend_calls(event_calls);
                     classes.extend(event_classes);
-                    n_resources += 1;
                 }
                 _ => continue,
             }
