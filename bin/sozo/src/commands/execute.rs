@@ -1,15 +1,12 @@
-use std::fmt;
-use std::str::FromStr;
-
 use anyhow::{anyhow, Result};
 use clap::Args;
 use dojo_types::naming;
 use dojo_utils::{Invoker, TxnConfig};
-use dojo_world::contracts::naming::ensure_namespace;
 use scarb::core::Config;
+use sozo_ops::resource_descriptor::ResourceDescriptor;
 use sozo_scarbext::WorkspaceExt;
 use sozo_walnut::WalnutDebugger;
-use starknet::core::types::{Call, Felt};
+use starknet::core::types::Call;
 use starknet::core::utils as snutils;
 use tracing::trace;
 
@@ -26,7 +23,7 @@ pub struct ExecuteArgs {
     #[arg(
         help = "The address or the tag (ex: dojo_examples:actions) of the contract to be executed."
     )]
-    pub tag_or_address: String,
+    pub tag_or_address: ResourceDescriptor,
 
     #[arg(help = "The name of the entrypoint to be executed.")]
     pub entrypoint: String,
@@ -63,14 +60,7 @@ impl ExecuteArgs {
 
         let profile_config = ws.load_profile_config()?;
 
-        let descriptor = if utils::is_address(&self.tag_or_address) {
-            ContractDescriptor::Address(Felt::from_str(&self.tag_or_address)?)
-        } else {
-            ContractDescriptor::Tag(ensure_namespace(
-                &self.tag_or_address,
-                &profile_config.namespace.default,
-            ))
-        };
+        let descriptor = self.tag_or_address.ensure_namespace(&profile_config.namespace.default);
 
         #[cfg(feature = "walnut")]
         let _walnut_debugger = WalnutDebugger::new_from_flag(
@@ -93,10 +83,13 @@ impl ExecuteArgs {
             .await?;
 
             let contract_address = match &descriptor {
-                ContractDescriptor::Address(address) => Some(*address),
-                ContractDescriptor::Tag(tag) => {
+                ResourceDescriptor::Address(address) => Some(*address),
+                ResourceDescriptor::Tag(tag) => {
                     let selector = naming::compute_selector_from_tag(tag);
                     world_diff.get_contract_address(selector)
+                }
+                ResourceDescriptor::Name(_) => {
+                    unimplemented!("Expected to be a resolved tag with default namespace.")
                 }
             }
             .ok_or_else(|| anyhow!("Contract {descriptor} not found in the world diff."))?;
@@ -127,20 +120,5 @@ impl ExecuteArgs {
             println!("{}", tx_result);
             Ok(())
         })
-    }
-}
-
-#[derive(Debug)]
-pub enum ContractDescriptor {
-    Address(Felt),
-    Tag(String),
-}
-
-impl fmt::Display for ContractDescriptor {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ContractDescriptor::Address(address) => write!(f, "{:#066x}", address),
-            ContractDescriptor::Tag(tag) => write!(f, "{}", tag),
-        }
     }
 }
