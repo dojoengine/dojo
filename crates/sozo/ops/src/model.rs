@@ -1,13 +1,11 @@
 use anyhow::Result;
 use cainome::cairo_serde::{ByteArray, CairoSerde};
-use dojo_types::schema::Ty;
-use dojo_world::contracts::abi::model::Layout;
+use dojo_types::primitive::Primitive;
+use dojo_types::schema::{Enum, Member, Struct, Ty};
+use dojo_world::contracts::abigen::model::{FieldLayout, Layout};
 use dojo_world::contracts::model::ModelReader;
-use dojo_world::contracts::naming;
 use dojo_world::contracts::world::WorldContractReader;
-use dojo_world::metadata::get_default_namespace_from_ws;
 use num_traits::ToPrimitive;
-use scarb::core::Config;
 use starknet::core::types::{BlockId, BlockTag, Felt};
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
@@ -161,15 +159,10 @@ fn format_field(selector: String, name: String, layout: String) -> String {
     format!("{INDENT}{:<20}{:<18}{}", format_selector(selector), format_name(name), layout)
 }
 
-fn format_field_layout(
-    layout: &dojo_world::contracts::model::abigen::model::Layout,
-    schema: &dojo_types::schema::Ty,
-) -> String {
+fn format_field_layout(layout: &Layout, schema: &Ty) -> String {
     match layout {
-        dojo_world::contracts::model::abigen::model::Layout::Fixed(x) => format_fixed(x),
-        dojo_world::contracts::model::abigen::model::Layout::ByteArray => {
-            "layout(ByteArray)".to_string()
-        }
+        Layout::Fixed(x) => format_fixed(x),
+        Layout::ByteArray => "layout(ByteArray)".to_string(),
         _ => format_layout_ref(&get_name_from_schema(schema)),
     }
 }
@@ -178,42 +171,42 @@ fn is_layout_in_list(list: &[LayoutInfo], name: &String) -> bool {
     list.iter().any(|x| x.name.eq(name))
 }
 
-fn get_name_from_schema(schema: &dojo_types::schema::Ty) -> String {
+fn get_name_from_schema(schema: &Ty) -> String {
     match schema {
-        dojo_types::schema::Ty::Struct(s) => s.name.clone(),
-        dojo_types::schema::Ty::Enum(e) => e.name.clone(),
-        dojo_types::schema::Ty::Primitive(p) => match p {
-            dojo_types::primitive::Primitive::I8(_) => "i8".to_string(),
-            dojo_types::primitive::Primitive::I16(_) => "i16".to_string(),
-            dojo_types::primitive::Primitive::I32(_) => "i32".to_string(),
-            dojo_types::primitive::Primitive::I64(_) => "i64".to_string(),
-            dojo_types::primitive::Primitive::I128(_) => "i128".to_string(),
-            dojo_types::primitive::Primitive::U8(_) => "u8".to_string(),
-            dojo_types::primitive::Primitive::U16(_) => "u16".to_string(),
-            dojo_types::primitive::Primitive::U32(_) => "u32".to_string(),
-            dojo_types::primitive::Primitive::U64(_) => "u64".to_string(),
-            dojo_types::primitive::Primitive::U128(_) => "u128".to_string(),
-            dojo_types::primitive::Primitive::U256(_) => "u256".to_string(),
-            dojo_types::primitive::Primitive::USize(_) => "usize".to_string(),
-            dojo_types::primitive::Primitive::Bool(_) => "bool".to_string(),
-            dojo_types::primitive::Primitive::Felt252(_) => "felt252".to_string(),
-            dojo_types::primitive::Primitive::ClassHash(_) => "ClassHash".to_string(),
-            dojo_types::primitive::Primitive::ContractAddress(_) => "ContractAddress".to_string(),
+        Ty::Struct(s) => s.name.clone(),
+        Ty::Enum(e) => e.name.clone(),
+        Ty::Primitive(p) => match p {
+            Primitive::I8(_) => "i8".to_string(),
+            Primitive::I16(_) => "i16".to_string(),
+            Primitive::I32(_) => "i32".to_string(),
+            Primitive::I64(_) => "i64".to_string(),
+            Primitive::I128(_) => "i128".to_string(),
+            Primitive::U8(_) => "u8".to_string(),
+            Primitive::U16(_) => "u16".to_string(),
+            Primitive::U32(_) => "u32".to_string(),
+            Primitive::U64(_) => "u64".to_string(),
+            Primitive::U128(_) => "u128".to_string(),
+            Primitive::U256(_) => "u256".to_string(),
+            Primitive::USize(_) => "usize".to_string(),
+            Primitive::Bool(_) => "bool".to_string(),
+            Primitive::Felt252(_) => "felt252".to_string(),
+            Primitive::ClassHash(_) => "ClassHash".to_string(),
+            Primitive::ContractAddress(_) => "ContractAddress".to_string(),
         },
-        dojo_types::schema::Ty::Tuple(t) => {
+        Ty::Tuple(t) => {
             format!("({})", t.iter().map(get_name_from_schema).collect::<Vec<_>>().join(", "))
         }
-        dojo_types::schema::Ty::Array(a) => format!("Array<{}>", get_name_from_schema(&a[0])),
+        Ty::Array(a) => format!("Array<{}>", get_name_from_schema(&a[0])),
         _ => "".to_string(),
     }
 }
 
 fn get_printable_layout_list_from_struct(
-    field_layouts: &[dojo_world::contracts::model::abigen::model::FieldLayout],
-    schema: &dojo_types::schema::Ty,
+    field_layouts: &[FieldLayout],
+    schema: &Ty,
     layout_list: &mut Vec<LayoutInfo>,
 ) {
-    if let dojo_types::schema::Ty::Struct(ss) = schema {
+    if let Ty::Struct(ss) = schema {
         let name = get_name_from_schema(schema);
 
         // process main struct
@@ -243,11 +236,11 @@ fn get_printable_layout_list_from_struct(
 }
 
 fn get_printable_layout_list_from_enum(
-    field_layouts: &[dojo_world::contracts::model::abigen::model::FieldLayout],
-    schema: &dojo_types::schema::Ty,
+    field_layouts: &[FieldLayout],
+    schema: &Ty,
     layout_list: &mut Vec<LayoutInfo>,
 ) {
-    if let dojo_types::schema::Ty::Enum(se) = schema {
+    if let Ty::Enum(se) = schema {
         let name = get_name_from_schema(schema);
 
         // proces main enum
@@ -275,11 +268,11 @@ fn get_printable_layout_list_from_enum(
 }
 
 fn get_printable_layout_list_from_tuple(
-    item_layouts: &[dojo_world::contracts::model::abigen::model::Layout],
-    schema: &dojo_types::schema::Ty,
+    item_layouts: &[Layout],
+    schema: &Ty,
     layout_list: &mut Vec<LayoutInfo>,
 ) {
-    if let dojo_types::schema::Ty::Tuple(st) = schema {
+    if let Ty::Tuple(st) = schema {
         let name = get_name_from_schema(schema);
 
         // process tuple
@@ -308,11 +301,11 @@ fn get_printable_layout_list_from_tuple(
 }
 
 fn get_printable_layout_list_from_array(
-    item_layout: &dojo_world::contracts::model::abigen::model::Layout,
-    schema: &dojo_types::schema::Ty,
+    item_layout: &Layout,
+    schema: &Ty,
     layout_list: &mut Vec<LayoutInfo>,
 ) {
-    if let dojo_types::schema::Ty::Array(sa) = schema {
+    if let Ty::Array(sa) = schema {
         let name = get_name_from_schema(schema);
 
         // process array
@@ -333,22 +326,18 @@ fn get_printable_layout_list_from_array(
     }
 }
 
-fn get_printable_layout_list(
-    root_layout: &dojo_world::contracts::model::abigen::model::Layout,
-    schema: &dojo_types::schema::Ty,
-    layout_list: &mut Vec<LayoutInfo>,
-) {
+fn get_printable_layout_list(root_layout: &Layout, schema: &Ty, layout_list: &mut Vec<LayoutInfo>) {
     match root_layout {
-        dojo_world::contracts::model::abigen::model::Layout::Struct(ls) => {
+        Layout::Struct(ls) => {
             get_printable_layout_list_from_struct(ls, schema, layout_list);
         }
-        dojo_world::contracts::model::abigen::model::Layout::Enum(le) => {
+        Layout::Enum(le) => {
             get_printable_layout_list_from_enum(le, schema, layout_list);
         }
-        dojo_world::contracts::model::abigen::model::Layout::Tuple(lt) => {
+        Layout::Tuple(lt) => {
             get_printable_layout_list_from_tuple(lt, schema, layout_list);
         }
-        dojo_world::contracts::model::abigen::model::Layout::Array(la) => {
+        Layout::Array(la) => {
             get_printable_layout_list_from_array(&la[0], schema, layout_list);
         }
         _ => {}
@@ -388,12 +377,8 @@ fn print_layout_info(layout_info: LayoutInfo) {
 }
 
 // print the full Layout tree
-fn deep_print_layout(
-    name: &String,
-    layout: &dojo_world::contracts::model::abigen::model::Layout,
-    schema: &dojo_types::schema::Ty,
-) {
-    if let dojo_world::contracts::model::abigen::model::Layout::Fixed(lf) = layout {
+fn deep_print_layout(name: &String, layout: &Layout, schema: &Ty) {
+    if let Layout::Fixed(lf) = layout {
         println!("\n{} (packed)", name);
         println!("    selector : {:#x}", get_selector_from_name(name).unwrap());
         println!("    layout   : {}", format_fixed(lf));
@@ -414,7 +399,7 @@ fn _start_indent(level: usize, start_indent: bool) -> String {
 }
 
 fn format_primitive(
-    p: &dojo_types::primitive::Primitive,
+    p: &Primitive,
     values: &mut Vec<Felt>,
     level: usize,
     start_indent: bool,
@@ -432,21 +417,12 @@ fn format_byte_array(values: &mut Vec<Felt>, level: usize, start_indent: bool) -
     format!("{}{}", _start_indent(level, start_indent), ByteArray::to_string(&bytearray).unwrap())
 }
 
-fn format_field_value(
-    member: &dojo_types::schema::Member,
-    values: &mut Vec<Felt>,
-    level: usize,
-) -> String {
+fn format_field_value(member: &Member, values: &mut Vec<Felt>, level: usize) -> String {
     let field_repr = format_record_value(&member.ty, values, level, false);
     format!("{}{:<16}: {field_repr}", INDENT.repeat(level), member.name)
 }
 
-fn format_array(
-    item: &dojo_types::schema::Ty,
-    values: &mut Vec<Felt>,
-    level: usize,
-    start_indent: bool,
-) -> String {
+fn format_array(item: &Ty, values: &mut Vec<Felt>, level: usize, start_indent: bool) -> String {
     let length: u32 = values.remove(0).to_u32().unwrap();
     let mut items = vec![];
 
@@ -462,12 +438,7 @@ fn format_array(
     )
 }
 
-fn format_tuple(
-    items: &[dojo_types::schema::Ty],
-    values: &mut Vec<Felt>,
-    level: usize,
-    start_indent: bool,
-) -> String {
+fn format_tuple(items: &[Ty], values: &mut Vec<Felt>, level: usize, start_indent: bool) -> String {
     if items.is_empty() {
         return "".to_string();
     }
@@ -482,7 +453,7 @@ fn format_tuple(
 }
 
 fn format_struct(
-    schema: &dojo_types::schema::Struct,
+    schema: &Struct,
     values: &mut Vec<Felt>,
     level: usize,
     start_indent: bool,
@@ -501,12 +472,7 @@ fn format_struct(
     )
 }
 
-fn format_enum(
-    schema: &dojo_types::schema::Enum,
-    values: &mut Vec<Felt>,
-    level: usize,
-    start_indent: bool,
-) -> String {
+fn format_enum(schema: &Enum, values: &mut Vec<Felt>, level: usize, start_indent: bool) -> String {
     let variant_index: u8 = values.remove(0).to_u8().unwrap();
     let variant_index: usize = variant_index.into();
     let variant_name = format!("{}::{}", schema.name, schema.options[variant_index].name);
@@ -526,23 +492,23 @@ fn format_enum(
 }
 
 fn format_record_value(
-    schema: &dojo_types::schema::Ty,
+    schema: &Ty,
     values: &mut Vec<Felt>,
     level: usize,
     start_indent: bool,
 ) -> String {
     match schema {
-        dojo_types::schema::Ty::Primitive(p) => format_primitive(p, values, level, start_indent),
-        dojo_types::schema::Ty::ByteArray(_) => format_byte_array(values, level, start_indent),
-        dojo_types::schema::Ty::Struct(s) => format_struct(s, values, level, start_indent),
-        dojo_types::schema::Ty::Enum(e) => format_enum(e, values, level, start_indent),
-        dojo_types::schema::Ty::Array(a) => format_array(&a[0], values, level, start_indent),
-        dojo_types::schema::Ty::Tuple(t) => format_tuple(t, values, level, start_indent),
+        Ty::Primitive(p) => format_primitive(p, values, level, start_indent),
+        Ty::ByteArray(_) => format_byte_array(values, level, start_indent),
+        Ty::Struct(s) => format_struct(s, values, level, start_indent),
+        Ty::Enum(e) => format_enum(e, values, level, start_indent),
+        Ty::Array(a) => format_array(&a[0], values, level, start_indent),
+        Ty::Tuple(t) => format_tuple(t, values, level, start_indent),
     }
 }
 
 // print the structured record values
-fn deep_print_record(schema: &dojo_types::schema::Ty, keys: &[Felt], values: &[Felt]) {
+fn deep_print_record(schema: &Ty, keys: &[Felt], values: &[Felt]) {
     let mut model_values = vec![];
     model_values.extend(keys);
     model_values.extend(values);
@@ -665,21 +631,5 @@ pub fn deep_print_ty(root: &Ty) {
 
     for ty in ty_list {
         print_ty(&ty);
-    }
-}
-
-/// Checks if the tag is a valid tag, if not, return the default namespace.
-///
-/// This allows sozo model commands to be run even without a Scarb.toml file in the current
-/// directory if a valid tag is provided.
-/// TODO: This may be removed in the future once SDKs are updated to use the new bindgen.
-pub fn check_tag_or_read_default_namespace(tag_or_name: &str, config: &Config) -> Result<String> {
-    if naming::is_valid_tag(tag_or_name) {
-        Ok(tag_or_name.to_string())
-    } else {
-        let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
-        let default_namespace = get_default_namespace_from_ws(&ws)?;
-        let tag = naming::ensure_namespace(tag_or_name, &default_namespace);
-        Ok(tag)
     }
 }
