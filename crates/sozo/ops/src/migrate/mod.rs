@@ -19,10 +19,10 @@
 //!    initialization of contracts can mutate resources.
 
 use std::collections::HashMap;
-use std::str::FromStr;
 
 use cainome::cairo_serde::{ByteArray, ClassHash, ContractAddress};
 use dojo_utils::{Declarer, Deployer, Invoker, TxnConfig};
+use dojo_world::config::calldata_decoder::decode_calldata;
 use dojo_world::config::ProfileConfig;
 use dojo_world::contracts::WorldContract;
 use dojo_world::diff::{Manifest, ResourceDiff, WorldDiff, WorldStatus};
@@ -168,11 +168,8 @@ where
                     // The injection of class hash and addresses is no longer supported since the
                     // world contains an internal DNS.
                     let args = if let Some(args) = init_call_args {
-                        let mut parsed_args = vec![];
-                        for arg in args {
-                            parsed_args.push(Felt::from_str(arg)?);
-                        }
-                        parsed_args
+                        decode_calldata(&args.join(","))
+                            .map_err(|_| MigrationError::InitCallArgs)?
                     } else {
                         vec![]
                     };

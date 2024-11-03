@@ -11,7 +11,7 @@ use tracing::trace;
 
 use super::options::starknet::StarknetOptions;
 use super::options::world::WorldOptions;
-use crate::commands::calldata_decoder;
+use dojo_world::config::calldata_decoder;
 use crate::utils;
 
 #[derive(Debug, Args)]
