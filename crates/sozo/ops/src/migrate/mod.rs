@@ -632,7 +632,7 @@ where
         match &self.diff.world_info.status {
             WorldStatus::Synced => return Ok(false),
             WorldStatus::NotDeployed => {
-                ui.update_text("Deploying world for the first time...");
+                ui.update_text("Deploying the world...");
                 trace!("Deploying the first world.");
 
                 Declarer::declare(
