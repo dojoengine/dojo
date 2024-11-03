@@ -284,6 +284,8 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                                 Err(e) => {
                                     error!(target: LOG_TARGET, error = %e, "Processing fetched data.");
                                     erroring_out = true;
+                                    // incase of error rollback the transaction
+                                    self.db.rollback().await?;
                                     sleep(backoff_delay).await;
                                     if backoff_delay < max_backoff_delay {
                                         backoff_delay *= 2;

@@ -116,6 +116,8 @@ pub enum QueryType {
     // similar to execute but doesn't create a new transaction
     Flush,
     Execute,
+    // rollback's the current transaction and starts a new one
+    Rollback,
     Other,
 }
 
@@ -203,6 +205,19 @@ impl QueryMessage {
                 statement: "".to_string(),
                 arguments: vec![],
                 query_type: QueryType::Flush,
+                tx: Some(tx),
+            },
+            rx,
+        )
+    }
+
+    pub fn rollback_recv() -> (Self, oneshot::Receiver<Result<()>>) {
+        let (tx, rx) = oneshot::channel();
+        (
+            Self {
+                statement: "".to_string(),
+                arguments: vec![],
+                query_type: QueryType::Rollback,
                 tx: Some(tx),
             },
             rx,
@@ -733,6 +748,20 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 // defer executing these queries since they depend on TokenRegister queries
                 self.deferred_query_messages.push(query_message);
             }
+            QueryType::Rollback => {
+                debug!(target: LOG_TARGET, "Rolling back the transaction.");
+                // rollback's the current transaction and starts a new one
+                let res = self.rollback().await;
+                debug!(target: LOG_TARGET, "Rolled back the transaction.");
+
+                if let Some(sender) = query_message.tx {
+                    sender
+                        .send(res)
+                        .map_err(|_| anyhow::anyhow!("Failed to send rollback result"))?;
+                } else {
+                    res?;
+                }
+            }
             QueryType::Other => {
                 query.execute(&mut **tx).await.with_context(|| {
                     format!(
@@ -783,6 +812,16 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
             })?;
         }
 
+        Ok(())
+    }
+
+    async fn rollback(&mut self) -> Result<()> {
+        let transaction = mem::replace(&mut self.transaction, self.pool.begin().await?);
+        transaction.rollback().await?;
+
+        // NOTE: clear doesn't reset the capacity
+        self.publish_queue.clear();
+        self.deferred_query_messages.clear();
         Ok(())
     }
 }
