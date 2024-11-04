@@ -2,6 +2,7 @@ use core::fmt;
 
 use anyhow::Result;
 use clap::Subcommand;
+use events::EventsArgs;
 use scarb::core::{Config, Package, Workspace};
 use tracing::info_span;
 
@@ -9,6 +10,7 @@ pub(crate) mod build;
 pub(crate) mod call;
 pub(crate) mod calldata_decoder;
 pub(crate) mod clean;
+pub(crate) mod events;
 pub(crate) mod execute;
 pub(crate) mod hash;
 pub(crate) mod init;
@@ -52,6 +54,8 @@ pub enum Commands {
     Init(Box<InitArgs>),
     #[command(about = "Inspect a model")]
     Model(Box<ModelArgs>),
+    #[command(about = "Inspect events emitted by the world")]
+    Events(Box<EventsArgs>),
 }
 
 impl fmt::Display for Commands {
@@ -67,6 +71,7 @@ impl fmt::Display for Commands {
             Commands::Hash(_) => write!(f, "Hash"),
             Commands::Init(_) => write!(f, "Init"),
             Commands::Model(_) => write!(f, "Model"),
+            Commands::Events(_) => write!(f, "Events"),
         }
     }
 }
@@ -90,6 +95,7 @@ pub fn run(command: Commands, config: &Config) -> Result<()> {
         Commands::Hash(args) => args.run().map(|_| ()),
         Commands::Init(args) => args.run(config),
         Commands::Model(args) => args.run(config),
+        Commands::Events(args) => args.run(config),
     }
 }
 

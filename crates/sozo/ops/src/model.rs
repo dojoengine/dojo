@@ -44,12 +44,17 @@ where
     Ok(model.contract_address())
 }
 
-pub async fn model_layout<P>(tag: String, world_address: Felt, provider: P) -> Result<Layout>
+pub async fn model_layout<P>(
+    tag: String,
+    world_address: Felt,
+    provider: P,
+    block_id: BlockId,
+) -> Result<Layout>
 where
     P: Provider + Send + Sync,
 {
     let mut world_reader = WorldContractReader::new(world_address, &provider);
-    world_reader.set_block(BlockId::Tag(BlockTag::Pending));
+    world_reader.set_block(block_id);
 
     let model = world_reader.model_reader_with_tag(&tag).await?;
     let layout = match model.layout().await {
@@ -70,13 +75,14 @@ pub async fn model_schema<P>(
     tag: String,
     world_address: Felt,
     provider: P,
+    block_id: BlockId,
     to_json: bool,
 ) -> Result<Ty>
 where
     P: Provider + Send + Sync,
 {
     let mut world_reader = WorldContractReader::new(world_address, &provider);
-    world_reader.set_block(BlockId::Tag(BlockTag::Pending));
+    world_reader.set_block(block_id);
 
     let model = world_reader.model_reader_with_tag(&tag).await?;
     let schema = model.schema().await?;
@@ -95,7 +101,8 @@ pub async fn model_get<P>(
     keys: Vec<Felt>,
     world_address: Felt,
     provider: P,
-) -> Result<(Ty, Vec<Felt>)>
+    block_id: BlockId,
+) -> Result<(String, Ty, Vec<Felt>)>
 where
     P: Provider + Send + Sync,
 {
@@ -104,15 +111,13 @@ where
     }
 
     let mut world_reader = WorldContractReader::new(world_address, &provider);
-    world_reader.set_block(BlockId::Tag(BlockTag::Pending));
+    world_reader.set_block(block_id);
 
     let model = world_reader.model_reader_with_tag(&tag).await?;
     let schema = model.schema().await?;
     let values = model.entity_storage(&keys).await?;
 
-    deep_print_record(&schema, &keys, &values);
-
-    Ok((schema, values))
+    Ok((format_deep_record(&schema, &keys, &values), schema, values))
 }
 
 #[derive(Clone, Debug)]
@@ -508,12 +513,12 @@ fn format_record_value(
 }
 
 // print the structured record values
-fn deep_print_record(schema: &Ty, keys: &[Felt], values: &[Felt]) {
+fn format_deep_record(schema: &Ty, keys: &[Felt], values: &[Felt]) -> String {
     let mut model_values = vec![];
     model_values.extend(keys);
     model_values.extend(values);
 
-    println!("{}", format_record_value(schema, &mut model_values, 0, true));
+    format_record_value(schema, &mut model_values, 0, true)
 }
 
 fn get_ty_repr(ty: &Ty) -> String {

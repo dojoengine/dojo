@@ -4,7 +4,7 @@ use scarb::core::Config;
 use sozo_ops::model;
 use sozo_ops::resource_descriptor::ResourceDescriptor;
 use sozo_scarbext::WorkspaceExt;
-use starknet::core::types::Felt;
+use starknet::core::types::{BlockId, BlockTag, Felt};
 use tracing::trace;
 
 use super::options::starknet::StarknetOptions;
@@ -72,6 +72,12 @@ hashes, called 'hash' in the following documentation.
 
         #[command(flatten)]
         starknet: StarknetOptions,
+
+        #[arg(short, long)]
+        #[arg(
+            help = "Block number at which to retrieve the model layout (pending block by default)"
+        )]
+        block: Option<u64>,
     },
 
     #[command(about = "Retrieve the schema for a model")]
@@ -88,6 +94,12 @@ hashes, called 'hash' in the following documentation.
         #[arg(short = 'j', long = "json")]
         #[arg(help_heading = "Display options")]
         to_json: bool,
+
+        #[arg(short, long)]
+        #[arg(
+            help = "Block number at which to retrieve the model schema (pending block by default)"
+        )]
+        block: Option<u64>,
     },
 
     #[command(about = "Get a models value for the provided key")]
@@ -105,6 +117,10 @@ hashes, called 'hash' in the following documentation.
 
         #[command(flatten)]
         starknet: StarknetOptions,
+
+        #[arg(short, long)]
+        #[arg(help = "Block number at which to retrieve the model data (pending block by default)")]
+        block: Option<u64>,
     },
 }
 
@@ -146,18 +162,27 @@ impl ModelArgs {
                     .await?;
                     Ok(())
                 }
-                ModelCommand::Layout { tag_or_name, starknet, world } => {
+                ModelCommand::Layout { tag_or_name, starknet, world, block } => {
                     let tag = tag_or_name.ensure_namespace(&default_ns);
+                    let block_id =
+                        block.map(BlockId::Number).unwrap_or(BlockId::Tag(BlockTag::Pending));
 
                     let (world_diff, provider, _) =
                         utils::get_world_diff_and_provider(starknet, world, &ws).await?;
 
-                    model::model_layout(tag.to_string(), world_diff.world_info.address, &provider)
-                        .await?;
+                    model::model_layout(
+                        tag.to_string(),
+                        world_diff.world_info.address,
+                        &provider,
+                        block_id,
+                    )
+                    .await?;
                     Ok(())
                 }
-                ModelCommand::Schema { tag_or_name, to_json, starknet, world } => {
+                ModelCommand::Schema { tag_or_name, to_json, starknet, world, block } => {
                     let tag = tag_or_name.ensure_namespace(&default_ns);
+                    let block_id =
+                        block.map(BlockId::Number).unwrap_or(BlockId::Tag(BlockTag::Pending));
 
                     let (world_diff, provider, _) =
                         utils::get_world_diff_and_provider(starknet, world, &ws).await?;
@@ -166,24 +191,31 @@ impl ModelArgs {
                         tag.to_string(),
                         world_diff.world_info.address,
                         &provider,
+                        block_id,
                         to_json,
                     )
                     .await?;
                     Ok(())
                 }
-                ModelCommand::Get { tag_or_name, keys, starknet, world } => {
+                ModelCommand::Get { tag_or_name, keys, block, starknet, world } => {
                     let tag = tag_or_name.ensure_namespace(&default_ns);
+                    let block_id =
+                        block.map(BlockId::Number).unwrap_or(BlockId::Tag(BlockTag::Pending));
 
                     let (world_diff, provider, _) =
                         utils::get_world_diff_and_provider(starknet, world, &ws).await?;
 
-                    model::model_get(
+                    let (record, _, _) = model::model_get(
                         tag.to_string(),
                         keys,
                         world_diff.world_info.address,
                         &provider,
+                        block_id,
                     )
                     .await?;
+
+                    println!("{}", record);
+
                     Ok(())
                 }
             }
