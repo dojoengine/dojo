@@ -24,7 +24,7 @@ pub struct ExecuteArgs {
         help = "The calls to be executed. Each call should include the address or tag, entrypoint, and calldata."
     )]
 
-    pub calls: Vec<CallArgs>,
+    pub calls: Vec<String>,
 
     #[command(flatten)]
     pub starknet: StarknetOptions,
@@ -39,43 +39,42 @@ pub struct ExecuteArgs {
     pub transaction: TransactionOptions,
 }
 
-#[derive(Debug, Args)]
-pub struct CallArgs {
-    #[arg(
-        help = "The address or the tag (ex: dojo_examples:actions) of the contract to be executed."
-    )]
-    pub tag_or_address: ResourceDescriptor,
+// #[derive(Debug, Args)]
+// pub struct CallArgs {
+//     #[arg(
+//         help = "The address or the tag (ex: dojo_examples:actions) of the contract to be executed."
+//     )]
+//     pub tag_or_address: ResourceDescriptor,
 
-    #[arg(help = "The name of the entrypoint to be executed.")]
-    pub entrypoint: String,
+//     #[arg(help = "The name of the entrypoint to be executed.")]
+//     pub entrypoint: String,
 
-    #[arg(short, long)]
-    #[arg(help = "The calldata to be passed to the system. Comma separated values e.g., \
-                  0x12345,128,u256:9999999999. Sozo supports some prefixes that you can use to \
-                  automatically parse some types. The supported prefixes are:
-                  - u256: A 256-bit unsigned integer.
-                  - sstr: A cairo short string.
-                  - str: A cairo string (ByteArray).
-                  - int: A signed integer.
-                  - no prefix: A cairo felt or any type that fit into one felt.")]
-    pub calldata: Option<String>,
+//     #[arg(short, long)]
+//     #[arg(help = "The calldata to be passed to the system. Comma separated values e.g., \
+//                   0x12345,128,u256:9999999999. Sozo supports some prefixes that you can use to \
+//                   automatically parse some types. The supported prefixes are:
+//                   - u256: A 256-bit unsigned integer.
+//                   - sstr: A cairo short string.
+//                   - str: A cairo string (ByteArray).
+//                   - int: A signed integer.
+//                   - no prefix: A cairo felt or any type that fit into one felt.")]
+//     pub calldata: Option<String>,
+// }
 
-    #[arg(long)]
-    #[arg(help = "If true, sozo will compute the diff of the world from the chain to translate \
-                  tags to addresses.")]
-    pub diff: bool,
 
-    #[command(flatten)]
-    pub starknet: StarknetOptions,
+impl CallArgs {
+    fn from_string(s: &str) -> Result<Self> {
+        let parts: Vec<&str> = s.split(',').collect();
+        if parts.len() < 2 {
+            return Err(anyhow!("Invalid call format"));
+        }
 
-    #[command(flatten)]
-    pub account: AccountOptions,
-
-    #[command(flatten)]
-    pub world: WorldOptions,
-
-    #[command(flatten)]
-    pub transaction: TransactionOptions,
+        Ok(CallArgs {
+            tag_or_address: parts[0].parse()?, 
+            entrypoint: parts[1].to_string(),
+            calldata: if parts.len() > 2 { Some(parts[2..].join(",")) } else { None },
+        })
+    }
 }
 
 impl ExecuteArgs {
@@ -108,7 +107,11 @@ impl ExecuteArgs {
             )
             .await?;
 
-            for call_args in self.calls {
+            let call_args_list: Vec<CallArgs> = self.calls.iter()
+                .map(|s| CallArgs::from_string(s))
+                .collect::<Result<Vec<_>>>()?;
+
+            for call_args in call_args_list {
                 let descriptor = call_args.tag_or_address.ensure_namespace(&profile_config.namespace.default);
 
                 let contract_address = match &descriptor {
@@ -135,6 +138,7 @@ impl ExecuteArgs {
                 } else {
                     vec![]
                 };
+
                 let call = Call {
                     calldata,
                     to: contract_address,
@@ -147,6 +151,8 @@ impl ExecuteArgs {
                 println!("{}", tx_result);
             }
             Ok(())
+
+          
         })
     }
 }
