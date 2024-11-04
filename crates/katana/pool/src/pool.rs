@@ -1,70 +1,20 @@
 use core::fmt;
-use std::collections::btree_set::IntoIter;
 use std::collections::BTreeSet;
-use std::future::Future;
-use std::pin::{pin, Pin};
 use std::sync::Arc;
-use std::task::{Context, Poll};
 
 use futures::channel::mpsc::{channel, Receiver, Sender};
-use futures::{Stream, StreamExt};
 use katana_primitives::transaction::TxHash;
 use parking_lot::RwLock;
 use tokio::sync::Notify;
 use tracing::{error, info, warn};
 
 use crate::ordering::PoolOrd;
+use crate::pending::PendingTransactions;
+use crate::subscription::PoolSubscription;
 use crate::tx::{PendingTx, PoolTransaction, TxId};
 use crate::validation::error::InvalidTransactionError;
 use crate::validation::{ValidationOutcome, Validator};
 use crate::{PoolError, PoolResult, TransactionPool};
-
-#[derive(Debug)]
-pub struct SubscriptionBox<T, O: PoolOrd> {
-    txs: Arc<RwLock<BTreeSet<PendingTx<T, O>>>>,
-    notify: Arc<Notify>,
-}
-
-impl<T, O: PoolOrd> Clone for SubscriptionBox<T, O> {
-    fn clone(&self) -> Self {
-        Self { txs: self.txs.clone(), notify: self.notify.clone() }
-    }
-}
-
-impl<T, O> SubscriptionBox<T, O>
-where
-    T: PoolTransaction,
-    O: PoolOrd<Transaction = T>,
-{
-    fn broadcast(&self, tx: PendingTx<T, O>) {
-        self.notify.notify_waiters();
-        self.txs.write().insert(tx);
-    }
-}
-
-impl<T, O> Stream for SubscriptionBox<T, O>
-where
-    T: PoolTransaction,
-    O: PoolOrd<Transaction = T>,
-{
-    type Item = PendingTx<T, O>;
-
-    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        let this = self.get_mut();
-
-        loop {
-            if let Some(tx) = this.txs.write().pop_first() {
-                return Poll::Ready(Some(tx));
-            }
-
-            if pin!(this.notify.notified()).poll(cx).is_pending() {
-                break;
-            }
-        }
-
-        Poll::Pending
-    }
-}
 
 #[derive(Debug)]
 pub struct Pool<T, V, O>
@@ -85,7 +35,7 @@ struct Inner<T, V, O: PoolOrd> {
     listeners: RwLock<Vec<Sender<TxHash>>>,
 
     /// subscribers for incoming txs
-    subscribers: RwLock<Vec<SubscriptionBox<T, O>>>,
+    subscribers: RwLock<Vec<PoolSubscription<T, O>>>,
 
     /// the tx validator
     validator: V,
@@ -153,9 +103,9 @@ where
         }
     }
 
-    fn subscribe(&self) -> SubscriptionBox<T, O> {
+    fn subscribe(&self) -> PoolSubscription<T, O> {
         let notify = Arc::new(Notify::new());
-        let subscription = SubscriptionBox { notify, txs: Default::default() };
+        let subscription = PoolSubscription { notify, txs: Default::default() };
         self.inner.subscribers.write().push(subscription.clone());
         subscription
     }
@@ -270,44 +220,6 @@ where
 {
     fn clone(&self) -> Self {
         Self { inner: Arc::clone(&self.inner) }
-    }
-}
-
-/// an iterator that yields transactions from the pool that can be included in a block, sorted by
-/// by its priority.
-#[derive(Debug)]
-pub struct PendingTransactions<T, O: PoolOrd> {
-    all: IntoIter<PendingTx<T, O>>,
-    subscription: SubscriptionBox<T, O>,
-}
-
-impl<T, O> Stream for PendingTransactions<T, O>
-where
-    T: PoolTransaction,
-    O: PoolOrd<Transaction = T>,
-{
-    type Item = PendingTx<T, O>;
-
-    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        let this = self.get_mut();
-
-        if let Some(tx) = this.all.next() {
-            Poll::Ready(Some(tx))
-        } else {
-            this.subscription.poll_next_unpin(cx)
-        }
-    }
-}
-
-impl<T, O> Iterator for PendingTransactions<T, O>
-where
-    T: PoolTransaction,
-    O: PoolOrd<Transaction = T>,
-{
-    type Item = PendingTx<T, O>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.all.next()
     }
 }
 

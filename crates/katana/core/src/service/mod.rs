@@ -10,10 +10,10 @@ use futures::channel::mpsc::Receiver;
 use futures::stream::{Fuse, Stream, StreamExt};
 use katana_executor::ExecutorFactory;
 use katana_pool::ordering::PoolOrd;
-use katana_pool::pool::PendingTransactions;
+use katana_pool::pending::PendingTransactions;
 use katana_pool::{TransactionPool, TxPool};
-use katana_primitives::Felt;
 use katana_primitives::transaction::ExecutableTxWithHash;
+use katana_primitives::Felt;
 use tracing::{error, info};
 
 use self::block_producer::BlockProducer;

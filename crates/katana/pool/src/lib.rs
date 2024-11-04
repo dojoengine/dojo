@@ -1,7 +1,9 @@
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
 
 pub mod ordering;
+pub mod pending;
 pub mod pool;
+pub mod subscription;
 pub mod tx;
 pub mod validation;
 
@@ -10,7 +12,8 @@ use std::sync::Arc;
 use futures::channel::mpsc::Receiver;
 use katana_primitives::transaction::{ExecutableTxWithHash, TxHash};
 use ordering::{FiFo, PoolOrd};
-use pool::{PendingTransactions, Pool};
+use pending::PendingTransactions;
+use pool::Pool;
 use tx::PoolTransaction;
 use validation::error::InvalidTransactionError;
 use validation::stateful::TxValidator;
