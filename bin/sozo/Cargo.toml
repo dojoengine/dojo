@@ -50,10 +50,9 @@ url.workspace = true
 reqwest = { workspace = true, features = [ "json" ], optional = true }
 
 [dev-dependencies]
-assert_fs.workspace = true
 dojo-test-utils = { workspace = true, features = [ "build-examples" ] }
 katana-runner.workspace = true
-snapbox = "0.4.6"
+serde_json.workspace = true
 
 [features]
 default = [ "controller", "walnut" ]

@@ -9795,12 +9795,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "normalize-line-endings"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "61807f77802ff30975e01f4f071c8ba10c022052f98b3294119f3e615d13e5be"
-
-[[package]]
 name = "ntapi"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -13165,28 +13159,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "snapbox"
-version = "0.4.17"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4b831b6e80fbcd2889efa75b185d24005f85981431495f995292b25836519d84"
-dependencies = [
- "anstream",
- "anstyle",
- "normalize-line-endings",
- "similar",
- "snapbox-macros",
-]
-
-[[package]]
-name = "snapbox-macros"
-version = "0.3.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "16569f53ca23a41bb6f62e0a5084aa1661f4814a67fa33696a79073e03a664af"
-dependencies = [
- "anstream",
-]
-
-[[package]]
 name = "snow"
 version = "0.9.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -13259,7 +13231,6 @@ name = "sozo"
 version = "1.0.0-rc.1"
 dependencies = [
  "anyhow",
- "assert_fs",
  "async-trait",
  "cairo-lang-compiler",
  "cairo-lang-filesystem",
@@ -13286,9 +13257,9 @@ dependencies = [
  "scarb-ui",
  "semver 1.0.23",
  "serde",
+ "serde_json",
  "slot",
  "smol_str",
- "snapbox",
  "sozo-ops",
  "sozo-scarbext",
  "sozo-walnut",
