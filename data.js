@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1730610763269,
+  "lastUpdate": 1730689692469,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -30288,6 +30288,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 9433005088,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "131cd8964bdeca822c9b5b0c5c1529533d3870c8",
+          "message": "feat(sozo): add events command back and event better (#2619)\n\nfeat(sozo): add events back",
+          "timestamp": "2024-11-03T20:52:26-06:00",
+          "tree_id": "b2eaabdc9e701cb79ad2558b71eab31d1a0a5933",
+          "url": "https://github.com/dojoengine/dojo/commit/131cd8964bdeca822c9b5b0c5c1529533d3870c8"
+        },
+        "date": 1730689691449,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 9341771270,
             "range": "± 0",
             "unit": "ns/iter"
           }
