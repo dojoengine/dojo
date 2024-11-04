@@ -1,4 +1,6 @@
-use dojo::{meta::{Layout, introspect::Ty, layout::compute_packed_size}, utils::entity_id_from_keys};
+use dojo::{
+    meta::{Layout, introspect::Struct, layout::compute_packed_size}, utils::entity_id_from_keys
+};
 
 use super::{ModelDefinition, ModelDef};
 
@@ -33,10 +35,8 @@ pub trait Model<M> {
     /// Returns the name of the model. (TODO: internalizing the name_hash could reduce poseidon
     /// costs).
     fn name() -> ByteArray;
-    /// Returns the version of the model.
-    fn version() -> u8;
     /// Returns the schema of the model.
-    fn schema() -> Ty;
+    fn schema() -> Struct;
     /// Returns the memory layout of the model.
     fn layout() -> Layout;
     /// Returns the unpacked size of the model. Only applicable for fixed size models.
@@ -84,15 +84,11 @@ pub impl ModelImpl<M, +ModelParser<M>, +ModelDefinition<M>, +Serde<M>> of Model<
         dojo::utils::selector_from_namespace_and_name(namespace_hash, @Self::name())
     }
 
-    fn version() -> u8 {
-        ModelDefinition::<M>::version()
-    }
-
     fn layout() -> Layout {
         ModelDefinition::<M>::layout()
     }
 
-    fn schema() -> Ty {
+    fn schema() -> Struct {
         ModelDefinition::<M>::schema()
     }
 
@@ -111,7 +107,6 @@ pub impl ModelImpl<M, +ModelParser<M>, +ModelDefinition<M>, +Serde<M>> of Model<
     fn definition() -> ModelDef {
         ModelDef {
             name: Self::name(),
-            version: Self::version(),
             layout: Self::layout(),
             schema: Self::schema(),
             packed_size: Self::packed_size(),

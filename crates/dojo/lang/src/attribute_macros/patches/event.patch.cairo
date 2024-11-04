@@ -19,8 +19,13 @@ pub impl $type_name$DojoEventImpl of dojo::event::Event<$type_name$> {
     }
 
     #[inline(always)]
-    fn schema() -> dojo::meta::introspect::Ty {
-        dojo::meta::introspect::Introspect::<$type_name$>::ty()
+    fn schema() -> dojo::meta::introspect::Struct {
+        if let dojo::meta::introspect::Ty::Struct(s) = dojo::meta::introspect::Introspect::<$type_name$>::ty() {
+            s
+        }
+        else {
+            panic!("Event `$type_name$`: invalid schema.")
+        }
     }
 
     #[inline(always)]
@@ -51,23 +56,13 @@ pub mod e_$type_name$ {
     struct Storage {}
 
     #[abi(embed_v0)]
-    impl $type_name$__DojoEventImpl of dojo::event::IEvent<ContractState>{
-        fn dojo_name(self: @ContractState) -> ByteArray {
-           "$type_name$"
-        }
+    impl $type_name$__DeployedEventImpl = dojo::event::component::IDeployedEventImpl<ContractState, $type_name$>;
 
-        fn definition(self: @ContractState) -> dojo::event::EventDefinition {
-            dojo::event::Event::<$type_name$>::definition()
-        }
+    #[abi(embed_v0)]
+    impl $type_name$__StoredEventImpl = dojo::event::component::IStoredEventImpl<ContractState, $type_name$>;
 
-        fn layout(self: @ContractState) -> dojo::meta::Layout {
-            dojo::event::Event::<$type_name$>::layout()
-        }
-
-        fn schema(self: @ContractState) -> dojo::meta::introspect::Ty {
-            dojo::meta::introspect::Introspect::<$type_name$>::ty()
-        }
-    }
+     #[abi(embed_v0)]
+    impl $type_name$__EventImpl = dojo::event::component::IEventImpl<ContractState, $type_name$>;
 
     #[abi(per_item)]
     #[generate_trait]
@@ -77,6 +72,13 @@ pub mod e_$type_name$ {
         #[external(v0)]
         fn ensure_abi(self: @ContractState, event: $type_name$) {
             let _event = event;
+        }
+
+        // Ensures the generated contract has a unique classhash, using
+        // a hardcoded hash computed on event and member names.
+        #[external(v0)]
+        fn ensure_unique(self: @ContractState) {
+            let _hash = $unique_hash$;
         }
     }
 }

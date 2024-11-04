@@ -21,7 +21,7 @@ pub struct E {
 }
 
 #[derive(Introspect, Drop, Serde)]
-#[dojo::event(historical: true)]
+#[dojo::event]
 pub struct EH {
     #[key]
     pub k: felt252,

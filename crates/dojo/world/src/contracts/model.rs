@@ -173,7 +173,7 @@ where
 
     async fn schema(&self) -> Result<Ty, ModelError> {
         let res = self.model_reader.schema().call().await?;
-        parse_schema(&res).map_err(ModelError::Parse)
+        parse_schema(&abigen::model::Ty::Struct(res)).map_err(ModelError::Parse)
     }
 
     // For non fixed layouts, packed and unpacked sizes are None.

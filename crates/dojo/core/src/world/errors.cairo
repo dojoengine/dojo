@@ -81,3 +81,21 @@ pub fn no_world_owner(caller: ContractAddress, target: @ByteArray) -> ByteArray 
 pub fn invalid_naming(kind: ByteArray, what: @ByteArray) -> ByteArray {
     format!("{kind} `{what}` is invalid according to Dojo naming rules: ^[a-zA-Z0-9_]+$")
 }
+
+pub fn invalid_resource_schema_upgrade(namespace: @ByteArray, name: @ByteArray) -> ByteArray {
+    format!("Invalid new schema to upgrade the resource `{}-{}`", namespace, name)
+}
+
+pub fn invalid_resource_layout_upgrade(namespace: @ByteArray, name: @ByteArray) -> ByteArray {
+    format!("Invalid new layout to upgrade the resource `{}-{}`", namespace, name)
+}
+
+pub fn invalid_resource_version_upgrade(
+    namespace: @ByteArray, name: @ByteArray, expected_version: u8
+) -> ByteArray {
+    format!("The new resource version of `{}-{}` should be {}", namespace, name, expected_version)
+}
+
+pub fn inconsistent_namespaces(old_hash: felt252, new_hash: felt252) -> ByteArray {
+    format!("Inconsistent namespaces (old: {old_hash} new: {new_hash}")
+}

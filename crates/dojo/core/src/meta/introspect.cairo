@@ -35,6 +35,31 @@ pub struct Member {
     pub ty: Ty
 }
 
+#[generate_trait]
+pub impl StructCompareImpl of StructCompareTrait {
+    fn is_an_upgrade_of(self: @Struct, old: @Struct) -> bool {
+        if self.name != old.name
+            || self.attrs != old.attrs
+            || (*self.children).len() < (*old.children).len() {
+            return false;
+        }
+
+        let mut i = 0;
+
+        loop {
+            if i >= (*old.children).len() {
+                break true;
+            }
+
+            if *old.children[i] != *self.children[i] {
+                break false;
+            }
+
+            i += 1;
+        }
+    }
+}
+
 pub trait Introspect<T> {
     fn size() -> Option<usize>;
     fn layout() -> Layout;
