@@ -8,7 +8,6 @@ use tracing::info_span;
 
 pub(crate) mod build;
 pub(crate) mod call;
-pub(crate) mod calldata_decoder;
 pub(crate) mod clean;
 pub(crate) mod events;
 pub(crate) mod execute;

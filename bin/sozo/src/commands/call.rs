@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Result};
 use clap::Args;
 use dojo_types::naming;
+use dojo_world::config::calldata_decoder;
 use scarb::core::Config;
 use sozo_ops::resource_descriptor::ResourceDescriptor;
 use sozo_scarbext::WorkspaceExt;
@@ -11,7 +12,6 @@ use tracing::trace;
 
 use super::options::starknet::StarknetOptions;
 use super::options::world::WorldOptions;
-use crate::commands::calldata_decoder;
 use crate::utils;
 
 #[derive(Debug, Args)]
