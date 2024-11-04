@@ -3,7 +3,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use futures::future;
 use katana_core::backend::Backend;
-use katana_core::service::block_producer::BlockProducer;
+use katana_core::service::block_producer::{BlockProducer, BlockProductionError};
 use katana_core::service::messaging::{MessagingConfig, MessagingService, MessagingTask};
 use katana_core::service::{BlockProductionTask, TransactionMiner};
 use katana_executor::ExecutorFactory;
@@ -52,7 +52,7 @@ impl<EF: ExecutorFactory> Sequencing<EF> {
         }
     }
 
-    fn run_block_production(&self) -> TaskHandle<()> {
+    fn run_block_production(&self) -> TaskHandle<Result<(), BlockProductionError>> {
         let pool = self.pool.clone();
         let miner = TransactionMiner::new(pool.add_listener());
         let block_producer = self.block_producer.clone();
