@@ -13,8 +13,8 @@ katana-primitives.workspace = true
 katana-provider.workspace = true
 parking_lot.workspace = true
 thiserror.workspace = true
+tokio = { workspace = true, features = [ "sync" ] }
 tracing.workspace = true
 
 [dev-dependencies]
 rand.workspace = true
-tokio.workspace = true

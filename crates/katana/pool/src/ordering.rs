@@ -145,7 +145,7 @@ mod tests {
         });
 
         // Get pending transactions
-        let pendings = pool.take_transactions().collect::<Vec<_>>();
+        let pendings = pool.pending_transactions().collect::<Vec<_>>();
 
         // Assert that the transactions are in the order they were added (first to last)
         pendings.iter().zip(txs).for_each(|(pending, tx)| {
@@ -177,7 +177,7 @@ mod tests {
         });
 
         // Get pending transactions
-        let pending = pool.take_transactions().collect::<Vec<_>>();
+        let pending = pool.pending_transactions().collect::<Vec<_>>();
         assert_eq!(pending.len(), txs.len());
 
         // Assert that the transactions are ordered by tip (highest to lowest)

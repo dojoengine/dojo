@@ -10,8 +10,8 @@ use std::sync::Arc;
 use futures::channel::mpsc::Receiver;
 use katana_primitives::transaction::{ExecutableTxWithHash, TxHash};
 use ordering::{FiFo, PoolOrd};
-use pool::Pool;
-use tx::{PendingTx, PoolTransaction};
+use pool::{PendingTransactions, Pool};
+use tx::PoolTransaction;
 use validation::error::InvalidTransactionError;
 use validation::stateful::TxValidator;
 use validation::Validator;
@@ -44,9 +44,7 @@ pub trait TransactionPool {
     /// Add a new transaction to the pool.
     fn add_transaction(&self, tx: Self::Transaction) -> PoolResult<TxHash>;
 
-    fn take_transactions(
-        &self,
-    ) -> impl Iterator<Item = PendingTx<Self::Transaction, Self::Ordering>>;
+    fn pending_transactions(&self) -> PendingTransactions<Self::Transaction, Self::Ordering>;
 
     /// Check if the pool contains a transaction with the given hash.
     fn contains(&self, hash: TxHash) -> bool;
@@ -55,6 +53,8 @@ pub trait TransactionPool {
     fn get(&self, hash: TxHash) -> Option<Arc<Self::Transaction>>;
 
     fn add_listener(&self) -> Receiver<TxHash>;
+
+    fn remove_transactions(&self, hashes: &[TxHash]);
 
     /// Get the total number of transactions in the pool.
     fn size(&self) -> usize;

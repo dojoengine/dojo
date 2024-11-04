@@ -1,11 +1,16 @@
 use core::fmt;
 use std::collections::btree_set::IntoIter;
 use std::collections::BTreeSet;
+use std::future::Future;
+use std::pin::{pin, Pin};
 use std::sync::Arc;
+use std::task::{Context, Poll};
 
 use futures::channel::mpsc::{channel, Receiver, Sender};
+use futures::{Stream, StreamExt};
 use katana_primitives::transaction::TxHash;
 use parking_lot::RwLock;
+use tokio::sync::Notify;
 use tracing::{error, info, warn};
 
 use crate::ordering::PoolOrd;
@@ -13,6 +18,53 @@ use crate::tx::{PendingTx, PoolTransaction, TxId};
 use crate::validation::error::InvalidTransactionError;
 use crate::validation::{ValidationOutcome, Validator};
 use crate::{PoolError, PoolResult, TransactionPool};
+
+#[derive(Debug)]
+pub struct SubscriptionBox<T, O: PoolOrd> {
+    txs: Arc<RwLock<BTreeSet<PendingTx<T, O>>>>,
+    notify: Arc<Notify>,
+}
+
+impl<T, O: PoolOrd> Clone for SubscriptionBox<T, O> {
+    fn clone(&self) -> Self {
+        Self { txs: self.txs.clone(), notify: self.notify.clone() }
+    }
+}
+
+impl<T, O> SubscriptionBox<T, O>
+where
+    T: PoolTransaction,
+    O: PoolOrd<Transaction = T>,
+{
+    fn broadcast(&self, tx: PendingTx<T, O>) {
+        self.notify.notify_waiters();
+        self.txs.write().insert(tx);
+    }
+}
+
+impl<T, O> Stream for SubscriptionBox<T, O>
+where
+    T: PoolTransaction,
+    O: PoolOrd<Transaction = T>,
+{
+    type Item = PendingTx<T, O>;
+
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        let this = self.get_mut();
+
+        loop {
+            if let Some(tx) = this.txs.write().pop_first() {
+                return Poll::Ready(Some(tx));
+            }
+
+            if pin!(this.notify.notified()).poll(cx).is_pending() {
+                break;
+            }
+        }
+
+        Poll::Pending
+    }
+}
 
 #[derive(Debug)]
 pub struct Pool<T, V, O>
@@ -31,6 +83,9 @@ struct Inner<T, V, O: PoolOrd> {
 
     /// listeners for incoming txs
     listeners: RwLock<Vec<Sender<TxHash>>>,
+
+    /// subscribers for incoming txs
+    subscribers: RwLock<Vec<SubscriptionBox<T, O>>>,
 
     /// the tx validator
     validator: V,
@@ -52,6 +107,7 @@ where
                 ordering,
                 validator,
                 transactions: Default::default(),
+                subscribers: Default::default(),
                 listeners: Default::default(),
             }),
         }
@@ -83,6 +139,26 @@ where
             }
         }
     }
+
+    // notify both listener and subscribers
+    fn notify(&self, tx: PendingTx<T, O>) {
+        self.notify_listener(tx.tx.hash());
+        self.notify_subscribers(tx);
+    }
+
+    fn notify_subscribers(&self, tx: PendingTx<T, O>) {
+        let subscribers = self.inner.subscribers.read();
+        for subscriber in subscribers.iter() {
+            subscriber.broadcast(tx.clone());
+        }
+    }
+
+    fn subscribe(&self) -> SubscriptionBox<T, O> {
+        let notify = Arc::new(Notify::new());
+        let subscription = SubscriptionBox { notify, txs: Default::default() };
+        self.inner.subscribers.write().push(subscription.clone());
+        subscription
+    }
 }
 
 impl<T, V, O> TransactionPool for Pool<T, V, O>
@@ -110,8 +186,8 @@ where
                         let tx = PendingTx::new(id, tx, priority);
 
                         // insert the tx in the pool
-                        self.inner.transactions.write().insert(tx);
-                        self.notify_listener(hash);
+                        self.inner.transactions.write().insert(tx.clone());
+                        self.notify(tx);
 
                         Ok(hash)
                     }
@@ -142,10 +218,11 @@ where
         }
     }
 
-    fn take_transactions(&self) -> impl Iterator<Item = PendingTx<T, O>> {
+    fn pending_transactions(&self) -> PendingTransactions<Self::Transaction, Self::Ordering> {
         // take all the transactions
         PendingTransactions {
-            all: std::mem::take(&mut *self.inner.transactions.write()).into_iter(),
+            subscription: self.subscribe(),
+            all: self.inner.transactions.read().clone().into_iter(),
         }
     }
 
@@ -170,6 +247,12 @@ where
         rx
     }
 
+    fn remove_transactions(&self, hashes: &[TxHash]) {
+        // retain only transactions that aren't included in the list
+        let mut txs = self.inner.transactions.write();
+        txs.retain(|t| !hashes.contains(&t.tx.hash()))
+    }
+
     fn size(&self) -> usize {
         self.inner.transactions.read().len()
     }
@@ -192,8 +275,28 @@ where
 
 /// an iterator that yields transactions from the pool that can be included in a block, sorted by
 /// by its priority.
-struct PendingTransactions<T, O: PoolOrd> {
+#[derive(Debug)]
+pub struct PendingTransactions<T, O: PoolOrd> {
     all: IntoIter<PendingTx<T, O>>,
+    subscription: SubscriptionBox<T, O>,
+}
+
+impl<T, O> Stream for PendingTransactions<T, O>
+where
+    T: PoolTransaction,
+    O: PoolOrd<Transaction = T>,
+{
+    type Item = PendingTx<T, O>;
+
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        let this = self.get_mut();
+
+        if let Some(tx) = this.all.next() {
+            Poll::Ready(Some(tx))
+        } else {
+            this.subscription.poll_next_unpin(cx)
+        }
+    }
 }
 
 impl<T, O> Iterator for PendingTransactions<T, O>
@@ -339,7 +442,7 @@ mod tests {
         assert!(txs.iter().all(|tx| pool.get(tx.hash()).is_some()));
 
         // noop validator should consider all txs as valid
-        let pendings = pool.take_transactions().collect::<Vec<_>>();
+        let pendings = pool.pending_transactions().collect::<Vec<_>>();
         assert_eq!(pendings.len(), txs.len());
 
         // bcs we're using fcfs, the order should be the same as the order of the txs submission
@@ -353,7 +456,7 @@ mod tests {
         }
 
         // take all transactions
-        let _ = pool.take_transactions();
+        let _ = pool.pending_transactions();
 
         // all txs should've been removed
         assert!(pool.size() == 0);
@@ -412,7 +515,7 @@ mod tests {
         });
 
         // Get pending transactions
-        let pending = pool.take_transactions().collect::<Vec<_>>();
+        let pending = pool.pending_transactions().collect::<Vec<_>>();
 
         // Check that the number of pending transactions matches the number of added transactions
         assert_eq!(pending.len(), total as usize);

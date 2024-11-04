@@ -54,7 +54,7 @@ impl<EF: ExecutorFactory> Sequencing<EF> {
 
     fn run_block_production(&self) -> TaskHandle<Result<(), BlockProductionError>> {
         let pool = self.pool.clone();
-        let miner = TransactionMiner::new(pool.add_listener());
+        let miner = TransactionMiner::new(pool.pending_transactions(), pool.add_listener());
         let block_producer = self.block_producer.clone();
 
         let service = BlockProductionTask::new(pool, miner, block_producer);
