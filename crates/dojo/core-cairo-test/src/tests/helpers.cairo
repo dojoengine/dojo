@@ -5,7 +5,7 @@ use dojo::world::{
 };
 use dojo::model::Model;
 
-use crate::world::{spawn_test_world, NamespaceDef, TestResource, ContractDefTrait};
+use crate::world::{spawn_test_world, NamespaceDef, TestResource};
 
 pub const DOJO_NSH: felt252 = 0x309e09669bc1fdc1dd6563a7ef862aa6227c97d099d08cc7b81bad58a7443fa;
 
@@ -238,7 +238,7 @@ pub fn deploy_world_and_bar() -> (IWorldDispatcher, IbarDispatcher) {
     let namespace_def = NamespaceDef {
         namespace: "dojo", resources: [
             TestResource::Model(m_Foo::TEST_CLASS_HASH.try_into().unwrap()),
-            TestResource::Contract(ContractDefTrait::new(bar::TEST_CLASS_HASH, "bar")),
+            TestResource::Model(bar::TEST_CLASS_HASH.try_into().unwrap()),
         ].span(),
     };
 
