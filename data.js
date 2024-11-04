@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1730754365804,
+  "lastUpdate": 1730754521009,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -30475,6 +30475,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10589033098,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d09cbcffd8c8f2745770888f9d3f30d07b8555ae",
+          "message": "feat(katana): exit on block production error (#2629)",
+          "timestamp": "2024-11-05T04:49:16+08:00",
+          "tree_id": "6b81ac616378170c0064abbd111055a7a0913444",
+          "url": "https://github.com/dojoengine/dojo/commit/d09cbcffd8c8f2745770888f9d3f30d07b8555ae"
+        },
+        "date": 1730754519722,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16452259,
+            "range": "± 187883",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8651577,
+            "range": "± 307351",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3503732134,
+            "range": "± 838719445",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8691451,
+            "range": "± 375425",
             "unit": "ns/iter"
           }
         ]
