@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1730743728140,
+  "lastUpdate": 1730743914233,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -30397,6 +30397,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 9831652926,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "76473430+edisontim@users.noreply.github.com",
+            "name": "tedison",
+            "username": "edisontim"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "82d3a85941e6e77734d9d22145b27acccfd7571f",
+          "message": "feat: Allow complex calldata when initializing contracts (#2625)\n\n* Permit complex calldata when initializing contracts\r\n\r\n* Address PR comments + format\r\n\r\n* fix CI + remove dead code",
+          "timestamp": "2024-11-04T11:52:09-06:00",
+          "tree_id": "32e1f5be54e2257146e638fc7672da9f96478e69",
+          "url": "https://github.com/dojoengine/dojo/commit/82d3a85941e6e77734d9d22145b27acccfd7571f"
+        },
+        "date": 1730743912957,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16340611,
+            "range": "± 227641",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8492044,
+            "range": "± 212718",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3542524311,
+            "range": "± 765469943",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8416935,
+            "range": "± 66606",
             "unit": "ns/iter"
           }
         ]
