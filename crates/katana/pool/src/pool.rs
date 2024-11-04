@@ -142,6 +142,8 @@ where
                         Ok(hash)
                     }
 
+                    // TODO: create a small cache for rejected transactions to respect the rpc spec
+                    // `getTransactionStatus`
                     ValidationOutcome::Invalid { error, .. } => {
                         warn!(hash = format!("{hash:#x}"), "Invalid transaction.");
                         Err(PoolError::InvalidTransaction(Box::new(error)))
