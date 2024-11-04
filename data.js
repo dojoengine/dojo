@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1730743914233,
+  "lastUpdate": 1730754365804,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -30445,6 +30445,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8416935,
             "range": "± 66606",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d09cbcffd8c8f2745770888f9d3f30d07b8555ae",
+          "message": "feat(katana): exit on block production error (#2629)",
+          "timestamp": "2024-11-05T04:49:16+08:00",
+          "tree_id": "6b81ac616378170c0064abbd111055a7a0913444",
+          "url": "https://github.com/dojoengine/dojo/commit/d09cbcffd8c8f2745770888f9d3f30d07b8555ae"
+        },
+        "date": 1730754364722,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10589033098,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
