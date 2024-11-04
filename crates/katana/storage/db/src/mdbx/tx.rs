@@ -118,7 +118,9 @@ impl DbTxMut for Tx<RW> {
     fn put<T: Table>(&self, key: T::Key, value: T::Value) -> Result<(), DatabaseError> {
         let key = key.encode();
         let value = value.compress();
-        self.inner.put(self.get_dbi::<T>()?, key, value, WriteFlags::UPSERT).unwrap();
+        self.inner.put(self.get_dbi::<T>()?, &key, value, WriteFlags::UPSERT).map_err(|error| {
+            DatabaseError::Write { error, table: T::NAME, key: Box::from(key.as_ref()) }
+        })?;
         Ok(())
     }
 
