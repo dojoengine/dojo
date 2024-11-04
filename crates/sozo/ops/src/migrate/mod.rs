@@ -164,7 +164,6 @@ where
                 };
 
                 if do_init {
-                    // Currently, only felts are supported in the init call data.
                     // The injection of class hash and addresses is no longer supported since the
                     // world contains an internal DNS.
                     let args = if let Some(args) = init_call_args {

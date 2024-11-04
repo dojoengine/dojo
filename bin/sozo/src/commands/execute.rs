@@ -2,6 +2,7 @@ use anyhow::{anyhow, Result};
 use clap::Args;
 use dojo_types::naming;
 use dojo_utils::{Invoker, TxnConfig};
+use dojo_world::config::calldata_decoder;
 use scarb::core::Config;
 use sozo_ops::resource_descriptor::ResourceDescriptor;
 use sozo_scarbext::WorkspaceExt;
@@ -14,7 +15,6 @@ use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
 use super::options::transaction::TransactionOptions;
 use super::options::world::WorldOptions;
-use dojo_world::config::calldata_decoder;
 use crate::utils;
 
 #[derive(Debug, Args)]
