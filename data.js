@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1730848391227,
+  "lastUpdate": 1730848646330,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -31099,6 +31099,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10572575645,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7bf9be39ef21c35c64d170efe4d75e3201f65a3c",
+          "message": "feat(katana): retain transactions in pool until mined (#2630)\n\nEvery block interval, the node would take transactions from the pool - removing it directly from the pool. this creates a small window (depending on the machine) that the transaction appears nonexistent. this is due to how the tx flows from the pool and executor. this applies for both instant and interval block production mode. \r\n\r\nFor instant mining, the window is between tx being picked up from the pool and the tx being committed to db. while for interval, tx being picked up from the pool and the tx being [inserted into the pending block](https://github.com/dojoengine/dojo/blob/d09cbcffd8c8f2745770888f9d3f30d07b8555ae/crates/katana/executor/src/implementation/blockifier/mod.rs#L208).\r\n\r\nWhen a tx is being queried thru the rpc, the node will first check if the it exist in the db, else find in the pending block (if interval mode). this pr adds a new (last) step, which is to try finding the tx in the pool if it doesn't exist anywhere else.",
+          "timestamp": "2024-11-06T06:57:15+08:00",
+          "tree_id": "77dd8139f051e9f97f4eb5d078155923d85b1777",
+          "url": "https://github.com/dojoengine/dojo/commit/7bf9be39ef21c35c64d170efe4d75e3201f65a3c"
+        },
+        "date": 1730848644503,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16773789,
+            "range": "± 217662",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8991740,
+            "range": "± 369604",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3827772478,
+            "range": "± 865079663",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8416127,
+            "range": "± 253889",
             "unit": "ns/iter"
           }
         ]
