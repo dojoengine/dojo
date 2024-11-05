@@ -67,9 +67,17 @@ pub trait Model<M> {
     fn ptr_from_id(entity_id: felt252) -> ModelPtr<M>;
     /// Returns the ptr of the model.
     fn ptr(self: @M) -> ModelPtr<M>;
+    /// Returns the pointers to the models from the keys.
+    fn ptrs_from_key<K, +Serde<K>, +Drop<K>>(keys: Span<K>) -> Span<ModelPtr<M>>;
+    /// Returns the pointers to the models from the keys.
+    fn ptrs_from_keys(keys: Span<Span<felt252>>) -> Span<ModelPtr<M>>;
+    /// Returns the pointers to the models from the entity ids.
+    fn ptrs_from_id(entity_ids: Span<felt252>) -> Span<ModelPtr<M>>;
 }
 
-pub impl ModelImpl<M, +ModelParser<M>, +ModelDefinition<M>, +Serde<M>> of Model<M> {
+pub impl ModelImpl<
+    M, +ModelParser<M>, +ModelDefinition<M>, +Serde<M>, +Drop<Array<ModelPtr<M>>>
+> of Model<M> {
     fn key<K, +KeyParser<M, K>>(self: @M) -> K {
         KeyParser::<M, K>::parse_key(self)
     }
@@ -152,26 +160,25 @@ pub impl ModelImpl<M, +ModelParser<M>, +ModelDefinition<M>, +Serde<M>> of Model<
     fn ptr(self: @M) -> ModelPtr<M> {
         ModelPtr::<M> { id: self.entity_id() }
     }
-}
-
-/// The `ModelTest` trait.
-///
-/// It provides a standardized way to interact with models for testing purposes,
-/// bypassing the permission checks.
-#[cfg(target: "test")]
-pub trait ModelTest<S, M> {
-    fn set_model_test(ref self: S, model: @M);
-    fn delete_model_test(ref self: S, model: @M);
-}
-
-/// The `ModelTestImpl` implementation for testing purposes.
-#[cfg(target: "test")]
-pub impl ModelTestImpl<S, M, +dojo::model::ModelStorageTest<S, M>, +Model<M>> of ModelTest<S, M> {
-    fn set_model_test(ref self: S, model: @M) {
-        dojo::model::ModelStorageTest::<S, M>::write_model_test(ref self, model);
+    fn ptrs_from_key<K, +Serde<K>, +Drop<K>>(keys: Span<K>) -> Span<ModelPtr<M>> {
+        let mut ptrs: Array<ModelPtr<M>> = array![];
+        for key in keys {
+            ptrs.append(ModelPtr { id: entity_id_from_key(key) })
+        };
+        ptrs.span()
     }
-
-    fn delete_model_test(ref self: S, model: @M) {
-        dojo::model::ModelStorageTest::<S, M>::erase_model_test(ref self, model);
+    fn ptrs_from_keys(keys: Span<Span<felt252>>) -> Span<ModelPtr<M>> {
+        let mut ptrs: Array<ModelPtr<M>> = array![];
+        for _keys in keys {
+            ptrs.append(ModelPtr { id: entity_id_from_keys(*_keys) })
+        };
+        ptrs.span()
+    }
+    fn ptrs_from_id(entity_ids: Span<felt252>) -> Span<ModelPtr<M>> {
+        let mut ptrs: Array<ModelPtr<M>> = array![];
+        for id in entity_ids {
+            ptrs.append(ModelPtr { id: *id })
+        };
+        ptrs.span()
     }
 }

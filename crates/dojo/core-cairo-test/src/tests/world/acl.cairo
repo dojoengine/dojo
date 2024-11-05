@@ -10,6 +10,8 @@ use crate::tests::expanded::selector_attack::{attacker_model, attacker_contract}
 fn test_owner() {
     let (world, foo_selector) = deploy_world_and_foo();
 
+    let world = world.dispatcher;
+
     let alice = starknet::contract_address_const::<0xa11ce>();
     let bob = starknet::contract_address_const::<0xb0b>();
 
@@ -34,6 +36,7 @@ fn test_owner() {
 #[should_panic(expected: ("Resource `42` is not registered", 'ENTRYPOINT_FAILED'))]
 fn test_grant_owner_not_registered_resource() {
     let world = deploy_world();
+    let world = world.dispatcher;
 
     // 42 is not a registered resource ID
     world.grant_owner(42, 69.try_into().unwrap());
@@ -43,6 +46,7 @@ fn test_grant_owner_not_registered_resource() {
 #[should_panic(expected: ('CONTRACT_NOT_DEPLOYED', 'ENTRYPOINT_FAILED'))]
 fn test_grant_owner_through_malicious_contract() {
     let (world, foo_selector) = deploy_world_and_foo();
+    let world = world.dispatcher;
 
     let alice = starknet::contract_address_const::<0xa11ce>();
     let bob = starknet::contract_address_const::<0xb0b>();
@@ -65,6 +69,7 @@ fn test_grant_owner_through_malicious_contract() {
 )]
 fn test_grant_owner_fails_for_non_owner() {
     let (world, foo_selector) = deploy_world_and_foo();
+    let world = world.dispatcher;
 
     let alice = starknet::contract_address_const::<0xa11ce>();
     let bob = starknet::contract_address_const::<0xb0b>();
@@ -79,6 +84,7 @@ fn test_grant_owner_fails_for_non_owner() {
 #[should_panic(expected: ('CONTRACT_NOT_DEPLOYED', 'ENTRYPOINT_FAILED'))]
 fn test_revoke_owner_through_malicious_contract() {
     let (world, foo_selector) = deploy_world_and_foo();
+    let world = world.dispatcher;
 
     let alice = starknet::contract_address_const::<0xa11ce>();
     let bob = starknet::contract_address_const::<0xb0b>();
@@ -102,6 +108,7 @@ fn test_revoke_owner_through_malicious_contract() {
 )]
 fn test_revoke_owner_fails_for_non_owner() {
     let (world, foo_selector) = deploy_world_and_foo();
+    let world = world.dispatcher;
 
     let alice = starknet::contract_address_const::<0xa11ce>();
     let bob = starknet::contract_address_const::<0xb0b>();
@@ -118,6 +125,7 @@ fn test_revoke_owner_fails_for_non_owner() {
 #[available_gas(6000000)]
 fn test_writer() {
     let (world, foo_selector) = deploy_world_and_foo();
+    let world = world.dispatcher;
 
     assert(!world.is_writer(foo_selector, 69.try_into().unwrap()), 'should not be writer');
 
@@ -131,6 +139,7 @@ fn test_writer() {
 #[test]
 fn test_writer_not_registered_resource() {
     let world = deploy_world();
+    let world = world.dispatcher;
 
     // 42 is not a registered resource ID
     !world.is_writer(42, 69.try_into().unwrap());
@@ -140,6 +149,7 @@ fn test_writer_not_registered_resource() {
 #[should_panic(expected: ('CONTRACT_NOT_DEPLOYED', 'ENTRYPOINT_FAILED'))]
 fn test_grant_writer_through_malicious_contract() {
     let (world, foo_selector) = deploy_world_and_foo();
+    let world = world.dispatcher;
 
     let alice = starknet::contract_address_const::<0xa11ce>();
     let bob = starknet::contract_address_const::<0xb0b>();
@@ -162,6 +172,7 @@ fn test_grant_writer_through_malicious_contract() {
 )]
 fn test_grant_writer_fails_for_non_owner() {
     let (world, foo_selector) = deploy_world_and_foo();
+    let world = world.dispatcher;
 
     let alice = starknet::contract_address_const::<0xa11ce>();
     let bob = starknet::contract_address_const::<0xb0b>();
@@ -176,6 +187,7 @@ fn test_grant_writer_fails_for_non_owner() {
 #[should_panic(expected: ('CONTRACT_NOT_DEPLOYED', 'ENTRYPOINT_FAILED'))]
 fn test_revoke_writer_through_malicious_contract() {
     let (world, foo_selector) = deploy_world_and_foo();
+    let world = world.dispatcher;
 
     let alice = starknet::contract_address_const::<0xa11ce>();
     let bob = starknet::contract_address_const::<0xb0b>();
@@ -199,6 +211,7 @@ fn test_revoke_writer_through_malicious_contract() {
 )]
 fn test_revoke_writer_fails_for_non_owner() {
     let (world, foo_selector) = deploy_world_and_foo();
+    let world = world.dispatcher;
 
     let alice = starknet::contract_address_const::<0xa11ce>();
     let bob = starknet::contract_address_const::<0xb0b>();
@@ -221,6 +234,7 @@ fn test_revoke_writer_fails_for_non_owner() {
 )]
 fn test_not_writer_with_known_contract() {
     let (world, _) = deploy_world_and_foo();
+    let world = world.dispatcher;
 
     let account = starknet::contract_address_const::<0xb0b>();
     world.grant_owner(bytearray_hash(@"dojo"), account);
@@ -259,6 +273,7 @@ fn test_register_model_namespace_not_owner() {
 
     // Owner deploys the world and register Foo model.
     let (world, foo_selector) = deploy_world_and_foo();
+    let world = world.dispatcher;
 
     assert(world.is_owner(foo_selector, owner), 'should be owner');
 
@@ -290,6 +305,7 @@ fn test_register_contract_namespace_not_owner() {
 
     // Owner deploys the world and register Foo model.
     let (world, foo_selector) = deploy_world_and_foo();
+    let world = world.dispatcher;
 
     assert(world.is_owner(foo_selector, owner), 'should be owner');
 

@@ -102,9 +102,3 @@ pub mod m_$model_type$ {
         }
     }
 }
-
-#[cfg(target: "test")]
-pub impl $model_type$ModelTestImpl<S, +dojo::model::storage::ModelStorageTest<S, $model_type$>> = dojo::model::model::ModelTestImpl<S, $model_type$>;
-
-#[cfg(target: "test")]
-pub impl $model_type$ModelValueTestImpl<S, +dojo::model::storage::ModelValueStorageTest<S, $model_type$Value>> = dojo::model::model_value::ModelValueTestImpl<S, $model_type$Value>;

@@ -1,3 +1,4 @@
+pub mod calldata_decoder;
 pub mod environment;
 pub mod metadata_config;
 pub mod migration_config;

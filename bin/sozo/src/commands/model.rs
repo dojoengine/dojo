@@ -2,7 +2,9 @@ use anyhow::Result;
 use clap::{Args, Subcommand};
 use scarb::core::Config;
 use sozo_ops::model;
-use starknet::core::types::Felt;
+use sozo_ops::resource_descriptor::ResourceDescriptor;
+use sozo_scarbext::WorkspaceExt;
+use starknet::core::types::{BlockId, BlockTag, Felt};
 use tracing::trace;
 
 use super::options::starknet::StarknetOptions;
@@ -20,7 +22,7 @@ pub enum ModelCommand {
     #[command(about = "Retrieve the class hash of a model")]
     ClassHash {
         #[arg(help = "The tag or name of the model")]
-        tag_or_name: String,
+        tag_or_name: ResourceDescriptor,
 
         #[command(flatten)]
         world: WorldOptions,
@@ -32,7 +34,7 @@ pub enum ModelCommand {
     #[command(about = "Retrieve the contract address of a model")]
     ContractAddress {
         #[arg(help = "The tag or name of the model")]
-        tag_or_name: String,
+        tag_or_name: ResourceDescriptor,
 
         #[command(flatten)]
         world: WorldOptions,
@@ -63,19 +65,25 @@ hashes, called 'hash' in the following documentation.
         final storage location  = hash('dojo_storage', model_selector, record_key)")]
     Layout {
         #[arg(help = "The tag or name of the model")]
-        tag_or_name: String,
+        tag_or_name: ResourceDescriptor,
 
         #[command(flatten)]
         world: WorldOptions,
 
         #[command(flatten)]
         starknet: StarknetOptions,
+
+        #[arg(short, long)]
+        #[arg(
+            help = "Block number at which to retrieve the model layout (pending block by default)"
+        )]
+        block: Option<u64>,
     },
 
     #[command(about = "Retrieve the schema for a model")]
     Schema {
         #[arg(help = "The tag or name of the model")]
-        tag_or_name: String,
+        tag_or_name: ResourceDescriptor,
 
         #[command(flatten)]
         world: WorldOptions,
@@ -86,12 +94,18 @@ hashes, called 'hash' in the following documentation.
         #[arg(short = 'j', long = "json")]
         #[arg(help_heading = "Display options")]
         to_json: bool,
+
+        #[arg(short, long)]
+        #[arg(
+            help = "Block number at which to retrieve the model schema (pending block by default)"
+        )]
+        block: Option<u64>,
     },
 
     #[command(about = "Get a models value for the provided key")]
     Get {
         #[arg(help = "The tag or name of the model")]
-        tag_or_name: String,
+        tag_or_name: ResourceDescriptor,
 
         #[arg(value_name = "KEYS")]
         #[arg(value_delimiter = ',')]
@@ -103,54 +117,105 @@ hashes, called 'hash' in the following documentation.
 
         #[command(flatten)]
         starknet: StarknetOptions,
+
+        #[arg(short, long)]
+        #[arg(help = "Block number at which to retrieve the model data (pending block by default)")]
+        block: Option<u64>,
     },
 }
 
 impl ModelArgs {
     pub fn run(self, config: &Config) -> Result<()> {
         trace!(args = ?self);
-        let env_metadata = utils::load_metadata_from_config(config)?;
+
+        let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
+        let profile_config = ws.load_profile_config()?;
+        let default_ns = profile_config.namespace.default;
 
         config.tokio_handle().block_on(async {
             match self.command {
                 ModelCommand::ClassHash { tag_or_name, starknet, world } => {
-                    let tag = model::check_tag_or_read_default_namespace(&tag_or_name, config)?;
+                    let tag = tag_or_name.ensure_namespace(&default_ns);
 
-                    let world_address = world.address(env_metadata.as_ref()).unwrap();
-                    let provider = starknet.provider(env_metadata.as_ref()).unwrap();
-                    model::model_class_hash(tag, world_address, &provider).await?;
+                    let (world_diff, provider, _) =
+                        utils::get_world_diff_and_provider(starknet, world, &ws).await?;
+
+                    model::model_class_hash(
+                        tag.to_string(),
+                        world_diff.world_info.address,
+                        &provider,
+                    )
+                    .await?;
                     Ok(())
                 }
                 ModelCommand::ContractAddress { tag_or_name, starknet, world } => {
-                    let tag = model::check_tag_or_read_default_namespace(&tag_or_name, config)?;
+                    let tag = tag_or_name.ensure_namespace(&default_ns);
 
-                    let world_address = world.address(env_metadata.as_ref()).unwrap();
-                    let provider = starknet.provider(env_metadata.as_ref()).unwrap();
-                    model::model_contract_address(tag, world_address, &provider).await?;
+                    let (world_diff, provider, _) =
+                        utils::get_world_diff_and_provider(starknet, world, &ws).await?;
+
+                    model::model_contract_address(
+                        tag.to_string(),
+                        world_diff.world_info.address,
+                        &provider,
+                    )
+                    .await?;
                     Ok(())
                 }
-                ModelCommand::Layout { tag_or_name, starknet, world } => {
-                    let tag = model::check_tag_or_read_default_namespace(&tag_or_name, config)?;
+                ModelCommand::Layout { tag_or_name, starknet, world, block } => {
+                    let tag = tag_or_name.ensure_namespace(&default_ns);
+                    let block_id =
+                        block.map(BlockId::Number).unwrap_or(BlockId::Tag(BlockTag::Pending));
 
-                    let world_address = world.address(env_metadata.as_ref()).unwrap();
-                    let provider = starknet.provider(env_metadata.as_ref()).unwrap();
-                    model::model_layout(tag, world_address, provider).await?;
+                    let (world_diff, provider, _) =
+                        utils::get_world_diff_and_provider(starknet, world, &ws).await?;
+
+                    model::model_layout(
+                        tag.to_string(),
+                        world_diff.world_info.address,
+                        &provider,
+                        block_id,
+                    )
+                    .await?;
                     Ok(())
                 }
-                ModelCommand::Schema { tag_or_name, to_json, starknet, world } => {
-                    let tag = model::check_tag_or_read_default_namespace(&tag_or_name, config)?;
+                ModelCommand::Schema { tag_or_name, to_json, starknet, world, block } => {
+                    let tag = tag_or_name.ensure_namespace(&default_ns);
+                    let block_id =
+                        block.map(BlockId::Number).unwrap_or(BlockId::Tag(BlockTag::Pending));
 
-                    let world_address = world.address(env_metadata.as_ref()).unwrap();
-                    let provider = starknet.provider(env_metadata.as_ref()).unwrap();
-                    model::model_schema(tag, world_address, provider, to_json).await?;
+                    let (world_diff, provider, _) =
+                        utils::get_world_diff_and_provider(starknet, world, &ws).await?;
+
+                    model::model_schema(
+                        tag.to_string(),
+                        world_diff.world_info.address,
+                        &provider,
+                        block_id,
+                        to_json,
+                    )
+                    .await?;
                     Ok(())
                 }
-                ModelCommand::Get { tag_or_name, keys, starknet, world } => {
-                    let tag = model::check_tag_or_read_default_namespace(&tag_or_name, config)?;
+                ModelCommand::Get { tag_or_name, keys, block, starknet, world } => {
+                    let tag = tag_or_name.ensure_namespace(&default_ns);
+                    let block_id =
+                        block.map(BlockId::Number).unwrap_or(BlockId::Tag(BlockTag::Pending));
 
-                    let world_address = world.address(env_metadata.as_ref()).unwrap();
-                    let provider = starknet.provider(env_metadata.as_ref()).unwrap();
-                    model::model_get(tag, keys, world_address, provider).await?;
+                    let (world_diff, provider, _) =
+                        utils::get_world_diff_and_provider(starknet, world, &ws).await?;
+
+                    let (record, _, _) = model::model_get(
+                        tag.to_string(),
+                        keys,
+                        world_diff.world_info.address,
+                        &provider,
+                        block_id,
+                    )
+                    .await?;
+
+                    println!("{}", record);
+
                     Ok(())
                 }
             }

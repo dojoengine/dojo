@@ -20,11 +20,11 @@ pub struct ProfileConfig {
     pub namespace: NamespaceConfig,
     pub env: Option<Environment>,
     pub migration: Option<MigrationConfig>,
-    /// A mapping <name_or_tag, [tags]> of writers to be set on the world.
+    /// A mapping <name_or_tag, <tags>> of writers to be set on the world.
     pub writers: Option<HashMap<String, HashSet<String>>>,
-    /// A mapping <name_or_tag, [tags]> of owners to be set on the world.
+    /// A mapping <name_or_tag, <tags>> of owners to be set on the world.
     pub owners: Option<HashMap<String, HashSet<String>>>,
-    /// A mapping <tag, [values]> of init call arguments to be passed to the contract.
+    /// A mapping <tag, <values>> of init call arguments to be passed to the contract.
     pub init_call_args: Option<HashMap<String, Vec<String>>>,
 }
 

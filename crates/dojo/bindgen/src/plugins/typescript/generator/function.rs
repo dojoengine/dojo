@@ -29,9 +29,9 @@ impl TsFunctionGenerator {
 
     fn generate_system_function(&self, contract_name: &str, token: &Function) -> String {
         format!(
-            "\tconst {} = async ({}) => {{
+            "\tconst {contract_name}_{} = async ({}) => {{
 \t\ttry {{
-\t\t\treturn await provider.execute(\n
+\t\t\treturn await provider.execute(
 \t\t\t\taccount,
 \t\t\t\t{{
 \t\t\t\t\tcontractName: \"{contract_name}\",
@@ -89,22 +89,69 @@ impl TsFunctionGenerator {
     }
 
     fn append_function_body(&self, idx: usize, buffer: &mut Buffer, body: String) {
-        // check if function was already appended to body, if so, append after other functions
+        // check if functions was already appended to body, if so, append after other functions
         let pos = if buffer.len() - idx > 2 { buffer.len() - 2 } else { idx };
 
         buffer.insert(pos + 1, body);
     }
 
-    fn setup_function_wrapper_end(&self, token: &Function, buffer: &mut Buffer) {
+    fn setup_function_wrapper_end(
+        &self,
+        contract_name: &str,
+        token: &Function,
+        buffer: &mut Buffer,
+    ) {
         let return_token = "\treturn {";
         if !buffer.has(return_token) {
-            buffer
-                .push(format!("\treturn {{\n\t\t{},\n\t}};\n}}", token.name.to_case(Case::Camel)));
+            buffer.push(format!(
+                "\treturn {{\n\t\t{}: {{\n\t\t\t{}: {}_{},\n\t\t}},\n\t}};\n}}",
+                contract_name,
+                token.name.to_case(Case::Camel),
+                contract_name,
+                token.name.to_case(Case::Camel)
+            ));
             return;
         }
 
+        // if buffer has return and has contract_name, we append in this object if contract_name is
+        // the same
+
+        let contract_name_token = format!("\n\t\t{}: {{\n\t\t\t", contract_name);
+        if buffer.has(contract_name_token.as_str()) {
+            // we can expect safely as condition has is true there
+            let return_idx = buffer.pos(return_token).expect("return token not found");
+            // find closing curly bracket to get closing of object `contract_name`, get the last
+            // comma and insert token just after it.
+            if let Some(pos) = buffer.get_first_after(
+                format!("\n\t\t{}: {{\n\t\t\t", contract_name).as_str(),
+                "}",
+                return_idx,
+            ) {
+                if let Some(insert_pos) = buffer.get_first_before_pos(",", pos, return_idx) {
+                    buffer.insert_at(
+                        format!(
+                            "\n\t\t\t{}: {}_{},",
+                            token.name.to_case(Case::Camel),
+                            contract_name,
+                            token.name.to_case(Case::Camel)
+                        ),
+                        insert_pos,
+                        return_idx,
+                    );
+                    return;
+                }
+            }
+        }
+
+        // if buffer has return but not contract_name, we append in this object
         buffer.insert_after(
-            format!("\n\t\t{},", token.name.to_case(Case::Camel)),
+            format!(
+                "\n\t\t{}: {{\n\t\t\t{}: {}_{},\n\t\t}},",
+                contract_name,
+                token.name.to_case(Case::Camel),
+                contract_name,
+                token.name.to_case(Case::Camel),
+            ),
             return_token,
             ",",
             1,
@@ -120,13 +167,14 @@ impl BindgenContractGenerator for TsFunctionGenerator {
         buffer: &mut Buffer,
     ) -> BindgenResult<String> {
         self.check_imports(buffer);
+        let contract_name = naming::get_name_from_tag(&contract.tag);
         let idx = self.setup_function_wrapper_start(buffer);
         self.append_function_body(
             idx,
             buffer,
-            self.generate_system_function(naming::get_name_from_tag(&contract.tag).as_str(), token),
+            self.generate_system_function(contract_name.as_str(), token),
         );
-        self.setup_function_wrapper_end(token, buffer);
+        self.setup_function_wrapper_end(contract_name.as_str(), token, buffer);
         Ok(String::new())
     }
 }
@@ -167,9 +215,10 @@ mod tests {
     fn test_generate_system_function() {
         let generator = TsFunctionGenerator {};
         let function = create_change_theme_function();
-        let expected = "\tconst changeTheme = async (account: Account, value: number) => {
+        let expected = "\tconst actions_changeTheme = async (account: Account, value: number) => \
+                        {
 \t\ttry {
-\t\t\treturn await provider.execute(\n
+\t\t\treturn await provider.execute(
 \t\t\t\taccount,
 \t\t\t\t{
 \t\t\t\t\tcontractName: \"actions\",
@@ -180,7 +229,8 @@ mod tests {
 \t\t} catch (error) {
 \t\t\tconsole.error(error);
 \t\t}
-\t};\n";
+\t};
+";
 
         let contract = create_dojo_contract();
         assert_eq!(
@@ -233,24 +283,46 @@ mod tests {
         let generator = TsFunctionGenerator {};
         let mut buff = Buffer::new();
 
-        generator.setup_function_wrapper_end(&create_change_theme_function(), &mut buff);
+        generator.setup_function_wrapper_end("actions", &create_change_theme_function(), &mut buff);
 
         let expected = "\treturn {
-\t\tchangeTheme,
+\t\tactions: {
+\t\t\tchangeTheme: actions_changeTheme,
+\t\t},
 \t};
 }";
 
         assert_eq!(1, buff.len());
         assert_eq!(expected, buff[0]);
 
-        generator.setup_function_wrapper_end(&create_increate_global_counter_function(), &mut buff);
+        generator.setup_function_wrapper_end(
+            "actions",
+            &create_increate_global_counter_function(),
+            &mut buff,
+        );
         let expected_2 = "\treturn {
-\t\tchangeTheme,
-\t\tincreaseGlobalCounter,
+\t\tactions: {
+\t\t\tchangeTheme: actions_changeTheme,
+\t\t\tincreaseGlobalCounter: actions_increaseGlobalCounter,
+\t\t},
 \t};
 }";
         assert_eq!(1, buff.len());
         assert_eq!(expected_2, buff[0]);
+
+        generator.setup_function_wrapper_end("dojo_starter", &create_move_function(), &mut buff);
+        let expected_3 = "\treturn {
+\t\tactions: {
+\t\t\tchangeTheme: actions_changeTheme,
+\t\t\tincreaseGlobalCounter: actions_increaseGlobalCounter,
+\t\t},
+\t\tdojo_starter: {
+\t\t\tmove: dojo_starter_move,
+\t\t},
+\t};
+}";
+        assert_eq!(1, buff.len());
+        assert_eq!(expected_3, buff[0]);
     }
 
     #[test]
@@ -259,10 +331,12 @@ mod tests {
         let mut buffer = Buffer::new();
         let change_theme = create_change_theme_function();
 
-        let _ = generator.generate(&create_dojo_contract(), &change_theme, &mut buffer);
+        let onchain_dash_contract = create_dojo_contract();
+        let _ = generator.generate(&onchain_dash_contract, &change_theme, &mut buffer);
+
         assert_eq!(buffer.len(), 6);
         let increase_global_counter = create_increate_global_counter_function();
-        let _ = generator.generate(&create_dojo_contract(), &increase_global_counter, &mut buffer);
+        let _ = generator.generate(&onchain_dash_contract, &increase_global_counter, &mut buffer);
         assert_eq!(buffer.len(), 7);
     }
 
@@ -278,6 +352,9 @@ mod tests {
 
     fn create_increate_global_counter_function() -> Function {
         create_test_function("increase_global_counter", vec![])
+    }
+    fn create_move_function() -> Function {
+        create_test_function("move", vec![])
     }
 
     fn create_test_function(name: &str, inputs: Vec<(String, Token)>) -> Function {

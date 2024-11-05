@@ -5,8 +5,9 @@
 # This script gives an easy way to remove those artifacts.
 
 cargo build -r --bin katana
+cargo build -r --bin sozo
 
-# some formatting:
+# Some formatting.
 cargo +nightly-2024-08-28 fmt --all -- "$@"
 
 scarb --manifest-path examples/spawn-and-move/Scarb.toml fmt
@@ -14,9 +15,7 @@ scarb --manifest-path examples/simple/Scarb.toml fmt
 scarb --manifest-path crates/dojo/core/Scarb.toml fmt
 scarb --manifest-path crates/dojo/core-cairo-test/Scarb.toml fmt
 
-cargo build -r --bin sozo
-
-# Cleanup
+# Manual forced cleanup.
 rm -rf examples/spawn-and-move/target
 rm -rf crates/torii/types-test/target
 rm -rf crates/dojo/lang/src/manifest_test_data/compiler_cairo/target
@@ -36,9 +35,8 @@ cargo +nightly-2024-08-28 fmt --all -- "$@"
 ./target/release/sozo build --manifest-path crates/torii/types-test/Scarb.toml
 
 # Generates the database for testing by migrating the spawn and move example.
-cargo generate-test-db
-# Ensure the user has locally the db dir in /tmp.
-rm -rf /tmp/spawn-and-move-db
-rm -rf /tmp/types-test-db
-tar xzf spawn-and-move-db.tar.gz -C /tmp/
-tar xzf types-test-db.tar.gz -C /tmp/
+KATANA_RUNNER_BIN=./target/release/katana cargo generate-test-db
+
+# Extracts the database for testing.
+bash ./scripts/extract_test_db.sh
+

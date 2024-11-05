@@ -1943,7 +1943,7 @@ dependencies = [
  "bitflags 2.6.0",
  "cexpr",
  "clang-sys",
- "itertools 0.12.1",
+ "itertools 0.10.5",
  "lazy_static",
  "lazycell",
  "log",
@@ -2727,7 +2727,7 @@ dependencies = [
 [[package]]
 name = "cairo-lang-macro"
 version = "0.1.0"
-source = "git+https://github.com/dojoengine/scarb?branch=dojo-284#5ee01a699da7a973c38ba51eac1cb6065bb5006f"
+source = "git+https://github.com/dojoengine/scarb?branch=dojo-284#67814694f39e961f0e064334581233b3cc9aa1a9"
 dependencies = [
  "cairo-lang-macro-attributes",
  "cairo-lang-macro-stable",
@@ -3705,7 +3705,7 @@ dependencies = [
 [[package]]
 name = "common"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/http-prover?rev=24256d5#24256d530e60de5458956a858106cc6be1cbee17"
+source = "git+https://github.com/cartridge-gg/http-prover?rev=f239ade#f239ade2f7ed363fbf99c9726b998fe6b0ab887b"
 dependencies = [
  "ed25519-dalek",
  "serde",
@@ -3745,7 +3745,7 @@ version = "0.15.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0e1f83fc076bd6dd27517eacdf25fef6c4dfe5f1d7448bafaaf3a26f13b5e4eb"
 dependencies = [
- "encode_unicode 0.3.6",
+ "encode_unicode",
  "lazy_static",
  "libc",
  "unicode-width",
@@ -3974,7 +3974,7 @@ dependencies = [
 [[package]]
 name = "create-output-dir"
 version = "1.0.0"
-source = "git+https://github.com/dojoengine/scarb?branch=dojo-284#5ee01a699da7a973c38ba51eac1cb6065bb5006f"
+source = "git+https://github.com/dojoengine/scarb?branch=dojo-284#67814694f39e961f0e064334581233b3cc9aa1a9"
 dependencies = [
  "anyhow",
  "core-foundation 0.10.0",
@@ -4111,27 +4111,6 @@ dependencies = [
  "generic-array",
  "rand_core 0.6.4",
  "typenum",
-]
-
-[[package]]
-name = "csv"
-version = "1.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ac574ff4d437a7b5ad237ef331c17ccca63c46479e5b5453eb8e10bb99a759fe"
-dependencies = [
- "csv-core",
- "itoa",
- "ryu",
- "serde",
-]
-
-[[package]]
-name = "csv-core"
-version = "0.1.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5efa2b3d7902f4b634a20cae3c9c4e6209dc4779feb6863329607560143efa70"
-dependencies = [
- "memchr",
 ]
 
 [[package]]
@@ -4623,7 +4602,7 @@ checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 
 [[package]]
 name = "dojo-bindgen"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -4646,15 +4625,15 @@ dependencies = [
 
 [[package]]
 name = "dojo-contracts"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 
 [[package]]
 name = "dojo-examples-spawn-and-move"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 
 [[package]]
 name = "dojo-lang"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -4676,7 +4655,7 @@ dependencies = [
  "cairo-lang-utils",
  "camino",
  "convert_case 0.6.0",
- "dojo-types 1.0.0-rc.0",
+ "dojo-types 1.0.0-rc.1",
  "indoc 1.0.9",
  "itertools 0.12.1",
  "once_cell",
@@ -4697,8 +4676,8 @@ dependencies = [
 
 [[package]]
 name = "dojo-lang"
-version = "1.0.0-rc.0"
-source = "git+https://github.com/dojoengine/dojo?rev=479b698def87b004ecc074058182fac40d53d077#479b698def87b004ecc074058182fac40d53d077"
+version = "1.0.0-rc.1"
+source = "git+https://github.com/dojoengine/dojo?rev=6cfe004bde326c2e7fda309a6ea5fb24007ba414#6cfe004bde326c2e7fda309a6ea5fb24007ba414"
 dependencies = [
  "anyhow",
  "cairo-lang-compiler",
@@ -4716,7 +4695,7 @@ dependencies = [
  "cairo-lang-utils",
  "camino",
  "convert_case 0.6.0",
- "dojo-types 1.0.0-rc.0 (git+https://github.com/dojoengine/dojo?rev=479b698def87b004ecc074058182fac40d53d077)",
+ "dojo-types 1.0.0-rc.1 (git+https://github.com/dojoengine/dojo?rev=6cfe004bde326c2e7fda309a6ea5fb24007ba414)",
  "indoc 1.0.9",
  "itertools 0.12.1",
  "regex",
@@ -4734,16 +4713,16 @@ dependencies = [
 
 [[package]]
 name = "dojo-language-server"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "cairo-lang-language-server",
  "clap",
- "dojo-lang 1.0.0-rc.0",
+ "dojo-lang 1.0.0-rc.1",
 ]
 
 [[package]]
 name = "dojo-metrics"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "anyhow",
  "hyper 0.14.30",
@@ -4762,13 +4741,13 @@ dependencies = [
 
 [[package]]
 name = "dojo-test-utils"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "anyhow",
  "assert_fs",
  "async-trait",
  "camino",
- "dojo-lang 1.0.0-rc.0",
+ "dojo-lang 1.0.0-rc.1",
  "dojo-world",
  "jsonrpsee 0.16.3",
  "katana-core",
@@ -4787,7 +4766,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-types"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "anyhow",
  "cainome 0.4.6",
@@ -4807,8 +4786,8 @@ dependencies = [
 
 [[package]]
 name = "dojo-types"
-version = "1.0.0-rc.0"
-source = "git+https://github.com/dojoengine/dojo?rev=479b698def87b004ecc074058182fac40d53d077#479b698def87b004ecc074058182fac40d53d077"
+version = "1.0.0-rc.1"
+source = "git+https://github.com/dojoengine/dojo?rev=6cfe004bde326c2e7fda309a6ea5fb24007ba414#6cfe004bde326c2e7fda309a6ea5fb24007ba414"
 dependencies = [
  "anyhow",
  "cainome 0.4.6",
@@ -4828,14 +4807,14 @@ dependencies = [
 
 [[package]]
 name = "dojo-utils"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "anyhow",
  "assert_matches",
  "colored_json",
  "dojo-test-utils",
  "futures",
- "reqwest 0.12.7",
+ "reqwest 0.11.27",
  "rpassword",
  "serde_json",
  "starknet 0.12.0",
@@ -4846,14 +4825,17 @@ dependencies = [
 
 [[package]]
 name = "dojo-world"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "anyhow",
  "async-trait",
  "cainome 0.4.6",
  "cairo-lang-starknet-classes",
- "dojo-types 1.0.0-rc.0",
+ "dojo-types 1.0.0-rc.1",
+ "hex",
+ "hex-literal",
  "ipfs-api-backend-hyper",
+ "num-bigint",
  "regex",
  "serde",
  "serde_json",
@@ -4869,7 +4851,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-world-abigen"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "anyhow",
  "cainome 0.4.6",
@@ -5015,12 +4997,6 @@ name = "encode_unicode"
 version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a357d28ed41a50f9c765dbfe56cbc04a64e53e5fc58ba79fbc34c10ef3df831f"
-
-[[package]]
-name = "encode_unicode"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "34aa73646ffb006b8f5147f3dc182bd4bcb190227ce861fc4a4844bf8e3cb2c0"
 
 [[package]]
 name = "encoding_rs"
@@ -5384,15 +5360,6 @@ name = "fs_extra"
 version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "42703706b716c37f96a77aea830392ad231f44c9e9a67872fa5548707e11b11c"
-
-[[package]]
-name = "fsevent-sys"
-version = "4.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "76ee7a02da4d231650c7cea31349b889be2f45ddb3ef3032d2ec8185f6313fd2"
-dependencies = [
- "libc",
-]
 
 [[package]]
 name = "fuchsia-cprng"
@@ -7049,7 +7016,7 @@ dependencies = [
  "httpdate",
  "itoa",
  "pin-project-lite",
- "socket2 0.5.7",
+ "socket2 0.4.10",
  "tokio",
  "tower-service",
  "tracing",
@@ -7225,7 +7192,7 @@ dependencies = [
  "iana-time-zone-haiku",
  "js-sys",
  "wasm-bindgen",
- "windows-core 0.52.0",
+ "windows-core 0.51.1",
 ]
 
 [[package]]
@@ -7485,26 +7452,6 @@ dependencies = [
  "quick-xml",
  "rgb",
  "str_stack",
-]
-
-[[package]]
-name = "inotify"
-version = "0.9.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f8069d3ec154eb856955c1c0fbffefbf5f3c40a104ec912d4797314c1801abff"
-dependencies = [
- "bitflags 1.3.2",
- "inotify-sys",
- "libc",
-]
-
-[[package]]
-name = "inotify-sys"
-version = "0.1.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e05c02b5e89bff3b946cedeca278abc628fe811e604f027c45a8aa3cf793d0eb"
-dependencies = [
- "libc",
 ]
 
 [[package]]
@@ -8105,7 +8052,7 @@ dependencies = [
 
 [[package]]
 name = "katana"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -8132,7 +8079,7 @@ dependencies = [
 
 [[package]]
 name = "katana-cairo"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "cairo-lang-casm",
  "cairo-lang-runner",
@@ -8147,7 +8094,7 @@ dependencies = [
 
 [[package]]
 name = "katana-codecs"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "bytes",
  "katana-primitives",
@@ -8155,7 +8102,7 @@ dependencies = [
 
 [[package]]
 name = "katana-codecs-derive"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -8165,7 +8112,7 @@ dependencies = [
 
 [[package]]
 name = "katana-core"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "alloy-contract 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "alloy-network 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -8187,14 +8134,16 @@ dependencies = [
  "katana-primitives",
  "katana-provider",
  "katana-tasks",
+ "katana-trie",
  "lazy_static",
  "metrics",
  "num-traits 0.2.19",
  "parking_lot 0.12.3",
- "reqwest 0.12.7",
+ "reqwest 0.11.27",
  "serde",
  "serde_json",
  "starknet 0.12.0",
+ "starknet-types-core",
  "tempfile",
  "thiserror",
  "tokio",
@@ -8204,7 +8153,7 @@ dependencies = [
 
 [[package]]
 name = "katana-db"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "anyhow",
  "arbitrary",
@@ -8231,7 +8180,7 @@ dependencies = [
 
 [[package]]
 name = "katana-executor"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -8258,7 +8207,7 @@ dependencies = [
 
 [[package]]
 name = "katana-node"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "anyhow",
  "const_format",
@@ -8288,7 +8237,7 @@ dependencies = [
 
 [[package]]
 name = "katana-node-bindings"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "regex",
  "serde",
@@ -8303,7 +8252,7 @@ dependencies = [
 
 [[package]]
 name = "katana-pipeline"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -8319,7 +8268,7 @@ dependencies = [
 
 [[package]]
 name = "katana-pool"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "futures",
  "katana-executor",
@@ -8334,7 +8283,7 @@ dependencies = [
 
 [[package]]
 name = "katana-primitives"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -8362,7 +8311,7 @@ dependencies = [
 
 [[package]]
 name = "katana-provider"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -8390,7 +8339,7 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "alloy",
  "alloy-primitives",
@@ -8432,7 +8381,7 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc-api"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "jsonrpsee 0.16.3",
  "katana-core",
@@ -8443,7 +8392,7 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc-types"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -8467,7 +8416,7 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc-types-builder"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "anyhow",
  "katana-executor",
@@ -8479,7 +8428,7 @@ dependencies = [
 
 [[package]]
 name = "katana-runner"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -8495,7 +8444,7 @@ dependencies = [
 
 [[package]]
 name = "katana-runner-macro"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -8504,7 +8453,7 @@ dependencies = [
 
 [[package]]
 name = "katana-slot-controller"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -8522,7 +8471,7 @@ dependencies = [
 
 [[package]]
 name = "katana-tasks"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "futures",
  "rayon",
@@ -8535,7 +8484,7 @@ dependencies = [
 
 [[package]]
 name = "katana-trie"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "anyhow",
  "bitvec",
@@ -8565,26 +8514,6 @@ checksum = "505d1856a39b200489082f90d897c3f07c455563880bc5952e38eabf731c83b6"
 dependencies = [
  "digest 0.10.7",
  "sha3-asm",
-]
-
-[[package]]
-name = "kqueue"
-version = "1.0.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7447f1ca1b7b563588a205fe93dea8df60fd981423a768bc1c0ded35ed147d0c"
-dependencies = [
- "kqueue-sys",
- "libc",
-]
-
-[[package]]
-name = "kqueue-sys"
-version = "1.0.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed9625ffda8729b85e45cf04090035ac368927b8cebc34898e7c120f52e4838b"
-dependencies = [
- "bitflags 1.3.2",
- "libc",
 ]
 
 [[package]]
@@ -9541,18 +9470,6 @@ dependencies = [
 
 [[package]]
 name = "mio"
-version = "0.8.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a4a650543ca06a924e8b371db273b2756685faae30f8487da1b56505a8f78b0c"
-dependencies = [
- "libc",
- "log",
- "wasi",
- "windows-sys 0.48.0",
-]
-
-[[package]]
-name = "mio"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "80e04d1dcff3aae0704555fe5fee3bcfaf3d1fdf8a7e521d5b9d2b42acb52cec"
@@ -9875,31 +9792,6 @@ checksum = "d273983c5a657a70a3e8f2a01329822f3b8c8172b73826411a55751e404a0a4a"
 dependencies = [
  "memchr",
  "minimal-lexical",
-]
-
-[[package]]
-name = "normalize-line-endings"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "61807f77802ff30975e01f4f071c8ba10c022052f98b3294119f3e615d13e5be"
-
-[[package]]
-name = "notify"
-version = "6.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6205bd8bb1e454ad2e27422015fb5e4f2bcc7e08fa8f27058670d208324a4d2d"
-dependencies = [
- "bitflags 2.6.0",
- "crossbeam-channel",
- "filetime",
- "fsevent-sys",
- "inotify",
- "kqueue",
- "libc",
- "log",
- "mio 0.8.11",
- "walkdir",
- "windows-sys 0.48.0",
 ]
 
 [[package]]
@@ -10847,20 +10739,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "prettytable-rs"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eea25e07510aa6ab6547308ebe3c036016d162b8da920dbb079e3ba8acf3d95a"
-dependencies = [
- "csv",
- "encode_unicode 1.0.0",
- "is-terminal",
- "lazy_static",
- "term",
- "unicode-width",
-]
-
-[[package]]
 name = "primeorder"
 version = "0.13.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -11071,7 +10949,7 @@ checksum = "22505a5c94da8e3b7c2996394d1c933236c4d743e81a410bcca4e6989fc066a4"
 dependencies = [
  "bytes",
  "heck 0.5.0",
- "itertools 0.12.1",
+ "itertools 0.10.5",
  "log",
  "multimap",
  "once_cell",
@@ -11112,7 +10990,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "81bddcdb20abf9501610992b6759a4c888aef7d1a7247ef75e2404275ac24af1"
 dependencies = [
  "anyhow",
- "itertools 0.12.1",
+ "itertools 0.10.5",
  "proc-macro2",
  "quote",
  "syn 2.0.77",
@@ -11152,7 +11030,7 @@ dependencies = [
 [[package]]
 name = "prover-sdk"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/http-prover?rev=24256d5#24256d530e60de5458956a858106cc6be1cbee17"
+source = "git+https://github.com/cartridge-gg/http-prover?rev=f239ade#f239ade2f7ed363fbf99c9726b998fe6b0ab887b"
 dependencies = [
  "base64 0.22.1",
  "common",
@@ -11160,7 +11038,7 @@ dependencies = [
  "futures",
  "prefix-hex",
  "rand 0.8.5",
- "reqwest 0.12.7",
+ "reqwest 0.11.27",
  "reqwest_cookie_store",
  "serde",
  "serde_json",
@@ -11587,6 +11465,8 @@ dependencies = [
  "async-compression",
  "base64 0.21.7",
  "bytes",
+ "cookie 0.17.0",
+ "cookie_store 0.20.0",
  "encoding_rs",
  "futures-core",
  "futures-util",
@@ -11637,7 +11517,6 @@ dependencies = [
  "bytes",
  "cookie 0.18.1",
  "cookie_store 0.21.0",
- "futures-channel",
  "futures-core",
  "futures-util",
  "http 1.1.0",
@@ -11667,12 +11546,10 @@ dependencies = [
  "tokio",
  "tokio-native-tls",
  "tokio-rustls 0.26.0",
- "tokio-util",
  "tower-service",
  "url",
  "wasm-bindgen",
  "wasm-bindgen-futures",
- "wasm-streams",
  "web-sys",
  "webpki-roots 0.26.6",
  "windows-registry",
@@ -12396,7 +12273,7 @@ dependencies = [
 
 [[package]]
 name = "saya"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -12414,7 +12291,7 @@ dependencies = [
 
 [[package]]
 name = "saya-core"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -12431,7 +12308,7 @@ dependencies = [
  "katana-provider",
  "katana-rpc-types",
  "prover-sdk",
- "reqwest 0.12.7",
+ "reqwest 0.11.27",
  "saya-provider",
  "serde",
  "serde-felt",
@@ -12447,7 +12324,7 @@ dependencies = [
 
 [[package]]
 name = "saya-provider"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -12479,7 +12356,7 @@ dependencies = [
 [[package]]
 name = "scarb"
 version = "2.8.4"
-source = "git+https://github.com/dojoengine/scarb?branch=dojo-284#5ee01a699da7a973c38ba51eac1cb6065bb5006f"
+source = "git+https://github.com/dojoengine/scarb?branch=dojo-284#67814694f39e961f0e064334581233b3cc9aa1a9"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -12509,7 +12386,7 @@ dependencies = [
  "derive_builder",
  "dialoguer",
  "directories",
- "dojo-lang 1.0.0-rc.0 (git+https://github.com/dojoengine/dojo?rev=479b698def87b004ecc074058182fac40d53d077)",
+ "dojo-lang 1.0.0-rc.1 (git+https://github.com/dojoengine/dojo?rev=6cfe004bde326c2e7fda309a6ea5fb24007ba414)",
  "dunce",
  "fs4",
  "fs_extra",
@@ -12560,7 +12437,7 @@ dependencies = [
 [[package]]
 name = "scarb-build-metadata"
 version = "2.8.4"
-source = "git+https://github.com/dojoengine/scarb?branch=dojo-284#5ee01a699da7a973c38ba51eac1cb6065bb5006f"
+source = "git+https://github.com/dojoengine/scarb?branch=dojo-284#67814694f39e961f0e064334581233b3cc9aa1a9"
 dependencies = [
  "cargo_metadata",
 ]
@@ -12581,7 +12458,7 @@ dependencies = [
 [[package]]
 name = "scarb-metadata"
 version = "1.12.0"
-source = "git+https://github.com/dojoengine/scarb?branch=dojo-284#5ee01a699da7a973c38ba51eac1cb6065bb5006f"
+source = "git+https://github.com/dojoengine/scarb?branch=dojo-284#67814694f39e961f0e064334581233b3cc9aa1a9"
 dependencies = [
  "camino",
  "derive_builder",
@@ -12604,7 +12481,7 @@ dependencies = [
 [[package]]
 name = "scarb-stable-hash"
 version = "1.0.0"
-source = "git+https://github.com/dojoengine/scarb?branch=dojo-284#5ee01a699da7a973c38ba51eac1cb6065bb5006f"
+source = "git+https://github.com/dojoengine/scarb?branch=dojo-284#67814694f39e961f0e064334581233b3cc9aa1a9"
 dependencies = [
  "data-encoding",
  "xxhash-rust",
@@ -12613,7 +12490,7 @@ dependencies = [
 [[package]]
 name = "scarb-ui"
 version = "0.1.5"
-source = "git+https://github.com/dojoengine/scarb?branch=dojo-284#5ee01a699da7a973c38ba51eac1cb6065bb5006f"
+source = "git+https://github.com/dojoengine/scarb?branch=dojo-284#67814694f39e961f0e064334581233b3cc9aa1a9"
 dependencies = [
  "anyhow",
  "camino",
@@ -12637,7 +12514,7 @@ dependencies = [
 
 [[package]]
 name = "scheduler"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -13282,28 +13159,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "snapbox"
-version = "0.4.17"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4b831b6e80fbcd2889efa75b185d24005f85981431495f995292b25836519d84"
-dependencies = [
- "anstream",
- "anstyle",
- "normalize-line-endings",
- "similar",
- "snapbox-macros",
-]
-
-[[package]]
-name = "snapbox-macros"
-version = "0.3.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "16569f53ca23a41bb6f62e0a5084aa1661f4814a67fa33696a79073e03a664af"
-dependencies = [
- "anstream",
-]
-
-[[package]]
 name = "snow"
 version = "0.9.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -13373,16 +13228,12 @@ dependencies = [
 
 [[package]]
 name = "sozo"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "anyhow",
- "assert_fs",
  "async-trait",
- "bigdecimal 0.4.5",
- "cainome 0.4.6",
  "cairo-lang-compiler",
  "cairo-lang-filesystem",
- "cairo-lang-plugins",
  "cairo-lang-project",
  "cairo-lang-starknet",
  "cairo-lang-test-plugin",
@@ -13392,25 +13243,16 @@ dependencies = [
  "clap",
  "clap-verbosity-flag",
  "colored",
- "console",
  "dojo-bindgen",
- "dojo-lang 1.0.0-rc.0",
+ "dojo-lang 1.0.0-rc.1",
  "dojo-test-utils",
- "dojo-types 1.0.0-rc.0",
+ "dojo-types 1.0.0-rc.1",
  "dojo-utils",
  "dojo-world",
- "hex",
- "hex-literal",
  "itertools 0.12.1",
  "katana-rpc-api",
  "katana-runner",
- "notify",
- "num-bigint",
- "num-integer",
- "prettytable-rs",
- "regex",
- "reqwest 0.12.7",
- "rpassword",
+ "reqwest 0.11.27",
  "scarb",
  "scarb-ui",
  "semver 1.0.23",
@@ -13418,11 +13260,9 @@ dependencies = [
  "serde_json",
  "slot",
  "smol_str",
- "snapbox",
  "sozo-ops",
  "sozo-scarbext",
  "sozo-walnut",
- "spinoff",
  "starknet 0.12.0",
  "starknet-crypto 0.7.2",
  "tabled",
@@ -13437,7 +13277,7 @@ dependencies = [
 
 [[package]]
 name = "sozo-ops"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -13447,28 +13287,31 @@ dependencies = [
  "colored",
  "colored_json",
  "dojo-test-utils",
- "dojo-types 1.0.0-rc.0",
+ "dojo-types 1.0.0-rc.1",
  "dojo-utils",
  "dojo-world",
  "futures",
  "ipfs-api-backend-hyper",
  "katana-runner",
  "num-traits 0.2.19",
+ "scarb",
  "serde",
  "serde_json",
  "serde_with 3.9.0",
+ "sozo-scarbext",
  "sozo-walnut",
  "spinoff",
  "starknet 0.12.0",
  "starknet-crypto 0.7.2",
  "thiserror",
+ "tokio",
  "toml 0.8.19",
  "tracing",
 ]
 
 [[package]]
 name = "sozo-scarbext"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "anyhow",
  "camino",
@@ -13481,7 +13324,7 @@ dependencies = [
 
 [[package]]
 name = "sozo-signers"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "anyhow",
  "starknet 0.12.0",
@@ -13489,12 +13332,12 @@ dependencies = [
 
 [[package]]
 name = "sozo-walnut"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "anyhow",
  "console",
  "dojo-world",
- "reqwest 0.12.7",
+ "reqwest 0.11.27",
  "scarb",
  "scarb-ui",
  "serde",
@@ -14701,7 +14544,7 @@ dependencies = [
  "backtrace",
  "bytes",
  "libc",
- "mio 1.0.2",
+ "mio",
  "parking_lot 0.12.3",
  "pin-project-lite",
  "signal-hook-registry",
@@ -15020,7 +14863,7 @@ dependencies = [
 
 [[package]]
 name = "torii"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -15030,7 +14873,7 @@ dependencies = [
  "clap",
  "ctrlc",
  "dojo-metrics",
- "dojo-types 1.0.0-rc.0",
+ "dojo-types 1.0.0-rc.1",
  "dojo-utils",
  "dojo-world",
  "either",
@@ -15066,12 +14909,12 @@ dependencies = [
 
 [[package]]
 name = "torii-client"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "async-trait",
  "camino",
  "crypto-bigint",
- "dojo-types 1.0.0-rc.0",
+ "dojo-types 1.0.0-rc.1",
  "dojo-world",
  "futures",
  "futures-util",
@@ -15094,7 +14937,7 @@ dependencies = [
 
 [[package]]
 name = "torii-core"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -15104,7 +14947,7 @@ dependencies = [
  "chrono",
  "crypto-bigint",
  "dojo-test-utils",
- "dojo-types 1.0.0-rc.0",
+ "dojo-types 1.0.0-rc.1",
  "dojo-utils",
  "dojo-world",
  "futures-channel",
@@ -15113,7 +14956,7 @@ dependencies = [
  "katana-runner",
  "num-traits 0.2.19",
  "once_cell",
- "reqwest 0.12.7",
+ "reqwest 0.11.27",
  "scarb",
  "serde",
  "serde_json",
@@ -15132,7 +14975,7 @@ dependencies = [
 
 [[package]]
 name = "torii-graphql"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "anyhow",
  "async-graphql",
@@ -15143,7 +14986,7 @@ dependencies = [
  "chrono",
  "convert_case 0.6.0",
  "dojo-test-utils",
- "dojo-types 1.0.0-rc.0",
+ "dojo-types 1.0.0-rc.1",
  "dojo-utils",
  "dojo-world",
  "katana-runner",
@@ -15172,13 +15015,13 @@ dependencies = [
 
 [[package]]
 name = "torii-grpc"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "cainome 0.4.6",
  "camino",
  "crypto-bigint",
  "dojo-test-utils",
- "dojo-types 1.0.0-rc.0",
+ "dojo-types 1.0.0-rc.1",
  "dojo-utils",
  "dojo-world",
  "futures",
@@ -15219,13 +15062,13 @@ dependencies = [
 
 [[package]]
 name = "torii-relay"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "anyhow",
  "cainome 0.4.6",
  "chrono",
  "crypto-bigint",
- "dojo-types 1.0.0-rc.0",
+ "dojo-types 1.0.0-rc.1",
  "dojo-world",
  "futures",
  "indexmap 2.5.0",
@@ -15254,7 +15097,7 @@ dependencies = [
 
 [[package]]
 name = "torii-server"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "base64 0.21.7",
  "http 0.2.12",
@@ -15624,7 +15467,7 @@ checksum = "42ff0bf0c66b8238c6f3b578df37d0b7848e55df8577b3f74f92a69acceeb825"
 
 [[package]]
 name = "types-test"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 
 [[package]]
 name = "u256-literal"
@@ -15915,7 +15758,7 @@ dependencies = [
 
 [[package]]
 name = "verify_db_balances"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "clap",
  "num-traits 0.2.19",
@@ -16567,15 +16410,6 @@ dependencies = [
 
 [[package]]
 name = "windows-core"
-version = "0.52.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "33ab640c8d7e35bf8ba19b884ba838ceb4fba93a4e8c65a9059d08afcfc683d9"
-dependencies = [
- "windows-targets 0.52.6",
-]
-
-[[package]]
-name = "windows-core"
 version = "0.57.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d2ed2439a290666cd67ecce2b0ffaad89c2a56b976b736e6ece670297897832d"
@@ -16979,14 +16813,14 @@ checksum = "9d422e8e38ec76e2f06ee439ccc765e9c6a9638b9e7c9f2e8255e4d41e8bd852"
 
 [[package]]
 name = "xtask-generate-test-db"
-version = "1.0.0-rc.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "anyhow",
  "dojo-test-utils",
  "dojo-utils",
  "dojo-world",
  "katana-runner",
- "reqwest 0.12.7",
+ "reqwest 0.11.27",
  "scarb",
  "sozo-ops",
  "sozo-scarbext",

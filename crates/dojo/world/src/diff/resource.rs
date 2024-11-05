@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 
+use starknet::core::types::contract::AbiEntry;
 use starknet_crypto::Felt;
 
 use crate::local::ResourceLocal;
@@ -105,6 +106,14 @@ impl ResourceDiff {
             ResourceDiff::Created(local) => local.class_hash(),
             ResourceDiff::Updated(_, remote) => remote.current_class_hash(),
             ResourceDiff::Synced(_, remote) => remote.current_class_hash(),
+        }
+    }
+
+    pub fn abi(&self) -> Vec<AbiEntry> {
+        match self {
+            ResourceDiff::Created(local) => local.abi(),
+            ResourceDiff::Updated(local, _) => local.abi(),
+            ResourceDiff::Synced(local, _) => local.abi(),
         }
     }
 }

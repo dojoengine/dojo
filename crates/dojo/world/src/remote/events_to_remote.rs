@@ -186,7 +186,7 @@ impl WorldRemote {
                 resource.push_class_hash(e.class_hash.into());
             }
             WorldEvent::ContractInitialized(e) => {
-                // Unwrap is safe bcause the contract must exist in the world.
+                // Unwrap is safe because the contract must exist in the world.
                 let resource = self.resources.get_mut(&e.selector).unwrap();
                 let contract = resource.as_contract_mut()?;
                 contract.is_initialized = true;

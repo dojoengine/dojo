@@ -4,9 +4,9 @@ use colored::Colorize;
 use dojo_utils::{self, TxnConfig};
 use dojo_world::contracts::WorldContract;
 use scarb::core::{Config, Workspace};
-use sozo_ops::migrate::{Migration, MigrationResult, MigrationUi};
+use sozo_ops::migrate::{Migration, MigrationResult};
+use sozo_ops::migration_ui::MigrationUi;
 use sozo_scarbext::WorkspaceExt;
-use spinoff::{spinner, spinners, Spinner};
 use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::Provider;
 use tabled::settings::Style;
@@ -45,22 +45,24 @@ impl MigrateArgs {
 
         let MigrateArgs { world, starknet, account, .. } = self;
 
-        let frames = spinner!(["⛩️ ", "🎃", "👻", "🧟", "💀"], 500);
-        // let frames = spinner!(["⛩️ ", "🥷 ", "🗡️ "], 500);
-
         config.tokio_handle().block_on(async {
             print_banner(&ws, &starknet).await?;
 
-            let mut spinner =
-                MigrationUi::Spinner(Spinner::new(frames, "Evaluating world diff...", None));
+            let mut spinner = MigrationUi::new(Some("Evaluating world diff..."));
+
+            let (world_diff, account, rpc_url) = utils::get_world_diff_and_account(
+                account,
+                starknet,
+                world,
+                &ws,
+                &mut Some(&mut spinner),
+            )
+            .await?;
+
+            let world_address = world_diff.world_info.address;
 
             let mut txn_config: TxnConfig = self.transaction.into();
             txn_config.wait = true;
-
-            let (world_diff, account, rpc_url) =
-                utils::get_world_diff_and_account(account, starknet, world, &ws).await?;
-
-            let world_address = world_diff.world_info.address;
 
             let migration = Migration::new(
                 world_diff,
@@ -84,7 +86,7 @@ impl MigrateArgs {
                 ("🎃", format!("No changes for world at address {:#066x}", world_address))
             };
 
-            spinner.stop_and_persist(symbol, Box::leak(end_text.into_boxed_str()));
+            spinner.stop_and_persist_boxed(symbol, end_text);
 
             Ok(())
         })
@@ -100,7 +102,8 @@ pub struct Banner {
 
 /// Prints the migration banner.
 async fn print_banner(ws: &Workspace<'_>, starknet: &StarknetOptions) -> Result<()> {
-    let (provider, rpc_url) = starknet.provider(None)?;
+    let profile_config = ws.load_profile_config()?;
+    let (provider, rpc_url) = starknet.provider(profile_config.env.as_ref())?;
 
     let chain_id = provider.chain_id().await?;
     let chain_id = parse_cairo_short_string(&chain_id)

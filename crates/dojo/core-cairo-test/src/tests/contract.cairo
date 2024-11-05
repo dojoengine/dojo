@@ -69,6 +69,7 @@ pub mod test_contract_upgrade {
 #[available_gas(7000000)]
 fn test_upgrade_from_world() {
     let world = deploy_world();
+    let world = world.dispatcher;
 
     let base_address = world
         .register_contract('salt', "dojo", test_contract::TEST_CLASS_HASH.try_into().unwrap());
@@ -85,6 +86,7 @@ fn test_upgrade_from_world() {
 #[should_panic(expected: ('ENTRYPOINT_NOT_FOUND', 'ENTRYPOINT_FAILED'))]
 fn test_upgrade_from_world_not_world_provider() {
     let world = deploy_world();
+    let world = world.dispatcher;
 
     let _ = world
         .register_contract('salt', "dojo", test_contract::TEST_CLASS_HASH.try_into().unwrap());
@@ -98,6 +100,7 @@ fn test_upgrade_from_world_not_world_provider() {
 #[should_panic(expected: ('must be called by world', 'ENTRYPOINT_FAILED'))]
 fn test_upgrade_direct() {
     let world = deploy_world();
+    let world = world.dispatcher;
 
     let base_address = world
         .register_contract('salt', "dojo", test_contract::TEST_CLASS_HASH.try_into().unwrap());
@@ -174,6 +177,7 @@ mod invalid_model_world {
 )]
 fn test_register_namespace_empty_name() {
     let world = deploy_world();
+    let world = world.dispatcher;
 
     world.register_namespace("");
 }

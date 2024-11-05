@@ -5,6 +5,7 @@ use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
+use block_producer::BlockProductionError;
 use futures::channel::mpsc::Receiver;
 use futures::stream::{Fuse, Stream, StreamExt};
 use katana_executor::ExecutorFactory;
@@ -47,7 +48,7 @@ impl<EF: ExecutorFactory> BlockProductionTask<EF> {
 }
 
 impl<EF: ExecutorFactory> Future for BlockProductionTask<EF> {
-    type Output = ();
+    type Output = Result<(), BlockProductionError>;
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = self.get_mut();
@@ -68,6 +69,7 @@ impl<EF: ExecutorFactory> Future for BlockProductionTask<EF> {
 
                     Err(error) => {
                         error!(target: LOG_TARGET, %error, "Mining block.");
+                        return Poll::Ready(Err(error));
                     }
                 }
             }

@@ -333,7 +333,8 @@ impl<'c> Executor<'c> {
                         let new_tps = if new_timestamp - cursor_timestamp != 0 {
                             num_transactions / (new_timestamp - cursor_timestamp)
                         } else {
-                            num_transactions
+                            let now = Instant::now();
+                            num_transactions / (now.elapsed().as_secs() - cursor_timestamp)
                         };
 
                         cursor.last_pending_block_contract_tx =

@@ -106,8 +106,8 @@ impl AccountOptions {
         let account_address = self.account_address(env_metadata)?;
 
         let signer = self.signer.signer(env_metadata, false)?;
-        trace!(?signer, "Signer obtained.");
 
+        trace!("Fetching chain id...");
         let chain_id = provider.chain_id().await?;
         trace!(?chain_id);
 
