@@ -197,7 +197,7 @@ pub mod bar {
             let mut world = self.world(@"dojo");
             let ptr = ModelPtr::<
                 Foo
-            >::Id(core::poseidon::poseidon_hash_span([get_caller_address().into()].span()));
+            > { id: core::poseidon::poseidon_hash_span([get_caller_address().into()].span()) };
             world.erase_model_ptr(ptr);
         }
     }

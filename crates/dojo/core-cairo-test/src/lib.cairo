@@ -23,9 +23,9 @@ mod tests {
         mod event;
     }
 
-    // mod model {
-    //     mod model;
-    // }
+    mod model {
+        mod model;
+    }
 
     mod storage {
         mod database;

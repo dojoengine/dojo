@@ -1,16 +1,6 @@
-use dojo::model::model_value::ModelValueKey;
+use dojo::{model::{ModelPtr, model_value::ModelValueKey}};
 
 // TODO: define the right interface for member accesses.
-
-/// A pointer to a model, which can be expressed by an entity id.
-/// It's different from `ModelIndex` which is used for low level accesses.
-#[derive(Copy, Drop, Serde, Debug, PartialEq)]
-pub enum ModelPtr<M> {
-    // The id of the model.
-    Id: felt252,
-    // The keys of the model as span.
-    Keys: Span<felt252>,
-}
 
 /// A `ModelStorage` trait that abstracts where the storage is.
 ///
@@ -41,8 +31,17 @@ pub trait ModelStorage<S, M> {
     /// The ptr is mostly used for type inferrence.
     fn erase_model_ptr(ref self: S, ptr: ModelPtr<M>);
 
-    /// Deletes multiple models of type `M` using the provided entity ids.
+    /// Deletes a model of type `M` using the provided entity id.
+    /// The ptr is mostly used for type inferrence.
     fn erase_models_ptrs(ref self: S, ptrs: Span<ModelPtr<M>>);
+
+    /// Retrieves a model of type `M` using the provided entity idref .
+    fn read_member<T, +Serde<T>>(self: @S, ptr: ModelPtr<M>, field_selector: felt252) -> T;
+
+    /// Retrieves a model of type `M` using the provided entity id.
+    fn write_member<T, +Serde<T>, +Drop<T>>(
+        ref self: S, ptr: ModelPtr<M>, field_selector: felt252, value: T
+    );
 
     /// Returns the current namespace hash.
     fn namespace_hash(self: @S) -> felt252;
