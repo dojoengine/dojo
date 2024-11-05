@@ -111,7 +111,7 @@ fn write_multiple_not_copiable() {
             let felt: felt252 = i.into();
             let caller: starknet::ContractAddress = felt.try_into().unwrap();
             // Can desnap as copiable.
-            let model: NotCopiable = *models[i.try_into().unwrap()];
+            let model: NotCopiable = models.pop_front().unwrap();
             assert_eq!(model.caller, caller);
             assert_eq!(model.a, array![felt]);
             assert_eq!(model.b, "ab");
