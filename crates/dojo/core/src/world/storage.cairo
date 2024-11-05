@@ -52,7 +52,6 @@ pub impl EventStorageWorldStorageImpl<E, +Event<E>> of EventStorage<WorldStorage
             Event::<E>::selector(self.namespace_hash),
             Event::<E>::keys(event),
             Event::<E>::values(event),
-            Event::<E>::historical()
         );
     }
 }
@@ -175,7 +174,6 @@ pub impl EventStorageTestWorldStorageImpl<
             Event::<E>::selector(self.namespace_hash),
             Event::<E>::keys(event),
             Event::<E>::values(event),
-            Event::<E>::historical()
         );
     }
 }

@@ -5,15 +5,9 @@ pub impl $type_name$DojoEventImpl of dojo::event::Event<$type_name$> {
     }
 
     #[inline(always)]
-    fn version() -> u8 {
-        $event_version$
-    }
-
-    #[inline(always)]
     fn definition() -> dojo::event::EventDefinition {
         dojo::event::EventDefinition {
             name: Self::name(),
-            version: Self::version(),
             layout: Self::layout(),
             schema: Self::schema()
         }
@@ -27,11 +21,6 @@ pub impl $type_name$DojoEventImpl of dojo::event::Event<$type_name$> {
     #[inline(always)]
     fn schema() -> dojo::meta::introspect::Ty {
         dojo::meta::introspect::Introspect::<$type_name$>::ty()
-    }
-
-    #[inline(always)]
-    fn historical() -> bool {
-        $event_historical$
     }
 
     #[inline(always)]
@@ -67,10 +56,6 @@ pub mod e_$type_name$ {
            "$type_name$"
         }
 
-        fn version(self: @ContractState) -> u8 {
-           $event_version$
-        }
-
         fn definition(self: @ContractState) -> dojo::event::EventDefinition {
             dojo::event::Event::<$type_name$>::definition()
         }
@@ -81,6 +66,17 @@ pub mod e_$type_name$ {
 
         fn schema(self: @ContractState) -> dojo::meta::introspect::Ty {
             dojo::meta::introspect::Introspect::<$type_name$>::ty()
+        }
+    }
+
+    #[abi(per_item)]
+    #[generate_trait]
+    impl $type_name$Impl of I$type_name${
+        // Ensures the ABI contains the Event struct, since it's never used
+        // by systems directly.
+        #[external(v0)]
+        fn ensure_abi(self: @ContractState, event: $type_name$) {
+            let _event = event;
         }
     }
 }

@@ -2,6 +2,10 @@ use starknet::ContractAddress;
 
 pub const DELETE_ENTITY_MEMBER: felt252 = 'Cannot delete entity member';
 
+pub fn lengths_mismatch(a: @ByteArray, b: @ByteArray, context: @ByteArray) -> ByteArray {
+    format!("Length mismatch: `{a}` and `{b}` in `{context}`")
+}
+
 pub fn not_writer(contract_tag: @ByteArray, on_type: @ByteArray, on_tag: @ByteArray) -> ByteArray {
     format!("Caller `{}` has no write access on {} `{}`", contract_tag, on_type, on_tag)
 }

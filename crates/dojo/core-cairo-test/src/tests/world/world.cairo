@@ -99,7 +99,6 @@ fn test_emit() {
             'bad event selector'
         );
         assert(event.system_address == bob, 'bad system address');
-        assert(!event.historical, 'bad historical value');
         assert(event.keys == [2].span(), 'bad keys');
         assert(event.values == [3, 4].span(), 'bad values');
     } else {
