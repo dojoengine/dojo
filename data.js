@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1730838175038,
+  "lastUpdate": 1730838387802,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -30943,6 +30943,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10735795297,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "remy.baranx@gmail.com",
+            "name": "Rémy Baranx",
+            "username": "remybar"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8b2d976c9d65cee1b5a5c5f3c8e49223507c1995",
+          "message": "feat: check models and events upgradability (#2626)",
+          "timestamp": "2024-11-05T14:06:33-06:00",
+          "tree_id": "0eac34bf4b7997d4291d244ca048b52d2c6c18db",
+          "url": "https://github.com/dojoengine/dojo/commit/8b2d976c9d65cee1b5a5c5f3c8e49223507c1995"
+        },
+        "date": 1730838386633,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16396085,
+            "range": "± 206412",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8808522,
+            "range": "± 433269",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3745639030,
+            "range": "± 778470528",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8499191,
+            "range": "± 145177",
             "unit": "ns/iter"
           }
         ]
