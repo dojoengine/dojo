@@ -263,7 +263,8 @@ namespace {namespace} {{
             .iter()
             .filter(|(_, s)| {
                 model_struct.inners.iter().any(|inner| {
-                    s.r#type == CompositeType::Struct && check_token_in_recursively(&inner.token, &s.type_name())
+                    s.r#type == CompositeType::Struct
+                        && check_token_in_recursively(&inner.token, &s.type_name())
                         && inner.token.type_name() != "ByteArray"
                 })
             })
@@ -283,7 +284,8 @@ namespace {namespace} {{
             .iter()
             .filter(|(_, s)| {
                 model_struct.inners.iter().any(|inner| {
-                    s.r#type == CompositeType::Enum && check_token_in_recursively(&inner.token, &s.type_name())
+                    s.r#type == CompositeType::Enum
+                        && check_token_in_recursively(&inner.token, &s.type_name())
                 })
             })
             .for_each(|(_, s)| {
@@ -567,17 +569,13 @@ fn check_token_in_recursively(token: &Token, type_name: &str) -> bool {
             if composite.type_name() == type_name {
                 return true;
             }
-            composite
-                .inners
-                .iter()
-                .any(|inner| check_token_in_recursively(&inner.token, type_name))
+            composite.inners.iter().any(|inner| check_token_in_recursively(&inner.token, type_name))
         }
         Token::Array(array) => check_token_in_recursively(&array.inner, type_name),
-        Token::Tuple(tuple) => tuple
-            .inners
-            .iter()
-            .any(|inner| check_token_in_recursively(&inner, type_name)),
-        _ => token.type_name() == type_name
+        Token::Tuple(tuple) => {
+            tuple.inners.iter().any(|inner| check_token_in_recursively(&inner, type_name))
+        }
+        _ => token.type_name() == type_name,
     }
 }
 
