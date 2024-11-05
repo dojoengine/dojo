@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1730838387802,
+  "lastUpdate": 1730843724073,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -30991,6 +30991,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8499191,
             "range": "± 145177",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "158306087+bengineer42@users.noreply.github.com",
+            "name": "Benjamin",
+            "username": "bengineer42"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "24964ced3a4d9f25e5356259374c633f97e8d90f",
+          "message": "Re added members and converted ModelPtr to a struct (#2634)\n\n* added member access back into the world store\r\n\r\n* added tests\r\n\r\n* simpolifying modelptr\r\n\r\n* Made model ptr a struct\r\n\r\n* added test\r\n\r\n* CHanged to match Model convention\r\n\r\n* Merged in main\r\n\r\n* Fixed lib\r\n\r\n* added tests\r\n\r\n* Empty commit\r\n\r\n* added tests\r\n\r\n* simpolifying modelptr\r\n\r\n* Made model ptr a struct\r\n\r\n* Empty commit\r\n\r\n* removed duplicate test\r\n\r\n* fix: remove ptrs to let user manage this part\r\n\r\n* fix: fix spaces\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-11-05T15:38:56-06:00",
+          "tree_id": "9219a0807e434d5c018392296cf02b2509ea4f5d",
+          "url": "https://github.com/dojoengine/dojo/commit/24964ced3a4d9f25e5356259374c633f97e8d90f"
+        },
+        "date": 1730843722374,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10350693545,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
