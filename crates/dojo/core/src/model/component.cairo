@@ -1,23 +1,30 @@
-use dojo::{model::{Model, IModel, ModelDef}, meta::{Layout, Ty}};
+use dojo::model::{Model, IModel, ModelDef};
+use dojo::meta::{Layout, introspect::Struct};
 
 #[starknet::embeddable]
-pub impl IModelImpl<TContractState, M, +Model<M>> of IModel<TContractState> {
+pub impl IDeployedModelImpl<
+    TContractState, M, +Model<M>
+> of dojo::meta::IDeployedResource<TContractState> {
     fn dojo_name(self: @TContractState) -> ByteArray {
         Model::<M>::name()
     }
+}
 
-    fn version(self: @TContractState) -> u8 {
-        Model::<M>::version()
-    }
-
-    fn schema(self: @TContractState) -> Ty {
+#[starknet::embeddable]
+pub impl IStoredModelImpl<
+    TContractState, M, +Model<M>
+> of dojo::meta::IStoredResource<TContractState> {
+    fn schema(self: @TContractState) -> Struct {
         Model::<M>::schema()
     }
 
     fn layout(self: @TContractState) -> Layout {
         Model::<M>::layout()
     }
+}
 
+#[starknet::embeddable]
+pub impl IModelImpl<TContractState, M, +Model<M>> of IModel<TContractState> {
     fn unpacked_size(self: @TContractState) -> Option<usize> {
         Model::<M>::unpacked_size()
     }

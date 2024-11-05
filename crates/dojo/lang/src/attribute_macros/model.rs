@@ -15,10 +15,7 @@ use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_types::naming;
 use starknet::core::utils::get_selector_from_name;
 
-use super::element::{
-    parse_members, serialize_member_ty, CommonStructParameters, StructParameterParser,
-};
-use super::DOJO_MODEL_ATTR;
+use super::element::{compute_unique_hash, parse_members, serialize_member_ty};
 use crate::aux_data::{Member, ModelAuxData};
 use crate::derive_macros::{
     extract_derive_attr_names, handle_derive_attrs, DOJO_INTROSPECT_DERIVE, DOJO_PACKED_DERIVE,
@@ -26,7 +23,6 @@ use crate::derive_macros::{
 
 const MODEL_CODE_PATCH: &str = include_str!("./patches/model.patch.cairo");
 const MODEL_FIELD_CODE_PATCH: &str = include_str!("./patches/model_field_store.patch.cairo");
-type ModelParameters = CommonStructParameters;
 
 #[derive(Debug, Clone, Default)]
 pub struct DojoModel {}
@@ -41,18 +37,8 @@ impl DojoModel {
     /// * A RewriteNode containing the generated code.
     pub fn from_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> PluginResult {
         let mut diagnostics = vec![];
-        let mut parameters = ModelParameters::default();
-
-        parameters.load_from_struct(
-            db,
-            &DOJO_MODEL_ATTR.to_string(),
-            struct_ast.clone(),
-            &mut diagnostics,
-        );
 
         let model_type = struct_ast.name(db).as_syntax_node().get_text(db).trim().to_string();
-
-        let model_version = parameters.version.to_string();
 
         for (id, value) in [("name", &model_type)] {
             if !naming::is_name_valid(value) {
@@ -166,8 +152,14 @@ impl DojoModel {
             derive_attr_names.push(DOJO_INTROSPECT_DERIVE.to_string());
         }
 
+        let is_packed = derive_attr_names.contains(&DOJO_PACKED_DERIVE.to_string());
+
         let (derive_nodes, derive_diagnostics) =
             handle_derive_attrs(db, &derive_attr_names, &ModuleItem::Struct(struct_ast.clone()));
+
+        let unique_hash =
+            compute_unique_hash(db, &model_type, is_packed, &struct_ast.members(db).elements(db))
+                .to_string();
 
         diagnostics.extend(derive_diagnostics);
 
@@ -175,7 +167,6 @@ impl DojoModel {
             MODEL_CODE_PATCH,
             &UnorderedHashMap::from([
                 ("model_type".to_string(), RewriteNode::Text(model_type.clone())),
-                ("model_version".to_string(), RewriteNode::Text(model_version)),
                 ("serialized_keys".to_string(), RewriteNode::new_modified(serialized_keys)),
                 ("serialized_values".to_string(), RewriteNode::new_modified(serialized_values)),
                 ("keys_to_tuple".to_string(), RewriteNode::Text(keys_to_tuple)),
@@ -186,6 +177,7 @@ impl DojoModel {
                     "model_value_derive_attr_names".to_string(),
                     RewriteNode::Text(model_value_derive_attr_names),
                 ),
+                ("unique_hash".to_string(), RewriteNode::Text(unique_hash)),
             ]),
         );
 

@@ -1943,7 +1943,7 @@ dependencies = [
  "bitflags 2.6.0",
  "cexpr",
  "clang-sys",
- "itertools 0.10.5",
+ "itertools 0.12.1",
  "lazy_static",
  "lazycell",
  "log",
@@ -2727,7 +2727,7 @@ dependencies = [
 [[package]]
 name = "cairo-lang-macro"
 version = "0.1.0"
-source = "git+https://github.com/dojoengine/scarb?branch=dojo-284#67814694f39e961f0e064334581233b3cc9aa1a9"
+source = "git+https://github.com/remybar/scarb?rev=fbad7d8d6bdb763b413055d8d9f8b7995672f145#fbad7d8d6bdb763b413055d8d9f8b7995672f145"
 dependencies = [
  "cairo-lang-macro-attributes",
  "cairo-lang-macro-stable",
@@ -3974,7 +3974,7 @@ dependencies = [
 [[package]]
 name = "create-output-dir"
 version = "1.0.0"
-source = "git+https://github.com/dojoengine/scarb?branch=dojo-284#67814694f39e961f0e064334581233b3cc9aa1a9"
+source = "git+https://github.com/remybar/scarb?rev=fbad7d8d6bdb763b413055d8d9f8b7995672f145#fbad7d8d6bdb763b413055d8d9f8b7995672f145"
 dependencies = [
  "anyhow",
  "core-foundation 0.10.0",
@@ -4667,6 +4667,7 @@ dependencies = [
  "serde_with 3.9.0",
  "smol_str",
  "starknet 0.12.0",
+ "starknet-crypto 0.7.2",
  "tempfile",
  "test-log",
  "toml 0.8.19",
@@ -4677,7 +4678,7 @@ dependencies = [
 [[package]]
 name = "dojo-lang"
 version = "1.0.0-rc.1"
-source = "git+https://github.com/dojoengine/dojo?rev=6cfe004bde326c2e7fda309a6ea5fb24007ba414#6cfe004bde326c2e7fda309a6ea5fb24007ba414"
+source = "git+https://github.com/remybar/dojo.git?branch=upgradeable_models#f6cff5f8b3d5265f0b9656a8df57d84531248565"
 dependencies = [
  "anyhow",
  "cairo-lang-compiler",
@@ -4695,7 +4696,7 @@ dependencies = [
  "cairo-lang-utils",
  "camino",
  "convert_case 0.6.0",
- "dojo-types 1.0.0-rc.1 (git+https://github.com/dojoengine/dojo?rev=6cfe004bde326c2e7fda309a6ea5fb24007ba414)",
+ "dojo-types 1.0.0-rc.1 (git+https://github.com/remybar/dojo.git?branch=upgradeable_models)",
  "indoc 1.0.9",
  "itertools 0.12.1",
  "regex",
@@ -4705,6 +4706,7 @@ dependencies = [
  "serde_with 3.9.0",
  "smol_str",
  "starknet 0.12.0",
+ "starknet-crypto 0.7.2",
  "tempfile",
  "toml 0.8.19",
  "tracing",
@@ -4787,7 +4789,7 @@ dependencies = [
 [[package]]
 name = "dojo-types"
 version = "1.0.0-rc.1"
-source = "git+https://github.com/dojoengine/dojo?rev=6cfe004bde326c2e7fda309a6ea5fb24007ba414#6cfe004bde326c2e7fda309a6ea5fb24007ba414"
+source = "git+https://github.com/remybar/dojo.git?branch=upgradeable_models#f6cff5f8b3d5265f0b9656a8df57d84531248565"
 dependencies = [
  "anyhow",
  "cainome 0.4.6",
@@ -7016,7 +7018,7 @@ dependencies = [
  "httpdate",
  "itoa",
  "pin-project-lite",
- "socket2 0.4.10",
+ "socket2 0.5.7",
  "tokio",
  "tower-service",
  "tracing",
@@ -7192,7 +7194,7 @@ dependencies = [
  "iana-time-zone-haiku",
  "js-sys",
  "wasm-bindgen",
- "windows-core 0.51.1",
+ "windows-core 0.52.0",
 ]
 
 [[package]]
@@ -10949,7 +10951,7 @@ checksum = "22505a5c94da8e3b7c2996394d1c933236c4d743e81a410bcca4e6989fc066a4"
 dependencies = [
  "bytes",
  "heck 0.5.0",
- "itertools 0.10.5",
+ "itertools 0.12.1",
  "log",
  "multimap",
  "once_cell",
@@ -10990,7 +10992,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "81bddcdb20abf9501610992b6759a4c888aef7d1a7247ef75e2404275ac24af1"
 dependencies = [
  "anyhow",
- "itertools 0.10.5",
+ "itertools 0.12.1",
  "proc-macro2",
  "quote",
  "syn 2.0.77",
@@ -12356,7 +12358,7 @@ dependencies = [
 [[package]]
 name = "scarb"
 version = "2.8.4"
-source = "git+https://github.com/dojoengine/scarb?branch=dojo-284#67814694f39e961f0e064334581233b3cc9aa1a9"
+source = "git+https://github.com/remybar/scarb?rev=fbad7d8d6bdb763b413055d8d9f8b7995672f145#fbad7d8d6bdb763b413055d8d9f8b7995672f145"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -12386,7 +12388,7 @@ dependencies = [
  "derive_builder",
  "dialoguer",
  "directories",
- "dojo-lang 1.0.0-rc.1 (git+https://github.com/dojoengine/dojo?rev=6cfe004bde326c2e7fda309a6ea5fb24007ba414)",
+ "dojo-lang 1.0.0-rc.1 (git+https://github.com/remybar/dojo.git?branch=upgradeable_models)",
  "dunce",
  "fs4",
  "fs_extra",
@@ -12406,8 +12408,8 @@ dependencies = [
  "redb",
  "reqwest 0.11.27",
  "scarb-build-metadata",
- "scarb-metadata 1.12.0 (git+https://github.com/dojoengine/scarb?branch=dojo-284)",
- "scarb-stable-hash 1.0.0 (git+https://github.com/dojoengine/scarb?branch=dojo-284)",
+ "scarb-metadata 1.12.0 (git+https://github.com/remybar/scarb?rev=fbad7d8d6bdb763b413055d8d9f8b7995672f145)",
+ "scarb-stable-hash 1.0.0 (git+https://github.com/remybar/scarb?rev=fbad7d8d6bdb763b413055d8d9f8b7995672f145)",
  "scarb-ui",
  "semver 1.0.23",
  "serde",
@@ -12437,7 +12439,7 @@ dependencies = [
 [[package]]
 name = "scarb-build-metadata"
 version = "2.8.4"
-source = "git+https://github.com/dojoengine/scarb?branch=dojo-284#67814694f39e961f0e064334581233b3cc9aa1a9"
+source = "git+https://github.com/remybar/scarb?rev=fbad7d8d6bdb763b413055d8d9f8b7995672f145#fbad7d8d6bdb763b413055d8d9f8b7995672f145"
 dependencies = [
  "cargo_metadata",
 ]
@@ -12458,7 +12460,7 @@ dependencies = [
 [[package]]
 name = "scarb-metadata"
 version = "1.12.0"
-source = "git+https://github.com/dojoengine/scarb?branch=dojo-284#67814694f39e961f0e064334581233b3cc9aa1a9"
+source = "git+https://github.com/remybar/scarb?rev=fbad7d8d6bdb763b413055d8d9f8b7995672f145#fbad7d8d6bdb763b413055d8d9f8b7995672f145"
 dependencies = [
  "camino",
  "derive_builder",
@@ -12481,7 +12483,7 @@ dependencies = [
 [[package]]
 name = "scarb-stable-hash"
 version = "1.0.0"
-source = "git+https://github.com/dojoengine/scarb?branch=dojo-284#67814694f39e961f0e064334581233b3cc9aa1a9"
+source = "git+https://github.com/remybar/scarb?rev=fbad7d8d6bdb763b413055d8d9f8b7995672f145#fbad7d8d6bdb763b413055d8d9f8b7995672f145"
 dependencies = [
  "data-encoding",
  "xxhash-rust",
@@ -12490,14 +12492,14 @@ dependencies = [
 [[package]]
 name = "scarb-ui"
 version = "0.1.5"
-source = "git+https://github.com/dojoengine/scarb?branch=dojo-284#67814694f39e961f0e064334581233b3cc9aa1a9"
+source = "git+https://github.com/remybar/scarb?rev=fbad7d8d6bdb763b413055d8d9f8b7995672f145#fbad7d8d6bdb763b413055d8d9f8b7995672f145"
 dependencies = [
  "anyhow",
  "camino",
  "clap",
  "console",
  "indicatif",
- "scarb-metadata 1.12.0 (git+https://github.com/dojoengine/scarb?branch=dojo-284)",
+ "scarb-metadata 1.12.0 (git+https://github.com/remybar/scarb?rev=fbad7d8d6bdb763b413055d8d9f8b7995672f145)",
  "serde",
  "serde_json",
  "tracing-core",
@@ -16406,6 +16408,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f1f8cf84f35d2db49a46868f947758c7a1138116f7fac3bc844f43ade1292e64"
 dependencies = [
  "windows-targets 0.48.5",
+]
+
+[[package]]
+name = "windows-core"
+version = "0.52.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "33ab640c8d7e35bf8ba19b884ba838ceb4fba93a4e8c65a9059d08afcfc683d9"
+dependencies = [
+ "windows-targets 0.52.6",
 ]
 
 [[package]]

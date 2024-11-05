@@ -109,7 +109,8 @@ mod records {
 
                 record_idx += 1;
 
-                world.emit_event(
+                world
+                    .emit_event(
                         @RecordLogged {
                             record_id, type_u8: record_idx.into(), type_felt, random_u128
                         }

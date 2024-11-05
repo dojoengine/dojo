@@ -172,9 +172,8 @@ impl cainome::cairo_serde::CairoSerde for Member {
 #[derive(Clone, serde::Serialize, serde::Deserialize, PartialEq, Debug)]
 pub struct ModelDef {
     pub name: cainome::cairo_serde::ByteArray,
-    pub version: u8,
     pub layout: Layout,
-    pub schema: Ty,
+    pub schema: Struct,
     pub packed_size: Option<u32>,
     pub unpacked_size: Option<u32>,
 }
@@ -185,9 +184,8 @@ impl cainome::cairo_serde::CairoSerde for ModelDef {
     fn cairo_serialized_size(__rust: &Self::RustType) -> usize {
         let mut __size = 0;
         __size += cainome::cairo_serde::ByteArray::cairo_serialized_size(&__rust.name);
-        __size += u8::cairo_serialized_size(&__rust.version);
         __size += Layout::cairo_serialized_size(&__rust.layout);
-        __size += Ty::cairo_serialized_size(&__rust.schema);
+        __size += Struct::cairo_serialized_size(&__rust.schema);
         __size += Option::<u32>::cairo_serialized_size(&__rust.packed_size);
         __size += Option::<u32>::cairo_serialized_size(&__rust.unpacked_size);
         __size
@@ -195,9 +193,8 @@ impl cainome::cairo_serde::CairoSerde for ModelDef {
     fn cairo_serialize(__rust: &Self::RustType) -> Vec<starknet::core::types::Felt> {
         let mut __out: Vec<starknet::core::types::Felt> = vec![];
         __out.extend(cainome::cairo_serde::ByteArray::cairo_serialize(&__rust.name));
-        __out.extend(u8::cairo_serialize(&__rust.version));
         __out.extend(Layout::cairo_serialize(&__rust.layout));
-        __out.extend(Ty::cairo_serialize(&__rust.schema));
+        __out.extend(Struct::cairo_serialize(&__rust.schema));
         __out.extend(Option::<u32>::cairo_serialize(&__rust.packed_size));
         __out.extend(Option::<u32>::cairo_serialize(&__rust.unpacked_size));
         __out
@@ -209,17 +206,15 @@ impl cainome::cairo_serde::CairoSerde for ModelDef {
         let mut __offset = __offset;
         let name = cainome::cairo_serde::ByteArray::cairo_deserialize(__felts, __offset)?;
         __offset += cainome::cairo_serde::ByteArray::cairo_serialized_size(&name);
-        let version = u8::cairo_deserialize(__felts, __offset)?;
-        __offset += u8::cairo_serialized_size(&version);
         let layout = Layout::cairo_deserialize(__felts, __offset)?;
         __offset += Layout::cairo_serialized_size(&layout);
-        let schema = Ty::cairo_deserialize(__felts, __offset)?;
-        __offset += Ty::cairo_serialized_size(&schema);
+        let schema = Struct::cairo_deserialize(__felts, __offset)?;
+        __offset += Struct::cairo_serialized_size(&schema);
         let packed_size = Option::<u32>::cairo_deserialize(__felts, __offset)?;
         __offset += Option::<u32>::cairo_serialized_size(&packed_size);
         let unpacked_size = Option::<u32>::cairo_deserialize(__felts, __offset)?;
         __offset += Option::<u32>::cairo_serialized_size(&unpacked_size);
-        Ok(ModelDef { name, version, layout, schema, packed_size, unpacked_size })
+        Ok(ModelDef { name, layout, schema, packed_size, unpacked_size })
     }
 }
 #[derive(Clone, serde::Serialize, serde::Deserialize, PartialEq, Debug)]
@@ -629,7 +624,7 @@ impl<A: starknet::accounts::ConnectedAccount + Sync> ModelContract<A> {
     }
     #[allow(clippy::ptr_arg)]
     #[allow(clippy::too_many_arguments)]
-    pub fn schema(&self) -> cainome::cairo_serde::call::FCall<A::Provider, Ty> {
+    pub fn schema(&self) -> cainome::cairo_serde::call::FCall<A::Provider, Struct> {
         use cainome::cairo_serde::CairoSerde;
         let mut __calldata = vec![];
         let __call = starknet::core::types::FunctionCall {
@@ -647,18 +642,6 @@ impl<A: starknet::accounts::ConnectedAccount + Sync> ModelContract<A> {
         let __call = starknet::core::types::FunctionCall {
             contract_address: self.address,
             entry_point_selector: starknet::macros::selector!("unpacked_size"),
-            calldata: __calldata,
-        };
-        cainome::cairo_serde::call::FCall::new(__call, self.provider())
-    }
-    #[allow(clippy::ptr_arg)]
-    #[allow(clippy::too_many_arguments)]
-    pub fn version(&self) -> cainome::cairo_serde::call::FCall<A::Provider, u8> {
-        use cainome::cairo_serde::CairoSerde;
-        let mut __calldata = vec![];
-        let __call = starknet::core::types::FunctionCall {
-            contract_address: self.address,
-            entry_point_selector: starknet::macros::selector!("version"),
             calldata: __calldata,
         };
         cainome::cairo_serde::call::FCall::new(__call, self.provider())
@@ -746,7 +729,7 @@ impl<P: starknet::providers::Provider + Sync> ModelContractReader<P> {
     }
     #[allow(clippy::ptr_arg)]
     #[allow(clippy::too_many_arguments)]
-    pub fn schema(&self) -> cainome::cairo_serde::call::FCall<P, Ty> {
+    pub fn schema(&self) -> cainome::cairo_serde::call::FCall<P, Struct> {
         use cainome::cairo_serde::CairoSerde;
         let mut __calldata = vec![];
         let __call = starknet::core::types::FunctionCall {
@@ -764,18 +747,6 @@ impl<P: starknet::providers::Provider + Sync> ModelContractReader<P> {
         let __call = starknet::core::types::FunctionCall {
             contract_address: self.address,
             entry_point_selector: starknet::macros::selector!("unpacked_size"),
-            calldata: __calldata,
-        };
-        cainome::cairo_serde::call::FCall::new(__call, self.provider())
-    }
-    #[allow(clippy::ptr_arg)]
-    #[allow(clippy::too_many_arguments)]
-    pub fn version(&self) -> cainome::cairo_serde::call::FCall<P, u8> {
-        use cainome::cairo_serde::CairoSerde;
-        let mut __calldata = vec![];
-        let __call = starknet::core::types::FunctionCall {
-            contract_address: self.address,
-            entry_point_selector: starknet::macros::selector!("version"),
             calldata: __calldata,
         };
         cainome::cairo_serde::call::FCall::new(__call, self.provider())

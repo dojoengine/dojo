@@ -22,6 +22,21 @@ pub enum Layout {
     Enum: Span<FieldLayout>,
 }
 
+#[generate_trait]
+pub impl LayoutCompareImpl of LayoutCompareTrait {
+    fn is_same_type_of(self: @Layout, old: @Layout) -> bool {
+        match (self, old) {
+            (Layout::Fixed(_), Layout::Fixed(_)) => true,
+            (Layout::Struct(_), Layout::Struct(_)) => true,
+            (Layout::Tuple(_), Layout::Tuple(_)) => true,
+            (Layout::Array(_), Layout::Array(_)) => true,
+            (Layout::ByteArray, Layout::ByteArray) => true,
+            (Layout::Enum(_), Layout::Enum(_)) => true,
+            _ => false
+        }
+    }
+}
+
 /// Compute the full size in bytes of a layout, when all the fields
 /// are bit-packed.
 /// Could be None if at least a field has a dynamic size.

@@ -39,12 +39,12 @@ pub mod world {
     use dojo::contract::components::upgradeable::{
         IUpgradeableDispatcher, IUpgradeableDispatcherTrait
     };
-    use dojo::contract::{IContractDispatcher, IContractDispatcherTrait};
-    use dojo::meta::Layout;
-    use dojo::model::{
-        Model, ResourceMetadata, metadata, ModelIndex, IModelDispatcher, IModelDispatcherTrait
+    use dojo::meta::{
+        Layout, IStoredResourceDispatcher, IStoredResourceDispatcherTrait,
+        IDeployedResourceDispatcher, IDeployedResourceDispatcherTrait, LayoutCompareTrait,
+        StructCompareTrait
     };
-    use dojo::event::{IEventDispatcher, IEventDispatcherTrait};
+    use dojo::model::{Model, ResourceMetadata, metadata, ModelIndex};
     use dojo::storage;
     use dojo::utils::{entity_id_from_keys, bytearray_hash, selector_from_namespace_and_name};
     use dojo::world::{IWorld, IUpgradeableWorld, Resource, ResourceIsNoneTrait};
@@ -347,7 +347,7 @@ pub mod world {
 
             storage::entity_model::write_model_entity(
                 metadata::resource_metadata_selector(internal_ns_hash),
-                metadata.resource_id,
+                entity_id_from_keys([metadata.resource_id].span()),
                 metadata.values(),
                 Model::<ResourceMetadata>::layout()
             );
@@ -426,7 +426,7 @@ pub mod world {
                 .unwrap_syscall();
             self.events_salt.write(salt + 1);
 
-            let event = IEventDispatcher { contract_address };
+            let event = IDeployedResourceDispatcher { contract_address };
             let event_name = event.dojo_name();
 
             self.assert_name(@event_name);
@@ -472,7 +472,7 @@ pub mod world {
 
             let namespace_hash = bytearray_hash(@namespace);
 
-            let event = IEventDispatcher { contract_address: new_contract_address };
+            let event = IDeployedResourceDispatcher { contract_address: new_contract_address };
             let event_name = event.dojo_name();
             let event_selector = selector_from_namespace_and_name(namespace_hash, @event_name);
 
@@ -497,6 +497,11 @@ pub mod world {
                     @errors::resource_conflict(@format!("{}-{}", @namespace, @event_name), @"event")
                 )
             };
+
+            self
+                .assert_resource_upgradability(
+                    @namespace, @event_name, prev_address, new_contract_address
+                );
 
             self
                 .resources
@@ -525,7 +530,7 @@ pub mod world {
                 .unwrap_syscall();
             self.models_salt.write(salt + 1);
 
-            let model = IModelDispatcher { contract_address };
+            let model = IDeployedResourceDispatcher { contract_address };
             let model_name = model.dojo_name();
 
             self.assert_name(@model_name);
@@ -571,7 +576,7 @@ pub mod world {
 
             let namespace_hash = bytearray_hash(@namespace);
 
-            let model = IModelDispatcher { contract_address: new_contract_address };
+            let model = IDeployedResourceDispatcher { contract_address: new_contract_address };
             let model_name = model.dojo_name();
             let model_selector = selector_from_namespace_and_name(namespace_hash, @model_name);
 
@@ -597,8 +602,10 @@ pub mod world {
                 )
             };
 
-            // TODO(@remy): check upgradeability with the actual content of the model.
-            // Use `prev_address` to get the previous model address and get `Ty` from it.
+            self
+                .assert_resource_upgradability(
+                    @namespace, @model_name, prev_address, new_contract_address
+                );
 
             self
                 .resources
@@ -648,7 +655,7 @@ pub mod world {
 
             let namespace_hash = bytearray_hash(@namespace);
 
-            let contract = IContractDispatcher { contract_address };
+            let contract = IDeployedResourceDispatcher { contract_address };
             let contract_name = contract.dojo_name();
             let contract_selector = selector_from_namespace_and_name(
                 namespace_hash, @contract_name
@@ -703,7 +710,7 @@ pub mod world {
 
             let namespace_hash = bytearray_hash(@namespace);
 
-            let contract = IContractDispatcher { contract_address: new_contract_address };
+            let contract = IDeployedResourceDispatcher { contract_address: new_contract_address };
             let contract_name = contract.dojo_name();
             let contract_selector = selector_from_namespace_and_name(
                 namespace_hash, @contract_name
@@ -738,7 +745,7 @@ pub mod world {
         fn init_contract(ref self: ContractState, selector: felt252, init_calldata: Span<felt252>) {
             if let Resource::Contract((contract_address, _)) = self.resources.read(selector) {
                 if self.initialized_contracts.read(selector) {
-                    let dispatcher = IContractDispatcher { contract_address };
+                    let dispatcher = IDeployedResourceDispatcher { contract_address };
                     panic_with_byte_array(
                         @errors::contract_already_initialized(@dispatcher.dojo_name())
                     );
@@ -1043,6 +1050,43 @@ pub mod world {
             }
         }
 
+        /// Panics if a resource is not upgradable.
+        ///
+        /// Upgradable means:
+        /// - the layout type must remain the same (Struct or Fixed),
+        /// - existing fields cannot be changed or moved inside the resource,
+        /// - new fields can only be appended at the end of the resource.
+        ///
+        /// # Arguments
+        ///   * `namespace` - the namespace of the resource.
+        ///   * `name` - the name of the resource.
+        ///   * `prev_address` - the address of the current resource.
+        ///   * `new_address` - the address of the newly deployed resource.
+        ///
+        fn assert_resource_upgradability(
+            self: @ContractState,
+            namespace: @ByteArray,
+            name: @ByteArray,
+            prev_address: ContractAddress,
+            new_address: ContractAddress
+        ) {
+            let resource = IStoredResourceDispatcher { contract_address: prev_address };
+            let old_layout = resource.layout();
+            let old_schema = resource.schema();
+
+            let new_resource = IStoredResourceDispatcher { contract_address: new_address };
+            let new_layout = new_resource.layout();
+            let new_schema = new_resource.schema();
+
+            if !new_layout.is_same_type_of(@old_layout) {
+                panic_with_byte_array(@errors::invalid_resource_layout_upgrade(namespace, name));
+            }
+
+            if !new_schema.is_an_upgrade_of(@old_schema) {
+                panic_with_byte_array(@errors::invalid_resource_schema_upgrade(namespace, name));
+            }
+        }
+
         /// Panics with the caller details.
         ///
         /// # Arguments
@@ -1059,19 +1103,19 @@ pub mod world {
                 Resource::Contract((
                     contract_address, _
                 )) => {
-                    let d = IContractDispatcher { contract_address };
+                    let d = IDeployedResourceDispatcher { contract_address };
                     format!("contract (or its namespace) `{}`", d.dojo_name())
                 },
                 Resource::Event((
                     contract_address, _
                 )) => {
-                    let d = IEventDispatcher { contract_address };
+                    let d = IDeployedResourceDispatcher { contract_address };
                     format!("event (or its namespace) `{}`", d.dojo_name())
                 },
                 Resource::Model((
                     contract_address, _
                 )) => {
-                    let d = IModelDispatcher { contract_address };
+                    let d = IDeployedResourceDispatcher { contract_address };
                     format!("model (or its namespace) `{}`", d.dojo_name())
                 },
                 Resource::Namespace(ns) => { format!("namespace `{}`", ns) },
@@ -1090,7 +1134,7 @@ pub mod world {
                 // If the contract is not an account or a dojo contract, tests will display
                 // "CONTRACT_NOT_DEPLOYED" as the error message. In production, the error message
                 // will display "ENTRYPOINT_NOT_FOUND".
-                let d = IContractDispatcher { contract_address: caller };
+                let d = IDeployedResourceDispatcher { contract_address: caller };
                 format!("Contract `{}`", d.dojo_name())
             };
 

@@ -9,9 +9,7 @@ use dojo::storage::database::MAX_ARRAY_LENGTH;
 use dojo::utils::entity_id_from_keys;
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 
-use dojo::tests::helpers::{
-    deploy_world, deploy_world_and_bar, IbarDispatcher, IbarDispatcherTrait, Foo, foo, bar
-};
+use dojo::tests::helpers::{deploy_world, deploy_world_and_bar, IbarDispatcher, Foo, foo, bar};
 use dojo::utils::test::{deploy_with_world_address, assert_array};
 
 #[derive(Introspect, Copy, Drop, Serde)]
@@ -247,6 +245,7 @@ fn test_set_entity_admin() {
 fn test_set_entity_unauthorized() {
     // Spawn empty world
     let world = deploy_world();
+    let world = world.dispatcher;
 
     let bar_contract = IbarDispatcher {
         contract_address: deploy_with_world_address(bar::TEST_CLASS_HASH, world)
@@ -265,6 +264,8 @@ fn test_set_entity_unauthorized() {
 #[test]
 fn test_set_entity_by_id() {
     let world = deploy_world();
+    let world = world.dispatcher;
+
     world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
     let selector = Model::<Foo>::selector();
     let entity_id = entity_id_from_keys([0x01234].span());
@@ -279,6 +280,8 @@ fn test_set_entity_by_id() {
 #[test]
 fn test_set_entity_with_fixed_layout() {
     let world = deploy_world();
+    let world = world.dispatcher;
+
     world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
     let selector = Model::<Foo>::selector();
     let keys = get_key_test();
@@ -293,6 +296,8 @@ fn test_set_entity_with_fixed_layout() {
 #[test]
 fn test_set_entity_with_struct_layout() {
     let world = deploy_world();
+    let world = world.dispatcher;
+
     world.register_model(struct_simple_model::TEST_CLASS_HASH.try_into().unwrap());
 
     let selector = Model::<StructSimpleModel>::selector();
@@ -309,6 +314,8 @@ fn test_set_entity_with_struct_layout() {
 #[test]
 fn test_set_entity_with_struct_tuple_layout() {
     let world = deploy_world();
+    let world = world.dispatcher;
+
     world.register_model(struct_with_tuple::TEST_CLASS_HASH.try_into().unwrap());
 
     let selector = Model::<StructWithTuple>::selector();
@@ -325,6 +332,8 @@ fn test_set_entity_with_struct_tuple_layout() {
 #[test]
 fn test_set_entity_with_struct_enum_layout() {
     let world = deploy_world();
+    let world = world.dispatcher;
+
     world.register_model(struct_with_enum::TEST_CLASS_HASH.try_into().unwrap());
 
     let selector = Model::<StructWithEnum>::selector();
@@ -349,6 +358,8 @@ fn test_set_entity_with_struct_enum_layout() {
 #[test]
 fn test_set_entity_with_struct_simple_array_layout() {
     let world = deploy_world();
+    let world = world.dispatcher;
+
     world.register_model(struct_simple_array_model::TEST_CLASS_HASH.try_into().unwrap());
 
     let selector = Model::<StructSimpleArrayModel>::selector();
@@ -365,6 +376,8 @@ fn test_set_entity_with_struct_simple_array_layout() {
 #[test]
 fn test_set_entity_with_struct_complex_array_layout() {
     let world = deploy_world();
+    let world = world.dispatcher;
+
     world.register_model(struct_complex_array_model::TEST_CLASS_HASH.try_into().unwrap());
 
     let selector = Model::<StructComplexArrayModel>::selector();
@@ -381,6 +394,8 @@ fn test_set_entity_with_struct_complex_array_layout() {
 #[test]
 fn test_set_entity_with_struct_layout_and_byte_array() {
     let world = deploy_world();
+    let world = world.dispatcher;
+
     world.register_model(struct_byte_array_model::TEST_CLASS_HASH.try_into().unwrap());
 
     let selector = Model::<StructByteArrayModel>::selector();
@@ -397,6 +412,8 @@ fn test_set_entity_with_struct_layout_and_byte_array() {
 #[test]
 fn test_set_entity_with_nested_elements() {
     let world = deploy_world();
+    let world = world.dispatcher;
+
     world.register_model(struct_nested_model::TEST_CLASS_HASH.try_into().unwrap());
 
     let selector = Model::<StructNestedModel>::selector();
@@ -424,6 +441,8 @@ fn assert_empty_array(values: Span<felt252>) {
 #[test]
 fn test_set_entity_with_struct_generics_enum_layout() {
     let world = deploy_world();
+    let world = world.dispatcher;
+
     world.register_model(struct_with_generic::TEST_CLASS_HASH.try_into().unwrap());
 
     let selector = Model::<StructWithGeneric>::selector();
@@ -448,6 +467,8 @@ fn test_set_entity_with_struct_generics_enum_layout() {
 #[test]
 fn test_delete_entity_by_id() {
     let world = deploy_world();
+    let world = world.dispatcher;
+
     world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
     let selector = Model::<Foo>::selector();
     let entity_id = entity_id_from_keys(get_key_test());
@@ -467,6 +488,8 @@ fn test_delete_entity_by_id() {
 #[test]
 fn test_delete_entity_with_fixed_layout() {
     let world = deploy_world();
+    let world = world.dispatcher;
+
     world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
     let selector = Model::<Foo>::selector();
     let keys = get_key_test();
@@ -486,6 +509,8 @@ fn test_delete_entity_with_fixed_layout() {
 #[test]
 fn test_delete_entity_with_simple_struct_layout() {
     let world = deploy_world();
+    let world = world.dispatcher;
+
     world.register_model(struct_simple_model::TEST_CLASS_HASH.try_into().unwrap());
 
     let selector = Model::<StructSimpleModel>::selector();
@@ -506,6 +531,8 @@ fn test_delete_entity_with_simple_struct_layout() {
 #[test]
 fn test_delete_entity_with_struct_simple_array_layout() {
     let world = deploy_world();
+    let world = world.dispatcher;
+
     world.register_model(struct_simple_array_model::TEST_CLASS_HASH.try_into().unwrap());
 
     let selector = Model::<StructSimpleArrayModel>::selector();
@@ -529,6 +556,8 @@ fn test_delete_entity_with_struct_simple_array_layout() {
 #[test]
 fn test_delete_entity_with_complex_array_struct_layout() {
     let world = deploy_world();
+    let world = world.dispatcher;
+
     world.register_model(struct_complex_array_model::TEST_CLASS_HASH.try_into().unwrap());
 
     let selector = Model::<StructComplexArrayModel>::selector();
@@ -553,6 +582,8 @@ fn test_delete_entity_with_complex_array_struct_layout() {
 #[test]
 fn test_delete_entity_with_struct_tuple_layout() {
     let world = deploy_world();
+    let world = world.dispatcher;
+
     world.register_model(struct_with_tuple::TEST_CLASS_HASH.try_into().unwrap());
 
     let selector = Model::<StructWithTuple>::selector();
@@ -574,6 +605,8 @@ fn test_delete_entity_with_struct_tuple_layout() {
 #[test]
 fn test_delete_entity_with_struct_enum_layout() {
     let world = deploy_world();
+    let world = world.dispatcher;
+
     world.register_model(struct_with_enum::TEST_CLASS_HASH.try_into().unwrap());
 
     let selector = Model::<StructWithEnum>::selector();
@@ -596,6 +629,8 @@ fn test_delete_entity_with_struct_enum_layout() {
 #[test]
 fn test_delete_entity_with_struct_layout_and_byte_array() {
     let world = deploy_world();
+    let world = world.dispatcher;
+
     world.register_model(struct_byte_array_model::TEST_CLASS_HASH.try_into().unwrap());
 
     let selector = Model::<StructByteArrayModel>::selector();
@@ -617,6 +652,8 @@ fn test_delete_entity_with_struct_layout_and_byte_array() {
 #[test]
 fn test_delete_entity_with_nested_elements() {
     let world = deploy_world();
+    let world = world.dispatcher;
+
     world.register_model(struct_nested_model::TEST_CLASS_HASH.try_into().unwrap());
 
     let selector = Model::<StructNestedModel>::selector();
@@ -638,6 +675,8 @@ fn test_delete_entity_with_nested_elements() {
 #[test]
 fn test_delete_entity_with_struct_generics_enum_layout() {
     let world = deploy_world();
+    let world = world.dispatcher;
+
     world.register_model(struct_with_generic::TEST_CLASS_HASH.try_into().unwrap());
 
     let selector = Model::<StructWithGeneric>::selector();
@@ -660,7 +699,7 @@ fn test_delete_entity_with_struct_generics_enum_layout() {
 #[should_panic(expected: ("Unexpected layout type for a model.", 'ENTRYPOINT_FAILED'))]
 fn test_set_entity_with_unexpected_array_model_layout() {
     let world = deploy_world();
-    world.register_model(struct_simple_array_model::TEST_CLASS_HASH.try_into().unwrap());
+    let world = world.dispatcher;
 
     let layout = Layout::Array([Introspect::<felt252>::layout()].span());
 
@@ -677,7 +716,7 @@ fn test_set_entity_with_unexpected_array_model_layout() {
 #[should_panic(expected: ("Unexpected layout type for a model.", 'ENTRYPOINT_FAILED'))]
 fn test_set_entity_with_unexpected_tuple_model_layout() {
     let world = deploy_world();
-    world.register_model(struct_simple_array_model::TEST_CLASS_HASH.try_into().unwrap());
+    let world = world.dispatcher;
 
     let layout = Layout::Tuple([Introspect::<felt252>::layout()].span());
 
@@ -694,7 +733,7 @@ fn test_set_entity_with_unexpected_tuple_model_layout() {
 #[should_panic(expected: ("Unexpected layout type for a model.", 'ENTRYPOINT_FAILED'))]
 fn test_delete_entity_with_unexpected_array_model_layout() {
     let world = deploy_world();
-    world.register_model(struct_simple_array_model::TEST_CLASS_HASH.try_into().unwrap());
+    let world = world.dispatcher;
 
     let layout = Layout::Array([Introspect::<felt252>::layout()].span());
     IWorldDispatcherTrait::delete_entity(
@@ -706,7 +745,7 @@ fn test_delete_entity_with_unexpected_array_model_layout() {
 #[should_panic(expected: ("Unexpected layout type for a model.", 'ENTRYPOINT_FAILED'))]
 fn test_delete_entity_with_unexpected_tuple_model_layout() {
     let world = deploy_world();
-    world.register_model(struct_simple_array_model::TEST_CLASS_HASH.try_into().unwrap());
+    let world = world.dispatcher;
 
     let layout = Layout::Tuple([Introspect::<felt252>::layout()].span());
 
@@ -719,7 +758,7 @@ fn test_delete_entity_with_unexpected_tuple_model_layout() {
 #[should_panic(expected: ("Unexpected layout type for a model.", 'ENTRYPOINT_FAILED'))]
 fn test_get_entity_with_unexpected_array_model_layout() {
     let world = deploy_world();
-    world.register_model(struct_simple_array_model::TEST_CLASS_HASH.try_into().unwrap());
+    let world = world.dispatcher;
 
     let layout = Layout::Array([Introspect::<felt252>::layout()].span());
 
@@ -730,7 +769,7 @@ fn test_get_entity_with_unexpected_array_model_layout() {
 #[should_panic(expected: ("Unexpected layout type for a model.", 'ENTRYPOINT_FAILED'))]
 fn test_get_entity_with_unexpected_tuple_model_layout() {
     let world = deploy_world();
-    world.register_model(struct_simple_array_model::TEST_CLASS_HASH.try_into().unwrap());
+    let world = world.dispatcher;
 
     let layout = Layout::Tuple([Introspect::<felt252>::layout()].span());
 
@@ -742,7 +781,7 @@ fn test_get_entity_with_unexpected_tuple_model_layout() {
 #[should_panic(expected: ('Invalid values length', 'ENTRYPOINT_FAILED',))]
 fn test_set_entity_with_bad_values_length_error_for_array_layout() {
     let world = deploy_world();
-    world.register_model(struct_simple_array_model::TEST_CLASS_HASH.try_into().unwrap());
+    let world = world.dispatcher;
 
     let selector = Model::<StructSimpleArrayModel>::selector();
     let keys = get_key_test();
@@ -755,7 +794,7 @@ fn test_set_entity_with_bad_values_length_error_for_array_layout() {
 #[should_panic(expected: ('invalid array length', 'ENTRYPOINT_FAILED',))]
 fn test_set_entity_with_too_big_array_length() {
     let world = deploy_world();
-    world.register_model(struct_simple_array_model::TEST_CLASS_HASH.try_into().unwrap());
+    let world = world.dispatcher;
 
     let selector = Model::<StructSimpleArrayModel>::selector();
     let keys = get_key_test();
@@ -771,7 +810,7 @@ fn test_set_entity_with_too_big_array_length() {
 #[should_panic(expected: ('invalid array length', 'ENTRYPOINT_FAILED',))]
 fn test_set_entity_with_struct_layout_and_bad_byte_array_length() {
     let world = deploy_world();
-    world.register_model(struct_byte_array_model::TEST_CLASS_HASH.try_into().unwrap());
+    let world = world.dispatcher;
 
     let selector = Model::<StructByteArrayModel>::selector();
     let keys = get_key_test();
@@ -787,7 +826,7 @@ fn test_set_entity_with_struct_layout_and_bad_byte_array_length() {
 #[should_panic(expected: ('Invalid values length', 'ENTRYPOINT_FAILED',))]
 fn test_set_entity_with_struct_layout_and_bad_value_length_for_byte_array() {
     let world = deploy_world();
-    world.register_model(struct_byte_array_model::TEST_CLASS_HASH.try_into().unwrap());
+    let world = world.dispatcher;
 
     let selector = Model::<StructByteArrayModel>::selector();
     let keys = get_key_test();

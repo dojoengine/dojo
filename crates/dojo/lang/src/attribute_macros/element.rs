@@ -1,125 +1,39 @@
-use std::collections::HashMap;
-
 use cairo_lang_defs::patcher::RewriteNode;
 use cairo_lang_defs::plugin::PluginDiagnostic;
 use cairo_lang_diagnostics::Severity;
-use cairo_lang_syntax::node::ast::{
-    ArgClause, ArgClauseNamed, Expr, ItemStruct, Member as MemberAst, OptionArgListParenthesized,
-};
+use cairo_lang_syntax::node::ast::Member as MemberAst;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{Terminal, TypedStablePtr, TypedSyntaxNode};
+use dojo_types::naming::compute_bytearray_hash;
+use starknet_crypto::{poseidon_hash_many, Felt};
 
 use crate::aux_data::Member;
 
-pub const DEFAULT_VERSION: u8 = 1;
-
-pub const PARAMETER_VERSION_NAME: &str = "version";
-
-/// `StructParameterParser` provides a general `from_struct` function to parse
-/// the parameters of a struct attribute like dojo::model or dojo::event.
-///
-/// Processing of specific parameters can then be implemented through the `process_named_parameters`
-/// function.
-pub trait StructParameterParser {
-    fn load_from_struct(
-        &mut self,
-        db: &dyn SyntaxGroup,
-        attribute_name: &String,
-        struct_ast: ItemStruct,
-        diagnostics: &mut Vec<PluginDiagnostic>,
-    ) {
-        let mut processed_args: HashMap<String, bool> = HashMap::new();
-
-        if let OptionArgListParenthesized::ArgListParenthesized(arguments) =
-            struct_ast.attributes(db).query_attr(db, attribute_name).first().unwrap().arguments(db)
-        {
-            arguments.arguments(db).elements(db).iter().for_each(|a| match a.arg_clause(db) {
-                ArgClause::Named(x) => {
-                    let arg_name = x.name(db).text(db).to_string();
-
-                    if processed_args.contains_key(&arg_name) {
-                        diagnostics.push(PluginDiagnostic {
-                            message: format!(
-                                "Too many '{}' attributes for {attribute_name}",
-                                arg_name
-                            ),
-                            stable_ptr: struct_ast.stable_ptr().untyped(),
-                            severity: Severity::Error,
-                        });
-                    } else {
-                        processed_args.insert(arg_name.clone(), true);
-                        self.process_named_parameters(db, attribute_name, x, diagnostics);
-                    }
-                }
-                ArgClause::Unnamed(x) => {
-                    diagnostics.push(PluginDiagnostic {
-                        message: format!(
-                            "Unexpected argument '{}' for {attribute_name}",
-                            x.as_syntax_node().get_text(db)
-                        ),
-                        stable_ptr: x.stable_ptr().untyped(),
-                        severity: Severity::Warning,
-                    });
-                }
-                ArgClause::FieldInitShorthand(x) => {
-                    diagnostics.push(PluginDiagnostic {
-                        message: format!(
-                            "Unexpected argument '{}' for {attribute_name}",
-                            x.name(db).name(db).text(db).to_string()
-                        ),
-                        stable_ptr: x.stable_ptr().untyped(),
-                        severity: Severity::Warning,
-                    });
-                }
+/// Compute a unique hash based on the element name and types and names of members.
+/// This hash is used in element contracts to ensure uniqueness.
+pub fn compute_unique_hash(
+    db: &dyn SyntaxGroup,
+    element_name: &str,
+    is_packed: bool,
+    members: &[MemberAst],
+) -> Felt {
+    let mut hashes =
+        vec![if is_packed { Felt::ONE } else { Felt::ZERO }, compute_bytearray_hash(element_name)];
+    hashes.extend(
+        members
+            .iter()
+            .map(|m| {
+                poseidon_hash_many(&[
+                    compute_bytearray_hash(&m.name(db).text(db).to_string()),
+                    compute_bytearray_hash(
+                        m.type_clause(db).ty(db).as_syntax_node().get_text(db).trim(),
+                    ),
+                ])
             })
-        }
-    }
-
-    fn process_named_parameters(
-        &mut self,
-        db: &dyn SyntaxGroup,
-        attribute_name: &str,
-        arg: ArgClauseNamed,
-        diagnostics: &mut Vec<PluginDiagnostic>,
+            .collect::<Vec<_>>(),
     );
-}
-
-#[derive(Debug)]
-pub struct CommonStructParameters {
-    pub version: u8,
-}
-
-impl Default for CommonStructParameters {
-    fn default() -> CommonStructParameters {
-        CommonStructParameters { version: DEFAULT_VERSION }
-    }
-}
-
-impl StructParameterParser for CommonStructParameters {
-    fn process_named_parameters(
-        &mut self,
-        db: &dyn SyntaxGroup,
-        attribute_name: &str,
-        arg: ArgClauseNamed,
-        diagnostics: &mut Vec<PluginDiagnostic>,
-    ) {
-        let arg_name = arg.name(db).text(db).to_string();
-        let arg_value = arg.value(db);
-
-        match arg_name.as_str() {
-            PARAMETER_VERSION_NAME => {
-                self.version = get_version(db, attribute_name, arg_value, diagnostics);
-            }
-            _ => {
-                diagnostics.push(PluginDiagnostic {
-                    message: format!("Unexpected argument '{}' for {attribute_name}", arg_name),
-                    stable_ptr: arg.stable_ptr().untyped(),
-                    severity: Severity::Warning,
-                });
-            }
-        }
-    }
+    poseidon_hash_many(&hashes)
 }
 
 pub fn parse_members(
@@ -207,50 +121,4 @@ pub fn deserialize_member_ty(member: &Member, input_name: &str) -> RewriteNode {
         "let {} = core::serde::Serde::<{}>::deserialize(ref {input_name})?;\n",
         member.name, member.ty
     ))
-}
-
-/// Get the version from the `Expr` parameter.
-fn get_version(
-    db: &dyn SyntaxGroup,
-    attribute_name: &str,
-    arg_value: Expr,
-    diagnostics: &mut Vec<PluginDiagnostic>,
-) -> u8 {
-    match arg_value {
-        Expr::Literal(ref value) => {
-            if let Ok(value) = value.text(db).parse::<u8>() {
-                if value <= DEFAULT_VERSION {
-                    value
-                } else {
-                    diagnostics.push(PluginDiagnostic {
-                        message: format!("{attribute_name} version {} not supported", value),
-                        stable_ptr: arg_value.stable_ptr().untyped(),
-                        severity: Severity::Error,
-                    });
-                    DEFAULT_VERSION
-                }
-            } else {
-                diagnostics.push(PluginDiagnostic {
-                    message: format!(
-                        "The argument '{}' of {attribute_name} must be an integer",
-                        PARAMETER_VERSION_NAME
-                    ),
-                    stable_ptr: arg_value.stable_ptr().untyped(),
-                    severity: Severity::Error,
-                });
-                DEFAULT_VERSION
-            }
-        }
-        _ => {
-            diagnostics.push(PluginDiagnostic {
-                message: format!(
-                    "The argument '{}' of {attribute_name} must be an integer",
-                    PARAMETER_VERSION_NAME
-                ),
-                stable_ptr: arg_value.stable_ptr().untyped(),
-                severity: Severity::Error,
-            });
-            DEFAULT_VERSION
-        }
-    }
 }
