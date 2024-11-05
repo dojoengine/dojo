@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1730771529063,
+  "lastUpdate": 1730771796152,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -30553,6 +30553,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 9469004973,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "92cfad07a74feb67b001f7a7ccb76e1c5a9268d7",
+          "message": "feat: separate the resource registration and permission phase for tes… (#2627)\n\n* feat: separate the resource registration and permission phase for testing\r\n\r\n* ci: add simple and core-cairo-test to tests\r\n\r\n* tests: fix world tests",
+          "timestamp": "2024-11-04T19:36:21-06:00",
+          "tree_id": "1f2f93efb4e895666d11d7ccb6e2e8229740ebac",
+          "url": "https://github.com/dojoengine/dojo/commit/92cfad07a74feb67b001f7a7ccb76e1c5a9268d7"
+        },
+        "date": 1730771794855,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16334081,
+            "range": "± 369405",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8640413,
+            "range": "± 246020",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3979591343,
+            "range": "± 711282974",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 9664153,
+            "range": "± 498180",
             "unit": "ns/iter"
           }
         ]
