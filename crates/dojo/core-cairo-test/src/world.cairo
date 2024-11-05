@@ -64,8 +64,23 @@ pub impl ContractDefImpl of ContractDefTrait {
         }
     }
 
+    fn new_address(address: ContractAddress) -> ContractDef {
+        ContractDef {
+            contract: ContractDescriptor::Address(address),
+            writer_of: [].span(),
+            owner_of: [].span(),
+            init_calldata: [].span()
+        }
+    }
+
     fn with_init_calldata(mut self: ContractDef, init_calldata: Span<felt252>) -> ContractDef {
-        self.init_calldata = init_calldata;
+        match self.contract {
+            ContractDescriptor::Address(_) => panic!(
+                "Cannot set init_calldata for address descriptor"
+            ),
+            ContractDescriptor::Named(_) => self.init_calldata = init_calldata,
+        };
+
         self
     }
 

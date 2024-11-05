@@ -45,8 +45,8 @@ mod tests {
     mod world {
         mod acl;
         //mod entities;
-    //mod resources;
-    //mod world;
+        //mod resources;
+        mod world;
     }
 
     mod utils {
