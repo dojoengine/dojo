@@ -15,7 +15,7 @@ mod records {
     use dojo::world::IWorldDispatcherTrait;
     use super::IRecords;
 
-    #[derive(Drop, starknet::Event)]
+    #[derive(Drop, Serde, starknet::Event)]
     #[dojo::event]
     struct RecordLogged {
         #[key]

@@ -1,6 +1,6 @@
 use dojo::model::ModelStorage;
 
-use crate::tests::helpers::{deploy_world_and_foo, Foo};
+use crate::tests::helpers::{deploy_world_and_foo, Foo, NotCopiable};
 
 #[test]
 fn write_simple() {
@@ -30,7 +30,7 @@ fn write_simple() {
 }
 
 #[test]
-fn write_multiple() {
+fn write_multiple_copiable() {
     let (mut world, _) = deploy_world_and_foo();
 
     let mut models_snaps: Array<@Foo> = array![];
@@ -75,5 +75,54 @@ fn write_multiple() {
     while let Option::Some(m) = models.pop_front() {
         assert_eq!(m.a, 0);
         assert_eq!(m.b, 0);
+    };
+}
+
+#[test]
+fn write_multiple_not_copiable() {
+    let (mut world, _) = deploy_world_and_foo();
+
+    let mut models_snaps: Array<@NotCopiable> = array![];
+    let mut keys: Array<starknet::ContractAddress> = array![];
+
+    for i in 0_u128
+        ..10_u128 {
+            let felt: felt252 = i.into();
+            let caller: starknet::ContractAddress = felt.try_into().unwrap();
+            keys.append(caller);
+
+            if i % 2 == 0 {
+                let foo = NotCopiable { caller, a: array![felt], b: "ab" };
+                models_snaps.append(@foo);
+            } else {
+                let foo = NotCopiable { caller, a: array![felt], b: "ab" };
+                models_snaps.append(@foo);
+            }
+        };
+
+    world.write_models(models_snaps.span());
+
+    let mut models: Array<NotCopiable> = world.read_models(keys.span());
+
+    assert_eq!(models.len(), 10);
+
+    for i in 0_u128
+        ..10_u128 {
+            let felt: felt252 = i.into();
+            let caller: starknet::ContractAddress = felt.try_into().unwrap();
+            // Can desnap as copiable.
+            let model: NotCopiable = *models[i.try_into().unwrap()];
+            assert_eq!(model.caller, caller);
+            assert_eq!(model.a, array![felt]);
+            assert_eq!(model.b, "ab");
+        };
+
+    world.erase_models(models_snaps.span());
+
+    let mut models: Array<NotCopiable> = world.read_models(keys.span());
+
+    while let Option::Some(m) = models.pop_front() {
+        assert_eq!(m.a, array![]);
+        assert_eq!(m.b, "");
     };
 }

@@ -17,9 +17,7 @@ use cairo_lang_syntax::node::{ast, TypedStablePtr, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_types::naming;
 
-use super::element::{
-    parse_members, serialize_keys_and_values,
-};
+use super::element::{parse_members, serialize_keys_and_values};
 use crate::aux_data::EventAuxData;
 use crate::derive_macros::{
     extract_derive_attr_names, handle_derive_attrs, DOJO_INTROSPECT_DERIVE, DOJO_PACKED_DERIVE,
