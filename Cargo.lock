@@ -8273,6 +8273,7 @@ name = "katana-pool"
 version = "1.0.0-rc.1"
 dependencies = [
  "futures",
+ "futures-util",
  "katana-executor",
  "katana-primitives",
  "katana-provider",

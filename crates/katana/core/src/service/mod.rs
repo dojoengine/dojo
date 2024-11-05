@@ -1,19 +1,14 @@
-// TODO: remove the messaging feature flag
-// TODO: move the tasks to a separate module
-
 use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
 use block_producer::BlockProductionError;
-use futures::channel::mpsc::Receiver;
-use futures::stream::{Fuse, Stream, StreamExt};
+use futures::stream::StreamExt;
 use katana_executor::ExecutorFactory;
 use katana_pool::ordering::PoolOrd;
 use katana_pool::pending::PendingTransactions;
 use katana_pool::{TransactionPool, TxPool};
 use katana_primitives::transaction::ExecutableTxWithHash;
-use katana_primitives::Felt;
 use tracing::{error, info};
 
 use self::block_producer::BlockProducer;
@@ -114,11 +109,6 @@ pub struct TransactionMiner<O>
 where
     O: PoolOrd<Transaction = ExecutableTxWithHash>,
 {
-    /// stores whether there are pending transacions (if known)
-    has_pending_txs: Option<bool>,
-    /// Receives hashes of transactions that are ready from the pool
-    rx: Fuse<Receiver<Felt>>,
-
     pending_txs: PendingTransactions<ExecutableTxWithHash, O>,
 }
 
@@ -126,41 +116,21 @@ impl<O> TransactionMiner<O>
 where
     O: PoolOrd<Transaction = ExecutableTxWithHash>,
 {
-    pub fn new(
-        pending_txs: PendingTransactions<ExecutableTxWithHash, O>,
-        rx: Receiver<Felt>,
-    ) -> Self {
-        Self { pending_txs, rx: rx.fuse(), has_pending_txs: None }
+    pub fn new(pending_txs: PendingTransactions<ExecutableTxWithHash, O>) -> Self {
+        Self { pending_txs }
     }
 
-    fn poll(
-        &mut self,
-        // pool: &TxPool,
-        cx: &mut Context<'_>,
-    ) -> Poll<Vec<ExecutableTxWithHash>> {
-        // drain the notification stream
-        while let Poll::Ready(Some(_)) = Pin::new(&mut self.rx).poll_next(cx) {
-            self.has_pending_txs = Some(true);
-        }
-
-        if self.has_pending_txs == Some(false) {
-            return Poll::Pending;
-        }
-
+    fn poll(&mut self, cx: &mut Context<'_>) -> Poll<Vec<ExecutableTxWithHash>> {
         let mut transactions = Vec::new();
+
         while let Poll::Ready(Some(tx)) = self.pending_txs.poll_next_unpin(cx) {
             transactions.push(tx.tx.as_ref().clone());
         }
-
-        // take all the transactions from the pool
-        // let transactions =
-        //     pool.take_transactions().map(|tx| tx.tx.as_ref().clone()).collect::<Vec<_>>();
 
         if transactions.is_empty() {
             return Poll::Pending;
         }
 
-        self.has_pending_txs = Some(false);
         Poll::Ready(transactions)
     }
 }

@@ -125,6 +125,8 @@ impl<T> Default for TipOrdering<T> {
 #[cfg(test)]
 mod tests {
 
+    use futures::executor;
+
     use crate::ordering::{self, FiFo};
     use crate::pool::test_utils::*;
     use crate::tx::PoolTransaction;
@@ -145,10 +147,10 @@ mod tests {
         });
 
         // Get pending transactions
-        let pendings = pool.pending_transactions().collect::<Vec<_>>();
+        let pendings = executor::block_on_stream(pool.pending_transactions());
 
         // Assert that the transactions are in the order they were added (first to last)
-        pendings.iter().zip(txs).for_each(|(pending, tx)| {
+        pendings.into_iter().zip(txs).for_each(|(pending, tx)| {
             assert_eq!(pending.tx.as_ref(), &tx);
         });
     }
@@ -177,7 +179,7 @@ mod tests {
         });
 
         // Get pending transactions
-        let pending = pool.pending_transactions().collect::<Vec<_>>();
+        let pending = executor::block_on_stream(pool.pending_transactions()).collect::<Vec<_>>();
         assert_eq!(pending.len(), txs.len());
 
         // Assert that the transactions are ordered by tip (highest to lowest)

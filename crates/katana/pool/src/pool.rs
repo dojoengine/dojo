@@ -5,12 +5,12 @@ use std::sync::Arc;
 use futures::channel::mpsc::{channel, Receiver, Sender};
 use katana_primitives::transaction::TxHash;
 use parking_lot::RwLock;
-use tokio::sync::Notify;
+use tokio::sync::mpsc;
 use tracing::{error, info, warn};
 
 use crate::ordering::PoolOrd;
 use crate::pending::PendingTransactions;
-use crate::subscription::PoolSubscription;
+use crate::subscription::Subscription;
 use crate::tx::{PendingTx, PoolTransaction, TxId};
 use crate::validation::error::InvalidTransactionError;
 use crate::validation::{ValidationOutcome, Validator};
@@ -35,7 +35,7 @@ struct Inner<T, V, O: PoolOrd> {
     listeners: RwLock<Vec<Sender<TxHash>>>,
 
     /// subscribers for incoming txs
-    subscribers: RwLock<Vec<PoolSubscription<T, O>>>,
+    subscribers: RwLock<Vec<mpsc::UnboundedSender<PendingTx<T, O>>>>,
 
     /// the tx validator
     validator: V,
@@ -90,24 +90,36 @@ where
         }
     }
 
+    fn notify_subscribers(&self, tx: PendingTx<T, O>) {
+        let mut subscribers = self.inner.subscribers.write();
+        // this is basically a retain but with mut reference
+        for n in (0..subscribers.len()).rev() {
+            let sender = subscribers.swap_remove(n);
+            let retain = match sender.send(tx.clone()) {
+                Ok(()) => true,
+                Err(error) => {
+                    warn!(%error, "Subscription channel closed");
+                    false
+                }
+            };
+
+            if retain {
+                subscribers.push(sender)
+            }
+        }
+    }
+
     // notify both listener and subscribers
     fn notify(&self, tx: PendingTx<T, O>) {
         self.notify_listener(tx.tx.hash());
         self.notify_subscribers(tx);
     }
 
-    fn notify_subscribers(&self, tx: PendingTx<T, O>) {
-        let subscribers = self.inner.subscribers.read();
-        for subscriber in subscribers.iter() {
-            subscriber.broadcast(tx.clone());
-        }
-    }
-
-    fn subscribe(&self) -> PoolSubscription<T, O> {
-        let notify = Arc::new(Notify::new());
-        let subscription = PoolSubscription { notify, txs: Default::default() };
-        self.inner.subscribers.write().push(subscription.clone());
-        subscription
+    fn subscribe(&self) -> Subscription<T, O> {
+        let (tx, rx) = mpsc::unbounded_channel();
+        let subscriber = Subscription::new(rx);
+        self.inner.subscribers.write().push(tx);
+        subscriber
     }
 }
 
@@ -307,7 +319,9 @@ pub(crate) mod test_utils {
 #[cfg(test)]
 mod tests {
 
+    use futures::executor;
     use katana_primitives::contract::{ContractAddress, Nonce};
+    use katana_primitives::transaction::TxHash;
     use katana_primitives::Felt;
 
     use super::test_utils::*;
@@ -356,7 +370,7 @@ mod tests {
         assert!(txs.iter().all(|tx| pool.get(tx.hash()).is_some()));
 
         // noop validator should consider all txs as valid
-        let pendings = pool.pending_transactions().collect::<Vec<_>>();
+        let pendings = executor::block_on_stream(pool.pending_transactions()).collect::<Vec<_>>();
         assert_eq!(pendings.len(), txs.len());
 
         // bcs we're using fcfs, the order should be the same as the order of the txs submission
@@ -412,6 +426,41 @@ mod tests {
     }
 
     #[test]
+    fn remove_transactions() {
+        let pool = TestPool::test();
+
+        let txs = [
+            PoolTx::new(),
+            PoolTx::new(),
+            PoolTx::new(),
+            PoolTx::new(),
+            PoolTx::new(),
+            PoolTx::new(),
+            PoolTx::new(),
+            PoolTx::new(),
+        ];
+
+        // start adding txs to the pool
+        txs.iter().for_each(|tx| {
+            let _ = pool.add_transaction(tx.clone());
+        });
+
+        // first check that the transaction are indeed in the pool
+        txs.iter().for_each(|tx| {
+            assert!(pool.contains(tx.hash()));
+        });
+
+        // remove the transactions
+        let hashes = txs.iter().map(|t| t.hash()).collect::<Vec<TxHash>>();
+        pool.remove_transactions(&hashes);
+
+        // check that the transaction are no longer in the pool
+        txs.iter().for_each(|tx| {
+            assert!(!pool.contains(tx.hash()));
+        });
+    }
+
+    #[test]
     #[ignore = "Txs dependency management not fully implemented yet"]
     fn dependent_txs_linear_insertion() {
         let pool = TestPool::test();
@@ -429,7 +478,7 @@ mod tests {
         });
 
         // Get pending transactions
-        let pending = pool.pending_transactions().collect::<Vec<_>>();
+        let pending = executor::block_on_stream(pool.pending_transactions()).collect::<Vec<_>>();
 
         // Check that the number of pending transactions matches the number of added transactions
         assert_eq!(pending.len(), total as usize);

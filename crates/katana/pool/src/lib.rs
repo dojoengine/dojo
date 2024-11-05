@@ -47,6 +47,8 @@ pub trait TransactionPool {
     /// Add a new transaction to the pool.
     fn add_transaction(&self, tx: Self::Transaction) -> PoolResult<TxHash>;
 
+    /// Returns a [`Stream`](futures::Stream) which yields pending transactions - transactions that
+    /// can be executed - from the pool.
     fn pending_transactions(&self) -> PendingTransactions<Self::Transaction, Self::Ordering>;
 
     /// Check if the pool contains a transaction with the given hash.
@@ -57,6 +59,7 @@ pub trait TransactionPool {
 
     fn add_listener(&self) -> Receiver<TxHash>;
 
+    /// Removes a list of transactions from the pool according to their hashes.
     fn remove_transactions(&self, hashes: &[TxHash]);
 
     /// Get the total number of transactions in the pool.

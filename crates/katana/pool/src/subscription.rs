@@ -1,40 +1,31 @@
 use std::collections::BTreeSet;
-use std::future::Future;
-use std::pin::{pin, Pin};
-use std::sync::Arc;
+use std::pin::Pin;
 use std::task::{Context, Poll};
 
 use futures::Stream;
-use parking_lot::RwLock;
-use tokio::sync::Notify;
+use parking_lot::Mutex;
+use tokio::sync::mpsc;
 
 use crate::ordering::PoolOrd;
 use crate::tx::{PendingTx, PoolTransaction};
 
 #[derive(Debug)]
-pub struct PoolSubscription<T, O: PoolOrd> {
-    pub(crate) txs: Arc<RwLock<BTreeSet<PendingTx<T, O>>>>,
-    pub(crate) notify: Arc<Notify>,
+pub struct Subscription<T, O: PoolOrd> {
+    txs: Mutex<BTreeSet<PendingTx<T, O>>>,
+    receiver: mpsc::UnboundedReceiver<PendingTx<T, O>>,
 }
 
-impl<T, O: PoolOrd> Clone for PoolSubscription<T, O> {
-    fn clone(&self) -> Self {
-        Self { txs: self.txs.clone(), notify: self.notify.clone() }
-    }
-}
-
-impl<T, O> PoolSubscription<T, O>
+impl<T, O> Subscription<T, O>
 where
     T: PoolTransaction,
     O: PoolOrd<Transaction = T>,
 {
-    pub(crate) fn broadcast(&self, tx: PendingTx<T, O>) {
-        self.notify.notify_waiters();
-        self.txs.write().insert(tx);
+    pub(crate) fn new(receiver: mpsc::UnboundedReceiver<PendingTx<T, O>>) -> Self {
+        Self { txs: Default::default(), receiver }
     }
 }
 
-impl<T, O> Stream for PoolSubscription<T, O>
+impl<T, O> Stream for Subscription<T, O>
 where
     T: PoolTransaction,
     O: PoolOrd<Transaction = T>,
@@ -43,17 +34,34 @@ where
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let this = self.get_mut();
+        let mut txs = this.txs.lock();
 
+        // In the event where a lot of transactions have been sent to the receiver channel and this
+        // stream hasn't been iterated since, the next call to `.next()` of this Stream will
+        // require to drain the channel and insert all the transactions into the btree set. If there
+        // are a lot of transactions to insert, it would take a while and might block the
+        // runtime.
         loop {
-            if let Some(tx) = this.txs.write().pop_first() {
+            if let Some(tx) = txs.pop_first() {
                 return Poll::Ready(Some(tx));
             }
 
-            if pin!(this.notify.notified()).poll(cx).is_pending() {
-                break;
+            // Check the channel if there are new transactions available.
+            match this.receiver.poll_recv(cx) {
+                // insert the new transactions into the btree set to make sure they are ordered
+                // according to the pool's ordering.
+                Poll::Ready(Some(tx)) => {
+                    txs.insert(tx);
+
+                    // Check if there are more transactions available in the channel.
+                    while let Poll::Ready(Some(tx)) = this.receiver.poll_recv(cx) {
+                        txs.insert(tx);
+                    }
+                }
+
+                Poll::Ready(None) => return Poll::Ready(None),
+                Poll::Pending => return Poll::Pending,
             }
         }
-
-        Poll::Pending
     }
 }
