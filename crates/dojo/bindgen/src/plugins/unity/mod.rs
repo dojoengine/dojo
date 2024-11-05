@@ -575,7 +575,7 @@ fn check_token_in_recursively(token: &Token, type_name: &str) -> bool {
         }
         Token::Array(array) => check_token_in_recursively(&array.inner, type_name),
         Token::Tuple(tuple) => {
-            tuple.inners.iter().any(|inner| check_token_in_recursively(&inner, type_name))
+            tuple.inners.iter().any(|inner| check_token_in_recursively(inner, type_name))
         }
         _ => token.type_name() == type_name,
     }
