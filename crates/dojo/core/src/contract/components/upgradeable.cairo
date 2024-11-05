@@ -50,8 +50,9 @@ pub mod upgradeable_cpt {
             );
             assert(new_class_hash.is_non_zero(), Errors::INVALID_CLASS);
 
-            // Seems like the match doesn't catch the error is the entrypoint is
-            // not found.
+            // Seems like the match doesn't catch the error if the entrypoint is
+            // not found. This is observed on public network like Sepolia.
+            // On the cairo runner, behavior seems to be as expected.
             match starknet::syscalls::library_call_syscall(
                 new_class_hash, selector!("dojo_name"), [].span(),
             ) {
