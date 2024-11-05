@@ -14,14 +14,16 @@ use starknet::ContractAddress;
 /// - World: The world itself, identified by the selector 0.
 ///
 /// - Namespace: ByteArray
-/// Namespace is a unique resource type, identified by a `ByteArray`, to scope models, events and contracts.
+/// Namespace is a unique resource type, identified by a `ByteArray`, to scope models, events and
+/// contracts.
 /// The poseidon hash of the serialized `ByteArray` is used as the namespace hash.
 ///
 /// - Model: (ContractAddress, NamespaceHash)
 /// A model defines data that can be stored in the world's storage.
 ///
 /// - Event: (ContractAddress, NamespaceHash)
-/// An event is never stored in the world's storage, but it's emitted by the world to be consumed by off-chain components.
+/// An event is never stored in the world's storage, but it's emitted by the world to be consumed by
+/// off-chain components.
 ///
 /// - Contract: (ContractAddress, NamespaceHash)
 /// A contract defines user logic to interact with the world's data (models) and to emit events.
