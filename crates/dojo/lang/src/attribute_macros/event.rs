@@ -10,60 +10,20 @@ use cairo_lang_defs::plugin::{
     DynGeneratedFileAuxData, PluginDiagnostic, PluginGeneratedFile, PluginResult,
 };
 use cairo_lang_diagnostics::Severity;
-use cairo_lang_syntax::node::ast::{ArgClauseNamed, Expr, ModuleItem};
+use cairo_lang_syntax::node::ast::ModuleItem;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
-use cairo_lang_syntax::node::{ast, Terminal, TypedStablePtr, TypedSyntaxNode};
+use cairo_lang_syntax::node::{ast, TypedStablePtr, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_types::naming;
 
-use super::element::{
-    parse_members, serialize_keys_and_values, CommonStructParameters, StructParameterParser,
-};
+use super::element::{parse_members, serialize_keys_and_values};
 use crate::aux_data::EventAuxData;
 use crate::derive_macros::{
     extract_derive_attr_names, handle_derive_attrs, DOJO_INTROSPECT_DERIVE, DOJO_PACKED_DERIVE,
 };
 
 const EVENT_PATCH: &str = include_str!("./patches/event.patch.cairo");
-use super::DOJO_EVENT_ATTR;
-
-pub const PARAMETER_HISTORICAL: &str = "historical";
-pub const DEFAULT_HISTORICAL_VALUE: bool = false;
-
-#[derive(Debug)]
-struct EventParameters {
-    common: CommonStructParameters,
-    historical: bool,
-}
-
-impl Default for EventParameters {
-    fn default() -> EventParameters {
-        EventParameters {
-            common: CommonStructParameters::default(),
-            historical: DEFAULT_HISTORICAL_VALUE,
-        }
-    }
-}
-
-impl StructParameterParser for EventParameters {
-    fn process_named_parameters(
-        &mut self,
-        db: &dyn SyntaxGroup,
-        attribute_name: &str,
-        arg: ArgClauseNamed,
-        diagnostics: &mut Vec<PluginDiagnostic>,
-    ) {
-        match arg.name(db).text(db).as_str() {
-            PARAMETER_HISTORICAL => {
-                self.historical = get_historical(attribute_name, arg.value(db), diagnostics);
-            }
-            _ => {
-                self.common.process_named_parameters(db, attribute_name, arg, diagnostics);
-            }
-        }
-    }
-}
 
 #[derive(Debug, Clone, Default)]
 pub struct DojoEvent {}
@@ -78,14 +38,6 @@ impl DojoEvent {
     /// * A RewriteNode containing the generated code.
     pub fn from_struct(db: &dyn SyntaxGroup, struct_ast: ast::ItemStruct) -> PluginResult {
         let mut diagnostics = vec![];
-        let mut parameters = EventParameters::default();
-
-        parameters.load_from_struct(
-            db,
-            &DOJO_EVENT_ATTR.to_string(),
-            struct_ast.clone(),
-            &mut diagnostics,
-        );
 
         let event_name = struct_ast.name(db).as_syntax_node().get_text(db).trim().to_string();
 
@@ -105,9 +57,6 @@ impl DojoEvent {
                 };
             }
         }
-
-        let event_version = parameters.common.version.to_string();
-        let event_historical = parameters.historical.to_string();
 
         let members = parse_members(db, &struct_ast.members(db).elements(db), &mut diagnostics);
 
@@ -171,8 +120,6 @@ impl DojoEvent {
                 ("member_names".to_string(), RewriteNode::new_modified(member_names)),
                 ("serialized_keys".to_string(), RewriteNode::new_modified(serialized_keys)),
                 ("serialized_values".to_string(), RewriteNode::new_modified(serialized_values)),
-                ("event_version".to_string(), RewriteNode::Text(event_version)),
-                ("event_historical".to_string(), RewriteNode::Text(event_historical)),
             ]),
         );
 
@@ -199,28 +146,6 @@ impl DojoEvent {
             }),
             diagnostics,
             remove_original_item: false,
-        }
-    }
-}
-
-/// Get the historical boolean parameter from the `Expr` parameter.
-fn get_historical(
-    attribute_name: &str,
-    arg_value: Expr,
-    diagnostics: &mut Vec<PluginDiagnostic>,
-) -> bool {
-    match arg_value {
-        Expr::True(_) => true,
-        Expr::False(_) => false,
-        _ => {
-            diagnostics.push(PluginDiagnostic {
-                message: format!(
-                    "The argument '{PARAMETER_HISTORICAL}' of {attribute_name} must be a boolean",
-                ),
-                stable_ptr: arg_value.stable_ptr().untyped(),
-                severity: Severity::Error,
-            });
-            DEFAULT_HISTORICAL_VALUE
         }
     }
 }

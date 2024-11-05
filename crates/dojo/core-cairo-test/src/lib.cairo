@@ -47,6 +47,7 @@ mod tests {
         //mod entities;
         //mod resources;
         mod world;
+        mod storage;
     }
 
     mod utils {

@@ -192,8 +192,6 @@ rpassword = "7.2.0"
 rstest = "0.18.2"
 rstest_reuse = "0.6.0"
 salsa = "0.16.1"
-#scarb = { git = "https://github.com/software-mansion/scarb", tag = "v2.8.4" }
-#scarb-ui = { git = "https://github.com/software-mansion/scarb", tag = "v2.8.4" }
 scarb = { git = "https://github.com/dojoengine/scarb", branch = "dojo-284" }
 scarb-ui = { git = "https://github.com/dojoengine/scarb", branch = "dojo-284" }
 #scarb = { path = "/Users/glihm/swm/scarb/scarb" }

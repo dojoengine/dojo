@@ -71,7 +71,9 @@ where
         let mut entity = model.schema.clone();
         entity.deserialize(&mut keys_and_unpacked)?;
 
-        db.set_event_message(entity, event_id, block_timestamp, event.historical).await?;
+        // TODO: this must come from some torii's configuration.
+        let historical = false;
+        db.set_event_message(entity, event_id, block_timestamp, historical).await?;
         Ok(())
     }
 }

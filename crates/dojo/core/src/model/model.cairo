@@ -119,25 +119,3 @@ pub impl ModelImpl<M, +ModelParser<M>, +ModelDefinition<M>, +Serde<M>> of Model<
         }
     }
 }
-
-/// The `ModelTest` trait.
-///
-/// It provides a standardized way to interact with models for testing purposes,
-/// bypassing the permission checks.
-#[cfg(target: "test")]
-pub trait ModelTest<S, M> {
-    fn set_model_test(ref self: S, model: @M);
-    fn delete_model_test(ref self: S, model: @M);
-}
-
-/// The `ModelTestImpl` implementation for testing purposes.
-#[cfg(target: "test")]
-pub impl ModelTestImpl<S, M, +dojo::model::ModelStorageTest<S, M>, +Model<M>> of ModelTest<S, M> {
-    fn set_model_test(ref self: S, model: @M) {
-        dojo::model::ModelStorageTest::<S, M>::write_model_test(ref self, model);
-    }
-
-    fn delete_model_test(ref self: S, model: @M) {
-        dojo::model::ModelStorageTest::<S, M>::erase_model_test(ref self, model);
-    }
-}

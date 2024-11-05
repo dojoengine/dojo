@@ -26,6 +26,15 @@ pub struct Foo {
     pub b: u128,
 }
 
+#[derive(Drop, Serde, Debug)]
+#[dojo::model]
+pub struct NotCopiable {
+    #[key]
+    pub caller: ContractAddress,
+    pub a: Array<felt252>,
+    pub b: ByteArray,
+}
+
 #[starknet::contract]
 pub mod foo_invalid_name {
     use dojo::model::IModel;
@@ -208,7 +217,10 @@ pub fn deploy_world() -> WorldStorage {
 /// No permissions are granted.
 pub fn deploy_world_and_foo() -> (WorldStorage, felt252) {
     let namespace_def = NamespaceDef {
-        namespace: "dojo", resources: [TestResource::Model(m_Foo::TEST_CLASS_HASH)].span(),
+        namespace: "dojo", resources: [
+            TestResource::Model(m_Foo::TEST_CLASS_HASH),
+            TestResource::Model(m_NotCopiable::TEST_CLASS_HASH),
+        ].span(),
     };
 
     (spawn_test_world([namespace_def].span()), Model::<Foo>::selector(DOJO_NSH))

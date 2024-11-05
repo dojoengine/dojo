@@ -226,8 +226,6 @@ pub mod world {
         pub selector: felt252,
         #[key]
         pub system_address: ContractAddress,
-        #[key]
-        pub historical: bool,
         pub keys: Span<felt252>,
         pub values: Span<felt252>,
     }
@@ -302,16 +300,11 @@ pub mod world {
             event_selector: felt252,
             keys: Span<felt252>,
             values: Span<felt252>,
-            historical: bool
         ) {
             self
                 .emit(
                     EventEmitted {
-                        selector: event_selector,
-                        system_address: get_caller_address(),
-                        historical,
-                        keys,
-                        values
+                        selector: event_selector, system_address: get_caller_address(), keys, values
                     }
                 );
         }
@@ -784,7 +777,6 @@ pub mod world {
             event_selector: felt252,
             keys: Span<felt252>,
             values: Span<felt252>,
-            historical: bool
         ) {
             if let Resource::Event((_, _)) = self.resources.read(event_selector) {
                 self.assert_caller_permissions(event_selector, Permission::Writer);
@@ -794,7 +786,6 @@ pub mod world {
                         EventEmitted {
                             selector: event_selector,
                             system_address: get_caller_address(),
-                            historical,
                             keys,
                             values,
                         }
@@ -806,28 +797,63 @@ pub mod world {
             }
         }
 
-        fn entity(
-            self: @ContractState, model_selector: felt252, index: ModelIndex, layout: Layout
-        ) -> Span<felt252> {
-            match index {
-                ModelIndex::Keys(keys) => {
-                    let entity_id = entity_id_from_keys(keys);
-                    storage::entity_model::read_model_entity(model_selector, entity_id, layout)
-                },
-                ModelIndex::Id(entity_id) => {
-                    storage::entity_model::read_model_entity(model_selector, entity_id, layout)
-                },
-                ModelIndex::MemberId((
-                    entity_id, member_id
-                )) => {
-                    storage::entity_model::read_model_member(
-                        model_selector, entity_id, member_id, layout
-                    )
+        fn emit_events(
+            ref self: ContractState,
+            event_selector: felt252,
+            keys: Span<Span<felt252>>,
+            values: Span<Span<felt252>>,
+        ) {
+            if let Resource::Event((_, _)) = self.resources.read(event_selector) {
+                self.assert_caller_permissions(event_selector, Permission::Writer);
+
+                if keys.len() != values.len() {
+                    panic_with_byte_array(
+                        @errors::lengths_mismatch(@"keys", @"values", @"emit_events")
+                    );
                 }
+
+                let mut i = 0;
+                loop {
+                    if i >= keys.len() {
+                        break;
+                    }
+
+                    self
+                        .emit(
+                            EventEmitted {
+                                selector: event_selector,
+                                system_address: get_caller_address(),
+                                keys: *keys[i],
+                                values: *values[i],
+                            }
+                        );
+
+                    i += 1;
+                }
+            } else {
+                panic_with_byte_array(
+                    @errors::resource_conflict(@format!("{event_selector}"), @"event")
+                );
             }
         }
 
-        // set_entities_batch. (check acl once, set batch).
+        fn entity(
+            self: @ContractState, model_selector: felt252, index: ModelIndex, layout: Layout
+        ) -> Span<felt252> {
+            self.get_entity_internal(model_selector, index, layout)
+        }
+
+        fn entities(
+            self: @ContractState, model_selector: felt252, indexes: Span<ModelIndex>, layout: Layout
+        ) -> Span<Span<felt252>> {
+            let mut models: Array<Span<felt252>> = array![];
+
+            for i in indexes {
+                models.append(self.get_entity_internal(model_selector, *i, layout));
+            };
+
+            models.span()
+        }
 
         fn set_entity(
             ref self: ContractState,
@@ -846,12 +872,64 @@ pub mod world {
             }
         }
 
+        fn set_entities(
+            ref self: ContractState,
+            model_selector: felt252,
+            indexes: Span<ModelIndex>,
+            values: Span<Span<felt252>>,
+            layout: Layout
+        ) {
+            if indexes.len() != values.len() {
+                panic_with_byte_array(
+                    @errors::lengths_mismatch(@"indexes", @"values", @"set_entities")
+                );
+            }
+
+            if let Resource::Model((_, _)) = self.resources.read(model_selector) {
+                self.assert_caller_permissions(model_selector, Permission::Writer);
+
+                let mut i = 0;
+                loop {
+                    if i >= indexes.len() {
+                        break;
+                    }
+
+                    self.set_entity_internal(model_selector, *indexes[i], *values[i], layout);
+
+                    i += 1;
+                };
+            } else {
+                panic_with_byte_array(
+                    @errors::resource_conflict(@format!("{model_selector}"), @"model")
+                );
+            }
+        }
+
         fn delete_entity(
             ref self: ContractState, model_selector: felt252, index: ModelIndex, layout: Layout
         ) {
             if let Resource::Model((_, _)) = self.resources.read(model_selector) {
                 self.assert_caller_permissions(model_selector, Permission::Writer);
                 self.delete_entity_internal(model_selector, index, layout);
+            } else {
+                panic_with_byte_array(
+                    @errors::resource_conflict(@format!("{model_selector}"), @"model")
+                );
+            }
+        }
+
+        fn delete_entities(
+            ref self: ContractState,
+            model_selector: felt252,
+            indexes: Span<ModelIndex>,
+            layout: Layout
+        ) {
+            if let Resource::Model((_, _)) = self.resources.read(model_selector) {
+                self.assert_caller_permissions(model_selector, Permission::Writer);
+
+                for i in indexes {
+                    self.delete_entity_internal(model_selector, *i, layout);
+                }
             } else {
                 panic_with_byte_array(
                     @errors::resource_conflict(@format!("{model_selector}"), @"model")
@@ -1099,6 +1177,34 @@ pub mod world {
                     self.emit(StoreDelRecord { selector: model_selector, entity_id });
                 },
                 ModelIndex::MemberId(_) => { panic_with_felt252(errors::DELETE_ENTITY_MEMBER); }
+            }
+        }
+
+        /// Gets the model values for the given entity.
+        ///
+        /// # Arguments
+        ///
+        /// * `model_selector` - The selector of the model to be retrieved.
+        /// * `index` - The entity/member to read for the given model.
+        /// * `layout` - The memory layout of the model.
+        fn get_entity_internal(
+            self: @ContractState, model_selector: felt252, index: ModelIndex, layout: Layout
+        ) -> Span<felt252> {
+            match index {
+                ModelIndex::Keys(keys) => {
+                    let entity_id = entity_id_from_keys(keys);
+                    storage::entity_model::read_model_entity(model_selector, entity_id, layout)
+                },
+                ModelIndex::Id(entity_id) => {
+                    storage::entity_model::read_model_entity(model_selector, entity_id, layout)
+                },
+                ModelIndex::MemberId((
+                    entity_id, member_id
+                )) => {
+                    storage::entity_model::read_model_member(
+                        model_selector, entity_id, member_id, layout
+                    )
+                }
             }
         }
 

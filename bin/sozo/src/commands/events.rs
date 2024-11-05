@@ -345,11 +345,9 @@ async fn match_event<P: Provider + Send + Sync>(
             (
                 format!("Event emitted ({})", tag),
                 format!(
-                    "Selector: {:#066x}\nContract: {}\nHistorical: {}\nKeys: {}\nValues: \
-                     {}\nData:\n{}",
+                    "Selector: {:#066x}\nContract: {}\nKeys: {}\nValues: {}\nData:\n{}",
                     e.selector,
                     contract_tag,
-                    e.historical,
                     e.keys
                         .iter()
                         .map(|k| format!("{:#066x}", k))

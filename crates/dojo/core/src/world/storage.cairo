@@ -52,7 +52,6 @@ pub impl EventStorageWorldStorageImpl<E, +Event<E>> of EventStorage<WorldStorage
             Event::<E>::selector(self.namespace_hash),
             Event::<E>::keys(event),
             Event::<E>::values(event),
-            Event::<E>::historical()
         );
     }
 }
@@ -76,6 +75,46 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
         }
     }
 
+    fn read_models<K, +Drop<K>, +Serde<K>>(self: @WorldStorage, keys: Span<K>) -> Array<M> {
+        let mut indexes: Array<ModelIndex> = array![];
+
+        for k in keys {
+            indexes.append(ModelIndex::Keys(serialize_inline::<K>(k)));
+        };
+
+        let all_values = IWorldDispatcherTrait::entities(
+            *self.dispatcher,
+            Model::<M>::selector(*self.namespace_hash),
+            indexes.span(),
+            Model::<M>::layout()
+        );
+
+        let mut models: Array<M> = array![];
+
+        let mut i = 0;
+        loop {
+            if i >= indexes.len() {
+                break;
+            }
+
+            let mut mk = serialize_inline::<K>(keys[i]);
+            let mut mv = *all_values[i];
+
+            match Model::<M>::from_values(ref mk, ref mv) {
+                Option::Some(model) => models.append(model),
+                Option::None => {
+                    panic!(
+                        "Model: deserialization failed. Ensure the length of the keys tuple is matching the number of #[key] fields in the model struct."
+                    )
+                }
+            };
+
+            i += 1;
+        };
+
+        models
+    }
+
     fn write_model(ref self: WorldStorage, model: @M) {
         IWorldDispatcherTrait::set_entity(
             self.dispatcher,
@@ -86,11 +125,42 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
         );
     }
 
+    fn write_models(ref self: WorldStorage, models: Span<@M>) {
+        let mut keys: Array<ModelIndex> = array![];
+        let mut values: Array<Span<felt252>> = array![];
+        for m in models {
+            keys.append(ModelIndex::Keys(Model::<M>::keys(*m)));
+            values.append(Model::<M>::values(*m));
+        };
+
+        IWorldDispatcherTrait::set_entities(
+            self.dispatcher,
+            Model::<M>::selector(self.namespace_hash),
+            keys.span(),
+            values.span(),
+            Model::<M>::layout()
+        );
+    }
+
     fn erase_model(ref self: WorldStorage, model: @M) {
         IWorldDispatcherTrait::delete_entity(
             self.dispatcher,
             Model::<M>::selector(self.namespace_hash),
             ModelIndex::Keys(Model::<M>::keys(model)),
+            Model::<M>::layout()
+        );
+    }
+
+    fn erase_models(ref self: WorldStorage, models: Span<@M>) {
+        let mut keys: Array<ModelIndex> = array![];
+        for m in models {
+            keys.append(ModelIndex::Keys(Model::<M>::keys(*m)));
+        };
+
+        IWorldDispatcherTrait::delete_entities(
+            self.dispatcher,
+            Model::<M>::selector(self.namespace_hash),
+            keys.span(),
             Model::<M>::layout()
         );
     }
@@ -109,13 +179,33 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
         );
     }
 
+    fn erase_models_ptrs(ref self: WorldStorage, ptrs: Span<ModelPtr<M>>) {
+        let mut indexes: Array<ModelIndex> = array![];
+        for p in ptrs {
+            indexes
+                .append(
+                    match p {
+                        ModelPtr::Id(id) => ModelIndex::Id(*id),
+                        ModelPtr::Keys(keys) => ModelIndex::Id(entity_id_from_keys(*keys)),
+                    }
+                );
+        };
+
+        IWorldDispatcherTrait::delete_entities(
+            self.dispatcher,
+            Model::<M>::selector(self.namespace_hash),
+            indexes.span(),
+            Model::<M>::layout()
+        );
+    }
+
     fn namespace_hash(self: @WorldStorage) -> felt252 {
         *self.namespace_hash
     }
 }
 
 impl ModelValueStorageWorldStorageImpl<
-    V, +ModelValue<V>
+    V, +ModelValue<V>, +Drop<V>
 > of dojo::model::ModelValueStorage<WorldStorage, V> {
     fn read_value<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(self: @WorldStorage, key: K) -> V {
         Self::read_value_from_id(self, entity_id_from_key(@key))
@@ -138,6 +228,55 @@ impl ModelValueStorageWorldStorageImpl<
         }
     }
 
+    fn read_values<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(
+        self: @WorldStorage, keys: Span<K>
+    ) -> Array<V> {
+        let mut entity_ids: Array<felt252> = array![];
+        for k in keys {
+            entity_ids.append(entity_id_from_key(k));
+        };
+
+        Self::read_values_from_ids(self, entity_ids.span())
+    }
+
+    fn read_values_from_ids(self: @WorldStorage, entity_ids: Span<felt252>) -> Array<V> {
+        let mut indexes: Array<ModelIndex> = array![];
+        for id in entity_ids {
+            indexes.append(ModelIndex::Id(*id));
+        };
+
+        let mut all_values = IWorldDispatcherTrait::entities(
+            *self.dispatcher,
+            ModelValue::<V>::selector(*self.namespace_hash),
+            indexes.span(),
+            ModelValue::<V>::layout()
+        );
+
+        let mut values: Array<V> = array![];
+        let mut i = 0;
+        loop {
+            if i >= indexes.len() {
+                break;
+            }
+
+            let entity_id = *entity_ids[i];
+            let mut v = *all_values[i];
+
+            match ModelValue::<V>::from_values(entity_id, ref v) {
+                Option::Some(value) => values.append(value),
+                Option::None => {
+                    panic!(
+                        "Value: deserialization failed. Ensure the length of the keys tuple is matching the number of #[key] fields in the model struct."
+                    )
+                }
+            }
+
+            i += 1;
+        };
+
+        values
+    }
+
     fn write_value<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(
         ref self: WorldStorage, key: K, value: @V
     ) {
@@ -151,12 +290,48 @@ impl ModelValueStorageWorldStorageImpl<
         );
     }
 
+    fn write_values<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(
+        ref self: WorldStorage, keys: Span<K>, values: Span<@V>
+    ) {
+        let mut ids: Array<felt252> = array![];
+        for k in keys {
+            ids.append(entity_id_from_key(k));
+        };
+
+        Self::write_values_from_ids(ref self, ids.span(), values);
+    }
+
     fn write_value_from_id(ref self: WorldStorage, entity_id: felt252, value: @V) {
         IWorldDispatcherTrait::set_entity(
             self.dispatcher,
             ModelValue::<V>::selector(self.namespace_hash),
             ModelIndex::Id(entity_id),
             ModelValue::<V>::values(value),
+            ModelValue::<V>::layout()
+        );
+    }
+
+    fn write_values_from_ids(ref self: WorldStorage, entity_ids: Span<felt252>, values: Span<@V>) {
+        let mut indexes: Array<ModelIndex> = array![];
+        let mut all_values: Array<Span<felt252>> = array![];
+        let mut i = 0;
+
+        loop {
+            if i >= entity_ids.len() {
+                break;
+            }
+
+            indexes.append(ModelIndex::Id(*entity_ids[i]));
+            all_values.append(ModelValue::<V>::values(*values[i]));
+
+            i += 1;
+        };
+
+        IWorldDispatcherTrait::set_entities(
+            self.dispatcher,
+            ModelValue::<V>::selector(self.namespace_hash),
+            indexes.span(),
+            all_values.span(),
             ModelValue::<V>::layout()
         );
     }
@@ -175,7 +350,6 @@ pub impl EventStorageTestWorldStorageImpl<
             Event::<E>::selector(self.namespace_hash),
             Event::<E>::keys(event),
             Event::<E>::values(event),
-            Event::<E>::historical()
         );
     }
 }
@@ -199,6 +373,12 @@ pub impl ModelStorageTestWorldStorageImpl<
         );
     }
 
+    fn write_models_test(ref self: WorldStorage, models: Span<@M>) {
+        for m in models {
+            Self::write_model_test(ref self, *m);
+        }
+    }
+
     fn erase_model_test(ref self: WorldStorage, model: @M) {
         let world_test = dojo::world::IWorldTestDispatcher {
             contract_address: self.dispatcher.contract_address
@@ -210,6 +390,12 @@ pub impl ModelStorageTestWorldStorageImpl<
             ModelIndex::Keys(Model::keys(model)),
             Model::<M>::layout()
         );
+    }
+
+    fn erase_models_test(ref self: WorldStorage, models: Span<@M>) {
+        for m in models {
+            Self::erase_model_test(ref self, *m);
+        }
     }
 
     fn erase_model_ptr_test(ref self: WorldStorage, ptr: ModelPtr<M>) {
@@ -229,6 +415,32 @@ pub impl ModelStorageTestWorldStorageImpl<
             Model::<M>::layout()
         );
     }
+
+    fn erase_models_ptrs_test(ref self: WorldStorage, ptrs: Span<ModelPtr<M>>) {
+        let mut ids: Array<felt252> = array![];
+        for p in ptrs {
+            ids
+                .append(
+                    match p {
+                        ModelPtr::Id(id) => *id,
+                        ModelPtr::Keys(keys) => entity_id_from_keys(*keys),
+                    }
+                );
+        };
+
+        let world_test = dojo::world::IWorldTestDispatcher {
+            contract_address: self.dispatcher.contract_address
+        };
+
+        for i in ids {
+            dojo::world::IWorldTestDispatcherTrait::delete_entity_test(
+                world_test,
+                Model::<M>::selector(self.namespace_hash),
+                ModelIndex::Id(i),
+                Model::<M>::layout()
+            );
+        }
+    }
 }
 
 /// Implementation of the `ModelValueStorageTest` trait for testing purposes, bypassing permission
@@ -242,6 +454,17 @@ pub impl ModelValueStorageTestWorldStorageImpl<
     ) {
         let keys = serialize_inline::<K>(@key);
         Self::write_value_from_id_test(ref self, dojo::utils::entity_id_from_keys(keys), value);
+    }
+
+    fn write_values_test<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(
+        ref self: WorldStorage, keys: Span<K>, values: Span<@V>
+    ) {
+        let mut ids: Array<felt252> = array![];
+        for k in keys {
+            ids.append(entity_id_from_key(k));
+        };
+
+        Self::write_values_from_ids_test(ref self, ids.span(), values);
     }
 
     fn write_value_from_id_test(ref self: WorldStorage, entity_id: felt252, value: @V) {
@@ -258,17 +481,19 @@ pub impl ModelValueStorageTestWorldStorageImpl<
         );
     }
 
-    fn erase_value_from_id_test(ref self: WorldStorage, entity_id: felt252) {
-        let world_test = dojo::world::IWorldTestDispatcher {
-            contract_address: self.dispatcher.contract_address
-        };
+    fn write_values_from_ids_test(
+        ref self: WorldStorage, entity_ids: Span<felt252>, values: Span<@V>
+    ) {
+        let mut i = 0;
+        loop {
+            if i >= entity_ids.len() {
+                break;
+            }
 
-        dojo::world::IWorldTestDispatcherTrait::delete_entity_test(
-            world_test,
-            ModelValue::<V>::selector(self.namespace_hash),
-            ModelIndex::Id(entity_id),
-            ModelValue::<V>::layout()
-        );
+            Self::write_value_from_id_test(ref self, *entity_ids[i], *values[i]);
+
+            i += 1;
+        }
     }
 }
 
