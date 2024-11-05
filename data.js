@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1730835726754,
+  "lastUpdate": 1730835906770,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -30817,6 +30817,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10060106658,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "14211a9c9d3707d3f35c27181971ffae9408ba51",
+          "message": "fix: u256 and ns for unity bindgen (#2635)",
+          "timestamp": "2024-11-05T14:25:27-05:00",
+          "tree_id": "4e8a95d8c90f63d9be459d0151fd66c8030e08c6",
+          "url": "https://github.com/dojoengine/dojo/commit/14211a9c9d3707d3f35c27181971ffae9408ba51"
+        },
+        "date": 1730835905023,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16235812,
+            "range": "± 184367",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8654407,
+            "range": "± 247431",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3526890981,
+            "range": "± 794401237",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8380359,
+            "range": "± 177388",
             "unit": "ns/iter"
           }
         ]
