@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1730782295451,
+  "lastUpdate": 1730782546712,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -30631,6 +30631,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 9568214542,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cf1d99f9045c7f2a1332f7d4c1628a8edf458586",
+          "message": "feat: batch entities (#2633)\n\n* feat: add batch operations and remove historical events\r\n\r\n* fix: ensure Array is returned and not span for multiples\r\n\r\n* fix: fix historical and add batch entities\r\n\r\n* chore: bump scarb\r\n\r\n* tests: fix tests for not copiable type",
+          "timestamp": "2024-11-04T22:35:59-06:00",
+          "tree_id": "3a6ee9fd15f12e9f8a46c007ed9b138375a4ad61",
+          "url": "https://github.com/dojoengine/dojo/commit/cf1d99f9045c7f2a1332f7d4c1628a8edf458586"
+        },
+        "date": 1730782544977,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16472845,
+            "range": "± 206342",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8654163,
+            "range": "± 227568",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3703350454,
+            "range": "± 772500701",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8391710,
+            "range": "± 124615",
             "unit": "ns/iter"
           }
         ]
