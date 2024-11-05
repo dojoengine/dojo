@@ -304,10 +304,7 @@ pub mod world {
             self
                 .emit(
                     EventEmitted {
-                        selector: event_selector,
-                        system_address: get_caller_address(),
-                        keys,
-                        values
+                        selector: event_selector, system_address: get_caller_address(), keys, values
                     }
                 );
         }
@@ -822,14 +819,14 @@ pub mod world {
                     }
 
                     self
-                    .emit(
-                        EventEmitted {
-                            selector: event_selector,
-                            system_address: get_caller_address(),
-                            keys: *keys[i],
-                            values: *values[i],
-                        }
-                    );
+                        .emit(
+                            EventEmitted {
+                                selector: event_selector,
+                                system_address: get_caller_address(),
+                                keys: *keys[i],
+                                values: *values[i],
+                            }
+                        );
 
                     i += 1;
                 }
@@ -929,7 +926,7 @@ pub mod world {
         ) {
             if let Resource::Model((_, _)) = self.resources.read(model_selector) {
                 self.assert_caller_permissions(model_selector, Permission::Writer);
-                
+
                 for i in indexes {
                     self.delete_entity_internal(model_selector, *i, layout);
                 }

@@ -127,10 +127,7 @@ pub trait IWorld<T> {
     /// * `keys` - The keys of the event.
     /// * `values` - The data to be logged by the event.
     fn emit_event(
-        ref self: T,
-        event_selector: felt252,
-        keys: Span<felt252>,
-        values: Span<felt252>,
+        ref self: T, event_selector: felt252, keys: Span<felt252>, values: Span<felt252>,
     );
 
     /// Emits multiple events.
@@ -226,7 +223,9 @@ pub trait IWorld<T> {
     /// * `model_selector` - The selector of the model to be deleted.
     /// * `indexes` - The indexes of the entities/members to delete.
     /// * `layout` - The memory layout of the model.
-    fn delete_entities(ref self: T, model_selector: felt252, indexes: Span<ModelIndex>, layout: Layout);
+    fn delete_entities(
+        ref self: T, model_selector: felt252, indexes: Span<ModelIndex>, layout: Layout
+    );
 
     /// Returns true if the provided account has owner permission for the resource, false otherwise.
     ///
@@ -309,10 +308,7 @@ pub trait IWorldTest<T> {
     /// Emits a custom event that was previously registered in the world without checking for
     /// resource permissions.
     fn emit_event_test(
-        ref self: T,
-        event_selector: felt252,
-        keys: Span<felt252>,
-        values: Span<felt252>,
+        ref self: T, event_selector: felt252, keys: Span<felt252>, values: Span<felt252>,
     );
 
     /// Returns the address of a registered contract, panics otherwise.
