@@ -1016,7 +1016,7 @@ impl Sql {
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn build_model_query(
+    async fn build_model_query(
         &mut self,
         selector: Felt,
         path: Vec<String>,
@@ -1029,25 +1029,58 @@ impl Sql {
         let table_id = path.join("$");
         let mut indices = Vec::new();
 
+        // Check if table exists using sqlx
+        let table_exists = sqlx::query_scalar::<_, bool>(
+            "SELECT EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name = ?)"
+        )
+        .bind(&table_id)
+        .fetch_one(&self.pool)
+        .await?;
+
         let mut create_table_query = format!(
             "CREATE TABLE IF NOT EXISTS [{table_id}] (id TEXT NOT NULL, event_id TEXT NOT NULL, \
              entity_id TEXT, event_message_id TEXT, "
         );
 
+        let mut alter_table_queries = Vec::new();
+
         if array_idx > 0 {
             // index columns
             for i in 0..array_idx {
-                create_table_query.push_str(&format!("idx_{i} INTEGER NOT NULL, ", i = i));
+                let column = format!("idx_{i} INTEGER NOT NULL");
+                create_table_query.push_str(&format!("{column}, "));
+                
+                if table_exists {
+                    // For upgrades, add column if it doesn't exist
+                    alter_table_queries.push(format!(
+                        "ALTER TABLE [{table_id}] ADD COLUMN idx_{i} INTEGER NOT NULL DEFAULT 0"
+                    ));
+                }
             }
 
             // full array id column
             create_table_query.push_str("full_array_id TEXT NOT NULL UNIQUE, ");
+            if table_exists {
+                alter_table_queries.push(
+                    format!("ALTER TABLE [{table_id}] ADD COLUMN full_array_id TEXT NOT NULL UNIQUE DEFAULT ''")
+                );
+            }
         }
 
         let mut build_member = |name: &str, ty: &Ty, options: &mut Option<Argument>| {
             if let Ok(cairo_type) = Primitive::from_str(&ty.name()) {
-                create_table_query
-                    .push_str(&format!("external_{name} {}, ", cairo_type.to_sql_type()));
+                let sql_type = cairo_type.to_sql_type();
+                let column = format!("external_{name} {sql_type}");
+                
+                create_table_query.push_str(&format!("{column}, "));
+                
+                if table_exists {
+                    // Add ALTER TABLE query for upgrades
+                    alter_table_queries.push(
+                        format!("ALTER TABLE [{table_id}] ADD COLUMN external_{name} {sql_type}")
+                    );
+                }
+                
                 indices.push(format!(
                     "CREATE INDEX IF NOT EXISTS [idx_{table_id}_{name}] ON [{table_id}] \
                      (external_{name});"
@@ -1060,12 +1093,19 @@ impl Sql {
                     .collect::<Vec<_>>()
                     .join(", ");
 
-                create_table_query.push_str(&format!(
-                    "external_{name} TEXT CHECK(external_{name} IN ({all_options})) ",
-                ));
-
-                // if we're an array, we could have multiple enum options
-                create_table_query.push_str(if array_idx > 0 { ", " } else { "NOT NULL, " });
+                let column = format!(
+                    "external_{name} TEXT CHECK(external_{name} IN ({all_options})) {}",
+                    if array_idx > 0 { "" } else { "NOT NULL" }
+                );
+                
+                create_table_query.push_str(&format!("{column}, "));
+                
+                if table_exists {
+                    // Add ALTER TABLE query for upgrades
+                    alter_table_queries.push(
+                        format!("ALTER TABLE [{table_id}] ADD COLUMN {column}")
+                    );
+                }
 
                 indices.push(format!(
                     "CREATE INDEX IF NOT EXISTS [idx_{table_id}_{name}] ON [{table_id}] \
@@ -1081,7 +1121,17 @@ impl Sql {
                         .to_string(),
                 ));
             } else if let Ty::ByteArray(_) = &ty {
-                create_table_query.push_str(&format!("external_{name} TEXT, "));
+                let column = format!("external_{name} TEXT");
+                
+                create_table_query.push_str(&format!("{column}, "));
+                
+                if table_exists {
+                    // Add ALTER TABLE query for upgrades
+                    alter_table_queries.push(
+                        format!("ALTER TABLE [{table_id}] ADD COLUMN {column}")
+                    );
+                }
+
                 indices.push(format!(
                     "CREATE INDEX IF NOT EXISTS [idx_{table_id}_{name}] ON [{table_id}] \
                      (external_{name});"
@@ -1248,10 +1298,23 @@ impl Sql {
         create_table_query
             .push_str("FOREIGN KEY (event_message_id) REFERENCES event_messages(id));");
 
-        self.executor.send(QueryMessage::other(create_table_query, vec![]))?;
+        // If table doesn't exist, create it with all columns
+        if !table_exists {
+            self.executor.send(QueryMessage::other(create_table_query, vec![]))?;
+        } else {
+            // If table exists, try to add any missing columns
+            for alter_query in alter_table_queries {
+                // We need to wrap each ALTER TABLE in a try-catch since the column might already exist
+                self.executor.send(QueryMessage::other(
+                    alter_query,
+                    vec![]
+                ))?;
+            }
+        }
 
-        for s in indices.iter() {
-            self.executor.send(QueryMessage::other(s.to_string(), vec![]))?;
+        // Create indices
+        for index_query in indices {
+            self.executor.send(QueryMessage::other(index_query, vec![]))?;
         }
 
         Ok(())
