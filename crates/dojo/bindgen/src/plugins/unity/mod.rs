@@ -256,9 +256,20 @@ namespace {namespace} {{
                 model_struct = Some(token.to_composite().unwrap());
                 continue;
             }
-
-            out += UnityPlugin::format_struct(token.to_composite().unwrap()).as_str();
         }
+
+        let model_struct = model_struct.expect("model struct not found");
+        handled_tokens
+            .iter()
+            .filter(|(_, s)| {
+                model_struct.inners.iter().any(|inner| {
+                    inner.token.type_name() == s.type_name()
+                        && inner.token.type_name() != "ByteArray"
+                })
+            })
+            .for_each(|(_, s)| {
+                out += UnityPlugin::format_struct(s).as_str();
+            });
 
         for token in &sorted_enums {
             if handled_tokens.contains_key(&token.type_path()) {
@@ -266,16 +277,15 @@ namespace {namespace} {{
             }
 
             handled_tokens.insert(token.type_path(), token.to_composite().unwrap().to_owned());
-            out += UnityPlugin::format_enum(token.to_composite().unwrap()).as_str();
+            if handled_tokens.iter().any(|(_, s)| s.type_name() == token.type_name()) {
+                out += UnityPlugin::format_enum(token.to_composite().unwrap()).as_str();
+            }
         }
 
         out += "\n";
 
-        out += UnityPlugin::format_model(
-            &get_namespace_from_tag(&model.tag),
-            model_struct.expect("model struct not found"),
-        )
-        .as_str();
+        out +=
+            UnityPlugin::format_model(&get_namespace_from_tag(&model.tag), model_struct).as_str();
 
         out
     }
@@ -477,7 +487,7 @@ namespace {namespace} {{
 
         return await account.ExecuteRaw(new dojo.Call[] {{
             new dojo.Call{{
-                to = contractAddress,
+                to = new FieldElement(contractAddress).Inner,
                 selector = \"{system_name}\",
                 calldata = calldata.ToArray()
             }}
