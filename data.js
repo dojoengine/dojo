@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1730835669166,
+  "lastUpdate": 1730835726754,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -30786,6 +30786,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 9764462990,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f3276c35bee37d546c4f6de5efd027d4b5f86c9c",
+          "message": "fix(torii): i64 deser (#2636)",
+          "timestamp": "2024-11-05T14:25:40-05:00",
+          "tree_id": "96c8e69fcb48fe62c4b2dc3f1b43149c61191e9e",
+          "url": "https://github.com/dojoengine/dojo/commit/f3276c35bee37d546c4f6de5efd027d4b5f86c9c"
+        },
+        "date": 1730835725596,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10060106658,
             "range": "± 0",
             "unit": "ns/iter"
           }
