@@ -228,26 +228,6 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
         );
     }
 
-    fn erase_models_ptrs(ref self: WorldStorage, ptrs: Span<ModelPtr<M>>) {
-        let mut indexes: Array<ModelIndex> = array![];
-        for p in ptrs {
-            indexes
-                .append(
-                    match p {
-                        ModelPtr::Id(id) => ModelIndex::Id(*id),
-                        ModelPtr::Keys(keys) => ModelIndex::Id(entity_id_from_keys(*keys)),
-                    }
-                );
-        };
-
-        IWorldDispatcherTrait::delete_entities(
-            self.dispatcher,
-            Model::<M>::selector(self.namespace_hash),
-            indexes.span(),
-            Model::<M>::layout()
-        );
-    }
-
     fn namespace_hash(self: @WorldStorage) -> felt252 {
         *self.namespace_hash
     }
