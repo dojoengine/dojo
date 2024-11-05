@@ -244,6 +244,7 @@ namespace {namespace} {{
         let mut sorted_enums = tokens.enums.clone();
         sorted_enums.sort_by(compare_tokens_by_type_name);
 
+        // Process structs first
         for token in &sorted_structs {
             if handled_tokens.contains_key(&token.type_path()) {
                 continue;
@@ -251,7 +252,6 @@ namespace {namespace} {{
 
             handled_tokens.insert(token.type_path(), token.to_composite().unwrap().to_owned());
 
-            // first index is our model struct
             if token.type_name() == naming::get_name_from_tag(&model.tag) {
                 model_struct = Some(token.to_composite().unwrap());
                 continue;
@@ -259,7 +259,9 @@ namespace {namespace} {{
         }
 
         let model_struct = model_struct.expect("model struct not found");
-        handled_tokens
+
+        // Handle struct dependencies
+        let struct_keys: Vec<String> = handled_tokens
             .iter()
             .filter(|(_, s)| {
                 model_struct.inners.iter().any(|inner| {
@@ -268,10 +270,16 @@ namespace {namespace} {{
                         && inner.token.type_name() != "ByteArray"
                 })
             })
-            .for_each(|(_, s)| {
-                out += UnityPlugin::format_struct(s).as_str();
-            });
+            .map(|(k, _)| k.clone())
+            .collect();
 
+        for key in struct_keys {
+            if let Some(s) = handled_tokens.remove(&key) {
+                out += UnityPlugin::format_struct(&s).as_str();
+            }
+        }
+
+        // Process enums
         for token in &sorted_enums {
             if handled_tokens.contains_key(&token.type_path()) {
                 continue;
@@ -280,7 +288,8 @@ namespace {namespace} {{
             handled_tokens.insert(token.type_path(), token.to_composite().unwrap().to_owned());
         }
 
-        handled_tokens
+        // Handle enum dependencies
+        let enum_keys: Vec<String> = handled_tokens
             .iter()
             .filter(|(_, s)| {
                 model_struct.inners.iter().any(|inner| {
@@ -288,12 +297,16 @@ namespace {namespace} {{
                         && check_token_in_recursively(&inner.token, &s.type_name())
                 })
             })
-            .for_each(|(_, s)| {
-                out += UnityPlugin::format_enum(s).as_str();
-            });
+            .map(|(k, _)| k.clone())
+            .collect();
+
+        for key in enum_keys {
+            if let Some(s) = handled_tokens.remove(&key) {
+                out += UnityPlugin::format_enum(&s).as_str();
+            }
+        }
 
         out += "\n";
-
         out +=
             UnityPlugin::format_model(&get_namespace_from_tag(&model.tag), model_struct).as_str();
 
@@ -303,11 +316,10 @@ namespace {namespace} {{
     // Formats a system into a C# method used by the contract class
     // Handled tokens should be a list of all structs and enums used by the contract
     // Such as a set of referenced tokens from a model
-    fn format_system(system: &Function, handled_tokens: &HashMap<String, Composite>) -> String {
+    fn format_system(system: &Function) -> String {
         fn handle_arg_recursive(
             arg_name: &str,
             token: &Token,
-            handled_tokens: &HashMap<String, Composite>,
             // variant name
             // if its an enum variant data
             enum_variant: Option<String>,
@@ -324,8 +336,6 @@ namespace {namespace} {{
 
             match token {
                 Token::Composite(t) => {
-                    let t = handled_tokens.get(&t.type_path).unwrap_or(t);
-
                     // Need to flatten the struct members.
                     match t.r#type {
                         CompositeType::Struct if t.type_name() == "ByteArray" => vec![(
@@ -339,7 +349,6 @@ namespace {namespace} {{
                                 tokens.extend(handle_arg_recursive(
                                     &format!("{}.{}", arg_name, f.name),
                                     &f.token,
-                                    handled_tokens,
                                     enum_variant.clone(),
                                 ));
                             });
@@ -380,7 +389,6 @@ namespace {namespace} {{
                                     } else {
                                         field.token.clone()
                                     },
-                                    handled_tokens,
                                     Some(field.name.clone()),
                                 ))
                             });
@@ -395,7 +403,6 @@ namespace {namespace} {{
                     let inner = handle_arg_recursive(
                         &format!("{arg_name}Item"),
                         &array.inner,
-                        handled_tokens,
                         enum_variant.clone(),
                     );
 
@@ -436,7 +443,6 @@ namespace {namespace} {{
                         handle_arg_recursive(
                             &format!("{}.Item{}", arg_name, idx + 1),
                             token,
-                            handled_tokens,
                             enum_variant.clone(),
                         )
                     })
@@ -461,7 +467,7 @@ namespace {namespace} {{
             .inputs
             .iter()
             .flat_map(|(name, token)| {
-                let tokens = handle_arg_recursive(name, token, handled_tokens, None);
+                let tokens = handle_arg_recursive(name, token, None);
 
                 tokens
                     .iter()
@@ -525,11 +531,7 @@ namespace {namespace} {{
     // Will format the contract into a C# class and
     // all systems into C# methods
     // Handled tokens should be a list of all structs and enums used by the contract
-    fn handle_contract(
-        &self,
-        contract: &DojoContract,
-        handled_tokens: &HashMap<String, Composite>,
-    ) -> String {
+    fn handle_contract(&self, contract: &DojoContract) -> String {
         let mut out = String::new();
         out += UnityPlugin::generated_header().as_str();
         out += UnityPlugin::contract_imports().as_str();
@@ -539,7 +541,7 @@ namespace {namespace} {{
             .iter()
             // we assume systems dont have outputs
             .filter(|s| s.to_function().unwrap().get_output_kind() as u8 == FunctionOutputKind::NoOutput as u8)
-            .map(|system| UnityPlugin::format_system(system.to_function().unwrap(), handled_tokens))
+            .map(|system| UnityPlugin::format_system(system.to_function().unwrap()))
             .collect::<Vec<String>>()
             .join("\n\n    ");
 
@@ -608,7 +610,7 @@ impl BuiltinPlugin for UnityPlugin {
             let contracts_path = Path::new(&format!("Contracts/{}.gen.cs", name)).to_owned();
 
             println!("Generating contract: {}", name);
-            let code = self.handle_contract(contract, &handled_tokens);
+            let code = self.handle_contract(contract);
 
             out.insert(contracts_path, code.as_bytes().to_vec());
         }
