@@ -134,15 +134,19 @@ pub impl ModelImpl<M, +ModelParser<M>, +ModelDefinition<M>, +Serde<M>> of Model<
             unpacked_size: Self::unpacked_size()
         }
     }
+
     fn ptr_from_key<K, +Serde<K>, +Drop<K>>(key: K) -> ModelPtr<M> {
         ModelPtr { id: entity_id_from_key(@key) }
     }
+
     fn ptr_from_keys(keys: Span<felt252>) -> ModelPtr<M> {
         ModelPtr { id: entity_id_from_keys(keys) }
     }
+
     fn ptr_from_id(entity_id: felt252) -> ModelPtr<M> {
         ModelPtr::<M> { id: entity_id }
     }
+
     fn ptr(self: @M) -> ModelPtr<M> {
         ModelPtr::<M> { id: self.entity_id() }
     }

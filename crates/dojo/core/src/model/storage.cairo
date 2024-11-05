@@ -9,30 +9,40 @@ use dojo::{model::{ModelPtr, model_value::ModelValueKey}};
 pub trait ModelStorage<S, M> {
     /// Sets a model of type `M`.
     fn write_model(ref self: S, model: @M);
+
     /// Sets multiple models of type `M`.
     fn write_models(ref self: S, models: Span<@M>);
+
     /// Retrieves a model of type `M` using the provided key of type `K`.
     fn read_model<K, +Drop<K>, +Serde<K>>(self: @S, key: K) -> M;
+
     /// Retrieves multiple models of type `M` using the provided keys of type `K`.
     /// Returnes an array to ensure the user can consume the models, even if the type is not
     /// copiable.
     fn read_models<K, +Drop<K>, +Serde<K>>(self: @S, keys: Span<K>) -> Array<M>;
+
     /// Deletes a model of type `M`.
     fn erase_model(ref self: S, model: @M);
+
     /// Deletes multiple models of type `M`.
     fn erase_models(ref self: S, models: Span<@M>);
+
     /// Deletes a model of type `M` using the provided entity id.
     /// The ptr is mostly used for type inferrence.
     fn erase_model_ptr(ref self: S, ptr: ModelPtr<M>);
+
     /// Deletes a model of type `M` using the provided entity id.
     /// The ptr is mostly used for type inferrence.
     fn erase_models_ptrs(ref self: S, ptrs: Span<ModelPtr<M>>);
+
     /// Retrieves a model of type `M` using the provided entity idref .
     fn read_member<T, +Serde<T>>(self: @S, ptr: ModelPtr<M>, field_selector: felt252) -> T;
+
     /// Retrieves a model of type `M` using the provided entity id.
     fn write_member<T, +Serde<T>, +Drop<T>>(
         ref self: S, ptr: ModelPtr<M>, field_selector: felt252, value: T
     );
+
     /// Returns the current namespace hash.
     fn namespace_hash(self: @S) -> felt252;
 }
