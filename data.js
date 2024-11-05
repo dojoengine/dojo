@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1730782546712,
+  "lastUpdate": 1730824779776,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -30679,6 +30679,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8391710,
             "range": "± 124615",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "447ba4f11f82d9acadfe59563517b1d3bdd61bc6",
+          "message": "refactor: update & fix unity bindgen (#2631)",
+          "timestamp": "2024-11-05T16:23:36Z",
+          "tree_id": "1e1033d41599b5f88e092df94383110a1001a151",
+          "url": "https://github.com/dojoengine/dojo/commit/447ba4f11f82d9acadfe59563517b1d3bdd61bc6"
+        },
+        "date": 1730824778658,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 9973968879,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
