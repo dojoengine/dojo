@@ -319,7 +319,7 @@ pub(crate) mod test_utils {
 #[cfg(test)]
 mod tests {
 
-    use futures::executor;
+    use futures::StreamExt;
     use katana_primitives::contract::{ContractAddress, Nonce};
     use katana_primitives::transaction::TxHash;
     use katana_primitives::Felt;
@@ -340,8 +340,8 @@ mod tests {
         }
     }
 
-    #[test]
-    fn pool_operations() {
+    #[tokio::test]
+    async fn pool_operations() {
         let txs = [
             PoolTx::new(),
             PoolTx::new(),
@@ -370,12 +370,12 @@ mod tests {
         assert!(txs.iter().all(|tx| pool.get(tx.hash()).is_some()));
 
         // noop validator should consider all txs as valid
-        let pendings = executor::block_on_stream(pool.pending_transactions()).collect::<Vec<_>>();
-        assert_eq!(pendings.len(), txs.len());
+        let mut pendings = pool.pending_transactions();
 
         // bcs we're using fcfs, the order should be the same as the order of the txs submission
         // (position in the array)
-        for (actual, expected) in pendings.iter().zip(txs.iter()) {
+        for expected in &txs {
+            let actual = pendings.next().await.unwrap();
             assert_eq!(actual.tx.tip(), expected.tip());
             assert_eq!(actual.tx.hash(), expected.hash());
             assert_eq!(actual.tx.nonce(), expected.nonce());
@@ -383,8 +383,9 @@ mod tests {
             assert_eq!(actual.tx.max_fee(), expected.max_fee());
         }
 
-        // take all transactions
-        let _ = pool.pending_transactions();
+        // remove all transactions
+        let hashes = txs.iter().map(|t| t.hash()).collect::<Vec<TxHash>>();
+        pool.remove_transactions(&hashes);
 
         // all txs should've been removed
         assert!(pool.size() == 0);
@@ -460,9 +461,9 @@ mod tests {
         });
     }
 
-    #[test]
+    #[tokio::test]
     #[ignore = "Txs dependency management not fully implemented yet"]
-    fn dependent_txs_linear_insertion() {
+    async fn dependent_txs_linear_insertion() {
         let pool = TestPool::test();
 
         // Create 100 transactions with the same sender but increasing nonce
@@ -478,14 +479,12 @@ mod tests {
         });
 
         // Get pending transactions
-        let pending = executor::block_on_stream(pool.pending_transactions()).collect::<Vec<_>>();
-
-        // Check that the number of pending transactions matches the number of added transactions
-        assert_eq!(pending.len(), total as usize);
+        let mut pendings = pool.pending_transactions();
 
         // Check that the pending transactions are in the same order as they were added
-        for (i, pending_tx) in pending.iter().enumerate() {
-            assert_eq!(pending_tx.tx.nonce(), Nonce::from(i as u128));
+        for i in 0..total {
+            let pending_tx = pendings.next().await.unwrap();
+            assert_eq!(pending_tx.tx.nonce(), Nonce::from(i));
             assert_eq!(pending_tx.tx.sender(), sender);
         }
     }

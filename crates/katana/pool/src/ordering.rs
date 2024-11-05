@@ -125,7 +125,7 @@ impl<T> Default for TipOrdering<T> {
 #[cfg(test)]
 mod tests {
 
-    use futures::executor;
+    use futures::StreamExt;
 
     use crate::ordering::{self, FiFo};
     use crate::pool::test_utils::*;
@@ -133,8 +133,8 @@ mod tests {
     use crate::validation::NoopValidator;
     use crate::{Pool, TransactionPool};
 
-    #[test]
-    fn fifo_ordering() {
+    #[tokio::test]
+    async fn fifo_ordering() {
         // Create mock transactions
         let txs = [PoolTx::new(), PoolTx::new(), PoolTx::new(), PoolTx::new(), PoolTx::new()];
 
@@ -147,16 +147,17 @@ mod tests {
         });
 
         // Get pending transactions
-        let pendings = executor::block_on_stream(pool.pending_transactions());
+        let mut pendings = pool.pending_transactions();
 
         // Assert that the transactions are in the order they were added (first to last)
-        pendings.into_iter().zip(txs).for_each(|(pending, tx)| {
+        for tx in txs {
+            let pending = pendings.next().await.unwrap();
             assert_eq!(pending.tx.as_ref(), &tx);
-        });
+        }
     }
 
-    #[test]
-    fn tip_based_ordering() {
+    #[tokio::test]
+    async fn tip_based_ordering() {
         // Create mock transactions with different tips and in random order
         let txs = [
             PoolTx::new().with_tip(2),
@@ -178,36 +179,43 @@ mod tests {
             let _ = pool.add_transaction(tx.clone());
         });
 
-        // Get pending transactions
-        let pending = executor::block_on_stream(pool.pending_transactions()).collect::<Vec<_>>();
-        assert_eq!(pending.len(), txs.len());
+        let mut pending = pool.pending_transactions();
 
         // Assert that the transactions are ordered by tip (highest to lowest)
-        assert_eq!(pending[0].tx.tip(), 7);
-        assert_eq!(pending[0].tx.hash(), txs[8].hash());
+        let tx = pending.next().await.unwrap();
+        assert_eq!(tx.tx.tip(), 7);
+        assert_eq!(tx.tx.hash(), txs[8].hash());
 
-        assert_eq!(pending[1].tx.tip(), 6);
-        assert_eq!(pending[1].tx.hash(), txs[2].hash());
+        let tx = pending.next().await.unwrap();
+        assert_eq!(tx.tx.tip(), 6);
+        assert_eq!(tx.tx.hash(), txs[2].hash());
 
-        assert_eq!(pending[2].tx.tip(), 5);
-        assert_eq!(pending[2].tx.hash(), txs[6].hash());
+        let tx = pending.next().await.unwrap();
+        assert_eq!(tx.tx.tip(), 5);
+        assert_eq!(tx.tx.hash(), txs[6].hash());
 
-        assert_eq!(pending[3].tx.tip(), 4);
-        assert_eq!(pending[3].tx.hash(), txs[7].hash());
+        let tx = pending.next().await.unwrap();
+        assert_eq!(tx.tx.tip(), 4);
+        assert_eq!(tx.tx.hash(), txs[7].hash());
 
-        assert_eq!(pending[4].tx.tip(), 3);
-        assert_eq!(pending[4].tx.hash(), txs[3].hash());
+        let tx = pending.next().await.unwrap();
+        assert_eq!(tx.tx.tip(), 3);
+        assert_eq!(tx.tx.hash(), txs[3].hash());
 
-        assert_eq!(pending[5].tx.tip(), 2);
-        assert_eq!(pending[5].tx.hash(), txs[0].hash());
+        let tx = pending.next().await.unwrap();
+        assert_eq!(tx.tx.tip(), 2);
+        assert_eq!(tx.tx.hash(), txs[0].hash());
 
-        assert_eq!(pending[6].tx.tip(), 2);
-        assert_eq!(pending[6].tx.hash(), txs[4].hash());
+        let tx = pending.next().await.unwrap();
+        assert_eq!(tx.tx.tip(), 2);
+        assert_eq!(tx.tx.hash(), txs[4].hash());
 
-        assert_eq!(pending[7].tx.tip(), 2);
-        assert_eq!(pending[7].tx.hash(), txs[5].hash());
+        let tx = pending.next().await.unwrap();
+        assert_eq!(tx.tx.tip(), 2);
+        assert_eq!(tx.tx.hash(), txs[5].hash());
 
-        assert_eq!(pending[8].tx.tip(), 1);
-        assert_eq!(pending[8].tx.hash(), txs[1].hash());
+        let tx = pending.next().await.unwrap();
+        assert_eq!(tx.tx.tip(), 1);
+        assert_eq!(tx.tx.hash(), txs[1].hash());
     }
 }
