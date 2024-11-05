@@ -120,12 +120,12 @@ fn test_read_and_write_field_name() {
 
     // Inference fails here, we need something better without too generics
     // which also fails.
-    let v1 = world.read_member(foo.instance_ptr(), selector!("v1"));
+    let v1 = world.read_member(foo.ptr(), selector!("v1"));
     assert!(foo.v1 == v1);
 
-    world.write_member(foo.instance_ptr(), selector!("v1"), 42);
+    world.write_member(foo.ptr(), selector!("v1"), 42);
 
-    let v1 = world.read_member(foo.instance_ptr(), selector!("v1"));
+    let v1 = world.read_member(foo.ptr(), selector!("v1"));
     assert!(v1 == 42);
 }
 
@@ -154,11 +154,30 @@ fn test_delete_from_model() {
 }
 
 #[test]
-fn test_model_ptr() {
+fn test_model_ptr_from_key() {
     let mut world = spawn_foo_world();
     let foo = Foo { k1: 1, k2: 2, v1: 3, v2: 4 };
-    let key = (foo.k1, foo.k2);
-    let ptr = Model::<Foo>::ptr(key);
+    let ptr = Model::<Foo>::ptr_from_key(foo.key());
+    world.write_model(@foo);
+    let v1 = world.read_member(ptr, selector!("v1"));
+    assert!(foo.v1 == v1);
+}
+
+#[test]
+fn test_model_ptr_from_keys() {
+    let mut world = spawn_foo_world();
+    let foo = Foo { k1: 1, k2: 2, v1: 3, v2: 4 };
+    let ptr = Model::<Foo>::ptr_from_keys(foo.keys());
+    world.write_model(@foo);
+    let v1 = world.read_member(ptr, selector!("v1"));
+    assert!(foo.v1 == v1);
+}
+
+#[test]
+fn test_model_ptr_from_entity_id() {
+    let mut world = spawn_foo_world();
+    let foo = Foo { k1: 1, k2: 2, v1: 3, v2: 4 };
+    let ptr = Model::<Foo>::ptr_from_id(foo.entity_id());
     world.write_model(@foo);
     let v1 = world.read_member(ptr, selector!("v1"));
     assert!(foo.v1 == v1);
