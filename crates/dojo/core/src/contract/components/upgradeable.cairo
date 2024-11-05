@@ -50,9 +50,10 @@ pub mod upgradeable_cpt {
             );
             assert(new_class_hash.is_non_zero(), Errors::INVALID_CLASS);
 
-            // Seems like the match doesn't catch the error if the entrypoint is
-            // not found. This is observed on public network like Sepolia.
-            // On the cairo runner, behavior seems to be as expected.
+            // Currently - any syscall that fails on starknet - fails the transaction, and it won't
+            // be included in any block.
+            // The test runner does not simulate this, but instead simulates the future behavior
+            // when errors can be recovered from.
             match starknet::syscalls::library_call_syscall(
                 new_class_hash, selector!("dojo_name"), [].span(),
             ) {
