@@ -172,7 +172,6 @@ fn inspect_resource(resource_name_or_tag: &str, world_diff: &WorldDiff) {
     } else {
         naming::compute_bytearray_hash(resource_name_or_tag)
     };
-
     let resource_diff = world_diff.resources.get(&selector);
 
     if resource_diff.is_none() {

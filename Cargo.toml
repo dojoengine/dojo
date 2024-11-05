@@ -192,10 +192,8 @@ rpassword = "7.2.0"
 rstest = "0.18.2"
 rstest_reuse = "0.6.0"
 salsa = "0.16.1"
-scarb = { git = "https://github.com/dojoengine/scarb", branch = "dojo-284" }
-scarb-ui = { git = "https://github.com/dojoengine/scarb", branch = "dojo-284" }
-#scarb = { path = "/Users/glihm/swm/scarb/scarb" }
-#scarb-ui = { path = "/Users/glihm/swm/scarb/utils/scarb-ui" }
+scarb = { git = "https://github.com/dojoengine/scarb", rev = "b9965b7e2f0d97f2a97f18ca9a75bac541de7d84" }
+scarb-ui = { git = "https://github.com/dojoengine/scarb", rev = "b9965b7e2f0d97f2a97f18ca9a75bac541de7d84" }
 semver = "1.0.5"
 serde = { version = "1.0", features = [ "derive" ] }
 serde_json = { version = "1.0", features = [ "arbitrary_precision" ] }

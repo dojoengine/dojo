@@ -21,7 +21,7 @@ pub struct E {
 }
 
 #[derive(Introspect, Drop, Serde)]
-#[dojo::event(historical: true)]
+#[dojo::event]
 pub struct EH {
     #[key]
     pub k: felt252,
@@ -39,7 +39,7 @@ pub trait MyInterface<T> {
 #[dojo::contract]
 pub mod c1 {
     use super::{MyInterface, M, E, EH, MValue};
-    use dojo::model::{ModelStorage, ModelValueStorage, Model, ModelPtr};
+    use dojo::model::{ModelStorage, ModelValueStorage, Model};
     use dojo::event::EventStorage;
 
     fn dojo_init(self: @ContractState, v: felt252) {
@@ -91,7 +91,7 @@ pub mod c1 {
             mv.v = 12;
             world.write_value_from_id(entity_id, @mv);
 
-            world.erase_model_ptr(ModelPtr::<M>::Id(entity_id));
+            world.erase_model_ptr(Model::<M>::ptr_from_id(entity_id));
         }
     }
 
@@ -139,10 +139,5 @@ mod tests {
 
         let m: M = world.read_model(0);
         assert!(m.v == 0xff, "invalid b");
-        //let m2 = M { a: 120, b: 244, };
-
-        // `write_model_test` goes over permissions checks.
-    //starknet::testing::set_contract_address(123.try_into().unwrap());
-    //world.write_model_test(@m2);
     }
 }

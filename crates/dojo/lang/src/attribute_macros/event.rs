@@ -17,7 +17,7 @@ use cairo_lang_syntax::node::{ast, TypedStablePtr, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_types::naming;
 
-use super::element::{parse_members, serialize_keys_and_values};
+use super::element::{compute_unique_hash, parse_members, serialize_keys_and_values};
 use crate::aux_data::EventAuxData;
 use crate::derive_macros::{
     extract_derive_attr_names, handle_derive_attrs, DOJO_INTROSPECT_DERIVE, DOJO_PACKED_DERIVE,
@@ -111,6 +111,10 @@ impl DojoEvent {
         let (derive_nodes, derive_diagnostics) =
             handle_derive_attrs(db, &derive_attr_names, &ModuleItem::Struct(struct_ast.clone()));
 
+        let unique_hash =
+            compute_unique_hash(db, &event_name, false, &struct_ast.members(db).elements(db))
+                .to_string();
+
         diagnostics.extend(derive_diagnostics);
 
         let node = RewriteNode::interpolate_patched(
@@ -120,6 +124,7 @@ impl DojoEvent {
                 ("member_names".to_string(), RewriteNode::new_modified(member_names)),
                 ("serialized_keys".to_string(), RewriteNode::new_modified(serialized_keys)),
                 ("serialized_values".to_string(), RewriteNode::new_modified(serialized_values)),
+                ("unique_hash".to_string(), RewriteNode::Text(unique_hash)),
             ]),
         );
 

@@ -1,4 +1,4 @@
-use dojo::meta::{Layout, introspect::Ty};
+use dojo::meta::{Layout, introspect::Struct};
 
 /// The `ModelIndex` provides encapsulation for different ways to access
 /// a model's data.
@@ -19,9 +19,8 @@ pub enum ModelIndex {
 /// Definition of the model containing all the fields that makes up a model.
 pub trait ModelDefinition<T> {
     fn name() -> ByteArray;
-    fn version() -> u8;
     fn layout() -> Layout;
-    fn schema() -> Ty;
+    fn schema() -> Struct;
     fn size() -> Option<usize>;
 }
 
@@ -29,9 +28,8 @@ pub trait ModelDefinition<T> {
 #[derive(Drop, Serde, Debug, PartialEq)]
 pub struct ModelDef {
     pub name: ByteArray,
-    pub version: u8,
     pub layout: Layout,
-    pub schema: Ty,
+    pub schema: Struct,
     pub packed_size: Option<usize>,
     pub unpacked_size: Option<usize>,
 }

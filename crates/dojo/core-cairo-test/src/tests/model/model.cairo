@@ -43,7 +43,6 @@ fn test_model_definition() {
     let definition = dojo::model::Model::<Foo>::definition();
 
     assert_eq!(definition.name, dojo::model::Model::<Foo>::name());
-    assert_eq!(definition.version, dojo::model::Model::<Foo>::version());
     assert_eq!(definition.layout, dojo::model::Model::<Foo>::layout());
     assert_eq!(definition.schema, dojo::model::Model::<Foo>::schema());
     assert_eq!(definition.packed_size, dojo::model::Model::<Foo>::packed_size());

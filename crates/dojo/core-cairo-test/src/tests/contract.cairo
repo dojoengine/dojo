@@ -34,6 +34,7 @@ pub trait IQuantumLeap<T> {
 #[starknet::contract]
 pub mod test_contract_upgrade {
     use dojo::contract::IContract;
+    use dojo::meta::IDeployedResource;
     use dojo::world::IWorldDispatcher;
     use dojo::contract::components::world_provider::IWorldProvider;
 
@@ -58,7 +59,10 @@ pub mod test_contract_upgrade {
     }
 
     #[abi(embed_v0)]
-    pub impl ContractImpl of IContract<ContractState> {
+    pub impl ContractImpl of IContract<ContractState> {}
+
+    #[abi(embed_v0)]
+    pub impl Contract_DeployedContractImpl of IDeployedResource<ContractState> {
         fn dojo_name(self: @ContractState) -> ByteArray {
             "test_contract"
         }

@@ -1,7 +1,8 @@
 use dojo::{
-    meta::{Layout, introspect::Ty, layout::compute_packed_size},
+    meta::{Layout, introspect::Struct, layout::compute_packed_size},
     utils::{entity_id_from_keys, find_model_field_layout, entity_id_from_key}
 };
+
 use super::{ModelDefinition, ModelDef};
 /// Trait `KeyParser` defines a trait for parsing keys from a given model.
 ///
@@ -41,10 +42,8 @@ pub trait Model<M> {
     /// Returns the name of the model. (TODO: internalizing the name_hash could reduce poseidon
     /// costs).
     fn name() -> ByteArray;
-    /// Returns the version of the model.
-    fn version() -> u8;
     /// Returns the schema of the model.
-    fn schema() -> Ty;
+    fn schema() -> Struct;
     /// Returns the memory layout of the model.
     fn layout() -> Layout;
     /// Returns the layout of a field in the model.
@@ -110,10 +109,6 @@ pub impl ModelImpl<
         dojo::utils::selector_from_namespace_and_name(namespace_hash, @Self::name())
     }
 
-    fn version() -> u8 {
-        ModelDefinition::<M>::version()
-    }
-
     fn layout() -> Layout {
         ModelDefinition::<M>::layout()
     }
@@ -122,7 +117,7 @@ pub impl ModelImpl<
         find_model_field_layout(Self::layout(), field_selector)
     }
 
-    fn schema() -> Ty {
+    fn schema() -> Struct {
         ModelDefinition::<M>::schema()
     }
 
@@ -141,7 +136,6 @@ pub impl ModelImpl<
     fn definition() -> ModelDef {
         ModelDef {
             name: Self::name(),
-            version: Self::version(),
             layout: Self::layout(),
             schema: Self::schema(),
             packed_size: Self::packed_size(),

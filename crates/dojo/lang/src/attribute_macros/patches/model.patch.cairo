@@ -25,18 +25,18 @@ pub mod m_$model_type$_definition {
         }
 
         #[inline(always)]
-        fn version() -> u8 {
-            $model_version$
-        }
-
-        #[inline(always)]
         fn layout() -> dojo::meta::Layout {
             dojo::meta::Introspect::<$model_type$>::layout()
         }
 
         #[inline(always)]
-        fn schema() -> dojo::meta::introspect::Ty {
-            dojo::meta::Introspect::<$model_type$>::ty()
+        fn schema() -> dojo::meta::introspect::Struct {
+            if let dojo::meta::introspect::Ty::Struct(s) = dojo::meta::Introspect::<$model_type$>::ty() {
+                s
+            }
+            else {
+                panic!("Model `$model_type$`: invalid schema.")
+            }
         }
 
         #[inline(always)]
@@ -82,6 +82,12 @@ pub mod m_$model_type$ {
     struct Storage {}
 
     #[abi(embed_v0)]
+    impl $model_type$__DojoDeployedModelImpl = dojo::model::component::IDeployedModelImpl<ContractState, $model_type$>;
+
+    #[abi(embed_v0)]
+    impl $model_type$__DojoStoredModelImpl = dojo::model::component::IStoredModelImpl<ContractState, $model_type$>;
+
+    #[abi(embed_v0)]
     impl $model_type$__DojoModelImpl = dojo::model::component::IModelImpl<ContractState, $model_type$>;
 
     #[abi(per_item)]
@@ -99,6 +105,13 @@ pub mod m_$model_type$ {
         #[external(v0)]
         fn ensure_values(self: @ContractState, value: $model_type$Value) {
             let _value = value;
+        }
+
+        // Ensures the generated contract has a unique classhash, using
+        // a hardcoded hash computed on model and member names.
+        #[external(v0)]
+        fn ensure_unique(self: @ContractState) {
+            let _hash = $unique_hash$;
         }
     }
 }

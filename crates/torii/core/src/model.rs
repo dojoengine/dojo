@@ -506,11 +506,8 @@ pub fn map_row_to_ty(
                     primitive.set_i32(Some(value))?;
                 }
                 Primitive::I64(_) => {
-                    let value = row.try_get::<String, &str>(&column_name)?;
-                    let hex_str = value.trim_start_matches("0x");
-                    primitive.set_i64(Some(
-                        i64::from_str_radix(hex_str, 16).map_err(ParseError::ParseIntError)?,
-                    ))?;
+                    let value = row.try_get::<i64, &str>(&column_name)?;
+                    primitive.set_i64(Some(value))?;
                 }
                 Primitive::I128(_) => {
                     let value = row.try_get::<String, &str>(&column_name)?;
