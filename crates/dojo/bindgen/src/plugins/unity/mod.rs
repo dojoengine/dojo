@@ -104,6 +104,7 @@ using dojo_bindings;
 using System.Collections.Generic;
 using System.Linq;
 using Enum = Dojo.Starknet.Enum;
+using BigInteger = System.Numerics.BigInteger;
 "
         .to_string()
     }
@@ -116,6 +117,7 @@ using System.Reflection;
 using System.Linq;
 using System.Collections.Generic;
 using Enum = Dojo.Starknet.Enum;
+using BigInteger = System.Numerics.BigInteger;
 "
         .to_string()
     }
@@ -201,23 +203,22 @@ public abstract record {}() : Enum {{",
 
         format!(
             "
-namespace {namespace} {{
-    // Model definition for `{}` model
-    public class {} : ModelInstance {{
-        {}
+// Model definition for `{}` model
+public class {}_{} : ModelInstance {{
+    {}
 
-        // Start is called before the first frame update
-        void Start() {{
-        }}
-    
-        // Update is called once per frame
-        void Update() {{
-        }}
+    // Start is called before the first frame update
+    void Start() {{
+    }}
+
+    // Update is called once per frame
+    void Update() {{
     }}
 }}
 
         ",
             model.type_path,
+            namespace,
             model.type_name(),
             fields
         )
@@ -341,6 +342,15 @@ namespace {namespace} {{
                         CompositeType::Struct if t.type_name() == "ByteArray" => vec![(
                             format!("ByteArray.Serialize({}).Select(f => f.Inner)", arg_name),
                             true,
+                            enum_variant,
+                        )],
+                        CompositeType::Unknown if t.type_name() == "U256" => vec![(
+                            format!("new FieldElement({}.high).Inner", arg_name),
+                            false,
+                            enum_variant.clone(),
+                        ), (
+                            format!("new FieldElement({}.low).Inner", arg_name),
+                            false,
                             enum_variant,
                         )],
                         CompositeType::Struct => {
