@@ -47,12 +47,6 @@ pub mod model {
 
     pub mod storage;
     pub use storage::{ModelStorage, ModelStorageTest, ModelValueStorage, ModelValueStorageTest,};
-
-    #[cfg(target: "test")]
-    pub use model::{ModelTest};
-
-    #[cfg(target: "test")]
-    pub use model_value::{ModelValueTest};
 }
 
 pub mod storage {
