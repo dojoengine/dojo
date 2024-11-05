@@ -181,32 +181,3 @@ fn test_model_ptr_from_entity_id() {
     let v1 = world.read_member(ptr, selector!("v1"));
     assert!(foo.v1 == v1);
 }
-
-#[test]
-fn test_models_ptrs_from_key() {
-    let foo = Foo { k1: 1, k2: 2, v1: 3, v2: 4 };
-    let foo2 = Foo { k1: 1, k2: 2, v1: 3, v2: 4 };
-    let keys = [foo.key(), foo2.key()].span();
-    let ptrs = Model::<Foo>::ptrs_from_key(keys);
-    assert_eq!(foo.entity_id(), *ptrs.at(0).id);
-    assert_eq!(foo2.entity_id(), *ptrs.at(1).id);
-}
-#[test]
-fn test_models_ptrs_from_keys() {
-    let foo = Foo { k1: 1, k2: 2, v1: 3, v2: 4 };
-    let foo2 = Foo { k1: 1, k2: 2, v1: 3, v2: 4 };
-    let keys = [foo.keys(), foo2.keys()].span();
-    let ptrs = Model::<Foo>::ptrs_from_keys(keys);
-    assert_eq!(foo.entity_id(), *ptrs.at(0).id);
-    assert_eq!(foo2.entity_id(), *ptrs.at(1).id);
-}
-#[test]
-fn test_models_ptrs_from_entity_id() {
-    let foo = Foo { k1: 1, k2: 2, v1: 3, v2: 4 };
-    let foo2 = Foo { k1: 1, k2: 2, v1: 3, v2: 4 };
-    let keys = [foo.entity_id(), foo2.entity_id()].span();
-    let ptrs = Model::<Foo>::ptrs_from_id(keys);
-    assert_eq!(foo.entity_id(), *ptrs.at(0).id);
-    assert_eq!(foo2.entity_id(), *ptrs.at(1).id);
-}
-

@@ -24,14 +24,6 @@ fn field_layout_unwrap<M, +Model<M>>(field_selector: felt252) -> Layout {
     }
 }
 
-fn model_ptrs_to_ids<M, +Model<M>>(ptrs: Span<ModelPtr<M>>) -> Span<felt252> {
-    let mut ids: Array<felt252> = array![];
-    for ptr in ptrs {
-        ids.append(*ptr.id);
-    };
-    ids.span()
-}
-
 #[generate_trait]
 pub impl WorldStorageInternalImpl of WorldStorageTrait {
     fn new(world: IWorldDispatcher, namespace: @ByteArray) -> WorldStorage {
