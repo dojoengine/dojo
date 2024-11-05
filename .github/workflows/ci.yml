@@ -133,6 +133,7 @@ jobs:
       - run: |
           chmod +x /tmp/bins/sozo
           /tmp/bins/sozo --manifest-path crates/dojo/core/Scarb.toml test
+          /tmp/bins/sozo --manifest-path crates/dojo/core-cairo-test/Scarb.toml test
 
   dojo-spawn-and-move-example-test:
     needs: build
@@ -148,6 +149,7 @@ jobs:
       - run: |
           chmod +x /tmp/bins/sozo
           /tmp/bins/sozo --manifest-path examples/spawn-and-move/Scarb.toml test
+          /tmp/bins/sozo --manifest-path examples/simple/Scarb.toml test
 
   clippy:
     runs-on: ubuntu-latest-4-cores

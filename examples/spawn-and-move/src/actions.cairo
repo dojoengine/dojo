@@ -210,7 +210,10 @@ pub mod actions {
 mod tests {
     use dojo::model::{ModelStorage, ModelValueStorage, ModelStorageTest};
     use dojo::world::WorldStorageTrait;
-    use dojo_cairo_test::{spawn_test_world, NamespaceDef, TestResource, ContractDefTrait};
+    use dojo_cairo_test::{
+        spawn_test_world, NamespaceDef, TestResource, ContractDefTrait, ContractDef,
+        WorldStorageTestTrait
+    };
 
     use super::{actions, IActionsDispatcher, IActionsDispatcherTrait};
     use dojo_examples::models::{Position, PositionValue, m_Position, Moves, m_Moves, Direction,};
@@ -218,17 +221,21 @@ mod tests {
     fn namespace_def() -> NamespaceDef {
         let ndef = NamespaceDef {
             namespace: "ns", resources: [
-                TestResource::Model(m_Position::TEST_CLASS_HASH.try_into().unwrap()),
-                TestResource::Model(m_Moves::TEST_CLASS_HASH.try_into().unwrap()),
-                TestResource::Event(actions::e_Moved::TEST_CLASS_HASH.try_into().unwrap()),
-                TestResource::Contract(
-                    ContractDefTrait::new(actions::TEST_CLASS_HASH, "actions")
-                        .with_writer_of([dojo::utils::bytearray_hash(@"ns")].span())
-                )
+                TestResource::Model(m_Position::TEST_CLASS_HASH),
+                TestResource::Model(m_Moves::TEST_CLASS_HASH),
+                TestResource::Event(actions::e_Moved::TEST_CLASS_HASH),
+                TestResource::Contract(actions::TEST_CLASS_HASH),
             ].span()
         };
 
         ndef
+    }
+
+    fn contract_defs() -> Span<ContractDef> {
+        [
+            ContractDefTrait::new(@"ns", @"actions")
+                .with_writer_of([dojo::utils::bytearray_hash(@"ns")].span())
+        ].span()
     }
 
     #[test]
@@ -237,6 +244,8 @@ mod tests {
 
         let ndef = namespace_def();
         let mut world = spawn_test_world([ndef].span());
+
+        world.sync_perms_and_inits(contract_defs());
 
         // Without having the permission, we can set data into the dojo database for the given
         // models.
@@ -272,6 +281,7 @@ mod tests {
 
         let ndef = namespace_def();
         let mut world = spawn_test_world([ndef].span());
+        world.sync_perms_and_inits(contract_defs());
 
         let (actions_system_addr, _) = world.dns(@"actions").unwrap();
         let actions_system = IActionsDispatcher { contract_address: actions_system_addr };

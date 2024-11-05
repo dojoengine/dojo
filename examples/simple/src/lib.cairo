@@ -115,23 +115,27 @@ pub mod c3 {}
 #[cfg(test)]
 mod tests {
     use dojo::model::ModelStorage;
-    use dojo_cairo_test::{spawn_test_world, NamespaceDef, TestResource, ContractDefTrait};
+    use dojo_cairo_test::{
+        spawn_test_world, NamespaceDef, TestResource, ContractDefTrait, WorldStorageTestTrait
+    };
     use super::{c1, m_M, M};
 
     #[test]
     fn test_1() {
         let ndef = NamespaceDef {
             namespace: "ns", resources: [
-                TestResource::Model(m_M::TEST_CLASS_HASH.try_into().unwrap()),
-                TestResource::Contract(
-                    ContractDefTrait::new(c1::TEST_CLASS_HASH, "c1")
-                        .with_init_calldata([0xff].span())
-                        .with_writer_of([dojo::utils::bytearray_hash(@"ns")].span())
-                )
+                TestResource::Model(m_M::TEST_CLASS_HASH),
+                TestResource::Contract(c1::TEST_CLASS_HASH),
             ].span()
         };
 
         let world = spawn_test_world([ndef].span());
+
+        let c1_def = ContractDefTrait::new(@"ns", @"c1")
+            .with_writer_of([dojo::utils::bytearray_hash(@"ns")].span())
+            .with_init_calldata([0xff].span());
+
+        world.sync_perms_and_inits([c1_def].span());
 
         let m: M = world.read_model(0);
         assert!(m.v == 0xff, "invalid b");

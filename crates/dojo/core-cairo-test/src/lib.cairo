@@ -10,7 +10,7 @@ pub use utils::{GasCounter, assert_array, GasCounterTrait};
 #[cfg(target: "test")]
 pub use world::{
     deploy_contract, deploy_with_world_address, spawn_test_world, NamespaceDef, TestResource,
-    ContractDef, ContractDefTrait
+    ContractDef, ContractDefTrait, WorldStorageTestTrait,
 };
 
 #[cfg(test)]
@@ -45,8 +45,8 @@ mod tests {
     mod world {
         mod acl;
         //mod entities;
-    //mod resources;
-    //mod world;
+        //mod resources;
+        mod world;
     }
 
     mod utils {

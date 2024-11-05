@@ -40,8 +40,8 @@ pub impl WorldStorageInternalImpl of WorldStorageTrait {
         }
     }
 
-    fn contract_selector(self: @WorldStorage, contract_name: @ByteArray) -> felt252 {
-        dojo::utils::selector_from_namespace_and_name(*self.namespace_hash, contract_name)
+    fn resource_selector(self: @WorldStorage, name: @ByteArray) -> felt252 {
+        dojo::utils::selector_from_namespace_and_name(*self.namespace_hash, name)
     }
 }
 
