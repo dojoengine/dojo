@@ -324,6 +324,8 @@ impl NodeArgs {
 
         if let Some(genesis) = self.starknet.genesis.clone() {
             chain_spec.genesis = genesis;
+        } else {
+            chain_spec.genesis.sequencer_address = *DEFAULT_SEQUENCER_ADDRESS;
         }
 
         // generate dev accounts
@@ -333,7 +335,6 @@ impl NodeArgs {
             .generate();
 
         chain_spec.genesis.extend_allocations(accounts.into_iter().map(|(k, v)| (k, v.into())));
-        chain_spec.genesis.sequencer_address = *DEFAULT_SEQUENCER_ADDRESS;
 
         #[cfg(feature = "slot")]
         if self.slot.controller {
@@ -516,6 +517,7 @@ PREFUNDED ACCOUNTS
 #[cfg(test)]
 mod test {
     use assert_matches::assert_matches;
+    use katana_primitives::{address, felt};
 
     use super::*;
 
@@ -557,6 +559,7 @@ mod test {
         assert_eq!(config.execution.validation_max_steps, 100);
         assert_eq!(config.db.dir, Some(PathBuf::from("/path/to/db")));
         assert_eq!(config.chain.id, ChainId::GOERLI);
+        assert_eq!(config.chain.genesis.sequencer_address, *DEFAULT_SEQUENCER_ADDRESS);
     }
 
     #[test]
@@ -595,6 +598,39 @@ mod test {
             assert_eq!(prices.gas_price.strk, 20);
             assert_eq!(prices.data_gas_price.eth, 1);
             assert_eq!(prices.data_gas_price.strk, 2);
+        })
+    }
+
+    #[test]
+    fn genesis_with_fixed_gas_prices() {
+        let config = NodeArgs::parse_from([
+            "katana",
+            "--genesis",
+            "./tests/test-data/genesis.json",
+            "--l1-eth-gas-price",
+            "100",
+            "--l1-strk-gas-price",
+            "200",
+            "--l1-eth-data-gas-price",
+            "111",
+            "--l1-strk-data-gas-price",
+            "222",
+        ])
+        .config()
+        .unwrap();
+
+        assert_eq!(config.chain.genesis.number, 0);
+        assert_eq!(config.chain.genesis.parent_hash, felt!("0x999"));
+        assert_eq!(config.chain.genesis.timestamp, 5123512314);
+        assert_eq!(config.chain.genesis.state_root, felt!("0x99"));
+        assert_eq!(config.chain.genesis.sequencer_address, address!("0x100"));
+        assert_eq!(config.chain.genesis.gas_prices.eth, 9999);
+        assert_eq!(config.chain.genesis.gas_prices.strk, 8888);
+        assert_matches!(config.dev.fixed_gas_prices, Some(prices) => {
+            assert_eq!(prices.gas_price.eth, 100);
+            assert_eq!(prices.gas_price.strk, 200);
+            assert_eq!(prices.data_gas_price.eth, 111);
+            assert_eq!(prices.data_gas_price.strk, 222);
         })
     }
 }
