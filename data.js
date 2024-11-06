@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1730921712476,
+  "lastUpdate": 1730921947866,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -31255,6 +31255,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10320422336,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "884a7267ff60752962193595eec87b01c9aa563d",
+          "message": "feat(katana): gas oracle skeleton (#2643)",
+          "timestamp": "2024-11-07T03:19:18+08:00",
+          "tree_id": "70a007f70265b01ca6c7ca9b30561ca22293d61d",
+          "url": "https://github.com/dojoengine/dojo/commit/884a7267ff60752962193595eec87b01c9aa563d"
+        },
+        "date": 1730921946488,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16367210,
+            "range": "± 475771",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8676703,
+            "range": "± 476169",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3499724184,
+            "range": "± 777434685",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8406024,
+            "range": "± 524587",
             "unit": "ns/iter"
           }
         ]
