@@ -61,6 +61,12 @@ pub struct ExecuteArgs {
 //     pub calldata: Option<String>,
 // }
 
+#[derive(Debug)]
+pub struct CallArgs {
+    pub tag_or_address: ResourceDescriptor,
+    pub entrypoint: String,
+    pub calldata: Option<String>,
+}
 
 impl CallArgs {
     fn from_string(s: &str) -> Result<Self> {
@@ -70,12 +76,28 @@ impl CallArgs {
         }
 
         Ok(CallArgs {
-            tag_or_address: parts[0].parse()?, 
+            tag_or_address: parts[0].parse()?,  
             entrypoint: parts[1].to_string(),
             calldata: if parts.len() > 2 { Some(parts[2..].join(",")) } else { None },
         })
     }
 }
+
+
+// impl CallArgs {
+//     fn from_string(s: &str) -> Result<Self> {
+//         let parts: Vec<&str> = s.split(',').collect();
+//         if parts.len() < 2 {
+//             return Err(anyhow!("Invalid call format"));
+//         }
+
+//         Ok(CallArgs {
+//             tag_or_address: parts[0].parse()?, 
+//             entrypoint: parts[1].to_string(),
+//             calldata: if parts.len() > 2 { Some(parts[2..].join(",")) } else { None },
+//         })
+//     }
+// }
 
 impl ExecuteArgs {
     pub fn run(self, config: &Config) -> Result<()> {
