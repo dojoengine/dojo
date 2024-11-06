@@ -548,10 +548,6 @@ mod test {
             "100",
             "--db-dir",
             "/path/to/db",
-            "--eth-gas-price",
-            "10",
-            "--strk-gas-price",
-            "20",
         ]);
         let config = args.config().unwrap();
 
@@ -561,8 +557,6 @@ mod test {
         assert_eq!(config.execution.validation_max_steps, 100);
         assert_eq!(config.db.dir, Some(PathBuf::from("/path/to/db")));
         assert_eq!(config.chain.id, ChainId::GOERLI);
-        assert_eq!(config.chain.genesis.gas_prices.eth, 10);
-        assert_eq!(config.chain.genesis.gas_prices.strk, 20);
     }
 
     #[test]
