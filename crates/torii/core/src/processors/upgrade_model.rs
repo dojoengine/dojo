@@ -1,7 +1,6 @@
 use anyhow::{Error, Ok, Result};
 use async_trait::async_trait;
-use dojo_world::contracts::abigen::world::Event as WorldEvent;
-use dojo_world::contracts::model::ModelReader;
+use dojo_world::contracts::{abigen::world::Event as WorldEvent, model::ModelReader};
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::Event;
 use starknet::providers::Provider;
@@ -21,7 +20,7 @@ where
     P: Provider + Send + Sync + std::fmt::Debug,
 {
     fn event_key(&self) -> String {
-        "ModelRegistered".to_string()
+        "ModelUpgraded".to_string()
     }
 
     // We might not need this anymore, since we don't have fallback and all world events must
@@ -47,17 +46,15 @@ where
                 <RegisterModelProcessor as EventProcessor<P>>::event_key(self)
             )
         }) {
-            WorldEvent::ModelRegistered(e) => e,
+            WorldEvent::ModelUpgraded(e) => e,
             _ => {
                 unreachable!()
             }
         };
 
-        // Safe to unwrap, since it's coming from the chain.
-        let namespace = event.namespace.to_string().unwrap();
-        let name = event.name.to_string().unwrap();
-
-        let model = world.model_reader(&namespace, &name).await?;
+        let model = world.model_reader_with_selector(event.selector).await?;
+        let namespace = model.namespace();
+        let name = model.name();
         let schema = model.schema().await?;
         let layout = model.layout().await?;
 
@@ -68,19 +65,19 @@ where
             target: LOG_TARGET,
             namespace = %namespace,
             name = %name,
-            "Registered model."
+            "Upgraded model."
         );
 
         debug!(
             target: LOG_TARGET,
-            name,
+            name = %name,
             schema = ?schema,
             layout = ?layout,
             class_hash = ?event.class_hash,
             contract_address = ?event.address,
             packed_size = %packed_size,
             unpacked_size = %unpacked_size,
-            "Registered model content."
+            "Upgraded model content."
         );
 
         db.register_model(
@@ -92,7 +89,7 @@ where
             packed_size,
             unpacked_size,
             block_timestamp,
-            false,
+            true,
         )
         .await?;
 

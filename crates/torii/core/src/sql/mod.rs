@@ -261,6 +261,7 @@ impl Sql {
         packed_size: u32,
         unpacked_size: u32,
         block_timestamp: u64,
+        is_upgrade: bool,
     ) -> Result<()> {
         let selector = compute_selector_from_names(namespace, &model.name());
         let namespaced_name = format!("{}-{}", namespace, model.name());
@@ -298,6 +299,7 @@ impl Sql {
             block_timestamp,
             &mut 0,
             &mut 0,
+            is_upgrade,
         )?;
 
         // we set the model in the cache directly
@@ -633,6 +635,7 @@ impl Sql {
         block_timestamp: u64,
         array_idx: &mut usize,
         parent_array_idx: &mut usize,
+        is_upgrade: bool,
     ) -> Result<()> {
         if let Ty::Enum(e) = model {
             if e.options.iter().all(|o| if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false })
@@ -649,6 +652,7 @@ impl Sql {
             block_timestamp,
             *array_idx,
             *parent_array_idx,
+            is_upgrade,
         )?;
 
         let mut build_member = |pathname: &str, member: &Ty| -> Result<()> {
@@ -669,6 +673,7 @@ impl Sql {
                 block_timestamp,
                 &mut (*array_idx + if let Ty::Array(_) = member { 1 } else { 0 }),
                 &mut (*parent_array_idx + if let Ty::Array(_) = model { 1 } else { 0 }),
+                is_upgrade,
             )?;
 
             Ok(())
@@ -828,7 +833,11 @@ impl Sql {
             Ty::Enum(e) => {
                 if e.options.iter().all(
                     |o| {
-                        if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false }
+                        if let Ty::Tuple(t) = &o.ty {
+                            t.is_empty()
+                        } else {
+                            false
+                        }
                     },
                 ) {
                     return Ok(());
@@ -1016,7 +1025,7 @@ impl Sql {
     }
 
     #[allow(clippy::too_many_arguments)]
-    async fn build_model_query(
+    fn build_model_query(
         &mut self,
         selector: Felt,
         path: Vec<String>,
@@ -1025,17 +1034,10 @@ impl Sql {
         block_timestamp: u64,
         array_idx: usize,
         parent_array_idx: usize,
+        is_upgrade: bool,
     ) -> Result<()> {
         let table_id = path.join("$");
         let mut indices = Vec::new();
-
-        // Check if table exists using sqlx
-        let table_exists = sqlx::query_scalar::<_, bool>(
-            "SELECT EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name = ?)"
-        )
-        .bind(&table_id)
-        .fetch_one(&self.pool)
-        .await?;
 
         let mut create_table_query = format!(
             "CREATE TABLE IF NOT EXISTS [{table_id}] (id TEXT NOT NULL, event_id TEXT NOT NULL, \
@@ -1049,38 +1051,30 @@ impl Sql {
             for i in 0..array_idx {
                 let column = format!("idx_{i} INTEGER NOT NULL");
                 create_table_query.push_str(&format!("{column}, "));
-                
-                if table_exists {
-                    // For upgrades, add column if it doesn't exist
-                    alter_table_queries.push(format!(
-                        "ALTER TABLE [{table_id}] ADD COLUMN idx_{i} INTEGER NOT NULL DEFAULT 0"
-                    ));
-                }
+
+                alter_table_queries.push(format!(
+                    "ALTER TABLE [{table_id}] ADD COLUMN idx_{i} INTEGER NOT NULL DEFAULT 0"
+                ));
             }
 
             // full array id column
             create_table_query.push_str("full_array_id TEXT NOT NULL UNIQUE, ");
-            if table_exists {
-                alter_table_queries.push(
-                    format!("ALTER TABLE [{table_id}] ADD COLUMN full_array_id TEXT NOT NULL UNIQUE DEFAULT ''")
-                );
-            }
+            alter_table_queries.push(format!(
+                "ALTER TABLE [{table_id}] ADD COLUMN full_array_id TEXT NOT NULL UNIQUE DEFAULT ''"
+            ));
         }
 
         let mut build_member = |name: &str, ty: &Ty, options: &mut Option<Argument>| {
             if let Ok(cairo_type) = Primitive::from_str(&ty.name()) {
                 let sql_type = cairo_type.to_sql_type();
                 let column = format!("external_{name} {sql_type}");
-                
+
                 create_table_query.push_str(&format!("{column}, "));
-                
-                if table_exists {
-                    // Add ALTER TABLE query for upgrades
-                    alter_table_queries.push(
-                        format!("ALTER TABLE [{table_id}] ADD COLUMN external_{name} {sql_type}")
-                    );
-                }
-                
+
+                alter_table_queries.push(format!(
+                    "ALTER TABLE [{table_id}] ADD COLUMN external_{name} {sql_type}"
+                ));
+
                 indices.push(format!(
                     "CREATE INDEX IF NOT EXISTS [idx_{table_id}_{name}] ON [{table_id}] \
                      (external_{name});"
@@ -1097,15 +1091,10 @@ impl Sql {
                     "external_{name} TEXT CHECK(external_{name} IN ({all_options})) {}",
                     if array_idx > 0 { "" } else { "NOT NULL" }
                 );
-                
+
                 create_table_query.push_str(&format!("{column}, "));
-                
-                if table_exists {
-                    // Add ALTER TABLE query for upgrades
-                    alter_table_queries.push(
-                        format!("ALTER TABLE [{table_id}] ADD COLUMN {column}")
-                    );
-                }
+
+                alter_table_queries.push(format!("ALTER TABLE [{table_id}] ADD COLUMN {column}"));
 
                 indices.push(format!(
                     "CREATE INDEX IF NOT EXISTS [idx_{table_id}_{name}] ON [{table_id}] \
@@ -1122,15 +1111,10 @@ impl Sql {
                 ));
             } else if let Ty::ByteArray(_) = &ty {
                 let column = format!("external_{name} TEXT");
-                
+
                 create_table_query.push_str(&format!("{column}, "));
-                
-                if table_exists {
-                    // Add ALTER TABLE query for upgrades
-                    alter_table_queries.push(
-                        format!("ALTER TABLE [{table_id}] ADD COLUMN {column}")
-                    );
-                }
+
+                alter_table_queries.push(format!("ALTER TABLE [{table_id}] ADD COLUMN {column}"));
 
                 indices.push(format!(
                     "CREATE INDEX IF NOT EXISTS [idx_{table_id}_{name}] ON [{table_id}] \
@@ -1298,21 +1282,14 @@ impl Sql {
         create_table_query
             .push_str("FOREIGN KEY (event_message_id) REFERENCES event_messages(id));");
 
-        // If table doesn't exist, create it with all columns
-        if !table_exists {
-            self.executor.send(QueryMessage::other(create_table_query, vec![]))?;
-        } else {
-            // If table exists, try to add any missing columns
+        if is_upgrade {
             for alter_query in alter_table_queries {
-                // We need to wrap each ALTER TABLE in a try-catch since the column might already exist
-                self.executor.send(QueryMessage::other(
-                    alter_query,
-                    vec![]
-                ))?;
+                self.executor.send(QueryMessage::other(alter_query, vec![]))?;
             }
+        } else {
+            self.executor.send(QueryMessage::other(create_table_query, vec![]))?;
         }
 
-        // Create indices
         for index_query in indices {
             self.executor.send(QueryMessage::other(index_query, vec![]))?;
         }

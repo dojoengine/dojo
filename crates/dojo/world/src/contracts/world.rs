@@ -1,6 +1,7 @@
 use std::result::Result;
 
 use starknet::providers::Provider;
+use starknet_crypto::Felt;
 
 pub use super::abigen::world::{
     ContractRegistered, ContractUpgraded, Event as WorldEvent, ModelRegistered, WorldContract,
@@ -32,5 +33,12 @@ where
         name: &str,
     ) -> Result<ModelRPCReader<'_, P>, ModelError> {
         ModelRPCReader::new(namespace, name, self).await
+    }
+
+    pub async fn model_reader_with_selector(
+        &self,
+        selector: Felt,
+    ) -> Result<ModelRPCReader<'_, P>, ModelError> {
+        ModelRPCReader::new_with_selector(selector, self).await
     }
 }

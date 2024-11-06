@@ -10,18 +10,18 @@ use tracing::{debug, info};
 use super::EventProcessor;
 use crate::sql::Sql;
 
-pub(crate) const LOG_TARGET: &str = "torii_core::processors::register_model";
+pub(crate) const LOG_TARGET: &str = "torii_core::processors::register_event";
 
 #[derive(Default, Debug)]
-pub struct RegisterModelProcessor;
+pub struct RegisterEventProcessor;
 
 #[async_trait]
-impl<P> EventProcessor<P> for RegisterModelProcessor
+impl<P> EventProcessor<P> for RegisterEventProcessor
 where
     P: Provider + Send + Sync + std::fmt::Debug,
 {
     fn event_key(&self) -> String {
-        "ModelRegistered".to_string()
+        "EventUpgraded".to_string()
     }
 
     // We might not need this anymore, since we don't have fallback and all world events must
@@ -44,31 +44,32 @@ where
         let event = match WorldEvent::try_from(event).unwrap_or_else(|_| {
             panic!(
                 "Expected {} event to be well formed.",
-                <RegisterModelProcessor as EventProcessor<P>>::event_key(self)
+                <RegisterEventProcessor as EventProcessor<P>>::event_key(self)
             )
         }) {
-            WorldEvent::ModelRegistered(e) => e,
+            WorldEvent::EventUpgraded(e) => e,
             _ => {
                 unreachable!()
             }
         };
 
-        // Safe to unwrap, since it's coming from the chain.
-        let namespace = event.namespace.to_string().unwrap();
-        let name = event.name.to_string().unwrap();
-
-        let model = world.model_reader(&namespace, &name).await?;
+        // Called model here by language, but it's an event. Torii rework will make clear
+        // distinction.
+        let model = world.model_reader_with_selector(event.selector).await?;
+        let namespace = model.namespace();
+        let name = model.name();
         let schema = model.schema().await?;
         let layout = model.layout().await?;
 
-        let unpacked_size: u32 = model.unpacked_size().await?;
-        let packed_size: u32 = model.packed_size().await?;
+        // Events are never stored onchain, hence no packing or unpacking.
+        let unpacked_size: u32 = 0;
+        let packed_size: u32 = 0;
 
         info!(
             target: LOG_TARGET,
             namespace = %namespace,
             name = %name,
-            "Registered model."
+            "Registered event."
         );
 
         debug!(
