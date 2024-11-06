@@ -99,7 +99,7 @@ impl Blockchain {
                     Ok(Self::new(provider))
                 } else {
                     Err(anyhow!(
-                        "Genesis block hash mismatch: expected {genesis_hash:#x}, got {db_hash:#}",
+                        "Genesis block hash mismatch: expected {genesis_hash:#x}, got {db_hash:#x}",
                     ))
                 }
             }
