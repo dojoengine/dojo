@@ -1,17 +1,14 @@
-// TODO: remove the messaging feature flag
-// TODO: move the tasks to a separate module
-
 use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
 use block_producer::BlockProductionError;
-use futures::channel::mpsc::Receiver;
-use futures::stream::{Fuse, Stream, StreamExt};
+use futures::stream::StreamExt;
 use katana_executor::ExecutorFactory;
+use katana_pool::ordering::PoolOrd;
+use katana_pool::pending::PendingTransactions;
 use katana_pool::{TransactionPool, TxPool};
 use katana_primitives::transaction::ExecutableTxWithHash;
-use katana_primitives::Felt;
 use tracing::{error, info};
 
 use self::block_producer::BlockProducer;
@@ -30,24 +27,40 @@ pub(crate) const LOG_TARGET: &str = "node";
 /// to construct a new block.
 #[must_use = "BlockProductionTask does nothing unless polled"]
 #[allow(missing_debug_implementations)]
-pub struct BlockProductionTask<EF: ExecutorFactory> {
+pub struct BlockProductionTask<EF, O>
+where
+    EF: ExecutorFactory,
+    O: PoolOrd<Transaction = ExecutableTxWithHash>,
+{
     /// creates new blocks
     pub(crate) block_producer: BlockProducer<EF>,
     /// the miner responsible to select transactions from the `pool´
-    pub(crate) miner: TransactionMiner,
+    pub(crate) miner: TransactionMiner<O>,
     /// the pool that holds all transactions
     pub(crate) pool: TxPool,
     /// Metrics for recording the service operations
     metrics: BlockProducerMetrics,
 }
 
-impl<EF: ExecutorFactory> BlockProductionTask<EF> {
-    pub fn new(pool: TxPool, miner: TransactionMiner, block_producer: BlockProducer<EF>) -> Self {
+impl<EF, O> BlockProductionTask<EF, O>
+where
+    EF: ExecutorFactory,
+    O: PoolOrd<Transaction = ExecutableTxWithHash>,
+{
+    pub fn new(
+        pool: TxPool,
+        miner: TransactionMiner<O>,
+        block_producer: BlockProducer<EF>,
+    ) -> Self {
         Self { block_producer, miner, pool, metrics: BlockProducerMetrics::default() }
     }
 }
 
-impl<EF: ExecutorFactory> Future for BlockProductionTask<EF> {
+impl<EF, O> Future for BlockProductionTask<EF, O>
+where
+    EF: ExecutorFactory,
+    O: PoolOrd<Transaction = ExecutableTxWithHash>,
+{
     type Output = Result<(), BlockProductionError>;
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
@@ -65,6 +78,9 @@ impl<EF: ExecutorFactory> Future for BlockProductionTask<EF> {
                         let steps_used = outcome.stats.cairo_steps_used;
                         this.metrics.l1_gas_processed_total.increment(gas_used as u64);
                         this.metrics.cairo_steps_processed_total.increment(steps_used as u64);
+
+                        // remove mined transactions from the pool
+                        this.pool.remove_transactions(&outcome.txs);
                     }
 
                     Err(error) => {
@@ -74,7 +90,7 @@ impl<EF: ExecutorFactory> Future for BlockProductionTask<EF> {
                 }
             }
 
-            if let Poll::Ready(pool_txs) = this.miner.poll(&this.pool, cx) {
+            if let Poll::Ready(pool_txs) = this.miner.poll(cx) {
                 // miner returned a set of transaction that we feed to the producer
                 this.block_producer.queue(pool_txs);
             } else {
@@ -89,37 +105,32 @@ impl<EF: ExecutorFactory> Future for BlockProductionTask<EF> {
 
 /// The type which takes the transaction from the pool and feeds them to the block producer.
 #[derive(Debug)]
-pub struct TransactionMiner {
-    /// stores whether there are pending transacions (if known)
-    has_pending_txs: Option<bool>,
-    /// Receives hashes of transactions that are ready from the pool
-    rx: Fuse<Receiver<Felt>>,
+pub struct TransactionMiner<O>
+where
+    O: PoolOrd<Transaction = ExecutableTxWithHash>,
+{
+    pending_txs: PendingTransactions<ExecutableTxWithHash, O>,
 }
 
-impl TransactionMiner {
-    pub fn new(rx: Receiver<Felt>) -> Self {
-        Self { rx: rx.fuse(), has_pending_txs: None }
+impl<O> TransactionMiner<O>
+where
+    O: PoolOrd<Transaction = ExecutableTxWithHash>,
+{
+    pub fn new(pending_txs: PendingTransactions<ExecutableTxWithHash, O>) -> Self {
+        Self { pending_txs }
     }
 
-    fn poll(&mut self, pool: &TxPool, cx: &mut Context<'_>) -> Poll<Vec<ExecutableTxWithHash>> {
-        // drain the notification stream
-        while let Poll::Ready(Some(_)) = Pin::new(&mut self.rx).poll_next(cx) {
-            self.has_pending_txs = Some(true);
-        }
+    fn poll(&mut self, cx: &mut Context<'_>) -> Poll<Vec<ExecutableTxWithHash>> {
+        let mut transactions = Vec::new();
 
-        if self.has_pending_txs == Some(false) {
-            return Poll::Pending;
+        while let Poll::Ready(Some(tx)) = self.pending_txs.poll_next_unpin(cx) {
+            transactions.push(tx.tx.as_ref().clone());
         }
-
-        // take all the transactions from the pool
-        let transactions =
-            pool.take_transactions().map(|tx| tx.tx.as_ref().clone()).collect::<Vec<_>>();
 
         if transactions.is_empty() {
             return Poll::Pending;
         }
 
-        self.has_pending_txs = Some(false);
         Poll::Ready(transactions)
     }
 }

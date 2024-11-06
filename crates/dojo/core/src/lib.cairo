@@ -42,7 +42,7 @@ pub mod model {
     pub use definition::{ModelIndex, ModelDefinition, ModelDef};
 
     pub mod model;
-    pub use model::{Model, KeyParser};
+    pub use model::{Model, KeyParser, ModelPtr};
 
     pub mod model_value;
     pub use model_value::{ModelValue, ModelValueKey};
@@ -54,9 +54,7 @@ pub mod model {
     pub use metadata::ResourceMetadata;
 
     pub mod storage;
-    pub use storage::{
-        ModelStorage, ModelStorageTest, ModelValueStorage, ModelValueStorageTest, ModelPtr,
-    };
+    pub use storage::{ModelStorage, ModelStorageTest, ModelValueStorage, ModelValueStorageTest,};
 }
 
 pub mod storage {
