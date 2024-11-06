@@ -224,6 +224,87 @@ impl Ty {
         }
         Ok(())
     }
+
+    /// Returns a new Ty containing only the differences between self and other
+    pub fn diff(&self, other: &Ty) -> Option<Ty> {
+        match (self, other) {
+            (Ty::Struct(s1), Ty::Struct(s2)) if s1.name == s2.name => {
+                // Find members that exist in s1 but not in s2, or are different
+                let diff_children: Vec<Member> = s1.children
+                    .iter()
+                    .filter(|m1| {
+                        s2.children
+                            .iter()
+                            .find(|m2| m2.name == m1.name)
+                            .map_or(true, |m2| *m1 != m2)
+                    })
+                    .cloned()
+                    .collect();
+
+                if diff_children.is_empty() {
+                    None
+                } else {
+                    Some(Ty::Struct(Struct {
+                        name: s1.name.clone(),
+                        children: diff_children,
+                    }))
+                }
+            }
+            (Ty::Enum(e1), Ty::Enum(e2)) if e1.name == e2.name => {
+                // Find options that exist in e1 but not in e2, or are different
+                let diff_options: Vec<EnumOption> = e1.options
+                    .iter()
+                    .filter(|o1| {
+                        e2.options
+                            .iter()
+                            .find(|o2| o2.name == o1.name)
+                            .map_or(true, |o2| *o1 != o2)
+                    })
+                    .cloned()
+                    .collect();
+
+                if diff_options.is_empty() {
+                    None
+                } else {
+                    Some(Ty::Enum(Enum {
+                        name: e1.name.clone(),
+                        option: e1.option,
+                        options: diff_options,
+                    }))
+                }
+            }
+            (Ty::Array(a1), Ty::Array(a2)) => {
+                if a1 == a2 {
+                    None
+                } else {
+                    Some(Ty::Array(a1.clone()))
+                }
+            }
+            (Ty::Tuple(t1), Ty::Tuple(t2)) => {
+                if t1 == t2 {
+                    None
+                } else {
+                    Some(Ty::Tuple(t1.clone()))
+                }
+            }
+            (Ty::ByteArray(b1), Ty::ByteArray(b2)) => {
+                if b1 == b2 {
+                    None
+                } else {
+                    Some(Ty::ByteArray(b1.clone()))
+                }
+            }
+            (Ty::Primitive(p1), Ty::Primitive(p2)) => {
+                if p1 == p2 {
+                    None
+                } else {
+                    Some(Ty::Primitive(p1.clone()))
+                }
+            }
+            // Different types entirely - return the new type
+            _ => Some(self.clone()),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -596,5 +677,91 @@ mod tests {
         for (member, expected) in test_cases {
             assert_eq!(format_member(&member), expected);
         }
+    }
+
+    #[test]
+    fn test_ty_diff() {
+        // Test struct diff
+        let struct1 = Ty::Struct(Struct {
+            name: "TestStruct".to_string(),
+            children: vec![
+                Member {
+                    name: "field1".to_string(),
+                    ty: Ty::Primitive(Primitive::U32(None)),
+                    key: false,
+                },
+                Member {
+                    name: "field2".to_string(),
+                    ty: Ty::Primitive(Primitive::U32(None)),
+                    key: false,
+                },
+                Member {
+                    name: "field3".to_string(),
+                    ty: Ty::Primitive(Primitive::U32(None)),
+                    key: false,
+                },
+            ],
+        });
+
+        let struct2 = Ty::Struct(Struct {
+            name: "TestStruct".to_string(),
+            children: vec![
+                Member {
+                    name: "field1".to_string(),
+                    ty: Ty::Primitive(Primitive::U32(None)),
+                    key: false,
+                },
+            ],
+        });
+
+        // Should show only field2 and field3 as differences
+        let diff = struct1.diff(&struct2).unwrap();
+        if let Ty::Struct(s) = diff {
+            assert_eq!(s.children.len(), 2);
+            assert_eq!(s.children[0].name, "field2");
+            assert_eq!(s.children[1].name, "field3");
+        } else {
+            panic!("Expected Struct diff");
+        }
+
+        // Test enum diff
+        let enum1 = Ty::Enum(Enum {
+            name: "TestEnum".to_string(),
+            option: None,
+            options: vec![
+                EnumOption {
+                    name: "Option1".to_string(),
+                    ty: Ty::Tuple(vec![]),
+                },
+                EnumOption {
+                    name: "Option2".to_string(),
+                    ty: Ty::Tuple(vec![]),
+                },
+            ],
+        });
+
+        let enum2 = Ty::Enum(Enum {
+            name: "TestEnum".to_string(),
+            option: None,
+            options: vec![
+                EnumOption {
+                    name: "Option1".to_string(),
+                    ty: Ty::Tuple(vec![]),
+                },
+            ],
+        });
+
+        // Should show only Option2 as difference
+        let diff = enum1.diff(&enum2).unwrap();
+        if let Ty::Enum(e) = diff {
+            assert_eq!(e.options.len(), 1);
+            assert_eq!(e.options[0].name, "Option2");
+        } else {
+            panic!("Expected Enum diff");
+        }
+
+        // Test no differences
+        let same_struct = struct2.diff(&struct2);
+        assert!(same_struct.is_none());
     }
 }

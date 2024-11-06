@@ -1,5 +1,6 @@
 use anyhow::{Error, Ok, Result};
 use async_trait::async_trait;
+use dojo_types::schema::Ty;
 use dojo_world::contracts::abigen::world::Event as WorldEvent;
 use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::world::WorldContractReader;
@@ -58,9 +59,26 @@ where
         let model = db.model(event.selector).await?;
         let name = model.name;
         let namespace = model.namespace;
+        let prev_schema = model.schema;
 
         let model = world.model_reader(&namespace, &name).await?;
-        let schema = model.schema().await?;
+        let mut new_schema = model.schema().await?;
+        match &mut new_schema {
+            Ty::Struct(s) => {
+                s.name = format!("{}-{}", namespace, name);
+            }
+            _ => unreachable!(),
+        }
+
+        let schema_diff = new_schema.diff(&prev_schema);
+        // No changes to the schema. This can happen if torii is re-run with a fresh database.
+        // As the register model fetches the latest schema from the chain.
+        if schema_diff.is_none() {
+            return Ok(());
+        }
+
+
+        let schema_diff = schema_diff.unwrap();
         let layout = model.layout().await?;
 
         // Events are never stored onchain, hence no packing or unpacking.
@@ -77,7 +95,7 @@ where
         debug!(
             target: LOG_TARGET,
             name,
-            schema = ?schema,
+            diff = ?schema_diff,
             layout = ?layout,
             class_hash = ?event.class_hash,
             contract_address = ?event.address,
@@ -88,7 +106,7 @@ where
 
         db.register_model(
             &namespace,
-            schema,
+            schema_diff,
             layout,
             event.class_hash.into(),
             event.address.into(),

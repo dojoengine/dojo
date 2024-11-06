@@ -673,7 +673,8 @@ impl Sql {
                 block_timestamp,
                 &mut (*array_idx + if let Ty::Array(_) = member { 1 } else { 0 }),
                 &mut (*parent_array_idx + if let Ty::Array(_) = model { 1 } else { 0 }),
-                is_upgrade,
+                // nested members are not upgrades
+                false,
             )?;
 
             Ok(())
