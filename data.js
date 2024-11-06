@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1730848646330,
+  "lastUpdate": 1730902204077,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -31147,6 +31147,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8416127,
             "range": "± 253889",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ba96d0e1a1863349223ea3cd4a5992523d71ba90",
+          "message": "feat: add systems to manifest (#2642)\n\nA system is any function found in a dojo contract that is exposed in the ABI\r\nwith the state mutability as external.\r\nEvent if Dojo per se doesn't modify the storage of the contract,\r\nit's required that the user explicitely identify the systems with\r\nref self.",
+          "timestamp": "2024-11-06T07:53:41-06:00",
+          "tree_id": "df62b01532da03c1a9dd4909f47dd42303e7d228",
+          "url": "https://github.com/dojoengine/dojo/commit/ba96d0e1a1863349223ea3cd4a5992523d71ba90"
+        },
+        "date": 1730902202933,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10746771887,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
