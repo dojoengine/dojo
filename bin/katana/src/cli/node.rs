@@ -19,12 +19,10 @@ use anyhow::{Context, Result};
 use clap::{Args, Parser};
 use console::Style;
 use dojo_utils::parse::parse_socket_address;
-use katana_core::constants::{
-    DEFAULT_ETH_L1_GAS_PRICE, DEFAULT_SEQUENCER_ADDRESS, DEFAULT_STRK_L1_GAS_PRICE,
-};
+use katana_core::constants::DEFAULT_SEQUENCER_ADDRESS;
 use katana_core::service::messaging::MessagingConfig;
 use katana_node::config::db::DbConfig;
-use katana_node::config::dev::DevConfig;
+use katana_node::config::dev::{DevConfig, FixedL1GasPriceConfig};
 use katana_node::config::execution::{
     ExecutionConfig, DEFAULT_INVOCATION_MAX_STEPS, DEFAULT_VALIDATION_MAX_STEPS,
 };
@@ -34,7 +32,7 @@ use katana_node::config::rpc::{
     ApiKind, RpcConfig, DEFAULT_RPC_ADDR, DEFAULT_RPC_MAX_CONNECTIONS, DEFAULT_RPC_PORT,
 };
 use katana_node::config::{Config, SequencingConfig};
-use katana_primitives::block::BlockHashOrNumber;
+use katana_primitives::block::{BlockHashOrNumber, GasPrices};
 use katana_primitives::chain::ChainId;
 use katana_primitives::chain_spec::{self, ChainSpec};
 use katana_primitives::class::ClassHash;
@@ -189,25 +187,31 @@ pub struct EnvironmentOptions {
 
     #[arg(long)]
     #[arg(help = "The maximum number of steps available for the account validation logic.")]
-    #[arg(default_value_t = DEFAULT_VALIDATION_MAX_STEPS)]
-    pub validate_max_steps: u32,
+    pub validate_max_steps: Option<u32>,
 
     #[arg(long)]
     #[arg(help = "The maximum number of steps available for the account execution logic.")]
-    #[arg(default_value_t = DEFAULT_INVOCATION_MAX_STEPS)]
-    pub invoke_max_steps: u32,
+    pub invoke_max_steps: Option<u32>,
 
-    #[arg(long = "eth-gas-price")]
-    #[arg(conflicts_with = "genesis")]
+    #[arg(long = "l1-eth-gas-price", value_name = "WEI")]
     #[arg(help = "The L1 ETH gas price. (denominated in wei)")]
-    #[arg(default_value_t = DEFAULT_ETH_L1_GAS_PRICE)]
-    pub l1_eth_gas_price: u128,
+    #[arg(requires = "l1_strk_gas_price")]
+    pub l1_eth_gas_price: Option<u128>,
 
-    #[arg(long = "strk-gas-price")]
-    #[arg(conflicts_with = "genesis")]
+    #[arg(long = "l1-strk-gas-price", value_name = "FRI")]
+    #[arg(requires = "l1_eth_data_gas_price")]
     #[arg(help = "The L1 STRK gas price. (denominated in fri)")]
-    #[arg(default_value_t = DEFAULT_STRK_L1_GAS_PRICE)]
-    pub l1_strk_gas_price: u128,
+    pub l1_strk_gas_price: Option<u128>,
+
+    #[arg(long = "l1-eth-data-gas-price", value_name = "WEI")]
+    #[arg(requires = "l1_strk_data_gas_price")]
+    #[arg(help = "The L1 ETH gas price. (denominated in wei)")]
+    pub l1_eth_data_gas_price: Option<u128>,
+
+    #[arg(long = "l1-strk-data-gas-price", value_name = "FRI")]
+    #[arg(requires = "l1_eth_gas_price")]
+    #[arg(help = "The L1 STRK gas prick. (denominated in fri)")]
+    pub l1_strk_data_gas_price: Option<u128>,
 }
 
 #[cfg(feature = "slot")]
@@ -330,8 +334,6 @@ impl NodeArgs {
 
         chain_spec.genesis.extend_allocations(accounts.into_iter().map(|(k, v)| (k, v.into())));
         chain_spec.genesis.sequencer_address = *DEFAULT_SEQUENCER_ADDRESS;
-        chain_spec.genesis.gas_prices.eth = self.starknet.environment.l1_eth_gas_price;
-        chain_spec.genesis.gas_prices.strk = self.starknet.environment.l1_strk_gas_price;
 
         #[cfg(feature = "slot")]
         if self.slot.controller {
@@ -342,7 +344,25 @@ impl NodeArgs {
     }
 
     fn dev_config(&self) -> DevConfig {
+        let fixed_gas_prices = if self.starknet.environment.l1_eth_gas_price.is_some() {
+            // It is safe to unwrap all of these here because the CLI parser ensures if one is set,
+            // all must be set.
+
+            let eth_gas_price = self.starknet.environment.l1_eth_gas_price.unwrap();
+            let strk_gas_price = self.starknet.environment.l1_strk_gas_price.unwrap();
+            let eth_data_gas_price = self.starknet.environment.l1_eth_data_gas_price.unwrap();
+            let strk_data_gas_price = self.starknet.environment.l1_strk_data_gas_price.unwrap();
+
+            let gas_price = GasPrices { eth: eth_gas_price, strk: strk_gas_price };
+            let data_gas_price = GasPrices { eth: eth_data_gas_price, strk: strk_data_gas_price };
+
+            Some(FixedL1GasPriceConfig { gas_price, data_gas_price })
+        } else {
+            None
+        };
+
         DevConfig {
+            fixed_gas_prices,
             fee: !self.starknet.disable_fee,
             account_validation: !self.starknet.disable_validate,
         }
@@ -350,8 +370,16 @@ impl NodeArgs {
 
     fn execution_config(&self) -> ExecutionConfig {
         ExecutionConfig {
-            invocation_max_steps: self.starknet.environment.invoke_max_steps,
-            validation_max_steps: self.starknet.environment.validate_max_steps,
+            invocation_max_steps: self
+                .starknet
+                .environment
+                .invoke_max_steps
+                .unwrap_or(DEFAULT_INVOCATION_MAX_STEPS),
+            validation_max_steps: self
+                .starknet
+                .environment
+                .validate_max_steps
+                .unwrap_or(DEFAULT_VALIDATION_MAX_STEPS),
             ..Default::default()
         }
     }
@@ -487,6 +515,8 @@ PREFUNDED ACCOUNTS
 
 #[cfg(test)]
 mod test {
+    use assert_matches::assert_matches;
+
     use super::*;
 
     #[test]
@@ -501,8 +531,6 @@ mod test {
         assert_eq!(config.execution.validation_max_steps, DEFAULT_VALIDATION_MAX_STEPS);
         assert_eq!(config.db.dir, None);
         assert_eq!(config.chain.id, ChainId::parse("KATANA").unwrap());
-        assert_eq!(config.chain.genesis.gas_prices.eth, DEFAULT_ETH_L1_GAS_PRICE);
-        assert_eq!(config.chain.genesis.gas_prices.strk, DEFAULT_STRK_L1_GAS_PRICE);
         assert_eq!(config.chain.genesis.sequencer_address, *DEFAULT_SEQUENCER_ADDRESS);
     }
 
@@ -535,5 +563,44 @@ mod test {
         assert_eq!(config.chain.id, ChainId::GOERLI);
         assert_eq!(config.chain.genesis.gas_prices.eth, 10);
         assert_eq!(config.chain.genesis.gas_prices.strk, 20);
+    }
+
+    #[test]
+    fn custom_fixed_gas_prices() {
+        let args = NodeArgs::parse_from([
+            "katana",
+            "--disable-fee",
+            "--disable-validate",
+            "--chain-id",
+            "SN_GOERLI",
+            "--invoke-max-steps",
+            "200",
+            "--validate-max-steps",
+            "100",
+            "--db-dir",
+            "/path/to/db",
+            "--l1-eth-gas-price",
+            "10",
+            "--l1-strk-gas-price",
+            "20",
+            "--l1-eth-data-gas-price",
+            "1",
+            "--l1-strk-data-gas-price",
+            "2",
+        ]);
+        let config = args.config().unwrap();
+
+        assert!(!config.dev.fee);
+        assert!(!config.dev.account_validation);
+        assert_eq!(config.execution.invocation_max_steps, 200);
+        assert_eq!(config.execution.validation_max_steps, 100);
+        assert_eq!(config.db.dir, Some(PathBuf::from("/path/to/db")));
+        assert_eq!(config.chain.id, ChainId::GOERLI);
+        assert_matches!(config.dev.fixed_gas_prices, Some(prices) => {
+            assert_eq!(prices.gas_price.eth, 10);
+            assert_eq!(prices.gas_price.strk, 20);
+            assert_eq!(prices.data_gas_price.eth, 1);
+            assert_eq!(prices.data_gas_price.strk, 2);
+        })
     }
 }
