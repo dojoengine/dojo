@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1730902204077,
+  "lastUpdate": 1730902394316,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -31177,6 +31177,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10746771887,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ba96d0e1a1863349223ea3cd4a5992523d71ba90",
+          "message": "feat: add systems to manifest (#2642)\n\nA system is any function found in a dojo contract that is exposed in the ABI\r\nwith the state mutability as external.\r\nEvent if Dojo per se doesn't modify the storage of the contract,\r\nit's required that the user explicitely identify the systems with\r\nref self.",
+          "timestamp": "2024-11-06T07:53:41-06:00",
+          "tree_id": "df62b01532da03c1a9dd4909f47dd42303e7d228",
+          "url": "https://github.com/dojoengine/dojo/commit/ba96d0e1a1863349223ea3cd4a5992523d71ba90"
+        },
+        "date": 1730902393183,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16344468,
+            "range": "± 186495",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8621873,
+            "range": "± 129580",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3433240748,
+            "range": "± 798488577",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8379836,
+            "range": "± 65464",
             "unit": "ns/iter"
           }
         ]
