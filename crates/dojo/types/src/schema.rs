@@ -230,7 +230,8 @@ impl Ty {
         match (self, other) {
             (Ty::Struct(s1), Ty::Struct(s2)) if s1.name == s2.name => {
                 // Find members that exist in s1 but not in s2, or are different
-                let diff_children: Vec<Member> = s1.children
+                let diff_children: Vec<Member> = s1
+                    .children
                     .iter()
                     .filter(|m1| {
                         s2.children
@@ -244,21 +245,16 @@ impl Ty {
                 if diff_children.is_empty() {
                     None
                 } else {
-                    Some(Ty::Struct(Struct {
-                        name: s1.name.clone(),
-                        children: diff_children,
-                    }))
+                    Some(Ty::Struct(Struct { name: s1.name.clone(), children: diff_children }))
                 }
             }
             (Ty::Enum(e1), Ty::Enum(e2)) if e1.name == e2.name => {
                 // Find options that exist in e1 but not in e2, or are different
-                let diff_options: Vec<EnumOption> = e1.options
+                let diff_options: Vec<EnumOption> = e1
+                    .options
                     .iter()
                     .filter(|o1| {
-                        e2.options
-                            .iter()
-                            .find(|o2| o2.name == o1.name)
-                            .map_or(true, |o2| *o1 != o2)
+                        e2.options.iter().find(|o2| o2.name == o1.name).map_or(true, |o2| *o1 != o2)
                     })
                     .cloned()
                     .collect();
@@ -705,13 +701,11 @@ mod tests {
 
         let struct2 = Ty::Struct(Struct {
             name: "TestStruct".to_string(),
-            children: vec![
-                Member {
-                    name: "field1".to_string(),
-                    ty: Ty::Primitive(Primitive::U32(None)),
-                    key: false,
-                },
-            ],
+            children: vec![Member {
+                name: "field1".to_string(),
+                ty: Ty::Primitive(Primitive::U32(None)),
+                key: false,
+            }],
         });
 
         // Should show only field2 and field3 as differences
@@ -729,26 +723,15 @@ mod tests {
             name: "TestEnum".to_string(),
             option: None,
             options: vec![
-                EnumOption {
-                    name: "Option1".to_string(),
-                    ty: Ty::Tuple(vec![]),
-                },
-                EnumOption {
-                    name: "Option2".to_string(),
-                    ty: Ty::Tuple(vec![]),
-                },
+                EnumOption { name: "Option1".to_string(), ty: Ty::Tuple(vec![]) },
+                EnumOption { name: "Option2".to_string(), ty: Ty::Tuple(vec![]) },
             ],
         });
 
         let enum2 = Ty::Enum(Enum {
             name: "TestEnum".to_string(),
             option: None,
-            options: vec![
-                EnumOption {
-                    name: "Option1".to_string(),
-                    ty: Ty::Tuple(vec![]),
-                },
-            ],
+            options: vec![EnumOption { name: "Option1".to_string(), ty: Ty::Tuple(vec![]) }],
         });
 
         // Should show only Option2 as difference

@@ -1,7 +1,8 @@
 use anyhow::{Error, Ok, Result};
 use async_trait::async_trait;
 use dojo_types::schema::Ty;
-use dojo_world::contracts::{abigen::world::Event as WorldEvent, model::ModelReader};
+use dojo_world::contracts::abigen::world::Event as WorldEvent;
+use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::Event;
 use starknet::providers::Provider;

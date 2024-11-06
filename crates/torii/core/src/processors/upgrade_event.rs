@@ -76,7 +76,6 @@ where
             return Ok(());
         }
 
-
         let schema_diff = schema_diff.unwrap();
         let layout = model.layout().await?;
 
