@@ -110,6 +110,11 @@ impl<EF: ExecutorFactory> Backend<EF> {
         block_env.timestamp = timestamp;
 
         // update the gas prices
+        self.update_block_gas_prices(block_env);
+    }
+
+    /// Updates the gas prices in the block environment.
+    pub fn update_block_gas_prices(&self, block_env: &mut BlockEnv) {
         block_env.l1_gas_prices = self.gas_oracle.current_gas_prices();
         block_env.l1_data_gas_prices = self.gas_oracle.current_data_gas_prices();
     }
