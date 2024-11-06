@@ -337,6 +337,7 @@ mod tests {
                 0,
                 0,
                 block_timestamp,
+                false,
             )
             .await
             .unwrap();
@@ -410,6 +411,7 @@ mod tests {
                 0,
                 0,
                 block_timestamp,
+                false,
             )
             .await
             .unwrap();
