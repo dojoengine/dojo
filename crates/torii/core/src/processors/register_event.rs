@@ -21,7 +21,7 @@ where
     P: Provider + Send + Sync + std::fmt::Debug,
 {
     fn event_key(&self) -> String {
-        "EventUpgraded".to_string()
+        "EventRegistered".to_string()
     }
 
     // We might not need this anymore, since we don't have fallback and all world events must
@@ -71,7 +71,7 @@ where
             target: LOG_TARGET,
             namespace = %namespace,
             name = %name,
-            "Upgraded event."
+            "Registered event."
         );
 
         debug!(
@@ -83,7 +83,7 @@ where
             contract_address = ?event.address,
             packed_size = %packed_size,
             unpacked_size = %unpacked_size,
-            "Upgraded event content."
+            "Registered event content."
         );
 
         db.register_model(
@@ -95,7 +95,7 @@ where
             packed_size,
             unpacked_size,
             block_timestamp,
-            true,
+            false,
         )
         .await?;
 

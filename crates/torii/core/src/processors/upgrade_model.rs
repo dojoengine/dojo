@@ -9,13 +9,13 @@ use tracing::{debug, info};
 use super::EventProcessor;
 use crate::sql::Sql;
 
-pub(crate) const LOG_TARGET: &str = "torii_core::processors::register_model";
+pub(crate) const LOG_TARGET: &str = "torii_core::processors::upgrade_model";
 
 #[derive(Default, Debug)]
-pub struct RegisterModelProcessor;
+pub struct UpgradeModelProcessor;
 
 #[async_trait]
-impl<P> EventProcessor<P> for RegisterModelProcessor
+impl<P> EventProcessor<P> for UpgradeModelProcessor
 where
     P: Provider + Send + Sync + std::fmt::Debug,
 {
@@ -43,7 +43,7 @@ where
         let event = match WorldEvent::try_from(event).unwrap_or_else(|_| {
             panic!(
                 "Expected {} event to be well formed.",
-                <RegisterModelProcessor as EventProcessor<P>>::event_key(self)
+                <UpgradeModelProcessor as EventProcessor<P>>::event_key(self)
             )
         }) {
             WorldEvent::ModelUpgraded(e) => e,
@@ -52,9 +52,11 @@ where
             }
         };
 
-        let model = world.model_reader_with_selector(event.selector).await?;
-        let namespace = model.namespace();
-        let name = model.name();
+        let model = db.model(event.selector).await?;
+        let name = model.name;
+        let namespace = model.namespace;
+
+        let model = world.model_reader(&namespace, &name).await?;
         let schema = model.schema().await?;
         let layout = model.layout().await?;
 

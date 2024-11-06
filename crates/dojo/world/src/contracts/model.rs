@@ -117,41 +117,6 @@ where
         })
     }
 
-    pub async fn new_with_selector(
-        selector: Felt,
-        world: &'a WorldContractReader<P>,
-    ) -> Result<ModelRPCReader<'a, P>, ModelError> {
-        // Events are also considered like models from a off-chain perspective. They both have
-        // introspection and convey type information.
-        let (contract_address, class_hash) =
-            match world.resource(&selector).block_id(world.block_id).call().await? {
-                abigen::world::Resource::Model((address, hash)) => (address, hash),
-                abigen::world::Resource::Event((address, hash)) => (address, hash),
-                _ => return Err(ModelError::ModelNotFound),
-            };
-
-        // World Cairo contract won't raise an error in case of unknown/unregistered
-        // model so raise an error here in case of zero address.
-        if contract_address == ContractAddress(Felt::ZERO) {
-            return Err(ModelError::ModelNotFound);
-        }
-
-        let model_reader = ModelContractReader::new(contract_address.into(), world.provider());
-        let tag = model_reader.dojo_name().call().await?;
-        // Safe to unwrap, since it's coming from the chain.
-        let (namespace, name) = naming::split_tag(&tag.to_string().unwrap()).unwrap();
-
-        Ok(Self {
-            namespace: namespace.into(),
-            name: name.into(),
-            world_reader: world,
-            class_hash,
-            contract_address: contract_address.into(),
-            selector,
-            model_reader,
-        })
-    }
-
     pub async fn entity_storage(&self, keys: &[Felt]) -> Result<Vec<Felt>, ModelError> {
         // As the dojo::model::Layout type has been pasted
         // in both `model` and `world` ABI by abigen, the compiler sees both types
@@ -211,7 +176,7 @@ where
         parse_schema(&abigen::model::Ty::Struct(res)).map_err(ModelError::Parse)
     }
 
-    // For non fixed layouts, packed and unpacked sizes are None.
+    // For non fixed layouts,   packed and unpacked sizes are None.
     // Therefore we return 0 in this case.
     async fn packed_size(&self) -> Result<u32, ModelError> {
         Ok(self.model_reader.packed_size().call().await?.unwrap_or(0))

@@ -37,6 +37,8 @@ use crate::processors::store_del_record::StoreDelRecordProcessor;
 use crate::processors::store_set_record::StoreSetRecordProcessor;
 use crate::processors::store_update_member::StoreUpdateMemberProcessor;
 use crate::processors::store_update_record::StoreUpdateRecordProcessor;
+use crate::processors::upgrade_event::UpgradeEventProcessor;
+use crate::processors::upgrade_model::UpgradeModelProcessor;
 use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
 use crate::sql::{Cursors, Sql};
 use crate::types::ContractType;
@@ -74,6 +76,8 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Processors<P> {
                 vec![
                     Box::new(RegisterModelProcessor) as Box<dyn EventProcessor<P>>,
                     Box::new(RegisterEventProcessor) as Box<dyn EventProcessor<P>>,
+                    Box::new(UpgradeModelProcessor) as Box<dyn EventProcessor<P>>,
+                    Box::new(UpgradeEventProcessor) as Box<dyn EventProcessor<P>>,
                     Box::new(StoreSetRecordProcessor),
                     Box::new(StoreDelRecordProcessor),
                     Box::new(StoreUpdateRecordProcessor),

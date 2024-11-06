@@ -10,13 +10,13 @@ use tracing::{debug, info};
 use super::EventProcessor;
 use crate::sql::Sql;
 
-pub(crate) const LOG_TARGET: &str = "torii_core::processors::register_event";
+pub(crate) const LOG_TARGET: &str = "torii_core::processors::upgrade_event";
 
 #[derive(Default, Debug)]
-pub struct RegisterEventProcessor;
+pub struct UpgradeEventProcessor;
 
 #[async_trait]
-impl<P> EventProcessor<P> for RegisterEventProcessor
+impl<P> EventProcessor<P> for UpgradeEventProcessor
 where
     P: Provider + Send + Sync + std::fmt::Debug,
 {
@@ -44,7 +44,7 @@ where
         let event = match WorldEvent::try_from(event).unwrap_or_else(|_| {
             panic!(
                 "Expected {} event to be well formed.",
-                <RegisterEventProcessor as EventProcessor<P>>::event_key(self)
+                <UpgradeEventProcessor as EventProcessor<P>>::event_key(self)
             )
         }) {
             WorldEvent::EventUpgraded(e) => e,
@@ -55,9 +55,11 @@ where
 
         // Called model here by language, but it's an event. Torii rework will make clear
         // distinction.
-        let model = world.model_reader_with_selector(event.selector).await?;
-        let namespace = model.namespace();
-        let name = model.name();
+        let model = db.model(event.selector).await?;
+        let name = model.name;
+        let namespace = model.namespace;
+
+        let model = world.model_reader(&namespace, &name).await?;
         let schema = model.schema().await?;
         let layout = model.layout().await?;
 
@@ -69,7 +71,7 @@ where
             target: LOG_TARGET,
             namespace = %namespace,
             name = %name,
-            "Registered event."
+            "Upgraded event."
         );
 
         debug!(
@@ -81,7 +83,7 @@ where
             contract_address = ?event.address,
             packed_size = %packed_size,
             unpacked_size = %unpacked_size,
-            "Registered model content."
+            "Upgraded event content."
         );
 
         db.register_model(
@@ -93,7 +95,7 @@ where
             packed_size,
             unpacked_size,
             block_timestamp,
-            false,
+            true,
         )
         .await?;
 
