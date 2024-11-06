@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1730902394316,
+  "lastUpdate": 1730921712476,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -31225,6 +31225,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8379836,
             "range": "± 65464",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "884a7267ff60752962193595eec87b01c9aa563d",
+          "message": "feat(katana): gas oracle skeleton (#2643)",
+          "timestamp": "2024-11-07T03:19:18+08:00",
+          "tree_id": "70a007f70265b01ca6c7ca9b30561ca22293d61d",
+          "url": "https://github.com/dojoengine/dojo/commit/884a7267ff60752962193595eec87b01c9aa563d"
+        },
+        "date": 1730921711313,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10320422336,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
