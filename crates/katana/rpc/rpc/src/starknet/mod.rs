@@ -71,6 +71,7 @@ struct Inner<EF: ExecutorFactory> {
     block_producer: BlockProducer<EF>,
     blocking_task_pool: BlockingTaskPool,
     forked_client: Option<ForkedClient>,
+    max_chunk_size: u64,
 }
 
 impl<EF: ExecutorFactory> StarknetApi<EF> {
@@ -103,7 +104,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         let blocking_task_pool =
             BlockingTaskPool::new().expect("failed to create blocking task pool");
         let inner =
-            Inner { pool, backend, block_producer, blocking_task_pool, validator, forked_client };
+            Inner { pool, backend, block_producer, blocking_task_pool, validator, forked_client, max_chunk_size: 1000 };
         Self { inner: Arc::new(inner) }
     }
 
@@ -810,6 +811,14 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         let EventFilterWithPage { event_filter, result_page_request } = filter;
         let ResultPageRequest { continuation_token, chunk_size } = result_page_request;
 
+        let max_chunk_size = self.inner.max_chunk_size;
+        if chunk_size > max_chunk_size {
+            return Err(StarknetApiError::ChunkSizeTooBig {
+                requested: chunk_size,
+                maximum: max_chunk_size,
+            });
+        }
+    
         self.on_io_blocking_task(move |this| {
             let from = match event_filter.from_block {
                 Some(id) => id,

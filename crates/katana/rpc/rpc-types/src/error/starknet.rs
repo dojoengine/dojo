@@ -83,6 +83,8 @@ pub enum StarknetApiError {
     TooManyKeysInFilter,
     #[error("Failed to fetch pending transactions")]
     FailedToFetchPendingTransactions,
+    #[error("Chunk Size is too big")]
+    ChunkSizeTooBig { requested: u64, maximum: u64 },
 }
 
 impl StarknetApiError {
@@ -118,6 +120,7 @@ impl StarknetApiError {
             StarknetApiError::UnsupportedContractClassVersion => 62,
             StarknetApiError::UnexpectedError { .. } => 63,
             StarknetApiError::ProofLimitExceeded => 10000,
+            StarknetApiError::ChunkSizeTooBig { .. } => 10001,
         }
     }
 
