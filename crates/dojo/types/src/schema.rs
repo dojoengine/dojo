@@ -294,7 +294,7 @@ impl Ty {
                 if p1 == p2 {
                     None
                 } else {
-                    Some(Ty::Primitive(p1.clone()))
+                    Some(Ty::Primitive(*p1))
                 }
             }
             // Different types entirely - return the new type
