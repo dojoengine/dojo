@@ -56,17 +56,16 @@ where
         let model = db.model(event.selector).await?;
         let name = model.name;
         let namespace = model.namespace;
-        let prev_schema = model.schema;
-
-        let model = world.model_reader(&namespace, &name).await?;
-        let mut new_schema = model.schema().await?;
-        match &mut new_schema {
+        let mut prev_schema = model.schema;
+        match &mut prev_schema {
             Ty::Struct(s) => {
-                s.name = format!("{}-{}", namespace, name);
+                s.name = name.clone();
             }
             _ => unreachable!(),
         }
 
+        let model = world.model_reader(&namespace, &name).await?;
+        let new_schema = model.schema().await?;
         let schema_diff = new_schema.diff(&prev_schema);
         // No changes to the schema. This can happen if torii is re-run with a fresh database.
         // As the register model fetches the latest schema from the chain.
