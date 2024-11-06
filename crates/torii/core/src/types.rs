@@ -123,21 +123,6 @@ pub struct Event {
     pub executed_at: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
 }
-
-#[derive(Default, Deserialize, Debug, Clone)]
-pub struct ToriiConfig {
-    /// contract addresses to index
-    pub contracts: VecDeque<Contract>,
-}
-
-impl ToriiConfig {
-    pub fn load_from_path(path: &PathBuf) -> Result<Self, anyhow::Error> {
-        let config = std::fs::read_to_string(path)?;
-        let config: Self = toml::from_str(&config)?;
-        Ok(config)
-    }
-}
-
 #[derive(Deserialize, Debug, Clone, Copy)]
 pub struct Contract {
     pub address: Felt,

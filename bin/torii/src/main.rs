@@ -23,6 +23,7 @@ use clap::{ArgAction, Parser};
 use dojo_metrics::exporters::prometheus::PrometheusRecorder;
 use dojo_utils::parse::{parse_socket_address, parse_url};
 use dojo_world::contracts::world::WorldContractReader;
+use serde::{Deserialize, Serialize};
 use sqlx::sqlite::{
     SqliteAutoVacuum, SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous,
 };
@@ -39,7 +40,7 @@ use torii_core::executor::Executor;
 use torii_core::processors::store_transaction::StoreTransactionProcessor;
 use torii_core::simple_broker::SimpleBroker;
 use torii_core::sql::Sql;
-use torii_core::types::{Contract, ContractType, Model, ToriiConfig};
+use torii_core::types::{Contract, ContractType, Model};
 use torii_server::proxy::Proxy;
 use tracing::{error, info};
 use tracing_subscriber::{fmt, EnvFilter};
@@ -48,7 +49,7 @@ use url::{form_urlencoded, Url};
 pub(crate) const LOG_TARGET: &str = "torii::cli";
 
 /// Dojo World Indexer
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Serialize, Deserialize)]
 #[command(name = "torii", author, version, about, long_about = None)]
 struct Args {
     /// The world to index
@@ -148,20 +149,24 @@ struct Args {
     config: Option<PathBuf>,
 }
 
+impl Args {
+    fn from_file(path: &PathBuf) -> anyhow::Result<Self> {
+        let content = std::fs::read_to_string(path)
+            .with_context(|| format!("Failed to read config file: {}", path.display()))?;
+        
+        toml::from_str(&content)
+            .with_context(|| "Failed to parse TOML config")
+    }
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
-    let mut config = if let Some(path) = args.config {
-        ToriiConfig::load_from_path(&path)?
+    let args = if let Some(path) = args.config {
+        Args::from_file(&path)?
     } else {
-        let mut config = ToriiConfig::default();
-
-        if let Some(contracts) = args.contracts {
-            config.contracts = VecDeque::from(contracts);
-        }
-
-        config
+        args
     };
 
     let world_address = verify_single_world_address(args.world_address, &mut config)?;
@@ -319,26 +324,6 @@ async fn main() -> anyhow::Result<()> {
     };
 
     Ok(())
-}
-
-// Verifies that the world address is defined at most once
-// and returns the world address
-fn verify_single_world_address(
-    world_address: Option<Felt>,
-    config: &mut ToriiConfig,
-) -> anyhow::Result<Felt> {
-    let world_from_config =
-        config.contracts.iter().find(|c| c.r#type == ContractType::WORLD).map(|c| c.address);
-
-    match (world_address, world_from_config) {
-        (Some(_), Some(_)) => Err(anyhow::anyhow!("World address specified multiple times")),
-        (Some(addr), _) => {
-            config.contracts.push_front(Contract { address: addr, r#type: ContractType::WORLD });
-            Ok(addr)
-        }
-        (_, Some(addr)) => Ok(addr),
-        (None, None) => Err(anyhow::anyhow!("World address not specified")),
-    }
 }
 
 async fn spawn_rebuilding_graphql_server(
