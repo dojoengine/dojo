@@ -140,6 +140,10 @@ impl Manifest {
 
         Self { world, contracts, models, events }
     }
+
+    pub fn get_contract_address(&self, tag: &str) -> Option<Felt> {
+        self.contracts.iter().find_map(|c| if c.tag == tag { Some(c.address) } else { None })
+    }
 }
 
 fn resource_diff_to_dojo_contract(diff: &WorldDiff, resource: &ResourceDiff) -> DojoContract {

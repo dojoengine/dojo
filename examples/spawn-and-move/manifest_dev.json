@@ -1,7 +1,7 @@
 {
   "world": {
-    "class_hash": "0x139239a99d627697b19b9856beaef7896fc75375caf3d750dd76982a7afeb78",
-    "address": "0x234d358c2ec21c98a229966bd2bae6dbf2c517969c361bc649361f9055afc32",
+    "class_hash": "0x2f92b70bd2b5a40ddef12c55257f245176870b25c7eb0bd7a60cf1f1f2fbf0e",
+    "address": "0x54d0f13bf3fb5f15a8674c5204aad35e3022af96bcc23bdbd16b7e297ffd399",
     "seed": "dojo_examples",
     "name": "example",
     "abi": [
@@ -83,16 +83,12 @@
         ]
       },
       {
-        "type": "enum",
-        "name": "core::bool",
-        "variants": [
+        "type": "struct",
+        "name": "core::array::Span::<core::array::Span::<core::felt252>>",
+        "members": [
           {
-            "name": "False",
-            "type": "()"
-          },
-          {
-            "name": "True",
-            "type": "()"
+            "name": "snapshot",
+            "type": "@core::array::Array::<core::array::Span::<core::felt252>>"
           }
         ]
       },
@@ -185,6 +181,30 @@
           {
             "name": "Enum",
             "type": "core::array::Span::<dojo::meta::layout::FieldLayout>"
+          }
+        ]
+      },
+      {
+        "type": "struct",
+        "name": "core::array::Span::<dojo::model::definition::ModelIndex>",
+        "members": [
+          {
+            "name": "snapshot",
+            "type": "@core::array::Array::<dojo::model::definition::ModelIndex>"
+          }
+        ]
+      },
+      {
+        "type": "enum",
+        "name": "core::bool",
+        "variants": [
+          {
+            "name": "False",
+            "type": "()"
+          },
+          {
+            "name": "True",
+            "type": "()"
           }
         ]
       },
@@ -398,10 +418,26 @@
               {
                 "name": "values",
                 "type": "core::array::Span::<core::felt252>"
+              }
+            ],
+            "outputs": [],
+            "state_mutability": "external"
+          },
+          {
+            "type": "function",
+            "name": "emit_events",
+            "inputs": [
+              {
+                "name": "event_selector",
+                "type": "core::felt252"
               },
               {
-                "name": "historical",
-                "type": "core::bool"
+                "name": "keys",
+                "type": "core::array::Span::<core::array::Span::<core::felt252>>"
+              },
+              {
+                "name": "values",
+                "type": "core::array::Span::<core::array::Span::<core::felt252>>"
               }
             ],
             "outputs": [],
@@ -433,6 +469,30 @@
           },
           {
             "type": "function",
+            "name": "entities",
+            "inputs": [
+              {
+                "name": "model_selector",
+                "type": "core::felt252"
+              },
+              {
+                "name": "indexes",
+                "type": "core::array::Span::<dojo::model::definition::ModelIndex>"
+              },
+              {
+                "name": "layout",
+                "type": "dojo::meta::layout::Layout"
+              }
+            ],
+            "outputs": [
+              {
+                "type": "core::array::Span::<core::array::Span::<core::felt252>>"
+              }
+            ],
+            "state_mutability": "view"
+          },
+          {
+            "type": "function",
             "name": "set_entity",
             "inputs": [
               {
@@ -457,6 +517,30 @@
           },
           {
             "type": "function",
+            "name": "set_entities",
+            "inputs": [
+              {
+                "name": "model_selector",
+                "type": "core::felt252"
+              },
+              {
+                "name": "indexes",
+                "type": "core::array::Span::<dojo::model::definition::ModelIndex>"
+              },
+              {
+                "name": "values",
+                "type": "core::array::Span::<core::array::Span::<core::felt252>>"
+              },
+              {
+                "name": "layout",
+                "type": "dojo::meta::layout::Layout"
+              }
+            ],
+            "outputs": [],
+            "state_mutability": "external"
+          },
+          {
+            "type": "function",
             "name": "delete_entity",
             "inputs": [
               {
@@ -466,6 +550,26 @@
               {
                 "name": "index",
                 "type": "dojo::model::definition::ModelIndex"
+              },
+              {
+                "name": "layout",
+                "type": "dojo::meta::layout::Layout"
+              }
+            ],
+            "outputs": [],
+            "state_mutability": "external"
+          },
+          {
+            "type": "function",
+            "name": "delete_entities",
+            "inputs": [
+              {
+                "name": "model_selector",
+                "type": "core::felt252"
+              },
+              {
+                "name": "indexes",
+                "type": "core::array::Span::<dojo::model::definition::ModelIndex>"
               },
               {
                 "name": "layout",
@@ -850,11 +954,6 @@
             "kind": "key"
           },
           {
-            "name": "historical",
-            "type": "core::bool",
-            "kind": "key"
-          },
-          {
             "name": "keys",
             "type": "core::array::Span::<core::felt252>",
             "kind": "data"
@@ -1121,13 +1220,23 @@
   },
   "contracts": [
     {
-      "address": "0x7bc340927668bc87eea10d95cb2dfe0fa10be12075fe8189f363643205c34d4",
-      "class_hash": "0x40fc071ee4de6ed9a5a3fe813d12d898f3b58d9397bf5247c9e4d3274fac5f",
+      "address": "0x7d32611d1b96df37b041f0a285bf340227cebc144d46c2f34cedd81e2fd5239",
+      "class_hash": "0x3449ac13c575e4ed3a0e897bf16929f449f0fadea49b119dd25046f6b347301",
       "abi": [
         {
           "type": "impl",
           "name": "actions__ContractImpl",
           "interface_name": "dojo::contract::interface::IContract"
+        },
+        {
+          "type": "interface",
+          "name": "dojo::contract::interface::IContract",
+          "items": []
+        },
+        {
+          "type": "impl",
+          "name": "actions__DeployedContractImpl",
+          "interface_name": "dojo::meta::interface::IDeployedResource"
         },
         {
           "type": "struct",
@@ -1149,7 +1258,7 @@
         },
         {
           "type": "interface",
-          "name": "dojo::contract::interface::IContract",
+          "name": "dojo::meta::interface::IDeployedResource",
           "items": [
             {
               "type": "function",
@@ -1442,13 +1551,23 @@
       "systems": []
     },
     {
-      "address": "0x2e7d504b81c2f1b60986c95de64b650feb8ae625f04c6cd924150fab3cad4a8",
-      "class_hash": "0x777841f87b122c785037c7ba983550cb35e476bed81535a6c9b5bfff2183906",
+      "address": "0x74967fafd9ea26b0c14287fdafa5867cf6e2d16d9e6fda3dde4361a7cf75c9d",
+      "class_hash": "0x16e8d864b5b5484bad069133a751f72961f9e5edade4f4f3b3b6076f6394c5b",
       "abi": [
         {
           "type": "impl",
           "name": "dungeon__ContractImpl",
           "interface_name": "dojo::contract::interface::IContract"
+        },
+        {
+          "type": "interface",
+          "name": "dojo::contract::interface::IContract",
+          "items": []
+        },
+        {
+          "type": "impl",
+          "name": "dungeon__DeployedContractImpl",
+          "interface_name": "dojo::meta::interface::IDeployedResource"
         },
         {
           "type": "struct",
@@ -1470,7 +1589,7 @@
         },
         {
           "type": "interface",
-          "name": "dojo::contract::interface::IContract",
+          "name": "dojo::meta::interface::IDeployedResource",
           "items": [
             {
               "type": "function",
@@ -1623,13 +1742,23 @@
       "systems": []
     },
     {
-      "address": "0x41ceb76687e3653610fffc3c830607d90079e9c5d96cfb6f270c8231e9ee9db",
-      "class_hash": "0xb429efa8844a23048e81db941adf6fc5776dab4ee0c06c6c964048a3f88192",
+      "address": "0x7077c3246c125a91b17e8c0a90f45af790ad6feabe65a3df225277d9eb02310",
+      "class_hash": "0x43e7cc34a35abdb9baf6804c71526811d8d3cccf58d66be5a095bd79b9be82e",
       "abi": [
         {
           "type": "impl",
           "name": "mock_token__ContractImpl",
           "interface_name": "dojo::contract::interface::IContract"
+        },
+        {
+          "type": "interface",
+          "name": "dojo::contract::interface::IContract",
+          "items": []
+        },
+        {
+          "type": "impl",
+          "name": "mock_token__DeployedContractImpl",
+          "interface_name": "dojo::meta::interface::IDeployedResource"
         },
         {
           "type": "struct",
@@ -1651,7 +1780,7 @@
         },
         {
           "type": "interface",
-          "name": "dojo::contract::interface::IContract",
+          "name": "dojo::meta::interface::IDeployedResource",
           "items": [
             {
               "type": "function",
@@ -1786,18 +1915,23 @@
       "systems": []
     },
     {
-<<<<<<< HEAD
-      "address": "0x200cd8070a7dbe0894c74426d2f4c9d778b13042ce955203cb189d85cfb43d1",
-      "class_hash": "0x4f290c42a0a2e342bf8da74103a31c6e3f2ebca2c72054da9d6d24754c3cc7e",
-=======
-      "address": "0x79e0653fbebdbdb864ca69d1470b263f2efdfce9cf355cfe9c7719627eff792",
-      "class_hash": "0x3356ff99134a997be6f9366c47ad18993aac3e29803819cc80309a57fa23f88",
->>>>>>> dojo/main
+      "address": "0x7e2c18814dd45847ae85d3c8eb40196cc2aa869614efd1ff67edf380c45cb8e",
+      "class_hash": "0xa1884cbaa79b05287019b513a94f993f0d98ed4d9602370bc2e5aaa04feebc",
       "abi": [
         {
           "type": "impl",
           "name": "others__ContractImpl",
           "interface_name": "dojo::contract::interface::IContract"
+        },
+        {
+          "type": "interface",
+          "name": "dojo::contract::interface::IContract",
+          "items": []
+        },
+        {
+          "type": "impl",
+          "name": "others__DeployedContractImpl",
+          "interface_name": "dojo::meta::interface::IDeployedResource"
         },
         {
           "type": "struct",
@@ -1819,7 +1953,7 @@
         },
         {
           "type": "interface",
-          "name": "dojo::contract::interface::IContract",
+          "name": "dojo::meta::interface::IDeployedResource",
           "items": [
             {
               "type": "function",
@@ -1964,44 +2098,44 @@
   "models": [
     {
       "members": [],
-      "class_hash": "0x51b0ffe6e8ece3d15b6fabce1f07dab1a1233e220da151375a2df149337be02",
+      "class_hash": "0x60908b9fa1c4e26baf1e118fab6b79626db53f10a534a0e17bd3f7f9bd872d",
       "tag": "Message"
     },
     {
       "members": [],
-      "class_hash": "0x1fd7e174290df3e0526cfaaad57d42830221fa18bb95ff2758efc669994bfb9",
+      "class_hash": "0x417aef6c830a2d6e5083c5a47e87a61c8c9eb360e40acd835b16299d433b3c1",
       "tag": "MockToken"
     },
     {
       "members": [],
-      "class_hash": "0x3f64a8d029dd11345095690578548dd96502e39a7df92f3ccc32d3bb9fd76e7",
+      "class_hash": "0x645ba084821e6a6a361c209e6bbaf40ba76dd8e9ac1c8a18470995fb3a7979b",
       "tag": "Moves"
     },
     {
       "members": [],
-      "class_hash": "0x725eafc8b33454db8df462f4dda1509ab6183b6b075e04467e1629cc5f0c047",
+      "class_hash": "0x77018639b9a36824fe474c7c2b2ba7b9ef0f30fa54be1d1f62037dbfc01a89b",
       "tag": "PlayerConfig"
     },
     {
       "members": [],
-      "class_hash": "0x6be5880fe4240c8ddf9d5db79c004e46c17aa7804df1f4aa2824d0748fa7056",
+      "class_hash": "0x6ccefe3d52e17e136309362d4b50c74c54b80f203ec1fb2f065e5ac7e4d4f5c",
       "tag": "Position"
     },
     {
       "members": [],
-      "class_hash": "0x5b6daaed2b92e067b3d7c8bef42c5920ba35d13dfc35bf3de6a89953c7fceb0",
+      "class_hash": "0x1f071ca31db4450e20be936d32669434959a9677470a9d8d164833a3ca93bcf",
       "tag": "ServerProfile"
     }
   ],
   "events": [
     {
       "members": [],
-      "class_hash": "0x22c33f3c7e525a21cd3651326f74c61deff6d75e26e06725f53ac2dfd4646fa",
+      "class_hash": "0x3dc79bcf7e88304d1331cdf9e232ff9f78ac19a719e998bd68016eb5ebb3e38",
       "tag": "Moved"
     },
     {
       "members": [],
-      "class_hash": "0x2c78ad5ec05d05be24a1cbace308ad15bff9375b56be8a8fa892ff5fc79eb23",
+      "class_hash": "0x7ddb49b2db32089d1bb14a6f66d91582fffdd09d18325187840de65ae443598",
       "tag": "MyInit"
     }
   ]
