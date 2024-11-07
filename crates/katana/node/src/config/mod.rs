@@ -5,27 +5,24 @@ pub mod fork;
 pub mod metrics;
 pub mod rpc;
 
-use std::{
-    collections::{BTreeMap, HashSet},
-    net::{IpAddr, SocketAddr},
-    path::PathBuf,
-    str::FromStr,
-};
+use std::collections::{BTreeMap, HashSet};
+use std::net::{IpAddr, SocketAddr};
+use std::path::PathBuf;
+use std::str::FromStr;
 
 use db::DbConfig;
 use dev::{DevConfig, FixedL1GasPriceConfig};
 use execution::ExecutionConfig;
 use fork::ForkingConfig;
 use katana_core::service::messaging::MessagingConfig;
-use katana_primitives::{
-    block::{BlockHash, BlockHashOrNumber, BlockNumber, GasPrices},
-    chain::ChainId,
-    chain_spec::ChainSpec,
-    class::ClassHash,
-    genesis::{allocation::GenesisAllocation, GenesisClass},
-    version::ProtocolVersion,
-    ContractAddress, Felt,
-};
+use katana_primitives::block::{BlockHash, BlockHashOrNumber, BlockNumber, GasPrices};
+use katana_primitives::chain::ChainId;
+use katana_primitives::chain_spec::ChainSpec;
+use katana_primitives::class::ClassHash;
+use katana_primitives::genesis::allocation::GenesisAllocation;
+use katana_primitives::genesis::GenesisClass;
+use katana_primitives::version::ProtocolVersion;
+use katana_primitives::{ContractAddress, Felt};
 use metrics::MetricsConfig;
 use rpc::{ApiKind, RpcConfig};
 use starknet::providers::Url;
@@ -75,7 +72,7 @@ pub struct SequencingConfig {
     pub no_mining: bool,
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct ConfigBuilder {
     config: Config,
 }
