@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1731014232586,
+  "lastUpdate": 1731014355249,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -31675,6 +31675,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10665634890,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ed8f546d9b434e4419a58882782bcffa5989937d",
+          "message": "feat(katana): include more data in logs on tx flow status (#2657)",
+          "timestamp": "2024-11-08T04:59:15+08:00",
+          "tree_id": "3e63685d1f7c79d42cd98d5443dba7aefb72e924",
+          "url": "https://github.com/dojoengine/dojo/commit/ed8f546d9b434e4419a58882782bcffa5989937d"
+        },
+        "date": 1731014354032,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16477894,
+            "range": "± 338325",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 9302740,
+            "range": "± 587034",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3735057994,
+            "range": "± 729932201",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8569042,
+            "range": "± 193782",
             "unit": "ns/iter"
           }
         ]
