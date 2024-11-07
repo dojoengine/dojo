@@ -68,7 +68,7 @@ impl ExecuteArgs {
             self.starknet.url(profile_config.env.as_ref())?,
         );
 
-        let txn_config: TxnConfig = self.transaction.into();
+        let txn_config: TxnConfig = self.transaction.try_into()?;
 
         config.tokio_handle().block_on(async {
             // We could save the world diff computation extracting the account directly from the

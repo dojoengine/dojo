@@ -61,7 +61,7 @@ impl MigrateArgs {
 
             let world_address = world_diff.world_info.address;
 
-            let mut txn_config: TxnConfig = self.transaction.into();
+            let mut txn_config: TxnConfig = self.transaction.try_into()?;
             txn_config.wait = true;
 
             let migration = Migration::new(

@@ -10,8 +10,9 @@ use anyhow::{anyhow, Result};
 use colored_json::ToColoredJson;
 use reqwest::Url;
 use starknet::accounts::{
-    AccountDeploymentV1, AccountError, AccountFactory, AccountFactoryError, ConnectedAccount,
-    DeclarationV2, ExecutionEncoding, ExecutionV1, SingleOwnerAccount,
+    AccountDeploymentV1, AccountDeploymentV3, AccountError, AccountFactory, AccountFactoryError,
+    ConnectedAccount, DeclarationV2, DeclarationV3, ExecutionEncoding, ExecutionV1, ExecutionV3,
+    SingleOwnerAccount,
 };
 use starknet::core::types::{
     BlockId, BlockTag, DeclareTransactionResult, DeployAccountTransactionResult, Felt,
@@ -21,31 +22,53 @@ use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{AnyProvider, JsonRpcClient, Provider};
 use starknet::signers::{LocalWallet, SigningKey};
 
+#[derive(Debug, Copy, Clone, Default)]
+pub struct StrkFeeConfig {
+    /// The maximum L1 gas amount.
+    pub gas: Option<u64>,
+    /// The maximum L1 gas price in STRK.
+    pub gas_price: Option<u128>,
+}
+
+#[derive(Debug, Copy, Clone, Default)]
+pub struct EthFeeConfig {
+    /// The multiplier for how much the actual transaction max fee should be relative to the
+    /// estimated fee.
+    pub fee_estimate_multiplier: Option<f64>,
+    /// The maximum fee to pay for the transaction.
+    pub max_fee_raw: Option<Felt>,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub enum FeeConfig {
+    /// The STRK fee configuration.
+    Strk(StrkFeeConfig),
+    /// The ETH fee configuration.
+    Eth(EthFeeConfig),
+}
+
+impl Default for FeeConfig {
+    fn default() -> Self {
+        Self::Strk(StrkFeeConfig::default())
+    }
+}
+
 /// The transaction configuration to use when sending a transaction.
 #[derive(Debug, Copy, Clone, Default)]
 pub struct TxnConfig {
-    /// The multiplier for how much the actual transaction max fee should be relative to the
-    /// estimated fee. If `None` is provided, the multiplier is set to `1.1`.
-    pub fee_estimate_multiplier: Option<f64>,
     /// Whether to wait for the transaction to be accepted or reverted on L2.
     pub wait: bool,
     /// Whether to display the transaction receipt.
     pub receipt: bool,
-    /// The maximum fee to pay for the transaction.
-    pub max_fee_raw: Option<Felt>,
     /// Whether to use the `walnut` fee estimation strategy.
     pub walnut: bool,
+    /// The fee configuration to use for the transaction.
+    pub fee_config: FeeConfig,
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 pub enum TxnAction {
-    Send {
-        wait: bool,
-        receipt: bool,
-        max_fee_raw: Option<Felt>,
-        fee_estimate_multiplier: Option<f64>,
-        walnut: bool,
-    },
+    Send { wait: bool, receipt: bool, fee_config: FeeConfig, walnut: bool },
     Estimate,
     Simulate,
 }
@@ -111,17 +134,18 @@ where
         mut self,
         txn_config: &TxnConfig,
     ) -> Result<Self::R, AccountError<T::SignError>> {
-        if let TxnConfig { fee_estimate_multiplier: Some(fee_est_mul), .. } = txn_config {
-            self = self.fee_estimate_multiplier(*fee_est_mul);
+        if let FeeConfig::Eth(EthFeeConfig { fee_estimate_multiplier: Some(fee_est_mul), .. }) =
+            txn_config.fee_config
+        {
+            self = self.fee_estimate_multiplier(fee_est_mul);
         }
 
-        if let TxnConfig { max_fee_raw: Some(max_fee_r), .. } = txn_config {
-            self = self.max_fee(*max_fee_r);
+        if let FeeConfig::Eth(EthFeeConfig { max_fee_raw: Some(max_fee_r), .. }) =
+            txn_config.fee_config
+        {
+            self = self.max_fee(max_fee_r);
         }
 
-        // TODO: need to fix the wait that is not usable, since we don't have access to the
-        // account/provider. Or execution could expose it, or we need it to be stored in the
-        // configuration...
         self.send().await
     }
 }
@@ -137,12 +161,16 @@ where
         mut self,
         txn_config: &TxnConfig,
     ) -> Result<Self::R, AccountError<T::SignError>> {
-        if let TxnConfig { fee_estimate_multiplier: Some(fee_est_mul), .. } = txn_config {
-            self = self.fee_estimate_multiplier(*fee_est_mul);
+        if let FeeConfig::Eth(EthFeeConfig { fee_estimate_multiplier: Some(fee_est_mul), .. }) =
+            txn_config.fee_config
+        {
+            self = self.fee_estimate_multiplier(fee_est_mul);
         }
 
-        if let TxnConfig { max_fee_raw: Some(max_raw_f), .. } = txn_config {
-            self = self.max_fee(*max_raw_f);
+        if let FeeConfig::Eth(EthFeeConfig { max_fee_raw: Some(max_raw_f), .. }) =
+            txn_config.fee_config
+        {
+            self = self.max_fee(max_raw_f);
         }
 
         self.send().await
@@ -160,12 +188,85 @@ where
         mut self,
         txn_config: &TxnConfig,
     ) -> Result<Self::R, AccountFactoryError<<T>::SignError>> {
-        if let TxnConfig { fee_estimate_multiplier: Some(fee_est_mul), .. } = txn_config {
-            self = self.fee_estimate_multiplier(*fee_est_mul);
+        if let FeeConfig::Eth(EthFeeConfig { fee_estimate_multiplier: Some(fee_est_mul), .. }) =
+            txn_config.fee_config
+        {
+            self = self.fee_estimate_multiplier(fee_est_mul);
         }
 
-        if let TxnConfig { max_fee_raw: Some(max_raw_f), .. } = txn_config {
-            self = self.max_fee(*max_raw_f);
+        if let FeeConfig::Eth(EthFeeConfig { max_fee_raw: Some(max_raw_f), .. }) =
+            txn_config.fee_config
+        {
+            self = self.max_fee(max_raw_f);
+        }
+
+        self.send().await
+    }
+}
+
+impl<T> TransactionExt<T> for ExecutionV3<'_, T>
+where
+    T: ConnectedAccount + Sync,
+{
+    type R = InvokeTransactionResult;
+    type U = AccountError<T::SignError>;
+
+    async fn send_with_cfg(
+        mut self,
+        txn_config: &TxnConfig,
+    ) -> Result<Self::R, AccountError<T::SignError>> {
+        if let FeeConfig::Strk(StrkFeeConfig { gas: Some(g), .. }) = txn_config.fee_config {
+            self = self.gas(g);
+        }
+
+        if let FeeConfig::Strk(StrkFeeConfig { gas_price: Some(gp), .. }) = txn_config.fee_config {
+            self = self.gas_price(gp);
+        }
+
+        self.send().await
+    }
+}
+
+impl<T> TransactionExt<T> for DeclarationV3<'_, T>
+where
+    T: ConnectedAccount + Sync,
+{
+    type R = DeclareTransactionResult;
+    type U = AccountError<T::SignError>;
+
+    async fn send_with_cfg(
+        mut self,
+        txn_config: &TxnConfig,
+    ) -> Result<Self::R, AccountError<T::SignError>> {
+        if let FeeConfig::Strk(StrkFeeConfig { gas: Some(g), .. }) = txn_config.fee_config {
+            self = self.gas(g);
+        }
+
+        if let FeeConfig::Strk(StrkFeeConfig { gas_price: Some(gp), .. }) = txn_config.fee_config {
+            self = self.gas_price(gp);
+        }
+
+        self.send().await
+    }
+}
+
+impl<T> TransactionExt<T> for AccountDeploymentV3<'_, T>
+where
+    T: AccountFactory + Sync,
+{
+    type R = DeployAccountTransactionResult;
+    type U = AccountFactoryError<T::SignError>;
+
+    async fn send_with_cfg(
+        mut self,
+        txn_config: &TxnConfig,
+    ) -> Result<Self::R, AccountFactoryError<<T>::SignError>> {
+        if let FeeConfig::Strk(StrkFeeConfig { gas: Some(g), .. }) = txn_config.fee_config {
+            self = self.gas(g);
+        }
+
+        if let FeeConfig::Strk(StrkFeeConfig { gas_price: Some(gp), .. }) = txn_config.fee_config {
+            self = self.gas_price(gp);
         }
 
         self.send().await
