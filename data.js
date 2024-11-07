@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1731002275321,
+  "lastUpdate": 1731002536376,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -31567,6 +31567,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10157045849,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "dddac3279569359adcd6262cce7b6a83f3786879",
+          "message": "fix: simplify ui for better readability of sozo output (#2656)",
+          "timestamp": "2024-11-07T11:42:01-06:00",
+          "tree_id": "25a509c2182c346a746e7994995e2bd42f4599db",
+          "url": "https://github.com/dojoengine/dojo/commit/dddac3279569359adcd6262cce7b6a83f3786879"
+        },
+        "date": 1731002535178,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16738125,
+            "range": "± 121085",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8929542,
+            "range": "± 181127",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3708011384,
+            "range": "± 803412121",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8581084,
+            "range": "± 196100",
             "unit": "ns/iter"
           }
         ]
