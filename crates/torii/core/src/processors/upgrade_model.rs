@@ -1,6 +1,5 @@
 use anyhow::{Error, Ok, Result};
 use async_trait::async_trait;
-use dojo_types::schema::Ty;
 use dojo_world::contracts::abigen::world::Event as WorldEvent;
 use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::world::WorldContractReader;
@@ -57,13 +56,7 @@ where
         let model = db.model(event.selector).await?;
         let name = model.name;
         let namespace = model.namespace;
-        let mut prev_schema = model.schema;
-        match &mut prev_schema {
-            Ty::Struct(s) => {
-                s.name = name.clone();
-            }
-            _ => unreachable!(),
-        }
+        let prev_schema = model.schema;
 
         let model = world.model_reader(&namespace, &name).await?;
         let new_schema = model.schema().await?;

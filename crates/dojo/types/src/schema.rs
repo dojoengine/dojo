@@ -228,7 +228,7 @@ impl Ty {
     /// Returns a new Ty containing only the differences between self and other
     pub fn diff(&self, other: &Ty) -> Option<Ty> {
         match (self, other) {
-            (Ty::Struct(s1), Ty::Struct(s2)) if s1.name == s2.name => {
+            (Ty::Struct(s1), Ty::Struct(s2)) => {
                 // Find members that exist in s1 but not in s2, or are different
                 let diff_children: Vec<Member> = s1
                     .children
@@ -248,7 +248,7 @@ impl Ty {
                     Some(Ty::Struct(Struct { name: s1.name.clone(), children: diff_children }))
                 }
             }
-            (Ty::Enum(e1), Ty::Enum(e2)) if e1.name == e2.name => {
+            (Ty::Enum(e1), Ty::Enum(e2)) => {
                 // Find options that exist in e1 but not in e2, or are different
                 let diff_options: Vec<EnumOption> = e1
                     .options
@@ -297,8 +297,12 @@ impl Ty {
                     Some(Ty::Primitive(*p1))
                 }
             }
-            // Different types entirely - return the new type
-            _ => Some(self.clone()),
+            // Different types entirely - we cannot diff them
+            _ => panic!(
+                "Type mismatch between self {:?} and other {:?}",
+                self.name(),
+                other.name()
+            ),
         }
     }
 }
