@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1731002536376,
+  "lastUpdate": 1731014116557,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -31615,6 +31615,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8581084,
             "range": "± 196100",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ed8f546d9b434e4419a58882782bcffa5989937d",
+          "message": "feat(katana): include more data in logs on tx flow status (#2657)",
+          "timestamp": "2024-11-08T04:59:15+08:00",
+          "tree_id": "3e63685d1f7c79d42cd98d5443dba7aefb72e924",
+          "url": "https://github.com/dojoengine/dojo/commit/ed8f546d9b434e4419a58882782bcffa5989937d"
+        },
+        "date": 1731014115345,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10401459775,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
