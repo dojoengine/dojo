@@ -62,9 +62,11 @@ where
 
         let InvokeTransactionResult { transaction_hash } = match self.txn_config.fee_config {
             FeeConfig::Strk(_) => {
+                trace!("Deploying with STRK.");
                 self.account.execute_v3(vec![call]).send_with_cfg(&self.txn_config).await?
             }
             FeeConfig::Eth(_) => {
+                trace!("Deploying with ETH.");
                 self.account.execute_v1(vec![call]).send_with_cfg(&self.txn_config).await?
             }
         };

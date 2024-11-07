@@ -11,36 +11,37 @@ use starknet::core::types::Felt;
 pub struct TransactionOptions {
     #[arg(long)]
     #[arg(help = "Fee token to use.")]
-    #[arg(default_value = "strk")]
-    pub fee_token: FeeToken,
+    #[arg(default_value_t = FeeToken::Strk)]
+    #[arg(global = true)]
+    pub fee: FeeToken,
 
+    #[arg(help_heading = "Transaction options - ETH")]
     #[arg(long, value_name = "MULTIPLIER")]
-    #[arg(help = "The multiplier to use for the fee estimate (--fee-token eth).")]
+    #[arg(help = "The multiplier to use for the fee estimate.")]
     #[arg(long_help = "The multiplier to use for the fee estimate. This value will be used on \
                        the estimated fee which will be used as the max fee for the transaction. \
                        (max_fee = estimated_fee * multiplier)")]
-    #[arg(conflicts_with = "max_fee_raw")]
-    #[arg(conflicts_with = "gas")]
-    #[arg(conflicts_with = "gas_price")]
+    #[arg(conflicts_with_all = ["max_fee_raw", "gas", "gas_price"])]
     #[arg(global = true)]
     pub fee_estimate_multiplier: Option<f64>,
 
+    #[arg(help_heading = "Transaction options - ETH")]
     #[arg(long)]
-    #[arg(help = "Maximum raw value to be used for fees, in Wei (--fee-token eth).")]
-    #[arg(conflicts_with = "fee_estimate_multiplier")]
-    #[arg(conflicts_with = "gas")]
-    #[arg(conflicts_with = "gas_price")]
+    #[arg(help = "Maximum raw value to be used for fees, in Wei.")]
+    #[arg(conflicts_with_all = ["fee_estimate_multiplier", "gas", "gas_price"])]
     #[arg(global = true)]
     pub max_fee_raw: Option<Felt>,
 
-    #[arg(long, help = "Maximum L1 gas amount (--fee-token strk).")]
-    #[arg(conflicts_with = "max_fee_raw")]
-    #[arg(conflicts_with = "fee_estimate_multiplier")]
+    #[arg(help_heading = "Transaction options - STRK")]
+    #[arg(long, help = "Maximum L1 gas amount.")]
+    #[arg(conflicts_with_all = ["max_fee_raw", "fee_estimate_multiplier"])]
+    #[arg(global = true)]
     pub gas: Option<u64>,
 
-    #[arg(long, help = "Maximum L1 gas price in STRK (--fee-token strk).")]
-    #[arg(conflicts_with = "max_fee_raw")]
-    #[arg(conflicts_with = "fee_estimate_multiplier")]
+    #[arg(help_heading = "Transaction options - STRK")]
+    #[arg(long, help = "Maximum L1 gas price in STRK.")]
+    #[arg(conflicts_with_all = ["max_fee_raw", "fee_estimate_multiplier"])]
+    #[arg(global = true)]
     pub gas_price: Option<u128>,
 
     #[arg(long)]
@@ -80,7 +81,7 @@ impl TransactionOptions {
             (false, false) => Ok(TxnAction::Send {
                 wait: self.wait || self.walnut,
                 receipt: self.receipt,
-                fee_config: match self.fee_token {
+                fee_config: match self.fee {
                     FeeToken::Strk => {
                         FeeConfig::Strk(StrkFeeConfig { gas: self.gas, gas_price: self.gas_price })
                     }
@@ -99,13 +100,12 @@ impl TryFrom<TransactionOptions> for TxnConfig {
     type Error = anyhow::Error;
 
     fn try_from(value: TransactionOptions) -> Result<Self> {
-        match value.fee_token {
+        match value.fee {
             FeeToken::Eth => {
                 if value.gas.is_some() || value.gas_price.is_some() {
                     bail!(
-                        "Gas and gas price are not supported for ETH transactions. Use \
-                         `--fee-token strk` instead or use `--max-fee-raw` and \
-                         `--fee-estimate-multiplier`."
+                        "Gas and gas price are not supported for ETH transactions. Use `--fee \
+                         strk` instead."
                     );
                 }
             }
@@ -113,8 +113,7 @@ impl TryFrom<TransactionOptions> for TxnConfig {
                 if value.max_fee_raw.is_some() || value.fee_estimate_multiplier.is_some() {
                     bail!(
                         "Max fee raw and fee estimate multiplier are not supported for STRK \
-                         transactions. Use `--fee-token eth` instead or use `--gas` and \
-                         `--gas-price`."
+                         transactions. Use `--fee eth` instead."
                     );
                 }
             }
@@ -123,7 +122,7 @@ impl TryFrom<TransactionOptions> for TxnConfig {
         Ok(Self {
             wait: value.wait || value.walnut,
             receipt: value.receipt,
-            fee_config: match value.fee_token {
+            fee_config: match value.fee {
                 FeeToken::Strk => {
                     FeeConfig::Strk(StrkFeeConfig { gas: value.gas, gas_price: value.gas_price })
                 }
@@ -177,7 +176,7 @@ mod tests {
         let opts = TransactionOptions {
             wait: true,
             receipt: true,
-            fee_token: FeeToken::Strk,
+            fee: FeeToken::Strk,
             gas: Some(1000),
             gas_price: Some(100),
             max_fee_raw: None,
@@ -207,7 +206,7 @@ mod tests {
         let opts = TransactionOptions {
             wait: false,
             receipt: true,
-            fee_token: FeeToken::Eth,
+            fee: FeeToken::Eth,
             gas: None,
             gas_price: None,
             max_fee_raw: Some(Felt::from(1000)),
@@ -235,7 +234,7 @@ mod tests {
     #[test]
     fn test_invalid_strk_config() {
         let opts = TransactionOptions {
-            fee_token: FeeToken::Strk,
+            fee: FeeToken::Strk,
             max_fee_raw: Some(Felt::from(1000)),
             fee_estimate_multiplier: Some(1.5),
             ..Default::default()
@@ -248,7 +247,7 @@ mod tests {
     #[test]
     fn test_invalid_eth_config() {
         let opts = TransactionOptions {
-            fee_token: FeeToken::Eth,
+            fee: FeeToken::Eth,
             gas: Some(1000),
             gas_price: Some(100),
             ..Default::default()
