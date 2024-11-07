@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::mem;
 use std::str::FromStr;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::{Context, Result};
 use dojo_types::schema::{Struct, Ty};
@@ -333,8 +334,10 @@ impl<'c> Executor<'c> {
                         let new_tps = if new_timestamp - cursor_timestamp != 0 {
                             num_transactions / (new_timestamp - cursor_timestamp)
                         } else {
-                            let now = Instant::now();
-                            num_transactions / (now.elapsed().as_secs() - cursor_timestamp)
+                            let current_time =
+                                SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+
+                            num_transactions / (current_time - cursor_timestamp)
                         };
 
                         cursor.last_pending_block_contract_tx =
