@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1731014355249,
+  "lastUpdate": 1731014442379,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -31723,6 +31723,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8569042,
             "range": "± 193782",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "76473430+edisontim@users.noreply.github.com",
+            "name": "tedison",
+            "username": "edisontim"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2050ec41b2d391a01f0f75d97b13d3914053c35a",
+          "message": "fix: time difference calculations for new_tps (#2655)",
+          "timestamp": "2024-11-08T05:00:41+08:00",
+          "tree_id": "a77f32eef6e9dc612dae8b748fbebf31e675ac9d",
+          "url": "https://github.com/dojoengine/dojo/commit/2050ec41b2d391a01f0f75d97b13d3914053c35a"
+        },
+        "date": 1731014441053,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17028943,
+            "range": "± 304653",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8690549,
+            "range": "± 213521",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3750008000,
+            "range": "± 770033270",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8461987,
+            "range": "± 167300",
             "unit": "ns/iter"
           }
         ]
