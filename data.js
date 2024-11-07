@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1731014116557,
+  "lastUpdate": 1731014232586,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -31644,6 +31644,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 10401459775,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "76473430+edisontim@users.noreply.github.com",
+            "name": "tedison",
+            "username": "edisontim"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2050ec41b2d391a01f0f75d97b13d3914053c35a",
+          "message": "fix: time difference calculations for new_tps (#2655)",
+          "timestamp": "2024-11-08T05:00:41+08:00",
+          "tree_id": "a77f32eef6e9dc612dae8b748fbebf31e675ac9d",
+          "url": "https://github.com/dojoengine/dojo/commit/2050ec41b2d391a01f0f75d97b13d3914053c35a"
+        },
+        "date": 1731014230757,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10665634890,
             "range": "± 0",
             "unit": "ns/iter"
           }
