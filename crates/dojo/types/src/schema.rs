@@ -298,11 +298,9 @@ impl Ty {
                 }
             }
             // Different types entirely - we cannot diff them
-            _ => panic!(
-                "Type mismatch between self {:?} and other {:?}",
-                self.name(),
-                other.name()
-            ),
+            _ => {
+                panic!("Type mismatch between self {:?} and other {:?}", self.name(), other.name())
+            }
         }
     }
 }
