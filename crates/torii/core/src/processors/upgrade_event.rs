@@ -97,14 +97,14 @@ where
 
         db.register_model(
             &namespace,
-            new_schema,
+            &new_schema,
             layout,
             event.class_hash.into(),
             event.address.into(),
             packed_size,
             unpacked_size,
             block_timestamp,
-            Some(schema_diff),
+            Some(&schema_diff),
         )
         .await?;
 

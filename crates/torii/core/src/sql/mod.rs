@@ -254,14 +254,14 @@ impl Sql {
     pub async fn register_model(
         &mut self,
         namespace: &str,
-        model: Ty,
+        model: &Ty,
         layout: Layout,
         class_hash: Felt,
         contract_address: Felt,
         packed_size: u32,
         unpacked_size: u32,
         block_timestamp: u64,
-        upgrade_diff: Option<Ty>,
+        upgrade_diff: Option<&Ty>,
     ) -> Result<()> {
         let selector = compute_selector_from_names(namespace, &model.name());
         let namespaced_name = format!("{}-{}", namespace, model.name());
@@ -299,7 +299,7 @@ impl Sql {
             block_timestamp,
             &mut 0,
             &mut 0,
-            upgrade_diff.is_some(),
+            upgrade_diff,
         )?;
 
         // we set the model in the cache directly
@@ -635,7 +635,7 @@ impl Sql {
         block_timestamp: u64,
         array_idx: &mut usize,
         parent_array_idx: &mut usize,
-        is_upgrade: bool,
+        upgrade_diff: Option<&Ty>,
     ) -> Result<()> {
         if let Ty::Enum(e) = model {
             if e.options.iter().all(|o| if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false })
@@ -652,7 +652,7 @@ impl Sql {
             block_timestamp,
             *array_idx,
             *parent_array_idx,
-            is_upgrade,
+            upgrade_diff,
         )?;
 
         let mut build_member = |pathname: &str, member: &Ty| -> Result<()> {
@@ -674,7 +674,7 @@ impl Sql {
                 &mut (*array_idx + if let Ty::Array(_) = member { 1 } else { 0 }),
                 &mut (*parent_array_idx + if let Ty::Array(_) = model { 1 } else { 0 }),
                 // nested members are not upgrades
-                false,
+                None,
             )?;
 
             Ok(())
@@ -1031,7 +1031,7 @@ impl Sql {
         block_timestamp: u64,
         array_idx: usize,
         parent_array_idx: usize,
-        is_upgrade: bool,
+        upgrade_diff: Option<&Ty>,
     ) -> Result<()> {
         let table_id = path.join("$");
         let mut indices = Vec::new();
@@ -1123,6 +1123,18 @@ impl Sql {
         match model {
             Ty::Struct(s) => {
                 for (member_idx, member) in s.children.iter().enumerate() {
+                    if let Some(upgrade_diff) = upgrade_diff {
+                        if !upgrade_diff
+                            .as_struct()
+                            .unwrap()
+                            .children
+                            .iter()
+                            .any(|m| m.name == member.name)
+                        {
+                            continue;
+                        }
+                    }
+
                     let name = member.name.clone();
                     let mut options = None; // TEMP: doesnt support complex enums yet
 
@@ -1279,7 +1291,7 @@ impl Sql {
         create_table_query
             .push_str("FOREIGN KEY (event_message_id) REFERENCES event_messages(id));");
 
-        if is_upgrade {
+        if upgrade_diff.is_some() {
             for alter_query in alter_table_queries {
                 self.executor.send(QueryMessage::other(alter_query, vec![]))?;
             }

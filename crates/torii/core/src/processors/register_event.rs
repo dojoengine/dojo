@@ -88,7 +88,7 @@ where
 
         db.register_model(
             &namespace,
-            schema,
+            &schema,
             layout,
             event.class_hash.into(),
             event.address.into(),
