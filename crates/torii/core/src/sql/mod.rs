@@ -261,7 +261,7 @@ impl Sql {
         packed_size: u32,
         unpacked_size: u32,
         block_timestamp: u64,
-        is_upgrade: bool,
+        upgrade_diff: Option<Ty>,
     ) -> Result<()> {
         let selector = compute_selector_from_names(namespace, &model.name());
         let namespaced_name = format!("{}-{}", namespace, model.name());
@@ -293,13 +293,13 @@ impl Sql {
         let mut model_idx = 0_i64;
         self.build_register_queries_recursive(
             selector,
-            &model,
+            upgrade_diff.as_ref().unwrap_or(&model),
             vec![namespaced_name.clone()],
             &mut model_idx,
             block_timestamp,
             &mut 0,
             &mut 0,
-            is_upgrade,
+            upgrade_diff.is_some(),
         )?;
 
         // we set the model in the cache directly

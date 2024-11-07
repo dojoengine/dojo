@@ -94,14 +94,14 @@ where
 
         db.register_model(
             &namespace,
-            schema_diff,
+            new_schema,
             layout,
             event.class_hash.into(),
             event.address.into(),
             packed_size,
             unpacked_size,
             block_timestamp,
-            true,
+            Some(schema_diff),
         )
         .await?;
 
