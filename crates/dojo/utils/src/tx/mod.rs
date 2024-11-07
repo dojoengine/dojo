@@ -134,16 +134,14 @@ where
         mut self,
         txn_config: &TxnConfig,
     ) -> Result<Self::R, AccountError<T::SignError>> {
-        if let FeeConfig::Eth(EthFeeConfig { fee_estimate_multiplier: Some(fee_est_mul), .. }) =
-            txn_config.fee_config
-        {
-            self = self.fee_estimate_multiplier(fee_est_mul);
-        }
+        if let FeeConfig::Eth(c) = txn_config.fee_config {
+            if let Some(fee_est_mul) = c.fee_estimate_multiplier {
+                self = self.fee_estimate_multiplier(fee_est_mul);
+            }
 
-        if let FeeConfig::Eth(EthFeeConfig { max_fee_raw: Some(max_fee_r), .. }) =
-            txn_config.fee_config
-        {
-            self = self.max_fee(max_fee_r);
+            if let Some(max_raw_f) = c.max_fee_raw {
+                self = self.max_fee(max_raw_f);
+            }
         }
 
         self.send().await
@@ -161,16 +159,14 @@ where
         mut self,
         txn_config: &TxnConfig,
     ) -> Result<Self::R, AccountError<T::SignError>> {
-        if let FeeConfig::Eth(EthFeeConfig { fee_estimate_multiplier: Some(fee_est_mul), .. }) =
-            txn_config.fee_config
-        {
-            self = self.fee_estimate_multiplier(fee_est_mul);
-        }
+        if let FeeConfig::Eth(c) = txn_config.fee_config {
+            if let Some(fee_est_mul) = c.fee_estimate_multiplier {
+                self = self.fee_estimate_multiplier(fee_est_mul);
+            }
 
-        if let FeeConfig::Eth(EthFeeConfig { max_fee_raw: Some(max_raw_f), .. }) =
-            txn_config.fee_config
-        {
-            self = self.max_fee(max_raw_f);
+            if let Some(max_raw_f) = c.max_fee_raw {
+                self = self.max_fee(max_raw_f);
+            }
         }
 
         self.send().await
@@ -188,16 +184,14 @@ where
         mut self,
         txn_config: &TxnConfig,
     ) -> Result<Self::R, AccountFactoryError<<T>::SignError>> {
-        if let FeeConfig::Eth(EthFeeConfig { fee_estimate_multiplier: Some(fee_est_mul), .. }) =
-            txn_config.fee_config
-        {
-            self = self.fee_estimate_multiplier(fee_est_mul);
-        }
+        if let FeeConfig::Eth(c) = txn_config.fee_config {
+            if let Some(fee_est_mul) = c.fee_estimate_multiplier {
+                self = self.fee_estimate_multiplier(fee_est_mul);
+            }
 
-        if let FeeConfig::Eth(EthFeeConfig { max_fee_raw: Some(max_raw_f), .. }) =
-            txn_config.fee_config
-        {
-            self = self.max_fee(max_raw_f);
+            if let Some(max_raw_f) = c.max_fee_raw {
+                self = self.max_fee(max_raw_f);
+            }
         }
 
         self.send().await
@@ -215,12 +209,14 @@ where
         mut self,
         txn_config: &TxnConfig,
     ) -> Result<Self::R, AccountError<T::SignError>> {
-        if let FeeConfig::Strk(StrkFeeConfig { gas: Some(g), .. }) = txn_config.fee_config {
-            self = self.gas(g);
-        }
+        if let FeeConfig::Strk(c) = txn_config.fee_config {
+            if let Some(g) = c.gas {
+                self = self.gas(g);
+            }
 
-        if let FeeConfig::Strk(StrkFeeConfig { gas_price: Some(gp), .. }) = txn_config.fee_config {
-            self = self.gas_price(gp);
+            if let Some(gp) = c.gas_price {
+                self = self.gas_price(gp);
+            }
         }
 
         self.send().await
@@ -238,12 +234,14 @@ where
         mut self,
         txn_config: &TxnConfig,
     ) -> Result<Self::R, AccountError<T::SignError>> {
-        if let FeeConfig::Strk(StrkFeeConfig { gas: Some(g), .. }) = txn_config.fee_config {
-            self = self.gas(g);
-        }
+        if let FeeConfig::Strk(c) = txn_config.fee_config {
+            if let Some(g) = c.gas {
+                self = self.gas(g);
+            }
 
-        if let FeeConfig::Strk(StrkFeeConfig { gas_price: Some(gp), .. }) = txn_config.fee_config {
-            self = self.gas_price(gp);
+            if let Some(gp) = c.gas_price {
+                self = self.gas_price(gp);
+            }
         }
 
         self.send().await
@@ -261,12 +259,14 @@ where
         mut self,
         txn_config: &TxnConfig,
     ) -> Result<Self::R, AccountFactoryError<<T>::SignError>> {
-        if let FeeConfig::Strk(StrkFeeConfig { gas: Some(g), .. }) = txn_config.fee_config {
-            self = self.gas(g);
-        }
+        if let FeeConfig::Strk(c) = txn_config.fee_config {
+            if let Some(g) = c.gas {
+                self = self.gas(g);
+            }
 
-        if let FeeConfig::Strk(StrkFeeConfig { gas_price: Some(gp), .. }) = txn_config.fee_config {
-            self = self.gas_price(gp);
+            if let Some(gp) = c.gas_price {
+                self = self.gas_price(gp);
+            }
         }
 
         self.send().await
