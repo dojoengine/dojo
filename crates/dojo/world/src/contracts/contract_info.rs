@@ -116,3 +116,103 @@ impl From<&WorldDiff> for HashMap<String, ContractInfo> {
         contracts
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use starknet::core::types::contract::{SierraClass, SierraClassDebugInfo};
+    use starknet::core::types::EntryPointsByType;
+    use starknet::macros::felt;
+
+    use super::*;
+    use crate::diff::{DojoContract, DojoModel, WorldContract};
+    use crate::local::{CommonLocalInfo, ContractLocal, WorldLocal};
+
+    #[test]
+    fn test_manifest_to_contracts_info() {
+        let manifest = Manifest {
+            world: WorldContract {
+                address: felt!("0x5678"),
+                class_hash: felt!("0x1111"),
+                seed: "test_seed".to_string(),
+                name: "test_world".to_string(),
+                entrypoints: vec!["execute".to_string()],
+                abi: vec![],
+            },
+            contracts: vec![DojoContract {
+                address: felt!("0x1234"),
+                class_hash: felt!("0x2222"),
+                abi: vec![],
+                init_calldata: vec![],
+                tag: "ns-test_contract".to_string(),
+                systems: vec!["system_1".to_string()],
+                selector: felt!("0x3333"),
+            }],
+            models: vec![DojoModel {
+                tag: "ns-test_model".to_string(),
+                class_hash: felt!("0x4444"),
+                members: vec![],
+                selector: felt!("0x5555"),
+            }],
+            events: vec![],
+        };
+
+        let contracts_info: HashMap<String, ContractInfo> = (&manifest).into();
+        assert_eq!(contracts_info.len(), 2);
+        assert_eq!(contracts_info["world"].address, felt!("0x5678"));
+        assert_eq!(contracts_info["world"].entrypoints, vec!["execute".to_string()]);
+        assert_eq!(contracts_info["ns-test_contract"].address, felt!("0x1234"));
+        assert_eq!(contracts_info["ns-test_contract"].entrypoints, vec!["system_1".to_string()]);
+        assert_eq!(contracts_info["ns-test_contract"].tag, "ns-test_contract".to_string());
+    }
+
+    #[test]
+    #[allow(clippy::field_reassign_with_default)]
+    fn test_world_diff_to_contracts_info() {
+        let mut local = WorldLocal::default();
+        local.entrypoints = vec!["execute".to_string()];
+
+        let contract = ContractLocal {
+            common: CommonLocalInfo {
+                name: "test_contract".to_string(),
+                namespace: "ns".to_string(),
+                class: SierraClass {
+                    sierra_program: vec![],
+                    sierra_program_debug_info: SierraClassDebugInfo {
+                        type_names: vec![],
+                        libfunc_names: vec![],
+                        user_func_names: vec![],
+                    },
+                    contract_class_version: "".to_string(),
+                    entry_points_by_type: EntryPointsByType {
+                        constructor: vec![],
+                        external: vec![],
+                        l1_handler: vec![],
+                    },
+                    abi: vec![],
+                },
+                class_hash: felt!("0x2222"),
+                casm_class_hash: felt!("0x2222"),
+            },
+            systems: vec!["system_1".to_string()],
+        };
+
+        local.profile_config.namespace.default = "ns".to_string();
+        local.add_resource(ResourceLocal::Contract(contract));
+
+        let world_diff = WorldDiff::from_local(local).unwrap();
+
+        let contracts_info: HashMap<String, ContractInfo> = (&world_diff).into();
+        assert_eq!(contracts_info.len(), 2);
+        assert_eq!(
+            contracts_info["world"].address,
+            felt!("0x66c1fe28a8f6c5f1dfe797df547fb683d1c9d18c87b049021f115f026be8077")
+        );
+        assert_eq!(contracts_info["world"].entrypoints, vec!["execute".to_string()]);
+        assert_eq!(
+            contracts_info["ns-test_contract"].address,
+            felt!("0x2a03d1761c3e0ee912794d32d5f9be9ae7d1af0fc349fc040fe292a096785ad")
+        );
+        assert_eq!(contracts_info["ns-test_contract"].entrypoints, vec!["system_1".to_string()]);
+        assert_eq!(contracts_info["ns-test_contract"].tag, "ns-test_contract".to_string());
+    }
+}
