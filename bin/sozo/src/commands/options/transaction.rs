@@ -15,7 +15,7 @@ pub struct TransactionOptions {
     pub fee_token: FeeToken,
 
     #[arg(long, value_name = "MULTIPLIER")]
-    #[arg(help = "The multiplier to use for the fee estimate (--eth).")]
+    #[arg(help = "The multiplier to use for the fee estimate (--fee-token eth).")]
     #[arg(long_help = "The multiplier to use for the fee estimate. This value will be used on \
                        the estimated fee which will be used as the max fee for the transaction. \
                        (max_fee = estimated_fee * multiplier)")]
@@ -26,17 +26,21 @@ pub struct TransactionOptions {
     pub fee_estimate_multiplier: Option<f64>,
 
     #[arg(long)]
-    #[arg(help = "Maximum raw value to be used for fees, in Wei (--eth).")]
+    #[arg(help = "Maximum raw value to be used for fees, in Wei (--fee-token eth).")]
     #[arg(conflicts_with = "fee_estimate_multiplier")]
     #[arg(conflicts_with = "gas")]
     #[arg(conflicts_with = "gas_price")]
     #[arg(global = true)]
     pub max_fee_raw: Option<Felt>,
 
-    #[arg(long, help = "Maximum L1 gas amount (--strk).")]
+    #[arg(long, help = "Maximum L1 gas amount (--fee-token strk).")]
+    #[arg(conflicts_with = "max_fee_raw")]
+    #[arg(conflicts_with = "fee_estimate_multiplier")]
     pub gas: Option<u64>,
 
-    #[arg(long, help = "Maximum L1 gas price in STRK (--strk).")]
+    #[arg(long, help = "Maximum L1 gas price in STRK (--fee-token strk).")]
+    #[arg(conflicts_with = "max_fee_raw")]
+    #[arg(conflicts_with = "fee_estimate_multiplier")]
     pub gas_price: Option<u128>,
 
     #[arg(long)]
