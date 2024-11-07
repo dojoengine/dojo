@@ -155,11 +155,9 @@ pub async fn get_world_diff_and_account(
         ui.stop();
     }
 
-    let account = {
-        account
-            .account(provider, world_diff.world_info.address, &starknet, env, &world_diff)
-            .await?
-    };
+    let contracts = (&world_diff).into();
+
+    let account = { account.account(provider, env, &starknet, &contracts).await? };
 
     if let Some(ui) = ui {
         ui.restart("Verifying account...");

@@ -333,19 +333,12 @@ async fn match_event<P: Provider + Send + Sync>(
                 format!("{:#066x}", e.system_address.0)
             };
 
-            let (record, _, _) = model::model_get(
-                tag.clone(),
-                e.keys.clone(),
-                world_diff.world_info.address,
-                provider,
-                block_id,
-            )
-            .await?;
+            // TODO: for events, we need to pull the schema and print the values accordingly.
 
             (
                 format!("Event emitted ({})", tag),
                 format!(
-                    "Selector: {:#066x}\nContract: {}\nKeys: {}\nValues: {}\nData:\n{}",
+                    "Selector: {:#066x}\nContract: {}\nKeys: {}\nValues: {}",
                     e.selector,
                     contract_tag,
                     e.keys
@@ -358,7 +351,6 @@ async fn match_event<P: Provider + Send + Sync>(
                         .map(|v| format!("{:#066x}", v))
                         .collect::<Vec<String>>()
                         .join(", "),
-                    record
                 ),
             )
         }

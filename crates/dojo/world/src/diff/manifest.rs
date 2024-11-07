@@ -140,6 +140,10 @@ impl Manifest {
 
         Self { world, contracts, models, events }
     }
+
+    pub fn get_contract_address(&self, tag: &str) -> Option<Felt> {
+        self.contracts.iter().find_map(|c| if c.tag == tag { Some(c.address) } else { None })
+    }
 }
 
 fn resource_diff_to_dojo_contract(diff: &WorldDiff, resource: &ResourceDiff) -> DojoContract {
@@ -178,6 +182,8 @@ fn resource_diff_to_dojo_contract(diff: &WorldDiff, resource: &ResourceDiff) -> 
 }
 
 fn resource_diff_to_dojo_model(resource: &ResourceDiff) -> DojoModel {
+    let tag = resource.tag();
+
     match &resource {
         ResourceDiff::Created(ResourceLocal::Model(l)) => DojoModel {
             members: l
@@ -186,7 +192,7 @@ fn resource_diff_to_dojo_model(resource: &ResourceDiff) -> DojoModel {
                 .map(|m| Member { name: m.name.clone(), ty: m.ty.clone(), key: m.key })
                 .collect(),
             class_hash: l.common.class_hash,
-            tag: l.common.name.clone(),
+            tag,
             selector: resource.dojo_selector(),
         },
         ResourceDiff::Updated(ResourceLocal::Model(l), _)
@@ -197,7 +203,7 @@ fn resource_diff_to_dojo_model(resource: &ResourceDiff) -> DojoModel {
                 .map(|m| Member { name: m.name.clone(), ty: m.ty.clone(), key: m.key })
                 .collect(),
             class_hash: l.common.class_hash,
-            tag: l.common.name.clone(),
+            tag,
             selector: resource.dojo_selector(),
         },
         _ => unreachable!(),
@@ -205,6 +211,8 @@ fn resource_diff_to_dojo_model(resource: &ResourceDiff) -> DojoModel {
 }
 
 fn resource_diff_to_dojo_event(resource: &ResourceDiff) -> DojoEvent {
+    let tag = resource.tag();
+
     match &resource {
         ResourceDiff::Created(ResourceLocal::Event(l)) => DojoEvent {
             members: l
@@ -213,7 +221,7 @@ fn resource_diff_to_dojo_event(resource: &ResourceDiff) -> DojoEvent {
                 .map(|m| Member { name: m.name.clone(), ty: m.ty.clone(), key: m.key })
                 .collect(),
             class_hash: l.common.class_hash,
-            tag: l.common.name.clone(),
+            tag,
             selector: resource.dojo_selector(),
         },
         ResourceDiff::Updated(ResourceLocal::Event(l), _)
@@ -224,7 +232,7 @@ fn resource_diff_to_dojo_event(resource: &ResourceDiff) -> DojoEvent {
                 .map(|m| Member { name: m.name.clone(), ty: m.ty.clone(), key: m.key })
                 .collect(),
             class_hash: l.common.class_hash,
-            tag: l.common.name.clone(),
+            tag,
             selector: resource.dojo_selector(),
         },
         _ => unreachable!(),

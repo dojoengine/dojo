@@ -2115,13 +2115,13 @@
     {
       "members": [],
       "class_hash": "0x506d770b7301fc791cf3a19705848647524a0e2595a4d38365df917b4d1d246",
-      "tag": "M",
+      "tag": "ns-M",
       "selector": "0x50aac05281bbfaa5393cacacc12e86f59ab7d5f3ee619427dd33a0756526f24"
     },
     {
       "members": [],
       "class_hash": "0x506d770b7301fc791cf3a19705848647524a0e2595a4d38365df917b4d1d246",
-      "tag": "M",
+      "tag": "ns2-M",
       "selector": "0x3b26427a55dd1d51738b0e3e989fe6f25649e1311295f30f0a4fa2db439aa2c"
     }
   ],
@@ -2129,13 +2129,13 @@
     {
       "members": [],
       "class_hash": "0x5c72f78327d896e16f3c9fe7ee5e136ad9fc4cda89fba1ce7e665877d477cd5",
-      "tag": "E",
+      "tag": "ns-E",
       "selector": "0x260e0511a6fa454a7d4ed8bea5fa52fc80fc588e33ba4cb58c65bbeeadf7565"
     },
     {
       "members": [],
       "class_hash": "0x408fc887363634ee0d261cc26606574ce2bc433bedbcef4bb88f8fbc69a1e43",
-      "tag": "EH",
+      "tag": "ns-EH",
       "selector": "0x4c6c7772b19b700cf97d078d02a419670d11d2b689a7a3647eac311b2817ced"
     }
   ]
