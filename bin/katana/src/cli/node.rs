@@ -31,7 +31,7 @@ use katana_node::config::metrics::MetricsConfig;
 use katana_node::config::rpc::{
     ApiKind, RpcConfig, DEFAULT_RPC_ADDR, DEFAULT_RPC_MAX_CONNECTIONS, DEFAULT_RPC_PORT,
 };
-use katana_node::config::{Config, SequencingConfig};
+use katana_node::config::{ConfigBuilder, SequencingConfig};
 use katana_primitives::block::{BlockHashOrNumber, GasPrices};
 use katana_primitives::chain::ChainId;
 use katana_primitives::chain_spec::{self, ChainSpec};
@@ -282,17 +282,17 @@ impl NodeArgs {
     }
 
     fn config(&self) -> Result<katana_node::config::Config> {
-        let db = self.db_config();
-        let rpc = self.rpc_config();
-        let dev = self.dev_config();
-        let chain = self.chain_spec()?;
-        let metrics = self.metrics_config();
-        let forking = self.forking_config()?;
-        let execution = self.execution_config();
-        let sequencing = self.sequencer_config();
-        let messaging = self.messaging.clone();
-
-        Ok(Config { metrics, db, dev, rpc, chain, execution, sequencing, messaging, forking })
+        Ok(ConfigBuilder::new()
+            .metrics(self.metrics_config())
+            .db(self.db_config())
+            .dev(self.dev_config())
+            .rpc(self.rpc_config())
+            .chain(self.chain_spec()?)
+            .execution(self.execution_config())
+            .sequencing(self.sequencer_config())
+            .messaging(self.messaging.clone())
+            .forking(self.forking_config()?)
+            .build())
     }
 
     fn sequencer_config(&self) -> SequencingConfig {
@@ -325,7 +325,7 @@ impl NodeArgs {
         if let Some(genesis) = self.starknet.genesis.clone() {
             chain_spec.genesis = genesis;
         } else {
-            chain_spec.genesis.sequencer_address = *DEFAULT_SEQUENCER_ADDRESS;
+            chain_spec.genesis.sequencer_address = DEFAULT_SEQUENCER_ADDRESS;
         }
 
         // generate dev accounts
@@ -533,7 +533,7 @@ mod test {
         assert_eq!(config.execution.validation_max_steps, DEFAULT_VALIDATION_MAX_STEPS);
         assert_eq!(config.db.dir, None);
         assert_eq!(config.chain.id, ChainId::parse("KATANA").unwrap());
-        assert_eq!(config.chain.genesis.sequencer_address, *DEFAULT_SEQUENCER_ADDRESS);
+        assert_eq!(config.chain.genesis.sequencer_address, DEFAULT_SEQUENCER_ADDRESS);
     }
 
     #[test]
@@ -559,7 +559,7 @@ mod test {
         assert_eq!(config.execution.validation_max_steps, 100);
         assert_eq!(config.db.dir, Some(PathBuf::from("/path/to/db")));
         assert_eq!(config.chain.id, ChainId::GOERLI);
-        assert_eq!(config.chain.genesis.sequencer_address, *DEFAULT_SEQUENCER_ADDRESS);
+        assert_eq!(config.chain.genesis.sequencer_address, DEFAULT_SEQUENCER_ADDRESS);
     }
 
     #[test]

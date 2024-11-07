@@ -113,17 +113,11 @@ impl TestSequencer {
 }
 
 pub fn get_default_test_config(sequencing: SequencingConfig) -> Config {
-    let dev = DevConfig { fee: false, account_validation: true, fixed_gas_prices: None };
-    let mut chain = ChainSpec { id: ChainId::SEPOLIA, ..Default::default() };
-    chain.genesis.sequencer_address = *DEFAULT_SEQUENCER_ADDRESS;
-
-    let rpc = RpcConfig {
-        allowed_origins: None,
-        port: 0,
-        addr: DEFAULT_RPC_ADDR,
-        max_connections: DEFAULT_RPC_MAX_CONNECTIONS,
-        apis: HashSet::from([ApiKind::Starknet, ApiKind::Dev, ApiKind::Saya, ApiKind::Torii]),
-    };
-
-    Config { sequencing, rpc, dev, chain, ..Default::default() }
+    ConfigBuilder::new()
+        .dev_fee(false)
+        .chain_id(ChainId::SEPOLIA)
+        .genesis_sequencer_address(DEFAULT_SEQUENCER_ADDRESS)
+        .rpc_apis(HashSet::from([ApiKind::Starknet, ApiKind::Dev, ApiKind::Saya, ApiKind::Torii]))
+        .sequencing(sequencing)
+        .build()
 }

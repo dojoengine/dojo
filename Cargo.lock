@@ -8138,7 +8138,6 @@ dependencies = [
  "katana-provider",
  "katana-tasks",
  "katana-trie",
- "lazy_static",
  "metrics",
  "num-traits 0.2.19",
  "parking_lot 0.12.3",
