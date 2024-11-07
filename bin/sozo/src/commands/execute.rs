@@ -75,7 +75,7 @@ impl ExecuteArgs {
             self.starknet.url(profile_config.env.as_ref())?,
         );
 
-        let txn_config: TxnConfig = self.transaction.into();
+        let txn_config: TxnConfig = self.transaction.try_into()?;
 
         config.tokio_handle().block_on(async {
             let local_manifest = ws.read_manifest_profile()?;
