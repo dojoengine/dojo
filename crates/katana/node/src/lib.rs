@@ -18,7 +18,7 @@ use hyper::{Method, Uri};
 use jsonrpsee::server::middleware::proxy_get_request::ProxyGetRequestLayer;
 use jsonrpsee::server::{AllowHosts, ServerBuilder, ServerHandle};
 use jsonrpsee::RpcModule;
-use katana_core::backend::gas_oracle::L1GasOracle;
+use katana_core::backend::gas_oracle::{GasOracleWorker, L1GasOracle};
 use katana_core::backend::storage::Blockchain;
 use katana_core::backend::Backend;
 use katana_core::constants::{
@@ -221,7 +221,6 @@ pub async fn build(mut config: Config) -> Result<Node> {
         // Default to a sampled gas oracle using the given provider
         L1GasOracle::sampled(config.l1_provider_url.clone())
     };
-
     let block_context_generator = BlockContextGenerator::default().into();
     let backend = Arc::new(Backend {
         gas_oracle,

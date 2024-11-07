@@ -127,12 +127,14 @@ async fn update_gas_price<P: Provider<T>, T: Transport + Clone>(
 ) -> anyhow::Result<()> {
     // Attempt to get the gas price from L1
     let last_block_number = provider.get_block_number().await?;
+<<<<<<< HEAD
 
+=======
+>>>>>>> 7c83e4d8 (WIP: progress on issue #2558 gas oracle feature on katana)
     let fee_history =
         provider.get_fee_history(1, BlockNumberOrTag::Number(last_block_number), &[]).await?;
 
     let latest_gas_price = fee_history.base_fee_per_gas.last().context("Getting eth gas price")?;
-
     buffer.add_sample(*latest_gas_price);
 
     let blob_fee_history = fee_history.base_fee_per_blob_gas;

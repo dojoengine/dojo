@@ -10,7 +10,7 @@ use clap::Parser;
 use katana_core::constants::DEFAULT_SEQUENCER_ADDRESS;
 use katana_core::service::messaging::MessagingConfig;
 use katana_node::config::db::DbConfig;
-use katana_node::config::dev::{DevConfig, FixedL1GasPriceConfig};
+use katana_node::config::dev::{DevConfig, FixedL1GasPriceConfig, GasPriceWorkerConfig};
 use katana_node::config::execution::ExecutionConfig;
 use katana_node::config::fork::ForkingConfig;
 use katana_node::config::metrics::MetricsConfig;
@@ -277,6 +277,7 @@ impl NodeArgs {
             fixed_gas_prices,
             fee: !self.development.no_fee,
             account_validation: !self.development.no_account_validation,
+            l1_worker: self.gas_price_worker_config(),
         }
     }
 
