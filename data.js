@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1730947404843,
+  "lastUpdate": 1730988333439,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -31459,6 +31459,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8324308,
             "range": "± 201201",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "valentin@pupucecorp.com",
+            "name": "valdo.carbonaboyz.stark",
+            "username": "MartianGreed"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c364d1353684fb64ba3bc05524aa493c9c761c54",
+          "message": "fix: function mappings + object naming (#2651)",
+          "timestamp": "2024-11-07T07:49:34-06:00",
+          "tree_id": "07e1bb35c7f15ebde64ccbc0fa348a9e6e1ddd8d",
+          "url": "https://github.com/dojoengine/dojo/commit/c364d1353684fb64ba3bc05524aa493c9c761c54"
+        },
+        "date": 1730988331682,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10133874707,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
