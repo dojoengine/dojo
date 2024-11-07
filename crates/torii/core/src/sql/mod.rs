@@ -293,7 +293,7 @@ impl Sql {
         let mut model_idx = 0_i64;
         self.build_register_queries_recursive(
             selector,
-            upgrade_diff.as_ref().unwrap_or(&model),
+            model,
             vec![namespaced_name.clone()],
             &mut model_idx,
             block_timestamp,
@@ -834,7 +834,11 @@ impl Sql {
             Ty::Enum(e) => {
                 if e.options.iter().all(
                     |o| {
-                        if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false }
+                        if let Ty::Tuple(t) = &o.ty {
+                            t.is_empty()
+                        } else {
+                            false
+                        }
                     },
                 ) {
                     return Ok(());
