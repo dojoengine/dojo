@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1731018118158,
+  "lastUpdate": 1731018330413,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -31801,6 +31801,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10799972632,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3db62fa7dd3e32a887066e400679ff7716bb952b",
+          "message": "feat: add fee token to `TransactionOption` and `TxnConfig` (#2650)\n\n* feat: add fee token to TransactionOption and TxnConfig\r\n\r\n* fix: fix clap help text\r\n\r\n* fix: remove unused file and switch to single match for fee config\r\n\r\n* fix: add v3 to multicall and display better error for validation error\r\n\r\n* fix: better display of options and update sepolia manifest",
+          "timestamp": "2024-11-07T16:05:35-06:00",
+          "tree_id": "36cd81546175fb3fa21d88ec9069790d51967cb3",
+          "url": "https://github.com/dojoengine/dojo/commit/3db62fa7dd3e32a887066e400679ff7716bb952b"
+        },
+        "date": 1731018329217,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16637908,
+            "range": "± 315639",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8676312,
+            "range": "± 287303",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3764907688,
+            "range": "± 780622264",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8316784,
+            "range": "± 184913",
             "unit": "ns/iter"
           }
         ]
