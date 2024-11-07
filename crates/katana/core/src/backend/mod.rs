@@ -18,6 +18,7 @@ use katana_trie::compute_merkle_root;
 use parking_lot::RwLock;
 use starknet::macros::short_string;
 use starknet_types_core::hash::{self, StarkHash};
+
 use tracing::info;
 
 pub mod contract;
@@ -117,6 +118,7 @@ impl<EF: ExecutorFactory> Backend<EF> {
     pub fn update_block_gas_prices(&self, block_env: &mut BlockEnv) {
         block_env.l1_gas_prices = self.gas_oracle.current_gas_prices();
         block_env.l1_data_gas_prices = self.gas_oracle.current_data_gas_prices();
+
     }
 
     pub fn mine_empty_block(

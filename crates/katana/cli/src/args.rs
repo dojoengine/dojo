@@ -4,12 +4,12 @@ use std::collections::HashSet;
 use std::path::PathBuf;
 
 use alloy_primitives::U256;
-use anyhow::{Context, Result};
+use anyhow::{Context, Ok, Result};
 use clap::Parser;
 use katana_core::constants::DEFAULT_SEQUENCER_ADDRESS;
 use katana_core::service::messaging::MessagingConfig;
 use katana_node::config::db::DbConfig;
-use katana_node::config::dev::{DevConfig, FixedL1GasPriceConfig};
+use katana_node::config::dev::{DevConfig, FixedL1GasPriceConfig, GasPriceWorkerConfig};
 use katana_node::config::execution::ExecutionConfig;
 use katana_node::config::fork::ForkingConfig;
 use katana_node::config::metrics::MetricsConfig;
@@ -22,6 +22,7 @@ use serde::{Deserialize, Serialize};
 use tracing::{info, Subscriber};
 use tracing_log::LogTracer;
 use tracing_subscriber::{fmt, EnvFilter};
+use url::Url;
 
 use crate::file::NodeArgsConfig;
 use crate::options::*;
@@ -67,6 +68,16 @@ pub struct NodeArgs {
     #[arg(value_name = "PATH")]
     #[arg(value_parser = katana_core::service::messaging::MessagingConfig::parse)]
     pub messaging: Option<MessagingConfig>,
+
+    /// Disable sampling, and fall back on hardcoded gas price values.
+    #[arg(long)]
+    #[arg(conflicts_with = "l1_provider_url")]
+    #[arg(help = "Disable L1 gas sampling and use hardcoded values.")]
+    pub no_sampling: bool,
+
+    #[arg(long = "l1.provider", value_name = "URL", alias = "l1-provider")]
+    #[arg(help = "The Ethereum RPC provider to sample the gas prices from.")]
+    pub l1_provider_url: Option<Url>,
 
     #[command(flatten)]
     pub logging: LoggingOptions,
@@ -170,8 +181,20 @@ impl NodeArgs {
         let execution = self.execution_config();
         let sequencing = self.sequencer_config();
         let messaging = self.messaging.clone();
+        let gas_price_worker = self.gas_price_worker_config();
 
-        Ok(Config { metrics, db, dev, rpc, chain, execution, sequencing, messaging, forking })
+        Ok(Config {
+            metrics,
+            db,
+            dev,
+            rpc,
+            chain,
+            execution,
+            sequencing,
+            messaging,
+            forking,
+            gas_price_worker,
+        })
     }
 
     fn sequencer_config(&self) -> SequencingConfig {
@@ -259,6 +282,7 @@ impl NodeArgs {
             fixed_gas_prices,
             fee: !self.development.no_fee,
             account_validation: !self.development.no_account_validation,
+            l1_worker: self.gas_price_worker_config(),
         }
     }
 
@@ -357,6 +381,13 @@ impl NodeArgs {
         }
 
         Ok(self)
+    }
+
+    fn gas_price_worker_config(&self) -> Option<GasPriceWorkerConfig> {
+        self.l1_provider_url.clone().map(|url| GasPriceWorkerConfig {
+            l1_provider_url: Some(url),
+            no_sampling: self.no_sampling,
+        })
     }
 }
 

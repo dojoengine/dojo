@@ -6,7 +6,7 @@ pub mod metrics;
 pub mod rpc;
 
 use db::DbConfig;
-use dev::DevConfig;
+use dev::{DevConfig, GasPriceWorkerConfig};
 use execution::ExecutionConfig;
 use fork::ForkingConfig;
 use katana_core::service::messaging::MessagingConfig;
@@ -45,6 +45,9 @@ pub struct Config {
 
     /// Development options.
     pub dev: DevConfig,
+
+    /// Gas L1 sampling options.
+    pub gas_price_worker: Option<GasPriceWorkerConfig>,
 }
 
 /// Configurations related to block production.
