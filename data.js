@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1730925342375,
+  "lastUpdate": 1730947200392,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -31381,6 +31381,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8350732,
             "range": "± 367485",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "86365fdaa0a6e0b5cd4a3bfb89502df56e8191df",
+          "message": "fix: use sozo manifest when possible to avoid recomputing diff (#2649)\n\n* fix: ensure the local manifest is used when possible\r\n\r\n* fix: add missing tag for the models and events\r\n\r\n* fix: regenerate db with new migration spawn and move\r\n\r\n* tests: add missing tests",
+          "timestamp": "2024-11-06T20:23:59-06:00",
+          "tree_id": "c16a7847dd26e3452b7eaa0164978f0d5b1fe45c",
+          "url": "https://github.com/dojoengine/dojo/commit/86365fdaa0a6e0b5cd4a3bfb89502df56e8191df"
+        },
+        "date": 1730947199261,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10411907590,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
