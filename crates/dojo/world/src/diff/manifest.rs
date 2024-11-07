@@ -182,6 +182,8 @@ fn resource_diff_to_dojo_contract(diff: &WorldDiff, resource: &ResourceDiff) -> 
 }
 
 fn resource_diff_to_dojo_model(resource: &ResourceDiff) -> DojoModel {
+    let tag = resource.tag();
+
     match &resource {
         ResourceDiff::Created(ResourceLocal::Model(l)) => DojoModel {
             members: l
@@ -190,7 +192,7 @@ fn resource_diff_to_dojo_model(resource: &ResourceDiff) -> DojoModel {
                 .map(|m| Member { name: m.name.clone(), ty: m.ty.clone(), key: m.key })
                 .collect(),
             class_hash: l.common.class_hash,
-            tag: l.common.name.clone(),
+            tag,
             selector: resource.dojo_selector(),
         },
         ResourceDiff::Updated(ResourceLocal::Model(l), _)
@@ -201,7 +203,7 @@ fn resource_diff_to_dojo_model(resource: &ResourceDiff) -> DojoModel {
                 .map(|m| Member { name: m.name.clone(), ty: m.ty.clone(), key: m.key })
                 .collect(),
             class_hash: l.common.class_hash,
-            tag: l.common.name.clone(),
+            tag,
             selector: resource.dojo_selector(),
         },
         _ => unreachable!(),
@@ -209,6 +211,8 @@ fn resource_diff_to_dojo_model(resource: &ResourceDiff) -> DojoModel {
 }
 
 fn resource_diff_to_dojo_event(resource: &ResourceDiff) -> DojoEvent {
+    let tag = resource.tag();
+
     match &resource {
         ResourceDiff::Created(ResourceLocal::Event(l)) => DojoEvent {
             members: l
@@ -217,7 +221,7 @@ fn resource_diff_to_dojo_event(resource: &ResourceDiff) -> DojoEvent {
                 .map(|m| Member { name: m.name.clone(), ty: m.ty.clone(), key: m.key })
                 .collect(),
             class_hash: l.common.class_hash,
-            tag: l.common.name.clone(),
+            tag,
             selector: resource.dojo_selector(),
         },
         ResourceDiff::Updated(ResourceLocal::Event(l), _)
@@ -228,7 +232,7 @@ fn resource_diff_to_dojo_event(resource: &ResourceDiff) -> DojoEvent {
                 .map(|m| Member { name: m.name.clone(), ty: m.ty.clone(), key: m.key })
                 .collect(),
             class_hash: l.common.class_hash,
-            tag: l.common.name.clone(),
+            tag,
             selector: resource.dojo_selector(),
         },
         _ => unreachable!(),
