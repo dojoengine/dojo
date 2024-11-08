@@ -31,7 +31,7 @@ use katana_node::config::rpc::{
     ApiKind, RpcConfig, DEFAULT_RPC_ADDR, DEFAULT_RPC_MAX_CONNECTIONS, DEFAULT_RPC_PORT,
 };
 use katana_node::config::{Config, SequencingConfig};
-use katana_primitives::block::{BlockHashOrNumber, GasPrices};
+use katana_primitives::block::BlockHashOrNumber;
 use katana_primitives::chain::ChainId;
 use katana_primitives::chain_spec::{self, ChainSpec};
 use katana_primitives::class::ClassHash;
@@ -250,22 +250,18 @@ pub struct LoggingOptions {
 #[command(next_help_heading = "Gas Price Oracle Options")]
 pub struct GasPriceOracleOptions {
     /// The L1 ETH gas price. (denominated in wei)
-    #[arg(requires_all = ["l1_strk_gas_price"])]
     #[arg(long = "gpo.l1-eth-gas-price", value_name = "WEI")]
     pub l1_eth_gas_price: Option<u128>,
 
     /// The L1 STRK gas price. (denominated in fri)
-    #[arg(requires_all = ["l1_eth_data_gas_price"])]
     #[arg(long = "gpo.l1-strk-gas-price", value_name = "FRI")]
     pub l1_strk_gas_price: Option<u128>,
 
     /// The L1 ETH data gas price. (denominated in wei)
-    #[arg(requires_all = ["l1_strk_data_gas_price"])]
     #[arg(long = "gpo.l1-eth-data-gas-price", value_name = "WEI")]
     pub l1_eth_data_gas_price: Option<u128>,
 
     /// The L1 STRK data gas price. (denominated in fri)
-    #[arg(requires_all = ["l1_eth_gas_price"])]
     #[arg(long = "gpo.l1-strk-data-gas-price", value_name = "FRI")]
     pub l1_strk_data_gas_price: Option<u128>,
 }
@@ -409,22 +405,27 @@ impl NodeArgs {
     }
 
     fn dev_config(&self) -> DevConfig {
-        let fixed_gas_prices = if self.gpo.l1_eth_gas_price.is_some() {
-            // It is safe to unwrap all of these here because the CLI parser ensures if one is set,
-            // all must be set.
+        let mut fixed_gas_prices = None;
 
-            let eth_gas_price = self.gpo.l1_eth_gas_price.unwrap();
-            let strk_gas_price = self.gpo.l1_strk_gas_price.unwrap();
-            let eth_data_gas_price = self.gpo.l1_eth_data_gas_price.unwrap();
-            let strk_data_gas_price = self.gpo.l1_strk_data_gas_price.unwrap();
+        if let Some(price) = self.gpo.l1_eth_gas_price {
+            let prices = fixed_gas_prices.get_or_insert(FixedL1GasPriceConfig::default());
+            prices.gas_price.eth = price;
+        }
 
-            let gas_price = GasPrices { eth: eth_gas_price, strk: strk_gas_price };
-            let data_gas_price = GasPrices { eth: eth_data_gas_price, strk: strk_data_gas_price };
+        if let Some(price) = self.gpo.l1_strk_gas_price {
+            let prices = fixed_gas_prices.get_or_insert(FixedL1GasPriceConfig::default());
+            prices.gas_price.strk = price;
+        }
 
-            Some(FixedL1GasPriceConfig { gas_price, data_gas_price })
-        } else {
-            None
-        };
+        if let Some(price) = self.gpo.l1_eth_data_gas_price {
+            let prices = fixed_gas_prices.get_or_insert(FixedL1GasPriceConfig::default());
+            prices.data_gas_price.eth = price;
+        }
+
+        if let Some(price) = self.gpo.l1_strk_data_gas_price {
+            let prices = fixed_gas_prices.get_or_insert(FixedL1GasPriceConfig::default());
+            prices.data_gas_price.strk = price;
+        }
 
         DevConfig {
             fixed_gas_prices,
@@ -586,6 +587,10 @@ PREFUNDED ACCOUNTS
 #[cfg(test)]
 mod test {
     use assert_matches::assert_matches;
+    use katana_core::constants::{
+        DEFAULT_ETH_L1_DATA_GAS_PRICE, DEFAULT_ETH_L1_GAS_PRICE, DEFAULT_STRK_L1_DATA_GAS_PRICE,
+        DEFAULT_STRK_L1_GAS_PRICE,
+    };
     use katana_primitives::{address, felt};
 
     use super::*;
@@ -634,19 +639,66 @@ mod test {
 
     #[test]
     fn custom_fixed_gas_prices() {
-        let args = NodeArgs::parse_from([
+        let config = NodeArgs::parse_from(["katana"]).config().unwrap();
+        assert!(config.dev.fixed_gas_prices.is_none());
+
+        let config =
+            NodeArgs::parse_from(["katana", "--gpo.l1-eth-gas-price", "10"]).config().unwrap();
+        assert_matches!(config.dev.fixed_gas_prices, Some(prices) => {
+            assert_eq!(prices.gas_price.eth, 10);
+            assert_eq!(prices.gas_price.strk, DEFAULT_STRK_L1_GAS_PRICE);
+            assert_eq!(prices.data_gas_price.eth, DEFAULT_ETH_L1_DATA_GAS_PRICE);
+            assert_eq!(prices.data_gas_price.strk, DEFAULT_STRK_L1_DATA_GAS_PRICE);
+        });
+
+        let config =
+            NodeArgs::parse_from(["katana", "--gpo.l1-strk-gas-price", "20"]).config().unwrap();
+        assert_matches!(config.dev.fixed_gas_prices, Some(prices) => {
+            assert_eq!(prices.gas_price.eth, DEFAULT_ETH_L1_GAS_PRICE);
+            assert_eq!(prices.gas_price.strk, 20);
+            assert_eq!(prices.data_gas_price.eth, DEFAULT_ETH_L1_DATA_GAS_PRICE);
+            assert_eq!(prices.data_gas_price.strk, DEFAULT_STRK_L1_DATA_GAS_PRICE);
+        });
+
+        let config =
+            NodeArgs::parse_from(["katana", "--gpo.l1-eth-data-gas-price", "1"]).config().unwrap();
+        assert_matches!(config.dev.fixed_gas_prices, Some(prices) => {
+            assert_eq!(prices.gas_price.eth, DEFAULT_ETH_L1_GAS_PRICE);
+            assert_eq!(prices.gas_price.strk, DEFAULT_STRK_L1_GAS_PRICE);
+            assert_eq!(prices.data_gas_price.eth, 1);
+            assert_eq!(prices.data_gas_price.strk, DEFAULT_STRK_L1_DATA_GAS_PRICE);
+        });
+
+        let config =
+            NodeArgs::parse_from(["katana", "--gpo.l1-strk-data-gas-price", "2"]).config().unwrap();
+        assert_matches!(config.dev.fixed_gas_prices, Some(prices) => {
+            assert_eq!(prices.gas_price.eth, DEFAULT_ETH_L1_GAS_PRICE);
+            assert_eq!(prices.gas_price.strk, DEFAULT_STRK_L1_GAS_PRICE);
+            assert_eq!(prices.data_gas_price.eth, DEFAULT_ETH_L1_DATA_GAS_PRICE);
+            assert_eq!(prices.data_gas_price.strk, 2);
+        });
+
+        let config = NodeArgs::parse_from([
             "katana",
-            "--dev",
-            "--dev.no-fee",
-            "--dev.no-account-validation",
-            "--chain-id",
-            "SN_GOERLI",
-            "--invoke-max-steps",
-            "200",
-            "--validate-max-steps",
-            "100",
-            "--db-dir",
-            "/path/to/db",
+            "--gpo.l1-eth-gas-price",
+            "10",
+            "--gpo.l1-strk-data-gas-price",
+            "2",
+        ])
+        .config()
+        .unwrap();
+
+        assert_matches!(config.dev.fixed_gas_prices, Some(prices) => {
+            assert_eq!(prices.gas_price.eth, 10);
+            assert_eq!(prices.gas_price.strk, DEFAULT_STRK_L1_GAS_PRICE);
+            assert_eq!(prices.data_gas_price.eth, DEFAULT_ETH_L1_DATA_GAS_PRICE);
+            assert_eq!(prices.data_gas_price.strk, 2);
+        });
+
+        // Set all the gas prices options
+
+        let config = NodeArgs::parse_from([
+            "katana",
             "--gpo.l1-eth-gas-price",
             "10",
             "--gpo.l1-strk-gas-price",
@@ -655,15 +707,10 @@ mod test {
             "1",
             "--gpo.l1-strk-data-gas-price",
             "2",
-        ]);
-        let config = args.config().unwrap();
+        ])
+        .config()
+        .unwrap();
 
-        assert!(!config.dev.fee);
-        assert!(!config.dev.account_validation);
-        assert_eq!(config.execution.invocation_max_steps, 200);
-        assert_eq!(config.execution.validation_max_steps, 100);
-        assert_eq!(config.db.dir, Some(PathBuf::from("/path/to/db")));
-        assert_eq!(config.chain.id, ChainId::GOERLI);
         assert_matches!(config.dev.fixed_gas_prices, Some(prices) => {
             assert_eq!(prices.gas_price.eth, 10);
             assert_eq!(prices.gas_price.strk, 20);
