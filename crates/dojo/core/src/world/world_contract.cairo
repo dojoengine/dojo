@@ -336,7 +336,7 @@ pub mod world {
 
             let mut keys = [resource_selector].span();
 
-            match Model::<ResourceMetadata>::from_serialized(ref keys, ref values) {
+            match Model::<ResourceMetadata>::from_serialized(keys, values) {
                 Option::Some(x) => x,
                 Option::None => panic!("Model `ResourceMetadata`: deserialization failed.")
             }

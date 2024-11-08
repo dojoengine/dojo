@@ -62,7 +62,7 @@ fn test_values() {
 fn test_from_values() {
     let mut values = [3, 4].span();
 
-    let model_values: Option<FooValue> = ModelValue::<FooValue>::from_serialized(1, ref values);
+    let model_values: Option<FooValue> = ModelValue::<FooValue>::from_serialized(values);
     assert!(model_values.is_some());
     let model_values = model_values.unwrap();
     assert!(model_values.v1 == 3 && model_values.v2 == 4);
@@ -71,7 +71,7 @@ fn test_from_values() {
 #[test]
 fn test_from_values_bad_data() {
     let mut values = [3].span();
-    let res: Option<FooValue> = ModelValue::<FooValue>::from_serialized(1, ref values);
+    let res: Option<FooValue> = ModelValue::<FooValue>::from_serialized(values);
     assert!(res.is_none());
 }
 

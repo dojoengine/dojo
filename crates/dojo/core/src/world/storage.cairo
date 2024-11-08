@@ -259,25 +259,15 @@ impl ModelValueStorageWorldStorageImpl<
         for id in entity_ids {
             indexes.append(ModelIndex::Id(*id));
         };
-
-        let mut all_values = IWorldDispatcherTrait::entities(
+        let mut values = array![];
+        for v in IWorldDispatcherTrait::entities(
             *self.dispatcher,
             ModelValue::<V>::selector(*self.namespace_hash),
             indexes.span(),
             ModelValue::<V>::layout()
-        );
-
-        let mut values: Array<V> = array![];
-        let mut i = 0;
-        loop {
-            if i >= indexes.len() {
-                break;
-            }
-
-            let entity_id = *entity_ids[i];
-            let mut v = *all_values[i];
-
-            match ModelValue::<V>::from_serialized(entity_id, ref v) {
+        ) {
+            let mut v = *v;
+            match ModelValue::<V>::from_serialized(v) {
                 Option::Some(value) => values.append(value),
                 Option::None => {
                     panic!(
@@ -285,10 +275,7 @@ impl ModelValueStorageWorldStorageImpl<
                     )
                 }
             }
-
-            i += 1;
         };
-
         values
     }
 
