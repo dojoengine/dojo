@@ -19,19 +19,19 @@ use super::options::transaction::TransactionOptions;
 use super::options::world::WorldOptions;
 use crate::utils;
 
-#[derive(Debug, Args)]
+#[derive(Debug, Clone, Args)]
 pub struct MigrateArgs {
     #[command(flatten)]
-    transaction: TransactionOptions,
+    pub transaction: TransactionOptions,
 
     #[command(flatten)]
-    world: WorldOptions,
+    pub world: WorldOptions,
 
     #[command(flatten)]
-    starknet: StarknetOptions,
+    pub starknet: StarknetOptions,
 
     #[command(flatten)]
-    account: AccountOptions,
+    pub account: AccountOptions,
 }
 
 impl MigrateArgs {
