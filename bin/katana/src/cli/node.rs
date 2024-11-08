@@ -73,15 +73,6 @@ pub struct NodeArgs {
     #[arg(value_name = "PATH")]
     pub db_dir: Option<PathBuf>,
 
-    /// The L1 provider RPC URL.
-    ///
-    /// Right now this is optional, required only when `--fork.block` is specified. This will be
-    /// used later once we make instantiating Katana from valid L1 state, a requirement. This will
-    /// also be used as the L1 provider in the messaging configuration. Setting this option without
-    /// `--fork.block` is a no-op.
-    #[arg(long = "l1.provider", value_name = "URL")]
-    pub l1_provider: Option<Url>,
-
     /// Configure the messaging with an other chain.
     ///
     /// Configure the messaging to allow Katana listening/sending messages on a
@@ -233,12 +224,16 @@ pub struct DevOptions {
 #[command(next_help_heading = "Forking options")]
 pub struct ForkingOptions {
     /// Run in forking mode.
-    #[arg(long, requires = "l1_provider")]
+    #[arg(long, requires = "fork_provider")]
     pub fork: bool,
+
+    /// The RPC URL of the network to fork from.
+    #[arg(long = "fork.provider", value_name = "URL", requires = "fork")]
+    pub fork_provider: Option<Url>,
 
     /// Fork the network at a specific block id, can either be a hash (0x-prefixed) or a block
     /// number.
-    #[arg(long = "fork.block", value_name = "BLOCK", requires_all = ["fork", "l1_provider"])]
+    #[arg(long = "fork.block", value_name = "BLOCK", requires = "fork")]
     #[arg(value_parser = parse_block_hash_or_number)]
     pub fork_block: Option<BlockHashOrNumber>,
 }
@@ -457,9 +452,7 @@ impl NodeArgs {
 
     fn forking_config(&self) -> Result<Option<ForkingConfig>> {
         if self.forking.fork {
-            // L1 provider is optional for now. See comments on the `l1_provider` field above for
-            // more context.
-            let url = self.l1_provider.as_ref().expect("should be required by cli");
+            let url = self.forking.fork_provider.as_ref().expect("should be required by cli");
             let cfg = ForkingConfig { url: url.clone(), block: self.forking.fork_block };
             return Ok(Some(cfg));
         }
