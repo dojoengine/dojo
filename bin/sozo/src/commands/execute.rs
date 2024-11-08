@@ -1,10 +1,7 @@
-use std::collections::HashMap;
-
 use anyhow::{anyhow, Result};
 use clap::Args;
 use dojo_utils::{Invoker, TxnConfig};
 use dojo_world::config::calldata_decoder;
-use dojo_world::contracts::ContractInfo;
 use scarb::core::Config;
 use sozo_ops::resource_descriptor::ResourceDescriptor;
 use sozo_scarbext::WorkspaceExt;

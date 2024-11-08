@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::io::{self, Write};
 use std::str::FromStr;
 
 use anyhow::{anyhow, Context, Result};
@@ -208,6 +209,7 @@ fn is_compatible_version(provided_version: &str, expected_version: &str) -> Resu
 }
 
 /// Returns the contracts from the manifest or from the diff.
+#[allow(clippy::unnecessary_unwrap)]
 pub async fn contracts_from_manifest_or_diff(
     account: AccountOptions,
     starknet: StarknetOptions,
@@ -227,6 +229,17 @@ pub async fn contracts_from_manifest_or_diff(
     };
 
     Ok(contracts)
+}
+
+/// Prompts the user to confirm an operation.
+pub fn prompt_confirm(prompt: &str) -> Result<bool> {
+    print!("{} [y/N]", prompt);
+    io::stdout().flush()?;
+
+    let mut input = String::new();
+    io::stdin().read_line(&mut input)?;
+
+    Ok(input.trim().to_lowercase() == "y")
 }
 
 #[cfg(test)]

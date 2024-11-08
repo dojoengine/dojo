@@ -1,24 +1,20 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 
 use anyhow::{anyhow, Result};
 use cainome::cairo_serde::ContractAddress;
 use clap::{Args, Subcommand};
 use colored::Colorize;
-use dojo_utils::{Invoker, TxnConfig};
-use dojo_world::config::{calldata_decoder, ProfileConfig};
+use dojo_utils::Invoker;
+use dojo_world::config::ProfileConfig;
 use dojo_world::contracts::{ContractInfo, WorldContract};
-use dojo_world::diff::DiffPermissions;
+use dojo_world::diff::{DiffPermissions, WorldDiff};
 use scarb::core::{Config, Workspace};
 use sozo_ops::migration_ui::MigrationUi;
-use sozo_ops::resource_descriptor::ResourceDescriptor;
 use sozo_scarbext::WorkspaceExt;
-use sozo_walnut::WalnutDebugger;
-use starknet::accounts::ConnectedAccount;
-use starknet::core::types::{Call, Felt};
-use starknet::core::utils as snutils;
+use starknet::core::types::Felt;
 use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::{JsonRpcClient, Provider};
+use starknet::providers::JsonRpcClient;
 use tracing::trace;
 
 use super::options::account::{AccountOptions, SozoAccount};
@@ -68,6 +64,24 @@ pub enum AuthCommand {
 
         #[command(flatten)]
         world: WorldOptions,
+    },
+    #[command(about = "Clone all permissions that one contract has to another.")]
+    Clone {
+        #[arg(help = "The tag or address of the source contract to clone the permissions from.")]
+        source: String,
+
+        #[arg(help = "The tag or address of the target contract to clone the permissions to.")]
+        target: String,
+
+        #[arg(
+            long,
+            help = "Revoke the permissions from the source contract after cloning them to the \
+                    target contract."
+        )]
+        revoke_source: bool,
+
+        #[command(flatten)]
+        common: CommonAuthOptions,
     },
 }
 
@@ -140,28 +154,12 @@ impl AuthArgs {
 
                     match kind {
                         AuthKind::Writer { pairs } => {
-                            let is_writer = true;
-                            update_permissions(
-                                &contracts,
-                                &common,
-                                &profile_config,
-                                pairs,
-                                is_writer,
-                                do_grant,
-                            )
-                            .await?;
+                            update_writers(&contracts, &common, &profile_config, pairs, do_grant)
+                                .await?;
                         }
                         AuthKind::Owner { pairs } => {
-                            let is_writer = false;
-                            update_permissions(
-                                &contracts,
-                                &common,
-                                &profile_config,
-                                pairs,
-                                is_writer,
-                                do_grant,
-                            )
-                            .await?;
+                            update_owners(&contracts, &common, &profile_config, pairs, do_grant)
+                                .await?;
                         }
                     }
                 }
@@ -179,38 +177,162 @@ impl AuthArgs {
 
                     match kind {
                         AuthKind::Writer { pairs } => {
-                            let is_writer = true;
-                            update_permissions(
-                                &contracts,
-                                &common,
-                                &profile_config,
-                                pairs,
-                                is_writer,
-                                do_grant,
-                            )
-                            .await?;
+                            update_writers(&contracts, &common, &profile_config, pairs, do_grant)
+                                .await?;
                         }
                         AuthKind::Owner { pairs } => {
-                            let is_writer = false;
-                            update_permissions(
-                                &contracts,
-                                &common,
-                                &profile_config,
-                                pairs,
-                                is_writer,
-                                do_grant,
-                            )
-                            .await?;
+                            update_owners(&contracts, &common, &profile_config, pairs, do_grant)
+                                .await?;
                         }
                     }
                 }
                 AuthCommand::List { resource, show_address, starknet, world } => {
                     list_permissions(resource, show_address, starknet, world, &ws).await?;
                 }
+                AuthCommand::Clone { revoke_source, common, source, target } => {
+                    if source == target {
+                        anyhow::bail!(
+                            "Source and target are the same, please specify different source and \
+                             target."
+                        );
+                    }
+
+                    clone_permissions(common, &ws, revoke_source, source, target).await?;
+                }
             };
 
             Ok(())
         })
+    }
+}
+
+/// Clones the permissions from the source contract address to the target contract address.
+async fn clone_permissions(
+    options: CommonAuthOptions,
+    ws: &Workspace<'_>,
+    revoke_source: bool,
+    source_tag_or_address: String,
+    target_tag_or_address: String,
+) -> Result<()> {
+    let mut migration_ui = MigrationUi::new_with_frames(
+        "Gathering permissions from the world...",
+        vec!["🌍", "🔍", "📜"],
+    );
+
+    let (world_diff, account, _) = utils::get_world_diff_and_account(
+        options.account,
+        options.starknet,
+        options.world,
+        ws,
+        &mut None,
+    )
+    .await?;
+
+    let source_address = resolve_address_or_tag(&source_tag_or_address, &world_diff)?;
+    let target_address = resolve_address_or_tag(&target_tag_or_address, &world_diff)?;
+
+    let mut writer_of = HashSet::new();
+    let mut owner_of = HashSet::new();
+
+    for (selector, resource) in world_diff.resources.iter() {
+        let writers = world_diff.get_writers(*selector);
+        let owners = world_diff.get_owners(*selector);
+
+        if writers.is_empty() && owners.is_empty() {
+            continue;
+        }
+
+        // We need to check remote only resources if we want to be exhaustive.
+        // But in this version, only synced permissions are supported.
+
+        if writers.synced().iter().any(|w| w.address == source_address) {
+            writer_of.insert(resource.tag().clone());
+        }
+
+        if owners.synced().iter().any(|o| o.address == source_address) {
+            owner_of.insert(resource.tag().clone());
+        }
+    }
+
+    if writer_of.is_empty() && owner_of.is_empty() {
+        migration_ui.stop();
+
+        println!("No permissions to clone.");
+        return Ok(());
+    }
+
+    migration_ui.stop();
+
+    let writers_resource_selectors = writer_of
+        .iter()
+        .map(|r| dojo_types::naming::compute_selector_from_tag_or_name(r))
+        .collect::<Vec<_>>();
+    let owners_resource_selectors = owner_of
+        .iter()
+        .map(|r| dojo_types::naming::compute_selector_from_tag_or_name(r))
+        .collect::<Vec<_>>();
+
+    let writers_of_tags = writer_of.into_iter().collect::<Vec<_>>().join(", ");
+    let owners_of_tags = owner_of.into_iter().collect::<Vec<_>>().join(", ");
+
+    println!(
+        "Confirm the following permissions to be cloned from {} to {}\n    writers: {}\n    \
+         owners: {}",
+        source_tag_or_address.bright_blue(),
+        target_tag_or_address.bright_blue(),
+        writers_of_tags.bright_green(),
+        owners_of_tags.bright_yellow(),
+    );
+
+    let confirm = utils::prompt_confirm("Continue?")?;
+    if !confirm {
+        return Ok(());
+    }
+
+    let world = WorldContract::new(world_diff.world_info.address, &account);
+    let mut invoker = Invoker::new(&account, options.transaction.clone().try_into()?);
+
+    for w in writers_resource_selectors.iter() {
+        invoker.add_call(world.grant_writer_getcall(w, &ContractAddress(target_address)));
+    }
+
+    for o in owners_resource_selectors.iter() {
+        invoker.add_call(world.grant_owner_getcall(o, &ContractAddress(target_address)));
+    }
+
+    if revoke_source {
+        println!(
+            "{}",
+            format!("\n!Permissions from {} will be revoked!", source_tag_or_address).bright_red()
+        );
+        if !utils::prompt_confirm("Continue?")? {
+            return Ok(());
+        }
+
+        for w in writers_resource_selectors.iter() {
+            invoker.add_call(world.revoke_writer_getcall(w, &ContractAddress(source_address)));
+        }
+
+        for o in owners_resource_selectors.iter() {
+            invoker.add_call(world.revoke_owner_getcall(o, &ContractAddress(source_address)));
+        }
+    }
+
+    let res = invoker.multicall().await?;
+    println!("{}", res);
+
+    Ok(())
+}
+
+/// Resolves the address or tag to an address.
+fn resolve_address_or_tag(address_or_tag: &str, world_diff: &WorldDiff) -> Result<Felt> {
+    if address_or_tag.starts_with("0x") {
+        Felt::from_str(address_or_tag)
+            .map_err(|_| anyhow!("Invalid contract address: {}", address_or_tag))
+    } else {
+        world_diff
+            .get_contract_address_from_tag(address_or_tag)
+            .ok_or_else(|| anyhow!("Contract {} not found.", address_or_tag))
     }
 }
 
@@ -344,41 +466,24 @@ fn print_diff_permissions(diff: &DiffPermissions, show_address: bool) {
     }
 }
 
-/// Updates the permissions of a resource for a contract.
-async fn update_permissions(
+/// Updates the owners permissions.
+async fn update_owners(
     contracts: &HashMap<String, ContractInfo>,
     options: &CommonAuthOptions,
     profile_config: &ProfileConfig,
     pairs: Vec<PermissionPair>,
-    is_writer: bool,
     do_grant: bool,
 ) -> Result<()> {
     let selectors_addresses = pairs
         .iter()
-        .map(|p| p.to_selector_and_address(&contracts))
+        .map(|p| p.to_selector_and_address(contracts))
         .collect::<Result<Vec<(Felt, Felt)>>>()?;
 
     let world = get_world_contract(contracts, options, profile_config).await?;
 
     let mut invoker = Invoker::new(&world.account, options.transaction.clone().try_into()?);
     for (selector, address) in selectors_addresses {
-        let call = if is_writer {
-            if do_grant {
-                trace!(
-                    selector = format!("{:#066x}", selector),
-                    address = format!("{:#066x}", address),
-                    "Grant writer call."
-                );
-                world.grant_writer_getcall(&selector, &ContractAddress(address))
-            } else {
-                trace!(
-                    selector = format!("{:#066x}", selector),
-                    address = format!("{:#066x}", address),
-                    "Revoke writer call."
-                );
-                world.revoke_writer_getcall(&selector, &ContractAddress(address))
-            }
-        } else if do_grant {
+        let call = if do_grant {
             trace!(
                 selector = format!("{:#066x}", selector),
                 address = format!("{:#066x}", address),
@@ -392,6 +497,48 @@ async fn update_permissions(
                 "Revoke owner call."
             );
             world.revoke_owner_getcall(&selector, &ContractAddress(address))
+        };
+
+        invoker.add_call(call);
+    }
+
+    let res = invoker.multicall().await?;
+    println!("{}", res);
+
+    Ok(())
+}
+
+/// Updates the writers permissions.
+async fn update_writers(
+    contracts: &HashMap<String, ContractInfo>,
+    options: &CommonAuthOptions,
+    profile_config: &ProfileConfig,
+    pairs: Vec<PermissionPair>,
+    do_grant: bool,
+) -> Result<()> {
+    let selectors_addresses = pairs
+        .iter()
+        .map(|p| p.to_selector_and_address(contracts))
+        .collect::<Result<Vec<(Felt, Felt)>>>()?;
+
+    let world = get_world_contract(contracts, options, profile_config).await?;
+
+    let mut invoker = Invoker::new(&world.account, options.transaction.clone().try_into()?);
+    for (selector, address) in selectors_addresses {
+        let call = if do_grant {
+            trace!(
+                selector = format!("{:#066x}", selector),
+                address = format!("{:#066x}", address),
+                "Grant writer call."
+            );
+            world.grant_writer_getcall(&selector, &ContractAddress(address))
+        } else {
+            trace!(
+                selector = format!("{:#066x}", selector),
+                address = format!("{:#066x}", address),
+                "Revoke writer call."
+            );
+            world.revoke_writer_getcall(&selector, &ContractAddress(address))
         };
 
         invoker.add_call(call);
