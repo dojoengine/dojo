@@ -181,6 +181,7 @@ impl<'a> BlockExecutor<'a> for StarknetVMProcessor<'a> {
             };
 
             let tx = TxWithHash::from(&exec_tx);
+            let hash = tx.hash;
             let res = utils::transact(&mut state.inner, block_context, flags, exec_tx);
 
             match &res {
@@ -190,7 +191,7 @@ impl<'a> BlockExecutor<'a> for StarknetVMProcessor<'a> {
                         receipt.resources_used().vm_resources.n_steps as u128;
 
                     if let Some(reason) = receipt.revert_reason() {
-                        info!(target: LOG_TARGET, %reason, "Transaction reverted.");
+                        info!(target: LOG_TARGET, hash = format!("{hash:#x}"), %reason, "Transaction reverted.");
                     }
 
                     if let Some((class_hash, compiled, sierra)) = class_decl_artifacts {
@@ -201,7 +202,7 @@ impl<'a> BlockExecutor<'a> for StarknetVMProcessor<'a> {
                 }
 
                 ExecutionResult::Failed { error } => {
-                    info!(target: LOG_TARGET, %error, "Executing transaction.");
+                    info!(target: LOG_TARGET, hash = format!("{hash:#x}"), %error, "Executing transaction.");
                 }
             };
 

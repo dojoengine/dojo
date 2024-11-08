@@ -10,6 +10,7 @@ slot = { workspace = true, optional = true }
 
 anyhow.workspace = true
 async-trait.workspace = true
+cainome.workspace = true
 cairo-lang-compiler.workspace = true
 cairo-lang-filesystem.workspace = true
 cairo-lang-project.workspace = true
