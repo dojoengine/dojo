@@ -144,6 +144,7 @@ struct Args {
 
     /// Configuration file
     #[arg(long)]
+    #[clap_config(skip)]
     config: Option<PathBuf>,
 }
 
