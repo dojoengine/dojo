@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1731103198333,
+  "lastUpdate": 1731103396367,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -32191,6 +32191,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10277702740,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "158306087+bengineer42@users.noreply.github.com",
+            "name": "Benjamin",
+            "username": "bengineer42"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8ed5e7210bda933a554763fb279878ee4f12881a",
+          "message": "refactor(lang): update convention for keys and values naming  (#2660)\n\n* Updated functions to clear up naming with serialized\n\n* Removed some redundecies in the code\n\n* Removed some redundecies in the code\n\n* updated benchmarks\n\n* chore: bump scarb\n\n* fix: rebuild test database\n\n---------\n\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-11-08T15:43:57-06:00",
+          "tree_id": "1434ab03c5a6648214e0cbf0737b99c3395f6345",
+          "url": "https://github.com/dojoengine/dojo/commit/8ed5e7210bda933a554763fb279878ee4f12881a"
+        },
+        "date": 1731103395092,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16439481,
+            "range": "± 229191",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8517360,
+            "range": "± 178477",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3318513414,
+            "range": "± 825004078",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8288425,
+            "range": "± 101681",
             "unit": "ns/iter"
           }
         ]
