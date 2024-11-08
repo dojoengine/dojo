@@ -23,12 +23,12 @@ use katana_core::service::messaging::MessagingConfig;
 use katana_node::config::db::DbConfig;
 use katana_node::config::dev::{DevConfig, FixedL1GasPriceConfig};
 use katana_node::config::execution::{
-    DEFAULT_INVOCATION_MAX_STEPS, DEFAULT_VALIDATION_MAX_STEPS, ExecutionConfig,
+    ExecutionConfig, DEFAULT_INVOCATION_MAX_STEPS, DEFAULT_VALIDATION_MAX_STEPS,
 };
 use katana_node::config::fork::ForkingConfig;
-use katana_node::config::metrics::{DEFAULT_METRICS_ADDR, DEFAULT_METRICS_PORT, MetricsConfig};
+use katana_node::config::metrics::{MetricsConfig, DEFAULT_METRICS_ADDR, DEFAULT_METRICS_PORT};
 use katana_node::config::rpc::{
-    ApiKind, DEFAULT_RPC_ADDR, DEFAULT_RPC_MAX_CONNECTIONS, DEFAULT_RPC_PORT, RpcConfig,
+    ApiKind, RpcConfig, DEFAULT_RPC_ADDR, DEFAULT_RPC_MAX_CONNECTIONS, DEFAULT_RPC_PORT,
 };
 use katana_node::config::{Config, SequencingConfig};
 use katana_primitives::block::{BlockHashOrNumber, GasPrices};
@@ -36,18 +36,18 @@ use katana_primitives::chain::ChainId;
 use katana_primitives::chain_spec::{self, ChainSpec};
 use katana_primitives::class::ClassHash;
 use katana_primitives::contract::ContractAddress;
-use katana_primitives::genesis::Genesis;
 use katana_primitives::genesis::allocation::{DevAllocationsGenerator, GenesisAccountAlloc};
 use katana_primitives::genesis::constant::{
     DEFAULT_LEGACY_ERC20_CLASS_HASH, DEFAULT_LEGACY_UDC_CLASS_HASH,
     DEFAULT_PREFUNDED_ACCOUNT_BALANCE, DEFAULT_UDC_ADDRESS,
 };
-use tracing::{Subscriber, info};
+use katana_primitives::genesis::Genesis;
+use tracing::{info, Subscriber};
 use tracing_log::LogTracer;
-use tracing_subscriber::{EnvFilter, fmt};
+use tracing_subscriber::{fmt, EnvFilter};
 use url::Url;
 
-use crate::utils::{parse_block_hash_or_number, parse_genesis, parse_seed};
+use crate::utils::{parse_block_hash_or_number, parse_genesis, parse_seed, LogFormat};
 
 #[derive(Parser, Debug)]
 pub struct NodeArgs {
@@ -73,20 +73,14 @@ pub struct NodeArgs {
     #[arg(value_name = "PATH")]
     pub db_dir: Option<PathBuf>,
 
-    /// The Starknet RPC provider to fork the network from.
-    #[arg(long = "fork.rpc-url", value_name = "URL", alias = "rpc-url")]
-    pub fork_rpc_url: Option<Url>,
-
-    #[arg(long = "fork.block", value_name = "BLOCK_ID", alias = "fork-block-number")]
-    #[arg(requires = "fork_rpc_url")]
-    #[arg(help = "Fork the network at a specific block id, can either be a hash (0x-prefixed) \
-                  or number.")]
-    #[arg(value_parser = parse_block_hash_or_number)]
-    pub fork_block: Option<BlockHashOrNumber>,
-
-    /// Output logs in JSON format.
-    #[arg(long)]
-    pub json_log: bool,
+    /// The L1 provider RPC URL.
+    ///
+    /// Right now this is optional, required only when `--fork.block` is specified. This will be
+    /// used later once we make instantiating Katana from valid L1 state, a requirement. This will
+    /// also be used as the L1 provider in the messaging configuration. Setting this option without
+    /// `--fork.block` is a no-op.
+    #[arg(long = "l1.provider", value_name = "URL")]
+    pub l1_provider: Option<Url>,
 
     /// Configure the messaging with an other chain.
     ///
@@ -97,6 +91,9 @@ pub struct NodeArgs {
     #[arg(value_name = "PATH")]
     #[arg(value_parser = katana_core::service::messaging::MessagingConfig::parse)]
     pub messaging: Option<MessagingConfig>,
+
+    #[command(flatten)]
+    pub logging: LoggingOptions,
 
     #[command(flatten)]
     pub metrics: MetricsOptions,
@@ -110,6 +107,9 @@ pub struct NodeArgs {
     #[command(flatten)]
     pub development: DevOptions,
 
+    #[command(flatten)]
+    pub forking: ForkingOptions,
+
     #[cfg(feature = "slot")]
     #[command(flatten)]
     pub slot: SlotOptions,
@@ -118,7 +118,7 @@ pub struct NodeArgs {
 #[derive(Debug, Args, Clone)]
 #[command(next_help_heading = "Metrics options")]
 pub struct MetricsOptions {
-    /// Whether to enable metrics.
+    /// Enable metrics.
     ///
     /// For now, metrics will still be collected even if this flag is not set. This only
     /// controls whether the metrics server is started or not.
@@ -170,7 +170,7 @@ pub struct StarknetOptions {
 
     #[arg(long)]
     #[arg(value_parser = parse_genesis)]
-    #[arg(conflicts_with_all(["fork_rpc_url", "seed", "total_accounts"]))]
+    #[arg(conflicts_with_all(["fork", "seed", "total_accounts"]))]
     pub genesis: Option<Genesis>,
 }
 
@@ -193,84 +193,80 @@ pub struct EnvironmentOptions {
     /// The maximum number of steps available for the account execution logic.
     #[arg(long)]
     pub invoke_max_steps: Option<u32>,
+}
+
+#[derive(Debug, Args, Clone)]
+#[command(next_help_heading = "Development options")]
+pub struct DevOptions {
+    /// Enable development mode.
+    #[arg(long)]
+    pub dev: bool,
+
+    /// Specify the seed for randomness of accounts to be predeployed.
+    #[arg(requires = "dev")]
+    #[arg(long = "dev.seed", default_value = "0")]
+    pub seed: String,
+
+    /// Number of pre-funded accounts to generate.
+    #[arg(requires = "dev")]
+    #[arg(long = "dev.accounts", value_name = "NUM")]
+    #[arg(default_value_t = 10)]
+    pub total_accounts: u16,
+
+    /// Disable charging fee when executing transactions.
+    #[arg(requires = "dev")]
+    #[arg(long = "dev.no-fee")]
+    pub no_fee: bool,
+
+    /// Disable account validation when executing transactions.
+    ///
+    /// Skipping the transaction sender's account validation function.
+    #[arg(requires = "dev")]
+    #[arg(long = "dev.no-account-validation")]
+    pub no_account_validation: bool,
 
     /// The L1 ETH gas price. (denominated in wei)
-    #[arg(long = "l1-eth-gas-price", value_name = "WEI")]
-    #[arg(requires = "l1_strk_gas_price")]
+    #[arg(requires_all = ["dev", "l1_strk_gas_price"])]
+    #[arg(long = "dev.l1-eth-gas-price", value_name = "WEI")]
     pub l1_eth_gas_price: Option<u128>,
 
     /// The L1 STRK gas price. (denominated in fri)
-    #[arg(long = "l1-strk-gas-price", value_name = "FRI")]
-    #[arg(requires = "l1_eth_data_gas_price")]
+    #[arg(requires_all = ["dev", "l1_eth_data_gas_price"])]
+    #[arg(long = "dev.l1-strk-gas-price", value_name = "FRI")]
     pub l1_strk_gas_price: Option<u128>,
 
-    #[arg(long = "l1-eth-data-gas-price", value_name = "WEI")]
-    #[arg(requires = "l1_strk_data_gas_price")]
-    #[arg(help = "The L1 ETH gas price. (denominated in wei)")]
+    /// The L1 ETH data gas price. (denominated in wei)
+    #[arg(requires_all = ["dev", "l1_strk_data_gas_price"])]
+    #[arg(long = "dev.l1-eth-data-gas-price", value_name = "WEI")]
     pub l1_eth_data_gas_price: Option<u128>,
 
-    #[arg(long = "l1-strk-data-gas-price", value_name = "FRI")]
-    #[arg(requires = "l1_eth_gas_price")]
-    #[arg(help = "The L1 STRK gas prick. (denominated in fri)")]
+    /// The L1 STRK data gas price. (denominated in fri)
+    #[arg(requires_all = ["dev", "l1_eth_gas_price"])]
+    #[arg(long = "dev.l1-strk-data-gas-price", value_name = "FRI")]
     pub l1_strk_data_gas_price: Option<u128>,
 }
 
 #[derive(Debug, Args, Clone)]
-#[command(next_help_heading = "Development options")]
-pub struct DevOptions {
-    /// Enable development mode.
-    #[arg(long)]
-    pub dev: bool,
+#[command(next_help_heading = "Forking options")]
+pub struct ForkingOptions {
+    /// Run in forking mode.
+    #[arg(long, requires = "l1_provider")]
+    pub fork: bool,
 
-    /// Specify the seed for randomness of accounts to be predeployed.
-    #[arg(requires = "dev")]
-    #[arg(long = "dev.seed", default_value = "0")]
-    pub seed: String,
-
-    /// Number of pre-funded accounts to generate.
-    #[arg(requires = "dev")]
-    #[arg(long = "dev.accounts", value_name = "NUM")]
-    #[arg(default_value_t = 10)]
-    pub total_accounts: u16,
-
-    /// Disable charging fee when executing transactions.
-    #[arg(requires = "dev")]
-    #[arg(long = "dev.disable-fee")]
-    pub disable_fee: bool,
-
-    /// Skip account validation when executing transactions.
-    #[arg(requires = "dev")]
-    #[arg(long = "dev.disable-account-validation")]
-    pub disable_validate: bool,
+    /// Fork the network at a specific block id, can either be a hash (0x-prefixed) or a block
+    /// number.
+    #[arg(long = "fork.block", value_name = "BLOCK", requires_all = ["fork", "l1_provider"])]
+    #[arg(value_parser = parse_block_hash_or_number)]
+    pub fork_block: Option<BlockHashOrNumber>,
 }
 
 #[derive(Debug, Args, Clone)]
-#[command(next_help_heading = "Development options")]
-pub struct DevOptions {
-    /// Enable development mode.
-    #[arg(long)]
-    pub dev: bool,
-
-    /// Specify the seed for randomness of accounts to be predeployed.
-    #[arg(requires = "dev")]
-    #[arg(long = "dev.seed", default_value = "0")]
-    pub seed: String,
-
-    /// Number of pre-funded accounts to generate.
-    #[arg(requires = "dev")]
-    #[arg(long = "dev.accounts", value_name = "NUM")]
-    #[arg(default_value_t = 10)]
-    pub total_accounts: u16,
-
-    /// Disable charging fee when executing transactions.
-    #[arg(requires = "dev")]
-    #[arg(long = "dev.disable-fee")]
-    pub disable_fee: bool,
-
-    /// Skip account validation when executing transactions.
-    #[arg(requires = "dev")]
-    #[arg(long = "dev.disable-account-validation")]
-    pub disable_validate: bool,
+#[command(next_help_heading = "Logging options")]
+pub struct LoggingOptions {
+    /// Log format to use
+    #[arg(long = "log.format", value_name = "FORMAT")]
+    #[arg(default_value_t = LogFormat::Full)]
+    pub log_format: LogFormat,
 }
 
 #[cfg(feature = "slot")]
@@ -323,19 +319,26 @@ impl NodeArgs {
 
     fn init_logging(&self) -> Result<()> {
         const DEFAULT_LOG_FILTER: &str = "info,tasks=debug,executor=trace,forking::backend=trace,\
-                                          server=debug,blockifier=off,jsonrpsee_server=off,\
-                                          hyper=off,messaging=debug,node=error";
+                                          blockifier=off,jsonrpsee_server=off,hyper=off,\
+                                          messaging=debug,node=error";
+
+        let filter = if self.development.dev {
+            &format!("{DEFAULT_LOG_FILTER},server=debug")
+        } else {
+            DEFAULT_LOG_FILTER
+        };
 
         LogTracer::init()?;
 
-        let builder = fmt::Subscriber::builder().with_env_filter(
-            EnvFilter::try_from_default_env().or(EnvFilter::try_new(DEFAULT_LOG_FILTER))?,
-        );
+        // If the user has set the `RUST_LOG` environment variable, then we prioritize it.
+        // Otherwise, we use the default log filter.
+        // TODO: change env var to `KATANA_LOG`.
+        let filter = EnvFilter::try_from_default_env().or(EnvFilter::try_new(filter))?;
+        let builder = fmt::Subscriber::builder().with_env_filter(filter);
 
-        let subscriber: Box<dyn Subscriber + Send + Sync> = if self.json_log {
-            Box::new(builder.json().finish())
-        } else {
-            Box::new(builder.finish())
+        let subscriber: Box<dyn Subscriber + Send + Sync> = match self.logging.log_format {
+            LogFormat::Full => Box::new(builder.finish()),
+            LogFormat::Json => Box::new(builder.json().finish()),
         };
 
         Ok(tracing::subscriber::set_global_default(subscriber)?)
@@ -405,14 +408,14 @@ impl NodeArgs {
     }
 
     fn dev_config(&self) -> DevConfig {
-        let fixed_gas_prices = if self.starknet.environment.l1_eth_gas_price.is_some() {
+        let fixed_gas_prices = if self.development.l1_eth_gas_price.is_some() {
             // It is safe to unwrap all of these here because the CLI parser ensures if one is set,
             // all must be set.
 
-            let eth_gas_price = self.starknet.environment.l1_eth_gas_price.unwrap();
-            let strk_gas_price = self.starknet.environment.l1_strk_gas_price.unwrap();
-            let eth_data_gas_price = self.starknet.environment.l1_eth_data_gas_price.unwrap();
-            let strk_data_gas_price = self.starknet.environment.l1_strk_data_gas_price.unwrap();
+            let eth_gas_price = self.development.l1_eth_gas_price.unwrap();
+            let strk_gas_price = self.development.l1_strk_gas_price.unwrap();
+            let eth_data_gas_price = self.development.l1_eth_data_gas_price.unwrap();
+            let strk_data_gas_price = self.development.l1_strk_data_gas_price.unwrap();
 
             let gas_price = GasPrices { eth: eth_gas_price, strk: strk_gas_price };
             let data_gas_price = GasPrices { eth: eth_data_gas_price, strk: strk_data_gas_price };
@@ -424,8 +427,8 @@ impl NodeArgs {
 
         DevConfig {
             fixed_gas_prices,
-            fee: !self.development.disable_fee,
-            account_validation: !self.development.disable_validate,
+            fee: !self.development.no_fee,
+            account_validation: !self.development.no_account_validation,
         }
     }
 
@@ -446,11 +449,15 @@ impl NodeArgs {
     }
 
     fn forking_config(&self) -> Result<Option<ForkingConfig>> {
-        if let Some(url) = self.fork_rpc_url.clone() {
-            Ok(Some(ForkingConfig { url, block: self.fork_block }))
-        } else {
-            Ok(None)
+        if self.forking.fork {
+            // L1 provider is optional for now. See comments on the `l1_provider` field above for
+            // more context.
+            let url = self.l1_provider.as_ref().expect("should be required by cli");
+            let cfg = ForkingConfig { url: url.clone(), block: self.forking.fork_block };
+            return Ok(Some(cfg));
         }
+
+        Ok(None)
     }
 
     fn db_config(&self) -> DbConfig {
@@ -471,7 +478,7 @@ fn print_intro(args: &NodeArgs, chain: &ChainSpec) {
     let account_class_hash = accounts.peek().map(|e| e.1.class_hash());
     let seed = &args.development.seed;
 
-    if args.json_log {
+    if args.logging.log_format == LogFormat::Json {
         info!(
             target: LOG_TARGET,
             "{}",
