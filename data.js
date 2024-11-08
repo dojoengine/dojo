@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1731103396367,
+  "lastUpdate": 1731108726315,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -32239,6 +32239,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8288425,
             "range": "± 101681",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "158306087+bengineer42@users.noreply.github.com",
+            "name": "Benjamin",
+            "username": "bengineer42"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cd7b3ca7cf8093bf33d6526fa80c43acaf2c5fd1",
+          "message": "refactor(lang): reduce events generated code (#2662)\n\n* Updated functions to clear up naming with serialized\n\n* Removed some redundecies in the code\n\n* Removed some redundecies in the code\n\n* updated benchmarks\n\n* Reduced events geenrated code and updated to match model convention\n\n* feat: add EventValue for ABI\n\n* fix: tests\n\n---------\n\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-11-08T17:15:49-06:00",
+          "tree_id": "207c806fec1b45803ea11e841453dc77169686bb",
+          "url": "https://github.com/dojoengine/dojo/commit/cd7b3ca7cf8093bf33d6526fa80c43acaf2c5fd1"
+        },
+        "date": 1731108724476,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10222214181,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
