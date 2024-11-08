@@ -11,25 +11,24 @@
 //!   for more info.
 
 use std::collections::HashSet;
-use std::net::{IpAddr, SocketAddr};
+use std::net::IpAddr;
 use std::path::PathBuf;
 
 use alloy_primitives::U256;
 use anyhow::{Context, Result};
 use clap::{Args, Parser};
 use console::Style;
-use dojo_utils::parse::parse_socket_address;
 use katana_core::constants::DEFAULT_SEQUENCER_ADDRESS;
 use katana_core::service::messaging::MessagingConfig;
 use katana_node::config::db::DbConfig;
 use katana_node::config::dev::{DevConfig, FixedL1GasPriceConfig};
 use katana_node::config::execution::{
-    ExecutionConfig, DEFAULT_INVOCATION_MAX_STEPS, DEFAULT_VALIDATION_MAX_STEPS,
+    DEFAULT_INVOCATION_MAX_STEPS, DEFAULT_VALIDATION_MAX_STEPS, ExecutionConfig,
 };
 use katana_node::config::fork::ForkingConfig;
-use katana_node::config::metrics::MetricsConfig;
+use katana_node::config::metrics::{DEFAULT_METRICS_ADDR, DEFAULT_METRICS_PORT, MetricsConfig};
 use katana_node::config::rpc::{
-    ApiKind, RpcConfig, DEFAULT_RPC_ADDR, DEFAULT_RPC_MAX_CONNECTIONS, DEFAULT_RPC_PORT,
+    ApiKind, DEFAULT_RPC_ADDR, DEFAULT_RPC_MAX_CONNECTIONS, DEFAULT_RPC_PORT, RpcConfig,
 };
 use katana_node::config::{Config, SequencingConfig};
 use katana_primitives::block::{BlockHashOrNumber, GasPrices};
@@ -37,15 +36,15 @@ use katana_primitives::chain::ChainId;
 use katana_primitives::chain_spec::{self, ChainSpec};
 use katana_primitives::class::ClassHash;
 use katana_primitives::contract::ContractAddress;
+use katana_primitives::genesis::Genesis;
 use katana_primitives::genesis::allocation::{DevAllocationsGenerator, GenesisAccountAlloc};
 use katana_primitives::genesis::constant::{
     DEFAULT_LEGACY_ERC20_CLASS_HASH, DEFAULT_LEGACY_UDC_CLASS_HASH,
     DEFAULT_PREFUNDED_ACCOUNT_BALANCE, DEFAULT_UDC_ADDRESS,
 };
-use katana_primitives::genesis::Genesis;
-use tracing::{info, Subscriber};
+use tracing::{Subscriber, info};
 use tracing_log::LogTracer;
-use tracing_subscriber::{fmt, EnvFilter};
+use tracing_subscriber::{EnvFilter, fmt};
 use url::Url;
 
 use crate::utils::{parse_block_hash_or_number, parse_genesis, parse_seed};
@@ -92,12 +91,6 @@ pub struct NodeArgs {
     #[arg(help = "Output logs in JSON format.")]
     pub json_log: bool,
 
-    /// Enable Prometheus metrics.
-    ///
-    /// The metrics will be served at the given interface and port.
-    #[arg(long, value_name = "SOCKET", value_parser = parse_socket_address, help_heading = "Metrics")]
-    pub metrics: Option<SocketAddr>,
-
     #[arg(long)]
     #[arg(value_name = "PATH")]
     #[arg(value_parser = katana_core::service::messaging::MessagingConfig::parse)]
@@ -108,20 +101,46 @@ pub struct NodeArgs {
     pub messaging: Option<MessagingConfig>,
 
     #[command(flatten)]
-    #[command(next_help_heading = "Server options")]
+    pub metrics: MetricsOptions,
+
+    #[command(flatten)]
     pub server: ServerOptions,
 
     #[command(flatten)]
-    #[command(next_help_heading = "Starknet options")]
     pub starknet: StarknetOptions,
 
     #[cfg(feature = "slot")]
     #[command(flatten)]
-    #[command(next_help_heading = "Slot options")]
     pub slot: SlotOptions,
 }
 
 #[derive(Debug, Args, Clone)]
+#[command(next_help_heading = "Metrics options")]
+pub struct MetricsOptions {
+    /// Whether to enable metrics.
+    ///
+    /// For now, metrics will still be collected even if this flag is not set. This only
+    /// controls whether the metrics server is started or not.
+    #[arg(long)]
+    pub metrics: bool,
+
+    /// The metrics will be served at the given address.
+    #[arg(long = "metrics.addr")]
+    #[arg(value_name = "ADD")]
+    #[arg(requires = "metrics")]
+    #[arg(default_value_t = DEFAULT_METRICS_ADDR)]
+    pub metrics_addr: IpAddr,
+
+    /// The metrics will be served at the given port.
+    #[arg(long = "metrics.port")]
+    #[arg(value_name = "PORT")]
+    #[arg(requires = "metrics")]
+    #[arg(default_value_t = DEFAULT_METRICS_PORT)]
+    pub metrics_port: u16,
+}
+
+#[derive(Debug, Args, Clone)]
+#[command(next_help_heading = "Server options")]
 pub struct ServerOptions {
     #[arg(short, long)]
     #[arg(default_value_t = DEFAULT_RPC_PORT)]
@@ -145,6 +164,7 @@ pub struct ServerOptions {
 }
 
 #[derive(Debug, Args, Clone)]
+#[command(next_help_heading = "Starknet options")]
 pub struct StarknetOptions {
     #[arg(long)]
     #[arg(default_value = "0")]
@@ -166,7 +186,6 @@ pub struct StarknetOptions {
     pub disable_validate: bool,
 
     #[command(flatten)]
-    #[command(next_help_heading = "Environment options")]
     pub environment: EnvironmentOptions,
 
     #[arg(long)]
@@ -176,6 +195,7 @@ pub struct StarknetOptions {
 }
 
 #[derive(Debug, Args, Clone)]
+#[command(next_help_heading = "Environment options")]
 pub struct EnvironmentOptions {
     #[arg(long)]
     #[arg(help = "The chain ID.")]
@@ -216,6 +236,7 @@ pub struct EnvironmentOptions {
 
 #[cfg(feature = "slot")]
 #[derive(Debug, Args, Clone)]
+#[command(next_help_heading = "Slot options")]
 pub struct SlotOptions {
     #[arg(hide = true)]
     #[arg(long = "slot.controller")]
@@ -398,7 +419,11 @@ impl NodeArgs {
     }
 
     fn metrics_config(&self) -> Option<MetricsConfig> {
-        self.metrics.map(|addr| MetricsConfig { addr })
+        if self.metrics.metrics {
+            Some(MetricsConfig { addr: self.metrics.metrics_addr, port: self.metrics.metrics_port })
+        } else {
+            None
+        }
     }
 }
 

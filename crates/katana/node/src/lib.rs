@@ -107,6 +107,7 @@ impl Node {
 
         // TODO: maybe move this to the build stage
         if let Some(ref cfg) = self.metrics_config {
+            let addr = cfg.socket_addr();
             let mut reports: Vec<Box<dyn Report>> = Vec::new();
 
             if let Some(ref db) = self.db {
@@ -116,8 +117,8 @@ impl Node {
             let exporter = PrometheusRecorder::current().expect("qed; should exist at this point");
             let server = MetricsServer::new(exporter).with_process_metrics().with_reports(reports);
 
-            self.task_manager.task_spawner().build_task().spawn(server.start(cfg.addr));
-            info!(addr = %cfg.addr, "Metrics server started.");
+            self.task_manager.task_spawner().build_task().spawn(server.start(addr));
+            info!(%addr, "Metrics server started.");
         }
 
         let pool = self.pool.clone();
