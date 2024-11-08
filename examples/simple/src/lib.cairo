@@ -41,13 +41,13 @@ pub mod c1 {
     use super::{MyInterface, M, E, EH, MValue};
     use dojo::model::{ModelStorage, ModelValueStorage, Model};
     use dojo::event::EventStorage;
-  
+
     fn dojo_init(self: @ContractState, v: felt252) {
         let m = M { k: 0, v, };
 
         let mut world = self.world_default();
         world.write_model(@m);
-    }      
+    }
 
     #[abi(embed_v0)]
     impl MyInterfaceImpl of MyInterface<ContractState> {

@@ -1,5 +1,6 @@
 use std::sync::mpsc::channel;
-use std::time::Duration;
+use std::thread;
+use std::time::{Duration, Instant};
 
 use anyhow::Result;
 use clap::Args;
@@ -53,32 +54,22 @@ pub struct DevArgs {
     /// Specify packages to build.
     #[command(flatten)]
     pub packages: Option<PackagesFilter>,
-
-    #[arg(long)]
-    #[arg(help = "Poll interval in seconds to watch for changes.")]
-    #[arg(default_value = "3")]
-    pub poll_interval: u64,
 }
 
 impl DevArgs {
-    /// Watches the `src` directory that is found at the same level of the `Scarb.toml` manifest
-    /// of the project into the provided [`Config`].
-    ///
-    /// When a change is detected, it rebuilds the project and applies the migrations.
     pub fn run(self, config: &Config) -> Result<()> {
-        let (tx, rx) = channel();
+        let (file_tx, file_rx) = channel();
+        let (rebuild_tx, rebuild_rx) = channel();
 
         let watcher_config =
-            notify::Config::default().with_poll_interval(Duration::from_secs(self.poll_interval));
+            notify::Config::default().with_poll_interval(Duration::from_millis(500));
 
-        let mut watcher = PollWatcher::new(tx, watcher_config)?;
+        let mut watcher = PollWatcher::new(file_tx, watcher_config)?;
 
         let watched_directory = config.manifest_path().parent().unwrap().join("src");
-
         watcher.watch(watched_directory.as_std_path(), RecursiveMode::Recursive).unwrap();
 
-        // Always build the project before starting the dev loop to make sure that the project is
-        // in a valid state. Devs may not use `build` anymore when using `dev`.
+        // Initial build and migrate
         let build_args = BuildArgs {
             typescript: self.typescript,
             typescript_v2: self.typescript_v2,
@@ -105,34 +96,57 @@ impl DevArgs {
             "Initial migration completed. Waiting for changes."
         );
 
-        let mut e_handler = EventHandler;
+        let e_handler = EventHandler;
+        let rebuild_tx_clone = rebuild_tx.clone();
 
-        loop {
-            // Issue with that currently is that we may receive other events
-            // and we can't cancel on-going tasks.
-            let is_rebuild_needed = match rx.recv() {
-                Ok(maybe_event) => match maybe_event {
-                    Ok(event) => {
-                        println!("Event: {:?}", event);
-                        e_handler.process_event(event)
+        // Independent thread to handle file events and trigger rebuilds.
+        config.tokio_handle().spawn(async move {
+            loop {
+                match file_rx.recv() {
+                    Ok(maybe_event) => match maybe_event {
+                        Ok(event) => {
+                            trace!(?event, "Event received.");
+
+                            if e_handler.process_event(event) && rebuild_tx_clone.send(()).is_err()
+                            {
+                                break;
+                            }
+                        }
+                        Err(error) => {
+                            error!(?error, "Processing event.");
+                            break;
+                        }
                     },
                     Err(error) => {
-                        error!(?error, "Processing event.");
+                        error!(?error, "Receiving event.");
                         break;
                     }
-                },
-                Err(error) => {
-                    error!(?error, "Receiving event.");
-                    break;
                 }
-            };
+            }
+        });
 
-            if is_rebuild_needed {
-                // Ignore the fails of those commands as the `run` function
-                // already logs the error.
-                // Currently, those two tasks are not cancellable since they are synchronous.
-                let _ = build_args.clone().run(config);
-                let _ = migrate_args.clone().run(config);
+        // Main thread handles the rebuilds.
+        let mut last_event_time = None;
+        let debounce_period = Duration::from_millis(1500);
+
+        loop {
+            match rebuild_rx.try_recv() {
+                Ok(()) => {
+                    last_event_time = Some(Instant::now());
+                }
+                Err(std::sync::mpsc::TryRecvError::Empty) => {
+                    if let Some(last_time) = last_event_time {
+                        if last_time.elapsed() >= debounce_period {
+                            let _ = build_args.clone().run(config);
+                            let _ = migrate_args.clone().run(config);
+                            last_event_time = None;
+                        } else {
+                            trace!("Change detected, waiting for debounce period.");
+                        }
+                    }
+                    thread::sleep(Duration::from_millis(300));
+                }
+                Err(std::sync::mpsc::TryRecvError::Disconnected) => break,
             }
         }
 
@@ -140,13 +154,13 @@ impl DevArgs {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 struct EventHandler;
 
 impl EventHandler {
     /// Processes a debounced event and return true if a rebuild is needed.
     /// Only considers Cairo file and the Scarb.toml manifest.
-    fn process_event(&mut self, event: Event) -> bool {
+    fn process_event(&self, event: Event) -> bool {
         trace!(?event, "Processing event.");
 
         let paths = match event.kind {
