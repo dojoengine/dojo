@@ -143,7 +143,7 @@ struct Args {
     contracts: Vec<Contract>,
 
     /// Event messages that are going to be treated as historical
-    /// A list of the model tags (namespace-name) 
+    /// A list of the model tags (namespace-name)
     #[arg(long, value_delimiter = ',')]
     historical_events: Vec<String>,
 
@@ -252,7 +252,7 @@ async fn main() -> anyhow::Result<()> {
             polling_interval: Duration::from_millis(args.polling_interval),
             flags,
             event_processor_config: EventProcessorConfig {
-                historical_events: args.historical_events,
+                historical_events: args.historical_events.into_iter().collect(),
             },
         },
         shutdown_tx.clone(),

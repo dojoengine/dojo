@@ -37,7 +37,9 @@ use crate::processors::store_del_record::StoreDelRecordProcessor;
 use crate::processors::store_set_record::StoreSetRecordProcessor;
 use crate::processors::store_update_member::StoreUpdateMemberProcessor;
 use crate::processors::store_update_record::StoreUpdateRecordProcessor;
-use crate::processors::{BlockProcessor, EventProcessor, EventProcessorConfig, TransactionProcessor};
+use crate::processors::{
+    BlockProcessor, EventProcessor, EventProcessorConfig, TransactionProcessor,
+};
 use crate::sql::{Cursors, Sql};
 use crate::types::{Contract, ContractType};
 
@@ -219,9 +221,11 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         config: EngineConfig,
         shutdown_tx: Sender<()>,
         block_tx: Option<BoundedSender<u64>>,
-        contracts: &Vec<Contract>,
+        contracts: &[Contract],
     ) -> Self {
-        let contracts = Arc::new(contracts.iter().map(|contract| (contract.address, contract.r#type)).collect());
+        let contracts = Arc::new(
+            contracts.iter().map(|contract| (contract.address, contract.r#type)).collect(),
+        );
 
         Self {
             world: Arc::new(world),

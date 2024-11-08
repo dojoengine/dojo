@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use anyhow::{Error, Result};
 use async_trait::async_trait;
 use dojo_world::contracts::world::WorldContractReader;
@@ -26,7 +28,7 @@ const ENTITY_ID_INDEX: usize = 1;
 
 #[derive(Clone, Debug, Default)]
 pub struct EventProcessorConfig {
-    pub historical_events: Vec<String>,
+    pub historical_events: HashSet<String>,
 }
 
 #[async_trait]

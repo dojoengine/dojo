@@ -92,9 +92,13 @@ async fn test_entities_queries(sequencer: &RunnerCtx) {
     tokio::spawn(async move {
         executor.run().await.unwrap();
     });
-    let db = Sql::new(pool.clone(), sender, &vec![Contract { address: world_address, r#type: ContractType::WORLD }])
-        .await
-        .unwrap();
+    let db = Sql::new(
+        pool.clone(),
+        sender,
+        &vec![Contract { address: world_address, r#type: ContractType::WORLD }],
+    )
+    .await
+    .unwrap();
 
     let (shutdown_tx, _) = broadcast::channel(1);
     let mut engine = Engine::new(
@@ -105,7 +109,7 @@ async fn test_entities_queries(sequencer: &RunnerCtx) {
         EngineConfig::default(),
         shutdown_tx,
         None,
-        &vec![Contract { address: world_address, r#type: ContractType::WORLD }],
+        &[Contract { address: world_address, r#type: ContractType::WORLD }],
     );
 
     let to = provider.block_hash_and_number().await.unwrap().block_number;

@@ -56,10 +56,13 @@ mod tests {
         tokio::spawn(async move {
             executor.run().await.unwrap();
         });
-        let mut db =
-            Sql::new(pool.clone(), sender, &vec![Contract { address: Felt::ZERO, r#type: ContractType::WORLD }])
-                .await
-                .unwrap();
+        let mut db = Sql::new(
+            pool.clone(),
+            sender,
+            &vec![Contract { address: Felt::ZERO, r#type: ContractType::WORLD }],
+        )
+        .await
+        .unwrap();
         let schema = build_schema(&pool).await.unwrap();
 
         let cover_img = "QWxsIHlvdXIgYmFzZSBiZWxvbmcgdG8gdXM=";
@@ -117,10 +120,13 @@ mod tests {
         tokio::spawn(async move {
             executor.run().await.unwrap();
         });
-        let mut db =
-            Sql::new(pool.clone(), sender, &vec![Contract { address: Felt::ZERO, r#type: ContractType::WORLD }])
-                .await
-                .unwrap();
+        let mut db = Sql::new(
+            pool.clone(),
+            sender,
+            &vec![Contract { address: Felt::ZERO, r#type: ContractType::WORLD }],
+        )
+        .await
+        .unwrap();
         let schema = build_schema(&pool).await.unwrap();
 
         db.set_metadata(&RESOURCE, URI, BLOCK_TIMESTAMP).unwrap();

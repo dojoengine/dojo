@@ -30,10 +30,13 @@ mod tests {
         tokio::spawn(async move {
             executor.run().await.unwrap();
         });
-        let mut db =
-            Sql::new(pool.clone(), sender, &vec![Contract { address: Felt::ZERO, r#type: ContractType::WORLD }])
-                .await
-                .unwrap();
+        let mut db = Sql::new(
+            pool.clone(),
+            sender,
+            &vec![Contract { address: Felt::ZERO, r#type: ContractType::WORLD }],
+        )
+        .await
+        .unwrap();
 
         model_fixtures(&mut db).await;
         // 0. Preprocess expected entity value
@@ -174,10 +177,13 @@ mod tests {
         tokio::spawn(async move {
             executor.run().await.unwrap();
         });
-        let mut db =
-            Sql::new(pool.clone(), sender, &vec![Contract { address: Felt::ZERO, r#type: ContractType::WORLD }])
-                .await
-                .unwrap();
+        let mut db = Sql::new(
+            pool.clone(),
+            sender,
+            &vec![Contract { address: Felt::ZERO, r#type: ContractType::WORLD }],
+        )
+        .await
+        .unwrap();
 
         model_fixtures(&mut db).await;
         // 0. Preprocess expected entity value
@@ -298,10 +304,13 @@ mod tests {
         tokio::spawn(async move {
             executor.run().await.unwrap();
         });
-        let mut db =
-            Sql::new(pool.clone(), sender, &vec![Contract { address: Felt::ZERO, r#type: ContractType::WORLD }])
-                .await
-                .unwrap();
+        let mut db = Sql::new(
+            pool.clone(),
+            sender,
+            &vec![Contract { address: Felt::ZERO, r#type: ContractType::WORLD }],
+        )
+        .await
+        .unwrap();
         // 0. Preprocess model value
         let namespace = "types_test".to_string();
         let model_name = "Subrecord".to_string();
@@ -372,10 +381,13 @@ mod tests {
         tokio::spawn(async move {
             executor.run().await.unwrap();
         });
-        let mut db =
-            Sql::new(pool.clone(), sender, &vec![Contract { address: Felt::ZERO, r#type: ContractType::WORLD }])
-                .await
-                .unwrap();
+        let mut db = Sql::new(
+            pool.clone(),
+            sender,
+            &vec![Contract { address: Felt::ZERO, r#type: ContractType::WORLD }],
+        )
+        .await
+        .unwrap();
         // 0. Preprocess model value
         let namespace = "types_test".to_string();
         let model_name = "Subrecord".to_string();
@@ -447,10 +459,13 @@ mod tests {
         tokio::spawn(async move {
             executor.run().await.unwrap();
         });
-        let mut db =
-            Sql::new(pool.clone(), sender, &vec![Contract { address: Felt::ZERO, r#type: ContractType::WORLD }])
-                .await
-                .unwrap();
+        let mut db = Sql::new(
+            pool.clone(),
+            sender,
+            &vec![Contract { address: Felt::ZERO, r#type: ContractType::WORLD }],
+        )
+        .await
+        .unwrap();
         let block_timestamp: u64 = 1710754478_u64;
         let (tx, mut rx) = mpsc::channel(7);
         tokio::spawn(async move {

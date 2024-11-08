@@ -45,7 +45,7 @@ where
         EngineConfig::default(),
         shutdown_tx,
         None,
-        &vec![Contract { address: world_address, r#type: ContractType::WORLD }],
+        &[Contract { address: world_address, r#type: ContractType::WORLD }],
     );
 
     let data = engine.fetch_range(0, to, &HashMap::new()).await.unwrap();

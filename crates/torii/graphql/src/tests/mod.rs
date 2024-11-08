@@ -345,9 +345,13 @@ pub async fn spinup_types_test(path: &str) -> Result<SqlitePool> {
     tokio::spawn(async move {
         executor.run().await.unwrap();
     });
-    let db = Sql::new(pool.clone(), sender, &vec![Contract { address: world_address, r#type: ContractType::WORLD }])
-        .await
-        .unwrap();
+    let db = Sql::new(
+        pool.clone(),
+        sender,
+        &vec![Contract { address: world_address, r#type: ContractType::WORLD }],
+    )
+    .await
+    .unwrap();
 
     let (shutdown_tx, _) = broadcast::channel(1);
     let mut engine = Engine::new(
@@ -358,7 +362,7 @@ pub async fn spinup_types_test(path: &str) -> Result<SqlitePool> {
         EngineConfig::default(),
         shutdown_tx,
         None,
-        &vec![Contract { address: world_address, r#type: ContractType::WORLD }],
+        &[Contract { address: world_address, r#type: ContractType::WORLD }],
     );
 
     let to = account.provider().block_hash_and_number().await?.block_number;

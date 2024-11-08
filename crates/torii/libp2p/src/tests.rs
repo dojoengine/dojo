@@ -577,10 +577,13 @@ mod test {
         tokio::spawn(async move {
             executor.run().await.unwrap();
         });
-        let mut db =
-            Sql::new(pool.clone(), sender, &vec![Contract { address: Felt::ZERO, r#type: ContractType::WORLD }])
-                .await
-                .unwrap();
+        let mut db = Sql::new(
+            pool.clone(),
+            sender,
+            &vec![Contract { address: Felt::ZERO, r#type: ContractType::WORLD }],
+        )
+        .await
+        .unwrap();
 
         // Register the model of our Message
         db.register_model(
