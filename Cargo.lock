@@ -13233,6 +13233,7 @@ version = "1.0.0-rc.1"
 dependencies = [
  "anyhow",
  "async-trait",
+ "cainome 0.4.6",
  "cairo-lang-compiler",
  "cairo-lang-filesystem",
  "cairo-lang-project",
