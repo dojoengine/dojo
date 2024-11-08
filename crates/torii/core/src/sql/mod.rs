@@ -76,12 +76,7 @@ impl Sql {
         }
 
         let local_cache = LocalCache::new(pool.clone()).await;
-        let db = Self {
-            pool: pool.clone(),
-            executor,
-            model_cache,
-            local_cache,
-        };
+        let db = Self { pool: pool.clone(), executor, model_cache, local_cache };
 
         db.execute().await?;
 
@@ -837,11 +832,7 @@ impl Sql {
             Ty::Enum(e) => {
                 if e.options.iter().all(
                     |o| {
-                        if let Ty::Tuple(t) = &o.ty {
-                            t.is_empty()
-                        } else {
-                            false
-                        }
+                        if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false }
                     },
                 ) {
                     return Ok(());

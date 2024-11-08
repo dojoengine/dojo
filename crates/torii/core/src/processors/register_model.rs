@@ -57,7 +57,8 @@ where
         let namespace = event.namespace.to_string().unwrap();
         let name = event.name.to_string().unwrap();
 
-        let model = world.model_reader_with_block(&namespace, &name, BlockId::Number(block_number)).await?;
+        let model =
+            world.model_reader_with_block(&namespace, &name, BlockId::Number(block_number)).await?;
         let schema = model.schema().await?;
         let layout = model.layout().await?;
 

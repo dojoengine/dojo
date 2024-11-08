@@ -23,6 +23,7 @@ use tokio::sync::broadcast;
 
 use crate::engine::{Engine, EngineConfig, Processors};
 use crate::executor::Executor;
+use crate::sql::cache::ModelCache;
 use crate::sql::Sql;
 use crate::types::ContractType;
 
@@ -124,10 +125,12 @@ async fn test_load_from_remote(sequencer: &RunnerCtx) {
         executor.run().await.unwrap();
     });
 
+    let model_cache = Arc::new(ModelCache::new(pool.clone()));
     let db = Sql::new(
         pool.clone(),
         sender.clone(),
         &HashMap::from([(world_reader.address, ContractType::WORLD)]),
+        model_cache.clone(),
     )
     .await
     .unwrap();
@@ -282,10 +285,12 @@ async fn test_load_from_remote_del(sequencer: &RunnerCtx) {
         executor.run().await.unwrap();
     });
 
+    let model_cache = Arc::new(ModelCache::new(pool.clone()));
     let db = Sql::new(
         pool.clone(),
         sender.clone(),
         &HashMap::from([(world_reader.address, ContractType::WORLD)]),
+        model_cache.clone(),
     )
     .await
     .unwrap();
@@ -368,10 +373,12 @@ async fn test_update_with_set_record(sequencer: &RunnerCtx) {
         executor.run().await.unwrap();
     });
 
+    let model_cache = Arc::new(ModelCache::new(pool.clone()));
     let db = Sql::new(
         pool.clone(),
         sender.clone(),
         &HashMap::from([(world_reader.address, ContractType::WORLD)]),
+        model_cache.clone(),
     )
     .await
     .unwrap();

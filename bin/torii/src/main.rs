@@ -257,9 +257,15 @@ async fn main() -> anyhow::Result<()> {
     );
 
     let shutdown_rx = shutdown_tx.subscribe();
-    let (grpc_addr, grpc_server) =
-        torii_grpc::server::new(shutdown_rx, &pool, block_rx, world_address, Arc::clone(&provider), model_cache)
-            .await?;
+    let (grpc_addr, grpc_server) = torii_grpc::server::new(
+        shutdown_rx,
+        &pool,
+        block_rx,
+        world_address,
+        Arc::clone(&provider),
+        model_cache,
+    )
+    .await?;
 
     let mut libp2p_relay_server = torii_relay::server::Relay::new(
         db,

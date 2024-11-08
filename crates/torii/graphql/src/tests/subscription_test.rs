@@ -2,6 +2,7 @@
 mod tests {
     use std::collections::HashMap;
     use std::str::FromStr;
+    use std::sync::Arc;
     use std::time::Duration;
 
     use async_graphql::value;
@@ -15,6 +16,7 @@ mod tests {
     use starknet_crypto::{poseidon_hash_many, Felt};
     use tokio::sync::{broadcast, mpsc};
     use torii_core::executor::Executor;
+    use torii_core::sql::cache::ModelCache;
     use torii_core::sql::utils::felts_to_sql_string;
     use torii_core::sql::Sql;
     use torii_core::types::ContractType;
@@ -31,10 +33,16 @@ mod tests {
         tokio::spawn(async move {
             executor.run().await.unwrap();
         });
-        let mut db =
-            Sql::new(pool.clone(), sender, &HashMap::from([(Felt::ZERO, ContractType::WORLD)]))
-                .await
-                .unwrap();
+
+        let model_cache = Arc::new(ModelCache::new(pool.clone()));
+        let mut db = Sql::new(
+            pool.clone(),
+            sender,
+            &HashMap::from([(Felt::ZERO, ContractType::WORLD)]),
+            model_cache,
+        )
+        .await
+        .unwrap();
 
         model_fixtures(&mut db).await;
         // 0. Preprocess expected entity value
@@ -175,10 +183,16 @@ mod tests {
         tokio::spawn(async move {
             executor.run().await.unwrap();
         });
-        let mut db =
-            Sql::new(pool.clone(), sender, &HashMap::from([(Felt::ZERO, ContractType::WORLD)]))
-                .await
-                .unwrap();
+
+        let model_cache = Arc::new(ModelCache::new(pool.clone()));
+        let mut db = Sql::new(
+            pool.clone(),
+            sender,
+            &HashMap::from([(Felt::ZERO, ContractType::WORLD)]),
+            model_cache,
+        )
+        .await
+        .unwrap();
 
         model_fixtures(&mut db).await;
         // 0. Preprocess expected entity value
@@ -299,10 +313,16 @@ mod tests {
         tokio::spawn(async move {
             executor.run().await.unwrap();
         });
-        let mut db =
-            Sql::new(pool.clone(), sender, &HashMap::from([(Felt::ZERO, ContractType::WORLD)]))
-                .await
-                .unwrap();
+
+        let model_cache = Arc::new(ModelCache::new(pool.clone()));
+        let mut db = Sql::new(
+            pool.clone(),
+            sender,
+            &HashMap::from([(Felt::ZERO, ContractType::WORLD)]),
+            model_cache,
+        )
+        .await
+        .unwrap();
         // 0. Preprocess model value
         let namespace = "types_test".to_string();
         let model_name = "Subrecord".to_string();
@@ -330,14 +350,14 @@ mod tests {
             });
             db.register_model(
                 &namespace,
-                model,
+                &model,
                 Layout::Fixed(vec![]),
                 class_hash,
                 contract_address,
                 0,
                 0,
                 block_timestamp,
-                false,
+                None,
             )
             .await
             .unwrap();
@@ -374,10 +394,16 @@ mod tests {
         tokio::spawn(async move {
             executor.run().await.unwrap();
         });
-        let mut db =
-            Sql::new(pool.clone(), sender, &HashMap::from([(Felt::ZERO, ContractType::WORLD)]))
-                .await
-                .unwrap();
+
+        let model_cache = Arc::new(ModelCache::new(pool.clone()));
+        let mut db = Sql::new(
+            pool.clone(),
+            sender,
+            &HashMap::from([(Felt::ZERO, ContractType::WORLD)]),
+            model_cache,
+        )
+        .await
+        .unwrap();
         // 0. Preprocess model value
         let namespace = "types_test".to_string();
         let model_name = "Subrecord".to_string();
@@ -404,14 +430,14 @@ mod tests {
             });
             db.register_model(
                 &namespace,
-                model,
+                &model,
                 Layout::Fixed(vec![]),
                 class_hash,
                 contract_address,
                 0,
                 0,
                 block_timestamp,
-                false,
+                None,
             )
             .await
             .unwrap();
@@ -450,10 +476,16 @@ mod tests {
         tokio::spawn(async move {
             executor.run().await.unwrap();
         });
-        let mut db =
-            Sql::new(pool.clone(), sender, &HashMap::from([(Felt::ZERO, ContractType::WORLD)]))
-                .await
-                .unwrap();
+
+        let model_cache = Arc::new(ModelCache::new(pool.clone()));
+        let mut db = Sql::new(
+            pool.clone(),
+            sender,
+            &HashMap::from([(Felt::ZERO, ContractType::WORLD)]),
+            model_cache,
+        )
+        .await
+        .unwrap();
         let block_timestamp: u64 = 1710754478_u64;
         let (tx, mut rx) = mpsc::channel(7);
         tokio::spawn(async move {

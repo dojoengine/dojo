@@ -59,7 +59,8 @@ where
 
         // Called model here by language, but it's an event. Torii rework will make clear
         // distinction.
-        let model = world.model_reader_with_block(&namespace, &name, BlockId::Number(block_number)).await?;
+        let model =
+            world.model_reader_with_block(&namespace, &name, BlockId::Number(block_number)).await?;
         let schema = model.schema().await?;
         let layout = model.layout().await?;
 

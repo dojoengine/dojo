@@ -1,12 +1,14 @@
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
+    use std::sync::Arc;
 
     use dojo_world::config::{ProfileConfig, WorldMetadata};
     use sqlx::SqlitePool;
     use starknet::core::types::Felt;
     use tokio::sync::broadcast;
     use torii_core::executor::Executor;
+    use torii_core::sql::cache::ModelCache;
     use torii_core::sql::Sql;
     use torii_core::types::ContractType;
 
@@ -58,10 +60,15 @@ mod tests {
         tokio::spawn(async move {
             executor.run().await.unwrap();
         });
-        let mut db =
-            Sql::new(pool.clone(), sender, &HashMap::from([(Felt::ZERO, ContractType::WORLD)]))
-                .await
-                .unwrap();
+        let model_cache = Arc::new(ModelCache::new(pool.clone()));
+        let mut db = Sql::new(
+            pool.clone(),
+            sender,
+            &HashMap::from([(Felt::ZERO, ContractType::WORLD)]),
+            model_cache,
+        )
+        .await
+        .unwrap();
         let schema = build_schema(&pool).await.unwrap();
 
         let cover_img = "QWxsIHlvdXIgYmFzZSBiZWxvbmcgdG8gdXM=";
@@ -119,10 +126,16 @@ mod tests {
         tokio::spawn(async move {
             executor.run().await.unwrap();
         });
-        let mut db =
-            Sql::new(pool.clone(), sender, &HashMap::from([(Felt::ZERO, ContractType::WORLD)]))
-                .await
-                .unwrap();
+
+        let model_cache = Arc::new(ModelCache::new(pool.clone()));
+        let mut db = Sql::new(
+            pool.clone(),
+            sender,
+            &HashMap::from([(Felt::ZERO, ContractType::WORLD)]),
+            model_cache,
+        )
+        .await
+        .unwrap();
         let schema = build_schema(&pool).await.unwrap();
 
         db.set_metadata(&RESOURCE, URI, BLOCK_TIMESTAMP).unwrap();
