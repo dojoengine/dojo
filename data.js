@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1731018330413,
+  "lastUpdate": 1731040377683,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -31849,6 +31849,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8316784,
             "range": "± 184913",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bb879581659e3c6b60b232d2bcd2bcc823d5673b",
+          "message": "refactor(katana): decrease default fixed gas prices values (#2658)",
+          "timestamp": "2024-11-08T12:16:34+08:00",
+          "tree_id": "6c4b83ea0e1f0d96a6035bc79a0cca9de5303bad",
+          "url": "https://github.com/dojoengine/dojo/commit/bb879581659e3c6b60b232d2bcd2bcc823d5673b"
+        },
+        "date": 1731040376216,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10328676126,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
