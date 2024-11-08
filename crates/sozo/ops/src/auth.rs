@@ -8,14 +8,8 @@ use dojo_world::contracts::naming::{
 };
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::contracts::WorldContractReader;
-use scarb_ui::Ui;
-#[cfg(feature = "walnut")]
-use sozo_walnut::WalnutDebugger;
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::types::{BlockId, BlockTag, Felt};
-
-//use crate::migration::ui::MigrationUi;
-use crate::utils;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ResourceType {

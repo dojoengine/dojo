@@ -207,7 +207,7 @@ async fn deploy_account(
     let contract = FeeToken::new(DEFAULT_ETH_FEE_TOKEN_ADDRESS.into(), &funding_account);
 
     // send enough tokens to the new_account's address just to send the deploy account tx
-    let amount = Uint256 { low: felt!("0x100000000000"), high: Felt::ZERO };
+    let amount = Uint256 { low: felt!("0x1ba32524a3000"), high: Felt::ZERO };
     let recipient = computed_address;
     let res = contract.transfer(&recipient, &amount).send().await?;
     dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await?;

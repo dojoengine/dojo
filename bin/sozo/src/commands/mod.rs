@@ -1,11 +1,13 @@
 use core::fmt;
 
 use anyhow::Result;
+use auth::AuthArgs;
 use clap::Subcommand;
 use events::EventsArgs;
 use scarb::core::{Config, Package, Workspace};
 use tracing::info_span;
 
+pub(crate) mod auth;
 pub(crate) mod build;
 pub(crate) mod call;
 pub(crate) mod clean;
@@ -32,6 +34,8 @@ use test::TestArgs;
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {
+    #[command(about = "Grant or revoke a contract permission to write to a resource")]
+    Auth(Box<AuthArgs>),
     #[command(about = "Build the world, generating the necessary artifacts for deployment")]
     Build(BuildArgs),
     #[command(about = "Run a migration, declaring and deploying contracts as necessary to update \
@@ -60,6 +64,7 @@ pub enum Commands {
 impl fmt::Display for Commands {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Commands::Auth(_) => write!(f, "Auth"),
             Commands::Build(_) => write!(f, "Build"),
             Commands::Clean(_) => write!(f, "Clean"),
             Commands::Execute(_) => write!(f, "Execute"),
@@ -84,6 +89,7 @@ pub fn run(command: Commands, config: &Config) -> Result<()> {
     // useful to write tests for each command.
 
     match command {
+        Commands::Auth(args) => args.run(config),
         Commands::Build(args) => args.run(config),
         Commands::Migrate(args) => args.run(config),
         Commands::Execute(args) => args.run(config),

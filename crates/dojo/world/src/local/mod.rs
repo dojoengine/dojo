@@ -36,6 +36,9 @@ pub struct WorldLocal {
     pub resources: HashMap<DojoSelector, ResourceLocal>,
     /// The profile configuration of the local world.
     pub profile_config: ProfileConfig,
+    /// All the entrypoints that are exposed by the world
+    /// and can be targetted by a transaction.
+    pub entrypoints: Vec<String>,
 }
 
 #[cfg(test)]
@@ -64,6 +67,7 @@ impl Default for WorldLocal {
             casm_class_hash: Felt::ZERO,
             resources: HashMap::new(),
             profile_config: ProfileConfig::default(),
+            entrypoints: vec![],
         }
     }
 }

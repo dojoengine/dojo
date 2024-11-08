@@ -201,11 +201,17 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
 
         let env = match block_id {
             BlockIdOrTag::Tag(BlockTag::Pending) => {
+                // If there is a pending block, use the block env of the pending block.
                 if let Some(exec) = self.pending_executor() {
                     Some(exec.read().block_env())
-                } else {
+                }
+                // else, we create a new block env and update the values to reflect the current
+                // state.
+                else {
                     let num = provider.latest_number()?;
-                    provider.block_env_at(num.into())?
+                    let mut env = provider.block_env_at(num.into())?.expect("missing block env");
+                    self.inner.backend.update_block_env(&mut env);
+                    Some(env)
                 }
             }
 

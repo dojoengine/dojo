@@ -27,17 +27,23 @@ impl TsFunctionGenerator {
         buffer.iter().position(|b| b.contains(fn_wrapper)).unwrap()
     }
 
-    fn generate_system_function(&self, contract_name: &str, token: &Function) -> String {
+    fn generate_system_function(
+        &self,
+        namespace: &str,
+        contract_name: &str,
+        token: &Function,
+    ) -> String {
         format!(
             "\tconst {contract_name}_{} = async ({}) => {{
 \t\ttry {{
 \t\t\treturn await provider.execute(
-\t\t\t\taccount,
+\t\t\t\tsnAccount,
 \t\t\t\t{{
 \t\t\t\t\tcontractName: \"{contract_name}\",
-\t\t\t\t\tentryPoint: \"{}\",
+\t\t\t\t\tentrypoint: \"{}\",
 \t\t\t\t\tcalldata: [{}],
-\t\t\t\t}}
+\t\t\t\t}},
+\t\t\t\t\"{namespace}\",
 \t\t\t);
 \t\t}} catch (error) {{
 \t\t\tconsole.error(error);
@@ -51,14 +57,17 @@ impl TsFunctionGenerator {
     }
 
     fn format_function_inputs(&self, token: &Function) -> String {
-        let inputs = vec!["account: Account".to_owned()];
+        let inputs = vec!["snAccount: Account".to_owned()];
         token
             .inputs
             .iter()
             .fold(inputs, |mut acc, input| {
                 let prefix = match &input.1 {
                     Token::Composite(t) => {
-                        if t.r#type == CompositeType::Enum {
+                        if t.r#type == CompositeType::Enum
+                            || (t.r#type == CompositeType::Struct
+                                && !t.type_path.starts_with("core"))
+                        {
                             "models."
                         } else {
                             ""
@@ -128,16 +137,17 @@ impl TsFunctionGenerator {
                 return_idx,
             ) {
                 if let Some(insert_pos) = buffer.get_first_before_pos(",", pos, return_idx) {
-                    buffer.insert_at(
-                        format!(
-                            "\n\t\t\t{}: {}_{},",
-                            token.name.to_case(Case::Camel),
-                            contract_name,
-                            token.name.to_case(Case::Camel)
-                        ),
-                        insert_pos,
-                        return_idx,
+                    let gen = format!(
+                        "\n\t\t\t{}: {}_{},",
+                        token.name.to_case(Case::Camel),
+                        contract_name,
+                        token.name.to_case(Case::Camel)
                     );
+                    // avoid duplicating identifiers. This can occur because some contracts keeps
+                    // camel ans snake cased functions
+                    if !buffer.has(&gen) {
+                        buffer.insert_at(gen, insert_pos, return_idx);
+                    }
                     return;
                 }
             }
@@ -169,11 +179,21 @@ impl BindgenContractGenerator for TsFunctionGenerator {
         self.check_imports(buffer);
         let contract_name = naming::get_name_from_tag(&contract.tag);
         let idx = self.setup_function_wrapper_start(buffer);
-        self.append_function_body(
-            idx,
-            buffer,
-            self.generate_system_function(contract_name.as_str(), token),
+
+        // avoid duplicating function body that can occur because some contracts keeps camel and
+        // snake cased identifiers
+        let fn_body = self.generate_system_function(
+            &naming::get_namespace_from_tag(&contract.tag),
+            contract_name.as_str(),
+            token,
         );
+        if let Some(fn_idx) = fn_body.chars().position(|c| c == '=') {
+            let fn_name = fn_body[0..fn_idx].to_string();
+            if !buffer.has(&fn_name) {
+                self.append_function_body(idx, buffer, fn_body);
+            }
+        }
+
         self.setup_function_wrapper_end(contract_name.as_str(), token, buffer);
         Ok(String::new())
     }
@@ -215,16 +235,17 @@ mod tests {
     fn test_generate_system_function() {
         let generator = TsFunctionGenerator {};
         let function = create_change_theme_function();
-        let expected = "\tconst actions_changeTheme = async (account: Account, value: number) => \
-                        {
+        let expected = "\tconst actions_changeTheme = async (snAccount: Account, value: number) \
+                        => {
 \t\ttry {
 \t\t\treturn await provider.execute(
-\t\t\t\taccount,
+\t\t\t\tsnAccount,
 \t\t\t\t{
 \t\t\t\t\tcontractName: \"actions\",
-\t\t\t\t\tentryPoint: \"change_theme\",
+\t\t\t\t\tentrypoint: \"change_theme\",
 \t\t\t\t\tcalldata: [value],
-\t\t\t\t}
+\t\t\t\t},
+\t\t\t\t\"onchain_dash\",
 \t\t\t);
 \t\t} catch (error) {
 \t\t\tconsole.error(error);
@@ -236,6 +257,7 @@ mod tests {
         assert_eq!(
             expected,
             generator.generate_system_function(
+                naming::get_namespace_from_tag(&contract.tag).as_str(),
                 naming::get_name_from_tag(&contract.tag).as_str(),
                 &function
             )
@@ -246,7 +268,7 @@ mod tests {
     fn test_format_function_inputs() {
         let generator = TsFunctionGenerator {};
         let function = create_change_theme_function();
-        let expected = "account: Account, value: number";
+        let expected = "snAccount: Account, value: number";
         assert_eq!(expected, generator.format_function_inputs(&function))
     }
 
@@ -254,7 +276,7 @@ mod tests {
     fn test_format_function_inputs_complex() {
         let generator = TsFunctionGenerator {};
         let function = create_change_theme_function();
-        let expected = "account: Account, value: number";
+        let expected = "snAccount: Account, value: number";
         assert_eq!(expected, generator.format_function_inputs(&function))
     }
 
@@ -326,6 +348,26 @@ mod tests {
     }
 
     #[test]
+    fn test_setup_function_wrapper_end_does_not_duplicate_identifiers() {
+        let generator = TsFunctionGenerator {};
+        let mut buff = Buffer::new();
+
+        generator.setup_function_wrapper_end("actions", &create_change_theme_function(), &mut buff);
+
+        let expected = "\treturn {
+\t\tactions: {
+\t\t\tchangeTheme: actions_changeTheme,
+\t\t},
+\t};
+}";
+        assert_eq!(1, buff.len());
+        assert_eq!(expected, buff[0]);
+        generator.setup_function_wrapper_end("actions", &create_change_theme_function(), &mut buff);
+        assert_eq!(1, buff.len());
+        assert_eq!(expected, buff[0]);
+    }
+
+    #[test]
     fn test_it_generates_function() {
         let generator = TsFunctionGenerator {};
         let mut buffer = Buffer::new();
@@ -340,9 +382,33 @@ mod tests {
         assert_eq!(buffer.len(), 7);
     }
 
+    #[test]
+    fn test_generate() {
+        let generator = TsFunctionGenerator {};
+        let mut buff = Buffer::new();
+        let function = create_change_theme_function();
+        let function_ca = create_change_theme_function_camelized();
+
+        let contract = create_dojo_contract();
+
+        let _ = generator.generate(&contract, &function, &mut buff);
+        assert_eq!(6, buff.len());
+        let _ = generator.generate(&contract, &function_ca, &mut buff);
+        assert_eq!(6, buff.len());
+    }
+
     fn create_change_theme_function() -> Function {
         create_test_function(
             "change_theme",
+            vec![(
+                "value".to_owned(),
+                Token::CoreBasic(CoreBasic { type_path: "core::integer::u8".to_owned() }),
+            )],
+        )
+    }
+    fn create_change_theme_function_camelized() -> Function {
+        create_test_function(
+            "changeTheme",
             vec![(
                 "value".to_owned(),
                 Token::CoreBasic(CoreBasic { type_path: "core::integer::u8".to_owned() }),

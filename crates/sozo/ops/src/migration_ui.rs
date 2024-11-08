@@ -22,7 +22,7 @@ impl MigrationUi {
     /// Returns a new instance with the default frames.
     pub fn new(text: Option<&'static str>) -> Self {
         if let Some(text) = text {
-            let frames = spinner!(["⛩️ ", "🎃", "👻", "🧟", "💀"], 500);
+            let frames = spinner!(["⛩️ ", "🥷 ", "🗡️ "], 500);
             let spinner = Spinner::new(frames.clone(), text, None);
             Self { spinner, default_frames: frames, silent: false }
         } else {
@@ -30,6 +30,15 @@ impl MigrationUi {
             let spinner = Spinner::new(frames.clone(), "", None);
             Self { spinner, default_frames: frames, silent: false }
         }
+    }
+
+    /// Returns a new instance with the given frames.
+    pub fn new_with_frames(text: &'static str, frames: Vec<&'static str>) -> Self {
+        let frames =
+            spinners::SpinnerFrames { interval: 500, frames: frames.into_iter().collect() };
+
+        let spinner = Spinner::new(frames.clone(), text, None);
+        Self { spinner, default_frames: frames, silent: false }
     }
 
     /// Returns a new instance with the silent flag set.

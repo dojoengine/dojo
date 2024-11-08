@@ -37,6 +37,8 @@ pub struct WorldStatusInfo {
     pub class: SierraClass,
     /// The status of the world.
     pub status: WorldStatus,
+    /// The entrypoints of the world.
+    pub entrypoints: Vec<String>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -75,6 +77,7 @@ impl WorldDiff {
                 casm_class_hash: local.casm_class_hash,
                 class: local.class,
                 status: WorldStatus::NotDeployed,
+                entrypoints: local.entrypoints,
             },
             namespaces: vec![],
             resources: HashMap::new(),
@@ -111,6 +114,7 @@ impl WorldDiff {
                 class_hash: local.class_hash,
                 casm_class_hash: local.casm_class_hash,
                 class: local.class,
+                entrypoints: local.entrypoints,
                 status,
             },
             namespaces: vec![],
