@@ -6,12 +6,14 @@ use clap::Args;
 use notify::event::Event;
 use notify::{EventKind, PollWatcher, RecursiveMode, Watcher};
 use scarb::core::Config;
+use scarb_ui::args::{FeaturesSpec, PackagesFilter};
 use tracing::{error, info, trace};
 
 use super::build::BuildArgs;
 use super::migrate::MigrateArgs;
 use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
+use super::options::transaction::TransactionOptions;
 use super::options::world::WorldOptions;
 
 #[derive(Debug, Args)]
@@ -24,6 +26,38 @@ pub struct DevArgs {
 
     #[command(flatten)]
     pub account: AccountOptions,
+
+    #[command(flatten)]
+    pub transaction: TransactionOptions,
+
+    #[arg(long)]
+    #[arg(help = "Generate Typescript bindings.")]
+    pub typescript: bool,
+
+    #[arg(long)]
+    #[arg(help = "Generate Typescript bindings.")]
+    pub typescript_v2: bool,
+
+    #[arg(long)]
+    #[arg(help = "Generate Unity bindings.")]
+    pub unity: bool,
+
+    #[arg(long)]
+    #[arg(help = "Output directory.", default_value = "bindings")]
+    pub bindings_output: String,
+
+    /// Specify the features to activate.
+    #[command(flatten)]
+    pub features: FeaturesSpec,
+
+    /// Specify packages to build.
+    #[command(flatten)]
+    pub packages: Option<PackagesFilter>,
+
+    #[arg(long)]
+    #[arg(help = "Poll interval in seconds to watch for changes.")]
+    #[arg(default_value = "3")]
+    pub poll_interval: u64,
 }
 
 impl DevArgs {
@@ -34,7 +68,8 @@ impl DevArgs {
     pub fn run(self, config: &Config) -> Result<()> {
         let (tx, rx) = channel();
 
-        let watcher_config = notify::Config::default().with_poll_interval(Duration::from_secs(1));
+        let watcher_config =
+            notify::Config::default().with_poll_interval(Duration::from_secs(self.poll_interval));
 
         let mut watcher = PollWatcher::new(tx, watcher_config)?;
 
@@ -44,12 +79,26 @@ impl DevArgs {
 
         // Always build the project before starting the dev loop to make sure that the project is
         // in a valid state. Devs may not use `build` anymore when using `dev`.
-        BuildArgs::default().run(config)?;
+        let build_args = BuildArgs {
+            typescript: self.typescript,
+            typescript_v2: self.typescript_v2,
+            unity: self.unity,
+            bindings_output: self.bindings_output,
+            features: self.features,
+            packages: self.packages,
+            ..Default::default()
+        };
+        build_args.clone().run(config)?;
         info!("Initial build completed.");
 
-        let _ =
-            MigrateArgs::new_apply(self.world.clone(), self.starknet.clone(), self.account.clone())
-                .run(config);
+        let migrate_args = MigrateArgs {
+            world: self.world,
+            starknet: self.starknet,
+            account: self.account,
+            transaction: self.transaction,
+        };
+
+        let _ = migrate_args.clone().run(config);
 
         info!(
             directory = watched_directory.to_string(),
@@ -59,9 +108,14 @@ impl DevArgs {
         let mut e_handler = EventHandler;
 
         loop {
+            // Issue with that currently is that we may receive other events
+            // and we can't cancel on-going tasks.
             let is_rebuild_needed = match rx.recv() {
                 Ok(maybe_event) => match maybe_event {
-                    Ok(event) => e_handler.process_event(event),
+                    Ok(event) => {
+                        println!("Event: {:?}", event);
+                        e_handler.process_event(event)
+                    },
                     Err(error) => {
                         error!(?error, "Processing event.");
                         break;
@@ -76,14 +130,9 @@ impl DevArgs {
             if is_rebuild_needed {
                 // Ignore the fails of those commands as the `run` function
                 // already logs the error.
-                let _ = BuildArgs::default().run(config);
-
-                let _ = MigrateArgs::new_apply(
-                    self.world.clone(),
-                    self.starknet.clone(),
-                    self.account.clone(),
-                )
-                .run(config);
+                // Currently, those two tasks are not cancellable since they are synchronous.
+                let _ = build_args.clone().run(config);
+                let _ = migrate_args.clone().run(config);
             }
         }
 

@@ -29,6 +29,7 @@ dojo-utils.workspace = true
 dojo-world.workspace = true
 itertools.workspace = true
 katana-rpc-api.workspace = true
+notify = "7.0.0"
 tabled = { version = "0.16.0", features = [ "ansi" ] }
 scarb.workspace = true
 scarb-ui.workspace = true
