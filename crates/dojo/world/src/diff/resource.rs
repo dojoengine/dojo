@@ -52,6 +52,10 @@ impl DiffPermissions {
     pub fn synced(&self) -> HashSet<PermissionGrantee> {
         self.local.intersection(&self.remote).cloned().collect()
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.local.is_empty() && self.remote.is_empty()
+    }
 }
 
 impl ResourceDiff {
