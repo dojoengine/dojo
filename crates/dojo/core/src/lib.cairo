@@ -70,7 +70,7 @@ pub mod utils {
     pub use hash::{bytearray_hash, selector_from_names, selector_from_namespace_and_name};
 
     pub mod key;
-    pub use key::{entity_id_from_keys, combine_key, entity_id_from_key};
+    pub use key::{entity_id_from_serialized_keys, combine_key, entity_id_from_keys};
 
     pub mod layout;
     pub use layout::{find_field_layout, find_model_field_layout};

@@ -29,14 +29,14 @@ pub impl $type_name$DojoEventImpl of dojo::event::Event<$type_name$> {
     }
 
     #[inline(always)]
-    fn keys(self: @$type_name$) -> Span<felt252> {
+    fn serialized_keys(self: @$type_name$) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         $serialized_keys$
         core::array::ArrayTrait::span(@serialized)
     }
 
     #[inline(always)]
-    fn values(self: @$type_name$) -> Span<felt252> {
+    fn serialized_values(self: @$type_name$) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         $serialized_values$
         core::array::ArrayTrait::span(@serialized)

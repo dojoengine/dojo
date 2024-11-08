@@ -13,8 +13,8 @@ pub trait Event<T> {
     fn definition() -> EventDefinition;
     fn layout() -> Layout;
     fn schema() -> Struct;
-    fn keys(self: @T) -> Span<felt252>;
-    fn values(self: @T) -> Span<felt252>;
+    fn serialized_keys(self: @T) -> Span<felt252>;
+    fn serialized_values(self: @T) -> Span<felt252>;
     /// Returns the selector of the event computed for the given namespace hash.
     fn selector(namespace_hash: felt252) -> felt252;
 }
