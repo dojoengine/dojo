@@ -78,26 +78,17 @@ impl ExecuteArgs {
         let txn_config: TxnConfig = self.transaction.try_into()?;
 
         config.tokio_handle().block_on(async {
-            let local_manifest = ws.read_manifest_profile()?;
-            let use_diff = self.diff || local_manifest.is_none();
-
             let (contract_address, contracts) = match &descriptor {
                 ResourceDescriptor::Address(address) => (Some(*address), Default::default()),
                 ResourceDescriptor::Tag(tag) => {
-                    let contracts: HashMap<String, ContractInfo> = if use_diff {
-                        let (world_diff, _, _) = utils::get_world_diff_and_account(
-                            self.account.clone(),
-                            self.starknet.clone(),
-                            self.world,
-                            &ws,
-                            &mut None,
-                        )
-                        .await?;
-
-                        (&world_diff).into()
-                    } else {
-                        (&local_manifest.unwrap()).into()
-                    };
+                    let contracts = utils::contracts_from_manifest_or_diff(
+                        self.account.clone(),
+                        self.starknet.clone(),
+                        self.world,
+                        &ws,
+                        self.diff,
+                    )
+                    .await?;
 
                     (contracts.get(tag).map(|c| c.address), contracts)
                 }

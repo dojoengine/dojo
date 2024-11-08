@@ -1,9 +1,11 @@
+use std::collections::HashMap;
 use std::str::FromStr;
 
 use anyhow::{anyhow, Context, Result};
 use camino::Utf8PathBuf;
 use colored::*;
 use dojo_world::config::ProfileConfig;
+use dojo_world::contracts::ContractInfo;
 use dojo_world::diff::WorldDiff;
 use dojo_world::local::WorldLocal;
 use katana_rpc_api::starknet::RPC_SPEC_VERSION;
@@ -203,6 +205,28 @@ fn is_compatible_version(provided_version: &str, expected_version: &str) -> Resu
     })?;
 
     Ok(expected_ver_req.matches(&provided_ver))
+}
+
+/// Returns the contracts from the manifest or from the diff.
+pub async fn contracts_from_manifest_or_diff(
+    account: AccountOptions,
+    starknet: StarknetOptions,
+    world: WorldOptions,
+    ws: &Workspace<'_>,
+    force_diff: bool,
+) -> Result<HashMap<String, ContractInfo>> {
+    let local_manifest = ws.read_manifest_profile()?;
+
+    let contracts: HashMap<String, ContractInfo> = if force_diff || local_manifest.is_none() {
+        let (world_diff, _, _) =
+            get_world_diff_and_account(account, starknet, world, ws, &mut None).await?;
+
+        (&world_diff).into()
+    } else {
+        (&local_manifest.unwrap()).into()
+    };
+
+    Ok(contracts)
 }
 
 #[cfg(test)]

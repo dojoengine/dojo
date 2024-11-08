@@ -6,7 +6,7 @@ use clap::{Args, ValueEnum};
 use dojo_utils::{EthFeeConfig, FeeConfig, StrkFeeConfig, TxnAction, TxnConfig};
 use starknet::core::types::Felt;
 
-#[derive(Debug, Args, Default)]
+#[derive(Debug, Clone, Args, Default)]
 #[command(next_help_heading = "Transaction options")]
 pub struct TransactionOptions {
     #[arg(long)]

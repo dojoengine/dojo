@@ -32,6 +32,15 @@ impl MigrationUi {
         }
     }
 
+    /// Returns a new instance with the given frames.
+    pub fn new_with_frames(text: &'static str, frames: Vec<&'static str>) -> Self {
+        let frames =
+            spinners::SpinnerFrames { interval: 500, frames: frames.into_iter().collect() };
+
+        let spinner = Spinner::new(frames.clone(), text, None);
+        Self { spinner, default_frames: frames, silent: false }
+    }
+
     /// Returns a new instance with the silent flag set.
     pub fn with_silent(mut self) -> Self {
         self.silent = true;

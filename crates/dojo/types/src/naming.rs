@@ -92,6 +92,14 @@ pub fn compute_selector_from_tag(tag: &str) -> Felt {
     compute_selector_from_names(&namespace, &name)
 }
 
+pub fn compute_selector_from_tag_or_name(tag_or_name: &str) -> Felt {
+    if is_valid_tag(tag_or_name) {
+        compute_selector_from_tag(tag_or_name)
+    } else {
+        compute_bytearray_hash(tag_or_name)
+    }
+}
+
 pub fn compute_selector_from_names(namespace: &str, name: &str) -> Felt {
     compute_selector_from_hashes(compute_bytearray_hash(namespace), compute_bytearray_hash(name))
 }
@@ -174,5 +182,21 @@ mod tests {
         assert!(!is_valid_tag("invalid-"));
         assert!(!is_valid_tag("-invalid"));
         assert!(!is_valid_tag(""));
+    }
+
+    #[test]
+    fn test_compute_selector_from_tag_or_name_tag() {
+        assert_eq!(
+            compute_selector_from_tag_or_name("namespace-model"),
+            compute_selector_from_tag("namespace-model")
+        );
+    }
+
+    #[test]
+    fn test_compute_selector_from_tag_or_name_name() {
+        assert_eq!(
+            compute_selector_from_tag_or_name("namespace"),
+            compute_bytearray_hash("namespace")
+        );
     }
 }
