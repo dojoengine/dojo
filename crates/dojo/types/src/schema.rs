@@ -173,6 +173,11 @@ impl Ty {
     }
 
     pub fn deserialize(&mut self, felts: &mut Vec<Felt>) -> Result<(), PrimitiveError> {
+        if felts.is_empty() {
+            // return early if there are no felts to deserialize
+            return Ok(());
+        }
+
         match self {
             Ty::Primitive(c) => {
                 c.deserialize(felts)?;

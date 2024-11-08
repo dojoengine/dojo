@@ -105,8 +105,8 @@ impl DojoWorld {
         block_rx: Receiver<u64>,
         world_address: Felt,
         provider: Arc<JsonRpcClient<HttpTransport>>,
+        model_cache: Arc<ModelCache>,
     ) -> Self {
-        let model_cache = Arc::new(ModelCache::new(pool.clone()));
         let entity_manager = Arc::new(EntityManager::default());
         let event_message_manager = Arc::new(EventMessageManager::default());
         let event_manager = Arc::new(EventManager::default());
@@ -624,7 +624,7 @@ impl DojoWorld {
                 Some(ValueType::String(value)) => value,
                 Some(ValueType::Primitive(value)) => {
                     let primitive: Primitive = value.try_into()?;
-                    primitive.to_sql_value()?
+                    primitive.to_sql_value()
                 }
                 None => return Err(QueryError::MissingParam("value_type".into()).into()),
             };
@@ -969,6 +969,7 @@ fn map_row_to_entity(
     schemas: &[Ty],
     dont_include_hashed_keys: bool,
 ) -> Result<proto::types::Entity, Error> {
+    println!("schemas: {:?}", schemas);
     let hashed_keys = Felt::from_str(&row.get::<String, _>("id")).map_err(ParseError::FromStr)?;
     let models = schemas
         .iter()
@@ -1060,7 +1061,7 @@ fn build_composite_clause(
                         Some(ValueType::String(value)) => value,
                         Some(ValueType::Primitive(value)) => {
                             let primitive: Primitive = value.try_into()?;
-                            primitive.to_sql_value()?
+                            primitive.to_sql_value()
                         }
                         None => return Err(QueryError::MissingParam("value_type".into()).into()),
                     };
@@ -1368,6 +1369,7 @@ pub async fn new(
     block_rx: Receiver<u64>,
     world_address: Felt,
     provider: Arc<JsonRpcClient<HttpTransport>>,
+    model_cache: Arc<ModelCache>,
 ) -> Result<
     (SocketAddr, impl Future<Output = Result<(), tonic::transport::Error>> + 'static),
     std::io::Error,
@@ -1380,7 +1382,7 @@ pub async fn new(
         .build()
         .unwrap();
 
-    let world = DojoWorld::new(pool.clone(), block_rx, world_address, provider);
+    let world = DojoWorld::new(pool.clone(), block_rx, world_address, provider, model_cache);
     let server = WorldServer::new(world)
         .accept_compressed(CompressionEncoding::Gzip)
         .send_compressed(CompressionEncoding::Gzip);

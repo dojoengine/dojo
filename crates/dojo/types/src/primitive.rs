@@ -190,46 +190,29 @@ impl Primitive {
         }
     }
 
-    pub fn to_sql_value(&self) -> Result<String, PrimitiveError> {
-        let value = self.serialize()?;
-
-        if value.is_empty() {
-            return Err(PrimitiveError::MissingFieldElement);
-        }
-
+    pub fn to_sql_value(&self) -> String {
         match self {
             // Integers
-            Primitive::I8(_) => Ok(format!("{}", try_from_felt::<i8>(value[0])?)),
-            Primitive::I16(_) => Ok(format!("{}", try_from_felt::<i16>(value[0])?)),
-            Primitive::I32(_) => Ok(format!("{}", try_from_felt::<i32>(value[0])?)),
-            Primitive::I64(_) => Ok(format!("{}", try_from_felt::<i64>(value[0])?)),
+            Primitive::I8(i8) => format!("{}", i8.unwrap_or_default()),
+            Primitive::I16(i16) => format!("{}", i16.unwrap_or_default()),
+            Primitive::I32(i32) => format!("{}", i32.unwrap_or_default()),
+            Primitive::I64(i64) => format!("{}", i64.unwrap_or_default()),
 
-            Primitive::U8(_)
-            | Primitive::U16(_)
-            | Primitive::U32(_)
-            | Primitive::USize(_)
-            | Primitive::Bool(_) => Ok(format!("{}", value[0])),
+            Primitive::U8(u8) => format!("{}", u8.unwrap_or_default()),
+            Primitive::U16(u16) => format!("{}", u16.unwrap_or_default()),
+            Primitive::U32(u32) => format!("{}", u32.unwrap_or_default()),
+            Primitive::USize(u32) => format!("{}", u32.unwrap_or_default()),
+            Primitive::Bool(bool) => format!("{}", bool.unwrap_or_default()),
 
             // Hex string
-            Primitive::I128(_) => Ok(format!("{:#064x}", try_from_felt::<i128>(value[0])?)),
-            Primitive::ContractAddress(_)
-            | Primitive::ClassHash(_)
-            | Primitive::Felt252(_)
-            | Primitive::U128(_)
-            | Primitive::U64(_) => Ok(format!("{:#064x}", value[0])),
+            Primitive::I128(i128) => format!("{:#064x}", i128.unwrap_or_default()),
+            Primitive::ContractAddress(felt) => format!("{:#064x}", felt.unwrap_or_default()),
+            Primitive::ClassHash(felt) => format!("{:#064x}", felt.unwrap_or_default()),
+            Primitive::Felt252(felt) => format!("{:#064x}", felt.unwrap_or_default()),
+            Primitive::U128(u128) => format!("{:#064x}", u128.unwrap_or_default()),
+            Primitive::U64(u64) => format!("{:#064x}", u64.unwrap_or_default()),
 
-            Primitive::U256(_) => {
-                if value.len() < 2 {
-                    Err(PrimitiveError::NotEnoughFieldElements)
-                } else {
-                    let mut buffer = [0u8; 32];
-                    let value0_bytes = value[0].to_bytes_be();
-                    let value1_bytes = value[1].to_bytes_be();
-                    buffer[16..].copy_from_slice(&value0_bytes[16..]);
-                    buffer[..16].copy_from_slice(&value1_bytes[16..]);
-                    Ok(format!("0x{}", hex::encode(buffer)))
-                }
-            }
+            Primitive::U256(u256) => format!("0x{:064x}", u256.unwrap_or_default()),
         }
     }
 
@@ -436,7 +419,7 @@ mod tests {
         let primitive = Primitive::U256(Some(U256::from_be_hex(
             "aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbccccccccccccccccdddddddddddddddd",
         )));
-        let sql_value = primitive.to_sql_value().unwrap();
+        let sql_value = primitive.to_sql_value();
         let serialized = primitive.serialize().unwrap();
 
         let mut deserialized = primitive;

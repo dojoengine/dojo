@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use dojo_world::contracts::abigen::world::Event as WorldEvent;
 use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::world::WorldContractReader;
-use starknet::core::types::Event;
+use starknet::core::types::{BlockId, Event};
 use starknet::providers::Provider;
 use tracing::{debug, info};
 
@@ -34,7 +34,7 @@ where
         &self,
         world: &WorldContractReader<P>,
         db: &mut Sql,
-        _block_number: u64,
+        block_number: u64,
         block_timestamp: u64,
         _event_id: &str,
         event: &Event,
@@ -57,7 +57,7 @@ where
         let namespace = event.namespace.to_string().unwrap();
         let name = event.name.to_string().unwrap();
 
-        let model = world.model_reader(&namespace, &name).await?;
+        let model = world.model_reader_with_block(&namespace, &name, BlockId::Number(block_number)).await?;
         let schema = model.schema().await?;
         let layout = model.layout().await?;
 

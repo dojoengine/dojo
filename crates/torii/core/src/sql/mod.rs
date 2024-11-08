@@ -60,6 +60,7 @@ impl Sql {
         pool: Pool<Sqlite>,
         executor: UnboundedSender<QueryMessage>,
         contracts: &HashMap<Felt, ContractType>,
+        model_cache: Arc<ModelCache>,
     ) -> Result<Self> {
         for contract in contracts {
             executor.send(QueryMessage::other(
@@ -78,7 +79,7 @@ impl Sql {
         let db = Self {
             pool: pool.clone(),
             executor,
-            model_cache: Arc::new(ModelCache::new(pool.clone())),
+            model_cache,
             local_cache,
         };
 
@@ -325,6 +326,8 @@ impl Sql {
             )
             .await;
 
+        println!("selector: {:?}", selector);
+        println!("set model cache: {:?}", model);
         Ok(())
     }
 
@@ -768,7 +771,7 @@ impl Sql {
                 match &member.ty {
                     Ty::Primitive(ty) => {
                         columns.push(format!("external_{}", &member.name));
-                        arguments.push(Argument::String(ty.to_sql_value().unwrap()));
+                        arguments.push(Argument::String(ty.to_sql_value()));
                     }
                     Ty::Enum(e) => {
                         columns.push(format!("external_{}", &member.name));
