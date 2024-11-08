@@ -53,7 +53,7 @@ pub(crate) const LOG_TARGET: &str = "torii::cli";
 struct Args {
     /// The world to index
     #[arg(short, long = "world", env = "DOJO_WORLD_ADDRESS")]
-    world_address: Felt,
+    world_address: Option<Felt>,
 
     /// The sequencer rpc endpoint to index.
     #[arg(long, value_name = "URL", default_value = ":5050", value_parser = parse_url)]
@@ -91,8 +91,7 @@ struct Args {
 
     /// Specify allowed origins for api endpoints (comma-separated list of allowed origins, or "*"
     /// for all)
-    #[arg(long)]
-    #[arg(value_delimiter = ',')]
+    #[arg(long, value_delimiter = ',')]
     allowed_origins: Option<Vec<String>>,
 
     /// The external url of the server, used for configuring the GraphQL Playground in a hosted
@@ -158,8 +157,14 @@ async fn main() -> anyhow::Result<()> {
         Args::from_arg_matches(&matches)?
     };
 
+    let world_address = if let Some(world_address) = args.world_address {
+        world_address
+    } else {
+        return Err(anyhow::anyhow!("Please specify a world address."));
+    };
+
     let mut contracts = parse_erc_contracts(&args.contracts)?;
-    contracts.push(Contract { address: args.world_address, r#type: ContractType::WORLD });
+    contracts.push(Contract { address: world_address, r#type: ContractType::WORLD });
 
     let filter_layer = EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| EnvFilter::new("info,hyper_reverse_proxy=off"));
@@ -203,7 +208,7 @@ async fn main() -> anyhow::Result<()> {
     let provider: Arc<_> = JsonRpcClient::new(HttpTransport::new(args.rpc)).into();
 
     // Get world address
-    let world = WorldContractReader::new(args.world_address, provider.clone());
+    let world = WorldContractReader::new(world_address, provider.clone());
 
 
     let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx.clone()).await?;
@@ -249,7 +254,7 @@ async fn main() -> anyhow::Result<()> {
 
     let shutdown_rx = shutdown_tx.subscribe();
     let (grpc_addr, grpc_server) =
-        torii_grpc::server::new(shutdown_rx, &pool, block_rx, args.world_address, Arc::clone(&provider))
+        torii_grpc::server::new(shutdown_rx, &pool, block_rx, world_address, Arc::clone(&provider))
             .await?;
 
     let mut libp2p_relay_server = torii_relay::server::Relay::new(
