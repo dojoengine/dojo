@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1731100653615,
+  "lastUpdate": 1731100904353,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -32113,6 +32113,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10405370036,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "61febd550dd6970ebf3b9d2164b54a4c981c336f",
+          "message": "feat(sozo): add sozo `dev` command (#2664)\n\n* feat: add sozo dev back\n\n* fix: add debounce logic for better experience",
+          "timestamp": "2024-11-08T15:01:27-06:00",
+          "tree_id": "9aabc5bfe2a58003a0bfb9dc603bfabe468e00dd",
+          "url": "https://github.com/dojoengine/dojo/commit/61febd550dd6970ebf3b9d2164b54a4c981c336f"
+        },
+        "date": 1731100903173,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16612025,
+            "range": "± 824373",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8620929,
+            "range": "± 504184",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3796968574,
+            "range": "± 751326988",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8549953,
+            "range": "± 239831",
             "unit": "ns/iter"
           }
         ]
