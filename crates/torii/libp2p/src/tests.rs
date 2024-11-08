@@ -524,7 +524,6 @@ mod test {
     #[cfg(not(target_arch = "wasm32"))]
     #[tokio::test]
     async fn test_client_messaging() -> Result<(), Box<dyn Error>> {
-        use std::collections::HashMap;
         use std::time::Duration;
 
         use dojo_types::schema::{Member, Struct, Ty};
@@ -541,7 +540,7 @@ mod test {
         use tokio::time::sleep;
         use torii_core::executor::Executor;
         use torii_core::sql::Sql;
-        use torii_core::types::ContractType;
+        use torii_core::types::{Contract, ContractType};
 
         use crate::server::Relay;
         use crate::typed_data::{Domain, Field, SimpleField, TypedData};
@@ -579,7 +578,7 @@ mod test {
             executor.run().await.unwrap();
         });
         let mut db =
-            Sql::new(pool.clone(), sender, &HashMap::from([(Felt::ZERO, ContractType::WORLD)]))
+            Sql::new(pool.clone(), sender, &vec![Contract { address: Felt::ZERO, r#type: ContractType::WORLD }])
                 .await
                 .unwrap();
 

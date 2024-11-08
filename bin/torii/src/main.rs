@@ -139,8 +139,8 @@ struct Args {
     index_raw_events: bool,
 
     /// ERC contract addresses to index
-    #[arg(long, value_parser = parse_erc_contracts, default_value = "")]
-    contracts: Vec<Contract>,
+    #[arg(long, default_value = "")]
+    contracts: String,
 
     /// Configuration file
     #[arg(long)]
@@ -157,6 +157,9 @@ async fn main() -> anyhow::Result<()> {
     } else {
         Args::from_arg_matches(&matches)?
     };
+
+    let mut contracts = parse_erc_contracts(&args.contracts)?;
+    contracts.push(Contract { address: args.world_address, r#type: ContractType::WORLD });
 
     let filter_layer = EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| EnvFilter::new("info,hyper_reverse_proxy=off"));
@@ -202,7 +205,6 @@ async fn main() -> anyhow::Result<()> {
     // Get world address
     let world = WorldContractReader::new(args.world_address, provider.clone());
 
-    let contracts = args.contracts.iter().map(|contract| (contract.address, contract.r#type)).collect();
 
     let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx.clone()).await?;
     tokio::spawn(async move {
@@ -242,7 +244,7 @@ async fn main() -> anyhow::Result<()> {
         },
         shutdown_tx.clone(),
         Some(block_tx),
-        Arc::new(contracts),
+        &contracts,
     );
 
     let shutdown_rx = shutdown_tx.subscribe();

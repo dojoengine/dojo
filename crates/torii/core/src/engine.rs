@@ -39,7 +39,7 @@ use crate::processors::store_update_member::StoreUpdateMemberProcessor;
 use crate::processors::store_update_record::StoreUpdateRecordProcessor;
 use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
 use crate::sql::{Cursors, Sql};
-use crate::types::ContractType;
+use crate::types::{Contract, ContractType};
 
 type EventProcessorMap<P> = HashMap<Felt, Vec<Box<dyn EventProcessor<P>>>>;
 
@@ -217,8 +217,10 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         config: EngineConfig,
         shutdown_tx: Sender<()>,
         block_tx: Option<BoundedSender<u64>>,
-        contracts: Arc<HashMap<Felt, ContractType>>,
+        contracts: &Vec<Contract>,
     ) -> Self {
+        let contracts = Arc::new(contracts.iter().map(|contract| (contract.address, contract.r#type)).collect());
+
         Self {
             world: Arc::new(world),
             db,
