@@ -1,5 +1,7 @@
 use anyhow::{anyhow, Result};
 use clap::Args;
+use std::str::FromStr;
+use dojo_types::naming;
 use dojo_utils::{Invoker, TxnConfig};
 use dojo_world::config::calldata_decoder;
 use scarb::core::Config;
@@ -21,7 +23,7 @@ use crate::utils;
 pub struct ExecuteArgs {
 
     #[arg(
-         help = "The address or the tag (ex: dojo_examples:actions) of the contract to be executed."
+         help = "List of calls to execute. Each call should be in format: <CONTRACT_ADDRESS/TAG>,<ENTRYPOINT>,<ARG1>,<ARG2>,... (ex: dojo_examples:actions,execute,1,2)"
     )]
 
     pub calls: Vec<String>,
@@ -46,16 +48,31 @@ pub struct CallArgs {
     pub calldata: Option<String>,
 }
 
-impl CallArgs {
-    fn from_string(s: &str) -> Result<Self> {
++impl std::str::FromStr for CallArgs  {
+
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let s = s.trim();
+                if s.is_empty() {
+                return Err(anyhow!("Empty call string"));
+               }
+        
         let parts: Vec<&str> = s.split(',').collect();
         if parts.len() < 2 {
             return Err(anyhow!("Invalid call format. Expected format: <CONTRACT_NAME>,<ENTRYPOINT_NAME>,<ARG1>,<ARG2>,..."));
         }
+        let entrypoint = parts[1].trim();
+                if entrypoint.is_empty() {
+                    return Err(anyhow!("Empty entrypoint"));
+                }
+                if !entrypoint.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
+                    return Err(anyhow!("Invalid entrypoint format. Must contain only alphanumeric characters and underscores"));
+                }
 
         Ok(CallArgs {
             tag_or_address: parts[0].parse()?,  
-            entrypoint: parts[1].to_string(),
+            entrypoint: entrypoint.to_string(),
             calldata: if parts.len() > 2 { Some(parts[2..].join(",")) } else { None },
         })
     }
