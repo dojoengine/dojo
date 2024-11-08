@@ -70,10 +70,10 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
         let mut values = IWorldDispatcherTrait::entity(
             *self.dispatcher,
             Model::<M>::selector(*self.namespace_hash),
-            ModelIndex::Keys(keys),
+            ModelIndex::Id(entity_id_from_serialized_keys(keys)),
             Model::<M>::layout()
         );
-        match Model::<M>::from_serialized(ref keys, ref values) {
+        match Model::<M>::from_serialized(keys, values) {
             Option::Some(model) => model,
             Option::None => {
                 panic!(
@@ -85,9 +85,11 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
 
     fn read_models<K, +Drop<K>, +Serde<K>>(self: @WorldStorage, keys: Span<K>) -> Array<M> {
         let mut indexes: Array<ModelIndex> = array![];
-
+        let mut serialized_keys: Array<Span<felt252>> = array![];
         for k in keys {
-            indexes.append(ModelIndex::Keys(serialize_inline::<K>(k)));
+            let sk = serialize_inline::<K>(k);
+            serialized_keys.append(sk);
+            indexes.append(ModelIndex::Id(entity_id_from_serialized_keys(sk)));
         };
 
         let all_values = IWorldDispatcherTrait::entities(
@@ -99,16 +101,9 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
 
         let mut models: Array<M> = array![];
 
-        let mut i = 0;
-        loop {
-            if i >= indexes.len() {
-                break;
-            }
-
-            let mut mk = serialize_inline::<K>(keys[i]);
-            let mut mv = *all_values[i];
-
-            match Model::<M>::from_serialized(ref mk, ref mv) {
+        let (mut i, len) = (0, indexes.len());
+        while i < len {
+            match Model::<M>::from_serialized(*serialized_keys[i], *all_values[i]) {
                 Option::Some(model) => models.append(model),
                 Option::None => {
                     panic!(
@@ -119,7 +114,6 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
 
             i += 1;
         };
-
         models
     }
 
@@ -154,7 +148,7 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
         IWorldDispatcherTrait::delete_entity(
             self.dispatcher,
             Model::<M>::selector(self.namespace_hash),
-            ModelIndex::Keys(Model::<M>::serialized_keys(model)),
+            ModelIndex::Id(Model::<M>::entity_id(model)),
             Model::<M>::layout()
         );
     }
@@ -239,7 +233,7 @@ impl ModelValueStorageWorldStorageImpl<
             ModelIndex::Id(entity_id),
             ModelValue::<V>::layout()
         );
-        match ModelValue::<V>::from_serialized(entity_id, ref values) {
+        match ModelValue::<V>::from_serialized(values) {
             Option::Some(entity) => entity,
             Option::None => {
                 panic!(
