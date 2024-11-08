@@ -282,7 +282,8 @@ impl NodeArgs {
     }
 
     fn config(&self) -> Result<katana_node::config::Config> {
-        Ok(ConfigBuilder::new()
+        let mut builder = ConfigBuilder::new();
+        Ok(builder
             .metrics(self.metrics_config())
             .db(self.db_config())
             .dev(self.dev_config())

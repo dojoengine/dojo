@@ -82,85 +82,85 @@ impl ConfigBuilder {
         ConfigBuilder::default()
     }
 
-    pub fn chain_id(mut self, chain_id: ChainId) -> Self {
+    pub fn chain_id(&mut self, chain_id: ChainId) -> &mut Self {
         self.config.chain.id = chain_id;
         self
     }
 
-    pub fn genesis_parent_hash(mut self, parent_hash: BlockHash) -> Self {
+    pub fn genesis_parent_hash(&mut self, parent_hash: BlockHash) -> &mut Self {
         self.config.chain.genesis.parent_hash = parent_hash;
         self
     }
 
-    pub fn genesis_state_root(mut self, state_root: Felt) -> Self {
+    pub fn genesis_state_root(&mut self, state_root: Felt) -> &mut Self {
         self.config.chain.genesis.state_root = state_root;
         self
     }
 
-    pub fn genesis_number(mut self, number: BlockNumber) -> Self {
+    pub fn genesis_number(&mut self, number: BlockNumber) -> &mut Self {
         self.config.chain.genesis.number = number;
         self
     }
 
-    pub fn genesis_timestamp(mut self, timestamp: u64) -> Self {
+    pub fn genesis_timestamp(&mut self, timestamp: u64) -> &mut Self {
         self.config.chain.genesis.timestamp = timestamp;
         self
     }
 
-    pub fn genesis_sequencer_address(mut self, sequencer_address: ContractAddress) -> Self {
+    pub fn genesis_sequencer_address(&mut self, sequencer_address: ContractAddress) -> &mut Self {
         self.config.chain.genesis.sequencer_address = sequencer_address;
         self
     }
 
-    pub fn genesis_gas_prices(mut self, gas_prices: GasPrices) -> Self {
+    pub fn genesis_gas_prices(&mut self, gas_prices: GasPrices) -> &mut Self {
         self.config.chain.genesis.gas_prices = gas_prices;
         self
     }
 
-    pub fn genesis_classes(mut self, classes: BTreeMap<ClassHash, GenesisClass>) -> Self {
+    pub fn genesis_classes(&mut self, classes: BTreeMap<ClassHash, GenesisClass>) -> &mut Self {
         self.config.chain.genesis.classes = classes;
         self
     }
 
     pub fn genesis_allocations(
-        mut self,
+        &mut self,
         allocations: BTreeMap<ContractAddress, GenesisAllocation>,
-    ) -> Self {
+    ) -> &mut Self {
         self.config.chain.genesis.allocations = allocations;
         self
     }
 
-    pub fn fee_contracts_eth(mut self, eth: ContractAddress) -> Self {
+    pub fn fee_contracts_eth(&mut self, eth: ContractAddress) -> &mut Self {
         self.config.chain.fee_contracts.eth = eth;
         self
     }
 
-    pub fn fee_contracts_strk(mut self, strk: ContractAddress) -> Self {
+    pub fn fee_contracts_strk(&mut self, strk: ContractAddress) -> &mut Self {
         self.config.chain.fee_contracts.strk = strk;
         self
     }
 
-    pub fn chain_protocol_version(mut self, version: ProtocolVersion) -> Self {
+    pub fn chain_protocol_version(&mut self, version: ProtocolVersion) -> &mut Self {
         self.config.chain.version = version;
         self
     }
 
-    pub fn db_dir(mut self, dir: Option<PathBuf>) -> Self {
+    pub fn db_dir(&mut self, dir: Option<PathBuf>) -> &mut Self {
         self.config.db.dir = dir;
         self
     }
 
-    pub fn forking(mut self, forking: Option<ForkingConfig>) -> Self {
+    pub fn forking(&mut self, forking: Option<ForkingConfig>) -> &mut Self {
         self.config.forking = forking;
         self
     }
 
-    pub fn fork_url(mut self, url: Url) -> Self {
+    pub fn fork_url(&mut self, url: Url) -> &mut Self {
         self.config.forking.get_or_insert(ForkingConfig { url, block: None }).url = url.clone();
         self
     }
 
-    pub fn fork_block(mut self, block: Option<BlockHashOrNumber>) -> Self {
+    pub fn fork_block(&mut self, block: Option<BlockHashOrNumber>) -> &mut Self {
         self.config
             .forking
             .get_or_insert(ForkingConfig { url: Url::from_str("").unwrap(), block: None })
@@ -168,52 +168,52 @@ impl ConfigBuilder {
         self
     }
 
-    pub fn rpc_port(mut self, port: u16) -> Self {
+    pub fn rpc_port(&mut self, port: u16) -> &mut Self {
         self.config.rpc.port = port;
         self
     }
 
-    pub fn rpc_addr(mut self, addr: IpAddr) -> Self {
+    pub fn rpc_addr(&mut self, addr: IpAddr) -> &mut Self {
         self.config.rpc.addr = addr;
         self
     }
 
-    pub fn rpc_max_connections(mut self, max_connections: u32) -> Self {
+    pub fn rpc_max_connections(&mut self, max_connections: u32) -> &mut Self {
         self.config.rpc.max_connections = max_connections;
         self
     }
 
-    pub fn rpc_allowed_origins(mut self, allowed_origins: Option<Vec<String>>) -> Self {
+    pub fn rpc_allowed_origins(&mut self, allowed_origins: Option<Vec<String>>) -> &mut Self {
         self.config.rpc.allowed_origins = allowed_origins;
         self
     }
 
-    pub fn rpc_apis(mut self, apis: HashSet<ApiKind>) -> Self {
+    pub fn rpc_apis(&mut self, apis: HashSet<ApiKind>) -> &mut Self {
         self.config.rpc.apis = apis;
         self
     }
 
-    pub fn metrics_addr(mut self, addr: SocketAddr) -> Self {
+    pub fn metrics_addr(&mut self, addr: SocketAddr) -> &mut Self {
         self.config.metrics.get_or_insert(MetricsConfig { addr }).addr = addr;
         self
     }
 
-    pub fn execution_invocation_max_steps(mut self, steps: u32) -> Self {
+    pub fn execution_invocation_max_steps(&mut self, steps: u32) -> &mut Self {
         self.config.execution.invocation_max_steps = steps;
         self
     }
 
-    pub fn execution_validation_max_steps(mut self, steps: u32) -> Self {
+    pub fn execution_validation_max_steps(&mut self, steps: u32) -> &mut Self {
         self.config.execution.validation_max_steps = steps;
         self
     }
 
-    pub fn execution_max_recursion_depth(mut self, depth: usize) -> Self {
+    pub fn execution_max_recursion_depth(&mut self, depth: usize) -> &mut Self {
         self.config.execution.max_recursion_depth = depth;
         self
     }
 
-    pub fn messaging_chain(mut self, chain: String) -> Self {
+    pub fn messaging_chain(&mut self, chain: String) -> &mut Self {
         self.config
             .messaging
             .get_or_insert(MessagingConfig { chain, ..Default::default() })
@@ -221,7 +221,7 @@ impl ConfigBuilder {
         self
     }
 
-    pub fn messaging_rpc_url(mut self, rpc_url: String) -> Self {
+    pub fn messaging_rpc_url(&mut self, rpc_url: String) -> &mut Self {
         self.config
             .messaging
             .get_or_insert(MessagingConfig { rpc_url, ..Default::default() })
@@ -229,7 +229,7 @@ impl ConfigBuilder {
         self
     }
 
-    pub fn messaging_contract_address(mut self, contract_address: String) -> Self {
+    pub fn messaging_contract_address(&mut self, contract_address: String) -> &mut Self {
         self.config
             .messaging
             .get_or_insert(MessagingConfig { contract_address, ..Default::default() })
@@ -237,7 +237,7 @@ impl ConfigBuilder {
         self
     }
 
-    pub fn messaging_sender_address(mut self, sender_address: String) -> Self {
+    pub fn messaging_sender_address(&mut self, sender_address: String) -> &mut Self {
         self.config
             .messaging
             .get_or_insert(MessagingConfig { sender_address, ..Default::default() })
@@ -245,7 +245,7 @@ impl ConfigBuilder {
         self
     }
 
-    pub fn messaging_private_key(mut self, private_key: String) -> Self {
+    pub fn messaging_private_key(&mut self, private_key: String) -> &mut Self {
         self.config
             .messaging
             .get_or_insert(MessagingConfig { private_key, ..Default::default() })
@@ -253,7 +253,7 @@ impl ConfigBuilder {
         self
     }
 
-    pub fn messaging_interval(mut self, interval: u64) -> Self {
+    pub fn messaging_interval(&mut self, interval: u64) -> &mut Self {
         self.config
             .messaging
             .get_or_insert(MessagingConfig { interval, ..Default::default() })
@@ -261,7 +261,7 @@ impl ConfigBuilder {
         self
     }
 
-    pub fn messaging_from_block(mut self, from_block: u64) -> Self {
+    pub fn messaging_from_block(&mut self, from_block: u64) -> &mut Self {
         self.config
             .messaging
             .get_or_insert(MessagingConfig { from_block, ..Default::default() })
@@ -269,72 +269,72 @@ impl ConfigBuilder {
         self
     }
 
-    pub fn sequencing_block_time(mut self, block_time: Option<u64>) -> Self {
+    pub fn sequencing_block_time(&mut self, block_time: Option<u64>) -> &mut Self {
         self.config.sequencing.block_time = block_time;
         self
     }
 
-    pub fn sequencing_no_mining(mut self, no_mining: bool) -> Self {
+    pub fn sequencing_no_mining(&mut self, no_mining: bool) -> &mut Self {
         self.config.sequencing.no_mining = no_mining;
         self
     }
 
-    pub fn dev_fee(mut self, fee: bool) -> Self {
+    pub fn dev_fee(&mut self, fee: bool) -> &mut Self {
         self.config.dev.fee = fee;
         self
     }
 
-    pub fn dev_account_validation(mut self, validation: bool) -> Self {
+    pub fn dev_account_validation(&mut self, validation: bool) -> &mut Self {
         self.config.dev.account_validation = validation;
         self
     }
 
-    pub fn dev_fixed_gas_prices(mut self, gas_prices: Option<FixedL1GasPriceConfig>) -> Self {
+    pub fn dev_fixed_gas_prices(&mut self, gas_prices: Option<FixedL1GasPriceConfig>) -> &mut Self {
         self.config.dev.fixed_gas_prices = gas_prices;
         self
     }
 
-    pub fn chain(mut self, chain: ChainSpec) -> Self {
+    pub fn chain(&mut self, chain: ChainSpec) -> &mut Self {
         self.config.chain = chain;
         self
     }
 
-    pub fn db(mut self, db: DbConfig) -> Self {
+    pub fn db(&mut self, db: DbConfig) -> &mut Self {
         self.config.db = db;
         self
     }
 
-    pub fn rpc(mut self, rpc: RpcConfig) -> Self {
+    pub fn rpc(&mut self, rpc: RpcConfig) -> &mut Self {
         self.config.rpc = rpc;
         self
     }
 
-    pub fn metrics(mut self, metrics: Option<MetricsConfig>) -> Self {
+    pub fn metrics(&mut self, metrics: Option<MetricsConfig>) -> &mut Self {
         self.config.metrics = metrics;
         self
     }
 
-    pub fn execution(mut self, execution: ExecutionConfig) -> Self {
+    pub fn execution(&mut self, execution: ExecutionConfig) -> &mut Self {
         self.config.execution = execution;
         self
     }
 
-    pub fn messaging(mut self, messaging: Option<MessagingConfig>) -> Self {
+    pub fn messaging(&mut self, messaging: Option<MessagingConfig>) -> &mut Self {
         self.config.messaging = messaging;
         self
     }
 
-    pub fn sequencing(mut self, sequencing: SequencingConfig) -> Self {
+    pub fn sequencing(&mut self, sequencing: SequencingConfig) -> &mut Self {
         self.config.sequencing = sequencing;
         self
     }
 
-    pub fn dev(mut self, dev: DevConfig) -> Self {
+    pub fn dev(&mut self, dev: DevConfig) -> &mut Self {
         self.config.dev = dev;
         self
     }
 
-    pub fn build(self) -> Config {
-        self.config
+    pub fn build(&mut self) -> Config {
+        self.config.clone()
     }
 }
