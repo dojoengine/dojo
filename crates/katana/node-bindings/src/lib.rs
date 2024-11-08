@@ -427,7 +427,7 @@ impl Katana {
 
         // In the case where port 0 is set, we will need to extract the actual port number
         // from the logs.
-        let mut port = self.http_port.unwrap_or(5050);
+        let mut port = self.http_port.unwrap_or(0);
         cmd.arg("--http.port").arg(port.to_string());
 
         if self.no_mining {
