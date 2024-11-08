@@ -50,4 +50,3 @@ pub impl EventImpl<E, +ModelParser<E>, +EventDefinition<E>, +Serde<E>, +Introspe
         dojo::utils::selector_from_namespace_and_name(namespace_hash, @Self::name())
     }
 }
-
