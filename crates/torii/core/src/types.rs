@@ -1,6 +1,4 @@
 use core::fmt;
-use std::collections::VecDeque;
-use std::path::PathBuf;
 use std::str::FromStr;
 
 use chrono::{DateTime, Utc};
@@ -123,13 +121,13 @@ pub struct Event {
     pub executed_at: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
 }
-#[derive(Deserialize, Debug, Clone, Copy)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 pub struct Contract {
     pub address: Felt,
     pub r#type: ContractType,
 }
 
-#[derive(Deserialize, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ContractType {
     WORLD,
     ERC20,

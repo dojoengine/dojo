@@ -11,7 +11,6 @@
 //!   for more info.
 
 use std::cmp;
-use std::collections::VecDeque;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -19,11 +18,11 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Context;
-use clap::{ArgAction, Parser};
+use clap::{ArgAction, CommandFactory, FromArgMatches, Parser};
+use clap_config::ClapConfig;
 use dojo_metrics::exporters::prometheus::PrometheusRecorder;
 use dojo_utils::parse::{parse_socket_address, parse_url};
 use dojo_world::contracts::world::WorldContractReader;
-use serde::{Deserialize, Serialize};
 use sqlx::sqlite::{
     SqliteAutoVacuum, SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous,
 };
@@ -49,12 +48,12 @@ use url::{form_urlencoded, Url};
 pub(crate) const LOG_TARGET: &str = "torii::cli";
 
 /// Dojo World Indexer
-#[derive(Parser, Debug, Serialize, Deserialize)]
+#[derive(ClapConfig, Parser, Debug)]
 #[command(name = "torii", author, version, about, long_about = None)]
 struct Args {
     /// The world to index
     #[arg(short, long = "world", env = "DOJO_WORLD_ADDRESS")]
-    world_address: Option<Felt>,
+    world_address: Felt,
 
     /// The sequencer rpc endpoint to index.
     #[arg(long, value_name = "URL", default_value = ":5050", value_parser = parse_url)]
@@ -140,36 +139,23 @@ struct Args {
     index_raw_events: bool,
 
     /// ERC contract addresses to index
-    #[arg(long, value_parser = parse_erc_contracts)]
-    #[arg(conflicts_with = "config")]
-    contracts: Option<std::vec::Vec<Contract>>,
+    #[arg(long, value_parser = parse_erc_contracts, default_value = "")]
+    contracts: Vec<Contract>,
 
     /// Configuration file
     #[arg(long)]
     config: Option<PathBuf>,
 }
 
-impl Args {
-    fn from_file(path: &PathBuf) -> anyhow::Result<Self> {
-        let content = std::fs::read_to_string(path)
-            .with_context(|| format!("Failed to read config file: {}", path.display()))?;
-        
-        toml::from_str(&content)
-            .with_context(|| "Failed to parse TOML config")
-    }
-}
-
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let args = Args::parse();
-
-    let args = if let Some(path) = args.config {
-        Args::from_file(&path)?
+    let matches = <Args as CommandFactory>::command().get_matches();
+    let args = if let Some(path) = matches.get_one::<PathBuf>("config") {
+        let config: ArgsConfig = toml::from_str(&std::fs::read_to_string(path)?)?;
+        Args::from_merged(matches, Some(config))
     } else {
-        args
+        Args::from_arg_matches(&matches)?
     };
-
-    let world_address = verify_single_world_address(args.world_address, &mut config)?;
 
     let filter_layer = EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| EnvFilter::new("info,hyper_reverse_proxy=off"));
@@ -213,10 +199,9 @@ async fn main() -> anyhow::Result<()> {
     let provider: Arc<_> = JsonRpcClient::new(HttpTransport::new(args.rpc)).into();
 
     // Get world address
-    let world = WorldContractReader::new(world_address, provider.clone());
+    let world = WorldContractReader::new(args.world_address, provider.clone());
 
-    let contracts =
-        config.contracts.iter().map(|contract| (contract.address, contract.r#type)).collect();
+    let contracts = args.contracts.iter().map(|contract| (contract.address, contract.r#type)).collect();
 
     let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx.clone()).await?;
     tokio::spawn(async move {
@@ -261,7 +246,7 @@ async fn main() -> anyhow::Result<()> {
 
     let shutdown_rx = shutdown_tx.subscribe();
     let (grpc_addr, grpc_server) =
-        torii_grpc::server::new(shutdown_rx, &pool, block_rx, world_address, Arc::clone(&provider))
+        torii_grpc::server::new(shutdown_rx, &pool, block_rx, args.world_address, Arc::clone(&provider))
             .await?;
 
     let mut libp2p_relay_server = torii_relay::server::Relay::new(
@@ -354,18 +339,20 @@ async fn spawn_rebuilding_graphql_server(
 // - erc_type:address:start_block
 // - address:start_block (erc_type defaults to ERC20)
 fn parse_erc_contracts(s: &str) -> anyhow::Result<Vec<Contract>> {
+    if s.is_empty() {
+        return Ok(Vec::new());
+    }
+
     let parts: Vec<&str> = s.split(',').collect();
     let mut contracts = Vec::new();
     for part in parts {
         match part.split(':').collect::<Vec<&str>>().as_slice() {
             [r#type, address] => {
                 let r#type = r#type.parse::<ContractType>()?;
-                let address = Felt::from_str(address)
-                    .with_context(|| format!("Expected address, found {}", address))?;
-                contracts.push(Contract { address, r#type });
-            }
-            [address] => {
-                let r#type = ContractType::WORLD;
+                if r#type == ContractType::WORLD {
+                    return Err(anyhow::anyhow!("World address cannot be specified as an ERC contract"));
+                }
+
                 let address = Felt::from_str(address)
                     .with_context(|| format!("Expected address, found {}", address))?;
                 contracts.push(Contract { address, r#type });
