@@ -6,6 +6,7 @@ pub struct TypeIntrospection(pub usize, pub Vec<usize>);
 // Provides type introspection information for primitive types
 pub fn primitive_type_introspection() -> HashMap<String, TypeIntrospection> {
     HashMap::from([
+        ("bytes31".into(), TypeIntrospection(1, vec![248])),
         ("felt252".into(), TypeIntrospection(1, vec![251])),
         ("bool".into(), TypeIntrospection(1, vec![1])),
         ("u8".into(), TypeIntrospection(1, vec![8])),
