@@ -9,7 +9,7 @@ use dojo::utils::serialize_inline;
 /// # Returns
 ///
 /// The entity id.
-pub fn entity_id_from_keys(keys: Span<felt252>) -> felt252 {
+pub fn entity_id_from_serialized_keys(keys: Span<felt252>) -> felt252 {
     core::poseidon::poseidon_hash_span(keys)
 }
 
@@ -19,6 +19,6 @@ pub fn combine_key(parent_key: felt252, child_key: felt252) -> felt252 {
 }
 
 /// Computes the entity id from the key.
-pub fn entity_id_from_key<K, +Serde<K>>(key: @K) -> felt252 {
-    entity_id_from_keys(serialize_inline::<K>(key))
+pub fn entity_id_from_keys<K, +Serde<K>>(keys: @K) -> felt252 {
+    entity_id_from_serialized_keys(serialize_inline::<K>(keys))
 }

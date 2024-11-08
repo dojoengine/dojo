@@ -6,7 +6,7 @@ use dojo::model::{Model, ModelIndex, ModelValueKey, ModelValue, ModelStorage, Mo
 use dojo::event::{Event, EventStorage};
 use dojo::meta::Layout;
 use dojo::utils::{
-    entity_id_from_key, entity_id_from_keys, serialize_inline, find_model_field_layout,
+    entity_id_from_keys, entity_id_from_serialized_keys, serialize_inline, find_model_field_layout,
     deserialize_unwrap
 };
 use starknet::{ContractAddress, ClassHash};
@@ -58,22 +58,22 @@ pub impl EventStorageWorldStorageImpl<E, +Event<E>> of EventStorage<WorldStorage
         dojo::world::IWorldDispatcherTrait::emit_event(
             self.dispatcher,
             Event::<E>::selector(self.namespace_hash),
-            Event::<E>::keys(event),
-            Event::<E>::values(event),
+            Event::<E>::serialized_keys(event),
+            Event::<E>::serialized_values(event),
         );
     }
 }
 
 pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<WorldStorage, M> {
-    fn read_model<K, +Drop<K>, +Serde<K>>(self: @WorldStorage, key: K) -> M {
-        let mut keys = serialize_inline::<K>(@key);
+    fn read_model<K, +Drop<K>, +Serde<K>>(self: @WorldStorage, keys: K) -> M {
+        let mut keys = serialize_inline::<K>(@keys);
         let mut values = IWorldDispatcherTrait::entity(
             *self.dispatcher,
             Model::<M>::selector(*self.namespace_hash),
             ModelIndex::Keys(keys),
             Model::<M>::layout()
         );
-        match Model::<M>::from_values(ref keys, ref values) {
+        match Model::<M>::from_serialized(ref keys, ref values) {
             Option::Some(model) => model,
             Option::None => {
                 panic!(
@@ -108,7 +108,7 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
             let mut mk = serialize_inline::<K>(keys[i]);
             let mut mv = *all_values[i];
 
-            match Model::<M>::from_values(ref mk, ref mv) {
+            match Model::<M>::from_serialized(ref mk, ref mv) {
                 Option::Some(model) => models.append(model),
                 Option::None => {
                     panic!(
@@ -127,8 +127,8 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
         IWorldDispatcherTrait::set_entity(
             self.dispatcher,
             Model::<M>::selector(self.namespace_hash),
-            ModelIndex::Keys(Model::<M>::keys(model)),
-            Model::<M>::values(model),
+            ModelIndex::Keys(Model::<M>::serialized_keys(model)),
+            Model::<M>::serialized_values(model),
             Model::<M>::layout()
         );
     }
@@ -137,8 +137,8 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
         let mut keys: Array<ModelIndex> = array![];
         let mut values: Array<Span<felt252>> = array![];
         for m in models {
-            keys.append(ModelIndex::Keys(Model::<M>::keys(*m)));
-            values.append(Model::<M>::values(*m));
+            keys.append(ModelIndex::Keys(Model::<M>::serialized_keys(*m)));
+            values.append(Model::<M>::serialized_values(*m));
         };
 
         IWorldDispatcherTrait::set_entities(
@@ -154,7 +154,7 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
         IWorldDispatcherTrait::delete_entity(
             self.dispatcher,
             Model::<M>::selector(self.namespace_hash),
-            ModelIndex::Keys(Model::<M>::keys(model)),
+            ModelIndex::Keys(Model::<M>::serialized_keys(model)),
             Model::<M>::layout()
         );
     }
@@ -228,8 +228,8 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
 impl ModelValueStorageWorldStorageImpl<
     V, +ModelValue<V>, +Drop<V>
 > of dojo::model::ModelValueStorage<WorldStorage, V> {
-    fn read_value<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(self: @WorldStorage, key: K) -> V {
-        Self::read_value_from_id(self, entity_id_from_key(@key))
+    fn read_value<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(self: @WorldStorage, keys: K) -> V {
+        Self::read_value_from_id(self, entity_id_from_keys(@keys))
     }
 
     fn read_value_from_id(self: @WorldStorage, entity_id: felt252) -> V {
@@ -239,7 +239,7 @@ impl ModelValueStorageWorldStorageImpl<
             ModelIndex::Id(entity_id),
             ModelValue::<V>::layout()
         );
-        match ModelValue::<V>::from_values(entity_id, ref values) {
+        match ModelValue::<V>::from_serialized(entity_id, ref values) {
             Option::Some(entity) => entity,
             Option::None => {
                 panic!(
@@ -254,7 +254,7 @@ impl ModelValueStorageWorldStorageImpl<
     ) -> Array<V> {
         let mut entity_ids: Array<felt252> = array![];
         for k in keys {
-            entity_ids.append(entity_id_from_key(k));
+            entity_ids.append(entity_id_from_keys(k));
         };
 
         Self::read_values_from_ids(self, entity_ids.span())
@@ -283,7 +283,7 @@ impl ModelValueStorageWorldStorageImpl<
             let entity_id = *entity_ids[i];
             let mut v = *all_values[i];
 
-            match ModelValue::<V>::from_values(entity_id, ref v) {
+            match ModelValue::<V>::from_serialized(entity_id, ref v) {
                 Option::Some(value) => values.append(value),
                 Option::None => {
                     panic!(
@@ -299,14 +299,14 @@ impl ModelValueStorageWorldStorageImpl<
     }
 
     fn write_value<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(
-        ref self: WorldStorage, key: K, value: @V
+        ref self: WorldStorage, keys: K, value: @V
     ) {
         IWorldDispatcherTrait::set_entity(
             self.dispatcher,
             ModelValue::<V>::selector(self.namespace_hash),
             // We need Id here to trigger the store update event.
-            ModelIndex::Id(entity_id_from_keys(serialize_inline::<K>(@key))),
-            ModelValue::<V>::values(value),
+            ModelIndex::Id(entity_id_from_serialized_keys(serialize_inline::<K>(@keys))),
+            ModelValue::<V>::serialized_values(value),
             ModelValue::<V>::layout()
         );
     }
@@ -316,7 +316,7 @@ impl ModelValueStorageWorldStorageImpl<
     ) {
         let mut ids: Array<felt252> = array![];
         for k in keys {
-            ids.append(entity_id_from_key(k));
+            ids.append(entity_id_from_keys(k));
         };
 
         Self::write_values_from_ids(ref self, ids.span(), values);
@@ -327,7 +327,7 @@ impl ModelValueStorageWorldStorageImpl<
             self.dispatcher,
             ModelValue::<V>::selector(self.namespace_hash),
             ModelIndex::Id(entity_id),
-            ModelValue::<V>::values(value),
+            ModelValue::<V>::serialized_values(value),
             ModelValue::<V>::layout()
         );
     }
@@ -343,7 +343,7 @@ impl ModelValueStorageWorldStorageImpl<
             }
 
             indexes.append(ModelIndex::Id(*entity_ids[i]));
-            all_values.append(ModelValue::<V>::values(*values[i]));
+            all_values.append(ModelValue::<V>::serialized_values(*values[i]));
 
             i += 1;
         };
@@ -369,8 +369,8 @@ pub impl EventStorageTestWorldStorageImpl<
         dojo::world::IWorldTestDispatcherTrait::emit_event_test(
             world_test,
             Event::<E>::selector(self.namespace_hash),
-            Event::<E>::keys(event),
-            Event::<E>::values(event),
+            Event::<E>::serialized_keys(event),
+            Event::<E>::serialized_values(event),
         );
     }
 }
@@ -388,8 +388,8 @@ pub impl ModelStorageTestWorldStorageImpl<
         dojo::world::IWorldTestDispatcherTrait::set_entity_test(
             world_test,
             Model::<M>::selector(self.namespace_hash),
-            ModelIndex::Keys(Model::keys(model)),
-            Model::<M>::values(model),
+            ModelIndex::Keys(Model::serialized_keys(model)),
+            Model::<M>::serialized_values(model),
             Model::<M>::layout()
         );
     }
@@ -408,7 +408,7 @@ pub impl ModelStorageTestWorldStorageImpl<
         dojo::world::IWorldTestDispatcherTrait::delete_entity_test(
             world_test,
             Model::<M>::selector(self.namespace_hash),
-            ModelIndex::Keys(Model::keys(model)),
+            ModelIndex::Keys(Model::serialized_keys(model)),
             Model::<M>::layout()
         );
     }
@@ -455,10 +455,9 @@ pub impl ModelValueStorageTestWorldStorageImpl<
     V, +ModelValue<V>
 > of dojo::model::ModelValueStorageTest<WorldStorage, V> {
     fn write_value_test<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(
-        ref self: WorldStorage, key: K, value: @V
+        ref self: WorldStorage, keys: K, value: @V
     ) {
-        let keys = serialize_inline::<K>(@key);
-        Self::write_value_from_id_test(ref self, dojo::utils::entity_id_from_keys(keys), value);
+        Self::write_value_from_id_test(ref self, dojo::utils::entity_id_from_keys(@keys), value);
     }
 
     fn write_values_test<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(
@@ -466,7 +465,7 @@ pub impl ModelValueStorageTestWorldStorageImpl<
     ) {
         let mut ids: Array<felt252> = array![];
         for k in keys {
-            ids.append(entity_id_from_key(k));
+            ids.append(entity_id_from_keys(k));
         };
 
         Self::write_values_from_ids_test(ref self, ids.span(), values);
@@ -481,7 +480,7 @@ pub impl ModelValueStorageTestWorldStorageImpl<
             world_test,
             ModelValue::<V>::selector(self.namespace_hash),
             ModelIndex::Id(entity_id),
-            ModelValue::<V>::values(value),
+            ModelValue::<V>::serialized_values(value),
             ModelValue::<V>::layout()
         );
     }

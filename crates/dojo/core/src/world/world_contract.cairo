@@ -46,7 +46,9 @@ pub mod world {
     };
     use dojo::model::{Model, ResourceMetadata, metadata, ModelIndex};
     use dojo::storage;
-    use dojo::utils::{entity_id_from_keys, bytearray_hash, selector_from_namespace_and_name};
+    use dojo::utils::{
+        entity_id_from_serialized_keys, bytearray_hash, selector_from_namespace_and_name
+    };
     use dojo::world::{IWorld, IUpgradeableWorld, Resource, ResourceIsNoneTrait};
     use super::Permission;
 
@@ -328,13 +330,13 @@ pub mod world {
 
             let mut values = storage::entity_model::read_model_entity(
                 metadata::resource_metadata_selector(internal_ns_hash),
-                entity_id_from_keys([resource_selector].span()),
+                entity_id_from_serialized_keys([resource_selector].span()),
                 Model::<ResourceMetadata>::layout()
             );
 
             let mut keys = [resource_selector].span();
 
-            match Model::<ResourceMetadata>::from_values(ref keys, ref values) {
+            match Model::<ResourceMetadata>::from_serialized(ref keys, ref values) {
                 Option::Some(x) => x,
                 Option::None => panic!("Model `ResourceMetadata`: deserialization failed.")
             }
@@ -347,8 +349,8 @@ pub mod world {
 
             storage::entity_model::write_model_entity(
                 metadata::resource_metadata_selector(internal_ns_hash),
-                entity_id_from_keys([metadata.resource_id].span()),
-                metadata.values(),
+                entity_id_from_serialized_keys([metadata.resource_id].span()),
+                metadata.serialized_values(),
                 Model::<ResourceMetadata>::layout()
             );
 
@@ -1172,7 +1174,7 @@ pub mod world {
         ) {
             match index {
                 ModelIndex::Keys(keys) => {
-                    let entity_id = entity_id_from_keys(keys);
+                    let entity_id = entity_id_from_serialized_keys(keys);
                     storage::entity_model::write_model_entity(
                         model_selector, entity_id, values, layout
                     );
@@ -1212,7 +1214,7 @@ pub mod world {
         ) {
             match index {
                 ModelIndex::Keys(keys) => {
-                    let entity_id = entity_id_from_keys(keys);
+                    let entity_id = entity_id_from_serialized_keys(keys);
                     storage::entity_model::delete_model_entity(model_selector, entity_id, layout);
                     self.emit(StoreDelRecord { selector: model_selector, entity_id });
                 },
@@ -1236,7 +1238,7 @@ pub mod world {
         ) -> Span<felt252> {
             match index {
                 ModelIndex::Keys(keys) => {
-                    let entity_id = entity_id_from_keys(keys);
+                    let entity_id = entity_id_from_serialized_keys(keys);
                     storage::entity_model::read_model_entity(model_selector, entity_id, layout)
                 },
                 ModelIndex::Id(entity_id) => {
