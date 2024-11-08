@@ -37,6 +37,7 @@ use tokio_stream::StreamExt;
 use torii_core::engine::{Engine, EngineConfig, IndexingFlags, Processors};
 use torii_core::executor::Executor;
 use torii_core::processors::store_transaction::StoreTransactionProcessor;
+use torii_core::processors::EventProcessorConfig;
 use torii_core::simple_broker::SimpleBroker;
 use torii_core::sql::Sql;
 use torii_core::types::{Contract, ContractType, Model};
@@ -92,7 +93,7 @@ struct Args {
     /// Specify allowed origins for api endpoints (comma-separated list of allowed origins, or "*"
     /// for all)
     #[arg(long, value_delimiter = ',')]
-    allowed_origins: Option<Vec<String>>,
+    allowed_origins: Vec<String>,
 
     /// The external url of the server, used for configuring the GraphQL Playground in a hosted
     /// environment
@@ -138,8 +139,13 @@ struct Args {
     index_raw_events: bool,
 
     /// ERC contract addresses to index
-    #[arg(long, default_value = "")]
-    contracts: String,
+    #[arg(long, value_delimiter = ',', value_parser = parse_erc_contract)]
+    contracts: Vec<Contract>,
+
+    /// Event messages that are going to be treated as historical
+    /// A list of the model tags (namespace-name) 
+    #[arg(long, value_delimiter = ',')]
+    historical_events: Vec<String>,
 
     /// Configuration file
     #[arg(long)]
@@ -150,7 +156,7 @@ struct Args {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let matches = <Args as CommandFactory>::command().get_matches();
-    let args = if let Some(path) = matches.get_one::<PathBuf>("config") {
+    let mut args = if let Some(path) = matches.get_one::<PathBuf>("config") {
         let config: ArgsConfig = toml::from_str(&std::fs::read_to_string(path)?)?;
         Args::from_merged(matches, Some(config))
     } else {
@@ -163,8 +169,8 @@ async fn main() -> anyhow::Result<()> {
         return Err(anyhow::anyhow!("Please specify a world address."));
     };
 
-    let mut contracts = parse_erc_contracts(&args.contracts)?;
-    contracts.push(Contract { address: world_address, r#type: ContractType::WORLD });
+    // let mut contracts = parse_erc_contracts(&args.contracts)?;
+    args.contracts.push(Contract { address: world_address, r#type: ContractType::WORLD });
 
     let filter_layer = EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| EnvFilter::new("info,hyper_reverse_proxy=off"));
@@ -210,13 +216,12 @@ async fn main() -> anyhow::Result<()> {
     // Get world address
     let world = WorldContractReader::new(world_address, provider.clone());
 
-
     let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx.clone()).await?;
     tokio::spawn(async move {
         executor.run().await.unwrap();
     });
 
-    let db = Sql::new(pool.clone(), sender.clone(), &contracts).await?;
+    let db = Sql::new(pool.clone(), sender.clone(), &args.contracts).await?;
 
     let processors = Processors {
         transaction: vec![Box::new(StoreTransactionProcessor)],
@@ -246,10 +251,13 @@ async fn main() -> anyhow::Result<()> {
             index_pending: args.index_pending,
             polling_interval: Duration::from_millis(args.polling_interval),
             flags,
+            event_processor_config: EventProcessorConfig {
+                historical_events: args.historical_events,
+            },
         },
         shutdown_tx.clone(),
         Some(block_tx),
-        &contracts,
+        &args.contracts,
     );
 
     let shutdown_rx = shutdown_tx.subscribe();
@@ -268,7 +276,12 @@ async fn main() -> anyhow::Result<()> {
     )
     .expect("Failed to start libp2p relay server");
 
-    let proxy_server = Arc::new(Proxy::new(args.addr, args.allowed_origins, Some(grpc_addr), None));
+    let proxy_server = Arc::new(Proxy::new(
+        args.addr,
+        if args.allowed_origins.is_empty() { None } else { Some(args.allowed_origins) },
+        Some(grpc_addr),
+        None,
+    ));
 
     let graphql_server = spawn_rebuilding_graphql_server(
         shutdown_tx.clone(),
@@ -346,27 +359,20 @@ async fn spawn_rebuilding_graphql_server(
 // Parses clap cli argument which is expected to be in the format:
 // - erc_type:address:start_block
 // - address:start_block (erc_type defaults to ERC20)
-fn parse_erc_contracts(s: &str) -> anyhow::Result<Vec<Contract>> {
-    if s.is_empty() {
-        return Ok(Vec::new());
-    }
-
-    let parts: Vec<&str> = s.split(',').collect();
-    let mut contracts = Vec::new();
-    for part in parts {
-        match part.split(':').collect::<Vec<&str>>().as_slice() {
-            [r#type, address] => {
-                let r#type = r#type.parse::<ContractType>()?;
-                if r#type == ContractType::WORLD {
-                    return Err(anyhow::anyhow!("World address cannot be specified as an ERC contract"));
-                }
-
-                let address = Felt::from_str(address)
-                    .with_context(|| format!("Expected address, found {}", address))?;
-                contracts.push(Contract { address, r#type });
+fn parse_erc_contract(part: &str) -> anyhow::Result<Contract> {
+    match part.split(':').collect::<Vec<&str>>().as_slice() {
+        [r#type, address] => {
+            let r#type = r#type.parse::<ContractType>()?;
+            if r#type == ContractType::WORLD {
+                return Err(anyhow::anyhow!(
+                    "World address cannot be specified as an ERC contract"
+                ));
             }
-            _ => return Err(anyhow::anyhow!("Invalid contract format")),
+
+            let address = Felt::from_str(address)
+                .with_context(|| format!("Expected address, found {}", address))?;
+            Ok(Contract { address, r#type })
         }
+        _ => Err(anyhow::anyhow!("Invalid contract format")),
     }
-    Ok(contracts)
 }

@@ -24,6 +24,11 @@ pub mod store_update_record;
 const MODEL_INDEX: usize = 0;
 const ENTITY_ID_INDEX: usize = 1;
 
+#[derive(Clone, Debug, Default)]
+pub struct EventProcessorConfig {
+    pub historical_events: Vec<String>,
+}
+
 #[async_trait]
 pub trait EventProcessor<P>: Send + Sync
 where
@@ -46,6 +51,7 @@ where
         block_timestamp: u64,
         event_id: &str,
         event: &Event,
+        _config: &EventProcessorConfig,
     ) -> Result<(), Error>;
 }
 

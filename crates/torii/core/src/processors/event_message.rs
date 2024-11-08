@@ -6,7 +6,7 @@ use starknet::core::types::{Event, Felt};
 use starknet::providers::Provider;
 use tracing::info;
 
-use super::EventProcessor;
+use super::{EventProcessor, EventProcessorConfig};
 use crate::sql::Sql;
 
 pub(crate) const LOG_TARGET: &str = "torii_core::processors::event_message";
@@ -35,6 +35,7 @@ where
         block_timestamp: u64,
         event_id: &str,
         event: &Event,
+        config: &EventProcessorConfig,
     ) -> Result<(), Error> {
         // Torii version is coupled to the world version, so we can expect the event to be well
         // formed.
@@ -72,7 +73,7 @@ where
         entity.deserialize(&mut keys_and_unpacked)?;
 
         // TODO: this must come from some torii's configuration.
-        let historical = false;
+        let historical = config.historical_events.contains(&format!("{}-{}", model.namespace, model.name));
         db.set_event_message(entity, event_id, block_timestamp, historical).await?;
         Ok(())
     }
