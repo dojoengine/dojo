@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1731043036770,
+  "lastUpdate": 1731086858400,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -32005,6 +32005,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8371625,
             "range": "± 26168",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "shramee.srivastav@gmail.com",
+            "name": "Shramee Srivastav",
+            "username": "shramee"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c7900e92b6f1f72dc73d059a7a0326e0645a3c43",
+          "message": "feat: introspection for bytes31 (#2661)",
+          "timestamp": "2024-11-08T11:11:41-06:00",
+          "tree_id": "53ca153dbd744744d1413e7c5b0df77683006065",
+          "url": "https://github.com/dojoengine/dojo/commit/c7900e92b6f1f72dc73d059a7a0326e0645a3c43"
+        },
+        "date": 1731086857199,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10279357183,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
