@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1731086858400,
+  "lastUpdate": 1731087092444,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -32035,6 +32035,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10279357183,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "shramee.srivastav@gmail.com",
+            "name": "Shramee Srivastav",
+            "username": "shramee"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c7900e92b6f1f72dc73d059a7a0326e0645a3c43",
+          "message": "feat: introspection for bytes31 (#2661)",
+          "timestamp": "2024-11-08T11:11:41-06:00",
+          "tree_id": "53ca153dbd744744d1413e7c5b0df77683006065",
+          "url": "https://github.com/dojoengine/dojo/commit/c7900e92b6f1f72dc73d059a7a0326e0645a3c43"
+        },
+        "date": 1731087091115,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16620149,
+            "range": "± 166719",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8579361,
+            "range": "± 234888",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3799485521,
+            "range": "± 844123449",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8311537,
+            "range": "± 66682",
             "unit": "ns/iter"
           }
         ]
