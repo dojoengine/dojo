@@ -38,7 +38,7 @@ pub trait Model<M> {
     /// Returns the values of the model.
     fn serialized_values(self: @M) -> Span<felt252>;
     /// Constructs a model from the given keys and values.
-    fn from_serialized(ref keys: Span<felt252>, ref values: Span<felt252>) -> Option<M>;
+    fn from_serialized(keys: Span<felt252>, values: Span<felt252>) -> Option<M>;
     /// Returns the name of the model. (TODO: internalizing the name_hash could reduce poseidon
     /// costs).
     fn name() -> ByteArray;
@@ -85,7 +85,7 @@ pub impl ModelImpl<M, +ModelParser<M>, +ModelDefinition<M>, +Serde<M>> of Model<
         ModelParser::<M>::serialize_values(self)
     }
 
-    fn from_serialized(ref keys: Span<felt252>, ref values: Span<felt252>) -> Option<M> {
+    fn from_serialized(keys: Span<felt252>, values: Span<felt252>) -> Option<M> {
         let mut serialized: Array<felt252> = keys.into();
         serialized.append_span(values);
         let mut span = serialized.span();
