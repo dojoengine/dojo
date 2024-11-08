@@ -1,52 +1,25 @@
-pub impl $type_name$DojoEventImpl of dojo::event::Event<$type_name$> {
+
+pub impl $type_name$Definition of dojo::event::EventDefinition<$type_name$>{
     #[inline(always)]
     fn name() -> ByteArray {
         "$type_name$"
     }
+}
 
-    #[inline(always)]
-    fn definition() -> dojo::event::EventDefinition {
-        dojo::event::EventDefinition {
-            name: Self::name(),
-            layout: Self::layout(),
-            schema: Self::schema()
-        }
-    }
-
-    #[inline(always)]
-    fn layout() -> dojo::meta::Layout {
-        dojo::meta::introspect::Introspect::<$type_name$>::layout()
-    }
-
-    #[inline(always)]
-    fn schema() -> dojo::meta::introspect::Struct {
-        if let dojo::meta::introspect::Ty::Struct(s) = dojo::meta::introspect::Introspect::<$type_name$>::ty() {
-            s
-        }
-        else {
-            panic!("Event `$type_name$`: invalid schema.")
-        }
-    }
-
-    #[inline(always)]
-    fn serialized_keys(self: @$type_name$) -> Span<felt252> {
+pub impl $type_name$ModelParser of dojo::model::model::ModelParser<$type_name$>{
+    fn serialize_keys(self: @$type_name$) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         $serialized_keys$
         core::array::ArrayTrait::span(@serialized)
     }
-
-    #[inline(always)]
-    fn serialized_values(self: @$type_name$) -> Span<felt252> {
+    fn serialize_values(self: @$type_name$) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         $serialized_values$
         core::array::ArrayTrait::span(@serialized)
     }
-
-    #[inline(always)]
-    fn selector(namespace_hash: felt252) -> felt252 {
-        dojo::utils::selector_from_namespace_and_name(namespace_hash, @Self::name())
-    }
 }
+
+pub impl $type_name$EventImpl = dojo::event::event::EventImpl<$type_name$>;
 
 #[starknet::contract]
 pub mod e_$type_name$ {

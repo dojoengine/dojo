@@ -12,7 +12,7 @@ pub mod event {
     pub mod component;
 
     pub mod event;
-    pub use event::{Event, EventDefinition};
+    pub use event::{Event, EventDefinition, EventDef};
 
     pub mod interface;
     pub use interface::{IEvent, IEventDispatcher, IEventDispatcherTrait};
