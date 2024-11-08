@@ -1,17 +1,20 @@
 use std::sync::mpsc::channel;
-use std::time::Duration;
+use std::thread;
+use std::time::{Duration, Instant};
 
 use anyhow::Result;
 use clap::Args;
 use notify::event::Event;
 use notify::{EventKind, PollWatcher, RecursiveMode, Watcher};
 use scarb::core::Config;
+use scarb_ui::args::{FeaturesSpec, PackagesFilter};
 use tracing::{error, info, trace};
 
 use super::build::BuildArgs;
 use super::migrate::MigrateArgs;
 use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
+use super::options::transaction::TransactionOptions;
 use super::options::world::WorldOptions;
 
 #[derive(Debug, Args)]
@@ -24,66 +27,126 @@ pub struct DevArgs {
 
     #[command(flatten)]
     pub account: AccountOptions,
+
+    #[command(flatten)]
+    pub transaction: TransactionOptions,
+
+    #[arg(long)]
+    #[arg(help = "Generate Typescript bindings.")]
+    pub typescript: bool,
+
+    #[arg(long)]
+    #[arg(help = "Generate Typescript bindings.")]
+    pub typescript_v2: bool,
+
+    #[arg(long)]
+    #[arg(help = "Generate Unity bindings.")]
+    pub unity: bool,
+
+    #[arg(long)]
+    #[arg(help = "Output directory.", default_value = "bindings")]
+    pub bindings_output: String,
+
+    /// Specify the features to activate.
+    #[command(flatten)]
+    pub features: FeaturesSpec,
+
+    /// Specify packages to build.
+    #[command(flatten)]
+    pub packages: Option<PackagesFilter>,
 }
 
 impl DevArgs {
-    /// Watches the `src` directory that is found at the same level of the `Scarb.toml` manifest
-    /// of the project into the provided [`Config`].
-    ///
-    /// When a change is detected, it rebuilds the project and applies the migrations.
     pub fn run(self, config: &Config) -> Result<()> {
-        let (tx, rx) = channel();
+        let (file_tx, file_rx) = channel();
+        let (rebuild_tx, rebuild_rx) = channel();
 
-        let watcher_config = notify::Config::default().with_poll_interval(Duration::from_secs(1));
+        let watcher_config =
+            notify::Config::default().with_poll_interval(Duration::from_millis(500));
 
-        let mut watcher = PollWatcher::new(tx, watcher_config)?;
+        let mut watcher = PollWatcher::new(file_tx, watcher_config)?;
 
         let watched_directory = config.manifest_path().parent().unwrap().join("src");
-
         watcher.watch(watched_directory.as_std_path(), RecursiveMode::Recursive).unwrap();
 
-        // Always build the project before starting the dev loop to make sure that the project is
-        // in a valid state. Devs may not use `build` anymore when using `dev`.
-        BuildArgs::default().run(config)?;
+        // Initial build and migrate
+        let build_args = BuildArgs {
+            typescript: self.typescript,
+            typescript_v2: self.typescript_v2,
+            unity: self.unity,
+            bindings_output: self.bindings_output,
+            features: self.features,
+            packages: self.packages,
+            ..Default::default()
+        };
+        build_args.clone().run(config)?;
         info!("Initial build completed.");
 
-        let _ =
-            MigrateArgs::new_apply(self.world.clone(), self.starknet.clone(), self.account.clone())
-                .run(config);
+        let migrate_args = MigrateArgs {
+            world: self.world,
+            starknet: self.starknet,
+            account: self.account,
+            transaction: self.transaction,
+        };
+
+        let _ = migrate_args.clone().run(config);
 
         info!(
             directory = watched_directory.to_string(),
             "Initial migration completed. Waiting for changes."
         );
 
-        let mut e_handler = EventHandler;
+        let e_handler = EventHandler;
+        let rebuild_tx_clone = rebuild_tx.clone();
 
-        loop {
-            let is_rebuild_needed = match rx.recv() {
-                Ok(maybe_event) => match maybe_event {
-                    Ok(event) => e_handler.process_event(event),
+        // Independent thread to handle file events and trigger rebuilds.
+        config.tokio_handle().spawn(async move {
+            loop {
+                match file_rx.recv() {
+                    Ok(maybe_event) => match maybe_event {
+                        Ok(event) => {
+                            trace!(?event, "Event received.");
+
+                            if e_handler.process_event(event) && rebuild_tx_clone.send(()).is_err()
+                            {
+                                break;
+                            }
+                        }
+                        Err(error) => {
+                            error!(?error, "Processing event.");
+                            break;
+                        }
+                    },
                     Err(error) => {
-                        error!(?error, "Processing event.");
+                        error!(?error, "Receiving event.");
                         break;
                     }
-                },
-                Err(error) => {
-                    error!(?error, "Receiving event.");
-                    break;
                 }
-            };
+            }
+        });
 
-            if is_rebuild_needed {
-                // Ignore the fails of those commands as the `run` function
-                // already logs the error.
-                let _ = BuildArgs::default().run(config);
+        // Main thread handles the rebuilds.
+        let mut last_event_time = None;
+        let debounce_period = Duration::from_millis(1500);
 
-                let _ = MigrateArgs::new_apply(
-                    self.world.clone(),
-                    self.starknet.clone(),
-                    self.account.clone(),
-                )
-                .run(config);
+        loop {
+            match rebuild_rx.try_recv() {
+                Ok(()) => {
+                    last_event_time = Some(Instant::now());
+                }
+                Err(std::sync::mpsc::TryRecvError::Empty) => {
+                    if let Some(last_time) = last_event_time {
+                        if last_time.elapsed() >= debounce_period {
+                            let _ = build_args.clone().run(config);
+                            let _ = migrate_args.clone().run(config);
+                            last_event_time = None;
+                        } else {
+                            trace!("Change detected, waiting for debounce period.");
+                        }
+                    }
+                    thread::sleep(Duration::from_millis(300));
+                }
+                Err(std::sync::mpsc::TryRecvError::Disconnected) => break,
             }
         }
 
@@ -91,13 +154,13 @@ impl DevArgs {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 struct EventHandler;
 
 impl EventHandler {
     /// Processes a debounced event and return true if a rebuild is needed.
     /// Only considers Cairo file and the Scarb.toml manifest.
-    fn process_event(&mut self, event: Event) -> bool {
+    fn process_event(&self, event: Event) -> bool {
         trace!(?event, "Processing event.");
 
         let paths = match event.kind {
