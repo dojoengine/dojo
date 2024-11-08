@@ -105,6 +105,9 @@ pub struct NodeArgs {
     pub starknet: StarknetOptions,
 
     #[command(flatten)]
+    pub gpo: GasPriceOracleOptions,
+
+    #[command(flatten)]
     pub development: DevOptions,
 
     #[command(flatten)]
@@ -224,26 +227,6 @@ pub struct DevOptions {
     #[arg(requires = "dev")]
     #[arg(long = "dev.no-account-validation")]
     pub no_account_validation: bool,
-
-    /// The L1 ETH gas price. (denominated in wei)
-    #[arg(requires_all = ["dev", "l1_strk_gas_price"])]
-    #[arg(long = "dev.l1-eth-gas-price", value_name = "WEI")]
-    pub l1_eth_gas_price: Option<u128>,
-
-    /// The L1 STRK gas price. (denominated in fri)
-    #[arg(requires_all = ["dev", "l1_eth_data_gas_price"])]
-    #[arg(long = "dev.l1-strk-gas-price", value_name = "FRI")]
-    pub l1_strk_gas_price: Option<u128>,
-
-    /// The L1 ETH data gas price. (denominated in wei)
-    #[arg(requires_all = ["dev", "l1_strk_data_gas_price"])]
-    #[arg(long = "dev.l1-eth-data-gas-price", value_name = "WEI")]
-    pub l1_eth_data_gas_price: Option<u128>,
-
-    /// The L1 STRK data gas price. (denominated in fri)
-    #[arg(requires_all = ["dev", "l1_eth_gas_price"])]
-    #[arg(long = "dev.l1-strk-data-gas-price", value_name = "FRI")]
-    pub l1_strk_data_gas_price: Option<u128>,
 }
 
 #[derive(Debug, Args, Clone)]
@@ -267,6 +250,30 @@ pub struct LoggingOptions {
     #[arg(long = "log.format", value_name = "FORMAT")]
     #[arg(default_value_t = LogFormat::Full)]
     pub log_format: LogFormat,
+}
+
+#[derive(Debug, Args, Clone)]
+#[command(next_help_heading = "Gas Price Oracle Options")]
+pub struct GasPriceOracleOptions {
+    /// The L1 ETH gas price. (denominated in wei)
+    #[arg(requires_all = ["l1_strk_gas_price"])]
+    #[arg(long = "gpo.l1-eth-gas-price", value_name = "WEI")]
+    pub l1_eth_gas_price: Option<u128>,
+
+    /// The L1 STRK gas price. (denominated in fri)
+    #[arg(requires_all = ["l1_eth_data_gas_price"])]
+    #[arg(long = "gpo.l1-strk-gas-price", value_name = "FRI")]
+    pub l1_strk_gas_price: Option<u128>,
+
+    /// The L1 ETH data gas price. (denominated in wei)
+    #[arg(requires_all = ["l1_strk_data_gas_price"])]
+    #[arg(long = "gpo.l1-eth-data-gas-price", value_name = "WEI")]
+    pub l1_eth_data_gas_price: Option<u128>,
+
+    /// The L1 STRK data gas price. (denominated in fri)
+    #[arg(requires_all = ["l1_eth_gas_price"])]
+    #[arg(long = "gpo.l1-strk-data-gas-price", value_name = "FRI")]
+    pub l1_strk_data_gas_price: Option<u128>,
 }
 
 #[cfg(feature = "slot")]
@@ -408,14 +415,14 @@ impl NodeArgs {
     }
 
     fn dev_config(&self) -> DevConfig {
-        let fixed_gas_prices = if self.development.l1_eth_gas_price.is_some() {
+        let fixed_gas_prices = if self.gpo.l1_eth_gas_price.is_some() {
             // It is safe to unwrap all of these here because the CLI parser ensures if one is set,
             // all must be set.
 
-            let eth_gas_price = self.development.l1_eth_gas_price.unwrap();
-            let strk_gas_price = self.development.l1_strk_gas_price.unwrap();
-            let eth_data_gas_price = self.development.l1_eth_data_gas_price.unwrap();
-            let strk_data_gas_price = self.development.l1_strk_data_gas_price.unwrap();
+            let eth_gas_price = self.gpo.l1_eth_gas_price.unwrap();
+            let strk_gas_price = self.gpo.l1_strk_gas_price.unwrap();
+            let eth_data_gas_price = self.gpo.l1_eth_data_gas_price.unwrap();
+            let strk_data_gas_price = self.gpo.l1_strk_data_gas_price.unwrap();
 
             let gas_price = GasPrices { eth: eth_gas_price, strk: strk_gas_price };
             let data_gas_price = GasPrices { eth: eth_data_gas_price, strk: strk_data_gas_price };
@@ -611,8 +618,9 @@ mod test {
     fn test_starknet_config_custom() {
         let args = NodeArgs::parse_from([
             "katana",
-            "--disable-fee",
-            "--disable-validate",
+            "--dev",
+            "--dev.no-fee",
+            "--dev.no-account-validation",
             "--chain-id",
             "SN_GOERLI",
             "--invoke-max-steps",
@@ -637,8 +645,9 @@ mod test {
     fn custom_fixed_gas_prices() {
         let args = NodeArgs::parse_from([
             "katana",
-            "--disable-fee",
-            "--disable-validate",
+            "--dev",
+            "--dev.no-fee",
+            "--dev.no-account-validation",
             "--chain-id",
             "SN_GOERLI",
             "--invoke-max-steps",
@@ -647,13 +656,13 @@ mod test {
             "100",
             "--db-dir",
             "/path/to/db",
-            "--l1-eth-gas-price",
+            "--gpo.l1-eth-gas-price",
             "10",
-            "--l1-strk-gas-price",
+            "--gpo.l1-strk-gas-price",
             "20",
-            "--l1-eth-data-gas-price",
+            "--gpo.l1-eth-data-gas-price",
             "1",
-            "--l1-strk-data-gas-price",
+            "--gpo.l1-strk-data-gas-price",
             "2",
         ]);
         let config = args.config().unwrap();
@@ -678,13 +687,13 @@ mod test {
             "katana",
             "--genesis",
             "./tests/test-data/genesis.json",
-            "--l1-eth-gas-price",
+            "--gpo.l1-eth-gas-price",
             "100",
-            "--l1-strk-gas-price",
+            "--gpo.l1-strk-gas-price",
             "200",
-            "--l1-eth-data-gas-price",
+            "--gpo.l1-eth-data-gas-price",
             "111",
-            "--l1-strk-data-gas-price",
+            "--gpo.l1-strk-data-gas-price",
             "222",
         ])
         .config()
