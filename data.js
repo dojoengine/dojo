@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1731167743606,
+  "lastUpdate": 1731167952599,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -32737,6 +32737,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10429395607,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "86c6a6c590e43e659d2dfad70b996d28dfc2044b",
+          "message": "refactor: apply code simplification to break with bool value (n-04) (#2639)\n\n* refactor: apply code simplification to break with bool value\n\n* tests: regenerate test db\n\n* fix: update policies\n\n* fix: update policies",
+          "timestamp": "2024-11-09T09:39:28-06:00",
+          "tree_id": "e709b20909802f011dd02c5d871835ddae551575",
+          "url": "https://github.com/dojoengine/dojo/commit/86c6a6c590e43e659d2dfad70b996d28dfc2044b"
+        },
+        "date": 1731167951303,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16513502,
+            "range": "± 265057",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8473522,
+            "range": "± 98990",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3633868038,
+            "range": "± 800596096",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8435901,
+            "range": "± 56207",
             "unit": "ns/iter"
           }
         ]
