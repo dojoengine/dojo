@@ -25,7 +25,7 @@ impl Cli {
             };
         }
 
-        self.node.execute()
+        self.node.with_config_file()?.execute()
     }
 }
 

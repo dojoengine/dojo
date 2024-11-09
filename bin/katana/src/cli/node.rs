@@ -16,7 +16,8 @@ use std::path::PathBuf;
 
 use alloy_primitives::U256;
 use anyhow::{Context, Result};
-use clap::{Args, Parser};
+use clap::{Args, CommandFactory, FromArgMatches, Parser};
+use clap_config::ClapConfig;
 use console::Style;
 use katana_core::constants::DEFAULT_SEQUENCER_ADDRESS;
 use katana_core::service::messaging::MessagingConfig;
@@ -42,6 +43,7 @@ use katana_primitives::genesis::constant::{
     DEFAULT_PREFUNDED_ACCOUNT_BALANCE, DEFAULT_UDC_ADDRESS,
 };
 use katana_primitives::genesis::Genesis;
+use serde::{Deserialize, Serialize};
 use tracing::{info, Subscriber};
 use tracing_log::LogTracer;
 use tracing_subscriber::{fmt, EnvFilter};
@@ -49,7 +51,11 @@ use url::Url;
 
 use crate::utils::{parse_block_hash_or_number, parse_genesis, parse_seed, LogFormat};
 
-#[derive(Parser, Debug)]
+const DEFAULT_DEV_SEED: &str = "0";
+const DEFAULT_DEV_ACCOUNTS: u16 = 10;
+
+#[derive(ClapConfig, Parser, Debug, Serialize, Deserialize, Default)]
+#[serde(default)]
 pub struct NodeArgs {
     /// Don't print anything on startup.
     #[arg(long)]
@@ -106,10 +112,16 @@ pub struct NodeArgs {
     #[cfg(feature = "slot")]
     #[command(flatten)]
     pub slot: SlotOptions,
+
+    /// Configuration file
+    #[arg(long)]
+    #[clap_config(skip)]
+    config: Option<PathBuf>,
 }
 
-#[derive(Debug, Args, Clone)]
+#[derive(Debug, Args, Clone, Serialize, Deserialize)]
 #[command(next_help_heading = "Metrics options")]
+#[serde(default)]
 pub struct MetricsOptions {
     /// Enable metrics.
     ///
@@ -131,8 +143,19 @@ pub struct MetricsOptions {
     pub metrics_port: u16,
 }
 
-#[derive(Debug, Args, Clone)]
+impl Default for MetricsOptions {
+    fn default() -> Self {
+        MetricsOptions {
+            metrics: false,
+            metrics_addr: DEFAULT_METRICS_ADDR,
+            metrics_port: DEFAULT_METRICS_PORT,
+        }
+    }
+}
+
+#[derive(Debug, Args, Clone, Serialize, Deserialize)]
 #[command(next_help_heading = "Server options")]
+#[serde(default)]
 pub struct ServerOptions {
     /// HTTP-RPC server listening interface.
     #[arg(long = "http.addr", value_name = "ADDRESS")]
@@ -155,10 +178,23 @@ pub struct ServerOptions {
     pub max_connections: u32,
 }
 
-#[derive(Debug, Args, Clone)]
+impl Default for ServerOptions {
+    fn default() -> Self {
+        ServerOptions {
+            http_addr: DEFAULT_RPC_ADDR,
+            http_port: DEFAULT_RPC_PORT,
+            max_connections: DEFAULT_RPC_MAX_CONNECTIONS,
+            http_cors_domain: None,
+        }
+    }
+}
+
+#[derive(Debug, Args, Clone, Serialize, Deserialize, Default)]
 #[command(next_help_heading = "Starknet options")]
+#[serde(default)]
 pub struct StarknetOptions {
     #[command(flatten)]
+    #[serde(rename = "env")]
     pub environment: EnvironmentOptions,
 
     #[arg(long)]
@@ -167,8 +203,9 @@ pub struct StarknetOptions {
     pub genesis: Option<Genesis>,
 }
 
-#[derive(Debug, Args, Clone)]
+#[derive(Debug, Args, Clone, Serialize, Deserialize)]
 #[command(next_help_heading = "Environment options")]
+#[serde(default)]
 pub struct EnvironmentOptions {
     /// The chain ID.
     ///
@@ -181,29 +218,43 @@ pub struct EnvironmentOptions {
 
     /// The maximum number of steps available for the account validation logic.
     #[arg(long)]
-    pub validate_max_steps: Option<u32>,
+    #[arg(default_value_t = DEFAULT_VALIDATION_MAX_STEPS)]
+    pub validate_max_steps: u32,
 
     /// The maximum number of steps available for the account execution logic.
     #[arg(long)]
-    pub invoke_max_steps: Option<u32>,
+    #[arg(default_value_t = DEFAULT_INVOCATION_MAX_STEPS)]
+    pub invoke_max_steps: u32,
 }
 
-#[derive(Debug, Args, Clone)]
+impl Default for EnvironmentOptions {
+    fn default() -> Self {
+        EnvironmentOptions {
+            validate_max_steps: DEFAULT_VALIDATION_MAX_STEPS,
+            invoke_max_steps: DEFAULT_INVOCATION_MAX_STEPS,
+            chain_id: None,
+        }
+    }
+}
+
+#[derive(Debug, Args, Clone, Serialize, Deserialize)]
 #[command(next_help_heading = "Development options")]
+#[serde(default)]
 pub struct DevOptions {
     /// Enable development mode.
     #[arg(long)]
+    #[serde(default)]
     pub dev: bool,
 
     /// Specify the seed for randomness of accounts to be predeployed.
     #[arg(requires = "dev")]
-    #[arg(long = "dev.seed", default_value = "0")]
+    #[arg(long = "dev.seed", default_value = DEFAULT_DEV_SEED)]
     pub seed: String,
 
     /// Number of pre-funded accounts to generate.
     #[arg(requires = "dev")]
     #[arg(long = "dev.accounts", value_name = "NUM")]
-    #[arg(default_value_t = 10)]
+    #[arg(default_value_t = DEFAULT_DEV_ACCOUNTS)]
     pub total_accounts: u16,
 
     /// Disable charging fee when executing transactions.
@@ -219,8 +270,21 @@ pub struct DevOptions {
     pub no_account_validation: bool,
 }
 
-#[derive(Debug, Args, Clone)]
+impl Default for DevOptions {
+    fn default() -> Self {
+        DevOptions {
+            dev: false,
+            seed: DEFAULT_DEV_SEED.to_string(),
+            total_accounts: DEFAULT_DEV_ACCOUNTS,
+            no_fee: false,
+            no_account_validation: false,
+        }
+    }
+}
+
+#[derive(Debug, Args, Clone, Serialize, Deserialize, Default)]
 #[command(next_help_heading = "Forking options")]
+#[serde(default)]
 pub struct ForkingOptions {
     /// The RPC URL of the network to fork from.
     ///
@@ -236,8 +300,9 @@ pub struct ForkingOptions {
     pub fork_block: Option<BlockHashOrNumber>,
 }
 
-#[derive(Debug, Args, Clone)]
+#[derive(Debug, Args, Clone, Serialize, Deserialize, Default)]
 #[command(next_help_heading = "Logging options")]
+#[serde(default)]
 pub struct LoggingOptions {
     /// Log format to use
     #[arg(long = "log.format", value_name = "FORMAT")]
@@ -245,8 +310,9 @@ pub struct LoggingOptions {
     pub log_format: LogFormat,
 }
 
-#[derive(Debug, Args, Clone)]
+#[derive(Debug, Args, Clone, Serialize, Deserialize, Default)]
 #[command(next_help_heading = "Gas Price Oracle Options")]
+#[serde(default)]
 pub struct GasPriceOracleOptions {
     /// The L1 ETH gas price. (denominated in wei)
     #[arg(long = "gpo.l1-eth-gas-price", value_name = "WEI")]
@@ -266,8 +332,9 @@ pub struct GasPriceOracleOptions {
 }
 
 #[cfg(feature = "slot")]
-#[derive(Debug, Args, Clone)]
+#[derive(Debug, Args, Clone, Serialize, Deserialize, Default)]
 #[command(next_help_heading = "Slot options")]
+#[serde(default)]
 pub struct SlotOptions {
     #[arg(hide = true)]
     #[arg(long = "slot.controller")]
@@ -278,6 +345,8 @@ pub(crate) const LOG_TARGET: &str = "katana::cli";
 
 impl NodeArgs {
     pub fn execute(self) -> Result<()> {
+        dbg!(&self);
+
         self.init_logging()?;
         tokio::runtime::Builder::new_multi_thread()
             .enable_all()
@@ -435,16 +504,8 @@ impl NodeArgs {
 
     fn execution_config(&self) -> ExecutionConfig {
         ExecutionConfig {
-            invocation_max_steps: self
-                .starknet
-                .environment
-                .invoke_max_steps
-                .unwrap_or(DEFAULT_INVOCATION_MAX_STEPS),
-            validation_max_steps: self
-                .starknet
-                .environment
-                .validate_max_steps
-                .unwrap_or(DEFAULT_VALIDATION_MAX_STEPS),
+            invocation_max_steps: self.starknet.environment.invoke_max_steps,
+            validation_max_steps: self.starknet.environment.validate_max_steps,
             ..Default::default()
         }
     }
@@ -468,6 +529,23 @@ impl NodeArgs {
         } else {
             None
         }
+    }
+
+    /// Parse the node config from the command line arguments and the config file,
+    /// and merge them together prioritizing the command line arguments.
+    pub fn with_config_file(self) -> Result<Self> {
+        let matches = <NodeArgs as CommandFactory>::command().get_matches();
+        let args = if let Some(path) = matches.get_one::<PathBuf>("config") {
+            let config: NodeArgsConfig = serde_json::from_str(&std::fs::read_to_string(path)?)?;
+            dbg!(&config);
+            NodeArgs::from_merged(matches, Some(config))
+        } else {
+            NodeArgs::from_arg_matches(&matches)?
+        };
+
+        dbg!(&args);
+
+        Ok(args)
     }
 }
 
@@ -743,6 +821,57 @@ mod test {
         assert_eq!(config.chain.genesis.sequencer_address, address!("0x100"));
         assert_eq!(config.chain.genesis.gas_prices.eth, 9999);
         assert_eq!(config.chain.genesis.gas_prices.strk, 8888);
+        assert_matches!(config.dev.fixed_gas_prices, Some(prices) => {
+            assert_eq!(prices.gas_price.eth, 100);
+            assert_eq!(prices.gas_price.strk, 200);
+            assert_eq!(prices.data_gas_price.eth, 111);
+            assert_eq!(prices.data_gas_price.strk, 222);
+        })
+    }
+
+    #[test]
+    fn config_from_file_and_cli() {
+        // CLI args must take precedence over the config file.
+        let content = r#"
+{
+    "gpo": {
+        "l1_eth_gas_price": 100,
+        "l1_strk_gas_price": 200,
+        "l1_eth_data_gas_price": 111,
+        "l1_strk_data_gas_price": 222
+    },
+    "development": {
+        "total_accounts": 20,
+        "no_fee": true
+    },
+    "logging": {},
+    "metrics": {},
+    "forking": {},
+    "slot": {},
+    "server": {},
+    "starknet": {
+        "validate_max_steps": 1234
+    }
+}
+        "#;
+        let path = std::env::temp_dir().join("katana-config.json");
+        std::fs::write(&path, content).unwrap();
+
+        let config = NodeArgs::parse_from([
+            "katana",
+            "--config",
+            path.to_string_lossy().to_string().as_str(),
+            "--validate-max-steps",
+            "1234",
+            "--dev",
+            "--dev.no-fee",
+        ])
+        .config()
+        .unwrap();
+
+        assert_eq!(config.execution.validation_max_steps, 1234);
+        assert_eq!(config.chain.id, ChainId::parse("KATANA").unwrap());
+        assert!(!config.dev.fee);
         assert_matches!(config.dev.fixed_gas_prices, Some(prices) => {
             assert_eq!(prices.gas_price.eth, 100);
             assert_eq!(prices.gas_price.strk, 200);
