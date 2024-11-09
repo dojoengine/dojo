@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1731165905714,
+  "lastUpdate": 1731166234896,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -32473,6 +32473,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8348904,
             "range": "± 99135",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "90767953a52ac2e2498cccca1f497f4c6df5764b",
+          "message": "docs: fix typo (n-06) (#2641)\n\n* docs: fix typo\n\n* docs: clarify syscall behavior",
+          "timestamp": "2024-11-09T09:14:15-06:00",
+          "tree_id": "2edaed024299589796e1fd17794605f7cab7bf61",
+          "url": "https://github.com/dojoengine/dojo/commit/90767953a52ac2e2498cccca1f497f4c6df5764b"
+        },
+        "date": 1731166233707,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10542598152,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
