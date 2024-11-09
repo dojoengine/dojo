@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1731165650746,
+  "lastUpdate": 1731165674611,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -32346,6 +32346,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 10387081936,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "aa44e0c6ab7b4b76200e526e2afc800ba4ff38a7",
+          "message": "fix: ensure wide block range supported mainnet + refactor auth (#2665)\n\n* fix: ensure tests and other commands are using the config world block\n\n* refactor: refacto auth including external resources\n\n* fix: add world as valid keyword for grant/revoke",
+          "timestamp": "2024-11-09T09:05:09-06:00",
+          "tree_id": "c4d76508c8b261441d0e90183939372a9aae493a",
+          "url": "https://github.com/dojoengine/dojo/commit/aa44e0c6ab7b4b76200e526e2afc800ba4ff38a7"
+        },
+        "date": 1731165673175,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10262652999,
             "range": "± 0",
             "unit": "ns/iter"
           }
