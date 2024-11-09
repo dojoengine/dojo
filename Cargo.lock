@@ -3589,6 +3589,7 @@ dependencies = [
  "anstyle",
  "clap_lex",
  "strsim 0.11.1",
+ "terminal_size",
 ]
 
 [[package]]
@@ -3598,6 +3599,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8937760c3f4c60871870b8c3ee5f9b30771f792a7045c48bcbba999d7d6b3b8e"
 dependencies = [
  "clap",
+]
+
+[[package]]
+name = "clap_config"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "46efb9cbf691f5505d0b7b2c8055aec0c9a770eaac8a06834b6d84b5be93279a"
+dependencies = [
+ "clap",
+ "heck 0.5.0",
+ "proc-macro2",
+ "quote",
+ "serde",
+ "syn 2.0.77",
 ]
 
 [[package]]
@@ -14463,6 +14478,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "terminal_size"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "21bebf2b7c9e0a515f6e0f8c51dc0f8e4696391e6f1ff30379559f8365fb0df7"
+dependencies = [
+ "rustix 0.38.37",
+ "windows-sys 0.48.0",
+]
+
+[[package]]
 name = "termtree"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -14952,6 +14977,7 @@ dependencies = [
  "camino",
  "chrono",
  "clap",
+ "clap_config",
  "ctrlc",
  "dojo-metrics",
  "dojo-types 1.0.0-rc.1",
@@ -14975,6 +15001,7 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "tokio-util",
+ "toml 0.8.19",
  "torii-core",
  "torii-graphql",
  "torii-grpc",
@@ -15050,7 +15077,6 @@ dependencies = [
  "thiserror",
  "tokio",
  "tokio-util",
- "toml 0.8.19",
  "tracing",
 ]
 

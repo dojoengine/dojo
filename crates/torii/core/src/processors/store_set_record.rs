@@ -6,7 +6,7 @@ use starknet::core::types::Event;
 use starknet::providers::Provider;
 use tracing::info;
 
-use super::EventProcessor;
+use super::{EventProcessor, EventProcessorConfig};
 use crate::sql::utils::felts_to_sql_string;
 use crate::sql::Sql;
 
@@ -36,6 +36,7 @@ where
         block_timestamp: u64,
         event_id: &str,
         event: &Event,
+        _config: &EventProcessorConfig,
     ) -> Result<(), Error> {
         // Torii version is coupled to the world version, so we can expect the event to be well
         // formed.

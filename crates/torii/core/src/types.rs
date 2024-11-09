@@ -1,6 +1,4 @@
 use core::fmt;
-use std::collections::VecDeque;
-use std::path::PathBuf;
 use std::str::FromStr;
 
 use chrono::{DateTime, Utc};
@@ -123,28 +121,13 @@ pub struct Event {
     pub executed_at: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
 }
-
-#[derive(Default, Deserialize, Debug, Clone)]
-pub struct ToriiConfig {
-    /// contract addresses to index
-    pub contracts: VecDeque<Contract>,
-}
-
-impl ToriiConfig {
-    pub fn load_from_path(path: &PathBuf) -> Result<Self, anyhow::Error> {
-        let config = std::fs::read_to_string(path)?;
-        let config: Self = toml::from_str(&config)?;
-        Ok(config)
-    }
-}
-
-#[derive(Deserialize, Debug, Clone, Copy)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 pub struct Contract {
     pub address: Felt,
     pub r#type: ContractType,
 }
 
-#[derive(Deserialize, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ContractType {
     WORLD,
     ERC20,

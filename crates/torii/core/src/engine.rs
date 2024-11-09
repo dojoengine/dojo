@@ -37,9 +37,11 @@ use crate::processors::store_del_record::StoreDelRecordProcessor;
 use crate::processors::store_set_record::StoreSetRecordProcessor;
 use crate::processors::store_update_member::StoreUpdateMemberProcessor;
 use crate::processors::store_update_record::StoreUpdateRecordProcessor;
-use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
+use crate::processors::{
+    BlockProcessor, EventProcessor, EventProcessorConfig, TransactionProcessor,
+};
 use crate::sql::{Cursors, Sql};
-use crate::types::ContractType;
+use crate::types::{Contract, ContractType};
 
 type EventProcessorMap<P> = HashMap<Felt, Vec<Box<dyn EventProcessor<P>>>>;
 
@@ -142,6 +144,7 @@ pub struct EngineConfig {
     pub index_pending: bool,
     pub max_concurrent_tasks: usize,
     pub flags: IndexingFlags,
+    pub event_processor_config: EventProcessorConfig,
 }
 
 impl Default for EngineConfig {
@@ -154,6 +157,7 @@ impl Default for EngineConfig {
             index_pending: true,
             max_concurrent_tasks: 100,
             flags: IndexingFlags::empty(),
+            event_processor_config: EventProcessorConfig::default(),
         }
     }
 }
@@ -217,8 +221,12 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         config: EngineConfig,
         shutdown_tx: Sender<()>,
         block_tx: Option<BoundedSender<u64>>,
-        contracts: Arc<HashMap<Felt, ContractType>>,
+        contracts: &[Contract],
     ) -> Self {
+        let contracts = Arc::new(
+            contracts.iter().map(|contract| (contract.address, contract.r#type)).collect(),
+        );
+
         Self {
             world: Arc::new(world),
             db,
@@ -574,6 +582,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             let semaphore = semaphore.clone();
             let processors = self.processors.clone();
 
+            let event_processor_config = self.config.event_processor_config.clone();
             handles.push(tokio::spawn(async move {
                 let _permit = semaphore.acquire().await?;
                 let mut local_db = db.clone();
@@ -586,7 +595,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                         debug!(target: LOG_TARGET, event_name = processor.event_key(), task_id = %task_id, "Processing parallelized event.");
 
                         if let Err(e) = processor
-                            .process(&world, &mut local_db, block_number, block_timestamp, &event_id, &event)
+                            .process(&world, &mut local_db, block_number, block_timestamp, &event_id, &event, &event_processor_config)
                             .await
                         {
                             error!(target: LOG_TARGET, event_name = processor.event_key(), error = %e, task_id = %task_id, "Processing parallelized event.");
@@ -796,6 +805,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                         block_timestamp,
                         event_id,
                         event,
+                        &self.config.event_processor_config,
                     )
                     .await
                 {
@@ -855,6 +865,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                         block_timestamp,
                         event_id,
                         event,
+                        &self.config.event_processor_config,
                     )
                     .await
                 {
