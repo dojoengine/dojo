@@ -19,19 +19,19 @@ use super::options::transaction::TransactionOptions;
 use super::options::world::WorldOptions;
 use crate::utils;
 
-#[derive(Debug, Args)]
+#[derive(Debug, Clone, Args)]
 pub struct MigrateArgs {
     #[command(flatten)]
-    transaction: TransactionOptions,
+    pub transaction: TransactionOptions,
 
     #[command(flatten)]
-    world: WorldOptions,
+    pub world: WorldOptions,
 
     #[command(flatten)]
-    starknet: StarknetOptions,
+    pub starknet: StarknetOptions,
 
     #[command(flatten)]
-    account: AccountOptions,
+    pub account: AccountOptions,
 }
 
 impl MigrateArgs {
@@ -61,7 +61,7 @@ impl MigrateArgs {
 
             let world_address = world_diff.world_info.address;
 
-            let mut txn_config: TxnConfig = self.transaction.into();
+            let mut txn_config: TxnConfig = self.transaction.try_into()?;
             txn_config.wait = true;
 
             let migration = Migration::new(
@@ -73,7 +73,7 @@ impl MigrateArgs {
             );
 
             let MigrationResult { manifest, has_changes } =
-                migration.migrate(&mut spinner).await.context("💀 Migration failed.")?;
+                migration.migrate(&mut spinner).await.context("Migration failed.")?;
 
             spinner.update_text("Writing manifest...");
             ws.write_manifest_profile(manifest).context("🪦 Failed to write manifest.")?;
@@ -83,7 +83,7 @@ impl MigrateArgs {
             let (symbol, end_text) = if has_changes {
                 ("⛩️ ", format!("Migration successful with world at address {}", colored_address))
             } else {
-                ("🎃", format!("No changes for world at address {:#066x}", world_address))
+                ("🪨 ", format!("No changes for world at address {:#066x}", world_address))
             };
 
             spinner.stop_and_persist_boxed(symbol, end_text);
@@ -106,11 +106,11 @@ async fn print_banner(ws: &Workspace<'_>, starknet: &StarknetOptions) -> Result<
     let (provider, rpc_url) = starknet.provider(profile_config.env.as_ref())?;
 
     let chain_id = provider.chain_id().await?;
-    let chain_id = parse_cairo_short_string(&chain_id)
-        .with_context(|| "💀 Cannot parse chain_id as string")?;
+    let chain_id =
+        parse_cairo_short_string(&chain_id).with_context(|| "Cannot parse chain_id as string")?;
 
     let banner = Banner {
-        profile: ws.current_profile().expect("💀 Scarb profile should be set.").to_string(),
+        profile: ws.current_profile().expect("Scarb profile should be set.").to_string(),
         chain_id,
         rpc_url,
     };

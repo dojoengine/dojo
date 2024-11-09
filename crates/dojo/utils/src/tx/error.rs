@@ -17,6 +17,8 @@ where
     Provider(ProviderError),
     #[error("{0}")]
     TransactionExecution(String),
+    #[error("{0}")]
+    TransactionValidation(String),
     #[error(transparent)]
     TransactionWaiting(#[from] TransactionWaitingError),
     #[error(transparent)]
@@ -50,6 +52,9 @@ where
         match &value {
             ProviderError::StarknetError(StarknetError::TransactionExecutionError(te)) => {
                 TransactionError::TransactionExecution(te.execution_error.clone())
+            }
+            ProviderError::StarknetError(StarknetError::ValidationFailure(ve)) => {
+                TransactionError::TransactionExecution(ve.to_string())
             }
             _ => TransactionError::Provider(value),
         }

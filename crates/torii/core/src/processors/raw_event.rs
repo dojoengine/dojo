@@ -4,7 +4,7 @@ use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::Event;
 use starknet::providers::Provider;
 
-use super::EventProcessor;
+use super::{EventProcessor, EventProcessorConfig};
 use crate::sql::Sql;
 
 #[derive(Default, Debug)]
@@ -31,6 +31,7 @@ where
         _block_timestamp: u64,
         _event_id: &str,
         _event: &Event,
+        _config: &EventProcessorConfig,
     ) -> Result<(), Error> {
         // We can choose to consider them, or not.
 

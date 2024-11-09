@@ -31,6 +31,7 @@ url.workspace = true
 
 [dev-dependencies]
 assert_matches.workspace = true
+starknet.workspace = true
 
 [features]
 default = [ "jemalloc", "slot" ]

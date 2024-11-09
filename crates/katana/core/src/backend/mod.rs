@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use gas_oracle::L1GasOracle;
 use katana_executor::{ExecutionOutput, ExecutionResult, ExecutorFactory};
 use katana_primitives::block::{
     FinalityStatus, Header, PartialHeader, SealedBlock, SealedBlockWithStatus,
@@ -20,6 +21,7 @@ use starknet_types_core::hash::{self, StarkHash};
 use tracing::info;
 
 pub mod contract;
+pub mod gas_oracle;
 pub mod storage;
 
 use self::storage::Blockchain;
@@ -38,6 +40,8 @@ pub struct Backend<EF: ExecutorFactory> {
     pub block_context_generator: RwLock<BlockContextGenerator>,
 
     pub executor_factory: Arc<EF>,
+
+    pub gas_oracle: L1GasOracle,
 }
 
 impl<EF: ExecutorFactory> Backend<EF> {
@@ -104,6 +108,15 @@ impl<EF: ExecutorFactory> Backend<EF> {
 
         block_env.number += 1;
         block_env.timestamp = timestamp;
+
+        // update the gas prices
+        self.update_block_gas_prices(block_env);
+    }
+
+    /// Updates the gas prices in the block environment.
+    pub fn update_block_gas_prices(&self, block_env: &mut BlockEnv) {
+        block_env.l1_gas_prices = self.gas_oracle.current_gas_prices();
+        block_env.l1_data_gas_prices = self.gas_oracle.current_data_gas_prices();
     }
 
     pub fn mine_empty_block(

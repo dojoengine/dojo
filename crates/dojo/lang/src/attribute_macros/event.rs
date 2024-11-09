@@ -81,6 +81,17 @@ impl DojoEvent {
             });
         }
 
+        let members_values = members
+            .iter()
+            .filter_map(|m| {
+                if m.key {
+                    None
+                } else {
+                    Some(RewriteNode::Text(format!("pub {}: {},\n", m.name, m.ty)))
+                }
+            })
+            .collect::<Vec<_>>();
+
         let member_names = members
             .iter()
             .map(|member| RewriteNode::Text(format!("{},\n", member.name.clone())))
@@ -96,9 +107,7 @@ impl DojoEvent {
         // and do not derive IntrospectPacked.
         if derive_attr_names.contains(&DOJO_PACKED_DERIVE.to_string()) {
             diagnostics.push(PluginDiagnostic {
-                message: format!(
-                    "Event should derive {DOJO_INTROSPECT_DERIVE} instead of {DOJO_PACKED_DERIVE}."
-                ),
+                message: format!("Deriving {DOJO_PACKED_DERIVE} on event is not allowed."),
                 stable_ptr: struct_ast.name(db).stable_ptr().untyped(),
                 severity: Severity::Error,
             });
@@ -125,6 +134,7 @@ impl DojoEvent {
                 ("serialized_keys".to_string(), RewriteNode::new_modified(serialized_keys)),
                 ("serialized_values".to_string(), RewriteNode::new_modified(serialized_values)),
                 ("unique_hash".to_string(), RewriteNode::Text(unique_hash)),
+                ("members_values".to_string(), RewriteNode::new_modified(members_values)),
             ]),
         );
 

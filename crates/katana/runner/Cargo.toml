@@ -11,9 +11,6 @@ katana-runner-macro = { path = "macro" }
 
 anyhow.workspace = true
 assert_fs.workspace = true
-chrono.workspace = true
-serde.workspace = true
-serde_json.workspace = true
 starknet.workspace = true
 tokio.workspace = true
 url.workspace = true

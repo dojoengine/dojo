@@ -12,7 +12,7 @@ use katana_core::backend::Backend;
 use katana_core::service::block_producer::{BlockProducer, BlockProducerMode, PendingExecutor};
 use katana_executor::{ExecutionResult, ExecutorFactory};
 use katana_pool::validation::stateful::TxValidator;
-use katana_pool::TxPool;
+use katana_pool::{TransactionPool, TxPool};
 use katana_primitives::block::{
     BlockHash, BlockHashOrNumber, BlockIdOrTag, BlockNumber, BlockTag, FinalityStatus,
     PartialHeader,
@@ -23,7 +23,7 @@ use katana_primitives::conversion::rpc::legacy_inner_to_rpc_class;
 use katana_primitives::da::L1DataAvailabilityMode;
 use katana_primitives::env::BlockEnv;
 use katana_primitives::event::MaybeForkedContinuationToken;
-use katana_primitives::transaction::{ExecutableTxWithHash, TxHash};
+use katana_primitives::transaction::{ExecutableTxWithHash, TxHash, TxWithHash};
 use katana_primitives::Felt;
 use katana_provider::traits::block::{BlockHashProvider, BlockIdReader, BlockNumberProvider};
 use katana_provider::traits::contract::ContractClassProvider;
@@ -200,11 +200,17 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
 
         let env = match block_id {
             BlockIdOrTag::Tag(BlockTag::Pending) => {
+                // If there is a pending block, use the block env of the pending block.
                 if let Some(exec) = self.pending_executor() {
                     Some(exec.read().block_env())
-                } else {
+                }
+                // else, we create a new block env and update the values to reflect the current
+                // state.
+                else {
                     let num = provider.latest_number()?;
-                    provider.block_env_at(num.into())?
+                    let mut env = provider.block_env_at(num.into())?.expect("missing block env");
+                    self.inner.backend.update_block_env(&mut env);
+                    Some(env)
                 }
             }
 
@@ -431,7 +437,9 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         } else if let Some(client) = &self.inner.forked_client {
             Ok(client.get_transaction_by_hash(hash).await?)
         } else {
-            Err(StarknetApiError::TxnHashNotFound)
+            let tx = self.inner.pool.get(hash).ok_or(StarknetApiError::TxnHashNotFound)?;
+            let tx = TxWithHash::from(tx.as_ref());
+            Ok(Tx::from(tx))
         }
     }
 
@@ -563,7 +571,8 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         } else if let Some(client) = &self.inner.forked_client {
             Ok(client.get_transaction_status(hash).await?)
         } else {
-            Err(StarknetApiError::TxnHashNotFound)
+            let _ = self.inner.pool.get(hash).ok_or(StarknetApiError::TxnHashNotFound)?;
+            Ok(TransactionStatus::Received)
         }
     }
 

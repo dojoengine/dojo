@@ -9,7 +9,7 @@ use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
 use tracing::{info, warn};
 
-use super::EventProcessor;
+use super::{EventProcessor, EventProcessorConfig};
 use crate::processors::{ENTITY_ID_INDEX, MODEL_INDEX};
 use crate::sql::Sql;
 
@@ -50,6 +50,7 @@ where
         block_timestamp: u64,
         event_id: &str,
         event: &Event,
+        _config: &EventProcessorConfig,
     ) -> Result<(), Error> {
         let model_id = event.data[MODEL_INDEX];
         let entity_id = event.data[ENTITY_ID_INDEX];

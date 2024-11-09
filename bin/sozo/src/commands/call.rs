@@ -1,7 +1,9 @@
+use std::collections::HashMap;
+
 use anyhow::{anyhow, Result};
 use clap::Args;
-use dojo_types::naming;
 use dojo_world::config::calldata_decoder;
+use dojo_world::contracts::ContractInfo;
 use scarb::core::Config;
 use sozo_ops::resource_descriptor::ResourceDescriptor;
 use sozo_scarbext::WorkspaceExt;
@@ -39,6 +41,11 @@ pub struct CallArgs {
     #[arg(help = "The block ID (could be a hash, a number, 'pending' or 'latest')")]
     pub block_id: Option<String>,
 
+    #[arg(long)]
+    #[arg(help = "If true, sozo will compute the diff of the world from the chain to translate \
+                  tags to addresses.")]
+    pub diff: bool,
+
     #[command(flatten)]
     pub starknet: StarknetOptions,
 
@@ -57,8 +64,7 @@ impl CallArgs {
         let descriptor = self.tag_or_address.ensure_namespace(&profile_config.namespace.default);
 
         config.tokio_handle().block_on(async {
-            let (world_diff, provider, _) =
-                utils::get_world_diff_and_provider(self.starknet.clone(), self.world, &ws).await?;
+            let local_manifest = ws.read_manifest_profile()?;
 
             let calldata = if let Some(cd) = self.calldata {
                 calldata_decoder::decode_calldata(&cd)?
@@ -69,8 +75,21 @@ impl CallArgs {
             let contract_address = match &descriptor {
                 ResourceDescriptor::Address(address) => Some(*address),
                 ResourceDescriptor::Tag(tag) => {
-                    let selector = naming::compute_selector_from_tag(tag);
-                    world_diff.get_contract_address(selector)
+                    let contracts: HashMap<String, ContractInfo> =
+                        if self.diff || local_manifest.is_none() {
+                            let (world_diff, _, _) = utils::get_world_diff_and_provider(
+                                self.starknet.clone(),
+                                self.world,
+                                &ws,
+                            )
+                            .await?;
+
+                            (&world_diff).into()
+                        } else {
+                            (&local_manifest.unwrap()).into()
+                        };
+
+                    contracts.get(tag).map(|c| c.address)
                 }
                 ResourceDescriptor::Name(_) => {
                     unimplemented!("Expected to be a resolved tag with default namespace.")
@@ -83,6 +102,8 @@ impl CallArgs {
             } else {
                 BlockId::Tag(BlockTag::Pending)
             };
+
+            let (provider, _) = self.starknet.provider(profile_config.env.as_ref())?;
 
             let res = provider
                 .call(

@@ -30,6 +30,7 @@ cargo +nightly-2024-08-28 fmt --all -- "$@"
 # CAIRO_FIX_TESTS=1 cargo test --package dojo-lang semantics
 
 # Re-run the minimal tests, this will re-build the projects + generate the build artifacts.
+./target/release/sozo build --manifest-path examples/simple/Scarb.toml
 ./target/release/sozo build --manifest-path examples/spawn-and-move/Scarb.toml
 ./target/release/sozo build --manifest-path examples/spawn-and-move/Scarb.toml -P release
 ./target/release/sozo build --manifest-path crates/torii/types-test/Scarb.toml

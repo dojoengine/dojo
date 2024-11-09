@@ -54,7 +54,7 @@ fn test_values() {
     let mvalues = FooValue { v1: 3, v2: 4 };
     let expected_values = [3, 4].span();
 
-    let values = mvalues.values();
+    let values = mvalues.serialized_values();
     assert!(expected_values == values);
 }
 
@@ -62,7 +62,7 @@ fn test_values() {
 fn test_from_values() {
     let mut values = [3, 4].span();
 
-    let model_values: Option<FooValue> = ModelValue::<FooValue>::from_values(1, ref values);
+    let model_values: Option<FooValue> = ModelValue::<FooValue>::from_serialized(values);
     assert!(model_values.is_some());
     let model_values = model_values.unwrap();
     assert!(model_values.v1 == 3 && model_values.v2 == 4);
@@ -71,7 +71,7 @@ fn test_from_values() {
 #[test]
 fn test_from_values_bad_data() {
     let mut values = [3].span();
-    let res: Option<FooValue> = ModelValue::<FooValue>::from_values(1, ref values);
+    let res: Option<FooValue> = ModelValue::<FooValue>::from_serialized(values);
     assert!(res.is_none());
 }
 
@@ -83,7 +83,7 @@ fn test_read_and_update_model_value() {
     world.write_model(@foo);
 
     let entity_id = foo.entity_id();
-    let mut model_value: FooValue = world.read_value(foo.key());
+    let mut model_value: FooValue = world.read_value(foo.keys());
     assert_eq!(model_value.v1, foo.v1);
     assert_eq!(model_value.v2, foo.v2);
 
@@ -92,7 +92,7 @@ fn test_read_and_update_model_value() {
 
     world.write_value_from_id(entity_id, @model_value);
 
-    let read_values: FooValue = world.read_value(foo.key());
+    let read_values: FooValue = world.read_value(foo.keys());
     assert!(read_values.v1 == model_value.v1 && read_values.v2 == model_value.v2);
 }
 
@@ -153,20 +153,20 @@ fn test_delete_from_model() {
 }
 
 #[test]
-fn test_model_ptr_from_key() {
+fn test_model_ptr_from_keys() {
     let mut world = spawn_foo_world();
     let foo = Foo { k1: 1, k2: 2, v1: 3, v2: 4 };
-    let ptr = Model::<Foo>::ptr_from_key(foo.key());
+    let ptr = Model::<Foo>::ptr_from_keys(foo.keys());
     world.write_model(@foo);
     let v1 = world.read_member(ptr, selector!("v1"));
     assert!(foo.v1 == v1);
 }
 
 #[test]
-fn test_model_ptr_from_keys() {
+fn test_model_ptr_from_serialized_keys() {
     let mut world = spawn_foo_world();
     let foo = Foo { k1: 1, k2: 2, v1: 3, v2: 4 };
-    let ptr = Model::<Foo>::ptr_from_keys(foo.keys());
+    let ptr = Model::<Foo>::ptr_from_serialized_keys(foo.serialized_keys());
     world.write_model(@foo);
     let v1 = world.read_member(ptr, selector!("v1"));
     assert!(foo.v1 == v1);
