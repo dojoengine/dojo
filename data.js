@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1731108991142,
+  "lastUpdate": 1731165650746,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -32317,6 +32317,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8705540,
             "range": "± 684887",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "428d6751d0d8c4c4eab9018da2379f6c6dfb645c",
+          "message": "feat(torii): configutation file for all torii cli options (#2646)\n\n* feat(torii): configutation file for all torii cli options\n\n* fix: config\n\n* skip config\n\n* wrap up config\n\n* optional world address\n\n* hisotrical event message sconfig\n\n* remove upgrade\n\n* fmt clippy",
+          "timestamp": "2024-11-09T09:04:36-06:00",
+          "tree_id": "95bfa157e72c3c9e6d303797af70105dcaad9182",
+          "url": "https://github.com/dojoengine/dojo/commit/428d6751d0d8c4c4eab9018da2379f6c6dfb645c"
+        },
+        "date": 1731165649579,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10387081936,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
