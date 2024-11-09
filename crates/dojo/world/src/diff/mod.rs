@@ -63,6 +63,10 @@ pub struct WorldDiff {
     pub resources: HashMap<DojoSelector, ResourceDiff>,
     /// The profile configuration for the world.
     pub profile_config: ProfileConfig,
+    /// The external writers.
+    pub external_writers: HashMap<DojoSelector, HashSet<ContractAddress>>,
+    /// The external owners.
+    pub external_owners: HashMap<DojoSelector, HashSet<ContractAddress>>,
 }
 
 impl WorldDiff {
@@ -82,6 +86,8 @@ impl WorldDiff {
             namespaces: vec![],
             resources: HashMap::new(),
             profile_config: local.profile_config,
+            external_writers: HashMap::new(),
+            external_owners: HashMap::new(),
         };
 
         for (selector, resource) in local.resources {
@@ -120,6 +126,8 @@ impl WorldDiff {
             namespaces: vec![],
             resources: HashMap::new(),
             profile_config: local.profile_config,
+            external_writers: remote.external_writers.clone(),
+            external_owners: remote.external_owners.clone(),
         };
 
         for (local_selector, local_resource) in local.resources {

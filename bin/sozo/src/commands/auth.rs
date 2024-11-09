@@ -68,17 +68,22 @@ pub enum AuthCommand {
     #[command(about = "Clone all permissions that one contract has to another.")]
     Clone {
         #[arg(help = "The tag or address of the source contract to clone the permissions from.")]
-        source: String,
+        #[arg(long)]
+        #[arg(global = true)]
+        from: String,
 
         #[arg(help = "The tag or address of the target contract to clone the permissions to.")]
-        target: String,
+        #[arg(long)]
+        #[arg(global = true)]
+        to: String,
 
         #[arg(
             long,
             help = "Revoke the permissions from the source contract after cloning them to the \
                     target contract."
         )]
-        revoke_source: bool,
+        #[arg(global = true)]
+        revoke_from: bool,
 
         #[command(flatten)]
         common: CommonAuthOptions,
@@ -189,15 +194,15 @@ impl AuthArgs {
                 AuthCommand::List { resource, show_address, starknet, world } => {
                     list_permissions(resource, show_address, starknet, world, &ws).await?;
                 }
-                AuthCommand::Clone { revoke_source, common, source, target } => {
-                    if source == target {
+                AuthCommand::Clone { revoke_from, common, from, to } => {
+                    if from == to {
                         anyhow::bail!(
                             "Source and target are the same, please specify different source and \
                              target."
                         );
                     }
 
-                    clone_permissions(common, &ws, revoke_source, source, target).await?;
+                    clone_permissions(common, &ws, revoke_from, from, to).await?;
                 }
             };
 
@@ -210,9 +215,9 @@ impl AuthArgs {
 async fn clone_permissions(
     options: CommonAuthOptions,
     ws: &Workspace<'_>,
-    revoke_source: bool,
-    source_tag_or_address: String,
-    target_tag_or_address: String,
+    revoke_from: bool,
+    from_tag_or_address: String,
+    to_tag_or_address: String,
 ) -> Result<()> {
     let mut migration_ui = MigrationUi::new_with_frames(
         "Gathering permissions from the world...",
@@ -224,12 +229,30 @@ async fn clone_permissions(
         options.starknet,
         options.world,
         ws,
-        &mut None,
+        &mut Some(&mut migration_ui),
     )
     .await?;
 
-    let source_address = resolve_address_or_tag(&source_tag_or_address, &world_diff)?;
-    let target_address = resolve_address_or_tag(&target_tag_or_address, &world_diff)?;
+    let from_address = resolve_address_or_tag(&from_tag_or_address, &world_diff)?;
+    let to_address = resolve_address_or_tag(&to_tag_or_address, &world_diff)?;
+
+    let external_writer_of: Vec<Felt> =
+        world_diff
+            .external_writers
+            .iter()
+            .filter_map(|(resource_selector, writers)| {
+                if writers.contains(&from_address) { Some(*resource_selector) } else { None }
+            })
+            .collect();
+
+    let external_owner_of: Vec<Felt> =
+        world_diff
+            .external_owners
+            .iter()
+            .filter_map(|(resource_selector, owners)| {
+                if owners.contains(&from_address) { Some(*resource_selector) } else { None }
+            })
+            .collect();
 
     let mut writer_of = HashSet::new();
     let mut owner_of = HashSet::new();
@@ -245,16 +268,20 @@ async fn clone_permissions(
         // We need to check remote only resources if we want to be exhaustive.
         // But in this version, only synced permissions are supported.
 
-        if writers.synced().iter().any(|w| w.address == source_address) {
+        if writers.synced().iter().any(|w| w.address == from_address) {
             writer_of.insert(resource.tag().clone());
         }
 
-        if owners.synced().iter().any(|o| o.address == source_address) {
+        if owners.synced().iter().any(|o| o.address == from_address) {
             owner_of.insert(resource.tag().clone());
         }
     }
 
-    if writer_of.is_empty() && owner_of.is_empty() {
+    if writer_of.is_empty()
+        && owner_of.is_empty()
+        && external_writer_of.is_empty()
+        && external_owner_of.is_empty()
+    {
         migration_ui.stop();
 
         println!("No permissions to clone.");
@@ -263,28 +290,59 @@ async fn clone_permissions(
 
     migration_ui.stop();
 
-    let writers_resource_selectors = writer_of
+    let mut writers_resource_selectors = writer_of
         .iter()
         .map(|r| dojo_types::naming::compute_selector_from_tag_or_name(r))
         .collect::<Vec<_>>();
-    let owners_resource_selectors = owner_of
+    let mut owners_resource_selectors = owner_of
         .iter()
         .map(|r| dojo_types::naming::compute_selector_from_tag_or_name(r))
         .collect::<Vec<_>>();
+
+    writers_resource_selectors.extend(external_writer_of.iter().copied());
+    owners_resource_selectors.extend(external_owner_of.iter().copied());
+
+    writer_of.extend(
+        external_writer_of
+            .iter()
+            .map(|r| if r != &Felt::ZERO { format!("{:#066x}", r) } else { "World".to_string() }),
+    );
+    owner_of.extend(
+        external_owner_of
+            .iter()
+            .map(|r| if r != &Felt::ZERO { format!("{:#066x}", r) } else { "World".to_string() }),
+    );
+
+    // Sort the tags to have a deterministic output.
+    let mut writer_of = writer_of.into_iter().collect::<Vec<_>>();
+    writer_of.sort();
+    let mut owner_of = owner_of.into_iter().collect::<Vec<_>>();
+    owner_of.sort();
 
     let writers_of_tags = writer_of.into_iter().collect::<Vec<_>>().join(", ");
     let owners_of_tags = owner_of.into_iter().collect::<Vec<_>>().join(", ");
 
+    let writers_txt = if writers_of_tags.is_empty() {
+        "".to_string()
+    } else {
+        format!("\n    writers: {}", writers_of_tags)
+    };
+
+    let owners_txt = if owners_of_tags.is_empty() {
+        "".to_string()
+    } else {
+        format!("\n    owners: {}", owners_of_tags)
+    };
+
     println!(
-        "Confirm the following permissions to be cloned from {} to {}\n    writers: {}\n    \
-         owners: {}",
-        source_tag_or_address.bright_blue(),
-        target_tag_or_address.bright_blue(),
-        writers_of_tags.bright_green(),
-        owners_of_tags.bright_yellow(),
+        "Confirm the following permissions to be cloned from {} to {}\n{}{}",
+        from_tag_or_address.bright_blue(),
+        to_tag_or_address.bright_blue(),
+        writers_txt.bright_green(),
+        owners_txt.bright_yellow(),
     );
 
-    let confirm = utils::prompt_confirm("Continue?")?;
+    let confirm = utils::prompt_confirm("\nContinue?")?;
     if !confirm {
         return Ok(());
     }
@@ -293,28 +351,28 @@ async fn clone_permissions(
     let mut invoker = Invoker::new(&account, options.transaction.clone().try_into()?);
 
     for w in writers_resource_selectors.iter() {
-        invoker.add_call(world.grant_writer_getcall(w, &ContractAddress(target_address)));
+        invoker.add_call(world.grant_writer_getcall(w, &ContractAddress(to_address)));
     }
 
     for o in owners_resource_selectors.iter() {
-        invoker.add_call(world.grant_owner_getcall(o, &ContractAddress(target_address)));
+        invoker.add_call(world.grant_owner_getcall(o, &ContractAddress(to_address)));
     }
 
-    if revoke_source {
+    if revoke_from {
         println!(
             "{}",
-            format!("\n!Permissions from {} will be revoked!", source_tag_or_address).bright_red()
+            format!("\n!Permissions from {} will be revoked!", from_tag_or_address).bright_red()
         );
-        if !utils::prompt_confirm("Continue?")? {
+        if !utils::prompt_confirm("\nContinue?")? {
             return Ok(());
         }
 
         for w in writers_resource_selectors.iter() {
-            invoker.add_call(world.revoke_writer_getcall(w, &ContractAddress(source_address)));
+            invoker.add_call(world.revoke_writer_getcall(w, &ContractAddress(from_address)));
         }
 
         for o in owners_resource_selectors.iter() {
-            invoker.add_call(world.revoke_owner_getcall(o, &ContractAddress(source_address)));
+            invoker.add_call(world.revoke_owner_getcall(o, &ContractAddress(from_address)));
         }
     }
 
@@ -356,6 +414,39 @@ async fn list_permissions(
     resources.sort_by_key(|r| r.tag().clone());
 
     migration_ui.stop();
+
+    let mut world_writers = world_diff
+        .external_writers
+        .get(&Felt::ZERO)
+        .map(|writers| writers.iter().cloned().collect::<Vec<_>>())
+        .unwrap_or_default();
+
+    let mut world_owners = world_diff
+        .external_owners
+        .get(&Felt::ZERO)
+        .map(|owners| owners.iter().cloned().collect::<Vec<_>>())
+        .unwrap_or_default();
+
+    // Sort the tags to have a deterministic output.
+    world_writers.sort();
+    world_owners.sort();
+
+    println!("{}", "World".bright_red());
+    if !world_writers.is_empty() {
+        println!(
+            "writers: {}",
+            world_writers.iter().map(|w| format!("{:#066x}", w)).collect::<Vec<_>>().join(", ")
+        );
+    }
+
+    if !world_owners.is_empty() {
+        println!(
+            "owners: {}",
+            world_owners.iter().map(|o| format!("{:#066x}", o)).collect::<Vec<_>>().join(", ")
+        );
+    }
+
+    println!();
 
     if let Some(resource) = resource {
         let selector = dojo_types::naming::compute_selector_from_tag_or_name(&resource);

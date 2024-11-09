@@ -6,6 +6,8 @@
 //! Events are also sequential, a resource is not expected to be upgraded before
 //! being registered. We take advantage of this fact to optimize the data gathering.
 
+use std::collections::HashSet;
+
 use anyhow::Result;
 use starknet::core::types::{BlockId, BlockTag, EventFilter, Felt, StarknetError};
 use starknet::providers::{Provider, ProviderError};
@@ -123,7 +125,14 @@ impl WorldRemote {
             WorldEvent::WorldSpawned(e) => {
                 self.class_hashes.push(e.class_hash.into());
 
-                trace!(class_hash = format!("{:#066x}", e.class_hash.0), "World spawned.");
+                // The creator is the world's owner, but no event emitted for that.
+                self.external_owners.insert(Felt::ZERO, HashSet::from([e.creator.into()]));
+
+                trace!(
+                    class_hash = format!("{:#066x}", e.class_hash.0),
+                    creator = format!("{:#066x}", e.creator.0),
+                    "World spawned."
+                );
             }
             WorldEvent::WorldUpgraded(e) => {
                 self.class_hashes.push(e.class_hash.into());
