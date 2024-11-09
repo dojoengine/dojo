@@ -676,7 +676,14 @@ impl PermissionPair {
         &self,
         contracts: &HashMap<String, ContractInfo>,
     ) -> Result<(Felt, Felt)> {
-        let selector = dojo_types::naming::compute_selector_from_tag_or_name(&self.resource_tag);
+        let selector = if self.resource_tag == "world" {
+            Felt::ZERO
+        } else if self.resource_tag.starts_with("0x") {
+            Felt::from_str(&self.resource_tag)
+                .map_err(|_| anyhow!("Invalid resource selector: {}", self.resource_tag))?
+        } else {
+            dojo_types::naming::compute_selector_from_tag_or_name(&self.resource_tag)
+        };
 
         let contract_address = if self.grantee_tag_or_address.starts_with("0x") {
             Felt::from_str(&self.grantee_tag_or_address)
@@ -775,5 +782,21 @@ mod tests {
             grantee_tag_or_address: "0xinvalid".to_string(),
         };
         assert!(pair.to_selector_and_address(&contracts).is_err());
+
+        let pair = PermissionPair {
+            resource_tag: "world".to_string(),
+            grantee_tag_or_address: "0x123".to_string(),
+        };
+        let (selector, address) = pair.to_selector_and_address(&contracts).unwrap();
+        assert_eq!(selector, Felt::ZERO);
+        assert_eq!(address, Felt::from_str("0x123").unwrap());
+
+        let pair = PermissionPair {
+            resource_tag: "0x123".to_string(),
+            grantee_tag_or_address: "0x456".to_string(),
+        };
+        let (selector, address) = pair.to_selector_and_address(&contracts).unwrap();
+        assert_eq!(selector, Felt::from_str("0x123").unwrap());
+        assert_eq!(address, Felt::from_str("0x456").unwrap());
     }
 }
