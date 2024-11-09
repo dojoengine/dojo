@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1731166452843,
+  "lastUpdate": 1731167743606,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -32707,6 +32707,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 9912714,
             "range": "± 533915",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "86c6a6c590e43e659d2dfad70b996d28dfc2044b",
+          "message": "refactor: apply code simplification to break with bool value (n-04) (#2639)\n\n* refactor: apply code simplification to break with bool value\n\n* tests: regenerate test db\n\n* fix: update policies\n\n* fix: update policies",
+          "timestamp": "2024-11-09T09:39:28-06:00",
+          "tree_id": "e709b20909802f011dd02c5d871835ddae551575",
+          "url": "https://github.com/dojoengine/dojo/commit/86c6a6c590e43e659d2dfad70b996d28dfc2044b"
+        },
+        "date": 1731167741820,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10429395607,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
