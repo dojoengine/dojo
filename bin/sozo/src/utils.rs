@@ -131,7 +131,13 @@ pub async fn get_world_diff_and_provider(
         .with_context(|| "Cannot parse chain_id as string")?;
     trace!(chain_id);
 
-    let world_diff = WorldDiff::new_from_chain(world_address, world_local, &provider).await?;
+    let world_diff = WorldDiff::new_from_chain(
+        world_address,
+        world_local,
+        &provider,
+        env.and_then(|e| e.world_block),
+    )
+    .await?;
 
     Ok((world_diff, provider, rpc_url))
 }

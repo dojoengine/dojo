@@ -8,6 +8,7 @@ use dojo_world::contracts::abigen::world::{self, Event as WorldEvent};
 use dojo_world::diff::WorldDiff;
 use scarb::core::Config;
 use sozo_ops::model;
+use sozo_scarbext::WorkspaceExt;
 use starknet::core::types::{BlockId, BlockTag, EventFilter, Felt};
 use starknet::core::utils::starknet_keccak;
 use starknet::providers::Provider;
@@ -54,13 +55,21 @@ impl EventsArgs {
     pub fn run(self, config: &Config) -> Result<()> {
         config.tokio_handle().block_on(async {
             let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
+            let profile_config = ws.load_profile_config()?;
 
             let (world_diff, provider, _) =
                 utils::get_world_diff_and_provider(self.starknet, self.world, &ws).await?;
 
             let provider = Arc::new(provider);
 
-            let from_block = self.from_block.map(BlockId::Number);
+            let from_block = if let Some(world_block) =
+                profile_config.env.as_ref().and_then(|e| e.world_block)
+            {
+                Some(BlockId::Number(world_block))
+            } else {
+                self.from_block.map(BlockId::Number)
+            };
+
             let to_block = self.to_block.map(BlockId::Number);
             let keys = self
                 .events
