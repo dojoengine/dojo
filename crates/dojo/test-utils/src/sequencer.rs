@@ -5,12 +5,10 @@ use jsonrpsee::core::Error;
 use katana_core::backend::Backend;
 use katana_core::constants::DEFAULT_SEQUENCER_ADDRESS;
 use katana_executor::implementation::blockifier::BlockifierFactory;
-use katana_node::config::dev::DevConfig;
-use katana_node::config::rpc::{ApiKind, RpcConfig, DEFAULT_RPC_ADDR, DEFAULT_RPC_MAX_CONNECTIONS};
+use katana_node::config::rpc::ApiKind;
 pub use katana_node::config::*;
 use katana_node::LaunchedNode;
 use katana_primitives::chain::ChainId;
-use katana_primitives::chain_spec::ChainSpec;
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::chain_id;
 use starknet::core::types::{BlockId, BlockTag, Felt};
@@ -113,17 +111,11 @@ impl TestSequencer {
 }
 
 pub fn get_default_test_config(sequencing: SequencingConfig) -> Config {
-    let dev = DevConfig { fee: false, account_validation: true, fixed_gas_prices: None };
-    let mut chain = ChainSpec { id: ChainId::SEPOLIA, ..Default::default() };
-    chain.genesis.sequencer_address = *DEFAULT_SEQUENCER_ADDRESS;
-
-    let rpc = RpcConfig {
-        allowed_origins: None,
-        port: 0,
-        addr: DEFAULT_RPC_ADDR,
-        max_connections: DEFAULT_RPC_MAX_CONNECTIONS,
-        apis: HashSet::from([ApiKind::Starknet, ApiKind::Dev, ApiKind::Saya, ApiKind::Torii]),
-    };
-
-    Config { sequencing, rpc, dev, chain, ..Default::default() }
+    ConfigBuilder::new()
+        .dev_fee(false)
+        .chain_id(ChainId::SEPOLIA)
+        .genesis_sequencer_address(DEFAULT_SEQUENCER_ADDRESS)
+        .rpc_apis(HashSet::from([ApiKind::Starknet, ApiKind::Dev, ApiKind::Saya, ApiKind::Torii]))
+        .sequencing(sequencing)
+        .build()
 }

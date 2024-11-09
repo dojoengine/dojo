@@ -13,9 +13,9 @@ pub struct ExecutionConfig {
 impl std::default::Default for ExecutionConfig {
     fn default() -> Self {
         Self {
-            max_recursion_depth: MAX_RECURSION_DEPTH,
             invocation_max_steps: DEFAULT_INVOCATION_MAX_STEPS,
             validation_max_steps: DEFAULT_VALIDATION_MAX_STEPS,
+            max_recursion_depth: MAX_RECURSION_DEPTH,
         }
     }
 }
