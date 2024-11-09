@@ -7,6 +7,7 @@ use clap::ValueEnum;
 use katana_primitives::block::{BlockHash, BlockHashOrNumber, BlockNumber};
 use katana_primitives::genesis::json::GenesisJson;
 use katana_primitives::genesis::Genesis;
+use serde::{Deserialize, Serialize};
 
 pub fn parse_seed(seed: &str) -> [u8; 32] {
     let seed = seed.as_bytes();
@@ -37,9 +38,10 @@ pub fn parse_block_hash_or_number(value: &str) -> Result<BlockHashOrNumber> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Default)]
 pub enum LogFormat {
     Json,
+    #[default]
     Full,
 }
 

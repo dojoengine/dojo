@@ -157,6 +157,7 @@ camino = { version = "1.1.2", features = [ "serde1" ] }
 chrono = { version = "0.4.24", features = [ "serde" ] }
 clap = { version = "4.5.16", features = [ "derive", "env" ] }
 clap-verbosity-flag = "2.0.1"
+clap_config = "0.1.1"
 clap_complete = "4.3"
 colored = "2.0.0"
 colored_json = "3.2.0"
