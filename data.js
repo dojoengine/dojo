@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1731166234896,
+  "lastUpdate": 1731166259496,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -32502,6 +32502,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 10542598152,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "dbe04ad9e91419bb957d8a5f90c9ecf0e0a7e46b",
+          "message": "fix: ensure proper documentation for the Resource enum (n-01) (#2640)\n\n* fix: ensure proper documentation for the Resource enum\n\n* fix: fmt",
+          "timestamp": "2024-11-09T09:14:37-06:00",
+          "tree_id": "26eb640ae26649d951ab45b2d4dc591204e0ae82",
+          "url": "https://github.com/dojoengine/dojo/commit/dbe04ad9e91419bb957d8a5f90c9ecf0e0a7e46b"
+        },
+        "date": 1731166257533,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10363426748,
             "range": "± 0",
             "unit": "ns/iter"
           }
