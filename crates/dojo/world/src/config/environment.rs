@@ -8,6 +8,14 @@ pub struct Environment {
     pub keystore_path: Option<String>,
     pub keystore_password: Option<String>,
     pub world_address: Option<String>,
+    pub world_block: Option<u64>,
+    pub http_headers: Option<Vec<HttpHeader>>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct HttpHeader {
+    pub name: String,
+    pub value: String,
 }
 
 impl Environment {

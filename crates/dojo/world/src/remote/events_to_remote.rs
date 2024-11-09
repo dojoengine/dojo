@@ -19,7 +19,11 @@ use crate::remote::{CommonRemoteInfo, ContractRemote, EventRemote, ModelRemote, 
 impl WorldRemote {
     /// Fetch the events from the world and convert them to remote resources.
     #[allow(clippy::field_reassign_with_default)]
-    pub async fn from_events<P: Provider>(world_address: Felt, provider: &P) -> Result<Self> {
+    pub async fn from_events<P: Provider>(
+        world_address: Felt,
+        provider: &P,
+        from_block: Option<u64>,
+    ) -> Result<Self> {
         let mut world = Self::default();
 
         world.address = world_address;
@@ -52,7 +56,9 @@ impl WorldRemote {
         ]];
 
         let filter = EventFilter {
-            from_block: None,
+            // Most of the node providers are struggling with wide block ranges.
+            // For this reason, we must be able to accept a custom from block.
+            from_block: from_block.map(BlockId::Number),
             to_block: Some(BlockId::Tag(BlockTag::Pending)),
             address: Some(world_address),
             keys: Some(keys),
@@ -86,6 +92,12 @@ impl WorldRemote {
             continuation_token = page.continuation_token;
             events.extend(page.events);
         }
+
+        trace!(
+            events_count = events.len(),
+            world_address = format!("{:#066x}", world_address),
+            "Fetched events for world."
+        );
 
         for event in &events {
             match world::Event::try_from(event) {
