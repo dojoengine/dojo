@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1731166451197,
+  "lastUpdate": 1731166452843,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -32659,6 +32659,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8331992,
             "range": "± 77097",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "90767953a52ac2e2498cccca1f497f4c6df5764b",
+          "message": "docs: fix typo (n-06) (#2641)\n\n* docs: fix typo\n\n* docs: clarify syscall behavior",
+          "timestamp": "2024-11-09T09:14:15-06:00",
+          "tree_id": "2edaed024299589796e1fd17794605f7cab7bf61",
+          "url": "https://github.com/dojoengine/dojo/commit/90767953a52ac2e2498cccca1f497f4c6df5764b"
+        },
+        "date": 1731166451384,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16756033,
+            "range": "± 172708",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 10672419,
+            "range": "± 342677",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3439081454,
+            "range": "± 670084707",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 9912714,
+            "range": "± 533915",
             "unit": "ns/iter"
           }
         ]
