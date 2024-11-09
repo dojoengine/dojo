@@ -77,7 +77,6 @@ pub struct NodeArgs {
     ///
     /// Configure the messaging to allow Katana listening/sending messages on a
     /// settlement chain that can be Ethereum or an other Starknet sequencer.
-    /// The configuration file details and examples can be found here: <https://book.dojoengine.org/toolchain/katana/reference#messaging>
     #[arg(long)]
     #[arg(value_name = "PATH")]
     #[arg(value_parser = katana_core::service::messaging::MessagingConfig::parse)]
