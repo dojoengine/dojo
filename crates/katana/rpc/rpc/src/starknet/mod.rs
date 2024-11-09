@@ -52,6 +52,7 @@ use crate::utils;
 use crate::utils::events::{Cursor, EventBlockId};
 
 pub type StarknetApiResult<T> = Result<T, StarknetApiError>;
+const MAX_CHUNK_SIZE: usize = 100;
 
 #[allow(missing_debug_implementations)]
 pub struct StarknetApi<EF: ExecutorFactory> {
@@ -497,6 +498,36 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         } else {
             Err(StarknetApiError::TxnHashNotFound)
         }
+    }
+
+
+    async fn get_events_with_limit(
+        &self,
+        filter: EventFilterWithPage,
+        chunk_size: usize,
+    ) -> StarknetApiResult<EventsPage> {
+        // Ensure the chunk size is within a reasonable limit
+        if chunk_size == 0 || chunk_size > Self::MAX_CHUNK_SIZE {
+            return Err(StarknetApiError::InvalidChunkSize);
+        }
+
+        // Fetch events based on the provided filter and chunk size
+        let events = self.fetch_events(filter).await?;
+        
+        // Paginate the results based on the specified chunk size
+        let paginated_events = events.into_iter().take(chunk_size).collect::<Vec<_>>();
+
+        // Prepare the response with the paginated events
+        let next_token = if events.len() > chunk_size {
+            Some(generate_next_token(&paginated_events))
+        } else {
+            None
+        };
+
+        Ok(EventsPage {
+            events: paginated_events,
+            continuation_token: next_token,
+        })
     }
 
     async fn transaction_status(&self, hash: TxHash) -> StarknetApiResult<TransactionStatus> {
