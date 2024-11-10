@@ -1,7 +1,7 @@
 {
   "world": {
-    "class_hash": "0x2f92b70bd2b5a40ddef12c55257f245176870b25c7eb0bd7a60cf1f1f2fbf0e",
-    "address": "0x30e907536f553a4b90bbd008df0785061073e432f20779e0c3549923dd67576",
+    "class_hash": "0x79d9ce84b97bcc2a631996c3100d57966fc2f5b061fb1ec4dfd0040976bcac6",
+    "address": "0x1b2e50266b9b673eb82e68249a1babde860f6414737b4a36ff7b29411a64666",
     "seed": "simple",
     "name": "simple",
     "entrypoints": [
@@ -1243,8 +1243,8 @@
   },
   "contracts": [
     {
-      "address": "0xb03e5934197257ff6e03833bf34989930cd0fa49acd441995e5f40b08e96bc",
-      "class_hash": "0x758181d4a28c2a580c7ef9e963d4bcd5b0712320dc68a174c4f3ff4ad3eaae0",
+      "address": "0x366a86098f39b0c3e026067c846367e83111c727b88fa036597120d154d44f5",
+      "class_hash": "0x340e197b0fac61961591acdd872a89b0cb862893272ab72455356f5534baa7e",
       "abi": [
         {
           "type": "impl",
@@ -1501,7 +1501,7 @@
       ]
     },
     {
-      "address": "0x4664cdf8f8b36a99f441440a92252e40b4885a9973e0d0b38ca204ef2b3c4a1",
+      "address": "0x53fbb8640694994275d8a1b31ce290ec13e0dd433077775e185a9c31f054008",
       "class_hash": "0x2a400df88b0add6c980d281dc96354a5cfc2b886547e9ed621b097e21842ee6",
       "abi": [
         {
@@ -1677,7 +1677,7 @@
       ]
     },
     {
-      "address": "0x151981aac48998f52e5d3189cf0fb0819ba642158425275a939d915e66bd2a3",
+      "address": "0x40c69a07b5a9b64f581176511c8f8eac9008b48cb3e3c543eac2bf7466c57e3",
       "class_hash": "0x7cc8d15e576873d544640f7fd124bd430bd19c0f31e203fb069b4fc2f5c0ab9",
       "abi": [
         {
@@ -1853,8 +1853,8 @@
       ]
     },
     {
-      "address": "0x7b320d6a08aa96dd4bdcae3e031d6313e0628239c332e37584ed3ebaea133dd",
-      "class_hash": "0x758181d4a28c2a580c7ef9e963d4bcd5b0712320dc68a174c4f3ff4ad3eaae0",
+      "address": "0x1302b12ead2cdce8cb0a47f461ecd9d53629e62e8d38327f6452066298381b5",
+      "class_hash": "0x340e197b0fac61961591acdd872a89b0cb862893272ab72455356f5534baa7e",
       "abi": [
         {
           "type": "impl",
@@ -2128,13 +2128,13 @@
   "events": [
     {
       "members": [],
-      "class_hash": "0x5c72f78327d896e16f3c9fe7ee5e136ad9fc4cda89fba1ce7e665877d477cd5",
+      "class_hash": "0x943620824729c411797e6be26c3078924893be417ab08789489532d9c6aebb",
       "tag": "ns-E",
       "selector": "0x260e0511a6fa454a7d4ed8bea5fa52fc80fc588e33ba4cb58c65bbeeadf7565"
     },
     {
       "members": [],
-      "class_hash": "0x408fc887363634ee0d261cc26606574ce2bc433bedbcef4bb88f8fbc69a1e43",
+      "class_hash": "0x5ed10e08c25eb6a1cb7e221209eac3baab14be36a3ea0b55f789d8302712310",
       "tag": "ns-EH",
       "selector": "0x4c6c7772b19b700cf97d078d02a419670d11d2b689a7a3647eac311b2817ced"
     }
