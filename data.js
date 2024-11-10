@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1731199261562,
+  "lastUpdate": 1731200262145,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -32863,6 +32863,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8536635,
             "range": "± 101514",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ae2a504b5aa70d297e70cf6d475389f0b1c82dc8",
+          "message": "feat: katana config file (#2668)\n\n* refactor(katana): separate metrics address and port into 2 args (#2537)\n\n* refactor(katana-cli): rename server args\n\n* refactor(katana-cli): explicit development related args\n\n* chore(katana-cli): rename var\n\n* fix\n\n* refactor cli\n\n* move gas price to gas price oracle options\n\n* update node bindings to new cli args\n\n* update ci\n\n* revert to free port\n\n* fmt\n\n* remove l1.provider\n\n* update\n\n* make fixed gpo sovereign\n\n* remove broken link\n\n* fix\n\n* feat: add config file with manual merge for now\n\n* fix: rename cors_domain to cors_origins\n\n---------\n\nCo-authored-by: Ammar Arif <evergreenkary@gmail.com>",
+          "timestamp": "2024-11-09T18:41:29-06:00",
+          "tree_id": "1e34ef21bed872eb6ebaadc4144d3c2334b18380",
+          "url": "https://github.com/dojoengine/dojo/commit/ae2a504b5aa70d297e70cf6d475389f0b1c82dc8"
+        },
+        "date": 1731200260298,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10410609068,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
