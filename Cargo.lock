@@ -14975,6 +14975,7 @@ name = "torii"
 version = "1.0.0-rc.2"
 dependencies = [
  "anyhow",
+ "assert_matches",
  "async-trait",
  "base64 0.21.7",
  "camino",

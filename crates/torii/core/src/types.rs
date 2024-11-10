@@ -121,7 +121,7 @@ pub struct Event {
     pub executed_at: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
 }
-#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
 pub struct Contract {
     pub address: Felt,
     pub r#type: ContractType,
