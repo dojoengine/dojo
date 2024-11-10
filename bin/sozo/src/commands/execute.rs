@@ -136,7 +136,13 @@ impl ExecuteArgs {
             for call_args in call_args_list {
                 let descriptor = call_args.tag_or_address.ensure_namespace(&profile_config.namespace.default);
 
-                let contract_address = resolve_contract_address(&descriptor, &world_diff)?;
+
+                // Checking the contract tag in local manifest
+                let contract_address = if let Some(local_address) = ws.get_contract_address(&descriptor) {
+                    local_address
+                } else {
+                    resolve_contract_address(&descriptor, &world_diff)?
+                };
 
                 trace!(
                     contract=?descriptor,
