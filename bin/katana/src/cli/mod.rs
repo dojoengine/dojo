@@ -1,5 +1,6 @@
 mod db;
 mod node;
+mod options;
 
 use anyhow::Result;
 use clap::{Args, CommandFactory, Parser, Subcommand};

@@ -11,29 +11,21 @@
 //!   for more info.
 
 use std::collections::HashSet;
-use std::net::IpAddr;
 use std::path::PathBuf;
 
 use alloy_primitives::U256;
 use anyhow::{Context, Result};
-use clap::{Args, CommandFactory, FromArgMatches, Parser};
-use clap_config::ClapConfig;
+use clap::Parser;
 use console::Style;
 use katana_core::constants::DEFAULT_SEQUENCER_ADDRESS;
 use katana_core::service::messaging::MessagingConfig;
 use katana_node::config::db::DbConfig;
 use katana_node::config::dev::{DevConfig, FixedL1GasPriceConfig};
-use katana_node::config::execution::{
-    ExecutionConfig, DEFAULT_INVOCATION_MAX_STEPS, DEFAULT_VALIDATION_MAX_STEPS,
-};
+use katana_node::config::execution::ExecutionConfig;
 use katana_node::config::fork::ForkingConfig;
-use katana_node::config::metrics::{MetricsConfig, DEFAULT_METRICS_ADDR, DEFAULT_METRICS_PORT};
-use katana_node::config::rpc::{
-    ApiKind, RpcConfig, DEFAULT_RPC_ADDR, DEFAULT_RPC_MAX_CONNECTIONS, DEFAULT_RPC_PORT,
-};
+use katana_node::config::metrics::MetricsConfig;
+use katana_node::config::rpc::{ApiKind, RpcConfig};
 use katana_node::config::{Config, SequencingConfig};
-use katana_primitives::block::BlockHashOrNumber;
-use katana_primitives::chain::ChainId;
 use katana_primitives::chain_spec::{self, ChainSpec};
 use katana_primitives::class::ClassHash;
 use katana_primitives::contract::ContractAddress;
@@ -42,20 +34,15 @@ use katana_primitives::genesis::constant::{
     DEFAULT_LEGACY_ERC20_CLASS_HASH, DEFAULT_LEGACY_UDC_CLASS_HASH,
     DEFAULT_PREFUNDED_ACCOUNT_BALANCE, DEFAULT_UDC_ADDRESS,
 };
-use katana_primitives::genesis::Genesis;
 use serde::{Deserialize, Serialize};
 use tracing::{info, Subscriber};
 use tracing_log::LogTracer;
 use tracing_subscriber::{fmt, EnvFilter};
-use url::Url;
 
-use crate::utils::{parse_block_hash_or_number, parse_genesis, parse_seed, LogFormat};
+use super::options::*;
+use crate::utils::{parse_seed, LogFormat};
 
-const DEFAULT_DEV_SEED: &str = "0";
-const DEFAULT_DEV_ACCOUNTS: u16 = 10;
-
-#[derive(ClapConfig, Parser, Debug, Serialize, Deserialize, Default)]
-#[serde(default)]
+#[derive(Parser, Debug, Serialize, Deserialize, Default)]
 pub struct NodeArgs {
     /// Don't print anything on startup.
     #[arg(long)]
@@ -115,238 +102,33 @@ pub struct NodeArgs {
 
     /// Configuration file
     #[arg(long)]
-    #[clap_config(skip)]
     config: Option<PathBuf>,
 }
 
-#[derive(Debug, Args, Clone, Serialize, Deserialize)]
-#[command(next_help_heading = "Metrics options")]
-#[serde(default)]
-pub struct MetricsOptions {
-    /// Enable metrics.
-    ///
-    /// For now, metrics will still be collected even if this flag is not set. This only
-    /// controls whether the metrics server is started or not.
-    #[arg(long)]
-    pub metrics: bool,
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct NodeArgsConfig {
+    pub silent: Option<bool>,
+    pub no_mining: Option<bool>,
+    pub block_time: Option<u64>,
+    pub db_dir: Option<PathBuf>,
+    pub messaging: Option<MessagingConfig>,
+    pub logging: Option<LoggingOptions>,
+    pub metrics: Option<MetricsOptions>,
+    pub server: Option<ServerOptions>,
+    pub starknet: Option<StarknetOptions>,
+    pub gpo: Option<GasPriceOracleOptions>,
+    pub forking: Option<ForkingOptions>,
+    #[serde(rename = "dev")]
+    pub development: Option<DevOptions>,
 
-    /// The metrics will be served at the given address.
-    #[arg(requires = "metrics")]
-    #[arg(long = "metrics.addr", value_name = "ADDRESS")]
-    #[arg(default_value_t = DEFAULT_METRICS_ADDR)]
-    pub metrics_addr: IpAddr,
-
-    /// The metrics will be served at the given port.
-    #[arg(requires = "metrics")]
-    #[arg(long = "metrics.port", value_name = "PORT")]
-    #[arg(default_value_t = DEFAULT_METRICS_PORT)]
-    pub metrics_port: u16,
-}
-
-impl Default for MetricsOptions {
-    fn default() -> Self {
-        MetricsOptions {
-            metrics: false,
-            metrics_addr: DEFAULT_METRICS_ADDR,
-            metrics_port: DEFAULT_METRICS_PORT,
-        }
-    }
-}
-
-#[derive(Debug, Args, Clone, Serialize, Deserialize)]
-#[command(next_help_heading = "Server options")]
-#[serde(default)]
-pub struct ServerOptions {
-    /// HTTP-RPC server listening interface.
-    #[arg(long = "http.addr", value_name = "ADDRESS")]
-    #[arg(default_value_t = DEFAULT_RPC_ADDR)]
-    pub http_addr: IpAddr,
-
-    /// HTTP-RPC server listening port.
-    #[arg(long = "http.port", value_name = "PORT")]
-    #[arg(default_value_t = DEFAULT_RPC_PORT)]
-    pub http_port: u16,
-
-    /// Comma separated list of domains from which to accept cross origin requests.
-    #[arg(long = "http.corsdomain")]
-    #[arg(value_delimiter = ',')]
-    pub http_cors_domain: Option<Vec<String>>,
-
-    /// Maximum number of concurrent connections allowed.
-    #[arg(long = "rpc.max-connections", value_name = "COUNT")]
-    #[arg(default_value_t = DEFAULT_RPC_MAX_CONNECTIONS)]
-    pub max_connections: u32,
-}
-
-impl Default for ServerOptions {
-    fn default() -> Self {
-        ServerOptions {
-            http_addr: DEFAULT_RPC_ADDR,
-            http_port: DEFAULT_RPC_PORT,
-            max_connections: DEFAULT_RPC_MAX_CONNECTIONS,
-            http_cors_domain: None,
-        }
-    }
-}
-
-#[derive(Debug, Args, Clone, Serialize, Deserialize, Default)]
-#[command(next_help_heading = "Starknet options")]
-#[serde(default)]
-pub struct StarknetOptions {
-    #[command(flatten)]
-    #[serde(rename = "env")]
-    pub environment: EnvironmentOptions,
-
-    #[arg(long)]
-    #[arg(value_parser = parse_genesis)]
-    #[arg(conflicts_with_all(["seed", "total_accounts"]))]
-    pub genesis: Option<Genesis>,
-}
-
-#[derive(Debug, Args, Clone, Serialize, Deserialize)]
-#[command(next_help_heading = "Environment options")]
-#[serde(default)]
-pub struct EnvironmentOptions {
-    /// The chain ID.
-    ///
-    /// The chain ID. If a raw hex string (`0x` prefix) is provided, then it'd
-    /// used as the actual chain ID. Otherwise, it's represented as the raw
-    /// ASCII values. It must be a valid Cairo short string.
-    #[arg(long)]
-    #[arg(value_parser = ChainId::parse)]
-    pub chain_id: Option<ChainId>,
-
-    /// The maximum number of steps available for the account validation logic.
-    #[arg(long)]
-    #[arg(default_value_t = DEFAULT_VALIDATION_MAX_STEPS)]
-    pub validate_max_steps: u32,
-
-    /// The maximum number of steps available for the account execution logic.
-    #[arg(long)]
-    #[arg(default_value_t = DEFAULT_INVOCATION_MAX_STEPS)]
-    pub invoke_max_steps: u32,
-}
-
-impl Default for EnvironmentOptions {
-    fn default() -> Self {
-        EnvironmentOptions {
-            validate_max_steps: DEFAULT_VALIDATION_MAX_STEPS,
-            invoke_max_steps: DEFAULT_INVOCATION_MAX_STEPS,
-            chain_id: None,
-        }
-    }
-}
-
-#[derive(Debug, Args, Clone, Serialize, Deserialize)]
-#[command(next_help_heading = "Development options")]
-#[serde(default)]
-pub struct DevOptions {
-    /// Enable development mode.
-    #[arg(long)]
-    #[serde(default)]
-    pub dev: bool,
-
-    /// Specify the seed for randomness of accounts to be predeployed.
-    #[arg(requires = "dev")]
-    #[arg(long = "dev.seed", default_value = DEFAULT_DEV_SEED)]
-    pub seed: String,
-
-    /// Number of pre-funded accounts to generate.
-    #[arg(requires = "dev")]
-    #[arg(long = "dev.accounts", value_name = "NUM")]
-    #[arg(default_value_t = DEFAULT_DEV_ACCOUNTS)]
-    pub total_accounts: u16,
-
-    /// Disable charging fee when executing transactions.
-    #[arg(requires = "dev")]
-    #[arg(long = "dev.no-fee")]
-    pub no_fee: bool,
-
-    /// Disable account validation when executing transactions.
-    ///
-    /// Skipping the transaction sender's account validation function.
-    #[arg(requires = "dev")]
-    #[arg(long = "dev.no-account-validation")]
-    pub no_account_validation: bool,
-}
-
-impl Default for DevOptions {
-    fn default() -> Self {
-        DevOptions {
-            dev: false,
-            seed: DEFAULT_DEV_SEED.to_string(),
-            total_accounts: DEFAULT_DEV_ACCOUNTS,
-            no_fee: false,
-            no_account_validation: false,
-        }
-    }
-}
-
-#[derive(Debug, Args, Clone, Serialize, Deserialize, Default)]
-#[command(next_help_heading = "Forking options")]
-#[serde(default)]
-pub struct ForkingOptions {
-    /// The RPC URL of the network to fork from.
-    ///
-    /// This will operate Katana in forked mode. Continuing from the tip of the forked network, or
-    /// at a specific block if `fork.block` is provided.
-    #[arg(long = "fork.provider", value_name = "URL", conflicts_with = "genesis")]
-    pub fork_provider: Option<Url>,
-
-    /// Fork the network at a specific block id, can either be a hash (0x-prefixed) or a block
-    /// number.
-    #[arg(long = "fork.block", value_name = "BLOCK", requires = "fork_provider")]
-    #[arg(value_parser = parse_block_hash_or_number)]
-    pub fork_block: Option<BlockHashOrNumber>,
-}
-
-#[derive(Debug, Args, Clone, Serialize, Deserialize, Default)]
-#[command(next_help_heading = "Logging options")]
-#[serde(default)]
-pub struct LoggingOptions {
-    /// Log format to use
-    #[arg(long = "log.format", value_name = "FORMAT")]
-    #[arg(default_value_t = LogFormat::Full)]
-    pub log_format: LogFormat,
-}
-
-#[derive(Debug, Args, Clone, Serialize, Deserialize, Default)]
-#[command(next_help_heading = "Gas Price Oracle Options")]
-#[serde(default)]
-pub struct GasPriceOracleOptions {
-    /// The L1 ETH gas price. (denominated in wei)
-    #[arg(long = "gpo.l1-eth-gas-price", value_name = "WEI")]
-    pub l1_eth_gas_price: Option<u128>,
-
-    /// The L1 STRK gas price. (denominated in fri)
-    #[arg(long = "gpo.l1-strk-gas-price", value_name = "FRI")]
-    pub l1_strk_gas_price: Option<u128>,
-
-    /// The L1 ETH data gas price. (denominated in wei)
-    #[arg(long = "gpo.l1-eth-data-gas-price", value_name = "WEI")]
-    pub l1_eth_data_gas_price: Option<u128>,
-
-    /// The L1 STRK data gas price. (denominated in fri)
-    #[arg(long = "gpo.l1-strk-data-gas-price", value_name = "FRI")]
-    pub l1_strk_data_gas_price: Option<u128>,
-}
-
-#[cfg(feature = "slot")]
-#[derive(Debug, Args, Clone, Serialize, Deserialize, Default)]
-#[command(next_help_heading = "Slot options")]
-#[serde(default)]
-pub struct SlotOptions {
-    #[arg(hide = true)]
-    #[arg(long = "slot.controller")]
-    pub controller: bool,
+    #[cfg(feature = "slot")]
+    pub slot: Option<SlotOptions>,
 }
 
 pub(crate) const LOG_TARGET: &str = "katana::cli";
 
 impl NodeArgs {
     pub fn execute(self) -> Result<()> {
-        dbg!(&self);
-
         self.init_logging()?;
         tokio::runtime::Builder::new_multi_thread()
             .enable_all()
@@ -475,24 +257,24 @@ impl NodeArgs {
     fn dev_config(&self) -> DevConfig {
         let mut fixed_gas_prices = None;
 
-        if let Some(price) = self.gpo.l1_eth_gas_price {
+        if self.gpo.l1_eth_gas_price > 0 {
             let prices = fixed_gas_prices.get_or_insert(FixedL1GasPriceConfig::default());
-            prices.gas_price.eth = price;
+            prices.gas_price.eth = self.gpo.l1_eth_gas_price;
         }
 
-        if let Some(price) = self.gpo.l1_strk_gas_price {
+        if self.gpo.l1_strk_gas_price > 0 {
             let prices = fixed_gas_prices.get_or_insert(FixedL1GasPriceConfig::default());
-            prices.gas_price.strk = price;
+            prices.gas_price.strk = self.gpo.l1_strk_gas_price;
         }
 
-        if let Some(price) = self.gpo.l1_eth_data_gas_price {
+        if self.gpo.l1_eth_data_gas_price > 0 {
             let prices = fixed_gas_prices.get_or_insert(FixedL1GasPriceConfig::default());
-            prices.data_gas_price.eth = price;
+            prices.data_gas_price.eth = self.gpo.l1_eth_data_gas_price;
         }
 
-        if let Some(price) = self.gpo.l1_strk_data_gas_price {
+        if self.gpo.l1_strk_data_gas_price > 0 {
             let prices = fixed_gas_prices.get_or_insert(FixedL1GasPriceConfig::default());
-            prices.data_gas_price.strk = price;
+            prices.data_gas_price.strk = self.gpo.l1_strk_data_gas_price;
         }
 
         DevConfig {
@@ -533,19 +315,83 @@ impl NodeArgs {
 
     /// Parse the node config from the command line arguments and the config file,
     /// and merge them together prioritizing the command line arguments.
-    pub fn with_config_file(self) -> Result<Self> {
-        let matches = <NodeArgs as CommandFactory>::command().get_matches();
-        let args = if let Some(path) = matches.get_one::<PathBuf>("config") {
-            let config: NodeArgsConfig = serde_json::from_str(&std::fs::read_to_string(path)?)?;
-            dbg!(&config);
-            NodeArgs::from_merged(matches, Some(config))
+    pub fn with_config_file(mut self) -> Result<Self> {
+        let config: NodeArgsConfig = if let Some(path) = &self.config {
+            toml::from_str(&std::fs::read_to_string(path)?)?
         } else {
-            NodeArgs::from_arg_matches(&matches)?
+            return Ok(self);
         };
 
-        dbg!(&args);
+        // the CLI (self) takes precedence over the config file.
+        // Currently, the merge is made at the top level of the commands.
+        // We may add recursive merging in the future.
 
-        Ok(args)
+        if !self.silent {
+            self.silent = config.silent.unwrap_or_default();
+        }
+
+        if !self.no_mining {
+            self.no_mining = config.no_mining.unwrap_or_default();
+        }
+
+        if self.block_time.is_none() {
+            self.block_time = config.block_time;
+        }
+
+        if self.db_dir.is_none() {
+            self.db_dir = config.db_dir;
+        }
+
+        if self.logging == LoggingOptions::default() {
+            if let Some(logging) = config.logging {
+                self.logging = logging;
+            }
+        }
+
+        if self.metrics == MetricsOptions::default() {
+            if let Some(metrics) = config.metrics {
+                self.metrics = metrics;
+            }
+        }
+
+        if self.server == ServerOptions::default() {
+            if let Some(server) = config.server {
+                self.server = server;
+            }
+        }
+
+        if self.starknet == StarknetOptions::default() {
+            if let Some(starknet) = config.starknet {
+                self.starknet = starknet;
+            }
+        }
+
+        if self.gpo == GasPriceOracleOptions::default() {
+            if let Some(gpo) = config.gpo {
+                self.gpo = gpo;
+            }
+        }
+
+        if self.forking == ForkingOptions::default() {
+            if let Some(forking) = config.forking {
+                self.forking = forking;
+            }
+        }
+
+        if self.development == DevOptions::default() {
+            if let Some(development) = config.development {
+                self.development = development;
+            }
+        }
+
+        #[cfg(feature = "slot")]
+        if self.slot == SlotOptions::default() {
+            if let Some(slot) = config.slot {
+                self.slot = slot;
+            }
+        }
+
+        Ok(self)
     }
 }
 
@@ -668,6 +514,10 @@ mod test {
         DEFAULT_ETH_L1_DATA_GAS_PRICE, DEFAULT_ETH_L1_GAS_PRICE, DEFAULT_STRK_L1_DATA_GAS_PRICE,
         DEFAULT_STRK_L1_GAS_PRICE,
     };
+    use katana_node::config::execution::{
+        DEFAULT_INVOCATION_MAX_STEPS, DEFAULT_VALIDATION_MAX_STEPS,
+    };
+    use katana_primitives::chain::ChainId;
     use katana_primitives::{address, felt};
 
     use super::*;
@@ -833,50 +683,54 @@ mod test {
     fn config_from_file_and_cli() {
         // CLI args must take precedence over the config file.
         let content = r#"
-{
-    "gpo": {
-        "l1_eth_gas_price": 100,
-        "l1_strk_gas_price": 200,
-        "l1_eth_data_gas_price": 111,
-        "l1_strk_data_gas_price": 222
-    },
-    "development": {
-        "total_accounts": 20,
-        "no_fee": true
-    },
-    "logging": {},
-    "metrics": {},
-    "forking": {},
-    "slot": {},
-    "server": {},
-    "starknet": {
-        "validate_max_steps": 1234
-    }
-}
+[gpo]
+l1_eth_gas_price = "0xfe"
+l1_strk_gas_price = "200"
+l1_eth_data_gas_price = "111"
+l1_strk_data_gas_price = "222"
+
+[dev]
+total_accounts = 20
+
+[starknet.env]
+validate_max_steps = 500
         "#;
         let path = std::env::temp_dir().join("katana-config.json");
         std::fs::write(&path, content).unwrap();
 
-        let config = NodeArgs::parse_from([
+        let path_str = path.to_string_lossy().to_string();
+
+        let args = vec![
             "katana",
             "--config",
-            path.to_string_lossy().to_string().as_str(),
+            path_str.as_str(),
+            "--genesis",
+            "./tests/test-data/genesis.json",
             "--validate-max-steps",
             "1234",
             "--dev",
             "--dev.no-fee",
-        ])
-        .config()
-        .unwrap();
+        ];
+
+        let config =
+            NodeArgs::parse_from(args.clone()).with_config_file().unwrap().config().unwrap();
 
         assert_eq!(config.execution.validation_max_steps, 1234);
+        assert_eq!(config.execution.invocation_max_steps, 10_000_000);
         assert_eq!(config.chain.id, ChainId::parse("KATANA").unwrap());
         assert!(!config.dev.fee);
         assert_matches!(config.dev.fixed_gas_prices, Some(prices) => {
-            assert_eq!(prices.gas_price.eth, 100);
+            assert_eq!(prices.gas_price.eth, 254);
             assert_eq!(prices.gas_price.strk, 200);
             assert_eq!(prices.data_gas_price.eth, 111);
             assert_eq!(prices.data_gas_price.strk, 222);
-        })
+        });
+        assert_eq!(config.chain.genesis.number, 0);
+        assert_eq!(config.chain.genesis.parent_hash, felt!("0x999"));
+        assert_eq!(config.chain.genesis.timestamp, 5123512314);
+        assert_eq!(config.chain.genesis.state_root, felt!("0x99"));
+        assert_eq!(config.chain.genesis.sequencer_address, address!("0x100"));
+        assert_eq!(config.chain.genesis.gas_prices.eth, 9999);
+        assert_eq!(config.chain.genesis.gas_prices.strk, 8888);
     }
 }
