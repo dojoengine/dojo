@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1731167952599,
+  "lastUpdate": 1731199026866,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -32785,6 +32785,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8435901,
             "range": "± 56207",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9db7e8cdd13fcf731bce64fc897997154a0ebf09",
+          "message": "feat(katana): new command line interface (breaking) (#2663)\n\n* refactor(katana): separate metrics address and port into 2 args (#2537)\n\n* refactor(katana-cli): rename server args\n\n* refactor(katana-cli): explicit development related args\n\n* chore(katana-cli): rename var\n\n* fix\n\n* refactor cli\n\n* move gas price to gas price oracle options\n\n* update node bindings to new cli args\n\n* update ci\n\n* revert to free port\n\n* fmt\n\n* remove l1.provider\n\n* update\n\n* make fixed gpo sovereign\n\n* remove broken link",
+          "timestamp": "2024-11-09T18:20:51-06:00",
+          "tree_id": "17e9d25b70d8d0f5100a01867756f163ad53acd0",
+          "url": "https://github.com/dojoengine/dojo/commit/9db7e8cdd13fcf731bce64fc897997154a0ebf09"
+        },
+        "date": 1731199025609,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10299983364,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
