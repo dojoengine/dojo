@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1731252154499,
+  "lastUpdate": 1731263102549,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -33253,6 +33253,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8453766,
             "range": "± 332304",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2b5e4de875e89e0c4bbd85ede231ec3261213377",
+          "message": "feat(torii): update cli to match katana's (#2672)",
+          "timestamp": "2024-11-10T12:08:55-06:00",
+          "tree_id": "b4485dbd1b38d30ebfd2695081f5387c41bd932e",
+          "url": "https://github.com/dojoengine/dojo/commit/2b5e4de875e89e0c4bbd85ede231ec3261213377"
+        },
+        "date": 1731263101093,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10239539169,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
