@@ -21,7 +21,7 @@
 use std::collections::HashMap;
 
 use cainome::cairo_serde::{ByteArray, ClassHash, ContractAddress};
-use dojo_utils::{Declarer, Deployer, Invoker, TxnConfig};
+use dojo_utils::{Declarer, Deployer, Invoker, TransactionResult, TxnConfig};
 use dojo_world::config::calldata_decoder::decode_calldata;
 use dojo_world::config::ProfileConfig;
 use dojo_world::contracts::WorldContract;
@@ -31,7 +31,7 @@ use dojo_world::remote::ResourceRemote;
 use dojo_world::{utils, ResourceType};
 use starknet::accounts::{ConnectedAccount, SingleOwnerAccount};
 use starknet::core::types::{Call, FlattenedSierraClass};
-use starknet::providers::AnyProvider;
+use starknet::providers::{AnyProvider, Provider};
 use starknet::signers::LocalWallet;
 use starknet_crypto::Felt;
 use tracing::trace;
@@ -639,9 +639,15 @@ where
                 )
                 .await?;
 
-                let deployer = Deployer::new(&self.world.account, self.txn_config);
+                // We want to wait for the receipt to be be able to print the
+                // world block number.
+                let mut txn_config = self.txn_config;
+                txn_config.wait = true;
+                txn_config.receipt = true;
 
-                deployer
+                let deployer = Deployer::new(&self.world.account, txn_config);
+
+                let res = deployer
                     .deploy_via_udc(
                         self.diff.world_info.class_hash,
                         utils::world_salt(&self.profile_config.world.seed)?,
@@ -649,6 +655,34 @@ where
                         Felt::ZERO,
                     )
                     .await?;
+
+                match res {
+                    TransactionResult::HashReceipt(hash, receipt) => {
+                        let block_msg = if let Some(n) = receipt.block.block_number() {
+                            n.to_string()
+                        } else {
+                            // If we are in the pending block, we must get the latest block of the
+                            // chain to display it to the user.
+                            let provider = &self.world.account.provider();
+
+                            format!(
+                                "pending ({})",
+                                provider.block_number().await.map_err(MigrationError::Provider)?
+                            )
+                        };
+
+                        ui.stop_and_persist_boxed(
+                            "🌍",
+                            format!(
+                                "World deployed at block {} with txn hash: {:#066x}",
+                                block_msg, hash
+                            ),
+                        );
+
+                        ui.restart("World deployed, continuing...");
+                    }
+                    _ => unreachable!(),
+                }
             }
             WorldStatus::NewVersion => {
                 trace!("Upgrading the world.");

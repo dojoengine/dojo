@@ -1,4 +1,4 @@
-use dojo::event::{Event, IEvent, EventDefinition};
+use dojo::event::{Event, IEvent, EventDef};
 use dojo::meta::{Layout, introspect::Struct};
 
 #[starknet::embeddable]
@@ -25,7 +25,7 @@ pub impl IStoredEventImpl<
 
 #[starknet::embeddable]
 pub impl IEventImpl<TContractState, E, +Event<E>> of IEvent<TContractState> {
-    fn definition(self: @TContractState) -> EventDefinition {
+    fn definition(self: @TContractState) -> EventDef {
         Event::<E>::definition()
     }
 }

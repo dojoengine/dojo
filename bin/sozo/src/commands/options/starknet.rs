@@ -38,7 +38,14 @@ impl StarknetOptions {
         let client =
             ClientBuilder::default().timeout(Self::DEFAULT_REQUEST_TIMEOUT).build().unwrap();
 
-        let transport = HttpTransport::new_with_client(url.clone(), client);
+        let mut transport = HttpTransport::new_with_client(url.clone(), client);
+
+        if let Some(headers) = env_metadata.and_then(|env| env.http_headers.as_ref()) {
+            for header in headers.iter() {
+                transport.add_header(header.name.clone(), header.value.clone());
+            }
+        }
+
         Ok((JsonRpcClient::new(transport), url.to_string()))
     }
 

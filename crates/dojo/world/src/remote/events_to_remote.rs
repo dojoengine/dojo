@@ -6,6 +6,8 @@
 //! Events are also sequential, a resource is not expected to be upgraded before
 //! being registered. We take advantage of this fact to optimize the data gathering.
 
+use std::collections::HashSet;
+
 use anyhow::Result;
 use starknet::core::types::{BlockId, BlockTag, EventFilter, Felt, StarknetError};
 use starknet::providers::{Provider, ProviderError};
@@ -19,7 +21,11 @@ use crate::remote::{CommonRemoteInfo, ContractRemote, EventRemote, ModelRemote, 
 impl WorldRemote {
     /// Fetch the events from the world and convert them to remote resources.
     #[allow(clippy::field_reassign_with_default)]
-    pub async fn from_events<P: Provider>(world_address: Felt, provider: &P) -> Result<Self> {
+    pub async fn from_events<P: Provider>(
+        world_address: Felt,
+        provider: &P,
+        from_block: Option<u64>,
+    ) -> Result<Self> {
         let mut world = Self::default();
 
         world.address = world_address;
@@ -52,7 +58,9 @@ impl WorldRemote {
         ]];
 
         let filter = EventFilter {
-            from_block: None,
+            // Most of the node providers are struggling with wide block ranges.
+            // For this reason, we must be able to accept a custom from block.
+            from_block: from_block.map(BlockId::Number),
             to_block: Some(BlockId::Tag(BlockTag::Pending)),
             address: Some(world_address),
             keys: Some(keys),
@@ -87,6 +95,12 @@ impl WorldRemote {
             events.extend(page.events);
         }
 
+        trace!(
+            events_count = events.len(),
+            world_address = format!("{:#066x}", world_address),
+            "Fetched events for world."
+        );
+
         for event in &events {
             match world::Event::try_from(event) {
                 Ok(ev) => {
@@ -111,7 +125,14 @@ impl WorldRemote {
             WorldEvent::WorldSpawned(e) => {
                 self.class_hashes.push(e.class_hash.into());
 
-                trace!(class_hash = format!("{:#066x}", e.class_hash.0), "World spawned.");
+                // The creator is the world's owner, but no event emitted for that.
+                self.external_owners.insert(Felt::ZERO, HashSet::from([e.creator.into()]));
+
+                trace!(
+                    class_hash = format!("{:#066x}", e.class_hash.0),
+                    creator = format!("{:#066x}", e.creator.0),
+                    "World spawned."
+                );
             }
             WorldEvent::WorldUpgraded(e) => {
                 self.class_hashes.push(e.class_hash.into());
