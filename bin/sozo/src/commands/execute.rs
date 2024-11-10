@@ -48,7 +48,7 @@ pub struct CallArgs {
     pub calldata: Option<String>,
 }
 
-+impl std::str::FromStr for CallArgs  {
+impl std::str::FromStr for CallArgs  {
 
     type Err = anyhow::Error;
 
