@@ -223,7 +223,7 @@ async fn main() -> anyhow::Result<()> {
     });
 
     let model_cache = Arc::new(ModelCache::new(pool.clone()));
-    let db = Sql::new(pool.clone(), sender.clone(), &contracts, &args.model_cache.clone()).await?;
+    let db = Sql::new(pool.clone(), sender.clone(), &args.contracts, model_cache.clone()).await?;
 
     let processors = Processors {
         transaction: vec![Box::new(StoreTransactionProcessor)],

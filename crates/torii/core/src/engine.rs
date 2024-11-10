@@ -39,7 +39,9 @@ use crate::processors::store_update_member::StoreUpdateMemberProcessor;
 use crate::processors::store_update_record::StoreUpdateRecordProcessor;
 use crate::processors::upgrade_event::UpgradeEventProcessor;
 use crate::processors::upgrade_model::UpgradeModelProcessor;
-use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor, EventProcessorConfig};
+use crate::processors::{
+    BlockProcessor, EventProcessor, EventProcessorConfig, TransactionProcessor,
+};
 use crate::sql::{Cursors, Sql};
 use crate::types::{Contract, ContractType};
 
