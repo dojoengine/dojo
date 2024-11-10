@@ -65,6 +65,7 @@ lto = "fat"
 
 [workspace.dependencies]
 cainome = { git = "https://github.com/cartridge-gg/cainome", rev = "5c2616c273faca7700d2ba565503fcefb5b9d720", features = [ "abigen-rs" ] }
+cainome-cairo-serde = { git = "https://github.com/cartridge-gg/cainome", rev = "5c2616c273faca7700d2ba565503fcefb5b9d720" }
 dojo-utils = { path = "crates/dojo/utils" }
 
 # metrics

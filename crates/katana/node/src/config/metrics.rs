@@ -6,7 +6,7 @@ pub const DEFAULT_METRICS_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::LOCALHOST);
 pub const DEFAULT_METRICS_PORT: u16 = 9100;
 
 /// Node metrics configurations.
-#[derive(Debug, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct MetricsConfig {
     /// The address to bind the metrics server to.
     pub addr: IpAddr,
