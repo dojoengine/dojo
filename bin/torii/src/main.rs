@@ -11,7 +11,7 @@
 //!   for more info.
 
 use std::cmp;
-use std::net::SocketAddr;
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -21,8 +21,9 @@ use anyhow::Context;
 use clap::{ArgAction, CommandFactory, FromArgMatches, Parser};
 use clap_config::ClapConfig;
 use dojo_metrics::exporters::prometheus::PrometheusRecorder;
-use dojo_utils::parse::{parse_socket_address, parse_url};
+use dojo_utils::parse::parse_url;
 use dojo_world::contracts::world::WorldContractReader;
+use serde::{Deserialize, Serialize};
 use sqlx::sqlite::{
     SqliteAutoVacuum, SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous,
 };
@@ -60,14 +61,13 @@ struct Args {
     #[arg(long, value_name = "URL", default_value = ":5050", value_parser = parse_url)]
     rpc: Url,
 
+    #[command(flatten)]
+    server: ServerOptions,
+
     /// Database filepath (ex: indexer.db). If specified file doesn't exist, it will be
     /// created. Defaults to in-memory database
     #[arg(short, long, default_value = "")]
     database: String,
-
-    /// Address to serve api endpoints at.
-    #[arg(long, value_name = "SOCKET", default_value = "0.0.0.0:8080", value_parser = parse_socket_address)]
-    addr: SocketAddr,
 
     /// Port to serve Libp2p TCP & UDP Quic transports
     #[arg(long, value_name = "PORT", default_value = "9090")]
@@ -90,21 +90,13 @@ struct Args {
     #[arg(long, value_name = "PATH")]
     relay_cert_path: Option<String>,
 
-    /// Specify allowed origins for api endpoints (comma-separated list of allowed origins, or "*"
-    /// for all)
-    #[arg(long, value_delimiter = ',')]
-    allowed_origins: Vec<String>,
-
     /// The external url of the server, used for configuring the GraphQL Playground in a hosted
     /// environment
     #[arg(long, value_parser = parse_url)]
     external_url: Option<Url>,
 
-    /// Enable Prometheus metrics.
-    ///
-    /// The metrics will be served at the given interface and port.
-    #[arg(long, value_name = "SOCKET", value_parser = parse_socket_address, help_heading = "Metrics")]
-    metrics: Option<SocketAddr>,
+    #[command(flatten)]
+    metrics: MetricsOptions,
 
     /// Open World Explorer on the browser.
     #[arg(long)]
@@ -151,6 +143,56 @@ struct Args {
     #[arg(long)]
     #[clap_config(skip)]
     config: Option<PathBuf>,
+}
+
+/// Metrics server default address.
+const DEFAULT_METRICS_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::LOCALHOST);
+/// Torii metrics server default port.
+const DEFAULT_METRICS_PORT: u16 = 9200;
+
+#[derive(Debug, clap::Args, Clone, Serialize, Deserialize)]
+#[command(next_help_heading = "Metrics options")]
+struct MetricsOptions {
+    /// Enable metrics.
+    ///
+    /// For now, metrics will still be collected even if this flag is not set. This only
+    /// controls whether the metrics server is started or not.
+    #[arg(long)]
+    metrics: bool,
+
+    /// The metrics will be served at the given address.
+    #[arg(requires = "metrics")]
+    #[arg(long = "metrics.addr", value_name = "ADDRESS")]
+    #[arg(default_value_t = DEFAULT_METRICS_ADDR)]
+    metrics_addr: IpAddr,
+
+    /// The metrics will be served at the given port.
+    #[arg(requires = "metrics")]
+    #[arg(long = "metrics.port", value_name = "PORT")]
+    #[arg(default_value_t = DEFAULT_METRICS_PORT)]
+    metrics_port: u16,
+}
+
+const DEFAULT_HTTP_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::LOCALHOST);
+const DEFAULT_HTTP_PORT: u16 = 8080;
+
+#[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq)]
+#[command(next_help_heading = "Server options")]
+struct ServerOptions {
+    /// HTTP server listening interface.
+    #[arg(long = "http.addr", value_name = "ADDRESS")]
+    #[arg(default_value_t = DEFAULT_HTTP_ADDR)]
+    http_addr: IpAddr,
+
+    /// HTTP server listening port.
+    #[arg(long = "http.port", value_name = "PORT")]
+    #[arg(default_value_t = DEFAULT_HTTP_PORT)]
+    http_port: u16,
+
+    /// Comma separated list of domains from which to accept cross origin requests.
+    #[arg(long = "http.corsdomain")]
+    #[arg(value_delimiter = ',')]
+    http_cors_origins: Vec<String>,
 }
 
 #[tokio::main]
@@ -276,9 +318,14 @@ async fn main() -> anyhow::Result<()> {
     )
     .expect("Failed to start libp2p relay server");
 
+    let addr = SocketAddr::new(args.server.http_addr, args.server.http_port);
     let proxy_server = Arc::new(Proxy::new(
-        args.addr,
-        if args.allowed_origins.is_empty() { None } else { Some(args.allowed_origins) },
+        addr,
+        if args.server.http_cors_origins.is_empty() {
+            None
+        } else {
+            Some(args.server.http_cors_origins)
+        },
         Some(grpc_addr),
         None,
     ));
@@ -290,13 +337,12 @@ async fn main() -> anyhow::Result<()> {
         proxy_server.clone(),
     );
 
-    let endpoint = format!("http://{}", args.addr);
-    let gql_endpoint = format!("{}/graphql", endpoint);
+    let gql_endpoint = format!("{addr}/graphql");
     let encoded: String =
         form_urlencoded::byte_serialize(gql_endpoint.replace("0.0.0.0", "localhost").as_bytes())
             .collect();
     let explorer_url = format!("https://worlds.dev/torii?url={}", encoded);
-    info!(target: LOG_TARGET, endpoint = %endpoint, "Starting torii endpoint.");
+    info!(target: LOG_TARGET, endpoint = %addr, "Starting torii endpoint.");
     info!(target: LOG_TARGET, endpoint = %gql_endpoint, "Serving Graphql playground.");
     info!(target: LOG_TARGET, url = %explorer_url, "Serving World Explorer.");
 
@@ -306,11 +352,12 @@ async fn main() -> anyhow::Result<()> {
         }
     }
 
-    if let Some(listen_addr) = args.metrics {
-        info!(target: LOG_TARGET, addr = %listen_addr, "Starting metrics endpoint.");
+    if args.metrics.metrics {
+        let addr = SocketAddr::new(args.metrics.metrics_addr, args.metrics.metrics_port);
+        info!(target: LOG_TARGET, %addr, "Starting metrics endpoint.");
         let prometheus_handle = PrometheusRecorder::install("torii")?;
         let server = dojo_metrics::Server::new(prometheus_handle).with_process_metrics();
-        tokio::spawn(server.start(listen_addr));
+        tokio::spawn(server.start(addr));
     }
 
     let engine_handle = tokio::spawn(async move { engine.start().await });
