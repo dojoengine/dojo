@@ -21,7 +21,7 @@
 use std::collections::HashMap;
 
 use cainome::cairo_serde::{ByteArray, ClassHash, ContractAddress};
-use dojo_utils::{Declarer, Deployer, Invoker, TransactionResult, TxnConfig};
+use dojo_utils::{Declarer, Deployer, Invoker, LabeledClass, TransactionResult, TxnConfig};
 use dojo_world::config::calldata_decoder::decode_calldata;
 use dojo_world::config::ProfileConfig;
 use dojo_world::contracts::WorldContract;
@@ -30,7 +30,7 @@ use dojo_world::local::ResourceLocal;
 use dojo_world::remote::ResourceRemote;
 use dojo_world::{utils, ResourceType};
 use starknet::accounts::{ConnectedAccount, SingleOwnerAccount};
-use starknet::core::types::{Call, FlattenedSierraClass};
+use starknet::core::types::Call;
 use starknet::providers::{AnyProvider, Provider};
 use starknet::signers::LocalWallet;
 use starknet_crypto::Felt;
@@ -302,7 +302,7 @@ where
         // Namespaces must be synced first, since contracts, models and events are namespaced.
         self.namespaces_getcalls(&mut invoker).await?;
 
-        let mut classes: HashMap<Felt, FlattenedSierraClass> = HashMap::new();
+        let mut classes: HashMap<Felt, LabeledClass> = HashMap::new();
         let mut n_resources = 0;
 
         // Collects the calls and classes to be declared to sync the resources.
@@ -360,7 +360,7 @@ where
         if accounts.is_empty() {
             trace!("Declaring classes with migrator account.");
             let mut declarer = Declarer::new(&self.world.account, self.txn_config);
-            declarer.extend_classes(classes.into_iter().collect());
+            declarer.extend_classes(classes.into_values().collect());
 
             let ui_text = format!("Declaring {} classes...", n_classes);
             ui.update_text_boxed(ui_text);
@@ -373,9 +373,9 @@ where
                 declarers.push(Declarer::new(account, self.txn_config));
             }
 
-            for (idx, (casm_class_hash, class)) in classes.into_iter().enumerate() {
+            for (idx, (_, labeled_class)) in classes.into_iter().enumerate() {
                 let declarer_idx = idx % declarers.len();
-                declarers[declarer_idx].add_class(casm_class_hash, class);
+                declarers[declarer_idx].add_class(labeled_class);
             }
 
             let ui_text =
@@ -450,13 +450,13 @@ where
     async fn contracts_calls_classes(
         &self,
         resource: &ResourceDiff,
-    ) -> Result<(Vec<Call>, HashMap<Felt, FlattenedSierraClass>), MigrationError<A::SignError>>
-    {
+    ) -> Result<(Vec<Call>, HashMap<Felt, LabeledClass>), MigrationError<A::SignError>> {
         let mut calls = vec![];
         let mut classes = HashMap::new();
 
         let namespace = resource.namespace();
         let ns_bytearray = ByteArray::from_string(&namespace)?;
+        let tag = resource.tag();
 
         if let ResourceDiff::Created(ResourceLocal::Contract(contract)) = resource {
             trace!(
@@ -466,8 +466,13 @@ where
                 "Registering contract."
             );
 
-            classes
-                .insert(contract.common.casm_class_hash, contract.common.class.clone().flatten()?);
+            let casm_class_hash = contract.common.casm_class_hash;
+            let class = contract.common.class.clone().flatten()?;
+
+            classes.insert(
+                casm_class_hash,
+                LabeledClass { label: tag.clone(), casm_class_hash, class },
+            );
 
             calls.push(self.world.register_contract_getcall(
                 &contract.dojo_selector(),
@@ -488,9 +493,12 @@ where
                 "Upgrading contract."
             );
 
+            let casm_class_hash = contract_local.common.casm_class_hash;
+            let class = contract_local.common.class.clone().flatten()?;
+
             classes.insert(
-                contract_local.common.casm_class_hash,
-                contract_local.common.class.clone().flatten()?,
+                casm_class_hash,
+                LabeledClass { label: tag.clone(), casm_class_hash, class },
             );
 
             calls.push(self.world.upgrade_contract_getcall(
@@ -508,13 +516,13 @@ where
     async fn models_calls_classes(
         &self,
         resource: &ResourceDiff,
-    ) -> Result<(Vec<Call>, HashMap<Felt, FlattenedSierraClass>), MigrationError<A::SignError>>
-    {
+    ) -> Result<(Vec<Call>, HashMap<Felt, LabeledClass>), MigrationError<A::SignError>> {
         let mut calls = vec![];
         let mut classes = HashMap::new();
 
         let namespace = resource.namespace();
         let ns_bytearray = ByteArray::from_string(&namespace)?;
+        let tag = resource.tag();
 
         if let ResourceDiff::Created(ResourceLocal::Model(model)) = resource {
             trace!(
@@ -524,7 +532,13 @@ where
                 "Registering model."
             );
 
-            classes.insert(model.common.casm_class_hash, model.common.class.clone().flatten()?);
+            let casm_class_hash = model.common.casm_class_hash;
+            let class = model.common.class.clone().flatten()?;
+
+            classes.insert(
+                casm_class_hash,
+                LabeledClass { label: tag.clone(), casm_class_hash, class },
+            );
 
             calls.push(
                 self.world
@@ -544,9 +558,12 @@ where
                 "Upgrading model."
             );
 
+            let casm_class_hash = model_local.common.casm_class_hash;
+            let class = model_local.common.class.clone().flatten()?;
+
             classes.insert(
-                model_local.common.casm_class_hash,
-                model_local.common.class.clone().flatten()?,
+                casm_class_hash,
+                LabeledClass { label: tag.clone(), casm_class_hash, class },
             );
 
             calls.push(
@@ -566,13 +583,13 @@ where
     async fn events_calls_classes(
         &self,
         resource: &ResourceDiff,
-    ) -> Result<(Vec<Call>, HashMap<Felt, FlattenedSierraClass>), MigrationError<A::SignError>>
-    {
+    ) -> Result<(Vec<Call>, HashMap<Felt, LabeledClass>), MigrationError<A::SignError>> {
         let mut calls = vec![];
         let mut classes = HashMap::new();
 
         let namespace = resource.namespace();
         let ns_bytearray = ByteArray::from_string(&namespace)?;
+        let tag = resource.tag();
 
         if let ResourceDiff::Created(ResourceLocal::Event(event)) = resource {
             trace!(
@@ -582,7 +599,13 @@ where
                 "Registering event."
             );
 
-            classes.insert(event.common.casm_class_hash, event.common.class.clone().flatten()?);
+            let casm_class_hash = event.common.casm_class_hash;
+            let class = event.common.class.clone().flatten()?;
+
+            classes.insert(
+                casm_class_hash,
+                LabeledClass { label: tag.clone(), casm_class_hash, class },
+            );
 
             calls.push(
                 self.world
@@ -602,9 +625,12 @@ where
                 "Upgrading event."
             );
 
+            let casm_class_hash = event_local.common.casm_class_hash;
+            let class = event_local.common.class.clone().flatten()?;
+
             classes.insert(
-                event_local.common.casm_class_hash,
-                event_local.common.class.clone().flatten()?,
+                casm_class_hash,
+                LabeledClass { label: tag.clone(), casm_class_hash, class },
             );
 
             calls.push(
@@ -631,13 +657,13 @@ where
                 ui.update_text("Deploying the world...");
                 trace!("Deploying the first world.");
 
-                Declarer::declare(
-                    self.diff.world_info.casm_class_hash,
-                    self.diff.world_info.class.clone().flatten()?,
-                    &self.world.account,
-                    &self.txn_config,
-                )
-                .await?;
+                let labeled_class = LabeledClass {
+                    label: "world".to_string(),
+                    casm_class_hash: self.diff.world_info.casm_class_hash,
+                    class: self.diff.world_info.class.clone().flatten()?,
+                };
+
+                Declarer::declare(labeled_class, &self.world.account, &self.txn_config).await?;
 
                 // We want to wait for the receipt to be be able to print the
                 // world block number.
@@ -688,13 +714,13 @@ where
                 trace!("Upgrading the world.");
                 ui.update_text("Upgrading the world...");
 
-                Declarer::declare(
-                    self.diff.world_info.casm_class_hash,
-                    self.diff.world_info.class.clone().flatten()?,
-                    &self.world.account,
-                    &self.txn_config,
-                )
-                .await?;
+                let labeled_class = LabeledClass {
+                    label: "world".to_string(),
+                    casm_class_hash: self.diff.world_info.casm_class_hash,
+                    class: self.diff.world_info.class.clone().flatten()?,
+                };
+
+                Declarer::declare(labeled_class, &self.world.account, &self.txn_config).await?;
 
                 let mut invoker = Invoker::new(&self.world.account, self.txn_config);
 
