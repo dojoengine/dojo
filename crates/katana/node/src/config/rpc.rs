@@ -23,8 +23,8 @@ pub struct RpcConfig {
     pub addr: IpAddr,
     pub port: u16,
     pub max_connections: u32,
-    pub allowed_origins: Option<Vec<String>>,
     pub apis: HashSet<ApiKind>,
+    pub cors_domain: Option<Vec<String>>,
 }
 
 impl RpcConfig {
@@ -37,7 +37,7 @@ impl RpcConfig {
 impl Default for RpcConfig {
     fn default() -> Self {
         Self {
-            allowed_origins: None,
+            cors_domain: None,
             addr: DEFAULT_RPC_ADDR,
             port: DEFAULT_RPC_PORT,
             max_connections: DEFAULT_RPC_MAX_CONNECTIONS,

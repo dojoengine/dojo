@@ -30,10 +30,6 @@ pub fn event_already_registered(namespace: @ByteArray, name: @ByteArray) -> Byte
     format!("Resource `{}-{}` is already registered", namespace, name)
 }
 
-pub fn event_not_registered(namespace: @ByteArray, name: @ByteArray) -> ByteArray {
-    format!("Resource `{}-{}` is not registered", namespace, name)
-}
-
 pub fn model_already_registered(namespace: @ByteArray, name: @ByteArray) -> ByteArray {
     format!("Resource `{}-{}` is already registered", namespace, name)
 }

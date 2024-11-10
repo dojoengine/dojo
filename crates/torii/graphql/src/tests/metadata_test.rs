@@ -1,6 +1,5 @@
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
     use std::sync::Arc;
 
     use dojo_world::config::{ProfileConfig, WorldMetadata};
@@ -10,7 +9,7 @@ mod tests {
     use torii_core::executor::Executor;
     use torii_core::sql::cache::ModelCache;
     use torii_core::sql::Sql;
-    use torii_core::types::ContractType;
+    use torii_core::types::{Contract, ContractType};
 
     use crate::schema::build_schema;
     use crate::tests::{run_graphql_query, Connection, Content, Metadata as SqlMetadata, Social};
@@ -64,7 +63,7 @@ mod tests {
         let mut db = Sql::new(
             pool.clone(),
             sender,
-            &HashMap::from([(Felt::ZERO, ContractType::WORLD)]),
+            &[Contract { address: Felt::ZERO, r#type: ContractType::WORLD }],
             model_cache,
         )
         .await
@@ -131,7 +130,7 @@ mod tests {
         let mut db = Sql::new(
             pool.clone(),
             sender,
-            &HashMap::from([(Felt::ZERO, ContractType::WORLD)]),
+            &[Contract { address: Felt::ZERO, r#type: ContractType::WORLD }],
             model_cache,
         )
         .await

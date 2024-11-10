@@ -1,6 +1,5 @@
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
     use std::str::FromStr;
     use std::sync::Arc;
     use std::time::Duration;
@@ -19,7 +18,7 @@ mod tests {
     use torii_core::sql::cache::ModelCache;
     use torii_core::sql::utils::felts_to_sql_string;
     use torii_core::sql::Sql;
-    use torii_core::types::ContractType;
+    use torii_core::types::{Contract, ContractType};
 
     use crate::tests::{model_fixtures, run_graphql_subscription};
     use crate::utils;
@@ -38,7 +37,7 @@ mod tests {
         let mut db = Sql::new(
             pool.clone(),
             sender,
-            &HashMap::from([(Felt::ZERO, ContractType::WORLD)]),
+            &[Contract { address: Felt::ZERO, r#type: ContractType::WORLD }],
             model_cache,
         )
         .await
@@ -188,7 +187,7 @@ mod tests {
         let mut db = Sql::new(
             pool.clone(),
             sender,
-            &HashMap::from([(Felt::ZERO, ContractType::WORLD)]),
+            &[Contract { address: Felt::ZERO, r#type: ContractType::WORLD }],
             model_cache,
         )
         .await
@@ -318,7 +317,7 @@ mod tests {
         let mut db = Sql::new(
             pool.clone(),
             sender,
-            &HashMap::from([(Felt::ZERO, ContractType::WORLD)]),
+            &[Contract { address: Felt::ZERO, r#type: ContractType::WORLD }],
             model_cache,
         )
         .await
@@ -399,7 +398,7 @@ mod tests {
         let mut db = Sql::new(
             pool.clone(),
             sender,
-            &HashMap::from([(Felt::ZERO, ContractType::WORLD)]),
+            &[Contract { address: Felt::ZERO, r#type: ContractType::WORLD }],
             model_cache,
         )
         .await
@@ -481,7 +480,7 @@ mod tests {
         let mut db = Sql::new(
             pool.clone(),
             sender,
-            &HashMap::from([(Felt::ZERO, ContractType::WORLD)]),
+            &[Contract { address: Felt::ZERO, r#type: ContractType::WORLD }],
             model_cache,
         )
         .await

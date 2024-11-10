@@ -20,7 +20,7 @@ use crate::executor::{
     Argument, DeleteEntityQuery, EventMessageQuery, QueryMessage, QueryType, ResetCursorsQuery,
     SetHeadQuery, UpdateCursorsQuery,
 };
-use crate::types::ContractType;
+use crate::types::Contract;
 use crate::utils::utc_dt_string_from_timestamp;
 
 type IsEventMessage = bool;
@@ -59,7 +59,7 @@ impl Sql {
     pub async fn new(
         pool: Pool<Sqlite>,
         executor: UnboundedSender<QueryMessage>,
-        contracts: &HashMap<Felt, ContractType>,
+        contracts: &[Contract],
         model_cache: Arc<ModelCache>,
     ) -> Result<Self> {
         for contract in contracts {
@@ -68,9 +68,9 @@ impl Sql {
                  ?, ?)"
                     .to_string(),
                 vec![
-                    Argument::FieldElement(*contract.0),
-                    Argument::FieldElement(*contract.0),
-                    Argument::String(contract.1.to_string()),
+                    Argument::FieldElement(contract.address),
+                    Argument::FieldElement(contract.address),
+                    Argument::String(contract.r#type.to_string()),
                 ],
             ))?;
         }

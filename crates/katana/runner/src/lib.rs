@@ -1,6 +1,5 @@
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
 
-mod logs;
 mod utils;
 
 use std::path::PathBuf;
@@ -122,7 +121,7 @@ impl KatanaRunner {
             .port(port)
             .accounts(n_accounts)
             .json_log(true)
-            .max_connections(10000)
+            .rpc_max_connections(10000)
             .dev(config.dev)
             .fee(!config.disable_fee);
 

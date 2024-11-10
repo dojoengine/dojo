@@ -10,6 +10,7 @@ slot = { workspace = true, optional = true }
 
 anyhow.workspace = true
 async-trait.workspace = true
+cainome.workspace = true
 cairo-lang-compiler.workspace = true
 cairo-lang-filesystem.workspace = true
 cairo-lang-project.workspace = true
@@ -28,6 +29,7 @@ dojo-utils.workspace = true
 dojo-world.workspace = true
 itertools.workspace = true
 katana-rpc-api.workspace = true
+notify = "7.0.0"
 tabled = { version = "0.16.0", features = [ "ansi" ] }
 scarb.workspace = true
 scarb-ui.workspace = true

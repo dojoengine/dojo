@@ -26,7 +26,7 @@ use torii_core::engine::{Engine, EngineConfig, Processors};
 use torii_core::executor::Executor;
 use torii_core::sql::cache::ModelCache;
 use torii_core::sql::Sql;
-use torii_core::types::ContractType;
+use torii_core::types::{Contract, ContractType};
 
 use crate::proto::types::KeysClause;
 use crate::server::DojoWorld;
@@ -98,7 +98,7 @@ async fn test_entities_queries(sequencer: &RunnerCtx) {
     let db = Sql::new(
         pool.clone(),
         sender,
-        &HashMap::from([(world_address, ContractType::WORLD)]),
+        &[Contract { address: world_address, r#type: ContractType::WORLD }],
         model_cache,
     )
     .await
@@ -113,7 +113,7 @@ async fn test_entities_queries(sequencer: &RunnerCtx) {
         EngineConfig::default(),
         shutdown_tx,
         None,
-        Arc::new(HashMap::from([(world_address, ContractType::WORLD)])),
+        &[Contract { address: world_address, r#type: ContractType::WORLD }],
     );
 
     let to = provider.block_hash_and_number().await.unwrap().block_number;

@@ -113,12 +113,12 @@ impl TestSequencer {
 }
 
 pub fn get_default_test_config(sequencing: SequencingConfig) -> Config {
-    let dev = DevConfig { fee: false, account_validation: true };
+    let dev = DevConfig { fee: false, account_validation: true, fixed_gas_prices: None };
     let mut chain = ChainSpec { id: ChainId::SEPOLIA, ..Default::default() };
     chain.genesis.sequencer_address = *DEFAULT_SEQUENCER_ADDRESS;
 
     let rpc = RpcConfig {
-        allowed_origins: None,
+        cors_domain: None,
         port: 0,
         addr: DEFAULT_RPC_ADDR,
         max_connections: DEFAULT_RPC_MAX_CONNECTIONS,

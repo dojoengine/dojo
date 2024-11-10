@@ -19,8 +19,13 @@ use hyper::{Method, Uri};
 use jsonrpsee::server::middleware::proxy_get_request::ProxyGetRequestLayer;
 use jsonrpsee::server::{AllowHosts, ServerBuilder, ServerHandle};
 use jsonrpsee::RpcModule;
+use katana_core::backend::gas_oracle::L1GasOracle;
 use katana_core::backend::storage::Blockchain;
 use katana_core::backend::Backend;
+use katana_core::constants::{
+    DEFAULT_ETH_L1_DATA_GAS_PRICE, DEFAULT_ETH_L1_GAS_PRICE, DEFAULT_STRK_L1_DATA_GAS_PRICE,
+    DEFAULT_STRK_L1_GAS_PRICE,
+};
 use katana_core::env::BlockContextGenerator;
 use katana_core::service::block_producer::BlockProducer;
 use katana_core::service::messaging::MessagingConfig;
@@ -31,6 +36,7 @@ use katana_pipeline::{stage, Pipeline};
 use katana_pool::ordering::FiFo;
 use katana_pool::validation::stateful::TxValidator;
 use katana_pool::TxPool;
+use katana_primitives::block::GasPrices;
 use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
 use katana_rpc::dev::DevApi;
 use katana_rpc::metrics::RpcServerMetrics;
@@ -101,6 +107,7 @@ impl Node {
 
         // TODO: maybe move this to the build stage
         if let Some(ref cfg) = self.metrics_config {
+            let addr = cfg.socket_addr();
             let mut reports: Vec<Box<dyn Report>> = Vec::new();
 
             if let Some(ref db) = self.db {
@@ -110,8 +117,8 @@ impl Node {
             let exporter = PrometheusRecorder::current().expect("qed; should exist at this point");
             let server = MetricsServer::new(exporter).with_process_metrics().with_reports(reports);
 
-            self.task_manager.task_spawner().build_task().spawn(server.start(cfg.addr));
-            info!(addr = %cfg.addr, "Metrics server started.");
+            self.task_manager.task_spawner().build_task().spawn(server.start(addr));
+            info!(%addr, "Metrics server started.");
         }
 
         let pool = self.pool.clone();
@@ -196,8 +203,24 @@ pub async fn build(mut config: Config) -> Result<Node> {
         (Blockchain::new_with_db(db.clone(), &config.chain)?, Some(db), None)
     };
 
+    // --- build l1 gas oracle
+
+    // Check if the user specify a fixed gas price in the dev config.
+    let gas_oracle = if let Some(fixed_prices) = config.dev.fixed_gas_prices {
+        L1GasOracle::fixed(fixed_prices.gas_price, fixed_prices.data_gas_price)
+    }
+    // TODO: for now we just use the default gas prices, but this should be a proper oracle in the
+    // future that can perform actual sampling.
+    else {
+        L1GasOracle::fixed(
+            GasPrices { eth: DEFAULT_ETH_L1_GAS_PRICE, strk: DEFAULT_STRK_L1_GAS_PRICE },
+            GasPrices { eth: DEFAULT_ETH_L1_DATA_GAS_PRICE, strk: DEFAULT_STRK_L1_DATA_GAS_PRICE },
+        )
+    };
+
     let block_context_generator = BlockContextGenerator::default().into();
     let backend = Arc::new(Backend {
+        gas_oracle,
         blockchain,
         executor_factory,
         block_context_generator,
@@ -290,20 +313,19 @@ pub async fn spawn<EF: ExecutorFactory>(
             .allow_methods([Method::POST, Method::GET])
             .allow_headers([hyper::header::CONTENT_TYPE, "argent-client".parse().unwrap(), "argent-version".parse().unwrap()]);
 
-    let cors =
-        config.allowed_origins.clone().map(|allowed_origins| match allowed_origins.as_slice() {
-            [origin] if origin == "*" => cors.allow_origin(AllowOrigin::mirror_request()),
-            origins => cors.allow_origin(
-                origins
-                    .iter()
-                    .map(|o| {
-                        let _ = o.parse::<Uri>().expect("Invalid URI");
+    let cors = config.cors_domain.clone().map(|allowed_origins| match allowed_origins.as_slice() {
+        [origin] if origin == "*" => cors.allow_origin(AllowOrigin::mirror_request()),
+        origins => cors.allow_origin(
+            origins
+                .iter()
+                .map(|o| {
+                    let _ = o.parse::<Uri>().expect("Invalid URI");
 
-                        o.parse().expect("Invalid origin")
-                    })
-                    .collect::<Vec<_>>(),
-            ),
-        });
+                    o.parse().expect("Invalid origin")
+                })
+                .collect::<Vec<_>>(),
+        ),
+    });
 
     let middleware = tower::ServiceBuilder::new()
         .option_layer(cors)
