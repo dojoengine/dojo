@@ -2727,7 +2727,7 @@ dependencies = [
 [[package]]
 name = "cairo-lang-macro"
 version = "0.1.0"
-source = "git+https://github.com/dojoengine/scarb?rev=0f10b0b1d0e4afb7af278228a66196b5cb56b57b#0f10b0b1d0e4afb7af278228a66196b5cb56b57b"
+source = "git+https://github.com/dojoengine/scarb?rev=7eac49b3e61236ce466e712225d9c989f9db1ef3#7eac49b3e61236ce466e712225d9c989f9db1ef3"
 dependencies = [
  "cairo-lang-macro-attributes",
  "cairo-lang-macro-stable",
@@ -3989,7 +3989,7 @@ dependencies = [
 [[package]]
 name = "create-output-dir"
 version = "1.0.0"
-source = "git+https://github.com/dojoengine/scarb?rev=0f10b0b1d0e4afb7af278228a66196b5cb56b57b#0f10b0b1d0e4afb7af278228a66196b5cb56b57b"
+source = "git+https://github.com/dojoengine/scarb?rev=7eac49b3e61236ce466e712225d9c989f9db1ef3#7eac49b3e61236ce466e712225d9c989f9db1ef3"
 dependencies = [
  "anyhow",
  "core-foundation 0.10.0",
@@ -4648,44 +4648,6 @@ version = "1.0.0-rc.2"
 
 [[package]]
 name = "dojo-lang"
-version = "1.0.0-rc.1"
-source = "git+https://github.com/bengineer42/dojo?rev=0bdcb48203ec0c0bcc5e98c8a0d3fb1db5b1f1cd#0bdcb48203ec0c0bcc5e98c8a0d3fb1db5b1f1cd"
-dependencies = [
- "anyhow",
- "cairo-lang-compiler",
- "cairo-lang-defs",
- "cairo-lang-diagnostics",
- "cairo-lang-filesystem",
- "cairo-lang-plugins",
- "cairo-lang-project",
- "cairo-lang-semantic",
- "cairo-lang-sierra-generator",
- "cairo-lang-starknet",
- "cairo-lang-starknet-classes",
- "cairo-lang-syntax",
- "cairo-lang-test-plugin",
- "cairo-lang-utils",
- "camino",
- "convert_case 0.6.0",
- "dojo-types 1.0.0-rc.1",
- "indoc 1.0.9",
- "itertools 0.12.1",
- "regex",
- "semver 1.0.23",
- "serde",
- "serde_json",
- "serde_with 3.9.0",
- "smol_str",
- "starknet 0.12.0",
- "starknet-crypto 0.7.2",
- "tempfile",
- "toml 0.8.19",
- "tracing",
- "url",
-]
-
-[[package]]
-name = "dojo-lang"
 version = "1.0.0-rc.2"
 dependencies = [
  "anyhow",
@@ -4723,6 +4685,44 @@ dependencies = [
  "starknet-crypto 0.7.2",
  "tempfile",
  "test-log",
+ "toml 0.8.19",
+ "tracing",
+ "url",
+]
+
+[[package]]
+name = "dojo-lang"
+version = "1.0.0-rc.2"
+source = "git+https://github.com/dojoengine/dojo?rev=6725a8f20af56213fa7382aa1e158817f3ee623c#6725a8f20af56213fa7382aa1e158817f3ee623c"
+dependencies = [
+ "anyhow",
+ "cairo-lang-compiler",
+ "cairo-lang-defs",
+ "cairo-lang-diagnostics",
+ "cairo-lang-filesystem",
+ "cairo-lang-plugins",
+ "cairo-lang-project",
+ "cairo-lang-semantic",
+ "cairo-lang-sierra-generator",
+ "cairo-lang-starknet",
+ "cairo-lang-starknet-classes",
+ "cairo-lang-syntax",
+ "cairo-lang-test-plugin",
+ "cairo-lang-utils",
+ "camino",
+ "convert_case 0.6.0",
+ "dojo-types 1.0.0-rc.2 (git+https://github.com/dojoengine/dojo?rev=6725a8f20af56213fa7382aa1e158817f3ee623c)",
+ "indoc 1.0.9",
+ "itertools 0.12.1",
+ "regex",
+ "semver 1.0.23",
+ "serde",
+ "serde_json",
+ "serde_with 3.9.0",
+ "smol_str",
+ "starknet 0.12.0",
+ "starknet-crypto 0.7.2",
+ "tempfile",
  "toml 0.8.19",
  "tracing",
  "url",
@@ -4783,8 +4783,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-types"
-version = "1.0.0-rc.1"
-source = "git+https://github.com/bengineer42/dojo?rev=0bdcb48203ec0c0bcc5e98c8a0d3fb1db5b1f1cd#0bdcb48203ec0c0bcc5e98c8a0d3fb1db5b1f1cd"
+version = "1.0.0-rc.2"
 dependencies = [
  "anyhow",
  "cainome 0.4.6",
@@ -4805,6 +4804,7 @@ dependencies = [
 [[package]]
 name = "dojo-types"
 version = "1.0.0-rc.2"
+source = "git+https://github.com/dojoengine/dojo?rev=6725a8f20af56213fa7382aa1e158817f3ee623c#6725a8f20af56213fa7382aa1e158817f3ee623c"
 dependencies = [
  "anyhow",
  "cainome 0.4.6",
@@ -12453,7 +12453,7 @@ dependencies = [
 [[package]]
 name = "scarb"
 version = "2.8.4"
-source = "git+https://github.com/dojoengine/scarb?rev=0f10b0b1d0e4afb7af278228a66196b5cb56b57b#0f10b0b1d0e4afb7af278228a66196b5cb56b57b"
+source = "git+https://github.com/dojoengine/scarb?rev=7eac49b3e61236ce466e712225d9c989f9db1ef3#7eac49b3e61236ce466e712225d9c989f9db1ef3"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -12483,7 +12483,7 @@ dependencies = [
  "derive_builder",
  "dialoguer",
  "directories",
- "dojo-lang 1.0.0-rc.1",
+ "dojo-lang 1.0.0-rc.2 (git+https://github.com/dojoengine/dojo?rev=6725a8f20af56213fa7382aa1e158817f3ee623c)",
  "dunce",
  "fs4",
  "fs_extra",
@@ -12503,8 +12503,8 @@ dependencies = [
  "redb",
  "reqwest 0.11.27",
  "scarb-build-metadata",
- "scarb-metadata 1.12.0 (git+https://github.com/dojoengine/scarb?rev=0f10b0b1d0e4afb7af278228a66196b5cb56b57b)",
- "scarb-stable-hash 1.0.0 (git+https://github.com/dojoengine/scarb?rev=0f10b0b1d0e4afb7af278228a66196b5cb56b57b)",
+ "scarb-metadata 1.12.0 (git+https://github.com/dojoengine/scarb?rev=7eac49b3e61236ce466e712225d9c989f9db1ef3)",
+ "scarb-stable-hash 1.0.0 (git+https://github.com/dojoengine/scarb?rev=7eac49b3e61236ce466e712225d9c989f9db1ef3)",
  "scarb-ui",
  "semver 1.0.23",
  "serde",
@@ -12534,7 +12534,7 @@ dependencies = [
 [[package]]
 name = "scarb-build-metadata"
 version = "2.8.4"
-source = "git+https://github.com/dojoengine/scarb?rev=0f10b0b1d0e4afb7af278228a66196b5cb56b57b#0f10b0b1d0e4afb7af278228a66196b5cb56b57b"
+source = "git+https://github.com/dojoengine/scarb?rev=7eac49b3e61236ce466e712225d9c989f9db1ef3#7eac49b3e61236ce466e712225d9c989f9db1ef3"
 dependencies = [
  "cargo_metadata",
 ]
@@ -12555,7 +12555,7 @@ dependencies = [
 [[package]]
 name = "scarb-metadata"
 version = "1.12.0"
-source = "git+https://github.com/dojoengine/scarb?rev=0f10b0b1d0e4afb7af278228a66196b5cb56b57b#0f10b0b1d0e4afb7af278228a66196b5cb56b57b"
+source = "git+https://github.com/dojoengine/scarb?rev=7eac49b3e61236ce466e712225d9c989f9db1ef3#7eac49b3e61236ce466e712225d9c989f9db1ef3"
 dependencies = [
  "camino",
  "derive_builder",
@@ -12578,7 +12578,7 @@ dependencies = [
 [[package]]
 name = "scarb-stable-hash"
 version = "1.0.0"
-source = "git+https://github.com/dojoengine/scarb?rev=0f10b0b1d0e4afb7af278228a66196b5cb56b57b#0f10b0b1d0e4afb7af278228a66196b5cb56b57b"
+source = "git+https://github.com/dojoengine/scarb?rev=7eac49b3e61236ce466e712225d9c989f9db1ef3#7eac49b3e61236ce466e712225d9c989f9db1ef3"
 dependencies = [
  "data-encoding",
  "xxhash-rust",
@@ -12587,14 +12587,14 @@ dependencies = [
 [[package]]
 name = "scarb-ui"
 version = "0.1.5"
-source = "git+https://github.com/dojoengine/scarb?rev=0f10b0b1d0e4afb7af278228a66196b5cb56b57b#0f10b0b1d0e4afb7af278228a66196b5cb56b57b"
+source = "git+https://github.com/dojoengine/scarb?rev=7eac49b3e61236ce466e712225d9c989f9db1ef3#7eac49b3e61236ce466e712225d9c989f9db1ef3"
 dependencies = [
  "anyhow",
  "camino",
  "clap",
  "console",
  "indicatif",
- "scarb-metadata 1.12.0 (git+https://github.com/dojoengine/scarb?rev=0f10b0b1d0e4afb7af278228a66196b5cb56b57b)",
+ "scarb-metadata 1.12.0 (git+https://github.com/dojoengine/scarb?rev=7eac49b3e61236ce466e712225d9c989f9db1ef3)",
  "serde",
  "serde_json",
  "tracing-core",
