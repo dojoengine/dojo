@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1731263102549,
+  "lastUpdate": 1731263290684,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -33283,6 +33283,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10239539169,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2b5e4de875e89e0c4bbd85ede231ec3261213377",
+          "message": "feat(torii): update cli to match katana's (#2672)",
+          "timestamp": "2024-11-10T12:08:55-06:00",
+          "tree_id": "b4485dbd1b38d30ebfd2695081f5387c41bd932e",
+          "url": "https://github.com/dojoengine/dojo/commit/2b5e4de875e89e0c4bbd85ede231ec3261213377"
+        },
+        "date": 1731263289293,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 15578898,
+            "range": "± 234554",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8502920,
+            "range": "± 387970",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3415397064,
+            "range": "± 791077584",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8315629,
+            "range": "± 194189",
             "unit": "ns/iter"
           }
         ]
