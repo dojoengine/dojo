@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1731263806321,
+  "lastUpdate": 1731263987730,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -33361,6 +33361,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10205768881,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "distinct": true,
+          "id": "c6bbcf521b13f9b766e3e36e20b6fbd353b895b4",
+          "message": "fix(sozo): fix ui loading spacing",
+          "timestamp": "2024-11-10T12:20:18-06:00",
+          "tree_id": "5362a123f4a99f5157aa12fa8fd70e5c4703c4f0",
+          "url": "https://github.com/dojoengine/dojo/commit/c6bbcf521b13f9b766e3e36e20b6fbd353b895b4"
+        },
+        "date": 1731263985976,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 15567757,
+            "range": "± 196166",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8455604,
+            "range": "± 24770",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3334809741,
+            "range": "± 831183329",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8320527,
+            "range": "± 418915",
             "unit": "ns/iter"
           }
         ]
