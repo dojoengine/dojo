@@ -73,7 +73,7 @@ pub struct ServerOptions {
     /// Comma separated list of domains from which to accept cross origin requests.
     #[arg(long = "http.corsdomain")]
     #[arg(value_delimiter = ',')]
-    pub http_cors_domain: Option<Vec<String>>,
+    pub http_cors_origins: Option<Vec<String>>,
 
     /// Maximum number of concurrent connections allowed.
     #[arg(long = "rpc.max-connections", value_name = "COUNT")]
@@ -87,7 +87,7 @@ impl Default for ServerOptions {
             http_addr: DEFAULT_RPC_ADDR,
             http_port: DEFAULT_RPC_PORT,
             max_connections: DEFAULT_RPC_MAX_CONNECTIONS,
-            http_cors_domain: None,
+            http_cors_origins: None,
         }
     }
 }

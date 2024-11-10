@@ -118,7 +118,7 @@ pub fn get_default_test_config(sequencing: SequencingConfig) -> Config {
     chain.genesis.sequencer_address = *DEFAULT_SEQUENCER_ADDRESS;
 
     let rpc = RpcConfig {
-        cors_domain: None,
+        cors_origins: None,
         port: 0,
         addr: DEFAULT_RPC_ADDR,
         max_connections: DEFAULT_RPC_MAX_CONNECTIONS,

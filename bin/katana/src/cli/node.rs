@@ -221,7 +221,7 @@ impl NodeArgs {
             port: self.server.http_port,
             addr: self.server.http_addr,
             max_connections: self.server.max_connections,
-            cors_domain: self.server.http_cors_domain.clone(),
+            cors_origins: self.server.http_cors_origins.clone(),
         }
     }
 
