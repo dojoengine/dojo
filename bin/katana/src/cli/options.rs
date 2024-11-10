@@ -63,21 +63,24 @@ pub struct ServerOptions {
     /// HTTP-RPC server listening interface.
     #[arg(long = "http.addr", value_name = "ADDRESS")]
     #[arg(default_value_t = DEFAULT_RPC_ADDR)]
+    #[serde(default = "default_http_addr")]
     pub http_addr: IpAddr,
 
     /// HTTP-RPC server listening port.
     #[arg(long = "http.port", value_name = "PORT")]
     #[arg(default_value_t = DEFAULT_RPC_PORT)]
+    #[serde(default = "default_http_port")]
     pub http_port: u16,
 
     /// Comma separated list of domains from which to accept cross origin requests.
-    #[arg(long = "http.corsdomain")]
+    #[arg(long = "http.cors_origins")]
     #[arg(value_delimiter = ',')]
     pub http_cors_origins: Option<Vec<String>>,
 
     /// Maximum number of concurrent connections allowed.
     #[arg(long = "rpc.max-connections", value_name = "COUNT")]
     #[arg(default_value_t = DEFAULT_RPC_MAX_CONNECTIONS)]
+    #[serde(default = "default_max_connections")]
     pub max_connections: u32,
 }
 
@@ -271,4 +274,16 @@ fn default_validate_max_steps() -> u32 {
 
 fn default_invoke_max_steps() -> u32 {
     DEFAULT_INVOCATION_MAX_STEPS
+}
+
+fn default_http_addr() -> IpAddr {
+    DEFAULT_RPC_ADDR
+}
+
+fn default_http_port() -> u16 {
+    DEFAULT_RPC_PORT
+}
+
+fn default_max_connections() -> u32 {
+    DEFAULT_RPC_MAX_CONNECTIONS
 }
