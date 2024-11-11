@@ -692,6 +692,7 @@ total_accounts = 20
 
 [starknet.env]
 validate_max_steps = 500
+invoke_max_steps = 9988
 chain_id.Named = "Mainnet"
         "#;
         let path = std::env::temp_dir().join("katana-config.json");
@@ -717,7 +718,7 @@ chain_id.Named = "Mainnet"
             NodeArgs::parse_from(args.clone()).with_config_file().unwrap().config().unwrap();
 
         assert_eq!(config.execution.validation_max_steps, 1234);
-        assert_eq!(config.execution.invocation_max_steps, 10_000_000);
+        assert_eq!(config.execution.invocation_max_steps, 9988);
         assert!(!config.dev.fee);
         assert_matches!(config.dev.fixed_gas_prices, Some(prices) => {
             assert_eq!(prices.gas_price.eth, 254);
