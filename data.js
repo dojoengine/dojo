@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1731287235160,
+  "lastUpdate": 1731287237376,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -33594,6 +33594,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 10331803317,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "82de373b308b21cd385847fe3d06120a1f22732b",
+          "message": "fix: katana granular config for starknet (#2677)\n\n* fix: ensure the genesis and the chainid can be set correctly from cli\n\n* tests: add a test for invoke max step\n\n* fix: add merge strategy for dev",
+          "timestamp": "2024-11-10T18:50:50-06:00",
+          "tree_id": "d45f5bcd84f64fb59915c6a79596094d0fd57d61",
+          "url": "https://github.com/dojoengine/dojo/commit/82de373b308b21cd385847fe3d06120a1f22732b"
+        },
+        "date": 1731287236068,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10553236795,
             "range": "± 0",
             "unit": "ns/iter"
           }
