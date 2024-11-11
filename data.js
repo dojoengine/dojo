@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1731283486489,
+  "lastUpdate": 1731283648944,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -33517,6 +33517,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 11163944946,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "95afbe018cf09c4f6f4864194dd539a0b0f342f9",
+          "message": "fix(sozo): add back -vvv and add label to class declaration (#2675)\n\nfix: add back -vvv and add label to class declaration",
+          "timestamp": "2024-11-10T17:48:00-06:00",
+          "tree_id": "99ffac43f405d4dc3d4711e12d997d6175b7801e",
+          "url": "https://github.com/dojoengine/dojo/commit/95afbe018cf09c4f6f4864194dd539a0b0f342f9"
+        },
+        "date": 1731283647019,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 15441390,
+            "range": "± 269736",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8446978,
+            "range": "± 320979",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3343718939,
+            "range": "± 846763924",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8363627,
+            "range": "± 128072",
             "unit": "ns/iter"
           }
         ]
