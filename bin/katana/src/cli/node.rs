@@ -360,11 +360,7 @@ impl NodeArgs {
             }
         }
 
-        if self.starknet == StarknetOptions::default() {
-            if let Some(starknet) = config.starknet {
-                self.starknet = starknet;
-            }
-        }
+        self.starknet.merge(config.starknet.as_ref());
 
         if self.gpo == GasPriceOracleOptions::default() {
             if let Some(gpo) = config.gpo {
@@ -509,6 +505,8 @@ PREFUNDED ACCOUNTS
 
 #[cfg(test)]
 mod test {
+    use std::str::FromStr;
+
     use assert_matches::assert_matches;
     use katana_core::constants::{
         DEFAULT_ETH_L1_DATA_GAS_PRICE, DEFAULT_ETH_L1_GAS_PRICE, DEFAULT_STRK_L1_DATA_GAS_PRICE,
@@ -518,7 +516,7 @@ mod test {
         DEFAULT_INVOCATION_MAX_STEPS, DEFAULT_VALIDATION_MAX_STEPS,
     };
     use katana_primitives::chain::ChainId;
-    use katana_primitives::{address, felt};
+    use katana_primitives::{address, felt, Felt};
 
     use super::*;
 
@@ -694,6 +692,7 @@ total_accounts = 20
 
 [starknet.env]
 validate_max_steps = 500
+chain_id.Named = "Mainnet"
         "#;
         let path = std::env::temp_dir().join("katana-config.json");
         std::fs::write(&path, content).unwrap();
@@ -710,6 +709,8 @@ validate_max_steps = 500
             "1234",
             "--dev",
             "--dev.no-fee",
+            "--chain-id",
+            "0x123",
         ];
 
         let config =
@@ -717,7 +718,6 @@ validate_max_steps = 500
 
         assert_eq!(config.execution.validation_max_steps, 1234);
         assert_eq!(config.execution.invocation_max_steps, 10_000_000);
-        assert_eq!(config.chain.id, ChainId::parse("KATANA").unwrap());
         assert!(!config.dev.fee);
         assert_matches!(config.dev.fixed_gas_prices, Some(prices) => {
             assert_eq!(prices.gas_price.eth, 254);
@@ -732,5 +732,6 @@ validate_max_steps = 500
         assert_eq!(config.chain.genesis.sequencer_address, address!("0x100"));
         assert_eq!(config.chain.genesis.gas_prices.eth, 9999);
         assert_eq!(config.chain.genesis.gas_prices.strk, 8888);
+        assert_eq!(config.chain.id, ChainId::Id(Felt::from_str("0x123").unwrap()));
     }
 }

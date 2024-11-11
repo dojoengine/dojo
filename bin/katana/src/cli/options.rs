@@ -108,6 +108,18 @@ pub struct StarknetOptions {
     pub genesis: Option<Genesis>,
 }
 
+impl StarknetOptions {
+    pub fn merge(&mut self, other: Option<&Self>) {
+        if let Some(other) = other {
+            self.environment.merge(Some(&other.environment));
+
+            if self.genesis.is_none() {
+                self.genesis = other.genesis.clone();
+            }
+        }
+    }
+}
+
 #[derive(Debug, Args, Clone, Serialize, Deserialize, PartialEq)]
 #[command(next_help_heading = "Environment options")]
 pub struct EnvironmentOptions {
@@ -139,6 +151,24 @@ impl Default for EnvironmentOptions {
             validate_max_steps: DEFAULT_VALIDATION_MAX_STEPS,
             invoke_max_steps: DEFAULT_INVOCATION_MAX_STEPS,
             chain_id: None,
+        }
+    }
+}
+
+impl EnvironmentOptions {
+    pub fn merge(&mut self, other: Option<&Self>) {
+        if let Some(other) = other {
+            if self.chain_id.is_none() {
+                self.chain_id = other.chain_id;
+            }
+
+            if self.validate_max_steps == DEFAULT_VALIDATION_MAX_STEPS {
+                self.validate_max_steps = other.validate_max_steps;
+            }
+
+            if self.invoke_max_steps == DEFAULT_INVOCATION_MAX_STEPS {
+                self.invoke_max_steps = other.invoke_max_steps;
+            }
         }
     }
 }
