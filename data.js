@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1731342396236,
+  "lastUpdate": 1731358741105,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -33799,6 +33799,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8476514,
             "range": "± 162545",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "caaf06b620c4b5f6021b5a0cdb17c87f4a34ae05",
+          "message": "chore: cleanup deps (#2680)\n\n* chore: cleanup wip\n\n* chore: cleanup deps 2",
+          "timestamp": "2024-11-11T14:42:46-06:00",
+          "tree_id": "ca8a73c7c9382159d3dc7925e609c710e3d5f55d",
+          "url": "https://github.com/dojoengine/dojo/commit/caaf06b620c4b5f6021b5a0cdb17c87f4a34ae05"
+        },
+        "date": 1731358739148,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10176590968,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
