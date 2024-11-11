@@ -4689,43 +4689,20 @@ name = "dojo-lang"
 version = "1.0.0"
 dependencies = [
  "anyhow",
- "assert_fs",
- "cairo-lang-compiler",
- "cairo-lang-debug",
  "cairo-lang-defs",
  "cairo-lang-diagnostics",
  "cairo-lang-filesystem",
- "cairo-lang-parser",
  "cairo-lang-plugins",
- "cairo-lang-project",
  "cairo-lang-semantic",
- "cairo-lang-sierra-generator",
- "cairo-lang-starknet",
- "cairo-lang-starknet-classes",
  "cairo-lang-syntax",
- "cairo-lang-test-plugin",
- "cairo-lang-test-utils",
  "cairo-lang-utils",
- "camino",
- "convert_case 0.6.0",
  "dojo-types 1.0.0",
- "indoc 1.0.9",
  "itertools 0.12.1",
- "once_cell",
- "regex",
- "salsa",
- "semver 1.0.23",
  "serde",
- "serde_json",
- "serde_with 3.9.0",
  "smol_str",
  "starknet 0.12.0",
  "starknet-crypto 0.7.2",
- "tempfile",
- "test-log",
- "toml 0.8.19",
  "tracing",
- "url",
 ]
 
 [[package]]
@@ -4741,7 +4718,6 @@ dependencies = [
 name = "dojo-metrics"
 version = "1.0.0"
 dependencies = [
- "anyhow",
  "hyper 0.14.30",
  "jemalloc-ctl",
  "jemallocator",
@@ -4751,8 +4727,6 @@ dependencies = [
  "metrics-process",
  "metrics-util",
  "thiserror",
- "tokio",
- "tokio-util",
  "tracing",
 ]
 
@@ -4764,8 +4738,6 @@ dependencies = [
  "assert_fs",
  "async-trait",
  "camino",
- "dojo-lang 1.0.0",
- "dojo-world",
  "jsonrpsee 0.16.3",
  "katana-core",
  "katana-executor",
@@ -6784,15 +6756,6 @@ dependencies = [
 
 [[package]]
 name = "heck"
-version = "0.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6d621efb26863f0e9924c6ac577e8275e5e6b77455db64ffa6c65c904e9e132c"
-dependencies = [
- "unicode-segmentation",
-]
-
-[[package]]
-name = "heck"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "95505c38b4572b2d910cecb0281560f54b440a19336cbbcb27bf6ce6adc6f5a8"
@@ -8400,7 +8363,6 @@ dependencies = [
  "dojo-metrics",
  "dojo-test-utils",
  "dojo-utils",
- "dojo-world",
  "futures",
  "indexmap 2.5.0",
  "jsonrpsee 0.16.3",
@@ -12322,35 +12284,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f3cb5ba0dc43242ce17de99c180e96db90b235b8a9fdc9543c96d2209116bd9f"
 
 [[package]]
-name = "salsa"
-version = "0.16.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4b84d9f96071f3f3be0dc818eae3327625d8ebc95b58da37d6850724f31d3403"
-dependencies = [
- "crossbeam-utils",
- "indexmap 1.9.3",
- "lock_api",
- "log",
- "oorandom",
- "parking_lot 0.11.2",
- "rustc-hash 1.1.0",
- "salsa-macros",
- "smallvec",
-]
-
-[[package]]
-name = "salsa-macros"
-version = "0.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cd3904a4ba0a9d0211816177fd34b04c7095443f8cdacd11175064fe541c8fe2"
-dependencies = [
- "heck 0.3.3",
- "proc-macro2",
- "quote",
- "syn 1.0.109",
-]
-
-[[package]]
 name = "salsa20"
 version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -13381,7 +13314,6 @@ dependencies = [
  "anyhow",
  "assert_fs",
  "async-trait",
- "bigdecimal 0.4.5",
  "cainome 0.4.6",
  "colored",
  "colored_json",
@@ -14497,28 +14429,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3369f5ac52d5eb6ab48c6b4ffdc8efbcad6b89c765749064ba298f2c68a16a76"
 
 [[package]]
-name = "test-log"
-version = "0.2.16"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3dffced63c2b5c7be278154d76b479f9f9920ed34e7574201407f0b14e2bbb93"
-dependencies = [
- "env_logger",
- "test-log-macros",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "test-log-macros"
-version = "0.2.16"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5999e24eaa32083191ba4e425deb75cdf25efefabe5aaccb7446dd0d4122a3f5"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.77",
-]
-
-[[package]]
 name = "thiserror"
 version = "1.0.63"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -14995,7 +14905,6 @@ dependencies = [
  "hyper-reverse-proxy",
  "indexmap 2.5.0",
  "lazy_static",
- "scarb",
  "serde",
  "serde_json",
  "sqlx",

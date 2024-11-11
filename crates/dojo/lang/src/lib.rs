@@ -2,6 +2,8 @@
 //!
 //! This crate contains the Dojo compiler, with a cairo plugin for the Cairo language.
 
+#![warn(unused_crate_dependencies)]
+
 pub mod attribute_macros;
 pub mod aux_data;
 pub mod cairo_plugin;
