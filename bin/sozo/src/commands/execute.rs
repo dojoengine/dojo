@@ -10,7 +10,6 @@ use sozo_walnut::WalnutDebugger;
 use starknet::core::types::Call;
 use starknet::core::utils as snutils;
 use tracing::trace;
-
 use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
 use super::options::transaction::TransactionOptions;
