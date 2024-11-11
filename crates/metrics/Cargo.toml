@@ -6,10 +6,8 @@ version.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow.workspace = true
 hyper = { workspace = true, features = [ "http1", "http2", "server", "tcp" ] }
 thiserror.workspace = true
-tokio.workspace = true
 tracing.workspace = true
 
 # Metrics
@@ -18,7 +16,6 @@ metrics-derive = "0.1"
 metrics-exporter-prometheus = "0.15.3"
 metrics-process = "2.1.0"
 metrics-util = "0.17.0"
-tokio-util.workspace = true
 
 [target.'cfg(not(windows))'.dependencies]
 jemalloc-ctl = { version = "0.5.0", optional = true }
