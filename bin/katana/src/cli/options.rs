@@ -222,6 +222,32 @@ impl Default for DevOptions {
     }
 }
 
+impl DevOptions {
+    pub fn merge(&mut self, other: Option<&Self>) {
+        if let Some(other) = other {
+            if !self.dev {
+                self.dev = other.dev;
+            }
+
+            if self.seed == DEFAULT_DEV_SEED {
+                self.seed = other.seed.clone();
+            }
+
+            if self.total_accounts == DEFAULT_DEV_ACCOUNTS {
+                self.total_accounts = other.total_accounts;
+            }
+
+            if !self.no_fee {
+                self.no_fee = other.no_fee;
+            }
+
+            if !self.no_account_validation {
+                self.no_account_validation = other.no_account_validation;
+            }
+        }
+    }
+}
+
 #[derive(Debug, Args, Clone, Serialize, Deserialize, Default, PartialEq)]
 #[command(next_help_heading = "Forking options")]
 pub struct ForkingOptions {

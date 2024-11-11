@@ -361,6 +361,7 @@ impl NodeArgs {
         }
 
         self.starknet.merge(config.starknet.as_ref());
+        self.development.merge(config.development.as_ref());
 
         if self.gpo == GasPriceOracleOptions::default() {
             if let Some(gpo) = config.gpo {
@@ -371,12 +372,6 @@ impl NodeArgs {
         if self.forking == ForkingOptions::default() {
             if let Some(forking) = config.forking {
                 self.forking = forking;
-            }
-        }
-
-        if self.development == DevOptions::default() {
-            if let Some(development) = config.development {
-                self.development = development;
             }
         }
 
