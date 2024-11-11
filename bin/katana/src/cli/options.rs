@@ -108,6 +108,18 @@ pub struct StarknetOptions {
     pub genesis: Option<Genesis>,
 }
 
+impl StarknetOptions {
+    pub fn merge(&mut self, other: Option<&Self>) {
+        if let Some(other) = other {
+            self.environment.merge(Some(&other.environment));
+
+            if self.genesis.is_none() {
+                self.genesis = other.genesis.clone();
+            }
+        }
+    }
+}
+
 #[derive(Debug, Args, Clone, Serialize, Deserialize, PartialEq)]
 #[command(next_help_heading = "Environment options")]
 pub struct EnvironmentOptions {
@@ -139,6 +151,24 @@ impl Default for EnvironmentOptions {
             validate_max_steps: DEFAULT_VALIDATION_MAX_STEPS,
             invoke_max_steps: DEFAULT_INVOCATION_MAX_STEPS,
             chain_id: None,
+        }
+    }
+}
+
+impl EnvironmentOptions {
+    pub fn merge(&mut self, other: Option<&Self>) {
+        if let Some(other) = other {
+            if self.chain_id.is_none() {
+                self.chain_id = other.chain_id;
+            }
+
+            if self.validate_max_steps == DEFAULT_VALIDATION_MAX_STEPS {
+                self.validate_max_steps = other.validate_max_steps;
+            }
+
+            if self.invoke_max_steps == DEFAULT_INVOCATION_MAX_STEPS {
+                self.invoke_max_steps = other.invoke_max_steps;
+            }
         }
     }
 }
@@ -188,6 +218,32 @@ impl Default for DevOptions {
             total_accounts: DEFAULT_DEV_ACCOUNTS,
             no_fee: false,
             no_account_validation: false,
+        }
+    }
+}
+
+impl DevOptions {
+    pub fn merge(&mut self, other: Option<&Self>) {
+        if let Some(other) = other {
+            if !self.dev {
+                self.dev = other.dev;
+            }
+
+            if self.seed == DEFAULT_DEV_SEED {
+                self.seed = other.seed.clone();
+            }
+
+            if self.total_accounts == DEFAULT_DEV_ACCOUNTS {
+                self.total_accounts = other.total_accounts;
+            }
+
+            if !self.no_fee {
+                self.no_fee = other.no_fee;
+            }
+
+            if !self.no_account_validation {
+                self.no_account_validation = other.no_account_validation;
+            }
         }
     }
 }
