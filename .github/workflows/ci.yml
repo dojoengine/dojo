@@ -31,7 +31,7 @@ jobs:
     needs: ensure-docker
     runs-on: ubuntu-latest-32-cores
     container:
-      image: ghcr.io/dojoengine/dojo-dev:v1.0.0-rc.1
+      image: ghcr.io/dojoengine/dojo-dev:v1.0.0
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -56,7 +56,7 @@ jobs:
   ensure-wasm:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:v1.0.0-rc.1
+      image: ghcr.io/dojoengine/dojo-dev:v1.0.0
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -123,7 +123,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:v1.0.0-rc.1
+      image: ghcr.io/dojoengine/dojo-dev:v1.0.0
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -139,7 +139,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:v1.0.0-rc.1
+      image: ghcr.io/dojoengine/dojo-dev:v1.0.0
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -154,7 +154,7 @@ jobs:
   clippy:
     runs-on: ubuntu-latest-4-cores
     container:
-      image: ghcr.io/dojoengine/dojo-dev:v1.0.0-rc.1
+      image: ghcr.io/dojoengine/dojo-dev:v1.0.0
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -163,7 +163,7 @@ jobs:
   fmt:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:v1.0.0-rc.1
+      image: ghcr.io/dojoengine/dojo-dev:v1.0.0
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -172,7 +172,7 @@ jobs:
   docs:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:v1.0.0-rc.1
+      image: ghcr.io/dojoengine/dojo-dev:v1.0.0
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -193,7 +193,7 @@ jobs:
           sudo apt update && sudo apt install ./hurl_3.0.0_amd64.deb
           chmod +x /tmp/bins/katana
           chmod +x /tmp/bins/sozo
-          nohup /tmp/bins/katana --accounts 2 --disable-fee &
+          nohup /tmp/bins/katana --dev --dev.accounts 2 --dev.no-fee &
       - run: |
           /tmp/bins/sozo --manifest-path examples/spawn-and-move/Scarb.toml build
           /tmp/bins/sozo --manifest-path examples/spawn-and-move/Scarb.toml migrate

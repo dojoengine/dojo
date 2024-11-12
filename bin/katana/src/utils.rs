@@ -1,9 +1,13 @@
+use std::fmt::Display;
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
+use clap::builder::PossibleValue;
+use clap::ValueEnum;
 use katana_primitives::block::{BlockHash, BlockHashOrNumber, BlockNumber};
 use katana_primitives::genesis::json::GenesisJson;
 use katana_primitives::genesis::Genesis;
+use serde::{Deserialize, Serialize};
 
 pub fn parse_seed(seed: &str) -> [u8; 32] {
     let seed = seed.as_bytes();
@@ -31,6 +35,35 @@ pub fn parse_block_hash_or_number(value: &str) -> Result<BlockHashOrNumber> {
     } else {
         let num = value.parse::<BlockNumber>().context("could not parse block number")?;
         Ok(BlockHashOrNumber::Num(num))
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Default)]
+pub enum LogFormat {
+    Json,
+    #[default]
+    Full,
+}
+
+impl ValueEnum for LogFormat {
+    fn value_variants<'a>() -> &'a [Self] {
+        &[Self::Json, Self::Full]
+    }
+
+    fn to_possible_value(&self) -> Option<PossibleValue> {
+        match self {
+            Self::Json => Some(PossibleValue::new("json")),
+            Self::Full => Some(PossibleValue::new("full")),
+        }
+    }
+}
+
+impl Display for LogFormat {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Json => write!(f, "json"),
+            Self::Full => write!(f, "full"),
+        }
     }
 }
 

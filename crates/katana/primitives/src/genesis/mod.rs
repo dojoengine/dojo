@@ -9,7 +9,7 @@ use std::sync::Arc;
 use constant::DEFAULT_ACCOUNT_CLASS;
 #[cfg(feature = "slot")]
 use constant::{CONTROLLER_ACCOUNT_CLASS, CONTROLLER_ACCOUNT_CLASS_CASM, CONTROLLER_CLASS_HASH};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use self::allocation::{GenesisAccountAlloc, GenesisAllocation, GenesisContractAlloc};
 use self::constant::{
@@ -23,7 +23,7 @@ use crate::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraC
 use crate::contract::ContractAddress;
 use crate::Felt;
 
-#[derive(Clone, Serialize, PartialEq, Eq)]
+#[derive(Clone, Serialize, PartialEq, Eq, Deserialize)]
 pub struct GenesisClass {
     /// The compiled class hash of the contract class.
     pub compiled_class_hash: CompiledClassHash,
@@ -47,7 +47,7 @@ impl core::fmt::Debug for GenesisClass {
 
 /// Genesis block configuration.
 #[serde_with::serde_as]
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Genesis {
     /// The genesis block parent hash.
     pub parent_hash: BlockHash,

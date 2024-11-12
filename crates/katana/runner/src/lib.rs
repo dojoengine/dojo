@@ -121,7 +121,7 @@ impl KatanaRunner {
             .port(port)
             .accounts(n_accounts)
             .json_log(true)
-            .max_connections(10000)
+            .rpc_max_connections(10000)
             .dev(config.dev)
             .fee(!config.disable_fee);
 

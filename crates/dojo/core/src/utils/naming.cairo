@@ -14,11 +14,7 @@ pub fn is_name_valid(name: @ByteArray) -> bool {
     let mut i = 0;
     loop {
         if i >= name.len() {
-            if i > 0 {
-                break true;
-            } else {
-                break false;
-            }
+            break (i > 0);
         }
 
         let c = name.at(i).unwrap();

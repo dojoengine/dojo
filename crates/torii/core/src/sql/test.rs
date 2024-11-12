@@ -24,7 +24,7 @@ use tokio::sync::broadcast;
 use crate::engine::{Engine, EngineConfig, Processors};
 use crate::executor::Executor;
 use crate::sql::Sql;
-use crate::types::ContractType;
+use crate::types::{Contract, ContractType};
 
 pub async fn bootstrap_engine<P>(
     world: WorldContractReader<P>,
@@ -45,7 +45,7 @@ where
         EngineConfig::default(),
         shutdown_tx,
         None,
-        Arc::new(HashMap::from([(world_address, ContractType::WORLD)])),
+        &[Contract { address: world_address, r#type: ContractType::WORLD }],
     );
 
     let data = engine.fetch_range(0, to, &HashMap::new()).await.unwrap();
@@ -127,7 +127,7 @@ async fn test_load_from_remote(sequencer: &RunnerCtx) {
     let db = Sql::new(
         pool.clone(),
         sender.clone(),
-        &HashMap::from([(world_reader.address, ContractType::WORLD)]),
+        &vec![Contract { address: world_reader.address, r#type: ContractType::WORLD }],
     )
     .await
     .unwrap();
@@ -285,7 +285,7 @@ async fn test_load_from_remote_del(sequencer: &RunnerCtx) {
     let db = Sql::new(
         pool.clone(),
         sender.clone(),
-        &HashMap::from([(world_reader.address, ContractType::WORLD)]),
+        &vec![Contract { address: world_reader.address, r#type: ContractType::WORLD }],
     )
     .await
     .unwrap();
@@ -371,7 +371,7 @@ async fn test_update_with_set_record(sequencer: &RunnerCtx) {
     let db = Sql::new(
         pool.clone(),
         sender.clone(),
-        &HashMap::from([(world_reader.address, ContractType::WORLD)]),
+        &vec![Contract { address: world_reader.address, r#type: ContractType::WORLD }],
     )
     .await
     .unwrap();
