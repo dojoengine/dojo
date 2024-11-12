@@ -33,6 +33,7 @@ starknet.workspace = true
 tokio-stream = "0.1.11"
 tokio-util = "0.7.7"
 tokio.workspace = true
+torii-cli.workspace = true
 torii-core.workspace = true
 torii-graphql.workspace = true
 torii-grpc = { workspace = true, features = [ "server" ] }

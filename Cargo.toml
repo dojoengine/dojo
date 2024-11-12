@@ -36,6 +36,7 @@ members = [
 	"crates/katana/storage/provider",
 	"crates/katana/tasks",
 	"crates/katana/trie",
+	"crates/katana/cli",
 	"crates/metrics",
 	"crates/saya/core",
 	"crates/saya/provider",
@@ -45,6 +46,7 @@ members = [
 	"crates/torii/client",
 	"crates/torii/server",
 	"crates/torii/types-test",
+	"crates/torii/cli",
 	"examples/spawn-and-move",
 	"scripts/verify_db_balances",
 	"xtask/generate-test-db",
@@ -103,6 +105,7 @@ katana-runner = { path = "crates/katana/runner" }
 katana-slot-controller = { path = "crates/katana/controller" }
 katana-tasks = { path = "crates/katana/tasks" }
 katana-trie = { path = "crates/katana/trie" }
+katana-cli = { path = "crates/katana/cli" }
 
 # torii
 torii-client = { path = "crates/torii/client" }
@@ -111,6 +114,7 @@ torii-graphql = { path = "crates/torii/graphql" }
 torii-grpc = { path = "crates/torii/grpc" }
 torii-relay = { path = "crates/torii/libp2p" }
 torii-server = { path = "crates/torii/server" }
+torii-cli = { path = "crates/torii/cli" }
 
 # saya
 saya-core = { path = "crates/saya/core" }

@@ -12,28 +12,24 @@
 
 use std::cmp;
 use std::net::SocketAddr;
-use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::Result;
 use clap::Parser;
 use dojo_metrics::exporters::prometheus::PrometheusRecorder;
-use dojo_utils::parse::parse_url;
 use dojo_world::contracts::world::WorldContractReader;
-use serde::{Deserialize, Serialize};
 use sqlx::sqlite::{
     SqliteAutoVacuum, SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous,
 };
 use sqlx::SqlitePool;
-use starknet::core::types::Felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use tempfile::NamedTempFile;
 use tokio::sync::broadcast;
 use tokio::sync::broadcast::Sender;
 use tokio_stream::StreamExt;
+use torii_cli::ToriiArgs;
 use torii_core::engine::{Engine, EngineConfig, IndexingFlags, Processors};
 use torii_core::executor::Executor;
 use torii_core::processors::store_transaction::StoreTransactionProcessor;
@@ -46,139 +42,7 @@ use tracing::{error, info};
 use tracing_subscriber::{fmt, EnvFilter};
 use url::{form_urlencoded, Url};
 
-mod options;
-
-use options::*;
-
 pub(crate) const LOG_TARGET: &str = "torii::cli";
-
-const DEFAULT_RPC_URL: &str = "http://0.0.0.0:5050";
-
-/// Dojo World Indexer
-#[derive(Parser, Debug)]
-#[command(name = "torii", author, version, about, long_about = None)]
-struct ToriiArgs {
-    /// The world to index
-    #[arg(short, long = "world", env = "DOJO_WORLD_ADDRESS")]
-    world_address: Option<Felt>,
-
-    /// The sequencer rpc endpoint to index.
-    #[arg(long, value_name = "URL", default_value = DEFAULT_RPC_URL, value_parser = parse_url)]
-    rpc: Url,
-
-    /// Database filepath (ex: indexer.db). If specified file doesn't exist, it will be
-    /// created. Defaults to in-memory database.
-    #[arg(long)]
-    #[arg(
-        value_name = "PATH",
-        help = "Database filepath. If specified directory doesn't exist, it will be created. \
-                Defaults to in-memory database."
-    )]
-    db_dir: Option<PathBuf>,
-
-    /// The external url of the server, used for configuring the GraphQL Playground in a hosted
-    /// environment
-    #[arg(long, value_parser = parse_url, help = "The external url of the server, used for configuring the GraphQL Playground in a hosted environment.")]
-    external_url: Option<Url>,
-
-    /// Open World Explorer on the browser.
-    #[arg(long, help = "Open World Explorer on the browser.")]
-    explorer: bool,
-
-    #[command(flatten)]
-    metrics: MetricsOptions,
-
-    #[command(flatten)]
-    indexing: IndexingOptions,
-
-    #[command(flatten)]
-    events: EventsOptions,
-
-    #[command(flatten)]
-    server: ServerOptions,
-
-    #[command(flatten)]
-    relay: RelayOptions,
-
-    /// Configuration file
-    #[arg(long, help = "Configuration file to setup Torii.")]
-    config: Option<PathBuf>,
-}
-
-impl ToriiArgs {
-    pub fn with_config_file(mut self) -> Result<Self> {
-        let config: ToriiArgsConfig = if let Some(path) = &self.config {
-            toml::from_str(&std::fs::read_to_string(path)?)?
-        } else {
-            return Ok(self);
-        };
-
-        // the CLI (self) takes precedence over the config file.
-        // Currently, the merge is made at the top level of the commands.
-        // We may add recursive merging in the future.
-
-        if self.world_address.is_none() {
-            self.world_address = config.world_address;
-        }
-
-        if self.rpc == Url::parse(DEFAULT_RPC_URL).unwrap() {
-            if let Some(rpc) = config.rpc {
-                self.rpc = rpc;
-            }
-        }
-
-        if self.db_dir.is_none() {
-            self.db_dir = config.db_dir;
-        }
-
-        if self.external_url.is_none() {
-            self.external_url = config.external_url;
-        }
-
-        // Currently the comparison it's only at the top level.
-        // Need to make it more granular.
-
-        if !self.explorer {
-            self.explorer = config.explorer.unwrap_or_default();
-        }
-
-        if self.metrics == MetricsOptions::default() {
-            self.metrics = config.metrics.unwrap_or_default();
-        }
-
-        if self.indexing == IndexingOptions::default() {
-            self.indexing = config.indexing.unwrap_or_default();
-        }
-
-        if self.events == EventsOptions::default() {
-            self.events = config.events.unwrap_or_default();
-        }
-
-        if self.server == ServerOptions::default() {
-            self.server = config.server.unwrap_or_default();
-        }
-
-        if self.relay == RelayOptions::default() {
-            self.relay = config.relay.unwrap_or_default();
-        }
-
-        Ok(self)
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize, Default)]
-pub struct ToriiArgsConfig {
-    pub world_address: Option<Felt>,
-    pub rpc: Option<Url>,
-    pub db_dir: Option<PathBuf>,
-    pub external_url: Option<Url>,
-    pub explorer: Option<bool>,
-    pub metrics: Option<MetricsOptions>,
-    pub indexing: Option<IndexingOptions>,
-    pub events: Option<EventsOptions>,
-    pub server: Option<ServerOptions>,
-    pub relay: Option<RelayOptions>,
-}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -376,128 +240,5 @@ async fn spawn_rebuilding_graphql_server(
         if broker.next().await.is_none() {
             break;
         }
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use std::net::{IpAddr, Ipv4Addr};
-
-    use super::*;
-
-    #[test]
-    fn test_cli_precedence() {
-        // CLI args must take precedence over the config file.
-        let content = r#"
-        world_address = "0x1234"
-        rpc = "http://0.0.0.0:5050"
-        db_dir = "/tmp/torii-test"
-        
-        [events]
-        raw = true
-        historical = [
-            "ns-E",
-            "ns-EH"
-        ]
-        "#;
-        let path = std::env::temp_dir().join("torii-config2.json");
-        std::fs::write(&path, content).unwrap();
-
-        let path_str = path.to_string_lossy().to_string();
-
-        let args = vec![
-            "torii",
-            "--world",
-            "0x9999",
-            "--rpc",
-            "http://0.0.0.0:6060",
-            "--db-dir",
-            "/tmp/torii-test2",
-            "--events.raw",
-            "false",
-            "--events.historical",
-            "a-A",
-            "--config",
-            path_str.as_str(),
-        ];
-
-        let torii_args = ToriiArgs::parse_from(args).with_config_file().unwrap();
-
-        assert_eq!(torii_args.world_address, Some(Felt::from_str("0x9999").unwrap()));
-        assert_eq!(torii_args.rpc, Url::parse("http://0.0.0.0:6060").unwrap());
-        assert_eq!(torii_args.db_dir, Some(PathBuf::from("/tmp/torii-test2")));
-        assert!(!torii_args.events.raw);
-        assert_eq!(torii_args.events.historical, Some(vec!["a-A".to_string()]));
-        assert_eq!(torii_args.server, ServerOptions::default());
-    }
-
-    #[test]
-    fn test_config_fallback() {
-        let content = r#"
-        world_address = "0x1234"
-        rpc = "http://0.0.0.0:2222"
-        db_dir = "/tmp/torii-test"
-
-        [events]
-        raw = false
-        historical = [
-            "ns-E",
-            "ns-EH"
-        ]
-
-        [server]
-        http_addr = "127.0.0.1"
-        http_port = 7777
-        http_cors_origins = ["*"]
-
-        [indexing]
-        events_chunk_size = 9999
-        index_pending = true
-        max_concurrent_tasks = 1000
-        index_transactions = false
-        contracts = [
-            "erc20:0x1234",
-            "erc721:0x5678"
-        ]
-        "#;
-        let path = std::env::temp_dir().join("torii-config.json");
-        std::fs::write(&path, content).unwrap();
-
-        let path_str = path.to_string_lossy().to_string();
-
-        let args = vec!["torii", "--config", path_str.as_str()];
-
-        let torii_args = ToriiArgs::parse_from(args).with_config_file().unwrap();
-
-        assert_eq!(torii_args.world_address, Some(Felt::from_str("0x1234").unwrap()));
-        assert_eq!(torii_args.rpc, Url::parse("http://0.0.0.0:2222").unwrap());
-        assert_eq!(torii_args.db_dir, Some(PathBuf::from("/tmp/torii-test")));
-        assert!(!torii_args.events.raw);
-        assert_eq!(
-            torii_args.events.historical,
-            Some(vec!["ns-E".to_string(), "ns-EH".to_string()])
-        );
-        assert_eq!(torii_args.indexing.events_chunk_size, 9999);
-        assert_eq!(torii_args.indexing.blocks_chunk_size, 10240);
-        assert!(torii_args.indexing.index_pending);
-        assert_eq!(torii_args.indexing.polling_interval, 500);
-        assert_eq!(torii_args.indexing.max_concurrent_tasks, 1000);
-        assert!(!torii_args.indexing.index_transactions);
-        assert_eq!(
-            torii_args.indexing.contracts,
-            vec![
-                Contract {
-                    address: Felt::from_str("0x1234").unwrap(),
-                    r#type: ContractType::ERC20
-                },
-                Contract {
-                    address: Felt::from_str("0x5678").unwrap(),
-                    r#type: ContractType::ERC721
-                }
-            ]
-        );
-        assert_eq!(torii_args.server.http_addr, IpAddr::V4(Ipv4Addr::LOCALHOST));
-        assert_eq!(torii_args.server.http_port, 7777);
-        assert_eq!(torii_args.server.http_cors_origins, Some(vec!["*".to_string()]));
     }
 }

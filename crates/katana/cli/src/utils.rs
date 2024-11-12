@@ -73,7 +73,7 @@ mod tests {
 
     #[test]
     fn parse_genesis_file() {
-        let path = "./tests/test-data/genesis.json";
+        let path = "./test-data/genesis.json";
         parse_genesis(path).unwrap();
     }
 }

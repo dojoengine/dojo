@@ -1,0 +1,29 @@
+[package]
+edition.workspace = true
+license.workspace = true
+name = "katana-cli"
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+katana-core.workspace = true
+katana-node.workspace = true
+katana-primitives.workspace = true
+katana-slot-controller = { workspace = true, optional = true }
+
+alloy-primitives.workspace = true
+anyhow.workspace = true
+cainome-cairo-serde.workspace = true
+clap.workspace = true
+serde.workspace = true
+shellexpand = "3.1.0"
+toml.workspace = true
+url.workspace = true
+
+[dev-dependencies]
+assert_matches.workspace = true
+starknet.workspace = true
+
+[features]
+default = [ "slot" ]
+slot = [ "dep:katana-slot-controller", "katana-primitives/slot" ]
