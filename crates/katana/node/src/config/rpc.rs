@@ -43,7 +43,7 @@ impl Default for RpcConfig {
             port: DEFAULT_RPC_PORT,
             max_connections: DEFAULT_RPC_MAX_CONNECTIONS,
             apis: HashSet::from([ApiKind::Starknet]),
-            page_size: None,
+            page_size: Some(DEFAULT_RPC_PAGE_SIZE),
         }
     }
 }
