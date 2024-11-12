@@ -82,16 +82,19 @@ impl std::str::FromStr for CallArgs {
 fn resolve_contract_address(
     descriptor: &ResourceDescriptor,
     world_diff: &WorldDiff,
+    options: &ExecuteArgs,
+    ws: &Workspace,
 ) -> Result<Address> {
     match descriptor {
         ResourceDescriptor::Address(address) => Ok(*address),
         ResourceDescriptor::Tag(tag) => {
             let contracts = utils::contracts_from_manifest_or_diff(
-                self.account.clone(),
-                self.starknet.clone(),
-                self.world,
+                
+                options.account.clone(),
+               options.starknet.clone(),
+               options.world,
                 &ws,
-                self.diff,
+                options.diff,
             )
             .await?;
 
