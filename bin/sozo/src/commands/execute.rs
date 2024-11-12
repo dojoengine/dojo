@@ -56,9 +56,7 @@ impl std::str::FromStr for CallArgs {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let s = s.trim();
-        if s.is_empty() {
-            return Err(anyhow!("Empty call string"));
-        }
+       
 
         let parts: Vec<&str> = s.split(',').collect();
         if parts.len() < 2 {
@@ -88,10 +86,16 @@ fn resolve_contract_address(
     match descriptor {
         ResourceDescriptor::Address(address) => Ok(*address),
         ResourceDescriptor::Tag(tag) => {
-            let selector = naming::compute_selector_from_tag(tag);
-            world_diff
-                .get_contract_address(selector)
-                .ok_or_else(|| anyhow!("Contract {descriptor} not found in the world diff."))
+            let contracts = utils::contracts_from_manifest_or_diff(
+                self.account.clone(),
+                self.starknet.clone(),
+                self.world,
+                &ws,
+                self.diff,
+            )
+            .await?;
+
+            (contracts.get(tag).map(|c| c.address), contracts)
         }
         ResourceDescriptor::Name(_) => {
             unimplemented!("Expected to be a resolved tag with default namespace.")
@@ -113,7 +117,7 @@ impl ExecuteArgs {
             self.starknet.url(profile_config.env.as_ref())?,
         );
 
-        let txn_config: TxnConfig = self.transaction.try_into()?; // Changed from `into()` to `try_into()` for better error handling
+        let txn_config: TxnConfig = self.transaction.try_into()?; 
 
         config.tokio_handle().block_on(async {
             // We could save the world diff computation extracting the account directly from the options.
