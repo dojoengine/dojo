@@ -8219,6 +8219,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "katana-grpc"
+version = "1.0.0"
+dependencies = [
+ "tonic 0.11.0",
+ "tonic-build 0.11.0",
+ "tonic-build 0.12.3",
+]
+
+[[package]]
 name = "katana-node"
 version = "1.0.0"
 dependencies = [
