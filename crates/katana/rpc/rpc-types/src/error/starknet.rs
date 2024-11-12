@@ -9,6 +9,7 @@ use serde::Serialize;
 use serde_json::Value;
 use starknet::core::types::StarknetError as StarknetRsError;
 use starknet::providers::ProviderError as StarknetRsProviderError;
+use serde_json::json;
 
 /// Possible list of errors that can be returned by the Starknet API according to the spec: <https://github.com/starkware-libs/starknet-specs>.
 #[derive(Debug, thiserror::Error, Clone, Serialize)]
@@ -32,11 +33,8 @@ pub enum StarknetApiError {
     #[error("Class hash not found")]
     ClassHashNotFound,
     #[error("Requested page size is too big")]
-    PageSizeTooBig {
-        requested: u64,
-        max_allowed: u64,
-    },
-        #[error("There are no blocks")]
+    PageSizeTooBig { requested: u64, max_allowed: u64 },
+    #[error("There are no blocks")]
     NoBlocks,
     #[error("The supplied continuation token is invalid or unknown")]
     InvalidContinuationToken,
@@ -139,8 +137,10 @@ impl StarknetApiError {
                 Some(Value::String(reason.to_string()))
             }
 
-            StarknetRsError::PageSizeTooBig => Self::PageSizeTooBig,
-            
+            StarknetApiError::PageSizeTooBig { requested, max_allowed } => Some(json!({
+                "requested": requested,
+                "max_allowed": max_allowed
+            })),
 
             _ => None,
         }
@@ -212,8 +212,8 @@ impl From<StarknetRsError> for StarknetApiError {
             StarknetRsError::NoBlocks => Self::NoBlocks,
             StarknetRsError::NonAccount => Self::NonAccount,
             StarknetRsError::BlockNotFound => Self::BlockNotFound,
-            StarknetRsError::PageSizeTooBig { requested, max_allowed } => {
-                Self::PageSizeTooBig { requested, max_allowed }
+            StarknetRsError::PageSizeTooBig => {
+                Self::PageSizeTooBig { requested: 0, max_allowed: 0 }
             }
             StarknetRsError::DuplicateTx => Self::DuplicateTransaction,
             StarknetRsError::ContractNotFound => Self::ContractNotFound,

@@ -222,6 +222,7 @@ impl NodeArgs {
             addr: self.server.http_addr,
             max_connections: self.server.max_connections,
             cors_origins: self.server.http_cors_origins.clone(),
+            page_size: Some(self.server.page_size),
         }
     }
 

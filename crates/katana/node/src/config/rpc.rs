@@ -5,7 +5,7 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 pub const DEFAULT_RPC_MAX_CONNECTIONS: u32 = 100;
 pub const DEFAULT_RPC_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::LOCALHOST);
 pub const DEFAULT_RPC_PORT: u16 = 5050;
-
+pub const DEFAULT_RPC_PAGE_SIZE: u64 = 100;
 /// List of APIs supported by Katana.
 #[derive(
     Debug, Copy, Clone, PartialEq, Eq, Hash, strum_macros::EnumString, strum_macros::Display,
@@ -24,13 +24,8 @@ pub struct RpcConfig {
     pub port: u16,
     pub max_connections: u32,
     pub apis: HashSet<ApiKind>,
-    pub page_size: Option<StarknetApiConfig>,
+    pub page_size: Option<u64>,
     pub cors_origins: Option<Vec<String>>,
-}
-
-#[derive(Debug, Clone)]
-pub struct StarknetApiConfig {
-    pub page_size: u64,
 }
 
 impl RpcConfig {

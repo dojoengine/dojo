@@ -49,6 +49,7 @@ use katana_rpc_api::saya::SayaApiServer;
 use katana_rpc_api::starknet::{StarknetApiServer, StarknetTraceApiServer, StarknetWriteApiServer};
 use katana_rpc_api::torii::ToriiApiServer;
 use katana_tasks::TaskManager;
+use katana_rpc::starknet::StarknetApiConfig;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing::info;
 
@@ -277,6 +278,9 @@ pub async fn spawn<EF: ExecutorFactory>(
     methods.register_method("health", |_, _| Ok(serde_json::json!({ "health": true })))?;
 
     if config.apis.contains(&ApiKind::Starknet) {
+        let starknet_api_config = StarknetApiConfig {
+            page_size: config.page_size.unwrap_or(1000), // Default value
+        };
         let server = if let Some(client) = forked_client {
             StarknetApi::new_forked(
                 backend.clone(),
@@ -284,9 +288,10 @@ pub async fn spawn<EF: ExecutorFactory>(
                 block_producer.clone(),
                 validator,
                 client,
+                starknet_api_config,
             )
         } else {
-            StarknetApi::new(backend.clone(), pool.clone(), block_producer.clone(), validator)
+            StarknetApi::new(backend.clone(), pool.clone(), block_producer.clone(), validator,starknet_api_config)
         };
 
         methods.merge(StarknetApiServer::into_rpc(server.clone()))?;

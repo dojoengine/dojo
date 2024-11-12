@@ -10,6 +10,7 @@ use std::sync::Arc;
 use forking::ForkedClient;
 use katana_core::backend::Backend;
 use katana_core::service::block_producer::{BlockProducer, BlockProducerMode, PendingExecutor};
+use katana_executor::implementation::blockifier::blockifier::blockifier::config;
 use katana_executor::{ExecutionResult, ExecutorFactory};
 use katana_pool::validation::stateful::TxValidator;
 use katana_pool::{TransactionPool, TxPool};
@@ -47,7 +48,6 @@ use katana_tasks::{BlockingTaskPool, TokioTaskSpawner};
 use starknet::core::types::{
     ContractClass, PriceUnit, ResultPageRequest, TransactionExecutionStatus, TransactionStatus,
 };
-use katana_node::config::rpc::{StarknetApiConfig, RpcConfig};
 
 use crate::utils;
 use crate::utils::events::{Cursor, EventBlockId};
@@ -59,6 +59,9 @@ pub struct StarknetApi<EF: ExecutorFactory> {
     inner: Arc<Inner<EF>>,
 }
 
+pub struct StarknetApiConfig {
+    pub page_size: u64,
+}
 
 impl<EF: ExecutorFactory> Clone for StarknetApi<EF> {
     fn clone(&self) -> Self {
@@ -82,8 +85,9 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         pool: TxPool,
         block_producer: BlockProducer<EF>,
         validator: TxValidator,
+        config: StarknetApiConfig,
     ) -> Self {
-        Self::new_inner(backend, pool, block_producer, validator, None)
+        Self::new_inner(backend, pool, block_producer, validator, None, config)
     }
 
     pub fn new_forked(
@@ -92,8 +96,9 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         block_producer: BlockProducer<EF>,
         validator: TxValidator,
         forked_client: ForkedClient,
+        config: StarknetApiConfig,
     ) -> Self {
-        Self::new_inner(backend, pool, block_producer, validator, Some(forked_client))
+        Self::new_inner(backend, pool, block_producer, validator, Some(forked_client), config)
     }
 
     fn new_inner(
@@ -102,11 +107,12 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         block_producer: BlockProducer<EF>,
         validator: TxValidator,
         forked_client: Option<ForkedClient>,
+        config: StarknetApiConfig,
     ) -> Self {
         let blocking_task_pool =
             BlockingTaskPool::new().expect("failed to create blocking task pool");
         let inner =
-            Inner { pool, backend, block_producer, blocking_task_pool, validator, forked_client, max_chunk_size: Some(1000) };
+            Inner { pool, backend, block_producer, blocking_task_pool, validator, forked_client, max_chunk_size: Some(config) };
         Self { inner: Arc::new(inner) }
     }
 
@@ -819,14 +825,15 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         let EventFilterWithPage { event_filter, result_page_request } = filter;
         let ResultPageRequest { continuation_token, chunk_size } = result_page_request;
 
-        let max_chunk_size = self.inner.max_chunk_size;
-        if chunk_size > max_chunk_size {
-            return Err(StarknetApiError::ChunkSizeTooBig {
-                requested: chunk_size,
-                maximum: max_chunk_size,
-            });
+        if let Some(config) = self.inner.max_chunk_size.as_ref() {
+            if chunk_size > config.page_size {
+                return Err(StarknetApiError::PageSizeTooBig {
+                    requested: chunk_size,
+                    max_allowed: config.page_size,
+                });
+            }
         }
-    
+        
         self.on_io_blocking_task(move |this| {
             let from = match event_filter.from_block {
                 Some(id) => id,
