@@ -32,8 +32,11 @@ pub enum StarknetApiError {
     #[error("Class hash not found")]
     ClassHashNotFound,
     #[error("Requested page size is too big")]
-    PageSizeTooBig,
-    #[error("There are no blocks")]
+    PageSizeTooBig {
+        requested: u64,
+        max_allowed: u64,
+    },
+        #[error("There are no blocks")]
     NoBlocks,
     #[error("The supplied continuation token is invalid or unknown")]
     InvalidContinuationToken,
@@ -83,8 +86,6 @@ pub enum StarknetApiError {
     TooManyKeysInFilter,
     #[error("Failed to fetch pending transactions")]
     FailedToFetchPendingTransactions,
-    #[error("Chunk Size is too big")]
-    ChunkSizeTooBig { requested: u64, maximum: u64 },
 }
 
 impl StarknetApiError {
@@ -98,7 +99,7 @@ impl StarknetApiError {
             StarknetApiError::InvalidTxnIndex => 27,
             StarknetApiError::ClassHashNotFound => 28,
             StarknetApiError::TxnHashNotFound => 29,
-            StarknetApiError::PageSizeTooBig => 31,
+            StarknetApiError::PageSizeTooBig { .. } => 31,
             StarknetApiError::NoBlocks => 32,
             StarknetApiError::InvalidContinuationToken => 33,
             StarknetApiError::TooManyKeysInFilter => 34,
@@ -120,7 +121,6 @@ impl StarknetApiError {
             StarknetApiError::UnsupportedContractClassVersion => 62,
             StarknetApiError::UnexpectedError { .. } => 63,
             StarknetApiError::ProofLimitExceeded => 10000,
-            StarknetApiError::ChunkSizeTooBig { .. } => 10001,
         }
     }
 
@@ -138,6 +138,9 @@ impl StarknetApiError {
             | StarknetApiError::ValidationFailure { reason } => {
                 Some(Value::String(reason.to_string()))
             }
+
+            StarknetRsError::PageSizeTooBig => Self::PageSizeTooBig,
+            
 
             _ => None,
         }
@@ -209,7 +212,9 @@ impl From<StarknetRsError> for StarknetApiError {
             StarknetRsError::NoBlocks => Self::NoBlocks,
             StarknetRsError::NonAccount => Self::NonAccount,
             StarknetRsError::BlockNotFound => Self::BlockNotFound,
-            StarknetRsError::PageSizeTooBig => Self::PageSizeTooBig,
+            StarknetRsError::PageSizeTooBig { requested, max_allowed } => {
+                Self::PageSizeTooBig { requested, max_allowed }
+            }
             StarknetRsError::DuplicateTx => Self::DuplicateTransaction,
             StarknetRsError::ContractNotFound => Self::ContractNotFound,
             StarknetRsError::CompilationFailed => Self::CompilationFailed,

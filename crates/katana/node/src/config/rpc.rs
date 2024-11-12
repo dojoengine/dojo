@@ -25,6 +25,12 @@ pub struct RpcConfig {
     pub max_connections: u32,
     pub allowed_origins: Option<Vec<String>>,
     pub apis: HashSet<ApiKind>,
+    pub page_size: Option<StarknetApiConfig>
+}
+
+#[derive(Debug, Clone)]
+pub struct StarknetApiConfig {
+    pub page_size: u64,
 }
 
 impl RpcConfig {
@@ -42,6 +48,7 @@ impl Default for RpcConfig {
             port: DEFAULT_RPC_PORT,
             max_connections: DEFAULT_RPC_MAX_CONNECTIONS,
             apis: HashSet::from([ApiKind::Starknet]),
+            page_size: None,
         }
     }
 }

@@ -47,6 +47,7 @@ use katana_tasks::{BlockingTaskPool, TokioTaskSpawner};
 use starknet::core::types::{
     ContractClass, PriceUnit, ResultPageRequest, TransactionExecutionStatus, TransactionStatus,
 };
+use katana_node::config::rpc::{StarknetApiConfig, RpcConfig};
 
 use crate::utils;
 use crate::utils::events::{Cursor, EventBlockId};
@@ -57,6 +58,7 @@ pub type StarknetApiResult<T> = Result<T, StarknetApiError>;
 pub struct StarknetApi<EF: ExecutorFactory> {
     inner: Arc<Inner<EF>>,
 }
+
 
 impl<EF: ExecutorFactory> Clone for StarknetApi<EF> {
     fn clone(&self) -> Self {
@@ -71,7 +73,7 @@ struct Inner<EF: ExecutorFactory> {
     block_producer: BlockProducer<EF>,
     blocking_task_pool: BlockingTaskPool,
     forked_client: Option<ForkedClient>,
-    max_chunk_size: u64,
+    max_chunk_size: Option<StarknetApiConfig>,
 }
 
 impl<EF: ExecutorFactory> StarknetApi<EF> {
@@ -104,7 +106,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         let blocking_task_pool =
             BlockingTaskPool::new().expect("failed to create blocking task pool");
         let inner =
-            Inner { pool, backend, block_producer, blocking_task_pool, validator, forked_client, max_chunk_size: 1000 };
+            Inner { pool, backend, block_producer, blocking_task_pool, validator, forked_client, max_chunk_size: Some(1000) };
         Self { inner: Arc::new(inner) }
     }
 
