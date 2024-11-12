@@ -4,7 +4,7 @@ use std::collections::HashSet;
 use std::path::PathBuf;
 
 use alloy_primitives::U256;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::Parser;
 use katana_core::constants::DEFAULT_SEQUENCER_ADDRESS;
 use katana_core::service::messaging::MessagingConfig;
@@ -19,9 +19,15 @@ use katana_primitives::chain_spec::{self, ChainSpec};
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
 use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
 use serde::{Deserialize, Serialize};
+use tracing::{info, Subscriber};
+use tracing_log::LogTracer;
+use tracing_subscriber::{fmt, EnvFilter};
 
-use super::options::*;
-use crate::utils::parse_seed;
+use crate::options::*;
+use crate::utils;
+use crate::utils::{parse_seed, LogFormat};
+
+pub(crate) const LOG_TARGET: &str = "katana::cli";
 
 #[derive(Parser, Debug, Serialize, Deserialize, Default)]
 pub struct NodeArgs {
@@ -107,6 +113,69 @@ pub struct NodeArgsConfig {
 }
 
 impl NodeArgs {
+    pub fn execute(&self) -> Result<()> {
+        self.init_logging()?;
+        tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .build()
+            .context("failed to build tokio runtime")?
+            .block_on(self.start_node())
+    }
+
+    async fn start_node(&self) -> Result<()> {
+        // Build the node
+        let config = self.config()?;
+        let node = katana_node::build(config).await.context("failed to build node")?;
+
+        if !self.silent {
+            utils::print_intro(self, &node.backend.chain_spec);
+        }
+
+        // Launch the node
+        let handle = node.launch().await.context("failed to launch node")?;
+
+        // Wait until an OS signal (ie SIGINT, SIGTERM) is received or the node is shutdown.
+        tokio::select! {
+            _ = dojo_utils::signal::wait_signals() => {
+                // Gracefully shutdown the node before exiting
+                handle.stop().await?;
+            },
+
+            _ = handle.stopped() => { }
+        }
+
+        info!("Shutting down.");
+
+        Ok(())
+    }
+
+    fn init_logging(&self) -> Result<()> {
+        const DEFAULT_LOG_FILTER: &str = "info,tasks=debug,executor=trace,forking::backend=trace,\
+                                          blockifier=off,jsonrpsee_server=off,hyper=off,\
+                                          messaging=debug,node=error";
+
+        let filter = if self.development.dev {
+            &format!("{DEFAULT_LOG_FILTER},server=debug")
+        } else {
+            DEFAULT_LOG_FILTER
+        };
+
+        LogTracer::init()?;
+
+        // If the user has set the `RUST_LOG` environment variable, then we prioritize it.
+        // Otherwise, we use the default log filter.
+        // TODO: change env var to `KATANA_LOG`.
+        let filter = EnvFilter::try_from_default_env().or(EnvFilter::try_new(filter))?;
+        let builder = fmt::Subscriber::builder().with_env_filter(filter);
+
+        let subscriber: Box<dyn Subscriber + Send + Sync> = match self.logging.log_format {
+            LogFormat::Full => Box::new(builder.finish()),
+            LogFormat::Json => Box::new(builder.json().finish()),
+        };
+
+        Ok(tracing::subscriber::set_global_default(subscriber)?)
+    }
+
     pub fn config(&self) -> Result<katana_node::config::Config> {
         let db = self.db_config();
         let rpc = self.rpc_config();

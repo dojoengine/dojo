@@ -8069,19 +8069,11 @@ dependencies = [
  "clap",
  "clap_complete",
  "comfy-table",
- "console",
- "dojo-utils",
  "katana-cli",
  "katana-db",
  "katana-node",
- "katana-primitives",
- "serde_json",
  "shellexpand",
  "starknet 0.12.0",
- "tokio",
- "tracing",
- "tracing-log 0.1.4",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -8108,14 +8100,21 @@ dependencies = [
  "assert_matches",
  "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome?rev=5c2616c273faca7700d2ba565503fcefb5b9d720)",
  "clap",
+ "console",
+ "dojo-utils",
  "katana-core",
  "katana-node",
  "katana-primitives",
  "katana-slot-controller",
  "serde",
+ "serde_json",
  "shellexpand",
  "starknet 0.12.0",
+ "tokio",
  "toml 0.8.19",
+ "tracing",
+ "tracing-log 0.1.4",
+ "tracing-subscriber",
  "url",
 ]
 
@@ -12822,9 +12821,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.128"
+version = "1.0.132"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6ff5456707a1de34e7e37f2a6fd3d3f808c318259cbd01ab6377795054b483d8"
+checksum = "d726bfaff4b320266d395898905d0eba0345aae23b54aee3a737e260fd46db03"
 dependencies = [
  "itoa",
  "memchr",

@@ -6,6 +6,7 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
+dojo-utils.workspace = true
 katana-core.workspace = true
 katana-node.workspace = true
 katana-primitives.workspace = true
@@ -15,9 +16,15 @@ alloy-primitives.workspace = true
 anyhow.workspace = true
 cainome-cairo-serde.workspace = true
 clap.workspace = true
+console.workspace = true
 serde.workspace = true
+serde_json = "1.0.132"
 shellexpand = "3.1.0"
+tokio.workspace = true
 toml.workspace = true
+tracing.workspace = true
+tracing-log.workspace = true
+tracing-subscriber.workspace = true
 url.workspace = true
 
 [dev-dependencies]
@@ -27,3 +34,4 @@ starknet.workspace = true
 [features]
 default = [ "slot" ]
 slot = [ "dep:katana-slot-controller", "katana-primitives/slot" ]
+starknet-messaging = [ "katana-node/starknet-messaging" ]
