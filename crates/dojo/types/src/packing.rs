@@ -321,7 +321,7 @@ mod tests {
     #[test]
     fn parse_simple_with_valid_value() {
         let data = [cairo_short_string_to_felt("u8").unwrap()];
-        assert_eq!(parse_simple(&data).unwrap(), Ty::Primitive(Primitive::U8(None)));
+        assert_eq!(parse_simple(&data).unwrap(), Ty::Primitive(Primitive::U8(0)));
     }
 
     #[test]

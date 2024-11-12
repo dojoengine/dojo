@@ -126,7 +126,7 @@ impl Ty {
         fn serialize_inner(ty: &Ty, felts: &mut Vec<Felt>) -> Result<(), PrimitiveError> {
             match ty {
                 Ty::Primitive(c) => {
-                    felts.extend(c.serialize()?);
+                    felts.extend(c.serialize());
                 }
                 Ty::Struct(s) => {
                     for child in &s.children {
@@ -151,7 +151,7 @@ impl Ty {
                 }
                 Ty::Array(items_ty) => {
                     let _ = serialize_inner(
-                        &Ty::Primitive(Primitive::U32(Some(items_ty.len().try_into().unwrap()))),
+                        &Ty::Primitive(Primitive::U32(items_ty.len().try_into().unwrap())),
                         felts,
                     );
                     for item_ty in items_ty {
@@ -400,7 +400,7 @@ pub enum EnumError {
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Hash, Eq)]
 pub struct Enum {
     pub name: String,
-    pub option: Option<u8>,
+    pub option: u8,
     pub options: Vec<EnumOption>,
 }
 
@@ -450,84 +450,52 @@ fn format_member(m: &Member) -> String {
     if let Ty::Primitive(ty) = &m.ty {
         match ty {
             Primitive::I8(value) => {
-                if let Some(value) = value {
-                    str.push_str(&format!(" = {}", value));
-                }
+                str.push_str(&format!(" = {}", value));
             }
             Primitive::I16(value) => {
-                if let Some(value) = value {
-                    str.push_str(&format!(" = {}", value));
-                }
+                str.push_str(&format!(" = {}", value));
             }
             Primitive::I32(value) => {
-                if let Some(value) = value {
-                    str.push_str(&format!(" = {}", value));
-                }
+                str.push_str(&format!(" = {}", value));
             }
             Primitive::I64(value) => {
-                if let Some(value) = value {
-                    str.push_str(&format!(" = {}", value));
-                }
+                str.push_str(&format!(" = {}", value));
             }
             Primitive::I128(value) => {
-                if let Some(value) = value {
-                    str.push_str(&format!(" = {}", value));
-                }
+                str.push_str(&format!(" = {}", value));
             }
             Primitive::U8(value) => {
-                if let Some(value) = value {
-                    str.push_str(&format!(" = {}", value));
-                }
+                str.push_str(&format!(" = {}", value));
             }
             Primitive::U16(value) => {
-                if let Some(value) = value {
-                    str.push_str(&format!(" = {}", value));
-                }
+                str.push_str(&format!(" = {}", value));
             }
             Primitive::U32(value) => {
-                if let Some(value) = value {
-                    str.push_str(&format!(" = {}", value));
-                }
+                str.push_str(&format!(" = {}", value));
             }
             Primitive::U64(value) => {
-                if let Some(value) = value {
-                    str.push_str(&format!(" = {}", value));
-                }
+                str.push_str(&format!(" = {}", value));
             }
             Primitive::U128(value) => {
-                if let Some(value) = value {
-                    str.push_str(&format!(" = {}", value));
-                }
+                str.push_str(&format!(" = {}", value));
             }
             Primitive::U256(value) => {
-                if let Some(value) = value {
-                    str.push_str(&format!(" = {}", value));
-                }
+                str.push_str(&format!(" = {}", value));
             }
             Primitive::USize(value) => {
-                if let Some(value) = value {
-                    str.push_str(&format!(" = {}", value));
-                }
+                str.push_str(&format!(" = {}", value));
             }
             Primitive::Bool(value) => {
-                if let Some(value) = value {
-                    str.push_str(&format!(" = {}", value));
-                }
+                str.push_str(&format!(" = {}", value));
             }
             Primitive::Felt252(value) => {
-                if let Some(value) = value {
-                    str.push_str(&format!(" = {:#x}", value));
-                }
+                str.push_str(&format!(" = {:#x}", value));
             }
             Primitive::ClassHash(value) => {
-                if let Some(value) = value {
-                    str.push_str(&format!(" = {:#x}", value));
-                }
+                str.push_str(&format!(" = {:#x}", value));
             }
             Primitive::ContractAddress(value) => {
-                if let Some(value) = value {
-                    str.push_str(&format!(" = {:#x}", value));
-                }
+                str.push_str(&format!(" = {:#x}", value));
             }
         }
     } else if let Ty::Enum(e) = &m.ty {
@@ -554,7 +522,7 @@ mod tests {
             (
                 Member {
                     name: "i8_field".to_string(),
-                    ty: Ty::Primitive(Primitive::I8(Some(-42))),
+                    ty: Ty::Primitive(Primitive::I8(-42)),
                     key: false,
                 },
                 "  i8_field: i8 = -42",
@@ -562,7 +530,7 @@ mod tests {
             (
                 Member {
                     name: "i16_field".to_string(),
-                    ty: Ty::Primitive(Primitive::I16(Some(-1000))),
+                    ty: Ty::Primitive(Primitive::I16(-1000)),
                     key: false,
                 },
                 "  i16_field: i16 = -1000",
@@ -570,7 +538,7 @@ mod tests {
             (
                 Member {
                     name: "i32_field".to_string(),
-                    ty: Ty::Primitive(Primitive::I32(Some(-100000))),
+                    ty: Ty::Primitive(Primitive::I32(-100000)),
                     key: false,
                 },
                 "  i32_field: i32 = -100000",
@@ -578,7 +546,7 @@ mod tests {
             (
                 Member {
                     name: "i64_field".to_string(),
-                    ty: Ty::Primitive(Primitive::I64(Some(-1000000000))),
+                    ty: Ty::Primitive(Primitive::I64(-1000000000)),
                     key: false,
                 },
                 "  i64_field: i64 = -1000000000",
@@ -586,7 +554,7 @@ mod tests {
             (
                 Member {
                     name: "i128_field".to_string(),
-                    ty: Ty::Primitive(Primitive::I128(Some(-1000000000000000000))),
+                    ty: Ty::Primitive(Primitive::I128(-1000000000000000000)),
                     key: false,
                 },
                 "  i128_field: i128 = -1000000000000000000",
@@ -594,7 +562,7 @@ mod tests {
             (
                 Member {
                     name: "u8_field".to_string(),
-                    ty: Ty::Primitive(Primitive::U8(Some(255))),
+                    ty: Ty::Primitive(Primitive::U8(255)),
                     key: false,
                 },
                 "  u8_field: u8 = 255",
@@ -602,7 +570,7 @@ mod tests {
             (
                 Member {
                     name: "u16_field".to_string(),
-                    ty: Ty::Primitive(Primitive::U16(Some(65535))),
+                    ty: Ty::Primitive(Primitive::U16(65535)),
                     key: false,
                 },
                 "  u16_field: u16 = 65535",
@@ -610,7 +578,7 @@ mod tests {
             (
                 Member {
                     name: "u32_field".to_string(),
-                    ty: Ty::Primitive(Primitive::U32(Some(4294967295))),
+                    ty: Ty::Primitive(Primitive::U32(4294967295)),
                     key: false,
                 },
                 "  u32_field: u32 = 4294967295",
@@ -618,7 +586,7 @@ mod tests {
             (
                 Member {
                     name: "u64_field".to_string(),
-                    ty: Ty::Primitive(Primitive::U64(Some(18446744073709551615))),
+                    ty: Ty::Primitive(Primitive::U64(18446744073709551615)),
                     key: false,
                 },
                 "  u64_field: u64 = 18446744073709551615",
@@ -626,9 +594,7 @@ mod tests {
             (
                 Member {
                     name: "u128_field".to_string(),
-                    ty: Ty::Primitive(Primitive::U128(Some(
-                        340282366920938463463374607431768211455,
-                    ))),
+                    ty: Ty::Primitive(Primitive::U128(340282366920938463463374607431768211455)),
                     key: false,
                 },
                 "  u128_field: u128 = 340282366920938463463374607431768211455",
@@ -636,7 +602,7 @@ mod tests {
             (
                 Member {
                     name: "u256_field".to_string(),
-                    ty: Ty::Primitive(Primitive::U256(Some(U256::from_u128(123456789_u128)))),
+                    ty: Ty::Primitive(Primitive::U256(U256::from_u128(123456789_u128))),
                     key: false,
                 },
                 "  u256_field: u256 = \
@@ -645,7 +611,7 @@ mod tests {
             (
                 Member {
                     name: "bool_field".to_string(),
-                    ty: Ty::Primitive(Primitive::Bool(Some(true))),
+                    ty: Ty::Primitive(Primitive::Bool(true)),
                     key: false,
                 },
                 "  bool_field: bool = true",
@@ -653,9 +619,7 @@ mod tests {
             (
                 Member {
                     name: "felt252_field".to_string(),
-                    ty: Ty::Primitive(Primitive::Felt252(Some(
-                        Felt::from_hex("0x123abc").unwrap(),
-                    ))),
+                    ty: Ty::Primitive(Primitive::Felt252(Felt::from_hex("0x123abc").unwrap())),
                     key: false,
                 },
                 "  felt252_field: felt252 = 0x123abc",
@@ -690,17 +654,17 @@ mod tests {
             children: vec![
                 Member {
                     name: "field1".to_string(),
-                    ty: Ty::Primitive(Primitive::U32(None)),
+                    ty: Ty::Primitive(Primitive::U32(0)),
                     key: false,
                 },
                 Member {
                     name: "field2".to_string(),
-                    ty: Ty::Primitive(Primitive::U32(None)),
+                    ty: Ty::Primitive(Primitive::U32(0)),
                     key: false,
                 },
                 Member {
                     name: "field3".to_string(),
-                    ty: Ty::Primitive(Primitive::U32(None)),
+                    ty: Ty::Primitive(Primitive::U32(0)),
                     key: false,
                 },
             ],
@@ -710,7 +674,7 @@ mod tests {
             name: "TestStruct".to_string(),
             children: vec![Member {
                 name: "field1".to_string(),
-                ty: Ty::Primitive(Primitive::U32(None)),
+                ty: Ty::Primitive(Primitive::U32(0)),
                 key: false,
             }],
         });
