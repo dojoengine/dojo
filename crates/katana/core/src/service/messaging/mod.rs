@@ -51,7 +51,7 @@ use futures::StreamExt;
 use katana_executor::ExecutorFactory;
 use katana_primitives::chain::ChainId;
 use katana_primitives::receipt::MessageToL1;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use tracing::{error, info};
 
 pub use self::service::{MessagingOutcome, MessagingService};
@@ -94,7 +94,7 @@ impl From<TransportError> for Error {
 }
 
 /// The config used to initialize the messaging service.
-#[derive(Debug, Default, Deserialize, Clone)]
+#[derive(Debug, Default, Deserialize, Clone, Serialize)]
 pub struct MessagingConfig {
     /// The settlement chain.
     pub chain: String,

@@ -13,9 +13,9 @@ pub trait ModelValueParser<V> {
 pub trait ModelValue<V> {
     /// Returns a span of values associated with the entity, every field of a model
     /// that is not a key.
-    fn values(self: @V) -> Span<felt252>;
+    fn serialized_values(self: @V) -> Span<felt252>;
     /// Constructs a model value from its identifier and values.
-    fn from_values(entity_id: felt252, ref values: Span<felt252>) -> Option<V>;
+    fn from_serialized(values: Span<felt252>) -> Option<V>;
     /// Returns the name of the model value type.
     fn name() -> ByteArray;
     /// Returns the layout of the model value type.
@@ -27,15 +27,12 @@ pub trait ModelValue<V> {
 }
 
 pub impl ModelValueImpl<V, +Serde<V>, +ModelDefinition<V>, +ModelValueParser<V>> of ModelValue<V> {
-    fn values(self: @V) -> Span<felt252> {
+    fn serialized_values(self: @V) -> Span<felt252> {
         ModelValueParser::<V>::serialize_values(self)
     }
 
-    fn from_values(entity_id: felt252, ref values: Span<felt252>) -> Option<V> {
-        let mut serialized: Array<felt252> = array![];
-        serialized.append_span(values);
-        let mut span = serialized.span();
-        Serde::<V>::deserialize(ref span)
+    fn from_serialized(mut values: Span<felt252>) -> Option<V> {
+        Serde::<V>::deserialize(ref values)
     }
 
     fn name() -> ByteArray {

@@ -55,7 +55,7 @@ edition = "2021"
 license = "Apache-2.0"
 license-file = "LICENSE"
 repository = "https://github.com/dojoengine/dojo/"
-version = "1.0.0-rc.1"
+version = "1.0.0"
 
 [profile.performance]
 codegen-units = 1
@@ -65,6 +65,7 @@ lto = "fat"
 
 [workspace.dependencies]
 cainome = { git = "https://github.com/cartridge-gg/cainome", rev = "5c2616c273faca7700d2ba565503fcefb5b9d720", features = [ "abigen-rs" ] }
+cainome-cairo-serde = { git = "https://github.com/cartridge-gg/cainome", rev = "5c2616c273faca7700d2ba565503fcefb5b9d720" }
 dojo-utils = { path = "crates/dojo/utils" }
 
 # metrics
@@ -192,8 +193,8 @@ rpassword = "7.2.0"
 rstest = "0.18.2"
 rstest_reuse = "0.6.0"
 salsa = "0.16.1"
-scarb = { git = "https://github.com/dojoengine/scarb", rev = "b9965b7e2f0d97f2a97f18ca9a75bac541de7d84" }
-scarb-ui = { git = "https://github.com/dojoengine/scarb", rev = "b9965b7e2f0d97f2a97f18ca9a75bac541de7d84" }
+scarb = { git = "https://github.com/dojoengine/scarb", rev = "7eac49b3e61236ce466e712225d9c989f9db1ef3" }
+scarb-ui = { git = "https://github.com/dojoengine/scarb", rev = "7eac49b3e61236ce466e712225d9c989f9db1ef3" }
 semver = "1.0.5"
 serde = { version = "1.0", features = [ "derive" ] }
 serde_json = { version = "1.0", features = [ "arbitrary_precision" ] }

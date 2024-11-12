@@ -15,7 +15,7 @@ use starknet::providers::Provider;
 use tokio_util::bytes::Bytes;
 use tracing::{error, info};
 
-use super::EventProcessor;
+use super::{EventProcessor, EventProcessorConfig};
 use crate::sql::Sql;
 
 const IPFS_URL: &str = "https://cartridge.infura-ipfs.io/ipfs/";
@@ -47,6 +47,7 @@ where
         block_timestamp: u64,
         _event_id: &str,
         event: &Event,
+        _config: &EventProcessorConfig,
     ) -> Result<(), Error> {
         // Torii version is coupled to the world version, so we can expect the event to be well
         // formed.

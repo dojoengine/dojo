@@ -8,7 +8,6 @@ version.workspace = true
 [dependencies]
 anyhow.workspace = true
 async-trait.workspace = true
-bigdecimal = "0.4.5"
 cainome.workspace = true
 colored.workspace = true
 colored_json.workspace = true

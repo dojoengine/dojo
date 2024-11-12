@@ -9,7 +9,7 @@ use tracing::debug;
 
 use crate::commands::check_package_dojo_version;
 
-#[derive(Debug, Args)]
+#[derive(Debug, Clone, Args)]
 pub struct BuildArgs {
     #[arg(long)]
     #[arg(help = "Generate Typescript bindings.")]

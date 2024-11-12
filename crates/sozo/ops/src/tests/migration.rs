@@ -31,7 +31,7 @@ async fn setup_migration(
     let world_local = ws.load_world_local().unwrap();
     let world_address = world_local.deterministic_world_address().unwrap();
 
-    let world_diff = WorldDiff::new_from_chain(world_address, world_local, &provider).await?;
+    let world_diff = WorldDiff::new_from_chain(world_address, world_local, &provider, None).await?;
 
     Ok(world_diff)
 }
