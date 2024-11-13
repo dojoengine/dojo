@@ -137,11 +137,7 @@ impl StarknetApiError {
                 Some(Value::String(reason.to_string()))
             }
 
-            StarknetApiError::PageSizeTooBig { requested, max_allowed } => Some(json!({
-                "requested": requested,
-                "max_allowed": max_allowed
-            })),
-
+            StarknetApiError::PageSizeTooBig { requested, max_allowed } => Some(serde_json::json!(self)),
             _ => None,
         }
     }
