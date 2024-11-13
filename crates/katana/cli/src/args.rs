@@ -1,14 +1,4 @@
-//! Katana binary executable.
-//!
-//! ## Feature Flags
-//!
-//! - `jemalloc`: Uses [jemallocator](https://github.com/tikv/jemallocator) as the global allocator.
-//!   This is **not recommended on Windows**. See [here](https://rust-lang.github.io/rfcs/1974-global-allocators.html#jemalloc)
-//!   for more info.
-//! - `jemalloc-prof`: Enables [jemallocator's](https://github.com/tikv/jemallocator) heap profiling
-//!   and leak detection functionality. See [jemalloc's opt.prof](https://jemalloc.net/jemalloc.3.html#opt.prof)
-//!   documentation for usage details. This is **not recommended on Windows**. See [here](https://rust-lang.github.io/rfcs/1974-global-allocators.html#jemalloc)
-//!   for more info.
+//! Katana node CLI options and configuration.
 
 use std::collections::HashSet;
 use std::path::PathBuf;
@@ -16,7 +6,6 @@ use std::path::PathBuf;
 use alloy_primitives::U256;
 use anyhow::{Context, Result};
 use clap::Parser;
-use console::Style;
 use katana_core::constants::DEFAULT_SEQUENCER_ADDRESS;
 use katana_core::service::messaging::MessagingConfig;
 use katana_node::config::db::DbConfig;
@@ -27,22 +16,22 @@ use katana_node::config::metrics::MetricsConfig;
 use katana_node::config::rpc::{ApiKind, RpcConfig};
 use katana_node::config::{Config, SequencingConfig};
 use katana_primitives::chain_spec::{self, ChainSpec};
-use katana_primitives::class::ClassHash;
-use katana_primitives::contract::ContractAddress;
-use katana_primitives::genesis::allocation::{DevAllocationsGenerator, GenesisAccountAlloc};
-use katana_primitives::genesis::constant::{
-    DEFAULT_LEGACY_ERC20_CLASS_HASH, DEFAULT_LEGACY_UDC_CLASS_HASH,
-    DEFAULT_PREFUNDED_ACCOUNT_BALANCE, DEFAULT_UDC_ADDRESS,
-};
+use katana_primitives::genesis::allocation::DevAllocationsGenerator;
+use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
 use serde::{Deserialize, Serialize};
 use tracing::{info, Subscriber};
 use tracing_log::LogTracer;
 use tracing_subscriber::{fmt, EnvFilter};
 
-use super::options::*;
+use crate::file::NodeArgsConfig;
+use crate::options::*;
+use crate::utils;
 use crate::utils::{parse_seed, LogFormat};
 
-#[derive(Parser, Debug, Serialize, Deserialize, Default)]
+pub(crate) const LOG_TARGET: &str = "katana::cli";
+
+#[derive(Parser, Debug, Serialize, Deserialize, Default, Clone)]
+#[command(next_help_heading = "Node options")]
 pub struct NodeArgs {
     /// Don't print anything on startup.
     #[arg(long)]
@@ -66,6 +55,10 @@ pub struct NodeArgs {
     #[arg(value_name = "PATH")]
     pub db_dir: Option<PathBuf>,
 
+    /// Configuration file
+    #[arg(long)]
+    config: Option<PathBuf>,
+
     /// Configure the messaging with an other chain.
     ///
     /// Configure the messaging to allow Katana listening/sending messages on a
@@ -78,9 +71,11 @@ pub struct NodeArgs {
     #[command(flatten)]
     pub logging: LoggingOptions,
 
+    #[cfg(feature = "server")]
     #[command(flatten)]
     pub metrics: MetricsOptions,
 
+    #[cfg(feature = "server")]
     #[command(flatten)]
     pub server: ServerOptions,
 
@@ -99,36 +94,10 @@ pub struct NodeArgs {
     #[cfg(feature = "slot")]
     #[command(flatten)]
     pub slot: SlotOptions,
-
-    /// Configuration file
-    #[arg(long)]
-    config: Option<PathBuf>,
 }
-
-#[derive(Debug, Serialize, Deserialize, Default)]
-pub struct NodeArgsConfig {
-    pub silent: Option<bool>,
-    pub no_mining: Option<bool>,
-    pub block_time: Option<u64>,
-    pub db_dir: Option<PathBuf>,
-    pub messaging: Option<MessagingConfig>,
-    pub logging: Option<LoggingOptions>,
-    pub metrics: Option<MetricsOptions>,
-    pub server: Option<ServerOptions>,
-    pub starknet: Option<StarknetOptions>,
-    pub gpo: Option<GasPriceOracleOptions>,
-    pub forking: Option<ForkingOptions>,
-    #[serde(rename = "dev")]
-    pub development: Option<DevOptions>,
-
-    #[cfg(feature = "slot")]
-    pub slot: Option<SlotOptions>,
-}
-
-pub(crate) const LOG_TARGET: &str = "katana::cli";
 
 impl NodeArgs {
-    pub fn execute(self) -> Result<()> {
+    pub fn execute(&self) -> Result<()> {
         self.init_logging()?;
         tokio::runtime::Builder::new_multi_thread()
             .enable_all()
@@ -137,13 +106,13 @@ impl NodeArgs {
             .block_on(self.start_node())
     }
 
-    async fn start_node(self) -> Result<()> {
+    async fn start_node(&self) -> Result<()> {
         // Build the node
         let config = self.config()?;
         let node = katana_node::build(config).await.context("failed to build node")?;
 
         if !self.silent {
-            print_intro(&self, &node.backend.chain_spec);
+            utils::print_intro(self, &node.backend.chain_spec);
         }
 
         // Launch the node
@@ -191,7 +160,7 @@ impl NodeArgs {
         Ok(tracing::subscriber::set_global_default(subscriber)?)
     }
 
-    fn config(&self) -> Result<katana_node::config::Config> {
+    pub fn config(&self) -> Result<katana_node::config::Config> {
         let db = self.db_config();
         let rpc = self.rpc_config();
         let dev = self.dev_config();
@@ -216,12 +185,20 @@ impl NodeArgs {
             apis.insert(ApiKind::Dev);
         }
 
-        RpcConfig {
-            apis,
-            port: self.server.http_port,
-            addr: self.server.http_addr,
-            max_connections: self.server.max_connections,
-            cors_origins: self.server.http_cors_origins.clone(),
+        #[cfg(feature = "server")]
+        {
+            RpcConfig {
+                apis,
+                port: self.server.http_port,
+                addr: self.server.http_addr,
+                max_connections: self.server.max_connections,
+                cors_origins: self.server.http_cors_origins.clone(),
+            }
+        }
+
+        #[cfg(not(feature = "server"))]
+        {
+            RpcConfig { apis, ..Default::default() }
         }
     }
 
@@ -306,18 +283,22 @@ impl NodeArgs {
     }
 
     fn metrics_config(&self) -> Option<MetricsConfig> {
+        #[cfg(feature = "server")]
         if self.metrics.metrics {
             Some(MetricsConfig { addr: self.metrics.metrics_addr, port: self.metrics.metrics_port })
         } else {
             None
         }
+
+        #[cfg(not(feature = "server"))]
+        None
     }
 
     /// Parse the node config from the command line arguments and the config file,
     /// and merge them together prioritizing the command line arguments.
     pub fn with_config_file(mut self) -> Result<Self> {
-        let config: NodeArgsConfig = if let Some(path) = &self.config {
-            toml::from_str(&std::fs::read_to_string(path)?)?
+        let config = if let Some(path) = &self.config {
+            NodeArgsConfig::read(path)?
         } else {
             return Ok(self);
         };
@@ -325,10 +306,6 @@ impl NodeArgs {
         // the CLI (self) takes precedence over the config file.
         // Currently, the merge is made at the top level of the commands.
         // We may add recursive merging in the future.
-
-        if !self.silent {
-            self.silent = config.silent.unwrap_or_default();
-        }
 
         if !self.no_mining {
             self.no_mining = config.no_mining.unwrap_or_default();
@@ -348,15 +325,18 @@ impl NodeArgs {
             }
         }
 
-        if self.metrics == MetricsOptions::default() {
-            if let Some(metrics) = config.metrics {
-                self.metrics = metrics;
+        #[cfg(feature = "server")]
+        {
+            if self.server == ServerOptions::default() {
+                if let Some(server) = config.server {
+                    self.server = server;
+                }
             }
-        }
 
-        if self.server == ServerOptions::default() {
-            if let Some(server) = config.server {
-                self.server = server;
+            if self.metrics == MetricsOptions::default() {
+                if let Some(metrics) = config.metrics {
+                    self.metrics = metrics;
+                }
             }
         }
 
@@ -375,126 +355,7 @@ impl NodeArgs {
             }
         }
 
-        #[cfg(feature = "slot")]
-        if self.slot == SlotOptions::default() {
-            if let Some(slot) = config.slot {
-                self.slot = slot;
-            }
-        }
-
         Ok(self)
-    }
-}
-
-fn print_intro(args: &NodeArgs, chain: &ChainSpec) {
-    let mut accounts = chain.genesis.accounts().peekable();
-    let account_class_hash = accounts.peek().map(|e| e.1.class_hash());
-    let seed = &args.development.seed;
-
-    if args.logging.log_format == LogFormat::Json {
-        info!(
-            target: LOG_TARGET,
-            "{}",
-            serde_json::json!({
-                "accounts": accounts.map(|a| serde_json::json!(a)).collect::<Vec<_>>(),
-                "seed": format!("{}", seed),
-            })
-        )
-    } else {
-        println!(
-            "{}",
-            Style::new().red().apply_to(
-                r"
-
-
-██╗  ██╗ █████╗ ████████╗ █████╗ ███╗   ██╗ █████╗
-██║ ██╔╝██╔══██╗╚══██╔══╝██╔══██╗████╗  ██║██╔══██╗
-█████╔╝ ███████║   ██║   ███████║██╔██╗ ██║███████║
-██╔═██╗ ██╔══██║   ██║   ██╔══██║██║╚██╗██║██╔══██║
-██║  ██╗██║  ██║   ██║   ██║  ██║██║ ╚████║██║  ██║
-╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝
-"
-            )
-        );
-
-        print_genesis_contracts(chain, account_class_hash);
-        print_genesis_accounts(accounts);
-
-        println!(
-            r"
-
-ACCOUNTS SEED
-=============
-{seed}
-    "
-        );
-    }
-}
-
-fn print_genesis_contracts(chain: &ChainSpec, account_class_hash: Option<ClassHash>) {
-    println!(
-        r"
-PREDEPLOYED CONTRACTS
-==================
-
-| Contract        | ETH Fee Token
-| Address         | {}
-| Class Hash      | {:#064x}
-
-| Contract        | STRK Fee Token
-| Address         | {}
-| Class Hash      | {:#064x}",
-        chain.fee_contracts.eth,
-        DEFAULT_LEGACY_ERC20_CLASS_HASH,
-        chain.fee_contracts.strk,
-        DEFAULT_LEGACY_ERC20_CLASS_HASH
-    );
-
-    println!(
-        r"
-| Contract        | Universal Deployer
-| Address         | {}
-| Class Hash      | {:#064x}",
-        DEFAULT_UDC_ADDRESS, DEFAULT_LEGACY_UDC_CLASS_HASH
-    );
-
-    if let Some(hash) = account_class_hash {
-        println!(
-            r"
-| Contract        | Account Contract
-| Class Hash      | {hash:#064x}"
-        )
-    }
-}
-
-fn print_genesis_accounts<'a, Accounts>(accounts: Accounts)
-where
-    Accounts: Iterator<Item = (&'a ContractAddress, &'a GenesisAccountAlloc)>,
-{
-    println!(
-        r"
-
-PREFUNDED ACCOUNTS
-=================="
-    );
-
-    for (addr, account) in accounts {
-        if let Some(pk) = account.private_key() {
-            println!(
-                r"
-| Account address |  {addr}
-| Private key     |  {pk:#x}
-| Public key      |  {:#x}",
-                account.public_key()
-            )
-        } else {
-            println!(
-                r"
-| Account address |  {addr}
-| Public key      |  {:#x}",
-                account.public_key()
-            )
-        }
     }
 }
 
@@ -511,7 +372,7 @@ mod test {
         DEFAULT_INVOCATION_MAX_STEPS, DEFAULT_VALIDATION_MAX_STEPS,
     };
     use katana_primitives::chain::ChainId;
-    use katana_primitives::{address, felt, Felt};
+    use katana_primitives::{address, felt, ContractAddress, Felt};
 
     use super::*;
 
@@ -644,7 +505,7 @@ mod test {
         let config = NodeArgs::parse_from([
             "katana",
             "--genesis",
-            "./tests/test-data/genesis.json",
+            "./test-data/genesis.json",
             "--gpo.l1-eth-gas-price",
             "100",
             "--gpo.l1-strk-gas-price",
@@ -700,7 +561,7 @@ chain_id.Named = "Mainnet"
             "--config",
             path_str.as_str(),
             "--genesis",
-            "./tests/test-data/genesis.json",
+            "./test-data/genesis.json",
             "--validate-max-steps",
             "1234",
             "--dev",
