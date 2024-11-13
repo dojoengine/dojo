@@ -65,7 +65,7 @@ fn graphql_filter(
     };
 
     let playground_filter = warp::path("graphql").map(move || {
-        warp::reply::html(GraphiQLSource::build().endpoint("/").subscription_endpoint(subscription_endpoint.as_str()).finish())
+        warp::reply::html(GraphiQLSource::build().endpoint("/graphql").subscription_endpoint(subscription_endpoint.as_str()).finish())
     });
 
     graphql_subscription(schema).or(graphql_post).or(playground_filter)
