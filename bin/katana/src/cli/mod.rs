@@ -1,10 +1,9 @@
 mod db;
-mod node;
-mod options;
 
 use anyhow::Result;
 use clap::{Args, CommandFactory, Parser, Subcommand};
 use clap_complete::Shell;
+use katana_cli::NodeArgs;
 use katana_node::version::VERSION;
 
 #[derive(Parser)]
@@ -14,7 +13,7 @@ pub struct Cli {
     commands: Option<Commands>,
 
     #[command(flatten)]
-    node: node::NodeArgs,
+    node: NodeArgs,
 }
 
 impl Cli {

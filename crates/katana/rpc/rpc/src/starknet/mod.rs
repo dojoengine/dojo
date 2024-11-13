@@ -825,11 +825,11 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         let EventFilterWithPage { event_filter, result_page_request } = filter;
         let ResultPageRequest { continuation_token, chunk_size } = result_page_request;
 
-        if let Some(config) = self.inner.max_chunk_size.as_ref() {
-            if chunk_size > config.page_size {
+        if let Some(max_size) = self.inner.config.max_event_page_size {
+            if chunk_size > max_size {
                 return Err(StarknetApiError::PageSizeTooBig {
                     requested: chunk_size,
-                    max_allowed: config.page_size,
+                    max_allowed: max_size,
                 });
             }
         }

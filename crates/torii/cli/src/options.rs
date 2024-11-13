@@ -7,18 +7,18 @@ use serde::{Deserialize, Serialize};
 use starknet::core::types::Felt;
 use torii_core::types::{Contract, ContractType};
 
-const DEFAULT_HTTP_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::LOCALHOST);
-const DEFAULT_HTTP_PORT: u16 = 8080;
-const DEFAULT_METRICS_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::LOCALHOST);
-const DEFAULT_METRICS_PORT: u16 = 9200;
-const DEFAULT_EVENTS_CHUNK_SIZE: u64 = 1024;
-const DEFAULT_BLOCKS_CHUNK_SIZE: u64 = 10240;
-const DEFAULT_POLLING_INTERVAL: u64 = 500;
-const DEFAULT_MAX_CONCURRENT_TASKS: usize = 100;
+pub const DEFAULT_HTTP_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::LOCALHOST);
+pub const DEFAULT_HTTP_PORT: u16 = 8080;
+pub const DEFAULT_METRICS_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::LOCALHOST);
+pub const DEFAULT_METRICS_PORT: u16 = 9200;
+pub const DEFAULT_EVENTS_CHUNK_SIZE: u64 = 1024;
+pub const DEFAULT_BLOCKS_CHUNK_SIZE: u64 = 10240;
+pub const DEFAULT_POLLING_INTERVAL: u64 = 500;
+pub const DEFAULT_MAX_CONCURRENT_TASKS: usize = 100;
 
-const DEFAULT_RELAY_PORT: u16 = 9090;
-const DEFAULT_RELAY_WEBRTC_PORT: u16 = 9091;
-const DEFAULT_RELAY_WEBSOCKET_PORT: u16 = 9092;
+pub const DEFAULT_RELAY_PORT: u16 = 9090;
+pub const DEFAULT_RELAY_WEBRTC_PORT: u16 = 9091;
+pub const DEFAULT_RELAY_WEBSOCKET_PORT: u16 = 9092;
 
 #[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq)]
 #[command(next_help_heading = "Relay options")]

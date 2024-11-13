@@ -1,5 +1,5 @@
 use dojo_types::naming;
-use starknet::core::types::contract::{AbiEntry, SierraClass};
+use starknet::core::types::contract::{AbiEntry, CompiledClass, SierraClass};
 use starknet::core::types::Felt;
 
 use crate::{DojoSelector, ResourceType};
@@ -22,6 +22,8 @@ pub struct CommonLocalInfo {
     pub namespace: String,
     /// The class of the resource.
     pub class: SierraClass,
+    /// The casm class of the resource, optional since it's mostly used for stats.
+    pub casm_class: Option<CompiledClass>,
     /// The class hash of the resource.
     pub class_hash: Felt,
     /// The casm class hash of the resource.
@@ -144,6 +146,16 @@ impl ResourceLocal {
             ResourceLocal::Model(_) => ResourceType::Model,
             ResourceLocal::Event(_) => ResourceType::Event,
             ResourceLocal::Namespace(_) => ResourceType::Namespace,
+        }
+    }
+
+    /// Returns the common information of the resource.
+    pub fn common(&self) -> &CommonLocalInfo {
+        match self {
+            ResourceLocal::Contract(c) => &c.common,
+            ResourceLocal::Model(m) => &m.common,
+            ResourceLocal::Event(e) => &e.common,
+            ResourceLocal::Namespace(_) => panic!("Namespace has no common info."),
         }
     }
 }

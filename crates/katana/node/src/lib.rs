@@ -279,7 +279,7 @@ pub async fn spawn<EF: ExecutorFactory>(
 
     if config.apis.contains(&ApiKind::Starknet) {
         let starknet_api_config = StarknetApiConfig {
-            page_size: config.page_size.unwrap_or(1000), // Default value
+            max_event_page_size: config.max_event_page_size.or(Some(1000)), // Default value
         };
         let server = if let Some(client) = forked_client {
             StarknetApi::new_forked(
