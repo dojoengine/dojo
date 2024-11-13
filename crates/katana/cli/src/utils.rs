@@ -18,7 +18,7 @@ use katana_primitives::genesis::Genesis;
 use serde::{Deserialize, Serialize};
 use tracing::info;
 
-use crate::node::LOG_TARGET;
+use crate::args::LOG_TARGET;
 use crate::NodeArgs;
 
 pub fn parse_seed(seed: &str) -> [u8; 32] {
