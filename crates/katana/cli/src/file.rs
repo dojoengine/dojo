@@ -4,7 +4,8 @@ use anyhow::Result;
 use katana_core::service::messaging::MessagingConfig;
 use serde::{Deserialize, Serialize};
 
-use crate::{options::*, NodeArgs};
+use crate::options::*;
+use crate::NodeArgs;
 
 /// Node arguments configuration file.
 #[derive(Debug, Serialize, Deserialize, Default)]
