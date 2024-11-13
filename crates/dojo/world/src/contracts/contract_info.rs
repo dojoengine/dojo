@@ -190,6 +190,7 @@ mod tests {
                     },
                     abi: vec![],
                 },
+                casm_class: None,
                 class_hash: felt!("0x2222"),
                 casm_class_hash: felt!("0x2222"),
             },
