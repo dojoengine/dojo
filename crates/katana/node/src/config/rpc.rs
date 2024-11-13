@@ -24,7 +24,7 @@ pub struct RpcConfig {
     pub port: u16,
     pub max_connections: u32,
     pub apis: HashSet<ApiKind>,
-    pub page_size: Option<u64>,
+    pub max_event_page_size: Option<u64>,
     pub cors_origins: Option<Vec<String>>,
 }
 
