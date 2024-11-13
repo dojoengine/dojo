@@ -236,7 +236,7 @@ impl From<&StatItem> for StatItemPrint {
         const MAX_CASM_FELTS: usize = 81_290;
 
         let tag = if item.tag == "world" {
-            "World".to_string().bright_red()
+            "World".to_string().bright_magenta()
         } else {
             item.tag.to_string().bright_blue()
         };
