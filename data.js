@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1731476302241,
+  "lastUpdate": 1731476517416,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -34141,6 +34141,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10759607366,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4671d9cf5d2046adc045e3bb9953b7b0587951af",
+          "message": "feat: add sozo stats back (#2684)\n\n* feat: add stats for contracts on build\n\n* fix: fix layout\n\n* fix: change world color to not be associated with errors",
+          "timestamp": "2024-11-12T23:21:49-06:00",
+          "tree_id": "d587a4c177d8766d2ad46a12f68d14f408ec0179",
+          "url": "https://github.com/dojoengine/dojo/commit/4671d9cf5d2046adc045e3bb9953b7b0587951af"
+        },
+        "date": 1731476515389,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 15212278,
+            "range": "± 269301",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 9037671,
+            "range": "± 370979",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3702961538,
+            "range": "± 760770743",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8540677,
+            "range": "± 240524",
             "unit": "ns/iter"
           }
         ]
