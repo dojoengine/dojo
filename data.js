@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1731475228660,
+  "lastUpdate": 1731475401737,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -34015,6 +34015,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10313870881,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cbdd2f0c3b641d1ca39a5f5cb6a5382a03c1eaf1",
+          "message": "refactor: move cli args to separate crates (#2681)\n\n* refactor: move cli args to separate crates\n\n* move node args methods to katana-cli crate as well\n\n* fix: add missing derive and conversion to config file\n\n* remove silent arg\n\n* create directory for db dir torii\n\n* move to new module\n\n* rename node -> args\n\n* dont re-export node config file\n\n* fmt\n\n---------\n\nCo-authored-by: Ammar Arif <evergreenkary@gmail.com>\nCo-authored-by: Nasr <larko236@outlook.com>",
+          "timestamp": "2024-11-12T23:03:24-06:00",
+          "tree_id": "a89323491b40aa1580e5d7857cfe1cbefb45a753",
+          "url": "https://github.com/dojoengine/dojo/commit/cbdd2f0c3b641d1ca39a5f5cb6a5382a03c1eaf1"
+        },
+        "date": 1731475400234,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 14972327,
+            "range": "± 258968",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8721800,
+            "range": "± 180908",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3738882480,
+            "range": "± 772879795",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8456967,
+            "range": "± 43180",
             "unit": "ns/iter"
           }
         ]
