@@ -20,7 +20,6 @@ mod tests {
     use torii_core::sql::cache::ModelCache;
     use torii_core::sql::utils::felts_to_sql_string;
     use torii_core::sql::Sql;
-    use torii_core::types::ContractType;
     use torii_core::types::{Contract, ContractType};
     use url::Url;
 
