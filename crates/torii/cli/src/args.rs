@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use anyhow::Result;
+use camino::Utf8PathBuf;
 use clap::Parser;
 use dojo_utils::parse::parse_url;
 use serde::{Deserialize, Serialize};
@@ -46,6 +47,10 @@ pub struct ToriiArgs {
     /// Configuration file
     #[arg(long, help = "Configuration file to setup Torii.")]
     pub config: Option<PathBuf>,
+
+    /// Path to a directory to store ERC artifacts
+    #[arg(long)]
+    pub artifacts_path: Option<Utf8PathBuf>,
 
     #[command(flatten)]
     pub indexing: IndexingOptions,
