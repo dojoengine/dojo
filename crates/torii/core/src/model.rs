@@ -1069,12 +1069,12 @@ mod tests {
              [Test-Position$vec].external_y AS \"Test-Position$vec.y\", \
              [Test-PlayerConfig$favorite_item].external_Some AS \
              \"Test-PlayerConfig$favorite_item.Some\", [Test-PlayerConfig].external_favorite_item \
-             AS \"Test-PlayerConfig.favorite_item\" FROM entities JOIN [Test-Position] ON \
-             entities.id = [Test-Position].entity_id  JOIN [Test-PlayerConfig] ON entities.id = \
-             [Test-PlayerConfig].entity_id  JOIN [Test-Position$vec] ON entities.id = \
-             [Test-Position$vec].entity_id  LEFT JOIN [Test-PlayerConfig$favorite_item] ON \
-             entities.id = [Test-PlayerConfig$favorite_item].entity_id ORDER BY entities.event_id \
-             DESC";
+             AS \"Test-PlayerConfig.favorite_item\" FROM entities LEFT JOIN [Test-Position] ON \
+             entities.id = [Test-Position].entity_id  LEFT JOIN [Test-PlayerConfig] ON \
+             entities.id = [Test-PlayerConfig].entity_id  LEFT JOIN [Test-Position$vec] ON \
+             entities.id = [Test-Position$vec].entity_id  LEFT JOIN \
+             [Test-PlayerConfig$favorite_item] ON entities.id = \
+             [Test-PlayerConfig$favorite_item].entity_id ORDER BY entities.event_id DESC";
         // todo: completely tests arrays
         assert_eq!(query.0, expected_query);
     }
