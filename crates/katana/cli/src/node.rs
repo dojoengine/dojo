@@ -23,6 +23,7 @@ use tracing::{info, Subscriber};
 use tracing_log::LogTracer;
 use tracing_subscriber::{fmt, EnvFilter};
 
+use crate::file::NodeArgsConfig;
 use crate::options::*;
 use crate::utils;
 use crate::utils::{parse_seed, LogFormat};
@@ -93,75 +94,6 @@ pub struct NodeArgs {
     #[cfg(feature = "slot")]
     #[command(flatten)]
     pub slot: SlotOptions,
-}
-
-#[derive(Debug, Serialize, Deserialize, Default)]
-pub struct NodeArgsConfig {
-    pub no_mining: Option<bool>,
-    pub block_time: Option<u64>,
-    pub db_dir: Option<PathBuf>,
-    pub messaging: Option<MessagingConfig>,
-    pub logging: Option<LoggingOptions>,
-    pub starknet: Option<StarknetOptions>,
-    pub gpo: Option<GasPriceOracleOptions>,
-    pub forking: Option<ForkingOptions>,
-    #[serde(rename = "dev")]
-    pub development: Option<DevOptions>,
-
-    #[cfg(feature = "server")]
-    pub server: Option<ServerOptions>,
-
-    #[cfg(feature = "server")]
-    pub metrics: Option<MetricsOptions>,
-
-    #[cfg(feature = "slot")]
-    pub slot: Option<SlotOptions>,
-}
-
-impl TryFrom<NodeArgs> for NodeArgsConfig {
-    type Error = anyhow::Error;
-
-    fn try_from(args: NodeArgs) -> Result<Self> {
-        // Ensure the config file is merged with the CLI arguments.
-        let args = args.with_config_file()?;
-
-        let mut node_config = NodeArgsConfig {
-            no_mining: if args.no_mining { Some(true) } else { None },
-            block_time: args.block_time,
-            db_dir: args.db_dir,
-            messaging: args.messaging,
-            ..Default::default()
-        };
-
-        // Only include the following options if they are not the default.
-        // This makes the config file more readable.
-        node_config.logging =
-            if args.logging == LoggingOptions::default() { None } else { Some(args.logging) };
-        node_config.starknet =
-            if args.starknet == StarknetOptions::default() { None } else { Some(args.starknet) };
-        node_config.gpo =
-            if args.gpo == GasPriceOracleOptions::default() { None } else { Some(args.gpo) };
-        node_config.forking =
-            if args.forking == ForkingOptions::default() { None } else { Some(args.forking) };
-        node_config.development =
-            if args.development == DevOptions::default() { None } else { Some(args.development) };
-
-        #[cfg(feature = "slot")]
-        {
-            node_config.slot =
-                if args.slot == SlotOptions::default() { None } else { Some(args.slot) };
-        }
-
-        #[cfg(feature = "server")]
-        {
-            node_config.server =
-                if args.server == ServerOptions::default() { None } else { Some(args.server) };
-            node_config.metrics =
-                if args.metrics == MetricsOptions::default() { None } else { Some(args.metrics) };
-        }
-
-        Ok(node_config)
-    }
 }
 
 impl NodeArgs {
@@ -365,8 +297,8 @@ impl NodeArgs {
     /// Parse the node config from the command line arguments and the config file,
     /// and merge them together prioritizing the command line arguments.
     pub fn with_config_file(mut self) -> Result<Self> {
-        let config: NodeArgsConfig = if let Some(path) = &self.config {
-            toml::from_str(&std::fs::read_to_string(path)?)?
+        let config = if let Some(path) = &self.config {
+            NodeArgsConfig::read(path)?
         } else {
             return Ok(self);
         };
@@ -420,13 +352,6 @@ impl NodeArgs {
         if self.forking == ForkingOptions::default() {
             if let Some(forking) = config.forking {
                 self.forking = forking;
-            }
-        }
-
-        #[cfg(feature = "slot")]
-        if self.slot == SlotOptions::default() {
-            if let Some(slot) = config.slot {
-                self.slot = slot;
             }
         }
 
