@@ -97,7 +97,6 @@ pub struct NodeArgs {
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct NodeArgsConfig {
-    pub silent: Option<bool>,
     pub no_mining: Option<bool>,
     pub block_time: Option<u64>,
     pub db_dir: Option<PathBuf>,
@@ -127,8 +126,7 @@ impl TryFrom<NodeArgs> for NodeArgsConfig {
         let args = args.with_config_file()?;
 
         let mut node_config = NodeArgsConfig {
-            silent: Some(args.silent),
-            no_mining: Some(args.no_mining),
+            no_mining: if args.no_mining { Some(true) } else { None },
             block_time: args.block_time,
             db_dir: args.db_dir,
             messaging: args.messaging,
@@ -376,10 +374,6 @@ impl NodeArgs {
         // the CLI (self) takes precedence over the config file.
         // Currently, the merge is made at the top level of the commands.
         // We may add recursive merging in the future.
-
-        if !self.silent {
-            self.silent = config.silent.unwrap_or_default();
-        }
 
         if !self.no_mining {
             self.no_mining = config.no_mining.unwrap_or_default();
