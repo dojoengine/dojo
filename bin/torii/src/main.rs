@@ -76,8 +76,14 @@ async fn main() -> anyhow::Result<()> {
     .expect("Error setting Ctrl-C handler");
 
     let tempfile = NamedTempFile::new()?;
-    let database_path =
-        if let Some(db_dir) = args.db_dir { db_dir } else { tempfile.path().to_path_buf() };
+    let database_path = if let Some(db_dir) = args.db_dir {
+        // Create the directory if it doesn't exist
+        std::fs::create_dir_all(&db_dir)?;
+        // Set the database file path inside the directory
+        db_dir.join("torii.db")
+    } else {
+        tempfile.path().to_path_buf()
+    };
 
     let mut options = SqliteConnectOptions::from_str(&database_path.to_string_lossy())?
         .create_if_missing(true)
