@@ -321,8 +321,6 @@ impl Sql {
             )
             .await;
 
-        println!("selector: {:?}", selector);
-        println!("set model cache: {:?}", model);
         Ok(())
     }
 

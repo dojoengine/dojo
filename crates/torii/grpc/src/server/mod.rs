@@ -969,7 +969,6 @@ fn map_row_to_entity(
     schemas: &[Ty],
     dont_include_hashed_keys: bool,
 ) -> Result<proto::types::Entity, Error> {
-    println!("schemas: {:?}", schemas);
     let hashed_keys = Felt::from_str(&row.get::<String, _>("id")).map_err(ParseError::FromStr)?;
     let models = schemas
         .iter()
