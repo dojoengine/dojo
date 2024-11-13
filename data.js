@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1731358977992,
+  "lastUpdate": 1731467210098,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -33877,6 +33877,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8391088,
             "range": "± 99028",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tarrencev@users.noreply.github.com",
+            "name": "Tarrence van As",
+            "username": "tarrencev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c16f3c99f560fb506ceb719bc4d11d462cd496ef",
+          "message": "Initialize katana grpc api (#2682)",
+          "timestamp": "2024-11-12T20:50:35-06:00",
+          "tree_id": "ec3a04e0f62d586068dc6b0bed0a9f1d02618a3d",
+          "url": "https://github.com/dojoengine/dojo/commit/c16f3c99f560fb506ceb719bc4d11d462cd496ef"
+        },
+        "date": 1731467208597,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10487843290,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
