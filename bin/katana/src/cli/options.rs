@@ -84,10 +84,10 @@ pub struct ServerOptions {
     pub max_connections: u32,
 
     /// Maximum page size for event queries.
-    #[arg(long = "rpc.page-size", value_name = "SIZE")]
+    #[arg(long = "rpc.max-event-page-size", value_name = "SIZE")]
     #[arg(default_value_t = DEFAULT_RPC_PAGE_SIZE)]
     #[serde(default = "default_page_size")]
-    pub page_size: u64, // New field added here
+    pub max_event_page_size: u64,
     
 }
 
