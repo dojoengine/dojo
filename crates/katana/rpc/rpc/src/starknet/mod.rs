@@ -10,7 +10,6 @@ use std::sync::Arc;
 use forking::ForkedClient;
 use katana_core::backend::Backend;
 use katana_core::service::block_producer::{BlockProducer, BlockProducerMode, PendingExecutor};
-use katana_executor::implementation::blockifier::blockifier::blockifier::config;
 use katana_executor::{ExecutionResult, ExecutorFactory};
 use katana_pool::validation::stateful::TxValidator;
 use katana_pool::{TransactionPool, TxPool};

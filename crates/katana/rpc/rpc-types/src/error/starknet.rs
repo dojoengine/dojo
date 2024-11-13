@@ -9,7 +9,6 @@ use serde::Serialize;
 use serde_json::Value;
 use starknet::core::types::StarknetError as StarknetRsError;
 use starknet::providers::ProviderError as StarknetRsProviderError;
-use serde_json::json;
 
 /// Possible list of errors that can be returned by the Starknet API according to the spec: <https://github.com/starkware-libs/starknet-specs>.
 #[derive(Debug, thiserror::Error, Clone, Serialize)]
@@ -137,7 +136,7 @@ impl StarknetApiError {
                 Some(Value::String(reason.to_string()))
             }
 
-            StarknetApiError::PageSizeTooBig { requested, max_allowed } => Some(serde_json::json!(self)),
+            StarknetApiError::PageSizeTooBig { requested: _, max_allowed: _ } => Some(serde_json::json!(self)),
             _ => None,
         }
     }
