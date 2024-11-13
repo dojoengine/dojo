@@ -166,6 +166,7 @@ impl BuildArgs {
             let mut table = Table::new(stats.iter().map(StatItemPrint::from).collect::<Vec<_>>());
             table.with(Style::psql());
 
+            println!();
             println!("{table}");
 
             if stats.iter().all(|s| s.casm_bytecode_size == 0) {

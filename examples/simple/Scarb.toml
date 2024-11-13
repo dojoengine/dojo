@@ -6,7 +6,7 @@ edition = "2024_07"
 
 [[target.starknet-contract]]
 sierra = true
-#casm = true
+# casm = true
 build-external-contracts = ["dojo::world::world_contract::world"]
 
 [dependencies]
