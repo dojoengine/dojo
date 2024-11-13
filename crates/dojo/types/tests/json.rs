@@ -7,8 +7,8 @@ fn serialize_ty_to_json() {
     let ty = Ty::Struct(Struct {
         name: "Position".into(),
         children: vec![
-            Member { name: "x".into(), key: false, ty: Ty::Primitive(Primitive::U8(128)) },
-            Member { name: "y".into(), key: false, ty: Ty::Primitive(Primitive::U64(2048)) },
+            Member { name: "x".into(), key: false, ty: Ty::Primitive(Primitive::U8(Some(128))) },
+            Member { name: "y".into(), key: false, ty: Ty::Primitive(Primitive::U64(Some(2048))) },
             Member {
                 name: "kind".into(),
                 key: false,
@@ -149,8 +149,8 @@ fn deserialize_ty_from_json() {
     let expected_value = Ty::Struct(Struct {
         name: "Position".into(),
         children: vec![
-            Member { name: "x".into(), key: false, ty: Ty::Primitive(Primitive::U8(128)) },
-            Member { name: "y".into(), key: false, ty: Ty::Primitive(Primitive::U64(2048)) },
+            Member { name: "x".into(), key: false, ty: Ty::Primitive(Primitive::U8(Some(128))) },
+            Member { name: "y".into(), key: false, ty: Ty::Primitive(Primitive::U64(Some(2048))) },
             Member {
                 name: "kind".into(),
                 key: false,
