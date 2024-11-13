@@ -6,5 +6,4 @@ pub mod options;
 pub mod utils;
 
 pub use args::NodeArgs;
-pub use file::NodeArgsConfig;
 pub use options::*;
