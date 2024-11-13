@@ -150,7 +150,7 @@ impl ExecuteArgs {
                     if let Some(local_address) = ws.get_contract_address(&descriptor) {
                         local_address
                     } else {
-                        resolve_contract_address(&descriptor, &self, &ws).await?;
+                        resolve_contract_address(&descriptor, &world_diff, &ws).await?;
                     };
 
                 trace!(
