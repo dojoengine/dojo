@@ -25,5 +25,6 @@ assert_matches.workspace = true
 starknet.workspace = true
 
 [features]
-default = [ "slot" ]
+default = [ "slot", "server" ]
 slot = [ "dep:katana-slot-controller", "katana-primitives/slot" ]
+server = [ ]

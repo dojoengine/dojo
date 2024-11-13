@@ -12,8 +12,9 @@ use super::options::*;
 pub const DEFAULT_RPC_URL: &str = "http://0.0.0.0:5050";
 
 /// Dojo World Indexer
-#[derive(Parser, Debug)]
-#[command(name = "torii", author, version, about, long_about = None)]
+#[derive(Parser, Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[command(name = "torii", author, about, long_about = None)]
+#[command(next_help_heading = "Torii general options")]
 pub struct ToriiArgs {
     /// The world to index
     #[arg(short, long = "world", env = "DOJO_WORLD_ADDRESS")]
@@ -42,8 +43,9 @@ pub struct ToriiArgs {
     #[arg(long, help = "Open World Explorer on the browser.")]
     pub explorer: bool,
 
-    #[command(flatten)]
-    pub metrics: MetricsOptions,
+    /// Configuration file
+    #[arg(long, help = "Configuration file to setup Torii.")]
+    pub config: Option<PathBuf>,
 
     #[command(flatten)]
     pub indexing: IndexingOptions,
@@ -51,15 +53,17 @@ pub struct ToriiArgs {
     #[command(flatten)]
     pub events: EventsOptions,
 
+    #[cfg(feature = "server")]
+    #[command(flatten)]
+    pub metrics: MetricsOptions,
+
+    #[cfg(feature = "server")]
     #[command(flatten)]
     pub server: ServerOptions,
 
+    #[cfg(feature = "server")]
     #[command(flatten)]
     pub relay: RelayOptions,
-
-    /// Configuration file
-    #[arg(long, help = "Configuration file to setup Torii.")]
-    pub config: Option<PathBuf>,
 }
 
 impl ToriiArgs {
@@ -99,10 +103,6 @@ impl ToriiArgs {
             self.explorer = config.explorer.unwrap_or_default();
         }
 
-        if self.metrics == MetricsOptions::default() {
-            self.metrics = config.metrics.unwrap_or_default();
-        }
-
         if self.indexing == IndexingOptions::default() {
             self.indexing = config.indexing.unwrap_or_default();
         }
@@ -111,12 +111,19 @@ impl ToriiArgs {
             self.events = config.events.unwrap_or_default();
         }
 
-        if self.server == ServerOptions::default() {
-            self.server = config.server.unwrap_or_default();
-        }
+        #[cfg(feature = "server")]
+        {
+            if self.server == ServerOptions::default() {
+                self.server = config.server.unwrap_or_default();
+            }
 
-        if self.relay == RelayOptions::default() {
-            self.relay = config.relay.unwrap_or_default();
+            if self.relay == RelayOptions::default() {
+                self.relay = config.relay.unwrap_or_default();
+            }
+
+            if self.metrics == MetricsOptions::default() {
+                self.metrics = config.metrics.unwrap_or_default();
+            }
         }
 
         Ok(self)
@@ -130,11 +137,52 @@ pub struct ToriiArgsConfig {
     pub db_dir: Option<PathBuf>,
     pub external_url: Option<Url>,
     pub explorer: Option<bool>,
-    pub metrics: Option<MetricsOptions>,
     pub indexing: Option<IndexingOptions>,
     pub events: Option<EventsOptions>,
+    #[cfg(feature = "server")]
+    pub metrics: Option<MetricsOptions>,
+    #[cfg(feature = "server")]
     pub server: Option<ServerOptions>,
+    #[cfg(feature = "server")]
     pub relay: Option<RelayOptions>,
+}
+
+impl TryFrom<ToriiArgs> for ToriiArgsConfig {
+    type Error = anyhow::Error;
+
+    fn try_from(args: ToriiArgs) -> Result<Self> {
+        // Ensure the config file is merged with the CLI arguments.
+        let args = args.with_config_file()?;
+
+        let mut config =
+            ToriiArgsConfig { world_address: args.world_address, ..Default::default() };
+
+        config.world_address = args.world_address;
+        config.rpc =
+            if args.rpc == Url::parse(DEFAULT_RPC_URL).unwrap() { None } else { Some(args.rpc) };
+        config.db_dir = args.db_dir;
+        config.external_url = args.external_url;
+        config.explorer = Some(args.explorer);
+
+        // Only include the following options if they are not the default.
+        // This makes the config file more readable.
+        config.indexing =
+            if args.indexing == IndexingOptions::default() { None } else { Some(args.indexing) };
+        config.events =
+            if args.events == EventsOptions::default() { None } else { Some(args.events) };
+
+        #[cfg(feature = "server")]
+        {
+            config.server =
+                if args.server == ServerOptions::default() { None } else { Some(args.server) };
+            config.relay =
+                if args.relay == RelayOptions::default() { None } else { Some(args.relay) };
+            config.metrics =
+                if args.metrics == MetricsOptions::default() { None } else { Some(args.metrics) };
+        }
+
+        Ok(config)
+    }
 }
 
 #[cfg(test)]

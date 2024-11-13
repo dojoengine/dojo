@@ -23,7 +23,8 @@ use serde::{Deserialize, Serialize};
 use super::options::*;
 use crate::utils::parse_seed;
 
-#[derive(Parser, Debug, Serialize, Deserialize, Default)]
+#[derive(Parser, Debug, Serialize, Deserialize, Default, Clone)]
+#[command(next_help_heading = "Node options")]
 pub struct NodeArgs {
     /// Don't print anything on startup.
     #[arg(long)]
@@ -47,6 +48,10 @@ pub struct NodeArgs {
     #[arg(value_name = "PATH")]
     pub db_dir: Option<PathBuf>,
 
+    /// Configuration file
+    #[arg(long)]
+    config: Option<PathBuf>,
+
     /// Configure the messaging with an other chain.
     ///
     /// Configure the messaging to allow Katana listening/sending messages on a
@@ -59,9 +64,11 @@ pub struct NodeArgs {
     #[command(flatten)]
     pub logging: LoggingOptions,
 
+    #[cfg(feature = "server")]
     #[command(flatten)]
     pub metrics: MetricsOptions,
 
+    #[cfg(feature = "server")]
     #[command(flatten)]
     pub server: ServerOptions,
 
@@ -80,10 +87,6 @@ pub struct NodeArgs {
     #[cfg(feature = "slot")]
     #[command(flatten)]
     pub slot: SlotOptions,
-
-    /// Configuration file
-    #[arg(long)]
-    config: Option<PathBuf>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
@@ -94,16 +97,67 @@ pub struct NodeArgsConfig {
     pub db_dir: Option<PathBuf>,
     pub messaging: Option<MessagingConfig>,
     pub logging: Option<LoggingOptions>,
-    pub metrics: Option<MetricsOptions>,
-    pub server: Option<ServerOptions>,
     pub starknet: Option<StarknetOptions>,
     pub gpo: Option<GasPriceOracleOptions>,
     pub forking: Option<ForkingOptions>,
     #[serde(rename = "dev")]
     pub development: Option<DevOptions>,
 
+    #[cfg(feature = "server")]
+    pub server: Option<ServerOptions>,
+
+    #[cfg(feature = "server")]
+    pub metrics: Option<MetricsOptions>,
+
     #[cfg(feature = "slot")]
     pub slot: Option<SlotOptions>,
+}
+
+impl TryFrom<NodeArgs> for NodeArgsConfig {
+    type Error = anyhow::Error;
+
+    fn try_from(args: NodeArgs) -> Result<Self> {
+        // Ensure the config file is merged with the CLI arguments.
+        let args = args.with_config_file()?;
+
+        let mut node_config = NodeArgsConfig {
+            silent: Some(args.silent),
+            no_mining: Some(args.no_mining),
+            block_time: args.block_time,
+            db_dir: args.db_dir,
+            messaging: args.messaging,
+            ..Default::default()
+        };
+
+        // Only include the following options if they are not the default.
+        // This makes the config file more readable.
+        node_config.logging =
+            if args.logging == LoggingOptions::default() { None } else { Some(args.logging) };
+        node_config.starknet =
+            if args.starknet == StarknetOptions::default() { None } else { Some(args.starknet) };
+        node_config.gpo =
+            if args.gpo == GasPriceOracleOptions::default() { None } else { Some(args.gpo) };
+        node_config.forking =
+            if args.forking == ForkingOptions::default() { None } else { Some(args.forking) };
+        node_config.development =
+            if args.development == DevOptions::default() { None } else { Some(args.development) };
+
+        #[cfg(feature = "slot")]
+        {
+            node_config.slot =
+                if args.slot == SlotOptions::default() { None } else { Some(args.slot) };
+        }
+
+        #[cfg(feature = "server")]
+        {
+            node_config.server =
+                if args.server == ServerOptions::default() { None } else { Some(args.server) };
+            node_config.metrics =
+                if args.metrics == MetricsOptions::default() { None } else { Some(args.metrics) };
+        }
+
+        Ok(node_config)
+    }
 }
 
 impl NodeArgs {
@@ -132,12 +186,20 @@ impl NodeArgs {
             apis.insert(ApiKind::Dev);
         }
 
-        RpcConfig {
-            apis,
-            port: self.server.http_port,
-            addr: self.server.http_addr,
-            max_connections: self.server.max_connections,
-            cors_origins: self.server.http_cors_origins.clone(),
+        #[cfg(feature = "server")]
+        {
+            RpcConfig {
+                apis,
+                port: self.server.http_port,
+                addr: self.server.http_addr,
+                max_connections: self.server.max_connections,
+                cors_origins: self.server.http_cors_origins.clone(),
+            }
+        }
+
+        #[cfg(not(feature = "server"))]
+        {
+            RpcConfig { apis, ..Default::default() }
         }
     }
 
@@ -222,11 +284,15 @@ impl NodeArgs {
     }
 
     fn metrics_config(&self) -> Option<MetricsConfig> {
+        #[cfg(feature = "server")]
         if self.metrics.metrics {
             Some(MetricsConfig { addr: self.metrics.metrics_addr, port: self.metrics.metrics_port })
         } else {
             None
         }
+
+        #[cfg(not(feature = "server"))]
+        None
     }
 
     /// Parse the node config from the command line arguments and the config file,
@@ -264,15 +330,18 @@ impl NodeArgs {
             }
         }
 
-        if self.metrics == MetricsOptions::default() {
-            if let Some(metrics) = config.metrics {
-                self.metrics = metrics;
+        #[cfg(feature = "server")]
+        {
+            if self.server == ServerOptions::default() {
+                if let Some(server) = config.server {
+                    self.server = server;
+                }
             }
-        }
 
-        if self.server == ServerOptions::default() {
-            if let Some(server) = config.server {
-                self.server = server;
+            if self.metrics == MetricsOptions::default() {
+                if let Some(metrics) = config.metrics {
+                    self.metrics = metrics;
+                }
             }
         }
 

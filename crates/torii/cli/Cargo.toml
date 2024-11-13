@@ -18,3 +18,7 @@ url.workspace = true
 [dev-dependencies]
 assert_matches.workspace = true
 camino.workspace = true
+
+[features]
+default = [ "server" ]
+server = [ ]
