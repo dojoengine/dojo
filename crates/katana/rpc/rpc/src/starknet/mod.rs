@@ -112,7 +112,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         let blocking_task_pool =
             BlockingTaskPool::new().expect("failed to create blocking task pool");
         let inner =
-            Inner { pool, backend, block_producer, blocking_task_pool, validator, forked_client, max_chunk_size: Some(config) };
+            Inner { pool, backend, block_producer, blocking_task_pool, validator, forked_client, config };
         Self { inner: Arc::new(inner) }
     }
 
