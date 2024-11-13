@@ -1,5 +1,6 @@
 //! Client implementation for the gRPC service.
 use std::num::ParseIntError;
+use std::time::Duration;
 
 use futures_util::stream::MapOk;
 use futures_util::{Stream, StreamExt, TryStreamExt};
@@ -49,9 +50,14 @@ pub struct WorldClient {
 
 impl WorldClient {
     #[cfg(not(target_arch = "wasm32"))]
-    pub async fn new(dst: String, world_address: Felt) -> Result<Self, Error> {
-        let endpoint =
-            Endpoint::from_shared(dst.clone()).map_err(|e| Error::Endpoint(e.to_string()))?;
+    pub async fn new(
+        dst: String,
+        world_address: Felt,
+        keepalive: Option<Duration>,
+    ) -> Result<Self, Error> {
+        let endpoint = Endpoint::from_shared(dst.clone())
+            .map_err(|e| Error::Endpoint(e.to_string()))?
+            .tcp_keepalive(keepalive);
         let channel = endpoint.connect().await.map_err(Error::Transport)?;
         Ok(Self {
             _world_address: world_address,
