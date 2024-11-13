@@ -76,7 +76,7 @@ struct Inner<EF: ExecutorFactory> {
     block_producer: BlockProducer<EF>,
     blocking_task_pool: BlockingTaskPool,
     forked_client: Option<ForkedClient>,
-    max_chunk_size: Option<StarknetApiConfig>,
+    config: StarknetApiConfig,
 }
 
 impl<EF: ExecutorFactory> StarknetApi<EF> {
