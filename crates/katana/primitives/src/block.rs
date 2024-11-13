@@ -15,7 +15,7 @@ pub type BlockNumber = u64;
 /// Block hash type.
 pub type BlockHash = Felt;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum BlockHashOrNumber {
     Hash(BlockHash),

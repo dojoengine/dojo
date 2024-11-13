@@ -19,6 +19,7 @@ members = [
 	"crates/katana/controller",
 	"crates/katana/core",
 	"crates/katana/executor",
+	"crates/katana/grpc",
 	"crates/katana/node",
 	"crates/katana/node-bindings",
 	"crates/katana/pipeline",
@@ -55,7 +56,7 @@ edition = "2021"
 license = "Apache-2.0"
 license-file = "LICENSE"
 repository = "https://github.com/dojoengine/dojo/"
-version = "1.0.0-rc.1"
+version = "1.0.0"
 
 [profile.performance]
 codegen-units = 1
@@ -65,6 +66,7 @@ lto = "fat"
 
 [workspace.dependencies]
 cainome = { git = "https://github.com/cartridge-gg/cainome", rev = "5c2616c273faca7700d2ba565503fcefb5b9d720", features = [ "abigen-rs" ] }
+cainome-cairo-serde = { git = "https://github.com/cartridge-gg/cainome", rev = "5c2616c273faca7700d2ba565503fcefb5b9d720" }
 dojo-utils = { path = "crates/dojo/utils" }
 
 # metrics
@@ -178,8 +180,8 @@ jsonrpsee = { version = "0.16.2", default-features = false }
 lazy_static = "1.4.0"
 log = "0.4.21"
 metrics = "0.23.0"
-num-traits = { version = "0.2", default-features = false }
 num-bigint = "0.4.3"
+num-traits = { version = "0.2", default-features = false }
 once_cell = "1.0"
 parking_lot = "0.12.1"
 postcard = { version = "1.0.10", features = [ "use-std" ], default-features = false }
@@ -192,8 +194,8 @@ rpassword = "7.2.0"
 rstest = "0.18.2"
 rstest_reuse = "0.6.0"
 salsa = "0.16.1"
-scarb = { git = "https://github.com/dojoengine/scarb", rev = "0f10b0b1d0e4afb7af278228a66196b5cb56b57b" }
-scarb-ui = { git = "https://github.com/dojoengine/scarb", rev = "0f10b0b1d0e4afb7af278228a66196b5cb56b57b" }
+scarb = { git = "https://github.com/dojoengine/scarb", rev = "7eac49b3e61236ce466e712225d9c989f9db1ef3" }
+scarb-ui = { git = "https://github.com/dojoengine/scarb", rev = "7eac49b3e61236ce466e712225d9c989f9db1ef3" }
 semver = "1.0.5"
 serde = { version = "1.0", features = [ "derive" ] }
 serde_json = { version = "1.0", features = [ "arbitrary_precision" ] }

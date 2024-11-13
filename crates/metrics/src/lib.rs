@@ -1,3 +1,5 @@
+#![warn(unused_crate_dependencies)]
+
 pub mod exporters;
 mod process;
 mod server;

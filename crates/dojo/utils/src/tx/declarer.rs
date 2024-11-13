@@ -19,6 +19,16 @@ use crate::{
     FeeConfig, TransactionError, TransactionExt, TransactionResult, TransactionWaiter, TxnConfig,
 };
 
+#[derive(Debug, Clone)]
+pub struct LabeledClass {
+    /// The label of the class.
+    pub label: String,
+    /// The casm class hash of the class.
+    pub casm_class_hash: Felt,
+    /// The class itself.
+    pub class: FlattenedSierraClass,
+}
+
 /// A declarer is in charge of declaring contracts.
 #[derive(Debug)]
 pub struct Declarer<A>
@@ -30,7 +40,7 @@ where
     /// The transaction configuration.
     pub txn_config: TxnConfig,
     /// The classes to declare,  identified by their casm class hash.
-    pub classes: HashMap<Felt, FlattenedSierraClass>,
+    pub classes: HashMap<Felt, LabeledClass>,
 }
 
 impl<A> Declarer<A>
@@ -43,14 +53,14 @@ where
     }
 
     /// Adds a class to the declarer, do nothing if the class is already known.
-    pub fn add_class(&mut self, casm_class_hash: Felt, class: FlattenedSierraClass) {
-        self.classes.entry(casm_class_hash).or_insert(class);
+    pub fn add_class(&mut self, labeled_class: LabeledClass) {
+        self.classes.entry(labeled_class.casm_class_hash).or_insert(labeled_class);
     }
 
     /// Extends the classes to the declarer.
-    pub fn extend_classes(&mut self, classes: Vec<(Felt, FlattenedSierraClass)>) {
-        for (casm_class_hash, class) in classes {
-            self.classes.entry(casm_class_hash).or_insert(class);
+    pub fn extend_classes(&mut self, classes: Vec<LabeledClass>) {
+        for labeled_class in classes {
+            self.classes.entry(labeled_class.casm_class_hash).or_insert(labeled_class);
         }
     }
 
@@ -64,10 +74,8 @@ where
     ) -> Result<Vec<TransactionResult>, TransactionError<A::SignError>> {
         let mut results = vec![];
 
-        for (casm_class_hash, class) in self.classes {
-            results.push(
-                Self::declare(casm_class_hash, class, &self.account, &self.txn_config).await?,
-            );
+        for (_, labeled_class) in self.classes {
+            results.push(Self::declare(labeled_class, &self.account, &self.txn_config).await?);
         }
 
         Ok(results)
@@ -75,17 +83,17 @@ where
 
     /// Declares a class.
     pub async fn declare(
-        casm_class_hash: Felt,
-        class: FlattenedSierraClass,
+        labeled_class: LabeledClass,
         account: &A,
         txn_config: &TxnConfig,
     ) -> Result<TransactionResult, TransactionError<A::SignError>> {
-        let class_hash = class.class_hash();
+        let class_hash = &labeled_class.class.class_hash();
 
         match account.provider().get_class(BlockId::Tag(BlockTag::Pending), class_hash).await {
             Err(ProviderError::StarknetError(StarknetError::ClassHashNotFound)) => {}
             Ok(_) => {
                 tracing::trace!(
+                    label = labeled_class.label,
                     class_hash = format!("{:#066x}", class_hash),
                     "Class already declared."
                 );
@@ -94,26 +102,36 @@ where
             Err(e) => return Err(TransactionError::Provider(e)),
         }
 
+        let casm_class_hash = labeled_class.casm_class_hash;
+
+        tracing::trace!(
+            label = labeled_class.label,
+            class_hash = format!("{:#066x}", class_hash),
+            casm_class_hash = format!("{:#066x}", casm_class_hash),
+            "Declaring class."
+        );
+
         let DeclareTransactionResult { transaction_hash, class_hash } = match txn_config.fee_config
         {
             FeeConfig::Strk(_) => {
                 account
-                    .declare_v3(Arc::new(class), casm_class_hash)
+                    .declare_v3(Arc::new(labeled_class.class), casm_class_hash)
                     .send_with_cfg(txn_config)
                     .await?
             }
             FeeConfig::Eth(_) => {
                 account
-                    .declare_v2(Arc::new(class), casm_class_hash)
+                    .declare_v2(Arc::new(labeled_class.class), casm_class_hash)
                     .send_with_cfg(txn_config)
                     .await?
             }
         };
 
         tracing::trace!(
+            label = labeled_class.label,
             transaction_hash = format!("{:#066x}", transaction_hash),
             class_hash = format!("{:#066x}", class_hash),
-            casm_class_hash = format!("{:#066x}", casm_class_hash),
+            casm_class_hash = format!("{:#066x}", labeled_class.casm_class_hash),
             "Declared class."
         );
 

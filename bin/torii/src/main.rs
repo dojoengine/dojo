@@ -17,12 +17,12 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::Context;
-use clap::{ArgAction, CommandFactory, FromArgMatches, Parser};
-use clap_config::ClapConfig;
+use anyhow::Result;
+use clap::Parser;
 use dojo_metrics::exporters::prometheus::PrometheusRecorder;
-use dojo_utils::parse::{parse_socket_address, parse_url};
+use dojo_utils::parse::parse_url;
 use dojo_world::contracts::world::WorldContractReader;
+use serde::{Deserialize, Serialize};
 use sqlx::sqlite::{
     SqliteAutoVacuum, SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous,
 };
@@ -47,122 +47,143 @@ use tracing::{error, info};
 use tracing_subscriber::{fmt, EnvFilter};
 use url::{form_urlencoded, Url};
 
+mod options;
+
+use options::*;
+
 pub(crate) const LOG_TARGET: &str = "torii::cli";
 
+const DEFAULT_RPC_URL: &str = "http://0.0.0.0:5050";
+
 /// Dojo World Indexer
-#[derive(ClapConfig, Parser, Debug)]
+#[derive(Parser, Debug)]
 #[command(name = "torii", author, version, about, long_about = None)]
-struct Args {
+struct ToriiArgs {
     /// The world to index
     #[arg(short, long = "world", env = "DOJO_WORLD_ADDRESS")]
     world_address: Option<Felt>,
 
     /// The sequencer rpc endpoint to index.
-    #[arg(long, value_name = "URL", default_value = ":5050", value_parser = parse_url)]
+    #[arg(long, value_name = "URL", default_value = DEFAULT_RPC_URL, value_parser = parse_url)]
     rpc: Url,
 
     /// Database filepath (ex: indexer.db). If specified file doesn't exist, it will be
-    /// created. Defaults to in-memory database
-    #[arg(short, long, default_value = "")]
-    database: String,
-
-    /// Address to serve api endpoints at.
-    #[arg(long, value_name = "SOCKET", default_value = "0.0.0.0:8080", value_parser = parse_socket_address)]
-    addr: SocketAddr,
-
-    /// Port to serve Libp2p TCP & UDP Quic transports
-    #[arg(long, value_name = "PORT", default_value = "9090")]
-    relay_port: u16,
-
-    /// Port to serve Libp2p WebRTC transport
-    #[arg(long, value_name = "PORT", default_value = "9091")]
-    relay_webrtc_port: u16,
-
-    /// Port to serve Libp2p WebRTC transport
-    #[arg(long, value_name = "PORT", default_value = "9092")]
-    relay_websocket_port: u16,
-
-    /// Path to a local identity key file. If not specified, a new identity will be generated
-    #[arg(long, value_name = "PATH")]
-    relay_local_key_path: Option<String>,
-
-    /// Path to a local certificate file. If not specified, a new certificate will be generated
-    /// for WebRTC connections
-    #[arg(long, value_name = "PATH")]
-    relay_cert_path: Option<String>,
-
-    /// Specify allowed origins for api endpoints (comma-separated list of allowed origins, or "*"
-    /// for all)
-    #[arg(long, value_delimiter = ',')]
-    allowed_origins: Vec<String>,
+    /// created. Defaults to in-memory database.
+    #[arg(long)]
+    #[arg(
+        value_name = "PATH",
+        help = "Database filepath. If specified directory doesn't exist, it will be created. \
+                Defaults to in-memory database."
+    )]
+    db_dir: Option<PathBuf>,
 
     /// The external url of the server, used for configuring the GraphQL Playground in a hosted
     /// environment
-    #[arg(long, value_parser = parse_url)]
+    #[arg(long, value_parser = parse_url, help = "The external url of the server, used for configuring the GraphQL Playground in a hosted environment.")]
     external_url: Option<Url>,
 
-    /// Enable Prometheus metrics.
-    ///
-    /// The metrics will be served at the given interface and port.
-    #[arg(long, value_name = "SOCKET", value_parser = parse_socket_address, help_heading = "Metrics")]
-    metrics: Option<SocketAddr>,
-
     /// Open World Explorer on the browser.
-    #[arg(long)]
+    #[arg(long, help = "Open World Explorer on the browser.")]
     explorer: bool,
 
-    /// Chunk size of the events page when indexing using events
-    #[arg(long, default_value = "1024")]
-    events_chunk_size: u64,
+    #[command(flatten)]
+    metrics: MetricsOptions,
 
-    /// Number of blocks to process before commiting to DB
-    #[arg(long, default_value = "10240")]
-    blocks_chunk_size: u64,
+    #[command(flatten)]
+    indexing: IndexingOptions,
 
-    /// Enable indexing pending blocks
-    #[arg(long, action = ArgAction::Set, default_value_t = true)]
-    index_pending: bool,
+    #[command(flatten)]
+    events: EventsOptions,
 
-    /// Polling interval in ms
-    #[arg(long, default_value = "500")]
-    polling_interval: u64,
+    #[command(flatten)]
+    server: ServerOptions,
 
-    /// Max concurrent tasks
-    #[arg(long, default_value = "100")]
-    max_concurrent_tasks: usize,
-
-    /// Whether or not to index world transactions
-    #[arg(long, action = ArgAction::Set, default_value_t = false)]
-    index_transactions: bool,
-
-    /// Whether or not to index raw events
-    #[arg(long, action = ArgAction::Set, default_value_t = true)]
-    index_raw_events: bool,
-
-    /// ERC contract addresses to index
-    #[arg(long, value_delimiter = ',', value_parser = parse_erc_contract)]
-    contracts: Vec<Contract>,
-
-    /// Event messages that are going to be treated as historical
-    /// A list of the model tags (namespace-name)
-    #[arg(long, value_delimiter = ',')]
-    historical_events: Vec<String>,
+    #[command(flatten)]
+    relay: RelayOptions,
 
     /// Configuration file
-    #[arg(long)]
-    #[clap_config(skip)]
+    #[arg(long, help = "Configuration file to setup Torii.")]
     config: Option<PathBuf>,
+}
+
+impl ToriiArgs {
+    pub fn with_config_file(mut self) -> Result<Self> {
+        let config: ToriiArgsConfig = if let Some(path) = &self.config {
+            toml::from_str(&std::fs::read_to_string(path)?)?
+        } else {
+            return Ok(self);
+        };
+
+        // the CLI (self) takes precedence over the config file.
+        // Currently, the merge is made at the top level of the commands.
+        // We may add recursive merging in the future.
+
+        if self.world_address.is_none() {
+            self.world_address = config.world_address;
+        }
+
+        if self.rpc == Url::parse(DEFAULT_RPC_URL).unwrap() {
+            if let Some(rpc) = config.rpc {
+                self.rpc = rpc;
+            }
+        }
+
+        if self.db_dir.is_none() {
+            self.db_dir = config.db_dir;
+        }
+
+        if self.external_url.is_none() {
+            self.external_url = config.external_url;
+        }
+
+        // Currently the comparison it's only at the top level.
+        // Need to make it more granular.
+
+        if !self.explorer {
+            self.explorer = config.explorer.unwrap_or_default();
+        }
+
+        if self.metrics == MetricsOptions::default() {
+            self.metrics = config.metrics.unwrap_or_default();
+        }
+
+        if self.indexing == IndexingOptions::default() {
+            self.indexing = config.indexing.unwrap_or_default();
+        }
+
+        if self.events == EventsOptions::default() {
+            self.events = config.events.unwrap_or_default();
+        }
+
+        if self.server == ServerOptions::default() {
+            self.server = config.server.unwrap_or_default();
+        }
+
+        if self.relay == RelayOptions::default() {
+            self.relay = config.relay.unwrap_or_default();
+        }
+
+        Ok(self)
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct ToriiArgsConfig {
+    pub world_address: Option<Felt>,
+    pub rpc: Option<Url>,
+    pub db_dir: Option<PathBuf>,
+    pub external_url: Option<Url>,
+    pub explorer: Option<bool>,
+    pub metrics: Option<MetricsOptions>,
+    pub indexing: Option<IndexingOptions>,
+    pub events: Option<EventsOptions>,
+    pub server: Option<ServerOptions>,
+    pub relay: Option<RelayOptions>,
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let matches = <Args as CommandFactory>::command().get_matches();
-    let mut args = if let Some(path) = matches.get_one::<PathBuf>("config") {
-        let config: ArgsConfig = toml::from_str(&std::fs::read_to_string(path)?)?;
-        Args::from_merged(matches, Some(config))
-    } else {
-        Args::from_arg_matches(&matches)?
-    };
+    let mut args = ToriiArgs::parse().with_config_file()?;
 
     let world_address = if let Some(world_address) = args.world_address {
         world_address
@@ -171,7 +192,7 @@ async fn main() -> anyhow::Result<()> {
     };
 
     // let mut contracts = parse_erc_contracts(&args.contracts)?;
-    args.contracts.push(Contract { address: world_address, r#type: ContractType::WORLD });
+    args.indexing.contracts.push(Contract { address: world_address, r#type: ContractType::WORLD });
 
     let filter_layer = EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| EnvFilter::new("info,hyper_reverse_proxy=off"));
@@ -193,10 +214,11 @@ async fn main() -> anyhow::Result<()> {
 
     let tempfile = NamedTempFile::new()?;
     let database_path =
-        if args.database.is_empty() { tempfile.path().to_str().unwrap() } else { &args.database };
+        if let Some(db_dir) = args.db_dir { db_dir } else { tempfile.path().to_path_buf() };
 
-    let mut options =
-        SqliteConnectOptions::from_str(database_path)?.create_if_missing(true).with_regexp();
+    let mut options = SqliteConnectOptions::from_str(&database_path.to_string_lossy())?
+        .create_if_missing(true)
+        .with_regexp();
 
     // Performance settings
     options = options.auto_vacuum(SqliteAutoVacuum::None);
@@ -233,10 +255,10 @@ async fn main() -> anyhow::Result<()> {
     let (block_tx, block_rx) = tokio::sync::mpsc::channel(100);
 
     let mut flags = IndexingFlags::empty();
-    if args.index_transactions {
+    if args.indexing.index_transactions {
         flags.insert(IndexingFlags::TRANSACTIONS);
     }
-    if args.index_raw_events {
+    if args.events.raw {
         flags.insert(IndexingFlags::RAW_EVENTS);
     }
 
@@ -246,20 +268,20 @@ async fn main() -> anyhow::Result<()> {
         provider.clone(),
         processors,
         EngineConfig {
-            max_concurrent_tasks: args.max_concurrent_tasks,
+            max_concurrent_tasks: args.indexing.max_concurrent_tasks,
             start_block: 0,
-            blocks_chunk_size: args.blocks_chunk_size,
-            events_chunk_size: args.events_chunk_size,
-            index_pending: args.index_pending,
-            polling_interval: Duration::from_millis(args.polling_interval),
+            blocks_chunk_size: args.indexing.blocks_chunk_size,
+            events_chunk_size: args.indexing.events_chunk_size,
+            index_pending: args.indexing.index_pending,
+            polling_interval: Duration::from_millis(args.indexing.polling_interval),
             flags,
             event_processor_config: EventProcessorConfig {
-                historical_events: args.historical_events.into_iter().collect(),
+                historical_events: args.events.historical.unwrap_or_default().into_iter().collect(),
             },
         },
         shutdown_tx.clone(),
         Some(block_tx),
-        &args.contracts,
+        &args.indexing.contracts,
     );
 
     let shutdown_rx = shutdown_tx.subscribe();
@@ -276,17 +298,18 @@ async fn main() -> anyhow::Result<()> {
     let mut libp2p_relay_server = torii_relay::server::Relay::new(
         db,
         provider.clone(),
-        args.relay_port,
-        args.relay_webrtc_port,
-        args.relay_websocket_port,
-        args.relay_local_key_path,
-        args.relay_cert_path,
+        args.relay.port,
+        args.relay.webrtc_port,
+        args.relay.websocket_port,
+        args.relay.local_key_path,
+        args.relay.cert_path,
     )
     .expect("Failed to start libp2p relay server");
 
+    let addr = SocketAddr::new(args.server.http_addr, args.server.http_port);
     let proxy_server = Arc::new(Proxy::new(
-        args.addr,
-        if args.allowed_origins.is_empty() { None } else { Some(args.allowed_origins) },
+        addr,
+        args.server.http_cors_origins.filter(|cors_origins| !cors_origins.is_empty()),
         Some(grpc_addr),
         None,
     ));
@@ -298,13 +321,12 @@ async fn main() -> anyhow::Result<()> {
         proxy_server.clone(),
     );
 
-    let endpoint = format!("http://{}", args.addr);
-    let gql_endpoint = format!("{}/graphql", endpoint);
+    let gql_endpoint = format!("{addr}/graphql");
     let encoded: String =
         form_urlencoded::byte_serialize(gql_endpoint.replace("0.0.0.0", "localhost").as_bytes())
             .collect();
     let explorer_url = format!("https://worlds.dev/torii?url={}", encoded);
-    info!(target: LOG_TARGET, endpoint = %endpoint, "Starting torii endpoint.");
+    info!(target: LOG_TARGET, endpoint = %addr, "Starting torii endpoint.");
     info!(target: LOG_TARGET, endpoint = %gql_endpoint, "Serving Graphql playground.");
     info!(target: LOG_TARGET, url = %explorer_url, "Serving World Explorer.");
 
@@ -314,11 +336,12 @@ async fn main() -> anyhow::Result<()> {
         }
     }
 
-    if let Some(listen_addr) = args.metrics {
-        info!(target: LOG_TARGET, addr = %listen_addr, "Starting metrics endpoint.");
+    if args.metrics.metrics {
+        let addr = SocketAddr::new(args.metrics.metrics_addr, args.metrics.metrics_port);
+        info!(target: LOG_TARGET, %addr, "Starting metrics endpoint.");
         let prometheus_handle = PrometheusRecorder::install("torii")?;
         let server = dojo_metrics::Server::new(prometheus_handle).with_process_metrics();
-        tokio::spawn(server.start(listen_addr));
+        tokio::spawn(server.start(addr));
     }
 
     let engine_handle = tokio::spawn(async move { engine.start().await });
@@ -364,23 +387,125 @@ async fn spawn_rebuilding_graphql_server(
     }
 }
 
-// Parses clap cli argument which is expected to be in the format:
-// - erc_type:address:start_block
-// - address:start_block (erc_type defaults to ERC20)
-fn parse_erc_contract(part: &str) -> anyhow::Result<Contract> {
-    match part.split(':').collect::<Vec<&str>>().as_slice() {
-        [r#type, address] => {
-            let r#type = r#type.parse::<ContractType>()?;
-            if r#type == ContractType::WORLD {
-                return Err(anyhow::anyhow!(
-                    "World address cannot be specified as an ERC contract"
-                ));
-            }
+#[cfg(test)]
+mod test {
+    use std::net::{IpAddr, Ipv4Addr};
 
-            let address = Felt::from_str(address)
-                .with_context(|| format!("Expected address, found {}", address))?;
-            Ok(Contract { address, r#type })
-        }
-        _ => Err(anyhow::anyhow!("Invalid contract format")),
+    use super::*;
+
+    #[test]
+    fn test_cli_precedence() {
+        // CLI args must take precedence over the config file.
+        let content = r#"
+        world_address = "0x1234"
+        rpc = "http://0.0.0.0:5050"
+        db_dir = "/tmp/torii-test"
+        
+        [events]
+        raw = true
+        historical = [
+            "ns-E",
+            "ns-EH"
+        ]
+        "#;
+        let path = std::env::temp_dir().join("torii-config2.json");
+        std::fs::write(&path, content).unwrap();
+
+        let path_str = path.to_string_lossy().to_string();
+
+        let args = vec![
+            "torii",
+            "--world",
+            "0x9999",
+            "--rpc",
+            "http://0.0.0.0:6060",
+            "--db-dir",
+            "/tmp/torii-test2",
+            "--events.raw",
+            "false",
+            "--events.historical",
+            "a-A",
+            "--config",
+            path_str.as_str(),
+        ];
+
+        let torii_args = ToriiArgs::parse_from(args).with_config_file().unwrap();
+
+        assert_eq!(torii_args.world_address, Some(Felt::from_str("0x9999").unwrap()));
+        assert_eq!(torii_args.rpc, Url::parse("http://0.0.0.0:6060").unwrap());
+        assert_eq!(torii_args.db_dir, Some(PathBuf::from("/tmp/torii-test2")));
+        assert!(!torii_args.events.raw);
+        assert_eq!(torii_args.events.historical, Some(vec!["a-A".to_string()]));
+        assert_eq!(torii_args.server, ServerOptions::default());
+    }
+
+    #[test]
+    fn test_config_fallback() {
+        let content = r#"
+        world_address = "0x1234"
+        rpc = "http://0.0.0.0:2222"
+        db_dir = "/tmp/torii-test"
+
+        [events]
+        raw = false
+        historical = [
+            "ns-E",
+            "ns-EH"
+        ]
+
+        [server]
+        http_addr = "127.0.0.1"
+        http_port = 7777
+        http_cors_origins = ["*"]
+
+        [indexing]
+        events_chunk_size = 9999
+        index_pending = true
+        max_concurrent_tasks = 1000
+        index_transactions = false
+        contracts = [
+            "erc20:0x1234",
+            "erc721:0x5678"
+        ]
+        "#;
+        let path = std::env::temp_dir().join("torii-config.json");
+        std::fs::write(&path, content).unwrap();
+
+        let path_str = path.to_string_lossy().to_string();
+
+        let args = vec!["torii", "--config", path_str.as_str()];
+
+        let torii_args = ToriiArgs::parse_from(args).with_config_file().unwrap();
+
+        assert_eq!(torii_args.world_address, Some(Felt::from_str("0x1234").unwrap()));
+        assert_eq!(torii_args.rpc, Url::parse("http://0.0.0.0:2222").unwrap());
+        assert_eq!(torii_args.db_dir, Some(PathBuf::from("/tmp/torii-test")));
+        assert!(!torii_args.events.raw);
+        assert_eq!(
+            torii_args.events.historical,
+            Some(vec!["ns-E".to_string(), "ns-EH".to_string()])
+        );
+        assert_eq!(torii_args.indexing.events_chunk_size, 9999);
+        assert_eq!(torii_args.indexing.blocks_chunk_size, 10240);
+        assert!(torii_args.indexing.index_pending);
+        assert_eq!(torii_args.indexing.polling_interval, 500);
+        assert_eq!(torii_args.indexing.max_concurrent_tasks, 1000);
+        assert!(!torii_args.indexing.index_transactions);
+        assert_eq!(
+            torii_args.indexing.contracts,
+            vec![
+                Contract {
+                    address: Felt::from_str("0x1234").unwrap(),
+                    r#type: ContractType::ERC20
+                },
+                Contract {
+                    address: Felt::from_str("0x5678").unwrap(),
+                    r#type: ContractType::ERC721
+                }
+            ]
+        );
+        assert_eq!(torii_args.server.http_addr, IpAddr::V4(Ipv4Addr::LOCALHOST));
+        assert_eq!(torii_args.server.http_port, 7777);
+        assert_eq!(torii_args.server.http_cors_origins, Some(vec!["*".to_string()]));
     }
 }
