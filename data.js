@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1731475401737,
+  "lastUpdate": 1731475475814,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -34063,6 +34063,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8456967,
             "range": "± 43180",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5826bd03180c5bb8f6fb33100cd9c6af5e1551eb",
+          "message": "feat; use graphiql & upgrade version (#2683)",
+          "timestamp": "2024-11-12T23:04:11-06:00",
+          "tree_id": "870a60f880660b84a91d2050e12fe47f4585416f",
+          "url": "https://github.com/dojoengine/dojo/commit/5826bd03180c5bb8f6fb33100cd9c6af5e1551eb"
+        },
+        "date": 1731475473822,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 15026104,
+            "range": "± 398699",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8869911,
+            "range": "± 143336",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3820030626,
+            "range": "± 838253955",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8523119,
+            "range": "± 250172",
             "unit": "ns/iter"
           }
         ]
