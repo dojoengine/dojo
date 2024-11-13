@@ -60,7 +60,7 @@ pub struct StarknetApi<EF: ExecutorFactory> {
 }
 
 pub struct StarknetApiConfig {
-    pub page_size: u64,
+    pub max_event_page_size: Option<u64>,
 }
 
 impl<EF: ExecutorFactory> Clone for StarknetApi<EF> {
