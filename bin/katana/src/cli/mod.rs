@@ -1,5 +1,4 @@
 mod db;
-mod node;
 
 use anyhow::Result;
 use clap::{Args, CommandFactory, Parser, Subcommand};
@@ -26,7 +25,7 @@ impl Cli {
             };
         }
 
-        node::execute(&self.node.with_config_file()?)
+        self.node.with_config_file()?.execute()
     }
 }
 
