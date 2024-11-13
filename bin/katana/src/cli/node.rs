@@ -210,8 +210,6 @@ impl NodeArgs {
     }
 
     fn rpc_config(&self) -> RpcConfig {
-        const MAX_PAGE_SIZE: u64 = 10_000;
-        let page_size = Some(self.server.page_size.min(MAX_PAGE_SIZE));
         let mut apis = HashSet::from([ApiKind::Starknet, ApiKind::Torii, ApiKind::Saya]);
         // only enable `katana` API in dev mode
         if self.development.dev {
