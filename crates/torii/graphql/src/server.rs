@@ -2,7 +2,7 @@ use std::future::Future;
 use std::net::SocketAddr;
 
 use async_graphql::dynamic::Schema;
-use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
+use async_graphql::http::GraphiQLSource;
 use async_graphql::Request;
 use async_graphql_warp::graphql_subscription;
 use serde_json::json;
@@ -65,11 +65,7 @@ fn graphql_filter(
     };
 
     let playground_filter = warp::path("graphql").map(move || {
-        warp::reply::html(playground_source(
-            // NOTE: GraphQL Playground currently doesn't support relative urls for the
-            // subscription endpoint.
-            GraphQLPlaygroundConfig::new("").subscription_endpoint(subscription_endpoint.as_str()),
-        ))
+        warp::reply::html(GraphiQLSource::build().endpoint("/").subscription_endpoint(subscription_endpoint.as_str()).finish())
     });
 
     graphql_subscription(schema).or(graphql_post).or(playground_filter)
