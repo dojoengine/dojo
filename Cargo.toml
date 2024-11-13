@@ -19,6 +19,7 @@ members = [
 	"crates/katana/controller",
 	"crates/katana/core",
 	"crates/katana/executor",
+	"crates/katana/grpc",
 	"crates/katana/node",
 	"crates/katana/node-bindings",
 	"crates/katana/pipeline",
@@ -179,8 +180,8 @@ jsonrpsee = { version = "0.16.2", default-features = false }
 lazy_static = "1.4.0"
 log = "0.4.21"
 metrics = "0.23.0"
-num-traits = { version = "0.2", default-features = false }
 num-bigint = "0.4.3"
+num-traits = { version = "0.2", default-features = false }
 once_cell = "1.0"
 parking_lot = "0.12.1"
 postcard = { version = "1.0.10", features = [ "use-std" ], default-features = false }
