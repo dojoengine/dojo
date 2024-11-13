@@ -770,7 +770,7 @@ impl Sql {
                     }
                     Ty::Enum(e) => {
                         columns.push(format!("external_{}", &member.name));
-                        arguments.push(Argument::String(e.to_sql_value().unwrap()));
+                        arguments.push(Argument::String(e.to_sql_value()));
                     }
                     Ty::ByteArray(b) => {
                         columns.push(format!("external_{}", &member.name));

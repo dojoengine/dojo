@@ -435,8 +435,8 @@ impl Enum {
         }
     }
 
-    pub fn to_sql_value(&self) -> Result<String, EnumError> {
-        self.option().map(|option| option.name.clone())
+    pub fn to_sql_value(&self) -> String {
+        self.option().unwrap_or(&self.options[0]).name.clone()
     }
 }
 
