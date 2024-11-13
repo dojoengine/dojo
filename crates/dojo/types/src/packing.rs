@@ -251,7 +251,7 @@ fn parse_enum(data: &[Felt]) -> Result<Ty, ParseError> {
         offset += len as usize + 2;
     }
 
-    Ok(Ty::Enum(schema::Enum { name, option: None, options: values }))
+    Ok(Ty::Enum(schema::Enum { name, option: 0, options: values }))
 }
 
 fn parse_tuple(data: &[Felt]) -> Result<Ty, ParseError> {

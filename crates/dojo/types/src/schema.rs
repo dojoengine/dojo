@@ -134,11 +134,7 @@ impl Ty {
                     }
                 }
                 Ty::Enum(e) => {
-                    let option = e
-                        .option
-                        .map(|v| Ok(vec![Felt::from(v)]))
-                        .unwrap_or(Err(PrimitiveError::MissingFieldElement))?;
-                    felts.extend(option);
+                    felts.extend(vec![Felt::from(e.option)]);
 
                     for EnumOption { ty, .. } in &e.options {
                         serialize_inner(ty, felts)?;
@@ -189,16 +185,16 @@ impl Ty {
             }
             Ty::Enum(e) => {
                 let value = felts.remove(0);
-                e.option = Some(value.to_u8().ok_or_else(|| PrimitiveError::ValueOutOfRange {
+                e.option = value.to_u8().ok_or_else(|| PrimitiveError::ValueOutOfRange {
                     r#type: type_name::<u8>(),
                     value,
-                })?);
+                })?;
 
-                match &e.options[e.option.unwrap() as usize].ty {
+                match &e.options[e.option as usize].ty {
                     // Skip deserializing the enum option if it has no type - unit type
                     Ty::Tuple(tuple) if tuple.is_empty() => {}
                     _ => {
-                        e.options[e.option.unwrap() as usize].ty.deserialize(felts)?;
+                        e.options[e.option as usize].ty.deserialize(felts)?;
                     }
                 }
             }
@@ -412,23 +408,17 @@ pub struct EnumOption {
 
 impl Enum {
     pub fn option(&self) -> Result<&EnumOption, EnumError> {
-        let option: usize = if let Some(option) = self.option {
-            option as usize
-        } else {
-            return Err(EnumError::OptionNotSet);
-        };
-
-        if option >= self.options.len() {
+        if self.option as usize >= self.options.len() {
             return Err(EnumError::OptionInvalid);
         }
 
-        Ok(&self.options[option])
+        Ok(&self.options[self.option as usize])
     }
 
     pub fn set_option(&mut self, name: &str) -> Result<(), EnumError> {
         match self.options.iter().position(|option| option.name == name) {
             Some(index) => {
-                self.option = Some(index as u8);
+                self.option = index as u8;
                 Ok(())
             }
             None => Err(EnumError::OptionInvalid),
@@ -629,7 +619,7 @@ mod tests {
                     name: "enum_field".to_string(),
                     ty: Ty::Enum(Enum {
                         name: "TestEnum".to_string(),
-                        option: Some(1),
+                        option: 1,
                         options: vec![
                             EnumOption { name: "OptionA".to_string(), ty: Ty::Tuple(vec![]) },
                             EnumOption { name: "OptionB".to_string(), ty: Ty::Tuple(vec![]) },
@@ -692,7 +682,7 @@ mod tests {
         // Test enum diff
         let enum1 = Ty::Enum(Enum {
             name: "TestEnum".to_string(),
-            option: None,
+            option: 0,
             options: vec![
                 EnumOption { name: "Option1".to_string(), ty: Ty::Tuple(vec![]) },
                 EnumOption { name: "Option2".to_string(), ty: Ty::Tuple(vec![]) },
@@ -701,7 +691,7 @@ mod tests {
 
         let enum2 = Ty::Enum(Enum {
             name: "TestEnum".to_string(),
-            option: None,
+            option: 0,
             options: vec![EnumOption { name: "Option1".to_string(), ty: Ty::Tuple(vec![]) }],
         });
 
