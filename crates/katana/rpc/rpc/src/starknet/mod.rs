@@ -58,6 +58,7 @@ pub struct StarknetApi<EF: ExecutorFactory> {
     inner: Arc<Inner<EF>>,
 }
 
+#[derive(Debug, Clone)]
 pub struct StarknetApiConfig {
     pub max_event_page_size: Option<u64>,
 }

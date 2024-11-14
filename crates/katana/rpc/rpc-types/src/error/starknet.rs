@@ -283,7 +283,7 @@ mod tests {
     #[case(StarknetApiError::TxnHashNotFound, 29, "Transaction hash not found")]
     #[case(StarknetApiError::ClassAlreadyDeclared, 51, "Class already declared")]
     #[case(StarknetApiError::InvalidContractClass, 50, "Invalid contract class")]
-    #[case(StarknetApiError::PageSizeTooBig, 31, "Requested page size is too big")]
+    #[case(StarknetApiError::PageSizeTooBig{requested: 1000, max_allowed: 500}, 31, "Requested page size is too big")]
     #[case(StarknetApiError::FailedToReceiveTxn, 1, "Failed to write transaction")]
     #[case(StarknetApiError::InvalidMessageSelector, 21, "Invalid message selector")]
     #[case(StarknetApiError::NonAccount, 58, "Sender address in not an account contract")]
