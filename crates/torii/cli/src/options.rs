@@ -60,6 +60,7 @@ pub struct RelayOptions {
         help = "Path to a local identity key file. If not specified, a new identity will be \
                 generated."
     )]
+    #[serde(default)]
     pub local_key_path: Option<String>,
 
     /// Path to a local certificate file. If not specified, a new certificate will be generated
@@ -70,6 +71,7 @@ pub struct RelayOptions {
         help = "Path to a local certificate file. If not specified, a new certificate will be \
                 generated for WebRTC connections."
     )]
+    #[serde(default)]
     pub cert_path: Option<String>,
 }
 
@@ -100,6 +102,7 @@ pub struct IndexingOptions {
 
     /// Enable indexing pending blocks
     #[arg(long = "indexing.pending", action = ArgAction::Set, default_value_t = true, help = "Whether or not to index pending blocks.")]
+    #[serde(default)]
     pub pending: bool,
 
     /// Polling interval in ms
@@ -127,6 +130,7 @@ pub struct IndexingOptions {
         default_value_t = false,
         help = "Whether or not to index world transactions and keep them in the database."
     )]
+    #[serde(default)]
     pub transactions: bool,
 
     /// ERC contract addresses to index
@@ -137,6 +141,7 @@ pub struct IndexingOptions {
         help = "ERC contract addresses to index. You may only specify ERC20 or ERC721 contracts."
     )]
     #[serde(deserialize_with = "deserialize_contracts")]
+    #[serde(default)]
     pub contracts: Vec<Contract>,
 
     /// Namespaces to index
@@ -146,6 +151,7 @@ pub struct IndexingOptions {
         help = "The namespaces of the world that torii should index. If empty, all namespaces \
                 will be indexed."
     )]
+    #[serde(default)]
     pub namespaces: Vec<String>,
 }
 
@@ -164,11 +170,50 @@ impl Default for IndexingOptions {
     }
 }
 
+impl IndexingOptions {
+    pub fn merge(&mut self, other: Option<&Self>) {
+        if let Some(other) = other {
+            if self.events_chunk_size == DEFAULT_EVENTS_CHUNK_SIZE {
+                self.events_chunk_size = other.events_chunk_size;
+            }
+
+            if self.blocks_chunk_size == DEFAULT_BLOCKS_CHUNK_SIZE {
+                self.blocks_chunk_size = other.blocks_chunk_size;
+            }
+
+            if !self.pending {
+                self.pending = other.pending;
+            }
+
+            if self.polling_interval == DEFAULT_POLLING_INTERVAL {
+                self.polling_interval = other.polling_interval;
+            }
+
+            if self.max_concurrent_tasks == DEFAULT_MAX_CONCURRENT_TASKS {
+                self.max_concurrent_tasks = other.max_concurrent_tasks;
+            }
+
+            if !self.transactions {
+                self.transactions = other.transactions;
+            }
+
+            if self.contracts.is_empty() {
+                self.contracts = other.contracts.clone();
+            }
+
+            if self.namespaces.is_empty() {
+                self.namespaces = other.namespaces.clone();
+            }
+        }
+    }
+}
+
 #[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq)]
 #[command(next_help_heading = "Events indexing options")]
 pub struct EventsOptions {
     /// Whether or not to index raw events
     #[arg(long = "events.raw", action = ArgAction::Set, default_value_t = true, help = "Whether or not to index raw events.")]
+    #[serde(default)]
     pub raw: bool,
 
     /// Event messages that are going to be treated as historical
@@ -178,6 +223,7 @@ pub struct EventsOptions {
         value_delimiter = ',',
         help = "Event messages that are going to be treated as historical during indexing."
     )]
+    #[serde(default)]
     pub historical: Vec<String>,
 }
 
@@ -205,6 +251,7 @@ pub struct ServerOptions {
     /// Comma separated list of domains from which to accept cross origin requests.
     #[arg(long = "http.cors_origins")]
     #[arg(value_delimiter = ',')]
+    #[serde(default)]
     pub http_cors_origins: Option<Vec<String>>,
 }
 
@@ -222,6 +269,7 @@ pub struct MetricsOptions {
     /// For now, metrics will still be collected even if this flag is not set. This only
     /// controls whether the metrics server is started or not.
     #[arg(long)]
+    #[serde(default)]
     pub metrics: bool,
 
     /// The metrics will be served at the given address.
