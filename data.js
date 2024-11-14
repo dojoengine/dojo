@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1731604470497,
+  "lastUpdate": 1731604716029,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -34531,6 +34531,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10460844876,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "76473430+edisontim@users.noreply.github.com",
+            "name": "tedison",
+            "username": "edisontim"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "eecd8bfff052c479d9e9db047f7351568dfc8aee",
+          "message": "feat: add keepalive to Torii client gRPC connections (#2690)\n\n* add keepalive to WorldClient\n\n* Remove keepalive argument from Torii client and set keep alive to default 30 secs\n\n* Introduce constant for keepalive time + set to 60 secs as per recommended",
+          "timestamp": "2024-11-14T10:58:19-06:00",
+          "tree_id": "ea333c13db0badde13e1963214fd0ffd95dba268",
+          "url": "https://github.com/dojoengine/dojo/commit/eecd8bfff052c479d9e9db047f7351568dfc8aee"
+        },
+        "date": 1731604713822,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 15386879,
+            "range": "± 256649",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 9090920,
+            "range": "± 434071",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3750373524,
+            "range": "± 890225532",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8461453,
+            "range": "± 135924",
             "unit": "ns/iter"
           }
         ]
