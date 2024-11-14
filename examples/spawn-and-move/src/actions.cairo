@@ -318,7 +318,7 @@ mod tests {
         let mut world = spawn_test_world([ndef].span());
         world.sync_perms_and_inits(contract_defs());
         let hash: felt252 = poseidon_hash_string!("ns");
-        let storage = world.dispatcher.new_from_hash(hash);
+        let storage = dojo::world::WorldStorageTrait::new_from_hash(world.dispatcher, hash);
         assert_eq!(storage.namespace_hash, world.namespace_hash);
         assert_eq!(storage.dispatcher.contract_address, world.dispatcher.contract_address);
     }

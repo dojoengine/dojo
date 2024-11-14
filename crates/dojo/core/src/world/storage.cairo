@@ -32,13 +32,14 @@ pub impl WorldStorageInternalImpl of WorldStorageTrait {
         WorldStorage { dispatcher: world, namespace_hash }
     }
 
-    fn new_from_hash(self: @IWorldDispatcher, namespace_hash: felt252) -> WorldStorage {
-        WorldStorage { dispatcher: *self, namespace_hash }
+    fn new_from_hash(world: IWorldDispatcher, namespace_hash: felt252) -> WorldStorage {
+        WorldStorage { dispatcher: world, namespace_hash }
     }
 
     fn set_namespace(ref self: WorldStorage, namespace: @ByteArray) {
         self.namespace_hash = dojo::utils::bytearray_hash(namespace);
     }
+
 
     fn dns(self: @WorldStorage, contract_name: @ByteArray) -> Option<(ContractAddress, ClassHash)> {
         match (*self.dispatcher)

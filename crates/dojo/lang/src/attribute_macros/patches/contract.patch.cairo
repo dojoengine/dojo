@@ -31,7 +31,7 @@ pub mod $name$ {
         }
 
         fn world_from_hash(self: @ContractState, namespace_hash: felt252) -> dojo::world::storage::WorldStorage {
-            dojo::world::WorldStorageTrait::new_from_hash(@(self.world_provider.world_dispatcher()), namespace_hash)
+            dojo::world::WorldStorageTrait::new_from_hash(self.world_provider.world_dispatcher(), namespace_hash)
         }
     }
 
