@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1731578099002,
+  "lastUpdate": 1731603262061,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -34423,6 +34423,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8491473,
             "range": "± 366726",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "distinct": true,
+          "id": "a8cea6f98c9357a2e0eb155641458809513f51cb",
+          "message": "fix(torii/graphql): use borrowed_any instead of owned_any\n\ncommit-id:eaaead2c",
+          "timestamp": "2024-11-14T22:08:08+05:30",
+          "tree_id": "39e2451afaaa3606250ddba8a34471d6e2401992",
+          "url": "https://github.com/dojoengine/dojo/commit/a8cea6f98c9357a2e0eb155641458809513f51cb"
+        },
+        "date": 1731603260768,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10497915788,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
