@@ -1,4 +1,4 @@
-use anyhow::{Error, Ok, Result};
+use anyhow::{Error, Result};
 use async_trait::async_trait;
 use dojo_world::contracts::abigen::world::Event as WorldEvent;
 use dojo_world::contracts::model::ModelReader;
@@ -56,7 +56,21 @@ where
 
         // Called model here by language, but it's an event. Torii rework will make clear
         // distinction.
-        let model = db.model(event.selector).await?;
+
+        // If the model does not exist, silently ignore it.
+        // This can happen if only specific namespaces are indexed.
+        let model = match db.model(event.selector).await {
+            Ok(m) => m,
+            Err(e) if e.to_string().contains("no rows") => {
+                debug!(
+                    target: LOG_TARGET,
+                    selector = %event.selector,
+                    "Model does not exist, skipping."
+                );
+                return Ok(());
+            }
+            Err(e) => return Err(e),
+        };
         let name = model.name;
         let namespace = model.namespace;
         let prev_schema = model.schema;
