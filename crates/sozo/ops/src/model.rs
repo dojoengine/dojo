@@ -412,7 +412,7 @@ fn format_primitive(
     let mut _p = *p;
     let _ = _p.deserialize(values);
 
-    format!("{}{}", _start_indent(level, start_indent), _p.to_sql_value().unwrap())
+    format!("{}{}", _start_indent(level, start_indent), _p.to_sql_value())
 }
 
 fn format_byte_array(values: &mut Vec<Felt>, level: usize, start_indent: bool) -> String {

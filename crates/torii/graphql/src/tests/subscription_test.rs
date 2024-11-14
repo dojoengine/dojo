@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
+    use std::sync::Arc;
     use std::time::Duration;
 
     use async_graphql::value;
@@ -14,6 +15,7 @@ mod tests {
     use starknet_crypto::{poseidon_hash_many, Felt};
     use tokio::sync::{broadcast, mpsc};
     use torii_core::executor::Executor;
+    use torii_core::sql::cache::ModelCache;
     use torii_core::sql::utils::felts_to_sql_string;
     use torii_core::sql::Sql;
     use torii_core::types::{Contract, ContractType};
@@ -30,10 +32,13 @@ mod tests {
         tokio::spawn(async move {
             executor.run().await.unwrap();
         });
+
+        let model_cache = Arc::new(ModelCache::new(pool.clone()));
         let mut db = Sql::new(
             pool.clone(),
             sender,
-            &vec![Contract { address: Felt::ZERO, r#type: ContractType::WORLD }],
+            &[Contract { address: Felt::ZERO, r#type: ContractType::WORLD }],
+            model_cache,
         )
         .await
         .unwrap();
@@ -177,10 +182,13 @@ mod tests {
         tokio::spawn(async move {
             executor.run().await.unwrap();
         });
+
+        let model_cache = Arc::new(ModelCache::new(pool.clone()));
         let mut db = Sql::new(
             pool.clone(),
             sender,
-            &vec![Contract { address: Felt::ZERO, r#type: ContractType::WORLD }],
+            &[Contract { address: Felt::ZERO, r#type: ContractType::WORLD }],
+            model_cache,
         )
         .await
         .unwrap();
@@ -304,10 +312,13 @@ mod tests {
         tokio::spawn(async move {
             executor.run().await.unwrap();
         });
+
+        let model_cache = Arc::new(ModelCache::new(pool.clone()));
         let mut db = Sql::new(
             pool.clone(),
             sender,
-            &vec![Contract { address: Felt::ZERO, r#type: ContractType::WORLD }],
+            &[Contract { address: Felt::ZERO, r#type: ContractType::WORLD }],
+            model_cache,
         )
         .await
         .unwrap();
@@ -338,13 +349,14 @@ mod tests {
             });
             db.register_model(
                 &namespace,
-                model,
+                &model,
                 Layout::Fixed(vec![]),
                 class_hash,
                 contract_address,
                 0,
                 0,
                 block_timestamp,
+                None,
             )
             .await
             .unwrap();
@@ -381,10 +393,13 @@ mod tests {
         tokio::spawn(async move {
             executor.run().await.unwrap();
         });
+
+        let model_cache = Arc::new(ModelCache::new(pool.clone()));
         let mut db = Sql::new(
             pool.clone(),
             sender,
-            &vec![Contract { address: Felt::ZERO, r#type: ContractType::WORLD }],
+            &[Contract { address: Felt::ZERO, r#type: ContractType::WORLD }],
+            model_cache,
         )
         .await
         .unwrap();
@@ -414,13 +429,14 @@ mod tests {
             });
             db.register_model(
                 &namespace,
-                model,
+                &model,
                 Layout::Fixed(vec![]),
                 class_hash,
                 contract_address,
                 0,
                 0,
                 block_timestamp,
+                None,
             )
             .await
             .unwrap();
@@ -459,10 +475,13 @@ mod tests {
         tokio::spawn(async move {
             executor.run().await.unwrap();
         });
+
+        let model_cache = Arc::new(ModelCache::new(pool.clone()));
         let mut db = Sql::new(
             pool.clone(),
             sender,
-            &vec![Contract { address: Felt::ZERO, r#type: ContractType::WORLD }],
+            &[Contract { address: Felt::ZERO, r#type: ContractType::WORLD }],
+            model_cache,
         )
         .await
         .unwrap();

@@ -1,10 +1,13 @@
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use dojo_world::config::{ProfileConfig, WorldMetadata};
     use sqlx::SqlitePool;
     use starknet::core::types::Felt;
     use tokio::sync::broadcast;
     use torii_core::executor::Executor;
+    use torii_core::sql::cache::ModelCache;
     use torii_core::sql::Sql;
     use torii_core::types::{Contract, ContractType};
 
@@ -56,10 +59,12 @@ mod tests {
         tokio::spawn(async move {
             executor.run().await.unwrap();
         });
+        let model_cache = Arc::new(ModelCache::new(pool.clone()));
         let mut db = Sql::new(
             pool.clone(),
             sender,
-            &vec![Contract { address: Felt::ZERO, r#type: ContractType::WORLD }],
+            &[Contract { address: Felt::ZERO, r#type: ContractType::WORLD }],
+            model_cache,
         )
         .await
         .unwrap();
@@ -120,10 +125,13 @@ mod tests {
         tokio::spawn(async move {
             executor.run().await.unwrap();
         });
+
+        let model_cache = Arc::new(ModelCache::new(pool.clone()));
         let mut db = Sql::new(
             pool.clone(),
             sender,
-            &vec![Contract { address: Felt::ZERO, r#type: ContractType::WORLD }],
+            &[Contract { address: Felt::ZERO, r#type: ContractType::WORLD }],
+            model_cache,
         )
         .await
         .unwrap();

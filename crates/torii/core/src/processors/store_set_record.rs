@@ -1,10 +1,10 @@
-use anyhow::{Error, Ok, Result};
+use anyhow::{Error, Result};
 use async_trait::async_trait;
 use dojo_world::contracts::abigen::world::Event as WorldEvent;
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::Event;
 use starknet::providers::Provider;
-use tracing::info;
+use tracing::{debug, info};
 
 use super::{EventProcessor, EventProcessorConfig};
 use crate::sql::utils::felts_to_sql_string;
@@ -52,7 +52,20 @@ where
             }
         };
 
-        let model = db.model(event.selector).await?;
+        // If the model does not exist, silently ignore it.
+        // This can happen if only specific namespaces are indexed.
+        let model = match db.model(event.selector).await {
+            Ok(m) => m,
+            Err(e) if e.to_string().contains("no rows") => {
+                debug!(
+                    target: LOG_TARGET,
+                    selector = %event.selector,
+                    "Model does not exist, skipping."
+                );
+                return Ok(());
+            }
+            Err(e) => return Err(e),
+        };
 
         info!(
             target: LOG_TARGET,
