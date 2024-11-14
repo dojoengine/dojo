@@ -268,6 +268,7 @@ mod test {
             "erc20:0x1234",
             "erc721:0x5678"
         ]
+        namespaces = []
         "#;
         let path = std::env::temp_dir().join("torii-config.json");
         std::fs::write(&path, content).unwrap();
