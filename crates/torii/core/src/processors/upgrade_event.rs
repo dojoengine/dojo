@@ -56,7 +56,18 @@ where
 
         // Called model here by language, but it's an event. Torii rework will make clear
         // distinction.
-        let model = db.model(event.selector).await?;
+
+        // If the model does not exist, silently ignore it.
+        // This can happen if only specific namespaces are indexed.
+        let model = match db.model(event.selector).await {
+            Ok(m) => m,
+            Err(e) => {
+                if e.to_string().contains("no rows") {
+                    return Ok(());
+                }
+                return Err(e);
+            }
+        };
         let name = model.name;
         let namespace = model.namespace;
         let prev_schema = model.schema;
