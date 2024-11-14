@@ -592,7 +592,9 @@ pub fn map_row_to_ty(
         }
         Ty::Enum(enum_ty) => {
             let option_name = row.try_get::<String, &str>(&column_name)?;
-            enum_ty.set_option(&option_name)?;
+            if !option_name.is_empty() {
+                enum_ty.set_option(&option_name)?;
+            }
 
             let path = [path, name].join("$");
             for option in &mut enum_ty.options {
