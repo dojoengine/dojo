@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1731577850542,
+  "lastUpdate": 1731578099002,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -34375,6 +34375,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10344308758,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "51d80cf369a529f7ecfe3c02e9f42d96cea6e8a0",
+          "message": "refactor(torii-core): upgrade model silent if not in namespace (#2688)",
+          "timestamp": "2024-11-14T09:34:38Z",
+          "tree_id": "08438425c31c569e61fd9224f90ddde093d95fef",
+          "url": "https://github.com/dojoengine/dojo/commit/51d80cf369a529f7ecfe3c02e9f42d96cea6e8a0"
+        },
+        "date": 1731578097096,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 15141732,
+            "range": "± 237147",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 9163542,
+            "range": "± 565531",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3748738248,
+            "range": "± 694205569",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8491473,
+            "range": "± 366726",
             "unit": "ns/iter"
           }
         ]
