@@ -419,7 +419,7 @@ pub fn build_sql_query(
                 .map(|(i, table)| {
                     if i == 0 {
                         format!(
-                            " LEFT JOIN [{}] ON {entities_table}.id = \
+                            " JOIN [{}] ON {entities_table}.id = \
                              [{}].{entity_relation_column}",
                             table.table_name, table.table_name
                         )
