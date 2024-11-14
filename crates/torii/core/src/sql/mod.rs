@@ -59,7 +59,8 @@ impl Sql {
     pub async fn new(
         pool: Pool<Sqlite>,
         executor: UnboundedSender<QueryMessage>,
-        contracts: &Vec<Contract>,
+        contracts: &[Contract],
+        model_cache: Arc<ModelCache>,
     ) -> Result<Self> {
         for contract in contracts {
             executor.send(QueryMessage::other(
@@ -75,12 +76,7 @@ impl Sql {
         }
 
         let local_cache = LocalCache::new(pool.clone()).await;
-        let db = Self {
-            pool: pool.clone(),
-            executor,
-            model_cache: Arc::new(ModelCache::new(pool.clone())),
-            local_cache,
-        };
+        let db = Self { pool: pool.clone(), executor, model_cache, local_cache };
 
         db.execute().await?;
 
@@ -254,13 +250,14 @@ impl Sql {
     pub async fn register_model(
         &mut self,
         namespace: &str,
-        model: Ty,
+        model: &Ty,
         layout: Layout,
         class_hash: Felt,
         contract_address: Felt,
         packed_size: u32,
         unpacked_size: u32,
         block_timestamp: u64,
+        upgrade_diff: Option<&Ty>,
     ) -> Result<()> {
         let selector = compute_selector_from_names(namespace, &model.name());
         let namespaced_name = format!("{}-{}", namespace, model.name());
@@ -292,12 +289,13 @@ impl Sql {
         let mut model_idx = 0_i64;
         self.build_register_queries_recursive(
             selector,
-            &model,
+            model,
             vec![namespaced_name.clone()],
             &mut model_idx,
             block_timestamp,
             &mut 0,
             &mut 0,
+            upgrade_diff,
         )?;
 
         // we set the model in the cache directly
@@ -633,6 +631,7 @@ impl Sql {
         block_timestamp: u64,
         array_idx: &mut usize,
         parent_array_idx: &mut usize,
+        upgrade_diff: Option<&Ty>,
     ) -> Result<()> {
         if let Ty::Enum(e) = model {
             if e.options.iter().all(|o| if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false })
@@ -649,6 +648,7 @@ impl Sql {
             block_timestamp,
             *array_idx,
             *parent_array_idx,
+            upgrade_diff,
         )?;
 
         let mut build_member = |pathname: &str, member: &Ty| -> Result<()> {
@@ -669,6 +669,8 @@ impl Sql {
                 block_timestamp,
                 &mut (*array_idx + if let Ty::Array(_) = member { 1 } else { 0 }),
                 &mut (*parent_array_idx + if let Ty::Array(_) = model { 1 } else { 0 }),
+                // nested members are not upgrades
+                None,
             )?;
 
             Ok(())
@@ -762,11 +764,11 @@ impl Sql {
                 match &member.ty {
                     Ty::Primitive(ty) => {
                         columns.push(format!("external_{}", &member.name));
-                        arguments.push(Argument::String(ty.to_sql_value().unwrap()));
+                        arguments.push(Argument::String(ty.to_sql_value()));
                     }
                     Ty::Enum(e) => {
                         columns.push(format!("external_{}", &member.name));
-                        arguments.push(Argument::String(e.to_sql_value().unwrap()));
+                        arguments.push(Argument::String(e.to_sql_value()));
                     }
                     Ty::ByteArray(b) => {
                         columns.push(format!("external_{}", &member.name));
@@ -1025,6 +1027,7 @@ impl Sql {
         block_timestamp: u64,
         array_idx: usize,
         parent_array_idx: usize,
+        upgrade_diff: Option<&Ty>,
     ) -> Result<()> {
         let table_id = path.join("$");
         let mut indices = Vec::new();
@@ -1034,20 +1037,37 @@ impl Sql {
              entity_id TEXT, event_message_id TEXT, "
         );
 
+        let mut alter_table_queries = Vec::new();
+
         if array_idx > 0 {
             // index columns
             for i in 0..array_idx {
-                create_table_query.push_str(&format!("idx_{i} INTEGER NOT NULL, ", i = i));
+                let column = format!("idx_{i} INTEGER NOT NULL");
+                create_table_query.push_str(&format!("{column}, "));
+
+                alter_table_queries.push(format!(
+                    "ALTER TABLE [{table_id}] ADD COLUMN idx_{i} INTEGER NOT NULL DEFAULT 0"
+                ));
             }
 
             // full array id column
             create_table_query.push_str("full_array_id TEXT NOT NULL UNIQUE, ");
+            alter_table_queries.push(format!(
+                "ALTER TABLE [{table_id}] ADD COLUMN full_array_id TEXT NOT NULL UNIQUE DEFAULT ''"
+            ));
         }
 
         let mut build_member = |name: &str, ty: &Ty, options: &mut Option<Argument>| {
             if let Ok(cairo_type) = Primitive::from_str(&ty.name()) {
-                create_table_query
-                    .push_str(&format!("external_{name} {}, ", cairo_type.to_sql_type()));
+                let sql_type = cairo_type.to_sql_type();
+                let column = format!("external_{name} {sql_type}");
+
+                create_table_query.push_str(&format!("{column}, "));
+
+                alter_table_queries.push(format!(
+                    "ALTER TABLE [{table_id}] ADD COLUMN external_{name} {sql_type}"
+                ));
+
                 indices.push(format!(
                     "CREATE INDEX IF NOT EXISTS [idx_{table_id}_{name}] ON [{table_id}] \
                      (external_{name});"
@@ -1060,12 +1080,12 @@ impl Sql {
                     .collect::<Vec<_>>()
                     .join(", ");
 
-                create_table_query.push_str(&format!(
-                    "external_{name} TEXT CHECK(external_{name} IN ({all_options})) ",
-                ));
+                let column =
+                    format!("external_{name} TEXT CHECK(external_{name} IN ({all_options}))",);
 
-                // if we're an array, we could have multiple enum options
-                create_table_query.push_str(if array_idx > 0 { ", " } else { "NOT NULL, " });
+                create_table_query.push_str(&format!("{column}, "));
+
+                alter_table_queries.push(format!("ALTER TABLE [{table_id}] ADD COLUMN {column}"));
 
                 indices.push(format!(
                     "CREATE INDEX IF NOT EXISTS [idx_{table_id}_{name}] ON [{table_id}] \
@@ -1081,7 +1101,12 @@ impl Sql {
                         .to_string(),
                 ));
             } else if let Ty::ByteArray(_) = &ty {
-                create_table_query.push_str(&format!("external_{name} TEXT, "));
+                let column = format!("external_{name} TEXT");
+
+                create_table_query.push_str(&format!("{column}, "));
+
+                alter_table_queries.push(format!("ALTER TABLE [{table_id}] ADD COLUMN {column}"));
+
                 indices.push(format!(
                     "CREATE INDEX IF NOT EXISTS [idx_{table_id}_{name}] ON [{table_id}] \
                      (external_{name});"
@@ -1092,6 +1117,18 @@ impl Sql {
         match model {
             Ty::Struct(s) => {
                 for (member_idx, member) in s.children.iter().enumerate() {
+                    if let Some(upgrade_diff) = upgrade_diff {
+                        if !upgrade_diff
+                            .as_struct()
+                            .unwrap()
+                            .children
+                            .iter()
+                            .any(|m| m.name == member.name)
+                        {
+                            continue;
+                        }
+                    }
+
                     let name = member.name.clone();
                     let mut options = None; // TEMP: doesnt support complex enums yet
 
@@ -1248,10 +1285,16 @@ impl Sql {
         create_table_query
             .push_str("FOREIGN KEY (event_message_id) REFERENCES event_messages(id));");
 
-        self.executor.send(QueryMessage::other(create_table_query, vec![]))?;
+        if upgrade_diff.is_some() {
+            for alter_query in alter_table_queries {
+                self.executor.send(QueryMessage::other(alter_query, vec![]))?;
+            }
+        } else {
+            self.executor.send(QueryMessage::other(create_table_query, vec![]))?;
+        }
 
-        for s in indices.iter() {
-            self.executor.send(QueryMessage::other(s.to_string(), vec![]))?;
+        for index_query in indices {
+            self.executor.send(QueryMessage::other(index_query, vec![]))?;
         }
 
         Ok(())

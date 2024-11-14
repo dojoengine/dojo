@@ -35,6 +35,7 @@ use torii_core::executor::Executor;
 use torii_core::processors::store_transaction::StoreTransactionProcessor;
 use torii_core::processors::EventProcessorConfig;
 use torii_core::simple_broker::SimpleBroker;
+use torii_core::sql::cache::ModelCache;
 use torii_core::sql::Sql;
 use torii_core::types::{Contract, ContractType, Model};
 use torii_server::proxy::Proxy;
@@ -113,7 +114,9 @@ async fn main() -> anyhow::Result<()> {
         executor.run().await.unwrap();
     });
 
-    let db = Sql::new(pool.clone(), sender.clone(), &args.indexing.contracts).await?;
+    let model_cache = Arc::new(ModelCache::new(pool.clone()));
+    let db = Sql::new(pool.clone(), sender.clone(), &args.indexing.contracts, model_cache.clone())
+        .await?;
 
     let processors = Processors {
         transaction: vec![Box::new(StoreTransactionProcessor)],
@@ -153,9 +156,15 @@ async fn main() -> anyhow::Result<()> {
     );
 
     let shutdown_rx = shutdown_tx.subscribe();
-    let (grpc_addr, grpc_server) =
-        torii_grpc::server::new(shutdown_rx, &pool, block_rx, world_address, Arc::clone(&provider))
-            .await?;
+    let (grpc_addr, grpc_server) = torii_grpc::server::new(
+        shutdown_rx,
+        &pool,
+        block_rx,
+        world_address,
+        Arc::clone(&provider),
+        model_cache,
+    )
+    .await?;
 
     let mut libp2p_relay_server = torii_relay::server::Relay::new(
         db,

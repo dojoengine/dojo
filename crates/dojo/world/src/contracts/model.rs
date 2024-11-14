@@ -5,7 +5,7 @@ use cainome::cairo_serde::{CairoSerde as _, ContractAddress, Error as CainomeErr
 use dojo_types::packing::{PackingError, ParseError};
 use dojo_types::primitive::{Primitive, PrimitiveError};
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
-use starknet::core::types::Felt;
+use starknet::core::types::{BlockId, Felt};
 use starknet::core::utils::{
     cairo_short_string_to_felt, parse_cairo_short_string, CairoShortStringToFeltError,
     NonAsciiNameError, ParseCairoShortStringError,
@@ -87,12 +87,21 @@ where
         name: &str,
         world: &'a WorldContractReader<P>,
     ) -> Result<ModelRPCReader<'a, P>, ModelError> {
+        Self::new_with_block(namespace, name, world, world.block_id).await
+    }
+
+    pub async fn new_with_block(
+        namespace: &str,
+        name: &str,
+        world: &'a WorldContractReader<P>,
+        block_id: BlockId,
+    ) -> Result<ModelRPCReader<'a, P>, ModelError> {
         let model_selector = naming::compute_selector_from_names(namespace, name);
 
         // Events are also considered like models from a off-chain perspective. They both have
         // introspection and convey type information.
         let (contract_address, class_hash) =
-            match world.resource(&model_selector).block_id(world.block_id).call().await? {
+            match world.resource(&model_selector).block_id(block_id).call().await? {
                 abigen::world::Resource::Model((address, hash)) => (address, hash),
                 abigen::world::Resource::Event((address, hash)) => (address, hash),
                 _ => return Err(ModelError::ModelNotFound),
@@ -104,7 +113,8 @@ where
             return Err(ModelError::ModelNotFound);
         }
 
-        let model_reader = ModelContractReader::new(contract_address.into(), world.provider());
+        let mut model_reader = ModelContractReader::new(contract_address.into(), world.provider());
+        model_reader.set_block(block_id);
 
         Ok(Self {
             namespace: namespace.into(),
@@ -176,7 +186,7 @@ where
         parse_schema(&abigen::model::Ty::Struct(res)).map_err(ModelError::Parse)
     }
 
-    // For non fixed layouts, packed and unpacked sizes are None.
+    // For non fixed layouts,   packed and unpacked sizes are None.
     // Therefore we return 0 in this case.
     async fn packed_size(&self) -> Result<u32, ModelError> {
         Ok(self.model_reader.packed_size().call().await?.unwrap_or(0))

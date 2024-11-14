@@ -238,7 +238,7 @@ pub fn build_sql_query(
     struct TableInfo {
         table_name: String,
         parent_table: Option<String>,
-        is_optional: bool,
+        // is_optional: bool,
         depth: usize, // Track nesting depth for proper ordering
     }
 
@@ -250,7 +250,7 @@ pub fn build_sql_query(
         selections: &mut Vec<String>,
         tables: &mut Vec<TableInfo>,
         arrays_queries: &mut HashMap<String, (Vec<String>, Vec<TableInfo>)>,
-        parent_is_optional: bool,
+        _parent_is_optional: bool,
         depth: usize,
     ) {
         match &ty {
@@ -261,7 +261,7 @@ pub fn build_sql_query(
                 tables.push(TableInfo {
                     table_name: table_name.clone(),
                     parent_table: if path.is_empty() { None } else { Some(path.to_string()) },
-                    is_optional: parent_is_optional,
+                    // is_optional: parent_is_optional,
                     depth,
                 });
 
@@ -273,7 +273,7 @@ pub fn build_sql_query(
                         selections,
                         tables,
                         arrays_queries,
-                        parent_is_optional,
+                        _parent_is_optional,
                         depth + 1,
                     );
                 }
@@ -284,7 +284,7 @@ pub fn build_sql_query(
                 tables.push(TableInfo {
                     table_name: table_name.clone(),
                     parent_table: Some(path.to_string()),
-                    is_optional: parent_is_optional,
+                    // is_optional: parent_is_optional,
                     depth,
                 });
 
@@ -296,7 +296,7 @@ pub fn build_sql_query(
                         selections,
                         tables,
                         arrays_queries,
-                        parent_is_optional,
+                        _parent_is_optional,
                         depth + 1,
                     );
                 }
@@ -309,7 +309,7 @@ pub fn build_sql_query(
                 let mut array_tables = vec![TableInfo {
                     table_name: table_name.clone(),
                     parent_table: Some(path.to_string()),
-                    is_optional: true,
+                    // is_optional: true,
                     depth,
                 }];
 
@@ -356,7 +356,7 @@ pub fn build_sql_query(
                     tables.push(TableInfo {
                         table_name,
                         parent_table: Some(path.to_string()),
-                        is_optional: parent_is_optional || is_optional,
+                        // is_optional: parent_is_optional || is_optional,
                         depth,
                     });
                 }
@@ -395,10 +395,9 @@ pub fn build_sql_query(
     let join_clause = global_tables
         .iter()
         .map(|table| {
-            let join_type = if table.is_optional { "LEFT JOIN" } else { "JOIN" };
             let join_condition =
                 format!("{entities_table}.id = [{}].{entity_relation_column}", table.table_name);
-            format!(" {join_type} [{}] ON {join_condition}", table.table_name)
+            format!(" LEFT JOIN [{}] ON {join_condition}", table.table_name)
         })
         .collect::<Vec<_>>()
         .join(" ");
@@ -424,9 +423,8 @@ pub fn build_sql_query(
                             table.table_name, table.table_name
                         )
                     } else {
-                        let join_type = if table.is_optional { "LEFT JOIN" } else { "JOIN" };
                         format!(
-                            " {join_type} [{}] ON [{}].full_array_id = [{}].full_array_id",
+                            " LEFT JOIN [{}] ON [{}].full_array_id = [{}].full_array_id",
                             table.table_name,
                             table.table_name,
                             table.parent_table.as_ref().unwrap()
@@ -512,9 +510,12 @@ pub fn map_row_to_ty(
                 Primitive::I128(_) => {
                     let value = row.try_get::<String, &str>(&column_name)?;
                     let hex_str = value.trim_start_matches("0x");
-                    primitive.set_i128(Some(
-                        i128::from_str_radix(hex_str, 16).map_err(ParseError::ParseIntError)?,
-                    ))?;
+
+                    if !hex_str.is_empty() {
+                        primitive.set_i128(Some(
+                            i128::from_str_radix(hex_str, 16).map_err(ParseError::ParseIntError)?,
+                        ))?;
+                    }
                 }
                 Primitive::U8(_) => {
                     let value = row.try_get::<u8, &str>(&column_name)?;
@@ -531,21 +532,30 @@ pub fn map_row_to_ty(
                 Primitive::U64(_) => {
                     let value = row.try_get::<String, &str>(&column_name)?;
                     let hex_str = value.trim_start_matches("0x");
-                    primitive.set_u64(Some(
-                        u64::from_str_radix(hex_str, 16).map_err(ParseError::ParseIntError)?,
-                    ))?;
+
+                    if !hex_str.is_empty() {
+                        primitive.set_u64(Some(
+                            u64::from_str_radix(hex_str, 16).map_err(ParseError::ParseIntError)?,
+                        ))?;
+                    }
                 }
                 Primitive::U128(_) => {
                     let value = row.try_get::<String, &str>(&column_name)?;
                     let hex_str = value.trim_start_matches("0x");
-                    primitive.set_u128(Some(
-                        u128::from_str_radix(hex_str, 16).map_err(ParseError::ParseIntError)?,
-                    ))?;
+
+                    if !hex_str.is_empty() {
+                        primitive.set_u128(Some(
+                            u128::from_str_radix(hex_str, 16).map_err(ParseError::ParseIntError)?,
+                        ))?;
+                    }
                 }
                 Primitive::U256(_) => {
                     let value = row.try_get::<String, &str>(&column_name)?;
                     let hex_str = value.trim_start_matches("0x");
-                    primitive.set_u256(Some(U256::from_be_hex(hex_str)))?;
+
+                    if !hex_str.is_empty() {
+                        primitive.set_u256(Some(U256::from_be_hex(hex_str)))?;
+                    }
                 }
                 Primitive::USize(_) => {
                     let value = row.try_get::<u32, &str>(&column_name)?;
@@ -557,26 +567,35 @@ pub fn map_row_to_ty(
                 }
                 Primitive::Felt252(_) => {
                     let value = row.try_get::<String, &str>(&column_name)?;
-                    primitive
-                        .set_felt252(Some(Felt::from_str(&value).map_err(ParseError::FromStr)?))?;
+                    if !value.is_empty() {
+                        primitive.set_felt252(Some(
+                            Felt::from_str(&value).map_err(ParseError::FromStr)?,
+                        ))?;
+                    }
                 }
                 Primitive::ClassHash(_) => {
                     let value = row.try_get::<String, &str>(&column_name)?;
-                    primitive.set_class_hash(Some(
-                        Felt::from_str(&value).map_err(ParseError::FromStr)?,
-                    ))?;
+                    if !value.is_empty() {
+                        primitive.set_class_hash(Some(
+                            Felt::from_str(&value).map_err(ParseError::FromStr)?,
+                        ))?;
+                    }
                 }
                 Primitive::ContractAddress(_) => {
                     let value = row.try_get::<String, &str>(&column_name)?;
-                    primitive.set_contract_address(Some(
-                        Felt::from_str(&value).map_err(ParseError::FromStr)?,
-                    ))?;
+                    if !value.is_empty() {
+                        primitive.set_contract_address(Some(
+                            Felt::from_str(&value).map_err(ParseError::FromStr)?,
+                        ))?;
+                    }
                 }
             };
         }
         Ty::Enum(enum_ty) => {
             let option_name = row.try_get::<String, &str>(&column_name)?;
-            enum_ty.set_option(&option_name)?;
+            if !option_name.is_empty() {
+                enum_ty.set_option(&option_name)?;
+            }
 
             let path = [path, name].join("$");
             for option in &mut enum_ty.options {
@@ -1070,12 +1089,12 @@ mod tests {
              [Test-Position$vec].external_y AS \"Test-Position$vec.y\", \
              [Test-PlayerConfig$favorite_item].external_Some AS \
              \"Test-PlayerConfig$favorite_item.Some\", [Test-PlayerConfig].external_favorite_item \
-             AS \"Test-PlayerConfig.favorite_item\" FROM entities JOIN [Test-Position] ON \
-             entities.id = [Test-Position].entity_id  JOIN [Test-PlayerConfig] ON entities.id = \
-             [Test-PlayerConfig].entity_id  JOIN [Test-Position$vec] ON entities.id = \
-             [Test-Position$vec].entity_id  LEFT JOIN [Test-PlayerConfig$favorite_item] ON \
-             entities.id = [Test-PlayerConfig$favorite_item].entity_id ORDER BY entities.event_id \
-             DESC";
+             AS \"Test-PlayerConfig.favorite_item\" FROM entities LEFT JOIN [Test-Position] ON \
+             entities.id = [Test-Position].entity_id  LEFT JOIN [Test-PlayerConfig] ON \
+             entities.id = [Test-PlayerConfig].entity_id  LEFT JOIN [Test-Position$vec] ON \
+             entities.id = [Test-Position$vec].entity_id  LEFT JOIN \
+             [Test-PlayerConfig$favorite_item] ON entities.id = \
+             [Test-PlayerConfig$favorite_item].entity_id ORDER BY entities.event_id DESC";
         // todo: completely tests arrays
         assert_eq!(query.0, expected_query);
     }

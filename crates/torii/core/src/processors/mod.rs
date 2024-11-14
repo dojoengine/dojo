@@ -22,6 +22,8 @@ pub mod store_set_record;
 pub mod store_transaction;
 pub mod store_update_member;
 pub mod store_update_record;
+pub mod upgrade_event;
+pub mod upgrade_model;
 
 const MODEL_INDEX: usize = 0;
 const ENTITY_ID_INDEX: usize = 1;

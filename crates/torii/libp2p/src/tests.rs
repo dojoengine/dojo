@@ -524,6 +524,7 @@ mod test {
     #[cfg(not(target_arch = "wasm32"))]
     #[tokio::test]
     async fn test_client_messaging() -> Result<(), Box<dyn Error>> {
+        use std::sync::Arc;
         use std::time::Duration;
 
         use dojo_types::schema::{Member, Struct, Ty};
@@ -539,6 +540,7 @@ mod test {
         use tokio::sync::broadcast;
         use tokio::time::sleep;
         use torii_core::executor::Executor;
+        use torii_core::sql::cache::ModelCache;
         use torii_core::sql::Sql;
         use torii_core::types::{Contract, ContractType};
 
@@ -577,10 +579,13 @@ mod test {
         tokio::spawn(async move {
             executor.run().await.unwrap();
         });
+
+        let model_cache = Arc::new(ModelCache::new(pool.clone()));
         let mut db = Sql::new(
             pool.clone(),
             sender,
-            &vec![Contract { address: Felt::ZERO, r#type: ContractType::WORLD }],
+            &[Contract { address: Felt::ZERO, r#type: ContractType::WORLD }],
+            model_cache,
         )
         .await
         .unwrap();
@@ -588,7 +593,7 @@ mod test {
         // Register the model of our Message
         db.register_model(
             "types_test",
-            Ty::Struct(Struct {
+            &Ty::Struct(Struct {
                 name: "Message".to_string(),
                 children: vec![
                     Member {
@@ -609,6 +614,7 @@ mod test {
             0,
             0,
             0,
+            None,
         )
         .await
         .unwrap();
