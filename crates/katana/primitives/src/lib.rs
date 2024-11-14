@@ -9,6 +9,7 @@ pub mod da;
 pub mod env;
 pub mod event;
 pub mod fee;
+pub mod feeder_gateway;
 pub mod genesis;
 pub mod message;
 pub mod receipt;

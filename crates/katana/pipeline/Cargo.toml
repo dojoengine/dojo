@@ -9,11 +9,14 @@ version.workspace = true
 katana-core.workspace = true
 katana-executor.workspace = true
 katana-pool.workspace = true
+katana-primitives.workspace = true
+katana-provider.workspace = true
 katana-tasks.workspace = true
 
 anyhow.workspace = true
 async-trait.workspace = true
 futures.workspace = true
+starknet.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 tracing.workspace = true

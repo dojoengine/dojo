@@ -5,6 +5,7 @@ pub mod stage;
 use core::future::IntoFuture;
 
 use futures::future::BoxFuture;
+use katana_primitives::block::BlockNumber;
 use stage::Stage;
 use tracing::{error, info};
 
