@@ -1,4 +1,4 @@
-use anyhow::{Error, Ok, Result};
+use anyhow::{Error, Result};
 use async_trait::async_trait;
 use dojo_world::contracts::abigen::world::Event as WorldEvent;
 use dojo_world::contracts::model::ModelReader;
