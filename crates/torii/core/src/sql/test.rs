@@ -120,7 +120,8 @@ async fn test_load_from_remote(sequencer: &RunnerCtx) {
     sqlx::migrate!("../migrations").run(&pool).await.unwrap();
 
     let (shutdown_tx, _) = broadcast::channel(1);
-    let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
+    let (mut executor, sender) =
+        Executor::new(pool.clone(), shutdown_tx.clone(), Arc::clone(&provider), 100).await.unwrap();
     tokio::spawn(async move {
         executor.run().await.unwrap();
     });
@@ -280,7 +281,8 @@ async fn test_load_from_remote_del(sequencer: &RunnerCtx) {
     sqlx::migrate!("../migrations").run(&pool).await.unwrap();
 
     let (shutdown_tx, _) = broadcast::channel(1);
-    let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
+    let (mut executor, sender) =
+        Executor::new(pool.clone(), shutdown_tx.clone(), Arc::clone(&provider), 100).await.unwrap();
     tokio::spawn(async move {
         executor.run().await.unwrap();
     });
@@ -295,7 +297,7 @@ async fn test_load_from_remote_del(sequencer: &RunnerCtx) {
     .await
     .unwrap();
 
-    let _ = bootstrap_engine(world_reader, db.clone(), provider).await;
+    let _ = bootstrap_engine(world_reader, db.clone(), Arc::clone(&provider)).await.unwrap();
 
     // TODO: seems that we don't delete the record after delete only values are zeroed?
     assert_eq!(count_table("ns-PlayerConfig", &pool).await, 0);
@@ -368,7 +370,9 @@ async fn test_update_with_set_record(sequencer: &RunnerCtx) {
     sqlx::migrate!("../migrations").run(&pool).await.unwrap();
 
     let (shutdown_tx, _) = broadcast::channel(1);
-    let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
+
+    let (mut executor, sender) =
+        Executor::new(pool.clone(), shutdown_tx.clone(), Arc::clone(&provider), 100).await.unwrap();
     tokio::spawn(async move {
         executor.run().await.unwrap();
     });

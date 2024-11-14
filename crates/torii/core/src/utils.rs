@@ -1,4 +1,18 @@
+use std::time::Duration;
+
+use anyhow::Result;
 use chrono::{DateTime, Utc};
+use futures_util::TryStreamExt;
+use ipfs_api_backend_hyper::{IpfsApi, IpfsClient, TryFromUri};
+use tokio_util::bytes::Bytes;
+use tracing::info;
+
+pub const IPFS_URL: &str = "https://ipfs.io/ipfs/";
+pub const MAX_RETRY: u8 = 3;
+
+pub const IPFS_CLIENT_URL: &str = "https://ipfs.infura.io:5001";
+pub const IPFS_USERNAME: &str = "2EBrzr7ZASQZKH32sl2xWauXPSA";
+pub const IPFS_PASSWORD: &str = "12290b883db9138a8ae3363b6739d220";
 
 pub fn must_utc_datetime_from_timestamp(timestamp: u64) -> DateTime<Utc> {
     let naive_dt = DateTime::from_timestamp(timestamp as i64, 0)
@@ -10,6 +24,31 @@ pub fn utc_dt_string_from_timestamp(timestamp: u64) -> String {
     must_utc_datetime_from_timestamp(timestamp).to_rfc3339()
 }
 
+pub async fn fetch_content_from_ipfs(cid: &str, mut retries: u8) -> Result<Bytes> {
+    let client =
+        IpfsClient::from_str(IPFS_CLIENT_URL)?.with_credentials(IPFS_USERNAME, IPFS_PASSWORD);
+    while retries > 0 {
+        let response = client.cat(cid).map_ok(|chunk| chunk.to_vec()).try_concat().await;
+        match response {
+            Ok(stream) => return Ok(Bytes::from(stream)),
+            Err(e) => {
+                retries -= 1;
+                if retries > 0 {
+                    info!(
+                        error = %e,
+                        "Fetch uri."
+                    );
+                    tokio::time::sleep(Duration::from_secs(3)).await;
+                }
+            }
+        }
+    }
+
+    Err(anyhow::anyhow!(format!(
+        "Failed to pull data from IPFS after {} attempts, cid: {}",
+        MAX_RETRY, cid
+    )))
+}
 // tests
 #[cfg(test)]
 mod tests {

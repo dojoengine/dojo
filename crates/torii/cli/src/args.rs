@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use anyhow::Result;
+use camino::Utf8PathBuf;
 use clap::Parser;
 use dojo_utils::parse::parse_url;
 use serde::{Deserialize, Serialize};
@@ -46,6 +47,10 @@ pub struct ToriiArgs {
     /// Configuration file
     #[arg(long, help = "Configuration file to setup Torii.")]
     pub config: Option<PathBuf>,
+
+    /// Path to a directory to store ERC artifacts
+    #[arg(long)]
+    pub artifacts_path: Option<Utf8PathBuf>,
 
     #[command(flatten)]
     pub indexing: IndexingOptions,
@@ -103,9 +108,7 @@ impl ToriiArgs {
             self.explorer = config.explorer.unwrap_or_default();
         }
 
-        if self.indexing == IndexingOptions::default() {
-            self.indexing = config.indexing.unwrap_or_default();
-        }
+        self.indexing.merge(config.indexing.as_ref());
 
         if self.events == EventsOptions::default() {
             self.events = config.events.unwrap_or_default();
@@ -201,7 +204,10 @@ mod test {
         world_address = "0x1234"
         rpc = "http://0.0.0.0:5050"
         db_dir = "/tmp/torii-test"
-        
+
+        [indexing]
+        transactions = false
+
         [events]
         raw = true
         historical = [
@@ -226,6 +232,8 @@ mod test {
             "false",
             "--events.historical",
             "a-A",
+            "--indexing.transactions",
+            "true",
             "--config",
             path_str.as_str(),
         ];
@@ -238,6 +246,7 @@ mod test {
         assert!(!torii_args.events.raw);
         assert_eq!(torii_args.events.historical, vec!["a-A".to_string()]);
         assert_eq!(torii_args.server, ServerOptions::default());
+        assert!(torii_args.indexing.transactions);
     }
 
     #[test]
