@@ -58,12 +58,15 @@ where
         // This can happen if only specific namespaces are indexed.
         let model = match db.model(event.selector).await {
             Ok(m) => m,
-            Err(e) => {
-                if e.to_string().contains("no rows") {
-                    return Ok(());
-                }
-                return Err(e);
-            }
+            Err(e) if e.to_string().contains("no rows") => {
+                debug!(
+                    target: LOG_TARGET,
+                    selector = %event.selector,
+                    "Model does not exist, skipping."
+                );
+                return Ok(());
+            },
+            Err(e) => return Err(e),
         };
 
         let name = model.name;
