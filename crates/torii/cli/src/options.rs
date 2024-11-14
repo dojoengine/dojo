@@ -100,7 +100,7 @@ pub struct IndexingOptions {
 
     /// Enable indexing pending blocks
     #[arg(long = "indexing.pending", action = ArgAction::Set, default_value_t = true, help = "Whether or not to index pending blocks.")]
-    pub index_pending: bool,
+    pub pending: bool,
 
     /// Polling interval in ms
     #[arg(
@@ -127,7 +127,7 @@ pub struct IndexingOptions {
         default_value_t = false,
         help = "Whether or not to index world transactions and keep them in the database."
     )]
-    pub index_transactions: bool,
+    pub transactions: bool,
 
     /// ERC contract addresses to index
     #[arg(
@@ -154,8 +154,8 @@ impl Default for IndexingOptions {
         Self {
             events_chunk_size: DEFAULT_EVENTS_CHUNK_SIZE,
             blocks_chunk_size: DEFAULT_BLOCKS_CHUNK_SIZE,
-            index_pending: true,
-            index_transactions: false,
+            pending: true,
+            transactions: false,
             contracts: vec![],
             polling_interval: DEFAULT_POLLING_INTERVAL,
             max_concurrent_tasks: DEFAULT_MAX_CONCURRENT_TASKS,

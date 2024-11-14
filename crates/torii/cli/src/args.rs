@@ -285,10 +285,10 @@ mod test {
         assert_eq!(torii_args.events.historical, vec!["ns-E".to_string(), "ns-EH".to_string()]);
         assert_eq!(torii_args.indexing.events_chunk_size, 9999);
         assert_eq!(torii_args.indexing.blocks_chunk_size, 10240);
-        assert!(torii_args.indexing.index_pending);
+        assert!(torii_args.indexing.pending);
         assert_eq!(torii_args.indexing.polling_interval, 500);
         assert_eq!(torii_args.indexing.max_concurrent_tasks, 1000);
-        assert!(!torii_args.indexing.index_transactions);
+        assert!(!torii_args.indexing.transactions);
         assert_eq!(
             torii_args.indexing.contracts,
             vec![

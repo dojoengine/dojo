@@ -123,7 +123,7 @@ async fn main() -> anyhow::Result<()> {
     let (block_tx, block_rx) = tokio::sync::mpsc::channel(100);
 
     let mut flags = IndexingFlags::empty();
-    if args.indexing.index_transactions {
+    if args.indexing.transactions {
         flags.insert(IndexingFlags::TRANSACTIONS);
     }
     if args.events.raw {
@@ -140,7 +140,7 @@ async fn main() -> anyhow::Result<()> {
             start_block: 0,
             blocks_chunk_size: args.indexing.blocks_chunk_size,
             events_chunk_size: args.indexing.events_chunk_size,
-            index_pending: args.indexing.index_pending,
+            index_pending: args.indexing.pending,
             polling_interval: Duration::from_millis(args.indexing.polling_interval),
             flags,
             event_processor_config: EventProcessorConfig {
