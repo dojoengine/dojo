@@ -202,7 +202,7 @@ impl Primitive {
             Primitive::U16(u16) => format!("{}", u16.unwrap_or_default()),
             Primitive::U32(u32) => format!("{}", u32.unwrap_or_default()),
             Primitive::USize(u32) => format!("{}", u32.unwrap_or_default()),
-            Primitive::Bool(bool) => format!("{}", bool.unwrap_or_default()),
+            Primitive::Bool(bool) => format!("{}", bool.unwrap_or_default() as i32),
 
             // Hex string
             Primitive::I128(i128) => format!("{:#064x}", i128.unwrap_or_default()),
