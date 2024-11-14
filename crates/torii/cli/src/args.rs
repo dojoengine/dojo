@@ -236,7 +236,7 @@ mod test {
         assert_eq!(torii_args.rpc, Url::parse("http://0.0.0.0:6060").unwrap());
         assert_eq!(torii_args.db_dir, Some(PathBuf::from("/tmp/torii-test2")));
         assert!(!torii_args.events.raw);
-        assert_eq!(torii_args.events.historical, Some(vec!["a-A".to_string()]));
+        assert_eq!(torii_args.events.historical, vec!["a-A".to_string()]);
         assert_eq!(torii_args.server, ServerOptions::default());
     }
 
@@ -261,13 +261,14 @@ mod test {
 
         [indexing]
         events_chunk_size = 9999
-        index_pending = true
+        pending = true
         max_concurrent_tasks = 1000
-        index_transactions = false
+        transactions = false
         contracts = [
             "erc20:0x1234",
             "erc721:0x5678"
         ]
+        namespaces = []
         "#;
         let path = std::env::temp_dir().join("torii-config.json");
         std::fs::write(&path, content).unwrap();
@@ -282,16 +283,13 @@ mod test {
         assert_eq!(torii_args.rpc, Url::parse("http://0.0.0.0:2222").unwrap());
         assert_eq!(torii_args.db_dir, Some(PathBuf::from("/tmp/torii-test")));
         assert!(!torii_args.events.raw);
-        assert_eq!(
-            torii_args.events.historical,
-            Some(vec!["ns-E".to_string(), "ns-EH".to_string()])
-        );
+        assert_eq!(torii_args.events.historical, vec!["ns-E".to_string(), "ns-EH".to_string()]);
         assert_eq!(torii_args.indexing.events_chunk_size, 9999);
         assert_eq!(torii_args.indexing.blocks_chunk_size, 10240);
-        assert!(torii_args.indexing.index_pending);
+        assert!(torii_args.indexing.pending);
         assert_eq!(torii_args.indexing.polling_interval, 500);
         assert_eq!(torii_args.indexing.max_concurrent_tasks, 1000);
-        assert!(!torii_args.indexing.index_transactions);
+        assert!(!torii_args.indexing.transactions);
         assert_eq!(
             torii_args.indexing.contracts,
             vec![

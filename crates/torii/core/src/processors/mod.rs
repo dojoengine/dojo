@@ -31,6 +31,7 @@ const ENTITY_ID_INDEX: usize = 1;
 #[derive(Clone, Debug, Default)]
 pub struct EventProcessorConfig {
     pub historical_events: HashSet<String>,
+    pub namespaces: HashSet<String>,
 }
 
 #[async_trait]
