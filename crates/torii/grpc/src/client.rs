@@ -51,9 +51,11 @@ pub struct WorldClient {
 impl WorldClient {
     #[cfg(not(target_arch = "wasm32"))]
     pub async fn new(dst: String, world_address: Felt) -> Result<Self, Error> {
+        const KEEPALIVE_TIME: u64 = 60;
+
         let endpoint = Endpoint::from_shared(dst.clone())
             .map_err(|e| Error::Endpoint(e.to_string()))?
-            .tcp_keepalive(Some(Duration::from_secs(30)));
+            .tcp_keepalive(Some(Duration::from_secs(KEEPALIVE_TIME)));
         let channel = endpoint.connect().await.map_err(Error::Transport)?;
         Ok(Self {
             _world_address: world_address,
