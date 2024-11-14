@@ -1081,8 +1081,7 @@ impl Sql {
                     .join(", ");
 
                 let column = format!(
-                    "external_{name} TEXT CHECK(external_{name} IN ({all_options})) {}",
-                    if array_idx > 0 { "" } else { "NOT NULL" }
+                    "external_{name} TEXT CHECK(external_{name} IN ({all_options}))",
                 );
 
                 create_table_query.push_str(&format!("{column}, "));
