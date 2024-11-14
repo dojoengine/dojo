@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1731607071807,
+  "lastUpdate": 1731607278299,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -34609,6 +34609,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10408591041,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fac5a67734ab91f751c554be4b55f72c09b3e2f8",
+          "message": "fix: cli args for torii and katana with serde default (#2692)\n\n* fix: ensure torii options use serde default\n\n* fix: add serde default to missing katana options",
+          "timestamp": "2024-11-14T11:41:14-06:00",
+          "tree_id": "928acf2629b893b171ae15f0ac6b7318297763f1",
+          "url": "https://github.com/dojoengine/dojo/commit/fac5a67734ab91f751c554be4b55f72c09b3e2f8"
+        },
+        "date": 1731607276720,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 15229919,
+            "range": "± 316973",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8969287,
+            "range": "± 393483",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3872880088,
+            "range": "± 786932757",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8485027,
+            "range": "± 126923",
             "unit": "ns/iter"
           }
         ]
