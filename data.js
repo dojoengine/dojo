@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1731567981630,
+  "lastUpdate": 1731568203416,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -34219,6 +34219,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10131900739,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "70d2b51d8bb92b235c1e8cad44b87cd15511bfa1",
+          "message": "feat(torii): model upgrades (#2637)\n\n* feat(torii): model upgrades\r\n\r\n* upgrade processor for event and model\r\n\r\n* fix processors\r\n\r\n* fix: model upgrade\r\n\r\n* wrap up model upgrade\r\n\r\n* ftm\r\n\r\n* clippy\r\n\r\n* fmt\r\n\r\n* refactor: diff\r\n\r\n* fmtg\r\n\r\n* fix: set model cache\r\n\r\n* fix add model members\r\n\r\n* fix\r\n\r\n* feat: shared cache between grpc & engine and fix partial deser\r\n\r\n* fix: test and fmt\r\n\r\n* fix\r\n\r\n* primitives not option\r\n\r\n* fix: enums\r\n\r\n* Revert \"fix: enums\"\r\n\r\nThis reverts commit d86fcc4fe5220a7301725a2b2d7abf3476955856.\r\n\r\n* Revert \"primitives not option\"\r\n\r\nThis reverts commit 210ac315d54eeef6b6ae6a397c65f69ffba2d3cc.\r\n\r\n* fix enum sql value\r\n\r\n* main\r\n\r\n* remove prints & format\r\n\r\n* fix quer ytest\r\n\r\n* fix: bool\r\n\r\n* fix: ararys\r\n\r\n* fmt\r\n\r\n* fix: map row to ty\r\n\r\n* fix: enum\r\n\r\n* fix: enum\r\n\r\n* fmt\r\n\r\n* fix: primitive len\r\n\r\n* Revert \"fix: primitive len\"\r\n\r\nThis reverts commit 551c6bd6fff5432cdb93e9d178e1f8183a33a7ed.\r\n\r\n* refactotr: dont use modelr eader block\r\n\r\n* Revert \"Revert \"fix: primitive len\"\"\r\n\r\nThis reverts commit cea81026c96ceceee1650ecbdb0e9c7940982326.",
+          "timestamp": "2024-11-14T13:50:15+07:00",
+          "tree_id": "c152f48161af236e1d30d3849f78e03029e64d4b",
+          "url": "https://github.com/dojoengine/dojo/commit/70d2b51d8bb92b235c1e8cad44b87cd15511bfa1"
+        },
+        "date": 1731568201397,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 15829419,
+            "range": "± 210948",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8723311,
+            "range": "± 273843",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3527177466,
+            "range": "± 676942997",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8425687,
+            "range": "± 54605",
             "unit": "ns/iter"
           }
         ]
