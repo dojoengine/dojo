@@ -85,7 +85,7 @@ pub trait BasicObject: Send + Sync {
                                     values
                                         .edges
                                         .iter()
-                                        .map(|v| FieldValue::owned_any(v.clone()))
+                                        .map(FieldValue::borrowed_any)
                                         .collect::<Vec<FieldValue<'_>>>(),
                                 )));
                             }
@@ -105,7 +105,7 @@ pub trait BasicObject: Send + Sync {
                         ctx.parent_value.try_downcast_ref::<ConnectionEdge<ErcTokenType>>()
                     {
                         match field_name.as_str() {
-                            "node" => return Ok(Some(FieldValue::owned_any(values.node.clone()))),
+                            "node" => return Ok(Some(FieldValue::borrowed_any(&values.node))),
                             "cursor" => {
                                 return Ok(Some(FieldValue::value(Value::String(
                                     values.cursor.clone(),
@@ -124,7 +124,7 @@ pub trait BasicObject: Send + Sync {
                                     values
                                         .edges
                                         .iter()
-                                        .map(|v| FieldValue::owned_any(v.clone()))
+                                        .map(FieldValue::borrowed_any)
                                         .collect::<Vec<FieldValue<'_>>>(),
                                 )));
                             }
@@ -144,7 +144,7 @@ pub trait BasicObject: Send + Sync {
                         ctx.parent_value.try_downcast_ref::<ConnectionEdge<TokenTransferNode>>()
                     {
                         match field_name.as_str() {
-                            "node" => return Ok(Some(FieldValue::owned_any(values.node.clone()))),
+                            "node" => return Ok(Some(FieldValue::borrowed_any(&values.node))),
                             "cursor" => {
                                 return Ok(Some(FieldValue::value(Value::String(
                                     values.cursor.clone(),
