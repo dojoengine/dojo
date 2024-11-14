@@ -12,8 +12,7 @@ use super::attribute_macros::{
     DojoContract, DojoEvent, DojoModel, DOJO_CONTRACT_ATTR, DOJO_EVENT_ATTR, DOJO_MODEL_ATTR,
 };
 use super::derive_macros::{dojo_derive_all, DOJO_INTROSPECT_DERIVE, DOJO_PACKED_DERIVE};
-use super::inline_macros::PoseidonHashStringMacro;
-use super::inline_macros::SelectorFromTagMacro;
+use super::inline_macros::{PoseidonHashStringMacro, SelectorFromTagMacro};
 
 // #[cfg(test)]
 // #[path = "plugin_test.rs"]
