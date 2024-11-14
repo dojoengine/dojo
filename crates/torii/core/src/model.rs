@@ -532,7 +532,7 @@ pub fn map_row_to_ty(
                 Primitive::U64(_) => {
                     let value = row.try_get::<String, &str>(&column_name)?;
                     let hex_str = value.trim_start_matches("0x");
-                    
+
                     if !hex_str.is_empty() {
                         primitive.set_u64(Some(
                             u64::from_str_radix(hex_str, 16).map_err(ParseError::ParseIntError)?,
@@ -568,8 +568,9 @@ pub fn map_row_to_ty(
                 Primitive::Felt252(_) => {
                     let value = row.try_get::<String, &str>(&column_name)?;
                     if !value.is_empty() {
-                        primitive
-                            .set_felt252(Some(Felt::from_str(&value).map_err(ParseError::FromStr)?))?;
+                        primitive.set_felt252(Some(
+                            Felt::from_str(&value).map_err(ParseError::FromStr)?,
+                        ))?;
                     }
                 }
                 Primitive::ClassHash(_) => {

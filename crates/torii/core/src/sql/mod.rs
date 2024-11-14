@@ -1080,9 +1080,8 @@ impl Sql {
                     .collect::<Vec<_>>()
                     .join(", ");
 
-                let column = format!(
-                    "external_{name} TEXT CHECK(external_{name} IN ({all_options}))",
-                );
+                let column =
+                    format!("external_{name} TEXT CHECK(external_{name} IN ({all_options}))",);
 
                 create_table_query.push_str(&format!("{column}, "));
 
