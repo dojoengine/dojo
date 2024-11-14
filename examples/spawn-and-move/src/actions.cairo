@@ -203,13 +203,17 @@ pub mod actions {
         fn world_default(self: @ContractState) -> dojo::world::WorldStorage {
             self.world(@"ns")
         }
+
+        fn world_default_from_hash(self: @ContractState) -> dojo::world::WorldStorage {
+            self.world_from_hash(poseidon_hash_string!("ns"))
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use dojo::model::{ModelStorage, ModelValueStorage, ModelStorageTest};
-    use dojo::world::WorldStorageTrait;
+    use dojo::world::{WorldStorageTrait};
     use dojo_cairo_test::{
         spawn_test_world, NamespaceDef, TestResource, ContractDefTrait, ContractDef,
         WorldStorageTestTrait
@@ -305,5 +309,17 @@ mod tests {
         let new_position: Position = world.read_model(caller);
         assert(new_position.vec.x == initial_position.vec.x + 1, 'position x is wrong');
         assert(new_position.vec.y == initial_position.vec.y, 'position y is wrong');
+    }
+
+    #[test]
+    #[available_gas(30000000)]
+    fn test_world_from_hash() {
+        let ndef = namespace_def();
+        let mut world = spawn_test_world([ndef].span());
+        world.sync_perms_and_inits(contract_defs());
+        let hash: felt252 = poseidon_hash_string!("ns");
+        let storage = world.dispatcher.new_from_hash(hash);
+        assert_eq!(storage.namespace_hash, world.namespace_hash);
+        assert_eq!(storage.dispatcher.contract_address, world.dispatcher.contract_address);
     }
 }

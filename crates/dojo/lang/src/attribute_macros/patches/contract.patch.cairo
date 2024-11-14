@@ -29,6 +29,10 @@ pub mod $name$ {
         fn world(self: @ContractState, namespace: @ByteArray) -> dojo::world::storage::WorldStorage {
             dojo::world::WorldStorageTrait::new(self.world_provider.world_dispatcher(), namespace)
         }
+
+        fn world_from_hash(self: @ContractState, namespace_hash: felt252) -> dojo::world::storage::WorldStorage {
+            dojo::world::WorldStorageTrait::new_from_hash(@(self.world_provider.world_dispatcher()), namespace_hash)
+        }
     }
 
     $body$
