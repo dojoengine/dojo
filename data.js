@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1731569847176,
+  "lastUpdate": 1731577850542,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -34345,6 +34345,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8502662,
             "range": "± 150196",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "51d80cf369a529f7ecfe3c02e9f42d96cea6e8a0",
+          "message": "refactor(torii-core): upgrade model silent if not in namespace (#2688)",
+          "timestamp": "2024-11-14T09:34:38Z",
+          "tree_id": "08438425c31c569e61fd9224f90ddde093d95fef",
+          "url": "https://github.com/dojoengine/dojo/commit/51d80cf369a529f7ecfe3c02e9f42d96cea6e8a0"
+        },
+        "date": 1731577849129,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10344308758,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
