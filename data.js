@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1731604716029,
+  "lastUpdate": 1731607071807,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -34579,6 +34579,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8461453,
             "range": "± 135924",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fac5a67734ab91f751c554be4b55f72c09b3e2f8",
+          "message": "fix: cli args for torii and katana with serde default (#2692)\n\n* fix: ensure torii options use serde default\n\n* fix: add serde default to missing katana options",
+          "timestamp": "2024-11-14T11:41:14-06:00",
+          "tree_id": "928acf2629b893b171ae15f0ac6b7318297763f1",
+          "url": "https://github.com/dojoengine/dojo/commit/fac5a67734ab91f751c554be4b55f72c09b3e2f8"
+        },
+        "date": 1731607069683,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10408591041,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
