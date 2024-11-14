@@ -261,9 +261,9 @@ mod test {
 
         [indexing]
         events_chunk_size = 9999
-        index_pending = true
+        pending = true
         max_concurrent_tasks = 1000
-        index_transactions = false
+        transactions = false
         contracts = [
             "erc20:0x1234",
             "erc721:0x5678"
