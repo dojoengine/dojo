@@ -205,12 +205,12 @@ impl Primitive {
             Primitive::Bool(bool) => format!("{}", bool.unwrap_or_default() as i32),
 
             // Hex string
-            Primitive::I128(i128) => format!("0x{:064x}", i128.unwrap_or_default()),
-            Primitive::ContractAddress(felt) => format!("0x{:064x}", felt.unwrap_or_default()),
-            Primitive::ClassHash(felt) => format!("0x{:064x}", felt.unwrap_or_default()),
-            Primitive::Felt252(felt) => format!("0x{:064x}", felt.unwrap_or_default()),
-            Primitive::U128(u128) => format!("0x{:064x}", u128.unwrap_or_default()),
-            Primitive::U64(u64) => format!("0x{:064x}", u64.unwrap_or_default()),
+            Primitive::I128(i128) => format!("{:#064x}", i128.unwrap_or_default()),
+            Primitive::ContractAddress(felt) => format!("{:#064x}", felt.unwrap_or_default()),
+            Primitive::ClassHash(felt) => format!("{:#064x}", felt.unwrap_or_default()),
+            Primitive::Felt252(felt) => format!("{:#064x}", felt.unwrap_or_default()),
+            Primitive::U128(u128) => format!("{:#064x}", u128.unwrap_or_default()),
+            Primitive::U64(u64) => format!("{:#064x}", u64.unwrap_or_default()),
 
             Primitive::U256(u256) => format!("0x{:064x}", u256.unwrap_or_default()),
         }
