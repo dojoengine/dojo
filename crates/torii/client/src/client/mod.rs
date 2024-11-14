@@ -1,7 +1,6 @@
 pub mod error;
 
 use std::sync::Arc;
-use std::time::Duration;
 
 use dojo_types::WorldMetadata;
 use dojo_world::contracts::WorldContractReader;
@@ -42,10 +41,8 @@ impl Client {
         rpc_url: String,
         relay_url: String,
         world: Felt,
-        keepalive: Option<Duration>,
     ) -> Result<Self, Error> {
-        let mut grpc_client =
-            torii_grpc::client::WorldClient::new(torii_url, world, keepalive).await?;
+        let mut grpc_client = torii_grpc::client::WorldClient::new(torii_url, world).await?;
 
         let relay_client = torii_relay::client::RelayClient::new(relay_url)?;
 
