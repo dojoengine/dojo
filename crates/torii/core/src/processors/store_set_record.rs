@@ -63,7 +63,7 @@ where
                     "Model does not exist, skipping."
                 );
                 return Ok(());
-            },
+            }
             Err(e) => return Err(e),
         };
 
