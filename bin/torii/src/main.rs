@@ -144,7 +144,8 @@ async fn main() -> anyhow::Result<()> {
             polling_interval: Duration::from_millis(args.indexing.polling_interval),
             flags,
             event_processor_config: EventProcessorConfig {
-                historical_events: args.events.historical.unwrap_or_default().into_iter().collect(),
+                historical_events: args.events.historical.into_iter().collect(),
+                namespaces: args.indexing.namespaces.into_iter().collect(),
             },
         },
         shutdown_tx.clone(),

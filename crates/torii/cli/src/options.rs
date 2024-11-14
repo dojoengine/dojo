@@ -138,6 +138,14 @@ pub struct IndexingOptions {
     )]
     #[serde(deserialize_with = "deserialize_contracts")]
     pub contracts: Vec<Contract>,
+
+    /// Namespaces to index
+    #[arg(
+        long = "indexing.namespaces",
+        value_delimiter = ',',
+        help = "The namespaces of the world that torii should index. If empty, all namespaces will be indexed."
+    )]
+    pub namespaces: Vec<String>,
 }
 
 impl Default for IndexingOptions {
@@ -150,6 +158,7 @@ impl Default for IndexingOptions {
             contracts: vec![],
             polling_interval: DEFAULT_POLLING_INTERVAL,
             max_concurrent_tasks: DEFAULT_MAX_CONCURRENT_TASKS,
+            namespaces: vec![],
         }
     }
 }
@@ -168,12 +177,12 @@ pub struct EventsOptions {
         value_delimiter = ',',
         help = "Event messages that are going to be treated as historical during indexing."
     )]
-    pub historical: Option<Vec<String>>,
+    pub historical: Vec<String>,
 }
 
 impl Default for EventsOptions {
     fn default() -> Self {
-        Self { raw: true, historical: None }
+        Self { raw: true, historical: vec![] }
     }
 }
 
