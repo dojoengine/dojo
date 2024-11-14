@@ -510,9 +510,12 @@ pub fn map_row_to_ty(
                 Primitive::I128(_) => {
                     let value = row.try_get::<String, &str>(&column_name)?;
                     let hex_str = value.trim_start_matches("0x");
-                    primitive.set_i128(Some(
-                        i128::from_str_radix(hex_str, 16).map_err(ParseError::ParseIntError)?,
-                    ))?;
+
+                    if !hex_str.is_empty() {
+                        primitive.set_i128(Some(
+                            i128::from_str_radix(hex_str, 16).map_err(ParseError::ParseIntError)?,
+                        ))?;
+                    }
                 }
                 Primitive::U8(_) => {
                     let value = row.try_get::<u8, &str>(&column_name)?;
@@ -529,21 +532,30 @@ pub fn map_row_to_ty(
                 Primitive::U64(_) => {
                     let value = row.try_get::<String, &str>(&column_name)?;
                     let hex_str = value.trim_start_matches("0x");
-                    primitive.set_u64(Some(
-                        u64::from_str_radix(hex_str, 16).map_err(ParseError::ParseIntError)?,
-                    ))?;
+                    
+                    if !hex_str.is_empty() {
+                        primitive.set_u64(Some(
+                            u64::from_str_radix(hex_str, 16).map_err(ParseError::ParseIntError)?,
+                        ))?;
+                    }
                 }
                 Primitive::U128(_) => {
                     let value = row.try_get::<String, &str>(&column_name)?;
                     let hex_str = value.trim_start_matches("0x");
-                    primitive.set_u128(Some(
-                        u128::from_str_radix(hex_str, 16).map_err(ParseError::ParseIntError)?,
-                    ))?;
+
+                    if !hex_str.is_empty() {
+                        primitive.set_u128(Some(
+                            u128::from_str_radix(hex_str, 16).map_err(ParseError::ParseIntError)?,
+                        ))?;
+                    }
                 }
                 Primitive::U256(_) => {
                     let value = row.try_get::<String, &str>(&column_name)?;
                     let hex_str = value.trim_start_matches("0x");
-                    primitive.set_u256(Some(U256::from_be_hex(hex_str)))?;
+
+                    if !hex_str.is_empty() {
+                        primitive.set_u256(Some(U256::from_be_hex(hex_str)))?;
+                    }
                 }
                 Primitive::USize(_) => {
                     let value = row.try_get::<u32, &str>(&column_name)?;
@@ -555,20 +567,26 @@ pub fn map_row_to_ty(
                 }
                 Primitive::Felt252(_) => {
                     let value = row.try_get::<String, &str>(&column_name)?;
-                    primitive
-                        .set_felt252(Some(Felt::from_str(&value).map_err(ParseError::FromStr)?))?;
+                    if !value.is_empty() {
+                        primitive
+                            .set_felt252(Some(Felt::from_str(&value).map_err(ParseError::FromStr)?))?;
+                    }
                 }
                 Primitive::ClassHash(_) => {
                     let value = row.try_get::<String, &str>(&column_name)?;
-                    primitive.set_class_hash(Some(
-                        Felt::from_str(&value).map_err(ParseError::FromStr)?,
-                    ))?;
+                    if !value.is_empty() {
+                        primitive.set_class_hash(Some(
+                            Felt::from_str(&value).map_err(ParseError::FromStr)?,
+                        ))?;
+                    }
                 }
                 Primitive::ContractAddress(_) => {
                     let value = row.try_get::<String, &str>(&column_name)?;
-                    primitive.set_contract_address(Some(
-                        Felt::from_str(&value).map_err(ParseError::FromStr)?,
-                    ))?;
+                    if !value.is_empty() {
+                        primitive.set_contract_address(Some(
+                            Felt::from_str(&value).map_err(ParseError::FromStr)?,
+                        ))?;
+                    }
                 }
             };
         }
