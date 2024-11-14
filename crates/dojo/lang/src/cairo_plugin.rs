@@ -12,6 +12,7 @@ use super::attribute_macros::{
     DojoContract, DojoEvent, DojoModel, DOJO_CONTRACT_ATTR, DOJO_EVENT_ATTR, DOJO_MODEL_ATTR,
 };
 use super::derive_macros::{dojo_derive_all, DOJO_INTROSPECT_DERIVE, DOJO_PACKED_DERIVE};
+use super::inline_macros::PoseidonHashStringMacro;
 use super::inline_macros::SelectorFromTagMacro;
 
 // #[cfg(test)]
@@ -26,6 +27,7 @@ pub fn dojo_plugin_suite() -> PluginSuite {
     let mut suite = PluginSuite::default();
 
     suite.add_plugin::<BuiltinDojoPlugin>().add_inline_macro_plugin::<SelectorFromTagMacro>();
+    suite.add_plugin::<BuiltinDojoPlugin>().add_inline_macro_plugin::<PoseidonHashStringMacro>();
 
     suite
 }
