@@ -143,7 +143,8 @@ pub struct IndexingOptions {
     #[arg(
         long = "indexing.namespaces",
         value_delimiter = ',',
-        help = "The namespaces of the world that torii should index. If empty, all namespaces will be indexed."
+        help = "The namespaces of the world that torii should index. If empty, all namespaces \
+                will be indexed."
     )]
     pub namespaces: Vec<String>,
 }
