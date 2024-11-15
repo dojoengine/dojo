@@ -9,7 +9,7 @@ pub type StageResult = Result<StageExecutionOutput, Error>;
 
 #[derive(Debug, Default, Clone)]
 pub struct StageExecutionInput {
-    pub from_block: BlockNumber,
+    pub to: BlockNumber,
 }
 
 #[derive(Debug, Default)]
@@ -21,6 +21,8 @@ pub struct StageExecutionOutput {
 pub enum Error {
     #[error(transparent)]
     Blocks(#[from] blocks::Error),
+    #[error(transparent)]
+    Provider(#[from] katana_provider::error::ProviderError),
     #[error(transparent)]
     Other(#[from] anyhow::Error),
 }

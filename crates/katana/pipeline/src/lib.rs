@@ -6,6 +6,8 @@ use core::future::IntoFuture;
 
 use futures::future::BoxFuture;
 use katana_primitives::block::BlockNumber;
+use katana_provider::error::ProviderError;
+use katana_provider::traits::stage::StageCheckpointProvider;
 use stage::{Stage, StageExecutionInput, StageExecutionOutput};
 use tracing::{error, info};
 
@@ -19,6 +21,8 @@ pub type PipelineFut = BoxFuture<'static, PipelineResult>;
 pub enum Error {
     #[error(transparent)]
     Stage(#[from] stage::Error),
+    #[error(transparent)]
+    Provider(#[from] ProviderError),
 }
 
 /// Manages the execution of stages.
@@ -32,12 +36,14 @@ pub enum Error {
 pub struct Pipeline {
     stages: Vec<Box<dyn Stage>>,
     tip: BlockNumber,
+    provider: Box<dyn StageCheckpointProvider>,
 }
 
 impl Pipeline {
     /// Create a new empty pipeline.
     pub fn new() -> Self {
-        Self { stages: Vec::new(), tip: 0 }
+        // Self { stages: Vec::new(), tip: 0 }
+        todo!()
     }
 
     /// Insert a new stage into the pipeline.
@@ -47,17 +53,20 @@ impl Pipeline {
 
     /// Start the pipeline.
     pub async fn run(&mut self) -> PipelineResult {
-        let mut input = StageExecutionInput { from_block: self.tip };
+        let mut input = StageExecutionInput { to: self.tip };
 
         for stage in &mut self.stages {
-            info!(target: "pipeline", id = %stage.id(), "Executing stage.");
+            let id = stage.id();
+
+            info!(target: "pipeline", %id, "Executing stage.");
             let StageExecutionOutput { last_block_processed } = stage.execute(&input).await?;
 
             // TODO: store the stage checkpoint in the db based on
             // the latest block number the stage has processed
+            self.provider.set_checkpoint(id, last_block_processed)?;
 
             // TODO: update the input for the next stage
-            input.from_block = last_block_processed;
+            input.to = last_block_processed;
         }
         info!(target: "pipeline", "Pipeline finished.");
         Ok(())
