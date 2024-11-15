@@ -108,6 +108,7 @@ mod tests {
                 address: Felt::ZERO,
                 owners: HashSet::new(),
                 writers: HashSet::new(),
+                metadata_hash: Felt::ZERO,
             },
         });
 
@@ -143,6 +144,7 @@ mod tests {
                 address: Felt::ZERO,
                 owners: HashSet::new(),
                 writers: HashSet::new(),
+                metadata_hash: Felt::ZERO,
             },
         });
 
@@ -192,6 +194,7 @@ mod tests {
                 address: Felt::ZERO,
                 owners: HashSet::new(),
                 writers: HashSet::new(),
+                metadata_hash: Felt::ZERO,
             },
             is_initialized: true,
         });

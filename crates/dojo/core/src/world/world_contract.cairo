@@ -111,7 +111,8 @@ pub mod world {
     pub struct MetadataUpdate {
         #[key]
         pub resource: felt252,
-        pub uri: ByteArray
+        pub uri: ByteArray,
+        pub hash: felt252
     }
 
     #[derive(Drop, starknet::Event)]
@@ -356,7 +357,11 @@ pub mod world {
 
             self
                 .emit(
-                    MetadataUpdate { resource: metadata.resource_id, uri: metadata.metadata_uri }
+                    MetadataUpdate {
+                        resource: metadata.resource_id,
+                        uri: metadata.metadata_uri,
+                        hash: metadata.metadata_hash
+                    }
                 );
         }
 

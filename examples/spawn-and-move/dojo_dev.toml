@@ -3,6 +3,26 @@ description = "example world"
 name = "example"
 seed = "dojo_examples"
 
+[[models]]
+tag = "ns-Message"
+description = "Message sent by a player"
+
+[[models]]
+tag = "ns-Position"
+description = "position of a player in the world"
+
+[[models]]
+tag = "ns-Moves"
+description = "move of a player in the world"
+
+[[events]]
+tag = "ns-Moved"
+description = "when a player has moved"
+
+[[contracts]]
+tag = "ns-actions"
+description = "set of actions for a player"
+
 [namespace]
 default = "ns"
 
@@ -11,7 +31,7 @@ rpc_url = "http://localhost:5050/"
 # Default account for katana with seed = 0
 account_address = "0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba"
 private_key = "0x1800000000300000180000000000030000000000003006001800006600"
-world_address = "0x70058e3886cb7411e8a77db90ee3dd453ac16b763b30bd99b3c8440fe42056e"
+world_address = "0x52ee4d3cba58d1a0462bbfb6813bf5aa1b35078c3b859cded2b727c1d9469ea"
 
 [init_call_args]
 "ns-others" = ["0xff"]

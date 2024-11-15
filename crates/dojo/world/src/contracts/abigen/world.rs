@@ -393,6 +393,7 @@ impl cainome::cairo_serde::CairoSerde for FieldLayout {
 pub struct MetadataUpdate {
     pub resource: starknet::core::types::Felt,
     pub uri: cainome::cairo_serde::ByteArray,
+    pub hash: starknet::core::types::Felt,
 }
 impl cainome::cairo_serde::CairoSerde for MetadataUpdate {
     type RustType = Self;
@@ -402,12 +403,14 @@ impl cainome::cairo_serde::CairoSerde for MetadataUpdate {
         let mut __size = 0;
         __size += starknet::core::types::Felt::cairo_serialized_size(&__rust.resource);
         __size += cainome::cairo_serde::ByteArray::cairo_serialized_size(&__rust.uri);
+        __size += starknet::core::types::Felt::cairo_serialized_size(&__rust.hash);
         __size
     }
     fn cairo_serialize(__rust: &Self::RustType) -> Vec<starknet::core::types::Felt> {
         let mut __out: Vec<starknet::core::types::Felt> = vec![];
         __out.extend(starknet::core::types::Felt::cairo_serialize(&__rust.resource));
         __out.extend(cainome::cairo_serde::ByteArray::cairo_serialize(&__rust.uri));
+        __out.extend(starknet::core::types::Felt::cairo_serialize(&__rust.hash));
         __out
     }
     fn cairo_deserialize(
@@ -419,7 +422,9 @@ impl cainome::cairo_serde::CairoSerde for MetadataUpdate {
         __offset += starknet::core::types::Felt::cairo_serialized_size(&resource);
         let uri = cainome::cairo_serde::ByteArray::cairo_deserialize(__felts, __offset)?;
         __offset += cainome::cairo_serde::ByteArray::cairo_serialized_size(&uri);
-        Ok(MetadataUpdate { resource, uri })
+        let hash = starknet::core::types::Felt::cairo_deserialize(__felts, __offset)?;
+        __offset += starknet::core::types::Felt::cairo_serialized_size(&hash);
+        Ok(MetadataUpdate { resource, uri, hash })
     }
 }
 impl MetadataUpdate {
@@ -625,6 +630,7 @@ impl OwnerUpdated {
 pub struct ResourceMetadata {
     pub resource_id: starknet::core::types::Felt,
     pub metadata_uri: cainome::cairo_serde::ByteArray,
+    pub metadata_hash: starknet::core::types::Felt,
 }
 impl cainome::cairo_serde::CairoSerde for ResourceMetadata {
     type RustType = Self;
@@ -634,12 +640,14 @@ impl cainome::cairo_serde::CairoSerde for ResourceMetadata {
         let mut __size = 0;
         __size += starknet::core::types::Felt::cairo_serialized_size(&__rust.resource_id);
         __size += cainome::cairo_serde::ByteArray::cairo_serialized_size(&__rust.metadata_uri);
+        __size += starknet::core::types::Felt::cairo_serialized_size(&__rust.metadata_hash);
         __size
     }
     fn cairo_serialize(__rust: &Self::RustType) -> Vec<starknet::core::types::Felt> {
         let mut __out: Vec<starknet::core::types::Felt> = vec![];
         __out.extend(starknet::core::types::Felt::cairo_serialize(&__rust.resource_id));
         __out.extend(cainome::cairo_serde::ByteArray::cairo_serialize(&__rust.metadata_uri));
+        __out.extend(starknet::core::types::Felt::cairo_serialize(&__rust.metadata_hash));
         __out
     }
     fn cairo_deserialize(
@@ -651,7 +659,9 @@ impl cainome::cairo_serde::CairoSerde for ResourceMetadata {
         __offset += starknet::core::types::Felt::cairo_serialized_size(&resource_id);
         let metadata_uri = cainome::cairo_serde::ByteArray::cairo_deserialize(__felts, __offset)?;
         __offset += cainome::cairo_serde::ByteArray::cairo_serialized_size(&metadata_uri);
-        Ok(ResourceMetadata { resource_id, metadata_uri })
+        let metadata_hash = starknet::core::types::Felt::cairo_deserialize(__felts, __offset)?;
+        __offset += starknet::core::types::Felt::cairo_serialized_size(&metadata_hash);
+        Ok(ResourceMetadata { resource_id, metadata_uri, metadata_hash })
     }
 }
 #[derive(Clone, serde::Serialize, serde::Deserialize, PartialEq, Debug)]
@@ -1791,7 +1801,18 @@ impl TryFrom<&starknet::core::types::EmittedEvent> for Event {
                 }
             };
             data_offset += cainome::cairo_serde::ByteArray::cairo_serialized_size(&uri);
-            return Ok(Event::MetadataUpdate(MetadataUpdate { resource, uri }));
+            let hash =
+                match starknet::core::types::Felt::cairo_deserialize(&event.data, data_offset) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        return Err(format!(
+                            "Could not deserialize field {} for {}: {:?}",
+                            "hash", "MetadataUpdate", e
+                        ));
+                    }
+                };
+            data_offset += starknet::core::types::Felt::cairo_serialized_size(&hash);
+            return Ok(Event::MetadataUpdate(MetadataUpdate { resource, uri, hash }));
         }
         let selector = event.keys[0];
         if selector
@@ -2660,7 +2681,18 @@ impl TryFrom<&starknet::core::types::Event> for Event {
                 }
             };
             data_offset += cainome::cairo_serde::ByteArray::cairo_serialized_size(&uri);
-            return Ok(Event::MetadataUpdate(MetadataUpdate { resource, uri }));
+            let hash =
+                match starknet::core::types::Felt::cairo_deserialize(&event.data, data_offset) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        return Err(format!(
+                            "Could not deserialize field {} for {}: {:?}",
+                            "hash", "MetadataUpdate", e
+                        ));
+                    }
+                };
+            data_offset += starknet::core::types::Felt::cairo_serialized_size(&hash);
+            return Ok(Event::MetadataUpdate(MetadataUpdate { resource, uri, hash }));
         }
         let selector = event.keys[0];
         if selector

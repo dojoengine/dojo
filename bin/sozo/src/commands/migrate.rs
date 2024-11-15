@@ -75,6 +75,8 @@ impl MigrateArgs {
             let MigrationResult { manifest, has_changes } =
                 migration.migrate(&mut spinner).await.context("Migration failed.")?;
 
+            migration.upload_metadata(&mut spinner).await.context("Metadata upload failed.")?;
+
             spinner.update_text("Writing manifest...");
             ws.write_manifest_profile(manifest).context("🪦 Failed to write manifest.")?;
 

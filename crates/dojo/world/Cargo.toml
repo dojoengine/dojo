@@ -30,6 +30,7 @@ num-bigint.workspace = true
 
 [dev-dependencies]
 tokio.workspace = true
+futures.workspace = true
 
 [features]
 metadata = [ "dep:ipfs-api-backend-hyper" ]

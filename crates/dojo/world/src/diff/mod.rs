@@ -29,6 +29,8 @@ pub use resource::*;
 pub struct WorldStatusInfo {
     /// The address of the world.
     pub address: Felt,
+    /// The hash of the metadata associated to the world.
+    pub metadata_hash: Felt,
     /// The class hash of the world.
     pub class_hash: Felt,
     /// The casm class hash of the world.
@@ -77,6 +79,7 @@ impl WorldDiff {
         let mut diff = Self {
             world_info: WorldStatusInfo {
                 address: local.deterministic_world_address()?,
+                metadata_hash: Felt::ZERO,
                 class_hash: local.class_hash,
                 casm_class_hash: local.casm_class_hash,
                 class: local.class,
@@ -117,6 +120,7 @@ impl WorldDiff {
             world_info: WorldStatusInfo {
                 // As the remote world was found, its address is always used.
                 address: remote.address,
+                metadata_hash: remote.metadata_hash,
                 class_hash: local.class_hash,
                 casm_class_hash: local.casm_class_hash,
                 class: local.class,
