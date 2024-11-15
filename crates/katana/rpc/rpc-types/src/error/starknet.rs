@@ -135,10 +135,6 @@ impl StarknetApiError {
             | StarknetApiError::ValidationFailure { reason } => {
                 Some(Value::String(reason.to_string()))
             }
-
-            StarknetApiError::PageSizeTooBig { requested: _, max_allowed: _ } => {
-                Some(serde_json::json!(self))
-            }
             _ => None,
         }
     }
