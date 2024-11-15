@@ -1,16 +1,13 @@
-use std::convert::Infallible;
 use std::time::Duration;
 
-use katana_primitives::block::{BlockNumber, SealedBlock};
+use katana_primitives::block::{BlockNumber, SealedBlockWithStatus};
+use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
 use katana_provider::traits::block::BlockWriter;
-use starknet::providers::sequencer::models::StateUpdateWithBlock;
-use starknet::providers::ProviderError;
-use starknet::providers::{
-    sequencer::models::{Block, BlockId},
-    SequencerGatewayProvider, SequencerGatewayProviderError,
-};
+use starknet::providers::sequencer::models::{BlockId, StateUpdateWithBlock};
+use starknet::providers::{ProviderError, SequencerGatewayProvider};
 
-use super::{Stage, StageId, StageResult};
+// Blocks -> Tx traces -> Classes (repeat)
+use super::{Stage, StageExecutionInput, StageExecutionOutput, StageResult};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -25,46 +22,48 @@ pub struct Blocks<P: BlockWriter> {
 }
 
 impl<P: BlockWriter> Blocks<P> {
-    #[allow(deprecated)]
     async fn fetch_blocks(&self, block: BlockNumber) -> Result<StateUpdateWithBlock, Error> {
-        let block_id = BlockId::Number(block);
-        let res = self.feeder_gateway.get_state_update_with_block(block_id).await?;
+        #[allow(deprecated)]
+        let res = self.feeder_gateway.get_state_update_with_block(BlockId::Number(block)).await?;
         Ok(res)
     }
 }
 
 #[async_trait::async_trait]
 impl<P: BlockWriter> Stage for Blocks<P> {
-    fn id(&self) -> StageId {
-        StageId::Blocks
+    fn id(&self) -> &'static str {
+        "Blocks"
     }
 
-    async fn execute(&mut self) -> StageResult {
+    async fn execute(&mut self, input: &StageExecutionInput) -> StageResult {
+        // TODO: get the last processed block from storage
         let mut current_block = self.from_block;
-        let mut blocks = Vec::new();
 
         loop {
             let data = self.fetch_blocks(current_block).await?;
-            let StateUpdateWithBlock { state_update, block } = data;
+            let StateUpdateWithBlock { state_update, block: fgw_block } = data;
 
-            blocks.push(state_update_with_block);
-            current_block += 1;
-
-            if current_block > 10 {
-                break;
-            }
+            let block = SealedBlockWithStatus::from(fgw_block);
+            let su = StateUpdates::from(state_update);
+            let su = StateUpdatesWithDeclaredClasses { state_updates: su, ..Default::default() };
 
             let _ = self.provider.insert_block_with_states_and_receipts(
                 block,
-                Default::default(),
+                su,
                 Vec::new(),
                 Vec::new(),
             );
 
             tokio::time::sleep(Duration::from_secs(1)).await;
+
+            if current_block == input.from_block {
+                break;
+            }
+
+            current_block += 1;
         }
 
-        Ok(())
+        Ok(StageExecutionOutput { last_block_processed: current_block })
     }
 }
 
@@ -83,12 +82,4 @@ mod tests {
     //     // assert_eq!(blocks.len(), 4);
     //     // println!("{:?}", blocks[3]);
     // }
-}
-
-impl TryFrom<Block> for SealedBlock {
-    type Error = Infallible;
-
-    fn try_from(value: Block) -> Result<Self, Self::Error> {
-        todo!()
-    }
 }

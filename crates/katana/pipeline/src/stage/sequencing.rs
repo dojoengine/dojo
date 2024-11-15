@@ -11,7 +11,7 @@ use katana_pool::{TransactionPool, TxPool};
 use katana_tasks::{TaskHandle, TaskSpawner};
 use tracing::error;
 
-use super::{StageId, StageResult};
+use super::{StageExecutionInput, StageExecutionOutput, StageResult};
 use crate::Stage;
 
 /// The sequencing stage is responsible for advancing the chain state.
@@ -63,12 +63,12 @@ impl<EF: ExecutorFactory> Sequencing<EF> {
 
 #[async_trait::async_trait]
 impl<EF: ExecutorFactory> Stage for Sequencing<EF> {
-    fn id(&self) -> StageId {
-        StageId::Sequencing
+    fn id(&self) -> &'static str {
+        "Sequencing"
     }
 
     #[tracing::instrument(skip(self), name = "Stage", fields(id = %self.id()))]
-    async fn execute(&mut self) -> StageResult {
+    async fn execute(&mut self, _: &StageExecutionInput) -> StageResult {
         // Build the messaging and block production tasks.
         let messaging = self.run_messaging().await?;
         let block_production = self.run_block_production();
@@ -86,6 +86,6 @@ impl<EF: ExecutorFactory> Stage for Sequencing<EF> {
             }
         }
 
-        Ok(())
+        Ok(StageExecutionOutput::default())
     }
 }

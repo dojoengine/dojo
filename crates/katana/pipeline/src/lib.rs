@@ -6,7 +6,7 @@ use core::future::IntoFuture;
 
 use futures::future::BoxFuture;
 use katana_primitives::block::BlockNumber;
-use stage::Stage;
+use stage::{Stage, StageExecutionInput, StageExecutionOutput};
 use tracing::{error, info};
 
 /// The result of a pipeline execution.
@@ -31,12 +31,13 @@ pub enum Error {
 /// [`reth`]: https://github.com/paradigmxyz/reth/blob/c7aebff0b6bc19cd0b73e295497d3c5150d40ed8/crates/stages/api/src/pipeline/mod.rs#L66
 pub struct Pipeline {
     stages: Vec<Box<dyn Stage>>,
+    tip: BlockNumber,
 }
 
 impl Pipeline {
     /// Create a new empty pipeline.
     pub fn new() -> Self {
-        Self { stages: Vec::new() }
+        Self { stages: Vec::new(), tip: 0 }
     }
 
     /// Insert a new stage into the pipeline.
@@ -46,9 +47,17 @@ impl Pipeline {
 
     /// Start the pipeline.
     pub async fn run(&mut self) -> PipelineResult {
+        let mut input = StageExecutionInput { from_block: self.tip };
+
         for stage in &mut self.stages {
             info!(target: "pipeline", id = %stage.id(), "Executing stage.");
-            stage.execute().await?;
+            let StageExecutionOutput { last_block_processed } = stage.execute(&input).await?;
+
+            // TODO: store the stage checkpoint in the db based on
+            // the latest block number the stage has processed
+
+            // TODO: update the input for the next stage
+            input.from_block = last_block_processed;
         }
         info!(target: "pipeline", "Pipeline finished.");
         Ok(())

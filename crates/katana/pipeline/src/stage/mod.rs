@@ -5,21 +5,16 @@ use katana_primitives::block::BlockNumber;
 pub use sequencing::Sequencing;
 
 /// The result type of a stage execution. See [Stage::execute].
-pub type StageResult = Result<(), Error>;
+pub type StageResult = Result<StageExecutionOutput, Error>;
 
-#[derive(Debug, Clone, Copy)]
-pub enum StageId {
-    Blocks,
-    Sequencing,
+#[derive(Debug, Default, Clone)]
+pub struct StageExecutionInput {
+    pub from_block: BlockNumber,
 }
 
-impl core::fmt::Display for StageId {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            StageId::Sequencing => write!(f, "Sequencing"),
-            StageId::Blocks => write!(f, "Blocks"),
-        }
-    }
+#[derive(Debug, Default)]
+pub struct StageExecutionOutput {
+    pub last_block_processed: BlockNumber,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -33,8 +28,8 @@ pub enum Error {
 #[async_trait::async_trait]
 pub trait Stage: Send + Sync {
     /// Returns the id which uniquely identifies the stage.
-    fn id(&self) -> StageId;
+    fn id(&self) -> &'static str;
 
     /// Executes the stage.
-    async fn execute(&mut self) -> StageResult;
+    async fn execute(&mut self, input: &StageExecutionInput) -> StageResult;
 }

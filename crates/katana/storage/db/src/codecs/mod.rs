@@ -72,6 +72,19 @@ macro_rules! impl_encode_and_decode_for_felts {
 impl_encode_and_decode_for_uints!(u64);
 impl_encode_and_decode_for_felts!(Felt, ContractAddress);
 
+impl Encode for String {
+    type Encoded = Vec<u8>;
+    fn encode(self) -> Self::Encoded {
+        self.into_bytes()
+    }
+}
+
+impl Decode for String {
+    fn decode<B: AsRef<[u8]>>(bytes: B) -> Result<Self, CodecError> {
+        String::from_utf8(bytes.as_ref().to_vec()).map_err(|e| CodecError::Decode(e.to_string()))
+    }
+}
+
 impl Compress for FlattenedSierraClass {
     type Compressed = Vec<u8>;
     fn compress(self) -> Self::Compressed {

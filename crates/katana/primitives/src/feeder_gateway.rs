@@ -1,12 +1,15 @@
-use starknet::providers::sequencer::models::Block;
+use starknet::providers::sequencer::models::{
+    Block as FgwBlock, BlockStatus, StateUpdate as FgwStateUpdate,
+};
 
-use crate::block::{Header, SealedBlock};
+use crate::block::{FinalityStatus, GasPrices, Header, SealedBlock, SealedBlockWithStatus};
+use crate::da::L1DataAvailabilityMode;
+use crate::state::StateUpdates;
 
-impl TryFrom<Block> for SealedBlock {
-    type Error = std::convert::Infallible;
-
-    fn try_from(value: Block) -> Result<Self, Self::Error> {
-        Ok(SealedBlock {
+impl From<FgwBlock> for SealedBlockWithStatus {
+    fn from(value: FgwBlock) -> Self {
+        let block = SealedBlock {
+            body: Vec::new(),
             hash: value.block_hash.unwrap_or_default().into(),
             header: Header {
                 parent_hash: value.parent_block_hash.into(),
@@ -21,12 +24,25 @@ impl TryFrom<Block> for SealedBlock {
                 state_diff_length: Default::default(),
                 timestamp: value.timestamp,
                 sequencer_address: value.sequencer_address.unwrap_or_default().into(),
-                l1_gas_prices: value.l1_gas_price,
-                l1_data_gas_prices: value.l1_data_gas_price,
-                l1_da_mode: value.l1_da_mode,
+                l1_gas_prices: GasPrices::default(),
+                l1_data_gas_prices: GasPrices::default(),
+                l1_da_mode: L1DataAvailabilityMode::Calldata,
                 protocol_version: Default::default(),
             },
-            body: value.transactions.into_iter().map(|tx| tx.into()).collect(),
-        })
+        };
+
+        let status = match value.status {
+            BlockStatus::AcceptedOnL2 => FinalityStatus::AcceptedOnL2,
+            BlockStatus::AcceptedOnL1 => FinalityStatus::AcceptedOnL1,
+            status => panic!("unsupported block status: {status:?}"),
+        };
+
+        SealedBlockWithStatus { block, status }
+    }
+}
+
+impl From<FgwStateUpdate> for StateUpdates {
+    fn from(value: FgwStateUpdate) -> Self {
+        StateUpdates::default()
     }
 }
