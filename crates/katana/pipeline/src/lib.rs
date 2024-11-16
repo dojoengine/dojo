@@ -19,8 +19,12 @@ pub type PipelineFut = BoxFuture<'static, PipelineResult>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    #[error("Stage not found: {id}")]
+    StageNotFound { id: String },
+
     #[error(transparent)]
     Stage(#[from] stage::Error),
+
     #[error(transparent)]
     Provider(#[from] ProviderError),
 }
@@ -33,30 +37,39 @@ pub enum Error {
 /// Inspired by [`reth`]'s staged sync pipeline.
 ///
 /// [`reth`]: https://github.com/paradigmxyz/reth/blob/c7aebff0b6bc19cd0b73e295497d3c5150d40ed8/crates/stages/api/src/pipeline/mod.rs#L66
-pub struct Pipeline {
-    stages: Vec<Box<dyn Stage>>,
+pub struct Pipeline<P> {
     tip: BlockNumber,
-    provider: Box<dyn StageCheckpointProvider>,
+    stages: Vec<Box<dyn Stage>>,
+    provider: P,
 }
 
-impl Pipeline {
+impl<P> Pipeline<P> {
     /// Create a new empty pipeline.
-    pub fn new() -> Self {
-        // Self { stages: Vec::new(), tip: 0 }
-        todo!()
+    pub fn new(provider: P, tip: BlockNumber) -> Self {
+        Self { stages: Vec::new(), tip, provider }
     }
 
     /// Insert a new stage into the pipeline.
     pub fn add_stage(&mut self, stage: Box<dyn Stage>) {
         self.stages.push(stage);
     }
+}
 
+impl<P: StageCheckpointProvider> Pipeline<P> {
     /// Start the pipeline.
     pub async fn run(&mut self) -> PipelineResult {
-        let mut input = StageExecutionInput { to: self.tip };
+        let mut input = StageExecutionInput { from: 0, to: self.tip };
 
         for stage in &mut self.stages {
             let id = stage.id();
+            let checkpoint = self.provider.checkpoint(id)?.unwrap_or_default();
+
+            if checkpoint > input.to {
+                info!(target: "pipeline", %id, "Skipping stage.");
+                continue;
+            } else {
+                input.from = checkpoint;
+            }
 
             info!(target: "pipeline", %id, "Executing stage.");
             let StageExecutionOutput { last_block_processed } = stage.execute(&input).await?;
@@ -65,15 +78,19 @@ impl Pipeline {
             // the latest block number the stage has processed
             self.provider.set_checkpoint(id, last_block_processed)?;
 
-            // TODO: update the input for the next stage
             input.to = last_block_processed;
         }
+
         info!(target: "pipeline", "Pipeline finished.");
+
         Ok(())
     }
 }
 
-impl IntoFuture for Pipeline {
+impl<P> IntoFuture for Pipeline<P>
+where
+    P: StageCheckpointProvider + 'static,
+{
     type Output = PipelineResult;
     type IntoFuture = PipelineFut;
 
@@ -86,15 +103,16 @@ impl IntoFuture for Pipeline {
     }
 }
 
-impl core::default::Default for Pipeline {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+// impl core::default::Default for Pipeline {
+//     fn default() -> Self {
+//         Self::new()
+//     }
+// }
 
-impl core::fmt::Debug for Pipeline {
+impl<P> core::fmt::Debug for Pipeline<P> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("Pipeline")
+            .field("tip", &self.tip)
             .field("stages", &self.stages.iter().map(|s| s.id()).collect::<Vec<_>>())
             .finish()
     }

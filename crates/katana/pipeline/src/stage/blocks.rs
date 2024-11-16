@@ -3,7 +3,6 @@ use std::time::Duration;
 use katana_primitives::block::{BlockNumber, SealedBlockWithStatus};
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
 use katana_provider::traits::block::BlockWriter;
-use katana_provider::traits::stage::StageCheckpointProvider;
 use starknet::providers::sequencer::models::{BlockId, StateUpdateWithBlock};
 use starknet::providers::{ProviderError, SequencerGatewayProvider};
 
@@ -21,10 +20,7 @@ pub struct Blocks<P> {
     feeder_gateway: SequencerGatewayProvider,
 }
 
-impl<P> Blocks<P>
-where
-    P: BlockWriter + StageCheckpointProvider,
-{
+impl<P: BlockWriter> Blocks<P> {
     async fn fetch_blocks(&self, block: BlockNumber) -> Result<StateUpdateWithBlock, Error> {
         #[allow(deprecated)]
         let res = self.feeder_gateway.get_state_update_with_block(BlockId::Number(block)).await?;
@@ -33,18 +29,13 @@ where
 }
 
 #[async_trait::async_trait]
-impl<P> Stage for Blocks<P>
-where
-    P: BlockWriter + StageCheckpointProvider,
-{
+impl<P: BlockWriter> Stage for Blocks<P> {
     fn id(&self) -> &'static str {
         "Blocks"
     }
 
     async fn execute(&mut self, input: &StageExecutionInput) -> StageResult {
-        // Get checkpoint from storage
-        let checkpoint = self.provider.checkpoint(self.id())?.unwrap_or_default();
-        let mut current_block = checkpoint;
+        let mut current_block = input.from;
 
         loop {
             let data = self.fetch_blocks(current_block).await?;

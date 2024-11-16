@@ -9,6 +9,7 @@ pub type StageResult = Result<StageExecutionOutput, Error>;
 
 #[derive(Debug, Default, Clone)]
 pub struct StageExecutionInput {
+    pub from: BlockNumber,
     pub to: BlockNumber,
 }
 

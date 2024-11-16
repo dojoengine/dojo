@@ -3,7 +3,7 @@ use alloy_primitives::BlockNumber;
 use crate::ProviderResult;
 
 #[auto_impl::auto_impl(&, Box, Arc)]
-pub trait StageCheckpointProvider {
+pub trait StageCheckpointProvider: Send + Sync {
     fn checkpoint(&self, id: &str) -> ProviderResult<Option<BlockNumber>>;
 
     fn set_checkpoint(&self, id: &str, block_number: BlockNumber) -> ProviderResult<Option<()>>;
