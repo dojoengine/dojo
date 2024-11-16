@@ -5,7 +5,10 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 pub const DEFAULT_RPC_MAX_CONNECTIONS: u32 = 100;
 pub const DEFAULT_RPC_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::LOCALHOST);
 pub const DEFAULT_RPC_PORT: u16 = 5050;
-pub const DEFAULT_RPC_PAGE_SIZE: u64 = 100;
+
+/// Default maximmum page size for the `starknet_getEvents` RPC method.
+pub const DEFAULT_RPC_MAX_EVENT_PAGE_SIZE: u64 = 1024;
+
 /// List of APIs supported by Katana.
 #[derive(
     Debug, Copy, Clone, PartialEq, Eq, Hash, strum_macros::EnumString, strum_macros::Display,
@@ -43,7 +46,7 @@ impl Default for RpcConfig {
             port: DEFAULT_RPC_PORT,
             max_connections: DEFAULT_RPC_MAX_CONNECTIONS,
             apis: HashSet::from([ApiKind::Starknet]),
-            max_event_page_size: Some(DEFAULT_RPC_PAGE_SIZE),
+            max_event_page_size: Some(DEFAULT_RPC_MAX_EVENT_PAGE_SIZE),
         }
     }
 }
