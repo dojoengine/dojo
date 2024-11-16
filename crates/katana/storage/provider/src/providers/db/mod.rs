@@ -14,6 +14,7 @@ use katana_db::models::contract::{
     ContractClassChange, ContractInfoChangeList, ContractNonceChange,
 };
 use katana_db::models::list::BlockList;
+use katana_db::models::stage::StageCheckpoint;
 use katana_db::models::storage::{ContractStorageEntry, ContractStorageKey, StorageEntry};
 use katana_db::tables::{self, DupSort, Table};
 use katana_db::utils::KeyValue;
@@ -38,6 +39,7 @@ use crate::traits::block::{
     HeaderProvider,
 };
 use crate::traits::env::BlockEnvProvider;
+use crate::traits::stage::StageCheckpointProvider;
 use crate::traits::state::{StateFactoryProvider, StateProvider, StateRootProvider};
 use crate::traits::state_update::StateUpdateProvider;
 use crate::traits::transaction::{
@@ -775,6 +777,26 @@ impl<Db: Database> BlockWriter for DbProvider<Db> {
 
             Ok(())
         })?
+    }
+}
+
+impl<Db: Database> StageCheckpointProvider for DbProvider<Db> {
+    fn checkpoint(&self, id: &str) -> ProviderResult<Option<BlockNumber>> {
+        let tx = self.0.tx()?;
+        let result = tx.get::<tables::StageCheckpoints>(id.to_string())?;
+        tx.commit()?;
+        Ok(result.map(|x| x.block))
+    }
+
+    fn set_checkpoint(&self, id: &str, block_number: BlockNumber) -> ProviderResult<()> {
+        let tx = self.0.tx_mut()?;
+
+        let key = id.to_string();
+        let value = StageCheckpoint { block: block_number };
+        tx.put::<tables::StageCheckpoints>(key, value)?;
+
+        tx.commit()?;
+        Ok(())
     }
 }
 

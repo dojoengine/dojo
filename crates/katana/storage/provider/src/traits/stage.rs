@@ -1,4 +1,4 @@
-use alloy_primitives::BlockNumber;
+use katana_primitives::block::BlockNumber;
 
 use crate::ProviderResult;
 
@@ -6,5 +6,5 @@ use crate::ProviderResult;
 pub trait StageCheckpointProvider: Send + Sync {
     fn checkpoint(&self, id: &str) -> ProviderResult<Option<BlockNumber>>;
 
-    fn set_checkpoint(&self, id: &str, block_number: BlockNumber) -> ProviderResult<Option<()>>;
+    fn set_checkpoint(&self, id: &str, block_number: BlockNumber) -> ProviderResult<()>;
 }

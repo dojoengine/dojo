@@ -53,32 +53,33 @@ impl<P> Pipeline<P> {
     pub fn add_stage(&mut self, stage: Box<dyn Stage>) {
         self.stages.push(stage);
     }
+
+    pub fn add_stages(&mut self, stages: impl Iterator<Item = Box<dyn Stage>>) {
+        self.stages.extend(stages);
+    }
 }
 
-impl<P: StageCheckpointProvider> Pipeline<P> {
+impl<P> Pipeline<P>
+where
+    P: StageCheckpointProvider,
+{
     /// Start the pipeline.
     pub async fn run(&mut self) -> PipelineResult {
-        let mut input = StageExecutionInput { from: 0, to: self.tip };
-
         for stage in &mut self.stages {
             let id = stage.id();
             let checkpoint = self.provider.checkpoint(id)?.unwrap_or_default();
 
-            if checkpoint > input.to {
+            if checkpoint > self.tip {
                 info!(target: "pipeline", %id, "Skipping stage.");
                 continue;
-            } else {
-                input.from = checkpoint;
             }
 
             info!(target: "pipeline", %id, "Executing stage.");
-            let StageExecutionOutput { last_block_processed } = stage.execute(&input).await?;
 
-            // TODO: store the stage checkpoint in the db based on
-            // the latest block number the stage has processed
-            self.provider.set_checkpoint(id, last_block_processed)?;
+            let input = StageExecutionInput { from: checkpoint, to: self.tip };
+            let output = stage.execute(&input).await?;
 
-            input.to = last_block_processed;
+            self.provider.set_checkpoint(id, output.last_block_processed)?;
         }
 
         info!(target: "pipeline", "Pipeline finished.");
@@ -115,5 +116,43 @@ impl<P> core::fmt::Debug for Pipeline<P> {
             .field("tip", &self.tip)
             .field("stages", &self.stages.iter().map(|s| s.id()).collect::<Vec<_>>())
             .finish()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Pipeline, Stage, StageExecutionInput};
+    use crate::stage::{StageExecutionOutput, StageResult};
+    use katana_provider::{test_utils::test_provider, traits::stage::StageCheckpointProvider};
+
+    struct MockStage;
+
+    #[async_trait::async_trait]
+    impl Stage for MockStage {
+        fn id(&self) -> &'static str {
+            "Mock"
+        }
+
+        async fn execute(&mut self, _: &StageExecutionInput) -> StageResult {
+            Ok(StageExecutionOutput { last_block_processed: 10 })
+        }
+    }
+
+    #[tokio::test]
+    async fn stage_checkpoint() {
+        let provider = test_provider();
+
+        let mut pipeline = Pipeline::new(&provider, 10);
+        pipeline.add_stage(Box::new(MockStage));
+
+        // check that the checkpoint was set
+        let initial_checkpoint = provider.checkpoint("Mock").unwrap();
+        assert_eq!(initial_checkpoint, None);
+
+        pipeline.run().await.expect("pipeline failed");
+
+        // check that the checkpoint was set
+        let actual_checkpoint = provider.checkpoint("Mock").unwrap();
+        assert_eq!(actual_checkpoint, Some(10));
     }
 }

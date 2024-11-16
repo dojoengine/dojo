@@ -10,7 +10,7 @@ katana-core.workspace = true
 katana-executor.workspace = true
 katana-pool.workspace = true
 katana-primitives.workspace = true
-katana-provider.workspace = true
+katana-provider = { workspace = true, features = [ "test-utils" ] }
 katana-tasks.workspace = true
 
 anyhow.workspace = true
