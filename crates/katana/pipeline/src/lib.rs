@@ -8,7 +8,7 @@ use futures::future::BoxFuture;
 use katana_primitives::block::BlockNumber;
 use katana_provider::error::ProviderError;
 use katana_provider::traits::stage::StageCheckpointProvider;
-use stage::{Stage, StageExecutionInput, StageExecutionOutput};
+use stage::{Stage, StageExecutionInput};
 use tracing::{error, info};
 
 /// The result of a pipeline execution.
@@ -104,12 +104,6 @@ where
     }
 }
 
-// impl core::default::Default for Pipeline {
-//     fn default() -> Self {
-//         Self::new()
-//     }
-// }
-
 impl<P> core::fmt::Debug for Pipeline<P> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("Pipeline")
@@ -121,9 +115,11 @@ impl<P> core::fmt::Debug for Pipeline<P> {
 
 #[cfg(test)]
 mod tests {
+    use katana_provider::test_utils::test_provider;
+    use katana_provider::traits::stage::StageCheckpointProvider;
+
     use super::{Pipeline, Stage, StageExecutionInput};
     use crate::stage::{StageExecutionOutput, StageResult};
-    use katana_provider::{test_utils::test_provider, traits::stage::StageCheckpointProvider};
 
     struct MockStage;
 

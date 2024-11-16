@@ -5,6 +5,7 @@ use starknet::providers::sequencer::models::{
 use crate::block::{FinalityStatus, GasPrices, Header, SealedBlock, SealedBlockWithStatus};
 use crate::da::L1DataAvailabilityMode;
 use crate::state::StateUpdates;
+use crate::ContractAddress;
 
 impl From<FgwBlock> for SealedBlockWithStatus {
     fn from(value: FgwBlock) -> Self {
@@ -43,6 +44,50 @@ impl From<FgwBlock> for SealedBlockWithStatus {
 
 impl From<FgwStateUpdate> for StateUpdates {
     fn from(value: FgwStateUpdate) -> Self {
-        StateUpdates::default()
+        let state_diff = value.state_diff;
+
+        let nonce_updates = state_diff
+            .nonces
+            .into_iter()
+            .map(|(addr, nonce)| (ContractAddress::from(addr), nonce))
+            .collect();
+
+        let storage_updates = state_diff
+            .storage_diffs
+            .into_iter()
+            .map(|(addr, diffs)| {
+                let storage_map = diffs.into_iter().map(|diff| (diff.key, diff.value)).collect();
+                (ContractAddress::from(addr), storage_map)
+            })
+            .collect();
+
+        let deployed_contracts = state_diff
+            .deployed_contracts
+            .into_iter()
+            .map(|contract| (ContractAddress::from(contract.address), contract.class_hash))
+            .collect();
+
+        let declared_classes = state_diff
+            .declared_classes
+            .into_iter()
+            .map(|contract| (contract.class_hash.into(), contract.compiled_class_hash))
+            .collect();
+
+        let deprecated_declared_classes = state_diff.old_declared_contracts.into_iter().collect();
+
+        let replaced_classes = state_diff
+            .replaced_classes
+            .into_iter()
+            .map(|contract| (ContractAddress::from(contract.address), contract.class_hash))
+            .collect();
+
+        StateUpdates {
+            nonce_updates,
+            storage_updates,
+            declared_classes,
+            replaced_classes,
+            deployed_contracts,
+            deprecated_declared_classes,
+        }
     }
 }

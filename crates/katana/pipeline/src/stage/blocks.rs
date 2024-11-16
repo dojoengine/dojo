@@ -15,13 +15,20 @@ pub enum Error {
     Gateway(#[from] ProviderError),
 }
 
+#[derive(Debug)]
 pub struct Blocks<P> {
     provider: P,
     feeder_gateway: SequencerGatewayProvider,
 }
 
+impl<P> Blocks<P> {
+    pub fn new(provider: P, feeder_gateway: SequencerGatewayProvider) -> Self {
+        Self { provider, feeder_gateway }
+    }
+}
+
 impl<P: BlockWriter> Blocks<P> {
-    async fn fetch_blocks(&self, block: BlockNumber) -> Result<StateUpdateWithBlock, Error> {
+    async fn fetch_block(&self, block: BlockNumber) -> Result<StateUpdateWithBlock, Error> {
         #[allow(deprecated)]
         let res = self.feeder_gateway.get_state_update_with_block(BlockId::Number(block)).await?;
         Ok(res)
@@ -38,7 +45,7 @@ impl<P: BlockWriter> Stage for Blocks<P> {
         let mut current_block = input.from;
 
         loop {
-            let data = self.fetch_blocks(current_block).await?;
+            let data = self.fetch_block(current_block).await?;
             let StateUpdateWithBlock { state_update, block: fgw_block } = data;
 
             let block = SealedBlockWithStatus::from(fgw_block);
@@ -56,9 +63,9 @@ impl<P: BlockWriter> Stage for Blocks<P> {
 
             if current_block == input.to {
                 break;
+            } else {
+                current_block += 1;
             }
-
-            current_block += 1;
         }
 
         Ok(StageExecutionOutput { last_block_processed: current_block })
@@ -67,17 +74,30 @@ impl<P: BlockWriter> Stage for Blocks<P> {
 
 #[cfg(test)]
 mod tests {
+    use katana_provider::test_utils::test_provider;
+    use katana_provider::traits::block::BlockNumberProvider;
     use starknet::providers::SequencerGatewayProvider;
 
-    // #[tokio::test]
-    // async fn fetch_blocks() {
-    //     let from_block = 308919;
-    //     let fgw = SequencerGatewayProvider::starknet_alpha_sepolia();
-    //     let client = super::Blocks { feeder_gateway: fgw, from_block };
+    use super::Blocks;
+    use crate::stage::{Stage, StageExecutionInput};
 
-    //     let blocks = client.fetch_blocks(from_block + 3).await.unwrap();
+    #[tokio::test]
+    async fn fetch_blocks() {
+        let from_block = 308919;
+        let to_block = from_block + 2;
 
-    //     // assert_eq!(blocks.len(), 4);
-    //     // println!("{:?}", blocks[3]);
-    // }
+        let provider = test_provider();
+        let feeder_gateway = SequencerGatewayProvider::starknet_alpha_sepolia();
+
+        let mut stage = Blocks::new(&provider, feeder_gateway);
+
+        let input = StageExecutionInput { from: from_block, to: to_block };
+        let output = stage.execute(&input).await.expect("failed to execute stage");
+
+        assert_eq!(output.last_block_processed, to_block);
+
+        // check provider storage
+        let block_number = provider.latest_number().expect("failed to get latest block number");
+        assert_eq!(block_number, to_block);
+    }
 }
