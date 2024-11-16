@@ -86,6 +86,6 @@ impl<EF: ExecutorFactory> Stage for Sequencing<EF> {
             }
         }
 
-        Ok(StageExecutionOutput::default())
+        Ok(())
     }
 }

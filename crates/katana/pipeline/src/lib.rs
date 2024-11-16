@@ -38,15 +38,16 @@ pub enum Error {
 ///
 /// [`reth`]: https://github.com/paradigmxyz/reth/blob/c7aebff0b6bc19cd0b73e295497d3c5150d40ed8/crates/stages/api/src/pipeline/mod.rs#L66
 pub struct Pipeline<P> {
+    chunk: u64,
     tip: BlockNumber,
-    stages: Vec<Box<dyn Stage>>,
     provider: P,
+    stages: Vec<Box<dyn Stage>>,
 }
 
 impl<P> Pipeline<P> {
     /// Create a new empty pipeline.
     pub fn new(provider: P, tip: BlockNumber) -> Self {
-        Self { stages: Vec::new(), tip, provider }
+        Self { stages: Vec::new(), tip, provider, chunk: 10 }
     }
 
     /// Insert a new stage into the pipeline.
@@ -54,6 +55,9 @@ impl<P> Pipeline<P> {
         self.stages.push(stage);
     }
 
+    /// Insert multiple stages into the pipeline.
+    ///
+    /// The stages will be executed in the order they are appear in the iterator.
     pub fn add_stages(&mut self, stages: impl Iterator<Item = Box<dyn Stage>>) {
         self.stages.extend(stages);
     }
@@ -65,21 +69,36 @@ where
 {
     /// Start the pipeline.
     pub async fn run(&mut self) -> PipelineResult {
-        for stage in &mut self.stages {
-            let id = stage.id();
-            let checkpoint = self.provider.checkpoint(id)?.unwrap_or_default();
+        let total_iterations = self.tip.saturating_div(self.chunk);
+        let mut iteration = 0;
+        let mut current_chunk_tip = self.chunk.min(self.tip);
 
-            if checkpoint > self.tip {
-                info!(target: "pipeline", %id, "Skipping stage.");
-                continue;
+        loop {
+            for stage in &mut self.stages {
+                let id = stage.id();
+                let checkpoint = self.provider.checkpoint(id)?.unwrap_or_default();
+
+                if checkpoint >= current_chunk_tip {
+                    info!(target: "pipeline", %id, %checkpoint, tip = %current_chunk_tip, %iteration, %total_iterations, "Skipping stage.");
+                    continue;
+                }
+
+                info!(target: "pipeline", %id, from_block = %checkpoint, to_block = %current_chunk_tip, %iteration, %total_iterations, "Executing stage.");
+
+                // plus 1 because the checkpoint is inclusive
+                let from = checkpoint + 1;
+                let to = current_chunk_tip;
+
+                let _ = stage.execute(&StageExecutionInput { from, to }).await?;
+                self.provider.set_checkpoint(id, current_chunk_tip)?;
             }
 
-            info!(target: "pipeline", %id, "Executing stage.");
-
-            let input = StageExecutionInput { from: checkpoint, to: self.tip };
-            let output = stage.execute(&input).await?;
-
-            self.provider.set_checkpoint(id, output.last_block_processed)?;
+            if current_chunk_tip < self.tip {
+                break;
+            } else {
+                iteration += 1;
+                current_chunk_tip = (current_chunk_tip + self.chunk).min(self.tip);
+            }
         }
 
         info!(target: "pipeline", "Pipeline finished.");
@@ -119,7 +138,7 @@ mod tests {
     use katana_provider::traits::stage::StageCheckpointProvider;
 
     use super::{Pipeline, Stage, StageExecutionInput};
-    use crate::stage::{StageExecutionOutput, StageResult};
+    use crate::stage::StageResult;
 
     struct MockStage;
 
@@ -130,7 +149,7 @@ mod tests {
         }
 
         async fn execute(&mut self, _: &StageExecutionInput) -> StageResult {
-            Ok(StageExecutionOutput { last_block_processed: 10 })
+            Ok(())
         }
     }
 

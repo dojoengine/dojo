@@ -6,7 +6,7 @@ use katana_primitives::block::BlockNumber;
 pub use sequencing::Sequencing;
 
 /// The result type of a stage execution. See [Stage::execute].
-pub type StageResult = Result<StageExecutionOutput, Error>;
+pub type StageResult = Result<(), Error>;
 
 #[derive(Debug, Default, Clone)]
 pub struct StageExecutionInput {

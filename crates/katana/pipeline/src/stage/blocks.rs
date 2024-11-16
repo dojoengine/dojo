@@ -7,7 +7,7 @@ use starknet::providers::sequencer::models::{BlockId, StateUpdateWithBlock};
 use starknet::providers::{ProviderError, SequencerGatewayProvider};
 
 // Blocks -> Tx traces -> Classes (repeat)
-use super::{Stage, StageExecutionInput, StageExecutionOutput, StageResult};
+use super::{Stage, StageExecutionInput, StageResult};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -68,7 +68,7 @@ impl<P: BlockWriter> Stage for Blocks<P> {
             }
         }
 
-        Ok(StageExecutionOutput { last_block_processed: current_block })
+        Ok(())
     }
 }
 
@@ -92,9 +92,7 @@ mod tests {
         let mut stage = Blocks::new(&provider, feeder_gateway);
 
         let input = StageExecutionInput { from: from_block, to: to_block };
-        let output = stage.execute(&input).await.expect("failed to execute stage");
-
-        assert_eq!(output.last_block_processed, to_block);
+        let _ = stage.execute(&input).await.expect("failed to execute stage");
 
         // check provider storage
         let block_number = provider.latest_number().expect("failed to get latest block number");

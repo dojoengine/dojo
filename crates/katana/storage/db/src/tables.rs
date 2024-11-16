@@ -179,8 +179,9 @@ define_tables_enum! {[
 ]}
 
 tables! {
-    /// Store stage checkpoint
+    /// Pipeline stages checkpoint
     StageCheckpoints: (StageId) => StageCheckpoint,
+
     /// Store canonical block headers
     Headers: (BlockNumber) => Header,
     /// Stores block hashes according to its block number

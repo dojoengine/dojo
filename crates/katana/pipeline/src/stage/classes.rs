@@ -5,7 +5,7 @@ use katana_primitives::class::ClassHash;
 use katana_provider::traits::{contract::ContractClassWriter, state_update::StateUpdateProvider};
 use starknet::providers::{sequencer::models::BlockId, ProviderError, SequencerGatewayProvider};
 
-use super::{Stage, StageExecutionInput, StageExecutionOutput, StageResult};
+use super::{Stage, StageExecutionInput, StageResult};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -62,9 +62,11 @@ where
                 // 2. store the classes
                 // self.provider.set_compiled_class(class_hash, class)?;
                 // self.provider.set_sierra_class(class_hash, class)?;
+
+                tokio::time::sleep(Duration::from_secs(1)).await;
             }
         }
 
-        Ok(StageExecutionOutput { last_block_processed: input.to })
+        Ok(())
     }
 }
