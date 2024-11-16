@@ -1,4 +1,5 @@
 mod blocks;
+mod classes;
 mod sequencing;
 
 use katana_primitives::block::BlockNumber;
@@ -20,10 +21,17 @@ pub struct StageExecutionOutput {
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    /// Errors that could happen during the execution of the [`Blocks`](blocks::Blocks) stage.
     #[error(transparent)]
     Blocks(#[from] blocks::Error),
+
+    /// Errors that could happen during the execution of the [`Classes`](classes::Classes) stage.
+    #[error(transparent)]
+    Classes(#[from] classes::Error),
+
     #[error(transparent)]
     Provider(#[from] katana_provider::error::ProviderError),
+
     #[error(transparent)]
     Other(#[from] anyhow::Error),
 }

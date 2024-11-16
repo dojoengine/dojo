@@ -368,6 +368,20 @@ impl<Db: Database> StateUpdateProvider for DbProvider<Db> {
             Ok(None)
         }
     }
+
+    fn declared_classes(
+        &self,
+        block_id: BlockHashOrNumber,
+    ) -> ProviderResult<Option<BTreeMap<ClassHash, CompiledClassHash>>> {
+        todo!()
+    }
+
+    fn deployed_contracts(
+        &self,
+        block_id: BlockHashOrNumber,
+    ) -> ProviderResult<Option<BTreeMap<ContractAddress, ClassHash>>> {
+        todo!()
+    }
 }
 
 impl<Db: Database> TransactionProvider for DbProvider<Db> {

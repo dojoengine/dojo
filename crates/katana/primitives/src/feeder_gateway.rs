@@ -1,10 +1,11 @@
 use starknet::providers::sequencer::models::{
-    Block as FgwBlock, BlockStatus, StateUpdate as FgwStateUpdate,
+    Block as FgwBlock, BlockStatus, InvokeFunctionTransaction, StateUpdate as FgwStateUpdate,
 };
 
 use crate::block::{FinalityStatus, GasPrices, Header, SealedBlock, SealedBlockWithStatus};
 use crate::da::L1DataAvailabilityMode;
 use crate::state::StateUpdates;
+use crate::transaction::TxWithHash;
 use crate::ContractAddress;
 
 impl From<FgwBlock> for SealedBlockWithStatus {
@@ -89,5 +90,11 @@ impl From<FgwStateUpdate> for StateUpdates {
             deployed_contracts,
             deprecated_declared_classes,
         }
+    }
+}
+
+impl From<InvokeFunctionTransaction> for TxWithHash {
+    fn from(value: InvokeFunctionTransaction) -> Self {
+        todo!()
     }
 }

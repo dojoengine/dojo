@@ -138,20 +138,23 @@ impl Node {
 
         // --- build and start the pipeline
 
-        let mut pipeline = Pipeline::new();
-        pipeline.add_stage(Box::new(sequencing));
+        // let mut pipeline = Pipeline::new();
+        // pipeline.add_stage(Box::new(sequencing));
 
-        self.task_manager
-            .task_spawner()
-            .build_task()
-            .critical()
-            .name("Pipeline")
-            .spawn(pipeline.into_future());
+        // self.task_manager
+        //     .task_spawner()
+        //     .build_task()
+        //     .critical()
+        //     .name("Pipeline")
+        //     .spawn(pipeline.into_future());
 
-        let node_components = (pool, backend, block_producer, validator, self.forked_client.take());
-        let rpc = spawn(node_components, self.rpc_config.clone()).await?;
+        // let node_components = (pool, backend, block_producer, validator,
+        // self.forked_client.take()); let rpc = spawn(node_components,
+        // self.rpc_config.clone()).await?;
 
-        Ok(LaunchedNode { node: self, rpc })
+        // Ok(LaunchedNode { node: self, rpc })
+
+        todo!()
     }
 }
 

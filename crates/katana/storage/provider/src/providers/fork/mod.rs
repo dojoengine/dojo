@@ -432,6 +432,20 @@ impl StateUpdateProvider for ForkedProvider {
             block_num.and_then(|num| self.storage.read().state_update.get(&num).cloned());
         Ok(state_update)
     }
+
+    fn declared_classes(
+        &self,
+        block_id: BlockHashOrNumber,
+    ) -> ProviderResult<Option<BTreeMap<ClassHash, CompiledClassHash>>> {
+        todo!()
+    }
+
+    fn deployed_contracts(
+        &self,
+        block_id: BlockHashOrNumber,
+    ) -> ProviderResult<Option<BTreeMap<ContractAddress, ClassHash>>> {
+        todo!()
+    }
 }
 
 impl StateFactoryProvider for ForkedProvider {

@@ -28,8 +28,8 @@ impl<P> Blocks<P> {
 }
 
 impl<P: BlockWriter> Blocks<P> {
+    #[allow(deprecated)]
     async fn fetch_block(&self, block: BlockNumber) -> Result<StateUpdateWithBlock, Error> {
-        #[allow(deprecated)]
         let res = self.feeder_gateway.get_state_update_with_block(BlockId::Number(block)).await?;
         Ok(res)
     }
