@@ -45,6 +45,9 @@ service World {
 
     // Retrieve tokens
     rpc RetrieveTokens (RetrieveTokensRequest) returns (RetrieveTokensResponse);
+
+    // Retrieve token balances
+    rpc RetrieveTokenBalances (RetrieveTokenBalancesRequest) returns (RetrieveTokenBalancesResponse);
 }
 
 // A request to retrieve tokens
@@ -56,6 +59,19 @@ message RetrieveTokensRequest {
 // A response containing tokens
 message RetrieveTokensResponse {
     repeated types.Token tokens = 1;
+}
+
+// A request to retrieve token balances
+message RetrieveTokenBalancesRequest {
+    // The account addresses to retrieve balances for
+    repeated bytes account_addresses = 1;
+    // The list of token contract addresses to retrieve balances for
+    repeated bytes contract_addresses = 2;
+}
+
+// A response containing token balances
+message RetrieveTokenBalancesResponse {
+    repeated types.TokenBalance balances = 1;
 }
 
 // A request to subscribe to indexer updates.

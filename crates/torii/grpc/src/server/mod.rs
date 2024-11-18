@@ -809,6 +809,14 @@ impl DojoWorld {
         Ok(RetrieveTokensResponse { tokens })
     }
 
+    async fn retrieve_balances(
+        &self,
+        account_address: Vec<Felt>,
+        contract_addresses: Vec<Felt>,
+    ) -> Result<RetrieveBalancesResponse, Status> {
+
+    }
+
     async fn subscribe_indexer(
         &self,
         contract_address: Felt,

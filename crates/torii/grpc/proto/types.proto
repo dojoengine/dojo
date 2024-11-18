@@ -159,7 +159,7 @@ message Token {
     string metadata = 6;
 }
 
-message Balance {
+message TokenBalance {
     string balance = 1;
     string account_address = 2;
     string contract_address = 3;
