@@ -193,6 +193,7 @@ impl NodeArgs {
                 addr: self.server.http_addr,
                 max_connections: self.server.max_connections,
                 cors_origins: self.server.http_cors_origins.clone(),
+                max_event_page_size: Some(self.server.max_event_page_size),
             }
         }
 

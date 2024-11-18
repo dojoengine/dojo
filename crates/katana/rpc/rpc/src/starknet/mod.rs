@@ -58,6 +58,11 @@ pub struct StarknetApi<EF: ExecutorFactory> {
     inner: Arc<Inner<EF>>,
 }
 
+#[derive(Debug, Clone)]
+pub struct StarknetApiConfig {
+    pub max_event_page_size: Option<u64>,
+}
+
 impl<EF: ExecutorFactory> Clone for StarknetApi<EF> {
     fn clone(&self) -> Self {
         Self { inner: Arc::clone(&self.inner) }
@@ -71,6 +76,7 @@ struct Inner<EF: ExecutorFactory> {
     block_producer: BlockProducer<EF>,
     blocking_task_pool: BlockingTaskPool,
     forked_client: Option<ForkedClient>,
+    config: StarknetApiConfig,
 }
 
 impl<EF: ExecutorFactory> StarknetApi<EF> {
@@ -79,8 +85,9 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         pool: TxPool,
         block_producer: BlockProducer<EF>,
         validator: TxValidator,
+        config: StarknetApiConfig,
     ) -> Self {
-        Self::new_inner(backend, pool, block_producer, validator, None)
+        Self::new_inner(backend, pool, block_producer, validator, None, config)
     }
 
     pub fn new_forked(
@@ -89,8 +96,9 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         block_producer: BlockProducer<EF>,
         validator: TxValidator,
         forked_client: ForkedClient,
+        config: StarknetApiConfig,
     ) -> Self {
-        Self::new_inner(backend, pool, block_producer, validator, Some(forked_client))
+        Self::new_inner(backend, pool, block_producer, validator, Some(forked_client), config)
     }
 
     fn new_inner(
@@ -99,11 +107,19 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         block_producer: BlockProducer<EF>,
         validator: TxValidator,
         forked_client: Option<ForkedClient>,
+        config: StarknetApiConfig,
     ) -> Self {
         let blocking_task_pool =
             BlockingTaskPool::new().expect("failed to create blocking task pool");
-        let inner =
-            Inner { pool, backend, block_producer, blocking_task_pool, validator, forked_client };
+        let inner = Inner {
+            pool,
+            backend,
+            block_producer,
+            blocking_task_pool,
+            validator,
+            forked_client,
+            config,
+        };
         Self { inner: Arc::new(inner) }
     }
 
@@ -815,6 +831,15 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
     async fn events(&self, filter: EventFilterWithPage) -> StarknetApiResult<EventsPage> {
         let EventFilterWithPage { event_filter, result_page_request } = filter;
         let ResultPageRequest { continuation_token, chunk_size } = result_page_request;
+
+        if let Some(max_size) = self.inner.config.max_event_page_size {
+            if chunk_size > max_size {
+                return Err(StarknetApiError::PageSizeTooBig {
+                    requested: chunk_size,
+                    max_allowed: max_size,
+                });
+            }
+        }
 
         self.on_io_blocking_task(move |this| {
             let from = match event_filter.from_block {
