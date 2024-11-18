@@ -54,7 +54,11 @@ use crate::proto::types::member_value::ValueType;
 use crate::proto::types::LogicalOperator;
 use crate::proto::world::world_server::WorldServer;
 use crate::proto::world::{
-    RetrieveEntitiesStreamingResponse, RetrieveEventMessagesRequest, RetrieveTokenBalancesRequest, RetrieveTokenBalancesResponse, RetrieveTokensRequest, RetrieveTokensResponse, SubscribeEntitiesRequest, SubscribeEntityResponse, SubscribeEventMessagesRequest, SubscribeEventsResponse, SubscribeIndexerRequest, SubscribeIndexerResponse, UpdateEventMessagesSubscriptionRequest, WorldMetadataRequest, WorldMetadataResponse
+    RetrieveEntitiesStreamingResponse, RetrieveEventMessagesRequest, RetrieveTokenBalancesRequest,
+    RetrieveTokenBalancesResponse, RetrieveTokensRequest, RetrieveTokensResponse,
+    SubscribeEntitiesRequest, SubscribeEntityResponse, SubscribeEventMessagesRequest,
+    SubscribeEventsResponse, SubscribeIndexerRequest, SubscribeIndexerResponse,
+    UpdateEventMessagesSubscriptionRequest, WorldMetadataRequest, WorldMetadataResponse,
 };
 use crate::proto::{self};
 use crate::types::schema::SchemaError;
@@ -815,7 +819,8 @@ impl DojoWorld {
         contract_addresses: Vec<Felt>,
     ) -> Result<RetrieveTokenBalancesResponse, Status> {
         let query = format!(
-            "SELECT * FROM token_balances WHERE account_address IN ({}) AND contract_address IN ({})",
+            "SELECT * FROM token_balances WHERE account_address IN ({}) AND contract_address IN \
+             ({})",
             account_addresses
                 .iter()
                 .map(|address| format!("{:#x}", address))
