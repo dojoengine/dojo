@@ -801,9 +801,9 @@ impl DojoWorld {
             format!(
                 "SELECT * FROM tokens WHERE contract_address IN ({})",
                 contract_addresses
-                .iter()
-                .map(|address| format!("{:#x}", address))
-                .collect::<Vec<_>>()
+                    .iter()
+                    .map(|address| format!("{:#x}", address))
+                    .collect::<Vec<_>>()
                     .join(", ")
             )
         };
