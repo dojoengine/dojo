@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1731947093864,
+  "lastUpdate": 1731947273237,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -34999,6 +34999,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10857144287,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "bpoulav@gmail.com",
+            "name": "Poulav Bhowmick",
+            "username": "PoulavBhowmick03"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "85c0b025f108bd1ed64a5b35cfb574f61545a0ff",
+          "message": "feat(katana): added chunk size limit to events method (#2644)\n\nCo-authored-by: Ammar Arif <evergreenkary@gmail.com>",
+          "timestamp": "2024-11-18T16:08:06Z",
+          "tree_id": "e3b2f5b68a95df3e0983920272f3b5fc5912d0e3",
+          "url": "https://github.com/dojoengine/dojo/commit/85c0b025f108bd1ed64a5b35cfb574f61545a0ff"
+        },
+        "date": 1731947271877,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 15002551,
+            "range": "± 267721",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8730467,
+            "range": "± 100656",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3791311353,
+            "range": "± 776568714",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8628628,
+            "range": "± 152020",
             "unit": "ns/iter"
           }
         ]
