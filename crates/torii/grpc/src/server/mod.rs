@@ -43,7 +43,7 @@ use torii_core::error::{Error, ParseError, QueryError};
 use torii_core::model::{build_sql_query, map_row_to_ty};
 use torii_core::sql::cache::ModelCache;
 use torii_core::sql::utils::sql_string_to_felts;
-use torii_core::types::Token;
+use torii_core::types::{Token, TokenBalance};
 use tower_http::cors::{AllowOrigin, CorsLayer};
 
 use self::subscriptions::entity::EntityManager;
@@ -54,7 +54,7 @@ use crate::proto::types::member_value::ValueType;
 use crate::proto::types::LogicalOperator;
 use crate::proto::world::world_server::WorldServer;
 use crate::proto::world::{
-    RetrieveEntitiesStreamingResponse, RetrieveEventMessagesRequest, RetrieveTokensRequest, RetrieveTokensResponse, SubscribeEntitiesRequest, SubscribeEntityResponse, SubscribeEventMessagesRequest, SubscribeEventsResponse, SubscribeIndexerRequest, SubscribeIndexerResponse, UpdateEventMessagesSubscriptionRequest, WorldMetadataRequest, WorldMetadataResponse
+    RetrieveEntitiesStreamingResponse, RetrieveEventMessagesRequest, RetrieveTokenBalancesRequest, RetrieveTokenBalancesResponse, RetrieveTokensRequest, RetrieveTokensResponse, SubscribeEntitiesRequest, SubscribeEntityResponse, SubscribeEventMessagesRequest, SubscribeEventsResponse, SubscribeIndexerRequest, SubscribeIndexerResponse, UpdateEventMessagesSubscriptionRequest, WorldMetadataRequest, WorldMetadataResponse
 };
 use crate::proto::{self};
 use crate::types::schema::SchemaError;
@@ -809,12 +809,32 @@ impl DojoWorld {
         Ok(RetrieveTokensResponse { tokens })
     }
 
-    async fn retrieve_balances(
+    async fn retrieve_token_balances(
         &self,
-        account_address: Vec<Felt>,
+        account_addresses: Vec<Felt>,
         contract_addresses: Vec<Felt>,
-    ) -> Result<RetrieveBalancesResponse, Status> {
+    ) -> Result<RetrieveTokenBalancesResponse, Status> {
+        let query = format!(
+            "SELECT * FROM token_balances WHERE account_address IN ({}) AND contract_address IN ({})",
+            account_addresses
+                .iter()
+                .map(|address| format!("{:#x}", address))
+                .collect::<Vec<_>>()
+                .join(", "),
+            contract_addresses
+                .iter()
+                .map(|address| format!("{:#x}", address))
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
 
+        let balances: Vec<TokenBalance> = sqlx::query_as(&query)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        let balances = balances.iter().map(|balance| balance.clone().into()).collect();
+        Ok(RetrieveTokenBalancesResponse { balances })
     }
 
     async fn subscribe_indexer(
@@ -1208,6 +1228,28 @@ impl proto::world::world_server::World for DojoWorld {
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
         Ok(Response::new(tokens))
+    }
+
+    async fn retrieve_token_balances(
+        &self,
+        request: Request<RetrieveTokenBalancesRequest>,
+    ) -> Result<Response<RetrieveTokenBalancesResponse>, Status> {
+        let RetrieveTokenBalancesRequest { account_addresses, contract_addresses } =
+            request.into_inner();
+        let account_addresses = account_addresses
+            .iter()
+            .map(|address| Felt::from_bytes_be_slice(address))
+            .collect::<Vec<_>>();
+        let contract_addresses = contract_addresses
+            .iter()
+            .map(|address| Felt::from_bytes_be_slice(address))
+            .collect::<Vec<_>>();
+
+        let balances = self
+            .retrieve_token_balances(account_addresses, contract_addresses)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+        Ok(Response::new(balances))
     }
 
     async fn subscribe_indexer(

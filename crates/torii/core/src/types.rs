@@ -135,7 +135,7 @@ pub struct Token {
 
 #[derive(FromRow, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct Balance {
+pub struct TokenBalance {
     pub id: String,
     pub balance: String,
     pub account_address: String,
