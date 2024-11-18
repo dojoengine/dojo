@@ -13,7 +13,10 @@ use clap::Args;
 use katana_node::config::execution::{DEFAULT_INVOCATION_MAX_STEPS, DEFAULT_VALIDATION_MAX_STEPS};
 use katana_node::config::metrics::{DEFAULT_METRICS_ADDR, DEFAULT_METRICS_PORT};
 #[cfg(feature = "server")]
-use katana_node::config::rpc::{DEFAULT_RPC_ADDR, DEFAULT_RPC_MAX_CONNECTIONS, DEFAULT_RPC_PORT};
+use katana_node::config::rpc::{
+    DEFAULT_RPC_ADDR, DEFAULT_RPC_MAX_CONNECTIONS, DEFAULT_RPC_MAX_EVENT_PAGE_SIZE,
+    DEFAULT_RPC_PORT,
+};
 use katana_primitives::block::BlockHashOrNumber;
 use katana_primitives::chain::ChainId;
 use katana_primitives::genesis::Genesis;
@@ -24,7 +27,6 @@ use crate::utils::{parse_block_hash_or_number, parse_genesis, LogFormat};
 
 const DEFAULT_DEV_SEED: &str = "0";
 const DEFAULT_DEV_ACCOUNTS: u16 = 10;
-const DEFAULT_RPC_PAGE_SIZE: u64 = 100;
 
 #[cfg(feature = "server")]
 #[derive(Debug, Args, Clone, Serialize, Deserialize, PartialEq)]
@@ -93,7 +95,7 @@ pub struct ServerOptions {
 
     /// Maximum page size for event queries.
     #[arg(long = "rpc.max-event-page-size", value_name = "SIZE")]
-    #[arg(default_value_t = DEFAULT_RPC_PAGE_SIZE)]
+    #[arg(default_value_t = DEFAULT_RPC_MAX_EVENT_PAGE_SIZE)]
     #[serde(default = "default_page_size")]
     pub max_event_page_size: u64,
 }
@@ -106,7 +108,7 @@ impl Default for ServerOptions {
             http_port: DEFAULT_RPC_PORT,
             max_connections: DEFAULT_RPC_MAX_CONNECTIONS,
             http_cors_origins: None,
-            max_event_page_size: DEFAULT_RPC_PAGE_SIZE,
+            max_event_page_size: DEFAULT_RPC_MAX_EVENT_PAGE_SIZE,
         }
     }
 }
@@ -365,7 +367,7 @@ fn default_max_connections() -> u32 {
 }
 
 fn default_page_size() -> u64 {
-    DEFAULT_RPC_PAGE_SIZE
+    DEFAULT_RPC_MAX_EVENT_PAGE_SIZE
 }
 
 #[cfg(feature = "server")]

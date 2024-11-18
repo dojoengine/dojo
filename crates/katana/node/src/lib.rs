@@ -277,8 +277,8 @@ pub async fn spawn<EF: ExecutorFactory>(
     methods.register_method("health", |_, _| Ok(serde_json::json!({ "health": true })))?;
 
     if config.apis.contains(&ApiKind::Starknet) {
-        let starknet_api_config =
-            StarknetApiConfig { max_event_page_size: config.max_event_page_size };
+        let cfg = StarknetApiConfig { max_event_page_size: config.max_event_page_size };
+
         let server = if let Some(client) = forked_client {
             StarknetApi::new_forked(
                 backend.clone(),
@@ -286,16 +286,10 @@ pub async fn spawn<EF: ExecutorFactory>(
                 block_producer.clone(),
                 validator,
                 client,
-                starknet_api_config,
+                cfg,
             )
         } else {
-            StarknetApi::new(
-                backend.clone(),
-                pool.clone(),
-                block_producer.clone(),
-                validator,
-                starknet_api_config,
-            )
+            StarknetApi::new(backend.clone(), pool.clone(), block_producer.clone(), validator, cfg)
         };
 
         methods.merge(StarknetApiServer::into_rpc(server.clone()))?;
