@@ -1,11 +1,13 @@
+use std::future::IntoFuture;
+
 use katana_pipeline::{stage, Pipeline};
 use katana_provider::test_utils::test_provider;
-use katana_provider::traits::block::BlockNumberProvider;
+use katana_provider::traits::block::{BlockNumberProvider, BlockProvider};
 use katana_provider::traits::state::StateFactoryProvider;
 use katana_provider::traits::state_update::StateUpdateProvider;
 use starknet::providers::SequencerGatewayProvider;
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn fgw_sync() {
     let tip = 10;
     let chunk_size = 5;
@@ -17,16 +19,24 @@ async fn fgw_sync() {
     let blocks = stage::Blocks::new(db_provider.clone(), fgw.clone());
     let classes = stage::Classes::new(db_provider.clone(), fgw);
 
-    let mut pipeline = Pipeline::new(tip, &db_provider, chunk_size);
+    let (mut pipeline, handle) = Pipeline::new(db_provider.clone(), chunk_size);
     pipeline.add_stage(blocks);
     pipeline.add_stage(classes);
 
-    pipeline.run().await.expect("failed to run pipelien");
+    tokio::spawn(pipeline.into_future());
+    handle.set_tip(10);
+
+    handle.stopped();
 
     // check the db
 
     let latest_num = db_provider.latest_number().expect("failed to get latest block number");
     assert_eq!(latest_num, tip);
+
+    for i in 0..latest_num {
+        let block = db_provider.block(i.into()).expect("failed to get block");
+        assert!(block.is_some());
+    }
 
     let declared_classes = db_provider.declared_classes(latest_num.into()).unwrap().unwrap();
     let latest_state = db_provider.latest().expect("failed to get latest state");

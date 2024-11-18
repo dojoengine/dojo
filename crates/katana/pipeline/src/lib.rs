@@ -3,12 +3,16 @@
 pub mod stage;
 
 use core::future::IntoFuture;
+use std::borrow::Borrow;
+use std::sync::Arc;
 
 use futures::future::BoxFuture;
 use katana_primitives::block::BlockNumber;
 use katana_provider::error::ProviderError;
 use katana_provider::traits::stage::StageCheckpointProvider;
+use parking_lot::{Condvar, Mutex};
 use stage::{Stage, StageExecutionInput};
+use tokio::sync::watch;
 use tracing::{error, info};
 
 /// The result of a pipeline execution.
@@ -29,9 +33,30 @@ pub enum Error {
     Provider(#[from] ProviderError),
 }
 
-#[derive(Debug, Default)]
-pub struct PipelineStats {
-    pub iterations: u64,
+#[derive(Debug)]
+pub struct PipelineHandle {
+    status: Arc<(Mutex<PipelineStatus>, Condvar)>,
+    tx: watch::Sender<Option<BlockNumber>>,
+}
+
+impl PipelineHandle {
+    pub fn set_tip(&self, tip: BlockNumber) {
+        self.tx.send(Some(tip)).expect("channel closed");
+    }
+
+    pub fn stopped(&self) {
+        while *self.status.0.lock() != PipelineStatus::Stopped {
+            self.status.1.wait(&mut self.status.0.lock());
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PipelineStatus {
+    NotStarted,
+    Syncing,
+    Stopped,
+    Finished,
 }
 
 /// Syncing pipeline.
@@ -43,17 +68,23 @@ pub struct PipelineStats {
 ///
 /// [`reth`]: https://github.com/paradigmxyz/reth/blob/c7aebff0b6bc19cd0b73e295497d3c5150d40ed8/crates/stages/api/src/pipeline/mod.rs#L66
 pub struct Pipeline<P> {
+    status: Arc<(Mutex<PipelineStatus>, Condvar)>,
     chunk_size: u64,
-    tip: BlockNumber,
+    tip: watch::Receiver<Option<BlockNumber>>,
     provider: P,
     stages: Vec<Box<dyn Stage>>,
-    stats: PipelineStats,
 }
 
 impl<P> Pipeline<P> {
     /// Create a new empty pipeline.
-    pub fn new(tip: BlockNumber, provider: P, chunk_size: u64) -> Self {
-        Self { stages: Vec::new(), tip, provider, chunk_size, stats: Default::default() }
+    pub fn new(provider: P, chunk_size: u64) -> (Self, PipelineHandle) {
+        let (tx, rx) = watch::channel(None);
+        let status = Arc::new((Mutex::new(PipelineStatus::NotStarted), Condvar::new()));
+
+        let handle = PipelineHandle { tx, status: status.clone() };
+        let pipeline = Self { stages: Vec::new(), tip: rx, provider, chunk_size, status };
+
+        (pipeline, handle)
     }
 
     /// Insert a new stage into the pipeline.
@@ -69,36 +100,57 @@ impl<P> Pipeline<P> {
     }
 }
 
-impl<P> Pipeline<P>
-where
-    P: StageCheckpointProvider,
-{
+impl<P: StageCheckpointProvider> Pipeline<P> {
     /// Run the pipeline in a loop.
     pub async fn run(&mut self) -> PipelineResult {
-        let mut current_chunk_tip = self.chunk_size.min(self.tip);
+        let mut current_chunk_tip = self.chunk_size;
 
         loop {
-            self.run_once(current_chunk_tip).await?;
+            let tip = *self.tip.borrow_and_update();
 
-            if current_chunk_tip >= self.tip {
+            if let Some(tip) = tip {
+                {
+                    let mut status = self.status.0.lock();
+                    if *status != PipelineStatus::Syncing {
+                        *status = PipelineStatus::Syncing;
+                    }
+                }
+
+                let until_block = current_chunk_tip.min(tip);
+                self.run_once_until(until_block).await?;
+
+                if current_chunk_tip < tip {
+                    current_chunk_tip = (current_chunk_tip + self.chunk_size).min(tip);
+                    continue;
+                }
+            }
+
+            *self.status.0.lock() = PipelineStatus::Stopped;
+            self.status.1.notify_one();
+
+            println!("stopped");
+
+            // wait until the tip has changed
+            if self.tip.changed().await.is_err() {
                 break;
-            } else {
-                self.stats.iterations += 1;
-                current_chunk_tip = (current_chunk_tip + self.chunk_size).min(self.tip);
             }
         }
 
+        *self.status.0.lock() = PipelineStatus::Finished;
         info!(target: "pipeline", "Pipeline finished.");
 
         Ok(())
     }
 
-    /// Run the pipeline once until the given tip.
-    async fn run_once(&mut self, to: BlockNumber) -> PipelineResult {
+    /// Run the pipeline once, until the given block number.
+    async fn run_once_until(&mut self, to: BlockNumber) -> PipelineResult {
         for stage in &mut self.stages {
             let id = stage.id();
+
+            // Get the checkpoint for the stage, otherwise default to block number 0
             let checkpoint = self.provider.checkpoint(id)?.unwrap_or_default();
 
+            // Skip the stage if the checkpoint is greater than or equal to the target block number
             if checkpoint >= to {
                 info!(target: "pipeline", %id, "Skipping stage.");
                 continue;
@@ -108,10 +160,28 @@ where
 
             // plus 1 because the checkpoint is inclusive
             let input = StageExecutionInput { from: checkpoint + 1, to };
-            let _ = stage.execute(&input).await?;
-
+            stage.execute(&input).await?;
             self.provider.set_checkpoint(id, to)?;
         }
+
+        Ok(())
+    }
+
+    #[cfg(test)]
+    pub async fn run_until(&mut self, to: BlockNumber) -> PipelineResult {
+        let mut current_chunk_tip = self.chunk_size.min(to);
+
+        loop {
+            self.run_once_until(current_chunk_tip).await?;
+
+            if current_chunk_tip >= to {
+                break;
+            } else {
+                current_chunk_tip = (current_chunk_tip + self.chunk_size).min(to);
+            }
+        }
+
+        info!(target: "pipeline", "Pipeline finished.");
 
         Ok(())
     }
@@ -133,10 +203,15 @@ where
     }
 }
 
-impl<P> core::fmt::Debug for Pipeline<P> {
+impl<P> core::fmt::Debug for Pipeline<P>
+where
+    P: core::fmt::Debug,
+{
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("Pipeline")
             .field("tip", &self.tip)
+            .field("provider", &self.provider)
+            .field("chunk_size", &self.chunk_size)
             .field("stages", &self.stages.iter().map(|s| s.id()).collect::<Vec<_>>())
             .finish()
     }
@@ -167,26 +242,26 @@ mod tests {
     async fn stage_checkpoint() {
         let provider = test_provider();
 
-        let mut pipeline = Pipeline::new(10, &provider, 10);
+        let (mut pipeline, handle) = Pipeline::new(&provider, 10);
         pipeline.add_stage(MockStage);
 
         // check that the checkpoint was set
         let initial_checkpoint = provider.checkpoint("Mock").unwrap();
         assert_eq!(initial_checkpoint, None);
 
-        pipeline.run_once(5).await.expect("failed to run the pipeline once");
+        pipeline.run_once_until(5).await.expect("failed to run the pipeline once");
 
         // check that the checkpoint was set
         let actual_checkpoint = provider.checkpoint("Mock").unwrap();
         assert_eq!(actual_checkpoint, Some(5));
 
-        pipeline.run_once(10).await.expect("failed to run the pipeline once");
+        pipeline.run_once_until(10).await.expect("failed to run the pipeline once");
 
         // check that the checkpoint was set
         let actual_checkpoint = provider.checkpoint("Mock").unwrap();
         assert_eq!(actual_checkpoint, Some(10));
 
-        pipeline.run_once(10).await.expect("failed to run the pipeline once");
+        pipeline.run_once_until(10).await.expect("failed to run the pipeline once");
 
         // check that the checkpoint doesn't change
         let actual_checkpoint = provider.checkpoint("Mock").unwrap();

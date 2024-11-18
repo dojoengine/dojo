@@ -11,7 +11,7 @@ use katana_pool::{TransactionPool, TxPool};
 use katana_tasks::{TaskHandle, TaskSpawner};
 use tracing::error;
 
-use super::{StageExecutionInput, StageExecutionOutput, StageResult};
+use super::{StageExecutionInput, StageResult};
 use crate::Stage;
 
 /// The sequencing stage is responsible for advancing the chain state.

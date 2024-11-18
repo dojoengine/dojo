@@ -8482,6 +8482,7 @@ dependencies = [
  "katana-primitives",
  "katana-provider",
  "katana-tasks",
+ "parking_lot 0.12.3",
  "serde_json",
  "starknet 0.12.0",
  "thiserror",

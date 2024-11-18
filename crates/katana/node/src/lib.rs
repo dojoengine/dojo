@@ -126,17 +126,17 @@ impl Node {
         let block_producer = self.block_producer.clone();
         let validator = self.block_producer.validator().clone();
 
-        // --- build sequencing stage
+        // // --- build sequencing stage
 
-        let sequencing = stage::Sequencing::new(
-            pool.clone(),
-            backend.clone(),
-            self.task_manager.task_spawner(),
-            block_producer.clone(),
-            self.messaging_config.clone(),
-        );
+        // let sequencing = stage::Sequencing::new(
+        //     pool.clone(),
+        //     backend.clone(),
+        //     self.task_manager.task_spawner(),
+        //     block_producer.clone(),
+        //     self.messaging_config.clone(),
+        // );
 
-        // --- build and start the pipeline
+        // // --- build and start the pipeline
 
         // let mut pipeline = Pipeline::new();
         // pipeline.add_stage(Box::new(sequencing));
@@ -148,13 +148,10 @@ impl Node {
         //     .name("Pipeline")
         //     .spawn(pipeline.into_future());
 
-        // let node_components = (pool, backend, block_producer, validator,
-        // self.forked_client.take()); let rpc = spawn(node_components,
-        // self.rpc_config.clone()).await?;
+        let node_components = (pool, backend, block_producer, validator, self.forked_client.take());
+        let rpc = spawn(node_components, self.rpc_config.clone()).await?;
 
-        // Ok(LaunchedNode { node: self, rpc })
-
-        todo!()
+        Ok(LaunchedNode { node: self, rpc })
     }
 }
 
