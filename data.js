@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1731924843198,
+  "lastUpdate": 1731925093498,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -34843,6 +34843,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10035418054,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bc50d9e7d81fce145eedc47674fbf3dd4dc22944",
+          "message": "fix(torii): missing cli version flag (#2700)",
+          "timestamp": "2024-11-18T04:58:10-05:00",
+          "tree_id": "1a68a5b2d367116958b95721116e603d60d1b220",
+          "url": "https://github.com/dojoengine/dojo/commit/bc50d9e7d81fce145eedc47674fbf3dd4dc22944"
+        },
+        "date": 1731925091974,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 15185089,
+            "range": "± 146434",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8778956,
+            "range": "± 221241",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3659489106,
+            "range": "± 795962093",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 9519922,
+            "range": "± 244036",
             "unit": "ns/iter"
           }
         ]
