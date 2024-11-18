@@ -10,35 +10,11 @@ use starknet::core::types::{
     ContractStorageDiffItem, Felt, FromStrError, StateDiff, StateUpdate, StorageEntry,
 };
 use strum_macros::{AsRefStr, EnumIter, FromRepr};
-use torii_core::types::{Token, TokenBalance};
 
 use crate::proto::types::member_value;
 use crate::proto::{self};
 
 pub mod schema;
-
-impl From<Token> for proto::types::Token {
-    fn from(value: Token) -> Self {
-        Self {
-            contract_address: value.contract_address,
-            name: value.name,
-            symbol: value.symbol,
-            decimals: value.decimals as u32,
-            metadata: serde_json::to_string(&value.metadata).unwrap(),
-        }
-    }
-}
-
-impl From<TokenBalance> for proto::types::TokenBalance {
-    fn from(value: TokenBalance) -> Self {
-        Self {
-            balance: value.balance,
-            account_address: value.account_address,
-            contract_address: value.contract_address,
-            token_id: value.token_id,
-        }
-    }
-}
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct IndexerUpdate {

@@ -89,6 +89,29 @@ impl From<SchemaError> for Error {
     }
 }
 
+impl From<Token> for proto::types::Token {
+    fn from(value: Token) -> Self {
+        Self {
+            contract_address: value.contract_address,
+            name: value.name,
+            symbol: value.symbol,
+            decimals: value.decimals as u32,
+            metadata: serde_json::to_string(&value.metadata).unwrap(),
+        }
+    }
+}
+
+impl From<TokenBalance> for proto::types::TokenBalance {
+    fn from(value: TokenBalance) -> Self {
+        Self {
+            balance: value.balance,
+            account_address: value.account_address,
+            contract_address: value.contract_address,
+            token_id: value.token_id,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct DojoWorld {
     pool: Pool<Sqlite>,
