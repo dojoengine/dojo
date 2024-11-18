@@ -18,6 +18,7 @@ pub trait StateUpdateProvider: Send + Sync {
         block_id: BlockHashOrNumber,
     ) -> ProviderResult<Option<BTreeMap<ClassHash, CompiledClassHash>>>;
 
+    /// Returns all deployed contracts at the given block.
     fn deployed_contracts(
         &self,
         block_id: BlockHashOrNumber,

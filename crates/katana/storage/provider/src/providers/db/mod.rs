@@ -50,7 +50,7 @@ use crate::ProviderResult;
 
 /// A provider implementation that uses a persistent database as the backend.
 // TODO: remove the default generic type
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DbProvider<Db: Database = DbEnv>(Db);
 
 impl<Db: Database> DbProvider<Db> {
@@ -275,28 +275,28 @@ impl<Db: Database> StateRootProvider for DbProvider<Db> {
     }
 }
 
+// A helper function that iterates over all entries in a dupsort table and collects the
+// results into `V`. If `key` is not found, `V::default()` is returned.
+fn dup_entries<Db, Tb, V, T>(
+    db_tx: &<Db as Database>::Tx,
+    key: <Tb as Table>::Key,
+    f: impl FnMut(Result<KeyValue<Tb>, DatabaseError>) -> ProviderResult<T>,
+) -> ProviderResult<V>
+where
+    Db: Database,
+    Tb: DupSort + Debug,
+    V: FromIterator<T> + Default,
+{
+    Ok(db_tx
+        .cursor_dup::<Tb>()?
+        .walk_dup(Some(key), None)?
+        .map(|walker| walker.map(f).collect::<ProviderResult<V>>())
+        .transpose()?
+        .unwrap_or_default())
+}
+
 impl<Db: Database> StateUpdateProvider for DbProvider<Db> {
     fn state_update(&self, block_id: BlockHashOrNumber) -> ProviderResult<Option<StateUpdates>> {
-        // A helper function that iterates over all entries in a dupsort table and collects the
-        // results into `V`. If `key` is not found, `V::default()` is returned.
-        fn dup_entries<Db, Tb, V, T>(
-            db_tx: &<Db as Database>::Tx,
-            key: <Tb as Table>::Key,
-            f: impl FnMut(Result<KeyValue<Tb>, DatabaseError>) -> ProviderResult<T>,
-        ) -> ProviderResult<V>
-        where
-            Db: Database,
-            Tb: DupSort + Debug,
-            V: FromIterator<T> + Default,
-        {
-            Ok(db_tx
-                .cursor_dup::<Tb>()?
-                .walk_dup(Some(key), None)?
-                .map(|walker| walker.map(f).collect::<ProviderResult<V>>())
-                .transpose()?
-                .unwrap_or_default())
-        }
-
         let db_tx = self.0.tx()?;
         let block_num = self.block_number_by_id(block_id)?;
 
@@ -373,7 +373,30 @@ impl<Db: Database> StateUpdateProvider for DbProvider<Db> {
         &self,
         block_id: BlockHashOrNumber,
     ) -> ProviderResult<Option<BTreeMap<ClassHash, CompiledClassHash>>> {
-        todo!()
+        let db_tx = self.0.tx()?;
+        let block_num = self.block_number_by_id(block_id)?;
+
+        if let Some(block_num) = block_num {
+            let declared_classes = dup_entries::<
+                Db,
+                tables::ClassDeclarations,
+                BTreeMap<ClassHash, CompiledClassHash>,
+                _,
+            >(&db_tx, block_num, |entry| {
+                let (_, class_hash) = entry?;
+
+                let compiled_hash = db_tx
+                    .get::<tables::CompiledClassHashes>(class_hash)?
+                    .ok_or(ProviderError::MissingCompiledClassHash(class_hash))?;
+
+                Ok((class_hash, compiled_hash))
+            })?;
+
+            db_tx.commit()?;
+            Ok(Some(declared_classes))
+        } else {
+            Ok(None)
+        }
     }
 
     fn deployed_contracts(

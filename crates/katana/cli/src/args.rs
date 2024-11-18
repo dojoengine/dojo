@@ -22,6 +22,7 @@ use serde::{Deserialize, Serialize};
 use tracing::{info, Subscriber};
 use tracing_log::LogTracer;
 use tracing_subscriber::{fmt, EnvFilter};
+use url::Url;
 
 use crate::file::NodeArgsConfig;
 use crate::options::*;
@@ -54,6 +55,9 @@ pub struct NodeArgs {
     #[arg(long)]
     #[arg(value_name = "PATH")]
     pub db_dir: Option<PathBuf>,
+
+    #[arg(long = "l1.provider")]
+    pub l1_provider: Option<Url>,
 
     /// Configuration file
     #[arg(long)]

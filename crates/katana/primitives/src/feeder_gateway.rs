@@ -1,3 +1,5 @@
+use num_traits::ToPrimitive;
+use starknet::core::types::ResourcePrice;
 use starknet::providers::sequencer::models::{
     Block as FgwBlock, BlockStatus, InvokeFunctionTransaction, StateUpdate as FgwStateUpdate,
 };
@@ -6,6 +8,7 @@ use crate::block::{FinalityStatus, GasPrices, Header, SealedBlock, SealedBlockWi
 use crate::da::L1DataAvailabilityMode;
 use crate::state::StateUpdates;
 use crate::transaction::TxWithHash;
+use crate::version::ProtocolVersion;
 use crate::ContractAddress;
 
 impl From<FgwBlock> for SealedBlockWithStatus {
@@ -26,10 +29,14 @@ impl From<FgwBlock> for SealedBlockWithStatus {
                 state_diff_length: Default::default(),
                 timestamp: value.timestamp,
                 sequencer_address: value.sequencer_address.unwrap_or_default().into(),
-                l1_gas_prices: GasPrices::default(),
-                l1_data_gas_prices: GasPrices::default(),
+                l1_gas_prices: value.l1_gas_price.into(),
+                l1_data_gas_prices: value.l1_data_gas_price.into(),
                 l1_da_mode: L1DataAvailabilityMode::Calldata,
-                protocol_version: Default::default(),
+                // old blocks dont include the version field
+                protocol_version: value
+                    .starknet_version
+                    .and_then(|v| ProtocolVersion::parse(&v).ok())
+                    .unwrap_or_default(),
             },
         };
 
@@ -89,6 +96,15 @@ impl From<FgwStateUpdate> for StateUpdates {
             replaced_classes,
             deployed_contracts,
             deprecated_declared_classes,
+        }
+    }
+}
+
+impl From<ResourcePrice> for GasPrices {
+    fn from(value: ResourcePrice) -> Self {
+        GasPrices {
+            eth: value.price_in_wei.to_u128().expect("fit in u128"),
+            strk: value.price_in_fri.to_u128().expect("fit in u128"),
         }
     }
 }

@@ -29,7 +29,12 @@ pub enum Error {
     Provider(#[from] ProviderError),
 }
 
-/// Manages the execution of stages.
+#[derive(Debug, Default)]
+pub struct PipelineStats {
+    pub iterations: u64,
+}
+
+/// Syncing pipeline.
 ///
 /// The pipeline drives the execution of stages, running each stage to completion in the order they
 /// were added.
@@ -38,21 +43,22 @@ pub enum Error {
 ///
 /// [`reth`]: https://github.com/paradigmxyz/reth/blob/c7aebff0b6bc19cd0b73e295497d3c5150d40ed8/crates/stages/api/src/pipeline/mod.rs#L66
 pub struct Pipeline<P> {
-    chunk: u64,
+    chunk_size: u64,
     tip: BlockNumber,
     provider: P,
     stages: Vec<Box<dyn Stage>>,
+    stats: PipelineStats,
 }
 
 impl<P> Pipeline<P> {
     /// Create a new empty pipeline.
-    pub fn new(provider: P, tip: BlockNumber) -> Self {
-        Self { stages: Vec::new(), tip, provider, chunk: 10 }
+    pub fn new(tip: BlockNumber, provider: P, chunk_size: u64) -> Self {
+        Self { stages: Vec::new(), tip, provider, chunk_size, stats: Default::default() }
     }
 
     /// Insert a new stage into the pipeline.
-    pub fn add_stage(&mut self, stage: Box<dyn Stage>) {
-        self.stages.push(stage);
+    pub fn add_stage<S: Stage + 'static>(&mut self, stage: S) {
+        self.stages.push(Box::new(stage));
     }
 
     /// Insert multiple stages into the pipeline.
@@ -67,41 +73,45 @@ impl<P> Pipeline<P>
 where
     P: StageCheckpointProvider,
 {
-    /// Start the pipeline.
+    /// Run the pipeline in a loop.
     pub async fn run(&mut self) -> PipelineResult {
-        let total_iterations = self.tip.saturating_div(self.chunk);
-        let mut iteration = 0;
-        let mut current_chunk_tip = self.chunk.min(self.tip);
+        let mut current_chunk_tip = self.chunk_size.min(self.tip);
 
         loop {
-            for stage in &mut self.stages {
-                let id = stage.id();
-                let checkpoint = self.provider.checkpoint(id)?.unwrap_or_default();
+            self.run_once(current_chunk_tip).await?;
 
-                if checkpoint >= current_chunk_tip {
-                    info!(target: "pipeline", %id, %checkpoint, tip = %current_chunk_tip, %iteration, %total_iterations, "Skipping stage.");
-                    continue;
-                }
-
-                info!(target: "pipeline", %id, from_block = %checkpoint, to_block = %current_chunk_tip, %iteration, %total_iterations, "Executing stage.");
-
-                // plus 1 because the checkpoint is inclusive
-                let from = checkpoint + 1;
-                let to = current_chunk_tip;
-
-                let _ = stage.execute(&StageExecutionInput { from, to }).await?;
-                self.provider.set_checkpoint(id, current_chunk_tip)?;
-            }
-
-            if current_chunk_tip < self.tip {
+            if current_chunk_tip >= self.tip {
                 break;
             } else {
-                iteration += 1;
-                current_chunk_tip = (current_chunk_tip + self.chunk).min(self.tip);
+                self.stats.iterations += 1;
+                current_chunk_tip = (current_chunk_tip + self.chunk_size).min(self.tip);
             }
         }
 
         info!(target: "pipeline", "Pipeline finished.");
+
+        Ok(())
+    }
+
+    /// Run the pipeline once until the given tip.
+    async fn run_once(&mut self, to: BlockNumber) -> PipelineResult {
+        for stage in &mut self.stages {
+            let id = stage.id();
+            let checkpoint = self.provider.checkpoint(id)?.unwrap_or_default();
+
+            if checkpoint >= to {
+                info!(target: "pipeline", %id, "Skipping stage.");
+                continue;
+            }
+
+            info!(target: "pipeline", %id, from_block = %checkpoint, to_block = %to, "Executing stage.");
+
+            // plus 1 because the checkpoint is inclusive
+            let input = StageExecutionInput { from: checkpoint + 1, to };
+            let _ = stage.execute(&input).await?;
+
+            self.provider.set_checkpoint(id, to)?;
+        }
 
         Ok(())
     }
@@ -157,16 +167,28 @@ mod tests {
     async fn stage_checkpoint() {
         let provider = test_provider();
 
-        let mut pipeline = Pipeline::new(&provider, 10);
-        pipeline.add_stage(Box::new(MockStage));
+        let mut pipeline = Pipeline::new(10, &provider, 10);
+        pipeline.add_stage(MockStage);
 
         // check that the checkpoint was set
         let initial_checkpoint = provider.checkpoint("Mock").unwrap();
         assert_eq!(initial_checkpoint, None);
 
-        pipeline.run().await.expect("pipeline failed");
+        pipeline.run_once(5).await.expect("failed to run the pipeline once");
 
         // check that the checkpoint was set
+        let actual_checkpoint = provider.checkpoint("Mock").unwrap();
+        assert_eq!(actual_checkpoint, Some(5));
+
+        pipeline.run_once(10).await.expect("failed to run the pipeline once");
+
+        // check that the checkpoint was set
+        let actual_checkpoint = provider.checkpoint("Mock").unwrap();
+        assert_eq!(actual_checkpoint, Some(10));
+
+        pipeline.run_once(10).await.expect("failed to run the pipeline once");
+
+        // check that the checkpoint doesn't change
         let actual_checkpoint = provider.checkpoint("Mock").unwrap();
         assert_eq!(actual_checkpoint, Some(10));
     }

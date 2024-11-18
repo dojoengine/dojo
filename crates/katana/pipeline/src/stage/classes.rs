@@ -1,9 +1,14 @@
 use std::time::Duration;
 
 use katana_primitives::block::BlockNumber;
-use katana_primitives::class::ClassHash;
-use katana_provider::traits::{contract::ContractClassWriter, state_update::StateUpdateProvider};
-use starknet::providers::{sequencer::models::BlockId, ProviderError, SequencerGatewayProvider};
+use katana_primitives::class::{
+    ClassHash, CompiledClass, DeprecatedCompiledClass, FlattenedSierraClass,
+};
+use katana_primitives::conversion::rpc::flattened_sierra_to_compiled_class;
+use katana_provider::traits::contract::ContractClassWriter;
+use katana_provider::traits::state_update::StateUpdateProvider;
+use starknet::providers::sequencer::models::{BlockId, DeployedClass};
+use starknet::providers::{ProviderError, SequencerGatewayProvider};
 
 use super::{Stage, StageExecutionInput, StageResult};
 
@@ -30,13 +35,29 @@ where
     P: StateUpdateProvider + ContractClassWriter,
 {
     #[allow(deprecated)]
-    async fn get_class(&self, hash: ClassHash, block: BlockNumber) -> Result<(), Error> {
+    async fn get_class(
+        &self,
+        hash: ClassHash,
+        block: BlockNumber,
+    ) -> Result<(Option<FlattenedSierraClass>, CompiledClass), Error> {
         let block_id = BlockId::Number(block);
 
-        let _ = self.feeder_gateway.get_class_by_hash(hash, block_id).await?;
-        let _ = self.feeder_gateway.get_compiled_class_by_class_hash(hash, block_id).await?;
+        let class = self.feeder_gateway.get_class_by_hash(hash, block_id).await?;
 
-        Ok(())
+        let (sierra, casm) = match class {
+            DeployedClass::LegacyClass(legacy) => {
+                // TODO: change this shit
+                let class = serde_json::to_value(legacy).unwrap();
+                let class = serde_json::from_value::<DeprecatedCompiledClass>(class).unwrap();
+                (None, CompiledClass::Deprecated(class))
+            }
+            DeployedClass::SierraClass(sierra) => {
+                let (_, _, class) = flattened_sierra_to_compiled_class(&sierra).unwrap();
+                (Some(sierra), class)
+            }
+        };
+
+        Ok((sierra, casm))
     }
 }
 
@@ -57,11 +78,14 @@ where
             // TODO: do this in parallel
             for class_hash in class_hashes.keys() {
                 // 1. fetch sierra and casm class from fgw
-                let _ = self.get_class(*class_hash, i).await?;
+                let (sierra, compiled) = self.get_class(*class_hash, i).await?;
 
                 // 2. store the classes
-                // self.provider.set_compiled_class(class_hash, class)?;
-                // self.provider.set_sierra_class(class_hash, class)?;
+                if let Some(sierra) = sierra {
+                    self.provider.set_sierra_class(*class_hash, sierra)?;
+                }
+
+                self.provider.set_class(*class_hash, compiled)?;
 
                 tokio::time::sleep(Duration::from_secs(1)).await;
             }

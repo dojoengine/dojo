@@ -1,8 +1,11 @@
+use katana_primitives::block::BlockNumber;
+
 mod blocks;
 mod classes;
 mod sequencing;
 
-use katana_primitives::block::BlockNumber;
+pub use blocks::Blocks;
+pub use classes::Classes;
 pub use sequencing::Sequencing;
 
 /// The result type of a stage execution. See [Stage::execute].
