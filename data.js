@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1731941589047,
+  "lastUpdate": 1731941834311,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -34921,6 +34921,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10237977387,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "radole1203@gmail.com",
+            "name": "Olexandr88",
+            "username": "Olexandr88"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0fbf5000471f100ec9bed954a8fa935053297fe9",
+          "message": "Docs: update discord link in readme (#2695)\n\nUpdate README.md",
+          "timestamp": "2024-11-18T08:36:50-06:00",
+          "tree_id": "afb7ef5df77a809d97abdad3b6faa62c0c077dc3",
+          "url": "https://github.com/dojoengine/dojo/commit/0fbf5000471f100ec9bed954a8fa935053297fe9"
+        },
+        "date": 1731941832252,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 15393979,
+            "range": "± 155687",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8924315,
+            "range": "± 239336",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3763636385,
+            "range": "± 716563788",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8672977,
+            "range": "± 290585",
             "unit": "ns/iter"
           }
         ]
