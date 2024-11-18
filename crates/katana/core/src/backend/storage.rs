@@ -76,7 +76,7 @@ impl<T> Database for T where
 {
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Blockchain {
     inner: BlockchainProvider<Box<dyn Database>>,
 }
