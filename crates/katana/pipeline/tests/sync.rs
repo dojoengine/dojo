@@ -9,7 +9,7 @@ use starknet::providers::SequencerGatewayProvider;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn fgw_sync() {
-    let tip = 10;
+    let tip = 20;
     let chunk_size = 5;
     let db_provider = test_provider();
 
@@ -24,9 +24,8 @@ async fn fgw_sync() {
     pipeline.add_stage(classes);
 
     tokio::spawn(pipeline.into_future());
-    handle.set_tip(10);
-
-    handle.stopped();
+    handle.set_tip(tip / 2);
+    handle.set_tip(tip);
 
     // check the db
 

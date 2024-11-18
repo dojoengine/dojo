@@ -56,9 +56,6 @@ pub struct NodeArgs {
     #[arg(value_name = "PATH")]
     pub db_dir: Option<PathBuf>,
 
-    #[arg(long = "l1.provider")]
-    pub l1_provider: Option<Url>,
-
     /// Configuration file
     #[arg(long)]
     config: Option<PathBuf>,

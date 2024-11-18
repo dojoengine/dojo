@@ -3,7 +3,6 @@
 pub mod stage;
 
 use core::future::IntoFuture;
-use std::borrow::Borrow;
 use std::sync::Arc;
 
 use futures::future::BoxFuture;
@@ -34,8 +33,13 @@ pub enum Error {
 }
 
 #[derive(Debug)]
+pub enum PipelineEvents {
+    UpdateTip(BlockNumber),
+    Stop,
+}
+
+#[derive(Debug)]
 pub struct PipelineHandle {
-    status: Arc<(Mutex<PipelineStatus>, Condvar)>,
     tx: watch::Sender<Option<BlockNumber>>,
 }
 
@@ -43,20 +47,6 @@ impl PipelineHandle {
     pub fn set_tip(&self, tip: BlockNumber) {
         self.tx.send(Some(tip)).expect("channel closed");
     }
-
-    pub fn stopped(&self) {
-        while *self.status.0.lock() != PipelineStatus::Stopped {
-            self.status.1.wait(&mut self.status.0.lock());
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum PipelineStatus {
-    NotStarted,
-    Syncing,
-    Stopped,
-    Finished,
 }
 
 /// Syncing pipeline.
@@ -68,22 +58,18 @@ pub enum PipelineStatus {
 ///
 /// [`reth`]: https://github.com/paradigmxyz/reth/blob/c7aebff0b6bc19cd0b73e295497d3c5150d40ed8/crates/stages/api/src/pipeline/mod.rs#L66
 pub struct Pipeline<P> {
-    status: Arc<(Mutex<PipelineStatus>, Condvar)>,
     chunk_size: u64,
-    tip: watch::Receiver<Option<BlockNumber>>,
     provider: P,
     stages: Vec<Box<dyn Stage>>,
+    tip: watch::Receiver<Option<BlockNumber>>,
 }
 
 impl<P> Pipeline<P> {
     /// Create a new empty pipeline.
     pub fn new(provider: P, chunk_size: u64) -> (Self, PipelineHandle) {
         let (tx, rx) = watch::channel(None);
-        let status = Arc::new((Mutex::new(PipelineStatus::NotStarted), Condvar::new()));
-
-        let handle = PipelineHandle { tx, status: status.clone() };
-        let pipeline = Self { stages: Vec::new(), tip: rx, provider, chunk_size, status };
-
+        let handle = PipelineHandle { tx };
+        let pipeline = Self { stages: Vec::new(), tip: rx, provider, chunk_size };
         (pipeline, handle)
     }
 
@@ -108,35 +94,27 @@ impl<P: StageCheckpointProvider> Pipeline<P> {
         loop {
             let tip = *self.tip.borrow_and_update();
 
-            if let Some(tip) = tip {
-                {
-                    let mut status = self.status.0.lock();
-                    if *status != PipelineStatus::Syncing {
-                        *status = PipelineStatus::Syncing;
+            loop {
+                if let Some(to) = tip {
+                    let to = current_chunk_tip.min(to);
+                    self.run_once_until(to).await?;
+
+                    if current_chunk_tip >= to {
+                        break;
+                    } else {
+                        current_chunk_tip = (current_chunk_tip + self.chunk_size).min(to);
+                        continue;
                     }
-                }
-
-                let until_block = current_chunk_tip.min(tip);
-                self.run_once_until(until_block).await?;
-
-                if current_chunk_tip < tip {
-                    current_chunk_tip = (current_chunk_tip + self.chunk_size).min(tip);
-                    continue;
                 }
             }
 
-            *self.status.0.lock() = PipelineStatus::Stopped;
-            self.status.1.notify_one();
-
-            println!("stopped");
-
-            // wait until the tip has changed
+            // If we reach here, that means we have run the pipeline up until the `tip`.
+            // So, wait until the tip has changed.
             if self.tip.changed().await.is_err() {
                 break;
             }
         }
 
-        *self.status.0.lock() = PipelineStatus::Finished;
         info!(target: "pipeline", "Pipeline finished.");
 
         Ok(())
@@ -163,25 +141,6 @@ impl<P: StageCheckpointProvider> Pipeline<P> {
             stage.execute(&input).await?;
             self.provider.set_checkpoint(id, to)?;
         }
-
-        Ok(())
-    }
-
-    #[cfg(test)]
-    pub async fn run_until(&mut self, to: BlockNumber) -> PipelineResult {
-        let mut current_chunk_tip = self.chunk_size.min(to);
-
-        loop {
-            self.run_once_until(current_chunk_tip).await?;
-
-            if current_chunk_tip >= to {
-                break;
-            } else {
-                current_chunk_tip = (current_chunk_tip + self.chunk_size).min(to);
-            }
-        }
-
-        info!(target: "pipeline", "Pipeline finished.");
 
         Ok(())
     }
