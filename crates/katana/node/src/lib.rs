@@ -140,13 +140,15 @@ impl Node {
 
         // --- build and start the pipeline
 
-        let provider = *(self.backend.blockchain.provider()).clone();
+        let provider = self.backend.blockchain.provider().clone();
         let fgw = SequencerGatewayProvider::starknet_alpha_sepolia();
         let (mut pipeline, handle) = Pipeline::new(provider.clone(), 10);
         // pipeline.add_stage(Box::new(sequencing));
 
         pipeline.add_stage(Blocks::new(provider.clone(), fgw.clone()));
         pipeline.add_stage(Classes::new(provider, fgw.clone()));
+
+        handle.set_tip(100);
 
         self.task_manager
             .task_spawner()

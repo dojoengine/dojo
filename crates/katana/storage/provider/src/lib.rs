@@ -42,7 +42,7 @@ pub type ProviderResult<T> = Result<T, error::ProviderError>;
 ///
 /// Serves as the main entrypoint for interacting with the storage storage. Every read/write
 /// operation is done through this provider.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct BlockchainProvider<Db> {
     provider: Arc<Db>,
 }
@@ -321,14 +321,14 @@ where
         &self,
         block_id: BlockHashOrNumber,
     ) -> ProviderResult<Option<BTreeMap<ClassHash, CompiledClassHash>>> {
-        todo!()
+        self.provider.declared_classes(block_id)
     }
 
     fn deployed_contracts(
         &self,
         block_id: BlockHashOrNumber,
     ) -> ProviderResult<Option<BTreeMap<ContractAddress, ClassHash>>> {
-        todo!()
+        self.provider.deployed_contracts(block_id)
     }
 }
 

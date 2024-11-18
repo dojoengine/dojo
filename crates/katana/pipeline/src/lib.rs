@@ -134,7 +134,7 @@ impl<P: StageCheckpointProvider> Pipeline<P> {
                 continue;
             }
 
-            info!(target: "pipeline", %id, from_block = %checkpoint, to_block = %to, "Executing stage.");
+            info!(target: "pipeline", %id, from = %checkpoint, %to, "Executing stage.");
 
             // plus 1 because the checkpoint is inclusive
             let input = StageExecutionInput { from: checkpoint + 1, to };
