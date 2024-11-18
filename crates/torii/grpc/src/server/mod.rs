@@ -43,6 +43,7 @@ use torii_core::error::{Error, ParseError, QueryError};
 use torii_core::model::{build_sql_query, map_row_to_ty};
 use torii_core::sql::cache::ModelCache;
 use torii_core::sql::utils::sql_string_to_felts;
+use torii_core::types::Token;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 
 use self::subscriptions::entity::EntityManager;
@@ -53,10 +54,7 @@ use crate::proto::types::member_value::ValueType;
 use crate::proto::types::LogicalOperator;
 use crate::proto::world::world_server::WorldServer;
 use crate::proto::world::{
-    RetrieveEntitiesStreamingResponse, RetrieveEventMessagesRequest, SubscribeEntitiesRequest,
-    SubscribeEntityResponse, SubscribeEventMessagesRequest, SubscribeEventsResponse,
-    SubscribeIndexerRequest, SubscribeIndexerResponse, UpdateEventMessagesSubscriptionRequest,
-    WorldMetadataRequest, WorldMetadataResponse,
+    RetrieveEntitiesStreamingResponse, RetrieveEventMessagesRequest, RetrieveTokensRequest, RetrieveTokensResponse, SubscribeEntitiesRequest, SubscribeEntityResponse, SubscribeEventMessagesRequest, SubscribeEventsResponse, SubscribeIndexerRequest, SubscribeIndexerResponse, UpdateEventMessagesSubscriptionRequest, WorldMetadataRequest, WorldMetadataResponse
 };
 use crate::proto::{self};
 use crate::types::schema::SchemaError;
@@ -789,6 +787,28 @@ impl DojoWorld {
         })
     }
 
+    async fn retrieve_tokens(
+        &self,
+        contract_addresses: Vec<Felt>,
+    ) -> Result<RetrieveTokensResponse, Status> {
+        let query = format!(
+            "SELECT * FROM tokens WHERE contract_address IN ({})",
+            contract_addresses
+                .iter()
+                .map(|address| format!("{:#x}", address))
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
+
+        let tokens: Vec<Token> = sqlx::query_as(&query)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        let tokens = tokens.iter().map(|token| token.clone().into()).collect();
+        Ok(RetrieveTokensResponse { tokens })
+    }
+
     async fn subscribe_indexer(
         &self,
         contract_address: Felt,
@@ -1163,6 +1183,23 @@ impl proto::world::world_server::World for DojoWorld {
         })?);
 
         Ok(Response::new(WorldMetadataResponse { metadata }))
+    }
+
+    async fn retrieve_tokens(
+        &self,
+        request: Request<RetrieveTokensRequest>,
+    ) -> Result<Response<RetrieveTokensResponse>, Status> {
+        let RetrieveTokensRequest { contract_addresses } = request.into_inner();
+        let contract_addresses = contract_addresses
+            .iter()
+            .map(|address| Felt::from_bytes_be_slice(address))
+            .collect::<Vec<_>>();
+
+        let tokens = self
+            .retrieve_tokens(contract_addresses)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+        Ok(Response::new(tokens))
     }
 
     async fn subscribe_indexer(

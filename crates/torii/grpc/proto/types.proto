@@ -156,6 +156,7 @@ message Token {
     string name = 3;
     string symbol = 4;
     uint32 decimals = 5;
+    string metadata = 6;
 }
 
 message Balance {

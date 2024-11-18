@@ -124,12 +124,13 @@ pub struct Event {
 
 #[derive(FromRow, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct ContractMetadata {
+pub struct Token {
     pub id: String,
     pub contract_address: String,
     pub name: String,
     pub symbol: String,
     pub decimals: u8,
+    pub metadata: String,
 }
 
 #[derive(FromRow, Deserialize, Debug, Clone)]
