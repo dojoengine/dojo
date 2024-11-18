@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1731941834311,
+  "lastUpdate": 1731947093864,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -34969,6 +34969,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8672977,
             "range": "± 290585",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "bpoulav@gmail.com",
+            "name": "Poulav Bhowmick",
+            "username": "PoulavBhowmick03"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "85c0b025f108bd1ed64a5b35cfb574f61545a0ff",
+          "message": "feat(katana): added chunk size limit to events method (#2644)\n\nCo-authored-by: Ammar Arif <evergreenkary@gmail.com>",
+          "timestamp": "2024-11-18T16:08:06Z",
+          "tree_id": "e3b2f5b68a95df3e0983920272f3b5fc5912d0e3",
+          "url": "https://github.com/dojoengine/dojo/commit/85c0b025f108bd1ed64a5b35cfb574f61545a0ff"
+        },
+        "date": 1731947092543,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10857144287,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
