@@ -795,14 +795,18 @@ impl DojoWorld {
         &self,
         contract_addresses: Vec<Felt>,
     ) -> Result<RetrieveTokensResponse, Status> {
-        let query = format!(
-            "SELECT * FROM tokens WHERE contract_address IN ({})",
-            contract_addresses
+        let query = if contract_addresses.is_empty() {
+            "SELECT * FROM tokens".to_string()
+        } else {
+            format!(
+                "SELECT * FROM tokens WHERE contract_address IN ({})",
+                contract_addresses
                 .iter()
                 .map(|address| format!("{:#x}", address))
                 .collect::<Vec<_>>()
-                .join(", ")
-        );
+                    .join(", ")
+            )
+        };
 
         let tokens: Vec<Token> = sqlx::query_as(&query)
             .fetch_all(&self.pool)
@@ -818,20 +822,33 @@ impl DojoWorld {
         account_addresses: Vec<Felt>,
         contract_addresses: Vec<Felt>,
     ) -> Result<RetrieveTokenBalancesResponse, Status> {
-        let query = format!(
-            "SELECT * FROM token_balances WHERE account_address IN ({}) AND contract_address IN \
-             ({})",
-            account_addresses
-                .iter()
-                .map(|address| format!("{:#x}", address))
-                .collect::<Vec<_>>()
-                .join(", "),
-            contract_addresses
-                .iter()
-                .map(|address| format!("{:#x}", address))
-                .collect::<Vec<_>>()
-                .join(", ")
-        );
+        let mut query = "SELECT * FROM token_balances".to_string();
+
+        let mut conditions = Vec::new();
+        if !account_addresses.is_empty() {
+            conditions.push(format!(
+                "account_address IN ({})",
+                account_addresses
+                    .iter()
+                    .map(|address| format!("{:#x}", address))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ));
+        }
+        if !contract_addresses.is_empty() {
+            conditions.push(format!(
+                "contract_address IN ({})",
+                contract_addresses
+                    .iter()
+                    .map(|address| format!("{:#x}", address))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ));
+        }
+
+        if !conditions.is_empty() {
+            query += &format!(" WHERE {}", conditions.join(" AND "));
+        }
 
         let balances: Vec<TokenBalance> = sqlx::query_as(&query)
             .fetch_all(&self.pool)
