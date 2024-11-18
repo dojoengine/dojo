@@ -42,6 +42,20 @@ service World {
 
     // Subscribe to events
     rpc SubscribeEvents (SubscribeEventsRequest) returns (stream SubscribeEventsResponse);
+
+    // Retrieve tokens
+    rpc RetrieveTokens (RetrieveTokensRequest) returns (RetrieveTokensResponse);
+}
+
+// A request to retrieve tokens
+message RetrieveTokensRequest {
+    // The list of contract addresses to retrieve tokens for
+    repeated bytes contract_addresses = 1;
+}
+
+// A response containing tokens
+message RetrieveTokensResponse {
+    repeated types.Token tokens = 1;
 }
 
 // A request to subscribe to indexer updates.

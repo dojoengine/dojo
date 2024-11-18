@@ -150,3 +150,17 @@ enum ComparisonOperator {
     LT = 4;
     LTE = 5;
 }
+
+message Token {
+    string contract_address = 2;
+    string name = 3;
+    string symbol = 4;
+    uint32 decimals = 5;
+}
+
+message Balance {
+    string balance = 1;
+    string account_address = 2;
+    string contract_address = 3;
+    string token_id = 4;
+}
