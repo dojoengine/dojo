@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1731619498629,
+  "lastUpdate": 1731924843198,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -34813,6 +34813,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8578014,
             "range": "± 94749",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bc50d9e7d81fce145eedc47674fbf3dd4dc22944",
+          "message": "fix(torii): missing cli version flag (#2700)",
+          "timestamp": "2024-11-18T04:58:10-05:00",
+          "tree_id": "1a68a5b2d367116958b95721116e603d60d1b220",
+          "url": "https://github.com/dojoengine/dojo/commit/bc50d9e7d81fce145eedc47674fbf3dd4dc22944"
+        },
+        "date": 1731924841922,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10035418054,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
