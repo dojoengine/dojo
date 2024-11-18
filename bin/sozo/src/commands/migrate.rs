@@ -3,6 +3,7 @@ use clap::Args;
 use colored::Colorize;
 use dojo_utils::{self, TxnConfig};
 use dojo_world::contracts::WorldContract;
+use dojo_world::metadata::IpfsMetadataService;
 use scarb::core::{Config, Workspace};
 use sozo_ops::migrate::{Migration, MigrationResult};
 use sozo_ops::migration_ui::MigrationUi;
@@ -18,6 +19,11 @@ use super::options::starknet::StarknetOptions;
 use super::options::transaction::TransactionOptions;
 use super::options::world::WorldOptions;
 use crate::utils;
+
+// TODO: to remove and to be read from environment variables
+const IPFS_CLIENT_URL: &str = "https://ipfs.infura.io:5001";
+const IPFS_USERNAME: &str = "2EBrzr7ZASQZKH32sl2xWauXPSA";
+const IPFS_PASSWORD: &str = "12290b883db9138a8ae3363b6739d220";
 
 #[derive(Debug, Clone, Args)]
 pub struct MigrateArgs {
@@ -75,7 +81,18 @@ impl MigrateArgs {
             let MigrationResult { manifest, has_changes } =
                 migration.migrate(&mut spinner).await.context("Migration failed.")?;
 
-            migration.upload_metadata(&mut spinner).await.context("Metadata upload failed.")?;
+            match IpfsMetadataService::new(IPFS_CLIENT_URL, IPFS_USERNAME, IPFS_PASSWORD) {
+                Ok(mut metadata_service) => {
+                    migration
+                        .upload_metadata(&mut spinner, &mut metadata_service)
+                        .await
+                        .context("Metadata upload failed.")?;
+                }
+                _ => {
+                    // Unable to instanciate IPFS service so metadata upload is ignored.
+                    // TODO: add a message.
+                }
+            };
 
             spinner.update_text("Writing manifest...");
             ws.write_manifest_profile(manifest).context("🪦 Failed to write manifest.")?;

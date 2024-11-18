@@ -29,7 +29,7 @@ use dojo_world::contracts::abigen::world::ResourceMetadata;
 use dojo_world::contracts::WorldContract;
 use dojo_world::diff::{Manifest, ResourceDiff, WorldDiff, WorldStatus};
 use dojo_world::local::ResourceLocal;
-use dojo_world::metadata::MetadataStorage;
+use dojo_world::metadata::{MetadataService, MetadataStorage};
 use dojo_world::remote::ResourceRemote;
 use dojo_world::{utils, ResourceType};
 use starknet::accounts::{ConnectedAccount, SingleOwnerAccount};
@@ -111,7 +111,11 @@ where
     /// # Arguments
     ///
     /// # Returns
-    pub async fn upload_metadata(&self, ui: &mut MigrationUi) -> anyhow::Result<()> {
+    pub async fn upload_metadata(
+        &self,
+        ui: &mut MigrationUi,
+        service: &mut impl MetadataService,
+    ) -> anyhow::Result<()> {
         ui.update_text("Uploading metadata...");
 
         let mut invoker = Invoker::new(&self.world.account, self.txn_config);
@@ -121,7 +125,7 @@ where
             self.diff.resources.get(&Felt::ZERO).map_or(Felt::ZERO, |r| r.metadata_hash());
         let new_metadata = WorldMetadata::from(self.diff.profile_config.world.clone());
 
-        let res = new_metadata.upload_if_changed(current_hash).await?;
+        let res = new_metadata.upload_if_changed(service, current_hash).await?;
 
         if let Some((new_uri, new_hash)) = res {
             invoker.add_call(self.world.set_metadata_getcall(&ResourceMetadata {
@@ -133,19 +137,19 @@ where
 
         // contracts
         if let Some(configs) = &self.diff.profile_config.contracts {
-            let calls = self.upload_metadata_from_resource_config(configs).await?;
+            let calls = self.upload_metadata_from_resource_config(service, configs).await?;
             invoker.extend_calls(calls);
         }
 
         // models
         if let Some(configs) = &self.diff.profile_config.models {
-            let calls = self.upload_metadata_from_resource_config(configs).await?;
+            let calls = self.upload_metadata_from_resource_config(service, configs).await?;
             invoker.extend_calls(calls);
         }
 
         // events
         if let Some(configs) = &self.diff.profile_config.events {
-            let calls = self.upload_metadata_from_resource_config(configs).await?;
+            let calls = self.upload_metadata_from_resource_config(service, configs).await?;
             invoker.extend_calls(calls);
         }
 
@@ -165,6 +169,7 @@ where
 
     async fn upload_metadata_from_resource_config(
         &self,
+        service: &mut impl MetadataService,
         config: &[ResourceConfig],
     ) -> anyhow::Result<Vec<Call>> {
         let mut calls = vec![];
@@ -177,7 +182,7 @@ where
 
             let new_metadata = metadata_config::ResourceMetadata::from(item.clone());
 
-            let res = new_metadata.upload_if_changed(current_hash).await?;
+            let res = new_metadata.upload_if_changed(service, current_hash).await?;
 
             if let Some((new_uri, new_hash)) = res {
                 calls.push(self.world.set_metadata_getcall(&ResourceMetadata {
