@@ -2,9 +2,12 @@ use std::time::Duration;
 
 use katana_primitives::block::BlockNumber;
 use katana_primitives::class::{
-    ClassHash, CompiledClass, DeprecatedCompiledClass, FlattenedSierraClass,
+    ClassHash, CompiledClass, DeprecatedCompiledClass, FlattenedSierraClass, SierraCompiledClass,
+    SierraProgram,
 };
-use katana_primitives::conversion::rpc::flattened_sierra_to_compiled_class;
+use katana_primitives::conversion::rpc::{
+    flattened_sierra_to_compiled_class, rpc_to_cairo_contract_class,
+};
 use katana_provider::traits::contract::ContractClassWriter;
 use katana_provider::traits::state_update::StateUpdateProvider;
 use starknet::providers::sequencer::models::{BlockId, DeployedClass};
@@ -42,7 +45,12 @@ where
     ) -> Result<(Option<FlattenedSierraClass>, CompiledClass), Error> {
         let block_id = BlockId::Number(block);
 
-        let class = self.feeder_gateway.get_class_by_hash(hash, block_id).await?;
+        let (class, casm) = tokio::join!(
+            self.feeder_gateway.get_class_by_hash(hash, block_id),
+            self.feeder_gateway.get_compiled_class_by_class_hash(hash, block_id)
+        );
+
+        let (class, casm) = (class?, casm?);
 
         let (sierra, casm) = match class {
             DeployedClass::LegacyClass(legacy) => {
@@ -51,9 +59,22 @@ where
                 let class = serde_json::from_value::<DeprecatedCompiledClass>(class).unwrap();
                 (None, CompiledClass::Deprecated(class))
             }
+
             DeployedClass::SierraClass(sierra) => {
-                let (_, _, class) = flattened_sierra_to_compiled_class(&sierra).unwrap();
-                (Some(sierra), class)
+                let sierra_program = {
+                    let class = rpc_to_cairo_contract_class(&sierra).unwrap();
+                    let program = class.extract_sierra_program().unwrap();
+                    let entry_points_by_type = class.entry_points_by_type.clone();
+                    SierraProgram { program, entry_points_by_type }
+                };
+
+                let casm = {
+                    let casm = serde_json::to_value(casm).unwrap();
+                    serde_json::from_value(casm).unwrap()
+                };
+
+                let compiled_class = SierraCompiledClass { sierra: sierra_program, casm };
+                (Some(sierra), CompiledClass::Class(compiled_class))
             }
         };
 

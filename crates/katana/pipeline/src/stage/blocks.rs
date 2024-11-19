@@ -6,7 +6,6 @@ use katana_provider::traits::block::BlockWriter;
 use starknet::providers::sequencer::models::{BlockId, StateUpdateWithBlock};
 use starknet::providers::{ProviderError, SequencerGatewayProvider};
 
-// Blocks -> Tx traces -> Classes (repeat)
 use super::{Stage, StageExecutionInput, StageResult};
 
 #[derive(Debug, thiserror::Error)]
