@@ -10,8 +10,8 @@ services:
     command: >
       katana
       --db-dir .katana/data-dir
-      --metrics 0.0.0.0:9001
-      --host 0.0.0.0 --port 5050
+      --http.addr 0.0.0.0 --http.port 5050
+      --metrics --metrics.addr 0.0.0.0 --metrics.port 9001
 
   prometheus:
     restart: unless-stopped
