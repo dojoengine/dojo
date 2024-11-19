@@ -16,6 +16,7 @@ use starknet_crypto::poseidon_hash_many;
 use tokio::sync::mpsc::UnboundedSender;
 use utils::felts_to_sql_string;
 
+use crate::constants::SQL_FELT_DELIMITER;
 use crate::executor::{
     Argument, DeleteEntityQuery, EventMessageQuery, QueryMessage, QueryType, ResetCursorsQuery,
     SetHeadQuery, UpdateCursorsQuery,
@@ -25,9 +26,6 @@ use crate::utils::utc_dt_string_from_timestamp;
 
 type IsEventMessage = bool;
 type IsStoreUpdate = bool;
-
-pub const WORLD_CONTRACT_TYPE: &str = "WORLD";
-pub const FELT_DELIMITER: &str = "/";
 
 pub mod cache;
 pub mod erc;
@@ -750,7 +748,7 @@ impl Sql {
                     std::iter::once(entity_id.to_string())
                         .chain(indexes.iter().map(|i| i.to_string()))
                         .collect::<Vec<String>>()
-                        .join(FELT_DELIMITER),
+                        .join(SQL_FELT_DELIMITER),
                 ));
             }
 

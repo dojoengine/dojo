@@ -44,6 +44,7 @@ use crate::processors::{
 };
 use crate::sql::{Cursors, Sql};
 use crate::types::{Contract, ContractType};
+use crate::constants::LOG_TARGET;
 
 type EventProcessorMap<P> = HashMap<Felt, Vec<Box<dyn EventProcessor<P>>>>;
 
@@ -128,8 +129,6 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Processors<P> {
         self.event_processors.get(&contract_type).unwrap()
     }
 }
-pub(crate) const LOG_TARGET: &str = "torii_core::engine";
-pub const QUERY_QUEUE_BATCH_SIZE: usize = 1000;
 
 bitflags! {
     #[derive(Debug, Clone)]

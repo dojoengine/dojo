@@ -12,8 +12,9 @@ use starknet::providers::Provider;
 use tracing::{error, info};
 
 use super::{EventProcessor, EventProcessorConfig};
+use crate::constants::IPFS_CLIENT_MAX_RETRY;
 use crate::sql::Sql;
-use crate::utils::{fetch_content_from_ipfs, MAX_RETRY};
+use crate::utils::fetch_content_from_ipfs;
 
 pub(crate) const LOG_TARGET: &str = "torii_core::processors::metadata_update";
 
@@ -106,7 +107,7 @@ async fn metadata(uri_str: String) -> Result<(WorldMetadata, Option<String>, Opt
     let uri = Uri::Ipfs(uri_str);
     let cid = uri.cid().ok_or("Uri is malformed").map_err(Error::msg)?;
 
-    let bytes = fetch_content_from_ipfs(cid, MAX_RETRY).await?;
+    let bytes = fetch_content_from_ipfs(cid, IPFS_CLIENT_MAX_RETRY).await?;
     let metadata: WorldMetadata = serde_json::from_str(std::str::from_utf8(&bytes)?)?;
 
     let icon_img = fetch_image(&metadata.icon_uri).await;
@@ -117,7 +118,7 @@ async fn metadata(uri_str: String) -> Result<(WorldMetadata, Option<String>, Opt
 
 async fn fetch_image(image_uri: &Option<Uri>) -> Option<String> {
     if let Some(uri) = image_uri {
-        let data = fetch_content_from_ipfs(uri.cid()?, MAX_RETRY).await.ok()?;
+        let data = fetch_content_from_ipfs(uri.cid()?, IPFS_CLIENT_MAX_RETRY).await.ok()?;
         let encoded = general_purpose::STANDARD.encode(data);
         return Some(encoded);
     }
