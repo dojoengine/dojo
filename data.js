@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1732034734378,
+  "lastUpdate": 1732034986828,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -35155,6 +35155,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10619524551,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0aa330d9d2bf6b1b2ea60a5716460335239de80b",
+          "message": "feat(torii-grpc): erc tokens and balances (#2698)\n\n* sqlx types for erc\r\n\r\n* add to proto\r\n\r\n* retriefe tokens\r\n\r\n* retrieve token balances\r\n\r\n* finish up fetching for token balances\r\n\r\n* fmt\r\n\r\n* wildcard conditions\r\n\r\n* fmt\r\n\r\n* fmt\r\n\r\n* add toek nbalances api to client\r\n\r\n* chore",
+          "timestamp": "2024-11-19T23:29:11+07:00",
+          "tree_id": "b23386317a2e889ce2b39680b7f00b0da374f597",
+          "url": "https://github.com/dojoengine/dojo/commit/0aa330d9d2bf6b1b2ea60a5716460335239de80b"
+        },
+        "date": 1732034984578,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 15085659,
+            "range": "± 235003",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 9204091,
+            "range": "± 431672",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3837007093,
+            "range": "± 783280717",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8827948,
+            "range": "± 493817",
             "unit": "ns/iter"
           }
         ]
