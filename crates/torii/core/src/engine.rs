@@ -143,7 +143,6 @@ bitflags! {
 #[derive(Debug)]
 pub struct EngineConfig {
     pub polling_interval: Duration,
-    pub start_block: u64,
     pub blocks_chunk_size: u64,
     pub events_chunk_size: u64,
     pub max_concurrent_tasks: usize,
@@ -155,7 +154,6 @@ impl Default for EngineConfig {
     fn default() -> Self {
         Self {
             polling_interval: Duration::from_millis(500),
-            start_block: 0,
             blocks_chunk_size: 10240,
             events_chunk_size: 1024,
             max_concurrent_tasks: 100,
@@ -244,14 +242,6 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
     }
 
     pub async fn start(&mut self) -> Result<()> {
-        // use the start block provided by user if head is 0
-        let (head, _, _) = self.db.head(self.world.address).await?;
-        if head == 0 {
-            self.db.set_head(self.config.start_block, 0, 0, self.world.address).await?;
-        } else if self.config.start_block != 0 {
-            warn!(target: LOG_TARGET, "Start block ignored, stored head exists and will be used instead.");
-        }
-
         let mut backoff_delay = Duration::from_secs(1);
         let max_backoff_delay = Duration::from_secs(60);
 

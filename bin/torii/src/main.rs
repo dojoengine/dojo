@@ -148,7 +148,6 @@ async fn main() -> anyhow::Result<()> {
         processors,
         EngineConfig {
             max_concurrent_tasks: args.indexing.max_concurrent_tasks,
-            start_block: 0,
             blocks_chunk_size: args.indexing.blocks_chunk_size,
             events_chunk_size: args.indexing.events_chunk_size,
             polling_interval: Duration::from_millis(args.indexing.polling_interval),
