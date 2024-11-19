@@ -257,7 +257,7 @@ mod test {
         db_dir = "/tmp/torii-test"
 
         [events]
-        raw = false
+        raw = true
         historical = [
             "ns-E",
             "ns-EH"
@@ -291,7 +291,7 @@ mod test {
         assert_eq!(torii_args.world_address, Some(Felt::from_str("0x1234").unwrap()));
         assert_eq!(torii_args.rpc, Url::parse("http://0.0.0.0:2222").unwrap());
         assert_eq!(torii_args.db_dir, Some(PathBuf::from("/tmp/torii-test")));
-        assert!(!torii_args.events.raw);
+        assert!(torii_args.events.raw);
         assert_eq!(torii_args.events.historical, vec!["ns-E".to_string(), "ns-EH".to_string()]);
         assert_eq!(torii_args.indexing.events_chunk_size, 9999);
         assert_eq!(torii_args.indexing.blocks_chunk_size, 10240);
