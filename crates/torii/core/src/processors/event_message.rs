@@ -73,8 +73,7 @@ where
         entity.deserialize(&mut keys_and_unpacked)?;
 
         // TODO: this must come from some torii's configuration.
-        let historical =
-            config.historical_events.contains(&format!("{}-{}", model.namespace, model.name));
+        let historical = config.is_historical(&format!("{}-{}", model.namespace, model.name));
         db.set_event_message(entity, event_id, block_timestamp, historical).await?;
         Ok(())
     }
