@@ -11,11 +11,13 @@ use tonic::transport::Endpoint;
 
 use crate::proto::world::{
     world_client, RetrieveEntitiesRequest, RetrieveEntitiesResponse, RetrieveEventMessagesRequest,
-    RetrieveEventsRequest, RetrieveEventsResponse, SubscribeEntitiesRequest,
-    SubscribeEntityResponse, SubscribeEventMessagesRequest, SubscribeEventsRequest,
-    SubscribeEventsResponse, SubscribeIndexerRequest, SubscribeIndexerResponse,
-    SubscribeModelsRequest, SubscribeModelsResponse, UpdateEntitiesSubscriptionRequest,
-    UpdateEventMessagesSubscriptionRequest, WorldMetadataRequest,
+    RetrieveEventsRequest, RetrieveEventsResponse, RetrieveTokenBalancesRequest,
+    RetrieveTokenBalancesResponse, RetrieveTokensRequest, RetrieveTokensResponse,
+    SubscribeEntitiesRequest, SubscribeEntityResponse, SubscribeEventMessagesRequest,
+    SubscribeEventsRequest, SubscribeEventsResponse, SubscribeIndexerRequest,
+    SubscribeIndexerResponse, SubscribeModelsRequest, SubscribeModelsResponse,
+    UpdateEntitiesSubscriptionRequest, UpdateEventMessagesSubscriptionRequest,
+    WorldMetadataRequest,
 };
 use crate::types::schema::{Entity, SchemaError};
 use crate::types::{EntityKeysClause, Event, EventQuery, IndexerUpdate, ModelKeysClause, Query};
@@ -88,6 +90,43 @@ impl WorldClient {
                     .ok_or(Error::Schema(SchemaError::MissingExpectedData("metadata".to_string())))
             })
             .and_then(|metadata| metadata.try_into().map_err(Error::ParseStr))
+    }
+
+    pub async fn retrieve_tokens(
+        &mut self,
+        contract_addresses: Vec<Felt>,
+    ) -> Result<RetrieveTokensResponse, Error> {
+        self.inner
+            .retrieve_tokens(RetrieveTokensRequest {
+                contract_addresses: contract_addresses
+                    .into_iter()
+                    .map(|c| c.to_bytes_be().to_vec())
+                    .collect(),
+            })
+            .await
+            .map_err(Error::Grpc)
+            .map(|res| res.into_inner())
+    }
+
+    pub async fn retrieve_token_balances(
+        &mut self,
+        account_addresses: Vec<Felt>,
+        contract_addresses: Vec<Felt>,
+    ) -> Result<RetrieveTokenBalancesResponse, Error> {
+        self.inner
+            .retrieve_token_balances(RetrieveTokenBalancesRequest {
+                account_addresses: account_addresses
+                    .into_iter()
+                    .map(|a| a.to_bytes_be().to_vec())
+                    .collect(),
+                contract_addresses: contract_addresses
+                    .into_iter()
+                    .map(|c| c.to_bytes_be().to_vec())
+                    .collect(),
+            })
+            .await
+            .map_err(Error::Grpc)
+            .map(|res| res.into_inner())
     }
 
     pub async fn retrieve_entities(

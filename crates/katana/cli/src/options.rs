@@ -55,6 +55,7 @@ pub struct MetricsOptions {
     pub metrics_port: u16,
 }
 
+#[cfg(feature = "server")]
 impl Default for MetricsOptions {
     fn default() -> Self {
         MetricsOptions {
@@ -366,6 +367,7 @@ fn default_max_connections() -> u32 {
     DEFAULT_RPC_MAX_CONNECTIONS
 }
 
+#[cfg(feature = "server")]
 fn default_page_size() -> u64 {
     DEFAULT_RPC_MAX_EVENT_PAGE_SIZE
 }

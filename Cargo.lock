@@ -15320,6 +15320,7 @@ dependencies = [
  "camino",
  "chrono",
  "clap",
+ "clap_complete",
  "clap_config",
  "ctrlc",
  "dojo-metrics",

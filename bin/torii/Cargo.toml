@@ -12,6 +12,7 @@ base64.workspace = true
 camino.workspace = true
 chrono.workspace = true
 clap.workspace = true
+clap_complete.workspace = true
 ctrlc = { version = "3.4", features = [ "termination" ] }
 dojo-metrics.workspace = true
 dojo-types.workspace = true

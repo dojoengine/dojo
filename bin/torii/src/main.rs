@@ -18,6 +18,7 @@ use std::time::Duration;
 
 use camino::Utf8PathBuf;
 use clap::Parser;
+use cli::Cli;
 use dojo_metrics::exporters::prometheus::PrometheusRecorder;
 use dojo_world::contracts::world::WorldContractReader;
 use sqlx::sqlite::{
@@ -30,7 +31,6 @@ use tempfile::{NamedTempFile, TempDir};
 use tokio::sync::broadcast;
 use tokio::sync::broadcast::Sender;
 use tokio_stream::StreamExt;
-use torii_cli::ToriiArgs;
 use torii_core::engine::{Engine, EngineConfig, IndexingFlags, Processors};
 use torii_core::executor::Executor;
 use torii_core::processors::store_transaction::StoreTransactionProcessor;
@@ -46,9 +46,11 @@ use url::{form_urlencoded, Url};
 
 pub(crate) const LOG_TARGET: &str = "torii::cli";
 
+mod cli;
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let mut args = ToriiArgs::parse().with_config_file()?;
+    let mut args = Cli::parse().args.with_config_file()?;
 
     let world_address = if let Some(world_address) = args.world_address {
         world_address
@@ -56,7 +58,6 @@ async fn main() -> anyhow::Result<()> {
         return Err(anyhow::anyhow!("Please specify a world address."));
     };
 
-    // let mut contracts = parse_erc_contracts(&args.contracts)?;
     args.indexing.contracts.push(Contract { address: world_address, r#type: ContractType::WORLD });
 
     let filter_layer = EnvFilter::try_from_default_env()

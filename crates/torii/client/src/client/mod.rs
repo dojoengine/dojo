@@ -11,9 +11,12 @@ use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use tokio::sync::RwLock as AsyncRwLock;
 use torii_grpc::client::{EntityUpdateStreaming, EventUpdateStreaming, IndexerUpdateStreaming};
-use torii_grpc::proto::world::{RetrieveEntitiesResponse, RetrieveEventsResponse};
+use torii_grpc::proto::world::{
+    RetrieveEntitiesResponse, RetrieveEventsResponse, RetrieveTokenBalancesResponse,
+    RetrieveTokensResponse,
+};
 use torii_grpc::types::schema::Entity;
-use torii_grpc::types::{EntityKeysClause, Event, EventQuery, Query};
+use torii_grpc::types::{EntityKeysClause, Event, EventQuery, Query, Token, TokenBalance};
 use torii_relay::client::EventLoop;
 use torii_relay::types::Message;
 
@@ -83,6 +86,26 @@ impl Client {
     /// Returns a read lock on the World metadata that the client is connected to.
     pub fn metadata(&self) -> RwLockReadGuard<'_, WorldMetadata> {
         self.metadata.read()
+    }
+
+    /// Retrieves tokens matching contract addresses.
+    pub async fn tokens(&self, contract_addresses: Vec<Felt>) -> Result<Vec<Token>, Error> {
+        let mut grpc_client = self.inner.write().await;
+        let RetrieveTokensResponse { tokens } =
+            grpc_client.retrieve_tokens(contract_addresses).await?;
+        Ok(tokens.into_iter().map(TryInto::try_into).collect::<Result<Vec<Token>, _>>()?)
+    }
+
+    /// Retrieves token balances for account addresses and contract addresses.
+    pub async fn token_balances(
+        &self,
+        account_addresses: Vec<Felt>,
+        contract_addresses: Vec<Felt>,
+    ) -> Result<Vec<TokenBalance>, Error> {
+        let mut grpc_client = self.inner.write().await;
+        let RetrieveTokenBalancesResponse { balances } =
+            grpc_client.retrieve_token_balances(account_addresses, contract_addresses).await?;
+        Ok(balances.into_iter().map(TryInto::try_into).collect::<Result<Vec<TokenBalance>, _>>()?)
     }
 
     /// Retrieves entities matching query parameter.
