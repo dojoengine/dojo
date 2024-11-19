@@ -43,6 +43,7 @@ use torii_core::error::{Error, ParseError, QueryError};
 use torii_core::model::{build_sql_query, map_row_to_ty};
 use torii_core::sql::cache::ModelCache;
 use torii_core::sql::utils::sql_string_to_felts;
+use torii_core::types::{Token, TokenBalance};
 use tower_http::cors::{AllowOrigin, CorsLayer};
 
 use self::subscriptions::entity::EntityManager;
@@ -53,10 +54,11 @@ use crate::proto::types::member_value::ValueType;
 use crate::proto::types::LogicalOperator;
 use crate::proto::world::world_server::WorldServer;
 use crate::proto::world::{
-    RetrieveEntitiesStreamingResponse, RetrieveEventMessagesRequest, SubscribeEntitiesRequest,
-    SubscribeEntityResponse, SubscribeEventMessagesRequest, SubscribeEventsResponse,
-    SubscribeIndexerRequest, SubscribeIndexerResponse, UpdateEventMessagesSubscriptionRequest,
-    WorldMetadataRequest, WorldMetadataResponse,
+    RetrieveEntitiesStreamingResponse, RetrieveEventMessagesRequest, RetrieveTokenBalancesRequest,
+    RetrieveTokenBalancesResponse, RetrieveTokensRequest, RetrieveTokensResponse,
+    SubscribeEntitiesRequest, SubscribeEntityResponse, SubscribeEventMessagesRequest,
+    SubscribeEventsResponse, SubscribeIndexerRequest, SubscribeIndexerResponse,
+    UpdateEventMessagesSubscriptionRequest, WorldMetadataRequest, WorldMetadataResponse,
 };
 use crate::proto::{self};
 use crate::types::schema::SchemaError;
@@ -83,6 +85,29 @@ impl From<SchemaError> for Error {
             SchemaError::ParseIntError(err) => ParseError::ParseIntError(err).into(),
             SchemaError::FromSlice(err) => ParseError::FromSlice(err).into(),
             SchemaError::FromStr(err) => ParseError::FromStr(err).into(),
+        }
+    }
+}
+
+impl From<Token> for proto::types::Token {
+    fn from(value: Token) -> Self {
+        Self {
+            contract_address: value.contract_address,
+            name: value.name,
+            symbol: value.symbol,
+            decimals: value.decimals as u32,
+            metadata: value.metadata,
+        }
+    }
+}
+
+impl From<TokenBalance> for proto::types::TokenBalance {
+    fn from(value: TokenBalance) -> Self {
+        Self {
+            balance: value.balance,
+            account_address: value.account_address,
+            contract_address: value.contract_address,
+            token_id: value.token_id,
         }
     }
 }
@@ -789,6 +814,74 @@ impl DojoWorld {
         })
     }
 
+    async fn retrieve_tokens(
+        &self,
+        contract_addresses: Vec<Felt>,
+    ) -> Result<RetrieveTokensResponse, Status> {
+        let query = if contract_addresses.is_empty() {
+            "SELECT * FROM tokens".to_string()
+        } else {
+            format!(
+                "SELECT * FROM tokens WHERE contract_address IN ({})",
+                contract_addresses
+                    .iter()
+                    .map(|address| format!("{:#x}", address))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )
+        };
+
+        let tokens: Vec<Token> = sqlx::query_as(&query)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        let tokens = tokens.iter().map(|token| token.clone().into()).collect();
+        Ok(RetrieveTokensResponse { tokens })
+    }
+
+    async fn retrieve_token_balances(
+        &self,
+        account_addresses: Vec<Felt>,
+        contract_addresses: Vec<Felt>,
+    ) -> Result<RetrieveTokenBalancesResponse, Status> {
+        let mut query = "SELECT * FROM token_balances".to_string();
+
+        let mut conditions = Vec::new();
+        if !account_addresses.is_empty() {
+            conditions.push(format!(
+                "account_address IN ({})",
+                account_addresses
+                    .iter()
+                    .map(|address| format!("{:#x}", address))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ));
+        }
+        if !contract_addresses.is_empty() {
+            conditions.push(format!(
+                "contract_address IN ({})",
+                contract_addresses
+                    .iter()
+                    .map(|address| format!("{:#x}", address))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ));
+        }
+
+        if !conditions.is_empty() {
+            query += &format!(" WHERE {}", conditions.join(" AND "));
+        }
+
+        let balances: Vec<TokenBalance> = sqlx::query_as(&query)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        let balances = balances.iter().map(|balance| balance.clone().into()).collect();
+        Ok(RetrieveTokenBalancesResponse { balances })
+    }
+
     async fn subscribe_indexer(
         &self,
         contract_address: Felt,
@@ -1163,6 +1256,45 @@ impl proto::world::world_server::World for DojoWorld {
         })?);
 
         Ok(Response::new(WorldMetadataResponse { metadata }))
+    }
+
+    async fn retrieve_tokens(
+        &self,
+        request: Request<RetrieveTokensRequest>,
+    ) -> Result<Response<RetrieveTokensResponse>, Status> {
+        let RetrieveTokensRequest { contract_addresses } = request.into_inner();
+        let contract_addresses = contract_addresses
+            .iter()
+            .map(|address| Felt::from_bytes_be_slice(address))
+            .collect::<Vec<_>>();
+
+        let tokens = self
+            .retrieve_tokens(contract_addresses)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+        Ok(Response::new(tokens))
+    }
+
+    async fn retrieve_token_balances(
+        &self,
+        request: Request<RetrieveTokenBalancesRequest>,
+    ) -> Result<Response<RetrieveTokenBalancesResponse>, Status> {
+        let RetrieveTokenBalancesRequest { account_addresses, contract_addresses } =
+            request.into_inner();
+        let account_addresses = account_addresses
+            .iter()
+            .map(|address| Felt::from_bytes_be_slice(address))
+            .collect::<Vec<_>>();
+        let contract_addresses = contract_addresses
+            .iter()
+            .map(|address| Felt::from_bytes_be_slice(address))
+            .collect::<Vec<_>>();
+
+        let balances = self
+            .retrieve_token_balances(account_addresses, contract_addresses)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+        Ok(Response::new(balances))
     }
 
     async fn subscribe_indexer(

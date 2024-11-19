@@ -121,6 +121,28 @@ pub struct Event {
     pub executed_at: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
 }
+
+#[derive(FromRow, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct Token {
+    pub id: String,
+    pub contract_address: String,
+    pub name: String,
+    pub symbol: String,
+    pub decimals: u8,
+    pub metadata: String,
+}
+
+#[derive(FromRow, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct TokenBalance {
+    pub id: String,
+    pub balance: String,
+    pub account_address: String,
+    pub contract_address: String,
+    pub token_id: String,
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
 pub struct Contract {
     pub address: Felt,
