@@ -96,7 +96,7 @@ impl From<Token> for proto::types::Token {
             name: value.name,
             symbol: value.symbol,
             decimals: value.decimals as u32,
-            metadata: serde_json::to_string(&value.metadata).unwrap(),
+            metadata: value.metadata,
         }
     }
 }
