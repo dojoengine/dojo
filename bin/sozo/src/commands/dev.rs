@@ -16,6 +16,7 @@ use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
 use super::options::transaction::TransactionOptions;
 use super::options::world::WorldOptions;
+use crate::commands::options::ipfs::IpfsOptions;
 
 #[derive(Debug, Args)]
 pub struct DevArgs {
@@ -87,6 +88,7 @@ impl DevArgs {
             starknet: self.starknet,
             account: self.account,
             transaction: self.transaction,
+            ipfs: IpfsOptions::default(), // no need for IPFS metadata upload here.
         };
 
         let _ = migrate_args.clone().run(config);

@@ -15,15 +15,11 @@ use tabled::{Table, Tabled};
 use tracing::trace;
 
 use super::options::account::AccountOptions;
+use super::options::ipfs::IpfsOptions;
 use super::options::starknet::StarknetOptions;
 use super::options::transaction::TransactionOptions;
 use super::options::world::WorldOptions;
 use crate::utils;
-
-// TODO: to remove and to be read from environment variables
-const IPFS_CLIENT_URL: &str = "https://ipfs.infura.io:5001";
-const IPFS_USERNAME: &str = "2EBrzr7ZASQZKH32sl2xWauXPSA";
-const IPFS_PASSWORD: &str = "12290b883db9138a8ae3363b6739d220";
 
 #[derive(Debug, Clone, Args)]
 pub struct MigrateArgs {
@@ -38,6 +34,9 @@ pub struct MigrateArgs {
 
     #[command(flatten)]
     pub account: AccountOptions,
+
+    #[command(flatten)]
+    pub ipfs: IpfsOptions,
 }
 
 impl MigrateArgs {
@@ -49,7 +48,7 @@ impl MigrateArgs {
         ws.profile_check()?;
         ws.ensure_profile_artifacts()?;
 
-        let MigrateArgs { world, starknet, account, .. } = self;
+        let MigrateArgs { world, starknet, account, ipfs, .. } = self;
 
         config.tokio_handle().block_on(async {
             print_banner(&ws, &starknet).await?;
@@ -66,6 +65,7 @@ impl MigrateArgs {
             .await?;
 
             let world_address = world_diff.world_info.address;
+            let profile_config = ws.load_profile_config()?;
 
             let mut txn_config: TxnConfig = self.transaction.try_into()?;
             txn_config.wait = true;
@@ -81,17 +81,27 @@ impl MigrateArgs {
             let MigrationResult { manifest, has_changes } =
                 migration.migrate(&mut spinner).await.context("Migration failed.")?;
 
-            match IpfsMetadataService::new(IPFS_CLIENT_URL, IPFS_USERNAME, IPFS_PASSWORD) {
-                Ok(mut metadata_service) => {
-                    migration
-                        .upload_metadata(&mut spinner, &mut metadata_service)
-                        .await
-                        .context("Metadata upload failed.")?;
-                }
-                _ => {
-                    // Unable to instanciate IPFS service so metadata upload is ignored.
-                    // TODO: add a message.
-                }
+            let ipfs_url = ipfs.url(profile_config.env.as_ref());
+            let ipfs_username = ipfs.username(profile_config.env.as_ref());
+            let ipfs_password = ipfs.password(profile_config.env.as_ref());
+
+            let mut metadata_upload_text = String::new();
+
+            if ipfs_url.is_some() && ipfs_username.is_some() && ipfs_password.is_some() {
+                let mut metadata_service = IpfsMetadataService::new(
+                    &ipfs_url.unwrap(),
+                    &ipfs_username.unwrap(),
+                    &ipfs_password.unwrap(),
+                )?;
+
+                migration
+                    .upload_metadata(&mut spinner, &mut metadata_service)
+                    .await
+                    .context("Metadata upload failed.")?;
+            } else {
+                metadata_upload_text = "\nMetadata: No IPFS credentials has been found => \
+                                        metadata upload has been ignored."
+                    .to_string();
             };
 
             spinner.update_text("Writing manifest...");
@@ -100,9 +110,21 @@ impl MigrateArgs {
             let colored_address = format!("{:#066x}", world_address).green();
 
             let (symbol, end_text) = if has_changes {
-                ("⛩️ ", format!("Migration successful with world at address {}", colored_address))
+                (
+                    "⛩️ ",
+                    format!(
+                        "Migration successful with world at address {}{metadata_upload_text}",
+                        colored_address
+                    ),
+                )
             } else {
-                ("🪨 ", format!("No changes for world at address {:#066x}", world_address))
+                (
+                    "🪨 ",
+                    format!(
+                        "No changes for world at address {:#066x}{metadata_upload_text}",
+                        world_address
+                    ),
+                )
             };
 
             spinner.stop_and_persist_boxed(symbol, end_text);

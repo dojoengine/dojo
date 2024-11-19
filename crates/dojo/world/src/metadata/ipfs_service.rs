@@ -33,10 +33,10 @@ impl IpfsMetadataService {
     ///  instanciated or a Anyhow error if not.
     pub fn new(client_url: &str, username: &str, password: &str) -> Result<Self> {
         if client_url.is_empty() || username.is_empty() || password.is_empty() {
-            anyhow::bail!("Invalid credentials: empty values not allowed");
+            anyhow::bail!("Invalid IPFS credentials: empty values not allowed");
         }
         if !client_url.starts_with("http://") && !client_url.starts_with("https://") {
-            anyhow::bail!("Invalid client URL: must start with http:// or https://");
+            anyhow::bail!("Invalid IPFS URL: must start with http:// or https://");
         }
 
         Ok(Self {

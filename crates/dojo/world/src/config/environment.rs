@@ -10,6 +10,9 @@ pub struct Environment {
     pub world_address: Option<String>,
     pub world_block: Option<u64>,
     pub http_headers: Option<Vec<HttpHeader>>,
+    pub ipfs_url: Option<String>,
+    pub ipfs_username: Option<String>,
+    pub ipfs_password: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -41,5 +44,17 @@ impl Environment {
 
     pub fn keystore_password(&self) -> Option<&str> {
         self.keystore_password.as_deref()
+    }
+
+    pub fn ipfs_url(&self) -> Option<&str> {
+        self.ipfs_url.as_deref()
+    }
+
+    pub fn ipfs_username(&self) -> Option<&str> {
+        self.ipfs_username.as_deref()
+    }
+
+    pub fn ipfs_password(&self) -> Option<&str> {
+        self.ipfs_password.as_deref()
     }
 }
