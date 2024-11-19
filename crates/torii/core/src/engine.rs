@@ -136,6 +136,7 @@ bitflags! {
     pub struct IndexingFlags: u32 {
         const TRANSACTIONS = 0b00000001;
         const RAW_EVENTS = 0b00000010;
+        const PENDING_BLOCKS = 0b00000100;
     }
 }
 
@@ -145,7 +146,6 @@ pub struct EngineConfig {
     pub start_block: u64,
     pub blocks_chunk_size: u64,
     pub events_chunk_size: u64,
-    pub index_pending: bool,
     pub max_concurrent_tasks: usize,
     pub flags: IndexingFlags,
     pub event_processor_config: EventProcessorConfig,
@@ -158,7 +158,6 @@ impl Default for EngineConfig {
             start_block: 0,
             blocks_chunk_size: 10240,
             events_chunk_size: 1024,
-            index_pending: true,
             max_concurrent_tasks: 100,
             flags: IndexingFlags::empty(),
             event_processor_config: EventProcessorConfig::default(),
@@ -324,7 +323,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             let data = self.fetch_range(from, to, &cursors.cursor_map).await?;
             debug!(target: LOG_TARGET, duration = ?instant.elapsed(), from = %from, to = %to, "Fetched data for range.");
             FetchDataResult::Range(data)
-        } else if self.config.index_pending {
+        } else if self.config.flags.contains(IndexingFlags::PENDING_BLOCKS) {
             let data =
                 self.fetch_pending(latest_block.clone(), cursors.last_pending_block_tx).await?;
             debug!(target: LOG_TARGET, duration = ?instant.elapsed(), latest_block_number = %latest_block.block_number, "Fetched pending data.");

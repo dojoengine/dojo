@@ -31,7 +31,6 @@ pub const FELT_DELIMITER: &str = "/";
 
 pub mod cache;
 pub mod erc;
-pub mod query_queue;
 #[cfg(test)]
 #[path = "test.rs"]
 mod test;
@@ -830,7 +829,11 @@ impl Sql {
             Ty::Enum(e) => {
                 if e.options.iter().all(
                     |o| {
-                        if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false }
+                        if let Ty::Tuple(t) = &o.ty {
+                            t.is_empty()
+                        } else {
+                            false
+                        }
                     },
                 ) {
                     return Ok(());
