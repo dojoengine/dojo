@@ -366,6 +366,7 @@ fn default_max_connections() -> u32 {
     DEFAULT_RPC_MAX_CONNECTIONS
 }
 
+#[cfg(feature = "server")]
 fn default_page_size() -> u64 {
     DEFAULT_RPC_MAX_EVENT_PAGE_SIZE
 }
