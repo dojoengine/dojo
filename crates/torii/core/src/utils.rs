@@ -7,7 +7,9 @@ use ipfs_api_backend_hyper::{IpfsApi, IpfsClient, TryFromUri};
 use tokio_util::bytes::Bytes;
 use tracing::info;
 
-use crate::constants::{IPFS_CLIENT_MAX_RETRY, IPFS_CLIENT_PASSWORD, IPFS_CLIENT_URL, IPFS_CLIENT_USERNAME};
+use crate::constants::{
+    IPFS_CLIENT_MAX_RETRY, IPFS_CLIENT_PASSWORD, IPFS_CLIENT_URL, IPFS_CLIENT_USERNAME,
+};
 
 pub fn must_utc_datetime_from_timestamp(timestamp: u64) -> DateTime<Utc> {
     let naive_dt = DateTime::from_timestamp(timestamp as i64, 0)
@@ -20,8 +22,8 @@ pub fn utc_dt_string_from_timestamp(timestamp: u64) -> String {
 }
 
 pub async fn fetch_content_from_ipfs(cid: &str, mut retries: u8) -> Result<Bytes> {
-    let client =
-        IpfsClient::from_str(IPFS_CLIENT_URL)?.with_credentials(IPFS_CLIENT_USERNAME, IPFS_CLIENT_PASSWORD);
+    let client = IpfsClient::from_str(IPFS_CLIENT_URL)?
+        .with_credentials(IPFS_CLIENT_USERNAME, IPFS_CLIENT_PASSWORD);
     while retries > 0 {
         let response = client.cat(cid).map_ok(|chunk| chunk.to_vec()).try_concat().await;
         match response {

@@ -13,9 +13,9 @@ use tokio::sync::mpsc::{
     channel, unbounded_channel, Receiver, Sender, UnboundedReceiver, UnboundedSender,
 };
 use tokio::sync::RwLock;
+use torii_core::constants::SQL_FELT_DELIMITER;
 use torii_core::error::{Error, ParseError};
 use torii_core::simple_broker::SimpleBroker;
-use torii_core::constants::SQL_FELT_DELIMITER;
 use torii_core::types::OptimisticEntity;
 use tracing::{error, trace};
 

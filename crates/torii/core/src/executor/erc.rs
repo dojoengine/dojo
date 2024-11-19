@@ -13,11 +13,10 @@ use starknet_crypto::Felt;
 use tracing::{debug, trace};
 
 use super::{ApplyBalanceDiffQuery, Executor};
-use crate::constants::TOKEN_BALANCE_TABLE;
+use crate::constants::{IPFS_CLIENT_MAX_RETRY, SQL_FELT_DELIMITER, TOKEN_BALANCE_TABLE};
 use crate::sql::utils::{felt_to_sql_string, sql_string_to_u256, u256_to_sql_string, I256};
 use crate::types::ContractType;
 use crate::utils::fetch_content_from_ipfs;
-use crate::constants::{SQL_FELT_DELIMITER, IPFS_CLIENT_MAX_RETRY};
 
 #[derive(Debug, Clone)]
 pub struct RegisterErc721TokenQuery {

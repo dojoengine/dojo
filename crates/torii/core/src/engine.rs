@@ -24,6 +24,7 @@ use tokio::task::JoinSet;
 use tokio::time::{sleep, Instant};
 use tracing::{debug, error, info, trace, warn};
 
+use crate::constants::LOG_TARGET;
 use crate::processors::erc20_legacy_transfer::Erc20LegacyTransferProcessor;
 use crate::processors::erc20_transfer::Erc20TransferProcessor;
 use crate::processors::erc721_legacy_transfer::Erc721LegacyTransferProcessor;
@@ -44,7 +45,6 @@ use crate::processors::{
 };
 use crate::sql::{Cursors, Sql};
 use crate::types::{Contract, ContractType};
-use crate::constants::LOG_TARGET;
 
 type EventProcessorMap<P> = HashMap<Felt, Vec<Box<dyn EventProcessor<P>>>>;
 
