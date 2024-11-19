@@ -55,6 +55,7 @@ pub struct MetricsOptions {
     pub metrics_port: u16,
 }
 
+#[cfg(feature = "server")]
 impl Default for MetricsOptions {
     fn default() -> Self {
         MetricsOptions {
