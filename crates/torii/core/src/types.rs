@@ -156,6 +156,12 @@ pub enum ContractType {
     ERC721,
 }
 
+impl std::fmt::Display for Contract {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}:{:#x}", self.r#type, self.address)
+    }
+}
+
 impl FromStr for ContractType {
     type Err = anyhow::Error;
 
