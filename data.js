@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1732013417318,
+  "lastUpdate": 1732034734378,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -35125,6 +35125,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8434245,
             "range": "± 45105",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0aa330d9d2bf6b1b2ea60a5716460335239de80b",
+          "message": "feat(torii-grpc): erc tokens and balances (#2698)\n\n* sqlx types for erc\r\n\r\n* add to proto\r\n\r\n* retriefe tokens\r\n\r\n* retrieve token balances\r\n\r\n* finish up fetching for token balances\r\n\r\n* fmt\r\n\r\n* wildcard conditions\r\n\r\n* fmt\r\n\r\n* fmt\r\n\r\n* add toek nbalances api to client\r\n\r\n* chore",
+          "timestamp": "2024-11-19T23:29:11+07:00",
+          "tree_id": "b23386317a2e889ce2b39680b7f00b0da374f597",
+          "url": "https://github.com/dojoengine/dojo/commit/0aa330d9d2bf6b1b2ea60a5716460335239de80b"
+        },
+        "date": 1732034733038,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10619524551,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
