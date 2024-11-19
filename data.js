@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1732034986828,
+  "lastUpdate": 1732043073967,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -35203,6 +35203,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8827948,
             "range": "± 493817",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0342464e7e36eda1771d9531038f0218fa596f0d",
+          "message": "fix(torii): ensure correct serde of args in config file (#2704)\n\n* fix: ensure correct serialization of the contracts\n\n* fix: split the CLI args to ensure version is used at the binary level\n\n* fix: derive missing feature\n\n* fix: add missing derive",
+          "timestamp": "2024-11-19T12:48:34-06:00",
+          "tree_id": "9b9d81a17bab51b648ac9c06a86ee0edbea2636e",
+          "url": "https://github.com/dojoengine/dojo/commit/0342464e7e36eda1771d9531038f0218fa596f0d"
+        },
+        "date": 1732043072572,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10342939577,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
