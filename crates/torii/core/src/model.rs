@@ -3,6 +3,7 @@ use std::str::FromStr;
 
 use async_trait::async_trait;
 use crypto_bigint::U256;
+use dojo_types::naming::get_tag;
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 use dojo_world::contracts::abigen::model::Layout;
@@ -210,10 +211,10 @@ pub fn parse_sql_model_members(
     }
 
     Ty::Struct(Struct {
-        name: format!("{}-{}", namespace, model),
+        name: get_tag(namespace, model),
         children: model_members_all
             .iter()
-            .filter(|m| m.id == format!("{}-{}", namespace, model))
+            .filter(|m| m.id == get_tag(namespace, model))
             .map(|m| Member {
                 key: m.key,
                 name: m.name.to_owned(),

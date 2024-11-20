@@ -4,6 +4,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Result};
+use dojo_types::naming::get_tag;
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{EnumOption, Member, Struct, Ty};
 use dojo_world::config::WorldMetadata;
@@ -257,7 +258,7 @@ impl Sql {
         upgrade_diff: Option<&Ty>,
     ) -> Result<()> {
         let selector = compute_selector_from_names(namespace, &model.name());
-        let namespaced_name = format!("{}-{}", namespace, model.name());
+        let namespaced_name = get_tag(namespace, &model.name());
 
         let insert_models =
             "INSERT INTO models (id, namespace, name, class_hash, contract_address, layout, \
