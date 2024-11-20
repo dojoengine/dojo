@@ -20,6 +20,8 @@ use tower::ServiceBuilder;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing::error;
 
+pub(crate) const LOG_TARGET: &str = "torii::server::proxy";
+
 const DEFAULT_ALLOW_HEADERS: [&str; 13] = [
     "accept",
     "origin",
@@ -175,7 +177,7 @@ async fn handle(
             return match GRAPHQL_PROXY_CLIENT.call(client_ip, &artifacts_addr, req).await {
                 Ok(response) => Ok(response),
                 Err(_error) => {
-                    error!("{:?}", _error);
+                    error!(target: LOG_TARGET, "Artifacts proxy error: {:?}", _error);
                     Ok(Response::builder()
                         .status(StatusCode::INTERNAL_SERVER_ERROR)
                         .body(Body::empty())
@@ -196,7 +198,7 @@ async fn handle(
             return match GRAPHQL_PROXY_CLIENT.call(client_ip, &graphql_addr, req).await {
                 Ok(response) => Ok(response),
                 Err(_error) => {
-                    error!("{:?}", _error);
+                    error!(target: LOG_TARGET, "GraphQL proxy error: {:?}", _error);
                     Ok(Response::builder()
                         .status(StatusCode::INTERNAL_SERVER_ERROR)
                         .body(Body::empty())
@@ -218,7 +220,7 @@ async fn handle(
                 return match GRPC_PROXY_CLIENT.call(client_ip, &grpc_addr, req).await {
                     Ok(response) => Ok(response),
                     Err(_error) => {
-                        error!("{:?}", _error);
+                        error!(target: LOG_TARGET, "GRPC proxy error: {:?}", _error);
                         Ok(Response::builder()
                             .status(StatusCode::INTERNAL_SERVER_ERROR)
                             .body(Body::empty())
@@ -253,7 +255,7 @@ async fn handle(
                 .unwrap());
         };
 
-        // Execute the query in a read-only transaction
+        // Execute the query
         return match sqlx::query(&query).fetch_all(&*pool).await {
             Ok(rows) => {
                 let result: Vec<_> = rows
@@ -302,13 +304,10 @@ async fn handle(
                     .body(Body::from(json))
                     .unwrap())
             }
-            Err(e) => {
-                error!("SQL query error: {:?}", e);
-                Ok(Response::builder()
-                    .status(StatusCode::BAD_REQUEST)
-                    .body(Body::from("Query error"))
-                    .unwrap())
-            }
+            Err(e) => Ok(Response::builder()
+                .status(StatusCode::BAD_REQUEST)
+                .body(Body::from(format!("Query error: {:?}", e)))
+                .unwrap()),
         };
     }
 
