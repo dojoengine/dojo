@@ -203,6 +203,7 @@ async fn main() -> anyhow::Result<()> {
         Some(grpc_addr),
         None,
         Some(artifacts_addr),
+        Arc::new(pool.clone()),
     ));
 
     let graphql_server = spawn_rebuilding_graphql_server(

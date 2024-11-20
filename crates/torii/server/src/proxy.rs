@@ -16,6 +16,7 @@ use tokio::sync::RwLock;
 use tower::ServiceBuilder;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing::error;
+use sqlx::SqlitePool;
 
 const DEFAULT_ALLOW_HEADERS: [&str; 13] = [
     "accept",
@@ -60,6 +61,7 @@ pub struct Proxy {
     grpc_addr: Option<SocketAddr>,
     artifacts_addr: Option<SocketAddr>,
     graphql_addr: Arc<RwLock<Option<SocketAddr>>>,
+    pool: Arc<SqlitePool>,
 }
 
 impl Proxy {
@@ -69,6 +71,7 @@ impl Proxy {
         grpc_addr: Option<SocketAddr>,
         graphql_addr: Option<SocketAddr>,
         artifacts_addr: Option<SocketAddr>,
+        pool: Arc<SqlitePool>,
     ) -> Self {
         Self {
             addr,
@@ -76,6 +79,7 @@ impl Proxy {
             grpc_addr,
             graphql_addr: Arc::new(RwLock::new(graphql_addr)),
             artifacts_addr,
+            pool,
         }
     }
 
@@ -93,6 +97,7 @@ impl Proxy {
         let grpc_addr = self.grpc_addr;
         let graphql_addr = self.graphql_addr.clone();
         let artifacts_addr = self.artifacts_addr;
+        let pool = self.pool.clone();
 
         let make_svc = make_service_fn(move |conn: &AddrStream| {
             let remote_addr = conn.remote_addr().ip();
@@ -131,10 +136,10 @@ impl Proxy {
 
             let graphql_addr_clone = graphql_addr.clone();
             let service = ServiceBuilder::new().option_layer(cors).service_fn(move |req| {
-                let graphql_addr = graphql_addr_clone.clone();
+                let pool = pool.clone();
                 async move {
-                    let graphql_addr = graphql_addr.read().await;
-                    handle(remote_addr, grpc_addr, artifacts_addr, *graphql_addr, req).await
+                    let graphql_addr = graphql_addr_clone.clone();
+                    handle(remote_addr, grpc_addr, artifacts_addr, *graphql_addr, pool, req).await
                 }
             });
 
@@ -156,6 +161,7 @@ async fn handle(
     grpc_addr: Option<SocketAddr>,
     artifacts_addr: Option<SocketAddr>,
     graphql_addr: Option<SocketAddr>,
+    pool: Arc<SqlitePool>,
     req: Request<Body>,
 ) -> Result<Response<Body>, Infallible> {
     if req.uri().path().starts_with("/static") {
@@ -222,6 +228,45 @@ async fn handle(
                     .unwrap());
             }
         }
+    }
+
+    if req.uri().path().starts_with("/sql") {
+        if req.method() != Method::POST {
+            return Ok(Response::builder()
+                .status(StatusCode::METHOD_NOT_ALLOWED)
+                .body(Body::from("Only POST method is allowed"))
+                .unwrap());
+        }
+
+        let body_bytes = hyper::body::to_bytes(req.into_body()).await.unwrap_or_default();
+        let query = String::from_utf8(body_bytes.to_vec()).unwrap_or_default();
+
+        if !query.trim().to_uppercase().starts_with("SELECT") {
+            return Ok(Response::builder()
+                .status(StatusCode::BAD_REQUEST)
+                .body(Body::from("Only SELECT queries are allowed"))
+                .unwrap());
+        }
+
+        return match sqlx::query(&query).fetch_all(&*pool).await {
+            Ok(rows) => {
+                let json = serde_json::to_string(
+                    &rows.iter()
+                        .map(|row| row.columns().iter().map(|col| col.name()).collect::<Vec<_>>())
+                        .collect::<Vec<_>>()
+                ).unwrap();
+                
+                Ok(Response::builder()
+                    .status(StatusCode::OK)
+                    .header(CONTENT_TYPE, "application/json")
+                    .body(Body::from(json))
+                    .unwrap())
+            }
+            Err(e) => Ok(Response::builder()
+                .status(StatusCode::BAD_REQUEST)
+                .body(Body::from(format!("Query error: {}", e)))
+                .unwrap()),
+        };
     }
 
     let json = json!({
