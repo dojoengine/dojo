@@ -3,6 +3,7 @@ use std::net::{IpAddr, SocketAddr};
 use std::sync::Arc;
 use std::time::Duration;
 
+use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
 use http::header::CONTENT_TYPE;
 use http::{HeaderName, Method};
@@ -13,12 +14,11 @@ use hyper::service::make_service_fn;
 use hyper::{Body, Client, Request, Response, Server, StatusCode};
 use hyper_reverse_proxy::ReverseProxy;
 use serde_json::json;
+use sqlx::{Column, Row, SqlitePool, TypeInfo};
 use tokio::sync::RwLock;
 use tower::ServiceBuilder;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing::error;
-use sqlx::{SqlitePool, Row, Column, TypeInfo};
-use base64::engine::general_purpose::STANDARD;
 
 const DEFAULT_ALLOW_HEADERS: [&str; 13] = [
     "accept",
@@ -254,53 +254,62 @@ async fn handle(
         };
 
         // Execute the query in a read-only transaction
-        return match sqlx::query(&query)
-            .fetch_all(&*pool)
-            .await {
-                Ok(rows) => {
-                    let result: Vec<_> = rows.iter()
-                        .map(|row| {
-                            let mut obj = serde_json::Map::new();
-                            for (i, column) in row.columns().iter().enumerate() {
-                                let value: serde_json::Value = match column.type_info().name() {
-                                    "TEXT" => row.get::<Option<String>, _>(i)
-                                        .map_or(serde_json::Value::Null, serde_json::Value::String),
-                                    "INTEGER" => row.get::<Option<i64>, _>(i)
-                                        .map_or(serde_json::Value::Null, |n| serde_json::Value::Number(n.into())),
-                                    "REAL" => row.get::<Option<f64>, _>(i)
-                                        .map_or(serde_json::Value::Null, |f| 
-                                            serde_json::Number::from_f64(f)
-                                                .map_or(serde_json::Value::Null, serde_json::Value::Number)
-                                        ),
-                                    "BLOB" => row.get::<Option<Vec<u8>>, _>(i)
-                                        .map_or(serde_json::Value::Null, |bytes| 
-                                            serde_json::Value::String(STANDARD.encode(bytes))
-                                        ),
-                                    _ => row.get::<Option<String>, _>(i)
-                                        .map_or(serde_json::Value::Null, serde_json::Value::String),
-                                };
-                                obj.insert(column.name().to_string(), value);
-                            }
-                            serde_json::Value::Object(obj)
-                        })
-                        .collect();
+        return match sqlx::query(&query).fetch_all(&*pool).await {
+            Ok(rows) => {
+                let result: Vec<_> = rows
+                    .iter()
+                    .map(|row| {
+                        let mut obj = serde_json::Map::new();
+                        for (i, column) in row.columns().iter().enumerate() {
+                            let value: serde_json::Value = match column.type_info().name() {
+                                "TEXT" => row
+                                    .get::<Option<String>, _>(i)
+                                    .map_or(serde_json::Value::Null, serde_json::Value::String),
+                                "INTEGER" => row
+                                    .get::<Option<i64>, _>(i)
+                                    .map_or(serde_json::Value::Null, |n| {
+                                        serde_json::Value::Number(n.into())
+                                    }),
+                                "REAL" => row.get::<Option<f64>, _>(i).map_or(
+                                    serde_json::Value::Null,
+                                    |f| {
+                                        serde_json::Number::from_f64(f).map_or(
+                                            serde_json::Value::Null,
+                                            serde_json::Value::Number,
+                                        )
+                                    },
+                                ),
+                                "BLOB" => row
+                                    .get::<Option<Vec<u8>>, _>(i)
+                                    .map_or(serde_json::Value::Null, |bytes| {
+                                        serde_json::Value::String(STANDARD.encode(bytes))
+                                    }),
+                                _ => row
+                                    .get::<Option<String>, _>(i)
+                                    .map_or(serde_json::Value::Null, serde_json::Value::String),
+                            };
+                            obj.insert(column.name().to_string(), value);
+                        }
+                        serde_json::Value::Object(obj)
+                    })
+                    .collect();
 
-                    let json = serde_json::to_string(&result).unwrap();
-                    
-                    Ok(Response::builder()
-                        .status(StatusCode::OK)
-                        .header(CONTENT_TYPE, "application/json")
-                        .body(Body::from(json))
-                        .unwrap())
-                }
-                Err(e) => {
-                    error!("SQL query error: {:?}", e);
-                    Ok(Response::builder()
-                        .status(StatusCode::BAD_REQUEST)
-                        .body(Body::from("Query error"))
-                        .unwrap())
-                }
-            };
+                let json = serde_json::to_string(&result).unwrap();
+
+                Ok(Response::builder()
+                    .status(StatusCode::OK)
+                    .header(CONTENT_TYPE, "application/json")
+                    .body(Body::from(json))
+                    .unwrap())
+            }
+            Err(e) => {
+                error!("SQL query error: {:?}", e);
+                Ok(Response::builder()
+                    .status(StatusCode::BAD_REQUEST)
+                    .body(Body::from("Query error"))
+                    .unwrap())
+            }
+        };
     }
 
     let json = json!({

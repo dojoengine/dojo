@@ -520,7 +520,7 @@ impl Sql {
     }
 
     pub async fn model(&self, selector: Felt) -> Result<Model> {
-        self.model_cache.model(&selector).await.map_err(|e| e.into()) 
+        self.model_cache.model(&selector).await.map_err(|e| e.into())
     }
 
     pub async fn does_entity_exist(&self, model: String, key: Felt) -> Result<bool> {
@@ -828,11 +828,7 @@ impl Sql {
             Ty::Enum(e) => {
                 if e.options.iter().all(
                     |o| {
-                        if let Ty::Tuple(t) = &o.ty {
-                            t.is_empty()
-                        } else {
-                            false
-                        }
+                        if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false }
                     },
                 ) {
                     return Ok(());
