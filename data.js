@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1732043323518,
+  "lastUpdate": 1732074177242,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -35281,6 +35281,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8765415,
             "range": "± 469431",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d0054754019e614776b2b18c4a7a521e7d17fa07",
+          "message": "refactor(torii-core): cleanups (#2702)\n\n* chore(torii-core): cleanups\n\n* hlper functions for evetn rpocessor config\n\n* disable raw events by default\n\n* remove start block entirely\n\n* cleanup constants\n\n* fmt\n\n* fix: clippy/fmt\n\n* fix: ensure the default for EventOptions matches the CLAP values\n\n* tag cleanups\n\n---------\n\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-11-19T21:26:47-06:00",
+          "tree_id": "69da8daa64a190b45168a8fa45102c5d91aab6b3",
+          "url": "https://github.com/dojoengine/dojo/commit/d0054754019e614776b2b18c4a7a521e7d17fa07"
+        },
+        "date": 1732074175985,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10251113350,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
