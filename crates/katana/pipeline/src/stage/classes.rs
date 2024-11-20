@@ -12,6 +12,7 @@ use katana_provider::traits::contract::ContractClassWriter;
 use katana_provider::traits::state_update::StateUpdateProvider;
 use starknet::providers::sequencer::models::{BlockId, DeployedClass};
 use starknet::providers::{ProviderError, SequencerGatewayProvider};
+use tracing::debug;
 
 use super::{Stage, StageExecutionInput, StageResult};
 
@@ -98,6 +99,8 @@ where
 
             // TODO: do this in parallel
             for class_hash in class_hashes.keys() {
+                debug!(target: "pipeline", "Fetching class artifacts for class hash {class_hash:#x}");
+
                 // 1. fetch sierra and casm class from fgw
                 let (sierra, compiled) = self.get_class(*class_hash, i).await?;
 
