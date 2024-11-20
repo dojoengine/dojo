@@ -50,7 +50,7 @@ fn graphql_filter(
 
     let subscription_endpoint = if let Some(external_url) = external_url {
         let mut websocket_url = external_url.clone();
-        websocket_url.set_path("/graphql/ws");
+        websocket_url.set_path("graphql/ws");
 
         let websocket_scheme = match websocket_url.scheme() {
             "http" => "ws",
@@ -61,13 +61,13 @@ fn graphql_filter(
         let _ = websocket_url.set_scheme(websocket_scheme);
         websocket_url.to_string()
     } else {
-        "/graphql/ws".to_string()
+        "graphql/ws".to_string()
     };
 
     let playground_filter = warp::path("graphql").map(move || {
         warp::reply::html(
             GraphiQLSource::build()
-                .endpoint("/graphql")
+                .endpoint("graphql")
                 .subscription_endpoint(subscription_endpoint.as_str())
                 .finish(),
         )
