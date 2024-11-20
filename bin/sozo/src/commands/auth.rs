@@ -7,6 +7,7 @@ use clap::{Args, Subcommand};
 use colored::Colorize;
 use dojo_utils::Invoker;
 use dojo_world::config::ProfileConfig;
+use dojo_world::constants::WORLD;
 use dojo_world::contracts::{ContractInfo, WorldContract};
 use dojo_world::diff::{DiffPermissions, WorldDiff};
 use scarb::core::{Config, Workspace};
@@ -305,12 +306,12 @@ async fn clone_permissions(
     writer_of.extend(
         external_writer_of
             .iter()
-            .map(|r| if r != &Felt::ZERO { format!("{:#066x}", r) } else { "World".to_string() }),
+            .map(|r| if r != &WORLD { format!("{:#066x}", r) } else { "World".to_string() }),
     );
     owner_of.extend(
         external_owner_of
             .iter()
-            .map(|r| if r != &Felt::ZERO { format!("{:#066x}", r) } else { "World".to_string() }),
+            .map(|r| if r != &WORLD { format!("{:#066x}", r) } else { "World".to_string() }),
     );
 
     // Sort the tags to have a deterministic output.
@@ -417,13 +418,13 @@ async fn list_permissions(
 
     let mut world_writers = world_diff
         .external_writers
-        .get(&Felt::ZERO)
+        .get(&WORLD)
         .map(|writers| writers.iter().cloned().collect::<Vec<_>>())
         .unwrap_or_default();
 
     let mut world_owners = world_diff
         .external_owners
-        .get(&Felt::ZERO)
+        .get(&WORLD)
         .map(|owners| owners.iter().cloned().collect::<Vec<_>>())
         .unwrap_or_default();
 
@@ -677,7 +678,7 @@ impl PermissionPair {
         contracts: &HashMap<String, ContractInfo>,
     ) -> Result<(Felt, Felt)> {
         let selector = if self.resource_tag == "world" {
-            Felt::ZERO
+            WORLD
         } else if self.resource_tag.starts_with("0x") {
             Felt::from_str(&self.resource_tag)
                 .map_err(|_| anyhow!("Invalid resource selector: {}", self.resource_tag))?
@@ -788,7 +789,7 @@ mod tests {
             grantee_tag_or_address: "0x123".to_string(),
         };
         let (selector, address) = pair.to_selector_and_address(&contracts).unwrap();
-        assert_eq!(selector, Felt::ZERO);
+        assert_eq!(selector, WORLD);
         assert_eq!(address, Felt::from_str("0x123").unwrap());
 
         let pair = PermissionPair {

@@ -165,6 +165,11 @@ mod tests {
         keystore_password = "test"
         world_address = "test"
 
+        [env.ipfs_config]
+        url = "https://ipfs.service"
+        username = "johndoe"
+        password = "123456"
+
         [migration]
         skip_contracts = [ "module::my-contract" ]
 
@@ -190,6 +195,11 @@ mod tests {
         assert_eq!(env.keystore_path, Some("test".to_string()));
         assert_eq!(env.keystore_password, Some("test".to_string()));
         assert_eq!(env.world_address, Some("test".to_string()));
+
+        let ipfs_config = env.ipfs_config.unwrap();
+        assert_eq!(ipfs_config.url, "https://ipfs.service".to_string());
+        assert_eq!(ipfs_config.username, "johndoe".to_string());
+        assert_eq!(ipfs_config.password, "123456".to_string());
 
         assert_eq!(config.world.description, Some("test".to_string()));
         assert_eq!(

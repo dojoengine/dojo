@@ -33,4 +33,4 @@ tokio.workspace = true
 futures.workspace = true
 
 [features]
-metadata = [ "dep:ipfs-api-backend-hyper" ]
+ipfs = [ "dep:ipfs-api-backend-hyper" ]

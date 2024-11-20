@@ -4,8 +4,8 @@ use anyhow::{Context, Result};
 use serde_json::json;
 use starknet_crypto::Felt;
 
-use super::metadata_service::MetadataService;
 use crate::config::metadata_config::{ResourceMetadata, WorldMetadata};
+use crate::services::UploadService;
 use crate::uri::Uri;
 
 /// Helper function to compute metadata hash.
@@ -27,7 +27,7 @@ where
 /// Helper function to process an optional URI.
 ///
 /// If the URI is set and refer to a local asset, this asset
-/// is then uploaded using the provided MetadataService.
+/// is then uploaded using the provided UploadService.
 /// In any other case, the URI is kept as it is.
 ///
 /// # Arguments
@@ -36,7 +36,7 @@ where
 ///
 /// # Returns
 ///   The updated URI or a Anyhow error.
-async fn upload_uri(uri: &Option<Uri>, service: &mut impl MetadataService) -> Result<Option<Uri>> {
+async fn upload_uri(uri: &Option<Uri>, service: &mut impl UploadService) -> Result<Option<Uri>> {
     if let Some(Uri::File(path)) = uri {
         let data = std::fs::read(path)?;
         let uploaded_uri = Uri::Ipfs(service.upload(data).await?);
@@ -57,7 +57,7 @@ pub trait MetadataStorage {
     ///
     /// # Returns
     ///   The uploaded metadata URI or a Anyhow error.
-    async fn upload(&self, service: &mut impl MetadataService) -> Result<String>;
+    async fn upload(&self, service: &mut impl UploadService) -> Result<String>;
 
     /// Upload metadata using the provided service, only if it has changed.
     ///
@@ -69,7 +69,7 @@ pub trait MetadataStorage {
     ///   The uploaded metadata URI or a Anyhow error.
     async fn upload_if_changed(
         &self,
-        service: &mut impl MetadataService,
+        service: &mut impl UploadService,
         current_hash: Felt,
     ) -> Result<Option<(String, Felt)>>
     where
@@ -89,7 +89,7 @@ pub trait MetadataStorage {
 
 #[allow(async_fn_in_trait)]
 impl MetadataStorage for WorldMetadata {
-    async fn upload(&self, service: &mut impl MetadataService) -> Result<String> {
+    async fn upload(&self, service: &mut impl UploadService) -> Result<String> {
         let mut meta = self.clone();
 
         meta.icon_uri =
@@ -104,7 +104,7 @@ impl MetadataStorage for WorldMetadata {
 
 #[allow(async_fn_in_trait)]
 impl MetadataStorage for ResourceMetadata {
-    async fn upload(&self, service: &mut impl MetadataService) -> Result<String> {
+    async fn upload(&self, service: &mut impl UploadService) -> Result<String> {
         let mut meta = self.clone();
 
         meta.icon_uri =

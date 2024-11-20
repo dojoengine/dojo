@@ -25,12 +25,14 @@ use cainome::cairo_serde::{ByteArray, ClassHash, ContractAddress};
 use dojo_utils::{Declarer, Deployer, Invoker, LabeledClass, TransactionResult, TxnConfig};
 use dojo_world::config::calldata_decoder::decode_calldata;
 use dojo_world::config::{metadata_config, ProfileConfig, ResourceConfig, WorldMetadata};
+use dojo_world::constants::WORLD;
 use dojo_world::contracts::abigen::world::ResourceMetadata;
 use dojo_world::contracts::WorldContract;
 use dojo_world::diff::{Manifest, ResourceDiff, WorldDiff, WorldStatus};
 use dojo_world::local::ResourceLocal;
-use dojo_world::metadata::{MetadataService, MetadataStorage};
+use dojo_world::metadata::MetadataStorage;
 use dojo_world::remote::ResourceRemote;
+use dojo_world::services::UploadService;
 use dojo_world::{utils, ResourceType};
 use starknet::accounts::{ConnectedAccount, SingleOwnerAccount};
 use starknet::core::types::Call;
@@ -114,7 +116,7 @@ where
     pub async fn upload_metadata(
         &self,
         ui: &mut MigrationUi,
-        service: &mut impl MetadataService,
+        service: &mut impl UploadService,
     ) -> anyhow::Result<()> {
         ui.update_text("Uploading metadata...");
 
@@ -122,7 +124,7 @@ where
 
         // world
         let current_hash =
-            self.diff.resources.get(&Felt::ZERO).map_or(Felt::ZERO, |r| r.metadata_hash());
+            self.diff.resources.get(&WORLD).map_or(Felt::ZERO, |r| r.metadata_hash());
         let new_metadata = WorldMetadata::from(self.diff.profile_config.world.clone());
 
         let res = new_metadata.upload_if_changed(service, current_hash).await?;
@@ -169,7 +171,7 @@ where
 
     async fn upload_metadata_from_resource_config(
         &self,
-        service: &mut impl MetadataService,
+        service: &mut impl UploadService,
         config: &[ResourceConfig],
     ) -> anyhow::Result<Vec<Call>> {
         let mut calls = vec![];

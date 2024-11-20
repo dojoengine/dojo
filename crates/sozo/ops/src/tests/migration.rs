@@ -8,7 +8,7 @@ use dojo_utils::TxnConfig;
 use dojo_world::config::ResourceConfig;
 use dojo_world::contracts::WorldContract;
 use dojo_world::diff::WorldDiff;
-use dojo_world::metadata::FakeMetadataService;
+use dojo_world::services::MockUploadService;
 use katana_runner::RunnerCtx;
 use scarb::compiler::Profile;
 use sozo_scarbext::WorkspaceExt;
@@ -64,7 +64,7 @@ async fn migrate_spawn_and_move(sequencer: &RunnerCtx, with_metadata: bool) -> M
     let res = migration.migrate(&mut ui).await.expect("Migration spawn-and-move failed.");
 
     if with_metadata {
-        let mut service = FakeMetadataService::default();
+        let mut service = MockUploadService::default();
         migration.upload_metadata(&mut ui, &mut service).await.expect("Upload metadata failed");
     }
 

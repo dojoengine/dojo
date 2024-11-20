@@ -15,6 +15,7 @@ use tracing::trace;
 
 use super::permissions::PermissionsUpdateable;
 use super::{ResourceRemote, WorldRemote};
+use crate::constants::WORLD;
 use crate::contracts::abigen::world::{self, Event as WorldEvent};
 use crate::remote::{CommonRemoteInfo, ContractRemote, EventRemote, ModelRemote, NamespaceRemote};
 
@@ -127,7 +128,7 @@ impl WorldRemote {
                 self.class_hashes.push(e.class_hash.into());
 
                 // The creator is the world's owner, but no event emitted for that.
-                self.external_owners.insert(Felt::ZERO, HashSet::from([e.creator.into()]));
+                self.external_owners.insert(WORLD, HashSet::from([e.creator.into()]));
 
                 trace!(
                     class_hash = format!("{:#066x}", e.class_hash.0),
@@ -252,7 +253,7 @@ impl WorldRemote {
                 trace!(?e, "Owner updated.");
             }
             WorldEvent::MetadataUpdate(e) => {
-                if e.resource == Felt::ZERO {
+                if e.resource == WORLD {
                     self.metadata_hash = e.hash;
                 } else {
                     // Unwrap is safe because the resource must exist in the world.

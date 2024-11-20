@@ -83,12 +83,16 @@ impl DevArgs {
         build_args.clone().run(config)?;
         info!("Initial build completed.");
 
+        // As this `dev` command is for development purpose only,
+        // allowing to watch for changes, compile and migrate them,
+        // there is no need for metadata uploading. That's why,
+        // `ipfs` is set to its default value meaning it is disabled.
         let migrate_args = MigrateArgs {
             world: self.world,
             starknet: self.starknet,
             account: self.account,
             transaction: self.transaction,
-            ipfs: IpfsOptions::default(), // no need for IPFS metadata upload here.
+            ipfs: IpfsOptions::default(),
         };
 
         let _ = migrate_args.clone().run(config);

@@ -1,6 +1,6 @@
 use clap::Args;
 use dojo_utils::env::{IPFS_PASSWORD_ENV_VAR, IPFS_URL_ENV_VAR, IPFS_USERNAME_ENV_VAR};
-use dojo_world::config::Environment;
+use dojo_world::config::IpfsConfig;
 use tracing::trace;
 use url::Url;
 
@@ -27,47 +27,16 @@ pub struct IpfsOptions {
 }
 
 impl IpfsOptions {
-    pub fn url(&self, env_metadata: Option<&Environment>) -> Option<String> {
-        trace!("Retrieving URL for IpfsOptions.");
+    pub fn config(&self) -> Option<IpfsConfig> {
+        trace!("Retrieving IPFS config for IpfsOptions.");
 
-        if let Some(url) = self.ipfs_url.as_ref() {
-            trace!(?url, "Using IPFS URL from command line.");
-            Some(url.to_string())
-        } else if let Some(url) = env_metadata.and_then(|env| env.ipfs_url()) {
-            trace!(url, "Using IPFS URL from environment metadata.");
-            Some(url.to_string())
+        let url = self.ipfs_url.as_ref().map(|url| url.to_string());
+        let username = self.ipfs_username.clone();
+        let password = self.ipfs_password.clone();
+
+        if let (Some(url), Some(username), Some(password)) = (url, username, password) {
+            Some(IpfsConfig { url, username, password })
         } else {
-            trace!("No default IPFS URL.");
-            None
-        }
-    }
-
-    pub fn username(&self, env_metadata: Option<&Environment>) -> Option<String> {
-        trace!("Retrieving username for IpfsOptions.");
-
-        if let Some(username) = self.ipfs_username.as_ref() {
-            trace!(?username, "Using IPFS username from command line.");
-            Some(username.clone())
-        } else if let Some(username) = env_metadata.and_then(|env| env.ipfs_username()) {
-            trace!(username, "Using IPFS username from environment metadata.");
-            Some(username.to_string())
-        } else {
-            trace!("No default IPFS username.");
-            None
-        }
-    }
-
-    pub fn password(&self, env_metadata: Option<&Environment>) -> Option<String> {
-        trace!("Retrieving password for IpfsOptions.");
-
-        if let Some(password) = self.ipfs_password.as_ref() {
-            trace!(?password, "Using IPFS password from command line.");
-            Some(password.clone())
-        } else if let Some(password) = env_metadata.and_then(|env| env.ipfs_password()) {
-            trace!(password, "Using IPFS password from environment metadata.");
-            Some(password.to_string())
-        } else {
-            trace!("No default IPFS password.");
             None
         }
     }
@@ -97,74 +66,51 @@ mod tests {
         std::env::set_var(IPFS_PASSWORD_ENV_VAR, ENV_IPFS_PASSWORD);
 
         let cmd = Command::parse_from([""]);
-        assert_eq!(cmd.options.url(None).unwrap().as_str(), ENV_IPFS_URL);
-        assert_eq!(cmd.options.username(None).unwrap(), ENV_IPFS_USERNAME);
-        assert_eq!(cmd.options.password(None).unwrap(), ENV_IPFS_PASSWORD);
+        let config = cmd.options.config().unwrap();
+        assert_eq!(config.url, ENV_IPFS_URL.to_string());
+        assert_eq!(config.username, ENV_IPFS_USERNAME.to_string());
+        assert_eq!(config.password, ENV_IPFS_PASSWORD.to_string());
     }
 
     #[test]
-    fn options_exist_in_env_but_not_in_args() {
-        let env_metadata = dojo_world::config::Environment {
-            ipfs_url: Some(ENV_IPFS_URL.into()),
-            ipfs_username: Some(ENV_IPFS_USERNAME.into()),
-            ipfs_password: Some(ENV_IPFS_PASSWORD.into()),
-            ..Default::default()
-        };
-
-        let cmd = Command::parse_from([""]);
-        assert_eq!(cmd.options.url(Some(&env_metadata)).unwrap().as_str(), ENV_IPFS_URL);
-        assert_eq!(cmd.options.username(Some(&env_metadata)).unwrap().as_str(), ENV_IPFS_USERNAME);
-        assert_eq!(cmd.options.password(Some(&env_metadata)).unwrap().as_str(), ENV_IPFS_PASSWORD);
-    }
-
-    #[test]
-    fn options_doesnt_exist_in_env_but_exist_in_args() {
-        let env_metadata = dojo_world::config::Environment::default();
-        let cmd = Command::parse_from([
-            "sozo",
-            "--ipfs-url",
-            ENV_IPFS_URL,
-            "--ipfs-username",
-            ENV_IPFS_USERNAME,
-            "--ipfs-password",
-            ENV_IPFS_PASSWORD,
-        ]);
-
-        assert_eq!(cmd.options.url(Some(&env_metadata)).unwrap().as_str(), ENV_IPFS_URL);
-        assert_eq!(cmd.options.username(Some(&env_metadata)).unwrap().as_str(), ENV_IPFS_USERNAME);
-        assert_eq!(cmd.options.password(Some(&env_metadata)).unwrap().as_str(), ENV_IPFS_PASSWORD);
-    }
-
-    #[test]
-    fn options_exists_in_both() {
-        let env_metadata = dojo_world::config::Environment {
-            ipfs_url: Some(ENV_IPFS_URL.into()),
-            ipfs_username: Some(ENV_IPFS_USERNAME.into()),
-            ipfs_password: Some(ENV_IPFS_PASSWORD.into()),
-            ..Default::default()
-        };
+    fn cli_args_override_env_variables() {
+        std::env::set_var(IPFS_URL_ENV_VAR, ENV_IPFS_URL);
+        let url = "http://different.url/";
+        let username = "bobsmith";
+        let password = "654321";
 
         let cmd = Command::parse_from([
             "sozo",
             "--ipfs-url",
-            ENV_IPFS_URL,
+            url,
             "--ipfs-username",
-            ENV_IPFS_USERNAME,
+            username,
             "--ipfs-password",
-            ENV_IPFS_PASSWORD,
+            password,
         ]);
-
-        assert_eq!(cmd.options.url(Some(&env_metadata)).unwrap().as_str(), ENV_IPFS_URL);
-        assert_eq!(cmd.options.username(Some(&env_metadata)).unwrap().as_str(), ENV_IPFS_USERNAME);
-        assert_eq!(cmd.options.password(Some(&env_metadata)).unwrap().as_str(), ENV_IPFS_PASSWORD);
+        let config = cmd.options.config().unwrap();
+        assert_eq!(config.url, url);
+        assert_eq!(config.username, username);
+        assert_eq!(config.password, password);
     }
 
     #[test]
-    fn url_exists_in_neither() {
-        let env_metadata = dojo_world::config::Environment::default();
-        let cmd = Command::parse_from([""]);
-        assert_eq!(cmd.options.url(Some(&env_metadata)), None);
-        assert_eq!(cmd.options.username(Some(&env_metadata)), None);
-        assert_eq!(cmd.options.password(Some(&env_metadata)), None);
+    fn invalid_url_format() {
+        let cmd = Command::try_parse_from([
+            "sozo",
+            "--ipfs-url",
+            "invalid-url",
+            "--ipfs-username",
+            "bobsmith",
+            "--ipfs-password",
+            "654321",
+        ]);
+        assert!(cmd.is_err());
+    }
+
+    #[test]
+    fn options_not_provided_in_env_variable() {
+        let cmd = Command::parse_from(["sozo"]);
+        assert!(cmd.options.config().is_none());
     }
 }

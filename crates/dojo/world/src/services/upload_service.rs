@@ -1,9 +1,9 @@
 use anyhow::Result;
 
-/// MetadataService trait to be implemented to upload
-/// some metadata on a specific storage system.
+/// UploadService trait to be implemented to upload
+/// some data on a specific storage system.
 #[allow(async_fn_in_trait)]
-pub trait MetadataService: std::marker::Send + std::marker::Sync + std::marker::Unpin {
+pub trait UploadService: std::marker::Send + std::marker::Sync + std::marker::Unpin {
     /// Upload some bytes (`data`) to the storage system,
     /// and get back a string URI.
     ///

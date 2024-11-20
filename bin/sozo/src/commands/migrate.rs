@@ -3,7 +3,7 @@ use clap::Args;
 use colored::Colorize;
 use dojo_utils::{self, TxnConfig};
 use dojo_world::contracts::WorldContract;
-use dojo_world::metadata::IpfsMetadataService;
+use dojo_world::services::IpfsService;
 use scarb::core::{Config, Workspace};
 use sozo_ops::migrate::{Migration, MigrationResult};
 use sozo_ops::migration_ui::MigrationUi;
@@ -81,18 +81,12 @@ impl MigrateArgs {
             let MigrationResult { manifest, has_changes } =
                 migration.migrate(&mut spinner).await.context("Migration failed.")?;
 
-            let ipfs_url = ipfs.url(profile_config.env.as_ref());
-            let ipfs_username = ipfs.username(profile_config.env.as_ref());
-            let ipfs_password = ipfs.password(profile_config.env.as_ref());
-
+            let ipfs_config =
+                ipfs.config().or(profile_config.env.map(|env| env.ipfs_config).unwrap_or(None));
             let mut metadata_upload_text = String::new();
 
-            if ipfs_url.is_some() && ipfs_username.is_some() && ipfs_password.is_some() {
-                let mut metadata_service = IpfsMetadataService::new(
-                    &ipfs_url.unwrap(),
-                    &ipfs_username.unwrap(),
-                    &ipfs_password.unwrap(),
-                )?;
+            if let Some(config) = ipfs_config {
+                let mut metadata_service = IpfsService::new(config)?;
 
                 migration
                     .upload_metadata(&mut spinner, &mut metadata_service)

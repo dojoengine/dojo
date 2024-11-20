@@ -7,10 +7,9 @@ use std::str::FromStr;
 use starknet_crypto::Felt;
 use url::Url;
 
-use super::fake_metadata_service::FakeMetadataService;
-use super::metadata_service::MetadataService;
 use super::metadata_storage::MetadataStorage;
 use crate::config::metadata_config::{ResourceMetadata, WorldMetadata};
+use crate::services::{MockUploadService, UploadService};
 use crate::uri::Uri;
 
 /// Helper function to create a local file absolute path
@@ -55,7 +54,7 @@ fn assert_ipfs_uri(uri: &Option<Uri>) {
 }
 
 // Helper function to check IPFS content.
-async fn assert_ipfs_content(service: &FakeMetadataService, uri: String, path: PathBuf) {
+async fn assert_ipfs_content(service: &MockUploadService, uri: String, path: PathBuf) {
     let ipfs_data = service.get(uri).await.expect("read metadata failed");
     let expected_data = std::fs::read(path).expect("read local data failed");
     assert_eq!(ipfs_data, expected_data);
@@ -63,7 +62,7 @@ async fn assert_ipfs_content(service: &FakeMetadataService, uri: String, path: P
 
 #[tokio::test]
 async fn test_world_metadata() {
-    let mut metadata_service = FakeMetadataService::default();
+    let mut metadata_service = MockUploadService::default();
 
     let world_metadata = build_world_metadata();
 
@@ -139,7 +138,7 @@ async fn test_world_metadata() {
 
 #[tokio::test]
 async fn test_resource_metadata() {
-    let mut metadata_service = FakeMetadataService::default();
+    let mut metadata_service = MockUploadService::default();
 
     let resource_metadata = build_resource_metadata();
 
