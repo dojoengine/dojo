@@ -8,7 +8,7 @@ use starknet::core::utils::{get_selector_from_name, parse_cairo_short_string};
 use starknet::providers::Provider;
 
 use super::utils::{u256_to_sql_string, I256};
-use super::{Sql, FELT_DELIMITER};
+use super::{Sql, SQL_FELT_DELIMITER};
 use crate::constants::TOKEN_TRANSFER_TABLE;
 use crate::executor::{
     ApplyBalanceDiffQuery, Argument, QueryMessage, QueryType, RegisterErc20TokenQuery,
@@ -108,7 +108,7 @@ impl Sql {
         // from_address/contract_address:id
         if from_address != Felt::ZERO {
             let from_balance_id =
-                format!("{}{FELT_DELIMITER}{}", felt_to_sql_string(&from_address), &token_id);
+                format!("{}{SQL_FELT_DELIMITER}{}", felt_to_sql_string(&from_address), &token_id);
             let from_balance = self
                 .local_cache
                 .erc_cache
@@ -119,7 +119,7 @@ impl Sql {
 
         if to_address != Felt::ZERO {
             let to_balance_id =
-                format!("{}{FELT_DELIMITER}{}", felt_to_sql_string(&to_address), &token_id);
+                format!("{}{SQL_FELT_DELIMITER}{}", felt_to_sql_string(&to_address), &token_id);
             let to_balance = self
                 .local_cache
                 .erc_cache

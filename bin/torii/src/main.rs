@@ -138,6 +138,9 @@ async fn main() -> anyhow::Result<()> {
     if args.events.raw {
         flags.insert(IndexingFlags::RAW_EVENTS);
     }
+    if args.indexing.pending {
+        flags.insert(IndexingFlags::PENDING_BLOCKS);
+    }
 
     let mut engine: Engine<Arc<JsonRpcClient<HttpTransport>>> = Engine::new(
         world,
@@ -146,10 +149,8 @@ async fn main() -> anyhow::Result<()> {
         processors,
         EngineConfig {
             max_concurrent_tasks: args.indexing.max_concurrent_tasks,
-            start_block: 0,
             blocks_chunk_size: args.indexing.blocks_chunk_size,
             events_chunk_size: args.indexing.events_chunk_size,
-            index_pending: args.indexing.pending,
             polling_interval: Duration::from_millis(args.indexing.polling_interval),
             flags,
             event_processor_config: EventProcessorConfig {

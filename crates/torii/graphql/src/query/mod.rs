@@ -8,7 +8,7 @@ use dojo_types::primitive::{Primitive, SqlType};
 use regex::Regex;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Row, SqliteConnection};
-use torii_core::sql::FELT_DELIMITER;
+use torii_core::constants::SQL_FELT_DELIMITER;
 
 use crate::constants::{
     BOOLEAN_TRUE, ENTITY_ID_COLUMN, EVENT_MESSAGE_ID_COLUMN, INTERNAL_ENTITY_ID_KEY,
@@ -185,7 +185,7 @@ pub fn value_mapping_from_row(
 
             // handles felt arrays stored as string (ex: keys)
             if let (TypeRef::List(_), Value::String(s)) = (&type_data.type_ref(), &value) {
-                let mut felts: Vec<_> = s.split(FELT_DELIMITER).map(Value::from).collect();
+                let mut felts: Vec<_> = s.split(SQL_FELT_DELIMITER).map(Value::from).collect();
                 felts.pop(); // removes empty item
                 value = Value::List(felts);
             }

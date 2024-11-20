@@ -13,11 +13,10 @@ use starknet_crypto::Felt;
 use tracing::{debug, trace};
 
 use super::{ApplyBalanceDiffQuery, Executor};
-use crate::constants::TOKEN_BALANCE_TABLE;
+use crate::constants::{IPFS_CLIENT_MAX_RETRY, SQL_FELT_DELIMITER, TOKEN_BALANCE_TABLE};
 use crate::sql::utils::{felt_to_sql_string, sql_string_to_u256, u256_to_sql_string, I256};
-use crate::sql::FELT_DELIMITER;
 use crate::types::ContractType;
-use crate::utils::{fetch_content_from_ipfs, MAX_RETRY};
+use crate::utils::fetch_content_from_ipfs;
 
 #[derive(Debug, Clone)]
 pub struct RegisterErc721TokenQuery {
@@ -50,7 +49,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
     ) -> Result<()> {
         let erc_cache = apply_balance_diff.erc_cache;
         for ((contract_type, id_str), balance) in erc_cache.iter() {
-            let id = id_str.split(FELT_DELIMITER).collect::<Vec<&str>>();
+            let id = id_str.split(SQL_FELT_DELIMITER).collect::<Vec<&str>>();
             match contract_type {
                 ContractType::WORLD => unreachable!(),
                 ContractType::ERC721 => {
@@ -228,7 +227,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
             uri if uri.starts_with("ipfs") => {
                 let cid = uri.strip_prefix("ipfs://").unwrap();
                 debug!(cid = %cid, "Fetching metadata from IPFS");
-                let response = fetch_content_from_ipfs(cid, MAX_RETRY)
+                let response = fetch_content_from_ipfs(cid, IPFS_CLIENT_MAX_RETRY)
                     .await
                     .context("Failed to fetch metadata from IPFS")?;
 

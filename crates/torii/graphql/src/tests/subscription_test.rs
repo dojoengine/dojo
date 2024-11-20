@@ -5,6 +5,7 @@ mod tests {
     use std::time::Duration;
 
     use async_graphql::value;
+    use dojo_types::naming::get_tag;
     use dojo_types::primitive::Primitive;
     use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
     use dojo_world::contracts::abigen::model::Layout;
@@ -81,7 +82,7 @@ mod tests {
             // 1. Open process and sleep.Go to execute subscription
             tokio::time::sleep(Duration::from_secs(1)).await;
             let ty = Ty::Struct(Struct {
-                name: utils::struct_name_from_names(&namespace, &model_name),
+                name: get_tag(&namespace, &model_name),
                 children: vec![
                     Member {
                         name: "depth".to_string(),
@@ -233,7 +234,7 @@ mod tests {
             // 1. Open process and sleep.Go to execute subscription
             tokio::time::sleep(Duration::from_secs(1)).await;
             let ty = Ty::Struct(Struct {
-                name: utils::struct_name_from_names(&namespace, &model_name),
+                name: get_tag(&namespace, &model_name),
                 children: vec![
                     Member {
                         name: "depth".to_string(),

@@ -210,11 +210,11 @@ impl IndexingOptions {
     }
 }
 
-#[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq, Default)]
 #[command(next_help_heading = "Events indexing options")]
 pub struct EventsOptions {
     /// Whether or not to index raw events
-    #[arg(long = "events.raw", action = ArgAction::Set, default_value_t = true, help = "Whether or not to index raw events.")]
+    #[arg(long = "events.raw", action = ArgAction::Set, default_value_t = false, help = "Whether or not to index raw events.")]
     #[serde(default)]
     pub raw: bool,
 
@@ -227,12 +227,6 @@ pub struct EventsOptions {
     )]
     #[serde(default)]
     pub historical: Vec<String>,
-}
-
-impl Default for EventsOptions {
-    fn default() -> Self {
-        Self { raw: true, historical: vec![] }
-    }
 }
 
 #[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq)]

@@ -34,6 +34,16 @@ pub struct EventProcessorConfig {
     pub namespaces: HashSet<String>,
 }
 
+impl EventProcessorConfig {
+    pub fn is_historical(&self, tag: &str) -> bool {
+        self.historical_events.contains(tag)
+    }
+
+    pub fn should_index(&self, namespace: &str) -> bool {
+        self.namespaces.is_empty() || self.namespaces.contains(namespace)
+    }
+}
+
 #[async_trait]
 pub trait EventProcessor<P>: Send + Sync
 where

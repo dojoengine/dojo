@@ -1,6 +1,7 @@
 use async_graphql::dynamic::{Enum, Field, FieldFuture, InputObject, Object, TypeRef};
 use async_graphql::Value;
 use chrono::{DateTime, Utc};
+use dojo_types::naming::get_tag;
 use serde::Deserialize;
 use sqlx::{FromRow, Pool, Sqlite};
 
@@ -69,7 +70,7 @@ impl BasicObject for ModelDataObject {
         let mut parts = self.type_name().split('_').collect::<Vec<&str>>();
         let model = parts.pop().unwrap();
         let namespace = parts.join("_");
-        let type_name = utils::struct_name_from_names(&namespace, model);
+        let type_name = get_tag(&namespace, model);
         let mut objects = data_objects_recursion(
             &TypeData::Nested((TypeRef::named(self.type_name()), self.type_mapping.clone())),
             &vec![type_name],
@@ -106,7 +107,7 @@ impl ResolvableObject for ModelDataObject {
             let mut parts = type_name.split('_').collect::<Vec<&str>>();
             let model = parts.pop().unwrap();
             let namespace = parts.join("_");
-            let type_name = utils::struct_name_from_names(&namespace, model);
+            let table_name = get_tag(&namespace, model);
 
             FieldFuture::new(async move {
                 let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
@@ -114,10 +115,10 @@ impl ResolvableObject for ModelDataObject {
                 let filters = parse_where_argument(&ctx, &where_mapping)?;
                 let connection = parse_connection_arguments(&ctx)?;
 
-                let total_count = count_rows(&mut conn, &type_name, &None, &filters).await?;
+                let total_count = count_rows(&mut conn, &table_name, &None, &filters).await?;
                 let (data, page_info) = fetch_multiple_rows(
                     &mut conn,
-                    &type_name,
+                    &table_name,
                     EVENT_ID_COLUMN,
                     &None,
                     &order,
