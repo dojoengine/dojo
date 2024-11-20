@@ -267,7 +267,9 @@ async fn handle(
                                 "TEXT" => row
                                     .get::<Option<String>, _>(i)
                                     .map_or(serde_json::Value::Null, serde_json::Value::String),
-                                "INTEGER" => row
+                                // for operators like count(*) the type info is NULL
+                                // so we default to a number
+                                "INTEGER" | "NULL" => row
                                     .get::<Option<i64>, _>(i)
                                     .map_or(serde_json::Value::Null, |n| {
                                         serde_json::Value::Number(n.into())
