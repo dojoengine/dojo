@@ -54,16 +54,17 @@ pub(crate) struct JsType(String);
 impl From<&str> for JsType {
     fn from(value: &str) -> Self {
         match value {
-            "felt252" => JsType("number".to_owned()),
+            "felt252" => JsType("BigNumberish".to_owned()),
             "ContractAddress" => JsType("string".to_owned()),
             "ByteArray" => JsType("string".to_owned()),
-            "u8" => JsType("number".to_owned()),
-            "u16" => JsType("number".to_owned()),
-            "u32" => JsType("number".to_owned()),
-            "u64" => JsType("number".to_owned()),
-            "u128" => JsType("number".to_owned()),
-            "u256" => JsType("number".to_owned()),
-            "U256" => JsType("number".to_owned()),
+            "u8" => JsType("BigNumberish".to_owned()),
+            "u16" => JsType("BigNumberish".to_owned()),
+            "u32" => JsType("BigNumberish".to_owned()),
+            "u64" => JsType("BigNumberish".to_owned()),
+            "u128" => JsType("BigNumberish".to_owned()),
+            "u256" => JsType("BigNumberish".to_owned()),
+            "U256" => JsType("BigNumberish".to_owned()),
+            "i128" => JsType("BigNumberish".to_owned()),
             "bool" => JsType("boolean".to_owned()),
             _ => JsType(value.to_owned()),
         }
@@ -112,6 +113,7 @@ impl From<&str> for JsDefaultValue {
             "u128" => JsDefaultValue("0".to_string()),
             "u256" => JsDefaultValue("0".to_string()),
             "U256" => JsDefaultValue("0".to_string()),
+            "i128" => JsDefaultValue("0".to_string()),
             "bool" => JsDefaultValue("false".to_string()),
             _ => JsDefaultValue(value.to_string()),
         }
@@ -192,13 +194,13 @@ mod tests {
     #[test]
     fn test_js_type_basics() {
         assert_eq!(
-            "number",
+            "BigNumberish",
             JsType::from(&Token::CoreBasic(CoreBasic {
                 type_path: "core::integer::u8".to_owned()
             }))
         );
         assert_eq!(
-            "number",
+            "BigNumberish",
             JsType::from(&Token::CoreBasic(CoreBasic { type_path: "core::felt252".to_owned() }))
         )
     }
@@ -206,7 +208,7 @@ mod tests {
     #[test]
     fn test_tuple_type() {
         assert_eq!(
-            "[number, number]",
+            "[BigNumberish, BigNumberish]",
             JsType::from(&Token::Tuple(Tuple {
                 type_path: "(core::integer::u8,core::integer::u128)".to_owned(),
                 inners: vec![
@@ -220,7 +222,7 @@ mod tests {
     #[test]
     fn test_array_type() {
         assert_eq!(
-            "Array<[number, number]>",
+            "Array<[BigNumberish, BigNumberish]>",
             JsType::from(&Token::Array(Array {
                 type_path: "core::array::Span<(core::integer::u8,core::integer::u128)>".to_owned(),
                 inner: Box::new(Token::Tuple(Tuple {

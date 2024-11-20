@@ -12,7 +12,7 @@ impl TsFunctionGenerator {
     fn check_imports(&self, buffer: &mut Buffer) {
         if !buffer.has("import { DojoProvider } from ") {
             buffer.insert(0, "import { DojoProvider } from \"@dojoengine/core\";".to_owned());
-            buffer.insert(1, "import { Account } from \"starknet\";".to_owned());
+            buffer.insert(1, "import { Account, BigNumberish } from \"starknet\";".to_owned());
             buffer.insert(2, "import * as models from \"./models.gen\";\n".to_owned());
         }
     }
@@ -235,8 +235,8 @@ mod tests {
     fn test_generate_system_function() {
         let generator = TsFunctionGenerator {};
         let function = create_change_theme_function();
-        let expected = "\tconst actions_changeTheme = async (snAccount: Account, value: number) \
-                        => {
+        let expected = "\tconst actions_changeTheme = async (snAccount: Account, value: \
+                        BigNumberish) => {
 \t\ttry {
 \t\t\treturn await provider.execute(
 \t\t\t\tsnAccount,
@@ -268,7 +268,7 @@ mod tests {
     fn test_format_function_inputs() {
         let generator = TsFunctionGenerator {};
         let function = create_change_theme_function();
-        let expected = "snAccount: Account, value: number";
+        let expected = "snAccount: Account, value: BigNumberish";
         assert_eq!(expected, generator.format_function_inputs(&function))
     }
 
@@ -276,7 +276,7 @@ mod tests {
     fn test_format_function_inputs_complex() {
         let generator = TsFunctionGenerator {};
         let function = create_change_theme_function();
-        let expected = "snAccount: Account, value: number";
+        let expected = "snAccount: Account, value: BigNumberish";
         assert_eq!(expected, generator.format_function_inputs(&function))
     }
 
