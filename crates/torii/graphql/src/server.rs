@@ -49,13 +49,16 @@ fn graphql_filter(
     );
 
     let (graphql_endpoint, subscription_endpoint) = if let Some(external_url) = external_url {
-        let mut graphql_url = external_url.clone();
+        let mut graphql_url = external_url;
         graphql_url.set_path("graphql");
 
-        let mut websocket_url = external_url;
-        websocket_url.set_path("graphql/ws");
-        let _ =
-            websocket_url.set_scheme(if websocket_url.scheme() == "https" { "wss" } else { "ws" });
+        let mut websocket_url = graphql_url.clone();
+        websocket_url.set_path("ws");
+        let _ = websocket_url.set_scheme(match websocket_url.scheme() {
+            "https" => "wss",
+            "http" => "ws",
+            _ => panic!("Invalid URL scheme - must be http or https"),
+        });
 
         (graphql_url.path().to_string(), websocket_url.to_string())
     } else {
