@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1732224209245,
+  "lastUpdate": 1732224282404,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -35593,6 +35593,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8300280,
             "range": "± 101866",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "374461db84fbed6cec0f2a52e16869b5e2b66c38",
+          "message": "fix(torii): graphql playground URL (#2707)\n\n* fix: avoid absolute path for URLs\n\n* fix: attempt to fix using relative URL\n\n* fix: merge external url logic for subscription and endpoint\n\n* fix: ensure panic if the scheme is invalid",
+          "timestamp": "2024-11-21T15:04:45-06:00",
+          "tree_id": "adf0824a34a933b8793a9ddd602e6ff0e4b2e1ee",
+          "url": "https://github.com/dojoengine/dojo/commit/374461db84fbed6cec0f2a52e16869b5e2b66c38"
+        },
+        "date": 1732224280839,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2436365,
+            "range": "± 12781",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 7968395,
+            "range": "± 376557",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3664307375,
+            "range": "± 837211687",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8277268,
+            "range": "± 131861",
             "unit": "ns/iter"
           }
         ]
