@@ -165,7 +165,7 @@ fn compute_legacy_class_hash(class: &LegacyContractClass) -> Result<Felt, Comput
 mod tests {
 
     use starknet::core::types::contract::legacy::LegacyContractClass as StarknetRsLegacyContractClass;
-    use starknet::core::types::contract::SierraClass;
+    use starknet::core::types::contract::SierraClass as StarknetRsSierraContractClass;
 
     use super::{ContractClass, LegacyContractClass, SierraContractClass};
 
@@ -178,7 +178,7 @@ mod tests {
 
         // Compare it against the hash computed using `starknet-rs` types
 
-        let class = serde_json::from_str::<SierraClass>(artifact).unwrap();
+        let class = serde_json::from_str::<StarknetRsSierraContractClass>(artifact).unwrap();
         let expected_hash = class.class_hash().unwrap();
 
         assert_eq!(actual_hash, expected_hash);
