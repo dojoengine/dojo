@@ -48,27 +48,28 @@ fn graphql_filter(
         },
     );
 
-    let subscription_endpoint = if let Some(external_url) = external_url {
-        let mut websocket_url = external_url.clone();
-        websocket_url.set_path("/graphql/ws");
+    let (graphql_endpoint, subscription_endpoint) = if let Some(external_url) = external_url {
+        let mut graphql_url = external_url;
+        graphql_url.set_path("graphql");
 
-        let websocket_scheme = match websocket_url.scheme() {
-            "http" => "ws",
+        let mut websocket_url = graphql_url.clone();
+        websocket_url.set_path("ws");
+        let _ = websocket_url.set_scheme(match websocket_url.scheme() {
             "https" => "wss",
-            _ => panic!("Invalid URL scheme"), // URL validated on input so this never hits
-        };
+            "http" => "ws",
+            _ => panic!("Invalid URL scheme - must be http or https"),
+        });
 
-        let _ = websocket_url.set_scheme(websocket_scheme);
-        websocket_url.to_string()
+        (graphql_url.path().to_string(), websocket_url.to_string())
     } else {
-        "/graphql/ws".to_string()
+        ("graphql".to_string(), "graphql/ws".to_string())
     };
 
     let playground_filter = warp::path("graphql").map(move || {
         warp::reply::html(
             GraphiQLSource::build()
-                .endpoint("/graphql")
-                .subscription_endpoint(subscription_endpoint.as_str())
+                .endpoint(&graphql_endpoint)
+                .subscription_endpoint(&subscription_endpoint)
                 .finish(),
         )
     });
