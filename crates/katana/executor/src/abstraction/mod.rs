@@ -3,10 +3,10 @@ mod executor;
 
 pub use error::*;
 pub use executor::*;
-use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
+use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, ContractClass};
 use katana_primitives::contract::{ContractAddress, Nonce, StorageKey, StorageValue};
 use katana_primitives::receipt::Receipt;
-use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
+use katana_primitives::state::{StateUpdates, StateUpdatesWithClasses};
 use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::TxWithHash;
 use katana_primitives::Felt;
@@ -90,7 +90,7 @@ pub struct ExecutionOutput {
     /// Statistics throughout the executions process.
     pub stats: ExecutionStats,
     /// The state updates produced by the executions.
-    pub states: StateUpdatesWithDeclaredClasses,
+    pub states: StateUpdatesWithClasses,
     /// The transactions that have been executed.
     pub transactions: Vec<(TxWithHash, ExecutionResult)>,
 }
@@ -168,8 +168,12 @@ impl<'a> StateProviderDb<'a> {
 }
 
 impl<'a> ContractClassProvider for StateProviderDb<'a> {
-    fn class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
+    fn class(&self, hash: ClassHash) -> ProviderResult<Option<ContractClass>> {
         self.0.class(hash)
+    }
+
+    fn compiled_class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
+        self.0.compiled_class(hash)
     }
 
     fn compiled_class_hash_of_class_hash(
@@ -177,10 +181,6 @@ impl<'a> ContractClassProvider for StateProviderDb<'a> {
         hash: ClassHash,
     ) -> ProviderResult<Option<CompiledClassHash>> {
         self.0.compiled_class_hash_of_class_hash(hash)
-    }
-
-    fn sierra_class(&self, hash: ClassHash) -> ProviderResult<Option<FlattenedSierraClass>> {
-        self.0.sierra_class(hash)
     }
 }
 

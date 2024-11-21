@@ -4,7 +4,7 @@ use std::iter;
 use starknet::macros::short_string;
 use starknet_types_core::hash::{self, StarkHash};
 
-use crate::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
+use crate::class::{ClassHash, CompiledClassHash, ContractClass};
 use crate::contract::{ContractAddress, Nonce, StorageKey, StorageValue};
 use crate::Felt;
 
@@ -48,15 +48,13 @@ impl StateUpdates {
     }
 }
 
-/// State update with declared classes definition.
+/// State update with declared classes artifacts.
 #[derive(Debug, Default, Clone)]
-pub struct StateUpdatesWithDeclaredClasses {
+pub struct StateUpdatesWithClasses {
     /// State updates.
     pub state_updates: StateUpdates,
     /// A mapping of class hashes to their sierra classes definition.
-    pub declared_sierra_classes: BTreeMap<ClassHash, FlattenedSierraClass>,
-    /// A mapping of class hashes to their compiled classes definition.
-    pub declared_compiled_classes: BTreeMap<ClassHash, CompiledClass>,
+    pub classes: BTreeMap<ClassHash, ContractClass>,
 }
 
 pub fn compute_state_diff_hash(states: StateUpdates) -> Felt {

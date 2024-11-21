@@ -378,7 +378,7 @@ mod tests {
             (BlockNumber, 99),
             (TxExecInfo, TxExecInfo::default()),
             (CompiledClassHash, felt!("211")),
-            (CompiledClass, CompiledClass::Deprecated(Default::default())),
+            (CompiledClass, CompiledClass::Legacy(Default::default())),
             (GenericContractInfo, GenericContractInfo::default()),
             (StorageEntry, StorageEntry::default()),
             (ContractInfoChangeList, ContractInfoChangeList::default()),

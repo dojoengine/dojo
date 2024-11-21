@@ -175,7 +175,7 @@ impl<'a> BlockExecutor<'a> for StarknetVMProcessor<'a> {
             // Collect class artifacts if its a declare tx
             let class_decl_artifacts = if let ExecutableTx::Declare(tx) = exec_tx.as_ref() {
                 let class_hash = tx.class_hash();
-                Some((class_hash, tx.compiled_class.clone(), tx.sierra_class.clone()))
+                Some((class_hash, tx.class.clone()))
             } else {
                 None
             };
@@ -194,8 +194,8 @@ impl<'a> BlockExecutor<'a> for StarknetVMProcessor<'a> {
                         info!(target: LOG_TARGET, hash = format!("{hash:#x}"), %reason, "Transaction reverted.");
                     }
 
-                    if let Some((class_hash, compiled, sierra)) = class_decl_artifacts {
-                        state.declared_classes.insert(class_hash, (compiled, sierra));
+                    if let Some((class_hash, class)) = class_decl_artifacts {
+                        state.declared_classes.insert(class_hash, class.as_ref().clone());
                     }
 
                     crate::utils::log_resources(&trace.actual_resources);

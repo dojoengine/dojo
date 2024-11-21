@@ -25,16 +25,13 @@ use super::allocation::{
     DevGenesisAccount, GenesisAccount, GenesisAccountAlloc, GenesisContractAlloc,
 };
 #[cfg(feature = "slot")]
+use super::constant::{CONTROLLER_ACCOUNT_CLASS, CONTROLLER_CLASS_HASH};
 use super::constant::{
-    CONTROLLER_ACCOUNT_CLASS, CONTROLLER_ACCOUNT_CLASS_CASM, CONTROLLER_CLASS_HASH,
-};
-use super::constant::{
-    DEFAULT_ACCOUNT_CLASS, DEFAULT_ACCOUNT_CLASS_CASM, DEFAULT_ACCOUNT_CLASS_HASH,
-    DEFAULT_ACCOUNT_COMPILED_CLASS_HASH,
+    DEFAULT_ACCOUNT_CLASS, DEFAULT_ACCOUNT_CLASS_HASH, DEFAULT_ACCOUNT_COMPILED_CLASS_HASH,
 };
 use super::{Genesis, GenesisAllocation};
 use crate::block::{BlockHash, BlockNumber, GasPrices};
-use crate::class::{ClassHash, CompiledClass, SierraClass};
+use crate::class::{ClassHash, ContractClass, SierraClass};
 use crate::contract::{ContractAddress, StorageKey, StorageValue};
 use crate::genesis::GenesisClass;
 use crate::utils::class::{parse_compiled_class_v1, parse_deprecated_compiled_class};
@@ -295,9 +292,9 @@ impl TryFrom<GenesisJson> for Genesis {
         classes.insert(
             CONTROLLER_CLASS_HASH,
             GenesisClass {
-                casm: Arc::new(CONTROLLER_ACCOUNT_CLASS_CASM.clone()),
+                class: ContractClass::Class(CONTROLLER_ACCOUNT_CLASS.clone().flatten().unwrap())
+                    .into(),
                 compiled_class_hash: CONTROLLER_CLASS_HASH,
-                sierra: Some(Arc::new(CONTROLLER_ACCOUNT_CLASS.clone().flatten()?)),
             },
         );
 
@@ -315,21 +312,16 @@ impl TryFrom<GenesisJson> for Genesis {
 
             let sierra = serde_json::from_value::<SierraClass>(artifact.clone());
 
-            let (class_hash, compiled_class_hash, sierra, casm) = match sierra {
+            let (class_hash, compiled_class_hash, class) = match sierra {
                 Ok(sierra) => {
-                    let class = parse_compiled_class_v1(artifact)?;
+                    let casm = parse_compiled_class_v1(artifact)?;
 
                     // check if the class hash is provided, otherwise compute it from the
                     // artifacts
                     let class_hash = class_hash.unwrap_or(sierra.class_hash()?);
-                    let compiled_hash = class.casm.compiled_class_hash();
+                    let compiled_hash = casm.compiled_class_hash();
 
-                    (
-                        class_hash,
-                        compiled_hash,
-                        Some(Arc::new(sierra.flatten()?)),
-                        Arc::new(CompiledClass::Class(class)),
-                    )
+                    (class_hash, compiled_hash, Arc::new(ContractClass::Class(sierra.flatten()?)))
                 }
 
                 // if the artifact is not a sierra contract, we check if it's a legacy contract
@@ -343,7 +335,7 @@ impl TryFrom<GenesisJson> for Genesis {
                         casm.class_hash()?
                     };
 
-                    (class_hash, class_hash, None, Arc::new(CompiledClass::Deprecated(casm)))
+                    (class_hash, class_hash, Arc::new(ContractClass::Legacy(casm)))
                 }
             };
 
@@ -362,7 +354,7 @@ impl TryFrom<GenesisJson> for Genesis {
                 }
             }
 
-            classes.insert(class_hash, GenesisClass { compiled_class_hash, sierra, casm });
+            classes.insert(class_hash, GenesisClass { compiled_class_hash, class });
         }
 
         let mut allocations: BTreeMap<ContractAddress, GenesisAllocation> = BTreeMap::new();
@@ -394,8 +386,10 @@ impl TryFrom<GenesisJson> for Genesis {
                     if let btree_map::Entry::Vacant(e) = classes.entry(DEFAULT_ACCOUNT_CLASS_HASH) {
                         // insert default account class to the classes map
                         e.insert(GenesisClass {
-                            casm: Arc::new(DEFAULT_ACCOUNT_CLASS_CASM.clone()),
-                            sierra: Some(Arc::new(DEFAULT_ACCOUNT_CLASS.clone().flatten()?)),
+                            class: ContractClass::Class(
+                                DEFAULT_ACCOUNT_CLASS.clone().flatten().unwrap(),
+                            )
+                            .into(),
                             compiled_class_hash: DEFAULT_ACCOUNT_COMPILED_CLASS_HASH,
                         });
                     }
@@ -544,7 +538,7 @@ mod tests {
 
     use super::*;
     use crate::address;
-    use crate::genesis::constant::{DEFAULT_LEGACY_ERC20_CASM, DEFAULT_LEGACY_UDC_CASM};
+    use crate::genesis::constant::{DEFAULT_LEGACY_ERC20_CLASS, DEFAULT_LEGACY_UDC_CLASS};
 
     #[test]
     fn deserialize_from_json() {
@@ -716,33 +710,33 @@ mod tests {
                 felt!("0x8"),
                 GenesisClass {
                     compiled_class_hash: felt!("0x8"),
-                    casm: DEFAULT_LEGACY_ERC20_CASM.clone().into(),
-                    sierra: None,
+                    class: DEFAULT_LEGACY_ERC20_CLASS.clone().into(),
                 },
             ),
             (
                 felt!("0x80085"),
                 GenesisClass {
                     compiled_class_hash: felt!("0x80085"),
-                    casm: DEFAULT_LEGACY_UDC_CASM.clone().into(),
-                    sierra: None,
+                    class: DEFAULT_LEGACY_UDC_CLASS.clone().into(),
                 },
             ),
             (
                 DEFAULT_ACCOUNT_CLASS_HASH,
                 GenesisClass {
                     compiled_class_hash: DEFAULT_ACCOUNT_COMPILED_CLASS_HASH,
-                    casm: DEFAULT_ACCOUNT_CLASS_CASM.clone().into(),
-                    sierra: Some(DEFAULT_ACCOUNT_CLASS.clone().flatten().unwrap().into()),
+                    class: ContractClass::Class(DEFAULT_ACCOUNT_CLASS.clone().flatten().unwrap())
+                        .into(),
                 },
             ),
             #[cfg(feature = "slot")]
             (
                 CONTROLLER_CLASS_HASH,
                 GenesisClass {
-                    casm: Arc::new(CONTROLLER_ACCOUNT_CLASS_CASM.clone()),
                     compiled_class_hash: CONTROLLER_CLASS_HASH,
-                    sierra: Some(Arc::new(CONTROLLER_ACCOUNT_CLASS.clone().flatten().unwrap())),
+                    class: ContractClass::Class(
+                        CONTROLLER_ACCOUNT_CLASS.clone().flatten().unwrap(),
+                    )
+                    .into(),
                 },
             ),
         ]);
@@ -866,8 +860,7 @@ mod tests {
         for class in actual_genesis.classes {
             let expected_class = expected_genesis.classes.get(&class.0).unwrap();
             assert_eq!(class.1.compiled_class_hash, expected_class.compiled_class_hash);
-            assert_eq!(class.1.casm, expected_class.casm);
-            assert_eq!(class.1.sierra, expected_class.sierra.clone());
+            assert_eq!(class.1.class, expected_class.class);
         }
     }
 
@@ -909,17 +902,19 @@ mod tests {
                 DEFAULT_ACCOUNT_CLASS_HASH,
                 GenesisClass {
                     compiled_class_hash: DEFAULT_ACCOUNT_COMPILED_CLASS_HASH,
-                    casm: DEFAULT_ACCOUNT_CLASS_CASM.clone().into(),
-                    sierra: Some(DEFAULT_ACCOUNT_CLASS.clone().flatten().unwrap().into()),
+                    class: ContractClass::Class(DEFAULT_ACCOUNT_CLASS.clone().flatten().unwrap())
+                        .into(),
                 },
             ),
             #[cfg(feature = "slot")]
             (
                 CONTROLLER_CLASS_HASH,
                 GenesisClass {
-                    casm: Arc::new(CONTROLLER_ACCOUNT_CLASS_CASM.clone()),
+                    class: ContractClass::Class(
+                        CONTROLLER_ACCOUNT_CLASS.clone().flatten().unwrap(),
+                    )
+                    .into(),
                     compiled_class_hash: CONTROLLER_CLASS_HASH,
-                    sierra: Some(Arc::new(CONTROLLER_ACCOUNT_CLASS.clone().flatten().unwrap())),
                 },
             ),
         ]);
@@ -960,8 +955,7 @@ mod tests {
             let expected_class = expected_genesis.classes.get(&hash).unwrap();
 
             assert_eq!(class.compiled_class_hash, expected_class.compiled_class_hash);
-            assert_eq!(class.casm, expected_class.casm);
-            assert_eq!(class.sierra, expected_class.sierra.clone());
+            assert_eq!(class.class, expected_class.class);
         }
     }
 

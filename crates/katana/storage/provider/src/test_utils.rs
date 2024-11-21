@@ -4,13 +4,13 @@ use alloy_primitives::U256;
 use katana_db::mdbx::test_utils;
 use katana_primitives::block::{BlockHash, FinalityStatus};
 use katana_primitives::chain_spec::ChainSpec;
-use katana_primitives::class::CompiledClass;
+use katana_primitives::class::ContractClass;
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::genesis::allocation::{
     DevGenesisAccount, GenesisAccountAlloc, GenesisAllocation,
 };
 use katana_primitives::genesis::{Genesis, GenesisClass};
-use katana_primitives::utils::class::parse_compiled_class_v1;
+use katana_primitives::utils::class::parse_sierra_class;
 use katana_primitives::{address, chain_spec};
 use starknet::macros::felt;
 
@@ -50,14 +50,9 @@ pub fn create_chain_for_testing() -> ChainSpec {
     // TODO: we should have a genesis builder that can do all of this for us.
     let class = {
         let json = include_str!("../test-data/simple_account.sierra.json");
-        let json = serde_json::from_str(json).unwrap();
-        let sierra = parse_compiled_class_v1(json).unwrap();
-
-        GenesisClass {
-            sierra: None,
-            compiled_class_hash: class_hash,
-            casm: Arc::new(CompiledClass::Class(sierra)),
-        }
+        let sierra = parse_sierra_class(json).unwrap();
+        let class = ContractClass::Class(sierra.flatten().unwrap());
+        GenesisClass { compiled_class_hash: class_hash, class: Arc::new(class) }
     };
 
     // setup test account

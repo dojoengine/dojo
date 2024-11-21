@@ -2,9 +2,11 @@ use lazy_static::lazy_static;
 use starknet::core::utils::get_storage_var_address;
 use starknet::macros::felt;
 
-use crate::class::{ClassHash, CompiledClass, CompiledClassHash, SierraClass};
+use crate::class::{ClassHash, CompiledClass, CompiledClassHash, ContractClass, SierraClass};
 use crate::contract::{ContractAddress, StorageKey};
-use crate::utils::class::{parse_compiled_class, parse_sierra_class};
+use crate::utils::class::{
+    parse_compiled_class, parse_deprecated_compiled_class, parse_sierra_class,
+};
 use crate::Felt;
 
 /// The default universal deployer contract address.
@@ -87,11 +89,10 @@ pub const CONTROLLER_CLASS_HASH: ClassHash =
 lazy_static! {
 
     // Default fee token contract
-    // pub static ref DEFAULT_LEGACY_ERC20_CONTRACT_CASM: CompiledContractClass = parse_compiled_class(include_str!("../../contracts/compiled/erc20.json")).unwrap();
-    pub static ref DEFAULT_LEGACY_ERC20_CASM: CompiledClass = read_compiled_class_artifact(include_str!("../../../contracts/build/erc20.json"));
+    pub static ref DEFAULT_LEGACY_ERC20_CLASS: ContractClass = read_legacy_class_artifact(include_str!("../../../contracts/build/erc20.json"));
 
     // Default universal deployer
-    pub static ref DEFAULT_LEGACY_UDC_CASM: CompiledClass = read_compiled_class_artifact(include_str!("../../../contracts/build/universal_deployer.json"));
+    pub static ref DEFAULT_LEGACY_UDC_CLASS: ContractClass = read_legacy_class_artifact(include_str!("../../../contracts/build/universal_deployer.json"));
 
     // Default account contract
     pub static ref DEFAULT_ACCOUNT_CLASS: SierraClass = parse_sierra_class(include_str!("../../../contracts/build/default_account.json")).unwrap();
@@ -102,7 +103,6 @@ lazy_static! {
 lazy_static! {
     // Cartridge Controller account
     pub static ref CONTROLLER_ACCOUNT_CLASS: SierraClass = parse_sierra_class(include_str!("../../../contracts/build/controller_CartridgeAccount.contract_class.json")).unwrap();
-    pub static ref CONTROLLER_ACCOUNT_CLASS_CASM: CompiledClass = read_compiled_class_artifact(include_str!("../../../contracts/build/controller_CartridgeAccount.contract_class.json"));
 }
 
 /// A helper function to get the base storage address for the fee token balance of a given account.
@@ -116,6 +116,12 @@ pub fn get_fee_token_balance_base_storage_address(address: ContractAddress) -> F
 fn read_compiled_class_artifact(artifact: &str) -> CompiledClass {
     let value = serde_json::from_str(artifact).unwrap();
     parse_compiled_class(value).unwrap()
+}
+
+fn read_legacy_class_artifact(artifact: &str) -> ContractClass {
+    let value = serde_json::from_str(artifact).unwrap();
+    let class = parse_deprecated_compiled_class(value).unwrap();
+    ContractClass::Legacy(class)
 }
 
 #[cfg(test)]

@@ -13,14 +13,14 @@ use crate::da::L1DataAvailabilityMode;
 use crate::genesis::allocation::{DevAllocationsGenerator, GenesisAllocation};
 use crate::genesis::constant::{
     get_fee_token_balance_base_storage_address, DEFAULT_ACCOUNT_CLASS_PUBKEY_STORAGE_SLOT,
-    DEFAULT_ETH_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CASM, DEFAULT_LEGACY_ERC20_CLASS_HASH,
-    DEFAULT_LEGACY_UDC_CASM, DEFAULT_LEGACY_UDC_CLASS_HASH, DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH,
-    DEFAULT_PREFUNDED_ACCOUNT_BALANCE, DEFAULT_STRK_FEE_TOKEN_ADDRESS, DEFAULT_UDC_ADDRESS,
-    ERC20_DECIMAL_STORAGE_SLOT, ERC20_NAME_STORAGE_SLOT, ERC20_SYMBOL_STORAGE_SLOT,
-    ERC20_TOTAL_SUPPLY_STORAGE_SLOT,
+    DEFAULT_ETH_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CLASS, DEFAULT_LEGACY_ERC20_CLASS_HASH,
+    DEFAULT_LEGACY_UDC_CLASS, DEFAULT_LEGACY_UDC_CLASS_HASH,
+    DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH, DEFAULT_PREFUNDED_ACCOUNT_BALANCE,
+    DEFAULT_STRK_FEE_TOKEN_ADDRESS, DEFAULT_UDC_ADDRESS, ERC20_DECIMAL_STORAGE_SLOT,
+    ERC20_NAME_STORAGE_SLOT, ERC20_SYMBOL_STORAGE_SLOT, ERC20_TOTAL_SUPPLY_STORAGE_SLOT,
 };
 use crate::genesis::Genesis;
-use crate::state::StateUpdatesWithDeclaredClasses;
+use crate::state::StateUpdatesWithClasses;
 use crate::utils::split_u256;
 use crate::version::{ProtocolVersion, CURRENT_STARKNET_VERSION};
 
@@ -74,18 +74,14 @@ impl ChainSpec {
     }
 
     // this method will include the the ETH and STRK fee tokens, and the UDC
-    pub fn state_updates(&self) -> StateUpdatesWithDeclaredClasses {
-        let mut states = StateUpdatesWithDeclaredClasses::default();
+    pub fn state_updates(&self) -> StateUpdatesWithClasses {
+        let mut states = StateUpdatesWithClasses::default();
 
         for (class_hash, class) in &self.genesis.classes {
             let class_hash = *class_hash;
 
             states.state_updates.declared_classes.insert(class_hash, class.compiled_class_hash);
-            states.declared_compiled_classes.insert(class_hash, class.casm.as_ref().clone());
-
-            if let Some(sierra) = &class.sierra {
-                states.declared_sierra_classes.insert(class_hash, sierra.as_ref().clone());
-            }
+            states.classes.insert(class_hash, class.class.as_ref().clone());
         }
 
         for (address, alloc) in &self.genesis.allocations {
@@ -146,12 +142,12 @@ lazy_static! {
     };
 }
 
-fn add_default_fee_tokens(states: &mut StateUpdatesWithDeclaredClasses, genesis: &Genesis) {
+fn add_default_fee_tokens(states: &mut StateUpdatesWithClasses, genesis: &Genesis) {
     // declare erc20 token contract
     states
-        .declared_compiled_classes
+        .classes
         .entry(DEFAULT_LEGACY_ERC20_CLASS_HASH)
-        .or_insert_with(|| DEFAULT_LEGACY_ERC20_CASM.clone());
+        .or_insert_with(|| DEFAULT_LEGACY_ERC20_CLASS.clone());
 
     // -- ETH
     add_fee_token(
@@ -177,7 +173,7 @@ fn add_default_fee_tokens(states: &mut StateUpdatesWithDeclaredClasses, genesis:
 }
 
 fn add_fee_token(
-    states: &mut StateUpdatesWithDeclaredClasses,
+    states: &mut StateUpdatesWithClasses,
     name: &str,
     symbol: &str,
     decimals: u8,
@@ -225,12 +221,13 @@ fn add_fee_token(
     states.state_updates.storage_updates.insert(address, storage);
 }
 
-fn add_default_udc(states: &mut StateUpdatesWithDeclaredClasses) {
+fn add_default_udc(states: &mut StateUpdatesWithClasses) {
     // declare UDC class
     states
-        .declared_compiled_classes
+        .classes
         .entry(DEFAULT_LEGACY_UDC_CLASS_HASH)
-        .or_insert_with(|| DEFAULT_LEGACY_UDC_CASM.clone());
+        .or_insert_with(|| DEFAULT_LEGACY_UDC_CLASS.clone());
+
     states
         .state_updates
         .declared_classes
@@ -256,17 +253,16 @@ mod tests {
     use super::*;
     use crate::address;
     use crate::block::{Block, GasPrices, Header};
+    use crate::class::ContractClass;
     use crate::da::L1DataAvailabilityMode;
     use crate::genesis::allocation::{GenesisAccount, GenesisAccountAlloc, GenesisContractAlloc};
     #[cfg(feature = "slot")]
+    use crate::genesis::constant::{CONTROLLER_ACCOUNT_CLASS, CONTROLLER_CLASS_HASH};
     use crate::genesis::constant::{
-        CONTROLLER_ACCOUNT_CLASS, CONTROLLER_ACCOUNT_CLASS_CASM, CONTROLLER_CLASS_HASH,
-    };
-    use crate::genesis::constant::{
-        DEFAULT_ACCOUNT_CLASS, DEFAULT_ACCOUNT_CLASS_CASM, DEFAULT_ACCOUNT_CLASS_HASH,
+        DEFAULT_ACCOUNT_CLASS, DEFAULT_ACCOUNT_CLASS_HASH,
         DEFAULT_ACCOUNT_CLASS_PUBKEY_STORAGE_SLOT, DEFAULT_ACCOUNT_COMPILED_CLASS_HASH,
-        DEFAULT_LEGACY_ERC20_CASM, DEFAULT_LEGACY_ERC20_COMPILED_CLASS_HASH,
-        DEFAULT_LEGACY_UDC_CASM, DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH,
+        DEFAULT_LEGACY_ERC20_CLASS, DEFAULT_LEGACY_ERC20_COMPILED_CLASS_HASH,
+        DEFAULT_LEGACY_UDC_CLASS, DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH,
     };
     use crate::genesis::GenesisClass;
     use crate::version::CURRENT_STARKNET_VERSION;
@@ -279,16 +275,14 @@ mod tests {
             (
                 DEFAULT_LEGACY_UDC_CLASS_HASH,
                 GenesisClass {
-                    sierra: None,
-                    casm: DEFAULT_LEGACY_UDC_CASM.clone().into(),
+                    class: DEFAULT_LEGACY_UDC_CLASS.clone().into(),
                     compiled_class_hash: DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH,
                 },
             ),
             (
                 DEFAULT_LEGACY_ERC20_CLASS_HASH,
                 GenesisClass {
-                    sierra: None,
-                    casm: DEFAULT_LEGACY_ERC20_CASM.clone().into(),
+                    class: DEFAULT_LEGACY_ERC20_CLASS.clone().into(),
                     compiled_class_hash: DEFAULT_LEGACY_ERC20_COMPILED_CLASS_HASH,
                 },
             ),
@@ -296,17 +290,19 @@ mod tests {
                 DEFAULT_ACCOUNT_CLASS_HASH,
                 GenesisClass {
                     compiled_class_hash: DEFAULT_ACCOUNT_COMPILED_CLASS_HASH,
-                    casm: DEFAULT_ACCOUNT_CLASS_CASM.clone().into(),
-                    sierra: Some(DEFAULT_ACCOUNT_CLASS.clone().flatten().unwrap().into()),
+                    class: ContractClass::Class(DEFAULT_ACCOUNT_CLASS.clone().flatten().unwrap())
+                        .into(),
                 },
             ),
             #[cfg(feature = "slot")]
             (
                 CONTROLLER_CLASS_HASH,
                 GenesisClass {
-                    casm: CONTROLLER_ACCOUNT_CLASS_CASM.clone().into(),
                     compiled_class_hash: CONTROLLER_CLASS_HASH,
-                    sierra: Some(CONTROLLER_ACCOUNT_CLASS.clone().flatten().unwrap().into()),
+                    class: ContractClass::Class(
+                        CONTROLLER_ACCOUNT_CLASS.clone().flatten().unwrap(),
+                    )
+                    .into(),
                 },
             ),
         ]);
@@ -413,25 +409,9 @@ mod tests {
         assert_eq!(actual_block.body, expected_block.body);
 
         if cfg!(feature = "slot") {
-            assert!(
-                actual_state_updates.declared_compiled_classes.len() == 4,
-                "should be 4 casm classes: udc, erc20, oz account, controller account"
-            );
-
-            assert!(
-                actual_state_updates.declared_sierra_classes.len() == 2,
-                "should be 2 sierra classes: oz account, controller account"
-            );
+            assert!(actual_state_updates.classes.len() == 4);
         } else {
-            assert!(
-                actual_state_updates.declared_compiled_classes.len() == 3,
-                "should be 3 casm classes: udc, erc20, oz account"
-            );
-
-            assert!(
-                actual_state_updates.declared_sierra_classes.len() == 1,
-                "should be only 1 sierra class: oz account"
-            );
+            assert!(actual_state_updates.classes.len() == 3);
         }
 
         assert_eq!(
@@ -440,20 +420,15 @@ mod tests {
                 .declared_classes
                 .get(&DEFAULT_LEGACY_ERC20_CLASS_HASH),
             Some(&DEFAULT_LEGACY_ERC20_COMPILED_CLASS_HASH),
-            "The default fee token class should be declared"
+        );
+        assert_eq!(
+            actual_state_updates.classes.get(&DEFAULT_LEGACY_ERC20_CLASS_HASH),
+            Some(&DEFAULT_LEGACY_ERC20_CLASS.clone())
         );
 
         assert_eq!(
-            actual_state_updates.declared_compiled_classes.get(&DEFAULT_LEGACY_ERC20_CLASS_HASH),
-            Some(&DEFAULT_LEGACY_ERC20_CASM.clone()),
-            "The default fee token casm class should be declared"
-        );
-
-        assert!(
-            !actual_state_updates
-                .declared_sierra_classes
-                .contains_key(&DEFAULT_LEGACY_ERC20_CLASS_HASH),
-            "The default fee token class doesnt have a sierra class"
+            actual_state_updates.classes.get(&DEFAULT_LEGACY_ERC20_CLASS_HASH),
+            Some(&*DEFAULT_LEGACY_ERC20_CLASS),
         );
 
         assert_eq!(
@@ -480,16 +455,13 @@ mod tests {
         );
 
         assert_eq!(
-            actual_state_updates.declared_compiled_classes.get(&DEFAULT_LEGACY_UDC_CLASS_HASH),
-            Some(&DEFAULT_LEGACY_UDC_CASM.clone()),
+            actual_state_updates.classes.get(&DEFAULT_LEGACY_UDC_CLASS_HASH),
+            Some(&*DEFAULT_LEGACY_UDC_CLASS),
             "The default universal deployer casm class should be declared"
         );
-
-        assert!(
-            !actual_state_updates
-                .declared_sierra_classes
-                .contains_key(&DEFAULT_LEGACY_UDC_CLASS_HASH),
-            "The default universal deployer class doesnt have a sierra class"
+        assert_eq!(
+            actual_state_updates.classes.get(&DEFAULT_LEGACY_UDC_CLASS_HASH),
+            Some(&DEFAULT_LEGACY_UDC_CLASS.clone())
         );
 
         assert_eq!(
@@ -505,17 +477,8 @@ mod tests {
         );
 
         assert_eq!(
-            actual_state_updates
-                .declared_compiled_classes
-                .get(&DEFAULT_ACCOUNT_CLASS_HASH)
-                .unwrap(),
-            &DEFAULT_ACCOUNT_CLASS_CASM.clone(),
-            "The default oz account contract casm class should be declared"
-        );
-
-        assert_eq!(
-            actual_state_updates.declared_sierra_classes.get(&DEFAULT_ACCOUNT_CLASS_HASH),
-            Some(&DEFAULT_ACCOUNT_CLASS.clone().flatten().unwrap()),
+            actual_state_updates.classes.get(&DEFAULT_ACCOUNT_CLASS_HASH),
+            Some(&ContractClass::Class(DEFAULT_ACCOUNT_CLASS.clone().flatten().unwrap())),
             "The default oz account contract sierra class should be declared"
         );
 
@@ -528,14 +491,8 @@ mod tests {
             );
 
             assert_eq!(
-                actual_state_updates.declared_compiled_classes.get(&CONTROLLER_CLASS_HASH),
-                Some(&CONTROLLER_ACCOUNT_CLASS_CASM.clone()),
-                "The controller account contract casm class should be declared"
-            );
-
-            assert_eq!(
-                actual_state_updates.declared_sierra_classes.get(&CONTROLLER_CLASS_HASH),
-                Some(&CONTROLLER_ACCOUNT_CLASS.clone().flatten().unwrap()),
+                actual_state_updates.classes.get(&CONTROLLER_CLASS_HASH),
+                Some(&ContractClass::Class(CONTROLLER_ACCOUNT_CLASS.clone().flatten().unwrap())),
                 "The controller account contract sierra class should be declared"
             );
         }

@@ -1,8 +1,10 @@
+use std::sync::Arc;
+
 use alloy_primitives::B256;
 use derive_more::{AsRef, Deref, From};
 
 use crate::chain::ChainId;
-use crate::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
+use crate::class::{ClassHash, CompiledClassHash, ContractClass};
 use crate::contract::{ContractAddress, Nonce};
 use crate::da::DataAvailabilityMode;
 use crate::fee::ResourceBoundsMapping;
@@ -134,10 +136,8 @@ impl ExecutableTxWithHash {
 
 #[derive(Debug, Clone, AsRef, Deref)]
 pub struct DeclareTxWithClass {
-    /// The Sierra class, if any.
-    pub sierra_class: Option<FlattenedSierraClass>,
-    /// The compiled contract class.
-    pub compiled_class: CompiledClass,
+    /// The contract class.
+    pub class: Arc<ContractClass>,
     /// The raw transaction.
     #[deref]
     #[as_ref]
@@ -145,12 +145,9 @@ pub struct DeclareTxWithClass {
 }
 
 impl DeclareTxWithClass {
-    pub fn new_with_classes(
-        transaction: DeclareTx,
-        sierra_class: FlattenedSierraClass,
-        compiled_class: CompiledClass,
-    ) -> Self {
-        Self { sierra_class: Some(sierra_class), compiled_class, transaction }
+    pub fn new(transaction: DeclareTx, class: ContractClass) -> Self {
+        let class = Arc::new(class);
+        Self { class, transaction }
     }
 }
 

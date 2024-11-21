@@ -3,7 +3,7 @@ use katana_primitives::block::{
     Block, BlockHashOrNumber, BlockNumber, BlockWithTxHashes, FinalityStatus,
 };
 use katana_primitives::env::BlockEnv;
-use katana_primitives::state::StateUpdatesWithDeclaredClasses;
+use katana_primitives::state::StateUpdatesWithClasses;
 use katana_primitives::transaction::TxWithHash;
 use katana_provider::providers::db::DbProvider;
 use katana_provider::providers::fork::ForkedProvider;
@@ -278,7 +278,7 @@ fn test_read_state_update_with_fork_provider(
         ForkedProvider,
     >,
     #[case] block_num: BlockNumber,
-    #[case] expected_state_update: StateUpdatesWithDeclaredClasses,
+    #[case] expected_state_update: StateUpdatesWithClasses,
 ) -> Result<()> {
     test_read_state_update_impl(provider, block_num, expected_state_update)
 }
@@ -287,7 +287,7 @@ fn test_read_state_update_with_fork_provider(
 fn test_read_state_update_with_db_provider(
     #[with(db_provider())] provider: BlockchainProvider<DbProvider>,
     #[case] block_num: BlockNumber,
-    #[case] expected_state_update: StateUpdatesWithDeclaredClasses,
+    #[case] expected_state_update: StateUpdatesWithClasses,
 ) -> Result<()> {
     test_read_state_update_impl(provider, block_num, expected_state_update)
 }
@@ -295,7 +295,7 @@ fn test_read_state_update_with_db_provider(
 fn test_read_state_update_impl<Db>(
     provider: BlockchainProvider<Db>,
     block_num: BlockNumber,
-    expected_state_update: StateUpdatesWithDeclaredClasses,
+    expected_state_update: StateUpdatesWithClasses,
 ) -> Result<()>
 where
     Db: StateUpdateProvider,
@@ -317,11 +317,11 @@ fn insert_block_cases(#[case] block_count: u64) {}
 #[rstest::rstest]
 #[case::state_update_at_block_1(1, mock_state_updates()[0].clone())]
 #[case::state_update_at_block_2(2, mock_state_updates()[1].clone())]
-#[case::state_update_at_block_3(3, StateUpdatesWithDeclaredClasses::default())]
+#[case::state_update_at_block_3(3, StateUpdatesWithClasses::default())]
 #[case::state_update_at_block_5(5, mock_state_updates()[2].clone())]
 fn test_read_state_update<Db>(
     #[from(provider_with_states)] provider: BlockchainProvider<Db>,
     #[case] block_num: BlockNumber,
-    #[case] expected_state_update: StateUpdatesWithDeclaredClasses,
+    #[case] expected_state_update: StateUpdatesWithClasses,
 ) {
 }
