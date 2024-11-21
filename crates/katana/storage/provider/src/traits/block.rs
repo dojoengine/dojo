@@ -6,7 +6,7 @@ use katana_primitives::block::{
     FinalityStatus, Header, SealedBlockWithStatus,
 };
 use katana_primitives::receipt::Receipt;
-use katana_primitives::state::StateUpdatesWithDeclaredClasses;
+use katana_primitives::state::StateUpdatesWithClasses;
 use katana_primitives::trace::TxExecInfo;
 
 use super::transaction::{TransactionProvider, TransactionsProviderExt};
@@ -146,7 +146,7 @@ pub trait BlockWriter: Send + Sync {
     fn insert_block_with_states_and_receipts(
         &self,
         block: SealedBlockWithStatus,
-        states: StateUpdatesWithDeclaredClasses,
+        states: StateUpdatesWithClasses,
         receipts: Vec<Receipt>,
         executions: Vec<TxExecInfo>,
     ) -> ProviderResult<()>;

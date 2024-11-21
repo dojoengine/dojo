@@ -7,7 +7,7 @@ use katana_primitives::block::{
 };
 use katana_primitives::chain_spec::ChainSpec;
 use katana_primitives::da::L1DataAvailabilityMode;
-use katana_primitives::state::StateUpdatesWithDeclaredClasses;
+use katana_primitives::state::StateUpdatesWithClasses;
 use katana_primitives::version::ProtocolVersion;
 use katana_provider::providers::db::DbProvider;
 use katana_provider::providers::fork::ForkedProvider;
@@ -213,7 +213,7 @@ impl Blockchain {
     fn new_with_genesis_block_and_state(
         provider: impl Database,
         block: SealedBlockWithStatus,
-        states: StateUpdatesWithDeclaredClasses,
+        states: StateUpdatesWithClasses,
     ) -> Result<Self> {
         BlockWriter::insert_block_with_states_and_receipts(
             &provider,
@@ -234,11 +234,11 @@ mod tests {
     use katana_primitives::da::L1DataAvailabilityMode;
     use katana_primitives::fee::{PriceUnit, TxFeeInfo};
     use katana_primitives::genesis::constant::{
-        DEFAULT_ETH_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CASM, DEFAULT_LEGACY_ERC20_CLASS_HASH,
-        DEFAULT_LEGACY_UDC_CASM, DEFAULT_LEGACY_UDC_CLASS_HASH, DEFAULT_UDC_ADDRESS,
+        DEFAULT_ETH_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CLASS, DEFAULT_LEGACY_ERC20_CLASS_HASH,
+        DEFAULT_LEGACY_UDC_CLASS, DEFAULT_LEGACY_UDC_CLASS_HASH, DEFAULT_UDC_ADDRESS,
     };
     use katana_primitives::receipt::{InvokeTxReceipt, Receipt};
-    use katana_primitives::state::StateUpdatesWithDeclaredClasses;
+    use katana_primitives::state::StateUpdatesWithClasses;
     use katana_primitives::trace::TxExecInfo;
     use katana_primitives::transaction::{InvokeTx, Tx, TxWithHash};
     use katana_primitives::{chain_spec, Felt};
@@ -305,7 +305,7 @@ mod tests {
                 .provider()
                 .insert_block_with_states_and_receipts(
                     dummy_block.clone(),
-                    StateUpdatesWithDeclaredClasses::default(),
+                    StateUpdatesWithClasses::default(),
                     vec![Receipt::Invoke(InvokeTxReceipt {
                         revert_error: None,
                         events: Vec::new(),
@@ -335,10 +335,10 @@ mod tests {
             let actual_fee_token_class = state.class(actual_fee_token_class_hash).unwrap().unwrap();
 
             assert_eq!(actual_udc_class_hash, DEFAULT_LEGACY_UDC_CLASS_HASH);
-            assert_eq!(actual_udc_class, DEFAULT_LEGACY_UDC_CASM.clone());
+            assert_eq!(actual_udc_class, DEFAULT_LEGACY_UDC_CLASS.clone());
 
             assert_eq!(actual_fee_token_class_hash, DEFAULT_LEGACY_ERC20_CLASS_HASH);
-            assert_eq!(actual_fee_token_class, DEFAULT_LEGACY_ERC20_CASM.clone());
+            assert_eq!(actual_fee_token_class, DEFAULT_LEGACY_ERC20_CLASS.clone());
         }
 
         // re open the db and assert the state is the same and not overwritten
@@ -361,10 +361,10 @@ mod tests {
             let actual_fee_token_class = state.class(actual_fee_token_class_hash).unwrap().unwrap();
 
             assert_eq!(actual_udc_class_hash, DEFAULT_LEGACY_UDC_CLASS_HASH);
-            assert_eq!(actual_udc_class, DEFAULT_LEGACY_UDC_CASM.clone());
+            assert_eq!(actual_udc_class, DEFAULT_LEGACY_UDC_CLASS.clone());
 
             assert_eq!(actual_fee_token_class_hash, DEFAULT_LEGACY_ERC20_CLASS_HASH);
-            assert_eq!(actual_fee_token_class, DEFAULT_LEGACY_ERC20_CASM.clone());
+            assert_eq!(actual_fee_token_class, DEFAULT_LEGACY_ERC20_CLASS.clone());
 
             let block_number = blockchain.provider().latest_number().unwrap();
             let block_hash = blockchain.provider().latest_hash().unwrap();

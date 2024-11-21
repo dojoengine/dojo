@@ -8,18 +8,18 @@ use std::sync::Arc;
 
 use constant::DEFAULT_ACCOUNT_CLASS;
 #[cfg(feature = "slot")]
-use constant::{CONTROLLER_ACCOUNT_CLASS, CONTROLLER_ACCOUNT_CLASS_CASM, CONTROLLER_CLASS_HASH};
+use constant::{CONTROLLER_ACCOUNT_CLASS, CONTROLLER_CLASS_HASH};
 use serde::{Deserialize, Serialize};
 
 use self::allocation::{GenesisAccountAlloc, GenesisAllocation, GenesisContractAlloc};
 use self::constant::{
-    DEFAULT_ACCOUNT_CLASS_CASM, DEFAULT_ACCOUNT_CLASS_HASH, DEFAULT_ACCOUNT_COMPILED_CLASS_HASH,
-    DEFAULT_LEGACY_ERC20_CASM, DEFAULT_LEGACY_ERC20_CLASS_HASH,
-    DEFAULT_LEGACY_ERC20_COMPILED_CLASS_HASH, DEFAULT_LEGACY_UDC_CASM,
-    DEFAULT_LEGACY_UDC_CLASS_HASH, DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH,
+    DEFAULT_ACCOUNT_CLASS_HASH, DEFAULT_ACCOUNT_COMPILED_CLASS_HASH, DEFAULT_LEGACY_ERC20_CLASS,
+    DEFAULT_LEGACY_ERC20_CLASS_HASH, DEFAULT_LEGACY_ERC20_COMPILED_CLASS_HASH,
+    DEFAULT_LEGACY_UDC_CLASS, DEFAULT_LEGACY_UDC_CLASS_HASH,
+    DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH,
 };
 use crate::block::{BlockHash, BlockNumber, GasPrices};
-use crate::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
+use crate::class::{ClassHash, CompiledClassHash, ContractClass};
 use crate::contract::ContractAddress;
 use crate::Felt;
 
@@ -27,20 +27,14 @@ use crate::Felt;
 pub struct GenesisClass {
     /// The compiled class hash of the contract class.
     pub compiled_class_hash: CompiledClassHash,
-    /// The casm class definition.
-    #[serde(skip_serializing)]
-    pub casm: Arc<CompiledClass>,
-    /// The sierra class definition.
-    #[serde(skip_serializing)]
-    pub sierra: Option<Arc<FlattenedSierraClass>>,
+    pub class: Arc<ContractClass>,
 }
 
 impl core::fmt::Debug for GenesisClass {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("GenesisClass")
             .field("compiled_class_hash", &self.compiled_class_hash)
-            .field("casm", &"...")
-            .field("sierra", &"...")
+            .field("class", &"...")
             .finish()
     }
 }
@@ -110,8 +104,7 @@ impl Default for Genesis {
             (
                 DEFAULT_LEGACY_ERC20_CLASS_HASH,
                 GenesisClass {
-                    sierra: None,
-                    casm: DEFAULT_LEGACY_ERC20_CASM.clone().into(),
+                    class: DEFAULT_LEGACY_ERC20_CLASS.clone().into(),
                     compiled_class_hash: DEFAULT_LEGACY_ERC20_COMPILED_CLASS_HASH,
                 },
             ),
@@ -119,8 +112,7 @@ impl Default for Genesis {
             (
                 DEFAULT_LEGACY_UDC_CLASS_HASH,
                 GenesisClass {
-                    sierra: None,
-                    casm: DEFAULT_LEGACY_UDC_CASM.clone().into(),
+                    class: DEFAULT_LEGACY_UDC_CLASS.clone().into(),
                     compiled_class_hash: DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH,
                 },
             ),
@@ -128,18 +120,20 @@ impl Default for Genesis {
             (
                 DEFAULT_ACCOUNT_CLASS_HASH,
                 GenesisClass {
-                    sierra: Some(DEFAULT_ACCOUNT_CLASS.clone().flatten().unwrap().into()),
-                    casm: DEFAULT_ACCOUNT_CLASS_CASM.clone().into(),
                     compiled_class_hash: DEFAULT_ACCOUNT_COMPILED_CLASS_HASH,
+                    class: ContractClass::Class(DEFAULT_ACCOUNT_CLASS.clone().flatten().unwrap())
+                        .into(),
                 },
             ),
             #[cfg(feature = "slot")]
             (
                 CONTROLLER_CLASS_HASH,
                 GenesisClass {
-                    casm: CONTROLLER_ACCOUNT_CLASS_CASM.clone().into(),
                     compiled_class_hash: CONTROLLER_CLASS_HASH,
-                    sierra: Some(CONTROLLER_ACCOUNT_CLASS.clone().flatten().unwrap().into()),
+                    class: ContractClass::Class(
+                        CONTROLLER_ACCOUNT_CLASS.clone().flatten().unwrap(),
+                    )
+                    .into(),
                 },
             ),
         ]);

@@ -27,7 +27,7 @@ use katana_primitives::contract::{
 };
 use katana_primitives::env::BlockEnv;
 use katana_primitives::receipt::Receipt;
-use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
+use katana_primitives::state::{StateUpdates, StateUpdatesWithClasses};
 use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{TxHash, TxNumber, TxWithHash};
 use katana_primitives::Felt;
@@ -611,7 +611,7 @@ impl<Db: Database> BlockWriter for DbProvider<Db> {
     fn insert_block_with_states_and_receipts(
         &self,
         block: SealedBlockWithStatus,
-        states: StateUpdatesWithDeclaredClasses,
+        states: StateUpdatesWithClasses,
         receipts: Vec<Receipt>,
         executions: Vec<TxExecInfo>,
     ) -> ProviderResult<()> {
@@ -660,12 +660,15 @@ impl<Db: Database> BlockWriter for DbProvider<Db> {
                 db_tx.put::<tables::ClassDeclarations>(block_number, class_hash)?
             }
 
-            for (hash, compiled_class) in states.declared_compiled_classes {
-                db_tx.put::<tables::CompiledClasses>(hash, compiled_class)?;
-            }
+            for (class_hash, class) in states.classes {
+                let sierra = class.as_class().cloned();
+                // generate the compiled class
+                let compiled = class.compile().unwrap();
 
-            for (class_hash, sierra_class) in states.declared_sierra_classes {
-                db_tx.put::<tables::SierraClasses>(class_hash, sierra_class)?;
+                if let Some(sierra) = sierra {
+                    db_tx.put::<tables::SierraClasses>(class_hash, sierra.clone())?;
+                }
+                db_tx.put::<tables::CompiledClasses>(class_hash, compiled)?;
             }
 
             // insert storage changes
@@ -786,7 +789,7 @@ mod tests {
     use katana_primitives::contract::ContractAddress;
     use katana_primitives::fee::{PriceUnit, TxFeeInfo};
     use katana_primitives::receipt::{InvokeTxReceipt, Receipt};
-    use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
+    use katana_primitives::state::{StateUpdates, StateUpdatesWithClasses};
     use katana_primitives::trace::TxExecInfo;
     use katana_primitives::transaction::{InvokeTx, Tx, TxHash, TxWithHash};
     use starknet::macros::felt;
@@ -811,8 +814,8 @@ mod tests {
         SealedBlockWithStatus { block, status: FinalityStatus::AcceptedOnL2 }
     }
 
-    fn create_dummy_state_updates() -> StateUpdatesWithDeclaredClasses {
-        StateUpdatesWithDeclaredClasses {
+    fn create_dummy_state_updates() -> StateUpdatesWithClasses {
+        StateUpdatesWithClasses {
             state_updates: StateUpdates {
                 nonce_updates: BTreeMap::from([
                     (address!("1"), felt!("1")),
@@ -836,8 +839,8 @@ mod tests {
         }
     }
 
-    fn create_dummy_state_updates_2() -> StateUpdatesWithDeclaredClasses {
-        StateUpdatesWithDeclaredClasses {
+    fn create_dummy_state_updates_2() -> StateUpdatesWithClasses {
+        StateUpdatesWithClasses {
             state_updates: StateUpdates {
                 nonce_updates: BTreeMap::from([
                     (address!("1"), felt!("5")),

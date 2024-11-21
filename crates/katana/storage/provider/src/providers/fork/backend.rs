@@ -12,11 +12,10 @@ use futures::future::BoxFuture;
 use futures::stream::Stream;
 use futures::{Future, FutureExt};
 use katana_primitives::block::BlockHashOrNumber;
-use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
+use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, ContractClass};
 use katana_primitives::contract::{ContractAddress, Nonce, StorageKey, StorageValue};
 use katana_primitives::conversion::rpc::{
-    compiled_class_hash_from_flattened_sierra_class, flattened_sierra_to_compiled_class,
-    legacy_rpc_to_compiled_class,
+    compiled_class_hash_from_flattened_sierra_class, legacy_rpc_to_class,
 };
 use katana_primitives::Felt;
 use parking_lot::Mutex;
@@ -480,28 +479,64 @@ impl StateProvider for SharedStateProvider {
 }
 
 impl ContractClassProvider for SharedStateProvider {
-    fn sierra_class(&self, hash: ClassHash) -> ProviderResult<Option<FlattenedSierraClass>> {
-        if let class @ Some(_) = self.0.shared_contract_classes.sierra_classes.read().get(&hash) {
-            return Ok(class.cloned());
+    fn class(&self, hash: ClassHash) -> ProviderResult<Option<ContractClass>> {
+        if let Some(class) = self.0.shared_contract_classes.classes.read().get(&hash) {
+            return Ok(Some(class.clone()));
         }
 
         let Some(class) = handle_not_found_err(self.0.get_class_at(hash)).map_err(|error| {
-            error!(target: LOG_TARGET, hash = %format!("{hash:#x}"), %error, "Fetching sierra class.");
+            error!(target: LOG_TARGET, hash = %format!("{hash:#x}"), %error, "Fetching class.");
             error
         })?
         else {
             return Ok(None);
         };
 
-        match class {
-            starknet::core::types::ContractClass::Legacy(_) => Ok(None),
-            starknet::core::types::ContractClass::Sierra(sierra_class) => {
+        let (class_hash, class) = match class {
+            RpcContractClass::Legacy(class) => {
+                let (_, class) = legacy_rpc_to_class(&class).map_err(|error| {
+                    error!(target: LOG_TARGET, hash = %format!("{hash:#x}"), %error, "Parsing legacy class.");
+                    ProviderError::ParsingError(error.to_string())
+                })?;
+
+                (hash, class)
+            }
+
+            RpcContractClass::Sierra(class) => (hash, ContractClass::Class(class)),
+        };
+
+        self.0.shared_contract_classes.classes.write().entry(class_hash).or_insert(class.clone());
+        Ok(Some(class))
+    }
+
+    fn compiled_class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
+        if let compiled @ Some(..) =
+            self.0.shared_contract_classes.compiled_classes.read().get(&hash)
+        {
+            Ok(compiled.cloned())
+        }
+        // If doesn't exist in the cache, try to fetch it from the forked provider.
+        else {
+            // The Starknet RPC specs doesn't provide an endpoint for fetching the compiled class.
+            // If the uncompiled version doesn't yet exist locally, we fetch from the forked
+            // provider (from the `starknet_getClsas` method) and compile it.
+            let class = self.0.shared_contract_classes.classes.read().get(&hash).cloned();
+            let class = if class.is_some() { class } else { self.class(hash)? };
+            let compiled = class.map(|c| c.compile()).transpose().inspect_err(|error|{
+	            error!(target: LOG_TARGET, hash = %format!("{hash:#x}"), %error, "Failed to compile class.");
+            })?;
+
+            if let Some(compiled) = compiled {
+                // Store the compiled class in the cache.
                 self.0
                     .shared_contract_classes
-                    .sierra_classes
+                    .compiled_classes
                     .write()
-                    .insert(hash, sierra_class.clone());
-                Ok(Some(sierra_class))
+                    .entry(hash)
+                    .or_insert(compiled.clone());
+                Ok(Some(compiled))
+            } else {
+                Ok(None)
             }
         }
     }
@@ -525,61 +560,6 @@ impl ContractClassProvider for SharedStateProvider {
         } else {
             Ok(None)
         }
-    }
-
-    fn class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
-        if let Some(class) = self.0.shared_contract_classes.compiled_classes.read().get(&hash) {
-            return Ok(Some(class.clone()));
-        }
-
-        let Some(class) = handle_not_found_err(self.0.get_class_at(hash)).map_err(|error| {
-            error!(target: LOG_TARGET, hash = %format!("{hash:#x}"), %error, "Fetching class.");
-            error
-        })?
-        else {
-            return Ok(None);
-        };
-
-        let (class_hash, compiled_class_hash, casm, sierra) = match class {
-            RpcContractClass::Legacy(class) => {
-                let (_, compiled_class) = legacy_rpc_to_compiled_class(&class).map_err(|error| {
-                    error!(target: LOG_TARGET, hash = %format!("{hash:#x}"), %error, "Parsing legacy class.");
-                    ProviderError::ParsingError(error.to_string())
-                })?;
-
-                (hash, hash, compiled_class, None)
-            }
-
-            RpcContractClass::Sierra(sierra_class) => {
-                let (_, compiled_class_hash, compiled_class) =
-                    flattened_sierra_to_compiled_class(&sierra_class).map_err(|error| {
-                        error!(target: LOG_TARGET, hash = %format!("{hash:#x}"), %error, "Parsing sierra class.");
-                        ProviderError::ParsingError(error.to_string())
-                    })?;
-
-                (hash, compiled_class_hash, compiled_class, Some(sierra_class))
-            }
-        };
-
-        self.0.compiled_class_hashes.write().insert(class_hash, compiled_class_hash);
-
-        self.0
-            .shared_contract_classes
-            .compiled_classes
-            .write()
-            .entry(class_hash)
-            .or_insert(casm.clone());
-
-        if let Some(sierra) = sierra {
-            self.0
-                .shared_contract_classes
-                .sierra_classes
-                .write()
-                .entry(class_hash)
-                .or_insert(sierra);
-        }
-
-        Ok(Some(casm))
     }
 }
 

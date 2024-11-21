@@ -1,41 +1,69 @@
-use katana_cairo::lang::sierra::program::Program;
-use katana_cairo::lang::starknet_classes::casm_contract_class::CasmContractClass;
-use katana_cairo::lang::starknet_classes::contract_class::ContractEntryPoints;
+use katana_cairo::lang::starknet_classes::casm_contract_class::{
+    CasmContractClass, StarknetSierraCompilationError,
+};
 
-use crate::Felt;
+use crate::conversion::rpc::rpc_to_cairo_contract_class;
 
 /// The canonical hash of a contract class. This is the identifier of a class.
-pub type ClassHash = Felt;
+pub type ClassHash = crate::Felt;
 /// The hash of a compiled contract class.
-pub type CompiledClassHash = Felt;
+pub type CompiledClassHash = crate::Felt;
 
 pub type SierraClass = starknet::core::types::contract::SierraClass;
 pub type FlattenedSierraClass = starknet::core::types::FlattenedSierraClass;
 
-/// Deprecated legacy (Cairo 0) CASM class
-pub type DeprecatedCompiledClass =
+/// Deprecated legacy (Cairo 0) class
+pub type LegacyContractClass =
     ::katana_cairo::starknet_api::deprecated_contract_class::ContractClass;
 
-/// Represents an executable Sierra program.
-#[derive(Debug, Clone, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct SierraProgram {
-    pub program: Program,
-    pub entry_points_by_type: ContractEntryPoints,
+#[derive(Debug, thiserror::Error)]
+pub enum ContractClassCompilationError {
+    #[error(transparent)]
+    SierraCompilation(#[from] StarknetSierraCompilationError),
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct SierraCompiledClass {
-    pub casm: CasmContractClass,
-    pub sierra: SierraProgram,
+#[derive(Debug, Clone, Eq, PartialEq, derive_more::From)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+pub enum ContractClass {
+    Class(FlattenedSierraClass),
+    Legacy(LegacyContractClass),
 }
 
-/// Executable contract class
+impl ContractClass {
+    /// Compiles the contract class into CASM.
+    pub fn compile(self) -> Result<CompiledClass, ContractClassCompilationError> {
+        match self {
+            Self::Legacy(class) => Ok(CompiledClass::Legacy(class)),
+            Self::Class(class) => {
+                let class = rpc_to_cairo_contract_class(&class).unwrap();
+                let casm = CasmContractClass::from_contract_class(class, true, usize::MAX)?;
+                Ok(CompiledClass::Class(casm))
+            }
+        }
+    }
+
+    /// Returns the class as a Sierra class, if any.
+    pub fn as_class(&self) -> Option<&FlattenedSierraClass> {
+        match self {
+            Self::Class(class) => Some(class),
+            _ => None,
+        }
+    }
+
+    /// Returns the class as a legacy class, if any.
+    pub fn as_legacy(&self) -> Option<&LegacyContractClass> {
+        match self {
+            Self::Legacy(class) => Some(class),
+            _ => None,
+        }
+    }
+}
+
+/// Compiled version of [`ContractClass`]. This is the format that is used for execution.
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone, Eq, PartialEq, derive_more::From)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub enum CompiledClass {
-    Class(SierraCompiledClass),
-    Deprecated(DeprecatedCompiledClass),
+    Class(CasmContractClass),
+    Legacy(LegacyContractClass),
 }

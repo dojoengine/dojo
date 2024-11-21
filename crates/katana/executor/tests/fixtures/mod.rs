@@ -8,7 +8,7 @@ use katana_primitives::block::{
 };
 use katana_primitives::chain::ChainId;
 use katana_primitives::chain_spec::{self, ChainSpec};
-use katana_primitives::class::{CompiledClass, FlattenedSierraClass};
+use katana_primitives::class::{CompiledClass, ContractClass};
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::da::L1DataAvailabilityMode;
 use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
@@ -37,14 +37,14 @@ pub fn legacy_contract_class() -> CompiledClass {
     parse_compiled_class(artifact).unwrap()
 }
 
-pub fn contract_class() -> (CompiledClass, FlattenedSierraClass) {
+pub fn contract_class() -> (CompiledClass, ContractClass) {
     let json = include_str!("contract.json");
     let artifact = serde_json::from_str(json).unwrap();
 
     let sierra = parse_sierra_class(json).unwrap().flatten().unwrap();
     let compiled = parse_compiled_class(artifact).unwrap();
 
-    (compiled, sierra)
+    (compiled, ContractClass::Class(sierra))
 }
 
 #[rstest::fixture]
@@ -132,10 +132,9 @@ pub fn valid_blocks() -> [ExecutableBlock; 3] {
                 }))),
                 // declare contract
                 ExecutableTxWithHash::new(ExecutableTx::Declare({
-                    let (compiled_class, sierra) = contract_class();
+                    let (.., class) = contract_class();
                     DeclareTxWithClass {
-                        compiled_class,
-                        sierra_class: Some(sierra),
+                        class: class.into(),
                         transaction: DeclareTx::V2(DeclareTxV2 {
                             nonce: Felt::ONE,
                             max_fee: 27092100000000000,

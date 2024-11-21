@@ -6,11 +6,11 @@ use katana_primitives::block::{
     Block, BlockHash, BlockHashOrNumber, BlockNumber, BlockWithTxHashes, FinalityStatus, Header,
     SealedBlockWithStatus,
 };
-use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
+use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, ContractClass};
 use katana_primitives::contract::{ContractAddress, StorageKey, StorageValue};
 use katana_primitives::env::BlockEnv;
 use katana_primitives::receipt::Receipt;
-use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
+use katana_primitives::state::{StateUpdates, StateUpdatesWithClasses};
 use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{TxHash, TxNumber, TxWithHash};
 use katana_primitives::Felt;
@@ -131,7 +131,7 @@ where
     fn insert_block_with_states_and_receipts(
         &self,
         block: SealedBlockWithStatus,
-        states: StateUpdatesWithDeclaredClasses,
+        states: StateUpdatesWithClasses,
         receipts: Vec<Receipt>,
         executions: Vec<TxExecInfo>,
     ) -> ProviderResult<()> {
@@ -269,19 +269,19 @@ impl<Db> ContractClassProvider for BlockchainProvider<Db>
 where
     Db: ContractClassProvider,
 {
+    fn class(&self, hash: ClassHash) -> ProviderResult<Option<ContractClass>> {
+        self.provider.class(hash)
+    }
+
+    fn compiled_class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
+        self.provider.compiled_class(hash)
+    }
+
     fn compiled_class_hash_of_class_hash(
         &self,
         hash: ClassHash,
     ) -> ProviderResult<Option<CompiledClassHash>> {
         self.provider.compiled_class_hash_of_class_hash(hash)
-    }
-
-    fn class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
-        self.provider.class(hash)
-    }
-
-    fn sierra_class(&self, hash: ClassHash) -> ProviderResult<Option<FlattenedSierraClass>> {
-        self.provider.sierra_class(hash)
     }
 }
 
@@ -323,7 +323,7 @@ impl<Db> ContractClassWriter for BlockchainProvider<Db>
 where
     Db: ContractClassWriter,
 {
-    fn set_class(&self, hash: ClassHash, class: CompiledClass) -> ProviderResult<()> {
+    fn set_class(&self, hash: ClassHash, class: ContractClass) -> ProviderResult<()> {
         self.provider.set_class(hash, class)
     }
 
@@ -335,12 +335,8 @@ where
         self.provider.set_compiled_class_hash_of_class_hash(hash, compiled_hash)
     }
 
-    fn set_sierra_class(
-        &self,
-        hash: ClassHash,
-        sierra: FlattenedSierraClass,
-    ) -> ProviderResult<()> {
-        self.provider.set_sierra_class(hash, sierra)
+    fn set_compiled_class(&self, hash: ClassHash, class: CompiledClass) -> ProviderResult<()> {
+        self.provider.set_compiled_class(hash, class)
     }
 }
 
