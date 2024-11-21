@@ -50,7 +50,6 @@ pub fn create_chain_for_testing() -> ChainSpec {
     // TODO: we should have a genesis builder that can do all of this for us.
     let class = {
         let json = include_str!("../test-data/simple_account.sierra.json");
-        let json = serde_json::from_str(json).unwrap();
         let sierra = parse_sierra_class(json).unwrap();
         let class = ContractClass::Class(sierra.flatten().unwrap());
         GenesisClass { compiled_class_hash: class_hash, class: Arc::new(class) }
