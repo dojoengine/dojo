@@ -15572,6 +15572,7 @@ dependencies = [
  "base64 0.21.7",
  "camino",
  "data-url",
+ "form_urlencoded",
  "http 0.2.12",
  "http-body 0.4.6",
  "hyper 0.14.30",

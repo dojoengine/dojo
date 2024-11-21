@@ -29,3 +29,4 @@ tower-http.workspace = true
 tower.workspace = true
 tracing.workspace = true
 warp.workspace = true
+form_urlencoded = "1.2.1"

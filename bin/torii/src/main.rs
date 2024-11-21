@@ -97,7 +97,14 @@ async fn main() -> anyhow::Result<()> {
     options = options.journal_mode(SqliteJournalMode::Wal);
     options = options.synchronous(SqliteSynchronous::Normal);
 
-    let pool = SqlitePoolOptions::new().min_connections(1).connect_with(options).await?;
+    let pool = SqlitePoolOptions::new().min_connections(1).connect_with(options.clone()).await?;
+
+    let readonly_options = options.read_only(true);
+    let readonly_pool = SqlitePoolOptions::new()
+        .min_connections(1)
+        .max_connections(100)
+        .connect_with(readonly_options)
+        .await?;
 
     // Set the number of threads based on CPU count
     let cpu_count = std::thread::available_parallelism().unwrap().get();
@@ -120,7 +127,7 @@ async fn main() -> anyhow::Result<()> {
     .await?;
     let executor_handle = tokio::spawn(async move { executor.run().await });
 
-    let model_cache = Arc::new(ModelCache::new(pool.clone()));
+    let model_cache = Arc::new(ModelCache::new(readonly_pool.clone()));
     let db = Sql::new(pool.clone(), sender.clone(), &args.indexing.contracts, model_cache.clone())
         .await?;
 
@@ -166,7 +173,7 @@ async fn main() -> anyhow::Result<()> {
     let shutdown_rx = shutdown_tx.subscribe();
     let (grpc_addr, grpc_server) = torii_grpc::server::new(
         shutdown_rx,
-        &pool,
+        &readonly_pool,
         block_rx,
         world_address,
         Arc::clone(&provider),
@@ -181,8 +188,12 @@ async fn main() -> anyhow::Result<()> {
     tokio::fs::create_dir_all(&artifacts_path).await?;
     let absolute_path = artifacts_path.canonicalize_utf8()?;
 
-    let (artifacts_addr, artifacts_server) =
-        torii_server::artifacts::new(shutdown_tx.subscribe(), &absolute_path, pool.clone()).await?;
+    let (artifacts_addr, artifacts_server) = torii_server::artifacts::new(
+        shutdown_tx.subscribe(),
+        &absolute_path,
+        readonly_pool.clone(),
+    )
+    .await?;
 
     let mut libp2p_relay_server = torii_relay::server::Relay::new(
         db,
@@ -203,11 +214,12 @@ async fn main() -> anyhow::Result<()> {
         Some(grpc_addr),
         None,
         Some(artifacts_addr),
+        Arc::new(readonly_pool.clone()),
     ));
 
     let graphql_server = spawn_rebuilding_graphql_server(
         shutdown_tx.clone(),
-        pool.into(),
+        readonly_pool.into(),
         args.external_url,
         proxy_server.clone(),
     );
