@@ -1,7 +1,9 @@
 use std::time::Duration;
 
+use anyhow::Result;
 use katana_primitives::block::BlockNumber;
 use katana_primitives::class::{CasmContractClass, ClassHash, CompiledClass, ContractClass};
+use katana_primitives::conversion::rpc::{legacy_rpc_to_class, StarknetRsLegacyContractClass};
 use katana_provider::traits::contract::ContractClassWriter;
 use katana_provider::traits::state_update::StateUpdateProvider;
 use starknet::providers::sequencer::models::{BlockId, DeployedClass};
@@ -47,12 +49,10 @@ where
 
         let (class, casm) = (class?, casm?);
 
-        let (sierra, casm) = match class {
+        let (class, casm) = match class {
             DeployedClass::LegacyClass(legacy) => {
-                // let (.., legacy) = legacy_rpc_to_class(&legacy).unwrap();
-                // (ContractClass::Legacy(legacy), None)
-
-                todo!()
+                let class = to_inner_legacy_class(legacy).unwrap();
+                (class, None)
             }
 
             DeployedClass::SierraClass(sierra) => {
@@ -65,7 +65,7 @@ where
             }
         };
 
-        Ok((sierra, casm))
+        Ok((class, casm))
     }
 }
 
@@ -101,4 +101,10 @@ where
 
         Ok(())
     }
+}
+
+fn to_inner_legacy_class(class: StarknetRsLegacyContractClass) -> Result<ContractClass> {
+    let value = serde_json::to_value(class)?;
+    let class = serde_json::from_value::<katana_primitives::class::LegacyContractClass>(value)?;
+    Ok(ContractClass::Legacy(class))
 }
