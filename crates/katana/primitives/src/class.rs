@@ -1,6 +1,5 @@
-use katana_cairo::lang::starknet_classes::casm_contract_class::{
-    CasmContractClass, StarknetSierraCompilationError,
-};
+pub use katana_cairo::lang::starknet_classes::casm_contract_class::CasmContractClass;
+use katana_cairo::lang::starknet_classes::casm_contract_class::StarknetSierraCompilationError;
 
 use crate::conversion::rpc::rpc_to_cairo_contract_class;
 

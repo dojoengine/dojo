@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use katana_primitives::block::{BlockNumber, SealedBlockWithStatus};
-use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
+use katana_primitives::state::{StateUpdates, StateUpdatesWithClasses};
 use katana_provider::traits::block::BlockWriter;
 use starknet::providers::sequencer::models::{BlockId, StateUpdateWithBlock};
 use starknet::providers::{ProviderError, SequencerGatewayProvider};
@@ -49,7 +49,7 @@ impl<P: BlockWriter> Stage for Blocks<P> {
 
             let block = SealedBlockWithStatus::from(fgw_block);
             let su = StateUpdates::from(state_update);
-            let su = StateUpdatesWithDeclaredClasses { state_updates: su, ..Default::default() };
+            let su = StateUpdatesWithClasses { state_updates: su, ..Default::default() };
 
             let _ = self.provider.insert_block_with_states_and_receipts(
                 block,

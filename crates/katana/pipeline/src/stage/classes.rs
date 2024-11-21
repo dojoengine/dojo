@@ -1,13 +1,7 @@
 use std::time::Duration;
 
 use katana_primitives::block::BlockNumber;
-use katana_primitives::class::{
-    ClassHash, CompiledClass, DeprecatedCompiledClass, FlattenedSierraClass, SierraCompiledClass,
-    SierraProgram,
-};
-use katana_primitives::conversion::rpc::{
-    flattened_sierra_to_compiled_class, rpc_to_cairo_contract_class,
-};
+use katana_primitives::class::{CasmContractClass, ClassHash, CompiledClass, ContractClass};
 use katana_provider::traits::contract::ContractClassWriter;
 use katana_provider::traits::state_update::StateUpdateProvider;
 use starknet::providers::sequencer::models::{BlockId, DeployedClass};
@@ -43,7 +37,7 @@ where
         &self,
         hash: ClassHash,
         block: BlockNumber,
-    ) -> Result<(Option<FlattenedSierraClass>, CompiledClass), Error> {
+    ) -> Result<(ContractClass, Option<CompiledClass>), Error> {
         let block_id = BlockId::Number(block);
 
         let (class, casm) = tokio::join!(
@@ -55,27 +49,19 @@ where
 
         let (sierra, casm) = match class {
             DeployedClass::LegacyClass(legacy) => {
-                // TODO: change this shit
-                let class = serde_json::to_value(legacy).unwrap();
-                let class = serde_json::from_value::<DeprecatedCompiledClass>(class).unwrap();
-                (None, CompiledClass::Deprecated(class))
+                // let (.., legacy) = legacy_rpc_to_class(&legacy).unwrap();
+                // (ContractClass::Legacy(legacy), None)
+
+                todo!()
             }
 
             DeployedClass::SierraClass(sierra) => {
-                let sierra_program = {
-                    let class = rpc_to_cairo_contract_class(&sierra).unwrap();
-                    let program = class.extract_sierra_program().unwrap();
-                    let entry_points_by_type = class.entry_points_by_type.clone();
-                    SierraProgram { program, entry_points_by_type }
-                };
+                // TODO: change this shyte
+                let value = serde_json::to_value(casm).unwrap();
+                let casm = serde_json::from_value::<CasmContractClass>(value).unwrap();
+                let compiled = CompiledClass::Class(casm);
 
-                let casm = {
-                    let casm = serde_json::to_value(casm).unwrap();
-                    serde_json::from_value(casm).unwrap()
-                };
-
-                let compiled_class = SierraCompiledClass { sierra: sierra_program, casm };
-                (Some(sierra), CompiledClass::Class(compiled_class))
+                (ContractClass::Class(sierra), Some(compiled))
             }
         };
 
@@ -102,14 +88,12 @@ where
                 debug!(target: "pipeline", "Fetching class artifacts for class hash {class_hash:#x}");
 
                 // 1. fetch sierra and casm class from fgw
-                let (sierra, compiled) = self.get_class(*class_hash, i).await?;
+                let (class, compiled) = self.get_class(*class_hash, i).await?;
 
-                // 2. store the classes
-                if let Some(sierra) = sierra {
-                    self.provider.set_sierra_class(*class_hash, sierra)?;
+                self.provider.set_class(*class_hash, class)?;
+                if let Some(casm) = compiled {
+                    self.provider.set_compiled_class(*class_hash, casm)?;
                 }
-
-                self.provider.set_class(*class_hash, compiled)?;
 
                 tokio::time::sleep(Duration::from_secs(1)).await;
             }
