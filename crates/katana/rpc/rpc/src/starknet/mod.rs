@@ -36,6 +36,7 @@ use katana_rpc_types::block::{
     MaybePendingBlockWithReceipts, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
     PendingBlockWithReceipts, PendingBlockWithTxHashes, PendingBlockWithTxs,
 };
+use katana_rpc_types::class::RpcContractClass;
 use katana_rpc_types::error::starknet::StarknetApiError;
 use katana_rpc_types::event::{EventFilterWithPage, EventsPage};
 use katana_rpc_types::receipt::{ReceiptBlock, TxReceiptWithBlockInfo};
@@ -254,7 +255,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         &self,
         block_id: BlockIdOrTag,
         class_hash: ClassHash,
-    ) -> StarknetApiResult<StarknetRsContractClass> {
+    ) -> StarknetApiResult<RpcContractClass> {
         self.on_io_blocking_task(move |this| {
             let state = this.state(&block_id)?;
 
@@ -262,10 +263,12 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
                 return Err(StarknetApiError::ClassHashNotFound);
             };
 
-            match class {
-                ContractClass::Legacy(class) => Ok(legacy_inner_to_rpc_class(class)?),
-                ContractClass::Class(sierra) => Ok(StarknetRsContractClass::Sierra(sierra)),
-            }
+            // match class {
+            //     ContractClass::Legacy(class) => Ok(legacy_inner_to_rpc_class(class)?),
+            //     ContractClass::Class(sierra) => Ok(StarknetRsContractClass::Sierra(sierra)),
+            // }
+
+            Ok(RpcContractClass::try_from(class).unwrap())
         })
         .await
     }
@@ -287,7 +290,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         &self,
         block_id: BlockIdOrTag,
         contract_address: ContractAddress,
-    ) -> StarknetApiResult<StarknetRsContractClass> {
+    ) -> StarknetApiResult<RpcContractClass> {
         let hash = self.class_hash_at_address(block_id, contract_address).await?;
         let class = self.class_at_hash(block_id, hash).await?;
         Ok(class)

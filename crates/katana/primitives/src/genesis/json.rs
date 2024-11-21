@@ -31,7 +31,7 @@ use super::constant::{
 };
 use super::{Genesis, GenesisAllocation};
 use crate::block::{BlockHash, BlockNumber, GasPrices};
-use crate::class::{ClassHash, ContractClass, SierraClass};
+use crate::class::{ClassHash, ContractClass, SierraContractClass};
 use crate::contract::{ContractAddress, StorageKey, StorageValue};
 use crate::genesis::GenesisClass;
 use crate::utils::class::{parse_compiled_class_v1, parse_deprecated_compiled_class};
@@ -292,8 +292,7 @@ impl TryFrom<GenesisJson> for Genesis {
         classes.insert(
             CONTROLLER_CLASS_HASH,
             GenesisClass {
-                class: ContractClass::Class(CONTROLLER_ACCOUNT_CLASS.clone().flatten().unwrap())
-                    .into(),
+                class: CONTROLLER_ACCOUNT_CLASS.clone().into(),
                 compiled_class_hash: CONTROLLER_CLASS_HASH,
             },
         );
@@ -310,7 +309,7 @@ impl TryFrom<GenesisJson> for Genesis {
                 }
             };
 
-            let sierra = serde_json::from_value::<SierraClass>(artifact.clone());
+            let sierra = serde_json::from_value::<SierraContractClass>(artifact.clone());
 
             let (class_hash, compiled_class_hash, class) = match sierra {
                 Ok(sierra) => {
@@ -318,10 +317,12 @@ impl TryFrom<GenesisJson> for Genesis {
 
                     // check if the class hash is provided, otherwise compute it from the
                     // artifacts
-                    let class_hash = class_hash.unwrap_or(sierra.class_hash()?);
+                    let class = ContractClass::Class(sierra);
+                    let class_hash = class_hash
+                        .unwrap_or_else(|| class.class_hash().expect("failed to compute hash"));
                     let compiled_hash = casm.compiled_class_hash();
 
-                    (class_hash, compiled_hash, Arc::new(ContractClass::Class(sierra.flatten()?)))
+                    (class_hash, compiled_hash, Arc::new(class))
                 }
 
                 // if the artifact is not a sierra contract, we check if it's a legacy contract
@@ -386,10 +387,7 @@ impl TryFrom<GenesisJson> for Genesis {
                     if let btree_map::Entry::Vacant(e) = classes.entry(DEFAULT_ACCOUNT_CLASS_HASH) {
                         // insert default account class to the classes map
                         e.insert(GenesisClass {
-                            class: ContractClass::Class(
-                                DEFAULT_ACCOUNT_CLASS.clone().flatten().unwrap(),
-                            )
-                            .into(),
+                            class: DEFAULT_ACCOUNT_CLASS.clone().into(),
                             compiled_class_hash: DEFAULT_ACCOUNT_COMPILED_CLASS_HASH,
                         });
                     }
@@ -724,8 +722,7 @@ mod tests {
                 DEFAULT_ACCOUNT_CLASS_HASH,
                 GenesisClass {
                     compiled_class_hash: DEFAULT_ACCOUNT_COMPILED_CLASS_HASH,
-                    class: ContractClass::Class(DEFAULT_ACCOUNT_CLASS.clone().flatten().unwrap())
-                        .into(),
+                    class: DEFAULT_ACCOUNT_CLASS.clone().into(),
                 },
             ),
             #[cfg(feature = "slot")]
@@ -733,10 +730,7 @@ mod tests {
                 CONTROLLER_CLASS_HASH,
                 GenesisClass {
                     compiled_class_hash: CONTROLLER_CLASS_HASH,
-                    class: ContractClass::Class(
-                        CONTROLLER_ACCOUNT_CLASS.clone().flatten().unwrap(),
-                    )
-                    .into(),
+                    class: CONTROLLER_ACCOUNT_CLASS.clone().into(),
                 },
             ),
         ]);
@@ -902,18 +896,14 @@ mod tests {
                 DEFAULT_ACCOUNT_CLASS_HASH,
                 GenesisClass {
                     compiled_class_hash: DEFAULT_ACCOUNT_COMPILED_CLASS_HASH,
-                    class: ContractClass::Class(DEFAULT_ACCOUNT_CLASS.clone().flatten().unwrap())
-                        .into(),
+                    class: DEFAULT_ACCOUNT_CLASS.clone().into(),
                 },
             ),
             #[cfg(feature = "slot")]
             (
                 CONTROLLER_CLASS_HASH,
                 GenesisClass {
-                    class: ContractClass::Class(
-                        CONTROLLER_ACCOUNT_CLASS.clone().flatten().unwrap(),
-                    )
-                    .into(),
+                    class: CONTROLLER_ACCOUNT_CLASS.clone().into(),
                     compiled_class_hash: CONTROLLER_CLASS_HASH,
                 },
             ),
@@ -963,12 +953,10 @@ mod tests {
     fn genesis_from_json_with_unresolved_paths() {
         let file = File::open("./src/genesis/test-genesis.json").unwrap();
         let json: GenesisJson = serde_json::from_reader(file).unwrap();
-        assert!(
-            Genesis::try_from(json)
-                .unwrap_err()
-                .to_string()
-                .contains("Unresolved class artifact path")
-        );
+        assert!(Genesis::try_from(json)
+            .unwrap_err()
+            .to_string()
+            .contains("Unresolved class artifact path"));
     }
 
     #[test]
@@ -1012,8 +1000,9 @@ mod tests {
             .expect("failed to load genesis file");
 
         let res = Genesis::try_from(json);
-        assert!(
-            res.unwrap_err().to_string().contains(&format!("Class name '{name}' already exists"))
-        )
+        assert!(res
+            .unwrap_err()
+            .to_string()
+            .contains(&format!("Class name '{name}' already exists")))
     }
 }

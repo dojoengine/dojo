@@ -8521,6 +8521,7 @@ dependencies = [
  "rstest 0.18.2",
  "serde",
  "serde_json",
+ "serde_json_pythonic",
  "serde_with 3.9.0",
  "similar-asserts",
  "starknet 0.12.0",
@@ -8616,6 +8617,7 @@ dependencies = [
  "alloy-primitives",
  "anyhow",
  "derive_more 0.99.18",
+ "flate2",
  "futures",
  "jsonrpsee 0.16.3",
  "katana-cairo",
@@ -8628,6 +8630,7 @@ dependencies = [
  "rstest 0.18.2",
  "serde",
  "serde_json",
+ "serde_json_pythonic",
  "serde_with 3.9.0",
  "starknet 0.12.0",
  "thiserror",
@@ -13189,9 +13192,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.132"
+version = "1.0.133"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d726bfaff4b320266d395898905d0eba0345aae23b54aee3a737e260fd46db03"
+checksum = "c7fceb2473b9166b2294ef05efcb65a3db80803f0b03ef86a5fc88a2b85ee377"
 dependencies = [
  "itoa",
  "memchr",

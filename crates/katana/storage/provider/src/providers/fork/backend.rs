@@ -502,7 +502,11 @@ impl ContractClassProvider for SharedStateProvider {
                 (hash, class)
             }
 
-            RpcContractClass::Sierra(class) => (hash, ContractClass::Class(class)),
+            RpcContractClass::Sierra(class) => {
+                let value = serde_json::to_value(class).unwrap();
+                let class = serde_json::from_value(value).unwrap();
+                (hash, ContractClass::Class(class))
+            }
         };
 
         self.0.shared_contract_classes.classes.write().entry(class_hash).or_insert(class.clone());

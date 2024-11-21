@@ -26,6 +26,8 @@ starknet.workspace = true
 thiserror.workspace = true
 
 alloy-primitives.workspace = true
+serde_json_pythonic = "0.1.2"
+flate2.workspace = true
 
 [dev-dependencies]
 rstest.workspace = true
