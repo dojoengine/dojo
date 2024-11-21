@@ -135,7 +135,7 @@ impl<S: StateDb> ContractClassProvider for CachedState<S> {
         if let class @ Some(..) = state.compiled_classes.get(&hash) {
             Ok(class.cloned())
         } else if let Some(class) = state.declared_classes.get(&hash) {
-            let compiled = class.clone().compile().expect("failed to compile class");
+            let compiled = class.clone().compile()?;
             state.compiled_classes.insert(hash, compiled.clone());
             Ok(Some(compiled))
         } else {

@@ -109,7 +109,7 @@ impl Blockchain {
     }
 
     /// Updates the [`Blockchain`] internal state adding the given [`SealedBlockWithStatus`]
-    /// and the associated [`StateUpdatesWithDeclaredClasses`].
+    /// and the associated [`StateUpdatesWithClasses`].
     ///
     /// Currently receipts are ignored.
     ///

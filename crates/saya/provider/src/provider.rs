@@ -19,7 +19,7 @@ pub trait Provider {
     async fn fetch_block(&self, block_number: BlockNumber) -> ProviderResult<SealedBlock>;
 
     /// Fetches the state updates related to a given block.
-    /// Returns the [`StateUpdatesWithDeclaredClasses`] and the serialiazed
+    /// Returns the [`StateUpdatesWithClasses`] and the serialiazed
     /// state update for data availability layer.
     ///
     /// # Arguments

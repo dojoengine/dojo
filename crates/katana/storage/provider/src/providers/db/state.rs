@@ -120,6 +120,7 @@ where
     Tx: DbTx + Send + Sync,
 {
     fn class(&self, hash: ClassHash) -> ProviderResult<Option<ContractClass>> {
+        // TODO: change the tables to store ContractClass directly
         match self.0.get::<tables::CompiledClasses>(hash)? {
             Some(CompiledClass::Class(..)) => {
                 let class = self.0.get::<tables::SierraClasses>(hash)?;
