@@ -4,12 +4,18 @@ use super::JsType;
 use crate::error::BindgenResult;
 use crate::plugins::{BindgenModelGenerator, Buffer};
 
+const BIGNUMNERISH_IMPORT: &str = "import type { BigNumberish } from 'starknet';";
+
 pub(crate) struct TsInterfaceGenerator;
 
 impl BindgenModelGenerator for TsInterfaceGenerator {
-    fn generate(&self, token: &Composite, _buffer: &mut Buffer) -> BindgenResult<String> {
+    fn generate(&self, token: &Composite, buffer: &mut Buffer) -> BindgenResult<String> {
         if token.r#type != CompositeType::Struct || token.inners.is_empty() {
             return Ok(String::new());
+        }
+
+        if !buffer.has(BIGNUMNERISH_IMPORT) {
+            buffer.push(BIGNUMNERISH_IMPORT.to_owned());
         }
 
         Ok(format!(
@@ -82,8 +88,8 @@ mod tests {
         assert_eq!(
             result,
             "// Type definition for `core::test::TestStruct` struct\nexport interface TestStruct \
-             {\n\tfieldOrder: string[];\n\tfield1: number;\n\tfield2: number;\n\tfield3: \
-             number;\n}\n"
+             {\n\tfieldOrder: string[];\n\tfield1: BigNumberish;\n\tfield2: \
+             BigNumberish;\n\tfield3: BigNumberish;\n}\n"
         );
     }
 
