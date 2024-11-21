@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1732185358350,
+  "lastUpdate": 1732224025738,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -35485,6 +35485,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8023225,
             "range": "± 33562",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "valentin@pupucecorp.com",
+            "name": "valdo.carbonaboyz.stark",
+            "username": "MartianGreed"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f44886d769f9af92a04056587d2876cc8a3daa51",
+          "message": "feat: add i128 + use BigNumberish type (#2705)\n\n* feat: add i128 + use BigNumberish type\n\n* fix: move string declarations to variables",
+          "timestamp": "2024-11-21T15:03:47-06:00",
+          "tree_id": "7d0abf4c3dfbaf5ffeca14426b4184585b80aac3",
+          "url": "https://github.com/dojoengine/dojo/commit/f44886d769f9af92a04056587d2876cc8a3daa51"
+        },
+        "date": 1732224023641,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10276585867,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
