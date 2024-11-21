@@ -251,7 +251,7 @@ mod tests {
     use katana_primitives::utils::class::{parse_compiled_class, parse_sierra_class};
     use katana_primitives::{address, Felt};
     use katana_provider::providers::db::DbProvider;
-    use katana_provider::traits::contract::ContractClassWriter;
+    use katana_provider::traits::contract::{ContractClassWriter, ContractClassWriterExt};
     use katana_provider::traits::state::{StateFactoryProvider, StateProvider, StateWriter};
     use starknet::macros::felt;
 

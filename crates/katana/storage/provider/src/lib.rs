@@ -15,7 +15,7 @@ use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{TxHash, TxNumber, TxWithHash};
 use katana_primitives::Felt;
 use traits::block::{BlockIdReader, BlockStatusProvider, BlockWriter};
-use traits::contract::{ContractClassProvider, ContractClassWriter};
+use traits::contract::{ContractClassProvider, ContractClassWriter, ContractClassWriterExt};
 use traits::env::BlockEnvProvider;
 use traits::state::{StateRootProvider, StateWriter};
 use traits::transaction::{TransactionStatusProvider, TransactionTraceProvider};
@@ -334,7 +334,12 @@ where
     ) -> ProviderResult<()> {
         self.provider.set_compiled_class_hash_of_class_hash(hash, compiled_hash)
     }
+}
 
+impl<Db> ContractClassWriterExt for BlockchainProvider<Db>
+where
+    Db: ContractClassWriterExt,
+{
     fn set_compiled_class(&self, hash: ClassHash, class: CompiledClass) -> ProviderResult<()> {
         self.provider.set_compiled_class(hash, class)
     }

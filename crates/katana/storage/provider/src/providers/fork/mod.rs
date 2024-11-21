@@ -30,7 +30,7 @@ use crate::traits::block::{
     BlockHashProvider, BlockNumberProvider, BlockProvider, BlockStatusProvider, BlockWriter,
     HeaderProvider,
 };
-use crate::traits::contract::ContractClassWriter;
+use crate::traits::contract::{ContractClassWriter, ContractClassWriterExt};
 use crate::traits::env::BlockEnvProvider;
 use crate::traits::state::{StateFactoryProvider, StateProvider, StateRootProvider, StateWriter};
 use crate::traits::state_update::StateUpdateProvider;
@@ -525,17 +525,19 @@ impl ContractClassWriter for ForkedProvider {
         Ok(())
     }
 
-    fn set_compiled_class(&self, hash: ClassHash, class: CompiledClass) -> ProviderResult<()> {
-        self.state.shared_contract_classes.compiled_classes.write().insert(hash, class);
-        Ok(())
-    }
-
     fn set_compiled_class_hash_of_class_hash(
         &self,
         hash: ClassHash,
         compiled_hash: CompiledClassHash,
     ) -> ProviderResult<()> {
         self.state.compiled_class_hashes.write().insert(hash, compiled_hash);
+        Ok(())
+    }
+}
+
+impl ContractClassWriterExt for ForkedProvider {
+    fn set_compiled_class(&self, hash: ClassHash, class: CompiledClass) -> ProviderResult<()> {
+        self.state.shared_contract_classes.compiled_classes.write().insert(hash, class);
         Ok(())
     }
 }

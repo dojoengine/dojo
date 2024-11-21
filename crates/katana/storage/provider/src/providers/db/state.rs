@@ -13,7 +13,7 @@ use katana_primitives::contract::{
 
 use super::DbProvider;
 use crate::error::ProviderError;
-use crate::traits::contract::{ContractClassProvider, ContractClassWriter};
+use crate::traits::contract::{ContractClassProvider, ContractClassWriter, ContractClassWriterExt};
 use crate::traits::state::{StateProvider, StateWriter};
 use crate::ProviderResult;
 
@@ -94,7 +94,9 @@ impl ContractClassWriter for DbProvider {
             Ok(())
         })?
     }
+}
 
+impl ContractClassWriterExt for DbProvider {
     fn set_compiled_class(&self, hash: ClassHash, class: CompiledClass) -> ProviderResult<()> {
         self.0.update(move |db_tx| -> ProviderResult<()> {
             db_tx.put::<tables::CompiledClasses>(hash, class)?;
