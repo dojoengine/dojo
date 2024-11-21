@@ -58,7 +58,15 @@ impl SqlHandler {
                     })
                     .collect();
 
-                let json = serde_json::to_string(&result).unwrap();
+                let json = match serde_json::to_string(&result) {
+                    Ok(json) => json,
+                    Err(e) => {
+                        return Response::builder()
+                            .status(StatusCode::INTERNAL_SERVER_ERROR)
+                            .body(Body::from(format!("Failed to serialize result: {:?}", e)))
+                            .unwrap();
+                    }
+                };
 
                 Response::builder()
                     .status(StatusCode::OK)
@@ -78,14 +86,24 @@ impl SqlHandler {
             Method::GET => {
                 // Get the query from the query params
                 let params = req.uri().query().unwrap_or_default();
-                Ok(form_urlencoded::parse(params.as_bytes())
+                form_urlencoded::parse(params.as_bytes())
                     .find(|(key, _)| key == "q" || key == "query")
                     .map(|(_, value)| value.to_string())
-                    .unwrap_or_default())
+                    .ok_or(
+                        Response::builder()
+                            .status(StatusCode::BAD_REQUEST)
+                            .body(Body::from("Missing 'q' or 'query' parameter."))
+                            .unwrap(),
+                    )
             }
             Method::POST => {
                 // Get the query from request body
-                let body_bytes = hyper::body::to_bytes(req.into_body()).await.unwrap_or_default();
+                let body_bytes = hyper::body::to_bytes(req.into_body()).await.map_err(|_| {
+                    Response::builder()
+                        .status(StatusCode::BAD_REQUEST)
+                        .body(Body::from("Failed to read query from request body"))
+                        .unwrap()
+                })?;
                 String::from_utf8(body_bytes.to_vec()).map_err(|_| {
                     Response::builder()
                         .status(StatusCode::BAD_REQUEST)
