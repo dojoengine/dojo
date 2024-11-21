@@ -1,10 +1,9 @@
 //! The types used are intentionally chosen so that they can be easily converted from RPC to the
-//! internal types without having to rely on intermediary types.
+//! internal types without having to rely on intermediary representation.
 
 use std::collections::HashMap;
-use std::io::Write;
+use std::io::{self, Write};
 
-use futures::io;
 use katana_cairo::lang::starknet_classes::contract_class::ContractEntryPoints;
 use katana_cairo::lang::utils::bigint::BigUintAsHex;
 use katana_cairo::starknet_api::deprecated_contract_class::{
@@ -17,10 +16,12 @@ use katana_primitives::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json_pythonic::to_string_pythonic;
+use starknet::core::serde::byte_array::base64;
 use starknet::core::types::{CompressedLegacyContractClass, FlattenedSierraClass};
 
 /// RPC representation of the contract class.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
 pub enum RpcContractClass {
     Class(RpcSierraContractClass),
     Legacy(RpcLegacyContractClass),
@@ -94,7 +95,7 @@ impl TryFrom<SierraContractClass> for RpcSierraContractClass {
 
 impl From<RpcSierraContractClass> for SierraContractClass {
     fn from(value: RpcSierraContractClass) -> Self {
-        // TODO: convert the abi from sting pythonic
+        // TODO: convert the abi from string pythonic
 
         let program = value
             .sierra_program
@@ -117,6 +118,7 @@ impl From<RpcSierraContractClass> for SierraContractClass {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RpcLegacyContractClass {
     /// A base64 representation of the compressed program code
+    #[serde(with = "base64")]
     pub program: Vec<u8>,
     /// The selector of each entry point is a unique identifier in the program.
     pub entry_points_by_type: HashMap<EntryPointType, Vec<EntryPoint>>,
