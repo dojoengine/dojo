@@ -48,7 +48,7 @@ fn graphql_filter(
         },
     );
 
-    let subscription_endpoint = if let Some(external_url) = external_url {
+    let subscription_endpoint = if let Some(external_url) = external_url.clone() {
         let mut websocket_url = external_url.clone();
         websocket_url.set_path("graphql/ws");
 
@@ -64,10 +64,18 @@ fn graphql_filter(
         "graphql/ws".to_string()
     };
 
+    let graphql_endpoint = if let Some(external_url) = external_url {
+        let mut graphql_url = external_url.clone();
+        graphql_url.set_path(&format!("{}/graphql", graphql_url.path().trim_end_matches('/')));
+        graphql_url.path().to_string()
+    } else {
+        "graphql".to_string()
+    };
+
     let playground_filter = warp::path("graphql").map(move || {
         warp::reply::html(
             GraphiQLSource::build()
-                .endpoint("graphql")
+                .endpoint(&graphql_endpoint)
                 .subscription_endpoint(subscription_endpoint.as_str())
                 .finish(),
         )
