@@ -1,6 +1,7 @@
 //! A simple storage abstraction for the world's storage.
 
 use core::panic_with_felt252;
+use core::poseidon::poseidon_hash_span;
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, Resource};
 use dojo::model::{Model, ModelIndex, ModelValueKey, ModelValue, ModelStorage, ModelPtr};
 use dojo::event::{Event, EventStorage};
@@ -42,10 +43,14 @@ pub impl WorldStorageInternalImpl of WorldStorageTrait {
 
 
     fn dns(self: @WorldStorage, contract_name: @ByteArray) -> Option<(ContractAddress, ClassHash)> {
+        Self::dns_from_hash(self, dojo::utils::bytearray_hash(contract_name))
+    }
+
+    fn dns_from_hash(
+        self: @WorldStorage, contract_name_hash: felt252
+    ) -> Option<(ContractAddress, ClassHash)> {
         match (*self.dispatcher)
-            .resource(
-                dojo::utils::selector_from_namespace_and_name(*self.namespace_hash, contract_name)
-            ) {
+            .resource(poseidon_hash_span([*self.namespace_hash, contract_name_hash].span())) {
             Resource::Contract((
                 contract_address, class_hash
             )) => Option::Some((contract_address, class_hash.try_into().unwrap())),
