@@ -43,6 +43,7 @@ use torii_core::error::{Error, ParseError, QueryError};
 use torii_core::model::{build_sql_query, map_row_to_ty};
 use torii_core::sql::cache::ModelCache;
 use torii_core::sql::utils::sql_string_to_felts;
+use torii_core::types::{Token, TokenBalance};
 use tower_http::cors::{AllowOrigin, CorsLayer};
 
 use self::subscriptions::entity::EntityManager;
@@ -53,10 +54,11 @@ use crate::proto::types::member_value::ValueType;
 use crate::proto::types::LogicalOperator;
 use crate::proto::world::world_server::WorldServer;
 use crate::proto::world::{
-    RetrieveEntitiesStreamingResponse, RetrieveEventMessagesRequest, SubscribeEntitiesRequest,
-    SubscribeEntityResponse, SubscribeEventMessagesRequest, SubscribeEventsResponse,
-    SubscribeIndexerRequest, SubscribeIndexerResponse, UpdateEventMessagesSubscriptionRequest,
-    WorldMetadataRequest, WorldMetadataResponse,
+    RetrieveEntitiesStreamingResponse, RetrieveEventMessagesRequest, RetrieveTokenBalancesRequest,
+    RetrieveTokenBalancesResponse, RetrieveTokensRequest, RetrieveTokensResponse,
+    SubscribeEntitiesRequest, SubscribeEntityResponse, SubscribeEventMessagesRequest,
+    SubscribeEventsResponse, SubscribeIndexerRequest, SubscribeIndexerResponse,
+    UpdateEventMessagesSubscriptionRequest, WorldMetadataRequest, WorldMetadataResponse,
 };
 use crate::proto::{self};
 use crate::types::schema::SchemaError;
@@ -87,6 +89,29 @@ impl From<SchemaError> for Error {
     }
 }
 
+impl From<Token> for proto::types::Token {
+    fn from(value: Token) -> Self {
+        Self {
+            contract_address: value.contract_address,
+            name: value.name,
+            symbol: value.symbol,
+            decimals: value.decimals as u32,
+            metadata: value.metadata,
+        }
+    }
+}
+
+impl From<TokenBalance> for proto::types::TokenBalance {
+    fn from(value: TokenBalance) -> Self {
+        Self {
+            balance: value.balance,
+            account_address: value.account_address,
+            contract_address: value.contract_address,
+            token_id: value.token_id,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct DojoWorld {
     pool: Pool<Sqlite>,
@@ -105,8 +130,8 @@ impl DojoWorld {
         block_rx: Receiver<u64>,
         world_address: Felt,
         provider: Arc<JsonRpcClient<HttpTransport>>,
+        model_cache: Arc<ModelCache>,
     ) -> Self {
-        let model_cache = Arc::new(ModelCache::new(pool.clone()));
         let entity_manager = Arc::new(EntityManager::default());
         let event_message_manager = Arc::new(EventMessageManager::default());
         let event_manager = Arc::new(EventManager::default());
@@ -624,7 +649,7 @@ impl DojoWorld {
                 Some(ValueType::String(value)) => value,
                 Some(ValueType::Primitive(value)) => {
                     let primitive: Primitive = value.try_into()?;
-                    primitive.to_sql_value()?
+                    primitive.to_sql_value()
                 }
                 None => return Err(QueryError::MissingParam("value_type".into()).into()),
             };
@@ -787,6 +812,74 @@ impl DojoWorld {
             layout: serde_json::to_vec(&model.layout).unwrap(),
             schema: serde_json::to_vec(&model.schema).unwrap(),
         })
+    }
+
+    async fn retrieve_tokens(
+        &self,
+        contract_addresses: Vec<Felt>,
+    ) -> Result<RetrieveTokensResponse, Status> {
+        let query = if contract_addresses.is_empty() {
+            "SELECT * FROM tokens".to_string()
+        } else {
+            format!(
+                "SELECT * FROM tokens WHERE contract_address IN ({})",
+                contract_addresses
+                    .iter()
+                    .map(|address| format!("{:#x}", address))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )
+        };
+
+        let tokens: Vec<Token> = sqlx::query_as(&query)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        let tokens = tokens.iter().map(|token| token.clone().into()).collect();
+        Ok(RetrieveTokensResponse { tokens })
+    }
+
+    async fn retrieve_token_balances(
+        &self,
+        account_addresses: Vec<Felt>,
+        contract_addresses: Vec<Felt>,
+    ) -> Result<RetrieveTokenBalancesResponse, Status> {
+        let mut query = "SELECT * FROM token_balances".to_string();
+
+        let mut conditions = Vec::new();
+        if !account_addresses.is_empty() {
+            conditions.push(format!(
+                "account_address IN ({})",
+                account_addresses
+                    .iter()
+                    .map(|address| format!("{:#x}", address))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ));
+        }
+        if !contract_addresses.is_empty() {
+            conditions.push(format!(
+                "contract_address IN ({})",
+                contract_addresses
+                    .iter()
+                    .map(|address| format!("{:#x}", address))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ));
+        }
+
+        if !conditions.is_empty() {
+            query += &format!(" WHERE {}", conditions.join(" AND "));
+        }
+
+        let balances: Vec<TokenBalance> = sqlx::query_as(&query)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        let balances = balances.iter().map(|balance| balance.clone().into()).collect();
+        Ok(RetrieveTokenBalancesResponse { balances })
     }
 
     async fn subscribe_indexer(
@@ -1060,7 +1153,7 @@ fn build_composite_clause(
                         Some(ValueType::String(value)) => value,
                         Some(ValueType::Primitive(value)) => {
                             let primitive: Primitive = value.try_into()?;
-                            primitive.to_sql_value()?
+                            primitive.to_sql_value()
                         }
                         None => return Err(QueryError::MissingParam("value_type".into()).into()),
                     };
@@ -1163,6 +1256,45 @@ impl proto::world::world_server::World for DojoWorld {
         })?);
 
         Ok(Response::new(WorldMetadataResponse { metadata }))
+    }
+
+    async fn retrieve_tokens(
+        &self,
+        request: Request<RetrieveTokensRequest>,
+    ) -> Result<Response<RetrieveTokensResponse>, Status> {
+        let RetrieveTokensRequest { contract_addresses } = request.into_inner();
+        let contract_addresses = contract_addresses
+            .iter()
+            .map(|address| Felt::from_bytes_be_slice(address))
+            .collect::<Vec<_>>();
+
+        let tokens = self
+            .retrieve_tokens(contract_addresses)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+        Ok(Response::new(tokens))
+    }
+
+    async fn retrieve_token_balances(
+        &self,
+        request: Request<RetrieveTokenBalancesRequest>,
+    ) -> Result<Response<RetrieveTokenBalancesResponse>, Status> {
+        let RetrieveTokenBalancesRequest { account_addresses, contract_addresses } =
+            request.into_inner();
+        let account_addresses = account_addresses
+            .iter()
+            .map(|address| Felt::from_bytes_be_slice(address))
+            .collect::<Vec<_>>();
+        let contract_addresses = contract_addresses
+            .iter()
+            .map(|address| Felt::from_bytes_be_slice(address))
+            .collect::<Vec<_>>();
+
+        let balances = self
+            .retrieve_token_balances(account_addresses, contract_addresses)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+        Ok(Response::new(balances))
     }
 
     async fn subscribe_indexer(
@@ -1368,6 +1500,7 @@ pub async fn new(
     block_rx: Receiver<u64>,
     world_address: Felt,
     provider: Arc<JsonRpcClient<HttpTransport>>,
+    model_cache: Arc<ModelCache>,
 ) -> Result<
     (SocketAddr, impl Future<Output = Result<(), tonic::transport::Error>> + 'static),
     std::io::Error,
@@ -1380,7 +1513,7 @@ pub async fn new(
         .build()
         .unwrap();
 
-    let world = DojoWorld::new(pool.clone(), block_rx, world_address, provider);
+    let world = DojoWorld::new(pool.clone(), block_rx, world_address, provider, model_cache);
     let server = WorldServer::new(world)
         .accept_compressed(CompressionEncoding::Gzip)
         .send_compressed(CompressionEncoding::Gzip);

@@ -42,7 +42,7 @@ use katana_rpc::dev::DevApi;
 use katana_rpc::metrics::RpcServerMetrics;
 use katana_rpc::saya::SayaApi;
 use katana_rpc::starknet::forking::ForkedClient;
-use katana_rpc::starknet::StarknetApi;
+use katana_rpc::starknet::{StarknetApi, StarknetApiConfig};
 use katana_rpc::torii::ToriiApi;
 use katana_rpc_api::dev::DevApiServer;
 use katana_rpc_api::saya::SayaApiServer;
@@ -277,6 +277,8 @@ pub async fn spawn<EF: ExecutorFactory>(
     methods.register_method("health", |_, _| Ok(serde_json::json!({ "health": true })))?;
 
     if config.apis.contains(&ApiKind::Starknet) {
+        let cfg = StarknetApiConfig { max_event_page_size: config.max_event_page_size };
+
         let server = if let Some(client) = forked_client {
             StarknetApi::new_forked(
                 backend.clone(),
@@ -284,9 +286,10 @@ pub async fn spawn<EF: ExecutorFactory>(
                 block_producer.clone(),
                 validator,
                 client,
+                cfg,
             )
         } else {
-            StarknetApi::new(backend.clone(), pool.clone(), block_producer.clone(), validator)
+            StarknetApi::new(backend.clone(), pool.clone(), block_producer.clone(), validator, cfg)
         };
 
         methods.merge(StarknetApiServer::into_rpc(server.clone()))?;

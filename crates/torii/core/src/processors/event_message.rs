@@ -1,6 +1,7 @@
 use anyhow::{Error, Result};
 use async_trait::async_trait;
 use dojo_world::contracts::abigen::world::Event as WorldEvent;
+use dojo_world::contracts::naming::get_tag;
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{Event, Felt};
 use starknet::providers::Provider;
@@ -65,16 +66,12 @@ where
             "Store event message."
         );
 
-        // TODO: check historical and keep the internal counter.
-
         let mut keys_and_unpacked = [event.keys, event.values].concat();
 
         let mut entity = model.schema.clone();
         entity.deserialize(&mut keys_and_unpacked)?;
 
-        // TODO: this must come from some torii's configuration.
-        let historical =
-            config.historical_events.contains(&format!("{}-{}", model.namespace, model.name));
+        let historical = config.is_historical(&get_tag(&model.namespace, &model.name));
         db.set_event_message(entity, event_id, block_timestamp, historical).await?;
         Ok(())
     }

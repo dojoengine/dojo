@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use anyhow::{Error, Result};
 use async_trait::async_trait;
 use base64::engine::general_purpose;
@@ -9,17 +7,14 @@ use dojo_world::config::WorldMetadata;
 use dojo_world::contracts::abigen::world::Event as WorldEvent;
 use dojo_world::contracts::world::WorldContractReader;
 use dojo_world::uri::Uri;
-use reqwest::Client;
 use starknet::core::types::{Event, Felt};
 use starknet::providers::Provider;
-use tokio_util::bytes::Bytes;
 use tracing::{error, info};
 
 use super::{EventProcessor, EventProcessorConfig};
+use crate::constants::IPFS_CLIENT_MAX_RETRY;
 use crate::sql::Sql;
-
-const IPFS_URL: &str = "https://cartridge.infura-ipfs.io/ipfs/";
-const MAX_RETRY: u8 = 3;
+use crate::utils::fetch_content_from_ipfs;
 
 pub(crate) const LOG_TARGET: &str = "torii_core::processors::metadata_update";
 
@@ -112,7 +107,7 @@ async fn metadata(uri_str: String) -> Result<(WorldMetadata, Option<String>, Opt
     let uri = Uri::Ipfs(uri_str);
     let cid = uri.cid().ok_or("Uri is malformed").map_err(Error::msg)?;
 
-    let bytes = fetch_content(cid, MAX_RETRY).await?;
+    let bytes = fetch_content_from_ipfs(cid, IPFS_CLIENT_MAX_RETRY).await?;
     let metadata: WorldMetadata = serde_json::from_str(std::str::from_utf8(&bytes)?)?;
 
     let icon_img = fetch_image(&metadata.icon_uri).await;
@@ -123,36 +118,10 @@ async fn metadata(uri_str: String) -> Result<(WorldMetadata, Option<String>, Opt
 
 async fn fetch_image(image_uri: &Option<Uri>) -> Option<String> {
     if let Some(uri) = image_uri {
-        let data = fetch_content(uri.cid()?, MAX_RETRY).await.ok()?;
+        let data = fetch_content_from_ipfs(uri.cid()?, IPFS_CLIENT_MAX_RETRY).await.ok()?;
         let encoded = general_purpose::STANDARD.encode(data);
         return Some(encoded);
     }
 
     None
-}
-
-async fn fetch_content(cid: &str, mut retries: u8) -> Result<Bytes> {
-    while retries > 0 {
-        let response = Client::new().get(format!("{IPFS_URL}{}", cid)).send().await;
-
-        match response {
-            Ok(response) => return response.bytes().await.map_err(|e| e.into()),
-            Err(e) => {
-                retries -= 1;
-                if retries > 0 {
-                    info!(
-                        target: LOG_TARGET,
-                        error = %e,
-                        "Fetch uri."
-                    );
-                    tokio::time::sleep(Duration::from_secs(3)).await;
-                }
-            }
-        }
-    }
-
-    Err(Error::msg(format!(
-        "Failed to pull data from IPFS after {} attempts, cid: {}",
-        MAX_RETRY, cid
-    )))
 }

@@ -3,6 +3,7 @@ use async_graphql::dynamic::{
     Field, FieldFuture, FieldValue, InputValue, SubscriptionField, SubscriptionFieldFuture, TypeRef,
 };
 use async_graphql::{Name, Value};
+use dojo_types::naming::get_tag;
 use sqlx::{Pool, Sqlite};
 use tokio_stream::StreamExt;
 use torii_core::simple_broker::SimpleBroker;
@@ -19,7 +20,6 @@ use crate::mapping::ENTITY_TYPE_MAPPING;
 use crate::object::{resolve_many, resolve_one};
 use crate::query::type_mapping_query;
 use crate::utils;
-
 #[derive(Debug)]
 pub struct EventMessageObject;
 
@@ -151,7 +151,7 @@ fn model_union_field() -> Field {
                         let data: ValueMapping = match model_data_recursive_query(
                             &mut conn,
                             EVENT_MESSAGE_ID_COLUMN,
-                            vec![format!("{namespace}-{name}")],
+                            vec![get_tag(&namespace, &name)],
                             &entity_id,
                             &[],
                             &type_mapping,

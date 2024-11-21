@@ -9,10 +9,12 @@ use super::object::event::EventObject;
 use super::object::model_data::ModelDataObject;
 use super::types::ScalarType;
 use super::utils;
-use crate::constants::{QUERY_TYPE_NAME, SUBSCRIPTION_TYPE_NAME};
-use crate::object::erc::erc_balance::ErcBalanceObject;
-use crate::object::erc::erc_token::ErcTokenObject;
-use crate::object::erc::erc_transfer::ErcTransferObject;
+use crate::constants::{
+    ERC20_TYPE_NAME, ERC721_TYPE_NAME, QUERY_TYPE_NAME, SUBSCRIPTION_TYPE_NAME, TOKEN_TYPE_NAME,
+};
+use crate::object::erc::erc_token::{Erc20TokenObject, Erc721TokenObject};
+use crate::object::erc::token_balance::ErcBalanceObject;
+use crate::object::erc::token_transfer::ErcTransferObject;
 use crate::object::event_message::EventMessageObject;
 use crate::object::metadata::content::ContentObject;
 use crate::object::metadata::social::SocialObject;
@@ -121,12 +123,19 @@ async fn build_objects(pool: &SqlitePool) -> Result<(Vec<ObjectVariant>, Vec<Uni
         ObjectVariant::Basic(Box::new(SocialObject)),
         ObjectVariant::Basic(Box::new(ContentObject)),
         ObjectVariant::Basic(Box::new(PageInfoObject)),
-        ObjectVariant::Basic(Box::new(ErcTokenObject)),
+        ObjectVariant::Basic(Box::new(Erc721TokenObject)),
+        ObjectVariant::Basic(Box::new(Erc20TokenObject)),
     ];
 
     // model union object
     let mut unions: Vec<Union> = Vec::new();
     let mut model_union = Union::new("ModelUnion");
+
+    // erc_token union object
+    let erc_token_union =
+        Union::new(TOKEN_TYPE_NAME).possible_type(ERC20_TYPE_NAME).possible_type(ERC721_TYPE_NAME);
+
+    unions.push(erc_token_union);
 
     // model data objects
     for model in models {

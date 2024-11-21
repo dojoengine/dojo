@@ -3,6 +3,8 @@ use std::net::{IpAddr, SocketAddr};
 use std::sync::Arc;
 use std::time::Duration;
 
+use base64::engine::general_purpose::STANDARD;
+use base64::Engine;
 use http::header::CONTENT_TYPE;
 use http::{HeaderName, Method};
 use hyper::client::connect::dns::GaiResolver;
@@ -12,10 +14,13 @@ use hyper::service::make_service_fn;
 use hyper::{Body, Client, Request, Response, Server, StatusCode};
 use hyper_reverse_proxy::ReverseProxy;
 use serde_json::json;
+use sqlx::{Column, Row, SqlitePool, TypeInfo};
 use tokio::sync::RwLock;
 use tower::ServiceBuilder;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing::error;
+
+pub(crate) const LOG_TARGET: &str = "torii::server::proxy";
 
 const DEFAULT_ALLOW_HEADERS: [&str; 13] = [
     "accept",
@@ -58,7 +63,9 @@ pub struct Proxy {
     addr: SocketAddr,
     allowed_origins: Option<Vec<String>>,
     grpc_addr: Option<SocketAddr>,
+    artifacts_addr: Option<SocketAddr>,
     graphql_addr: Arc<RwLock<Option<SocketAddr>>>,
+    pool: Arc<SqlitePool>,
 }
 
 impl Proxy {
@@ -67,8 +74,17 @@ impl Proxy {
         allowed_origins: Option<Vec<String>>,
         grpc_addr: Option<SocketAddr>,
         graphql_addr: Option<SocketAddr>,
+        artifacts_addr: Option<SocketAddr>,
+        pool: Arc<SqlitePool>,
     ) -> Self {
-        Self { addr, allowed_origins, grpc_addr, graphql_addr: Arc::new(RwLock::new(graphql_addr)) }
+        Self {
+            addr,
+            allowed_origins,
+            grpc_addr,
+            graphql_addr: Arc::new(RwLock::new(graphql_addr)),
+            artifacts_addr,
+            pool,
+        }
     }
 
     pub async fn set_graphql_addr(&self, addr: SocketAddr) {
@@ -84,6 +100,8 @@ impl Proxy {
         let allowed_origins = self.allowed_origins.clone();
         let grpc_addr = self.grpc_addr;
         let graphql_addr = self.graphql_addr.clone();
+        let artifacts_addr = self.artifacts_addr;
+        let pool = self.pool.clone();
 
         let make_svc = make_service_fn(move |conn: &AddrStream| {
             let remote_addr = conn.remote_addr().ip();
@@ -120,12 +138,14 @@ impl Proxy {
                     ),
                 });
 
+            let pool_clone = pool.clone();
             let graphql_addr_clone = graphql_addr.clone();
             let service = ServiceBuilder::new().option_layer(cors).service_fn(move |req| {
+                let pool = pool_clone.clone();
                 let graphql_addr = graphql_addr_clone.clone();
                 async move {
                     let graphql_addr = graphql_addr.read().await;
-                    handle(remote_addr, grpc_addr, *graphql_addr, req).await
+                    handle(remote_addr, grpc_addr, artifacts_addr, *graphql_addr, pool, req).await
                 }
             });
 
@@ -145,16 +165,40 @@ impl Proxy {
 async fn handle(
     client_ip: IpAddr,
     grpc_addr: Option<SocketAddr>,
+    artifacts_addr: Option<SocketAddr>,
     graphql_addr: Option<SocketAddr>,
+    pool: Arc<SqlitePool>,
     req: Request<Body>,
 ) -> Result<Response<Body>, Infallible> {
+    if req.uri().path().starts_with("/static") {
+        if let Some(artifacts_addr) = artifacts_addr {
+            let artifacts_addr = format!("http://{}", artifacts_addr);
+
+            return match GRAPHQL_PROXY_CLIENT.call(client_ip, &artifacts_addr, req).await {
+                Ok(response) => Ok(response),
+                Err(_error) => {
+                    error!(target: LOG_TARGET, "Artifacts proxy error: {:?}", _error);
+                    Ok(Response::builder()
+                        .status(StatusCode::INTERNAL_SERVER_ERROR)
+                        .body(Body::empty())
+                        .unwrap())
+                }
+            };
+        } else {
+            return Ok(Response::builder()
+                .status(StatusCode::NOT_FOUND)
+                .body(Body::empty())
+                .unwrap());
+        }
+    }
+
     if req.uri().path().starts_with("/graphql") {
         if let Some(graphql_addr) = graphql_addr {
             let graphql_addr = format!("http://{}", graphql_addr);
             return match GRAPHQL_PROXY_CLIENT.call(client_ip, &graphql_addr, req).await {
                 Ok(response) => Ok(response),
                 Err(_error) => {
-                    error!("{:?}", _error);
+                    error!(target: LOG_TARGET, "GraphQL proxy error: {:?}", _error);
                     Ok(Response::builder()
                         .status(StatusCode::INTERNAL_SERVER_ERROR)
                         .body(Body::empty())
@@ -176,7 +220,7 @@ async fn handle(
                 return match GRPC_PROXY_CLIENT.call(client_ip, &grpc_addr, req).await {
                     Ok(response) => Ok(response),
                     Err(_error) => {
-                        error!("{:?}", _error);
+                        error!(target: LOG_TARGET, "GRPC proxy error: {:?}", _error);
                         Ok(Response::builder()
                             .status(StatusCode::INTERNAL_SERVER_ERROR)
                             .body(Body::empty())
@@ -190,6 +234,83 @@ async fn handle(
                     .unwrap());
             }
         }
+    }
+
+    if req.uri().path().starts_with("/sql") {
+        let query = if req.method() == Method::GET {
+            // Get the query from URL parameters
+            let params = req.uri().query().unwrap_or_default();
+            form_urlencoded::parse(params.as_bytes())
+                .find(|(key, _)| key == "q")
+                .map(|(_, value)| value.to_string())
+                .unwrap_or_default()
+        } else if req.method() == Method::POST {
+            // Get the query from request body
+            let body_bytes = hyper::body::to_bytes(req.into_body()).await.unwrap_or_default();
+            String::from_utf8(body_bytes.to_vec()).unwrap_or_default()
+        } else {
+            return Ok(Response::builder()
+                .status(StatusCode::METHOD_NOT_ALLOWED)
+                .body(Body::from("Only GET and POST methods are allowed"))
+                .unwrap());
+        };
+
+        // Execute the query
+        return match sqlx::query(&query).fetch_all(&*pool).await {
+            Ok(rows) => {
+                let result: Vec<_> = rows
+                    .iter()
+                    .map(|row| {
+                        let mut obj = serde_json::Map::new();
+                        for (i, column) in row.columns().iter().enumerate() {
+                            let value: serde_json::Value = match column.type_info().name() {
+                                "TEXT" => row
+                                    .get::<Option<String>, _>(i)
+                                    .map_or(serde_json::Value::Null, serde_json::Value::String),
+                                // for operators like count(*) the type info is NULL
+                                // so we default to a number
+                                "INTEGER" | "NULL" => row
+                                    .get::<Option<i64>, _>(i)
+                                    .map_or(serde_json::Value::Null, |n| {
+                                        serde_json::Value::Number(n.into())
+                                    }),
+                                "REAL" => row.get::<Option<f64>, _>(i).map_or(
+                                    serde_json::Value::Null,
+                                    |f| {
+                                        serde_json::Number::from_f64(f).map_or(
+                                            serde_json::Value::Null,
+                                            serde_json::Value::Number,
+                                        )
+                                    },
+                                ),
+                                "BLOB" => row
+                                    .get::<Option<Vec<u8>>, _>(i)
+                                    .map_or(serde_json::Value::Null, |bytes| {
+                                        serde_json::Value::String(STANDARD.encode(bytes))
+                                    }),
+                                _ => row
+                                    .get::<Option<String>, _>(i)
+                                    .map_or(serde_json::Value::Null, serde_json::Value::String),
+                            };
+                            obj.insert(column.name().to_string(), value);
+                        }
+                        serde_json::Value::Object(obj)
+                    })
+                    .collect();
+
+                let json = serde_json::to_string(&result).unwrap();
+
+                Ok(Response::builder()
+                    .status(StatusCode::OK)
+                    .header(CONTENT_TYPE, "application/json")
+                    .body(Body::from(json))
+                    .unwrap())
+            }
+            Err(e) => Ok(Response::builder()
+                .status(StatusCode::BAD_REQUEST)
+                .body(Body::from(format!("Query error: {:?}", e)))
+                .unwrap()),
+        };
     }
 
     let json = json!({

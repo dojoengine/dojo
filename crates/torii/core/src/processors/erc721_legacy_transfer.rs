@@ -36,7 +36,7 @@ where
 
     async fn process(
         &self,
-        world: &WorldContractReader<P>,
+        _world: &WorldContractReader<P>,
         db: &mut Sql,
         _block_number: u64,
         block_timestamp: u64,
@@ -51,16 +51,8 @@ where
         let token_id = U256Cainome::cairo_deserialize(&event.data, 2)?;
         let token_id = U256::from_words(token_id.low, token_id.high);
 
-        db.handle_erc721_transfer(
-            token_address,
-            from,
-            to,
-            token_id,
-            world.provider(),
-            block_timestamp,
-            event_id,
-        )
-        .await?;
+        db.handle_erc721_transfer(token_address, from, to, token_id, block_timestamp, event_id)
+            .await?;
         debug!(target: LOG_TARGET, from = ?from, to = ?to, token_id = ?token_id, "ERC721 Transfer");
 
         Ok(())

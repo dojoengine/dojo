@@ -24,6 +24,7 @@ use tempfile::NamedTempFile;
 use tokio::sync::broadcast;
 use torii_core::engine::{Engine, EngineConfig, Processors};
 use torii_core::executor::Executor;
+use torii_core::sql::cache::ModelCache;
 use torii_core::sql::Sql;
 use torii_core::types::{Contract, ContractType};
 
@@ -88,14 +89,19 @@ async fn test_entities_queries(sequencer: &RunnerCtx) {
     TransactionWaiter::new(tx.transaction_hash, &provider).await.unwrap();
 
     let (shutdown_tx, _) = broadcast::channel(1);
-    let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
+
+    let (mut executor, sender) =
+        Executor::new(pool.clone(), shutdown_tx.clone(), Arc::clone(&provider), 100).await.unwrap();
     tokio::spawn(async move {
         executor.run().await.unwrap();
     });
+
+    let model_cache = Arc::new(ModelCache::new(pool.clone()));
     let db = Sql::new(
         pool.clone(),
         sender,
-        &vec![Contract { address: world_address, r#type: ContractType::WORLD }],
+        &[Contract { address: world_address, r#type: ContractType::WORLD }],
+        model_cache,
     )
     .await
     .unwrap();
@@ -119,7 +125,8 @@ async fn test_entities_queries(sequencer: &RunnerCtx) {
     db.execute().await.unwrap();
 
     let (_, receiver) = tokio::sync::mpsc::channel(1);
-    let grpc = DojoWorld::new(db.pool, receiver, world_address, provider.clone());
+    let model_cache = Arc::new(ModelCache::new(pool.clone()));
+    let grpc = DojoWorld::new(db.pool, receiver, world_address, provider.clone(), model_cache);
 
     let entities = grpc
         .query_by_keys(

@@ -22,6 +22,8 @@ pub mod store_set_record;
 pub mod store_transaction;
 pub mod store_update_member;
 pub mod store_update_record;
+pub mod upgrade_event;
+pub mod upgrade_model;
 
 const MODEL_INDEX: usize = 0;
 const ENTITY_ID_INDEX: usize = 1;
@@ -29,6 +31,17 @@ const ENTITY_ID_INDEX: usize = 1;
 #[derive(Clone, Debug, Default)]
 pub struct EventProcessorConfig {
     pub historical_events: HashSet<String>,
+    pub namespaces: HashSet<String>,
+}
+
+impl EventProcessorConfig {
+    pub fn is_historical(&self, tag: &str) -> bool {
+        self.historical_events.contains(tag)
+    }
+
+    pub fn should_index(&self, namespace: &str) -> bool {
+        self.namespaces.is_empty() || self.namespaces.contains(namespace)
+    }
 }
 
 #[async_trait]

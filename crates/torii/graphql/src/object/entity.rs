@@ -4,6 +4,7 @@ use async_graphql::dynamic::{
 };
 use async_graphql::{Name, Value};
 use async_recursion::async_recursion;
+use dojo_types::naming::get_tag;
 use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Sqlite};
 use tokio_stream::StreamExt;
@@ -21,7 +22,6 @@ use crate::object::{resolve_many, resolve_one};
 use crate::query::{type_mapping_query, value_mapping_from_row};
 use crate::types::TypeData;
 use crate::utils;
-
 #[derive(Debug)]
 pub struct EntityObject;
 
@@ -145,7 +145,7 @@ fn model_union_field() -> Field {
                         let data: ValueMapping = match model_data_recursive_query(
                             &mut conn,
                             ENTITY_ID_COLUMN,
-                            vec![format!("{namespace}-{name}")],
+                            vec![get_tag(&namespace, &name)],
                             &entity_id,
                             &[],
                             &type_mapping,

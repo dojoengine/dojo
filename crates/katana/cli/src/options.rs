@@ -13,7 +13,10 @@ use clap::Args;
 use katana_node::config::execution::{DEFAULT_INVOCATION_MAX_STEPS, DEFAULT_VALIDATION_MAX_STEPS};
 use katana_node::config::metrics::{DEFAULT_METRICS_ADDR, DEFAULT_METRICS_PORT};
 #[cfg(feature = "server")]
-use katana_node::config::rpc::{DEFAULT_RPC_ADDR, DEFAULT_RPC_MAX_CONNECTIONS, DEFAULT_RPC_PORT};
+use katana_node::config::rpc::{
+    DEFAULT_RPC_ADDR, DEFAULT_RPC_MAX_CONNECTIONS, DEFAULT_RPC_MAX_EVENT_PAGE_SIZE,
+    DEFAULT_RPC_PORT,
+};
 use katana_primitives::block::BlockHashOrNumber;
 use katana_primitives::chain::ChainId;
 use katana_primitives::genesis::Genesis;
@@ -25,6 +28,7 @@ use crate::utils::{parse_block_hash_or_number, parse_genesis, LogFormat};
 const DEFAULT_DEV_SEED: &str = "0";
 const DEFAULT_DEV_ACCOUNTS: u16 = 10;
 
+#[cfg(feature = "server")]
 #[derive(Debug, Args, Clone, Serialize, Deserialize, PartialEq)]
 #[command(next_help_heading = "Metrics options")]
 pub struct MetricsOptions {
@@ -33,21 +37,25 @@ pub struct MetricsOptions {
     /// For now, metrics will still be collected even if this flag is not set. This only
     /// controls whether the metrics server is started or not.
     #[arg(long)]
+    #[serde(default)]
     pub metrics: bool,
 
     /// The metrics will be served at the given address.
     #[arg(requires = "metrics")]
     #[arg(long = "metrics.addr", value_name = "ADDRESS")]
     #[arg(default_value_t = DEFAULT_METRICS_ADDR)]
+    #[serde(default = "default_metrics_addr")]
     pub metrics_addr: IpAddr,
 
     /// The metrics will be served at the given port.
     #[arg(requires = "metrics")]
     #[arg(long = "metrics.port", value_name = "PORT")]
     #[arg(default_value_t = DEFAULT_METRICS_PORT)]
+    #[serde(default = "default_metrics_port")]
     pub metrics_port: u16,
 }
 
+#[cfg(feature = "server")]
 impl Default for MetricsOptions {
     fn default() -> Self {
         MetricsOptions {
@@ -77,6 +85,7 @@ pub struct ServerOptions {
     /// Comma separated list of domains from which to accept cross origin requests.
     #[arg(long = "http.cors_origins")]
     #[arg(value_delimiter = ',')]
+    #[serde(default)]
     pub http_cors_origins: Option<Vec<String>>,
 
     /// Maximum number of concurrent connections allowed.
@@ -84,6 +93,12 @@ pub struct ServerOptions {
     #[arg(default_value_t = DEFAULT_RPC_MAX_CONNECTIONS)]
     #[serde(default = "default_max_connections")]
     pub max_connections: u32,
+
+    /// Maximum page size for event queries.
+    #[arg(long = "rpc.max-event-page-size", value_name = "SIZE")]
+    #[arg(default_value_t = DEFAULT_RPC_MAX_EVENT_PAGE_SIZE)]
+    #[serde(default = "default_page_size")]
+    pub max_event_page_size: u64,
 }
 
 #[cfg(feature = "server")]
@@ -94,6 +109,7 @@ impl Default for ServerOptions {
             http_port: DEFAULT_RPC_PORT,
             max_connections: DEFAULT_RPC_MAX_CONNECTIONS,
             http_cors_origins: None,
+            max_event_page_size: DEFAULT_RPC_MAX_EVENT_PAGE_SIZE,
         }
     }
 }
@@ -133,6 +149,7 @@ pub struct EnvironmentOptions {
     /// ASCII values. It must be a valid Cairo short string.
     #[arg(long)]
     #[arg(value_parser = ChainId::parse)]
+    #[serde(default)]
     pub chain_id: Option<ChainId>,
 
     /// The maximum number of steps available for the account validation logic.
@@ -348,4 +365,19 @@ fn default_http_port() -> u16 {
 #[cfg(feature = "server")]
 fn default_max_connections() -> u32 {
     DEFAULT_RPC_MAX_CONNECTIONS
+}
+
+#[cfg(feature = "server")]
+fn default_page_size() -> u64 {
+    DEFAULT_RPC_MAX_EVENT_PAGE_SIZE
+}
+
+#[cfg(feature = "server")]
+fn default_metrics_addr() -> IpAddr {
+    DEFAULT_METRICS_ADDR
+}
+
+#[cfg(feature = "server")]
+fn default_metrics_port() -> u16 {
+    DEFAULT_METRICS_PORT
 }

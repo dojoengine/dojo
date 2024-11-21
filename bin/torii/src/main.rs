@@ -16,7 +16,9 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 
+use camino::Utf8PathBuf;
 use clap::Parser;
+use cli::Cli;
 use dojo_metrics::exporters::prometheus::PrometheusRecorder;
 use dojo_world::contracts::world::WorldContractReader;
 use sqlx::sqlite::{
@@ -25,16 +27,16 @@ use sqlx::sqlite::{
 use sqlx::SqlitePool;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
-use tempfile::NamedTempFile;
+use tempfile::{NamedTempFile, TempDir};
 use tokio::sync::broadcast;
 use tokio::sync::broadcast::Sender;
 use tokio_stream::StreamExt;
-use torii_cli::ToriiArgs;
 use torii_core::engine::{Engine, EngineConfig, IndexingFlags, Processors};
 use torii_core::executor::Executor;
 use torii_core::processors::store_transaction::StoreTransactionProcessor;
 use torii_core::processors::EventProcessorConfig;
 use torii_core::simple_broker::SimpleBroker;
+use torii_core::sql::cache::ModelCache;
 use torii_core::sql::Sql;
 use torii_core::types::{Contract, ContractType, Model};
 use torii_server::proxy::Proxy;
@@ -44,9 +46,11 @@ use url::{form_urlencoded, Url};
 
 pub(crate) const LOG_TARGET: &str = "torii::cli";
 
+mod cli;
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let mut args = ToriiArgs::parse().with_config_file()?;
+    let mut args = Cli::parse().args.with_config_file()?;
 
     let world_address = if let Some(world_address) = args.world_address {
         world_address
@@ -54,7 +58,6 @@ async fn main() -> anyhow::Result<()> {
         return Err(anyhow::anyhow!("Please specify a world address."));
     };
 
-    // let mut contracts = parse_erc_contracts(&args.contracts)?;
     args.indexing.contracts.push(Contract { address: world_address, r#type: ContractType::WORLD });
 
     let filter_layer = EnvFilter::try_from_default_env()
@@ -94,7 +97,14 @@ async fn main() -> anyhow::Result<()> {
     options = options.journal_mode(SqliteJournalMode::Wal);
     options = options.synchronous(SqliteSynchronous::Normal);
 
-    let pool = SqlitePoolOptions::new().min_connections(1).connect_with(options).await?;
+    let pool = SqlitePoolOptions::new().min_connections(1).connect_with(options.clone()).await?;
+
+    let readonly_options = options.read_only(true);
+    let readonly_pool = SqlitePoolOptions::new()
+        .min_connections(1)
+        .max_connections(100)
+        .connect_with(readonly_options)
+        .await?;
 
     // Set the number of threads based on CPU count
     let cpu_count = std::thread::available_parallelism().unwrap().get();
@@ -108,12 +118,18 @@ async fn main() -> anyhow::Result<()> {
     // Get world address
     let world = WorldContractReader::new(world_address, provider.clone());
 
-    let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx.clone()).await?;
-    tokio::spawn(async move {
-        executor.run().await.unwrap();
-    });
+    let (mut executor, sender) = Executor::new(
+        pool.clone(),
+        shutdown_tx.clone(),
+        provider.clone(),
+        args.indexing.max_concurrent_tasks,
+    )
+    .await?;
+    let executor_handle = tokio::spawn(async move { executor.run().await });
 
-    let db = Sql::new(pool.clone(), sender.clone(), &args.indexing.contracts).await?;
+    let model_cache = Arc::new(ModelCache::new(readonly_pool.clone()));
+    let db = Sql::new(pool.clone(), sender.clone(), &args.indexing.contracts, model_cache.clone())
+        .await?;
 
     let processors = Processors {
         transaction: vec![Box::new(StoreTransactionProcessor)],
@@ -123,11 +139,14 @@ async fn main() -> anyhow::Result<()> {
     let (block_tx, block_rx) = tokio::sync::mpsc::channel(100);
 
     let mut flags = IndexingFlags::empty();
-    if args.indexing.index_transactions {
+    if args.indexing.transactions {
         flags.insert(IndexingFlags::TRANSACTIONS);
     }
     if args.events.raw {
         flags.insert(IndexingFlags::RAW_EVENTS);
+    }
+    if args.indexing.pending {
+        flags.insert(IndexingFlags::PENDING_BLOCKS);
     }
 
     let mut engine: Engine<Arc<JsonRpcClient<HttpTransport>>> = Engine::new(
@@ -137,14 +156,13 @@ async fn main() -> anyhow::Result<()> {
         processors,
         EngineConfig {
             max_concurrent_tasks: args.indexing.max_concurrent_tasks,
-            start_block: 0,
             blocks_chunk_size: args.indexing.blocks_chunk_size,
             events_chunk_size: args.indexing.events_chunk_size,
-            index_pending: args.indexing.index_pending,
             polling_interval: Duration::from_millis(args.indexing.polling_interval),
             flags,
             event_processor_config: EventProcessorConfig {
-                historical_events: args.events.historical.unwrap_or_default().into_iter().collect(),
+                historical_events: args.events.historical.into_iter().collect(),
+                namespaces: args.indexing.namespaces.into_iter().collect(),
             },
         },
         shutdown_tx.clone(),
@@ -153,9 +171,29 @@ async fn main() -> anyhow::Result<()> {
     );
 
     let shutdown_rx = shutdown_tx.subscribe();
-    let (grpc_addr, grpc_server) =
-        torii_grpc::server::new(shutdown_rx, &pool, block_rx, world_address, Arc::clone(&provider))
-            .await?;
+    let (grpc_addr, grpc_server) = torii_grpc::server::new(
+        shutdown_rx,
+        &readonly_pool,
+        block_rx,
+        world_address,
+        Arc::clone(&provider),
+        model_cache,
+    )
+    .await?;
+
+    let temp_dir = TempDir::new()?;
+    let artifacts_path =
+        args.artifacts_path.unwrap_or_else(|| Utf8PathBuf::from(temp_dir.path().to_str().unwrap()));
+
+    tokio::fs::create_dir_all(&artifacts_path).await?;
+    let absolute_path = artifacts_path.canonicalize_utf8()?;
+
+    let (artifacts_addr, artifacts_server) = torii_server::artifacts::new(
+        shutdown_tx.subscribe(),
+        &absolute_path,
+        readonly_pool.clone(),
+    )
+    .await?;
 
     let mut libp2p_relay_server = torii_relay::server::Relay::new(
         db,
@@ -169,16 +207,19 @@ async fn main() -> anyhow::Result<()> {
     .expect("Failed to start libp2p relay server");
 
     let addr = SocketAddr::new(args.server.http_addr, args.server.http_port);
+
     let proxy_server = Arc::new(Proxy::new(
         addr,
         args.server.http_cors_origins.filter(|cors_origins| !cors_origins.is_empty()),
         Some(grpc_addr),
         None,
+        Some(artifacts_addr),
+        Arc::new(readonly_pool.clone()),
     ));
 
     let graphql_server = spawn_rebuilding_graphql_server(
         shutdown_tx.clone(),
-        pool.into(),
+        readonly_pool.into(),
         args.external_url,
         proxy_server.clone(),
     );
@@ -191,6 +232,7 @@ async fn main() -> anyhow::Result<()> {
     info!(target: LOG_TARGET, endpoint = %addr, "Starting torii endpoint.");
     info!(target: LOG_TARGET, endpoint = %gql_endpoint, "Serving Graphql playground.");
     info!(target: LOG_TARGET, url = %explorer_url, "Serving World Explorer.");
+    info!(target: LOG_TARGET, path = %artifacts_path, "Serving ERC artifacts at path");
 
     if args.explorer {
         if let Err(e) = webbrowser::open(&explorer_url) {
@@ -212,13 +254,16 @@ async fn main() -> anyhow::Result<()> {
     let graphql_server_handle = tokio::spawn(graphql_server);
     let grpc_server_handle = tokio::spawn(grpc_server);
     let libp2p_relay_server_handle = tokio::spawn(async move { libp2p_relay_server.run().await });
+    let artifacts_server_handle = tokio::spawn(artifacts_server);
 
     tokio::select! {
         res = engine_handle => res??,
+        res = executor_handle => res??,
         res = proxy_server_handle => res??,
         res = graphql_server_handle => res?,
         res = grpc_server_handle => res??,
         res = libp2p_relay_server_handle => res?,
+        res = artifacts_server_handle => res?,
         _ = dojo_utils::signal::wait_signals() => {},
     };
 
