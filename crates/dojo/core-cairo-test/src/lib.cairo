@@ -38,6 +38,7 @@ mod tests {
 
     mod expanded {
         pub(crate) mod selector_attack;
+        mod poseidon_hash_string;
     }
 
     mod helpers {
