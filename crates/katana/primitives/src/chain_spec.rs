@@ -282,7 +282,7 @@ mod tests {
             (
                 DEFAULT_LEGACY_ERC20_CLASS_HASH,
                 GenesisClass {
-                    class: DEFAULT_LEGACY_UDC_CLASS.clone().into(),
+                    class: DEFAULT_LEGACY_ERC20_CLASS.clone().into(),
                     compiled_class_hash: DEFAULT_LEGACY_ERC20_COMPILED_CLASS_HASH,
                 },
             ),
@@ -409,15 +409,9 @@ mod tests {
         assert_eq!(actual_block.body, expected_block.body);
 
         if cfg!(feature = "slot") {
-            assert!(
-                actual_state_updates.classes.len() == 2,
-                "should be 2 sierra classes: oz account, controller account"
-            );
+            assert!(actual_state_updates.classes.len() == 4);
         } else {
-            assert!(
-                actual_state_updates.classes.len() == 1,
-                "should be only 1 sierra class: oz account"
-            );
+            assert!(actual_state_updates.classes.len() == 3);
         }
 
         assert_eq!(
@@ -426,18 +420,15 @@ mod tests {
                 .declared_classes
                 .get(&DEFAULT_LEGACY_ERC20_CLASS_HASH),
             Some(&DEFAULT_LEGACY_ERC20_COMPILED_CLASS_HASH),
-            "The default fee token class should be declared"
+        );
+        assert_eq!(
+            actual_state_updates.classes.get(&DEFAULT_LEGACY_ERC20_CLASS_HASH),
+            Some(&DEFAULT_LEGACY_ERC20_CLASS.clone())
         );
 
         assert_eq!(
             actual_state_updates.classes.get(&DEFAULT_LEGACY_ERC20_CLASS_HASH),
             Some(&*DEFAULT_LEGACY_ERC20_CLASS),
-            "The default fee token casm class should be declared"
-        );
-
-        assert!(
-            !actual_state_updates.classes.contains_key(&DEFAULT_LEGACY_ERC20_CLASS_HASH),
-            "The default fee token class doesnt have a sierra class"
         );
 
         assert_eq!(
@@ -468,10 +459,9 @@ mod tests {
             Some(&*DEFAULT_LEGACY_UDC_CLASS),
             "The default universal deployer casm class should be declared"
         );
-
-        assert!(
-            !actual_state_updates.classes.contains_key(&DEFAULT_LEGACY_UDC_CLASS_HASH),
-            "The default universal deployer class doesnt have a sierra class"
+        assert_eq!(
+            actual_state_updates.classes.get(&DEFAULT_LEGACY_UDC_CLASS_HASH),
+            Some(&DEFAULT_LEGACY_UDC_CLASS.clone())
         );
 
         assert_eq!(
