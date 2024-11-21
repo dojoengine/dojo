@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1732224025738,
+  "lastUpdate": 1732224081831,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -35514,6 +35514,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 10276585867,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "374461db84fbed6cec0f2a52e16869b5e2b66c38",
+          "message": "fix(torii): graphql playground URL (#2707)\n\n* fix: avoid absolute path for URLs\n\n* fix: attempt to fix using relative URL\n\n* fix: merge external url logic for subscription and endpoint\n\n* fix: ensure panic if the scheme is invalid",
+          "timestamp": "2024-11-21T15:04:45-06:00",
+          "tree_id": "adf0824a34a933b8793a9ddd602e6ff0e4b2e1ee",
+          "url": "https://github.com/dojoengine/dojo/commit/374461db84fbed6cec0f2a52e16869b5e2b66c38"
+        },
+        "date": 1732224080477,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11142708123,
             "range": "± 0",
             "unit": "ns/iter"
           }
