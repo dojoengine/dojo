@@ -49,11 +49,18 @@ pub impl WorldStorageInternalImpl of WorldStorageTrait {
     fn dns_from_hash(
         self: @WorldStorage, contract_name_hash: felt252
     ) -> Option<(ContractAddress, ClassHash)> {
-        match (*self.dispatcher)
-            .resource(poseidon_hash_span([*self.namespace_hash, contract_name_hash].span())) {
+        Self::dns_from_selector(
+            self, poseidon_hash_span([*self.namespace_hash, contract_name_hash].span())
+        )
+    }
+
+    fn dns_from_selector(
+        self: @WorldStorage, selector: felt252
+    ) -> Option<(ContractAddress, ClassHash)> {
+        match (*self.dispatcher).resource(selector) {
             Resource::Contract((
                 contract_address, class_hash
-            )) => Option::Some((contract_address, class_hash.try_into().unwrap())),
+            )) => { Option::Some((contract_address, class_hash.try_into().unwrap())) },
             _ => Option::None
         }
     }
