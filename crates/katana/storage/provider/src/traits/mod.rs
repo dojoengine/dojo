@@ -1,4 +1,6 @@
-//! `-Ext` suffixed traits means they are not meant to be used in the main program flow. Usually as a way to restrict certain operations/functions from being accessed at certain parts of the program.
+//! `-Ext` suffixed traits means they are not meant to be used in the main program flow. Usually as
+//! a way to restrict certain operations/functions from being accessed at certain parts of the
+//! program.
 
 pub mod block;
 pub mod contract;
