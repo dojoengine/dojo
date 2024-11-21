@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1732074396274,
+  "lastUpdate": 1732159163509,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -35359,6 +35359,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8534328,
             "range": "± 369400",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "043554cbe399935d9ada1fe6aede58e0586d9f73",
+          "message": "feat(torii): sql proxy endpoint for querying (#2706)\n\n* feat: sql proxy endpoint\n\n* serilization to json\n\n* fmt\n\n* logging\n\n* fix ops",
+          "timestamp": "2024-11-21T10:02:56+07:00",
+          "tree_id": "74ab0f85556a0ec54d1159f20cdc168a35010f39",
+          "url": "https://github.com/dojoengine/dojo/commit/043554cbe399935d9ada1fe6aede58e0586d9f73"
+        },
+        "date": 1732159161632,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10441037619,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
