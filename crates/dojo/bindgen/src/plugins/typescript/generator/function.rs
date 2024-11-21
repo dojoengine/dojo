@@ -2,6 +2,7 @@ use cainome::parser::tokens::{CompositeType, Function, Token};
 use convert_case::{Case, Casing};
 use dojo_world::contracts::naming;
 
+use super::constants::JS_BIGNUMBERISH;
 use super::JsType;
 use crate::error::BindgenResult;
 use crate::plugins::{BindgenContractGenerator, Buffer};
@@ -12,7 +13,8 @@ impl TsFunctionGenerator {
     fn check_imports(&self, buffer: &mut Buffer) {
         if !buffer.has("import { DojoProvider } from ") {
             buffer.insert(0, "import { DojoProvider } from \"@dojoengine/core\";".to_owned());
-            buffer.insert(1, "import { Account, BigNumberish } from \"starknet\";".to_owned());
+            buffer
+                .insert(1, format!("import {{ Account, {} }} from \"starknet\";", JS_BIGNUMBERISH));
             buffer.insert(2, "import * as models from \"./models.gen\";\n".to_owned());
         }
     }

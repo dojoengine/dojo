@@ -1,6 +1,12 @@
 use cainome::parser::tokens::{Composite, Token};
+use constants::{
+    CAIRO_BOOL, CAIRO_BYTE_ARRAY, CAIRO_CONTRACT_ADDRESS, CAIRO_FELT252, CAIRO_I128, CAIRO_U128,
+    CAIRO_U16, CAIRO_U256, CAIRO_U256_STRUCT, CAIRO_U32, CAIRO_U64, CAIRO_U8, JS_BIGNUMBERISH,
+    JS_BOOLEAN, JS_STRING,
+};
 use convert_case::{Case, Casing};
 
+pub(crate) mod constants;
 pub(crate) mod r#enum;
 pub(crate) mod erc;
 pub(crate) mod function;
@@ -54,18 +60,18 @@ pub(crate) struct JsType(String);
 impl From<&str> for JsType {
     fn from(value: &str) -> Self {
         match value {
-            "felt252" => JsType("BigNumberish".to_owned()),
-            "ContractAddress" => JsType("string".to_owned()),
-            "ByteArray" => JsType("string".to_owned()),
-            "u8" => JsType("BigNumberish".to_owned()),
-            "u16" => JsType("BigNumberish".to_owned()),
-            "u32" => JsType("BigNumberish".to_owned()),
-            "u64" => JsType("BigNumberish".to_owned()),
-            "u128" => JsType("BigNumberish".to_owned()),
-            "u256" => JsType("BigNumberish".to_owned()),
-            "U256" => JsType("BigNumberish".to_owned()),
-            "i128" => JsType("BigNumberish".to_owned()),
-            "bool" => JsType("boolean".to_owned()),
+            CAIRO_FELT252 => JsType(JS_BIGNUMBERISH.to_owned()),
+            CAIRO_CONTRACT_ADDRESS => JsType(JS_STRING.to_owned()),
+            CAIRO_BYTE_ARRAY => JsType(JS_STRING.to_owned()),
+            CAIRO_U8 => JsType(JS_BIGNUMBERISH.to_owned()),
+            CAIRO_U16 => JsType(JS_BIGNUMBERISH.to_owned()),
+            CAIRO_U32 => JsType(JS_BIGNUMBERISH.to_owned()),
+            CAIRO_U64 => JsType(JS_BIGNUMBERISH.to_owned()),
+            CAIRO_U128 => JsType(JS_BIGNUMBERISH.to_owned()),
+            CAIRO_U256 => JsType(JS_BIGNUMBERISH.to_owned()),
+            CAIRO_U256_STRUCT => JsType(JS_BIGNUMBERISH.to_owned()),
+            CAIRO_I128 => JsType(JS_BIGNUMBERISH.to_owned()),
+            CAIRO_BOOL => JsType(JS_BOOLEAN.to_owned()),
             _ => JsType(value.to_owned()),
         }
     }
@@ -103,18 +109,18 @@ pub(crate) struct JsDefaultValue(String);
 impl From<&str> for JsDefaultValue {
     fn from(value: &str) -> Self {
         match value {
-            "felt252" => JsDefaultValue("0".to_string()),
-            "ContractAddress" => JsDefaultValue("\"\"".to_string()),
-            "ByteArray" => JsDefaultValue("\"\"".to_string()),
-            "u8" => JsDefaultValue("0".to_string()),
-            "u16" => JsDefaultValue("0".to_string()),
-            "u32" => JsDefaultValue("0".to_string()),
-            "u64" => JsDefaultValue("0".to_string()),
-            "u128" => JsDefaultValue("0".to_string()),
-            "u256" => JsDefaultValue("0".to_string()),
-            "U256" => JsDefaultValue("0".to_string()),
-            "i128" => JsDefaultValue("0".to_string()),
-            "bool" => JsDefaultValue("false".to_string()),
+            CAIRO_FELT252 => JsDefaultValue("0".to_string()),
+            CAIRO_CONTRACT_ADDRESS => JsDefaultValue("\"\"".to_string()),
+            CAIRO_BYTE_ARRAY => JsDefaultValue("\"\"".to_string()),
+            CAIRO_U8 => JsDefaultValue("0".to_string()),
+            CAIRO_U16 => JsDefaultValue("0".to_string()),
+            CAIRO_U32 => JsDefaultValue("0".to_string()),
+            CAIRO_U64 => JsDefaultValue("0".to_string()),
+            CAIRO_U128 => JsDefaultValue("0".to_string()),
+            CAIRO_U256 => JsDefaultValue("0".to_string()),
+            CAIRO_U256_STRUCT => JsDefaultValue("0".to_string()),
+            CAIRO_I128 => JsDefaultValue("0".to_string()),
+            CAIRO_BOOL => JsDefaultValue("false".to_string()),
             _ => JsDefaultValue(value.to_string()),
         }
     }
@@ -177,6 +183,7 @@ mod tests {
         Tuple,
     };
 
+    use crate::plugins::typescript::generator::constants::JS_BIGNUMBERISH;
     use crate::plugins::typescript::generator::{generate_type_init, JsDefaultValue, JsType};
 
     impl PartialEq<JsType> for &str {
@@ -194,13 +201,13 @@ mod tests {
     #[test]
     fn test_js_type_basics() {
         assert_eq!(
-            "BigNumberish",
+            JS_BIGNUMBERISH,
             JsType::from(&Token::CoreBasic(CoreBasic {
                 type_path: "core::integer::u8".to_owned()
             }))
         );
         assert_eq!(
-            "BigNumberish",
+            JS_BIGNUMBERISH,
             JsType::from(&Token::CoreBasic(CoreBasic { type_path: "core::felt252".to_owned() }))
         )
     }
@@ -208,7 +215,7 @@ mod tests {
     #[test]
     fn test_tuple_type() {
         assert_eq!(
-            "[BigNumberish, BigNumberish]",
+            format!("[{}, {}]", JS_BIGNUMBERISH, JS_BIGNUMBERISH).as_str(),
             JsType::from(&Token::Tuple(Tuple {
                 type_path: "(core::integer::u8,core::integer::u128)".to_owned(),
                 inners: vec![
@@ -222,7 +229,7 @@ mod tests {
     #[test]
     fn test_array_type() {
         assert_eq!(
-            "Array<[BigNumberish, BigNumberish]>",
+            format!("Array<[{}, {}]>", JS_BIGNUMBERISH, JS_BIGNUMBERISH).as_str(),
             JsType::from(&Token::Array(Array {
                 type_path: "core::array::Span<(core::integer::u8,core::integer::u128)>".to_owned(),
                 inner: Box::new(Token::Tuple(Tuple {
