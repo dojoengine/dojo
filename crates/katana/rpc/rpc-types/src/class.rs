@@ -1,3 +1,6 @@
+//! The types used are intentionally chosen so that they can be easily converted from RPC to the
+//! internal types without having to rely on intermediary types.
+
 use std::collections::HashMap;
 use std::io::Write;
 
@@ -204,7 +207,7 @@ mod tests {
         let class = serde_json::from_str::<SierraContractClass>(json).unwrap();
 
         let rpc = RpcSierraContractClass::try_from(class.clone()).unwrap();
-        let rt = SierraContractClass::try_from(rpc).unwrap();
+        let rt = SierraContractClass::from(rpc);
 
         assert_eq!(class.sierra_program, rt.sierra_program);
         assert_eq!(class.entry_points_by_type, rt.entry_points_by_type);
