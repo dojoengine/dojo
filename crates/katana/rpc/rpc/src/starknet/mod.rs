@@ -17,9 +17,8 @@ use katana_primitives::block::{
     BlockHash, BlockHashOrNumber, BlockIdOrTag, BlockNumber, BlockTag, FinalityStatus,
     PartialHeader,
 };
-use katana_primitives::class::{ClassHash, ContractClass};
+use katana_primitives::class::ClassHash;
 use katana_primitives::contract::{ContractAddress, Nonce, StorageKey, StorageValue};
-use katana_primitives::conversion::rpc::legacy_inner_to_rpc_class;
 use katana_primitives::da::L1DataAvailabilityMode;
 use katana_primitives::env::BlockEnv;
 use katana_primitives::event::MaybeForkedContinuationToken;
@@ -46,8 +45,7 @@ use katana_rpc_types::FeeEstimate;
 use katana_rpc_types_builder::ReceiptBuilder;
 use katana_tasks::{BlockingTaskPool, TokioTaskSpawner};
 use starknet::core::types::{
-    ContractClass as StarknetRsContractClass, PriceUnit, ResultPageRequest,
-    TransactionExecutionStatus, TransactionStatus,
+    PriceUnit, ResultPageRequest, TransactionExecutionStatus, TransactionStatus,
 };
 
 use crate::utils;
@@ -262,11 +260,6 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
             let Some(class) = state.class(class_hash)? else {
                 return Err(StarknetApiError::ClassHashNotFound);
             };
-
-            // match class {
-            //     ContractClass::Legacy(class) => Ok(legacy_inner_to_rpc_class(class)?),
-            //     ContractClass::Class(sierra) => Ok(StarknetRsContractClass::Sierra(sierra)),
-            // }
 
             Ok(RpcContractClass::try_from(class).unwrap())
         })

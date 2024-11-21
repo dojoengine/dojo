@@ -1,3 +1,6 @@
+use std::collections::HashMap;
+use std::io::Write;
+
 use futures::io;
 use katana_cairo::lang::starknet_classes::contract_class::ContractEntryPoints;
 use katana_cairo::lang::utils::bigint::BigUintAsHex;
@@ -6,14 +9,14 @@ use katana_cairo::starknet_api::deprecated_contract_class::{
 };
 use katana_cairo::starknet_api::serde_utils::deserialize_optional_contract_class_abi_entry_vector;
 use katana_primitives::class::{ContractClass, LegacyContractClass, SierraContractClass};
-use katana_primitives::Felt;
-use katana_primitives::{self};
+use katana_primitives::{
+    Felt, {self},
+};
 use serde::{Deserialize, Serialize};
 use serde_json_pythonic::to_string_pythonic;
 use starknet::core::types::{CompressedLegacyContractClass, FlattenedSierraClass};
-use std::collections::HashMap;
-use std::io::Write;
 
+/// RPC representation of the contract class.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum RpcContractClass {
     Class(RpcSierraContractClass),
@@ -108,7 +111,7 @@ impl From<RpcSierraContractClass> for SierraContractClass {
 
 // -- LEGACY CLASS
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RpcLegacyContractClass {
     /// A base64 representation of the compressed program code
     pub program: Vec<u8>,
@@ -151,7 +154,11 @@ fn decompress_legacy_program(compressed_data: &[u8]) -> Result<LegacyProgram, Co
     Ok(serde_json::from_slice::<LegacyProgram>(&decompressed)?)
 }
 
-// Conversion from `starknet-rs` types for convenience
+// Conversion from `starknet-rs` types for convenience.
+//
+// These are not the most efficient way to convert the types, but they are the most convenient.
+// Considering we are not using `starknet-rs` types for the contract class definitions in Katana and
+// mainly for utility purposes, these conversions are not meant to be used in the program hot path.
 
 impl TryFrom<FlattenedSierraClass> for RpcSierraContractClass {
     type Error = ConversionError;
@@ -175,8 +182,10 @@ impl TryFrom<CompressedLegacyContractClass> for RpcLegacyContractClass {
 
 #[cfg(test)]
 mod tests {
+    use katana_primitives::class::{LegacyContractClass, SierraContractClass};
+
     use super::RpcLegacyContractClass;
-    use katana_primitives::class::LegacyContractClass;
+    use crate::class::RpcSierraContractClass;
 
     #[test]
     fn legacy_rt() {
@@ -190,5 +199,15 @@ mod tests {
     }
 
     #[test]
-    fn rt() {}
+    fn rt() {
+        let json = include_str!("../../../contracts/build/default_account.json");
+        let class = serde_json::from_str::<SierraContractClass>(json).unwrap();
+
+        let rpc = RpcSierraContractClass::try_from(class.clone()).unwrap();
+        let rt = SierraContractClass::try_from(rpc).unwrap();
+
+        assert_eq!(class.sierra_program, rt.sierra_program);
+        assert_eq!(class.entry_points_by_type, rt.entry_points_by_type);
+        assert_eq!(class.contract_class_version, rt.contract_class_version);
+    }
 }

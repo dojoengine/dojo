@@ -144,8 +144,8 @@ impl BroadcastedDeclareTx {
                 //     account_deployment_data: tx.account_deployment_data,
                 //     resource_bounds: from_rpc_resource_bounds(tx.resource_bounds),
                 //     fee_data_availability_mode: from_rpc_da_mode(tx.fee_data_availability_mode),
-                //     nonce_data_availability_mode: from_rpc_da_mode(tx.nonce_data_availability_mode),
-                // });
+                //     nonce_data_availability_mode:
+                // from_rpc_da_mode(tx.nonce_data_availability_mode), });
 
                 // Ok(DeclareTxWithClass::new(tx, class))
 

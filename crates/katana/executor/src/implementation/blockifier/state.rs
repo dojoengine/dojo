@@ -151,11 +151,7 @@ impl<S: StateDb> ContractClassProvider for CachedState<S> {
             return Ok(None);
         };
 
-        if hash.0 == Felt::ZERO {
-            Ok(None)
-        } else {
-            Ok(Some(hash.0))
-        }
+        if hash.0 == Felt::ZERO { Ok(None) } else { Ok(Some(hash.0)) }
     }
 }
 
@@ -168,11 +164,7 @@ impl<S: StateDb> StateProvider for CachedState<S> {
             return Ok(None);
         };
 
-        if hash.0 == Felt::ZERO {
-            Ok(None)
-        } else {
-            Ok(Some(hash.0))
-        }
+        if hash.0 == Felt::ZERO { Ok(None) } else { Ok(Some(hash.0)) }
     }
 
     fn nonce(

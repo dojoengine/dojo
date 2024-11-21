@@ -308,11 +308,7 @@ fn recent_change_from_block(
     // 1. the list is empty
     // 2. there are no prior changes occured before/at `block_number`
     let rank = block_list.rank(block_number);
-    if rank == 0 {
-        None
-    } else {
-        block_list.select(rank - 1)
-    }
+    if rank == 0 { None } else { block_list.select(rank - 1) }
 }
 
 #[cfg(test)]
