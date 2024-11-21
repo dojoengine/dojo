@@ -20,7 +20,7 @@ impl StaticHandler {
 
 #[async_trait::async_trait]
 impl Handler for StaticHandler {
-    fn can_handle(&self, req: &Request<Body>) -> bool {
+    fn should_handle(&self, req: &Request<Body>) -> bool {
         req.uri().path().starts_with("/static")
     }
 

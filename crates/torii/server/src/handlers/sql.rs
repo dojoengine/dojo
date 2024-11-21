@@ -73,18 +73,25 @@ impl SqlHandler {
         }
     }
 
-    fn extract_query(&self, req: Request<Body>) -> Result<String, Response<Body>> {
+    async fn extract_query(&self, req: Request<Body>) -> Result<String, Response<Body>> {
         match *req.method() {
             Method::GET => {
+                // Get the query from the query params
                 let params = req.uri().query().unwrap_or_default();
                 Ok(form_urlencoded::parse(params.as_bytes())
-                    .find(|(key, _)| key == "q")
+                    .find(|(key, _)| key == "q" || key == "query")
                     .map(|(_, value)| value.to_string())
                     .unwrap_or_default())
             }
             Method::POST => {
-                // Note: This would need to be adjusted to handle the async body reading
-                Ok(String::new()) // Placeholder
+                // Get the query from request body
+                let body_bytes = hyper::body::to_bytes(req.into_body()).await.unwrap_or_default();
+                String::from_utf8(body_bytes.to_vec()).map_err(|_| {
+                    Response::builder()
+                        .status(StatusCode::BAD_REQUEST)
+                        .body(Body::from("Invalid query"))
+                        .unwrap()
+                })
             }
             _ => Err(Response::builder()
                 .status(StatusCode::METHOD_NOT_ALLOWED)
@@ -96,12 +103,12 @@ impl SqlHandler {
 
 #[async_trait::async_trait]
 impl Handler for SqlHandler {
-    fn can_handle(&self, req: &Request<Body>) -> bool {
+    fn should_handle(&self, req: &Request<Body>) -> bool {
         req.uri().path().starts_with("/sql")
     }
 
     async fn handle(&self, req: Request<Body>) -> Response<Body> {
-        match self.extract_query(req) {
+        match self.extract_query(req).await {
             Ok(query) => self.execute_query(query).await,
             Err(response) => response,
         }

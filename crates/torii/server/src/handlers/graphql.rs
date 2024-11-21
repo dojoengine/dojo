@@ -21,7 +21,7 @@ impl GraphQLHandler {
 
 #[async_trait::async_trait]
 impl Handler for GraphQLHandler {
-    fn can_handle(&self, req: &Request<Body>) -> bool {
+    fn should_handle(&self, req: &Request<Body>) -> bool {
         req.uri().path().starts_with("/graphql")
     }
 

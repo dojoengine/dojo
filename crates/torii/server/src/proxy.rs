@@ -179,7 +179,7 @@ async fn handle(
     ];
 
     for handler in handlers {
-        if handler.can_handle(&req) {
+        if handler.should_handle(&req) {
             return Ok(handler.handle(req).await);
         }
     }

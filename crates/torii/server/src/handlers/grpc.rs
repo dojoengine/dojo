@@ -21,7 +21,7 @@ impl GrpcHandler {
 
 #[async_trait::async_trait]
 impl Handler for GrpcHandler {
-    fn can_handle(&self, req: &Request<Body>) -> bool {
+    fn should_handle(&self, req: &Request<Body>) -> bool {
         req.headers()
             .get(CONTENT_TYPE)
             .and_then(|ct| ct.to_str().ok())
