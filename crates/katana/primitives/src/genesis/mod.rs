@@ -121,8 +121,7 @@ impl Default for Genesis {
                 DEFAULT_ACCOUNT_CLASS_HASH,
                 GenesisClass {
                     compiled_class_hash: DEFAULT_ACCOUNT_COMPILED_CLASS_HASH,
-                    class: ContractClass::Class(DEFAULT_ACCOUNT_CLASS.clone().flatten().unwrap())
-                        .into(),
+                    class: DEFAULT_ACCOUNT_CLASS.clone().into(),
                 },
             ),
             #[cfg(feature = "slot")]
@@ -130,10 +129,7 @@ impl Default for Genesis {
                 CONTROLLER_CLASS_HASH,
                 GenesisClass {
                     compiled_class_hash: CONTROLLER_CLASS_HASH,
-                    class: ContractClass::Class(
-                        CONTROLLER_ACCOUNT_CLASS.clone().flatten().unwrap(),
-                    )
-                    .into(),
+                    class: CONTROLLER_ACCOUNT_CLASS.clone().into(),
                 },
             ),
         ]);

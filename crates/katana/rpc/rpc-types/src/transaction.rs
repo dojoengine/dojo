@@ -1,11 +1,11 @@
+use std::sync::Arc;
+
 use anyhow::Result;
 use derive_more::Deref;
 use katana_primitives::chain::ChainId;
 use katana_primitives::class::{ClassHash, ContractClass};
 use katana_primitives::contract::ContractAddress;
-use katana_primitives::conversion::rpc::{
-    compiled_class_hash_from_flattened_sierra_class, legacy_rpc_to_class,
-};
+use katana_primitives::conversion::rpc::compiled_class_hash_from_flattened_sierra_class;
 use katana_primitives::da::DataAvailabilityMode;
 use katana_primitives::fee::{ResourceBounds, ResourceBoundsMapping};
 use katana_primitives::transaction::{
@@ -22,6 +22,7 @@ use starknet::core::types::{
 };
 use starknet::core::utils::get_contract_address;
 
+use crate::class::{RpcContractClass, RpcLegacyContractClass, RpcSierraContractClass};
 use crate::receipt::TxReceiptWithBlockInfo;
 
 pub const CHUNK_SIZE_DEFAULT: u64 = 100;
@@ -91,11 +92,17 @@ impl BroadcastedDeclareTx {
         Ok(is_valid)
     }
 
+    // TODO: change the contract class type for the broadcasted tx to katana-rpc-types instead for
+    // easier conversion.
     /// This function assumes that the compiled class hash is valid.
     pub fn try_into_tx_with_chain_id(self, chain_id: ChainId) -> Result<DeclareTxWithClass> {
         match self.0 {
             BroadcastedDeclareTransaction::V1(tx) => {
-                let (class_hash, class) = legacy_rpc_to_class(&tx.contract_class)?;
+                let rpc_class = Arc::unwrap_or_clone(tx.contract_class);
+                let rpc_class = RpcLegacyContractClass::try_from(rpc_class).unwrap();
+                let class = ContractClass::try_from(RpcContractClass::Legacy(rpc_class)).unwrap();
+
+                let class_hash = class.class_hash().unwrap();
 
                 let tx = DeclareTx::V1(DeclareTxV1 {
                     chain_id,
@@ -111,7 +118,10 @@ impl BroadcastedDeclareTx {
 
             BroadcastedDeclareTransaction::V2(tx) => {
                 let class_hash = tx.contract_class.class_hash();
-                let class = ContractClass::Class(tx.contract_class.as_ref().clone());
+
+                let rpc_class = Arc::unwrap_or_clone(tx.contract_class);
+                let rpc_class = RpcSierraContractClass::try_from(rpc_class).unwrap();
+                let class = ContractClass::try_from(RpcContractClass::Class(rpc_class)).unwrap();
 
                 let tx = DeclareTx::V2(DeclareTxV2 {
                     chain_id,
@@ -128,7 +138,10 @@ impl BroadcastedDeclareTx {
 
             BroadcastedDeclareTransaction::V3(tx) => {
                 let class_hash = tx.contract_class.class_hash();
-                let class = ContractClass::Class(tx.contract_class.as_ref().clone());
+
+                let rpc_class = Arc::unwrap_or_clone(tx.contract_class);
+                let rpc_class = RpcSierraContractClass::try_from(rpc_class).unwrap();
+                let class = ContractClass::try_from(RpcContractClass::Class(rpc_class)).unwrap();
 
                 let tx = DeclareTx::V3(DeclareTxV3 {
                     chain_id,
