@@ -8632,6 +8632,7 @@ dependencies = [
  "serde_json",
  "serde_json_pythonic",
  "serde_with 3.9.0",
+ "similar-asserts",
  "starknet 0.12.0",
  "thiserror",
 ]

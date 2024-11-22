@@ -150,7 +150,10 @@ impl TryFrom<RpcLegacyContractClass> for LegacyContractClass {
     }
 }
 
-fn compress_legacy_program(program: LegacyProgram) -> Result<Vec<u8>, ConversionError> {
+fn compress_legacy_program(mut program: LegacyProgram) -> Result<Vec<u8>, ConversionError> {
+    // We don't need the debug info in the compressed program.
+    program.debug_info = serde_json::to_value::<Option<()>>(None)?;
+
     let bytes = serde_json::to_vec(&program)?;
     let mut gzip_encoder = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::fast());
     Write::write_all(&mut gzip_encoder, &bytes)?;
@@ -168,7 +171,8 @@ fn decompress_legacy_program(compressed_data: &[u8]) -> Result<LegacyProgram, Co
 //
 // These are not the most efficient way to convert the types, but they are the most convenient.
 // Considering we are not using `starknet-rs` types for the contract class definitions in Katana and
-// mainly for utility purposes, these conversions are not meant to be used in the program hot path.
+// mainly for utility purposes, these conversions should be avoided from being used in a program
+// hot path.
 
 impl TryFrom<FlattenedSierraClass> for RpcSierraContractClass {
     type Error = ConversionError;
@@ -193,6 +197,7 @@ impl TryFrom<CompressedLegacyContractClass> for RpcLegacyContractClass {
 #[cfg(test)]
 mod tests {
     use katana_primitives::class::{ContractClass, LegacyContractClass, SierraContractClass};
+    use starknet::core::types::contract::legacy::LegacyContractClass as StarknetRsLegacyContractClass;
     use starknet::core::types::contract::SierraClass;
 
     use super::RpcLegacyContractClass;
@@ -247,5 +252,42 @@ mod tests {
         assert_eq!(expected_class.sierra_program, class.sierra_program);
         assert_eq!(expected_class.entry_points_by_type, class.entry_points_by_type);
         assert_eq!(expected_class.contract_class_version, class.contract_class_version);
+    }
+
+    #[test]
+    fn legacy_rt_with_starknet_rs() {
+        use similar_asserts::assert_eq;
+
+        let json = include_str!("../../../contracts/build/erc20.json");
+        let expected_class = serde_json::from_str::<LegacyContractClass>(json).unwrap();
+
+        // -- starknet-rs
+
+        let starknet_rs_class =
+            serde_json::from_str::<StarknetRsLegacyContractClass>(json).unwrap();
+        let starknet_rs_hash = starknet_rs_class.class_hash().unwrap();
+        let starknet_rs_rpc = starknet_rs_class.compress().unwrap();
+
+        let json = serde_json::to_string(&starknet_rs_rpc).unwrap();
+
+        // -- katana
+
+        let rpc = serde_json::from_str::<RpcLegacyContractClass>(&json).unwrap();
+        let class = LegacyContractClass::try_from(rpc).unwrap();
+        let hash = ContractClass::Legacy(class.clone()).class_hash().unwrap();
+
+        assert_eq!(starknet_rs_hash, hash);
+        assert_eq!(expected_class.abi, class.abi);
+        assert_eq!(expected_class.entry_points_by_type, class.entry_points_by_type);
+        assert_eq!(expected_class.program.builtins, class.program.builtins);
+        assert_eq!(expected_class.program.compiler_version, class.program.compiler_version);
+        assert_eq!(expected_class.program.data, class.program.data);
+        assert_eq!(expected_class.program.hints, class.program.hints);
+        assert_eq!(expected_class.program.identifiers, class.program.identifiers);
+        assert_eq!(expected_class.program.main_scope, class.program.main_scope);
+        assert_eq!(expected_class.program.prime, class.program.prime);
+        assert_eq!(expected_class.program.reference_manager, class.program.reference_manager);
+        // The debug info is stripped when converting to RPC format.
+        assert_eq!(serde_json::to_value::<Option<()>>(None).unwrap(), class.program.debug_info);
     }
 }
