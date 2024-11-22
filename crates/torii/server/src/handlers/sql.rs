@@ -5,6 +5,7 @@ use base64::Engine;
 use http::header::CONTENT_TYPE;
 use hyper::{Body, Method, Request, Response, StatusCode};
 use sqlx::{Column, Row, SqlitePool, TypeInfo};
+use include_str;
 
 use super::Handler;
 
@@ -117,6 +118,28 @@ impl SqlHandler {
                 .unwrap()),
         }
     }
+
+    async fn serve_playground(&self) -> Response<Body> {
+        let html = include_str!("../../static/sql-playground.html");
+        
+        Response::builder()
+            .status(StatusCode::OK)
+            .header(CONTENT_TYPE, "text/html")
+            .header("Access-Control-Allow-Origin", "*")
+            .body(Body::from(html))
+            .unwrap()
+    }
+
+    async fn handle_request(&self, req: Request<Body>) -> Response<Body> {
+        if req.method() == Method::GET && req.uri().query().unwrap_or_default().is_empty() {
+            self.serve_playground().await
+        } else {
+            match self.extract_query(req).await {
+                Ok(query) => self.execute_query(query).await,
+                Err(_) => self.serve_playground().await,
+            }
+        }
+    }
 }
 
 #[async_trait::async_trait]
@@ -126,9 +149,6 @@ impl Handler for SqlHandler {
     }
 
     async fn handle(&self, req: Request<Body>) -> Response<Body> {
-        match self.extract_query(req).await {
-            Ok(query) => self.execute_query(query).await,
-            Err(response) => response,
-        }
+        self.handle_request(req).await
     }
 }

@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Torii SQL Playground</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Add Monaco Editor -->
+    <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
+    <style>
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        /* Monaco editor container */
+        #monaco-editor {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body class="bg-black">
+    <div id="root"></div>
+    <script>
+        // Configure Monaco loader
+        require.config({ paths: { 'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' }});
+
+        const DEFAULT_QUERY = `-- Welcome to Torii SQL Playground!
+-- Try running a query like:
+SELECT *
+FROM entities
+LIMIT 1000;`;
+
+        const {
+            useState,
+            useCallback,
+            useEffect,
+            useRef
+        } = React;
+
+        function Card({ children, className }) {
+            return React.createElement('div', {
+                className: `bg-zinc-900 rounded-lg border border-zinc-800 ${className || ''}`
+            }, children);
+        }
+
+        function Button({ children, onClick, disabled, variant, className }) {
+            const baseClasses = 'inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus:outline-none disabled:opacity-50 disabled:pointer-events-none px-4 py-2';
+            const variantClasses = variant === 'outline' 
+                ? 'border border-zinc-700 hover:bg-zinc-800 text-white'
+                : 'bg-white text-black hover:bg-zinc-100';
+            
+            return React.createElement('button', {
+                onClick,
+                disabled,
+                className: `${baseClasses} ${variantClasses} ${className || ''}`
+            }, children);
+        }
+
+        function Alert({ children, variant }) {
+            const classes = variant === 'destructive'
+                ? 'bg-red-900/50 text-red-200 border border-red-800/50 rounded-lg p-4'
+                : 'bg-zinc-800 border rounded-lg p-4';
+            
+            return React.createElement('div', { className: classes }, children);
+        }
+
+        function SQLPlayground() {
+            const [query, setQuery] = useState(DEFAULT_QUERY);
+            const [response, setResponse] = useState(null);
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState(null);
+            const [copied, setCopied] = useState(false);
+            const editorRef = useRef(null);
+            const monacoRef = useRef(null);
+
+            useEffect(() => {
+                require(['vs/editor/editor.main'], function(monaco) {
+                    // SQL Language Configuration
+                    monaco.languages.register({ id: 'sql' });
+
+                    // Add SQL completions
+                    monaco.languages.registerCompletionItemProvider('sql', {
+                        provideCompletionItems: () => {
+                            const suggestions = [
+                                // Keywords
+                                {
+                                    label: 'SELECT',
+                                    kind: monaco.languages.CompletionItemKind.Keyword,
+                                    insertText: 'SELECT',
+                                    detail: 'SQL Keyword',
+                                    documentation: 'Retrieve data from a table'
+                                },
+                                {
+                                    label: 'FROM',
+                                    kind: monaco.languages.CompletionItemKind.Keyword,
+                                    insertText: 'FROM',
+                                    detail: 'SQL Keyword'
+                                },
+                                {
+                                    label: 'WHERE',
+                                    kind: monaco.languages.CompletionItemKind.Keyword,
+                                    insertText: 'WHERE',
+                                    detail: 'SQL Keyword'
+                                },
+                                {
+                                    label: 'GROUP BY',
+                                    kind: monaco.languages.CompletionItemKind.Keyword,
+                                    insertText: 'GROUP BY',
+                                    detail: 'SQL Keyword'
+                                },
+                                {
+                                    label: 'ORDER BY',
+                                    kind: monaco.languages.CompletionItemKind.Keyword,
+                                    insertText: 'ORDER BY',
+                                    detail: 'SQL Keyword'
+                                },
+                                {
+                                    label: 'LIMIT',
+                                    kind: monaco.languages.CompletionItemKind.Keyword,
+                                    insertText: 'LIMIT',
+                                    detail: 'SQL Keyword'
+                                },
+                                {
+                                    label: 'JOIN',
+                                    kind: monaco.languages.CompletionItemKind.Keyword,
+                                    insertText: 'JOIN',
+                                    detail: 'SQL Keyword'
+                                },
+                                {
+                                    label: 'LEFT JOIN',
+                                    kind: monaco.languages.CompletionItemKind.Keyword,
+                                    insertText: 'LEFT JOIN',
+                                    detail: 'SQL Keyword'
+                                },
+                                {
+                                    label: 'INNER JOIN',
+                                    kind: monaco.languages.CompletionItemKind.Keyword,
+                                    insertText: 'INNER JOIN',
+                                    detail: 'SQL Keyword'
+                                },
+                                // Functions
+                                {
+                                    label: 'COUNT',
+                                    kind: monaco.languages.CompletionItemKind.Function,
+                                    insertText: 'COUNT($0)',
+                                    insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                                    detail: 'SQL Function',
+                                    documentation: 'Count the number of rows'
+                                },
+                                {
+                                    label: 'SUM',
+                                    kind: monaco.languages.CompletionItemKind.Function,
+                                    insertText: 'SUM($0)',
+                                    insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                                    detail: 'SQL Function'
+                                },
+                                {
+                                    label: 'AVG',
+                                    kind: monaco.languages.CompletionItemKind.Function,
+                                    insertText: 'AVG($0)',
+                                    insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                                    detail: 'SQL Function'
+                                },
+                                // Snippets
+                                {
+                                    label: 'SELECT FROM',
+                                    kind: monaco.languages.CompletionItemKind.Snippet,
+                                    insertText: [
+                                        'SELECT ${1:*}',
+                                        'FROM ${2:table_name}',
+                                        '${0}'
+                                    ].join('\n'),
+                                    insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                                    detail: 'Basic SELECT query',
+                                    documentation: 'Basic SELECT query template'
+                                },
+                                {
+                                    label: 'SELECT FROM WHERE',
+                                    kind: monaco.languages.CompletionItemKind.Snippet,
+                                    insertText: [
+                                        'SELECT ${1:*}',
+                                        'FROM ${2:table_name}',
+                                        'WHERE ${3:condition}',
+                                        '${0}'
+                                    ].join('\n'),
+                                    insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                                    detail: 'SELECT query with WHERE clause'
+                                },
+                                {
+                                    label: 'SELECT JOIN',
+                                    kind: monaco.languages.CompletionItemKind.Snippet,
+                                    insertText: [
+                                        'SELECT ${1:*}',
+                                        'FROM ${2:table1}',
+                                        'JOIN ${3:table2} ON ${4:table1.id = table2.id}',
+                                        '${0}'
+                                    ].join('\n'),
+                                    insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                                    detail: 'SELECT query with JOIN'
+                                }
+                            ];
+
+                            // Add common table suggestions (you might want to fetch these dynamically)
+                            const commonTables = ['users', 'orders', 'products', 'customers'];
+                            commonTables.forEach(table => {
+                                suggestions.push({
+                                    label: table,
+                                    kind: monaco.languages.CompletionItemKind.Class,
+                                    insertText: table,
+                                    detail: 'Table'
+                                });
+                            });
+
+                            return { suggestions };
+                        }
+                    });
+
+                    // Create editor with updated options
+                    if (!editorRef.current) {
+                        const editor = monaco.editor.create(document.getElementById('monaco-editor'), {
+                            value: query,
+                            language: 'sql',
+                            theme: 'vs-dark',
+                            minimap: { enabled: false },
+                            fontSize: 14,
+                            lineNumbers: 'on',
+                            roundedSelection: true,
+                            scrollBeyondLastLine: false,
+                            automaticLayout: true,
+                            suggestOnTriggerCharacters: true,
+                            quickSuggestions: true,
+                            quickSuggestionsDelay: 0,
+                            parameterHints: {
+                                enabled: true
+                            },
+                            suggest: {
+                                snippetsPreventQuickSuggestions: false,
+                                showKeywords: true,
+                                showSnippets: true,
+                                showClasses: true,
+                                showFunctions: true,
+                                preview: true
+                            }
+                        });
+
+                        // Add keyboard shortcut for suggestions
+                        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Space, () => {
+                            editor.trigger('keyboard', 'editor.action.triggerSuggest', {});
+                        });
+
+                        editor.onDidChangeModelContent(() => {
+                            setQuery(editor.getValue());
+                        });
+
+                        editorRef.current = editor;
+                        monacoRef.current = monaco;
+                    }
+                });
+
+                return () => {
+                    if (editorRef.current) {
+                        editorRef.current.dispose();
+                    }
+                };
+            }, []);
+
+            // ... rest of the functions stay the same ...
+
+            return React.createElement('div', { className: 'min-h-screen bg-black text-white p-4' },
+                React.createElement('div', { className: 'max-w-8xl mx-auto' }, [
+                    React.createElement('div', { className: 'mb-6', key: 'header' }, [
+                        React.createElement('div', { className: 'flex items-center gap-2 mb-1' }, [
+                            React.createElement('h1', { className: 'text-2xl font-bold text-white' }, 'Torii SQL Playground'),
+                            React.createElement('span', { className: 'px-2 py-1 rounded-full bg-zinc-800 text-xs text-zinc-400' }, 'BETA')
+                        ]),
+                        React.createElement('p', { className: 'text-zinc-400' }, 'Write and execute SQL queries in real-time')
+                    ]),
+                    React.createElement('div', { className: 'grid grid-cols-1 lg:grid-cols-2 gap-6', key: 'content' }, [
+                        // Query Editor Panel
+                        React.createElement(Card, { key: 'editor', className: 'flex flex-col h-[75vh]' }, [
+                            React.createElement('div', { className: 'p-4 border-b border-zinc-800 flex items-center justify-between' }, [
+                                React.createElement('h2', { className: 'text-lg font-semibold text-white' }, 'Query Editor'),
+                                React.createElement(Button, {
+                                    variant: 'outline',
+                                    onClick: () => copyToClipboard(query)
+                                }, copied ? '✓ Copied!' : 'Copy')
+                            ]),
+                            React.createElement('div', { className: 'flex-1 relative' },
+                                React.createElement('div', { 
+                                    id: 'monaco-editor',
+                                    className: 'absolute inset-0'
+                                })
+                            ),
+                            React.createElement('div', { className: 'p-4 border-t border-zinc-800' },
+                                React.createElement(Button, {
+                                    onClick: executeQuery,
+                                    disabled: loading,
+                                    className: 'w-full'
+                                }, loading ? '⟳ Executing...' : '▶ Run Query')
+                            )
+                        ]),
+
+                        // Results Panel updates...
+                        React.createElement(Card, { key: 'results', className: 'flex flex-col h-[75vh]' }, [
+                            React.createElement('div', { className: 'p-4 border-b border-zinc-800 flex items-center justify-between' }, [
+                                React.createElement('h2', { className: 'text-lg font-semibold text-white' }, 'Results'),
+                                response && React.createElement(Button, {
+                                    variant: 'outline',
+                                    onClick: downloadResults
+                                }, '⇩ Download JSON')
+                            ]),
+                            React.createElement('div', { className: 'flex-1 p-4 overflow-auto' }, [
+                                error && React.createElement(Alert, { variant: 'destructive' },
+                                    '⚠ ' + error
+                                ),
+                                response && response.length > 0 && React.createElement('div', { className: 'overflow-x-auto' },
+                                    React.createElement('table', { className: 'min-w-full divide-y divide-zinc-800' }, [
+                                        React.createElement('thead', { className: 'bg-zinc-900' },
+                                            React.createElement('tr', {},
+                                                Object.keys(response[0]).map(header =>
+                                                    React.createElement('th', {
+                                                        key: header,
+                                                        className: 'px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider'
+                                                    }, header)
+                                                )
+                                            )
+                                        ),
+                                        React.createElement('tbody', { className: 'divide-y divide-zinc-800' },
+                                            response.map((row, rowIndex) =>
+                                                React.createElement('tr', { 
+                                                    key: rowIndex,
+                                                    className: rowIndex % 2 === 0 ? 'bg-zinc-900' : 'bg-zinc-900/50'
+                                                },
+                                                    Object.values(row).map((value, colIndex) =>
+                                                        React.createElement('td', {
+                                                            key: colIndex,
+                                                            className: 'px-6 py-4 whitespace-nowrap text-sm text-zinc-300 font-mono'
+                                                        }, 
+                                                            value === null ? 
+                                                                React.createElement('span', { className: 'text-zinc-500 italic' }, 'NULL') :
+                                                                typeof value === 'object' ? 
+                                                                    JSON.stringify(value) : 
+                                                                    String(value)
+                                                        )
+                                                    )
+                                                )
+                                            )
+                                        )
+                                    ])
+                                ),
+                                (!response || response.length === 0) && !error && !loading && React.createElement('div', {
+                                    className: 'flex flex-col items-center justify-center h-full text-zinc-500'
+                                }, [
+                                    React.createElement('p', { className: 'text-lg font-medium' }, 'No Results Yet'),
+                                    React.createElement('p', { className: 'text-sm' }, 'Execute a query to see results here')
+                                ])
+                            ]),
+                            response && React.createElement('div', { className: 'p-4 border-t border-zinc-800 bg-zinc-900' },
+                                React.createElement('p', { className: 'text-sm text-zinc-400' },
+                                    `Showing ${response.length} row${response.length !== 1 ? 's' : ''}`
+                                )
+                            )
+                        ])
+                    ])
+                ])
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(React.createElement(SQLPlayground));
+    </script>
+</body>
+</html> 
