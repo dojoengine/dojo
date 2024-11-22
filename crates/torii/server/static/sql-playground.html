@@ -48,8 +48,8 @@
         const DEFAULT_QUERY = `-- Welcome to Torii SQL Playground!
 -- Try running a query like:
 SELECT *
-FROM entities
-LIMIT 1000;`;
+FROM users
+LIMIT 5;`;
 
         const {
             useState,
@@ -285,7 +285,47 @@ LIMIT 1000;`;
                 };
             }, []);
 
-            // ... rest of the functions stay the same ...
+            const executeQuery = async () => {
+                setLoading(true);
+                setError(null);
+                try {
+                    const response = await fetch('/sql?' + new URLSearchParams({ query }));
+                    if (!response.ok) {
+                        throw new Error(`Query failed: ${response.statusText}`);
+                    }
+                    const data = await response.json();
+                    setResponse(data);
+                } catch (error) {
+                    setError(error.message);
+                    setResponse(null);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const copyToClipboard = useCallback(async (text) => {
+                try {
+                    await navigator.clipboard.writeText(text);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                } catch (err) {
+                    console.error('Failed to copy:', err);
+                }
+            }, []);
+
+            const downloadResults = useCallback(() => {
+                const blob = new Blob([JSON.stringify(response, null, 2)], {
+                    type: 'application/json'
+                });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'query-results.json';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, [response]);
 
             return React.createElement('div', { className: 'min-h-screen bg-black text-white p-4' },
                 React.createElement('div', { className: 'max-w-8xl mx-auto' }, [
