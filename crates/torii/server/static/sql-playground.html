@@ -177,184 +177,88 @@ LIMIT 5;`;
             }, []);
 
             useEffect(() => {
-                let editorInstance = null;
+                if (activeTab !== 'editor') return;
 
-                if (activeTab === 'editor') {
-                    setTimeout(() => {
-                        // Check if there's already an editor instance in the DOM
-                        const existingEditor = document.querySelector('.monaco-editor');
-                        if (existingEditor) {
-                            return;
+                require(['vs/editor/editor.main'], function(monaco) {
+                    monaco.languages.register({ id: 'sql' });
+
+                    monaco.languages.registerCompletionItemProvider('sql', {
+                        provideCompletionItems: () => {
+                            const suggestions = [];
+
+                            // Add table suggestions from schema
+                            const tables = [...new Set(schema.map(row => row.table_name))];
+                            tables.forEach(table => {
+                                suggestions.push({
+                                    label: table,
+                                    kind: monaco.languages.CompletionItemKind.Class,
+                                    insertText: table,
+                                    detail: 'Table',
+                                    documentation: `Table: ${table}`
+                                });
+                            });
+
+                            // Add column suggestions from schema
+                            schema.forEach(row => {
+                                suggestions.push({
+                                    label: row.column_name,
+                                    kind: monaco.languages.CompletionItemKind.Field,
+                                    insertText: row.column_name,
+                                    detail: `Column (${row.data_type})`,
+                                    documentation: {
+                                        value: [
+                                            `**Table:** ${row.table_name}`,
+                                            `**Type:** ${row.data_type}`,
+                                            `**Primary Key:** ${row.is_primary_key ? 'Yes' : 'No'}`,
+                                            `**Nullable:** ${row.is_nullable ? 'Yes' : 'No'}`
+                                        ].join('\n\n')
+                                    }
+                                });
+                            });
+
+                            // Add SQL keywords
+                            ['SELECT', 'FROM', 'WHERE', 'GROUP BY', 'ORDER BY', 'LIMIT',
+                             'JOIN', 'LEFT JOIN', 'INNER JOIN', 'COUNT', 'SUM', 'AVG'].forEach(keyword => {
+                                suggestions.push({
+                                    label: keyword,
+                                    kind: monaco.languages.CompletionItemKind.Keyword,
+                                    insertText: keyword,
+                                    detail: 'SQL Keyword'
+                                });
+                            });
+
+                            return { suggestions };
                         }
+                    });
 
-                        require(['vs/editor/editor.main'], function(monaco) {
-                            // Check again before creating to prevent race conditions
-                            if (editorRef.current || document.querySelector('.monaco-editor')) {
-                                return;
-                            }
-
-                            monaco.languages.register({ id: 'sql' });
-
-                            // Register SQL completion provider
-                            monaco.languages.registerCompletionItemProvider('sql', {
-                                provideCompletionItems: (model, position) => {
-                                    const textUntilPosition = model.getValueInRange({
-                                        startLineNumber: 1,
-                                        startColumn: 1,
-                                        endLineNumber: position.lineNumber,
-                                        endColumn: position.column
-                                    });
-
-                                    const suggestions = [];
-
-                                    // Add SQL keywords
-                                    const keywords = {
-                                        'SELECT': 'Retrieve data from tables',
-                                        'FROM': 'Specify the table to query',
-                                        'WHERE': 'Filter records',
-                                        'GROUP BY': 'Group records',
-                                        'ORDER BY': 'Sort records',
-                                        'LIMIT': 'Limit the number of records',
-                                        'JOIN': 'Join tables',
-                                        'LEFT JOIN': 'Left join tables',
-                                        'INNER JOIN': 'Inner join tables',
-                                        'COUNT': 'Count records',
-                                        'SUM': 'Sum values',
-                                        'AVG': 'Average values',
-                                        'AND': 'Logical AND operator',
-                                        'OR': 'Logical OR operator',
-                                        'ON': 'Specify join condition',
-                                        'AS': 'Alias a column or table',
-                                        'DESC': 'Sort in descending order',
-                                        'ASC': 'Sort in ascending order'
-                                    };
-
-                                    // Context-aware suggestions
-                                    const beforeWord = textUntilPosition.match(/[\w\s]*$/)[0].trim().toUpperCase();
-                                    const words = textUntilPosition.toUpperCase().split(/\s+/);
-                                    const lastWord = words[words.length - 1];
-
-                                    // After SELECT, suggest columns and functions
-                                    if (beforeWord.includes('SELECT') || lastWord === 'SELECT') {
-                                        // Add column suggestions
-                                        schema.forEach(row => {
-                                            suggestions.push({
-                                                label: row.column_name,
-                                                kind: monaco.languages.CompletionItemKind.Field,
-                                                insertText: row.column_name,
-                                                detail: `Column from ${row.table_name}`,
-                                                documentation: {
-                                                    value: [
-                                                        `**Table:** ${row.table_name}`,
-                                                        `**Type:** ${row.data_type}`,
-                                                        `**Primary Key:** ${row.is_primary_key ? 'Yes' : 'No'}`,
-                                                        `**Nullable:** ${row.is_nullable ? 'Yes' : 'No'}`
-                                                    ].join('\n\n')
-                                                }
-                                            });
-                                        });
-
-                                        // Add common SQL functions
-                                        ['COUNT(*)', 'SUM', 'AVG', 'MAX', 'MIN'].forEach(func => {
-                                            suggestions.push({
-                                                label: func,
-                                                kind: monaco.languages.CompletionItemKind.Function,
-                                                insertText: func,
-                                                detail: 'SQL Function'
-                                            });
-                                        });
-                                    }
-
-                                    // After FROM or JOIN, suggest tables
-                                    if (beforeWord.includes('FROM') || beforeWord.includes('JOIN') || 
-                                        lastWord === 'FROM' || lastWord === 'JOIN' || 
-                                        lastWord === 'UPDATE' || lastWord === 'INTO') {
-                                        const tables = [...new Set(schema.map(row => row.table_name))];
-                                        tables.forEach(table => {
-                                            suggestions.push({
-                                                label: table,
-                                                kind: monaco.languages.CompletionItemKind.Class,
-                                                insertText: table,
-                                                detail: 'Table',
-                                                documentation: {
-                                                    value: `**Table:** ${table}\n\nColumns:\n` + 
-                                                        schema.filter(row => row.table_name === table)
-                                                            .map(row => `- ${row.column_name} (${row.data_type})`)
-                                                            .join('\n')
-                                                }
-                                            });
-                                        });
-                                    }
-
-                                    // After WHERE or ON, suggest columns and operators
-                                    if (beforeWord.includes('WHERE') || beforeWord.includes('ON') || 
-                                        lastWord === 'WHERE' || lastWord === 'ON') {
-                                        // Add columns
-                                        schema.forEach(row => {
-                                            suggestions.push({
-                                                label: row.column_name,
-                                                kind: monaco.languages.CompletionItemKind.Field,
-                                                insertText: row.column_name,
-                                                detail: `Column from ${row.table_name}`
-                                            });
-                                        });
-                                        // Add operators
-                                        ['=', '>', '<', '>=', '<=', '<>', 'LIKE', 'IN', 'IS NULL', 'IS NOT NULL'].forEach(op => {
-                                            suggestions.push({
-                                                label: op,
-                                                kind: monaco.languages.CompletionItemKind.Operator,
-                                                insertText: op,
-                                                detail: 'Operator'
-                                            });
-                                        });
-                                    }
-
-                                    // Add keywords in appropriate contexts
-                                    Object.entries(keywords).forEach(([keyword, description]) => {
-                                        suggestions.push({
-                                            label: keyword,
-                                            kind: monaco.languages.CompletionItemKind.Keyword,
-                                            insertText: keyword,
-                                            detail: 'SQL Keyword',
-                                            documentation: description
-                                        });
-                                    });
-
-                                    return {
-                                        suggestions: suggestions
-                                    };
-                                },
-                                triggerCharacters: [' ', '.', '(']
-                            });
-
-                            editorInstance = monaco.editor.create(document.getElementById('monaco-editor'), {
-                                value: query,
-                                language: 'sql',
-                                theme: 'vs-dark',
-                                minimap: { enabled: false },
-                                fontSize: 14,
-                                lineNumbers: 'on',
-                                roundedSelection: true,
-                                scrollBeyondLastLine: false,
-                                automaticLayout: true,
-                                suggestOnTriggerCharacters: true,
-                                quickSuggestions: true,
-                                quickSuggestionsDelay: 0
-                            });
-
-                            editorInstance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Space, () => {
-                                editorInstance.trigger('keyboard', 'editor.action.triggerSuggest', {});
-                            });
-
-                            editorInstance.onDidChangeModelContent(() => {
-                                setQuery(editorInstance.getValue());
-                            });
-
-                            editorRef.current = editorInstance;
-                            monacoRef.current = monaco;
+                    if (!editorRef.current) {
+                        const editor = monaco.editor.create(document.getElementById('monaco-editor'), {
+                            value: query,
+                            language: 'sql',
+                            theme: 'vs-dark',
+                            minimap: { enabled: false },
+                            fontSize: 14,
+                            lineNumbers: 'on',
+                            roundedSelection: true,
+                            scrollBeyondLastLine: false,
+                            automaticLayout: true,
+                            suggestOnTriggerCharacters: true,
+                            quickSuggestions: true,
+                            quickSuggestionsDelay: 0
                         });
-                    }, 0);
-                }
+
+                        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Space, () => {
+                            editor.trigger('keyboard', 'editor.action.triggerSuggest', {});
+                        });
+
+                        editor.onDidChangeModelContent(() => {
+                            setQuery(editor.getValue());
+                        });
+
+                        editorRef.current = editor;
+                        monacoRef.current = monaco;
+                    }
+                });
 
                 return () => {
                     if (editorRef.current) {
@@ -362,7 +266,7 @@ LIMIT 5;`;
                         editorRef.current = null;
                     }
                 };
-            }, [activeTab, schema]);
+            }, [schema, activeTab]);
 
             const executeQuery = async () => {
                 setLoading(true);
@@ -405,20 +309,6 @@ LIMIT 5;`;
                 }
             };
 
-            const downloadResults = useCallback(() => {
-                const blob = new Blob([JSON.stringify(response, null, 2)], {
-                    type: 'application/json'
-                });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'query-results.json';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-            }, [response]);
-
             return React.createElement('div', { className: 'min-h-screen bg-black text-white p-4' },
                 React.createElement('div', { className: 'max-w-8xl mx-auto' }, [
                     React.createElement('div', { className: 'mb-6', key: 'header' }, [
@@ -442,9 +332,7 @@ LIMIT 5;`;
                                     className: 'flex-1'
                                 }, 'Schema')
                             ]),
-                            React.createElement(Card, { 
-                                className: 'flex flex-col h-[calc(75vh-48px)] overflow-hidden'
-                            },
+                            React.createElement(Card, { className: 'flex flex-col h-[calc(75vh-48px)]' },
                                 activeTab === 'editor' ? [
                                     React.createElement('div', { 
                                         className: 'p-4 border-b border-zinc-800 flex items-center justify-between',
