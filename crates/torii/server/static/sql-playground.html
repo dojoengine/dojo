@@ -288,6 +288,20 @@ LIMIT 1000;`;
                 }
             }, []);
 
+            const downloadResults = useCallback(() => {
+                const blob = new Blob([JSON.stringify(response, null, 2)], {
+                    type: 'application/json'
+                });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'query-results.json';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, [response]);
+
             return React.createElement('div', { className: 'min-h-screen bg-black text-white p-4' },
                 React.createElement('div', { className: 'max-w-8xl mx-auto' }, [
                     React.createElement('div', { className: 'mb-6', key: 'header' }, [
