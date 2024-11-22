@@ -516,16 +516,32 @@ LIMIT 1000;`;
             setExecutionTime(endTime - startTime);
             setResponse(data);
 
-            // Add to history with favorite field
+            // Add to history with deduplication
             setQueryHistory((prev) => {
+              // Find existing query index
+              const existingIndex = prev.findIndex(item => item.query.trim() === query.trim());
+              
               const newEntry = {
                 query,
                 timestamp: Date.now(),
                 rows: data.length,
                 executionTime: endTime - startTime,
-                favorite: false
+                favorite: existingIndex >= 0 ? prev[existingIndex].favorite : false
               };
-              const updated = [newEntry, ...prev.slice(0, 49)];
+
+              let updated;
+              if (existingIndex >= 0) {
+                // Update existing entry and move to top
+                updated = [
+                  newEntry,
+                  ...prev.slice(0, existingIndex),
+                  ...prev.slice(existingIndex + 1)
+                ];
+              } else {
+                // Add new entry
+                updated = [newEntry, ...prev.slice(0, 49)];
+              }
+
               // Keep favorites at the top
               return updated.sort((a, b) => {
                 if (a.favorite === b.favorite) {
