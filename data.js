@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1732266916098,
+  "lastUpdate": 1732267138803,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -35749,6 +35749,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10275462093,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c5a4eaf50a53c5c889b9898dc4ac6d62a9010e99",
+          "message": "refactor(katana): rpc class types improvements (#2712)\n\nthe goal is to reduce the steps in converting from rpc to primitives types for classes. currently we rely on starknet-rs for rpc types, while using cairo-lang types for internal usages (ie execution). this required a very ugly ceremony for conversion as they don't share the same types (only Felt!). so the current approach is to convert the starknet-rs types to serde_json::Value first and deserialize it to the cairo-lang types. This is damn slow!!\r\n\r\nso im solving this by defining the rpc types ourselves using the same internal types (for the inner fields) as cairo-lang's. so we don't need to perform any conversions from rpc -> internal. i also replace any usages of starknet-rs class types in the db and go fully with cairo-lang as the primitives types.",
+          "timestamp": "2024-11-22T16:59:04+08:00",
+          "tree_id": "1f89799d3c1e1b45c8c52e384454baa151434af8",
+          "url": "https://github.com/dojoengine/dojo/commit/c5a4eaf50a53c5c889b9898dc4ac6d62a9010e99"
+        },
+        "date": 1732267137299,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2574021,
+            "range": "± 34367",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 7922050,
+            "range": "± 168069",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3705123237,
+            "range": "± 834753230",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 7801255,
+            "range": "± 160694",
             "unit": "ns/iter"
           }
         ]
