@@ -269,7 +269,7 @@ LIMIT 1000;`;
                 const startTime = performance.now();
                 try {
                     const response = await fetch('/sql?' + new URLSearchParams({ query }));
-                    if (!response.ok) throw new Error(`Query failed: ${response.statusText}`);
+                    if (!response.ok) throw new Error(await response.text());
                     const data = await response.json();
                     const endTime = performance.now();
                     setExecutionTime(endTime - startTime);
