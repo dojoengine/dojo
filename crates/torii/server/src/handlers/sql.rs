@@ -30,7 +30,7 @@ impl SqlHandler {
                                 "TEXT" => row
                                     .get::<Option<String>, _>(i)
                                     .map_or(serde_json::Value::Null, serde_json::Value::String),
-                                "INTEGER" | "NULL" => row
+                                "INTEGER" => row
                                     .get::<Option<i64>, _>(i)
                                     .map_or(serde_json::Value::Null, |n| {
                                         serde_json::Value::Number(n.into())
@@ -49,9 +49,25 @@ impl SqlHandler {
                                     .map_or(serde_json::Value::Null, |bytes| {
                                         serde_json::Value::String(STANDARD.encode(bytes))
                                     }),
-                                _ => row
-                                    .get::<Option<String>, _>(i)
-                                    .map_or(serde_json::Value::Null, serde_json::Value::String),
+                                _ => {
+                                    // Try different types in order
+                                    if let Ok(val) = row.try_get::<i64, _>(i) {
+                                        serde_json::Value::Number(val.into())
+                                    } else if let Ok(val) = row.try_get::<f64, _>(i) {
+                                        // Handle floating point numbers
+                                        serde_json::json!(val)
+                                    } else if let Ok(val) = row.try_get::<bool, _>(i) {
+                                        serde_json::Value::Bool(val)
+                                    } else if let Ok(val) = row.try_get::<String, _>(i) {
+                                        serde_json::Value::String(val)
+                                    } else {
+                                        // Handle or fallback to BLOB as base64
+                                        let val = row.get::<Option<Vec<u8>>, _>(i);
+                                        val.map_or(serde_json::Value::Null, |bytes| {
+                                            serde_json::Value::String(STANDARD.encode(bytes))
+                                        })
+                                    }
+                                },
                             };
                             obj.insert(column.name().to_string(), value);
                         }
