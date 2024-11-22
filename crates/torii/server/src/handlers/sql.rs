@@ -4,8 +4,8 @@ use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
 use http::header::CONTENT_TYPE;
 use hyper::{Body, Method, Request, Response, StatusCode};
-use sqlx::{Column, Row, SqlitePool, TypeInfo};
 use include_str;
+use sqlx::{Column, Row, SqlitePool, TypeInfo};
 
 use super::Handler;
 
@@ -121,7 +121,7 @@ impl SqlHandler {
 
     async fn serve_playground(&self) -> Response<Body> {
         let html = include_str!("../../static/sql-playground.html");
-        
+
         Response::builder()
             .status(StatusCode::OK)
             .header(CONTENT_TYPE, "text/html")
