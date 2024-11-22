@@ -1,3 +1,4 @@
+use std::backtrace::Backtrace;
 use std::collections::VecDeque;
 use std::fmt::Debug;
 use std::future::IntoFuture;
@@ -141,10 +142,11 @@ impl GasOracleWorker {
                 // tick every 60 seconds
                 _ = interval.tick() => {
                     if let Err(e) = update_gas_price(&mut self.l1_oracle, provider.clone(), &mut buffer).await {
-                        eprintln!("Error running the gas oracle: {:?}", e);
+                        let trace = Backtrace::capture();
+                        eprintln!("Error running the gas oracle: {:?}, Backtrace:\n{:?}", e, trace);
                     }
-                    // (provisionary)
-                    println!("{:?}", self.l1_oracle.current_gas_prices());
+                    // (provisionary statement for testing with `cargo test -- --nocapture`)
+                    // println!("{:?}", self.l1_oracle.current_gas_prices());
                 }
             }
         }
@@ -191,6 +193,10 @@ impl GasPriceBuffer {
 #[cfg(test)]
 mod tests {
 
+    use std::sync::Arc;
+
+    use tokio::sync::Mutex;
+
     use super::*;
 
     // Test the buffer functionality separately
@@ -227,7 +233,7 @@ mod tests {
     fn test_bufffer_multiple_samples_average() {
         let mut buffer = GasPriceBuffer::new();
         // Add some test values
-        let test_values = vec![100, 200, 300];
+        let test_values = [100, 200, 300];
         for value in test_values.iter() {
             buffer.add_sample(*value);
         }
@@ -237,29 +243,40 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_worker_interval() {
-        use tokio::time::Duration;
-        const TEST_DURATION: Duration = Duration::from_secs(30); // To test if it actually updates every 60 secs, like in the starknet doc.(https://docs.starknet.io/architecture-and-concepts/network-architecture/fee-mechanism/#calculation_of_gas_costs)
+    async fn test_update_after_60_secs() {
+        // Test if it actually updates after 60 secs
 
-        let url = Url::parse("https://eth.merkle.io/").expect("error url");
-        let mut worker = GasOracleWorker::new(Some(url));
+        let url = Url::parse("https://eth.merkle.io/").expect("Invalid URL");
+        let worker = Arc::new(Mutex::new(GasOracleWorker::new(Some(url))));
 
+        // Capture initial gas prices
+        let initial_gas_prices = {
+            let worker = worker.lock().await;
+            worker.l1_oracle.current_gas_prices()
+        };
+
+        // Spawn worker task with timeout
+        let worker_clone = Arc::clone(&worker);
         let worker_task = tokio::spawn(async move {
-            // this fails because of an alloy error:
-            // Quote: <"error sending request for url (https://eth.merkle.io/)
-            // Caused by:
-            //   0: error sending request for url (https://eth.merkle.io/)
-            //   1: client error (Connect)
-            //   2: invalid URL, scheme is not http">
-            if let Err(e) = worker.run().await {
-                eprintln!("Worker failed: {}", e);
-            }
+            let mut worker = worker_clone.lock().await;
+            tokio::time::timeout(INTERVAL, worker.run()).await
         });
 
-        // Allow the test to run for a while to observe intervals
-        tokio::time::sleep(TEST_DURATION).await;
+        // Wait for the duration
+        tokio::time::sleep(INTERVAL).await;
+
+        // Get final prices before stopping
+        let gas_prices_after_60 = {
+            let worker = worker.lock().await;
+            worker.l1_oracle.current_gas_prices()
+        };
 
         // Clean up
         worker_task.abort();
+
+        assert_ne!(
+            initial_gas_prices, gas_prices_after_60,
+            "Gas prices should update after 60 seconds"
+        );
     }
 }
