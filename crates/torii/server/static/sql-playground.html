@@ -142,6 +142,7 @@ LIMIT 1000;`;
             const [activeTab, setActiveTab] = useState('editor');
             const editorRef = useRef(null);
             const monacoRef = useRef(null);
+            const [executionTime, setExecutionTime] = useState(null);
 
             useEffect(() => {
                 const fetchSchema = async () => {
@@ -265,14 +266,18 @@ LIMIT 1000;`;
             const executeQuery = async () => {
                 setLoading(true);
                 setError(null);
+                const startTime = performance.now();
                 try {
                     const response = await fetch('/sql?' + new URLSearchParams({ query }));
                     if (!response.ok) throw new Error(`Query failed: ${response.statusText}`);
                     const data = await response.json();
+                    const endTime = performance.now();
+                    setExecutionTime(endTime - startTime);
                     setResponse(data);
                 } catch (error) {
                     setError(error.message);
                     setResponse(null);
+                    setExecutionTime(null);
                 } finally {
                     setLoading(false);
                 }
@@ -421,10 +426,21 @@ LIMIT 1000;`;
                             response && React.createElement('div', { 
                                 className: 'p-4 border-t border-zinc-800 bg-zinc-900',
                                 key: 'footer'
-                            },
-                                React.createElement('p', { className: 'text-sm text-zinc-400' },
-                                    `Showing ${response.length} row${response.length !== 1 ? 's' : ''}`
-                                )
+                            }, 
+                                React.createElement('div', {
+                                    className: 'flex justify-between items-center'
+                                }, [
+                                    React.createElement('p', { 
+                                        className: 'text-sm text-zinc-400'
+                                    },
+                                        `Showing ${response.length} row${response.length !== 1 ? 's' : ''}`
+                                    ),
+                                    executionTime && React.createElement('p', { 
+                                        className: 'text-sm text-zinc-500'
+                                    },
+                                        `${executionTime.toFixed(0)}ms`
+                                    )
+                                ])
                             )
                         ])
                     ])
