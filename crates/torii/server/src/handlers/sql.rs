@@ -67,7 +67,7 @@ impl SqlHandler {
                                             serde_json::Value::String(STANDARD.encode(bytes))
                                         })
                                     }
-                                },
+                                }
                             };
                             obj.insert(column.name().to_string(), value);
                         }
