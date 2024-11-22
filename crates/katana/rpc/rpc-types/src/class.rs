@@ -225,7 +225,18 @@ mod tests {
         let rpc = RpcLegacyContractClass::try_from(class.clone()).unwrap();
         let rt = LegacyContractClass::try_from(rpc).unwrap();
 
-        assert_eq!(class, rt);
+        assert_eq!(class.abi, rt.abi);
+        assert_eq!(class.entry_points_by_type, rt.entry_points_by_type);
+        assert_eq!(class.program.builtins, rt.program.builtins);
+        assert_eq!(class.program.compiler_version, rt.program.compiler_version);
+        assert_eq!(class.program.data, rt.program.data);
+        assert_eq!(class.program.hints, rt.program.hints);
+        assert_eq!(class.program.identifiers, rt.program.identifiers);
+        assert_eq!(class.program.main_scope, rt.program.main_scope);
+        assert_eq!(class.program.prime, rt.program.prime);
+        assert_eq!(class.program.reference_manager, rt.program.reference_manager);
+        // The debug info is stripped when converting to RPC format.
+        assert_eq!(serde_json::to_value::<Option<()>>(None).unwrap(), rt.program.debug_info);
     }
 
     #[test]
