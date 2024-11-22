@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1732267138803,
+  "lastUpdate": 1732311302522,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -35797,6 +35797,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7801255,
             "range": "± 160694",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "da52a06dd1d5380da59b7707d3d7d330c2fb1e8e",
+          "message": "feat(torii): sql playground (#2714)\n\n* feat(torii): sql playground\n\n* fix: sql playground\n\n* fmt\n\n* fix: dynamic types\n\n* auto completion & schema\n\n* fix playground\n\n* chore\n\n* c\n\n* fix\n\n* chore: show fetch time in query result\n\n* fmt\n\n* better error hamdling\n\n* add history and favoriting queries\n\n* dedup",
+          "timestamp": "2024-11-22T15:18:20-06:00",
+          "tree_id": "24e8ea3e0b0ceaef80bf8bd6e0b29cd0d176853f",
+          "url": "https://github.com/dojoengine/dojo/commit/da52a06dd1d5380da59b7707d3d7d330c2fb1e8e"
+        },
+        "date": 1732311300560,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10247131117,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
