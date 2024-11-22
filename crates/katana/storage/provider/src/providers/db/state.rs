@@ -113,12 +113,7 @@ where
     Tx: DbTx + Send + Sync,
 {
     fn class(&self, hash: ClassHash) -> ProviderResult<Option<ContractClass>> {
-        // TODO: change the tables to store ContractClass directly
-        match self.0.get::<tables::CompiledClasses>(hash)? {
-            Some(CompiledClass::Class(..)) => Ok(self.0.get::<tables::Classes>(hash)?),
-            Some(CompiledClass::Legacy(class)) => Ok(Some(ContractClass::Legacy(class))),
-            None => Ok(None),
-        }
+        Ok(self.0.get::<tables::Classes>(hash)?)
     }
 
     fn compiled_class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {

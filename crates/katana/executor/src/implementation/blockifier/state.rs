@@ -275,7 +275,7 @@ mod tests {
         let compiled_hash = felt!("0x456");
         let class = DEFAULT_ACCOUNT_CLASS.clone();
         let compiled_class = DEFAULT_ACCOUNT_CLASS_CASM.clone();
-        let legacy_class_hash = felt!("0x111");
+        let legacy_class_hash = felt!("0x445");
         let legacy_class = DEFAULT_LEGACY_ERC20_CLASS.clone();
 
         let provider = katana_provider::test_utils::test_provider();
@@ -285,7 +285,8 @@ mod tests {
         provider.set_compiled_class_hash_of_class_hash(class_hash, compiled_hash).unwrap();
         provider.set_class(class_hash, class).unwrap();
         provider.set_compiled_class(class_hash, compiled_class).unwrap();
-        provider.set_class(legacy_class_hash, legacy_class).unwrap();
+        provider.set_class(legacy_class_hash, legacy_class.clone()).unwrap();
+        provider.set_compiled_class(legacy_class_hash, legacy_class.compile().unwrap()).unwrap();
 
         provider.latest().unwrap()
     }
@@ -296,7 +297,7 @@ mod tests {
         let cached_state = CachedState::new(StateProviderDb::new(state));
 
         let address = address!("0x67");
-        let legacy_class_hash = felt!("0x111");
+        let legacy_class_hash = felt!("0x445");
         let storage_key = felt!("0x1");
 
         let api_address = utils::to_blk_address(address);
@@ -405,7 +406,7 @@ mod tests {
 
         let address = address!("0x67");
         let class_hash = felt!("0x123");
-        let legacy_class_hash = felt!("0x111");
+        let legacy_class_hash = felt!("0x445");
 
         let actual_class_hash = sp.class_hash_of_contract(address)?;
         let actual_nonce = sp.nonce(address)?;
