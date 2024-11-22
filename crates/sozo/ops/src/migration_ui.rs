@@ -22,7 +22,7 @@ impl MigrationUi {
     /// Returns a new instance with the default frames.
     pub fn new(text: Option<&'static str>) -> Self {
         if let Some(text) = text {
-            let frames = spinner!(["⛩️ ", "🥷", "🗡️ "], 500);
+            let frames = spinner!(["⛩️ ", "🥷 ", "🗡️ "], 500);
             let spinner = Spinner::new(frames.clone(), text, None);
             Self { spinner, default_frames: frames, silent: false }
         } else {
