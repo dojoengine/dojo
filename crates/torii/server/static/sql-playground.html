@@ -76,7 +76,7 @@ LIMIT 1000;`;
             return React.createElement('div', { className: classes }, children);
         }
 
-        function SchemaExplorer({ schema, onTableClick }) {
+        function SchemaExplorer({ schema }) {
             const [expandedTables, setExpandedTables] = useState({});
 
             // Group schema by table
@@ -109,13 +109,7 @@ LIMIT 1000;`;
                                 React.createElement('span', null, 
                                     expandedTables[tableName] ? '▼' : '▶'
                                 ),
-                                React.createElement('span', {
-                                    className: 'hover:text-blue-400 cursor-pointer',
-                                    onClick: (e) => {
-                                        e.stopPropagation();
-                                        onTableClick(tableName);
-                                    }
-                                }, tableName)
+                                React.createElement('span', null, tableName)
                             ]),
                             expandedTables[tableName] && React.createElement('div', {
                                 className: 'pl-8 pr-2 pb-2 space-y-1'
@@ -294,21 +288,6 @@ LIMIT 1000;`;
                 }
             }, []);
 
-            const insertTableName = (tableName) => {
-                if (editorRef.current) {
-                    const position = editorRef.current.getPosition();
-                    editorRef.current.executeEdits('insert-table', [{
-                        range: {
-                            startLineNumber: position.lineNumber,
-                            startColumn: position.column,
-                            endLineNumber: position.lineNumber,
-                            endColumn: position.column
-                        },
-                        text: tableName
-                    }]);
-                }
-            };
-
             return React.createElement('div', { className: 'min-h-screen bg-black text-white p-4' },
                 React.createElement('div', { className: 'max-w-8xl mx-auto' }, [
                     React.createElement('div', { className: 'mb-6', key: 'header' }, [
@@ -365,7 +344,6 @@ LIMIT 1000;`;
                                     )
                                 ] : React.createElement(SchemaExplorer, {
                                     schema,
-                                    onTableClick: insertTableName
                                 })
                             )
                         ]),
