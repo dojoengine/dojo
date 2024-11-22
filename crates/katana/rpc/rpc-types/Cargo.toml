@@ -9,8 +9,8 @@ version.workspace = true
 [dependencies]
 katana-cairo.workspace = true
 katana-core.workspace = true
-katana-pool.workspace = true
 katana-executor.workspace = true
+katana-pool.workspace = true
 katana-primitives.workspace = true
 katana-provider.workspace = true
 
@@ -26,6 +26,9 @@ starknet.workspace = true
 thiserror.workspace = true
 
 alloy-primitives.workspace = true
+flate2.workspace = true
+serde_json_pythonic = "0.1.2"
+similar-asserts.workspace = true
 
 [dev-dependencies]
 rstest.workspace = true

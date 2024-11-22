@@ -1,9 +1,8 @@
 use anyhow::Result;
 use katana_cairo::lang::starknet_classes::casm_contract_class::CasmContractClass;
-use katana_cairo::lang::starknet_classes::contract_class::ContractClass;
 use serde_json::Value;
 
-use crate::class::{CompiledClass, LegacyContractClass, SierraClass};
+use crate::class::{CompiledClass, ContractClass, LegacyContractClass, SierraContractClass};
 
 // TODO: this was taken from the current network limit
 // https://docs.starknet.io/documentation/tools/limits_and_triggers/.
@@ -21,13 +20,15 @@ pub fn parse_compiled_class(artifact: Value) -> Result<CompiledClass> {
 }
 
 pub fn parse_compiled_class_v1(class: Value) -> Result<CasmContractClass> {
+    use katana_cairo::lang::starknet_classes::contract_class::ContractClass;
     let class: ContractClass = serde_json::from_value(class)?;
     Ok(CasmContractClass::from_contract_class(class, true, usize::MAX)?)
 }
 
 /// Parse a [`str`] into a [`SierraClass`].
-pub fn parse_sierra_class(class: &str) -> Result<SierraClass, serde_json::Error> {
-    serde_json::from_str(class)
+pub fn parse_sierra_class(class: &str) -> Result<ContractClass, serde_json::Error> {
+    let sierra = serde_json::from_str::<SierraContractClass>(class)?;
+    Ok(ContractClass::Class(sierra))
 }
 
 pub fn parse_deprecated_compiled_class(

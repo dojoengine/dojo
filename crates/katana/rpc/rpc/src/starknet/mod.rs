@@ -17,9 +17,8 @@ use katana_primitives::block::{
     BlockHash, BlockHashOrNumber, BlockIdOrTag, BlockNumber, BlockTag, FinalityStatus,
     PartialHeader,
 };
-use katana_primitives::class::{ClassHash, ContractClass};
+use katana_primitives::class::ClassHash;
 use katana_primitives::contract::{ContractAddress, Nonce, StorageKey, StorageValue};
-use katana_primitives::conversion::rpc::legacy_inner_to_rpc_class;
 use katana_primitives::da::L1DataAvailabilityMode;
 use katana_primitives::env::BlockEnv;
 use katana_primitives::event::MaybeForkedContinuationToken;
@@ -36,6 +35,7 @@ use katana_rpc_types::block::{
     MaybePendingBlockWithReceipts, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
     PendingBlockWithReceipts, PendingBlockWithTxHashes, PendingBlockWithTxs,
 };
+use katana_rpc_types::class::RpcContractClass;
 use katana_rpc_types::error::starknet::StarknetApiError;
 use katana_rpc_types::event::{EventFilterWithPage, EventsPage};
 use katana_rpc_types::receipt::{ReceiptBlock, TxReceiptWithBlockInfo};
@@ -45,8 +45,7 @@ use katana_rpc_types::FeeEstimate;
 use katana_rpc_types_builder::ReceiptBuilder;
 use katana_tasks::{BlockingTaskPool, TokioTaskSpawner};
 use starknet::core::types::{
-    ContractClass as StarknetRsContractClass, PriceUnit, ResultPageRequest,
-    TransactionExecutionStatus, TransactionStatus,
+    PriceUnit, ResultPageRequest, TransactionExecutionStatus, TransactionStatus,
 };
 
 use crate::utils;
@@ -254,7 +253,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         &self,
         block_id: BlockIdOrTag,
         class_hash: ClassHash,
-    ) -> StarknetApiResult<StarknetRsContractClass> {
+    ) -> StarknetApiResult<RpcContractClass> {
         self.on_io_blocking_task(move |this| {
             let state = this.state(&block_id)?;
 
@@ -262,10 +261,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
                 return Err(StarknetApiError::ClassHashNotFound);
             };
 
-            match class {
-                ContractClass::Legacy(class) => Ok(legacy_inner_to_rpc_class(class)?),
-                ContractClass::Class(sierra) => Ok(StarknetRsContractClass::Sierra(sierra)),
-            }
+            Ok(RpcContractClass::try_from(class).unwrap())
         })
         .await
     }
@@ -287,7 +283,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         &self,
         block_id: BlockIdOrTag,
         contract_address: ContractAddress,
-    ) -> StarknetApiResult<StarknetRsContractClass> {
+    ) -> StarknetApiResult<RpcContractClass> {
         let hash = self.class_hash_at_address(block_id, contract_address).await?;
         let class = self.class_at_hash(block_id, hash).await?;
         Ok(class)
