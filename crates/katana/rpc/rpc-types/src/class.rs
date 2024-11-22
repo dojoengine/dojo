@@ -59,7 +59,9 @@ impl TryFrom<RpcContractClass> for ContractClass {
 
     fn try_from(value: RpcContractClass) -> Result<Self, Self::Error> {
         match value {
-            RpcContractClass::Class(class) => Ok(Self::Class(SierraContractClass::from(class))),
+            RpcContractClass::Class(class) => {
+                Ok(Self::Class(SierraContractClass::try_from(class)?))
+            }
             RpcContractClass::Legacy(class) => {
                 Ok(Self::Legacy(LegacyContractClass::try_from(class)?))
             }
@@ -93,23 +95,26 @@ impl TryFrom<SierraContractClass> for RpcSierraContractClass {
     }
 }
 
-impl From<RpcSierraContractClass> for SierraContractClass {
-    fn from(value: RpcSierraContractClass) -> Self {
-        // TODO: convert the abi from string pythonic
+impl TryFrom<RpcSierraContractClass> for SierraContractClass {
+    type Error = ConversionError;
 
+    fn try_from(value: RpcSierraContractClass) -> Result<Self, Self::Error> {
+        use katana_cairo::lang::starknet_classes::abi;
+
+        let abi = serde_json::from_str::<Option<abi::Contract>>(&value.abi)?;
         let program = value
             .sierra_program
             .into_iter()
             .map(|f| BigUintAsHex { value: f.to_biguint() })
             .collect::<Vec<_>>();
 
-        Self {
-            abi: None,
+        Ok(Self {
+            abi,
             sierra_program: program,
             sierra_program_debug_info: None,
             entry_points_by_type: value.entry_points_by_type,
             contract_class_version: value.contract_class_version,
-        }
+        })
     }
 }
 
@@ -187,10 +192,25 @@ impl TryFrom<CompressedLegacyContractClass> for RpcLegacyContractClass {
 
 #[cfg(test)]
 mod tests {
-    use katana_primitives::class::{LegacyContractClass, SierraContractClass};
+    use katana_primitives::class::{ContractClass, LegacyContractClass, SierraContractClass};
+    use starknet::core::types::contract::SierraClass;
 
     use super::RpcLegacyContractClass;
     use crate::class::RpcSierraContractClass;
+
+    #[test]
+    fn rt() {
+        let json = include_str!("../../../contracts/build/default_account.json");
+        let class = serde_json::from_str::<SierraContractClass>(json).unwrap();
+
+        let rpc = RpcSierraContractClass::try_from(class.clone()).unwrap();
+        let rt = SierraContractClass::try_from(rpc).unwrap();
+
+        assert_eq!(class.abi, rt.abi);
+        assert_eq!(class.sierra_program, rt.sierra_program);
+        assert_eq!(class.entry_points_by_type, rt.entry_points_by_type);
+        assert_eq!(class.contract_class_version, rt.contract_class_version);
+    }
 
     #[test]
     fn legacy_rt() {
@@ -204,15 +224,28 @@ mod tests {
     }
 
     #[test]
-    fn rt() {
+    fn rt_with_starknet_rs() {
         let json = include_str!("../../../contracts/build/default_account.json");
-        let class = serde_json::from_str::<SierraContractClass>(json).unwrap();
+        let expected_class = serde_json::from_str::<SierraContractClass>(json).unwrap();
 
-        let rpc = RpcSierraContractClass::try_from(class.clone()).unwrap();
-        let rt = SierraContractClass::from(rpc);
+        // -- starknet-rs
 
-        assert_eq!(class.sierra_program, rt.sierra_program);
-        assert_eq!(class.entry_points_by_type, rt.entry_points_by_type);
-        assert_eq!(class.contract_class_version, rt.contract_class_version);
+        let starknet_rs_class = serde_json::from_str::<SierraClass>(json).unwrap();
+        let starknet_rs_hash = starknet_rs_class.class_hash().unwrap();
+        let rpc = starknet_rs_class.flatten().unwrap();
+
+        let json = serde_json::to_string(&rpc).unwrap();
+
+        // -- katana
+
+        let rpc = serde_json::from_str::<RpcSierraContractClass>(&json).unwrap();
+        let class = SierraContractClass::try_from(rpc).unwrap();
+        let hash = ContractClass::Class(class.clone()).class_hash().unwrap();
+
+        assert_eq!(starknet_rs_hash, hash);
+        assert_eq!(expected_class.abi, class.abi);
+        assert_eq!(expected_class.sierra_program, class.sierra_program);
+        assert_eq!(expected_class.entry_points_by_type, class.entry_points_by_type);
+        assert_eq!(expected_class.contract_class_version, class.contract_class_version);
     }
 }
