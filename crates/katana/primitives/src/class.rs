@@ -166,8 +166,8 @@ fn compute_legacy_class_hash(class: &LegacyContractClass) -> Result<Felt, Comput
 #[cfg(test)]
 mod tests {
 
-    use starknet::core::types::contract::legacy::LegacyContractClass as StarknetRsLegacyContractClass;
     use starknet::core::types::contract::SierraClass as StarknetRsSierraContractClass;
+    use starknet::core::types::contract::legacy::LegacyContractClass as StarknetRsLegacyContractClass;
 
     use super::{ContractClass, LegacyContractClass, SierraContractClass};
 

@@ -1,8 +1,9 @@
 use jsonrpsee::core::{async_trait, Error, RpcResult};
 use katana_executor::{EntryPointCall, ExecutorFactory};
 use katana_primitives::block::BlockIdOrTag;
+use katana_primitives::class::{CasmContractClass, ClassHash};
 use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash, TxHash};
-use katana_primitives::Felt;
+use katana_primitives::{ContractAddress, Felt};
 use katana_rpc_api::starknet::StarknetApiServer;
 use katana_rpc_types::block::{
     BlockHashAndNumber, MaybePendingBlockWithReceipts, MaybePendingBlockWithTxHashes,
@@ -15,6 +16,7 @@ use katana_rpc_types::message::MsgFromL1;
 use katana_rpc_types::receipt::TxReceiptWithBlockInfo;
 use katana_rpc_types::state_update::MaybePendingStateUpdate;
 use katana_rpc_types::transaction::{BroadcastedTx, Tx};
+use katana_rpc_types::trie::{ContractStorageKeys, GetStorageProofResponse};
 use katana_rpc_types::{FeeEstimate, FeltAsHex, FunctionCall, SimulationFlagForEstimateFee};
 use starknet::core::types::TransactionStatus;
 
@@ -264,5 +266,15 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
         transaction_hash: TxHash,
     ) -> RpcResult<TransactionStatus> {
         Ok(self.transaction_status(transaction_hash).await?)
+    }
+
+    async fn get_storage_proof(
+        &self,
+        block_id: BlockIdOrTag,
+        class_hashes: Option<Vec<ClassHash>>,
+        contract_addresses: Option<Vec<ContractAddress>>,
+        contracts_storage_keys: Option<Vec<ContractStorageKeys>>,
+    ) -> RpcResult<GetStorageProofResponse> {
+        todo!()
     }
 }
