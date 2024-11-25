@@ -6,10 +6,17 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
-tonic.workspace = true
+katana-primitives.workspace = true
 
-[dev-dependencies]
+prost.workspace = true
+thiserror.workspace = true
+tonic.workspace = true
 
 [build-dependencies]
 tonic-build.workspace = true
 wasm-tonic-build.workspace = true
+
+[features]
+client = [  ]
+default = [ "server" ]
+server = [  ]

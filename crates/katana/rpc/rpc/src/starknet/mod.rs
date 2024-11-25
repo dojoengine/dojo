@@ -1,6 +1,7 @@
 //! Server implementation for the Starknet JSON-RPC API.
 
 pub mod forking;
+mod grpc;
 mod read;
 mod trace;
 mod write;

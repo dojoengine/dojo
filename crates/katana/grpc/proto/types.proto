@@ -10,8 +10,13 @@ message BlockID {
   oneof identifier {
     uint64 number = 1 [json_name = "block_number"];
     Felt hash = 2 [json_name = "block_hash"];
-    string tag = 3 [json_name = "block_tag"];
+    BlockTag tag = 3 [json_name = "block_tag"];
   }
+}
+
+enum BlockTag {
+  PENDING = 0;
+  LATEST = 1;
 }
 
 enum SimulationFlag {

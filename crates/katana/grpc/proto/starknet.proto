@@ -235,7 +235,7 @@ message BlockHashAndNumberResponse {
 message ChainIdRequest {}
 
 message ChainIdResponse {
-    string chain_id = 1;
+    types.Felt chain_id = 1;
 }
 
 message SyncingRequest {}

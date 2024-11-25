@@ -8419,6 +8419,9 @@ dependencies = [
 name = "katana-grpc"
 version = "1.0.1"
 dependencies = [
+ "katana-primitives",
+ "prost 0.12.6",
+ "thiserror",
  "tonic 0.11.0",
  "tonic-build 0.11.0",
  "tonic-build 0.12.3",
@@ -8566,6 +8569,7 @@ dependencies = [
  "alloy-primitives",
  "anyhow",
  "assert_matches",
+ "async-trait",
  "cainome 0.4.6",
  "dojo-metrics",
  "dojo-test-utils",
@@ -8576,6 +8580,7 @@ dependencies = [
  "katana-cairo",
  "katana-core",
  "katana-executor",
+ "katana-grpc",
  "katana-node",
  "katana-pool",
  "katana-primitives",
@@ -8595,6 +8600,7 @@ dependencies = [
  "tempfile",
  "thiserror",
  "tokio",
+ "tonic 0.11.0",
  "tracing",
  "url",
 ]
