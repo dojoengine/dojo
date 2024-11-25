@@ -275,6 +275,9 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
         contract_addresses: Option<Vec<ContractAddress>>,
         contracts_storage_keys: Option<Vec<ContractStorageKeys>>,
     ) -> RpcResult<GetStorageProofResponse> {
-        todo!()
+        let proofs = self
+            .get_proofs(block_id, class_hashes, contract_addresses, contracts_storage_keys)
+            .await?;
+        Ok(proofs)
     }
 }

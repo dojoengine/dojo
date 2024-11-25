@@ -34,6 +34,7 @@ use katana_rpc_types::event::{EventFilterWithPage, EventsPage};
 use katana_rpc_types::receipt::{ReceiptBlock, TxReceiptWithBlockInfo};
 use katana_rpc_types::state_update::MaybePendingStateUpdate;
 use katana_rpc_types::transaction::Tx;
+use katana_rpc_types::trie::{ContractStorageKeys, GetStorageProofResponse};
 use katana_rpc_types::FeeEstimate;
 use katana_rpc_types_builder::ReceiptBuilder;
 use katana_tasks::{BlockingTaskPool, TokioTaskSpawner};
@@ -1123,6 +1124,16 @@ where
         };
 
         Ok(id)
+    }
+
+    async fn get_proofs(
+        &self,
+        block_id: BlockIdOrTag,
+        class_hashes: Option<Vec<ClassHash>>,
+        contract_addresses: Option<Vec<ContractAddress>>,
+        contracts_storage_keys: Option<Vec<ContractStorageKeys>>,
+    ) -> StarknetApiResult<GetStorageProofResponse> {
+        self.on_io_blocking_task(move |this| todo!()).await
     }
 }
 
