@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1732311521282,
+  "lastUpdate": 1732561014801,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -35875,6 +35875,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7822965,
             "range": "± 32995",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d7930e6d649f908960adf73d4fd8f9475f9f0f24",
+          "message": "fix: ensure the manifest existence is correctly tested (#2713)\n\n* fix: ensure the manifest existence is correctly tested\n\n* tests: fix policies",
+          "timestamp": "2024-11-25T12:40:39-06:00",
+          "tree_id": "c6bf5474c2cab53b777d25185fbd69b02509905f",
+          "url": "https://github.com/dojoengine/dojo/commit/d7930e6d649f908960adf73d4fd8f9475f9f0f24"
+        },
+        "date": 1732561013462,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10588417934,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
