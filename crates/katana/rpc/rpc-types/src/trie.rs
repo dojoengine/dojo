@@ -23,29 +23,24 @@ pub struct GlobalRoots {
 /// Node in the Merkle-Patricia trie.
 #[derive(Debug, Serialize, Deserialize)]
 pub enum MerkleNode {
-    Edge(EdgeNode),
-    Binary(BinaryNode),
-}
+    /// Represents a path to the highest non-zero descendant node.
+    Edge {
+        /// An integer whose binary representation represents the path from the current node to its
+        /// highest non-zero descendant (bounded by 2^251)
+        path: Felt,
+        /// The length of the path (bounded by 251).
+        length: u8,
+        /// The hash of the unique non-zero maximal-height descendant node.
+        child: Felt,
+    },
 
-/// Represents a path to the highest non-zero descendant node.
-#[derive(Debug, Serialize, Deserialize)]
-pub struct EdgeNode {
-    /// An integer whose binary representation represents the path from the current node to its
-    /// highest non-zero descendant (bounded by 2^251)
-    pub path: Felt,
-    /// The length of the path (bounded by 251).
-    pub length: u8,
-    /// The hash of the unique non-zero maximal-height descendant node.
-    pub child: Felt,
-}
-
-/// An internal node whose both children are non-zero.
-#[derive(Debug, Serialize, Deserialize)]
-pub struct BinaryNode {
-    /// The hash of the left child.
-    pub left: Felt,
-    /// The hash of the right child.
-    pub right: Felt,
+    /// An internal node whose both children are non-zero.
+    Binary {
+        /// The hash of the left child.
+        left: Felt,
+        /// The hash of the right child.
+        right: Felt,
+    },
 }
 
 /// The response type for `starknet_getStorageProof` method.
