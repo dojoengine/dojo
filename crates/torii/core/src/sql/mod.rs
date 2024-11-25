@@ -285,14 +285,12 @@ impl Sql {
         ))?;
 
         let mut model_idx = 0_i64;
-        self.build_register_queries_recursive(
+        self.build_model_query(
             selector,
-            model,
             vec![namespaced_name.clone()],
-            &mut model_idx,
+            model,
+            model_idx,
             block_timestamp,
-            &mut 0,
-            &mut 0,
             upgrade_diff,
         )?;
 
@@ -939,10 +937,8 @@ impl Sql {
         selector: Felt,
         path: Vec<String>,
         model: &Ty,
-        model_idx: i64,
+        mut model_idx: i64,
         block_timestamp: u64,
-        _array_idx: usize,
-        _parent_array_idx: usize,
         upgrade_diff: Option<&Ty>,
     ) -> Result<()> {
         let table_id = path[0].clone(); // Use only the root path component
@@ -959,13 +955,17 @@ impl Sql {
              internal_event_message_id TEXT, "
         );
 
-        // Recursively add columns for all nested types
+        // Recursively add columns for all nested type
         self.add_columns_recursive(
             &path,
             model,
             &mut columns,
+            &mut alter_table_queries,
             &mut indices,
             &table_id,
+            selector,
+            &mut model_idx,
+            block_timestamp,
             upgrade_diff,
         )?;
 
@@ -1005,8 +1005,12 @@ impl Sql {
         path: &[String],
         ty: &Ty,
         columns: &mut Vec<String>,
+        alter_table_queries: &mut Vec<String>,
         indices: &mut Vec<String>,
         table_id: &str,
+        selector: Felt,
+        model_idx: &mut i64,
+        block_timestamp: u64,
         upgrade_diff: Option<&Ty>,
     ) -> Result<()> {
         let column_prefix = if path.len() > 1 {
@@ -1015,9 +1019,22 @@ impl Sql {
             String::new()
         };
 
+        let mut add_column = |name: &str, sql_type: &str| {
+            if upgrade_diff.is_some() {
+                alter_table_queries.push(format!(
+                    "ALTER TABLE [{table_id}] ADD COLUMN {name} {sql_type}"
+                ));
+            } else {
+                columns.push(format!("{name} {sql_type}"));
+            }
+            indices.push(format!(
+                "CREATE INDEX IF NOT EXISTS [idx_{table_id}_{name}] ON [{table_id}] ({name});"
+            ));
+        };
+
         match ty {
             Ty::Struct(s) => {
-                for member in s.children.iter() {
+                for (member_idx, member) in s.children.iter().enumerate() {
                     if let Some(upgrade_diff) = upgrade_diff {
                         if !upgrade_diff
                             .as_struct()
@@ -1032,47 +1049,89 @@ impl Sql {
 
                     let mut new_path = path.to_vec();
                     new_path.push(member.name.clone());
+
+                    self.add_model_member(
+                        table_id,
+                        selector,
+                        *model_idx,
+                        member_idx as i64,
+                        &member.name,
+                        &member.ty,
+                        member.key,
+                        block_timestamp,
+                    )?;
+
+                    *model_idx += 1;  // Increment before recursing
                     
                     self.add_columns_recursive(
                         &new_path,
                         &member.ty,
                         columns,
+                        alter_table_queries,
                         indices,
                         table_id,
-                        upgrade_diff,
+                        selector,
+                        model_idx,
+                        block_timestamp,
+                        None,
                     )?;
                 }
             }
             Ty::Tuple(tuple) => {
                 for (idx, member) in tuple.iter().enumerate() {
                     let mut new_path = path.to_vec();
-                    new_path.push(idx.to_string());
+                    new_path.push(format!("_{}", idx));
+
+                    self.add_model_member(
+                        table_id,
+                        selector,
+                        *model_idx,
+                        idx as i64,
+                        &format!("_{}", idx),
+                        member,
+                        false,
+                        block_timestamp,
+                    )?;
+
+                    *model_idx += 1;  // Increment before recursing
                     
                     self.add_columns_recursive(
                         &new_path,
                         member,
                         columns,
+                        alter_table_queries,
                         indices,
                         table_id,
-                        upgrade_diff,
+                        selector,
+                        model_idx,
+                        block_timestamp,
+                        None,
                     )?;
                 }
             }
             Ty::Array(_) => {
-                // Store array as JSON in a single column
                 let column_name = if column_prefix.is_empty() {
                     "value".to_string()
                 } else {
                     column_prefix
                 };
                 
-                columns.push(format!("{} TEXT", column_name)); // JSON will be stored as TEXT
-                indices.push(format!(
-                    "CREATE INDEX IF NOT EXISTS [idx_{table_id}_{column_name}] ON [{table_id}] ({column_name});"
-                ));
+                add_column(&column_name, "TEXT");
+
+                self.add_model_member(
+                    table_id,
+                    selector,
+                    *model_idx,
+                    0,
+                    &column_name,
+                    ty,
+                    false,
+                    block_timestamp,
+                )?;
+
+                *model_idx += 1;  // Increment after adding array
             }
             Ty::Enum(e) => {
-                // Add the enum option column
                 let column_name = if column_prefix.is_empty() {
                     "option".to_string()
                 } else {
@@ -1086,13 +1145,23 @@ impl Sql {
                     .collect::<Vec<_>>()
                     .join(", ");
 
-                columns.push(format!("{} TEXT CHECK({} IN ({}))", column_name, column_name, all_options));
-                indices.push(format!(
-                    "CREATE INDEX IF NOT EXISTS [idx_{table_id}_{column_name}] ON [{table_id}] ({column_name});"
-                ));
+                let sql_type = format!("TEXT CHECK({} IN ({}))", column_name, all_options);
+                add_column(&column_name, &sql_type);
 
-                // Add columns for each enum variant's data
-                for child in e.options.iter() {
+                self.add_model_member(
+                    table_id,
+                    selector,
+                    *model_idx,
+                    0,
+                    &column_name,
+                    ty,
+                    false,
+                    block_timestamp,
+                )?;
+
+                *model_idx += 1;  // Increment after adding enum option
+
+                for (idx, child) in e.options.iter().enumerate() {
                     if let Ty::Tuple(tuple) = &child.ty {
                         if tuple.is_empty() {
                             continue;
@@ -1101,34 +1170,101 @@ impl Sql {
 
                     let mut new_path = path.to_vec();
                     new_path.push(child.name.clone());
+
+                    self.add_model_member(
+                        table_id,
+                        selector,
+                        *model_idx,
+                        idx as i64 + 1,
+                        &child.name,
+                        &child.ty,
+                        false,
+                        block_timestamp,
+                    )?;
+
+                    *model_idx += 1;  // Increment before recursing
                     
                     self.add_columns_recursive(
                         &new_path,
                         &child.ty,
                         columns,
+                        alter_table_queries,
                         indices,
                         table_id,
-                        upgrade_diff,
+                        selector,
+                        model_idx,
+                        block_timestamp,
+                        None,
                     )?;
                 }
             }
             _ => {
-                // Handle primitive types
                 if let Ok(cairo_type) = Primitive::from_str(&ty.name()) {
-                    let sql_type = cairo_type.to_sql_type();
                     let column_name = if column_prefix.is_empty() {
                         "value".to_string()
                     } else {
                         column_prefix
                     };
                     
-                    columns.push(format!("{} {}", column_name, sql_type));
-                    indices.push(format!(
-                        "CREATE INDEX IF NOT EXISTS [idx_{table_id}_{column_name}] ON [{table_id}] ({column_name});"
-                    ));
+                    add_column(&column_name, &cairo_type.to_sql_type().to_string());
+
+                    self.add_model_member(
+                        table_id,
+                        selector,
+                        *model_idx,
+                        0,
+                        &column_name,
+                        ty,
+                        false,
+                        block_timestamp,
+                    )?;
                 }
             }
         }
+
+        Ok(())
+    }
+
+    fn add_model_member(
+        &mut self,
+        table_id: &str,
+        selector: Felt,
+        model_idx: i64,
+        member_idx: i64,
+        name: &str,
+        ty: &Ty,
+        key: bool,
+        block_timestamp: u64,
+    ) -> Result<()> {
+        let statement = "INSERT OR IGNORE INTO model_members (id, model_id, model_idx, member_idx, name, \
+                         type, type_enum, enum_options, key, executed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+        let enum_options = if let Ty::Enum(e) = ty {
+            Some(Argument::String(
+                e.options
+                    .iter()
+                    .map(|c| c.name.clone())
+                    .collect::<Vec<_>>()
+                    .join(","),
+            ))
+        } else {
+            None
+        };
+
+        let arguments = vec![
+            Argument::String(table_id.to_string()),
+            Argument::String(format!("{:#x}", selector)),
+            Argument::Int(model_idx),
+            Argument::Int(member_idx),
+            Argument::String(name.to_string()),
+            Argument::String(ty.name()),
+            Argument::String(ty.as_ref().into()),
+            enum_options.unwrap_or(Argument::Null),
+            Argument::Bool(key),
+            Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
+        ];
+
+        self.executor.send(QueryMessage::other(statement.to_string(), arguments))?;
 
         Ok(())
     }
