@@ -8440,6 +8440,7 @@ dependencies = [
  "katana-core",
  "katana-db",
  "katana-executor",
+ "katana-grpc",
  "katana-pipeline",
  "katana-pool",
  "katana-primitives",
@@ -8450,6 +8451,9 @@ dependencies = [
  "starknet 0.12.0",
  "strum 0.25.0",
  "strum_macros 0.25.3",
+ "tokio",
+ "tonic 0.11.0",
+ "tonic-health",
  "tower 0.4.13",
  "tower-http 0.4.4",
  "tracing",
@@ -15259,6 +15263,19 @@ dependencies = [
  "prost-types 0.13.3",
  "quote",
  "syn 2.0.77",
+]
+
+[[package]]
+name = "tonic-health"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2cef6e24bc96871001a7e48e820ab240b3de2201e59b517cf52835df2f1d2350"
+dependencies = [
+ "async-stream",
+ "prost 0.12.6",
+ "tokio",
+ "tokio-stream",
+ "tonic 0.11.0",
 ]
 
 [[package]]

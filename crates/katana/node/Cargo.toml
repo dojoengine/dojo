@@ -9,6 +9,7 @@ version.workspace = true
 katana-core.workspace = true
 katana-db.workspace = true
 katana-executor.workspace = true
+katana-grpc.workspace = true
 katana-pipeline.workspace = true
 katana-pool.workspace = true
 katana-primitives.workspace = true
@@ -27,9 +28,12 @@ tower = { workspace = true, features = [ "full" ] }
 tower-http = { workspace = true, features = [ "full" ] }
 tracing.workspace = true
 
+const_format = "0.2.33"
 strum.workspace = true
 strum_macros.workspace = true
-const_format = "0.2.33"
+tonic.workspace = true
+tonic-health.workspace = true
+tokio.workspace = true
 
 [build-dependencies]
 vergen = { version = "9.0.0", features = [ "build", "cargo", "emit_and_set" ] }

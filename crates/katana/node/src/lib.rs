@@ -271,6 +271,9 @@ pub async fn spawn<EF: ExecutorFactory>(
     ),
     config: RpcConfig,
 ) -> Result<RpcServer> {
+    use katana_grpc::api::starknet_server::StarknetServer;
+    use tonic_health::server::HealthReporter;
+
     let (pool, backend, block_producer, validator, forked_client) = node_components;
 
     let mut methods = RpcModule::new(());
@@ -291,6 +294,18 @@ pub async fn spawn<EF: ExecutorFactory>(
         } else {
             StarknetApi::new(backend.clone(), pool.clone(), block_producer.clone(), validator, cfg)
         };
+
+        let (mut health_reporter, health_service) = tonic_health::server::health_reporter();
+        health_reporter.set_serving::<StarknetServer<StarknetApi<EF>>>().await;
+
+        tokio::spawn(
+            tonic::transport::Server::builder()
+                .add_service(health_service)
+                .add_service(StarknetServer::new(server.clone()))
+                .serve(SocketAddr::new(config.addr, 6969)),
+        );
+
+        info!("grpc server listening on port 6969");
 
         methods.merge(StarknetApiServer::into_rpc(server.clone()))?;
         methods.merge(StarknetWriteApiServer::into_rpc(server.clone()))?;
