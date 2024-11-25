@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1732561014801,
+  "lastUpdate": 1732561260541,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -35905,6 +35905,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10588417934,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d7930e6d649f908960adf73d4fd8f9475f9f0f24",
+          "message": "fix: ensure the manifest existence is correctly tested (#2713)\n\n* fix: ensure the manifest existence is correctly tested\n\n* tests: fix policies",
+          "timestamp": "2024-11-25T12:40:39-06:00",
+          "tree_id": "c6bf5474c2cab53b777d25185fbd69b02509905f",
+          "url": "https://github.com/dojoengine/dojo/commit/d7930e6d649f908960adf73d4fd8f9475f9f0f24"
+        },
+        "date": 1732561258917,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2534437,
+            "range": "± 123770",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8905131,
+            "range": "± 398229",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3928594395,
+            "range": "± 816367380",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8657551,
+            "range": "± 486165",
             "unit": "ns/iter"
           }
         ]
