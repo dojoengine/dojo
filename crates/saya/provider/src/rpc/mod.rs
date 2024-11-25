@@ -14,6 +14,7 @@ use katana_primitives::state::StateUpdatesWithClasses;
 use katana_primitives::transaction::TxWithHash;
 use katana_primitives::version::ProtocolVersion;
 use katana_rpc_api::saya::SayaApiClient;
+use katana_rpc_types::class::{RpcContractClass, RpcSierraContractClass};
 use katana_rpc_types::trace::TxExecutionInfo;
 use num_traits::ToPrimitive;
 use starknet::core::types::{
@@ -162,7 +163,9 @@ impl Provider for JsonRpcProvider {
                 StarknetRsContractClass::Sierra(s) => {
                     trace!(target: LOG_TARGET, version = "cairo 1", %class_hash, "Set contract class.");
 
-                    let class = ContractClass::Class(s);
+                    let class = RpcSierraContractClass::try_from(s).unwrap();
+                    let class = ContractClass::try_from(RpcContractClass::Class(class)).unwrap();
+
                     state_updates_with_classes.classes.insert(*class_hash, class);
                 }
             }

@@ -253,7 +253,6 @@ mod tests {
     use super::*;
     use crate::address;
     use crate::block::{Block, GasPrices, Header};
-    use crate::class::ContractClass;
     use crate::da::L1DataAvailabilityMode;
     use crate::genesis::allocation::{GenesisAccount, GenesisAccountAlloc, GenesisContractAlloc};
     #[cfg(feature = "slot")]
@@ -290,8 +289,7 @@ mod tests {
                 DEFAULT_ACCOUNT_CLASS_HASH,
                 GenesisClass {
                     compiled_class_hash: DEFAULT_ACCOUNT_COMPILED_CLASS_HASH,
-                    class: ContractClass::Class(DEFAULT_ACCOUNT_CLASS.clone().flatten().unwrap())
-                        .into(),
+                    class: DEFAULT_ACCOUNT_CLASS.clone().into(),
                 },
             ),
             #[cfg(feature = "slot")]
@@ -299,10 +297,7 @@ mod tests {
                 CONTROLLER_CLASS_HASH,
                 GenesisClass {
                     compiled_class_hash: CONTROLLER_CLASS_HASH,
-                    class: ContractClass::Class(
-                        CONTROLLER_ACCOUNT_CLASS.clone().flatten().unwrap(),
-                    )
-                    .into(),
+                    class: CONTROLLER_ACCOUNT_CLASS.clone().into(),
                 },
             ),
         ]);
@@ -478,7 +473,7 @@ mod tests {
 
         assert_eq!(
             actual_state_updates.classes.get(&DEFAULT_ACCOUNT_CLASS_HASH),
-            Some(&ContractClass::Class(DEFAULT_ACCOUNT_CLASS.clone().flatten().unwrap())),
+            Some(&*DEFAULT_ACCOUNT_CLASS),
             "The default oz account contract sierra class should be declared"
         );
 
@@ -492,7 +487,7 @@ mod tests {
 
             assert_eq!(
                 actual_state_updates.classes.get(&CONTROLLER_CLASS_HASH),
-                Some(&ContractClass::Class(CONTROLLER_ACCOUNT_CLASS.clone().flatten().unwrap())),
+                Some(&*CONTROLLER_ACCOUNT_CLASS),
                 "The controller account contract sierra class should be declared"
             );
         }

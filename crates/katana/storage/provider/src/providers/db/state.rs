@@ -72,14 +72,7 @@ impl<Db: Database> StateWriter for DbProvider<Db> {
 impl ContractClassWriter for DbProvider {
     fn set_class(&self, hash: ClassHash, class: ContractClass) -> ProviderResult<()> {
         self.0.update(move |db_tx| -> ProviderResult<()> {
-            match class {
-                ContractClass::Class(sierra) => {
-                    db_tx.put::<tables::SierraClasses>(hash, sierra)?;
-                }
-                ContractClass::Legacy(class) => {
-                    db_tx.put::<tables::CompiledClasses>(hash, CompiledClass::Legacy(class))?;
-                }
-            }
+            db_tx.put::<tables::Classes>(hash, class)?;
             Ok(())
         })?
     }
@@ -120,15 +113,7 @@ where
     Tx: DbTx + Send + Sync,
 {
     fn class(&self, hash: ClassHash) -> ProviderResult<Option<ContractClass>> {
-        // TODO: change the tables to store ContractClass directly
-        match self.0.get::<tables::CompiledClasses>(hash)? {
-            Some(CompiledClass::Class(..)) => {
-                let class = self.0.get::<tables::SierraClasses>(hash)?;
-                Ok(class.map(ContractClass::Class))
-            }
-            Some(CompiledClass::Legacy(class)) => Ok(Some(ContractClass::Legacy(class))),
-            None => Ok(None),
-        }
+        Ok(self.0.get::<tables::Classes>(hash)?)
     }
 
     fn compiled_class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
@@ -196,14 +181,7 @@ where
 {
     fn class(&self, hash: ClassHash) -> ProviderResult<Option<ContractClass>> {
         if self.compiled_class_hash_of_class_hash(hash)?.is_some() {
-            match self.tx.get::<tables::CompiledClasses>(hash)? {
-                None => Ok(None),
-                Some(CompiledClass::Class(..)) => {
-                    let class = self.tx.get::<tables::SierraClasses>(hash)?;
-                    Ok(class.map(ContractClass::Class))
-                }
-                Some(CompiledClass::Legacy(class)) => Ok(Some(ContractClass::Legacy(class))),
-            }
+            Ok(self.tx.get::<tables::Classes>(hash)?)
         } else {
             Ok(None)
         }

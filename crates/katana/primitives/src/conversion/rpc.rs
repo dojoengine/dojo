@@ -19,13 +19,13 @@ use starknet::core::types::contract::legacy::{
 };
 pub use starknet::core::types::contract::CompiledClass;
 use starknet::core::types::{
-    CompressedLegacyContractClass, ContractClass, FunctionStateMutability, LegacyContractAbiEntry,
-    LegacyContractEntryPoint, LegacyEntryPointsByType, LegacyEventAbiEntry, LegacyEventAbiType,
-    LegacyFunctionAbiEntry, LegacyFunctionAbiType, LegacyStructAbiEntry, LegacyStructAbiType,
-    LegacyStructMember, LegacyTypedParameter,
+    CompressedLegacyContractClass, ContractClass, FlattenedSierraClass, FunctionStateMutability,
+    LegacyContractAbiEntry, LegacyContractEntryPoint, LegacyEntryPointsByType, LegacyEventAbiEntry,
+    LegacyEventAbiType, LegacyFunctionAbiEntry, LegacyFunctionAbiType, LegacyStructAbiEntry,
+    LegacyStructAbiType, LegacyStructMember, LegacyTypedParameter,
 };
 
-use crate::class::{ClassHash, CompiledClassHash, FlattenedSierraClass, LegacyContractClass};
+use crate::class::{ClassHash, CompiledClassHash, LegacyContractClass};
 use crate::Felt;
 
 /// Converts the legacy inner compiled class type [DeprecatedCompiledClass] into its RPC equivalent
@@ -197,7 +197,7 @@ pub fn rpc_to_cairo_contract_class(
     })
 }
 
-fn compress_legacy_program_data(
+pub fn compress_legacy_program_data(
     legacy_program: katana_cairo::starknet_api::deprecated_contract_class::Program,
 ) -> Result<Vec<u8>, io::Error> {
     let bytes = serde_json::to_vec(&legacy_program)?;
@@ -271,7 +271,6 @@ mod tests {
 
     use super::{legacy_inner_to_rpc_class, legacy_rpc_to_class};
     use crate::class::{ContractClass, LegacyContractClass};
-    use crate::genesis::constant::DEFAULT_ACCOUNT_CLASS;
     use crate::utils::class::parse_deprecated_compiled_class;
 
     #[test]
@@ -293,11 +292,5 @@ mod tests {
         assert_eq!(class.abi, converted.abi);
         assert_eq!(class.program, converted.program);
         assert_eq!(class.entry_points_by_type, converted.entry_points_by_type);
-    }
-
-    #[test]
-    fn flattened_sierra_class_to_compiled_class() {
-        let sierra = DEFAULT_ACCOUNT_CLASS.clone().flatten().unwrap();
-        assert!(super::flattened_sierra_to_compiled_class(&sierra).is_ok());
     }
 }
