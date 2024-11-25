@@ -742,7 +742,11 @@ impl Sql {
             Ty::Enum(e) => {
                 if e.options.iter().all(
                     |o| {
-                        if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false }
+                        if let Ty::Tuple(t) = &o.ty {
+                            t.is_empty()
+                        } else {
+                            false
+                        }
                     },
                 ) {
                     return Ok(());
@@ -962,7 +966,6 @@ impl Sql {
             &mut indices,
             &table_id,
             selector,
-            &mut model_idx,
             block_timestamp,
             upgrade_diff,
         )?;
@@ -974,12 +977,15 @@ impl Sql {
 
         // Add internal timestamps
         create_table_query.push_str("internal_executed_at DATETIME NOT NULL, ");
-        create_table_query.push_str("internal_created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, ");
-        create_table_query.push_str("internal_updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, ");
+        create_table_query
+            .push_str("internal_created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, ");
+        create_table_query
+            .push_str("internal_updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, ");
 
         // Add foreign key constraints
         create_table_query.push_str("FOREIGN KEY (internal_entity_id) REFERENCES entities(id), ");
-        create_table_query.push_str("FOREIGN KEY (internal_event_message_id) REFERENCES event_messages(id));");
+        create_table_query
+            .push_str("FOREIGN KEY (internal_event_message_id) REFERENCES event_messages(id));");
 
         // Execute the queries
         if upgrade_diff.is_some() {
@@ -1007,21 +1013,15 @@ impl Sql {
         indices: &mut Vec<String>,
         table_id: &str,
         selector: Felt,
-        model_idx: &mut i64,
         block_timestamp: u64,
         upgrade_diff: Option<&Ty>,
     ) -> Result<()> {
-        let column_prefix = if path.len() > 1 {
-            path[1..].join("_")
-        } else {
-            String::new()
-        };
+        let column_prefix = if path.len() > 1 { path[1..].join("_") } else { String::new() };
 
         let mut add_column = |name: &str, sql_type: &str| {
             if upgrade_diff.is_some() {
-                alter_table_queries.push(format!(
-                    "ALTER TABLE [{table_id}] ADD COLUMN {name} {sql_type}"
-                ));
+                alter_table_queries
+                    .push(format!("ALTER TABLE [{table_id}] ADD COLUMN {name} {sql_type}"));
             } else {
                 columns.push(format!("{name} {sql_type}"));
             }
@@ -1048,18 +1048,16 @@ impl Sql {
                     let mut new_path = path.to_vec();
                     new_path.push(member.name.clone());
 
-                    let model_idx = &mut (*model_idx + 1);
                     self.add_model_member(
                         table_id,
                         selector,
-                        *model_idx,
                         member_idx as i64,
                         &member.name,
                         &member.ty,
                         member.key,
                         block_timestamp,
                     )?;
-                    
+
                     self.add_columns_recursive(
                         &new_path,
                         &member.ty,
@@ -1068,7 +1066,6 @@ impl Sql {
                         indices,
                         table_id,
                         selector,
-                        model_idx,
                         block_timestamp,
                         None,
                     )?;
@@ -1079,11 +1076,9 @@ impl Sql {
                     let mut new_path = path.to_vec();
                     new_path.push(format!("_{}", idx));
 
-                    let model_idx = &mut (*model_idx + 1);
                     self.add_model_member(
                         table_id,
                         selector,
-                        *model_idx,
                         idx as i64,
                         &format!("_{}", idx),
                         member,
@@ -1099,26 +1094,20 @@ impl Sql {
                         indices,
                         table_id,
                         selector,
-                        model_idx,
                         block_timestamp,
                         None,
                     )?;
                 }
             }
             Ty::Array(_) => {
-                let column_name = if column_prefix.is_empty() {
-                    "value".to_string()
-                } else {
-                    column_prefix
-                };
-                
+                let column_name =
+                    if column_prefix.is_empty() { "value".to_string() } else { column_prefix };
+
                 add_column(&column_name, "TEXT");
 
-                let model_idx = &mut (*model_idx + 1);
                 self.add_model_member(
                     table_id,
                     selector,
-                    *model_idx,
                     0,
                     &column_name,
                     ty,
@@ -1132,8 +1121,7 @@ impl Sql {
                 } else {
                     format!("{}_option", column_prefix)
                 };
-                
-                let model_idx = &mut (*model_idx + 1);
+
                 let all_options = e
                     .options
                     .iter()
@@ -1147,7 +1135,6 @@ impl Sql {
                 self.add_model_member(
                     table_id,
                     selector,
-                    *model_idx,
                     0,
                     &column_name,
                     ty,
@@ -1168,7 +1155,6 @@ impl Sql {
                     self.add_model_member(
                         table_id,
                         selector,
-                        *model_idx,
                         idx as i64 + 1,
                         &child.name,
                         &child.ty,
@@ -1184,7 +1170,6 @@ impl Sql {
                         indices,
                         table_id,
                         selector,
-                        model_idx,
                         block_timestamp,
                         None,
                     )?;
@@ -1192,18 +1177,14 @@ impl Sql {
             }
             _ => {
                 if let Ok(cairo_type) = Primitive::from_str(&ty.name()) {
-                    let column_name = if column_prefix.is_empty() {
-                        "value".to_string()
-                    } else {
-                        column_prefix
-                    };
-                    
+                    let column_name =
+                        if column_prefix.is_empty() { "value".to_string() } else { column_prefix };
+
                     add_column(&column_name, &cairo_type.to_sql_type().to_string());
 
                     self.add_model_member(
                         table_id,
                         selector,
-                        *model_idx,
                         0,
                         &column_name,
                         ty,
@@ -1221,7 +1202,6 @@ impl Sql {
         &mut self,
         table_id: &str,
         selector: Felt,
-        model_idx: i64,
         member_idx: i64,
         name: &str,
         ty: &Ty,
@@ -1233,11 +1213,7 @@ impl Sql {
 
         let enum_options = if let Ty::Enum(e) = ty {
             Some(Argument::String(
-                e.options
-                    .iter()
-                    .map(|c| c.name.clone())
-                    .collect::<Vec<_>>()
-                    .join(","),
+                e.options.iter().map(|c| c.name.clone()).collect::<Vec<_>>().join(","),
             ))
         } else {
             None
@@ -1246,7 +1222,7 @@ impl Sql {
         let arguments = vec![
             Argument::String(table_id.to_string()),
             Argument::String(format!("{:#x}", selector)),
-            Argument::Int(model_idx),
+            Argument::Int(0),
             Argument::Int(member_idx),
             Argument::String(name.to_string()),
             Argument::String(ty.name()),
