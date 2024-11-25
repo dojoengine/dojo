@@ -619,88 +619,6 @@ impl Sql {
         Ok(())
     }
 
-    #[allow(clippy::too_many_arguments)]
-    fn build_register_queries_recursive(
-        &mut self,
-        selector: Felt,
-        model: &Ty,
-        path: Vec<String>,
-        model_idx: &mut i64,
-        block_timestamp: u64,
-        array_idx: &mut usize,
-        parent_array_idx: &mut usize,
-        upgrade_diff: Option<&Ty>,
-    ) -> Result<()> {
-        if let Ty::Enum(e) = model {
-            if e.options.iter().all(|o| if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false })
-            {
-                return Ok(());
-            }
-        }
-
-        self.build_model_query(
-            selector,
-            path.clone(),
-            model,
-            *model_idx,
-            block_timestamp,
-            *array_idx,
-            *parent_array_idx,
-            upgrade_diff,
-        )?;
-
-        let mut build_member = |pathname: &str, member: &Ty| -> Result<()> {
-            if let Ty::Primitive(_) = member {
-                return Ok(());
-            } else if let Ty::ByteArray(_) = member {
-                return Ok(());
-            }
-
-            let mut path_clone = path.clone();
-            path_clone.push(pathname.to_string());
-
-            self.build_register_queries_recursive(
-                selector,
-                member,
-                path_clone,
-                &mut (*model_idx + 1),
-                block_timestamp,
-                &mut (*array_idx + if let Ty::Array(_) = member { 1 } else { 0 }),
-                &mut (*parent_array_idx + if let Ty::Array(_) = model { 1 } else { 0 }),
-                // nested members are not upgrades
-                None,
-            )?;
-
-            Ok(())
-        };
-
-        if let Ty::Struct(s) = model {
-            for member in s.children.iter() {
-                build_member(&member.name, &member.ty)?;
-            }
-        } else if let Ty::Tuple(t) = model {
-            for (idx, member) in t.iter().enumerate() {
-                build_member(format!("_{}", idx).as_str(), member)?;
-            }
-        } else if let Ty::Array(array) = model {
-            let ty = &array[0];
-            build_member("data", ty)?;
-        } else if let Ty::Enum(e) = model {
-            for child in e.options.iter() {
-                // Skip enum options that have no type / member
-                if let Ty::Tuple(t) = &child.ty {
-                    if t.is_empty() {
-                        continue;
-                    }
-                }
-
-                build_member(&child.name, &child.ty)?;
-            }
-        }
-
-        Ok(())
-    }
-
     fn build_set_entity_queries_recursive(
         &mut self,
         path: Vec<String>,
@@ -1027,94 +945,99 @@ impl Sql {
         parent_array_idx: usize,
         upgrade_diff: Option<&Ty>,
     ) -> Result<()> {
-        let table_id = path.join("$");
+        let table_id = path[0].clone(); // Use only the root path component
+        let mut columns = Vec::new();
         let mut indices = Vec::new();
+        let mut alter_table_queries = Vec::new();
 
+        // Start building the create table query
         let mut create_table_query = format!(
             "CREATE TABLE IF NOT EXISTS [{table_id}] (id TEXT NOT NULL, event_id TEXT NOT NULL, \
              entity_id TEXT, event_message_id TEXT, "
         );
 
-        let mut alter_table_queries = Vec::new();
-
+        // Handle array indexing columns if needed
         if array_idx > 0 {
-            // index columns
             for i in 0..array_idx {
                 let column = format!("idx_{i} INTEGER NOT NULL");
                 create_table_query.push_str(&format!("{column}, "));
-
                 alter_table_queries.push(format!(
                     "ALTER TABLE [{table_id}] ADD COLUMN idx_{i} INTEGER NOT NULL DEFAULT 0"
                 ));
             }
 
-            // full array id column
             create_table_query.push_str("full_array_id TEXT NOT NULL UNIQUE, ");
             alter_table_queries.push(format!(
                 "ALTER TABLE [{table_id}] ADD COLUMN full_array_id TEXT NOT NULL UNIQUE DEFAULT ''"
             ));
         }
 
-        let mut build_member = |name: &str, ty: &Ty, options: &mut Option<Argument>| {
-            if let Ok(cairo_type) = Primitive::from_str(&ty.name()) {
-                let sql_type = cairo_type.to_sql_type();
-                let column = format!("external_{name} {sql_type}");
+        // Recursively add columns for all nested types
+        self.add_columns_recursive(
+            &path,
+            model,
+            &mut columns,
+            &mut indices,
+            &table_id,
+            upgrade_diff,
+        )?;
 
-                create_table_query.push_str(&format!("{column}, "));
+        // Add all columns to the create table query
+        for column in columns {
+            create_table_query.push_str(&format!("{}, ", column));
+        }
 
-                alter_table_queries.push(format!(
-                    "ALTER TABLE [{table_id}] ADD COLUMN external_{name} {sql_type}"
-                ));
+        // Add standard timestamps
+        create_table_query.push_str("executed_at DATETIME NOT NULL, ");
+        create_table_query.push_str("created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, ");
+        create_table_query.push_str("updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, ");
 
-                indices.push(format!(
-                    "CREATE INDEX IF NOT EXISTS [idx_{table_id}_{name}] ON [{table_id}] \
-                     (external_{name});"
-                ));
-            } else if let Ty::Enum(e) = &ty {
-                let all_options = e
-                    .options
-                    .iter()
-                    .map(|c| format!("'{}'", c.name))
-                    .collect::<Vec<_>>()
-                    .join(", ");
+        // Add primary key
+        create_table_query.push_str("PRIMARY KEY (id");
+        for i in 0..array_idx {
+            create_table_query.push_str(&format!(", idx_{i}"));
+        }
+        create_table_query.push_str("), ");
 
-                let column =
-                    format!("external_{name} TEXT CHECK(external_{name} IN ({all_options}))",);
+        // Add foreign key constraints
+        create_table_query.push_str("FOREIGN KEY (entity_id) REFERENCES entities(id), ");
+        create_table_query.push_str("FOREIGN KEY (event_message_id) REFERENCES event_messages(id));");
 
-                create_table_query.push_str(&format!("{column}, "));
-
-                alter_table_queries.push(format!("ALTER TABLE [{table_id}] ADD COLUMN {column}"));
-
-                indices.push(format!(
-                    "CREATE INDEX IF NOT EXISTS [idx_{table_id}_{name}] ON [{table_id}] \
-                     (external_{name});"
-                ));
-
-                *options = Some(Argument::String(
-                    e.options
-                        .iter()
-                        .map(|c: &dojo_types::schema::EnumOption| c.name.clone())
-                        .collect::<Vec<_>>()
-                        .join(",")
-                        .to_string(),
-                ));
-            } else if let Ty::ByteArray(_) = &ty {
-                let column = format!("external_{name} TEXT");
-
-                create_table_query.push_str(&format!("{column}, "));
-
-                alter_table_queries.push(format!("ALTER TABLE [{table_id}] ADD COLUMN {column}"));
-
-                indices.push(format!(
-                    "CREATE INDEX IF NOT EXISTS [idx_{table_id}_{name}] ON [{table_id}] \
-                     (external_{name});"
-                ));
+        // Execute the queries
+        if upgrade_diff.is_some() {
+            for alter_query in alter_table_queries {
+                self.executor.send(QueryMessage::other(alter_query, vec![]))?;
             }
+        } else {
+            self.executor.send(QueryMessage::other(create_table_query, vec![]))?;
+        }
+
+        // Create indices
+        for index_query in indices {
+            self.executor.send(QueryMessage::other(index_query, vec![]))?;
+        }
+
+        Ok(())
+    }
+
+    fn add_columns_recursive(
+        &mut self,
+        path: &[String],
+        ty: &Ty,
+        columns: &mut Vec<String>,
+        indices: &mut Vec<String>,
+        table_id: &str,
+        upgrade_diff: Option<&Ty>,
+    ) -> Result<()> {
+        let column_prefix = if path.len() > 1 {
+            path[1..].join("_")
+        } else {
+            String::new()
         };
 
-        match model {
+        match ty {
             Ty::Struct(s) => {
-                for (member_idx, member) in s.children.iter().enumerate() {
+                for member in s.children.iter() {
                     if let Some(upgrade_diff) = upgrade_diff {
                         if !upgrade_diff
                             .as_struct()
@@ -1127,172 +1050,104 @@ impl Sql {
                         }
                     }
 
-                    let name = member.name.clone();
-                    let mut options = None; // TEMP: doesnt support complex enums yet
-
-                    build_member(&name, &member.ty, &mut options);
-
-                    // NOTE: this might cause some errors to fail silently
-                    // due to the ignore clause. check migrations for type_enum check
-                    let statement = "INSERT OR IGNORE INTO model_members (id, model_id, \
-                                     model_idx, member_idx, name, type, type_enum, enum_options, \
-                                     key, executed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-
-                    let arguments = vec![
-                        Argument::String(table_id.clone()),
-                        // TEMP: this is temporary until the model hash is precomputed
-                        Argument::String(format!("{:#x}", selector)),
-                        Argument::Int(model_idx),
-                        Argument::Int(member_idx as i64),
-                        Argument::String(name),
-                        Argument::String(member.ty.name()),
-                        Argument::String(member.ty.as_ref().into()),
-                        options.unwrap_or(Argument::Null),
-                        Argument::Bool(member.key),
-                        Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
-                    ];
-
-                    self.executor.send(QueryMessage::other(statement.to_string(), arguments))?;
+                    let mut new_path = path.to_vec();
+                    new_path.push(member.name.clone());
+                    
+                    self.add_columns_recursive(
+                        &new_path,
+                        &member.ty,
+                        columns,
+                        indices,
+                        table_id,
+                        None,
+                    )?;
                 }
             }
             Ty::Tuple(tuple) => {
                 for (idx, member) in tuple.iter().enumerate() {
-                    let mut options = None; // TEMP: doesnt support complex enums yet
-
-                    build_member(&format!("_{}", idx), member, &mut options);
-
-                    let statement = "INSERT OR IGNORE INTO model_members (id, model_id, \
-                                     model_idx, member_idx, name, type, type_enum, enum_options, \
-                                     key, executed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                    let arguments = vec![
-                        Argument::String(table_id.clone()),
-                        // TEMP: this is temporary until the model hash is precomputed
-                        Argument::String(format!("{:#x}", selector)),
-                        Argument::Int(model_idx),
-                        Argument::Int(idx as i64),
-                        Argument::String(format!("_{}", idx)),
-                        Argument::String(member.name()),
-                        Argument::String(member.as_ref().into()),
-                        options.unwrap_or(Argument::Null),
-                        // NOTE: should we consider the case where
-                        // a tuple is used as a key? should its members be keys?
-                        Argument::Bool(false),
-                        Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
-                    ];
-
-                    self.executor.send(QueryMessage::other(statement.to_string(), arguments))?;
+                    let mut new_path = path.to_vec();
+                    new_path.push(format!("_{}", idx));
+                    
+                    self.add_columns_recursive(
+                        &new_path,
+                        member,
+                        columns,
+                        indices,
+                        table_id,
+                        None,
+                    )?;
                 }
             }
             Ty::Array(array) => {
-                let mut options = None; // TEMP: doesnt support complex enums yet
-                let ty = &array[0];
-                build_member("data", ty, &mut options);
-
-                let statement = "INSERT OR IGNORE INTO model_members (id, model_id, model_idx, \
-                                 member_idx, name, type, type_enum, enum_options, key, \
-                                 executed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                let arguments = vec![
-                    Argument::String(table_id.clone()),
-                    // TEMP: this is temporary until the model hash is precomputed
-                    Argument::String(format!("{:#x}", selector)),
-                    Argument::Int(model_idx),
-                    Argument::Int(0),
-                    Argument::String("data".to_string()),
-                    Argument::String(ty.name()),
-                    Argument::String(ty.as_ref().into()),
-                    options.unwrap_or(Argument::Null),
-                    Argument::Bool(false),
-                    Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
-                ];
-
-                self.executor.send(QueryMessage::other(statement.to_string(), arguments))?;
+                let mut new_path = path.to_vec();
+                new_path.push("data".to_string());
+                
+                self.add_columns_recursive(
+                    &new_path,
+                    &array[0],
+                    columns,
+                    indices,
+                    table_id,
+                    None,
+                )?;
             }
             Ty::Enum(e) => {
-                for (idx, child) in e
+                // Add the enum option column
+                let column_name = if column_prefix.is_empty() {
+                    format!("external_option")
+                } else {
+                    format!("external_{}_option", column_prefix)
+                };
+                
+                let all_options = e
                     .options
                     .iter()
-                    .chain(vec![&EnumOption {
-                        name: "option".to_string(),
-                        ty: Ty::Enum(e.clone()),
-                    }])
-                    .enumerate()
-                {
-                    // Skip enum options that have no type / member
+                    .map(|c| format!("'{}'", c.name))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+
+                columns.push(format!("{} TEXT CHECK({} IN ({}))", column_name, column_name, all_options));
+                indices.push(format!(
+                    "CREATE INDEX IF NOT EXISTS [idx_{table_id}_{column_name}] ON [{table_id}] ({column_name});"
+                ));
+
+                // Add columns for each enum variant's data
+                for child in e.options.iter() {
                     if let Ty::Tuple(tuple) = &child.ty {
                         if tuple.is_empty() {
                             continue;
                         }
                     }
 
-                    let mut options = None; // TEMP: doesnt support complex enums yet
-                    build_member(&child.name, &child.ty, &mut options);
-
-                    let statement = "INSERT OR IGNORE INTO model_members (id, model_id, \
-                                     model_idx, member_idx, name, type, type_enum, enum_options, \
-                                     key, executed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                    let arguments = vec![
-                        Argument::String(table_id.clone()),
-                        // TEMP: this is temporary until the model hash is precomputed
-                        Argument::String(format!("{:#x}", selector)),
-                        Argument::Int(model_idx),
-                        Argument::Int(idx as i64),
-                        Argument::String(child.name.clone()),
-                        Argument::String(child.ty.name()),
-                        Argument::String(child.ty.as_ref().into()),
-                        options.unwrap_or(Argument::Null),
-                        Argument::Bool(false),
-                        Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
-                    ];
-
-                    self.executor.send(QueryMessage::other(statement.to_string(), arguments))?;
+                    let mut new_path = path.to_vec();
+                    new_path.push(child.name.clone());
+                    
+                    self.add_columns_recursive(
+                        &new_path,
+                        &child.ty,
+                        columns,
+                        indices,
+                        table_id,
+                        None,
+                    )?;
                 }
             }
-            _ => {}
-        }
-
-        create_table_query.push_str("executed_at DATETIME NOT NULL, ");
-        create_table_query.push_str("created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, ");
-        create_table_query.push_str("updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, ");
-
-        // If this is not the Model's root table, create a reference to the parent.
-        if path.len() > 1 {
-            let parent_table_id = path[..path.len() - 1].join("$");
-
-            create_table_query.push_str("FOREIGN KEY (id");
-            for i in 0..parent_array_idx {
-                create_table_query.push_str(&format!(", idx_{i}", i = i));
+            _ => {
+                // Handle primitive types
+                if let Ok(cairo_type) = Primitive::from_str(&ty.name()) {
+                    let sql_type = cairo_type.to_sql_type();
+                    let column_name = if column_prefix.is_empty() {
+                        format!("external_value")
+                    } else {
+                        format!("external_{}", column_prefix)
+                    };
+                    
+                    columns.push(format!("{} {}", column_name, sql_type));
+                    indices.push(format!(
+                        "CREATE INDEX IF NOT EXISTS [idx_{table_id}_{column_name}] ON [{table_id}] ({column_name});"
+                    ));
+                }
             }
-            create_table_query.push_str(&format!(
-                ") REFERENCES [{parent_table_id}] (id",
-                parent_table_id = parent_table_id
-            ));
-            for i in 0..parent_array_idx {
-                create_table_query.push_str(&format!(", idx_{i}", i = i));
-            }
-            create_table_query.push_str(") ON DELETE CASCADE, ");
-        };
-
-        create_table_query.push_str("PRIMARY KEY (id");
-        for i in 0..array_idx {
-            create_table_query.push_str(&format!(", idx_{i}", i = i));
-        }
-        create_table_query.push_str("), ");
-
-        create_table_query.push_str("FOREIGN KEY (entity_id) REFERENCES entities(id), ");
-        // create_table_query.push_str("FOREIGN KEY (event_id) REFERENCES events(id), ");
-        create_table_query
-            .push_str("FOREIGN KEY (event_message_id) REFERENCES event_messages(id));");
-
-        if upgrade_diff.is_some() {
-            for alter_query in alter_table_queries {
-                self.executor.send(QueryMessage::other(alter_query, vec![]))?;
-            }
-        } else {
-            self.executor.send(QueryMessage::other(create_table_query, vec![]))?;
-        }
-
-        for index_query in indices {
-            self.executor.send(QueryMessage::other(index_query, vec![]))?;
         }
 
         Ok(())
