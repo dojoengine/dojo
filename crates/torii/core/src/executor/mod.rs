@@ -756,10 +756,12 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 }
             }
             QueryType::Other => {
-                query.execute(&mut **tx).await.with_context(|| {
-                    format!(
-                        "Failed to execute query: {:?}, args: {:?}",
-                        query_message.statement, query_message.arguments
+                query.execute(&mut **tx).await.map_err(|e| {
+                    anyhow::anyhow!(
+                        "Failed to execute query: {:?}, args: {:?}, error: {:?}",
+                        query_message.statement,
+                        query_message.arguments,
+                        e
                     )
                 })?;
             }
