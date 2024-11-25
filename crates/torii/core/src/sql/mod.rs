@@ -284,12 +284,10 @@ impl Sql {
             QueryType::RegisterModel,
         ))?;
 
-        let mut model_idx = 0_i64;
         self.build_model_query(
             selector,
             vec![namespaced_name.clone()],
             model,
-            model_idx,
             block_timestamp,
             upgrade_diff,
         )?;
@@ -937,7 +935,6 @@ impl Sql {
         selector: Felt,
         path: Vec<String>,
         model: &Ty,
-        mut model_idx: i64,
         block_timestamp: u64,
         upgrade_diff: Option<&Ty>,
     ) -> Result<()> {
@@ -956,6 +953,7 @@ impl Sql {
         );
 
         // Recursively add columns for all nested type
+        let mut model_idx = 0_i64;
         self.add_columns_recursive(
             &path,
             model,
@@ -1050,6 +1048,7 @@ impl Sql {
                     let mut new_path = path.to_vec();
                     new_path.push(member.name.clone());
 
+                    let model_idx = &mut (*model_idx + 1);
                     self.add_model_member(
                         table_id,
                         selector,
@@ -1060,8 +1059,6 @@ impl Sql {
                         member.key,
                         block_timestamp,
                     )?;
-
-                    *model_idx += 1;  // Increment before recursing
                     
                     self.add_columns_recursive(
                         &new_path,
@@ -1082,6 +1079,7 @@ impl Sql {
                     let mut new_path = path.to_vec();
                     new_path.push(format!("_{}", idx));
 
+                    let model_idx = &mut (*model_idx + 1);
                     self.add_model_member(
                         table_id,
                         selector,
@@ -1093,8 +1091,6 @@ impl Sql {
                         block_timestamp,
                     )?;
 
-                    *model_idx += 1;  // Increment before recursing
-                    
                     self.add_columns_recursive(
                         &new_path,
                         member,
@@ -1118,6 +1114,7 @@ impl Sql {
                 
                 add_column(&column_name, "TEXT");
 
+                let model_idx = &mut (*model_idx + 1);
                 self.add_model_member(
                     table_id,
                     selector,
@@ -1128,8 +1125,6 @@ impl Sql {
                     false,
                     block_timestamp,
                 )?;
-
-                *model_idx += 1;  // Increment after adding array
             }
             Ty::Enum(e) => {
                 let column_name = if column_prefix.is_empty() {
@@ -1138,6 +1133,7 @@ impl Sql {
                     format!("{}_option", column_prefix)
                 };
                 
+                let model_idx = &mut (*model_idx + 1);
                 let all_options = e
                     .options
                     .iter()
@@ -1158,8 +1154,6 @@ impl Sql {
                     false,
                     block_timestamp,
                 )?;
-
-                *model_idx += 1;  // Increment after adding enum option
 
                 for (idx, child) in e.options.iter().enumerate() {
                     if let Ty::Tuple(tuple) = &child.ty {
@@ -1182,8 +1176,6 @@ impl Sql {
                         block_timestamp,
                     )?;
 
-                    *model_idx += 1;  // Increment before recursing
-                    
                     self.add_columns_recursive(
                         &new_path,
                         &child.ty,
