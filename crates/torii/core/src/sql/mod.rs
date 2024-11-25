@@ -941,8 +941,8 @@ impl Sql {
         model: &Ty,
         model_idx: i64,
         block_timestamp: u64,
-        array_idx: usize,
-        parent_array_idx: usize,
+        _array_idx: usize,
+        _parent_array_idx: usize,
         upgrade_diff: Option<&Ty>,
     ) -> Result<()> {
         let table_id = path[0].clone(); // Use only the root path component
@@ -950,27 +950,14 @@ impl Sql {
         let mut indices = Vec::new();
         let mut alter_table_queries = Vec::new();
 
-        // Start building the create table query
+        // Start building the create table query with internal columns
         let mut create_table_query = format!(
-            "CREATE TABLE IF NOT EXISTS [{table_id}] (id TEXT NOT NULL, event_id TEXT NOT NULL, \
-             entity_id TEXT, event_message_id TEXT, "
+            "CREATE TABLE IF NOT EXISTS [{table_id}] (\
+             internal_id TEXT NOT NULL PRIMARY KEY, \
+             internal_event_id TEXT NOT NULL, \
+             internal_entity_id TEXT, \
+             internal_event_message_id TEXT, "
         );
-
-        // Handle array indexing columns if needed
-        if array_idx > 0 {
-            for i in 0..array_idx {
-                let column = format!("idx_{i} INTEGER NOT NULL");
-                create_table_query.push_str(&format!("{column}, "));
-                alter_table_queries.push(format!(
-                    "ALTER TABLE [{table_id}] ADD COLUMN idx_{i} INTEGER NOT NULL DEFAULT 0"
-                ));
-            }
-
-            create_table_query.push_str("full_array_id TEXT NOT NULL UNIQUE, ");
-            alter_table_queries.push(format!(
-                "ALTER TABLE [{table_id}] ADD COLUMN full_array_id TEXT NOT NULL UNIQUE DEFAULT ''"
-            ));
-        }
 
         // Recursively add columns for all nested types
         self.add_columns_recursive(
@@ -987,21 +974,14 @@ impl Sql {
             create_table_query.push_str(&format!("{}, ", column));
         }
 
-        // Add standard timestamps
-        create_table_query.push_str("executed_at DATETIME NOT NULL, ");
-        create_table_query.push_str("created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, ");
-        create_table_query.push_str("updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, ");
-
-        // Add primary key
-        create_table_query.push_str("PRIMARY KEY (id");
-        for i in 0..array_idx {
-            create_table_query.push_str(&format!(", idx_{i}"));
-        }
-        create_table_query.push_str("), ");
+        // Add internal timestamps
+        create_table_query.push_str("internal_executed_at DATETIME NOT NULL, ");
+        create_table_query.push_str("internal_created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, ");
+        create_table_query.push_str("internal_updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, ");
 
         // Add foreign key constraints
-        create_table_query.push_str("FOREIGN KEY (entity_id) REFERENCES entities(id), ");
-        create_table_query.push_str("FOREIGN KEY (event_message_id) REFERENCES event_messages(id));");
+        create_table_query.push_str("FOREIGN KEY (internal_entity_id) REFERENCES entities(id), ");
+        create_table_query.push_str("FOREIGN KEY (internal_event_message_id) REFERENCES event_messages(id));");
 
         // Execute the queries
         if upgrade_diff.is_some() {
@@ -1059,14 +1039,14 @@ impl Sql {
                         columns,
                         indices,
                         table_id,
-                        None,
+                        upgrade_diff,
                     )?;
                 }
             }
             Ty::Tuple(tuple) => {
                 for (idx, member) in tuple.iter().enumerate() {
                     let mut new_path = path.to_vec();
-                    new_path.push(format!("_{}", idx));
+                    new_path.push(idx.to_string());
                     
                     self.add_columns_recursive(
                         &new_path,
@@ -1074,29 +1054,29 @@ impl Sql {
                         columns,
                         indices,
                         table_id,
-                        None,
+                        upgrade_diff,
                     )?;
                 }
             }
-            Ty::Array(array) => {
-                let mut new_path = path.to_vec();
-                new_path.push("data".to_string());
+            Ty::Array(_) => {
+                // Store array as JSON in a single column
+                let column_name = if column_prefix.is_empty() {
+                    "value".to_string()
+                } else {
+                    column_prefix
+                };
                 
-                self.add_columns_recursive(
-                    &new_path,
-                    &array[0],
-                    columns,
-                    indices,
-                    table_id,
-                    None,
-                )?;
+                columns.push(format!("{} TEXT", column_name)); // JSON will be stored as TEXT
+                indices.push(format!(
+                    "CREATE INDEX IF NOT EXISTS [idx_{table_id}_{column_name}] ON [{table_id}] ({column_name});"
+                ));
             }
             Ty::Enum(e) => {
                 // Add the enum option column
                 let column_name = if column_prefix.is_empty() {
-                    format!("external_option")
+                    "option".to_string()
                 } else {
-                    format!("external_{}_option", column_prefix)
+                    format!("{}_option", column_prefix)
                 };
                 
                 let all_options = e
@@ -1128,7 +1108,7 @@ impl Sql {
                         columns,
                         indices,
                         table_id,
-                        None,
+                        upgrade_diff,
                     )?;
                 }
             }
@@ -1137,9 +1117,9 @@ impl Sql {
                 if let Ok(cairo_type) = Primitive::from_str(&ty.name()) {
                     let sql_type = cairo_type.to_sql_type();
                     let column_name = if column_prefix.is_empty() {
-                        format!("external_value")
+                        "value".to_string()
                     } else {
-                        format!("external_{}", column_prefix)
+                        column_prefix
                     };
                     
                     columns.push(format!("{} {}", column_name, sql_type));
