@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1732634335737,
+  "lastUpdate": 1732638489392,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -36187,6 +36187,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7894199,
             "range": "± 289610",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "distinct": true,
+          "id": "339e9c1379fb6509b33450fb9f31f4ec15b0677d",
+          "message": "fix(chore): update Cargo.lock",
+          "timestamp": "2024-11-26T10:11:45-06:00",
+          "tree_id": "94d90800bf7b3d8e48bde1b63054821b1cd4c9f2",
+          "url": "https://github.com/dojoengine/dojo/commit/339e9c1379fb6509b33450fb9f31f4ec15b0677d"
+        },
+        "date": 1732638488044,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10467002335,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
