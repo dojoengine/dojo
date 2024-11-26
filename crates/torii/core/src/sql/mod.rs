@@ -732,7 +732,12 @@ impl Sql {
             }
             Ty::Enum(e) => {
                 let option = e.options[e.option.unwrap() as usize].clone();
-                
+                if let Ty::Tuple(t) = &option.ty {
+                    if t.is_empty() {
+                        return Ok(());
+                    }
+                }
+
                 update_members(
                     &[
                         Member { name: "option".to_string(), ty: Ty::Enum(e.clone()), key: false },
