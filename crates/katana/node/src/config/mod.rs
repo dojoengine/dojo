@@ -8,7 +8,7 @@ pub mod rpc;
 use std::sync::Arc;
 
 use db::DbConfig;
-use dev::{DevConfig, GasPriceWorkerConfig};
+use dev::DevConfig;
 use execution::ExecutionConfig;
 use fork::ForkingConfig;
 use katana_core::service::messaging::MessagingConfig;

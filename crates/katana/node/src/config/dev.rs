@@ -3,7 +3,6 @@ use katana_core::constants::{
     DEFAULT_STRK_L1_GAS_PRICE,
 };
 use katana_primitives::block::GasPrices;
-use url::Url;
 
 /// Development configuration.
 #[derive(Debug, Clone)]
@@ -32,11 +31,6 @@ pub struct DevConfig {
     ///
     /// These are the prices that will be used for calculating the gas fee for transactions.
     pub fixed_gas_prices: Option<FixedL1GasPriceConfig>,
-
-    /// L1 gas oracle worker task configuration for real time gas sampling.
-    ///
-    /// If sampling disabled, the system falls back to the hardcoded gas values.
-    pub l1_worker: Option<GasPriceWorkerConfig>,
 }
 
 /// Fixed gas prices for development.
@@ -44,12 +38,6 @@ pub struct DevConfig {
 pub struct FixedL1GasPriceConfig {
     pub gas_price: GasPrices,
     pub data_gas_price: GasPrices,
-}
-
-#[derive(Debug, Clone)]
-pub struct GasPriceWorkerConfig {
-    pub l1_provider_url: Option<Url>,
-    pub no_sampling: bool,
 }
 
 impl std::default::Default for FixedL1GasPriceConfig {
@@ -66,12 +54,6 @@ impl std::default::Default for FixedL1GasPriceConfig {
 
 impl std::default::Default for DevConfig {
     fn default() -> Self {
-        Self { fee: true, account_validation: true, fixed_gas_prices: None, l1_worker: None }
-    }
-}
-
-impl std::default::Default for GasPriceWorkerConfig {
-    fn default() -> Self {
-        Self { l1_provider_url: None, no_sampling: true }
+        Self { fee: true, account_validation: true, fixed_gas_prices: None }
     }
 }
