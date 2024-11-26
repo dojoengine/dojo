@@ -1,11 +1,11 @@
-use dojo_world::diff::WorldDiff;
+use dojo_utils::TransactionResult;
 use scarb::core::Workspace;
 use scarb_ui::Ui;
 use starknet::core::types::Felt;
 use url::Url;
 
 use crate::transaction::walnut_debug_transaction;
-use crate::verification::walnut_verify_migration_strategy;
+use crate::verification::walnut_verify;
 use crate::{utils, Error};
 
 /// A debugger for Starknet transactions embedding the walnut configuration.
@@ -22,11 +22,26 @@ impl WalnutDebugger {
 
     /// Creates a new Walnut debugger if the `use_walnut` flag is set.
     pub fn new_from_flag(use_walnut: bool, rpc_url: Url) -> Option<Self> {
-        if use_walnut { Some(Self::new(rpc_url)) } else { None }
+        if use_walnut {
+            Some(Self::new(rpc_url))
+        } else {
+            None
+        }
     }
 
     /// Debugs a transaction with Walnut by printing a link to the Walnut debugger page.
-    pub fn debug_transaction(&self, ui: &Ui, transaction_hash: &Felt) -> Result<(), Error> {
+    pub fn debug_transaction(
+        &self,
+        ui: &Ui,
+        transaction_result: &TransactionResult,
+    ) -> Result<(), Error> {
+        let transaction_hash = match transaction_result {
+            TransactionResult::Hash(transaction_hash) => transaction_hash,
+            TransactionResult::Noop => {
+                return Ok(());
+            }
+            TransactionResult::HashReceipt(transaction_hash, _) => transaction_hash,
+        };
         let url = walnut_debug_transaction(&self.rpc_url, transaction_hash)?;
         ui.print(format!("Debug transaction with Walnut: {url}"));
         Ok(())
@@ -34,17 +49,7 @@ impl WalnutDebugger {
 
     /// Verifies a migration strategy with Walnut by uploading the source code of the contracts and
     /// models in the strategy.
-    pub async fn verify_migration_strategy(
-        &self,
-        ws: &Workspace<'_>,
-        world_diff: &WorldDiff,
-    ) -> anyhow::Result<()> {
-        walnut_verify_migration_strategy(ws, self.rpc_url.to_string(), world_diff).await
-    }
-
-    /// Checks if the Walnut API key is set.
-    pub fn check_api_key() -> Result<(), Error> {
-        let _ = utils::walnut_get_api_key()?;
-        Ok(())
+    pub async fn verify(ws: &Workspace<'_>) -> anyhow::Result<()> {
+        walnut_verify(ws).await
     }
 }
