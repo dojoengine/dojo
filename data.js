@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1732634146072,
+  "lastUpdate": 1732634335737,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -36139,6 +36139,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10542378239,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "valentin@pupucecorp.com",
+            "name": "valdo.carbonaboyz.stark",
+            "username": "MartianGreed"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1aabd5fe3de02e4e506fbcaea693af78b3d154d7",
+          "message": "fix: all bindgen functionns external instead of view (#2725)",
+          "timestamp": "2024-11-26T08:59:06-06:00",
+          "tree_id": "adc72c2d97924df755815bed622d5e992f87eea6",
+          "url": "https://github.com/dojoengine/dojo/commit/1aabd5fe3de02e4e506fbcaea693af78b3d154d7"
+        },
+        "date": 1732634334138,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2430513,
+            "range": "± 35404",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 7940617,
+            "range": "± 198421",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3712070857,
+            "range": "± 869734837",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 7894199,
+            "range": "± 289610",
             "unit": "ns/iter"
           }
         ]
