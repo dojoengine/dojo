@@ -3,13 +3,11 @@
 pub mod stage;
 
 use core::future::IntoFuture;
-use std::sync::Arc;
 
 use futures::future::BoxFuture;
 use katana_primitives::block::BlockNumber;
 use katana_provider::error::ProviderError;
 use katana_provider::traits::stage::StageCheckpointProvider;
-use parking_lot::{Condvar, Mutex};
 use stage::{Stage, StageExecutionInput};
 use tokio::sync::watch;
 use tracing::{error, info};
@@ -30,12 +28,6 @@ pub enum Error {
 
     #[error(transparent)]
     Provider(#[from] ProviderError),
-}
-
-#[derive(Debug)]
-pub enum PipelineEvents {
-    UpdateTip(BlockNumber),
-    Stop,
 }
 
 #[derive(Debug)]
@@ -95,15 +87,15 @@ impl<P: StageCheckpointProvider> Pipeline<P> {
             let tip = *self.tip.borrow_and_update();
 
             loop {
-                if let Some(to) = tip {
-                    let to = current_chunk_tip.min(to);
+                if let Some(tip) = tip {
+                    let to = current_chunk_tip.min(tip);
                     self.run_once_until(to).await?;
 
-                    if current_chunk_tip >= to {
+                    if to >= tip {
+                        info!(target: "pipeline", %tip, "Finished processing until tip.");
                         break;
                     } else {
-                        current_chunk_tip = (current_chunk_tip + self.chunk_size).min(to);
-                        continue;
+                        current_chunk_tip = (current_chunk_tip + self.chunk_size).min(tip);
                     }
                 }
             }

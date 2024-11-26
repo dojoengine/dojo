@@ -33,7 +33,7 @@ use katana_db::mdbx::DbEnv;
 use katana_executor::implementation::blockifier::BlockifierFactory;
 use katana_executor::{ExecutionFlags, ExecutorFactory};
 use katana_pipeline::stage::{Blocks, Classes};
-use katana_pipeline::{stage, Pipeline};
+use katana_pipeline::{stage, Pipeline, PipelineHandle};
 use katana_pool::ordering::FiFo;
 use katana_pool::validation::stateful::TxValidator;
 use katana_pool::TxPool;
@@ -62,6 +62,8 @@ pub struct LaunchedNode {
     pub node: Node,
     /// Handle to the rpc server.
     pub rpc: RpcServer,
+    /// Handle to the syncing pipeline.
+    pub pipeline: PipelineHandle,
 }
 
 impl LaunchedNode {
@@ -128,22 +130,11 @@ impl Node {
         let block_producer = self.block_producer.clone();
         let validator = self.block_producer.validator().clone();
 
-        // // --- build sequencing stage
-
-        // let sequencing = stage::Sequencing::new(
-        //     pool.clone(),
-        //     backend.clone(),
-        //     self.task_manager.task_spawner(),
-        //     block_producer.clone(),
-        //     self.messaging_config.clone(),
-        // );
-
         // --- build and start the pipeline
 
         let provider = self.backend.blockchain.provider().clone();
         let fgw = SequencerGatewayProvider::starknet_alpha_sepolia();
         let (mut pipeline, handle) = Pipeline::new(provider.clone(), 10);
-        // pipeline.add_stage(Box::new(sequencing));
 
         pipeline.add_stage(Blocks::new(provider.clone(), fgw.clone()));
         pipeline.add_stage(Classes::new(provider, fgw.clone()));
@@ -160,7 +151,7 @@ impl Node {
         let node_components = (pool, backend, block_producer, validator, self.forked_client.take());
         let rpc = spawn(node_components, self.rpc_config.clone()).await?;
 
-        Ok(LaunchedNode { node: self, rpc })
+        Ok(LaunchedNode { node: self, pipeline: handle, rpc })
     }
 }
 
