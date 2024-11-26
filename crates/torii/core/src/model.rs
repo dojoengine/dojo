@@ -149,7 +149,7 @@ pub fn build_sql_query(
             Ty::Enum(e) => {
                 // Add the enum variant column
                 selections.push(format!("[{}]", path));
-                
+
                 // Add columns for each variant's value (if not empty tuple)
                 for option in &e.options {
                     if let Ty::Tuple(t) = &option.ty {
@@ -168,29 +168,22 @@ pub fn build_sql_query(
     }
 
     let mut selections = vec!["internal_id".to_string(), "internal_entity_id".to_string()];
-    
+
     for model in schemas {
         collect_columns("", model, &mut selections);
     }
 
     let selections_clause = selections.join(", ");
 
-    let mut query = format!(
-        "SELECT {} FROM [{}]",
-        selections_clause,
-        table_name,
-    );
-    
-    let mut count_query = format!(
-        "SELECT COUNT(internal_id) FROM [{}]",
-        table_name,
-    );
+    let mut query = format!("SELECT {} FROM [{}]", selections_clause, table_name,);
+
+    let mut count_query = format!("SELECT COUNT(internal_id) FROM [{}]", table_name,);
 
     if let Some(where_clause) = where_clause {
         query += &format!(" WHERE {}", where_clause);
         count_query += &format!(" WHERE {}", where_clause);
     }
-    
+
     query += " ORDER BY internal_event_id DESC";
 
     if let Some(limit) = limit {
@@ -502,19 +495,7 @@ mod tests {
         )
         .unwrap();
 
-        let expected_query =
-            "SELECT entities.id, entities.keys, [Test-Position].external_player AS \
-             \"Test-Position.player\", [Test-Position$vec].external_x AS \"Test-Position$vec.x\", \
-             [Test-Position$vec].external_y AS \"Test-Position$vec.y\", \
-             [Test-PlayerConfig$favorite_item].external_Some AS \
-             \"Test-PlayerConfig$favorite_item.Some\", [Test-PlayerConfig].external_favorite_item \
-             AS \"Test-PlayerConfig.favorite_item\" FROM entities LEFT JOIN [Test-Position] ON \
-             entities.id = [Test-Position].entity_id  LEFT JOIN [Test-PlayerConfig] ON \
-             entities.id = [Test-PlayerConfig].entity_id  LEFT JOIN [Test-Position$vec] ON \
-             entities.id = [Test-Position$vec].entity_id  LEFT JOIN \
-             [Test-PlayerConfig$favorite_item] ON entities.id = \
-             [Test-PlayerConfig$favorite_item].entity_id ORDER BY entities.event_id DESC";
-        // todo: completely tests arrays
+        let expected_query = "SELECT internal_id, internal_entity_id, [player], [vec.x], [vec.y], [test_everything], [favorite_item], [favorite_item.Some], [items] FROM [entities] WHERE entity_id ORDER BY internal_event_id DESC";
         assert_eq!(query.0, expected_query);
     }
 }

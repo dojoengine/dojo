@@ -7,8 +7,7 @@ use starknet_crypto::Felt;
 use tokio::sync::RwLock;
 
 use crate::constants::TOKEN_BALANCE_TABLE;
-use crate::error::{Error, ParseError, QueryError};
-use crate::model::{parse_sql_model_members, SqlModelMember};
+use crate::error::{Error, ParseError};
 use crate::sql::utils::I256;
 use crate::types::ContractType;
 
@@ -62,19 +61,18 @@ impl ModelCache {
     }
 
     async fn update_model(&self, selector: &Felt) -> Result<Model, Error> {
-        let formatted_selector = format!("{:#x}", selector);
-
-        let (namespace, name, class_hash, contract_address, packed_size, unpacked_size, layout): (
+        let (namespace, name, class_hash, contract_address, packed_size, unpacked_size, layout, schema): (
             String,
             String,
             String,
             String,
             u32,
             u32,
+            String,
             String,
         ) = sqlx::query_as(
             "SELECT namespace, name, class_hash, contract_address, packed_size, unpacked_size, \
-             layout FROM models WHERE id = ?",
+             layout, schema FROM models WHERE id = ?",
         )
         .bind(format!("{:#x}", selector))
         .fetch_one(&self.pool)
@@ -84,20 +82,8 @@ impl ModelCache {
         let contract_address = Felt::from_hex(&contract_address).map_err(ParseError::FromStr)?;
 
         let layout = serde_json::from_str(&layout).map_err(ParseError::FromJsonStr)?;
+        let schema = serde_json::from_str(&schema).map_err(ParseError::FromJsonStr)?;
 
-        let model_members: Vec<SqlModelMember> = sqlx::query_as(
-            "SELECT id, model_idx, member_idx, name, type, type_enum, enum_options, key FROM \
-             model_members WHERE model_id = ? ORDER BY model_idx ASC, member_idx ASC",
-        )
-        .bind(formatted_selector)
-        .fetch_all(&self.pool)
-        .await?;
-
-        if model_members.is_empty() {
-            return Err(QueryError::ModelNotFound(name.clone()).into());
-        }
-
-        let schema = parse_sql_model_members(&namespace, &name, &model_members);
         let mut cache = self.model_cache.write().await;
 
         let model = Model {
