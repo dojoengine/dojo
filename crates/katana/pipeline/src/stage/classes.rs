@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::Result;
 use backon::{ExponentialBuilder, Retryable};
@@ -10,7 +11,7 @@ use katana_provider::traits::state_update::StateUpdateProvider;
 use katana_rpc_types::class::RpcSierraContractClass;
 use starknet::providers::sequencer::models::{BlockId, DeployedClass};
 use starknet::providers::{ProviderError, SequencerGatewayProvider};
-use tracing::warn;
+use tracing::{debug, warn};
 
 use super::{Stage, StageExecutionInput, StageResult};
 
@@ -27,8 +28,13 @@ pub struct Classes<P> {
 }
 
 impl<P> Classes<P> {
-    pub fn new(provider: P, feeder_gateway: SequencerGatewayProvider) -> Self {
-        Self { provider, downloader: Downloader::new(feeder_gateway) }
+    pub fn new(
+        provider: P,
+        feeder_gateway: SequencerGatewayProvider,
+        download_batch_size: usize,
+    ) -> Self {
+        let downloader = Downloader::new(feeder_gateway, download_batch_size);
+        Self { provider, downloader }
     }
 }
 
@@ -43,12 +49,18 @@ where
 
     async fn execute(&mut self, input: &StageExecutionInput) -> StageResult {
         for i in input.from..=input.to {
+            // get the classes declared at block `i`
             let class_hashes = self.provider.declared_classes(i.into())?.unwrap();
             let class_hashes = class_hashes.keys().map(|hash| *hash).collect::<Vec<_>>();
 
-            let classes = self.downloader.fetch_classes(&class_hashes, i).await?;
-            for (hash, class) in classes {
-                self.provider.set_class(hash, class)?;
+            // fetch the classes artifacts
+            let classes = self.downloader.download_classes(&class_hashes, i).await?;
+
+            if !classes.is_empty() {
+                debug!(target: "stage", id = %self.id(), total = %classes.len(), "Storing classes to storage.");
+                for (hash, class) in class_hashes.iter().zip(classes) {
+                    self.provider.set_class(*hash, class)?;
+                }
             }
         }
 
@@ -58,53 +70,63 @@ where
 
 #[derive(Debug, Clone)]
 struct Downloader {
+    batch_size: usize,
     client: Arc<SequencerGatewayProvider>,
 }
 
 impl Downloader {
-    fn new(client: SequencerGatewayProvider) -> Self {
-        Self { client: Arc::new(client) }
+    fn new(client: SequencerGatewayProvider, batch_size: usize) -> Self {
+        Self { client: Arc::new(client), batch_size }
+    }
+
+    async fn download_classes(
+        &self,
+        hashes: &[ClassHash],
+        block: BlockNumber,
+    ) -> Result<Vec<ContractClass>, Error> {
+        debug!(total = %hashes.len(), %block, "Downloading classes.");
+        let mut classes = Vec::with_capacity(hashes.len());
+
+        for chunk in hashes.chunks(self.batch_size) {
+            let batch = self.fetch_classes_with_retry(chunk, block).await?;
+            classes.extend(batch);
+        }
+
+        Ok(classes)
+    }
+
+    async fn fetch_classes_with_retry(
+        &self,
+        classes: &[ClassHash],
+        block: BlockNumber,
+    ) -> Result<Vec<ContractClass>, Error> {
+        let request = || async move { self.clone().fetch_classes(classes, block).await };
+
+        // Retry only when being rate limited
+        let backoff = ExponentialBuilder::default().with_min_delay(Duration::from_secs(3));
+        let result = request
+            .retry(backoff)
+            .notify(|error, _| {
+                warn!(target: "pipeline", %error, "Retrying class download.");
+            })
+            .await?;
+
+        Ok(result)
     }
 
     async fn fetch_classes(
         &self,
         classes: &[ClassHash],
         block: BlockNumber,
-    ) -> Result<Vec<(ClassHash, ContractClass)>, Error> {
-        let mut all_results = Vec::with_capacity(classes.len());
+    ) -> Result<Vec<ContractClass>, Error> {
+        let mut requests = Vec::with_capacity(classes.len());
 
-        for hash in classes {
-            let mut futures = Vec::new();
-
-            futures.push(self.fetch_class_with_retry(*hash, block));
-            let batch_results = futures::future::join_all(futures).await;
-
-            all_results.extend(batch_results);
+        for class in classes {
+            requests.push(self.fetch_class(*class, block));
         }
 
-        all_results.into_iter().collect()
-    }
-
-    async fn fetch_class_with_retry(
-        &self,
-        hash: ClassHash,
-        block: BlockNumber,
-    ) -> Result<(ClassHash, ContractClass), Error> {
-        let request = || async move {
-            #[allow(deprecated)]
-            self.clone().fetch_class(hash, block).await
-        };
-
-        // Retry only when being rate limited
-        let result = request
-            .retry(ExponentialBuilder::default())
-            .when(|e| matches!(e, Error::Gateway(ProviderError::RateLimited)))
-            .notify(|error, _| {
-                warn!(target: "pipeline", hash = format!("{hash:#x}"), %block, %error, "Retrying class download.");
-            })
-            .await?;
-
-        Ok((hash, result))
+        let results = futures::future::join_all(requests).await;
+        results.into_iter().collect()
     }
 
     async fn fetch_class(

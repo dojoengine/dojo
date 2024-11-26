@@ -22,7 +22,6 @@ use serde::{Deserialize, Serialize};
 use tracing::{info, Subscriber};
 use tracing_log::LogTracer;
 use tracing_subscriber::{fmt, EnvFilter};
-use url::Url;
 
 use crate::file::NodeArgsConfig;
 use crate::options::*;
@@ -136,8 +135,8 @@ impl NodeArgs {
 
     fn init_logging(&self) -> Result<()> {
         const DEFAULT_LOG_FILTER: &str =
-            "pipeline=debug,info,tasks=debug,executor=trace,forking::backend=trace,blockifier=off,\
-             jsonrpsee_server=off,hyper=off,messaging=debug,node=error";
+            "pipeline=debug,stage=debug,info,tasks=debug,executor=trace,forking::backend=trace,\
+             blockifier=off,jsonrpsee_server=off,hyper=off,messaging=debug,node=error";
 
         let filter = if self.development.dev {
             &format!("{DEFAULT_LOG_FILTER},server=debug")

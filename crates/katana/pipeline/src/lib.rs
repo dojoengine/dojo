@@ -132,8 +132,9 @@ impl<P: StageCheckpointProvider> Pipeline<P> {
             let input = StageExecutionInput { from: checkpoint + 1, to };
             stage.execute(&input).await?;
             self.provider.set_checkpoint(id, to)?;
-        }
 
+            info!(target: "pipeline", %id, from = %checkpoint, %to, "Stage execution completed.");
+        }
         Ok(())
     }
 }
@@ -193,7 +194,7 @@ mod tests {
     async fn stage_checkpoint() {
         let provider = test_provider();
 
-        let (mut pipeline, handle) = Pipeline::new(&provider, 10);
+        let (mut pipeline, _handle) = Pipeline::new(&provider, 10);
         pipeline.add_stage(MockStage);
 
         // check that the checkpoint was set

@@ -33,7 +33,7 @@ use katana_db::mdbx::DbEnv;
 use katana_executor::implementation::blockifier::BlockifierFactory;
 use katana_executor::{ExecutionFlags, ExecutorFactory};
 use katana_pipeline::stage::{Blocks, Classes};
-use katana_pipeline::{stage, Pipeline, PipelineHandle};
+use katana_pipeline::{Pipeline, PipelineHandle};
 use katana_pool::ordering::FiFo;
 use katana_pool::validation::stateful::TxValidator;
 use katana_pool::TxPool;
@@ -134,12 +134,12 @@ impl Node {
 
         let provider = self.backend.blockchain.provider().clone();
         let fgw = SequencerGatewayProvider::starknet_alpha_sepolia();
-        let (mut pipeline, handle) = Pipeline::new(provider.clone(), 10);
+        let (mut pipeline, handle) = Pipeline::new(provider.clone(), 64);
 
-        pipeline.add_stage(Blocks::new(provider.clone(), fgw.clone()));
-        pipeline.add_stage(Classes::new(provider, fgw.clone()));
+        pipeline.add_stage(Blocks::new(provider.clone(), fgw.clone(), 3));
+        pipeline.add_stage(Classes::new(provider, fgw.clone(), 3));
 
-        handle.set_tip(100);
+        handle.set_tip(1000);
 
         self.task_manager
             .task_spawner()

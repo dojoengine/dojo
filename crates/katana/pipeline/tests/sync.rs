@@ -16,8 +16,8 @@ async fn fgw_sync() {
     // build stages
 
     let fgw = SequencerGatewayProvider::starknet_alpha_sepolia();
-    let blocks = stage::Blocks::new(db_provider.clone(), fgw.clone());
-    let classes = stage::Classes::new(db_provider.clone(), fgw);
+    let blocks = stage::Blocks::new(db_provider.clone(), fgw.clone(), 10);
+    let classes = stage::Classes::new(db_provider.clone(), fgw, 10);
 
     let (mut pipeline, handle) = Pipeline::new(db_provider.clone(), chunk_size);
     pipeline.add_stage(blocks);

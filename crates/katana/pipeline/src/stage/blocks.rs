@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::time::Duration;
 
 use backon::{ExponentialBuilder, Retryable};
 use katana_primitives::block::{BlockNumber, SealedBlockWithStatus};
@@ -6,7 +7,7 @@ use katana_primitives::state::{StateUpdates, StateUpdatesWithClasses};
 use katana_provider::traits::block::BlockWriter;
 use starknet::providers::sequencer::models::{BlockId, StateUpdateWithBlock};
 use starknet::providers::{ProviderError, SequencerGatewayProvider};
-use tracing::warn;
+use tracing::{debug, warn};
 
 use super::{Stage, StageExecutionInput, StageResult};
 
@@ -23,8 +24,13 @@ pub struct Blocks<P> {
 }
 
 impl<P> Blocks<P> {
-    pub fn new(provider: P, feeder_gateway: SequencerGatewayProvider) -> Self {
-        Self { provider, downloader: Downloader::new(feeder_gateway) }
+    pub fn new(
+        provider: P,
+        feeder_gateway: SequencerGatewayProvider,
+        download_batch_size: usize,
+    ) -> Self {
+        let downloader = Downloader::new(feeder_gateway, download_batch_size);
+        Self { provider, downloader }
     }
 }
 
@@ -36,22 +42,25 @@ impl<P: BlockWriter> Stage for Blocks<P> {
 
     async fn execute(&mut self, input: &StageExecutionInput) -> StageResult {
         // Download all blocks concurrently
-        let blocks = self.downloader.fetch_blocks_range(input.from, input.to, 10).await?;
+        let blocks = self.downloader.download_blocks(input.from, input.to).await?;
 
-        // Then process them sequentially
-        for data in blocks {
-            let StateUpdateWithBlock { state_update, block: fgw_block } = data;
+        if !blocks.is_empty() {
+            debug!(target: "stage", id = %self.id(), total = %blocks.len(), "Storing blocks to storage.");
+            // Store blocks to storage
+            for block in blocks {
+                let StateUpdateWithBlock { state_update, block: fgw_block } = block;
 
-            let block = SealedBlockWithStatus::from(fgw_block);
-            let su = StateUpdates::from(state_update);
-            let su = StateUpdatesWithClasses { state_updates: su, ..Default::default() };
+                let block = SealedBlockWithStatus::from(fgw_block);
+                let su = StateUpdates::from(state_update);
+                let su = StateUpdatesWithClasses { state_updates: su, ..Default::default() };
 
-            let _ = self.provider.insert_block_with_states_and_receipts(
-                block,
-                su,
-                Vec::new(),
-                Vec::new(),
-            );
+                let _ = self.provider.insert_block_with_states_and_receipts(
+                    block,
+                    su,
+                    Vec::new(),
+                    Vec::new(),
+                );
+            }
         }
 
         Ok(())
@@ -60,59 +69,67 @@ impl<P: BlockWriter> Stage for Blocks<P> {
 
 #[derive(Debug, Clone)]
 struct Downloader {
+    batch_size: usize,
     client: Arc<SequencerGatewayProvider>,
 }
 
 impl Downloader {
-    fn new(client: SequencerGatewayProvider) -> Self {
-        Self { client: Arc::new(client) }
+    fn new(client: SequencerGatewayProvider, batch_size: usize) -> Self {
+        Self { client: Arc::new(client), batch_size }
     }
 
     /// Fetch blocks in the range [from, to] in batches of `batch_size`.
-    async fn fetch_blocks_range(
+    async fn download_blocks(
         &self,
         from: BlockNumber,
         to: BlockNumber,
-        batch_size: usize,
     ) -> Result<Vec<StateUpdateWithBlock>, Error> {
-        let mut all_results = Vec::with_capacity(to.saturating_sub(from) as usize);
+        debug!(target: "pipeline", %from, %to, "Downloading blocks.");
+        let mut blocks = Vec::with_capacity(to.saturating_sub(from) as usize);
 
-        for batch_start in (from..=to).step_by(batch_size) {
-            let batch_end = (batch_start + batch_size as u64 - 1).min(to);
-
-            // fetch in batches and wait on them before proceeding to the next batch
-            let mut futures = Vec::new();
-            for block_num in batch_start..=batch_end {
-                futures.push(self.fetch_block_with_retry(block_num));
-            }
-
-            let batch_results = futures::future::join_all(futures).await;
-            all_results.extend(batch_results);
+        for batch_start in (from..=to).step_by(self.batch_size) {
+            let batch_end = (batch_start + self.batch_size as u64 - 1).min(to);
+            let batch = self.fetch_blocks_with_retry(batch_start, batch_end).await?;
+            blocks.extend(batch);
         }
 
-        all_results.into_iter().collect()
+        Ok(blocks)
     }
 
-    /// Fetch a single block with the given block number with retry mechanism.
-    async fn fetch_block_with_retry(
+    /// Fetch blocks with the given block number with retry mechanism at a batch level.
+    async fn fetch_blocks_with_retry(
         &self,
-        block: BlockNumber,
-    ) -> Result<StateUpdateWithBlock, Error> {
-        let request = || async move {
-            #[allow(deprecated)]
-            self.clone().fetch_block(block).await
-        };
+        from: BlockNumber,
+        to: BlockNumber,
+    ) -> Result<Vec<StateUpdateWithBlock>, Error> {
+        let request = || async move { self.clone().fetch_blocks(from, to).await };
 
         // Retry only when being rate limited
+        let backoff = ExponentialBuilder::default().with_min_delay(Duration::from_secs(9));
         let result = request
-            .retry(ExponentialBuilder::default())
-            .when(|e| matches!(e, Error::Gateway(ProviderError::RateLimited)))
+            .retry(backoff)
             .notify(|error, _| {
-                warn!(target: "pipeline", %block, %error, "Retrying block download.");
+                warn!(target: "pipeline", %from, %to, %error, "Retrying block download.");
             })
             .await?;
 
         Ok(result)
+    }
+
+    async fn fetch_blocks(
+        &self,
+        from: BlockNumber,
+        to: BlockNumber,
+    ) -> Result<Vec<StateUpdateWithBlock>, Error> {
+        let total = to.saturating_sub(from) as usize;
+        let mut requests = Vec::with_capacity(total);
+
+        for i in from..=to {
+            requests.push(self.fetch_block(i));
+        }
+
+        let results = futures::future::join_all(requests).await;
+        results.into_iter().collect()
     }
 
     /// Fetch a single block with the given block number.
@@ -140,7 +157,7 @@ mod tests {
         let provider = test_provider();
         let feeder_gateway = SequencerGatewayProvider::starknet_alpha_sepolia();
 
-        let mut stage = Blocks::new(&provider, feeder_gateway);
+        let mut stage = Blocks::new(&provider, feeder_gateway, 10);
 
         let input = StageExecutionInput { from: from_block, to: to_block };
         let _ = stage.execute(&input).await.expect("failed to execute stage");
