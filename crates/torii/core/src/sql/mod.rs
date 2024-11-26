@@ -1013,13 +1013,17 @@ impl Sql {
                     )?;
                 }
             }
-            _ => {
-                if let Ok(cairo_type) = Primitive::from_str(&ty.name()) {
-                    let column_name =
-                        if column_prefix.is_empty() { "value".to_string() } else { column_prefix };
+            Ty::ByteArray(_) => {
+                let column_name =
+                    if column_prefix.is_empty() { "value".to_string() } else { column_prefix };
 
-                    add_column(&column_name, &cairo_type.to_sql_type().to_string());
-                }
+                add_column(&column_name, "TEXT");
+            }
+            Ty::Primitive(p) => {
+                let column_name =
+                    if column_prefix.is_empty() { "value".to_string() } else { column_prefix };
+
+                add_column(&column_name, &p.to_sql_type().to_string());
             }
         }
 

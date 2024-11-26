@@ -147,8 +147,7 @@ pub fn build_sql_query(
             Ty::Enum(e) => {
                 // Add the enum variant column with table prefix and alias
                 selections.push(format!(
-                    "{}.\"{}\" as \"{}.{}\"",
-                    table_prefix, path, table_prefix, path
+                    "[{table_prefix}].[{path}] as \"{table_prefix}.{path}\"",
                 ));
 
                 // Add columns for each variant's value (if not empty tuple)
@@ -164,8 +163,7 @@ pub fn build_sql_query(
             }
             Ty::Array(_) | Ty::Primitive(_) | Ty::ByteArray(_) => {
                 selections.push(format!(
-                    "{}.\"{}\" as \"{}.{}\"",
-                    table_prefix, path, table_prefix, path
+                    "[{table_prefix}].[{path}] as \"{table_prefix}.{path}\"",
                 ));
             }
         }

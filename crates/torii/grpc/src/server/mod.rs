@@ -65,11 +65,11 @@ use crate::types::ComparisonOperator;
 
 pub(crate) static ENTITIES_TABLE: &str = "entities";
 pub(crate) static ENTITIES_MODEL_RELATION_TABLE: &str = "entity_model";
-pub(crate) static ENTITIES_ENTITY_RELATION_COLUMN: &str = "entity_id";
+pub(crate) static ENTITIES_ENTITY_RELATION_COLUMN: &str = "internal_entity_id";
 
 pub(crate) static EVENT_MESSAGES_TABLE: &str = "event_messages";
 pub(crate) static EVENT_MESSAGES_MODEL_RELATION_TABLE: &str = "event_model";
-pub(crate) static EVENT_MESSAGES_ENTITY_RELATION_COLUMN: &str = "event_message_id";
+pub(crate) static EVENT_MESSAGES_ENTITY_RELATION_COLUMN: &str = "internal_event_message_id";
 
 pub(crate) static EVENT_MESSAGES_HISTORICAL_TABLE: &str = "event_messages_historical";
 
@@ -309,6 +309,8 @@ impl DojoWorld {
                 None,
                 None,
             )?;
+
+            println!("entity_query: {}", entity_query);
 
             let rows = sqlx::query(&entity_query).bind(&models_str).fetch_all(&mut *tx).await?;
             let schemas = Arc::new(schemas);
