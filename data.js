@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1732643107637,
+  "lastUpdate": 1732643299535,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -36295,6 +36295,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10607837605,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ebcc23d9b16c3adbb21a8088e5ad2b6c7f43e4a7",
+          "message": "ci: update rust toolchain and conventional commit format (#2727)\n\n* ci: use conventional commit for devcontainer PR proposal\n\n* ci: fix rust version",
+          "timestamp": "2024-11-26T11:28:21-06:00",
+          "tree_id": "72e048f9616750cf4fa6deecae84f0da42aedda1",
+          "url": "https://github.com/dojoengine/dojo/commit/ebcc23d9b16c3adbb21a8088e5ad2b6c7f43e4a7"
+        },
+        "date": 1732643297518,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2412817,
+            "range": "± 13895",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 7933998,
+            "range": "± 106039",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3700216521,
+            "range": "± 835415461",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 7912480,
+            "range": "± 189724",
             "unit": "ns/iter"
           }
         ]
