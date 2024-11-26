@@ -9,7 +9,7 @@ use clap::Parser;
 use katana_core::constants::DEFAULT_SEQUENCER_ADDRESS;
 use katana_core::service::messaging::MessagingConfig;
 use katana_node::config::db::DbConfig;
-use katana_node::config::dev::{DevConfig, FixedL1GasPriceConfig, GasPriceWorkerConfig};
+use katana_node::config::dev::{DevConfig, FixedL1GasPriceConfig};
 use katana_node::config::execution::ExecutionConfig;
 use katana_node::config::fork::ForkingConfig;
 use katana_node::config::metrics::MetricsConfig;
@@ -69,17 +69,8 @@ pub struct NodeArgs {
     #[arg(value_parser = katana_core::service::messaging::MessagingConfig::parse)]
     pub messaging: Option<MessagingConfig>,
 
-    /// Disable sampling for the Gas Price Oracle, and fall back on hardcoded gas price values.
-    #[arg(long)]
-    #[arg(conflicts_with = "l1_provider_url")]
-    #[arg(help = "Disable L1 gas sampling and use hardcoded values.")]
-    pub no_sampling: bool,
-
     #[arg(long = "l1.provider", value_name = "URL", alias = "l1-provider")]
-    #[arg(help = "The Ethereum RPC provider to sample the gas prices from. Required unless \
-                  --no-sampling is used.")]
-    //   #[arg(required_unless_present = "no_sampling")] // --- Should use this when turning
-    // l1.provider to a required argument.
+    #[arg(help = "The Ethereum RPC provider to sample the gas prices from")]
     pub l1_provider_url: Option<Url>,
 
     #[command(flatten)]
@@ -184,7 +175,7 @@ impl NodeArgs {
         let execution = self.execution_config();
         let sequencing = self.sequencer_config();
         let messaging = self.messaging.clone();
-        let gas_price_worker = self.gas_price_worker_config();
+        let l1_provider_url = self.gpo_config();
 
         Ok(Config {
             metrics,
@@ -196,7 +187,7 @@ impl NodeArgs {
             sequencing,
             messaging,
             forking,
-            gas_price_worker,
+            l1_provider_url,
         })
     }
 
@@ -285,7 +276,6 @@ impl NodeArgs {
             fixed_gas_prices,
             fee: !self.development.no_fee,
             account_validation: !self.development.no_account_validation,
-            l1_worker: self.gas_price_worker_config(),
         }
     }
 
@@ -386,11 +376,8 @@ impl NodeArgs {
         Ok(self)
     }
 
-    fn gas_price_worker_config(&self) -> Option<GasPriceWorkerConfig> {
-        self.l1_provider_url.clone().map(|url| GasPriceWorkerConfig {
-            l1_provider_url: Some(url),
-            no_sampling: self.no_sampling,
-        })
+    fn gpo_config(&self) -> Option<Url> {
+        self.l1_provider_url.clone()
     }
 }
 
@@ -628,80 +615,37 @@ chain_id.Named = "Mainnet"
     }
 
     #[test]
-    fn test_gas_oracle_sampling_config() {
-        // Should change this test when the l1.provider argument will be required.
-
-        // Test default behavior - neither flag specified (should be changed when l1.provider
-        // becomes a required argument).
+    fn test_l1_provider_configuration() {
+        // Default case - no provider URL
         let config = NodeArgs::parse_from(["katana"]).config().unwrap();
-        assert!(config.gas_price_worker.is_none());
+        assert!(config.l1_provider_url.is_none());
+        assert!(config.dev.fixed_gas_prices.is_none());
 
-        // Test no_sampling flag, if no sampling there should be no worker task
-        let config = NodeArgs::parse_from(["katana", "--no-sampling"]).config().unwrap();
-        assert!(config.gas_price_worker.is_none()); // Should be None when using no_sampling
-
-        // Test l1_provider_url flag
-        let config = NodeArgs::parse_from(["katana", "--l1-provider", "http://localhost:8545"])
+        // Set provider URL
+        let config = NodeArgs::parse_from(["katana", "--l1.provider", "https://localhost:8545"])
             .config()
             .unwrap();
-        assert_matches!(config.gas_price_worker, Some(worker) => {
-            assert!(!worker.no_sampling);
-            assert_eq!(
-                worker.l1_provider_url,
-                Some(Url::parse("http://localhost:8545").unwrap())
-            );
-        });
+        assert_eq!(config.l1_provider_url, Some("https://localhost:8545".parse().unwrap()));
+        assert!(config.dev.fixed_gas_prices.is_none());
 
-        // Test that using both flags results in an error
-        let result = NodeArgs::try_parse_from([
-            "katana",
-            "--no-sampling",
-            "--l1-provider",
-            "http://localhost:8545",
-        ]);
-        assert!(result.is_err());
-
-        // Test the alias for l1_provider_url
-        let config = NodeArgs::parse_from(["katana", "--l1.provider", "http://localhost:8545"])
-            .config()
-            .unwrap();
-        assert_matches!(config.gas_price_worker, Some(worker) => {
-            assert!(!worker.no_sampling);
-            assert_eq!(
-                worker.l1_provider_url,
-                Some(Url::parse("http://localhost:8545").unwrap())
-            );
-        });
-
-        // Test interaction with fixed gas prices and no_sampling
-        let config =
-            NodeArgs::parse_from(["katana", "--no-sampling", "--gpo.l1-eth-gas-price", "10"])
-                .config()
-                .unwrap();
-        assert!(config.gas_price_worker.is_none()); // Should be None when using no_sampling
-        assert_matches!(config.dev.fixed_gas_prices, Some(prices) => {
-            assert_eq!(prices.gas_price.eth, 10);
-        });
-
-        // Test interaction with fixed gas prices and l1_provider
+        // Verify that provider URL can coexist with gas price options
         let config = NodeArgs::parse_from([
             "katana",
-            "--l1-provider",
-            "http://localhost:8545",
+            "--l1.provider",
+            "https://localhost:8545",
             "--gpo.l1-eth-gas-price",
             "10",
         ])
         .config()
         .unwrap();
-        assert_matches!(config.gas_price_worker, Some(worker) => {
-            assert!(!worker.no_sampling);
-            assert_eq!(
-                worker.l1_provider_url,
-                Some(Url::parse("http://localhost:8545").unwrap())
-            );
-        });
-        assert_matches!(config.dev.fixed_gas_prices, Some(prices) => {
-            assert_eq!(prices.gas_price.eth, 10);
-        });
+        assert_eq!(config.l1_provider_url, Some("https://localhost:8545".parse().unwrap()));
+        assert_eq!(config.dev.fixed_gas_prices.unwrap().gas_price.eth, 10);
+        // Additional valid URL formats
+        let valid_urls = ["https://localhost:8546", "https://localhost:8545"];
+
+        for url in valid_urls {
+            let config = NodeArgs::parse_from(["katana", "--l1.provider", url]).config().unwrap();
+            assert_eq!(config.l1_provider_url, Some(url.parse().unwrap()));
+        }
     }
 }

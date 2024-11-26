@@ -10,7 +10,6 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Result;
-use config::dev::GasPriceWorkerConfig;
 use config::metrics::MetricsConfig;
 use config::rpc::{ApiKind, RpcConfig};
 use config::{Config, SequencingConfig};
@@ -20,7 +19,7 @@ use hyper::{Method, Uri};
 use jsonrpsee::server::middleware::proxy_get_request::ProxyGetRequestLayer;
 use jsonrpsee::server::{AllowHosts, ServerBuilder, ServerHandle};
 use jsonrpsee::RpcModule;
-use katana_core::backend::gas_oracle::{GasOracleWorker, L1GasOracle};
+use katana_core::backend::gas_oracle::L1GasOracle;
 use katana_core::backend::storage::Blockchain;
 use katana_core::backend::Backend;
 use katana_core::constants::{
@@ -52,6 +51,7 @@ use katana_rpc_api::torii::ToriiApiServer;
 use katana_tasks::TaskManager;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing::info;
+use url::Url;
 
 use crate::exit::NodeStoppedFuture;
 
@@ -95,7 +95,7 @@ pub struct Node {
     pub metrics_config: Option<MetricsConfig>,
     pub sequencing_config: SequencingConfig,
     pub messaging_config: Option<MessagingConfig>,
-    pub gas_price_worker_config: Option<GasPriceWorkerConfig>,
+    pub l1_provider_url: Option<Url>,
     forked_client: Option<ForkedClient>,
 }
 
@@ -156,17 +156,12 @@ impl Node {
         // --- build and start the gas oracle worker task
 
         // if the Option<GasWorkerConfig> is none, default to no sampling
-        if !self.gas_price_worker_config.as_ref().map_or(true, |config| config.no_sampling) {
-            let gas_oracle: GasOracleWorker = GasOracleWorker::new(
-                self.gas_price_worker_config.clone().expect("lib.src #160").l1_provider_url,
-            );
-
-            self.task_manager
-                .task_spawner()
-                .build_task()
-                .graceful_shutdown()
-                .name("L1 Gas oracle worker")
-                .spawn(async move { gas_oracle.into_future().await });
+        if let Some(gpo_url) = self.l1_provider_url.as_ref() {
+            let gas_oracle = L1GasOracle::sampled(Some(gpo_url.clone())); // Clone the URL if needed
+            gas_oracle.run_worker(self.task_manager.task_spawner());
+        } else {
+            // Optionally handle the `None` case
+            eprintln!("Gas price oracle is None; skipping gas oracle worker initialization.");
         }
 
         Ok(LaunchedNode { node: self, rpc })
@@ -229,15 +224,19 @@ pub async fn build(mut config: Config) -> Result<Node> {
     //      2. No fixed price by user and no sampling
     //      3. Sampling with user input provider url
     let gas_oracle = if let Some(fixed_prices) = config.dev.fixed_gas_prices {
+        // Use fixed gas prices if provided in the configuration
         L1GasOracle::fixed(fixed_prices.gas_price, fixed_prices.data_gas_price)
-    } else if config.gas_price_worker.as_ref().map_or(false, |worker| worker.no_sampling) {
+    } else if config.l1_provider_url.as_ref().is_none() {
+        // Use default fixed gas prices if `gpo` is `None`
         L1GasOracle::fixed(
             GasPrices { eth: DEFAULT_ETH_L1_GAS_PRICE, strk: DEFAULT_STRK_L1_GAS_PRICE },
             GasPrices { eth: DEFAULT_ETH_L1_DATA_GAS_PRICE, strk: DEFAULT_STRK_L1_DATA_GAS_PRICE },
         )
     } else {
-        L1GasOracle::sampled()
+        // Default to a sampled gas oracle using the given provider
+        L1GasOracle::sampled(config.l1_provider_url.clone())
     };
+
     let block_context_generator = BlockContextGenerator::default().into();
     let backend = Arc::new(Backend {
         gas_oracle,
@@ -275,7 +274,7 @@ pub async fn build(mut config: Config) -> Result<Node> {
         messaging_config: config.messaging,
         sequencing_config: config.sequencing,
         task_manager: TaskManager::current(),
-        gas_price_worker_config: config.gas_price_worker,
+        l1_provider_url: config.l1_provider_url,
     };
 
     Ok(node)

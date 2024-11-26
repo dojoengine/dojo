@@ -6,13 +6,14 @@ pub mod metrics;
 pub mod rpc;
 
 use db::DbConfig;
-use dev::{DevConfig, GasPriceWorkerConfig};
+use dev::DevConfig;
 use execution::ExecutionConfig;
 use fork::ForkingConfig;
 use katana_core::service::messaging::MessagingConfig;
 use katana_primitives::chain_spec::ChainSpec;
 use metrics::MetricsConfig;
 use rpc::RpcConfig;
+use url::Url;
 
 /// Node configurations.
 ///
@@ -47,7 +48,7 @@ pub struct Config {
     pub dev: DevConfig,
 
     /// Gas L1 sampling options.
-    pub gas_price_worker: Option<GasPriceWorkerConfig>,
+    pub l1_provider_url: Option<Url>,
 }
 
 /// Configurations related to block production.
