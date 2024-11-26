@@ -8,6 +8,13 @@ use katana_primitives::Felt;
 use crate::ProviderResult;
 
 #[auto_impl::auto_impl(&, Box, Arc)]
+pub trait ClassTrieProvider: Send + Sync {
+    fn proofs(&self, block_number: BlockNumber, class_hashes: Vec<ClassHash>);
+
+    fn root(&self);
+}
+
+#[auto_impl::auto_impl(&, Box, Arc)]
 pub trait ClassTrieWriter: Send + Sync {
     fn insert_updates(
         &self,
