@@ -20,20 +20,6 @@ use crate::query::value_mapping_from_row;
 use crate::types::TypeData;
 use crate::utils;
 
-#[derive(FromRow, Deserialize, PartialEq, Eq, Debug)]
-pub struct ModelMember {
-    pub id: String,
-    pub model_id: String,
-    pub model_idx: i64,
-    pub name: String,
-    #[serde(rename = "type")]
-    pub ty: String,
-    pub type_enum: String,
-    pub key: bool,
-    pub executed_at: DateTime<Utc>,
-    pub created_at: DateTime<Utc>,
-}
-
 #[derive(Debug)]
 pub struct ModelDataObject {
     pub name: String,

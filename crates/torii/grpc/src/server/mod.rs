@@ -299,13 +299,10 @@ impl DojoWorld {
             let schemas =
                 self.model_cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect();
 
-            let (entity_query, arrays_queries, _) = build_sql_query(
+            let (entity_query, _) = build_sql_query(
                 &schemas,
                 table,
                 entity_relation_column,
-                Some(&format!(
-                    "[{table}].id IN (SELECT id FROM temp_entity_ids WHERE model_group = ?)"
-                )),
                 Some(&format!(
                     "[{table}].id IN (SELECT id FROM temp_entity_ids WHERE model_group = ?)"
                 )),
@@ -314,20 +311,11 @@ impl DojoWorld {
             )?;
 
             let rows = sqlx::query(&entity_query).bind(&models_str).fetch_all(&mut *tx).await?;
-
-            let mut arrays_rows = HashMap::new();
-            for (name, array_query) in arrays_queries {
-                let array_rows =
-                    sqlx::query(&array_query).bind(&models_str).fetch_all(&mut *tx).await?;
-                arrays_rows.insert(name, array_rows);
-            }
-
-            let arrays_rows = Arc::new(arrays_rows);
             let schemas = Arc::new(schemas);
 
             let group_entities: Result<Vec<_>, Error> = rows
                 .par_iter()
-                .map(|row| map_row_to_entity(row, &arrays_rows, &schemas, dont_include_hashed_keys))
+                .map(|row| map_row_to_entity(row, &schemas, dont_include_hashed_keys))
                 .collect();
 
             all_entities.extend(group_entities?);
@@ -694,12 +682,11 @@ impl DojoWorld {
         } else {
             (model, format!("external_{}", member_clause.member))
         };
-        let (entity_query, arrays_queries, count_query) = build_sql_query(
+        let (entity_query, count_query) = build_sql_query(
             &schemas,
             table,
             entity_relation_column,
             Some(&format!("[{table_name}].{column_name} {comparison_operator} ?")),
-            None,
             limit,
             offset,
         )?;
@@ -715,16 +702,10 @@ impl DojoWorld {
             .bind(offset)
             .fetch_all(&self.pool)
             .await?;
-        let mut arrays_rows = HashMap::new();
-        for (name, query) in arrays_queries {
-            let rows =
-                sqlx::query(&query).bind(comparison_value.clone()).fetch_all(&self.pool).await?;
-            arrays_rows.insert(name, rows);
-        }
 
         let entities_collection: Result<Vec<_>, Error> = db_entities
             .par_iter()
-            .map(|row| map_row_to_entity(row, &arrays_rows, &schemas, dont_include_hashed_keys))
+            .map(|row| map_row_to_entity(row, &schemas, dont_include_hashed_keys))
             .collect();
         Ok((entities_collection?, total_count))
     }
@@ -1058,7 +1039,6 @@ fn map_row_to_event(row: &(String, String, String)) -> Result<proto::types::Even
 
 fn map_row_to_entity(
     row: &SqliteRow,
-    arrays_rows: &HashMap<String, Vec<SqliteRow>>,
     schemas: &[Ty],
     dont_include_hashed_keys: bool,
 ) -> Result<proto::types::Entity, Error> {
@@ -1067,7 +1047,7 @@ fn map_row_to_entity(
         .iter()
         .map(|schema| {
             let mut ty = schema.clone();
-            map_row_to_ty("", &schema.name(), &mut ty, row, arrays_rows)?;
+            map_row_to_ty("", &schema.name(), &mut ty, row)?;
             Ok(ty.as_struct().unwrap().clone().into())
         })
         .collect::<Result<Vec<_>, Error>>()?;

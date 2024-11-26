@@ -4,6 +4,7 @@ use async_graphql::dynamic::{
 };
 use async_graphql::{Name, Value};
 use dojo_types::naming::get_tag;
+use dojo_types::schema::Ty;
 use sqlx::{Pool, Sqlite};
 use tokio_stream::StreamExt;
 use torii_core::simple_broker::SimpleBroker;
@@ -18,7 +19,7 @@ use crate::constants::{
 };
 use crate::mapping::ENTITY_TYPE_MAPPING;
 use crate::object::{resolve_many, resolve_one};
-use crate::query::type_mapping_query;
+use crate::query::build_type_mapping;
 use crate::utils;
 #[derive(Debug)]
 pub struct EventMessageObject;
@@ -129,8 +130,8 @@ fn model_union_field() -> Field {
                     let entity_id = utils::extract::<String>(indexmap, "id")?;
                     // fetch name from the models table
                     // using the model id (hashed model name)
-                    let model_ids: Vec<(String, String, String)> = sqlx::query_as(
-                        "SELECT id, namespace, name
+                    let model_ids: Vec<(String, String, String, String)> = sqlx::query_as(
+                        "SELECT id, namespace, name, schema
                         FROM models
                         WHERE id IN (    
                             SELECT model_id
@@ -143,9 +144,10 @@ fn model_union_field() -> Field {
                     .await?;
 
                     let mut results: Vec<FieldValue<'_>> = Vec::new();
-                    for (id, namespace, name) in model_ids {
-                        // the model id in the model mmeebrs table is the hashed model name (id)
-                        let type_mapping = type_mapping_query(&mut conn, &id).await?;
+                    for (id, namespace, name, schema) in model_ids {
+                        let schema: Ty = serde_json::from_str(&schema)
+                            .map_err(|e| anyhow::anyhow!(format!("Failed to parse model schema: {e}")))?;
+                        let type_mapping = build_type_mapping(&namespace, &schema);
 
                         // but the table name for the model data is the unhashed model name
                         let data: ValueMapping = match model_data_recursive_query(

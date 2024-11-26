@@ -120,11 +120,12 @@ impl ModelReader<Error> for ModelSQLReader {
 pub fn build_sql_query(
     schemas: &Vec<Ty>,
     table_name: &str,
+    entity_relation_column: &str,
     where_clause: Option<&str>,
     limit: Option<u32>,
     offset: Option<u32>,
 ) -> Result<(String, String), Error> {
-    fn collect_columns(path: &str, ty: &Ty, selections: &mut Vec<String>) {
+    fn collect_columns(table_prefix: &str, path: &str, ty: &Ty, selections: &mut Vec<String>) {
         match ty {
             Ty::Struct(s) => {
                 for child in &s.children {
@@ -133,22 +134,22 @@ pub fn build_sql_query(
                     } else {
                         format!("{}.{}", path, child.name)
                     };
-                    collect_columns(&new_path, &child.ty, selections);
+                    collect_columns(table_prefix, &new_path, &child.ty, selections);
                 }
             }
             Ty::Tuple(t) => {
                 for (i, child) in t.iter().enumerate() {
-                    let new_path = if path.is_empty() {
-                        format!("_{}", i)
-                    } else {
-                        format!("{}._{}", path, i)
-                    };
-                    collect_columns(&new_path, child, selections);
+                    let new_path =
+                        if path.is_empty() { format!("{}", i) } else { format!("{}.{}", path, i) };
+                    collect_columns(table_prefix, &new_path, child, selections);
                 }
             }
             Ty::Enum(e) => {
-                // Add the enum variant column
-                selections.push(format!("[{}]", path));
+                // Add the enum variant column with table prefix and alias
+                selections.push(format!(
+                    "{}.\"{}\" as \"{}.{}\"",
+                    table_prefix, path, table_prefix, path
+                ));
 
                 // Add columns for each variant's value (if not empty tuple)
                 for option in &e.options {
@@ -158,33 +159,50 @@ pub fn build_sql_query(
                         }
                     }
                     let variant_path = format!("{}.{}", path, option.name);
-                    collect_columns(&variant_path, &option.ty, selections);
+                    collect_columns(table_prefix, &variant_path, &option.ty, selections);
                 }
             }
             Ty::Array(_) | Ty::Primitive(_) | Ty::ByteArray(_) => {
-                selections.push(format!("[{}]", path));
+                selections.push(format!(
+                    "{}.\"{}\" as \"{}.{}\"",
+                    table_prefix, path, table_prefix, path
+                ));
             }
         }
     }
 
-    let mut selections = vec!["internal_id".to_string(), "internal_entity_id".to_string()];
+    let mut selections = Vec::new();
+    let mut joins = Vec::new();
 
+    // Add base table columns
+    selections.push(format!("{}.id", table_name));
+    selections.push(format!("{}.keys", table_name));
+
+    // Process each model schema
     for model in schemas {
-        collect_columns("", model, &mut selections);
+        let model_table = model.name();
+        joins.push(format!(
+            "LEFT JOIN [{model_table}] ON {table_name}.id = [{model_table}].{entity_relation_column}",
+        ));
+
+        // Collect columns with table prefix
+        collect_columns(&model_table, "", model, &mut selections);
     }
 
     let selections_clause = selections.join(", ");
+    let joins_clause = joins.join(" ");
 
-    let mut query = format!("SELECT {} FROM [{}]", selections_clause, table_name,);
+    let mut query = format!("SELECT {} FROM [{}] {}", selections_clause, table_name, joins_clause);
 
-    let mut count_query = format!("SELECT COUNT(internal_id) FROM [{}]", table_name,);
+    let mut count_query =
+        format!("SELECT COUNT(DISTINCT {}.id) FROM [{}] {}", table_name, table_name, joins_clause);
 
     if let Some(where_clause) = where_clause {
         query += &format!(" WHERE {}", where_clause);
         count_query += &format!(" WHERE {}", where_clause);
     }
 
-    query += " ORDER BY internal_event_id DESC";
+    query += &format!(" ORDER BY {}.event_id DESC", table_name);
 
     if let Some(limit) = limit {
         query += &format!(" LIMIT {}", limit);
@@ -204,12 +222,12 @@ pub fn map_row_to_ty(
     ty: &mut Ty,
     // the row that contains non dynamic data for Ty
     row: &SqliteRow,
-    // a hashmap where keys are the paths for the model
-    // arrays and values are the rows mapping to each element
-    // in the array
-    arrays_rows: &HashMap<String, Vec<SqliteRow>>,
 ) -> Result<(), Error> {
-    let column_name = format!("{}.{}", path, name);
+    let column_name = if path.is_empty() {
+        name
+    } else {
+        &format!("{}.{}", path, name)
+    };
 
     match ty {
         Ty::Primitive(primitive) => {
@@ -320,52 +338,28 @@ pub fn map_row_to_ty(
                 enum_ty.set_option(&option_name)?;
             }
 
-            let path = [path, name].join("$");
             for option in &mut enum_ty.options {
                 if option.name != option_name {
                     continue;
                 }
 
-                map_row_to_ty(&path, &option.name, &mut option.ty, row, arrays_rows)?;
+                map_row_to_ty(&column_name, &option.name, &mut option.ty, row)?;
             }
         }
         Ty::Struct(struct_ty) => {
-            // struct can be the main entrypoint to our model schema
-            // so we dont format the table name if the path is empty
-            let path =
-                if path.is_empty() { struct_ty.name.clone() } else { [path, name].join("$") };
-
             for member in &mut struct_ty.children {
-                map_row_to_ty(&path, &member.name, &mut member.ty, row, arrays_rows)?;
+                map_row_to_ty(&column_name, &member.name, &mut member.ty, row)?;
             }
         }
         Ty::Tuple(ty) => {
-            let path = [path, name].join("$");
-
             for (i, member) in ty.iter_mut().enumerate() {
-                map_row_to_ty(&path, &format!("_{}", i), member, row, arrays_rows)?;
+                map_row_to_ty(&column_name, &i.to_string(), member, row)?;
             }
         }
         Ty::Array(ty) => {
-            let path = [path, name].join("$");
-            // filter by entity id in case we have multiple entities
-            let rows = arrays_rows
-                .get(&path)
-                .expect("qed; rows should exist")
-                .iter()
-                .filter(|array_row| array_row.get::<String, _>("id") == row.get::<String, _>("id"))
-                .collect::<Vec<_>>();
+            let serialized_array = row.try_get::<String, &str>(&column_name)?;
 
-            // map each row to the ty of the array
-            let tys = rows
-                .iter()
-                .map(|row| {
-                    let mut ty = ty[0].clone();
-                    map_row_to_ty(&path, "data", &mut ty, row, arrays_rows).map(|_| ty)
-                })
-                .collect::<Result<Vec<_>, _>>()?;
-
-            *ty = tys;
+            *ty = serde_json::from_str(&serialized_array).map_err(ParseError::FromJsonStr)?;
         }
         Ty::ByteArray(bytearray) => {
             let value = row.try_get::<String, &str>(&column_name)?;
@@ -489,7 +483,8 @@ mod tests {
         let query = build_sql_query(
             &vec![position, player_config],
             "entities",
-            Some("entity_id"),
+            "internal_entity_id",
+            None,
             None,
             None,
         )
