@@ -367,9 +367,8 @@ impl Sql {
             vec![Argument::String(entity_id.clone()), Argument::String(model_id.clone())],
         ))?;
 
-        let path = vec![namespaced_name];
         self.build_set_entity_queries_recursive(
-            path,
+            &namespaced_name,
             event_id,
             (&entity_id, false),
             (&entity, keys_str.is_none()),
@@ -428,9 +427,8 @@ impl Sql {
             }),
         ))?;
 
-        let path = vec![namespaced_name];
         self.build_set_entity_queries_recursive(
-            path,
+            &namespaced_name,
             event_id,
             (&entity_id, true),
             (&entity, false),
@@ -616,173 +614,130 @@ impl Sql {
 
     fn build_set_entity_queries_recursive(
         &mut self,
-        path: Vec<String>,
+        model_name: &str,
         event_id: &str,
         entity_id: (&str, IsEventMessage),
         entity: (&Ty, IsStoreUpdate),
         block_timestamp: u64,
     ) -> Result<()> {
         let (entity_id, is_event_message) = entity_id;
-        let (entity, is_store_update_member) = entity;
+        let (entity, is_store_update) = entity;
 
-        let update_members = |members: &[Member],
-                              executor: &mut UnboundedSender<QueryMessage>|
-         -> Result<()> {
-            let table_id = path[0].clone(); // Use only root path for table name
-            let column_prefix = if path.len() > 1 { path[1..].join(".") } else { String::new() };
+        let mut columns = vec![
+            "internal_id".to_string(),
+            "internal_event_id".to_string(),
+            "internal_executed_at".to_string(),
+            "internal_updated_at".to_string(),
+            if is_event_message {
+                "internal_event_message_id".to_string()
+            } else {
+                "internal_entity_id".to_string()
+            },
+        ];
 
-            let mut columns = vec![
-                "internal_id".to_string(),
-                "internal_event_id".to_string(),
-                "internal_executed_at".to_string(),
-                "internal_updated_at".to_string(),
-                if is_event_message {
-                    "internal_event_message_id".to_string()
-                } else {
-                    "internal_entity_id".to_string()
-                },
-            ];
+        let mut arguments = vec![
+            Argument::String(if is_event_message {
+                "event:".to_string() + entity_id
+            } else {
+                entity_id.to_string()
+            }),
+            Argument::String(event_id.to_string()),
+            Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
+            Argument::String(chrono::Utc::now().to_rfc3339()),
+            Argument::String(entity_id.to_string()),
+        ];
 
-            let mut arguments = vec![
-                Argument::String(if is_event_message {
-                    "event:".to_string() + entity_id
-                } else {
-                    entity_id.to_string()
-                }),
-                Argument::String(event_id.to_string()),
-                Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
-                Argument::String(chrono::Utc::now().to_rfc3339()),
-                Argument::String(entity_id.to_string()),
-            ];
-
-            for member in members.iter() {
-                let column_name = if column_prefix.is_empty() {
-                    member.name.clone()
-                } else {
-                    format!("{}.{}", column_prefix, member.name)
-                };
-
-                match &member.ty {
-                    Ty::Primitive(ty) => {
-                        columns.push(column_name);
-                        arguments.push(Argument::String(ty.to_sql_value()));
+        fn collect_members(
+            prefix: &str,
+            ty: &Ty,
+            columns: &mut Vec<String>,
+            arguments: &mut Vec<Argument>,
+        ) -> Result<()> {
+            match ty {
+                Ty::Struct(s) => {
+                    for member in &s.children {
+                        let column_name = if prefix.is_empty() {
+                            member.name.clone()
+                        } else {
+                            format!("{}.{}", prefix, member.name)
+                        };
+                        collect_members(&column_name, &member.ty, columns, arguments)?;
                     }
-                    Ty::Enum(e) => {
-                        // Just use the column name directly for enum option
-                        columns.push(column_name);
-                        arguments.push(Argument::String(e.to_sql_value()));
+                }
+                Ty::Enum(e) => {
+                    columns.push(format!("\"{}\"", prefix));
+                    arguments.push(Argument::String(e.to_sql_value()));
+
+                    if let Some(option_idx) = e.option {
+                        let option = &e.options[option_idx as usize];
+                        if let Ty::Tuple(t) = &option.ty {
+                            if t.is_empty() {
+                                return Ok(());
+                            }
+                        }
+                        let variant_path = format!("{}.{}", prefix, option.name);
+                        collect_members(&variant_path, &option.ty, columns, arguments)?;
                     }
-                    Ty::Array(array) => {
-                        columns.push(column_name);
-                        arguments.push(Argument::String(serde_json::to_string(array)?));
+                }
+                Ty::Tuple(t) => {
+                    for (idx, member) in t.iter().enumerate() {
+                        let column_name = if prefix.is_empty() {
+                            format!("_{}", idx)
+                        } else {
+                            format!("{}._{}", prefix, idx)
+                        };
+                        collect_members(&column_name, member, columns, arguments)?;
                     }
-                    Ty::ByteArray(b) => {
-                        columns.push(column_name);
-                        arguments.push(Argument::String(b.clone()));
-                    }
-                    _ => {} // Other types are handled recursively
+                }
+                Ty::Array(array) => {
+                    columns.push(format!("\"{}\"", prefix));
+                    arguments.push(Argument::String(serde_json::to_string(array)?));
+                }
+                Ty::Primitive(ty) => {
+                    columns.push(format!("\"{}\"", prefix));
+                    arguments.push(Argument::String(ty.to_sql_value()));
+                }
+                Ty::ByteArray(b) => {
+                    columns.push(format!("\"{}\"", prefix));
+                    arguments.push(Argument::String(b.clone()));
                 }
             }
-
-            let placeholders: Vec<&str> = arguments.iter().map(|_| "?").collect();
-            let statement = if is_store_update_member {
-                arguments.push(Argument::String(if is_event_message {
-                    "event:".to_string() + entity_id
-                } else {
-                    entity_id.to_string()
-                }));
-
-                format!(
-                    "UPDATE [{table_id}] SET {updates} WHERE internal_id = ?",
-                    updates = columns
-                        .iter()
-                        .zip(placeholders.iter())
-                        .map(|(column, placeholder)| format!("[{}] = {}", column, placeholder))
-                        .collect::<Vec<String>>()
-                        .join(", ")
-                )
-            } else {
-                format!(
-                    "INSERT OR REPLACE INTO [{table_id}] ([{}]) VALUES ({})",
-                    columns.join("],["),
-                    placeholders.join(",")
-                )
-            };
-
-            executor.send(QueryMessage::other(statement, arguments))?;
-
             Ok(())
+        }
+
+        // Collect all columns and arguments recursively
+        collect_members("", entity, &mut columns, &mut arguments)?;
+
+        // Build the final query
+        let placeholders: Vec<&str> = arguments.iter().map(|_| "?").collect();
+        let statement = if is_store_update {
+            arguments.push(Argument::String(if is_event_message {
+                "event:".to_string() + entity_id
+            } else {
+                entity_id.to_string()
+            }));
+
+            format!(
+                "UPDATE [{}] SET {} WHERE internal_id = ?",
+                model_name,
+                columns
+                    .iter()
+                    .zip(placeholders.iter())
+                    .map(|(column, placeholder)| format!("{} = {}", column, placeholder))
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            )
+        } else {
+            format!(
+                "INSERT OR REPLACE INTO [{}] ({}) VALUES ({})",
+                model_name,
+                columns.join(","),
+                placeholders.join(",")
+            )
         };
 
-        match entity {
-            Ty::Struct(s) => {
-                update_members(&s.children, &mut self.executor)?;
-
-                for member in s.children.iter() {
-                    let mut path_clone = path.clone();
-                    path_clone.push(member.name.clone());
-                    self.build_set_entity_queries_recursive(
-                        path_clone,
-                        event_id,
-                        (entity_id, is_event_message),
-                        (&member.ty, is_store_update_member),
-                        block_timestamp,
-                    )?;
-                }
-            }
-            Ty::Enum(e) => {
-                let option = e.options[e.option.unwrap() as usize].clone();
-                if let Ty::Tuple(t) = &option.ty {
-                    if t.is_empty() {
-                        return Ok(());
-                    }
-                }
-
-                update_members(
-                    &[
-                        Member { name: "option".to_string(), ty: Ty::Enum(e.clone()), key: false },
-                        Member { name: option.name.clone(), ty: option.ty.clone(), key: false },
-                    ],
-                    &mut self.executor,
-                )?;
-
-                let mut path_clone = path.clone();
-                path_clone.push(option.name.clone());
-                self.build_set_entity_queries_recursive(
-                    path_clone,
-                    event_id,
-                    (entity_id, is_event_message),
-                    (&option.ty, is_store_update_member),
-                    block_timestamp,
-                )?;
-            }
-            Ty::Tuple(t) => {
-                update_members(
-                    &t.iter()
-                        .enumerate()
-                        .map(|(idx, member)| Member {
-                            name: format!("_{}", idx),
-                            ty: member.clone(),
-                            key: false,
-                        })
-                        .collect::<Vec<Member>>(),
-                    &mut self.executor,
-                )?;
-
-                for (idx, member) in t.iter().enumerate() {
-                    let mut path_clone = path.clone();
-                    path_clone.push(format!("_{}", idx));
-                    self.build_set_entity_queries_recursive(
-                        path_clone,
-                        event_id,
-                        (entity_id, is_event_message),
-                        (member, is_store_update_member),
-                        block_timestamp,
-                    )?;
-                }
-            }
-            _ => {} // Arrays and primitives are handled in their parent's update_members
-        }
+        // Execute the single query
+        self.executor.send(QueryMessage::other(statement, arguments))?;
 
         Ok(())
     }
