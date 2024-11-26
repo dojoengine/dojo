@@ -1843,6 +1843,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "backon"
+version = "1.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ba5289ec98f68f28dd809fd601059e6aa908bb8f6108620930828283d4ee23d7"
+dependencies = [
+ "fastrand 2.1.1",
+ "gloo-timers 0.3.0",
+ "tokio",
+]
+
+[[package]]
 name = "backtrace"
 version = "0.3.74"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8475,12 +8486,14 @@ version = "1.0.2"
 dependencies = [
  "anyhow",
  "async-trait",
+ "backon",
  "futures",
  "katana-core",
  "katana-executor",
  "katana-pool",
  "katana-primitives",
  "katana-provider",
+ "katana-rpc-types",
  "katana-tasks",
  "parking_lot 0.12.3",
  "serde_json",

@@ -1,10 +1,10 @@
 #[cfg(feature = "postcard")]
 pub mod postcard;
 
-use katana_primitives::Felt;
 use katana_primitives::block::FinalityStatus;
 use katana_primitives::class::ContractClass;
 use katana_primitives::contract::ContractAddress;
+use katana_primitives::Felt;
 
 use crate::error::CodecError;
 

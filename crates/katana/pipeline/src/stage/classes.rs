@@ -2,13 +2,16 @@ use std::time::Duration;
 
 use anyhow::Result;
 use katana_primitives::block::BlockNumber;
-use katana_primitives::class::{CasmContractClass, ClassHash, CompiledClass, ContractClass};
+use katana_primitives::class::{
+    CasmContractClass, ClassHash, CompiledClass, ContractClass, SierraContractClass,
+};
 use katana_primitives::conversion::rpc::{legacy_rpc_to_class, StarknetRsLegacyContractClass};
-use katana_provider::traits::contract::ContractClassWriter;
+use katana_provider::traits::contract::{ContractClassWriter, ContractClassWriterExt};
 use katana_provider::traits::state_update::StateUpdateProvider;
+use katana_rpc_types::class::RpcSierraContractClass;
 use starknet::providers::sequencer::models::{BlockId, DeployedClass};
 use starknet::providers::{ProviderError, SequencerGatewayProvider};
-use tracing::debug;
+use tracing::info;
 
 use super::{Stage, StageExecutionInput, StageResult};
 
@@ -35,44 +38,31 @@ where
     P: StateUpdateProvider + ContractClassWriter,
 {
     #[allow(deprecated)]
-    async fn get_class(
-        &self,
-        hash: ClassHash,
-        block: BlockNumber,
-    ) -> Result<(ContractClass, Option<CompiledClass>), Error> {
-        let block_id = BlockId::Number(block);
+    async fn get_class(&self, hash: ClassHash, block: BlockNumber) -> Result<ContractClass, Error> {
+        let class = self.feeder_gateway.get_class_by_hash(hash, BlockId::Number(block)).await?;
 
-        let (class, casm) = tokio::join!(
-            self.feeder_gateway.get_class_by_hash(hash, block_id),
-            self.feeder_gateway.get_compiled_class_by_class_hash(hash, block_id)
-        );
-
-        let (class, casm) = (class?, casm?);
-
-        let (class, casm) = match class {
+        let class = match class {
             DeployedClass::LegacyClass(legacy) => {
                 let class = to_inner_legacy_class(legacy).unwrap();
-                (class, None)
+                class
             }
 
+            // TODO: implement our own fgw client using our own types for easier conversion
             DeployedClass::SierraClass(sierra) => {
-                // TODO: change this shyte
-                let value = serde_json::to_value(casm).unwrap();
-                let casm = serde_json::from_value::<CasmContractClass>(value).unwrap();
-                let compiled = CompiledClass::Class(casm);
-
-                (ContractClass::Class(sierra), Some(compiled))
+                let rpc_class = RpcSierraContractClass::try_from(sierra).unwrap();
+                let class = SierraContractClass::try_from(rpc_class).unwrap();
+                ContractClass::Class(class)
             }
         };
 
-        Ok((class, casm))
+        Ok(class)
     }
 }
 
 #[async_trait::async_trait]
 impl<P> Stage for Classes<P>
 where
-    P: StateUpdateProvider + ContractClassWriter,
+    P: StateUpdateProvider + ContractClassWriter + ContractClassWriterExt,
 {
     fn id(&self) -> &'static str {
         "Classes"
@@ -84,16 +74,12 @@ where
             let class_hashes = self.provider.declared_classes(i.into())?.unwrap();
 
             // TODO: do this in parallel
-            for class_hash in class_hashes.keys() {
-                debug!(target: "pipeline", "Fetching class artifacts for class hash {class_hash:#x}");
+            for hash in class_hashes.keys() {
+                info!(target: "pipeline", class_hash = format!("{hash:#x}"), "Fetching class artifacts.");
 
                 // 1. fetch sierra and casm class from fgw
-                let (class, compiled) = self.get_class(*class_hash, i).await?;
-
-                self.provider.set_class(*class_hash, class)?;
-                if let Some(casm) = compiled {
-                    self.provider.set_compiled_class(*class_hash, casm)?;
-                }
+                let class = self.get_class(*hash, i).await?;
+                self.provider.set_class(*hash, class)?;
 
                 tokio::time::sleep(Duration::from_secs(1)).await;
             }
