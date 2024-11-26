@@ -5,6 +5,7 @@
 
 pub mod account;
 pub mod block;
+pub mod class;
 pub mod error;
 pub mod event;
 pub mod message;
@@ -49,7 +50,7 @@ pub type FunctionCall = starknet::core::types::FunctionCall;
 
 pub type FeeEstimate = starknet::core::types::FeeEstimate;
 
-pub type ContractClass = starknet::core::types::ContractClass;
+// pub type ContractClass = starknet::core::types::ContractClass;
 
 pub type SimulationFlagForEstimateFee = starknet::core::types::SimulationFlagForEstimateFee;
 

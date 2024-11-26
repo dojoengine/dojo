@@ -4,7 +4,6 @@ use alloy_primitives::U256;
 use katana_db::mdbx::test_utils;
 use katana_primitives::block::{BlockHash, FinalityStatus};
 use katana_primitives::chain_spec::ChainSpec;
-use katana_primitives::class::ContractClass;
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::genesis::allocation::{
     DevGenesisAccount, GenesisAccountAlloc, GenesisAllocation,
@@ -50,8 +49,7 @@ pub fn create_chain_for_testing() -> ChainSpec {
     // TODO: we should have a genesis builder that can do all of this for us.
     let class = {
         let json = include_str!("../test-data/simple_account.sierra.json");
-        let sierra = parse_sierra_class(json).unwrap();
-        let class = ContractClass::Class(sierra.flatten().unwrap());
+        let class = parse_sierra_class(json).unwrap();
         GenesisClass { compiled_class_hash: class_hash, class: Arc::new(class) }
     };
 

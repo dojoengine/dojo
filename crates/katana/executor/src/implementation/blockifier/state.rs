@@ -242,7 +242,7 @@ impl<S: StateDb> StateReader for CachedState<S> {
 mod tests {
 
     use blockifier::state::state_api::{State, StateReader};
-    use katana_primitives::class::{CompiledClass, FlattenedSierraClass};
+    use katana_primitives::class::CompiledClass;
     use katana_primitives::contract::ContractAddress;
     use katana_primitives::genesis::constant::{
         DEFAULT_ACCOUNT_CLASS, DEFAULT_ACCOUNT_CLASS_CASM, DEFAULT_LEGACY_ERC20_CLASS,
@@ -258,11 +258,11 @@ mod tests {
     use super::{CachedState, *};
     use crate::StateProviderDb;
 
-    fn new_sierra_class() -> (FlattenedSierraClass, CompiledClass) {
+    fn new_sierra_class() -> (ContractClass, CompiledClass) {
         let json = include_str!("../../../../contracts/build/cairo1_contract.json");
         let artifact = serde_json::from_str(json).unwrap();
         let compiled_class = parse_compiled_class(artifact).unwrap();
-        let sierra_class = parse_sierra_class(json).unwrap().flatten().unwrap();
+        let sierra_class = parse_sierra_class(json).unwrap();
         (sierra_class, compiled_class)
     }
 
@@ -273,9 +273,9 @@ mod tests {
         let storage_value = felt!("0x2");
         let class_hash = felt!("0x123");
         let compiled_hash = felt!("0x456");
-        let class = ContractClass::Class(DEFAULT_ACCOUNT_CLASS.clone().flatten().unwrap());
+        let class = DEFAULT_ACCOUNT_CLASS.clone();
         let compiled_class = DEFAULT_ACCOUNT_CLASS_CASM.clone();
-        let legacy_class_hash = felt!("0x111");
+        let legacy_class_hash = felt!("0x445");
         let legacy_class = DEFAULT_LEGACY_ERC20_CLASS.clone();
 
         let provider = katana_provider::test_utils::test_provider();
@@ -285,7 +285,8 @@ mod tests {
         provider.set_compiled_class_hash_of_class_hash(class_hash, compiled_hash).unwrap();
         provider.set_class(class_hash, class).unwrap();
         provider.set_compiled_class(class_hash, compiled_class).unwrap();
-        provider.set_class(legacy_class_hash, legacy_class).unwrap();
+        provider.set_class(legacy_class_hash, legacy_class.clone()).unwrap();
+        provider.set_compiled_class(legacy_class_hash, legacy_class.compile().unwrap()).unwrap();
 
         provider.latest().unwrap()
     }
@@ -296,7 +297,7 @@ mod tests {
         let cached_state = CachedState::new(StateProviderDb::new(state));
 
         let address = address!("0x67");
-        let legacy_class_hash = felt!("0x111");
+        let legacy_class_hash = felt!("0x445");
         let storage_key = felt!("0x1");
 
         let api_address = utils::to_blk_address(address);
@@ -397,7 +398,7 @@ mod tests {
 
             let declared_classes = &mut lock.declared_classes;
             declared_classes.insert(new_legacy_class_hash, new_legacy_class.clone());
-            declared_classes.insert(new_class_hash, ContractClass::Class(new_sierra_class.clone()));
+            declared_classes.insert(new_class_hash, new_sierra_class.clone());
         }
 
         // assert that can fetch data from the underlyign state provider
@@ -405,7 +406,7 @@ mod tests {
 
         let address = address!("0x67");
         let class_hash = felt!("0x123");
-        let legacy_class_hash = felt!("0x111");
+        let legacy_class_hash = felt!("0x445");
 
         let actual_class_hash = sp.class_hash_of_contract(address)?;
         let actual_nonce = sp.nonce(address)?;
@@ -420,10 +421,7 @@ mod tests {
         assert_eq!(actual_storage_value, Some(felt!("0x2")));
         assert_eq!(actual_compiled_hash, Some(felt!("0x456")));
         assert_eq!(actual_compiled_class, Some(DEFAULT_ACCOUNT_CLASS_CASM.clone()));
-        assert_eq!(
-            actual_class,
-            Some(ContractClass::Class(DEFAULT_ACCOUNT_CLASS.clone().flatten()?))
-        );
+        assert_eq!(actual_class, Some(DEFAULT_ACCOUNT_CLASS.clone()));
         assert_eq!(actual_legacy_class, Some(DEFAULT_LEGACY_ERC20_CLASS.clone()));
 
         // assert that can fetch data native to the cached state from the state provider
@@ -451,7 +449,7 @@ mod tests {
             "data should be in cached state"
         );
         assert_eq!(actual_new_compiled_class, Some(new_compiled_sierra_class));
-        assert_eq!(actual_new_class, Some(ContractClass::Class(new_sierra_class)));
+        assert_eq!(actual_new_class, Some(new_sierra_class));
         assert_eq!(actual_new_compiled_hash, Some(new_compiled_hash));
         assert_eq!(actual_legacy_class, Some(new_legacy_class.clone()));
         assert_eq!(

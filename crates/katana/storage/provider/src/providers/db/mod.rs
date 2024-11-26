@@ -700,13 +700,9 @@ impl<Db: Database> BlockWriter for DbProvider<Db> {
             }
 
             for (class_hash, class) in states.classes {
-                let sierra = class.as_class().cloned();
                 // generate the compiled class
-                let compiled = class.compile()?;
-
-                if let Some(sierra) = sierra {
-                    db_tx.put::<tables::SierraClasses>(class_hash, sierra.clone())?;
-                }
+                let compiled = class.clone().compile()?;
+                db_tx.put::<tables::Classes>(class_hash, class)?;
                 db_tx.put::<tables::CompiledClasses>(class_hash, compiled)?;
             }
 

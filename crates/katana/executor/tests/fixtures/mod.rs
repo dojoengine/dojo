@@ -41,10 +41,10 @@ pub fn contract_class() -> (CompiledClass, ContractClass) {
     let json = include_str!("contract.json");
     let artifact = serde_json::from_str(json).unwrap();
 
-    let sierra = parse_sierra_class(json).unwrap().flatten().unwrap();
+    let class = parse_sierra_class(json).unwrap();
     let compiled = parse_compiled_class(artifact).unwrap();
 
-    (compiled, ContractClass::Class(sierra))
+    (compiled, class)
 }
 
 #[rstest::fixture]

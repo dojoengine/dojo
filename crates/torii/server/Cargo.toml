@@ -30,3 +30,4 @@ tower.workspace = true
 tracing.workspace = true
 warp.workspace = true
 form_urlencoded = "1.2.1"
+async-trait = "0.1.83"

@@ -8,15 +8,14 @@ use katana_rpc_types::block::{
     BlockHashAndNumber, MaybePendingBlockWithReceipts, MaybePendingBlockWithTxHashes,
     MaybePendingBlockWithTxs,
 };
+use katana_rpc_types::class::RpcContractClass;
 use katana_rpc_types::error::starknet::StarknetApiError;
 use katana_rpc_types::event::{EventFilterWithPage, EventsPage};
 use katana_rpc_types::message::MsgFromL1;
 use katana_rpc_types::receipt::TxReceiptWithBlockInfo;
 use katana_rpc_types::state_update::MaybePendingStateUpdate;
 use katana_rpc_types::transaction::{BroadcastedTx, Tx};
-use katana_rpc_types::{
-    ContractClass, FeeEstimate, FeltAsHex, FunctionCall, SimulationFlagForEstimateFee,
-};
+use katana_rpc_types::{FeeEstimate, FeltAsHex, FunctionCall, SimulationFlagForEstimateFee};
 use starknet::core::types::TransactionStatus;
 
 use super::StarknetApi;
@@ -51,7 +50,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
         &self,
         block_id: BlockIdOrTag,
         contract_address: Felt,
-    ) -> RpcResult<ContractClass> {
+    ) -> RpcResult<RpcContractClass> {
         Ok(self.class_at_address(block_id, contract_address.into()).await?)
     }
 
@@ -115,7 +114,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
         &self,
         block_id: BlockIdOrTag,
         class_hash: Felt,
-    ) -> RpcResult<ContractClass> {
+    ) -> RpcResult<RpcContractClass> {
         Ok(self.class_at_hash(block_id, class_hash).await?)
     }
 

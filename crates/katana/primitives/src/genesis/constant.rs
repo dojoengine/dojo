@@ -2,7 +2,7 @@ use lazy_static::lazy_static;
 use starknet::core::utils::get_storage_var_address;
 use starknet::macros::felt;
 
-use crate::class::{ClassHash, CompiledClass, CompiledClassHash, ContractClass, SierraClass};
+use crate::class::{ClassHash, CompiledClass, CompiledClassHash, ContractClass};
 use crate::contract::{ContractAddress, StorageKey};
 use crate::utils::class::{
     parse_compiled_class, parse_deprecated_compiled_class, parse_sierra_class,
@@ -95,14 +95,14 @@ lazy_static! {
     pub static ref DEFAULT_LEGACY_UDC_CLASS: ContractClass = read_legacy_class_artifact(include_str!("../../../contracts/build/universal_deployer.json"));
 
     // Default account contract
-    pub static ref DEFAULT_ACCOUNT_CLASS: SierraClass = parse_sierra_class(include_str!("../../../contracts/build/default_account.json")).unwrap();
+    pub static ref DEFAULT_ACCOUNT_CLASS: ContractClass = parse_sierra_class(include_str!("../../../contracts/build/default_account.json")).unwrap();
     pub static ref DEFAULT_ACCOUNT_CLASS_CASM: CompiledClass = read_compiled_class_artifact(include_str!("../../../contracts/build/default_account.json"));
 }
 
 #[cfg(feature = "controller")]
 lazy_static! {
     // Cartridge Controller account
-    pub static ref CONTROLLER_ACCOUNT_CLASS: SierraClass = parse_sierra_class(include_str!("../../../contracts/build/controller_CartridgeAccount.contract_class.json")).unwrap();
+    pub static ref CONTROLLER_ACCOUNT_CLASS: ContractClass = parse_sierra_class(include_str!("../../../contracts/build/controller_CartridgeAccount.contract_class.json")).unwrap();
 }
 
 /// A helper function to get the base storage address for the fee token balance of a given account.

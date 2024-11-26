@@ -1,5 +1,5 @@
 use katana_primitives::block::{BlockHash, BlockNumber, FinalityStatus, Header};
-use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
+use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, ContractClass};
 use katana_primitives::contract::{ContractAddress, GenericContractInfo, StorageKey};
 use katana_primitives::receipt::Receipt;
 use katana_primitives::trace::TxExecInfo;
@@ -163,7 +163,7 @@ define_tables_enum! {[
     (Receipts, TableType::Table),
     (CompiledClassHashes, TableType::Table),
     (CompiledClasses, TableType::Table),
-    (SierraClasses, TableType::Table),
+    (Classes, TableType::Table),
     (ContractInfo, TableType::Table),
     (ContractStorage, TableType::DupSort),
     (ClassDeclarationBlock, TableType::Table),
@@ -207,10 +207,10 @@ tables! {
     Receipts: (TxNumber) => Receipt,
     /// Store compiled classes
     CompiledClassHashes: (ClassHash) => CompiledClassHash,
-    /// Store compiled contract classes according to its compiled class hash
+    /// Store compiled contract classes according to its class hash
     CompiledClasses: (ClassHash) => CompiledClass,
-    /// Store Sierra classes according to its class hash
-    SierraClasses: (ClassHash) => FlattenedSierraClass,
+    /// Store contract classes according to its class hash
+    Classes: (ClassHash) => ContractClass,
     /// Store contract information according to its contract address
     ContractInfo: (ContractAddress) => GenericContractInfo,
     /// Store contract storage
@@ -268,7 +268,7 @@ mod tests {
         assert_eq!(Tables::ALL[10].name(), Receipts::NAME);
         assert_eq!(Tables::ALL[11].name(), CompiledClassHashes::NAME);
         assert_eq!(Tables::ALL[12].name(), CompiledClasses::NAME);
-        assert_eq!(Tables::ALL[13].name(), SierraClasses::NAME);
+        assert_eq!(Tables::ALL[13].name(), Classes::NAME);
         assert_eq!(Tables::ALL[14].name(), ContractInfo::NAME);
         assert_eq!(Tables::ALL[15].name(), ContractStorage::NAME);
         assert_eq!(Tables::ALL[16].name(), ClassDeclarationBlock::NAME);
@@ -294,7 +294,7 @@ mod tests {
         assert_eq!(Tables::Receipts.table_type(), TableType::Table);
         assert_eq!(Tables::CompiledClassHashes.table_type(), TableType::Table);
         assert_eq!(Tables::CompiledClasses.table_type(), TableType::Table);
-        assert_eq!(Tables::SierraClasses.table_type(), TableType::Table);
+        assert_eq!(Tables::Classes.table_type(), TableType::Table);
         assert_eq!(Tables::ContractInfo.table_type(), TableType::Table);
         assert_eq!(Tables::ContractStorage.table_type(), TableType::DupSort);
         assert_eq!(Tables::ClassDeclarationBlock.table_type(), TableType::Table);
