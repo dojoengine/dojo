@@ -1,17 +1,16 @@
-use std::time::Duration;
+use std::sync::Arc;
 
 use anyhow::Result;
+use backon::{ExponentialBuilder, Retryable};
 use katana_primitives::block::BlockNumber;
-use katana_primitives::class::{
-    CasmContractClass, ClassHash, CompiledClass, ContractClass, SierraContractClass,
-};
-use katana_primitives::conversion::rpc::{legacy_rpc_to_class, StarknetRsLegacyContractClass};
+use katana_primitives::class::{ClassHash, ContractClass, SierraContractClass};
+use katana_primitives::conversion::rpc::StarknetRsLegacyContractClass;
 use katana_provider::traits::contract::{ContractClassWriter, ContractClassWriterExt};
 use katana_provider::traits::state_update::StateUpdateProvider;
 use katana_rpc_types::class::RpcSierraContractClass;
 use starknet::providers::sequencer::models::{BlockId, DeployedClass};
 use starknet::providers::{ProviderError, SequencerGatewayProvider};
-use tracing::info;
+use tracing::warn;
 
 use super::{Stage, StageExecutionInput, StageResult};
 
@@ -24,22 +23,97 @@ pub enum Error {
 #[derive(Debug)]
 pub struct Classes<P> {
     provider: P,
-    feeder_gateway: SequencerGatewayProvider,
+    downloader: Downloader,
 }
 
 impl<P> Classes<P> {
     pub fn new(provider: P, feeder_gateway: SequencerGatewayProvider) -> Self {
-        Self { provider, feeder_gateway }
+        Self { provider, downloader: Downloader::new(feeder_gateway) }
     }
 }
 
-impl<P> Classes<P>
+#[async_trait::async_trait]
+impl<P> Stage for Classes<P>
 where
-    P: StateUpdateProvider + ContractClassWriter,
+    P: StateUpdateProvider + ContractClassWriter + ContractClassWriterExt,
 {
-    #[allow(deprecated)]
-    async fn get_class(&self, hash: ClassHash, block: BlockNumber) -> Result<ContractClass, Error> {
-        let class = self.feeder_gateway.get_class_by_hash(hash, BlockId::Number(block)).await?;
+    fn id(&self) -> &'static str {
+        "Classes"
+    }
+
+    async fn execute(&mut self, input: &StageExecutionInput) -> StageResult {
+        for i in input.from..=input.to {
+            let class_hashes = self.provider.declared_classes(i.into())?.unwrap();
+            let class_hashes = class_hashes.keys().map(|hash| *hash).collect::<Vec<_>>();
+
+            let classes = self.downloader.fetch_classes(&class_hashes, i).await?;
+            for (hash, class) in classes {
+                self.provider.set_class(hash, class)?;
+            }
+        }
+
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone)]
+struct Downloader {
+    client: Arc<SequencerGatewayProvider>,
+}
+
+impl Downloader {
+    fn new(client: SequencerGatewayProvider) -> Self {
+        Self { client: Arc::new(client) }
+    }
+
+    async fn fetch_classes(
+        &self,
+        classes: &[ClassHash],
+        block: BlockNumber,
+    ) -> Result<Vec<(ClassHash, ContractClass)>, Error> {
+        let mut all_results = Vec::with_capacity(classes.len());
+
+        for hash in classes {
+            let mut futures = Vec::new();
+
+            futures.push(self.fetch_class_with_retry(*hash, block));
+            let batch_results = futures::future::join_all(futures).await;
+
+            all_results.extend(batch_results);
+        }
+
+        all_results.into_iter().collect()
+    }
+
+    async fn fetch_class_with_retry(
+        &self,
+        hash: ClassHash,
+        block: BlockNumber,
+    ) -> Result<(ClassHash, ContractClass), Error> {
+        let request = || async move {
+            #[allow(deprecated)]
+            self.clone().fetch_class(hash, block).await
+        };
+
+        // Retry only when being rate limited
+        let result = request
+            .retry(ExponentialBuilder::default())
+            .when(|e| matches!(e, Error::Gateway(ProviderError::RateLimited)))
+            .notify(|error, _| {
+                warn!(target: "pipeline", hash = format!("{hash:#x}"), %block, %error, "Retrying class download.");
+            })
+            .await?;
+
+        Ok((hash, result))
+    }
+
+    async fn fetch_class(
+        &self,
+        hash: ClassHash,
+        block: BlockNumber,
+    ) -> Result<ContractClass, Error> {
+        #[allow(deprecated)]
+        let class = self.client.get_class_by_hash(hash, BlockId::Number(block)).await?;
 
         let class = match class {
             DeployedClass::LegacyClass(legacy) => {
@@ -56,36 +130,6 @@ where
         };
 
         Ok(class)
-    }
-}
-
-#[async_trait::async_trait]
-impl<P> Stage for Classes<P>
-where
-    P: StateUpdateProvider + ContractClassWriter + ContractClassWriterExt,
-{
-    fn id(&self) -> &'static str {
-        "Classes"
-    }
-
-    async fn execute(&mut self, input: &StageExecutionInput) -> StageResult {
-        for i in input.from..=input.to {
-            // loop thru all the class hashes in the current block
-            let class_hashes = self.provider.declared_classes(i.into())?.unwrap();
-
-            // TODO: do this in parallel
-            for hash in class_hashes.keys() {
-                info!(target: "pipeline", class_hash = format!("{hash:#x}"), "Fetching class artifacts.");
-
-                // 1. fetch sierra and casm class from fgw
-                let class = self.get_class(*hash, i).await?;
-                self.provider.set_class(*hash, class)?;
-
-                tokio::time::sleep(Duration::from_secs(1)).await;
-            }
-        }
-
-        Ok(())
     }
 }
 
