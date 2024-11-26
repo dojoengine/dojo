@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1732629813811,
+  "lastUpdate": 1732634146072,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -36109,6 +36109,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7798234,
             "range": "± 296977",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "valentin@pupucecorp.com",
+            "name": "valdo.carbonaboyz.stark",
+            "username": "MartianGreed"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1aabd5fe3de02e4e506fbcaea693af78b3d154d7",
+          "message": "fix: all bindgen functionns external instead of view (#2725)",
+          "timestamp": "2024-11-26T08:59:06-06:00",
+          "tree_id": "adc72c2d97924df755815bed622d5e992f87eea6",
+          "url": "https://github.com/dojoengine/dojo/commit/1aabd5fe3de02e4e506fbcaea693af78b3d154d7"
+        },
+        "date": 1732634144144,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10542378239,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
