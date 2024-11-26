@@ -6,7 +6,7 @@ use std::sync::Arc;
 use anyhow::{anyhow, Context, Result};
 use dojo_types::naming::get_tag;
 use dojo_types::primitive::Primitive;
-use dojo_types::schema::{Member, Struct, Ty};
+use dojo_types::schema::{Struct, Ty};
 use dojo_world::config::WorldMetadata;
 use dojo_world::contracts::abigen::model::Layout;
 use dojo_world::contracts::naming::compute_selector_from_names;
@@ -261,9 +261,9 @@ impl Sql {
         let namespaced_name = get_tag(namespace, &model.name());
 
         let insert_models =
-            "INSERT INTO models (id, namespace, name, class_hash, contract_address, layout, schema, \
-             packed_size, unpacked_size, executed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON \
-             CONFLICT(id) DO UPDATE SET contract_address=EXCLUDED.contract_address, \
+            "INSERT INTO models (id, namespace, name, class_hash, contract_address, layout, \
+             schema, packed_size, unpacked_size, executed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, \
+             ?) ON CONFLICT(id) DO UPDATE SET contract_address=EXCLUDED.contract_address, \
              class_hash=EXCLUDED.class_hash, layout=EXCLUDED.layout, schema=EXCLUDED.schema, \
              packed_size=EXCLUDED.packed_size, unpacked_size=EXCLUDED.unpacked_size, \
              executed_at=EXCLUDED.executed_at RETURNING *";
@@ -839,11 +839,9 @@ impl Sql {
 
         // Start building the create table query with internal columns
         let mut create_table_query = format!(
-            "CREATE TABLE IF NOT EXISTS [{table_id}] (\
-             internal_id TEXT NOT NULL PRIMARY KEY, \
-             internal_event_id TEXT NOT NULL, \
-             internal_entity_id TEXT, \
-             internal_event_message_id TEXT, "
+            "CREATE TABLE IF NOT EXISTS [{table_id}] (internal_id TEXT NOT NULL PRIMARY KEY, \
+             internal_event_id TEXT NOT NULL, internal_entity_id TEXT, internal_event_message_id \
+             TEXT, "
         );
 
         // Recursively add columns for all nested type

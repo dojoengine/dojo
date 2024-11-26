@@ -61,16 +61,16 @@ impl ModelCache {
     }
 
     async fn update_model(&self, selector: &Felt) -> Result<Model, Error> {
-        let (namespace, name, class_hash, contract_address, packed_size, unpacked_size, layout, schema): (
-            String,
-            String,
-            String,
-            String,
-            u32,
-            u32,
-            String,
-            String,
-        ) = sqlx::query_as(
+        let (
+            namespace,
+            name,
+            class_hash,
+            contract_address,
+            packed_size,
+            unpacked_size,
+            layout,
+            schema,
+        ): (String, String, String, String, u32, u32, String, String) = sqlx::query_as(
             "SELECT namespace, name, class_hash, contract_address, packed_size, unpacked_size, \
              layout, schema FROM models WHERE id = ?",
         )

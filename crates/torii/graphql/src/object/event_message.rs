@@ -145,8 +145,9 @@ fn model_union_field() -> Field {
 
                     let mut results: Vec<FieldValue<'_>> = Vec::new();
                     for (id, namespace, name, schema) in model_ids {
-                        let schema: Ty = serde_json::from_str(&schema)
-                            .map_err(|e| anyhow::anyhow!(format!("Failed to parse model schema: {e}")))?;
+                        let schema: Ty = serde_json::from_str(&schema).map_err(|e| {
+                            anyhow::anyhow!(format!("Failed to parse model schema: {e}"))
+                        })?;
                         let type_mapping = build_type_mapping(&namespace, &schema);
 
                         // but the table name for the model data is the unhashed model name

@@ -41,13 +41,10 @@ fn member_to_type_data(namespace: &str, schema: &Ty) -> TypeData {
         Ty::Array(array) => TypeData::List(Box::new(member_to_type_data(namespace, &array[0]))),
         // Enums that do not have a nested member are considered as a simple Enum
         Ty::Enum(enum_)
-            if enum_.options.iter().all(|o| {
-                if let Ty::Tuple(t) = &o.ty {
-                    t.is_empty()
-                } else {
-                    false
-                }
-            }) =>
+            if enum_
+                .options
+                .iter()
+                .all(|o| if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false }) =>
         {
             TypeData::Simple(TypeRef::named("Enum"))
         }

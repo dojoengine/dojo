@@ -182,7 +182,8 @@ pub fn build_sql_query(
     for model in schemas {
         let model_table = model.name();
         joins.push(format!(
-            "LEFT JOIN [{model_table}] ON {table_name}.id = [{model_table}].{entity_relation_column}",
+            "LEFT JOIN [{model_table}] ON {table_name}.id = \
+             [{model_table}].{entity_relation_column}",
         ));
 
         // Collect columns with table prefix
@@ -223,11 +224,7 @@ pub fn map_row_to_ty(
     // the row that contains non dynamic data for Ty
     row: &SqliteRow,
 ) -> Result<(), Error> {
-    let column_name = if path.is_empty() {
-        name
-    } else {
-        &format!("{}.{}", path, name)
-    };
+    let column_name = if path.is_empty() { name } else { &format!("{}.{}", path, name) };
 
     match ty {
         Ty::Primitive(primitive) => {
@@ -490,7 +487,9 @@ mod tests {
         )
         .unwrap();
 
-        let expected_query = "SELECT internal_id, internal_entity_id, [player], [vec.x], [vec.y], [test_everything], [favorite_item], [favorite_item.Some], [items] FROM [entities] WHERE entity_id ORDER BY internal_event_id DESC";
+        let expected_query = "SELECT internal_id, internal_entity_id, [player], [vec.x], [vec.y], \
+                              [test_everything], [favorite_item], [favorite_item.Some], [items] \
+                              FROM [entities] WHERE entity_id ORDER BY internal_event_id DESC";
         assert_eq!(query.0, expected_query);
     }
 }
