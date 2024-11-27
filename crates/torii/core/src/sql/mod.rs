@@ -5,7 +5,6 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Result};
 use dojo_types::naming::get_tag;
-use dojo_types::primitive::Primitive;
 use dojo_types::schema::{Struct, Ty};
 use dojo_world::config::WorldMetadata;
 use dojo_world::contracts::abigen::model::Layout;
@@ -367,7 +366,7 @@ impl Sql {
             vec![Argument::String(entity_id.clone()), Argument::String(model_id.clone())],
         ))?;
 
-        self.build_set_entity_queries_recursive(
+        self.set_entity_model(
             &namespaced_name,
             event_id,
             (&entity_id, false),
@@ -427,7 +426,7 @@ impl Sql {
             }),
         ))?;
 
-        self.build_set_entity_queries_recursive(
+        self.set_entity_model(
             &namespaced_name,
             event_id,
             (&entity_id, true),
@@ -447,12 +446,10 @@ impl Sql {
         block_timestamp: u64,
     ) -> Result<()> {
         let entity_id = format!("{:#x}", entity_id);
-        let path = vec![entity.name()];
-        // delete entity models data
-        self.build_delete_entity_queries_recursive(path, &entity_id, &entity)?;
+        let model_table = entity.name();
 
         self.executor.send(QueryMessage::new(
-            "DELETE FROM entity_model WHERE entity_id = ? AND model_id = ?".to_string(),
+            format!("DELETE FROM [{model_table}] WHERE internal_id = ?; DELETE FROM entity_model WHERE entity_id = ? AND model_id = ?").to_string(),
             vec![Argument::String(entity_id.clone()), Argument::String(format!("{:#x}", model_id))],
             QueryType::DeleteEntity(DeleteEntityQuery {
                 entity_id: entity_id.clone(),
@@ -612,7 +609,7 @@ impl Sql {
         Ok(())
     }
 
-    fn build_set_entity_queries_recursive(
+    fn set_entity_model(
         &mut self,
         model_name: &str,
         event_id: &str,
@@ -682,9 +679,9 @@ impl Sql {
                 Ty::Tuple(t) => {
                     for (idx, member) in t.iter().enumerate() {
                         let column_name = if prefix.is_empty() {
-                            format!("_{}", idx)
+                            format!("{}", idx)
                         } else {
-                            format!("{}._{}", prefix, idx)
+                            format!("{}.{}", prefix, idx)
                         };
                         collect_members(&column_name, member, columns, arguments)?;
                     }
@@ -738,87 +735,6 @@ impl Sql {
 
         // Execute the single query
         self.executor.send(QueryMessage::other(statement, arguments))?;
-
-        Ok(())
-    }
-
-    fn build_delete_entity_queries_recursive(
-        &mut self,
-        path: Vec<String>,
-        entity_id: &str,
-        entity: &Ty,
-    ) -> Result<()> {
-        match entity {
-            Ty::Struct(s) => {
-                let table_id = path.join("$");
-                let statement = format!("DELETE FROM [{table_id}] WHERE entity_id = ?");
-                self.executor.send(QueryMessage::other(
-                    statement,
-                    vec![Argument::String(entity_id.to_string())],
-                ))?;
-                for member in s.children.iter() {
-                    let mut path_clone = path.clone();
-                    path_clone.push(member.name.clone());
-                    self.build_delete_entity_queries_recursive(path_clone, entity_id, &member.ty)?;
-                }
-            }
-            Ty::Enum(e) => {
-                if e.options
-                    .iter()
-                    .all(|o| if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false })
-                {
-                    return Ok(());
-                }
-
-                let table_id = path.join("$");
-                let statement = format!("DELETE FROM [{table_id}] WHERE entity_id = ?");
-                self.executor.send(QueryMessage::other(
-                    statement,
-                    vec![Argument::String(entity_id.to_string())],
-                ))?;
-
-                for child in e.options.iter() {
-                    if let Ty::Tuple(t) = &child.ty {
-                        if t.is_empty() {
-                            continue;
-                        }
-                    }
-
-                    let mut path_clone = path.clone();
-                    path_clone.push(child.name.clone());
-                    self.build_delete_entity_queries_recursive(path_clone, entity_id, &child.ty)?;
-                }
-            }
-            Ty::Array(array) => {
-                let table_id = path.join("$");
-                let statement = format!("DELETE FROM [{table_id}] WHERE entity_id = ?");
-                self.executor.send(QueryMessage::other(
-                    statement,
-                    vec![Argument::String(entity_id.to_string())],
-                ))?;
-
-                for member in array.iter() {
-                    let mut path_clone = path.clone();
-                    path_clone.push("data".to_string());
-                    self.build_delete_entity_queries_recursive(path_clone, entity_id, member)?;
-                }
-            }
-            Ty::Tuple(t) => {
-                let table_id = path.join("$");
-                let statement = format!("DELETE FROM [{table_id}] WHERE entity_id = ?");
-                self.executor.send(QueryMessage::other(
-                    statement,
-                    vec![Argument::String(entity_id.to_string())],
-                ))?;
-
-                for (idx, member) in t.iter().enumerate() {
-                    let mut path_clone = path.clone();
-                    path_clone.push(format!("_{}", idx));
-                    self.build_delete_entity_queries_recursive(path_clone, entity_id, member)?;
-                }
-            }
-            _ => {}
-        }
 
         Ok(())
     }
