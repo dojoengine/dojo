@@ -124,8 +124,8 @@ fn model_union_field() -> Field {
                     let entity_id = utils::extract::<String>(indexmap, "id")?;
                     // fetch name from the models table
                     // using the model id (hashed model name)
-                    let model_ids: Vec<(String, String, String, String)> = sqlx::query_as(
-                        "SELECT id, namespace, name, schema
+                    let model_ids: Vec<(String, String, String)> = sqlx::query_as(
+                        "SELECT namespace, name, schema
                         FROM models
                         WHERE id IN (    
                             SELECT model_id
@@ -138,7 +138,7 @@ fn model_union_field() -> Field {
                     .await?;
 
                     let mut results: Vec<FieldValue<'_>> = Vec::new();
-                    for (id, namespace, name, schema) in model_ids {
+                    for (namespace, name, schema) in model_ids {
                         let schema: Ty = serde_json::from_str(&schema).map_err(|e| {
                             anyhow::anyhow!(format!("Failed to parse model schema: {e}"))
                         })?;

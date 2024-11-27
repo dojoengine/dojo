@@ -1,9 +1,8 @@
 use async_graphql::dynamic::{Enum, Field, FieldFuture, InputObject, Object, TypeRef};
 use async_graphql::Value;
-use chrono::{DateTime, Utc};
 use dojo_types::naming::get_tag;
-use serde::Deserialize;
-use sqlx::{FromRow, Pool, Sqlite};
+use sqlx::Pool;
+use sqlx::Sqlite;
 
 use super::connection::{connection_arguments, connection_output, parse_connection_arguments};
 use super::inputs::order_input::{order_argument, parse_order_argument, OrderInputObject};

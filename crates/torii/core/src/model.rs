@@ -1,11 +1,9 @@
-use std::collections::HashMap;
 use std::str::FromStr;
 
 use async_trait::async_trait;
 use crypto_bigint::U256;
-use dojo_types::naming::get_tag;
 use dojo_types::primitive::Primitive;
-use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
+use dojo_types::schema::Ty;
 use dojo_world::contracts::abigen::model::Layout;
 use dojo_world::contracts::model::ModelReader;
 use sqlx::sqlite::SqliteRow;
@@ -13,7 +11,7 @@ use sqlx::{Pool, Row, Sqlite};
 use starknet::core::types::Felt;
 
 use super::error::{self, Error};
-use crate::error::{ParseError, QueryError};
+use crate::error::ParseError;
 
 #[derive(Debug)]
 pub struct ModelSQLReader {
@@ -146,9 +144,7 @@ pub fn build_sql_query(
             }
             Ty::Enum(e) => {
                 // Add the enum variant column with table prefix and alias
-                selections.push(format!(
-                    "[{table_prefix}].[{path}] as \"{table_prefix}.{path}\"",
-                ));
+                selections.push(format!("[{table_prefix}].[{path}] as \"{table_prefix}.{path}\"",));
 
                 // Add columns for each variant's value (if not empty tuple)
                 for option in &e.options {
@@ -162,9 +158,7 @@ pub fn build_sql_query(
                 }
             }
             Ty::Array(_) | Ty::Primitive(_) | Ty::ByteArray(_) => {
-                selections.push(format!(
-                    "[{table_prefix}].[{path}] as \"{table_prefix}.{path}\"",
-                ));
+                selections.push(format!("[{table_prefix}].[{path}] as \"{table_prefix}.{path}\"",));
             }
         }
     }
