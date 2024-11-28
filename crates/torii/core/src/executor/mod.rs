@@ -548,14 +548,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 if em_query.is_historical {
                     event_counter += 1;
 
-                    let data = em_query
-                        .ty
-                        .serialize()?
-                        .iter()
-                        .map(|felt| format!("{:#x}", felt))
-                        .collect::<Vec<String>>()
-                        .join("/");
-
+                    let data = serde_json::to_string(&em_query.ty.to_json_value()?)?;
                     sqlx::query(
                         "INSERT INTO event_messages_historical (id, keys, event_id, data, \
                          model_id, executed_at) VALUES (?, ?, ?, ?, ?, ?) RETURNING *",

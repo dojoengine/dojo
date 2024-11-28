@@ -42,7 +42,6 @@ use tonic_web::GrpcWebLayer;
 use torii_core::error::{Error, ParseError, QueryError};
 use torii_core::model::{build_sql_query, map_row_to_ty};
 use torii_core::sql::cache::ModelCache;
-use torii_core::sql::utils::sql_string_to_felts;
 use torii_core::types::{Token, TokenBalance};
 use tower_http::cors::{AllowOrigin, CorsLayer};
 
@@ -368,7 +367,8 @@ impl DojoWorld {
                 .model(&Felt::from_str(&model_id).map_err(ParseError::FromStr)?)
                 .await?;
             let mut schema = model.schema;
-            schema.deserialize(&mut sql_string_to_felts(&data))?;
+            schema
+                .from_json_value(serde_json::from_str(&data).map_err(ParseError::FromJsonStr)?)?;
 
             let entity = entities
                 .entry(id)
