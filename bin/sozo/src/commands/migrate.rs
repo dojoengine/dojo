@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use clap::Args;
-use colored::Colorize;
+use colored::*;
 use dojo_utils::{self, TxnConfig};
 use dojo_world::contracts::WorldContract;
 use dojo_world::services::IpfsService;
@@ -12,7 +12,7 @@ use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::Provider;
 use tabled::settings::Style;
 use tabled::{Table, Tabled};
-use tracing::{trace, warn};
+use tracing::trace;
 
 use super::options::account::AccountOptions;
 use super::options::ipfs::IpfsOptions;
@@ -92,8 +92,10 @@ impl MigrateArgs {
                     .await
                     .context("Metadata upload failed.")?;
             } else {
-                warn!(
-                    "No IPFS credentials has been found, metadata upload has been ignored. If you are expecting to upload metadata, ensure you have set the IPFS credentials in your profile config or in the environment variables: https://book.dojoengine.org/framework/world/metadata."
+                println!();
+                println!(
+                    "{}",
+                    "IPFS credentials not found. Metadata upload skipped. To upload metadata, configure IPFS credentials in your profile config or environment variables: https://book.dojoengine.org/framework/world/metadata.".bright_yellow()
                 );
             };
 
