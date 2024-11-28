@@ -1,4 +1,5 @@
 use katana_primitives::block::{BlockIdOrTag, BlockTag};
+use katana_primitives::class::CasmContractClass;
 use katana_primitives::state::StateUpdates;
 use katana_primitives::Felt;
 use reqwest::{Client, StatusCode};
@@ -6,9 +7,9 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-mod types;
+pub mod types;
 
-use types::{CompiledClass, ContractClass};
+use types::ContractClass;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -76,7 +77,7 @@ impl SequencerGateway {
         &self,
         hash: Felt,
         block_id: BlockIdOrTag,
-    ) -> Result<CompiledClass, Error> {
+    ) -> Result<CasmContractClass, Error> {
         self.feeder_gateway("get_compiled_class_by_class_hash")
             .with_query_param("classHash", &format!("{hash:#x}"))
             .with_block_id(block_id)
