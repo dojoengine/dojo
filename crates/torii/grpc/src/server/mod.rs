@@ -368,7 +368,7 @@ impl DojoWorld {
                 .model(&Felt::from_str(&model_id).map_err(ParseError::FromStr)?)
                 .await?;
             let mut schema = model.schema;
-            schema.deserialize(&mut sql_string_to_felts(&data))?;
+            schema.from_json_value(serde_json::from_str(&data).unwrap())?;
 
             let entity = entities
                 .entry(id)
