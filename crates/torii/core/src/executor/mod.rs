@@ -61,6 +61,7 @@ pub struct DeleteEntityQuery {
 #[derive(Debug, Clone)]
 pub struct ApplyBalanceDiffQuery {
     pub erc_cache: HashMap<(ContractType, String), I256>,
+    pub block_id: BlockId,
 }
 
 #[derive(Debug, Clone)]
@@ -606,7 +607,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
             QueryType::ApplyBalanceDiff(apply_balance_diff) => {
                 debug!(target: LOG_TARGET, "Applying balance diff.");
                 let instant = Instant::now();
-                self.apply_balance_diff(apply_balance_diff).await?;
+                self.apply_balance_diff(apply_balance_diff, self.provider.clone()).await?;
                 debug!(target: LOG_TARGET, duration = ?instant.elapsed(), "Applied balance diff.");
             }
             QueryType::RegisterErc721Token(register_erc721_token) => {
@@ -678,6 +679,8 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
 
                 self.register_tasks.spawn(async move {
                     let permit = semaphore.acquire().await.unwrap();
+                    let span = tracing::span!(tracing::Level::INFO, "contract_address_span", contract_address = %register_erc721_token.contract_address);
+                    let _enter = span.enter();
 
                     let result = Self::process_register_erc721_token_query(
                         register_erc721_token,
