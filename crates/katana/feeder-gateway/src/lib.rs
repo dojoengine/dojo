@@ -1,6 +1,5 @@
 use katana_primitives::block::{BlockIdOrTag, BlockTag};
 use katana_primitives::class::CasmContractClass;
-use katana_primitives::state::StateUpdates;
 use katana_primitives::Felt;
 use reqwest::{Client, StatusCode};
 use serde::de::DeserializeOwned;
@@ -9,7 +8,7 @@ use url::Url;
 
 pub mod types;
 
-use types::ContractClass;
+use types::{ContractClass, StateUpdate};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -46,14 +45,14 @@ impl SequencerGateway {
 }
 
 impl SequencerGateway {
-    pub async fn get_state_update(&self, block_id: BlockIdOrTag) -> Result<StateUpdates, Error> {
+    pub async fn get_state_update(&self, block_id: BlockIdOrTag) -> Result<StateUpdate, Error> {
         self.feeder_gateway("get_state_update").with_block_id(block_id).send().await
     }
 
     pub async fn get_state_update_with_block(
         &self,
         block_id: BlockIdOrTag,
-    ) -> Result<StateUpdates, Error> {
+    ) -> Result<StateUpdate, Error> {
         self.feeder_gateway("get_state_update")
             .with_query_param("includeBlock", "true")
             .with_block_id(block_id)
