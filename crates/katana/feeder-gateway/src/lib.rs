@@ -1,5 +1,3 @@
-use std::fmt::Debug;
-
 use katana_primitives::block::{BlockIdOrTag, BlockTag};
 use katana_primitives::state::StateUpdates;
 use katana_primitives::Felt;
