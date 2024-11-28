@@ -263,8 +263,14 @@ fn token_transfers_connection_output<'a>(
                 let token_id = row.token_id.split(':').collect::<Vec<&str>>();
                 assert!(token_id.len() == 2);
 
+                // skip the token if metadata is null
+                if row.metadata.is_none() {
+                    continue;
+                }
+
+                let metadata_str = row.metadata.as_ref().unwrap();
                 let metadata: serde_json::Value =
-                    serde_json::from_str(&row.metadata).expect("metadata is always json");
+                    serde_json::from_str(metadata_str).expect("metadata is always json");
                 let metadata_name =
                     metadata.get("name").map(|v| v.to_string().trim_matches('"').to_string());
                 let metadata_description = metadata
@@ -277,7 +283,7 @@ fn token_transfers_connection_output<'a>(
 
                 let token_metadata = ErcTokenType::Erc721(Erc721Token {
                     name: row.name,
-                    metadata: row.metadata,
+                    metadata: metadata_str.to_owned(),
                     contract_address: row.contract_address,
                     symbol: row.symbol,
                     token_id: token_id[1].to_string(),
@@ -333,7 +339,7 @@ struct TransferQueryResultRaw {
     pub symbol: String,
     pub decimals: u8,
     pub contract_type: String,
-    pub metadata: String,
+    pub metadata: Option<String>,
 }
 
 #[derive(Debug, Clone)]
