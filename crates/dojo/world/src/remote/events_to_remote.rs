@@ -253,6 +253,7 @@ impl WorldRemote {
                 trace!(?e, "Owner updated.");
             }
             WorldEvent::MetadataUpdate(e) => {
+                dbg!("metadata", &e);
                 if e.resource == WORLD {
                     self.metadata_hash = e.hash;
                 } else {

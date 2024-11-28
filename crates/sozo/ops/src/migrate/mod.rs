@@ -123,15 +123,16 @@ where
         let mut invoker = Invoker::new(&self.world.account, self.txn_config);
 
         // world
-        let current_hash =
-            self.diff.resources.get(&WORLD).map_or(Felt::ZERO, |r| r.metadata_hash());
+        let current_hash = self.diff.world_info.metadata_hash;
         let new_metadata = WorldMetadata::from(self.diff.profile_config.world.clone());
 
         let res = new_metadata.upload_if_changed(service, current_hash).await?;
 
         if let Some((new_uri, new_hash)) = res {
+            trace!(new_uri, new_hash = format!("{:#066x}", new_hash), "World metadata updated.");
+
             invoker.add_call(self.world.set_metadata_getcall(&ResourceMetadata {
-                resource_id: Felt::ZERO,
+                resource_id: WORLD,
                 metadata_uri: ByteArray::from_string(&new_uri)?,
                 metadata_hash: new_hash,
             }));
@@ -187,6 +188,13 @@ where
             let res = new_metadata.upload_if_changed(service, current_hash).await?;
 
             if let Some((new_uri, new_hash)) = res {
+                trace!(
+                    tag = item.tag,
+                    new_uri,
+                    new_hash = format!("{:#066x}", new_hash),
+                    "Resource metadata updated."
+                );
+
                 calls.push(self.world.set_metadata_getcall(&ResourceMetadata {
                     resource_id: selector,
                     metadata_uri: ByteArray::from_string(&new_uri)?,

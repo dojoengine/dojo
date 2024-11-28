@@ -12,7 +12,7 @@ use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::Provider;
 use tabled::settings::Style;
 use tabled::{Table, Tabled};
-use tracing::trace;
+use tracing::{trace, warn};
 
 use super::options::account::AccountOptions;
 use super::options::ipfs::IpfsOptions;
@@ -83,7 +83,6 @@ impl MigrateArgs {
 
             let ipfs_config =
                 ipfs.config().or(profile_config.env.map(|env| env.ipfs_config).unwrap_or(None));
-            let mut metadata_upload_text = String::new();
 
             if let Some(config) = ipfs_config {
                 let mut metadata_service = IpfsService::new(config)?;
@@ -93,9 +92,9 @@ impl MigrateArgs {
                     .await
                     .context("Metadata upload failed.")?;
             } else {
-                metadata_upload_text = "\nMetadata: No IPFS credentials has been found => \
-                                        metadata upload has been ignored."
-                    .to_string();
+                warn!(
+                    "No IPFS credentials has been found, metadata upload has been ignored. If you are expecting to upload metadata, ensure you have set the IPFS credentials in your profile config or in the environment variables: https://book.dojoengine.org/framework/world/metadata."
+                );
             };
 
             spinner.update_text("Writing manifest...");
@@ -107,7 +106,7 @@ impl MigrateArgs {
                 (
                     "⛩️ ",
                     format!(
-                        "Migration successful with world at address {}{metadata_upload_text}",
+                        "Migration successful with world at address {}",
                         colored_address
                     ),
                 )
@@ -115,7 +114,7 @@ impl MigrateArgs {
                 (
                     "🪨 ",
                     format!(
-                        "No changes for world at address {:#066x}{metadata_upload_text}",
+                        "No changes for world at address {:#066x}",
                         world_address
                     ),
                 )
