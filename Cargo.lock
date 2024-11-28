@@ -4875,6 +4875,7 @@ dependencies = [
  "cainome 0.4.6",
  "crypto-bigint",
  "hex",
+ "indexmap 2.5.0",
  "itertools 0.12.1",
  "num-traits 0.2.19",
  "regex",
