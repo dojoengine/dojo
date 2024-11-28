@@ -11,6 +11,7 @@ use katana_rpc_types::class::ConversionError;
 pub use katana_rpc_types::class::RpcSierraContractClass;
 use serde::Deserialize;
 
+/// The contract class type returns by `/get_class_by_hash` endpoint.
 #[derive(Debug, Deserialize)]
 #[serde(untagged)]
 pub enum ContractClass {
@@ -18,20 +19,7 @@ pub enum ContractClass {
     Legacy(LegacyContractClass),
 }
 
-impl TryFrom<ContractClass> for katana_primitives::class::ContractClass {
-    type Error = ConversionError;
-
-    fn try_from(value: ContractClass) -> Result<Self, Self::Error> {
-        match value {
-            ContractClass::Legacy(class) => Ok(Self::Legacy(class)),
-            ContractClass::Class(class) => {
-                let class = SierraContractClass::try_from(class)?;
-                Ok(Self::Class(class))
-            }
-        }
-    }
-}
-
+/// The state update type returns by `/get_state_update` endpoint.
 #[derive(Debug, Deserialize)]
 pub struct StateUpdate {
     pub block_hash: Option<Felt>,
@@ -66,6 +54,22 @@ pub struct DeployedContract {
 pub struct DeclaredContract {
     pub class_hash: ClassHash,
     pub compiled_class_hash: CompiledClassHash,
+}
+
+// -- Conversion to Katana primitive types.
+
+impl TryFrom<ContractClass> for katana_primitives::class::ContractClass {
+    type Error = ConversionError;
+
+    fn try_from(value: ContractClass) -> Result<Self, Self::Error> {
+        match value {
+            ContractClass::Legacy(class) => Ok(Self::Legacy(class)),
+            ContractClass::Class(class) => {
+                let class = SierraContractClass::try_from(class)?;
+                Ok(Self::Class(class))
+            }
+        }
+    }
 }
 
 impl From<StateDiff> for StateUpdates {
