@@ -182,7 +182,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_query_params() {
+    fn request_block_id() {
         let client = Client::new();
         let base_url = Url::parse("https://example.com/").unwrap();
         let req = RequestBuilder { client: &client, url: base_url };
@@ -203,5 +203,47 @@ mod tests {
         // Test latest block (should have no query params)
         let latest_url = req.with_block_id(BlockIdOrTag::Tag(BlockTag::Latest)).url;
         assert_eq!(latest_url.query(), None);
+    }
+
+    #[test]
+    fn request_block_id_overwrite() {
+        let client = Client::new();
+        let base_url = Url::parse("https://example.com/").unwrap();
+        let req = RequestBuilder { client: &client, url: base_url };
+
+        let url = req
+            .clone()
+            .with_block_id(BlockIdOrTag::Tag(BlockTag::Pending))
+            .with_block_id(BlockIdOrTag::Number(42))
+            .url;
+
+        assert_eq!(url.query(), Some("blockNumber=42"));
+
+        let hash = Felt::from(123);
+        let url = req
+            .clone()
+            .with_block_id(BlockIdOrTag::Hash(hash))
+            .with_block_id(BlockIdOrTag::Tag(BlockTag::Pending))
+            .url;
+
+        assert_eq!(url.query(), Some("blockNumber=pending"));
+    }
+
+    #[test]
+    fn multiple_query_params() {
+        let client = Client::new();
+        let base_url = Url::parse("https://example.com/").unwrap();
+        let req = RequestBuilder { client: &client, url: base_url };
+
+        let url = req
+            .with_query_param("param1", "value1")
+            .with_query_param("param2", "value2")
+            .with_query_param("param3", "value3")
+            .url;
+
+        let query = url.query().unwrap();
+        assert!(query.contains("param1=value1"));
+        assert!(query.contains("param2=value2"));
+        assert!(query.contains("param3=value3"));
     }
 }
