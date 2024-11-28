@@ -1,14 +1,15 @@
-use std::{any::type_name, str::FromStr};
+use std::any::type_name;
+use std::str::FromStr;
 
 use cainome::cairo_serde::{ByteArray, CairoSerde};
 use crypto_bigint::{Encoding, U256};
+use indexmap::IndexMap;
 use itertools::Itertools;
 use num_traits::ToPrimitive;
 use serde::{Deserialize, Serialize};
+use serde_json::{json, Value as JsonValue};
 use starknet::core::types::Felt;
 use strum_macros::AsRefStr;
-use serde_json::{Value as JsonValue, json};
-use indexmap::IndexMap;
 
 use crate::primitive::{Primitive, PrimitiveError};
 
@@ -348,21 +349,21 @@ impl Ty {
                     obj.insert(member.name.clone(), member.ty.to_json_value()?);
                 }
                 Ok(json!(obj))
-            },
+            }
             Ty::Enum(e) => {
                 let option = e.option().map_err(|_| PrimitiveError::MissingFieldElement)?;
                 Ok(json!({
                     option.name.clone(): option.ty.to_json_value()?
                 }))
-            },
+            }
             Ty::Array(items) => {
                 let values: Result<Vec<_>, _> = items.iter().map(|ty| ty.to_json_value()).collect();
                 Ok(json!(values?))
-            },
+            }
             Ty::Tuple(items) => {
                 let values: Result<Vec<_>, _> = items.iter().map(|ty| ty.to_json_value()).collect();
                 Ok(json!(values?))
-            },
+            }
             Ty::ByteArray(bytes) => Ok(json!(bytes.clone())),
         }
     }
@@ -375,67 +376,69 @@ impl Ty {
                     if let JsonValue::Bool(b) = value {
                         *v = Some(b);
                     }
-                },
+                }
                 Primitive::I8(v) => {
                     if let JsonValue::Number(n) = value {
                         *v = n.as_i64().map(|n| n as i8);
                     }
-                },
+                }
                 Primitive::I16(v) => {
                     if let JsonValue::Number(n) = value {
                         *v = n.as_i64().map(|n| n as i16);
                     }
-                },
+                }
                 Primitive::I32(v) => {
                     if let JsonValue::Number(n) = value {
                         *v = n.as_i64().map(|n| n as i32);
                     }
-                },
+                }
                 Primitive::I64(v) => {
                     if let JsonValue::String(s) = value {
                         *v = s.parse().ok();
                     }
-                },
+                }
                 Primitive::I128(v) => {
                     if let JsonValue::String(s) = value {
                         *v = s.parse().ok();
                     }
-                },
+                }
                 Primitive::U8(v) => {
                     if let JsonValue::Number(n) = value {
                         *v = n.as_u64().map(|n| n as u8);
                     }
-                },
+                }
                 Primitive::U16(v) => {
                     if let JsonValue::Number(n) = value {
                         *v = n.as_u64().map(|n| n as u16);
                     }
-                },
+                }
                 Primitive::U32(v) => {
                     if let JsonValue::Number(n) = value {
                         *v = n.as_u64().map(|n| n as u32);
                     }
-                },
+                }
                 Primitive::U64(v) => {
                     if let JsonValue::String(s) = value {
                         *v = s.parse().ok();
                     }
-                },
+                }
                 Primitive::U128(v) => {
                     if let JsonValue::String(s) = value {
                         *v = s.parse().ok();
                     }
-                },
+                }
                 Primitive::USize(v) => {
                     if let JsonValue::Number(n) = value {
                         *v = n.as_u64().map(|n| n as u32);
                     }
-                },
+                }
                 Primitive::U256(v) => {
                     if let JsonValue::Object(obj) = value {
-                        if let (Some(JsonValue::String(high)), Some(JsonValue::String(low))) = 
-                            (obj.get("high"), obj.get("low")) {
-                            if let (Ok(high), Ok(low)) = (high.parse::<u128>(), low.parse::<u128>()) {
+                        if let (Some(JsonValue::String(high)), Some(JsonValue::String(low))) =
+                            (obj.get("high"), obj.get("low"))
+                        {
+                            if let (Ok(high), Ok(low)) = (high.parse::<u128>(), low.parse::<u128>())
+                            {
                                 let mut bytes = [0u8; 32];
                                 bytes[..16].copy_from_slice(&high.to_be_bytes());
                                 bytes[16..].copy_from_slice(&low.to_be_bytes());
@@ -443,22 +446,22 @@ impl Ty {
                             }
                         }
                     }
-                },
+                }
                 Primitive::Felt252(v) => {
                     if let JsonValue::String(s) = value {
                         *v = Felt::from_str(&s).ok();
                     }
-                },
+                }
                 Primitive::ClassHash(v) => {
                     if let JsonValue::String(s) = value {
                         *v = Felt::from_str(&s).ok();
                     }
-                },
+                }
                 Primitive::ContractAddress(v) => {
                     if let JsonValue::String(s) = value {
                         *v = Felt::from_str(&s).ok();
                     }
-                },
+                }
             },
             (Ty::Struct(s), JsonValue::Object(obj)) => {
                 for member in &mut s.children {
@@ -466,7 +469,7 @@ impl Ty {
                         member.ty.from_json_value(value.clone())?;
                     }
                 }
-            },
+            }
             (Ty::Enum(e), JsonValue::Object(obj)) => {
                 if let Some((name, value)) = obj.into_iter().next() {
                     e.set_option(&name).map_err(|_| PrimitiveError::TypeMismatch)?;
@@ -474,7 +477,7 @@ impl Ty {
                         e.options[option as usize].ty.from_json_value(value)?;
                     }
                 }
-            },
+            }
             (Ty::Array(items), JsonValue::Array(values)) => {
                 let template = items[0].clone();
                 items.clear();
@@ -483,7 +486,7 @@ impl Ty {
                     item.from_json_value(value)?;
                     items.push(item);
                 }
-            },
+            }
             (Ty::Tuple(items), JsonValue::Array(values)) => {
                 if items.len() != values.len() {
                     return Err(PrimitiveError::TypeMismatch);
@@ -491,10 +494,10 @@ impl Ty {
                 for (item, value) in items.iter_mut().zip(values) {
                     item.from_json_value(value)?;
                 }
-            },
+            }
             (Ty::ByteArray(bytes), JsonValue::String(s)) => {
                 *bytes = s;
-            },
+            }
             _ => return Err(PrimitiveError::TypeMismatch),
         }
         Ok(())
