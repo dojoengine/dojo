@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use katana_primitives::block::{BlockIdOrTag, BlockTag};
 use katana_primitives::state::StateUpdates;
 use katana_primitives::Felt;
-use reqwest::{Client, Error as ReqwestError, StatusCode};
+use reqwest::{Client, StatusCode};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use url::Url;
@@ -12,63 +12,23 @@ mod types;
 
 use types::{CompiledClass, ContractClass};
 
-#[derive(Debug, Clone)]
-pub struct SequencerGateway {
-    base_url: Url,
-    client: Client,
-}
-
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error(transparent)]
-    Network(#[from] ReqwestError),
+    Network(#[from] reqwest::Error),
+
     #[error(transparent)]
     Sequencer(SequencerError),
+
     #[error("Request rate limited")]
     RateLimited,
 }
 
-#[derive(Debug, thiserror::Error, Deserialize)]
-#[error("{message} ({code:?})")]
-pub struct SequencerError {
-    pub code: ErrorCode,
-    pub message: String,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
-pub enum ErrorCode {
-    #[serde(rename = "StarknetErrorCode.BLOCK_NOT_FOUND")]
-    BlockNotFound,
-    #[serde(rename = "StarknetErrorCode.ENTRY_POINT_NOT_FOUND_IN_CONTRACT")]
-    EntryPointNotFoundInContract,
-    #[serde(rename = "StarknetErrorCode.INVALID_PROGRAM")]
-    InvalidProgram,
-    #[serde(rename = "StarknetErrorCode.TRANSACTION_FAILED")]
-    TransactionFailed,
-    #[serde(rename = "StarknetErrorCode.TRANSACTION_NOT_FOUND")]
-    TransactionNotFound,
-    #[serde(rename = "StarknetErrorCode.UNINITIALIZED_CONTRACT")]
-    UninitializedContract,
-    #[serde(rename = "StarkErrorCode.MALFORMED_REQUEST")]
-    MalformedRequest,
-    #[serde(rename = "StarknetErrorCode.UNDECLARED_CLASS")]
-    UndeclaredClass,
-    #[serde(rename = "StarknetErrorCode.INVALID_TRANSACTION_NONCE")]
-    InvalidTransactionNonce,
-    #[serde(rename = "StarknetErrorCode.VALIDATE_FAILURE")]
-    ValidateFailure,
-    #[serde(rename = "StarknetErrorCode.CLASS_ALREADY_DECLARED")]
-    ClassAlreadyDeclared,
-    #[serde(rename = "StarknetErrorCode.COMPILATION_FAILED")]
-    CompilationFailed,
-    #[serde(rename = "StarknetErrorCode.INVALID_COMPILED_CLASS_HASH")]
-    InvalidCompiledClassHash,
-    #[serde(rename = "StarknetErrorCode.DUPLICATED_TRANSACTION")]
-    DuplicatedTransaction,
-    #[serde(rename = "StarknetErrorCode.INVALID_CONTRACT_CLASS")]
-    InvalidContractClass,
-    #[serde(rename = "StarknetErrorCode.DEPRECATED_ENDPOINT")]
-    DeprecatedEndpoint,
+/// A client for interacting with the Starknet's feeder gateway.
+#[derive(Debug, Clone)]
+pub struct SequencerGateway {
+    base_url: Url,
+    client: Client,
 }
 
 impl SequencerGateway {
@@ -173,6 +133,49 @@ impl<'a> RequestBuilder<'a> {
             }
         }
     }
+}
+
+#[derive(Debug, thiserror::Error, Deserialize)]
+#[error("{message} ({code:?})")]
+pub struct SequencerError {
+    pub code: ErrorCode,
+    pub message: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+pub enum ErrorCode {
+    #[serde(rename = "StarknetErrorCode.BLOCK_NOT_FOUND")]
+    BlockNotFound,
+    #[serde(rename = "StarknetErrorCode.ENTRY_POINT_NOT_FOUND_IN_CONTRACT")]
+    EntryPointNotFoundInContract,
+    #[serde(rename = "StarknetErrorCode.INVALID_PROGRAM")]
+    InvalidProgram,
+    #[serde(rename = "StarknetErrorCode.TRANSACTION_FAILED")]
+    TransactionFailed,
+    #[serde(rename = "StarknetErrorCode.TRANSACTION_NOT_FOUND")]
+    TransactionNotFound,
+    #[serde(rename = "StarknetErrorCode.UNINITIALIZED_CONTRACT")]
+    UninitializedContract,
+    #[serde(rename = "StarkErrorCode.MALFORMED_REQUEST")]
+    MalformedRequest,
+    #[serde(rename = "StarknetErrorCode.UNDECLARED_CLASS")]
+    UndeclaredClass,
+    #[serde(rename = "StarknetErrorCode.INVALID_TRANSACTION_NONCE")]
+    InvalidTransactionNonce,
+    #[serde(rename = "StarknetErrorCode.VALIDATE_FAILURE")]
+    ValidateFailure,
+    #[serde(rename = "StarknetErrorCode.CLASS_ALREADY_DECLARED")]
+    ClassAlreadyDeclared,
+    #[serde(rename = "StarknetErrorCode.COMPILATION_FAILED")]
+    CompilationFailed,
+    #[serde(rename = "StarknetErrorCode.INVALID_COMPILED_CLASS_HASH")]
+    InvalidCompiledClassHash,
+    #[serde(rename = "StarknetErrorCode.DUPLICATED_TRANSACTION")]
+    DuplicatedTransaction,
+    #[serde(rename = "StarknetErrorCode.INVALID_CONTRACT_CLASS")]
+    InvalidContractClass,
+    #[serde(rename = "StarknetErrorCode.DEPRECATED_ENDPOINT")]
+    DeprecatedEndpoint,
 }
 
 #[cfg(test)]
