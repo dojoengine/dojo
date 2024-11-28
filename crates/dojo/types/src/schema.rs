@@ -338,9 +338,9 @@ impl Ty {
                         "low": low.to_string()
                     }))
                 }
-                Primitive::Felt252(Some(v)) => Ok(json!(v.to_string())),
-                Primitive::ClassHash(Some(v)) => Ok(json!(v.to_string())),
-                Primitive::ContractAddress(Some(v)) => Ok(json!(v.to_string())),
+                Primitive::Felt252(Some(v)) => Ok(json!(format!("{:#x}", v))),
+                Primitive::ClassHash(Some(v)) => Ok(json!(format!("{:#x}", v))),
+                Primitive::ContractAddress(Some(v)) => Ok(json!(format!("{:#x}", v))),
                 _ => Err(PrimitiveError::MissingFieldElement),
             },
             Ty::Struct(s) => {
