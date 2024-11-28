@@ -1,130 +1,130 @@
 [
   {
-    "target": "0x70058e3886cb7411e8a77db90ee3dd453ac16b763b30bd99b3c8440fe42056e",
-    "method": "uuid"
-  },
-  {
-    "target": "0x70058e3886cb7411e8a77db90ee3dd453ac16b763b30bd99b3c8440fe42056e",
-    "method": "set_metadata"
-  },
-  {
-    "target": "0x70058e3886cb7411e8a77db90ee3dd453ac16b763b30bd99b3c8440fe42056e",
-    "method": "register_namespace"
-  },
-  {
-    "target": "0x70058e3886cb7411e8a77db90ee3dd453ac16b763b30bd99b3c8440fe42056e",
-    "method": "register_event"
-  },
-  {
-    "target": "0x70058e3886cb7411e8a77db90ee3dd453ac16b763b30bd99b3c8440fe42056e",
-    "method": "register_model"
-  },
-  {
-    "target": "0x70058e3886cb7411e8a77db90ee3dd453ac16b763b30bd99b3c8440fe42056e",
-    "method": "register_contract"
-  },
-  {
-    "target": "0x70058e3886cb7411e8a77db90ee3dd453ac16b763b30bd99b3c8440fe42056e",
-    "method": "init_contract"
-  },
-  {
-    "target": "0x70058e3886cb7411e8a77db90ee3dd453ac16b763b30bd99b3c8440fe42056e",
-    "method": "upgrade_event"
-  },
-  {
-    "target": "0x70058e3886cb7411e8a77db90ee3dd453ac16b763b30bd99b3c8440fe42056e",
-    "method": "upgrade_model"
-  },
-  {
-    "target": "0x70058e3886cb7411e8a77db90ee3dd453ac16b763b30bd99b3c8440fe42056e",
-    "method": "upgrade_contract"
-  },
-  {
-    "target": "0x70058e3886cb7411e8a77db90ee3dd453ac16b763b30bd99b3c8440fe42056e",
-    "method": "emit_event"
-  },
-  {
-    "target": "0x70058e3886cb7411e8a77db90ee3dd453ac16b763b30bd99b3c8440fe42056e",
-    "method": "emit_events"
-  },
-  {
-    "target": "0x70058e3886cb7411e8a77db90ee3dd453ac16b763b30bd99b3c8440fe42056e",
-    "method": "set_entity"
-  },
-  {
-    "target": "0x70058e3886cb7411e8a77db90ee3dd453ac16b763b30bd99b3c8440fe42056e",
-    "method": "set_entities"
-  },
-  {
-    "target": "0x70058e3886cb7411e8a77db90ee3dd453ac16b763b30bd99b3c8440fe42056e",
-    "method": "delete_entity"
-  },
-  {
-    "target": "0x70058e3886cb7411e8a77db90ee3dd453ac16b763b30bd99b3c8440fe42056e",
-    "method": "delete_entities"
-  },
-  {
-    "target": "0x70058e3886cb7411e8a77db90ee3dd453ac16b763b30bd99b3c8440fe42056e",
-    "method": "grant_owner"
-  },
-  {
-    "target": "0x70058e3886cb7411e8a77db90ee3dd453ac16b763b30bd99b3c8440fe42056e",
-    "method": "revoke_owner"
-  },
-  {
-    "target": "0x70058e3886cb7411e8a77db90ee3dd453ac16b763b30bd99b3c8440fe42056e",
-    "method": "grant_writer"
-  },
-  {
-    "target": "0x70058e3886cb7411e8a77db90ee3dd453ac16b763b30bd99b3c8440fe42056e",
-    "method": "revoke_writer"
-  },
-  {
-    "target": "0x70058e3886cb7411e8a77db90ee3dd453ac16b763b30bd99b3c8440fe42056e",
+    "target": "0x72a9f501c260b2d13f8988ea172680c5c1fdc085c5b44bdcac8477362ed5290",
     "method": "upgrade"
   },
   {
-    "target": "0x7e5b903baa82407f74bd0a573352e0ca33f2b9fac3bcc2e35230119841cd08",
-    "method": "upgrade"
-  },
-  {
-    "target": "0x32bc6ef441c52acfc62ee1186885760803d88e165119fdad6e16f9424547981",
-    "method": "upgrade"
-  },
-  {
-    "target": "0x72b95d835f6158dd1454c1b4463a91222c6088f1bf5dd2cdd09268f92dad16f",
-    "method": "upgrade"
-  },
-  {
-    "target": "0x1cc5853cbf65c96d7c3c8f951e6315f3c1f19a34ace7b579da9ba87b974dce3",
+    "target": "0x7e8a52c68b243d3a86a55c04ccec2edc760252d5952566d3af4001bd6cf38f3",
     "method": "spawn"
   },
   {
-    "target": "0x1cc5853cbf65c96d7c3c8f951e6315f3c1f19a34ace7b579da9ba87b974dce3",
+    "target": "0x7e8a52c68b243d3a86a55c04ccec2edc760252d5952566d3af4001bd6cf38f3",
     "method": "move"
   },
   {
-    "target": "0x1cc5853cbf65c96d7c3c8f951e6315f3c1f19a34ace7b579da9ba87b974dce3",
+    "target": "0x7e8a52c68b243d3a86a55c04ccec2edc760252d5952566d3af4001bd6cf38f3",
     "method": "set_player_config"
   },
   {
-    "target": "0x1cc5853cbf65c96d7c3c8f951e6315f3c1f19a34ace7b579da9ba87b974dce3",
+    "target": "0x7e8a52c68b243d3a86a55c04ccec2edc760252d5952566d3af4001bd6cf38f3",
     "method": "reset_player_config"
   },
   {
-    "target": "0x1cc5853cbf65c96d7c3c8f951e6315f3c1f19a34ace7b579da9ba87b974dce3",
+    "target": "0x7e8a52c68b243d3a86a55c04ccec2edc760252d5952566d3af4001bd6cf38f3",
     "method": "set_player_server_profile"
   },
   {
-    "target": "0x1cc5853cbf65c96d7c3c8f951e6315f3c1f19a34ace7b579da9ba87b974dce3",
+    "target": "0x7e8a52c68b243d3a86a55c04ccec2edc760252d5952566d3af4001bd6cf38f3",
     "method": "set_models"
   },
   {
-    "target": "0x1cc5853cbf65c96d7c3c8f951e6315f3c1f19a34ace7b579da9ba87b974dce3",
+    "target": "0x7e8a52c68b243d3a86a55c04ccec2edc760252d5952566d3af4001bd6cf38f3",
     "method": "enter_dungeon"
   },
   {
-    "target": "0x1cc5853cbf65c96d7c3c8f951e6315f3c1f19a34ace7b579da9ba87b974dce3",
+    "target": "0x7e8a52c68b243d3a86a55c04ccec2edc760252d5952566d3af4001bd6cf38f3",
+    "method": "upgrade"
+  },
+  {
+    "target": "0x50b1497d463d52cbeb5919a35a82360ea6702db2b9c62c2d69c167995f34c08",
+    "method": "upgrade"
+  },
+  {
+    "target": "0x4b41a2abaeff170f3a04acb0144790a5a812e25e7a735dfef959247cfeb527",
+    "method": "upgrade"
+  },
+  {
+    "target": "0x52ee4d3cba58d1a0462bbfb6813bf5aa1b35078c3b859cded2b727c1d9469ea",
+    "method": "uuid"
+  },
+  {
+    "target": "0x52ee4d3cba58d1a0462bbfb6813bf5aa1b35078c3b859cded2b727c1d9469ea",
+    "method": "set_metadata"
+  },
+  {
+    "target": "0x52ee4d3cba58d1a0462bbfb6813bf5aa1b35078c3b859cded2b727c1d9469ea",
+    "method": "register_namespace"
+  },
+  {
+    "target": "0x52ee4d3cba58d1a0462bbfb6813bf5aa1b35078c3b859cded2b727c1d9469ea",
+    "method": "register_event"
+  },
+  {
+    "target": "0x52ee4d3cba58d1a0462bbfb6813bf5aa1b35078c3b859cded2b727c1d9469ea",
+    "method": "register_model"
+  },
+  {
+    "target": "0x52ee4d3cba58d1a0462bbfb6813bf5aa1b35078c3b859cded2b727c1d9469ea",
+    "method": "register_contract"
+  },
+  {
+    "target": "0x52ee4d3cba58d1a0462bbfb6813bf5aa1b35078c3b859cded2b727c1d9469ea",
+    "method": "init_contract"
+  },
+  {
+    "target": "0x52ee4d3cba58d1a0462bbfb6813bf5aa1b35078c3b859cded2b727c1d9469ea",
+    "method": "upgrade_event"
+  },
+  {
+    "target": "0x52ee4d3cba58d1a0462bbfb6813bf5aa1b35078c3b859cded2b727c1d9469ea",
+    "method": "upgrade_model"
+  },
+  {
+    "target": "0x52ee4d3cba58d1a0462bbfb6813bf5aa1b35078c3b859cded2b727c1d9469ea",
+    "method": "upgrade_contract"
+  },
+  {
+    "target": "0x52ee4d3cba58d1a0462bbfb6813bf5aa1b35078c3b859cded2b727c1d9469ea",
+    "method": "emit_event"
+  },
+  {
+    "target": "0x52ee4d3cba58d1a0462bbfb6813bf5aa1b35078c3b859cded2b727c1d9469ea",
+    "method": "emit_events"
+  },
+  {
+    "target": "0x52ee4d3cba58d1a0462bbfb6813bf5aa1b35078c3b859cded2b727c1d9469ea",
+    "method": "set_entity"
+  },
+  {
+    "target": "0x52ee4d3cba58d1a0462bbfb6813bf5aa1b35078c3b859cded2b727c1d9469ea",
+    "method": "set_entities"
+  },
+  {
+    "target": "0x52ee4d3cba58d1a0462bbfb6813bf5aa1b35078c3b859cded2b727c1d9469ea",
+    "method": "delete_entity"
+  },
+  {
+    "target": "0x52ee4d3cba58d1a0462bbfb6813bf5aa1b35078c3b859cded2b727c1d9469ea",
+    "method": "delete_entities"
+  },
+  {
+    "target": "0x52ee4d3cba58d1a0462bbfb6813bf5aa1b35078c3b859cded2b727c1d9469ea",
+    "method": "grant_owner"
+  },
+  {
+    "target": "0x52ee4d3cba58d1a0462bbfb6813bf5aa1b35078c3b859cded2b727c1d9469ea",
+    "method": "revoke_owner"
+  },
+  {
+    "target": "0x52ee4d3cba58d1a0462bbfb6813bf5aa1b35078c3b859cded2b727c1d9469ea",
+    "method": "grant_writer"
+  },
+  {
+    "target": "0x52ee4d3cba58d1a0462bbfb6813bf5aa1b35078c3b859cded2b727c1d9469ea",
+    "method": "revoke_writer"
+  },
+  {
+    "target": "0x52ee4d3cba58d1a0462bbfb6813bf5aa1b35078c3b859cded2b727c1d9469ea",
     "method": "upgrade"
   },
   {

@@ -1,13 +1,14 @@
 #![warn(unused_crate_dependencies)]
 
-#[cfg(feature = "metadata")]
 pub mod metadata;
 
 pub mod config;
+pub mod constants;
 pub mod contracts;
 pub mod diff;
 pub mod local;
 pub mod remote;
+pub mod services;
 pub mod uri;
 pub mod utils;
 

@@ -1,8 +1,9 @@
 use anyhow::{Context, Result};
 use clap::Args;
-use colored::Colorize;
+use colored::*;
 use dojo_utils::{self, TxnConfig};
 use dojo_world::contracts::WorldContract;
+use dojo_world::services::IpfsService;
 use scarb::core::{Config, Workspace};
 use sozo_ops::migrate::{Migration, MigrationResult};
 use sozo_ops::migration_ui::MigrationUi;
@@ -14,6 +15,7 @@ use tabled::{Table, Tabled};
 use tracing::trace;
 
 use super::options::account::AccountOptions;
+use super::options::ipfs::IpfsOptions;
 use super::options::starknet::StarknetOptions;
 use super::options::transaction::TransactionOptions;
 use super::options::world::WorldOptions;
@@ -32,6 +34,9 @@ pub struct MigrateArgs {
 
     #[command(flatten)]
     pub account: AccountOptions,
+
+    #[command(flatten)]
+    pub ipfs: IpfsOptions,
 }
 
 impl MigrateArgs {
@@ -43,7 +48,7 @@ impl MigrateArgs {
         ws.profile_check()?;
         ws.ensure_profile_artifacts()?;
 
-        let MigrateArgs { world, starknet, account, .. } = self;
+        let MigrateArgs { world, starknet, account, ipfs, .. } = self;
 
         config.tokio_handle().block_on(async {
             print_banner(&ws, &starknet).await?;
@@ -60,6 +65,7 @@ impl MigrateArgs {
             .await?;
 
             let world_address = world_diff.world_info.address;
+            let profile_config = ws.load_profile_config()?;
 
             let mut txn_config: TxnConfig = self.transaction.try_into()?;
             txn_config.wait = true;
@@ -75,15 +81,45 @@ impl MigrateArgs {
             let MigrationResult { manifest, has_changes } =
                 migration.migrate(&mut spinner).await.context("Migration failed.")?;
 
+            let ipfs_config =
+                ipfs.config().or(profile_config.env.map(|env| env.ipfs_config).unwrap_or(None));
+
+            if let Some(config) = ipfs_config {
+                let mut metadata_service = IpfsService::new(config)?;
+
+                migration
+                    .upload_metadata(&mut spinner, &mut metadata_service)
+                    .await
+                    .context("Metadata upload failed.")?;
+            } else {
+                println!();
+                println!(
+                    "{}",
+                    "IPFS credentials not found. Metadata upload skipped. To upload metadata, configure IPFS credentials in your profile config or environment variables: https://book.dojoengine.org/framework/world/metadata.".bright_yellow()
+                );
+            };
+
             spinner.update_text("Writing manifest...");
             ws.write_manifest_profile(manifest).context("🪦 Failed to write manifest.")?;
 
             let colored_address = format!("{:#066x}", world_address).green();
 
             let (symbol, end_text) = if has_changes {
-                ("⛩️ ", format!("Migration successful with world at address {}", colored_address))
+                (
+                    "⛩️ ",
+                    format!(
+                        "Migration successful with world at address {}",
+                        colored_address
+                    ),
+                )
             } else {
-                ("🪨 ", format!("No changes for world at address {:#066x}", world_address))
+                (
+                    "🪨 ",
+                    format!(
+                        "No changes for world at address {:#066x}",
+                        world_address
+                    ),
+                )
             };
 
             spinner.stop_and_persist_boxed(symbol, end_text);
