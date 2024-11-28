@@ -368,7 +368,7 @@ impl DojoWorld {
                 .await?;
             let mut schema = model.schema;
             schema.from_json_value(
-                serde_json::from_str(&data).map_err(|e| ParseError::FromJsonStr(e))?,
+                serde_json::from_str(&data).map_err(ParseError::FromJsonStr)?,
             )?;
 
             let entity = entities
