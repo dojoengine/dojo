@@ -7,7 +7,7 @@ use num_traits::ToPrimitive;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::Felt;
 use strum_macros::AsRefStr;
-use serde_json::{Number, Value as JsonValue};
+use serde_json::{Value as JsonValue, json};
 use indexmap::IndexMap;
 
 use crate::primitive::{Primitive, PrimitiveError};
@@ -316,31 +316,30 @@ impl Ty {
     pub fn to_json_value(&self) -> Result<JsonValue, PrimitiveError> {
         match self {
             Ty::Primitive(primitive) => match primitive {
-                Primitive::Bool(Some(v)) => Ok(JsonValue::Bool(*v)),
-                Primitive::I8(Some(v)) => Ok(JsonValue::Number(Number::from(*v))),
-                Primitive::I16(Some(v)) => Ok(JsonValue::Number(Number::from(*v))),
-                Primitive::I32(Some(v)) => Ok(JsonValue::Number(Number::from(*v))),
-                Primitive::I64(Some(v)) => Ok(JsonValue::String(v.to_string())),
-                Primitive::I128(Some(v)) => Ok(JsonValue::String(v.to_string())),
-                Primitive::U8(Some(v)) => Ok(JsonValue::Number(Number::from(*v))),
-                Primitive::U16(Some(v)) => Ok(JsonValue::Number(Number::from(*v))),
-                Primitive::U32(Some(v)) => Ok(JsonValue::Number(Number::from(*v))),
-                Primitive::U64(Some(v)) => Ok(JsonValue::String(v.to_string())),
-                Primitive::U128(Some(v)) => Ok(JsonValue::String(v.to_string())),
-                Primitive::USize(Some(v)) => Ok(JsonValue::Number(Number::from(*v))),
+                Primitive::Bool(Some(v)) => Ok(json!(*v)),
+                Primitive::I8(Some(v)) => Ok(json!(*v)),
+                Primitive::I16(Some(v)) => Ok(json!(*v)),
+                Primitive::I32(Some(v)) => Ok(json!(*v)),
+                Primitive::I64(Some(v)) => Ok(json!(v.to_string())),
+                Primitive::I128(Some(v)) => Ok(json!(v.to_string())),
+                Primitive::U8(Some(v)) => Ok(json!(*v)),
+                Primitive::U16(Some(v)) => Ok(json!(*v)),
+                Primitive::U32(Some(v)) => Ok(json!(*v)),
+                Primitive::U64(Some(v)) => Ok(json!(v.to_string())),
+                Primitive::U128(Some(v)) => Ok(json!(v.to_string())),
+                Primitive::USize(Some(v)) => Ok(json!(*v)),
                 Primitive::U256(Some(v)) => {
                     let bytes = v.to_be_bytes();
                     let high = u128::from_be_bytes(bytes[..16].try_into().unwrap());
                     let low = u128::from_be_bytes(bytes[16..].try_into().unwrap());
-                    
-                    let mut obj = IndexMap::new();
-                    obj.insert("high".to_string(), JsonValue::String(high.to_string()));
-                    obj.insert("low".to_string(), JsonValue::String(low.to_string()));
-                    Ok(JsonValue::Object(obj.into_iter().collect()))
+                    Ok(json!({
+                        "high": high.to_string(),
+                        "low": low.to_string()
+                    }))
                 }
-                Primitive::Felt252(Some(v)) => Ok(JsonValue::String(v.to_string())),
-                Primitive::ClassHash(Some(v)) => Ok(JsonValue::String(v.to_string())),
-                Primitive::ContractAddress(Some(v)) => Ok(JsonValue::String(v.to_string())),
+                Primitive::Felt252(Some(v)) => Ok(json!(v.to_string())),
+                Primitive::ClassHash(Some(v)) => Ok(json!(v.to_string())),
+                Primitive::ContractAddress(Some(v)) => Ok(json!(v.to_string())),
                 _ => Err(PrimitiveError::MissingFieldElement),
             },
             Ty::Struct(s) => {
@@ -348,23 +347,23 @@ impl Ty {
                 for member in &s.children {
                     obj.insert(member.name.clone(), member.ty.to_json_value()?);
                 }
-                Ok(JsonValue::Object(obj.into_iter().collect()))
+                Ok(json!(obj))
             },
             Ty::Enum(e) => {
                 let option = e.option().map_err(|_| PrimitiveError::MissingFieldElement)?;
-                let mut obj = IndexMap::new();
-                obj.insert(option.name.clone(), option.ty.to_json_value()?);
-                Ok(JsonValue::Object(obj.into_iter().collect()))
+                Ok(json!({
+                    option.name.clone(): option.ty.to_json_value()?
+                }))
             },
             Ty::Array(items) => {
-                let values: Result<Vec<JsonValue>, _> = items.iter().map(|ty| ty.to_json_value()).collect();
-                Ok(JsonValue::Array(values?))
+                let values: Result<Vec<_>, _> = items.iter().map(|ty| ty.to_json_value()).collect();
+                Ok(json!(values?))
             },
             Ty::Tuple(items) => {
-                let values: Result<Vec<JsonValue>, _> = items.iter().map(|ty| ty.to_json_value()).collect();
-                Ok(JsonValue::Array(values?))
+                let values: Result<Vec<_>, _> = items.iter().map(|ty| ty.to_json_value()).collect();
+                Ok(json!(values?))
             },
-            Ty::ByteArray(bytes) => Ok(JsonValue::String(bytes.clone())),
+            Ty::ByteArray(bytes) => Ok(json!(bytes.clone())),
         }
     }
 
@@ -477,8 +476,8 @@ impl Ty {
                 }
             },
             (Ty::Array(items), JsonValue::Array(values)) => {
+                let template = items[0].clone();
                 items.clear();
-                let template = items.first().cloned().unwrap_or_else(|| Ty::Primitive(Primitive::Felt252(None)));
                 for value in values {
                     let mut item = template.clone();
                     item.from_json_value(value)?;
