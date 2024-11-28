@@ -5,11 +5,12 @@ use starknet::providers::sequencer::models::{
 };
 
 use crate::block::{FinalityStatus, GasPrices, Header, SealedBlock, SealedBlockWithStatus};
-use crate::da::L1DataAvailabilityMode;
+use crate::da::{DataAvailabilityMode, L1DataAvailabilityMode};
 use crate::state::StateUpdates;
-use crate::transaction::TxWithHash;
+use crate::transaction::{InvokeTx, InvokeTxV1, InvokeTxV3, Tx, TxWithHash};
 use crate::version::ProtocolVersion;
 use crate::ContractAddress;
+use crate::Felt;
 
 impl From<FgwBlock> for SealedBlockWithStatus {
     fn from(value: FgwBlock) -> Self {
@@ -109,8 +110,37 @@ impl From<ResourcePrice> for GasPrices {
     }
 }
 
-impl From<InvokeFunctionTransaction> for TxWithHash {
-    fn from(value: InvokeFunctionTransaction) -> Self {
-        todo!()
+impl TryFrom<InvokeFunctionTransaction> for TxWithHash {
+    type Error = ();
+
+    fn try_from(value: InvokeFunctionTransaction) -> Result<Self, Self::Error> {
+        let tx = if value.version == Felt::ONE {
+            InvokeTx::V1(InvokeTxV1 {
+                chain_id: Default::default(),
+                sender_address: value.sender_address.into(),
+                nonce: value.nonce.unwrap_or_default(),
+                calldata: value.calldata,
+                signature: value.signature,
+                max_fee: value.max_fee.and_then(|f| f.to_u128()).unwrap_or_default(),
+            })
+        } else if value.version == Felt::THREE {
+            InvokeTx::V3(InvokeTxV3 {
+                chain_id: Default::default(),
+                sender_address: value.sender_address.into(),
+                nonce: value.nonce.unwrap_or_default(),
+                calldata: value.calldata,
+                signature: value.signature,
+                resource_bounds: Default::default(),
+                tip: value.tip.unwrap_or_default(),
+                paymaster_data: value.paymaster_data.unwrap_or_default(),
+                account_deployment_data: value.account_deployment_data.unwrap_or_default(),
+                nonce_data_availability_mode: DataAvailabilityMode::L1,
+                fee_data_availability_mode: DataAvailabilityMode::L1,
+            })
+        } else {
+            panic!("Unsupported invoke transaction version")
+        };
+
+        Ok(TxWithHash { hash: value.transaction_hash.into(), transaction: Tx::Invoke(tx) })
     }
 }

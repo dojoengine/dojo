@@ -11,6 +11,7 @@ pub mod event;
 pub mod fee;
 pub mod feeder_gateway;
 pub mod genesis;
+pub mod header;
 pub mod message;
 pub mod receipt;
 pub mod trace;
