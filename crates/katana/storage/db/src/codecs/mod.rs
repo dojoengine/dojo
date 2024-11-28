@@ -2,7 +2,7 @@
 pub mod postcard;
 
 use katana_primitives::block::FinalityStatus;
-use katana_primitives::class::FlattenedSierraClass;
+use katana_primitives::class::ContractClass;
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::Felt;
 
@@ -72,14 +72,14 @@ macro_rules! impl_encode_and_decode_for_felts {
 impl_encode_and_decode_for_uints!(u64);
 impl_encode_and_decode_for_felts!(Felt, ContractAddress);
 
-impl Compress for FlattenedSierraClass {
+impl Compress for ContractClass {
     type Compressed = Vec<u8>;
     fn compress(self) -> Self::Compressed {
         serde_json::to_vec(&self).unwrap()
     }
 }
 
-impl Decompress for FlattenedSierraClass {
+impl Decompress for ContractClass {
     fn decompress<B: AsRef<[u8]>>(bytes: B) -> Result<Self, CodecError> {
         serde_json::from_slice(bytes.as_ref()).map_err(|e| CodecError::Decode(e.to_string()))
     }

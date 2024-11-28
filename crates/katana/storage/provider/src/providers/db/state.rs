@@ -6,14 +6,14 @@ use katana_db::models::list::BlockList;
 use katana_db::models::storage::{ContractStorageKey, StorageEntry};
 use katana_db::tables;
 use katana_primitives::block::BlockNumber;
-use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
+use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, ContractClass};
 use katana_primitives::contract::{
     ContractAddress, GenericContractInfo, Nonce, StorageKey, StorageValue,
 };
 
 use super::DbProvider;
 use crate::error::ProviderError;
-use crate::traits::contract::{ContractClassProvider, ContractClassWriter};
+use crate::traits::contract::{ContractClassProvider, ContractClassWriter, ContractClassWriterExt};
 use crate::traits::state::{StateProvider, StateWriter};
 use crate::ProviderResult;
 
@@ -70,9 +70,9 @@ impl<Db: Database> StateWriter for DbProvider<Db> {
 }
 
 impl ContractClassWriter for DbProvider {
-    fn set_class(&self, hash: ClassHash, class: CompiledClass) -> ProviderResult<()> {
+    fn set_class(&self, hash: ClassHash, class: ContractClass) -> ProviderResult<()> {
         self.0.update(move |db_tx| -> ProviderResult<()> {
-            db_tx.put::<tables::CompiledClasses>(hash, class)?;
+            db_tx.put::<tables::Classes>(hash, class)?;
             Ok(())
         })?
     }
@@ -87,14 +87,12 @@ impl ContractClassWriter for DbProvider {
             Ok(())
         })?
     }
+}
 
-    fn set_sierra_class(
-        &self,
-        hash: ClassHash,
-        sierra: FlattenedSierraClass,
-    ) -> ProviderResult<()> {
+impl ContractClassWriterExt for DbProvider {
+    fn set_compiled_class(&self, hash: ClassHash, class: CompiledClass) -> ProviderResult<()> {
         self.0.update(move |db_tx| -> ProviderResult<()> {
-            db_tx.put::<tables::SierraClasses>(hash, sierra)?;
+            db_tx.put::<tables::CompiledClasses>(hash, class)?;
             Ok(())
         })?
     }
@@ -114,9 +112,12 @@ impl<Tx> ContractClassProvider for LatestStateProvider<Tx>
 where
     Tx: DbTx + Send + Sync,
 {
-    fn class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
-        let class = self.0.get::<tables::CompiledClasses>(hash)?;
-        Ok(class)
+    fn class(&self, hash: ClassHash) -> ProviderResult<Option<ContractClass>> {
+        Ok(self.0.get::<tables::Classes>(hash)?)
+    }
+
+    fn compiled_class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
+        Ok(self.0.get::<tables::CompiledClasses>(hash)?)
     }
 
     fn compiled_class_hash_of_class_hash(
@@ -125,11 +126,6 @@ where
     ) -> ProviderResult<Option<CompiledClassHash>> {
         let hash = self.0.get::<tables::CompiledClassHashes>(hash)?;
         Ok(hash)
-    }
-
-    fn sierra_class(&self, hash: ClassHash) -> ProviderResult<Option<FlattenedSierraClass>> {
-        let class = self.0.get::<tables::SierraClasses>(hash)?;
-        Ok(class)
     }
 }
 
@@ -183,6 +179,22 @@ impl<Tx> ContractClassProvider for HistoricalStateProvider<Tx>
 where
     Tx: DbTx + fmt::Debug + Send + Sync,
 {
+    fn class(&self, hash: ClassHash) -> ProviderResult<Option<ContractClass>> {
+        if self.compiled_class_hash_of_class_hash(hash)?.is_some() {
+            Ok(self.tx.get::<tables::Classes>(hash)?)
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn compiled_class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
+        if self.compiled_class_hash_of_class_hash(hash)?.is_some() {
+            Ok(self.tx.get::<tables::CompiledClasses>(hash)?)
+        } else {
+            Ok(None)
+        }
+    }
+
     fn compiled_class_hash_of_class_hash(
         &self,
         hash: ClassHash,
@@ -194,23 +206,6 @@ where
             .is_some_and(|num| num <= self.block_number)
         {
             Ok(self.tx.get::<tables::CompiledClassHashes>(hash)?)
-        } else {
-            Ok(None)
-        }
-    }
-
-    fn class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
-        if self.compiled_class_hash_of_class_hash(hash)?.is_some() {
-            let contract = self.tx.get::<tables::CompiledClasses>(hash)?;
-            Ok(contract)
-        } else {
-            Ok(None)
-        }
-    }
-
-    fn sierra_class(&self, hash: ClassHash) -> ProviderResult<Option<FlattenedSierraClass>> {
-        if self.compiled_class_hash_of_class_hash(hash)?.is_some() {
-            self.tx.get::<tables::SierraClasses>(hash).map_err(|e| e.into())
         } else {
             Ok(None)
         }

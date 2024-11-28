@@ -5,11 +5,11 @@ use std::str::FromStr;
 use starknet::core::types::U256;
 use starknet_crypto::Felt;
 
-use super::FELT_DELIMITER;
+use crate::constants::SQL_FELT_DELIMITER;
 
 pub fn felts_to_sql_string(felts: &[Felt]) -> String {
-    felts.iter().map(|k| format!("{:#x}", k)).collect::<Vec<String>>().join(FELT_DELIMITER)
-        + FELT_DELIMITER
+    felts.iter().map(|k| format!("{:#x}", k)).collect::<Vec<String>>().join(SQL_FELT_DELIMITER)
+        + SQL_FELT_DELIMITER
 }
 
 pub fn felt_to_sql_string(felt: &Felt) -> String {
@@ -30,7 +30,7 @@ pub fn sql_string_to_u256(sql_string: &str) -> U256 {
 }
 
 pub fn sql_string_to_felts(sql_string: &str) -> Vec<Felt> {
-    sql_string.split(FELT_DELIMITER).map(|felt| Felt::from_str(felt).unwrap()).collect()
+    sql_string.split(SQL_FELT_DELIMITER).map(|felt| Felt::from_str(felt).unwrap()).collect()
 }
 
 // type used to do calculation on inmemory balances

@@ -60,7 +60,7 @@ where
 
         // If the namespace is not in the list of namespaces to index, silently ignore it.
         // If our config is empty, we index all namespaces.
-        if !config.namespaces.is_empty() && !config.namespaces.contains(&namespace) {
+        if !config.should_index(&namespace) {
             return Ok(());
         }
 

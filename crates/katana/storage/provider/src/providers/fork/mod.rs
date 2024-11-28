@@ -10,11 +10,11 @@ use katana_primitives::block::{
     Block, BlockHash, BlockHashOrNumber, BlockNumber, BlockWithTxHashes, FinalityStatus, Header,
     SealedBlockWithStatus,
 };
-use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
+use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, ContractClass};
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::env::BlockEnv;
 use katana_primitives::receipt::Receipt;
-use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
+use katana_primitives::state::{StateUpdates, StateUpdatesWithClasses};
 use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{Tx, TxHash, TxNumber, TxWithHash};
 use katana_primitives::Felt;
@@ -30,7 +30,7 @@ use crate::traits::block::{
     BlockHashProvider, BlockNumberProvider, BlockProvider, BlockStatusProvider, BlockWriter,
     HeaderProvider,
 };
-use crate::traits::contract::ContractClassWriter;
+use crate::traits::contract::{ContractClassWriter, ContractClassWriterExt};
 use crate::traits::env::BlockEnvProvider;
 use crate::traits::state::{StateFactoryProvider, StateProvider, StateRootProvider, StateWriter};
 use crate::traits::state_update::StateUpdateProvider;
@@ -466,7 +466,7 @@ impl BlockWriter for ForkedProvider {
     fn insert_block_with_states_and_receipts(
         &self,
         block: SealedBlockWithStatus,
-        states: StateUpdatesWithDeclaredClasses,
+        states: StateUpdatesWithClasses,
         receipts: Vec<Receipt>,
         executions: Vec<TxExecInfo>,
     ) -> ProviderResult<()> {
@@ -520,17 +520,8 @@ impl BlockWriter for ForkedProvider {
 }
 
 impl ContractClassWriter for ForkedProvider {
-    fn set_class(&self, hash: ClassHash, class: CompiledClass) -> ProviderResult<()> {
-        self.state.shared_contract_classes.compiled_classes.write().insert(hash, class);
-        Ok(())
-    }
-
-    fn set_sierra_class(
-        &self,
-        hash: ClassHash,
-        sierra: FlattenedSierraClass,
-    ) -> ProviderResult<()> {
-        self.state.shared_contract_classes.sierra_classes.write().insert(hash, sierra);
+    fn set_class(&self, hash: ClassHash, class: ContractClass) -> ProviderResult<()> {
+        self.state.shared_contract_classes.classes.write().insert(hash, class);
         Ok(())
     }
 
@@ -540,6 +531,13 @@ impl ContractClassWriter for ForkedProvider {
         compiled_hash: CompiledClassHash,
     ) -> ProviderResult<()> {
         self.state.compiled_class_hashes.write().insert(hash, compiled_hash);
+        Ok(())
+    }
+}
+
+impl ContractClassWriterExt for ForkedProvider {
+    fn set_compiled_class(&self, hash: ClassHash, class: CompiledClass) -> ProviderResult<()> {
+        self.state.shared_contract_classes.compiled_classes.write().insert(hash, class);
         Ok(())
     }
 }

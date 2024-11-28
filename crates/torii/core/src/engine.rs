@@ -24,6 +24,7 @@ use tokio::task::JoinSet;
 use tokio::time::{sleep, Instant};
 use tracing::{debug, error, info, trace, warn};
 
+use crate::constants::LOG_TARGET;
 use crate::processors::erc20_legacy_transfer::Erc20LegacyTransferProcessor;
 use crate::processors::erc20_transfer::Erc20TransferProcessor;
 use crate::processors::erc721_legacy_transfer::Erc721LegacyTransferProcessor;
@@ -128,24 +129,21 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Processors<P> {
         self.event_processors.get(&contract_type).unwrap()
     }
 }
-pub(crate) const LOG_TARGET: &str = "torii_core::engine";
-pub const QUERY_QUEUE_BATCH_SIZE: usize = 1000;
 
 bitflags! {
     #[derive(Debug, Clone)]
     pub struct IndexingFlags: u32 {
         const TRANSACTIONS = 0b00000001;
         const RAW_EVENTS = 0b00000010;
+        const PENDING_BLOCKS = 0b00000100;
     }
 }
 
 #[derive(Debug)]
 pub struct EngineConfig {
     pub polling_interval: Duration,
-    pub start_block: u64,
     pub blocks_chunk_size: u64,
     pub events_chunk_size: u64,
-    pub index_pending: bool,
     pub max_concurrent_tasks: usize,
     pub flags: IndexingFlags,
     pub event_processor_config: EventProcessorConfig,
@@ -155,10 +153,8 @@ impl Default for EngineConfig {
     fn default() -> Self {
         Self {
             polling_interval: Duration::from_millis(500),
-            start_block: 0,
             blocks_chunk_size: 10240,
             events_chunk_size: 1024,
-            index_pending: true,
             max_concurrent_tasks: 100,
             flags: IndexingFlags::empty(),
             event_processor_config: EventProcessorConfig::default(),
@@ -245,14 +241,6 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
     }
 
     pub async fn start(&mut self) -> Result<()> {
-        // use the start block provided by user if head is 0
-        let (head, _, _) = self.db.head(self.world.address).await?;
-        if head == 0 {
-            self.db.set_head(self.config.start_block, 0, 0, self.world.address).await?;
-        } else if self.config.start_block != 0 {
-            warn!(target: LOG_TARGET, "Start block ignored, stored head exists and will be used instead.");
-        }
-
         let mut backoff_delay = Duration::from_secs(1);
         let max_backoff_delay = Duration::from_secs(60);
 
@@ -324,7 +312,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             let data = self.fetch_range(from, to, &cursors.cursor_map).await?;
             debug!(target: LOG_TARGET, duration = ?instant.elapsed(), from = %from, to = %to, "Fetched data for range.");
             FetchDataResult::Range(data)
-        } else if self.config.index_pending {
+        } else if self.config.flags.contains(IndexingFlags::PENDING_BLOCKS) {
             let data =
                 self.fetch_pending(latest_block.clone(), cursors.last_pending_block_tx).await?;
             debug!(target: LOG_TARGET, duration = ?instant.elapsed(), latest_block_number = %latest_block.block_number, "Fetched pending data.");

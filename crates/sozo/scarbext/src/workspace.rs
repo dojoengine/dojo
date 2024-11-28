@@ -146,7 +146,7 @@ impl WorkspaceExt for Workspace<'_> {
         let manifest_dir = self.manifest_path().parent().unwrap();
         let manifest_dir = Filesystem::new(manifest_dir.into());
 
-        if !manifest_dir.exists() {
+        if !manifest_dir.child(manifest_name.clone()).exists() {
             return Ok(None);
         }
 

@@ -4,6 +4,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Result};
+use dojo_types::naming::get_tag;
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{EnumOption, Member, Struct, Ty};
 use dojo_world::config::WorldMetadata;
@@ -16,6 +17,7 @@ use starknet_crypto::poseidon_hash_many;
 use tokio::sync::mpsc::UnboundedSender;
 use utils::felts_to_sql_string;
 
+use crate::constants::SQL_FELT_DELIMITER;
 use crate::executor::{
     Argument, DeleteEntityQuery, EventMessageQuery, QueryMessage, QueryType, ResetCursorsQuery,
     SetHeadQuery, UpdateCursorsQuery,
@@ -26,12 +28,8 @@ use crate::utils::utc_dt_string_from_timestamp;
 type IsEventMessage = bool;
 type IsStoreUpdate = bool;
 
-pub const WORLD_CONTRACT_TYPE: &str = "WORLD";
-pub const FELT_DELIMITER: &str = "/";
-
 pub mod cache;
 pub mod erc;
-pub mod query_queue;
 #[cfg(test)]
 #[path = "test.rs"]
 mod test;
@@ -260,7 +258,7 @@ impl Sql {
         upgrade_diff: Option<&Ty>,
     ) -> Result<()> {
         let selector = compute_selector_from_names(namespace, &model.name());
-        let namespaced_name = format!("{}-{}", namespace, model.name());
+        let namespaced_name = get_tag(namespace, &model.name());
 
         let insert_models =
             "INSERT INTO models (id, namespace, name, class_hash, contract_address, layout, \
@@ -751,7 +749,7 @@ impl Sql {
                     std::iter::once(entity_id.to_string())
                         .chain(indexes.iter().map(|i| i.to_string()))
                         .collect::<Vec<String>>()
-                        .join(FELT_DELIMITER),
+                        .join(SQL_FELT_DELIMITER),
                 ));
             }
 

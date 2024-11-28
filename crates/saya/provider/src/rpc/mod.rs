@@ -7,16 +7,19 @@ use anyhow::anyhow;
 use jsonrpsee::http_client::HttpClientBuilder;
 use katana_primitives::block::{BlockIdOrTag, BlockNumber, GasPrices, Header, SealedBlock};
 use katana_primitives::chain::ChainId;
+use katana_primitives::class::ContractClass;
 use katana_primitives::conversion::rpc as rpc_converter;
 use katana_primitives::da::L1DataAvailabilityMode;
-use katana_primitives::state::StateUpdatesWithDeclaredClasses;
+use katana_primitives::state::StateUpdatesWithClasses;
 use katana_primitives::transaction::TxWithHash;
 use katana_primitives::version::ProtocolVersion;
 use katana_rpc_api::saya::SayaApiClient;
+use katana_rpc_types::class::{RpcContractClass, RpcSierraContractClass};
 use katana_rpc_types::trace::TxExecutionInfo;
 use num_traits::ToPrimitive;
 use starknet::core::types::{
-    ContractClass, Felt, MaybePendingBlockWithTxs, MaybePendingStateUpdate,
+    ContractClass as StarknetRsContractClass, Felt, MaybePendingBlockWithTxs,
+    MaybePendingStateUpdate,
 };
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider as StarknetProvider};
@@ -126,7 +129,7 @@ impl Provider for JsonRpcProvider {
     async fn fetch_state_updates(
         &self,
         block_number: BlockNumber,
-    ) -> ProviderResult<(StateUpdatesWithDeclaredClasses, Vec<Felt>)> {
+    ) -> ProviderResult<(StateUpdatesWithClasses, Vec<Felt>)> {
         let rpc_state_update = match self
             .starknet_provider
             .get_state_update(BlockIdOrTag::Number(block_number))
@@ -143,7 +146,7 @@ impl Provider for JsonRpcProvider {
         let state_updates = state_converter::state_updates_from_rpc(&rpc_state_update)?;
 
         let mut state_updates_with_classes =
-            StateUpdatesWithDeclaredClasses { state_updates, ..Default::default() };
+            StateUpdatesWithClasses { state_updates, ..Default::default() };
 
         for class_hash in state_updates_with_classes.state_updates.declared_classes.keys() {
             match self
@@ -151,18 +154,19 @@ impl Provider for JsonRpcProvider {
                 .get_class(BlockIdOrTag::Number(block_number), class_hash)
                 .await?
             {
-                ContractClass::Legacy(legacy) => {
+                StarknetRsContractClass::Legacy(legacy) => {
                     trace!(target: LOG_TARGET, version = "cairo 0", %class_hash, "Set contract class.");
 
-                    let (hash, class) = rpc_converter::legacy_rpc_to_compiled_class(&legacy)?;
-                    state_updates_with_classes.declared_compiled_classes.insert(hash, class);
+                    let (.., class) = rpc_converter::legacy_rpc_to_class(&legacy)?;
+                    state_updates_with_classes.classes.insert(*class_hash, class);
                 }
-                ContractClass::Sierra(s) => {
+                StarknetRsContractClass::Sierra(s) => {
                     trace!(target: LOG_TARGET, version = "cairo 1", %class_hash, "Set contract class.");
 
-                    state_updates_with_classes
-                        .declared_sierra_classes
-                        .insert(*class_hash, s.clone());
+                    let class = RpcSierraContractClass::try_from(s).unwrap();
+                    let class = ContractClass::try_from(RpcContractClass::Class(class)).unwrap();
+
+                    state_updates_with_classes.classes.insert(*class_hash, class);
                 }
             }
         }

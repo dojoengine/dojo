@@ -3,6 +3,7 @@ use std::str::FromStr;
 
 use anyhow::Context;
 use clap::ArgAction;
+use serde::ser::SerializeSeq;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::Felt;
 use torii_core::types::{Contract, ContractType};
@@ -141,6 +142,7 @@ pub struct IndexingOptions {
         help = "ERC contract addresses to index. You may only specify ERC20 or ERC721 contracts."
     )]
     #[serde(deserialize_with = "deserialize_contracts")]
+    #[serde(serialize_with = "serialize_contracts")]
     #[serde(default)]
     pub contracts: Vec<Contract>,
 
@@ -208,11 +210,11 @@ impl IndexingOptions {
     }
 }
 
-#[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq, Default)]
 #[command(next_help_heading = "Events indexing options")]
 pub struct EventsOptions {
     /// Whether or not to index raw events
-    #[arg(long = "events.raw", action = ArgAction::Set, default_value_t = true, help = "Whether or not to index raw events.")]
+    #[arg(long = "events.raw", action = ArgAction::Set, default_value_t = false, help = "Whether or not to index raw events.")]
     #[serde(default)]
     pub raw: bool,
 
@@ -225,12 +227,6 @@ pub struct EventsOptions {
     )]
     #[serde(default)]
     pub historical: Vec<String>,
-}
-
-impl Default for EventsOptions {
-    fn default() -> Self {
-        Self { raw: true, historical: vec![] }
-    }
 }
 
 #[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq)]
@@ -325,6 +321,19 @@ where
 {
     let contracts: Vec<String> = Vec::deserialize(deserializer)?;
     contracts.iter().map(|s| parse_erc_contract(s).map_err(serde::de::Error::custom)).collect()
+}
+
+fn serialize_contracts<S>(contracts: &Vec<Contract>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    let mut seq = serializer.serialize_seq(Some(contracts.len()))?;
+
+    for contract in contracts {
+        seq.serialize_element(&contract.to_string())?;
+    }
+
+    seq.end()
 }
 
 // ** Default functions to setup serde of the configuration file **

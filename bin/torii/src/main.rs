@@ -18,6 +18,7 @@ use std::time::Duration;
 
 use camino::Utf8PathBuf;
 use clap::Parser;
+use cli::Cli;
 use dojo_metrics::exporters::prometheus::PrometheusRecorder;
 use dojo_world::contracts::world::WorldContractReader;
 use sqlx::sqlite::{
@@ -30,7 +31,6 @@ use tempfile::{NamedTempFile, TempDir};
 use tokio::sync::broadcast;
 use tokio::sync::broadcast::Sender;
 use tokio_stream::StreamExt;
-use torii_cli::ToriiArgs;
 use torii_core::engine::{Engine, EngineConfig, IndexingFlags, Processors};
 use torii_core::executor::Executor;
 use torii_core::processors::store_transaction::StoreTransactionProcessor;
@@ -46,9 +46,11 @@ use url::{form_urlencoded, Url};
 
 pub(crate) const LOG_TARGET: &str = "torii::cli";
 
+mod cli;
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let mut args = ToriiArgs::parse().with_config_file()?;
+    let mut args = Cli::parse().args.with_config_file()?;
 
     let world_address = if let Some(world_address) = args.world_address {
         world_address
@@ -56,7 +58,6 @@ async fn main() -> anyhow::Result<()> {
         return Err(anyhow::anyhow!("Please specify a world address."));
     };
 
-    // let mut contracts = parse_erc_contracts(&args.contracts)?;
     args.indexing.contracts.push(Contract { address: world_address, r#type: ContractType::WORLD });
 
     let filter_layer = EnvFilter::try_from_default_env()
@@ -96,7 +97,14 @@ async fn main() -> anyhow::Result<()> {
     options = options.journal_mode(SqliteJournalMode::Wal);
     options = options.synchronous(SqliteSynchronous::Normal);
 
-    let pool = SqlitePoolOptions::new().min_connections(1).connect_with(options).await?;
+    let pool = SqlitePoolOptions::new().min_connections(1).connect_with(options.clone()).await?;
+
+    let readonly_options = options.read_only(true);
+    let readonly_pool = SqlitePoolOptions::new()
+        .min_connections(1)
+        .max_connections(100)
+        .connect_with(readonly_options)
+        .await?;
 
     // Set the number of threads based on CPU count
     let cpu_count = std::thread::available_parallelism().unwrap().get();
@@ -119,7 +127,7 @@ async fn main() -> anyhow::Result<()> {
     .await?;
     let executor_handle = tokio::spawn(async move { executor.run().await });
 
-    let model_cache = Arc::new(ModelCache::new(pool.clone()));
+    let model_cache = Arc::new(ModelCache::new(readonly_pool.clone()));
     let db = Sql::new(pool.clone(), sender.clone(), &args.indexing.contracts, model_cache.clone())
         .await?;
 
@@ -137,6 +145,9 @@ async fn main() -> anyhow::Result<()> {
     if args.events.raw {
         flags.insert(IndexingFlags::RAW_EVENTS);
     }
+    if args.indexing.pending {
+        flags.insert(IndexingFlags::PENDING_BLOCKS);
+    }
 
     let mut engine: Engine<Arc<JsonRpcClient<HttpTransport>>> = Engine::new(
         world,
@@ -145,10 +156,8 @@ async fn main() -> anyhow::Result<()> {
         processors,
         EngineConfig {
             max_concurrent_tasks: args.indexing.max_concurrent_tasks,
-            start_block: 0,
             blocks_chunk_size: args.indexing.blocks_chunk_size,
             events_chunk_size: args.indexing.events_chunk_size,
-            index_pending: args.indexing.pending,
             polling_interval: Duration::from_millis(args.indexing.polling_interval),
             flags,
             event_processor_config: EventProcessorConfig {
@@ -164,7 +173,7 @@ async fn main() -> anyhow::Result<()> {
     let shutdown_rx = shutdown_tx.subscribe();
     let (grpc_addr, grpc_server) = torii_grpc::server::new(
         shutdown_rx,
-        &pool,
+        &readonly_pool,
         block_rx,
         world_address,
         Arc::clone(&provider),
@@ -179,8 +188,12 @@ async fn main() -> anyhow::Result<()> {
     tokio::fs::create_dir_all(&artifacts_path).await?;
     let absolute_path = artifacts_path.canonicalize_utf8()?;
 
-    let (artifacts_addr, artifacts_server) =
-        torii_server::artifacts::new(shutdown_tx.subscribe(), &absolute_path, pool.clone()).await?;
+    let (artifacts_addr, artifacts_server) = torii_server::artifacts::new(
+        shutdown_tx.subscribe(),
+        &absolute_path,
+        readonly_pool.clone(),
+    )
+    .await?;
 
     let mut libp2p_relay_server = torii_relay::server::Relay::new(
         db,
@@ -201,11 +214,12 @@ async fn main() -> anyhow::Result<()> {
         Some(grpc_addr),
         None,
         Some(artifacts_addr),
+        Arc::new(readonly_pool.clone()),
     ));
 
     let graphql_server = spawn_rebuilding_graphql_server(
         shutdown_tx.clone(),
-        pool.into(),
+        readonly_pool.into(),
         args.external_url,
         proxy_server.clone(),
     );

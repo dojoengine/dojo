@@ -1,14 +1,6 @@
 [
   {
-    "target": "0x4b41a2abaeff170f3a04acb0144790a5a812e25e7a735dfef959247cfeb527",
-    "method": "upgrade"
-  },
-  {
     "target": "0x72a9f501c260b2d13f8988ea172680c5c1fdc085c5b44bdcac8477362ed5290",
-    "method": "upgrade"
-  },
-  {
-    "target": "0x50b1497d463d52cbeb5919a35a82360ea6702db2b9c62c2d69c167995f34c08",
     "method": "upgrade"
   },
   {
@@ -41,6 +33,14 @@
   },
   {
     "target": "0x7e8a52c68b243d3a86a55c04ccec2edc760252d5952566d3af4001bd6cf38f3",
+    "method": "upgrade"
+  },
+  {
+    "target": "0x50b1497d463d52cbeb5919a35a82360ea6702db2b9c62c2d69c167995f34c08",
+    "method": "upgrade"
+  },
+  {
+    "target": "0x4b41a2abaeff170f3a04acb0144790a5a812e25e7a735dfef959247cfeb527",
     "method": "upgrade"
   },
   {

@@ -1,7 +1,8 @@
-use cainome::parser::tokens::{CompositeType, Function, Token};
+use cainome::parser::tokens::{CompositeType, Function, StateMutability, Token};
 use convert_case::{Case, Casing};
 use dojo_world::contracts::naming;
 
+use super::constants::JS_BIGNUMBERISH;
 use super::JsType;
 use crate::error::BindgenResult;
 use crate::plugins::{BindgenContractGenerator, Buffer};
@@ -12,7 +13,8 @@ impl TsFunctionGenerator {
     fn check_imports(&self, buffer: &mut Buffer) {
         if !buffer.has("import { DojoProvider } from ") {
             buffer.insert(0, "import { DojoProvider } from \"@dojoengine/core\";".to_owned());
-            buffer.insert(1, "import { Account } from \"starknet\";".to_owned());
+            buffer
+                .insert(1, format!("import {{ Account, {} }} from \"starknet\";", JS_BIGNUMBERISH));
             buffer.insert(2, "import * as models from \"./models.gen\";\n".to_owned());
         }
     }
@@ -33,8 +35,9 @@ impl TsFunctionGenerator {
         contract_name: &str,
         token: &Function,
     ) -> String {
-        format!(
-            "\tconst {contract_name}_{} = async ({}) => {{
+        match token.state_mutability {
+            StateMutability::External => format!(
+                "\tconst {contract_name}_{} = async ({}) => {{
 \t\ttry {{
 \t\t\treturn await provider.execute(
 \t\t\t\tsnAccount,
@@ -49,15 +52,36 @@ impl TsFunctionGenerator {
 \t\t\tconsole.error(error);
 \t\t}}
 \t}};\n",
-            token.name.to_case(Case::Camel),
-            self.format_function_inputs(token),
-            token.name,
-            self.format_function_calldata(token)
-        )
+                token.name.to_case(Case::Camel),
+                self.format_function_inputs(token),
+                token.name,
+                self.format_function_calldata(token)
+            ),
+            StateMutability::View => format!(
+                "\tconst {contract_name}_{} = async ({}) => {{
+\t\ttry {{
+\t\t\treturn await provider.call(\"{namespace}\", {{
+\t\t\t\tcontractName: \"{contract_name}\",
+\t\t\t\tentrypoint: \"{}\",
+\t\t\t\tcalldata: [{}],
+\t\t\t}});
+\t\t}} catch (error) {{
+\t\t\tconsole.error(error);
+\t\t}}
+\t}};\n",
+                token.name.to_case(Case::Camel),
+                self.format_function_inputs(token),
+                token.name,
+                self.format_function_calldata(token)
+            ),
+        }
     }
 
     fn format_function_inputs(&self, token: &Function) -> String {
-        let inputs = vec!["snAccount: Account".to_owned()];
+        let inputs = match token.state_mutability {
+            StateMutability::External => vec!["snAccount: Account".to_owned()],
+            StateMutability::View => Vec::new(),
+        };
         token
             .inputs
             .iter()
@@ -235,8 +259,8 @@ mod tests {
     fn test_generate_system_function() {
         let generator = TsFunctionGenerator {};
         let function = create_change_theme_function();
-        let expected = "\tconst actions_changeTheme = async (snAccount: Account, value: number) \
-                        => {
+        let expected = "\tconst actions_changeTheme = async (snAccount: Account, value: \
+                        BigNumberish) => {
 \t\ttry {
 \t\t\treturn await provider.execute(
 \t\t\t\tsnAccount,
@@ -268,7 +292,14 @@ mod tests {
     fn test_format_function_inputs() {
         let generator = TsFunctionGenerator {};
         let function = create_change_theme_function();
-        let expected = "snAccount: Account, value: number";
+        let expected = "snAccount: Account, value: BigNumberish";
+        assert_eq!(expected, generator.format_function_inputs(&function))
+    }
+    #[test]
+    fn test_format_function_inputs_view() {
+        let generator = TsFunctionGenerator {};
+        let function = create_basic_view_function();
+        let expected = "";
         assert_eq!(expected, generator.format_function_inputs(&function))
     }
 
@@ -276,7 +307,7 @@ mod tests {
     fn test_format_function_inputs_complex() {
         let generator = TsFunctionGenerator {};
         let function = create_change_theme_function();
-        let expected = "snAccount: Account, value: number";
+        let expected = "snAccount: Account, value: BigNumberish";
         assert_eq!(expected, generator.format_function_inputs(&function))
     }
 
@@ -406,6 +437,17 @@ mod tests {
             )],
         )
     }
+
+    fn create_basic_view_function() -> Function {
+        Function {
+            name: "allowance".to_owned(),
+            state_mutability: cainome::parser::tokens::StateMutability::View,
+            inputs: vec![],
+            outputs: vec![],
+            named_outputs: vec![],
+        }
+    }
+
     fn create_change_theme_function_camelized() -> Function {
         create_test_function(
             "changeTheme",

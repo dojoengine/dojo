@@ -1,6 +1,6 @@
 use katana_db::error::DatabaseError;
 use katana_primitives::block::BlockNumber;
-use katana_primitives::class::ClassHash;
+use katana_primitives::class::{ClassHash, ContractClassCompilationError};
 use katana_primitives::contract::{ContractAddress, StorageKey};
 use katana_primitives::transaction::TxNumber;
 
@@ -95,6 +95,9 @@ pub enum ProviderError {
         /// The updated storage key.
         storage_key: StorageKey,
     },
+
+    #[error(transparent)]
+    ContractClassCompilation(#[from] ContractClassCompilationError),
 
     /// Error returned by the database implementation.
     #[error(transparent)]
