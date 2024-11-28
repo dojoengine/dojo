@@ -20,14 +20,19 @@
 
 use std::collections::HashMap;
 
+use anyhow::anyhow;
 use cainome::cairo_serde::{ByteArray, ClassHash, ContractAddress};
 use dojo_utils::{Declarer, Deployer, Invoker, LabeledClass, TransactionResult, TxnConfig};
 use dojo_world::config::calldata_decoder::decode_calldata;
-use dojo_world::config::ProfileConfig;
+use dojo_world::config::{metadata_config, ProfileConfig, ResourceConfig, WorldMetadata};
+use dojo_world::constants::WORLD;
+use dojo_world::contracts::abigen::world::ResourceMetadata;
 use dojo_world::contracts::WorldContract;
 use dojo_world::diff::{Manifest, ResourceDiff, WorldDiff, WorldStatus};
 use dojo_world::local::ResourceLocal;
+use dojo_world::metadata::MetadataStorage;
 use dojo_world::remote::ResourceRemote;
+use dojo_world::services::UploadService;
 use dojo_world::{utils, ResourceType};
 use starknet::accounts::{ConnectedAccount, SingleOwnerAccount};
 use starknet::core::types::Call;
@@ -101,6 +106,104 @@ where
                 || contracts_have_changed,
             manifest: Manifest::new(&self.diff),
         })
+    }
+
+    /// Upload resources metadata to IPFS and update the ResourceMetadata Dojo model.
+    ///
+    /// # Arguments
+    ///
+    /// # Returns
+    pub async fn upload_metadata(
+        &self,
+        ui: &mut MigrationUi,
+        service: &mut impl UploadService,
+    ) -> anyhow::Result<()> {
+        ui.update_text("Uploading metadata...");
+
+        let mut invoker = Invoker::new(&self.world.account, self.txn_config);
+
+        // world
+        let current_hash = self.diff.world_info.metadata_hash;
+        let new_metadata = WorldMetadata::from(self.diff.profile_config.world.clone());
+
+        let res = new_metadata.upload_if_changed(service, current_hash).await?;
+
+        if let Some((new_uri, new_hash)) = res {
+            trace!(new_uri, new_hash = format!("{:#066x}", new_hash), "World metadata updated.");
+
+            invoker.add_call(self.world.set_metadata_getcall(&ResourceMetadata {
+                resource_id: WORLD,
+                metadata_uri: ByteArray::from_string(&new_uri)?,
+                metadata_hash: new_hash,
+            }));
+        }
+
+        // contracts
+        if let Some(configs) = &self.diff.profile_config.contracts {
+            let calls = self.upload_metadata_from_resource_config(service, configs).await?;
+            invoker.extend_calls(calls);
+        }
+
+        // models
+        if let Some(configs) = &self.diff.profile_config.models {
+            let calls = self.upload_metadata_from_resource_config(service, configs).await?;
+            invoker.extend_calls(calls);
+        }
+
+        // events
+        if let Some(configs) = &self.diff.profile_config.events {
+            let calls = self.upload_metadata_from_resource_config(service, configs).await?;
+            invoker.extend_calls(calls);
+        }
+
+        if self.do_multicall() {
+            ui.update_text_boxed(format!("Uploading {} metadata...", invoker.calls.len()));
+            invoker.multicall().await.map_err(|e| anyhow!(e.to_string()))?;
+        } else {
+            ui.update_text_boxed(format!(
+                "Uploading {} metadata (sequentially)...",
+                invoker.calls.len()
+            ));
+            invoker.invoke_all_sequentially().await.map_err(|e| anyhow!(e.to_string()))?;
+        }
+
+        Ok(())
+    }
+
+    async fn upload_metadata_from_resource_config(
+        &self,
+        service: &mut impl UploadService,
+        config: &[ResourceConfig],
+    ) -> anyhow::Result<Vec<Call>> {
+        let mut calls = vec![];
+
+        for item in config {
+            let selector = dojo_types::naming::compute_selector_from_tag_or_name(&item.tag);
+
+            let current_hash =
+                self.diff.resources.get(&selector).map_or(Felt::ZERO, |r| r.metadata_hash());
+
+            let new_metadata = metadata_config::ResourceMetadata::from(item.clone());
+
+            let res = new_metadata.upload_if_changed(service, current_hash).await?;
+
+            if let Some((new_uri, new_hash)) = res {
+                trace!(
+                    tag = item.tag,
+                    new_uri,
+                    new_hash = format!("{:#066x}", new_hash),
+                    "Resource metadata updated."
+                );
+
+                calls.push(self.world.set_metadata_getcall(&ResourceMetadata {
+                    resource_id: selector,
+                    metadata_uri: ByteArray::from_string(&new_uri)?,
+                    metadata_hash: new_hash,
+                }));
+            }
+        }
+
+        Ok(calls)
     }
 
     /// Returns whether multicall should be used. By default, it is enabled.

@@ -1,3 +1,5 @@
-//! Metadata for the world.
+pub mod metadata_storage;
+pub use metadata_storage::MetadataStorage;
 
-pub mod world;
+#[cfg(test)]
+mod metadata_test;
