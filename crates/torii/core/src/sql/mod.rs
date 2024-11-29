@@ -449,7 +449,11 @@ impl Sql {
         let model_table = entity.name();
 
         self.executor.send(QueryMessage::new(
-            format!("DELETE FROM [{model_table}] WHERE internal_id = ?; DELETE FROM entity_model WHERE entity_id = ? AND model_id = ?").to_string(),
+            format!(
+                "DELETE FROM [{model_table}] WHERE internal_id = ?; DELETE FROM entity_model \
+                 WHERE entity_id = ? AND model_id = ?"
+            )
+            .to_string(),
             vec![Argument::String(entity_id.clone()), Argument::String(format!("{:#x}", model_id))],
             QueryType::DeleteEntity(DeleteEntityQuery {
                 entity_id: entity_id.clone(),

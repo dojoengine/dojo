@@ -3,10 +3,8 @@ use async_graphql::dynamic::{
     Field, FieldFuture, FieldValue, InputValue, SubscriptionField, SubscriptionFieldFuture, TypeRef,
 };
 use async_graphql::{Name, Value};
-use async_recursion::async_recursion;
 use dojo_types::naming::get_tag;
 use dojo_types::schema::Ty;
-use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Sqlite};
 use tokio_stream::StreamExt;
 use torii_core::simple_broker::SimpleBroker;
@@ -15,13 +13,11 @@ use torii_core::types::Entity;
 use super::inputs::keys_input::keys_argument;
 use super::{BasicObject, ResolvableObject, TypeMapping, ValueMapping};
 use crate::constants::{
-    DATETIME_FORMAT, ENTITY_ID_COLUMN, ENTITY_NAMES, ENTITY_TABLE, ENTITY_TYPE_NAME,
-    EVENT_ID_COLUMN, ID_COLUMN,
+    DATETIME_FORMAT, ENTITY_NAMES, ENTITY_TABLE, ENTITY_TYPE_NAME, EVENT_ID_COLUMN, ID_COLUMN,
 };
 use crate::mapping::ENTITY_TYPE_MAPPING;
 use crate::object::{resolve_many, resolve_one};
 use crate::query::{build_type_mapping, value_mapping_from_row};
-use crate::types::TypeData;
 use crate::utils;
 #[derive(Debug)]
 pub struct EntityObject;
@@ -67,10 +63,8 @@ impl ResolvableObject for EntityObject {
     }
 
     fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
-        Some(vec![SubscriptionField::new(
-            "entityUpdated",
-            TypeRef::named_nn(self.type_name()),
-            |ctx| {
+        Some(vec![
+            SubscriptionField::new("entityUpdated", TypeRef::named_nn(self.type_name()), |ctx| {
                 SubscriptionFieldFuture::new(async move {
                     let id = match ctx.args.get("id") {
                         Some(id) => Some(id.string()?.to_string()),
@@ -87,9 +81,9 @@ impl ResolvableObject for EntityObject {
                         }
                     }))
                 })
-            },
-        )
-        .argument(InputValue::new("id", TypeRef::named(TypeRef::ID)))])
+            })
+            .argument(InputValue::new("id", TypeRef::named(TypeRef::ID))),
+        ])
     }
 }
 
@@ -150,7 +144,8 @@ fn model_union_field() -> Field {
                         let table_name = get_tag(&namespace, &name);
 
                         // Fetch the row data
-                        let query = format!("SELECT * FROM [{}] WHERE internal_entity_id = ?", table_name);
+                        let query =
+                            format!("SELECT * FROM [{}] WHERE internal_entity_id = ?", table_name);
                         let row =
                             sqlx::query(&query).bind(&entity_id).fetch_one(&mut *conn).await?;
 

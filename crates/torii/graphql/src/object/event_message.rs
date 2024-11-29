@@ -13,8 +13,8 @@ use torii_core::types::EventMessage;
 use super::inputs::keys_input::keys_argument;
 use super::{BasicObject, ResolvableObject, TypeMapping, ValueMapping};
 use crate::constants::{
-    DATETIME_FORMAT, EVENT_ID_COLUMN, EVENT_MESSAGE_ID_COLUMN, EVENT_MESSAGE_NAMES,
-    EVENT_MESSAGE_TABLE, EVENT_MESSAGE_TYPE_NAME, ID_COLUMN,
+    DATETIME_FORMAT, EVENT_ID_COLUMN, EVENT_MESSAGE_NAMES, EVENT_MESSAGE_TABLE,
+    EVENT_MESSAGE_TYPE_NAME, ID_COLUMN,
 };
 use crate::mapping::ENTITY_TYPE_MAPPING;
 use crate::object::{resolve_many, resolve_one};
@@ -148,16 +148,14 @@ fn model_union_field() -> Field {
 
                         // Get the table name
                         let table_name = get_tag(&namespace, &name);
-                        
+
                         // Fetch the row data
                         let query = format!(
                             "SELECT * FROM [{}] WHERE internal_event_message_id = ?",
                             table_name
                         );
-                        let row = sqlx::query(&query)
-                            .bind(&entity_id)
-                            .fetch_one(&mut *conn)
-                            .await?;
+                        let row =
+                            sqlx::query(&query).bind(&entity_id).fetch_one(&mut *conn).await?;
 
                         // Use value_mapping_from_row to handle nested structures
                         let data = value_mapping_from_row(&row, &type_mapping, true)?;

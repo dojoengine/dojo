@@ -2,8 +2,7 @@ use async_graphql::dynamic::{Enum, Field, FieldFuture, InputObject, Object, Type
 use async_graphql::Value;
 use dojo_types::naming::get_tag;
 use dojo_types::schema::Ty;
-use sqlx::Pool;
-use sqlx::Sqlite;
+use sqlx::{Pool, Sqlite};
 
 use super::connection::{connection_arguments, connection_output, parse_connection_arguments};
 use super::inputs::order_input::{order_argument, parse_order_argument, OrderInputObject};
@@ -11,8 +10,8 @@ use super::inputs::where_input::{parse_where_argument, where_argument, WhereInpu
 use super::inputs::InputObjectTrait;
 use super::{BasicObject, ResolvableObject, TypeMapping, ValueMapping};
 use crate::constants::{
-    ENTITY_ID_COLUMN, ENTITY_TABLE, ENTITY_TYPE_NAME, EVENT_ID_COLUMN, EVENT_MESSAGE_TABLE,
-    EVENT_MESSAGE_TYPE_NAME, ID_COLUMN, INTERNAL_ENTITY_ID_KEY,
+    ENTITY_ID_COLUMN, ENTITY_TABLE, ENTITY_TYPE_NAME, EVENT_MESSAGE_TABLE, EVENT_MESSAGE_TYPE_NAME,
+    ID_COLUMN, INTERNAL_ENTITY_ID_KEY,
 };
 use crate::mapping::ENTITY_TYPE_MAPPING;
 use crate::query::data::{count_rows, fetch_multiple_rows, fetch_single_row};

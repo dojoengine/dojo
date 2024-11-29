@@ -3,7 +3,6 @@ use std::str::FromStr;
 use async_graphql::dynamic::TypeRef;
 use async_graphql::{Name, Value};
 use chrono::{DateTime, Utc};
-use convert_case::{Case, Casing};
 use dojo_types::primitive::{Primitive, SqlType};
 use dojo_types::schema::Ty;
 use regex::Regex;
@@ -130,11 +129,13 @@ pub fn value_mapping_from_row(
 
             match type_data {
                 TypeData::Simple(type_ref) => {
-                    let mut value = fetch_value(row, &column_name, &type_ref.to_string(), is_external)?;
+                    let mut value =
+                        fetch_value(row, &column_name, &type_ref.to_string(), is_external)?;
 
                     // handles felt arrays stored as string (ex: keys)
                     if let (TypeRef::List(_), Value::String(s)) = (type_ref, &value) {
-                        let mut felts: Vec<_> = s.split(SQL_FELT_DELIMITER).map(Value::from).collect();
+                        let mut felts: Vec<_> =
+                            s.split(SQL_FELT_DELIMITER).map(Value::from).collect();
                         felts.pop(); // removes empty item
                         value = Value::List(felts);
                     }
@@ -144,18 +145,15 @@ pub fn value_mapping_from_row(
                 TypeData::List(inner) => {
                     let value = fetch_value(row, &column_name, "String", is_external)?;
                     if let Value::String(json_str) = value {
-                        let array_value: Value = serde_json::from_str(&json_str)
-                            .map_err(|e| sqlx::Error::Protocol(format!("JSON parse error: {}", e)))?;
+                        let array_value: Value = serde_json::from_str(&json_str).map_err(|e| {
+                            sqlx::Error::Protocol(format!("JSON parse error: {}", e))
+                        })?;
                         value_mapping.insert(Name::new(field_name), array_value);
                     }
                 }
                 TypeData::Nested((_, nested_mapping)) => {
-                    let nested_values = build_value_mapping(
-                        row,
-                        nested_mapping,
-                        &column_name,
-                        is_external,
-                    )?;
+                    let nested_values =
+                        build_value_mapping(row, nested_mapping, &column_name, is_external)?;
                     value_mapping.insert(Name::new(field_name), Value::Object(nested_values));
                 }
             }
@@ -182,11 +180,8 @@ fn fetch_value(
     type_name: &str,
     is_external: bool,
 ) -> sqlx::Result<Value> {
-    let mut column_name = if !is_external {
-        format!("internal_{}", field_name)
-    } else {
-        field_name.to_string()
-    };
+    let mut column_name =
+        if !is_external { format!("internal_{}", field_name) } else { field_name.to_string() };
 
     // for enum options, remove the ".option" suffix to get the variant
     // through the enum itself field name

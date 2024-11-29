@@ -358,8 +358,8 @@ pub fn map_row_to_ty(
                     let mut ty = schema.clone();
                     ty.from_json_value(v.clone())?;
                     Result::<_, PrimitiveError>::Ok(ty)
-            })
-            .collect::<Result<Vec<Ty>, _>>()?;
+                })
+                .collect::<Result<Vec<Ty>, _>>()?;
         }
         Ty::ByteArray(bytearray) => {
             let value = row.try_get::<String, &str>(&column_name)?;
