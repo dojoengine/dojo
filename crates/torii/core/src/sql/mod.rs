@@ -873,7 +873,7 @@ impl Sql {
             Ty::Tuple(tuple) => {
                 for (idx, member) in tuple.iter().enumerate() {
                     let mut new_path = path.to_vec();
-                    new_path.push(format!("_{}", idx));
+                    new_path.push(idx.to_string());
 
                     self.add_columns_recursive(
                         &new_path,
