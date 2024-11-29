@@ -48,20 +48,21 @@ fn graphql_filter(
         },
     );
 
+    // If an external URL is provided, we are expecting the GraphQL endpoint to be given.
+    // Hence, we don't have to append "/graphql" to the URL.
     let (graphql_endpoint, subscription_endpoint) = if let Some(external_url) = external_url {
-        let mut graphql_url = external_url;
-        graphql_url.set_path("graphql");
-
+        let graphql_url = external_url;
         let mut websocket_url = graphql_url.clone();
-        websocket_url.set_path("ws");
+        websocket_url.set_path(&format!("{}/ws", websocket_url.path()));
         let _ = websocket_url.set_scheme(match websocket_url.scheme() {
             "https" => "wss",
             "http" => "ws",
             _ => panic!("Invalid URL scheme - must be http or https"),
         });
-
-        (graphql_url.path().to_string(), websocket_url.to_string())
+        (graphql_url.to_string(), websocket_url.to_string())
     } else {
+        // Otherwise, we are running the GraphQL server locally and we need to
+        // append "/graphql" to the URL.
         ("graphql".to_string(), "graphql/ws".to_string())
     };
 
