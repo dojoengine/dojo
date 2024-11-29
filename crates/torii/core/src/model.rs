@@ -2,10 +2,11 @@ use std::str::FromStr;
 
 use async_trait::async_trait;
 use crypto_bigint::U256;
-use dojo_types::primitive::Primitive;
+use dojo_types::primitive::{Primitive, PrimitiveError};
 use dojo_types::schema::Ty;
 use dojo_world::contracts::abigen::model::Layout;
 use dojo_world::contracts::model::ModelReader;
+use serde_json::Value as JsonValue;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Pool, Row, Sqlite};
 use starknet::core::types::Felt;
@@ -346,9 +347,19 @@ pub fn map_row_to_ty(
             }
         }
         Ty::Array(ty) => {
+            let schema = ty[0].clone();
             let serialized_array = row.try_get::<String, &str>(&column_name)?;
 
-            *ty = serde_json::from_str(&serialized_array).map_err(ParseError::FromJsonStr)?;
+            let values: Vec<JsonValue> =
+                serde_json::from_str(&serialized_array).map_err(ParseError::FromJsonStr)?;
+            *ty = values
+                .iter()
+                .map(|v| {
+                    let mut ty = schema.clone();
+                    ty.from_json_value(v.clone())?;
+                    Result::<_, PrimitiveError>::Ok(ty)
+            })
+            .collect::<Result<Vec<Ty>, _>>()?;
         }
         Ty::ByteArray(bytearray) => {
             let value = row.try_get::<String, &str>(&column_name)?;

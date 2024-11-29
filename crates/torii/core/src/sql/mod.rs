@@ -688,7 +688,9 @@ impl Sql {
                 }
                 Ty::Array(array) => {
                     columns.push(format!("\"{}\"", prefix));
-                    arguments.push(Argument::String(serde_json::to_string(array)?));
+                    let values =
+                        array.iter().map(|v| v.to_json_value()).collect::<Result<Vec<_>, _>>()?;
+                    arguments.push(Argument::String(serde_json::to_string(&values)?));
                 }
                 Ty::Primitive(ty) => {
                     columns.push(format!("\"{}\"", prefix));
