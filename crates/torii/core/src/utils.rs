@@ -7,10 +7,10 @@ use ipfs_api_backend_hyper::{IpfsApi, IpfsClient, TryFromUri};
 use starknet::core::types::{BlockId, BlockTag};
 use starknet::providers::Provider;
 use tokio_util::bytes::Bytes;
-use tracing::info;
+use tracing::{info, trace};
 
 use crate::constants::{
-    IPFS_CLIENT_MAX_RETRY, IPFS_CLIENT_PASSWORD, IPFS_CLIENT_URL, IPFS_CLIENT_USERNAME, LOG_TARGET,
+    IPFS_CLIENT_MAX_RETRY, IPFS_CLIENT_PASSWORD, IPFS_CLIENT_URL, IPFS_CLIENT_USERNAME,
 };
 
 pub fn must_utc_datetime_from_timestamp(timestamp: u64) -> DateTime<Utc> {
@@ -52,8 +52,11 @@ pub async fn health_check_provider<P: Provider + Sync + std::fmt::Debug + 'stati
     provider: P,
 ) -> Result<(), anyhow::Error> {
     match provider.get_block_with_tx_hashes(BlockId::Tag(BlockTag::Latest)).await {
-        Ok(latest_block) => {
-            info!(target: LOG_TARGET, "health_check latest_block is: {:?}.", latest_block);
+        Ok(block) => {
+            trace!(
+                latest_block = ?block,
+                "Provider health check."
+            );
             Ok(())
         }
         Err(_) => {
