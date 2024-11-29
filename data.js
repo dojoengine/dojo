@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1732905293134,
+  "lastUpdate": 1732905504055,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -36685,6 +36685,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10417766331,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0fe329a3c094db60b415d33b0779b90003c8968f",
+          "message": "fix: fix graphql playground URL (#2737)\n\nExternal url is now expected to be the graphql\nurl. Where the websocket may be added.",
+          "timestamp": "2024-11-29T12:18:13-06:00",
+          "tree_id": "0f31647d682983ac28e54e5640d7c2bca12c7f55",
+          "url": "https://github.com/dojoengine/dojo/commit/0fe329a3c094db60b415d33b0779b90003c8968f"
+        },
+        "date": 1732905502424,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2561364,
+            "range": "± 44762",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 7868391,
+            "range": "± 272814",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3730911336,
+            "range": "± 813538200",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8259046,
+            "range": "± 285796",
             "unit": "ns/iter"
           }
         ]
