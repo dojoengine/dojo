@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1732920879436,
+  "lastUpdate": 1732921107840,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -36841,6 +36841,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10095843677,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "847850277@qq.com",
+            "name": "zhengpeng",
+            "username": "847850277"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1aab149e6b959c16da4f645054aee3f5cb1cfcdb",
+          "message": "refactor(torii-core): add provider health check (#2729)\n\n* [ISSUES#]2721 health_check_provider.\n\n* [ISSUES#]2721 health_check_provider.\n\n* [ISSUES#]2721 health_check_provider.\n\n* fix: change info to trace and refacto structured logging\n\n---------\n\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-11-29T16:38:39-06:00",
+          "tree_id": "30a0201123e52645bd1626c91be7f5b2343ddab7",
+          "url": "https://github.com/dojoengine/dojo/commit/1aab149e6b959c16da4f645054aee3f5cb1cfcdb"
+        },
+        "date": 1732921106420,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2440711,
+            "range": "± 25439",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 7943366,
+            "range": "± 408488",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3702555857,
+            "range": "± 815341255",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8158311,
+            "range": "± 193293",
             "unit": "ns/iter"
           }
         ]
