@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1732919895344,
+  "lastUpdate": 1732920879436,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -36811,6 +36811,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7923989,
             "range": "± 172445",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "847850277@qq.com",
+            "name": "zhengpeng",
+            "username": "847850277"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1aab149e6b959c16da4f645054aee3f5cb1cfcdb",
+          "message": "refactor(torii-core): add provider health check (#2729)\n\n* [ISSUES#]2721 health_check_provider.\n\n* [ISSUES#]2721 health_check_provider.\n\n* [ISSUES#]2721 health_check_provider.\n\n* fix: change info to trace and refacto structured logging\n\n---------\n\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-11-29T16:38:39-06:00",
+          "tree_id": "30a0201123e52645bd1626c91be7f5b2343ddab7",
+          "url": "https://github.com/dojoengine/dojo/commit/1aab149e6b959c16da4f645054aee3f5cb1cfcdb"
+        },
+        "date": 1732920877978,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10095843677,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
