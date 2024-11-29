@@ -1,6 +1,7 @@
 use async_graphql::dynamic::{Enum, Field, FieldFuture, InputObject, Object, TypeRef};
 use async_graphql::Value;
 use dojo_types::naming::get_tag;
+use dojo_types::schema::Ty;
 use sqlx::Pool;
 use sqlx::Sqlite;
 
@@ -25,16 +26,17 @@ pub struct ModelDataObject {
     pub plural_name: String,
     pub type_name: String,
     pub type_mapping: TypeMapping,
+    pub schema: Ty,
     pub where_input: WhereInputObject,
     pub order_input: OrderInputObject,
 }
 
 impl ModelDataObject {
-    pub fn new(name: String, type_name: String, type_mapping: TypeMapping) -> Self {
+    pub fn new(name: String, type_name: String, type_mapping: TypeMapping, schema: Ty) -> Self {
         let where_input = WhereInputObject::new(type_name.as_str(), &type_mapping);
         let order_input = OrderInputObject::new(type_name.as_str(), &type_mapping);
         let plural_name = format!("{}Models", name);
-        Self { name, plural_name, type_name, type_mapping, where_input, order_input }
+        Self { name, plural_name, type_name, type_mapping, schema, where_input, order_input }
     }
 }
 
@@ -104,7 +106,7 @@ impl ResolvableObject for ModelDataObject {
                 let (data, page_info) = fetch_multiple_rows(
                     &mut conn,
                     &table_name,
-                    EVENT_ID_COLUMN,
+                    "internal_event_id",
                     &None,
                     &order,
                     &filters,
@@ -116,7 +118,7 @@ impl ResolvableObject for ModelDataObject {
                     &data,
                     &type_mapping,
                     &order,
-                    EVENT_ID_COLUMN,
+                    "internal_event_id",
                     total_count,
                     true,
                     page_info,

@@ -156,6 +156,7 @@ async fn build_objects(pool: &SqlitePool) -> Result<(Vec<ObjectVariant>, Vec<Uni
                 field_name,
                 type_name,
                 type_mapping.clone(),
+                schema,
             ))));
         }
     }

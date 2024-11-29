@@ -261,7 +261,7 @@ pub fn resolve_one(
             let id: String =
                 extract::<String>(ctx.args.as_index_map(), &id_column.to_case(Case::Camel))?;
             let data = fetch_single_row(&mut conn, &table_name, &id_column, &id).await?;
-            let model = value_mapping_from_row(&data, &type_mapping, false)?;
+            let model = value_mapping_from_row(&data, &type_mapping, true)?;
             Ok(Some(Value::Object(model)))
         })
     })
@@ -310,7 +310,7 @@ pub fn resolve_many(
                     &order,
                     &id_column,
                     total_count,
-                    false,
+                    true,
                     page_info,
                 )?;
 

@@ -112,29 +112,61 @@ pub fn value_mapping_from_row(
     types: &TypeMapping,
     is_external: bool,
 ) -> sqlx::Result<ValueMapping> {
-    let mut value_mapping = types
-        .iter()
-        .filter(|(_, type_data)| {
-            type_data.is_simple()
-            // ignore Enum fields because the column is not stored in this row. we inejct it later
-            // && !(type_data.type_ref().to_string() == "Enum")
-        })
-        .map(|(field_name, type_data)| {
-            let mut value =
-                fetch_value(row, field_name, &type_data.type_ref().to_string(), is_external)?;
+    println!("types: {:?}", types);
+    fn build_value_mapping(
+        row: &SqliteRow,
+        types: &TypeMapping,
+        prefix: &str,
+        is_external: bool,
+    ) -> sqlx::Result<ValueMapping> {
+        let mut value_mapping = ValueMapping::new();
 
-            // handles felt arrays stored as string (ex: keys)
-            if let (TypeRef::List(_), Value::String(s)) = (&type_data.type_ref(), &value) {
-                let mut felts: Vec<_> = s.split(SQL_FELT_DELIMITER).map(Value::from).collect();
-                felts.pop(); // removes empty item
-                value = Value::List(felts);
+        for (field_name, type_data) in types {
+            let column_name = if prefix.is_empty() {
+                field_name.to_string()
+            } else {
+                format!("{}.{}", prefix, field_name)
+            };
+
+            match type_data {
+                TypeData::Simple(type_ref) => {
+                    let mut value = fetch_value(row, &column_name, &type_ref.to_string(), is_external)?;
+
+                    // handles felt arrays stored as string (ex: keys)
+                    if let (TypeRef::List(_), Value::String(s)) = (type_ref, &value) {
+                        let mut felts: Vec<_> = s.split(SQL_FELT_DELIMITER).map(Value::from).collect();
+                        felts.pop(); // removes empty item
+                        value = Value::List(felts);
+                    }
+
+                    value_mapping.insert(Name::new(field_name), value);
+                }
+                TypeData::List(inner) => {
+                    let value = fetch_value(row, &column_name, "String", is_external)?;
+                    if let Value::String(json_str) = value {
+                        let array_value: Value = serde_json::from_str(&json_str)
+                            .map_err(|e| sqlx::Error::Protocol(format!("JSON parse error: {}", e)))?;
+                        value_mapping.insert(Name::new(field_name), array_value);
+                    }
+                }
+                TypeData::Nested((_, nested_mapping)) => {
+                    let nested_values = build_value_mapping(
+                        row,
+                        nested_mapping,
+                        &column_name,
+                        is_external,
+                    )?;
+                    value_mapping.insert(Name::new(field_name), Value::Object(nested_values));
+                }
             }
+        }
 
-            Ok((Name::new(field_name), value))
-        })
-        .collect::<sqlx::Result<ValueMapping>>()?;
+        Ok(value_mapping)
+    }
 
-    // entity_id is not part of a model's type_mapping but needed to relate to parent entity
+    let mut value_mapping = build_value_mapping(row, types, "", is_external)?;
+
+    // Add internal entity ID if present
     if let Ok(entity_id) = row.try_get::<String, &str>(ENTITY_ID_COLUMN) {
         value_mapping.insert(Name::new(INTERNAL_ENTITY_ID_KEY), Value::from(entity_id));
     } else if let Ok(event_message_id) = row.try_get::<String, &str>(EVENT_MESSAGE_ID_COLUMN) {
@@ -150,11 +182,17 @@ fn fetch_value(
     type_name: &str,
     is_external: bool,
 ) -> sqlx::Result<Value> {
-    let column_name = if is_external {
-        format!("external_{}", field_name)
+    let mut column_name = if !is_external {
+        format!("internal_{}", field_name)
     } else {
-        field_name.to_string().to_case(Case::Snake)
+        field_name.to_string()
     };
+
+    // for enum options, remove the ".option" suffix to get the variant
+    // through the enum itself field name
+    if type_name == "Enum" && column_name.ends_with(".option") {
+        column_name = column_name.trim_end_matches(".option").to_string();
+    }
 
     match Primitive::from_str(type_name) {
         // fetch boolean

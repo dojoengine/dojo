@@ -125,8 +125,8 @@ pub fn connection_output(
         .map(|row| {
             let order_field = match order {
                 Some(order) => {
-                    if is_external {
-                        format!("external_{}", order.field)
+                    if !is_external {
+                        format!("internal_{}", order.field)
                     } else {
                         order.field.to_string()
                     }

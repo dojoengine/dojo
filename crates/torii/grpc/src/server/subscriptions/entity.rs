@@ -113,7 +113,6 @@ impl Service {
         entity: &OptimisticEntity,
     ) -> Result<(), Error> {
         let mut closed_stream = Vec::new();
-        println!("entity: {:?}", entity);
         let hashed = Felt::from_str(&entity.id).map_err(ParseError::FromStr)?;
         // sometimes for some reason keys isxx empty. investigate the issue
         let keys = entity
