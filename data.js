@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1732839072429,
+  "lastUpdate": 1732839260255,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -36451,6 +36451,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10210839651,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "remy.baranx@gmail.com",
+            "name": "Rémy Baranx",
+            "username": "remybar"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fe5c48e661074ca855d7c53032ee31703542c203",
+          "message": "feat(sozo): upload world/models/contracts metadata only if changed (#2691)\n\n* feat(sozo): upload world/resources metadata if they changed\n\n* inject ipfs service dependency\n\n* get ipfs credentials from env/command-line\n\n* add --fix option to rust_fmt.sh\n\n* after review\n\n* fix: ensure no upload if no change on the world\n\n* fix: fix warning message\n\n---------\n\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-11-28T17:54:45-06:00",
+          "tree_id": "c70e2a5106253f7bf5c0874e8744e5f6a6a2737c",
+          "url": "https://github.com/dojoengine/dojo/commit/fe5c48e661074ca855d7c53032ee31703542c203"
+        },
+        "date": 1732839258880,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2419637,
+            "range": "± 10938",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8022607,
+            "range": "± 198580",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3667223562,
+            "range": "± 775970576",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 7779266,
+            "range": "± 42202",
             "unit": "ns/iter"
           }
         ]
