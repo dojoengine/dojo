@@ -5,6 +5,8 @@ pub mod fork;
 pub mod metrics;
 pub mod rpc;
 
+use std::sync::Arc;
+
 use db::DbConfig;
 use dev::DevConfig;
 use execution::ExecutionConfig;
@@ -21,7 +23,7 @@ use url::Url;
 #[derive(Debug, Clone, Default)]
 pub struct Config {
     /// The chain specification.
-    pub chain: ChainSpec,
+    pub chain: Arc<ChainSpec>,
 
     /// Database options.
     pub db: DbConfig,
