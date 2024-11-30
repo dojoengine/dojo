@@ -8419,7 +8419,7 @@ dependencies = [
 
 [[package]]
 name = "katana-feeder-gateway"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "katana-primitives",
  "katana-rpc-types",
