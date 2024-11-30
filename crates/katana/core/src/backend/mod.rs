@@ -33,7 +33,7 @@ pub(crate) const LOG_TARGET: &str = "katana::core::backend";
 
 #[derive(Debug)]
 pub struct Backend<EF: ExecutorFactory> {
-    pub chain_spec: ChainSpec,
+    pub chain_spec: Arc<ChainSpec>,
     /// stores all block related data in memory
     pub blockchain: Blockchain,
     /// The block context generator.

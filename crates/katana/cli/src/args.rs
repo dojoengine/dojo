@@ -2,6 +2,7 @@
 
 use std::collections::HashSet;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use alloy_primitives::U256;
 use anyhow::{Context, Result};
@@ -203,7 +204,7 @@ impl NodeArgs {
         }
     }
 
-    fn chain_spec(&self) -> Result<ChainSpec> {
+    fn chain_spec(&self) -> Result<Arc<ChainSpec>> {
         let mut chain_spec = chain_spec::DEV_UNALLOCATED.clone();
 
         if let Some(id) = self.starknet.environment.chain_id {
@@ -229,7 +230,7 @@ impl NodeArgs {
             katana_slot_controller::add_controller_account(&mut chain_spec.genesis)?;
         }
 
-        Ok(chain_spec)
+        Ok(Arc::new(chain_spec))
     }
 
     fn dev_config(&self) -> DevConfig {
