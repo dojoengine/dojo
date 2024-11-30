@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1732999299682,
+  "lastUpdate": 1732999521627,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -36997,6 +36997,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10165845722,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0f72d24bba8c5aa73fef6c8941eee26b3eac82b2",
+          "message": "feat(katana): pipeline execution loop with checkpointing (#2741)",
+          "timestamp": "2024-12-01T04:25:26+08:00",
+          "tree_id": "5b0c638eaf43546e43be61cbe53a0af1b138f09b",
+          "url": "https://github.com/dojoengine/dojo/commit/0f72d24bba8c5aa73fef6c8941eee26b3eac82b2"
+        },
+        "date": 1732999520150,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2478236,
+            "range": "± 21649",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 7809299,
+            "range": "± 181559",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3695611786,
+            "range": "± 717246086",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 7882884,
+            "range": "± 153430",
             "unit": "ns/iter"
           }
         ]
