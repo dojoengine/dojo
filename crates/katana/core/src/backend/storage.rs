@@ -14,6 +14,7 @@ use katana_provider::providers::fork::ForkedProvider;
 use katana_provider::traits::block::{BlockProvider, BlockWriter};
 use katana_provider::traits::contract::ContractClassWriter;
 use katana_provider::traits::env::BlockEnvProvider;
+use katana_provider::traits::stage::StageCheckpointProvider;
 use katana_provider::traits::state::{StateFactoryProvider, StateRootProvider, StateWriter};
 use katana_provider::traits::state_update::StateUpdateProvider;
 use katana_provider::traits::transaction::{
@@ -46,6 +47,7 @@ pub trait Database:
     + BlockEnvProvider
     + ClassTrieWriter
     + ContractTrieWriter
+    + StageCheckpointProvider
     + 'static
     + Send
     + Sync
@@ -69,6 +71,7 @@ impl<T> Database for T where
         + BlockEnvProvider
         + ClassTrieWriter
         + ContractTrieWriter
+        + StageCheckpointProvider
         + 'static
         + Send
         + Sync
@@ -76,7 +79,7 @@ impl<T> Database for T where
 {
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Blockchain {
     inner: BlockchainProvider<Box<dyn Database>>,
 }

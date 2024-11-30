@@ -8495,6 +8495,8 @@ dependencies = [
  "katana-core",
  "katana-executor",
  "katana-pool",
+ "katana-primitives",
+ "katana-provider",
  "katana-tasks",
  "thiserror",
  "tokio",
