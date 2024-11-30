@@ -100,7 +100,7 @@ jobs:
         with:
           # We have to use a PAT in order to trigger ci
           token: ${{ secrets.CREATE_PR_TOKEN }}
-          title: "Update devcontainer image: ${{ needs.build-and-push.outputs.tag_name }}"
+          title: "chore(devcontainer): update image: ${{ needs.build-and-push.outputs.tag_name }}"
           commit-message: "Update devcontainer image: ${{ needs.build-and-push.outputs.tag_name }}"
           branch: bump-devcontainer
           base: main
