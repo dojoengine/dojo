@@ -27,9 +27,9 @@ tower = { workspace = true, features = [ "full" ] }
 tower-http = { workspace = true, features = [ "full" ] }
 tracing.workspace = true
 
+const_format = "0.2.33"
 strum.workspace = true
 strum_macros.workspace = true
-const_format = "0.2.33"
 
 [build-dependencies]
 vergen = { version = "9.0.0", features = [ "build", "cargo", "emit_and_set" ] }
