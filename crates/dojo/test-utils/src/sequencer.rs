@@ -126,5 +126,5 @@ pub fn get_default_test_config(sequencing: SequencingConfig) -> Config {
         max_event_page_size: Some(100),
     };
 
-    Config { sequencing, rpc, dev, chain, ..Default::default() }
+    Config { sequencing, rpc, dev, chain: chain.into(), ..Default::default() }
 }
