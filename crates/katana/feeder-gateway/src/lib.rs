@@ -8,7 +8,7 @@ use url::Url;
 
 pub mod types;
 
-use types::{ContractClass, StateUpdate};
+use types::{ContractClass, StateUpdate, StateUpdateWithBlock};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -22,7 +22,7 @@ pub enum Error {
     RateLimited,
 }
 
-/// A client for interacting with the Starknet's feeder gateway.
+/// Client for interacting with the Starknet's feeder gateway.
 #[derive(Debug, Clone)]
 pub struct SequencerGateway {
     base_url: Url,
@@ -30,21 +30,26 @@ pub struct SequencerGateway {
 }
 
 impl SequencerGateway {
+    /// Creates a new gateway client to Starknet mainnet.
+    ///
+    /// https://docs.starknet.io/tools/important-addresses/#sequencer_base_url
+    pub fn sn_mainnet() -> Self {
+        Self::new(Url::parse("https://alpha-mainnet.starknet.io/").unwrap())
+    }
+
+    /// Creates a new gateway client to Starknet sepolia.
+    ///
+    /// https://docs.starknet.io/tools/important-addresses/#sequencer_base_url
+    pub fn sn_sepolia() -> Self {
+        Self::new(Url::parse("https://alpha-sepolia.starknet.io/").unwrap())
+    }
+
+    /// Creates a new gateway client at the given base URL.
     pub fn new(base_url: Url) -> Self {
         let client = Client::new();
         Self { client, base_url }
     }
 
-    pub fn starknet_mainnet() -> Self {
-        Self::new(Url::parse("https://alpha-mainnet.starknet.io/").unwrap())
-    }
-
-    pub fn starknet_sepolia() -> Self {
-        Self::new(Url::parse("https://alpha-sepolia.starknet.io/").unwrap())
-    }
-}
-
-impl SequencerGateway {
     pub async fn get_state_update(&self, block_id: BlockIdOrTag) -> Result<StateUpdate, Error> {
         self.feeder_gateway("get_state_update").with_block_id(block_id).send().await
     }
@@ -52,7 +57,7 @@ impl SequencerGateway {
     pub async fn get_state_update_with_block(
         &self,
         block_id: BlockIdOrTag,
-    ) -> Result<StateUpdate, Error> {
+    ) -> Result<StateUpdateWithBlock, Error> {
         self.feeder_gateway("get_state_update")
             .with_query_param("includeBlock", "true")
             .with_block_id(block_id)

@@ -5,11 +5,11 @@ use katana_primitives::class::{
     ClassHash, CompiledClassHash, LegacyContractClass, SierraContractClass,
 };
 use katana_primitives::contract::{Nonce, StorageKey, StorageValue};
-use katana_primitives::state::StateUpdates;
 use katana_primitives::{ContractAddress, Felt};
 use katana_rpc_types::class::ConversionError;
 pub use katana_rpc_types::class::RpcSierraContractClass;
 use serde::Deserialize;
+use starknet::providers::sequencer::models::Block;
 
 /// The contract class type returns by `/get_class_by_hash` endpoint.
 #[derive(Debug, Deserialize)]
@@ -56,6 +56,13 @@ pub struct DeclaredContract {
     pub compiled_class_hash: CompiledClassHash,
 }
 
+/// The state update type returns by `/get_state_update` endpoint, with `includeBlock=true`.
+#[derive(Debug, Deserialize)]
+pub struct StateUpdateWithBlock {
+    pub state_update: StateUpdate,
+    pub block: Block,
+}
+
 // -- Conversion to Katana primitive types.
 
 impl TryFrom<ContractClass> for katana_primitives::class::ContractClass {
@@ -72,7 +79,7 @@ impl TryFrom<ContractClass> for katana_primitives::class::ContractClass {
     }
 }
 
-impl From<StateDiff> for StateUpdates {
+impl From<StateDiff> for katana_primitives::state::StateUpdates {
     fn from(value: StateDiff) -> Self {
         let storage_updates = value
             .storage_diffs
@@ -101,7 +108,7 @@ impl From<StateDiff> for StateUpdates {
             .map(|contract| (contract.address, contract.class_hash))
             .collect();
 
-        StateUpdates {
+        Self {
             storage_updates,
             declared_classes,
             replaced_classes,
