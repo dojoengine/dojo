@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 use std::ops::{Range, RangeInclusive};
+use std::sync::Arc;
 
 use katana_db::models::block::StoredBlockBodyIndices;
 use katana_primitives::block::{
@@ -17,6 +18,7 @@ use katana_primitives::Felt;
 use traits::block::{BlockIdReader, BlockStatusProvider, BlockWriter};
 use traits::contract::{ContractClassProvider, ContractClassWriter, ContractClassWriterExt};
 use traits::env::BlockEnvProvider;
+use traits::stage::StageCheckpointProvider;
 use traits::state::{StateRootProvider, StateWriter};
 use traits::transaction::{TransactionStatusProvider, TransactionTraceProvider};
 use traits::trie::{ClassTrieWriter, ContractTrieWriter};
@@ -42,12 +44,18 @@ pub type ProviderResult<T> = Result<T, error::ProviderError>;
 /// operation is done through this provider.
 #[derive(Debug)]
 pub struct BlockchainProvider<Db> {
-    provider: Db,
+    provider: Arc<Db>,
 }
 
 impl<Db> BlockchainProvider<Db> {
     pub fn new(provider: Db) -> Self {
-        Self { provider }
+        Self { provider: Arc::new(provider) }
+    }
+}
+
+impl<Db> Clone for BlockchainProvider<Db> {
+    fn clone(&self) -> Self {
+        Self { provider: self.provider.clone() }
     }
 }
 
@@ -407,5 +415,18 @@ where
         state_updates: &StateUpdates,
     ) -> ProviderResult<Felt> {
         self.provider.insert_updates(block_number, state_updates)
+    }
+}
+
+impl<Db> StageCheckpointProvider for BlockchainProvider<Db>
+where
+    Db: StageCheckpointProvider,
+{
+    fn checkpoint(&self, id: &str) -> ProviderResult<Option<BlockNumber>> {
+        self.provider.checkpoint(id)
+    }
+
+    fn set_checkpoint(&self, id: &str, block_number: BlockNumber) -> ProviderResult<()> {
+        self.provider.set_checkpoint(id, block_number)
     }
 }

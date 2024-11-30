@@ -9,6 +9,7 @@ use crate::codecs::{Compress, Decode, Decompress, Encode};
 use crate::models::block::StoredBlockBodyIndices;
 use crate::models::contract::{ContractClassChange, ContractInfoChangeList, ContractNonceChange};
 use crate::models::list::BlockList;
+use crate::models::stage::{StageCheckpoint, StageId};
 use crate::models::storage::{ContractStorageEntry, ContractStorageKey, StorageEntry};
 use crate::models::trie::{TrieDatabaseKey, TrieDatabaseValue};
 
@@ -47,7 +48,7 @@ pub enum TableType {
     DupSort,
 }
 
-pub const NUM_TABLES: usize = 26;
+pub const NUM_TABLES: usize = 27;
 
 /// Macro to declare `libmdbx` tables.
 #[macro_export]
@@ -173,10 +174,14 @@ define_tables_enum! {[
     (StorageChangeSet, TableType::Table),
     (ClassTrie, TableType::Table),
     (ContractTrie, TableType::Table),
-    (ContractStorageTrie, TableType::Table)
+    (ContractStorageTrie, TableType::Table),
+    (StageCheckpoints, TableType::Table)
 ]}
 
 tables! {
+    /// Pipeline stages checkpoint
+    StageCheckpoints: (StageId) => StageCheckpoint,
+
     /// Store canonical block headers
     Headers: (BlockNumber) => Header,
     /// Stores block hashes according to its block number
@@ -275,6 +280,8 @@ mod tests {
         assert_eq!(Tables::ALL[22].name(), StorageChangeSet::NAME);
         assert_eq!(Tables::ALL[23].name(), ClassTrie::NAME);
         assert_eq!(Tables::ALL[24].name(), ContractTrie::NAME);
+        assert_eq!(Tables::ALL[25].name(), ContractStorageTrie::NAME);
+        assert_eq!(Tables::ALL[26].name(), StageCheckpoints::NAME);
 
         assert_eq!(Tables::Headers.table_type(), TableType::Table);
         assert_eq!(Tables::BlockHashes.table_type(), TableType::Table);
@@ -301,6 +308,8 @@ mod tests {
         assert_eq!(Tables::StorageChangeSet.table_type(), TableType::Table);
         assert_eq!(Tables::ClassTrie.table_type(), TableType::Table);
         assert_eq!(Tables::ContractTrie.table_type(), TableType::Table);
+        assert_eq!(Tables::ContractStorageTrie.table_type(), TableType::Table);
+        assert_eq!(Tables::StageCheckpoints.table_type(), TableType::Table);
     }
 
     use katana_primitives::address;

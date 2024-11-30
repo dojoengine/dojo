@@ -32,6 +32,7 @@ use crate::traits::block::{
 };
 use crate::traits::contract::{ContractClassWriter, ContractClassWriterExt};
 use crate::traits::env::BlockEnvProvider;
+use crate::traits::stage::StageCheckpointProvider;
 use crate::traits::state::{StateFactoryProvider, StateProvider, StateRootProvider, StateWriter};
 use crate::traits::state_update::StateUpdateProvider;
 use crate::traits::transaction::{
@@ -605,5 +606,18 @@ impl ContractTrieWriter for ForkedProvider {
         let _ = block_number;
         let _ = state_updates;
         Ok(Felt::ZERO)
+    }
+}
+
+impl StageCheckpointProvider for ForkedProvider {
+    fn checkpoint(&self, id: &str) -> ProviderResult<Option<BlockNumber>> {
+        let _ = id;
+        unimplemented!("syncing is not supported for forked provider")
+    }
+
+    fn set_checkpoint(&self, id: &str, block_number: BlockNumber) -> ProviderResult<()> {
+        let _ = id;
+        let _ = block_number;
+        unimplemented!("syncing is not supported for forked provider")
     }
 }
