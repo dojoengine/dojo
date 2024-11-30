@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1732989780431,
+  "lastUpdate": 1732989974311,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -36919,6 +36919,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10288967452,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e191569c7910c64240f305cd4cbc22af9570b4ac",
+          "message": "refactor(katana): dont run sequencing task inside of pipeline (#2740)",
+          "timestamp": "2024-12-01T01:46:41+08:00",
+          "tree_id": "9a2a3c5a123a279d07f5ad8e97f0e11fa76835e2",
+          "url": "https://github.com/dojoengine/dojo/commit/e191569c7910c64240f305cd4cbc22af9570b4ac"
+        },
+        "date": 1732989972888,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2457639,
+            "range": "± 21351",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 7832732,
+            "range": "± 204208",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3595007936,
+            "range": "± 812280147",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 7974361,
+            "range": "± 55655",
             "unit": "ns/iter"
           }
         ]
