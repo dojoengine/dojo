@@ -17,6 +17,7 @@ use katana_primitives::Felt;
 use traits::block::{BlockIdReader, BlockStatusProvider, BlockWriter};
 use traits::contract::{ContractClassProvider, ContractClassWriter, ContractClassWriterExt};
 use traits::env::BlockEnvProvider;
+use traits::stage::StageCheckpointProvider;
 use traits::state::{StateRootProvider, StateWriter};
 use traits::transaction::{TransactionStatusProvider, TransactionTraceProvider};
 use traits::trie::{ClassTrieWriter, ContractTrieWriter};
@@ -407,5 +408,18 @@ where
         state_updates: &StateUpdates,
     ) -> ProviderResult<Felt> {
         self.provider.insert_updates(block_number, state_updates)
+    }
+}
+
+impl<Db> StageCheckpointProvider for BlockchainProvider<Db>
+where
+    Db: StageCheckpointProvider,
+{
+    fn checkpoint(&self, id: &str) -> ProviderResult<Option<BlockNumber>> {
+        self.provider.checkpoint(id)
+    }
+
+    fn set_checkpoint(&self, id: &str, block_number: BlockNumber) -> ProviderResult<()> {
+        self.provider.set_checkpoint(id, block_number)
     }
 }

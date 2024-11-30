@@ -9,6 +9,7 @@ use crate::codecs::{Compress, Decode, Decompress, Encode};
 use crate::models::block::StoredBlockBodyIndices;
 use crate::models::contract::{ContractClassChange, ContractInfoChangeList, ContractNonceChange};
 use crate::models::list::BlockList;
+use crate::models::stage::{StageCheckpoint, StageId};
 use crate::models::storage::{ContractStorageEntry, ContractStorageKey, StorageEntry};
 use crate::models::trie::{TrieDatabaseKey, TrieDatabaseValue};
 
@@ -47,7 +48,7 @@ pub enum TableType {
     DupSort,
 }
 
-pub const NUM_TABLES: usize = 26;
+pub const NUM_TABLES: usize = 27;
 
 /// Macro to declare `libmdbx` tables.
 #[macro_export]
@@ -148,6 +149,7 @@ macro_rules! dupsort {
 }
 
 define_tables_enum! {[
+    (StageCheckpoints, TableType::Table),
     (Headers, TableType::Table),
     (BlockHashes, TableType::Table),
     (BlockNumbers, TableType::Table),
@@ -177,6 +179,9 @@ define_tables_enum! {[
 ]}
 
 tables! {
+    /// Pipeline stages checkpoint
+    StageCheckpoints: (StageId) => StageCheckpoint,
+
     /// Store canonical block headers
     Headers: (BlockNumber) => Header,
     /// Stores block hashes according to its block number
