@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 use std::ops::{Range, RangeInclusive};
+use std::sync::Arc;
 
 use katana_db::models::block::StoredBlockBodyIndices;
 use katana_primitives::block::{
@@ -43,12 +44,18 @@ pub type ProviderResult<T> = Result<T, error::ProviderError>;
 /// operation is done through this provider.
 #[derive(Debug)]
 pub struct BlockchainProvider<Db> {
-    provider: Db,
+    provider: Arc<Db>,
 }
 
 impl<Db> BlockchainProvider<Db> {
     pub fn new(provider: Db) -> Self {
-        Self { provider }
+        Self { provider: Arc::new(provider) }
+    }
+}
+
+impl<Db> Clone for BlockchainProvider<Db> {
+    fn clone(&self) -> Self {
+        Self { provider: self.provider.clone() }
     }
 }
 
