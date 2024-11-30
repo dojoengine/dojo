@@ -1,7 +1,5 @@
 use katana_cairo::lang::starknet_classes::abi;
-use katana_cairo::lang::starknet_classes::casm_contract_class::{
-    CasmContractClass, StarknetSierraCompilationError,
-};
+use katana_cairo::lang::starknet_classes::casm_contract_class::StarknetSierraCompilationError;
 use katana_cairo::lang::starknet_classes::contract_class::ContractEntryPoint;
 use serde_json_pythonic::to_string_pythonic;
 use starknet::core::utils::{normalize_address, starknet_keccak};
@@ -19,6 +17,10 @@ pub type CompiledClassHash = Felt;
 pub type SierraContractClass = katana_cairo::lang::starknet_classes::contract_class::ContractClass;
 /// The canonical legacy class (Cairo 0) type.
 pub type LegacyContractClass = katana_cairo::starknet_api::deprecated_contract_class::ContractClass;
+
+/// The canonical compiled Sierra contract class type.
+pub type CasmContractClass =
+    katana_cairo::lang::starknet_classes::casm_contract_class::CasmContractClass;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ContractClassCompilationError {
