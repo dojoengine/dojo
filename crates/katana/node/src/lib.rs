@@ -32,7 +32,7 @@ use katana_core::service::messaging::MessagingConfig;
 use katana_db::mdbx::DbEnv;
 use katana_executor::implementation::blockifier::BlockifierFactory;
 use katana_executor::{ExecutionFlags, ExecutorFactory};
-use katana_pipeline::{stage, Pipeline};
+use katana_pipeline::stage::Sequencing;
 use katana_pool::ordering::FiFo;
 use katana_pool::validation::stateful::TxValidator;
 use katana_pool::TxPool;
@@ -126,9 +126,9 @@ impl Node {
         let block_producer = self.block_producer.clone();
         let validator = self.block_producer.validator().clone();
 
-        // --- build sequencing stage
+        // --- build and run sequencing task
 
-        let sequencing = stage::Sequencing::new(
+        let sequencing = Sequencing::new(
             pool.clone(),
             backend.clone(),
             self.task_manager.task_spawner(),
@@ -136,17 +136,12 @@ impl Node {
             self.messaging_config.clone(),
         );
 
-        // --- build and start the pipeline
-
-        let mut pipeline = Pipeline::new();
-        pipeline.add_stage(Box::new(sequencing));
-
         self.task_manager
             .task_spawner()
             .build_task()
             .critical()
-            .name("Pipeline")
-            .spawn(pipeline.into_future());
+            .name("Sequencing")
+            .spawn(sequencing.into_future());
 
         let node_components = (pool, backend, block_producer, validator, self.forked_client.take());
         let rpc = spawn(node_components, self.rpc_config.clone()).await?;
