@@ -91,6 +91,18 @@ where
     }
 }
 
+pub fn deserialize_u64<'de, D>(deserializer: D) -> Result<u64, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;
+    if let Some(hex) = s.strip_prefix("0x") {
+        u64::from_str_radix(hex, 16).map_err(serde::de::Error::custom)
+    } else {
+        s.parse::<u64>().map_err(serde::de::Error::custom)
+    }
+}
+
 // uncommited header ->  header (what is stored in the database)
 
 /// Represents a block header.

@@ -185,6 +185,7 @@ pub struct InvokeTxV1 {
     /// The chain id of the chain on which the transaction is initiated.
     ///
     /// Used as a simple replay attack protection.
+    #[serde(default)]
     pub chain_id: ChainId,
     /// The account address which the transaction is initiated from.
     pub sender_address: ContractAddress,
@@ -207,6 +208,7 @@ pub struct InvokeTxV3 {
     /// The chain id of the chain on which the transaction is initiated.
     ///
     /// Used as a simple replay attack protection.
+    #[serde(default)]
     pub chain_id: ChainId,
     /// The account address which the transaction is initiated from.
     pub sender_address: ContractAddress,
@@ -298,6 +300,7 @@ pub struct DeclareTxV1 {
     /// The chain id of the chain on which the transaction is initiated.
     ///
     /// Used as a simple replay attack protection.
+    #[serde(default)]
     pub chain_id: ChainId,
     /// The account address which the transaction is initiated from.
     pub sender_address: ContractAddress,
@@ -321,6 +324,7 @@ pub struct DeclareTxV2 {
     /// The chain id of the chain on which the transaction is initiated.
     ///
     /// Used as a simple replay attack protection.
+    #[serde(default)]
     pub chain_id: ChainId,
     /// The account address which the transaction is initiated from.
     pub sender_address: ContractAddress,
@@ -346,6 +350,7 @@ pub struct DeclareTxV3 {
     /// The chain id of the chain on which the transaction is initiated.
     ///
     /// Used as a simple replay attack protection.
+    #[serde(default)]
     pub chain_id: ChainId,
     /// The account address which the transaction is initiated from.
     pub sender_address: ContractAddress,
@@ -422,6 +427,7 @@ pub struct L1HandlerTx {
     /// The L1 to L2 message nonce.
     pub nonce: Nonce,
     /// The chain id.
+    #[serde(default)]
     pub chain_id: ChainId,
     /// Amount of fee paid on L1.
     pub paid_fee_on_l1: u128,
@@ -475,6 +481,7 @@ pub struct DeployAccountTxV1 {
     /// The chain id of the chain on which the transaction is initiated.
     ///
     /// Used as a simple replay attack protection.
+    #[serde(default)]
     pub chain_id: ChainId,
     /// The nonce value of the account. Corresponds to the number of transactions initiated by
     /// sender.
@@ -501,6 +508,7 @@ pub struct DeployAccountTxV3 {
     /// The chain id of the chain on which the transaction is initiated.
     ///
     /// Used as a simple replay attack protection.
+    #[serde(default)]
     pub chain_id: ChainId,
     /// The nonce value of the account. Corresponds to the number of transactions initiated by
     /// sender.

@@ -63,7 +63,13 @@ impl SequencerGateway {
             .send::<serde_json::Value>()
             .await?;
 
-        Ok(serde_json::from_value(value).unwrap())
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&value.get("block").unwrap().get("transactions").unwrap())
+                .unwrap()
+        );
+
+        Ok(serde_json_path_to_error::from_value(value).unwrap())
     }
 
     pub async fn get_class(

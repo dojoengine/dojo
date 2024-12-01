@@ -124,17 +124,16 @@ mod tests {
             "version": "0x0"
         }"#;
 
-        let tx: ConfirmedTransaction = serde_json::from_str(json).unwrap();
+        let tx = serde_json::from_str::<ConfirmedTransaction>(json).unwrap();
 
-        assert!(matches!(tx.tx, TypedTransaction::InvokeFunction(InvokeTx::V0(..))));
         assert_eq!(tx.hash, felt!("0x123"));
 
-        if let TypedTransaction::InvokeFunction(InvokeTx::V0(v0)) = tx.tx {
-            assert_eq!(v0.sender_address, felt!("0x456").into());
-            assert_eq!(v0.nonce, felt!("0x1").into());
-            assert_eq!(v0.entry_point_selector, felt!("0x1"));
-            assert_eq!(v0.calldata.len(), 0);
-            assert_eq!(v0.signature.len(), 0);
+        if let TypedTransaction::InvokeFunction(InvokeTx::V0(tx)) = tx.tx {
+            assert_eq!(tx.sender_address, felt!("0x456").into());
+            assert_eq!(tx.nonce, felt!("0x1").into());
+            assert_eq!(tx.entry_point_selector, felt!("0x1"));
+            assert_eq!(tx.calldata.len(), 0);
+            assert_eq!(tx.signature.len(), 0);
         } else {
             panic!("wrong variant")
         }
