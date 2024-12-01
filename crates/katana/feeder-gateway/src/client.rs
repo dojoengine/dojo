@@ -56,11 +56,14 @@ impl SequencerGateway {
         &self,
         block_id: BlockIdOrTag,
     ) -> Result<StateUpdateWithBlock, Error> {
-        self.feeder_gateway("get_state_update")
+        let value = self
+            .feeder_gateway("get_state_update")
             .with_query_param("includeBlock", "true")
             .with_block_id(block_id)
-            .send()
-            .await
+            .send::<serde_json::Value>()
+            .await?;
+
+        Ok(serde_json::from_value(value).unwrap())
     }
 
     pub async fn get_class(
@@ -182,6 +185,13 @@ pub enum ErrorCode {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn get_block() {
+        let client = SequencerGateway::sn_sepolia();
+        let su =
+            client.get_state_update_with_block(BlockIdOrTag::Tag(BlockTag::Latest)).await.unwrap();
+    }
 
     #[test]
     fn request_block_id() {

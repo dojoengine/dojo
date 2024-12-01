@@ -3,6 +3,7 @@ use std::sync::Arc;
 use alloy_primitives::B256;
 use derive_more::{AsRef, Deref, From};
 
+use crate::block::deserialize_u128;
 use crate::chain::ChainId;
 use crate::class::{ClassHash, CompiledClassHash, ContractClass};
 use crate::contract::{ContractAddress, Nonce};
@@ -195,6 +196,7 @@ pub struct InvokeTxV1 {
     /// The transaction signature associated with the sender address.
     pub signature: Vec<Felt>,
     /// The max fee that the sender is willing to pay for the transaction.
+    #[cfg_attr(feature = "serde", serde(deserialize_with = "deserialize_u128"))]
     pub max_fee: u128,
 }
 
@@ -307,6 +309,7 @@ pub struct DeclareTxV1 {
     /// The class hash of the contract class to be declared.
     pub class_hash: ClassHash,
     /// The max fee that the sender is willing to pay for the transaction.
+    #[cfg_attr(feature = "serde", serde(deserialize_with = "deserialize_u128"))]
     pub max_fee: u128,
 }
 
@@ -331,6 +334,7 @@ pub struct DeclareTxV2 {
     /// The compiled class hash of the contract class (only if it's a Sierra class).
     pub compiled_class_hash: CompiledClassHash,
     /// The max fee that the sender is willing to pay for the transaction.
+    #[cfg_attr(feature = "serde", serde(deserialize_with = "deserialize_u128"))]
     pub max_fee: u128,
 }
 
@@ -486,6 +490,7 @@ pub struct DeployAccountTxV1 {
     /// The input data to the constructor function of the contract class.
     pub constructor_calldata: Vec<Felt>,
     /// The max fee that the sender is willing to pay for the transaction.
+    #[cfg_attr(feature = "serde", serde(deserialize_with = "deserialize_u128"))]
     pub max_fee: u128,
 }
 
@@ -554,6 +559,23 @@ impl DeployAccountTx {
             ),
         }
     }
+}
+
+/// Legacy Deploy transacation type.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct DeployTx {
+    /// The contract address of the account contract that will be deployed.
+    pub contract_address: Felt,
+    /// The salt used to generate the contract address.
+    pub contract_address_salt: Felt,
+    /// The input data to the constructor function of the contract class.
+    pub constructor_calldata: Vec<Felt>,
+    /// The hash of the contract class from which the account contract will be deployed from.
+    pub class_hash: Felt,
+    /// Transaction version.
+    pub version: Felt,
 }
 
 #[derive(Debug, Clone, AsRef, Deref, PartialEq, Eq)]
