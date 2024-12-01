@@ -5,6 +5,7 @@ use katana_primitives::class::{
     ClassHash, CompiledClassHash, LegacyContractClass, SierraContractClass,
 };
 use katana_primitives::contract::{Nonce, StorageKey, StorageValue};
+use katana_primitives::transaction::TxHash;
 use katana_primitives::{ContractAddress, Felt};
 use katana_rpc_types::class::ConversionError;
 pub use katana_rpc_types::class::RpcSierraContractClass;
@@ -63,6 +64,130 @@ pub struct StateUpdateWithBlock {
     pub block: Block,
 }
 
+pub struct TxWithHash {
+    pub hash: TxHash,
+    pub tx: Tx,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(tag = "type")]
+pub enum Tx {
+    #[serde(rename = "DECLARE")]
+    Declare,
+    #[serde(rename = "DECLARE")]
+    Deploy,
+    #[serde(rename = "DEPLOY_ACCOUNT")]
+    DeployAccount(DeployAccountTx),
+    #[serde(rename = "INVOKE_FUNCTION")]
+    Invoke(InvokeTx),
+    #[serde(rename = "L1_HANDLER")]
+    L1Handler,
+}
+
+#[derive(Debug)]
+pub enum DeclareTx {
+    V1,
+    V2,
+    V3,
+}
+
+#[derive(Debug)]
+pub enum DeployAccountTx {
+    V1,
+    V3,
+}
+
+#[derive(Debug)]
+pub enum InvokeTx {
+    V0,
+    V1,
+    V3,
+}
+
+impl<'de> Deserialize<'de> for TxWithHash {
+    fn deserialize<D>(deserializer: D) -> Result<TxWithHash, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct Helper {
+            #[serde(flatten)]
+            tx: Tx,
+            #[serde(rename = "transaction_hash")]
+            hash: TxHash,
+        }
+
+        let Helper { hash, tx } = Helper::deserialize(deserializer)?;
+        Ok(Self { hash, tx })
+    }
+}
+
+impl<'de> Deserialize<'de> for DeclareTx {
+    fn deserialize<D>(deserializer: D) -> Result<DeclareTx, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct Helper {
+            version: u8,
+        }
+
+        let h = Helper::deserialize(deserializer)?;
+        match h.version {
+            1 => Ok(DeclareTx::V1),
+            2 => Ok(DeclareTx::V2),
+            3 => Ok(DeclareTx::V3),
+            v => Err(serde::de::Error::custom(format!("unknown version: {}", v))),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for DeployAccountTx {
+    fn deserialize<D>(deserializer: D) -> Result<DeployAccountTx, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct Helper {
+            version: Felt,
+        }
+
+        let Helper { version } = Helper::deserialize(deserializer)?;
+
+        if version == Felt::ONE {
+            Ok(DeployAccountTx::V1)
+        } else if version == Felt::THREE {
+            Ok(DeployAccountTx::V3)
+        } else {
+            Err(serde::de::Error::custom(format!("unknown version: {version}")))
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for InvokeTx {
+    fn deserialize<D>(deserializer: D) -> Result<InvokeTx, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct Helper {
+            version: Felt,
+        }
+
+        let Helper { version } = Helper::deserialize(deserializer)?;
+
+        if version == Felt::ZERO {
+            Ok(InvokeTx::V0)
+        } else if version == Felt::ONE {
+            Ok(InvokeTx::V1)
+        } else if version == Felt::THREE {
+            Ok(InvokeTx::V3)
+        } else {
+            Err(serde::de::Error::custom(format!("unknown version: {version}")))
+        }
+    }
+}
+
 // -- Conversion to Katana primitive types.
 
 impl TryFrom<ContractClass> for katana_primitives::class::ContractClass {
@@ -116,5 +241,49 @@ impl From<StateDiff> for katana_primitives::state::StateUpdates {
             nonce_updates: value.nonces,
             deprecated_declared_classes: BTreeSet::from_iter(value.old_declared_contracts),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use katana_primitives::felt;
+    use serde_json;
+
+    use super::*;
+
+    #[test]
+    fn test_tx_with_hash_deserialization() {
+        let json = r#"{
+            "type": "INVOKE_FUNCTION",
+            "transaction_hash": "0x123",
+            "version": "0x0"
+        }"#;
+
+        let tx: TxWithHash = serde_json::from_str(json).unwrap();
+
+        assert!(matches!(tx.tx, Tx::Invoke(InvokeTx::V0)));
+        assert_eq!(tx.hash, felt!("0x123"));
+
+        let json = r#"{
+            "type": "INVOKE_FUNCTION",
+            "transaction_hash": "0x123",
+            "version": "0x1"
+        }"#;
+
+        let tx: TxWithHash = serde_json::from_str(json).unwrap();
+
+        assert!(matches!(tx.tx, Tx::Invoke(InvokeTx::V1)));
+        assert_eq!(tx.hash, felt!("0x123"));
+
+        let json = r#"{
+            "type": "DEPLOY_ACCOUNT",
+            "transaction_hash": "0x123",
+            "version": "0x3"
+        }"#;
+
+        let tx: TxWithHash = serde_json::from_str(json).unwrap();
+
+        assert!(matches!(tx.tx, Tx::DeployAccount(DeployAccountTx::V3)));
+        assert_eq!(tx.hash, felt!("0x123"));
     }
 }
