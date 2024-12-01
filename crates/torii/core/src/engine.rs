@@ -45,6 +45,7 @@ use crate::processors::{
 };
 use crate::sql::{Cursors, Sql};
 use crate::types::{Contract, ContractType};
+use crate::utils::health_check_provider;
 
 type EventProcessorMap<P> = HashMap<Felt, Vec<Box<dyn EventProcessor<P>>>>;
 
@@ -241,6 +242,11 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
     }
 
     pub async fn start(&mut self) -> Result<()> {
+        if let Err(e) = health_check_provider(self.provider.clone()).await {
+            error!(target: LOG_TARGET,"Provider health check failed during engine start");
+            return Err(e);
+        }
+
         let mut backoff_delay = Duration::from_secs(1);
         let max_backoff_delay = Duration::from_secs(60);
 

@@ -175,7 +175,8 @@ define_tables_enum! {[
     (StorageChangeSet, TableType::Table),
     (ClassTrie, TableType::Table),
     (ContractTrie, TableType::Table),
-    (ContractStorageTrie, TableType::Table)
+    (ContractStorageTrie, TableType::Table),
+    (StageCheckpoints, TableType::Table)
 ]}
 
 tables! {
@@ -280,6 +281,8 @@ mod tests {
         assert_eq!(Tables::ALL[22].name(), StorageChangeSet::NAME);
         assert_eq!(Tables::ALL[23].name(), ClassTrie::NAME);
         assert_eq!(Tables::ALL[24].name(), ContractTrie::NAME);
+        assert_eq!(Tables::ALL[25].name(), ContractStorageTrie::NAME);
+        assert_eq!(Tables::ALL[26].name(), StageCheckpoints::NAME);
 
         assert_eq!(Tables::Headers.table_type(), TableType::Table);
         assert_eq!(Tables::BlockHashes.table_type(), TableType::Table);
@@ -306,6 +309,8 @@ mod tests {
         assert_eq!(Tables::StorageChangeSet.table_type(), TableType::Table);
         assert_eq!(Tables::ClassTrie.table_type(), TableType::Table);
         assert_eq!(Tables::ContractTrie.table_type(), TableType::Table);
+        assert_eq!(Tables::ContractStorageTrie.table_type(), TableType::Table);
+        assert_eq!(Tables::StageCheckpoints.table_type(), TableType::Table);
     }
 
     use katana_primitives::address;

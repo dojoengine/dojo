@@ -10,33 +10,30 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Result;
-use config::metrics::MetricsConfig;
+use config::Config;
 use config::rpc::{ApiKind, RpcConfig};
-use config::{Config, SequencingConfig};
 use dojo_metrics::exporters::prometheus::PrometheusRecorder;
 use dojo_metrics::{Report, Server as MetricsServer};
 use hyper::{Method, Uri};
+use jsonrpsee::RpcModule;
 use jsonrpsee::server::middleware::proxy_get_request::ProxyGetRequestLayer;
 use jsonrpsee::server::{AllowHosts, ServerBuilder, ServerHandle};
-use jsonrpsee::RpcModule;
+use katana_core::backend::Backend;
 use katana_core::backend::gas_oracle::L1GasOracle;
 use katana_core::backend::storage::Blockchain;
-use katana_core::backend::Backend;
 use katana_core::constants::{
     DEFAULT_ETH_L1_DATA_GAS_PRICE, DEFAULT_ETH_L1_GAS_PRICE, DEFAULT_STRK_L1_DATA_GAS_PRICE,
     DEFAULT_STRK_L1_GAS_PRICE,
 };
 use katana_core::env::BlockContextGenerator;
 use katana_core::service::block_producer::BlockProducer;
-use katana_core::service::messaging::MessagingConfig;
 use katana_db::mdbx::DbEnv;
 use katana_executor::implementation::blockifier::BlockifierFactory;
 use katana_executor::{ExecutionFlags, ExecutorFactory};
-use katana_pipeline::stage::{Blocks, Classes};
-use katana_pipeline::{Pipeline, PipelineHandle};
+use katana_pipeline::stage::Sequencing;
+use katana_pool::TxPool;
 use katana_pool::ordering::FiFo;
 use katana_pool::validation::stateful::TxValidator;
-use katana_pool::TxPool;
 use katana_primitives::block::GasPrices;
 use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
 use katana_rpc::dev::DevApi;
@@ -94,10 +91,7 @@ pub struct Node {
     pub task_manager: TaskManager,
     pub backend: Arc<Backend<BlockifierFactory>>,
     pub block_producer: BlockProducer<BlockifierFactory>,
-    pub rpc_config: RpcConfig,
-    pub metrics_config: Option<MetricsConfig>,
-    pub sequencing_config: SequencingConfig,
-    pub messaging_config: Option<MessagingConfig>,
+    pub config: Arc<Config>,
     forked_client: Option<ForkedClient>,
 }
 
@@ -110,7 +104,7 @@ impl Node {
         info!(%chain, "Starting node.");
 
         // TODO: maybe move this to the build stage
-        if let Some(ref cfg) = self.metrics_config {
+        if let Some(ref cfg) = self.config.metrics {
             let addr = cfg.socket_addr();
             let mut reports: Vec<Box<dyn Report>> = Vec::new();
 
@@ -130,6 +124,21 @@ impl Node {
         let block_producer = self.block_producer.clone();
         let validator = self.block_producer.validator().clone();
 
+        // let sequencing = Sequencing::new(
+        //     pool.clone(),
+        //     backend.clone(),
+        //     self.task_manager.task_spawner(),
+        //     block_producer.clone(),
+        //     self.config.messaging.clone(),
+        // );
+
+        // self.task_manager
+        //     .task_spawner()
+        //     .build_task()
+        //     .critical()
+        //     .name("Sequencing")
+        //     .spawn(sequencing.into_future());
+
         // --- build and start the pipeline
 
         let provider = self.backend.blockchain.provider().clone();
@@ -145,11 +154,11 @@ impl Node {
             .task_spawner()
             .build_task()
             .critical()
-            .name("Pipeline")
-            .spawn(pipeline.into_future());
+            .name("Sequencing")
+            .spawn(sequencing.into_future());
 
         let node_components = (pool, backend, block_producer, validator, self.forked_client.take());
-        let rpc = spawn(node_components, self.rpc_config.clone()).await?;
+        let rpc = spawn(node_components, self.config.rpc.clone()).await?;
 
         Ok(LaunchedNode { node: self, pipeline: handle, rpc })
     }
@@ -188,8 +197,9 @@ pub async fn build(mut config: Config) -> Result<Node> {
     // --- build backend
 
     let (blockchain, db, forked_client) = if let Some(cfg) = &config.forking {
+        let chain_spec = Arc::get_mut(&mut config.chain).expect("get mut Arc");
         let (bc, block_num) =
-            Blockchain::new_from_forked(cfg.url.clone(), cfg.block, &mut config.chain).await?;
+            Blockchain::new_from_forked(cfg.url.clone(), cfg.block, chain_spec).await?;
 
         // TODO: it'd bee nice if the client can be shared on both the rpc and forked backend side
         let forked_client = ForkedClient::new_http(cfg.url.clone(), block_num);
@@ -206,8 +216,8 @@ pub async fn build(mut config: Config) -> Result<Node> {
     // --- build l1 gas oracle
 
     // Check if the user specify a fixed gas price in the dev config.
-    let gas_oracle = if let Some(fixed_prices) = config.dev.fixed_gas_prices {
-        L1GasOracle::fixed(fixed_prices.gas_price, fixed_prices.data_gas_price)
+    let gas_oracle = if let Some(fixed_prices) = &config.dev.fixed_gas_prices {
+        L1GasOracle::fixed(fixed_prices.gas_price.clone(), fixed_prices.data_gas_price.clone())
     }
     // TODO: for now we just use the default gas prices, but this should be a proper oracle in the
     // future that can perform actual sampling.
@@ -224,7 +234,7 @@ pub async fn build(mut config: Config) -> Result<Node> {
         blockchain,
         executor_factory,
         block_context_generator,
-        chain_spec: config.chain,
+        chain_spec: config.chain.clone(),
     });
 
     // --- build block producer
@@ -250,10 +260,7 @@ pub async fn build(mut config: Config) -> Result<Node> {
         backend,
         forked_client,
         block_producer,
-        rpc_config: config.rpc,
-        metrics_config: config.metrics,
-        messaging_config: config.messaging,
-        sequencing_config: config.sequencing,
+        config: Arc::new(config),
         task_manager: TaskManager::current(),
     };
 

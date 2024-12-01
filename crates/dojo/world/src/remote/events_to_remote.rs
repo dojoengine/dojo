@@ -15,6 +15,7 @@ use tracing::trace;
 
 use super::permissions::PermissionsUpdateable;
 use super::{ResourceRemote, WorldRemote};
+use crate::constants::WORLD;
 use crate::contracts::abigen::world::{self, Event as WorldEvent};
 use crate::remote::{CommonRemoteInfo, ContractRemote, EventRemote, ModelRemote, NamespaceRemote};
 
@@ -55,6 +56,7 @@ impl WorldRemote {
             world::ContractInitialized::event_selector(),
             world::WriterUpdated::event_selector(),
             world::OwnerUpdated::event_selector(),
+            world::MetadataUpdate::event_selector(),
         ]];
 
         let filter = EventFilter {
@@ -126,7 +128,7 @@ impl WorldRemote {
                 self.class_hashes.push(e.class_hash.into());
 
                 // The creator is the world's owner, but no event emitted for that.
-                self.external_owners.insert(Felt::ZERO, HashSet::from([e.creator.into()]));
+                self.external_owners.insert(WORLD, HashSet::from([e.creator.into()]));
 
                 trace!(
                     class_hash = format!("{:#066x}", e.class_hash.0),
@@ -249,6 +251,18 @@ impl WorldRemote {
                 }
 
                 trace!(?e, "Owner updated.");
+            }
+            WorldEvent::MetadataUpdate(e) => {
+                dbg!("metadata", &e);
+                if e.resource == WORLD {
+                    self.metadata_hash = e.hash;
+                } else {
+                    // Unwrap is safe because the resource must exist in the world.
+                    let resource = self.resources.get_mut(&e.resource).unwrap();
+                    trace!(?resource, "Metadata updated.");
+
+                    resource.set_metadata_hash(e.hash);
+                }
             }
             _ => {
                 // Ignore events filtered out by the event filter.
@@ -515,5 +529,38 @@ mod tests {
 
         let resource = world_remote.resources.get(&selector).unwrap();
         assert_eq!(resource.as_namespace_or_panic().owners, HashSet::from([]));
+    }
+
+    #[tokio::test]
+    async fn test_metadata_updated_event() {
+        let mut world_remote = WorldRemote::default();
+        let selector = naming::compute_selector_from_names("ns", "m1");
+
+        let resource = ResourceRemote::Model(ModelRemote {
+            common: CommonRemoteInfo::new(Felt::TWO, "ns", "m1", Felt::ONE),
+        });
+        world_remote.add_resource(resource);
+
+        let event = WorldEvent::MetadataUpdate(world::MetadataUpdate {
+            resource: selector,
+            uri: ByteArray::from_string("ipfs://m1").unwrap(),
+            hash: Felt::THREE,
+        });
+
+        world_remote.match_event(event).unwrap();
+
+        let resource = world_remote.resources.get(&selector).unwrap();
+        assert_eq!(resource.metadata_hash(), Felt::THREE);
+
+        let event = WorldEvent::MetadataUpdate(world::MetadataUpdate {
+            resource: selector,
+            uri: ByteArray::from_string("ipfs://m1").unwrap(),
+            hash: Felt::ONE,
+        });
+
+        world_remote.match_event(event).unwrap();
+
+        let resource = world_remote.resources.get(&selector).unwrap();
+        assert_eq!(resource.metadata_hash(), Felt::ONE);
     }
 }

@@ -6,6 +6,7 @@ use std::ops::{Range, RangeInclusive};
 use std::sync::Arc;
 
 use katana_db::models::block::StoredBlockBodyIndices;
+use katana_primitives::Felt;
 use katana_primitives::block::{
     Block, BlockHash, BlockHashOrNumber, BlockNumber, BlockWithTxHashes, FinalityStatus, Header,
     SealedBlockWithStatus,
@@ -17,15 +18,15 @@ use katana_primitives::receipt::Receipt;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithClasses};
 use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{Tx, TxHash, TxNumber, TxWithHash};
-use katana_primitives::Felt;
 use parking_lot::RwLock;
-use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
+use starknet::providers::jsonrpc::HttpTransport;
 
 use self::backend::{Backend, BackendError, SharedStateProvider};
 use self::state::ForkedStateDb;
 use super::in_memory::cache::{CacheDb, CacheStateDb};
 use super::in_memory::state::HistoricalStates;
+use crate::ProviderResult;
 use crate::traits::block::{
     BlockHashProvider, BlockNumberProvider, BlockProvider, BlockStatusProvider, BlockWriter,
     HeaderProvider,
@@ -40,7 +41,6 @@ use crate::traits::transaction::{
     TransactionsProviderExt,
 };
 use crate::traits::trie::{ClassTrieWriter, ContractTrieWriter};
-use crate::ProviderResult;
 
 #[derive(Debug)]
 pub struct ForkedProvider {
@@ -625,10 +625,13 @@ impl ContractTrieWriter for ForkedProvider {
 
 impl StageCheckpointProvider for ForkedProvider {
     fn checkpoint(&self, id: &str) -> ProviderResult<Option<BlockNumber>> {
-        todo!()
+        let _ = id;
+        unimplemented!("syncing is not supported for forked provider")
     }
 
     fn set_checkpoint(&self, id: &str, block_number: BlockNumber) -> ProviderResult<()> {
-        todo!()
+        let _ = id;
+        let _ = block_number;
+        unimplemented!("syncing is not supported for forked provider")
     }
 }

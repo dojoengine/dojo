@@ -20,6 +20,7 @@ members = [
 	"crates/katana/controller",
 	"crates/katana/core",
 	"crates/katana/executor",
+	"crates/katana/feeder-gateway",
 	"crates/katana/grpc",
 	"crates/katana/node",
 	"crates/katana/node-bindings",
@@ -58,7 +59,7 @@ edition = "2021"
 license = "Apache-2.0"
 license-file = "LICENSE"
 repository = "https://github.com/dojoengine/dojo/"
-version = "1.0.2"
+version = "1.0.3"
 
 [profile.performance]
 codegen-units = 1
@@ -97,6 +98,7 @@ katana-codecs-derive = { path = "crates/katana/storage/codecs/derive" }
 katana-core = { path = "crates/katana/core", default-features = false }
 katana-db = { path = "crates/katana/storage/db" }
 katana-executor = { path = "crates/katana/executor" }
+katana-feeder-gateway = { path = "crates/katana/feeder-gateway" }
 katana-node = { path = "crates/katana/node", default-features = false }
 katana-node-bindings = { path = "crates/katana/node-bindings" }
 katana-pipeline = { path = "crates/katana/pipeline" }
@@ -140,28 +142,28 @@ auto_impl = "1.2.0"
 base64 = "0.21.2"
 bigdecimal = "0.4.1"
 bytes = "1.6"
-cairo-lang-compiler = "2.8.4"
-cairo-lang-debug = "2.8.4"
-cairo-lang-defs = "2.8.4"
+cairo-lang-compiler = "=2.8.4"
+cairo-lang-debug = "=2.8.4"
+cairo-lang-defs = "=2.8.4"
 cairo-lang-diagnostics = "2.7.0"
-cairo-lang-filesystem = "2.8.4"
-cairo-lang-formatter = "2.8.4"
-cairo-lang-language-server = "2.8.4"
-cairo-lang-lowering = "2.8.4"
-cairo-lang-parser = "2.8.4"
-cairo-lang-plugins = { version = "2.8.4", features = [ "testing" ] }
-cairo-lang-project = "2.8.4"
-cairo-lang-semantic = "2.8.4"
-cairo-lang-sierra = "2.8.4"
-cairo-lang-sierra-generator = "2.8.4"
-cairo-lang-sierra-to-casm = "2.8.4"
-cairo-lang-starknet = "2.8.4"
-cairo-lang-starknet-classes = "2.8.4"
-cairo-lang-syntax = "2.8.4"
-cairo-lang-test-plugin = "2.8.4"
-cairo-lang-test-runner = "2.8.4"
-cairo-lang-test-utils = "2.8.4"
-cairo-lang-utils = "2.8.4"
+cairo-lang-filesystem = "=2.8.4"
+cairo-lang-formatter = "=2.8.4"
+cairo-lang-language-server = "=2.8.4"
+cairo-lang-lowering = "=2.8.4"
+cairo-lang-parser = "=2.8.4"
+cairo-lang-plugins = { version = "=2.8.4", features = [ "testing" ] }
+cairo-lang-project = "=2.8.4"
+cairo-lang-semantic = "=2.8.4"
+cairo-lang-sierra = "=2.8.4"
+cairo-lang-sierra-generator = "=2.8.4"
+cairo-lang-sierra-to-casm = "=2.8.4"
+cairo-lang-starknet = "=2.8.4"
+cairo-lang-starknet-classes = "=2.8.4"
+cairo-lang-syntax = "=2.8.4"
+cairo-lang-test-plugin = "=2.8.4"
+cairo-lang-test-runner = "=2.8.4"
+cairo-lang-test-utils = "=2.8.4"
+cairo-lang-utils = "=2.8.4"
 cairo-vm = "1.0.0-rc4"
 camino = { version = "1.1.2", features = [ "serde1" ] }
 chrono = { version = "0.4.24", features = [ "serde" ] }
