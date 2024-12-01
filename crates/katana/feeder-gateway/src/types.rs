@@ -5,11 +5,11 @@ use katana_primitives::class::{
     ClassHash, CompiledClassHash, LegacyContractClass, SierraContractClass,
 };
 use katana_primitives::contract::{Nonce, StorageKey, StorageValue};
-use katana_primitives::transaction::TxHash;
+use katana_primitives::transaction::{InvokeTx, TxHash};
 use katana_primitives::{ContractAddress, Felt};
 use katana_rpc_types::class::ConversionError;
 pub use katana_rpc_types::class::RpcSierraContractClass;
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer};
 use starknet::providers::sequencer::models::Block;
 
 /// The contract class type returns by `/get_class_by_hash` endpoint.
@@ -64,23 +64,22 @@ pub struct StateUpdateWithBlock {
     pub block: Block,
 }
 
-pub struct TxWithHash {
+#[derive(Debug, Deserialize)]
+pub struct Transaction {
+    #[serde(rename = "transaction_hash")]
     pub hash: TxHash,
-    pub tx: Tx,
+    #[serde(flatten)]
+    pub tx: TypedTransaction,
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(tag = "type")]
-pub enum Tx {
-    #[serde(rename = "DECLARE")]
+#[serde(tag = "type", rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum TypedTransaction {
     Declare,
-    #[serde(rename = "DECLARE")]
     Deploy,
-    #[serde(rename = "DEPLOY_ACCOUNT")]
     DeployAccount(DeployAccountTx),
-    #[serde(rename = "INVOKE_FUNCTION")]
-    Invoke(InvokeTx),
-    #[serde(rename = "L1_HANDLER")]
+    #[serde(deserialize_with = "deserialize_invoke")]
+    InvokeFunction(InvokeTx),
     L1Handler,
 }
 
@@ -97,28 +96,31 @@ pub enum DeployAccountTx {
     V3,
 }
 
-#[derive(Debug)]
-pub enum InvokeTx {
-    V0,
-    V1,
-    V3,
-}
+fn deserialize_invoke<'de, D>(deserializer: D) -> Result<InvokeTx, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    use katana_primitives::transaction::{InvokeTxV0, InvokeTxV1};
 
-impl<'de> Deserialize<'de> for TxWithHash {
-    fn deserialize<D>(deserializer: D) -> Result<TxWithHash, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        #[derive(Deserialize)]
-        struct Helper {
-            #[serde(flatten)]
-            tx: Tx,
-            #[serde(rename = "transaction_hash")]
-            hash: TxHash,
-        }
+    #[derive(Debug, Deserialize)]
+    struct Helper {
+        version: TxHash,
+        #[serde(flatten)]
+        value: serde_json::Value,
+    }
 
-        let Helper { hash, tx } = Helper::deserialize(deserializer)?;
-        Ok(Self { hash, tx })
+    let Helper { version, value } = Helper::deserialize(deserializer)?;
+
+    if version == Felt::ZERO {
+        let tx = serde_json::from_value::<InvokeTxV0>(value).map_err(serde::de::Error::custom)?;
+        Ok(InvokeTx::V0(tx))
+    } else if version == Felt::ONE {
+        let tx = serde_json::from_value::<InvokeTxV1>(value).map_err(serde::de::Error::custom)?;
+        Ok(InvokeTx::V1(tx))
+    } else if version == Felt::THREE {
+        Ok(InvokeTx::V1(Default::default()))
+    } else {
+        Err(serde::de::Error::custom(format!("unknown version: {version}")))
     }
 }
 
@@ -158,30 +160,6 @@ impl<'de> Deserialize<'de> for DeployAccountTx {
             Ok(DeployAccountTx::V1)
         } else if version == Felt::THREE {
             Ok(DeployAccountTx::V3)
-        } else {
-            Err(serde::de::Error::custom(format!("unknown version: {version}")))
-        }
-    }
-}
-
-impl<'de> Deserialize<'de> for InvokeTx {
-    fn deserialize<D>(deserializer: D) -> Result<InvokeTx, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        #[derive(Deserialize)]
-        struct Helper {
-            version: Felt,
-        }
-
-        let Helper { version } = Helper::deserialize(deserializer)?;
-
-        if version == Felt::ZERO {
-            Ok(InvokeTx::V0)
-        } else if version == Felt::ONE {
-            Ok(InvokeTx::V1)
-        } else if version == Felt::THREE {
-            Ok(InvokeTx::V3)
         } else {
             Err(serde::de::Error::custom(format!("unknown version: {version}")))
         }
@@ -246,6 +224,7 @@ impl From<StateDiff> for katana_primitives::state::StateUpdates {
 
 #[cfg(test)]
 mod tests {
+
     use katana_primitives::felt;
     use serde_json;
 
@@ -256,34 +235,27 @@ mod tests {
         let json = r#"{
             "type": "INVOKE_FUNCTION",
             "transaction_hash": "0x123",
+            "sender_address": "0x456",
+            "nonce": "0x1",
+            "entry_point_selector": "0x1",
+            "calldata": [],
+            "signature": [],
             "version": "0x0"
         }"#;
 
-        let tx: TxWithHash = serde_json::from_str(json).unwrap();
+        let tx: Transaction = serde_json::from_str(json).unwrap();
 
-        assert!(matches!(tx.tx, Tx::Invoke(InvokeTx::V0)));
+        assert!(matches!(tx.tx, TypedTransaction::Invoke(InvokeTx::V0(..))));
         assert_eq!(tx.hash, felt!("0x123"));
 
-        let json = r#"{
-            "type": "INVOKE_FUNCTION",
-            "transaction_hash": "0x123",
-            "version": "0x1"
-        }"#;
-
-        let tx: TxWithHash = serde_json::from_str(json).unwrap();
-
-        assert!(matches!(tx.tx, Tx::Invoke(InvokeTx::V1)));
-        assert_eq!(tx.hash, felt!("0x123"));
-
-        let json = r#"{
-            "type": "DEPLOY_ACCOUNT",
-            "transaction_hash": "0x123",
-            "version": "0x3"
-        }"#;
-
-        let tx: TxWithHash = serde_json::from_str(json).unwrap();
-
-        assert!(matches!(tx.tx, Tx::DeployAccount(DeployAccountTx::V3)));
-        assert_eq!(tx.hash, felt!("0x123"));
+        if let TypedTransaction::Invoke(InvokeTx::V0(v0)) = tx.tx {
+            assert_eq!(v0.sender_address, felt!("0x456").into());
+            assert_eq!(v0.nonce, felt!("0x1").into());
+            assert_eq!(v0.entry_point_selector, felt!("0x1"));
+            assert_eq!(v0.calldata.len(), 0);
+            assert_eq!(v0.signature.len(), 0);
+        } else {
+            panic!("wrong variant")
+        }
     }
 }

@@ -155,8 +155,26 @@ impl DeclareTxWithClass {
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum InvokeTx {
+    V0(InvokeTxV0),
     V1(InvokeTxV1),
     V3(InvokeTxV3),
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct InvokeTxV0 {
+    /// The account address which the transaction is initiated from.
+    pub sender_address: ContractAddress,
+    /// The nonce value of the account. Corresponds to the number of transactions initiated by
+    /// sender.
+    pub nonce: Nonce,
+    /// Entry point selector
+    pub entry_point_selector: Felt,
+    /// The data used as the input to the execute entry point of sender account contract.
+    pub calldata: Vec<Felt>,
+    /// The transaction signature associated with the sender address.
+    pub signature: Vec<Felt>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -220,6 +238,10 @@ impl InvokeTx {
     /// Compute the hash of the transaction.
     pub fn calculate_hash(&self, is_query: bool) -> TxHash {
         match self {
+            InvokeTx::V0(..) => {
+                todo!()
+            }
+
             InvokeTx::V1(tx) => compute_invoke_v1_tx_hash(
                 Felt::from(tx.sender_address),
                 &tx.calldata,

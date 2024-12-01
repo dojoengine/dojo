@@ -184,6 +184,10 @@ pub fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
 
     match tx.transaction {
         ExecutableTx::Invoke(tx) => match tx {
+            InvokeTx::V0(..) => {
+                todo!()
+            }
+
             InvokeTx::V1(tx) => {
                 let calldata = tx.calldata;
                 let signature = tx.signature;

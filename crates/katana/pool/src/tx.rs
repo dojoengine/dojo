@@ -116,6 +116,7 @@ impl PoolTransaction for ExecutableTxWithHash {
     fn nonce(&self) -> Nonce {
         match &self.transaction {
             ExecutableTx::Invoke(tx) => match tx {
+                InvokeTx::V0(v0) => v0.nonce,
                 InvokeTx::V1(v1) => v1.nonce,
                 InvokeTx::V3(v3) => v3.nonce,
             },
@@ -135,6 +136,7 @@ impl PoolTransaction for ExecutableTxWithHash {
     fn sender(&self) -> ContractAddress {
         match &self.transaction {
             ExecutableTx::Invoke(tx) => match tx {
+                InvokeTx::V0(v1) => v1.sender_address,
                 InvokeTx::V1(v1) => v1.sender_address,
                 InvokeTx::V3(v3) => v3.sender_address,
             },
@@ -151,6 +153,7 @@ impl PoolTransaction for ExecutableTxWithHash {
     fn max_fee(&self) -> u128 {
         match &self.transaction {
             ExecutableTx::Invoke(tx) => match tx {
+                InvokeTx::V0(..) => 0, // V0 doesn't have max_fee
                 InvokeTx::V1(v1) => v1.max_fee,
                 InvokeTx::V3(_) => 0, // V3 doesn't have max_fee
             },
@@ -170,6 +173,7 @@ impl PoolTransaction for ExecutableTxWithHash {
     fn tip(&self) -> u64 {
         match &self.transaction {
             ExecutableTx::Invoke(tx) => match tx {
+                InvokeTx::V0(_) => 0, // V0 doesn't have tip
                 InvokeTx::V1(_) => 0, // V1 doesn't have tip
                 InvokeTx::V3(v3) => v3.tip,
             },

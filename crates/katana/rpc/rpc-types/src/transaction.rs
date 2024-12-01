@@ -264,6 +264,10 @@ impl From<TxWithHash> for Tx {
         let transaction_hash = value.hash;
         let tx = match value.transaction {
             InternalTx::Invoke(invoke) => match invoke {
+                InvokeTx::V0(..) => {
+                    todo!()
+                }
+
                 InvokeTx::V1(tx) => starknet::core::types::Transaction::Invoke(
                     starknet::core::types::InvokeTransaction::V1(
                         starknet::core::types::InvokeTransactionV1 {
