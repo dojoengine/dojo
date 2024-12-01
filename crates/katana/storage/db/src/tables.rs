@@ -149,7 +149,6 @@ macro_rules! dupsort {
 }
 
 define_tables_enum! {[
-    (StageCheckpoints, TableType::Table),
     (Headers, TableType::Table),
     (BlockHashes, TableType::Table),
     (BlockNumbers, TableType::Table),

@@ -13,6 +13,7 @@ katana-primitives.workspace = true
 katana-provider = { workspace = true, features = [ "test-utils" ] }
 katana-rpc-types.workspace = true
 katana-tasks.workspace = true
+katana-feeder-gateway.workspace = true
 
 anyhow.workspace = true
 async-trait.workspace = true

@@ -3,14 +3,13 @@ use std::time::Duration;
 
 use anyhow::Result;
 use backon::{ExponentialBuilder, Retryable};
-use katana_primitives::block::BlockNumber;
-use katana_primitives::class::{ClassHash, ContractClass, SierraContractClass};
+use katana_feeder_gateway::client::SequencerGateway;
+use katana_primitives::block::{BlockIdOrTag, BlockNumber};
+use katana_primitives::class::{ClassHash, ContractClass};
 use katana_primitives::conversion::rpc::StarknetRsLegacyContractClass;
 use katana_provider::traits::contract::{ContractClassWriter, ContractClassWriterExt};
 use katana_provider::traits::state_update::StateUpdateProvider;
-use katana_rpc_types::class::RpcSierraContractClass;
-use starknet::providers::sequencer::models::{BlockId, DeployedClass};
-use starknet::providers::{ProviderError, SequencerGatewayProvider};
+use katana_rpc_types::class::ConversionError;
 use tracing::{debug, warn};
 
 use super::{Stage, StageExecutionInput, StageResult};
@@ -18,7 +17,10 @@ use super::{Stage, StageExecutionInput, StageResult};
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error(transparent)]
-    Gateway(#[from] ProviderError),
+    Gateway(#[from] katana_feeder_gateway::client::Error),
+
+    #[error(transparent)]
+    Conversion(#[from] ConversionError),
 }
 
 #[derive(Debug)]
@@ -28,11 +30,7 @@ pub struct Classes<P> {
 }
 
 impl<P> Classes<P> {
-    pub fn new(
-        provider: P,
-        feeder_gateway: SequencerGatewayProvider,
-        download_batch_size: usize,
-    ) -> Self {
+    pub fn new(provider: P, feeder_gateway: SequencerGateway, download_batch_size: usize) -> Self {
         let downloader = Downloader::new(feeder_gateway, download_batch_size);
         Self { provider, downloader }
     }
@@ -71,11 +69,11 @@ where
 #[derive(Debug, Clone)]
 struct Downloader {
     batch_size: usize,
-    client: Arc<SequencerGatewayProvider>,
+    client: Arc<SequencerGateway>,
 }
 
 impl Downloader {
-    fn new(client: SequencerGatewayProvider, batch_size: usize) -> Self {
+    fn new(client: SequencerGateway, batch_size: usize) -> Self {
         Self { client: Arc::new(client), batch_size }
     }
 
@@ -134,24 +132,8 @@ impl Downloader {
         hash: ClassHash,
         block: BlockNumber,
     ) -> Result<ContractClass, Error> {
-        #[allow(deprecated)]
-        let class = self.client.get_class_by_hash(hash, BlockId::Number(block)).await?;
-
-        let class = match class {
-            DeployedClass::LegacyClass(legacy) => {
-                let class = to_inner_legacy_class(legacy).unwrap();
-                class
-            }
-
-            // TODO: implement our own fgw client using our own types for easier conversion
-            DeployedClass::SierraClass(sierra) => {
-                let rpc_class = RpcSierraContractClass::try_from(sierra).unwrap();
-                let class = SierraContractClass::try_from(rpc_class).unwrap();
-                ContractClass::Class(class)
-            }
-        };
-
-        Ok(class)
+        let class = self.client.get_class(hash, BlockIdOrTag::Number(block)).await?;
+        Ok(class.try_into()?)
     }
 }
 

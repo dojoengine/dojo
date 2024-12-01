@@ -8506,6 +8506,7 @@ dependencies = [
  "futures",
  "katana-core",
  "katana-executor",
+ "katana-feeder-gateway",
  "katana-pool",
  "katana-primitives",
  "katana-provider",

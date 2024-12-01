@@ -9,8 +9,7 @@ use crate::da::{DataAvailabilityMode, L1DataAvailabilityMode};
 use crate::state::StateUpdates;
 use crate::transaction::{InvokeTx, InvokeTxV1, InvokeTxV3, Tx, TxWithHash};
 use crate::version::ProtocolVersion;
-use crate::ContractAddress;
-use crate::Felt;
+use crate::{ContractAddress, Felt};
 
 impl From<FgwBlock> for SealedBlockWithStatus {
     fn from(value: FgwBlock) -> Self {

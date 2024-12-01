@@ -10,17 +10,17 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Result;
-use config::Config;
 use config::rpc::{ApiKind, RpcConfig};
+use config::Config;
 use dojo_metrics::exporters::prometheus::PrometheusRecorder;
 use dojo_metrics::{Report, Server as MetricsServer};
 use hyper::{Method, Uri};
-use jsonrpsee::RpcModule;
 use jsonrpsee::server::middleware::proxy_get_request::ProxyGetRequestLayer;
 use jsonrpsee::server::{AllowHosts, ServerBuilder, ServerHandle};
-use katana_core::backend::Backend;
+use jsonrpsee::RpcModule;
 use katana_core::backend::gas_oracle::L1GasOracle;
 use katana_core::backend::storage::Blockchain;
+use katana_core::backend::Backend;
 use katana_core::constants::{
     DEFAULT_ETH_L1_DATA_GAS_PRICE, DEFAULT_ETH_L1_GAS_PRICE, DEFAULT_STRK_L1_DATA_GAS_PRICE,
     DEFAULT_STRK_L1_GAS_PRICE,
@@ -31,9 +31,9 @@ use katana_db::mdbx::DbEnv;
 use katana_executor::implementation::blockifier::BlockifierFactory;
 use katana_executor::{ExecutionFlags, ExecutorFactory};
 use katana_pipeline::stage::Sequencing;
-use katana_pool::TxPool;
 use katana_pool::ordering::FiFo;
 use katana_pool::validation::stateful::TxValidator;
+use katana_pool::TxPool;
 use katana_primitives::block::GasPrices;
 use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
 use katana_rpc::dev::DevApi;

@@ -6,7 +6,6 @@ use std::ops::{Range, RangeInclusive};
 use std::sync::Arc;
 
 use katana_db::models::block::StoredBlockBodyIndices;
-use katana_primitives::Felt;
 use katana_primitives::block::{
     Block, BlockHash, BlockHashOrNumber, BlockNumber, BlockWithTxHashes, FinalityStatus, Header,
     SealedBlockWithStatus,
@@ -18,15 +17,15 @@ use katana_primitives::receipt::Receipt;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithClasses};
 use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{Tx, TxHash, TxNumber, TxWithHash};
+use katana_primitives::Felt;
 use parking_lot::RwLock;
-use starknet::providers::JsonRpcClient;
 use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::JsonRpcClient;
 
 use self::backend::{Backend, BackendError, SharedStateProvider};
 use self::state::ForkedStateDb;
 use super::in_memory::cache::{CacheDb, CacheStateDb};
 use super::in_memory::state::HistoricalStates;
-use crate::ProviderResult;
 use crate::traits::block::{
     BlockHashProvider, BlockNumberProvider, BlockProvider, BlockStatusProvider, BlockWriter,
     HeaderProvider,
@@ -41,6 +40,7 @@ use crate::traits::transaction::{
     TransactionsProviderExt,
 };
 use crate::traits::trie::{ClassTrieWriter, ContractTrieWriter};
+use crate::ProviderResult;
 
 #[derive(Debug)]
 pub struct ForkedProvider {
@@ -438,14 +438,14 @@ impl StateUpdateProvider for ForkedProvider {
         &self,
         block_id: BlockHashOrNumber,
     ) -> ProviderResult<Option<BTreeMap<ClassHash, CompiledClassHash>>> {
-        todo!()
+        Ok(self.state_update(block_id)?.map(|su| su.declared_classes))
     }
 
     fn deployed_contracts(
         &self,
         block_id: BlockHashOrNumber,
     ) -> ProviderResult<Option<BTreeMap<ContractAddress, ClassHash>>> {
-        todo!()
+        Ok(self.state_update(block_id)?.map(|su| su.deployed_contracts))
     }
 }
 

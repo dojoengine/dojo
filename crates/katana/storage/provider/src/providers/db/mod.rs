@@ -403,7 +403,25 @@ impl<Db: Database> StateUpdateProvider for DbProvider<Db> {
         &self,
         block_id: BlockHashOrNumber,
     ) -> ProviderResult<Option<BTreeMap<ContractAddress, ClassHash>>> {
-        todo!()
+        let db_tx = self.0.tx()?;
+        let block_num = self.block_number_by_id(block_id)?;
+
+        if let Some(block_num) = block_num {
+            let deployed_contracts = dup_entries::<
+                Db,
+                tables::ClassChangeHistory,
+                BTreeMap<ContractAddress, ClassHash>,
+                _,
+            >(&db_tx, block_num, |entry| {
+                let (_, ContractClassChange { contract_address, class_hash }) = entry?;
+                Ok((contract_address, class_hash))
+            })?;
+
+            db_tx.commit()?;
+            Ok(Some(deployed_contracts))
+        } else {
+            Ok(None)
+        }
     }
 }
 
