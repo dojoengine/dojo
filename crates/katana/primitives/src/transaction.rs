@@ -167,16 +167,16 @@ pub enum InvokeTx {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct InvokeTxV0 {
     /// The account address which the transaction is initiated from.
-    pub sender_address: ContractAddress,
-    /// The nonce value of the account. Corresponds to the number of transactions initiated by
-    /// sender.
-    pub nonce: Nonce,
+    pub contract_address: ContractAddress,
     /// Entry point selector
     pub entry_point_selector: Felt,
     /// The data used as the input to the execute entry point of sender account contract.
     pub calldata: Vec<Felt>,
     /// The transaction signature associated with the sender address.
     pub signature: Vec<Felt>,
+    /// The max fee that the sender is willing to pay for the transaction.
+    #[cfg_attr(feature = "serde", serde(deserialize_with = "deserialize_u128"))]
+    pub max_fee: u128,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]

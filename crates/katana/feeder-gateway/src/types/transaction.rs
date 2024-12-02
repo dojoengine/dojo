@@ -55,8 +55,12 @@ impl<'de> Deserialize<'de> for DataAvailabilityMode {
 
 #[derive(Debug, Deserialize)]
 pub struct RawInvokeTx {
+    // Alias for v0 transaction
+    #[serde(alias = "contract_address")]
     pub sender_address: ContractAddress,
-    pub nonce: Nonce,
+    // v0 doesn't include nonce
+    #[serde(default)]
+    pub nonce: Option<Nonce>,
     #[serde(default)]
     pub entry_point_selector: Option<Felt>,
     pub calldata: Vec<Felt>,
@@ -142,6 +146,9 @@ pub enum TxTryFromError {
 
     #[error("Missing `entry_point_selector`")]
     MissingEntryPointSelector,
+
+    #[error("Missing `nonce`")]
+    MissingNonce,
 
     #[error("Missing `max_fee`")]
     MissingMaxFee,
@@ -236,10 +243,10 @@ impl TryFrom<RawInvokeTx> for InvokeTx {
     fn try_from(value: RawInvokeTx) -> Result<Self, Self::Error> {
         if Felt::ZERO == value.version {
             Ok(InvokeTx::V0(InvokeTxV0 {
-                nonce: value.nonce,
                 calldata: value.calldata,
                 signature: value.signature,
-                sender_address: value.sender_address,
+                contract_address: value.sender_address,
+                max_fee: value.max_fee.ok_or(TxTryFromError::MissingMaxFee)?,
                 entry_point_selector: value
                     .entry_point_selector
                     .ok_or(TxTryFromError::MissingEntryPointSelector)?,
@@ -247,7 +254,7 @@ impl TryFrom<RawInvokeTx> for InvokeTx {
         } else if Felt::ONE == value.version {
             Ok(InvokeTx::V1(InvokeTxV1 {
                 chain_id: Default::default(),
-                nonce: value.nonce,
+                nonce: value.nonce.ok_or(TxTryFromError::MissingNonce)?,
                 calldata: value.calldata,
                 signature: value.signature,
                 max_fee: value.max_fee.ok_or(TxTryFromError::MissingMaxFee)?,
@@ -271,7 +278,7 @@ impl TryFrom<RawInvokeTx> for InvokeTx {
                 tip,
                 paymaster_data,
                 chain_id: Default::default(),
-                nonce: value.nonce,
+                nonce: value.nonce.ok_or(TxTryFromError::MissingNonce)?,
                 calldata: value.calldata,
                 signature: value.signature,
                 sender_address: value.sender_address,

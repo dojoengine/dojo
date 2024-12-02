@@ -31,7 +31,7 @@ use katana_cairo::cairo_vm::types::errors::program_errors::ProgramError;
 use katana_cairo::cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 use katana_cairo::starknet_api::block::{BlockNumber, BlockTimestamp};
 use katana_cairo::starknet_api::core::{
-    self, ChainId, ClassHash, CompiledClassHash, ContractAddress, Nonce,
+    self, ChainId, ClassHash, CompiledClassHash, ContractAddress, EntryPointSelector, Nonce,
 };
 use katana_cairo::starknet_api::data_availability::DataAvailabilityMode;
 use katana_cairo::starknet_api::deprecated_contract_class::EntryPointType;
@@ -184,8 +184,23 @@ pub fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
 
     match tx.transaction {
         ExecutableTx::Invoke(tx) => match tx {
-            InvokeTx::V0(..) => {
-                todo!()
+            InvokeTx::V0(tx) => {
+                let calldata = tx.calldata;
+                let signature = tx.signature;
+
+                Transaction::AccountTransaction(AccountTransaction::Invoke(InvokeTransaction {
+                    tx: ApiInvokeTransaction::V0(
+                        katana_cairo::starknet_api::transaction::InvokeTransactionV0 {
+                            entry_point_selector: EntryPointSelector(tx.entry_point_selector),
+                            contract_address: to_blk_address(tx.contract_address),
+                            signature: TransactionSignature(signature),
+                            calldata: Calldata(Arc::new(calldata)),
+                            max_fee: Fee(tx.max_fee),
+                        },
+                    ),
+                    tx_hash: TransactionHash(hash),
+                    only_query: false,
+                }))
             }
 
             InvokeTx::V1(tx) => {

@@ -116,7 +116,7 @@ impl PoolTransaction for ExecutableTxWithHash {
     fn nonce(&self) -> Nonce {
         match &self.transaction {
             ExecutableTx::Invoke(tx) => match tx {
-                InvokeTx::V0(v0) => v0.nonce,
+                InvokeTx::V0(..) => unimplemented!("v0 transaction not supported"),
                 InvokeTx::V1(v1) => v1.nonce,
                 InvokeTx::V3(v3) => v3.nonce,
             },
@@ -136,7 +136,7 @@ impl PoolTransaction for ExecutableTxWithHash {
     fn sender(&self) -> ContractAddress {
         match &self.transaction {
             ExecutableTx::Invoke(tx) => match tx {
-                InvokeTx::V0(v1) => v1.sender_address,
+                InvokeTx::V0(v1) => v1.contract_address,
                 InvokeTx::V1(v1) => v1.sender_address,
                 InvokeTx::V3(v3) => v3.sender_address,
             },
