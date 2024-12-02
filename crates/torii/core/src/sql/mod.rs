@@ -285,10 +285,8 @@ impl Sql {
         ))?;
 
         self.build_model_query(
-            selector,
             vec![namespaced_name.clone()],
             model,
-            block_timestamp,
             upgrade_diff,
         )?;
 
@@ -748,10 +746,8 @@ impl Sql {
     #[allow(clippy::too_many_arguments)]
     fn build_model_query(
         &mut self,
-        selector: Felt,
         path: Vec<String>,
         model: &Ty,
-        block_timestamp: u64,
         upgrade_diff: Option<&Ty>,
     ) -> Result<()> {
         let table_id = path[0].clone(); // Use only the root path component
@@ -767,15 +763,13 @@ impl Sql {
         );
 
         // Recursively add columns for all nested type
-        self.add_columns_recursive(
+        add_columns_recursive(
             &path,
             model,
             &mut columns,
             &mut alter_table_queries,
             &mut indices,
             &table_id,
-            selector,
-            block_timestamp,
             upgrade_diff,
         )?;
 
@@ -813,145 +807,7 @@ impl Sql {
         Ok(())
     }
 
-    fn add_columns_recursive(
-        &mut self,
-        path: &[String],
-        ty: &Ty,
-        columns: &mut Vec<String>,
-        alter_table_queries: &mut Vec<String>,
-        indices: &mut Vec<String>,
-        table_id: &str,
-        selector: Felt,
-        block_timestamp: u64,
-        upgrade_diff: Option<&Ty>,
-    ) -> Result<()> {
-        let column_prefix = if path.len() > 1 { path[1..].join(".") } else { String::new() };
-
-        let mut add_column = |name: &str, sql_type: &str| {
-            if upgrade_diff.is_some() {
-                alter_table_queries
-                    .push(format!("ALTER TABLE [{table_id}] ADD COLUMN [{name}] {sql_type}"));
-            } else {
-                columns.push(format!("[{name}] {sql_type}"));
-            }
-            indices.push(format!(
-                "CREATE INDEX IF NOT EXISTS [idx_{table_id}_{name}] ON [{table_id}] ([{name}]);"
-            ));
-        };
-
-        match ty {
-            Ty::Struct(s) => {
-                for member in &s.children {
-                    if let Some(upgrade_diff) = upgrade_diff {
-                        if !upgrade_diff
-                            .as_struct()
-                            .unwrap()
-                            .children
-                            .iter()
-                            .any(|m| m.name == member.name)
-                        {
-                            continue;
-                        }
-                    }
-
-                    let mut new_path = path.to_vec();
-                    new_path.push(member.name.clone());
-
-                    self.add_columns_recursive(
-                        &new_path,
-                        &member.ty,
-                        columns,
-                        alter_table_queries,
-                        indices,
-                        table_id,
-                        selector,
-                        block_timestamp,
-                        None,
-                    )?;
-                }
-            }
-            Ty::Tuple(tuple) => {
-                for (idx, member) in tuple.iter().enumerate() {
-                    let mut new_path = path.to_vec();
-                    new_path.push(idx.to_string());
-
-                    self.add_columns_recursive(
-                        &new_path,
-                        member,
-                        columns,
-                        alter_table_queries,
-                        indices,
-                        table_id,
-                        selector,
-                        block_timestamp,
-                        None,
-                    )?;
-                }
-            }
-            Ty::Array(_) => {
-                let column_name =
-                    if column_prefix.is_empty() { "value".to_string() } else { column_prefix };
-
-                add_column(&column_name, "TEXT");
-            }
-            Ty::Enum(e) => {
-                // The variant of the enum
-                let column_name = if column_prefix.is_empty() {
-                    "option".to_string()
-                } else {
-                    format!("{}", column_prefix)
-                };
-
-                let all_options = e
-                    .options
-                    .iter()
-                    .map(|c| format!("'{}'", c.name))
-                    .collect::<Vec<_>>()
-                    .join(", ");
-
-                let sql_type = format!("TEXT CHECK({} IN ({}))", column_name, all_options);
-                add_column(&column_name, &sql_type);
-
-                for child in &e.options {
-                    if let Ty::Tuple(tuple) = &child.ty {
-                        if tuple.is_empty() {
-                            continue;
-                        }
-                    }
-
-                    let mut new_path = path.to_vec();
-                    new_path.push(child.name.clone());
-
-                    self.add_columns_recursive(
-                        &new_path,
-                        &child.ty,
-                        columns,
-                        alter_table_queries,
-                        indices,
-                        table_id,
-                        selector,
-                        block_timestamp,
-                        None,
-                    )?;
-                }
-            }
-            Ty::ByteArray(_) => {
-                let column_name =
-                    if column_prefix.is_empty() { "value".to_string() } else { column_prefix };
-
-                add_column(&column_name, "TEXT");
-            }
-            Ty::Primitive(p) => {
-                let column_name =
-                    if column_prefix.is_empty() { "value".to_string() } else { column_prefix };
-
-                add_column(&column_name, &p.to_sql_type().to_string());
-            }
-        }
-
-        Ok(())
-    }
-
+    
     pub async fn execute(&self) -> Result<()> {
         let (execute, recv) = QueryMessage::execute_recv();
         self.executor.send(execute)?;
@@ -969,4 +825,134 @@ impl Sql {
         self.executor.send(rollback)?;
         recv.await?
     }
+}
+
+fn add_columns_recursive(
+    path: &[String],
+    ty: &Ty,
+    columns: &mut Vec<String>,
+    alter_table_queries: &mut Vec<String>,
+    indices: &mut Vec<String>,
+    table_id: &str,
+    upgrade_diff: Option<&Ty>,
+) -> Result<()> {
+    let column_prefix = if path.len() > 1 { path[1..].join(".") } else { String::new() };
+
+    let mut add_column = |name: &str, sql_type: &str| {
+        if upgrade_diff.is_some() {
+            alter_table_queries
+                .push(format!("ALTER TABLE [{table_id}] ADD COLUMN [{name}] {sql_type}"));
+        } else {
+            columns.push(format!("[{name}] {sql_type}"));
+        }
+        indices.push(format!(
+            "CREATE INDEX IF NOT EXISTS [idx_{table_id}_{name}] ON [{table_id}] ([{name}]);"
+        ));
+    };
+
+    match ty {
+        Ty::Struct(s) => {
+            for member in &s.children {
+                if let Some(upgrade_diff) = upgrade_diff {
+                    if !upgrade_diff
+                        .as_struct()
+                        .unwrap()
+                        .children
+                        .iter()
+                        .any(|m| m.name == member.name)
+                    {
+                        continue;
+                    }
+                }
+
+                let mut new_path = path.to_vec();
+                new_path.push(member.name.clone());
+
+                add_columns_recursive(
+                    &new_path,
+                    &member.ty,
+                    columns,
+                    alter_table_queries,
+                    indices,
+                    table_id,
+                    None,
+                )?;
+            }
+        }
+        Ty::Tuple(tuple) => {
+            for (idx, member) in tuple.iter().enumerate() {
+                let mut new_path = path.to_vec();
+                new_path.push(idx.to_string());
+
+                add_columns_recursive(
+                    &new_path,
+                    member,
+                    columns,
+                    alter_table_queries,
+                    indices,
+                    table_id,
+                    None,
+                )?;
+            }
+        }
+        Ty::Array(_) => {
+            let column_name =
+                if column_prefix.is_empty() { "value".to_string() } else { column_prefix };
+
+            add_column(&column_name, "TEXT");
+        }
+        Ty::Enum(e) => {
+            // The variant of the enum
+            let column_name = if column_prefix.is_empty() {
+                "option".to_string()
+            } else {
+                column_prefix
+            };
+
+            let all_options = e
+                .options
+                .iter()
+                .map(|c| format!("'{}'", c.name))
+                .collect::<Vec<_>>()
+                .join(", ");
+
+            let sql_type = format!("TEXT CHECK({} IN ({}))", column_name, all_options);
+            add_column(&column_name, &sql_type);
+
+            for child in &e.options {
+                if let Ty::Tuple(tuple) = &child.ty {
+                    if tuple.is_empty() {
+                        continue;
+                    }
+                }
+
+                let mut new_path = path.to_vec();
+                new_path.push(child.name.clone());
+
+                add_columns_recursive(
+                    &new_path,
+                    &child.ty,
+                    columns,
+                    alter_table_queries,
+                    indices,
+                    table_id,
+                    None,
+                )?;
+            }
+        }
+        Ty::ByteArray(_) => {
+            let column_name =
+                if column_prefix.is_empty() { "value".to_string() } else { column_prefix };
+
+            add_column(&column_name, "TEXT");
+        }
+        Ty::Primitive(p) => {
+            let column_name =
+                if column_prefix.is_empty() { "value".to_string() } else { column_prefix };
+
+            add_column(&column_name, p.to_sql_type().as_ref());
+        }
+    }
+
+    Ok(())
 }

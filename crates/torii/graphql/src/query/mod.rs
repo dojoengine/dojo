@@ -85,7 +85,7 @@ fn parse_nested_type(namespace: &str, schema: &Ty) -> TypeData {
         Ty::Tuple(t) => t
             .iter()
             .enumerate()
-            .map(|(i, ty)| (Name::new(&format!("_{}", i)), member_to_type_data(namespace, &ty)))
+            .map(|(i, ty)| (Name::new(format!("_{}", i)), member_to_type_data(namespace, ty)))
             .collect(),
         _ => return TypeData::Simple(TypeRef::named(schema.name())),
     };
@@ -225,7 +225,7 @@ pub fn value_mapping_from_row(
                             }
                         }
 
-                        populate_value(&mut array_value, &type_data, entity_id);
+                        populate_value(&mut array_value, type_data, entity_id);
                         value_mapping.insert(Name::new(field_name), array_value);
                     }
                 }

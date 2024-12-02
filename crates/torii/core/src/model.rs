@@ -223,23 +223,23 @@ pub fn map_row_to_ty(
         Ty::Primitive(primitive) => {
             match &primitive {
                 Primitive::I8(_) => {
-                    let value = row.try_get::<i8, &str>(&column_name)?;
+                    let value = row.try_get::<i8, &str>(column_name)?;
                     primitive.set_i8(Some(value))?;
                 }
                 Primitive::I16(_) => {
-                    let value = row.try_get::<i16, &str>(&column_name)?;
+                    let value = row.try_get::<i16, &str>(column_name)?;
                     primitive.set_i16(Some(value))?;
                 }
                 Primitive::I32(_) => {
-                    let value = row.try_get::<i32, &str>(&column_name)?;
+                    let value = row.try_get::<i32, &str>(column_name)?;
                     primitive.set_i32(Some(value))?;
                 }
                 Primitive::I64(_) => {
-                    let value = row.try_get::<i64, &str>(&column_name)?;
+                    let value = row.try_get::<i64, &str>(column_name)?;
                     primitive.set_i64(Some(value))?;
                 }
                 Primitive::I128(_) => {
-                    let value = row.try_get::<String, &str>(&column_name)?;
+                    let value = row.try_get::<String, &str>(column_name)?;
                     let hex_str = value.trim_start_matches("0x");
 
                     if !hex_str.is_empty() {
@@ -249,19 +249,19 @@ pub fn map_row_to_ty(
                     }
                 }
                 Primitive::U8(_) => {
-                    let value = row.try_get::<u8, &str>(&column_name)?;
+                    let value = row.try_get::<u8, &str>(column_name)?;
                     primitive.set_u8(Some(value))?;
                 }
                 Primitive::U16(_) => {
-                    let value = row.try_get::<u16, &str>(&column_name)?;
+                    let value = row.try_get::<u16, &str>(column_name)?;
                     primitive.set_u16(Some(value))?;
                 }
                 Primitive::U32(_) => {
-                    let value = row.try_get::<u32, &str>(&column_name)?;
+                    let value = row.try_get::<u32, &str>(column_name)?;
                     primitive.set_u32(Some(value))?;
                 }
                 Primitive::U64(_) => {
-                    let value = row.try_get::<String, &str>(&column_name)?;
+                    let value = row.try_get::<String, &str>(column_name)?;
                     let hex_str = value.trim_start_matches("0x");
 
                     if !hex_str.is_empty() {
@@ -271,7 +271,7 @@ pub fn map_row_to_ty(
                     }
                 }
                 Primitive::U128(_) => {
-                    let value = row.try_get::<String, &str>(&column_name)?;
+                    let value = row.try_get::<String, &str>(column_name)?;
                     let hex_str = value.trim_start_matches("0x");
 
                     if !hex_str.is_empty() {
@@ -281,7 +281,7 @@ pub fn map_row_to_ty(
                     }
                 }
                 Primitive::U256(_) => {
-                    let value = row.try_get::<String, &str>(&column_name)?;
+                    let value = row.try_get::<String, &str>(column_name)?;
                     let hex_str = value.trim_start_matches("0x");
 
                     if !hex_str.is_empty() {
@@ -289,15 +289,15 @@ pub fn map_row_to_ty(
                     }
                 }
                 Primitive::USize(_) => {
-                    let value = row.try_get::<u32, &str>(&column_name)?;
+                    let value = row.try_get::<u32, &str>(column_name)?;
                     primitive.set_usize(Some(value))?;
                 }
                 Primitive::Bool(_) => {
-                    let value = row.try_get::<bool, &str>(&column_name)?;
+                    let value = row.try_get::<bool, &str>(column_name)?;
                     primitive.set_bool(Some(value))?;
                 }
                 Primitive::Felt252(_) => {
-                    let value = row.try_get::<String, &str>(&column_name)?;
+                    let value = row.try_get::<String, &str>(column_name)?;
                     if !value.is_empty() {
                         primitive.set_felt252(Some(
                             Felt::from_str(&value).map_err(ParseError::FromStr)?,
@@ -305,7 +305,7 @@ pub fn map_row_to_ty(
                     }
                 }
                 Primitive::ClassHash(_) => {
-                    let value = row.try_get::<String, &str>(&column_name)?;
+                    let value = row.try_get::<String, &str>(column_name)?;
                     if !value.is_empty() {
                         primitive.set_class_hash(Some(
                             Felt::from_str(&value).map_err(ParseError::FromStr)?,
@@ -313,7 +313,7 @@ pub fn map_row_to_ty(
                     }
                 }
                 Primitive::ContractAddress(_) => {
-                    let value = row.try_get::<String, &str>(&column_name)?;
+                    let value = row.try_get::<String, &str>(column_name)?;
                     if !value.is_empty() {
                         primitive.set_contract_address(Some(
                             Felt::from_str(&value).map_err(ParseError::FromStr)?,
@@ -323,7 +323,7 @@ pub fn map_row_to_ty(
             };
         }
         Ty::Enum(enum_ty) => {
-            let option_name = row.try_get::<String, &str>(&column_name)?;
+            let option_name = row.try_get::<String, &str>(column_name)?;
             if !option_name.is_empty() {
                 enum_ty.set_option(&option_name)?;
             }
@@ -333,22 +333,22 @@ pub fn map_row_to_ty(
                     continue;
                 }
 
-                map_row_to_ty(&column_name, &option.name, &mut option.ty, row)?;
+                map_row_to_ty(column_name, &option.name, &mut option.ty, row)?;
             }
         }
         Ty::Struct(struct_ty) => {
             for member in &mut struct_ty.children {
-                map_row_to_ty(&column_name, &member.name, &mut member.ty, row)?;
+                map_row_to_ty(column_name, &member.name, &mut member.ty, row)?;
             }
         }
         Ty::Tuple(ty) => {
             for (i, member) in ty.iter_mut().enumerate() {
-                map_row_to_ty(&column_name, &i.to_string(), member, row)?;
+                map_row_to_ty(column_name, &i.to_string(), member, row)?;
             }
         }
         Ty::Array(ty) => {
             let schema = ty[0].clone();
-            let serialized_array = row.try_get::<String, &str>(&column_name)?;
+            let serialized_array = row.try_get::<String, &str>(column_name)?;
 
             let values: Vec<JsonValue> =
                 serde_json::from_str(&serialized_array).map_err(ParseError::FromJsonStr)?;
@@ -362,7 +362,7 @@ pub fn map_row_to_ty(
                 .collect::<Result<Vec<Ty>, _>>()?;
         }
         Ty::ByteArray(bytearray) => {
-            let value = row.try_get::<String, &str>(&column_name)?;
+            let value = row.try_get::<String, &str>(column_name)?;
             *bytearray = value;
         }
     };
