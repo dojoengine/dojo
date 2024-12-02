@@ -284,11 +284,7 @@ impl Sql {
             QueryType::RegisterModel,
         ))?;
 
-        self.build_model_query(
-            vec![namespaced_name.clone()],
-            model,
-            upgrade_diff,
-        )?;
+        self.build_model_query(vec![namespaced_name.clone()], model, upgrade_diff)?;
 
         // we set the model in the cache directly
         // because entities might be using it before the query queue is processed
@@ -807,7 +803,6 @@ impl Sql {
         Ok(())
     }
 
-    
     pub async fn execute(&self) -> Result<()> {
         let (execute, recv) = QueryMessage::execute_recv();
         self.executor.send(execute)?;
@@ -903,18 +898,11 @@ fn add_columns_recursive(
         }
         Ty::Enum(e) => {
             // The variant of the enum
-            let column_name = if column_prefix.is_empty() {
-                "option".to_string()
-            } else {
-                column_prefix
-            };
+            let column_name =
+                if column_prefix.is_empty() { "option".to_string() } else { column_prefix };
 
-            let all_options = e
-                .options
-                .iter()
-                .map(|c| format!("'{}'", c.name))
-                .collect::<Vec<_>>()
-                .join(", ");
+            let all_options =
+                e.options.iter().map(|c| format!("'{}'", c.name)).collect::<Vec<_>>().join(", ");
 
             let sql_type = format!("TEXT CHECK({} IN ({}))", column_name, all_options);
             add_column(&column_name, &sql_type);
