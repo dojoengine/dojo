@@ -75,7 +75,6 @@ pub struct PlayerItem {
     pub item_id: u32,
     pub quantity: u32,
     pub score: i32,
-    pub test: (u32, u32),
 }
 
 #[derive(Drop, Serde)]
@@ -86,8 +85,6 @@ pub struct PlayerConfig {
     pub name: ByteArray,
     pub items: Array<PlayerItem>,
     pub favorite_item: Option<u32>,
-    pub test: Array<Array<Option<PlayerItem>>>,
-    pub test_tuple: (u32, u32, PlayerItem),
 }
 
 #[derive(Drop, Serde)]

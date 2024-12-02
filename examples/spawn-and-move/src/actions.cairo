@@ -65,8 +65,6 @@ pub mod actions {
                 name: "hello",
                 items: array![],
                 favorite_item: Option::None,
-                test: array![],
-                test_tuple: (1, 2, PlayerItem { item_id: 1, quantity: 100, score: 150, test: (1, 2) })
             };
 
             let mut world = self.world_default();
@@ -125,14 +123,11 @@ pub mod actions {
             let player = get_caller_address();
 
             let items = array![
-                PlayerItem { item_id: 1, quantity: 100, score: 150, test: (1, 2) },
-                PlayerItem { item_id: 2, quantity: 50, score: -32, test: (3, 4) }
+                PlayerItem { item_id: 1, quantity: 100, score: 150 },
+                PlayerItem { item_id: 2, quantity: 50, score: -32 }
             ];
 
-            let item = items[0].clone();
-            let config = PlayerConfig { player, name, items, favorite_item: Option::Some(1), test: array![
-                array![Option::Some(item)],
-            ], test_tuple: (1, 2, item) };
+            let config = PlayerConfig { player, name, items, favorite_item: Option::Some(1) };
             world.write_model(@config);
         }
 
