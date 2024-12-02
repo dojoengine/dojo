@@ -1,5 +1,6 @@
 use std::str::FromStr;
 
+use async_graphql::dynamic::indexmap::IndexMap;
 use async_graphql::dynamic::TypeRef;
 use async_graphql::{Name, Value};
 use chrono::{DateTime, Utc};
@@ -136,6 +137,10 @@ pub fn value_mapping_from_row(
         entity_id: &Option<String>,
     ) -> sqlx::Result<ValueMapping> {
         let mut value_mapping = ValueMapping::new();
+        // Add internal entity ID if present
+        if let Some(entity_id) = entity_id {
+            value_mapping.insert(Name::new(INTERNAL_ENTITY_ID_KEY), Value::from(entity_id));
+        }
 
         for (field_name, type_data) in types {
             let column_name = if prefix.is_empty() {
@@ -199,11 +204,26 @@ pub fn value_mapping_from_row(
                                         );
                                     }
                                 }
-                                Value::List(inner) => {
-                                    for item in inner {
-                                        populate_value(item, type_data.inner().unwrap(), entity_id);
+                                Value::List(inner) => match type_data {
+                                    TypeData::List(inner_type_data) => {
+                                        for item in inner.iter_mut() {
+                                            populate_value(item, inner_type_data, entity_id);
+                                        }
                                     }
-                                }
+                                    TypeData::Nested((_, mapping)) => {
+                                        let mut obj = IndexMap::new();
+                                        for (i, item) in inner.iter_mut().enumerate() {
+                                            populate_value(
+                                                item,
+                                                &mapping[&Name::new(format!("_{}", i))],
+                                                entity_id,
+                                            );
+                                            obj.insert(Name::new(format!("_{}", i)), item.clone());
+                                        }
+                                        *value = Value::Object(obj);
+                                    }
+                                    _ => {}
+                                },
                                 _ => {}
                             }
                         }
@@ -228,13 +248,7 @@ pub fn value_mapping_from_row(
         Ok(value_mapping)
     }
 
-    let mut value_mapping = build_value_mapping(row, types, "", is_external, &entity_id)?;
-
-    // Add internal entity ID if present
-    if let Some(entity_id) = entity_id {
-        value_mapping.insert(Name::new(INTERNAL_ENTITY_ID_KEY), Value::from(entity_id));
-    }
-
+    let value_mapping = build_value_mapping(row, types, "", is_external, &entity_id)?;
     Ok(value_mapping)
 }
 
@@ -246,6 +260,20 @@ fn fetch_value(
 ) -> sqlx::Result<Value> {
     let mut column_name =
         if !is_external { format!("internal_{}", field_name) } else { field_name.to_string() };
+
+    // Strip _0, _1, etc. from tuple field names
+    // to get the actual SQL column name which is 0, 1 etc..
+    column_name = column_name
+        .split('.')
+        .map(|part| {
+            if part.starts_with('_') && part[1..].parse::<usize>().is_ok() {
+                &part[1..]
+            } else {
+                part
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(".");
 
     // for enum options, remove the ".option" suffix to get the variant
     // through the enum itself field name
