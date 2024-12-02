@@ -258,6 +258,10 @@ impl Sql {
     ) -> Result<()> {
         let selector = compute_selector_from_names(namespace, &model.name());
         let namespaced_name = get_tag(namespace, &model.name());
+        let namespaced_schema = Ty::Struct(Struct {
+            name: namespaced_name.clone(),
+            children: model.as_struct().unwrap().children.clone(),
+        });
 
         let insert_models =
             "INSERT INTO models (id, namespace, name, class_hash, contract_address, layout, \
@@ -273,7 +277,7 @@ impl Sql {
             Argument::String(format!("{class_hash:#x}")),
             Argument::String(format!("{contract_address:#x}")),
             Argument::String(serde_json::to_string(&layout)?),
-            Argument::String(serde_json::to_string(&model)?),
+            Argument::String(serde_json::to_string(&namespaced_schema)?),
             Argument::Int(packed_size as i64),
             Argument::Int(unpacked_size as i64),
             Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
@@ -300,11 +304,7 @@ impl Sql {
                     packed_size,
                     unpacked_size,
                     layout,
-                    // we need to update the name of the struct to include the namespace
-                    schema: Ty::Struct(Struct {
-                        name: namespaced_name,
-                        children: model.as_struct().unwrap().children.clone(),
-                    }),
+                    schema: namespaced_schema,
                 },
             )
             .await;
