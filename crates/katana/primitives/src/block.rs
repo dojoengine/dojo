@@ -54,8 +54,6 @@ pub struct PartialHeader {
     pub protocol_version: ProtocolVersion,
 }
 
-// we use deserialize_with to keep compatibility with the current db format while still supporting
-// the format returned by the feeder gateway. maybe remove the deserialize_with in the future??
 /// The L1 gas prices.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
