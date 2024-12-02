@@ -158,7 +158,7 @@ fn model_union_field() -> Field {
                             sqlx::query(&query).bind(&entity_id).fetch_one(&mut *conn).await?;
 
                         // Use value_mapping_from_row to handle nested structures
-                        let data = value_mapping_from_row(&row, &type_mapping, false)?;
+                        let data = value_mapping_from_row(&row, &type_mapping, false, false)?;
 
                         results.push(FieldValue::with_type(
                             FieldValue::owned_any(data),

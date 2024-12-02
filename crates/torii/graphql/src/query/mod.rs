@@ -117,6 +117,7 @@ pub fn value_mapping_from_row(
     row: &SqliteRow,
     types: &TypeMapping,
     is_internal: bool,
+    snake_case: bool,
 ) -> sqlx::Result<ValueMapping> {
     // Retrieve entity ID if present
     let entity_id = if let Ok(entity_id) = row.try_get::<String, &str>(ENTITY_ID_COLUMN) {
@@ -132,6 +133,7 @@ pub fn value_mapping_from_row(
         types: &TypeMapping,
         prefix: &str,
         is_internal: bool,
+        snake_case: bool,
         entity_id: &Option<String>,
     ) -> sqlx::Result<ValueMapping> {
         let mut value_mapping = ValueMapping::new();
@@ -149,8 +151,13 @@ pub fn value_mapping_from_row(
 
             match type_data {
                 TypeData::Simple(type_ref) => {
-                    let mut value =
-                        fetch_value(row, &column_name, &type_ref.to_string(), is_internal)?;
+                    let mut value = fetch_value(
+                        row,
+                        &column_name,
+                        &type_ref.to_string(),
+                        is_internal,
+                        snake_case,
+                    )?;
 
                     // handles felt arrays stored as string (ex: keys)
                     if let (TypeRef::List(_), Value::String(s)) = (type_ref, &value) {
@@ -163,7 +170,7 @@ pub fn value_mapping_from_row(
                     value_mapping.insert(Name::new(field_name), value);
                 }
                 TypeData::List(_) => {
-                    let value = fetch_value(row, &column_name, "String", is_internal)?;
+                    let value = fetch_value(row, &column_name, "String", is_internal, snake_case)?;
                     if let Value::String(json_str) = value {
                         let mut array_value: Value =
                             serde_json::from_str(&json_str).map_err(|e| {
@@ -236,6 +243,7 @@ pub fn value_mapping_from_row(
                         nested_mapping,
                         &column_name,
                         is_internal,
+                        snake_case,
                         entity_id,
                     )?;
                     value_mapping.insert(Name::new(field_name), Value::Object(nested_values));
@@ -246,7 +254,7 @@ pub fn value_mapping_from_row(
         Ok(value_mapping)
     }
 
-    let value_mapping = build_value_mapping(row, types, "", is_internal, &entity_id)?;
+    let value_mapping = build_value_mapping(row, types, "", is_internal, snake_case, &entity_id)?;
     Ok(value_mapping)
 }
 
@@ -255,22 +263,21 @@ fn fetch_value(
     field_name: &str,
     type_name: &str,
     is_internal: bool,
+    snake_case: bool,
 ) -> sqlx::Result<Value> {
-    let mut column_name =
-        if is_internal { format!("internal_{}", field_name) } else { field_name.to_string() };
+    let mut column_name = if is_internal {
+        format!("internal_{}", field_name)
+    } else {
+        if snake_case { field_name.to_case(Case::Snake) } else { field_name.to_string() }
+    };
 
     // Strip _0, _1, etc. from tuple field names
     // to get the actual SQL column name which is 0, 1 etc..
-    let parts: Vec<_> = column_name.split('.').collect();
-
-    column_name = parts
-        .iter()
-        .enumerate()
-        .map(|(i, part)| {
+    column_name = column_name
+        .split('.')
+        .map(|part| {
             if part.starts_with('_') && part[1..].parse::<usize>().is_ok() {
                 part[1..].to_string()
-            } else if i == parts.len() - 1 {
-                part.to_case(Case::Snake)
             } else {
                 part.to_string()
             }

@@ -120,6 +120,7 @@ impl ResolvableObject for ModelDataObject {
                     "internal_event_id",
                     total_count,
                     false,
+                    false,
                     page_info,
                 )?;
 
@@ -200,7 +201,8 @@ pub fn object(type_name: &str, type_mapping: &TypeMapping, path_array: Vec<Strin
                                     &entity_id,
                                 )
                                 .await?;
-                                let result = value_mapping_from_row(&data, &nested_mapping, false)?;
+                                let result =
+                                    value_mapping_from_row(&data, &nested_mapping, false, false)?;
 
                                 Ok(Some(Value::Object(result)))
                             }
@@ -242,7 +244,7 @@ fn entity_field() -> Field {
                     let entity_id = utils::extract::<String>(indexmap, INTERNAL_ENTITY_ID_KEY)?;
                     let data =
                         fetch_single_row(&mut conn, ENTITY_TABLE, ID_COLUMN, &entity_id).await?;
-                    let entity = value_mapping_from_row(&data, &ENTITY_TYPE_MAPPING, false)?;
+                    let entity = value_mapping_from_row(&data, &ENTITY_TYPE_MAPPING, false, true)?;
 
                     Ok(Some(Value::Object(entity)))
                 }
@@ -262,7 +264,8 @@ fn event_message_field() -> Field {
                     let data =
                         fetch_single_row(&mut conn, EVENT_MESSAGE_TABLE, ID_COLUMN, &entity_id)
                             .await?;
-                    let event_message = value_mapping_from_row(&data, &ENTITY_TYPE_MAPPING, false)?;
+                    let event_message =
+                        value_mapping_from_row(&data, &ENTITY_TYPE_MAPPING, false, true)?;
 
                     Ok(Some(Value::Object(event_message)))
                 }

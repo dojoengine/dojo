@@ -118,6 +118,7 @@ pub fn connection_output(
     id_column: &str,
     total_count: i64,
     is_internal: bool,
+    snake_case: bool,
     page_info: PageInfo,
 ) -> sqlx::Result<ValueMapping> {
     let model_edges = data
@@ -136,7 +137,7 @@ pub fn connection_output(
             let primary_order = row.try_get::<String, &str>(id_column)?;
             let secondary_order = row.try_get_unchecked::<String, &str>(&order_field)?;
             let cursor = cursor::encode(&primary_order, &secondary_order);
-            let value_mapping = value_mapping_from_row(row, types, is_internal)?;
+            let value_mapping = value_mapping_from_row(row, types, is_internal, snake_case)?;
 
             let mut edge = ValueMapping::new();
             edge.insert(Name::new("node"), Value::Object(value_mapping));
