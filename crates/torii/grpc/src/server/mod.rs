@@ -310,8 +310,6 @@ impl DojoWorld {
                 None,
             )?;
 
-            println!("entity_query: {}", entity_query);
-
             let rows = sqlx::query(&entity_query).bind(&models_str).fetch_all(&mut *tx).await?;
             let schemas = Arc::new(schemas);
 
