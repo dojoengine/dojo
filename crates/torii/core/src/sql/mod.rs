@@ -904,7 +904,7 @@ fn add_columns_recursive(
             let all_options =
                 e.options.iter().map(|c| format!("'{}'", c.name)).collect::<Vec<_>>().join(", ");
 
-            let sql_type = format!("TEXT CHECK({} IN ({}))", column_name, all_options);
+            let sql_type = format!("TEXT CHECK([{column_name}] IN ({all_options}))");
             add_column(&column_name, &sql_type);
 
             for child in &e.options {
