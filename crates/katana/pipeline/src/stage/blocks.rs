@@ -2,11 +2,12 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use backon::{ExponentialBuilder, Retryable};
-use katana_primitives::block::{BlockNumber, SealedBlockWithStatus};
+use katana_feeder_gateway::client::SequencerGateway;
+use katana_feeder_gateway::types::StateUpdateWithBlock;
+use katana_primitives::block::{BlockIdOrTag, BlockNumber, SealedBlockWithStatus};
 use katana_primitives::state::{StateUpdates, StateUpdatesWithClasses};
+use katana_primitives::transaction::TxWithHash;
 use katana_provider::traits::block::BlockWriter;
-use starknet::providers::sequencer::models::{BlockId, StateUpdateWithBlock};
-use starknet::providers::{ProviderError, SequencerGatewayProvider};
 use tracing::{debug, warn};
 
 use super::{Stage, StageExecutionInput, StageResult};
@@ -14,7 +15,7 @@ use super::{Stage, StageExecutionInput, StageResult};
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error(transparent)]
-    Gateway(#[from] ProviderError),
+    Gateway(#[from] katana_feeder_gateway::client::Error),
 }
 
 #[derive(Debug)]
@@ -24,11 +25,7 @@ pub struct Blocks<P> {
 }
 
 impl<P> Blocks<P> {
-    pub fn new(
-        provider: P,
-        feeder_gateway: SequencerGatewayProvider,
-        download_batch_size: usize,
-    ) -> Self {
+    pub fn new(provider: P, feeder_gateway: SequencerGateway, download_batch_size: usize) -> Self {
         let downloader = Downloader::new(feeder_gateway, download_batch_size);
         Self { provider, downloader }
     }
@@ -48,18 +45,25 @@ impl<P: BlockWriter> Stage for Blocks<P> {
             debug!(target: "stage", id = %self.id(), total = %blocks.len(), "Storing blocks to storage.");
             // Store blocks to storage
             for block in blocks {
-                let StateUpdateWithBlock { state_update, block: fgw_block } = block;
+                let StateUpdateWithBlock { state_update, block } = block;
 
-                let block = SealedBlockWithStatus::from(fgw_block);
-                let su = StateUpdates::from(state_update);
-                let su = StateUpdatesWithClasses { state_updates: su, ..Default::default() };
+                let transactions: Vec<TxWithHash> = block
+                    .transactions
+                    .into_iter()
+                    .map(|tx| tx.try_into())
+                    .collect::<Result<Vec<_>, _>>()?;
 
-                let _ = self.provider.insert_block_with_states_and_receipts(
-                    block,
-                    su,
-                    Vec::new(),
-                    Vec::new(),
-                );
+                let block: SealedBlockWithStatus = block.into;
+
+                // let su = StateUpdates::from(state_update);
+                // let su = StateUpdatesWithClasses { state_updates: su, ..Default::default() };
+
+                // let _ = self.provider.insert_block_with_states_and_receipts(
+                //     block,
+                //     su,
+                //     Vec::new(),
+                //     Vec::new(),
+                // );
             }
         }
 
@@ -70,11 +74,11 @@ impl<P: BlockWriter> Stage for Blocks<P> {
 #[derive(Debug, Clone)]
 struct Downloader {
     batch_size: usize,
-    client: Arc<SequencerGatewayProvider>,
+    client: Arc<SequencerGateway>,
 }
 
 impl Downloader {
-    fn new(client: SequencerGatewayProvider, batch_size: usize) -> Self {
+    fn new(client: SequencerGateway, batch_size: usize) -> Self {
         Self { client: Arc::new(client), batch_size }
     }
 
@@ -134,17 +138,15 @@ impl Downloader {
 
     /// Fetch a single block with the given block number.
     async fn fetch_block(&self, block: BlockNumber) -> Result<StateUpdateWithBlock, Error> {
-        #[allow(deprecated)]
-        let res = self.client.get_state_update_with_block(BlockId::Number(block)).await?;
-        Ok(res)
+        Ok(self.client.get_state_update_with_block(BlockIdOrTag::Number(block)).await?)
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use katana_feeder_gateway::client::SequencerGateway;
     use katana_provider::test_utils::test_provider;
     use katana_provider::traits::block::BlockNumberProvider;
-    use starknet::providers::SequencerGatewayProvider;
 
     use super::Blocks;
     use crate::stage::{Stage, StageExecutionInput};
@@ -155,7 +157,7 @@ mod tests {
         let to_block = from_block + 2;
 
         let provider = test_provider();
-        let feeder_gateway = SequencerGatewayProvider::starknet_alpha_sepolia();
+        let feeder_gateway = SequencerGateway::sn_sepolia();
 
         let mut stage = Blocks::new(&provider, feeder_gateway, 10);
 
