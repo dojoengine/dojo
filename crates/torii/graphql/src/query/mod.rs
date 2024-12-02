@@ -261,22 +261,22 @@ fn fetch_value(
 
     // Strip _0, _1, etc. from tuple field names
     // to get the actual SQL column name which is 0, 1 etc..
-    column_name = column_name
-        .split('.')
-        .map(|part| {
+    let parts: Vec<_> = column_name.split('.').collect();
+
+    column_name = parts
+        .iter()
+        .enumerate()
+        .map(|(i, part)| {
             if part.starts_with('_') && part[1..].parse::<usize>().is_ok() {
-                &part[1..]
+                part[1..].to_string()
+            } else if i == parts.len() - 1 {
+                part.to_case(Case::Snake)
             } else {
-                part
+                part.to_string()
             }
         })
         .collect::<Vec<_>>()
         .join(".");
-
-    // we do this for fields like eventId, classHash etc. which are stored as snake_case in the DB
-    if !column_name.contains('_') {
-        column_name = column_name.to_case(Case::Snake);
-    }
 
     // for enum options, remove the ".option" suffix to get the variant
     // through the enum itself field name
