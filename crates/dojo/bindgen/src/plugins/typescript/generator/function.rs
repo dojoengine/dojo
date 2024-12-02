@@ -88,11 +88,12 @@ impl TsFunctionGenerator {
             .fold(inputs, |mut acc, input| {
                 let prefix = match &input.1 {
                     Token::Composite(t) => {
-                        if t.r#type == CompositeType::Enum
-                            || (t.r#type == CompositeType::Struct
-                                && !t.type_path.starts_with("core"))
-                        {
+                        if t.r#type == CompositeType::Enum {
                             "models."
+                        } else if t.r#type == CompositeType::Struct
+                            && !t.type_path.starts_with("core")
+                        {
+                            "models.Input"
                         } else {
                             ""
                         }

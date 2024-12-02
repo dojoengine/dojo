@@ -1,6 +1,8 @@
 use cainome::parser::tokens::{Composite, CompositeType, Token};
 
-use super::constants::{BIGNUMNERISH_IMPORT, CAIRO_OPTION_IMPORT, SN_IMPORT_SEARCH};
+use super::constants::{
+    BIGNUMNERISH_IMPORT, CAIRO_OPTION_IMPORT, REMOVE_FIELD_ORDER_TYPE_DEF, SN_IMPORT_SEARCH,
+};
 use super::{token_is_option, JsType};
 use crate::error::BindgenResult;
 use crate::plugins::typescript::generator::constants::CAIRO_OPTION_TOKEN;
@@ -25,6 +27,12 @@ impl TsInterfaceGenerator {
             }
         }
     }
+
+    fn add_input_type(&self, buffer: &mut Buffer) {
+        if !buffer.has(REMOVE_FIELD_ORDER_TYPE_DEF) {
+            buffer.push(REMOVE_FIELD_ORDER_TYPE_DEF.to_owned());
+        }
+    }
 }
 
 impl BindgenModelGenerator for TsInterfaceGenerator {
@@ -34,6 +42,7 @@ impl BindgenModelGenerator for TsInterfaceGenerator {
         }
 
         self.check_import(token, buffer);
+        self.add_input_type(buffer);
 
         Ok(format!(
             "// Type definition for `{path}` struct
@@ -41,6 +50,7 @@ export interface {name} {{
 \tfieldOrder: string[];
 {fields}
 }}
+export type Input{name} = RemoveFieldOrder<{name}>;
 ",
             path = token.type_path,
             name = token.type_name(),
@@ -114,7 +124,7 @@ mod tests {
             result,
             "// Type definition for `core::test::TestStruct` struct\nexport interface TestStruct \
              {\n\tfieldOrder: string[];\n\tfield1: BigNumberish;\n\tfield2: \
-             BigNumberish;\n\tfield3: BigNumberish;\n}\n"
+             BigNumberish;\n\tfield3: BigNumberish;\n}\nexport type InputTestStruct = RemoveFieldOrder<TestStruct>;\n"
         );
     }
 

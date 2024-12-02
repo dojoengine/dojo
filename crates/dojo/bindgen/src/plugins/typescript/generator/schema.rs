@@ -87,7 +87,7 @@ impl TsSchemaGenerator {
             return;
         }
 
-        buffer.insert_after(gen, const_type, ",", 1);
+        buffer.insert_after(gen, const_type, ",", 2);
     }
 
     /// Check if namespace is defined in schema
