@@ -4,6 +4,7 @@ use async_graphql::dynamic::indexmap::IndexMap;
 use async_graphql::dynamic::TypeRef;
 use async_graphql::{Name, Value};
 use chrono::{DateTime, Utc};
+use convert_case::{Case, Casing};
 use dojo_types::primitive::{Primitive, SqlType};
 use dojo_types::schema::Ty;
 use regex::Regex;
@@ -260,17 +261,21 @@ fn fetch_value(
 
     // Strip _0, _1, etc. from tuple field names
     // to get the actual SQL column name which is 0, 1 etc..
-    column_name = column_name
-        .split('.')
-        .map(|part| {
-            if part.starts_with('_') && part[1..].parse::<usize>().is_ok() {
-                &part[1..]
-            } else {
-                part
-            }
-        })
-        .collect::<Vec<_>>()
-        .join(".");
+    column_name = if column_name.contains('.') {
+        column_name
+            .split('.')
+            .map(|part| {
+                if part.starts_with('_') && part[1..].parse::<usize>().is_ok() {
+                    &part[1..]
+                } else {
+                    part
+                }
+            })
+            .collect::<Vec<_>>()
+            .join(".")
+    } else {
+        column_name.to_case(Case::Snake)
+    };
 
     // for enum options, remove the ".option" suffix to get the variant
     // through the enum itself field name
