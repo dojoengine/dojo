@@ -19,6 +19,8 @@ pub enum L1DataAvailabilityMode {
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub enum DataAvailabilityMode {
-    L1 = 0,
-    L2 = 1,
+    #[serde(rename = "L1")]
+    L1,
+    #[serde(rename = "L2")]
+    L2,
 }
