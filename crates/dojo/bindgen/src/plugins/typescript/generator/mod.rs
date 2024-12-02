@@ -1,4 +1,5 @@
-use cainome::parser::tokens::{Composite, Token};
+use crate::plugins::typescript::generator::constants::CAIRO_OPTION_TYPE_PATH;
+use cainome::parser::tokens::{Composite, CompositeType, Token};
 use constants::{
     CAIRO_BOOL, CAIRO_BYTE_ARRAY, CAIRO_CONTRACT_ADDRESS, CAIRO_FELT252, CAIRO_I128, CAIRO_U128,
     CAIRO_U16, CAIRO_U256, CAIRO_U256_STRUCT, CAIRO_U32, CAIRO_U64, CAIRO_U8, JS_BIGNUMBERISH,
@@ -55,6 +56,21 @@ pub(crate) fn generate_type_init(token: &Composite) -> String {
     )
 }
 
+/// Checks if Token::Composite is an Option
+/// * token - The token to check
+///
+pub(crate) fn token_is_option(token: &Composite) -> bool {
+    token.type_path.starts_with(CAIRO_OPTION_TYPE_PATH)
+}
+
+/// Checks if Token::Composite is an custom enum (enum with nested Composite types)
+/// * token - The token to check
+///
+pub(crate) fn token_is_custom_enum(token: &Composite) -> bool {
+    token.r#type == CompositeType::Enum
+        && token.inners.iter().any(|inner| inner.token.to_composite().is_ok())
+}
+
 #[derive(Debug)]
 pub(crate) struct JsType(String);
 impl From<&str> for JsType {
@@ -93,6 +109,16 @@ impl From<&Token> for JsType {
                 )
                 .as_str(),
             ),
+            Token::Composite(c) => {
+                if token_is_option(c) {
+                    return JsType::from(format!("CairoOption<{}>", c.generic_args.iter().map(|(_, t)| JsType::from(t.type_name().as_str()).to_string()).collect::<Vec<_>>().join(", ")).as_str());
+                }
+                if token_is_custom_enum(c) {
+                    // we defined a type wrapper with Enum suffix let's use it there
+                    return JsType::from(format!("{}Enum", value.type_name()).as_str());
+                }
+                return JsType::from(value.type_name().as_str())
+            },
             _ => JsType::from(value.type_name().as_str()),
         }
     }
@@ -241,6 +267,82 @@ mod tests {
                 })),
                 is_legacy: false,
             }))
+        )
+    }
+
+    #[test]
+    fn test_option_type() {
+        assert_eq!(
+            "CairoOption<GatedType>",
+            JsType::from(&Token::Composite(Composite {
+                type_path: "core::option::Option<tournament::ls15_components::models::tournament::GatedType>".to_owned(),
+                inners: vec![],
+                generic_args: vec![
+                        (
+                        "A".to_owned(), 
+                        Token::Composite(
+                            Composite { 
+                                type_path: "tournament::ls15_components::models::tournament::GatedType".to_owned(), 
+                                inners: vec![
+                                    CompositeInner {
+                                        index: 0,
+                                        name: "token".to_owned(),
+                                        kind: CompositeInnerKind::NotUsed,
+                                        token: Token::Composite(
+                                            Composite {
+                                                type_path: "tournament::ls15_components::models::tournament::GatedToken".to_owned(),
+                                                inners: vec![],
+                                                generic_args: vec![],
+                                                r#type: CompositeType::Unknown,
+                                                is_event: false,
+                                                alias: None,
+                                            },
+                                        ),
+                                    },
+                                    CompositeInner {
+                                        index: 1,
+                                        name: "tournament".to_owned(),
+                                        kind: CompositeInnerKind::NotUsed,
+                                        token: Token::Array(
+                                            Array {
+                                                type_path: "core::array::Span::<core::integer::u64>".to_owned(),
+                                                inner: Box::new(Token::CoreBasic(
+                                                    CoreBasic {
+                                                        type_path: "core::integer::u64".to_owned(),
+                                                    },
+                                               )),
+                                                is_legacy: false,
+                                            },
+                                        ),
+                                    },
+                                    CompositeInner {
+                                        index: 2,
+                                        name: "address".to_owned(),
+                                        kind: CompositeInnerKind::NotUsed,
+                                        token: Token::Array(
+                                            Array {
+                                                type_path: "core::array::Span::<core::starknet::contract_address::ContractAddress>".to_owned(),
+                                                inner: Box::new(Token::CoreBasic(
+                                                    CoreBasic {
+                                                        type_path: "core::starknet::contract_address::ContractAddress".to_owned(),
+                                                    },
+                                                )) ,
+                                                is_legacy: false,
+                                            },
+                                        ),
+                                    }
+                                ],
+                                generic_args: vec![],
+                                r#type: CompositeType::Unknown,
+                                is_event: false,
+                                alias: None
+                            }
+                        )
+                    ),
+                ],
+                r#type: CompositeType::Unknown,
+                is_event: false,
+                alias: None            }))
         )
     }
 

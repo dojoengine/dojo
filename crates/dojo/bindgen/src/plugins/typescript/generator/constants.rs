@@ -14,3 +14,11 @@ pub const CAIRO_BOOL: &str = "bool";
 pub const JS_BOOLEAN: &str = "boolean";
 pub const JS_STRING: &str = "string";
 pub const JS_BIGNUMBERISH: &str = "BigNumberish";
+
+pub(crate) const BIGNUMNERISH_IMPORT: &str = "import type { BigNumberish } from 'starknet';\n";
+pub(crate) const CAIRO_OPTION_IMPORT: &str = "import type { CairoOption } from 'starknet';\n";
+pub(crate) const CAIRO_ENUM_IMPORT: &str = "import type { CairoCustomEnum } from 'starknet';\n";
+pub(crate) const CAIRO_OPTION_TYPE_PATH: &str = "core::option::Option";
+pub(crate) const SN_IMPORT_SEARCH: &str = "} from 'starknet';";
+pub(crate) const CAIRO_OPTION_TOKEN: &str = "CairoOption,";
+pub(crate) const CAIRO_ENUM_TOKEN: &str = "CairoCustomEnum,";
