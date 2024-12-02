@@ -141,7 +141,13 @@ async fn print_banner(ws: &Workspace<'_>, starknet: &StarknetOptions) -> Result<
     let profile_config = ws.load_profile_config()?;
     let (provider, rpc_url) = starknet.provider(profile_config.env.as_ref())?;
 
-    let chain_id = provider.chain_id().await?;
+    let chain_id_result = provider.chain_id().await;
+    if chain_id_result.is_err() {
+        let error_info =
+            format!("Unhealthy provider {:?}, please check your configuration.", provider);
+        return Err(anyhow::anyhow!(error_info));
+    }
+    let chain_id = chain_id_result.unwrap();
     let chain_id =
         parse_cairo_short_string(&chain_id).with_context(|| "Cannot parse chain_id as string")?;
 

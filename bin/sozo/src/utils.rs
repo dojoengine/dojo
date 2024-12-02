@@ -115,7 +115,13 @@ pub async fn get_world_diff_and_provider(
     let (provider, rpc_url) = starknet.provider(env)?;
     trace!(?provider, "Provider initialized.");
 
-    let spec_version = provider.spec_version().await?;
+    let spec_version_result = provider.spec_version().await;
+    if spec_version_result.is_err() {
+        let error_info =
+            format!("Unhealthy provider {:?}, please check your configuration.", provider);
+        return Err(anyhow::anyhow!(error_info));
+    }
+    let spec_version = spec_version_result.unwrap();
     trace!(spec_version);
 
     if !is_compatible_version(&spec_version, RPC_SPEC_VERSION)? {
