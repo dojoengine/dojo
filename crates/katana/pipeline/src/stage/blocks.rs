@@ -1,13 +1,24 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use anyhow::Result;
 use backon::{ExponentialBuilder, Retryable};
 use katana_feeder_gateway::client::SequencerGateway;
+use katana_feeder_gateway::types::Block;
 use katana_feeder_gateway::types::StateUpdateWithBlock;
-use katana_primitives::block::{BlockIdOrTag, BlockNumber, SealedBlockWithStatus};
+use katana_primitives::block::FinalityStatus;
+use katana_primitives::block::GasPrices;
+use katana_primitives::block::Header;
+use katana_primitives::block::{BlockIdOrTag, BlockNumber, SealedBlock, SealedBlockWithStatus};
+use katana_primitives::da::L1DataAvailabilityMode;
+use katana_primitives::receipt::Receipt;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithClasses};
 use katana_primitives::transaction::TxWithHash;
+use katana_primitives::version::ProtocolVersion;
 use katana_provider::traits::block::BlockWriter;
+use num_traits::ToPrimitive;
+use starknet::core::types::ResourcePrice;
+use starknet::providers::sequencer::models::BlockStatus;
 use tracing::{debug, warn};
 
 use super::{Stage, StageExecutionInput, StageResult};
@@ -45,25 +56,14 @@ impl<P: BlockWriter> Stage for Blocks<P> {
             debug!(target: "stage", id = %self.id(), total = %blocks.len(), "Storing blocks to storage.");
             // Store blocks to storage
             for block in blocks {
-                let StateUpdateWithBlock { state_update, block } = block;
+                let (block, receipts, state_updates) = extract_block_data(block)?;
 
-                let transactions: Vec<TxWithHash> = block
-                    .transactions
-                    .into_iter()
-                    .map(|tx| tx.try_into())
-                    .collect::<Result<Vec<_>, _>>()?;
-
-                let block: SealedBlockWithStatus = block.into;
-
-                // let su = StateUpdates::from(state_update);
-                // let su = StateUpdatesWithClasses { state_updates: su, ..Default::default() };
-
-                // let _ = self.provider.insert_block_with_states_and_receipts(
-                //     block,
-                //     su,
-                //     Vec::new(),
-                //     Vec::new(),
-                // );
+                let _ = self.provider.insert_block_with_states_and_receipts(
+                    block,
+                    state_updates,
+                    receipts,
+                    Vec::new(),
+                );
             }
         }
 
@@ -140,6 +140,65 @@ impl Downloader {
     async fn fetch_block(&self, block: BlockNumber) -> Result<StateUpdateWithBlock, Error> {
         Ok(self.client.get_state_update_with_block(BlockIdOrTag::Number(block)).await?)
     }
+}
+
+fn extract_block_data(
+    data: StateUpdateWithBlock,
+) -> Result<(SealedBlockWithStatus, Vec<Receipt>, StateUpdatesWithClasses)> {
+    fn to_gas_prices(prices: ResourcePrice) -> GasPrices {
+        GasPrices {
+            eth: prices.price_in_fri.to_u128().expect("valid u128"),
+            strk: prices.price_in_fri.to_u128().expect("valid u128"),
+        }
+    }
+
+    let status = match data.block.status {
+        BlockStatus::AcceptedOnL2 => FinalityStatus::AcceptedOnL2,
+        BlockStatus::AcceptedOnL1 => FinalityStatus::AcceptedOnL1,
+        status => panic!("unsupported block status: {status:?}"),
+    };
+
+    let transactions = data
+        .block
+        .transactions
+        .into_iter()
+        .map(|tx| tx.try_into())
+        .collect::<Result<Vec<TxWithHash>, _>>()?;
+
+    let receipts = data
+        .block
+        .receipts
+        .into_iter()
+        .map(|receipt| receipt.try_into())
+        .collect::<Result<Vec<Receipt>, _>>()?;
+
+    let block = SealedBlock {
+        body: Vec::new(),
+        hash: data.block.block_hash.unwrap_or_default(),
+        header: Header {
+            timestamp: data.block.timestamp,
+            l1_da_mode: data.block.l1_da_mode,
+            events_count: Default::default(),
+            parent_hash: data.block.parent_block_hash,
+            state_diff_length: Default::default(),
+            receipts_commitment: Default::default(),
+            state_diff_commitment: Default::default(),
+            transaction_count: transactions.len() as u32,
+            number: data.block.block_number.unwrap_or_default(),
+            l1_gas_prices: to_gas_prices(data.block.l1_gas_price),
+            state_root: data.block.state_root.unwrap_or_default(),
+            l1_data_gas_prices: to_gas_prices(data.block.l1_data_gas_price),
+            protocol_version: data.block.starknet_version.unwrap_or_default(),
+            events_commitment: data.block.event_commitment.unwrap_or_default(),
+            sequencer_address: data.block.sequencer_address.unwrap_or_default(),
+            transactions_commitment: data.block.transaction_commitment.unwrap_or_default(),
+        },
+    };
+
+    let state_updates: StateUpdates = data.state_update.state_diff.try_into().unwrap();
+    let state_updates = StateUpdatesWithClasses { state_updates, ..Default::default() };
+
+    (SealedBlockWithStatus { block, status }, receipts, state_updates)
 }
 
 #[cfg(test)]

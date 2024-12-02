@@ -8512,6 +8512,7 @@ dependencies = [
  "katana-provider",
  "katana-rpc-types",
  "katana-tasks",
+ "num-traits 0.2.19",
  "serde_json",
  "starknet 0.12.0",
  "thiserror",
