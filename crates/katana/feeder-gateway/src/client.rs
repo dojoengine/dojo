@@ -56,14 +56,11 @@ impl SequencerGateway {
         &self,
         block_id: BlockIdOrTag,
     ) -> Result<StateUpdateWithBlock, Error> {
-        let value = self
-            .feeder_gateway("get_state_update")
+        self.feeder_gateway("get_state_update")
             .add_query_param("includeBlock", "true")
             .with_block_id(block_id)
-            .send::<serde_json::Value>()
-            .await?;
-
-        Ok(serde_json_path_to_error::from_value(value).unwrap())
+            .send()
+            .await
     }
 
     pub async fn get_class(
