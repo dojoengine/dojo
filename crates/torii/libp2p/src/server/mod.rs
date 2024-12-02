@@ -252,8 +252,10 @@ impl<P: Provider + Sync> Relay<P> {
                             let model_id = ty_model_id(&ty).unwrap();
 
                             // select only identity field, if doesn't exist, empty string
-                            let query =
-                                format!("SELECT identity FROM [{}] WHERE id = ?", ty.name());
+                            let query = format!(
+                                "SELECT identity FROM [{}] WHERE internal_id = ?",
+                                ty.name()
+                            );
                             let entity_identity: Option<String> = match sqlx::query_scalar(&query)
                                 .bind(format!("{:#x}", entity_id))
                                 .fetch_optional(&mut *pool)
