@@ -1,4 +1,3 @@
-use serde::Deserialize;
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::macros::short_string;
 
@@ -64,69 +63,15 @@ pub struct PartialHeader {
 #[cfg_attr(feature = "serde", serde(rename_all = "UPPERCASE"))]
 pub struct GasPrices {
     /// The price of one unit of the given resource, denominated in wei
-    #[cfg_attr(
-        feature = "serde",
-        serde(alias = "price_in_wei", deserialize_with = "deserialize_u128")
-    )]
     pub eth: u128,
     /// The price of one unit of the given resource, denominated in fri (the smallest unit of STRK,
     /// equivalent to 10^-18 STRK)
-    #[cfg_attr(
-        feature = "serde",
-        serde(alias = "price_in_fri", deserialize_with = "deserialize_u128")
-    )]
     pub strk: u128,
 }
 
 impl GasPrices {
     pub fn new(wei_gas_price: u128, fri_gas_price: u128) -> Self {
         Self { eth: wei_gas_price, strk: fri_gas_price }
-    }
-}
-
-pub fn deserialize_u128<'de, D>(deserializer: D) -> Result<u128, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    #[derive(Deserialize)]
-    #[serde(untagged)]
-    enum StringOrNum {
-        Number(u128),
-        String(String),
-    }
-
-    match StringOrNum::deserialize(deserializer)? {
-        StringOrNum::Number(n) => Ok(n),
-        StringOrNum::String(s) => {
-            if let Some(hex) = s.strip_prefix("0x") {
-                u128::from_str_radix(hex, 16).map_err(serde::de::Error::custom)
-            } else {
-                s.parse().map_err(serde::de::Error::custom)
-            }
-        }
-    }
-}
-
-pub fn deserialize_u64<'de, D>(deserializer: D) -> Result<u64, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    #[derive(Deserialize)]
-    #[serde(untagged)]
-    enum StringOrNum {
-        Number(u64),
-        String(String),
-    }
-
-    match StringOrNum::deserialize(deserializer)? {
-        StringOrNum::Number(n) => Ok(n),
-        StringOrNum::String(s) => {
-            if let Some(hex) = s.strip_prefix("0x") {
-                u64::from_str_radix(hex, 16).map_err(serde::de::Error::custom)
-            } else {
-                s.parse().map_err(serde::de::Error::custom)
-            }
-        }
     }
 }
 

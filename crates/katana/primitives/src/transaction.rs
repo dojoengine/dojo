@@ -3,7 +3,6 @@ use std::sync::Arc;
 use alloy_primitives::B256;
 use derive_more::{AsRef, Deref, From};
 
-use crate::block::deserialize_u128;
 use crate::chain::ChainId;
 use crate::class::{ClassHash, CompiledClassHash, ContractClass};
 use crate::contract::{ContractAddress, Nonce};
@@ -175,7 +174,6 @@ pub struct InvokeTxV0 {
     /// The transaction signature associated with the sender address.
     pub signature: Vec<Felt>,
     /// The max fee that the sender is willing to pay for the transaction.
-    #[cfg_attr(feature = "serde", serde(deserialize_with = "deserialize_u128"))]
     pub max_fee: u128,
 }
 
@@ -198,7 +196,6 @@ pub struct InvokeTxV1 {
     /// The transaction signature associated with the sender address.
     pub signature: Vec<Felt>,
     /// The max fee that the sender is willing to pay for the transaction.
-    #[cfg_attr(feature = "serde", serde(deserialize_with = "deserialize_u128"))]
     pub max_fee: u128,
 }
 
@@ -313,7 +310,6 @@ pub struct DeclareTxV1 {
     /// The class hash of the contract class to be declared.
     pub class_hash: ClassHash,
     /// The max fee that the sender is willing to pay for the transaction.
-    #[cfg_attr(feature = "serde", serde(deserialize_with = "deserialize_u128"))]
     pub max_fee: u128,
 }
 
@@ -339,7 +335,6 @@ pub struct DeclareTxV2 {
     /// The compiled class hash of the contract class (only if it's a Sierra class).
     pub compiled_class_hash: CompiledClassHash,
     /// The max fee that the sender is willing to pay for the transaction.
-    #[cfg_attr(feature = "serde", serde(deserialize_with = "deserialize_u128"))]
     pub max_fee: u128,
 }
 
@@ -498,7 +493,6 @@ pub struct DeployAccountTxV1 {
     /// The input data to the constructor function of the contract class.
     pub constructor_calldata: Vec<Felt>,
     /// The max fee that the sender is willing to pay for the transaction.
-    #[cfg_attr(feature = "serde", serde(deserialize_with = "deserialize_u128"))]
     pub max_fee: u128,
 }
 

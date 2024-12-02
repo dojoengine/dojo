@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use katana_primitives::block::{BlockHash, BlockNumber, GasPrices};
+use katana_primitives::block::{BlockHash, BlockNumber};
 pub use katana_primitives::class::CasmContractClass;
 use katana_primitives::class::{
     ClassHash, CompiledClassHash, LegacyContractClass, SierraContractClass,
@@ -12,6 +12,7 @@ use katana_primitives::{ContractAddress, Felt};
 use katana_rpc_types::class::ConversionError;
 pub use katana_rpc_types::class::RpcSierraContractClass;
 use serde::Deserialize;
+use starknet::core::types::ResourcePrice;
 use starknet::providers::sequencer::models::BlockStatus;
 
 mod receipt;
@@ -72,6 +73,10 @@ pub struct StateUpdateWithBlock {
     pub block: Block,
 }
 
+// The reason why we're not using the GasPrices from the `katana_primitives` crate is because
+// the serde impl is different. So for now, lets just use starknet-rs types. The type isn't
+// that complex anyway so the conversion is simple. But if we can use the primitive types, we
+// should.
 #[derive(Debug, Deserialize)]
 pub struct Block {
     #[serde(default)]
@@ -89,8 +94,8 @@ pub struct Block {
     pub event_commitment: Option<Felt>,
     pub status: BlockStatus,
     pub l1_da_mode: L1DataAvailabilityMode,
-    pub l1_gas_price: GasPrices,
-    pub l1_data_gas_price: GasPrices,
+    pub l1_gas_price: ResourcePrice,
+    pub l1_data_gas_price: ResourcePrice,
     pub transactions: Vec<ConfirmedTransaction>,
     pub transaction_receipts: Vec<ConfirmedReceipt>,
     #[serde(default)]

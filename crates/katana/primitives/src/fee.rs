@@ -1,14 +1,10 @@
-use crate::block::{deserialize_u128, deserialize_u64};
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ResourceBounds {
     /// The max amount of the resource that can be used in the tx
-    #[cfg_attr(feature = "serde", serde(deserialize_with = "deserialize_u64"))]
     pub max_amount: u64,
     /// The max price per unit of this resource for this tx
-    #[cfg_attr(feature = "serde", serde(deserialize_with = "deserialize_u128"))]
     pub max_price_per_unit: u128,
 }
 
