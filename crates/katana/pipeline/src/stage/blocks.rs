@@ -3,30 +3,32 @@ use std::time::Duration;
 
 use anyhow::Result;
 use backon::{ExponentialBuilder, Retryable};
+use katana_feeder_gateway::client;
 use katana_feeder_gateway::client::SequencerGateway;
-use katana_feeder_gateway::types::Block;
 use katana_feeder_gateway::types::StateUpdateWithBlock;
-use katana_primitives::block::FinalityStatus;
-use katana_primitives::block::GasPrices;
-use katana_primitives::block::Header;
-use katana_primitives::block::{BlockIdOrTag, BlockNumber, SealedBlock, SealedBlockWithStatus};
-use katana_primitives::da::L1DataAvailabilityMode;
-use katana_primitives::receipt::Receipt;
+use katana_primitives::block::{
+    BlockIdOrTag, BlockNumber, FinalityStatus, GasPrices, Header, SealedBlock,
+    SealedBlockWithStatus,
+};
+use katana_primitives::fee::{PriceUnit, TxFeeInfo};
+use katana_primitives::receipt::{
+    DeclareTxReceipt, DeployAccountTxReceipt, InvokeTxReceipt, L1HandlerTxReceipt, Receipt,
+};
 use katana_primitives::state::{StateUpdates, StateUpdatesWithClasses};
-use katana_primitives::transaction::TxWithHash;
-use katana_primitives::version::ProtocolVersion;
+use katana_primitives::transaction::{Tx, TxWithHash};
+use katana_primitives::Felt;
 use katana_provider::traits::block::BlockWriter;
 use num_traits::ToPrimitive;
 use starknet::core::types::ResourcePrice;
 use starknet::providers::sequencer::models::BlockStatus;
-use tracing::{debug, warn};
+use tracing::{debug, error, warn};
 
-use super::{Stage, StageExecutionInput, StageResult};
+use super::{Stage, StageExecutionInput, StageExecutionOutput, StageResult};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error(transparent)]
-    Gateway(#[from] katana_feeder_gateway::client::Error),
+    Gateway(#[from] client::Error),
 }
 
 #[derive(Debug)]
@@ -112,6 +114,7 @@ impl Downloader {
         let backoff = ExponentialBuilder::default().with_min_delay(Duration::from_secs(9));
         let result = request
             .retry(backoff)
+            .when(|error| matches!(error, Error::Gateway(client::Error::RateLimited)))
             .notify(|error, _| {
                 warn!(target: "pipeline", %from, %to, %error, "Retrying block download.");
             })
@@ -138,7 +141,16 @@ impl Downloader {
 
     /// Fetch a single block with the given block number.
     async fn fetch_block(&self, block: BlockNumber) -> Result<StateUpdateWithBlock, Error> {
-        Ok(self.client.get_state_update_with_block(BlockIdOrTag::Number(block)).await?)
+        let block = self
+            .client
+            .get_state_update_with_block(BlockIdOrTag::Number(block))
+            .await
+            .inspect_err(|error| {
+                if !error.is_rate_limited() {
+                    error!(target: "pipeline", %error, %block, "Failed to fetch block.")
+                }
+            })?;
+        Ok(block)
     }
 }
 
@@ -167,15 +179,70 @@ fn extract_block_data(
 
     let receipts = data
         .block
-        .receipts
+        .transaction_receipts
         .into_iter()
-        .map(|receipt| receipt.try_into())
-        .collect::<Result<Vec<Receipt>, _>>()?;
+        .zip(transactions.iter())
+        .map(|(receipt, tx)| {
+            let events = receipt.events;
+            let revert_error = receipt.revert_error;
+            let messages_sent = receipt.l2_to_l1_messages;
+            let overall_fee = receipt.actual_fee.to_u128().expect("valid u128");
 
+            let unit = if tx.transaction.version() >= Felt::THREE {
+                PriceUnit::Fri
+            } else {
+                PriceUnit::Wei
+            };
+
+            let fee = TxFeeInfo {
+                unit,
+                overall_fee,
+                gas_price: Default::default(),
+                gas_consumed: Default::default(),
+            };
+
+            match tx.transaction {
+                Tx::Invoke(_) => Receipt::Invoke(InvokeTxReceipt {
+                    fee,
+                    events,
+                    revert_error,
+                    messages_sent,
+                    execution_resources: Default::default(),
+                }),
+                Tx::Declare(_) => Receipt::Declare(DeclareTxReceipt {
+                    fee,
+                    events,
+                    revert_error,
+                    messages_sent,
+                    execution_resources: Default::default(),
+                }),
+                Tx::L1Handler(_) => Receipt::L1Handler(L1HandlerTxReceipt {
+                    fee,
+                    events,
+                    messages_sent,
+                    revert_error,
+                    message_hash: Default::default(),
+                    execution_resources: Default::default(),
+                }),
+                Tx::DeployAccount(_) => Receipt::DeployAccount(DeployAccountTxReceipt {
+                    fee,
+                    events,
+                    revert_error,
+                    messages_sent,
+                    contract_address: Default::default(),
+                    execution_resources: Default::default(),
+                }),
+                Tx::Deploy(_) => unreachable!("Deploy transactions are not supported"),
+            }
+        })
+        .collect::<Vec<Receipt>>();
+
+    let transaction_count = transactions.len() as u32;
     let block = SealedBlock {
-        body: Vec::new(),
+        body: transactions,
         hash: data.block.block_hash.unwrap_or_default(),
         header: Header {
+            transaction_count,
             timestamp: data.block.timestamp,
             l1_da_mode: data.block.l1_da_mode,
             events_count: Default::default(),
@@ -183,7 +250,6 @@ fn extract_block_data(
             state_diff_length: Default::default(),
             receipts_commitment: Default::default(),
             state_diff_commitment: Default::default(),
-            transaction_count: transactions.len() as u32,
             number: data.block.block_number.unwrap_or_default(),
             l1_gas_prices: to_gas_prices(data.block.l1_gas_price),
             state_root: data.block.state_root.unwrap_or_default(),
@@ -198,7 +264,7 @@ fn extract_block_data(
     let state_updates: StateUpdates = data.state_update.state_diff.try_into().unwrap();
     let state_updates = StateUpdatesWithClasses { state_updates, ..Default::default() };
 
-    (SealedBlockWithStatus { block, status }, receipts, state_updates)
+    Ok((SealedBlockWithStatus { block, status }, receipts, state_updates))
 }
 
 #[cfg(test)]

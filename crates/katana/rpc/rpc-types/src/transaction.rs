@@ -314,6 +314,16 @@ impl From<TxWithHash> for Tx {
             },
 
             InternalTx::Declare(tx) => starknet::core::types::Transaction::Declare(match tx {
+                DeclareTx::V0(tx) => starknet::core::types::DeclareTransaction::V0(
+                    starknet::core::types::DeclareTransactionV0 {
+                        transaction_hash,
+                        signature: tx.signature,
+                        class_hash: tx.class_hash,
+                        max_fee: tx.max_fee.into(),
+                        sender_address: tx.sender_address.into(),
+                    },
+                ),
+
                 DeclareTx::V1(tx) => starknet::core::types::DeclareTransaction::V1(
                     starknet::core::types::DeclareTransactionV1 {
                         nonce: tx.nonce,

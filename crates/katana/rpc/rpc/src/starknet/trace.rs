@@ -263,6 +263,10 @@ fn to_rpc_trace(trace: TxExecInfo) -> TransactionTrace {
                 state_diff,
             })
         }
+
+        TxType::Deploy => {
+            unimplemented!("unsupported legacy tx type")
+        }
     }
 }
 

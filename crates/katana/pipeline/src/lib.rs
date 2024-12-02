@@ -13,10 +13,10 @@ use tokio::sync::watch;
 use tracing::{error, info};
 
 /// The result of a pipeline execution.
-pub type PipelineResult = Result<(), Error>;
+pub type PipelineResult<T> = Result<T, Error>;
 
 /// The future type for [Pipeline]'s implementation of [IntoFuture].
-pub type PipelineFut = BoxFuture<'static, PipelineResult>;
+pub type PipelineFut = BoxFuture<'static, PipelineResult<()>>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -80,7 +80,7 @@ impl<P> Pipeline<P> {
 
 impl<P: StageCheckpointProvider> Pipeline<P> {
     /// Run the pipeline in a loop.
-    pub async fn run(&mut self) -> PipelineResult {
+    pub async fn run(&mut self) -> PipelineResult<()> {
         let mut current_chunk_tip = self.chunk_size;
 
         loop {
@@ -89,13 +89,13 @@ impl<P: StageCheckpointProvider> Pipeline<P> {
             loop {
                 if let Some(tip) = tip {
                     let to = current_chunk_tip.min(tip);
-                    self.run_once_until(to).await?;
+                    let last_block_processed = self.run_once_until(to).await?;
 
-                    if to >= tip {
+                    if last_block_processed >= tip {
                         info!(target: "pipeline", %tip, "Finished processing until tip.");
                         break;
                     } else {
-                        current_chunk_tip = (current_chunk_tip + self.chunk_size).min(tip);
+                        current_chunk_tip = (last_block_processed + self.chunk_size).min(tip);
                     }
                 }
             }
@@ -113,8 +113,10 @@ impl<P: StageCheckpointProvider> Pipeline<P> {
     }
 
     /// Run the pipeline once, until the given block number.
-    async fn run_once_until(&mut self, to: BlockNumber) -> PipelineResult {
-        for stage in &mut self.stages {
+    async fn run_once_until(&mut self, to: BlockNumber) -> PipelineResult<BlockNumber> {
+        let last_stage_idx = self.stages.len() - 1;
+
+        for (i, stage) in self.stages.iter_mut().enumerate() {
             let id = stage.id();
 
             // Get the checkpoint for the stage, otherwise default to block number 0
@@ -123,6 +125,11 @@ impl<P: StageCheckpointProvider> Pipeline<P> {
             // Skip the stage if the checkpoint is greater than or equal to the target block number
             if checkpoint >= to {
                 info!(target: "pipeline", %id, "Skipping stage.");
+
+                if i == last_stage_idx {
+                    return Ok(checkpoint);
+                }
+
                 continue;
             }
 
@@ -135,7 +142,8 @@ impl<P: StageCheckpointProvider> Pipeline<P> {
 
             info!(target: "pipeline", %id, from = %checkpoint, %to, "Stage execution completed.");
         }
-        Ok(())
+
+        Ok(to)
     }
 }
 
@@ -143,7 +151,7 @@ impl<P> IntoFuture for Pipeline<P>
 where
     P: StageCheckpointProvider + 'static,
 {
-    type Output = PipelineResult;
+    type Output = PipelineResult<()>;
     type IntoFuture = PipelineFut;
 
     fn into_future(mut self) -> Self::IntoFuture {
@@ -175,7 +183,7 @@ mod tests {
     use katana_provider::traits::stage::StageCheckpointProvider;
 
     use super::{Pipeline, Stage, StageExecutionInput};
-    use crate::stage::StageResult;
+    use crate::stage::{StageExecutionOutput, StageResult};
 
     struct MockStage;
 

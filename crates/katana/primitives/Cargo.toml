@@ -28,6 +28,8 @@ alloy-primitives = { workspace = true, features = [ "arbitrary" ] }
 flate2.workspace = true
 num-bigint = "0.4.6"
 serde_json_pythonic = "0.1.2"
+strum.workspace = true
+strum_macros.workspace = true
 
 [dev-dependencies]
 assert_matches.workspace = true

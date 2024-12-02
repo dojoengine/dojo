@@ -3,21 +3,20 @@ use std::time::Duration;
 
 use anyhow::Result;
 use backon::{ExponentialBuilder, Retryable};
-use katana_feeder_gateway::client::SequencerGateway;
+use katana_feeder_gateway::client::{self, SequencerGateway};
 use katana_primitives::block::{BlockIdOrTag, BlockNumber};
 use katana_primitives::class::{ClassHash, ContractClass};
-use katana_primitives::conversion::rpc::StarknetRsLegacyContractClass;
 use katana_provider::traits::contract::{ContractClassWriter, ContractClassWriterExt};
 use katana_provider::traits::state_update::StateUpdateProvider;
 use katana_rpc_types::class::ConversionError;
-use tracing::{debug, warn};
+use tracing::{debug, error, warn};
 
-use super::{Stage, StageExecutionInput, StageResult};
+use super::{Stage, StageExecutionInput, StageExecutionOutput, StageResult};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error(transparent)]
-    Gateway(#[from] katana_feeder_gateway::client::Error),
+    Gateway(#[from] client::Error),
 
     #[error(transparent)]
     Conversion(#[from] ConversionError),
@@ -104,6 +103,7 @@ impl Downloader {
         let backoff = ExponentialBuilder::default().with_min_delay(Duration::from_secs(3));
         let result = request
             .retry(backoff)
+            .when(|error| matches!(error, Error::Gateway(client::Error::RateLimited)))
             .notify(|error, _| {
                 warn!(target: "pipeline", %error, "Retrying class download.");
             })
@@ -132,13 +132,13 @@ impl Downloader {
         hash: ClassHash,
         block: BlockNumber,
     ) -> Result<ContractClass, Error> {
-        let class = self.client.get_class(hash, BlockIdOrTag::Number(block)).await?;
+        let class = self.client.get_class(hash, BlockIdOrTag::Number(block)).await.inspect_err(
+            |error| {
+                if !error.is_rate_limited() {
+	                error!(target: "pipeline", %error, %block, class = %format!("{hash:#x}"), "Fetching class.")
+                }
+            },
+        )?;
         Ok(class.try_into()?)
     }
-}
-
-fn to_inner_legacy_class(class: StarknetRsLegacyContractClass) -> Result<ContractClass> {
-    let value = serde_json::to_value(class)?;
-    let class = serde_json::from_value::<katana_primitives::class::LegacyContractClass>(value)?;
-    Ok(ContractClass::Legacy(class))
 }

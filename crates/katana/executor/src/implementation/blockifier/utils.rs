@@ -310,6 +310,14 @@ pub fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
             let compiled = tx.class.as_ref().clone().compile().expect("failed to compile");
 
             let tx = match tx.transaction {
+                DeclareTx::V0(tx) => ApiDeclareTransaction::V0(DeclareTransactionV0V1 {
+                    max_fee: Fee(tx.max_fee),
+                    nonce: Nonce::default(),
+                    sender_address: to_blk_address(tx.sender_address),
+                    signature: TransactionSignature(tx.signature),
+                    class_hash: ClassHash(tx.class_hash),
+                }),
+
                 DeclareTx::V1(tx) => ApiDeclareTransaction::V1(DeclareTransactionV0V1 {
                     max_fee: Fee(tx.max_fee),
                     nonce: Nonce(tx.nonce),

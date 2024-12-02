@@ -8436,9 +8436,12 @@ dependencies = [
  "katana-rpc-types",
  "reqwest 0.11.27",
  "serde",
+ "serde_json",
+ "serde_json_path_to_error",
  "starknet 0.12.0",
  "thiserror",
  "tokio",
+ "tracing",
  "url",
 ]
 
@@ -8464,6 +8467,7 @@ dependencies = [
  "katana-core",
  "katana-db",
  "katana-executor",
+ "katana-feeder-gateway",
  "katana-pipeline",
  "katana-pool",
  "katana-primitives",
@@ -8513,7 +8517,6 @@ dependencies = [
  "katana-rpc-types",
  "katana-tasks",
  "num-traits 0.2.19",
- "serde_json",
  "starknet 0.12.0",
  "thiserror",
  "tokio",
@@ -8562,6 +8565,8 @@ dependencies = [
  "starknet 0.12.0",
  "starknet-crypto 0.7.2",
  "starknet-types-core",
+ "strum 0.25.0",
+ "strum_macros 0.25.3",
  "thiserror",
 ]
 
@@ -13236,6 +13241,17 @@ dependencies = [
  "memchr",
  "ryu",
  "serde",
+]
+
+[[package]]
+name = "serde_json_path_to_error"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d7f2c2432eb04d880635fbf5d45cd5e619aeca7d4aff62cc1699671512db7d53"
+dependencies = [
+ "serde",
+ "serde_json",
+ "serde_path_to_error",
 ]
 
 [[package]]

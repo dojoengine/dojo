@@ -1,11 +1,11 @@
 use std::future::IntoFuture;
 
+use katana_feeder_gateway::client::SequencerGateway;
 use katana_pipeline::{stage, Pipeline};
 use katana_provider::test_utils::test_provider;
 use katana_provider::traits::block::{BlockNumberProvider, BlockProvider};
 use katana_provider::traits::state::StateFactoryProvider;
 use katana_provider::traits::state_update::StateUpdateProvider;
-use starknet::providers::SequencerGatewayProvider;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn fgw_sync() {
@@ -15,7 +15,7 @@ async fn fgw_sync() {
 
     // build stages
 
-    let fgw = SequencerGatewayProvider::starknet_alpha_sepolia();
+    let fgw = SequencerGateway::sn_sepolia();
     let blocks = stage::Blocks::new(db_provider.clone(), fgw.clone(), 10);
     let classes = stage::Classes::new(db_provider.clone(), fgw, 10);
 
