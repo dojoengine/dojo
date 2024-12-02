@@ -119,7 +119,7 @@ impl ResolvableObject for ModelDataObject {
                     &order,
                     "internal_event_id",
                     total_count,
-                    true,
+                    false,
                     page_info,
                 )?;
 
@@ -200,7 +200,7 @@ pub fn object(type_name: &str, type_mapping: &TypeMapping, path_array: Vec<Strin
                                     &entity_id,
                                 )
                                 .await?;
-                                let result = value_mapping_from_row(&data, &nested_mapping, true)?;
+                                let result = value_mapping_from_row(&data, &nested_mapping, false)?;
 
                                 Ok(Some(Value::Object(result)))
                             }

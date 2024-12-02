@@ -117,7 +117,7 @@ pub fn connection_output(
     order: &Option<Order>,
     id_column: &str,
     total_count: i64,
-    is_external: bool,
+    is_internal: bool,
     page_info: PageInfo,
 ) -> sqlx::Result<ValueMapping> {
     let model_edges = data
@@ -125,7 +125,7 @@ pub fn connection_output(
         .map(|row| {
             let order_field = match order {
                 Some(order) => {
-                    if !is_external {
+                    if is_internal {
                         format!("internal_{}", order.field)
                     } else {
                         order.field.to_string()
@@ -136,7 +136,7 @@ pub fn connection_output(
             let primary_order = row.try_get::<String, &str>(id_column)?;
             let secondary_order = row.try_get_unchecked::<String, &str>(&order_field)?;
             let cursor = cursor::encode(&primary_order, &secondary_order);
-            let value_mapping = value_mapping_from_row(row, types, is_external)?;
+            let value_mapping = value_mapping_from_row(row, types, is_internal)?;
 
             let mut edge = ValueMapping::new();
             edge.insert(Name::new("node"), Value::Object(value_mapping));
