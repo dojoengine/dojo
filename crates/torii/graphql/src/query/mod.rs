@@ -267,8 +267,10 @@ fn fetch_value(
 ) -> sqlx::Result<Value> {
     let mut column_name = if is_internal {
         format!("internal_{}", field_name)
+    } else if snake_case {
+        field_name.to_case(Case::Snake)
     } else {
-        if snake_case { field_name.to_case(Case::Snake) } else { field_name.to_string() }
+        field_name.to_string()
     };
 
     // Strip _0, _1, etc. from tuple field names

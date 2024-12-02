@@ -111,6 +111,7 @@ pub fn connection_arguments(field: Field) -> Field {
         .argument(InputValue::new("limit", TypeRef::named(TypeRef::INT)))
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn connection_output(
     data: &[SqliteRow],
     types: &TypeMapping,
