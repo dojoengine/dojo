@@ -674,19 +674,15 @@ impl DojoWorld {
         let schemas =
             self.model_cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect();
 
-        let model = member_clause.model.clone();
-        let parts: Vec<&str> = member_clause.member.split('.').collect();
-        let (table_name, column_name) = if parts.len() > 1 {
-            let nested_table = parts[..parts.len() - 1].join("$");
-            (format!("{model}${nested_table}"), format!("external_{}", parts.last().unwrap()))
-        } else {
-            (model, format!("external_{}", member_clause.member))
-        };
+        // Use the member name directly as the column name since it's already flattened
         let (entity_query, count_query) = build_sql_query(
             &schemas,
             table,
             entity_relation_column,
-            Some(&format!("[{table_name}].{column_name} {comparison_operator} ?")),
+            Some(&format!(
+                "[{}].[{}] {comparison_operator} ?",
+                member_clause.model, member_clause.member
+            )),
             limit,
             offset,
         )?;
@@ -697,7 +693,7 @@ impl DojoWorld {
             .await?
             .unwrap_or(0);
         let db_entities = sqlx::query(&entity_query)
-            .bind(comparison_value.clone())
+            .bind(comparison_value)
             .bind(limit)
             .bind(offset)
             .fetch_all(&self.pool)
@@ -1101,9 +1097,7 @@ fn build_composite_clause(
     let mut join_clauses = Vec::new();
     let mut having_clauses = Vec::new();
     let mut bind_values = Vec::new();
-
-    // HashMap to track the number of joins per model
-    let mut model_counters: HashMap<String, usize> = HashMap::new();
+    let mut seen_models = HashMap::new();
 
     for clause in &composite.clauses {
         match clause.clause_type.as_ref().unwrap() {
@@ -1140,42 +1134,41 @@ fn build_composite_clause(
                 bind_values.push(comparison_value);
 
                 let model = member.model.clone();
-                let parts: Vec<&str> = member.member.split('.').collect();
-                let (table_name, column_name) = if parts.len() > 1 {
-                    let nested_table = parts[..parts.len() - 1].join("$");
-                    (
-                        format!("[{model}${nested_table}]"),
-                        format!("external_{}", parts.last().unwrap()),
-                    )
-                } else {
-                    (format!("[{model}]"), format!("external_{}", member.member))
-                };
+                // Get or create unique alias for this model
+                let alias = seen_models.entry(model.clone()).or_insert_with(|| {
+                    let (namespace, model_name) = model
+                        .split_once('-')
+                        .ok_or(QueryError::InvalidNamespacedModel(model.clone()))
+                        .unwrap();
+                    let model_id = compute_selector_from_names(namespace, model_name);
 
-                let (namespace, model_name) = member
-                    .model
-                    .split_once('-')
-                    .ok_or(QueryError::InvalidNamespacedModel(member.model.clone()))?;
-                let model_id = compute_selector_from_names(namespace, model_name);
+                    // Add model check to having clause
+                    having_clauses.push(format!(
+                        "INSTR(group_concat({model_relation_table}.model_id), '{:#x}') > 0",
+                        model_id
+                    ));
 
-                // Generate a unique alias for each model
-                let counter = model_counters.entry(model.clone()).or_insert(0);
-                *counter += 1;
-                let alias =
-                    if *counter == 1 { model.clone() } else { format!("{model}_{}", *counter - 1) };
+                    // Add join clause
+                    join_clauses.push(format!(
+                        "LEFT JOIN [{model}] AS [{model}] ON [{table}].id = \
+                         [{model}].internal_entity_id"
+                    ));
 
-                join_clauses.push(format!(
-                    "LEFT JOIN {table_name} AS [{alias}] ON [{table}].id = [{alias}].entity_id"
-                ));
-                where_clauses.push(format!("[{alias}].{column_name} {comparison_operator} ?"));
-                having_clauses.push(format!(
-                    "INSTR(group_concat({model_relation_table}.model_id), '{:#x}') > 0",
-                    model_id
-                ));
+                    model.clone()
+                });
+
+                // Use the column name directly since it's already flattened
+                where_clauses
+                    .push(format!("[{alias}].[{}] {comparison_operator} ?", member.member));
             }
-            ClauseType::Composite(nested_composite) => {
+            ClauseType::Composite(nested) => {
+                // Handle nested composite by recursively building the clause
                 let (nested_where, nested_having, nested_join, nested_values) =
-                    build_composite_clause(table, model_relation_table, nested_composite)?;
-                where_clauses.push(format!("({})", nested_where.trim_start_matches("WHERE ")));
+                    build_composite_clause(table, model_relation_table, nested)?;
+
+                if !nested_where.is_empty() {
+                    where_clauses.push(format!("({})", nested_where.trim_start_matches("WHERE ")));
+                }
                 if !nested_having.is_empty() {
                     having_clauses.push(nested_having.trim_start_matches("HAVING ").to_string());
                 }
