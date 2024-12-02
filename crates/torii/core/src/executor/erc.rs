@@ -10,7 +10,7 @@ use starknet::core::types::{BlockId, BlockTag, FunctionCall, U256};
 use starknet::core::utils::{get_selector_from_name, parse_cairo_short_string};
 use starknet::providers::Provider;
 use starknet_crypto::Felt;
-use tracing::{debug, trace};
+use tracing::{debug, trace, warn};
 
 use super::{ApplyBalanceDiffQuery, Executor};
 use crate::constants::{IPFS_CLIENT_MAX_RETRY, SQL_FELT_DELIMITER, TOKEN_BALANCE_TABLE};
@@ -176,7 +176,14 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         {
             token_uri
         } else {
-            return Err(anyhow::anyhow!("Failed to fetch token_uri"));
+            warn!(
+                contract_address = format!("{:#x}", register_erc721_token.contract_address),
+                token_id = %register_erc721_token.actual_token_id,
+                "Error fetching token URI, empty metadata will be used instead.",
+            );
+
+            // Ignoring the token URI if the contract can't return it.
+            ByteArray::cairo_serialize(&"".try_into().unwrap())
         };
 
         let token_uri = if let Ok(byte_array) = ByteArray::cairo_deserialize(&token_uri, 0) {
@@ -192,13 +199,19 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
             return Err(anyhow::anyhow!("token_uri is neither ByteArray nor Array<Felt>"));
         };
 
-        let metadata = Self::fetch_metadata(&token_uri).await.with_context(|| {
-            format!(
-                "Failed to fetch metadata for token_id: {}",
-                register_erc721_token.actual_token_id
-            )
-        })?;
-        let metadata = serde_json::to_string(&metadata).context("Failed to serialize metadata")?;
+        let metadata = if token_uri.is_empty() {
+            "".to_string()
+        } else {
+            let metadata = Self::fetch_metadata(&token_uri).await.with_context(|| {
+                format!(
+                    "Failed to fetch metadata for token_id: {}",
+                    register_erc721_token.actual_token_id
+                )
+            })?;
+
+            serde_json::to_string(&metadata).context("Failed to serialize metadata")?
+        };
+
         Ok(RegisterErc721TokenMetadata { query: register_erc721_token, metadata, name, symbol })
     }
 
