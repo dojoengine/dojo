@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1733174587725,
+  "lastUpdate": 1733183509150,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -37201,6 +37201,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8725792,
             "range": "± 547627",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "66445649cadb464388008f3582b138a9f7a10569",
+          "message": "fix(torii): avoid panic on fetch token URI fail (#2750)\n\nfix: ensure torii doesn't stop on fetch URI fail\n\nIn this occasions, the token URI may not be fetched correctly.\nSince it's mostly use for metadata, a default metadata is\nused in this scenario.",
+          "timestamp": "2024-12-02T17:35:34-06:00",
+          "tree_id": "1ddb7c65772455d622721838b4bb05a167816b4a",
+          "url": "https://github.com/dojoengine/dojo/commit/66445649cadb464388008f3582b138a9f7a10569"
+        },
+        "date": 1733183506780,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10154637962,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
