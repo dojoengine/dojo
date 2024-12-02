@@ -55,7 +55,8 @@ pub struct PartialHeader {
     pub protocol_version: ProtocolVersion,
 }
 
-// TODO: change names to wei and fri
+// we use deserialize_with to keep compatibility with the current db format while still supporting
+// the format returned by the feeder gateway. maybe remove the deserialize_with in the future??
 /// The L1 gas prices.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
@@ -63,13 +64,17 @@ pub struct PartialHeader {
 #[cfg_attr(feature = "serde", serde(rename_all = "UPPERCASE"))]
 pub struct GasPrices {
     /// The price of one unit of the given resource, denominated in wei
-    #[cfg_attr(feature = "serde", serde(alias = "price_in_wei"))]
-    #[cfg_attr(feature = "serde", serde(deserialize_with = "deserialize_u128"))]
+    #[cfg_attr(
+        feature = "serde",
+        serde(alias = "price_in_wei", deserialize_with = "deserialize_u128")
+    )]
     pub eth: u128,
     /// The price of one unit of the given resource, denominated in fri (the smallest unit of STRK,
     /// equivalent to 10^-18 STRK)
-    #[cfg_attr(feature = "serde", serde(alias = "price_in_fri"))]
-    #[cfg_attr(feature = "serde", serde(deserialize_with = "deserialize_u128"))]
+    #[cfg_attr(
+        feature = "serde",
+        serde(alias = "price_in_fri", deserialize_with = "deserialize_u128")
+    )]
     pub strk: u128,
 }
 
@@ -83,11 +88,22 @@ pub fn deserialize_u128<'de, D>(deserializer: D) -> Result<u128, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
-    let s = String::deserialize(deserializer)?;
-    if let Some(hex) = s.strip_prefix("0x") {
-        u128::from_str_radix(hex, 16).map_err(serde::de::Error::custom)
-    } else {
-        s.parse::<u128>().map_err(serde::de::Error::custom)
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum StringOrNum {
+        Number(u128),
+        String(String),
+    }
+
+    match StringOrNum::deserialize(deserializer)? {
+        StringOrNum::Number(n) => Ok(n),
+        StringOrNum::String(s) => {
+            if let Some(hex) = s.strip_prefix("0x") {
+                u128::from_str_radix(hex, 16).map_err(serde::de::Error::custom)
+            } else {
+                s.parse().map_err(serde::de::Error::custom)
+            }
+        }
     }
 }
 
@@ -95,11 +111,22 @@ pub fn deserialize_u64<'de, D>(deserializer: D) -> Result<u64, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
-    let s = String::deserialize(deserializer)?;
-    if let Some(hex) = s.strip_prefix("0x") {
-        u64::from_str_radix(hex, 16).map_err(serde::de::Error::custom)
-    } else {
-        s.parse::<u64>().map_err(serde::de::Error::custom)
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum StringOrNum {
+        Number(u64),
+        String(String),
+    }
+
+    match StringOrNum::deserialize(deserializer)? {
+        StringOrNum::Number(n) => Ok(n),
+        StringOrNum::String(s) => {
+            if let Some(hex) = s.strip_prefix("0x") {
+                u64::from_str_radix(hex, 16).map_err(serde::de::Error::custom)
+            } else {
+                s.parse().map_err(serde::de::Error::custom)
+            }
+        }
     }
 }
 
