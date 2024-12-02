@@ -1,15 +1,25 @@
 use std::collections::{BTreeMap, BTreeSet};
 
+use katana_primitives::block::{BlockHash, BlockNumber};
 pub use katana_primitives::class::CasmContractClass;
 use katana_primitives::class::{
     ClassHash, CompiledClassHash, LegacyContractClass, SierraContractClass,
 };
 use katana_primitives::contract::{Nonce, StorageKey, StorageValue};
+use katana_primitives::da::L1DataAvailabilityMode;
+use katana_primitives::version::ProtocolVersion;
 use katana_primitives::{ContractAddress, Felt};
 use katana_rpc_types::class::ConversionError;
 pub use katana_rpc_types::class::RpcSierraContractClass;
 use serde::Deserialize;
-use starknet::providers::sequencer::models::Block;
+use starknet::core::types::ResourcePrice;
+use starknet::providers::sequencer::models::BlockStatus;
+
+mod receipt;
+mod transaction;
+
+pub use receipt::*;
+pub use transaction::*;
 
 /// The contract class type returns by `/get_class_by_hash` endpoint.
 #[derive(Debug, Deserialize)]
@@ -61,6 +71,35 @@ pub struct DeclaredContract {
 pub struct StateUpdateWithBlock {
     pub state_update: StateUpdate,
     pub block: Block,
+}
+
+// The reason why we're not using the GasPrices from the `katana_primitives` crate is because
+// the serde impl is different. So for now, lets just use starknet-rs types. The type isn't
+// that complex anyway so the conversion is simple. But if we can use the primitive types, we
+// should.
+#[derive(Debug, Deserialize)]
+pub struct Block {
+    #[serde(default)]
+    pub block_hash: Option<BlockHash>,
+    #[serde(default)]
+    pub block_number: Option<BlockNumber>,
+    pub parent_block_hash: BlockHash,
+    pub timestamp: u64,
+    pub sequencer_address: Option<ContractAddress>,
+    #[serde(default)]
+    pub state_root: Option<Felt>,
+    #[serde(default)]
+    pub transaction_commitment: Option<Felt>,
+    #[serde(default)]
+    pub event_commitment: Option<Felt>,
+    pub status: BlockStatus,
+    pub l1_da_mode: L1DataAvailabilityMode,
+    pub l1_gas_price: ResourcePrice,
+    pub l1_data_gas_price: ResourcePrice,
+    pub transactions: Vec<ConfirmedTransaction>,
+    pub transaction_receipts: Vec<ConfirmedReceipt>,
+    #[serde(default)]
+    pub starknet_version: Option<ProtocolVersion>,
 }
 
 // -- Conversion to Katana primitive types.
