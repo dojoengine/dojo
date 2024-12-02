@@ -42,6 +42,13 @@ impl TypeData {
         matches!(self, TypeData::List(_))
     }
 
+    pub fn inner(&self) -> Option<&TypeData> {
+        match self {
+            TypeData::List(inner) => Some(inner),
+            _ => None,
+        }
+    }
+
     // pub fn is_enum(&self) -> bool {
     //     matches!(self, TypeData::Enum(_))
     // }

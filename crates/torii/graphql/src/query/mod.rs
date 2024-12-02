@@ -40,10 +40,13 @@ fn member_to_type_data(namespace: &str, schema: &Ty) -> TypeData {
         Ty::Array(array) => TypeData::List(Box::new(member_to_type_data(namespace, &array[0]))),
         // Enums that do not have a nested member are considered as a simple Enum
         Ty::Enum(enum_)
-            if enum_
-                .options
-                .iter()
-                .all(|o| if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false }) =>
+            if enum_.options.iter().all(|o| {
+                if let Ty::Tuple(t) = &o.ty {
+                    t.is_empty()
+                } else {
+                    false
+                }
+            }) =>
         {
             TypeData::Simple(TypeRef::named("Enum"))
         }
@@ -81,6 +84,11 @@ fn parse_nested_type(namespace: &str, schema: &Ty) -> TypeData {
             type_mapping.insert(Name::new("option"), TypeData::Simple(TypeRef::named("Enum")));
             type_mapping
         }
+        Ty::Tuple(t) => t
+            .iter()
+            .enumerate()
+            .map(|(i, ty)| (Name::new(&format!("_{}", i)), member_to_type_data(namespace, &ty)))
+            .collect(),
         _ => return TypeData::Simple(TypeRef::named(schema.name())),
     };
 
@@ -111,12 +119,21 @@ pub fn value_mapping_from_row(
     types: &TypeMapping,
     is_external: bool,
 ) -> sqlx::Result<ValueMapping> {
-    println!("types: {:?}", types);
+    // Retrieve entity ID if present
+    let entity_id = if let Ok(entity_id) = row.try_get::<String, &str>(ENTITY_ID_COLUMN) {
+        Some(entity_id)
+    } else if let Ok(event_message_id) = row.try_get::<String, &str>(EVENT_MESSAGE_ID_COLUMN) {
+        Some(event_message_id)
+    } else {
+        None
+    };
+
     fn build_value_mapping(
         row: &SqliteRow,
         types: &TypeMapping,
         prefix: &str,
         is_external: bool,
+        entity_id: &Option<String>,
     ) -> sqlx::Result<ValueMapping> {
         let mut value_mapping = ValueMapping::new();
 
@@ -142,18 +159,67 @@ pub fn value_mapping_from_row(
 
                     value_mapping.insert(Name::new(field_name), value);
                 }
-                TypeData::List(inner) => {
+                TypeData::List(_) => {
                     let value = fetch_value(row, &column_name, "String", is_external)?;
                     if let Value::String(json_str) = value {
-                        let array_value: Value = serde_json::from_str(&json_str).map_err(|e| {
-                            sqlx::Error::Protocol(format!("JSON parse error: {}", e))
-                        })?;
+                        let mut array_value: Value =
+                            serde_json::from_str(&json_str).map_err(|e| {
+                                sqlx::Error::Protocol(format!("JSON parse error: {}", e))
+                            })?;
+
+                        fn populate_value(
+                            value: &mut Value,
+                            type_data: &TypeData,
+                            entity_id: &Option<String>,
+                        ) {
+                            match value {
+                                Value::Object(obj) => {
+                                    for (field_name, field_value) in obj.iter_mut() {
+                                        populate_value(
+                                            field_value,
+                                            &type_data.type_mapping().unwrap()[field_name],
+                                            entity_id,
+                                        );
+                                    }
+
+                                    if type_data.type_mapping().map_or(false, |mapping| {
+                                        mapping.contains_key(&Name::new("option"))
+                                    }) {
+                                        obj.insert(
+                                            Name::new("option"),
+                                            Value::String(obj.keys().next().unwrap().to_string()),
+                                        );
+                                    }
+
+                                    // insert $entity_id$ relation
+                                    if let Some(entity_id) = entity_id {
+                                        obj.insert(
+                                            Name::new(INTERNAL_ENTITY_ID_KEY),
+                                            Value::from(entity_id),
+                                        );
+                                    }
+                                }
+                                Value::List(inner) => {
+                                    for item in inner {
+                                        populate_value(item, type_data.inner().unwrap(), entity_id);
+                                    }
+                                }
+                                _ => {}
+                            }
+                        }
+
+                        populate_value(&mut array_value, &type_data, entity_id);
                         value_mapping.insert(Name::new(field_name), array_value);
                     }
                 }
                 TypeData::Nested((_, nested_mapping)) => {
-                    let nested_values =
-                        build_value_mapping(row, nested_mapping, &column_name, is_external)?;
+                    let nested_values = build_value_mapping(
+                        row,
+                        nested_mapping,
+                        &column_name,
+                        is_external,
+                        entity_id,
+                    )?;
                     value_mapping.insert(Name::new(field_name), Value::Object(nested_values));
                 }
             }
@@ -162,13 +228,11 @@ pub fn value_mapping_from_row(
         Ok(value_mapping)
     }
 
-    let mut value_mapping = build_value_mapping(row, types, "", is_external)?;
+    let mut value_mapping = build_value_mapping(row, types, "", is_external, &entity_id)?;
 
     // Add internal entity ID if present
-    if let Ok(entity_id) = row.try_get::<String, &str>(ENTITY_ID_COLUMN) {
+    if let Some(entity_id) = entity_id {
         value_mapping.insert(Name::new(INTERNAL_ENTITY_ID_KEY), Value::from(entity_id));
-    } else if let Ok(event_message_id) = row.try_get::<String, &str>(EVENT_MESSAGE_ID_COLUMN) {
-        value_mapping.insert(Name::new(INTERNAL_ENTITY_ID_KEY), Value::from(event_message_id));
     }
 
     Ok(value_mapping)
