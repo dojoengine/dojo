@@ -53,6 +53,7 @@ pub enum Tx {
     Declare(DeclareTx),
     L1Handler(L1HandlerTx),
     DeployAccount(DeployAccountTx),
+    Deploy(DeployTx),
 }
 
 #[derive(Debug)]

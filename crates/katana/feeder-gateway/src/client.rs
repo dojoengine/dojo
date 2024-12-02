@@ -58,16 +58,10 @@ impl SequencerGateway {
     ) -> Result<StateUpdateWithBlock, Error> {
         let value = self
             .feeder_gateway("get_state_update")
-            .with_query_param("includeBlock", "true")
+            .add_query_param("includeBlock", "true")
             .with_block_id(block_id)
             .send::<serde_json::Value>()
             .await?;
-
-        println!(
-            "{}",
-            serde_json::to_string_pretty(&value.get("block").unwrap().get("transactions").unwrap())
-                .unwrap()
-        );
 
         Ok(serde_json_path_to_error::from_value(value).unwrap())
     }
@@ -78,7 +72,7 @@ impl SequencerGateway {
         block_id: BlockIdOrTag,
     ) -> Result<ContractClass, Error> {
         self.feeder_gateway("get_class_by_hash")
-            .with_query_param("classHash", &format!("{hash:#x}"))
+            .add_query_param("classHash", &format!("{hash:#x}"))
             .with_block_id(block_id)
             .send()
             .await
@@ -90,7 +84,7 @@ impl SequencerGateway {
         block_id: BlockIdOrTag,
     ) -> Result<CasmContractClass, Error> {
         self.feeder_gateway("get_compiled_class_by_class_hash")
-            .with_query_param("classHash", &format!("{hash:#x}"))
+            .add_query_param("classHash", &format!("{hash:#x}"))
             .with_block_id(block_id)
             .send()
             .await
@@ -121,13 +115,13 @@ impl<'a> RequestBuilder<'a> {
         match block_id {
             // latest block is implied, if no block id specified
             BlockIdOrTag::Tag(BlockTag::Latest) => self,
-            BlockIdOrTag::Tag(BlockTag::Pending) => self.with_query_param("blockNumber", "pending"),
-            BlockIdOrTag::Hash(hash) => self.with_query_param("blockHash", &format!("{hash:#x}")),
-            BlockIdOrTag::Number(num) => self.with_query_param("blockNumber", &num.to_string()),
+            BlockIdOrTag::Tag(BlockTag::Pending) => self.add_query_param("blockNumber", "pending"),
+            BlockIdOrTag::Hash(hash) => self.add_query_param("blockHash", &format!("{hash:#x}")),
+            BlockIdOrTag::Number(num) => self.add_query_param("blockNumber", &num.to_string()),
         }
     }
 
-    fn with_query_param(mut self, key: &str, value: &str) -> Self {
+    fn add_query_param(mut self, key: &str, value: &str) -> Self {
         self.url.query_pairs_mut().append_pair(key, value);
         self
     }
@@ -190,14 +184,8 @@ pub enum ErrorCode {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
-    #[tokio::test]
-    async fn get_block() {
-        let client = SequencerGateway::sn_sepolia();
-        let su =
-            client.get_state_update_with_block(BlockIdOrTag::Tag(BlockTag::Latest)).await.unwrap();
-    }
+    use super::*;
 
     #[test]
     fn request_block_id() {
@@ -230,9 +218,9 @@ mod tests {
         let req = RequestBuilder { client: &client, url: base_url };
 
         let url = req
-            .with_query_param("param1", "value1")
-            .with_query_param("param2", "value2")
-            .with_query_param("param3", "value3")
+            .add_query_param("param1", "value1")
+            .add_query_param("param2", "value2")
+            .add_query_param("param3", "value3")
             .url;
 
         let query = url.query().unwrap();

@@ -394,6 +394,16 @@ impl From<TxWithHash> for Tx {
                     ),
                 })
             }
+
+            InternalTx::Deploy(tx) => starknet::core::types::Transaction::Deploy(
+                starknet::core::types::DeployTransaction {
+                    constructor_calldata: tx.constructor_calldata,
+                    contract_address_salt: tx.contract_address_salt,
+                    class_hash: tx.class_hash,
+                    version: tx.version,
+                    transaction_hash,
+                },
+            ),
         };
 
         Tx(tx)

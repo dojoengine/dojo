@@ -12,10 +12,12 @@ use katana_primitives::{ContractAddress, Felt};
 use katana_rpc_types::class::ConversionError;
 pub use katana_rpc_types::class::RpcSierraContractClass;
 use serde::Deserialize;
-use starknet::providers::sequencer::models::{BlockStatus, ConfirmedTransactionReceipt};
+use starknet::providers::sequencer::models::BlockStatus;
 
+mod receipt;
 mod transaction;
 
+pub use receipt::*;
 pub use transaction::*;
 
 /// The contract class type returns by `/get_class_by_hash` endpoint.
@@ -72,20 +74,26 @@ pub struct StateUpdateWithBlock {
 
 #[derive(Debug, Deserialize)]
 pub struct Block {
+    #[serde(default)]
     pub block_hash: Option<BlockHash>,
+    #[serde(default)]
     pub block_number: Option<BlockNumber>,
     pub parent_block_hash: BlockHash,
     pub timestamp: u64,
     pub sequencer_address: Option<ContractAddress>,
+    #[serde(default)]
     pub state_root: Option<Felt>,
+    #[serde(default)]
     pub transaction_commitment: Option<Felt>,
+    #[serde(default)]
     pub event_commitment: Option<Felt>,
     pub status: BlockStatus,
     pub l1_da_mode: L1DataAvailabilityMode,
     pub l1_gas_price: GasPrices,
     pub l1_data_gas_price: GasPrices,
     pub transactions: Vec<ConfirmedTransaction>,
-    pub transaction_receipts: Vec<ConfirmedTransactionReceipt>,
+    pub transaction_receipts: Vec<ConfirmedReceipt>,
+    #[serde(default)]
     pub starknet_version: Option<ProtocolVersion>,
 }
 
