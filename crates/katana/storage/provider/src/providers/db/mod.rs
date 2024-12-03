@@ -690,13 +690,8 @@ impl<Db: Database> BlockWriter for DbProvider<Db> {
             db_tx.put::<tables::Headers>(block_number, block_header)?;
             db_tx.put::<tables::BlockBodyIndices>(block_number, block_body_indices)?;
 
-            for (i, (transaction, receipt, execution)) in transactions
-                .into_iter()
-                .zip(receipts.into_iter())
-                .zip(executions.into_iter())
-                .map(|((transaction, receipt), execution)| (transaction, receipt, execution))
-                .enumerate()
-            {
+            // Store base transaction details
+            for (i, transaction) in transactions.into_iter().enumerate() {
                 let tx_number = tx_offset + i as u64;
                 let tx_hash = transaction.hash;
 
@@ -704,7 +699,17 @@ impl<Db: Database> BlockWriter for DbProvider<Db> {
                 db_tx.put::<tables::TxNumbers>(tx_hash, tx_number)?;
                 db_tx.put::<tables::TxBlocks>(tx_number, block_number)?;
                 db_tx.put::<tables::Transactions>(tx_number, transaction.transaction)?;
+            }
+
+            // Store transaction receipts
+            for (i, receipt) in receipts.into_iter().enumerate() {
+                let tx_number = tx_offset + i as u64;
                 db_tx.put::<tables::Receipts>(tx_number, receipt)?;
+            }
+
+            // Store execution traces
+            for (i, execution) in executions.into_iter().enumerate() {
+                let tx_number = tx_offset + i as u64;
                 db_tx.put::<tables::TxTraces>(tx_number, execution)?;
             }
 
