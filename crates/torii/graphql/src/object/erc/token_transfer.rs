@@ -119,7 +119,10 @@ JOIN
 "#,
     );
 
-    let mut conditions = vec!["et.from_address = ? OR et.to_address = ?".to_string()];
+    let mut conditions = vec![
+        "(et.from_address = ? OR et.to_address = ?)".to_string(),
+        "(t.metadata IS NULL OR length(t.metadata) > 0)".to_string(),
+    ];
 
     let mut cursor_param = &connection.after;
     if let Some(after_cursor) = &connection.after {
@@ -263,14 +266,9 @@ fn token_transfers_connection_output<'a>(
                 let token_id = row.token_id.split(':').collect::<Vec<&str>>();
                 assert!(token_id.len() == 2);
 
-                // skip the token if metadata is null
-                if row.metadata.is_none() {
-                    continue;
-                }
-
-                let metadata_str = row.metadata.as_ref().unwrap();
+                let metadata_str = row.metadata;
                 let metadata: serde_json::Value =
-                    serde_json::from_str(metadata_str).expect("metadata is always json");
+                    serde_json::from_str(&metadata_str).expect("metadata is always json");
                 let metadata_name =
                     metadata.get("name").map(|v| v.to_string().trim_matches('"').to_string());
                 let metadata_description = metadata
@@ -339,7 +337,7 @@ struct TransferQueryResultRaw {
     pub symbol: String,
     pub decimals: u8,
     pub contract_type: String,
-    pub metadata: Option<String>,
+    pub metadata: String,
 }
 
 #[derive(Debug, Clone)]
