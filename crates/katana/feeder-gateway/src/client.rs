@@ -112,7 +112,7 @@ impl SequencerGateway {
     fn feeder_gateway(&self, method: &str) -> RequestBuilder<'_> {
         let mut url = self.base_url.clone();
         url.path_segments_mut().expect("invalid base url").extend(["feeder_gateway", method]);
-        RequestBuilder { gateway_client: &self, url }
+        RequestBuilder { gateway_client: self, url }
     }
 }
 
