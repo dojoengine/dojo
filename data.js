@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1733192353774,
+  "lastUpdate": 1733192561808,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -37387,6 +37387,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10873119589,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "distinct": true,
+          "id": "859c9d9f3eb96528de0e32b11c8bd27e4ff6bda9",
+          "message": "fix(torii/graphql): wait to query db after getting broker update\n\ncommit-id:b7448a81",
+          "timestamp": "2024-12-03T07:32:44+05:30",
+          "tree_id": "fdede7d27fb229b6db739c0f7952e83bfd28c5c0",
+          "url": "https://github.com/dojoengine/dojo/commit/859c9d9f3eb96528de0e32b11c8bd27e4ff6bda9"
+        },
+        "date": 1733192559765,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2544757,
+            "range": "± 32129",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 9184637,
+            "range": "± 817056",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3613473301,
+            "range": "± 839043566",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 7874253,
+            "range": "± 100011",
             "unit": "ns/iter"
           }
         ]
