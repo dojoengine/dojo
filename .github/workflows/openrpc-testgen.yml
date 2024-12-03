@@ -11,13 +11,27 @@ jobs:
   build:
     runs-on: arc-runner-set
     steps:
-      - uses: actions/checkout@v3
-      - uses: Swatinem/rust-cache@v2
-      - run: |
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install Rust
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          source $HOME/.cargo/env
+          rustc --version
+          cargo --version
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build katana
+        run: |
           cargo build -r --bin katana
           mkdir -p bins
           cp ./target/release/katana bins/
-      - uses: actions/upload-artifact@v4
+
+      - name: Upload katana binary
+        uses: actions/upload-artifact@v4
         with:
           name: dojo-bins
           path: bins
@@ -25,20 +39,43 @@ jobs:
   test:
     needs: build
     runs-on: arc-runner-set
-    container:
-      image: ghcr.io/dojoengine/dojo-dev:v1.0.2
     steps:
-      - uses: actions/checkout@v3
-      - uses: Swatinem/rust-cache@v2
-      - uses: actions/download-artifact@v4
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install Rust
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          source $HOME/.cargo/env
+          rustc --version
+          cargo --version
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Download katana binary
+        uses: actions/download-artifact@v4
         with:
           name: dojo-bins
           path: /tmp/bins
-      - run: |
+
+      - name: Make katana executable
+        run: |
           export PATH=/tmp/bins:$PATH
           chmod +x /tmp/bins/katana
-          
+
+      - name: Start katana node
+        run: |
           /tmp/bins/katana &
           
-          docker run --rm docker.io/uacias/katana-runner:v0.0.1
-          
+          # Poczekaj aż katana będzie gotowa
+          until curl -s http://127.0.0.1:5050 >/dev/null; do
+            echo "Waiting for Katana to be ready..."
+            sleep 5
+          done
+
+      - name: Run testgen-runner Docker container
+        run: |
+          docker run --rm \
+            uacias/katana-runner:v0.0.1
+
