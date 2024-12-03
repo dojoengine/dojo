@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1733188425606,
+  "lastUpdate": 1733188609249,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -37309,6 +37309,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10238454328,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "distinct": true,
+          "id": "938d50fbcef04fb0360a5ae3e2f108cb1f3b86be",
+          "message": "fix(torii): add erc20 patch for eth mainnet token\n\ncommit-id:93263be6",
+          "timestamp": "2024-12-03T06:27:23+05:30",
+          "tree_id": "461b86919f1017f26e1c5ec0265419c69053612e",
+          "url": "https://github.com/dojoengine/dojo/commit/938d50fbcef04fb0360a5ae3e2f108cb1f3b86be"
+        },
+        "date": 1733188607761,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2741949,
+            "range": "± 71170",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 7841667,
+            "range": "± 254487",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3609273840,
+            "range": "± 747820828",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 7886106,
+            "range": "± 188044",
             "unit": "ns/iter"
           }
         ]
