@@ -278,8 +278,7 @@ async fn spawn_rebuilding_graphql_server(
 
     loop {
         let shutdown_rx = shutdown_tx.subscribe();
-        let (new_addr, new_server) =
-            torii_graphql::server::new(shutdown_rx, &pool).await;
+        let (new_addr, new_server) = torii_graphql::server::new(shutdown_rx, &pool).await;
 
         tokio::spawn(new_server);
 
