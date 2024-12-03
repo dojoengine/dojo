@@ -768,7 +768,7 @@ where
 
                 Declarer::declare(labeled_class, &self.world.account, &self.txn_config).await?;
 
-                // We want to wait for the receipt to be be able to print the
+                // We want to wait for the receipt to be able to print the
                 // world block number.
                 let mut txn_config = self.txn_config;
                 txn_config.wait = true;
