@@ -48,10 +48,10 @@ fn graphql_filter(
     let playground_filter = warp::path("graphql").map(move || {
         warp::reply::html(
             GraphiQLSource::build()
-                .subscription_endpoint("graphql/ws")
+                .subscription_endpoint("/ws")
                 // we patch the generated source to use the current URL instead of the origin
                 // for hsoted services like SLOT
-                .finish().replace("window.location.origin", "window.location.href"),
+                .finish().replace("new URL(endpoint, window.location.origin);", "new URL(window.location.href.trimEnd('/') + endpoint)"),
         )
     });
 
