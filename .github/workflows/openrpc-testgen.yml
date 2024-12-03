@@ -24,7 +24,7 @@ jobs:
 
   test:
     needs: build
-    runs-on: arc-runner
+    runs-on: arc-runner-set
     container:
       image: ghcr.io/dojoengine/dojo-dev:v1.0.2
     steps:
@@ -40,6 +40,5 @@ jobs:
           
           /tmp/bins/katana &
           
-          # Uruchomienie testgen-runner z Twojego obrazu Docker
           docker run --rm docker.io/uacias/katana-runner:v0.0.1
           
