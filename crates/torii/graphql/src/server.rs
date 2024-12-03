@@ -50,7 +50,7 @@ fn graphql_filter(
             GraphiQLSource::build()
                 .subscription_endpoint("/ws")
                 // we patch the generated source to use the current URL instead of the origin
-                // for hsoted services like SLOT
+                // for hosted services like SLOT
                 .finish().replace("new URL(endpoint, window.location.origin);", "new URL(window.location.href.trimEnd('/') + endpoint)"),
         )
     });
