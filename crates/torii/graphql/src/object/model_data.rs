@@ -1,9 +1,8 @@
 use async_graphql::dynamic::{Enum, Field, FieldFuture, InputObject, Object, TypeRef};
 use async_graphql::Value;
-use chrono::{DateTime, Utc};
 use dojo_types::naming::get_tag;
-use serde::Deserialize;
-use sqlx::{FromRow, Pool, Sqlite};
+use dojo_types::schema::Ty;
+use sqlx::{Pool, Sqlite};
 
 use super::connection::{connection_arguments, connection_output, parse_connection_arguments};
 use super::inputs::order_input::{order_argument, parse_order_argument, OrderInputObject};
@@ -11,8 +10,8 @@ use super::inputs::where_input::{parse_where_argument, where_argument, WhereInpu
 use super::inputs::InputObjectTrait;
 use super::{BasicObject, ResolvableObject, TypeMapping, ValueMapping};
 use crate::constants::{
-    ENTITY_ID_COLUMN, ENTITY_TABLE, ENTITY_TYPE_NAME, EVENT_ID_COLUMN, EVENT_MESSAGE_TABLE,
-    EVENT_MESSAGE_TYPE_NAME, ID_COLUMN, INTERNAL_ENTITY_ID_KEY,
+    ENTITY_ID_COLUMN, ENTITY_TABLE, ENTITY_TYPE_NAME, EVENT_MESSAGE_TABLE, EVENT_MESSAGE_TYPE_NAME,
+    ID_COLUMN, INTERNAL_ENTITY_ID_KEY,
 };
 use crate::mapping::ENTITY_TYPE_MAPPING;
 use crate::query::data::{count_rows, fetch_multiple_rows, fetch_single_row};
@@ -20,36 +19,23 @@ use crate::query::value_mapping_from_row;
 use crate::types::TypeData;
 use crate::utils;
 
-#[derive(FromRow, Deserialize, PartialEq, Eq, Debug)]
-pub struct ModelMember {
-    pub id: String,
-    pub model_id: String,
-    pub model_idx: i64,
-    pub name: String,
-    #[serde(rename = "type")]
-    pub ty: String,
-    pub type_enum: String,
-    pub key: bool,
-    pub executed_at: DateTime<Utc>,
-    pub created_at: DateTime<Utc>,
-}
-
 #[derive(Debug)]
 pub struct ModelDataObject {
     pub name: String,
     pub plural_name: String,
     pub type_name: String,
     pub type_mapping: TypeMapping,
+    pub schema: Ty,
     pub where_input: WhereInputObject,
     pub order_input: OrderInputObject,
 }
 
 impl ModelDataObject {
-    pub fn new(name: String, type_name: String, type_mapping: TypeMapping) -> Self {
+    pub fn new(name: String, type_name: String, type_mapping: TypeMapping, schema: Ty) -> Self {
         let where_input = WhereInputObject::new(type_name.as_str(), &type_mapping);
         let order_input = OrderInputObject::new(type_name.as_str(), &type_mapping);
         let plural_name = format!("{}Models", name);
-        Self { name, plural_name, type_name, type_mapping, where_input, order_input }
+        Self { name, plural_name, type_name, type_mapping, schema, where_input, order_input }
     }
 }
 
@@ -119,7 +105,7 @@ impl ResolvableObject for ModelDataObject {
                 let (data, page_info) = fetch_multiple_rows(
                     &mut conn,
                     &table_name,
-                    EVENT_ID_COLUMN,
+                    "internal_event_id",
                     &None,
                     &order,
                     &filters,
@@ -131,9 +117,10 @@ impl ResolvableObject for ModelDataObject {
                     &data,
                     &type_mapping,
                     &order,
-                    EVENT_ID_COLUMN,
+                    "internal_event_id",
                     total_count,
-                    true,
+                    false,
+                    false,
                     page_info,
                 )?;
 
@@ -214,7 +201,8 @@ pub fn object(type_name: &str, type_mapping: &TypeMapping, path_array: Vec<Strin
                                     &entity_id,
                                 )
                                 .await?;
-                                let result = value_mapping_from_row(&data, &nested_mapping, true)?;
+                                let result =
+                                    value_mapping_from_row(&data, &nested_mapping, false, false)?;
 
                                 Ok(Some(Value::Object(result)))
                             }
@@ -256,7 +244,7 @@ fn entity_field() -> Field {
                     let entity_id = utils::extract::<String>(indexmap, INTERNAL_ENTITY_ID_KEY)?;
                     let data =
                         fetch_single_row(&mut conn, ENTITY_TABLE, ID_COLUMN, &entity_id).await?;
-                    let entity = value_mapping_from_row(&data, &ENTITY_TYPE_MAPPING, false)?;
+                    let entity = value_mapping_from_row(&data, &ENTITY_TYPE_MAPPING, false, true)?;
 
                     Ok(Some(Value::Object(entity)))
                 }
@@ -276,7 +264,8 @@ fn event_message_field() -> Field {
                     let data =
                         fetch_single_row(&mut conn, EVENT_MESSAGE_TABLE, ID_COLUMN, &entity_id)
                             .await?;
-                    let event_message = value_mapping_from_row(&data, &ENTITY_TYPE_MAPPING, false)?;
+                    let event_message =
+                        value_mapping_from_row(&data, &ENTITY_TYPE_MAPPING, false, true)?;
 
                     Ok(Some(Value::Object(event_message)))
                 }

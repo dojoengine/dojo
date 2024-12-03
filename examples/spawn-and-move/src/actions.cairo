@@ -64,7 +64,7 @@ pub mod actions {
                 player: seed.try_into().unwrap(),
                 name: "hello",
                 items: array![],
-                favorite_item: Option::None
+                favorite_item: Option::None,
             };
 
             let mut world = self.world_default();
@@ -127,7 +127,7 @@ pub mod actions {
                 PlayerItem { item_id: 2, quantity: 50, score: -32 }
             ];
 
-            let config = PlayerConfig { player, name, items, favorite_item: Option::Some(1), };
+            let config = PlayerConfig { player, name, items, favorite_item: Option::Some(1) };
             world.write_model(@config);
         }
 
