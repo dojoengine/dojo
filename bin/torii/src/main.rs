@@ -290,6 +290,8 @@ async fn spawn_rebuilding_graphql_server(
         // Break the loop if there are no more events
         if broker.next().await.is_none() {
             break;
+        } else {
+            tokio::time::sleep(Duration::from_secs(1)).await;
         }
     }
 }
