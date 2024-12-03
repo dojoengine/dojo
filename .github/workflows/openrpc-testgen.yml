@@ -17,7 +17,7 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential
+          sudo apt-get install -y build-essential libclang-dev
 
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
@@ -49,7 +49,7 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential
+          sudo apt-get install -y build-essential libclang-dev
 
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
