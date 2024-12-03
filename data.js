@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1733269478551,
+  "lastUpdate": 1733269650746,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -38011,6 +38011,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 11182189451,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9d57b4b64d6e2285d93d6891372cc03581bd47c7",
+          "message": "refactor(katana-rpc): remove some components dependency from starknet rpc handler (#2759)\n\nthe idea is to make the StarknetApi struct not depend on components that are not shared in a full and sequencer node configuration.",
+          "timestamp": "2024-12-04T07:27:45+08:00",
+          "tree_id": "178b65237bc19302beb3054eb0fa0bb180ddb656",
+          "url": "https://github.com/dojoengine/dojo/commit/9d57b4b64d6e2285d93d6891372cc03581bd47c7"
+        },
+        "date": 1733269649263,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2414476,
+            "range": "± 29566",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8065752,
+            "range": "± 310559",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3778516306,
+            "range": "± 771116044",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 7946384,
+            "range": "± 291439",
             "unit": "ns/iter"
           }
         ]
