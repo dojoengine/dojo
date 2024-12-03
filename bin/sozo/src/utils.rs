@@ -3,7 +3,6 @@ use std::io::{self, Write};
 use std::str::FromStr;
 use std::sync::Arc;
 
-use crate::commands::LOG_TARGET;
 use anyhow::{anyhow, Context, Result};
 use camino::Utf8PathBuf;
 use colored::*;
@@ -27,6 +26,7 @@ use tracing::{error, trace};
 use crate::commands::options::account::{AccountOptions, SozoAccount};
 use crate::commands::options::starknet::StarknetOptions;
 use crate::commands::options::world::WorldOptions;
+use crate::commands::LOG_TARGET;
 
 /// Computes the world address based on the provided options.
 pub fn get_world_address(

@@ -1,4 +1,5 @@
-use crate::commands::LOG_TARGET;
+use std::sync::Arc;
+
 use anyhow::{anyhow, Context, Result};
 use clap::Args;
 use colored::*;
@@ -12,7 +13,6 @@ use sozo_ops::migration_ui::MigrationUi;
 use sozo_scarbext::WorkspaceExt;
 use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::Provider;
-use std::sync::Arc;
 use tabled::settings::Style;
 use tabled::{Table, Tabled};
 use tracing::{error, trace};
@@ -22,6 +22,7 @@ use super::options::ipfs::IpfsOptions;
 use super::options::starknet::StarknetOptions;
 use super::options::transaction::TransactionOptions;
 use super::options::world::WorldOptions;
+use crate::commands::LOG_TARGET;
 use crate::utils;
 
 #[derive(Debug, Clone, Args)]
