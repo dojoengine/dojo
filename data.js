@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1733183726692,
+  "lastUpdate": 1733188425606,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -37279,6 +37279,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7830027,
             "range": "± 48594",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "distinct": true,
+          "id": "938d50fbcef04fb0360a5ae3e2f108cb1f3b86be",
+          "message": "fix(torii): add erc20 patch for eth mainnet token\n\ncommit-id:93263be6",
+          "timestamp": "2024-12-03T06:27:23+05:30",
+          "tree_id": "461b86919f1017f26e1c5ec0265419c69053612e",
+          "url": "https://github.com/dojoengine/dojo/commit/938d50fbcef04fb0360a5ae3e2f108cb1f3b86be"
+        },
+        "date": 1733188423507,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10238454328,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
