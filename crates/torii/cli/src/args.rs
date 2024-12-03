@@ -35,11 +35,6 @@ pub struct ToriiArgs {
     )]
     pub db_dir: Option<PathBuf>,
 
-    /// The external url of the server, used for configuring the GraphQL Playground in a hosted
-    /// environment
-    #[arg(long, value_parser = parse_url, help = "The external url of the server, used for configuring the GraphQL Playground in a hosted environment.")]
-    pub external_url: Option<Url>,
-
     /// Open World Explorer on the browser.
     #[arg(long, help = "Open World Explorer on the browser.")]
     pub explorer: bool,
@@ -95,10 +90,6 @@ impl ToriiArgs {
 
         if self.db_dir.is_none() {
             self.db_dir = config.db_dir;
-        }
-
-        if self.external_url.is_none() {
-            self.external_url = config.external_url;
         }
 
         // Currently the comparison it's only at the top level.
@@ -164,7 +155,6 @@ impl TryFrom<ToriiArgs> for ToriiArgsConfig {
         config.rpc =
             if args.rpc == Url::parse(DEFAULT_RPC_URL).unwrap() { None } else { Some(args.rpc) };
         config.db_dir = args.db_dir;
-        config.external_url = args.external_url;
         config.explorer = Some(args.explorer);
 
         // Only include the following options if they are not the default.

@@ -42,7 +42,7 @@ use torii_core::types::{Contract, ContractType, Model};
 use torii_server::proxy::Proxy;
 use tracing::{error, info};
 use tracing_subscriber::{fmt, EnvFilter};
-use url::{form_urlencoded, Url};
+use url::form_urlencoded;
 
 pub(crate) const LOG_TARGET: &str = "torii::cli";
 
@@ -220,7 +220,6 @@ async fn main() -> anyhow::Result<()> {
     let graphql_server = spawn_rebuilding_graphql_server(
         shutdown_tx.clone(),
         readonly_pool.into(),
-        args.external_url,
         proxy_server.clone(),
     );
 
@@ -273,15 +272,13 @@ async fn main() -> anyhow::Result<()> {
 async fn spawn_rebuilding_graphql_server(
     shutdown_tx: Sender<()>,
     pool: Arc<SqlitePool>,
-    external_url: Option<Url>,
     proxy_server: Arc<Proxy>,
 ) {
     let mut broker = SimpleBroker::<Model>::subscribe();
 
     loop {
         let shutdown_rx = shutdown_tx.subscribe();
-        let (new_addr, new_server) =
-            torii_graphql::server::new(shutdown_rx, &pool, external_url.clone()).await;
+        let (new_addr, new_server) = torii_graphql::server::new(shutdown_rx, &pool).await;
 
         tokio::spawn(new_server);
 

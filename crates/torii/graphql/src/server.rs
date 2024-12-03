@@ -8,7 +8,6 @@ use async_graphql_warp::graphql_subscription;
 use serde_json::json;
 use sqlx::{Pool, Sqlite};
 use tokio::sync::broadcast::Receiver;
-use url::Url;
 use warp::{Filter, Rejection, Reply};
 
 use super::schema::build_schema;
@@ -18,13 +17,12 @@ use crate::query::data::count_rows;
 pub async fn new(
     mut shutdown_rx: Receiver<()>,
     pool: &Pool<Sqlite>,
-    external_url: Option<Url>,
 ) -> (SocketAddr, impl Future<Output = ()> + 'static) {
     let schema = build_schema(pool).await.unwrap();
     let mut conn = pool.acquire().await.unwrap();
     let num_models = count_rows(&mut conn, MODEL_TABLE, &None, &None).await.unwrap();
 
-    let routes = graphql_filter(schema, external_url, num_models == 0);
+    let routes = graphql_filter(schema, num_models == 0);
     warp::serve(routes).bind_with_graceful_shutdown(([127, 0, 0, 1], 0), async move {
         shutdown_rx.recv().await.ok();
     })
@@ -32,7 +30,6 @@ pub async fn new(
 
 fn graphql_filter(
     schema: Schema,
-    external_url: Option<Url>,
     is_empty: bool,
 ) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
     let graphql_post = async_graphql_warp::graphql(schema.clone()).and_then(
@@ -48,30 +45,13 @@ fn graphql_filter(
         },
     );
 
-    // If an external URL is provided, we are expecting the GraphQL endpoint to be given.
-    // Hence, we don't have to append "/graphql" to the URL.
-    let (graphql_endpoint, subscription_endpoint) = if let Some(external_url) = external_url {
-        let graphql_url = external_url;
-        let mut websocket_url = graphql_url.clone();
-        websocket_url.set_path(&format!("{}/ws", websocket_url.path()));
-        let _ = websocket_url.set_scheme(match websocket_url.scheme() {
-            "https" => "wss",
-            "http" => "ws",
-            _ => panic!("Invalid URL scheme - must be http or https"),
-        });
-        (graphql_url.to_string(), websocket_url.to_string())
-    } else {
-        // Otherwise, we are running the GraphQL server locally and we need to
-        // append "/graphql" to the URL.
-        ("graphql".to_string(), "graphql/ws".to_string())
-    };
-
     let playground_filter = warp::path("graphql").map(move || {
         warp::reply::html(
             GraphiQLSource::build()
-                .endpoint(&graphql_endpoint)
-                .subscription_endpoint(&subscription_endpoint)
-                .finish(),
+                .subscription_endpoint("/ws")
+                // we patch the generated source to use the current URL instead of the origin
+                // for hosted services like SLOT
+                .finish().replace("new URL(endpoint, window.location.origin);", "new URL(window.location.href.trimEnd('/') + endpoint)"),
         )
     });
 
