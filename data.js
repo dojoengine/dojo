@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1733192561808,
+  "lastUpdate": 1733243401024,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -37435,6 +37435,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7874253,
             "range": "± 100011",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "56c0bf7463d77c88f7e6814435d6da6a441d1038",
+          "message": "refactor(torii-graphql): move away from external url (#2753)\n\n* refactor(torii-graphql): move away from external url\n\n* fmt\n\n* better patch\n\n* comment typo",
+          "timestamp": "2024-12-03T10:12:51-06:00",
+          "tree_id": "21305b8463c3dd0b86c7129c1acfe580d8c6be0b",
+          "url": "https://github.com/dojoengine/dojo/commit/56c0bf7463d77c88f7e6814435d6da6a441d1038"
+        },
+        "date": 1733243398856,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11213796972,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
