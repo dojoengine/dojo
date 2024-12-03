@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1733244945358,
+  "lastUpdate": 1733245122945,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -37699,6 +37699,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 11215381515,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "gopher@before.tech",
+            "name": "rusttech",
+            "username": "rusttech"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2026f5823cdbe05836272def1323cf1d36991d50",
+          "message": "chore: remove redundant words in comment (#2752)\n\nSigned-off-by: rusttech <gopher@before.tech>",
+          "timestamp": "2024-12-03T10:38:36-06:00",
+          "tree_id": "564454b7f978eecf53b582fe3b82161dadd22888",
+          "url": "https://github.com/dojoengine/dojo/commit/2026f5823cdbe05836272def1323cf1d36991d50"
+        },
+        "date": 1733245121271,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2715605,
+            "range": "± 30803",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 7918020,
+            "range": "± 216137",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3614749345,
+            "range": "± 745321498",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 7869476,
+            "range": "± 281453",
             "unit": "ns/iter"
           }
         ]
