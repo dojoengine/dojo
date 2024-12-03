@@ -52,6 +52,7 @@ pub enum Tx {
     Declare(DeclareTx),
     L1Handler(L1HandlerTx),
     DeployAccount(DeployAccountTx),
+    Deploy(DeployTx),
 }
 
 #[derive(Debug)]
@@ -155,8 +156,25 @@ impl DeclareTxWithClass {
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum InvokeTx {
+    V0(InvokeTxV0),
     V1(InvokeTxV1),
     V3(InvokeTxV3),
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct InvokeTxV0 {
+    /// The account address which the transaction is initiated from.
+    pub contract_address: ContractAddress,
+    /// Entry point selector
+    pub entry_point_selector: Felt,
+    /// The data used as the input to the execute entry point of sender account contract.
+    pub calldata: Vec<Felt>,
+    /// The transaction signature associated with the sender address.
+    pub signature: Vec<Felt>,
+    /// The max fee that the sender is willing to pay for the transaction.
+    pub max_fee: u128,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -166,6 +184,7 @@ pub struct InvokeTxV1 {
     /// The chain id of the chain on which the transaction is initiated.
     ///
     /// Used as a simple replay attack protection.
+    #[serde(default)]
     pub chain_id: ChainId,
     /// The account address which the transaction is initiated from.
     pub sender_address: ContractAddress,
@@ -187,6 +206,7 @@ pub struct InvokeTxV3 {
     /// The chain id of the chain on which the transaction is initiated.
     ///
     /// Used as a simple replay attack protection.
+    #[serde(default)]
     pub chain_id: ChainId,
     /// The account address which the transaction is initiated from.
     pub sender_address: ContractAddress,
@@ -220,6 +240,10 @@ impl InvokeTx {
     /// Compute the hash of the transaction.
     pub fn calculate_hash(&self, is_query: bool) -> TxHash {
         match self {
+            InvokeTx::V0(..) => {
+                todo!()
+            }
+
             InvokeTx::V1(tx) => compute_invoke_v1_tx_hash(
                 Felt::from(tx.sender_address),
                 &tx.calldata,
@@ -274,6 +298,7 @@ pub struct DeclareTxV1 {
     /// The chain id of the chain on which the transaction is initiated.
     ///
     /// Used as a simple replay attack protection.
+    #[serde(default)]
     pub chain_id: ChainId,
     /// The account address which the transaction is initiated from.
     pub sender_address: ContractAddress,
@@ -296,6 +321,7 @@ pub struct DeclareTxV2 {
     /// The chain id of the chain on which the transaction is initiated.
     ///
     /// Used as a simple replay attack protection.
+    #[serde(default)]
     pub chain_id: ChainId,
     /// The account address which the transaction is initiated from.
     pub sender_address: ContractAddress,
@@ -320,6 +346,7 @@ pub struct DeclareTxV3 {
     /// The chain id of the chain on which the transaction is initiated.
     ///
     /// Used as a simple replay attack protection.
+    #[serde(default)]
     pub chain_id: ChainId,
     /// The account address which the transaction is initiated from.
     pub sender_address: ContractAddress,
@@ -396,6 +423,7 @@ pub struct L1HandlerTx {
     /// The L1 to L2 message nonce.
     pub nonce: Nonce,
     /// The chain id.
+    #[serde(default)]
     pub chain_id: ChainId,
     /// Amount of fee paid on L1.
     pub paid_fee_on_l1: u128,
@@ -449,6 +477,7 @@ pub struct DeployAccountTxV1 {
     /// The chain id of the chain on which the transaction is initiated.
     ///
     /// Used as a simple replay attack protection.
+    #[serde(default)]
     pub chain_id: ChainId,
     /// The nonce value of the account. Corresponds to the number of transactions initiated by
     /// sender.
@@ -474,6 +503,7 @@ pub struct DeployAccountTxV3 {
     /// The chain id of the chain on which the transaction is initiated.
     ///
     /// Used as a simple replay attack protection.
+    #[serde(default)]
     pub chain_id: ChainId,
     /// The nonce value of the account. Corresponds to the number of transactions initiated by
     /// sender.
@@ -532,6 +562,23 @@ impl DeployAccountTx {
             ),
         }
     }
+}
+
+/// Legacy Deploy transacation type.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct DeployTx {
+    /// The contract address of the account contract that will be deployed.
+    pub contract_address: Felt,
+    /// The salt used to generate the contract address.
+    pub contract_address_salt: Felt,
+    /// The input data to the constructor function of the contract class.
+    pub constructor_calldata: Vec<Felt>,
+    /// The hash of the contract class from which the account contract will be deployed from.
+    pub class_hash: Felt,
+    /// Transaction version.
+    pub version: Felt,
 }
 
 #[derive(Debug, Clone, AsRef, Deref, PartialEq, Eq)]

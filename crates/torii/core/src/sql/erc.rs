@@ -29,6 +29,7 @@ impl Sql {
         provider: &P,
         block_timestamp: u64,
         event_id: &str,
+        block_number: u64,
     ) -> Result<()> {
         // contract_address
         let token_id = felt_to_sql_string(&contract_address);
@@ -66,10 +67,11 @@ impl Sql {
                 self.local_cache.erc_cache.entry((ContractType::ERC20, to_balance_id)).or_default();
             *to_balance += I256::from(amount);
         }
+        let block_id = BlockId::Number(block_number);
 
         if self.local_cache.erc_cache.len() >= 100000 {
             self.flush().await.with_context(|| "Failed to flush in handle_erc20_transfer")?;
-            self.apply_cache_diff().await?;
+            self.apply_cache_diff(block_id).await?;
         }
 
         Ok(())
@@ -84,6 +86,7 @@ impl Sql {
         token_id: U256,
         block_timestamp: u64,
         event_id: &str,
+        block_number: u64,
     ) -> Result<()> {
         // contract_address:id
         let actual_token_id = token_id;
@@ -127,10 +130,11 @@ impl Sql {
                 .or_default();
             *to_balance += I256::from(1u8);
         }
+        let block_id = BlockId::Number(block_number);
 
         if self.local_cache.erc_cache.len() >= 100000 {
             self.flush().await.with_context(|| "Failed to flush in handle_erc721_transfer")?;
-            self.apply_cache_diff().await?;
+            self.apply_cache_diff(block_id).await?;
         }
 
         Ok(())
@@ -272,7 +276,7 @@ impl Sql {
         Ok(())
     }
 
-    pub async fn apply_cache_diff(&mut self) -> Result<()> {
+    pub async fn apply_cache_diff(&mut self, block_id: BlockId) -> Result<()> {
         if !self.local_cache.erc_cache.is_empty() {
             self.executor.send(QueryMessage::new(
                 "".to_string(),
@@ -282,6 +286,7 @@ impl Sql {
                         &mut self.local_cache.erc_cache,
                         HashMap::with_capacity(64),
                     ),
+                    block_id,
                 }),
             ))?;
         }

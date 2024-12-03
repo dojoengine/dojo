@@ -264,6 +264,19 @@ impl From<TxWithHash> for Tx {
         let transaction_hash = value.hash;
         let tx = match value.transaction {
             InternalTx::Invoke(invoke) => match invoke {
+                InvokeTx::V0(tx) => starknet::core::types::Transaction::Invoke(
+                    starknet::core::types::InvokeTransaction::V0(
+                        starknet::core::types::InvokeTransactionV0 {
+                            transaction_hash,
+                            calldata: tx.calldata,
+                            signature: tx.signature,
+                            max_fee: tx.max_fee.into(),
+                            contract_address: tx.contract_address.into(),
+                            entry_point_selector: tx.entry_point_selector,
+                        },
+                    ),
+                ),
+
                 InvokeTx::V1(tx) => starknet::core::types::Transaction::Invoke(
                     starknet::core::types::InvokeTransaction::V1(
                         starknet::core::types::InvokeTransactionV1 {
@@ -390,6 +403,16 @@ impl From<TxWithHash> for Tx {
                     ),
                 })
             }
+
+            InternalTx::Deploy(tx) => starknet::core::types::Transaction::Deploy(
+                starknet::core::types::DeployTransaction {
+                    constructor_calldata: tx.constructor_calldata,
+                    contract_address_salt: tx.contract_address_salt,
+                    class_hash: tx.class_hash,
+                    version: tx.version,
+                    transaction_hash,
+                },
+            ),
         };
 
         Tx(tx)

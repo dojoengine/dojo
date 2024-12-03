@@ -10,10 +10,11 @@ use starknet::core::types::{BlockId, BlockTag, FunctionCall, U256};
 use starknet::core::utils::{get_selector_from_name, parse_cairo_short_string};
 use starknet::providers::Provider;
 use starknet_crypto::Felt;
-use tracing::{debug, trace};
+use tracing::{debug, trace, warn};
 
 use super::{ApplyBalanceDiffQuery, Executor};
 use crate::constants::{IPFS_CLIENT_MAX_RETRY, SQL_FELT_DELIMITER, TOKEN_BALANCE_TABLE};
+use crate::executor::LOG_TARGET;
 use crate::sql::utils::{felt_to_sql_string, sql_string_to_u256, u256_to_sql_string, I256};
 use crate::types::ContractType;
 use crate::utils::fetch_content_from_ipfs;
@@ -46,6 +47,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
     pub async fn apply_balance_diff(
         &mut self,
         apply_balance_diff: ApplyBalanceDiffQuery,
+        provider: Arc<P>,
     ) -> Result<()> {
         let erc_cache = apply_balance_diff.erc_cache;
         for ((contract_type, id_str), balance) in erc_cache.iter() {
@@ -66,6 +68,8 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                         contract_address,
                         token_id,
                         balance,
+                        Arc::clone(&provider),
+                        apply_balance_diff.block_id,
                     )
                     .await
                     .with_context(|| "Failed to apply balance diff in apply_cache_diff")?;
@@ -83,6 +87,8 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                         contract_address,
                         token_id,
                         balance,
+                        Arc::clone(&provider),
+                        apply_balance_diff.block_id,
                     )
                     .await
                     .with_context(|| "Failed to apply balance diff in apply_cache_diff")?;
@@ -93,6 +99,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn apply_balance_diff_helper(
         &mut self,
         id: &str,
@@ -100,6 +107,8 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         contract_address: &str,
         token_id: &str,
         balance_diff: &I256,
+        provider: Arc<P>,
+        block_id: BlockId,
     ) -> Result<()> {
         let tx = &mut self.transaction;
         let balance: Option<(String,)> =
@@ -116,9 +125,35 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
 
         if balance_diff.is_negative {
             if balance < balance_diff.value {
-                dbg!(&balance_diff, balance, id);
+                // HACK: ideally we should never hit this case. But ETH on starknet mainnet didn't
+                // emit transfer events properly so they are broken. For those cases
+                // we manually fetch the balance of the address using RPC
+
+                let current_balance = provider
+                    .call(
+                        FunctionCall {
+                            contract_address: Felt::from_str(contract_address).unwrap(),
+                            entry_point_selector: get_selector_from_name("balanceOf").unwrap(),
+                            calldata: vec![Felt::from_str(account_address).unwrap()],
+                        },
+                        block_id,
+                    )
+                    .await
+                    .with_context(|| format!("Failed to fetch balance for id: {}", id))?;
+
+                let current_balance =
+                    cainome::cairo_serde::U256::cairo_deserialize(&current_balance, 0).unwrap();
+
+                warn!(
+                    target: LOG_TARGET,
+                    id = id,
+                    "Invalid transfer event detected, overriding balance by querying RPC directly"
+                );
+                // override the balance from onchain data
+                balance = U256::from_words(current_balance.low, current_balance.high);
+            } else {
+                balance -= balance_diff.value;
             }
-            balance -= balance_diff.value;
         } else {
             balance += balance_diff.value;
         }
@@ -176,7 +211,14 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         {
             token_uri
         } else {
-            return Err(anyhow::anyhow!("Failed to fetch token_uri"));
+            warn!(
+                contract_address = format!("{:#x}", register_erc721_token.contract_address),
+                token_id = %register_erc721_token.actual_token_id,
+                "Error fetching token URI, empty metadata will be used instead.",
+            );
+
+            // Ignoring the token URI if the contract can't return it.
+            ByteArray::cairo_serialize(&"".try_into().unwrap())
         };
 
         let token_uri = if let Ok(byte_array) = ByteArray::cairo_deserialize(&token_uri, 0) {
@@ -192,13 +234,19 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
             return Err(anyhow::anyhow!("token_uri is neither ByteArray nor Array<Felt>"));
         };
 
-        let metadata = Self::fetch_metadata(&token_uri).await.with_context(|| {
-            format!(
-                "Failed to fetch metadata for token_id: {}",
-                register_erc721_token.actual_token_id
-            )
-        })?;
-        let metadata = serde_json::to_string(&metadata).context("Failed to serialize metadata")?;
+        let metadata = if token_uri.is_empty() {
+            "".to_string()
+        } else {
+            let metadata = Self::fetch_metadata(&token_uri).await.with_context(|| {
+                format!(
+                    "Failed to fetch metadata for token_id: {}",
+                    register_erc721_token.actual_token_id
+                )
+            })?;
+
+            serde_json::to_string(&metadata).context("Failed to serialize metadata")?
+        };
+
         Ok(RegisterErc721TokenMetadata { query: register_erc721_token, metadata, name, symbol })
     }
 

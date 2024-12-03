@@ -54,7 +54,6 @@ pub struct PartialHeader {
     pub protocol_version: ProtocolVersion,
 }
 
-// TODO: change names to wei and fri
 /// The L1 gas prices.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
