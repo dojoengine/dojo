@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1733188609249,
+  "lastUpdate": 1733192353774,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -37357,6 +37357,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7886106,
             "range": "± 188044",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "distinct": true,
+          "id": "859c9d9f3eb96528de0e32b11c8bd27e4ff6bda9",
+          "message": "fix(torii/graphql): wait to query db after getting broker update\n\ncommit-id:b7448a81",
+          "timestamp": "2024-12-03T07:32:44+05:30",
+          "tree_id": "fdede7d27fb229b6db739c0f7952e83bfd28c5c0",
+          "url": "https://github.com/dojoengine/dojo/commit/859c9d9f3eb96528de0e32b11c8bd27e4ff6bda9"
+        },
+        "date": 1733192352284,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10873119589,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
