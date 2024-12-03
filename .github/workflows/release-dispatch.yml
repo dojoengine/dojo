@@ -1,11 +1,14 @@
 name: release-dispatch
+# on:
+#   workflow_dispatch:
+#     inputs:
+#       version:
+#         description: Version to release
+#         required: true
+#         type: string
+
 on:
   workflow_dispatch:
-    inputs:
-      version:
-        description: Version to release
-        required: true
-        type: string
 
 jobs:
   propose-release:

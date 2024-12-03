@@ -1,10 +1,13 @@
 name: ci
 
+# on:
+#   push:
+#     branches:
+#       - main
+#   pull_request:
+
 on:
-  push:
-    branches:
-      - main
-  pull_request:
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always

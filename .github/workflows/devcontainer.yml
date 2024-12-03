@@ -1,19 +1,22 @@
 name: devcontainer
 
+# on:
+#   workflow_dispatch:
+#     inputs:
+#       docker_tag:
+#         description: Descriptive name of the devcontainer for the Docker tag
+#         required: true
+#         type: string
+#   push:
+#     paths:
+#       - ".devcontainer/**"
+#       - ".github/workflows/devcontainer.yml"
+#       - "!.devcontainer/devcontainer.json"
+#   release:
+#     types: [published]
+
 on:
   workflow_dispatch:
-    inputs:
-      docker_tag:
-        description: Descriptive name of the devcontainer for the Docker tag
-        required: true
-        type: string
-  push:
-    paths:
-      - ".devcontainer/**"
-      - ".github/workflows/devcontainer.yml"
-      - "!.devcontainer/devcontainer.json"
-  release:
-    types: [published]
 
 jobs:
   build-and-push:
