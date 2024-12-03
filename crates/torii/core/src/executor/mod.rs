@@ -679,8 +679,6 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
 
                 self.register_tasks.spawn(async move {
                     let permit = semaphore.acquire().await.unwrap();
-                    let span = tracing::span!(tracing::Level::INFO, "contract_address_span", contract_address = %register_erc721_token.contract_address);
-                    let _enter = span.enter();
 
                     let result = Self::process_register_erc721_token_query(
                         register_erc721_token,
