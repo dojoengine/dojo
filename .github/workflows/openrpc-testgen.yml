@@ -1,4 +1,4 @@
-name: ci
+name: openrpc-testgen
 
 on:
   workflow_dispatch:
