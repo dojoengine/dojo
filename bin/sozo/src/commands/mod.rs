@@ -44,10 +44,8 @@ pub enum Commands {
     Build(Box<BuildArgs>),
     #[command(about = "Build and migrate the world every time a file changes")]
     Dev(Box<DevArgs>),
-    #[command(
-        about = "Run a migration, declaring and deploying contracts as necessary to update \
-                       the world"
-    )]
+    #[command(about = "Run a migration, declaring and deploying contracts as necessary to update \
+                       the world")]
     Migrate(Box<MigrateArgs>),
     #[command(about = "Execute a system with the given calldata.")]
     Execute(Box<ExecuteArgs>),
