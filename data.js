@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1733244856364,
+  "lastUpdate": 1733244889781,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -37621,6 +37621,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7879875,
             "range": "± 88403",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "distinct": true,
+          "id": "ef343bbaa2eaf220608f020fdeb6e70048417788",
+          "message": "fix(torii): handle failed metadata fetch and empty metadata in db\n\ncommit-id:5474e77e",
+          "timestamp": "2024-12-03T22:04:44+05:30",
+          "tree_id": "6e914638955e4816b3c53f6c7cd1bcb109a92dee",
+          "url": "https://github.com/dojoengine/dojo/commit/ef343bbaa2eaf220608f020fdeb6e70048417788"
+        },
+        "date": 1733244888339,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2539410,
+            "range": "± 16262",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8245089,
+            "range": "± 581456",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3873466283,
+            "range": "± 831588384",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8308066,
+            "range": "± 269591",
             "unit": "ns/iter"
           }
         ]
