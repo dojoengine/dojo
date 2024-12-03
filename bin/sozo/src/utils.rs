@@ -1,10 +1,13 @@
 use std::collections::HashMap;
 use std::io::{self, Write};
 use std::str::FromStr;
+use std::sync::Arc;
 
+use crate::commands::LOG_TARGET;
 use anyhow::{anyhow, Context, Result};
 use camino::Utf8PathBuf;
 use colored::*;
+use dojo_utils::utils::health_check_provider;
 use dojo_world::config::ProfileConfig;
 use dojo_world::contracts::ContractInfo;
 use dojo_world::diff::WorldDiff;
@@ -19,7 +22,7 @@ use starknet::core::types::Felt;
 use starknet::core::utils as snutils;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
-use tracing::trace;
+use tracing::{error, trace};
 
 use crate::commands::options::account::{AccountOptions, SozoAccount};
 use crate::commands::options::starknet::StarknetOptions;
@@ -113,15 +116,15 @@ pub async fn get_world_diff_and_provider(
     let world_address = get_world_address(&profile_config, &world, &world_local)?;
 
     let (provider, rpc_url) = starknet.provider(env)?;
+    let provider = Arc::new(provider);
+    if let Err(e) = health_check_provider(provider.clone()).await {
+        error!(target: LOG_TARGET,"Provider health check failed during sozo inspect.");
+        return Err(e);
+    }
+    let provider = Arc::try_unwrap(provider).map_err(|_| anyhow!("Failed to unwrap Arc"))?;
     trace!(?provider, "Provider initialized.");
 
-    let spec_version_result = provider.spec_version().await;
-    if spec_version_result.is_err() {
-        let error_info =
-            format!("Unhealthy provider {:?}, please check your configuration.", provider);
-        return Err(anyhow::anyhow!(error_info));
-    }
-    let spec_version = spec_version_result.unwrap();
+    let spec_version = provider.spec_version().await?;
     trace!(spec_version);
 
     if !is_compatible_version(&spec_version, RPC_SPEC_VERSION)? {

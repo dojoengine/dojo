@@ -6,6 +6,7 @@ use std::time::Duration;
 
 use anyhow::Result;
 use bitflags::bitflags;
+use dojo_utils::utils::health_check_provider;
 use dojo_world::contracts::world::WorldContractReader;
 use futures_util::future::{join_all, try_join_all};
 use hashlink::LinkedHashMap;
@@ -45,7 +46,6 @@ use crate::processors::{
 };
 use crate::sql::{Cursors, Sql};
 use crate::types::{Contract, ContractType};
-use crate::utils::health_check_provider;
 
 type EventProcessorMap<P> = HashMap<Felt, Vec<Box<dyn EventProcessor<P>>>>;
 

@@ -1,6 +1,8 @@
-use anyhow::{Context, Result};
+use crate::commands::LOG_TARGET;
+use anyhow::{anyhow, Context, Result};
 use clap::Args;
 use colored::*;
+use dojo_utils::utils::health_check_provider;
 use dojo_utils::{self, TxnConfig};
 use dojo_world::contracts::WorldContract;
 use dojo_world::services::IpfsService;
@@ -10,9 +12,10 @@ use sozo_ops::migration_ui::MigrationUi;
 use sozo_scarbext::WorkspaceExt;
 use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::Provider;
+use std::sync::Arc;
 use tabled::settings::Style;
 use tabled::{Table, Tabled};
-use tracing::trace;
+use tracing::{error, trace};
 
 use super::options::account::AccountOptions;
 use super::options::ipfs::IpfsOptions;
@@ -141,13 +144,13 @@ async fn print_banner(ws: &Workspace<'_>, starknet: &StarknetOptions) -> Result<
     let profile_config = ws.load_profile_config()?;
     let (provider, rpc_url) = starknet.provider(profile_config.env.as_ref())?;
 
-    let chain_id_result = provider.chain_id().await;
-    if chain_id_result.is_err() {
-        let error_info =
-            format!("Unhealthy provider {:?}, please check your configuration.", provider);
-        return Err(anyhow::anyhow!(error_info));
+    let provider = Arc::new(provider);
+    if let Err(e) = health_check_provider(provider.clone()).await {
+        error!(target: LOG_TARGET,"Provider health check failed during sozo migrate.");
+        return Err(e);
     }
-    let chain_id = chain_id_result.unwrap();
+    let provider = Arc::try_unwrap(provider).map_err(|_| anyhow!("Failed to unwrap Arc"))?;
+    let chain_id = provider.chain_id().await?;
     let chain_id =
         parse_cairo_short_string(&chain_id).with_context(|| "Cannot parse chain_id as string")?;
 
