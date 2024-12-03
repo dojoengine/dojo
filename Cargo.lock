@@ -8425,6 +8425,7 @@ dependencies = [
  "katana-rpc-types",
  "reqwest 0.11.27",
  "serde",
+ "serde_json",
  "starknet 0.12.0",
  "thiserror",
  "tokio",
