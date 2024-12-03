@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1733244650810,
+  "lastUpdate": 1733244705476,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -37542,6 +37542,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 10252857653,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "distinct": true,
+          "id": "ef343bbaa2eaf220608f020fdeb6e70048417788",
+          "message": "fix(torii): handle failed metadata fetch and empty metadata in db\n\ncommit-id:5474e77e",
+          "timestamp": "2024-12-03T22:04:44+05:30",
+          "tree_id": "6e914638955e4816b3c53f6c7cd1bcb109a92dee",
+          "url": "https://github.com/dojoengine/dojo/commit/ef343bbaa2eaf220608f020fdeb6e70048417788"
+        },
+        "date": 1733244703375,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11149260893,
             "range": "± 0",
             "unit": "ns/iter"
           }
