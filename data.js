@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1733244705476,
+  "lastUpdate": 1733244856364,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -37573,6 +37573,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 11149260893,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d0722c4bea2ad613f422c669aa8d8aede265d0f6",
+          "message": "opt-refactor(torii-core): complete sql schema refactor (#2718)\n\n* start sql model register refactor\n\n* refactor: arrays as json & model members\n\n* alter table and model idx\n\n* fix: model idx\n\n* better error log\n\n* remove model idx\n\n* rempve model members table\n\n* model schema migration\n\n* lol\n\n* refactor: ditch model members & refactor dynamic query\n\n* start refactoring while grpc and grahql services/type mapping\n\n* fix set entities enum\n\n* fix set entities\n\n* fmt\n\n* update grpc for flattened reads\n\n* cleanup\n\n* feat(torii-core): delete entity new schema\n\n* graphql integration almost done\n\n* global arrays refactor & fix graphql\n\n* fmt\n\n* tuple no _\n\n* feat: graphql arrays of objects and enums\n\n* feat: tuple support\n\n* fmt\n\n* c\n\n* f\n\n* fix\n\n* fix entities\n\n* refactor: value mapping fix\n\n* types\n\n* fix: snake case\n\n* fix: casing\n\n* f\n\n* namespaced schema\n\n* fix grpc test\n\n* ff\n\n* fmt\n\n* c\n\n* fix clauses\n\n* fix libp2p\n\n* fix id",
+          "timestamp": "2024-12-03T10:34:12-06:00",
+          "tree_id": "5409a73d2e457dfa82da95358880397c13d192f2",
+          "url": "https://github.com/dojoengine/dojo/commit/d0722c4bea2ad613f422c669aa8d8aede265d0f6"
+        },
+        "date": 1733244854877,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2698112,
+            "range": "± 38076",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 7893724,
+            "range": "± 216153",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3952360733,
+            "range": "± 790766776",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 7879875,
+            "range": "± 88403",
             "unit": "ns/iter"
           }
         ]
