@@ -20,6 +20,7 @@ use katana_primitives::Felt;
 use katana_provider::traits::block::{BlockHashProvider, BlockIdReader, BlockNumberProvider};
 use katana_provider::traits::contract::ContractClassProvider;
 use katana_provider::traits::env::BlockEnvProvider;
+use katana_provider::traits::pending::PendingBlockProvider;
 use katana_provider::traits::state::{StateFactoryProvider, StateProvider};
 use katana_provider::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionStatusProvider,
@@ -185,6 +186,10 @@ where
         Ok(estimates)
     }
 
+    fn pending_provider(&self) -> Option<Box<dyn PendingBlockProvider>> {
+        todo!()
+    }
+
     /// Returns the pending state if the sequencer is running in _interval_ mode. Otherwise `None`.
     fn pending_executor(&self) -> Option<PendingExecutor> {
         self.inner.block_producer.as_ref().and_then(|bp| match &*bp.producer.read() {
@@ -200,11 +205,17 @@ where
             BlockIdOrTag::Tag(BlockTag::Latest) => Some(provider.latest()?),
 
             BlockIdOrTag::Tag(BlockTag::Pending) => {
-                if let Some(exec) = self.pending_executor() {
-                    Some(exec.read().state())
+                if let Some(provider) = self.pending_provider() {
+                    Some(provider.pending_state()?)
                 } else {
                     Some(provider.latest()?)
                 }
+
+                // if let Some(exec) = self.pending_executor() {
+                //     Some(exec.read().state())
+                // } else {
+                //     Some(provider.latest()?)
+                // }
             }
 
             BlockIdOrTag::Hash(hash) => provider.historical((*hash).into())?,
@@ -220,8 +231,11 @@ where
         let env = match block_id {
             BlockIdOrTag::Tag(BlockTag::Pending) => {
                 // If there is a pending block, use the block env of the pending block.
-                if let Some(exec) = self.pending_executor() {
-                    Some(exec.read().block_env())
+                // if let Some(exec) = self.pending_executor() {
+                //     Some(exec.read().block_env())
+                // }
+                if let Some(provider) = self.pending_provider() {
+                    Some(provider.pending_block_env()?)
                 }
                 // else, we create a new block env and update the values to reflect the current
                 // state.
@@ -315,9 +329,16 @@ where
                 let provider = this.inner.backend.blockchain.provider();
 
                 let block_id: BlockHashOrNumber = match block_id {
-                    BlockIdOrTag::Tag(BlockTag::Pending) => match this.pending_executor() {
-                        Some(exec) => {
-                            let count = exec.read().transactions().len() as u64;
+                    // BlockIdOrTag::Tag(BlockTag::Pending) => match this.pending_executor() {
+                    //     Some(exec) => {
+                    //         let count = exec.read().transactions().len() as u64;
+                    //         return Ok(Some(count));
+                    //     }
+                    //     None => provider.latest_hash()?.into(),
+                    // },
+                    BlockIdOrTag::Tag(BlockTag::Pending) => match this.pending_provider() {
+                        Some(provider) => {
+                            let count = provider.pending_transactions()?.len() as u64;
                             return Ok(Some(count));
                         }
                         None => provider.latest_hash()?.into(),
@@ -425,14 +446,19 @@ where
                 let result = match tx {
                     tx @ Some(_) => tx,
                     None => {
-                        // check if the transaction is in the pending block
-                        this.pending_executor().as_ref().and_then(|exec| {
-                            exec.read()
-                                .transactions()
-                                .iter()
-                                .find(|(tx, _)| tx.hash == hash)
-                                .map(|(tx, _)| Tx::from(tx.clone()))
-                        })
+                        // // check if the transaction is in the pending block
+                        // this.pending_executor().as_ref().and_then(|exec| {
+                        //     exec.read()
+                        //         .transactions()
+                        //         .iter()
+                        //         .find(|(tx, _)| tx.hash == hash)
+                        //         .map(|(tx, _)| Tx::from(tx.clone()))
+                        // })
+
+                        this.pending_provider()
+                            .map(|pv| pv.pending_transaction(hash))
+                            .transpose()?
+                            .map(Tx::from)
                     }
                 };
 
@@ -461,27 +487,32 @@ where
                 match receipt {
                     Some(receipt) => Ok(Some(receipt)),
                     None => {
-                        let executor = this.pending_executor();
-                        // If there's a pending executor
-                        let pending_receipt = executor.and_then(|executor| {
-                            // Find the transaction in the pending block that matches the hash
-                            executor.read().transactions().iter().find_map(|(tx, res)| {
-                                if tx.hash == hash {
-                                    // If the transaction is found, only return the receipt if it's
-                                    // successful
-                                    match res {
-                                        ExecutionResult::Success { receipt, .. } => {
-                                            Some(receipt.clone())
-                                        }
-                                        ExecutionResult::Failed { .. } => None,
-                                    }
-                                } else {
-                                    None
-                                }
-                            })
-                        });
+                        // let executor = this.pending_executor();
+                        // // If there's a pending executor
+                        // let pending_receipt = executor.and_then(|executor| {
+                        //     // Find the transaction in the pending block that matches the hash
+                        //     executor.read().transactions().iter().find_map(|(tx, res)| {
+                        //         if tx.hash == hash {
+                        //             // If the transaction is found, only return the receipt if it's
+                        //             // successful
+                        //             match res {
+                        //                 ExecutionResult::Success { receipt, .. } => {
+                        //                     Some(receipt.clone())
+                        //                 }
+                        //                 ExecutionResult::Failed { .. } => None,
+                        //             }
+                        //         } else {
+                        //             None
+                        //         }
+                        //     })
+                        // });
 
-                        if let Some(receipt) = pending_receipt {
+                        let receipt = this
+                            .pending_provider()
+                            .map(|pv| pv.pending_receipt(hash))
+                            .transpose()?;
+
+                        if let Some(receipt) = receipt {
                             let receipt = TxReceiptWithBlockInfo::new(
                                 ReceiptBlock::Pending,
                                 hash,
@@ -595,7 +626,7 @@ where
                 if BlockIdOrTag::Tag(BlockTag::Pending) == block_id {
                     if let Some(executor) = this.pending_executor() {
                         let block_env = executor.read().block_env();
-                        let latest_hash = provider.latest_hash().map_err(StarknetApiError::from)?;
+                        let latest_hash = provider.latest_hash()?;
 
                         let l1_gas_prices = block_env.l1_gas_prices.clone();
                         let l1_data_gas_prices = block_env.l1_data_gas_prices.clone();
