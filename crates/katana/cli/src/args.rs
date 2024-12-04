@@ -15,7 +15,7 @@ use katana_node::config::execution::ExecutionConfig;
 use katana_node::config::fork::ForkingConfig;
 use katana_node::config::metrics::MetricsConfig;
 use katana_node::config::rpc::{ApiKind, RpcConfig};
-use katana_node::config::{Config, NodeType, SequencingConfig};
+use katana_node::config::{Config, SequencingConfig};
 use katana_primitives::chain_spec::{self, ChainSpec};
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
 use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
@@ -55,10 +55,6 @@ pub struct NodeArgs {
     #[arg(long)]
     #[arg(value_name = "PATH")]
     pub db_dir: Option<PathBuf>,
-
-    #[arg(long = "type")]
-    #[arg(default_value_t = NodeType::Full)]
-    pub node_type: NodeType,
 
     /// Configuration file
     #[arg(long)]
@@ -176,18 +172,7 @@ impl NodeArgs {
         let sequencing = self.sequencer_config();
         let messaging = self.messaging.clone();
 
-        Ok(Config {
-            metrics,
-            db,
-            dev,
-            rpc,
-            chain,
-            execution,
-            sequencing,
-            messaging,
-            forking,
-            node_type: self.node_type.clone(),
-        })
+        Ok(Config { metrics, db, dev, rpc, chain, execution, sequencing, messaging, forking })
     }
 
     fn sequencer_config(&self) -> SequencingConfig {
