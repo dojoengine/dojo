@@ -8307,8 +8307,6 @@ dependencies = [
  "serde_json",
  "shellexpand",
  "starknet 0.12.0",
- "strum 0.25.0",
- "strum_macros 0.25.3",
  "tokio",
  "toml 0.8.19",
  "tracing",

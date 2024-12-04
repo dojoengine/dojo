@@ -30,12 +30,8 @@ pub struct MetricsOptions {
     pub metrics_port: u16,
 }
 
-#[derive(Parser)]
+#[derive(Debug, Parser)]
 pub struct Cli {
-    /// Directory path of the database to initialize from.
-    ///
-    /// The path must either be an empty directory or a directory which already contains a
-    /// previously initialized Katana database.
     #[arg(long)]
     #[arg(value_name = "PATH")]
     db_dir: PathBuf,

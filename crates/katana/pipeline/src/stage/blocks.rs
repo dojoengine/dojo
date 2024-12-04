@@ -262,7 +262,7 @@ fn extract_block_data(
         },
     };
 
-    let state_updates: StateUpdates = data.state_update.state_diff.try_into().unwrap();
+    let state_updates: StateUpdates = data.state_update.state_diff.into();
     let state_updates = StateUpdatesWithClasses { state_updates, ..Default::default() };
 
     Ok((SealedBlockWithStatus { block, status }, receipts, state_updates))
@@ -288,7 +288,7 @@ mod tests {
         let mut stage = Blocks::new(&provider, feeder_gateway, 10);
 
         let input = StageExecutionInput { from: from_block, to: to_block };
-        let _ = stage.execute(&input).await.expect("failed to execute stage");
+        stage.execute(&input).await.expect("failed to execute stage");
 
         // check provider storage
         let block_number = provider.latest_number().expect("failed to get latest block number");

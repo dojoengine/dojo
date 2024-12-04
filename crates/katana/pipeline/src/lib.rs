@@ -91,19 +91,15 @@ impl<P: StageCheckpointProvider> Pipeline<P> {
         loop {
             let tip = *self.tip_watcher.0.borrow_and_update();
 
-            loop {
-                if let Some(tip) = tip {
-                    let to = current_chunk_tip.min(tip);
-                    let last_block_processed = self.run_once_until(to).await?;
+            while let Some(tip) = tip {
+                let to = current_chunk_tip.min(tip);
+                let last_block_processed = self.run_once_until(to).await?;
 
-                    if last_block_processed >= tip {
-                        info!(target: "pipeline", %tip, "Finished processing until tip.");
-                        break;
-                    } else {
-                        current_chunk_tip = (last_block_processed + self.chunk_size).min(tip);
-                    }
-                } else {
+                if last_block_processed >= tip {
+                    info!(target: "pipeline", %tip, "Finished processing until tip.");
                     break;
+                } else {
+                    current_chunk_tip = (last_block_processed + self.chunk_size).min(tip);
                 }
             }
 

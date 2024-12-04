@@ -65,7 +65,7 @@ where
                 .provider
                 .declared_classes(block.into())?
                 .ok_or(Error::MissingBlockDeclaredClasses { block })?;
-            let class_hashes = class_hashes.keys().map(|hash| *hash).collect::<Vec<_>>();
+            let class_hashes = class_hashes.keys().copied().collect::<Vec<_>>();
 
             // fetch the classes artifacts
             let class_artifacts = self.downloader.download_classes(&class_hashes, block).await?;

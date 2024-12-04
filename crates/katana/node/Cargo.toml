@@ -45,20 +45,17 @@ vergen = { version = "9.0.0", features = [ "build", "cargo", "emit_and_set" ] }
 vergen-gitcl = { version = "1.0.0", features = [ "build", "cargo", "rustc", "si" ] }
 
 [features]
-default = [ "full-node" ]
 starknet-messaging = [ "katana-core/starknet-messaging" ]
 # experimental feature to test katana full node mode
-full-node = [
-	"dep:clap",
-	"dep:dojo-utils",
-	"dep:katana-feeder-gateway",
-	"dep:katana-provider",
-	"dep:tokio",
-	"dep:tracing-log",
-	"dep:tracing-subscriber",
-]
+full-node = [ "dep:katana-feeder-gateway", "dep:katana-provider", "dep:tokio" ]
 
 [[bin]]
 name = "full-node"
 path = "src/full/node.rs"
-required-features = [ "full-node" ]
+required-features = [
+	"clap",
+	"dojo-utils",
+	"full-node",
+	"tracing-log",
+	"tracing-subscriber",
+]
