@@ -1,6 +1,5 @@
 use katana_primitives::class::{ClassHash, CompiledClassHash};
 use katana_primitives::contract::Nonce;
-use katana_primitives::fee::ResourceBoundsMapping;
 use katana_primitives::transaction::{
     DeclareTx, DeclareTxV1, DeclareTxV2, DeclareTxV3, DeployAccountTx, DeployAccountTxV1,
     DeployAccountTxV3, DeployTx, InvokeTx, InvokeTxV0, InvokeTxV1, InvokeTxV3, L1HandlerTx, Tx,
@@ -8,6 +7,10 @@ use katana_primitives::transaction::{
 };
 use katana_primitives::{ContractAddress, Felt};
 use serde::Deserialize;
+
+use super::serde_utils::{
+    deserialize_optional_u128, deserialize_optional_u64, deserialize_u128, deserialize_u64,
+};
 
 #[derive(Debug, Deserialize)]
 pub struct ConfirmedTransaction {
@@ -51,6 +54,23 @@ impl<'de> Deserialize<'de> for DataAvailabilityMode {
             ))),
         }
     }
+}
+
+// Same reason as `DataAvailabilityMode` above, this struct is also defined because the serde
+// implementation of its primitive counterpart is different.
+#[derive(Debug, Deserialize)]
+pub struct ResourceBounds {
+    #[serde(deserialize_with = "deserialize_u64")]
+    pub max_amount: u64,
+    #[serde(deserialize_with = "deserialize_u128")]
+    pub max_price_per_unit: u128,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub struct ResourceBoundsMapping {
+    pub l1_gas: ResourceBounds,
+    pub l2_gas: ResourceBounds,
 }
 
 #[derive(Debug, Deserialize)]
@@ -113,7 +133,7 @@ pub struct RawDeployAccountTx {
     pub nonce: Nonce,
     pub signature: Vec<Felt>,
     pub class_hash: ClassHash,
-    pub contract_address: ContractAddress,
+    pub contract_address: Option<ContractAddress>,
     pub contract_address_salt: Felt,
     pub constructor_calldata: Vec<Felt>,
     #[serde(default)]
@@ -167,54 +187,6 @@ pub enum TxTryFromError {
 
     #[error("Missing `compiled_class_hash`")]
     MissingCompiledClassHash,
-}
-
-fn deserialize_optional_u128<'de, D>(deserializer: D) -> Result<Option<u128>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    #[derive(Deserialize)]
-    #[serde(untagged)]
-    enum StringOrNum {
-        String(String),
-        Number(u128),
-    }
-
-    match Option::<StringOrNum>::deserialize(deserializer)? {
-        None => Ok(None),
-        Some(StringOrNum::Number(n)) => Ok(Some(n)),
-        Some(StringOrNum::String(s)) => {
-            if let Some(hex) = s.strip_prefix("0x") {
-                u128::from_str_radix(hex, 16).map(Some).map_err(serde::de::Error::custom)
-            } else {
-                s.parse().map(Some).map_err(serde::de::Error::custom)
-            }
-        }
-    }
-}
-
-fn deserialize_optional_u64<'de, D>(deserializer: D) -> Result<Option<u64>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    #[derive(Deserialize)]
-    #[serde(untagged)]
-    enum StringOrNum {
-        String(String),
-        Number(u64),
-    }
-
-    match Option::<StringOrNum>::deserialize(deserializer)? {
-        None => Ok(None),
-        Some(StringOrNum::Number(n)) => Ok(Some(n)),
-        Some(StringOrNum::String(s)) => {
-            if let Some(hex) = s.strip_prefix("0x") {
-                u64::from_str_radix(hex, 16).map(Some).map_err(serde::de::Error::custom)
-            } else {
-                s.parse().map(Some).map_err(serde::de::Error::custom)
-            }
-        }
-    }
 }
 
 // -- Conversion to Katana primitive types.
@@ -282,7 +254,7 @@ impl TryFrom<RawInvokeTx> for InvokeTx {
                 calldata: value.calldata,
                 signature: value.signature,
                 sender_address: value.sender_address,
-                resource_bounds,
+                resource_bounds: resource_bounds.into(),
                 account_deployment_data,
                 fee_data_availability_mode: fee_data_availability_mode.into(),
                 nonce_data_availability_mode: nonce_data_availability_mode.into(),
@@ -341,7 +313,7 @@ impl TryFrom<RawDeclareTx> for DeclareTx {
                 signature: value.signature,
                 class_hash: value.class_hash,
                 compiled_class_hash,
-                resource_bounds,
+                resource_bounds: resource_bounds.into(),
                 tip,
                 paymaster_data,
                 account_deployment_data,
@@ -364,7 +336,7 @@ impl TryFrom<RawDeployAccountTx> for DeployAccountTx {
                 nonce: value.nonce,
                 signature: value.signature,
                 class_hash: value.class_hash,
-                contract_address: value.contract_address,
+                contract_address: value.contract_address.unwrap_or_default(),
                 contract_address_salt: value.contract_address_salt,
                 constructor_calldata: value.constructor_calldata,
                 max_fee: value.max_fee.ok_or(TxTryFromError::MissingMaxFee)?,
@@ -385,10 +357,10 @@ impl TryFrom<RawDeployAccountTx> for DeployAccountTx {
                 nonce: value.nonce,
                 signature: value.signature,
                 class_hash: value.class_hash,
-                contract_address: value.contract_address,
+                contract_address: value.contract_address.unwrap_or_default(),
                 contract_address_salt: value.contract_address_salt,
                 constructor_calldata: value.constructor_calldata,
-                resource_bounds,
+                resource_bounds: resource_bounds.into(),
                 tip,
                 paymaster_data,
                 nonce_data_availability_mode: nonce_data_availability_mode.into(),
@@ -405,6 +377,21 @@ impl From<DataAvailabilityMode> for katana_primitives::da::DataAvailabilityMode 
         match mode {
             DataAvailabilityMode::L1 => Self::L1,
             DataAvailabilityMode::L2 => Self::L2,
+        }
+    }
+}
+
+impl From<ResourceBoundsMapping> for katana_primitives::fee::ResourceBoundsMapping {
+    fn from(bounds: ResourceBoundsMapping) -> Self {
+        Self {
+            l1_gas: katana_primitives::fee::ResourceBounds {
+                max_amount: bounds.l1_gas.max_amount,
+                max_price_per_unit: bounds.l1_gas.max_price_per_unit,
+            },
+            l2_gas: katana_primitives::fee::ResourceBounds {
+                max_amount: bounds.l2_gas.max_amount,
+                max_price_per_unit: bounds.l2_gas.max_price_per_unit,
+            },
         }
     }
 }
