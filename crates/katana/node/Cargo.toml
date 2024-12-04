@@ -9,11 +9,9 @@ version.workspace = true
 katana-core.workspace = true
 katana-db.workspace = true
 katana-executor.workspace = true
-katana-feeder-gateway.workspace = true
 katana-pipeline.workspace = true
 katana-pool.workspace = true
 katana-primitives.workspace = true
-katana-provider.workspace = true
 katana-rpc.workspace = true
 katana-rpc-api.workspace = true
 katana-tasks.workspace = true
@@ -34,9 +32,33 @@ const_format = "0.2.33"
 strum.workspace = true
 strum_macros.workspace = true
 
+clap = { workspace = true, optional = true }
+dojo-utils = { workspace = true, optional = true }
+katana-feeder-gateway = { workspace = true, optional = true }
+katana-provider = { workspace = true, optional = true }
+tokio = { workspace = true, features = [ "time" ], optional = true }
+tracing-log = { workspace = true, optional = true }
+tracing-subscriber = { workspace = true, optional = true }
+
 [build-dependencies]
 vergen = { version = "9.0.0", features = [ "build", "cargo", "emit_and_set" ] }
 vergen-gitcl = { version = "1.0.0", features = [ "build", "cargo", "rustc", "si" ] }
 
 [features]
+default = [ "full-node" ]
 starknet-messaging = [ "katana-core/starknet-messaging" ]
+# experimental feature to test katana full node mode
+full-node = [
+	"dep:clap",
+	"dep:dojo-utils",
+	"dep:katana-feeder-gateway",
+	"dep:katana-provider",
+	"dep:tokio",
+	"dep:tracing-log",
+	"dep:tracing-subscriber",
+]
+
+[[bin]]
+name = "full-node"
+path = "src/full/node.rs"
+required-features = [ "full-node" ]

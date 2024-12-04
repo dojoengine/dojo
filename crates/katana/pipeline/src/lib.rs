@@ -1,7 +1,6 @@
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
 
 pub mod stage;
-pub mod tip_watcher;
 
 use core::future::IntoFuture;
 
