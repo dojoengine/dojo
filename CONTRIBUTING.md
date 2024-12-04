@@ -98,4 +98,4 @@ The [Dojo Book repository](https://github.com/dojoengine/book) is where you shou
 
 ## Final Notes
 
-Again, thank you for considering to contribute to Dojo. Your contribution is invaluable to us. We hope this guide makes the contribution process clear and answers any questions you might have. If not, feel free to ask on the [Discord](https://discord.gg/PwDa2mKhR4) or on [GitHub](https://github.com/dojoengine/dojo/issues).
+Again, thank you for considering to contribute to Dojo. Your contribution is invaluable to us. We hope this guide makes the contribution process clear and answers any questions you might have. If not, feel free to ask on the [Discord](https://discord.com/invite/dojoengine) or on [GitHub](https://github.com/dojoengine/dojo/issues).
