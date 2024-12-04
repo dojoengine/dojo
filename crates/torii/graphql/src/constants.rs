@@ -12,8 +12,8 @@ pub const METADATA_TABLE: &str = "metadata";
 
 pub const ID_COLUMN: &str = "id";
 pub const EVENT_ID_COLUMN: &str = "event_id";
-pub const ENTITY_ID_COLUMN: &str = "entity_id";
-pub const EVENT_MESSAGE_ID_COLUMN: &str = "event_message_id";
+pub const ENTITY_ID_COLUMN: &str = "internal_entity_id";
+pub const EVENT_MESSAGE_ID_COLUMN: &str = "internal_event_message_id";
 pub const JSON_COLUMN: &str = "json";
 pub const TRANSACTION_HASH_COLUMN: &str = "transaction_hash";
 

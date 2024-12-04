@@ -103,7 +103,10 @@ async fn fetch_token_balances(
          JOIN tokens t ON b.token_id = t.id
          JOIN contracts c ON t.contract_address = c.contract_address"
     );
-    let mut conditions = vec!["b.account_address = ?".to_string()];
+    let mut conditions = vec![
+        "(b.account_address = ?)".to_string(),
+        "(t.metadata IS NULL OR length(t.metadata) > 0)".to_string(),
+    ];
 
     let mut cursor_param = &connection.after;
     if let Some(after_cursor) = &connection.after {
@@ -234,8 +237,9 @@ fn token_balances_connection_output<'a>(
                 let token_id = row.token_id.split(':').collect::<Vec<&str>>();
                 assert!(token_id.len() == 2);
 
+                let metadata_str = row.metadata;
                 let metadata: serde_json::Value =
-                    serde_json::from_str(&row.metadata).expect("metadata is always json");
+                    serde_json::from_str(&metadata_str).expect("metadata is always json");
                 let metadata_name =
                     metadata.get("name").map(|v| v.to_string().trim_matches('"').to_string());
                 let metadata_description = metadata
@@ -248,7 +252,7 @@ fn token_balances_connection_output<'a>(
 
                 let token_metadata = Erc721Token {
                     name: row.name,
-                    metadata: row.metadata,
+                    metadata: metadata_str.to_owned(),
                     contract_address: row.contract_address,
                     symbol: row.symbol,
                     token_id: token_id[1].to_string(),

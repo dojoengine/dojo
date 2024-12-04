@@ -1,17 +1,10 @@
 //! Server implementation for the Starknet JSON-RPC API.
 
-pub mod forking;
-mod read;
-mod trace;
-mod write;
-
 use std::sync::Arc;
 
-use forking::ForkedClient;
 use katana_core::backend::Backend;
 use katana_core::service::block_producer::{BlockProducer, BlockProducerMode, PendingExecutor};
 use katana_executor::{ExecutionResult, ExecutorFactory};
-use katana_pool::validation::stateful::TxValidator;
 use katana_pool::{TransactionPool, TxPool};
 use katana_primitives::block::{
     BlockHash, BlockHashOrNumber, BlockIdOrTag, BlockNumber, BlockTag, FinalityStatus,
@@ -51,75 +44,85 @@ use starknet::core::types::{
 use crate::utils;
 use crate::utils::events::{Cursor, EventBlockId};
 
-pub type StarknetApiResult<T> = Result<T, StarknetApiError>;
+mod config;
+pub mod forking;
+mod read;
+mod trace;
+mod write;
 
+pub use config::StarknetApiConfig;
+use forking::ForkedClient;
+
+type StarknetApiResult<T> = Result<T, StarknetApiError>;
+
+/// Handler for the Starknet JSON-RPC server.
+///
+/// This struct implements all the JSON-RPC traits required to serve the Starknet API (ie,
+/// [read](katana_rpc_api::starknet::StarknetApi),
+/// [write](katana_rpc_api::starknet::StarknetWriteApi), and
+/// [trace](katana_rpc_api::starknet::StarknetTraceApi) APIs.
 #[allow(missing_debug_implementations)]
-pub struct StarknetApi<EF: ExecutorFactory> {
-    inner: Arc<Inner<EF>>,
+pub struct StarknetApi<EF>
+where
+    EF: ExecutorFactory,
+{
+    inner: Arc<StarknetApiInner<EF>>,
 }
 
-#[derive(Debug, Clone)]
-pub struct StarknetApiConfig {
-    pub max_event_page_size: Option<u64>,
-}
-
-impl<EF: ExecutorFactory> Clone for StarknetApi<EF> {
-    fn clone(&self) -> Self {
-        Self { inner: Arc::clone(&self.inner) }
-    }
-}
-
-struct Inner<EF: ExecutorFactory> {
-    validator: TxValidator,
+struct StarknetApiInner<EF>
+where
+    EF: ExecutorFactory,
+{
     pool: TxPool,
     backend: Arc<Backend<EF>>,
-    block_producer: BlockProducer<EF>,
-    blocking_task_pool: BlockingTaskPool,
     forked_client: Option<ForkedClient>,
+    blocking_task_pool: BlockingTaskPool,
+    block_producer: Option<BlockProducer<EF>>,
     config: StarknetApiConfig,
 }
 
-impl<EF: ExecutorFactory> StarknetApi<EF> {
+impl<EF> StarknetApi<EF>
+where
+    EF: ExecutorFactory,
+{
     pub fn new(
         backend: Arc<Backend<EF>>,
         pool: TxPool,
-        block_producer: BlockProducer<EF>,
-        validator: TxValidator,
+        block_producer: Option<BlockProducer<EF>>,
         config: StarknetApiConfig,
     ) -> Self {
-        Self::new_inner(backend, pool, block_producer, validator, None, config)
+        Self::new_inner(backend, pool, block_producer, None, config)
     }
 
     pub fn new_forked(
         backend: Arc<Backend<EF>>,
         pool: TxPool,
         block_producer: BlockProducer<EF>,
-        validator: TxValidator,
         forked_client: ForkedClient,
         config: StarknetApiConfig,
     ) -> Self {
-        Self::new_inner(backend, pool, block_producer, validator, Some(forked_client), config)
+        Self::new_inner(backend, pool, Some(block_producer), Some(forked_client), config)
     }
 
     fn new_inner(
         backend: Arc<Backend<EF>>,
         pool: TxPool,
-        block_producer: BlockProducer<EF>,
-        validator: TxValidator,
+        block_producer: Option<BlockProducer<EF>>,
         forked_client: Option<ForkedClient>,
         config: StarknetApiConfig,
     ) -> Self {
         let blocking_task_pool =
             BlockingTaskPool::new().expect("failed to create blocking task pool");
-        let inner = Inner {
+
+        let inner = StarknetApiInner {
             pool,
             backend,
             block_producer,
             blocking_task_pool,
-            validator,
             forked_client,
             config,
         };
+
         Self { inner: Arc::new(inner) }
     }
 
@@ -184,10 +187,10 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
 
     /// Returns the pending state if the sequencer is running in _interval_ mode. Otherwise `None`.
     fn pending_executor(&self) -> Option<PendingExecutor> {
-        match &*self.inner.block_producer.producer.read() {
+        self.inner.block_producer.as_ref().and_then(|bp| match &*bp.producer.read() {
             BlockProducerMode::Instant(_) => None,
             BlockProducerMode::Interval(producer) => Some(producer.executor()),
-        }
+        })
     }
 
     fn state(&self, block_id: &BlockIdOrTag) -> StarknetApiResult<Box<dyn StateProvider>> {
@@ -357,7 +360,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
             // TODO: this is a temporary solution, we should have a better way to handle this.
             // perhaps a pending/pool state provider that implements all the state provider traits.
             let result = if let BlockIdOrTag::Tag(BlockTag::Pending) = block_id {
-                this.inner.validator.pool_nonce(contract_address)?
+                this.inner.pool.validator().pool_nonce(contract_address)?
             } else {
                 let state = this.state(&block_id)?;
                 state.nonce(contract_address)?
@@ -1120,5 +1123,14 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         };
 
         Ok(id)
+    }
+}
+
+impl<EF> Clone for StarknetApi<EF>
+where
+    EF: ExecutorFactory,
+{
+    fn clone(&self) -> Self {
+        Self { inner: Arc::clone(&self.inner) }
     }
 }

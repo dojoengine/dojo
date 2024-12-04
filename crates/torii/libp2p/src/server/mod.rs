@@ -253,7 +253,7 @@ impl<P: Provider + Sync> Relay<P> {
 
                             // select only identity field, if doesn't exist, empty string
                             let query = format!(
-                                "SELECT external_identity FROM [{}] WHERE id = ?",
+                                "SELECT identity FROM [{}] WHERE internal_id = ?",
                                 ty.name()
                             );
                             let entity_identity: Option<String> = match sqlx::query_scalar(&query)

@@ -1,13 +1,17 @@
 use katana_primitives::block::{BlockIdOrTag, BlockTag};
 use katana_primitives::class::CasmContractClass;
 use katana_primitives::Felt;
+use reqwest::header::{HeaderMap, HeaderValue};
 use reqwest::{Client, StatusCode};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use tracing::error;
 use url::Url;
 
-use crate::types::{ContractClass, StateUpdate, StateUpdateWithBlock};
+use crate::types::{Block, ContractClass, StateUpdate, StateUpdateWithBlock};
+
+/// HTTP request header for the feeder gateway API key. This allow bypassing the rate limiting.
+const X_THROTTLING_BYPASS: &str = "X-Throttling-Bypass";
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -17,7 +21,10 @@ pub enum Error {
     #[error(transparent)]
     Sequencer(SequencerError),
 
-    #[error("Request rate limited")]
+    #[error("failed to parse header value '{value}'")]
+    InvalidHeaderValue { value: String },
+
+    #[error("request rate limited")]
     RateLimited,
 }
 
@@ -31,8 +38,12 @@ impl Error {
 /// Client for interacting with the Starknet's feeder gateway.
 #[derive(Debug, Clone)]
 pub struct SequencerGateway {
+    /// The feeder gateway base URL.
     base_url: Url,
-    client: Client,
+    /// The HTTP client used to send the requests.
+    http_client: Client,
+    /// The API key used to bypass the rate limiting of the feeder gateway.
+    api_key: Option<String>,
 }
 
 impl SequencerGateway {
@@ -52,8 +63,19 @@ impl SequencerGateway {
 
     /// Creates a new gateway client at the given base URL.
     pub fn new(base_url: Url) -> Self {
+        let api_key = None;
         let client = Client::new();
-        Self { client, base_url }
+        Self { http_client: client, base_url, api_key }
+    }
+
+    /// Sets the API key.
+    pub fn with_api_key(mut self, api_key: String) -> Self {
+        self.api_key = Some(api_key);
+        self
+    }
+
+    pub async fn get_block(&self, block_id: BlockIdOrTag) -> Result<Block, Error> {
+        self.feeder_gateway("get_block").with_block_id(block_id).send().await
     }
 
     pub async fn get_state_update(&self, block_id: BlockIdOrTag) -> Result<StateUpdate, Error> {
@@ -98,7 +120,7 @@ impl SequencerGateway {
     fn feeder_gateway(&self, method: &str) -> RequestBuilder<'_> {
         let mut url = self.base_url.clone();
         url.path_segments_mut().expect("invalid base url").extend(["feeder_gateway", method]);
-        RequestBuilder { client: &self.client, url }
+        RequestBuilder { gateway_client: self, url }
     }
 }
 
@@ -111,7 +133,7 @@ enum Response<T> {
 
 #[derive(Debug, Clone)]
 struct RequestBuilder<'a> {
-    client: &'a Client,
+    gateway_client: &'a SequencerGateway,
     url: Url,
 }
 
@@ -132,7 +154,17 @@ impl<'a> RequestBuilder<'a> {
     }
 
     async fn send<T: DeserializeOwned>(self) -> Result<T, Error> {
-        let response = self.client.get(self.url).send().await?;
+        let mut headers = HeaderMap::new();
+
+        if let Some(key) = self.gateway_client.api_key.as_ref() {
+            let value = HeaderValue::from_str(key)
+                .map_err(|_| Error::InvalidHeaderValue { value: key.to_string() })?;
+            headers.insert(X_THROTTLING_BYPASS, value);
+        }
+
+        let response =
+            self.gateway_client.http_client.get(self.url).headers(headers).send().await?;
+
         if response.status() == StatusCode::TOO_MANY_REQUESTS {
             Err(Error::RateLimited)
         } else {
@@ -194,9 +226,9 @@ mod tests {
 
     #[test]
     fn request_block_id() {
-        let client = Client::new();
         let base_url = Url::parse("https://example.com/").unwrap();
-        let req = RequestBuilder { client: &client, url: base_url };
+        let client = SequencerGateway::new(base_url);
+        let req = client.feeder_gateway("test");
 
         // Test pending block
         let pending_url = req.clone().with_block_id(BlockIdOrTag::Tag(BlockTag::Pending)).url;
@@ -218,9 +250,9 @@ mod tests {
 
     #[test]
     fn multiple_query_params() {
-        let client = Client::new();
         let base_url = Url::parse("https://example.com/").unwrap();
-        let req = RequestBuilder { client: &client, url: base_url };
+        let client = SequencerGateway::new(base_url);
+        let req = client.feeder_gateway("test");
 
         let url = req
             .add_query_param("param1", "value1")
@@ -237,9 +269,9 @@ mod tests {
     #[test]
     #[ignore]
     fn request_block_id_overwrite() {
-        let client = Client::new();
         let base_url = Url::parse("https://example.com/").unwrap();
-        let req = RequestBuilder { client: &client, url: base_url };
+        let client = SequencerGateway::new(base_url);
+        let req = client.feeder_gateway("test");
 
         let url = req
             .clone()

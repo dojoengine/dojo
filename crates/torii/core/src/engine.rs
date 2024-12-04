@@ -170,6 +170,17 @@ pub enum FetchDataResult {
     None,
 }
 
+impl FetchDataResult {
+    pub fn block_id(&self) -> Option<BlockId> {
+        match self {
+            FetchDataResult::Range(range) => Some(BlockId::Number(range.latest_block_number)),
+            FetchDataResult::Pending(_pending) => Some(BlockId::Tag(BlockTag::Pending)),
+            // we dont require block_id when result is none, we return None
+            FetchDataResult::None => None,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct FetchRangeResult {
     // (block_number, transaction_hash) -> events
@@ -269,11 +280,16 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                                 info!(target: LOG_TARGET, "Syncing reestablished.");
                             }
 
+                            let block_id = fetch_result.block_id();
                             match self.process(fetch_result).await {
                                 Ok(_) => {
-                                    self.db.flush().await?;
-                                    self.db.apply_cache_diff().await?;
-                                    self.db.execute().await?;
+                                    // Its only `None` when `FetchDataResult::None` in which case
+                                    // we don't need to flush or apply cache diff
+                                    if let Some(block_id) = block_id {
+                                        self.db.flush().await?;
+                                        self.db.apply_cache_diff(block_id).await?;
+                                        self.db.execute().await?;
+                                    }
                                 },
                                 Err(e) => {
                                     error!(target: LOG_TARGET, error = %e, "Processing fetched data.");

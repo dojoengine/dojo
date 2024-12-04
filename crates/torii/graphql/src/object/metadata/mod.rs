@@ -105,7 +105,7 @@ fn metadata_connection_output(
         .map(|row| {
             let order = row.try_get::<String, &str>(ID_COLUMN)?;
             let cursor = cursor::encode(&order, &order);
-            let mut value_mapping = value_mapping_from_row(row, row_types, false)?;
+            let mut value_mapping = value_mapping_from_row(row, row_types, false, true)?;
             value_mapping.insert(Name::new("worldAddress"), Value::from(world_address));
 
             let json_str = row.try_get::<String, &str>(JSON_COLUMN)?;

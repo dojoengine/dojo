@@ -36,7 +36,6 @@ use katana_pipeline::stage::{Blocks, Classes, Sequencing};
 use katana_pipeline::tip_watcher::ChainTipWatcher;
 use katana_pipeline::{Pipeline, PipelineHandle};
 use katana_pool::ordering::FiFo;
-use katana_pool::validation::stateful::TxValidator;
 use katana_pool::TxPool;
 use katana_primitives::block::GasPrices;
 use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
@@ -125,7 +124,6 @@ impl Node {
         let pool = self.pool.clone();
         let backend = self.backend.clone();
         let block_producer = self.block_producer.clone();
-        let validator = self.block_producer.validator().clone();
 
         if self.config.node_type == NodeType::Full {
             // --- build and start the pipeline
@@ -153,8 +151,7 @@ impl Node {
                 .name("Pipeline")
                 .spawn(pipeline.into_future());
 
-            let node_components =
-                (pool, backend, block_producer, validator, self.forked_client.take());
+            let node_components = (pool, backend, block_producer, self.forked_client.take());
             let rpc = spawn(node_components, self.config.rpc.clone()).await?;
 
             Ok(LaunchedNode { node: self, pipeline: Some(handle), rpc })
@@ -176,8 +173,7 @@ impl Node {
                 .name("Sequencing")
                 .spawn(sequencing.into_future());
 
-            let node_components =
-                (pool, backend, block_producer, validator, self.forked_client.take());
+            let node_components = (pool, backend, block_producer, self.forked_client.take());
             let rpc = spawn(node_components, self.config.rpc.clone()).await?;
 
             Ok(LaunchedNode { node: self, pipeline: None, rpc })
@@ -290,16 +286,10 @@ pub async fn build(mut config: Config) -> Result<Node> {
 
 // Moved from `katana_rpc` crate
 pub async fn spawn<EF: ExecutorFactory>(
-    node_components: (
-        TxPool,
-        Arc<Backend<EF>>,
-        BlockProducer<EF>,
-        TxValidator,
-        Option<ForkedClient>,
-    ),
+    node_components: (TxPool, Arc<Backend<EF>>, BlockProducer<EF>, Option<ForkedClient>),
     config: RpcConfig,
 ) -> Result<RpcServer> {
-    let (pool, backend, block_producer, validator, forked_client) = node_components;
+    let (pool, backend, block_producer, forked_client) = node_components;
 
     let mut methods = RpcModule::new(());
     methods.register_method("health", |_, _| Ok(serde_json::json!({ "health": true })))?;
@@ -312,12 +302,11 @@ pub async fn spawn<EF: ExecutorFactory>(
                 backend.clone(),
                 pool.clone(),
                 block_producer.clone(),
-                validator,
                 client,
                 cfg,
             )
         } else {
-            StarknetApi::new(backend.clone(), pool.clone(), block_producer.clone(), validator, cfg)
+            StarknetApi::new(backend.clone(), pool.clone(), Some(block_producer.clone()), cfg)
         };
 
         methods.merge(StarknetApiServer::into_rpc(server.clone()))?;

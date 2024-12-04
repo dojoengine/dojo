@@ -61,6 +61,7 @@ pub struct DeleteEntityQuery {
 #[derive(Debug, Clone)]
 pub struct ApplyBalanceDiffQuery {
     pub erc_cache: HashMap<(ContractType, String), I256>,
+    pub block_id: BlockId,
 }
 
 #[derive(Debug, Clone)]
@@ -606,7 +607,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
             QueryType::ApplyBalanceDiff(apply_balance_diff) => {
                 debug!(target: LOG_TARGET, "Applying balance diff.");
                 let instant = Instant::now();
-                self.apply_balance_diff(apply_balance_diff).await?;
+                self.apply_balance_diff(apply_balance_diff, self.provider.clone()).await?;
                 debug!(target: LOG_TARGET, duration = ?instant.elapsed(), "Applied balance diff.");
             }
             QueryType::RegisterErc721Token(register_erc721_token) => {
@@ -756,10 +757,12 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 }
             }
             QueryType::Other => {
-                query.execute(&mut **tx).await.with_context(|| {
-                    format!(
-                        "Failed to execute query: {:?}, args: {:?}",
-                        query_message.statement, query_message.arguments
+                query.execute(&mut **tx).await.map_err(|e| {
+                    anyhow::anyhow!(
+                        "Failed to execute query: {:?}, args: {:?}, error: {:?}",
+                        query_message.statement,
+                        query_message.arguments,
+                        e
                     )
                 })?;
             }

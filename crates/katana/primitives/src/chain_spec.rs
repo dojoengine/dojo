@@ -73,7 +73,7 @@ impl ChainSpec {
         Block { header, body: Vec::new() }
     }
 
-    // this method will include the the ETH and STRK fee tokens, and the UDC
+    // this method will include the ETH and STRK fee tokens, and the UDC
     pub fn state_updates(&self) -> StateUpdatesWithClasses {
         let mut states = StateUpdatesWithClasses::default();
 

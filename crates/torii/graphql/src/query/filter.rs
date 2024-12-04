@@ -56,16 +56,10 @@ pub struct Filter {
 pub fn parse_filter(input: &Name, value: FilterValue) -> Filter {
     for comparator in Comparator::iter() {
         if let Some(field) = input.strip_suffix(comparator.as_ref()) {
-            // Filtering only applies to model members which are stored in db with
-            // external_{name}
-            return Filter {
-                field: format!("external_{}", field),
-                comparator: comparator.clone(),
-                value,
-            };
+            return Filter { field: field.to_string(), comparator: comparator.clone(), value };
         }
     }
 
     // If no suffix found assume equality comparison
-    Filter { field: format!("external_{}", input), comparator: Comparator::Eq, value }
+    Filter { field: input.to_string(), comparator: Comparator::Eq, value }
 }
