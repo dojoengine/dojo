@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1733332287406,
+  "lastUpdate": 1733332479824,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -38245,6 +38245,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10578338389,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "327e653892dc94ef0ee8e70cce0a0280cb64bca6",
+          "message": "feat(katana): experimental full node (#2724)",
+          "timestamp": "2024-12-05T00:54:46+08:00",
+          "tree_id": "4fe0cc2c64944bc0c86eddcd9a023ca8fc75692f",
+          "url": "https://github.com/dojoengine/dojo/commit/327e653892dc94ef0ee8e70cce0a0280cb64bca6"
+        },
+        "date": 1733332478329,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2426936,
+            "range": "± 49079",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 7838734,
+            "range": "± 170159",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3784578504,
+            "range": "± 783011607",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 7932742,
+            "range": "± 40860",
             "unit": "ns/iter"
           }
         ]
