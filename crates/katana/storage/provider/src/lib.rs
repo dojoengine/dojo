@@ -316,6 +316,20 @@ where
     fn state_update(&self, block_id: BlockHashOrNumber) -> ProviderResult<Option<StateUpdates>> {
         self.provider.state_update(block_id)
     }
+
+    fn declared_classes(
+        &self,
+        block_id: BlockHashOrNumber,
+    ) -> ProviderResult<Option<BTreeMap<ClassHash, CompiledClassHash>>> {
+        self.provider.declared_classes(block_id)
+    }
+
+    fn deployed_contracts(
+        &self,
+        block_id: BlockHashOrNumber,
+    ) -> ProviderResult<Option<BTreeMap<ContractAddress, ClassHash>>> {
+        self.provider.deployed_contracts(block_id)
+    }
 }
 
 impl<Db> StateRootProvider for BlockchainProvider<Db>

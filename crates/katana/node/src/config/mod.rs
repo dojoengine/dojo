@@ -1,11 +1,11 @@
+use std::sync::Arc;
+
 pub mod db;
 pub mod dev;
 pub mod execution;
 pub mod fork;
 pub mod metrics;
 pub mod rpc;
-
-use std::sync::Arc;
 
 use db::DbConfig;
 use dev::DevConfig;

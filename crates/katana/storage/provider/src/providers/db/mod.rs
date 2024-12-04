@@ -275,28 +275,28 @@ impl<Db: Database> StateRootProvider for DbProvider<Db> {
     }
 }
 
+// A helper function that iterates over all entries in a dupsort table and collects the
+// results into `V`. If `key` is not found, `V::default()` is returned.
+fn dup_entries<Db, Tb, V, T>(
+    db_tx: &<Db as Database>::Tx,
+    key: <Tb as Table>::Key,
+    f: impl FnMut(Result<KeyValue<Tb>, DatabaseError>) -> ProviderResult<T>,
+) -> ProviderResult<V>
+where
+    Db: Database,
+    Tb: DupSort + Debug,
+    V: FromIterator<T> + Default,
+{
+    Ok(db_tx
+        .cursor_dup::<Tb>()?
+        .walk_dup(Some(key), None)?
+        .map(|walker| walker.map(f).collect::<ProviderResult<V>>())
+        .transpose()?
+        .unwrap_or_default())
+}
+
 impl<Db: Database> StateUpdateProvider for DbProvider<Db> {
     fn state_update(&self, block_id: BlockHashOrNumber) -> ProviderResult<Option<StateUpdates>> {
-        // A helper function that iterates over all entries in a dupsort table and collects the
-        // results into `V`. If `key` is not found, `V::default()` is returned.
-        fn dup_entries<Db, Tb, V, T>(
-            db_tx: &<Db as Database>::Tx,
-            key: <Tb as Table>::Key,
-            f: impl FnMut(Result<KeyValue<Tb>, DatabaseError>) -> ProviderResult<T>,
-        ) -> ProviderResult<V>
-        where
-            Db: Database,
-            Tb: DupSort + Debug,
-            V: FromIterator<T> + Default,
-        {
-            Ok(db_tx
-                .cursor_dup::<Tb>()?
-                .walk_dup(Some(key), None)?
-                .map(|walker| walker.map(f).collect::<ProviderResult<V>>())
-                .transpose()?
-                .unwrap_or_default())
-        }
-
         let db_tx = self.0.tx()?;
         let block_num = self.block_number_by_id(block_id)?;
 
@@ -364,6 +364,61 @@ impl<Db: Database> StateUpdateProvider for DbProvider<Db> {
                 declared_classes,
                 ..Default::default()
             }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn declared_classes(
+        &self,
+        block_id: BlockHashOrNumber,
+    ) -> ProviderResult<Option<BTreeMap<ClassHash, CompiledClassHash>>> {
+        let db_tx = self.0.tx()?;
+        let block_num = self.block_number_by_id(block_id)?;
+
+        if let Some(block_num) = block_num {
+            let declared_classes = dup_entries::<
+                Db,
+                tables::ClassDeclarations,
+                BTreeMap<ClassHash, CompiledClassHash>,
+                _,
+            >(&db_tx, block_num, |entry| {
+                let (_, class_hash) = entry?;
+
+                let compiled_hash = db_tx
+                    .get::<tables::CompiledClassHashes>(class_hash)?
+                    .ok_or(ProviderError::MissingCompiledClassHash(class_hash))?;
+
+                Ok((class_hash, compiled_hash))
+            })?;
+
+            db_tx.commit()?;
+            Ok(Some(declared_classes))
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn deployed_contracts(
+        &self,
+        block_id: BlockHashOrNumber,
+    ) -> ProviderResult<Option<BTreeMap<ContractAddress, ClassHash>>> {
+        let db_tx = self.0.tx()?;
+        let block_num = self.block_number_by_id(block_id)?;
+
+        if let Some(block_num) = block_num {
+            let deployed_contracts = dup_entries::<
+                Db,
+                tables::ClassChangeHistory,
+                BTreeMap<ContractAddress, ClassHash>,
+                _,
+            >(&db_tx, block_num, |entry| {
+                let (_, ContractClassChange { contract_address, class_hash }) = entry?;
+                Ok((contract_address, class_hash))
+            })?;
+
+            db_tx.commit()?;
+            Ok(Some(deployed_contracts))
         } else {
             Ok(None)
         }
@@ -635,13 +690,8 @@ impl<Db: Database> BlockWriter for DbProvider<Db> {
             db_tx.put::<tables::Headers>(block_number, block_header)?;
             db_tx.put::<tables::BlockBodyIndices>(block_number, block_body_indices)?;
 
-            for (i, (transaction, receipt, execution)) in transactions
-                .into_iter()
-                .zip(receipts.into_iter())
-                .zip(executions.into_iter())
-                .map(|((transaction, receipt), execution)| (transaction, receipt, execution))
-                .enumerate()
-            {
+            // Store base transaction details
+            for (i, transaction) in transactions.into_iter().enumerate() {
                 let tx_number = tx_offset + i as u64;
                 let tx_hash = transaction.hash;
 
@@ -649,7 +699,17 @@ impl<Db: Database> BlockWriter for DbProvider<Db> {
                 db_tx.put::<tables::TxNumbers>(tx_hash, tx_number)?;
                 db_tx.put::<tables::TxBlocks>(tx_number, block_number)?;
                 db_tx.put::<tables::Transactions>(tx_number, transaction.transaction)?;
+            }
+
+            // Store transaction receipts
+            for (i, receipt) in receipts.into_iter().enumerate() {
+                let tx_number = tx_offset + i as u64;
                 db_tx.put::<tables::Receipts>(tx_number, receipt)?;
+            }
+
+            // Store execution traces
+            for (i, execution) in executions.into_iter().enumerate() {
+                let tx_number = tx_offset + i as u64;
                 db_tx.put::<tables::TxTraces>(tx_number, execution)?;
             }
 

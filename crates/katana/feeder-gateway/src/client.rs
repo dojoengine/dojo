@@ -5,6 +5,7 @@ use reqwest::header::{HeaderMap, HeaderValue};
 use reqwest::{Client, StatusCode};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
+use tracing::error;
 use url::Url;
 
 use crate::types::{Block, ContractClass, StateUpdate, StateUpdateWithBlock};
@@ -25,6 +26,13 @@ pub enum Error {
 
     #[error("request rate limited")]
     RateLimited,
+}
+
+impl Error {
+    /// Returns `true` if the error is due to rate limiting.
+    pub fn is_rate_limited(&self) -> bool {
+        matches!(self, Self::RateLimited)
+    }
 }
 
 /// Client for interacting with the Starknet's feeder gateway.
