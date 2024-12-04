@@ -138,7 +138,8 @@ jobs:
 
       - name: Run openrpc-testgen-runner binary
         run: |
-          katana-runner/target/release/openrpc-testgen-runner \
+          cd katana-runner 
+          target/release/openrpc-testgen-runner \
           --urls "http://127.0.0.1:5050" \
           --paymaster-account-address "0x127fd5f1fe78a71f8bcd1fec63e3fe2f0486b6ecd5c86a0466c3a21fa5cfcec" \
           --paymaster-private-key "0xc5b2fcab997346f3ea1c00b002ecf6f382c5f9c9659a3894eb783c5320f912" \
