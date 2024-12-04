@@ -1,11 +1,13 @@
+use std::sync::Arc;
+
+use serde::{Deserialize, Serialize};
+
 pub mod db;
 pub mod dev;
 pub mod execution;
 pub mod fork;
 pub mod metrics;
 pub mod rpc;
-
-use std::sync::Arc;
 
 use db::DbConfig;
 use dev::DevConfig;
@@ -47,6 +49,8 @@ pub struct Config {
 
     /// Development options.
     pub dev: DevConfig,
+
+    pub node_type: NodeType,
 }
 
 /// Configurations related to block production.
@@ -59,4 +63,22 @@ pub struct SequencingConfig {
     ///
     /// Allowing block to only be produced manually.
     pub no_mining: bool,
+}
+
+#[derive(
+    Debug,
+    Default,
+    Serialize,
+    Deserialize,
+    Clone,
+    PartialEq,
+    strum_macros::Display,
+    strum_macros::EnumString,
+)]
+pub enum NodeType {
+    #[strum(ascii_case_insensitive)]
+    Full,
+    #[default]
+    #[strum(ascii_case_insensitive)]
+    Sequencer,
 }

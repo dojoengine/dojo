@@ -2,6 +2,7 @@
 
 pub mod config;
 pub mod exit;
+pub mod node;
 pub mod version;
 
 use std::future::IntoFuture;
@@ -11,7 +12,7 @@ use std::time::Duration;
 
 use anyhow::Result;
 use config::rpc::{ApiKind, RpcConfig};
-use config::Config;
+use config::{Config, NodeType};
 use dojo_metrics::exporters::prometheus::PrometheusRecorder;
 use dojo_metrics::{Report, Server as MetricsServer};
 use hyper::{Method, Uri};
@@ -32,6 +33,7 @@ use katana_executor::implementation::blockifier::BlockifierFactory;
 use katana_executor::{ExecutionFlags, ExecutorFactory};
 use katana_feeder_gateway::client::SequencerGateway;
 use katana_pipeline::stage::{Blocks, Classes, Sequencing};
+use katana_pipeline::tip_watcher::ChainTipWatcher;
 use katana_pipeline::{Pipeline, PipelineHandle};
 use katana_pool::ordering::FiFo;
 use katana_pool::validation::stateful::TxValidator;
@@ -61,7 +63,7 @@ pub struct LaunchedNode {
     /// Handle to the rpc server.
     pub rpc: RpcServer,
     /// Handle to the syncing pipeline.
-    pub pipeline: PipelineHandle,
+    pub pipeline: Option<PipelineHandle>,
 }
 
 impl LaunchedNode {
@@ -125,43 +127,61 @@ impl Node {
         let block_producer = self.block_producer.clone();
         let validator = self.block_producer.validator().clone();
 
-        // let sequencing = Sequencing::new(
-        //     pool.clone(),
-        //     backend.clone(),
-        //     self.task_manager.task_spawner(),
-        //     block_producer.clone(),
-        //     self.config.messaging.clone(),
-        // );
+        if self.config.node_type == NodeType::Full {
+            // --- build and start the pipeline
 
-        // self.task_manager
-        //     .task_spawner()
-        //     .build_task()
-        //     .critical()
-        //     .name("Sequencing")
-        //     .spawn(sequencing.into_future());
+            let provider = self.backend.blockchain.provider().clone();
+            let fgw = SequencerGateway::sn_sepolia();
+            let (mut pipeline, handle) = Pipeline::new(provider.clone(), 64);
 
-        // --- build and start the pipeline
+            pipeline.add_stage(Blocks::new(provider.clone(), fgw.clone(), 3));
+            pipeline.add_stage(Classes::new(provider, fgw.clone(), 3));
 
-        let provider = self.backend.blockchain.provider().clone();
-        let fgw = SequencerGateway::sn_sepolia();
-        let (mut pipeline, handle) = Pipeline::new(provider.clone(), 64);
+            let tip_watcher = ChainTipWatcher::new(fgw, handle.clone());
 
-        pipeline.add_stage(Blocks::new(provider.clone(), fgw.clone(), 3));
-        pipeline.add_stage(Classes::new(provider, fgw.clone(), 3));
+            self.task_manager
+                .task_spawner()
+                .build_task()
+                .critical()
+                .name("Chain tip watcher")
+                .spawn(tip_watcher.into_future());
 
-        handle.set_tip(500);
+            self.task_manager
+                .task_spawner()
+                .build_task()
+                .critical()
+                .name("Pipeline")
+                .spawn(pipeline.into_future());
 
-        self.task_manager
-            .task_spawner()
-            .build_task()
-            .critical()
-            .name("Pipeline")
-            .spawn(pipeline.into_future());
+            let node_components =
+                (pool, backend, block_producer, validator, self.forked_client.take());
+            let rpc = spawn(node_components, self.config.rpc.clone()).await?;
 
-        let node_components = (pool, backend, block_producer, validator, self.forked_client.take());
-        let rpc = spawn(node_components, self.config.rpc.clone()).await?;
+            Ok(LaunchedNode { node: self, pipeline: Some(handle), rpc })
+        } else {
+            // --- build and start the sequencing task
 
-        Ok(LaunchedNode { node: self, pipeline: handle, rpc })
+            let sequencing = Sequencing::new(
+                pool.clone(),
+                backend.clone(),
+                self.task_manager.task_spawner(),
+                block_producer.clone(),
+                self.config.messaging.clone(),
+            );
+
+            self.task_manager
+                .task_spawner()
+                .build_task()
+                .critical()
+                .name("Sequencing")
+                .spawn(sequencing.into_future());
+
+            let node_components =
+                (pool, backend, block_producer, validator, self.forked_client.take());
+            let rpc = spawn(node_components, self.config.rpc.clone()).await?;
+
+            Ok(LaunchedNode { node: self, pipeline: None, rpc })
+        }
     }
 }
 
