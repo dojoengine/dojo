@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1733343835978,
+  "lastUpdate": 1733344049320,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -38323,6 +38323,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10364064530,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "distinct": true,
+          "id": "ffc92592efc71489c78bb0bb9268341d8d01a2b1",
+          "message": "opt(torii/core): add explicit limit to sql query\n\nEven though we where already using `fetch_one` to only fetch a single row, its documentation says to add a limit to the query explicitly.\n\ncommit-id:c0a96916",
+          "timestamp": "2024-12-05T01:37:29+05:30",
+          "tree_id": "36b4540f9826bfe16c4a528b7f5f49cd16993bb3",
+          "url": "https://github.com/dojoengine/dojo/commit/ffc92592efc71489c78bb0bb9268341d8d01a2b1"
+        },
+        "date": 1733344047669,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2452726,
+            "range": "± 28397",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 7887546,
+            "range": "± 215149",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3711380822,
+            "range": "± 790522986",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8051899,
+            "range": "± 471162",
             "unit": "ns/iter"
           }
         ]
