@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1733332479824,
+  "lastUpdate": 1733343835978,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -38293,6 +38293,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7932742,
             "range": "± 40860",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "distinct": true,
+          "id": "ffc92592efc71489c78bb0bb9268341d8d01a2b1",
+          "message": "opt(torii/core): add explicit limit to sql query\n\nEven though we where already using `fetch_one` to only fetch a single row, its documentation says to add a limit to the query explicitly.\n\ncommit-id:c0a96916",
+          "timestamp": "2024-12-05T01:37:29+05:30",
+          "tree_id": "36b4540f9826bfe16c4a528b7f5f49cd16993bb3",
+          "url": "https://github.com/dojoengine/dojo/commit/ffc92592efc71489c78bb0bb9268341d8d01a2b1"
+        },
+        "date": 1733343834527,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10364064530,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
