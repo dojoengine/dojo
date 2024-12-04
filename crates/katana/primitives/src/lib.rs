@@ -10,7 +10,6 @@ pub mod env;
 pub mod event;
 pub mod fee;
 pub mod genesis;
-pub mod header;
 pub mod message;
 pub mod receipt;
 pub mod trace;
