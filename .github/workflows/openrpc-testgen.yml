@@ -19,6 +19,15 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential libclang-dev
 
+      - name: Install Podman
+        run: |
+          . /etc/os-release
+          sudo sh -c "echo 'deb http://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/$ID\_$VERSION_ID/ /' > /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list"
+          wget -nv https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/$ID\_$VERSION_ID/Release.key -O Release.key
+          sudo apt-key add - < Release.key
+          sudo apt-get update
+          sudo apt-get -y install podman
+
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -51,6 +60,15 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential libclang-dev
 
+      - name: Install Podman
+        run: |
+          . /etc/os-release
+          sudo sh -c "echo 'deb http://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/$ID\_$VERSION_ID/ /' > /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list"
+          wget -nv https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/$ID\_$VERSION_ID/Release.key -O Release.key
+          sudo apt-key add - < Release.key
+          sudo apt-get update
+          sudo apt-get -y install podman
+
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -79,9 +97,9 @@ jobs:
             sleep 5
           done
 
-      - name: Run testgen-runner Docker container
+      - name: Run testgen-runner Podman container
         run: |
-          docker run --rm \
+          podman run --rm \
             uacias/katana-runner:v0.0.1
 
       - name: Upload Code Coverage Report
