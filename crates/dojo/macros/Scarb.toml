@@ -1,0 +1,8 @@
+[package]
+name = "dojo_macros"
+version = "0.1.0"
+description = "Dojo macros"
+homepage = "https://github.com/dojoengine/dojo"
+edition = "2024_07"
+
+[cairo-plugin]

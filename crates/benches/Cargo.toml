@@ -14,7 +14,6 @@ katana-runner.workspace = true
 
 anyhow.workspace = true
 clap.workspace = true
-dojo-lang.workspace = true
 dojo-world.workspace = true
 futures.workspace = true
 hex.workspace = true

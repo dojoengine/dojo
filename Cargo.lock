@@ -2260,7 +2260,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "40723b8fb387abc38f4f4a37c09073622e41dd12327033091ef8950659e6dc0c"
 dependencies = [
  "memchr",
- "regex-automata 0.4.7",
+ "regex-automata 0.4.9",
  "serde",
 ]
 
@@ -2909,7 +2909,17 @@ name = "cairo-lang-macro"
 version = "0.1.0"
 source = "git+https://github.com/dojoengine/scarb?rev=7eac49b3e61236ce466e712225d9c989f9db1ef3#7eac49b3e61236ce466e712225d9c989f9db1ef3"
 dependencies = [
- "cairo-lang-macro-attributes",
+ "cairo-lang-macro-attributes 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cairo-lang-macro-stable",
+ "linkme",
+]
+
+[[package]]
+name = "cairo-lang-macro"
+version = "0.1.1"
+source = "git+https://github.com/remybar/scarb?rev=f6953d5b0690f166011da5f911452922dd835a96#f6953d5b0690f166011da5f911452922dd835a96"
+dependencies = [
+ "cairo-lang-macro-attributes 0.1.0 (git+https://github.com/remybar/scarb?rev=f6953d5b0690f166011da5f911452922dd835a96)",
  "cairo-lang-macro-stable",
  "linkme",
 ]
@@ -2919,6 +2929,16 @@ name = "cairo-lang-macro-attributes"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e32e958decd95ae122ee64daa26721da2f76e83231047f947fd9cdc5d3c90cc6"
+dependencies = [
+ "quote",
+ "scarb-stable-hash 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "syn 2.0.77",
+]
+
+[[package]]
+name = "cairo-lang-macro-attributes"
+version = "0.1.0"
+source = "git+https://github.com/remybar/scarb?rev=f6953d5b0690f166011da5f911452922dd835a96#f6953d5b0690f166011da5f911452922dd835a96"
 dependencies = [
  "quote",
  "scarb-stable-hash 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4887,33 +4907,31 @@ dependencies = [
 ]
 
 [[package]]
-name = "dojo-lang"
-version = "1.0.5"
-dependencies = [
- "anyhow",
- "cairo-lang-defs",
- "cairo-lang-diagnostics",
- "cairo-lang-filesystem",
- "cairo-lang-plugins",
- "cairo-lang-semantic",
- "cairo-lang-syntax",
- "cairo-lang-utils",
- "dojo-types 1.0.5",
- "itertools 0.12.1",
- "serde",
- "smol_str",
- "starknet 0.12.0",
- "starknet-crypto 0.7.2",
- "tracing",
-]
-
-[[package]]
 name = "dojo-language-server"
 version = "1.0.5"
 dependencies = [
  "cairo-lang-language-server",
  "clap",
- "dojo-lang 1.0.5",
+ "dojo-macros",
+]
+
+[[package]]
+name = "dojo-macros"
+version = "0.1.0"
+dependencies = [
+ "cairo-lang-defs",
+ "cairo-lang-macro 0.1.1",
+ "cairo-lang-parser",
+ "cairo-lang-plugins",
+ "cairo-lang-syntax",
+ "cairo-lang-utils",
+ "convert_case 0.6.0",
+ "dojo-types 1.0.4",
+ "regex",
+ "serde",
+ "serde_json",
+ "starknet 0.12.0",
+ "starknet-crypto 0.7.2",
 ]
 
 [[package]]
@@ -6667,8 +6685,8 @@ dependencies = [
  "aho-corasick",
  "bstr",
  "log",
- "regex-automata 0.4.7",
- "regex-syntax 0.8.4",
+ "regex-automata 0.4.9",
+ "regex-syntax 0.8.5",
 ]
 
 [[package]]
@@ -7545,7 +7563,7 @@ dependencies = [
  "globset",
  "log",
  "memchr",
- "regex-automata 0.4.7",
+ "regex-automata 0.4.9",
  "same-file",
  "walkdir",
  "winapi-util",
@@ -8960,7 +8978,7 @@ dependencies = [
  "petgraph",
  "pico-args",
  "regex",
- "regex-syntax 0.8.4",
+ "regex-syntax 0.8.5",
  "string_cache",
  "term",
  "tiny-keccak",
@@ -8974,7 +8992,7 @@ version = "0.20.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "507460a910eb7b32ee961886ff48539633b788a36b65692b95f225b844c82553"
 dependencies = [
- "regex-automata 0.4.7",
+ "regex-automata 0.4.9",
 ]
 
 [[package]]
@@ -11456,7 +11474,7 @@ dependencies = [
  "rand 0.8.5",
  "rand_chacha",
  "rand_xorshift",
- "regex-syntax 0.8.4",
+ "regex-syntax 0.8.5",
  "rusty-fork",
  "tempfile",
  "unarray",
@@ -12006,14 +12024,14 @@ dependencies = [
 
 [[package]]
 name = "regex"
-version = "1.10.6"
+version = "1.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4219d74c6b67a3654a9fbebc4b419e22126d13d2f3c4a07ee0cb61ff79a79619"
+checksum = "b544ef1b4eac5dc2db33ea63606ae9ffcfac26c1416a2806ae0bf5f56b201191"
 dependencies = [
  "aho-corasick",
  "memchr",
- "regex-automata 0.4.7",
- "regex-syntax 0.8.4",
+ "regex-automata 0.4.9",
+ "regex-syntax 0.8.5",
 ]
 
 [[package]]
@@ -12027,13 +12045,13 @@ dependencies = [
 
 [[package]]
 name = "regex-automata"
-version = "0.4.7"
+version = "0.4.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "38caf58cc5ef2fed281f89292ef23f6365465ed9a41b7a7754eb4e26496c92df"
+checksum = "809e8dc61f6de73b46c85f4c96486310fe304c434cfa43669d7b40f711150908"
 dependencies = [
  "aho-corasick",
  "memchr",
- "regex-syntax 0.8.4",
+ "regex-syntax 0.8.5",
 ]
 
 [[package]]
@@ -12044,9 +12062,9 @@ checksum = "f162c6dd7b008981e4d40210aca20b4bd0f9b60ca9271061b07f78537722f2e1"
 
 [[package]]
 name = "regex-syntax"
-version = "0.8.4"
+version = "0.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7a66a03ae7c801facd77a29370b4faec201768915ac14a721ba36f20bc9c209b"
+checksum = "2b15c43186be67a4fd63bee50d0303afffcef381492ebe2c5d87f324e1b8815c"
 
 [[package]]
 name = "relative-path"
@@ -12953,7 +12971,7 @@ dependencies = [
  "cairo-lang-filesystem",
  "cairo-lang-formatter",
  "cairo-lang-lowering",
- "cairo-lang-macro",
+ "cairo-lang-macro 0.1.0",
  "cairo-lang-macro-stable",
  "cairo-lang-parser",
  "cairo-lang-semantic",
@@ -12973,7 +12991,7 @@ dependencies = [
  "derive_builder",
  "dialoguer",
  "directories",
- "dojo-lang 1.0.0-rc.2",
+ "dojo-lang",
  "dunce",
  "fs4",
  "fs_extra",
@@ -13847,7 +13865,6 @@ dependencies = [
  "clap-verbosity-flag",
  "colored",
  "dojo-bindgen",
- "dojo-lang 1.0.5",
  "dojo-test-utils",
  "dojo-types 1.0.5",
  "dojo-utils",

@@ -1,4 +1,4 @@
-use starknet::{ContractAddress, get_caller_address};
+use starknet::ContractAddress;
 
 // TODO import all this when complex benchmarks are merged
 #[derive(Introspect, Copy, Drop, Serde)]

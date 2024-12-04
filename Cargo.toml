@@ -10,7 +10,7 @@ members = [
 	"bin/torii",
 	"crates/dojo/bindgen",
 	"crates/dojo/core",
-	"crates/dojo/lang",
+	"crates/dojo/macros",
 	"crates/dojo/test-utils",
 	"crates/dojo/types",
 	"crates/dojo/utils",
@@ -83,7 +83,7 @@ dojo-metrics = { path = "crates/metrics" }
 # dojo-lang
 dojo-bindgen = { path = "crates/dojo/bindgen" }
 dojo-core = { path = "crates/dojo/core" }
-dojo-lang = { path = "crates/dojo/lang" }
+dojo-macros = { path = "crates/dojo/macros" }
 dojo-test-utils = { path = "crates/dojo/test-utils" }
 dojo-types = { path = "crates/dojo/types" }
 dojo-world = { path = "crates/dojo/world" }
