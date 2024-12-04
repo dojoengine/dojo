@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1733269650746,
+  "lastUpdate": 1733279831137,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -38059,6 +38059,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7946384,
             "range": "± 291439",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9aa5b1057e9361fe9230c31ec4ede6600413bc51",
+          "message": "refactor(katana): fix feeder gateway types (#2760)",
+          "timestamp": "2024-12-04T10:21:05+08:00",
+          "tree_id": "424ac2d4142f6d87eb69c03e5b5e0678f795a102",
+          "url": "https://github.com/dojoengine/dojo/commit/9aa5b1057e9361fe9230c31ec4ede6600413bc51"
+        },
+        "date": 1733279829706,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10245770759,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
