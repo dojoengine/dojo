@@ -48,7 +48,6 @@ use katana_rpc_api::torii::ToriiApiServer;
 use katana_tasks::TaskManager;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing::info;
-use url::Url;
 
 use crate::exit::NodeStoppedFuture;
 
@@ -89,11 +88,6 @@ pub struct Node {
     pub backend: Arc<Backend<BlockifierFactory>>,
     pub block_producer: BlockProducer<BlockifierFactory>,
     pub config: Arc<Config>,
-    pub rpc_config: RpcConfig,
-    pub metrics_config: Option<MetricsConfig>,
-    pub sequencing_config: SequencingConfig,
-    pub messaging_config: Option<MessagingConfig>,
-    pub l1_provider_url: Option<Url>,
     forked_client: Option<ForkedClient>,
 }
 
@@ -145,16 +139,11 @@ impl Node {
         let node_components = (pool, backend, block_producer, self.forked_client.take());
         let rpc = spawn(node_components, self.config.rpc.clone()).await?;
 
-        // --- build and start the gas oracle worker task
-
-        // if the Option<GasWorkerConfig> is none, default to no sampling
-        if let Some(gpo_url) = self.l1_provider_url.as_ref() {
-            let gas_oracle = L1GasOracle::sampled(Some(gpo_url.clone())); // Clone the URL if needed
-            gas_oracle.run_worker(self.task_manager.task_spawner());
-        } else {
-            // Optionally handle the `None` case
-            eprintln!("Gas price oracle is None; skipping gas oracle worker initialization.");
-        }
+        // --- start the gas oracle worker task
+        if let Some(ref url) = self.config.l1_provider_url {
+            self.backend.gas_oracle.run_worker(self.task_manager.task_spawner());
+            info!(%url, "Gas Price Oracle started.");
+        };
 
         Ok(LaunchedNode { node: self, rpc })
     }
@@ -211,39 +200,20 @@ pub async fn build(mut config: Config) -> Result<Node> {
 
     // --- build l1 gas oracle
 
-    // Check if the user specify a fixed gas price in the dev config.
-    let gas_oracle = if let Some(fixed_prices) = &config.dev.fixed_gas_prices {
-        L1GasOracle::fixed(fixed_prices.gas_price.clone(), fixed_prices.data_gas_price.clone())
-    }
-    // TODO: for now we just use the default gas prices, but this should be a proper oracle in the
-    // future that can perform actual sampling.
-    else {
-<<<<<<< HEAD
-=======
-=======
-    // cases to cover:
-    //      1. Fixed price by user
-    //      2. No fixed price by user and no sampling
-    //      3. Sampling with user input provider url
-    let gas_oracle = if let Some(fixed_prices) = config.dev.fixed_gas_prices {
-        // Use fixed gas prices if provided in the configuration
-        L1GasOracle::fixed(fixed_prices.gas_price, fixed_prices.data_gas_price)
-<<<<<<< HEAD
-    } else if config.gas_price_worker.as_ref().map_or(false, |worker| worker.no_sampling) {
->>>>>>> 4e82cdff (WIP: progress on issue #2558 gas oracle feature on katana)
-=======
-    } else if config.l1_provider_url.as_ref().is_none() {
-        // Use default fixed gas prices if `gpo` is `None`
->>>>>>> ae337f9c (shared oracle/backend gas prices, cleaned up config)
->>>>>>> 31b801e6 (shared oracle/backend gas prices, cleaned up config)
-        L1GasOracle::fixed(
-            GasPrices { eth: DEFAULT_ETH_L1_GAS_PRICE, strk: DEFAULT_STRK_L1_GAS_PRICE },
-            GasPrices { eth: DEFAULT_ETH_L1_DATA_GAS_PRICE, strk: DEFAULT_STRK_L1_DATA_GAS_PRICE },
-        )
-    } else {
-        // Default to a sampled gas oracle using the given provider
-        L1GasOracle::sampled(config.l1_provider_url.clone())
-    };
+// Check if the user specify a fixed gas price in the config.
+let gas_oracle = if let Some(fixed_prices) = &config.dev.fixed_gas_prices {
+    // Use fixed gas prices if provided in the configuration
+    L1GasOracle::fixed(fixed_prices.gas_price.clone(), fixed_prices.data_gas_price.clone())
+} else if let Some(url) = &config.l1_provider_url {
+    // Default to a sampled gas oracle using the given provider
+    L1GasOracle::sampled(url.clone())
+} else {
+    // Use default fixed gas prices if no url, and no fixed price are provided
+    L1GasOracle::fixed(
+        GasPrices { eth: DEFAULT_ETH_L1_GAS_PRICE, strk: DEFAULT_STRK_L1_GAS_PRICE },
+        GasPrices { eth: DEFAULT_ETH_L1_DATA_GAS_PRICE, strk: DEFAULT_STRK_L1_DATA_GAS_PRICE },
+    )
+};
 
     let block_context_generator = BlockContextGenerator::default().into();
     let backend = Arc::new(Backend {
@@ -279,7 +249,6 @@ pub async fn build(mut config: Config) -> Result<Node> {
         block_producer,
         config: Arc::new(config),
         task_manager: TaskManager::current(),
-        l1_provider_url: config.l1_provider_url,
     };
 
     Ok(node)
