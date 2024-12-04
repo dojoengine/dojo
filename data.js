@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1733279831137,
+  "lastUpdate": 1733280112385,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -38089,6 +38089,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10245770759,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9aa5b1057e9361fe9230c31ec4ede6600413bc51",
+          "message": "refactor(katana): fix feeder gateway types (#2760)",
+          "timestamp": "2024-12-04T10:21:05+08:00",
+          "tree_id": "424ac2d4142f6d87eb69c03e5b5e0678f795a102",
+          "url": "https://github.com/dojoengine/dojo/commit/9aa5b1057e9361fe9230c31ec4ede6600413bc51"
+        },
+        "date": 1733280110954,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2446989,
+            "range": "± 34069",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8905906,
+            "range": "± 634146",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3846010491,
+            "range": "± 813888095",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 7881807,
+            "range": "± 235703",
             "unit": "ns/iter"
           }
         ]
