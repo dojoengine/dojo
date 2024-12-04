@@ -1,6 +1,7 @@
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
 
 pub mod stage;
+pub mod tip_watcher;
 
 use core::future::IntoFuture;
 
@@ -30,13 +31,14 @@ pub enum Error {
     Provider(#[from] ProviderError),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PipelineHandle {
     tx: watch::Sender<Option<BlockNumber>>,
 }
 
 impl PipelineHandle {
     pub fn set_tip(&self, tip: BlockNumber) {
+        info!(target: "pipeline", %tip, "Setting new tip");
         self.tx.send(Some(tip)).expect("channel closed");
     }
 }
@@ -53,15 +55,15 @@ pub struct Pipeline<P> {
     chunk_size: u64,
     provider: P,
     stages: Vec<Box<dyn Stage>>,
-    tip: watch::Receiver<Option<BlockNumber>>,
+    tip_watcher: (watch::Receiver<Option<BlockNumber>>, watch::Sender<Option<BlockNumber>>),
 }
 
 impl<P> Pipeline<P> {
     /// Create a new empty pipeline.
     pub fn new(provider: P, chunk_size: u64) -> (Self, PipelineHandle) {
         let (tx, rx) = watch::channel(None);
-        let handle = PipelineHandle { tx };
-        let pipeline = Self { stages: Vec::new(), tip: rx, provider, chunk_size };
+        let handle = PipelineHandle { tx: tx.clone() };
+        let pipeline = Self { stages: Vec::new(), tip_watcher: (rx, tx), provider, chunk_size };
         (pipeline, handle)
     }
 
@@ -76,6 +78,10 @@ impl<P> Pipeline<P> {
     pub fn add_stages(&mut self, stages: impl Iterator<Item = Box<dyn Stage>>) {
         self.stages.extend(stages);
     }
+
+    pub fn handle(&self) -> PipelineHandle {
+        PipelineHandle { tx: self.tip_watcher.1.clone() }
+    }
 }
 
 impl<P: StageCheckpointProvider> Pipeline<P> {
@@ -84,7 +90,7 @@ impl<P: StageCheckpointProvider> Pipeline<P> {
         let mut current_chunk_tip = self.chunk_size;
 
         loop {
-            let tip = *self.tip.borrow_and_update();
+            let tip = *self.tip_watcher.0.borrow_and_update();
 
             loop {
                 if let Some(tip) = tip {
@@ -97,12 +103,16 @@ impl<P: StageCheckpointProvider> Pipeline<P> {
                     } else {
                         current_chunk_tip = (last_block_processed + self.chunk_size).min(tip);
                     }
+                } else {
+                    break;
                 }
             }
 
+            info!(target: "pipeline", "Waiting for new tip.");
+
             // If we reach here, that means we have run the pipeline up until the `tip`.
             // So, wait until the tip has changed.
-            if self.tip.changed().await.is_err() {
+            if self.tip_watcher.0.changed().await.is_err() {
                 break;
             }
         }
@@ -169,7 +179,7 @@ where
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("Pipeline")
-            .field("tip", &self.tip)
+            .field("tip", &self.tip_watcher)
             .field("provider", &self.provider)
             .field("chunk_size", &self.chunk_size)
             .field("stages", &self.stages.iter().map(|s| s.id()).collect::<Vec<_>>())
@@ -183,7 +193,7 @@ mod tests {
     use katana_provider::traits::stage::StageCheckpointProvider;
 
     use super::{Pipeline, Stage, StageExecutionInput};
-    use crate::stage::{StageExecutionOutput, StageResult};
+    use crate::stage::StageResult;
 
     struct MockStage;
 

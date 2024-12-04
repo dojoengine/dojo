@@ -23,7 +23,7 @@ use starknet::core::types::ResourcePrice;
 use starknet::providers::sequencer::models::BlockStatus;
 use tracing::{debug, error, warn};
 
-use super::{Stage, StageExecutionInput, StageExecutionOutput, StageResult};
+use super::{Stage, StageExecutionInput, StageResult};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -51,21 +51,22 @@ impl<P: BlockWriter> Stage for Blocks<P> {
     }
 
     async fn execute(&mut self, input: &StageExecutionInput) -> StageResult {
-        // Download all blocks concurrently
+        // Download all blocks from the provided range
         let blocks = self.downloader.download_blocks(input.from, input.to).await?;
 
         if !blocks.is_empty() {
             debug!(target: "stage", id = %self.id(), total = %blocks.len(), "Storing blocks to storage.");
+
             // Store blocks to storage
             for block in blocks {
                 let (block, receipts, state_updates) = extract_block_data(block)?;
 
-                let _ = self.provider.insert_block_with_states_and_receipts(
+                self.provider.insert_block_with_states_and_receipts(
                     block,
                     state_updates,
                     receipts,
                     Vec::new(),
-                );
+                )?;
             }
         }
 

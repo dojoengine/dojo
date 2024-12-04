@@ -6,20 +6,32 @@ use backon::{ExponentialBuilder, Retryable};
 use katana_feeder_gateway::client::{self, SequencerGateway};
 use katana_primitives::block::{BlockIdOrTag, BlockNumber};
 use katana_primitives::class::{ClassHash, ContractClass};
+use katana_provider::error::ProviderError;
 use katana_provider::traits::contract::{ContractClassWriter, ContractClassWriterExt};
 use katana_provider::traits::state_update::StateUpdateProvider;
 use katana_rpc_types::class::ConversionError;
 use tracing::{debug, error, warn};
 
-use super::{Stage, StageExecutionInput, StageExecutionOutput, StageResult};
+use super::{Stage, StageExecutionInput, StageResult};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    #[error("missing declared classes for block {block}")]
+    MissingBlockDeclaredClasses {
+        /// The block number whose declared classes are missing.
+        block: BlockNumber,
+    },
+
+    /// Error returnd by the client used to download the classes from.
     #[error(transparent)]
     Gateway(#[from] client::Error),
 
+    /// Error that can occur when converting the classes types to the internal types.
     #[error(transparent)]
     Conversion(#[from] ConversionError),
+
+    #[error(transparent)]
+    Provider(#[from] ProviderError),
 }
 
 #[derive(Debug)]
@@ -45,19 +57,25 @@ where
     }
 
     async fn execute(&mut self, input: &StageExecutionInput) -> StageResult {
-        for i in input.from..=input.to {
+        let mut classes: Vec<(ClassHash, ContractClass)> = Vec::new();
+
+        for block in input.from..=input.to {
             // get the classes declared at block `i`
-            let class_hashes = self.provider.declared_classes(i.into())?.unwrap();
+            let class_hashes = self
+                .provider
+                .declared_classes(block.into())?
+                .ok_or(Error::MissingBlockDeclaredClasses { block })?;
             let class_hashes = class_hashes.keys().map(|hash| *hash).collect::<Vec<_>>();
 
             // fetch the classes artifacts
-            let classes = self.downloader.download_classes(&class_hashes, i).await?;
+            let class_artifacts = self.downloader.download_classes(&class_hashes, block).await?;
+            classes.extend(class_hashes.into_iter().zip(class_artifacts));
+        }
 
-            if !classes.is_empty() {
-                debug!(target: "stage", id = %self.id(), total = %classes.len(), "Storing classes to storage.");
-                for (hash, class) in class_hashes.iter().zip(classes) {
-                    self.provider.set_class(*hash, class)?;
-                }
+        if !classes.is_empty() {
+            debug!(target: "stage", id = self.id(), total = %classes.len(), "Storing class artifacts.");
+            for (hash, class) in classes {
+                self.provider.set_class(hash, class)?;
             }
         }
 
