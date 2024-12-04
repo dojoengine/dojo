@@ -221,10 +221,10 @@ mod tests {
     fn namespace_def() -> NamespaceDef {
         let ndef = NamespaceDef {
             namespace: "ns", resources: [
-                TestResource::Model(m_Position::TEST_CLASS_HASH),
-                TestResource::Model(m_Moves::TEST_CLASS_HASH),
-                TestResource::Event(actions::e_Moved::TEST_CLASS_HASH),
-                TestResource::Contract(actions::TEST_CLASS_HASH),
+                TestResource::Model("Position"),
+                TestResource::Model("Moves"),
+                TestResource::Event("Moved"),
+                TestResource::Contract("actions"),
             ].span()
         };
 

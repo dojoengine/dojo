@@ -19,7 +19,7 @@ dojo = { path = "../../crates/dojo/core" }
 starknet = "2.8.4"
 
 [dev-dependencies]
-dojo_cairo_test = { path = "../../crates/dojo/core-cairo-test" }
+dojo_foundry_test = { path = "../../crates/dojo/core-foundry-test" }
 
 [features]
 default = [ "dungeon" ]

@@ -23,7 +23,6 @@ clap.workspace = true
 clap-verbosity-flag.workspace = true
 colored.workspace = true
 dojo-bindgen.workspace = true
-dojo-lang.workspace = true
 dojo-types.workspace = true
 dojo-utils.workspace = true
 dojo-world.workspace = true
