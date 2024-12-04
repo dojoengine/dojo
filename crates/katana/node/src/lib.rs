@@ -2,7 +2,7 @@
 
 pub mod config;
 pub mod exit;
-pub mod node;
+pub mod full;
 pub mod version;
 
 use std::future::IntoFuture;
@@ -12,7 +12,7 @@ use std::time::Duration;
 
 use anyhow::Result;
 use config::rpc::{ApiKind, RpcConfig};
-use config::{Config, NodeType};
+use config::Config;
 use dojo_metrics::exporters::prometheus::PrometheusRecorder;
 use dojo_metrics::{Report, Server as MetricsServer};
 use hyper::{Method, Uri};
@@ -31,10 +31,7 @@ use katana_core::service::block_producer::BlockProducer;
 use katana_db::mdbx::DbEnv;
 use katana_executor::implementation::blockifier::BlockifierFactory;
 use katana_executor::{ExecutionFlags, ExecutorFactory};
-use katana_feeder_gateway::client::SequencerGateway;
-use katana_pipeline::stage::{Blocks, Classes, Sequencing};
-use katana_pipeline::tip_watcher::ChainTipWatcher;
-use katana_pipeline::{Pipeline, PipelineHandle};
+use katana_pipeline::stage::Sequencing;
 use katana_pool::ordering::FiFo;
 use katana_pool::TxPool;
 use katana_primitives::block::GasPrices;
@@ -61,8 +58,6 @@ pub struct LaunchedNode {
     pub node: Node,
     /// Handle to the rpc server.
     pub rpc: RpcServer,
-    /// Handle to the syncing pipeline.
-    pub pipeline: Option<PipelineHandle>,
 }
 
 impl LaunchedNode {
@@ -125,59 +120,27 @@ impl Node {
         let backend = self.backend.clone();
         let block_producer = self.block_producer.clone();
 
-        if self.config.node_type == NodeType::Full {
-            // --- build and start the pipeline
+        // --- build and run sequencing task
 
-            let provider = self.backend.blockchain.provider().clone();
-            let fgw = SequencerGateway::sn_sepolia();
-            let (mut pipeline, handle) = Pipeline::new(provider.clone(), 64);
+        let sequencing = Sequencing::new(
+            pool.clone(),
+            backend.clone(),
+            self.task_manager.task_spawner(),
+            block_producer.clone(),
+            self.config.messaging.clone(),
+        );
 
-            pipeline.add_stage(Blocks::new(provider.clone(), fgw.clone(), 3));
-            pipeline.add_stage(Classes::new(provider, fgw.clone(), 3));
+        self.task_manager
+            .task_spawner()
+            .build_task()
+            .critical()
+            .name("Sequencing")
+            .spawn(sequencing.into_future());
 
-            let tip_watcher = ChainTipWatcher::new(fgw, handle.clone());
+        let node_components = (pool, backend, block_producer, self.forked_client.take());
+        let rpc = spawn(node_components, self.config.rpc.clone()).await?;
 
-            self.task_manager
-                .task_spawner()
-                .build_task()
-                .critical()
-                .name("Chain tip watcher")
-                .spawn(tip_watcher.into_future());
-
-            self.task_manager
-                .task_spawner()
-                .build_task()
-                .critical()
-                .name("Pipeline")
-                .spawn(pipeline.into_future());
-
-            let node_components = (pool, backend, block_producer, self.forked_client.take());
-            let rpc = spawn(node_components, self.config.rpc.clone()).await?;
-
-            Ok(LaunchedNode { node: self, pipeline: Some(handle), rpc })
-        } else {
-            // --- build and start the sequencing task
-
-            let sequencing = Sequencing::new(
-                pool.clone(),
-                backend.clone(),
-                self.task_manager.task_spawner(),
-                block_producer.clone(),
-                self.config.messaging.clone(),
-            );
-
-            self.task_manager
-                .task_spawner()
-                .build_task()
-                .critical()
-                .name("Sequencing")
-                .spawn(sequencing.into_future());
-
-            let node_components = (pool, backend, block_producer, self.forked_client.take());
-            let rpc = spawn(node_components, self.config.rpc.clone()).await?;
-
-            Ok(LaunchedNode { node: self, pipeline: None, rpc })
-        }
+        Ok(LaunchedNode { node: self, rpc })
     }
 }
 

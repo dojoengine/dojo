@@ -1,3 +1,5 @@
+//! Experimental full node implementation.
+
 use std::future::IntoFuture;
 use std::sync::Arc;
 
