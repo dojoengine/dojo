@@ -2,7 +2,6 @@ use std::cmp::Ordering;
 use std::ops::RangeInclusive;
 
 use anyhow::Context;
-use katana_core::service::block_producer::PendingExecutor;
 use katana_primitives::block::{BlockHash, BlockNumber};
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::event::ContinuationToken;
@@ -11,6 +10,7 @@ use katana_primitives::transaction::TxHash;
 use katana_primitives::Felt;
 use katana_provider::error::ProviderError;
 use katana_provider::traits::block::BlockProvider;
+use katana_provider::traits::pending::PendingBlockProvider;
 use katana_provider::traits::transaction::ReceiptProvider;
 use katana_rpc_types::error::starknet::StarknetApiError;
 use starknet::core::types::EmittedEvent;
@@ -86,23 +86,26 @@ impl PartialCursor {
 }
 
 pub fn fetch_pending_events(
-    pending_executor: &PendingExecutor,
+    // pending_executor: &PendingExecutor,
+    pending_provider: &impl PendingBlockProvider,
     filter: &Filter,
     chunk_size: u64,
     cursor: Option<Cursor>,
     buffer: &mut Vec<EmittedEvent>,
 ) -> EventQueryResult<Cursor> {
-    let pending_block = pending_executor.read();
+    // let pending_block = pending_executor.read();
 
-    let block_env = pending_block.block_env();
-    let txs = pending_block.transactions();
+    let block_env = pending_provider.pending_block_env()?;
+    let txs = pending_provider.pending_transactions()?;
+    let receipts = pending_provider.pending_receipts()?;
     let cursor = cursor.unwrap_or(Cursor::new_block(block_env.number));
 
     // process individual transactions in the block.
     // the iterator will start with txn index == cursor.txn.idx
     for (tx_idx, (tx_hash, events)) in txs
         .iter()
-        .filter_map(|(tx, res)| res.receipt().map(|receipt| (tx.hash, receipt.events())))
+        .zip(receipts.iter())
+        .map(|(tx, receipt)| (tx.hash, receipt.events()))
         .enumerate()
         .skip(cursor.txn.idx)
     {

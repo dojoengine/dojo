@@ -12,16 +12,23 @@ use katana_executor::{BlockExecutor, ExecutionResult, ExecutionStats, ExecutorFa
 use katana_pool::validation::stateful::TxValidator;
 use katana_primitives::block::{BlockHashOrNumber, ExecutableBlock, PartialHeader};
 use katana_primitives::da::L1DataAvailabilityMode;
+use katana_primitives::env::BlockEnv;
 use katana_primitives::receipt::Receipt;
 use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{ExecutableTxWithHash, TxHash, TxWithHash};
 use katana_provider::error::ProviderError;
 use katana_provider::traits::block::{BlockHashProvider, BlockNumberProvider};
 use katana_provider::traits::env::BlockEnvProvider;
-use katana_provider::traits::state::StateFactoryProvider;
+use katana_provider::traits::pending::PendingBlockProvider;
+use katana_provider::traits::state::{StateFactoryProvider, StateProvider};
+use katana_provider::traits::transaction::{
+    ReceiptProvider, TransactionProvider, TransactionTraceProvider,
+};
+use katana_provider::ProviderResult;
 use katana_tasks::{BlockingTaskPool, BlockingTaskResult};
 use parking_lot::lock_api::RawMutex;
 use parking_lot::{Mutex, RwLock};
+use starknet::core::types::{TransactionExecutionStatus, TransactionStatus};
 use tokio::time::{interval_at, Instant, Interval};
 use tracing::{error, info, trace, warn};
 
@@ -697,5 +704,252 @@ impl<EF: ExecutorFactory> Stream for InstantBlockProducer<EF> {
         }
 
         Poll::Pending
+    }
+}
+
+impl<EF> PendingBlockProvider for BlockProducer<EF>
+where
+    EF: ExecutorFactory,
+{
+    fn pending_block(&self) -> ProviderResult<()> {
+        match &*self.producer.read() {
+            BlockProducerMode::Instant(bp) => bp.pending_block(),
+            BlockProducerMode::Interval(bp) => bp.pending_block(),
+        }
+    }
+
+    fn pending_transaction(&self, hash: TxHash) -> ProviderResult<Option<TxWithHash>> {
+        match &*self.producer.read() {
+            BlockProducerMode::Instant(bp) => bp.pending_transaction(hash),
+            BlockProducerMode::Interval(bp) => bp.pending_transaction(hash),
+        }
+    }
+
+    fn pending_receipt(&self, hash: TxHash) -> ProviderResult<Option<Receipt>> {
+        match &*self.producer.read() {
+            BlockProducerMode::Instant(bp) => bp.pending_receipt(hash),
+            BlockProducerMode::Interval(bp) => bp.pending_receipt(hash),
+        }
+    }
+
+    fn pending_block_env(&self) -> ProviderResult<BlockEnv> {
+        match &*self.producer.read() {
+            BlockProducerMode::Instant(bp) => bp.pending_block_env(),
+            BlockProducerMode::Interval(bp) => bp.pending_block_env(),
+        }
+    }
+
+    fn pending_state(&self) -> ProviderResult<Box<dyn StateProvider>> {
+        match &*self.producer.read() {
+            BlockProducerMode::Instant(bp) => bp.pending_state(),
+            BlockProducerMode::Interval(bp) => bp.pending_state(),
+        }
+    }
+
+    fn pending_transaction_status(
+        &self,
+        hash: TxHash,
+    ) -> ProviderResult<Option<TransactionStatus>> {
+        match &*self.producer.read() {
+            BlockProducerMode::Instant(bp) => bp.pending_transaction_status(hash),
+            BlockProducerMode::Interval(bp) => bp.pending_transaction_status(hash),
+        }
+    }
+
+    fn pending_transactions(&self) -> ProviderResult<Vec<TxWithHash>> {
+        match &*self.producer.read() {
+            BlockProducerMode::Instant(bp) => bp.pending_transactions(),
+            BlockProducerMode::Interval(bp) => bp.pending_transactions(),
+        }
+    }
+
+    fn pending_receipts(&self) -> ProviderResult<Vec<Receipt>> {
+        match &*self.producer.read() {
+            BlockProducerMode::Instant(bp) => bp.pending_receipts(),
+            BlockProducerMode::Interval(bp) => bp.pending_receipts(),
+        }
+    }
+
+    fn pending_transaction_trace(&self, hash: TxHash) -> ProviderResult<Option<TxExecInfo>> {
+        match &*self.producer.read() {
+            BlockProducerMode::Instant(bp) => bp.pending_transaction_trace(hash),
+            BlockProducerMode::Interval(bp) => bp.pending_transaction_trace(hash),
+        }
+    }
+
+    fn pending_transaction_traces(&self) -> ProviderResult<Vec<TxExecInfo>> {
+        match &*self.producer.read() {
+            BlockProducerMode::Instant(bp) => bp.pending_transaction_traces(),
+            BlockProducerMode::Interval(bp) => bp.pending_transaction_traces(),
+        }
+    }
+}
+
+impl<EF> PendingBlockProvider for InstantBlockProducer<EF>
+where
+    EF: ExecutorFactory,
+{
+    fn pending_transaction(&self, hash: TxHash) -> ProviderResult<Option<TxWithHash>> {
+        self.backend.blockchain.provider().transaction_by_hash(hash)
+    }
+
+    fn pending_receipt(&self, hash: TxHash) -> ProviderResult<Option<Receipt>> {
+        self.backend.blockchain.provider().receipt_by_hash(hash)
+    }
+
+    fn pending_block_env(&self) -> ProviderResult<BlockEnv> {
+        let hash = self.backend.blockchain.provider().latest_hash()?;
+        let env = self.backend.blockchain.provider().block_env_at(hash.into())?;
+        Ok(env.expect("latest block env not found"))
+    }
+
+    fn pending_state(&self) -> ProviderResult<Box<dyn StateProvider>> {
+        self.backend.blockchain.provider().latest()
+    }
+
+    fn pending_block(&self) -> ProviderResult<()> {
+        todo!()
+    }
+
+    fn pending_transaction_status(
+        &self,
+        hash: TxHash,
+    ) -> ProviderResult<Option<TransactionStatus>> {
+        if let Some(receipt) = self.backend.blockchain.provider().receipt_by_hash(hash)? {
+            if receipt.is_reverted() {
+                Ok(Some(TransactionStatus::AcceptedOnL2(TransactionExecutionStatus::Reverted)))
+            } else {
+                Ok(Some(TransactionStatus::AcceptedOnL2(TransactionExecutionStatus::Succeeded)))
+            }
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn pending_transactions(&self) -> ProviderResult<Vec<TxWithHash>> {
+        Ok(Vec::new())
+    }
+
+    fn pending_receipts(&self) -> ProviderResult<Vec<Receipt>> {
+        Ok(Vec::new())
+    }
+
+    fn pending_transaction_trace(&self, hash: TxHash) -> ProviderResult<Option<TxExecInfo>> {
+        self.backend.blockchain.provider().transaction_execution(hash)
+    }
+
+    fn pending_transaction_traces(&self) -> ProviderResult<Vec<TxExecInfo>> {
+        let number = self.backend.blockchain.provider().latest_number()?;
+        let traces =
+            self.backend.blockchain.provider().transaction_executions_by_block(number.into())?;
+        Ok(traces.expect("traces for latest block must exist"))
+    }
+}
+
+impl<EF> PendingBlockProvider for IntervalBlockProducer<EF>
+where
+    EF: ExecutorFactory,
+{
+    fn pending_transaction(&self, hash: TxHash) -> ProviderResult<Option<TxWithHash>> {
+        let transaction = self
+            .executor()
+            .read()
+            .transactions()
+            .iter()
+            .find_map(|(tx, _)| if tx.hash == hash { Some(tx.clone()) } else { None });
+
+        Ok(transaction)
+    }
+
+    fn pending_receipt(&self, hash: TxHash) -> ProviderResult<Option<Receipt>> {
+        let receipt = self
+            .executor()
+            .read()
+            .transactions()
+            .iter()
+            .find_map(|(tx, res)| if tx.hash == hash { res.receipt().cloned() } else { None });
+
+        Ok(receipt)
+    }
+
+    fn pending_transactions(&self) -> ProviderResult<Vec<TxWithHash>> {
+        Ok(self.executor().read().transactions().iter().map(|(tx, _)| tx.clone()).collect())
+    }
+
+    fn pending_state(&self) -> ProviderResult<Box<dyn StateProvider>> {
+        Ok(self.executor().read().state())
+    }
+
+    fn pending_block_env(&self) -> ProviderResult<BlockEnv> {
+        Ok(self.executor().read().block_env())
+    }
+
+    fn pending_block(&self) -> ProviderResult<()> {
+        todo!()
+    }
+
+    fn pending_receipts(&self) -> ProviderResult<Vec<Receipt>> {
+        let receipts = self.executor().read().transactions().iter().fold(
+            Vec::new(),
+            |mut acc, (_, result)| {
+                if let Some(receipt) = result.receipt() {
+                    acc.push(receipt.clone());
+                }
+                acc
+            },
+        );
+
+        Ok(receipts)
+    }
+
+    fn pending_transaction_status(
+        &self,
+        hash: TxHash,
+    ) -> ProviderResult<Option<TransactionStatus>> {
+        if let Some((_, res)) =
+            self.executor().read().transactions().iter().find(|(tx, _)| tx.hash == hash)
+        {
+            // TODO: should impl From<ExecutionResult> for TransactionStatus
+            let status = match res {
+                ExecutionResult::Failed { .. } => TransactionStatus::Rejected,
+                ExecutionResult::Success { receipt, .. } => {
+                    if receipt.is_reverted() {
+                        TransactionStatus::AcceptedOnL2(TransactionExecutionStatus::Reverted)
+                    } else {
+                        TransactionStatus::AcceptedOnL2(TransactionExecutionStatus::Succeeded)
+                    }
+                }
+            };
+
+            Ok(Some(status))
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn pending_transaction_trace(&self, hash: TxHash) -> ProviderResult<Option<TxExecInfo>> {
+        let result = self
+            .executor()
+            .read()
+            .transactions()
+            .iter()
+            .find(|(t, _)| t.hash == hash)
+            .map(|(_, res)| res)
+            .and_then(|res| res.trace())
+            .cloned();
+
+        Ok(result)
+    }
+
+    fn pending_transaction_traces(&self) -> ProviderResult<Vec<TxExecInfo>> {
+        let traces = self
+            .executor()
+            .read()
+            .transactions()
+            .iter()
+            .filter_map(|(_, r)| r.trace().cloned())
+            .collect::<Vec<_>>();
+
+        Ok(traces)
     }
 }

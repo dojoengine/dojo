@@ -3,6 +3,7 @@ use katana_executor::{EntryPointCall, ExecutorFactory};
 use katana_primitives::block::BlockIdOrTag;
 use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash, TxHash};
 use katana_primitives::Felt;
+use katana_provider::traits::pending::PendingBlockProvider;
 use katana_rpc_api::starknet::StarknetApiServer;
 use katana_rpc_types::block::{
     BlockHashAndNumber, MaybePendingBlockWithReceipts, MaybePendingBlockWithTxHashes,
@@ -21,7 +22,11 @@ use starknet::core::types::TransactionStatus;
 use super::StarknetApi;
 
 #[async_trait]
-impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
+impl<EF, P> StarknetApiServer for StarknetApi<EF, P>
+where
+    EF: ExecutorFactory,
+    P: PendingBlockProvider,
+{
     async fn chain_id(&self) -> RpcResult<FeltAsHex> {
         Ok(self.inner.backend.chain_spec.id.id().into())
     }

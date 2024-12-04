@@ -279,7 +279,7 @@ pub async fn spawn<EF: ExecutorFactory>(
                 cfg,
             )
         } else {
-            StarknetApi::new(backend.clone(), pool.clone(), Some(block_producer.clone()), cfg)
+            StarknetApi::new(backend.clone(), pool.clone(), block_producer.clone(), cfg)
         };
 
         methods.merge(StarknetApiServer::into_rpc(server.clone()))?;

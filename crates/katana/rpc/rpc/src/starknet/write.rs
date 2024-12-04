@@ -2,6 +2,7 @@ use jsonrpsee::core::{async_trait, RpcResult};
 use katana_executor::ExecutorFactory;
 use katana_pool::TransactionPool;
 use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash};
+use katana_provider::traits::pending::PendingBlockProvider;
 use katana_rpc_api::starknet::StarknetWriteApiServer;
 use katana_rpc_types::error::starknet::StarknetApiError;
 use katana_rpc_types::transaction::{
@@ -11,7 +12,11 @@ use katana_rpc_types::transaction::{
 
 use super::StarknetApi;
 
-impl<EF: ExecutorFactory> StarknetApi<EF> {
+impl<EF, P> StarknetApi<EF, P>
+where
+    EF: ExecutorFactory,
+    P: PendingBlockProvider,
+{
     async fn add_invoke_transaction_impl(
         &self,
         tx: BroadcastedInvokeTx,
@@ -74,7 +79,11 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
 }
 
 #[async_trait]
-impl<EF: ExecutorFactory> StarknetWriteApiServer for StarknetApi<EF> {
+impl<EF, P> StarknetWriteApiServer for StarknetApi<EF, P>
+where
+    EF: ExecutorFactory,
+    P: PendingBlockProvider,
+{
     async fn add_invoke_transaction(
         &self,
         invoke_transaction: BroadcastedInvokeTx,

@@ -3,8 +3,7 @@
 use std::sync::Arc;
 
 use katana_core::backend::Backend;
-use katana_core::service::block_producer::{BlockProducer, BlockProducerMode, PendingExecutor};
-use katana_executor::{ExecutionResult, ExecutorFactory};
+use katana_executor::ExecutorFactory;
 use katana_pool::{TransactionPool, TxPool};
 use katana_primitives::block::{
     BlockHash, BlockHashOrNumber, BlockIdOrTag, BlockNumber, BlockTag, FinalityStatus,
@@ -63,68 +62,64 @@ type StarknetApiResult<T> = Result<T, StarknetApiError>;
 /// [write](katana_rpc_api::starknet::StarknetWriteApi), and
 /// [trace](katana_rpc_api::starknet::StarknetTraceApi) APIs.
 #[allow(missing_debug_implementations)]
-pub struct StarknetApi<EF>
-where
-    EF: ExecutorFactory,
-{
-    inner: Arc<StarknetApiInner<EF>>,
+pub struct StarknetApi<EF, P> {
+    inner: Arc<StarknetApiInner<EF, P>>,
 }
 
-struct StarknetApiInner<EF>
-where
-    EF: ExecutorFactory,
-{
+struct StarknetApiInner<EF, P> {
     pool: TxPool,
     backend: Arc<Backend<EF>>,
     forked_client: Option<ForkedClient>,
     blocking_task_pool: BlockingTaskPool,
-    block_producer: Option<BlockProducer<EF>>,
+    // block_producer: Option<BlockProducer<EF>>,
+    pending_provider: Option<P>,
     config: StarknetApiConfig,
 }
 
-impl<EF> StarknetApi<EF>
+impl<EF, P> StarknetApi<EF, P>
 where
     EF: ExecutorFactory,
+    P: PendingBlockProvider,
 {
     pub fn new(
         backend: Arc<Backend<EF>>,
         pool: TxPool,
-        block_producer: Option<BlockProducer<EF>>,
+        pending_provider: P,
         config: StarknetApiConfig,
     ) -> Self {
-        Self::new_inner(backend, pool, block_producer, None, config)
+        Self::new_inner(backend, pool, Some(pending_provider), None, config)
     }
 
     pub fn new_forked(
         backend: Arc<Backend<EF>>,
         pool: TxPool,
-        block_producer: BlockProducer<EF>,
+        pending_provider: P,
         forked_client: ForkedClient,
         config: StarknetApiConfig,
     ) -> Self {
-        Self::new_inner(backend, pool, Some(block_producer), Some(forked_client), config)
+        Self::new_inner(backend, pool, Some(pending_provider), Some(forked_client), config)
     }
 
     fn new_inner(
         backend: Arc<Backend<EF>>,
         pool: TxPool,
-        block_producer: Option<BlockProducer<EF>>,
+        pending_provider: Option<P>,
         forked_client: Option<ForkedClient>,
         config: StarknetApiConfig,
     ) -> Self {
         let blocking_task_pool =
             BlockingTaskPool::new().expect("failed to create blocking task pool");
 
-        let inner = StarknetApiInner {
-            pool,
-            backend,
-            block_producer,
-            blocking_task_pool,
-            forked_client,
-            config,
-        };
-
-        Self { inner: Arc::new(inner) }
+        Self {
+            inner: Arc::new(StarknetApiInner {
+                pool,
+                config,
+                backend,
+                forked_client,
+                pending_provider,
+                blocking_task_pool,
+            }),
+        }
     }
 
     async fn on_cpu_blocking_task<F, T>(&self, func: F) -> T
@@ -186,17 +181,17 @@ where
         Ok(estimates)
     }
 
-    fn pending_provider(&self) -> Option<Box<dyn PendingBlockProvider>> {
-        todo!()
+    fn pending_provider(&self) -> Option<&P> {
+        self.inner.pending_provider.as_ref()
     }
 
     /// Returns the pending state if the sequencer is running in _interval_ mode. Otherwise `None`.
-    fn pending_executor(&self) -> Option<PendingExecutor> {
-        self.inner.block_producer.as_ref().and_then(|bp| match &*bp.producer.read() {
-            BlockProducerMode::Instant(_) => None,
-            BlockProducerMode::Interval(producer) => Some(producer.executor()),
-        })
-    }
+    // fn pending_executor(&self) -> Option<PendingExecutor> {
+    //     self.inner.block_producer.as_ref().and_then(|bp| match &*bp.producer.read() {
+    //         BlockProducerMode::Instant(_) => None,
+    //         BlockProducerMode::Interval(producer) => Some(producer.executor()),
+    //     })
+    // }
 
     fn state(&self, block_id: &BlockIdOrTag) -> StarknetApiResult<Box<dyn StateProvider>> {
         let provider = self.inner.backend.blockchain.provider();
@@ -402,13 +397,11 @@ where
             .on_io_blocking_task(move |this| {
                 // TEMP: have to handle pending tag independently for now
                 let tx = if BlockIdOrTag::Tag(BlockTag::Pending) == block_id {
-                    let Some(executor) = this.pending_executor() else {
+                    let Some(provider) = this.pending_provider() else {
                         return Err(StarknetApiError::BlockNotFound);
                     };
 
-                    let executor = executor.read();
-                    let pending_txs = executor.transactions();
-                    pending_txs.get(index as usize).map(|(tx, _)| tx.clone())
+                    provider.pending_transactions()?.get(index as usize).cloned()
                 } else {
                     let provider = &this.inner.backend.blockchain.provider();
 
@@ -456,7 +449,7 @@ where
                         // })
 
                         this.pending_provider()
-                            .map(|pv| pv.pending_transaction(hash))
+                            .and_then(|pv| pv.pending_transaction(hash).transpose())
                             .transpose()?
                             .map(Tx::from)
                     }
@@ -493,8 +486,8 @@ where
                         //     // Find the transaction in the pending block that matches the hash
                         //     executor.read().transactions().iter().find_map(|(tx, res)| {
                         //         if tx.hash == hash {
-                        //             // If the transaction is found, only return the receipt if it's
-                        //             // successful
+                        //             // If the transaction is found, only return the receipt if
+                        // it's             // successful
                         //             match res {
                         //                 ExecutionResult::Success { receipt, .. } => {
                         //                     Some(receipt.clone())
@@ -509,7 +502,7 @@ where
 
                         let receipt = this
                             .pending_provider()
-                            .map(|pv| pv.pending_receipt(hash))
+                            .and_then(|pv| pv.pending_receipt(hash).transpose())
                             .transpose()?;
 
                         if let Some(receipt) = receipt {
@@ -573,31 +566,8 @@ where
                 }
 
                 // seach in the pending block if the transaction is not found
-                if let Some(pending_executor) = this.pending_executor() {
-                    let pending_executor = pending_executor.read();
-                    let pending_txs = pending_executor.transactions();
-                    let (_, res) = pending_txs
-                        .iter()
-                        .find(|(tx, _)| tx.hash == hash)
-                        .ok_or(StarknetApiError::TxnHashNotFound)?;
-
-                    // TODO: should impl From<ExecutionResult> for TransactionStatus
-                    let status = match res {
-                        ExecutionResult::Failed { .. } => TransactionStatus::Rejected,
-                        ExecutionResult::Success { receipt, .. } => {
-                            if receipt.is_reverted() {
-                                TransactionStatus::AcceptedOnL2(
-                                    TransactionExecutionStatus::Reverted,
-                                )
-                            } else {
-                                TransactionStatus::AcceptedOnL2(
-                                    TransactionExecutionStatus::Succeeded,
-                                )
-                            }
-                        }
-                    };
-
-                    Ok(Some(status))
+                if let Some(provider) = this.pending_provider() {
+                    Ok(provider.pending_transaction_status(hash)?)
                 } else {
                     // Err(StarknetApiError::TxnHashNotFound)
                     Ok(None)
@@ -624,8 +594,8 @@ where
                 let provider = this.inner.backend.blockchain.provider();
 
                 if BlockIdOrTag::Tag(BlockTag::Pending) == block_id {
-                    if let Some(executor) = this.pending_executor() {
-                        let block_env = executor.read().block_env();
+                    if let Some(pending_provider) = this.pending_provider() {
+                        let block_env = pending_provider.pending_block_env()?;
                         let latest_hash = provider.latest_hash()?;
 
                         let l1_gas_prices = block_env.l1_gas_prices.clone();
@@ -647,14 +617,7 @@ where
 
                         // A block should only include successful transactions, we filter out the
                         // failed ones (didn't pass validation stage).
-                        let transactions = executor
-                            .read()
-                            .transactions()
-                            .iter()
-                            .filter(|(_, receipt)| receipt.is_success())
-                            .map(|(tx, _)| tx.clone())
-                            .collect::<Vec<_>>();
-
+                        let transactions = pending_provider.pending_transactions()?;
                         let block = PendingBlockWithTxs::new(header, transactions);
                         return Ok(Some(MaybePendingBlockWithTxs::Pending(block)));
                     }
@@ -690,8 +653,8 @@ where
                 let provider = this.inner.backend.blockchain.provider();
 
                 if BlockIdOrTag::Tag(BlockTag::Pending) == block_id {
-                    if let Some(executor) = this.pending_executor() {
-                        let block_env = executor.read().block_env();
+                    if let Some(pending_provider) = this.pending_provider() {
+                        let block_env = pending_provider.pending_block_env()?;
                         let latest_hash = provider.latest_hash()?;
 
                         let l1_gas_prices = block_env.l1_gas_prices.clone();
@@ -708,19 +671,11 @@ where
                             protocol_version: this.inner.backend.chain_spec.version.clone(),
                         };
 
-                        let receipts = executor
-                            .read()
-                            .transactions()
-                            .iter()
-                            .filter_map(|(tx, result)| match result {
-                                ExecutionResult::Success { receipt, .. } => {
-                                    Some((tx.clone(), receipt.clone()))
-                                }
-                                ExecutionResult::Failed { .. } => None,
-                            })
-                            .collect::<Vec<_>>();
+                        let transactions = pending_provider.pending_transactions()?;
+                        let receipts = pending_provider.pending_receipts()?;
+                        let tx_receipt_pairs = transactions.into_iter().zip(receipts.into_iter());
 
-                        let block = PendingBlockWithReceipts::new(header, receipts.into_iter());
+                        let block = PendingBlockWithReceipts::new(header, tx_receipt_pairs);
                         return Ok(Some(MaybePendingBlockWithReceipts::Pending(block)));
                     }
                 }
@@ -755,8 +710,8 @@ where
                 let provider = this.inner.backend.blockchain.provider();
 
                 if BlockIdOrTag::Tag(BlockTag::Pending) == block_id {
-                    if let Some(executor) = this.pending_executor() {
-                        let block_env = executor.read().block_env();
+                    if let Some(pending_provider) = this.pending_provider() {
+                        let block_env = pending_provider.pending_block_env()?;
                         let latest_hash = provider.latest_hash().map_err(StarknetApiError::from)?;
 
                         let l1_gas_prices = block_env.l1_gas_prices.clone();
@@ -778,15 +733,13 @@ where
 
                         // A block should only include successful transactions, we filter out the
                         // failed ones (didn't pass validation stage).
-                        let transactions = executor
-                            .read()
-                            .transactions()
-                            .iter()
-                            .filter(|(_, receipt)| receipt.is_success())
-                            .map(|(tx, _)| tx.hash)
+                        let hashes = pending_provider
+                            .pending_transactions()?
+                            .into_iter()
+                            .map(|tx| tx.hash)
                             .collect::<Vec<_>>();
 
-                        let block = PendingBlockWithTxHashes::new(header, transactions);
+                        let block = PendingBlockWithTxHashes::new(header, hashes);
                         return Ok(Some(MaybePendingBlockWithTxHashes::Pending(block)));
                     }
                 }
@@ -1070,9 +1023,9 @@ where
                     return Ok(EventsPage { events, continuation_token });
                 }
 
-                if let Some(executor) = self.pending_executor() {
+                if let Some(provider) = self.pending_provider() {
                     let cursor = utils::events::fetch_pending_events(
-                        &executor,
+                        provider,
                         &filter,
                         chunk_size,
                         cursor,
@@ -1089,10 +1042,10 @@ where
             }
 
             (EventBlockId::Pending, EventBlockId::Pending) => {
-                if let Some(executor) = self.pending_executor() {
+                if let Some(provider) = self.pending_provider() {
                     let cursor = continuation_token.and_then(|t| t.to_token().map(|t| t.into()));
                     let new_cursor = utils::events::fetch_pending_events(
-                        &executor,
+                        provider,
                         &filter,
                         chunk_size,
                         cursor,
@@ -1157,10 +1110,7 @@ where
     }
 }
 
-impl<EF> Clone for StarknetApi<EF>
-where
-    EF: ExecutorFactory,
-{
+impl<EF, P> Clone for StarknetApi<EF, P> {
     fn clone(&self) -> Self {
         Self { inner: Arc::clone(&self.inner) }
     }
