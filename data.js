@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1733280112385,
+  "lastUpdate": 1733320144533,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -38137,6 +38137,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7881807,
             "range": "± 235703",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "ocheretovich@gmail.com",
+            "name": "Ocheretovich",
+            "username": "Ocheretovich"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "68999b24ded646ab512d201a0c722303ae8fa833",
+          "message": "docs: fix discord invite link (#2761)\n\nThe old Discord invite is invalid",
+          "timestamp": "2024-12-04T21:32:42+08:00",
+          "tree_id": "877e9f1b2b8c8afeb158d324f09d69c7d468c37f",
+          "url": "https://github.com/dojoengine/dojo/commit/68999b24ded646ab512d201a0c722303ae8fa833"
+        },
+        "date": 1733320143030,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10169258585,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
