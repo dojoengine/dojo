@@ -68,7 +68,7 @@ jobs:
     
       - name: Set PATH for asdf
         run: |
-          echo "$HOME/.asdf/bin:$HOME/.asdf/shims" >> $GITHUB_ENV
+          echo "PATH=$HOME/.asdf/bin:$HOME/.asdf/shims:$PATH" >> $GITHUB_ENV
 
       - name: Install Scarb
         run: |
