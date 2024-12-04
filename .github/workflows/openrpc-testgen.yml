@@ -90,11 +90,6 @@ jobs:
 
       - name: Run testgen-runner Podman container
         run: |
-          podman run --rm \
+          sudo podman run --rm \
             uacias/katana-runner:v0.0.1
 
-      - name: Upload Code Coverage Report
-        if: success()
-        uses: codecov/codecov-action@v4
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
