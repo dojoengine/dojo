@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1733415022475,
+  "lastUpdate": 1733415221306,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -38713,6 +38713,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10383874573,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ea0973ca2f5f51ee523493076ad6d6785121be0b",
+          "message": "fix(torii/graphql): filter out tokens with zero balance (#2769)\n\ncommit-id:11f63cc1\n\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-12-05T09:53:55-06:00",
+          "tree_id": "18eff668e3fb7226476824c9b2d715879ac2207b",
+          "url": "https://github.com/dojoengine/dojo/commit/ea0973ca2f5f51ee523493076ad6d6785121be0b"
+        },
+        "date": 1733415219560,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2426767,
+            "range": "± 33928",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 7878617,
+            "range": "± 405437",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3635136268,
+            "range": "± 845691739",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8030125,
+            "range": "± 141483",
             "unit": "ns/iter"
           }
         ]
