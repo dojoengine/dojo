@@ -2,7 +2,6 @@ use std::net::{IpAddr, Ipv4Addr};
 use std::str::FromStr;
 
 use anyhow::Context;
-use clap::ArgAction;
 use serde::ser::SerializeSeq;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::Felt;
@@ -102,7 +101,11 @@ pub struct IndexingOptions {
     pub blocks_chunk_size: u64,
 
     /// Enable indexing pending blocks
-    #[arg(long = "indexing.pending", action = ArgAction::Set, default_value_t = true, help = "Whether or not to index pending blocks.")]
+    #[arg(
+        long = "indexing.pending",
+        default_value_t = true,
+        help = "Whether or not to index pending blocks."
+    )]
     #[serde(default)]
     pub pending: bool,
 
@@ -127,7 +130,6 @@ pub struct IndexingOptions {
     /// Whether or not to index world transactions
     #[arg(
         long = "indexing.transactions",
-        action = ArgAction::Set,
         default_value_t = false,
         help = "Whether or not to index world transactions and keep them in the database."
     )]
@@ -214,7 +216,11 @@ impl IndexingOptions {
 #[command(next_help_heading = "Events indexing options")]
 pub struct EventsOptions {
     /// Whether or not to index raw events
-    #[arg(long = "events.raw", action = ArgAction::Set, default_value_t = false, help = "Whether or not to index raw events.")]
+    #[arg(
+        long = "events.raw",
+        default_value_t = false,
+        help = "Whether or not to index raw events."
+    )]
     #[serde(default)]
     pub raw: bool,
 

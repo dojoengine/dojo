@@ -103,10 +103,10 @@ async fn fetch_token_balances(
          JOIN tokens t ON b.token_id = t.id
          JOIN contracts c ON t.contract_address = c.contract_address"
     );
+
+    // Only select balances for the given account address and non-zero balances.
     let mut conditions = vec![
         "(b.account_address = ?)".to_string(),
-        "(t.metadata IS NULL OR length(t.metadata) > 0)".to_string(),
-        // Filter out zero balance
         "b.balance != '0x0000000000000000000000000000000000000000000000000000000000000000'"
             .to_string(),
     ];
@@ -241,17 +241,36 @@ fn token_balances_connection_output<'a>(
                 assert!(token_id.len() == 2);
 
                 let metadata_str = row.metadata;
-                let metadata: serde_json::Value =
-                    serde_json::from_str(&metadata_str).expect("metadata is always json");
-                let metadata_name =
-                    metadata.get("name").map(|v| v.to_string().trim_matches('"').to_string());
-                let metadata_description = metadata
-                    .get("description")
-                    .map(|v| v.to_string().trim_matches('"').to_string());
-                let metadata_attributes =
-                    metadata.get("attributes").map(|v| v.to_string().trim_matches('"').to_string());
+                let (
+                    metadata_str,
+                    metadata_name,
+                    metadata_description,
+                    metadata_attributes,
+                    image_path,
+                ) = if metadata_str.is_empty() {
+                    (String::new(), None, None, None, String::new())
+                } else {
+                    let metadata: serde_json::Value =
+                        serde_json::from_str(&metadata_str).expect("metadata is always json");
+                    let metadata_name =
+                        metadata.get("name").map(|v| v.to_string().trim_matches('"').to_string());
+                    let metadata_description = metadata
+                        .get("description")
+                        .map(|v| v.to_string().trim_matches('"').to_string());
+                    let metadata_attributes = metadata
+                        .get("attributes")
+                        .map(|v| v.to_string().trim_matches('"').to_string());
 
-                let image_path = format!("{}/{}", token_id.join("/"), "image");
+                    let image_path = format!("{}/{}", token_id.join("/"), "image");
+
+                    (
+                        metadata_str,
+                        metadata_name,
+                        metadata_description,
+                        metadata_attributes,
+                        image_path,
+                    )
+                };
 
                 let token_metadata = Erc721Token {
                     name: row.name,

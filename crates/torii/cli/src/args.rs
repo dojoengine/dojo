@@ -218,12 +218,9 @@ mod test {
             "http://0.0.0.0:6060",
             "--db-dir",
             "/tmp/torii-test2",
-            "--events.raw",
-            "false",
             "--events.historical",
             "a-A",
             "--indexing.transactions",
-            "true",
             "--config",
             path_str.as_str(),
         ];
