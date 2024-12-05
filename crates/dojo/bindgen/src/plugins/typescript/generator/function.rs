@@ -14,7 +14,7 @@ impl TsFunctionGenerator {
         if !buffer.has("import { DojoProvider } from ") {
             buffer.insert(0, "import { DojoProvider } from \"@dojoengine/core\";".to_owned());
             buffer
-                .insert(1, format!("import {{ Account, {} }} from \"starknet\";", JS_BIGNUMBERISH));
+                .insert(1, format!("import {{ Account, AccountInterface, {} }} from \"starknet\";", JS_BIGNUMBERISH));
             buffer.insert(2, "import * as models from \"./models.gen\";\n".to_owned());
         }
     }
@@ -79,7 +79,7 @@ impl TsFunctionGenerator {
 
     fn format_function_inputs(&self, token: &Function) -> String {
         let inputs = match token.state_mutability {
-            StateMutability::External => vec!["snAccount: Account".to_owned()],
+            StateMutability::External => vec!["snAccount: Account | AccountInterface".to_owned()],
             StateMutability::View => Vec::new(),
         };
         token
@@ -259,7 +259,7 @@ mod tests {
     fn test_generate_system_function() {
         let generator = TsFunctionGenerator {};
         let function = create_change_theme_function();
-        let expected = "\tconst actions_changeTheme = async (snAccount: Account, value: \
+        let expected = "\tconst actions_changeTheme = async (snAccount: Account | AccountInterface , value: \
                         BigNumberish) => {
 \t\ttry {
 \t\t\treturn await provider.execute(
@@ -292,7 +292,7 @@ mod tests {
     fn test_format_function_inputs() {
         let generator = TsFunctionGenerator {};
         let function = create_change_theme_function();
-        let expected = "snAccount: Account, value: BigNumberish";
+        let expected = "snAccount: Account | AccountInterface, value: BigNumberish";
         assert_eq!(expected, generator.format_function_inputs(&function))
     }
     #[test]
@@ -307,7 +307,7 @@ mod tests {
     fn test_format_function_inputs_complex() {
         let generator = TsFunctionGenerator {};
         let function = create_change_theme_function();
-        let expected = "snAccount: Account, value: BigNumberish";
+        let expected = "snAccount: Account | AccountInterface, value: BigNumberish";
         assert_eq!(expected, generator.format_function_inputs(&function))
     }
 
