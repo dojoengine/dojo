@@ -81,6 +81,6 @@ jobs:
         name: Move cache
         run: |
           rm -rf /tmp/.buildx-cache/prebuild
-          mv /tmp/.buildx-cache-new/prebuild /tmp/.buildx-cache/prebuild
+          mv /tmp/.buildx-cache-new/prebuild /tmp/.buildx-cache/prebuild || true
           rm -rf /tmp/.buildx-cache/build
-          mv /tmp/.buildx-cache-new/build /tmp/.buildx-cache/build
+          mv /tmp/.buildx-cache-new/build /tmp/.buildx-cache/build || true
