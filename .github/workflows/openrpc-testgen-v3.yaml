@@ -14,22 +14,6 @@ jobs:
       - name: Checkout main repository
         uses: actions/checkout@v3
 
-      - name: Cache APT lists
-        uses: actions/cache@v3
-        with:
-          path: /var/lib/apt/lists
-          key: ${{ runner.os }}-apt-lists-${{ hashFiles('**/sources.list') }}
-          restore-keys: |
-            ${{ runner.os }}-apt-lists-
-
-      - name: Cache APT archives
-        uses: actions/cache@v3
-        with:
-          path: /var/cache/apt/archives
-          key: ${{ runner.os }}-apt-archives-${{ hashFiles('**/sources.list') }}
-          restore-keys: |
-            ${{ runner.os }}-apt-archives-
-
       - name: Install build dependencies
         run: |
           sudo apt-get update
