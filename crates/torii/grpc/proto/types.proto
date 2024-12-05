@@ -92,11 +92,6 @@ message Clause {
     }
 }
 
-message TimeClause {
-    uint64 updated_before = 1;
-    uint64 updated_after = 2;
-}
-
 message ModelKeysClause {
     string model = 2;
     repeated bytes keys = 3;
