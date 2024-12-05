@@ -101,7 +101,11 @@ pub struct IndexingOptions {
     pub blocks_chunk_size: u64,
 
     /// Enable indexing pending blocks
-    #[arg(long = "indexing.pending", default_value_t = true, help = "Whether or not to index pending blocks.")]
+    #[arg(
+        long = "indexing.pending",
+        default_value_t = true,
+        help = "Whether or not to index pending blocks."
+    )]
     #[serde(default)]
     pub pending: bool,
 
@@ -212,7 +216,11 @@ impl IndexingOptions {
 #[command(next_help_heading = "Events indexing options")]
 pub struct EventsOptions {
     /// Whether or not to index raw events
-    #[arg(long = "events.raw", default_value_t = false, help = "Whether or not to index raw events.")]
+    #[arg(
+        long = "events.raw",
+        default_value_t = false,
+        help = "Whether or not to index raw events."
+    )]
     #[serde(default)]
     pub raw: bool,
 
