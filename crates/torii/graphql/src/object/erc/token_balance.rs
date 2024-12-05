@@ -103,7 +103,13 @@ async fn fetch_token_balances(
          JOIN tokens t ON b.token_id = t.id
          JOIN contracts c ON t.contract_address = c.contract_address"
     );
-    let mut conditions = vec!["(b.account_address = ?)".to_string()];
+
+    // Only select balances for the given account address and non-zero balances.
+    let mut conditions = vec![
+        "(b.account_address = ?)".to_string(),
+        "b.balance != '0x0000000000000000000000000000000000000000000000000000000000000000'"
+            .to_string(),
+    ];
 
     let mut cursor_param = &connection.after;
     if let Some(after_cursor) = &connection.after {
