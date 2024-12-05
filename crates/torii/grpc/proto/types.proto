@@ -70,7 +70,7 @@ message ModelUpdate {
 }
 
 message Pagination {
-    // Time-based pagination (using block time or creation time)
+    // Updated at time-based pagination 
     uint64 updated_before = 1;  
     uint64 updated_after = 2;   
     
