@@ -78,11 +78,6 @@ jobs:
           asdf global scarb 2.8.4
         shell: bash
 
-      - name: Verify Scarb installation
-        run: |
-          scarb --version
-        shell: bash
-
       - name: Cache target directory
         uses: actions/cache@v3
         with:
@@ -118,33 +113,22 @@ jobs:
 
       - name: Scarb build
         run: |
-          cd katana-runner
           scarb build
-
-      - name: Verify Scarb build output
-        run: |
-          cd katana-runner
-          ls -la target/dev/
-        shell: bash
+        working-directory: katana-runner
 
       - name: Build openrpc-testgen-runner
         run: |
-          cd katana-runner
-          cargo build --release --features katana
-
-      - name: Make openrpc-testgen-runner executable
-        run: |
-          chmod +x katana-runner/target/release/openrpc-testgen-runner
-
+          cargo build --release --features katana -p openrpc-testgen -p openrpc-testgen-runner
+        working-directory: katana-runner
+        
       - name: Run openrpc-testgen-runner binary
         run: |
-          cd katana-runner 
           target/release/openrpc-testgen-runner \
           --urls "http://127.0.0.1:5050" \
           --paymaster-account-address "0x127fd5f1fe78a71f8bcd1fec63e3fe2f0486b6ecd5c86a0466c3a21fa5cfcec" \
           --paymaster-private-key "0xc5b2fcab997346f3ea1c00b002ecf6f382c5f9c9659a3894eb783c5320f912" \
           --udc-address "0x41a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf" \
           --account-class-hash "0x07dc7899aa655b0aae51eadff6d801a58e97dd99cf4666ee59e704249e51adf2"
-
+        working-directory: katana-runner
 
 
