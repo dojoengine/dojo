@@ -8,4 +8,4 @@ version.workspace = true
 [dependencies]
 cairo-lang-language-server.workspace = true
 clap.workspace = true
-dojo-lang.workspace = true
+dojo-macros.workspace = true

@@ -16,7 +16,6 @@ use cairo_lang_test_plugin::{test_plugin_suite, TestsCompilationConfig};
 use cairo_lang_test_runner::{CompiledTestRunner, RunProfilerConfig, TestCompiler, TestRunConfig};
 use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
 use clap::Args;
-use dojo_lang::dojo_plugin_suite;
 use itertools::Itertools;
 use scarb::compiler::{
     CairoCompilationUnit, CompilationUnit, CompilationUnitAttributes, ContractSelector,
@@ -197,7 +196,6 @@ pub(crate) fn build_root_database(unit: &CairoCompilationUnit) -> Result<RootDat
     b.with_cfg(CfgSet::from_iter([Cfg::name("test"), Cfg::kv("target", "test")]));
 
     b.with_plugin_suite(test_plugin_suite());
-    b.with_plugin_suite(dojo_plugin_suite());
     b.with_plugin_suite(starknet_plugin_suite());
 
     b.build()
