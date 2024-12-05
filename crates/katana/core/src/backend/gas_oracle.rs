@@ -64,11 +64,7 @@ impl L1GasOracle {
     pub fn current_gas_prices(&self) -> GasPrices {
         match self {
             L1GasOracle::Fixed(fixed) => fixed.current_gas_prices(),
-            L1GasOracle::Sampled(sampled) => sampled
-                .prices
-                .try_lock()
-                .map(|prices| prices.gas_prices.clone())
-                .unwrap_or_else(GasPrices::default),
+            L1GasOracle::Sampled(sampled) => sampled.prices.lock().gas_prices.clone(),
         }
     }
 
@@ -76,11 +72,7 @@ impl L1GasOracle {
     pub fn current_data_gas_prices(&self) -> GasPrices {
         match self {
             L1GasOracle::Fixed(fixed) => fixed.current_data_gas_prices(),
-            L1GasOracle::Sampled(sampled) => sampled
-                .prices
-                .try_lock()
-                .map(|prices| prices.data_gas_prices.clone())
-                .unwrap_or_else(GasPrices::default),
+            L1GasOracle::Sampled(sampled) => sampled.prices.lock().data_gas_prices.clone(),
         }
     }
 
