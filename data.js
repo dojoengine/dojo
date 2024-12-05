@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1733413286579,
+  "lastUpdate": 1733415022475,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -38683,6 +38683,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7853636,
             "range": "± 30864",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ea0973ca2f5f51ee523493076ad6d6785121be0b",
+          "message": "fix(torii/graphql): filter out tokens with zero balance (#2769)\n\ncommit-id:11f63cc1\n\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-12-05T09:53:55-06:00",
+          "tree_id": "18eff668e3fb7226476824c9b2d715879ac2207b",
+          "url": "https://github.com/dojoengine/dojo/commit/ea0973ca2f5f51ee523493076ad6d6785121be0b"
+        },
+        "date": 1733415020765,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10383874573,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
