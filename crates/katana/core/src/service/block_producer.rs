@@ -792,14 +792,15 @@ impl<EF: ExecutorFactory> PendingBlockProvider for InstantBlockProducer<EF> {
     }
 
     fn pending_block_env(&self) -> ProviderResult<BlockEnv> {
-        // In instant mining mode, we don't have a notion of 'pending' block as a block is mined instantly
-        // when a valid transaction is submitted. So we need to mimic how a new block env is created in
-        // interval mining mode.
+        // In instant mining mode, we don't have a notion of 'pending' block as a block is mined
+        // instantly when a valid transaction is submitted. So we need to mimic how a new
+        // block env is created in interval mining mode.
         //
-        // It is important that we update the block env here especially for the block timestamp. Because if
-        // a fee estimate is requested using the pending block in instant mode, and the timestamp is NOT
-        // UPDATED, it will be estimated using the block timestamp of the last mined block. This is not ideal
-        // as the fee estimate should be based on the block timestamp of the block that the transaction may
+        // It is important that we update the block env here especially for the block timestamp.
+        // Because if a fee estimate is requested using the pending block in instant mode,
+        // and the timestamp is NOT UPDATED, it will be estimated using the block timestamp
+        // of the last mined block. This is not ideal as the fee estimate should be based on
+        // the block timestamp of the block that the transaction may
 
         let num = self.backend.blockchain.provider().latest_number()?;
         let env = self.backend.blockchain.provider().block_env_at(num.into())?;
@@ -855,25 +856,23 @@ impl<EF: ExecutorFactory> PendingBlockProvider for InstantBlockProducer<EF> {
 
 impl<EF: ExecutorFactory> PendingBlockProvider for IntervalBlockProducer<EF> {
     fn pending_transaction(&self, hash: TxHash) -> ProviderResult<Option<TxWithHash>> {
-        let transaction = self.executor().read().transactions().iter().find_map(|(tx, _)| {
-            if tx.hash == hash {
-                Some(tx.clone())
-            } else {
-                None
-            }
-        });
+        let transaction = self
+            .executor()
+            .read()
+            .transactions()
+            .iter()
+            .find_map(|(tx, _)| if tx.hash == hash { Some(tx.clone()) } else { None });
 
         Ok(transaction)
     }
 
     fn pending_receipt(&self, hash: TxHash) -> ProviderResult<Option<Receipt>> {
-        let receipt = self.executor().read().transactions().iter().find_map(|(tx, res)| {
-            if tx.hash == hash {
-                res.receipt().cloned()
-            } else {
-                None
-            }
-        });
+        let receipt = self
+            .executor()
+            .read()
+            .transactions()
+            .iter()
+            .find_map(|(tx, res)| if tx.hash == hash { res.receipt().cloned() } else { None });
 
         Ok(receipt)
     }
