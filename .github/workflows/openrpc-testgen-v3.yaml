@@ -68,10 +68,11 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
 
-      - name: Install Scarb
+      - name: Install Scarb via script
         run: |
-          cargo install scarb --version 2.8.4
-          echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> $GITHUB_ENV
+          export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
+          curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | bash -s -- -v 2.8.4
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
 
       - name: Verify Scarb installation
