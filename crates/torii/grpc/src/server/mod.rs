@@ -217,6 +217,7 @@ impl DojoWorld {
         Ok(proto::types::WorldMetadata { world_address, models: models_metadata })
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn entities_all(
         &self,
         table: &str,
