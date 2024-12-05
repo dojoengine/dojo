@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1733413113028,
+  "lastUpdate": 1733413286579,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -38635,6 +38635,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10410811218,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "90e2edda9777775caee2a7dfb2c56ba755589ec1",
+          "message": "fix(torii-core): store v3 transactions (#2768)",
+          "timestamp": "2024-12-05T09:21:47-06:00",
+          "tree_id": "80e12a34cca862f750b8668466f72a9c64456db4",
+          "url": "https://github.com/dojoengine/dojo/commit/90e2edda9777775caee2a7dfb2c56ba755589ec1"
+        },
+        "date": 1733413284907,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2419227,
+            "range": "± 27405",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8030567,
+            "range": "± 344830",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3622807075,
+            "range": "± 788941761",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 7853636,
+            "range": "± 30864",
             "unit": "ns/iter"
           }
         ]
