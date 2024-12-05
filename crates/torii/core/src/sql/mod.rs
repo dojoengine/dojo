@@ -543,6 +543,14 @@ impl Sql {
 
         let (transaction_hash, sender_address, calldata, max_fee, signature, nonce) =
             match transaction {
+                Transaction::Invoke(InvokeTransaction::V3(invoke_v3_transaction)) => (
+                    Argument::FieldElement(invoke_v3_transaction.transaction_hash),
+                    Argument::FieldElement(invoke_v3_transaction.sender_address),
+                    Argument::String(felts_to_sql_string(&invoke_v3_transaction.calldata)),
+                    Argument::FieldElement(Felt::ZERO), // has no max_fee
+                    Argument::String(felts_to_sql_string(&invoke_v3_transaction.signature)),
+                    Argument::FieldElement(invoke_v3_transaction.nonce),
+                ),
                 Transaction::Invoke(InvokeTransaction::V1(invoke_v1_transaction)) => (
                     Argument::FieldElement(invoke_v1_transaction.transaction_hash),
                     Argument::FieldElement(invoke_v1_transaction.sender_address),
