@@ -1,4 +1,4 @@
-name: openrpc-testgenv2
+name: openrpc-testgenv3
 
 on:
   workflow_dispatch:
@@ -42,6 +42,11 @@ jobs:
   test:
     needs: build
     runs-on: arc-runner-set
+    env:
+      PAYMASTER_ACCOUNT_ADDRESS: ${{ vars.PAYMASTER_ACCOUNT_ADDRESS }}
+      PAYMASTER_PRIVATE_KEY: ${{ vars.PAYMASTER_PRIVATE_KEY }}
+      UDC_ADDRESS: ${{ vars.UDC_ADDRESS }}
+      ACCOUNT_CLASS_HASH: ${{ vars.ACCOUNT_CLASS_HASH }}
     steps:
       - name: Checkout main repository
         uses: actions/checkout@v3
