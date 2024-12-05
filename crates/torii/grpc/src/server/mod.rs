@@ -258,6 +258,8 @@ impl DojoWorld {
         entity_relation_column: &str,
         entities: Vec<(String, String)>,
         dont_include_hashed_keys: bool,
+        where_clause: Option<&str>,
+        order_by: Option<&str>,
     ) -> Result<Vec<proto::types::Entity>, Error> {
         // Group entities by their model combinations
         let mut model_groups: HashMap<String, Vec<String>> = HashMap::new();
@@ -293,6 +295,11 @@ impl DojoWorld {
             }
         }
 
+        let where_clause = where_clause.map_or(
+            "[{table}].id IN (SELECT id FROM temp_entity_ids WHERE model_group = ?)",
+            |clause| &format!("{} AND [{table}].id IN (SELECT id FROM temp_entity_ids WHERE model_group = ?)", clause),
+        );
+
         for (models_str, _) in model_groups {
             let model_ids =
                 models_str.split(',').map(|id| Felt::from_str(id).unwrap()).collect::<Vec<_>>();
@@ -303,9 +310,8 @@ impl DojoWorld {
                 &schemas,
                 table,
                 entity_relation_column,
-                Some(&format!(
-                    "[{table}].id IN (SELECT id FROM temp_entity_ids WHERE model_group = ?)"
-                )),
+                Some(&where_clause),
+                order_by,
                 None,
                 None,
             )?;
@@ -377,6 +383,7 @@ impl DojoWorld {
         limit: Option<u32>,
         offset: Option<u32>,
         dont_include_hashed_keys: bool,
+        where_clause: Option<&str>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         // TODO: use prepared statement for where clause
         let filter_ids = match hashed_keys {
@@ -465,9 +472,19 @@ impl DojoWorld {
         limit: Option<u32>,
         offset: Option<u32>,
         dont_include_hashed_keys: bool,
+        updated_before: Option<u64>,
+        updated_after: Option<u64>,
+        order_by: Option<&str>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         let keys_pattern = build_keys_pattern(keys_clause)?;
 
+        let mut where_clause = vec![];
+        if let Some(updated_before) = updated_before {
+            where_clause.push(format!("updated_at <= {}", updated_before));
+        }
+        if let Some(updated_after) = updated_after {
+            where_clause.push(format!("updated_at >= {}", updated_after));
+        }
         // total count of rows that matches keys_pattern without limit and offset
         let count_query = format!(
             r#"
@@ -628,6 +645,9 @@ impl DojoWorld {
         limit: Option<u32>,
         offset: Option<u32>,
         dont_include_hashed_keys: bool,
+        updated_before: Option<u64>,
+        updated_after: Option<u64>,
+        order_by: Option<&str>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         let comparison_operator = ComparisonOperator::from_repr(member_clause.operator as usize)
             .expect("invalid comparison operator");
@@ -675,14 +695,23 @@ impl DojoWorld {
             self.model_cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect();
 
         // Use the member name directly as the column name since it's already flattened
+        let mut where_clause = format!(
+            "[{}].[{}] {comparison_operator} ?",
+            member_clause.model, member_clause.member
+        );
+        if let Some(updated_before) = updated_before {
+            where_clause += &format!(" AND updated_at <= {}", updated_before);
+        }
+        if let Some(updated_after) = updated_after {
+            where_clause += &format!(" AND updated_at >= {}", updated_after);
+        }
+
         let (entity_query, count_query) = build_sql_query(
             &schemas,
             table,
             entity_relation_column,
-            Some(&format!(
-                "[{}].[{}] {comparison_operator} ?",
-                member_clause.model, member_clause.member
-            )),
+            Some(&where_clause),
+            order_by,
             limit,
             offset,
         )?;
@@ -909,6 +938,15 @@ impl DojoWorld {
         entity_relation_column: &str,
         query: proto::types::Query,
     ) -> Result<proto::world::RetrieveEntitiesResponse, Error> {
+        let order_by = query
+            .order_by
+            .map(|order_by| {
+                format!(
+                    "[{}] [{}] {}",
+                    order_by.model, order_by.member, order_by.direction
+                )
+            });
+
         let (entities, total_count) = match query.clause {
             None => {
                 self.entities_all(
@@ -963,6 +1001,9 @@ impl DojoWorld {
                             Some(query.limit),
                             Some(query.offset),
                             query.dont_include_hashed_keys,
+                            query.updated_before,
+                            query.updated_after,
+                            order_by,
                         )
                         .await?
                     }

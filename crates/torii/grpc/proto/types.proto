@@ -69,21 +69,17 @@ message ModelUpdate {
     ModelDiff model_diff = 2;
 }
 
-message Pagination {
-    // Updated at time-based pagination 
-    uint64 updated_before = 1;  
-    uint64 updated_after = 2;   
-    
-    // Standard offset pagination
-    uint32 limit = 3;           
-    uint32 offset = 4;          
-}
-
 message Query {
     Clause clause = 1;
-    bool dont_include_hashed_keys = 2;
-    repeated OrderBy order_by = 3;
-    Pagination pagination = 4;
+    // Standard offset pagination
+    uint32 limit = 2;
+    uint32 offset = 3;
+    bool dont_include_hashed_keys = 4;
+    repeated OrderBy order_by = 5;
+
+    // Updated at time-based filter 
+    uint64 updated_before = 6;  
+    uint64 updated_after = 7;   
 }
 
 message EventQuery {
