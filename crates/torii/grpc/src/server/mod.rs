@@ -225,6 +225,8 @@ impl DojoWorld {
         limit: u32,
         offset: u32,
         dont_include_hashed_keys: bool,
+        where_clause: Option<&str>,
+        order_by: Option<&str>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         self.query_by_hashed_keys(
             table,
@@ -234,6 +236,8 @@ impl DojoWorld {
             Some(limit),
             Some(offset),
             dont_include_hashed_keys,
+            where_clause,
+            order_by,
         )
         .await
     }
@@ -258,7 +262,6 @@ impl DojoWorld {
         entity_relation_column: &str,
         entities: Vec<(String, String)>,
         dont_include_hashed_keys: bool,
-        where_clause: Option<&str>,
         order_by: Option<&str>,
     ) -> Result<Vec<proto::types::Entity>, Error> {
         // Group entities by their model combinations
@@ -295,11 +298,6 @@ impl DojoWorld {
             }
         }
 
-        let where_clause = where_clause.map_or(
-            "[{table}].id IN (SELECT id FROM temp_entity_ids WHERE model_group = ?)",
-            |clause| &format!("{} AND [{table}].id IN (SELECT id FROM temp_entity_ids WHERE model_group = ?)", clause),
-        );
-
         for (models_str, _) in model_groups {
             let model_ids =
                 models_str.split(',').map(|id| Felt::from_str(id).unwrap()).collect::<Vec<_>>();
@@ -310,7 +308,9 @@ impl DojoWorld {
                 &schemas,
                 table,
                 entity_relation_column,
-                Some(&where_clause),
+                Some(&format!(
+                    "[{table}].id IN (SELECT id FROM temp_entity_ids WHERE model_group = ?)"
+                )),
                 order_by,
                 None,
                 None,
@@ -384,6 +384,7 @@ impl DojoWorld {
         offset: Option<u32>,
         dont_include_hashed_keys: bool,
         where_clause: Option<&str>,
+        order_by: Option<&str>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         // TODO: use prepared statement for where clause
         let filter_ids = match hashed_keys {
@@ -394,9 +395,23 @@ impl DojoWorld {
                     .map(|id| Ok(format!("{table}.id = '{:#x}'", Felt::from_bytes_be_slice(id))))
                     .collect::<Result<Vec<_>, Error>>()?;
 
-                format!("WHERE {}", ids.join(" OR "))
+                format!(
+                    "WHERE {} {}",
+                    ids.join(" OR "),
+                    if let Some(where_clause) = where_clause {
+                        format!("AND {}", where_clause)
+                    } else {
+                        String::new()
+                    }
+                )
             }
-            None => String::new(),
+            None => {
+                if let Some(where_clause) = where_clause {
+                    format!("WHERE {}", where_clause)
+                } else {
+                    String::new()
+                }
+            }
         };
 
         // count query that matches filter_ids
@@ -457,7 +472,13 @@ impl DojoWorld {
             sqlx::query_as(&query).bind(limit).bind(offset).fetch_all(&self.pool).await?;
 
         let entities = self
-            .fetch_entities(table, entity_relation_column, db_entities, dont_include_hashed_keys)
+            .fetch_entities(
+                table,
+                entity_relation_column,
+                db_entities,
+                dont_include_hashed_keys,
+                order_by,
+            )
             .await?;
         Ok((entities, total_count))
     }
@@ -472,25 +493,17 @@ impl DojoWorld {
         limit: Option<u32>,
         offset: Option<u32>,
         dont_include_hashed_keys: bool,
-        updated_before: Option<u64>,
-        updated_after: Option<u64>,
+        where_clause: Option<&str>,
         order_by: Option<&str>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         let keys_pattern = build_keys_pattern(keys_clause)?;
 
-        let mut where_clause = vec![];
-        if let Some(updated_before) = updated_before {
-            where_clause.push(format!("updated_at <= {}", updated_before));
-        }
-        if let Some(updated_after) = updated_after {
-            where_clause.push(format!("updated_at >= {}", updated_after));
-        }
         // total count of rows that matches keys_pattern without limit and offset
         let count_query = format!(
             r#"
             SELECT count(*)
             FROM {table}
-            {}
+            {} {}
         "#,
             if !keys_clause.models.is_empty() {
                 // split the model names to namespace and model
@@ -525,6 +538,11 @@ impl DojoWorld {
                 WHERE {table}.keys REGEXP ?
             "#
                 )
+            },
+            if let Some(where_clause) = where_clause {
+                format!("AND {}", where_clause)
+            } else {
+                String::new()
             }
         );
 
@@ -543,9 +561,14 @@ impl DojoWorld {
                 SELECT {table}.id, {table}.data, {table}.model_id, group_concat({model_relation_table}.model_id) as model_ids
                 FROM {table}
                 JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
-                WHERE {table}.keys REGEXP ?
+                WHERE {table}.keys REGEXP ? {}
                 GROUP BY {table}.event_id
-            "#
+            "#,
+                if let Some(where_clause) = where_clause {
+                    format!("AND {}", where_clause)
+                } else {
+                    String::new()
+                }
             )
         } else {
             format!(
@@ -553,9 +576,14 @@ impl DojoWorld {
                 SELECT {table}.id, group_concat({model_relation_table}.model_id) as model_ids
                 FROM {table}
                 JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
-                WHERE {table}.keys REGEXP ?
+                WHERE {table}.keys REGEXP ? {}
                 GROUP BY {table}.id
-            "#
+            "#,
+                if let Some(where_clause) = where_clause {
+                    format!("AND {}", where_clause)
+                } else {
+                    String::new()
+                }
             )
         };
 
@@ -603,7 +631,13 @@ impl DojoWorld {
             .await?;
 
         let entities = self
-            .fetch_entities(table, entity_relation_column, db_entities, dont_include_hashed_keys)
+            .fetch_entities(
+                table,
+                entity_relation_column,
+                db_entities,
+                dont_include_hashed_keys,
+                order_by,
+            )
             .await?;
         Ok((entities, total_count))
     }
@@ -645,8 +679,7 @@ impl DojoWorld {
         limit: Option<u32>,
         offset: Option<u32>,
         dont_include_hashed_keys: bool,
-        updated_before: Option<u64>,
-        updated_after: Option<u64>,
+        where_clause: Option<&str>,
         order_by: Option<&str>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         let comparison_operator = ComparisonOperator::from_repr(member_clause.operator as usize)
@@ -695,15 +728,10 @@ impl DojoWorld {
             self.model_cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect();
 
         // Use the member name directly as the column name since it's already flattened
-        let mut where_clause = format!(
-            "[{}].[{}] {comparison_operator} ?",
-            member_clause.model, member_clause.member
-        );
-        if let Some(updated_before) = updated_before {
-            where_clause += &format!(" AND updated_at <= {}", updated_before);
-        }
-        if let Some(updated_after) = updated_after {
-            where_clause += &format!(" AND updated_at >= {}", updated_after);
+        let mut where_clause =
+            format!("[{}].[{}] {comparison_operator} ? ", member_clause.model, member_clause.member);
+        if let Some(where_clause) = where_clause {
+            where_clause += &format!(" AND {}", where_clause);
         }
 
         let (entity_query, count_query) = build_sql_query(
@@ -745,8 +773,10 @@ impl DojoWorld {
         limit: Option<u32>,
         offset: Option<u32>,
         dont_include_hashed_keys: bool,
+        where_clause: Option<&str>,
+        order_by: Option<&str>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
-        let (where_clause, having_clause, join_clause, bind_values) =
+        let (composite_where_clause, having_clause, join_clause, bind_values) =
             build_composite_clause(table, model_relation_table, &composite)?;
 
         let count_query = format!(
@@ -755,9 +785,14 @@ impl DojoWorld {
             FROM [{table}]
             JOIN {model_relation_table} ON [{table}].id = {model_relation_table}.entity_id
             {join_clause}
-            {where_clause}
+            {composite_where_clause} {}
             {having_clause}
-            "#
+            "#,
+            if let Some(where_clause) = where_clause {
+                format!("AND {}", where_clause)
+            } else {
+                String::new()
+            }
         );
 
         let mut count_query = sqlx::query_scalar::<_, u32>(&count_query);
@@ -776,12 +811,17 @@ impl DojoWorld {
             FROM [{table}]
             JOIN {model_relation_table} ON [{table}].id = {model_relation_table}.entity_id
             {join_clause}
-            {where_clause}
+            {composite_where_clause} {}
             GROUP BY [{table}].id
             {having_clause}
             ORDER BY [{table}].event_id DESC
             LIMIT ? OFFSET ?
-            "#
+            "#,
+            if let Some(where_clause) = where_clause {
+                format!("AND {}", where_clause)
+            } else {
+                String::new()
+            }
         );
 
         let mut db_query = sqlx::query_as(&query);
@@ -793,7 +833,13 @@ impl DojoWorld {
         let db_entities: Vec<(String, String)> = db_query.fetch_all(&self.pool).await?;
 
         let entities = self
-            .fetch_entities(table, entity_relation_column, db_entities, dont_include_hashed_keys)
+            .fetch_entities(
+                table,
+                entity_relation_column,
+                db_entities,
+                dont_include_hashed_keys,
+                order_by,
+            )
             .await?;
         Ok((entities, total_count))
     }
@@ -938,14 +984,17 @@ impl DojoWorld {
         entity_relation_column: &str,
         query: proto::types::Query,
     ) -> Result<proto::world::RetrieveEntitiesResponse, Error> {
-        let order_by = query
-            .order_by
-            .map(|order_by| {
-                format!(
-                    "[{}] [{}] {}",
-                    order_by.model, order_by.member, order_by.direction
-                )
-            });
+        let order_by = query.order_by.map(|order_by| {
+            format!("[{}] [{}] {}", order_by.model, order_by.member, order_by.direction)
+        });
+
+        let where_clause = String::new();
+        if let Some(updated_before) = query.updated_before {
+            where_clause += &format!("{table}.updated_at <= {}", updated_before);
+        }
+        if let Some(updated_after) = query.updated_after {
+            where_clause += &format!(" AND {table}.updated_at >= {}", updated_after);
+        }
 
         let (entities, total_count) = match query.clause {
             None => {
@@ -956,6 +1005,8 @@ impl DojoWorld {
                     query.limit,
                     query.offset,
                     query.dont_include_hashed_keys,
+                    &where_clause,
+                    order_by,
                 )
                 .await?
             }
@@ -977,6 +1028,8 @@ impl DojoWorld {
                             Some(query.limit),
                             Some(query.offset),
                             query.dont_include_hashed_keys,
+                            &where_clause,
+                            order_by,
                         )
                         .await?
                     }
@@ -989,6 +1042,8 @@ impl DojoWorld {
                             Some(query.limit),
                             Some(query.offset),
                             query.dont_include_hashed_keys,
+                            &where_clause,
+                            order_by,
                         )
                         .await?
                     }
@@ -1001,8 +1056,7 @@ impl DojoWorld {
                             Some(query.limit),
                             Some(query.offset),
                             query.dont_include_hashed_keys,
-                            query.updated_before,
-                            query.updated_after,
+                            &where_clause,
                             order_by,
                         )
                         .await?
@@ -1016,6 +1070,8 @@ impl DojoWorld {
                             Some(query.limit),
                             Some(query.offset),
                             query.dont_include_hashed_keys,
+                            &where_clause,
+                            order_by,
                         )
                         .await?
                     }
