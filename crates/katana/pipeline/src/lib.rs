@@ -13,10 +13,10 @@ use tokio::sync::watch;
 use tracing::{error, info};
 
 /// The result of a pipeline execution.
-pub type PipelineResult = Result<(), Error>;
+pub type PipelineResult<T> = Result<T, Error>;
 
 /// The future type for [Pipeline]'s implementation of [IntoFuture].
-pub type PipelineFut = BoxFuture<'static, PipelineResult>;
+pub type PipelineFut = BoxFuture<'static, PipelineResult<()>>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -30,13 +30,14 @@ pub enum Error {
     Provider(#[from] ProviderError),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PipelineHandle {
     tx: watch::Sender<Option<BlockNumber>>,
 }
 
 impl PipelineHandle {
     pub fn set_tip(&self, tip: BlockNumber) {
+        info!(target: "pipeline", %tip, "Setting new tip");
         self.tx.send(Some(tip)).expect("channel closed");
     }
 }
@@ -53,15 +54,15 @@ pub struct Pipeline<P> {
     chunk_size: u64,
     provider: P,
     stages: Vec<Box<dyn Stage>>,
-    tip: watch::Receiver<Option<BlockNumber>>,
+    tip_watcher: (watch::Receiver<Option<BlockNumber>>, watch::Sender<Option<BlockNumber>>),
 }
 
 impl<P> Pipeline<P> {
     /// Create a new empty pipeline.
     pub fn new(provider: P, chunk_size: u64) -> (Self, PipelineHandle) {
         let (tx, rx) = watch::channel(None);
-        let handle = PipelineHandle { tx };
-        let pipeline = Self { stages: Vec::new(), tip: rx, provider, chunk_size };
+        let handle = PipelineHandle { tx: tx.clone() };
+        let pipeline = Self { stages: Vec::new(), tip_watcher: (rx, tx), provider, chunk_size };
         (pipeline, handle)
     }
 
@@ -76,33 +77,37 @@ impl<P> Pipeline<P> {
     pub fn add_stages(&mut self, stages: impl Iterator<Item = Box<dyn Stage>>) {
         self.stages.extend(stages);
     }
+
+    pub fn handle(&self) -> PipelineHandle {
+        PipelineHandle { tx: self.tip_watcher.1.clone() }
+    }
 }
 
 impl<P: StageCheckpointProvider> Pipeline<P> {
     /// Run the pipeline in a loop.
-    pub async fn run(&mut self) -> PipelineResult {
+    pub async fn run(&mut self) -> PipelineResult<()> {
         let mut current_chunk_tip = self.chunk_size;
 
         loop {
-            let tip = *self.tip.borrow_and_update();
+            let tip = *self.tip_watcher.0.borrow_and_update();
 
-            loop {
-                if let Some(tip) = tip {
-                    let to = current_chunk_tip.min(tip);
-                    self.run_once_until(to).await?;
+            while let Some(tip) = tip {
+                let to = current_chunk_tip.min(tip);
+                let last_block_processed = self.run_once_until(to).await?;
 
-                    if to >= tip {
-                        info!(target: "pipeline", %tip, "Finished processing until tip.");
-                        break;
-                    } else {
-                        current_chunk_tip = (current_chunk_tip + self.chunk_size).min(tip);
-                    }
+                if last_block_processed >= tip {
+                    info!(target: "pipeline", %tip, "Finished processing until tip.");
+                    break;
+                } else {
+                    current_chunk_tip = (last_block_processed + self.chunk_size).min(tip);
                 }
             }
 
+            info!(target: "pipeline", "Waiting for new tip.");
+
             // If we reach here, that means we have run the pipeline up until the `tip`.
             // So, wait until the tip has changed.
-            if self.tip.changed().await.is_err() {
+            if self.tip_watcher.0.changed().await.is_err() {
                 break;
             }
         }
@@ -113,8 +118,10 @@ impl<P: StageCheckpointProvider> Pipeline<P> {
     }
 
     /// Run the pipeline once, until the given block number.
-    async fn run_once_until(&mut self, to: BlockNumber) -> PipelineResult {
-        for stage in &mut self.stages {
+    async fn run_once_until(&mut self, to: BlockNumber) -> PipelineResult<BlockNumber> {
+        let last_stage_idx = self.stages.len() - 1;
+
+        for (i, stage) in self.stages.iter_mut().enumerate() {
             let id = stage.id();
 
             // Get the checkpoint for the stage, otherwise default to block number 0
@@ -123,6 +130,11 @@ impl<P: StageCheckpointProvider> Pipeline<P> {
             // Skip the stage if the checkpoint is greater than or equal to the target block number
             if checkpoint >= to {
                 info!(target: "pipeline", %id, "Skipping stage.");
+
+                if i == last_stage_idx {
+                    return Ok(checkpoint);
+                }
+
                 continue;
             }
 
@@ -135,7 +147,8 @@ impl<P: StageCheckpointProvider> Pipeline<P> {
 
             info!(target: "pipeline", %id, from = %checkpoint, %to, "Stage execution completed.");
         }
-        Ok(())
+
+        Ok(to)
     }
 }
 
@@ -143,7 +156,7 @@ impl<P> IntoFuture for Pipeline<P>
 where
     P: StageCheckpointProvider + 'static,
 {
-    type Output = PipelineResult;
+    type Output = PipelineResult<()>;
     type IntoFuture = PipelineFut;
 
     fn into_future(mut self) -> Self::IntoFuture {
@@ -161,7 +174,7 @@ where
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("Pipeline")
-            .field("tip", &self.tip)
+            .field("tip", &self.tip_watcher)
             .field("provider", &self.provider)
             .field("chunk_size", &self.chunk_size)
             .field("stages", &self.stages.iter().map(|s| s.id()).collect::<Vec<_>>())

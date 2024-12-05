@@ -32,7 +32,7 @@ assert_matches.workspace = true
 starknet.workspace = true
 
 [features]
-default = [ "slot", "server" ]
+default = [ "server", "slot" ]
+server = [  ]
 slot = [ "dep:katana-slot-controller", "katana-primitives/slot" ]
-server = [ ]
 starknet-messaging = [ "katana-node/starknet-messaging" ]

@@ -242,9 +242,18 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                     "Failed to fetch metadata for token_id: {}",
                     register_erc721_token.actual_token_id
                 )
-            })?;
+            });
 
-            serde_json::to_string(&metadata).context("Failed to serialize metadata")?
+            if let Ok(metadata) = metadata {
+                serde_json::to_string(&metadata).context("Failed to serialize metadata")?
+            } else {
+                warn!(
+                contract_address = format!("{:#x}", register_erc721_token.contract_address),
+                    token_id = %register_erc721_token.actual_token_id,
+                    "Error fetching metadata, empty metadata will be used instead.",
+                );
+                "".to_string()
+            }
         };
 
         Ok(RegisterErc721TokenMetadata { query: register_erc721_token, metadata, name, symbol })

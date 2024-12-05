@@ -1,8 +1,12 @@
 use katana_primitives::block::BlockNumber;
 use katana_provider::error::ProviderError;
 
+mod blocks;
+mod classes;
 mod sequencing;
 
+pub use blocks::Blocks;
+pub use classes::Classes;
 pub use sequencing::Sequencing;
 
 /// The result type of a stage execution. See [Stage::execute].
@@ -23,6 +27,14 @@ pub struct StageExecutionOutput {
 pub enum Error {
     #[error(transparent)]
     Provider(#[from] ProviderError),
+
+    /// Errors that could happen during the execution of the [`Blocks`](blocks::Blocks) stage.
+    #[error(transparent)]
+    Blocks(#[from] blocks::Error),
+
+    /// Errors that could happen during the execution of the [`Classes`](classes::Classes) stage.
+    #[error(transparent)]
+    Classes(#[from] classes::Error),
 
     #[error(transparent)]
     Other(#[from] anyhow::Error),

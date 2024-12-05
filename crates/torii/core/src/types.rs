@@ -107,6 +107,8 @@ pub struct Model {
     pub class_hash: String,
     pub contract_address: String,
     pub transaction_hash: String,
+    pub layout: String,
+    pub schema: String,
     pub executed_at: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
 }

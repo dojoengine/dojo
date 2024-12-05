@@ -16,6 +16,7 @@ use starknet::core::types::ResourcePrice;
 use starknet::providers::sequencer::models::BlockStatus;
 
 mod receipt;
+mod serde_utils;
 mod transaction;
 
 pub use receipt::*;

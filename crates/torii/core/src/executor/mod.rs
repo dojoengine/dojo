@@ -614,7 +614,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 let semaphore = self.semaphore.clone();
                 let provider = self.provider.clone();
                 let res = sqlx::query_as::<_, (String, String)>(&format!(
-                    "SELECT name, symbol FROM {TOKENS_TABLE} WHERE contract_address = ?"
+                    "SELECT name, symbol FROM {TOKENS_TABLE} WHERE contract_address = ? LIMIT 1"
                 ))
                 .bind(felt_to_sql_string(&register_erc721_token.contract_address))
                 .fetch_one(&mut **tx)
@@ -679,8 +679,6 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
 
                 self.register_tasks.spawn(async move {
                     let permit = semaphore.acquire().await.unwrap();
-                    let span = tracing::span!(tracing::Level::INFO, "contract_address_span", contract_address = %register_erc721_token.contract_address);
-                    let _enter = span.enter();
 
                     let result = Self::process_register_erc721_token_query(
                         register_erc721_token,
@@ -759,10 +757,12 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 }
             }
             QueryType::Other => {
-                query.execute(&mut **tx).await.with_context(|| {
-                    format!(
-                        "Failed to execute query: {:?}, args: {:?}",
-                        query_message.statement, query_message.arguments
+                query.execute(&mut **tx).await.map_err(|e| {
+                    anyhow::anyhow!(
+                        "Failed to execute query: {:?}, args: {:?}, error: {:?}",
+                        query_message.statement,
+                        query_message.arguments,
+                        e
                     )
                 })?;
             }

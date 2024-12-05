@@ -23,7 +23,9 @@ pub type TxNumber = u64;
 /// The transaction types as defined by the [Starknet API].
 ///
 /// [Starknet API]: https://github.com/starkware-libs/starknet-specs/blob/b5c43955b1868b8e19af6d1736178e02ec84e678/api/starknet_api_openrpc.json
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Default, strum_macros::EnumString, strum_macros::Display,
+)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum TxType {
@@ -42,6 +44,9 @@ pub enum TxType {
     /// It is only used internally for handling messages sent from L1. Therefore, it is not a
     /// transaction that can be broadcasted like the other transaction types.
     L1Handler,
+
+    /// Leagcy transaction type for deploying new contracts.
+    Deploy,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -53,6 +58,31 @@ pub enum Tx {
     L1Handler(L1HandlerTx),
     DeployAccount(DeployAccountTx),
     Deploy(DeployTx),
+}
+
+impl Tx {
+    /// Get the transaction version.
+    pub fn version(&self) -> Felt {
+        match self {
+            Tx::Invoke(tx) => match tx {
+                InvokeTx::V0(_) => Felt::ZERO,
+                InvokeTx::V1(_) => Felt::ONE,
+                InvokeTx::V3(_) => Felt::THREE,
+            },
+            Tx::Declare(tx) => match tx {
+                DeclareTx::V0(_) => Felt::ZERO,
+                DeclareTx::V1(_) => Felt::ONE,
+                DeclareTx::V2(_) => Felt::TWO,
+                DeclareTx::V3(_) => Felt::THREE,
+            },
+            Tx::L1Handler(tx) => tx.version,
+            Tx::DeployAccount(tx) => match tx {
+                DeployAccountTx::V1(_) => Felt::ONE,
+                DeployAccountTx::V3(_) => Felt::THREE,
+            },
+            Tx::Deploy(tx) => tx.version,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -278,16 +308,38 @@ pub enum DeclareTx {
     V1(DeclareTxV1),
     V2(DeclareTxV2),
     V3(DeclareTxV3),
+    V0(DeclareTxV0),
 }
 
 impl DeclareTx {
     pub fn class_hash(&self) -> ClassHash {
         match self {
+            DeclareTx::V0(tx) => tx.class_hash,
             DeclareTx::V1(tx) => tx.class_hash,
             DeclareTx::V2(tx) => tx.class_hash,
             DeclareTx::V3(tx) => tx.class_hash,
         }
     }
+}
+
+/// Represents a legacy v0 declare transaction type.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct DeclareTxV0 {
+    /// The chain id of the chain on which the transaction is initiated.
+    ///
+    /// Used as a simple replay attack protection.
+    #[serde(default)]
+    pub chain_id: ChainId,
+    /// The account address which the transaction is initiated from.
+    pub sender_address: ContractAddress,
+    /// The transaction signature associated with the sender address.
+    pub signature: Vec<Felt>,
+    /// The class hash of the contract class to be declared.
+    pub class_hash: ClassHash,
+    /// The max fee that the sender is willing to pay for the transaction.
+    pub max_fee: u128,
 }
 
 /// Represents a declare transaction type.
@@ -377,6 +429,8 @@ impl DeclareTx {
     /// Compute the hash of the transaction.
     pub fn calculate_hash(&self, is_query: bool) -> TxHash {
         match self {
+            DeclareTx::V0(..) => todo!(),
+
             DeclareTx::V1(tx) => compute_declare_v1_tx_hash(
                 Felt::from(tx.sender_address),
                 tx.class_hash,
