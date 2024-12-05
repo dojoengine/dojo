@@ -65,8 +65,8 @@ pub enum Commands {
     Model(Box<ModelArgs>),
     #[command(about = "Inspect events emitted by the world")]
     Events(Box<EventsArgs>),
-    #[command(about = "Verify a contract")]
-    Verify(Box<VerifyArgs>),
+    #[command(about = "Verify contracts in walnut.dev - transactions debugger and simulator")]
+    WalnutVerify(Box<VerifyArgs>),
 }
 
 impl fmt::Display for Commands {
@@ -85,7 +85,7 @@ impl fmt::Display for Commands {
             Commands::Init(_) => write!(f, "Init"),
             Commands::Model(_) => write!(f, "Model"),
             Commands::Events(_) => write!(f, "Events"),
-            Commands::Verify(_) => write!(f, "Verify"),
+            Commands::WalnutVerify(_) => write!(f, "WalnutVerify"),
         }
     }
 }
@@ -112,7 +112,7 @@ pub fn run(command: Commands, config: &Config) -> Result<()> {
         Commands::Init(args) => args.run(config),
         Commands::Model(args) => args.run(config),
         Commands::Events(args) => args.run(config),
-        Commands::Verify(args) => args.run(config),
+        Commands::WalnutVerify(args) => args.run(config),
     }
 }
 

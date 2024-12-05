@@ -134,6 +134,7 @@ impl ExecuteArgs {
             let invoker = Invoker::new(&account, txn_config);
             let tx_result = invoker.invoke(call).await?;
 
+            #[cfg(feature = "walnut")]
             if let Some(walnut_debugger) = walnut_debugger {
                 walnut_debugger.debug_transaction(&config.ui(), &tx_result)?;
             }
