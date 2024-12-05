@@ -1,13 +1,14 @@
 use cainome::parser::tokens::{Composite, CompositeType};
 
+use super::constants::{CAIRO_ENUM_IMPORT, CAIRO_ENUM_TOKEN, SN_IMPORT_SEARCH};
+use super::token_is_custom_enum;
 use crate::error::BindgenResult;
 use crate::plugins::typescript::generator::JsType;
 use crate::plugins::{BindgenModelGenerator, Buffer};
 
-use super::constants::{CAIRO_ENUM_IMPORT, CAIRO_ENUM_TOKEN, SN_IMPORT_SEARCH};
-use super::token_is_custom_enum;
-
-const CAIRO_ENUM_TYPE_IMPL: &str = "export type TypedCairoEnum<T> = CairoCustomEnum & {\n\tvariant: { [K in keyof T]: T[K] | undefined };\n\tunwrap(): T[keyof T];\n}\n";
+const CAIRO_ENUM_TYPE_IMPL: &str = "export type TypedCairoEnum<T> = CairoCustomEnum & \
+                                    {\n\tvariant: { [K in keyof T]: T[K] | undefined \
+                                    };\n\tunwrap(): T[keyof T];\n}\n";
 
 pub(crate) struct TsEnumGenerator;
 

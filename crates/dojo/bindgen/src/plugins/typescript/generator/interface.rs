@@ -40,6 +40,11 @@ impl BindgenModelGenerator for TsInterfaceGenerator {
         if token.r#type != CompositeType::Struct || token.inners.is_empty() {
             return Ok(String::new());
         }
+        if buffer
+            .has(format!("// Type definition for `{path}` struct", path = token.type_path).as_str())
+        {
+            return Ok(String::new());
+        }
 
         self.check_import(token, buffer);
         self.add_input_type(buffer);
@@ -124,7 +129,8 @@ mod tests {
             result,
             "// Type definition for `core::test::TestStruct` struct\nexport interface TestStruct \
              {\n\tfieldOrder: string[];\n\tfield1: BigNumberish;\n\tfield2: \
-             BigNumberish;\n\tfield3: BigNumberish;\n}\nexport type InputTestStruct = RemoveFieldOrder<TestStruct>;\n"
+             BigNumberish;\n\tfield3: BigNumberish;\n}\nexport type InputTestStruct = \
+             RemoveFieldOrder<TestStruct>;\n"
         );
     }
 

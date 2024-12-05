@@ -26,8 +26,8 @@ impl TsSchemaGenerator {
         let schema_type = "export interface SchemaType extends ISchemaType";
         if !buffer.has(schema_type) {
             buffer.push(format!(
-                "export interface SchemaType extends ISchemaType {{\n\t{ns}: \
-                 {{\n\t\t{}: {},\n\t}},\n}}",
+                "export interface SchemaType extends ISchemaType {{\n\t{ns}: {{\n\t\t{}: \
+                 {},\n\t}},\n}}",
                 type_name, type_name
             ));
             return;
@@ -64,8 +64,7 @@ impl TsSchemaGenerator {
         let const_type = "export const schema: SchemaType";
         if !buffer.has(const_type) {
             buffer.push(format!(
-                "export const schema: SchemaType = {{\n\t{ns}: {{\n\t\t{}: \
-                 {},\n\t}},\n}};",
+                "export const schema: SchemaType = {{\n\t{ns}: {{\n\t\t{}: {},\n\t}},\n}};",
                 type_name,
                 generate_type_init(token)
             ));
@@ -203,14 +202,16 @@ mod tests {
         generator.handle_schema_type(&token_3, &mut buffer);
         assert_eq!(
             "export interface SchemaType extends ISchemaType {\n\tonchain_dash: \
-             {\n\t\tTestStruct: TestStruct,\n\t\tAvailableTheme: AvailableTheme,\n\t},\n\tcombat: {\n\t\tPlayer: Player,\n\t},\n}",
+             {\n\t\tTestStruct: TestStruct,\n\t\tAvailableTheme: AvailableTheme,\n\t},\n\tcombat: \
+             {\n\t\tPlayer: Player,\n\t},\n}",
             buffer[0]
         );
         let token_4 = create_test_struct_token("Position", "combat");
         generator.handle_schema_type(&token_4, &mut buffer);
         assert_eq!(
             "export interface SchemaType extends ISchemaType {\n\tonchain_dash: \
-             {\n\t\tTestStruct: TestStruct,\n\t\tAvailableTheme: AvailableTheme,\n\t},\n\tcombat: {\n\t\tPlayer: Player,\n\t\tPosition: Position,\n\t},\n}",
+             {\n\t\tTestStruct: TestStruct,\n\t\tAvailableTheme: AvailableTheme,\n\t},\n\tcombat: \
+             {\n\t\tPlayer: Player,\n\t\tPosition: Position,\n\t},\n}",
             buffer[0]
         );
     }
@@ -251,7 +252,9 @@ mod tests {
              {\n\t\t\tfieldOrder: ['field1', 'field2', 'field3'],\n\t\t\tfield1: \
              0,\n\t\t\tfield2: 0,\n\t\t\tfield3: 0,\n\t\t},\n\t\tAvailableTheme: \
              {\n\t\t\tfieldOrder: ['field1', 'field2', 'field3'],\n\t\t\tfield1: \
-             0,\n\t\t\tfield2: 0,\n\t\t\tfield3: 0,\n\t\t},\n\t},\n\tcombat: {\n\t\tPlayer: {\n\t\t\tfieldOrder: ['field1', 'field2', 'field3'],\n\t\t\tfield1: 0,\n\t\t\tfield2: 0,\n\t\t\tfield3: 0,\n\t\t},\n\t},\n};"
+             0,\n\t\t\tfield2: 0,\n\t\t\tfield3: 0,\n\t\t},\n\t},\n\tcombat: {\n\t\tPlayer: \
+             {\n\t\t\tfieldOrder: ['field1', 'field2', 'field3'],\n\t\t\tfield1: \
+             0,\n\t\t\tfield2: 0,\n\t\t\tfield3: 0,\n\t\t},\n\t},\n};"
         );
 
         let token_4 = create_test_struct_token("Position", "combat");
@@ -263,7 +266,11 @@ mod tests {
              {\n\t\t\tfieldOrder: ['field1', 'field2', 'field3'],\n\t\t\tfield1: \
              0,\n\t\t\tfield2: 0,\n\t\t\tfield3: 0,\n\t\t},\n\t\tAvailableTheme: \
              {\n\t\t\tfieldOrder: ['field1', 'field2', 'field3'],\n\t\t\tfield1: \
-             0,\n\t\t\tfield2: 0,\n\t\t\tfield3: 0,\n\t\t},\n\t},\n\tcombat: {\n\t\tPlayer: {\n\t\t\tfieldOrder: ['field1', 'field2', 'field3'],\n\t\t\tfield1: 0,\n\t\t\tfield2: 0,\n\t\t\tfield3: 0,\n\t\t},\n\t\tPosition: {\n\t\t\tfieldOrder: ['field1', 'field2', 'field3'],\n\t\t\tfield1: 0,\n\t\t\tfield2: 0,\n\t\t\tfield3: 0,\n\t\t},\n\t},\n};"
+             0,\n\t\t\tfield2: 0,\n\t\t\tfield3: 0,\n\t\t},\n\t},\n\tcombat: {\n\t\tPlayer: \
+             {\n\t\t\tfieldOrder: ['field1', 'field2', 'field3'],\n\t\t\tfield1: \
+             0,\n\t\t\tfield2: 0,\n\t\t\tfield3: 0,\n\t\t},\n\t\tPosition: {\n\t\t\tfieldOrder: \
+             ['field1', 'field2', 'field3'],\n\t\t\tfield1: 0,\n\t\t\tfield2: 0,\n\t\t\tfield3: \
+             0,\n\t\t},\n\t},\n};"
         );
     }
 

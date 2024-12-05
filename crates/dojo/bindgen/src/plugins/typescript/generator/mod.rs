@@ -1,4 +1,3 @@
-use crate::plugins::typescript::generator::constants::CAIRO_OPTION_TYPE_PATH;
 use cainome::parser::tokens::{Composite, CompositeType, Token};
 use constants::{
     CAIRO_BOOL, CAIRO_BYTE_ARRAY, CAIRO_CONTRACT_ADDRESS, CAIRO_FELT252, CAIRO_I128, CAIRO_U128,
@@ -6,6 +5,8 @@ use constants::{
     JS_BOOLEAN, JS_STRING,
 };
 use convert_case::{Case, Casing};
+
+use crate::plugins::typescript::generator::constants::CAIRO_OPTION_TYPE_PATH;
 
 pub(crate) mod constants;
 pub(crate) mod r#enum;
@@ -58,14 +59,12 @@ pub(crate) fn generate_type_init(token: &Composite) -> String {
 
 /// Checks if Token::Composite is an Option
 /// * token - The token to check
-///
 pub(crate) fn token_is_option(token: &Composite) -> bool {
     token.type_path.starts_with(CAIRO_OPTION_TYPE_PATH)
 }
 
 /// Checks if Token::Composite is an custom enum (enum with nested Composite types)
 /// * token - The token to check
-///
 pub(crate) fn token_is_custom_enum(token: &Composite) -> bool {
     token.r#type == CompositeType::Enum
         && token.inners.iter().any(|inner| inner.token.to_composite().is_ok())
@@ -111,14 +110,24 @@ impl From<&Token> for JsType {
             ),
             Token::Composite(c) => {
                 if token_is_option(c) {
-                    return JsType::from(format!("CairoOption<{}>", c.generic_args.iter().map(|(_, t)| JsType::from(t.type_name().as_str()).to_string()).collect::<Vec<_>>().join(", ")).as_str());
+                    return JsType::from(
+                        format!(
+                            "CairoOption<{}>",
+                            c.generic_args
+                                .iter()
+                                .map(|(_, t)| JsType::from(t.type_name().as_str()).to_string())
+                                .collect::<Vec<_>>()
+                                .join(", ")
+                        )
+                        .as_str(),
+                    );
                 }
                 if token_is_custom_enum(c) {
                     // we defined a type wrapper with Enum suffix let's use it there
                     return JsType::from(format!("{}Enum", value.type_name()).as_str());
                 }
-                return JsType::from(value.type_name().as_str())
-            },
+                return JsType::from(value.type_name().as_str());
+            }
             _ => JsType::from(value.type_name().as_str()),
         }
     }
@@ -155,7 +164,12 @@ impl From<&Composite> for JsDefaultValue {
     fn from(value: &Composite) -> Self {
         match value.r#type {
             cainome::parser::tokens::CompositeType::Enum => {
-                JsDefaultValue(format!("{}.{}", value.type_name(), value.inners[0].name))
+                match value.inners[0].token.to_composite() {
+                    Ok(c) => JsDefaultValue::from(c),
+                    Err(_) => {
+                        JsDefaultValue(format!("{}.{}", value.type_name(), value.inners[0].name))
+                    }
+                }
             }
             cainome::parser::tokens::CompositeType::Struct => JsDefaultValue(format!(
                 "{{ fieldOrder: [{}], {} }}",
@@ -163,7 +177,18 @@ impl From<&Composite> for JsDefaultValue {
                 value
                     .inners
                     .iter()
-                    .map(|i| format!("{}: {},", i.name, JsDefaultValue::from(&i.token)))
+                    .map(|i| format!(
+                        "{}: {},",
+                        i.name,
+                        match i.token.to_composite() {
+                            Ok(c) => {
+                                JsDefaultValue::from(c)
+                            }
+                            Err(_) => {
+                                JsDefaultValue::from(&i.token)
+                            }
+                        }
+                    ))
                     .collect::<Vec<_>>()
                     .join(" ")
             )),
@@ -281,7 +306,7 @@ mod tests {
                         (
                         "A".to_owned(), 
                         Token::Composite(
-                            Composite { 
+                            Composite {
                                 type_path: "tournament::ls15_components::models::tournament::GatedType".to_owned(), 
                                 inners: vec![
                                     CompositeInner {
@@ -390,6 +415,223 @@ mod tests {
                     ]
                 })),
                 is_legacy: false,
+            }))
+        )
+    }
+
+    #[test]
+    fn test_enum_default_value() {
+        assert_eq!(
+            "Direction.Up",
+            JsDefaultValue::from(&Token::Composite(Composite {
+                type_path: "dojo_starter::Direction".to_owned(),
+                inners: vec![
+                    CompositeInner {
+                        index: 0,
+                        name: "Up".to_owned(),
+                        kind: CompositeInnerKind::NotUsed,
+                        token: Token::CoreBasic(CoreBasic { type_path: "()".to_owned() })
+                    },
+                    CompositeInner {
+                        index: 1,
+                        name: "Down".to_owned(),
+                        kind: CompositeInnerKind::NotUsed,
+                        token: Token::CoreBasic(CoreBasic { type_path: "()".to_owned() })
+                    },
+                    CompositeInner {
+                        index: 2,
+                        name: "Left".to_owned(),
+                        kind: CompositeInnerKind::NotUsed,
+                        token: Token::CoreBasic(CoreBasic { type_path: "()".to_owned() })
+                    },
+                    CompositeInner {
+                        index: 3,
+                        name: "Right".to_owned(),
+                        kind: CompositeInnerKind::NotUsed,
+                        token: Token::CoreBasic(CoreBasic { type_path: "()".to_owned() })
+                    },
+                ],
+                generic_args: vec![],
+                r#type: CompositeType::Enum,
+                is_event: false,
+                alias: None,
+            }))
+        )
+    }
+
+    #[test]
+    fn test_cairo_custom_enum_default_value() {
+        assert_eq!(
+            "{ fieldOrder: ['id', 'xp'], id: 0, xp: 0, }",
+            JsDefaultValue::from(&Token::Composite(Composite {
+                type_path: "dojo_starter::Direction".to_owned(),
+                inners: vec![
+                    CompositeInner {
+                        index: 0,
+                        name: "item".to_owned(),
+                        kind: CompositeInnerKind::NotUsed,
+                        token: Token::Composite(Composite {
+                            type_path: "dojo_starter::Item".to_owned(),
+                            inners: vec![
+                                CompositeInner {
+                                    index: 0,
+                                    name: "id".to_owned(),
+                                    kind: CompositeInnerKind::NotUsed,
+                                    token: Token::CoreBasic(CoreBasic {
+                                        type_path: "core::felt252".to_owned(),
+                                    })
+                                },
+                                CompositeInner {
+                                    index: 1,
+                                    name: "xp".to_owned(),
+                                    kind: CompositeInnerKind::NotUsed,
+                                    token: Token::CoreBasic(CoreBasic {
+                                        type_path: "core::felt252".to_owned(),
+                                    })
+                                },
+                            ],
+                            generic_args: vec![],
+                            r#type: CompositeType::Struct,
+                            is_event: false,
+                            alias: None,
+                        })
+                    },
+                    CompositeInner {
+                        index: 1,
+                        name: "address".to_owned(),
+                        kind: CompositeInnerKind::NotUsed,
+                        token: Token::CoreBasic(CoreBasic { type_path: "()".to_owned() })
+                    },
+                ],
+                generic_args: vec![],
+                r#type: CompositeType::Enum,
+                is_event: false,
+                alias: None,
+            }))
+        )
+    }
+
+    #[test]
+    fn test_composite_default_value() {
+        assert_eq!(
+            "{ fieldOrder: ['id', 'xp'], id: 0, xp: 0, }",
+            JsDefaultValue::from(&Token::Composite(Composite {
+                type_path: "dojo_starter::Item".to_owned(),
+                inners: vec![
+                    CompositeInner {
+                        index: 0,
+                        name: "id".to_owned(),
+                        kind: CompositeInnerKind::NotUsed,
+                        token: Token::CoreBasic(CoreBasic {
+                            type_path: "core::felt252".to_owned(),
+                        })
+                    },
+                    CompositeInner {
+                        index: 1,
+                        name: "xp".to_owned(),
+                        kind: CompositeInnerKind::NotUsed,
+                        token: Token::CoreBasic(CoreBasic {
+                            type_path: "core::felt252".to_owned(),
+                        })
+                    },
+                ],
+                generic_args: vec![],
+                r#type: CompositeType::Struct,
+                is_event: false,
+                alias: None,
+            }))
+        )
+    }
+
+    #[test]
+    fn test_nested_composite_default_value() {
+        assert_eq!(
+            "{ fieldOrder: ['id', 'xp', 'item'], id: 0, xp: 0, item: { fieldOrder: ['id', 'xp', \
+             'item'], id: 0, xp: 0, item: { fieldOrder: ['id', 'xp'], id: 0, xp: 0, }, }, }",
+            JsDefaultValue::from(&Token::Composite(Composite {
+                type_path: "dojo_starter::Item".to_owned(),
+                inners: vec![
+                    CompositeInner {
+                        index: 0,
+                        name: "id".to_owned(),
+                        kind: CompositeInnerKind::NotUsed,
+                        token: Token::CoreBasic(CoreBasic {
+                            type_path: "core::felt252".to_owned(),
+                        })
+                    },
+                    CompositeInner {
+                        index: 1,
+                        name: "xp".to_owned(),
+                        kind: CompositeInnerKind::NotUsed,
+                        token: Token::CoreBasic(CoreBasic {
+                            type_path: "core::felt252".to_owned(),
+                        })
+                    },
+                    CompositeInner {
+                        index: 1,
+                        name: "item".to_owned(),
+                        kind: CompositeInnerKind::NotUsed,
+                        token: Token::Composite(Composite {
+                            type_path: "dojo_starter::Item".to_owned(),
+                            inners: vec![
+                                CompositeInner {
+                                    index: 0,
+                                    name: "id".to_owned(),
+                                    kind: CompositeInnerKind::NotUsed,
+                                    token: Token::CoreBasic(CoreBasic {
+                                        type_path: "core::felt252".to_owned(),
+                                    })
+                                },
+                                CompositeInner {
+                                    index: 1,
+                                    name: "xp".to_owned(),
+                                    kind: CompositeInnerKind::NotUsed,
+                                    token: Token::CoreBasic(CoreBasic {
+                                        type_path: "core::felt252".to_owned(),
+                                    })
+                                },
+                                CompositeInner {
+                                    index: 1,
+                                    name: "item".to_owned(),
+                                    kind: CompositeInnerKind::NotUsed,
+                                    token: Token::Composite(Composite {
+                                        type_path: "dojo_starter::Item".to_owned(),
+                                        inners: vec![
+                                            CompositeInner {
+                                                index: 0,
+                                                name: "id".to_owned(),
+                                                kind: CompositeInnerKind::NotUsed,
+                                                token: Token::CoreBasic(CoreBasic {
+                                                    type_path: "core::felt252".to_owned(),
+                                                })
+                                            },
+                                            CompositeInner {
+                                                index: 1,
+                                                name: "xp".to_owned(),
+                                                kind: CompositeInnerKind::NotUsed,
+                                                token: Token::CoreBasic(CoreBasic {
+                                                    type_path: "core::felt252".to_owned(),
+                                                })
+                                            },
+                                        ],
+                                        generic_args: vec![],
+                                        r#type: CompositeType::Struct,
+                                        is_event: false,
+                                        alias: None,
+                                    })
+                                },
+                            ],
+                            generic_args: vec![],
+                            r#type: CompositeType::Struct,
+                            is_event: false,
+                            alias: None,
+                        })
+                    },
+                ],
+                generic_args: vec![],
+                r#type: CompositeType::Struct,
+                is_event: false,
+                alias: None,
             }))
         )
     }
