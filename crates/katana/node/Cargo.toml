@@ -27,6 +27,7 @@ starknet.workspace = true
 tower = { workspace = true, features = [ "full" ] }
 tower-http = { workspace = true, features = [ "full" ] }
 tracing.workspace = true
+url.workspace = true
 
 const_format = "0.2.33"
 strum.workspace = true

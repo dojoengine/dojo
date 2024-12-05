@@ -23,6 +23,7 @@ use serde::{Deserialize, Serialize};
 use tracing::{info, Subscriber};
 use tracing_log::LogTracer;
 use tracing_subscriber::{fmt, EnvFilter};
+use url::Url;
 
 use crate::file::NodeArgsConfig;
 use crate::options::*;
@@ -68,6 +69,11 @@ pub struct NodeArgs {
     #[arg(value_name = "PATH")]
     #[arg(value_parser = katana_core::service::messaging::MessagingConfig::parse)]
     pub messaging: Option<MessagingConfig>,
+
+    #[arg(long = "l1.provider", value_name = "URL", alias = "l1-provider")]
+    #[arg(help = "The Ethereum RPC provider to sample the gas prices from to enable the gas \
+                  price oracle.")]
+    pub l1_provider_url: Option<Url>,
 
     #[command(flatten)]
     pub logging: LoggingOptions,
@@ -171,8 +177,20 @@ impl NodeArgs {
         let execution = self.execution_config();
         let sequencing = self.sequencer_config();
         let messaging = self.messaging.clone();
+        let l1_provider_url = self.gpo_config();
 
-        Ok(Config { metrics, db, dev, rpc, chain, execution, sequencing, messaging, forking })
+        Ok(Config {
+            metrics,
+            db,
+            dev,
+            rpc,
+            chain,
+            execution,
+            sequencing,
+            messaging,
+            forking,
+            l1_provider_url,
+        })
     }
 
     fn sequencer_config(&self) -> SequencingConfig {
@@ -294,6 +312,10 @@ impl NodeArgs {
 
         #[cfg(not(feature = "server"))]
         None
+    }
+
+    fn gpo_config(&self) -> Option<Url> {
+        self.l1_provider_url.clone()
     }
 
     /// Parse the node config from the command line arguments and the config file,

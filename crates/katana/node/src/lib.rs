@@ -142,6 +142,12 @@ impl Node {
         let node_components = (pool, backend, block_producer, self.forked_client.take());
         let rpc = spawn(node_components, self.config.rpc.clone()).await?;
 
+        // --- start the gas oracle worker task
+        if let Some(ref url) = self.config.l1_provider_url {
+            self.backend.gas_oracle.run_worker(self.task_manager.task_spawner());
+            info!(%url, "Gas Price Oracle started.");
+        };
+
         Ok(LaunchedNode { node: self, rpc })
     }
 }
@@ -199,11 +205,13 @@ pub async fn build(mut config: Config) -> Result<Node> {
 
     // Check if the user specify a fixed gas price in the dev config.
     let gas_oracle = if let Some(fixed_prices) = &config.dev.fixed_gas_prices {
+        // Use fixed gas prices if provided in the configuration
         L1GasOracle::fixed(fixed_prices.gas_price.clone(), fixed_prices.data_gas_price.clone())
-    }
-    // TODO: for now we just use the default gas prices, but this should be a proper oracle in the
-    // future that can perform actual sampling.
-    else {
+    } else if let Some(url) = &config.l1_provider_url {
+        // Default to a sampled gas oracle using the given provider
+        L1GasOracle::sampled(url.clone())
+    } else {
+        // Use default fixed gas prices if no url and if no fixed prices are provided
         L1GasOracle::fixed(
             GasPrices { eth: DEFAULT_ETH_L1_GAS_PRICE, strk: DEFAULT_STRK_L1_GAS_PRICE },
             GasPrices { eth: DEFAULT_ETH_L1_DATA_GAS_PRICE, strk: DEFAULT_STRK_L1_DATA_GAS_PRICE },
