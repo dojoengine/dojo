@@ -283,6 +283,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore = "Requires external assumption"]
     async fn test_gas_oracle() {
         let url = Url::parse("https://eth.merkle.io/").expect("Invalid URL");
         let oracle = L1GasOracle::sampled(url.clone());
