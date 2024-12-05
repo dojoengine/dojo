@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1733413062084,
+  "lastUpdate": 1733413113028,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -38605,6 +38605,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7906172,
             "range": "± 159307",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "90e2edda9777775caee2a7dfb2c56ba755589ec1",
+          "message": "fix(torii-core): store v3 transactions (#2768)",
+          "timestamp": "2024-12-05T09:21:47-06:00",
+          "tree_id": "80e12a34cca862f750b8668466f72a9c64456db4",
+          "url": "https://github.com/dojoengine/dojo/commit/90e2edda9777775caee2a7dfb2c56ba755589ec1"
+        },
+        "date": 1733413110856,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10410811218,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
