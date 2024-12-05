@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1733412762122,
+  "lastUpdate": 1733412834457,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -38478,6 +38478,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 10338864335,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "06bc91e5f12febca9cd1190d80b71d3360d7e9a2",
+          "message": "fix(torii-tokens-graphql): returns tokens balances with no metadata (#2764)\n\n* fix(torii-tokens-graphql): returns tokens balances even with empty metadata\n\n* wip: check preview workflow issue\n\n* ci: disable move cache for now\n\n* ci: remove preview fix since merged in main",
+          "timestamp": "2024-12-05T09:17:24-06:00",
+          "tree_id": "24c9362692774397ef5b84fc0c775652e2f488c7",
+          "url": "https://github.com/dojoengine/dojo/commit/06bc91e5f12febca9cd1190d80b71d3360d7e9a2"
+        },
+        "date": 1733412832352,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10338978207,
             "range": "± 0",
             "unit": "ns/iter"
           }
