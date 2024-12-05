@@ -69,10 +69,9 @@ pub struct StarknetApi<EF, P> {
 struct StarknetApiInner<EF, P> {
     pool: TxPool,
     backend: Arc<Backend<EF>>,
+    pending_provider: Option<P>,
     forked_client: Option<ForkedClient>,
     blocking_task_pool: BlockingTaskPool,
-    // block_producer: Option<BlockProducer<EF>>,
-    pending_provider: Option<P>,
     config: StarknetApiConfig,
 }
 
@@ -185,14 +184,6 @@ where
         self.inner.pending_provider.as_ref()
     }
 
-    /// Returns the pending state if the sequencer is running in _interval_ mode. Otherwise `None`.
-    // fn pending_executor(&self) -> Option<PendingExecutor> {
-    //     self.inner.block_producer.as_ref().and_then(|bp| match &*bp.producer.read() {
-    //         BlockProducerMode::Instant(_) => None,
-    //         BlockProducerMode::Interval(producer) => Some(producer.executor()),
-    //     })
-    // }
-
     fn state(&self, block_id: &BlockIdOrTag) -> StarknetApiResult<Box<dyn StateProvider>> {
         let provider = self.inner.backend.blockchain.provider();
 
@@ -205,12 +196,6 @@ where
                 } else {
                     Some(provider.latest()?)
                 }
-
-                // if let Some(exec) = self.pending_executor() {
-                //     Some(exec.read().state())
-                // } else {
-                //     Some(provider.latest()?)
-                // }
             }
 
             BlockIdOrTag::Hash(hash) => provider.historical((*hash).into())?,
@@ -226,9 +211,6 @@ where
         let env = match block_id {
             BlockIdOrTag::Tag(BlockTag::Pending) => {
                 // If there is a pending block, use the block env of the pending block.
-                // if let Some(exec) = self.pending_executor() {
-                //     Some(exec.read().block_env())
-                // }
                 if let Some(provider) = self.pending_provider() {
                     Some(provider.pending_block_env()?)
                 }
@@ -324,13 +306,6 @@ where
                 let provider = this.inner.backend.blockchain.provider();
 
                 let block_id: BlockHashOrNumber = match block_id {
-                    // BlockIdOrTag::Tag(BlockTag::Pending) => match this.pending_executor() {
-                    //     Some(exec) => {
-                    //         let count = exec.read().transactions().len() as u64;
-                    //         return Ok(Some(count));
-                    //     }
-                    //     None => provider.latest_hash()?.into(),
-                    // },
                     BlockIdOrTag::Tag(BlockTag::Pending) => match this.pending_provider() {
                         Some(provider) => {
                             let count = provider.pending_transactions()?.len() as u64;
@@ -439,15 +414,7 @@ where
                 let result = match tx {
                     tx @ Some(_) => tx,
                     None => {
-                        // // check if the transaction is in the pending block
-                        // this.pending_executor().as_ref().and_then(|exec| {
-                        //     exec.read()
-                        //         .transactions()
-                        //         .iter()
-                        //         .find(|(tx, _)| tx.hash == hash)
-                        //         .map(|(tx, _)| Tx::from(tx.clone()))
-                        // })
-
+                        // check if the transaction is in the pending block
                         this.pending_provider()
                             .and_then(|pv| pv.pending_transaction(hash).transpose())
                             .transpose()?
@@ -480,26 +447,6 @@ where
                 match receipt {
                     Some(receipt) => Ok(Some(receipt)),
                     None => {
-                        // let executor = this.pending_executor();
-                        // // If there's a pending executor
-                        // let pending_receipt = executor.and_then(|executor| {
-                        //     // Find the transaction in the pending block that matches the hash
-                        //     executor.read().transactions().iter().find_map(|(tx, res)| {
-                        //         if tx.hash == hash {
-                        //             // If the transaction is found, only return the receipt if
-                        // it's             // successful
-                        //             match res {
-                        //                 ExecutionResult::Success { receipt, .. } => {
-                        //                     Some(receipt.clone())
-                        //                 }
-                        //                 ExecutionResult::Failed { .. } => None,
-                        //             }
-                        //         } else {
-                        //             None
-                        //         }
-                        //     })
-                        // });
-
                         let receipt = this
                             .pending_provider()
                             .and_then(|pv| pv.pending_receipt(hash).transpose())

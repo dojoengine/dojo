@@ -707,10 +707,7 @@ impl<EF: ExecutorFactory> Stream for InstantBlockProducer<EF> {
     }
 }
 
-impl<EF> PendingBlockProvider for BlockProducer<EF>
-where
-    EF: ExecutorFactory,
-{
+impl<EF: ExecutorFactory> PendingBlockProvider for BlockProducer<EF> {
     fn pending_block(&self) -> ProviderResult<()> {
         match &*self.producer.read() {
             BlockProducerMode::Instant(bp) => bp.pending_block(),
@@ -785,10 +782,7 @@ where
     }
 }
 
-impl<EF> PendingBlockProvider for InstantBlockProducer<EF>
-where
-    EF: ExecutorFactory,
-{
+impl<EF: ExecutorFactory> PendingBlockProvider for InstantBlockProducer<EF> {
     fn pending_transaction(&self, hash: TxHash) -> ProviderResult<Option<TxWithHash>> {
         self.backend.blockchain.provider().transaction_by_hash(hash)
     }
@@ -815,7 +809,7 @@ where
         &self,
         hash: TxHash,
     ) -> ProviderResult<Option<TransactionStatus>> {
-        if let Some(receipt) = self.backend.blockchain.provider().receipt_by_hash(hash)? {
+        if let Some(receipt) = dbg!(self.backend.blockchain.provider().receipt_by_hash(hash)?) {
             if receipt.is_reverted() {
                 Ok(Some(TransactionStatus::AcceptedOnL2(TransactionExecutionStatus::Reverted)))
             } else {
@@ -846,28 +840,27 @@ where
     }
 }
 
-impl<EF> PendingBlockProvider for IntervalBlockProducer<EF>
-where
-    EF: ExecutorFactory,
-{
+impl<EF: ExecutorFactory> PendingBlockProvider for IntervalBlockProducer<EF> {
     fn pending_transaction(&self, hash: TxHash) -> ProviderResult<Option<TxWithHash>> {
-        let transaction = self
-            .executor()
-            .read()
-            .transactions()
-            .iter()
-            .find_map(|(tx, _)| if tx.hash == hash { Some(tx.clone()) } else { None });
+        let transaction = self.executor().read().transactions().iter().find_map(|(tx, _)| {
+            if tx.hash == hash {
+                Some(tx.clone())
+            } else {
+                None
+            }
+        });
 
         Ok(transaction)
     }
 
     fn pending_receipt(&self, hash: TxHash) -> ProviderResult<Option<Receipt>> {
-        let receipt = self
-            .executor()
-            .read()
-            .transactions()
-            .iter()
-            .find_map(|(tx, res)| if tx.hash == hash { res.receipt().cloned() } else { None });
+        let receipt = self.executor().read().transactions().iter().find_map(|(tx, res)| {
+            if tx.hash == hash {
+                res.receipt().cloned()
+            } else {
+                None
+            }
+        });
 
         Ok(receipt)
     }
