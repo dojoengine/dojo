@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1733413037878,
+  "lastUpdate": 1733413062084,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -38557,6 +38557,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8963062,
             "range": "± 360938",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "06bc91e5f12febca9cd1190d80b71d3360d7e9a2",
+          "message": "fix(torii-tokens-graphql): returns tokens balances with no metadata (#2764)\n\n* fix(torii-tokens-graphql): returns tokens balances even with empty metadata\n\n* wip: check preview workflow issue\n\n* ci: disable move cache for now\n\n* ci: remove preview fix since merged in main",
+          "timestamp": "2024-12-05T09:17:24-06:00",
+          "tree_id": "24c9362692774397ef5b84fc0c775652e2f488c7",
+          "url": "https://github.com/dojoengine/dojo/commit/06bc91e5f12febca9cd1190d80b71d3360d7e9a2"
+        },
+        "date": 1733413059913,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2433353,
+            "range": "± 45528",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 7890437,
+            "range": "± 296464",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3742051032,
+            "range": "± 733227271",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 7906172,
+            "range": "± 159307",
             "unit": "ns/iter"
           }
         ]
