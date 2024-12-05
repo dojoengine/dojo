@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1733406558996,
+  "lastUpdate": 1733412762122,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -38449,6 +38449,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8024317,
             "range": "± 346487",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "71799199a9e395419f51c79c5606054f7fd4f104",
+          "message": "refactor(torii-args): bool values no need for explicit true (#2767)\n\n* refactor(torii-args): bool values no need for explicit true\n\n* fmt\n\n* fix test",
+          "timestamp": "2024-12-05T09:16:22-06:00",
+          "tree_id": "d037e8e7942ce8bbe11f002ed3f939875ef80930",
+          "url": "https://github.com/dojoengine/dojo/commit/71799199a9e395419f51c79c5606054f7fd4f104"
+        },
+        "date": 1733412760451,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10338864335,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
