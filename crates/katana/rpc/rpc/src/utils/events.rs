@@ -86,15 +86,12 @@ impl PartialCursor {
 }
 
 pub fn fetch_pending_events(
-    // pending_executor: &PendingExecutor,
     pending_provider: &impl PendingBlockProvider,
     filter: &Filter,
     chunk_size: u64,
     cursor: Option<Cursor>,
     buffer: &mut Vec<EmittedEvent>,
 ) -> EventQueryResult<Cursor> {
-    // let pending_block = pending_executor.read();
-
     let block_env = pending_provider.pending_block_env()?;
     let txs = pending_provider.pending_transactions()?;
     let receipts = pending_provider.pending_receipts()?;
