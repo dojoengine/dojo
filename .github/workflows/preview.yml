@@ -80,7 +80,7 @@ jobs:
         # https://github.com/moby/buildkit/issues/1896
         name: Move cache
         run: |
-          rm -rf /tmp/.buildx-cache/prebuild
-          mv /tmp/.buildx-cache-new/prebuild /tmp/.buildx-cache/prebuild
-          rm -rf /tmp/.buildx-cache/build
-          mv /tmp/.buildx-cache-new/build /tmp/.buildx-cache/build
+          ls -la /tmp/
+          ls -la /tmp/.buildx-cache/
+          ls -la /tmp/.buildx-cache-new/
+
