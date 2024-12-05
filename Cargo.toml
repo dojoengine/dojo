@@ -265,7 +265,7 @@ slot = { git = "https://github.com/cartridge-gg/slot", rev = "1298a30" }
 alloy-contract = { version = "0.3", default-features = false }
 alloy-json-rpc = { version = "0.3", default-features = false }
 alloy-network = { version = "0.3", default-features = false }
-alloy-provider = { version = "0.3", default-features = false, features = [ "reqwest" ] }
+alloy-provider = "0.3"
 alloy-rpc-types-eth = { version = "0.3", default-features = false }
 alloy-signer = { version = "0.3", default-features = false }
 alloy-transport = { version = "0.3", default-features = false }
