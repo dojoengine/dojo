@@ -8,11 +8,10 @@ use super::state::StateProvider;
 use crate::ProviderResult;
 
 /// A provider for pending block data ie., header, transactions, receipts, traces (if any).
-//
-// In the context of a full node, where the node doesn't produce the blocks itself, how it can provide
-// the pending block data could be from a remote sequencer or feeder gateway. But, if the node itself
-// is a sequencer, it can provide the pending block data from its own local state. So, the main motivation
-// for this trait is to provide a common interface for both cases.
+// In the context of a full node, where the node doesn't produce the blocks itself, how it can
+// provide the pending block data could be from a remote sequencer or feeder gateway. But, if the
+// node itself is a sequencer, it can provide the pending block data from its own local state. So,
+// the main motivation for this trait is to provide a common interface for both cases.
 //
 // TODO: Maybe more to rpc crate as this is mainly gonna be used in the rpc side.
 #[auto_impl::auto_impl(&, Box, Arc)]
@@ -40,7 +39,7 @@ pub trait PendingBlockProvider: Send + Sync + 'static {
     fn pending_transaction_trace(&self, hash: TxHash) -> ProviderResult<Option<TxExecInfo>>;
 
     fn pending_transaction_status(&self, hash: TxHash)
-        -> ProviderResult<Option<TransactionStatus>>;
+    -> ProviderResult<Option<TransactionStatus>>;
 
     /// Returns a [`StateProvider`] for the pending state.
     fn pending_state(&self) -> ProviderResult<Box<dyn StateProvider>>;

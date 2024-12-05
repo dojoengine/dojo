@@ -792,9 +792,22 @@ impl<EF: ExecutorFactory> PendingBlockProvider for InstantBlockProducer<EF> {
     }
 
     fn pending_block_env(&self) -> ProviderResult<BlockEnv> {
-        let hash = self.backend.blockchain.provider().latest_hash()?;
-        let env = self.backend.blockchain.provider().block_env_at(hash.into())?;
-        Ok(env.expect("latest block env not found"))
+        // In instant mining mode, we don't have a notion of 'pending' block as a block is mined instantly
+        // when a valid transaction is submitted. So we need to mimic how a new block env is created in
+        // interval mining mode.
+        //
+        // It is important that we update the block env here especially for the block timestamp. Because if
+        // a fee estimate is requested using the pending block in instant mode, and the timestamp is NOT
+        // UPDATED, it will be estimated using the block timestamp of the last mined block. This is not ideal
+        // as the fee estimate should be based on the block timestamp of the block that the transaction may
+
+        let num = self.backend.blockchain.provider().latest_number()?;
+        let env = self.backend.blockchain.provider().block_env_at(num.into())?;
+
+        let mut env = env.expect("latest block env must exist");
+        self.backend.update_block_env(&mut env);
+
+        Ok(env)
     }
 
     fn pending_state(&self) -> ProviderResult<Box<dyn StateProvider>> {
