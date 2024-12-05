@@ -13,8 +13,13 @@ impl TsFunctionGenerator {
     fn check_imports(&self, buffer: &mut Buffer) {
         if !buffer.has("import { DojoProvider } from ") {
             buffer.insert(0, "import { DojoProvider } from \"@dojoengine/core\";".to_owned());
-            buffer
-                .insert(1, format!("import {{ Account, AccountInterface, {} }} from \"starknet\";", JS_BIGNUMBERISH));
+            buffer.insert(
+                1,
+                format!(
+                    "import {{ Account, AccountInterface, {} }} from \"starknet\";",
+                    JS_BIGNUMBERISH
+                ),
+            );
             buffer.insert(2, "import * as models from \"./models.gen\";\n".to_owned());
         }
     }
@@ -259,8 +264,8 @@ mod tests {
     fn test_generate_system_function() {
         let generator = TsFunctionGenerator {};
         let function = create_change_theme_function();
-        let expected = "\tconst actions_changeTheme = async (snAccount: Account | AccountInterface , value: \
-                        BigNumberish) => {
+        let expected = "\tconst actions_changeTheme = async (snAccount: Account | \
+                        AccountInterface, value: BigNumberish) => {
 \t\ttry {
 \t\t\treturn await provider.execute(
 \t\t\t\tsnAccount,
