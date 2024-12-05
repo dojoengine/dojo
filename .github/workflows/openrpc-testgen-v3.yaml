@@ -1,7 +1,10 @@
 name: openrpc-testgenv3
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - 'uacias/**'    
+  workflow_dispatch:    
 
 env:
   CARGO_TERM_COLOR: always
