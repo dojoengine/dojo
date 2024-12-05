@@ -71,15 +71,10 @@ message ModelUpdate {
 
 message Query {
     Clause clause = 1;
-    // Standard offset pagination
     uint32 limit = 2;
     uint32 offset = 3;
     bool dont_include_hashed_keys = 4;
     repeated OrderBy order_by = 5;
-
-    // Updated at time-based filter 
-    uint64 updated_before = 6;  
-    uint64 updated_after = 7;   
 }
 
 message EventQuery {
@@ -95,6 +90,11 @@ message Clause {
         MemberClause member = 3;
         CompositeClause composite = 4;
     }
+}
+
+message TimeClause {
+    uint64 updated_before = 1;
+    uint64 updated_after = 2;
 }
 
 message ModelKeysClause {
