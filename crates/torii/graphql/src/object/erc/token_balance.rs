@@ -106,6 +106,9 @@ async fn fetch_token_balances(
     let mut conditions = vec![
         "(b.account_address = ?)".to_string(),
         "(t.metadata IS NULL OR length(t.metadata) > 0)".to_string(),
+        // Filter out zero balance
+        "b.balance != '0x0000000000000000000000000000000000000000000000000000000000000000'"
+            .to_string(),
     ];
 
     let mut cursor_param = &connection.after;
