@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1733425455693,
+  "lastUpdate": 1733425665905,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -38791,6 +38791,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10489908667,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "73721937+augustin-v@users.noreply.github.com",
+            "name": "Augustin Villetard",
+            "username": "augustin-v"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9be17f35173252e1d73b11c7098d60e48dbf7bb6",
+          "message": "feat(katana): l1 gas prices sampling (#2766)\n\n\r\n---------\r\n\r\nCo-authored-by: Ammar Arif <evergreenkary@gmail.com>",
+          "timestamp": "2024-12-06T02:47:36+08:00",
+          "tree_id": "8fd936fec2522fa7048bb36dd6f4dddb417c1b50",
+          "url": "https://github.com/dojoengine/dojo/commit/9be17f35173252e1d73b11c7098d60e48dbf7bb6"
+        },
+        "date": 1733425664071,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2434560,
+            "range": "± 35660",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8205608,
+            "range": "± 311134",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3743167880,
+            "range": "± 774634445",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 7944812,
+            "range": "± 276019",
             "unit": "ns/iter"
           }
         ]
