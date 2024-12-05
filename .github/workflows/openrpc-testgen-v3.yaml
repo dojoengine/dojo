@@ -65,24 +65,11 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
 
-      - name: Install asdf
-        run: |
-          git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.14.1
-          echo ". $HOME/.asdf/asdf.sh" >> ~/.bashrc
-          echo ". $HOME/.asdf/completions/asdf.bash" >> ~/.bashrc
-          source ~/.bashrc
-
-      - name: Set PATH for asdf
-        run: |
-          echo "PATH=$HOME/.asdf/bin:$HOME/.asdf/shims:$PATH" >> $GITHUB_ENV
-
       - name: Install Scarb
         run: |
-          source ~/.asdf/asdf.sh
-          asdf plugin add scarb
-          asdf install scarb 2.8.4
-          asdf global scarb 2.8.4
-        shell: bash
+          cargo install scarb --version 2.8.4
+          echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> $GITHUB_ENV
+
 
       - name: Verify Scarb installation
         run: |
