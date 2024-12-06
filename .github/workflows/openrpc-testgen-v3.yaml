@@ -119,15 +119,7 @@ jobs:
       - name: Build openrpc-testgen-runner
         run: |
           cd katana-runner
-          cargo build --release --features katana
-
-      - name: Check openrpc-testgen permissions
-        run: |
-          ls -l katana-runner/target/release
-
-      - name: Make openrpc-testgen-runner executable
-        run: |
-          chmod +x katana-runner/target/release/openrpc-testgen-runner
+          cargo build --release --features katana -p openrpc-testgen -p openrpc-testgen-runner
 
       - name: Run openrpc-testgen-runner binary
         run: |
