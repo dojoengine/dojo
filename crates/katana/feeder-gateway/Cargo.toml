@@ -1,6 +1,5 @@
 [package]
 edition.workspace = true
-license.workspace = true
 license-file.workspace = true
 name = "katana-feeder-gateway"
 repository.workspace = true

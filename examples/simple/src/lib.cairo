@@ -115,7 +115,7 @@ pub mod c3 {}
 #[cfg(test)]
 mod tests {
     use dojo::model::ModelStorage;
-    use dojo_cairo_test::{
+    use dojo_foundry_test::{
         spawn_test_world, NamespaceDef, TestResource, ContractDefTrait, WorldStorageTestTrait
     };
     use super::{c1, m_M, M};

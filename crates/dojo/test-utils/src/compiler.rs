@@ -195,8 +195,8 @@ pub fn copy_project_temp(
         fs::create_dir_all(destination_dir)?;
     }
 
-    let dojo_cairo_test_path =
-        Utf8PathBuf::from(dojo_core_path.to_string().replace("core", "core-cairo-test"));
+    let dojo_foundry_test_path =
+        Utf8PathBuf::from(dojo_core_path.to_string().replace("core", "core-foundry-test"));
 
     for entry in fs::read_dir(source_dir)? {
         let entry = entry?;
@@ -248,10 +248,10 @@ pub fn copy_project_temp(
                         .expect("Failed to write to Scab.toml");
                 }
 
-                let dojo_cairo_test = if table.contains_key("workspace") {
+                let dojo_foundry_test = if table.contains_key("workspace") {
                     if table["workspace"].as_table().unwrap().contains_key("dev-dependencies") {
                         Some(
-                            table["workspace"]["dev-dependencies"]["dojo_cairo_test"]
+                            table["workspace"]["dev-dependencies"]["dojo_foundry_test"]
                                 .as_table_mut()
                                 .unwrap(),
                         )
@@ -259,15 +259,15 @@ pub fn copy_project_temp(
                         None
                     }
                 } else if table.contains_key("dev-dependencies") {
-                    Some(table["dev-dependencies"]["dojo_cairo_test"].as_table_mut().unwrap())
+                    Some(table["dev-dependencies"]["dojo_foundry_test"].as_table_mut().unwrap())
                 } else {
                     None
                 };
 
-                if let Some(dojo_cairo_test) = dojo_cairo_test {
-                    if dojo_cairo_test.contains_key("path") {
-                        dojo_cairo_test["path"] = Value::String(
-                            fs::canonicalize(dojo_cairo_test_path.clone())
+                if let Some(dojo_foundry_test) = dojo_foundry_test {
+                    if dojo_foundry_test.contains_key("path") {
+                        dojo_foundry_test["path"] = Value::String(
+                            fs::canonicalize(dojo_foundry_test_path.clone())
                                 .unwrap()
                                 .to_string_lossy()
                                 .to_string(),
