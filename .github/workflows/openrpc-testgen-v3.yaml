@@ -58,7 +58,7 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential libclang-dev git curl bash
+          sudo apt-get install -y build-essential libclang-dev git curl bash openssl
 
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
@@ -88,11 +88,7 @@ jobs:
           name: dojo-bins
           path: /tmp/bins
 
-      - name: Check katana permissions
-        run: |
-          ls -l /tmp/bins
-
-      - name: Make katana executable
+      - name: Set permissions for katana
         run: |
           chmod +x /tmp/bins/katana
 
