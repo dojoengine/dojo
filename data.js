@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1733478724945,
+  "lastUpdate": 1733478921379,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -39181,6 +39181,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10384797505,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a023fc67c7c303b4c2b1ef4243260d19df3989e9",
+          "message": "fix(torii-sql): sql playground for slot (#2779)",
+          "timestamp": "2024-12-06T16:35:24+07:00",
+          "tree_id": "400f7cde7e28d3f5448a50dc5fc064b5c3eb6c4e",
+          "url": "https://github.com/dojoengine/dojo/commit/a023fc67c7c303b4c2b1ef4243260d19df3989e9"
+        },
+        "date": 1733478918828,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2474030,
+            "range": "± 28319",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 7910060,
+            "range": "± 154400",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3795524847,
+            "range": "± 788391892",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 7963938,
+            "range": "± 226041",
             "unit": "ns/iter"
           }
         ]
