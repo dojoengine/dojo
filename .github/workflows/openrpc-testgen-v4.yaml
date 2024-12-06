@@ -125,6 +125,10 @@ jobs:
           name: openrpc-artifacts
           path: /tmp/openrpc
 
+      - name: Check openrpc-artifacts
+        run: |
+          ls -l /tmp/openrpc
+        
       - name: Set permissions for katana
         run: |
           chmod +x /tmp/bins/katana
