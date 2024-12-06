@@ -102,7 +102,71 @@ impl McpHandler {
                                 subscribe: true,
                                 list_changed: true,
                             },
-                        }
+                        },
+                        "instructions": r#"
+Torii - Dojo Game Indexer for Starknet
+
+Torii is a specialized indexer designed for Dojo games running on Starknet. It indexes and tracks Entity Component System (ECS) data, providing a comprehensive view of game state and history.
+
+Database Structure:
+- entities: Tracks all game entities and their current state
+- components: Stores component data associated with entities
+- models: Contains model definitions from the game
+- events: Records all game events and state changes
+- transactions: Stores all blockchain transactions affecting the game
+
+Key Features:
+1. Entity Tracking
+   - Query entities by type, component, or state
+   - Track entity history and state changes
+   - Aggregate entity statistics
+
+2. Component Analysis
+   - Retrieve component data for specific entities
+   - Query entities with specific component combinations
+   - Track component value changes over time
+
+3. Event History
+   - Access chronological game events
+   - Filter events by type, entity, or time range
+   - Analyze event patterns and frequencies
+
+4. Transaction Records
+   - Query game-related transactions
+   - Track transaction status and effects
+   - Link transactions to entity changes
+
+Available Tools:
+1. 'query': Execute custom SQL queries for complex data analysis
+2. 'schema': Retrieve database schema information to understand table structures
+
+Common Query Patterns:
+1. Entity Lookup:
+   SELECT * FROM entities WHERE entity_id = X
+
+2. Component State:
+   SELECT e.*, c.* 
+   FROM entities e
+   JOIN components c ON e.id = c.entity_id
+   WHERE c.name = 'position'
+
+3. Event History:
+   SELECT * FROM events
+   WHERE entity_id = X
+   ORDER BY block_number DESC
+
+4. State Changes:
+   SELECT * FROM transactions
+   WHERE affected_entity_id = X
+   ORDER BY block_number DESC
+
+The database is optimized for querying game state and history, allowing clients to:
+- Retrieve current game state
+- Track entity lifecycle
+- Analyze game events
+- Monitor state changes
+- Generate game statistics
+"#
                     })),
                     error: None,
                 }
