@@ -136,7 +136,7 @@ jobs:
       - name: Run Katana No Mining Suite
         run: |
           cd katana-runner 
-          URLS="https://${KATANA_ADDR}:${KATANA_NO_MINING_PORT}"
+          URLS="${KATANA_ADDR}:${KATANA_NO_MINING_PORT}"
           target/release/openrpc-testgen-runner \
           --urls "${URLS}" \
           --paymaster-account-address "${PAYMASTER_ACCOUNT_ADDRESS}" \
