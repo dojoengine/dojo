@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1733505452872,
+  "lastUpdate": 1733505558083,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -39288,6 +39288,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 10657612721,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "dccd06ea83333b7b5b848aacc1a3ad72f463126f",
+          "message": "refactor(torii-libp2p): always use is_valid_signature (#2776)\n\n* refactor(torii-libp2p): always use is_valid_signature\n\n* fmt",
+          "timestamp": "2024-12-06T11:01:44-06:00",
+          "tree_id": "c9f951c141b3b298a5fe780ae18c3da9fa178631",
+          "url": "https://github.com/dojoengine/dojo/commit/dccd06ea83333b7b5b848aacc1a3ad72f463126f"
+        },
+        "date": 1733505555860,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11397841282,
             "range": "± 0",
             "unit": "ns/iter"
           }
