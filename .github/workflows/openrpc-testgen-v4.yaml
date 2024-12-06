@@ -11,7 +11,7 @@ env:
   RUST_VERSION: 1.80.0
 
 jobs:
-  build-katana:
+  build:
     runs-on: arc-runner-set
     steps:
       - name: Checkout main repository
@@ -42,8 +42,8 @@ jobs:
           name: dojo-bins
           path: bins
 
-  build-openrpc:
-    needs: build-katana
+  openrpctestgenb:
+    needs: build
     runs-on: arc-runner-set
     steps:
       - name: Checkout main repository
@@ -104,10 +104,10 @@ jobs:
           path: katana-runner/target  
 
   run-openrpc-testgen:
-    needs: [build-openrpc, build-katana]
+    needs: [build, openrpctestgenb]
     runs-on: arc-runner-set
     env:
-      RLS: "http://127.0.0.1:5050"
+      URLS: "http://127.0.0.1:5050"
       PAYMASTER_PRIVATE_KEY: "0xc5b2fcab997346f3ea1c00b002ecf6f382c5f9c9659a3894eb783c5320f912"
       PAYMASTER_ACCOUNT_ADDRESS: "0x127fd5f1fe78a71f8bcd1fec63e3fe2f0486b6ecd5c86a0466c3a21fa5cfcec"
       UDC_ADDRESS: "0x41a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf"
@@ -142,6 +142,10 @@ jobs:
           cd /tmp/openrpc
           cargo build --release --features katana -p openrpc-testgen-runner
 
+      - name: Check build with feature
+        run: |
+          ls -l /tmp/openrpc
+
       - name: Start katana node
         run: |
           /tmp/bins/katana &
@@ -153,7 +157,7 @@ jobs:
       - name: Run openrpc-testgen-runner binary
         run: |
           cd /tmp/openrpc
-          /target/release/openrpc-testgen-runner \
+          target/release/openrpc-testgen-runner \
           --urls "${URLS}" \
           --paymaster-account-address "${PAYMASTER_ACCOUNT_ADDRESS}" \
           --paymaster-private-key "${PAYMASTER_PRIVATE_KEY}" \
