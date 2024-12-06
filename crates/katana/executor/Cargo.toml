@@ -15,7 +15,8 @@ starknet = { workspace = true, optional = true }
 thiserror.workspace = true
 tracing.workspace = true
 
-blockifier = { git = "https://github.com/dojoengine/sequencer", tag = "v0.8.0-rc3.2", features = [ "testing" ], optional = true }
+blockifier = { git = "https://github.com/dojoengine/sequencer", rev = "92da150d", features = [ "testing" ], optional = true }
+#blockifier = { path = "/Users/glihm/cgg/sequencer/crates/blockifier", features = [ "testing" ], optional = true }
 katana-cairo = { workspace = true, optional = true }
 
 [dev-dependencies]
