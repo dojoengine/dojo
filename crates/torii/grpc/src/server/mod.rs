@@ -799,10 +799,7 @@ impl DojoWorld {
             "SELECT * FROM tokens".to_string()
         } else {
             let placeholders = vec!["?"; contract_addresses.len()].join(", ");
-            format!(
-                "SELECT * FROM tokens WHERE contract_address IN ({})",
-                placeholders
-            )
+            format!("SELECT * FROM tokens WHERE contract_address IN ({})", placeholders)
         };
 
         let mut query = sqlx::query_as(&query);
@@ -810,10 +807,8 @@ impl DojoWorld {
             query = query.bind(format!("{:#x}", address));
         }
 
-        let tokens: Vec<Token> = query
-            .fetch_all(&self.pool)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        let tokens: Vec<Token> =
+            query.fetch_all(&self.pool).await.map_err(|e| Status::internal(e.to_string()))?;
 
         let tokens = tokens.iter().map(|token| token.clone().into()).collect();
         Ok(RetrieveTokensResponse { tokens })
@@ -833,7 +828,7 @@ impl DojoWorld {
             conditions.push(format!("account_address IN ({})", placeholders));
             bind_values.extend(account_addresses.iter().map(|addr| format!("{:#x}", addr)));
         }
-        
+
         if !contract_addresses.is_empty() {
             let placeholders = vec!["?"; contract_addresses.len()].join(", ");
             conditions.push(format!("contract_address IN ({})", placeholders));
@@ -849,10 +844,8 @@ impl DojoWorld {
             query = query.bind(value);
         }
 
-        let balances: Vec<TokenBalance> = query
-            .fetch_all(&self.pool)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        let balances: Vec<TokenBalance> =
+            query.fetch_all(&self.pool).await.map_err(|e| Status::internal(e.to_string()))?;
 
         let balances = balances.iter().map(|balance| balance.clone().into()).collect();
         Ok(RetrieveTokenBalancesResponse { balances })
