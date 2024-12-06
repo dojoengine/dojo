@@ -23,7 +23,17 @@ dependencies = [
 ]
 
 [[package]]
-name = "dojo_cairo_test"
+name = "dojo_examples"
+version = "1.0.4"
+dependencies = [
+ "armory",
+ "bestiary",
+ "dojo",
+ "dojo_foundry_test",
+]
+
+[[package]]
+name = "dojo_foundry_test"
 version = "1.0.0-rc.0"
 dependencies = [
  "dojo",

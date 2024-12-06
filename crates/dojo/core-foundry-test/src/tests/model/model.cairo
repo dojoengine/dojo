@@ -27,7 +27,7 @@ struct Foo2 {
 
 fn namespace_def() -> NamespaceDef {
     NamespaceDef {
-        namespace: "dojo_cairo_test", resources: [
+        namespace: "dojo_foundry_test", resources: [
             TestResource::Model("Foo"), TestResource::Model("Foo2"),
         ].span()
     }

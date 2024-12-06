@@ -210,7 +210,7 @@ pub mod actions {
 mod tests {
     use dojo::model::{ModelStorage, ModelValueStorage, ModelStorageTest};
     use dojo::world::WorldStorageTrait;
-    use dojo_cairo_test::{
+    use dojo_foundry_test::{
         spawn_test_world, NamespaceDef, TestResource, ContractDefTrait, ContractDef,
         WorldStorageTestTrait
     };

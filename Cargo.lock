@@ -4926,7 +4926,7 @@ dependencies = [
  "cairo-lang-syntax",
  "cairo-lang-utils",
  "convert_case 0.6.0",
- "dojo-types 1.0.4",
+ "dojo-types 1.0.5",
  "regex",
  "serde",
  "serde_json",

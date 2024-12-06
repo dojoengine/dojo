@@ -9,9 +9,6 @@ version = "1.0.5"
 starknet = "=2.8.4"
 dojo_macros = { path = "../macros" }
 
-[dev-dependencies]
-cairo_test = "=2.8.4"
-
 [lib]
 
 [[target.starknet-contract]]
