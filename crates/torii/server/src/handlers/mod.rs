@@ -1,8 +1,8 @@
 pub mod graphql;
 pub mod grpc;
+pub mod mcp;
 pub mod sql;
 pub mod static_files;
-pub mod mcp;
 
 use hyper::{Body, Request, Response};
 
