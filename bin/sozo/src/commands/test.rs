@@ -8,8 +8,10 @@ use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_compiler::diagnostics::DiagnosticsReporter;
 use cairo_lang_compiler::project::{ProjectConfig, ProjectConfigContent};
 use cairo_lang_filesystem::cfg::{Cfg, CfgSet};
-use cairo_lang_filesystem::db::{CrateSettings, ExperimentalFeaturesConfig, FilesGroup};
-use cairo_lang_filesystem::ids::{CrateId, CrateLongId, Directory};
+use cairo_lang_filesystem::db::{
+    CrateIdentifier, CrateSettings, DependencySettings, ExperimentalFeaturesConfig, FilesGroup,
+};
+use cairo_lang_filesystem::ids::{CrateId, CrateLongId};
 use cairo_lang_project::AllCratesConfig;
 use cairo_lang_starknet::starknet_plugin_suite;
 use cairo_lang_test_plugin::{test_plugin_suite, TestsCompilationConfig};
@@ -109,29 +111,31 @@ impl TestArgs {
             exclude_target_kinds: vec![],
             include_target_names: vec![],
             features: self.features.try_into()?,
+            ignore_cairo_version: false,
         };
 
-        let compilation_units = ops::generate_compilation_units(&resolve, &opts.features, &ws)?
-            .into_iter()
-            .filter(|cu| {
-                let is_excluded =
-                    opts.exclude_target_kinds.contains(&cu.main_component().target_kind());
-                let is_included = opts.include_target_kinds.is_empty()
-                    || opts.include_target_kinds.contains(&cu.main_component().target_kind());
-                let is_included = is_included
-                    && (opts.include_target_names.is_empty()
-                        || cu
-                            .main_component()
-                            .targets
-                            .iter()
-                            .any(|t| opts.include_target_names.contains(&t.name)));
+        let compilation_units =
+            ops::generate_compilation_units(&resolve, &opts.features, false, &ws)?
+                .into_iter()
+                .filter(|cu| {
+                    let is_excluded =
+                        opts.exclude_target_kinds.contains(&cu.main_component().target_kind());
+                    let is_included = opts.include_target_kinds.is_empty()
+                        || opts.include_target_kinds.contains(&cu.main_component().target_kind());
+                    let is_included = is_included
+                        && (opts.include_target_names.is_empty()
+                            || cu
+                                .main_component()
+                                .targets
+                                .iter()
+                                .any(|t| opts.include_target_names.contains(&t.name)));
 
-                let is_selected = packages.iter().any(|p| p.id == cu.main_package_id());
+                    let is_selected = packages.iter().any(|p| p.id == cu.main_package_id());
 
-                let is_cairo_plugin = matches!(cu, CompilationUnit::ProcMacro(_));
-                is_cairo_plugin || (is_included && is_selected && !is_excluded)
-            })
-            .collect::<Vec<_>>();
+                    let is_cairo_plugin = matches!(cu, CompilationUnit::ProcMacro(_));
+                    is_cairo_plugin || (is_included && is_selected && !is_excluded)
+                })
+                .collect::<Vec<_>>();
 
         for unit in compilation_units {
             let unit = if let CompilationUnit::Cairo(unit) = unit {
@@ -153,9 +157,17 @@ impl TestArgs {
 
             let mut main_crate_ids = collect_all_crate_ids(&unit, &db);
 
-            if let Some(external_contracts) = props.build_external_contracts {
+            if let Some(external_contracts) = props.build_external_contracts.clone() {
                 main_crate_ids.extend(collect_crates_ids_from_selectors(&db, &external_contracts));
             }
+
+            let contracts = scarb::compiler::compilers::find_project_contracts(
+                &db,
+                config.ui(),
+                &unit,
+                main_crate_ids.clone(),
+                props.build_external_contracts,
+            )?;
 
             let config = TestRunConfig {
                 filter: self.filter.clone(),
@@ -168,13 +180,16 @@ impl TestArgs {
 
             let compiler = TestCompiler {
                 db: db.snapshot(),
-                main_crate_ids,
+                main_crate_ids: main_crate_ids.clone(),
                 test_crate_ids,
                 allow_warnings: true,
                 config: TestsCompilationConfig {
                     starknet: true,
                     add_statements_functions: false,
                     add_statements_code_locations: false,
+                    contract_crate_ids: Some(main_crate_ids),
+                    executable_crate_ids: None,
+                    contract_declarations: Some(contracts),
                 },
             };
 
@@ -212,21 +227,18 @@ fn build_project_config(unit: &CairoCompilationUnit) -> Result<ProjectConfig> {
         //       main package source root due to the order maintained by scarb.
         .map(|c| {
             (
-                c.cairo_package_name(),
+                c.id.to_crate_identifier(),
                 c.first_target().source_root().into(),
             )
         })
         .collect();
-
-    let corelib =
-        unit.core_package_component().map(|c| Directory::Real(c.targets[0].source_root().into()));
 
     let crates_config = crates_config_for_compilation_unit(unit);
 
     let content = ProjectConfigContent { crate_roots, crates_config };
 
     let project_config =
-        ProjectConfig { base_path: unit.main_component().package.root().into(), corelib, content };
+        ProjectConfig { base_path: unit.main_component().package.root().into(), content };
 
     trace!(?project_config, "Project config built.");
 
@@ -262,19 +274,26 @@ pub fn collect_crates_ids_from_selectors(
         .iter()
         .map(|selector| selector.package().into())
         .unique()
-        .map(|package_name: SmolStr| db.intern_crate(CrateLongId::Real(package_name)))
+        .map(|package_name: SmolStr| {
+            db.intern_crate(CrateLongId::Real { name: package_name, discriminator: None })
+        })
         .collect::<Vec<_>>()
 }
 
 pub fn collect_all_crate_ids(unit: &CairoCompilationUnit, db: &RootDatabase) -> Vec<CrateId> {
     unit.components
         .iter()
-        .map(|component| db.intern_crate(CrateLongId::Real(component.cairo_package_name())))
+        .map(|component| {
+            db.intern_crate(CrateLongId::Real {
+                name: component.cairo_package_name(),
+                discriminator: component.id.to_discriminator(),
+            })
+        })
         .collect()
 }
 
 pub fn crates_config_for_compilation_unit(unit: &CairoCompilationUnit) -> AllCratesConfig {
-    let crates_config: OrderedHashMap<SmolStr, CrateSettings> = unit
+    let crates_config: OrderedHashMap<CrateIdentifier, CrateSettings> = unit
         .components()
         .iter()
         .map(|component| {
@@ -282,15 +301,40 @@ pub fn crates_config_for_compilation_unit(unit: &CairoCompilationUnit) -> AllCra
             let experimental_features = component.package.manifest.experimental_features.clone();
             let experimental_features = experimental_features.unwrap_or_default();
 
+            let dependencies = component
+                .dependencies
+                .iter()
+                .map(|compilation_unit_component_id| {
+                    let compilation_unit_component = unit
+                        .components
+                        .iter()
+                        .find(|component| component.id == *compilation_unit_component_id)
+                        .expect(
+                            "dependency of a component is guaranteed to exist in compilation unit \
+                             components",
+                        );
+                    (
+                        compilation_unit_component.cairo_package_name().to_string(),
+                        DependencySettings {
+                            discriminator: compilation_unit_component.id.to_discriminator(),
+                        },
+                    )
+                })
+                .collect();
+
             (
-                component.cairo_package_name(),
+                component.id.to_crate_identifier(),
                 CrateSettings {
+                    name: Some(component.cairo_package_name()),
                     version: Some(component.package.id.version.clone()),
                     edition: component.package.manifest.edition,
+                    dependencies,
                     experimental_features: ExperimentalFeaturesConfig {
                         negative_impls: experimental_features
                             .contains(&SmolStr::new_inline("negative_impls")),
                         coupons: experimental_features.contains(&SmolStr::new_inline("coupons")),
+                        associated_item_constraints: experimental_features
+                            .contains(&SmolStr::new_inline("associated_item_constraints")),
                     },
                     cfg_set: component.cfg_set.clone(),
                 },
