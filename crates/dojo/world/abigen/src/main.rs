@@ -170,6 +170,7 @@ fn compile_dojo_core() -> Result<()> {
             include_target_kinds: vec![],
             exclude_target_kinds: vec![TargetKind::TEST],
             features: features_opts,
+            ignore_cairo_version: false,
         },
         &ws,
     )
