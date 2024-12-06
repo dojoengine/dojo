@@ -88,6 +88,10 @@ jobs:
           name: dojo-bins
           path: /tmp/bins
 
+      - name: Check katana permissions
+        run: |
+          ls -l /tmp/bins
+
       - name: Make katana executable
         run: |
           chmod +x /tmp/bins/katana
@@ -112,16 +116,14 @@ jobs:
           cd katana-runner
           scarb build
 
-      - name: Verify Scarb build output
-        run: |
-          cd katana-runner
-          ls -la target/dev/
-        shell: bash
-
       - name: Build openrpc-testgen-runner
         run: |
           cd katana-runner
           cargo build --release --features katana
+
+      - name: Check openrpc-testgen permissions
+        run: |
+          ls -l katana-runner/target/release
 
       - name: Make openrpc-testgen-runner executable
         run: |
