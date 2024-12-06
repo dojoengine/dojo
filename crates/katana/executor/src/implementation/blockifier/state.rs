@@ -46,18 +46,18 @@ impl<'a> StateReader for StateProviderDb<'a> {
         }
     }
 
-    fn get_compiled_contract_class(
+    fn get_compiled_class(
         &self,
         class_hash: ClassHash,
-    ) -> StateResult<blockifier::execution::contract_class::ContractClass> {
+    ) -> StateResult<blockifier::execution::contract_class::RunnableCompiledClass> {
         if let Some(class) = self
             .compiled_class(class_hash.0)
             .map_err(|e| StateError::StateReadError(e.to_string()))?
         {
-            let class =
-                utils::to_class(class).map_err(|e| StateError::StateReadError(e.to_string()))?;
+            let class = utils::to_runnable_class(class)
+                .map_err(|e| StateError::StateReadError(e.to_string()))?;
 
-            Ok(class.contract_class())
+            Ok(class)
         } else {
             Err(StateError::UndeclaredClassHash(class_hash))
         }
@@ -151,7 +151,11 @@ impl<S: StateDb> ContractClassProvider for CachedState<S> {
             return Ok(None);
         };
 
-        if hash.0 == Felt::ZERO { Ok(None) } else { Ok(Some(hash.0)) }
+        if hash.0 == Felt::ZERO {
+            Ok(None)
+        } else {
+            Ok(Some(hash.0))
+        }
     }
 }
 
@@ -164,7 +168,11 @@ impl<S: StateDb> StateProvider for CachedState<S> {
             return Ok(None);
         };
 
-        if hash.0 == Felt::ZERO { Ok(None) } else { Ok(Some(hash.0)) }
+        if hash.0 == Felt::ZERO {
+            Ok(None)
+        } else {
+            Ok(Some(hash.0))
+        }
     }
 
     fn nonce(
@@ -215,11 +223,11 @@ impl<S: StateDb> StateReader for CachedState<S> {
         self.0.lock().inner.get_compiled_class_hash(class_hash)
     }
 
-    fn get_compiled_contract_class(
+    fn get_compiled_class(
         &self,
         class_hash: ClassHash,
-    ) -> StateResult<blockifier::execution::contract_class::ContractClass> {
-        self.0.lock().inner.get_compiled_contract_class(class_hash)
+    ) -> StateResult<blockifier::execution::contract_class::RunnableCompiledClass> {
+        self.0.lock().inner.get_compiled_class(class_hash)
     }
 
     fn get_nonce_at(
@@ -306,9 +314,8 @@ mod tests {
         let actual_storage_value = cached_state
             .get_storage_at(api_address, StorageKey(storage_key.try_into().unwrap()))?;
         let actual_compiled_hash = cached_state.get_compiled_class_hash(actual_class_hash)?;
-        let actual_class = cached_state.get_compiled_contract_class(actual_class_hash)?;
-        let actual_legacy_class =
-            cached_state.get_compiled_contract_class(ClassHash(legacy_class_hash))?;
+        let actual_class = cached_state.get_compiled_class(actual_class_hash)?;
+        let actual_legacy_class = cached_state.get_compiled_class(ClassHash(legacy_class_hash))?;
 
         assert_eq!(actual_nonce.0, felt!("0x7"));
         assert_eq!(actual_storage_value, felt!("0x2"));
@@ -316,13 +323,14 @@ mod tests {
         assert_eq!(actual_compiled_hash.0, felt!("0x456"));
         assert_eq!(
             actual_class,
-            utils::to_class(DEFAULT_ACCOUNT_CLASS_CASM.clone()).unwrap().contract_class()
+            utils::to_runnable_class(DEFAULT_ACCOUNT_CLASS_CASM.clone()).unwrap()
         );
         assert_eq!(
             actual_legacy_class,
-            utils::to_class(DEFAULT_LEGACY_ERC20_CLASS.clone().compile().expect("can compile"))
-                .unwrap()
-                .contract_class()
+            utils::to_runnable_class(
+                DEFAULT_LEGACY_ERC20_CLASS.clone().compile().expect("can compile")
+            )
+            .unwrap()
         );
 
         Ok(())
@@ -378,14 +386,12 @@ mod tests {
             let storage_key = StorageKey(new_storage_key.try_into().unwrap());
             let storage_value = new_storage_value;
             let class_hash = ClassHash(new_class_hash);
-            let class =
-                utils::to_class(new_compiled_sierra_class.clone()).unwrap().contract_class();
+            let class = utils::to_runnable_class(new_compiled_sierra_class.clone()).unwrap();
             let compiled_hash = CompiledClassHash(new_compiled_hash);
             let legacy_class_hash = ClassHash(new_legacy_class_hash);
             let legacy_class =
-                utils::to_class(DEFAULT_LEGACY_UDC_CLASS.clone().compile().expect("can compile"))
-                    .unwrap()
-                    .contract_class();
+                utils::to_runnable_class(DEFAULT_LEGACY_UDC_CLASS.clone().compile().unwrap())
+                    .unwrap();
             let legacy_compiled_hash = CompiledClassHash(new_legacy_compiled_hash);
 
             blk_state.increment_nonce(address)?;
@@ -498,7 +504,7 @@ mod tests {
         let actual_class_hash =
             cached_state.get_class_hash_at(api_address).expect("should return default value");
         let actual_compiled_hash = cached_state.get_compiled_class_hash(api_class_hash);
-        let actual_compiled_class = cached_state.get_compiled_contract_class(api_class_hash);
+        let actual_compiled_class = cached_state.get_compiled_class(api_class_hash);
         let actual_edge_storage_value = cached_state
             .get_storage_at(utils::to_blk_address(edge_address), api_storage_key)
             .expect("should return default value");

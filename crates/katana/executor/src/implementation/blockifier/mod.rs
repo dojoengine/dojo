@@ -7,11 +7,13 @@ pub mod utils;
 
 use std::num::NonZeroU128;
 
-use blockifier::blockifier::block::{BlockInfo, GasPrices};
+// use blockifier::blockifier::block::{BlockInfo, GasPrices};
 use blockifier::context::BlockContext;
 use blockifier::state::cached_state::{self, MutRefState};
 use blockifier::state::state_api::StateReader;
-use katana_cairo::starknet_api::block::{BlockNumber, BlockTimestamp};
+use katana_cairo::starknet_api::block::{
+    BlockInfo, BlockNumber, BlockTimestamp, GasPrice, GasPriceVector, GasPrices, NonzeroGasPrice,
+};
 use katana_primitives::block::{ExecutableBlock, GasPrices as KatanaGasPrices, PartialHeader};
 use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::fee::TxFeeInfo;
@@ -102,17 +104,14 @@ impl<'a> StarknetVMProcessor<'a> {
         // TODO: should we enforce the gas price to not be 0,
         // as there's a flag to disable gas uasge instead?
         let eth_l1_gas_price =
-            NonZeroU128::new(header.l1_gas_prices.eth).unwrap_or(NonZeroU128::new(1).unwrap());
+            NonzeroGasPrice::new(header.l1_gas_prices.eth.into()).unwrap_or(NonzeroGasPrice::MIN);
         let strk_l1_gas_price =
-            NonZeroU128::new(header.l1_gas_prices.strk).unwrap_or(NonZeroU128::new(1).unwrap());
+            NonzeroGasPrice::new(header.l1_gas_prices.strk.into()).unwrap_or(NonzeroGasPrice::MIN);
+        let eth_l1_data_gas_price = NonzeroGasPrice::new(header.l1_data_gas_prices.eth.into())
+            .unwrap_or(NonzeroGasPrice::MIN);
+        let strk_l1_data_gas_price = NonzeroGasPrice::new(header.l1_data_gas_prices.strk.into())
+            .unwrap_or(NonzeroGasPrice::MIN);
 
-        // TODO: which values is correct for those one?
-        let eth_l1_data_gas_price = eth_l1_gas_price;
-        let strk_l1_data_gas_price = strk_l1_gas_price;
-
-        // TODO: @kariy, not sure here if we should add some functions to alter it
-        // instead of cloning. Or did I miss a function?
-        // https://github.com/starkware-libs/blockifier/blob/a6200402ab635d8a8e175f7f135be5914c960007/crates/blockifier/src/context.rs#L23
         let versioned_constants = self.block_context.versioned_constants().clone();
         let chain_info = self.block_context.chain_info().clone();
         let block_info = BlockInfo {
@@ -120,10 +119,18 @@ impl<'a> StarknetVMProcessor<'a> {
             block_timestamp: timestamp,
             sequencer_address: utils::to_blk_address(header.sequencer_address),
             gas_prices: GasPrices {
-                eth_l1_gas_price,
-                strk_l1_gas_price,
-                eth_l1_data_gas_price,
-                strk_l1_data_gas_price,
+                eth_gas_prices: GasPriceVector {
+                    l1_gas_price: eth_l1_gas_price,
+                    l1_data_gas_price: eth_l1_data_gas_price,
+                    // TODO: update to use the correct value
+                    l2_gas_price: eth_l1_gas_price,
+                },
+                strk_gas_prices: GasPriceVector {
+                    l1_gas_price: strk_l1_gas_price,
+                    l1_data_gas_price: strk_l1_data_gas_price,
+                    // TODO: update to use the correct value
+                    l2_gas_price: strk_l1_gas_price,
+                },
             },
             use_kzg_da: false,
         };
@@ -228,20 +235,38 @@ impl<'a> BlockExecutor<'a> for StarknetVMProcessor<'a> {
     }
 
     fn block_env(&self) -> BlockEnv {
-        let eth_l1_gas_price = self.block_context.block_info().gas_prices.eth_l1_gas_price;
-        let strk_l1_gas_price = self.block_context.block_info().gas_prices.strk_l1_gas_price;
-
         BlockEnv {
             number: self.block_context.block_info().block_number.0,
             timestamp: self.block_context.block_info().block_timestamp.0,
             sequencer_address: utils::to_address(self.block_context.block_info().sequencer_address),
             l1_gas_prices: KatanaGasPrices {
-                eth: eth_l1_gas_price.into(),
-                strk: strk_l1_gas_price.into(),
+                eth: self.block_context.block_info().gas_prices.eth_gas_prices.l1_gas_price.get().0,
+                strk: self
+                    .block_context
+                    .block_info()
+                    .gas_prices
+                    .strk_gas_prices
+                    .l1_gas_price
+                    .get()
+                    .0,
             },
             l1_data_gas_prices: KatanaGasPrices {
-                eth: self.block_context.block_info().gas_prices.eth_l1_data_gas_price.into(),
-                strk: self.block_context.block_info().gas_prices.strk_l1_data_gas_price.into(),
+                eth: self
+                    .block_context
+                    .block_info()
+                    .gas_prices
+                    .eth_gas_prices
+                    .l1_data_gas_price
+                    .get()
+                    .0,
+                strk: self
+                    .block_context
+                    .block_info()
+                    .gas_prices
+                    .strk_gas_prices
+                    .l1_data_gas_price
+                    .get()
+                    .0,
             },
         }
     }

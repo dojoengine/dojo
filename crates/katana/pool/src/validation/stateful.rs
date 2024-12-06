@@ -167,7 +167,7 @@ fn validate(
     skip_fee_check: bool,
 ) -> ValidationResult<ExecutableTxWithHash> {
     match to_executor_tx(pool_tx.clone()) {
-        Transaction::AccountTransaction(tx) => {
+        Transaction::Account(tx) => {
             match validator.perform_validations(tx, skip_validate, skip_fee_check) {
                 Ok(()) => Ok(ValidationOutcome::Valid(pool_tx)),
                 Err(e) => match map_invalid_tx_err(e) {
@@ -178,7 +178,7 @@ fn validate(
         }
 
         // we skip validation for L1HandlerTransaction
-        Transaction::L1HandlerTransaction(_) => Ok(ValidationOutcome::Valid(pool_tx)),
+        Transaction::L1Handler(_) => Ok(ValidationOutcome::Valid(pool_tx)),
     }
 }
 
