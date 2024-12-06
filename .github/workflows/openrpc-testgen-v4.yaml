@@ -130,7 +130,7 @@ jobs:
           --paymaster-account-address "${PAYMASTER_ACCOUNT_ADDRESS}" \
           --paymaster-private-key "${PAYMASTER_PRIVATE_KEY}" \
           --udc-address "${UDC_ADDRESS}" \
-          --account-class-hash "${ACCOUNT_CLASS_HASH}"
+          --account-class-hash "${ACCOUNT_CLASS_HASH}" \
           --suite katana
 
       - name: Run Katana No Mining Suite
@@ -142,6 +142,6 @@ jobs:
           --paymaster-account-address "${PAYMASTER_ACCOUNT_ADDRESS}" \
           --paymaster-private-key "${PAYMASTER_PRIVATE_KEY}" \
           --udc-address "${UDC_ADDRESS}" \
-          --account-class-hash "${ACCOUNT_CLASS_HASH}"
+          --account-class-hash "${ACCOUNT_CLASS_HASH}" \
           --suite katana-no-mining
 
