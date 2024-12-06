@@ -826,20 +826,17 @@ impl DojoWorld {
         let query = if contract_addresses.is_empty() {
             "SELECT * FROM tokens".to_string()
         } else {
-            format!(
-                "SELECT * FROM tokens WHERE contract_address IN ({})",
-                contract_addresses
-                    .iter()
-                    .map(|address| format!("{:#x}", address))
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            )
+            let placeholders = vec!["?"; contract_addresses.len()].join(", ");
+            format!("SELECT * FROM tokens WHERE contract_address IN ({})", placeholders)
         };
 
-        let tokens: Vec<Token> = sqlx::query_as(&query)
-            .fetch_all(&self.pool)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        let mut query = sqlx::query_as(&query);
+        for address in &contract_addresses {
+            query = query.bind(format!("{:#x}", address));
+        }
+
+        let tokens: Vec<Token> =
+            query.fetch_all(&self.pool).await.map_err(|e| Status::internal(e.to_string()))?;
 
         let tokens = tokens.iter().map(|token| token.clone().into()).collect();
         Ok(RetrieveTokensResponse { tokens })
@@ -851,37 +848,32 @@ impl DojoWorld {
         contract_addresses: Vec<Felt>,
     ) -> Result<RetrieveTokenBalancesResponse, Status> {
         let mut query = "SELECT * FROM token_balances".to_string();
-
+        let mut bind_values = Vec::new();
         let mut conditions = Vec::new();
+
         if !account_addresses.is_empty() {
-            conditions.push(format!(
-                "account_address IN ({})",
-                account_addresses
-                    .iter()
-                    .map(|address| format!("{:#x}", address))
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            ));
+            let placeholders = vec!["?"; account_addresses.len()].join(", ");
+            conditions.push(format!("account_address IN ({})", placeholders));
+            bind_values.extend(account_addresses.iter().map(|addr| format!("{:#x}", addr)));
         }
+
         if !contract_addresses.is_empty() {
-            conditions.push(format!(
-                "contract_address IN ({})",
-                contract_addresses
-                    .iter()
-                    .map(|address| format!("{:#x}", address))
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            ));
+            let placeholders = vec!["?"; contract_addresses.len()].join(", ");
+            conditions.push(format!("contract_address IN ({})", placeholders));
+            bind_values.extend(contract_addresses.iter().map(|addr| format!("{:#x}", addr)));
         }
 
         if !conditions.is_empty() {
             query += &format!(" WHERE {}", conditions.join(" AND "));
         }
 
-        let balances: Vec<TokenBalance> = sqlx::query_as(&query)
-            .fetch_all(&self.pool)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        let mut query = sqlx::query_as(&query);
+        for value in bind_values {
+            query = query.bind(value);
+        }
+
+        let balances: Vec<TokenBalance> =
+            query.fetch_all(&self.pool).await.map_err(|e| Status::internal(e.to_string()))?;
 
         let balances = balances.iter().map(|balance| balance.clone().into()).collect();
         Ok(RetrieveTokenBalancesResponse { balances })
