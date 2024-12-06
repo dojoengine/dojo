@@ -42,9 +42,17 @@ jobs:
           name: dojo-bins
           path: bins
 
-  openrpctestgenb:
+  test:
     needs: build
     runs-on: arc-runner-set
+    env:
+      KATANA_ADDR: "127.0.0.1"
+      KATANA_PORT: "5050"
+      KATANA_NO_MINING_PORT: "5051"
+      PAYMASTER_PRIVATE_KEY: "0xc5b2fcab997346f3ea1c00b002ecf6f382c5f9c9659a3894eb783c5320f912"
+      PAYMASTER_ACCOUNT_ADDRESS: "0x127fd5f1fe78a71f8bcd1fec63e3fe2f0486b6ecd5c86a0466c3a21fa5cfcec"
+      UDC_ADDRESS: "0x41a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf"
+      ACCOUNT_CLASS_HASH: "0x07dc7899aa655b0aae51eadff6d801a58e97dd99cf4666ee59e704249e51adf2"
     steps:
       - name: Checkout main repository
         uses: actions/checkout@v3
@@ -76,6 +84,27 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
+      - name: Download katana binary
+        uses: actions/download-artifact@v4
+        with:
+          name: dojo-bins
+          path: /tmp/bins
+
+      - name: Set permissions for katana
+        run: |
+          chmod +x /tmp/bins/katana
+
+      - name: Start katana nodes 
+        run: |
+          /tmp/bins/katana \
+          --http.port "${KATANA_PORT}" \
+          --http.addr "${KATANA_ADDR}" \
+          & 
+          /tmp/bins/katana \
+          --http.port "${KATANA_NO_MINING_PORT}" \
+          --http.addr "${KATANA_ADDR}" \
+          &
+
       - name: Checkout katana-runner repository
         uses: actions/checkout@v3
         with:
@@ -87,84 +116,32 @@ jobs:
           cd katana-runner
           scarb build
 
-      - name: Build openrpc-testgen
-        run: |
-          cd katana-runner
-          cargo build --release --features "katana katana_no_mining" -p openrpc-testgen 
-
       - name: Build openrpc-testgen-runner
         run: |
           cd katana-runner
-          cargo build --release -p openrpc-testgen-runner
+          cargo build --release --features "katana katana_no_mining" -p openrpc-testgen -p openrpc-testgen-runner
 
-      - name: Upload openrpc artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: openrpc-artifacts
-          path: katana-runner/target  
-
-  run-openrpc-testgen:
-    needs: [build, openrpctestgenb]
-    runs-on: arc-runner-set
-    env:
-      URLS: "http://127.0.0.1:5050"
-      PAYMASTER_PRIVATE_KEY: "0xc5b2fcab997346f3ea1c00b002ecf6f382c5f9c9659a3894eb783c5320f912"
-      PAYMASTER_ACCOUNT_ADDRESS: "0x127fd5f1fe78a71f8bcd1fec63e3fe2f0486b6ecd5c86a0466c3a21fa5cfcec"
-      UDC_ADDRESS: "0x41a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf"
-      ACCOUNT_CLASS_HASH: "0x07dc7899aa655b0aae51eadff6d801a58e97dd99cf4666ee59e704249e51adf2"
-    steps:
-      - name: Download katana binary
-        uses: actions/download-artifact@v4
-        with:
-          name: dojo-bins
-          path: /tmp/bins
-
-      - name: Download openrpc artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: openrpc-artifacts
-          path: /tmp/openrpc
-
-      - name: Check openrpc-artifacts
+      - name: Run Katana Suite
         run: |
-          ls -l /tmp/openrpc
-        
-      - name: Set permissions for katana
-        run: |
-          chmod +x /tmp/bins/katana
-
-      - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
-
-      - name: Build openrpc-testgen-runner with features
-        run: |
-          cd /tmp/openrpc
-          cargo build --release --features katana -p openrpc-testgen-runner
-
-      - name: Check build with feature
-        run: |
-          ls -l /tmp/openrpc
-
-      - name: Start katana node
-        run: |
-          /tmp/bins/katana &
-          until curl -s http://127.0.0.1:5050 >/dev/null; do
-            echo "Waiting for Katana to be ready..."
-            sleep 5
-          done
-
-      - name: Run openrpc-testgen-runner binary
-        run: |
-          cd /tmp/openrpc
+          cd katana-runner 
+          URLS="https://${KATANA_ADDR}:${KATANA_PORT},https://${KATANA_ADDR}:${KATANA_NO_MINING_PORT}"
           target/release/openrpc-testgen-runner \
           --urls "${URLS}" \
           --paymaster-account-address "${PAYMASTER_ACCOUNT_ADDRESS}" \
           --paymaster-private-key "${PAYMASTER_PRIVATE_KEY}" \
           --udc-address "${UDC_ADDRESS}" \
-          --account-class-hash "${ACCOUNT_CLASS_HASH}" \
-          --features "katana katana_no_mining"
+          --account-class-hash "${ACCOUNT_CLASS_HASH}"
+          --suite katana
+
+      - name: Run Katana No Mining Suite
+        run: |
+          cd katana-runner 
+          URLS="https://${KATANA_ADDR}:${KATANA_NO_MINING_PORT}"
+          target/release/openrpc-testgen-runner \
+          --urls "${URLS}" \
+          --paymaster-account-address "${PAYMASTER_ACCOUNT_ADDRESS}" \
+          --paymaster-private-key "${PAYMASTER_PRIVATE_KEY}" \
+          --udc-address "${UDC_ADDRESS}" \
+          --account-class-hash "${ACCOUNT_CLASS_HASH}"
+          --suite katana-no-mining
+
