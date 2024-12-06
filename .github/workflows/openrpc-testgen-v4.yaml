@@ -99,10 +99,14 @@ jobs:
           /tmp/bins/katana \
           --http.port "${KATANA_PORT}" \
           --http.addr "${KATANA_ADDR}" \
+          --silent \
           & 
           /tmp/bins/katana \
           --http.port "${KATANA_NO_MINING_PORT}" \
           --http.addr "${KATANA_ADDR}" \
+          --silent \
+          --no-mining \
+          --dev \
           &
 
       - name: Checkout katana-runner repository
@@ -113,17 +117,16 @@ jobs:
 
       - name: Scarb build
         run: |
-          cd katana-runner
           scarb build
+        working-directory: katana-runner
 
       - name: Build openrpc-testgen-runner
         run: |
-          cd katana-runner
           cargo build --release --features "katana katana_no_mining" -p openrpc-testgen -p openrpc-testgen-runner
+        working-directory: katana-runner
 
       - name: Run Katana Suite
         run: |
-          cd katana-runner 
           URLS="http://${KATANA_ADDR}:${KATANA_PORT}"
           target/release/openrpc-testgen-runner \
           --urls "${URLS}" \
@@ -132,10 +135,10 @@ jobs:
           --udc-address "${UDC_ADDRESS}" \
           --account-class-hash "${ACCOUNT_CLASS_HASH}" \
           --suite katana
+        working-directory: katana-runner
 
       - name: Run Katana No Mining Suite
         run: |
-          cd katana-runner 
           URLS="http://${KATANA_ADDR}:${KATANA_NO_MINING_PORT}"
           target/release/openrpc-testgen-runner \
           --urls "${URLS}" \
@@ -144,4 +147,5 @@ jobs:
           --udc-address "${UDC_ADDRESS}" \
           --account-class-hash "${ACCOUNT_CLASS_HASH}" \
           --suite katana-no-mining
+        working-directory: katana-runner
 
