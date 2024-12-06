@@ -15259,6 +15259,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "tokio-tungstenite"
+version = "0.22.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d46baf930138837d65e25e3b33be49c9228579a6135dbf756b5cb9e4283e7cef"
+dependencies = [
+ "futures-util",
+ "log",
+ "tokio",
+ "tungstenite",
+]
+
+[[package]]
 name = "tokio-util"
 version = "0.7.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -15722,6 +15734,7 @@ dependencies = [
  "camino",
  "data-url",
  "form_urlencoded",
+ "futures-util",
  "http 0.2.12",
  "http-body 0.4.6",
  "hyper 0.14.30",
@@ -15735,6 +15748,7 @@ dependencies = [
  "serde_json",
  "sqlx",
  "tokio",
+ "tokio-tungstenite 0.22.0",
  "tokio-util",
  "torii-core",
  "tower 0.4.13",
@@ -16513,7 +16527,7 @@ dependencies = [
  "serde_json",
  "serde_urlencoded",
  "tokio",
- "tokio-tungstenite",
+ "tokio-tungstenite 0.21.0",
  "tokio-util",
  "tower-service",
  "tracing",
