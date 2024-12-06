@@ -11,6 +11,7 @@ build-external-contracts = ["dojo::world::world_contract::world"]
 
 [dependencies]
 dojo = { path = "../../crates/dojo/core" }
+snforge_std = "0.33.0"
 starknet = "2.8.4"
 
 [dev-dependencies]
@@ -18,5 +19,8 @@ dojo_foundry_test = { path = "../../crates/dojo/core-foundry-test" }
 
 [features]
 default = []
+
+[scripts]
+test = "snforge test"
 
 [profile.sepolia]
