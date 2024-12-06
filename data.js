@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1733505422020,
+  "lastUpdate": 1733505452872,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -39258,6 +39258,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 10557012029,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d44522fbda0b43744d7eaf3b2935e57faaaa88e2",
+          "message": "feat(torii-grpc): ordering and pagination (#2765)\n\n* proto orderb y and pagination\n\n* c\n\n* start uupdating grpc for order and updated filter\n\n* finish up queries for grpc\n\n* remove time stuff & finish ordering\n\n* fix clippy\n\n* remove time clause",
+          "timestamp": "2024-12-06T11:00:41-06:00",
+          "tree_id": "a08c20e6fa377c6fe3209517a80a755b9adb06e8",
+          "url": "https://github.com/dojoengine/dojo/commit/d44522fbda0b43744d7eaf3b2935e57faaaa88e2"
+        },
+        "date": 1733505451269,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10657612721,
             "range": "± 0",
             "unit": "ns/iter"
           }
