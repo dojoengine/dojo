@@ -124,7 +124,7 @@ jobs:
       - name: Run Katana Suite
         run: |
           cd katana-runner 
-          URLS="https://${KATANA_ADDR}:${KATANA_PORT},https://${KATANA_ADDR}:${KATANA_NO_MINING_PORT}"
+          URLS="https://${KATANA_ADDR}:${KATANA_PORT}"
           target/release/openrpc-testgen-runner \
           --urls "${URLS}" \
           --paymaster-account-address "${PAYMASTER_ACCOUNT_ADDRESS}" \
