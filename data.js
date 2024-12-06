@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1733446933711,
+  "lastUpdate": 1733478724945,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -39151,6 +39151,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7855853,
             "range": "± 274921",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a023fc67c7c303b4c2b1ef4243260d19df3989e9",
+          "message": "fix(torii-sql): sql playground for slot (#2779)",
+          "timestamp": "2024-12-06T16:35:24+07:00",
+          "tree_id": "400f7cde7e28d3f5448a50dc5fc064b5c3eb6c4e",
+          "url": "https://github.com/dojoengine/dojo/commit/a023fc67c7c303b4c2b1ef4243260d19df3989e9"
+        },
+        "date": 1733478722784,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10384797505,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
