@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1733445270637,
+  "lastUpdate": 1733445455824,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -39025,6 +39025,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10286342706,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "42612612+starknetdev@users.noreply.github.com",
+            "name": "Starknet Dev",
+            "username": "starknetdev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b821845f062dd9e8d0a713e9a4d56886f69d12b8",
+          "message": "feat(bindgen): add `AccountInterface` to function (#2770)",
+          "timestamp": "2024-12-05T18:17:50-06:00",
+          "tree_id": "189d92c9c3cb998d4347af8135cc7e8894906419",
+          "url": "https://github.com/dojoengine/dojo/commit/b821845f062dd9e8d0a713e9a4d56886f69d12b8"
+        },
+        "date": 1733445454082,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2430672,
+            "range": "± 28057",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 7801935,
+            "range": "± 170284",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3704320122,
+            "range": "± 772319481",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 7828628,
+            "range": "± 48190",
             "unit": "ns/iter"
           }
         ]
