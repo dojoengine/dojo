@@ -4,10 +4,8 @@ use anyhow::Result;
 use chrono::{DateTime, Utc};
 use futures_util::TryStreamExt;
 use ipfs_api_backend_hyper::{IpfsApi, IpfsClient, TryFromUri};
-use starknet::core::types::{BlockId, BlockTag};
-use starknet::providers::Provider;
 use tokio_util::bytes::Bytes;
-use tracing::{info, trace};
+use tracing::info;
 
 use crate::constants::{
     IPFS_CLIENT_MAX_RETRY, IPFS_CLIENT_PASSWORD, IPFS_CLIENT_URL, IPFS_CLIENT_USERNAME,
@@ -46,25 +44,6 @@ pub async fn fetch_content_from_ipfs(cid: &str, mut retries: u8) -> Result<Bytes
         "Failed to pull data from IPFS after {} attempts, cid: {}",
         IPFS_CLIENT_MAX_RETRY, cid
     )))
-}
-
-pub async fn health_check_provider<P: Provider + Sync + std::fmt::Debug + 'static>(
-    provider: P,
-) -> Result<(), anyhow::Error> {
-    match provider.get_block_with_tx_hashes(BlockId::Tag(BlockTag::Latest)).await {
-        Ok(block) => {
-            trace!(
-                latest_block = ?block,
-                "Provider health check."
-            );
-            Ok(())
-        }
-        Err(_) => {
-            let error_info =
-                format!("Unhealthy provider {:?}, please check your configuration.", provider);
-            Err(anyhow::anyhow!(error_info))
-        }
-    }
 }
 
 // tests
