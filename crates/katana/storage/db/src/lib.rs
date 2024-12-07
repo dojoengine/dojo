@@ -13,6 +13,7 @@ pub mod error;
 pub mod mdbx;
 pub mod models;
 pub mod tables;
+pub mod trie;
 pub mod utils;
 pub mod version;
 

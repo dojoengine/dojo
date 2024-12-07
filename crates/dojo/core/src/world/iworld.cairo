@@ -126,13 +126,23 @@ pub trait IWorld<T> {
     /// * `event_selector` - The selector of the event.
     /// * `keys` - The keys of the event.
     /// * `values` - The data to be logged by the event.
-    /// * `historical` - Whether the event should be logged in historical mode.
     fn emit_event(
+        ref self: T, event_selector: felt252, keys: Span<felt252>, values: Span<felt252>,
+    );
+
+    /// Emits multiple events.
+    /// Permissions are only checked once, then the events are batched.
+    ///
+    /// # Arguments
+    ///
+    /// * `event_selector` - The selector of the event.
+    /// * `keys` - The keys of the event.
+    /// * `values` - The data to be logged by the event.
+    fn emit_events(
         ref self: T,
         event_selector: felt252,
-        keys: Span<felt252>,
-        values: Span<felt252>,
-        historical: bool
+        keys: Span<Span<felt252>>,
+        values: Span<Span<felt252>>,
     );
 
     /// Gets the values of a model entity/member.
@@ -151,6 +161,17 @@ pub trait IWorld<T> {
         self: @T, model_selector: felt252, index: ModelIndex, layout: Layout
     ) -> Span<felt252>;
 
+    /// Gets the model values for the given entities.
+    ///
+    /// # Arguments
+    ///
+    /// * `model_selector` - The selector of the model to be retrieved.
+    /// * `indices` - The indexes of the entities/members to read.
+    /// * `layout` - The memory layout of the model.
+    fn entities(
+        self: @T, model_selector: felt252, indexes: Span<ModelIndex>, layout: Layout
+    ) -> Span<Span<felt252>>;
+
     /// Sets the model value for the given entity/member.
     ///
     /// # Arguments
@@ -167,6 +188,23 @@ pub trait IWorld<T> {
         layout: Layout
     );
 
+    /// Sets the model values for the given entities.
+    /// The permissions are only checked once, then the writes are batched.
+    ///
+    /// # Arguments
+    ///
+    /// * `model_selector` - The selector of the model to be set.
+    /// * `indexes` - The indexes of the entities/members to write.
+    /// * `values` - The values to be set, serialized using the model layout format.
+    /// * `layout` - The memory layout of the model.
+    fn set_entities(
+        ref self: T,
+        model_selector: felt252,
+        indexes: Span<ModelIndex>,
+        values: Span<Span<felt252>>,
+        layout: Layout
+    );
+
     /// Deletes a model value for the given entity/member.
     /// Deleting is setting all the values to 0 in the given layout.
     ///
@@ -176,6 +214,18 @@ pub trait IWorld<T> {
     /// * `index` - The index of the entity/member to delete.
     /// * `layout` - The memory layout of the model.
     fn delete_entity(ref self: T, model_selector: felt252, index: ModelIndex, layout: Layout);
+
+    /// Deletes the model values for the given entities.
+    /// The permissions are only checked once, then the deletes are batched.
+    ///
+    /// # Arguments
+    ///
+    /// * `model_selector` - The selector of the model to be deleted.
+    /// * `indexes` - The indexes of the entities/members to delete.
+    /// * `layout` - The memory layout of the model.
+    fn delete_entities(
+        ref self: T, model_selector: felt252, indexes: Span<ModelIndex>, layout: Layout
+    );
 
     /// Returns true if the provided account has owner permission for the resource, false otherwise.
     ///
@@ -258,11 +308,7 @@ pub trait IWorldTest<T> {
     /// Emits a custom event that was previously registered in the world without checking for
     /// resource permissions.
     fn emit_event_test(
-        ref self: T,
-        event_selector: felt252,
-        keys: Span<felt252>,
-        values: Span<felt252>,
-        historical: bool
+        ref self: T, event_selector: felt252, keys: Span<felt252>, values: Span<felt252>,
     );
 
     /// Returns the address of a registered contract, panics otherwise.

@@ -13,7 +13,7 @@ use katana_rpc_api::starknet::StarknetApiClient;
 use katana_rpc_api::torii::ToriiApiClient;
 use katana_rpc_types::transaction::{TransactionsPage, TransactionsPageCursor};
 use starknet::accounts::{Account, ConnectedAccount};
-use starknet::core::types::{Call, Felt, TransactionStatus};
+use starknet::core::types::{Call, DeclareTransactionResult, Felt, TransactionStatus};
 use starknet::core::utils::get_selector_from_name;
 use tokio::time::sleep;
 
@@ -194,10 +194,10 @@ async fn test_get_transactions_with_instant_mining() {
     // Should return successfully when no transactions have been mined.
     let cursor = TransactionsPageCursor { block_number: 0, transaction_index: 0, chunk_size: 100 };
 
-    let declare_res =
+    let DeclareTransactionResult { transaction_hash, class_hash } =
         account.declare_v2(contract.clone(), compiled_class_hash).send().await.unwrap();
 
-    sleep(Duration::from_millis(1000)).await;
+    dojo_utils::TransactionWaiter::new(transaction_hash, &sequencer.provider()).await.unwrap();
 
     // Should return successfully with single txn.
     let response: TransactionsPage = client.get_transactions(cursor).await.unwrap();
@@ -208,7 +208,7 @@ async fn test_get_transactions_with_instant_mining() {
 
     // Should block on cursor at end of page and return on new txn
     let long_poll_future = client.get_transactions(response.cursor);
-    let deploy_call = build_deploy_contract_call(declare_res.class_hash, Felt::ZERO);
+    let deploy_call = build_deploy_contract_call(class_hash, Felt::ZERO);
     let deploy_txn = account.execute_v1(vec![deploy_call]);
     let deploy_txn_future = deploy_txn.send();
 
@@ -225,7 +225,7 @@ async fn test_get_transactions_with_instant_mining() {
         }
     }
 
-    let deploy_call = build_deploy_contract_call(declare_res.class_hash, Felt::ONE);
+    let deploy_call = build_deploy_contract_call(class_hash, Felt::ONE);
     let deploy_txn = account.execute_v1(vec![deploy_call]);
     let deploy_txn_future = deploy_txn.send().await.unwrap();
 

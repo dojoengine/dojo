@@ -1,7 +1,5 @@
 //! The deployer is in charge of deploying contracts to starknet.
 
-use std::time::Duration;
-
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{
     BlockId, BlockTag, Call, Felt, InvokeTransactionResult, StarknetError,
@@ -11,7 +9,9 @@ use starknet::macros::{felt, selector};
 use starknet::providers::{Provider, ProviderError};
 use tracing::trace;
 
-use crate::{TransactionError, TransactionExt, TransactionResult, TransactionWaiter, TxnConfig};
+use crate::{
+    FeeConfig, TransactionError, TransactionExt, TransactionResult, TransactionWaiter, TxnConfig,
+};
 
 const UDC_DEPLOY_SELECTOR: Felt = selector!("deployContract");
 const UDC_ADDRESS: Felt =
@@ -58,14 +58,18 @@ where
             return Ok(TransactionResult::Noop);
         }
 
-        let txn = self.account.execute_v1(vec![Call {
-            calldata: udc_calldata,
-            selector: UDC_DEPLOY_SELECTOR,
-            to: UDC_ADDRESS,
-        }]);
+        let call = Call { calldata: udc_calldata, selector: UDC_DEPLOY_SELECTOR, to: UDC_ADDRESS };
 
-        let InvokeTransactionResult { transaction_hash } =
-            txn.send_with_cfg(&self.txn_config).await?;
+        let InvokeTransactionResult { transaction_hash } = match self.txn_config.fee_config {
+            FeeConfig::Strk(_) => {
+                trace!("Deploying with STRK.");
+                self.account.execute_v3(vec![call]).send_with_cfg(&self.txn_config).await?
+            }
+            FeeConfig::Eth(_) => {
+                trace!("Deploying with ETH.");
+                self.account.execute_v1(vec![call]).send_with_cfg(&self.txn_config).await?
+            }
+        };
 
         trace!(
             transaction_hash = format!("{:#066x}", transaction_hash),
@@ -74,13 +78,8 @@ where
         );
 
         if self.txn_config.wait {
-            let receipt = if let Some(timeout_ms) = self.txn_config.timeout_ms {
-                TransactionWaiter::new(transaction_hash, &self.account.provider())
-                    .with_timeout(Duration::from_millis(timeout_ms))
-                    .await?
-            } else {
-                TransactionWaiter::new(transaction_hash, &self.account.provider()).await?
-            };
+            let receipt =
+                TransactionWaiter::new(transaction_hash, &self.account.provider()).await?;
 
             if self.txn_config.receipt {
                 return Ok(TransactionResult::HashReceipt(transaction_hash, Box::new(receipt)));

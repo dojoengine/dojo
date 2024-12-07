@@ -3,12 +3,9 @@ use std::sync::Arc;
 use anyhow::Result;
 use derive_more::Deref;
 use katana_primitives::chain::ChainId;
-use katana_primitives::class::ClassHash;
+use katana_primitives::class::{ClassHash, ContractClass};
 use katana_primitives::contract::ContractAddress;
-use katana_primitives::conversion::rpc::{
-    compiled_class_hash_from_flattened_sierra_class, flattened_sierra_to_compiled_class,
-    legacy_rpc_to_compiled_class,
-};
+use katana_primitives::conversion::rpc::compiled_class_hash_from_flattened_sierra_class;
 use katana_primitives::da::DataAvailabilityMode;
 use katana_primitives::fee::{ResourceBounds, ResourceBoundsMapping};
 use katana_primitives::transaction::{
@@ -25,6 +22,7 @@ use starknet::core::types::{
 };
 use starknet::core::utils::get_contract_address;
 
+use crate::class::{RpcContractClass, RpcLegacyContractClass, RpcSierraContractClass};
 use crate::receipt::TxReceiptWithBlockInfo;
 
 pub const CHUNK_SIZE_DEFAULT: u64 = 100;
@@ -94,72 +92,73 @@ impl BroadcastedDeclareTx {
         Ok(is_valid)
     }
 
+    // TODO: change the contract class type for the broadcasted tx to katana-rpc-types instead for
+    // easier conversion.
     /// This function assumes that the compiled class hash is valid.
     pub fn try_into_tx_with_chain_id(self, chain_id: ChainId) -> Result<DeclareTxWithClass> {
         match self.0 {
             BroadcastedDeclareTransaction::V1(tx) => {
-                let (class_hash, compiled_class) =
-                    legacy_rpc_to_compiled_class(&tx.contract_class)?;
+                let rpc_class = Arc::unwrap_or_clone(tx.contract_class);
+                let rpc_class = RpcLegacyContractClass::try_from(rpc_class).unwrap();
+                let class = ContractClass::try_from(RpcContractClass::Legacy(rpc_class)).unwrap();
 
-                Ok(DeclareTxWithClass {
-                    compiled_class,
-                    sierra_class: None,
-                    transaction: DeclareTx::V1(DeclareTxV1 {
-                        chain_id,
-                        class_hash,
-                        nonce: tx.nonce,
-                        signature: tx.signature,
-                        sender_address: tx.sender_address.into(),
-                        max_fee: tx.max_fee.to_u128().expect("max fee is too large"),
-                    }),
-                })
+                let class_hash = class.class_hash().unwrap();
+
+                let tx = DeclareTx::V1(DeclareTxV1 {
+                    chain_id,
+                    class_hash,
+                    nonce: tx.nonce,
+                    signature: tx.signature,
+                    sender_address: tx.sender_address.into(),
+                    max_fee: tx.max_fee.to_u128().expect("max fee is too large"),
+                });
+
+                Ok(DeclareTxWithClass::new(tx, class))
             }
 
             BroadcastedDeclareTransaction::V2(tx) => {
-                // TODO: avoid computing the class hash again
-                let (class_hash, _, compiled_class) =
-                    flattened_sierra_to_compiled_class(&tx.contract_class)?;
+                let class_hash = tx.contract_class.class_hash();
 
-                Ok(DeclareTxWithClass {
-                    compiled_class,
-                    sierra_class: Arc::into_inner(tx.contract_class),
-                    transaction: DeclareTx::V2(DeclareTxV2 {
-                        chain_id,
-                        class_hash,
-                        nonce: tx.nonce,
-                        signature: tx.signature,
-                        sender_address: tx.sender_address.into(),
-                        compiled_class_hash: tx.compiled_class_hash,
-                        max_fee: tx.max_fee.to_u128().expect("max fee is too large"),
-                    }),
-                })
+                let rpc_class = Arc::unwrap_or_clone(tx.contract_class);
+                let rpc_class = RpcSierraContractClass::try_from(rpc_class).unwrap();
+                let class = ContractClass::try_from(RpcContractClass::Class(rpc_class)).unwrap();
+
+                let tx = DeclareTx::V2(DeclareTxV2 {
+                    chain_id,
+                    class_hash,
+                    nonce: tx.nonce,
+                    signature: tx.signature,
+                    sender_address: tx.sender_address.into(),
+                    compiled_class_hash: tx.compiled_class_hash,
+                    max_fee: tx.max_fee.to_u128().expect("max fee is too large"),
+                });
+
+                Ok(DeclareTxWithClass::new(tx, class))
             }
 
             BroadcastedDeclareTransaction::V3(tx) => {
-                // TODO: avoid computing the class hash again
-                let (class_hash, _, compiled_class) =
-                    flattened_sierra_to_compiled_class(&tx.contract_class)?;
+                let class_hash = tx.contract_class.class_hash();
 
-                Ok(DeclareTxWithClass {
-                    compiled_class,
-                    sierra_class: Arc::into_inner(tx.contract_class),
-                    transaction: DeclareTx::V3(DeclareTxV3 {
-                        chain_id,
-                        class_hash,
-                        nonce: tx.nonce,
-                        signature: tx.signature,
-                        sender_address: tx.sender_address.into(),
-                        compiled_class_hash: tx.compiled_class_hash,
-                        tip: tx.tip,
-                        paymaster_data: tx.paymaster_data,
-                        account_deployment_data: tx.account_deployment_data,
-                        resource_bounds: from_rpc_resource_bounds(tx.resource_bounds),
-                        fee_data_availability_mode: from_rpc_da_mode(tx.fee_data_availability_mode),
-                        nonce_data_availability_mode: from_rpc_da_mode(
-                            tx.nonce_data_availability_mode,
-                        ),
-                    }),
-                })
+                let rpc_class = Arc::unwrap_or_clone(tx.contract_class);
+                let rpc_class = RpcSierraContractClass::try_from(rpc_class).unwrap();
+                let class = ContractClass::try_from(RpcContractClass::Class(rpc_class)).unwrap();
+
+                let tx = DeclareTx::V3(DeclareTxV3 {
+                    chain_id,
+                    class_hash,
+                    tip: tx.tip,
+                    nonce: tx.nonce,
+                    signature: tx.signature,
+                    paymaster_data: tx.paymaster_data,
+                    sender_address: tx.sender_address.into(),
+                    compiled_class_hash: tx.compiled_class_hash,
+                    account_deployment_data: tx.account_deployment_data,
+                    resource_bounds: from_rpc_resource_bounds(tx.resource_bounds),
+                    fee_data_availability_mode: from_rpc_da_mode(tx.fee_data_availability_mode),
+                    nonce_data_availability_mode: from_rpc_da_mode(tx.nonce_data_availability_mode),
+                });
+
+                Ok(DeclareTxWithClass::new(tx, class))
             }
         }
     }
@@ -265,6 +264,19 @@ impl From<TxWithHash> for Tx {
         let transaction_hash = value.hash;
         let tx = match value.transaction {
             InternalTx::Invoke(invoke) => match invoke {
+                InvokeTx::V0(tx) => starknet::core::types::Transaction::Invoke(
+                    starknet::core::types::InvokeTransaction::V0(
+                        starknet::core::types::InvokeTransactionV0 {
+                            transaction_hash,
+                            calldata: tx.calldata,
+                            signature: tx.signature,
+                            max_fee: tx.max_fee.into(),
+                            contract_address: tx.contract_address.into(),
+                            entry_point_selector: tx.entry_point_selector,
+                        },
+                    ),
+                ),
+
                 InvokeTx::V1(tx) => starknet::core::types::Transaction::Invoke(
                     starknet::core::types::InvokeTransaction::V1(
                         starknet::core::types::InvokeTransactionV1 {
@@ -302,6 +314,16 @@ impl From<TxWithHash> for Tx {
             },
 
             InternalTx::Declare(tx) => starknet::core::types::Transaction::Declare(match tx {
+                DeclareTx::V0(tx) => starknet::core::types::DeclareTransaction::V0(
+                    starknet::core::types::DeclareTransactionV0 {
+                        transaction_hash,
+                        signature: tx.signature,
+                        class_hash: tx.class_hash,
+                        max_fee: tx.max_fee.into(),
+                        sender_address: tx.sender_address.into(),
+                    },
+                ),
+
                 DeclareTx::V1(tx) => starknet::core::types::DeclareTransaction::V1(
                     starknet::core::types::DeclareTransactionV1 {
                         nonce: tx.nonce,
@@ -391,6 +413,16 @@ impl From<TxWithHash> for Tx {
                     ),
                 })
             }
+
+            InternalTx::Deploy(tx) => starknet::core::types::Transaction::Deploy(
+                starknet::core::types::DeployTransaction {
+                    constructor_calldata: tx.constructor_calldata,
+                    contract_address_salt: tx.contract_address_salt,
+                    class_hash: tx.class_hash,
+                    version: tx.version,
+                    transaction_hash,
+                },
+            ),
         };
 
         Tx(tx)

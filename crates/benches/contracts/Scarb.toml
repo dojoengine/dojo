@@ -1,24 +1,11 @@
 [package]
-cairo-version = "2.4.0"
+cairo-version = "=2.8.4"
 name = "benches"
-version = "0.4.4"
+version = "1.0.0-rc.0"
 
-[cairo]
-sierra-replace-ids = true
+[[target.starknet-contract]]
+build-external-contracts = ["dojo::world::world_contract::world"]
 
 [dependencies]
-dojo = { git = "https://github.com/dojoengine/dojo", version = "0.4.4" }
-
-[[target.dojo]]
-
-[tool.dojo]
-initializer_class_hash = "0xbeef"
-
-[tool.dojo.env]
-# rpc_url = "http://localhost:5050/"
-# Default account for katana with seed = 0
-account_address = "0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba"
-private_key = "0x1800000000300000180000000000030000000000003006001800006600"
-
-[tool.dojo.world.namespace]
-default = "benches"
+dojo = { git = "https://github.com/dojoengine/dojo", tag = "v1.0.0-rc.0" }
+starknet = "=2.8.4"

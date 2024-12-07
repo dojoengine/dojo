@@ -34,9 +34,6 @@ pub enum BlockProductionError {
     #[error(transparent)]
     Provider(#[from] ProviderError),
 
-    #[error("block mining task cancelled")]
-    BlockMiningTaskCancelled,
-
     #[error("transaction execution task cancelled")]
     ExecutionTaskCancelled,
 

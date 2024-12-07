@@ -6,6 +6,7 @@ edition = "2024_07"
 
 [[target.starknet-contract]]
 sierra = true
+casm = true
 build-external-contracts = ["dojo::world::world_contract::world"]
 
 [dependencies]
@@ -17,3 +18,5 @@ dojo_cairo_test = { path = "../../crates/dojo/core-cairo-test" }
 
 [features]
 default = []
+
+[profile.sepolia]

@@ -33,6 +33,8 @@ pub struct WorldContract {
     pub seed: String,
     /// Name of the world.
     pub name: String,
+    /// Entrypoints of the world.
+    pub entrypoints: Vec<String>,
     /// Abi of the world.
     pub abi: Vec<AbiEntry>,
 }
@@ -53,6 +55,9 @@ pub struct DojoContract {
     pub init_calldata: Vec<String>,
     /// Tag of the contract.
     pub tag: String,
+    /// Selector of the contract.
+    #[serde_as(as = "UfeHex")]
+    pub selector: Felt,
     /// Systems of the contract.
     pub systems: Vec<String>,
 }
@@ -68,6 +73,9 @@ pub struct DojoModel {
     pub class_hash: Felt,
     /// Tag of the model.
     pub tag: String,
+    /// Selector of the model.
+    #[serde_as(as = "UfeHex")]
+    pub selector: Felt,
 }
 
 #[serde_as]
@@ -81,6 +89,9 @@ pub struct DojoEvent {
     pub class_hash: Felt,
     /// Tag of the event.
     pub tag: String,
+    /// Selector of the event.
+    #[serde_as(as = "UfeHex")]
+    pub selector: Felt,
 }
 
 /// Represents a model member.
@@ -102,6 +113,7 @@ impl Manifest {
             address: diff.world_info.address,
             seed: diff.profile_config.world.seed.clone(),
             name: diff.profile_config.world.name.clone(),
+            entrypoints: diff.world_info.entrypoints.clone(),
             abi: diff.world_info.class.abi.clone(),
         };
 
@@ -128,6 +140,10 @@ impl Manifest {
 
         Self { world, contracts, models, events }
     }
+
+    pub fn get_contract_address(&self, tag: &str) -> Option<Felt> {
+        self.contracts.iter().find_map(|c| if c.tag == tag { Some(c.address) } else { None })
+    }
 }
 
 fn resource_diff_to_dojo_contract(diff: &WorldDiff, resource: &ResourceDiff) -> DojoContract {
@@ -147,6 +163,7 @@ fn resource_diff_to_dojo_contract(diff: &WorldDiff, resource: &ResourceDiff) -> 
             init_calldata,
             tag,
             systems: l.systems.clone(),
+            selector: resource.dojo_selector(),
         },
         ResourceDiff::Updated(ResourceLocal::Contract(l), ResourceRemote::Contract(r))
         | ResourceDiff::Synced(ResourceLocal::Contract(l), ResourceRemote::Contract(r)) => {
@@ -157,6 +174,7 @@ fn resource_diff_to_dojo_contract(diff: &WorldDiff, resource: &ResourceDiff) -> 
                 init_calldata,
                 tag,
                 systems: l.systems.clone(),
+                selector: resource.dojo_selector(),
             }
         }
         _ => unreachable!(),
@@ -164,6 +182,8 @@ fn resource_diff_to_dojo_contract(diff: &WorldDiff, resource: &ResourceDiff) -> 
 }
 
 fn resource_diff_to_dojo_model(resource: &ResourceDiff) -> DojoModel {
+    let tag = resource.tag();
+
     match &resource {
         ResourceDiff::Created(ResourceLocal::Model(l)) => DojoModel {
             members: l
@@ -172,7 +192,8 @@ fn resource_diff_to_dojo_model(resource: &ResourceDiff) -> DojoModel {
                 .map(|m| Member { name: m.name.clone(), ty: m.ty.clone(), key: m.key })
                 .collect(),
             class_hash: l.common.class_hash,
-            tag: l.common.name.clone(),
+            tag,
+            selector: resource.dojo_selector(),
         },
         ResourceDiff::Updated(ResourceLocal::Model(l), _)
         | ResourceDiff::Synced(ResourceLocal::Model(l), _) => DojoModel {
@@ -182,13 +203,16 @@ fn resource_diff_to_dojo_model(resource: &ResourceDiff) -> DojoModel {
                 .map(|m| Member { name: m.name.clone(), ty: m.ty.clone(), key: m.key })
                 .collect(),
             class_hash: l.common.class_hash,
-            tag: l.common.name.clone(),
+            tag,
+            selector: resource.dojo_selector(),
         },
         _ => unreachable!(),
     }
 }
 
 fn resource_diff_to_dojo_event(resource: &ResourceDiff) -> DojoEvent {
+    let tag = resource.tag();
+
     match &resource {
         ResourceDiff::Created(ResourceLocal::Event(l)) => DojoEvent {
             members: l
@@ -197,7 +221,8 @@ fn resource_diff_to_dojo_event(resource: &ResourceDiff) -> DojoEvent {
                 .map(|m| Member { name: m.name.clone(), ty: m.ty.clone(), key: m.key })
                 .collect(),
             class_hash: l.common.class_hash,
-            tag: l.common.name.clone(),
+            tag,
+            selector: resource.dojo_selector(),
         },
         ResourceDiff::Updated(ResourceLocal::Event(l), _)
         | ResourceDiff::Synced(ResourceLocal::Event(l), _) => DojoEvent {
@@ -207,7 +232,8 @@ fn resource_diff_to_dojo_event(resource: &ResourceDiff) -> DojoEvent {
                 .map(|m| Member { name: m.name.clone(), ty: m.ty.clone(), key: m.key })
                 .collect(),
             class_hash: l.common.class_hash,
-            tag: l.common.name.clone(),
+            tag,
+            selector: resource.dojo_selector(),
         },
         _ => unreachable!(),
     }

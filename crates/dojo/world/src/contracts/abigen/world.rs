@@ -202,7 +202,6 @@ impl ContractUpgraded {
 pub struct EventEmitted {
     pub selector: starknet::core::types::Felt,
     pub system_address: cainome::cairo_serde::ContractAddress,
-    pub historical: bool,
     pub keys: Vec<starknet::core::types::Felt>,
     pub values: Vec<starknet::core::types::Felt>,
 }
@@ -215,7 +214,6 @@ impl cainome::cairo_serde::CairoSerde for EventEmitted {
         __size += starknet::core::types::Felt::cairo_serialized_size(&__rust.selector);
         __size +=
             cainome::cairo_serde::ContractAddress::cairo_serialized_size(&__rust.system_address);
-        __size += bool::cairo_serialized_size(&__rust.historical);
         __size += Vec::<starknet::core::types::Felt>::cairo_serialized_size(&__rust.keys);
         __size += Vec::<starknet::core::types::Felt>::cairo_serialized_size(&__rust.values);
         __size
@@ -225,7 +223,6 @@ impl cainome::cairo_serde::CairoSerde for EventEmitted {
         __out.extend(starknet::core::types::Felt::cairo_serialize(&__rust.selector));
         __out
             .extend(cainome::cairo_serde::ContractAddress::cairo_serialize(&__rust.system_address));
-        __out.extend(bool::cairo_serialize(&__rust.historical));
         __out.extend(Vec::<starknet::core::types::Felt>::cairo_serialize(&__rust.keys));
         __out.extend(Vec::<starknet::core::types::Felt>::cairo_serialize(&__rust.values));
         __out
@@ -240,13 +237,11 @@ impl cainome::cairo_serde::CairoSerde for EventEmitted {
         let system_address =
             cainome::cairo_serde::ContractAddress::cairo_deserialize(__felts, __offset)?;
         __offset += cainome::cairo_serde::ContractAddress::cairo_serialized_size(&system_address);
-        let historical = bool::cairo_deserialize(__felts, __offset)?;
-        __offset += bool::cairo_serialized_size(&historical);
         let keys = Vec::<starknet::core::types::Felt>::cairo_deserialize(__felts, __offset)?;
         __offset += Vec::<starknet::core::types::Felt>::cairo_serialized_size(&keys);
         let values = Vec::<starknet::core::types::Felt>::cairo_deserialize(__felts, __offset)?;
         __offset += Vec::<starknet::core::types::Felt>::cairo_serialized_size(&values);
-        Ok(EventEmitted { selector, system_address, historical, keys, values })
+        Ok(EventEmitted { selector, system_address, keys, values })
     }
 }
 impl EventEmitted {
@@ -398,6 +393,7 @@ impl cainome::cairo_serde::CairoSerde for FieldLayout {
 pub struct MetadataUpdate {
     pub resource: starknet::core::types::Felt,
     pub uri: cainome::cairo_serde::ByteArray,
+    pub hash: starknet::core::types::Felt,
 }
 impl cainome::cairo_serde::CairoSerde for MetadataUpdate {
     type RustType = Self;
@@ -407,12 +403,14 @@ impl cainome::cairo_serde::CairoSerde for MetadataUpdate {
         let mut __size = 0;
         __size += starknet::core::types::Felt::cairo_serialized_size(&__rust.resource);
         __size += cainome::cairo_serde::ByteArray::cairo_serialized_size(&__rust.uri);
+        __size += starknet::core::types::Felt::cairo_serialized_size(&__rust.hash);
         __size
     }
     fn cairo_serialize(__rust: &Self::RustType) -> Vec<starknet::core::types::Felt> {
         let mut __out: Vec<starknet::core::types::Felt> = vec![];
         __out.extend(starknet::core::types::Felt::cairo_serialize(&__rust.resource));
         __out.extend(cainome::cairo_serde::ByteArray::cairo_serialize(&__rust.uri));
+        __out.extend(starknet::core::types::Felt::cairo_serialize(&__rust.hash));
         __out
     }
     fn cairo_deserialize(
@@ -424,7 +422,9 @@ impl cainome::cairo_serde::CairoSerde for MetadataUpdate {
         __offset += starknet::core::types::Felt::cairo_serialized_size(&resource);
         let uri = cainome::cairo_serde::ByteArray::cairo_deserialize(__felts, __offset)?;
         __offset += cainome::cairo_serde::ByteArray::cairo_serialized_size(&uri);
-        Ok(MetadataUpdate { resource, uri })
+        let hash = starknet::core::types::Felt::cairo_deserialize(__felts, __offset)?;
+        __offset += starknet::core::types::Felt::cairo_serialized_size(&hash);
+        Ok(MetadataUpdate { resource, uri, hash })
     }
 }
 impl MetadataUpdate {
@@ -630,6 +630,7 @@ impl OwnerUpdated {
 pub struct ResourceMetadata {
     pub resource_id: starknet::core::types::Felt,
     pub metadata_uri: cainome::cairo_serde::ByteArray,
+    pub metadata_hash: starknet::core::types::Felt,
 }
 impl cainome::cairo_serde::CairoSerde for ResourceMetadata {
     type RustType = Self;
@@ -639,12 +640,14 @@ impl cainome::cairo_serde::CairoSerde for ResourceMetadata {
         let mut __size = 0;
         __size += starknet::core::types::Felt::cairo_serialized_size(&__rust.resource_id);
         __size += cainome::cairo_serde::ByteArray::cairo_serialized_size(&__rust.metadata_uri);
+        __size += starknet::core::types::Felt::cairo_serialized_size(&__rust.metadata_hash);
         __size
     }
     fn cairo_serialize(__rust: &Self::RustType) -> Vec<starknet::core::types::Felt> {
         let mut __out: Vec<starknet::core::types::Felt> = vec![];
         __out.extend(starknet::core::types::Felt::cairo_serialize(&__rust.resource_id));
         __out.extend(cainome::cairo_serde::ByteArray::cairo_serialize(&__rust.metadata_uri));
+        __out.extend(starknet::core::types::Felt::cairo_serialize(&__rust.metadata_hash));
         __out
     }
     fn cairo_deserialize(
@@ -656,7 +659,9 @@ impl cainome::cairo_serde::CairoSerde for ResourceMetadata {
         __offset += starknet::core::types::Felt::cairo_serialized_size(&resource_id);
         let metadata_uri = cainome::cairo_serde::ByteArray::cairo_deserialize(__felts, __offset)?;
         __offset += cainome::cairo_serde::ByteArray::cairo_serialized_size(&metadata_uri);
-        Ok(ResourceMetadata { resource_id, metadata_uri })
+        let metadata_hash = starknet::core::types::Felt::cairo_deserialize(__felts, __offset)?;
+        __offset += starknet::core::types::Felt::cairo_serialized_size(&metadata_hash);
+        Ok(ResourceMetadata { resource_id, metadata_uri, metadata_hash })
     }
 }
 #[derive(Clone, serde::Serialize, serde::Deserialize, PartialEq, Debug)]
@@ -1732,16 +1737,6 @@ impl TryFrom<&starknet::core::types::EmittedEvent> for Event {
             };
             key_offset +=
                 cainome::cairo_serde::ContractAddress::cairo_serialized_size(&system_address);
-            let historical = match bool::cairo_deserialize(&event.keys, key_offset) {
-                Ok(v) => v,
-                Err(e) => {
-                    return Err(format!(
-                        "Could not deserialize field {} for {}: {:?}",
-                        "historical", "EventEmitted", e
-                    ));
-                }
-            };
-            key_offset += bool::cairo_serialized_size(&historical);
             let keys = match Vec::<starknet::core::types::Felt>::cairo_deserialize(
                 &event.data,
                 data_offset,
@@ -1771,7 +1766,6 @@ impl TryFrom<&starknet::core::types::EmittedEvent> for Event {
             return Ok(Event::EventEmitted(EventEmitted {
                 selector,
                 system_address,
-                historical,
                 keys,
                 values,
             }));
@@ -1807,7 +1801,18 @@ impl TryFrom<&starknet::core::types::EmittedEvent> for Event {
                 }
             };
             data_offset += cainome::cairo_serde::ByteArray::cairo_serialized_size(&uri);
-            return Ok(Event::MetadataUpdate(MetadataUpdate { resource, uri }));
+            let hash =
+                match starknet::core::types::Felt::cairo_deserialize(&event.data, data_offset) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        return Err(format!(
+                            "Could not deserialize field {} for {}: {:?}",
+                            "hash", "MetadataUpdate", e
+                        ));
+                    }
+                };
+            data_offset += starknet::core::types::Felt::cairo_serialized_size(&hash);
+            return Ok(Event::MetadataUpdate(MetadataUpdate { resource, uri, hash }));
         }
         let selector = event.keys[0];
         if selector
@@ -2612,16 +2617,6 @@ impl TryFrom<&starknet::core::types::Event> for Event {
             };
             key_offset +=
                 cainome::cairo_serde::ContractAddress::cairo_serialized_size(&system_address);
-            let historical = match bool::cairo_deserialize(&event.keys, key_offset) {
-                Ok(v) => v,
-                Err(e) => {
-                    return Err(format!(
-                        "Could not deserialize field {} for {}: {:?}",
-                        "historical", "EventEmitted", e
-                    ));
-                }
-            };
-            key_offset += bool::cairo_serialized_size(&historical);
             let keys = match Vec::<starknet::core::types::Felt>::cairo_deserialize(
                 &event.data,
                 data_offset,
@@ -2651,7 +2646,6 @@ impl TryFrom<&starknet::core::types::Event> for Event {
             return Ok(Event::EventEmitted(EventEmitted {
                 selector,
                 system_address,
-                historical,
                 keys,
                 values,
             }));
@@ -2687,7 +2681,18 @@ impl TryFrom<&starknet::core::types::Event> for Event {
                 }
             };
             data_offset += cainome::cairo_serde::ByteArray::cairo_serialized_size(&uri);
-            return Ok(Event::MetadataUpdate(MetadataUpdate { resource, uri }));
+            let hash =
+                match starknet::core::types::Felt::cairo_deserialize(&event.data, data_offset) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        return Err(format!(
+                            "Could not deserialize field {} for {}: {:?}",
+                            "hash", "MetadataUpdate", e
+                        ));
+                    }
+                };
+            data_offset += starknet::core::types::Felt::cairo_serialized_size(&hash);
+            return Ok(Event::MetadataUpdate(MetadataUpdate { resource, uri, hash }));
         }
         let selector = event.keys[0];
         if selector
@@ -3254,6 +3259,26 @@ impl cainome::cairo_serde::CairoSerde for Resource {
 impl<A: starknet::accounts::ConnectedAccount + Sync> WorldContract<A> {
     #[allow(clippy::ptr_arg)]
     #[allow(clippy::too_many_arguments)]
+    pub fn entities(
+        &self,
+        model_selector: &starknet::core::types::Felt,
+        indexes: &Vec<ModelIndex>,
+        layout: &Layout,
+    ) -> cainome::cairo_serde::call::FCall<A::Provider, Vec<Vec<starknet::core::types::Felt>>> {
+        use cainome::cairo_serde::CairoSerde;
+        let mut __calldata = vec![];
+        __calldata.extend(starknet::core::types::Felt::cairo_serialize(model_selector));
+        __calldata.extend(Vec::<ModelIndex>::cairo_serialize(indexes));
+        __calldata.extend(Layout::cairo_serialize(layout));
+        let __call = starknet::core::types::FunctionCall {
+            contract_address: self.address,
+            entry_point_selector: starknet::macros::selector!("entities"),
+            calldata: __calldata,
+        };
+        cainome::cairo_serde::call::FCall::new(__call, self.provider())
+    }
+    #[allow(clippy::ptr_arg)]
+    #[allow(clippy::too_many_arguments)]
     pub fn entity(
         &self,
         model_selector: &starknet::core::types::Felt,
@@ -3342,6 +3367,45 @@ impl<A: starknet::accounts::ConnectedAccount + Sync> WorldContract<A> {
     }
     #[allow(clippy::ptr_arg)]
     #[allow(clippy::too_many_arguments)]
+    pub fn delete_entities_getcall(
+        &self,
+        model_selector: &starknet::core::types::Felt,
+        indexes: &Vec<ModelIndex>,
+        layout: &Layout,
+    ) -> starknet::core::types::Call {
+        use cainome::cairo_serde::CairoSerde;
+        let mut __calldata = vec![];
+        __calldata.extend(starknet::core::types::Felt::cairo_serialize(model_selector));
+        __calldata.extend(Vec::<ModelIndex>::cairo_serialize(indexes));
+        __calldata.extend(Layout::cairo_serialize(layout));
+        starknet::core::types::Call {
+            to: self.address,
+            selector: starknet::macros::selector!("delete_entities"),
+            calldata: __calldata,
+        }
+    }
+    #[allow(clippy::ptr_arg)]
+    #[allow(clippy::too_many_arguments)]
+    pub fn delete_entities(
+        &self,
+        model_selector: &starknet::core::types::Felt,
+        indexes: &Vec<ModelIndex>,
+        layout: &Layout,
+    ) -> starknet::accounts::ExecutionV1<A> {
+        use cainome::cairo_serde::CairoSerde;
+        let mut __calldata = vec![];
+        __calldata.extend(starknet::core::types::Felt::cairo_serialize(model_selector));
+        __calldata.extend(Vec::<ModelIndex>::cairo_serialize(indexes));
+        __calldata.extend(Layout::cairo_serialize(layout));
+        let __call = starknet::core::types::Call {
+            to: self.address,
+            selector: starknet::macros::selector!("delete_entities"),
+            calldata: __calldata,
+        };
+        self.account.execute_v1(vec![__call])
+    }
+    #[allow(clippy::ptr_arg)]
+    #[allow(clippy::too_many_arguments)]
     pub fn delete_entity_getcall(
         &self,
         model_selector: &starknet::core::types::Felt,
@@ -3386,14 +3450,12 @@ impl<A: starknet::accounts::ConnectedAccount + Sync> WorldContract<A> {
         event_selector: &starknet::core::types::Felt,
         keys: &Vec<starknet::core::types::Felt>,
         values: &Vec<starknet::core::types::Felt>,
-        historical: &bool,
     ) -> starknet::core::types::Call {
         use cainome::cairo_serde::CairoSerde;
         let mut __calldata = vec![];
         __calldata.extend(starknet::core::types::Felt::cairo_serialize(event_selector));
         __calldata.extend(Vec::<starknet::core::types::Felt>::cairo_serialize(keys));
         __calldata.extend(Vec::<starknet::core::types::Felt>::cairo_serialize(values));
-        __calldata.extend(bool::cairo_serialize(historical));
         starknet::core::types::Call {
             to: self.address,
             selector: starknet::macros::selector!("emit_event"),
@@ -3407,17 +3469,54 @@ impl<A: starknet::accounts::ConnectedAccount + Sync> WorldContract<A> {
         event_selector: &starknet::core::types::Felt,
         keys: &Vec<starknet::core::types::Felt>,
         values: &Vec<starknet::core::types::Felt>,
-        historical: &bool,
     ) -> starknet::accounts::ExecutionV1<A> {
         use cainome::cairo_serde::CairoSerde;
         let mut __calldata = vec![];
         __calldata.extend(starknet::core::types::Felt::cairo_serialize(event_selector));
         __calldata.extend(Vec::<starknet::core::types::Felt>::cairo_serialize(keys));
         __calldata.extend(Vec::<starknet::core::types::Felt>::cairo_serialize(values));
-        __calldata.extend(bool::cairo_serialize(historical));
         let __call = starknet::core::types::Call {
             to: self.address,
             selector: starknet::macros::selector!("emit_event"),
+            calldata: __calldata,
+        };
+        self.account.execute_v1(vec![__call])
+    }
+    #[allow(clippy::ptr_arg)]
+    #[allow(clippy::too_many_arguments)]
+    pub fn emit_events_getcall(
+        &self,
+        event_selector: &starknet::core::types::Felt,
+        keys: &Vec<Vec<starknet::core::types::Felt>>,
+        values: &Vec<Vec<starknet::core::types::Felt>>,
+    ) -> starknet::core::types::Call {
+        use cainome::cairo_serde::CairoSerde;
+        let mut __calldata = vec![];
+        __calldata.extend(starknet::core::types::Felt::cairo_serialize(event_selector));
+        __calldata.extend(Vec::<Vec<starknet::core::types::Felt>>::cairo_serialize(keys));
+        __calldata.extend(Vec::<Vec<starknet::core::types::Felt>>::cairo_serialize(values));
+        starknet::core::types::Call {
+            to: self.address,
+            selector: starknet::macros::selector!("emit_events"),
+            calldata: __calldata,
+        }
+    }
+    #[allow(clippy::ptr_arg)]
+    #[allow(clippy::too_many_arguments)]
+    pub fn emit_events(
+        &self,
+        event_selector: &starknet::core::types::Felt,
+        keys: &Vec<Vec<starknet::core::types::Felt>>,
+        values: &Vec<Vec<starknet::core::types::Felt>>,
+    ) -> starknet::accounts::ExecutionV1<A> {
+        use cainome::cairo_serde::CairoSerde;
+        let mut __calldata = vec![];
+        __calldata.extend(starknet::core::types::Felt::cairo_serialize(event_selector));
+        __calldata.extend(Vec::<Vec<starknet::core::types::Felt>>::cairo_serialize(keys));
+        __calldata.extend(Vec::<Vec<starknet::core::types::Felt>>::cairo_serialize(values));
+        let __call = starknet::core::types::Call {
+            to: self.address,
+            selector: starknet::macros::selector!("emit_events"),
             calldata: __calldata,
         };
         self.account.execute_v1(vec![__call])
@@ -3739,6 +3838,49 @@ impl<A: starknet::accounts::ConnectedAccount + Sync> WorldContract<A> {
     }
     #[allow(clippy::ptr_arg)]
     #[allow(clippy::too_many_arguments)]
+    pub fn set_entities_getcall(
+        &self,
+        model_selector: &starknet::core::types::Felt,
+        indexes: &Vec<ModelIndex>,
+        values: &Vec<Vec<starknet::core::types::Felt>>,
+        layout: &Layout,
+    ) -> starknet::core::types::Call {
+        use cainome::cairo_serde::CairoSerde;
+        let mut __calldata = vec![];
+        __calldata.extend(starknet::core::types::Felt::cairo_serialize(model_selector));
+        __calldata.extend(Vec::<ModelIndex>::cairo_serialize(indexes));
+        __calldata.extend(Vec::<Vec<starknet::core::types::Felt>>::cairo_serialize(values));
+        __calldata.extend(Layout::cairo_serialize(layout));
+        starknet::core::types::Call {
+            to: self.address,
+            selector: starknet::macros::selector!("set_entities"),
+            calldata: __calldata,
+        }
+    }
+    #[allow(clippy::ptr_arg)]
+    #[allow(clippy::too_many_arguments)]
+    pub fn set_entities(
+        &self,
+        model_selector: &starknet::core::types::Felt,
+        indexes: &Vec<ModelIndex>,
+        values: &Vec<Vec<starknet::core::types::Felt>>,
+        layout: &Layout,
+    ) -> starknet::accounts::ExecutionV1<A> {
+        use cainome::cairo_serde::CairoSerde;
+        let mut __calldata = vec![];
+        __calldata.extend(starknet::core::types::Felt::cairo_serialize(model_selector));
+        __calldata.extend(Vec::<ModelIndex>::cairo_serialize(indexes));
+        __calldata.extend(Vec::<Vec<starknet::core::types::Felt>>::cairo_serialize(values));
+        __calldata.extend(Layout::cairo_serialize(layout));
+        let __call = starknet::core::types::Call {
+            to: self.address,
+            selector: starknet::macros::selector!("set_entities"),
+            calldata: __calldata,
+        };
+        self.account.execute_v1(vec![__call])
+    }
+    #[allow(clippy::ptr_arg)]
+    #[allow(clippy::too_many_arguments)]
     pub fn set_entity_getcall(
         &self,
         model_selector: &starknet::core::types::Felt,
@@ -3966,6 +4108,26 @@ impl<A: starknet::accounts::ConnectedAccount + Sync> WorldContract<A> {
     }
 }
 impl<P: starknet::providers::Provider + Sync> WorldContractReader<P> {
+    #[allow(clippy::ptr_arg)]
+    #[allow(clippy::too_many_arguments)]
+    pub fn entities(
+        &self,
+        model_selector: &starknet::core::types::Felt,
+        indexes: &Vec<ModelIndex>,
+        layout: &Layout,
+    ) -> cainome::cairo_serde::call::FCall<P, Vec<Vec<starknet::core::types::Felt>>> {
+        use cainome::cairo_serde::CairoSerde;
+        let mut __calldata = vec![];
+        __calldata.extend(starknet::core::types::Felt::cairo_serialize(model_selector));
+        __calldata.extend(Vec::<ModelIndex>::cairo_serialize(indexes));
+        __calldata.extend(Layout::cairo_serialize(layout));
+        let __call = starknet::core::types::FunctionCall {
+            contract_address: self.address,
+            entry_point_selector: starknet::macros::selector!("entities"),
+            calldata: __calldata,
+        };
+        cainome::cairo_serde::call::FCall::new(__call, self.provider())
+    }
     #[allow(clippy::ptr_arg)]
     #[allow(clippy::too_many_arguments)]
     pub fn entity(

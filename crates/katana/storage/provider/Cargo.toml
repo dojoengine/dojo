@@ -8,7 +8,8 @@ version.workspace = true
 
 [dependencies]
 katana-db = { workspace = true, features = [ "test-utils" ] }
-katana-primitives = { workspace = true, features = [ "rpc" ] }
+katana-primitives.workspace = true
+katana-trie.workspace = true
 
 anyhow.workspace = true
 auto_impl.workspace = true
@@ -16,19 +17,22 @@ parking_lot.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 
+bitvec.workspace = true
+starknet-types-core.workspace = true
+
 # fork provider deps
 futures = { workspace = true, optional = true }
 starknet = { workspace = true, optional = true }
 tokio = { workspace = true, optional = true }
 
 alloy-primitives = { workspace = true, optional = true }
-serde_json = { workspace = true, optional = true }
+serde_json = { version = "1.0.133" }
 
 [features]
 default = [ "fork", "in-memory" ]
 fork = [ "dep:futures", "dep:starknet", "dep:tokio", "in-memory" ]
 in-memory = [  ]
-test-utils = [ "dep:alloy-primitives", "dep:serde_json" ]
+test-utils = [ "dep:alloy-primitives"]
 
 [dev-dependencies]
 alloy-primitives.workspace = true

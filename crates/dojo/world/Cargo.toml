@@ -24,9 +24,13 @@ dojo-types.workspace = true
 ipfs-api-backend-hyper = { git = "https://github.com/ferristseng/rust-ipfs-api", rev = "af2c17f7b19ef5b9898f458d97a90055c3605633", features = [ "with-hyper-rustls" ], optional = true }
 toml.workspace = true
 url.workspace = true
+hex.workspace = true
+hex-literal.workspace = true
+num-bigint.workspace = true
 
 [dev-dependencies]
 tokio.workspace = true
+futures.workspace = true
 
 [features]
-metadata = [ "dep:ipfs-api-backend-hyper" ]
+ipfs = [ "dep:ipfs-api-backend-hyper" ]

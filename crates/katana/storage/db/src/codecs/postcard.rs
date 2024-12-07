@@ -11,6 +11,8 @@ use crate::error::CodecError;
 use crate::models::block::StoredBlockBodyIndices;
 use crate::models::contract::ContractInfoChangeList;
 use crate::models::list::BlockList;
+use crate::models::stage::StageCheckpoint;
+use crate::models::trie::TrieDatabaseValue;
 
 macro_rules! impl_compress_and_decompress_for_table_values {
     ($($name:ty),*) => {
@@ -38,8 +40,10 @@ impl_compress_and_decompress_for_table_values!(
     Header,
     Receipt,
     Felt,
+    TrieDatabaseValue,
     ContractAddress,
     BlockList,
+    StageCheckpoint,
     GenericContractInfo,
     StoredBlockBodyIndices,
     ContractInfoChangeList

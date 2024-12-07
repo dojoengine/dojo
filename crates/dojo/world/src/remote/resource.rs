@@ -30,6 +30,8 @@ pub struct CommonRemoteInfo {
     pub namespace: String,
     /// The address of the resource.
     pub address: ContractAddress,
+    /// The hash of the stored metadata associated to the resource if any.
+    pub metadata_hash: Felt,
     /// The contract addresses that have owner permission on the resource.
     pub owners: HashSet<ContractAddress>,
     /// The contract addresses that have writer permission on the resource.
@@ -80,6 +82,7 @@ impl CommonRemoteInfo {
             name: name.to_string(),
             namespace: namespace.to_string(),
             address,
+            metadata_hash: Felt::ZERO,
             owners: HashSet::new(),
             writers: HashSet::new(),
         }
@@ -169,6 +172,26 @@ impl ResourceRemote {
             ResourceRemote::Contract(c) => c.common.address,
             ResourceRemote::Model(m) => m.common.address,
             ResourceRemote::Event(e) => e.common.address,
+            ResourceRemote::Namespace(_) => Felt::ZERO,
+        }
+    }
+
+    /// Set the hash of the stored metadata associated to the resource.
+    pub fn set_metadata_hash(&mut self, hash: Felt) {
+        match self {
+            ResourceRemote::Contract(c) => c.common.metadata_hash = hash,
+            ResourceRemote::Model(m) => m.common.metadata_hash = hash,
+            ResourceRemote::Event(e) => e.common.metadata_hash = hash,
+            ResourceRemote::Namespace(_) => {}
+        }
+    }
+
+    /// The hash of the stored metadata associated to the resource.
+    pub fn metadata_hash(&self) -> Felt {
+        match self {
+            ResourceRemote::Contract(c) => c.common.metadata_hash,
+            ResourceRemote::Model(m) => m.common.metadata_hash,
+            ResourceRemote::Event(e) => e.common.metadata_hash,
             ResourceRemote::Namespace(_) => Felt::ZERO,
         }
     }

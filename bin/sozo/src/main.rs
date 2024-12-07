@@ -1,4 +1,4 @@
-// #![cfg_attr(not(test), warn(unused_crate_dependencies))]
+#![warn(unused_crate_dependencies)]
 
 use std::env;
 use std::process::exit;
@@ -11,14 +11,13 @@ use scarb::compiler::CompilerRepository;
 use scarb::core::Config;
 use scarb_ui::{OutputFormat, Ui};
 use tracing::trace;
-
 mod args;
 mod commands;
 mod utils;
 
 fn main() {
     let args = SozoArgs::parse();
-    let _ = args.init_logging();
+    let _ = args.init_logging(&args.verbose);
     let ui = Ui::new(args.ui_verbosity(), OutputFormat::Text);
 
     if let Err(err) = cli_main(args) {

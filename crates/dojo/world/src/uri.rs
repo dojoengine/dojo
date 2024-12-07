@@ -1,3 +1,4 @@
+use std::hash::{Hash, Hasher};
 use std::path::PathBuf;
 
 use anyhow::Result;
@@ -15,6 +16,22 @@ pub enum Uri {
     Http(Url),
     Ipfs(String),
     File(PathBuf),
+}
+
+impl Hash for Uri {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        match self {
+            Uri::Http(url) => {
+                url.to_string().hash(state);
+            }
+            Uri::Ipfs(uri) => {
+                uri.to_string().hash(state);
+            }
+            Uri::File(path) => {
+                path.hash(state);
+            }
+        }
+    }
 }
 
 impl Serialize for Uri {
@@ -37,6 +54,16 @@ impl<'de> Deserialize<'de> for Uri {
     {
         let s = String::deserialize(deserializer)?;
         Uri::from_string(&s).map_err(serde::de::Error::custom)
+    }
+}
+
+impl std::fmt::Display for Uri {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Uri::File(path) => write!(f, "{}", path.to_string_lossy()),
+            Uri::Http(url) => write!(f, "{}", url),
+            Uri::Ipfs(uri) => write!(f, "{}", uri),
+        }
     }
 }
 

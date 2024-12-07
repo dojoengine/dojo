@@ -10,10 +10,9 @@ slot = { workspace = true, optional = true }
 
 anyhow.workspace = true
 async-trait.workspace = true
-bigdecimal.workspace = true
+cainome.workspace = true
 cairo-lang-compiler.workspace = true
 cairo-lang-filesystem.workspace = true
-cairo-lang-plugins.workspace = true
 cairo-lang-project.workspace = true
 cairo-lang-starknet.workspace = true
 cairo-lang-test-plugin.workspace = true
@@ -23,23 +22,15 @@ camino.workspace = true
 clap.workspace = true
 clap-verbosity-flag.workspace = true
 colored.workspace = true
-console.workspace = true
 dojo-bindgen.workspace = true
 dojo-lang.workspace = true
 dojo-types.workspace = true
 dojo-utils.workspace = true
 dojo-world.workspace = true
-hex = "0.4.3"
-hex-literal = "0.4.1"
 itertools.workspace = true
 katana-rpc-api.workspace = true
-notify = "6.0.1"
-num-bigint = "0.4.3"
-num-integer = "0.1.45"
-prettytable-rs = "0.10.0"
+notify = "7.0.0"
 tabled = { version = "0.16.0", features = [ "ansi" ] }
-regex.workspace = true
-rpassword.workspace = true
 scarb.workspace = true
 scarb-ui.workspace = true
 semver.workspace = true
@@ -49,25 +40,22 @@ smol_str.workspace = true
 sozo-ops.workspace = true
 sozo-walnut = { workspace = true, optional = true }
 sozo-scarbext.workspace = true
-spinoff.workspace = true
 starknet.workspace = true
 starknet-crypto.workspace = true
 thiserror.workspace = true
 toml.workspace = true
-tokio.workspace = true
 tracing.workspace = true
 tracing-log.workspace = true
 tracing-subscriber.workspace = true
 url.workspace = true
 
-cainome.workspace = true
 reqwest = { workspace = true, features = [ "json" ], optional = true }
 
 [dev-dependencies]
-assert_fs.workspace = true
 dojo-test-utils = { workspace = true, features = [ "build-examples" ] }
 katana-runner.workspace = true
-snapbox = "0.4.6"
+serde_json.workspace = true
+tokio.workspace = true
 
 [features]
 default = [ "controller", "walnut" ]

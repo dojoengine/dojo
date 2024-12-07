@@ -1,6 +1,6 @@
 ![Dojo Feature Matrix](.github/feature_matrix.png)
 
-# Dojo: Provable Games and Applications [![discord](https://img.shields.io/badge/join-dojo-green?logo=discord&logoColor=white)](https://discord.gg/PwDa2mKhR4) [![Telegram Chat][tg-badge]][tg-url] ![Github Actions][gha-badge]
+# Dojo: Provable Games and Applications [![discord](https://img.shields.io/badge/join-dojo-green?logo=discord&logoColor=white)](https://discord.com/invite/dojoengine) [![Telegram Chat][tg-badge]][tg-url] ![Github Actions][gha-badge]
 
 [gha-badge]: https://img.shields.io/github/actions/workflow/status/dojoengine/dojo/ci.yml?branch=main
 [tg-badge]: https://img.shields.io/endpoint?color=neon&logo=telegram&label=chat&style=flat-square&url=https%3A%2F%2Ftg.sumanjay.workers.dev%2Fdojoengine

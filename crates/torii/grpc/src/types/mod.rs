@@ -2,9 +2,11 @@ use core::fmt;
 use std::collections::HashMap;
 use std::str::FromStr;
 
+use crypto_bigint::U256;
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::Ty;
 use dojo_world::contracts::naming;
+use schema::SchemaError;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::{
     ContractStorageDiffItem, Felt, FromStrError, StateDiff, StateUpdate, StorageEntry,
@@ -15,6 +17,48 @@ use crate::proto::types::member_value;
 use crate::proto::{self};
 
 pub mod schema;
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
+pub struct Token {
+    pub contract_address: Felt,
+    pub name: String,
+    pub symbol: String,
+    pub decimals: u8,
+    pub metadata: String,
+}
+
+impl TryFrom<proto::types::Token> for Token {
+    type Error = SchemaError;
+    fn try_from(value: proto::types::Token) -> Result<Self, Self::Error> {
+        Ok(Self {
+            contract_address: Felt::from_str(&value.contract_address)?,
+            name: value.name,
+            symbol: value.symbol,
+            decimals: value.decimals as u8,
+            metadata: value.metadata,
+        })
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
+pub struct TokenBalance {
+    pub balance: U256,
+    pub account_address: Felt,
+    pub contract_address: Felt,
+    pub token_id: String,
+}
+
+impl TryFrom<proto::types::TokenBalance> for TokenBalance {
+    type Error = SchemaError;
+    fn try_from(value: proto::types::TokenBalance) -> Result<Self, Self::Error> {
+        Ok(Self {
+            balance: U256::from_be_hex(&value.balance),
+            account_address: Felt::from_str(&value.account_address)?,
+            contract_address: Felt::from_str(&value.contract_address)?,
+            token_id: value.token_id,
+        })
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct IndexerUpdate {
@@ -36,11 +80,31 @@ impl From<proto::world::SubscribeIndexerResponse> for IndexerUpdate {
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
+pub struct OrderBy {
+    pub model: String,
+    pub member: String,
+    pub direction: OrderDirection,
+}
+
+impl From<OrderBy> for proto::types::OrderBy {
+    fn from(value: OrderBy) -> Self {
+        Self { model: value.model, member: value.member, direction: value.direction as i32 }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
+pub enum OrderDirection {
+    Asc,
+    Desc,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct Query {
     pub clause: Option<Clause>,
     pub limit: u32,
     pub offset: u32,
     pub dont_include_hashed_keys: bool,
+    pub order_by: Vec<OrderBy>,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
@@ -204,6 +268,7 @@ impl From<Query> for proto::types::Query {
             limit: value.limit,
             offset: value.offset,
             dont_include_hashed_keys: value.dont_include_hashed_keys,
+            order_by: value.order_by.into_iter().map(|o| o.into()).collect(),
         }
     }
 }

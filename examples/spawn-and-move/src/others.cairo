@@ -5,7 +5,7 @@ pub mod others {
 
     #[derive(Copy, Drop, Serde)]
     #[dojo::event]
-    struct ContractInitialized {
+    struct MyInit {
         #[key]
         caller: ContractAddress,
         value: u8,
@@ -14,6 +14,6 @@ pub mod others {
     fn dojo_init(self: @ContractState, value: u8) {
         let mut world = self.world(@"ns");
 
-        world.emit_event(@ContractInitialized { caller: get_caller_address(), value });
+        world.emit_event(@MyInit { caller: get_caller_address(), value });
     }
 }

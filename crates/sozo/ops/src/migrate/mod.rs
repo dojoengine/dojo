@@ -19,24 +19,29 @@
 //!    initialization of contracts can mutate resources.
 
 use std::collections::HashMap;
-use std::fmt;
-use std::str::FromStr;
 
+use anyhow::anyhow;
 use cainome::cairo_serde::{ByteArray, ClassHash, ContractAddress};
-use dojo_utils::{Declarer, Deployer, Invoker, TxnConfig};
-use dojo_world::config::ProfileConfig;
+use dojo_utils::{Declarer, Deployer, Invoker, LabeledClass, TransactionResult, TxnConfig};
+use dojo_world::config::calldata_decoder::decode_calldata;
+use dojo_world::config::{metadata_config, ProfileConfig, ResourceConfig, WorldMetadata};
+use dojo_world::constants::WORLD;
+use dojo_world::contracts::abigen::world::ResourceMetadata;
 use dojo_world::contracts::WorldContract;
 use dojo_world::diff::{Manifest, ResourceDiff, WorldDiff, WorldStatus};
 use dojo_world::local::ResourceLocal;
+use dojo_world::metadata::MetadataStorage;
 use dojo_world::remote::ResourceRemote;
+use dojo_world::services::UploadService;
 use dojo_world::{utils, ResourceType};
-use spinoff::Spinner;
 use starknet::accounts::{ConnectedAccount, SingleOwnerAccount};
-use starknet::core::types::{Call, FlattenedSierraClass};
-use starknet::providers::AnyProvider;
+use starknet::core::types::Call;
+use starknet::providers::{AnyProvider, Provider};
 use starknet::signers::LocalWallet;
 use starknet_crypto::Felt;
 use tracing::trace;
+
+use crate::migration_ui::MigrationUi;
 
 pub mod error;
 pub use error::MigrationError;
@@ -61,36 +66,6 @@ pub struct MigrationResult {
     pub manifest: Manifest,
 }
 
-pub enum MigrationUi {
-    Spinner(Spinner),
-    None,
-}
-
-impl fmt::Debug for MigrationUi {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Spinner(_) => write!(f, "Spinner"),
-            Self::None => write!(f, "None"),
-        }
-    }
-}
-
-impl MigrationUi {
-    pub fn update_text(&mut self, text: &'static str) {
-        match self {
-            Self::Spinner(s) => s.update_text(text),
-            Self::None => (),
-        }
-    }
-
-    pub fn stop_and_persist(&mut self, symbol: &'static str, text: &'static str) {
-        match self {
-            Self::Spinner(s) => s.stop_and_persist(symbol, text),
-            Self::None => (),
-        }
-    }
-}
-
 impl<A> Migration<A>
 where
     A: ConnectedAccount + Sync + Send,
@@ -113,23 +88,16 @@ where
     /// spinner.
     pub async fn migrate(
         &self,
-        spinner: &mut MigrationUi,
+        ui: &mut MigrationUi,
     ) -> Result<MigrationResult, MigrationError<A::SignError>> {
-        spinner.update_text("Deploying world...");
-        let world_has_changed = self.ensure_world().await?;
+        let world_has_changed = self.ensure_world(ui).await?;
 
-        let resources_have_changed = if !self.diff.is_synced() {
-            spinner.update_text("Syncing resources...");
-            self.sync_resources().await?
-        } else {
-            false
-        };
+        let resources_have_changed =
+            if !self.diff.is_synced() { self.sync_resources(ui).await? } else { false };
 
-        spinner.update_text("Syncing permissions...");
-        let permissions_have_changed = self.sync_permissions().await?;
+        let permissions_have_changed = self.sync_permissions(ui).await?;
 
-        spinner.update_text("Initializing contracts...");
-        let contracts_have_changed = self.initialize_contracts().await?;
+        let contracts_have_changed = self.initialize_contracts(ui).await?;
 
         Ok(MigrationResult {
             has_changes: world_has_changed
@@ -138,6 +106,104 @@ where
                 || contracts_have_changed,
             manifest: Manifest::new(&self.diff),
         })
+    }
+
+    /// Upload resources metadata to IPFS and update the ResourceMetadata Dojo model.
+    ///
+    /// # Arguments
+    ///
+    /// # Returns
+    pub async fn upload_metadata(
+        &self,
+        ui: &mut MigrationUi,
+        service: &mut impl UploadService,
+    ) -> anyhow::Result<()> {
+        ui.update_text("Uploading metadata...");
+
+        let mut invoker = Invoker::new(&self.world.account, self.txn_config);
+
+        // world
+        let current_hash = self.diff.world_info.metadata_hash;
+        let new_metadata = WorldMetadata::from(self.diff.profile_config.world.clone());
+
+        let res = new_metadata.upload_if_changed(service, current_hash).await?;
+
+        if let Some((new_uri, new_hash)) = res {
+            trace!(new_uri, new_hash = format!("{:#066x}", new_hash), "World metadata updated.");
+
+            invoker.add_call(self.world.set_metadata_getcall(&ResourceMetadata {
+                resource_id: WORLD,
+                metadata_uri: ByteArray::from_string(&new_uri)?,
+                metadata_hash: new_hash,
+            }));
+        }
+
+        // contracts
+        if let Some(configs) = &self.diff.profile_config.contracts {
+            let calls = self.upload_metadata_from_resource_config(service, configs).await?;
+            invoker.extend_calls(calls);
+        }
+
+        // models
+        if let Some(configs) = &self.diff.profile_config.models {
+            let calls = self.upload_metadata_from_resource_config(service, configs).await?;
+            invoker.extend_calls(calls);
+        }
+
+        // events
+        if let Some(configs) = &self.diff.profile_config.events {
+            let calls = self.upload_metadata_from_resource_config(service, configs).await?;
+            invoker.extend_calls(calls);
+        }
+
+        if self.do_multicall() {
+            ui.update_text_boxed(format!("Uploading {} metadata...", invoker.calls.len()));
+            invoker.multicall().await.map_err(|e| anyhow!(e.to_string()))?;
+        } else {
+            ui.update_text_boxed(format!(
+                "Uploading {} metadata (sequentially)...",
+                invoker.calls.len()
+            ));
+            invoker.invoke_all_sequentially().await.map_err(|e| anyhow!(e.to_string()))?;
+        }
+
+        Ok(())
+    }
+
+    async fn upload_metadata_from_resource_config(
+        &self,
+        service: &mut impl UploadService,
+        config: &[ResourceConfig],
+    ) -> anyhow::Result<Vec<Call>> {
+        let mut calls = vec![];
+
+        for item in config {
+            let selector = dojo_types::naming::compute_selector_from_tag_or_name(&item.tag);
+
+            let current_hash =
+                self.diff.resources.get(&selector).map_or(Felt::ZERO, |r| r.metadata_hash());
+
+            let new_metadata = metadata_config::ResourceMetadata::from(item.clone());
+
+            let res = new_metadata.upload_if_changed(service, current_hash).await?;
+
+            if let Some((new_uri, new_hash)) = res {
+                trace!(
+                    tag = item.tag,
+                    new_uri,
+                    new_hash = format!("{:#066x}", new_hash),
+                    "Resource metadata updated."
+                );
+
+                calls.push(self.world.set_metadata_getcall(&ResourceMetadata {
+                    resource_id: selector,
+                    metadata_uri: ByteArray::from_string(&new_uri)?,
+                    metadata_hash: new_hash,
+                }));
+            }
+        }
+
+        Ok(calls)
     }
 
     /// Returns whether multicall should be used. By default, it is enabled.
@@ -152,7 +218,12 @@ where
     /// found in the [`ProfileConfig`].
     ///
     /// Returns true if at least one contract has been initialized, false otherwise.
-    async fn initialize_contracts(&self) -> Result<bool, MigrationError<A::SignError>> {
+    async fn initialize_contracts(
+        &self,
+        ui: &mut MigrationUi,
+    ) -> Result<bool, MigrationError<A::SignError>> {
+        ui.update_text("Initializing contracts...");
+
         let mut invoker = Invoker::new(&self.world.account, self.txn_config);
 
         let init_call_args = if let Some(init_call_args) = &self.profile_config.init_call_args {
@@ -196,15 +267,11 @@ where
                 };
 
                 if do_init {
-                    // Currently, only felts are supported in the init call data.
                     // The injection of class hash and addresses is no longer supported since the
                     // world contains an internal DNS.
                     let args = if let Some(args) = init_call_args {
-                        let mut parsed_args = vec![];
-                        for arg in args {
-                            parsed_args.push(Felt::from_str(arg)?);
-                        }
-                        parsed_args
+                        decode_calldata(&args.join(","))
+                            .map_err(|_| MigrationError::InitCallArgs)?
                     } else {
                         vec![]
                     };
@@ -235,10 +302,19 @@ where
 
         let has_changed = !invoker.calls.is_empty();
 
-        if self.do_multicall() {
-            invoker.multicall().await?;
-        } else {
-            invoker.invoke_all_sequentially().await?;
+        if !invoker.calls.is_empty() {
+            if self.do_multicall() {
+                let ui_text = format!("Initializing {} contracts...", invoker.calls.len());
+                ui.update_text_boxed(ui_text);
+
+                invoker.multicall().await?;
+            } else {
+                let ui_text =
+                    format!("Initializing {} contracts (sequentially)...", invoker.calls.len());
+                ui.update_text_boxed(ui_text);
+
+                invoker.invoke_all_sequentially().await?;
+            }
         }
 
         Ok(has_changed)
@@ -257,7 +333,12 @@ where
     /// overlay resource, which can contain also writers.
     ///
     /// Returns true if at least one permission has changed, false otherwise.
-    async fn sync_permissions(&self) -> Result<bool, MigrationError<A::SignError>> {
+    async fn sync_permissions(
+        &self,
+        ui: &mut MigrationUi,
+    ) -> Result<bool, MigrationError<A::SignError>> {
+        ui.update_text("Syncing permissions...");
+
         let mut invoker = Invoker::new(&self.world.account, self.txn_config);
 
         // Only takes the local permissions that are not already set onchain to apply them.
@@ -296,8 +377,14 @@ where
         let has_changed = !invoker.calls.is_empty();
 
         if self.do_multicall() {
+            let ui_text = format!("Syncing {} permissions...", invoker.calls.len());
+            ui.update_text_boxed(ui_text);
+
             invoker.multicall().await?;
         } else {
+            let ui_text = format!("Syncing {} permissions (sequentially)...", invoker.calls.len());
+            ui.update_text_boxed(ui_text);
+
             invoker.invoke_all_sequentially().await?;
         }
 
@@ -307,13 +394,19 @@ where
     /// Syncs the resources by declaring the classes and registering/upgrading the resources.
     ///
     /// Returns true if at least one resource has changed, false otherwise.
-    async fn sync_resources(&self) -> Result<bool, MigrationError<A::SignError>> {
+    async fn sync_resources(
+        &self,
+        ui: &mut MigrationUi,
+    ) -> Result<bool, MigrationError<A::SignError>> {
+        ui.update_text("Syncing resources...");
+
         let mut invoker = Invoker::new(&self.world.account, self.txn_config);
 
         // Namespaces must be synced first, since contracts, models and events are namespaced.
         self.namespaces_getcalls(&mut invoker).await?;
 
-        let mut classes: HashMap<Felt, FlattenedSierraClass> = HashMap::new();
+        let mut classes: HashMap<Felt, LabeledClass> = HashMap::new();
+        let mut n_resources = 0;
 
         // Collects the calls and classes to be declared to sync the resources.
         for resource in self.diff.resources.values() {
@@ -325,16 +418,31 @@ where
                 ResourceType::Contract => {
                     let (contract_calls, contract_classes) =
                         self.contracts_calls_classes(resource).await?;
+
+                    if !contract_calls.is_empty() {
+                        n_resources += 1;
+                    }
+
                     invoker.extend_calls(contract_calls);
                     classes.extend(contract_classes);
                 }
                 ResourceType::Model => {
                     let (model_calls, model_classes) = self.models_calls_classes(resource).await?;
+
+                    if !model_calls.is_empty() {
+                        n_resources += 1;
+                    }
+
                     invoker.extend_calls(model_calls);
                     classes.extend(model_classes);
                 }
                 ResourceType::Event => {
                     let (event_calls, event_classes) = self.events_calls_classes(resource).await?;
+
+                    if !event_calls.is_empty() {
+                        n_resources += 1;
+                    }
+
                     invoker.extend_calls(event_calls);
                     classes.extend(event_classes);
                 }
@@ -350,11 +458,16 @@ where
         // Since migrator account from `self.world.account` is under the [`ConnectedAccount`] trait,
         // we can group it with the predeployed accounts which are concrete types.
         let accounts = self.get_accounts().await;
+        let n_classes = classes.len();
 
         if accounts.is_empty() {
             trace!("Declaring classes with migrator account.");
             let mut declarer = Declarer::new(&self.world.account, self.txn_config);
-            declarer.extend_classes(classes.into_iter().collect());
+            declarer.extend_classes(classes.into_values().collect());
+
+            let ui_text = format!("Declaring {} classes...", n_classes);
+            ui.update_text_boxed(ui_text);
+
             declarer.declare_all().await?;
         } else {
             trace!("Declaring classes with {} accounts.", accounts.len());
@@ -363,10 +476,14 @@ where
                 declarers.push(Declarer::new(account, self.txn_config));
             }
 
-            for (idx, (casm_class_hash, class)) in classes.into_iter().enumerate() {
+            for (idx, (_, labeled_class)) in classes.into_iter().enumerate() {
                 let declarer_idx = idx % declarers.len();
-                declarers[declarer_idx].add_class(casm_class_hash, class);
+                declarers[declarer_idx].add_class(labeled_class);
             }
+
+            let ui_text =
+                format!("Declaring {} classes with {} accounts...", n_classes, declarers.len());
+            ui.update_text_boxed(ui_text);
 
             let declarers_futures =
                 futures::future::join_all(declarers.into_iter().map(|d| d.declare_all())).await;
@@ -388,8 +505,14 @@ where
         }
 
         if self.do_multicall() {
+            let ui_text = format!("Registering {} resources...", n_resources);
+            ui.update_text_boxed(ui_text);
+
             invoker.multicall().await?;
         } else {
+            let ui_text = format!("Registering {} resources (sequentially)...", n_resources);
+            ui.update_text_boxed(ui_text);
+
             invoker.invoke_all_sequentially().await?;
         }
 
@@ -430,13 +553,13 @@ where
     async fn contracts_calls_classes(
         &self,
         resource: &ResourceDiff,
-    ) -> Result<(Vec<Call>, HashMap<Felt, FlattenedSierraClass>), MigrationError<A::SignError>>
-    {
+    ) -> Result<(Vec<Call>, HashMap<Felt, LabeledClass>), MigrationError<A::SignError>> {
         let mut calls = vec![];
         let mut classes = HashMap::new();
 
         let namespace = resource.namespace();
         let ns_bytearray = ByteArray::from_string(&namespace)?;
+        let tag = resource.tag();
 
         if let ResourceDiff::Created(ResourceLocal::Contract(contract)) = resource {
             trace!(
@@ -446,8 +569,13 @@ where
                 "Registering contract."
             );
 
-            classes
-                .insert(contract.common.casm_class_hash, contract.common.class.clone().flatten()?);
+            let casm_class_hash = contract.common.casm_class_hash;
+            let class = contract.common.class.clone().flatten()?;
+
+            classes.insert(
+                casm_class_hash,
+                LabeledClass { label: tag.clone(), casm_class_hash, class },
+            );
 
             calls.push(self.world.register_contract_getcall(
                 &contract.dojo_selector(),
@@ -468,9 +596,12 @@ where
                 "Upgrading contract."
             );
 
+            let casm_class_hash = contract_local.common.casm_class_hash;
+            let class = contract_local.common.class.clone().flatten()?;
+
             classes.insert(
-                contract_local.common.casm_class_hash,
-                contract_local.common.class.clone().flatten()?,
+                casm_class_hash,
+                LabeledClass { label: tag.clone(), casm_class_hash, class },
             );
 
             calls.push(self.world.upgrade_contract_getcall(
@@ -488,13 +619,13 @@ where
     async fn models_calls_classes(
         &self,
         resource: &ResourceDiff,
-    ) -> Result<(Vec<Call>, HashMap<Felt, FlattenedSierraClass>), MigrationError<A::SignError>>
-    {
+    ) -> Result<(Vec<Call>, HashMap<Felt, LabeledClass>), MigrationError<A::SignError>> {
         let mut calls = vec![];
         let mut classes = HashMap::new();
 
         let namespace = resource.namespace();
         let ns_bytearray = ByteArray::from_string(&namespace)?;
+        let tag = resource.tag();
 
         if let ResourceDiff::Created(ResourceLocal::Model(model)) = resource {
             trace!(
@@ -504,7 +635,13 @@ where
                 "Registering model."
             );
 
-            classes.insert(model.common.casm_class_hash, model.common.class.clone().flatten()?);
+            let casm_class_hash = model.common.casm_class_hash;
+            let class = model.common.class.clone().flatten()?;
+
+            classes.insert(
+                casm_class_hash,
+                LabeledClass { label: tag.clone(), casm_class_hash, class },
+            );
 
             calls.push(
                 self.world
@@ -524,9 +661,12 @@ where
                 "Upgrading model."
             );
 
+            let casm_class_hash = model_local.common.casm_class_hash;
+            let class = model_local.common.class.clone().flatten()?;
+
             classes.insert(
-                model_local.common.casm_class_hash,
-                model_local.common.class.clone().flatten()?,
+                casm_class_hash,
+                LabeledClass { label: tag.clone(), casm_class_hash, class },
             );
 
             calls.push(
@@ -546,13 +686,13 @@ where
     async fn events_calls_classes(
         &self,
         resource: &ResourceDiff,
-    ) -> Result<(Vec<Call>, HashMap<Felt, FlattenedSierraClass>), MigrationError<A::SignError>>
-    {
+    ) -> Result<(Vec<Call>, HashMap<Felt, LabeledClass>), MigrationError<A::SignError>> {
         let mut calls = vec![];
         let mut classes = HashMap::new();
 
         let namespace = resource.namespace();
         let ns_bytearray = ByteArray::from_string(&namespace)?;
+        let tag = resource.tag();
 
         if let ResourceDiff::Created(ResourceLocal::Event(event)) = resource {
             trace!(
@@ -562,7 +702,13 @@ where
                 "Registering event."
             );
 
-            classes.insert(event.common.casm_class_hash, event.common.class.clone().flatten()?);
+            let casm_class_hash = event.common.casm_class_hash;
+            let class = event.common.class.clone().flatten()?;
+
+            classes.insert(
+                casm_class_hash,
+                LabeledClass { label: tag.clone(), casm_class_hash, class },
+            );
 
             calls.push(
                 self.world
@@ -582,9 +728,12 @@ where
                 "Upgrading event."
             );
 
+            let casm_class_hash = event_local.common.casm_class_hash;
+            let class = event_local.common.class.clone().flatten()?;
+
             classes.insert(
-                event_local.common.casm_class_hash,
-                event_local.common.class.clone().flatten()?,
+                casm_class_hash,
+                LabeledClass { label: tag.clone(), casm_class_hash, class },
             );
 
             calls.push(
@@ -601,23 +750,33 @@ where
     /// Ensures the world is declared and deployed if necessary.
     ///
     /// Returns true if the world has to be deployed/updated, false otherwise.
-    async fn ensure_world(&self) -> Result<bool, MigrationError<A::SignError>> {
+    async fn ensure_world(
+        &self,
+        ui: &mut MigrationUi,
+    ) -> Result<bool, MigrationError<A::SignError>> {
         match &self.diff.world_info.status {
             WorldStatus::Synced => return Ok(false),
             WorldStatus::NotDeployed => {
+                ui.update_text("Deploying the world...");
                 trace!("Deploying the first world.");
 
-                Declarer::declare(
-                    self.diff.world_info.casm_class_hash,
-                    self.diff.world_info.class.clone().flatten()?,
-                    &self.world.account,
-                    &self.txn_config,
-                )
-                .await?;
+                let labeled_class = LabeledClass {
+                    label: "world".to_string(),
+                    casm_class_hash: self.diff.world_info.casm_class_hash,
+                    class: self.diff.world_info.class.clone().flatten()?,
+                };
 
-                let deployer = Deployer::new(&self.world.account, self.txn_config);
+                Declarer::declare(labeled_class, &self.world.account, &self.txn_config).await?;
 
-                deployer
+                // We want to wait for the receipt to be able to print the
+                // world block number.
+                let mut txn_config = self.txn_config;
+                txn_config.wait = true;
+                txn_config.receipt = true;
+
+                let deployer = Deployer::new(&self.world.account, txn_config);
+
+                let res = deployer
                     .deploy_via_udc(
                         self.diff.world_info.class_hash,
                         utils::world_salt(&self.profile_config.world.seed)?,
@@ -625,17 +784,46 @@ where
                         Felt::ZERO,
                     )
                     .await?;
+
+                match res {
+                    TransactionResult::HashReceipt(hash, receipt) => {
+                        let block_msg = if let Some(n) = receipt.block.block_number() {
+                            n.to_string()
+                        } else {
+                            // If we are in the pending block, we must get the latest block of the
+                            // chain to display it to the user.
+                            let provider = &self.world.account.provider();
+
+                            format!(
+                                "pending ({})",
+                                provider.block_number().await.map_err(MigrationError::Provider)?
+                            )
+                        };
+
+                        ui.stop_and_persist_boxed(
+                            "🌍",
+                            format!(
+                                "World deployed at block {} with txn hash: {:#066x}",
+                                block_msg, hash
+                            ),
+                        );
+
+                        ui.restart("World deployed, continuing...");
+                    }
+                    _ => unreachable!(),
+                }
             }
             WorldStatus::NewVersion => {
                 trace!("Upgrading the world.");
+                ui.update_text("Upgrading the world...");
 
-                Declarer::declare(
-                    self.diff.world_info.casm_class_hash,
-                    self.diff.world_info.class.clone().flatten()?,
-                    &self.world.account,
-                    &self.txn_config,
-                )
-                .await?;
+                let labeled_class = LabeledClass {
+                    label: "world".to_string(),
+                    casm_class_hash: self.diff.world_info.casm_class_hash,
+                    class: self.diff.world_info.class.clone().flatten()?,
+                };
+
+                Declarer::declare(labeled_class, &self.world.account, &self.txn_config).await?;
 
                 let mut invoker = Invoker::new(&self.world.account, self.txn_config);
 

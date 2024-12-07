@@ -3,6 +3,26 @@ description = "example world"
 name = "example"
 seed = "dojo_examples"
 
+[[models]]
+tag = "ns-Message"
+description = "Message sent by a player"
+
+[[models]]
+tag = "ns-Position"
+description = "position of a player in the world"
+
+[[models]]
+tag = "ns-Moves"
+description = "move of a player in the world"
+
+[[events]]
+tag = "ns-Moved"
+description = "when a player has moved"
+
+[[contracts]]
+tag = "ns-actions"
+description = "set of actions for a player"
+
 [namespace]
 default = "ns"
 
@@ -11,7 +31,10 @@ rpc_url = "http://localhost:5050/"
 # Default account for katana with seed = 0
 account_address = "0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba"
 private_key = "0x1800000000300000180000000000030000000000003006001800006600"
-world_address = "0x234d358c2ec21c98a229966bd2bae6dbf2c517969c361bc649361f9055afc32"
+world_address = "0x52ee4d3cba58d1a0462bbfb6813bf5aa1b35078c3b859cded2b727c1d9469ea"
+ipfs_config.url = "https://ipfs.infura.io:5001"
+ipfs_config.username = "2EBrzr7ZASQZKH32sl2xWauXPSA"
+ipfs_config.password = "12290b883db9138a8ae3363b6739d220"
 
 [init_call_args]
 "ns-others" = ["0xff"]

@@ -1,36 +1,47 @@
 use core::fmt;
 
 use anyhow::Result;
+use auth::AuthArgs;
 use clap::Subcommand;
+use events::EventsArgs;
 use scarb::core::{Config, Package, Workspace};
 use tracing::info_span;
 
+pub(crate) mod auth;
 pub(crate) mod build;
 pub(crate) mod call;
-pub(crate) mod calldata_decoder;
 pub(crate) mod clean;
+pub(crate) mod dev;
+pub(crate) mod events;
 pub(crate) mod execute;
 pub(crate) mod hash;
 pub(crate) mod init;
 pub(crate) mod inspect;
 pub(crate) mod migrate;
+pub(crate) mod model;
 pub(crate) mod options;
 pub(crate) mod test;
 
 use build::BuildArgs;
 use call::CallArgs;
 use clean::CleanArgs;
+use dev::DevArgs;
 use execute::ExecuteArgs;
 use hash::HashArgs;
 use init::InitArgs;
 use inspect::InspectArgs;
 use migrate::MigrateArgs;
+use model::ModelArgs;
 use test::TestArgs;
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {
+    #[command(about = "Grant or revoke a contract permission to write to a resource")]
+    Auth(Box<AuthArgs>),
     #[command(about = "Build the world, generating the necessary artifacts for deployment")]
-    Build(BuildArgs),
+    Build(Box<BuildArgs>),
+    #[command(about = "Build and migrate the world every time a file changes")]
+    Dev(Box<DevArgs>),
     #[command(about = "Run a migration, declaring and deploying contracts as necessary to update \
                        the world")]
     Migrate(Box<MigrateArgs>),
@@ -48,13 +59,19 @@ pub enum Commands {
     Hash(Box<HashArgs>),
     #[command(about = "Initialize a new dojo project")]
     Init(Box<InitArgs>),
+    #[command(about = "Inspect a model")]
+    Model(Box<ModelArgs>),
+    #[command(about = "Inspect events emitted by the world")]
+    Events(Box<EventsArgs>),
 }
 
 impl fmt::Display for Commands {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Commands::Auth(_) => write!(f, "Auth"),
             Commands::Build(_) => write!(f, "Build"),
             Commands::Clean(_) => write!(f, "Clean"),
+            Commands::Dev(_) => write!(f, "Dev"),
             Commands::Execute(_) => write!(f, "Execute"),
             Commands::Inspect(_) => write!(f, "Inspect"),
             Commands::Migrate(_) => write!(f, "Migrate"),
@@ -62,6 +79,8 @@ impl fmt::Display for Commands {
             Commands::Test(_) => write!(f, "Test"),
             Commands::Hash(_) => write!(f, "Hash"),
             Commands::Init(_) => write!(f, "Init"),
+            Commands::Model(_) => write!(f, "Model"),
+            Commands::Events(_) => write!(f, "Events"),
         }
     }
 }
@@ -75,7 +94,9 @@ pub fn run(command: Commands, config: &Config) -> Result<()> {
     // useful to write tests for each command.
 
     match command {
+        Commands::Auth(args) => args.run(config),
         Commands::Build(args) => args.run(config),
+        Commands::Dev(args) => args.run(config),
         Commands::Migrate(args) => args.run(config),
         Commands::Execute(args) => args.run(config),
         Commands::Inspect(args) => args.run(config),
@@ -84,6 +105,8 @@ pub fn run(command: Commands, config: &Config) -> Result<()> {
         Commands::Test(args) => args.run(config),
         Commands::Hash(args) => args.run().map(|_| ()),
         Commands::Init(args) => args.run(config),
+        Commands::Model(args) => args.run(config),
+        Commands::Events(args) => args.run(config),
     }
 }
 

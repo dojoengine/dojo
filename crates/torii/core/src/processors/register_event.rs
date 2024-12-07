@@ -7,7 +7,7 @@ use starknet::core::types::Event;
 use starknet::providers::Provider;
 use tracing::{debug, info};
 
-use super::EventProcessor;
+use super::{EventProcessor, EventProcessorConfig};
 use crate::sql::Sql;
 
 pub(crate) const LOG_TARGET: &str = "torii_core::processors::register_event";
@@ -38,6 +38,7 @@ where
         block_timestamp: u64,
         _event_id: &str,
         event: &Event,
+        config: &EventProcessorConfig,
     ) -> Result<(), Error> {
         // Torii version is coupled to the world version, so we can expect the event to be well
         // formed.
@@ -56,6 +57,12 @@ where
         // Safe to unwrap, since it's coming from the chain.
         let namespace = event.namespace.to_string().unwrap();
         let name = event.name.to_string().unwrap();
+
+        // If the namespace is not in the list of namespaces to index, silently ignore it.
+        // If our config is empty, we index all namespaces.
+        if !config.should_index(&namespace) {
+            return Ok(());
+        }
 
         // Called model here by language, but it's an event. Torii rework will make clear
         // distinction.
@@ -83,18 +90,19 @@ where
             contract_address = ?event.address,
             packed_size = %packed_size,
             unpacked_size = %unpacked_size,
-            "Registered model content."
+            "Registered event content."
         );
 
         db.register_model(
             &namespace,
-            schema,
+            &schema,
             layout,
             event.class_hash.into(),
             event.address.into(),
             packed_size,
             unpacked_size,
             block_timestamp,
+            None,
         )
         .await?;
 

@@ -1,5 +1,6 @@
 use anyhow::Result;
 use async_graphql::dynamic::{Object, Scalar, Schema, Subscription, Union};
+use dojo_types::schema::Ty;
 use sqlx::SqlitePool;
 use torii_core::types::Model;
 
@@ -9,10 +10,12 @@ use super::object::event::EventObject;
 use super::object::model_data::ModelDataObject;
 use super::types::ScalarType;
 use super::utils;
-use crate::constants::{QUERY_TYPE_NAME, SUBSCRIPTION_TYPE_NAME};
-use crate::object::erc::erc_balance::ErcBalanceObject;
-use crate::object::erc::erc_token::ErcTokenObject;
-use crate::object::erc::erc_transfer::ErcTransferObject;
+use crate::constants::{
+    ERC20_TYPE_NAME, ERC721_TYPE_NAME, QUERY_TYPE_NAME, SUBSCRIPTION_TYPE_NAME, TOKEN_TYPE_NAME,
+};
+use crate::object::erc::erc_token::{Erc20TokenObject, Erc721TokenObject};
+use crate::object::erc::token_balance::ErcBalanceObject;
+use crate::object::erc::token_transfer::ErcTransferObject;
 use crate::object::event_message::EventMessageObject;
 use crate::object::metadata::content::ContentObject;
 use crate::object::metadata::social::SocialObject;
@@ -20,7 +23,7 @@ use crate::object::metadata::MetadataObject;
 use crate::object::model::ModelObject;
 use crate::object::transaction::TransactionObject;
 use crate::object::ObjectVariant;
-use crate::query::type_mapping_query;
+use crate::query::build_type_mapping;
 
 // The graphql schema is built dynamically at runtime, this is because we won't know the schema of
 // the models until runtime. There are however, predefined objects such as entities and
@@ -121,16 +124,25 @@ async fn build_objects(pool: &SqlitePool) -> Result<(Vec<ObjectVariant>, Vec<Uni
         ObjectVariant::Basic(Box::new(SocialObject)),
         ObjectVariant::Basic(Box::new(ContentObject)),
         ObjectVariant::Basic(Box::new(PageInfoObject)),
-        ObjectVariant::Basic(Box::new(ErcTokenObject)),
+        ObjectVariant::Basic(Box::new(Erc721TokenObject)),
+        ObjectVariant::Basic(Box::new(Erc20TokenObject)),
     ];
 
     // model union object
     let mut unions: Vec<Union> = Vec::new();
     let mut model_union = Union::new("ModelUnion");
 
+    // erc_token union object
+    let erc_token_union =
+        Union::new(TOKEN_TYPE_NAME).possible_type(ERC20_TYPE_NAME).possible_type(ERC721_TYPE_NAME);
+
+    unions.push(erc_token_union);
+
     // model data objects
     for model in models {
-        let type_mapping = type_mapping_query(&mut conn, &model.id).await?;
+        let schema: Ty = serde_json::from_str(&model.schema)
+            .map_err(|e| anyhow::anyhow!(format!("Failed to parse model schema: {e}")))?;
+        let type_mapping = build_type_mapping(&model.namespace, &schema);
 
         if !type_mapping.is_empty() {
             // add models objects & unions
@@ -144,6 +156,7 @@ async fn build_objects(pool: &SqlitePool) -> Result<(Vec<ObjectVariant>, Vec<Uni
                 field_name,
                 type_name,
                 type_mapping.clone(),
+                schema,
             ))));
         }
     }

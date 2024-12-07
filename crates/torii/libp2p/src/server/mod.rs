@@ -253,7 +253,7 @@ impl<P: Provider + Sync> Relay<P> {
 
                             // select only identity field, if doesn't exist, empty string
                             let query = format!(
-                                "SELECT external_identity FROM [{}] WHERE id = ?",
+                                "SELECT identity FROM [{}] WHERE internal_id = ?",
                                 ty.name()
                             );
                             let entity_identity: Option<String> = match sqlx::query_scalar(&query)
@@ -302,37 +302,15 @@ impl<P: Provider + Sync> Relay<P> {
                             // to prevent replay attacks.
 
                             // Verify the signature
-                            let message_hash =
-                                if let Ok(message) = data.message.encode(entity_identity) {
-                                    message
-                                } else {
-                                    info!(
-                                        target: LOG_TARGET,
-                                        "Encoding message."
-                                    );
-                                    continue;
-                                };
-
-                            let mut calldata = vec![message_hash];
-                            calldata.push(Felt::from(data.signature.len()));
-
-                            calldata.extend(data.signature);
-                            if !match self
-                                .provider
-                                .call(
-                                    FunctionCall {
-                                        contract_address: entity_identity,
-                                        entry_point_selector: get_selector_from_name(
-                                            "is_valid_signature",
-                                        )
-                                        .unwrap(),
-                                        calldata,
-                                    },
-                                    BlockId::Tag(BlockTag::Pending),
-                                )
-                                .await
+                            if !match validate_signature(
+                                &self.provider,
+                                entity_identity,
+                                &data.message,
+                                &data.signature,
+                            )
+                            .await
                             {
-                                Ok(res) => res[0] != Felt::ZERO,
+                                Ok(res) => res,
                                 Err(e) => {
                                     warn!(
                                         target: LOG_TARGET,
@@ -430,6 +408,30 @@ impl<P: Provider + Sync> Relay<P> {
             }
         }
     }
+}
+
+async fn validate_signature<P: Provider + Sync>(
+    provider: &P,
+    entity_identity: Felt,
+    message: &TypedData,
+    signature: &[Felt],
+) -> Result<bool, Error> {
+    let message_hash = message.encode(entity_identity)?;
+
+    let mut calldata = vec![message_hash, Felt::from(signature.len())];
+    calldata.extend(signature);
+    provider
+        .call(
+            FunctionCall {
+                contract_address: entity_identity,
+                entry_point_selector: get_selector_from_name("is_valid_signature").unwrap(),
+                calldata,
+            },
+            BlockId::Tag(BlockTag::Pending),
+        )
+        .await
+        .map_err(Error::ProviderError)
+        .map(|res| res[0] != Felt::ZERO)
 }
 
 fn ty_keys(ty: &Ty) -> Result<Vec<Felt>, Error> {

@@ -3,21 +3,22 @@ use async_graphql::dynamic::{
     Field, FieldFuture, FieldValue, InputValue, SubscriptionField, SubscriptionFieldFuture, TypeRef,
 };
 use async_graphql::{Name, Value};
+use dojo_types::naming::get_tag;
+use dojo_types::schema::Ty;
 use sqlx::{Pool, Sqlite};
 use tokio_stream::StreamExt;
 use torii_core::simple_broker::SimpleBroker;
 use torii_core::types::EventMessage;
 
-use super::entity::model_data_recursive_query;
 use super::inputs::keys_input::keys_argument;
 use super::{BasicObject, ResolvableObject, TypeMapping, ValueMapping};
 use crate::constants::{
-    DATETIME_FORMAT, EVENT_ID_COLUMN, EVENT_MESSAGE_ID_COLUMN, EVENT_MESSAGE_NAMES,
-    EVENT_MESSAGE_TABLE, EVENT_MESSAGE_TYPE_NAME, ID_COLUMN,
+    DATETIME_FORMAT, EVENT_ID_COLUMN, EVENT_MESSAGE_NAMES, EVENT_MESSAGE_TABLE,
+    EVENT_MESSAGE_TYPE_NAME, ID_COLUMN,
 };
 use crate::mapping::ENTITY_TYPE_MAPPING;
 use crate::object::{resolve_many, resolve_one};
-use crate::query::type_mapping_query;
+use crate::query::{build_type_mapping, value_mapping_from_row};
 use crate::utils;
 
 #[derive(Debug)]
@@ -74,8 +75,6 @@ impl ResolvableObject for EventMessageObject {
                             Some(id) => Some(id.string()?.to_string()),
                             None => None,
                         };
-                        // if id is None, then subscribe to all entities
-                        // if id is Some, then subscribe to only the entity with that id
                         Ok(SimpleBroker::<EventMessage>::subscribe().filter_map(
                             move |entity: EventMessage| {
                                 if id.is_none() || id == Some(entity.id.clone()) {
@@ -83,7 +82,6 @@ impl ResolvableObject for EventMessageObject {
                                         entity,
                                     ))))
                                 } else {
-                                    // id != entity.id , then don't send anything, still listening
                                     None
                                 }
                             },
@@ -128,9 +126,8 @@ fn model_union_field() -> Field {
 
                     let entity_id = utils::extract::<String>(indexmap, "id")?;
                     // fetch name from the models table
-                    // using the model id (hashed model name)
                     let model_ids: Vec<(String, String, String)> = sqlx::query_as(
-                        "SELECT id, namespace, name
+                        "SELECT namespace, name, schema
                         FROM models
                         WHERE id IN (    
                             SELECT model_id
@@ -143,25 +140,25 @@ fn model_union_field() -> Field {
                     .await?;
 
                     let mut results: Vec<FieldValue<'_>> = Vec::new();
-                    for (id, namespace, name) in model_ids {
-                        // the model id in the model mmeebrs table is the hashed model name (id)
-                        let type_mapping = type_mapping_query(&mut conn, &id).await?;
+                    for (namespace, name, schema) in model_ids {
+                        let schema: Ty = serde_json::from_str(&schema).map_err(|e| {
+                            anyhow::anyhow!(format!("Failed to parse model schema: {e}"))
+                        })?;
+                        let type_mapping = build_type_mapping(&namespace, &schema);
 
-                        // but the table name for the model data is the unhashed model name
-                        let data: ValueMapping = match model_data_recursive_query(
-                            &mut conn,
-                            EVENT_MESSAGE_ID_COLUMN,
-                            vec![format!("{namespace}-{name}")],
-                            &entity_id,
-                            &[],
-                            &type_mapping,
-                            false,
-                        )
-                        .await?
-                        {
-                            Value::Object(map) => map,
-                            _ => unreachable!(),
-                        };
+                        // Get the table name
+                        let table_name = get_tag(&namespace, &name);
+
+                        // Fetch the row data
+                        let query = format!(
+                            "SELECT * FROM [{}] WHERE internal_event_message_id = ?",
+                            table_name
+                        );
+                        let row =
+                            sqlx::query(&query).bind(&entity_id).fetch_one(&mut *conn).await?;
+
+                        // Use value_mapping_from_row to handle nested structures
+                        let data = value_mapping_from_row(&row, &type_mapping, false, false)?;
 
                         results.push(FieldValue::with_type(
                             FieldValue::owned_any(data),

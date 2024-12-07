@@ -31,7 +31,7 @@ use katana_cairo::cairo_vm::types::errors::program_errors::ProgramError;
 use katana_cairo::cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 use katana_cairo::starknet_api::block::{BlockNumber, BlockTimestamp};
 use katana_cairo::starknet_api::core::{
-    self, ChainId, ClassHash, CompiledClassHash, ContractAddress, Nonce,
+    self, ChainId, ClassHash, CompiledClassHash, ContractAddress, EntryPointSelector, Nonce,
 };
 use katana_cairo::starknet_api::data_availability::DataAvailabilityMode;
 use katana_cairo::starknet_api::deprecated_contract_class::EntryPointType;
@@ -46,7 +46,7 @@ use katana_cairo::starknet_api::transaction::{
 use katana_primitives::chain::NamedChainId;
 use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::fee::{PriceUnit, TxFeeInfo};
-use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
+use katana_primitives::state::{StateUpdates, StateUpdatesWithClasses};
 use katana_primitives::trace::{L1Gas, TxExecInfo, TxResources};
 use katana_primitives::transaction::{
     DeclareTx, DeployAccountTx, ExecutableTx, ExecutableTxWithHash, InvokeTx, TxType,
@@ -184,6 +184,25 @@ pub fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
 
     match tx.transaction {
         ExecutableTx::Invoke(tx) => match tx {
+            InvokeTx::V0(tx) => {
+                let calldata = tx.calldata;
+                let signature = tx.signature;
+
+                Transaction::AccountTransaction(AccountTransaction::Invoke(InvokeTransaction {
+                    tx: ApiInvokeTransaction::V0(
+                        katana_cairo::starknet_api::transaction::InvokeTransactionV0 {
+                            entry_point_selector: EntryPointSelector(tx.entry_point_selector),
+                            contract_address: to_blk_address(tx.contract_address),
+                            signature: TransactionSignature(signature),
+                            calldata: Calldata(Arc::new(calldata)),
+                            max_fee: Fee(tx.max_fee),
+                        },
+                    ),
+                    tx_hash: TransactionHash(hash),
+                    only_query: false,
+                }))
+            }
+
             InvokeTx::V1(tx) => {
                 let calldata = tx.calldata;
                 let signature = tx.signature;
@@ -288,9 +307,17 @@ pub fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
         },
 
         ExecutableTx::Declare(tx) => {
-            let contract_class = tx.compiled_class;
+            let compiled = tx.class.as_ref().clone().compile().expect("failed to compile");
 
             let tx = match tx.transaction {
+                DeclareTx::V0(tx) => ApiDeclareTransaction::V0(DeclareTransactionV0V1 {
+                    max_fee: Fee(tx.max_fee),
+                    nonce: Nonce::default(),
+                    sender_address: to_blk_address(tx.sender_address),
+                    signature: TransactionSignature(tx.signature),
+                    class_hash: ClassHash(tx.class_hash),
+                }),
+
                 DeclareTx::V1(tx) => ApiDeclareTransaction::V1(DeclareTransactionV0V1 {
                     max_fee: Fee(tx.max_fee),
                     nonce: Nonce(tx.nonce),
@@ -338,7 +365,7 @@ pub fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
             };
 
             let hash = TransactionHash(hash);
-            let class = to_class(contract_class).unwrap();
+            let class = to_class(compiled).unwrap();
             let tx = DeclareTransaction::new(tx, hash, class).expect("class mismatch");
             Transaction::AccountTransaction(AccountTransaction::Declare(tx))
         }
@@ -397,31 +424,18 @@ pub fn block_context_from_envs(block_env: &BlockEnv, cfg_env: &CfgEnv) -> BlockC
 
 pub(super) fn state_update_from_cached_state<S: StateDb>(
     state: &CachedState<S>,
-) -> StateUpdatesWithDeclaredClasses {
-    use katana_primitives::class::{CompiledClass, FlattenedSierraClass};
-
+) -> StateUpdatesWithClasses {
     let state_diff = state.0.lock().inner.to_state_diff().unwrap();
 
-    let mut declared_compiled_classes: BTreeMap<
+    let mut declared_contract_classes: BTreeMap<
         katana_primitives::class::ClassHash,
-        CompiledClass,
-    > = BTreeMap::new();
-
-    let mut declared_sierra_classes: BTreeMap<
-        katana_primitives::class::ClassHash,
-        FlattenedSierraClass,
+        katana_primitives::class::ContractClass,
     > = BTreeMap::new();
 
     for class_hash in state_diff.compiled_class_hashes.keys() {
         let hash = class_hash.0;
         let class = state.class(hash).unwrap().expect("must exist if declared");
-
-        if let CompiledClass::Class(_) = class {
-            let sierra = state.sierra_class(hash).unwrap().expect("must exist if declared");
-            declared_sierra_classes.insert(hash, sierra);
-        }
-
-        declared_compiled_classes.insert(hash, class);
+        declared_contract_classes.insert(hash, class);
     }
 
     let nonce_updates =
@@ -466,9 +480,8 @@ pub(super) fn state_update_from_cached_state<S: StateDb>(
                 katana_primitives::class::CompiledClassHash,
             >>();
 
-    StateUpdatesWithDeclaredClasses {
-        declared_sierra_classes,
-        declared_compiled_classes,
+    StateUpdatesWithClasses {
+        classes: declared_contract_classes,
         state_updates: StateUpdates {
             nonce_updates,
             storage_updates,
@@ -535,17 +548,17 @@ pub fn to_class(class: class::CompiledClass) -> Result<ClassInfo, ProgramError> 
     // TODO: @kariy not sure of the variant that must be used in this case. Should we change the
     // return type to include this case of error for contract class conversions?
     match class {
-        class::CompiledClass::Deprecated(class) => {
+        class::CompiledClass::Legacy(class) => {
             // For cairo 0, the sierra_program_length must be 0.
             Ok(ClassInfo::new(&ContractClass::V0(ContractClassV0::try_from(class)?), 0, 0)
                 .map_err(|e| ProgramError::ConstWithoutValue(format!("{e}")))?)
         }
 
-        class::CompiledClass::Class(class) => {
-            let sierra_program_len = class.sierra.program.statements.len();
+        class::CompiledClass::Class(casm) => {
+            let sierra_program_len = casm.bytecode.len();
             // TODO: @kariy not sure from where the ABI length can be grasped.
             Ok(ClassInfo::new(
-                &ContractClass::V1(ContractClassV1::try_from(class.casm)?),
+                &ContractClass::V1(ContractClassV1::try_from(casm)?),
                 sierra_program_len,
                 0,
             )

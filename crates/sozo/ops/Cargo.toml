@@ -8,12 +8,12 @@ version.workspace = true
 [dependencies]
 anyhow.workspace = true
 async-trait.workspace = true
-bigdecimal = "0.4.5"
 cainome.workspace = true
 colored.workspace = true
 colored_json.workspace = true
+dojo-types.workspace = true
 dojo-utils.workspace = true
-dojo-world.workspace = true
+dojo-world = { workspace = true, features = [ "ipfs" ] }
 futures.workspace = true
 num-traits.workspace = true
 serde.workspace = true
@@ -21,8 +21,8 @@ serde_json.workspace = true
 serde_with.workspace = true
 sozo-walnut = { workspace = true, optional = true }
 spinoff.workspace = true
-starknet.workspace = true
 starknet-crypto.workspace = true
+starknet.workspace = true
 thiserror.workspace = true
 toml.workspace = true
 tracing.workspace = true
@@ -33,9 +33,10 @@ katana-runner = { workspace = true, optional = true }
 [dev-dependencies]
 assert_fs.workspace = true
 dojo-test-utils = { workspace = true, features = [ "build-examples" ] }
-ipfs-api-backend-hyper = { git = "https://github.com/ferristseng/rust-ipfs-api", rev = "af2c17f7b19ef5b9898f458d97a90055c3605633", features = [ "with-hyper-rustls" ] }
 katana-runner.workspace = true
-dojo-types.workspace = true
+scarb.workspace = true
+sozo-scarbext.workspace = true
+tokio.workspace = true
 
 [features]
 test-utils = [ "dep:dojo-test-utils", "dep:katana-runner" ]

@@ -1,6 +1,14 @@
-use cainome::parser::tokens::{Composite, Token};
+use cainome::parser::tokens::{Composite, CompositeType, Token};
+use constants::{
+    CAIRO_BOOL, CAIRO_BYTE_ARRAY, CAIRO_CONTRACT_ADDRESS, CAIRO_FELT252, CAIRO_I128, CAIRO_U128,
+    CAIRO_U16, CAIRO_U256, CAIRO_U256_STRUCT, CAIRO_U32, CAIRO_U64, CAIRO_U8, JS_BIGNUMBERISH,
+    JS_BOOLEAN, JS_STRING,
+};
 use convert_case::{Case, Casing};
 
+use crate::plugins::typescript::generator::constants::CAIRO_OPTION_TYPE_PATH;
+
+pub(crate) mod constants;
 pub(crate) mod r#enum;
 pub(crate) mod erc;
 pub(crate) mod function;
@@ -49,22 +57,36 @@ pub(crate) fn generate_type_init(token: &Composite) -> String {
     )
 }
 
+/// Checks if Token::Composite is an Option
+/// * token - The token to check
+pub(crate) fn token_is_option(token: &Composite) -> bool {
+    token.type_path.starts_with(CAIRO_OPTION_TYPE_PATH)
+}
+
+/// Checks if Token::Composite is an custom enum (enum with nested Composite types)
+/// * token - The token to check
+pub(crate) fn token_is_custom_enum(token: &Composite) -> bool {
+    token.r#type == CompositeType::Enum
+        && token.inners.iter().any(|inner| inner.token.to_composite().is_ok())
+}
+
 #[derive(Debug)]
 pub(crate) struct JsType(String);
 impl From<&str> for JsType {
     fn from(value: &str) -> Self {
         match value {
-            "felt252" => JsType("number".to_owned()),
-            "ContractAddress" => JsType("string".to_owned()),
-            "ByteArray" => JsType("string".to_owned()),
-            "u8" => JsType("number".to_owned()),
-            "u16" => JsType("number".to_owned()),
-            "u32" => JsType("number".to_owned()),
-            "u64" => JsType("number".to_owned()),
-            "u128" => JsType("number".to_owned()),
-            "u256" => JsType("number".to_owned()),
-            "U256" => JsType("number".to_owned()),
-            "bool" => JsType("boolean".to_owned()),
+            CAIRO_FELT252 => JsType(JS_BIGNUMBERISH.to_owned()),
+            CAIRO_CONTRACT_ADDRESS => JsType(JS_STRING.to_owned()),
+            CAIRO_BYTE_ARRAY => JsType(JS_STRING.to_owned()),
+            CAIRO_U8 => JsType(JS_BIGNUMBERISH.to_owned()),
+            CAIRO_U16 => JsType(JS_BIGNUMBERISH.to_owned()),
+            CAIRO_U32 => JsType(JS_BIGNUMBERISH.to_owned()),
+            CAIRO_U64 => JsType(JS_BIGNUMBERISH.to_owned()),
+            CAIRO_U128 => JsType(JS_BIGNUMBERISH.to_owned()),
+            CAIRO_U256 => JsType(JS_BIGNUMBERISH.to_owned()),
+            CAIRO_U256_STRUCT => JsType(JS_BIGNUMBERISH.to_owned()),
+            CAIRO_I128 => JsType(JS_BIGNUMBERISH.to_owned()),
+            CAIRO_BOOL => JsType(JS_BOOLEAN.to_owned()),
             _ => JsType(value.to_owned()),
         }
     }
@@ -86,6 +108,26 @@ impl From<&Token> for JsType {
                 )
                 .as_str(),
             ),
+            Token::Composite(c) => {
+                if token_is_option(c) {
+                    return JsType::from(
+                        format!(
+                            "CairoOption<{}>",
+                            c.generic_args
+                                .iter()
+                                .map(|(_, t)| JsType::from(t.type_name().as_str()).to_string())
+                                .collect::<Vec<_>>()
+                                .join(", ")
+                        )
+                        .as_str(),
+                    );
+                }
+                if token_is_custom_enum(c) {
+                    // we defined a type wrapper with Enum suffix let's use it there
+                    return JsType::from(format!("{}Enum", value.type_name()).as_str());
+                }
+                return JsType::from(value.type_name().as_str());
+            }
             _ => JsType::from(value.type_name().as_str()),
         }
     }
@@ -102,17 +144,18 @@ pub(crate) struct JsDefaultValue(String);
 impl From<&str> for JsDefaultValue {
     fn from(value: &str) -> Self {
         match value {
-            "felt252" => JsDefaultValue("0".to_string()),
-            "ContractAddress" => JsDefaultValue("\"\"".to_string()),
-            "ByteArray" => JsDefaultValue("\"\"".to_string()),
-            "u8" => JsDefaultValue("0".to_string()),
-            "u16" => JsDefaultValue("0".to_string()),
-            "u32" => JsDefaultValue("0".to_string()),
-            "u64" => JsDefaultValue("0".to_string()),
-            "u128" => JsDefaultValue("0".to_string()),
-            "u256" => JsDefaultValue("0".to_string()),
-            "U256" => JsDefaultValue("0".to_string()),
-            "bool" => JsDefaultValue("false".to_string()),
+            CAIRO_FELT252 => JsDefaultValue("0".to_string()),
+            CAIRO_CONTRACT_ADDRESS => JsDefaultValue("\"\"".to_string()),
+            CAIRO_BYTE_ARRAY => JsDefaultValue("\"\"".to_string()),
+            CAIRO_U8 => JsDefaultValue("0".to_string()),
+            CAIRO_U16 => JsDefaultValue("0".to_string()),
+            CAIRO_U32 => JsDefaultValue("0".to_string()),
+            CAIRO_U64 => JsDefaultValue("0".to_string()),
+            CAIRO_U128 => JsDefaultValue("0".to_string()),
+            CAIRO_U256 => JsDefaultValue("0".to_string()),
+            CAIRO_U256_STRUCT => JsDefaultValue("0".to_string()),
+            CAIRO_I128 => JsDefaultValue("0".to_string()),
+            CAIRO_BOOL => JsDefaultValue("false".to_string()),
             _ => JsDefaultValue(value.to_string()),
         }
     }
@@ -121,7 +164,12 @@ impl From<&Composite> for JsDefaultValue {
     fn from(value: &Composite) -> Self {
         match value.r#type {
             cainome::parser::tokens::CompositeType::Enum => {
-                JsDefaultValue(format!("{}.{}", value.type_name(), value.inners[0].name))
+                match value.inners[0].token.to_composite() {
+                    Ok(c) => JsDefaultValue::from(c),
+                    Err(_) => {
+                        JsDefaultValue(format!("{}.{}", value.type_name(), value.inners[0].name))
+                    }
+                }
             }
             cainome::parser::tokens::CompositeType::Struct => JsDefaultValue(format!(
                 "{{ fieldOrder: [{}], {} }}",
@@ -129,7 +177,18 @@ impl From<&Composite> for JsDefaultValue {
                 value
                     .inners
                     .iter()
-                    .map(|i| format!("{}: {},", i.name, JsDefaultValue::from(&i.token)))
+                    .map(|i| format!(
+                        "{}: {},",
+                        i.name,
+                        match i.token.to_composite() {
+                            Ok(c) => {
+                                JsDefaultValue::from(c)
+                            }
+                            Err(_) => {
+                                JsDefaultValue::from(&i.token)
+                            }
+                        }
+                    ))
                     .collect::<Vec<_>>()
                     .join(" ")
             )),
@@ -175,6 +234,7 @@ mod tests {
         Tuple,
     };
 
+    use crate::plugins::typescript::generator::constants::JS_BIGNUMBERISH;
     use crate::plugins::typescript::generator::{generate_type_init, JsDefaultValue, JsType};
 
     impl PartialEq<JsType> for &str {
@@ -192,13 +252,13 @@ mod tests {
     #[test]
     fn test_js_type_basics() {
         assert_eq!(
-            "number",
+            JS_BIGNUMBERISH,
             JsType::from(&Token::CoreBasic(CoreBasic {
                 type_path: "core::integer::u8".to_owned()
             }))
         );
         assert_eq!(
-            "number",
+            JS_BIGNUMBERISH,
             JsType::from(&Token::CoreBasic(CoreBasic { type_path: "core::felt252".to_owned() }))
         )
     }
@@ -206,7 +266,7 @@ mod tests {
     #[test]
     fn test_tuple_type() {
         assert_eq!(
-            "[number, number]",
+            format!("[{}, {}]", JS_BIGNUMBERISH, JS_BIGNUMBERISH).as_str(),
             JsType::from(&Token::Tuple(Tuple {
                 type_path: "(core::integer::u8,core::integer::u128)".to_owned(),
                 inners: vec![
@@ -220,7 +280,7 @@ mod tests {
     #[test]
     fn test_array_type() {
         assert_eq!(
-            "Array<[number, number]>",
+            format!("Array<[{}, {}]>", JS_BIGNUMBERISH, JS_BIGNUMBERISH).as_str(),
             JsType::from(&Token::Array(Array {
                 type_path: "core::array::Span<(core::integer::u8,core::integer::u128)>".to_owned(),
                 inner: Box::new(Token::Tuple(Tuple {
@@ -232,6 +292,82 @@ mod tests {
                 })),
                 is_legacy: false,
             }))
+        )
+    }
+
+    #[test]
+    fn test_option_type() {
+        assert_eq!(
+            "CairoOption<GatedType>",
+            JsType::from(&Token::Composite(Composite {
+                type_path: "core::option::Option<tournament::ls15_components::models::tournament::GatedType>".to_owned(),
+                inners: vec![],
+                generic_args: vec![
+                        (
+                        "A".to_owned(), 
+                        Token::Composite(
+                            Composite {
+                                type_path: "tournament::ls15_components::models::tournament::GatedType".to_owned(), 
+                                inners: vec![
+                                    CompositeInner {
+                                        index: 0,
+                                        name: "token".to_owned(),
+                                        kind: CompositeInnerKind::NotUsed,
+                                        token: Token::Composite(
+                                            Composite {
+                                                type_path: "tournament::ls15_components::models::tournament::GatedToken".to_owned(),
+                                                inners: vec![],
+                                                generic_args: vec![],
+                                                r#type: CompositeType::Unknown,
+                                                is_event: false,
+                                                alias: None,
+                                            },
+                                        ),
+                                    },
+                                    CompositeInner {
+                                        index: 1,
+                                        name: "tournament".to_owned(),
+                                        kind: CompositeInnerKind::NotUsed,
+                                        token: Token::Array(
+                                            Array {
+                                                type_path: "core::array::Span::<core::integer::u64>".to_owned(),
+                                                inner: Box::new(Token::CoreBasic(
+                                                    CoreBasic {
+                                                        type_path: "core::integer::u64".to_owned(),
+                                                    },
+                                               )),
+                                                is_legacy: false,
+                                            },
+                                        ),
+                                    },
+                                    CompositeInner {
+                                        index: 2,
+                                        name: "address".to_owned(),
+                                        kind: CompositeInnerKind::NotUsed,
+                                        token: Token::Array(
+                                            Array {
+                                                type_path: "core::array::Span::<core::starknet::contract_address::ContractAddress>".to_owned(),
+                                                inner: Box::new(Token::CoreBasic(
+                                                    CoreBasic {
+                                                        type_path: "core::starknet::contract_address::ContractAddress".to_owned(),
+                                                    },
+                                                )) ,
+                                                is_legacy: false,
+                                            },
+                                        ),
+                                    }
+                                ],
+                                generic_args: vec![],
+                                r#type: CompositeType::Unknown,
+                                is_event: false,
+                                alias: None
+                            }
+                        )
+                    ),
+                ],
+                r#type: CompositeType::Unknown,
+                is_event: false,
+                alias: None            }))
         )
     }
 
@@ -279,6 +415,223 @@ mod tests {
                     ]
                 })),
                 is_legacy: false,
+            }))
+        )
+    }
+
+    #[test]
+    fn test_enum_default_value() {
+        assert_eq!(
+            "Direction.Up",
+            JsDefaultValue::from(&Token::Composite(Composite {
+                type_path: "dojo_starter::Direction".to_owned(),
+                inners: vec![
+                    CompositeInner {
+                        index: 0,
+                        name: "Up".to_owned(),
+                        kind: CompositeInnerKind::NotUsed,
+                        token: Token::CoreBasic(CoreBasic { type_path: "()".to_owned() })
+                    },
+                    CompositeInner {
+                        index: 1,
+                        name: "Down".to_owned(),
+                        kind: CompositeInnerKind::NotUsed,
+                        token: Token::CoreBasic(CoreBasic { type_path: "()".to_owned() })
+                    },
+                    CompositeInner {
+                        index: 2,
+                        name: "Left".to_owned(),
+                        kind: CompositeInnerKind::NotUsed,
+                        token: Token::CoreBasic(CoreBasic { type_path: "()".to_owned() })
+                    },
+                    CompositeInner {
+                        index: 3,
+                        name: "Right".to_owned(),
+                        kind: CompositeInnerKind::NotUsed,
+                        token: Token::CoreBasic(CoreBasic { type_path: "()".to_owned() })
+                    },
+                ],
+                generic_args: vec![],
+                r#type: CompositeType::Enum,
+                is_event: false,
+                alias: None,
+            }))
+        )
+    }
+
+    #[test]
+    fn test_cairo_custom_enum_default_value() {
+        assert_eq!(
+            "{ fieldOrder: ['id', 'xp'], id: 0, xp: 0, }",
+            JsDefaultValue::from(&Token::Composite(Composite {
+                type_path: "dojo_starter::Direction".to_owned(),
+                inners: vec![
+                    CompositeInner {
+                        index: 0,
+                        name: "item".to_owned(),
+                        kind: CompositeInnerKind::NotUsed,
+                        token: Token::Composite(Composite {
+                            type_path: "dojo_starter::Item".to_owned(),
+                            inners: vec![
+                                CompositeInner {
+                                    index: 0,
+                                    name: "id".to_owned(),
+                                    kind: CompositeInnerKind::NotUsed,
+                                    token: Token::CoreBasic(CoreBasic {
+                                        type_path: "core::felt252".to_owned(),
+                                    })
+                                },
+                                CompositeInner {
+                                    index: 1,
+                                    name: "xp".to_owned(),
+                                    kind: CompositeInnerKind::NotUsed,
+                                    token: Token::CoreBasic(CoreBasic {
+                                        type_path: "core::felt252".to_owned(),
+                                    })
+                                },
+                            ],
+                            generic_args: vec![],
+                            r#type: CompositeType::Struct,
+                            is_event: false,
+                            alias: None,
+                        })
+                    },
+                    CompositeInner {
+                        index: 1,
+                        name: "address".to_owned(),
+                        kind: CompositeInnerKind::NotUsed,
+                        token: Token::CoreBasic(CoreBasic { type_path: "()".to_owned() })
+                    },
+                ],
+                generic_args: vec![],
+                r#type: CompositeType::Enum,
+                is_event: false,
+                alias: None,
+            }))
+        )
+    }
+
+    #[test]
+    fn test_composite_default_value() {
+        assert_eq!(
+            "{ fieldOrder: ['id', 'xp'], id: 0, xp: 0, }",
+            JsDefaultValue::from(&Token::Composite(Composite {
+                type_path: "dojo_starter::Item".to_owned(),
+                inners: vec![
+                    CompositeInner {
+                        index: 0,
+                        name: "id".to_owned(),
+                        kind: CompositeInnerKind::NotUsed,
+                        token: Token::CoreBasic(CoreBasic {
+                            type_path: "core::felt252".to_owned(),
+                        })
+                    },
+                    CompositeInner {
+                        index: 1,
+                        name: "xp".to_owned(),
+                        kind: CompositeInnerKind::NotUsed,
+                        token: Token::CoreBasic(CoreBasic {
+                            type_path: "core::felt252".to_owned(),
+                        })
+                    },
+                ],
+                generic_args: vec![],
+                r#type: CompositeType::Struct,
+                is_event: false,
+                alias: None,
+            }))
+        )
+    }
+
+    #[test]
+    fn test_nested_composite_default_value() {
+        assert_eq!(
+            "{ fieldOrder: ['id', 'xp', 'item'], id: 0, xp: 0, item: { fieldOrder: ['id', 'xp', \
+             'item'], id: 0, xp: 0, item: { fieldOrder: ['id', 'xp'], id: 0, xp: 0, }, }, }",
+            JsDefaultValue::from(&Token::Composite(Composite {
+                type_path: "dojo_starter::Item".to_owned(),
+                inners: vec![
+                    CompositeInner {
+                        index: 0,
+                        name: "id".to_owned(),
+                        kind: CompositeInnerKind::NotUsed,
+                        token: Token::CoreBasic(CoreBasic {
+                            type_path: "core::felt252".to_owned(),
+                        })
+                    },
+                    CompositeInner {
+                        index: 1,
+                        name: "xp".to_owned(),
+                        kind: CompositeInnerKind::NotUsed,
+                        token: Token::CoreBasic(CoreBasic {
+                            type_path: "core::felt252".to_owned(),
+                        })
+                    },
+                    CompositeInner {
+                        index: 1,
+                        name: "item".to_owned(),
+                        kind: CompositeInnerKind::NotUsed,
+                        token: Token::Composite(Composite {
+                            type_path: "dojo_starter::Item".to_owned(),
+                            inners: vec![
+                                CompositeInner {
+                                    index: 0,
+                                    name: "id".to_owned(),
+                                    kind: CompositeInnerKind::NotUsed,
+                                    token: Token::CoreBasic(CoreBasic {
+                                        type_path: "core::felt252".to_owned(),
+                                    })
+                                },
+                                CompositeInner {
+                                    index: 1,
+                                    name: "xp".to_owned(),
+                                    kind: CompositeInnerKind::NotUsed,
+                                    token: Token::CoreBasic(CoreBasic {
+                                        type_path: "core::felt252".to_owned(),
+                                    })
+                                },
+                                CompositeInner {
+                                    index: 1,
+                                    name: "item".to_owned(),
+                                    kind: CompositeInnerKind::NotUsed,
+                                    token: Token::Composite(Composite {
+                                        type_path: "dojo_starter::Item".to_owned(),
+                                        inners: vec![
+                                            CompositeInner {
+                                                index: 0,
+                                                name: "id".to_owned(),
+                                                kind: CompositeInnerKind::NotUsed,
+                                                token: Token::CoreBasic(CoreBasic {
+                                                    type_path: "core::felt252".to_owned(),
+                                                })
+                                            },
+                                            CompositeInner {
+                                                index: 1,
+                                                name: "xp".to_owned(),
+                                                kind: CompositeInnerKind::NotUsed,
+                                                token: Token::CoreBasic(CoreBasic {
+                                                    type_path: "core::felt252".to_owned(),
+                                                })
+                                            },
+                                        ],
+                                        generic_args: vec![],
+                                        r#type: CompositeType::Struct,
+                                        is_event: false,
+                                        alias: None,
+                                    })
+                                },
+                            ],
+                            generic_args: vec![],
+                            r#type: CompositeType::Struct,
+                            is_event: false,
+                            alias: None,
+                        })
+                    },
+                ],
+                generic_args: vec![],
+                r#type: CompositeType::Struct,
+                is_event: false,
+                alias: None,
             }))
         )
     }

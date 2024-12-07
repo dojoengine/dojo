@@ -29,8 +29,9 @@ use tokio::sync::broadcast;
 use tokio_stream::StreamExt;
 use torii_core::engine::{Engine, EngineConfig, Processors};
 use torii_core::executor::Executor;
+use torii_core::sql::cache::ModelCache;
 use torii_core::sql::Sql;
-use torii_core::types::ContractType;
+use torii_core::types::{Contract, ContractType};
 
 mod entities_test;
 mod events_test;
@@ -211,7 +212,7 @@ pub async fn run_graphql_subscription(
 pub async fn model_fixtures(db: &mut Sql) {
     db.register_model(
         "types_test",
-        Ty::Struct(Struct {
+        &Ty::Struct(Struct {
             name: "Record".to_string(),
             children: vec![
                 Member {
@@ -266,6 +267,7 @@ pub async fn model_fixtures(db: &mut Sql) {
         0,
         0,
         1710754478_u64,
+        None,
     )
     .await
     .unwrap();
@@ -341,13 +343,21 @@ pub async fn spinup_types_test(path: &str) -> Result<SqlitePool> {
     let world = WorldContractReader::new(world_address, Arc::clone(&provider));
 
     let (shutdown_tx, _) = broadcast::channel(1);
-    let (mut executor, sender) = Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
+    let (mut executor, sender) =
+        Executor::new(pool.clone(), shutdown_tx.clone(), Arc::clone(&provider), 100).await.unwrap();
     tokio::spawn(async move {
         executor.run().await.unwrap();
     });
-    let db = Sql::new(pool.clone(), sender, &HashMap::from([(world_address, ContractType::WORLD)]))
-        .await
-        .unwrap();
+
+    let model_cache = Arc::new(ModelCache::new(pool.clone()));
+    let db = Sql::new(
+        pool.clone(),
+        sender,
+        &[Contract { address: world_address, r#type: ContractType::WORLD }],
+        model_cache,
+    )
+    .await
+    .unwrap();
 
     let (shutdown_tx, _) = broadcast::channel(1);
     let mut engine = Engine::new(
@@ -358,7 +368,7 @@ pub async fn spinup_types_test(path: &str) -> Result<SqlitePool> {
         EngineConfig::default(),
         shutdown_tx,
         None,
-        Arc::new(HashMap::from([(world_address, ContractType::WORLD)])),
+        &[Contract { address: world_address, r#type: ContractType::WORLD }],
     );
 
     let to = account.provider().block_hash_and_number().await?.block_number;

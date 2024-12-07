@@ -7,7 +7,7 @@ use dojo_world::ResourceType;
 use scarb::core::Config;
 use serde::Serialize;
 use tabled::settings::object::Cell;
-use tabled::settings::{Color, Theme};
+use tabled::settings::{Color, Style};
 use tabled::{Table, Tabled};
 use tracing::trace;
 
@@ -66,7 +66,7 @@ impl std::fmt::Display for ResourceStatus {
             ResourceStatus::Updated => write!(f, "{}", "Updated".yellow()),
             ResourceStatus::Synced => write!(f, "{}", "Synced".green()),
             ResourceStatus::DirtyLocalPerms => write!(f, "{}", "Dirty local perms".yellow()),
-            ResourceStatus::MigrationSkipped => write!(f, "{}", "Migration skipped".black()),
+            ResourceStatus::MigrationSkipped => write!(f, "{}", "Migration skipped".bright_black()),
         }
     }
 }
@@ -149,7 +149,7 @@ impl std::fmt::Display for GranteeSource {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             GranteeSource::Local => write!(f, "{}", "Local".blue()),
-            GranteeSource::Remote => write!(f, "{}", "Remote".black()),
+            GranteeSource::Remote => write!(f, "{}", "Remote".bright_black()),
             GranteeSource::Synced => write!(f, "{}", "Synced".green()),
         }
     }
@@ -172,7 +172,6 @@ fn inspect_resource(resource_name_or_tag: &str, world_diff: &WorldDiff) {
     } else {
         naming::compute_bytearray_hash(resource_name_or_tag)
     };
-
     let resource_diff = world_diff.resources.get(&selector);
 
     if resource_diff.is_none() {
@@ -440,7 +439,7 @@ where
     }
 
     let mut table = Table::new(data);
-    table.with(halloween());
+    table.with(Style::psql());
 
     if let Some(color) = color {
         table.modify(Cell::new(0, 0), color);
@@ -451,17 +450,6 @@ where
     }
 
     println!("{table}\n");
-}
-
-pub fn halloween() -> Theme {
-    let mut style = Theme::default();
-    style.set_borders_vertical('💀');
-    style.set_borders_left('💀');
-    style.set_borders_right('💀');
-
-    style.set_borders_corner_top_left('🎃');
-
-    style
 }
 
 /// Pretty prints a TOML string.
@@ -493,7 +481,7 @@ fn pretty_print_toml(str: &str) {
                     _ => value.white(),
                 };
 
-                println!("{}: {}", key.black(), colored_values);
+                println!("{}: {}", key.bright_black(), colored_values);
             } else {
                 println!("{}", line);
             }

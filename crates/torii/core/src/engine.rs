@@ -10,9 +10,9 @@ use dojo_world::contracts::world::WorldContractReader;
 use futures_util::future::{join_all, try_join_all};
 use hashlink::LinkedHashMap;
 use starknet::core::types::{
-    BlockId, BlockTag, EmittedEvent, Event, EventFilter, EventsPage, MaybePendingBlockWithReceipts,
-    MaybePendingBlockWithTxHashes, PendingBlockWithReceipts, Transaction, TransactionReceipt,
-    TransactionWithReceipt,
+    BlockHashAndNumber, BlockId, BlockTag, EmittedEvent, Event, EventFilter, EventsPage,
+    MaybePendingBlockWithReceipts, MaybePendingBlockWithTxHashes, PendingBlockWithReceipts,
+    Transaction, TransactionReceipt, TransactionWithReceipt,
 };
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
@@ -24,6 +24,7 @@ use tokio::task::JoinSet;
 use tokio::time::{sleep, Instant};
 use tracing::{debug, error, info, trace, warn};
 
+use crate::constants::LOG_TARGET;
 use crate::processors::erc20_legacy_transfer::Erc20LegacyTransferProcessor;
 use crate::processors::erc20_transfer::Erc20TransferProcessor;
 use crate::processors::erc721_legacy_transfer::Erc721LegacyTransferProcessor;
@@ -37,9 +38,14 @@ use crate::processors::store_del_record::StoreDelRecordProcessor;
 use crate::processors::store_set_record::StoreSetRecordProcessor;
 use crate::processors::store_update_member::StoreUpdateMemberProcessor;
 use crate::processors::store_update_record::StoreUpdateRecordProcessor;
-use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
+use crate::processors::upgrade_event::UpgradeEventProcessor;
+use crate::processors::upgrade_model::UpgradeModelProcessor;
+use crate::processors::{
+    BlockProcessor, EventProcessor, EventProcessorConfig, TransactionProcessor,
+};
 use crate::sql::{Cursors, Sql};
-use crate::types::ContractType;
+use crate::types::{Contract, ContractType};
+use crate::utils::health_check_provider;
 
 type EventProcessorMap<P> = HashMap<Felt, Vec<Box<dyn EventProcessor<P>>>>;
 
@@ -74,6 +80,8 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Processors<P> {
                 vec![
                     Box::new(RegisterModelProcessor) as Box<dyn EventProcessor<P>>,
                     Box::new(RegisterEventProcessor) as Box<dyn EventProcessor<P>>,
+                    Box::new(UpgradeModelProcessor) as Box<dyn EventProcessor<P>>,
+                    Box::new(UpgradeEventProcessor) as Box<dyn EventProcessor<P>>,
                     Box::new(StoreSetRecordProcessor),
                     Box::new(StoreDelRecordProcessor),
                     Box::new(StoreUpdateRecordProcessor),
@@ -122,38 +130,35 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Processors<P> {
         self.event_processors.get(&contract_type).unwrap()
     }
 }
-pub(crate) const LOG_TARGET: &str = "torii_core::engine";
-pub const QUERY_QUEUE_BATCH_SIZE: usize = 1000;
 
 bitflags! {
     #[derive(Debug, Clone)]
     pub struct IndexingFlags: u32 {
         const TRANSACTIONS = 0b00000001;
         const RAW_EVENTS = 0b00000010;
+        const PENDING_BLOCKS = 0b00000100;
     }
 }
 
 #[derive(Debug)]
 pub struct EngineConfig {
     pub polling_interval: Duration,
-    pub start_block: u64,
     pub blocks_chunk_size: u64,
     pub events_chunk_size: u64,
-    pub index_pending: bool,
     pub max_concurrent_tasks: usize,
     pub flags: IndexingFlags,
+    pub event_processor_config: EventProcessorConfig,
 }
 
 impl Default for EngineConfig {
     fn default() -> Self {
         Self {
             polling_interval: Duration::from_millis(500),
-            start_block: 0,
             blocks_chunk_size: 10240,
             events_chunk_size: 1024,
-            index_pending: true,
             max_concurrent_tasks: 100,
             flags: IndexingFlags::empty(),
+            event_processor_config: EventProcessorConfig::default(),
         }
     }
 }
@@ -163,6 +168,17 @@ pub enum FetchDataResult {
     Range(FetchRangeResult),
     Pending(FetchPendingResult),
     None,
+}
+
+impl FetchDataResult {
+    pub fn block_id(&self) -> Option<BlockId> {
+        match self {
+            FetchDataResult::Range(range) => Some(BlockId::Number(range.latest_block_number)),
+            FetchDataResult::Pending(_pending) => Some(BlockId::Tag(BlockTag::Pending)),
+            // we dont require block_id when result is none, we return None
+            FetchDataResult::None => None,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -217,8 +233,12 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         config: EngineConfig,
         shutdown_tx: Sender<()>,
         block_tx: Option<BoundedSender<u64>>,
-        contracts: Arc<HashMap<Felt, ContractType>>,
+        contracts: &[Contract],
     ) -> Self {
+        let contracts = Arc::new(
+            contracts.iter().map(|contract| (contract.address, contract.r#type)).collect(),
+        );
+
         Self {
             world: Arc::new(world),
             db,
@@ -233,12 +253,9 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
     }
 
     pub async fn start(&mut self) -> Result<()> {
-        // use the start block provided by user if head is 0
-        let (head, _, _) = self.db.head(self.world.address).await?;
-        if head == 0 {
-            self.db.set_head(self.config.start_block, 0, 0, self.world.address).await?;
-        } else if self.config.start_block != 0 {
-            warn!(target: LOG_TARGET, "Start block ignored, stored head exists and will be used instead.");
+        if let Err(e) = health_check_provider(self.provider.clone()).await {
+            error!(target: LOG_TARGET,"Provider health check failed during engine start");
+            return Err(e);
         }
 
         let mut backoff_delay = Duration::from_secs(1);
@@ -263,14 +280,22 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                                 info!(target: LOG_TARGET, "Syncing reestablished.");
                             }
 
+                            let block_id = fetch_result.block_id();
                             match self.process(fetch_result).await {
                                 Ok(_) => {
-                                    self.db.execute().await?;
-                                    self.db.apply_cache_diff().await?;
+                                    // Its only `None` when `FetchDataResult::None` in which case
+                                    // we don't need to flush or apply cache diff
+                                    if let Some(block_id) = block_id {
+                                        self.db.flush().await?;
+                                        self.db.apply_cache_diff(block_id).await?;
+                                        self.db.execute().await?;
+                                    }
                                 },
                                 Err(e) => {
                                     error!(target: LOG_TARGET, error = %e, "Processing fetched data.");
                                     erroring_out = true;
+                                    // incase of error rollback the transaction
+                                    self.db.rollback().await?;
                                     sleep(backoff_delay).await;
                                     if backoff_delay < max_backoff_delay {
                                         backoff_delay *= 2;
@@ -296,23 +321,23 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
 
     // TODO: since we now process blocks in chunks we can parallelize the fetching of data
     pub async fn fetch_data(&mut self, cursors: &Cursors) -> Result<FetchDataResult> {
-        let latest_block_number = self.provider.block_hash_and_number().await?.block_number;
+        let latest_block = self.provider.block_hash_and_number().await?;
 
         let from = cursors.head.unwrap_or(0);
-        let total_remaining_blocks = latest_block_number - from;
+        let total_remaining_blocks = latest_block.block_number - from;
         let blocks_to_process = total_remaining_blocks.min(self.config.blocks_chunk_size);
         let to = from + blocks_to_process;
 
         let instant = Instant::now();
-        let result = if from < latest_block_number {
+        let result = if from < latest_block.block_number {
             let from = if from == 0 { from } else { from + 1 };
             let data = self.fetch_range(from, to, &cursors.cursor_map).await?;
             debug!(target: LOG_TARGET, duration = ?instant.elapsed(), from = %from, to = %to, "Fetched data for range.");
             FetchDataResult::Range(data)
-        } else if self.config.index_pending {
+        } else if self.config.flags.contains(IndexingFlags::PENDING_BLOCKS) {
             let data =
-                self.fetch_pending(latest_block_number + 1, cursors.last_pending_block_tx).await?;
-            debug!(target: LOG_TARGET, duration = ?instant.elapsed(), latest_block_number = %latest_block_number, "Fetched pending data.");
+                self.fetch_pending(latest_block.clone(), cursors.last_pending_block_tx).await?;
+            debug!(target: LOG_TARGET, duration = ?instant.elapsed(), latest_block_number = %latest_block.block_number, "Fetched pending data.");
             if let Some(data) = data {
                 FetchDataResult::Pending(data)
             } else {
@@ -440,12 +465,18 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
 
     async fn fetch_pending(
         &self,
-        block_number: u64,
+        block: BlockHashAndNumber,
         last_pending_block_tx: Option<Felt>,
     ) -> Result<Option<FetchPendingResult>> {
-        let block = if let MaybePendingBlockWithReceipts::PendingBlock(pending) =
+        let pending_block = if let MaybePendingBlockWithReceipts::PendingBlock(pending) =
             self.provider.get_block_with_receipts(BlockId::Tag(BlockTag::Pending)).await?
         {
+            // if the parent hash is not the hash of the latest block that we fetched, then it means
+            // a new block got mined just after we fetched the latest block information
+            if block.block_hash != pending.parent_hash {
+                return Ok(None);
+            }
+
             pending
         } else {
             // TODO: change this to unreachable once katana is updated to return PendingBlockWithTxs
@@ -455,8 +486,8 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         };
 
         Ok(Some(FetchPendingResult {
-            pending_block: Box::new(block),
-            block_number,
+            pending_block: Box::new(pending_block),
+            block_number: block.block_number + 1,
             last_pending_block_tx,
         }))
     }
@@ -574,6 +605,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             let semaphore = semaphore.clone();
             let processors = self.processors.clone();
 
+            let event_processor_config = self.config.event_processor_config.clone();
             handles.push(tokio::spawn(async move {
                 let _permit = semaphore.acquire().await?;
                 let mut local_db = db.clone();
@@ -586,7 +618,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                         debug!(target: LOG_TARGET, event_name = processor.event_key(), task_id = %task_id, "Processing parallelized event.");
 
                         if let Err(e) = processor
-                            .process(&world, &mut local_db, block_number, block_timestamp, &event_id, &event)
+                            .process(&world, &mut local_db, block_number, block_timestamp, &event_id, &event, &event_processor_config)
                             .await
                         {
                             error!(target: LOG_TARGET, event_name = processor.event_key(), error = %e, task_id = %task_id, "Processing parallelized event.");
@@ -633,8 +665,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
 
             unique_contracts.insert(event.from_address);
 
-            Self::process_event(
-                self,
+            self.process_event(
                 block_number,
                 block_timestamp,
                 &event_id,
@@ -694,8 +725,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                 let event_id =
                     format!("{:#064x}:{:#x}:{:#04x}", block_number, *transaction_hash, event_idx);
 
-                Self::process_event(
-                    self,
+                self.process_event(
                     block_number,
                     block_timestamp,
                     &event_id,
@@ -707,8 +737,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             }
 
             if self.config.flags.contains(IndexingFlags::TRANSACTIONS) {
-                Self::process_transaction(
-                    self,
+                self.process_transaction(
                     block_number,
                     block_timestamp,
                     *transaction_hash,
@@ -720,6 +749,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
 
         for contract in unique_contracts {
             let entry = cursor_map.entry(contract).or_insert((*transaction_hash, 0));
+            entry.0 = *transaction_hash;
             entry.1 += 1;
         }
 
@@ -796,6 +826,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                         block_timestamp,
                         event_id,
                         event,
+                        &self.config.event_processor_config,
                     )
                     .await
                 {
@@ -855,6 +886,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                         block_timestamp,
                         event_id,
                         event,
+                        &self.config.event_processor_config,
                     )
                     .await
                 {

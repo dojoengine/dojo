@@ -1,118 +1,130 @@
 [
   {
-    "target": "0x7bc340927668bc87eea10d95cb2dfe0fa10be12075fe8189f363643205c34d4",
+    "target": "0x72a9f501c260b2d13f8988ea172680c5c1fdc085c5b44bdcac8477362ed5290",
+    "method": "upgrade"
+  },
+  {
+    "target": "0x7e8a52c68b243d3a86a55c04ccec2edc760252d5952566d3af4001bd6cf38f3",
     "method": "spawn"
   },
   {
-    "target": "0x7bc340927668bc87eea10d95cb2dfe0fa10be12075fe8189f363643205c34d4",
+    "target": "0x7e8a52c68b243d3a86a55c04ccec2edc760252d5952566d3af4001bd6cf38f3",
     "method": "move"
   },
   {
-    "target": "0x7bc340927668bc87eea10d95cb2dfe0fa10be12075fe8189f363643205c34d4",
+    "target": "0x7e8a52c68b243d3a86a55c04ccec2edc760252d5952566d3af4001bd6cf38f3",
     "method": "set_player_config"
   },
   {
-    "target": "0x7bc340927668bc87eea10d95cb2dfe0fa10be12075fe8189f363643205c34d4",
+    "target": "0x7e8a52c68b243d3a86a55c04ccec2edc760252d5952566d3af4001bd6cf38f3",
     "method": "reset_player_config"
   },
   {
-    "target": "0x7bc340927668bc87eea10d95cb2dfe0fa10be12075fe8189f363643205c34d4",
+    "target": "0x7e8a52c68b243d3a86a55c04ccec2edc760252d5952566d3af4001bd6cf38f3",
     "method": "set_player_server_profile"
   },
   {
-    "target": "0x7bc340927668bc87eea10d95cb2dfe0fa10be12075fe8189f363643205c34d4",
+    "target": "0x7e8a52c68b243d3a86a55c04ccec2edc760252d5952566d3af4001bd6cf38f3",
     "method": "set_models"
   },
   {
-    "target": "0x7bc340927668bc87eea10d95cb2dfe0fa10be12075fe8189f363643205c34d4",
+    "target": "0x7e8a52c68b243d3a86a55c04ccec2edc760252d5952566d3af4001bd6cf38f3",
     "method": "enter_dungeon"
   },
   {
-    "target": "0x7bc340927668bc87eea10d95cb2dfe0fa10be12075fe8189f363643205c34d4",
+    "target": "0x7e8a52c68b243d3a86a55c04ccec2edc760252d5952566d3af4001bd6cf38f3",
     "method": "upgrade"
   },
   {
-    "target": "0x79e0653fbebdbdb864ca69d1470b263f2efdfce9cf355cfe9c7719627eff792",
+    "target": "0x50b1497d463d52cbeb5919a35a82360ea6702db2b9c62c2d69c167995f34c08",
     "method": "upgrade"
   },
   {
-    "target": "0x2e7d504b81c2f1b60986c95de64b650feb8ae625f04c6cd924150fab3cad4a8",
+    "target": "0x4b41a2abaeff170f3a04acb0144790a5a812e25e7a735dfef959247cfeb527",
     "method": "upgrade"
   },
   {
-    "target": "0x41ceb76687e3653610fffc3c830607d90079e9c5d96cfb6f270c8231e9ee9db",
-    "method": "upgrade"
-  },
-  {
-    "target": "0x234d358c2ec21c98a229966bd2bae6dbf2c517969c361bc649361f9055afc32",
+    "target": "0x52ee4d3cba58d1a0462bbfb6813bf5aa1b35078c3b859cded2b727c1d9469ea",
     "method": "uuid"
   },
   {
-    "target": "0x234d358c2ec21c98a229966bd2bae6dbf2c517969c361bc649361f9055afc32",
+    "target": "0x52ee4d3cba58d1a0462bbfb6813bf5aa1b35078c3b859cded2b727c1d9469ea",
     "method": "set_metadata"
   },
   {
-    "target": "0x234d358c2ec21c98a229966bd2bae6dbf2c517969c361bc649361f9055afc32",
+    "target": "0x52ee4d3cba58d1a0462bbfb6813bf5aa1b35078c3b859cded2b727c1d9469ea",
     "method": "register_namespace"
   },
   {
-    "target": "0x234d358c2ec21c98a229966bd2bae6dbf2c517969c361bc649361f9055afc32",
+    "target": "0x52ee4d3cba58d1a0462bbfb6813bf5aa1b35078c3b859cded2b727c1d9469ea",
     "method": "register_event"
   },
   {
-    "target": "0x234d358c2ec21c98a229966bd2bae6dbf2c517969c361bc649361f9055afc32",
+    "target": "0x52ee4d3cba58d1a0462bbfb6813bf5aa1b35078c3b859cded2b727c1d9469ea",
     "method": "register_model"
   },
   {
-    "target": "0x234d358c2ec21c98a229966bd2bae6dbf2c517969c361bc649361f9055afc32",
+    "target": "0x52ee4d3cba58d1a0462bbfb6813bf5aa1b35078c3b859cded2b727c1d9469ea",
     "method": "register_contract"
   },
   {
-    "target": "0x234d358c2ec21c98a229966bd2bae6dbf2c517969c361bc649361f9055afc32",
+    "target": "0x52ee4d3cba58d1a0462bbfb6813bf5aa1b35078c3b859cded2b727c1d9469ea",
     "method": "init_contract"
   },
   {
-    "target": "0x234d358c2ec21c98a229966bd2bae6dbf2c517969c361bc649361f9055afc32",
+    "target": "0x52ee4d3cba58d1a0462bbfb6813bf5aa1b35078c3b859cded2b727c1d9469ea",
     "method": "upgrade_event"
   },
   {
-    "target": "0x234d358c2ec21c98a229966bd2bae6dbf2c517969c361bc649361f9055afc32",
+    "target": "0x52ee4d3cba58d1a0462bbfb6813bf5aa1b35078c3b859cded2b727c1d9469ea",
     "method": "upgrade_model"
   },
   {
-    "target": "0x234d358c2ec21c98a229966bd2bae6dbf2c517969c361bc649361f9055afc32",
+    "target": "0x52ee4d3cba58d1a0462bbfb6813bf5aa1b35078c3b859cded2b727c1d9469ea",
     "method": "upgrade_contract"
   },
   {
-    "target": "0x234d358c2ec21c98a229966bd2bae6dbf2c517969c361bc649361f9055afc32",
+    "target": "0x52ee4d3cba58d1a0462bbfb6813bf5aa1b35078c3b859cded2b727c1d9469ea",
     "method": "emit_event"
   },
   {
-    "target": "0x234d358c2ec21c98a229966bd2bae6dbf2c517969c361bc649361f9055afc32",
+    "target": "0x52ee4d3cba58d1a0462bbfb6813bf5aa1b35078c3b859cded2b727c1d9469ea",
+    "method": "emit_events"
+  },
+  {
+    "target": "0x52ee4d3cba58d1a0462bbfb6813bf5aa1b35078c3b859cded2b727c1d9469ea",
     "method": "set_entity"
   },
   {
-    "target": "0x234d358c2ec21c98a229966bd2bae6dbf2c517969c361bc649361f9055afc32",
+    "target": "0x52ee4d3cba58d1a0462bbfb6813bf5aa1b35078c3b859cded2b727c1d9469ea",
+    "method": "set_entities"
+  },
+  {
+    "target": "0x52ee4d3cba58d1a0462bbfb6813bf5aa1b35078c3b859cded2b727c1d9469ea",
     "method": "delete_entity"
   },
   {
-    "target": "0x234d358c2ec21c98a229966bd2bae6dbf2c517969c361bc649361f9055afc32",
+    "target": "0x52ee4d3cba58d1a0462bbfb6813bf5aa1b35078c3b859cded2b727c1d9469ea",
+    "method": "delete_entities"
+  },
+  {
+    "target": "0x52ee4d3cba58d1a0462bbfb6813bf5aa1b35078c3b859cded2b727c1d9469ea",
     "method": "grant_owner"
   },
   {
-    "target": "0x234d358c2ec21c98a229966bd2bae6dbf2c517969c361bc649361f9055afc32",
+    "target": "0x52ee4d3cba58d1a0462bbfb6813bf5aa1b35078c3b859cded2b727c1d9469ea",
     "method": "revoke_owner"
   },
   {
-    "target": "0x234d358c2ec21c98a229966bd2bae6dbf2c517969c361bc649361f9055afc32",
+    "target": "0x52ee4d3cba58d1a0462bbfb6813bf5aa1b35078c3b859cded2b727c1d9469ea",
     "method": "grant_writer"
   },
   {
-    "target": "0x234d358c2ec21c98a229966bd2bae6dbf2c517969c361bc649361f9055afc32",
+    "target": "0x52ee4d3cba58d1a0462bbfb6813bf5aa1b35078c3b859cded2b727c1d9469ea",
     "method": "revoke_writer"
   },
   {
-    "target": "0x234d358c2ec21c98a229966bd2bae6dbf2c517969c361bc649361f9055afc32",
+    "target": "0x52ee4d3cba58d1a0462bbfb6813bf5aa1b35078c3b859cded2b727c1d9469ea",
     "method": "upgrade"
   },
   {

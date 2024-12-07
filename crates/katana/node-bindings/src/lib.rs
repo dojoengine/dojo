@@ -176,20 +176,21 @@ pub struct Katana {
     json_log: bool,
     block_time: Option<u64>,
     db_dir: Option<PathBuf>,
-    rpc_url: Option<String>,
+    l1_provider: Option<String>,
     fork_block_number: Option<u64>,
     messaging: Option<PathBuf>,
 
     // Metrics options
-    metrics: Option<String>,
+    metrics_addr: Option<SocketAddr>,
+    metrics_port: Option<u16>,
 
     // Server options
-    port: Option<u16>,
-    host: Option<String>,
-    max_connections: Option<u64>,
-    allowed_origins: Option<String>,
+    http_addr: Option<SocketAddr>,
+    http_port: Option<u16>,
+    rpc_max_connections: Option<u64>,
+    http_cors_domain: Option<String>,
 
-    // Starknet options
+    // Dev options
     seed: Option<u64>,
     accounts: Option<u16>,
     disable_fee: bool,
@@ -253,7 +254,7 @@ impl Katana {
 
     /// Sets the port which will be used when the `katana` instance is launched.
     pub fn port<T: Into<u16>>(mut self, port: T) -> Self {
-        self.port = Some(port.into());
+        self.http_port = Some(port.into());
         self
     }
 
@@ -271,8 +272,8 @@ impl Katana {
     }
 
     /// Sets the RPC URL to fork the network from.
-    pub fn rpc_url<T: Into<String>>(mut self, rpc_url: T) -> Self {
-        self.rpc_url = Some(rpc_url.into());
+    pub fn l1_provider<T: Into<String>>(mut self, rpc_url: T) -> Self {
+        self.l1_provider = Some(rpc_url.into());
         self
     }
 
@@ -301,27 +302,33 @@ impl Katana {
         self
     }
 
-    /// Enables Prometheus metrics and sets the socket address.
-    pub fn metrics<T: Into<String>>(mut self, metrics: T) -> Self {
-        self.metrics = Some(metrics.into());
+    /// Enables Prometheus metrics and sets the metrics server address.
+    pub fn metrics_addr<T: Into<SocketAddr>>(mut self, addr: T) -> Self {
+        self.metrics_addr = Some(addr.into());
+        self
+    }
+
+    /// Enables Prometheus metrics and sets the metrics server port.
+    pub fn metrics_port<T: Into<u16>>(mut self, port: T) -> Self {
+        self.metrics_port = Some(port.into());
         self
     }
 
     /// Sets the host IP address the server will listen on.
-    pub fn host<T: Into<String>>(mut self, host: T) -> Self {
-        self.host = Some(host.into());
+    pub fn http_addr<T: Into<SocketAddr>>(mut self, addr: T) -> Self {
+        self.http_addr = Some(addr.into());
         self
     }
 
     /// Sets the maximum number of concurrent connections allowed.
-    pub const fn max_connections(mut self, max_connections: u64) -> Self {
-        self.max_connections = Some(max_connections);
+    pub const fn rpc_max_connections(mut self, max_connections: u64) -> Self {
+        self.rpc_max_connections = Some(max_connections);
         self
     }
 
     /// Enables the CORS layer and sets the allowed origins, separated by commas.
-    pub fn allowed_origins<T: Into<String>>(mut self, allowed_origins: T) -> Self {
-        self.allowed_origins = Some(allowed_origins.into());
+    pub fn http_cors_domain<T: Into<String>>(mut self, allowed_origins: T) -> Self {
+        self.http_cors_domain = Some(allowed_origins.into());
         self
     }
 
@@ -414,8 +421,14 @@ impl Katana {
         let mut cmd = self.program.as_ref().map_or_else(|| Command::new("katana"), Command::new);
         cmd.stdout(std::process::Stdio::piped()).stderr(std::process::Stdio::inherit());
 
-        let mut port = self.port.unwrap_or(0);
-        cmd.arg("--port").arg(port.to_string());
+        if let Some(host) = self.http_addr {
+            cmd.arg("--http.addr").arg(host.to_string());
+        }
+
+        // In the case where port 0 is set, we will need to extract the actual port number
+        // from the logs.
+        let mut port = self.http_port.unwrap_or(0);
+        cmd.arg("--http.port").arg(port.to_string());
 
         if self.no_mining {
             cmd.arg("--no-mining");
@@ -428,56 +441,92 @@ impl Katana {
         if let Some(db_dir) = self.db_dir {
             cmd.arg("--db-dir").arg(db_dir);
         }
-        if let Some(rpc_url) = self.rpc_url {
-            cmd.arg("--rpc-url").arg(rpc_url);
+
+        if let Some(url) = self.l1_provider {
+            cmd.arg("--l1.provider").arg(url);
         }
+
+        // Need to make sure that the `--dev` is not being set twice.
+        let mut is_dev = false;
 
         if self.dev {
             cmd.arg("--dev");
+            is_dev = true;
+        }
+
+        if let Some(seed) = self.seed {
+            if !is_dev {
+                cmd.arg("--dev");
+                is_dev = true;
+            }
+
+            cmd.arg("--dev.seed").arg(seed.to_string());
+        }
+
+        if let Some(accounts) = self.accounts {
+            if !is_dev {
+                cmd.arg("--dev");
+                is_dev = true;
+            }
+
+            cmd.arg("--dev.accounts").arg(accounts.to_string());
+        }
+
+        if self.disable_fee {
+            if !is_dev {
+                cmd.arg("--dev");
+                is_dev = true;
+            }
+
+            cmd.arg("--dev.no-fee");
+        }
+
+        if self.disable_validate {
+            if !is_dev {
+                cmd.arg("--dev");
+            }
+
+            cmd.arg("--dev.no-account-validation");
         }
 
         if self.json_log {
-            cmd.arg("--json-log");
+            cmd.args(["--log.format", "json"]);
         }
 
         if let Some(fork_block_number) = self.fork_block_number {
-            cmd.arg("--fork-block-number").arg(fork_block_number.to_string());
+            cmd.args(["--fork", "--fork.block"]).arg(fork_block_number.to_string());
         }
 
         if let Some(messaging) = self.messaging {
             cmd.arg("--messaging").arg(messaging);
         }
 
-        if let Some(metrics) = self.metrics {
-            cmd.arg("--metrics").arg(metrics);
+        // Need to make sure that the `--metrics` is not being set twice.
+        let mut metrics_enabled = false;
+
+        if let Some(addr) = self.metrics_addr {
+            if !metrics_enabled {
+                cmd.arg("--metrics");
+                metrics_enabled = true;
+            }
+
+            cmd.arg("--metrics.addr").arg(addr.to_string());
         }
 
-        if let Some(host) = self.host {
-            cmd.arg("--host").arg(host);
+        if let Some(port) = self.metrics_port {
+            if !metrics_enabled {
+                cmd.arg("--metrics");
+            }
+
+            cmd.arg("--metrics.port").arg(port.to_string());
         }
 
-        if let Some(max_connections) = self.max_connections {
-            cmd.arg("--max-connections").arg(max_connections.to_string());
+        if let Some(max_connections) = self.rpc_max_connections {
+            cmd.arg("--rpc.max-connections").arg(max_connections.to_string());
         }
 
-        if let Some(allowed_origins) = self.allowed_origins {
-            cmd.arg("--allowed-origins").arg(allowed_origins);
-        }
-
-        if let Some(seed) = self.seed {
-            cmd.arg("--seed").arg(seed.to_string());
-        }
-
-        if let Some(accounts) = self.accounts {
-            cmd.arg("--accounts").arg(accounts.to_string());
-        }
-
-        if self.disable_fee {
-            cmd.arg("--disable-fee");
-        }
-
-        if self.disable_validate {
-            cmd.arg("--disable-validate");
+        if let Some(allowed_origins) = self.http_cors_domain {
+            cmd.arg("--http.corsdomain").arg(allowed_origins);
         }
 
         if let Some(chain_id) = self.chain_id {

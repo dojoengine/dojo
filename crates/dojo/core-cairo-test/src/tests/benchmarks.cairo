@@ -195,7 +195,7 @@ fn bench_simple_struct() {
     gas.end("foo serialize");
 
     let gas = GasCounterTrait::start();
-    let values: Span<felt252> = foo.values();
+    let values: Span<felt252> = foo.serialized_values();
     gas.end("foo values");
 
     assert(serialized.len() == 2, 'serialized wrong length');
@@ -249,7 +249,7 @@ fn test_struct_with_many_fields_fixed() {
     gas.end("pos serialize");
 
     let gas = GasCounterTrait::start();
-    let values: Span<felt252> = pos.values();
+    let values: Span<felt252> = pos.serialized_values();
     gas.end("pos values");
 
     assert(serialized.len() == values.len(), 'serialized not equal');
@@ -268,7 +268,7 @@ fn test_struct_with_many_fields_fixed() {
     };
 
     let gas = GasCounterTrait::start();
-    database::set('positions', '42', pos.values(), 0, layout);
+    database::set('positions', '42', pos.serialized_values(), 0, layout);
     gas.end("pos db set");
 
     let gas = GasCounterTrait::start();
@@ -297,7 +297,7 @@ fn bench_nested_struct_packed() {
     gas.end("case serialize");
 
     let gas = GasCounterTrait::start();
-    let values: Span<felt252> = case.values();
+    let values: Span<felt252> = case.serialized_values();
     gas.end("case values");
 
     assert(serialized.len() == values.len(), 'serialized not equal');
@@ -378,7 +378,7 @@ fn bench_complex_struct_packed() {
     gas.end("chars serialize");
 
     let gas = GasCounterTrait::start();
-    let values: Span<felt252> = char.values();
+    let values: Span<felt252> = char.serialized_values();
     gas.end("chars values");
 
     assert(serialized.len() == values.len(), 'serialized not equal');
@@ -398,7 +398,7 @@ fn bench_complex_struct_packed() {
     };
 
     let gas = GasCounterTrait::start();
-    database::set('chars', '42', char.values(), 0, layout);
+    database::set('chars', '42', char.serialized_values(), 0, layout);
     gas.end("chars db set");
 
     let gas = GasCounterTrait::start();
@@ -467,8 +467,8 @@ fn test_benchmark_set_entity() {
     world
         .set_entity(
             model_selector: Model::<Case>::selector(DOJO_NSH),
-            index: ModelIndex::Keys(simple_entity_packed.keys()),
-            values: simple_entity_packed.values(),
+            index: ModelIndex::Keys(simple_entity_packed.serialized_keys()),
+            values: simple_entity_packed.serialized_values(),
             layout: Model::<Case>::layout()
         );
     gas.end("World::SetEntity::SimplePacked");
@@ -477,8 +477,8 @@ fn test_benchmark_set_entity() {
     world
         .set_entity(
             model_selector: Model::<CaseNotPacked>::selector(),
-            index: ModelIndex::Keys(simple_entity_not_packed.keys()),
-            values: simple_entity_not_packed.values(),
+            index: ModelIndex::Keys(simple_entity_not_packed.serialized_keys()),
+            values: simple_entity_not_packed.serialized_values(),
             layout: Model::<CaseNotPacked>::layout()
         );
     gas.end("World::SetEntity::SimpleNotPacked");
@@ -488,7 +488,7 @@ fn test_benchmark_set_entity() {
         .set_entity(
             model_selector: Model::<ComplexModel>::selector(),
             index: ModelIndex::Keys(complex_entity.keys()),
-            values: complex_entity.values(),
+            values: complex_entity.serialized_values(),
             layout: Model::<ComplexModel>::layout()
         );
     gas.end("World::SetEntity::ComplexModel");

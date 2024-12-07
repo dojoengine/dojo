@@ -1,13 +1,15 @@
 //! Converts Scarb artifacts to local resources.
 
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 use cairo_lang_starknet_classes::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet_classes::contract_class::ContractClass;
 use serde_json;
-use starknet::core::types::contract::{AbiEntry, AbiImpl, SierraClass};
+use starknet::core::types::contract::{
+    AbiEntry, AbiImpl, CompiledClass, SierraClass, StateMutability,
+};
 use starknet::core::types::Felt;
 use tracing::trace;
 
@@ -21,11 +23,18 @@ const EVENT_INTF: &str = "dojo::event::interface::IEvent";
 
 impl WorldLocal {
     pub fn from_directory<P: AsRef<Path>>(dir: P, profile_config: ProfileConfig) -> Result<Self> {
+        trace!(
+            ?profile_config,
+            directory = %dir.as_ref().to_string_lossy(),
+            "Loading world from directory."
+        );
         let mut resources = vec![];
 
         let mut world_class = None;
         let mut world_class_hash = None;
         let mut world_casm_class_hash = None;
+        let mut world_casm_class = None;
+        let mut world_entrypoints = vec![];
 
         for entry in fs::read_dir(dir)? {
             let entry = entry?;
@@ -34,6 +43,20 @@ impl WorldLocal {
                 if let Ok(sierra) =
                     serde_json::from_reader::<_, SierraClass>(std::fs::File::open(&path)?)
                 {
+                    let casm_path = PathBuf::from(
+                        path.to_string_lossy()
+                            .to_string()
+                            .replace("contract_class.json", "compiled_contract_class.json"),
+                    );
+
+                    let casm_class = if casm_path.exists() {
+                        Some(serde_json::from_reader::<_, CompiledClass>(std::fs::File::open(
+                            &casm_path,
+                        )?)?)
+                    } else {
+                        None
+                    };
+
                     let abi = sierra.abi.clone();
                     let class_hash = sierra.class_hash()?;
                     let casm_class_hash = casm_class_hash_from_sierra_file(&path)?;
@@ -52,10 +75,14 @@ impl WorldLocal {
                                 world_class = Some(sierra);
                                 world_class_hash = Some(class_hash);
                                 world_casm_class_hash = Some(casm_class_hash);
+                                world_entrypoints = systems_from_abi(&abi);
+                                world_casm_class = casm_class;
                                 break;
                             }
                             ResourceType::Contract(name) => {
                                 let namespaces = profile_config.namespace.get_namespaces(&name);
+
+                                let systems = systems_from_abi(&abi);
 
                                 for ns in namespaces {
                                     trace!(
@@ -69,10 +96,11 @@ impl WorldLocal {
                                             namespace: ns,
                                             name: name.clone(),
                                             class: sierra.clone(),
+                                            casm_class: casm_class.clone(),
                                             class_hash,
                                             casm_class_hash,
                                         },
-                                        systems: vec![],
+                                        systems: systems.clone(),
                                     });
 
                                     resources.push(resource);
@@ -94,6 +122,7 @@ impl WorldLocal {
                                             namespace: ns,
                                             name: name.clone(),
                                             class: sierra.clone(),
+                                            casm_class: casm_class.clone(),
                                             class_hash,
                                             casm_class_hash,
                                         },
@@ -119,6 +148,7 @@ impl WorldLocal {
                                             namespace: ns,
                                             name: name.clone(),
                                             class: sierra.clone(),
+                                            casm_class: casm_class.clone(),
                                             class_hash,
                                             casm_class_hash,
                                         },
@@ -154,19 +184,22 @@ impl WorldLocal {
             (Some(class), Some(class_hash), Some(casm_class_hash)) => Self {
                 class,
                 class_hash,
+                casm_class: world_casm_class,
                 casm_class_hash,
                 resources: HashMap::new(),
                 profile_config,
+                entrypoints: world_entrypoints,
             },
             _ => {
                 return Err(anyhow::anyhow!(
-                    "World artifact is missing, and required to deploy the world. Ensure you have \
-                     added the contract to your Scarb.toml file:\n\n
+                    r#"
+World artifact is missing, and required to deploy the world. Ensure you have \
+added the contract to your Scarb.toml file:
 
-                    [[target.starknet-contract]]\n
-                    sierra = true\n
-                    build-external-contracts = [\"dojo::world::world_contract::world\"]\n
-                    "
+[[target.starknet-contract]]
+sierra = true
+build-external-contracts = ["dojo::world::world_contract::world"]
+"#
                 ));
             }
         };
@@ -222,6 +255,26 @@ fn name_from_impl(impl_name: &str) -> String {
     impl_name.split("__").collect::<Vec<&str>>()[0].to_string()
 }
 
+fn systems_from_abi(abi: &[AbiEntry]) -> Vec<String> {
+    fn extract_systems_from_abi_entry(entry: &AbiEntry) -> Vec<String> {
+        match entry {
+            AbiEntry::Function(f) => {
+                if matches!(f.state_mutability, StateMutability::External) {
+                    vec![f.name.clone()]
+                } else {
+                    vec![]
+                }
+            }
+            AbiEntry::Interface(intf_entry) => {
+                intf_entry.items.iter().flat_map(extract_systems_from_abi_entry).collect()
+            }
+            _ => vec![],
+        }
+    }
+
+    abi.iter().flat_map(extract_systems_from_abi_entry).collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -269,19 +322,56 @@ mod tests {
         );
     }
 
-    #[ignore = "The simple example must be stabilized first (and built for this test to work)"]
     #[test]
     fn test_load_world_from_directory() {
         let namespace_config = NamespaceConfig::new("dojo");
         let profile_config = ProfileConfig::new("test", "seed", namespace_config);
 
-        let world = WorldLocal::from_directory(
-            "/Users/glihm/cgg/dojo/examples/simple/target/dev",
-            profile_config,
+        let world =
+            WorldLocal::from_directory("../../../examples/simple/target/dev/", profile_config)
+                .unwrap();
+
+        assert!(world.class_hash != Felt::ZERO);
+        assert_eq!(world.resources.len(), 7);
+        assert_eq!(
+            world.entrypoints,
+            vec![
+                "uuid",
+                "set_metadata",
+                "register_namespace",
+                "register_event",
+                "register_model",
+                "register_contract",
+                "init_contract",
+                "upgrade_event",
+                "upgrade_model",
+                "upgrade_contract",
+                "emit_event",
+                "emit_events",
+                "set_entity",
+                "set_entities",
+                "delete_entity",
+                "delete_entities",
+                "grant_owner",
+                "revoke_owner",
+                "grant_writer",
+                "revoke_writer",
+                "upgrade"
+            ]
+        );
+    }
+
+    #[test]
+    fn test_systems_from_abi() {
+        let abi = serde_json::from_reader::<_, SierraClass>(
+            std::fs::File::open(
+                "../../../examples/simple/target/dev/dojo_simple_c1.contract_class.json",
+            )
+            .unwrap(),
         )
         .unwrap();
 
-        assert!(world.class_hash != Felt::ZERO);
-        assert_eq!(world.resources.len(), 3);
+        let systems = systems_from_abi(&abi.abi);
+        assert_eq!(systems, vec!["system_1", "system_2", "system_3", "system_4", "upgrade"]);
     }
 }

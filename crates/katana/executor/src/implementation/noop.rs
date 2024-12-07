@@ -1,5 +1,5 @@
 use katana_primitives::block::ExecutableBlock;
-use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
+use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, ContractClass};
 use katana_primitives::contract::{ContractAddress, Nonce, StorageKey, StorageValue};
 use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::fee::TxFeeInfo;
@@ -127,7 +127,12 @@ impl<'a> BlockExecutor<'a> for NoopExecutor {
 struct NoopStateProvider;
 
 impl ContractClassProvider for NoopStateProvider {
-    fn class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
+    fn class(&self, hash: ClassHash) -> ProviderResult<Option<ContractClass>> {
+        let _ = hash;
+        Ok(None)
+    }
+
+    fn compiled_class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
         let _ = hash;
         Ok(None)
     }
@@ -136,11 +141,6 @@ impl ContractClassProvider for NoopStateProvider {
         &self,
         hash: ClassHash,
     ) -> ProviderResult<Option<CompiledClassHash>> {
-        let _ = hash;
-        Ok(None)
-    }
-
-    fn sierra_class(&self, hash: ClassHash) -> ProviderResult<Option<FlattenedSierraClass>> {
         let _ = hash;
         Ok(None)
     }

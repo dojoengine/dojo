@@ -29,6 +29,8 @@ pub use resource::*;
 pub struct WorldStatusInfo {
     /// The address of the world.
     pub address: Felt,
+    /// The hash of the metadata associated to the world.
+    pub metadata_hash: Felt,
     /// The class hash of the world.
     pub class_hash: Felt,
     /// The casm class hash of the world.
@@ -37,6 +39,8 @@ pub struct WorldStatusInfo {
     pub class: SierraClass,
     /// The status of the world.
     pub status: WorldStatus,
+    /// The entrypoints of the world.
+    pub entrypoints: Vec<String>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -61,6 +65,10 @@ pub struct WorldDiff {
     pub resources: HashMap<DojoSelector, ResourceDiff>,
     /// The profile configuration for the world.
     pub profile_config: ProfileConfig,
+    /// The external writers.
+    pub external_writers: HashMap<DojoSelector, HashSet<ContractAddress>>,
+    /// The external owners.
+    pub external_owners: HashMap<DojoSelector, HashSet<ContractAddress>>,
 }
 
 impl WorldDiff {
@@ -71,14 +79,18 @@ impl WorldDiff {
         let mut diff = Self {
             world_info: WorldStatusInfo {
                 address: local.deterministic_world_address()?,
+                metadata_hash: Felt::ZERO,
                 class_hash: local.class_hash,
                 casm_class_hash: local.casm_class_hash,
                 class: local.class,
                 status: WorldStatus::NotDeployed,
+                entrypoints: local.entrypoints,
             },
             namespaces: vec![],
             resources: HashMap::new(),
             profile_config: local.profile_config,
+            external_writers: HashMap::new(),
+            external_owners: HashMap::new(),
         };
 
         for (selector, resource) in local.resources {
@@ -108,14 +120,18 @@ impl WorldDiff {
             world_info: WorldStatusInfo {
                 // As the remote world was found, its address is always used.
                 address: remote.address,
+                metadata_hash: remote.metadata_hash,
                 class_hash: local.class_hash,
                 casm_class_hash: local.casm_class_hash,
                 class: local.class,
+                entrypoints: local.entrypoints,
                 status,
             },
             namespaces: vec![],
             resources: HashMap::new(),
             profile_config: local.profile_config,
+            external_writers: remote.external_writers.clone(),
+            external_owners: remote.external_owners.clone(),
         };
 
         for (local_selector, local_resource) in local.resources {
@@ -137,10 +153,14 @@ impl WorldDiff {
     }
 
     /// Creates a new world diff pulling events from the chain.
+    ///
+    /// Since node providers are struggling with wide block ranges, we accept a custom
+    /// from block to optimize the event fetching.
     pub async fn new_from_chain<P>(
         world_address: Felt,
         world_local: WorldLocal,
         provider: P,
+        from_block: Option<u64>,
     ) -> Result<Self>
     where
         P: Provider,
@@ -161,7 +181,8 @@ impl WorldDiff {
         }?;
 
         if is_deployed {
-            let world_remote = WorldRemote::from_events(world_address, &provider).await?;
+            let world_remote =
+                WorldRemote::from_events(world_address, &provider, from_block).await?;
 
             Ok(Self::new(world_local, world_remote))
         } else {
@@ -362,6 +383,7 @@ mod tests {
                 name: "c".to_string(),
                 namespace: ns.clone(),
                 class: empty_sierra_class(),
+                casm_class: None,
                 class_hash: Felt::ONE,
                 casm_class_hash: Felt::ZERO,
             },
@@ -400,6 +422,7 @@ mod tests {
                 name: "c".to_string(),
                 namespace: ns.clone(),
                 class: empty_sierra_class(),
+                casm_class: None,
                 class_hash: Felt::TWO,
                 casm_class_hash: Felt::ZERO,
             },

@@ -9,8 +9,10 @@ pub mod contract {
 }
 
 pub mod event {
+    pub mod component;
+
     pub mod event;
-    pub use event::{Event, EventDefinition};
+    pub use event::{Event, EventDefinition, EventDef};
 
     pub mod interface;
     pub use interface::{IEvent, IEventDispatcher, IEventDispatcherTrait};
@@ -20,11 +22,17 @@ pub mod event {
 }
 
 pub mod meta {
+    pub mod interface;
+    pub use interface::{
+        IDeployedResource, IDeployedResourceDispatcher, IDeployedResourceDispatcherTrait,
+        IStoredResource, IStoredResourceDispatcher, IStoredResourceDispatcherTrait
+    };
+
     pub mod introspect;
-    pub use introspect::{Introspect, Ty};
+    pub use introspect::{Introspect, Ty, StructCompareTrait};
 
     pub mod layout;
-    pub use layout::{Layout, FieldLayout};
+    pub use layout::{Layout, FieldLayout, LayoutCompareTrait};
 }
 
 pub mod model {
@@ -34,7 +42,7 @@ pub mod model {
     pub use definition::{ModelIndex, ModelDefinition, ModelDef};
 
     pub mod model;
-    pub use model::{Model, KeyParser};
+    pub use model::{Model, KeyParser, ModelPtr};
 
     pub mod model_value;
     pub use model_value::{ModelValue, ModelValueKey};
@@ -46,15 +54,7 @@ pub mod model {
     pub use metadata::ResourceMetadata;
 
     pub mod storage;
-    pub use storage::{
-        ModelStorage, ModelStorageTest, ModelValueStorage, ModelValueStorageTest, ModelPtr,
-    };
-
-    #[cfg(target: "test")]
-    pub use model::{ModelTest};
-
-    #[cfg(target: "test")]
-    pub use model_value::{ModelValueTest};
+    pub use storage::{ModelStorage, ModelStorageTest, ModelValueStorage, ModelValueStorageTest,};
 }
 
 pub mod storage {
@@ -70,7 +70,7 @@ pub mod utils {
     pub use hash::{bytearray_hash, selector_from_names, selector_from_namespace_and_name};
 
     pub mod key;
-    pub use key::{entity_id_from_keys, combine_key, entity_id_from_key};
+    pub use key::{entity_id_from_serialized_keys, combine_key, entity_id_from_keys};
 
     pub mod layout;
     pub use layout::{find_field_layout, find_model_field_layout};

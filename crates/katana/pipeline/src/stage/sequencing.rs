@@ -1,9 +1,10 @@
+use std::future::IntoFuture;
 use std::sync::Arc;
 
 use anyhow::Result;
-use futures::future;
+use futures::future::{self, BoxFuture};
 use katana_core::backend::Backend;
-use katana_core::service::block_producer::BlockProducer;
+use katana_core::service::block_producer::{BlockProducer, BlockProductionError};
 use katana_core::service::messaging::{MessagingConfig, MessagingService, MessagingTask};
 use katana_core::service::{BlockProductionTask, TransactionMiner};
 use katana_executor::ExecutorFactory;
@@ -11,8 +12,7 @@ use katana_pool::{TransactionPool, TxPool};
 use katana_tasks::{TaskHandle, TaskSpawner};
 use tracing::error;
 
-use super::{StageId, StageResult};
-use crate::Stage;
+pub type SequencingFut = BoxFuture<'static, Result<()>>;
 
 /// The sequencing stage is responsible for advancing the chain state.
 #[allow(missing_debug_implementations)]
@@ -52,41 +52,39 @@ impl<EF: ExecutorFactory> Sequencing<EF> {
         }
     }
 
-    fn run_block_production(&self) -> TaskHandle<()> {
-        let pool = self.pool.clone();
-        let miner = TransactionMiner::new(pool.add_listener());
+    fn run_block_production(&self) -> TaskHandle<Result<(), BlockProductionError>> {
+        // Create a new transaction miner with a subscription to the pool's pending transactions.
+        let miner = TransactionMiner::new(self.pool.pending_transactions());
         let block_producer = self.block_producer.clone();
-
-        let service = BlockProductionTask::new(pool, miner, block_producer);
+        let service = BlockProductionTask::new(self.pool.clone(), miner, block_producer);
         self.task_spawner.build_task().name("Block production").spawn(service)
     }
 }
 
-#[async_trait::async_trait]
-impl<EF: ExecutorFactory> Stage for Sequencing<EF> {
-    fn id(&self) -> StageId {
-        StageId::Sequencing
-    }
+impl<EF: ExecutorFactory> IntoFuture for Sequencing<EF> {
+    type Output = Result<()>;
+    type IntoFuture = SequencingFut;
 
-    #[tracing::instrument(skip(self), name = "Stage", fields(id = %self.id()))]
-    async fn execute(&mut self) -> StageResult {
-        // Build the messaging and block production tasks.
-        let messaging = self.run_messaging().await?;
-        let block_production = self.run_block_production();
+    fn into_future(self) -> Self::IntoFuture {
+        Box::pin(async move {
+            // Build the messaging and block production tasks.
+            let messaging = self.run_messaging().await?;
+            let block_production = self.run_block_production();
 
-        // Neither of these tasks should complete as they are meant to be run forever,
-        // but if either of them do complete, the sequencing stage should return.
-        //
-        // Select on the tasks completion to prevent the task from failing silently (if any).
-        tokio::select! {
-            res = messaging => {
-                error!(target: "pipeline", reason = ?res, "Messaging task finished unexpectedly.");
-            },
-            res = block_production => {
-                error!(target: "pipeline", reason = ?res, "Block production task finished unexpectedly.");
+            // Neither of these tasks should complete as they are meant to be run forever,
+            // but if either of them do complete, the sequencing stage should return.
+            //
+            // Select on the tasks completion to prevent the task from failing silently (if any).
+            tokio::select! {
+                res = messaging => {
+                    error!(target: "sequencing", reason = ?res, "Messaging task finished unexpectedly.");
+                },
+                res = block_production => {
+                    error!(target: "sequencing", reason = ?res, "Block production task finished unexpectedly.");
+                }
             }
-        }
 
-        Ok(())
+            Ok(())
+        })
     }
 }

@@ -1,10 +1,11 @@
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
     use std::str::FromStr;
+    use std::sync::Arc;
     use std::time::Duration;
 
     use async_graphql::value;
+    use dojo_types::naming::get_tag;
     use dojo_types::primitive::Primitive;
     use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
     use dojo_world::contracts::abigen::model::Layout;
@@ -12,12 +13,16 @@ mod tests {
     use serial_test::serial;
     use sqlx::SqlitePool;
     use starknet::core::types::Event;
+    use starknet::providers::jsonrpc::HttpTransport;
+    use starknet::providers::JsonRpcClient;
     use starknet_crypto::{poseidon_hash_many, Felt};
     use tokio::sync::{broadcast, mpsc};
     use torii_core::executor::Executor;
+    use torii_core::sql::cache::ModelCache;
     use torii_core::sql::utils::felts_to_sql_string;
     use torii_core::sql::Sql;
-    use torii_core::types::ContractType;
+    use torii_core::types::{Contract, ContractType};
+    use url::Url;
 
     use crate::tests::{model_fixtures, run_graphql_subscription};
     use crate::utils;
@@ -26,15 +31,24 @@ mod tests {
     #[serial]
     async fn test_entity_subscription(pool: SqlitePool) {
         let (shutdown_tx, _) = broadcast::channel(1);
+        // used to fetch token_uri data for erc721 tokens so pass dummy for the test
+        let url: Url = "https://www.example.com".parse().unwrap();
+        let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(url)));
         let (mut executor, sender) =
-            Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
+            Executor::new(pool.clone(), shutdown_tx.clone(), provider, 100).await.unwrap();
         tokio::spawn(async move {
             executor.run().await.unwrap();
         });
-        let mut db =
-            Sql::new(pool.clone(), sender, &HashMap::from([(Felt::ZERO, ContractType::WORLD)]))
-                .await
-                .unwrap();
+
+        let model_cache = Arc::new(ModelCache::new(pool.clone()));
+        let mut db = Sql::new(
+            pool.clone(),
+            sender,
+            &[Contract { address: Felt::ZERO, r#type: ContractType::WORLD }],
+            model_cache,
+        )
+        .await
+        .unwrap();
 
         model_fixtures(&mut db).await;
         // 0. Preprocess expected entity value
@@ -68,7 +82,7 @@ mod tests {
             // 1. Open process and sleep.Go to execute subscription
             tokio::time::sleep(Duration::from_secs(1)).await;
             let ty = Ty::Struct(Struct {
-                name: utils::struct_name_from_names(&namespace, &model_name),
+                name: get_tag(&namespace, &model_name),
                 children: vec![
                     Member {
                         name: "depth".to_string(),
@@ -170,15 +184,26 @@ mod tests {
     #[serial]
     async fn test_entity_subscription_with_id(pool: SqlitePool) {
         let (shutdown_tx, _) = broadcast::channel(1);
+
+        // dummy provider since its required to query data for erc721 tokens
+        let url: Url = "https://www.example.com".parse().unwrap();
+        let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(url)));
+
         let (mut executor, sender) =
-            Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
+            Executor::new(pool.clone(), shutdown_tx.clone(), provider, 100).await.unwrap();
         tokio::spawn(async move {
             executor.run().await.unwrap();
         });
-        let mut db =
-            Sql::new(pool.clone(), sender, &HashMap::from([(Felt::ZERO, ContractType::WORLD)]))
-                .await
-                .unwrap();
+
+        let model_cache = Arc::new(ModelCache::new(pool.clone()));
+        let mut db = Sql::new(
+            pool.clone(),
+            sender,
+            &[Contract { address: Felt::ZERO, r#type: ContractType::WORLD }],
+            model_cache,
+        )
+        .await
+        .unwrap();
 
         model_fixtures(&mut db).await;
         // 0. Preprocess expected entity value
@@ -209,7 +234,7 @@ mod tests {
             // 1. Open process and sleep.Go to execute subscription
             tokio::time::sleep(Duration::from_secs(1)).await;
             let ty = Ty::Struct(Struct {
-                name: utils::struct_name_from_names(&namespace, &model_name),
+                name: get_tag(&namespace, &model_name),
                 children: vec![
                     Member {
                         name: "depth".to_string(),
@@ -294,15 +319,24 @@ mod tests {
     #[serial]
     async fn test_model_subscription(pool: SqlitePool) {
         let (shutdown_tx, _) = broadcast::channel(1);
+
+        let url: Url = "https://www.example.com".parse().unwrap();
+        let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(url)));
         let (mut executor, sender) =
-            Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
+            Executor::new(pool.clone(), shutdown_tx.clone(), provider, 100).await.unwrap();
         tokio::spawn(async move {
             executor.run().await.unwrap();
         });
-        let mut db =
-            Sql::new(pool.clone(), sender, &HashMap::from([(Felt::ZERO, ContractType::WORLD)]))
-                .await
-                .unwrap();
+
+        let model_cache = Arc::new(ModelCache::new(pool.clone()));
+        let mut db = Sql::new(
+            pool.clone(),
+            sender,
+            &[Contract { address: Felt::ZERO, r#type: ContractType::WORLD }],
+            model_cache,
+        )
+        .await
+        .unwrap();
         // 0. Preprocess model value
         let namespace = "types_test".to_string();
         let model_name = "Subrecord".to_string();
@@ -330,13 +364,14 @@ mod tests {
             });
             db.register_model(
                 &namespace,
-                model,
+                &model,
                 Layout::Fixed(vec![]),
                 class_hash,
                 contract_address,
                 0,
                 0,
                 block_timestamp,
+                None,
             )
             .await
             .unwrap();
@@ -368,15 +403,24 @@ mod tests {
     #[serial]
     async fn test_model_subscription_with_id(pool: SqlitePool) {
         let (shutdown_tx, _) = broadcast::channel(1);
+
+        let url: Url = "https://www.example.com".parse().unwrap();
+        let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(url)));
         let (mut executor, sender) =
-            Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
+            Executor::new(pool.clone(), shutdown_tx.clone(), provider, 100).await.unwrap();
         tokio::spawn(async move {
             executor.run().await.unwrap();
         });
-        let mut db =
-            Sql::new(pool.clone(), sender, &HashMap::from([(Felt::ZERO, ContractType::WORLD)]))
-                .await
-                .unwrap();
+
+        let model_cache = Arc::new(ModelCache::new(pool.clone()));
+        let mut db = Sql::new(
+            pool.clone(),
+            sender,
+            &[Contract { address: Felt::ZERO, r#type: ContractType::WORLD }],
+            model_cache,
+        )
+        .await
+        .unwrap();
         // 0. Preprocess model value
         let namespace = "types_test".to_string();
         let model_name = "Subrecord".to_string();
@@ -403,13 +447,14 @@ mod tests {
             });
             db.register_model(
                 &namespace,
-                model,
+                &model,
                 Layout::Fixed(vec![]),
                 class_hash,
                 contract_address,
                 0,
                 0,
                 block_timestamp,
+                None,
             )
             .await
             .unwrap();
@@ -443,15 +488,24 @@ mod tests {
     #[serial]
     async fn test_event_emitted(pool: SqlitePool) {
         let (shutdown_tx, _) = broadcast::channel(1);
+
+        let url: Url = "https://www.example.com".parse().unwrap();
+        let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(url)));
         let (mut executor, sender) =
-            Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
+            Executor::new(pool.clone(), shutdown_tx.clone(), provider, 100).await.unwrap();
         tokio::spawn(async move {
             executor.run().await.unwrap();
         });
-        let mut db =
-            Sql::new(pool.clone(), sender, &HashMap::from([(Felt::ZERO, ContractType::WORLD)]))
-                .await
-                .unwrap();
+
+        let model_cache = Arc::new(ModelCache::new(pool.clone()));
+        let mut db = Sql::new(
+            pool.clone(),
+            sender,
+            &[Contract { address: Felt::ZERO, r#type: ContractType::WORLD }],
+            model_cache,
+        )
+        .await
+        .unwrap();
         let block_timestamp: u64 = 1710754478_u64;
         let (tx, mut rx) = mpsc::channel(7);
         tokio::spawn(async move {

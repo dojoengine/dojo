@@ -1,12 +1,11 @@
 //! Invoker to invoke contracts.
 
-use std::time::Duration;
-
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::Call;
 use tracing::trace;
 
 use super::TransactionResult;
+use crate::tx::FeeConfig;
 use crate::{TransactionError, TransactionExt, TransactionWaiter, TxnConfig};
 
 #[derive(Debug)]
@@ -56,18 +55,22 @@ where
     ) -> Result<TransactionResult, TransactionError<A::SignError>> {
         trace!(?call, "Invoke contract.");
 
-        let tx = self.account.execute_v1(vec![call]).send_with_cfg(&self.txn_config).await?;
+        let tx = match self.txn_config.fee_config {
+            FeeConfig::Strk(config) => {
+                trace!(?config, "Invoking with STRK.");
+                self.account.execute_v3(vec![call]).send_with_cfg(&self.txn_config).await?
+            }
+            FeeConfig::Eth(config) => {
+                trace!(?config, "Invoking with ETH.");
+                self.account.execute_v1(vec![call]).send_with_cfg(&self.txn_config).await?
+            }
+        };
 
         trace!(transaction_hash = format!("{:#066x}", tx.transaction_hash), "Invoke contract.");
 
         if self.txn_config.wait {
-            let receipt = if let Some(timeout_ms) = self.txn_config.timeout_ms {
-                TransactionWaiter::new(tx.transaction_hash, &self.account.provider())
-                    .with_timeout(Duration::from_millis(timeout_ms))
-                    .await?
-            } else {
-                TransactionWaiter::new(tx.transaction_hash, &self.account.provider()).await?
-            };
+            let receipt =
+                TransactionWaiter::new(tx.transaction_hash, &self.account.provider()).await?;
 
             if self.txn_config.receipt {
                 return Ok(TransactionResult::HashReceipt(tx.transaction_hash, Box::new(receipt)));
@@ -85,8 +88,16 @@ where
 
         trace!(?self.calls, "Invoke contract multicall.");
 
-        let tx =
-            self.account.execute_v1(self.calls.clone()).send_with_cfg(&self.txn_config).await?;
+        let tx = match self.txn_config.fee_config {
+            FeeConfig::Strk(config) => {
+                trace!(?config, "Invoking with STRK.");
+                self.account.execute_v3(self.calls.clone()).send_with_cfg(&self.txn_config).await?
+            }
+            FeeConfig::Eth(config) => {
+                trace!(?config, "Invoking with ETH.");
+                self.account.execute_v1(self.calls.clone()).send_with_cfg(&self.txn_config).await?
+            }
+        };
 
         trace!(
             transaction_hash = format!("{:#066x}", tx.transaction_hash),
@@ -94,13 +105,8 @@ where
         );
 
         if self.txn_config.wait {
-            let receipt = if let Some(timeout_ms) = self.txn_config.timeout_ms {
-                TransactionWaiter::new(tx.transaction_hash, &self.account.provider())
-                    .with_timeout(Duration::from_millis(timeout_ms))
-                    .await?
-            } else {
-                TransactionWaiter::new(tx.transaction_hash, &self.account.provider()).await?
-            };
+            let receipt =
+                TransactionWaiter::new(tx.transaction_hash, &self.account.provider()).await?;
 
             if self.txn_config.receipt {
                 return Ok(TransactionResult::HashReceipt(tx.transaction_hash, Box::new(receipt)));

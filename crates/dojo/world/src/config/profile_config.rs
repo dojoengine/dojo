@@ -9,6 +9,7 @@ use toml;
 use super::environment::Environment;
 use super::migration_config::MigrationConfig;
 use super::namespace_config::NamespaceConfig;
+use super::resource_config::ResourceConfig;
 use super::world_config::WorldConfig;
 
 /// Profile configuration that is used to configure the world and its environment.
@@ -17,14 +18,17 @@ use super::world_config::WorldConfig;
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct ProfileConfig {
     pub world: WorldConfig,
+    pub models: Option<Vec<ResourceConfig>>,
+    pub contracts: Option<Vec<ResourceConfig>>,
+    pub events: Option<Vec<ResourceConfig>>,
     pub namespace: NamespaceConfig,
     pub env: Option<Environment>,
     pub migration: Option<MigrationConfig>,
-    /// A mapping <name_or_tag, [tags]> of writers to be set on the world.
+    /// A mapping <name_or_tag, <tags>> of writers to be set on the world.
     pub writers: Option<HashMap<String, HashSet<String>>>,
-    /// A mapping <name_or_tag, [tags]> of owners to be set on the world.
+    /// A mapping <name_or_tag, <tags>> of owners to be set on the world.
     pub owners: Option<HashMap<String, HashSet<String>>>,
-    /// A mapping <tag, [values]> of init call arguments to be passed to the contract.
+    /// A mapping <tag, <values>> of init call arguments to be passed to the contract.
     pub init_call_args: Option<HashMap<String, Vec<String>>>,
 }
 
@@ -134,6 +138,21 @@ mod tests {
         website = "https://example.com"
         socials = { "twitter" = "test", "discord" = "test" }
 
+        [[models]]
+        tag = "ns1-m1"
+        description = "This is the m1 model"
+        icon_uri = "ipfs://dojo/m1.png"
+
+        [[contracts]]
+        tag = "ns1-c1"
+        description = "This is the c1 contract"
+        icon_uri = "ipfs://dojo/c1.png"
+
+        [[events]]
+        tag = "ns1-e1"
+        description = "This is the e1 event"
+        icon_uri = "ipfs://dojo/e1.png"
+
         [namespace]
         default = "test"
         mappings = { "test" = ["test2"] }
@@ -145,6 +164,11 @@ mod tests {
         keystore_path = "test"
         keystore_password = "test"
         world_address = "test"
+
+        [env.ipfs_config]
+        url = "https://ipfs.service"
+        username = "johndoe"
+        password = "123456"
 
         [migration]
         skip_contracts = [ "module::my-contract" ]
@@ -172,6 +196,11 @@ mod tests {
         assert_eq!(env.keystore_password, Some("test".to_string()));
         assert_eq!(env.world_address, Some("test".to_string()));
 
+        let ipfs_config = env.ipfs_config.unwrap();
+        assert_eq!(ipfs_config.url, "https://ipfs.service".to_string());
+        assert_eq!(ipfs_config.username, "johndoe".to_string());
+        assert_eq!(ipfs_config.password, "123456".to_string());
+
         assert_eq!(config.world.description, Some("test".to_string()));
         assert_eq!(
             config.world.cover_uri,
@@ -189,6 +218,27 @@ mod tests {
                 ("discord".to_string(), "test".to_string())
             ]))
         );
+
+        assert!(config.models.is_some());
+        let models = config.models.unwrap();
+        assert_eq!(models.len(), 1);
+        assert_eq!(models[0].tag, "ns1-m1");
+        assert_eq!(models[0].description, Some("This is the m1 model".to_string()));
+        assert_eq!(models[0].icon_uri, Some(Uri::from_string("ipfs://dojo/m1.png").unwrap()));
+
+        assert!(config.contracts.is_some());
+        let contracts = config.contracts.unwrap();
+        assert_eq!(contracts.len(), 1);
+        assert_eq!(contracts[0].tag, "ns1-c1");
+        assert_eq!(contracts[0].description, Some("This is the c1 contract".to_string()));
+        assert_eq!(contracts[0].icon_uri, Some(Uri::from_string("ipfs://dojo/c1.png").unwrap()));
+
+        assert!(config.events.is_some());
+        let events = config.events.unwrap();
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0].tag, "ns1-e1");
+        assert_eq!(events[0].description, Some("This is the e1 event".to_string()));
+        assert_eq!(events[0].icon_uri, Some(Uri::from_string("ipfs://dojo/e1.png").unwrap()));
 
         assert_eq!(config.namespace.default, "test".to_string());
         assert_eq!(
