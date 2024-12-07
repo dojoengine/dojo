@@ -12,6 +12,5 @@ pub mod torii;
 
 mod future;
 mod logger;
-mod server;
 mod transport;
 mod utils;
