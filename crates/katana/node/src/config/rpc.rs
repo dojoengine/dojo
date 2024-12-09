@@ -1,6 +1,8 @@
 use std::collections::HashSet;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
+use http::HeaderValue;
+
 /// The default maximum number of concurrent RPC connections.
 pub const DEFAULT_RPC_MAX_CONNECTIONS: u32 = 100;
 pub const DEFAULT_RPC_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::LOCALHOST);
@@ -28,7 +30,7 @@ pub struct RpcConfig {
     pub max_connections: u32,
     pub apis: HashSet<ApiKind>,
     pub max_event_page_size: Option<u64>,
-    pub cors_origins: Option<Vec<String>>,
+    pub cors_origins: Vec<HeaderValue>,
 }
 
 impl RpcConfig {
@@ -41,7 +43,7 @@ impl RpcConfig {
 impl Default for RpcConfig {
     fn default() -> Self {
         Self {
-            cors_origins: None,
+            cors_origins: Vec::new(),
             addr: DEFAULT_RPC_ADDR,
             port: DEFAULT_RPC_PORT,
             max_connections: DEFAULT_RPC_MAX_CONNECTIONS,

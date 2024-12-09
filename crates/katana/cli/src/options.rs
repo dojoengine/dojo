@@ -10,6 +10,7 @@
 use std::net::IpAddr;
 
 use clap::Args;
+use http::HeaderValue;
 use katana_node::config::execution::{DEFAULT_INVOCATION_MAX_STEPS, DEFAULT_VALIDATION_MAX_STEPS};
 use katana_node::config::metrics::{DEFAULT_METRICS_ADDR, DEFAULT_METRICS_PORT};
 #[cfg(feature = "server")]
@@ -23,7 +24,10 @@ use katana_primitives::genesis::Genesis;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-use crate::utils::{parse_block_hash_or_number, parse_genesis, LogFormat};
+use crate::utils::{
+    deserialize_cors_origins, parse_block_hash_or_number, parse_genesis, serialize_cors_origins,
+    LogFormat,
+};
 
 const DEFAULT_DEV_SEED: &str = "0";
 const DEFAULT_DEV_ACCOUNTS: u16 = 10;
@@ -85,8 +89,12 @@ pub struct ServerOptions {
     /// Comma separated list of domains from which to accept cross origin requests.
     #[arg(long = "http.cors_origins")]
     #[arg(value_delimiter = ',')]
-    #[serde(default)]
-    pub http_cors_origins: Option<Vec<String>>,
+    #[serde(
+        default,
+        serialize_with = "serialize_cors_origins",
+        deserialize_with = "deserialize_cors_origins"
+    )]
+    pub http_cors_origins: Vec<HeaderValue>,
 
     /// Maximum number of concurrent connections allowed.
     #[arg(long = "rpc.max-connections", value_name = "COUNT")]
@@ -108,7 +116,7 @@ impl Default for ServerOptions {
             http_addr: DEFAULT_RPC_ADDR,
             http_port: DEFAULT_RPC_PORT,
             max_connections: DEFAULT_RPC_MAX_CONNECTIONS,
-            http_cors_origins: None,
+            http_cors_origins: Vec::new(),
             max_event_page_size: DEFAULT_RPC_MAX_EVENT_PAGE_SIZE,
         }
     }
