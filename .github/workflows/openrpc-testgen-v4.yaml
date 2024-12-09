@@ -190,8 +190,3 @@ jobs:
           --suite katana-no-account-validation
         working-directory: katana-runner
 
-      - name: Echo
-        run: |
-          echo "done"
-        working-directory: katana-runner
-
