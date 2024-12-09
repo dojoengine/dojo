@@ -220,11 +220,16 @@ where
                     self.pending_requests.push((req_key, fut));
                     e.insert(vec![sender]);
                 } else {
-                    let sender_vec = self
-                        .request_dedup_map
-                        .get_mut(&req_key)
-                        .expect("failed to get current request dedup vector");
-                    sender_vec.push(sender);
+                    match self.request_dedup_map.get_mut(&req_key) {
+                        Some(sender_vec) => {
+                            sender_vec.push(sender);
+                        }
+                        None => {
+                            // Log this and do nothing here, as this should never happen.
+                            // If this does happen it is an unexpected bug.
+                            error!(target: LOG_TARGET, "failed to get current request dedup vector");
+                        }
+                    }
                 }
             }
 
@@ -246,11 +251,16 @@ where
                     self.pending_requests.push((req_key, fut));
                     e.insert(vec![sender]);
                 } else {
-                    let sender_vec = self
-                        .request_dedup_map
-                        .get_mut(&req_key)
-                        .expect("failed to get current request dedup vector");
-                    sender_vec.push(sender);
+                    match self.request_dedup_map.get_mut(&req_key) {
+                        Some(sender_vec) => {
+                            sender_vec.push(sender);
+                        }
+                        None => {
+                            // Log this and do nothing here, as this should never happen.
+                            // If this does happen it is an unexpected bug.
+                            error!(target: LOG_TARGET, "failed to get current request dedup vector");
+                        }
+                    }
                 }
             }
 
@@ -272,11 +282,16 @@ where
                     self.pending_requests.push((req_key, fut));
                     e.insert(vec![sender]);
                 } else {
-                    let sender_vec = self
-                        .request_dedup_map
-                        .get_mut(&req_key)
-                        .expect("failed to get current request dedup vector");
-                    sender_vec.push(sender);
+                    match self.request_dedup_map.get_mut(&req_key) {
+                        Some(sender_vec) => {
+                            sender_vec.push(sender);
+                        }
+                        None => {
+                            // Log this and do nothing here, as this should never happen.
+                            // If this does happen it is an unexpected bug.
+                            error!(target: LOG_TARGET, "failed to get current request dedup vector");
+                        }
+                    }
                 }
             }
 
@@ -298,11 +313,16 @@ where
                     self.pending_requests.push((req_key, fut));
                     e.insert(vec![sender]);
                 } else {
-                    let sender_vec = self
-                        .request_dedup_map
-                        .get_mut(&req_key)
-                        .expect("failed to get current request dedup vector");
-                    sender_vec.push(sender);
+                    match self.request_dedup_map.get_mut(&req_key) {
+                        Some(sender_vec) => {
+                            sender_vec.push(sender);
+                        }
+                        None => {
+                            // Log this and do nothing here, as this should never happen.
+                            // If this does happen it is an unexpected bug.
+                            error!(target: LOG_TARGET, "failed to get current request dedup vector");
+                        }
+                    }
                 }
             }
 
@@ -361,9 +381,7 @@ where
 
                         // Send the response to all the senders waiting on the same request
                         sender_vec.iter().for_each(|sender| {
-                            sender.send(res.clone()).expect(
-                                format!("failed to send result of request {:?}", fut_key).as_str(),
-                            );
+                            sender.send(res.clone()).unwrap_or_else(|_| error!(target: LOG_TARGET, "failed to send result of request {:?} to sender {:?}", fut_key, sender));
                         });
 
                         pin.request_dedup_map.remove(&fut_key);
