@@ -215,8 +215,8 @@ mod tests {
         WorldStorageTestTrait
     };
 
-    use super::{actions, IActionsDispatcher, IActionsDispatcherTrait};
-    use dojo_examples::models::{Position, PositionValue, m_Position, Moves, m_Moves, Direction,};
+    use super::{IActionsDispatcher, IActionsDispatcherTrait};
+    use dojo_examples::models::{Position, PositionValue, Moves, Direction,};
 
     fn namespace_def() -> NamespaceDef {
         let ndef = NamespaceDef {
@@ -277,7 +277,7 @@ mod tests {
     #[test]
     #[available_gas(30000000)]
     fn test_move() {
-        let caller = starknet::contract_address_const::<0x0>();
+        let caller = snforge_std::test_address();
 
         let ndef = namespace_def();
         let mut world = spawn_test_world([ndef].span());

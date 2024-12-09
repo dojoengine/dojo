@@ -16,6 +16,7 @@ build-external-contracts = [ "dojo::world::world_contract::world" ]
 armory = { path = "../game-lib/armory" }
 bestiary = { path = "../game-lib/bestiary" }
 dojo = { path = "../../crates/dojo/core" }
+snforge_std = "0.33.0"
 starknet = "2.8.4"
 
 [dev-dependencies]
@@ -24,5 +25,8 @@ dojo_foundry_test = { path = "../../crates/dojo/core-foundry-test" }
 [features]
 default = [ "dungeon" ]
 dungeon = [  ]
+
+[scripts]
+test = "snforge test"
 
 [profile.saya]

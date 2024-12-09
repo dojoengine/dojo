@@ -1,13 +1,13 @@
-#[cfg(test)]
+#[cfg(target: "test")]
 mod utils;
-#[cfg(test)]
+#[cfg(target: "test")]
 mod snf_utils;
-#[cfg(test)]
+#[cfg(target: "test")]
 mod world;
 
-#[cfg(test)]
+#[cfg(target: "test")]
 pub use utils::{GasCounter, assert_array, GasCounterTrait};
-#[cfg(test)]
+#[cfg(target: "test")]
 pub use world::{
     spawn_test_world, NamespaceDef, TestResource, ContractDef, ContractDefTrait,
     WorldStorageTestTrait,

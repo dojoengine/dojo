@@ -118,7 +118,7 @@ mod tests {
     use dojo_foundry_test::{
         spawn_test_world, NamespaceDef, TestResource, ContractDefTrait, WorldStorageTestTrait
     };
-    use super::{c1, m_M, M};
+    use super::M;
 
     #[test]
     fn test_1() {
