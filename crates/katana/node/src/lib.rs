@@ -40,6 +40,7 @@ use katana_primitives::block::GasPrices;
 use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
 use katana_rpc::dev::DevApi;
 use katana_rpc::metrics::RpcServerMetrics;
+use katana_rpc::proxy_get_request::DevnetProxyLayer;
 use katana_rpc::saya::SayaApi;
 use katana_rpc::starknet::forking::ForkedClient;
 use katana_rpc::starknet::{StarknetApi, StarknetApiConfig};
@@ -324,6 +325,8 @@ pub async fn spawn<EF: ExecutorFactory>(
     let middleware = tower::ServiceBuilder::new()
         .option_layer(cors)
         .layer(ProxyGetRequestLayer::new("/", "health")?)
+        .layer(DevnetProxyLayer::new("/account_balance", "dev_accountBalance")?)
+        .layer(DevnetProxyLayer::new("/fee_token", "dev_feeToken")?)
         .timeout(Duration::from_secs(20));
 
     let server = ServerBuilder::new()
