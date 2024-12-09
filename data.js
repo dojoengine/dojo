@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1733780279761,
+  "lastUpdate": 1733780449201,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -39601,6 +39601,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10594371647,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bd04c6bb62a5c397addff881e229694c6c6c44a5",
+          "message": "fix(sozo): remove skipped contracts from manifest (#2787)\n\n* chore: remove warning due to double license\n\n* fix: ensure skipped contracts are not in manifest\n\n* fix: add some trace log",
+          "timestamp": "2024-12-09T15:20:38-06:00",
+          "tree_id": "b45e8036fba6aa3b1af482b4500dc021496d36c6",
+          "url": "https://github.com/dojoengine/dojo/commit/bd04c6bb62a5c397addff881e229694c6c6c44a5"
+        },
+        "date": 1733780446934,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2497986,
+            "range": "± 40886",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 7995174,
+            "range": "± 450514",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3769392760,
+            "range": "± 954739079",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 7944129,
+            "range": "± 176826",
             "unit": "ns/iter"
           }
         ]
