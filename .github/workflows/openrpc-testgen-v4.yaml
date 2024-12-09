@@ -121,8 +121,8 @@ jobs:
           --http.port "${KATANA_NO_ACCOUNT_VALIDATION_PORT}" \
           --http.addr "${KATANA_ADDR}" \
           --silent \
-          --no-mining \
           --dev \
+          --dev.no-account-validation \
           &
           
 
