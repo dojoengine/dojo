@@ -714,11 +714,12 @@ fn handle_not_found_err<T>(result: Result<T, BackendError>) -> Result<Option<T>,
 #[cfg(test)]
 pub(crate) mod test_utils {
 
-    use std::sync::mpsc::sync_channel;
+    use std::sync::mpsc::{SyncSender, sync_channel};
 
     use katana_primitives::block::BlockNumber;
     use starknet::providers::JsonRpcClient;
     use starknet::providers::jsonrpc::HttpTransport;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
     use tokio::net::TcpListener;
     use url::Url;
 
@@ -752,33 +753,50 @@ pub(crate) mod test_utils {
         rx.recv().unwrap();
     }
 
-        // Starts a mocked starknet rpc server that never close the connection.
-        // The server will only accept certain function calls.
-        pub fn start_mock_starknet_rpc_server(addr: String) {
-            use tokio::runtime::Builder;
-    
-            let (tx, rx) = sync_channel::<()>(1);
-            thread::spawn(move || {
-                Builder::new_current_thread().enable_all().build().unwrap().block_on(async move {
-                    let listener = TcpListener::bind(addr).await.unwrap();
-                    let mut connections = Vec::new();
-    
-                    tx.send(()).unwrap();
-    
-                    loop {
-                        let (socket, _) = listener.accept().await.unwrap();
-                        connections.push(socket);
-                    }
-                });
+    // Helper function to start a TCP server that returns predefined JSON-RPC responses
+    pub fn start_mock_rpc_server(addr: String, response: String) -> SyncSender<()> {
+        use tokio::runtime::Builder;
+        let (tx, rx) = sync_channel::<()>(1);
+
+        thread::spawn(move || {
+            Builder::new_current_thread().enable_all().build().unwrap().block_on(async move {
+                let listener = TcpListener::bind(addr).await.unwrap();
+
+                loop {
+                    let (mut socket, _) = listener.accept().await.unwrap();
+
+                    // Read the request, so hyper would not close the connection
+                    let mut buffer = [0; 1024];
+                    let _ = socket.read(&mut buffer).await.unwrap();
+
+                    // Wait for a signal to return the response.
+                    rx.recv().unwrap();
+
+                    // After reading, we send the pre-determined response
+                    let http_response = format!(
+                        "HTTP/1.1 200 OK\r\n\
+                        content-length: {}\r\n\
+                        content-type: application/json\r\n\
+                        \r\n\
+                        {}",
+                        response.len(),
+                        response
+                    );
+
+                    socket.write_all(http_response.as_bytes()).await.unwrap();
+                    socket.flush().await.unwrap();
+                }
             });
-    
-            rx.recv().unwrap();
-        }
+        });
+
+        // Returning the sender to allow controlling the response timing.
+        tx
+    }
 }
 
 #[cfg(test)]
 mod tests {
-
+    use std::sync::Mutex;
     use std::time::Duration;
 
     use katana_primitives::contract::GenericContractInfo;
@@ -1123,6 +1141,53 @@ mod tests {
             StateProvider::class_hash_of_contract(&provider, ADDR_1).unwrap(),
             Some(ADDR_1_CLASS_HASH)
         );
+    }
+
+    #[test]
+    fn test_deduplicated_request_should_return_similar_results() {
+        // Start mock server with a predefined nonce response
+        let response = r#"{"jsonrpc":"2.0","result":"0x123","id":1}"#;
+        let sender = start_mock_rpc_server("127.0.0.1:8090".to_string(), response.to_string());
+
+        let handle = create_forked_backend("http://127.0.0.1:8090", 1);
+        let addr = ContractAddress(felt!("0x1"));
+
+        // Collect results from multiple identical nonce requests
+        let results: Arc<Mutex<Vec<Result<Nonce, BackendError>>>> =
+            Arc::new(Mutex::new(Vec::new()));
+        let handles: Vec<_> = (0..5)
+            .map(|_| {
+                let h = handle.clone();
+                let results = results.clone();
+                thread::spawn(move || {
+                    let res = h.get_nonce(addr);
+                    results.lock().unwrap().push(res);
+                })
+            })
+            .collect();
+
+        // wait for the requests to be sent to the rpc server
+        thread::sleep(Duration::from_secs(1));
+
+        // Check that there's only one request, meaning it is deduplicated.
+        let stats = handle.stats().expect(ERROR_STATS);
+        assert_eq!(stats, 1, "Backend should only have 1 ongoing requests.");
+
+        // Send the signal to tell the mock rpc server to return the response
+        sender.send(()).unwrap();
+
+        // Join all request threads
+        handles.into_iter().for_each(|h| h.join().unwrap());
+
+        // Verify all results are identical
+        let results = results.lock().unwrap();
+        for result in results.iter() {
+            assert_eq!(
+                "0x123",
+                format!("{:#x}", result.as_ref().unwrap()),
+                "All deduplicated nonce requests should return the same result"
+            );
+        }
     }
 
     // TODO: unignore this once we have separate the spawning of the backend thread from the backend
