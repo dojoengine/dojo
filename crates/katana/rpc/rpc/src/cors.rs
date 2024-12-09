@@ -1,4 +1,4 @@
-use http::HeaderValue;
+pub use http::HeaderValue;
 use tower::Layer;
 use tower_http::cors::{self, Any};
 pub use tower_http::cors::{AllowHeaders, AllowMethods};

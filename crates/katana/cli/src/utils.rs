@@ -5,7 +5,6 @@ use anyhow::{Context, Result};
 use clap::builder::PossibleValue;
 use clap::ValueEnum;
 use console::Style;
-use http::HeaderValue;
 use katana_primitives::block::{BlockHash, BlockHashOrNumber, BlockNumber};
 use katana_primitives::chain_spec::ChainSpec;
 use katana_primitives::class::ClassHash;
@@ -16,6 +15,7 @@ use katana_primitives::genesis::constant::{
 };
 use katana_primitives::genesis::json::GenesisJson;
 use katana_primitives::genesis::Genesis;
+use katana_rpc::cors::HeaderValue;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use tracing::info;
 

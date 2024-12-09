@@ -388,7 +388,6 @@ mod test {
     use std::str::FromStr;
 
     use assert_matches::assert_matches;
-    use http::HeaderValue;
     use katana_core::constants::{
         DEFAULT_ETH_L1_DATA_GAS_PRICE, DEFAULT_ETH_L1_GAS_PRICE, DEFAULT_STRK_L1_DATA_GAS_PRICE,
         DEFAULT_STRK_L1_GAS_PRICE,
@@ -398,6 +397,7 @@ mod test {
     };
     use katana_primitives::chain::ChainId;
     use katana_primitives::{address, felt, ContractAddress, Felt};
+    use katana_rpc::cors::HeaderValue;
 
     use super::*;
 
