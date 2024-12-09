@@ -10,6 +10,7 @@ version.workspace = true
 anyhow.workspace = true
 dojo-metrics.workspace = true
 futures.workspace = true
+http.workspace = true
 jsonrpsee = { workspace = true, features = [ "server" ] }
 katana-core.workspace = true
 katana-executor.workspace = true
@@ -21,9 +22,12 @@ katana-rpc-types.workspace = true
 katana-rpc-types-builder.workspace = true
 katana-tasks.workspace = true
 metrics.workspace = true
+serde_json.workspace = true
 starknet.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
+tower.workspace = true
+tower-http.workspace = true
 tracing.workspace = true
 url.workspace = true
 
@@ -47,3 +51,6 @@ serde_json.workspace = true
 similar-asserts.workspace = true
 tempfile.workspace = true
 tokio.workspace = true
+
+[features]
+argent = [  ]

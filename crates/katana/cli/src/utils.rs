@@ -5,6 +5,7 @@ use anyhow::{Context, Result};
 use clap::builder::PossibleValue;
 use clap::ValueEnum;
 use console::Style;
+use http::HeaderValue;
 use katana_primitives::block::{BlockHash, BlockHashOrNumber, BlockNumber};
 use katana_primitives::chain_spec::ChainSpec;
 use katana_primitives::class::ClassHash;
@@ -15,7 +16,7 @@ use katana_primitives::genesis::constant::{
 };
 use katana_primitives::genesis::json::GenesisJson;
 use katana_primitives::genesis::Genesis;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use tracing::info;
 
 use crate::args::LOG_TARGET;
@@ -189,6 +190,33 @@ PREFUNDED ACCOUNTS
             )
         }
     }
+}
+
+pub fn serialize_cors_origins<S>(values: &[HeaderValue], serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let string = values
+        .iter()
+        .map(|v| v.to_str())
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(serde::ser::Error::custom)?
+        .join(",");
+
+    serializer.serialize_str(&string)
+}
+
+pub fn deserialize_cors_origins<'de, D>(deserializer: D) -> Result<Vec<HeaderValue>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    String::deserialize(deserializer)?
+        .split(',')
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+        .map(HeaderValue::from_str)
+        .collect::<Result<Vec<HeaderValue>, _>>()
+        .map_err(serde::de::Error::custom)
 }
 
 #[cfg(test)]

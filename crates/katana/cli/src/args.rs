@@ -388,6 +388,7 @@ mod test {
     use std::str::FromStr;
 
     use assert_matches::assert_matches;
+    use http::HeaderValue;
     use katana_core::constants::{
         DEFAULT_ETH_L1_DATA_GAS_PRICE, DEFAULT_ETH_L1_GAS_PRICE, DEFAULT_STRK_L1_DATA_GAS_PRICE,
         DEFAULT_STRK_L1_GAS_PRICE,
@@ -614,5 +615,24 @@ chain_id.Named = "Mainnet"
         assert_eq!(config.chain.genesis.gas_prices.eth, 9999);
         assert_eq!(config.chain.genesis.gas_prices.strk, 8888);
         assert_eq!(config.chain.id, ChainId::Id(Felt::from_str("0x123").unwrap()));
+    }
+
+    #[test]
+    #[cfg(feature = "server")]
+    fn parse_cors_origins() {
+        let config = NodeArgs::parse_from([
+            "katana",
+            "--http.cors_origins",
+            "*,http://localhost:3000,https://example.com",
+        ])
+        .config()
+        .unwrap();
+
+        let cors_origins = config.rpc.cors_origins;
+
+        assert_eq!(cors_origins.len(), 3);
+        assert!(cors_origins.contains(&HeaderValue::from_static("*")));
+        assert!(cors_origins.contains(&HeaderValue::from_static("http://localhost:3000")));
+        assert!(cors_origins.contains(&HeaderValue::from_static("https://example.com")));
     }
 }
