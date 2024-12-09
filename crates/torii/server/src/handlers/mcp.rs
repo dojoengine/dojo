@@ -309,8 +309,7 @@ The database is optimized for querying game state and history, allowing clients 
             .and_then(Value::as_str);
 
         let schema_query = match table_filter {
-            Some(_table) => format!(
-                "SELECT 
+            Some(_table) => "SELECT 
                     m.name as table_name,
                     p.* 
                 FROM sqlite_master m
@@ -318,16 +317,15 @@ The database is optimized for querying game state and history, allowing clients 
                 WHERE m.type = 'table'
                 AND m.name = ?
                 ORDER BY m.name, p.cid"
-            ),
-            None => format!(
-                "SELECT 
+                .to_string(),
+            None => "SELECT 
                     m.name as table_name,
                     p.* 
                 FROM sqlite_master m
                 JOIN pragma_table_info(m.name) p
                 WHERE m.type = 'table'
                 ORDER BY m.name, p.cid"
-            ),
+                .to_string(),
         };
 
         let rows = match table_filter {
