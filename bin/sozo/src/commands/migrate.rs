@@ -3,8 +3,7 @@ use std::sync::Arc;
 use anyhow::{anyhow, Context, Result};
 use clap::Args;
 use colored::*;
-use dojo_utils::utils::health_check_provider;
-use dojo_utils::{self, TxnConfig};
+use dojo_utils::{self, provider as provider_utils, TxnConfig};
 use dojo_world::contracts::WorldContract;
 use dojo_world::services::IpfsService;
 use scarb::core::{Config, Workspace};
@@ -146,7 +145,7 @@ async fn print_banner(ws: &Workspace<'_>, starknet: &StarknetOptions) -> Result<
     let (provider, rpc_url) = starknet.provider(profile_config.env.as_ref())?;
 
     let provider = Arc::new(provider);
-    if let Err(e) = health_check_provider(provider.clone()).await {
+    if let Err(e) = provider_utils::health_check_provider(provider.clone()).await {
         error!(target: LOG_TARGET,"Provider health check failed during sozo migrate.");
         return Err(e);
     }

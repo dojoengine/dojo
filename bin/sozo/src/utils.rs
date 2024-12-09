@@ -6,7 +6,7 @@ use std::sync::Arc;
 use anyhow::{anyhow, Context, Result};
 use camino::Utf8PathBuf;
 use colored::*;
-use dojo_utils::utils::health_check_provider;
+use dojo_utils::provider as provider_utils;
 use dojo_world::config::ProfileConfig;
 use dojo_world::contracts::ContractInfo;
 use dojo_world::diff::WorldDiff;
@@ -117,7 +117,7 @@ pub async fn get_world_diff_and_provider(
 
     let (provider, rpc_url) = starknet.provider(env)?;
     let provider = Arc::new(provider);
-    if let Err(e) = health_check_provider(provider.clone()).await {
+    if let Err(e) = provider_utils::health_check_provider(provider.clone()).await {
         error!(target: LOG_TARGET,"Provider health check failed during sozo inspect.");
         return Err(e);
     }

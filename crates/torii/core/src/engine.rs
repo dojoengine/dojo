@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use anyhow::Result;
 use bitflags::bitflags;
-use dojo_utils::utils::health_check_provider;
+use dojo_utils::provider as provider_utils;
 use dojo_world::contracts::world::WorldContractReader;
 use futures_util::future::{join_all, try_join_all};
 use hashlink::LinkedHashMap;
@@ -253,7 +253,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
     }
 
     pub async fn start(&mut self) -> Result<()> {
-        if let Err(e) = health_check_provider(self.provider.clone()).await {
+        if let Err(e) = provider_utils::health_check_provider(self.provider.clone()).await {
             error!(target: LOG_TARGET,"Provider health check failed during engine start");
             return Err(e);
         }
