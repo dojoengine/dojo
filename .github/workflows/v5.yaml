@@ -1,10 +1,10 @@
-name: openrpc-testgenv5
+name: v5
 
 on:
   push:
     branches:
-      - 'uacias/**'    
-  workflow_dispatch:    
+      - 'uacias/**'
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
@@ -32,7 +32,7 @@ jobs:
 
       - name: Build katana
         run: |
-          cargo build --release --bin katana
+          cargo build --release --bin katana -j16
           mkdir -p bins
           cp ./target/release/katana bins/
 
@@ -47,14 +47,21 @@ jobs:
     runs-on: arc-runner-set
     env:
       KATANA_ADDR: "127.0.0.1"
-      KATANA_PORT: "5050"
-      KATANA_NO_MINING_PORT: "5051"
-      KATANA_NO_FEE_PORT: "5052"
-      KATANA_NO_ACCOUNT_VALIDATION_PORT: "5053"
       PAYMASTER_PRIVATE_KEY: "0xc5b2fcab997346f3ea1c00b002ecf6f382c5f9c9659a3894eb783c5320f912"
       PAYMASTER_ACCOUNT_ADDRESS: "0x127fd5f1fe78a71f8bcd1fec63e3fe2f0486b6ecd5c86a0466c3a21fa5cfcec"
       UDC_ADDRESS: "0x41a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf"
       ACCOUNT_CLASS_HASH: "0x07dc7899aa655b0aae51eadff6d801a58e97dd99cf4666ee59e704249e51adf2"
+    strategy:
+      matrix:
+        include:
+          - suite: "katana"
+            port: "5050"
+          - suite: "katana-no-mining"
+            port: "5051"
+          - suite: "katana-no-fee"
+            port: "5052"
+          - suite: "katana-no-account-validation"
+            port: "5053"
     steps:
       - name: Checkout main repository
         uses: actions/checkout@v3
@@ -96,35 +103,16 @@ jobs:
         run: |
           chmod +x /tmp/bins/katana
 
-      - name: Start katana nodes 
+      - name: Start katana node for ${{ matrix.suite }}
         run: |
           /tmp/bins/katana \
-          --http.port "${KATANA_PORT}" \
-          --http.addr "${KATANA_ADDR}" \
-          --silent \
-          & 
-          /tmp/bins/katana \
-          --http.port "${KATANA_NO_MINING_PORT}" \
-          --http.addr "${KATANA_ADDR}" \
-          --silent \
-          --no-mining \
-          --dev \
-          &
-          /tmp/bins/katana \
-          --http.port "${KATANA_NO_FEE_PORT}" \
-          --http.addr "${KATANA_ADDR}" \
-          --silent \
-          --dev \
-          --dev.no-fee \
-          &
-          /tmp/bins/katana \
-          --http.port "${KATANA_NO_ACCOUNT_VALIDATION_PORT}" \
-          --http.addr "${KATANA_ADDR}" \
-          --silent \
-          --dev \
-          --dev.no-account-validation \
-          &
-          
+            --http.port "${{ matrix.port }}" \
+            --http.addr "${KATANA_ADDR}" \
+            --silent \
+            $( if [ "${{ matrix.suite }}" = "katana-no-mining" ]; then echo "--no-mining --dev"; fi ) \
+            $( if [ "${{ matrix.suite }}" = "katana-no-fee" ]; then echo "--dev --dev.no-fee"; fi ) \
+            $( if [ "${{ matrix.suite }}" = "katana-no-account-validation" ]; then echo "--dev --dev.no-account-validation"; fi ) \
+            &
 
       - name: Checkout katana-runner repository
         uses: actions/checkout@v3
@@ -138,56 +126,19 @@ jobs:
         working-directory: katana-runner
 
       - name: Build openrpc-testgen-runner
+        # Use -j16 to speed up cargo build
         run: |
-          cargo build --release --features "katana katana_no_mining katana_no_fee katana_no_account_validation" -p openrpc-testgen -p openrpc-testgen-runner
+          cargo build --release -j16 --features "katana katana_no_mining katana_no_fee katana_no_account_validation" -p openrpc-testgen -p openrpc-testgen-runner
         working-directory: katana-runner
 
-      - name: Run Katana Suite
+      - name: Run ${{ matrix.suite }} Suite
         run: |
-          URLS="http://${KATANA_ADDR}:${KATANA_PORT}"
+          URLS="http://${KATANA_ADDR}:${{ matrix.port }}"
           target/release/openrpc-testgen-runner \
-          --urls "${URLS}" \
-          --paymaster-account-address "${PAYMASTER_ACCOUNT_ADDRESS}" \
-          --paymaster-private-key "${PAYMASTER_PRIVATE_KEY}" \
-          --udc-address "${UDC_ADDRESS}" \
-          --account-class-hash "${ACCOUNT_CLASS_HASH}" \
-          --suite katana
+            --urls "${URLS}" \
+            --paymaster-account-address "${PAYMASTER_ACCOUNT_ADDRESS}" \
+            --paymaster-private-key "${PAYMASTER_PRIVATE_KEY}" \
+            --udc-address "${UDC_ADDRESS}" \
+            --account-class-hash "${ACCOUNT_CLASS_HASH}" \
+            --suite ${{ matrix.suite }}
         working-directory: katana-runner
-
-      - name: Run Katana No Mining Suite
-        run: |
-          URLS="http://${KATANA_ADDR}:${KATANA_NO_MINING_PORT}"
-          target/release/openrpc-testgen-runner \
-          --urls "${URLS}" \
-          --paymaster-account-address "${PAYMASTER_ACCOUNT_ADDRESS}" \
-          --paymaster-private-key "${PAYMASTER_PRIVATE_KEY}" \
-          --udc-address "${UDC_ADDRESS}" \
-          --account-class-hash "${ACCOUNT_CLASS_HASH}" \
-          --suite katana-no-mining
-        working-directory: katana-runner
-
-      - name: Run Katana No Fee Suite
-        run: |
-          URLS="http://${KATANA_ADDR}:${KATANA_NO_FEE_PORT}"
-          target/release/openrpc-testgen-runner \
-          --urls "${URLS}" \
-          --paymaster-account-address "${PAYMASTER_ACCOUNT_ADDRESS}" \
-          --paymaster-private-key "${PAYMASTER_PRIVATE_KEY}" \
-          --udc-address "${UDC_ADDRESS}" \
-          --account-class-hash "${ACCOUNT_CLASS_HASH}" \
-          --suite katana-no-fee
-        working-directory: katana-runner
-
-      - name: Run Katana No Account Validation Suite
-        run: |
-          URLS="http://${KATANA_ADDR}:${KATANA_NO_ACCOUNT_VALIDATION_PORT}"
-          target/release/openrpc-testgen-runner \
-          --urls "${URLS}" \
-          --paymaster-account-address "${PAYMASTER_ACCOUNT_ADDRESS}" \
-          --paymaster-private-key "${PAYMASTER_PRIVATE_KEY}" \
-          --udc-address "${UDC_ADDRESS}" \
-          --account-class-hash "${ACCOUNT_CLASS_HASH}" \
-          --suite katana-no-account-validation
-        working-directory: katana-runner
-
-
