@@ -1,15 +1,12 @@
 //! Compiles and runs tests for a Dojo project.
-//!
-//! We can't use scarb to run tests since our injection will not work.
-//! Scarb uses other binaries to run tests. Dojo plugin injection is done in scarb itself.
-//! When proc macro will be fully supported, we can switch back to scarb.
-use cairo_lang_test_runner::RunProfilerConfig;
 use clap::Args;
 use scarb::compiler::ContractSelector;
 use scarb::core::{Config, Package};
 use scarb::ops;
+use scarb::ops::{validate_features, FeaturesOpts};
 use scarb_ui::args::{FeaturesSpec, PackagesFilter};
 use serde::{Deserialize, Serialize};
+use std::ffi::{OsStr, OsString};
 
 use super::check_package_dojo_version;
 
@@ -17,23 +14,6 @@ use super::check_package_dojo_version;
 #[serde(rename_all = "kebab-case")]
 pub struct Props {
     pub build_external_contracts: Option<Vec<ContractSelector>>,
-}
-
-#[derive(Debug, Clone, PartialEq, clap::ValueEnum)]
-pub enum ProfilerMode {
-    None,
-    Cairo,
-    Sierra,
-}
-
-impl From<ProfilerMode> for RunProfilerConfig {
-    fn from(mode: ProfilerMode) -> Self {
-        match mode {
-            ProfilerMode::None => RunProfilerConfig::None,
-            ProfilerMode::Cairo => RunProfilerConfig::Cairo,
-            ProfilerMode::Sierra => RunProfilerConfig::Sierra,
-        }
-    }
 }
 
 /// Execute all unit tests of a local package.
@@ -48,9 +28,9 @@ pub struct TestArgs {
     /// Should we run only the ignored tests.
     #[arg(long, default_value_t = false)]
     ignored: bool,
-    /// Should we run the profiler and with what mode.
-    #[arg(long, default_value = "none")]
-    profiler_mode: ProfilerMode,
+    /// Should we run the profiler.
+    #[arg(long, default_value_t = false)]
+    profiler: bool,
     /// Should we run the tests with gas enabled.
     #[arg(long, default_value_t = true)]
     gas_enabled: bool,
@@ -66,13 +46,13 @@ pub struct TestArgs {
 }
 
 impl TestArgs {
-    pub fn run(self, config: &Config) -> anyhow::Result<()> {
+    pub fn run(&self, config: &Config) -> anyhow::Result<()> {
         let ws = ops::read_workspace(config.manifest_path(), config).unwrap_or_else(|err| {
             eprintln!("error: {err}");
             std::process::exit(1);
         });
 
-        let packages: Vec<Package> = if let Some(filter) = self.packages {
+        let packages: Vec<Package> = if let Some(filter) = &self.packages {
             filter.match_many(&ws)?.into_iter().collect()
         } else {
             ws.members().collect()
@@ -82,11 +62,37 @@ impl TestArgs {
             check_package_dojo_version(&ws, p)?;
         }
 
-        // TODO RBA: build args from TestArgs options
-        let args = vec![];
+        let features_opts: FeaturesOpts = self.features.clone().try_into()?;
+        validate_features(&packages, &features_opts)?;
+
+        let args = self.build_args();
 
         packages.iter().try_for_each(|package| {
             ops::execute_test_subcommand(package, &args, &ws, self.features.clone()).map(|_| ())
         })
+    }
+
+    pub fn build_args(&self) -> Vec<OsString> {
+        let mut args = vec![];
+
+        if self.include_ignored {
+            args.push(OsStr::new("--include-ignored").to_os_string());
+        }
+
+        if self.ignored {
+            args.push(OsStr::new("--ignored").to_os_string());
+        }
+
+        if self.print_resource_usage {
+            args.push(OsStr::new("--detailed-resources").to_os_string());
+        }
+
+        if self.profiler {
+            args.push(OsStr::new("--build-profile").to_os_string());
+        }
+
+        //TODO: no 'gas_enabled' option in snforge, should we remove it ?
+
+        args
     }
 }
