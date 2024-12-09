@@ -250,6 +250,7 @@ where
                 // TODO: maybe we want a resource diff with a new variant. Where the migration
                 // is skipped, but we still have the local resource.
                 if self.profile_config.is_skipped(&tag) {
+                    trace!(tag = resource.tag(), "Contract init skipping resource.");
                     continue;
                 }
 
@@ -344,6 +345,7 @@ where
         // Only takes the local permissions that are not already set onchain to apply them.
         for (selector, resource) in &self.diff.resources {
             if self.profile_config.is_skipped(&resource.tag()) {
+                trace!(tag = resource.tag(), "Sync permissions skipping resource.");
                 continue;
             }
 
@@ -411,6 +413,7 @@ where
         // Collects the calls and classes to be declared to sync the resources.
         for resource in self.diff.resources.values() {
             if self.profile_config.is_skipped(&resource.tag()) {
+                trace!(tag = resource.tag(), "Sync skipping resource.");
                 continue;
             }
 
