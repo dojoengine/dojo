@@ -136,3 +136,19 @@ impl From<Vec<HeaderValue>> for AllowOrigins {
         Self::list(vec)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn wildcard_in_list() {
+        let origins = vec![
+            HeaderValue::from_static("http://example.com"),
+            HeaderValue::from_static("*"),
+            HeaderValue::from_static("http://other.com"),
+        ];
+
+        let _ = AllowOrigins::list(origins);
+    }
+}
