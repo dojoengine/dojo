@@ -10,7 +10,6 @@
 use std::net::IpAddr;
 
 use clap::Args;
-use http::HeaderValue;
 use katana_node::config::execution::{DEFAULT_INVOCATION_MAX_STEPS, DEFAULT_VALIDATION_MAX_STEPS};
 use katana_node::config::metrics::{DEFAULT_METRICS_ADDR, DEFAULT_METRICS_PORT};
 #[cfg(feature = "server")]
@@ -21,6 +20,7 @@ use katana_node::config::rpc::{
 use katana_primitives::block::BlockHashOrNumber;
 use katana_primitives::chain::ChainId;
 use katana_primitives::genesis::Genesis;
+use katana_rpc::cors::HeaderValue;
 use serde::{Deserialize, Serialize};
 use url::Url;
 

@@ -20,7 +20,6 @@ katana-tasks.workspace = true
 anyhow.workspace = true
 dojo-metrics.workspace = true
 futures.workspace = true
-http.workspace = true
 hyper.workspace = true
 jsonrpsee.workspace = true
 serde.workspace = true

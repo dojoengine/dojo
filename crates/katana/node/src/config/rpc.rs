@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
-use http::HeaderValue;
+use katana_rpc::cors::HeaderValue;
 
 /// The default maximum number of concurrent RPC connections.
 pub const DEFAULT_RPC_MAX_CONNECTIONS: u32 = 100;
