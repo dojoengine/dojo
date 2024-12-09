@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1733712402858,
+  "lastUpdate": 1733780249733,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -39541,6 +39541,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7881365,
             "range": "± 143463",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "847850277@qq.com",
+            "name": "zhengpeng",
+            "username": "847850277"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0d29ae3d2cfa2cf36db9243c63b9826f2665857c",
+          "message": "feat(sozo): provider health check (#2745)\n\n* [ISSUES#] 2739 sozo health check.\n\n* [ISSUES#] 2739 provider health check for sozo.\n\n* [ISSUES#] 2739 provider health check for sozo.\n\n* [ISSUES#] 2739 provider health check for sozo fmt.\n\n* fix: new utils provider module and minor fixes\n\n---------\n\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-12-09T15:20:58-06:00",
+          "tree_id": "57404cc00bf430ab9e2ea763e03861fd2654e493",
+          "url": "https://github.com/dojoengine/dojo/commit/0d29ae3d2cfa2cf36db9243c63b9826f2665857c"
+        },
+        "date": 1733780247531,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10066495267,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
