@@ -205,131 +205,93 @@ where
             BackendRequest::Nonce(Request { payload, sender }) => {
                 let req_key = BackendRequestIdentifier::Nonce(payload);
 
-                if let std::collections::hash_map::Entry::Vacant(e) =
-                    self.request_dedup_map.entry(req_key)
-                {
-                    let fut = Box::pin(async move {
+                self.dedup_request(req_key, sender, move || {
+                    Box::pin(async move {
                         let res = provider
                             .get_nonce(block, Felt::from(payload))
                             .await
                             .map_err(|e| BackendError::StarknetProvider(Arc::new(e)));
-
                         BackendResponse::Nonce(res)
-                    });
-
-                    self.pending_requests.push((req_key, fut));
-                    e.insert(vec![sender]);
-                } else {
-                    match self.request_dedup_map.get_mut(&req_key) {
-                        Some(sender_vec) => {
-                            sender_vec.push(sender);
-                        }
-                        None => {
-                            // Log this and do nothing here, as this should never happen.
-                            // If this does happen it is an unexpected bug.
-                            error!(target: LOG_TARGET, "failed to get current request dedup vector");
-                        }
-                    }
-                }
+                    })
+                });
             }
 
             BackendRequest::Storage(Request { payload: (addr, key), sender }) => {
                 let req_key = BackendRequestIdentifier::Storage((addr, key));
 
-                if let std::collections::hash_map::Entry::Vacant(e) =
-                    self.request_dedup_map.entry(req_key)
-                {
-                    let fut = Box::pin(async move {
+                self.dedup_request(req_key, sender, move || {
+                    Box::pin(async move {
                         let res = provider
                             .get_storage_at(Felt::from(addr), key, block)
                             .await
                             .map_err(|e| BackendError::StarknetProvider(Arc::new(e)));
 
                         BackendResponse::Storage(res)
-                    });
-
-                    self.pending_requests.push((req_key, fut));
-                    e.insert(vec![sender]);
-                } else {
-                    match self.request_dedup_map.get_mut(&req_key) {
-                        Some(sender_vec) => {
-                            sender_vec.push(sender);
-                        }
-                        None => {
-                            // Log this and do nothing here, as this should never happen.
-                            // If this does happen it is an unexpected bug.
-                            error!(target: LOG_TARGET, "failed to get current request dedup vector");
-                        }
-                    }
-                }
+                    })
+                });
             }
 
             BackendRequest::ClassHash(Request { payload, sender }) => {
                 let req_key = BackendRequestIdentifier::ClassHash(payload);
 
-                if let std::collections::hash_map::Entry::Vacant(e) =
-                    self.request_dedup_map.entry(req_key)
-                {
-                    let fut = Box::pin(async move {
+                self.dedup_request(req_key, sender, move || {
+                    Box::pin(async move {
                         let res = provider
                             .get_class_hash_at(block, Felt::from(payload))
                             .await
                             .map_err(|e| BackendError::StarknetProvider(Arc::new(e)));
 
                         BackendResponse::ClassHashAt(res)
-                    });
-
-                    self.pending_requests.push((req_key, fut));
-                    e.insert(vec![sender]);
-                } else {
-                    match self.request_dedup_map.get_mut(&req_key) {
-                        Some(sender_vec) => {
-                            sender_vec.push(sender);
-                        }
-                        None => {
-                            // Log this and do nothing here, as this should never happen.
-                            // If this does happen it is an unexpected bug.
-                            error!(target: LOG_TARGET, "failed to get current request dedup vector");
-                        }
-                    }
-                }
+                    })
+                });
             }
 
             BackendRequest::Class(Request { payload, sender }) => {
                 let req_key = BackendRequestIdentifier::Class(payload);
 
-                if let std::collections::hash_map::Entry::Vacant(e) =
-                    self.request_dedup_map.entry(req_key)
-                {
-                    let fut = Box::pin(async move {
+                self.dedup_request(req_key, sender, move || {
+                    Box::pin(async move {
                         let res = provider
                             .get_class(block, payload)
                             .await
                             .map_err(|e| BackendError::StarknetProvider(Arc::new(e)));
 
                         BackendResponse::ClassAt(res)
-                    });
-
-                    self.pending_requests.push((req_key, fut));
-                    e.insert(vec![sender]);
-                } else {
-                    match self.request_dedup_map.get_mut(&req_key) {
-                        Some(sender_vec) => {
-                            sender_vec.push(sender);
-                        }
-                        None => {
-                            // Log this and do nothing here, as this should never happen.
-                            // If this does happen it is an unexpected bug.
-                            error!(target: LOG_TARGET, "failed to get current request dedup vector");
-                        }
-                    }
-                }
+                    })
+                });
             }
 
             #[cfg(test)]
             BackendRequest::Stats(sender) => {
                 let total_ongoing_request = self.pending_requests.len();
                 sender.send(total_ongoing_request).expect("failed to send backend stats");
+            }
+        }
+    }
+
+    fn dedup_request<F>(
+        &mut self,
+        req_key: BackendRequestIdentifier,
+        sender: OneshotSender<BackendResponse>,
+        rpc_call_future: F,
+    ) where
+        F: FnOnce() -> BoxFuture<'static, BackendResponse>,
+    {
+        if let std::collections::hash_map::Entry::Vacant(e) = self.request_dedup_map.entry(req_key)
+        {
+            let fut = rpc_call_future();
+            self.pending_requests.push((req_key, fut));
+            e.insert(vec![sender]);
+        } else {
+            match self.request_dedup_map.get_mut(&req_key) {
+                Some(sender_vec) => {
+                    sender_vec.push(sender);
+                }
+                None => {
+                    // Log this and do nothing here, as this should never happen.
+                    // If this does happen it is an unexpected bug.
+                    error!(target: LOG_TARGET, "failed to get current request dedup vector");
+                }
             }
         }
     }
