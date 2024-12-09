@@ -59,7 +59,7 @@ edition = "2021"
 license = "Apache-2.0"
 license-file = "LICENSE"
 repository = "https://github.com/dojoengine/dojo/"
-version = "1.0.4"
+version = "1.0.5"
 
 [profile.performance]
 codegen-units = 1
@@ -72,8 +72,8 @@ debug = true
 inherits = "release"
 
 [workspace.dependencies]
-cainome = { git = "https://github.com/cartridge-gg/cainome", rev = "5c2616c273faca7700d2ba565503fcefb5b9d720", features = [ "abigen-rs" ] }
-cainome-cairo-serde = { git = "https://github.com/cartridge-gg/cainome", rev = "5c2616c273faca7700d2ba565503fcefb5b9d720" }
+cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.4.10", features = [ "abigen-rs" ] }
+cainome-cairo-serde = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.4.10" }
 dojo-utils = { path = "crates/dojo/utils" }
 
 # metrics
@@ -212,7 +212,7 @@ scarb-ui = { git = "https://github.com/dojoengine/scarb", rev = "7eac49b3e61236c
 semver = "1.0.5"
 serde = { version = "1.0", features = [ "derive" ] }
 serde_json = { version = "1.0", features = [ "arbitrary_precision" ] }
-serde_with = "3.9.0"
+serde_with = "3.11.0"
 similar-asserts = "1.5.0"
 smol_str = { version = "0.2.0", features = [ "serde" ] }
 spinoff = "0.8.0"
@@ -265,7 +265,7 @@ slot = { git = "https://github.com/cartridge-gg/slot", rev = "1298a30" }
 alloy-contract = { version = "0.3", default-features = false }
 alloy-json-rpc = { version = "0.3", default-features = false }
 alloy-network = { version = "0.3", default-features = false }
-alloy-provider = { version = "0.3", default-features = false, features = [ "reqwest" ] }
+alloy-provider = { version = "0.3", default-features = false }
 alloy-rpc-types-eth = { version = "0.3", default-features = false }
 alloy-signer = { version = "0.3", default-features = false }
 alloy-transport = { version = "0.3", default-features = false }

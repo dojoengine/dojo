@@ -257,9 +257,10 @@ mod tests {
             None
         };
 
+        dbg!(&config.manifest_path());
         let data =
             gather_dojo_data(&config.manifest_path().to_path_buf(), "ns", "dev", skip_migrations)
-                .unwrap();
+                .expect("Failed to gather dojo data");
 
         assert_eq!(data.models.len(), 6);
 

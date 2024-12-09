@@ -374,7 +374,7 @@ LIMIT 1000;`;
                             ORDER BY m.name, p.cid;
                         `;
               const response = await fetch(
-                "/sql?" + new URLSearchParams({ query: schemaQuery })
+                `${window.location.href}?` + new URLSearchParams({ query: schemaQuery })
               );
               if (!response.ok) throw new Error("Failed to fetch schema");
               const data = await response.json();
@@ -508,7 +508,7 @@ LIMIT 1000;`;
           const startTime = performance.now();
           try {
             const response = await fetch(
-              "/sql?" + new URLSearchParams({ query })
+              `${window.location.href}?` + new URLSearchParams({ query })
             );
             if (!response.ok) throw new Error(await response.text());
             const data = await response.json();

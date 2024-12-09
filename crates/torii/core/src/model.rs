@@ -121,6 +121,7 @@ pub fn build_sql_query(
     table_name: &str,
     entity_relation_column: &str,
     where_clause: Option<&str>,
+    order_by: Option<&str>,
     limit: Option<u32>,
     offset: Option<u32>,
 ) -> Result<(String, String), Error> {
@@ -196,7 +197,12 @@ pub fn build_sql_query(
         count_query += &format!(" WHERE {}", where_clause);
     }
 
-    query += &format!(" ORDER BY {}.event_id DESC", table_name);
+    // Use custom order by if provided, otherwise default to event_id DESC
+    if let Some(order_clause) = order_by {
+        query += &format!(" ORDER BY {}", order_clause);
+    } else {
+        query += &format!(" ORDER BY {}.event_id DESC", table_name);
+    }
 
     if let Some(limit) = limit {
         query += &format!(" LIMIT {}", limit);
@@ -484,6 +490,7 @@ mod tests {
             &vec![position, player_config],
             "entities",
             "internal_entity_id",
+            None,
             None,
             None,
             None,

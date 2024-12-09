@@ -74,6 +74,7 @@ message Query {
     uint32 limit = 2;
     uint32 offset = 3;
     bool dont_include_hashed_keys = 4;
+    repeated OrderBy order_by = 5;
 }
 
 message EventQuery {
@@ -164,4 +165,15 @@ message TokenBalance {
     string account_address = 2;
     string contract_address = 3;
     string token_id = 4;
+}
+
+message OrderBy {
+    string model = 1;
+    string member = 2;
+    OrderDirection direction = 3;
+}
+
+enum OrderDirection {
+    ASC = 0;
+    DESC = 1;
 }
