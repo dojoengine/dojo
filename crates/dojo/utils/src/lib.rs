@@ -12,5 +12,5 @@ pub use tx::*;
 
 pub mod env;
 pub mod keystore;
-
+pub mod provider;
 pub mod signal;
