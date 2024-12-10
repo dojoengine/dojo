@@ -69,6 +69,7 @@ ARG DOJO_VERSION=stable
 ARG BUILD_TYPE=default
 RUN curl -L https://install.dojoengine.org | bash
 RUN curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | bash
+RUN curl -L https://raw.githubusercontent.com/foundry-rs/starknet-foundry/master/scripts/install.sh | bash
 ENV PATH=${PATH}:/root/.dojo/bin
 RUN if [ "$BUILD_TYPE" = "release" ]; then \
     echo "Installing Dojo version $DOJO_VERSION"; \
