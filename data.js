@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1733867538187,
+  "lastUpdate": 1733867744682,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -40117,6 +40117,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10419806676,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bcd581e05b9b0f0a1dc338461c5ca9cf1ad263a7",
+          "message": "refactor(torii-server): mcp and sql cleanup with instructions static file (#2790)",
+          "timestamp": "2024-12-10T15:35:36-06:00",
+          "tree_id": "5d101e76eb084d83c978673f7c7886ab20a9928a",
+          "url": "https://github.com/dojoengine/dojo/commit/bcd581e05b9b0f0a1dc338461c5ca9cf1ad263a7"
+        },
+        "date": 1733867738801,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2457854,
+            "range": "± 38921",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 7869250,
+            "range": "± 128134",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3924285469,
+            "range": "± 752808023",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8547184,
+            "range": "± 457721",
             "unit": "ns/iter"
           }
         ]
