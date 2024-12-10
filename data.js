@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1733866881707,
+  "lastUpdate": 1733867538187,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -40087,6 +40087,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7835262,
             "range": "± 230235",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bcd581e05b9b0f0a1dc338461c5ca9cf1ad263a7",
+          "message": "refactor(torii-server): mcp and sql cleanup with instructions static file (#2790)",
+          "timestamp": "2024-12-10T15:35:36-06:00",
+          "tree_id": "5d101e76eb084d83c978673f7c7886ab20a9928a",
+          "url": "https://github.com/dojoengine/dojo/commit/bcd581e05b9b0f0a1dc338461c5ca9cf1ad263a7"
+        },
+        "date": 1733867535996,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10419806676,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
