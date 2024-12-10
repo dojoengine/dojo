@@ -275,7 +275,7 @@ mod tests {
     use katana_provider::traits::block::BlockNumberProvider;
 
     use super::Blocks;
-    use crate::stage::{Stage, StageExecutionInput};
+    use crate::{Stage, StageExecutionInput};
 
     #[tokio::test]
     async fn fetch_blocks() {

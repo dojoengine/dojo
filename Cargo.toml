@@ -24,7 +24,6 @@ members = [
 	"crates/katana/grpc",
 	"crates/katana/node",
 	"crates/katana/node-bindings",
-	"crates/katana/pipeline",
 	"crates/katana/pool",
 	"crates/katana/primitives",
 	"crates/katana/rpc/rpc",
@@ -37,6 +36,8 @@ members = [
 	"crates/katana/storage/codecs/derive",
 	"crates/katana/storage/db",
 	"crates/katana/storage/provider",
+	"crates/katana/sync/pipeline",
+	"crates/katana/sync/stage",
 	"crates/katana/tasks",
 	"crates/katana/trie",
 	"crates/metrics",
@@ -101,7 +102,7 @@ katana-executor = { path = "crates/katana/executor" }
 katana-feeder-gateway = { path = "crates/katana/feeder-gateway" }
 katana-node = { path = "crates/katana/node", default-features = false }
 katana-node-bindings = { path = "crates/katana/node-bindings" }
-katana-pipeline = { path = "crates/katana/pipeline" }
+katana-pipeline = { path = "crates/katana/sync/pipeline" }
 katana-pool = { path = "crates/katana/pool" }
 katana-primitives = { path = "crates/katana/primitives" }
 katana-provider = { path = "crates/katana/storage/provider" }
@@ -111,6 +112,7 @@ katana-rpc-types = { path = "crates/katana/rpc/rpc-types" }
 katana-rpc-types-builder = { path = "crates/katana/rpc/rpc-types-builder" }
 katana-runner = { path = "crates/katana/runner" }
 katana-slot-controller = { path = "crates/katana/controller" }
+katana-stage = { path = "crates/katana/sync/stage" }
 katana-tasks = { path = "crates/katana/tasks" }
 katana-trie = { path = "crates/katana/trie" }
 

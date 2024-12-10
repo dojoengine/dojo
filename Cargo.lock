@@ -8585,6 +8585,7 @@ dependencies = [
  "katana-provider",
  "katana-rpc",
  "katana-rpc-api",
+ "katana-stage",
  "katana-tasks",
  "serde",
  "serde_json",
@@ -8621,20 +8622,11 @@ dependencies = [
 name = "katana-pipeline"
 version = "1.0.5"
 dependencies = [
- "anyhow",
  "async-trait",
- "backon",
  "futures",
- "katana-core",
- "katana-executor",
- "katana-feeder-gateway",
- "katana-pool",
  "katana-primitives",
  "katana-provider",
- "katana-rpc-types",
- "katana-tasks",
- "num-traits 0.2.19",
- "starknet 0.12.0",
+ "katana-stage",
  "thiserror",
  "tokio",
  "tracing",
@@ -8844,6 +8836,29 @@ dependencies = [
  "starknet 0.12.0",
  "tracing",
  "webauthn-rs-proto",
+]
+
+[[package]]
+name = "katana-stage"
+version = "1.0.5"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "backon",
+ "futures",
+ "katana-core",
+ "katana-executor",
+ "katana-feeder-gateway",
+ "katana-pool",
+ "katana-primitives",
+ "katana-provider",
+ "katana-rpc-types",
+ "katana-tasks",
+ "num-traits 0.2.19",
+ "starknet 0.12.0",
+ "thiserror",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
