@@ -19,6 +19,7 @@ use tower_http::cors::{AllowOrigin, CorsLayer};
 
 use crate::handlers::graphql::GraphQLHandler;
 use crate::handlers::grpc::GrpcHandler;
+use crate::handlers::mcp::McpHandler;
 use crate::handlers::sql::SqlHandler;
 use crate::handlers::static_files::StaticHandler;
 use crate::handlers::Handler;
@@ -172,10 +173,11 @@ async fn handle(
     req: Request<Body>,
 ) -> Result<Response<Body>, Infallible> {
     let handlers: Vec<Box<dyn Handler>> = vec![
-        Box::new(SqlHandler::new(pool)),
+        Box::new(SqlHandler::new(pool.clone())),
         Box::new(GraphQLHandler::new(client_ip, graphql_addr)),
         Box::new(GrpcHandler::new(client_ip, grpc_addr)),
         Box::new(StaticHandler::new(client_ip, artifacts_addr)),
+        Box::new(McpHandler::new(pool.clone())),
     ];
 
     for handler in handlers {
