@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use super::check_package_dojo_version;
 
-const TEST_COMMAND: &str = "snforge";
+const TEST_COMMAND: &str = "scarb";
 const TEST_COMMAND_FIRST_ARG: &str = "test";
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -72,7 +72,7 @@ impl TestArgs {
                 .output()
                 .map_err(|_| {
                     anyhow::anyhow!(
-                        "Unable to run `{TEST_COMMAND}` for {}",
+                        "Unable to run `{TEST_COMMAND} {TEST_COMMAND_FIRST_ARG}` for {}",
                         package.manifest_path()
                     )
                 })
