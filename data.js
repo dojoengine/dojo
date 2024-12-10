@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1733852615811,
+  "lastUpdate": 1733866682836,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -40009,6 +40009,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7917588,
             "range": "± 90313",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "51545faf274ddbf816cf84e336f4f8fcde855582",
+          "message": "fix(sozo-bindgen): unity less strict on composites (#2791)",
+          "timestamp": "2024-12-10T15:21:13-06:00",
+          "tree_id": "609ac22b4f47726e853936b4583c003702bb4e45",
+          "url": "https://github.com/dojoengine/dojo/commit/51545faf274ddbf816cf84e336f4f8fcde855582"
+        },
+        "date": 1733866681239,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10783319789,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
