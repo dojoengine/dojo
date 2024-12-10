@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1733803578959,
+  "lastUpdate": 1733844442617,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -39853,6 +39853,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 9044176,
             "range": "± 606596",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "71db0b4f9e1d3793ae35963ad0581ff9a6220791",
+          "message": "feat(katana-rpc): rpc server builder (#2788)",
+          "timestamp": "2024-12-10T23:10:31+08:00",
+          "tree_id": "46dd2548c09ae18474fdab3124f06188b36b2471",
+          "url": "https://github.com/dojoengine/dojo/commit/71db0b4f9e1d3793ae35963ad0581ff9a6220791"
+        },
+        "date": 1733844441040,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10864611882,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
