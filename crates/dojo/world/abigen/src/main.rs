@@ -23,7 +23,7 @@ use scarb::ops::{CompileOpts, FeaturesOpts, FeaturesSelector};
 const SCARB_MANIFEST: &str = "crates/dojo/core/Scarb.toml";
 const WORLD_ARTIFACT: &str = "crates/dojo/core/target/dev/dojo_world.contract_class.json";
 const MODEL_ARTIFACT: &str =
-    "crates/dojo/core/target/dev/dojo_resource_metadata.contract_class.json";
+    "crates/dojo/core/target/dev/dojo_m_ResourceMetadata.contract_class.json";
 const OUT_DIR: &str = "crates/dojo/world/src/contracts/abigen";
 
 /// Entrypoint for the abigen program to generate or check the bindings for the world and model

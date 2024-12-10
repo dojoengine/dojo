@@ -86,19 +86,15 @@ impl EventsArgs {
                 provider.get_events(event_filter, self.continuation_token, self.chunk_size).await?;
 
             for event in &res.events {
+                let tx_hash = event.transaction_hash.clone();
+                let block_number = event.block_number;
                 match world::Event::try_from(event) {
                     Ok(ev) => {
-                        match_event(
-                            &ev,
-                            &world_diff,
-                            event.block_number,
-                            event.transaction_hash,
-                            &provider,
-                        )
-                        .await
-                        .unwrap_or_else(|e| {
-                            tracing::error!(?e, "Failed to process event: {:?}", ev);
-                        });
+                        match_event(&ev, &world_diff, block_number, tx_hash, &provider)
+                            .await
+                            .unwrap_or_else(|e| {
+                                tracing::error!(?e, "Failed to process event: {:?}", ev);
+                            });
                     }
                     Err(e) => {
                         tracing::error!(
