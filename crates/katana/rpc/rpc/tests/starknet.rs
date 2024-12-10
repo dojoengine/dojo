@@ -925,7 +925,7 @@ async fn block_traces() -> Result<()> {
 // will be using STRK fee token as its gas fee. So, the STRK fee token must exist in the chain in
 // order for this to pass.
 #[tokio::test]
-async fn v3_transactions() -> Result<()> {
+async fn v3_transactions() {
     let config =
         get_default_test_config(SequencingConfig { no_mining: true, ..Default::default() });
     let sequencer = TestSequencer::start(config).await;
@@ -943,11 +943,9 @@ async fn v3_transactions() -> Result<()> {
         .gas(100000000000)
         .send()
         .await
-        .inspect_err(|e| println!("transaction failed: {e:?}"))?;
+        .unwrap();
 
-    let receipt = dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await?;
-    let status = receipt.receipt.execution_result().status();
+    let rec = dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
+    let status = rec.receipt.execution_result().status();
     assert_eq!(status, TransactionExecutionStatus::Succeeded);
-
-    Ok(())
 }

@@ -5,14 +5,11 @@ mod error;
 mod state;
 pub mod utils;
 
-use std::num::NonZeroU128;
-
-// use blockifier::blockifier::block::{BlockInfo, GasPrices};
 use blockifier::context::BlockContext;
 use blockifier::state::cached_state::{self, MutRefState};
 use blockifier::state::state_api::StateReader;
 use katana_cairo::starknet_api::block::{
-    BlockInfo, BlockNumber, BlockTimestamp, GasPrice, GasPriceVector, GasPrices, NonzeroGasPrice,
+    BlockInfo, BlockNumber, BlockTimestamp, GasPriceVector, GasPrices, NonzeroGasPrice,
 };
 use katana_primitives::block::{ExecutableBlock, GasPrices as KatanaGasPrices, PartialHeader};
 use katana_primitives::env::{BlockEnv, CfgEnv};
@@ -289,7 +286,9 @@ impl ExecutorExt for StarknetVMProcessor<'_> {
         transactions: Vec<ExecutableTxWithHash>,
         flags: ExecutionFlags,
     ) -> Vec<Result<TxFeeInfo, ExecutionError>> {
-        self.simulate_with(transactions, &flags, |_, (_, res)| match res {
+        // TODO: figure out how this can be implied automatically
+        let estimate_fee_flags = flags.with_fee(false);
+        self.simulate_with(transactions, &estimate_fee_flags, |_, (_, res)| match res {
             ExecutionResult::Success { receipt, .. } => {
                 // if the transaction was reverted, return as error
                 if let Some(reason) = receipt.revert_reason() {

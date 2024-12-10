@@ -1,13 +1,11 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-// use blockifier::blockifier::block::{BlockInfo, GasPrices};
 use blockifier::bouncer::BouncerConfig;
 use blockifier::context::{BlockContext, ChainInfo, FeeTokenAddresses, TransactionContext};
 use blockifier::execution::call_info::{
     CallExecution, CallInfo, OrderedEvent, OrderedL2ToL1Message,
 };
-use blockifier::execution::common_hints::ExecutionMode;
 use blockifier::execution::contract_class::{
     CompiledClassV0, CompiledClassV1, RunnableCompiledClass,
 };
@@ -16,7 +14,7 @@ use blockifier::fee::fee_utils::get_fee_by_gas_vector;
 use blockifier::state::cached_state;
 use blockifier::state::state_api::StateReader;
 use blockifier::transaction::account_transaction::{
-    AccountTransaction, ExecutionFlags as BlockifierExecFlags,
+    AccountTransaction, ExecutionFlags as BlockifierExecutionFlags,
 };
 use blockifier::transaction::objects::{
     DeprecatedTransactionInfo, HasRelatedFeeType, TransactionExecutionInfo, TransactionInfo,
@@ -38,8 +36,8 @@ use katana_cairo::starknet_api::executable_transaction::{
     DeclareTransaction, DeployAccountTransaction, InvokeTransaction, L1HandlerTransaction,
 };
 use katana_cairo::starknet_api::transaction::fields::{
-    AccountDeploymentData, AllResourceBounds, Calldata, ContractAddressSalt, Fee, PaymasterData,
-    ResourceBounds, Tip, TransactionSignature, ValidResourceBounds,
+    AccountDeploymentData, Calldata, ContractAddressSalt, Fee, PaymasterData, ResourceBounds, Tip,
+    TransactionSignature, ValidResourceBounds,
 };
 use katana_cairo::starknet_api::transaction::{
     DeclareTransaction as ApiDeclareTransaction, DeclareTransactionV0V1, DeclareTransactionV2,
@@ -68,24 +66,14 @@ use crate::{ExecutionError, ExecutionResult};
 pub fn transact<S: StateReader>(
     state: &mut cached_state::CachedState<S>,
     block_context: &BlockContext,
-    simulation_flags: &ExecutionFlags,
+    flags: &ExecutionFlags,
     tx: ExecutableTxWithHash,
 ) -> ExecutionResult {
     fn transact_inner<S: StateReader>(
         state: &mut cached_state::CachedState<S>,
         block_context: &BlockContext,
-        simulation_flags: &ExecutionFlags,
         tx: Transaction,
     ) -> Result<(TransactionExecutionInfo, TxFeeInfo), ExecutionError> {
-        let validate = simulation_flags.account_validation();
-        let charge_fee = simulation_flags.fee();
-        // Blockifier doesn't provide a way to fully skip nonce check during the tx validation
-        // stage. The `nonce_check` flag in `tx.execute()` only 'relaxes' the check for
-        // nonce that is equal or higher than the current (expected) account nonce.
-        //
-        // Related commit on Blockifier: https://github.com/dojoengine/blockifier/commit/2410b6055453f247d48759f223c34b3fb5fa777
-        let nonce_check = simulation_flags.nonce_check();
-
         let fee_type = get_fee_type_from_tx(&tx);
         let info = match tx {
             Transaction::Account(tx) => tx.execute(state, block_context),
@@ -121,7 +109,8 @@ pub fn transact<S: StateReader>(
         Ok((info, fee_info))
     }
 
-    match transact_inner(state, block_context, simulation_flags, to_executor_tx(tx.clone())) {
+    let blockifier_tx = to_executor_tx(tx.clone(), flags.clone());
+    match transact_inner(state, block_context, blockifier_tx) {
         Ok((info, fee)) => {
             // get the trace and receipt from the execution info
             let trace = to_exec_info(info, tx.r#type());
@@ -173,7 +162,7 @@ pub fn call<S: StateReader>(
     Ok(res.execution.retdata.0)
 }
 
-pub fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
+pub fn to_executor_tx(tx: ExecutableTxWithHash, flags: ExecutionFlags) -> Transaction {
     use katana_cairo::starknet_api::executable_transaction::AccountTransaction as ExecTx;
 
     let hash = tx.hash;
@@ -199,7 +188,7 @@ pub fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
 
                 Transaction::Account(AccountTransaction {
                     tx: ExecTx::Invoke(tx),
-                    execution_flags: BlockifierExecFlags::default(),
+                    execution_flags: flags.into(),
                 })
             }
 
@@ -222,7 +211,7 @@ pub fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
 
                 Transaction::Account(AccountTransaction {
                     tx: ExecTx::Invoke(tx),
-                    execution_flags: BlockifierExecFlags::default(),
+                    execution_flags: flags.into(),
                 })
             }
 
@@ -253,7 +242,7 @@ pub fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
 
                 Transaction::Account(AccountTransaction {
                     tx: ExecTx::Invoke(tx),
-                    execution_flags: BlockifierExecFlags::default(),
+                    execution_flags: flags.into(),
                 })
             }
         },
@@ -279,7 +268,7 @@ pub fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
 
                 Transaction::Account(AccountTransaction {
                     tx: ExecTx::DeployAccount(tx),
-                    execution_flags: BlockifierExecFlags::default(),
+                    execution_flags: flags.into(),
                 })
             }
 
@@ -311,7 +300,7 @@ pub fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
 
                 Transaction::Account(AccountTransaction {
                     tx: ExecTx::DeployAccount(tx),
-                    execution_flags: BlockifierExecFlags::default(),
+                    execution_flags: flags.into(),
                 })
             }
         },
@@ -381,7 +370,7 @@ pub fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
 
             Transaction::Account(AccountTransaction {
                 tx: ExecTx::Declare(tx),
-                execution_flags: BlockifierExecFlags::default(),
+                execution_flags: flags.into(),
             })
         }
 
@@ -527,23 +516,17 @@ fn to_api_da_mode(mode: katana_primitives::da::DataAvailabilityMode) -> DataAvai
     }
 }
 
+// The protocol version we want to support depends on the returned `ValidResourceBounds`. Returning
+// the wrong variant without the right values will result in execution error.
+//
+// Ref: https://community.starknet.io/t/starknet-v0-13-1-pre-release-notes/113664#sdkswallets-how-to-use-the-new-fee-estimates-7
 fn to_api_resource_bounds(
     resource_bounds: katana_primitives::fee::ResourceBoundsMapping,
 ) -> ValidResourceBounds {
-    let l1_gas = ResourceBounds {
+    // Pre 0.13.3. Only L1 gas. L2 bounds are signed but never used.
+    ValidResourceBounds::L1Gas(ResourceBounds {
         max_amount: resource_bounds.l1_gas.max_amount.into(),
         max_price_per_unit: resource_bounds.l1_gas.max_price_per_unit.into(),
-    };
-
-    let l2_gas = ResourceBounds {
-        max_amount: resource_bounds.l2_gas.max_amount.into(),
-        max_price_per_unit: resource_bounds.l2_gas.max_price_per_unit.into(),
-    };
-
-    ValidResourceBounds::AllResources(AllResourceBounds {
-        l1_gas,
-        l2_gas,
-        l1_data_gas: Default::default(),
     })
 }
 
@@ -679,6 +662,8 @@ fn to_call_info(call: CallInfo) -> trace::CallInfo {
     let storage_read_values = call.storage_read_values;
     let storg_keys = call.accessed_storage_keys.into_iter().map(|k| *k.0.key()).collect();
     let inner_calls = call.inner_calls.into_iter().map(to_call_info).collect();
+    let execution_resources = to_execution_resources(call.charged_resources.vm_resources);
+    let gas_consumed = call.execution.gas_consumed as u128;
 
     trace::CallInfo {
         contract_address,
@@ -690,13 +675,13 @@ fn to_call_info(call: CallInfo) -> trace::CallInfo {
         entry_point_type,
         calldata,
         retdata,
-        execution_resources: to_execution_resources(call.charged_resources.vm_resources),
+        execution_resources,
         events,
         l2_to_l1_messages: l1_msg,
         storage_read_values,
         accessed_storage_keys: storg_keys,
         inner_calls,
-        gas_consumed: call.execution.gas_consumed as u128,
+        gas_consumed,
         failed: call.execution.failed,
     }
 }
@@ -729,11 +714,23 @@ fn to_execution_resources(
     }
 }
 
+impl From<ExecutionFlags> for BlockifierExecutionFlags {
+    fn from(value: ExecutionFlags) -> Self {
+        Self {
+            only_query: false,
+            charge_fee: value.fee(),
+            nonce_check: value.nonce_check(),
+            validate: value.account_validation(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
 
     use std::collections::{HashMap, HashSet};
 
+    use blockifier::execution::call_info::ChargedResources;
     use katana_cairo::cairo_vm::types::builtin_name::BuiltinName;
     use katana_cairo::cairo_vm::vm::runners::cairo_runner::ExecutionResources;
     use katana_cairo::starknet_api::core::EntryPointSelector;
@@ -828,14 +825,17 @@ mod tests {
             },
             storage_read_values: vec![felt!(1_u8), felt!(2_u8)],
             accessed_storage_keys: HashSet::from([3u128.into(), 4u128.into(), 5u128.into()]),
-            // resources: ExecutionResources {
-            //     n_steps: 1_000_000,
-            //     n_memory_holes: 9_000,
-            //     builtin_instance_counter: HashMap::from([
-            //         (BuiltinName::ecdsa, 50),
-            //         (BuiltinName::pedersen, 9),
-            //     ]),
-            // },
+            charged_resources: ChargedResources {
+                vm_resources: ExecutionResources {
+                    n_steps: 1_000_000,
+                    n_memory_holes: 9_000,
+                    builtin_instance_counter: HashMap::from([
+                        (BuiltinName::ecdsa, 50),
+                        (BuiltinName::pedersen, 9),
+                    ]),
+                },
+                ..Default::default()
+            },
             inner_calls: vec![nested_call],
             ..Default::default()
         }

@@ -1,5 +1,4 @@
 use blockifier::execution::errors::{EntryPointExecutionError, PreExecutionError};
-// use blockifier::execution::execution_utils::format_panic_data;
 use blockifier::state::errors::StateError;
 use blockifier::transaction::errors::{
     TransactionExecutionError, TransactionFeeError, TransactionPreValidationError,
