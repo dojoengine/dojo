@@ -1,14 +1,13 @@
 use std::sync::Arc;
 
-use base64::engine::general_purpose::STANDARD;
-use base64::Engine;
 use futures_util::{SinkExt, StreamExt};
 use hyper::{Body, Request, Response, StatusCode};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use sqlx::{Column, Row, SqlitePool, TypeInfo};
+use sqlx::{Row, SqlitePool};
 use tokio_tungstenite::tungstenite::Message;
 
+use super::sql::map_row_to_json;
 use super::Handler;
 
 const JSONRPC_VERSION: &str = "2.0";
@@ -88,179 +87,90 @@ impl McpHandler {
 
     async fn handle_request(&self, request: JsonRpcRequest) -> JsonRpcResponse {
         if request.jsonrpc != JSONRPC_VERSION {
-            return JsonRpcResponse {
-                jsonrpc: JSONRPC_VERSION.to_string(),
-                id: request.id,
-                result: None,
-                error: Some(JsonRpcError {
-                    code: -32600,
-                    message: "Invalid Request".to_string(),
-                    data: None,
-                }),
-            };
+            return JsonRpcResponse::invalid_request(request.id);
         }
 
         match request.method.as_str() {
-            "initialize" => JsonRpcResponse {
-                jsonrpc: JSONRPC_VERSION.to_string(),
-                id: request.id,
-                result: Some(json!({
-                    "protocolVersion": MCP_VERSION,
-                    "serverInfo": Implementation {
-                        name: "torii-mcp".to_string(),
-                        version: env!("CARGO_PKG_VERSION").to_string(),
+            "initialize" => self.handle_initialize(request.id),
+            "tools/list" => self.handle_tools_list(request.id),
+            "tools/call" => self.handle_tools_call(request).await,
+            _ => JsonRpcResponse::method_not_found(request.id),
+        }
+    }
+
+    fn handle_initialize(&self, id: Value) -> JsonRpcResponse {
+        JsonRpcResponse::ok(
+            id,
+            json!({
+                "protocolVersion": MCP_VERSION,
+                "serverInfo": Implementation {
+                    name: "torii-mcp".to_string(),
+                    version: env!("CARGO_PKG_VERSION").to_string(),
+                },
+                "capabilities": ServerCapabilities {
+                    tools: ToolCapabilities {
+                        list_changed: true,
                     },
-                    "capabilities": ServerCapabilities {
-                        tools: ToolCapabilities {
-                            list_changed: true,
-                        },
-                        resources: ResourceCapabilities {
-                            subscribe: true,
-                            list_changed: true,
-                        },
+                    resources: ResourceCapabilities {
+                        subscribe: true,
+                        list_changed: true,
                     },
-                    "instructions": r#"
-Torii - Dojo Game Indexer for Starknet
+                },
+                "instructions": include_str!("../../static/mcp-instructions.txt")
+            }),
+        )
+    }
 
-Torii is a specialized indexer designed for Dojo games running on Starknet. It indexes and tracks Entity Component System (ECS) data, providing a comprehensive view of game state and history.
-
-Database Structure:
-- entities: Tracks all game entities and their current state
-- components: Stores component data associated with entities
-- models: Contains model definitions from the game
-- events: Records all game events and state changes
-- transactions: Stores all blockchain transactions affecting the game
-
-Key Features:
-1. Entity Tracking
-   - Query entities by type, component, or state
-   - Track entity history and state changes
-   - Aggregate entity statistics
-
-2. Component Analysis
-   - Retrieve component data for specific entities
-   - Query entities with specific component combinations
-   - Track component value changes over time
-
-3. Event History
-   - Access chronological game events
-   - Filter events by type, entity, or time range
-   - Analyze event patterns and frequencies
-
-4. Transaction Records
-   - Query game-related transactions
-   - Track transaction status and effects
-   - Link transactions to entity changes
-
-Available Tools:
-1. 'query': Execute custom SQL queries for complex data analysis
-2. 'schema': Retrieve database schema information to understand table structures
-
-Common Query Patterns:
-1. Entity Lookup:
-   SELECT * FROM entities WHERE entity_id = X
-
-2. Component State:
-   SELECT e.*, c.* 
-   FROM entities e
-   JOIN components c ON e.id = c.entity_id
-   WHERE c.name = 'position'
-
-3. Event History:
-   SELECT * FROM events
-   WHERE entity_id = X
-   ORDER BY block_number DESC
-
-4. State Changes:
-   SELECT * FROM transactions
-   WHERE affected_entity_id = X
-   ORDER BY block_number DESC
-
-The database is optimized for querying game state and history, allowing clients to:
-- Retrieve current game state
-- Track entity lifecycle
-- Analyze game events
-- Monitor state changes
-- Generate game statistics
-"#
-                })),
-                error: None,
-            },
-            "tools/list" => JsonRpcResponse {
-                jsonrpc: JSONRPC_VERSION.to_string(),
-                id: request.id,
-                result: Some(json!({
-                    "tools": [
-                        {
-                            "name": "query",
-                            "description": "Execute a SQL query on the database",
-                            "inputSchema": {
-                                "type": "object",
-                                "properties": {
-                                    "query": {
-                                        "type": "string",
-                                        "description": "SQL query to execute"
-                                    }
-                                },
-                                "required": ["query"]
-                            }
-                        },
-                        {
-                            "name": "schema",
-                            "description": "Retrieve the database schema including tables, columns, and their types",
-                            "inputSchema": {
-                                "type": "object",
-                                "properties": {
-                                    "table": {
-                                        "type": "string",
-                                        "description": "Optional table name to get schema for. If omitted, returns schema for all tables."
-                                    }
+    fn handle_tools_list(&self, id: Value) -> JsonRpcResponse {
+        JsonRpcResponse::ok(
+            id,
+            json!({
+                "tools": [
+                    {
+                        "name": "query",
+                        "description": "Execute a SQL query on the database",
+                        "inputSchema": {
+                            "type": "object",
+                            "properties": {
+                                "query": {
+                                    "type": "string",
+                                    "description": "SQL query to execute"
+                                }
+                            },
+                            "required": ["query"]
+                        }
+                    },
+                    {
+                        "name": "schema",
+                        "description": "Retrieve the database schema including tables, columns, and their types",
+                        "inputSchema": {
+                            "type": "object",
+                            "properties": {
+                                "table": {
+                                    "type": "string",
+                                    "description": "Optional table name to get schema for. If omitted, returns schema for all tables."
                                 }
                             }
                         }
-                    ]
-                })),
-                error: None,
-            },
-            "tools/call" => {
-                if let Some(params) = &request.params {
-                    match params.get("name").and_then(Value::as_str) {
-                        Some("query") => self.handle_query_tool(request).await,
-                        Some("schema") => self.handle_schema_tool(request).await,
-                        _ => JsonRpcResponse {
-                            jsonrpc: JSONRPC_VERSION.to_string(),
-                            id: request.id,
-                            result: None,
-                            error: Some(JsonRpcError {
-                                code: -32601,
-                                message: "Tool not found".to_string(),
-                                data: None,
-                            }),
-                        },
                     }
-                } else {
-                    JsonRpcResponse {
-                        jsonrpc: JSONRPC_VERSION.to_string(),
-                        id: request.id,
-                        result: None,
-                        error: Some(JsonRpcError {
-                            code: -32602,
-                            message: "Invalid params".to_string(),
-                            data: None,
-                        }),
-                    }
-                }
-            }
-            _ => JsonRpcResponse {
-                jsonrpc: JSONRPC_VERSION.to_string(),
-                id: request.id,
-                result: None,
-                error: Some(JsonRpcError {
-                    code: -32601,
-                    message: "Method not found".to_string(),
-                    data: None,
-                }),
-            },
+                ]
+            }),
+        )
+    }
+
+    async fn handle_tools_call(&self, request: JsonRpcRequest) -> JsonRpcResponse {
+        let Some(params) = &request.params else {
+            return JsonRpcResponse::invalid_params(request.id, "Missing params");
+        };
+
+        let Some(tool_name) = params.get("name").and_then(Value::as_str) else {
+            return JsonRpcResponse::invalid_params(request.id, "Missing tool name");
+        };
+
+        match tool_name {
+            "query" => self.handle_query_tool(request).await,
+            "schema" => self.handle_schema_tool(request).await,
+            _ => JsonRpcResponse::method_not_found(request.id),
         }
     }
 
@@ -278,16 +188,7 @@ The database is optimized for querying game state and history, allowing clients 
                         // Handle notifications if needed
                         continue;
                     }
-                    Err(e) => JsonRpcResponse {
-                        jsonrpc: JSONRPC_VERSION.to_string(),
-                        id: Value::Null,
-                        result: None,
-                        error: Some(JsonRpcError {
-                            code: -32700,
-                            message: "Parse error".to_string(),
-                            data: Some(json!({ "details": e.to_string() })),
-                        }),
-                    },
+                    Err(e) => JsonRpcResponse::parse_error(Value::Null, &e.to_string()),
                 };
 
                 if let Err(e) =
@@ -393,67 +294,11 @@ The database is optimized for querying game state and history, allowing clients 
 
     async fn handle_query_tool(&self, request: JsonRpcRequest) -> JsonRpcResponse {
         if let Some(params) = request.params {
-            if let Some(query) = params.get("query").and_then(Value::as_str) {
+            if let Some(query) = params.get("arguments").and_then(Value::as_str) {
                 match sqlx::query(query).fetch_all(&*self.pool).await {
                     Ok(rows) => {
-                        // Convert rows to JSON using the same logic as SqlHandler
-                        let result = rows
-                            .iter()
-                            .map(|row| {
-                                let mut obj = serde_json::Map::new();
-                                for (i, column) in row.columns().iter().enumerate() {
-                                    let value: serde_json::Value = match column.type_info().name() {
-                                        "TEXT" => row.get::<Option<String>, _>(i).map_or(
-                                            serde_json::Value::Null,
-                                            serde_json::Value::String,
-                                        ),
-                                        "INTEGER" => row
-                                            .get::<Option<i64>, _>(i)
-                                            .map_or(serde_json::Value::Null, |n| {
-                                                serde_json::Value::Number(n.into())
-                                            }),
-                                        "REAL" => row.get::<Option<f64>, _>(i).map_or(
-                                            serde_json::Value::Null,
-                                            |f| {
-                                                serde_json::Number::from_f64(f).map_or(
-                                                    serde_json::Value::Null,
-                                                    serde_json::Value::Number,
-                                                )
-                                            },
-                                        ),
-                                        "BLOB" => row.get::<Option<Vec<u8>>, _>(i).map_or(
-                                            serde_json::Value::Null,
-                                            |bytes| {
-                                                serde_json::Value::String(STANDARD.encode(bytes))
-                                            },
-                                        ),
-                                        _ => {
-                                            // Try different types in order
-                                            if let Ok(val) = row.try_get::<i64, _>(i) {
-                                                serde_json::Value::Number(val.into())
-                                            } else if let Ok(val) = row.try_get::<f64, _>(i) {
-                                                // Handle floating point numbers
-                                                serde_json::json!(val)
-                                            } else if let Ok(val) = row.try_get::<bool, _>(i) {
-                                                serde_json::Value::Bool(val)
-                                            } else if let Ok(val) = row.try_get::<String, _>(i) {
-                                                serde_json::Value::String(val)
-                                            } else {
-                                                // Handle or fallback to BLOB as base64
-                                                let val = row.get::<Option<Vec<u8>>, _>(i);
-                                                val.map_or(serde_json::Value::Null, |bytes| {
-                                                    serde_json::Value::String(
-                                                        STANDARD.encode(bytes),
-                                                    )
-                                                })
-                                            }
-                                        }
-                                    };
-                                    obj.insert(column.name().to_string(), value);
-                                }
-                                Value::Object(obj)
-                            })
-                            .collect::<Vec<_>>();
+                        // Convert rows to JSON using shared mapping function
+                        let result = rows.iter().map(map_row_to_json).collect::<Vec<_>>();
 
                         JsonRpcResponse {
                             jsonrpc: JSONRPC_VERSION.to_string(),
@@ -502,6 +347,37 @@ The database is optimized for querying game state and history, allowing clients 
                 }),
             }
         }
+    }
+}
+
+impl JsonRpcResponse {
+    fn ok(id: Value, result: Value) -> Self {
+        Self { jsonrpc: JSONRPC_VERSION.to_string(), id, result: Some(result), error: None }
+    }
+
+    fn error(id: Value, code: i32, message: &str, data: Option<Value>) -> Self {
+        Self {
+            jsonrpc: JSONRPC_VERSION.to_string(),
+            id,
+            result: None,
+            error: Some(JsonRpcError { code, message: message.to_string(), data }),
+        }
+    }
+
+    fn invalid_request(id: Value) -> Self {
+        Self::error(id, -32600, "Invalid Request", None)
+    }
+
+    fn method_not_found(id: Value) -> Self {
+        Self::error(id, -32601, "Method not found", None)
+    }
+
+    fn invalid_params(id: Value, details: &str) -> Self {
+        Self::error(id, -32602, "Invalid params", Some(json!({ "details": details })))
+    }
+
+    fn parse_error(id: Value, details: &str) -> Self {
+        Self::error(id, -32700, "Parse error", Some(json!({ "details": details })))
     }
 }
 
