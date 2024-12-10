@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1733780463822,
+  "lastUpdate": 1733796605730,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -39697,6 +39697,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 9335743,
             "range": "± 538117",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3e062fde163f20ca22aee3bd642fac91fb3f6c73",
+          "message": "feat(torii-server): add MCP service to torii ✨ (#2778)\n\n* feat(torii-grpc): add MCP service to torii ✨\n\n* instructions\n\n* mcp fixes\n\n* clippy",
+          "timestamp": "2024-12-09T19:53:07-06:00",
+          "tree_id": "085ccc0fd6da15f977f5625eed8abd32b000b0aa",
+          "url": "https://github.com/dojoengine/dojo/commit/3e062fde163f20ca22aee3bd642fac91fb3f6c73"
+        },
+        "date": 1733796604140,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10871125689,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
