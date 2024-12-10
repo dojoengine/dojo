@@ -24,7 +24,7 @@ dependencies = [
 
 [[package]]
 name = "dojo_examples"
-version = "1.0.4"
+version = "1.0.5"
 dependencies = [
  "armory",
  "bestiary",
@@ -38,16 +38,6 @@ name = "dojo_foundry_test"
 version = "1.0.0-rc.0"
 dependencies = [
  "dojo",
-]
-
-[[package]]
-name = "dojo_examples"
-version = "1.0.5"
-dependencies = [
- "armory",
- "bestiary",
- "dojo",
- "dojo_cairo_test",
 ]
 
 [[package]]

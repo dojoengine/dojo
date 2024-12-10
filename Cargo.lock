@@ -4832,15 +4832,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dojo-language-server"
-version = "1.0.5"
-dependencies = [
- "cairo-lang-language-server",
- "clap",
- "dojo-macros",
-]
-
-[[package]]
 name = "dojo-macros"
 version = "0.1.0"
 dependencies = [
@@ -13752,12 +13743,6 @@ dependencies = [
  "anyhow",
  "async-trait",
  "cainome 0.4.8",
- "cairo-lang-compiler",
- "cairo-lang-filesystem",
- "cairo-lang-project",
- "cairo-lang-starknet",
- "cairo-lang-test-plugin",
- "cairo-lang-test-runner",
  "camino",
  "clap",
  "clap-verbosity-flag",

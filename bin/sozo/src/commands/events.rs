@@ -86,7 +86,7 @@ impl EventsArgs {
                 provider.get_events(event_filter, self.continuation_token, self.chunk_size).await?;
 
             for event in &res.events {
-                match world::Event::try_from(event) {
+                match world::Event::try_from(event.clone()) {
                     Ok(ev) => {
                         match_event(
                             &ev,
