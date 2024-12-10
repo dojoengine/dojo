@@ -64,7 +64,7 @@ impl LaunchedNode {
     /// This will instruct the node to stop and wait until it has actually stop.
     pub async fn stop(&self) -> Result<()> {
         // TODO: wait for the rpc server to stop instead of just stopping it.
-        self.rpc.handle.stop()?;
+        self.rpc.stop()?;
         self.node.task_manager.shutdown().await;
         Ok(())
     }

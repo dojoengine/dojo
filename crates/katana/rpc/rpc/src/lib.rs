@@ -33,13 +33,17 @@ pub enum Error {
     AlreadyStopped,
 }
 
-#[derive(Debug)]
+/// The RPC server handle.
+#[derive(Debug, Clone)]
 pub struct RpcServerHandle {
-    pub addr: SocketAddr,
-    pub handle: ServerHandle,
+    /// The actual address that the server is binded to.
+    addr: SocketAddr,
+    /// The handle to the spawned [`jsonrpsee::server::Server`].
+    handle: ServerHandle,
 }
 
 impl RpcServerHandle {
+    /// Tell the server to stop without waiting for the server to stop.
     pub fn stop(&self) -> Result<(), Error> {
         self.handle.stop().map_err(|_| Error::AlreadyStopped)
     }
@@ -47,6 +51,11 @@ impl RpcServerHandle {
     /// Wait until the server has stopped.
     pub async fn stopped(self) {
         self.handle.stopped().await
+    }
+
+    /// Returns the socket address the server is listening on.
+    pub fn addr(&self) -> &SocketAddr {
+        &self.addr
     }
 }
 
