@@ -51,6 +51,7 @@ jobs:
       KATANA_NO_MINING_PORT: "5051"
       KATANA_NO_FEE_PORT: "5052"
       KATANA_NO_ACCOUNT_VALIDATION_PORT: "5053"
+      KATANA_OPENRPC_PORT: "5054"
       PAYMASTER_PRIVATE_KEY: "0xc5b2fcab997346f3ea1c00b002ecf6f382c5f9c9659a3894eb783c5320f912"
       PAYMASTER_ACCOUNT_ADDRESS: "0x127fd5f1fe78a71f8bcd1fec63e3fe2f0486b6ecd5c86a0466c3a21fa5cfcec"
       UDC_ADDRESS: "0x41a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf"
@@ -104,6 +105,11 @@ jobs:
           --silent \
           & 
           /tmp/bins/katana \
+          --http.port "${KATANA_OPENRPC_PORT}" \
+          --http.addr "${KATANA_ADDR}" \
+          --silent \
+          &
+          /tmp/bins/katana \
           --http.port "${KATANA_NO_MINING_PORT}" \
           --http.addr "${KATANA_ADDR}" \
           --silent \
@@ -139,7 +145,7 @@ jobs:
 
       - name: Build openrpc-testgen-runner
         run: |
-          cargo build --release --features "katana katana_no_mining katana_no_fee katana_no_account_validation" -p openrpc-testgen -p openrpc-testgen-runner
+          cargo build --release --features "openrpc katana katana_no_mining katana_no_fee katana_no_account_validation" -p openrpc-testgen -p openrpc-testgen-runner
         working-directory: katana-runner
 
       - name: Run Katana Suite
@@ -152,6 +158,18 @@ jobs:
           --udc-address "${UDC_ADDRESS}" \
           --account-class-hash "${ACCOUNT_CLASS_HASH}" \
           --suite katana
+        working-directory: katana-runner
+
+      - name: Run OpenRPC Suite
+        run: |
+          URLS="http://${KATANA_ADDR}:${KATANA_OPENRPC_PORT}"
+          target/release/openrpc-testgen-runner \
+          --urls "${URLS}" \
+          --paymaster-account-address "${PAYMASTER_ACCOUNT_ADDRESS}" \
+          --paymaster-private-key "${PAYMASTER_PRIVATE_KEY}" \
+          --udc-address "${UDC_ADDRESS}" \
+          --account-class-hash "${ACCOUNT_CLASS_HASH}" \
+          --suite open-rpc
         working-directory: katana-runner
 
       - name: Run Katana No Mining Suite
