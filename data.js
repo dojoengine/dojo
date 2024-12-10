@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1733796605730,
+  "lastUpdate": 1733796780899,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -39727,6 +39727,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10871125689,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3e062fde163f20ca22aee3bd642fac91fb3f6c73",
+          "message": "feat(torii-server): add MCP service to torii ✨ (#2778)\n\n* feat(torii-grpc): add MCP service to torii ✨\n\n* instructions\n\n* mcp fixes\n\n* clippy",
+          "timestamp": "2024-12-09T19:53:07-06:00",
+          "tree_id": "085ccc0fd6da15f977f5625eed8abd32b000b0aa",
+          "url": "https://github.com/dojoengine/dojo/commit/3e062fde163f20ca22aee3bd642fac91fb3f6c73"
+        },
+        "date": 1733796779228,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2506598,
+            "range": "± 43276",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 7826523,
+            "range": "± 135064",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3664537223,
+            "range": "± 691279785",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 7809742,
+            "range": "± 43408",
             "unit": "ns/iter"
           }
         ]
