@@ -31,9 +31,6 @@ pub struct TestArgs {
     /// Should we run the profiler.
     #[arg(long, default_value_t = false)]
     profiler: bool,
-    /// Should we run the tests with gas enabled.
-    #[arg(long, default_value_t = true)]
-    gas_enabled: bool,
     /// Should we print the resource usage.
     #[arg(long, default_value_t = false)]
     print_resource_usage: bool,
@@ -90,8 +87,6 @@ impl TestArgs {
         if self.profiler {
             args.push(OsStr::new("--build-profile").to_os_string());
         }
-
-        //TODO: no 'gas_enabled' option in snforge, should we remove it ?
 
         args
     }

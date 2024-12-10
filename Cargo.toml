@@ -2,7 +2,6 @@
 resolver = "2"
 
 members = [
-	"bin/dojo-language-server",
 	"bin/katana",
 	"bin/saya",
 	"bin/scheduler",
@@ -160,7 +159,6 @@ cairo-lang-starknet = "=2.8.4"
 cairo-lang-starknet-classes = "=2.8.4"
 cairo-lang-syntax = "=2.8.4"
 cairo-lang-test-plugin = "=2.8.4"
-cairo-lang-test-runner = "=2.8.4"
 cairo-lang-test-utils = "=2.8.4"
 cairo-lang-utils = "=2.8.4"
 cairo-vm = "1.0.0-rc4"
