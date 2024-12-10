@@ -1,7 +1,6 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use jsonrpsee::core::Error;
 use katana_core::backend::Backend;
 use katana_core::constants::DEFAULT_SEQUENCER_ADDRESS;
 use katana_executor::implementation::blockifier::BlockifierFactory;
@@ -11,6 +10,7 @@ pub use katana_node::config::*;
 use katana_node::LaunchedNode;
 use katana_primitives::chain::ChainId;
 use katana_primitives::chain_spec::ChainSpec;
+use katana_rpc::Error;
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::chain_id;
 use starknet::core::types::{BlockId, BlockTag, Felt};
@@ -42,7 +42,8 @@ impl TestSequencer {
             .await
             .expect("Failed to launch node");
 
-        let url = Url::parse(&format!("http://{}", handle.rpc.addr)).expect("Failed to parse URL");
+        let url =
+            Url::parse(&format!("http://{}", handle.rpc.addr())).expect("Failed to parse URL");
 
         let account = handle.node.backend.chain_spec.genesis.accounts().next().unwrap();
         let account = TestAccount {
@@ -104,7 +105,7 @@ impl TestSequencer {
     }
 
     pub fn stop(self) -> Result<(), Error> {
-        self.handle.rpc.handle.stop()
+        self.handle.rpc.stop()
     }
 
     pub fn url(&self) -> Url {
