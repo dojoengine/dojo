@@ -131,7 +131,11 @@ impl RpcServer {
             RpcServerHandle { addr, handle }
         };
 
-        info!(target: "rpc", %addr, "RPC server started.");
+        // The socket address that we log out must be from the RPC handle, in the case that the
+        // `addr` passed to this method has port number 0. As the 0 port will be resolved to
+        // a free port during the call to `ServerBuilder::build(addr)`.
+
+        info!(target: "rpc", addr = %handle.addr, "RPC server started.");
 
         Ok(handle)
     }
