@@ -546,7 +546,7 @@ mod test {
 
         use crate::server::Relay;
         use crate::typed_data::{Domain, Field, SimpleField, TypedData};
-        use crate::types::{Message, Signature};
+        use crate::types::Message;
 
         let _ = tracing_subscriber::fmt()
             .with_env_filter("torii::relay::client=debug,torii::relay::server=debug")
@@ -693,10 +693,7 @@ mod test {
 
         client
             .command_sender
-            .publish(Message {
-                message: typed_data,
-                signature: Signature::Account(vec![signature.r, signature.s]),
-            })
+            .publish(Message { message: typed_data, signature: vec![signature.r, signature.s] })
             .await?;
 
         sleep(std::time::Duration::from_secs(2)).await;

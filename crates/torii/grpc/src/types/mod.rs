@@ -80,11 +80,31 @@ impl From<proto::world::SubscribeIndexerResponse> for IndexerUpdate {
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
+pub struct OrderBy {
+    pub model: String,
+    pub member: String,
+    pub direction: OrderDirection,
+}
+
+impl From<OrderBy> for proto::types::OrderBy {
+    fn from(value: OrderBy) -> Self {
+        Self { model: value.model, member: value.member, direction: value.direction as i32 }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
+pub enum OrderDirection {
+    Asc,
+    Desc,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct Query {
     pub clause: Option<Clause>,
     pub limit: u32,
     pub offset: u32,
     pub dont_include_hashed_keys: bool,
+    pub order_by: Vec<OrderBy>,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
@@ -248,6 +268,7 @@ impl From<Query> for proto::types::Query {
             limit: value.limit,
             offset: value.offset,
             dont_include_hashed_keys: value.dont_include_hashed_keys,
+            order_by: value.order_by.into_iter().map(|o| o.into()).collect(),
         }
     }
 }

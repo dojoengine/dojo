@@ -23,8 +23,9 @@ use starknet::accounts::{
 use starknet::core::types::contract::legacy::LegacyContractClass;
 use starknet::core::types::{
     BlockId, BlockTag, Call, DeclareTransactionReceipt, DeployAccountTransactionReceipt,
-    EventFilter, EventsPage, ExecutionResult, Felt, StarknetError, TransactionExecutionStatus,
-    TransactionFinalityStatus, TransactionReceipt, TransactionTrace,
+    EventFilter, EventsPage, ExecutionResult, Felt, MaybePendingBlockWithReceipts,
+    MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs, StarknetError,
+    TransactionExecutionStatus, TransactionFinalityStatus, TransactionReceipt, TransactionTrace,
 };
 use starknet::core::utils::get_contract_address;
 use starknet::macros::{felt, selector};
@@ -948,4 +949,198 @@ async fn v3_transactions() {
     let rec = dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
     let status = rec.receipt.execution_result().status();
     assert_eq!(status, TransactionExecutionStatus::Succeeded);
+}
+
+#[tokio::test]
+async fn fetch_pending_blocks() {
+    let config =
+        get_default_test_config(SequencingConfig { no_mining: true, ..Default::default() });
+    let sequencer = TestSequencer::start(config).await;
+
+    // create a json rpc client to interact with the dev api.
+    let dev_client = HttpClientBuilder::default().build(sequencer.url()).unwrap();
+    let provider = sequencer.provider();
+    let account = sequencer.account();
+
+    // setup contract to interact with (can be any existing contract that can be interacted with)
+    let contract = Erc20Contract::new(DEFAULT_ETH_FEE_TOKEN_ADDRESS.into(), &account);
+
+    // setup contract function params
+    let recipient = felt!("0x1");
+    let amount = Uint256 { low: felt!("0x1"), high: Felt::ZERO };
+
+    // list of tx hashes that we've sent
+    let mut txs = Vec::new();
+
+    for _ in 0..3 {
+        let res = contract.transfer(&recipient, &amount).send().await.unwrap();
+        dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
+        txs.push(res.transaction_hash);
+    }
+
+    let block_id = BlockId::Tag(BlockTag::Pending);
+
+    // -----------------------------------------------------------------------
+
+    let latest_block_hash_n_num = provider.block_hash_and_number().await.unwrap();
+    let latest_block_hash = latest_block_hash_n_num.block_hash;
+
+    let block_with_txs = provider.get_block_with_txs(block_id).await.unwrap();
+
+    if let MaybePendingBlockWithTxs::PendingBlock(block) = block_with_txs {
+        assert_eq!(block.transactions.len(), txs.len());
+        assert_eq!(block.parent_hash, latest_block_hash);
+        assert_eq!(txs[0], *block.transactions[0].transaction_hash());
+        assert_eq!(txs[1], *block.transactions[1].transaction_hash());
+        assert_eq!(txs[2], *block.transactions[2].transaction_hash());
+    } else {
+        panic!("expected pending block with transactions")
+    }
+
+    let block_with_tx_hashes = provider.get_block_with_tx_hashes(block_id).await.unwrap();
+    if let MaybePendingBlockWithTxHashes::PendingBlock(block) = block_with_tx_hashes {
+        assert_eq!(block.transactions.len(), txs.len());
+        assert_eq!(block.parent_hash, latest_block_hash);
+        assert_eq!(txs[0], block.transactions[0]);
+        assert_eq!(txs[1], block.transactions[1]);
+        assert_eq!(txs[2], block.transactions[2]);
+    } else {
+        panic!("expected pending block with transaction hashes")
+    }
+
+    let block_with_receipts = provider.get_block_with_receipts(block_id).await.unwrap();
+    if let MaybePendingBlockWithReceipts::PendingBlock(block) = block_with_receipts {
+        assert_eq!(block.transactions.len(), txs.len());
+        assert_eq!(block.parent_hash, latest_block_hash);
+        assert_eq!(txs[0], *block.transactions[0].transaction.transaction_hash());
+        assert_eq!(txs[1], *block.transactions[1].transaction.transaction_hash());
+        assert_eq!(txs[2], *block.transactions[2].transaction.transaction_hash());
+    } else {
+        panic!("expected pending block with transaction receipts")
+    }
+
+    // Close the current pending block
+    dev_client.generate_block().await.unwrap();
+
+    // -----------------------------------------------------------------------
+
+    let latest_block_hash_n_num = provider.block_hash_and_number().await.unwrap();
+    let latest_block_hash = latest_block_hash_n_num.block_hash;
+    let block_with_txs = provider.get_block_with_txs(block_id).await.unwrap();
+
+    assert_matches!(block_with_txs, MaybePendingBlockWithTxs::PendingBlock(_));
+    if let MaybePendingBlockWithTxs::PendingBlock(block) = block_with_txs {
+        assert_eq!(block.transactions.len(), 0);
+        assert_eq!(block.parent_hash, latest_block_hash);
+    } else {
+        panic!("expected pending block with transactions")
+    }
+
+    let block_with_tx_hashes = provider.get_block_with_tx_hashes(block_id).await.unwrap();
+    if let MaybePendingBlockWithTxHashes::PendingBlock(block) = block_with_tx_hashes {
+        assert_eq!(block.transactions.len(), 0);
+        assert_eq!(block.parent_hash, latest_block_hash);
+    } else {
+        panic!("expected pending block with transaction hashes")
+    }
+
+    let block_with_receipts = provider.get_block_with_receipts(block_id).await.unwrap();
+    if let MaybePendingBlockWithReceipts::PendingBlock(block) = block_with_receipts {
+        assert_eq!(block.transactions.len(), 0);
+        assert_eq!(block.parent_hash, latest_block_hash);
+    } else {
+        panic!("expected pending block with transaction receipts")
+    }
+}
+
+// Querying for pending blocks in instant mining mode will always return the last accepted block.
+#[tokio::test]
+async fn fetch_pending_blocks_in_instant_mode() {
+    let config = get_default_test_config(SequencingConfig::default());
+    let sequencer = TestSequencer::start(config).await;
+
+    // create a json rpc client to interact with the dev api.
+    let dev_client = HttpClientBuilder::default().build(sequencer.url()).unwrap();
+    let provider = sequencer.provider();
+    let account = sequencer.account();
+
+    // Get the latest block hash before sending the tx beacuse the tx will generate a new block.
+    let latest_block_hash_n_num = provider.block_hash_and_number().await.unwrap();
+    let latest_block_hash = latest_block_hash_n_num.block_hash;
+
+    // setup contract to interact with (can be any existing contract that can be interacted with)
+    let contract = Erc20Contract::new(DEFAULT_ETH_FEE_TOKEN_ADDRESS.into(), &account);
+
+    // setup contract function params
+    let recipient = felt!("0x1");
+    let amount = Uint256 { low: felt!("0x1"), high: Felt::ZERO };
+
+    let res = contract.transfer(&recipient, &amount).send().await.unwrap();
+    dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
+
+    let block_id = BlockId::Tag(BlockTag::Pending);
+
+    // -----------------------------------------------------------------------
+
+    let block_with_txs = provider.get_block_with_txs(block_id).await.unwrap();
+
+    if let MaybePendingBlockWithTxs::Block(block) = block_with_txs {
+        assert_eq!(block.transactions.len(), 1);
+        assert_eq!(block.parent_hash, latest_block_hash);
+        assert_eq!(*block.transactions[0].transaction_hash(), res.transaction_hash);
+    } else {
+        panic!("expected pending block with transactions")
+    }
+
+    let block_with_tx_hashes = provider.get_block_with_tx_hashes(block_id).await.unwrap();
+    if let MaybePendingBlockWithTxHashes::Block(block) = block_with_tx_hashes {
+        assert_eq!(block.transactions.len(), 1);
+        assert_eq!(block.parent_hash, latest_block_hash);
+        assert_eq!(block.transactions[0], res.transaction_hash);
+    } else {
+        panic!("expected pending block with transaction hashes")
+    }
+
+    let block_with_receipts = provider.get_block_with_receipts(block_id).await.unwrap();
+    if let MaybePendingBlockWithReceipts::Block(block) = block_with_receipts {
+        assert_eq!(block.transactions.len(), 1);
+        assert_eq!(block.parent_hash, latest_block_hash);
+        assert_eq!(*block.transactions[0].transaction.transaction_hash(), res.transaction_hash);
+    } else {
+        panic!("expected pending block with transaction receipts")
+    }
+
+    // Get the recently generated block from the sent tx
+    let latest_block_hash_n_num = provider.block_hash_and_number().await.unwrap();
+    let latest_block_hash = latest_block_hash_n_num.block_hash;
+
+    // Generate an empty block
+    dev_client.generate_block().await.unwrap();
+
+    // -----------------------------------------------------------------------
+
+    let block_with_txs = provider.get_block_with_txs(block_id).await.unwrap();
+
+    if let MaybePendingBlockWithTxs::Block(block) = block_with_txs {
+        assert_eq!(block.transactions.len(), 0);
+        assert_eq!(block.parent_hash, latest_block_hash);
+    } else {
+        panic!("expected block with transactions")
+    }
+
+    let block_with_tx_hashes = provider.get_block_with_tx_hashes(block_id).await.unwrap();
+    if let MaybePendingBlockWithTxHashes::Block(block) = block_with_tx_hashes {
+        assert_eq!(block.transactions.len(), 0);
+        assert_eq!(block.parent_hash, latest_block_hash);
+    } else {
+        panic!("expected block with transaction hashes")
+    }
+
+    let block_with_receipts = provider.get_block_with_receipts(block_id).await.unwrap();
+    if let MaybePendingBlockWithReceipts::Block(block) = block_with_receipts {
+        assert_eq!(block.transactions.len(), 0);
+        assert_eq!(block.parent_hash, latest_block_hash);
+    } else {
+        panic!("expected block with transaction receipts")
+    }
 }

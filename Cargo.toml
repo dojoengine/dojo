@@ -24,7 +24,6 @@ members = [
 	"crates/katana/grpc",
 	"crates/katana/node",
 	"crates/katana/node-bindings",
-	"crates/katana/pipeline",
 	"crates/katana/pool",
 	"crates/katana/primitives",
 	"crates/katana/rpc/rpc",
@@ -37,6 +36,8 @@ members = [
 	"crates/katana/storage/codecs/derive",
 	"crates/katana/storage/db",
 	"crates/katana/storage/provider",
+	"crates/katana/sync/pipeline",
+	"crates/katana/sync/stage",
 	"crates/katana/tasks",
 	"crates/katana/trie",
 	"crates/metrics",
@@ -59,7 +60,7 @@ edition = "2021"
 license = "Apache-2.0"
 license-file = "LICENSE"
 repository = "https://github.com/dojoengine/dojo/"
-version = "1.0.4"
+version = "1.0.5"
 
 [profile.performance]
 codegen-units = 1
@@ -72,8 +73,8 @@ debug = true
 inherits = "release"
 
 [workspace.dependencies]
-cainome = { git = "https://github.com/cartridge-gg/cainome", rev = "5c2616c273faca7700d2ba565503fcefb5b9d720", features = [ "abigen-rs" ] }
-cainome-cairo-serde = { git = "https://github.com/cartridge-gg/cainome", rev = "5c2616c273faca7700d2ba565503fcefb5b9d720" }
+cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.4.10", features = [ "abigen-rs" ] }
+cainome-cairo-serde = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.4.10" }
 dojo-utils = { path = "crates/dojo/utils" }
 
 # metrics
@@ -101,7 +102,7 @@ katana-executor = { path = "crates/katana/executor" }
 katana-feeder-gateway = { path = "crates/katana/feeder-gateway" }
 katana-node = { path = "crates/katana/node", default-features = false }
 katana-node-bindings = { path = "crates/katana/node-bindings" }
-katana-pipeline = { path = "crates/katana/pipeline" }
+katana-pipeline = { path = "crates/katana/sync/pipeline" }
 katana-pool = { path = "crates/katana/pool" }
 katana-primitives = { path = "crates/katana/primitives" }
 katana-provider = { path = "crates/katana/storage/provider" }
@@ -111,6 +112,7 @@ katana-rpc-types = { path = "crates/katana/rpc/rpc-types" }
 katana-rpc-types-builder = { path = "crates/katana/rpc/rpc-types-builder" }
 katana-runner = { path = "crates/katana/runner" }
 katana-slot-controller = { path = "crates/katana/controller" }
+katana-stage = { path = "crates/katana/sync/stage" }
 katana-tasks = { path = "crates/katana/tasks" }
 katana-trie = { path = "crates/katana/trie" }
 
@@ -212,7 +214,7 @@ scarb-ui = { git = "https://github.com/dojoengine/scarb", rev = "c3eaac9ad2fe0dd
 semver = "1.0.5"
 serde = { version = "1.0", features = [ "derive" ] }
 serde_json = { version = "1.0", features = [ "arbitrary_precision" ] }
-serde_with = "3.9.0"
+serde_with = "3.11.0"
 similar-asserts = "1.5.0"
 smol_str = { version = "0.2.0", features = [ "serde" ] }
 spinoff = "0.8.0"

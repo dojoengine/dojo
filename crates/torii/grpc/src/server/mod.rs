@@ -217,6 +217,7 @@ impl DojoWorld {
         Ok(proto::types::WorldMetadata { world_address, models: models_metadata })
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn entities_all(
         &self,
         table: &str,
@@ -225,6 +226,7 @@ impl DojoWorld {
         limit: u32,
         offset: u32,
         dont_include_hashed_keys: bool,
+        order_by: Option<&str>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         self.query_by_hashed_keys(
             table,
@@ -234,6 +236,7 @@ impl DojoWorld {
             Some(limit),
             Some(offset),
             dont_include_hashed_keys,
+            order_by,
         )
         .await
     }
@@ -258,6 +261,7 @@ impl DojoWorld {
         entity_relation_column: &str,
         entities: Vec<(String, String)>,
         dont_include_hashed_keys: bool,
+        order_by: Option<&str>,
     ) -> Result<Vec<proto::types::Entity>, Error> {
         // Group entities by their model combinations
         let mut model_groups: HashMap<String, Vec<String>> = HashMap::new();
@@ -306,6 +310,7 @@ impl DojoWorld {
                 Some(&format!(
                     "[{table}].id IN (SELECT id FROM temp_entity_ids WHERE model_group = ?)"
                 )),
+                order_by,
                 None,
                 None,
             )?;
@@ -377,6 +382,7 @@ impl DojoWorld {
         limit: Option<u32>,
         offset: Option<u32>,
         dont_include_hashed_keys: bool,
+        order_by: Option<&str>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         // TODO: use prepared statement for where clause
         let filter_ids = match hashed_keys {
@@ -450,7 +456,13 @@ impl DojoWorld {
             sqlx::query_as(&query).bind(limit).bind(offset).fetch_all(&self.pool).await?;
 
         let entities = self
-            .fetch_entities(table, entity_relation_column, db_entities, dont_include_hashed_keys)
+            .fetch_entities(
+                table,
+                entity_relation_column,
+                db_entities,
+                dont_include_hashed_keys,
+                order_by,
+            )
             .await?;
         Ok((entities, total_count))
     }
@@ -465,6 +477,7 @@ impl DojoWorld {
         limit: Option<u32>,
         offset: Option<u32>,
         dont_include_hashed_keys: bool,
+        order_by: Option<&str>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         let keys_pattern = build_keys_pattern(keys_clause)?;
 
@@ -528,7 +541,7 @@ impl DojoWorld {
                 JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
                 WHERE {table}.keys REGEXP ?
                 GROUP BY {table}.event_id
-            "#
+            "#,
             )
         } else {
             format!(
@@ -538,7 +551,7 @@ impl DojoWorld {
                 JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
                 WHERE {table}.keys REGEXP ?
                 GROUP BY {table}.id
-            "#
+            "#,
             )
         };
 
@@ -586,7 +599,13 @@ impl DojoWorld {
             .await?;
 
         let entities = self
-            .fetch_entities(table, entity_relation_column, db_entities, dont_include_hashed_keys)
+            .fetch_entities(
+                table,
+                entity_relation_column,
+                db_entities,
+                dont_include_hashed_keys,
+                order_by,
+            )
             .await?;
         Ok((entities, total_count))
     }
@@ -628,6 +647,7 @@ impl DojoWorld {
         limit: Option<u32>,
         offset: Option<u32>,
         dont_include_hashed_keys: bool,
+        order_by: Option<&str>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         let comparison_operator = ComparisonOperator::from_repr(member_clause.operator as usize)
             .expect("invalid comparison operator");
@@ -675,14 +695,15 @@ impl DojoWorld {
             self.model_cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect();
 
         // Use the member name directly as the column name since it's already flattened
+        let where_clause =
+            format!("[{}].[{}] {comparison_operator} ?", member_clause.model, member_clause.member);
+
         let (entity_query, count_query) = build_sql_query(
             &schemas,
             table,
             entity_relation_column,
-            Some(&format!(
-                "[{}].[{}] {comparison_operator} ?",
-                member_clause.model, member_clause.member
-            )),
+            Some(&where_clause),
+            order_by,
             limit,
             offset,
         )?;
@@ -716,6 +737,7 @@ impl DojoWorld {
         limit: Option<u32>,
         offset: Option<u32>,
         dont_include_hashed_keys: bool,
+        order_by: Option<&str>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         let (where_clause, having_clause, join_clause, bind_values) =
             build_composite_clause(table, model_relation_table, &composite)?;
@@ -728,7 +750,7 @@ impl DojoWorld {
             {join_clause}
             {where_clause}
             {having_clause}
-            "#
+            "#,
         );
 
         let mut count_query = sqlx::query_scalar::<_, u32>(&count_query);
@@ -752,7 +774,7 @@ impl DojoWorld {
             {having_clause}
             ORDER BY [{table}].event_id DESC
             LIMIT ? OFFSET ?
-            "#
+            "#,
         );
 
         let mut db_query = sqlx::query_as(&query);
@@ -764,7 +786,13 @@ impl DojoWorld {
         let db_entities: Vec<(String, String)> = db_query.fetch_all(&self.pool).await?;
 
         let entities = self
-            .fetch_entities(table, entity_relation_column, db_entities, dont_include_hashed_keys)
+            .fetch_entities(
+                table,
+                entity_relation_column,
+                db_entities,
+                dont_include_hashed_keys,
+                order_by,
+            )
             .await?;
         Ok((entities, total_count))
     }
@@ -798,20 +826,17 @@ impl DojoWorld {
         let query = if contract_addresses.is_empty() {
             "SELECT * FROM tokens".to_string()
         } else {
-            format!(
-                "SELECT * FROM tokens WHERE contract_address IN ({})",
-                contract_addresses
-                    .iter()
-                    .map(|address| format!("{:#x}", address))
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            )
+            let placeholders = vec!["?"; contract_addresses.len()].join(", ");
+            format!("SELECT * FROM tokens WHERE contract_address IN ({})", placeholders)
         };
 
-        let tokens: Vec<Token> = sqlx::query_as(&query)
-            .fetch_all(&self.pool)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        let mut query = sqlx::query_as(&query);
+        for address in &contract_addresses {
+            query = query.bind(format!("{:#x}", address));
+        }
+
+        let tokens: Vec<Token> =
+            query.fetch_all(&self.pool).await.map_err(|e| Status::internal(e.to_string()))?;
 
         let tokens = tokens.iter().map(|token| token.clone().into()).collect();
         Ok(RetrieveTokensResponse { tokens })
@@ -823,37 +848,32 @@ impl DojoWorld {
         contract_addresses: Vec<Felt>,
     ) -> Result<RetrieveTokenBalancesResponse, Status> {
         let mut query = "SELECT * FROM token_balances".to_string();
-
+        let mut bind_values = Vec::new();
         let mut conditions = Vec::new();
+
         if !account_addresses.is_empty() {
-            conditions.push(format!(
-                "account_address IN ({})",
-                account_addresses
-                    .iter()
-                    .map(|address| format!("{:#x}", address))
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            ));
+            let placeholders = vec!["?"; account_addresses.len()].join(", ");
+            conditions.push(format!("account_address IN ({})", placeholders));
+            bind_values.extend(account_addresses.iter().map(|addr| format!("{:#x}", addr)));
         }
+
         if !contract_addresses.is_empty() {
-            conditions.push(format!(
-                "contract_address IN ({})",
-                contract_addresses
-                    .iter()
-                    .map(|address| format!("{:#x}", address))
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            ));
+            let placeholders = vec!["?"; contract_addresses.len()].join(", ");
+            conditions.push(format!("contract_address IN ({})", placeholders));
+            bind_values.extend(contract_addresses.iter().map(|addr| format!("{:#x}", addr)));
         }
 
         if !conditions.is_empty() {
             query += &format!(" WHERE {}", conditions.join(" AND "));
         }
 
-        let balances: Vec<TokenBalance> = sqlx::query_as(&query)
-            .fetch_all(&self.pool)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        let mut query = sqlx::query_as(&query);
+        for value in bind_values {
+            query = query.bind(value);
+        }
+
+        let balances: Vec<TokenBalance> =
+            query.fetch_all(&self.pool).await.map_err(|e| Status::internal(e.to_string()))?;
 
         let balances = balances.iter().map(|balance| balance.clone().into()).collect();
         Ok(RetrieveTokenBalancesResponse { balances })
@@ -909,6 +929,26 @@ impl DojoWorld {
         entity_relation_column: &str,
         query: proto::types::Query,
     ) -> Result<proto::world::RetrieveEntitiesResponse, Error> {
+        let order_by = query
+            .order_by
+            .iter()
+            .map(|order_by| {
+                format!(
+                    "[{}].[{}] {}",
+                    order_by.model,
+                    order_by.member,
+                    match order_by.direction {
+                        0 => "ASC",
+                        1 => "DESC",
+                        _ => unreachable!(),
+                    }
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(", ");
+
+        let order_by = if order_by.is_empty() { None } else { Some(order_by.as_str()) };
+
         let (entities, total_count) = match query.clause {
             None => {
                 self.entities_all(
@@ -918,6 +958,7 @@ impl DojoWorld {
                     query.limit,
                     query.offset,
                     query.dont_include_hashed_keys,
+                    order_by,
                 )
                 .await?
             }
@@ -939,6 +980,7 @@ impl DojoWorld {
                             Some(query.limit),
                             Some(query.offset),
                             query.dont_include_hashed_keys,
+                            order_by,
                         )
                         .await?
                     }
@@ -951,6 +993,7 @@ impl DojoWorld {
                             Some(query.limit),
                             Some(query.offset),
                             query.dont_include_hashed_keys,
+                            order_by,
                         )
                         .await?
                     }
@@ -963,6 +1006,7 @@ impl DojoWorld {
                             Some(query.limit),
                             Some(query.offset),
                             query.dont_include_hashed_keys,
+                            order_by,
                         )
                         .await?
                     }
@@ -975,6 +1019,7 @@ impl DojoWorld {
                             Some(query.limit),
                             Some(query.offset),
                             query.dont_include_hashed_keys,
+                            order_by,
                         )
                         .await?
                     }

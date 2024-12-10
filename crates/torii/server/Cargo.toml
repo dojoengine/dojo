@@ -31,3 +31,6 @@ tracing.workspace = true
 warp.workspace = true
 form_urlencoded = "1.2.1"
 async-trait = "0.1.83"
+tokio-tungstenite = "0.20.0"
+hyper-tungstenite = "0.11.1"
+futures-util.workspace = true

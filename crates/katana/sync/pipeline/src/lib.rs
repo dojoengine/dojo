@@ -1,14 +1,12 @@
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
 
-pub mod stage;
-
 use core::future::IntoFuture;
 
 use futures::future::BoxFuture;
 use katana_primitives::block::BlockNumber;
 use katana_provider::error::ProviderError;
 use katana_provider::traits::stage::StageCheckpointProvider;
-use stage::{Stage, StageExecutionInput};
+use katana_stage::{Stage, StageExecutionInput};
 use tokio::sync::watch;
 use tracing::{error, info};
 
@@ -24,7 +22,7 @@ pub enum Error {
     StageNotFound { id: String },
 
     #[error(transparent)]
-    Stage(#[from] stage::Error),
+    Stage(#[from] katana_stage::Error),
 
     #[error(transparent)]
     Provider(#[from] ProviderError),
@@ -186,9 +184,9 @@ where
 mod tests {
     use katana_provider::test_utils::test_provider;
     use katana_provider::traits::stage::StageCheckpointProvider;
+    use katana_stage::StageResult;
 
     use super::{Pipeline, Stage, StageExecutionInput};
-    use crate::stage::StageResult;
 
     struct MockStage;
 

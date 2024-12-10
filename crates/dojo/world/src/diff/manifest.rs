@@ -122,6 +122,10 @@ impl Manifest {
         let mut events = Vec::new();
 
         for resource in diff.resources.values() {
+            if diff.profile_config.is_skipped(&resource.tag()) {
+                continue;
+            }
+
             match resource.resource_type() {
                 ResourceType::Contract => {
                     contracts.push(resource_diff_to_dojo_contract(diff, resource))
