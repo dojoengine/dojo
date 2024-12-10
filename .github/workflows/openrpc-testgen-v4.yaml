@@ -1,9 +1,9 @@
 name: openrpc-testgenv4
 
 on:
-  # push:
-  #   branches:
-  #     - 'uacias/**'    
+  push:
+    branches:
+      - 'uacias/**'    
   workflow_dispatch:    
 
 env:
