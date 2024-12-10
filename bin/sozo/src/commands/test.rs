@@ -6,9 +6,11 @@ use scarb::ops;
 use scarb::ops::{validate_features, FeaturesOpts};
 use scarb_ui::args::{FeaturesSpec, PackagesFilter};
 use serde::{Deserialize, Serialize};
-use std::ffi::{OsStr, OsString};
 
 use super::check_package_dojo_version;
+
+const TEST_COMMAND: &str = "snforge";
+const TEST_COMMAND_FIRST_ARG: &str = "test";
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -62,30 +64,39 @@ impl TestArgs {
         let features_opts: FeaturesOpts = self.features.clone().try_into()?;
         validate_features(&packages, &features_opts)?;
 
-        let args = self.build_args();
-
         packages.iter().try_for_each(|package| {
-            ops::execute_test_subcommand(package, &args, &ws, self.features.clone()).map(|_| ())
+            std::process::Command::new(TEST_COMMAND)
+                .args(self.build_args())
+                .current_dir(package.root())
+                .stdout(std::process::Stdio::inherit())
+                .output()
+                .map_err(|_| {
+                    anyhow::anyhow!(
+                        "Unable to run `{TEST_COMMAND}` for {}",
+                        package.manifest_path()
+                    )
+                })
+                .map(|_| ())
         })
     }
 
-    pub fn build_args(&self) -> Vec<OsString> {
-        let mut args = vec![];
+    pub fn build_args(&self) -> Vec<&str> {
+        let mut args = vec![TEST_COMMAND_FIRST_ARG];
 
         if self.include_ignored {
-            args.push(OsStr::new("--include-ignored").to_os_string());
+            args.push("--include-ignored");
         }
 
         if self.ignored {
-            args.push(OsStr::new("--ignored").to_os_string());
+            args.push("--ignored");
         }
 
         if self.print_resource_usage {
-            args.push(OsStr::new("--detailed-resources").to_os_string());
+            args.push("--detailed-resources");
         }
 
         if self.profiler {
-            args.push(OsStr::new("--build-profile").to_os_string());
+            args.push("--build-profile");
         }
 
         args
