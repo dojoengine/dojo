@@ -3,7 +3,7 @@ use dojo::meta::{Layout, introspect::Struct};
 
 #[starknet::embeddable]
 pub impl IDeployedEventImpl<
-    TContractState, E, +Event<E>
+    TContractState, E, +Event<E>,
 > of dojo::meta::interface::IDeployedResource<TContractState> {
     fn dojo_name(self: @TContractState) -> ByteArray {
         Event::<E>::name()
@@ -12,7 +12,7 @@ pub impl IDeployedEventImpl<
 
 #[starknet::embeddable]
 pub impl IStoredEventImpl<
-    TContractState, E, +Event<E>
+    TContractState, E, +Event<E>,
 > of dojo::meta::interface::IStoredResource<TContractState> {
     fn schema(self: @TContractState) -> Struct {
         Event::<E>::schema()

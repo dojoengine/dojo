@@ -177,7 +177,7 @@ mod invalid_model_world {
     expected: (
         "Namespace `` is invalid according to Dojo naming rules: ^[a-zA-Z0-9_]+$",
         'ENTRYPOINT_FAILED',
-    )
+    ),
 )]
 fn test_register_namespace_empty_name() {
     let world = deploy_world();

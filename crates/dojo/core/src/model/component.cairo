@@ -3,7 +3,7 @@ use dojo::meta::{Layout, introspect::Struct};
 
 #[starknet::embeddable]
 pub impl IDeployedModelImpl<
-    TContractState, M, +Model<M>
+    TContractState, M, +Model<M>,
 > of dojo::meta::IDeployedResource<TContractState> {
     fn dojo_name(self: @TContractState) -> ByteArray {
         Model::<M>::name()
@@ -12,7 +12,7 @@ pub impl IDeployedModelImpl<
 
 #[starknet::embeddable]
 pub impl IStoredModelImpl<
-    TContractState, M, +Model<M>
+    TContractState, M, +Model<M>,
 > of dojo::meta::IStoredResource<TContractState> {
     fn schema(self: @TContractState) -> Struct {
         Model::<M>::schema()

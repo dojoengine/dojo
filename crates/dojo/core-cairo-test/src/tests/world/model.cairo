@@ -2,7 +2,7 @@ use core::starknet::ContractAddress;
 
 use crate::tests::helpers::{
     Foo, m_Foo, DOJO_NSH, drop_all_events, deploy_world, deploy_world_for_model_upgrades,
-    foo_invalid_name
+    foo_invalid_name,
 };
 use dojo::world::{world, IWorldDispatcherTrait};
 use dojo::model::Model;
@@ -32,7 +32,7 @@ pub struct FooModelMemberAddedButRemoved {
     pub caller: ContractAddress,
     pub b: u128,
     pub c: u256,
-    pub d: u256
+    pub d: u256,
 }
 
 #[derive(Introspect, Copy, Drop, Serde)]
@@ -42,7 +42,7 @@ pub struct FooModelMemberAddedButMoved {
     pub caller: ContractAddress,
     pub b: u128,
     pub a: felt252,
-    pub c: u256
+    pub c: u256,
 }
 
 #[derive(Introspect, Copy, Drop, Serde)]
@@ -52,7 +52,7 @@ pub struct FooModelMemberAdded {
     pub caller: ContractAddress,
     pub a: felt252,
     pub b: u128,
-    pub c: u256
+    pub c: u256,
 }
 
 #[test]
@@ -77,11 +77,11 @@ fn test_register_model_for_namespace_owner() {
         assert(event.name == Model::<Foo>::name(), 'bad event name');
         assert(event.namespace == "dojo", 'bad event namespace');
         assert(
-            event.class_hash == m_Foo::TEST_CLASS_HASH.try_into().unwrap(), 'bad event class_hash'
+            event.class_hash == m_Foo::TEST_CLASS_HASH.try_into().unwrap(), 'bad event class_hash',
         );
         assert(
             event.address != core::num::traits::Zero::<ContractAddress>::zero(),
-            'bad event prev address'
+            'bad event prev address',
         );
     } else {
         core::panic_with_felt252('no ModelRegistered event');
@@ -96,7 +96,7 @@ fn test_register_model_for_namespace_owner() {
     expected: (
         "Name `foo-bis` is invalid according to Dojo naming rules: ^[a-zA-Z0-9_]+$",
         'ENTRYPOINT_FAILED',
-    )
+    ),
 )]
 fn test_register_model_with_invalid_name() {
     let world = deploy_world();
@@ -107,7 +107,7 @@ fn test_register_model_with_invalid_name() {
 
 #[test]
 #[should_panic(
-    expected: ("Account `2827` does NOT have OWNER role on namespace `dojo`", 'ENTRYPOINT_FAILED',)
+    expected: ("Account `2827` does NOT have OWNER role on namespace `dojo`", 'ENTRYPOINT_FAILED'),
 )]
 fn test_register_model_for_namespace_writer() {
     let bob = starknet::contract_address_const::<0xb0b>();
@@ -143,15 +143,16 @@ fn test_upgrade_model_from_model_owner() {
 
     if let world::Event::ModelUpgraded(event) = event.unwrap() {
         assert(
-            event.selector == Model::<FooModelMemberAdded>::selector(DOJO_NSH), 'bad model selector'
+            event.selector == Model::<FooModelMemberAdded>::selector(DOJO_NSH),
+            'bad model selector',
         );
         assert(
             event.class_hash == m_FooModelMemberAdded::TEST_CLASS_HASH.try_into().unwrap(),
-            'bad model class_hash'
+            'bad model class_hash',
         );
         assert(
             event.address != core::num::traits::Zero::<ContractAddress>::zero(),
-            'bad model prev address'
+            'bad model prev address',
         );
     } else {
         core::panic_with_felt252('no ModelUpgraded event');
@@ -159,7 +160,7 @@ fn test_upgrade_model_from_model_owner() {
 
     assert(
         world.is_owner(Model::<FooModelMemberAdded>::selector(DOJO_NSH), bob),
-        'bob is not the owner'
+        'bob is not the owner',
     );
 }
 
@@ -176,14 +177,16 @@ fn test_upgrade_model() {
 
     if let world::Event::ModelUpgraded(event) = event.unwrap() {
         assert(
-            event.selector == Model::<FooModelMemberAdded>::selector(DOJO_NSH), 'bad model selector'
+            event.selector == Model::<FooModelMemberAdded>::selector(DOJO_NSH),
+            'bad model selector',
         );
         assert(
             event.class_hash == m_FooModelMemberAdded::TEST_CLASS_HASH.try_into().unwrap(),
-            'bad model class_hash'
+            'bad model class_hash',
         );
         assert(
-            event.address != core::num::traits::Zero::<ContractAddress>::zero(), 'bad model address'
+            event.address != core::num::traits::Zero::<ContractAddress>::zero(),
+            'bad model address',
         );
     } else {
         core::panic_with_felt252('no ModelUpgraded event');
@@ -195,7 +198,7 @@ fn test_upgrade_model() {
     expected: (
         "Invalid new layout to upgrade the resource `dojo-FooModelBadLayoutType`",
         'ENTRYPOINT_FAILED',
-    )
+    ),
 )]
 fn test_upgrade_model_with_bad_layout_type() {
     let world = deploy_world_for_model_upgrades();
@@ -207,7 +210,7 @@ fn test_upgrade_model_with_bad_layout_type() {
     expected: (
         "Invalid new schema to upgrade the resource `dojo-FooModelMemberRemoved`",
         'ENTRYPOINT_FAILED',
-    )
+    ),
 )]
 fn test_upgrade_model_with_member_removed() {
     let world = deploy_world_for_model_upgrades();
@@ -219,13 +222,13 @@ fn test_upgrade_model_with_member_removed() {
     expected: (
         "Invalid new schema to upgrade the resource `dojo-FooModelMemberAddedButRemoved`",
         'ENTRYPOINT_FAILED',
-    )
+    ),
 )]
 fn test_upgrade_model_with_member_added_but_removed() {
     let world = deploy_world_for_model_upgrades();
     world
         .upgrade_model(
-            "dojo", m_FooModelMemberAddedButRemoved::TEST_CLASS_HASH.try_into().unwrap()
+            "dojo", m_FooModelMemberAddedButRemoved::TEST_CLASS_HASH.try_into().unwrap(),
         );
 }
 
@@ -234,7 +237,7 @@ fn test_upgrade_model_with_member_added_but_removed() {
     expected: (
         "Invalid new schema to upgrade the resource `dojo-FooModelMemberAddedButMoved`",
         'ENTRYPOINT_FAILED',
-    )
+    ),
 )]
 fn test_upgrade_model_with_member_moved() {
     let world = deploy_world_for_model_upgrades();
@@ -246,7 +249,7 @@ fn test_upgrade_model_with_member_moved() {
     expected: (
         "Account `659918` does NOT have OWNER role on model (or its namespace) `FooModelMemberAdded`",
         'ENTRYPOINT_FAILED',
-    )
+    ),
 )]
 fn test_upgrade_model_from_model_writer() {
     let alice = starknet::contract_address_const::<0xa11ce>();
@@ -261,7 +264,7 @@ fn test_upgrade_model_from_model_writer() {
 }
 
 #[test]
-#[should_panic(expected: ("Resource `dojo-Foo` is already registered", 'ENTRYPOINT_FAILED',))]
+#[should_panic(expected: ("Resource `dojo-Foo` is already registered", 'ENTRYPOINT_FAILED'))]
 fn test_upgrade_model_from_random_account() {
     let bob = starknet::contract_address_const::<0xb0b>();
     let alice = starknet::contract_address_const::<0xa11ce>();
@@ -282,7 +285,7 @@ fn test_upgrade_model_from_random_account() {
 }
 
 #[test]
-#[should_panic(expected: ("Namespace `another_namespace` is not registered", 'ENTRYPOINT_FAILED',))]
+#[should_panic(expected: ("Namespace `another_namespace` is not registered", 'ENTRYPOINT_FAILED'))]
 fn test_register_model_with_unregistered_namespace() {
     let world = deploy_world();
     let world = world.dispatcher;
@@ -293,7 +296,7 @@ fn test_register_model_with_unregistered_namespace() {
 // It's CONTRACT_NOT_DEPLOYED for now as in this example the contract is not a dojo contract
 // and it's not the account that is calling the register_model function.
 #[test]
-#[should_panic(expected: ('CONTRACT_NOT_DEPLOYED', 'ENTRYPOINT_FAILED',))]
+#[should_panic(expected: ('CONTRACT_NOT_DEPLOYED', 'ENTRYPOINT_FAILED'))]
 fn test_register_model_through_malicious_contract() {
     let bob = starknet::contract_address_const::<0xb0b>();
     let malicious_contract = starknet::contract_address_const::<0xdead>();

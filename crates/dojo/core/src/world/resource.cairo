@@ -47,7 +47,7 @@ pub impl ResourceIsNoneImpl of ResourceIsNoneTrait {
     fn is_unregistered(self: @Resource) -> bool {
         match self {
             Resource::Unregistered => true,
-            _ => false
+            _ => false,
         }
     }
 }
