@@ -263,25 +263,36 @@ impl DojoWorld {
         dont_include_hashed_keys: bool,
         order_by: Option<&str>,
     ) -> Result<Vec<proto::types::Entity>, Error> {
+        tracing::debug!(
+            "Fetching entities from table {table} with {} entity/model pairs",
+            entities.len()
+        );
+        let start = std::time::Instant::now();
+
         // Group entities by their model combinations
         let mut model_groups: HashMap<String, Vec<String>> = HashMap::new();
         for (entity_id, models_str) in entities {
             model_groups.entry(models_str).or_default().push(entity_id);
         }
+        tracing::debug!("Grouped into {} distinct model combinations", model_groups.len());
 
         let mut all_entities = Vec::new();
 
         let mut tx = self.pool.begin().await?;
+        tracing::debug!("Started database transaction");
 
         // Create a temporary table to store entity IDs due to them potentially exceeding
         // SQLite's parameters limit which is 999
+        let temp_table_start = std::time::Instant::now();
         sqlx::query(
             "CREATE TEMPORARY TABLE temp_entity_ids (id TEXT PRIMARY KEY, model_group TEXT)",
         )
         .execute(&mut *tx)
         .await?;
+        tracing::debug!("Created temporary table in {:?}", temp_table_start.elapsed());
 
         // Insert all entity IDs into the temporary table
+        let insert_start = std::time::Instant::now();
         for (model_ids, entity_ids) in &model_groups {
             for chunk in entity_ids.chunks(999) {
                 let placeholders = chunk.iter().map(|_| "(?, ?)").collect::<Vec<_>>().join(",");
@@ -296,8 +307,14 @@ impl DojoWorld {
                 query.execute(&mut *tx).await?;
             }
         }
+        tracing::debug!(
+            "Inserted all entity IDs into temporary table in {:?}",
+            insert_start.elapsed()
+        );
 
-        for (models_str, _) in model_groups {
+        let query_start = std::time::Instant::now();
+        for (models_str, entity_ids) in &model_groups {
+            tracing::debug!("Processing model group with {} entities", entity_ids.len());
             let model_ids =
                 models_str.split(',').map(|id| Felt::from_str(id).unwrap()).collect::<Vec<_>>();
             let schemas =
@@ -325,10 +342,15 @@ impl DojoWorld {
 
             all_entities.extend(group_entities?);
         }
+        tracing::debug!("Processed all model groups in {:?}", query_start.elapsed());
 
         sqlx::query("DROP TABLE temp_entity_ids").execute(&mut *tx).await?;
+        tracing::debug!("Dropped temporary table");
 
         tx.commit().await?;
+        tracing::debug!("Committed transaction");
+
+        tracing::debug!("Total fetch_entities operation took {:?}", start.elapsed());
 
         Ok(all_entities)
     }
