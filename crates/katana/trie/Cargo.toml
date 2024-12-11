@@ -20,4 +20,4 @@ thiserror.workspace = true
 default-features = false
 features = [ "std" ]
 git = "https://github.com/madara-alliance/bonsai-trie/"
-rev = "a74f1ae"
+rev = "bfc6ad4"
