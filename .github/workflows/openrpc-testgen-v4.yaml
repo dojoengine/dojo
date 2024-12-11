@@ -3,7 +3,7 @@ name: openrpc-testgenv4
 on:
   push:
     branches:
-      - 'uacias/**'    
+      - 'feat/**'    
   workflow_dispatch:    
 
 env:
@@ -78,14 +78,6 @@ jobs:
           export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
           curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | bash -s -- -v 2.8.4
           echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-      - name: Cache target directory
-        uses: actions/cache@v3
-        with:
-          path: katana-runner/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('katana-runner/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
 
       - name: Download katana binary
         uses: actions/download-artifact@v4

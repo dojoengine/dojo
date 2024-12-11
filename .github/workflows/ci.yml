@@ -1,27 +1,18 @@
 name: ci
 
-# on:
-#   push:
-#     branches:
-#       - main
-#   pull_request:
-
-# on:
-#   workflow_dispatch:
-
 on:
   push:
     branches:
-      - 'feat/**'    
+      - main
+  pull_request:
   
-
 env:
   CARGO_TERM_COLOR: always
   RUST_VERSION: 1.80.0
 
 jobs:
   build:
-    runs-on: arc-runner-set
+    runs-on: ubuntu-latest-4-cores
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -50,13 +41,13 @@ jobs:
       PAYMASTER_ACCOUNT_ADDRESS: "0x127fd5f1fe78a71f8bcd1fec63e3fe2f0486b6ecd5c86a0466c3a21fa5cfcec"
       UDC_ADDRESS: "0x41a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf"
       ACCOUNT_CLASS_HASH: "0x07dc7899aa655b0aae51eadff6d801a58e97dd99cf4666ee59e704249e51adf2"
+      SCARB_VERSION: "2.8.4"
     steps:
-      - name: Checkout main repository
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
       - name: Install build dependencies
         run: |
-          sudo apt-get update
+          sudo apt-get update && \
           sudo apt-get install -y build-essential libclang-dev git curl bash libssl-dev pkg-config
 
       - name: Install Rust toolchain
@@ -70,7 +61,7 @@ jobs:
       - name: Install Scarb via script
         run: |
           export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
-          curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | bash -s -- -v 2.8.4
+          curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | bash -s -- -v $SCARB_VERSION
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Cache target directory
