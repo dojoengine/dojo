@@ -115,9 +115,6 @@ async fn main() -> anyhow::Result<()> {
 
     let provider: Arc<_> = JsonRpcClient::new(HttpTransport::new(args.rpc)).into();
 
-    // Get world address
-    let world = WorldContractReader::new(world_address, provider.clone());
-
     let (mut executor, sender) = Executor::new(
         pool.clone(),
         shutdown_tx.clone(),
@@ -149,26 +146,32 @@ async fn main() -> anyhow::Result<()> {
         flags.insert(IndexingFlags::PENDING_BLOCKS);
     }
 
-    let mut engine: Engine<Arc<JsonRpcClient<HttpTransport>>> = Engine::new(
-        world,
-        db.clone(),
-        provider.clone(),
-        processors,
-        EngineConfig {
-            max_concurrent_tasks: args.indexing.max_concurrent_tasks,
-            blocks_chunk_size: args.indexing.blocks_chunk_size,
-            events_chunk_size: args.indexing.events_chunk_size,
-            polling_interval: Duration::from_millis(args.indexing.polling_interval),
-            flags,
-            event_processor_config: EventProcessorConfig {
-                historical_events: args.events.historical.into_iter().collect(),
-                namespaces: args.indexing.namespaces.into_iter().collect(),
+    // Get world address
+    let world = WorldContractReader::new(world_address, provider.clone());
+    let mut engine: Option<Engine<Arc<JsonRpcClient<HttpTransport>>>> = if args.indexing.enabled {
+        Some(Engine::new(
+            world,
+            db.clone(),
+            provider.clone(),
+            processors,
+            EngineConfig {
+                max_concurrent_tasks: args.indexing.max_concurrent_tasks,
+                blocks_chunk_size: args.indexing.blocks_chunk_size,
+                events_chunk_size: args.indexing.events_chunk_size,
+                polling_interval: Duration::from_millis(args.indexing.polling_interval),
+                flags,
+                event_processor_config: EventProcessorConfig {
+                    historical_events: args.events.historical.into_iter().collect(),
+                    namespaces: args.indexing.namespaces.into_iter().collect(),
+                },
             },
-        },
-        shutdown_tx.clone(),
-        Some(block_tx),
-        &args.indexing.contracts,
-    );
+            shutdown_tx.clone(),
+            Some(block_tx),
+            &args.indexing.contracts,
+        ))
+    } else {
+        None
+    };
 
     let shutdown_rx = shutdown_tx.subscribe();
     let (grpc_addr, grpc_server) = torii_grpc::server::new(
@@ -247,7 +250,12 @@ async fn main() -> anyhow::Result<()> {
         tokio::spawn(server.start(addr));
     }
 
-    let engine_handle = tokio::spawn(async move { engine.start().await });
+    let engine_handle = tokio::spawn(async move {
+        if let Some(engine) = &mut engine {
+            return engine.start().await;
+        }
+        Ok(())
+    });
     let proxy_server_handle =
         tokio::spawn(async move { proxy_server.start(shutdown_tx.subscribe()).await });
     let graphql_server_handle = tokio::spawn(graphql_server);

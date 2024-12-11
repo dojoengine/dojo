@@ -90,6 +90,10 @@ impl Default for RelayOptions {
 #[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq)]
 #[command(next_help_heading = "Indexing options")]
 pub struct IndexingOptions {
+    /// If indexing should be enabled
+    #[arg(long, default_value_t = true, help = "If indexing should be enabled.")]
+    pub enabled: bool,
+
     /// Chunk size of the events page when indexing using events
     #[arg(long = "indexing.events_chunk_size", default_value_t = DEFAULT_EVENTS_CHUNK_SIZE, help = "Chunk size of the events page to fetch from the sequencer.")]
     #[serde(default = "default_events_chunk_size")]
@@ -162,6 +166,7 @@ pub struct IndexingOptions {
 impl Default for IndexingOptions {
     fn default() -> Self {
         Self {
+            enabled: true,
             events_chunk_size: DEFAULT_EVENTS_CHUNK_SIZE,
             blocks_chunk_size: DEFAULT_BLOCKS_CHUNK_SIZE,
             pending: true,
@@ -177,6 +182,10 @@ impl Default for IndexingOptions {
 impl IndexingOptions {
     pub fn merge(&mut self, other: Option<&Self>) {
         if let Some(other) = other {
+            if self.enabled {
+                self.enabled = other.enabled;
+            }
+
             if self.events_chunk_size == DEFAULT_EVENTS_CHUNK_SIZE {
                 self.events_chunk_size = other.events_chunk_size;
             }
