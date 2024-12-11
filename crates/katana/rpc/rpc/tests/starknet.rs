@@ -1144,3 +1144,18 @@ async fn fetch_pending_blocks_in_instant_mode() {
         panic!("expected block with transaction receipts")
     }
 }
+
+#[tokio::test]
+async fn call_contract() {
+    let config = get_default_test_config(SequencingConfig::default());
+    let sequencer = TestSequencer::start(config).await;
+
+    let provider = sequencer.provider();
+    let account = sequencer.account().address();
+
+    // setup contract to interact with (can be any existing contract that can be interacted with)
+    let contract = Erc20ContractReader::new(DEFAULT_ETH_FEE_TOKEN_ADDRESS.into(), &provider);
+
+    let _ = contract.name().call().await.unwrap();
+    let _ = contract.balanceOf(&account).call().await.unwrap();
+}

@@ -23,7 +23,7 @@ use blockifier::transaction::transaction_execution::Transaction;
 use blockifier::transaction::transactions::ExecutableTransaction;
 use blockifier::versioned_constants::VersionedConstants;
 use katana_cairo::cairo_vm::types::errors::program_errors::ProgramError;
-use katana_cairo::cairo_vm::vm::runners::cairo_runner::ExecutionResources;
+use katana_cairo::cairo_vm::vm::runners::cairo_runner::{ExecutionResources, RunResources};
 use katana_cairo::starknet_api::block::{
     BlockInfo, BlockNumber, BlockTimestamp, FeeType, GasPriceVector, GasPrices, NonzeroGasPrice,
 };
@@ -139,22 +139,23 @@ pub fn call<S: StateReader>(
         ..Default::default()
     };
 
-    // TODO: this must be false if fees are disabled I assume.
-    let limit_steps_by_resources = true;
-
-    // Now, the max step is not given directly to this function.
-    // It's computed by a new function max_steps, and it tooks the values
-    // from the block context itself instead of the input give. The dojoengine
-    // fork of the blockifier ensures we're not limited by the min function applied
-    // by starkware.
-    // https://github.com/starkware-libs/blockifier/blob/4fd71645b45fd1deb6b8e44802414774ec2a2ec1/crates/blockifier/src/execution/entry_point.rs#L159
-    // https://github.com/dojoengine/blockifier/blob/5f58be8961ddf84022dd739a8ab254e32c435075/crates/blockifier/src/execution/entry_point.rs#L188
-
     let tx_context = Arc::new(TransactionContext {
         block_context: block_context.clone(),
         tx_info: TransactionInfo::Deprecated(DeprecatedTransactionInfo::default()),
     });
+
+    // The reason whhy we assign a new `RunResources` is because of how the initial gas value for
+    // the call is being computed. Passing the `initial_gas` value directly used to work,
+    // meaning the actual value of the `initial_gas` would be used to run the contract call, but
+    // now Blockifier computes the initial gas differently, based on the block gas prices. See
+    // `EntryPointExecutionContext::max_steps()` for further references.
+    //
+    // The value of `limit_steps_by_resources` becomes irrelevant because of the explicit
+    // re-assignment of the run resources.
+
+    let limit_steps_by_resources = false;
     let mut ctx = EntryPointExecutionContext::new_invoke(tx_context, limit_steps_by_resources);
+    ctx.vm_run_resources = RunResources::new(initial_gas.try_into().unwrap_or(usize::MAX));
 
     let mut remaining_gas = initial_gas as u64;
     let res = call.execute(&mut state, &mut ctx, &mut remaining_gas)?;
