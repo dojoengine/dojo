@@ -11,7 +11,7 @@ use katana_primitives::block::{
     SealedBlockWithStatus,
 };
 use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, ContractClass};
-use katana_primitives::contract::ContractAddress;
+use katana_primitives::contract::{ContractAddress, StorageKey};
 use katana_primitives::env::BlockEnv;
 use katana_primitives::receipt::Receipt;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithClasses};
@@ -40,7 +40,9 @@ use crate::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionStatusProvider, TransactionTraceProvider,
     TransactionsProviderExt,
 };
-use crate::traits::trie::{ClassTrieProvider, ClassTrieWriter, ContractTrieWriter};
+use crate::traits::trie::{
+    ClassTrieProvider, ClassTrieWriter, ContractTrieProvider, ContractTrieWriter,
+};
 use crate::ProviderResult;
 
 #[derive(Debug)]
@@ -600,8 +602,36 @@ impl BlockEnvProvider for ForkedProvider {
     }
 }
 
+impl ContractTrieProvider for ForkedProvider {
+    fn contract_trie_root(&self) -> ProviderResult<Felt> {
+        unimplemented!()
+    }
+
+    fn contracts_proof(
+        &self,
+        block_number: BlockNumber,
+        contract_addresses: &[ContractAddress],
+    ) -> ProviderResult<MultiProof> {
+        let _ = block_number;
+        let _ = contract_addresses;
+        unimplemented!()
+    }
+
+    fn storage_proof(
+        &self,
+        block_number: BlockNumber,
+        contract_address: ContractAddress,
+        storage_keys: Vec<StorageKey>,
+    ) -> ProviderResult<MultiProof> {
+        let _ = block_number;
+        let _ = contract_address;
+        let _ = storage_keys;
+        unimplemented!()
+    }
+}
+
 impl ClassTrieProvider for ForkedProvider {
-    fn proofs(
+    fn classes_proof(
         &self,
         block_number: BlockNumber,
         class_hashes: &[ClassHash],
@@ -611,7 +641,7 @@ impl ClassTrieProvider for ForkedProvider {
         unimplemented!()
     }
 
-    fn root(&self) -> ProviderResult<Felt> {
+    fn class_trie_root(&self) -> ProviderResult<Felt> {
         unimplemented!()
     }
 }

@@ -15,13 +15,14 @@ use katana_primitives::state::{StateUpdates, StateUpdatesWithClasses};
 use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{TxHash, TxNumber, TxWithHash};
 use katana_primitives::Felt;
+use katana_trie::MultiProof;
 use traits::block::{BlockIdReader, BlockStatusProvider, BlockWriter};
 use traits::contract::{ContractClassProvider, ContractClassWriter, ContractClassWriterExt};
 use traits::env::BlockEnvProvider;
 use traits::stage::StageCheckpointProvider;
 use traits::state::{StateRootProvider, StateWriter};
 use traits::transaction::{TransactionStatusProvider, TransactionTraceProvider};
-use traits::trie::{ClassTrieProvider, ClassTrieWriter, ContractTrieWriter};
+use traits::trie::{ClassTrieProvider, ClassTrieWriter, ContractTrieProvider, ContractTrieWriter};
 
 pub mod error;
 pub mod providers;
@@ -410,16 +411,42 @@ impl<Db> ClassTrieProvider for BlockchainProvider<Db>
 where
     Db: ClassTrieProvider,
 {
-    fn proofs(
+    fn classes_proof(
         &self,
         block_number: BlockNumber,
         class_hashes: &[ClassHash],
-    ) -> ProviderResult<katana_trie::MultiProof> {
-        self.provider.proofs(block_number, class_hashes)
+    ) -> ProviderResult<MultiProof> {
+        self.provider.classes_proof(block_number, class_hashes)
     }
 
-    fn root(&self) -> ProviderResult<Felt> {
-        self.provider.root()
+    fn class_trie_root(&self) -> ProviderResult<Felt> {
+        self.provider.class_trie_root()
+    }
+}
+
+impl<Db> ContractTrieProvider for BlockchainProvider<Db>
+where
+    Db: ContractTrieProvider,
+{
+    fn storage_proof(
+        &self,
+        block_number: BlockNumber,
+        contract_address: ContractAddress,
+        storage_keys: Vec<StorageKey>,
+    ) -> ProviderResult<MultiProof> {
+        self.provider.storage_proof(block_number, contract_address, storage_keys)
+    }
+
+    fn contracts_proof(
+        &self,
+        block_number: BlockNumber,
+        contracts_storage_keys: &[ContractAddress],
+    ) -> ProviderResult<MultiProof> {
+        self.provider.contracts_proof(block_number, contracts_storage_keys)
+    }
+
+    fn contract_trie_root(&self) -> ProviderResult<Felt> {
+        self.provider.contract_trie_root()
     }
 }
 

@@ -6,13 +6,17 @@ use katana_db::trie;
 use katana_db::trie::{ContractTrie, StorageTrie};
 use katana_primitives::block::BlockNumber;
 use katana_primitives::class::{ClassHash, CompiledClassHash};
+use katana_primitives::contract::StorageKey;
 use katana_primitives::state::StateUpdates;
 use katana_primitives::{ContractAddress, Felt};
 use katana_trie::{compute_contract_state_hash, MultiProof};
 
 use crate::providers::db::DbProvider;
 use crate::traits::state::{StateFactoryProvider, StateProvider};
-use crate::traits::trie::{ClassTrieProvider, ClassTrieWriter, ContractTrieWriter};
+use crate::traits::trie::{
+    ClassTrieProvider, ClassTrieWriter, ContractTrieProvider, ContractTrieWriter,
+};
+use crate::ProviderResult;
 
 #[derive(Debug, Default)]
 struct ContractLeaf {
@@ -21,16 +25,45 @@ struct ContractLeaf {
     pub nonce: Option<Felt>,
 }
 
+impl<Db: Database> ContractTrieProvider for DbProvider<Db> {
+    fn contract_trie_root(&self) -> ProviderResult<Felt> {
+        Ok(trie::ContractTrie::new(self.0.tx_mut()?).root())
+    }
+
+    fn contracts_proof(
+        &self,
+        block_number: BlockNumber,
+        contract_addresses: &[ContractAddress],
+    ) -> ProviderResult<MultiProof> {
+        let proofs = trie::ContractTrie::new_at_block(self.0.tx_mut()?, block_number)
+            .expect("trie should exist")
+            .get_multi_proof(contract_addresses);
+        Ok(proofs)
+    }
+
+    fn storage_proof(
+        &self,
+        block_number: BlockNumber,
+        contract_address: ContractAddress,
+        storage_keys: Vec<StorageKey>,
+    ) -> ProviderResult<MultiProof> {
+        let proofs = trie::StorageTrie::new_at_block(self.0.tx_mut()?, block_number)
+            .expect("trie should exist")
+            .get_multi_proof(contract_address, storage_keys);
+        Ok(proofs)
+    }
+}
+
 impl<Db: Database> ClassTrieProvider for DbProvider<Db> {
-    fn root(&self) -> crate::ProviderResult<Felt> {
+    fn class_trie_root(&self) -> ProviderResult<Felt> {
         Ok(trie::ClassTrie::new(self.0.tx_mut()?).root())
     }
 
-    fn proofs(
+    fn classes_proof(
         &self,
         block_number: BlockNumber,
         class_hashes: &[ClassHash],
-    ) -> crate::ProviderResult<MultiProof> {
+    ) -> ProviderResult<MultiProof> {
         let proofs = trie::ClassTrie::new_at_block(self.0.tx_mut()?, block_number)
             .expect("trie should exist")
             .get_multi_proof(class_hashes);
@@ -43,7 +76,7 @@ impl<Db: Database> ClassTrieWriter for DbProvider<Db> {
         &self,
         block_number: BlockNumber,
         updates: &BTreeMap<ClassHash, CompiledClassHash>,
-    ) -> crate::ProviderResult<Felt> {
+    ) -> ProviderResult<Felt> {
         let mut trie = trie::ClassTrie::new(self.0.tx_mut()?);
 
         for (class_hash, compiled_hash) in updates {
@@ -60,7 +93,7 @@ impl<Db: Database> ContractTrieWriter for DbProvider<Db> {
         &self,
         block_number: BlockNumber,
         state_updates: &StateUpdates,
-    ) -> crate::ProviderResult<Felt> {
+    ) -> ProviderResult<Felt> {
         let mut contract_leafs: HashMap<ContractAddress, ContractLeaf> = HashMap::new();
 
         let leaf_hashes: Vec<_> = {

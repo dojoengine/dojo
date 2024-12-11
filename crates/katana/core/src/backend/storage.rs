@@ -21,7 +21,9 @@ use katana_provider::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionStatusProvider, TransactionTraceProvider,
     TransactionsProviderExt,
 };
-use katana_provider::traits::trie::{ClassTrieProvider, ClassTrieWriter, ContractTrieWriter};
+use katana_provider::traits::trie::{
+    ClassTrieProvider, ClassTrieWriter, ContractTrieProvider, ContractTrieWriter,
+};
 use katana_provider::BlockchainProvider;
 use num_traits::ToPrimitive;
 use starknet::core::types::{BlockStatus, MaybePendingBlockWithTxHashes};
@@ -47,6 +49,7 @@ pub trait Database:
     + StateFactoryProvider
     + BlockEnvProvider
     + ClassTrieProvider
+    + ContractTrieProvider
     + ClassTrieWriter
     + ContractTrieWriter
     + StageCheckpointProvider
@@ -73,6 +76,7 @@ impl<T> Database for T where
         + StateFactoryProvider
         + BlockEnvProvider
         + ClassTrieProvider
+        + ContractTrieProvider
         + ClassTrieWriter
         + ContractTrieWriter
         + StageCheckpointProvider
