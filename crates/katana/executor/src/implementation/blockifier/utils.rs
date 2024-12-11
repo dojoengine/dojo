@@ -144,17 +144,19 @@ pub fn call<S: StateReader>(
         tx_info: TransactionInfo::Deprecated(DeprecatedTransactionInfo::default()),
     });
 
-    // The reason whhy we assign a new `RunResources` is because of how the initial gas value for
+    // The reason why we assign a new `RunResources` is because of how the initial gas value for
     // the call is being computed. Passing the `initial_gas` value directly used to work,
-    // meaning the actual value of the `initial_gas` would be used to run the contract call, but
-    // now Blockifier computes the initial gas differently, based on the block gas prices. See
-    // `EntryPointExecutionContext::max_steps()` for further references.
+    // meaning the literal value of the `initial_gas` would be used as the to run the contract call,
+    // but now Blockifier computes the initial gas differently, based on the block gas prices.
+    // See `EntryPointExecutionContext::max_steps()` for further references.
     //
     // The value of `limit_steps_by_resources` becomes irrelevant because of the explicit
     // re-assignment of the run resources.
 
     let limit_steps_by_resources = false;
     let mut ctx = EntryPointExecutionContext::new_invoke(tx_context, limit_steps_by_resources);
+
+    // If `initial_gas` can't fit in a usize, use the maximum.
     ctx.vm_run_resources = RunResources::new(initial_gas.try_into().unwrap_or(usize::MAX));
 
     let mut remaining_gas = initial_gas as u64;

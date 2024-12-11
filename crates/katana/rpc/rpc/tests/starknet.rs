@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use assert_matches::assert_matches;
-use cainome::rs::abigen_legacy;
+use cainome::rs::{abigen, abigen_legacy};
 use common::split_felt;
 use dojo_test_utils::sequencer::{get_default_test_config, TestSequencer};
 use indexmap::IndexSet;
@@ -1153,9 +1153,23 @@ async fn call_contract() {
     let provider = sequencer.provider();
     let account = sequencer.account().address();
 
-    // setup contract to interact with (can be any existing contract that can be interacted with)
-    let contract = Erc20ContractReader::new(DEFAULT_ETH_FEE_TOKEN_ADDRESS.into(), &provider);
+    // -----------------------------------------------------------------------
+    // Call legacy contract
 
+    let contract = Erc20ContractReader::new(DEFAULT_ETH_FEE_TOKEN_ADDRESS.into(), &provider);
     let _ = contract.name().call().await.unwrap();
     let _ = contract.balanceOf(&account).call().await.unwrap();
+
+    // -----------------------------------------------------------------------
+    // Call contract
+
+    abigen!(
+        AccountContract,
+        "[{\"type\":\"function\",\"name\":\"get_public_key\",\"inputs\":[],\"outputs\":[{\"type\":\
+         \"core::felt252\"}],\"state_mutability\":\"view\"}]"
+    );
+
+    // setup contract to interact with (can be any existing contract that can be interacted with)
+    let contract = AccountContractReader::new(account, &provider);
+    let _ = contract.get_public_key().call().await.unwrap();
 }
