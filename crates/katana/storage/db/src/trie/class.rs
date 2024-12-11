@@ -40,7 +40,7 @@ where
         };
 
         let db = TrieDb::<tables::ClassTrie, Tx>::new(tx);
-        let inner = BonsaiStorage::new(db, config, 64);
+        let inner = BonsaiStorage::new(db, config, 251);
 
         Self { inner }
     }

@@ -2,32 +2,40 @@ use std::collections::BTreeMap;
 
 use katana_primitives::block::BlockNumber;
 use katana_primitives::class::{ClassHash, CompiledClassHash};
+use katana_primitives::contract::StorageKey;
 use katana_primitives::state::StateUpdates;
-use katana_primitives::Felt;
+use katana_primitives::{ContractAddress, Felt};
 use katana_trie::MultiProof;
 
 use crate::ProviderResult;
 
 #[auto_impl::auto_impl(&, Box, Arc)]
 pub trait ClassTrieProvider: Send + Sync {
-    fn proofs(
+    fn classes_proof(
         &self,
         block_number: BlockNumber,
         class_hashes: &[ClassHash],
     ) -> ProviderResult<MultiProof>;
 
-    fn root(&self) -> ProviderResult<Felt>;
+    fn class_trie_root(&self) -> ProviderResult<Felt>;
 }
 
 #[auto_impl::auto_impl(&, Box, Arc)]
 pub trait ContractTrieProvider: Send + Sync {
-    fn proofs(
+    fn contracts_proof(
         &self,
         block_number: BlockNumber,
-        class_hashes: &[ClassHash],
+        contract_addresses: &[ContractAddress],
     ) -> ProviderResult<MultiProof>;
 
-    fn root(&self) -> ProviderResult<Felt>;
+    fn storage_proof(
+        &self,
+        block_number: BlockNumber,
+        contract_address: ContractAddress,
+        storage_keys: Vec<StorageKey>,
+    ) -> ProviderResult<MultiProof>;
+
+    fn contract_trie_root(&self) -> ProviderResult<Felt>;
 }
 
 #[auto_impl::auto_impl(&, Box, Arc)]

@@ -1,5 +1,6 @@
 use core::fmt;
 
+use bitvec::array::BitArray;
 use bitvec::order::Msb0;
 use bitvec::vec::BitVec;
 use bitvec::view::AsBits;
@@ -8,6 +9,7 @@ use katana_primitives::contract::{StorageKey, StorageValue};
 use katana_primitives::{ContractAddress, Felt};
 use katana_trie::bonsai::id::BasicId;
 use katana_trie::bonsai::{BonsaiStorage, BonsaiStorageConfig};
+use katana_trie::MultiProof;
 use starknet_types_core::hash::Poseidon;
 
 use crate::abstraction::DbTxMut;
@@ -34,9 +36,17 @@ where
         };
 
         let db = TrieDb::<tables::ContractStorageTrie, Tx>::new(tx);
-        let inner = BonsaiStorage::new(db, config, 64);
+        let inner = BonsaiStorage::new(db, config, 251);
 
         Self { inner }
+    }
+
+    pub fn new_at_block(tx: Tx, block_number: BlockNumber) -> Option<Self> {
+        let trie = Self::new(tx);
+        trie.inner
+            .get_transactional_state(BasicId::new(block_number), trie.inner.get_config())
+            .expect("failed to get trie at exact block")
+            .map(|inner| Self { inner })
     }
 
     pub fn insert(&mut self, address: ContractAddress, key: StorageKey, value: StorageValue) {
@@ -50,6 +60,19 @@ where
 
     pub fn root(&self, address: &ContractAddress) -> Felt {
         self.inner.root_hash(&address.to_bytes_be()).unwrap()
+    }
+
+    pub fn get_multi_proof(
+        &mut self,
+        address: ContractAddress,
+        key: Vec<StorageKey>,
+    ) -> MultiProof {
+        let mut keys: Vec<BitArray<_, Msb0>> =
+            key.iter().map(|k| BitArray::new(k.to_bytes_be())).collect();
+        keys.sort();
+
+        let keys = keys.iter().map(|k| k.as_bitslice()[5..].to_owned());
+        self.inner.get_multi_proof(&address.to_bytes_be(), keys).unwrap()
     }
 }
 
@@ -73,9 +96,17 @@ where
         };
 
         let db = TrieDb::<tables::ContractTrie, Tx>::new(tx);
-        let inner = BonsaiStorage::new(db, config, 64);
+        let inner = BonsaiStorage::new(db, config, 251);
 
         Self { inner }
+    }
+
+    pub fn new_at_block(tx: Tx, block_number: BlockNumber) -> Option<Self> {
+        let trie = Self::new(tx);
+        trie.inner
+            .get_transactional_state(BasicId::new(block_number), trie.inner.get_config())
+            .expect("failed to get trie at exact block")
+            .map(|inner| Self { inner })
     }
 
     pub fn insert(&mut self, address: ContractAddress, state_hash: Felt) {
@@ -89,6 +120,16 @@ where
 
     pub fn root(&self) -> Felt {
         self.inner.root_hash(self.bonsai_identifier()).unwrap()
+    }
+
+    pub fn get_multi_proof(&mut self, contract_addresses: &[ContractAddress]) -> MultiProof {
+        let mut keys: Vec<BitArray<_, Msb0>> =
+            contract_addresses.iter().map(|h| BitArray::new(h.to_bytes_be())).collect();
+        keys.sort();
+
+        let keys = keys.iter().map(|hash| hash.as_bitslice()[5..].to_owned());
+        let proofs = self.inner.get_multi_proof(&self.bonsai_identifier(), keys).unwrap();
+        proofs
     }
 
     fn bonsai_identifier(&self) -> &'static [u8] {
