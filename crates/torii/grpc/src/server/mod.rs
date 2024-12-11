@@ -332,7 +332,7 @@ impl DojoWorld {
                 None,
             )?;
 
-            let rows = sqlx::query(&entity_query).bind(&models_str).fetch_all(&mut *tx).await?;
+            let rows = sqlx::query(&entity_query).bind(models_str).fetch_all(&mut *tx).await?;
             let schemas = Arc::new(schemas);
 
             let group_entities: Result<Vec<_>, Error> = rows

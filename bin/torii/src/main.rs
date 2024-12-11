@@ -164,6 +164,7 @@ async fn main() -> anyhow::Result<()> {
                 historical_events: args.events.historical.into_iter().collect(),
                 namespaces: args.indexing.namespaces.into_iter().collect(),
             },
+            world_block: args.indexing.world_block,
         },
         shutdown_tx.clone(),
         Some(block_tx),

@@ -3,6 +3,7 @@ rpc = "https://api.cartridge.gg/x/starknet/mainnet"
 explorer = false
 
 [indexing]
+world_block = 948000
 events_chunk_size = 1024
 blocks_chunk_size = 1024000
 pending = true
