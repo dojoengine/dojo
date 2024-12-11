@@ -21,7 +21,7 @@ use traits::env::BlockEnvProvider;
 use traits::stage::StageCheckpointProvider;
 use traits::state::{StateRootProvider, StateWriter};
 use traits::transaction::{TransactionStatusProvider, TransactionTraceProvider};
-use traits::trie::{ClassTrieWriter, ContractTrieWriter};
+use traits::trie::{ClassTrieProvider, ClassTrieWriter, ContractTrieWriter};
 
 pub mod error;
 pub mod providers;
@@ -403,6 +403,23 @@ where
 {
     fn block_env_at(&self, id: BlockHashOrNumber) -> ProviderResult<Option<BlockEnv>> {
         self.provider.block_env_at(id)
+    }
+}
+
+impl<Db> ClassTrieProvider for BlockchainProvider<Db>
+where
+    Db: ClassTrieProvider,
+{
+    fn proofs(
+        &self,
+        block_number: BlockNumber,
+        class_hashes: &[ClassHash],
+    ) -> ProviderResult<katana_trie::MultiProof> {
+        self.provider.proofs(block_number, class_hashes)
+    }
+
+    fn root(&self) -> ProviderResult<Felt> {
+        self.provider.root()
     }
 }
 

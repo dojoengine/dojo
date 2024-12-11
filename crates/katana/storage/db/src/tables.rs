@@ -20,7 +20,7 @@ impl<T> Key for T where T: Encode + Decode + Clone + std::fmt::Debug {}
 impl<T> Value for T where T: Compress + Decompress + std::fmt::Debug {}
 
 /// An asbtraction for a table.
-pub trait Table {
+pub trait Table: 'static {
     /// The name of the table.
     const NAME: &'static str;
     /// The key type of the table.

@@ -1,3 +1,5 @@
+use core::fmt;
+
 use bitvec::order::Msb0;
 use bitvec::vec::BitVec;
 use bitvec::view::AsBits;
@@ -13,11 +15,17 @@ use crate::tables;
 use crate::trie::TrieDb;
 
 #[derive(Debug)]
-pub struct StorageTrie<Tx: DbTxMut> {
+pub struct StorageTrie<Tx>
+where
+    Tx: DbTxMut + fmt::Debug,
+{
     inner: BonsaiStorage<BasicId, TrieDb<tables::ContractStorageTrie, Tx>, Poseidon>,
 }
 
-impl<Tx: DbTxMut> StorageTrie<Tx> {
+impl<Tx> StorageTrie<Tx>
+where
+    Tx: DbTxMut + fmt::Debug,
+{
     pub fn new(tx: Tx) -> Self {
         let config = BonsaiStorageConfig {
             max_saved_trie_logs: Some(0),
@@ -26,7 +34,7 @@ impl<Tx: DbTxMut> StorageTrie<Tx> {
         };
 
         let db = TrieDb::<tables::ContractStorageTrie, Tx>::new(tx);
-        let inner = BonsaiStorage::new(db, config).unwrap();
+        let inner = BonsaiStorage::new(db, config, 64);
 
         Self { inner }
     }
@@ -46,11 +54,17 @@ impl<Tx: DbTxMut> StorageTrie<Tx> {
 }
 
 #[derive(Debug)]
-pub struct ContractTrie<Tx: DbTxMut> {
+pub struct ContractTrie<Tx>
+where
+    Tx: DbTxMut + fmt::Debug,
+{
     inner: BonsaiStorage<BasicId, TrieDb<tables::ContractTrie, Tx>, Poseidon>,
 }
 
-impl<Tx: DbTxMut> ContractTrie<Tx> {
+impl<Tx> ContractTrie<Tx>
+where
+    Tx: DbTxMut + fmt::Debug,
+{
     pub fn new(tx: Tx) -> Self {
         let config = BonsaiStorageConfig {
             max_saved_trie_logs: Some(0),
@@ -59,7 +73,7 @@ impl<Tx: DbTxMut> ContractTrie<Tx> {
         };
 
         let db = TrieDb::<tables::ContractTrie, Tx>::new(tx);
-        let inner = BonsaiStorage::new(db, config).unwrap();
+        let inner = BonsaiStorage::new(db, config, 64);
 
         Self { inner }
     }

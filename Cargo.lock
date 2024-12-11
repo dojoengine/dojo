@@ -8781,6 +8781,7 @@ dependencies = [
  "katana-pool",
  "katana-primitives",
  "katana-provider",
+ "katana-trie",
  "num-traits 0.2.19",
  "rstest 0.18.2",
  "serde",

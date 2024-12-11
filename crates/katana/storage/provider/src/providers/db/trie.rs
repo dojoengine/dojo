@@ -8,17 +8,34 @@ use katana_primitives::block::BlockNumber;
 use katana_primitives::class::{ClassHash, CompiledClassHash};
 use katana_primitives::state::StateUpdates;
 use katana_primitives::{ContractAddress, Felt};
-use katana_trie::compute_contract_state_hash;
+use katana_trie::{compute_contract_state_hash, MultiProof};
 
 use crate::providers::db::DbProvider;
 use crate::traits::state::{StateFactoryProvider, StateProvider};
-use crate::traits::trie::{ClassTrieWriter, ContractTrieWriter};
+use crate::traits::trie::{ClassTrieProvider, ClassTrieWriter, ContractTrieWriter};
 
 #[derive(Debug, Default)]
 struct ContractLeaf {
     pub class_hash: Option<Felt>,
     pub storage_root: Option<Felt>,
     pub nonce: Option<Felt>,
+}
+
+impl<Db: Database> ClassTrieProvider for DbProvider<Db> {
+    fn root(&self) -> crate::ProviderResult<Felt> {
+        Ok(trie::ClassTrie::new(self.0.tx_mut()?).root())
+    }
+
+    fn proofs(
+        &self,
+        block_number: BlockNumber,
+        class_hashes: &[ClassHash],
+    ) -> crate::ProviderResult<MultiProof> {
+        let proofs = trie::ClassTrie::new_at_block(self.0.tx_mut()?, block_number)
+            .expect("trie should exist")
+            .get_multi_proof(class_hashes);
+        Ok(proofs)
+    }
 }
 
 impl<Db: Database> ClassTrieWriter for DbProvider<Db> {

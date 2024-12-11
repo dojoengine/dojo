@@ -1,7 +1,7 @@
 use jsonrpsee::core::{async_trait, Error, RpcResult};
 use katana_executor::{EntryPointCall, ExecutorFactory};
 use katana_primitives::block::BlockIdOrTag;
-use katana_primitives::class::{CasmContractClass, ClassHash};
+use katana_primitives::class::ClassHash;
 use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash, TxHash};
 use katana_primitives::{ContractAddress, Felt};
 use katana_rpc_api::starknet::StarknetApiServer;

@@ -2,6 +2,8 @@ use std::collections::HashMap;
 
 use katana_primitives::contract::StorageKey;
 use katana_primitives::{ContractAddress, Felt};
+use katana_trie::bonsai::BitSlice;
+use katana_trie::{MultiProof, ProofNode};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -14,7 +16,8 @@ pub struct ContractStorageKeys {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GlobalRoots {
-    /// The associated block hash (needed in case the caller used a block tag for the block_id parameter).
+    /// The associated block hash (needed in case the caller used a block tag for the block_id
+    /// parameter).
     pub block_hash: Felt,
     pub classes_tree_root: Felt,
     pub contracts_tree_root: Felt,
@@ -56,16 +59,17 @@ pub struct GetStorageProofResponse {
     pub contracts_storage_proofs: ContractStorageProofs,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct ClassesProof {
     pub nodes: Nodes,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct ContractsProof {
     /// The nodes in the union of the paths from the contracts tree root to the requested leaves.
     pub nodes: Nodes,
-    /// The nonce and class hash for each requested contract address, in the order in which they appear in the request. These values are needed to construct the associated leaf node.
+    /// The nonce and class hash for each requested contract address, in the order in which they
+    /// appear in the request. These values are needed to construct the associated leaf node.
     pub contract_leaves_data: Vec<ContractLeafData>,
 }
 
@@ -75,12 +79,12 @@ pub struct ContractLeafData {
     pub class_hash: Felt,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct ContractStorageProofs {
     pub nodes: Vec<Nodes>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Nodes(pub HashMap<Felt, MerkleNode>);
 
 impl Serialize for Nodes {
@@ -119,4 +123,30 @@ impl<'de> Deserialize<'de> for Nodes {
         let map = entries.into_iter().map(|entry| (entry.node_hash, entry.node)).collect();
         Ok(Nodes(map))
     }
+}
+
+// --- Conversion from internal types
+
+impl From<MultiProof> for Nodes {
+    fn from(value: MultiProof) -> Self {
+        Self(value.0.into_iter().map(|(hash, node)| (hash, MerkleNode::from(node))).collect())
+    }
+}
+
+impl From<ProofNode> for MerkleNode {
+    fn from(value: ProofNode) -> Self {
+        match value {
+            ProofNode::Binary { left, right } => MerkleNode::Binary { left, right },
+            ProofNode::Edge { child, path } => {
+                MerkleNode::Edge { child, path: path_to_felt(&path), length: path.len() as u8 }
+            }
+        }
+    }
+}
+
+fn path_to_felt(path: &BitSlice) -> Felt {
+    let mut arr = [0u8; 32];
+    let slice = &mut BitSlice::from_slice_mut(&mut arr)[5..];
+    slice[..path.len()].copy_from_bitslice(path);
+    Felt::from_bytes_be(&arr)
 }
