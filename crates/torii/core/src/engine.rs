@@ -323,7 +323,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
     pub async fn fetch_data(&mut self, cursors: &Cursors) -> Result<FetchDataResult> {
         let latest_block = self.provider.block_hash_and_number().await?;
 
-        let from = cursors.head.unwrap_or(0);
+        let from = cursors.head.unwrap_or(948000);
         let total_remaining_blocks = latest_block.block_number - from;
         let blocks_to_process = total_remaining_blocks.min(self.config.blocks_chunk_size);
         let to = from + blocks_to_process;
