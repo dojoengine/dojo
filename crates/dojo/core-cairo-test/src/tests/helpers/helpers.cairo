@@ -164,7 +164,7 @@ pub struct Stats {
 #[derive(IntrospectPacked, Copy, Drop, Serde)]
 pub enum Weapon {
     DualWield: (Sword, Sword),
-    Fists: (Sword, Sword) // Introspect requires same arms
+    Fists: (Sword, Sword)
 }
 
 #[starknet::interface]

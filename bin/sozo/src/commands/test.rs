@@ -334,7 +334,7 @@ pub fn crates_config_for_compilation_unit(unit: &CairoCompilationUnit) -> AllCra
                             .contains(&SmolStr::new_inline("negative_impls")),
                         coupons: experimental_features.contains(&SmolStr::new_inline("coupons")),
                         associated_item_constraints: experimental_features
-                            .contains(&SmolStr::new_inline("associated_item_constraints")),
+                            .contains(&SmolStr::new_static("associated_item_constraints")),
                     },
                     cfg_set: component.cfg_set.clone(),
                 },
