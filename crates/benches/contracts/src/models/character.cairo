@@ -39,7 +39,7 @@ struct Stats {
 #[derive(Introspect, Copy, Drop, Serde)]
 enum Weapon {
     DualWield: (Sword, Sword),
-    Fists: (Sword, Sword), // Introspect requires same arms
+    Fists: (Sword, Sword),
 }
 
 #[derive(Introspect, Copy, Drop, Serde)]

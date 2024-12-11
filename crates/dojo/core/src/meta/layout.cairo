@@ -3,7 +3,7 @@ use dojo::storage::packing::calculate_packed_size;
 #[derive(Copy, Drop, Serde, Debug, PartialEq)]
 pub struct FieldLayout {
     pub selector: felt252,
-    pub layout: Layout
+    pub layout: Layout,
 }
 
 #[derive(Copy, Drop, Serde, Debug, PartialEq)]
@@ -32,7 +32,7 @@ pub impl LayoutCompareImpl of LayoutCompareTrait {
             (Layout::Array(_), Layout::Array(_)) => true,
             (Layout::ByteArray, Layout::ByteArray) => true,
             (Layout::Enum(_), Layout::Enum(_)) => true,
-            _ => false
+            _ => false,
         }
     }
 }

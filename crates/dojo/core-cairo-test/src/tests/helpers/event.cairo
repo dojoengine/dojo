@@ -65,15 +65,17 @@ struct FooEventMemberAdded {
 
 pub fn deploy_world_for_event_upgrades() -> IWorldDispatcher {
     let namespace_def = NamespaceDef {
-        namespace: "dojo", resources: [
+        namespace: "dojo",
+        resources: [
             TestResource::Event(old_foo_event_bad_layout_type::TEST_CLASS_HASH.try_into().unwrap()),
             TestResource::Event(e_FooEventMemberRemoved::TEST_CLASS_HASH.try_into().unwrap()),
             TestResource::Event(
-                e_FooEventMemberAddedButRemoved::TEST_CLASS_HASH.try_into().unwrap()
+                e_FooEventMemberAddedButRemoved::TEST_CLASS_HASH.try_into().unwrap(),
             ),
             TestResource::Event(e_FooEventMemberAddedButMoved::TEST_CLASS_HASH.try_into().unwrap()),
             TestResource::Event(e_FooEventMemberAdded::TEST_CLASS_HASH.try_into().unwrap()),
-        ].span()
+        ]
+            .span(),
     };
     spawn_test_world([namespace_def].span()).dispatcher
 }

@@ -87,7 +87,7 @@ pub fn invalid_resource_layout_upgrade(namespace: @ByteArray, name: @ByteArray) 
 }
 
 pub fn invalid_resource_version_upgrade(
-    namespace: @ByteArray, name: @ByteArray, expected_version: u8
+    namespace: @ByteArray, name: @ByteArray, expected_version: u8,
 ) -> ByteArray {
     format!("The new resource version of `{}-{}` should be {}", namespace, name, expected_version)
 }

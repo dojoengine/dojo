@@ -55,12 +55,12 @@ pub struct NamespaceDef {
 
 #[generate_trait]
 pub impl ContractDefImpl of ContractDefTrait {
-    fn new(namespace: @ByteArray, name: @ByteArray,) -> ContractDef {
+    fn new(namespace: @ByteArray, name: @ByteArray) -> ContractDef {
         ContractDef {
             contract: ContractDescriptor::Named((namespace, name)),
             writer_of: [].span(),
             owner_of: [].span(),
-            init_calldata: [].span()
+            init_calldata: [].span(),
         }
     }
 
@@ -69,14 +69,14 @@ pub impl ContractDefImpl of ContractDefTrait {
             contract: ContractDescriptor::Address(address),
             writer_of: [].span(),
             owner_of: [].span(),
-            init_calldata: [].span()
+            init_calldata: [].span(),
         }
     }
 
     fn with_init_calldata(mut self: ContractDef, init_calldata: Span<felt252>) -> ContractDef {
         match self.contract {
             ContractDescriptor::Address(_) => panic!(
-                "Cannot set init_calldata for address descriptor"
+                "Cannot set init_calldata for address descriptor",
             ),
             ContractDescriptor::Named(_) => self.init_calldata = init_calldata,
         };
@@ -106,7 +106,7 @@ pub impl ContractDefImpl of ContractDefTrait {
 /// * address of contract deployed
 pub fn deploy_contract(class_hash: felt252, calldata: Span<felt252>) -> ContractAddress {
     let (contract, _) = starknet::syscalls::deploy_syscall(
-        class_hash.try_into().unwrap(), 0, calldata, false
+        class_hash.try_into().unwrap(), 0, calldata, false,
     )
         .unwrap();
     contract
@@ -145,7 +145,7 @@ pub fn spawn_test_world(namespaces_defs: Span<NamespaceDef>) -> WorldStorage {
         world::TEST_CLASS_HASH.try_into().unwrap(),
         salt.into(),
         [world::TEST_CLASS_HASH].span(),
-        false
+        false,
     )
         .unwrap();
 
@@ -161,21 +161,19 @@ pub fn spawn_test_world(namespaces_defs: Span<NamespaceDef>) -> WorldStorage {
             first_namespace = Option::Some(namespace.clone());
         }
 
-        for r in ns
-            .resources
-            .clone() {
-                match r {
-                    TestResource::Event(ch) => {
-                        world.register_event(namespace.clone(), (*ch).try_into().unwrap());
-                    },
-                    TestResource::Model(ch) => {
-                        world.register_model(namespace.clone(), (*ch).try_into().unwrap());
-                    },
-                    TestResource::Contract(ch) => {
-                        world.register_contract(*ch, namespace.clone(), (*ch).try_into().unwrap());
-                    }
-                }
+        for r in ns.resources.clone() {
+            match r {
+                TestResource::Event(ch) => {
+                    world.register_event(namespace.clone(), (*ch).try_into().unwrap());
+                },
+                TestResource::Model(ch) => {
+                    world.register_model(namespace.clone(), (*ch).try_into().unwrap());
+                },
+                TestResource::Contract(ch) => {
+                    world.register_contract(*ch, namespace.clone(), (*ch).try_into().unwrap());
+                },
             }
+        }
     };
 
     WorldStorageTrait::new(world, @first_namespace.unwrap())
@@ -189,7 +187,7 @@ pub impl WorldStorageInternalTestImpl of WorldStorageTestTrait {
             let contract_address = match c.contract {
                 ContractDescriptor::Address(address) => *address,
                 ContractDescriptor::Named((
-                    namespace, name
+                    namespace, name,
                 )) => {
                     let selector = dojo::utils::selector_from_names(*namespace, *name);
                     match (*self.dispatcher).resource(selector) {
@@ -213,11 +211,11 @@ pub impl WorldStorageInternalTestImpl of WorldStorageTestTrait {
             match c.contract {
                 ContractDescriptor::Address(_) => {},
                 ContractDescriptor::Named((
-                    namespace, name
+                    namespace, name,
                 )) => {
                     let selector = dojo::utils::selector_from_names(*namespace, *name);
                     (*self.dispatcher).init_contract(selector, *c.init_calldata);
-                }
+                },
             }
         };
     }

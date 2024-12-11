@@ -221,6 +221,7 @@ impl cainome::cairo_serde::CairoSerde for ModelDef {
 pub struct ResourceMetadata {
     pub resource_id: starknet::core::types::Felt,
     pub metadata_uri: cainome::cairo_serde::ByteArray,
+    pub metadata_hash: starknet::core::types::Felt,
 }
 impl cainome::cairo_serde::CairoSerde for ResourceMetadata {
     type RustType = Self;
@@ -230,12 +231,14 @@ impl cainome::cairo_serde::CairoSerde for ResourceMetadata {
         let mut __size = 0;
         __size += starknet::core::types::Felt::cairo_serialized_size(&__rust.resource_id);
         __size += cainome::cairo_serde::ByteArray::cairo_serialized_size(&__rust.metadata_uri);
+        __size += starknet::core::types::Felt::cairo_serialized_size(&__rust.metadata_hash);
         __size
     }
     fn cairo_serialize(__rust: &Self::RustType) -> Vec<starknet::core::types::Felt> {
         let mut __out: Vec<starknet::core::types::Felt> = vec![];
         __out.extend(starknet::core::types::Felt::cairo_serialize(&__rust.resource_id));
         __out.extend(cainome::cairo_serde::ByteArray::cairo_serialize(&__rust.metadata_uri));
+        __out.extend(starknet::core::types::Felt::cairo_serialize(&__rust.metadata_hash));
         __out
     }
     fn cairo_deserialize(
@@ -247,12 +250,15 @@ impl cainome::cairo_serde::CairoSerde for ResourceMetadata {
         __offset += starknet::core::types::Felt::cairo_serialized_size(&resource_id);
         let metadata_uri = cainome::cairo_serde::ByteArray::cairo_deserialize(__felts, __offset)?;
         __offset += cainome::cairo_serde::ByteArray::cairo_serialized_size(&metadata_uri);
-        Ok(ResourceMetadata { resource_id, metadata_uri })
+        let metadata_hash = starknet::core::types::Felt::cairo_deserialize(__felts, __offset)?;
+        __offset += starknet::core::types::Felt::cairo_serialized_size(&metadata_hash);
+        Ok(ResourceMetadata { resource_id, metadata_uri, metadata_hash })
     }
 }
 #[derive(Clone, serde::Serialize, serde::Deserialize, PartialEq, Debug)]
 pub struct ResourceMetadataValue {
     pub metadata_uri: cainome::cairo_serde::ByteArray,
+    pub metadata_hash: starknet::core::types::Felt,
 }
 impl cainome::cairo_serde::CairoSerde for ResourceMetadataValue {
     type RustType = Self;
@@ -261,11 +267,13 @@ impl cainome::cairo_serde::CairoSerde for ResourceMetadataValue {
     fn cairo_serialized_size(__rust: &Self::RustType) -> usize {
         let mut __size = 0;
         __size += cainome::cairo_serde::ByteArray::cairo_serialized_size(&__rust.metadata_uri);
+        __size += starknet::core::types::Felt::cairo_serialized_size(&__rust.metadata_hash);
         __size
     }
     fn cairo_serialize(__rust: &Self::RustType) -> Vec<starknet::core::types::Felt> {
         let mut __out: Vec<starknet::core::types::Felt> = vec![];
         __out.extend(cainome::cairo_serde::ByteArray::cairo_serialize(&__rust.metadata_uri));
+        __out.extend(starknet::core::types::Felt::cairo_serialize(&__rust.metadata_hash));
         __out
     }
     fn cairo_deserialize(
@@ -275,7 +283,9 @@ impl cainome::cairo_serde::CairoSerde for ResourceMetadataValue {
         let mut __offset = __offset;
         let metadata_uri = cainome::cairo_serde::ByteArray::cairo_deserialize(__felts, __offset)?;
         __offset += cainome::cairo_serde::ByteArray::cairo_serialized_size(&metadata_uri);
-        Ok(ResourceMetadataValue { metadata_uri })
+        let metadata_hash = starknet::core::types::Felt::cairo_deserialize(__felts, __offset)?;
+        __offset += starknet::core::types::Felt::cairo_serialized_size(&metadata_hash);
+        Ok(ResourceMetadataValue { metadata_uri, metadata_hash })
     }
 }
 #[derive(Clone, serde::Serialize, serde::Deserialize, PartialEq, Debug)]
@@ -584,6 +594,18 @@ impl<A: starknet::accounts::ConnectedAccount + Sync> ModelContract<A> {
     }
     #[allow(clippy::ptr_arg)]
     #[allow(clippy::too_many_arguments)]
+    pub fn ensure_unique(&self) -> cainome::cairo_serde::call::FCall<A::Provider, ()> {
+        use cainome::cairo_serde::CairoSerde;
+        let mut __calldata = vec![];
+        let __call = starknet::core::types::FunctionCall {
+            contract_address: self.address,
+            entry_point_selector: starknet::macros::selector!("ensure_unique"),
+            calldata: __calldata,
+        };
+        cainome::cairo_serde::call::FCall::new(__call, self.provider())
+    }
+    #[allow(clippy::ptr_arg)]
+    #[allow(clippy::too_many_arguments)]
     pub fn ensure_values(
         &self,
         value: &ResourceMetadataValue,
@@ -683,6 +705,18 @@ impl<P: starknet::providers::Provider + Sync> ModelContractReader<P> {
         let __call = starknet::core::types::FunctionCall {
             contract_address: self.address,
             entry_point_selector: starknet::macros::selector!("ensure_abi"),
+            calldata: __calldata,
+        };
+        cainome::cairo_serde::call::FCall::new(__call, self.provider())
+    }
+    #[allow(clippy::ptr_arg)]
+    #[allow(clippy::too_many_arguments)]
+    pub fn ensure_unique(&self) -> cainome::cairo_serde::call::FCall<P, ()> {
+        use cainome::cairo_serde::CairoSerde;
+        let mut __calldata = vec![];
+        let __call = starknet::core::types::FunctionCall {
+            contract_address: self.address,
+            entry_point_selector: starknet::macros::selector!("ensure_unique"),
             calldata: __calldata,
         };
         cainome::cairo_serde::call::FCall::new(__call, self.provider())
