@@ -4,14 +4,30 @@ use katana_primitives::block::BlockNumber;
 use katana_primitives::class::{ClassHash, CompiledClassHash};
 use katana_primitives::state::StateUpdates;
 use katana_primitives::Felt;
+use katana_trie::MultiProof;
 
 use crate::ProviderResult;
 
 #[auto_impl::auto_impl(&, Box, Arc)]
 pub trait ClassTrieProvider: Send + Sync {
-    fn proofs(&self, block_number: BlockNumber, class_hashes: Vec<ClassHash>);
+    fn proofs(
+        &self,
+        block_number: BlockNumber,
+        class_hashes: &[ClassHash],
+    ) -> ProviderResult<MultiProof>;
 
-    fn root(&self);
+    fn root(&self) -> ProviderResult<Felt>;
+}
+
+#[auto_impl::auto_impl(&, Box, Arc)]
+pub trait ContractTrieProvider: Send + Sync {
+    fn proofs(
+        &self,
+        block_number: BlockNumber,
+        class_hashes: &[ClassHash],
+    ) -> ProviderResult<MultiProof>;
+
+    fn root(&self) -> ProviderResult<Felt>;
 }
 
 #[auto_impl::auto_impl(&, Box, Arc)]

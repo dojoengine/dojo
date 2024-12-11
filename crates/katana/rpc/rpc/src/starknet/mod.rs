@@ -24,6 +24,7 @@ use katana_provider::traits::state::{StateFactoryProvider, StateProvider};
 use katana_provider::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionStatusProvider,
 };
+use katana_provider::traits::trie::ClassTrieProvider;
 use katana_rpc_types::block::{
     MaybePendingBlockWithReceipts, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
     PendingBlockWithReceipts, PendingBlockWithTxHashes, PendingBlockWithTxs,
@@ -34,7 +35,10 @@ use katana_rpc_types::event::{EventFilterWithPage, EventsPage};
 use katana_rpc_types::receipt::{ReceiptBlock, TxReceiptWithBlockInfo};
 use katana_rpc_types::state_update::MaybePendingStateUpdate;
 use katana_rpc_types::transaction::Tx;
-use katana_rpc_types::trie::{ContractStorageKeys, GetStorageProofResponse};
+use katana_rpc_types::trie::{
+    ClassesProof, ContractStorageKeys, ContractStorageProofs, ContractsProof,
+    GetStorageProofResponse, GlobalRoots,
+};
 use katana_rpc_types::FeeEstimate;
 use katana_rpc_types_builder::ReceiptBuilder;
 use katana_tasks::{BlockingTaskPool, TokioTaskSpawner};
@@ -1133,7 +1137,51 @@ where
         contract_addresses: Option<Vec<ContractAddress>>,
         contracts_storage_keys: Option<Vec<ContractStorageKeys>>,
     ) -> StarknetApiResult<GetStorageProofResponse> {
-        self.on_io_blocking_task(move |this| todo!()).await
+        self.on_io_blocking_task(move |this| {
+            let provider = this.inner.backend.blockchain.provider();
+
+            let block_number = provider.convert_block_id(block_id)?;
+            let block_number = block_number.ok_or(StarknetApiError::BlockNotFound)?;
+            let block_hash = provider.latest_hash()?;
+
+            // --- Get classes proof (if any)
+
+            let classes_proof = if let Some(class_hashes) = class_hashes {
+                let proofs = provider.proofs(block_number, &class_hashes)?;
+                ClassesProof { nodes: proofs.into() }
+            } else {
+                ClassesProof::default()
+            };
+
+            // --- Get contracts proof (if any)
+
+            let contracts_proof = if let Some(..) = contract_addresses {
+                ContractsProof::default()
+            } else {
+                ContractsProof::default()
+            };
+
+            // --- Get contracts storage proof (if any)
+
+            let contracts_storage_proofs = if let Some(..) = contracts_storage_keys {
+                ContractStorageProofs::default()
+            } else {
+                ContractStorageProofs::default()
+            };
+
+            let classes_tree_root = provider.root()?;
+
+            let global_roots =
+                GlobalRoots { block_hash, classes_tree_root, contracts_tree_root: Felt::ZERO };
+
+            Ok(GetStorageProofResponse {
+                classes_proof,
+                contracts_proof,
+                contracts_storage_proofs,
+                global_roots,
+            })
+        })
+        .await
     }
 }
 

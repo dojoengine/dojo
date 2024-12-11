@@ -1,3 +1,4 @@
+use core::fmt;
 use std::marker::PhantomData;
 
 use anyhow::Result;
@@ -23,7 +24,11 @@ pub struct Error(#[from] crate::error::DatabaseError);
 impl katana_trie::bonsai::DBError for Error {}
 
 #[derive(Debug)]
-pub struct TrieDb<Tb: tables::Trie, Tx: DbTxMut> {
+pub struct TrieDb<Tb, Tx>
+where
+    Tb: tables::Trie,
+    Tx: DbTxMut,
+{
     tx: Tx,
     _table: PhantomData<Tb>,
 }
@@ -40,8 +45,8 @@ where
 
 impl<Tb, Tx> bonsai::BonsaiDatabase for TrieDb<Tb, Tx>
 where
-    Tb: tables::Trie,
-    Tx: DbTxMut,
+    Tb: tables::Trie + fmt::Debug,
+    Tx: DbTxMut + fmt::Debug,
 {
     type Batch = ();
     type DatabaseError = Error;
@@ -118,20 +123,23 @@ where
 
 impl<Tb, Tx> bonsai::BonsaiPersistentDatabase<BasicId> for TrieDb<Tb, Tx>
 where
-    Tb: tables::Trie,
-    Tx: DbTxMut,
+    Tb: tables::Trie + fmt::Debug,
+    Tx: DbTxMut + fmt::Debug,
 {
     type DatabaseError = Error;
-    type Transaction = TrieDb<Tb, Tx>;
+    type Transaction<'a> = TrieDb<Tb, Tx>  where Self: 'a;
 
     fn snapshot(&mut self, _: BasicId) {}
 
-    fn merge(&mut self, _: Self::Transaction) -> Result<(), Self::DatabaseError> {
+    fn merge<'a>(&mut self, _: Self::Transaction<'a>) -> Result<(), Self::DatabaseError>
+    where
+        Self: 'a,
+    {
         todo!();
     }
 
-    fn transaction(&self, _: BasicId) -> Option<Self::Transaction> {
-        todo!();
+    fn transaction(&self, id: BasicId) -> Option<(BasicId, Self::Transaction<'_>)> {
+        todo!()
     }
 }
 

@@ -18,6 +18,7 @@ use katana_primitives::state::{StateUpdates, StateUpdatesWithClasses};
 use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{Tx, TxHash, TxNumber, TxWithHash};
 use katana_primitives::Felt;
+use katana_trie::MultiProof;
 use parking_lot::RwLock;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
@@ -39,7 +40,7 @@ use crate::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionStatusProvider, TransactionTraceProvider,
     TransactionsProviderExt,
 };
-use crate::traits::trie::{ClassTrieWriter, ContractTrieWriter};
+use crate::traits::trie::{ClassTrieProvider, ClassTrieWriter, ContractTrieWriter};
 use crate::ProviderResult;
 
 #[derive(Debug)]
@@ -596,6 +597,22 @@ impl BlockEnvProvider for ForkedProvider {
             l1_data_gas_prices: header.l1_data_gas_prices,
             sequencer_address: header.sequencer_address,
         }))
+    }
+}
+
+impl ClassTrieProvider for ForkedProvider {
+    fn proofs(
+        &self,
+        block_number: BlockNumber,
+        class_hashes: &[ClassHash],
+    ) -> ProviderResult<MultiProof> {
+        let _ = block_number;
+        let _ = class_hashes;
+        unimplemented!()
+    }
+
+    fn root(&self) -> ProviderResult<Felt> {
+        unimplemented!()
     }
 }
 

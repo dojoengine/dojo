@@ -1,5 +1,6 @@
 use anyhow::Result;
 use bitvec::vec::BitVec;
+pub use bonsai::{MultiProof, ProofNode};
 pub use bonsai_trie as bonsai;
 use bonsai_trie::id::BasicId;
 use bonsai_trie::{BonsaiDatabase, BonsaiPersistentDatabase};
@@ -25,7 +26,7 @@ where
 
     let config = BonsaiStorageConfig::default();
     let bonsai_db = databases::HashMapDb::<BasicId>::default();
-    let mut bs = BonsaiStorage::<_, _, H>::new(bonsai_db, config).unwrap();
+    let mut bs = BonsaiStorage::<_, _, H>::new(bonsai_db, config, 64);
 
     for (id, value) in values.iter().enumerate() {
         let key = BitVec::from_iter(id.to_be_bytes());
