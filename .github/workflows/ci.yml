@@ -6,8 +6,14 @@ name: ci
 #       - main
 #   pull_request:
 
+# on:
+#   workflow_dispatch:
+
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - 'feat/**'    
+  
 
 env:
   CARGO_TERM_COLOR: always
