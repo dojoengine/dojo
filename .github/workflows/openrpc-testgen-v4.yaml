@@ -57,21 +57,16 @@ jobs:
       UDC_ADDRESS: "0x41a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf"
       ACCOUNT_CLASS_HASH: "0x07dc7899aa655b0aae51eadff6d801a58e97dd99cf4666ee59e704249e51adf2"
     steps:
-      - name: Checkout main repository
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
       - name: Install build dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential libclang-dev git curl bash libssl-dev pkg-config
 
-      - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
+      - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
 
       - name: Install Scarb via script
         run: |
@@ -79,53 +74,32 @@ jobs:
           curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | bash -s -- -v 2.8.4
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name: Download katana binary
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           name: dojo-bins
           path: /tmp/bins
 
-      - name: Set permissions for katana
+      - run: chmod +x /tmp/bins/katana
+        
+      - name: Start katana nodes
         run: |
-          chmod +x /tmp/bins/katana
-
-      - name: Start katana nodes 
-        run: |
-          /tmp/bins/katana \
-          --http.port "${KATANA_PORT}" \
-          --http.addr "${KATANA_ADDR}" \
-          --silent \
-          & 
-          /tmp/bins/katana \
-          --http.port "${KATANA_OPENRPC_PORT}" \
-          --http.addr "${KATANA_ADDR}" \
-          --silent \
-          &
-          /tmp/bins/katana \
-          --http.port "${KATANA_NO_MINING_PORT}" \
-          --http.addr "${KATANA_ADDR}" \
-          --silent \
-          --no-mining \
-          --dev \
-          &
-          /tmp/bins/katana \
-          --http.port "${KATANA_NO_FEE_PORT}" \
-          --http.addr "${KATANA_ADDR}" \
-          --silent \
-          --dev \
-          --dev.no-fee \
-          &
-          /tmp/bins/katana \
-          --http.port "${KATANA_NO_ACCOUNT_VALIDATION_PORT}" \
-          --http.addr "${KATANA_ADDR}" \
-          --silent \
-          --dev \
-          --dev.no-account-validation \
-          &
-          
-
-      - name: Checkout katana-runner repository
-        uses: actions/checkout@v3
+          declare -A KATANA_CONFIG=(
+            ["${KATANA_PORT}"]=""
+            ["${KATANA_OPENRPC_PORT}"]=""
+            ["${KATANA_NO_MINING_PORT}"]="--no-mining --dev"
+            ["${KATANA_NO_FEE_PORT}"]="--dev --dev.no-fee"
+            ["${KATANA_NO_ACCOUNT_VALIDATION_PORT}"]="--dev --dev.no-account-validation"
+          )
+      
+          for PORT in "${!KATANA_CONFIG[@]}"; do
+            /tmp/bins/katana \
+            --http.port "${PORT}" \
+            --http.addr "${KATANA_ADDR}" \
+            --silent \
+            ${KATANA_CONFIG[$PORT]} &
+          done
+        
+      - uses: actions/checkout@v3
         with:
           repository: neotheprogramist/starknet-rpc-tests
           path: katana-runner

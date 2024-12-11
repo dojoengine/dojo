@@ -50,27 +50,15 @@ jobs:
           sudo apt-get update && \
           sudo apt-get install -y build-essential libclang-dev git curl bash libssl-dev pkg-config
 
-      - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
+      - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
 
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
-
-      - name: Install Scarb via script
+      - name: Install Scarb
         run: |
           export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
           curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | bash -s -- -v $SCARB_VERSION
           echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-      - name: Cache target directory
-        uses: actions/cache@v3
-        with:
-          path: katana-runner/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('katana-runner/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
 
       - name: Download katana binary
         uses: actions/download-artifact@v4
@@ -78,9 +66,7 @@ jobs:
           name: dojo-bins
           path: /tmp/bins
 
-      - name: Set permissions for katana
-        run: |
-          chmod +x /tmp/bins/katana
+      - run: chmod +x /tmp/bins/katana
 
       - name: Start katana nodes 
         run: |
