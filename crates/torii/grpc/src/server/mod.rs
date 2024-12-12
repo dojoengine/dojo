@@ -1124,7 +1124,7 @@ fn build_keys_pattern(clause: &proto::types::KeysClause) -> Result<String, Error
     let mut keys_pattern = format!("^{}", keys.join("/"));
 
     if clause.pattern_matching == proto::types::PatternMatching::VariableLen as i32 {
-        keys_pattern += &format!("({})*", KEY_PATTERN);
+        keys_pattern += &format!("(/{})*", KEY_PATTERN);
     }
     keys_pattern += "/$";
 
