@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1733867744682,
+  "lastUpdate": 1733980564347,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -40165,6 +40165,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8547184,
             "range": "± 457721",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tarrencev@users.noreply.github.com",
+            "name": "Tarrence van As",
+            "username": "tarrencev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "35a58b3bca43510b549811edaf5ef1e8ca174cd3",
+          "message": "feat(torii): add world block and instrument queries (#2796)\n\n* start indexing from fixed block for eternum\r\n\r\n* Instrucment fetch entities\r\n\r\n* feat: add the world block to start syncing\r\n\r\nCurrently this commit will break the indexing of tokens\r\nsince they need to start from block 0.\r\n\r\n* chore: modify eternum config for quick sync\r\n\r\n---------\r\n\r\nCo-authored-by: tedison <timothyedison@hotmail.com>\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-12-12T11:59:40+07:00",
+          "tree_id": "c50006022178c82146d293c2a9067253a7430365",
+          "url": "https://github.com/dojoengine/dojo/commit/35a58b3bca43510b549811edaf5ef1e8ca174cd3"
+        },
+        "date": 1733980562608,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10186611892,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
