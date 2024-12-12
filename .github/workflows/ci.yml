@@ -68,39 +68,23 @@ jobs:
 
       - run: chmod +x /tmp/bins/katana
 
-      - name: Start katana nodes 
+      - name: Start katana nodes
         run: |
-          /tmp/bins/katana \
-          --http.port "${KATANA_PORT}" \
-          --http.addr "${KATANA_ADDR}" \
-          --silent \
-          & 
-          /tmp/bins/katana \
-          --http.port "${KATANA_OPENRPC_PORT}" \
-          --http.addr "${KATANA_ADDR}" \
-          --silent \
-          &
-          /tmp/bins/katana \
-          --http.port "${KATANA_NO_MINING_PORT}" \
-          --http.addr "${KATANA_ADDR}" \
-          --silent \
-          --no-mining \
-          --dev \
-          &
-          /tmp/bins/katana \
-          --http.port "${KATANA_NO_FEE_PORT}" \
-          --http.addr "${KATANA_ADDR}" \
-          --silent \
-          --dev \
-          --dev.no-fee \
-          &
-          /tmp/bins/katana \
-          --http.port "${KATANA_NO_ACCOUNT_VALIDATION_PORT}" \
-          --http.addr "${KATANA_ADDR}" \
-          --silent \
-          --dev \
-          --dev.no-account-validation \
-          &
+          declare -A KATANA_CONFIG=(
+            ["${KATANA_PORT}"]=""
+            ["${KATANA_OPENRPC_PORT}"]=""
+            ["${KATANA_NO_MINING_PORT}"]="--no-mining --dev"
+            ["${KATANA_NO_FEE_PORT}"]="--dev --dev.no-fee"
+            ["${KATANA_NO_ACCOUNT_VALIDATION_PORT}"]="--dev --dev.no-account-validation"
+          )
+      
+          for PORT in "${!KATANA_CONFIG[@]}"; do
+            /tmp/bins/katana \
+            --http.port "${PORT}" \
+            --http.addr "${KATANA_ADDR}" \
+            --silent \
+            ${KATANA_CONFIG[$PORT]} &
+          done
 
       - name: Checkout katana-runner repository
         uses: actions/checkout@v3
