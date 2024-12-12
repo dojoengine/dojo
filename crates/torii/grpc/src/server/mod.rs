@@ -768,7 +768,7 @@ impl DojoWorld {
             format!(
                 r#"
                 SELECT COUNT(*) FROM (
-                    SELECT [{table}].id
+                    SELECT DISTINCT [{table}].id
                     FROM [{table}]
                     JOIN {model_relation_table} ON [{table}].id = {model_relation_table}.entity_id
                     {join_clause}
@@ -802,7 +802,7 @@ impl DojoWorld {
 
         let query = format!(
             r#"
-            SELECT [{table}].id, group_concat({model_relation_table}.model_id) as model_ids
+            SELECT DISTINCT [{table}].id, group_concat({model_relation_table}.model_id) as model_ids
             FROM [{table}]
             JOIN {model_relation_table} ON [{table}].id = {model_relation_table}.entity_id
             {join_clause}
