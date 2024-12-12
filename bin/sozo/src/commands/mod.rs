@@ -21,7 +21,7 @@ pub(crate) mod migrate;
 pub(crate) mod model;
 pub(crate) mod options;
 pub(crate) mod test;
-pub(crate) mod verify;
+pub(crate) mod walnut;
 
 use build::BuildArgs;
 use call::CallArgs;
@@ -34,7 +34,7 @@ use inspect::InspectArgs;
 use migrate::MigrateArgs;
 use model::ModelArgs;
 use test::TestArgs;
-use verify::VerifyArgs;
+use walnut::WalnutArgs;
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {
@@ -65,8 +65,8 @@ pub enum Commands {
     Model(Box<ModelArgs>),
     #[command(about = "Inspect events emitted by the world")]
     Events(Box<EventsArgs>),
-    #[command(about = "Verify contracts in walnut.dev - transactions debugger and simulator")]
-    WalnutVerify(Box<VerifyArgs>),
+    #[command(about = "Interact with walnut.dev - transactions debugger and simulator")]
+    Walnut(Box<WalnutArgs>),
 }
 
 impl fmt::Display for Commands {
@@ -85,7 +85,7 @@ impl fmt::Display for Commands {
             Commands::Init(_) => write!(f, "Init"),
             Commands::Model(_) => write!(f, "Model"),
             Commands::Events(_) => write!(f, "Events"),
-            Commands::WalnutVerify(_) => write!(f, "WalnutVerify"),
+            Commands::Walnut(_) => write!(f, "WalnutVerify"),
         }
     }
 }
@@ -112,7 +112,7 @@ pub fn run(command: Commands, config: &Config) -> Result<()> {
         Commands::Init(args) => args.run(config),
         Commands::Model(args) => args.run(config),
         Commands::Events(args) => args.run(config),
-        Commands::WalnutVerify(args) => args.run(config),
+        Commands::Walnut(args) => args.run(config),
     }
 }
 
