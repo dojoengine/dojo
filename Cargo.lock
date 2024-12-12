@@ -13942,6 +13942,7 @@ version = "1.0.5"
 dependencies = [
  "anyhow",
  "console",
+ "dojo-utils",
  "dojo-world",
  "reqwest 0.11.27",
  "scarb",
