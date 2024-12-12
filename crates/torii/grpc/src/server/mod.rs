@@ -768,7 +768,7 @@ impl DojoWorld {
             format!(
                 r#"
                 SELECT COUNT(*) FROM (
-                    SELECT [{table}].id
+                    SELECT DISTINCT [{table}].id
                     FROM [{table}]
                     JOIN {model_relation_table} ON [{table}].id = {model_relation_table}.entity_id
                     {join_clause}
@@ -802,7 +802,7 @@ impl DojoWorld {
 
         let query = format!(
             r#"
-            SELECT [{table}].id, group_concat({model_relation_table}.model_id) as model_ids
+            SELECT DISTINCT [{table}].id, group_concat({model_relation_table}.model_id) as model_ids
             FROM [{table}]
             JOIN {model_relation_table} ON [{table}].id = {model_relation_table}.entity_id
             {join_clause}
@@ -1193,12 +1193,12 @@ fn build_composite_clause(
                     })
                     .collect::<Vec<_>>()
                     .join(", ");
-                where_clauses.push(format!("{table}.id IN ({})", ids));
+                where_clauses.push(format!("({table}.id IN ({}))", ids));
             }
             ClauseType::Keys(keys) => {
                 let keys_pattern = build_keys_pattern(keys)?;
                 bind_values.push(keys_pattern);
-                where_clauses.push(format!("{table}.keys REGEXP ?"));
+                where_clauses.push(format!("({table}.keys REGEXP ?)"));
 
                 // Add model checks for specified models
                 for model in &keys.models {
@@ -1254,7 +1254,7 @@ fn build_composite_clause(
 
                 // Use the column name directly since it's already flattened
                 where_clauses
-                    .push(format!("[{alias}].[{}] {comparison_operator} ?", member.member));
+                    .push(format!("([{alias}].[{}] {comparison_operator} ?)", member.member));
             }
             ClauseType::Composite(nested) => {
                 // Handle nested composite by recursively building the clause
@@ -1265,7 +1265,8 @@ fn build_composite_clause(
                     where_clauses.push(format!("({})", nested_where.trim_start_matches("WHERE ")));
                 }
                 if !nested_having.is_empty() {
-                    having_clauses.push(nested_having.trim_start_matches("HAVING ").to_string());
+                    having_clauses
+                        .push(format!("({})", nested_having.trim_start_matches("HAVING ")));
                 }
                 join_clauses.extend(
                     nested_join
