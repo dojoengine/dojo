@@ -1,12 +1,9 @@
 name: cargo-udeps
 
-# on:
-#   schedule:
-#     # Triggers the workflow every Sunday
-#     - cron: "0 18 * * 0"
-
 on:
-  workflow_dispatch:
+  schedule:
+    # Triggers the workflow every Sunday
+    - cron: "0 18 * * 0"
 
 env:
   CARGO_TERM_COLOR: always

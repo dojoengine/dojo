@@ -1,12 +1,8 @@
 name: benchmark
 
-# on:
-  # push:
-  #   branches: [main]
-
 on:
-  workflow_dispatch:
-
+  push:
+    branches: [main]
 
 permissions:
   # deployments permission to deploy GitHub pages website
