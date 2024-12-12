@@ -1124,7 +1124,7 @@ fn build_keys_pattern(clause: &proto::types::KeysClause) -> Result<String, Error
     let mut keys_pattern = format!("^{}", keys.join("/"));
 
     if clause.pattern_matching == proto::types::PatternMatching::VariableLen as i32 {
-        keys_pattern += &format!("({})*", KEY_PATTERN);
+        keys_pattern += &format!("/({})*", KEY_PATTERN);
     }
     keys_pattern += "/$";
 
@@ -1162,6 +1162,19 @@ fn build_composite_clause(
                 let keys_pattern = build_keys_pattern(keys)?;
                 bind_values.push(keys_pattern);
                 where_clauses.push(format!("{table}.keys REGEXP ?"));
+
+                // Add model checks for specified models
+                for model in &keys.models {
+                    let (namespace, model_name) = model
+                        .split_once('-')
+                        .ok_or(QueryError::InvalidNamespacedModel(model.clone()))?;
+                    let model_id = compute_selector_from_names(namespace, model_name);
+
+                    having_clauses.push(format!(
+                        "INSTR(group_concat({model_relation_table}.model_id), '{:#x}') > 0",
+                        model_id
+                    ));
+                }
             }
             ClauseType::Member(member) => {
                 let comparison_operator = ComparisonOperator::from_repr(member.operator as usize)
