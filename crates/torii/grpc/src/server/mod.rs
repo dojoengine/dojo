@@ -742,16 +742,25 @@ impl DojoWorld {
         let (where_clause, having_clause, join_clause, bind_values) =
             build_composite_clause(table, model_relation_table, &composite)?;
 
-        let count_query = format!(
-            r#"
-            SELECT COUNT(DISTINCT [{table}].id)
-            FROM [{table}]
-            JOIN {model_relation_table} ON [{table}].id = {model_relation_table}.entity_id
-            {join_clause}
-            {where_clause}
-            {having_clause}
-            "#,
-        );
+        let count_query = if !having_clause.is_empty() {
+            format!(
+                "SELECT COUNT(*) FROM (
+                    SELECT {table}.id
+                    FROM {table}
+                    {join_clause}
+                    {where_clause}
+                    GROUP BY {table}.id
+                    {having_clause}
+                ) as filtered_count",
+            )
+        } else {
+            format!(
+                "SELECT COUNT(DISTINCT {table}.id)
+                FROM {table}
+                {join_clause}
+                {where_clause}",
+            )
+        };
 
         let mut count_query = sqlx::query_scalar::<_, u32>(&count_query);
         for value in &bind_values {
