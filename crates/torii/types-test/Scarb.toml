@@ -2,7 +2,7 @@
 cairo-version = "=2.8.4"
 edition = "2024_07"
 name = "types_test"
-version = "1.0.5"
+version = "1.0.6"
 
 [cairo]
 sierra-replace-ids = true
