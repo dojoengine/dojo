@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1733981780687,
+  "lastUpdate": 1734020348503,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -40321,6 +40321,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7869491,
             "range": "± 59991",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "133feec560e48cb6b53713bbec92b63bffacfcf8",
+          "message": "fix(torii-grpc): address sql precedence in composite (#2800)\n\n* fix(torii-grpc): address sql precedence in composite\n\n* add distincts\n\n* fmt",
+          "timestamp": "2024-12-12T16:02:17Z",
+          "tree_id": "4da81b9aef7b9cc13176be531974c7c9653d5ecb",
+          "url": "https://github.com/dojoengine/dojo/commit/133feec560e48cb6b53713bbec92b63bffacfcf8"
+        },
+        "date": 1734020346854,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10497762059,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
