@@ -1,12 +1,14 @@
 use std::str::FromStr;
 use std::sync::Arc;
 
+use crate::transport::http;
 use jsonrpsee::core::{async_trait, Error};
 use katana_core::backend::Backend;
 use katana_core::service::block_producer::{BlockProducer, BlockProducerMode, PendingExecutor};
 use katana_executor::ExecutorFactory;
+use katana_primitives::fee::PriceUnit;
 use katana_primitives::genesis::constant::{
-    get_fee_token_balance_base_storage_address, ERC20_NAME_STORAGE_SLOT,
+    get_erc20_address, get_fee_token_balance_base_storage_address,
 };
 use katana_primitives::ContractAddress;
 use katana_provider::traits::state::StateFactoryProvider;
@@ -97,29 +99,20 @@ impl<EF: ExecutorFactory> DevApiServer for DevApi<EF> {
         Ok(())
     }
 
-    async fn account_balance(&self, address: String) -> Result<u128, Error> {
-        let account_address: ContractAddress = Felt::from_str(&address).unwrap().into();
+    async fn account_balance(&self, address: String, unit: String) -> Result<u128, Error> {
+        let account_address: ContractAddress = Felt::from_str(address.as_str()).unwrap().into();
+        let unit = Some(PriceUnit::from_str(unit.to_uppercase().as_str()))
+            .unwrap()
+            .unwrap_or(PriceUnit::Wei);
+        let erc20_address =
+            get_erc20_address(&unit).map_err(|_| http::response::internal_error()).unwrap();
+
         let provider = self.backend.blockchain.provider();
         let state = provider.latest().unwrap();
-        // let storage_slot =
-        //     get_storage_var_address("ERC20_balances", &[account_address.into()]).unwrap();
         let storage_slot = get_fee_token_balance_base_storage_address(account_address);
-        let balance_felt = state
-            .storage(self.backend.chain_spec.fee_contracts.eth, storage_slot)
-            .unwrap()
-            .unwrap();
+        let balance_felt = state.storage(erc20_address, storage_slot).unwrap().unwrap();
         let balance: u128 = balance_felt.to_string().parse().unwrap();
         Ok(balance)
-    }
-
-    async fn fee_token(&self) -> Result<String, Error> {
-        let provider = self.backend.blockchain.provider();
-        let state = provider.latest().unwrap();
-        let fee_token = state
-            .storage(self.backend.chain_spec.fee_contracts.eth, ERC20_NAME_STORAGE_SLOT)
-            .unwrap()
-            .unwrap();
-        Ok(fee_token.to_string())
     }
 
     async fn mint(&self) -> Result<(), Error> {

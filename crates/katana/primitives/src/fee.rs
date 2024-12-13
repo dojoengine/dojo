@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -27,6 +29,17 @@ pub enum PriceUnit {
     Wei,
     #[serde(rename = "FRI")]
     Fri,
+}
+
+impl FromStr for PriceUnit {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "WEI" => Ok(PriceUnit::Wei),
+            "FRI" => Ok(PriceUnit::Fri),
+            _ => Err(()), // Return an error for unknown units
+        }
+    }
 }
 
 /// Information regarding the fee and gas usages of a transaction.
