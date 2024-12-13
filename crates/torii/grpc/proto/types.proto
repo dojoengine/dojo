@@ -76,6 +76,7 @@ message Query {
     bool dont_include_hashed_keys = 4;
     repeated OrderBy order_by = 5;
     repeated string entity_models = 6;
+	uint64 internal_updated_at = 7;
 }
 
 message EventQuery {

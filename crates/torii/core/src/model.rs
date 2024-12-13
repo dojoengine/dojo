@@ -124,6 +124,7 @@ pub fn build_sql_query(
     order_by: Option<&str>,
     limit: Option<u32>,
     offset: Option<u32>,
+    internal_updated_at: u64,
 ) -> Result<(String, String), Error> {
     fn collect_columns(table_prefix: &str, path: &str, ty: &Ty, selections: &mut Vec<String>) {
         match ty {
@@ -172,6 +173,7 @@ pub fn build_sql_query(
     selections.push(format!("{}.id", table_name));
     selections.push(format!("{}.keys", table_name));
 
+    let mut internal_updated_at_clause = Vec::with_capacity(schemas.len());
     // Process each model schema
     for model in schemas {
         let model_table = model.name();
@@ -179,6 +181,11 @@ pub fn build_sql_query(
             "LEFT JOIN [{model_table}] ON {table_name}.id = \
              [{model_table}].{entity_relation_column}",
         ));
+
+        if internal_updated_at > 0 {
+            internal_updated_at_clause
+                .push(format!("[{model_table}].internal_updated_at > {}", internal_updated_at));
+        }
 
         // Collect columns with table prefix
         collect_columns(&model_table, "", model, &mut selections);
@@ -195,6 +202,18 @@ pub fn build_sql_query(
     if let Some(where_clause) = where_clause {
         query += &format!(" WHERE {}", where_clause);
         count_query += &format!(" WHERE {}", where_clause);
+    }
+
+    if !internal_updated_at_clause.is_empty() {
+        if where_clause.is_none() {
+            query += " WHERE ";
+            count_query += " WHERE ";
+        } else {
+            query += " AND ";
+            count_query += " AND ";
+        }
+        query += &format!(" {}", internal_updated_at_clause.join(" AND "));
+        count_query += &format!(" {}", internal_updated_at_clause.join(" AND "));
     }
 
     // Use custom order by if provided, otherwise default to event_id DESC
@@ -494,11 +513,11 @@ mod tests {
             None,
             None,
             None,
+            0,
         )
         .unwrap();
 
-        let expected_query =
-            "SELECT entities.id, entities.keys, [Test-Position].[player] as \
+        let expected_query = "SELECT entities.id, entities.keys, [Test-Position].[player] as \
              \"Test-Position.player\", [Test-Position].[vec.x] as \"Test-Position.vec.x\", \
              [Test-Position].[vec.y] as \"Test-Position.vec.y\", \
              [Test-Position].[test_everything] as \"Test-Position.test_everything\", \
