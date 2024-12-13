@@ -105,6 +105,7 @@ pub struct Query {
     pub offset: u32,
     pub dont_include_hashed_keys: bool,
     pub order_by: Vec<OrderBy>,
+    pub entity_models: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
@@ -269,6 +270,7 @@ impl From<Query> for proto::types::Query {
             offset: value.offset,
             dont_include_hashed_keys: value.dont_include_hashed_keys,
             order_by: value.order_by.into_iter().map(|o| o.into()).collect(),
+            entity_models: value.entity_models,
         }
     }
 }
