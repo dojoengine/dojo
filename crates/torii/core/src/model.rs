@@ -116,6 +116,7 @@ impl ModelReader<Error> for ModelSQLReader {
 }
 
 /// Creates a query that fetches all models and their nested data.
+#[allow(clippy::too_many_arguments)]
 pub fn build_sql_query(
     schemas: &Vec<Ty>,
     table_name: &str,
