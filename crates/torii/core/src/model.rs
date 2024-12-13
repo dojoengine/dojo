@@ -517,7 +517,8 @@ mod tests {
         )
         .unwrap();
 
-        let expected_query = "SELECT entities.id, entities.keys, [Test-Position].[player] as \
+        let expected_query =
+            "SELECT entities.id, entities.keys, [Test-Position].[player] as \
              \"Test-Position.player\", [Test-Position].[vec.x] as \"Test-Position.vec.x\", \
              [Test-Position].[vec.y] as \"Test-Position.vec.y\", \
              [Test-Position].[test_everything] as \"Test-Position.test_everything\", \
