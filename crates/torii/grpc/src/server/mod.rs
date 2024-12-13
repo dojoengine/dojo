@@ -267,7 +267,8 @@ impl DojoWorld {
         order_by: Option<&str>,
         entity_models: Vec<String>,
     ) -> Result<Vec<proto::types::Entity>, Error> {
-        let entity_models = entity_models.iter().map(|tag| compute_selector_from_tag(tag)).collect::<Vec<Felt>>();
+        let entity_models =
+            entity_models.iter().map(|tag| compute_selector_from_tag(tag)).collect::<Vec<Felt>>();
 
         tracing::debug!(
             "Fetching entities from table {table} with {} entity/model pairs",
@@ -321,15 +322,17 @@ impl DojoWorld {
         let query_start = std::time::Instant::now();
         for (models_str, entity_ids) in &model_groups {
             tracing::debug!("Processing model group with {} entities", entity_ids.len());
-            let model_ids =
-                models_str.split(',').filter_map(|id| {
+            let model_ids = models_str
+                .split(',')
+                .filter_map(|id| {
                     let model_id = Felt::from_str(id).unwrap();
                     if entity_models.is_empty() || entity_models.contains(&model_id) {
                         Some(model_id)
                     } else {
                         None
                     }
-                }).collect::<Vec<_>>();
+                })
+                .collect::<Vec<_>>();
             let schemas =
                 self.model_cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect();
 
@@ -689,7 +692,8 @@ impl DojoWorld {
         order_by: Option<&str>,
         entity_models: Vec<String>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
-        let entity_models = entity_models.iter().map(|model| compute_selector_from_tag(model)).collect::<Vec<_>>();
+        let entity_models =
+            entity_models.iter().map(|model| compute_selector_from_tag(model)).collect::<Vec<_>>();
         let comparison_operator = ComparisonOperator::from_repr(member_clause.operator as usize)
             .expect("invalid comparison operator");
 
