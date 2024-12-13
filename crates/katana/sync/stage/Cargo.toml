@@ -1,7 +1,7 @@
 [package]
 edition.workspace = true
 license.workspace = true
-name = "katana-pipeline"
+name = "katana-stage"
 repository.workspace = true
 version.workspace = true
 
@@ -11,7 +11,7 @@ katana-executor.workspace = true
 katana-feeder-gateway.workspace = true
 katana-pool.workspace = true
 katana-primitives.workspace = true
-katana-provider = { workspace = true, features = [ "test-utils" ] }
+katana-provider.workspace = true
 katana-rpc-types.workspace = true
 katana-tasks.workspace = true
 

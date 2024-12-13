@@ -4819,7 +4819,7 @@ checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 
 [[package]]
 name = "dojo-bindgen"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -4842,11 +4842,11 @@ dependencies = [
 
 [[package]]
 name = "dojo-contracts"
-version = "1.0.5"
+version = "1.0.6"
 
 [[package]]
 name = "dojo-examples-spawn-and-move"
-version = "1.0.5"
+version = "1.0.6"
 
 [[package]]
 name = "dojo-lang"
@@ -4888,7 +4888,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-lang"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "anyhow",
  "cairo-lang-defs",
@@ -4898,7 +4898,7 @@ dependencies = [
  "cairo-lang-semantic",
  "cairo-lang-syntax",
  "cairo-lang-utils",
- "dojo-types 1.0.5",
+ "dojo-types 1.0.6",
  "itertools 0.12.1",
  "serde",
  "smol_str",
@@ -4909,16 +4909,16 @@ dependencies = [
 
 [[package]]
 name = "dojo-language-server"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "cairo-lang-language-server",
  "clap",
- "dojo-lang 1.0.5",
+ "dojo-lang 1.0.6",
 ]
 
 [[package]]
 name = "dojo-metrics"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "hyper 0.14.30",
  "jemalloc-ctl",
@@ -4934,17 +4934,17 @@ dependencies = [
 
 [[package]]
 name = "dojo-test-utils"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "anyhow",
  "assert_fs",
  "async-trait",
  "camino",
- "jsonrpsee 0.16.3",
  "katana-core",
  "katana-executor",
  "katana-node",
  "katana-primitives",
+ "katana-rpc",
  "scarb",
  "scarb-ui",
  "serde",
@@ -4978,7 +4978,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-types"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "anyhow",
  "cainome 0.4.8",
@@ -4999,7 +4999,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-utils"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -5017,13 +5017,13 @@ dependencies = [
 
 [[package]]
 name = "dojo-world"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "anyhow",
  "async-trait",
  "cainome 0.4.8",
  "cairo-lang-starknet-classes",
- "dojo-types 1.0.5",
+ "dojo-types 1.0.6",
  "futures",
  "hex",
  "hex-literal",
@@ -5044,7 +5044,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-world-abigen"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "anyhow",
  "cainome 0.4.8",
@@ -7390,6 +7390,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "hyper-tungstenite"
+version = "0.11.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7cc7dcb1ab67cd336f468a12491765672e61a3b6b148634dbfe2fe8acd3fe7d9"
+dependencies = [
+ "hyper 0.14.30",
+ "pin-project-lite",
+ "tokio",
+ "tokio-tungstenite 0.20.1",
+ "tungstenite 0.20.1",
+]
+
+[[package]]
 name = "hyper-util"
 version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8356,7 +8369,7 @@ dependencies = [
 
 [[package]]
 name = "katana"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -8373,7 +8386,7 @@ dependencies = [
 
 [[package]]
 name = "katana-cairo"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "cairo-lang-casm",
  "cairo-lang-runner",
@@ -8388,7 +8401,7 @@ dependencies = [
 
 [[package]]
 name = "katana-cli"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -8400,6 +8413,7 @@ dependencies = [
  "katana-core",
  "katana-node",
  "katana-primitives",
+ "katana-rpc",
  "katana-slot-controller",
  "serde",
  "serde_json",
@@ -8415,7 +8429,7 @@ dependencies = [
 
 [[package]]
 name = "katana-codecs"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "bytes",
  "katana-primitives",
@@ -8423,7 +8437,7 @@ dependencies = [
 
 [[package]]
 name = "katana-codecs-derive"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -8433,7 +8447,7 @@ dependencies = [
 
 [[package]]
 name = "katana-core"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "alloy-contract 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "alloy-network 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -8474,7 +8488,7 @@ dependencies = [
 
 [[package]]
 name = "katana-db"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "anyhow",
  "arbitrary",
@@ -8501,7 +8515,7 @@ dependencies = [
 
 [[package]]
 name = "katana-executor"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -8528,7 +8542,7 @@ dependencies = [
 
 [[package]]
 name = "katana-feeder-gateway"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "katana-primitives",
  "katana-rpc-types",
@@ -8543,7 +8557,7 @@ dependencies = [
 
 [[package]]
 name = "katana-grpc"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "tonic 0.11.0",
  "tonic-build 0.11.0",
@@ -8552,7 +8566,7 @@ dependencies = [
 
 [[package]]
 name = "katana-node"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "anyhow",
  "clap",
@@ -8572,6 +8586,7 @@ dependencies = [
  "katana-provider",
  "katana-rpc",
  "katana-rpc-api",
+ "katana-stage",
  "katana-tasks",
  "serde",
  "serde_json",
@@ -8591,7 +8606,7 @@ dependencies = [
 
 [[package]]
 name = "katana-node-bindings"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "regex",
  "serde",
@@ -8606,22 +8621,13 @@ dependencies = [
 
 [[package]]
 name = "katana-pipeline"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
- "anyhow",
  "async-trait",
- "backon",
  "futures",
- "katana-core",
- "katana-executor",
- "katana-feeder-gateway",
- "katana-pool",
  "katana-primitives",
  "katana-provider",
- "katana-rpc-types",
- "katana-tasks",
- "num-traits 0.2.19",
- "starknet 0.12.0",
+ "katana-stage",
  "thiserror",
  "tokio",
  "tracing",
@@ -8629,7 +8635,7 @@ dependencies = [
 
 [[package]]
 name = "katana-pool"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "futures",
  "futures-util",
@@ -8645,7 +8651,7 @@ dependencies = [
 
 [[package]]
 name = "katana-primitives"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -8676,7 +8682,7 @@ dependencies = [
 
 [[package]]
 name = "katana-provider"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -8704,7 +8710,7 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "alloy",
  "alloy-primitives",
@@ -8750,13 +8756,14 @@ dependencies = [
  "tokio-stream",
  "tokio-util",
  "tower 0.4.13",
+ "tower-http 0.4.4",
  "tracing",
  "url",
 ]
 
 [[package]]
 name = "katana-rpc-api"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "jsonrpsee 0.16.3",
  "katana-core",
@@ -8767,7 +8774,7 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc-types"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -8794,7 +8801,7 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc-types-builder"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "anyhow",
  "katana-executor",
@@ -8806,7 +8813,7 @@ dependencies = [
 
 [[package]]
 name = "katana-runner"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -8819,7 +8826,7 @@ dependencies = [
 
 [[package]]
 name = "katana-runner-macro"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -8828,7 +8835,7 @@ dependencies = [
 
 [[package]]
 name = "katana-slot-controller"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -8845,8 +8852,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "katana-stage"
+version = "1.0.6"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "backon",
+ "futures",
+ "katana-core",
+ "katana-executor",
+ "katana-feeder-gateway",
+ "katana-pool",
+ "katana-primitives",
+ "katana-provider",
+ "katana-rpc-types",
+ "katana-tasks",
+ "num-traits 0.2.19",
+ "starknet 0.12.0",
+ "thiserror",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "katana-tasks"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "futures",
  "rayon",
@@ -8859,7 +8889,7 @@ dependencies = [
 
 [[package]]
 name = "katana-trie"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "anyhow",
  "bitvec",
@@ -12843,7 +12873,7 @@ dependencies = [
 
 [[package]]
 name = "saya"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "anyhow",
  "clap",
@@ -12861,7 +12891,7 @@ dependencies = [
 
 [[package]]
 name = "saya-core"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -12894,7 +12924,7 @@ dependencies = [
 
 [[package]]
 name = "saya-provider"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -13084,7 +13114,7 @@ dependencies = [
 
 [[package]]
 name = "scheduler"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "anyhow",
  "clap",
@@ -13813,7 +13843,7 @@ dependencies = [
 
 [[package]]
 name = "sozo"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -13830,9 +13860,9 @@ dependencies = [
  "clap-verbosity-flag",
  "colored",
  "dojo-bindgen",
- "dojo-lang 1.0.5",
+ "dojo-lang 1.0.6",
  "dojo-test-utils",
- "dojo-types 1.0.5",
+ "dojo-types 1.0.6",
  "dojo-utils",
  "dojo-world",
  "itertools 0.12.1",
@@ -13864,7 +13894,7 @@ dependencies = [
 
 [[package]]
 name = "sozo-ops"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -13873,7 +13903,7 @@ dependencies = [
  "colored",
  "colored_json",
  "dojo-test-utils",
- "dojo-types 1.0.5",
+ "dojo-types 1.0.6",
  "dojo-utils",
  "dojo-world",
  "futures",
@@ -13896,7 +13926,7 @@ dependencies = [
 
 [[package]]
 name = "sozo-scarbext"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "anyhow",
  "camino",
@@ -13909,7 +13939,7 @@ dependencies = [
 
 [[package]]
 name = "sozo-signers"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "anyhow",
  "starknet 0.12.0",
@@ -13917,7 +13947,7 @@ dependencies = [
 
 [[package]]
 name = "sozo-walnut"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "anyhow",
  "console",
@@ -15259,6 +15289,18 @@ dependencies = [
 
 [[package]]
 name = "tokio-tungstenite"
+version = "0.20.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "212d5dcb2a1ce06d81107c3d0ffa3121fe974b73f068c8282cb1c32328113b6c"
+dependencies = [
+ "futures-util",
+ "log",
+ "tokio",
+ "tungstenite 0.20.1",
+]
+
+[[package]]
+name = "tokio-tungstenite"
 version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c83b561d025642014097b66e6c1bb422783339e0909e4429cde4749d1990bc38"
@@ -15266,7 +15308,7 @@ dependencies = [
  "futures-util",
  "log",
  "tokio",
- "tungstenite",
+ "tungstenite 0.21.0",
 ]
 
 [[package]]
@@ -15470,7 +15512,7 @@ dependencies = [
 
 [[package]]
 name = "torii"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -15483,7 +15525,7 @@ dependencies = [
  "clap_config",
  "ctrlc",
  "dojo-metrics",
- "dojo-types 1.0.5",
+ "dojo-types 1.0.6",
  "dojo-utils",
  "dojo-world",
  "either",
@@ -15520,7 +15562,7 @@ dependencies = [
 
 [[package]]
 name = "torii-cli"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -15536,12 +15578,12 @@ dependencies = [
 
 [[package]]
 name = "torii-client"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "async-trait",
  "camino",
  "crypto-bigint",
- "dojo-types 1.0.5",
+ "dojo-types 1.0.6",
  "dojo-world",
  "futures",
  "futures-util",
@@ -15564,7 +15606,7 @@ dependencies = [
 
 [[package]]
 name = "torii-core"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -15575,7 +15617,7 @@ dependencies = [
  "crypto-bigint",
  "data-url",
  "dojo-test-utils",
- "dojo-types 1.0.5",
+ "dojo-types 1.0.6",
  "dojo-utils",
  "dojo-world",
  "futures-channel",
@@ -15603,7 +15645,7 @@ dependencies = [
 
 [[package]]
 name = "torii-graphql"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "anyhow",
  "async-graphql",
@@ -15614,7 +15656,7 @@ dependencies = [
  "chrono",
  "convert_case 0.6.0",
  "dojo-test-utils",
- "dojo-types 1.0.5",
+ "dojo-types 1.0.6",
  "dojo-utils",
  "dojo-world",
  "katana-runner",
@@ -15643,13 +15685,13 @@ dependencies = [
 
 [[package]]
 name = "torii-grpc"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "cainome 0.4.8",
  "camino",
  "crypto-bigint",
  "dojo-test-utils",
- "dojo-types 1.0.5",
+ "dojo-types 1.0.6",
  "dojo-utils",
  "dojo-world",
  "futures",
@@ -15690,13 +15732,13 @@ dependencies = [
 
 [[package]]
 name = "torii-relay"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "anyhow",
  "cainome 0.4.8",
  "chrono",
  "crypto-bigint",
- "dojo-types 1.0.5",
+ "dojo-types 1.0.6",
  "dojo-world",
  "futures",
  "indexmap 2.5.0",
@@ -15725,7 +15767,7 @@ dependencies = [
 
 [[package]]
 name = "torii-server"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -15733,10 +15775,12 @@ dependencies = [
  "camino",
  "data-url",
  "form_urlencoded",
+ "futures-util",
  "http 0.2.12",
  "http-body 0.4.6",
  "hyper 0.14.30",
  "hyper-reverse-proxy",
+ "hyper-tungstenite",
  "image",
  "indexmap 2.5.0",
  "lazy_static",
@@ -15746,6 +15790,7 @@ dependencies = [
  "serde_json",
  "sqlx",
  "tokio",
+ "tokio-tungstenite 0.20.1",
  "tokio-util",
  "torii-core",
  "tower 0.4.13",
@@ -16035,6 +16080,25 @@ dependencies = [
 
 [[package]]
 name = "tungstenite"
+version = "0.20.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9e3dac10fd62eaf6617d3a904ae222845979aec67c615d1c842b4002c7666fb9"
+dependencies = [
+ "byteorder",
+ "bytes",
+ "data-encoding",
+ "http 0.2.12",
+ "httparse",
+ "log",
+ "rand 0.8.5",
+ "sha1",
+ "thiserror",
+ "url",
+ "utf-8",
+]
+
+[[package]]
+name = "tungstenite"
 version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9ef1a641ea34f399a848dea702823bbecfb4c486f911735368f1f137cb8257e1"
@@ -16106,7 +16170,7 @@ checksum = "42ff0bf0c66b8238c6f3b578df37d0b7848e55df8577b3f74f92a69acceeb825"
 
 [[package]]
 name = "types-test"
-version = "1.0.5"
+version = "1.0.6"
 
 [[package]]
 name = "u256-literal"
@@ -16408,7 +16472,7 @@ dependencies = [
 
 [[package]]
 name = "verify_db_balances"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "clap",
  "num-traits 0.2.19",
@@ -16524,7 +16588,7 @@ dependencies = [
  "serde_json",
  "serde_urlencoded",
  "tokio",
- "tokio-tungstenite",
+ "tokio-tungstenite 0.21.0",
  "tokio-util",
  "tower-service",
  "tracing",
@@ -17484,7 +17548,7 @@ checksum = "9d422e8e38ec76e2f06ee439ccc765e9c6a9638b9e7c9f2e8255e4d41e8bd852"
 
 [[package]]
 name = "xtask-generate-test-db"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "anyhow",
  "dojo-test-utils",

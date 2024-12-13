@@ -344,19 +344,7 @@ public class {}_{} : ModelInstance {{
                             true,
                             enum_variant,
                         )],
-                        CompositeType::Unknown if t.type_name() == "U256" => vec![
-                            (
-                                format!("new FieldElement({}.high).Inner", arg_name),
-                                false,
-                                enum_variant.clone(),
-                            ),
-                            (
-                                format!("new FieldElement({}.low).Inner", arg_name),
-                                false,
-                                enum_variant,
-                            ),
-                        ],
-                        CompositeType::Struct => {
+                        CompositeType::Unknown | CompositeType::Struct => {
                             let mut tokens = vec![];
                             t.inners.iter().for_each(|f| {
                                 tokens.extend(handle_arg_recursive(
@@ -408,7 +396,6 @@ public class {}_{} : ModelInstance {{
 
                             tokens
                         }
-                        CompositeType::Unknown => panic!("Unknown composite type: {:?}", t),
                     }
                 }
                 Token::Array(array) => {

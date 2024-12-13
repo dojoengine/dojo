@@ -263,25 +263,36 @@ impl DojoWorld {
         dont_include_hashed_keys: bool,
         order_by: Option<&str>,
     ) -> Result<Vec<proto::types::Entity>, Error> {
+        tracing::debug!(
+            "Fetching entities from table {table} with {} entity/model pairs",
+            entities.len()
+        );
+        let start = std::time::Instant::now();
+
         // Group entities by their model combinations
         let mut model_groups: HashMap<String, Vec<String>> = HashMap::new();
         for (entity_id, models_str) in entities {
             model_groups.entry(models_str).or_default().push(entity_id);
         }
+        tracing::debug!("Grouped into {} distinct model combinations", model_groups.len());
 
         let mut all_entities = Vec::new();
 
         let mut tx = self.pool.begin().await?;
+        tracing::debug!("Started database transaction");
 
         // Create a temporary table to store entity IDs due to them potentially exceeding
         // SQLite's parameters limit which is 999
+        let temp_table_start = std::time::Instant::now();
         sqlx::query(
             "CREATE TEMPORARY TABLE temp_entity_ids (id TEXT PRIMARY KEY, model_group TEXT)",
         )
         .execute(&mut *tx)
         .await?;
+        tracing::debug!("Created temporary table in {:?}", temp_table_start.elapsed());
 
         // Insert all entity IDs into the temporary table
+        let insert_start = std::time::Instant::now();
         for (model_ids, entity_ids) in &model_groups {
             for chunk in entity_ids.chunks(999) {
                 let placeholders = chunk.iter().map(|_| "(?, ?)").collect::<Vec<_>>().join(",");
@@ -296,8 +307,14 @@ impl DojoWorld {
                 query.execute(&mut *tx).await?;
             }
         }
+        tracing::debug!(
+            "Inserted all entity IDs into temporary table in {:?}",
+            insert_start.elapsed()
+        );
 
-        for (models_str, _) in model_groups {
+        let query_start = std::time::Instant::now();
+        for (models_str, entity_ids) in &model_groups {
+            tracing::debug!("Processing model group with {} entities", entity_ids.len());
             let model_ids =
                 models_str.split(',').map(|id| Felt::from_str(id).unwrap()).collect::<Vec<_>>();
             let schemas =
@@ -315,7 +332,7 @@ impl DojoWorld {
                 None,
             )?;
 
-            let rows = sqlx::query(&entity_query).bind(&models_str).fetch_all(&mut *tx).await?;
+            let rows = sqlx::query(&entity_query).bind(models_str).fetch_all(&mut *tx).await?;
             let schemas = Arc::new(schemas);
 
             let group_entities: Result<Vec<_>, Error> = rows
@@ -325,10 +342,15 @@ impl DojoWorld {
 
             all_entities.extend(group_entities?);
         }
+        tracing::debug!("Processed all model groups in {:?}", query_start.elapsed());
 
         sqlx::query("DROP TABLE temp_entity_ids").execute(&mut *tx).await?;
+        tracing::debug!("Dropped temporary table");
 
         tx.commit().await?;
+        tracing::debug!("Committed transaction");
+
+        tracing::debug!("Total fetch_entities operation took {:?}", start.elapsed());
 
         Ok(all_entities)
     }
@@ -742,16 +764,31 @@ impl DojoWorld {
         let (where_clause, having_clause, join_clause, bind_values) =
             build_composite_clause(table, model_relation_table, &composite)?;
 
-        let count_query = format!(
-            r#"
-            SELECT COUNT(DISTINCT [{table}].id)
-            FROM [{table}]
-            JOIN {model_relation_table} ON [{table}].id = {model_relation_table}.entity_id
-            {join_clause}
-            {where_clause}
-            {having_clause}
-            "#,
-        );
+        let count_query = if !having_clause.is_empty() {
+            format!(
+                r#"
+                SELECT COUNT(*) FROM (
+                    SELECT DISTINCT [{table}].id
+                    FROM [{table}]
+                    JOIN {model_relation_table} ON [{table}].id = {model_relation_table}.entity_id
+                    {join_clause}
+                    {where_clause}
+                    GROUP BY [{table}].id
+                    {having_clause}
+                ) as filtered_count
+                "#
+            )
+        } else {
+            format!(
+                r#"
+                SELECT COUNT(DISTINCT [{table}].id)
+                FROM [{table}]
+                JOIN {model_relation_table} ON [{table}].id = {model_relation_table}.entity_id
+                {join_clause}
+                {where_clause}
+                "#
+            )
+        };
 
         let mut count_query = sqlx::query_scalar::<_, u32>(&count_query);
         for value in &bind_values {
@@ -765,7 +802,7 @@ impl DojoWorld {
 
         let query = format!(
             r#"
-            SELECT [{table}].id, group_concat({model_relation_table}.model_id) as model_ids
+            SELECT DISTINCT [{table}].id, group_concat({model_relation_table}.model_id) as model_ids
             FROM [{table}]
             JOIN {model_relation_table} ON [{table}].id = {model_relation_table}.entity_id
             {join_clause}
@@ -826,20 +863,17 @@ impl DojoWorld {
         let query = if contract_addresses.is_empty() {
             "SELECT * FROM tokens".to_string()
         } else {
-            format!(
-                "SELECT * FROM tokens WHERE contract_address IN ({})",
-                contract_addresses
-                    .iter()
-                    .map(|address| format!("{:#x}", address))
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            )
+            let placeholders = vec!["?"; contract_addresses.len()].join(", ");
+            format!("SELECT * FROM tokens WHERE contract_address IN ({})", placeholders)
         };
 
-        let tokens: Vec<Token> = sqlx::query_as(&query)
-            .fetch_all(&self.pool)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        let mut query = sqlx::query_as(&query);
+        for address in &contract_addresses {
+            query = query.bind(format!("{:#x}", address));
+        }
+
+        let tokens: Vec<Token> =
+            query.fetch_all(&self.pool).await.map_err(|e| Status::internal(e.to_string()))?;
 
         let tokens = tokens.iter().map(|token| token.clone().into()).collect();
         Ok(RetrieveTokensResponse { tokens })
@@ -851,37 +885,32 @@ impl DojoWorld {
         contract_addresses: Vec<Felt>,
     ) -> Result<RetrieveTokenBalancesResponse, Status> {
         let mut query = "SELECT * FROM token_balances".to_string();
-
+        let mut bind_values = Vec::new();
         let mut conditions = Vec::new();
+
         if !account_addresses.is_empty() {
-            conditions.push(format!(
-                "account_address IN ({})",
-                account_addresses
-                    .iter()
-                    .map(|address| format!("{:#x}", address))
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            ));
+            let placeholders = vec!["?"; account_addresses.len()].join(", ");
+            conditions.push(format!("account_address IN ({})", placeholders));
+            bind_values.extend(account_addresses.iter().map(|addr| format!("{:#x}", addr)));
         }
+
         if !contract_addresses.is_empty() {
-            conditions.push(format!(
-                "contract_address IN ({})",
-                contract_addresses
-                    .iter()
-                    .map(|address| format!("{:#x}", address))
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            ));
+            let placeholders = vec!["?"; contract_addresses.len()].join(", ");
+            conditions.push(format!("contract_address IN ({})", placeholders));
+            bind_values.extend(contract_addresses.iter().map(|addr| format!("{:#x}", addr)));
         }
 
         if !conditions.is_empty() {
             query += &format!(" WHERE {}", conditions.join(" AND "));
         }
 
-        let balances: Vec<TokenBalance> = sqlx::query_as(&query)
-            .fetch_all(&self.pool)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        let mut query = sqlx::query_as(&query);
+        for value in bind_values {
+            query = query.bind(value);
+        }
+
+        let balances: Vec<TokenBalance> =
+            query.fetch_all(&self.pool).await.map_err(|e| Status::internal(e.to_string()))?;
 
         let balances = balances.iter().map(|balance| balance.clone().into()).collect();
         Ok(RetrieveTokenBalancesResponse { balances })
@@ -1132,7 +1161,7 @@ fn build_keys_pattern(clause: &proto::types::KeysClause) -> Result<String, Error
     let mut keys_pattern = format!("^{}", keys.join("/"));
 
     if clause.pattern_matching == proto::types::PatternMatching::VariableLen as i32 {
-        keys_pattern += &format!("({})*", KEY_PATTERN);
+        keys_pattern += &format!("/({})*", KEY_PATTERN);
     }
     keys_pattern += "/$";
 
@@ -1164,12 +1193,25 @@ fn build_composite_clause(
                     })
                     .collect::<Vec<_>>()
                     .join(", ");
-                where_clauses.push(format!("{table}.id IN ({})", ids));
+                where_clauses.push(format!("({table}.id IN ({}))", ids));
             }
             ClauseType::Keys(keys) => {
                 let keys_pattern = build_keys_pattern(keys)?;
                 bind_values.push(keys_pattern);
-                where_clauses.push(format!("{table}.keys REGEXP ?"));
+                where_clauses.push(format!("({table}.keys REGEXP ?)"));
+
+                // Add model checks for specified models
+                for model in &keys.models {
+                    let (namespace, model_name) = model
+                        .split_once('-')
+                        .ok_or(QueryError::InvalidNamespacedModel(model.clone()))?;
+                    let model_id = compute_selector_from_names(namespace, model_name);
+
+                    having_clauses.push(format!(
+                        "INSTR(group_concat({model_relation_table}.model_id), '{:#x}') > 0",
+                        model_id
+                    ));
+                }
             }
             ClauseType::Member(member) => {
                 let comparison_operator = ComparisonOperator::from_repr(member.operator as usize)
@@ -1212,7 +1254,7 @@ fn build_composite_clause(
 
                 // Use the column name directly since it's already flattened
                 where_clauses
-                    .push(format!("[{alias}].[{}] {comparison_operator} ?", member.member));
+                    .push(format!("([{alias}].[{}] {comparison_operator} ?)", member.member));
             }
             ClauseType::Composite(nested) => {
                 // Handle nested composite by recursively building the clause
@@ -1223,7 +1265,8 @@ fn build_composite_clause(
                     where_clauses.push(format!("({})", nested_where.trim_start_matches("WHERE ")));
                 }
                 if !nested_having.is_empty() {
-                    having_clauses.push(nested_having.trim_start_matches("HAVING ").to_string());
+                    having_clauses
+                        .push(format!("({})", nested_having.trim_start_matches("HAVING ")));
                 }
                 join_clauses.extend(
                     nested_join

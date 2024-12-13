@@ -6,6 +6,7 @@ use std::time::Duration;
 
 use anyhow::Result;
 use bitflags::bitflags;
+use dojo_utils::provider as provider_utils;
 use dojo_world::contracts::world::WorldContractReader;
 use futures_util::future::{join_all, try_join_all};
 use hashlink::LinkedHashMap;
@@ -45,7 +46,6 @@ use crate::processors::{
 };
 use crate::sql::{Cursors, Sql};
 use crate::types::{Contract, ContractType};
-use crate::utils::health_check_provider;
 
 type EventProcessorMap<P> = HashMap<Felt, Vec<Box<dyn EventProcessor<P>>>>;
 
@@ -148,6 +148,7 @@ pub struct EngineConfig {
     pub max_concurrent_tasks: usize,
     pub flags: IndexingFlags,
     pub event_processor_config: EventProcessorConfig,
+    pub world_block: u64,
 }
 
 impl Default for EngineConfig {
@@ -159,6 +160,7 @@ impl Default for EngineConfig {
             max_concurrent_tasks: 100,
             flags: IndexingFlags::empty(),
             event_processor_config: EventProcessorConfig::default(),
+            world_block: 0,
         }
     }
 }
@@ -253,7 +255,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
     }
 
     pub async fn start(&mut self) -> Result<()> {
-        if let Err(e) = health_check_provider(self.provider.clone()).await {
+        if let Err(e) = provider_utils::health_check_provider(self.provider.clone()).await {
             error!(target: LOG_TARGET,"Provider health check failed during engine start");
             return Err(e);
         }
@@ -323,7 +325,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
     pub async fn fetch_data(&mut self, cursors: &Cursors) -> Result<FetchDataResult> {
         let latest_block = self.provider.block_hash_and_number().await?;
 
-        let from = cursors.head.unwrap_or(0);
+        let from = cursors.head.unwrap_or(self.config.world_block);
         let total_remaining_blocks = latest_block.block_number - from;
         let blocks_to_process = total_remaining_blocks.min(self.config.blocks_chunk_size);
         let to = from + blocks_to_process;

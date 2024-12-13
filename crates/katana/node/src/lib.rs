@@ -8,18 +8,14 @@ pub mod exit;
 pub mod version;
 
 use std::future::IntoFuture;
-use std::net::SocketAddr;
 use std::sync::Arc;
-use std::time::Duration;
 
 use anyhow::Result;
-use config::rpc::{ApiKind, RpcConfig};
+use config::rpc::ApiKind;
 use config::Config;
 use dojo_metrics::exporters::prometheus::PrometheusRecorder;
 use dojo_metrics::{Report, Server as MetricsServer};
-use hyper::{Method, Uri};
-use jsonrpsee::server::middleware::proxy_get_request::ProxyGetRequestLayer;
-use jsonrpsee::server::{AllowHosts, ServerBuilder, ServerHandle};
+use hyper::Method;
 use jsonrpsee::RpcModule;
 use katana_core::backend::gas_oracle::L1GasOracle;
 use katana_core::backend::storage::Blockchain;
@@ -32,12 +28,12 @@ use katana_core::env::BlockContextGenerator;
 use katana_core::service::block_producer::BlockProducer;
 use katana_db::mdbx::DbEnv;
 use katana_executor::implementation::blockifier::BlockifierFactory;
-use katana_executor::{ExecutionFlags, ExecutorFactory};
-use katana_pipeline::stage::Sequencing;
+use katana_executor::ExecutionFlags;
 use katana_pool::ordering::FiFo;
 use katana_pool::TxPool;
 use katana_primitives::block::GasPrices;
 use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
+use katana_rpc::cors::Cors;
 use katana_rpc::dev::DevApi;
 use katana_rpc::metrics::RpcServerMetrics;
 use katana_rpc::proxy_get_request::DevnetProxyLayer;
@@ -45,12 +41,13 @@ use katana_rpc::saya::SayaApi;
 use katana_rpc::starknet::forking::ForkedClient;
 use katana_rpc::starknet::{StarknetApi, StarknetApiConfig};
 use katana_rpc::torii::ToriiApi;
+use katana_rpc::{RpcServer, RpcServerHandle};
 use katana_rpc_api::dev::DevApiServer;
 use katana_rpc_api::saya::SayaApiServer;
 use katana_rpc_api::starknet::{StarknetApiServer, StarknetTraceApiServer, StarknetWriteApiServer};
 use katana_rpc_api::torii::ToriiApiServer;
+use katana_stage::Sequencing;
 use katana_tasks::TaskManager;
-use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing::info;
 
 use crate::exit::NodeStoppedFuture;
@@ -60,7 +57,7 @@ use crate::exit::NodeStoppedFuture;
 pub struct LaunchedNode {
     pub node: Node,
     /// Handle to the rpc server.
-    pub rpc: RpcServer,
+    pub rpc: RpcServerHandle,
 }
 
 impl LaunchedNode {
@@ -69,7 +66,7 @@ impl LaunchedNode {
     /// This will instruct the node to stop and wait until it has actually stop.
     pub async fn stop(&self) -> Result<()> {
         // TODO: wait for the rpc server to stop instead of just stopping it.
-        self.rpc.handle.stop()?;
+        self.rpc.stop()?;
         self.node.task_manager.shutdown().await;
         Ok(())
     }
@@ -88,18 +85,18 @@ impl LaunchedNode {
 pub struct Node {
     pub pool: TxPool,
     pub db: Option<DbEnv>,
+    pub rpc_server: RpcServer,
     pub task_manager: TaskManager,
     pub backend: Arc<Backend<BlockifierFactory>>,
     pub block_producer: BlockProducer<BlockifierFactory>,
     pub config: Arc<Config>,
-    forked_client: Option<ForkedClient>,
 }
 
 impl Node {
     /// Start the node.
     ///
     /// This method will start all the node process, running them until the node is stopped.
-    pub async fn launch(mut self) -> Result<LaunchedNode> {
+    pub async fn launch(self) -> Result<LaunchedNode> {
         let chain = self.backend.chain_spec.id;
         info!(%chain, "Starting node.");
 
@@ -140,16 +137,18 @@ impl Node {
             .name("Sequencing")
             .spawn(sequencing.into_future());
 
-        let node_components = (pool, backend, block_producer, self.forked_client.take());
-        let rpc = spawn(node_components, self.config.rpc.clone()).await?;
+        // --- start the rpc server
+
+        let rpc_handle = self.rpc_server.start(self.config.rpc.socket_addr()).await?;
 
         // --- start the gas oracle worker task
+
         if let Some(ref url) = self.config.l1_provider_url {
             self.backend.gas_oracle.run_worker(self.task_manager.task_spawner());
             info!(%url, "Gas Price Oracle started.");
         };
 
-        Ok(LaunchedNode { node: self, rpc })
+        Ok(LaunchedNode { node: self, rpc: rpc_handle })
     }
 }
 
@@ -245,33 +244,20 @@ pub async fn build(mut config: Config) -> Result<Node> {
     let validator = block_producer.validator();
     let pool = TxPool::new(validator.clone(), FiFo::new());
 
-    let node = Node {
-        db,
-        pool,
-        backend,
-        forked_client,
-        block_producer,
-        config: Arc::new(config),
-        task_manager: TaskManager::current(),
-    };
+    // --- build rpc server
 
-    Ok(node)
-}
+    let mut rpc_modules = RpcModule::new(());
 
-// Moved from `katana_rpc` crate
-pub async fn spawn<EF: ExecutorFactory>(
-    node_components: (TxPool, Arc<Backend<EF>>, BlockProducer<EF>, Option<ForkedClient>),
-    config: RpcConfig,
-) -> Result<RpcServer> {
-    let (pool, backend, block_producer, forked_client) = node_components;
+    let cors = Cors::new()
+        .allow_origins(config.rpc.cors_origins.clone())
+        // Allow `POST` when accessing the resource
+        .allow_methods([Method::POST, Method::GET])
+        .allow_headers([hyper::header::CONTENT_TYPE, "argent-client".parse().unwrap(), "argent-version".parse().unwrap()]);
 
-    let mut methods = RpcModule::new(());
-    methods.register_method("health", |_, _| Ok(serde_json::json!({ "health": true })))?;
+    if config.rpc.apis.contains(&ApiKind::Starknet) {
+        let cfg = StarknetApiConfig { max_event_page_size: config.rpc.max_event_page_size };
 
-    if config.apis.contains(&ApiKind::Starknet) {
-        let cfg = StarknetApiConfig { max_event_page_size: config.max_event_page_size };
-
-        let server = if let Some(client) = forked_client {
+        let api = if let Some(client) = forked_client {
             StarknetApi::new_forked(
                 backend.clone(),
                 pool.clone(),
@@ -283,69 +269,35 @@ pub async fn spawn<EF: ExecutorFactory>(
             StarknetApi::new(backend.clone(), pool.clone(), Some(block_producer.clone()), cfg)
         };
 
-        methods.merge(StarknetApiServer::into_rpc(server.clone()))?;
-        methods.merge(StarknetWriteApiServer::into_rpc(server.clone()))?;
-        methods.merge(StarknetTraceApiServer::into_rpc(server))?;
+        rpc_modules.merge(StarknetApiServer::into_rpc(api.clone()))?;
+        rpc_modules.merge(StarknetWriteApiServer::into_rpc(api.clone()))?;
+        rpc_modules.merge(StarknetTraceApiServer::into_rpc(api))?;
     }
 
-    if config.apis.contains(&ApiKind::Dev) {
-        methods.merge(DevApi::new(backend.clone(), block_producer.clone()).into_rpc())?;
+    if config.rpc.apis.contains(&ApiKind::Dev) {
+        let api = DevApi::new(backend.clone(), block_producer.clone());
+        rpc_modules.merge(api.into_rpc())?;
     }
 
-    if config.apis.contains(&ApiKind::Torii) {
-        methods.merge(
-            ToriiApi::new(backend.clone(), pool.clone(), block_producer.clone()).into_rpc(),
-        )?;
+    if config.rpc.apis.contains(&ApiKind::Torii) {
+        let api = ToriiApi::new(backend.clone(), pool.clone(), block_producer.clone());
+        rpc_modules.merge(api.into_rpc())?;
     }
 
-    if config.apis.contains(&ApiKind::Saya) {
-        methods.merge(SayaApi::new(backend.clone(), block_producer.clone()).into_rpc())?;
+    if config.rpc.apis.contains(&ApiKind::Saya) {
+        let api = SayaApi::new(backend.clone(), block_producer.clone());
+        rpc_modules.merge(api.into_rpc())?;
     }
 
-    let cors = CorsLayer::new()
-            // Allow `POST` when accessing the resource
-            .allow_methods([Method::POST, Method::GET])
-            .allow_headers([hyper::header::CONTENT_TYPE, "argent-client".parse().unwrap(), "argent-version".parse().unwrap()]);
+    let rpc_server = RpcServer::new().metrics().health_check().cors(cors).module(rpc_modules);
 
-    let cors =
-        config.cors_origins.clone().map(|allowed_origins| match allowed_origins.as_slice() {
-            [origin] if origin == "*" => cors.allow_origin(AllowOrigin::mirror_request()),
-            origins => cors.allow_origin(
-                origins
-                    .iter()
-                    .map(|o| {
-                        let _ = o.parse::<Uri>().expect("Invalid URI");
-
-                        o.parse().expect("Invalid origin")
-                    })
-                    .collect::<Vec<_>>(),
-            ),
-        });
-
-    let middleware = tower::ServiceBuilder::new()
-        .option_layer(cors)
-        .layer(ProxyGetRequestLayer::new("/", "health")?)
-        .layer(DevnetProxyLayer::new()?)
-        .timeout(Duration::from_secs(20));
-
-    let server = ServerBuilder::new()
-        .set_logger(RpcServerMetrics::new(&methods))
-        .set_host_filtering(AllowHosts::Any)
-        .set_middleware(middleware)
-        .max_connections(config.max_connections)
-        .build(config.socket_addr())
-        .await?;
-
-    let addr = server.local_addr()?;
-    let handle = server.start(methods)?;
-
-    info!(target: "rpc", %addr, "RPC server started.");
-
-    Ok(RpcServer { handle, addr })
-}
-
-#[derive(Debug)]
-pub struct RpcServer {
-    pub addr: SocketAddr,
-    pub handle: ServerHandle,
+    Ok(Node {
+        db,
+        pool,
+        backend,
+        rpc_server,
+        block_producer,
+        config: Arc::new(config),
+        task_manager: TaskManager::current(),
+    })
 }
