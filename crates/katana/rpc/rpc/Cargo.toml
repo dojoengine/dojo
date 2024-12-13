@@ -15,8 +15,6 @@ jsonrpsee = { workspace = true, features = [ "server" ] }
 jsonrpsee-core = { version = "0.16.3", features = [ "server", "soketto", "http-helpers" ] }
 jsonrpsee-types = { version = "0.16.3"}
 hyper.workspace = true
-tower = { workspace = true, features = [ "full" ] }
-http = { version = "0.2.7" }
 katana-core.workspace = true
 katana-executor.workspace = true
 katana-pool.workspace = true
@@ -36,7 +34,6 @@ tower-http.workspace = true
 tracing.workspace = true
 url.workspace = true
 serde.workspace = true
-serde_json.workspace = true
 soketto = { version = "0.7.1", features = ["http"] }
 futures-channel = { version = "0.3.14"}
 futures-util = { version = "0.3.14",  features = [
