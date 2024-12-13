@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1734066646443,
+  "lastUpdate": 1734066846897,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -40585,6 +40585,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10371140203,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8f72aea91c3ca4d5d1335e92d4f6f8c34a90e7ed",
+          "message": "fix(torii-grpc-server): adjust regex to support variable len correctly (#2803)\n\nfix: adjust regex to support variable len correctly",
+          "timestamp": "2024-12-12T22:54:27-06:00",
+          "tree_id": "ec050efb45e67454a84fada7ebb4ddd93a5bdbe8",
+          "url": "https://github.com/dojoengine/dojo/commit/8f72aea91c3ca4d5d1335e92d4f6f8c34a90e7ed"
+        },
+        "date": 1734066845153,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2418708,
+            "range": "± 34044",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 7859340,
+            "range": "± 281706",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3667389334,
+            "range": "± 794527898",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 7928883,
+            "range": "± 77902",
             "unit": "ns/iter"
           }
         ]
