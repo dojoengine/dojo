@@ -202,9 +202,9 @@ where
     }
 }
 
-impl<'tx, Tb, Tx> BonsaiPersistentDatabase<CommitId> for TrieDb<'tx, Tb, Tx>
+impl<'tx, Tb, Tx> BonsaiPersistentDatabase<CommitId> for TrieDbMut<'tx, Tb, Tx>
 where
-    Tb: Trie + fmt::Debug,
+    Tb: Trie,
     Tx: DbTxMutRef<'tx> + fmt::Debug + 'tx,
 {
     type DatabaseError = Error;
@@ -254,7 +254,7 @@ where
     Tb: Trie,
     Tx: DbTxMutRef<'tx>,
 {
-    pub(crate) fn new(tx: Tx) -> Self {
+    pub fn new(tx: Tx) -> Self {
         Self { tx, _phantom: &PhantomData }
     }
 }
@@ -338,7 +338,6 @@ where
     }
 }
 
-#[derive(Debug)]
 pub struct SnapshotTrieDb<'tx, Tb, Tx>
 where
     Tb: Trie,
@@ -347,6 +346,16 @@ where
     tx: Tx,
     snapshot_id: CommitId,
     _table: &'tx PhantomData<Tb>,
+}
+
+impl<'a, Tb, Tx> fmt::Debug for SnapshotTrieDb<'a, Tb, Tx>
+where
+    Tb: Trie,
+    Tx: DbTxRef<'a> + fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("SnapshotTrieDb").field("tx", &self.tx).finish()
+    }
 }
 
 impl<'tx, Tb, Tx> SnapshotTrieDb<'tx, Tb, Tx>
@@ -361,7 +370,7 @@ where
 
 impl<'tx, Tb, Tx> BonsaiDatabase for SnapshotTrieDb<'tx, Tb, Tx>
 where
-    Tb: Trie + fmt::Debug,
+    Tb: Trie,
     Tx: DbTxRef<'tx> + fmt::Debug,
 {
     type Batch = ();

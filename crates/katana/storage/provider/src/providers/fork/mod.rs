@@ -11,14 +11,13 @@ use katana_primitives::block::{
     SealedBlockWithStatus,
 };
 use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, ContractClass};
-use katana_primitives::contract::{ContractAddress, StorageKey};
+use katana_primitives::contract::ContractAddress;
 use katana_primitives::env::BlockEnv;
 use katana_primitives::receipt::Receipt;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithClasses};
 use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{Tx, TxHash, TxNumber, TxWithHash};
 use katana_primitives::Felt;
-use katana_trie::MultiProof;
 use parking_lot::RwLock;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
@@ -34,15 +33,13 @@ use crate::traits::block::{
 use crate::traits::contract::{ContractClassWriter, ContractClassWriterExt};
 use crate::traits::env::BlockEnvProvider;
 use crate::traits::stage::StageCheckpointProvider;
-use crate::traits::state::{StateFactoryProvider, StateProvider, StateRootProvider, StateWriter};
+use crate::traits::state::{StateFactoryProvider, StateProvider, StateWriter};
 use crate::traits::state_update::StateUpdateProvider;
 use crate::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionStatusProvider, TransactionTraceProvider,
     TransactionsProviderExt,
 };
-use crate::traits::trie::{
-    ClassTrieProvider, ClassTrieWriter, ContractTrieProvider, ContractTrieWriter,
-};
+use crate::traits::trie::TrieWriter;
 use crate::ProviderResult;
 
 #[derive(Debug)]
@@ -413,17 +410,17 @@ impl ReceiptProvider for ForkedProvider {
     }
 }
 
-impl StateRootProvider for ForkedProvider {
-    fn state_root(
-        &self,
-        block_id: BlockHashOrNumber,
-    ) -> ProviderResult<Option<katana_primitives::Felt>> {
-        let state_root = self.block_number_by_id(block_id)?.and_then(|num| {
-            self.storage.read().block_headers.get(&num).map(|header| header.state_root)
-        });
-        Ok(state_root)
-    }
-}
+// impl StateRootProvider for ForkedProvider {
+//     fn state_root(
+//         &self,
+//         block_id: BlockHashOrNumber,
+//     ) -> ProviderResult<Option<katana_primitives::Felt>> {
+//         let state_root = self.block_number_by_id(block_id)?.and_then(|num| {
+//             self.storage.read().block_headers.get(&num).map(|header| header.state_root)
+//         });
+//         Ok(state_root)
+//     }
+// }
 
 impl StateUpdateProvider for ForkedProvider {
     fn state_update(&self, block_id: BlockHashOrNumber) -> ProviderResult<Option<StateUpdates>> {
@@ -602,52 +599,8 @@ impl BlockEnvProvider for ForkedProvider {
     }
 }
 
-impl ContractTrieProvider for ForkedProvider {
-    fn contract_trie_root(&self) -> ProviderResult<Felt> {
-        unimplemented!()
-    }
-
-    fn contracts_proof(
-        &self,
-        block_number: BlockNumber,
-        contract_addresses: &[ContractAddress],
-    ) -> ProviderResult<MultiProof> {
-        let _ = block_number;
-        let _ = contract_addresses;
-        unimplemented!()
-    }
-
-    fn storage_proof(
-        &self,
-        block_number: BlockNumber,
-        contract_address: ContractAddress,
-        storage_keys: Vec<StorageKey>,
-    ) -> ProviderResult<MultiProof> {
-        let _ = block_number;
-        let _ = contract_address;
-        let _ = storage_keys;
-        unimplemented!()
-    }
-}
-
-impl ClassTrieProvider for ForkedProvider {
-    fn classes_proof(
-        &self,
-        block_number: BlockNumber,
-        class_hashes: &[ClassHash],
-    ) -> ProviderResult<MultiProof> {
-        let _ = block_number;
-        let _ = class_hashes;
-        unimplemented!()
-    }
-
-    fn class_trie_root(&self) -> ProviderResult<Felt> {
-        unimplemented!()
-    }
-}
-
-impl ClassTrieWriter for ForkedProvider {
-    fn insert_updates(
+impl TrieWriter for ForkedProvider {
+    fn trie_insert_declared_classes(
         &self,
         block_number: BlockNumber,
         updates: &BTreeMap<ClassHash, CompiledClassHash>,
@@ -656,10 +609,8 @@ impl ClassTrieWriter for ForkedProvider {
         let _ = updates;
         Ok(Felt::ZERO)
     }
-}
 
-impl ContractTrieWriter for ForkedProvider {
-    fn insert_updates(
+    fn trie_insert_contract_updates(
         &self,
         block_number: BlockNumber,
         state_updates: &StateUpdates,

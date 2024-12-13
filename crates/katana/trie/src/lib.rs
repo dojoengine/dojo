@@ -85,7 +85,7 @@ where
 
     let config = BonsaiStorageConfig::default();
     let bonsai_db = databases::HashMapDb::<BasicId>::default();
-    let mut bs = BonsaiStorage::<_, _, H>::new(bonsai_db, config, 251);
+    let mut bs = BonsaiStorage::<_, _, H>::new(bonsai_db, config, 64);
 
     for (id, value) in values.iter().enumerate() {
         let key = BitVec::from_iter(id.to_be_bytes());

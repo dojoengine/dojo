@@ -17,8 +17,8 @@ impl<DB: BonsaiDatabase> ContractsTrie<DB> {
         Self { trie: crate::BonsaiTrie::new(db) }
     }
 
-    pub fn root(&self, address: ContractAddress) -> Felt {
-        self.trie.root(&address.to_bytes_be())
+    pub fn root(&self) -> Felt {
+        self.trie.root(Self::BONSAI_IDENTIFIER)
     }
 
     pub fn multiproof(&mut self, addresses: Vec<ContractAddress>) -> MultiProof {

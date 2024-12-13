@@ -11,7 +11,6 @@ katana-primitives = { workspace = true, features = [ "arbitrary" ] }
 katana-trie.workspace = true
 
 anyhow.workspace = true
-auto_impl.workspace = true
 dojo-metrics.workspace = true
 metrics.workspace = true
 page_size = "0.6.0"
@@ -19,14 +18,11 @@ parking_lot.workspace = true
 roaring = { version = "0.10.3", features = [ "serde" ] }
 serde.workspace = true
 serde_json.workspace = true
-starknet.workspace = true
-starknet-types-core.workspace = true
 tempfile.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 
 # codecs
-bitvec.workspace = true
 postcard = { workspace = true, optional = true }
 smallvec = "1.13.2"
 
@@ -38,6 +34,7 @@ rev = "b34b0d3"
 [dev-dependencies]
 arbitrary.workspace = true
 criterion.workspace = true
+starknet.workspace = true
 
 [features]
 default = [ "postcard" ]

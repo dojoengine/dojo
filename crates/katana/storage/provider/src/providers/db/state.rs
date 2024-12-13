@@ -15,7 +15,7 @@ use katana_primitives::contract::{
 use super::DbProvider;
 use crate::error::ProviderError;
 use crate::traits::contract::{ContractClassProvider, ContractClassWriter, ContractClassWriterExt};
-use crate::traits::state::{StateProofProvider, StateProvider, StateWriter};
+use crate::traits::state::{StateProofProvider, StateProvider, StateRootProvider, StateWriter};
 use crate::ProviderResult;
 
 impl<Db: Database> StateWriter for DbProvider<Db> {
@@ -191,6 +191,21 @@ where
     }
 }
 
+impl<Tx> StateRootProvider for LatestStateProvider<Tx>
+where
+    Tx: DbTx + fmt::Debug + Send + Sync,
+{
+    fn classes_root(&self) -> ProviderResult<katana_primitives::Felt> {
+        let trie = TrieDbFactory::new(&self.0).latest().classes_trie();
+        Ok(trie.root())
+    }
+
+    fn contracts_root(&self) -> ProviderResult<katana_primitives::Felt> {
+        let trie = TrieDbFactory::new(&self.0).latest().contracts_trie();
+        Ok(trie.root())
+    }
+}
+
 /// A historical state provider.
 #[derive(Debug)]
 pub(super) struct HistoricalStateProvider<Tx: DbTx + fmt::Debug> {
@@ -360,6 +375,29 @@ where
             .storages_trie()
             .multiproof(address, storage_keys);
         Ok(proofs)
+    }
+}
+
+impl<Tx> StateRootProvider for HistoricalStateProvider<Tx>
+where
+    Tx: DbTx + fmt::Debug + Send + Sync,
+{
+    fn classes_root(&self) -> ProviderResult<katana_primitives::Felt> {
+        let root = TrieDbFactory::new(&self.tx)
+            .historical(self.block_number)
+            .expect("should exist")
+            .classes_trie()
+            .root();
+        Ok(root)
+    }
+
+    fn contracts_root(&self) -> ProviderResult<katana_primitives::Felt> {
+        let root = TrieDbFactory::new(&self.tx)
+            .historical(self.block_number)
+            .expect("should exist")
+            .contracts_trie()
+            .root();
+        Ok(root)
     }
 }
 

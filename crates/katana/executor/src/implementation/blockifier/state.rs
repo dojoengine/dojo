@@ -10,7 +10,7 @@ use katana_primitives::class::{self, CompiledClass, ContractClass};
 use katana_primitives::Felt;
 use katana_provider::error::ProviderError;
 use katana_provider::traits::contract::ContractClassProvider;
-use katana_provider::traits::state::{StateProofProvider, StateProvider};
+use katana_provider::traits::state::{StateProofProvider, StateProvider, StateRootProvider};
 use katana_provider::ProviderResult;
 use parking_lot::Mutex;
 
@@ -262,6 +262,16 @@ impl<S: StateDb> StateProofProvider for CachedState<S> {
     ) -> ProviderResult<katana_trie::MultiProof> {
         let _ = address;
         let _ = key;
+        unimplemented!("not supported in executor's state")
+    }
+}
+
+impl<S: StateDb> StateRootProvider for CachedState<S> {
+    fn classes_root(&self) -> ProviderResult<Felt> {
+        unimplemented!("not supported in executor's state")
+    }
+
+    fn contracts_root(&self) -> ProviderResult<Felt> {
         unimplemented!("not supported in executor's state")
     }
 }

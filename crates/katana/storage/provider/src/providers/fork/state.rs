@@ -7,7 +7,7 @@ use super::backend::SharedStateProvider;
 use crate::providers::in_memory::cache::CacheStateDb;
 use crate::providers::in_memory::state::StateSnapshot;
 use crate::traits::contract::ContractClassProvider;
-use crate::traits::state::{StateProofProvider, StateProvider};
+use crate::traits::state::{StateProofProvider, StateProvider, StateRootProvider};
 use crate::ProviderResult;
 
 pub type ForkedStateDb = CacheStateDb<SharedStateProvider>;
@@ -127,6 +127,16 @@ impl StateProofProvider for ForkedStateDb {
     }
 }
 
+impl StateRootProvider for ForkedStateDb {
+    fn classes_root(&self) -> ProviderResult<katana_primitives::Felt> {
+        unimplemented!("not supported in forked mode")
+    }
+
+    fn contracts_root(&self) -> ProviderResult<katana_primitives::Felt> {
+        unimplemented!("not supported in forked mode")
+    }
+}
+
 #[derive(Debug)]
 pub(super) struct LatestStateProvider(pub(super) Arc<ForkedStateDb>);
 
@@ -189,6 +199,16 @@ impl StateProofProvider for LatestStateProvider {
     ) -> ProviderResult<katana_trie::MultiProof> {
         let _ = address;
         let _ = key;
+        unimplemented!("not supported in forked mode")
+    }
+}
+
+impl StateRootProvider for LatestStateProvider {
+    fn classes_root(&self) -> ProviderResult<katana_primitives::Felt> {
+        unimplemented!("not supported in forked mode")
+    }
+
+    fn contracts_root(&self) -> ProviderResult<katana_primitives::Felt> {
         unimplemented!("not supported in forked mode")
     }
 }
@@ -286,6 +306,16 @@ impl StateProofProvider for ForkedSnapshot {
     ) -> ProviderResult<katana_trie::MultiProof> {
         let _ = address;
         let _ = key;
+        unimplemented!("not supported in forked mode")
+    }
+}
+
+impl StateRootProvider for ForkedSnapshot {
+    fn classes_root(&self) -> ProviderResult<katana_primitives::Felt> {
+        unimplemented!("not supported in forked mode")
+    }
+
+    fn contracts_root(&self) -> ProviderResult<katana_primitives::Felt> {
         unimplemented!("not supported in forked mode")
     }
 }

@@ -6,7 +6,7 @@ use katana_primitives::fee::TxFeeInfo;
 use katana_primitives::transaction::{ExecutableTxWithHash, TxWithHash};
 use katana_primitives::Felt;
 use katana_provider::traits::contract::ContractClassProvider;
-use katana_provider::traits::state::{StateProofProvider, StateProvider};
+use katana_provider::traits::state::{StateProofProvider, StateProvider, StateRootProvider};
 use katana_provider::ProviderResult;
 
 use crate::abstraction::{
@@ -193,5 +193,15 @@ impl StateProofProvider for NoopStateProvider {
         let _ = address;
         let _ = key;
         Ok(katana_trie::MultiProof(Default::default()))
+    }
+}
+
+impl StateRootProvider for NoopStateProvider {
+    fn classes_root(&self) -> ProviderResult<Felt> {
+        Ok(Felt::ZERO)
+    }
+
+    fn contracts_root(&self) -> ProviderResult<Felt> {
+        Ok(Felt::ZERO)
     }
 }

@@ -11,7 +11,7 @@ use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::TxWithHash;
 use katana_primitives::Felt;
 use katana_provider::traits::contract::ContractClassProvider;
-use katana_provider::traits::state::{StateProofProvider, StateProvider};
+use katana_provider::traits::state::{StateProofProvider, StateProvider, StateRootProvider};
 use katana_provider::ProviderResult;
 use katana_trie::MultiProof;
 
@@ -221,5 +221,19 @@ impl<'a> StateProofProvider for StateProviderDb<'a> {
         key: Vec<StorageKey>,
     ) -> ProviderResult<MultiProof> {
         self.0.storage_multiproof(address, key)
+    }
+}
+
+impl<'a> StateRootProvider for StateProviderDb<'a> {
+    fn classes_root(&self) -> ProviderResult<Felt> {
+        self.0.classes_root()
+    }
+
+    fn contracts_root(&self) -> ProviderResult<Felt> {
+        self.0.contracts_root()
+    }
+
+    fn state_root(&self) -> ProviderResult<Felt> {
+        self.0.state_root()
     }
 }

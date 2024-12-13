@@ -3,19 +3,33 @@ use katana_primitives::class::ClassHash;
 use katana_primitives::contract::{ContractAddress, Nonce, StorageKey, StorageValue};
 use katana_primitives::Felt;
 use katana_trie::MultiProof;
+use starknet::macros::short_string;
+use starknet_types_core::hash::StarkHash;
 
 use super::contract::ContractClassProvider;
 use crate::ProviderResult;
 
 #[auto_impl::auto_impl(&, Box, Arc)]
 pub trait StateRootProvider: Send + Sync {
-    /// Retrieves the state root of a block.
-    fn state_root(&self, block_id: BlockHashOrNumber) -> ProviderResult<Option<Felt>>;
+    /// Retrieves the root of the global state trie.
+    fn state_root(&self) -> ProviderResult<Felt> {
+        Ok(starknet_types_core::hash::Poseidon::hash_array(&[
+            short_string!("STARKNET_STATE_V0"),
+            self.contracts_root()?,
+            self.classes_root()?,
+        ]))
+    }
+
+    /// Retrieves the root of the classes trie.
+    fn classes_root(&self) -> ProviderResult<Felt>;
+
+    /// Retrieves the root of the contracts trie.
+    fn contracts_root(&self) -> ProviderResult<Felt>;
 }
 
 #[auto_impl::auto_impl(&, Box, Arc)]
 pub trait StateProvider:
-    ContractClassProvider + StateProofProvider + Send + Sync + std::fmt::Debug
+    ContractClassProvider + StateProofProvider + StateRootProvider + Send + Sync + std::fmt::Debug
 {
     /// Returns the nonce of a contract.
     fn nonce(&self, address: ContractAddress) -> ProviderResult<Option<Nonce>>;

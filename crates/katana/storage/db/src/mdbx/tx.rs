@@ -1,6 +1,5 @@
 //! Transaction wrapper for libmdbx-sys.
 
-use std::borrow::Borrow;
 use std::str::FromStr;
 
 use libmdbx::ffi::DBI;
@@ -9,7 +8,7 @@ use parking_lot::RwLock;
 
 use super::cursor::Cursor;
 use super::stats::TableStat;
-use crate::abstraction::{DbTx, DbTxMut, DbTxMutRef, DbTxRef};
+use crate::abstraction::{DbTx, DbTxMut};
 use crate::codecs::{Compress, Encode};
 use crate::error::DatabaseError;
 use crate::tables::{DupSort, Table, Tables, NUM_TABLES};

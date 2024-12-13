@@ -26,7 +26,7 @@ use tracing::{error, trace};
 use crate::error::ProviderError;
 use crate::providers::in_memory::cache::CacheStateDb;
 use crate::traits::contract::ContractClassProvider;
-use crate::traits::state::{StateProofProvider, StateProvider};
+use crate::traits::state::{StateProofProvider, StateProvider, StateRootProvider};
 use crate::ProviderResult;
 
 const LOG_TARGET: &str = "forking::backend";
@@ -588,6 +588,16 @@ impl StateProofProvider for SharedStateProvider {
     ) -> ProviderResult<katana_trie::MultiProof> {
         let _ = address;
         let _ = key;
+        unimplemented!("not supported in forked mode")
+    }
+}
+
+impl StateRootProvider for SharedStateProvider {
+    fn classes_root(&self) -> ProviderResult<Felt> {
+        unimplemented!("not supported in forked mode")
+    }
+
+    fn contracts_root(&self) -> ProviderResult<Felt> {
         unimplemented!("not supported in forked mode")
     }
 }
