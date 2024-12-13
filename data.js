@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1734066846897,
+  "lastUpdate": 1734068268555,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -40633,6 +40633,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7928883,
             "range": "± 77902",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "distinct": true,
+          "id": "7817319de962dd083cab18548e8a449d4d31eca1",
+          "message": "docs: add latest OpenZeppelin audit link",
+          "timestamp": "2024-12-12T23:21:24-06:00",
+          "tree_id": "16061e227051686411d66cc62a851882391487bb",
+          "url": "https://github.com/dojoengine/dojo/commit/7817319de962dd083cab18548e8a449d4d31eca1"
+        },
+        "date": 1734068266791,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10020304940,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
