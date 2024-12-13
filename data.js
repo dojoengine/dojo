@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1734070879723,
+  "lastUpdate": 1734070896084,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -40819,6 +40819,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7906006,
             "range": "± 85784",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c730914719544e7c8d213a8b7f7545f9b8524b82",
+          "message": "feat(grpc): add entity models for returned models (#2805)\n\n* feat(grpc): add entity models for returned models\n\n* fmtW\n\n* client types\n\n* ignore emtpy schemas\n\n* fmt",
+          "timestamp": "2024-12-13T00:00:57-06:00",
+          "tree_id": "66e93903ae48dfa1b69dc741b9b39c43e04963e9",
+          "url": "https://github.com/dojoengine/dojo/commit/c730914719544e7c8d213a8b7f7545f9b8524b82"
+        },
+        "date": 1734070894232,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2466465,
+            "range": "± 56395",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 9571448,
+            "range": "± 349812",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3619116941,
+            "range": "± 776208528",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 9963505,
+            "range": "± 268605",
             "unit": "ns/iter"
           }
         ]
