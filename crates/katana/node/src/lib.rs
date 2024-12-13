@@ -35,8 +35,6 @@ use katana_primitives::block::GasPrices;
 use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
 use katana_rpc::cors::Cors;
 use katana_rpc::dev::DevApi;
-use katana_rpc::metrics::RpcServerMetrics;
-use katana_rpc::proxy_get_request::DevnetProxyLayer;
 use katana_rpc::saya::SayaApi;
 use katana_rpc::starknet::forking::ForkedClient;
 use katana_rpc::starknet::{StarknetApi, StarknetApiConfig};

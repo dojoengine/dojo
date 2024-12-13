@@ -8,6 +8,7 @@ use std::time::Duration;
 
 use jsonrpsee::server::{AllowHosts, ServerBuilder, ServerHandle};
 use jsonrpsee::RpcModule;
+use proxy_get_request::DevnetProxyLayer;
 use tower::ServiceBuilder;
 use tracing::info;
 
@@ -121,6 +122,7 @@ impl RpcServer {
         let middleware = ServiceBuilder::new()
             .option_layer(self.cors.clone())
             .option_layer(health_check_proxy)
+            .layer(DevnetProxyLayer::new()?)
             .timeout(Duration::from_secs(20));
 
         let builder = ServerBuilder::new()
