@@ -334,7 +334,10 @@ impl DojoWorld {
                 })
                 .collect::<Vec<_>>();
             let schemas =
-                self.model_cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect();
+                self.model_cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect::<Vec<_>>();
+            if schemas.is_empty() {
+                continue;
+            }
 
             let (entity_query, _) = build_sql_query(
                 &schemas,
