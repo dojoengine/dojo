@@ -260,6 +260,7 @@ impl DojoWorld {
         row_events.iter().map(map_row_to_event).collect()
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn fetch_entities(
         &self,
         table: &str,
