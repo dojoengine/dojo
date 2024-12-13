@@ -75,6 +75,7 @@ message Query {
     uint32 offset = 3;
     bool dont_include_hashed_keys = 4;
     repeated OrderBy order_by = 5;
+    repeated string entity_models = 6;
 }
 
 message EventQuery {
