@@ -5,13 +5,12 @@ use katana_db::models::contract::ContractInfoChangeList;
 use katana_db::models::list::BlockList;
 use katana_db::models::storage::{ContractStorageKey, StorageEntry};
 use katana_db::tables;
-use katana_db::trie::TrieDb;
+use katana_db::trie::TrieDbFactory;
 use katana_primitives::block::BlockNumber;
 use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, ContractClass};
 use katana_primitives::contract::{
     ContractAddress, GenericContractInfo, Nonce, StorageKey, StorageValue,
 };
-use katana_trie::BonsaiTrie;
 
 use super::DbProvider;
 use crate::error::ProviderError;
@@ -164,11 +163,10 @@ where
 
 impl<Tx> StateProofProvider for LatestStateProvider<Tx>
 where
-    Tx: DbTxMut + fmt::Debug + Send + Sync,
+    Tx: DbTx + fmt::Debug + Send + Sync,
 {
     fn class_multiproof(&self, classes: Vec<ClassHash>) -> ProviderResult<katana_trie::MultiProof> {
-        let db = TrieDb::<tables::ClassesTrie, _>::new(&self.0);
-        let mut trie = katana_trie::ClassesTrie { trie: BonsaiTrie::new(db) };
+        let mut trie = TrieDbFactory::new(&self.0).latest().classes_trie();
         let proofs = trie.multiproof(classes);
         Ok(proofs)
     }
@@ -177,8 +175,7 @@ where
         &self,
         addresses: Vec<ContractAddress>,
     ) -> ProviderResult<katana_trie::MultiProof> {
-        let db = TrieDb::<tables::ContractsTrie, _>::new(&self.0);
-        let mut trie = katana_trie::ContractsTrie { trie: BonsaiTrie::new(db) };
+        let mut trie = TrieDbFactory::new(&self.0).latest().contracts_trie();
         let proofs = trie.multiproof(addresses);
         Ok(proofs)
     }
@@ -188,8 +185,7 @@ where
         address: ContractAddress,
         storage_keys: Vec<StorageKey>,
     ) -> ProviderResult<katana_trie::MultiProof> {
-        let db = TrieDb::<tables::StoragesTrie, _>::new(&self.0);
-        let mut trie = katana_trie::StoragesTrie { trie: BonsaiTrie::new(db) };
+        let mut trie = TrieDbFactory::new(&self.0).latest().storages_trie();
         let proofs = trie.multiproof(address, storage_keys);
         Ok(proofs)
     }
@@ -333,14 +329,24 @@ where
     Tx: DbTx + fmt::Debug + Send + Sync,
 {
     fn class_multiproof(&self, classes: Vec<ClassHash>) -> ProviderResult<katana_trie::MultiProof> {
-        todo!()
+        let proofs = TrieDbFactory::new(&self.tx)
+            .historical(self.block_number)
+            .expect("should exist")
+            .classes_trie()
+            .multiproof(classes);
+        Ok(proofs)
     }
 
     fn contract_multiproof(
         &self,
         addresses: Vec<ContractAddress>,
     ) -> ProviderResult<katana_trie::MultiProof> {
-        todo!()
+        let proofs = TrieDbFactory::new(&self.tx)
+            .historical(self.block_number)
+            .expect("should exist")
+            .contracts_trie()
+            .multiproof(addresses);
+        Ok(proofs)
     }
 
     fn storage_multiproof(
@@ -348,11 +354,12 @@ where
         address: ContractAddress,
         storage_keys: Vec<StorageKey>,
     ) -> ProviderResult<katana_trie::MultiProof> {
-        // let mut trie = trie::StorageTrie::new_at_block(&self.tx, self.block_number);
-        // let proofs = trie.multiproof(address, storage_keys);
-        // Ok(proofs)
-
-        todo!()
+        let proofs = TrieDbFactory::new(&self.tx)
+            .historical(self.block_number)
+            .expect("should exist")
+            .storages_trie()
+            .multiproof(address, storage_keys);
+        Ok(proofs)
     }
 }
 

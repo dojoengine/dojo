@@ -127,10 +127,7 @@ pub trait DbTxMutRef<'a>: DbTxRef<'a> {
     fn clear<T: Table>(&self) -> Result<(), DatabaseError>;
 }
 
-impl<'a, Tx> DbTxRef<'a> for &'a Tx
-where
-    Tx: DbTx,
-{
+impl<'a, Tx: DbTx> DbTxRef<'a> for &'a Tx {
     type Cursor<T: Table> = <Tx as DbTx>::Cursor<T>;
     type DupCursor<T: DupSort> = <Tx as DbTx>::DupCursor<T>;
 
@@ -151,10 +148,7 @@ where
     }
 }
 
-impl<'a, Tx> DbTxMutRef<'a> for &'a Tx
-where
-    Tx: DbTxMut,
-{
+impl<'a, Tx: DbTxMut> DbTxMutRef<'a> for &'a Tx {
     type Cursor<T: Table> = <Tx as DbTxMut>::Cursor<T>;
     type DupCursor<T: DupSort> = <Tx as DbTxMut>::DupCursor<T>;
 

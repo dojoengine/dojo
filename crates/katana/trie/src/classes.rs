@@ -8,11 +8,15 @@ use starknet_types_core::hash::{Poseidon, StarkHash};
 use crate::id::CommitId;
 
 pub struct ClassesTrie<DB: BonsaiDatabase> {
-    pub trie: crate::BonsaiTrie<DB>,
+    trie: crate::BonsaiTrie<DB>,
 }
 
 impl<DB: BonsaiDatabase> ClassesTrie<DB> {
     const BONSAI_IDENTIFIER: &'static [u8] = b"classes";
+
+    pub fn new(db: DB) -> Self {
+        Self { trie: crate::BonsaiTrie::new(db) }
+    }
 
     pub fn root(&self) -> Felt {
         self.trie.root(Self::BONSAI_IDENTIFIER)

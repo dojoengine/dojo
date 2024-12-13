@@ -1,4 +1,3 @@
-use anyhow::Result;
 use bitvec::array::BitArray;
 use bitvec::order::Msb0;
 use bitvec::vec::BitVec;
@@ -21,18 +20,18 @@ pub use contracts::ContractsTrie;
 pub use id::CommitId;
 pub use storages::StoragesTrie;
 
-/// A lightweight shim for [`BonsaiStorage`]
-pub struct BonsaiTrie<DB>
-where
-    DB: BonsaiDatabase,
-{
+/// A lightweight shim for [`BonsaiStorage`].
+///
+/// This abstract the Bonsai Trie operations - providing a simplified interface without
+/// having to handle how to transform the keys into the internal keys used by the trie.
+/// This struct is not meant to be used directly, and instead use the specific tries that have
+/// been derived from it, [`ClassesTrie`], [`ContractsTrie`], or [`StoragesTrie`].
+#[derive(Debug)]
+pub(crate) struct BonsaiTrie<DB: BonsaiDatabase> {
     storage: BonsaiStorage<CommitId, DB, Poseidon>,
 }
 
-impl<DB> BonsaiTrie<DB>
-where
-    DB: BonsaiDatabase,
-{
+impl<DB: BonsaiDatabase> BonsaiTrie<DB> {
     pub fn new(db: DB) -> Self {
         let config = BonsaiStorageConfig {
             max_saved_trie_logs: Some(0),
@@ -44,10 +43,7 @@ where
     }
 }
 
-impl<DB> BonsaiTrie<DB>
-where
-    DB: BonsaiDatabase,
-{
+impl<DB: BonsaiDatabase> BonsaiTrie<DB> {
     pub fn root(&self, id: &[u8]) -> Felt {
         self.storage.root_hash(id).expect("failed to get trie root")
     }
@@ -77,7 +73,7 @@ where
     }
 }
 
-pub fn compute_merkle_root<H>(values: &[Felt]) -> Result<Felt>
+pub fn compute_merkle_root<H>(values: &[Felt]) -> anyhow::Result<Felt>
 where
     H: StarkHash + Send + Sync,
 {

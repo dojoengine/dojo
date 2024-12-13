@@ -1148,7 +1148,7 @@ where
             // --- Get classes proof (if any)
 
             let classes_proof = if let Some(class_hashes) = class_hashes {
-                let proofs = provider.classes_proof(block_number, &class_hashes)?;
+                // let proofs = state.class_multiproof
                 ClassesProof { nodes: proofs.into() }
             } else {
                 ClassesProof::default()

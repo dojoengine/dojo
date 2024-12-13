@@ -6,10 +6,14 @@ use katana_primitives::{ContractAddress, Felt};
 use crate::id::CommitId;
 
 pub struct StoragesTrie<DB: BonsaiDatabase> {
-    pub trie: crate::BonsaiTrie<DB>,
+    trie: crate::BonsaiTrie<DB>,
 }
 
 impl<DB: BonsaiDatabase> StoragesTrie<DB> {
+    pub fn new(db: DB) -> Self {
+        Self { trie: crate::BonsaiTrie::new(db) }
+    }
+
     pub fn root(&self, address: ContractAddress) -> Felt {
         self.trie.root(&address.to_bytes_be())
     }
