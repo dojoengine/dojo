@@ -5,16 +5,18 @@ use katana_db::models::contract::ContractInfoChangeList;
 use katana_db::models::list::BlockList;
 use katana_db::models::storage::{ContractStorageKey, StorageEntry};
 use katana_db::tables;
+use katana_db::trie::TrieDb;
 use katana_primitives::block::BlockNumber;
 use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, ContractClass};
 use katana_primitives::contract::{
     ContractAddress, GenericContractInfo, Nonce, StorageKey, StorageValue,
 };
+use katana_trie::BonsaiTrie;
 
 use super::DbProvider;
 use crate::error::ProviderError;
 use crate::traits::contract::{ContractClassProvider, ContractClassWriter, ContractClassWriterExt};
-use crate::traits::state::{StateProvider, StateWriter};
+use crate::traits::state::{StateProofProvider, StateProvider, StateWriter};
 use crate::ProviderResult;
 
 impl<Db: Database> StateWriter for DbProvider<Db> {
@@ -160,6 +162,39 @@ where
     }
 }
 
+impl<Tx> StateProofProvider for LatestStateProvider<Tx>
+where
+    Tx: DbTxMut + fmt::Debug + Send + Sync,
+{
+    fn class_multiproof(&self, classes: Vec<ClassHash>) -> ProviderResult<katana_trie::MultiProof> {
+        let db = TrieDb::<tables::ClassesTrie, _>::new(&self.0);
+        let mut trie = katana_trie::ClassesTrie { trie: BonsaiTrie::new(db) };
+        let proofs = trie.multiproof(classes);
+        Ok(proofs)
+    }
+
+    fn contract_multiproof(
+        &self,
+        addresses: Vec<ContractAddress>,
+    ) -> ProviderResult<katana_trie::MultiProof> {
+        let db = TrieDb::<tables::ContractsTrie, _>::new(&self.0);
+        let mut trie = katana_trie::ContractsTrie { trie: BonsaiTrie::new(db) };
+        let proofs = trie.multiproof(addresses);
+        Ok(proofs)
+    }
+
+    fn storage_multiproof(
+        &self,
+        address: ContractAddress,
+        storage_keys: Vec<StorageKey>,
+    ) -> ProviderResult<katana_trie::MultiProof> {
+        let db = TrieDb::<tables::StoragesTrie, _>::new(&self.0);
+        let mut trie = katana_trie::StoragesTrie { trie: BonsaiTrie::new(db) };
+        let proofs = trie.multiproof(address, storage_keys);
+        Ok(proofs)
+    }
+}
+
 /// A historical state provider.
 #[derive(Debug)]
 pub(super) struct HistoricalStateProvider<Tx: DbTx + fmt::Debug> {
@@ -293,8 +328,40 @@ where
     }
 }
 
+impl<Tx> StateProofProvider for HistoricalStateProvider<Tx>
+where
+    Tx: DbTx + fmt::Debug + Send + Sync,
+{
+    fn class_multiproof(&self, classes: Vec<ClassHash>) -> ProviderResult<katana_trie::MultiProof> {
+        todo!()
+    }
+
+    fn contract_multiproof(
+        &self,
+        addresses: Vec<ContractAddress>,
+    ) -> ProviderResult<katana_trie::MultiProof> {
+        todo!()
+    }
+
+    fn storage_multiproof(
+        &self,
+        address: ContractAddress,
+        storage_keys: Vec<StorageKey>,
+    ) -> ProviderResult<katana_trie::MultiProof> {
+        // let mut trie = trie::StorageTrie::new_at_block(&self.tx, self.block_number);
+        // let proofs = trie.multiproof(address, storage_keys);
+        // Ok(proofs)
+
+        todo!()
+    }
+}
+
 /// This is a helper function for getting the block number of the most
 /// recent change that occurred relative to the given block number.
+///
+/// ## Arguments
+///
+/// * `block_list`: A list of block numbers where a change in value occur.
 fn recent_change_from_block(
     block_number: BlockNumber,
     block_list: &BlockList,

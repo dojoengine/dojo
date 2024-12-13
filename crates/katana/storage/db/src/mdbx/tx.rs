@@ -1,5 +1,6 @@
 //! Transaction wrapper for libmdbx-sys.
 
+use std::borrow::Borrow;
 use std::str::FromStr;
 
 use libmdbx::ffi::DBI;
@@ -8,7 +9,7 @@ use parking_lot::RwLock;
 
 use super::cursor::Cursor;
 use super::stats::TableStat;
-use crate::abstraction::{DbTx, DbTxMut};
+use crate::abstraction::{DbTx, DbTxMut, DbTxMutRef, DbTxRef};
 use crate::codecs::{Compress, Encode};
 use crate::error::DatabaseError;
 use crate::tables::{DupSort, Table, Tables, NUM_TABLES};
@@ -33,7 +34,7 @@ pub struct Tx<K: TransactionKind> {
 impl<K: TransactionKind> Tx<K> {
     /// Creates new `Tx` object with a `RO` or `RW` transaction.
     pub fn new(inner: libmdbx::Transaction<K>) -> Self {
-        Self { inner, db_handles: Default::default() }
+        Self { inner, db_handles: RwLock::new([None; NUM_TABLES]) }
     }
 
     pub fn get_dbi<T: Table>(&self) -> Result<DBI, DatabaseError> {
@@ -138,3 +139,81 @@ impl DbTxMut for Tx<RW> {
         self.inner.clear_db(self.get_dbi::<T>()?).map_err(DatabaseError::Clear)
     }
 }
+
+// --- Reference variant
+
+// impl<'a, K: TransactionKind> DbTxRef<'a> for &'a Tx<K> {
+//     type Cursor<T: Table> = Cursor<K, T>;
+//     type DupCursor<T: DupSort> = Self::Cursor<T>;
+
+//     fn cursor<T: Table>(&self) -> Result<Self::Cursor<T>, DatabaseError> {
+//         self.inner
+//             .cursor_with_dbi(self.get_dbi::<T>()?)
+//             .map(Cursor::new)
+//             .map_err(DatabaseError::CreateCursor)
+//     }
+
+//     fn cursor_dup<T: DupSort>(&self) -> Result<Self::DupCursor<T>, DatabaseError> {
+//         self.inner
+//             .cursor_with_dbi(self.get_dbi::<T>()?)
+//             .map(Cursor::new)
+//             .map_err(DatabaseError::CreateCursor)
+//     }
+
+//     fn get<T: Table>(&self, key: T::Key) -> Result<Option<T::Value>, DatabaseError> {
+//         let key = Encode::encode(key);
+//         self.inner
+//             .get(self.get_dbi::<T>()?, key.as_ref())
+//             .map_err(DatabaseError::Read)?
+//             .map(decode_one::<T>)
+//             .transpose()
+//     }
+
+//     fn entries<T: Table>(&self) -> Result<usize, DatabaseError> {
+//         self.inner
+//             .db_stat_with_dbi(self.get_dbi::<T>()?)
+//             .map(|stat| stat.entries())
+//             .map_err(DatabaseError::Stat)
+//     }
+// }
+
+// impl<'a> DbTxMutRef<'a> for &'a Tx<RW> {
+//     type Cursor<T: Table> = Cursor<RW, T>;
+//     type DupCursor<T: DupSort> = <Self as DbTxMutRef<'a>>::Cursor<T>;
+
+//     fn cursor_mut<T: Table>(&self) -> Result<<Self as DbTxMutRef<'a>>::Cursor<T>, DatabaseError>
+// {         DbTxRef::cursor(self)
+//     }
+
+//     fn cursor_dup_mut<T: DupSort>(
+//         &self,
+//     ) -> Result<<Self as DbTxMutRef<'a>>::DupCursor<T>, DatabaseError> {
+//         self.inner
+//             .cursor_with_dbi(self.get_dbi::<T>()?)
+//             .map(Cursor::new)
+//             .map_err(DatabaseError::CreateCursor)
+//     }
+
+//     fn put<T: Table>(&self, key: T::Key, value: T::Value) -> Result<(), DatabaseError> {
+//         let key = key.encode();
+//         let value = value.compress();
+//         self.inner.put(self.get_dbi::<T>()?, &key, value, WriteFlags::UPSERT).map_err(|error| {
+//             DatabaseError::Write { error, table: T::NAME, key: Box::from(key.as_ref()) }
+//         })?;
+//         Ok(())
+//     }
+
+//     fn delete<T: Table>(
+//         &self,
+//         key: T::Key,
+//         value: Option<T::Value>,
+//     ) -> Result<bool, DatabaseError> {
+//         let value = value.map(Compress::compress);
+//         let value = value.as_ref().map(|v| v.as_ref());
+//         self.inner.del(self.get_dbi::<T>()?, key.encode(), value).map_err(DatabaseError::Delete)
+//     }
+
+//     fn clear<T: Table>(&self) -> Result<(), DatabaseError> {
+//         self.inner.clear_db(self.get_dbi::<T>()?).map_err(DatabaseError::Clear)
+//     }
+// }

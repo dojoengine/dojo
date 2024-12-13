@@ -2,20 +2,17 @@ use core::fmt;
 use std::marker::PhantomData;
 
 use anyhow::Result;
-use katana_trie::bonsai::id::BasicId;
-use katana_trie::bonsai::{self, ByteVec, DatabaseKey};
+use katana_trie::bonsai::{BonsaiDatabase, BonsaiPersistentDatabase, ByteVec, DatabaseKey};
+use katana_trie::CommitId;
 use smallvec::ToSmallVec;
+use snapshot::SnapshotTrieDb;
 
-use crate::abstraction::{DbCursor, DbTxMut};
+use crate::abstraction::{DbCursor, DbTxMutRef};
 use crate::models::trie::{TrieDatabaseKey, TrieDatabaseKeyType};
 use crate::models::{self};
-use crate::tables;
+use crate::tables::Trie;
 
-mod class;
-mod contract;
-
-pub use class::ClassTrie;
-pub use contract::{ContractTrie, StorageTrie};
+mod snapshot;
 
 #[derive(Debug, thiserror::Error)]
 #[error(transparent)]
@@ -24,29 +21,29 @@ pub struct Error(#[from] crate::error::DatabaseError);
 impl katana_trie::bonsai::DBError for Error {}
 
 #[derive(Debug)]
-pub struct TrieDb<Tb, Tx>
+pub struct TrieDb<'tx, Tb, Tx>
 where
-    Tb: tables::Trie,
-    Tx: DbTxMut,
+    Tb: Trie,
+    Tx: DbTxMutRef<'tx>,
 {
     tx: Tx,
-    _table: PhantomData<Tb>,
+    _table: &'tx PhantomData<Tb>,
 }
 
-impl<Tb, Tx> TrieDb<Tb, Tx>
+impl<'tx, Tb, Tx> TrieDb<'tx, Tb, Tx>
 where
-    Tb: tables::Trie,
-    Tx: DbTxMut,
+    Tb: Trie,
+    Tx: DbTxMutRef<'tx>,
 {
     pub fn new(tx: Tx) -> Self {
-        Self { tx, _table: PhantomData }
+        Self { tx, _table: &PhantomData }
     }
 }
 
-impl<Tb, Tx> bonsai::BonsaiDatabase for TrieDb<Tb, Tx>
+impl<'tx, Tb, Tx> BonsaiDatabase for TrieDb<'tx, Tb, Tx>
 where
-    Tb: tables::Trie + fmt::Debug,
-    Tx: DbTxMut + fmt::Debug,
+    Tb: Trie + fmt::Debug,
+    Tx: DbTxMutRef<'tx> + fmt::Debug,
 {
     type Batch = ();
     type DatabaseError = Error;
@@ -116,30 +113,37 @@ where
         Ok(value.is_some())
     }
 
-    fn write_batch(&mut self, _batch: Self::Batch) -> Result<(), Self::DatabaseError> {
+    fn write_batch(&mut self, batch: Self::Batch) -> Result<(), Self::DatabaseError> {
+        let _ = batch;
         Ok(())
     }
 }
 
-impl<Tb, Tx> bonsai::BonsaiPersistentDatabase<BasicId> for TrieDb<Tb, Tx>
+impl<'tx, Tb, Tx> BonsaiPersistentDatabase<CommitId> for TrieDb<'tx, Tb, Tx>
 where
-    Tb: tables::Trie + fmt::Debug,
-    Tx: DbTxMut + fmt::Debug,
+    Tb: Trie + fmt::Debug,
+    Tx: DbTxMutRef<'tx> + fmt::Debug + 'tx,
 {
     type DatabaseError = Error;
-    type Transaction<'a> = TrieDb<Tb, Tx>  where Self: 'a;
+    type Transaction<'a> = SnapshotTrieDb<'tx, Tb, Tx>  where Self: 'a;
 
-    fn snapshot(&mut self, _: BasicId) {}
+    fn snapshot(&mut self, id: CommitId) {
+        let _ = id;
+        todo!()
+    }
 
-    fn merge<'a>(&mut self, _: Self::Transaction<'a>) -> Result<(), Self::DatabaseError>
+    // merging should recompute the trie again
+    fn merge<'a>(&mut self, transaction: Self::Transaction<'a>) -> Result<(), Self::DatabaseError>
     where
         Self: 'a,
     {
-        todo!();
+        let _ = transaction;
+        unimplemented!();
     }
 
-    fn transaction(&self, id: BasicId) -> Option<(BasicId, Self::Transaction<'_>)> {
-        todo!()
+    // TODO: check if the snapshot exist
+    fn transaction(&self, id: CommitId) -> Option<(CommitId, Self::Transaction<'_>)> {
+        Some((id, SnapshotTrieDb::new(self.tx.clone(), id)))
     }
 }
 

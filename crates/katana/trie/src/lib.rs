@@ -1,18 +1,81 @@
 use anyhow::Result;
+use bitvec::array::BitArray;
+use bitvec::order::Msb0;
 use bitvec::vec::BitVec;
+use bitvec::view::AsBits;
 pub use bonsai::{MultiProof, ProofNode};
 pub use bonsai_trie as bonsai;
-use bonsai_trie::id::BasicId;
-use bonsai_trie::{BonsaiDatabase, BonsaiPersistentDatabase};
+pub use bonsai_trie::{BonsaiDatabase, BonsaiPersistentDatabase};
+use bonsai_trie::{BonsaiStorage, BonsaiStorageConfig};
 use katana_primitives::class::ClassHash;
 use katana_primitives::Felt;
-use starknet_types_core::hash::{Pedersen, StarkHash};
+use starknet_types_core::hash::{Pedersen, Poseidon, StarkHash};
 
-/// A helper trait to define a database that can be used as a Bonsai Trie.
-///
-/// Basically a short hand for `BonsaiDatabase + BonsaiPersistentDatabase<BasicId>`.
-pub trait BonsaiTrieDb: BonsaiDatabase + BonsaiPersistentDatabase<BasicId> {}
-impl<T> BonsaiTrieDb for T where T: BonsaiDatabase + BonsaiPersistentDatabase<BasicId> {}
+mod classes;
+mod contracts;
+mod id;
+mod storages;
+
+pub use classes::ClassesTrie;
+pub use contracts::ContractsTrie;
+pub use id::CommitId;
+pub use storages::StoragesTrie;
+
+/// A lightweight shim for [`BonsaiStorage`]
+pub struct BonsaiTrie<DB>
+where
+    DB: BonsaiDatabase,
+{
+    storage: BonsaiStorage<CommitId, DB, Poseidon>,
+}
+
+impl<DB> BonsaiTrie<DB>
+where
+    DB: BonsaiDatabase,
+{
+    pub fn new(db: DB) -> Self {
+        let config = BonsaiStorageConfig {
+            max_saved_trie_logs: Some(0),
+            max_saved_snapshots: Some(0),
+            snapshot_interval: u64::MAX,
+        };
+
+        Self { storage: BonsaiStorage::new(db, config, 251) }
+    }
+}
+
+impl<DB> BonsaiTrie<DB>
+where
+    DB: BonsaiDatabase,
+{
+    pub fn root(&self, id: &[u8]) -> Felt {
+        self.storage.root_hash(id).expect("failed to get trie root")
+    }
+
+    pub fn multiproof(&mut self, id: &[u8], mut keys: Vec<Felt>) -> MultiProof {
+        keys.sort();
+        let keys = keys
+            .into_iter()
+            .map(|key| BitArray::new(key.to_bytes_be()))
+            .map(|hash| hash.as_bitslice()[5..].to_owned());
+
+        self.storage.get_multi_proof(id, keys).expect("failed to get multiproof")
+    }
+}
+
+impl<DB> BonsaiTrie<DB>
+where
+    DB: BonsaiDatabase + BonsaiPersistentDatabase<CommitId>,
+{
+    pub fn insert(&mut self, id: &[u8], key: Felt, value: Felt) {
+        let key: BitVec<u8, Msb0> = key.to_bytes_be().as_bits()[5..].to_owned();
+        self.storage.insert(id, &key, &value).unwrap();
+    }
+
+    pub fn commit(&mut self, id: CommitId) {
+        self.storage.commit(id).expect("failed to commit trie");
+    }
+}
 
 pub fn compute_merkle_root<H>(values: &[Felt]) -> Result<Felt>
 where
@@ -26,7 +89,7 @@ where
 
     let config = BonsaiStorageConfig::default();
     let bonsai_db = databases::HashMapDb::<BasicId>::default();
-    let mut bs = BonsaiStorage::<_, _, H>::new(bonsai_db, config, 64);
+    let mut bs = BonsaiStorage::<_, _, H>::new(bonsai_db, config, 251);
 
     for (id, value) in values.iter().enumerate() {
         let key = BitVec::from_iter(id.to_be_bytes());

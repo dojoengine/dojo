@@ -8494,6 +8494,7 @@ version = "1.0.7"
 dependencies = [
  "anyhow",
  "arbitrary",
+ "auto_impl",
  "bitvec",
  "criterion",
  "dojo-metrics",

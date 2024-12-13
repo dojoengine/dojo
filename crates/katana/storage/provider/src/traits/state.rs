@@ -2,6 +2,7 @@ use katana_primitives::block::BlockHashOrNumber;
 use katana_primitives::class::ClassHash;
 use katana_primitives::contract::{ContractAddress, Nonce, StorageKey, StorageValue};
 use katana_primitives::Felt;
+use katana_trie::MultiProof;
 
 use super::contract::ContractClassProvider;
 use crate::ProviderResult;
@@ -62,4 +63,17 @@ pub trait StateWriter: Send + Sync {
         address: ContractAddress,
         class_hash: ClassHash,
     ) -> ProviderResult<()>;
+}
+
+#[auto_impl::auto_impl(&, Box, Arc)]
+pub trait StateProofProvider: Send + Sync {
+    fn storage_multiproof(
+        &self,
+        address: ContractAddress,
+        key: Vec<StorageKey>,
+    ) -> ProviderResult<MultiProof>;
+
+    fn contract_multiproof(&self, addresses: Vec<ContractAddress>) -> ProviderResult<MultiProof>;
+
+    fn class_multiproof(&self, classes: Vec<ClassHash>) -> ProviderResult<MultiProof>;
 }

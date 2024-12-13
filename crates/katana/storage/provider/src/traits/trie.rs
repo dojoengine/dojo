@@ -10,6 +10,15 @@ use katana_trie::MultiProof;
 use crate::ProviderResult;
 
 #[auto_impl::auto_impl(&, Box, Arc)]
+pub trait StateRootProvider: Send + Sync {
+    fn state_root(&self) -> ProviderResult<Felt>;
+
+    fn classes_root(&self) -> ProviderResult<Felt>;
+
+    fn contracts_root(&self) -> ProviderResult<Felt>;
+}
+
+#[auto_impl::auto_impl(&, Box, Arc)]
 pub trait ClassTrieProvider: Send + Sync {
     fn classes_proof(
         &self,

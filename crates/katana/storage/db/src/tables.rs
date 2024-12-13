@@ -48,7 +48,7 @@ pub enum TableType {
     DupSort,
 }
 
-pub const NUM_TABLES: usize = 27;
+pub const NUM_TABLES: usize = 33;
 
 /// Macro to declare `libmdbx` tables.
 #[macro_export]
@@ -172,9 +172,15 @@ define_tables_enum! {[
     (ClassChangeHistory, TableType::DupSort),
     (StorageChangeHistory, TableType::DupSort),
     (StorageChangeSet, TableType::Table),
-    (ClassTrie, TableType::Table),
-    (ContractTrie, TableType::Table),
-    (ContractStorageTrie, TableType::Table),
+    (ClassesTrie, TableType::Table),
+    (ContractsTrie, TableType::Table),
+    (StoragesTrie, TableType::Table),
+    (ClassesTrieHistory, TableType::DupSort),
+    (ContractsTrieHistory, TableType::DupSort),
+    (StoragesTrieHistory, TableType::DupSort),
+    (ClassesTrieChangeSet, TableType::Table),
+    (ContractsTrieChangeSet, TableType::Table),
+    (StoragesTrieChangeSet, TableType::Table),
     (StageCheckpoints, TableType::Table)
 ]}
 
@@ -236,16 +242,30 @@ tables! {
     StorageChangeHistory: (BlockNumber, ContractStorageKey) => ContractStorageEntry,
 
     /// Class trie
-    ClassTrie: (TrieDatabaseKey) => TrieDatabaseValue,
+    ClassesTrie: (TrieDatabaseKey) => TrieDatabaseValue,
     /// Contract trie
-    ContractTrie: (TrieDatabaseKey) => TrieDatabaseValue,
+    ContractsTrie: (TrieDatabaseKey) => TrieDatabaseValue,
     /// Contract storage trie
-    ContractStorageTrie: (TrieDatabaseKey) => TrieDatabaseValue
+    StoragesTrie: (TrieDatabaseKey) => TrieDatabaseValue,
+
+    /// Class trie history
+    ClassesTrieHistory: (BlockNumber, TrieDatabaseKey) => TrieDatabaseValue,
+    /// Contract trie history
+    ContractsTrieHistory: (BlockNumber,TrieDatabaseKey) => TrieDatabaseValue,
+    /// Contract storage trie history
+    StoragesTrieHistory: (BlockNumber,TrieDatabaseKey) => TrieDatabaseValue,
+
+    /// Class trie change set
+    ClassesTrieChangeSet: (TrieDatabaseKey) => BlockList,
+    /// contract trie change set
+    ContractsTrieChangeSet: (TrieDatabaseKey) => BlockList,
+    /// contract storage trie change set
+    StoragesTrieChangeSet: (TrieDatabaseKey) => BlockList
 }
 
-impl Trie for ClassTrie {}
-impl Trie for ContractTrie {}
-impl Trie for ContractStorageTrie {}
+impl Trie for ClassesTrie {}
+impl Trie for ContractsTrie {}
+impl Trie for StoragesTrie {}
 
 #[cfg(test)]
 mod tests {
@@ -278,9 +298,9 @@ mod tests {
         assert_eq!(Tables::ALL[20].name(), ClassChangeHistory::NAME);
         assert_eq!(Tables::ALL[21].name(), StorageChangeHistory::NAME);
         assert_eq!(Tables::ALL[22].name(), StorageChangeSet::NAME);
-        assert_eq!(Tables::ALL[23].name(), ClassTrie::NAME);
-        assert_eq!(Tables::ALL[24].name(), ContractTrie::NAME);
-        assert_eq!(Tables::ALL[25].name(), ContractStorageTrie::NAME);
+        assert_eq!(Tables::ALL[23].name(), ClassesTrie::NAME);
+        assert_eq!(Tables::ALL[24].name(), ContractsTrie::NAME);
+        assert_eq!(Tables::ALL[25].name(), StoragesTrie::NAME);
         assert_eq!(Tables::ALL[26].name(), StageCheckpoints::NAME);
 
         assert_eq!(Tables::Headers.table_type(), TableType::Table);
@@ -306,9 +326,9 @@ mod tests {
         assert_eq!(Tables::ClassChangeHistory.table_type(), TableType::DupSort);
         assert_eq!(Tables::StorageChangeHistory.table_type(), TableType::DupSort);
         assert_eq!(Tables::StorageChangeSet.table_type(), TableType::Table);
-        assert_eq!(Tables::ClassTrie.table_type(), TableType::Table);
-        assert_eq!(Tables::ContractTrie.table_type(), TableType::Table);
-        assert_eq!(Tables::ContractStorageTrie.table_type(), TableType::Table);
+        assert_eq!(Tables::ClassesTrie.table_type(), TableType::Table);
+        assert_eq!(Tables::ContractsTrie.table_type(), TableType::Table);
+        assert_eq!(Tables::StoragesTrie.table_type(), TableType::Table);
         assert_eq!(Tables::StageCheckpoints.table_type(), TableType::Table);
     }
 
