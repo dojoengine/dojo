@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1734068467472,
+  "lastUpdate": 1734070649661,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -40711,6 +40711,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7853403,
             "range": "± 42050",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c730914719544e7c8d213a8b7f7545f9b8524b82",
+          "message": "feat(grpc): add entity models for returned models (#2805)\n\n* feat(grpc): add entity models for returned models\n\n* fmtW\n\n* client types\n\n* ignore emtpy schemas\n\n* fmt",
+          "timestamp": "2024-12-13T00:00:57-06:00",
+          "tree_id": "66e93903ae48dfa1b69dc741b9b39c43e04963e9",
+          "url": "https://github.com/dojoengine/dojo/commit/c730914719544e7c8d213a8b7f7545f9b8524b82"
+        },
+        "date": 1734070647864,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10215740501,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
