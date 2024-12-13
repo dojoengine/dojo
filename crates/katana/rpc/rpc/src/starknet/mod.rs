@@ -1158,8 +1158,8 @@ where
                 let mut contract_leaves_data = Vec::new();
 
                 for address in addresses {
-                    let nonce = state.nonce(address)?.unwrap();
-                    let class_hash = state.class_hash_of_contract(address)?.unwrap();
+                    let nonce = state.nonce(address)?.unwrap_or_default();
+                    let class_hash = state.class_hash_of_contract(address)?.unwrap_or_default();
                     contract_leaves_data.push(ContractLeafData { class_hash, nonce });
                 }
 

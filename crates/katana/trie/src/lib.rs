@@ -34,9 +34,9 @@ pub(crate) struct BonsaiTrie<DB: BonsaiDatabase> {
 impl<DB: BonsaiDatabase> BonsaiTrie<DB> {
     pub fn new(db: DB) -> Self {
         let config = BonsaiStorageConfig {
-            max_saved_trie_logs: Some(0),
-            max_saved_snapshots: Some(0),
-            snapshot_interval: u64::MAX,
+            max_saved_trie_logs: Some(usize::MAX),
+            max_saved_snapshots: Some(usize::MAX),
+            snapshot_interval: 1,
         };
 
         Self { storage: BonsaiStorage::new(db, config, 251) }

@@ -23,6 +23,7 @@ impl<DB: BonsaiDatabase> ContractsTrie<DB> {
 
     pub fn multiproof(&mut self, addresses: Vec<ContractAddress>) -> MultiProof {
         let keys = addresses.into_iter().map(Felt::from).collect::<Vec<Felt>>();
+        dbg!(&keys);
         self.trie.multiproof(Self::BONSAI_IDENTIFIER, keys)
     }
 }

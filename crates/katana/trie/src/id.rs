@@ -30,3 +30,9 @@ impl From<BlockNumber> for CommitId {
         Self(value)
     }
 }
+
+impl From<CommitId> for BlockNumber {
+    fn from(value: CommitId) -> Self {
+        value.0
+    }
+}

@@ -11,7 +11,7 @@ use crate::models::contract::{ContractClassChange, ContractInfoChangeList, Contr
 use crate::models::list::BlockList;
 use crate::models::stage::{StageCheckpoint, StageId};
 use crate::models::storage::{ContractStorageEntry, ContractStorageKey, StorageEntry};
-use crate::models::trie::{TrieDatabaseKey, TrieDatabaseValue};
+use crate::models::trie::{TrieDatabaseKey, TrieDatabaseValue, TrieHistoryEntry};
 
 pub trait Key: Encode + Decode + Clone + std::fmt::Debug {}
 pub trait Value: Compress + Decompress + std::fmt::Debug {}
@@ -37,7 +37,12 @@ pub trait DupSort: Table {
     type SubKey: Key;
 }
 
-pub trait Trie: Table<Key = TrieDatabaseKey, Value = TrieDatabaseValue> {}
+pub trait Trie: Table<Key = TrieDatabaseKey, Value = TrieDatabaseValue> {
+    /// Table for storing the trie entries according to the block its was committed.
+    type History: DupSort<Key = BlockNumber, SubKey = TrieDatabaseKey, Value = TrieHistoryEntry>;
+    /// Table for storing the trie change set.
+    type Changeset: Table<Key = TrieDatabaseKey, Value = BlockList>;
+}
 
 /// Enum for the types of tables present in libmdbx.
 #[derive(Debug, PartialEq, Copy, Clone)]
@@ -249,11 +254,11 @@ tables! {
     StoragesTrie: (TrieDatabaseKey) => TrieDatabaseValue,
 
     /// Class trie history
-    ClassesTrieHistory: (BlockNumber, TrieDatabaseKey) => TrieDatabaseValue,
+    ClassesTrieHistory: (BlockNumber, TrieDatabaseKey) => TrieHistoryEntry,
     /// Contract trie history
-    ContractsTrieHistory: (BlockNumber,TrieDatabaseKey) => TrieDatabaseValue,
+    ContractsTrieHistory: (BlockNumber, TrieDatabaseKey) => TrieHistoryEntry,
     /// Contract storage trie history
-    StoragesTrieHistory: (BlockNumber,TrieDatabaseKey) => TrieDatabaseValue,
+    StoragesTrieHistory: (BlockNumber, TrieDatabaseKey) => TrieHistoryEntry,
 
     /// Class trie change set
     ClassesTrieChangeSet: (TrieDatabaseKey) => BlockList,
@@ -263,10 +268,20 @@ tables! {
     StoragesTrieChangeSet: (TrieDatabaseKey) => BlockList
 }
 
-impl Trie for ClassesTrie {}
-impl Trie for ContractsTrie {}
-impl Trie for StoragesTrie {}
+impl Trie for ClassesTrie {
+    type History = ClassesTrieHistory;
+    type Changeset = ClassesTrieChangeSet;
+}
 
+impl Trie for ContractsTrie {
+    type History = ContractsTrieHistory;
+    type Changeset = ContractsTrieChangeSet;
+}
+
+impl Trie for StoragesTrie {
+    type History = StoragesTrieHistory;
+    type Changeset = StoragesTrieChangeSet;
+}
 #[cfg(test)]
 mod tests {
 

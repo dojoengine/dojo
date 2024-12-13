@@ -1,4 +1,5 @@
 use core::fmt;
+use std::collections::HashMap;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
@@ -9,9 +10,13 @@ use katana_trie::CommitId;
 use smallvec::ToSmallVec;
 
 use crate::abstraction::{DbCursor, DbTxMutRef, DbTxRef};
-use crate::models::trie::{TrieDatabaseKey, TrieDatabaseKeyType};
+use crate::models::trie::{TrieDatabaseKey, TrieDatabaseKeyType, TrieHistoryEntry};
 use crate::models::{self};
 use crate::tables::{self, Trie};
+
+mod snapshot;
+
+pub use snapshot::SnapshotTrieDb;
 
 #[derive(Debug, thiserror::Error)]
 #[error(transparent)]
@@ -202,40 +207,17 @@ where
     }
 }
 
-impl<'tx, Tb, Tx> BonsaiPersistentDatabase<CommitId> for TrieDbMut<'tx, Tb, Tx>
-where
-    Tb: Trie,
-    Tx: DbTxMutRef<'tx> + fmt::Debug + 'tx,
-{
-    type DatabaseError = Error;
-    type Transaction<'a> = SnapshotTrieDb<'tx, Tb, Tx>  where Self: 'a;
-
-    fn snapshot(&mut self, id: CommitId) {
-        let _ = id;
-        todo!()
-    }
-
-    // merging should recompute the trie again
-    fn merge<'a>(&mut self, transaction: Self::Transaction<'a>) -> Result<(), Self::DatabaseError>
-    where
-        Self: 'a,
-    {
-        let _ = transaction;
-        unimplemented!();
-    }
-
-    // TODO: check if the snapshot exist
-    fn transaction(&self, id: CommitId) -> Option<(CommitId, Self::Transaction<'_>)> {
-        Some((id, SnapshotTrieDb::new(self.tx.clone(), id)))
-    }
-}
-
 pub struct TrieDbMut<'tx, Tb, Tx>
 where
     Tb: Trie,
     Tx: DbTxMutRef<'tx>,
 {
     tx: Tx,
+    /// List of key-value pairs that has been added throughout the duration of the trie
+    /// transaction.
+    ///
+    /// This will be used to create the trie snapshot.
+    write_cache: HashMap<TrieDatabaseKey, ByteVec>,
     _phantom: &'tx PhantomData<Tb>,
 }
 
@@ -255,7 +237,7 @@ where
     Tx: DbTxMutRef<'tx>,
 {
     pub fn new(tx: Tx) -> Self {
-        Self { tx, _phantom: &PhantomData }
+        Self { tx, write_cache: HashMap::new(), _phantom: &PhantomData }
     }
 }
 
@@ -306,23 +288,30 @@ where
         &mut self,
         key: &DatabaseKey<'_>,
         value: &[u8],
-        _batch: Option<&mut Self::Batch>,
+        batch: Option<&mut Self::Batch>,
     ) -> Result<Option<ByteVec>, Self::DatabaseError> {
+        let _ = batch;
         let key = to_db_key(key);
         let value: ByteVec = value.to_smallvec();
+
         let old_value = self.tx.get::<Tb>(key.clone())?;
-        self.tx.put::<Tb>(key, value)?;
+        self.tx.put::<Tb>(key.clone(), value.clone())?;
+
+        self.write_cache.insert(key, value);
         Ok(old_value)
     }
 
     fn remove(
         &mut self,
         key: &DatabaseKey<'_>,
-        _batch: Option<&mut Self::Batch>,
+        batch: Option<&mut Self::Batch>,
     ) -> Result<Option<ByteVec>, Self::DatabaseError> {
+        let _ = batch;
         let key = to_db_key(key);
+
         let old_value = self.tx.get::<Tb>(key.clone())?;
         self.tx.delete::<Tb>(key, None)?;
+
         Ok(old_value)
     }
 
@@ -338,91 +327,51 @@ where
     }
 }
 
-pub struct SnapshotTrieDb<'tx, Tb, Tx>
+impl<'tx, Tb, Tx> BonsaiPersistentDatabase<CommitId> for TrieDbMut<'tx, Tb, Tx>
 where
     Tb: Trie,
-    Tx: DbTxRef<'tx>,
+    Tx: DbTxMutRef<'tx> + fmt::Debug + 'tx,
 {
-    tx: Tx,
-    snapshot_id: CommitId,
-    _table: &'tx PhantomData<Tb>,
-}
-
-impl<'a, Tb, Tx> fmt::Debug for SnapshotTrieDb<'a, Tb, Tx>
-where
-    Tb: Trie,
-    Tx: DbTxRef<'a> + fmt::Debug,
-{
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("SnapshotTrieDb").field("tx", &self.tx).finish()
-    }
-}
-
-impl<'tx, Tb, Tx> SnapshotTrieDb<'tx, Tb, Tx>
-where
-    Tb: Trie,
-    Tx: DbTxRef<'tx>,
-{
-    pub(crate) fn new(tx: Tx, id: CommitId) -> Self {
-        Self { tx, snapshot_id: id, _table: &PhantomData }
-    }
-}
-
-impl<'tx, Tb, Tx> BonsaiDatabase for SnapshotTrieDb<'tx, Tb, Tx>
-where
-    Tb: Trie,
-    Tx: DbTxRef<'tx> + fmt::Debug,
-{
-    type Batch = ();
     type DatabaseError = Error;
+    type Transaction<'a> = SnapshotTrieDb<'tx, Tb, Tx>  where Self: 'a;
 
-    fn create_batch(&self) -> Self::Batch {}
+    fn snapshot(&mut self, id: CommitId) {
+        let block_number: BlockNumber = id.into();
 
-    fn remove_by_prefix(&mut self, prefix: &DatabaseKey<'_>) -> Result<(), Self::DatabaseError> {
-        let _ = prefix;
-        unimplemented!("modifying trie snapshot is not supported")
+        let entries = std::mem::take(&mut self.write_cache);
+        let entries = entries.into_iter().map(|(key, value)| TrieHistoryEntry { key, value });
+
+        for entry in entries {
+            let mut set = self
+                .tx
+                .get::<Tb::Changeset>(entry.key.clone())
+                .expect("failed to get trie change set")
+                .unwrap_or_default();
+            set.insert(block_number);
+
+            self.tx
+                .put::<Tb::Changeset>(entry.key.clone(), set)
+                .expect("failed to put trie change set");
+
+            self.tx
+                .put::<Tb::History>(block_number, entry)
+                .expect("failed to put trie history entry");
+        }
     }
 
-    fn get(&self, key: &DatabaseKey<'_>) -> Result<Option<ByteVec>, Self::DatabaseError> {
-        todo!()
+    // merging should recompute the trie again
+    fn merge<'a>(&mut self, transaction: Self::Transaction<'a>) -> Result<(), Self::DatabaseError>
+    where
+        Self: 'a,
+    {
+        let _ = transaction;
+        unimplemented!();
     }
 
-    fn get_by_prefix(
-        &self,
-        prefix: &DatabaseKey,
-    ) -> Result<Vec<(ByteVec, ByteVec)>, Self::DatabaseError> {
-        todo!()
-    }
-
-    fn insert(
-        &mut self,
-        key: &DatabaseKey<'_>,
-        value: &[u8],
-        batch: Option<&mut Self::Batch>,
-    ) -> Result<Option<ByteVec>, Self::DatabaseError> {
-        let _ = key;
-        let _ = value;
-        let _ = batch;
-        unimplemented!("modifying trie snapshot is not supported")
-    }
-
-    fn remove(
-        &mut self,
-        key: &DatabaseKey<'_>,
-        batch: Option<&mut Self::Batch>,
-    ) -> Result<Option<ByteVec>, Self::DatabaseError> {
-        let _ = key;
-        let _ = batch;
-        unimplemented!("modifying trie snapshot is not supported")
-    }
-
-    fn contains(&self, key: &DatabaseKey<'_>) -> Result<bool, Self::DatabaseError> {
-        todo!()
-    }
-
-    fn write_batch(&mut self, batch: Self::Batch) -> Result<(), Self::DatabaseError> {
-        let _ = batch;
-        unimplemented!("modifying trie snapshot is not supported")
+    // TODO: check if the snapshot exist
+    fn transaction(&self, id: CommitId) -> Option<(CommitId, Self::Transaction<'_>)> {
+        dbg!("getting snapshot", id);
+        Some((id, SnapshotTrieDb::new(self.tx.clone(), id)))
     }
 }
 
