@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1734029364917,
+  "lastUpdate": 1734066646443,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -40555,6 +40555,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8013876,
             "range": "± 525296",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8f72aea91c3ca4d5d1335e92d4f6f8c34a90e7ed",
+          "message": "fix(torii-grpc-server): adjust regex to support variable len correctly (#2803)\n\nfix: adjust regex to support variable len correctly",
+          "timestamp": "2024-12-12T22:54:27-06:00",
+          "tree_id": "ec050efb45e67454a84fada7ebb4ddd93a5bdbe8",
+          "url": "https://github.com/dojoengine/dojo/commit/8f72aea91c3ca4d5d1335e92d4f6f8c34a90e7ed"
+        },
+        "date": 1734066644856,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10371140203,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
