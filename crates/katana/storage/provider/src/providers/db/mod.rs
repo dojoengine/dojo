@@ -255,25 +255,6 @@ impl<Db: Database> BlockStatusProvider for DbProvider<Db> {
     }
 }
 
-// impl<Db: Database> StateRootProvider for DbProvider<Db> {
-//     fn state_root(&self, block_id: BlockHashOrNumber) -> ProviderResult<Option<Felt>> {
-//         let db_tx = self.0.tx()?;
-
-//         let block_num = match block_id {
-//             BlockHashOrNumber::Num(num) => Some(num),
-//             BlockHashOrNumber::Hash(hash) => db_tx.get::<tables::BlockNumbers>(hash)?,
-//         };
-
-//         if let Some(block_num) = block_num {
-//             let header = db_tx.get::<tables::Headers>(block_num)?;
-//             db_tx.commit()?;
-//             Ok(header.map(|h| h.state_root))
-//         } else {
-//             Ok(None)
-//         }
-//     }
-// }
-
 // A helper function that iterates over all entries in a dupsort table and collects the
 // results into `V`. If `key` is not found, `V::default()` is returned.
 fn dup_entries<Db, Tb, V, T>(

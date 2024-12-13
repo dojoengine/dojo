@@ -246,53 +246,6 @@ where
     }
 }
 
-// impl<Db> StateProvider for BlockchainProvider<Db>
-// where
-//     Db: StateProvider,
-// {
-//     fn nonce(
-//         &self,
-//         address: ContractAddress,
-//     ) -> ProviderResult<Option<katana_primitives::contract::Nonce>> {
-//         self.provider.nonce(address)
-//     }
-
-//     fn storage(
-//         &self,
-//         address: ContractAddress,
-//         storage_key: StorageKey,
-//     ) -> ProviderResult<Option<StorageValue>> {
-//         self.provider.storage(address, storage_key)
-//     }
-
-//     fn class_hash_of_contract(
-//         &self,
-//         address: ContractAddress,
-//     ) -> ProviderResult<Option<ClassHash>> {
-//         self.provider.class_hash_of_contract(address)
-//     }
-// }
-
-// impl<Db> ContractClassProvider for BlockchainProvider<Db>
-// where
-//     Db: ContractClassProvider,
-// {
-//     fn class(&self, hash: ClassHash) -> ProviderResult<Option<ContractClass>> {
-//         self.provider.class(hash)
-//     }
-
-//     fn compiled_class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
-//         self.provider.compiled_class(hash)
-//     }
-
-//     fn compiled_class_hash_of_class_hash(
-//         &self,
-//         hash: ClassHash,
-//     ) -> ProviderResult<Option<CompiledClassHash>> {
-//         self.provider.compiled_class_hash_of_class_hash(hash)
-//     }
-// }
-
 impl<Db> StateFactoryProvider for BlockchainProvider<Db>
 where
     Db: StateFactoryProvider,
@@ -331,15 +284,6 @@ where
         self.provider.deployed_contracts(block_id)
     }
 }
-
-// impl<Db> StateRootProvider for BlockchainProvider<Db>
-// where
-//     Db: StateRootProvider,
-// {
-//     fn state_root(&self, block_id: BlockHashOrNumber) -> ProviderResult<Option<Felt>> {
-//         self.provider.state_root(block_id)
-//     }
-// }
 
 impl<Db> ContractClassWriter for BlockchainProvider<Db>
 where

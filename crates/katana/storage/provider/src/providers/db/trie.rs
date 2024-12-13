@@ -1,8 +1,7 @@
 use std::collections::{BTreeMap, HashMap};
 use std::fmt::Debug;
-use std::marker::PhantomData;
 
-use katana_db::abstraction::{Database, DbTxMut};
+use katana_db::abstraction::Database;
 use katana_db::tables;
 use katana_db::trie::TrieDbMut;
 use katana_primitives::block::BlockNumber;
@@ -21,11 +20,6 @@ struct ContractLeaf {
     pub class_hash: Option<Felt>,
     pub storage_root: Option<Felt>,
     pub nonce: Option<Felt>,
-}
-
-pub struct TrieFactory<'tx, Tx: DbTxMut> {
-    tx: Tx,
-    _lifetime: &'tx PhantomData<()>,
 }
 
 impl<Db: Database> TrieWriter for DbProvider<Db> {
