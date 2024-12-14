@@ -27,6 +27,7 @@ use proto::world::{
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use sqlx::prelude::FromRow;
 use sqlx::sqlite::SqliteRow;
+use sqlx::types::chrono::{DateTime, Utc};
 use sqlx::{Pool, Row, Sqlite};
 use starknet::core::types::Felt;
 use starknet::providers::jsonrpc::HttpTransport;
@@ -361,7 +362,16 @@ impl DojoWorld {
                 internal_updated_at,
             )?;
 
-            let query = sqlx::query(&entity_query).bind(models_str);
+            let mut query = sqlx::query(&entity_query).bind(models_str);
+            if internal_updated_at > 0 {
+                for _ in 0..schemas.len() {
+                    query = query.bind(
+                        DateTime::<Utc>::from_timestamp(internal_updated_at as i64, 0)
+                            .ok_or_else(|| Error::from(QueryError::UnsupportedQuery))?
+                            .to_rfc3339(),
+                    );
+                }
+            }
             let rows = query.fetch_all(&mut *tx).await?;
             let schemas = Arc::new(schemas);
 
