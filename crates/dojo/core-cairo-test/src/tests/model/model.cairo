@@ -242,5 +242,7 @@ fn test_write_schema() {
             && read_model.v3.b == schema.v3.b
             && read_model.v3.c == schema.v3.c
             && read_model.v3.d == schema.v3.d
+            && read_model.v1 == foo.v1
+            && read_model.v2 == foo.v2
     );
 }
