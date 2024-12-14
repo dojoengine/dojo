@@ -12,11 +12,11 @@ pub struct ModelPtr<M> {
     pub id: felt252,
 }
 
-trait ModelPtrsTrait<M> {
+pub trait ModelPtrsTrait<M> {
     fn to_indexes(self: Span<ModelPtr<M>>) -> Span<ModelIndex>;
 }
 
-impl ModelPtrsImpl<M> of ModelPtrsTrait<M> {
+pub impl ModelPtrsImpl<M> of ModelPtrsTrait<M> {
     fn to_indexes(self: Span<ModelPtr<M>>) -> Span<ModelIndex> {
         let mut ids = ArrayTrait::<ModelIndex>::new();
         for ptr in self {

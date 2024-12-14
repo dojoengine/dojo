@@ -25,11 +25,37 @@ struct Foo2 {
     v2: u32
 }
 
+#[derive(Copy, Drop, Serde, Debug, Introspect)]
+struct AStruct {
+    a: u8,
+    b: u8,
+    c: u8,
+    d: u8,
+}
+
+#[dojo::model]
+#[derive(Copy, Drop, Serde, Debug)]
+struct Foo3 {
+    #[key]
+    id: felt252,
+    v0: u256,
+    v1: felt252,
+    v2: u128,
+    v3: AStruct,
+}
+
+#[derive(Copy, Drop, Serde, Debug, Introspect)]
+struct Oo {
+    v0: u256,
+    v3: AStruct,
+}
+
 fn namespace_def() -> NamespaceDef {
     NamespaceDef {
         namespace: "dojo_cairo_test", resources: [
             TestResource::Model(m_Foo::TEST_CLASS_HASH.try_into().unwrap()),
             TestResource::Model(m_Foo2::TEST_CLASS_HASH.try_into().unwrap()),
+            TestResource::Model(m_Foo3::TEST_CLASS_HASH.try_into().unwrap()),
         ].span()
     }
 }
@@ -180,4 +206,41 @@ fn test_model_ptr_from_entity_id() {
     world.write_model(@foo);
     let v1 = world.read_member(ptr, selector!("v1"));
     assert!(foo.v1 == v1);
+}
+
+
+#[test]
+fn test_read_schema() {
+    let mut world = spawn_foo_world();
+    let foo = Foo3 { id: 1, v0: 2, v1: 3, v2: 4, v3: AStruct { a: 5, b: 6, c: 7, d: 8 } };
+    world.write_model(@foo);
+
+    let schema: Oo = world.read_schema(foo.ptr());
+    assert!(
+        schema.v0 == foo.v0
+            && schema.v3.a == foo.v3.a
+            && schema.v3.b == foo.v3.b
+            && schema.v3.c == foo.v3.c
+            && schema.v3.d == foo.v3.d
+    );
+}
+
+
+#[test]
+fn test_write_schema() {
+    let mut world = spawn_foo_world();
+    let foo = Foo3 { id: 1, v0: 2, v1: 3, v2: 4, v3: AStruct { a: 5, b: 6, c: 7, d: 8 } };
+    world.write_model(@foo);
+
+    let mut schema = Oo { v0: 12, v3: AStruct { a: 13, b: 14, c: 15, d: 16 } };
+    world.write_schema(foo.ptr(), schema);
+
+    let read_model: Foo3 = world.read_model(foo.id);
+    assert!(
+        read_model.v0 == schema.v0
+            && read_model.v3.a == schema.v3.a
+            && read_model.v3.b == schema.v3.b
+            && read_model.v3.c == schema.v3.c
+            && read_model.v3.d == schema.v3.d
+    );
 }

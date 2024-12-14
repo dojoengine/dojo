@@ -1,4 +1,4 @@
-use dojo::{model::{ModelPtr, model_value::ModelValueKey}};
+use dojo::{model::{ModelPtr, model_value::ModelValueKey}, meta::Introspect};
 
 // TODO: define the right interface for member accesses.
 
@@ -51,6 +51,14 @@ pub trait ModelStorage<S, M> {
         self: @S, ptrs: Span<ModelPtr<M>>, field_selectors: Span<felt252>
     ) -> Array<T>;
 
+    /// Retrieves part of a model, matching a schema.
+    fn read_schema<T, +Serde<T>, +Introspect<T>>(self: @S, ptr: ModelPtr<M>) -> T;
+
+    /// Retrieves part of multiple models, matching a schema.
+    fn read_schemas<T, +Drop<T>, +Serde<T>, +Introspect<T>>(
+        self: @S, ptrs: Span<ModelPtr<M>>
+    ) -> Array<T>;
+
     /// Updates a member of a model.
     fn write_member<T, +Serde<T>, +Drop<T>>(
         ref self: S, ptr: ModelPtr<M>, field_selector: felt252, value: T
@@ -69,6 +77,16 @@ pub trait ModelStorage<S, M> {
     /// Updates multiple members of multiple models.
     fn write_models_members<T, +Serde<T>, +Drop<T>>(
         ref self: S, ptrs: Span<ModelPtr<M>>, field_selectors: Span<felt252>, values: Span<T>
+    );
+
+    /// Updates part of a model, matching a schema.
+    fn write_schema<T, +Serde<T>, +Drop<T>, +Introspect<T>>(
+        ref self: S, ptr: ModelPtr<M>, value: T
+    );
+
+    /// Updates part of multiple models, matching a schema.
+    fn write_schemas<T, +Serde<T>, +Drop<T>, +Introspect<T>>(
+        ref self: S, ptrs: Span<ModelPtr<M>>, values: Span<T>
     );
     /// Returns the current namespace hash.
     fn namespace_hash(self: @S) -> felt252;
