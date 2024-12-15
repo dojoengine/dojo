@@ -271,7 +271,7 @@ impl DojoWorld {
         order_by: Option<&str>,
         entity_models: Vec<String>,
         internal_updated_at: u64,
-    ) -> Result<Vec<proto::types::Entity>, Error> {
+    ) -> Result<(Vec<proto::types::Entity>, usize), Error> {
         let entity_models =
             entity_models.iter().map(|tag| compute_selector_from_tag(tag)).collect::<Vec<Felt>>();
 
@@ -324,6 +324,8 @@ impl DojoWorld {
             insert_start.elapsed()
         );
 
+        let mut query_result_count: usize = 0;
+
         let query_start = std::time::Instant::now();
         for (models_str, entity_ids) in &model_groups {
             tracing::debug!("Processing model group with {} entities", entity_ids.len());
@@ -349,7 +351,7 @@ impl DojoWorld {
                 continue;
             }
 
-            let (entity_query, _) = build_sql_query(
+            let (entity_query, count_query) = build_sql_query(
                 &schemas,
                 table,
                 entity_relation_column,
@@ -363,16 +365,23 @@ impl DojoWorld {
             )?;
 
             let mut query = sqlx::query(&entity_query).bind(models_str);
+            let mut count_query = sqlx::query(&count_query).bind(models_str);
             if internal_updated_at > 0 {
                 for _ in 0..schemas.len() {
-                    query = query.bind(
-                        DateTime::<Utc>::from_timestamp(internal_updated_at as i64, 0)
-                            .ok_or_else(|| Error::from(QueryError::UnsupportedQuery))?
-                            .to_rfc3339(),
-                    );
+                    let time = DateTime::<Utc>::from_timestamp(internal_updated_at as i64, 0)
+                        .ok_or_else(|| {
+                            Error::from(QueryError::InvalidTimestamp(internal_updated_at))
+                        })?
+                        .to_rfc3339();
+                    query = query.bind(time.clone());
+                    count_query = count_query.bind(time);
                 }
             }
             let rows = query.fetch_all(&mut *tx).await?;
+            let fetch_one_result = count_query.fetch_one(&mut *tx).await?;
+            let query_count: u32 = fetch_one_result.get(0);
+            query_result_count += query_count as usize;
+
             let schemas = Arc::new(schemas);
 
             let group_entities: Result<Vec<_>, Error> = rows
@@ -392,7 +401,7 @@ impl DojoWorld {
 
         tracing::debug!("Total fetch_entities operation took {:?}", start.elapsed());
 
-        Ok(all_entities)
+        Ok((all_entities, query_result_count))
     }
 
     async fn fetch_historical_event_messages(
@@ -519,7 +528,7 @@ impl DojoWorld {
         let db_entities: Vec<(String, String)> =
             sqlx::query_as(&query).bind(limit).bind(offset).fetch_all(&self.pool).await?;
 
-        let entities = self
+        let (entities, query_result_count) = self
             .fetch_entities(
                 table,
                 entity_relation_column,
@@ -530,7 +539,7 @@ impl DojoWorld {
                 internal_updated_at,
             )
             .await?;
-        Ok((entities, total_count))
+        Ok((entities, query_result_count as u32))
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -666,7 +675,7 @@ impl DojoWorld {
             .fetch_all(&self.pool)
             .await?;
 
-        let entities = self
+        let (entities, query_result_count) = self
             .fetch_entities(
                 table,
                 entity_relation_column,
@@ -677,7 +686,7 @@ impl DojoWorld {
                 internal_updated_at,
             )
             .await?;
-        Ok((entities, total_count))
+        Ok((entities, query_result_count as u32))
     }
 
     pub(crate) async fn events_by_keys(
@@ -883,7 +892,7 @@ impl DojoWorld {
 
         let db_entities: Vec<(String, String)> = db_query.fetch_all(&self.pool).await?;
 
-        let entities = self
+        let (entities, query_result_count) = self
             .fetch_entities(
                 table,
                 entity_relation_column,
@@ -894,7 +903,7 @@ impl DojoWorld {
                 internal_updated_at,
             )
             .await?;
-        Ok((entities, total_count))
+        Ok((entities, query_result_count as u32))
     }
 
     pub async fn model_metadata(

@@ -184,7 +184,7 @@ pub fn build_sql_query(
         ));
 
         if internal_updated_at > 0 {
-            internal_updated_at_clause.push(format!("[{model_table}].internal_updated_at > ?"));
+            internal_updated_at_clause.push(format!("[{model_table}].internal_updated_at >= ?"));
         }
 
         // Collect columns with table prefix
