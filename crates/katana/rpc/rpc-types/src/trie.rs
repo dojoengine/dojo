@@ -6,7 +6,7 @@ use katana_trie::bonsai::BitSlice;
 use katana_trie::{MultiProof, Path, ProofNode};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct ContractStorageKeys {
     #[serde(rename = "contract_address")]
     pub address: ContractAddress,
