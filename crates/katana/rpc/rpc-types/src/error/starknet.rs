@@ -3,6 +3,7 @@ use jsonrpsee::types::error::CallError;
 use jsonrpsee::types::ErrorObject;
 use katana_pool::validation::error::InvalidTransactionError;
 use katana_pool::PoolError;
+use katana_primitives::block::BlockNumber;
 use katana_primitives::event::ContinuationTokenError;
 use katana_provider::error::ProviderError;
 use serde::Serialize;
@@ -83,6 +84,13 @@ pub enum StarknetApiError {
     TooManyKeysInFilter,
     #[error("Failed to fetch pending transactions")]
     FailedToFetchPendingTransactions,
+    #[error("The node doesn't support storage proofs for blocks that are too far in the past")]
+    StorageProofNotSupported {
+        /// The oldest block whose storage proof can be obtained.
+        oldest_block: BlockNumber,
+        /// The block of the storage proof that is being requested.
+        requested_block: BlockNumber,
+    },
 }
 
 impl StarknetApiError {
@@ -103,6 +111,7 @@ impl StarknetApiError {
             StarknetApiError::FailedToFetchPendingTransactions => 38,
             StarknetApiError::ContractError { .. } => 40,
             StarknetApiError::TransactionExecutionError { .. } => 41,
+            StarknetApiError::StorageProofNotSupported { .. } => 42,
             StarknetApiError::InvalidContractClass => 50,
             StarknetApiError::ClassAlreadyDeclared => 51,
             StarknetApiError::InvalidTransactionNonce { .. } => 52,
@@ -130,6 +139,7 @@ impl StarknetApiError {
             StarknetApiError::ContractError { .. }
             | StarknetApiError::UnexpectedError { .. }
             | StarknetApiError::PageSizeTooBig { .. }
+            | StarknetApiError::StorageProofNotSupported { .. }
             | StarknetApiError::TransactionExecutionError { .. } => Some(serde_json::json!(self)),
 
             StarknetApiError::InvalidTransactionNonce { reason }
@@ -370,6 +380,18 @@ mod tests {
         json!({
         	"requested": 1000,
          	"max_allowed": 500
+        }),
+    )]
+    #[case(
+    	StarknetApiError::StorageProofNotSupported {
+     		oldest_block: 10,
+       		requested_block: 9
+     	},
+      	42,
+       	"The node doesn't support storage proofs for blocks that are too far in the past",
+        json!({
+        	"oldest_block": 10,
+         	"requested_block": 9
         }),
     )]
     fn test_starknet_api_error_to_error_conversion_data_some(
