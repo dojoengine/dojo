@@ -103,27 +103,23 @@ impl ContractClassProvider for ForkedStateDb {
 }
 
 impl StateProofProvider for ForkedStateDb {
-    fn class_multiproof(&self, classes: Vec<ClassHash>) -> ProviderResult<katana_trie::MultiProof> {
-        let _ = classes;
-        unimplemented!("not supported in forked mode")
+    fn class_multiproof(&self, _: Vec<ClassHash>) -> ProviderResult<katana_trie::MultiProof> {
+        Ok(katana_trie::MultiProof(Default::default()))
     }
 
     fn contract_multiproof(
         &self,
-        addresses: Vec<ContractAddress>,
+        _: Vec<ContractAddress>,
     ) -> ProviderResult<katana_trie::MultiProof> {
-        let _ = addresses;
-        unimplemented!("not supported in forked mode")
+        Ok(katana_trie::MultiProof(Default::default()))
     }
 
     fn storage_multiproof(
         &self,
-        address: ContractAddress,
-        key: Vec<StorageKey>,
+        _: ContractAddress,
+        _: Vec<StorageKey>,
     ) -> ProviderResult<katana_trie::MultiProof> {
-        let _ = address;
-        let _ = key;
-        unimplemented!("not supported in forked mode")
+        Ok(katana_trie::MultiProof(Default::default()))
     }
 }
 
@@ -179,27 +175,23 @@ impl ContractClassProvider for LatestStateProvider {
 }
 
 impl StateProofProvider for LatestStateProvider {
-    fn class_multiproof(&self, classes: Vec<ClassHash>) -> ProviderResult<katana_trie::MultiProof> {
-        let _ = classes;
-        unimplemented!("not supported in forked mode")
+    fn class_multiproof(&self, _: Vec<ClassHash>) -> ProviderResult<katana_trie::MultiProof> {
+        Ok(katana_trie::MultiProof(Default::default()))
     }
 
     fn contract_multiproof(
         &self,
-        addresses: Vec<ContractAddress>,
+        _: Vec<ContractAddress>,
     ) -> ProviderResult<katana_trie::MultiProof> {
-        let _ = addresses;
-        unimplemented!("not supported in forked mode")
+        Ok(katana_trie::MultiProof(Default::default()))
     }
 
     fn storage_multiproof(
         &self,
-        address: ContractAddress,
-        key: Vec<StorageKey>,
+        _: ContractAddress,
+        _: Vec<StorageKey>,
     ) -> ProviderResult<katana_trie::MultiProof> {
-        let _ = address;
-        let _ = key;
-        unimplemented!("not supported in forked mode")
+        Ok(katana_trie::MultiProof(Default::default()))
     }
 }
 
@@ -286,27 +278,23 @@ impl ContractClassProvider for ForkedSnapshot {
 }
 
 impl StateProofProvider for ForkedSnapshot {
-    fn class_multiproof(&self, classes: Vec<ClassHash>) -> ProviderResult<katana_trie::MultiProof> {
-        let _ = classes;
-        unimplemented!("not supported in forked mode")
+    fn class_multiproof(&self, _: Vec<ClassHash>) -> ProviderResult<katana_trie::MultiProof> {
+        Ok(katana_trie::MultiProof(Default::default()))
     }
 
     fn contract_multiproof(
         &self,
-        addresses: Vec<ContractAddress>,
+        _: Vec<ContractAddress>,
     ) -> ProviderResult<katana_trie::MultiProof> {
-        let _ = addresses;
-        unimplemented!("not supported in forked mode")
+        Ok(katana_trie::MultiProof(Default::default()))
     }
 
     fn storage_multiproof(
         &self,
-        address: ContractAddress,
-        key: Vec<StorageKey>,
+        _: ContractAddress,
+        _: Vec<StorageKey>,
     ) -> ProviderResult<katana_trie::MultiProof> {
-        let _ = address;
-        let _ = key;
-        unimplemented!("not supported in forked mode")
+        Ok(katana_trie::MultiProof(Default::default()))
     }
 }
 
