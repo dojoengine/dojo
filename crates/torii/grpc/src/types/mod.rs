@@ -105,7 +105,12 @@ pub struct Query {
     pub offset: u32,
     pub dont_include_hashed_keys: bool,
     pub order_by: Vec<OrderBy>,
+    /// If the array is not empty, only the given models are retrieved.
+    /// All entities that don't have a model in the array are excluded.
     pub entity_models: Vec<String>,
+    /// The internal updated at timestamp in seconds (unix timestamp) from which entities are
+    /// retrieved (inclusive). Use 0 to retrieve all entities.
+    pub internal_updated_at: u64,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
@@ -271,6 +276,7 @@ impl From<Query> for proto::types::Query {
             dont_include_hashed_keys: value.dont_include_hashed_keys,
             order_by: value.order_by.into_iter().map(|o| o.into()).collect(),
             entity_models: value.entity_models,
+            internal_updated_at: value.internal_updated_at,
         }
     }
 }
