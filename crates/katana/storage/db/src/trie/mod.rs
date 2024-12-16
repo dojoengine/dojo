@@ -155,8 +155,7 @@ where
 
     fn create_batch(&self) -> Self::Batch {}
 
-    fn remove_by_prefix(&mut self, prefix: &DatabaseKey<'_>) -> Result<(), Self::DatabaseError> {
-        let _ = prefix;
+    fn remove_by_prefix(&mut self, _: &DatabaseKey<'_>) -> Result<(), Self::DatabaseError> {
         Ok(())
     }
 
@@ -167,31 +166,25 @@ where
 
     fn get_by_prefix(
         &self,
-        prefix: &DatabaseKey<'_>,
+        _: &DatabaseKey<'_>,
     ) -> Result<Vec<(ByteVec, ByteVec)>, Self::DatabaseError> {
-        let _ = prefix;
         todo!()
     }
 
     fn insert(
         &mut self,
-        key: &DatabaseKey<'_>,
-        value: &[u8],
-        batch: Option<&mut Self::Batch>,
+        _: &DatabaseKey<'_>,
+        _: &[u8],
+        _: Option<&mut Self::Batch>,
     ) -> Result<Option<ByteVec>, Self::DatabaseError> {
-        let _ = key;
-        let _ = value;
-        let _ = batch;
         unimplemented!("not supported in read-only transaction")
     }
 
     fn remove(
         &mut self,
-        key: &DatabaseKey<'_>,
-        batch: Option<&mut Self::Batch>,
+        _: &DatabaseKey<'_>,
+        _: Option<&mut Self::Batch>,
     ) -> Result<Option<ByteVec>, Self::DatabaseError> {
-        let _ = key;
-        let _ = batch;
         unimplemented!("not supported in read-only transaction")
     }
 
@@ -201,8 +194,7 @@ where
         Ok(value.is_some())
     }
 
-    fn write_batch(&mut self, batch: Self::Batch) -> Result<(), Self::DatabaseError> {
-        let _ = batch;
+    fn write_batch(&mut self, _: Self::Batch) -> Result<(), Self::DatabaseError> {
         unimplemented!("not supported in read-only transaction")
     }
 }
@@ -321,8 +313,7 @@ where
         Ok(value.is_some())
     }
 
-    fn write_batch(&mut self, batch: Self::Batch) -> Result<(), Self::DatabaseError> {
-        let _ = batch;
+    fn write_batch(&mut self, _: Self::Batch) -> Result<(), Self::DatabaseError> {
         Ok(())
     }
 }

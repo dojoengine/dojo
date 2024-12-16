@@ -4,6 +4,7 @@ use katana_primitives::{ContractAddress, Felt};
 
 use crate::id::CommitId;
 
+#[derive(Debug)]
 pub struct ContractsTrie<DB: BonsaiDatabase> {
     trie: crate::BonsaiTrie<DB>,
 }

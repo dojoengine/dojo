@@ -3,15 +3,17 @@ use std::path::PathBuf;
 use dojo_test_utils::sequencer::{get_default_test_config, TestSequencer};
 use jsonrpsee::http_client::HttpClientBuilder;
 use katana_node::config::SequencingConfig;
+use katana_primitives::block::BlockIdOrTag;
 use katana_primitives::hash;
-use katana_primitives::{block::BlockIdOrTag, hash::StarkHash};
+use katana_primitives::hash::StarkHash;
 use katana_rpc_api::starknet::StarknetApiClient;
 use katana_rpc_types::trie::GetStorageProofResponse;
 use katana_trie::bitvec::view::AsBits;
 use katana_trie::bonsai::BitVec;
 use katana_trie::MultiProof;
+use starknet::accounts::Account;
+use starknet::core::types::BlockTag;
 use starknet::macros::short_string;
-use starknet::{accounts::Account, core::types::BlockTag};
 
 mod common;
 

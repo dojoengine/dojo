@@ -66,8 +66,7 @@ where
 
     fn create_batch(&self) -> Self::Batch {}
 
-    fn remove_by_prefix(&mut self, prefix: &DatabaseKey<'_>) -> Result<(), Self::DatabaseError> {
-        let _ = prefix;
+    fn remove_by_prefix(&mut self, _: &DatabaseKey<'_>) -> Result<(), Self::DatabaseError> {
         unimplemented!("modifying trie snapshot is not supported")
     }
 
@@ -92,39 +91,33 @@ where
 
     fn get_by_prefix(
         &self,
-        prefix: &DatabaseKey,
+        _: &DatabaseKey<'_>,
     ) -> Result<Vec<(ByteVec, ByteVec)>, Self::DatabaseError> {
         todo!()
     }
 
     fn insert(
         &mut self,
-        key: &DatabaseKey<'_>,
-        value: &[u8],
-        batch: Option<&mut Self::Batch>,
+        _: &DatabaseKey<'_>,
+        _: &[u8],
+        _: Option<&mut Self::Batch>,
     ) -> Result<Option<ByteVec>, Self::DatabaseError> {
-        let _ = key;
-        let _ = value;
-        let _ = batch;
         unimplemented!("modifying trie snapshot is not supported")
     }
 
     fn remove(
         &mut self,
-        key: &DatabaseKey<'_>,
-        batch: Option<&mut Self::Batch>,
+        _: &DatabaseKey<'_>,
+        _: Option<&mut Self::Batch>,
     ) -> Result<Option<ByteVec>, Self::DatabaseError> {
-        let _ = key;
-        let _ = batch;
         unimplemented!("modifying trie snapshot is not supported")
     }
 
-    fn contains(&self, key: &DatabaseKey<'_>) -> Result<bool, Self::DatabaseError> {
+    fn contains(&self, _: &DatabaseKey<'_>) -> Result<bool, Self::DatabaseError> {
         todo!()
     }
 
-    fn write_batch(&mut self, batch: Self::Batch) -> Result<(), Self::DatabaseError> {
-        let _ = batch;
+    fn write_batch(&mut self, _: Self::Batch) -> Result<(), Self::DatabaseError> {
         unimplemented!("modifying trie snapshot is not supported")
     }
 }

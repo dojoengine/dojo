@@ -1,15 +1,14 @@
-pub use bitvec;
 use bitvec::array::BitArray;
 use bitvec::order::Msb0;
 use bitvec::vec::BitVec;
 use bitvec::view::AsBits;
 pub use bonsai::{MultiProof, Path, ProofNode};
-pub use bonsai_trie as bonsai;
 pub use bonsai_trie::{BonsaiDatabase, BonsaiPersistentDatabase};
 use bonsai_trie::{BonsaiStorage, BonsaiStorageConfig};
 use katana_primitives::class::ClassHash;
 use katana_primitives::Felt;
 use starknet_types_core::hash::{Pedersen, Poseidon, StarkHash};
+pub use {bitvec, bonsai_trie as bonsai};
 
 mod classes;
 mod contracts;

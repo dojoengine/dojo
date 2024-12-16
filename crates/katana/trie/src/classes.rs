@@ -7,6 +7,7 @@ use starknet_types_core::hash::{Poseidon, StarkHash};
 
 use crate::id::CommitId;
 
+#[derive(Debug)]
 pub struct ClassesTrie<DB: BonsaiDatabase> {
     trie: crate::BonsaiTrie<DB>,
 }
