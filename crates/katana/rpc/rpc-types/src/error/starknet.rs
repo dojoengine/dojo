@@ -78,8 +78,6 @@ pub enum StarknetApiError {
     UnsupportedContractClassVersion,
     #[error("An unexpected error occured")]
     UnexpectedError { reason: String },
-    #[error("Too many storage keys requested")]
-    ProofLimitExceeded,
     #[error("Too many keys provided in a filter")]
     TooManyKeysInFilter,
     #[error("Failed to fetch pending transactions")]
@@ -90,6 +88,13 @@ pub enum StarknetApiError {
         oldest_block: BlockNumber,
         /// The block of the storage proof that is being requested.
         requested_block: BlockNumber,
+    },
+    #[error("Proof limit exceeded")]
+    ProofLimitExceeded {
+        /// The limit for the total number of keys that can be specified in a single request.
+        limit: u64,
+        /// The total number of keys that is being requested.
+        total: u64,
     },
 }
 
@@ -126,7 +131,7 @@ impl StarknetApiError {
             StarknetApiError::UnsupportedTransactionVersion => 61,
             StarknetApiError::UnsupportedContractClassVersion => 62,
             StarknetApiError::UnexpectedError { .. } => 63,
-            StarknetApiError::ProofLimitExceeded => 10000,
+            StarknetApiError::ProofLimitExceeded { .. } => 1000,
         }
     }
 
@@ -137,8 +142,9 @@ impl StarknetApiError {
     pub fn data(&self) -> Option<serde_json::Value> {
         match self {
             StarknetApiError::ContractError { .. }
-            | StarknetApiError::UnexpectedError { .. }
             | StarknetApiError::PageSizeTooBig { .. }
+            | StarknetApiError::UnexpectedError { .. }
+            | StarknetApiError::ProofLimitExceeded { .. }
             | StarknetApiError::StorageProofNotSupported { .. }
             | StarknetApiError::TransactionExecutionError { .. } => Some(serde_json::json!(self)),
 
@@ -294,7 +300,6 @@ mod tests {
     #[case(StarknetApiError::InvalidMessageSelector, 21, "Invalid message selector")]
     #[case(StarknetApiError::NonAccount, 58, "Sender address in not an account contract")]
     #[case(StarknetApiError::InvalidTxnIndex, 27, "Invalid transaction index in a block")]
-    #[case(StarknetApiError::ProofLimitExceeded, 10000, "Too many storage keys requested")]
     #[case(StarknetApiError::TooManyKeysInFilter, 34, "Too many keys provided in a filter")]
     #[case(StarknetApiError::ContractClassSizeIsTooLarge, 57, "Contract class size is too large")]
     #[case(StarknetApiError::FailedToFetchPendingTransactions, 38, "Failed to fetch pending transactions")]
@@ -392,6 +397,18 @@ mod tests {
         json!({
         	"oldest_block": 10,
          	"requested_block": 9
+        }),
+    )]
+    #[case(
+    	StarknetApiError::ProofLimitExceeded {
+     		limit: 5,
+       		total: 10
+     	},
+      	1000,
+       	"Proof limit exceeded",
+        json!({
+        	"limit": 5,
+         	"total": 10
         }),
     )]
     fn test_starknet_api_error_to_error_conversion_data_some(
