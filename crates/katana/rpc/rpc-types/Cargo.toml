@@ -13,6 +13,7 @@ katana-executor.workspace = true
 katana-pool.workspace = true
 katana-primitives.workspace = true
 katana-provider.workspace = true
+katana-trie.workspace = true
 
 anyhow.workspace = true
 derive_more.workspace = true
