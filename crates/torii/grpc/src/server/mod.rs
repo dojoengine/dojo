@@ -438,7 +438,6 @@ impl DojoWorld {
         entity_models: Vec<String>,
         entity_updated_after: Option<String>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
-        // TODO: use prepared statement for where clause
         let where_clause = match &hashed_keys {
             Some(hashed_keys) => {
                 let ids = hashed_keys
@@ -450,7 +449,7 @@ impl DojoWorld {
                     "WHERE {} {}",
                     ids.join(" OR "),
                     if entity_updated_after.is_some() {
-                        format!("AND [{table}].updated_at >= ?")
+                        format!("AND {table}.updated_at >= ?")
                     } else {
                         String::new()
                     }
@@ -458,7 +457,7 @@ impl DojoWorld {
             }
             None => {
                 if entity_updated_after.is_some() {
-                    format!("WHERE [{table}].updated_at >= ?")
+                    format!("WHERE {table}.updated_at >= ?")
                 } else {
                     String::new()
                 }
@@ -473,9 +472,20 @@ impl DojoWorld {
                     {where_clause}
                 "#
         );
+
         // total count of rows without limit and offset
-        let total_count: u32 =
-            sqlx::query_scalar(&count_query).fetch_optional(&self.pool).await?.unwrap_or(0);
+        let mut count_query = sqlx::query_scalar(&count_query);
+        if let Some(hashed_keys) = &hashed_keys {
+            for key in &hashed_keys.hashed_keys {
+                let key = Felt::from_bytes_be_slice(&key);
+                count_query = count_query.bind(format!("{:#x}", key));
+            }
+        }
+
+        if let Some(entity_updated_after) = entity_updated_after.clone() {
+            count_query = count_query.bind(entity_updated_after);
+        }
+        let total_count = count_query.fetch_optional(&self.pool).await?.unwrap_or(0);
         if total_count == 0 {
             return Ok((Vec::new(), 0));
         }
@@ -527,7 +537,10 @@ impl DojoWorld {
             }
         }
 
-        query = query.bind(entity_updated_after).bind(limit).bind(offset);
+        if let Some(entity_updated_after) = entity_updated_after.clone() {
+            query = query.bind(entity_updated_after);
+        }
+        query = query.bind(limit).bind(offset);
         let db_entities: Vec<(String, String)> = query.fetch_all(&self.pool).await?;
 
         let entities = self
@@ -694,13 +707,12 @@ impl DojoWorld {
             return Ok((entities, total_count));
         }
 
-        let db_entities = sqlx::query_as(&models_query)
-            .bind(&keys_pattern)
-            .bind(entity_updated_after)
-            .bind(limit)
-            .bind(offset)
-            .fetch_all(&self.pool)
-            .await?;
+        let mut query = sqlx::query_as(&models_query).bind(&keys_pattern);
+        if let Some(entity_updated_after) = entity_updated_after.clone() {
+            query = query.bind(entity_updated_after);
+        }
+        query = query.bind(limit).bind(offset);
+        let db_entities: Vec<(String, String)> = query.fetch_all(&self.pool).await?;
 
         let entities = self
             .fetch_entities(
@@ -813,7 +825,7 @@ impl DojoWorld {
         let mut where_clause =
             format!("[{}].[{}] {comparison_operator} ?", member_clause.model, member_clause.member);
         if entity_updated_after.is_some() {
-            where_clause += &format!(" AND {table}.internal_updated_at >= ?");
+            where_clause += &format!(" AND {table}.updated_at >= ?");
         }
 
         let (entity_query, count_query) = build_sql_query(
@@ -833,13 +845,12 @@ impl DojoWorld {
             .await?
             .unwrap_or(0);
 
-        let db_entities = sqlx::query(&entity_query)
-            .bind(comparison_value)
-            .bind(entity_updated_after.clone())
-            .bind(limit)
-            .bind(offset)
-            .fetch_all(&self.pool)
-            .await?;
+        let mut query = sqlx::query(&entity_query).bind(comparison_value);
+        if let Some(entity_updated_after) = entity_updated_after.clone() {
+            query = query.bind(entity_updated_after);
+        }
+        query = query.bind(limit).bind(offset);
+        let db_entities = query.fetch_all(&self.pool).await?;
 
         let entities_collection: Result<Vec<_>, Error> = db_entities
             .par_iter()
@@ -918,7 +929,7 @@ impl DojoWorld {
         for value in &bind_values {
             db_query = db_query.bind(value);
         }
-        db_query = db_query.bind(limit.unwrap_or(u32::MAX)).bind(offset.unwrap_or(0));
+        db_query = db_query.bind(limit).bind(offset);
 
         let db_entities: Vec<(String, String)> = db_query.fetch_all(&self.pool).await?;
 
@@ -1304,11 +1315,6 @@ fn build_composite_clause(
     let mut bind_values = Vec::new();
     let mut seen_models = HashMap::new();
 
-    if let Some(entity_updated_after) = entity_updated_after.clone() {
-        where_clauses.push(format!("({table}.updated_at >= ?)"));
-        bind_values.push(entity_updated_after);
-    }
-
     for clause in &composite.clauses {
         match clause.clause_type.as_ref().unwrap() {
             ClauseType::HashedKeys(hashed_keys) => {
@@ -1414,10 +1420,25 @@ fn build_composite_clause(
 
     let join_clause = join_clauses.join(" ");
     let where_clause = if !where_clauses.is_empty() {
-        format!("WHERE {}", where_clauses.join(if is_or { " OR " } else { " AND " }))
+        format!(
+            "WHERE {} {}",
+            where_clauses.join(if is_or { " OR " } else { " AND " }),
+            if let Some(entity_updated_after) = entity_updated_after.clone() {
+                bind_values.push(entity_updated_after);
+                format!("AND {table}.updated_at >= ?")
+            } else {
+                String::new()
+            }
+        )
     } else {
-        String::new()
+        if let Some(entity_updated_after) = entity_updated_after.clone() {
+            bind_values.push(entity_updated_after);
+            format!("WHERE {table}.updated_at >= ?")
+        } else {
+            String::new()
+        }
     };
+
     let having_clause = if !having_clauses.is_empty() {
         format!("HAVING {}", having_clauses.join(if is_or { " OR " } else { " AND " }))
     } else {
