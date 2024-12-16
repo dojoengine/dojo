@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1734379736348,
+  "lastUpdate": 1734379924673,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -41053,6 +41053,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10128223160,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b0e9367d66239741ff69aad672f0518e2e5531b6",
+          "message": "opt(torii-grpc): entity updated after on entities table (#2810)\n\n* opt(torii-grpc): entity updated after on entities table\n\n* fix: query\n\n* refactor: clean up code and fix total counts\n\n* fmt\n\n* fmt\n\n* clippy",
+          "timestamp": "2024-12-16T13:52:23-06:00",
+          "tree_id": "08c8c96a27d4bb7eeb8042748c8c4af3d7ce4fce",
+          "url": "https://github.com/dojoengine/dojo/commit/b0e9367d66239741ff69aad672f0518e2e5531b6"
+        },
+        "date": 1734379922873,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2477069,
+            "range": "± 33718",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8047635,
+            "range": "± 213577",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3620565871,
+            "range": "± 821813598",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 7981796,
+            "range": "± 80790",
             "unit": "ns/iter"
           }
         ]
