@@ -10,7 +10,7 @@ use katana_primitives::class::{self, CompiledClass, ContractClass};
 use katana_primitives::Felt;
 use katana_provider::error::ProviderError;
 use katana_provider::traits::contract::ContractClassProvider;
-use katana_provider::traits::state::StateProvider;
+use katana_provider::traits::state::{StateProofProvider, StateProvider, StateRootProvider};
 use katana_provider::ProviderResult;
 use parking_lot::Mutex;
 
@@ -235,6 +235,44 @@ impl<S: StateDb> StateReader for CachedState<S> {
         key: StorageKey,
     ) -> StateResult<katana_cairo::starknet_api::hash::StarkHash> {
         self.0.lock().inner.get_storage_at(contract_address, key)
+    }
+}
+
+impl<S: StateDb> StateProofProvider for CachedState<S> {
+    fn class_multiproof(
+        &self,
+        classes: Vec<class::ClassHash>,
+    ) -> ProviderResult<katana_trie::MultiProof> {
+        let _ = classes;
+        unimplemented!("not supported in executor's state")
+    }
+
+    fn contract_multiproof(
+        &self,
+        addresses: Vec<katana_primitives::ContractAddress>,
+    ) -> ProviderResult<katana_trie::MultiProof> {
+        let _ = addresses;
+        unimplemented!("not supported in executor's state")
+    }
+
+    fn storage_multiproof(
+        &self,
+        address: katana_primitives::ContractAddress,
+        key: Vec<katana_primitives::contract::StorageKey>,
+    ) -> ProviderResult<katana_trie::MultiProof> {
+        let _ = address;
+        let _ = key;
+        unimplemented!("not supported in executor's state")
+    }
+}
+
+impl<S: StateDb> StateRootProvider for CachedState<S> {
+    fn classes_root(&self) -> ProviderResult<Felt> {
+        unimplemented!("not supported in executor's state")
+    }
+
+    fn contracts_root(&self) -> ProviderResult<Felt> {
+        unimplemented!("not supported in executor's state")
     }
 }
 
