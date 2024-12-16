@@ -129,11 +129,11 @@ impl StateProofProvider for ForkedStateDb {
 
 impl StateRootProvider for ForkedStateDb {
     fn classes_root(&self) -> ProviderResult<katana_primitives::Felt> {
-        unimplemented!("not supported in forked mode")
+        Ok(katana_primitives::Felt::ZERO)
     }
 
     fn contracts_root(&self) -> ProviderResult<katana_primitives::Felt> {
-        unimplemented!("not supported in forked mode")
+        Ok(katana_primitives::Felt::ZERO)
     }
 }
 
@@ -205,11 +205,11 @@ impl StateProofProvider for LatestStateProvider {
 
 impl StateRootProvider for LatestStateProvider {
     fn classes_root(&self) -> ProviderResult<katana_primitives::Felt> {
-        unimplemented!("not supported in forked mode")
+        Ok(katana_primitives::Felt::ZERO)
     }
 
     fn contracts_root(&self) -> ProviderResult<katana_primitives::Felt> {
-        unimplemented!("not supported in forked mode")
+        Ok(katana_primitives::Felt::ZERO)
     }
 }
 
@@ -312,11 +312,11 @@ impl StateProofProvider for ForkedSnapshot {
 
 impl StateRootProvider for ForkedSnapshot {
     fn classes_root(&self) -> ProviderResult<katana_primitives::Felt> {
-        unimplemented!("not supported in forked mode")
+        Ok(katana_primitives::Felt::ZERO)
     }
 
     fn contracts_root(&self) -> ProviderResult<katana_primitives::Felt> {
-        unimplemented!("not supported in forked mode")
+        Ok(katana_primitives::Felt::ZERO)
     }
 }
 

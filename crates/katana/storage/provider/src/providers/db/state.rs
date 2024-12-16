@@ -399,6 +399,11 @@ where
             .root();
         Ok(root)
     }
+
+    fn state_root(&self) -> ProviderResult<katana_primitives::Felt> {
+        let header = self.tx.get::<tables::Headers>(self.block_number)?.expect("should exist");
+        Ok(header.state_root)
+    }
 }
 
 /// This is a helper function for getting the block number of the most
