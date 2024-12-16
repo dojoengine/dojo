@@ -105,7 +105,11 @@ pub struct Query {
     pub offset: u32,
     pub dont_include_hashed_keys: bool,
     pub order_by: Vec<OrderBy>,
+    /// If the array is not empty, only the given models are retrieved.
+    /// All entities that don't have a model in the array are excluded.
     pub entity_models: Vec<String>,
+    /// The internal updated at timestamp in seconds (unix timestamp) from which entities are
+    /// retrieved (inclusive). Use 0 to retrieve all entities.
     pub internal_updated_at: u64,
 }
 
