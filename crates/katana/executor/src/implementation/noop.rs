@@ -6,7 +6,7 @@ use katana_primitives::fee::TxFeeInfo;
 use katana_primitives::transaction::{ExecutableTxWithHash, TxWithHash};
 use katana_primitives::Felt;
 use katana_provider::traits::contract::ContractClassProvider;
-use katana_provider::traits::state::StateProvider;
+use katana_provider::traits::state::{StateProofProvider, StateProvider, StateRootProvider};
 use katana_provider::ProviderResult;
 
 use crate::abstraction::{
@@ -168,5 +168,40 @@ impl StateProvider for NoopStateProvider {
         let _ = address;
         let _ = storage_key;
         Ok(None)
+    }
+}
+
+impl StateProofProvider for NoopStateProvider {
+    fn class_multiproof(&self, classes: Vec<ClassHash>) -> ProviderResult<katana_trie::MultiProof> {
+        let _ = classes;
+        Ok(katana_trie::MultiProof(Default::default()))
+    }
+
+    fn contract_multiproof(
+        &self,
+        addresses: Vec<ContractAddress>,
+    ) -> ProviderResult<katana_trie::MultiProof> {
+        let _ = addresses;
+        Ok(katana_trie::MultiProof(Default::default()))
+    }
+
+    fn storage_multiproof(
+        &self,
+        address: ContractAddress,
+        key: Vec<StorageKey>,
+    ) -> ProviderResult<katana_trie::MultiProof> {
+        let _ = address;
+        let _ = key;
+        Ok(katana_trie::MultiProof(Default::default()))
+    }
+}
+
+impl StateRootProvider for NoopStateProvider {
+    fn classes_root(&self) -> ProviderResult<Felt> {
+        Ok(Felt::ZERO)
+    }
+
+    fn contracts_root(&self) -> ProviderResult<Felt> {
+        Ok(Felt::ZERO)
     }
 }

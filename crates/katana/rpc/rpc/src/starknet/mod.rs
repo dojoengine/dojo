@@ -20,7 +20,7 @@ use katana_primitives::Felt;
 use katana_provider::traits::block::{BlockHashProvider, BlockIdReader, BlockNumberProvider};
 use katana_provider::traits::contract::ContractClassProvider;
 use katana_provider::traits::env::BlockEnvProvider;
-use katana_provider::traits::state::{StateFactoryProvider, StateProvider};
+use katana_provider::traits::state::{StateFactoryProvider, StateProvider, StateRootProvider};
 use katana_provider::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionStatusProvider,
 };
@@ -34,6 +34,10 @@ use katana_rpc_types::event::{EventFilterWithPage, EventsPage};
 use katana_rpc_types::receipt::{ReceiptBlock, TxReceiptWithBlockInfo};
 use katana_rpc_types::state_update::MaybePendingStateUpdate;
 use katana_rpc_types::transaction::Tx;
+use katana_rpc_types::trie::{
+    ClassesProof, ContractLeafData, ContractStorageKeys, ContractStorageProofs, ContractsProof,
+    GetStorageProofResponse, GlobalRoots, Nodes,
+};
 use katana_rpc_types::FeeEstimate;
 use katana_rpc_types_builder::ReceiptBuilder;
 use katana_tasks::{BlockingTaskPool, TokioTaskSpawner};
@@ -1123,6 +1127,75 @@ where
         };
 
         Ok(id)
+    }
+
+    async fn get_proofs(
+        &self,
+        block_id: BlockIdOrTag,
+        class_hashes: Option<Vec<ClassHash>>,
+        contract_addresses: Option<Vec<ContractAddress>>,
+        contracts_storage_keys: Option<Vec<ContractStorageKeys>>,
+    ) -> StarknetApiResult<GetStorageProofResponse> {
+        self.on_io_blocking_task(move |this| {
+            let provider = this.inner.backend.blockchain.provider();
+
+            let state = this.state(&block_id)?;
+            let block_hash = provider.latest_hash()?;
+
+            // --- Get classes proof (if any)
+
+            let classes_proof = if let Some(classes) = class_hashes {
+                let proofs = state.class_multiproof(classes)?;
+                ClassesProof { nodes: proofs.into() }
+            } else {
+                ClassesProof::default()
+            };
+
+            // --- Get contracts proof (if any)
+
+            let contracts_proof = if let Some(addresses) = contract_addresses {
+                let proofs = state.contract_multiproof(addresses.clone())?;
+                let mut contract_leaves_data = Vec::new();
+
+                for address in addresses {
+                    let nonce = state.nonce(address)?.unwrap_or_default();
+                    let class_hash = state.class_hash_of_contract(address)?.unwrap_or_default();
+                    contract_leaves_data.push(ContractLeafData { class_hash, nonce });
+                }
+
+                ContractsProof { nodes: proofs.into(), contract_leaves_data }
+            } else {
+                ContractsProof::default()
+            };
+
+            // --- Get contracts storage proof (if any)
+
+            let contracts_storage_proofs = if let Some(contract_storage) = contracts_storage_keys {
+                let mut nodes: Vec<Nodes> = Vec::new();
+
+                for ContractStorageKeys { address, keys } in contract_storage {
+                    let proofs = state.storage_multiproof(address, keys)?;
+                    nodes.push(proofs.into());
+                }
+
+                ContractStorageProofs { nodes }
+            } else {
+                ContractStorageProofs::default()
+            };
+
+            let classes_tree_root = state.classes_root()?;
+            let contracts_tree_root = state.contracts_root()?;
+
+            let global_roots = GlobalRoots { block_hash, classes_tree_root, contracts_tree_root };
+
+            Ok(GetStorageProofResponse {
+                global_roots,
+                classes_proof,
+                contracts_proof,
+                contracts_storage_proofs,
+            })
+        })
+        .await
     }
 }
 

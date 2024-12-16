@@ -11,8 +11,9 @@ use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::TxWithHash;
 use katana_primitives::Felt;
 use katana_provider::traits::contract::ContractClassProvider;
-use katana_provider::traits::state::StateProvider;
+use katana_provider::traits::state::{StateProofProvider, StateProvider, StateRootProvider};
 use katana_provider::ProviderResult;
+use katana_trie::MultiProof;
 
 pub type ExecutorResult<T> = Result<T, error::ExecutorError>;
 
@@ -202,5 +203,37 @@ impl<'a> StateProvider for StateProviderDb<'a> {
         storage_key: StorageKey,
     ) -> ProviderResult<Option<StorageValue>> {
         self.0.storage(address, storage_key)
+    }
+}
+
+impl<'a> StateProofProvider for StateProviderDb<'a> {
+    fn class_multiproof(&self, classes: Vec<ClassHash>) -> ProviderResult<MultiProof> {
+        self.0.class_multiproof(classes)
+    }
+
+    fn contract_multiproof(&self, addresses: Vec<ContractAddress>) -> ProviderResult<MultiProof> {
+        self.0.contract_multiproof(addresses)
+    }
+
+    fn storage_multiproof(
+        &self,
+        address: ContractAddress,
+        key: Vec<StorageKey>,
+    ) -> ProviderResult<MultiProof> {
+        self.0.storage_multiproof(address, key)
+    }
+}
+
+impl<'a> StateRootProvider for StateProviderDb<'a> {
+    fn classes_root(&self) -> ProviderResult<Felt> {
+        self.0.classes_root()
+    }
+
+    fn contracts_root(&self) -> ProviderResult<Felt> {
+        self.0.contracts_root()
+    }
+
+    fn state_root(&self) -> ProviderResult<Felt> {
+        self.0.state_root()
     }
 }

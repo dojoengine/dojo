@@ -8,17 +8,14 @@ use katana_primitives::Felt;
 use crate::ProviderResult;
 
 #[auto_impl::auto_impl(&, Box, Arc)]
-pub trait ClassTrieWriter: Send + Sync {
-    fn insert_updates(
+pub trait TrieWriter: Send + Sync {
+    fn trie_insert_declared_classes(
         &self,
         block_number: BlockNumber,
         updates: &BTreeMap<ClassHash, CompiledClassHash>,
     ) -> ProviderResult<Felt>;
-}
 
-#[auto_impl::auto_impl(&, Box, Arc)]
-pub trait ContractTrieWriter: Send + Sync {
-    fn insert_updates(
+    fn trie_insert_contract_updates(
         &self,
         block_number: BlockNumber,
         state_updates: &StateUpdates,

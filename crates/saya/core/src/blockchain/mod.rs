@@ -6,9 +6,7 @@ use katana_provider::providers::db::DbProvider;
 use katana_provider::traits::block::{BlockProvider, BlockWriter};
 use katana_provider::traits::contract::ContractClassWriter;
 use katana_provider::traits::env::BlockEnvProvider;
-use katana_provider::traits::state::{
-    StateFactoryProvider, StateProvider, StateRootProvider, StateWriter,
-};
+use katana_provider::traits::state::{StateFactoryProvider, StateProvider, StateWriter};
 use katana_provider::traits::state_update::StateUpdateProvider;
 use katana_provider::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionStatusProvider, TransactionsProviderExt,
@@ -25,7 +23,6 @@ pub trait Database:
     + TransactionsProviderExt
     + ReceiptProvider
     + StateUpdateProvider
-    + StateRootProvider
     + StateWriter
     + ContractClassWriter
     + StateFactoryProvider
@@ -44,7 +41,6 @@ impl<T> Database for T where
         + TransactionsProviderExt
         + ReceiptProvider
         + StateUpdateProvider
-        + StateRootProvider
         + StateWriter
         + ContractClassWriter
         + StateFactoryProvider

@@ -3,8 +3,9 @@
 use jsonrpsee::core::RpcResult;
 use jsonrpsee::proc_macros::rpc;
 use katana_primitives::block::{BlockIdOrTag, BlockNumber};
+use katana_primitives::class::ClassHash;
 use katana_primitives::transaction::TxHash;
-use katana_primitives::Felt;
+use katana_primitives::{ContractAddress, Felt};
 use katana_rpc_types::block::{
     BlockHashAndNumber, BlockTxCount, MaybePendingBlockWithReceipts, MaybePendingBlockWithTxHashes,
     MaybePendingBlockWithTxs,
@@ -18,6 +19,7 @@ use katana_rpc_types::transaction::{
     BroadcastedDeclareTx, BroadcastedDeployAccountTx, BroadcastedInvokeTx, BroadcastedTx,
     DeclareTxResult, DeployAccountTxResult, InvokeTxResult, Tx,
 };
+use katana_rpc_types::trie::{ContractStorageKeys, GetStorageProofResponse};
 use katana_rpc_types::{
     FeeEstimate, FeltAsHex, FunctionCall, SimulationFlag, SimulationFlagForEstimateFee,
     SyncingStatus,
@@ -183,6 +185,18 @@ pub trait StarknetApi {
         block_id: BlockIdOrTag,
         contract_address: Felt,
     ) -> RpcResult<FeltAsHex>;
+
+    /// Get merkle paths in one of the state tries: global state, classes, individual contract. A
+    /// single request can query for any mix of the three types of storage proofs (classes,
+    /// contracts, and storage).
+    #[method(name = "getStorageProof")]
+    async fn get_storage_proof(
+        &self,
+        block_id: BlockIdOrTag,
+        class_hashes: Option<Vec<ClassHash>>,
+        contract_addresses: Option<Vec<ContractAddress>>,
+        contracts_storage_keys: Option<Vec<ContractStorageKeys>>,
+    ) -> RpcResult<GetStorageProofResponse>;
 }
 
 /// Write API.

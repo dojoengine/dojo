@@ -15,13 +15,13 @@ use katana_provider::traits::block::{BlockProvider, BlockWriter};
 use katana_provider::traits::contract::{ContractClassWriter, ContractClassWriterExt};
 use katana_provider::traits::env::BlockEnvProvider;
 use katana_provider::traits::stage::StageCheckpointProvider;
-use katana_provider::traits::state::{StateFactoryProvider, StateRootProvider, StateWriter};
+use katana_provider::traits::state::{StateFactoryProvider, StateWriter};
 use katana_provider::traits::state_update::StateUpdateProvider;
 use katana_provider::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionStatusProvider, TransactionTraceProvider,
     TransactionsProviderExt,
 };
-use katana_provider::traits::trie::{ClassTrieWriter, ContractTrieWriter};
+use katana_provider::traits::trie::TrieWriter;
 use katana_provider::BlockchainProvider;
 use num_traits::ToPrimitive;
 use starknet::core::types::{BlockStatus, MaybePendingBlockWithTxHashes};
@@ -40,14 +40,12 @@ pub trait Database:
     + TransactionsProviderExt
     + ReceiptProvider
     + StateUpdateProvider
-    + StateRootProvider
     + StateWriter
     + ContractClassWriter
     + ContractClassWriterExt
     + StateFactoryProvider
     + BlockEnvProvider
-    + ClassTrieWriter
-    + ContractTrieWriter
+    + TrieWriter
     + StageCheckpointProvider
     + 'static
     + Send
@@ -65,14 +63,12 @@ impl<T> Database for T where
         + TransactionsProviderExt
         + ReceiptProvider
         + StateUpdateProvider
-        + StateRootProvider
         + StateWriter
         + ContractClassWriter
         + ContractClassWriterExt
         + StateFactoryProvider
         + BlockEnvProvider
-        + ClassTrieWriter
-        + ContractTrieWriter
+        + TrieWriter
         + StageCheckpointProvider
         + 'static
         + Send

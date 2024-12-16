@@ -33,13 +33,13 @@ use crate::traits::block::{
 use crate::traits::contract::{ContractClassWriter, ContractClassWriterExt};
 use crate::traits::env::BlockEnvProvider;
 use crate::traits::stage::StageCheckpointProvider;
-use crate::traits::state::{StateFactoryProvider, StateProvider, StateRootProvider, StateWriter};
+use crate::traits::state::{StateFactoryProvider, StateProvider, StateWriter};
 use crate::traits::state_update::StateUpdateProvider;
 use crate::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionStatusProvider, TransactionTraceProvider,
     TransactionsProviderExt,
 };
-use crate::traits::trie::{ClassTrieWriter, ContractTrieWriter};
+use crate::traits::trie::TrieWriter;
 use crate::ProviderResult;
 
 #[derive(Debug)]
@@ -410,17 +410,17 @@ impl ReceiptProvider for ForkedProvider {
     }
 }
 
-impl StateRootProvider for ForkedProvider {
-    fn state_root(
-        &self,
-        block_id: BlockHashOrNumber,
-    ) -> ProviderResult<Option<katana_primitives::Felt>> {
-        let state_root = self.block_number_by_id(block_id)?.and_then(|num| {
-            self.storage.read().block_headers.get(&num).map(|header| header.state_root)
-        });
-        Ok(state_root)
-    }
-}
+// impl StateRootProvider for ForkedProvider {
+//     fn state_root(
+//         &self,
+//         block_id: BlockHashOrNumber,
+//     ) -> ProviderResult<Option<katana_primitives::Felt>> {
+//         let state_root = self.block_number_by_id(block_id)?.and_then(|num| {
+//             self.storage.read().block_headers.get(&num).map(|header| header.state_root)
+//         });
+//         Ok(state_root)
+//     }
+// }
 
 impl StateUpdateProvider for ForkedProvider {
     fn state_update(&self, block_id: BlockHashOrNumber) -> ProviderResult<Option<StateUpdates>> {
@@ -599,8 +599,8 @@ impl BlockEnvProvider for ForkedProvider {
     }
 }
 
-impl ClassTrieWriter for ForkedProvider {
-    fn insert_updates(
+impl TrieWriter for ForkedProvider {
+    fn trie_insert_declared_classes(
         &self,
         block_number: BlockNumber,
         updates: &BTreeMap<ClassHash, CompiledClassHash>,
@@ -609,10 +609,8 @@ impl ClassTrieWriter for ForkedProvider {
         let _ = updates;
         Ok(Felt::ZERO)
     }
-}
 
-impl ContractTrieWriter for ForkedProvider {
-    fn insert_updates(
+    fn trie_insert_contract_updates(
         &self,
         block_number: BlockNumber,
         state_updates: &StateUpdates,
