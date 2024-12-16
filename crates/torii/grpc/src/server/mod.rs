@@ -1101,11 +1101,17 @@ impl DojoWorld {
         let entity_updated_after = match query.entity_updated_after {
             0 => None,
             _ => Some(
+                // This conversion would include a `UTC` suffix, which is not valid for the SQL
+                // query when comparing the timestamp with equality.
+                // To have `>=` working, we need to remove the `UTC` suffix.
                 DateTime::<Utc>::from_timestamp(query.entity_updated_after as i64, 0)
                     .ok_or_else(|| {
                         Error::from(QueryError::InvalidTimestamp(query.entity_updated_after))
                     })?
-                    .to_rfc3339(),
+                    .to_string()
+                    .replace("UTC", "")
+                    .trim()
+                    .to_string(),
             ),
         };
 
