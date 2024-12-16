@@ -177,6 +177,7 @@ define_tables_enum! {[
     (ClassChangeHistory, TableType::DupSort),
     (StorageChangeHistory, TableType::DupSort),
     (StorageChangeSet, TableType::Table),
+    (StageCheckpoints, TableType::Table),
     (ClassesTrie, TableType::Table),
     (ContractsTrie, TableType::Table),
     (StoragesTrie, TableType::Table),
@@ -185,8 +186,7 @@ define_tables_enum! {[
     (StoragesTrieHistory, TableType::DupSort),
     (ClassesTrieChangeSet, TableType::Table),
     (ContractsTrieChangeSet, TableType::Table),
-    (StoragesTrieChangeSet, TableType::Table),
-    (StageCheckpoints, TableType::Table)
+    (StoragesTrieChangeSet, TableType::Table)
 ]}
 
 tables! {
@@ -282,6 +282,7 @@ impl Trie for StoragesTrie {
     type History = StoragesTrieHistory;
     type Changeset = StoragesTrieChangeSet;
 }
+
 #[cfg(test)]
 mod tests {
 
@@ -313,10 +314,16 @@ mod tests {
         assert_eq!(Tables::ALL[20].name(), ClassChangeHistory::NAME);
         assert_eq!(Tables::ALL[21].name(), StorageChangeHistory::NAME);
         assert_eq!(Tables::ALL[22].name(), StorageChangeSet::NAME);
+        assert_eq!(Tables::ALL[26].name(), StageCheckpoints::NAME);
         assert_eq!(Tables::ALL[23].name(), ClassesTrie::NAME);
         assert_eq!(Tables::ALL[24].name(), ContractsTrie::NAME);
         assert_eq!(Tables::ALL[25].name(), StoragesTrie::NAME);
-        assert_eq!(Tables::ALL[26].name(), StageCheckpoints::NAME);
+        assert_eq!(Tables::ALL[27].name(), ClassesTrieHistory::NAME);
+        assert_eq!(Tables::ALL[28].name(), ContractsTrieHistory::NAME);
+        assert_eq!(Tables::ALL[29].name(), StoragesTrieHistory::NAME);
+        assert_eq!(Tables::ALL[30].name(), ClassesTrieChangeSet::NAME);
+        assert_eq!(Tables::ALL[31].name(), ContractsTrieChangeSet::NAME);
+        assert_eq!(Tables::ALL[32].name(), StoragesTrieChangeSet::NAME);
 
         assert_eq!(Tables::Headers.table_type(), TableType::Table);
         assert_eq!(Tables::BlockHashes.table_type(), TableType::Table);
@@ -341,10 +348,16 @@ mod tests {
         assert_eq!(Tables::ClassChangeHistory.table_type(), TableType::DupSort);
         assert_eq!(Tables::StorageChangeHistory.table_type(), TableType::DupSort);
         assert_eq!(Tables::StorageChangeSet.table_type(), TableType::Table);
+        assert_eq!(Tables::StageCheckpoints.table_type(), TableType::Table);
         assert_eq!(Tables::ClassesTrie.table_type(), TableType::Table);
         assert_eq!(Tables::ContractsTrie.table_type(), TableType::Table);
         assert_eq!(Tables::StoragesTrie.table_type(), TableType::Table);
-        assert_eq!(Tables::StageCheckpoints.table_type(), TableType::Table);
+        assert_eq!(Tables::ClassesTrieHistory.table_type(), TableType::DupSort);
+        assert_eq!(Tables::ContractsTrieHistory.table_type(), TableType::DupSort);
+        assert_eq!(Tables::StoragesTrieHistory.table_type(), TableType::DupSort);
+        assert_eq!(Tables::ClassesTrieChangeSet.table_type(), TableType::Table);
+        assert_eq!(Tables::ContractsTrieChangeSet.table_type(), TableType::Table);
+        assert_eq!(Tables::StoragesTrieChangeSet.table_type(), TableType::Table);
     }
 
     use katana_primitives::address;
@@ -364,6 +377,9 @@ mod tests {
     };
     use crate::models::list::BlockList;
     use crate::models::storage::{ContractStorageEntry, ContractStorageKey, StorageEntry};
+    use crate::models::trie::{
+        TrieDatabaseKey, TrieDatabaseKeyType, TrieDatabaseValue, TrieHistoryEntry,
+    };
 
     macro_rules! assert_key_encode_decode {
 	    { $( ($name:ty, $key:expr) ),* } => {
@@ -431,12 +447,17 @@ mod tests {
             (BlockList, BlockList::default()),
             (ContractStorageEntry, ContractStorageEntry::default()),
             (Receipt, Receipt::Invoke(InvokeTxReceipt {
-                        revert_error: None,
-                        events: Vec::new(),
-                        messages_sent: Vec::new(),
-                        execution_resources: Default::default(),
-                        fee: TxFeeInfo { gas_consumed: 0, gas_price: 0, overall_fee: 0, unit: PriceUnit::Wei },
-                    }))
+                revert_error: None,
+                events: Vec::new(),
+                messages_sent: Vec::new(),
+                execution_resources: Default::default(),
+                fee: TxFeeInfo { gas_consumed: 0, gas_price: 0, overall_fee: 0, unit: PriceUnit::Wei },
+            })),
+            (TrieDatabaseValue, TrieDatabaseValue::default()),
+            (TrieHistoryEntry, TrieHistoryEntry {
+                value: TrieDatabaseValue::default(),
+                key: TrieDatabaseKey { key: Vec::default(), r#type: TrieDatabaseKeyType::Flat },
+            })
         }
     }
 }
