@@ -103,6 +103,8 @@ pub struct Query {
     pub clause: Option<Clause>,
     pub limit: u32,
     pub offset: u32,
+    /// Whether or not to include the hashed keys (entity id) of the entities.
+    /// This is useful for large queries compressed with GZIP to reduce the size of the response.
     pub dont_include_hashed_keys: bool,
     pub order_by: Vec<OrderBy>,
     /// If the array is not empty, only the given models are retrieved.
@@ -110,7 +112,7 @@ pub struct Query {
     pub entity_models: Vec<String>,
     /// The internal updated at timestamp in seconds (unix timestamp) from which entities are
     /// retrieved (inclusive). Use 0 to retrieve all entities.
-    pub internal_updated_at: u64,
+    pub entity_updated_after: u64,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
