@@ -12,6 +12,7 @@ use std::net::IpAddr;
 use clap::Args;
 use katana_node::config::execution::{DEFAULT_INVOCATION_MAX_STEPS, DEFAULT_VALIDATION_MAX_STEPS};
 use katana_node::config::metrics::{DEFAULT_METRICS_ADDR, DEFAULT_METRICS_PORT};
+use katana_node::config::rpc::DEFAULT_RPC_MAX_PROOF_KEYS;
 #[cfg(feature = "server")]
 use katana_node::config::rpc::{
     DEFAULT_RPC_ADDR, DEFAULT_RPC_MAX_CONNECTIONS, DEFAULT_RPC_MAX_EVENT_PAGE_SIZE,
@@ -107,6 +108,12 @@ pub struct ServerOptions {
     #[arg(default_value_t = DEFAULT_RPC_MAX_EVENT_PAGE_SIZE)]
     #[serde(default = "default_page_size")]
     pub max_event_page_size: u64,
+
+    /// Maximum keys for requesting storage proofs.
+    #[arg(long = "rpc.max-proof-keys", value_name = "SIZE")]
+    #[arg(default_value_t = DEFAULT_RPC_MAX_PROOF_KEYS)]
+    #[serde(default = "default_proof_keys")]
+    pub max_proof_keys: u64,
 }
 
 #[cfg(feature = "server")]
@@ -118,6 +125,7 @@ impl Default for ServerOptions {
             max_connections: DEFAULT_RPC_MAX_CONNECTIONS,
             http_cors_origins: Vec::new(),
             max_event_page_size: DEFAULT_RPC_MAX_EVENT_PAGE_SIZE,
+            max_proof_keys: DEFAULT_RPC_MAX_PROOF_KEYS,
         }
     }
 }
@@ -378,6 +386,11 @@ fn default_max_connections() -> u32 {
 #[cfg(feature = "server")]
 fn default_page_size() -> u64 {
     DEFAULT_RPC_MAX_EVENT_PAGE_SIZE
+}
+
+#[cfg(feature = "server")]
+fn default_proof_keys() -> u64 {
+    katana_node::config::rpc::DEFAULT_RPC_MAX_PROOF_KEYS
 }
 
 #[cfg(feature = "server")]
