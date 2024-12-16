@@ -276,7 +276,7 @@ impl From<Query> for proto::types::Query {
             dont_include_hashed_keys: value.dont_include_hashed_keys,
             order_by: value.order_by.into_iter().map(|o| o.into()).collect(),
             entity_models: value.entity_models,
-            internal_updated_at: value.internal_updated_at,
+            entity_updated_after: value.entity_updated_after,
         }
     }
 }

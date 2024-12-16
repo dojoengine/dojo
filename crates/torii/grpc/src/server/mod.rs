@@ -230,7 +230,7 @@ impl DojoWorld {
         dont_include_hashed_keys: bool,
         order_by: Option<&str>,
         entity_models: Vec<String>,
-        internal_updated_at: u64,
+        entity_updated_after: u64,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         self.query_by_hashed_keys(
             table,
@@ -242,7 +242,7 @@ impl DojoWorld {
             dont_include_hashed_keys,
             order_by,
             entity_models,
-            internal_updated_at,
+            entity_updated_after,
         )
         .await
     }
@@ -270,7 +270,7 @@ impl DojoWorld {
         dont_include_hashed_keys: bool,
         order_by: Option<&str>,
         entity_models: Vec<String>,
-        internal_updated_at: u64,
+        entity_updated_after: u64,
     ) -> Result<Vec<proto::types::Entity>, Error> {
         let entity_models =
             entity_models.iter().map(|tag| compute_selector_from_tag(tag)).collect::<Vec<Felt>>();
@@ -359,15 +359,15 @@ impl DojoWorld {
                 order_by,
                 None,
                 None,
-                internal_updated_at,
+                entity_updated_after,
             )?;
 
             let mut query = sqlx::query(&entity_query).bind(models_str);
-            if internal_updated_at > 0 {
+            if entity_updated_after > 0 {
                 for _ in 0..schemas.len() {
-                    let time = DateTime::<Utc>::from_timestamp(internal_updated_at as i64, 0)
+                    let time = DateTime::<Utc>::from_timestamp(entity_updated_after as i64, 0)
                         .ok_or_else(|| {
-                            Error::from(QueryError::InvalidTimestamp(internal_updated_at))
+                            Error::from(QueryError::InvalidTimestamp(entity_updated_after))
                         })?
                         .to_rfc3339();
                     query = query.bind(time.clone());
@@ -448,7 +448,7 @@ impl DojoWorld {
         dont_include_hashed_keys: bool,
         order_by: Option<&str>,
         entity_models: Vec<String>,
-        internal_updated_at: u64,
+        entity_updated_after: u64,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         // TODO: use prepared statement for where clause
         let filter_ids = match hashed_keys {
@@ -529,7 +529,7 @@ impl DojoWorld {
                 dont_include_hashed_keys,
                 order_by,
                 entity_models,
-                internal_updated_at,
+                entity_updated_after,
             )
             .await?;
         Ok((entities, total_count))
@@ -547,7 +547,7 @@ impl DojoWorld {
         dont_include_hashed_keys: bool,
         order_by: Option<&str>,
         entity_models: Vec<String>,
-        internal_updated_at: u64,
+        entity_updated_after: u64,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         let keys_pattern = build_keys_pattern(keys_clause)?;
 
@@ -676,7 +676,7 @@ impl DojoWorld {
                 dont_include_hashed_keys,
                 order_by,
                 entity_models,
-                internal_updated_at,
+                entity_updated_after,
             )
             .await?;
         Ok((entities, total_count))
@@ -721,7 +721,7 @@ impl DojoWorld {
         dont_include_hashed_keys: bool,
         order_by: Option<&str>,
         entity_models: Vec<String>,
-        internal_updated_at: u64,
+        entity_updated_after: u64,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         let entity_models =
             entity_models.iter().map(|model| compute_selector_from_tag(model)).collect::<Vec<_>>();
@@ -788,7 +788,7 @@ impl DojoWorld {
             order_by,
             limit,
             offset,
-            internal_updated_at,
+            entity_updated_after,
         )?;
 
         let total_count = sqlx::query_scalar(&count_query)
@@ -822,7 +822,7 @@ impl DojoWorld {
         dont_include_hashed_keys: bool,
         order_by: Option<&str>,
         entity_models: Vec<String>,
-        internal_updated_at: u64,
+        entity_updated_after: u64,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         let (where_clause, having_clause, join_clause, bind_values) =
             build_composite_clause(table, model_relation_table, &composite)?;
@@ -893,7 +893,7 @@ impl DojoWorld {
                 dont_include_hashed_keys,
                 order_by,
                 entity_models,
-                internal_updated_at,
+                entity_updated_after,
             )
             .await?;
         Ok((entities, total_count))
@@ -1062,7 +1062,7 @@ impl DojoWorld {
                     query.dont_include_hashed_keys,
                     order_by,
                     query.entity_models,
-                    query.internal_updated_at,
+                    query.entity_updated_after,
                 )
                 .await?
             }
@@ -1086,7 +1086,7 @@ impl DojoWorld {
                             query.dont_include_hashed_keys,
                             order_by,
                             query.entity_models,
-                            query.internal_updated_at,
+                            query.entity_updated_after,
                         )
                         .await?
                     }
@@ -1101,7 +1101,7 @@ impl DojoWorld {
                             query.dont_include_hashed_keys,
                             order_by,
                             query.entity_models,
-                            query.internal_updated_at,
+                            query.entity_updated_after,
                         )
                         .await?
                     }
@@ -1116,7 +1116,7 @@ impl DojoWorld {
                             query.dont_include_hashed_keys,
                             order_by,
                             query.entity_models,
-                            query.internal_updated_at,
+                            query.entity_updated_after,
                         )
                         .await?
                     }
@@ -1131,7 +1131,7 @@ impl DojoWorld {
                             query.dont_include_hashed_keys,
                             order_by,
                             query.entity_models,
-                            query.internal_updated_at,
+                            query.entity_updated_after,
                         )
                         .await?
                     }
