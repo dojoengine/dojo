@@ -252,7 +252,6 @@ impl<'a, P: TrieWriter> UncommittedBlock<'a, P> {
 
     // state_commitment = hPos("STARKNET_STATE_V0", contract_trie_root, class_trie_root)
     fn compute_new_state_root(&self) -> Felt {
-        println!("ohayo im committing now");
         let class_trie_root = self
             .provider
             .trie_insert_declared_classes(self.header.number, &self.state_updates.declared_classes)

@@ -253,7 +253,10 @@ pub async fn build(mut config: Config) -> Result<Node> {
         .allow_headers([hyper::header::CONTENT_TYPE, "argent-client".parse().unwrap(), "argent-version".parse().unwrap()]);
 
     if config.rpc.apis.contains(&ApiKind::Starknet) {
-        let cfg = StarknetApiConfig { max_event_page_size: config.rpc.max_event_page_size };
+        let cfg = StarknetApiConfig {
+            max_event_page_size: config.rpc.max_event_page_size,
+            max_proof_keys: config.rpc.max_proof_keys,
+        };
 
         let api = if let Some(client) = forked_client {
             StarknetApi::new_forked(

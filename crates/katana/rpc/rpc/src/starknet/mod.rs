@@ -1139,6 +1139,18 @@ where
         self.on_io_blocking_task(move |this| {
             let provider = this.inner.backend.blockchain.provider();
 
+            // Check if the total number of keys requested exceeds the RPC limit.
+            if let Some(limit) = this.inner.config.max_proof_keys {
+                let total_keys = class_hashes.as_ref().map(|v| v.len()).unwrap_or(0)
+                    + contract_addresses.as_ref().map(|v| v.len()).unwrap_or(0)
+                    + contracts_storage_keys.as_ref().map(|v| v.len()).unwrap_or(0);
+
+                let total_keys = total_keys as u64;
+                if total_keys > limit {
+                    return Err(StarknetApiError::ProofLimitExceeded { limit, total: total_keys });
+                }
+            }
+
             let state = this.state(&block_id)?;
             let block_hash = provider.latest_hash()?;
 
@@ -1185,7 +1197,6 @@ where
 
             let classes_tree_root = state.classes_root()?;
             let contracts_tree_root = state.contracts_root()?;
-
             let global_roots = GlobalRoots { block_hash, classes_tree_root, contracts_tree_root };
 
             Ok(GetStorageProofResponse {

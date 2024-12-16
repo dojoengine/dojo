@@ -10,6 +10,8 @@ pub const DEFAULT_RPC_PORT: u16 = 5050;
 
 /// Default maximmum page size for the `starknet_getEvents` RPC method.
 pub const DEFAULT_RPC_MAX_EVENT_PAGE_SIZE: u64 = 1024;
+/// Default maximmum number of keys for the `starknet_getStorageProof` RPC method.
+pub const DEFAULT_RPC_MAX_PROOF_KEYS: u64 = 100;
 
 /// List of APIs supported by Katana.
 #[derive(
@@ -29,8 +31,9 @@ pub struct RpcConfig {
     pub port: u16,
     pub max_connections: u32,
     pub apis: HashSet<ApiKind>,
-    pub max_event_page_size: Option<u64>,
     pub cors_origins: Vec<HeaderValue>,
+    pub max_event_page_size: Option<u64>,
+    pub max_proof_keys: Option<u64>,
 }
 
 impl RpcConfig {
@@ -49,6 +52,7 @@ impl Default for RpcConfig {
             max_connections: DEFAULT_RPC_MAX_CONNECTIONS,
             apis: HashSet::from([ApiKind::Starknet]),
             max_event_page_size: Some(DEFAULT_RPC_MAX_EVENT_PAGE_SIZE),
+            max_proof_keys: Some(DEFAULT_RPC_MAX_PROOF_KEYS),
         }
     }
 }
