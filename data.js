@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1734095551633,
+  "lastUpdate": 1734322356622,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -40945,6 +40945,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8123277,
             "range": "± 232003",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "76473430+edisontim@users.noreply.github.com",
+            "name": "tedison",
+            "username": "edisontim"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8111b6d13da6796451d97aa61bff67a584c65727",
+          "message": "feat: introduce updated at field in top level torii query (#2807)\n\n* introduce updated at field in top level query\n\n* fmt\n\n* fmt + clippy\n\n* clippy\n\n* fix timestamp issue\n\n* fix query count\n\n* remove query count\n\n* docs: add comments to explain fields\n\n---------\n\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-12-15T21:56:00-06:00",
+          "tree_id": "546658cdcd4ad3c0725679547d84f00e9e12a89b",
+          "url": "https://github.com/dojoengine/dojo/commit/8111b6d13da6796451d97aa61bff67a584c65727"
+        },
+        "date": 1734322354369,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10303123091,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
