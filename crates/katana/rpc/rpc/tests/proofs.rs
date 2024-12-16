@@ -49,16 +49,16 @@ async fn classes_proofs() {
         .expect("failed to get storage proof");
 
     let key: BitVec = class_hash.to_bytes_be().as_bits()[5..].to_owned();
+    let value =
+        hash::Poseidon::hash(&short_string!("CONTRACT_CLASS_LEAF_V0"), &compiled_class_hash);
 
     let classes_proof = MultiProof::from(classes_proof.nodes);
+
+    // the returned data is the list of values corresponds to the [key]
     let results = classes_proof
         .verify_proof::<hash::Poseidon>(global_roots.classes_tree_root, [key], 251)
         .collect::<Result<Vec<_>, _>>()
         .expect("failed to verify proofs");
 
-    let value =
-        hash::Poseidon::hash(&short_string!("CONTRACT_CLASS_LEAF_V0"), &compiled_class_hash);
-
-    dbg!(results);
-    dbg!(value);
+    assert_eq!(vec![value], results);
 }
