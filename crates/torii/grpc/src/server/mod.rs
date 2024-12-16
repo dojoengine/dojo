@@ -477,7 +477,7 @@ impl DojoWorld {
         let mut count_query = sqlx::query_scalar(&count_query);
         if let Some(hashed_keys) = &hashed_keys {
             for key in &hashed_keys.hashed_keys {
-                let key = Felt::from_bytes_be_slice(&key);
+                let key = Felt::from_bytes_be_slice(key);
                 count_query = count_query.bind(format!("{:#x}", key));
             }
         }
@@ -1430,13 +1430,11 @@ fn build_composite_clause(
                 String::new()
             }
         )
+    } else if let Some(entity_updated_after) = entity_updated_after.clone() {
+        bind_values.push(entity_updated_after);
+        format!("WHERE {table}.updated_at >= ?")
     } else {
-        if let Some(entity_updated_after) = entity_updated_after.clone() {
-            bind_values.push(entity_updated_after);
-            format!("WHERE {table}.updated_at >= ?")
-        } else {
-            String::new()
-        }
+        String::new()
     };
 
     let having_clause = if !having_clauses.is_empty() {
