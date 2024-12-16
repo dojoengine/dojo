@@ -1,8 +1,9 @@
+pub use bitvec;
 use bitvec::array::BitArray;
 use bitvec::order::Msb0;
 use bitvec::vec::BitVec;
 use bitvec::view::AsBits;
-pub use bonsai::{MultiProof, ProofNode};
+pub use bonsai::{MultiProof, Path, ProofNode};
 pub use bonsai_trie as bonsai;
 pub use bonsai_trie::{BonsaiDatabase, BonsaiPersistentDatabase};
 use bonsai_trie::{BonsaiStorage, BonsaiStorageConfig};
