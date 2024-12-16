@@ -143,7 +143,7 @@ async fn test_entities_queries(sequencer: &RunnerCtx) {
             false,
             None,
             vec![],
-            None
+            None,
         )
         .await
         .unwrap()
