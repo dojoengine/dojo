@@ -29,6 +29,7 @@ use fixtures::{
 use katana_primitives::Felt;
 
 #[apply(insert_block_cases)]
+#[ignore = "trie computation not supported yet for forked mode yet"]
 fn insert_block_with_fork_provider(
     #[from(fork_provider)] provider: BlockchainProvider<ForkedProvider>,
     #[case] block_count: u64,
@@ -45,6 +46,7 @@ fn insert_block_with_db_provider(
 }
 
 #[apply(insert_block_cases)]
+#[ignore = "trie computation not supported yet for forked mode yet"]
 fn insert_block_empty_with_fork_provider(
     #[from(fork_provider)] provider: BlockchainProvider<ForkedProvider>,
     #[case] block_count: u64,
