@@ -125,7 +125,6 @@ pub fn build_sql_query(
     order_by: Option<&str>,
     limit: Option<u32>,
     offset: Option<u32>,
-    entity_updated_after: u64,
 ) -> Result<(String, String), Error> {
     fn collect_columns(table_prefix: &str, path: &str, ty: &Ty, selections: &mut Vec<String>) {
         match ty {
@@ -197,14 +196,6 @@ pub fn build_sql_query(
     if let Some(where_clause) = where_clause {
         query += &format!(" WHERE {}", where_clause);
         count_query += &format!(" WHERE {}", where_clause);
-
-        if entity_updated_after > 0 {
-            query += &format!(" AND {}.internal_updated_at >= ?", table_name);
-            count_query += &format!(" AND {}.internal_updated_at >= ?", table_name);
-        }
-    } else if entity_updated_after > 0 {
-        query += &format!(" WHERE {}.internal_updated_at >= ?", table_name);
-        count_query += &format!(" WHERE {}.internal_updated_at >= ?", table_name);
     }
 
     // Use custom order by if provided, otherwise default to event_id DESC
@@ -504,7 +495,6 @@ mod tests {
             None,
             None,
             None,
-            0,
         )
         .unwrap();
 

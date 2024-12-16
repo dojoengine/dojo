@@ -230,7 +230,7 @@ impl DojoWorld {
         dont_include_hashed_keys: bool,
         order_by: Option<&str>,
         entity_models: Vec<String>,
-        entity_updated_after: u64,
+        entity_updated_after: Option<String>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         self.query_by_hashed_keys(
             table,
@@ -270,7 +270,6 @@ impl DojoWorld {
         dont_include_hashed_keys: bool,
         order_by: Option<&str>,
         entity_models: Vec<String>,
-        entity_updated_after: u64,
     ) -> Result<Vec<proto::types::Entity>, Error> {
         let entity_models =
             entity_models.iter().map(|tag| compute_selector_from_tag(tag)).collect::<Vec<Felt>>();
@@ -359,20 +358,9 @@ impl DojoWorld {
                 order_by,
                 None,
                 None,
-                entity_updated_after,
             )?;
 
-            let mut query = sqlx::query(&entity_query).bind(models_str);
-            if entity_updated_after > 0 {
-                for _ in 0..schemas.len() {
-                    let time = DateTime::<Utc>::from_timestamp(entity_updated_after as i64, 0)
-                        .ok_or_else(|| {
-                            Error::from(QueryError::InvalidTimestamp(entity_updated_after))
-                        })?
-                        .to_rfc3339();
-                    query = query.bind(time.clone());
-                }
-            }
+            let query = sqlx::query(&entity_query).bind(models_str);
             let rows = query.fetch_all(&mut *tx).await?;
 
             let schemas = Arc::new(schemas);
@@ -448,20 +436,33 @@ impl DojoWorld {
         dont_include_hashed_keys: bool,
         order_by: Option<&str>,
         entity_models: Vec<String>,
-        entity_updated_after: u64,
+        entity_updated_after: Option<String>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         // TODO: use prepared statement for where clause
-        let filter_ids = match hashed_keys {
+        let where_clause = match &hashed_keys {
             Some(hashed_keys) => {
                 let ids = hashed_keys
                     .hashed_keys
                     .iter()
-                    .map(|id| Ok(format!("{table}.id = '{:#x}'", Felt::from_bytes_be_slice(id))))
+                    .map(|_| Ok("{table}.id = ?"))
                     .collect::<Result<Vec<_>, Error>>()?;
-
-                format!("WHERE {}", ids.join(" OR "))
+                format!(
+                    "WHERE {} {}",
+                    ids.join(" OR "),
+                    if entity_updated_after.is_some() {
+                        format!("AND [{table}].updated_at >= ?")
+                    } else {
+                        String::new()
+                    }
+                )
             }
-            None => String::new(),
+            None => {
+                if entity_updated_after.is_some() {
+                    format!("WHERE [{table}].updated_at >= ?")
+                } else {
+                    String::new()
+                }
+            }
         };
 
         // count query that matches filter_ids
@@ -469,7 +470,7 @@ impl DojoWorld {
             r#"
                     SELECT count(*)
                     FROM {table}
-                    {filter_ids}
+                    {where_clause}
                 "#
         );
         // total count of rows without limit and offset
@@ -486,7 +487,7 @@ impl DojoWorld {
             SELECT {table}.id, {table}.data, {table}.model_id, group_concat({model_relation_table}.model_id) as model_ids
             FROM {table}
             JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
-            {filter_ids}
+            {where_clause}
             GROUP BY {table}.event_id
             ORDER BY {table}.event_id DESC
          "#
@@ -497,7 +498,7 @@ impl DojoWorld {
             SELECT {table}.id, group_concat({model_relation_table}.model_id) as model_ids
             FROM {table}
             JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
-            {filter_ids}
+            {where_clause}
             GROUP BY {table}.id
             ORDER BY {table}.event_id DESC
          "#
@@ -518,8 +519,16 @@ impl DojoWorld {
             return Ok((entities, total_count));
         }
 
-        let db_entities: Vec<(String, String)> =
-            sqlx::query_as(&query).bind(limit).bind(offset).fetch_all(&self.pool).await?;
+        let mut query = sqlx::query_as(&query);
+        if let Some(hashed_keys) = hashed_keys {
+            for key in hashed_keys.hashed_keys {
+                let key = Felt::from_bytes_be_slice(&key);
+                query = query.bind(format!("{:#x}", key));
+            }
+        }
+
+        query = query.bind(entity_updated_after).bind(limit).bind(offset);
+        let db_entities: Vec<(String, String)> = query.fetch_all(&self.pool).await?;
 
         let entities = self
             .fetch_entities(
@@ -529,7 +538,6 @@ impl DojoWorld {
                 dont_include_hashed_keys,
                 order_by,
                 entity_models,
-                entity_updated_after,
             )
             .await?;
         Ok((entities, total_count))
@@ -547,7 +555,7 @@ impl DojoWorld {
         dont_include_hashed_keys: bool,
         order_by: Option<&str>,
         entity_models: Vec<String>,
-        entity_updated_after: u64,
+        entity_updated_after: Option<String>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         let keys_pattern = build_keys_pattern(keys_clause)?;
 
@@ -582,20 +590,33 @@ impl DojoWorld {
                 JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
                 WHERE {model_relation_table}.model_id IN ({})
                 AND {table}.keys REGEXP ?
+                {}
             "#,
-                    model_ids_str
+                    model_ids_str,
+                    if entity_updated_after.is_some() {
+                        format!("AND {table}.updated_at >= ?")
+                    } else {
+                        String::new()
+                    }
                 )
             } else {
                 format!(
                     r#"
                 WHERE {table}.keys REGEXP ?
-            "#
+                {}
+            "#,
+                    if entity_updated_after.is_some() {
+                        format!("AND {table}.updated_at >= ?")
+                    } else {
+                        String::new()
+                    }
                 )
             }
         );
 
         let total_count = sqlx::query_scalar(&count_query)
             .bind(&keys_pattern)
+            .bind(entity_updated_after.clone())
             .fetch_optional(&self.pool)
             .await?
             .unwrap_or(0);
@@ -610,8 +631,14 @@ impl DojoWorld {
                 FROM {table}
                 JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
                 WHERE {table}.keys REGEXP ?
+                {}
                 GROUP BY {table}.event_id
             "#,
+                if entity_updated_after.is_some() {
+                    format!("AND {table}.updated_at >= ?")
+                } else {
+                    String::new()
+                }
             )
         } else {
             format!(
@@ -620,8 +647,14 @@ impl DojoWorld {
                 FROM {table}
                 JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
                 WHERE {table}.keys REGEXP ?
+                {}
                 GROUP BY {table}.id
             "#,
+                if entity_updated_after.is_some() {
+                    format!("AND {table}.updated_at >= ?")
+                } else {
+                    String::new()
+                }
             )
         };
 
@@ -661,8 +694,9 @@ impl DojoWorld {
             return Ok((entities, total_count));
         }
 
-        let db_entities: Vec<(String, String)> = sqlx::query_as(&models_query)
+        let db_entities = sqlx::query_as(&models_query)
             .bind(&keys_pattern)
+            .bind(entity_updated_after)
             .bind(limit)
             .bind(offset)
             .fetch_all(&self.pool)
@@ -676,7 +710,6 @@ impl DojoWorld {
                 dont_include_hashed_keys,
                 order_by,
                 entity_models,
-                entity_updated_after,
             )
             .await?;
         Ok((entities, total_count))
@@ -721,7 +754,7 @@ impl DojoWorld {
         dont_include_hashed_keys: bool,
         order_by: Option<&str>,
         entity_models: Vec<String>,
-        entity_updated_after: u64,
+        entity_updated_after: Option<String>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         let entity_models =
             entity_models.iter().map(|model| compute_selector_from_tag(model)).collect::<Vec<_>>();
@@ -777,8 +810,11 @@ impl DojoWorld {
             self.model_cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect();
 
         // Use the member name directly as the column name since it's already flattened
-        let where_clause =
+        let mut where_clause =
             format!("[{}].[{}] {comparison_operator} ?", member_clause.model, member_clause.member);
+        if entity_updated_after.is_some() {
+            where_clause += &format!(" AND {table}.internal_updated_at >= ?");
+        }
 
         let (entity_query, count_query) = build_sql_query(
             &schemas,
@@ -788,16 +824,18 @@ impl DojoWorld {
             order_by,
             limit,
             offset,
-            entity_updated_after,
         )?;
 
         let total_count = sqlx::query_scalar(&count_query)
             .bind(comparison_value.clone())
+            .bind(entity_updated_after.clone())
             .fetch_optional(&self.pool)
             .await?
             .unwrap_or(0);
+
         let db_entities = sqlx::query(&entity_query)
             .bind(comparison_value)
+            .bind(entity_updated_after.clone())
             .bind(limit)
             .bind(offset)
             .fetch_all(&self.pool)
@@ -822,10 +860,10 @@ impl DojoWorld {
         dont_include_hashed_keys: bool,
         order_by: Option<&str>,
         entity_models: Vec<String>,
-        entity_updated_after: u64,
+        entity_updated_after: Option<String>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         let (where_clause, having_clause, join_clause, bind_values) =
-            build_composite_clause(table, model_relation_table, &composite)?;
+            build_composite_clause(table, model_relation_table, &composite, entity_updated_after)?;
 
         let count_query = if !having_clause.is_empty() {
             format!(
@@ -839,7 +877,7 @@ impl DojoWorld {
                     GROUP BY [{table}].id
                     {having_clause}
                 ) as filtered_count
-                "#
+                "#,
             )
         } else {
             format!(
@@ -849,7 +887,7 @@ impl DojoWorld {
                 JOIN {model_relation_table} ON [{table}].id = {model_relation_table}.entity_id
                 {join_clause}
                 {where_clause}
-                "#
+                "#,
             )
         };
 
@@ -857,7 +895,6 @@ impl DojoWorld {
         for value in &bind_values {
             count_query = count_query.bind(value);
         }
-
         let total_count = count_query.fetch_optional(&self.pool).await?.unwrap_or(0);
         if total_count == 0 {
             return Ok((Vec::new(), 0));
@@ -893,7 +930,6 @@ impl DojoWorld {
                 dont_include_hashed_keys,
                 order_by,
                 entity_models,
-                entity_updated_after,
             )
             .await?;
         Ok((entities, total_count))
@@ -1051,6 +1087,17 @@ impl DojoWorld {
 
         let order_by = if order_by.is_empty() { None } else { Some(order_by.as_str()) };
 
+        let entity_updated_after = match query.entity_updated_after {
+            0 => None,
+            _ => Some(
+                DateTime::<Utc>::from_timestamp(query.entity_updated_after as i64, 0)
+                    .ok_or_else(|| {
+                        Error::from(QueryError::InvalidTimestamp(query.entity_updated_after))
+                    })?
+                    .to_rfc3339(),
+            ),
+        };
+
         let (entities, total_count) = match query.clause {
             None => {
                 self.entities_all(
@@ -1062,7 +1109,7 @@ impl DojoWorld {
                     query.dont_include_hashed_keys,
                     order_by,
                     query.entity_models,
-                    query.entity_updated_after,
+                    entity_updated_after,
                 )
                 .await?
             }
@@ -1086,7 +1133,7 @@ impl DojoWorld {
                             query.dont_include_hashed_keys,
                             order_by,
                             query.entity_models,
-                            query.entity_updated_after,
+                            entity_updated_after,
                         )
                         .await?
                     }
@@ -1101,7 +1148,7 @@ impl DojoWorld {
                             query.dont_include_hashed_keys,
                             order_by,
                             query.entity_models,
-                            query.entity_updated_after,
+                            entity_updated_after,
                         )
                         .await?
                     }
@@ -1116,7 +1163,7 @@ impl DojoWorld {
                             query.dont_include_hashed_keys,
                             order_by,
                             query.entity_models,
-                            query.entity_updated_after,
+                            entity_updated_after,
                         )
                         .await?
                     }
@@ -1131,7 +1178,7 @@ impl DojoWorld {
                             query.dont_include_hashed_keys,
                             order_by,
                             query.entity_models,
-                            query.entity_updated_after,
+                            entity_updated_after,
                         )
                         .await?
                     }
@@ -1248,6 +1295,7 @@ fn build_composite_clause(
     table: &str,
     model_relation_table: &str,
     composite: &proto::types::CompositeClause,
+    entity_updated_after: Option<String>,
 ) -> Result<(String, String, String, Vec<String>), Error> {
     let is_or = composite.operator == LogicalOperator::Or as i32;
     let mut where_clauses = Vec::new();
@@ -1255,6 +1303,11 @@ fn build_composite_clause(
     let mut having_clauses = Vec::new();
     let mut bind_values = Vec::new();
     let mut seen_models = HashMap::new();
+
+    if let Some(entity_updated_after) = entity_updated_after.clone() {
+        where_clauses.push(format!("({table}.updated_at >= ?)"));
+        bind_values.push(entity_updated_after);
+    }
 
     for clause in &composite.clauses {
         match clause.clause_type.as_ref().unwrap() {
@@ -1334,7 +1387,12 @@ fn build_composite_clause(
             ClauseType::Composite(nested) => {
                 // Handle nested composite by recursively building the clause
                 let (nested_where, nested_having, nested_join, nested_values) =
-                    build_composite_clause(table, model_relation_table, nested)?;
+                    build_composite_clause(
+                        table,
+                        model_relation_table,
+                        nested,
+                        entity_updated_after.clone(),
+                    )?;
 
                 if !nested_where.is_empty() {
                     where_clauses.push(format!("({})", nested_where.trim_start_matches("WHERE ")));
