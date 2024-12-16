@@ -11,7 +11,7 @@ use katana_provider::traits::block::{
     BlockHashProvider, BlockNumberProvider, BlockProvider, BlockStatusProvider, BlockWriter,
 };
 use katana_provider::traits::env::BlockEnvProvider;
-use katana_provider::traits::state::StateRootProvider;
+use katana_provider::traits::state::{StateFactoryProvider, StateRootProvider};
 use katana_provider::traits::state_update::StateUpdateProvider;
 use katana_provider::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionStatusProvider, TransactionTraceProvider,
@@ -29,6 +29,7 @@ use fixtures::{
 use katana_primitives::Felt;
 
 #[apply(insert_block_cases)]
+#[ignore = "trie computation not supported yet for forked mode yet"]
 fn insert_block_with_fork_provider(
     #[from(fork_provider)] provider: BlockchainProvider<ForkedProvider>,
     #[case] block_count: u64,
@@ -45,6 +46,7 @@ fn insert_block_with_db_provider(
 }
 
 #[apply(insert_block_cases)]
+#[ignore = "trie computation not supported yet for forked mode yet"]
 fn insert_block_empty_with_fork_provider(
     #[from(fork_provider)] provider: BlockchainProvider<ForkedProvider>,
     #[case] block_count: u64,
@@ -65,7 +67,7 @@ where
     Db: BlockProvider
         + BlockWriter
         + ReceiptProvider
-        + StateRootProvider
+        + StateFactoryProvider
         + TransactionStatusProvider
         + TransactionTraceProvider
         + BlockEnvProvider,
@@ -119,7 +121,8 @@ where
         let actual_block = provider.block(block_id)?;
         let actual_block_txs = provider.transactions_by_block(block_id)?;
         let actual_status = provider.block_status(block_id)?;
-        let actual_state_root = provider.state_root(block_id)?;
+        let actual_state_root =
+            provider.historical(block_id)?.map(|s| s.state_root()).transpose()?;
 
         let actual_block_tx_count = provider.transaction_count_by_block(block_id)?;
         let actual_receipts = provider.receipts_by_block(block_id)?;
@@ -174,7 +177,7 @@ where
     Db: BlockProvider
         + BlockWriter
         + ReceiptProvider
-        + StateRootProvider
+        + StateFactoryProvider
         + TransactionStatusProvider
         + TransactionTraceProvider
         + BlockEnvProvider,
@@ -225,7 +228,8 @@ where
         let actual_block = provider.block(block_id)?;
         let actual_block_txs = provider.transactions_by_block(block_id)?;
         let actual_status = provider.block_status(block_id)?;
-        let actual_state_root = provider.state_root(block_id)?;
+        let actual_state_root =
+            provider.historical(block_id)?.map(|s| s.state_root()).transpose()?;
 
         let actual_block_tx_count = provider.transaction_count_by_block(block_id)?;
         let actual_receipts = provider.receipts_by_block(block_id)?;

@@ -43,6 +43,7 @@ jsonrpsee = { workspace = true, features = [ "client" ] }
 katana-cairo.workspace = true
 katana-node.workspace = true
 katana-rpc-api = { workspace = true, features = [ "client" ] }
+katana-trie.workspace = true
 num-traits.workspace = true
 rand.workspace = true
 rstest.workspace = true
