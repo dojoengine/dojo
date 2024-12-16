@@ -32,7 +32,7 @@ use crate::utils::get_current_timestamp;
 pub(crate) const LOG_TARGET: &str = "katana::core::backend";
 
 #[derive(Debug)]
-pub struct Backend<EF: ExecutorFactory> {
+pub struct Backend<EF> {
     pub chain_spec: Arc<ChainSpec>,
     /// stores all block related data in memory
     pub blockchain: Blockchain,
