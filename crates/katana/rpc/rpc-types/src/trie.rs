@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use katana_primitives::contract::StorageKey;
 use katana_primitives::{ContractAddress, Felt};
 use katana_trie::bonsai::BitSlice;
-use katana_trie::{MultiProof, ProofNode};
+use katana_trie::{MultiProof, Path, ProofNode};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -125,11 +125,17 @@ impl<'de> Deserialize<'de> for Nodes {
     }
 }
 
-// --- Conversion from internal types
+// --- Conversion from/to internal types for convenience
 
 impl From<MultiProof> for Nodes {
     fn from(value: MultiProof) -> Self {
         Self(value.0.into_iter().map(|(hash, node)| (hash, MerkleNode::from(node))).collect())
+    }
+}
+
+impl From<Nodes> for MultiProof {
+    fn from(value: Nodes) -> Self {
+        Self(value.0.into_iter().map(|(hash, node)| (hash, ProofNode::from(node))).collect())
     }
 }
 
@@ -138,15 +144,50 @@ impl From<ProofNode> for MerkleNode {
         match value {
             ProofNode::Binary { left, right } => MerkleNode::Binary { left, right },
             ProofNode::Edge { child, path } => {
-                MerkleNode::Edge { child, path: path_to_felt(&path), length: path.len() as u8 }
+                MerkleNode::Edge { child, length: path.len() as u8, path: path_to_felt(path) }
             }
         }
     }
 }
 
-fn path_to_felt(path: &BitSlice) -> Felt {
+impl From<MerkleNode> for ProofNode {
+    fn from(value: MerkleNode) -> Self {
+        match value {
+            MerkleNode::Binary { left, right } => Self::Binary { left, right },
+            MerkleNode::Edge { path, child, .. } => Self::Edge { child, path: felt_to_path(path) },
+        }
+    }
+}
+
+fn felt_to_path(felt: Felt) -> Path {
+    Path(BitSlice::from_slice(&felt.to_bytes_be())[5..].to_bitvec())
+}
+
+fn path_to_felt(path: Path) -> Felt {
     let mut arr = [0u8; 32];
     let slice = &mut BitSlice::from_slice_mut(&mut arr)[5..];
-    slice[..path.len()].copy_from_bitslice(path);
+    slice[..path.len()].copy_from_bitslice(&path);
     Felt::from_bytes_be(&arr)
+}
+
+#[cfg(test)]
+mod tests {
+    use katana_primitives::felt;
+
+    use super::*;
+
+    // This test is assuming that the `path` field in `MerkleNode::Edge` is already a valid trie
+    // path value.
+    #[rstest::rstest]
+    #[case(felt!("0x1234567890abcdef"))]
+    #[case(felt!("0xdeadbeef"))]
+    #[case(Felt::MAX)]
+    #[case(Felt::ZERO)]
+    fn test_path_felt_roundtrip(#[case] path_in_felt: Felt) {
+        let initial_path = felt_to_path(path_in_felt);
+
+        let converted_felt = path_to_felt(initial_path.clone());
+        let path = felt_to_path(converted_felt);
+        assert_eq!(initial_path, path);
+    }
 }

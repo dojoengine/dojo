@@ -8736,6 +8736,7 @@ dependencies = [
  "katana-rpc-types",
  "katana-rpc-types-builder",
  "katana-tasks",
+ "katana-trie",
  "metrics",
  "num-traits 0.2.19",
  "rand 0.8.5",
