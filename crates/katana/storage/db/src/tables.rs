@@ -314,10 +314,10 @@ mod tests {
         assert_eq!(Tables::ALL[20].name(), ClassChangeHistory::NAME);
         assert_eq!(Tables::ALL[21].name(), StorageChangeHistory::NAME);
         assert_eq!(Tables::ALL[22].name(), StorageChangeSet::NAME);
-        assert_eq!(Tables::ALL[26].name(), StageCheckpoints::NAME);
-        assert_eq!(Tables::ALL[23].name(), ClassesTrie::NAME);
-        assert_eq!(Tables::ALL[24].name(), ContractsTrie::NAME);
-        assert_eq!(Tables::ALL[25].name(), StoragesTrie::NAME);
+        assert_eq!(Tables::ALL[23].name(), StageCheckpoints::NAME);
+        assert_eq!(Tables::ALL[24].name(), ClassesTrie::NAME);
+        assert_eq!(Tables::ALL[25].name(), ContractsTrie::NAME);
+        assert_eq!(Tables::ALL[26].name(), StoragesTrie::NAME);
         assert_eq!(Tables::ALL[27].name(), ClassesTrieHistory::NAME);
         assert_eq!(Tables::ALL[28].name(), ContractsTrieHistory::NAME);
         assert_eq!(Tables::ALL[29].name(), StoragesTrieHistory::NAME);
