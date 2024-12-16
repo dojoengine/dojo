@@ -1,7 +1,7 @@
 use katana_primitives::block::BlockHashOrNumber;
 use katana_primitives::Felt;
 use katana_provider::traits::block::{BlockHashProvider, BlockNumberProvider};
-use katana_provider::traits::state::StateRootProvider;
+use katana_provider::traits::state::{StateFactoryProvider, StateRootProvider};
 use katana_provider::traits::state_update::StateUpdateProvider;
 use katana_provider::ProviderResult;
 use katana_rpc_types::state_update::{StateDiff, StateUpdate};
@@ -21,7 +21,7 @@ impl<P> StateUpdateBuilder<P> {
 
 impl<P> StateUpdateBuilder<P>
 where
-    P: BlockHashProvider + BlockNumberProvider + StateRootProvider + StateUpdateProvider,
+    P: BlockHashProvider + BlockNumberProvider + StateFactoryProvider + StateUpdateProvider,
 {
     /// Builds a state update for the given block.
     pub fn build(self) -> ProviderResult<Option<StateUpdate>> {
@@ -30,16 +30,23 @@ where
             return Ok(None);
         };
 
-        let new_root = StateRootProvider::state_root(&self.provider, self.block_id)?
-            .expect("should exist if block exists");
+        let new_root = self
+            .provider
+            .historical(self.block_id)?
+            .expect("should exist if block exists")
+            .state_root()?;
+
         let old_root = {
             let block_num = BlockNumberProvider::block_number_by_hash(&self.provider, block_hash)?
                 .expect("should exist if block exists");
 
             match block_num {
                 0 => Felt::ZERO,
-                _ => StateRootProvider::state_root(&self.provider, (block_num - 1).into())?
-                    .expect("should exist if not genesis"),
+                _ => self
+                    .provider
+                    .historical((block_num - 1).into())?
+                    .expect("should exist if block exists")
+                    .state_root()?,
             }
         };
 
