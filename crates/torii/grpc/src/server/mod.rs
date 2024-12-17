@@ -773,16 +773,29 @@ impl DojoWorld {
         let comparison_operator = ComparisonOperator::from_repr(member_clause.operator as usize)
             .expect("invalid comparison operator");
 
-        fn comparison_value(value: &proto::types::MemberValue) -> Result<String, Error> {
+        fn prepare_comparison(
+            value: &proto::types::MemberValue,
+            bind_values: &mut Vec<String>,
+        ) -> Result<String, Error> {
             match &value.value_type {
-                Some(ValueType::String(value)) => Ok(value.to_string()),
+                Some(ValueType::String(value)) => {
+                    bind_values.push(value.to_string());
+                    Ok("?".to_string())
+                }
                 Some(ValueType::Primitive(value)) => {
                     let primitive: Primitive = (value.clone()).try_into()?;
-                    Ok(primitive.to_sql_value())
+                    bind_values.push(primitive.to_sql_value());
+                    Ok("?".to_string())
                 }
-                Some(ValueType::List(values)) => {
-                    Ok(format!("({})", values.values.iter().map(|v| comparison_value(v)).collect::<Result<Vec<String>, Error>>()?.join(", ")))
-                }
+                Some(ValueType::List(values)) => Ok(format!(
+                    "({})",
+                    values
+                        .values
+                        .iter()
+                        .map(|v| prepare_comparison(v, bind_values))
+                        .collect::<Result<Vec<String>, Error>>()?
+                        .join(", ")
+                )),
                 None => return Err(QueryError::MissingParam("value_type".into()).into()),
             }
         }
@@ -826,8 +839,13 @@ impl DojoWorld {
             self.model_cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect();
 
         // Use the member name directly as the column name since it's already flattened
+        let mut bind_values = Vec::new();
+        let value = prepare_comparison(
+            &member_clause.value.clone().ok_or(QueryError::MissingParam("value".into()))?,
+            &mut bind_values,
+        )?;
         let mut where_clause =
-            format!("[{}].[{}] {comparison_operator} ?", member_clause.model, member_clause.member);
+            format!("[{}].[{}] {comparison_operator} {value}", member_clause.model, member_clause.member);
         if entity_updated_after.is_some() {
             where_clause += &format!(" AND {table}.updated_at >= ?");
         }
@@ -841,16 +859,19 @@ impl DojoWorld {
             limit,
             offset,
         )?;
+        let mut count_query = sqlx::query_scalar(&count_query);
+        for value in &bind_values {
+            count_query = count_query.bind(value);
+        }
+        if let Some(entity_updated_after) = entity_updated_after.clone() {
+            count_query = count_query.bind(entity_updated_after);
+        }
+        let total_count = count_query.fetch_optional(&self.pool).await?.unwrap_or(0);
 
-        let value = comparison_value(&member_clause.value.clone().ok_or(QueryError::MissingParam("value".into()))?)?;
-        let total_count = sqlx::query_scalar(&count_query)
-            .bind(value.clone())
-            .bind(entity_updated_after.clone())
-            .fetch_optional(&self.pool)
-            .await?
-            .unwrap_or(0);
-
-        let mut query = sqlx::query(&entity_query).bind(value);
+        let mut query = sqlx::query(&entity_query);
+        for value in &bind_values {
+            query = query.bind(value);
+        }
         if let Some(entity_updated_after) = entity_updated_after.clone() {
             query = query.bind(entity_updated_after);
         }
@@ -1362,20 +1383,33 @@ fn build_composite_clause(
                 let comparison_operator = ComparisonOperator::from_repr(member.operator as usize)
                     .expect("invalid comparison operator");
                 let value = member.value.clone().ok_or(QueryError::MissingParam("value".into()))?;
-                fn comparison_value(value: &proto::types::MemberValue) -> Result<String, Error> {
+                fn prepare_comparison(
+                    value: &proto::types::MemberValue,
+                    bind_values: &mut Vec<String>,
+                ) -> Result<String, Error> {
                     match &value.value_type {
-                        Some(ValueType::String(value)) => Ok(value.to_string()),
+                        Some(ValueType::String(value)) => {
+                            bind_values.push(value.to_string());
+                            Ok("?".to_string())
+                        }
                         Some(ValueType::Primitive(value)) => {
                             let primitive: Primitive = (value.clone()).try_into()?;
-                            Ok(primitive.to_sql_value())
+                            bind_values.push(primitive.to_sql_value());
+                            Ok("?".to_string())
                         }
-                        Some(ValueType::List(values)) => {
-                            Ok(format!("({})", values.values.iter().map(|v| comparison_value(v)).collect::<Result<Vec<String>, Error>>()?.join(", ")))
-                        }
+                        Some(ValueType::List(values)) => Ok(format!(
+                            "({})",
+                            values
+                                .values
+                                .iter()
+                                .map(|v| prepare_comparison(v, bind_values))
+                                .collect::<Result<Vec<String>, Error>>()?
+                                .join(", ")
+                        )),
                         None => return Err(QueryError::MissingParam("value_type".into()).into()),
                     }
                 }
-                bind_values.push(comparison_value(&value)?);
+                let value = prepare_comparison(&value, &mut bind_values)?;
 
                 let model = member.model.clone();
                 // Get or create unique alias for this model
@@ -1403,7 +1437,7 @@ fn build_composite_clause(
 
                 // Use the column name directly since it's already flattened
                 where_clauses
-                    .push(format!("([{alias}].[{}] {comparison_operator} ?)", member.member));
+                    .push(format!("([{alias}].[{}] {comparison_operator} {value})", member.member));
             }
             ClauseType::Composite(nested) => {
                 // Handle nested composite by recursively building the clause
