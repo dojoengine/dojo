@@ -490,69 +490,54 @@ impl DojoWorld {
             return Ok((Vec::new(), 0));
         }
 
-        // Query to get entity IDs and their model IDs
-        let mut query = if table == EVENT_MESSAGES_HISTORICAL_TABLE {
-            format!(
-                r#"
-            SELECT {table}.id, {table}.data, {table}.model_id, group_concat({model_relation_table}.model_id) as model_ids
-            FROM {table}
-            JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
-            {where_clause}
-            GROUP BY {table}.event_id
-            ORDER BY {table}.event_id DESC
-         "#
-            )
-        } else {
-            format!(
-                r#"
-            SELECT {table}.id, group_concat({model_relation_table}.model_id) as model_ids
-            FROM {table}
-            JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
-            {where_clause}
-            GROUP BY {table}.id
-            ORDER BY {table}.event_id DESC
-         "#
-            )
-        };
-
-        if limit.is_some() {
-            query += " LIMIT ?"
-        }
-
-        if offset.is_some() {
-            query += " OFFSET ?"
-        }
-
         if table == EVENT_MESSAGES_HISTORICAL_TABLE {
             let entities =
-                self.fetch_historical_event_messages(&query, None, limit, offset).await?;
+                self.fetch_historical_event_messages(&format!(
+                    r#"
+                SELECT {table}.id, {table}.data, {table}.model_id, group_concat({model_relation_table}.model_id) as model_ids
+                FROM {table}
+                JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
+                {where_clause}
+                GROUP BY {table}.event_id
+                ORDER BY {table}.event_id DESC
+             "#
+                ), None, limit, offset).await?;
             return Ok((entities, total_count));
         }
 
-        let mut query = sqlx::query_as(&query);
+        // retrieve all schemas
+        let schemas = self
+            .model_cache
+            .models(&[])
+            .await?
+            .iter()
+            .map(|m| m.schema.clone())
+            .collect::<Vec<_>>();
+        let (query, count_query) = build_sql_query(
+            &schemas,
+            table,
+            entity_relation_column,
+            Some(&where_clause),
+            order_by,
+            limit,
+            offset,
+        )?;
+        let query = sqlx::query(&query);
         if let Some(hashed_keys) = hashed_keys {
             for key in hashed_keys.hashed_keys {
                 let key = Felt::from_bytes_be_slice(&key);
                 query = query.bind(format!("{:#x}", key));
             }
         }
-
         if let Some(entity_updated_after) = entity_updated_after.clone() {
             query = query.bind(entity_updated_after);
         }
-        query = query.bind(limit).bind(offset);
-        let db_entities: Vec<(String, String)> = query.fetch_all(&self.pool).await?;
+        let entities = query.fetch_all(&self.pool).await?;
+        let entities = db_entities
+            .iter()
+            .map(|row| map_row_to_entity(row, &schemas, dont_include_hashed_keys))
+            .collect::<Result<Vec<_>, Error>>()?;
 
-        let entities = self
-            .fetch_entities(
-                table,
-                entity_relation_column,
-                db_entities,
-                dont_include_hashed_keys,
-                order_by,
-                entity_models,
-            )
-            .await?;
         Ok((entities, total_count))
     }
 
