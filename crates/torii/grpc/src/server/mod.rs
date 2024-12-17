@@ -844,8 +844,10 @@ impl DojoWorld {
             &member_clause.value.clone().ok_or(QueryError::MissingParam("value".into()))?,
             &mut bind_values,
         )?;
-        let mut where_clause =
-            format!("[{}].[{}] {comparison_operator} {value}", member_clause.model, member_clause.member);
+        let mut where_clause = format!(
+            "[{}].[{}] {comparison_operator} {value}",
+            member_clause.model, member_clause.member
+        );
         if entity_updated_after.is_some() {
             where_clause += &format!(" AND {table}.updated_at >= ?");
         }
