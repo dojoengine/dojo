@@ -773,15 +773,19 @@ impl DojoWorld {
         let comparison_operator = ComparisonOperator::from_repr(member_clause.operator as usize)
             .expect("invalid comparison operator");
 
-        let comparison_value =
-            match member_clause.value.ok_or(QueryError::MissingParam("value".into()))?.value_type {
-                Some(ValueType::String(value)) => value,
+        fn comparison_value(value: &proto::types::MemberValue) -> Result<String, Error> {
+            match &value.value_type {
+                Some(ValueType::String(value)) => Ok(value.to_string()),
                 Some(ValueType::Primitive(value)) => {
-                    let primitive: Primitive = value.try_into()?;
-                    primitive.to_sql_value()
+                    let primitive: Primitive = (value.clone()).try_into()?;
+                    Ok(primitive.to_sql_value())
+                }
+                Some(ValueType::List(values)) => {
+                    Ok(format!("({})", values.values.iter().map(|v| comparison_value(v)).collect::<Result<Vec<String>, Error>>()?.join(", ")))
                 }
                 None => return Err(QueryError::MissingParam("value_type".into()).into()),
-            };
+            }
+        }
 
         let (namespace, model) = member_clause
             .model
@@ -838,14 +842,15 @@ impl DojoWorld {
             offset,
         )?;
 
+        let value = comparison_value(&member_clause.value.clone().ok_or(QueryError::MissingParam("value".into()))?)?;
         let total_count = sqlx::query_scalar(&count_query)
-            .bind(comparison_value.clone())
+            .bind(value.clone())
             .bind(entity_updated_after.clone())
             .fetch_optional(&self.pool)
             .await?
             .unwrap_or(0);
 
-        let mut query = sqlx::query(&entity_query).bind(comparison_value);
+        let mut query = sqlx::query(&entity_query).bind(value);
         if let Some(entity_updated_after) = entity_updated_after.clone() {
             query = query.bind(entity_updated_after);
         }
@@ -1356,17 +1361,21 @@ fn build_composite_clause(
             ClauseType::Member(member) => {
                 let comparison_operator = ComparisonOperator::from_repr(member.operator as usize)
                     .expect("invalid comparison operator");
-                let value = member.value.clone();
-                let comparison_value =
-                    match value.ok_or(QueryError::MissingParam("value".into()))?.value_type {
-                        Some(ValueType::String(value)) => value,
+                let value = member.value.clone().ok_or(QueryError::MissingParam("value".into()))?;
+                fn comparison_value(value: &proto::types::MemberValue) -> Result<String, Error> {
+                    match &value.value_type {
+                        Some(ValueType::String(value)) => Ok(value.to_string()),
                         Some(ValueType::Primitive(value)) => {
-                            let primitive: Primitive = value.try_into()?;
-                            primitive.to_sql_value()
+                            let primitive: Primitive = (value.clone()).try_into()?;
+                            Ok(primitive.to_sql_value())
+                        }
+                        Some(ValueType::List(values)) => {
+                            Ok(format!("({})", values.values.iter().map(|v| comparison_value(v)).collect::<Result<Vec<String>, Error>>()?.join(", ")))
                         }
                         None => return Err(QueryError::MissingParam("value_type".into()).into()),
-                    };
-                bind_values.push(comparison_value);
+                    }
+                }
+                bind_values.push(comparison_value(&value)?);
 
                 let model = member.model.clone();
                 // Get or create unique alias for this model

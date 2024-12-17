@@ -187,6 +187,8 @@ pub enum ComparisonOperator {
     Gte,
     Lt,
     Lte,
+    In,
+    NotIn,
 }
 
 impl fmt::Display for ComparisonOperator {
@@ -198,6 +200,8 @@ impl fmt::Display for ComparisonOperator {
             ComparisonOperator::Lte => write!(f, "<="),
             ComparisonOperator::Neq => write!(f, "!="),
             ComparisonOperator::Eq => write!(f, "="),
+            ComparisonOperator::In => write!(f, "IN"),
+            ComparisonOperator::NotIn => write!(f, "NOT IN"),
         }
     }
 }
@@ -211,6 +215,8 @@ impl From<proto::types::ComparisonOperator> for ComparisonOperator {
             proto::types::ComparisonOperator::Lt => ComparisonOperator::Lt,
             proto::types::ComparisonOperator::Lte => ComparisonOperator::Lte,
             proto::types::ComparisonOperator::Neq => ComparisonOperator::Neq,
+            proto::types::ComparisonOperator::In => ComparisonOperator::In,
+            proto::types::ComparisonOperator::NotIn => ComparisonOperator::NotIn,
         }
     }
 }

@@ -120,7 +120,12 @@ message MemberValue {
     oneof value_type {
         Primitive primitive = 1;
         string string = 2;
+        MemberValueList list = 3;
     }
+}
+
+message MemberValueList {
+    repeated MemberValue values = 1;
 }
 
 message MemberClause {
@@ -152,6 +157,8 @@ enum ComparisonOperator {
     GTE = 3;
     LT = 4;
     LTE = 5;
+    IN = 6;
+    NOT_IN = 7;
 }
 
 message Token {
