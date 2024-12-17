@@ -3,7 +3,7 @@ use cainome::parser::tokens::{Composite, CompositeType};
 use super::constants::{CAIRO_ENUM_IMPORT, CAIRO_ENUM_TOKEN, SN_IMPORT_SEARCH};
 use super::token_is_custom_enum;
 use crate::error::BindgenResult;
-use crate::plugins::typescript::generator::JsType;
+use crate::plugins::typescript::generator::JsPrimitiveType;
 use crate::plugins::{BindgenModelGenerator, Buffer};
 
 const CAIRO_ENUM_TYPE_IMPL: &str = "export type TypedCairoEnum<T> = CairoCustomEnum & \
@@ -51,7 +51,9 @@ export type {name}Enum = TypedCairoEnum<{name}>;
                 variants = token
                     .inners
                     .iter()
-                    .map(|inner| { format!("\t{}: {};", inner.name, JsType::from(&inner.token)) })
+                    .map(|inner| {
+                        format!("\t{}: {};", inner.name, JsPrimitiveType::from(&inner.token))
+                    })
                     .collect::<Vec<String>>()
                     .join("\n")
             )
