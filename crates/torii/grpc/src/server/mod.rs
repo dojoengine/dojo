@@ -464,33 +464,22 @@ impl DojoWorld {
             }
         };
 
-        // count query that matches filter_ids
-        let count_query = format!(
-            r#"
-                    SELECT count(*)
-                    FROM {table}
-                    {where_clause}
-                "#
-        );
-
-        // total count of rows without limit and offset
-        let mut count_query = sqlx::query_scalar(&count_query);
-        if let Some(hashed_keys) = &hashed_keys {
-            for key in &hashed_keys.hashed_keys {
-                let key = Felt::from_bytes_be_slice(key);
-                count_query = count_query.bind(format!("{:#x}", key));
-            }
-        }
-
-        if let Some(entity_updated_after) = entity_updated_after.clone() {
-            count_query = count_query.bind(entity_updated_after);
-        }
-        let total_count = count_query.fetch_optional(&self.pool).await?.unwrap_or(0);
-        if total_count == 0 {
-            return Ok((Vec::new(), 0));
-        }
-
         if table == EVENT_MESSAGES_HISTORICAL_TABLE {
+            let count_query = format!(
+                r#"
+                SELECT count(*)
+                FROM {table}
+                {where_clause}
+            "#
+            );
+            let total_count = sqlx::query_scalar(&count_query)
+                .bind(entity_updated_after.clone())
+                .fetch_one(&self.pool)
+                .await?;
+            if total_count == 0 {
+                return Ok((Vec::new(), 0));
+            }
+
             let entities =
                 self.fetch_historical_event_messages(&format!(
                     r#"
@@ -504,6 +493,14 @@ impl DojoWorld {
                 ), None, limit, offset).await?;
             return Ok((entities, total_count));
         }
+
+        let count_query = format!(
+            r#"
+            SELECT count(*)
+            FROM {table}
+            {where_clause}
+        "#
+        );
 
         // retrieve all schemas
         let schemas = self
@@ -533,7 +530,7 @@ impl DojoWorld {
             query = query.bind(entity_updated_after);
         }
         let entities = query.fetch_all(&self.pool).await?;
-        let entities = db_entities
+        let entities = entities
             .iter()
             .map(|row| map_row_to_entity(row, &schemas, dont_include_hashed_keys))
             .collect::<Result<Vec<_>, Error>>()?;
