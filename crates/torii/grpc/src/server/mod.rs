@@ -13,6 +13,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 
+use crypto_bigint::rand_core::le;
 use dojo_types::naming::compute_selector_from_tag;
 use dojo_types::primitive::{Primitive, PrimitiveError};
 use dojo_types::schema::Ty;
@@ -388,20 +389,16 @@ impl DojoWorld {
     async fn fetch_historical_event_messages(
         &self,
         query: &str,
-        keys_pattern: Option<&str>,
+        bind_values: Vec<String>,
         limit: Option<u32>,
         offset: Option<u32>,
     ) -> Result<Vec<proto::types::Entity>, Error> {
-        let db_entities: Vec<(String, String, String, String)> = if keys_pattern.is_some() {
-            sqlx::query_as(query)
-                .bind(keys_pattern.unwrap())
-                .bind(limit)
-                .bind(offset)
-                .fetch_all(&self.pool)
-                .await?
-        } else {
-            sqlx::query_as(query).bind(limit).bind(offset).fetch_all(&self.pool).await?
-        };
+        let mut query = sqlx::query_as(query);
+        for value in bind_values {
+            query = query.bind(value);
+        }
+        let db_entities: Vec<(String, String, String, String)> =
+            query.bind(limit).bind(offset).fetch_all(&self.pool).await?;
 
         let mut entities = HashMap::new();
         for (id, data, model_id, _) in db_entities {
@@ -463,23 +460,42 @@ impl DojoWorld {
                 }
             }
         };
+        let mut bind_values = vec![];
+        if let Some(hashed_keys) = hashed_keys {
+            bind_values = hashed_keys
+                .hashed_keys
+                .iter()
+                .map(|key| format!("{:#x}", Felt::from_bytes_be_slice(key)))
+                .collect::<Vec<_>>()
+        }
+        if let Some(entity_updated_after) = entity_updated_after.clone() {
+            bind_values.push(entity_updated_after);
+        }
+
+        if let Some(limit) = limit {
+            bind_values.push(limit.to_string());
+        }
+        if let Some(offset) = offset {
+            bind_values.push(offset.to_string());
+        }
+
+        let count_query = format!(
+            r#"
+            SELECT count(*)
+            FROM {table}
+            {where_clause}
+        "#
+        );
+        let mut count_query = sqlx::query_scalar(&count_query);
+        for value in &bind_values {
+            count_query = count_query.bind(value);
+        }
+        let total_count = count_query.fetch_one(&self.pool).await?;
+        if total_count == 0 {
+            return Ok((Vec::new(), 0));
+        }
 
         if table == EVENT_MESSAGES_HISTORICAL_TABLE {
-            let count_query = format!(
-                r#"
-                SELECT count(*)
-                FROM {table}
-                {where_clause}
-            "#
-            );
-            let total_count = sqlx::query_scalar(&count_query)
-                .bind(entity_updated_after.clone())
-                .fetch_one(&self.pool)
-                .await?;
-            if total_count == 0 {
-                return Ok((Vec::new(), 0));
-            }
-
             let entities =
                 self.fetch_historical_event_messages(&format!(
                     r#"
@@ -490,17 +506,9 @@ impl DojoWorld {
                 GROUP BY {table}.event_id
                 ORDER BY {table}.event_id DESC
              "#
-                ), None, limit, offset).await?;
+                ), bind_values, limit, offset).await?;
             return Ok((entities, total_count));
         }
-
-        let count_query = format!(
-            r#"
-            SELECT count(*)
-            FROM {table}
-            {where_clause}
-        "#
-        );
 
         // retrieve all schemas
         let schemas = self
@@ -510,24 +518,21 @@ impl DojoWorld {
             .iter()
             .map(|m| m.schema.clone())
             .collect::<Vec<_>>();
-        let (query, count_query) = build_sql_query(
+        let (query, _) = build_sql_query(
             &schemas,
             table,
             entity_relation_column,
-            Some(&where_clause),
+            if where_clause.is_empty() {
+                None
+            } else {
+                Some(&where_clause)
+            },
             order_by,
-            limit,
-            offset,
         )?;
-        let query = sqlx::query(&query);
-        if let Some(hashed_keys) = hashed_keys {
-            for key in hashed_keys.hashed_keys {
-                let key = Felt::from_bytes_be_slice(&key);
-                query = query.bind(format!("{:#x}", key));
-            }
-        }
-        if let Some(entity_updated_after) = entity_updated_after.clone() {
-            query = query.bind(entity_updated_after);
+        println!("query: {}", query);
+        let mut query = sqlx::query(&query);
+        for value in &bind_values {
+            query = query.bind(value);
         }
         let entities = query.fetch_all(&self.pool).await?;
         let entities = entities
@@ -684,7 +689,7 @@ impl DojoWorld {
 
         if table == EVENT_MESSAGES_HISTORICAL_TABLE {
             let entities = self
-                .fetch_historical_event_messages(&models_query, Some(&keys_pattern), limit, offset)
+                .fetch_historical_event_messages(&models_query, vec![keys_pattern], limit, offset)
                 .await?;
             return Ok((entities, total_count));
         }
