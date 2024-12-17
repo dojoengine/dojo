@@ -796,7 +796,7 @@ impl DojoWorld {
                         .collect::<Result<Vec<String>, Error>>()?
                         .join(", ")
                 )),
-                None => return Err(QueryError::MissingParam("value_type".into()).into()),
+                None => Err(QueryError::MissingParam("value_type".into()).into()),
             }
         }
 
@@ -1408,7 +1408,7 @@ fn build_composite_clause(
                                 .collect::<Result<Vec<String>, Error>>()?
                                 .join(", ")
                         )),
-                        None => return Err(QueryError::MissingParam("value_type".into()).into()),
+                        None => Err(QueryError::MissingParam("value_type".into()).into()),
                     }
                 }
                 let value = prepare_comparison(&value, &mut bind_values)?;
