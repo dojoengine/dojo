@@ -8379,9 +8379,13 @@ dependencies = [
  "clap",
  "clap_complete",
  "comfy-table",
+ "dojo-utils",
+ "katana-cairo",
  "katana-cli",
  "katana-db",
  "katana-node",
+ "katana-primitives",
+ "serde_json",
  "shellexpand",
  "starknet 0.12.0",
 ]
