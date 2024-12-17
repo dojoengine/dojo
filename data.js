@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1734474251197,
+  "lastUpdate": 1734474284457,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -41335,6 +41335,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8566957,
             "range": "± 360981",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "valentin@pupucecorp.com",
+            "name": "Brother MartianGreed",
+            "username": "MartianGreed"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a2f00edecc32932ddd3a6e2d09c3ae164c925d04",
+          "message": "Feat/bindgen improve types (#2816)\n\n* bump: cainome-0.4.8\n\n* feat: add CairoOption and CairoCustomEnum type handling\n\n* feat: merge schema in models.gen.ts\n\n* feat: add Input type to omit fieldOrder field\n\n* feat: recursive types in model definition",
+          "timestamp": "2024-12-17T16:08:13-06:00",
+          "tree_id": "4d807a2cea228f9acf8167460d2eb495f47cb5da",
+          "url": "https://github.com/dojoengine/dojo/commit/a2f00edecc32932ddd3a6e2d09c3ae164c925d04"
+        },
+        "date": 1734474282234,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10496413249,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
