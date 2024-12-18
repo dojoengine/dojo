@@ -198,10 +198,8 @@ pub fn build_sql_query(
     let mut query = format!("SELECT {} FROM [{}] {}", selections_clause, table_name, joins_clause);
 
     let mut count_query = format!(
-        "SELECT COUNT(DISTINCT {}.id), group_concat({model_relation_table}.model_id) as model_ids FROM [{}] {}",
-        table_name,
-        table_name,
-        joins_clause
+        "SELECT COUNT(*) FROM (SELECT {}.id FROM [{}] {} GROUP BY {}.id",
+        table_name, table_name, joins_clause, table_name
     );
 
     if let Some(where_clause) = where_clause {
@@ -215,6 +213,9 @@ pub fn build_sql_query(
         query += &format!(" HAVING {}", having_clause);
         count_query += &format!(" HAVING {}", having_clause);
     }
+
+    // Close the subquery
+    count_query += ") AS filtered_entities";
 
     // Use custom order by if provided, otherwise default to event_id DESC
     if let Some(order_clause) = order_by {
