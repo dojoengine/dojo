@@ -436,7 +436,7 @@ impl DojoWorld {
         let keys_pattern = build_keys_pattern(keys_clause)?;
 
         let where_clause = format!(
-            "WHERE {table}.keys REGEXP ? {}",
+            "{table}.keys REGEXP ? {}",
             if entity_updated_after.is_some() {
                 format!("AND {table}.updated_at >= ?")
             } else {
@@ -460,7 +460,7 @@ impl DojoWorld {
             r#"
             SELECT count(*)
             FROM {table}
-            {where_clause}
+            WHERE {where_clause}
         "#
         );
         let mut count_query = sqlx::query_scalar(&count_query);
@@ -479,7 +479,7 @@ impl DojoWorld {
                     SELECT {table}.id, {table}.data, {table}.model_id, group_concat({model_relation_table}.model_id) as model_ids
                     FROM {table}
                     JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
-                    {where_clause}
+                    WHERE {where_clause}
                     GROUP BY {table}.event_id
                     ORDER BY {table}.event_id DESC
                  "#
