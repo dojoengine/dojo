@@ -198,7 +198,7 @@ pub fn build_sql_query(
     let mut query = format!("SELECT {} FROM [{}] {}", selections_clause, table_name, joins_clause);
 
     let mut count_query = format!(
-        "SELECT COUNT(DISTINCT {}.id, group_concat({model_relation_table}.model_id)) FROM [{}] {}",
+        "SELECT COUNT(DISTINCT {}.id), group_concat({model_relation_table}.model_id) as model_ids FROM [{}] {}",
         table_name,
         table_name,
         joins_clause
