@@ -1,18 +1,18 @@
+use std::collections::hash_map::Entry;
 use std::collections::{HashMap, VecDeque};
 use std::pin::Pin;
-use std::sync::Arc;
 use std::sync::mpsc::{
-    Receiver as OneshotReceiver, RecvError, Sender as OneshotSender, channel as oneshot,
+    channel as oneshot, Receiver as OneshotReceiver, RecvError, Sender as OneshotSender,
 };
+use std::sync::Arc;
 use std::task::{Context, Poll};
 use std::{io, thread};
 
 use anyhow::anyhow;
-use futures::channel::mpsc::{Receiver, SendError, Sender, channel as async_channel};
+use futures::channel::mpsc::{channel as async_channel, Receiver, SendError, Sender};
 use futures::future::BoxFuture;
 use futures::stream::Stream;
 use futures::{Future, FutureExt};
-use katana_primitives::Felt;
 use katana_primitives::block::BlockHashOrNumber;
 use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
 use katana_primitives::contract::{ContractAddress, Nonce, StorageKey, StorageValue};
@@ -20,16 +20,17 @@ use katana_primitives::conversion::rpc::{
     compiled_class_hash_from_flattened_sierra_class, flattened_sierra_to_compiled_class,
     legacy_rpc_to_compiled_class,
 };
+use katana_primitives::Felt;
 use parking_lot::Mutex;
 use starknet::core::types::{BlockId, ContractClass as RpcContractClass, StarknetError};
 use starknet::providers::{Provider, ProviderError as StarknetProviderError};
 use tracing::{error, trace};
 
-use crate::ProviderResult;
 use crate::error::ProviderError;
 use crate::providers::in_memory::cache::CacheStateDb;
 use crate::traits::contract::ContractClassProvider;
 use crate::traits::state::StateProvider;
+use crate::ProviderResult;
 
 const LOG_TARGET: &str = "forking::backend";
 
@@ -205,21 +206,25 @@ where
             BackendRequest::Nonce(Request { payload, sender }) => {
                 let req_key = BackendRequestIdentifier::Nonce(payload);
 
-                self.dedup_request(req_key, sender, move || {
+                self.dedup_request(
+                    req_key,
+                    sender,
                     Box::pin(async move {
                         let res = provider
                             .get_nonce(block, Felt::from(payload))
                             .await
                             .map_err(|e| BackendError::StarknetProvider(Arc::new(e)));
                         BackendResponse::Nonce(res)
-                    })
-                });
+                    }),
+                );
             }
 
             BackendRequest::Storage(Request { payload: (addr, key), sender }) => {
                 let req_key = BackendRequestIdentifier::Storage((addr, key));
 
-                self.dedup_request(req_key, sender, move || {
+                self.dedup_request(
+                    req_key,
+                    sender,
                     Box::pin(async move {
                         let res = provider
                             .get_storage_at(Felt::from(addr), key, block)
@@ -227,14 +232,16 @@ where
                             .map_err(|e| BackendError::StarknetProvider(Arc::new(e)));
 
                         BackendResponse::Storage(res)
-                    })
-                });
+                    }),
+                );
             }
 
             BackendRequest::ClassHash(Request { payload, sender }) => {
                 let req_key = BackendRequestIdentifier::ClassHash(payload);
 
-                self.dedup_request(req_key, sender, move || {
+                self.dedup_request(
+                    req_key,
+                    sender,
                     Box::pin(async move {
                         let res = provider
                             .get_class_hash_at(block, Felt::from(payload))
@@ -242,14 +249,16 @@ where
                             .map_err(|e| BackendError::StarknetProvider(Arc::new(e)));
 
                         BackendResponse::ClassHashAt(res)
-                    })
-                });
+                    }),
+                );
             }
 
             BackendRequest::Class(Request { payload, sender }) => {
                 let req_key = BackendRequestIdentifier::Class(payload);
 
-                self.dedup_request(req_key, sender, move || {
+                self.dedup_request(
+                    req_key,
+                    sender,
                     Box::pin(async move {
                         let res = provider
                             .get_class(block, payload)
@@ -257,8 +266,8 @@ where
                             .map_err(|e| BackendError::StarknetProvider(Arc::new(e)));
 
                         BackendResponse::ClassAt(res)
-                    })
-                });
+                    }),
+                );
             }
 
             #[cfg(test)]
@@ -269,18 +278,14 @@ where
         }
     }
 
-    fn dedup_request<F>(
+    fn dedup_request(
         &mut self,
         req_key: BackendRequestIdentifier,
         sender: OneshotSender<BackendResponse>,
-        rpc_call_future: F,
-    ) where
-        F: FnOnce() -> BoxFuture<'static, BackendResponse>,
-    {
-        if let std::collections::hash_map::Entry::Vacant(e) = self.request_dedup_map.entry(req_key)
-        {
-            let fut = rpc_call_future();
-            self.pending_requests.push((req_key, fut));
+        rpc_call_future: BoxFuture<'static, BackendResponse>,
+    ) {
+        if let Entry::Vacant(e) = self.request_dedup_map.entry(req_key) {
+            self.pending_requests.push((req_key, rpc_call_future));
             e.insert(vec![sender]);
         } else {
             match self.request_dedup_map.get_mut(&req_key) {
@@ -343,7 +348,9 @@ where
 
                         // Send the response to all the senders waiting on the same request
                         sender_vec.iter().for_each(|sender| {
-                            sender.send(res.clone()).unwrap_or_else(|_| error!(target: LOG_TARGET, "failed to send result of request {:?} to sender {:?}", fut_key, sender));
+                            sender.send(res.clone()).unwrap_or_else(|error| {
+                            	error!(target: LOG_TARGET, key = ?fut_key, %error, "Failed to send result.")
+                            });
                         });
 
                         pin.request_dedup_map.remove(&fut_key);
@@ -694,11 +701,11 @@ fn handle_not_found_err<T>(result: Result<T, BackendError>) -> Result<Option<T>,
 #[cfg(test)]
 pub(crate) mod test_utils {
 
-    use std::sync::mpsc::{SyncSender, sync_channel};
+    use std::sync::mpsc::{sync_channel, SyncSender};
 
     use katana_primitives::block::BlockNumber;
-    use starknet::providers::JsonRpcClient;
     use starknet::providers::jsonrpc::HttpTransport;
+    use starknet::providers::JsonRpcClient;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
     use tokio::net::TcpListener;
     use url::Url;
@@ -754,11 +761,8 @@ pub(crate) mod test_utils {
 
                     // After reading, we send the pre-determined response
                     let http_response = format!(
-                        "HTTP/1.1 200 OK\r\n\
-                        content-length: {}\r\n\
-                        content-type: application/json\r\n\
-                        \r\n\
-                        {}",
+                        "HTTP/1.1 200 OK\r\ncontent-length: {}\r\ncontent-type: \
+                         application/json\r\n\r\n{}",
                         response.len(),
                         response
                     );
@@ -857,6 +861,11 @@ mod tests {
         thread::spawn(move || {
             h2.get_nonce(felt!("0x1").into()).expect(ERROR_SEND_REQUEST);
         });
+
+        // check current request count
+        let stats = handle.stats().expect(ERROR_STATS);
+        assert_eq!(stats, 1, "Backend should have 1 ongoing requests.");
+
         // Different request, should be counted
         let h3 = handle.clone();
         thread::spawn(move || {
@@ -891,6 +900,11 @@ mod tests {
         thread::spawn(move || {
             h2.get_class_at(felt!("0x1")).expect(ERROR_SEND_REQUEST);
         });
+
+        // check current request count
+        let stats = handle.stats().expect(ERROR_STATS);
+        assert_eq!(stats, 2, "Backend should have 1 ongoing requests.");
+
         // Different request, should be counted
         let h3 = handle.clone();
         thread::spawn(move || {
@@ -925,6 +939,11 @@ mod tests {
         thread::spawn(move || {
             h2.get_compiled_class_hash(felt!("0x1")).expect(ERROR_SEND_REQUEST);
         });
+
+        // check current request count
+        let stats = handle.stats().expect(ERROR_STATS);
+        assert_eq!(stats, 1, "Backend should have 1 ongoing requests.");
+
         // Different request, should be counted
         let h3 = handle.clone();
         thread::spawn(move || {
@@ -960,15 +979,15 @@ mod tests {
         thread::spawn(move || {
             h2.get_compiled_class_hash(felt!("0x1")).expect(ERROR_SEND_REQUEST);
         });
+
+        // check current request count
+        let stats = handle.stats().expect(ERROR_STATS);
+        assert_eq!(stats, 1, "Backend should have 1 ongoing requests.");
+
         // Different request, should be counted
         let h3 = handle.clone();
         thread::spawn(move || {
             h3.get_class_at(felt!("0x2")).expect(ERROR_SEND_REQUEST);
-        });
-        // Different request, should be counted
-        let h4 = handle.clone();
-        thread::spawn(move || {
-            h4.get_compiled_class_hash(felt!("0x3")).expect(ERROR_SEND_REQUEST);
         });
 
         // wait for the requests to be handled
@@ -976,7 +995,7 @@ mod tests {
 
         // check request are handled
         let stats = handle.stats().expect(ERROR_STATS);
-        assert_eq!(stats, 3, "Backend should only have 3 ongoing requests.")
+        assert_eq!(stats, 1, "Backend should only have 2 ongoing requests.")
     }
 
     #[test]
@@ -999,6 +1018,11 @@ mod tests {
         thread::spawn(move || {
             h2.get_class_hash_at(felt!("0x1").into()).expect(ERROR_SEND_REQUEST);
         });
+
+        // check current request count
+        let stats = handle.stats().expect(ERROR_STATS);
+        assert_eq!(stats, 1, "Backend should have 1 ongoing requests.");
+
         // Different request, should be counted
         let h3 = handle.clone();
         thread::spawn(move || {
@@ -1033,6 +1057,11 @@ mod tests {
         thread::spawn(move || {
             h2.get_storage(felt!("0x1").into(), felt!("0x1")).expect(ERROR_SEND_REQUEST);
         });
+
+        // check current request count
+        let stats = handle.stats().expect(ERROR_STATS);
+        assert_eq!(stats, 1, "Backend should have 1 ongoing requests.");
+
         // Different request, should be counted
         let h3 = handle.clone();
         thread::spawn(move || {
@@ -1067,6 +1096,11 @@ mod tests {
         thread::spawn(move || {
             h2.get_storage(felt!("0x1").into(), felt!("0x1")).expect(ERROR_SEND_REQUEST);
         });
+
+        // check current request count
+        let stats = handle.stats().expect(ERROR_STATS);
+        assert_eq!(stats, 1, "Backend should have 1 ongoing requests.");
+
         // Different request, should be counted
         let h3 = handle.clone();
         thread::spawn(move || {
@@ -1077,6 +1111,10 @@ mod tests {
         thread::spawn(move || {
             h4.get_storage(felt!("0x1").into(), felt!("0x6")).expect(ERROR_SEND_REQUEST);
         });
+
+        // check current request count
+        let stats = handle.stats().expect(ERROR_STATS);
+        assert_eq!(stats, 3, "Backend should have 3 ongoing requests.");
 
         // Same request as the last one, shouldn't be counted
         let h5 = handle.clone();
@@ -1105,10 +1143,10 @@ mod tests {
             .or_default()
             .insert(STORAGE_KEY, ADDR_1_STORAGE_VALUE);
 
-        state_db.contract_state.write().insert(ADDR_1, GenericContractInfo {
-            nonce: ADDR_1_NONCE,
-            class_hash: ADDR_1_CLASS_HASH,
-        });
+        state_db.contract_state.write().insert(
+            ADDR_1,
+            GenericContractInfo { nonce: ADDR_1_NONCE, class_hash: ADDR_1_CLASS_HASH },
+        );
 
         let provider = SharedStateProvider(Arc::new(state_db));
 
