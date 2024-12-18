@@ -25,6 +25,7 @@ pub struct GlobalRoots {
 
 /// Node in the Merkle-Patricia trie.
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(untagged)]
 pub enum MerkleNode {
     /// Represents a path to the highest non-zero descendant node.
     Edge {
