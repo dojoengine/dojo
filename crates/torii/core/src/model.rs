@@ -197,8 +197,12 @@ pub fn build_sql_query(
 
     let mut query = format!("SELECT {} FROM [{}] {}", selections_clause, table_name, joins_clause);
 
-    let mut count_query =
-        format!("SELECT COUNT(DISTINCT {}.id) FROM [{}] {}", table_name, table_name, joins_clause);
+    let mut count_query = format!(
+        "SELECT COUNT(DISTINCT {}.id, group_concat({model_relation_table}.model_id)) FROM [{}] {}",
+        table_name,
+        table_name,
+        joins_clause
+    );
 
     if let Some(where_clause) = where_clause {
         query += &format!(" WHERE {}", where_clause);
