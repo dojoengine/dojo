@@ -694,7 +694,6 @@ impl DojoWorld {
             offset,
         )?;
 
-        println!("count_query: {}", count_query);
         let mut count_query = sqlx::query_scalar(&count_query);
         for value in &bind_values {
             count_query = count_query.bind(value);
@@ -705,6 +704,7 @@ impl DojoWorld {
             return Ok((Vec::new(), 0));
         }
 
+        println!("query: {}", query);
         let mut query = sqlx::query(&query);
         for value in &bind_values {
             query = query.bind(value);
