@@ -6,7 +6,7 @@ struct FooEvent {
     #[key]
     k2: felt252,
     v1: u128,
-    v2: u32
+    v2: u32,
 }
 
 #[test]

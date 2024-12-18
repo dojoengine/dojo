@@ -6,7 +6,7 @@ use core::serde::Serde;
 use starknet::{ContractAddress, SyscallResultTrait};
 use starknet::storage_access::{
     storage_base_address_from_felt252, storage_address_from_base,
-    storage_address_from_base_and_offset
+    storage_address_from_base_and_offset,
 };
 use starknet::syscalls::{storage_read_syscall, storage_write_syscall};
 
@@ -44,11 +44,13 @@ struct ComplexModel {
 
 fn deploy_world() -> IWorldDispatcher {
     let namespace_def = NamespaceDef {
-        namespace: "dojo", resources: [
+        namespace: "dojo",
+        resources: [
             TestResource::Model(case::TEST_CLASS_HASH.try_into().unwrap()),
             TestResource::Model(case_not_packed::TEST_CLASS_HASH.try_into().unwrap()),
             TestResource::Model(complex_model::TEST_CLASS_HASH.try_into().unwrap()),
-        ].span(),
+        ]
+            .span(),
     };
 
     spawn_test_world([namespace_def].span())
@@ -184,7 +186,7 @@ fn bench_simple_struct() {
     let caller = starknet::contract_address_const::<0x42>();
 
     let gas = GasCounterTrait::start();
-    let mut foo = Foo { caller, a: 0x123456789abcdef, b: 0x123456789abcdef, };
+    let mut foo = Foo { caller, a: 0x123456789abcdef, b: 0x123456789abcdef };
     gas.end("foo init");
 
     let gas = GasCounterTrait::start();
@@ -285,7 +287,7 @@ fn bench_nested_struct_packed() {
 
     let gas = GasCounterTrait::start();
     let mut case = Case {
-        owner: caller, sword: Sword { swordsmith: caller, damage: 0x12345678, }, material: 'wooden',
+        owner: caller, sword: Sword { swordsmith: caller, damage: 0x12345678 }, material: 'wooden',
     };
     gas.end("case init");
 
@@ -360,8 +362,8 @@ fn bench_complex_struct_packed() {
                 },
                 Sword {
                     swordsmith: starknet::contract_address_const::<0x69>(), damage: 0x12345678,
-                }
-            )
+                },
+            ),
         ),
         gold: 0x12345678,
     };
@@ -412,11 +414,11 @@ fn test_benchmark_set_entity() {
     let bob = starknet::contract_address_const::<0xb0b>();
 
     let simple_entity_packed = Case {
-        owner: bob, sword: Sword { swordsmith: bob, damage: 42, }, material: 'iron'
+        owner: bob, sword: Sword { swordsmith: bob, damage: 42 }, material: 'iron',
     };
 
     let simple_entity_not_packed = CaseNotPacked {
-        owner: bob, sword: Sword { swordsmith: bob, damage: 42, }, material: 'iron'
+        owner: bob, sword: Sword { swordsmith: bob, damage: 42 }, material: 'iron',
     };
 
     let complex_entity = ComplexModel {
@@ -426,11 +428,11 @@ fn test_benchmark_set_entity() {
         last_name: "Doe",
         weapons: array![
             Weapon::DualWield(
-                (Sword { swordsmith: bob, damage: 42 }, Sword { swordsmith: bob, damage: 800 })
+                (Sword { swordsmith: bob, damage: 42 }, Sword { swordsmith: bob, damage: 800 }),
             ),
             Weapon::Fists(
-                (Sword { swordsmith: bob, damage: 300 }, Sword { swordsmith: bob, damage: 1200 })
-            )
+                (Sword { swordsmith: bob, damage: 300 }, Sword { swordsmith: bob, damage: 1200 }),
+            ),
         ],
         abilities: (
             Abilities {
@@ -448,7 +450,7 @@ fn test_benchmark_set_entity() {
                 intelligence: 2,
                 wisdom: 1,
                 charisma: 43,
-            }
+            },
         ),
         stats: Stats {
             kills: 99,
@@ -459,7 +461,7 @@ fn test_benchmark_set_entity() {
             walked: 12,
             runned: 32,
             finished: true,
-            romances: 65
+            romances: 65,
         },
     };
 
@@ -469,7 +471,7 @@ fn test_benchmark_set_entity() {
             model_selector: Model::<Case>::selector(DOJO_NSH),
             index: ModelIndex::Keys(simple_entity_packed.serialized_keys()),
             values: simple_entity_packed.serialized_values(),
-            layout: Model::<Case>::layout()
+            layout: Model::<Case>::layout(),
         );
     gas.end("World::SetEntity::SimplePacked");
 
@@ -479,7 +481,7 @@ fn test_benchmark_set_entity() {
             model_selector: Model::<CaseNotPacked>::selector(),
             index: ModelIndex::Keys(simple_entity_not_packed.serialized_keys()),
             values: simple_entity_not_packed.serialized_values(),
-            layout: Model::<CaseNotPacked>::layout()
+            layout: Model::<CaseNotPacked>::layout(),
         );
     gas.end("World::SetEntity::SimpleNotPacked");
 
@@ -489,7 +491,7 @@ fn test_benchmark_set_entity() {
             model_selector: Model::<ComplexModel>::selector(),
             index: ModelIndex::Keys(complex_entity.keys()),
             values: complex_entity.serialized_values(),
-            layout: Model::<ComplexModel>::layout()
+            layout: Model::<ComplexModel>::layout(),
         );
     gas.end("World::SetEntity::ComplexModel");
 

@@ -3,7 +3,7 @@ use core::option::OptionTrait;
 use core::traits::{Into, TryInto};
 
 use dojo::storage::packing::{
-    shl, shr, fpow, pack, unpack, pack_inner, unpack_inner, calculate_packed_size, pow2_const
+    shl, shr, fpow, pack, unpack, pack_inner, unpack_inner, calculate_packed_size, pow2_const,
 };
 
 #[test]
@@ -11,9 +11,9 @@ use dojo::storage::packing::{
 fn test_bit_fpow() {
     assert(
         fpow(
-            2, 250
+            2, 250,
         ) == 1809251394333065553493296640760748560207343510400633813116524750123642650624_u256,
-        ''
+        '',
     )
 }
 
@@ -22,9 +22,9 @@ fn test_bit_fpow() {
 fn test_bit_pow2_const() {
     assert(
         pow2_const(
-            250
+            250,
         ) == 1809251394333065553493296640760748560207343510400633813116524750123642650624_u256,
-        ''
+        '',
     )
 }
 
@@ -75,10 +75,11 @@ fn test_pack_unpack_felt252_u128() {
 
     assert(
         unpack_inner(128, ref packed_span, ref unpacking, ref un_offset).unwrap() == 1337,
-        'Types u8'
+        'Types u8',
     );
     assert(
-        unpack_inner(252, ref packed_span, ref unpacking, ref un_offset).unwrap() == 420, 'Types u8'
+        unpack_inner(252, ref packed_span, ref unpacking, ref un_offset).unwrap() == 420,
+        'Types u8',
     );
 }
 
@@ -100,10 +101,10 @@ fn test_pack_multiple() {
     packed.append(packing);
 
     assert(
-        *packed.at(0) == 0x6000000050000000400000003000000020000000100000000, 'Packed multiple 0'
+        *packed.at(0) == 0x6000000050000000400000003000000020000000100000000, 'Packed multiple 0',
     );
     assert(
-        *packed.at(1) == 0xd0000000c0000000b0000000a000000090000000800000007, 'Packed multiple 1'
+        *packed.at(1) == 0xd0000000c0000000b0000000a000000090000000800000007, 'Packed multiple 1',
     );
     assert(*packed.at(2) == 0x130000001200000011000000100000000f0000000e, 'Packed multiple 2');
 }
@@ -182,57 +183,57 @@ fn test_pack_unpack_types() {
             .unwrap()
             .try_into()
             .unwrap() == 3_u8,
-        'Types u8'
+        'Types u8',
     );
     assert(
         unpack_inner(16, ref packed_span, ref unpacking, ref un_offset)
             .unwrap()
             .try_into()
             .unwrap() == 14_u16,
-        'Types u16'
+        'Types u16',
     );
     assert(
         unpack_inner(32, ref packed_span, ref unpacking, ref un_offset)
             .unwrap()
             .try_into()
             .unwrap() == 59_u32,
-        'Types u32'
+        'Types u32',
     );
     assert(
         unpack_inner(64, ref packed_span, ref unpacking, ref un_offset)
             .unwrap()
             .try_into()
             .unwrap() == 26_u64,
-        'Types u64'
+        'Types u64',
     );
     assert(
         unpack_inner(128, ref packed_span, ref unpacking, ref un_offset)
             .unwrap()
             .try_into()
             .unwrap() == 53_u128,
-        'Types u128'
+        'Types u128',
     );
     assert(
         unpack_inner(251, ref packed_span, ref unpacking, ref un_offset).unwrap() == 58_felt252,
-        'Types felt252'
+        'Types felt252',
     );
     assert(
         unpack_inner(1, ref packed_span, ref unpacking, ref un_offset).unwrap() == false.into(),
-        'Types bool'
+        'Types bool',
     );
     assert(
         unpack_inner(251, ref packed_span, ref unpacking, ref un_offset)
             .unwrap()
             .try_into()
             .unwrap() == contract_address,
-        'Types ContractAddress'
+        'Types ContractAddress',
     );
     assert(
         unpack_inner(251, ref packed_span, ref unpacking, ref un_offset)
             .unwrap()
             .try_into()
             .unwrap() == class_hash,
-        'Types ClassHash'
+        'Types ClassHash',
     );
 }
 
@@ -258,7 +259,7 @@ fn test_inner_pack_unpack_u256_single() {
     let high = unpack_inner(128, ref packed_span, ref unpacking, ref un_offset).unwrap();
     assert(
         u256 { low: low.try_into().unwrap(), high: high.try_into().unwrap() } == input,
-        'Unpacked equals packed'
+        'Unpacked equals packed',
     );
 }
 

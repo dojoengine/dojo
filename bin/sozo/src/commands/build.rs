@@ -103,6 +103,7 @@ impl BuildArgs {
                 include_target_kinds: vec![],
                 exclude_target_kinds: vec![TargetKind::TEST],
                 features: self.features.try_into()?,
+                ignore_cairo_version: false,
             },
             &ws,
         )?;

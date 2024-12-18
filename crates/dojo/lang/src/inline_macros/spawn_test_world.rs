@@ -98,6 +98,7 @@ impl InlineMacroExprPlugin for SpawnTestWorld {
                 content: code,
                 code_mappings,
                 aux_data: None,
+                diagnostics_note: None,
             }),
             diagnostics: vec![],
         }
