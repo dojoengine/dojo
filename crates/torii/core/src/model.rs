@@ -120,9 +120,13 @@ impl ModelReader<Error> for ModelSQLReader {
 pub fn build_sql_query(
     schemas: &Vec<Ty>,
     table_name: &str,
+    model_relation_table: &str,
     entity_relation_column: &str,
     where_clause: Option<&str>,
+    having_clause: Option<&str>,
     order_by: Option<&str>,
+    limit: Option<u32>,
+    offset: Option<u32>,
 ) -> Result<(String, String), Error> {
     fn collect_columns(table_prefix: &str, path: &str, ty: &Ty, selections: &mut Vec<String>) {
         match ty {
@@ -170,6 +174,7 @@ pub fn build_sql_query(
     // Add base table columns
     selections.push(format!("{}.id", table_name));
     selections.push(format!("{}.keys", table_name));
+    selections.push(format!("group_concat({model_relation_table}.model_id) as model_ids"));
 
     // Process each model schema
     for model in schemas {
@@ -182,6 +187,10 @@ pub fn build_sql_query(
         // Collect columns with table prefix
         collect_columns(&model_table, "", model, &mut selections);
     }
+
+    joins.push(format!(
+        "JOIN {model_relation_table} ON {table_name}.id = {model_relation_table}.entity_id"
+    ));
 
     let selections_clause = selections.join(", ");
     let joins_clause = joins.join(" ");
@@ -196,6 +205,13 @@ pub fn build_sql_query(
         count_query += &format!(" WHERE {}", where_clause);
     }
 
+    query += &format!(" GROUP BY {table_name}.id");
+
+    if let Some(having_clause) = having_clause {
+        query += &format!(" HAVING {}", having_clause);
+        count_query += &format!(" HAVING {}", having_clause);
+    }
+
     // Use custom order by if provided, otherwise default to event_id DESC
     if let Some(order_clause) = order_by {
         query += &format!(" ORDER BY {}", order_clause);
@@ -203,7 +219,13 @@ pub fn build_sql_query(
         query += &format!(" ORDER BY {}.event_id DESC", table_name);
     }
 
-    query += " LIMIT ? OFFSET ?";
+    if let Some(limit) = limit {
+        query += &format!(" LIMIT {}", limit);
+    }
+
+    if let Some(offset) = offset {
+        query += &format!(" OFFSET {}", offset);
+    }
 
     Ok((query, count_query))
 }
@@ -482,7 +504,9 @@ mod tests {
         let query = build_sql_query(
             &vec![position, player_config],
             "entities",
+            "entity_model",
             "internal_entity_id",
+            None,
             None,
             None,
             None,

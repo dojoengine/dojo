@@ -13,7 +13,6 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 
-use crypto_bigint::rand_core::le;
 use dojo_types::naming::compute_selector_from_tag;
 use dojo_types::primitive::{Primitive, PrimitiveError};
 use dojo_types::schema::Ty;
@@ -262,130 +261,6 @@ impl DojoWorld {
         row_events.iter().map(map_row_to_event).collect()
     }
 
-    #[allow(clippy::too_many_arguments)]
-    async fn fetch_entities(
-        &self,
-        table: &str,
-        entity_relation_column: &str,
-        entities: Vec<(String, String)>,
-        dont_include_hashed_keys: bool,
-        order_by: Option<&str>,
-        entity_models: Vec<String>,
-    ) -> Result<Vec<proto::types::Entity>, Error> {
-        let entity_models =
-            entity_models.iter().map(|tag| compute_selector_from_tag(tag)).collect::<Vec<Felt>>();
-
-        tracing::debug!(
-            "Fetching entities from table {table} with {} entity/model pairs",
-            entities.len()
-        );
-        let start = std::time::Instant::now();
-
-        // Group entities by their model combinations
-        let mut model_groups: HashMap<String, Vec<String>> = HashMap::new();
-        for (entity_id, models_str) in entities {
-            model_groups.entry(models_str).or_default().push(entity_id);
-        }
-        tracing::debug!("Grouped into {} distinct model combinations", model_groups.len());
-
-        let mut all_entities = Vec::new();
-
-        let mut tx = self.pool.begin().await?;
-        tracing::debug!("Started database transaction");
-
-        // Create a temporary table to store entity IDs due to them potentially exceeding
-        // SQLite's parameters limit which is 999
-        let temp_table_start = std::time::Instant::now();
-        sqlx::query(
-            "CREATE TEMPORARY TABLE temp_entity_ids (id TEXT PRIMARY KEY, model_group TEXT)",
-        )
-        .execute(&mut *tx)
-        .await?;
-        tracing::debug!("Created temporary table in {:?}", temp_table_start.elapsed());
-
-        // Insert all entity IDs into the temporary table
-        let insert_start = std::time::Instant::now();
-        for (model_ids, entity_ids) in &model_groups {
-            for chunk in entity_ids.chunks(999) {
-                let placeholders = chunk.iter().map(|_| "(?, ?)").collect::<Vec<_>>().join(",");
-                let query = format!(
-                    "INSERT INTO temp_entity_ids (id, model_group) VALUES {}",
-                    placeholders
-                );
-                let mut query = sqlx::query(&query);
-                for id in chunk {
-                    query = query.bind(id).bind(model_ids);
-                }
-                query.execute(&mut *tx).await?;
-            }
-        }
-        tracing::debug!(
-            "Inserted all entity IDs into temporary table in {:?}",
-            insert_start.elapsed()
-        );
-
-        let query_start = std::time::Instant::now();
-        for (models_str, entity_ids) in &model_groups {
-            tracing::debug!("Processing model group with {} entities", entity_ids.len());
-            let model_ids = models_str
-                .split(',')
-                .filter_map(|id| {
-                    let model_id = Felt::from_str(id).unwrap();
-                    if entity_models.is_empty() || entity_models.contains(&model_id) {
-                        Some(model_id)
-                    } else {
-                        None
-                    }
-                })
-                .collect::<Vec<_>>();
-            let schemas = self
-                .model_cache
-                .models(&model_ids)
-                .await?
-                .into_iter()
-                .map(|m| m.schema)
-                .collect::<Vec<_>>();
-            if schemas.is_empty() {
-                continue;
-            }
-
-            let (entity_query, _) = build_sql_query(
-                &schemas,
-                table,
-                entity_relation_column,
-                Some(&format!(
-                    "[{table}].id IN (SELECT id FROM temp_entity_ids WHERE model_group = ?)"
-                )),
-                order_by,
-                None,
-                None,
-            )?;
-
-            let query = sqlx::query(&entity_query).bind(models_str);
-            let rows = query.fetch_all(&mut *tx).await?;
-
-            let schemas = Arc::new(schemas);
-
-            let group_entities: Result<Vec<_>, Error> = rows
-                .par_iter()
-                .map(|row| map_row_to_entity(row, &schemas, dont_include_hashed_keys))
-                .collect();
-
-            all_entities.extend(group_entities?);
-        }
-        tracing::debug!("Processed all model groups in {:?}", query_start.elapsed());
-
-        sqlx::query("DROP TABLE temp_entity_ids").execute(&mut *tx).await?;
-        tracing::debug!("Dropped temporary table");
-
-        tx.commit().await?;
-        tracing::debug!("Committed transaction");
-
-        tracing::debug!("Total fetch_entities operation took {:?}", start.elapsed());
-
-        Ok(all_entities)
-    }
-
     async fn fetch_historical_event_messages(
         &self,
         query: &str,
@@ -511,9 +386,11 @@ impl DojoWorld {
         }
 
         // retrieve all schemas
+        let entity_models =
+            entity_models.iter().map(|model| compute_selector_from_tag(model)).collect::<Vec<_>>();
         let schemas = self
             .model_cache
-            .models(&[])
+            .models(&entity_models)
             .await?
             .iter()
             .map(|m| m.schema.clone())
@@ -521,15 +398,15 @@ impl DojoWorld {
         let (query, _) = build_sql_query(
             &schemas,
             table,
+            model_relation_table,
             entity_relation_column,
-            if where_clause.is_empty() {
-                None
-            } else {
-                Some(&where_clause)
-            },
+            if where_clause.is_empty() { None } else { Some(&where_clause) },
+            None,
             order_by,
+            limit,
+            offset,
         )?;
-        println!("query: {}", query);
+
         let mut query = sqlx::query(&query);
         for value in &bind_values {
             query = query.bind(value);
@@ -543,7 +420,6 @@ impl DojoWorld {
         Ok((entities, total_count))
     }
 
-    #[allow(clippy::too_many_arguments)]
     pub(crate) async fn query_by_keys(
         &self,
         table: &str,
@@ -559,158 +435,95 @@ impl DojoWorld {
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         let keys_pattern = build_keys_pattern(keys_clause)?;
 
-        // total count of rows that matches keys_pattern without limit and offset
+        let where_clause = format!(
+            "WHERE {table}.keys REGEXP ? {}",
+            if entity_updated_after.is_some() {
+                format!("AND {table}.updated_at >= ?")
+            } else {
+                String::new()
+            }
+        );
+
+        let mut bind_values = vec![keys_pattern];
+        if let Some(entity_updated_after) = entity_updated_after.clone() {
+            bind_values.push(entity_updated_after);
+        }
+
+        if let Some(limit) = limit {
+            bind_values.push(limit.to_string());
+        }
+        if let Some(offset) = offset {
+            bind_values.push(offset.to_string());
+        }
+
         let count_query = format!(
             r#"
             SELECT count(*)
             FROM {table}
-            {}
-        "#,
-            if !keys_clause.models.is_empty() {
-                // split the model names to namespace and model
-                let model_ids = keys_clause
-                    .models
-                    .iter()
-                    .map(|model| {
-                        model
-                            .split_once('-')
-                            .ok_or(QueryError::InvalidNamespacedModel(model.clone()))
-                    })
-                    .collect::<Result<Vec<_>, _>>()?;
-                // get the model selector from namespace and model and format
-                let model_ids_str = model_ids
-                    .iter()
-                    .map(|(namespace, model)| {
-                        format!("'{:#x}'", compute_selector_from_names(namespace, model))
-                    })
-                    .collect::<Vec<_>>()
-                    .join(",");
-                format!(
-                    r#"
-                JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
-                WHERE {model_relation_table}.model_id IN ({})
-                AND {table}.keys REGEXP ?
-                {}
-            "#,
-                    model_ids_str,
-                    if entity_updated_after.is_some() {
-                        format!("AND {table}.updated_at >= ?")
-                    } else {
-                        String::new()
-                    }
-                )
-            } else {
-                format!(
-                    r#"
-                WHERE {table}.keys REGEXP ?
-                {}
-            "#,
-                    if entity_updated_after.is_some() {
-                        format!("AND {table}.updated_at >= ?")
-                    } else {
-                        String::new()
-                    }
-                )
-            }
+            {where_clause}
+        "#
         );
-
-        let total_count = sqlx::query_scalar(&count_query)
-            .bind(&keys_pattern)
-            .bind(entity_updated_after.clone())
-            .fetch_optional(&self.pool)
-            .await?
-            .unwrap_or(0);
+        let mut count_query = sqlx::query_scalar(&count_query);
+        for value in &bind_values {
+            count_query = count_query.bind(value);
+        }
+        let total_count = count_query.fetch_one(&self.pool).await?;
         if total_count == 0 {
             return Ok((Vec::new(), 0));
         }
 
-        let mut models_query = if table == EVENT_MESSAGES_HISTORICAL_TABLE {
-            format!(
-                r#"
-                SELECT {table}.id, {table}.data, {table}.model_id, group_concat({model_relation_table}.model_id) as model_ids
-                FROM {table}
-                JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
-                WHERE {table}.keys REGEXP ?
-                {}
-                GROUP BY {table}.event_id
-            "#,
-                if entity_updated_after.is_some() {
-                    format!("AND {table}.updated_at >= ?")
-                } else {
-                    String::new()
-                }
-            )
-        } else {
-            format!(
-                r#"
-                SELECT {table}.id, group_concat({model_relation_table}.model_id) as model_ids
-                FROM {table}
-                JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
-                WHERE {table}.keys REGEXP ?
-                {}
-                GROUP BY {table}.id
-            "#,
-                if entity_updated_after.is_some() {
-                    format!("AND {table}.updated_at >= ?")
-                } else {
-                    String::new()
-                }
-            )
-        };
-
-        if !keys_clause.models.is_empty() {
-            // filter by models
-            models_query += &format!(
-                "HAVING {}",
-                keys_clause
-                    .models
-                    .iter()
-                    .map(|model| {
-                        let (namespace, name) = model
-                            .split_once('-')
-                            .ok_or(QueryError::InvalidNamespacedModel(model.clone()))?;
-                        let model_id = compute_selector_from_names(namespace, name);
-                        Ok(format!("INSTR(model_ids, '{:#x}') > 0", model_id))
-                    })
-                    .collect::<Result<Vec<_>, Error>>()?
-                    .join(" OR ")
-                    .as_str()
-            );
-        }
-
-        models_query += &format!(" ORDER BY {table}.event_id DESC");
-
-        if limit.is_some() {
-            models_query += " LIMIT ?";
-        }
-        if offset.is_some() {
-            models_query += " OFFSET ?";
-        }
-
         if table == EVENT_MESSAGES_HISTORICAL_TABLE {
-            let entities = self
-                .fetch_historical_event_messages(&models_query, vec![keys_pattern], limit, offset)
-                .await?;
+            let entities = self.fetch_historical_event_messages(
+                &format!(
+                    r#"
+                    SELECT {table}.id, {table}.data, {table}.model_id, group_concat({model_relation_table}.model_id) as model_ids
+                    FROM {table}
+                    JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
+                    {where_clause}
+                    GROUP BY {table}.event_id
+                    ORDER BY {table}.event_id DESC
+                 "#
+                ),
+                bind_values,
+                limit,
+                offset
+            ).await?;
             return Ok((entities, total_count));
         }
 
-        let mut query = sqlx::query_as(&models_query).bind(&keys_pattern);
-        if let Some(entity_updated_after) = entity_updated_after.clone() {
-            query = query.bind(entity_updated_after);
-        }
-        query = query.bind(limit).bind(offset);
-        let db_entities: Vec<(String, String)> = query.fetch_all(&self.pool).await?;
+        // retrieve all schemas
+        let entity_models =
+            entity_models.iter().map(|model| compute_selector_from_tag(model)).collect::<Vec<_>>();
+        let schemas = self
+            .model_cache
+            .models(&entity_models)
+            .await?
+            .iter()
+            .map(|m| m.schema.clone())
+            .collect::<Vec<_>>();
 
-        let entities = self
-            .fetch_entities(
-                table,
-                entity_relation_column,
-                db_entities,
-                dont_include_hashed_keys,
-                order_by,
-                entity_models,
-            )
-            .await?;
+        let (query, _) = build_sql_query(
+            &schemas,
+            table,
+            model_relation_table,
+            entity_relation_column,
+            Some(&where_clause),
+            None,
+            order_by,
+            limit,
+            offset,
+        )?;
+
+        let mut query = sqlx::query(&query);
+        for value in &bind_values {
+            query = query.bind(value);
+        }
+        let entities = query.fetch_all(&self.pool).await?;
+        let entities = entities
+            .iter()
+            .map(|row| map_row_to_entity(row, &schemas, dont_include_hashed_keys))
+            .collect::<Result<Vec<_>, Error>>()?;
+
         Ok((entities, total_count))
     }
 
@@ -818,8 +631,10 @@ impl DojoWorld {
         let (entity_query, count_query) = build_sql_query(
             &schemas,
             table,
+            model_relation_table,
             entity_relation_column,
             Some(&where_clause),
+            None,
             order_by,
             limit,
             offset,
@@ -860,76 +675,46 @@ impl DojoWorld {
         entity_models: Vec<String>,
         entity_updated_after: Option<String>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
-        let (where_clause, having_clause, join_clause, bind_values) =
+        let (where_clause, having_clauses, bind_values) =
             build_composite_clause(table, model_relation_table, &composite, entity_updated_after)?;
 
-        let count_query = if !having_clause.is_empty() {
-            format!(
-                r#"
-                SELECT COUNT(*) FROM (
-                    SELECT DISTINCT [{table}].id
-                    FROM [{table}]
-                    JOIN {model_relation_table} ON [{table}].id = {model_relation_table}.entity_id
-                    {join_clause}
-                    {where_clause}
-                    GROUP BY [{table}].id
-                    {having_clause}
-                ) as filtered_count
-                "#,
-            )
-        } else {
-            format!(
-                r#"
-                SELECT COUNT(DISTINCT [{table}].id)
-                FROM [{table}]
-                JOIN {model_relation_table} ON [{table}].id = {model_relation_table}.entity_id
-                {join_clause}
-                {where_clause}
-                "#,
-            )
-        };
+        let entity_models =
+            entity_models.iter().map(|model| compute_selector_from_tag(model)).collect::<Vec<_>>();
+        let schemas =
+            self.model_cache.models(&entity_models).await?.into_iter().map(|m| m.schema).collect();
+        let (query, count_query) = build_sql_query(
+            &schemas,
+            table,
+            model_relation_table,
+            entity_relation_column,
+            if where_clause.is_empty() { None } else { Some(&where_clause) },
+            if having_clauses.is_empty() { None } else { Some(&having_clauses) },
+            order_by,
+            limit,
+            offset,
+        )?;
 
-        let mut count_query = sqlx::query_scalar::<_, u32>(&count_query);
+        println!("count_query: {}", count_query);
+        let mut count_query = sqlx::query_scalar(&count_query);
         for value in &bind_values {
             count_query = count_query.bind(value);
         }
-        let total_count = count_query.fetch_optional(&self.pool).await?.unwrap_or(0);
+
+        let total_count = count_query.fetch_one(&self.pool).await?;
         if total_count == 0 {
             return Ok((Vec::new(), 0));
         }
 
-        let query = format!(
-            r#"
-            SELECT DISTINCT [{table}].id, group_concat({model_relation_table}.model_id) as model_ids
-            FROM [{table}]
-            JOIN {model_relation_table} ON [{table}].id = {model_relation_table}.entity_id
-            {join_clause}
-            {where_clause}
-            GROUP BY [{table}].id
-            {having_clause}
-            ORDER BY [{table}].event_id DESC
-            LIMIT ? OFFSET ?
-            "#,
-        );
-
-        let mut db_query = sqlx::query_as(&query);
+        let mut query = sqlx::query(&query);
         for value in &bind_values {
-            db_query = db_query.bind(value);
+            query = query.bind(value);
         }
-        db_query = db_query.bind(limit).bind(offset);
+        let db_entities = query.fetch_all(&self.pool).await?;
 
-        let db_entities: Vec<(String, String)> = db_query.fetch_all(&self.pool).await?;
-
-        let entities = self
-            .fetch_entities(
-                table,
-                entity_relation_column,
-                db_entities,
-                dont_include_hashed_keys,
-                order_by,
-                entity_models,
-            )
-            .await?;
+        let entities = db_entities
+            .par_iter()
+            .map(|row| map_row_to_entity(row, &schemas, dont_include_hashed_keys))
+            .collect::<Result<Vec<_>, Error>>()?;
         Ok((entities, total_count))
     }
 
@@ -1247,8 +1032,15 @@ fn map_row_to_entity(
     dont_include_hashed_keys: bool,
 ) -> Result<proto::types::Entity, Error> {
     let hashed_keys = Felt::from_str(&row.get::<String, _>("id")).map_err(ParseError::FromStr)?;
+    let model_ids = row
+        .get::<String, _>("model_ids")
+        .split(',')
+        .map(|id| Felt::from_str(id).map_err(ParseError::FromStr))
+        .collect::<Result<Vec<_>, _>>()?;
+
     let models = schemas
         .iter()
+        .filter(|schema| model_ids.contains(&compute_selector_from_tag(&schema.name())))
         .map(|schema| {
             let mut ty = schema.clone();
             map_row_to_ty("", &schema.name(), &mut ty, row)?;
@@ -1300,13 +1092,11 @@ fn build_composite_clause(
     model_relation_table: &str,
     composite: &proto::types::CompositeClause,
     entity_updated_after: Option<String>,
-) -> Result<(String, String, String, Vec<String>), Error> {
+) -> Result<(String, String, Vec<String>), Error> {
     let is_or = composite.operator == LogicalOperator::Or as i32;
     let mut where_clauses = Vec::new();
-    let mut join_clauses = Vec::new();
     let mut having_clauses = Vec::new();
     let mut bind_values = Vec::new();
-    let mut seen_models = HashMap::new();
 
     for clause in &composite.clauses {
         match clause.clause_type.as_ref().unwrap() {
@@ -1334,10 +1124,7 @@ fn build_composite_clause(
                         .ok_or(QueryError::InvalidNamespacedModel(model.clone()))?;
                     let model_id = compute_selector_from_names(namespace, model_name);
 
-                    having_clauses.push(format!(
-                        "INSTR(group_concat({model_relation_table}.model_id), '{:#x}') > 0",
-                        model_id
-                    ));
+                    having_clauses.push(format!("INSTR(model_ids, '{:#x}') > 0", model_id));
                 }
             }
             ClauseType::Member(member) => {
@@ -1356,65 +1143,34 @@ fn build_composite_clause(
                 bind_values.push(comparison_value);
 
                 let model = member.model.clone();
-                // Get or create unique alias for this model
-                let alias = seen_models.entry(model.clone()).or_insert_with(|| {
-                    let (namespace, model_name) = model
-                        .split_once('-')
-                        .ok_or(QueryError::InvalidNamespacedModel(model.clone()))
-                        .unwrap();
-                    let model_id = compute_selector_from_names(namespace, model_name);
-
-                    // Add model check to having clause
-                    having_clauses.push(format!(
-                        "INSTR(group_concat({model_relation_table}.model_id), '{:#x}') > 0",
-                        model_id
-                    ));
-
-                    // Add join clause
-                    join_clauses.push(format!(
-                        "LEFT JOIN [{model}] AS [{model}] ON [{table}].id = \
-                         [{model}].internal_entity_id"
-                    ));
-
-                    model.clone()
-                });
 
                 // Use the column name directly since it's already flattened
                 where_clauses
-                    .push(format!("([{alias}].[{}] {comparison_operator} ?)", member.member));
+                    .push(format!("([{model}].[{}] {comparison_operator} ?)", member.member));
             }
             ClauseType::Composite(nested) => {
                 // Handle nested composite by recursively building the clause
-                let (nested_where, nested_having, nested_join, nested_values) =
-                    build_composite_clause(
-                        table,
-                        model_relation_table,
-                        nested,
-                        entity_updated_after.clone(),
-                    )?;
+                let (nested_where, nested_having, nested_values) = build_composite_clause(
+                    table,
+                    model_relation_table,
+                    nested,
+                    entity_updated_after.clone(),
+                )?;
 
                 if !nested_where.is_empty() {
-                    where_clauses.push(format!("({})", nested_where.trim_start_matches("WHERE ")));
+                    where_clauses.push(nested_where);
                 }
                 if !nested_having.is_empty() {
-                    having_clauses
-                        .push(format!("({})", nested_having.trim_start_matches("HAVING ")));
+                    having_clauses.push(nested_having);
                 }
-                join_clauses.extend(
-                    nested_join
-                        .split_whitespace()
-                        .filter(|&s| s.starts_with("LEFT"))
-                        .map(String::from),
-                );
                 bind_values.extend(nested_values);
             }
         }
     }
 
-    let join_clause = join_clauses.join(" ");
     let where_clause = if !where_clauses.is_empty() {
         format!(
-            "WHERE {} {}",
+            "{} {}",
             where_clauses.join(if is_or { " OR " } else { " AND " }),
             if let Some(entity_updated_after) = entity_updated_after.clone() {
                 bind_values.push(entity_updated_after);
@@ -1425,18 +1181,18 @@ fn build_composite_clause(
         )
     } else if let Some(entity_updated_after) = entity_updated_after.clone() {
         bind_values.push(entity_updated_after);
-        format!("WHERE {table}.updated_at >= ?")
+        format!("{table}.updated_at >= ?")
     } else {
         String::new()
     };
 
     let having_clause = if !having_clauses.is_empty() {
-        format!("HAVING {}", having_clauses.join(if is_or { " OR " } else { " AND " }))
+        format!("{}", having_clauses.join(if is_or { " OR " } else { " AND " }))
     } else {
         String::new()
     };
 
-    Ok((where_clause, having_clause, join_clause, bind_values))
+    Ok((where_clause, having_clause, bind_values))
 }
 
 type ServiceResult<T> = Result<Response<T>, Status>;
