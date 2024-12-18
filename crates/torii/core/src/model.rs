@@ -197,9 +197,10 @@ pub fn build_sql_query(
 
     let mut query = format!("SELECT {} FROM [{}] {}", selections_clause, table_name, joins_clause);
 
+    // Include model_ids in the subquery and put WHERE before GROUP BY
     let mut count_query = format!(
-        "SELECT COUNT(*) FROM (SELECT {}.id FROM [{}] {} GROUP BY {}.id",
-        table_name, table_name, joins_clause, table_name
+        "SELECT COUNT(*) FROM (SELECT {}.id, group_concat({}.model_id) as model_ids FROM [{}] {}",
+        table_name, model_relation_table, table_name, joins_clause
     );
 
     if let Some(where_clause) = where_clause {
@@ -208,6 +209,7 @@ pub fn build_sql_query(
     }
 
     query += &format!(" GROUP BY {table_name}.id");
+    count_query += &format!(" GROUP BY {table_name}.id");
 
     if let Some(having_clause) = having_clause {
         query += &format!(" HAVING {}", having_clause);
