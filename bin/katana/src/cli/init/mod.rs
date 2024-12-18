@@ -269,7 +269,7 @@ where
     .await;
 
     match result {
-        Ok(addr) => sp.success(&format!("Deployment successful ( {addr} )")),
+        Ok(addr) => sp.success(&format!("Deployment successful ({addr})")),
         Err(..) => sp.fail("Deployment failed"),
     }
     result
