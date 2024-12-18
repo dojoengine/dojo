@@ -502,13 +502,18 @@ impl DojoWorld {
             .map(|m| m.schema.clone())
             .collect::<Vec<_>>();
 
+        let having_clause = entity_models
+            .iter()
+            .map(|model| format!("INSTR(model_ids, '{:#x}') > 0", model))
+            .collect::<Vec<_>>()
+            .join(" OR ");
         let (query, _) = build_sql_query(
             &schemas,
             table,
             model_relation_table,
             entity_relation_column,
             Some(&where_clause),
-            None,
+            if !having_clause.is_empty() { Some(&having_clause) } else { None },
             order_by,
             limit,
             offset,
