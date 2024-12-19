@@ -13,6 +13,7 @@ use crate::ProviderResult;
 pub trait StateRootProvider: Send + Sync {
     /// Retrieves the root of the global state trie.
     fn state_root(&self) -> ProviderResult<Felt> {
+        // https://docs.starknet.io/architecture-and-concepts/network-architecture/starknet-state/#state_commitment
         Ok(starknet_types_core::hash::Poseidon::hash_array(&[
             short_string!("STARKNET_STATE_V0"),
             self.contracts_root()?,
