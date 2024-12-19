@@ -111,7 +111,7 @@ async fn classes_proofs() {
 
     // the returned data is the list of values corresponds to the [key]
     let results = classes_proof
-        .verify_proof::<hash::Poseidon>(global_roots.classes_tree_root, [key], 251)
+        .verify_proof::<hash::Pedersen>(global_roots.classes_tree_root, [key], 251)
         .collect::<Result<Vec<_>, _>>()
         .expect("failed to verify proofs");
 
