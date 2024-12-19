@@ -1133,9 +1133,12 @@ mod tests {
             h4.get_storage(felt!("0x1").into(), felt!("0x6")).expect(ERROR_SEND_REQUEST);
         });
 
+        // wait for the requests to be handled
+        thread::sleep(Duration::from_secs(1));
+
         // check current request count
         let stats = handle.stats().expect(ERROR_STATS);
-        assert_eq!(stats, 1, "Backend should have 1 ongoing requests.");
+        assert_eq!(stats, 3, "Backend should have 3 ongoing requests.");
 
         // Same request as the last one, shouldn't be counted
         let h5 = handle.clone();
