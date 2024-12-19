@@ -17,7 +17,10 @@ use katana_primitives::env::BlockEnv;
 use katana_primitives::event::MaybeForkedContinuationToken;
 use katana_primitives::transaction::{ExecutableTxWithHash, TxHash, TxWithHash};
 use katana_primitives::Felt;
-use katana_provider::traits::block::{BlockHashProvider, BlockIdReader, BlockNumberProvider};
+use katana_provider::error::ProviderError;
+use katana_provider::traits::block::{
+    BlockHashProvider, BlockIdReader, BlockNumberProvider, HeaderProvider,
+};
 use katana_provider::traits::contract::ContractClassProvider;
 use katana_provider::traits::env::BlockEnvProvider;
 use katana_provider::traits::state::{StateFactoryProvider, StateProvider, StateRootProvider};
@@ -1139,6 +1142,10 @@ where
         self.on_io_blocking_task(move |this| {
             let provider = this.inner.backend.blockchain.provider();
 
+            let Some(block_num) = provider.convert_block_id(block_id)? else {
+                return Err(StarknetApiError::BlockNotFound);
+            };
+
             // Check if the total number of keys requested exceeds the RPC limit.
             if let Some(limit) = this.inner.config.max_proof_keys {
                 let total_keys = class_hashes.as_ref().map(|v| v.len()).unwrap_or(0)
@@ -1151,8 +1158,11 @@ where
                 }
             }
 
-            let state = this.state(&block_id)?;
-            let block_hash = provider.latest_hash()?;
+            // TODO: the way we handle the block id is very clanky. change it!
+            let state = this.state(&BlockIdOrTag::Number(block_num))?;
+            let block_hash = provider
+                .block_hash_by_num(block_num.into())?
+                .ok_or(ProviderError::MissingBlockHeader(block_num))?;
 
             // --- Get classes proof (if any)
 
