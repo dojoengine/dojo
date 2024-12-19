@@ -5,6 +5,7 @@ use katana_primitives::fee::TxFeeInfo;
 use katana_primitives::trace::{BuiltinCounters, TxExecInfo};
 use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash, TxHash, TxType};
 use katana_provider::traits::block::{BlockNumberProvider, BlockProvider};
+use katana_provider::traits::pending::PendingBlockProvider;
 use katana_provider::traits::transaction::{TransactionTraceProvider, TransactionsProviderExt};
 use katana_rpc_api::starknet::StarknetTraceApiServer;
 use katana_rpc_types::error::starknet::StarknetApiError;
@@ -20,7 +21,11 @@ use starknet::core::types::{
 
 use super::StarknetApi;
 
-impl<EF: ExecutorFactory> StarknetApi<EF> {
+impl<EF, P> StarknetApi<EF, P>
+where
+    EF: ExecutorFactory,
+    P: PendingBlockProvider,
+{
     fn simulate_txs(
         &self,
         block_id: BlockIdOrTag,
@@ -116,22 +121,22 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         let provider = self.inner.backend.blockchain.provider();
 
         let block_id: BlockHashOrNumber = match block_id {
-            BlockIdOrTag::Tag(BlockTag::Pending) => match self.pending_executor() {
-                Some(state) => {
-                    let pending_block = state.read();
+            BlockIdOrTag::Tag(BlockTag::Pending) => match self.pending_provider() {
+                Some(pending_provider) => {
+                    let transactions = pending_provider.pending_transactions()?;
+                    let traces = pending_provider.pending_transaction_traces()?;
 
-                    // extract the txs from the pending block
-                    let traces = pending_block.transactions().iter().filter_map(|(t, r)| {
-                        if let Some(trace) = r.trace() {
-                            let transaction_hash = t.hash;
-                            let trace_root = to_rpc_trace(trace.clone());
-                            Some(TransactionTraceWithHash { transaction_hash, trace_root })
-                        } else {
-                            None
-                        }
-                    });
+                    let traces = transactions
+                        .into_iter()
+                        .map(|tx| tx.hash)
+                        .zip(traces)
+                        .map(|(hash, trace)| {
+                            let trace_root = to_rpc_trace(trace);
+                            TransactionTraceWithHash { transaction_hash: hash, trace_root }
+                        })
+                        .collect::<Vec<_>>();
 
-                    return Ok(traces.collect::<Vec<TransactionTraceWithHash>>());
+                    return Ok(traces);
                 }
 
                 // if there is no pending block, return the latest block
@@ -162,12 +167,9 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         use StarknetApiError::TxnHashNotFound;
 
         // Check in the pending block first
-        if let Some(state) = self.pending_executor() {
-            let pending_block = state.read();
-            let tx = pending_block.transactions().iter().find(|(t, _)| t.hash == tx_hash);
-
-            if let Some(trace) = tx.and_then(|(_, res)| res.trace()) {
-                return Ok(to_rpc_trace(trace.clone()));
+        if let Some(provider) = self.pending_provider() {
+            if let Some(trace) = provider.pending_transaction_trace(tx_hash)? {
+                return Ok(to_rpc_trace(trace));
             }
         }
 
@@ -180,7 +182,11 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
 }
 
 #[async_trait]
-impl<EF: ExecutorFactory> StarknetTraceApiServer for StarknetApi<EF> {
+impl<EF, P> StarknetTraceApiServer for StarknetApi<EF, P>
+where
+    EF: ExecutorFactory,
+    P: PendingBlockProvider,
+{
     async fn trace_transaction(&self, transaction_hash: TxHash) -> RpcResult<TransactionTrace> {
         self.on_io_blocking_task(move |this| Ok(this.trace(transaction_hash)?)).await
     }

@@ -264,7 +264,7 @@ pub async fn build(mut config: Config) -> Result<Node> {
                 cfg,
             )
         } else {
-            StarknetApi::new(backend.clone(), pool.clone(), Some(block_producer.clone()), cfg)
+            StarknetApi::new(backend.clone(), pool.clone(), block_producer.clone(), cfg)
         };
 
         rpc_modules.merge(StarknetApiServer::into_rpc(api.clone()))?;
