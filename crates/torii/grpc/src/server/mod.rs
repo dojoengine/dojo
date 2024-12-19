@@ -1182,7 +1182,7 @@ fn build_composite_clause(
 
                 // Use the column name directly since it's already flattened
                 where_clauses
-                    .push(format!("([{model}].[{}] {comparison_operator} ?)", member.member));
+                    .push(format!("([{model}].[{}] {comparison_operator} {value})", member.member));
             }
             ClauseType::Composite(nested) => {
                 // Handle nested composite by recursively building the clause
