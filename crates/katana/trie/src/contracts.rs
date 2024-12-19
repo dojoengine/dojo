@@ -1,12 +1,13 @@
 use bonsai_trie::{BonsaiDatabase, BonsaiPersistentDatabase, MultiProof};
 use katana_primitives::block::BlockNumber;
+use katana_primitives::hash::Pedersen;
 use katana_primitives::{ContractAddress, Felt};
 
 use crate::id::CommitId;
 
 #[derive(Debug)]
 pub struct ContractsTrie<DB: BonsaiDatabase> {
-    trie: crate::BonsaiTrie<DB>,
+    trie: crate::BonsaiTrie<DB, Pedersen>,
 }
 
 impl<DB: BonsaiDatabase> ContractsTrie<DB> {

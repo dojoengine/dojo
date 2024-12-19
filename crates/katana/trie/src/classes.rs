@@ -1,6 +1,7 @@
 use bonsai_trie::{BonsaiDatabase, BonsaiPersistentDatabase, MultiProof};
 use katana_primitives::block::BlockNumber;
 use katana_primitives::class::{ClassHash, CompiledClassHash};
+use katana_primitives::hash::Pedersen;
 use katana_primitives::Felt;
 use starknet::macros::short_string;
 use starknet_types_core::hash::{Poseidon, StarkHash};
@@ -9,7 +10,7 @@ use crate::id::CommitId;
 
 #[derive(Debug)]
 pub struct ClassesTrie<DB: BonsaiDatabase> {
-    trie: crate::BonsaiTrie<DB>,
+    trie: crate::BonsaiTrie<DB, Pedersen>,
 }
 
 impl<DB: BonsaiDatabase> ClassesTrie<DB> {
