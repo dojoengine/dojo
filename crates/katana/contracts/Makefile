@@ -11,4 +11,13 @@ $(BUILD_DIR): ./account/src/*
 	scarb build -p katana_account
 	mv target/dev/$(ORIGINAL_CLASS_NAME) $(BUILD_DIR)/$(CLASS_NAME)
 
+## ---- Piltover contracts
+
+ORIGINAL_CLASS_NAME := piltover_appchain$(CONTRACT_CLASS_SUFFIX)
+CLASS_NAME := appchain_core_contract.json
+
+$(BUILD_DIR): ./piltover/src/*
+	cd piltover && scarb build
+	mv target/dev/$(ORIGINAL_CLASS_NAME) $(BUILD_DIR)/$(CLASS_NAME)
+
 ## ----
