@@ -31,19 +31,24 @@ struct InitInput {
 
     // the id of the new chain to be initialized.
     id: String,
+
     // the chain id of the settlement layer.
-    l1_id: String,
+    settlement_id: String,
+
     // the rpc url for the settlement layer.
-    l1_rpc_url: Url,
+    rpc_url: Url,
+
     fee_token: ContractAddress,
+
     settlement_contract: ContractAddress,
+
     // path at which the config file will be written at.
     output_path: PathBuf,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub struct L1 {
+pub struct SettlementLayer {
     // the account address that was used to initialized the l1 deployments
     pub account: ContractAddress,
 
@@ -77,7 +82,7 @@ pub struct InitConfiguration {
     // this corresponds to the l1 token contract
     pub fee_token: ContractAddress,
 
-    pub l1: L1,
+    pub settlement: SettlementLayer,
 }
 
 #[derive(Debug, Args)]
@@ -97,10 +102,10 @@ impl InitArgs {
         let output = InitConfiguration {
             id: input.id,
             fee_token: ContractAddress::default(),
-            l1: L1 {
+            settlement: SettlementLayer {
                 account: input.account,
-                id: input.l1_id,
-                rpc_url: input.l1_rpc_url,
+                id: input.settlement_id,
+                rpc_url: input.rpc_url,
                 fee_token: input.fee_token,
                 bridge_contract: ContractAddress::default(),
                 settlement_contract: input.settlement_contract,
@@ -116,7 +121,7 @@ impl InitArgs {
     fn prompt(&self, rt: &Runtime) -> Result<InitInput> {
         let chain_id = Text::new("Id").prompt()?;
 
-        let url = CustomType::<Url>::new("L1 RPC URL")
+        let url = CustomType::<Url>::new("Settlement RPC URL")
             .with_default(Url::parse("http://localhost:5050")?)
             .with_error_message("Please enter a valid URL")
             .prompt()?;
@@ -185,10 +190,10 @@ impl InitArgs {
         Ok(InitInput {
             account: account_address,
             settlement_contract,
-            l1_id: parse_cairo_short_string(&l1_chain_id)?,
+            settlement_id: parse_cairo_short_string(&l1_chain_id)?,
             id: chain_id,
             fee_token,
-            l1_rpc_url: url,
+            rpc_url: url,
             output_path,
         })
     }
