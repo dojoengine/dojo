@@ -1,4 +1,5 @@
 use std::fmt;
+use std::str::FromStr;
 
 use num_bigint::BigUint;
 use starknet::core::utils::normalize_address;
@@ -40,9 +41,23 @@ impl fmt::Display for ContractAddress {
     }
 }
 
+impl FromStr for ContractAddress {
+    type Err = <Felt as FromStr>::Err;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Felt::from_str(s).map(ContractAddress::new)
+    }
+}
+
 impl From<Felt> for ContractAddress {
     fn from(value: Felt) -> Self {
         ContractAddress::new(value)
+    }
+}
+
+impl AsRef<Felt> for ContractAddress {
+    fn as_ref(&self) -> &Felt {
+        &self.0
     }
 }
 
