@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::ops::{Deref, DerefMut};
 
 use katana_primitives::contract::StorageKey;
 use katana_primitives::{ContractAddress, Felt};
@@ -84,45 +84,26 @@ pub struct ContractLeafData {
 pub struct ContractStorageProofs {
     pub nodes: Vec<Nodes>,
 }
+#[derive(Debug, Serialize, Deserialize)]
+pub struct NodeWithHash {
+    pub node_hash: Felt,
+    pub node: MerkleNode,
+}
 
-#[derive(Debug, Default)]
-pub struct Nodes(pub HashMap<Felt, MerkleNode>);
+#[derive(Debug, Default, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct Nodes(pub Vec<NodeWithHash>);
 
-impl Serialize for Nodes {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        use serde::ser::SerializeSeq;
-
-        #[derive(Debug, Serialize)]
-        struct NodeEntry<'a> {
-            node_hash: &'a Felt,
-            node: &'a MerkleNode,
-        }
-
-        let mut seq = serializer.serialize_seq(Some(self.0.len()))?;
-        for (node_hash, node) in &self.0 {
-            seq.serialize_element(&NodeEntry { node_hash, node })?;
-        }
-        seq.end()
+impl Deref for Nodes {
+    type Target = Vec<NodeWithHash>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
-impl<'de> Deserialize<'de> for Nodes {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        #[derive(Debug, Deserialize)]
-        struct NodeEntry {
-            node_hash: Felt,
-            node: MerkleNode,
-        }
-
-        let entries: Vec<NodeEntry> = Vec::deserialize(deserializer)?;
-        let map = entries.into_iter().map(|entry| (entry.node_hash, entry.node)).collect();
-        Ok(Nodes(map))
+impl DerefMut for Nodes {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }
 
@@ -130,13 +111,19 @@ impl<'de> Deserialize<'de> for Nodes {
 
 impl From<MultiProof> for Nodes {
     fn from(value: MultiProof) -> Self {
-        Self(value.0.into_iter().map(|(hash, node)| (hash, MerkleNode::from(node))).collect())
+        Self(
+            value
+                .0
+                .into_iter()
+                .map(|(hash, node)| NodeWithHash { node_hash: hash, node: MerkleNode::from(node) })
+                .collect(),
+        )
     }
 }
 
 impl From<Nodes> for MultiProof {
     fn from(value: Nodes) -> Self {
-        Self(value.0.into_iter().map(|(hash, node)| (hash, ProofNode::from(node))).collect())
+        Self(value.0.into_iter().map(|node| (node.node_hash, ProofNode::from(node.node))).collect())
     }
 }
 

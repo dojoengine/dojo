@@ -2186,11 +2186,12 @@ dependencies = [
 [[package]]
 name = "bonsai-trie"
 version = "0.1.0"
-source = "git+https://github.com/dojoengine/bonsai-trie/?branch=kariy/public-path#9108a1264fd82f5e68f5056f8df767042440825f"
+source = "git+https://github.com/dojoengine/bonsai-trie/?branch=kariy/indexmap#d2741d49d14210f675195a9a607910bf76bbed04"
 dependencies = [
  "bitvec",
  "derive_more 0.99.18",
  "hashbrown 0.14.5",
+ "indexmap 2.5.0",
  "log",
  "parity-scale-codec",
  "rayon",
