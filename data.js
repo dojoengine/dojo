@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1734474495706,
+  "lastUpdate": 1734633124860,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -41413,6 +41413,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7835321,
             "range": "± 594853",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "23054115+cwkang1998@users.noreply.github.com",
+            "name": "Chen Wen Kang",
+            "username": "cwkang1998"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d67a5fd839da430bc6d4b626f851880beaef5957",
+          "message": "feat(katana): dedup fork request (#2001)\n\nCo-authored-by: Ammar Arif <evergreenkary@gmail.com>",
+          "timestamp": "2024-12-20T02:15:41+08:00",
+          "tree_id": "d4a692cbb6769b2894e5866c51eca0677d7eba75",
+          "url": "https://github.com/dojoengine/dojo/commit/d67a5fd839da430bc6d4b626f851880beaef5957"
+        },
+        "date": 1734633123302,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10182896571,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
