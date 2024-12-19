@@ -1,9 +1,11 @@
+use anyhow::Error;
 use lazy_static::lazy_static;
 use starknet::core::utils::get_storage_var_address;
 use starknet::macros::felt;
 
 use crate::class::{ClassHash, CompiledClass, CompiledClassHash, ContractClass};
 use crate::contract::{ContractAddress, StorageKey};
+use crate::fee::PriceUnit;
 use crate::utils::class::{
     parse_compiled_class, parse_deprecated_compiled_class, parse_sierra_class,
 };
@@ -122,6 +124,15 @@ fn read_legacy_class_artifact(artifact: &str) -> ContractClass {
     let value = serde_json::from_str(artifact).unwrap();
     let class = parse_deprecated_compiled_class(value).unwrap();
     ContractClass::Legacy(class)
+}
+
+pub fn get_erc20_address(unit: &PriceUnit) -> Result<ContractAddress, Error> {
+    let erc20_contract_address = match unit {
+        PriceUnit::Wei => DEFAULT_ETH_FEE_TOKEN_ADDRESS,
+        PriceUnit::Fri => DEFAULT_STRK_FEE_TOKEN_ADDRESS,
+    };
+
+    Ok(ContractAddress::new(erc20_contract_address.into()))
 }
 
 #[cfg(test)]
