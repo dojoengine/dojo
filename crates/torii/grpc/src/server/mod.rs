@@ -687,20 +687,27 @@ impl DojoWorld {
         entity_models: Vec<String>,
         entity_updated_after: Option<String>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
-        let (where_clause, having_clauses, bind_values) =
+        let (where_clause, bind_values) =
             build_composite_clause(table, model_relation_table, &composite, entity_updated_after)?;
 
         let entity_models =
             entity_models.iter().map(|model| compute_selector_from_tag(model)).collect::<Vec<_>>();
         let schemas =
             self.model_cache.models(&entity_models).await?.into_iter().map(|m| m.schema).collect();
+
+        let having_clause = entity_models
+            .iter()
+            .map(|model| format!("INSTR(model_ids, '{:#x}') > 0", model))
+            .collect::<Vec<_>>()
+            .join(" OR ");
+
         let (query, count_query) = build_sql_query(
             &schemas,
             table,
             model_relation_table,
             entity_relation_column,
             if where_clause.is_empty() { None } else { Some(&where_clause) },
-            if having_clauses.is_empty() { None } else { Some(&having_clauses) },
+            if having_clause.is_empty() { None } else { Some(&having_clause) },
             order_by,
             limit,
             offset,
@@ -1104,10 +1111,9 @@ fn build_composite_clause(
     model_relation_table: &str,
     composite: &proto::types::CompositeClause,
     entity_updated_after: Option<String>,
-) -> Result<(String, String, Vec<String>), Error> {
+) -> Result<(String, Vec<String>), Error> {
     let is_or = composite.operator == LogicalOperator::Or as i32;
     let mut where_clauses = Vec::new();
-    let mut having_clauses = Vec::new();
     let mut bind_values = Vec::new();
 
     for clause in &composite.clauses {
@@ -1130,14 +1136,17 @@ fn build_composite_clause(
                 where_clauses.push(format!("({table}.keys REGEXP ?)"));
 
                 // Add model checks for specified models
-                for model in &keys.models {
-                    let (namespace, model_name) = model
-                        .split_once('-')
-                        .ok_or(QueryError::InvalidNamespacedModel(model.clone()))?;
-                    let model_id = compute_selector_from_names(namespace, model_name);
+                
+                // NOTE: disabled since we are now using the top level entity models
 
-                    having_clauses.push(format!("INSTR(model_ids, '{:#x}') > 0", model_id));
-                }
+                // for model in &keys.models {
+                //     let (namespace, model_name) = model
+                //         .split_once('-')
+                //         .ok_or(QueryError::InvalidNamespacedModel(model.clone()))?;
+                //     let model_id = compute_selector_from_names(namespace, model_name);
+
+                //     having_clauses.push(format!("INSTR(model_ids, '{:#x}') > 0", model_id));
+                // }
             }
             ClauseType::Member(member) => {
                 let comparison_operator = ComparisonOperator::from_repr(member.operator as usize)
@@ -1162,7 +1171,7 @@ fn build_composite_clause(
             }
             ClauseType::Composite(nested) => {
                 // Handle nested composite by recursively building the clause
-                let (nested_where, nested_having, nested_values) = build_composite_clause(
+                let (nested_where, nested_values) = build_composite_clause(
                     table,
                     model_relation_table,
                     nested,
@@ -1171,9 +1180,6 @@ fn build_composite_clause(
 
                 if !nested_where.is_empty() {
                     where_clauses.push(nested_where);
-                }
-                if !nested_having.is_empty() {
-                    having_clauses.push(nested_having);
                 }
                 bind_values.extend(nested_values);
             }
@@ -1198,13 +1204,7 @@ fn build_composite_clause(
         String::new()
     };
 
-    let having_clause = if !having_clauses.is_empty() {
-        format!("{}", having_clauses.join(if is_or { " OR " } else { " AND " }))
-    } else {
-        String::new()
-    };
-
-    Ok((where_clause, having_clause, bind_values))
+    Ok((where_clause, bind_values))
 }
 
 type ServiceResult<T> = Result<Response<T>, Status>;
