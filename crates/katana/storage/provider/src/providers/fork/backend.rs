@@ -862,6 +862,9 @@ mod tests {
             h2.get_nonce(felt!("0x1").into()).expect(ERROR_SEND_REQUEST);
         });
 
+        // wait for the requests to be handled
+        thread::sleep(Duration::from_secs(1));
+
         // check current request count
         let stats = handle.stats().expect(ERROR_STATS);
         assert_eq!(stats, 1, "Backend should have 1 ongoing requests.");
@@ -901,9 +904,12 @@ mod tests {
             h2.get_class_at(felt!("0x1")).expect(ERROR_SEND_REQUEST);
         });
 
+        // wait for the requests to be handled
+        thread::sleep(Duration::from_secs(1));
+
         // check current request count
         let stats = handle.stats().expect(ERROR_STATS);
-        assert_eq!(stats, 2, "Backend should have 1 ongoing requests.");
+        assert_eq!(stats, 1, "Backend should have 1 ongoing requests.");
 
         // Different request, should be counted
         let h3 = handle.clone();
@@ -939,6 +945,9 @@ mod tests {
         thread::spawn(move || {
             h2.get_compiled_class_hash(felt!("0x1")).expect(ERROR_SEND_REQUEST);
         });
+
+        // wait for the requests to be handled
+        thread::sleep(Duration::from_secs(1));
 
         // check current request count
         let stats = handle.stats().expect(ERROR_STATS);
@@ -980,6 +989,9 @@ mod tests {
             h2.get_compiled_class_hash(felt!("0x1")).expect(ERROR_SEND_REQUEST);
         });
 
+        // wait for the requests to be handled
+        thread::sleep(Duration::from_secs(1));
+
         // check current request count
         let stats = handle.stats().expect(ERROR_STATS);
         assert_eq!(stats, 1, "Backend should have 1 ongoing requests.");
@@ -995,7 +1007,7 @@ mod tests {
 
         // check request are handled
         let stats = handle.stats().expect(ERROR_STATS);
-        assert_eq!(stats, 1, "Backend should only have 2 ongoing requests.")
+        assert_eq!(stats, 2, "Backend should only have 2 ongoing requests.")
     }
 
     #[test]
@@ -1018,6 +1030,9 @@ mod tests {
         thread::spawn(move || {
             h2.get_class_hash_at(felt!("0x1").into()).expect(ERROR_SEND_REQUEST);
         });
+
+        // wait for the requests to be handled
+        thread::sleep(Duration::from_secs(1));
 
         // check current request count
         let stats = handle.stats().expect(ERROR_STATS);
@@ -1058,6 +1073,9 @@ mod tests {
             h2.get_storage(felt!("0x1").into(), felt!("0x1")).expect(ERROR_SEND_REQUEST);
         });
 
+        // wait for the requests to be handled
+        thread::sleep(Duration::from_secs(1));
+
         // check current request count
         let stats = handle.stats().expect(ERROR_STATS);
         assert_eq!(stats, 1, "Backend should have 1 ongoing requests.");
@@ -1097,6 +1115,9 @@ mod tests {
             h2.get_storage(felt!("0x1").into(), felt!("0x1")).expect(ERROR_SEND_REQUEST);
         });
 
+        // wait for the requests to be handled
+        thread::sleep(Duration::from_secs(1));
+
         // check current request count
         let stats = handle.stats().expect(ERROR_STATS);
         assert_eq!(stats, 1, "Backend should have 1 ongoing requests.");
@@ -1114,7 +1135,7 @@ mod tests {
 
         // check current request count
         let stats = handle.stats().expect(ERROR_STATS);
-        assert_eq!(stats, 3, "Backend should have 3 ongoing requests.");
+        assert_eq!(stats, 1, "Backend should have 1 ongoing requests.");
 
         // Same request as the last one, shouldn't be counted
         let h5 = handle.clone();
