@@ -427,6 +427,7 @@ impl DojoWorld {
         Ok((entities, total_count))
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(crate) async fn query_by_keys(
         &self,
         table: &str,
@@ -688,7 +689,7 @@ impl DojoWorld {
         entity_updated_after: Option<String>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         let (where_clause, bind_values) =
-            build_composite_clause(table, model_relation_table, &composite, entity_updated_after)?;
+            build_composite_clause(table, &composite, entity_updated_after)?;
 
         let entity_models =
             entity_models.iter().map(|model| compute_selector_from_tag(model)).collect::<Vec<_>>();
@@ -1108,7 +1109,6 @@ fn build_keys_pattern(clause: &proto::types::KeysClause) -> Result<String, Error
 // builds a composite clause for a query
 fn build_composite_clause(
     table: &str,
-    model_relation_table: &str,
     composite: &proto::types::CompositeClause,
     entity_updated_after: Option<String>,
 ) -> Result<(String, Vec<String>), Error> {
@@ -1171,12 +1171,8 @@ fn build_composite_clause(
             }
             ClauseType::Composite(nested) => {
                 // Handle nested composite by recursively building the clause
-                let (nested_where, nested_values) = build_composite_clause(
-                    table,
-                    model_relation_table,
-                    nested,
-                    entity_updated_after.clone(),
-                )?;
+                let (nested_where, nested_values) =
+                    build_composite_clause(table, nested, entity_updated_after.clone())?;
 
                 if !nested_where.is_empty() {
                     where_clauses.push(nested_where);
