@@ -1136,7 +1136,7 @@ fn build_composite_clause(
                 where_clauses.push(format!("({table}.keys REGEXP ?)"));
 
                 // Add model checks for specified models
-                
+
                 // NOTE: disabled since we are now using the top level entity models
 
                 // for model in &keys.models {
