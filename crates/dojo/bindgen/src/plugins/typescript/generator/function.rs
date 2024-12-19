@@ -3,7 +3,7 @@ use convert_case::{Case, Casing};
 use dojo_world::contracts::naming;
 
 use super::constants::JS_BIGNUMBERISH;
-use super::JsPrimitiveType;
+use super::JsPrimitiveInputType;
 use crate::error::BindgenResult;
 use crate::plugins::{BindgenContractGenerator, Buffer};
 use crate::DojoContract;
@@ -16,7 +16,7 @@ impl TsFunctionGenerator {
             buffer.insert(
                 1,
                 format!(
-                    "import {{ Account, AccountInterface, {}, CairoOption, CairoCustomEnum }} \
+                    "import {{ Account, AccountInterface, {}, CairoOption, CairoCustomEnum, ByteArray }} \
                      from \"starknet\";",
                     JS_BIGNUMBERISH
                 ),
@@ -84,6 +84,7 @@ impl TsFunctionGenerator {
     }
 
     fn format_function_inputs(&self, token: &Function) -> String {
+        println!("{:#?}", token);
         let inputs = match token.state_mutability {
             StateMutability::External => vec!["snAccount: Account | AccountInterface".to_owned()],
             StateMutability::View => Vec::new(),
@@ -106,7 +107,7 @@ impl TsFunctionGenerator {
                     }
                     _ => "",
                 };
-                let mut type_input = JsPrimitiveType::from(&input.1).to_string();
+                let mut type_input = JsPrimitiveInputType::from(&input.1).to_string();
                 if type_input.contains("<") {
                     type_input = type_input.replace("<", format!("<{}", prefix).as_str());
                 } else {

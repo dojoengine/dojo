@@ -80,8 +80,10 @@ pub(crate) fn token_is_custom_enum(token: &Composite) -> bool {
     token.r#type == CompositeType::Enum && token_has_inner_composite(token)
 }
 
+/// Type used to map cainome `Token` into javascript types in interface definition
 #[derive(Debug)]
 pub(crate) struct JsPrimitiveType(String);
+
 impl From<&str> for JsPrimitiveType {
     fn from(value: &str) -> Self {
         match value {
@@ -148,6 +150,77 @@ impl From<&Token> for JsPrimitiveType {
 impl std::fmt::Display for JsPrimitiveType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(&self.0)
+    }
+}
+
+/// Type used to map cainome `Token` into javascript types in function definition
+#[derive(Debug)]
+pub(crate) struct JsPrimitiveInputType(String);
+impl std::fmt::Display for JsPrimitiveInputType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+impl From<&str> for JsPrimitiveInputType {
+    fn from(value: &str) -> Self {
+        match value {
+            CAIRO_FELT252 => JsPrimitiveInputType(JS_BIGNUMBERISH.to_owned()),
+            CAIRO_CONTRACT_ADDRESS => JsPrimitiveInputType(JS_STRING.to_owned()),
+            CAIRO_BYTE_ARRAY => JsPrimitiveInputType(CAIRO_BYTE_ARRAY.to_owned()),
+            CAIRO_U8 => JsPrimitiveInputType(JS_BIGNUMBERISH.to_owned()),
+            CAIRO_U16 => JsPrimitiveInputType(JS_BIGNUMBERISH.to_owned()),
+            CAIRO_U32 => JsPrimitiveInputType(JS_BIGNUMBERISH.to_owned()),
+            CAIRO_U64 => JsPrimitiveInputType(JS_BIGNUMBERISH.to_owned()),
+            CAIRO_U128 => JsPrimitiveInputType(JS_BIGNUMBERISH.to_owned()),
+            CAIRO_U256 => JsPrimitiveInputType(CAIRO_U256_STRUCT.to_owned()),
+            CAIRO_U256_STRUCT => JsPrimitiveInputType(CAIRO_U256_STRUCT.to_owned()),
+            CAIRO_I128 => JsPrimitiveInputType(JS_BIGNUMBERISH.to_owned()),
+            CAIRO_BOOL => JsPrimitiveInputType(JS_BOOLEAN.to_owned()),
+            _ => JsPrimitiveInputType(value.to_owned()),
+        }
+    }
+}
+
+impl From<&Token> for JsPrimitiveInputType {
+    fn from(value: &Token) -> Self {
+        match value {
+            Token::Array(a) => JsPrimitiveInputType::from(
+                format!("Array<{}>", JsPrimitiveInputType::from(&*a.inner)).as_str(),
+            ),
+            Token::Tuple(t) => JsPrimitiveInputType::from(
+                format!(
+                    "[{}]",
+                    t.inners
+                        .iter()
+                        .map(|i| JsPrimitiveInputType::from(i.type_name().as_str()).to_string())
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                        .as_str()
+                )
+                .as_str(),
+            ),
+            Token::Composite(c) => {
+                if token_is_option(c) {
+                    return JsPrimitiveInputType::from(
+                        format!(
+                            "CairoOption<{}>",
+                            c.generic_args
+                                .iter()
+                                .map(|(_, t)| JsPrimitiveInputType::from(t).to_string())
+                                .collect::<Vec<_>>()
+                                .join(", ")
+                        )
+                        .as_str(),
+                    );
+                }
+                if token_is_custom_enum(c) {
+                    // we defined a type wrapper with Enum suffix let's use it there
+                    return JsPrimitiveInputType::from(format!("{}Enum", c.type_name()).as_str());
+                }
+                return JsPrimitiveInputType::from(value.type_name().as_str());
+            }
+            _ => JsPrimitiveInputType::from(value.type_name().as_str()),
+        }
     }
 }
 
