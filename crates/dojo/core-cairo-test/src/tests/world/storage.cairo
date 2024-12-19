@@ -36,20 +36,19 @@ fn write_multiple_copiable() {
     let mut models_snaps: Array<@Foo> = array![];
     let mut keys: Array<starknet::ContractAddress> = array![];
 
-    for i in 0_u128
-        ..10_u128 {
-            let felt: felt252 = i.into();
-            let caller: starknet::ContractAddress = felt.try_into().unwrap();
-            keys.append(caller);
+    for i in 0_u128..10_u128 {
+        let felt: felt252 = i.into();
+        let caller: starknet::ContractAddress = felt.try_into().unwrap();
+        keys.append(caller);
 
-            if i % 2 == 0 {
-                let foo = Foo { caller, a: felt, b: i };
-                models_snaps.append(@foo);
-            } else {
-                let foo = Foo { caller, a: felt, b: i };
-                models_snaps.append(@foo);
-            }
-        };
+        if i % 2 == 0 {
+            let foo = Foo { caller, a: felt, b: i };
+            models_snaps.append(@foo);
+        } else {
+            let foo = Foo { caller, a: felt, b: i };
+            models_snaps.append(@foo);
+        }
+    };
 
     world.write_models(models_snaps.span());
 
@@ -57,16 +56,15 @@ fn write_multiple_copiable() {
 
     assert_eq!(models.len(), 10);
 
-    for i in 0_u128
-        ..10_u128 {
-            let felt: felt252 = i.into();
-            let caller: starknet::ContractAddress = felt.try_into().unwrap();
-            // Can desnap as copiable.
-            let model: Foo = *models[i.try_into().unwrap()];
-            assert_eq!(model.caller, caller);
-            assert_eq!(model.a, felt);
-            assert_eq!(model.b, i);
-        };
+    for i in 0_u128..10_u128 {
+        let felt: felt252 = i.into();
+        let caller: starknet::ContractAddress = felt.try_into().unwrap();
+        // Can desnap as copiable.
+        let model: Foo = *models[i.try_into().unwrap()];
+        assert_eq!(model.caller, caller);
+        assert_eq!(model.a, felt);
+        assert_eq!(model.b, i);
+    };
 
     world.erase_models(models_snaps.span());
 
@@ -85,20 +83,19 @@ fn write_multiple_not_copiable() {
     let mut models_snaps: Array<@NotCopiable> = array![];
     let mut keys: Array<starknet::ContractAddress> = array![];
 
-    for i in 0_u128
-        ..10_u128 {
-            let felt: felt252 = i.into();
-            let caller: starknet::ContractAddress = felt.try_into().unwrap();
-            keys.append(caller);
+    for i in 0_u128..10_u128 {
+        let felt: felt252 = i.into();
+        let caller: starknet::ContractAddress = felt.try_into().unwrap();
+        keys.append(caller);
 
-            if i % 2 == 0 {
-                let foo = NotCopiable { caller, a: array![felt], b: "ab" };
-                models_snaps.append(@foo);
-            } else {
-                let foo = NotCopiable { caller, a: array![felt], b: "ab" };
-                models_snaps.append(@foo);
-            }
-        };
+        if i % 2 == 0 {
+            let foo = NotCopiable { caller, a: array![felt], b: "ab" };
+            models_snaps.append(@foo);
+        } else {
+            let foo = NotCopiable { caller, a: array![felt], b: "ab" };
+            models_snaps.append(@foo);
+        }
+    };
 
     world.write_models(models_snaps.span());
 
@@ -106,16 +103,15 @@ fn write_multiple_not_copiable() {
 
     assert_eq!(models.len(), 10);
 
-    for i in 0_u128
-        ..10_u128 {
-            let felt: felt252 = i.into();
-            let caller: starknet::ContractAddress = felt.try_into().unwrap();
-            // Can desnap as copiable.
-            let model: NotCopiable = models.pop_front().unwrap();
-            assert_eq!(model.caller, caller);
-            assert_eq!(model.a, array![felt]);
-            assert_eq!(model.b, "ab");
-        };
+    for i in 0_u128..10_u128 {
+        let felt: felt252 = i.into();
+        let caller: starknet::ContractAddress = felt.try_into().unwrap();
+        // Can desnap as copiable.
+        let model: NotCopiable = models.pop_front().unwrap();
+        assert_eq!(model.caller, caller);
+        assert_eq!(model.a, array![felt]);
+        assert_eq!(model.b, "ab");
+    };
 
     world.erase_models(models_snaps.span());
 

@@ -40,7 +40,7 @@ pub trait ModelStorage<S, M> {
 
     /// Retrieves a model of type `M` using the provided entity id.
     fn write_member<T, +Serde<T>, +Drop<T>>(
-        ref self: S, ptr: ModelPtr<M>, field_selector: felt252, value: T
+        ref self: S, ptr: ModelPtr<M>, field_selector: felt252, value: T,
     );
 
     /// Returns the current namespace hash.
@@ -54,7 +54,7 @@ pub trait ModelValueStorage<S, V> {
 
     /// Retrieves multiple model values of type `V` using the provided keys of type `K`.
     fn read_values<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(
-        self: @S, keys: Span<K>
+        self: @S, keys: Span<K>,
     ) -> Array<V>;
 
     /// Retrieves a model value of type `V` using the provided entity id.
@@ -68,7 +68,7 @@ pub trait ModelValueStorage<S, V> {
 
     /// Updates multiple model values of type `V`.
     fn write_values<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(
-        ref self: S, keys: Span<K>, values: Span<@V>
+        ref self: S, keys: Span<K>, values: Span<@V>,
     );
 
     /// Updates a model value of type `V`.
@@ -102,11 +102,11 @@ pub trait ModelStorageTest<S, M> {
 pub trait ModelValueStorageTest<S, V> {
     /// Updates a model value of type `V`.
     fn write_value_test<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(
-        ref self: S, keys: K, value: @V
+        ref self: S, keys: K, value: @V,
     );
     /// Updates multiple model values of type `V`.
     fn write_values_test<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(
-        ref self: S, keys: Span<K>, values: Span<@V>
+        ref self: S, keys: Span<K>, values: Span<@V>,
     );
     /// Updates a model value of type `V`.
     fn write_value_from_id_test(ref self: S, entity_id: felt252, value: @V);
