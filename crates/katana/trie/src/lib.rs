@@ -7,7 +7,7 @@ pub use bonsai_trie::{BonsaiDatabase, BonsaiPersistentDatabase};
 use bonsai_trie::{BonsaiStorage, BonsaiStorageConfig};
 use katana_primitives::class::ClassHash;
 use katana_primitives::Felt;
-use starknet_types_core::hash::{Pedersen, Poseidon, StarkHash};
+use starknet_types_core::hash::{Pedersen, StarkHash};
 pub use {bitvec, bonsai_trie as bonsai};
 
 mod classes;
@@ -26,12 +26,19 @@ pub use storages::StoragesTrie;
 /// having to handle how to transform the keys into the internal keys used by the trie.
 /// This struct is not meant to be used directly, and instead use the specific tries that have
 /// been derived from it, [`ClassesTrie`], [`ContractsTrie`], or [`StoragesTrie`].
-#[derive(Debug)]
-pub(crate) struct BonsaiTrie<DB: BonsaiDatabase> {
-    storage: BonsaiStorage<CommitId, DB, Poseidon>,
+pub(crate) struct BonsaiTrie<DB, Hash = Pedersen>
+where
+    DB: BonsaiDatabase,
+    Hash: StarkHash + Send + Sync,
+{
+    storage: BonsaiStorage<CommitId, DB, Hash>,
 }
 
-impl<DB: BonsaiDatabase> BonsaiTrie<DB> {
+impl<DB, Hash> BonsaiTrie<DB, Hash>
+where
+    DB: BonsaiDatabase,
+    Hash: StarkHash + Send + Sync,
+{
     pub fn new(db: DB) -> Self {
         let config = BonsaiStorageConfig {
             max_saved_trie_logs: Some(usize::MAX),
@@ -43,7 +50,11 @@ impl<DB: BonsaiDatabase> BonsaiTrie<DB> {
     }
 }
 
-impl<DB: BonsaiDatabase> BonsaiTrie<DB> {
+impl<DB, Hash> BonsaiTrie<DB, Hash>
+where
+    DB: BonsaiDatabase,
+    Hash: StarkHash + Send + Sync,
+{
     pub fn root(&self, id: &[u8]) -> Felt {
         self.storage.root_hash(id).expect("failed to get trie root")
     }
@@ -59,9 +70,10 @@ impl<DB: BonsaiDatabase> BonsaiTrie<DB> {
     }
 }
 
-impl<DB> BonsaiTrie<DB>
+impl<DB, Hash> BonsaiTrie<DB, Hash>
 where
     DB: BonsaiDatabase + BonsaiPersistentDatabase<CommitId>,
+    Hash: StarkHash + Send + Sync,
 {
     pub fn insert(&mut self, id: &[u8], key: Felt, value: Felt) {
         let key: BitVec<u8, Msb0> = key.to_bytes_be().as_bits()[5..].to_owned();
@@ -70,6 +82,16 @@ where
 
     pub fn commit(&mut self, id: CommitId) {
         self.storage.commit(id).expect("failed to commit trie");
+    }
+}
+
+impl<DB, Hash> std::fmt::Debug for BonsaiTrie<DB, Hash>
+where
+    DB: BonsaiDatabase,
+    Hash: StarkHash + Send + Sync,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("BonsaiTrie").field("storage", &self.storage).finish()
     }
 }
 
