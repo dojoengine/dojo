@@ -17,7 +17,7 @@ starknet-types-core.workspace = true
 thiserror.workspace = true
 
 [dependencies.bonsai-trie]
-branch = "kariy/public-path"
+branch = "kariy/indexmap"
 default-features = false
 features = [ "std" ]
 git = "https://github.com/dojoengine/bonsai-trie/"
