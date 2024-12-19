@@ -347,20 +347,34 @@ impl DojoWorld {
             bind_values.push(entity_updated_after);
         }
 
-        if let Some(limit) = limit {
-            bind_values.push(limit.to_string());
-        }
-        if let Some(offset) = offset {
-            bind_values.push(offset.to_string());
-        }
+        let entity_models =
+            entity_models.iter().map(|model| compute_selector_from_tag(model)).collect::<Vec<_>>();
+        let schemas = self
+            .model_cache
+            .models(&entity_models)
+            .await?
+            .iter()
+            .map(|m| m.schema.clone())
+            .collect::<Vec<_>>();
 
-        let count_query = format!(
-            r#"
-            SELECT count(*)
-            FROM {table}
-            {where_clause}
-        "#
-        );
+        let having_clause = entity_models
+            .iter()
+            .map(|model| format!("INSTR(model_ids, '{:#x}') > 0", model))
+            .collect::<Vec<_>>()
+            .join(" OR ");
+
+        let (query, count_query) = build_sql_query(
+            &schemas,
+            table,
+            model_relation_table,
+            entity_relation_column,
+            if where_clause.is_empty() { None } else { Some(&where_clause) },
+            if !having_clause.is_empty() { Some(&having_clause) } else { None },
+            order_by,
+            limit,
+            offset,
+        )?;
+
         let mut count_query = sqlx::query_scalar(&count_query);
         for value in &bind_values {
             count_query = count_query.bind(value);
@@ -384,35 +398,6 @@ impl DojoWorld {
                 ), bind_values, limit, offset).await?;
             return Ok((entities, total_count));
         }
-
-        // retrieve all schemas
-        let entity_models =
-            entity_models.iter().map(|model| compute_selector_from_tag(model)).collect::<Vec<_>>();
-        let schemas = self
-            .model_cache
-            .models(&entity_models)
-            .await?
-            .iter()
-            .map(|m| m.schema.clone())
-            .collect::<Vec<_>>();
-
-        let having_clause = entity_models
-            .iter()
-            .map(|model| format!("INSTR(model_ids, '{:#x}') > 0", model))
-            .collect::<Vec<_>>()
-            .join(" OR ");
-
-        let (query, _) = build_sql_query(
-            &schemas,
-            table,
-            model_relation_table,
-            entity_relation_column,
-            if where_clause.is_empty() { None } else { Some(&where_clause) },
-            if !having_clause.is_empty() { Some(&having_clause) } else { None },
-            order_by,
-            limit,
-            offset,
-        )?;
 
         let mut query = sqlx::query(&query);
         for value in &bind_values {
@@ -457,20 +442,33 @@ impl DojoWorld {
             bind_values.push(entity_updated_after);
         }
 
-        if let Some(limit) = limit {
-            bind_values.push(limit.to_string());
-        }
-        if let Some(offset) = offset {
-            bind_values.push(offset.to_string());
-        }
+        let entity_models =
+            entity_models.iter().map(|model| compute_selector_from_tag(model)).collect::<Vec<_>>();
+        let schemas = self
+            .model_cache
+            .models(&entity_models)
+            .await?
+            .iter()
+            .map(|m| m.schema.clone())
+            .collect::<Vec<_>>();
 
-        let count_query = format!(
-            r#"
-            SELECT count(*)
-            FROM {table}
-            WHERE {where_clause}
-        "#
-        );
+        let having_clause = entity_models
+            .iter()
+            .map(|model| format!("INSTR(model_ids, '{:#x}') > 0", model))
+            .collect::<Vec<_>>()
+            .join(" OR ");
+        let (query, count_query) = build_sql_query(
+            &schemas,
+            table,
+            model_relation_table,
+            entity_relation_column,
+            Some(&where_clause),
+            if !having_clause.is_empty() { Some(&having_clause) } else { None },
+            order_by,
+            limit,
+            offset,
+        )?;
+
         let mut count_query = sqlx::query_scalar(&count_query);
         for value in &bind_values {
             count_query = count_query.bind(value);
@@ -498,34 +496,6 @@ impl DojoWorld {
             ).await?;
             return Ok((entities, total_count));
         }
-
-        // retrieve all schemas
-        let entity_models =
-            entity_models.iter().map(|model| compute_selector_from_tag(model)).collect::<Vec<_>>();
-        let schemas = self
-            .model_cache
-            .models(&entity_models)
-            .await?
-            .iter()
-            .map(|m| m.schema.clone())
-            .collect::<Vec<_>>();
-
-        let having_clause = entity_models
-            .iter()
-            .map(|model| format!("INSTR(model_ids, '{:#x}') > 0", model))
-            .collect::<Vec<_>>()
-            .join(" OR ");
-        let (query, _) = build_sql_query(
-            &schemas,
-            table,
-            model_relation_table,
-            entity_relation_column,
-            Some(&where_clause),
-            if !having_clause.is_empty() { Some(&having_clause) } else { None },
-            order_by,
-            limit,
-            offset,
-        )?;
 
         let mut query = sqlx::query(&query);
         for value in &bind_values {
