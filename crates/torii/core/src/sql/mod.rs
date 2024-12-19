@@ -766,6 +766,15 @@ impl Sql {
              TEXT, "
         );
 
+        indices.push(format!(
+            "CREATE INDEX IF NOT EXISTS [idx_{table_id}_internal_entity_id] ON [{table_id}] \
+             ([internal_entity_id]);"
+        ));
+        indices.push(format!(
+            "CREATE INDEX IF NOT EXISTS [idx_{table_id}_internal_event_message_id] ON [{table_id}] \
+             ([internal_event_message_id]);"
+        ));
+
         // Recursively add columns for all nested type
         add_columns_recursive(
             &path,
