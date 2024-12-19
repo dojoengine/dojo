@@ -771,8 +771,8 @@ impl Sql {
              ([internal_entity_id]);"
         ));
         indices.push(format!(
-            "CREATE INDEX IF NOT EXISTS [idx_{table_id}_internal_event_message_id] ON [{table_id}] \
-             ([internal_event_message_id]);"
+            "CREATE INDEX IF NOT EXISTS [idx_{table_id}_internal_event_message_id] ON \
+             [{table_id}] ([internal_event_message_id]);"
         ));
 
         // Recursively add columns for all nested type
