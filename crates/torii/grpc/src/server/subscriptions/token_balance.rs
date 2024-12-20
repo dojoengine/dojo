@@ -50,10 +50,7 @@ impl TokenBalanceManager {
 
         // Send initial empty response
         let _ = sender
-            .send(Ok(SubscribeTokenBalancesResponse {
-                subscription_id,
-                balance: None,
-            }))
+            .send(Ok(SubscribeTokenBalancesResponse { subscription_id, balance: None }))
             .await;
 
         self.subscribers.write().await.insert(
@@ -136,18 +133,22 @@ impl Service {
         let mut closed_stream = Vec::new();
 
         for (idx, sub) in subs.subscribers.read().await.iter() {
-            let contract_address = Felt::from_str(&balance.contract_address).map_err(ParseError::FromStr)?;
-            let account_address = Felt::from_str(&balance.account_address).map_err(ParseError::FromStr)?;
+            let contract_address =
+                Felt::from_str(&balance.contract_address).map_err(ParseError::FromStr)?;
+            let account_address =
+                Felt::from_str(&balance.account_address).map_err(ParseError::FromStr)?;
 
             // Skip if contract address filter doesn't match
-            if !sub.contract_addresses.is_empty() 
-                && !sub.contract_addresses.contains(&contract_address) {
+            if !sub.contract_addresses.is_empty()
+                && !sub.contract_addresses.contains(&contract_address)
+            {
                 continue;
             }
 
             // Skip if account address filter doesn't match
-            if !sub.account_addresses.is_empty() 
-                && !sub.account_addresses.contains(&account_address) {
+            if !sub.account_addresses.is_empty()
+                && !sub.account_addresses.contains(&account_address)
+            {
                 continue;
             }
 
@@ -189,4 +190,4 @@ impl Future for Service {
 
         Poll::Pending
     }
-} 
+}
