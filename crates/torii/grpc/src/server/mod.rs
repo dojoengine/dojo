@@ -56,7 +56,12 @@ use crate::proto::types::member_value::ValueType;
 use crate::proto::types::LogicalOperator;
 use crate::proto::world::world_server::WorldServer;
 use crate::proto::world::{
-    RetrieveEntitiesStreamingResponse, RetrieveEventMessagesRequest, RetrieveTokenBalancesRequest, RetrieveTokenBalancesResponse, RetrieveTokensRequest, RetrieveTokensResponse, SubscribeEntitiesRequest, SubscribeEntityResponse, SubscribeEventMessagesRequest, SubscribeEventsResponse, SubscribeIndexerRequest, SubscribeIndexerResponse, SubscribeTokenBalancesResponse, UpdateEventMessagesSubscriptionRequest, UpdateTokenBalancesSubscriptionRequest, WorldMetadataRequest, WorldMetadataResponse
+    RetrieveEntitiesStreamingResponse, RetrieveEventMessagesRequest, RetrieveTokenBalancesRequest,
+    RetrieveTokenBalancesResponse, RetrieveTokensRequest, RetrieveTokensResponse,
+    SubscribeEntitiesRequest, SubscribeEntityResponse, SubscribeEventMessagesRequest,
+    SubscribeEventsResponse, SubscribeIndexerRequest, SubscribeIndexerResponse,
+    SubscribeTokenBalancesResponse, UpdateEventMessagesSubscriptionRequest,
+    UpdateTokenBalancesSubscriptionRequest, WorldMetadataRequest, WorldMetadataResponse,
 };
 use crate::proto::{self};
 use crate::types::schema::SchemaError;
@@ -155,7 +160,9 @@ impl DojoWorld {
 
         tokio::task::spawn(subscriptions::indexer::Service::new(Arc::clone(&indexer_manager)));
 
-        tokio::task::spawn(subscriptions::token_balance::Service::new(Arc::clone(&token_balance_manager)));
+        tokio::task::spawn(subscriptions::token_balance::Service::new(Arc::clone(
+            &token_balance_manager,
+        )));
 
         Self {
             pool,
@@ -1062,7 +1069,8 @@ impl DojoWorld {
         &self,
         contract_addresses: Vec<Felt>,
         account_addresses: Vec<Felt>,
-    ) -> Result<Receiver<Result<proto::world::SubscribeTokenBalancesResponse, tonic::Status>>, Error> {
+    ) -> Result<Receiver<Result<proto::world::SubscribeTokenBalancesResponse, tonic::Status>>, Error>
+    {
         self.token_balance_manager.add_subscriber(contract_addresses, account_addresses).await
     }
 
@@ -1636,7 +1644,8 @@ impl proto::world::world_server::World for DojoWorld {
         &self,
         request: Request<RetrieveTokenBalancesRequest>,
     ) -> ServiceResult<Self::SubscribeTokenBalancesStream> {
-        let RetrieveTokenBalancesRequest { contract_addresses, account_addresses } = request.into_inner();
+        let RetrieveTokenBalancesRequest { contract_addresses, account_addresses } =
+            request.into_inner();
         let contract_addresses = contract_addresses
             .iter()
             .map(|address| Felt::from_bytes_be_slice(address))
@@ -1646,7 +1655,10 @@ impl proto::world::world_server::World for DojoWorld {
             .map(|address| Felt::from_bytes_be_slice(address))
             .collect::<Vec<_>>();
 
-        let rx = self.subscribe_token_balances(contract_addresses, account_addresses).await.map_err(|e| Status::internal(e.to_string()))?;
+        let rx = self
+            .subscribe_token_balances(contract_addresses, account_addresses)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
         Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::SubscribeTokenBalancesStream))
     }
 
@@ -1654,7 +1666,11 @@ impl proto::world::world_server::World for DojoWorld {
         &self,
         request: Request<UpdateTokenBalancesSubscriptionRequest>,
     ) -> ServiceResult<()> {
-        let UpdateTokenBalancesSubscriptionRequest { subscription_id, contract_addresses, account_addresses } = request.into_inner();
+        let UpdateTokenBalancesSubscriptionRequest {
+            subscription_id,
+            contract_addresses,
+            account_addresses,
+        } = request.into_inner();
         let contract_addresses = contract_addresses
             .iter()
             .map(|address| Felt::from_bytes_be_slice(address))
@@ -1664,7 +1680,9 @@ impl proto::world::world_server::World for DojoWorld {
             .map(|address| Felt::from_bytes_be_slice(address))
             .collect::<Vec<_>>();
 
-        self.token_balance_manager.update_subscriber(subscription_id, contract_addresses, account_addresses).await;
+        self.token_balance_manager
+            .update_subscriber(subscription_id, contract_addresses, account_addresses)
+            .await;
         Ok(Response::new(()))
     }
 
