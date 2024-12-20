@@ -36,7 +36,7 @@ impl WorldRemote {
                 // The world contract exists, we can continue and fetch the events.
             }
             Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {
-                tracing::trace!(%world_address, "No remote world contract found.");
+                trace!(%world_address, "No remote world contract found.");
                 return Ok(world);
             }
             Err(e) => return Err(e.into()),
@@ -70,7 +70,7 @@ impl WorldRemote {
 
         let chunk_size = 500;
 
-        tracing::trace!(
+        trace!(
             world_address = format!("{:#066x}", world_address),
             chunk_size,
             ?filter,
@@ -106,7 +106,7 @@ impl WorldRemote {
         for event in &events {
             match world::Event::try_from(event) {
                 Ok(ev) => {
-                    tracing::trace!(?ev, "Processing world event.");
+                    trace!(?ev, "Processing world event.");
                     world.match_event(ev)?;
                 }
                 Err(e) => {

@@ -98,7 +98,7 @@ where
     match provider.get_class_hash_at(BlockId::Tag(BlockTag::Pending), contract_address).await {
         Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => Ok(false),
         Ok(_) => {
-            tracing::trace!(
+            trace!(
                 contract_address = format!("{:#066x}", contract_address),
                 "Contract already deployed."
             );
