@@ -27,7 +27,7 @@ impl TsSchemaGenerator {
         if !buffer.has(schema_type) {
             buffer.push(format!(
                 "export interface SchemaType extends ISchemaType {{\n\t{ns}: {{\n\t\t{}: \
-                 {},\n\t}},\n}}",
+                 WithFieldOrder<{}>,\n\t}},\n}}",
                 type_name, type_name
             ));
             return;
@@ -36,13 +36,13 @@ impl TsSchemaGenerator {
         // check if namespace is defined in interface. if not, add it.
         // next, find where namespace was defined in interface and add property to it.
         if !self.namespace_is_defined(buffer, &ns) {
-            let gen = format!("\n\t{ns}: {{\n\t\t{type_name}: {type_name},\n\t}},");
+            let gen = format!("\n\t{ns}: {{\n\t\t{type_name}: WithFieldOrder<{type_name}>,\n\t}},");
             buffer.insert_after(gen, schema_type, ",", 1);
             return;
         }
 
         // type has already been initialized
-        let gen = format!("\n\t\t{type_name}: {type_name},");
+        let gen = format!("\n\t\t{type_name}: WithFieldOrder<{type_name}>,");
         if buffer.has(&gen) {
             return;
         }
@@ -171,7 +171,7 @@ mod tests {
         let _result = generator.generate(&token, &mut buffer);
         assert_eq!(
             "export interface SchemaType extends ISchemaType {\n\tonchain_dash: \
-             {\n\t\tTestStruct: TestStruct,\n\t},\n}",
+             {\n\t\tTestStruct: WithFieldOrder<TestStruct>,\n\t},\n}",
             buffer[1]
         );
     }
@@ -187,7 +187,7 @@ mod tests {
         assert_ne!(0, buffer.len());
         assert_eq!(
             "export interface SchemaType extends ISchemaType {\n\tonchain_dash: \
-             {\n\t\tTestStruct: TestStruct,\n\t},\n}",
+             {\n\t\tTestStruct: WithFieldOrder<TestStruct>,\n\t},\n}",
             buffer[0]
         );
 
@@ -195,23 +195,26 @@ mod tests {
         generator.handle_schema_type(&token_2, &mut buffer);
         assert_eq!(
             "export interface SchemaType extends ISchemaType {\n\tonchain_dash: \
-             {\n\t\tTestStruct: TestStruct,\n\t\tAvailableTheme: AvailableTheme,\n\t},\n}",
+             {\n\t\tTestStruct: WithFieldOrder<TestStruct>,\n\t\tAvailableTheme: \
+             WithFieldOrder<AvailableTheme>,\n\t},\n}",
             buffer[0]
         );
         let token_3 = create_test_struct_token("Player", "combat");
         generator.handle_schema_type(&token_3, &mut buffer);
         assert_eq!(
             "export interface SchemaType extends ISchemaType {\n\tonchain_dash: \
-             {\n\t\tTestStruct: TestStruct,\n\t\tAvailableTheme: AvailableTheme,\n\t},\n\tcombat: \
-             {\n\t\tPlayer: Player,\n\t},\n}",
+             {\n\t\tTestStruct: WithFieldOrder<TestStruct>,\n\t\tAvailableTheme: \
+             WithFieldOrder<AvailableTheme>,\n\t},\n\tcombat: {\n\t\tPlayer: \
+             WithFieldOrder<Player>,\n\t},\n}",
             buffer[0]
         );
         let token_4 = create_test_struct_token("Position", "combat");
         generator.handle_schema_type(&token_4, &mut buffer);
         assert_eq!(
             "export interface SchemaType extends ISchemaType {\n\tonchain_dash: \
-             {\n\t\tTestStruct: TestStruct,\n\t\tAvailableTheme: AvailableTheme,\n\t},\n\tcombat: \
-             {\n\t\tPlayer: Player,\n\t\tPosition: Position,\n\t},\n}",
+             {\n\t\tTestStruct: WithFieldOrder<TestStruct>,\n\t\tAvailableTheme: \
+             WithFieldOrder<AvailableTheme>,\n\t},\n\tcombat: {\n\t\tPlayer: \
+             WithFieldOrder<Player>,\n\t\tPosition: WithFieldOrder<Position>,\n\t},\n}",
             buffer[0]
         );
     }

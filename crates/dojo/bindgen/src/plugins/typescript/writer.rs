@@ -20,11 +20,9 @@ impl TsFileWriter {
 impl BindgenWriter for TsFileWriter {
     fn write(&self, path: &str, data: &DojoData) -> BindgenResult<(PathBuf, Vec<u8>)> {
         let models_path = Path::new(path).to_owned();
-        let mut models = data.models.values().collect::<Vec<_>>();
+        let models = data.models.values().collect::<Vec<_>>();
 
-        // Sort models based on their tag to ensure deterministic output.
-        models.sort_by(|a, b| a.tag.cmp(&b.tag));
-        let composites = models
+        let mut composites = models
             .iter()
             .flat_map(|m| {
                 let mut composites: Vec<&Composite> = Vec::new();
@@ -46,14 +44,15 @@ impl BindgenWriter for TsFileWriter {
             .filter(|c| !(c.type_path.starts_with("dojo::") || c.type_path.starts_with("core::")))
             .collect::<Vec<_>>();
 
+        // Sort models based on their tag to ensure deterministic output.
+        // models.sort_by(|a, b| a.tag.cmp(&b.tag));
+        composites.sort_by(|a, b| a.type_path.cmp(&b.type_path));
+
         let code = self
             .generators
             .iter()
             .fold(Buffer::new(), |mut acc, g| {
                 composites.iter().for_each(|c| {
-                    // println!("Generating code for model {}", c.type_path);
-                    // println!("{:#?}", c);
-                    // println!("=====================");
                     match g.generate(c, &mut acc) {
                         Ok(code) => {
                             if !code.is_empty() {

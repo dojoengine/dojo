@@ -3,7 +3,7 @@ use convert_case::{Case, Casing};
 use dojo_world::contracts::naming;
 
 use super::constants::JS_BIGNUMBERISH;
-use super::JsType;
+use super::{token_is_custom_enum, JsPrimitiveInputType};
 use crate::error::BindgenResult;
 use crate::plugins::{BindgenContractGenerator, Buffer};
 use crate::DojoContract;
@@ -16,7 +16,8 @@ impl TsFunctionGenerator {
             buffer.insert(
                 1,
                 format!(
-                    "import {{ Account, AccountInterface, {} }} from \"starknet\";",
+                    "import {{ Account, AccountInterface, {}, CairoOption, CairoCustomEnum, \
+                     ByteArray }} from \"starknet\";",
                     JS_BIGNUMBERISH
                 ),
             );
@@ -25,7 +26,7 @@ impl TsFunctionGenerator {
     }
 
     fn setup_function_wrapper_start(&self, buffer: &mut Buffer) -> usize {
-        let fn_wrapper = "export async function setupWorld(provider: DojoProvider) {\n";
+        let fn_wrapper = "export function setupWorld(provider: DojoProvider) {\n";
 
         if !buffer.has(fn_wrapper) {
             buffer.push(fn_wrapper.to_owned());
@@ -93,24 +94,26 @@ impl TsFunctionGenerator {
             .fold(inputs, |mut acc, input| {
                 let prefix = match &input.1 {
                     Token::Composite(t) => {
-                        if t.r#type == CompositeType::Enum {
-                            "models."
-                        } else if t.r#type == CompositeType::Struct
-                            && !t.type_path.starts_with("core")
+                        if !token_is_custom_enum(t)
+                            && (t.r#type == CompositeType::Enum
+                                || (t.r#type == CompositeType::Struct
+                                    && !t.type_path.starts_with("core"))
+                                || t.r#type == CompositeType::Unknown)
                         {
-                            "models.Input"
+                            "models."
                         } else {
                             ""
                         }
                     }
                     _ => "",
                 };
-                acc.push(format!(
-                    "{}: {}{}",
-                    input.0.to_case(Case::Camel),
-                    prefix,
-                    JsType::from(&input.1)
-                ));
+                let mut type_input = JsPrimitiveInputType::from(&input.1).to_string();
+                if type_input.contains("<") {
+                    type_input = type_input.replace("<", format!("<{}", prefix).as_str());
+                } else {
+                    type_input = format!("{}{}", prefix, type_input);
+                }
+                acc.push(format!("{}: {}", input.0.to_case(Case::Camel), type_input));
                 acc
             })
             .join(", ")
@@ -231,7 +234,10 @@ impl BindgenContractGenerator for TsFunctionGenerator {
 
 #[cfg(test)]
 mod tests {
-    use cainome::parser::tokens::{CoreBasic, Function, Token};
+    use cainome::parser::tokens::{
+        Array, Composite, CompositeInner, CompositeInnerKind, CompositeType, CoreBasic, Function,
+        Token,
+    };
     use cainome::parser::TokenizedAbi;
     use dojo_world::contracts::naming;
 
@@ -314,6 +320,23 @@ mod tests {
         let generator = TsFunctionGenerator {};
         let function = create_change_theme_function();
         let expected = "snAccount: Account | AccountInterface, value: BigNumberish";
+        assert_eq!(expected, generator.format_function_inputs(&function))
+    }
+
+    #[test]
+    fn test_format_function_inputs_cairo_option() {
+        let generator = TsFunctionGenerator {};
+        let function = create_function_with_option_param();
+        let expected =
+            "snAccount: Account | AccountInterface, value: CairoOption<models.GatedType>";
+        assert_eq!(expected, generator.format_function_inputs(&function))
+    }
+
+    #[test]
+    fn test_format_function_inputs_cairo_enum() {
+        let generator = TsFunctionGenerator {};
+        let function = create_function_with_custom_enum();
+        let expected = "snAccount: Account | AccountInterface, value: models.GatedType";
         assert_eq!(expected, generator.format_function_inputs(&function))
     }
 
@@ -486,6 +509,164 @@ mod tests {
             tag: "onchain_dash-actions".to_owned(),
             tokens: TokenizedAbi::default(),
             systems: vec![],
+        }
+    }
+
+    fn create_function_with_option_param() -> Function {
+        Function {
+            name: "cairo_option".to_owned(),
+            state_mutability: cainome::parser::tokens::StateMutability::External,
+            inputs: vec![("value".to_owned(), Token::Composite(Composite {
+type_path: "core::option::Option<tournament::ls15_components::models::tournament::GatedType>".to_owned(),
+                inners: vec![],
+                generic_args: vec![
+                        (
+                        "A".to_owned(), 
+                        Token::Composite(
+                            Composite {
+                                type_path: "tournament::ls15_components::models::tournament::GatedType".to_owned(), 
+                                inners: vec![
+                                    CompositeInner {
+                                        index: 0,
+                                        name: "token".to_owned(),
+                                        kind: CompositeInnerKind::NotUsed,
+                                        token: Token::Composite(
+                                            Composite {
+                                                type_path: "tournament::ls15_components::models::tournament::GatedToken".to_owned(),
+                                                inners: vec![],
+                                                generic_args: vec![],
+                                                r#type: CompositeType::Unknown,
+                                                is_event: false,
+                                                alias: None,
+                                            },
+                                        ),
+                                    },
+                                    CompositeInner {
+                                        index: 1,
+                                        name: "tournament".to_owned(),
+                                        kind: CompositeInnerKind::NotUsed,
+                                        token: Token::Array(
+                                            Array {
+                                                type_path: "core::array::Span::<core::integer::u64>".to_owned(),
+                                                inner: Box::new(Token::CoreBasic(
+                                                    CoreBasic {
+                                                        type_path: "core::integer::u64".to_owned(),
+                                                    },
+                                               )),
+                                                is_legacy: false,
+                                            },
+                                        ),
+                                    },
+                                    CompositeInner {
+                                        index: 2,
+                                        name: "address".to_owned(),
+                                        kind: CompositeInnerKind::NotUsed,
+                                        token: Token::Array(
+                                            Array {
+                                                type_path: "core::array::Span::<core::starknet::contract_address::ContractAddress>".to_owned(),
+                                                inner: Box::new(Token::CoreBasic(
+                                                    CoreBasic {
+                                                        type_path: "core::starknet::contract_address::ContractAddress".to_owned(),
+                                                    },
+                                                )) ,
+                                                is_legacy: false,
+                                            },
+                                        ),
+                                    }
+                                ],
+                                generic_args: vec![],
+                                r#type: CompositeType::Unknown,
+                                is_event: false,
+                                alias: None
+                            }
+                        )
+                    ),
+                ],
+                r#type: CompositeType::Unknown,
+                is_event: false,
+                alias: None
+            }))],
+            outputs: vec![],
+            named_outputs: vec![],
+        }
+    }
+    fn create_function_with_custom_enum() -> Function {
+        Function {
+            name: "cairo_enum".to_owned(),
+            state_mutability: cainome::parser::tokens::StateMutability::External,
+            inputs: vec![("value".to_owned(), Token::Composite(Composite {
+                type_path: "tournament::ls15_components::models::tournament::GatedType".to_owned(),
+                inners: vec![
+                    CompositeInner {
+                        index: 0,
+                        name: "token".to_owned(),
+                        kind: CompositeInnerKind::NotUsed,
+                        token: Token::Composite(
+                            Composite {
+                                type_path: "tournament::ls15_components::models::tournament::GatedType".to_owned(), 
+                                inners: vec![
+                                    CompositeInner {
+                                        index: 0,
+                                        name: "token".to_owned(),
+                                        kind: CompositeInnerKind::NotUsed,
+                                        token: Token::Composite(
+                                            Composite {
+                                                type_path: "tournament::ls15_components::models::tournament::GatedToken".to_owned(),
+                                                inners: vec![],
+                                                generic_args: vec![],
+                                                r#type: CompositeType::Unknown,
+                                                is_event: false,
+                                                alias: None,
+                                            },
+                                        ),
+                                    },
+                                    CompositeInner {
+                                        index: 1,
+                                        name: "tournament".to_owned(),
+                                        kind: CompositeInnerKind::NotUsed,
+                                        token: Token::Array(
+                                            Array {
+                                                type_path: "core::array::Span::<core::integer::u64>".to_owned(),
+                                                inner: Box::new(Token::CoreBasic(
+                                                    CoreBasic {
+                                                        type_path: "core::integer::u64".to_owned(),
+                                                    },
+                                               )),
+                                                is_legacy: false,
+                                            },
+                                        ),
+                                    },
+                                    CompositeInner {
+                                        index: 2,
+                                        name: "address".to_owned(),
+                                        kind: CompositeInnerKind::NotUsed,
+                                        token: Token::Array(
+                                            Array {
+                                                type_path: "core::array::Span::<core::starknet::contract_address::ContractAddress>".to_owned(),
+                                                inner: Box::new(Token::CoreBasic(
+                                                    CoreBasic {
+                                                        type_path: "core::starknet::contract_address::ContractAddress".to_owned(),
+                                                    },
+                                                )) ,
+                                                is_legacy: false,
+                                            },
+                                        ),
+                                    }
+                                ],
+                                generic_args: vec![],
+                                r#type: CompositeType::Unknown,
+                                is_event: false,
+                                alias: None
+                            }),
+                    }
+                ],
+                generic_args: vec![],
+                r#type: CompositeType::Unknown,
+                is_event: false,
+                alias: None
+            }))],
+            outputs: vec![],
+            named_outputs: vec![],
         }
     }
 }
