@@ -19,10 +19,7 @@ pub async fn new(
     pool: &Pool<Sqlite>,
 ) -> (SocketAddr, impl Future<Output = ()> + 'static) {
     let schema = build_schema(pool).await.unwrap();
-    let mut conn = pool.acquire().await.unwrap();
-    let num_models = count_rows(&mut conn, MODEL_TABLE, &None, &None).await.unwrap();
-
-    let routes = graphql_filter(schema, num_models == 0);
+    let routes = graphql_filter(schema);
     warp::serve(routes).bind_with_graceful_shutdown(([127, 0, 0, 1], 0), async move {
         shutdown_rx.recv().await.ok();
     })
@@ -30,14 +27,9 @@ pub async fn new(
 
 fn graphql_filter(
     schema: Schema,
-    is_empty: bool,
 ) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
     let graphql_post = async_graphql_warp::graphql(schema.clone()).and_then(
         move |(schema, request): (Schema, Request)| async move {
-            if is_empty {
-                return Ok::<_, Rejection>(empty_response());
-            }
-
             // Execute query
             let response = schema.execute(request).await;
             // Return result
@@ -56,13 +48,4 @@ fn graphql_filter(
     });
 
     graphql_subscription(schema).or(graphql_post).or(playground_filter)
-}
-
-fn empty_response() -> warp::reply::Json {
-    let empty_response = json!({
-        "errors": [{
-            "message": "World does not have any indexed data yet."
-        }]
-    });
-    warp::reply::json(&empty_response)
 }
