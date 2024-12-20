@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1734670991956,
+  "lastUpdate": 1734719360730,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -41569,6 +41569,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8085752,
             "range": "± 40814",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "valentin@pupucecorp.com",
+            "name": "Brother MartianGreed",
+            "username": "MartianGreed"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "93168a13bbac9cf028bc09731abd322bc57d1210",
+          "message": "Fix/bindgen types improvements (#2832)\n\n* feat: bindgen types improvements\r\n\r\n* feat: js ByteArray function input\r\n\r\n* feat: bindgen enums improvements",
+          "timestamp": "2024-12-20T12:12:25-06:00",
+          "tree_id": "1509e7e203f874c0c763db1f233ea0ec5f163b88",
+          "url": "https://github.com/dojoengine/dojo/commit/93168a13bbac9cf028bc09731abd322bc57d1210"
+        },
+        "date": 1734719358473,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10695874273,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
