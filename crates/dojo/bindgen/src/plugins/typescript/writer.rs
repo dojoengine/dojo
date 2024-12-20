@@ -53,9 +53,6 @@ impl BindgenWriter for TsFileWriter {
             .iter()
             .fold(Buffer::new(), |mut acc, g| {
                 composites.iter().for_each(|c| {
-                    // println!("Generating code for model {}", c.type_path);
-                    // println!("{:#?}", c);
-                    // println!("=====================");
                     match g.generate(c, &mut acc) {
                         Ok(code) => {
                             if !code.is_empty() {

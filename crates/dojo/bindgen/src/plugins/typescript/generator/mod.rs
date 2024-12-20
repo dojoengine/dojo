@@ -1,4 +1,4 @@
-use cainome::parser::tokens::{Composite, CompositeType, Token};
+use cainome::parser::tokens::{Composite, CompositeInner, CompositeType, Token};
 use constants::{
     CAIRO_BOOL, CAIRO_BYTE_ARRAY, CAIRO_CONTRACT_ADDRESS, CAIRO_FELT252, CAIRO_I128, CAIRO_OPTION,
     CAIRO_OPTION_DEFAULT_VALUE, CAIRO_U128, CAIRO_U16, CAIRO_U256, CAIRO_U256_STRUCT, CAIRO_U32,
@@ -37,21 +37,7 @@ pub(crate) fn generate_type_init(token: &Composite) -> String {
         token
             .inners
             .iter()
-            .map(|i| {
-                match i.token.to_composite() {
-                    Ok(c) => {
-                        format!("\t\t\t{}: {},", i.name, JsPrimitiveDefaultValue::from(c))
-                    }
-                    Err(_) => {
-                        // this will fail on core types as
-                        // `core::starknet::contract_address::ContractAddress`
-                        // `core::felt252`
-                        // `core::integer::u64`
-                        // and so son
-                        format!("\t\t\t{}: {},", i.name, JsPrimitiveDefaultValue::from(&i.token))
-                    }
-                }
-            })
+            .map(build_composite_inner_primitive_default_value)
             .collect::<Vec<String>>()
             .join("\n")
     )
@@ -214,8 +200,8 @@ impl From<&Token> for JsPrimitiveInputType {
                     );
                 }
                 if token_is_custom_enum(c) {
-                    // we defined a type wrapper with Enum suffix let's use it there
-                    return JsPrimitiveInputType::from(format!("{}Enum", c.type_name()).as_str());
+                    // Use CairoCustomEnum type from starknetjs
+                    return JsPrimitiveInputType::from("CairoCustomEnum");
                 }
                 return JsPrimitiveInputType::from(value.type_name().as_str());
             }
@@ -274,24 +260,31 @@ impl From<&Composite> for JsPrimitiveDefaultValue {
 /// * token - The enum token to build the default value for
 fn build_default_enum_variant(token: &Composite) -> String {
     let default_value = token.inners.iter().take(1).fold(String::new(), |_acc, i| {
-        format!(
-            "\n\t\t\t\t{}: {}",
-            i.name,
-            match &i.token {
-                Token::CoreBasic(core_basic) =>
-                    JsPrimitiveDefaultValue::from(core_basic.type_name().as_str()).0,
-                Token::Array(_) => "[]".to_owned(),
-                Token::Tuple(_) => "()".to_owned(),
-                Token::Composite(composite) => generate_type_init(composite),
-                _ => "".to_string(),
-            }
-        )
+        format!("\n\t\t{}", build_composite_inner_primitive_default_value(i))
     });
     let undefined = token.inners.iter().skip(1).fold(String::new(), |acc, i| {
         format!("{acc}\n\t\t\t\t{}: undefined,", i.name.to_case(Case::Camel))
     });
 
-    default_value + "," + &undefined
+    default_value + &undefined
+}
+
+/// Builds JsPrimitiveDefaultValue from CompositeInne token
+/// * inner - CompositeInner
+fn build_composite_inner_primitive_default_value(inner: &CompositeInner) -> String {
+    match inner.token.to_composite() {
+        Ok(c) => {
+            format!("\t\t{}: {},", inner.name, JsPrimitiveDefaultValue::from(c))
+        }
+        Err(_) => {
+            // this will fail on core types as
+            // `core::starknet::contract_address::ContractAddress`
+            // `core::felt252`
+            // `core::integer::u64`
+            // and so son
+            format!("\t\t\t{}: {},", inner.name, JsPrimitiveDefaultValue::from(&inner.token))
+        }
+    }
 }
 
 /// Builds the default value for an enum variant
@@ -595,8 +588,8 @@ mod tests {
     #[test]
     fn test_cairo_custom_enum_default_value() {
         assert_eq!(
-            "new CairoCustomEnum({ \n\t\t\t\titem: {\n\t\t\tfieldOrder: ['id', 'xp'],\n\t\t\tid: \
-             0,\n\t\t\txp: 0,\n\t\t},\n\t\t\t\taddress: undefined, })",
+            "new CairoCustomEnum({ \n\t\t\t\titem: { fieldOrder: ['id', 'xp'], id: 0, xp: 0, \
+             },\n\t\t\t\taddress: undefined, })",
             JsPrimitiveDefaultValue::from(&Token::Composite(Composite {
                 type_path: "dojo_starter::Direction".to_owned(),
                 inners: vec![

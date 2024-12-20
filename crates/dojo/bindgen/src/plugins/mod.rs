@@ -74,15 +74,6 @@ impl Buffer {
         }
     }
 
-    /// Inserts string at the specified index.
-    ///
-    /// * `s` - The string to insert.
-    /// * `pos` - The position to insert the string at.
-    /// * `idx` - The index of the string to insert at.
-    pub fn insert_at_index(&mut self, s: String, idx: usize) {
-        self.0.insert(idx, s);
-    }
-
     /// Finds position of the given string in the inner vec.
     ///
     /// * `pos` - The string to search for.

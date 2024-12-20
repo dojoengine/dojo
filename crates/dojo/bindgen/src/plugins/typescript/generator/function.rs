@@ -3,7 +3,7 @@ use convert_case::{Case, Casing};
 use dojo_world::contracts::naming;
 
 use super::constants::JS_BIGNUMBERISH;
-use super::JsPrimitiveInputType;
+use super::{token_is_custom_enum, JsPrimitiveInputType};
 use crate::error::BindgenResult;
 use crate::plugins::{BindgenContractGenerator, Buffer};
 use crate::DojoContract;
@@ -16,8 +16,8 @@ impl TsFunctionGenerator {
             buffer.insert(
                 1,
                 format!(
-                    "import {{ Account, AccountInterface, {}, CairoOption, CairoCustomEnum, ByteArray }} \
-                     from \"starknet\";",
+                    "import {{ Account, AccountInterface, {}, CairoOption, CairoCustomEnum, \
+                     ByteArray }} from \"starknet\";",
                     JS_BIGNUMBERISH
                 ),
             );
@@ -26,7 +26,7 @@ impl TsFunctionGenerator {
     }
 
     fn setup_function_wrapper_start(&self, buffer: &mut Buffer) -> usize {
-        let fn_wrapper = "export async function setupWorld(provider: DojoProvider) {\n";
+        let fn_wrapper = "export function setupWorld(provider: DojoProvider) {\n";
 
         if !buffer.has(fn_wrapper) {
             buffer.push(fn_wrapper.to_owned());
@@ -84,7 +84,6 @@ impl TsFunctionGenerator {
     }
 
     fn format_function_inputs(&self, token: &Function) -> String {
-        println!("{:#?}", token);
         let inputs = match token.state_mutability {
             StateMutability::External => vec!["snAccount: Account | AccountInterface".to_owned()],
             StateMutability::View => Vec::new(),
@@ -95,10 +94,11 @@ impl TsFunctionGenerator {
             .fold(inputs, |mut acc, input| {
                 let prefix = match &input.1 {
                     Token::Composite(t) => {
-                        if t.r#type == CompositeType::Enum
-                            || (t.r#type == CompositeType::Struct
-                                && !t.type_path.starts_with("core"))
-                            || t.r#type == CompositeType::Unknown
+                        if !token_is_custom_enum(t)
+                            && (t.r#type == CompositeType::Enum
+                                || (t.r#type == CompositeType::Struct
+                                    && !t.type_path.starts_with("core"))
+                                || t.r#type == CompositeType::Unknown)
                         {
                             "models."
                         } else {
