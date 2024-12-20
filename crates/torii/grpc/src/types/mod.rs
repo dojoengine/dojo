@@ -151,6 +151,7 @@ pub enum PatternMatching {
 pub enum MemberValue {
     Primitive(Primitive),
     String(String),
+    List(Vec<MemberValue>),
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
@@ -418,6 +419,9 @@ impl From<MemberValue> for member_value::ValueType {
                 member_value::ValueType::Primitive(primitive.into())
             }
             MemberValue::String(string) => member_value::ValueType::String(string),
+            MemberValue::List(list) => member_value::ValueType::List(proto::types::MemberValueList {
+                values: list.into_iter().map(|v| proto::types::MemberValue { value_type: Some(v.into()) }).collect(),
+            }),
         }
     }
 }
