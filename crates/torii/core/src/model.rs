@@ -120,8 +120,10 @@ impl ModelReader<Error> for ModelSQLReader {
 pub fn build_sql_query(
     schemas: &Vec<Ty>,
     table_name: &str,
+    model_relation_table: &str,
     entity_relation_column: &str,
     where_clause: Option<&str>,
+    having_clause: Option<&str>,
     order_by: Option<&str>,
     limit: Option<u32>,
     offset: Option<u32>,
@@ -172,6 +174,7 @@ pub fn build_sql_query(
     // Add base table columns
     selections.push(format!("{}.id", table_name));
     selections.push(format!("{}.keys", table_name));
+    selections.push(format!("group_concat({model_relation_table}.model_id) as model_ids"));
 
     // Process each model schema
     for model in schemas {
@@ -185,18 +188,36 @@ pub fn build_sql_query(
         collect_columns(&model_table, "", model, &mut selections);
     }
 
+    joins.push(format!(
+        "JOIN {model_relation_table} ON {table_name}.id = {model_relation_table}.entity_id"
+    ));
+
     let selections_clause = selections.join(", ");
     let joins_clause = joins.join(" ");
 
     let mut query = format!("SELECT {} FROM [{}] {}", selections_clause, table_name, joins_clause);
 
-    let mut count_query =
-        format!("SELECT COUNT(DISTINCT {}.id) FROM [{}] {}", table_name, table_name, joins_clause);
+    // Include model_ids in the subquery and put WHERE before GROUP BY
+    let mut count_query = format!(
+        "SELECT COUNT(*) FROM (SELECT {}.id, group_concat({}.model_id) as model_ids FROM [{}] {}",
+        table_name, model_relation_table, table_name, joins_clause
+    );
 
     if let Some(where_clause) = where_clause {
         query += &format!(" WHERE {}", where_clause);
         count_query += &format!(" WHERE {}", where_clause);
     }
+
+    query += &format!(" GROUP BY {table_name}.id");
+    count_query += &format!(" GROUP BY {table_name}.id");
+
+    if let Some(having_clause) = having_clause {
+        query += &format!(" HAVING {}", having_clause);
+        count_query += &format!(" HAVING {}", having_clause);
+    }
+
+    // Close the subquery
+    count_query += ") AS filtered_entities";
 
     // Use custom order by if provided, otherwise default to event_id DESC
     if let Some(order_clause) = order_by {
@@ -490,7 +511,9 @@ mod tests {
         let query = build_sql_query(
             &vec![position, player_config],
             "entities",
+            "entity_model",
             "internal_entity_id",
+            None,
             None,
             None,
             None,
@@ -499,16 +522,17 @@ mod tests {
         .unwrap();
 
         let expected_query =
-            "SELECT entities.id, entities.keys, [Test-Position].[player] as \
-             \"Test-Position.player\", [Test-Position].[vec.x] as \"Test-Position.vec.x\", \
-             [Test-Position].[vec.y] as \"Test-Position.vec.y\", \
+            "SELECT entities.id, entities.keys, group_concat(entity_model.model_id) as model_ids, \
+             [Test-Position].[player] as \"Test-Position.player\", [Test-Position].[vec.x] as \
+             \"Test-Position.vec.x\", [Test-Position].[vec.y] as \"Test-Position.vec.y\", \
              [Test-Position].[test_everything] as \"Test-Position.test_everything\", \
              [Test-PlayerConfig].[favorite_item] as \"Test-PlayerConfig.favorite_item\", \
              [Test-PlayerConfig].[favorite_item.Some] as \
              \"Test-PlayerConfig.favorite_item.Some\", [Test-PlayerConfig].[items] as \
              \"Test-PlayerConfig.items\" FROM [entities] LEFT JOIN [Test-Position] ON entities.id \
              = [Test-Position].internal_entity_id LEFT JOIN [Test-PlayerConfig] ON entities.id = \
-             [Test-PlayerConfig].internal_entity_id ORDER BY entities.event_id DESC";
+             [Test-PlayerConfig].internal_entity_id JOIN entity_model ON entities.id = \
+             entity_model.entity_id GROUP BY entities.id ORDER BY entities.event_id DESC";
         assert_eq!(query.0, expected_query);
     }
 }

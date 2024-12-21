@@ -31,7 +31,7 @@ dependencies = [
 
 [[package]]
 name = "dojo_examples"
-version = "1.0.5"
+version = "1.0.8"
 dependencies = [
  "armory",
  "bestiary",

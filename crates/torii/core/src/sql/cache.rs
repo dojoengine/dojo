@@ -41,6 +41,10 @@ impl ModelCache {
     }
 
     pub async fn models(&self, selectors: &[Felt]) -> Result<Vec<Model>, Error> {
+        if selectors.is_empty() {
+            return Ok(self.model_cache.read().await.values().cloned().collect());
+        }
+
         let mut schemas = Vec::with_capacity(selectors.len());
         for selector in selectors {
             schemas.push(self.model(selector).await?);
