@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1734719511277,
+  "lastUpdate": 1734753296061,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -41647,6 +41647,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8072702,
             "range": "± 54445",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7ff762c88137c5bad57c59d0e77894fc14bef78e",
+          "message": "fix(katana): update default erc20 class hash (#2836)\n\nThe class hash wasn't updated when the source code was updated at commit 61f318d",
+          "timestamp": "2024-12-21T11:38:25+08:00",
+          "tree_id": "690709a03809dee19f923906f8adad03e91bc257",
+          "url": "https://github.com/dojoengine/dojo/commit/7ff762c88137c5bad57c59d0e77894fc14bef78e"
+        },
+        "date": 1734753293878,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10291507170,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
