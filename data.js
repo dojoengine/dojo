@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1734753476277,
+  "lastUpdate": 1734796884394,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -41725,6 +41725,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8098957,
             "range": "± 69822",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "847850277@qq.com",
+            "name": "zhengpeng",
+            "username": "847850277"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "12c96ae55c9f1c2527cef91e4ab11dddf43d4375",
+          "message": "refactor(dojo):  change usage of trace! to avoid path prefix (#2830)\n\n[ISSUES#2829] Optimize trace!.",
+          "timestamp": "2024-12-21T09:44:53-06:00",
+          "tree_id": "81984a86db3ee0a66f1c8ed064cdc1f05455c694",
+          "url": "https://github.com/dojoengine/dojo/commit/12c96ae55c9f1c2527cef91e4ab11dddf43d4375"
+        },
+        "date": 1734796882804,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10611144500,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
