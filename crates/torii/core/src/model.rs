@@ -522,7 +522,17 @@ mod tests {
         .unwrap();
 
         let expected_query =
-            "SELECT entities.id, entities.keys, group_concat(entity_model.model_id) as model_ids, [Test-Position].[player] as \"Test-Position.player\", [Test-Position].[vec.x] as \"Test-Position.vec.x\", [Test-Position].[vec.y] as \"Test-Position.vec.y\", [Test-Position].[test_everything] as \"Test-Position.test_everything\", [Test-PlayerConfig].[favorite_item] as \"Test-PlayerConfig.favorite_item\", [Test-PlayerConfig].[favorite_item.Some] as \"Test-PlayerConfig.favorite_item.Some\", [Test-PlayerConfig].[items] as \"Test-PlayerConfig.items\" FROM [entities] LEFT JOIN [Test-Position] ON entities.id = [Test-Position].internal_entity_id LEFT JOIN [Test-PlayerConfig] ON entities.id = [Test-PlayerConfig].internal_entity_id JOIN entity_model ON entities.id = entity_model.entity_id GROUP BY entities.id ORDER BY entities.event_id DESC";
+            "SELECT entities.id, entities.keys, group_concat(entity_model.model_id) as model_ids, \
+             [Test-Position].[player] as \"Test-Position.player\", [Test-Position].[vec.x] as \
+             \"Test-Position.vec.x\", [Test-Position].[vec.y] as \"Test-Position.vec.y\", \
+             [Test-Position].[test_everything] as \"Test-Position.test_everything\", \
+             [Test-PlayerConfig].[favorite_item] as \"Test-PlayerConfig.favorite_item\", \
+             [Test-PlayerConfig].[favorite_item.Some] as \
+             \"Test-PlayerConfig.favorite_item.Some\", [Test-PlayerConfig].[items] as \
+             \"Test-PlayerConfig.items\" FROM [entities] LEFT JOIN [Test-Position] ON entities.id \
+             = [Test-Position].internal_entity_id LEFT JOIN [Test-PlayerConfig] ON entities.id = \
+             [Test-PlayerConfig].internal_entity_id JOIN entity_model ON entities.id = \
+             entity_model.entity_id GROUP BY entities.id ORDER BY entities.event_id DESC";
         assert_eq!(query.0, expected_query);
     }
 }
