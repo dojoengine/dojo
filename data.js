@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1734796884394,
+  "lastUpdate": 1734797055324,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -41755,6 +41755,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10611144500,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "847850277@qq.com",
+            "name": "zhengpeng",
+            "username": "847850277"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "12c96ae55c9f1c2527cef91e4ab11dddf43d4375",
+          "message": "refactor(dojo):  change usage of trace! to avoid path prefix (#2830)\n\n[ISSUES#2829] Optimize trace!.",
+          "timestamp": "2024-12-21T09:44:53-06:00",
+          "tree_id": "81984a86db3ee0a66f1c8ed064cdc1f05455c694",
+          "url": "https://github.com/dojoengine/dojo/commit/12c96ae55c9f1c2527cef91e4ab11dddf43d4375"
+        },
+        "date": 1734797053705,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2455965,
+            "range": "± 27545",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 7817191,
+            "range": "± 111763",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3415214594,
+            "range": "± 806850371",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8256614,
+            "range": "± 118219",
             "unit": "ns/iter"
           }
         ]
