@@ -5,14 +5,11 @@ use async_graphql::dynamic::Schema;
 use async_graphql::http::GraphiQLSource;
 use async_graphql::Request;
 use async_graphql_warp::graphql_subscription;
-use serde_json::json;
 use sqlx::{Pool, Sqlite};
 use tokio::sync::broadcast::Receiver;
 use warp::{Filter, Rejection, Reply};
 
 use super::schema::build_schema;
-use crate::constants::MODEL_TABLE;
-use crate::query::data::count_rows;
 
 pub async fn new(
     mut shutdown_rx: Receiver<()>,
@@ -25,9 +22,7 @@ pub async fn new(
     })
 }
 
-fn graphql_filter(
-    schema: Schema,
-) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
+fn graphql_filter(schema: Schema) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
     let graphql_post = async_graphql_warp::graphql(schema.clone()).and_then(
         move |(schema, request): (Schema, Request)| async move {
             // Execute query
