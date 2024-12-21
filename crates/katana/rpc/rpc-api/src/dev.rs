@@ -20,8 +20,14 @@ pub trait DevApi {
 
     #[method(name = "setStorageAt")]
     async fn set_storage_at(&self, contract_address: Felt, key: Felt, value: Felt)
-    -> RpcResult<()>;
+        -> RpcResult<()>;
 
     #[method(name = "predeployedAccounts")]
     async fn predeployed_accounts(&self) -> RpcResult<Vec<Account>>;
+
+    #[method(name = "accountBalance")]
+    async fn account_balance(&self, address: String, unit: String) -> RpcResult<u128>;
+
+    #[method(name = "mint")]
+    async fn mint(&self) -> RpcResult<()>;
 }
