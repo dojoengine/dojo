@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1734797055324,
+  "lastUpdate": 1734800807001,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -41803,6 +41803,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8256614,
             "range": "± 118219",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3c32891f39dc911603f1a9c8ab1046bfee19f3b8",
+          "message": "feat(torii-grpc): start rework to use 1 single query (#2817)\n\n* feat(torii-grpc): start rework to use 1 single query\r\n\r\n* hashed keys\r\n\r\n* start using build sql query singular with left joins\r\n\r\n* optimize all queries\r\n\r\n* fix: count\r\n\r\n* f\r\n\r\n* fix count to use having\r\n\r\n* f\r\n\r\n* print query\r\n\r\n* fix keys clause\r\n\r\n* having clause keys\r\n\r\n* having to hashed keys\r\n\r\n* having clause for composite\r\n\r\n* fmt\r\n\r\n* fmt\r\n\r\n* fix: count\r\n\r\n* value\r\n\r\n* indices\r\n\r\n* tests: fix tests\r\n\r\n* fix: fmt\r\n\r\n* tests: fix by passing the list of expected models\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-12-21T10:50:30-06:00",
+          "tree_id": "19135b20aca93dbf881861258c1d887f4dcf8ea3",
+          "url": "https://github.com/dojoengine/dojo/commit/3c32891f39dc911603f1a9c8ab1046bfee19f3b8"
+        },
+        "date": 1734800805410,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10302829749,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
