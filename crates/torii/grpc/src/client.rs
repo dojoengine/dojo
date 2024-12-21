@@ -16,11 +16,14 @@ use crate::proto::world::{
     SubscribeEntitiesRequest, SubscribeEntityResponse, SubscribeEventMessagesRequest,
     SubscribeEventsRequest, SubscribeEventsResponse, SubscribeIndexerRequest,
     SubscribeIndexerResponse, SubscribeModelsRequest, SubscribeModelsResponse,
-    UpdateEntitiesSubscriptionRequest, UpdateEventMessagesSubscriptionRequest,
+    SubscribeTokenBalancesResponse, UpdateEntitiesSubscriptionRequest,
+    UpdateEventMessagesSubscriptionRequest, UpdateTokenBalancesSubscriptionRequest,
     WorldMetadataRequest,
 };
 use crate::types::schema::{Entity, SchemaError};
-use crate::types::{EntityKeysClause, Event, EventQuery, IndexerUpdate, ModelKeysClause, Query};
+use crate::types::{
+    EntityKeysClause, Event, EventQuery, IndexerUpdate, ModelKeysClause, Query, TokenBalance,
+};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -294,6 +297,76 @@ impl WorldClient {
             }
             None => empty_state_update(),
         }))))
+    }
+
+    /// Subscribe to token balances.
+    pub async fn subscribe_token_balances(
+        &mut self,
+        contract_addresses: Vec<Felt>,
+        account_addresses: Vec<Felt>,
+    ) -> Result<TokenBalanceStreaming, Error> {
+        let request = RetrieveTokenBalancesRequest {
+            contract_addresses: contract_addresses
+                .into_iter()
+                .map(|c| c.to_bytes_be().to_vec())
+                .collect(),
+            account_addresses: account_addresses
+                .into_iter()
+                .map(|a| a.to_bytes_be().to_vec())
+                .collect(),
+        };
+        let stream = self
+            .inner
+            .subscribe_token_balances(request)
+            .await
+            .map_err(Error::Grpc)
+            .map(|res| res.into_inner())?;
+        Ok(TokenBalanceStreaming(stream.map_ok(Box::new(|res| {
+            (res.subscription_id, res.balance.unwrap().try_into().expect("must able to serialize"))
+        }))))
+    }
+
+    /// Update a token balances subscription.
+    pub async fn update_token_balances_subscription(
+        &mut self,
+        subscription_id: u64,
+        contract_addresses: Vec<Felt>,
+        account_addresses: Vec<Felt>,
+    ) -> Result<(), Error> {
+        let request = UpdateTokenBalancesSubscriptionRequest {
+            subscription_id,
+            contract_addresses: contract_addresses
+                .into_iter()
+                .map(|c| c.to_bytes_be().to_vec())
+                .collect(),
+            account_addresses: account_addresses
+                .into_iter()
+                .map(|a| a.to_bytes_be().to_vec())
+                .collect(),
+        };
+        self.inner
+            .update_token_balances_subscription(request)
+            .await
+            .map_err(Error::Grpc)
+            .map(|res| res.into_inner())
+    }
+}
+
+type TokenBalanceMappedStream = MapOk<
+    tonic::Streaming<SubscribeTokenBalancesResponse>,
+    Box<dyn Fn(SubscribeTokenBalancesResponse) -> (SubscriptionId, TokenBalance) + Send>,
+>;
+
+#[derive(Debug)]
+pub struct TokenBalanceStreaming(TokenBalanceMappedStream);
+
+impl Stream for TokenBalanceStreaming {
+    type Item = <TokenBalanceMappedStream as Stream>::Item;
+    fn poll_next(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        self.0.poll_next_unpin(cx)
     }
 }
 
