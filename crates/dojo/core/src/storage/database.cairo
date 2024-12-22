@@ -88,7 +88,7 @@ pub fn delete(table: felt252, key: felt252, layout: Span<u8>) {
 pub fn set_array(table: felt252, key: felt252, value: Span<felt252>, offset: u32, array_size: u32) {
     let storage_key = get_storage_key(table, key);
     storage::set_packed_array(
-        storage::DEFAULT_ADDRESS_DOMAIN, storage_key, value, offset, array_size
+        storage::DEFAULT_ADDRESS_DOMAIN, storage_key, value, offset, array_size,
     )
         .unwrap_syscall();
 }

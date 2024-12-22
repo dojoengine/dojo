@@ -9,7 +9,7 @@ fn test_set_metadata_world() {
     let world = world.dispatcher;
 
     let metadata = ResourceMetadata {
-        resource_id: 0, metadata_uri: format!("ipfs:world_with_a_long_uri_that"), metadata_hash: 42
+        resource_id: 0, metadata_uri: format!("ipfs:world_with_a_long_uri_that"), metadata_hash: 42,
     };
 
     world.set_metadata(metadata.clone());
@@ -30,7 +30,7 @@ fn test_set_metadata_resource_owner() {
     starknet::testing::set_contract_address(bob);
 
     let metadata = ResourceMetadata {
-        resource_id: model_selector, metadata_uri: format!("ipfs:bob"), metadata_hash: 42
+        resource_id: model_selector, metadata_uri: format!("ipfs:bob"), metadata_hash: 42,
     };
 
     drop_all_events(world.contract_address);
@@ -57,7 +57,7 @@ fn test_set_metadata_resource_owner() {
     expected: (
         "Account `2827` does NOT have OWNER role on model (or its namespace) `Foo`",
         'ENTRYPOINT_FAILED',
-    )
+    ),
 )]
 fn test_set_metadata_not_possible_for_resource_writer() {
     let (world, model_selector) = deploy_world_and_foo();
@@ -71,22 +71,20 @@ fn test_set_metadata_not_possible_for_resource_writer() {
     starknet::testing::set_contract_address(bob);
 
     let metadata = ResourceMetadata {
-        resource_id: model_selector, metadata_uri: format!("ipfs:bob"), metadata_hash: 42
+        resource_id: model_selector, metadata_uri: format!("ipfs:bob"), metadata_hash: 42,
     };
 
     world.set_metadata(metadata.clone());
 }
 
 #[test]
-#[should_panic(
-    expected: ("Account `2827` does NOT have OWNER role on world", 'ENTRYPOINT_FAILED',)
-)]
+#[should_panic(expected: ("Account `2827` does NOT have OWNER role on world", 'ENTRYPOINT_FAILED'))]
 fn test_set_metadata_not_possible_for_random_account() {
     let world = deploy_world();
     let world = world.dispatcher;
 
     let metadata = ResourceMetadata { // World metadata.
-        resource_id: 0, metadata_uri: format!("ipfs:bob"), metadata_hash: 42
+        resource_id: 0, metadata_uri: format!("ipfs:bob"), metadata_hash: 42,
     };
 
     let bob = starknet::contract_address_const::<0xb0b>();
@@ -99,7 +97,7 @@ fn test_set_metadata_not_possible_for_random_account() {
 }
 
 #[test]
-#[should_panic(expected: ('CONTRACT_NOT_DEPLOYED', 'ENTRYPOINT_FAILED',))]
+#[should_panic(expected: ('CONTRACT_NOT_DEPLOYED', 'ENTRYPOINT_FAILED'))]
 fn test_set_metadata_through_malicious_contract() {
     let (world, model_selector) = deploy_world_and_foo();
     let world = world.dispatcher;
@@ -113,7 +111,7 @@ fn test_set_metadata_through_malicious_contract() {
     starknet::testing::set_contract_address(malicious_contract);
 
     let metadata = ResourceMetadata {
-        resource_id: model_selector, metadata_uri: format!("ipfs:bob"), metadata_hash: 42
+        resource_id: model_selector, metadata_uri: format!("ipfs:bob"), metadata_hash: 42,
     };
 
     world.set_metadata(metadata.clone());
