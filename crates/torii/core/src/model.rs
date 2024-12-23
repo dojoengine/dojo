@@ -398,9 +398,10 @@ pub fn map_row_to_ty(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn fetch_entities(
     pool: &Pool<sqlx::Sqlite>,
-    schemas: &Vec<Ty>,
+    schemas: &[Ty],
     table_name: &str,
     model_relation_table: &str,
     entity_relation_column: &str,
