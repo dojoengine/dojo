@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1734801033340,
+  "lastUpdate": 1734965232210,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -41881,6 +41881,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8138829,
             "range": "± 86908",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "845c5b16db42d2a9082dec90c67f4781ec5eabb5",
+          "message": "feat(torii-grpc): add list to member value enum for usage in sdk (#2828)\n\n* feat(torii-grpc): add list to member value enum for usasge in sdk\r\n\r\n* fmt",
+          "timestamp": "2024-12-23T08:30:47-06:00",
+          "tree_id": "e91daaf554bc5004dd43a3181c4469ec00a4108a",
+          "url": "https://github.com/dojoengine/dojo/commit/845c5b16db42d2a9082dec90c67f4781ec5eabb5"
+        },
+        "date": 1734965230290,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10438921822,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
