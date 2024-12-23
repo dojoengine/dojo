@@ -442,8 +442,10 @@ impl DojoWorld {
             bind_values.push(entity_updated_after);
         }
 
-        let entity_models =
-            entity_models.iter().map(|model| compute_selector_from_tag(model)).collect::<Vec<_>>();
+        let entity_models = entity_models
+            .iter()
+            .map(|model| compute_selector_from_tag(model))
+            .collect::<Vec<_>>();
         let schemas = self
             .model_cache
             .models(&entity_models)
@@ -457,28 +459,25 @@ impl DojoWorld {
             .map(|model| format!("INSTR(model_ids, '{:#x}') > 0", model))
             .collect::<Vec<_>>()
             .join(" OR ");
-        let (query, count_query) = build_sql_query(
-            &schemas,
-            table,
-            model_relation_table,
-            entity_relation_column,
-            Some(&where_clause),
-            if !having_clause.is_empty() { Some(&having_clause) } else { None },
-            order_by,
-            limit,
-            offset,
-        )?;
-
-        let mut count_query = sqlx::query_scalar(&count_query);
-        for value in &bind_values {
-            count_query = count_query.bind(value);
-        }
-        let total_count = count_query.fetch_one(&self.pool).await?;
-        if total_count == 0 {
-            return Ok((Vec::new(), 0));
-        }
 
         if table == EVENT_MESSAGES_HISTORICAL_TABLE {
+            let count_query = format!(
+                r#"
+                SELECT COUNT(*) FROM {table}
+                JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
+                WHERE {where_clause}
+                GROUP BY {table}.event_id
+            "#
+            );
+            let total_count = sqlx::query_scalar(&count_query);
+            for value in &bind_values {
+                total_count = total_count.bind(value);
+            }
+            let total_count = total_count.fetch_one(&self.pool).await?;
+            if total_count == 0 {
+                return Ok((Vec::new(), 0));
+            }
+
             let entities = self.fetch_historical_event_messages(
                 &format!(
                     r#"
@@ -497,12 +496,21 @@ impl DojoWorld {
             return Ok((entities, total_count));
         }
 
-        let mut query = sqlx::query(&query);
-        for value in &bind_values {
-            query = query.bind(value);
-        }
-        let entities = query.fetch_all(&self.pool).await?;
-        let entities = entities
+        let (rows, total_count) = fetch_entities(
+            &self.pool,
+            &schemas,
+            table,
+            model_relation_table,
+            entity_relation_column,
+            Some(&where_clause),
+            if !having_clause.is_empty() { Some(&having_clause) } else { None },
+            order_by,
+            limit,
+            offset,
+            bind_values,
+        ).await?;
+
+        let entities = rows
             .iter()
             .map(|row| map_row_to_entity(row, &schemas, dont_include_hashed_keys))
             .collect::<Result<Vec<_>, Error>>()?;
