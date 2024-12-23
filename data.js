@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1734965410694,
+  "lastUpdate": 1734969997338,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -41959,6 +41959,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8141444,
             "range": "± 87462",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "548783b1fb1a276e8f7740b9b58a607bc119c238",
+          "message": "refactor(torii-gql): get rid of world indexing error (#2827)\n\n* refactor(torii-gql): get rid of world indexing error\r\n\r\n* fix: fmt and clippy\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-12-23T09:49:25-06:00",
+          "tree_id": "d8b3fcd64f8a9fbfff351d2a41971b5f6ddf0ec7",
+          "url": "https://github.com/dojoengine/dojo/commit/548783b1fb1a276e8f7740b9b58a607bc119c238"
+        },
+        "date": 1734969995030,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10723867656,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
