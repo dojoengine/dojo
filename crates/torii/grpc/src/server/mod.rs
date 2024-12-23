@@ -42,7 +42,7 @@ use tonic::transport::Server;
 use tonic::{Request, Response, Status};
 use tonic_web::GrpcWebLayer;
 use torii_core::error::{Error, ParseError, QueryError};
-use torii_core::model::{build_sql_query, map_row_to_ty};
+use torii_core::model::{fetch_entities, map_row_to_ty};
 use torii_core::sql::cache::ModelCache;
 use torii_core::types::{Token, TokenBalance};
 use tower_http::cors::{AllowOrigin, CorsLayer};
@@ -413,7 +413,7 @@ impl DojoWorld {
         .await?;
 
         let entities = rows
-            .iter()
+            .par_iter()
             .map(|row| map_row_to_entity(row, &schemas, dont_include_hashed_keys))
             .collect::<Result<Vec<_>, Error>>()?;
 
@@ -475,7 +475,7 @@ impl DojoWorld {
                 GROUP BY {table}.event_id
             "#
             );
-            let total_count = sqlx::query_scalar(&count_query);
+            let mut total_count = sqlx::query_scalar(&count_query);
             for value in &bind_values {
                 total_count = total_count.bind(value);
             }
@@ -518,7 +518,7 @@ impl DojoWorld {
         .await?;
 
         let entities = rows
-            .iter()
+            .par_iter()
             .map(|row| map_row_to_entity(row, &schemas, dont_include_hashed_keys))
             .collect::<Result<Vec<_>, Error>>()?;
 
