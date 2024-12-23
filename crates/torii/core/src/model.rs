@@ -470,7 +470,8 @@ pub async fn fetch_entities(
         for model in chunk {
             let model_table = model.name();
             joins.push(format!(
-                "LEFT JOIN [{model_table}] ON {table_name}.id = [{model_table}].{entity_relation_column}"
+                "LEFT JOIN [{model_table}] ON {table_name}.id = \
+                 [{model_table}].{entity_relation_column}"
             ));
             collect_columns(&model_table, "", model, &mut selections);
         }
@@ -484,7 +485,8 @@ pub async fn fetch_entities(
 
         // Build count query
         let count_query = format!(
-            "SELECT COUNT(*) FROM (SELECT {}.id, group_concat({}.model_id) as model_ids FROM [{}] {} {} GROUP BY {}.id {})",
+            "SELECT COUNT(*) FROM (SELECT {}.id, group_concat({}.model_id) as model_ids FROM [{}] \
+             {} {} GROUP BY {}.id {})",
             table_name,
             model_relation_table,
             table_name,
@@ -504,10 +506,8 @@ pub async fn fetch_entities(
 
         if chunk_count > 0 {
             // Build main query
-            let mut query = format!(
-                "SELECT {} FROM [{}] {}",
-                selections_clause, table_name, joins_clause
-            );
+            let mut query =
+                format!("SELECT {} FROM [{}] {}", selections_clause, table_name, joins_clause);
 
             if let Some(where_clause) = where_clause {
                 query += &format!(" WHERE {}", where_clause);

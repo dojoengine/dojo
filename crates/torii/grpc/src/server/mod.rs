@@ -312,11 +312,8 @@ impl DojoWorld {
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         let where_clause = match &hashed_keys {
             Some(hashed_keys) => {
-                let ids = hashed_keys
-                    .hashed_keys
-                    .iter()
-                    .map(|_| "{table}.id = ?")
-                    .collect::<Vec<_>>();
+                let ids =
+                    hashed_keys.hashed_keys.iter().map(|_| "{table}.id = ?").collect::<Vec<_>>();
                 format!(
                     "{} {}",
                     ids.join(" OR "),
@@ -348,10 +345,8 @@ impl DojoWorld {
             bind_values.push(entity_updated_after);
         }
 
-        let entity_models = entity_models
-            .iter()
-            .map(|model| compute_selector_from_tag(model))
-            .collect::<Vec<_>>();
+        let entity_models =
+            entity_models.iter().map(|model| compute_selector_from_tag(model)).collect::<Vec<_>>();
         let schemas = self
             .model_cache
             .models(&entity_models)
@@ -414,7 +409,8 @@ impl DojoWorld {
             limit,
             offset,
             bind_values,
-        ).await?;
+        )
+        .await?;
 
         let entities = rows
             .iter()
@@ -454,10 +450,8 @@ impl DojoWorld {
             bind_values.push(entity_updated_after);
         }
 
-        let entity_models = entity_models
-            .iter()
-            .map(|model| compute_selector_from_tag(model))
-            .collect::<Vec<_>>();
+        let entity_models =
+            entity_models.iter().map(|model| compute_selector_from_tag(model)).collect::<Vec<_>>();
         let schemas = self
             .model_cache
             .models(&entity_models)
@@ -520,7 +514,8 @@ impl DojoWorld {
             limit,
             offset,
             bind_values,
-        ).await?;
+        )
+        .await?;
 
         let entities = rows
             .iter()
@@ -571,10 +566,8 @@ impl DojoWorld {
         entity_models: Vec<String>,
         entity_updated_after: Option<String>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
-        let entity_models = entity_models
-            .iter()
-            .map(|model| compute_selector_from_tag(model))
-            .collect::<Vec<_>>();
+        let entity_models =
+            entity_models.iter().map(|model| compute_selector_from_tag(model)).collect::<Vec<_>>();
         let comparison_operator = ComparisonOperator::from_repr(member_clause.operator as usize)
             .expect("invalid comparison operator");
 
@@ -700,13 +693,11 @@ impl DojoWorld {
         entity_models: Vec<String>,
         entity_updated_after: Option<String>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
-        let (where_clause, bind_values) = 
+        let (where_clause, bind_values) =
             build_composite_clause(table, &composite, entity_updated_after)?;
 
-        let entity_models = entity_models
-            .iter()
-            .map(|model| compute_selector_from_tag(model))
-            .collect::<Vec<_>>();
+        let entity_models =
+            entity_models.iter().map(|model| compute_selector_from_tag(model)).collect::<Vec<_>>();
         let schemas = self
             .model_cache
             .models(&entity_models)
