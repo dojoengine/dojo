@@ -270,11 +270,10 @@ pub fn map_row_to_ty(
                     let value = row.try_get::<String, &str>(column_name)?;
                     let hex_str = value.trim_start_matches("0x");
 
-                    if !hex_str.is_empty() {
-                        primitive.set_i128(Some(
-                            i128::from_str_radix(hex_str, 16).map_err(ParseError::ParseIntError)?,
-                        ))?;
-                    }
+                    primitive.set_i128(Some(
+                        u128::from_str_radix(hex_str, 16).map_err(ParseError::ParseIntError)?
+                            as i128,
+                    ))?;
                 }
                 Primitive::U8(_) => {
                     let value = row.try_get::<u8, &str>(column_name)?;
