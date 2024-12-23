@@ -271,7 +271,7 @@ pub fn map_row_to_ty(
                     let hex_str = value.trim_start_matches("0x");
 
                     primitive.set_i128(Some(
-                        u128::from_str_radix(&hex_str, 16).map_err(ParseError::ParseIntError)?
+                        u128::from_str_radix(hex_str, 16).map_err(ParseError::ParseIntError)?
                             as i128,
                     ))?;
                 }
