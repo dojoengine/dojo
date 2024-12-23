@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1734974030654,
+  "lastUpdate": 1734974303646,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -42115,6 +42115,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8149620,
             "range": "± 290717",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6be2d0c55e06fc7d41aa49871cbbb7c39dda5f80",
+          "message": "refactor(torii-grpc): chunk schema joins to avoid sqlite join limit (#2839)\n\n* refactor(torii-grpc): chunk schema joins to avoid sqlite join limit\r\n\r\n* update member & composite\r\n\r\n* fmt\r\n\r\n* fix\r\n\r\n* clippy",
+          "timestamp": "2024-12-23T11:01:44-06:00",
+          "tree_id": "3b51487e10ac1fc2413a3ae104e6c9cab5ff8152",
+          "url": "https://github.com/dojoengine/dojo/commit/6be2d0c55e06fc7d41aa49871cbbb7c39dda5f80"
+        },
+        "date": 1734974301474,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10480257516,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
