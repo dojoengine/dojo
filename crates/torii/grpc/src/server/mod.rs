@@ -43,7 +43,7 @@ use tonic::transport::Server;
 use tonic::{Request, Response, Status};
 use tonic_web::GrpcWebLayer;
 use torii_core::error::{Error, ParseError, QueryError};
-use torii_core::model::{build_sql_query, map_row_to_ty};
+use torii_core::model::{fetch_entities, map_row_to_ty};
 use torii_core::sql::cache::ModelCache;
 use torii_core::types::{Token, TokenBalance};
 use tower_http::cors::{AllowOrigin, CorsLayer};
@@ -321,13 +321,10 @@ impl DojoWorld {
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         let where_clause = match &hashed_keys {
             Some(hashed_keys) => {
-                let ids = hashed_keys
-                    .hashed_keys
-                    .iter()
-                    .map(|_| Ok("{table}.id = ?"))
-                    .collect::<Result<Vec<_>, Error>>()?;
+                let ids =
+                    hashed_keys.hashed_keys.iter().map(|_| "{table}.id = ?").collect::<Vec<_>>();
                 format!(
-                    "WHERE {} {}",
+                    "{} {}",
                     ids.join(" OR "),
                     if entity_updated_after.is_some() {
                         format!("AND {table}.updated_at >= ?")
@@ -338,19 +335,20 @@ impl DojoWorld {
             }
             None => {
                 if entity_updated_after.is_some() {
-                    format!("WHERE {table}.updated_at >= ?")
+                    format!("{table}.updated_at >= ?")
                 } else {
                     String::new()
                 }
             }
         };
+
         let mut bind_values = vec![];
         if let Some(hashed_keys) = hashed_keys {
             bind_values = hashed_keys
                 .hashed_keys
                 .iter()
                 .map(|key| format!("{:#x}", Felt::from_bytes_be_slice(key)))
-                .collect::<Vec<_>>()
+                .collect::<Vec<_>>();
         }
         if let Some(entity_updated_after) = entity_updated_after.clone() {
             bind_values.push(entity_updated_after);
@@ -372,49 +370,59 @@ impl DojoWorld {
             .collect::<Vec<_>>()
             .join(" OR ");
 
-        let (query, count_query) = build_sql_query(
-            &schemas,
-            table,
-            model_relation_table,
-            entity_relation_column,
-            if where_clause.is_empty() { None } else { Some(&where_clause) },
-            if !having_clause.is_empty() { Some(&having_clause) } else { None },
-            order_by,
-            limit,
-            offset,
-        )?;
-
-        let mut count_query = sqlx::query_scalar(&count_query);
-        for value in &bind_values {
-            count_query = count_query.bind(value);
-        }
-        let total_count = count_query.fetch_one(&self.pool).await?;
-        if total_count == 0 {
-            return Ok((Vec::new(), 0));
-        }
-
         if table == EVENT_MESSAGES_HISTORICAL_TABLE {
-            let entities =
-                self.fetch_historical_event_messages(&format!(
+            let count_query = format!(
+                r#"
+                SELECT COUNT(*) FROM {table}
+                JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
+                WHERE {where_clause}
+                GROUP BY {table}.event_id
+            "#
+            );
+            let mut total_count = sqlx::query_scalar(&count_query);
+            for value in &bind_values {
+                total_count = total_count.bind(value);
+            }
+            let total_count = total_count.fetch_one(&self.pool).await?;
+            if total_count == 0 {
+                return Ok((Vec::new(), 0));
+            }
+
+            let entities = self.fetch_historical_event_messages(
+                &format!(
                     r#"
                 SELECT {table}.id, {table}.data, {table}.model_id, group_concat({model_relation_table}.model_id) as model_ids
                 FROM {table}
                 JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
-                {where_clause}
+                WHERE {where_clause}
                 GROUP BY {table}.event_id
                 ORDER BY {table}.event_id DESC
              "#
-                ), bind_values, limit, offset).await?;
+                ),
+                bind_values,
+                limit,
+                offset
+            ).await?;
             return Ok((entities, total_count));
         }
 
-        let mut query = sqlx::query(&query);
-        for value in &bind_values {
-            query = query.bind(value);
-        }
-        let entities = query.fetch_all(&self.pool).await?;
-        let entities = entities
-            .iter()
+        let (rows, total_count) = fetch_entities(
+            &self.pool,
+            &schemas,
+            table,
+            model_relation_table,
+            entity_relation_column,
+            if !where_clause.is_empty() { Some(&where_clause) } else { None },
+            if !having_clause.is_empty() { Some(&having_clause) } else { None },
+            order_by,
+            limit,
+            offset,
+            bind_values,
+        )
+        .await?;
+
+        let entities = rows
+            .par_iter()
             .map(|row| map_row_to_entity(row, &schemas, dont_include_hashed_keys))
             .collect::<Result<Vec<_>, Error>>()?;
 
@@ -466,28 +474,25 @@ impl DojoWorld {
             .map(|model| format!("INSTR(model_ids, '{:#x}') > 0", model))
             .collect::<Vec<_>>()
             .join(" OR ");
-        let (query, count_query) = build_sql_query(
-            &schemas,
-            table,
-            model_relation_table,
-            entity_relation_column,
-            Some(&where_clause),
-            if !having_clause.is_empty() { Some(&having_clause) } else { None },
-            order_by,
-            limit,
-            offset,
-        )?;
-
-        let mut count_query = sqlx::query_scalar(&count_query);
-        for value in &bind_values {
-            count_query = count_query.bind(value);
-        }
-        let total_count = count_query.fetch_one(&self.pool).await?;
-        if total_count == 0 {
-            return Ok((Vec::new(), 0));
-        }
 
         if table == EVENT_MESSAGES_HISTORICAL_TABLE {
+            let count_query = format!(
+                r#"
+                SELECT COUNT(*) FROM {table}
+                JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
+                WHERE {where_clause}
+                GROUP BY {table}.event_id
+            "#
+            );
+            let mut total_count = sqlx::query_scalar(&count_query);
+            for value in &bind_values {
+                total_count = total_count.bind(value);
+            }
+            let total_count = total_count.fetch_one(&self.pool).await?;
+            if total_count == 0 {
+                return Ok((Vec::new(), 0));
+            }
+
             let entities = self.fetch_historical_event_messages(
                 &format!(
                     r#"
@@ -506,13 +511,23 @@ impl DojoWorld {
             return Ok((entities, total_count));
         }
 
-        let mut query = sqlx::query(&query);
-        for value in &bind_values {
-            query = query.bind(value);
-        }
-        let entities = query.fetch_all(&self.pool).await?;
-        let entities = entities
-            .iter()
+        let (rows, total_count) = fetch_entities(
+            &self.pool,
+            &schemas,
+            table,
+            model_relation_table,
+            entity_relation_column,
+            Some(&where_clause),
+            if !having_clause.is_empty() { Some(&having_clause) } else { None },
+            order_by,
+            limit,
+            offset,
+            bind_values,
+        )
+        .await?;
+
+        let entities = rows
+            .par_iter()
             .map(|row| map_row_to_entity(row, &schemas, dont_include_hashed_keys))
             .collect::<Result<Vec<_>, Error>>()?;
 
@@ -627,8 +642,13 @@ impl DojoWorld {
                 }
             })
             .collect::<Vec<_>>();
-        let schemas =
-            self.model_cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect();
+        let schemas = self
+            .model_cache
+            .models(&model_ids)
+            .await?
+            .into_iter()
+            .map(|m| m.schema)
+            .collect::<Vec<_>>();
 
         // Use the member name directly as the column name since it's already flattened
         let mut bind_values = Vec::new();
@@ -642,9 +662,11 @@ impl DojoWorld {
         );
         if entity_updated_after.is_some() {
             where_clause += &format!(" AND {table}.updated_at >= ?");
+            bind_values.push(entity_updated_after.unwrap());
         }
 
-        let (entity_query, count_query) = build_sql_query(
+        let (rows, total_count) = fetch_entities(
+            &self.pool,
             &schemas,
             table,
             model_relation_table,
@@ -654,31 +676,16 @@ impl DojoWorld {
             order_by,
             limit,
             offset,
-        )?;
-        let mut count_query = sqlx::query_scalar(&count_query);
-        for value in &bind_values {
-            count_query = count_query.bind(value);
-        }
-        if let Some(entity_updated_after) = entity_updated_after.clone() {
-            count_query = count_query.bind(entity_updated_after);
-        }
-        let total_count = count_query.fetch_optional(&self.pool).await?.unwrap_or(0);
+            bind_values,
+        )
+        .await?;
 
-        let mut query = sqlx::query(&entity_query);
-        for value in &bind_values {
-            query = query.bind(value);
-        }
-        if let Some(entity_updated_after) = entity_updated_after.clone() {
-            query = query.bind(entity_updated_after);
-        }
-        query = query.bind(limit).bind(offset);
-        let db_entities = query.fetch_all(&self.pool).await?;
-
-        let entities_collection: Result<Vec<_>, Error> = db_entities
+        let entities = rows
             .par_iter()
             .map(|row| map_row_to_entity(row, &schemas, dont_include_hashed_keys))
-            .collect();
-        Ok((entities_collection?, total_count))
+            .collect::<Result<Vec<_>, Error>>()?;
+
+        Ok((entities, total_count))
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -700,8 +707,13 @@ impl DojoWorld {
 
         let entity_models =
             entity_models.iter().map(|model| compute_selector_from_tag(model)).collect::<Vec<_>>();
-        let schemas =
-            self.model_cache.models(&entity_models).await?.into_iter().map(|m| m.schema).collect();
+        let schemas = self
+            .model_cache
+            .models(&entity_models)
+            .await?
+            .into_iter()
+            .map(|m| m.schema)
+            .collect::<Vec<_>>();
 
         let having_clause = entity_models
             .iter()
@@ -709,7 +721,8 @@ impl DojoWorld {
             .collect::<Vec<_>>()
             .join(" OR ");
 
-        let (query, count_query) = build_sql_query(
+        let (rows, total_count) = fetch_entities(
+            &self.pool,
             &schemas,
             table,
             model_relation_table,
@@ -719,29 +732,15 @@ impl DojoWorld {
             order_by,
             limit,
             offset,
-        )?;
+            bind_values,
+        )
+        .await?;
 
-        let mut count_query = sqlx::query_scalar(&count_query);
-        for value in &bind_values {
-            count_query = count_query.bind(value);
-        }
-
-        let total_count = count_query.fetch_one(&self.pool).await?;
-        if total_count == 0 {
-            return Ok((Vec::new(), 0));
-        }
-
-        println!("query: {}", query);
-        let mut query = sqlx::query(&query);
-        for value in &bind_values {
-            query = query.bind(value);
-        }
-        let db_entities = query.fetch_all(&self.pool).await?;
-
-        let entities = db_entities
+        let entities = rows
             .par_iter()
             .map(|row| map_row_to_entity(row, &schemas, dont_include_hashed_keys))
             .collect::<Result<Vec<_>, Error>>()?;
+
         Ok((entities, total_count))
     }
 
