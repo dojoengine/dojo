@@ -7,7 +7,7 @@ use katana_trie::bitvec::view::BitView;
 use katana_trie::{BitVec, MultiProof, Path, ProofNode};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ContractStorageKeys {
     #[serde(rename = "contract_address")]
     pub address: ContractAddress,
