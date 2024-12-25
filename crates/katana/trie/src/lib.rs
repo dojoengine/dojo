@@ -38,8 +38,14 @@ where
 {
     pub fn new(db: DB) -> Self {
         let config = BonsaiStorageConfig {
-            max_saved_trie_logs: Some(usize::MAX),
-            max_saved_snapshots: Some(usize::MAX),
+            // we have our own implementation of storing trie changes
+            max_saved_trie_logs: Some(0),
+            // in the bonsai-trie crate, this field seems to be only used in rocksdb impl.
+            // i dont understand why would they add a config thats implementation specific ????
+            //
+            // this config should be used by our implementation of the
+            // BonsaiPersistentDatabase::snapshot()
+            max_saved_snapshots: Some(64usize),
             snapshot_interval: 1,
         };
 
