@@ -695,6 +695,10 @@ impl StateRootProvider for SharedStateProvider {
     fn contracts_root(&self) -> ProviderResult<Felt> {
         unimplemented!("not supported in forked mode")
     }
+
+    fn storage_root(&self, _: ContractAddress) -> ProviderResult<Option<Felt>> {
+        unimplemented!("not supported in forked mode")
+    }
 }
 
 /// A helper function to convert a contract/class not found error returned by the RPC provider into

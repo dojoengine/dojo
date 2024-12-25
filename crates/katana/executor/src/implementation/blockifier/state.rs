@@ -274,6 +274,10 @@ impl<S: StateDb> StateRootProvider for CachedState<S> {
     fn contracts_root(&self) -> ProviderResult<Felt> {
         unimplemented!("not supported in executor's state")
     }
+
+    fn storage_root(&self, _: katana_primitives::ContractAddress) -> ProviderResult<Option<Felt>> {
+        unimplemented!("not supported in executor's state")
+    }
 }
 
 #[cfg(test)]

@@ -5,6 +5,7 @@ use std::marker::PhantomData;
 
 use anyhow::Result;
 use katana_primitives::block::BlockNumber;
+use katana_primitives::ContractAddress;
 use katana_trie::bonsai::{BonsaiDatabase, BonsaiPersistentDatabase, ByteVec, DatabaseKey};
 use katana_trie::CommitId;
 use smallvec::ToSmallVec;
@@ -68,9 +69,13 @@ where
         katana_trie::ClassesTrie::new(TrieDb::new(self.tx.clone()))
     }
 
+    // TODO: makes this return an Option
     /// Returns the storages trie.
-    pub fn storages_trie(&self) -> katana_trie::StoragesTrie<TrieDb<'a, tables::StoragesTrie, Tx>> {
-        katana_trie::StoragesTrie::new(TrieDb::new(self.tx.clone()))
+    pub fn storages_trie(
+        &self,
+        address: ContractAddress,
+    ) -> katana_trie::StoragesTrie<TrieDb<'a, tables::StoragesTrie, Tx>> {
+        katana_trie::StoragesTrie::new(TrieDb::new(self.tx.clone()), address)
     }
 }
 
@@ -104,12 +109,14 @@ where
         katana_trie::ClassesTrie::new(SnapshotTrieDb::new(self.tx.clone(), commit))
     }
 
+    // TODO: makes this return an Option
     /// Returns the historical storages trie.
     pub fn storages_trie(
         &self,
+        address: ContractAddress,
     ) -> katana_trie::StoragesTrie<SnapshotTrieDb<'a, tables::StoragesTrie, Tx>> {
         let commit = CommitId::new(self.block);
-        katana_trie::StoragesTrie::new(SnapshotTrieDb::new(self.tx.clone(), commit))
+        katana_trie::StoragesTrie::new(SnapshotTrieDb::new(self.tx.clone(), commit), address)
     }
 }
 

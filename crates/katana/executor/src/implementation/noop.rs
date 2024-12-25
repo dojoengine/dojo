@@ -204,4 +204,8 @@ impl StateRootProvider for NoopStateProvider {
     fn contracts_root(&self) -> ProviderResult<Felt> {
         Ok(Felt::ZERO)
     }
+
+    fn storage_root(&self, _: ContractAddress) -> ProviderResult<Option<Felt>> {
+        Ok(Some(Felt::ZERO))
+    }
 }

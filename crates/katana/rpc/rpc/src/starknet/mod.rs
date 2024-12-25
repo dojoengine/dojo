@@ -1180,7 +1180,8 @@ where
                 for address in addresses {
                     let nonce = state.nonce(address)?.unwrap_or_default();
                     let class_hash = state.class_hash_of_contract(address)?.unwrap_or_default();
-                    contract_leaves_data.push(ContractLeafData { class_hash, nonce });
+                    let storage_root = state.storage_root(address)?.unwrap_or_default();
+                    contract_leaves_data.push(ContractLeafData { storage_root, class_hash, nonce });
                 }
 
                 ContractsProof { nodes: proofs.into(), contract_leaves_data }
