@@ -1,9 +1,10 @@
 use std::ops::{Deref, DerefMut};
 
 use katana_primitives::contract::StorageKey;
+use katana_primitives::hash::StarkHash;
 use katana_primitives::{ContractAddress, Felt};
-use katana_trie::bonsai::BitSlice;
-use katana_trie::{MultiProof, Path, ProofNode};
+use katana_trie::bitvec::view::BitView;
+use katana_trie::{BitVec, MultiProof, Path, ProofNode};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -24,7 +25,7 @@ pub struct GlobalRoots {
 }
 
 /// Node in the Merkle-Patricia trie.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum MerkleNode {
     /// Represents a path to the highest non-zero descendant node.
@@ -45,6 +46,21 @@ pub enum MerkleNode {
         /// The hash of the right child.
         right: Felt,
     },
+}
+
+impl MerkleNode {
+    // Taken from `bonsai-trie`: https://github.com/madara-alliance/bonsai-trie/blob/bfc6ad47b3cb8b75b1326bf630ca16e581f194c5/src/trie/merkle_node.rs#L234-L248
+    pub fn compute_hash<Hash: StarkHash>(&self) -> Felt {
+        match self {
+            Self::Binary { left, right } => Hash::hash(left, right),
+            Self::Edge { child, path, length } => {
+                let mut length_bytes = [0u8; 32];
+                length_bytes[31] = *length;
+                let length = Felt::from_bytes_be(&length_bytes);
+                Hash::hash(child, path) + length
+            }
+        }
+    }
 }
 
 /// The response type for `starknet_getStorageProof` method.
@@ -142,40 +158,63 @@ impl From<MerkleNode> for ProofNode {
     fn from(value: MerkleNode) -> Self {
         match value {
             MerkleNode::Binary { left, right } => Self::Binary { left, right },
-            MerkleNode::Edge { path, child, .. } => Self::Edge { child, path: felt_to_path(path) },
+            MerkleNode::Edge { path, child, length } => {
+                Self::Edge { child, path: felt_to_path(path, length) }
+            }
         }
     }
 }
 
-fn felt_to_path(felt: Felt) -> Path {
-    Path(BitSlice::from_slice(&felt.to_bytes_be())[5..].to_bitvec())
+fn felt_to_path(felt: Felt, length: u8) -> Path {
+    let length = length as usize;
+    let mut bits = BitVec::new();
+
+    // This function converts a Felt to a Path by preserving leading zeros
+    // that are semantically important in the Merkle tree path representation.
+    //
+    // Example:
+    // For a path "0000100" (length=7):
+    // - As an integer/hex: 0x4 (leading zeros get truncated)
+    // - As a Path: [0,0,0,0,1,0,0] (leading zeros preserved)
+    //
+    // We need to preserve these leading zeros because in a Merkle tree path:
+    // - Each bit represents a direction (left=0, right=1)
+    // - The position/index of each bit matters for the path traversal
+    // - "0000100" and "100" would represent different paths in the tree
+    for bit in &felt.to_bits_be()[256 - length..] {
+        bits.push(*bit);
+    }
+
+    Path(bits)
 }
 
 fn path_to_felt(path: Path) -> Felt {
-    let mut arr = [0u8; 32];
-    let slice = &mut BitSlice::from_slice_mut(&mut arr)[5..];
-    slice[..path.len()].copy_from_bitslice(&path);
-    Felt::from_bytes_be(&arr)
+    let mut bytes = [0u8; 32];
+    bytes.view_bits_mut()[256 - path.len()..].copy_from_bitslice(&path);
+    Felt::from_bytes_be(&bytes)
 }
 
 #[cfg(test)]
 mod tests {
-    use katana_primitives::felt;
+    use katana_trie::BitVec;
 
     use super::*;
 
-    // This test is assuming that the `path` field in `MerkleNode::Edge` is already a valid trie
-    // path value.
+    // Test cases taken from `bonsai-trie` crate
     #[rstest::rstest]
-    #[case(felt!("0x1234567890abcdef"))]
-    #[case(felt!("0xdeadbeef"))]
-    #[case(Felt::MAX)]
-    #[case(Felt::ZERO)]
-    fn test_path_felt_roundtrip(#[case] path_in_felt: Felt) {
-        let initial_path = felt_to_path(path_in_felt);
+    #[case(&[0b10101010, 0b10101010])]
+    #[case(&[])]
+    #[case(&[0b10101010])]
+    #[case(&[0b00000000])]
+    #[case(&[0b11111111])]
+    #[case(&[0b11111111, 0b00000000, 0b10101010, 0b10101010, 0b11111111, 0b00000000, 0b10101010, 0b10101010, 0b11111111, 0b00000000, 0b10101010, 0b10101010])]
+    fn path_felt_rt(#[case] input: &[u8]) {
+        let path = Path(BitVec::from_slice(input));
 
-        let converted_felt = path_to_felt(initial_path.clone());
-        let path = felt_to_path(converted_felt);
-        assert_eq!(initial_path, path);
+        let converted_felt = path_to_felt(path.clone());
+        let converted_path = felt_to_path(converted_felt, path.len() as u8);
+
+        assert_eq!(path, converted_path);
+        assert_eq!(path.len(), converted_path.len());
     }
 }

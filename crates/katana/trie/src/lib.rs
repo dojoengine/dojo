@@ -1,10 +1,7 @@
-use bitvec::array::BitArray;
-use bitvec::order::Msb0;
-use bitvec::vec::BitVec;
 use bitvec::view::AsBits;
-pub use bonsai::{MultiProof, Path, ProofNode};
-pub use bonsai_trie::{BonsaiDatabase, BonsaiPersistentDatabase};
-use bonsai_trie::{BonsaiStorage, BonsaiStorageConfig};
+pub use bonsai::{BitVec, MultiProof, Path, ProofNode};
+use bonsai_trie::BonsaiStorage;
+pub use bonsai_trie::{BonsaiDatabase, BonsaiPersistentDatabase, BonsaiStorageConfig};
 use katana_primitives::class::ClassHash;
 use katana_primitives::Felt;
 use starknet_types_core::hash::{Pedersen, StarkHash};
@@ -15,7 +12,7 @@ mod contracts;
 mod id;
 mod storages;
 
-pub use classes::ClassesTrie;
+pub use classes::*;
 pub use contracts::ContractsTrie;
 pub use id::CommitId;
 pub use storages::StoragesTrie;
@@ -26,7 +23,7 @@ pub use storages::StoragesTrie;
 /// having to handle how to transform the keys into the internal keys used by the trie.
 /// This struct is not meant to be used directly, and instead use the specific tries that have
 /// been derived from it, [`ClassesTrie`], [`ContractsTrie`], or [`StoragesTrie`].
-pub(crate) struct BonsaiTrie<DB, Hash = Pedersen>
+pub struct BonsaiTrie<DB, Hash = Pedersen>
 where
     DB: BonsaiDatabase,
     Hash: StarkHash + Send + Sync,
@@ -59,13 +56,8 @@ where
         self.storage.root_hash(id).expect("failed to get trie root")
     }
 
-    pub fn multiproof(&mut self, id: &[u8], mut keys: Vec<Felt>) -> MultiProof {
-        keys.sort();
-        let keys = keys
-            .into_iter()
-            .map(|key| BitArray::new(key.to_bytes_be()))
-            .map(|hash| hash.as_bitslice()[5..].to_owned());
-
+    pub fn multiproof(&mut self, id: &[u8], keys: Vec<Felt>) -> MultiProof {
+        let keys = keys.into_iter().map(|key| key.to_bytes_be().as_bits()[5..].to_owned());
         self.storage.get_multi_proof(id, keys).expect("failed to get multiproof")
     }
 }
@@ -76,7 +68,7 @@ where
     Hash: StarkHash + Send + Sync,
 {
     pub fn insert(&mut self, id: &[u8], key: Felt, value: Felt) {
-        let key: BitVec<u8, Msb0> = key.to_bytes_be().as_bits()[5..].to_owned();
+        let key: BitVec = key.to_bytes_be().as_bits()[5..].to_owned();
         self.storage.insert(id, &key, &value).unwrap();
     }
 
@@ -130,6 +122,15 @@ pub fn compute_contract_state_hash(
     let hash = Pedersen::hash(class_hash, storage_root);
     let hash = Pedersen::hash(&hash, nonce);
     Pedersen::hash(&hash, &CONTRACT_STATE_HASH_VERSION)
+}
+
+pub fn verify_proof<Hash: StarkHash>(
+    proofs: &MultiProof,
+    root: Felt,
+    keys: Vec<Felt>,
+) -> Vec<Felt> {
+    let keys = keys.into_iter().map(|f| f.to_bytes_be().as_bits()[5..].to_owned());
+    proofs.verify_proof::<Hash>(root, keys, 251).collect::<Result<Vec<Felt>, _>>().unwrap()
 }
 
 #[cfg(test)]
