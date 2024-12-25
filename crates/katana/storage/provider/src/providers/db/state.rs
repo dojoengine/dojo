@@ -11,6 +11,7 @@ use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, Cont
 use katana_primitives::contract::{
     ContractAddress, GenericContractInfo, Nonce, StorageKey, StorageValue,
 };
+use katana_primitives::Felt;
 
 use super::DbProvider;
 use crate::error::ProviderError;
@@ -185,8 +186,8 @@ where
         address: ContractAddress,
         storage_keys: Vec<StorageKey>,
     ) -> ProviderResult<katana_trie::MultiProof> {
-        let mut trie = TrieDbFactory::new(&self.0).latest().storages_trie();
-        let proofs = trie.multiproof(address, storage_keys);
+        let mut trie = TrieDbFactory::new(&self.0).latest().storages_trie(address);
+        let proofs = trie.multiproof(storage_keys);
         Ok(proofs)
     }
 }
@@ -195,14 +196,19 @@ impl<Tx> StateRootProvider for LatestStateProvider<Tx>
 where
     Tx: DbTx + fmt::Debug + Send + Sync,
 {
-    fn classes_root(&self) -> ProviderResult<katana_primitives::Felt> {
+    fn classes_root(&self) -> ProviderResult<Felt> {
         let trie = TrieDbFactory::new(&self.0).latest().classes_trie();
         Ok(trie.root())
     }
 
-    fn contracts_root(&self) -> ProviderResult<katana_primitives::Felt> {
+    fn contracts_root(&self) -> ProviderResult<Felt> {
         let trie = TrieDbFactory::new(&self.0).latest().contracts_trie();
         Ok(trie.root())
+    }
+
+    fn storage_root(&self, contract: ContractAddress) -> ProviderResult<Option<Felt>> {
+        let trie = TrieDbFactory::new(&self.0).latest().storages_trie(contract);
+        Ok(Some(trie.root()))
     }
 }
 
@@ -372,8 +378,8 @@ where
         let proofs = TrieDbFactory::new(&self.tx)
             .historical(self.block_number)
             .expect("should exist")
-            .storages_trie()
-            .multiproof(address, storage_keys);
+            .storages_trie(address)
+            .multiproof(storage_keys);
         Ok(proofs)
     }
 }
@@ -398,6 +404,15 @@ where
             .contracts_trie()
             .root();
         Ok(root)
+    }
+
+    fn storage_root(&self, contract: ContractAddress) -> ProviderResult<Option<Felt>> {
+        let root = TrieDbFactory::new(&self.tx)
+            .historical(self.block_number)
+            .expect("should exist")
+            .storages_trie(contract)
+            .root();
+        Ok(Some(root))
     }
 
     fn state_root(&self) -> ProviderResult<katana_primitives::Felt> {

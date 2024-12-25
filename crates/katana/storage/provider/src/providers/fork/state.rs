@@ -131,6 +131,10 @@ impl StateRootProvider for ForkedStateDb {
     fn contracts_root(&self) -> ProviderResult<katana_primitives::Felt> {
         Ok(katana_primitives::Felt::ZERO)
     }
+
+    fn storage_root(&self, _: ContractAddress) -> ProviderResult<Option<katana_primitives::Felt>> {
+        Ok(Some(katana_primitives::Felt::ZERO))
+    }
 }
 
 #[derive(Debug)]
@@ -202,6 +206,10 @@ impl StateRootProvider for LatestStateProvider {
 
     fn contracts_root(&self) -> ProviderResult<katana_primitives::Felt> {
         Ok(katana_primitives::Felt::ZERO)
+    }
+
+    fn storage_root(&self, _: ContractAddress) -> ProviderResult<Option<katana_primitives::Felt>> {
+        Ok(Some(katana_primitives::Felt::ZERO))
     }
 }
 
@@ -305,6 +313,10 @@ impl StateRootProvider for ForkedSnapshot {
 
     fn contracts_root(&self) -> ProviderResult<katana_primitives::Felt> {
         Ok(katana_primitives::Felt::ZERO)
+    }
+
+    fn storage_root(&self, _: ContractAddress) -> ProviderResult<Option<katana_primitives::Felt>> {
+        Ok(Some(katana_primitives::Felt::ZERO))
     }
 }
 

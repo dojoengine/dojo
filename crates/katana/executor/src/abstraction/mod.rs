@@ -233,6 +233,10 @@ impl<'a> StateRootProvider for StateProviderDb<'a> {
         self.0.contracts_root()
     }
 
+    fn storage_root(&self, contract: ContractAddress) -> ProviderResult<Option<Felt>> {
+        self.0.storage_root(contract)
+    }
+
     fn state_root(&self) -> ProviderResult<Felt> {
         self.0.state_root()
     }
