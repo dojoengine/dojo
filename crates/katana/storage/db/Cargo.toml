@@ -34,6 +34,8 @@ rev = "b34b0d3"
 [dev-dependencies]
 arbitrary.workspace = true
 criterion.workspace = true
+proptest = "1.6.0"
+rstest.workspace = true
 starknet.workspace = true
 
 [features]
