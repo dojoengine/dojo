@@ -92,6 +92,10 @@ pub struct ContractsProof {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ContractLeafData {
+    // NOTE: This field is not specified in the RPC specs, but the contract storage root is
+    // required to compute the contract state hash (ie the value of the contracts trie). We
+    // include this in the response for now to ease the conversions over on SNOS side.
+    pub storage_root: Felt,
     pub nonce: Felt,
     pub class_hash: Felt,
 }

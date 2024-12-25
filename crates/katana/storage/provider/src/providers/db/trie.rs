@@ -10,6 +10,7 @@ use katana_primitives::state::StateUpdates;
 use katana_primitives::{ContractAddress, Felt};
 use katana_trie::{compute_contract_state_hash, ClassesTrie, ContractsTrie, StoragesTrie};
 
+use crate::error::ProviderError;
 use crate::providers::db::DbProvider;
 use crate::traits::state::{StateFactoryProvider, StateProvider};
 use crate::traits::trie::TrieWriter;
@@ -48,24 +49,25 @@ impl<Db: Database> TrieWriter for DbProvider<Db> {
         self.0.update(|tx| {
             let mut contract_trie_db =
                 ContractsTrie::new(TrieDbMut::<tables::ContractsTrie, _>::new(tx));
-            let mut storage_trie_db =
-                StoragesTrie::new(TrieDbMut::<tables::StoragesTrie, _>::new(tx));
 
             let mut contract_leafs: HashMap<ContractAddress, ContractLeaf> = HashMap::new();
 
             let leaf_hashes: Vec<_> = {
                 // First we insert the contract storage changes
                 for (address, storage_entries) in &state_updates.storage_updates {
+                    let mut storage_trie_db =
+                        StoragesTrie::new(TrieDbMut::<tables::StoragesTrie, _>::new(tx), *address);
+
                     for (key, value) in storage_entries {
-                        storage_trie_db.insert(*address, *key, *value);
+                        storage_trie_db.insert(*key, *value);
                     }
                     // insert the contract address in the contract_leafs to put the storage root
                     // later
                     contract_leafs.insert(*address, Default::default());
-                }
 
-                // Then we commit them
-                storage_trie_db.commit(block_number);
+                    // Then we commit them
+                    storage_trie_db.commit(block_number);
+                }
 
                 for (address, nonce) in &state_updates.nonce_updates {
                     contract_leafs.entry(*address).or_default().nonce = Some(*nonce);
@@ -82,15 +84,19 @@ impl<Db: Database> TrieWriter for DbProvider<Db> {
                 contract_leafs
                     .into_iter()
                     .map(|(address, mut leaf)| {
-                        let storage_root = storage_trie_db.root(address);
+                        let storage_trie = StoragesTrie::new(
+                            TrieDbMut::<tables::StoragesTrie, _>::new(tx),
+                            address,
+                        );
+                        let storage_root = storage_trie.root();
                         leaf.storage_root = Some(storage_root);
 
-                        let latest_state = self.latest().unwrap();
+                        let latest_state = self.latest()?;
                         let leaf_hash = contract_state_leaf_hash(latest_state, &address, &leaf);
 
-                        (address, leaf_hash)
+                        Ok((address, leaf_hash))
                     })
-                    .collect::<Vec<_>>()
+                    .collect::<Result<Vec<_>, ProviderError>>()?
             };
 
             for (k, v) in leaf_hashes {
