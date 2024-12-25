@@ -10,6 +10,10 @@ pub struct ContractsTrie<DB: BonsaiDatabase> {
     trie: crate::BonsaiTrie<DB, Pedersen>,
 }
 
+//////////////////////////////////////////////////////////////
+// 	ContractsTrie implementations
+//////////////////////////////////////////////////////////////
+
 impl<DB: BonsaiDatabase> ContractsTrie<DB> {
     /// NOTE: The identifier value is only relevant if the underlying [`BonsaiDatabase`]
     /// implementation is shared across other tries.
@@ -25,7 +29,6 @@ impl<DB: BonsaiDatabase> ContractsTrie<DB> {
 
     pub fn multiproof(&mut self, addresses: Vec<ContractAddress>) -> MultiProof {
         let keys = addresses.into_iter().map(Felt::from).collect::<Vec<Felt>>();
-        dbg!(&keys);
         self.trie.multiproof(Self::BONSAI_IDENTIFIER, keys)
     }
 }

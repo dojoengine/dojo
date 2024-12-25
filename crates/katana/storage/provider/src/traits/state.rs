@@ -26,6 +26,9 @@ pub trait StateRootProvider: Send + Sync {
 
     /// Retrieves the root of the contracts trie.
     fn contracts_root(&self) -> ProviderResult<Felt>;
+
+    /// Retrieves the root of a contract's storage trie.
+    fn storage_root(&self, contract: ContractAddress) -> ProviderResult<Option<Felt>>;
 }
 
 #[auto_impl::auto_impl(&, Box, Arc)]
