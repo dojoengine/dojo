@@ -121,3 +121,124 @@ where
         unimplemented!("modifying trie snapshot is not supported")
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use katana_primitives::felt;
+    use katana_trie::bonsai::DatabaseKey;
+    use katana_trie::{BonsaiPersistentDatabase, CommitId};
+    use proptest::prelude::*;
+    use proptest::strategy;
+
+    use super::*;
+    use crate::abstraction::{Database, DbTx};
+    use crate::mdbx::test_utils;
+    use crate::models::trie::TrieDatabaseKeyType;
+    use crate::tables;
+    use crate::trie::{SnapshotTrieDb, TrieDbMut};
+
+    #[allow(unused)]
+    fn arb_db_key_type() -> BoxedStrategy<TrieDatabaseKeyType> {
+        prop_oneof![
+            Just(TrieDatabaseKeyType::Trie),
+            Just(TrieDatabaseKeyType::Flat),
+            Just(TrieDatabaseKeyType::TrieLog),
+        ]
+        .boxed()
+    }
+
+    #[derive(Debug)]
+    struct Case {
+        number: BlockNumber,
+        keyvalues: HashMap<(TrieDatabaseKeyType, [u8; 32]), [u8; 32]>,
+    }
+
+    prop_compose! {
+        // This create a strategy that generates a random values but always a hardcoded key
+        fn arb_keyvalues_with_fixed_key() (
+            value in any::<[u8;32]>()
+        ) -> HashMap<(TrieDatabaseKeyType, [u8; 32]), [u8; 32]> {
+            let key = (TrieDatabaseKeyType::Trie, felt!("0x112345678921541231").to_bytes_be());
+            HashMap::from_iter([(key, value)])
+        }
+    }
+
+    prop_compose! {
+        fn arb_keyvalues() (
+            keyvalues in prop::collection::hash_map(
+                (arb_db_key_type(), any::<[u8;32]>()),
+                any::<[u8;32]>(),
+                1..100
+            )
+        ) -> HashMap<(TrieDatabaseKeyType, [u8; 32]), [u8; 32]> {
+            keyvalues
+        }
+    }
+
+    prop_compose! {
+        fn arb_block(count: u64, step: u64) (
+            number in (count * step)..((count * step) + step),
+            keyvalues in arb_keyvalues_with_fixed_key()
+        ) -> Case {
+            Case { number, keyvalues }
+        }
+    }
+
+    /// Strategy for generating a list of blocks with `count` size where each block is within a
+    /// range of `step` size. See [`arb_block`].
+    fn arb_blocklist(step: u64, count: usize) -> impl strategy::Strategy<Value = Vec<Case>> {
+        let mut strats = Vec::with_capacity(count);
+        for i in 0..count {
+            strats.push(arb_block(i as u64, step));
+        }
+        strategy::Strategy::prop_map(strats, move |strats| strats)
+    }
+
+    proptest! {
+        #[test]
+        fn test_get_insert(blocks in arb_blocklist(10, 1000)) {
+            let db = test_utils::create_test_db();
+            let tx = db.tx_mut().expect("failed to create rw tx");
+
+            for block in &blocks {
+                let mut trie = TrieDbMut::<tables::ClassesTrie, _>::new(&tx);
+
+                // Insert key/value pairs
+                for ((r#type, key), value) in &block.keyvalues {
+                    let db_key = match r#type {
+                        TrieDatabaseKeyType::Trie => DatabaseKey::Trie(key.as_ref()),
+                        TrieDatabaseKeyType::Flat => DatabaseKey::Flat(key.as_ref()),
+                        TrieDatabaseKeyType::TrieLog => DatabaseKey::TrieLog(key.as_ref()),
+                     };
+
+                    trie.insert(&db_key, value.as_ref(), None).expect("failed to insert");
+                }
+
+                let snapshot_id = CommitId::from(block.number);
+                trie.snapshot(snapshot_id);
+            }
+
+            tx.commit().expect("failed to commit tx");
+            let tx = db.tx().expect("failed to create ro tx");
+
+            for block in &blocks {
+                let snapshot_id = CommitId::from(block.number);
+                let snapshot_db = SnapshotTrieDb::<tables::ClassesTrie, _>::new(&tx, snapshot_id);
+
+                // Verify snapshots
+                for ((r#type, key), value) in &block.keyvalues {
+                    let db_key = match r#type {
+                        TrieDatabaseKeyType::Trie => DatabaseKey::Trie(key.as_ref()),
+                        TrieDatabaseKeyType::Flat => DatabaseKey::Flat(key.as_ref()),
+                        TrieDatabaseKeyType::TrieLog => DatabaseKey::TrieLog(key.as_ref()),
+                     };
+
+                    let result = snapshot_db.get(&db_key).unwrap();
+                    prop_assert_eq!(result.as_ref().map(|x| x.as_slice()), Some(value.as_slice()));
+                }
+            }
+        }
+    }
+}

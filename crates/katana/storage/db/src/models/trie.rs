@@ -42,6 +42,23 @@ pub enum TrieDatabaseKeyType {
     TrieLog,
 }
 
+#[derive(Debug, thiserror::Error)]
+#[error("unknown trie key type: {0}")]
+pub struct TrieDatabaseKeyTypeTryFromError(u8);
+
+impl TryFrom<u8> for TrieDatabaseKeyType {
+    type Error = TrieDatabaseKeyTypeTryFromError;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(Self::Trie),
+            1 => Ok(Self::Flat),
+            2 => Ok(Self::TrieLog),
+            invalid => Err(TrieDatabaseKeyTypeTryFromError(invalid)),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct TrieDatabaseKey {
     pub r#type: TrieDatabaseKeyType,
@@ -68,16 +85,11 @@ impl Decode for TrieDatabaseKey {
 
         if bytes.len() < 2 {
             // Need at least type and length bytes
-            panic!("emptyy buffer")
+            panic!("empty buffer")
         }
 
-        let r#type = match bytes[0] {
-            0 => TrieDatabaseKeyType::Trie,
-            1 => TrieDatabaseKeyType::Flat,
-            2 => TrieDatabaseKeyType::TrieLog,
-            _ => panic!("Invalid trie database key type"),
-        };
-
+        let r#type =
+            TrieDatabaseKeyType::try_from(bytes[0]).expect("Invalid trie database key type");
         let key_len = bytes[1] as usize;
 
         if bytes.len() < 2 + key_len {
