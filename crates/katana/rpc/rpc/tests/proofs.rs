@@ -7,9 +7,13 @@ use katana_node::config::rpc::DEFAULT_RPC_MAX_PROOF_KEYS;
 use katana_node::config::SequencingConfig;
 use katana_primitives::block::BlockIdOrTag;
 use katana_primitives::class::{ClassHash, CompiledClassHash};
-use katana_primitives::Felt;
+use katana_primitives::contract::{StorageKey, StorageValue};
+use katana_primitives::{hash, ContractAddress, Felt};
 use katana_rpc_api::starknet::StarknetApiClient;
-use katana_trie::{compute_classes_trie_value, ClassesMultiProof, MultiProof};
+use katana_rpc_types::trie::ContractStorageKeys;
+use katana_trie::{
+    compute_classes_trie_value, compute_contract_state_hash, ClassesMultiProof, MultiProof,
+};
 use starknet::accounts::{Account, ConnectedAccount, SingleOwnerAccount};
 use starknet::core::types::BlockTag;
 use starknet::providers::jsonrpc::HttpTransport;
@@ -68,6 +72,115 @@ async fn proofs_limit() {
 
         assert_eq!(actual_data, expected_data);
     });
+}
+
+#[tokio::test]
+async fn genesis_states() {
+    let cfg = get_default_test_config(SequencingConfig::default());
+
+    let sequencer = TestSequencer::start(cfg).await;
+    let genesis_states = sequencer.backend().chain_spec.state_updates();
+
+    // We need to use the jsonrpsee client because `starknet-rs` doesn't yet support RPC 0.8.0
+    let client = HttpClientBuilder::default().build(sequencer.url()).unwrap();
+
+    // Check class declarations
+    let genesis_classes =
+        genesis_states.state_updates.declared_classes.keys().cloned().collect::<Vec<ClassHash>>();
+
+    // Check contract deployments
+    let genesis_contracts = genesis_states
+        .state_updates
+        .deployed_contracts
+        .keys()
+        .cloned()
+        .collect::<Vec<ContractAddress>>();
+
+    // Check contract storage
+    let genesis_contract_storages = genesis_states
+        .state_updates
+        .storage_updates
+        .iter()
+        .map(|(address, keys)| ContractStorageKeys {
+            address: *address,
+            keys: keys.keys().cloned().collect(),
+        })
+        .collect::<Vec<ContractStorageKeys>>();
+
+    let proofs = client
+        .get_storage_proof(
+            BlockIdOrTag::Tag(BlockTag::Latest),
+            Some(genesis_classes.clone()),
+            Some(genesis_contracts.clone()),
+            Some(genesis_contract_storages.clone()),
+        )
+        .await
+        .expect("failed to get state proofs");
+
+    // -----------------------------------------------------------------------
+    // Verify classes proofs
+
+    let classes_proof = MultiProof::from(proofs.classes_proof.nodes);
+    let classes_tree_root = proofs.global_roots.classes_tree_root;
+    let classes_verification_result = katana_trie::verify_proof::<hash::Pedersen>(
+        &classes_proof,
+        classes_tree_root,
+        genesis_classes,
+    );
+
+    // Compute the classes trie values
+    let class_trie_entries = genesis_states
+        .state_updates
+        .declared_classes
+        .values()
+        .map(|compiled_hash| compute_classes_trie_value(*compiled_hash))
+        .collect::<Vec<Felt>>();
+
+    assert_eq!(class_trie_entries, classes_verification_result);
+
+    // -----------------------------------------------------------------------
+    // Verify contracts proofs
+
+    let contracts_proof = MultiProof::from(proofs.contracts_proof.nodes);
+    let contracts_tree_root = proofs.global_roots.contracts_tree_root;
+    let contracts_verification_result = katana_trie::verify_proof::<hash::Pedersen>(
+        &contracts_proof,
+        contracts_tree_root,
+        genesis_contracts.into_iter().map(Felt::from).collect(),
+    );
+
+    // Compute the classes trie values
+    let contracts_trie_entries = proofs
+        .contracts_proof
+        .contract_leaves_data
+        .into_iter()
+        .map(|d| compute_contract_state_hash(&d.class_hash, &d.storage_root, &d.nonce))
+        .collect::<Vec<Felt>>();
+
+    assert_eq!(contracts_trie_entries, contracts_verification_result);
+
+    // -----------------------------------------------------------------------
+    // Verify contracts proofs
+
+    let storages_updates = &genesis_states.state_updates.storage_updates.values();
+    let storages_proofs = proofs.contracts_storage_proofs.nodes;
+
+    // The order of which the proofs are returned is of the same order of the proofs requests.
+    for (storages, proofs) in storages_updates.clone().zip(storages_proofs) {
+        let storage_keys = storages.keys().cloned().collect::<Vec<StorageKey>>();
+        let storage_values = storages.values().cloned().collect::<Vec<StorageValue>>();
+
+        let contracts_storages_proof = MultiProof::from(proofs);
+        let (storage_tree_root, ..) = contracts_storages_proof.0.first().unwrap();
+
+        let storages_verification_result = katana_trie::verify_proof::<hash::Pedersen>(
+            &contracts_storages_proof,
+            *storage_tree_root,
+            storage_keys,
+        );
+
+        assert_eq!(storage_values, storages_verification_result);
+    }
 }
 
 #[tokio::test]
