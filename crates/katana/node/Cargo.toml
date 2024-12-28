@@ -25,6 +25,7 @@ jsonrpsee.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 starknet.workspace = true
+thiserror.workspace = true
 tower = { workspace = true, features = [ "full" ] }
 tower-http = { workspace = true, features = [ "full" ] }
 tracing.workspace = true
