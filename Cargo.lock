@@ -8674,6 +8674,7 @@ dependencies = [
  "starknet 0.12.0",
  "strum 0.25.0",
  "strum_macros 0.25.3",
+ "thiserror 1.0.63",
  "tokio",
  "tower 0.4.13",
  "tower-http 0.4.4",
