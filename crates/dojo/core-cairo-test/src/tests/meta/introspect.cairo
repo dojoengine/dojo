@@ -12,11 +12,11 @@ struct WithArray {
     arr: Array<u8>
 }
 
-// #[derive(Drop, Introspect)]
-// struct WithFixedArray {
-//     value: u32,
-//     arr: [u8; 3]
-// }
+#[derive(Drop, Introspect)]
+struct WithFixedArray {
+    value: u32,
+    arr: [u8; 3]
+}
 
 #[derive(Drop, Introspect)]
 struct WithByteArray {

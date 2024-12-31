@@ -1,7 +1,7 @@
-// use regex::Regex;
+use regex::Regex;
 use std::collections::HashMap;
 
-// const FIXED_ARRAY_REGEX: &str = r"\[[^;]+;\s*\d{1,10}\s*\]";
+const FIXED_ARRAY_REGEX: &str = r"\[[^;]+;\s*\d{1,10}\s*\]";
 
 #[derive(Clone, Default, Debug)]
 pub struct TypeIntrospection(pub usize, pub Vec<usize>);
@@ -30,10 +30,10 @@ pub fn is_unsupported_option_type(ty: &str) -> bool {
     ty.starts_with("Option<(")
 }
 
-// pub fn is_fixed_array(ty: &str) -> bool {
-//     let re = Regex::new(FIXED_ARRAY_REGEX).unwrap();
-//     re.is_match(ty)
-// }
+pub fn is_fixed_array(ty: &str) -> bool {
+    let re = Regex::new(FIXED_ARRAY_REGEX).unwrap();
+    re.is_match(ty)
+}
 
 pub fn is_byte_array(ty: &str) -> bool {
     ty.eq("ByteArray")
@@ -55,10 +55,10 @@ pub fn get_array_item_type(ty: &str) -> String {
     }
 }
 
-// pub fn get_fixed_array_type_and_size(ty: &str) -> (String, usize) {
-//     let mut parts = ty.trim().strip_prefix('[').unwrap().strip_suffix(']').unwrap().split(';');
-//     (parts.next().unwrap().trim().to_string(), parts.last().unwrap().trim().parse().unwrap())
-// }
+pub fn get_fixed_array_type_and_size(ty: &str) -> (String, usize) {
+    let mut parts = ty.trim().strip_prefix('[').unwrap().strip_suffix(']').unwrap().split(';');
+    (parts.next().unwrap().trim().to_string(), parts.last().unwrap().trim().parse().unwrap())
+}
 /// split a tuple in array of items (nested tuples are not splitted).
 /// example (u8, (u16, u32), u128) -> ["u8", "(u16, u32)", "u128"]
 pub fn get_tuple_item_types(ty: &str) -> Vec<String> {

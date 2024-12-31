@@ -11,7 +11,7 @@ pub enum Ty {
     // And `Box` is not serializable. So using a Span, even if it's to have
     // one element, does the trick.
     Array: Span<Ty>,
-    // FixedArray: Span<(Ty, u32)>,
+    FixedArray: Span<(Ty, u32)>,
     ByteArray,
 }
 
@@ -91,20 +91,21 @@ pub impl Introspect_bool of Introspect<bool> {
     }
 }
 
-// pub impl Introspect_FixedArray<T, const N: usize, +Introspect<T>> of Introspect<[T; N]> {
-//     fn size() -> Option<usize> {
-//         match Introspect::<T>::size() {
-//             Option::Some(size) => Option::Some(size * N),
-//             Option::None => Option::None
-//         }
-//     }
-//     fn layout() -> Layout {
-//         Layout::FixedArray([(Introspect::<T>::layout(), N)].span())
-//     }
-//     fn ty() -> Ty {
-//         Ty::FixedArray([(Introspect::<T>::ty(), N)].span())
-//     }
-// }
+pub impl Introspect_FixedArray<T, const N: usize, +Introspect<T>> of Introspect<[T; N]> {
+    fn size() -> Option<usize> {
+        match Introspect::<T>::size() {
+            Option::Some(size) => Option::Some(size * N),
+            Option::None => Option::None
+        }
+    }
+    fn layout() -> Layout {
+        Layout::FixedArray([(Introspect::<T>::layout(), N)].span())
+    }
+    fn ty() -> Ty {
+        Ty::FixedArray([(Introspect::<T>::ty(), N)].span())
+    }
+}
+
 
 pub impl Introspect_u8 of Introspect<u8> {
     fn size() -> Option<usize> {

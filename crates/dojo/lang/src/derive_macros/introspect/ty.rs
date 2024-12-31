@@ -5,7 +5,10 @@ use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode};
 
-use super::utils::{get_array_item_type, get_tuple_item_types, is_array, is_byte_array, is_tuple};
+use super::utils::{
+    get_array_item_type, get_fixed_array_type_and_size, get_tuple_item_types, is_array,
+    is_byte_array, is_fixed_array, is_tuple,
+};
 
 pub fn build_struct_ty(db: &dyn SyntaxGroup, name: &String, struct_ast: &ItemStruct) -> String {
     let members_ty = struct_ast
@@ -56,7 +59,7 @@ pub fn build_member_ty(db: &dyn SyntaxGroup, member: &Member) -> String {
     let attrs = if member.has_attr(db, "key") { vec!["'key'"] } else { vec![] };
 
     format!(
-        "dojo::meta::introspect::FixedArray {{
+        "dojo::meta::introspect::Member {{
             name: '{name}',
             attrs: array![{}].span(),
             ty: {}
@@ -107,17 +110,17 @@ pub fn build_item_ty_from_type(item_type: &String) -> String {
             )",
             build_item_ty_from_type(&array_item_type)
         )
-    // } else if is_fixed_array(item_type) {
-    //     let (array_item_type, size) = get_fixed_array_type_and_size(&item_type);
-    //     format!(
-    //         "dojo::meta::introspect::Ty::FixedArray(
-    //             array![
-    //             ({}, {})
-    //             ].span()
-    //         )",
-    //         build_item_ty_from_type(&array_item_type),
-    //         size
-    //     )
+    } else if is_fixed_array(item_type) {
+        let (array_item_type, size) = get_fixed_array_type_and_size(&item_type);
+        format!(
+            "dojo::meta::introspect::Ty::FixedArray(
+                array![
+                ({}, {})
+                ].span()
+            )",
+            build_item_ty_from_type(&array_item_type),
+            size
+        )
     } else if is_byte_array(item_type) {
         "dojo::meta::introspect::Ty::ByteArray".to_string()
     } else if is_tuple(item_type) {
