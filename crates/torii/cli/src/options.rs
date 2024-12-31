@@ -2,10 +2,12 @@ use std::net::{IpAddr, Ipv4Addr};
 use std::str::FromStr;
 
 use anyhow::Context;
+use dojo_utils::parse::parse_url;
 use serde::ser::SerializeSeq;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::Felt;
 use torii_core::types::{Contract, ContractType};
+use url::Url;
 
 pub const DEFAULT_HTTP_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::LOCALHOST);
 pub const DEFAULT_HTTP_PORT: u16 = 8080;
@@ -19,6 +21,9 @@ pub const DEFAULT_MAX_CONCURRENT_TASKS: usize = 100;
 pub const DEFAULT_RELAY_PORT: u16 = 9090;
 pub const DEFAULT_RELAY_WEBRTC_PORT: u16 = 9091;
 pub const DEFAULT_RELAY_WEBSOCKET_PORT: u16 = 9092;
+
+pub const DEFAULT_REPLICA_ENTITIES: bool = true;
+pub const DEFAULT_REPLICA_EVENT_MESSAGES: bool = true;
 
 #[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq)]
 #[command(next_help_heading = "Relay options")]
@@ -313,6 +318,32 @@ impl Default for MetricsOptions {
             metrics: false,
             metrics_addr: DEFAULT_METRICS_ADDR,
             metrics_port: DEFAULT_METRICS_PORT,
+        }
+    }
+}
+
+#[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq)]
+#[command(next_help_heading = "Replica options")]
+pub struct ReplicaOptions {
+    /// The master torii URL to connect to
+    #[arg(long, value_name = "URL", value_parser = parse_url)]
+    pub master_torii: Option<Url>,
+
+    /// If this replica should sync entity updates
+    #[arg(long, default_value_t = DEFAULT_REPLICA_ENTITIES)]
+    pub entities: bool,
+
+    /// If this replica should sync event messages
+    #[arg(long, default_value_t = DEFAULT_REPLICA_EVENT_MESSAGES)]
+    pub event_messages: bool,
+}
+
+impl Default for ReplicaOptions {
+    fn default() -> Self {
+        Self {
+            master_torii: None,
+            entities: DEFAULT_REPLICA_ENTITIES,
+            event_messages: DEFAULT_REPLICA_EVENT_MESSAGES,
         }
     }
 }

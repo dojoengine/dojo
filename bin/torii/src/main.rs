@@ -39,6 +39,7 @@ use torii_core::simple_broker::SimpleBroker;
 use torii_core::sql::cache::ModelCache;
 use torii_core::sql::Sql;
 use torii_core::types::{Contract, ContractType, Model};
+use torii_grpc::client::WorldClient;
 use torii_server::proxy::Proxy;
 use tracing::{error, info};
 use tracing_subscriber::{fmt, EnvFilter};
