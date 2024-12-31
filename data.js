@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1735664765049,
+  "lastUpdate": 1735664793309,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -42535,6 +42535,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8153474,
             "range": "± 49171",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "valentin@pupucecorp.com",
+            "name": "Brother MartianGreed",
+            "username": "MartianGreed"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bd8afc8b72b2d30c5020869cee0602d1316d241f",
+          "message": "feat: add events in typescript bindgen + sort functions by name (#2853)",
+          "timestamp": "2024-12-31T10:46:44-06:00",
+          "tree_id": "5f500fc3ab56b57cb941109f4d6668142a7998c3",
+          "url": "https://github.com/dojoengine/dojo/commit/bd8afc8b72b2d30c5020869cee0602d1316d241f"
+        },
+        "date": 1735664791621,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2461043,
+            "range": "± 34507",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 7865215,
+            "range": "± 171163",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3602867977,
+            "range": "± 763759398",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8179611,
+            "range": "± 108281",
             "unit": "ns/iter"
           }
         ]
