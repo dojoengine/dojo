@@ -22,9 +22,9 @@ pub fn write_layout(
         Layout::Fixed(layout) => { write_fixed_layout(model, key, values, ref offset, layout); },
         Layout::Struct(layout) => { write_struct_layout(model, key, values, ref offset, layout); },
         Layout::Array(layout) => { write_array_layout(model, key, values, ref offset, layout); },
-        Layout::FixedArray(layout) => {
-            write_fixed_array_layout(model, key, values, ref offset, layout);
-        },
+        // Layout::FixedArray(layout) => {
+        //     write_fixed_array_layout(model, key, values, ref offset, layout);
+        // },
         Layout::Tuple(layout) => { write_tuple_layout(model, key, values, ref offset, layout); },
         Layout::ByteArray => { write_byte_array_layout(model, key, values, ref offset); },
         Layout::Enum(layout) => { write_enum_layout(model, key, values, ref offset, layout); }
@@ -92,29 +92,29 @@ pub fn write_array_layout(
 /// * `values` - the model record values.
 /// * `offset` - the start of model record values in the `values` parameter.
 /// * `item_layout` - the model record layout (temporary a Span because of type recursion issue).
-pub fn write_fixed_array_layout(
-    model: felt252,
-    key: felt252,
-    values: Span<felt252>,
-    ref offset: u32,
-    mut item_layout: Span<(Layout, u32)>
-) {
-    let (item_layout, array_len): (Layout, u32) = *item_layout.pop_front().unwrap();
-    assert((values.len() - offset) >= array_len, 'Invalid values length');
+// pub fn write_fixed_array_layout(
+//     model: felt252,
+//     key: felt252,
+//     values: Span<felt252>,
+//     ref offset: u32,
+//     mut item_layout: Span<(Layout, u32)>
+// ) {
+//     let (item_layout, array_len): (Layout, u32) = *item_layout.pop_front().unwrap();
+//     assert((values.len() - offset) >= array_len, 'Invalid values length');
 
-    // first, read array size which is the first felt252 from values
-    assert(array_len.into() <= database::MAX_ARRAY_LENGTH, 'invalid array length');
+//     // first, read array size which is the first felt252 from values
+//     assert(array_len.into() <= database::MAX_ARRAY_LENGTH, 'invalid array length');
 
-    // then, write the array size
-    database::set(model, key, values, offset, [packing::PACKING_MAX_BITS].span());
-    offset += 1;
+//     // then, write the array size
+//     database::set(model, key, values, offset, [packing::PACKING_MAX_BITS].span());
+//     offset += 1;
 
-    // and then, write array items
-    for i in 0
-        ..array_len {
-            write_layout(model, combine_key(key, i.into()), values, ref offset, item_layout);
-        };
-}
+//     // and then, write array items
+//     for i in 0
+//         ..array_len {
+//             write_layout(model, combine_key(key, i.into()), values, ref offset, item_layout);
+//         };
+// }
 
 ///
 pub fn write_byte_array_layout(
@@ -247,13 +247,13 @@ pub fn delete_array_layout(model: felt252, key: felt252) {
     database::delete(model, key, [packing::PACKING_MAX_BITS].span());
 }
 
-pub fn delete_fixed_array_layout(model: felt252, key: felt252, mut layout: Span<(Layout, u32)>) {
-    let (item_layout, array_len): (Layout, u32) = *layout.pop_front().unwrap();
-    database::delete(model, key, [packing::PACKING_MAX_BITS].span());
-    for i in 0..array_len {
-        delete_layout(model, combine_key(key, i.into()), item_layout);
-    }
-}
+// pub fn delete_fixed_array_layout(model: felt252, key: felt252, mut layout: Span<(Layout, u32)>) {
+//     let (item_layout, array_len): (Layout, u32) = *layout.pop_front().unwrap();
+//     database::delete(model, key, [packing::PACKING_MAX_BITS].span());
+//     for i in 0..array_len {
+//         delete_layout(model, combine_key(key, i.into()), item_layout);
+//     }
+// }
 
 ///
 pub fn delete_byte_array_layout(model: felt252, key: felt252) {
@@ -284,7 +284,7 @@ pub fn delete_layout(model: felt252, key: felt252, layout: Layout) {
         Layout::Fixed(layout) => { delete_fixed_layout(model, key, layout); },
         Layout::Struct(layout) => { delete_struct_layout(model, key, layout); },
         Layout::Array(_) => { delete_array_layout(model, key); },
-        Layout::FixedArray(layout) => { delete_fixed_array_layout(model, key, layout); },
+        // Layout::FixedArray(layout) => { delete_fixed_array_layout(model, key, layout); },
         Layout::Tuple(layout) => { delete_tuple_layout(model, key, layout); },
         Layout::ByteArray => { delete_byte_array_layout(model, key); },
         Layout::Enum(layout) => { delete_enum_layout(model, key, layout); }
@@ -367,7 +367,7 @@ pub fn read_layout(model: felt252, key: felt252, ref read_data: Array<felt252>, 
         Layout::Fixed(layout) => read_fixed_layout(model, key, ref read_data, layout),
         Layout::Struct(layout) => read_struct_layout(model, key, ref read_data, layout),
         Layout::Array(layout) => read_array_layout(model, key, ref read_data, layout),
-        Layout::FixedArray(layout) => read_fixed_array_layout(model, key, ref read_data, layout),
+        // Layout::FixedArray(layout) => read_fixed_array_layout(model, key, ref read_data, layout),
         Layout::Tuple(layout) => read_tuple_layout(model, key, ref read_data, layout),
         Layout::ByteArray => read_byte_array_layout(model, key, ref read_data),
         Layout::Enum(layout) => read_enum_layout(model, key, ref read_data, layout),
@@ -423,34 +423,23 @@ pub fn read_array_layout(
     };
 }
 
-pub fn read_fixed_array_layout(
-    model: felt252, key: felt252, ref read_data: Array<felt252>, mut layout: Span<(Layout, u32)>
-) {
-    // read number of array items
-    let (item_layout, array_len): (Layout, u32) = *layout.pop_front().unwrap();
-    let res = database::get(model, key, [packing::PACKING_MAX_BITS].span());
-    assert(res.len() == 1, 'internal database error');
+// pub fn read_fixed_array_layout(
+//     model: felt252, key: felt252, ref read_data: Array<felt252>, mut layout: Span<(Layout, u32)>
+// ) {
+//     // read number of array items
+//     let (item_layout, array_len): (Layout, u32) = *layout.pop_front().unwrap();
+//     let res = database::get(model, key, [packing::PACKING_MAX_BITS].span());
+//     assert(res.len() == 1, 'internal database error');
 
-    assert(array_len.into() <= database::MAX_ARRAY_LENGTH, 'invalid array length');
+//     assert(array_len.into() <= database::MAX_ARRAY_LENGTH, 'invalid array length');
 
-    read_data.append(array_len.into());
+//     read_data.append(array_len.into());
 
-    let mut i = 0;
-    loop {
-        if i >= array_len {
-            break;
-        }
-
-        let field_key = combine_key(key, i.into());
-        read_layout(model, field_key, ref read_data, item_layout);
-
-        i += 1;
-    };
-    for i in 0
-        ..array_len {
-            read_layout(model, combine_key(key, i.into()), ref read_data, item_layout);
-        };
-}
+//     for i in 0
+//         ..array_len {
+//             read_layout(model, combine_key(key, i.into()), ref read_data, item_layout);
+//         };
+// }
 
 ///
 pub fn read_byte_array_layout(model: felt252, key: felt252, ref read_data: Array<felt252>) {

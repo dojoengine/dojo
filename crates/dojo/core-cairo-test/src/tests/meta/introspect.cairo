@@ -12,12 +12,11 @@ struct WithArray {
     arr: Array<u8>
 }
 
-#[derive(Drop, Introspect)]
-struct WithFixedArray {
-    value: u32,
-    arr: [u8; 3]
-}
-
+// #[derive(Drop, Introspect)]
+// struct WithFixedArray {
+//     value: u32,
+//     arr: [u8; 3]
+// }
 
 #[derive(Drop, Introspect)]
 struct WithByteArray {
@@ -173,11 +172,11 @@ fn test_size_with_array() {
     assert!(Introspect::<WithArray>::size().is_none());
 }
 
-fn test_size_with_fixed_array() {
-    let size = Introspect::<WithFixedArray>::size();
-    assert!(size.is_some());
-    assert!(size.unwrap() == 4);
-}
+// fn test_size_with_fixed_array() {
+//     let size = Introspect::<WithFixedArray>::size();
+//     assert!(size.is_some());
+//     assert!(size.unwrap() == 4);
+// }
 
 #[test]
 fn test_size_with_byte_array() {
