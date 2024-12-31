@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1735664549966,
+  "lastUpdate": 1735664575533,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -42456,6 +42456,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 10130284621,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "valentin@pupucecorp.com",
+            "name": "Brother MartianGreed",
+            "username": "MartianGreed"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bd8afc8b72b2d30c5020869cee0602d1316d241f",
+          "message": "feat: add events in typescript bindgen + sort functions by name (#2853)",
+          "timestamp": "2024-12-31T10:46:44-06:00",
+          "tree_id": "5f500fc3ab56b57cb941109f4d6668142a7998c3",
+          "url": "https://github.com/dojoengine/dojo/commit/bd8afc8b72b2d30c5020869cee0602d1316d241f"
+        },
+        "date": 1735664573654,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 9992967480,
             "range": "± 0",
             "unit": "ns/iter"
           }
