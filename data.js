@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1735664575533,
+  "lastUpdate": 1735664765049,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -42487,6 +42487,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 9992967480,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "valentin@pupucecorp.com",
+            "name": "Brother MartianGreed",
+            "username": "MartianGreed"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d21b1a1a9ecfeca8923bfcf5f7ce2433de0399a7",
+          "message": "feat: split calldata and provider call (#2852)",
+          "timestamp": "2024-12-31T10:46:12-06:00",
+          "tree_id": "8fd9bba3d7bb72f8c5dbcd1203a50cf3d6f8e81f",
+          "url": "https://github.com/dojoengine/dojo/commit/d21b1a1a9ecfeca8923bfcf5f7ce2433de0399a7"
+        },
+        "date": 1735664762561,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2447067,
+            "range": "± 10665",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 7899268,
+            "range": "± 298413",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3769600562,
+            "range": "± 779709121",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8153474,
+            "range": "± 49171",
             "unit": "ns/iter"
           }
         ]
