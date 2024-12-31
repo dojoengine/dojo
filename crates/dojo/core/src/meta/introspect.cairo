@@ -91,6 +91,21 @@ pub impl Introspect_bool of Introspect<bool> {
     }
 }
 
+pub impl Introspect_FixedArray<T, const N: usize, +Introspect<T>> of Introspect<[T; N]> {
+    fn size() -> Option<usize> {
+        match Introspect::<T>::size() {
+            Option::Some(size) => Option::Some(size * N),
+            Option::None => Option::None
+        }
+    }
+    fn layout() -> Layout {
+        Layout::FixedArray([(Introspect::<T>::layout(), N)].span())
+    }
+    fn ty() -> Ty {
+        Ty::FixedArray([(Introspect::<T>::ty(), N)].span())
+    }
+}
+
 pub impl Introspect_u8 of Introspect<u8> {
     fn size() -> Option<usize> {
         Option::Some(1)
