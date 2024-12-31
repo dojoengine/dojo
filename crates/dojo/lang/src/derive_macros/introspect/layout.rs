@@ -7,9 +7,15 @@ use cairo_lang_syntax::node::{ids, Terminal, TypedSyntaxNode};
 use starknet::core::utils::get_selector_from_name;
 
 use super::utils::{
-    get_array_item_type, get_tuple_item_types, is_array, is_byte_array, is_tuple,
-    is_unsupported_option_type, primitive_type_introspection,
+    get_array_item_type, get_fixed_array_type_and_size, get_tuple_item_types, is_array,
+    is_byte_array, is_fixed_array, is_tuple, is_unsupported_option_type,
+    primitive_type_introspection,
 };
+
+pub enum Wrapper {
+    Introspect,
+    Array(String),
+}
 
 /// build the full layout for every field in the Struct.
 pub fn build_field_layouts(
@@ -110,26 +116,62 @@ pub fn build_array_layout_from_type(
 ) -> String {
     let array_item_type = get_array_item_type(item_type);
 
-    if is_tuple(&array_item_type) {
-        format!(
-            "dojo::meta::Layout::Array(
-                array![
-                    {}
-                ].span()
-            )",
-            build_item_layout_from_type(diagnostics, diagnostic_item, &array_item_type)
-        )
-    } else if is_array(&array_item_type) {
-        format!(
-            "dojo::meta::Layout::Array(
-                array![
-                    {}
-                ].span()
-            )",
-            build_array_layout_from_type(diagnostics, diagnostic_item, &array_item_type)
-        )
+    match build_member_layout_from_type(diagnostics, diagnostic_item, &array_item_type) {
+        Wrapper::Introspect => {
+            format!("dojo::meta::introspect::Introspect::<{}>::layout()", array_item_type)
+        }
+        Wrapper::Array(layout) => {
+            format!(
+                "dojo::meta::Layout::Array(
+                    array![
+                        {}
+                    ].span(),
+                )",
+                layout
+            )
+        }
+    }
+}
+
+pub fn build_member_layout_from_type(
+    diagnostics: &mut Vec<PluginDiagnostic>,
+    diagnostic_item: ids::SyntaxStablePtrId,
+    item_type: &str,
+) -> Wrapper {
+    if is_array(item_type) {
+        Wrapper::Array(build_array_layout_from_type(diagnostics, diagnostic_item, item_type))
+    } else if is_fixed_array(item_type) {
+        Wrapper::Array(build_fixed_array_layout_from_type(diagnostics, diagnostic_item, item_type))
+    } else if is_tuple(item_type) {
+        Wrapper::Array(build_tuple_layout_from_type(diagnostics, diagnostic_item, item_type))
     } else {
-        format!("dojo::meta::introspect::Introspect::<{}>::layout()", item_type)
+        Wrapper::Introspect
+    }
+}
+
+pub fn build_fixed_array_layout_from_type(
+    diagnostics: &mut Vec<PluginDiagnostic>,
+    diagnostic_item: ids::SyntaxStablePtrId,
+    item_type: &str,
+) -> String {
+    let (array_item_type, array_size) = get_fixed_array_type_and_size(item_type);
+    match build_member_layout_from_type(diagnostics, diagnostic_item, &array_item_type) {
+        Wrapper::Introspect => {
+            format!(
+                "dojo::meta::introspect::Introspect::<({}, {})>::layout()",
+                array_item_type, array_size
+            )
+        }
+        Wrapper::Array(layout) => {
+            format!(
+                "dojo::meta::Layout::FixedArray(
+                    array![
+                        ({}, {})
+                    ].span(),
+                )",
+                layout, array_size
+            )
+        }
     }
 }
 
@@ -164,6 +206,8 @@ pub fn build_item_layout_from_type(
 ) -> String {
     if is_array(item_type) {
         build_array_layout_from_type(diagnostics, diagnostic_item, item_type)
+    } else if is_fixed_array(item_type) {
+        build_fixed_array_layout_from_type(diagnostics, diagnostic_item, item_type)
     } else if is_tuple(item_type) {
         build_tuple_layout_from_type(diagnostics, diagnostic_item, item_type)
     } else {
@@ -343,6 +387,8 @@ pub fn get_packed_item_layout_from_type(
         vec!["ERROR".to_string()]
     } else if is_tuple(item_type) {
         get_packed_tuple_layout_from_type(diagnostics, diagnostic_item, item_type)
+    } else if is_fixed_array(item_type) {
+        // TODO: Implement fixed array packed layout
     } else {
         let primitives = primitive_type_introspection();
 

@@ -20,6 +20,7 @@ cairo-lang-syntax.workspace = true
 cairo-lang-utils.workspace = true
 dojo-types.workspace = true
 itertools.workspace = true
+regex.workspace = true
 serde.workspace = true
 smol_str.workspace = true
 starknet.workspace = true

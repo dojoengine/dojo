@@ -4900,6 +4900,7 @@ dependencies = [
  "cairo-lang-utils",
  "dojo-types 1.0.9",
  "itertools 0.12.1",
+ "regex",
  "serde",
  "smol_str",
  "starknet 0.12.0",
