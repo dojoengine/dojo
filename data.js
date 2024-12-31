@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1735326654717,
+  "lastUpdate": 1735664549966,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -42427,6 +42427,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8455709,
             "range": "± 312984",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "valentin@pupucecorp.com",
+            "name": "Brother MartianGreed",
+            "username": "MartianGreed"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d21b1a1a9ecfeca8923bfcf5f7ce2433de0399a7",
+          "message": "feat: split calldata and provider call (#2852)",
+          "timestamp": "2024-12-31T10:46:12-06:00",
+          "tree_id": "8fd9bba3d7bb72f8c5dbcd1203a50cf3d6f8e81f",
+          "url": "https://github.com/dojoengine/dojo/commit/d21b1a1a9ecfeca8923bfcf5f7ce2433de0399a7"
+        },
+        "date": 1735664548326,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10130284621,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
