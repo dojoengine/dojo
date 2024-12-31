@@ -24,7 +24,7 @@ pub fn write_layout(
         Layout::Array(layout) => { write_array_layout(model, key, values, ref offset, layout); },
         Layout::Tuple(layout) => { write_tuple_layout(model, key, values, ref offset, layout); },
         Layout::ByteArray => { write_byte_array_layout(model, key, values, ref offset); },
-        Layout::Enum(layout) => { write_enum_layout(model, key, values, ref offset, layout); }
+        Layout::Enum(layout) => { write_enum_layout(model, key, values, ref offset, layout); },
     }
 }
 
@@ -37,7 +37,7 @@ pub fn write_layout(
 /// * `offset` - the start of model record values in the `values` parameter.
 /// * `layout` - the model record layout.
 pub fn write_fixed_layout(
-    model: felt252, key: felt252, values: Span<felt252>, ref offset: u32, layout: Span<u8>
+    model: felt252, key: felt252, values: Span<felt252>, ref offset: u32, layout: Span<u8>,
 ) {
     database::set(model, key, values, offset, layout);
     offset += layout.len();
@@ -52,7 +52,7 @@ pub fn write_fixed_layout(
 /// * `offset` - the start of model record values in the `values` parameter.
 /// * `item_layout` - the model record layout (temporary a Span because of type recursion issue).
 pub fn write_array_layout(
-    model: felt252, key: felt252, values: Span<felt252>, ref offset: u32, item_layout: Span<Layout>
+    model: felt252, key: felt252, values: Span<felt252>, ref offset: u32, item_layout: Span<Layout>,
 ) {
     assert((values.len() - offset) > 0, 'Invalid values length');
 
@@ -83,7 +83,7 @@ pub fn write_array_layout(
 
 ///
 pub fn write_byte_array_layout(
-    model: felt252, key: felt252, values: Span<felt252>, ref offset: u32
+    model: felt252, key: felt252, values: Span<felt252>, ref offset: u32,
 ) {
     // The ByteArray internal structure is
     // struct ByteArray {
@@ -99,7 +99,7 @@ pub fn write_byte_array_layout(
     let data_len = *values.at(offset);
     assert(
         data_len.into() <= (database::MAX_ARRAY_LENGTH - MIN_BYTE_ARRAY_SIZE.into()),
-        'invalid array length'
+        'invalid array length',
     );
 
     let array_size: u32 = data_len.try_into().unwrap() + MIN_BYTE_ARRAY_SIZE.into();
@@ -118,7 +118,7 @@ pub fn write_byte_array_layout(
 /// * `offset` - the start of model record values in the `values` parameter.
 /// * `layout` - list of field layouts.
 pub fn write_struct_layout(
-    model: felt252, key: felt252, values: Span<felt252>, ref offset: u32, layout: Span<FieldLayout>
+    model: felt252, key: felt252, values: Span<felt252>, ref offset: u32, layout: Span<FieldLayout>,
 ) {
     let mut i = 0;
     loop {
@@ -144,7 +144,7 @@ pub fn write_struct_layout(
 /// * `offset` - the start of model record values in the `values` parameter.
 /// * `layout` - list of tuple item layouts.
 pub fn write_tuple_layout(
-    model: felt252, key: felt252, values: Span<felt252>, ref offset: u32, layout: Span<Layout>
+    model: felt252, key: felt252, values: Span<felt252>, ref offset: u32, layout: Span<Layout>,
 ) {
     let mut i = 0;
     loop {
@@ -166,7 +166,7 @@ pub fn write_enum_layout(
     key: felt252,
     values: Span<felt252>,
     ref offset: u32,
-    variant_layouts: Span<FieldLayout>
+    variant_layouts: Span<FieldLayout>,
 ) {
     if let Option::Some(variant) = values.get(offset) {
         // TODO: when Cairo 2.8 support is added, unboxing should be implicit.
@@ -183,9 +183,9 @@ pub fn write_enum_layout(
 
         match find_field_layout(variant, variant_layouts) {
             Option::Some(layout) => write_layout(
-                model, variant_data_key, values, ref offset, layout
+                model, variant_data_key, values, ref offset, layout,
             ),
-            Option::None => panic!("Unable to find the variant layout")
+            Option::None => panic!("Unable to find the variant layout"),
         };
     } else {
         panic!("offset is out of bounds for enum layout variant");
@@ -226,7 +226,7 @@ pub fn delete_byte_array_layout(model: felt252, key: felt252) {
     database::delete(
         model,
         key,
-        [packing::PACKING_MAX_BITS, packing::PACKING_MAX_BITS, packing::PACKING_MAX_BITS].span()
+        [packing::PACKING_MAX_BITS, packing::PACKING_MAX_BITS, packing::PACKING_MAX_BITS].span(),
     );
 }
 
@@ -243,7 +243,7 @@ pub fn delete_layout(model: felt252, key: felt252, layout: Layout) {
         Layout::Array(_) => { delete_array_layout(model, key); },
         Layout::Tuple(layout) => { delete_tuple_layout(model, key, layout); },
         Layout::ByteArray => { delete_byte_array_layout(model, key); },
-        Layout::Enum(layout) => { delete_enum_layout(model, key, layout); }
+        Layout::Enum(layout) => { delete_enum_layout(model, key, layout); },
     }
 }
 
@@ -307,7 +307,7 @@ pub fn delete_enum_layout(model: felt252, key: felt252, variant_layouts: Span<Fi
 
     match find_field_layout(variant, variant_layouts) {
         Option::Some(layout) => delete_layout(model, variant_data_key, layout),
-        Option::None => panic!("Unable to find the variant layout")
+        Option::None => panic!("Unable to find the variant layout"),
     };
 }
 
@@ -337,7 +337,7 @@ pub fn read_layout(model: felt252, key: felt252, ref read_data: Array<felt252>, 
 ///   * `read_data` - the read data.
 ///   * `layout` - the model layout
 pub fn read_fixed_layout(
-    model: felt252, key: felt252, ref read_data: Array<felt252>, layout: Span<u8>
+    model: felt252, key: felt252, ref read_data: Array<felt252>, layout: Span<u8>,
 ) {
     let mut data = database::get(model, key, layout);
     read_data.append_span(data);
@@ -351,7 +351,7 @@ pub fn read_fixed_layout(
 ///   * `read_data` - the read data.
 ///   * `layout` - the array item layout
 pub fn read_array_layout(
-    model: felt252, key: felt252, ref read_data: Array<felt252>, layout: Span<Layout>
+    model: felt252, key: felt252, ref read_data: Array<felt252>, layout: Span<Layout>,
 ) {
     // read number of array items
     let res = database::get(model, key, [packing::PACKING_MAX_BITS].span());
@@ -395,7 +395,7 @@ pub fn read_byte_array_layout(model: felt252, key: felt252, ref read_data: Array
     let data_len = *res.at(0);
     assert(
         data_len.into() <= (database::MAX_ARRAY_LENGTH - MIN_BYTE_ARRAY_SIZE.into()),
-        'invalid array length'
+        'invalid array length',
     );
 
     let array_size: u32 = data_len.try_into().unwrap() + MIN_BYTE_ARRAY_SIZE;
@@ -412,7 +412,7 @@ pub fn read_byte_array_layout(model: felt252, key: felt252, ref read_data: Array
 ///   * `read_data` - the read data.
 ///   * `layout` - the list of field layouts.
 pub fn read_struct_layout(
-    model: felt252, key: felt252, ref read_data: Array<felt252>, layout: Span<FieldLayout>
+    model: felt252, key: felt252, ref read_data: Array<felt252>, layout: Span<FieldLayout>,
 ) {
     let mut i = 0;
     loop {
@@ -437,7 +437,7 @@ pub fn read_struct_layout(
 ///   * `read_data` - the read data.
 ///   * `layout` - the tuple item layouts
 pub fn read_tuple_layout(
-    model: felt252, key: felt252, ref read_data: Array<felt252>, layout: Span<Layout>
+    model: felt252, key: felt252, ref read_data: Array<felt252>, layout: Span<Layout>,
 ) {
     let mut i = 0;
     loop {
@@ -454,7 +454,7 @@ pub fn read_tuple_layout(
 }
 
 pub fn read_enum_layout(
-    model: felt252, key: felt252, ref read_data: Array<felt252>, variant_layouts: Span<FieldLayout>
+    model: felt252, key: felt252, ref read_data: Array<felt252>, variant_layouts: Span<FieldLayout>,
 ) {
     // read the variant value first
     let res = database::get(model, key, [8].span());
@@ -470,6 +470,6 @@ pub fn read_enum_layout(
 
     match find_field_layout(variant, variant_layouts) {
         Option::Some(layout) => read_layout(model, variant_data_key, ref read_data, layout),
-        Option::None => panic!("Unable to find the variant layout")
+        Option::None => panic!("Unable to find the variant layout"),
     };
 }

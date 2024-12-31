@@ -43,7 +43,7 @@ pub mod c1 {
     use dojo::event::EventStorage;
 
     fn dojo_init(self: @ContractState, v: felt252) {
-        let m = M { k: 0, v, };
+        let m = M { k: 0, v };
 
         let mut world = self.world_default();
         world.write_model(@m);
@@ -54,7 +54,7 @@ pub mod c1 {
         fn system_1(ref self: ContractState, k: felt252, v: felt252) {
             let mut world = self.world_default();
 
-            let m = M { k, v, };
+            let m = M { k, v };
 
             world.write_model(@m)
         }
@@ -70,17 +70,17 @@ pub mod c1 {
         fn system_3(ref self: ContractState, k: felt252, v: u32) {
             let mut world = self.world_default();
 
-            let e = E { k, v, };
+            let e = E { k, v };
             world.emit_event(@e);
 
-            let eh = EH { k, v, };
+            let eh = EH { k, v };
             world.emit_event(@eh);
         }
 
         fn system_4(ref self: ContractState, k: felt252) {
             let mut world = self.world_default();
 
-            let m = M { k, v: 288, };
+            let m = M { k, v: 288 };
 
             let entity_id = Model::<M>::entity_id(@m);
 
@@ -116,17 +116,19 @@ pub mod c3 {}
 mod tests {
     use dojo::model::ModelStorage;
     use dojo_cairo_test::{
-        spawn_test_world, NamespaceDef, TestResource, ContractDefTrait, WorldStorageTestTrait
+        spawn_test_world, NamespaceDef, TestResource, ContractDefTrait, WorldStorageTestTrait,
     };
     use super::{c1, m_M, M};
 
     #[test]
     fn test_1() {
         let ndef = NamespaceDef {
-            namespace: "ns", resources: [
+            namespace: "ns",
+            resources: [
                 TestResource::Model(m_M::TEST_CLASS_HASH),
                 TestResource::Contract(c1::TEST_CLASS_HASH),
-            ].span()
+            ]
+                .span(),
         };
 
         let world = spawn_test_world([ndef].span());

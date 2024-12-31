@@ -152,6 +152,7 @@ impl DojoContract {
                         systems: contract.systems.clone(),
                     })),
                     code_mappings,
+                    diagnostics_note: None,
                 }),
                 diagnostics: contract.diagnostics,
                 remove_original_item: true,

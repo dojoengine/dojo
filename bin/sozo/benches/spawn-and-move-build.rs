@@ -23,6 +23,7 @@ fn build_spawn_and_move() {
     scarb::ops::compile(
         packages.iter().map(|p| p.id).collect(),
         CompileOpts {
+            ignore_cairo_version: false,
             include_target_names: vec![],
             include_target_kinds: vec![],
             exclude_target_kinds: vec![TargetKind::TEST],
