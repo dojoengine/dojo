@@ -4,6 +4,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Result};
+use async_trait::async_trait;
 use dojo_types::naming::get_tag;
 use dojo_types::schema::{Struct, Ty};
 use dojo_world::config::WorldMetadata;
@@ -36,6 +37,155 @@ pub mod utils;
 
 use cache::{LocalCache, Model, ModelCache};
 
+#[async_trait]
+pub trait DatabaseBackend {
+    type Pool;
+    type Connection;
+
+    /// Creates a new database backend instance
+    async fn new(
+        pool: Self::Pool,
+        executor: UnboundedSender<QueryMessage>,
+        contracts: &[Contract],
+        model_cache: Arc<ModelCache>,
+    ) -> Result<Self>
+    where
+        Self: Sized;
+
+    /// Gets the head block number and pending transaction info for a contract
+    async fn head(&self, contract: Felt) -> Result<(u64, Option<Felt>, Option<Felt>)>;
+
+    /// Sets the head block number and timestamp for a contract
+    async fn set_head(
+        &mut self,
+        head: u64,
+        last_block_timestamp: u64,
+        world_txns_count: u64,
+        contract_address: Felt,
+    ) -> Result<()>;
+
+    /// Sets the last pending block contract transaction
+    fn set_last_pending_block_contract_tx(
+        &mut self,
+        contract: Felt,
+        last_pending_block_contract_tx: Option<Felt>,
+    ) -> Result<()>;
+
+    /// Sets the last pending block transaction
+    fn set_last_pending_block_tx(&mut self, last_pending_block_tx: Option<Felt>) -> Result<()>;
+
+    /// Gets all cursors
+    async fn cursors(&self) -> Result<Cursors>;
+
+    /// Resets cursors to a specific state
+    fn reset_cursors(
+        &mut self,
+        head: u64,
+        cursor_map: HashMap<Felt, (Felt, u64)>,
+        last_block_timestamp: u64,
+    ) -> Result<()>;
+
+    /// Updates cursors with new state
+    fn update_cursors(
+        &mut self,
+        head: u64,
+        last_pending_block_tx: Option<Felt>,
+        cursor_map: HashMap<Felt, (Felt, u64)>,
+        pending_block_timestamp: u64,
+    ) -> Result<()>;
+
+    /// Registers a new model
+    async fn register_model(
+        &mut self,
+        namespace: &str,
+        model: &Ty,
+        layout: Layout,
+        class_hash: Felt,
+        contract_address: Felt,
+        packed_size: u32,
+        unpacked_size: u32,
+        block_timestamp: u64,
+        upgrade_diff: Option<&Ty>,
+    ) -> Result<()>;
+
+    /// Sets an entity
+    async fn set_entity(
+        &mut self,
+        entity: Ty,
+        event_id: &str,
+        block_timestamp: u64,
+        entity_id: Felt,
+        model_id: Felt,
+        keys_str: Option<&str>,
+    ) -> Result<()>;
+
+    /// Sets an event message
+    async fn set_event_message(
+        &mut self,
+        entity: Ty,
+        event_id: &str,
+        block_timestamp: u64,
+        is_historical: bool,
+    ) -> Result<()>;
+
+    /// Deletes an entity
+    async fn delete_entity(
+        &mut self,
+        entity_id: Felt,
+        model_id: Felt,
+        entity: Ty,
+        event_id: &str,
+        block_timestamp: u64,
+    ) -> Result<()>;
+
+    /// Sets metadata for a resource
+    fn set_metadata(&mut self, resource: &Felt, uri: &str, block_timestamp: u64) -> Result<()>;
+
+    /// Updates metadata for a resource
+    fn update_metadata(
+        &mut self,
+        resource: &Felt,
+        uri: &str,
+        metadata: &WorldMetadata,
+        icon_img: &Option<String>,
+        cover_img: &Option<String>,
+    ) -> Result<()>;
+
+    /// Gets a model by selector
+    async fn model(&self, selector: Felt) -> Result<Model>;
+
+    /// Checks if an entity exists
+    async fn does_entity_exist(&self, model: String, key: Felt) -> Result<bool>;
+
+    /// Gets all entities for a model
+    async fn entities(&self, model: String) -> Result<Vec<Vec<Felt>>>;
+
+    /// Stores a transaction
+    fn store_transaction(
+        &mut self,
+        transaction: &Transaction,
+        transaction_id: &str,
+        block_timestamp: u64,
+    ) -> Result<()>;
+
+    /// Stores an event
+    fn store_event(
+        &mut self,
+        event_id: &str,
+        event: &Event,
+        transaction_hash: Felt,
+        block_timestamp: u64,
+    ) -> Result<()>;
+
+    /// Executes pending operations
+    async fn execute(&self) -> Result<()>;
+
+    /// Flushes pending operations
+    async fn flush(&self) -> Result<()>;
+
+    /// Rolls back pending operations
+    async fn rollback(&self) -> Result<()>;
+}
 #[derive(Debug, Clone)]
 pub struct Sql {
     pub pool: Pool<Sqlite>,
