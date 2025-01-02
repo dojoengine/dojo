@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1735843071482,
+  "lastUpdate": 1735852600204,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -42739,6 +42739,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8090433,
             "range": "± 153558",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "38f68db8c9b61ceeabd7f40a3fb4c0bb57df60cf",
+          "message": "refactor(katana): make gas oracle a critical task (#2859)",
+          "timestamp": "2025-01-03T04:59:58+08:00",
+          "tree_id": "c44ea5516facbabb9f78702efa13b0539ba19b6f",
+          "url": "https://github.com/dojoengine/dojo/commit/38f68db8c9b61ceeabd7f40a3fb4c0bb57df60cf"
+        },
+        "date": 1735852598042,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10393070014,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
