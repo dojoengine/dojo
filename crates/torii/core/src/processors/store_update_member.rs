@@ -1,21 +1,18 @@
 use anyhow::{Context, Error, Result};
 use async_trait::async_trait;
 use dojo_types::schema::{Struct, Ty};
+use dojo_world::contracts::abigen::world::Event as WorldEvent;
 use dojo_world::contracts::naming;
 use dojo_world::contracts::world::WorldContractReader;
-use num_traits::ToPrimitive;
 use starknet::core::types::Event;
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
 use tracing::{info, warn};
 
 use super::{EventProcessor, EventProcessorConfig};
-use crate::processors::{ENTITY_ID_INDEX, MODEL_INDEX};
 use crate::sql::Sql;
 
 pub(crate) const LOG_TARGET: &str = "torii_core::processors::store_update_member";
-
-const MEMBER_INDEX: usize = 2;
 
 #[derive(Default, Debug)]
 pub struct StoreUpdateMemberProcessor;
@@ -29,7 +26,7 @@ where
         "StoreUpdateMember".to_string()
     }
 
-    fn validate(&self, event: &Event) -> bool {
+    fn validate(&self, _event: &Event) -> bool {
         true
     }
 
@@ -43,13 +40,27 @@ where
         event: &Event,
         _config: &EventProcessorConfig,
     ) -> Result<(), Error> {
-        let model_id = event.data[MODEL_INDEX];
-        let entity_id = event.data[ENTITY_ID_INDEX];
-        let member_selector = event.data[MEMBER_INDEX];
+        // Torii version is coupled to the world version, so we can expect the event to be well
+        // formed.
+        let event = match WorldEvent::try_from(event).unwrap_or_else(|_| {
+            panic!(
+                "Expected {} event to be well formed.",
+                <StoreUpdateMemberProcessor as EventProcessor<P>>::event_key(self)
+            )
+        }) {
+            WorldEvent::StoreUpdateMember(e) => e,
+            _ => {
+                unreachable!()
+            }
+        };
+
+        let model_selector = event.selector;
+        let entity_id = event.entity_id;
+        let member_selector = event.member_selector;
 
         // If the model does not exist, silently ignore it.
         // This can happen if only specific namespaces are indexed.
-        let model = match db.model(model_id).await {
+        let model = match db.model(model_selector).await {
             Ok(m) => m,
             Err(e) => {
                 if e.to_string().contains("no rows") {
@@ -81,12 +92,8 @@ where
             "Store update member.",
         );
 
-        let values_start = MEMBER_INDEX + 1;
-        let values_end: usize =
-            values_start + event.data[values_start].to_usize().context("invalid usize")?;
-
-        // Skip the length to only get the values as they will be deserialized.
-        let mut values = event.data[values_start + 1..=values_end].to_vec();
+        let mut values = event.values.to_vec();
+        member.ty.deserialize(&mut values)?;
 
         let tag = naming::get_tag(&model.namespace, &model.name);
 
@@ -101,10 +108,10 @@ where
             return Ok(());
         }
 
-        member.ty.deserialize(&mut values)?;
         let wrapped_ty = Ty::Struct(Struct { name: schema.name(), children: vec![member] });
 
-        db.set_entity(wrapped_ty, event_id, block_timestamp, entity_id, model_id, None).await?;
+        db.set_entity(wrapped_ty, event_id, block_timestamp, entity_id, model_selector, None)
+            .await?;
         Ok(())
     }
 }
