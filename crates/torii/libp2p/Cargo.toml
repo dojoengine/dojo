@@ -35,7 +35,7 @@ tracing-subscriber.workspace = true
 libp2p = { git = "https://github.com/libp2p/rust-libp2p", features = [ "dns", "ed25519", "gossipsub", "identify", "macros", "noise", "ping", "quic", "relay", "tcp", "tokio", "websocket", "yamux" ], rev = "cdc9638" }
 libp2p-webrtc = { git = "https://github.com/libp2p/rust-libp2p", features = [ "pem", "tokio" ], rev = "cdc9638" }
 sqlx.workspace = true
-torii-core.workspace = true
+torii-sqlite.workspace = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 libp2p = { git = "https://github.com/libp2p/rust-libp2p", features = [ "ed25519", "gossipsub", "identify", "macros", "noise", "ping", "tcp", "wasm-bindgen", "yamux" ], rev = "cdc9638" }

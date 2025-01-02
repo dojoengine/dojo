@@ -33,6 +33,10 @@ pub mod erc;
 #[path = "test.rs"]
 mod test;
 pub mod utils;
+pub mod constants;
+pub mod executor;
+pub mod types;
+pub mod simple_broker;
 
 use cache::{LocalCache, Model, ModelCache};
 

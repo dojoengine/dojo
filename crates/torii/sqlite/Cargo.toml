@@ -1,8 +1,8 @@
 [package]
-description = "Torii core implementation."
+description = "Torii SQLite implementation."
 edition.workspace = true
 license-file.workspace = true
-name = "torii-core"
+name = "torii-sqlite"
 repository.workspace = true
 version.workspace = true
 
