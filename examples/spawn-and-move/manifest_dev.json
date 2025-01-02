@@ -1252,8 +1252,8 @@
   },
   "contracts": [
     {
-      "address": "0x7e8a52c68b243d3a86a55c04ccec2edc760252d5952566d3af4001bd6cf38f3",
-      "class_hash": "0x636c2cf31b094097625cb5ada96f54ee9a3f7bc6d8cde00cc85e5ef0c622c8b",
+      "address": "0x6bfba78b8f4f42da469860a95291c2fad959c91ea747e2062de763ff4e62c4a",
+      "class_hash": "0x3e65d56b082c47e9e0952503424bcf6956ddd6d5faff40dd9900ea787d89c6",
       "abi": [
         {
           "type": "impl",
@@ -1390,6 +1390,18 @@
             {
               "type": "function",
               "name": "set_player_config",
+              "inputs": [
+                {
+                  "name": "name",
+                  "type": "core::byte_array::ByteArray"
+                }
+              ],
+              "outputs": [],
+              "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "update_player_config_name",
               "inputs": [
                 {
                   "name": "name",
@@ -1585,6 +1597,7 @@
         "spawn",
         "move",
         "set_player_config",
+        "update_player_config_name",
         "reset_player_config",
         "set_player_server_profile",
         "set_models",
