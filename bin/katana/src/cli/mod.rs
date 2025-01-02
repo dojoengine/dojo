@@ -33,7 +33,7 @@ impl Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    #[command(about = "Initialize chain")]
+    #[command(about = "Initialize chain", hide = true)]
     Init(init::InitArgs),
 
     #[command(about = "Database utilities")]
