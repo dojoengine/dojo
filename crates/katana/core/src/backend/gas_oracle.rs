@@ -9,7 +9,7 @@ use katana_primitives::block::GasPrices;
 use katana_tasks::TaskSpawner;
 use parking_lot::Mutex;
 use tokio::time::Duration;
-use tracing::info;
+use tracing::error;
 use url::Url;
 
 const BUFFER_SIZE: usize = 60;
@@ -83,10 +83,13 @@ impl L1GasOracle {
                 let prices = oracle.prices.clone();
                 let l1_provider = oracle.l1_provider.clone();
 
-                task_spawner.build_task().graceful_shutdown().name("L1 Gas Oracle worker").spawn(
+                task_spawner.build_task().critical().name("L1 Gas Oracle worker").spawn(
                     async move {
                         let mut worker = GasOracleWorker::new(prices, l1_provider);
-                        worker.run().await
+                        worker
+                            .run()
+                            .await
+                            .inspect_err(|error| error!(target: "gas_oracle", %error, "Gas oracle worker failed."))
                     },
                 );
             }
@@ -174,13 +177,13 @@ impl GasOracleWorker {
 
                 let mut prices = self.prices.lock();
 
-                if let Err(e) = update_gas_price(
+                if let Err(error) = update_gas_price(
                     &mut prices,
                     &mut self.gas_price_buffer,
                     &mut self.data_gas_price_buffer,
                     fee_history,
                 ) {
-                    info!(%e, "Error running the gas oracle");
+                    error!(target: "gas_oracle", %error, "Error updating gas prices.");
                 }
             }
         }
