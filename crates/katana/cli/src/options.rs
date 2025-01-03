@@ -19,6 +19,7 @@ use katana_node::config::rpc::{
     DEFAULT_RPC_PORT,
 };
 use katana_primitives::block::BlockHashOrNumber;
+use katana_primitives::chain::ChainId;
 use katana_primitives::genesis::Genesis;
 use katana_rpc::cors::HeaderValue;
 use serde::{Deserialize, Serialize};
@@ -164,6 +165,16 @@ impl StarknetOptions {
 #[derive(Debug, Args, Clone, Serialize, Deserialize, PartialEq)]
 #[command(next_help_heading = "Environment options")]
 pub struct EnvironmentOptions {
+    /// The chain ID.
+    ///
+    /// The chain ID. If a raw hex string (`0x` prefix) is provided, then it'd
+    /// used as the actual chain ID. Otherwise, it's represented as the raw
+    /// ASCII values. It must be a valid Cairo short string.
+    #[arg(long, conflicts_with = "chain")]
+    #[arg(value_parser = ChainId::parse)]
+    #[serde(default)]
+    pub chain_id: Option<ChainId>,
+
     /// The maximum number of steps available for the account validation logic.
     #[arg(long)]
     #[arg(default_value_t = DEFAULT_VALIDATION_MAX_STEPS)]
@@ -182,6 +193,7 @@ impl Default for EnvironmentOptions {
         EnvironmentOptions {
             validate_max_steps: DEFAULT_VALIDATION_MAX_STEPS,
             invoke_max_steps: DEFAULT_INVOCATION_MAX_STEPS,
+            chain_id: None,
         }
     }
 }

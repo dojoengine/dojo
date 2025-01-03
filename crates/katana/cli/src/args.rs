@@ -235,6 +235,10 @@ impl NodeArgs {
             let mut chain_spec = katana_chain_spec::DEV_UNALLOCATED.clone();
             chain_spec.genesis.sequencer_address = *DEFAULT_SEQUENCER_ADDRESS;
 
+            if let Some(id) = self.starknet.environment.chain_id {
+                chain_spec.id = id;
+            }
+
             // generate dev accounts
             let accounts = DevAllocationsGenerator::new(self.development.total_accounts)
                 .with_seed(parse_seed(&self.development.seed))
