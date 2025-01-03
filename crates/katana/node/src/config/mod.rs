@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+pub mod chain;
 pub mod db;
 pub mod dev;
 pub mod execution;
@@ -15,7 +16,6 @@ use katana_core::service::messaging::MessagingConfig;
 use katana_primitives::chain_spec::ChainSpec;
 use metrics::MetricsConfig;
 use rpc::RpcConfig;
-use url::Url;
 
 /// Node configurations.
 ///
@@ -48,9 +48,8 @@ pub struct Config {
 
     /// Development options.
     pub dev: DevConfig,
-
-    /// Provider url for gas price oracle
-    pub l1_provider_url: Option<Url>,
+    // /// Provider url for gas price oracle
+    // pub l1_provider_url: Option<Url>,
 }
 
 /// Configurations related to block production.

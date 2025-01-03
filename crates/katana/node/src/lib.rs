@@ -20,10 +20,6 @@ use jsonrpsee::RpcModule;
 use katana_core::backend::gas_oracle::L1GasOracle;
 use katana_core::backend::storage::Blockchain;
 use katana_core::backend::Backend;
-use katana_core::constants::{
-    DEFAULT_ETH_L1_DATA_GAS_PRICE, DEFAULT_ETH_L1_GAS_PRICE, DEFAULT_STRK_L1_DATA_GAS_PRICE,
-    DEFAULT_STRK_L1_GAS_PRICE,
-};
 use katana_core::env::BlockContextGenerator;
 use katana_core::service::block_producer::BlockProducer;
 use katana_db::mdbx::DbEnv;
@@ -31,7 +27,6 @@ use katana_executor::implementation::blockifier::BlockifierFactory;
 use katana_executor::ExecutionFlags;
 use katana_pool::ordering::FiFo;
 use katana_pool::TxPool;
-use katana_primitives::block::GasPrices;
 use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
 use katana_rpc::cors::Cors;
 use katana_rpc::dev::DevApi;
@@ -140,11 +135,8 @@ impl Node {
         let rpc_handle = self.rpc_server.start(self.config.rpc.socket_addr()).await?;
 
         // --- start the gas oracle worker task
-
-        if let Some(ref url) = self.config.l1_provider_url {
-            self.backend.gas_oracle.run_worker(self.task_manager.task_spawner());
-            info!(%url, "Gas Price Oracle started.");
-        };
+        self.backend.gas_oracle.run_worker(self.task_manager.task_spawner());
+        info!(url = %self.backend.chain_spec.l1_rpc_url, "Gas Price Oracle started.");
 
         Ok(LaunchedNode { node: self, rpc: rpc_handle })
     }
@@ -205,15 +197,8 @@ pub async fn build(mut config: Config) -> Result<Node> {
     let gas_oracle = if let Some(fixed_prices) = &config.dev.fixed_gas_prices {
         // Use fixed gas prices if provided in the configuration
         L1GasOracle::fixed(fixed_prices.gas_price.clone(), fixed_prices.data_gas_price.clone())
-    } else if let Some(url) = &config.l1_provider_url {
-        // Default to a sampled gas oracle using the given provider
-        L1GasOracle::sampled(url.clone())
     } else {
-        // Use default fixed gas prices if no url and if no fixed prices are provided
-        L1GasOracle::fixed(
-            GasPrices { eth: DEFAULT_ETH_L1_GAS_PRICE, strk: DEFAULT_STRK_L1_GAS_PRICE },
-            GasPrices { eth: DEFAULT_ETH_L1_DATA_GAS_PRICE, strk: DEFAULT_STRK_L1_DATA_GAS_PRICE },
-        )
+        L1GasOracle::sampled(config.chain.l1_rpc_url.clone())
     };
 
     let block_context_generator = BlockContextGenerator::default().into();
