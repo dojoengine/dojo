@@ -1,8 +1,3 @@
-//! RPC implementations.
-
-#![allow(clippy::blocks_in_conditions)]
-#![cfg_attr(not(test), warn(unused_crate_dependencies))]
-
 use std::net::SocketAddr;
 use std::time::Duration;
 
@@ -21,8 +16,6 @@ pub mod saya;
 pub mod starknet;
 pub mod torii;
 
-mod future;
-mod logger;
 mod transport;
 mod utils;
 

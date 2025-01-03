@@ -123,7 +123,7 @@ where
                 result: &'a serde_json::value::RawValue,
             }
 
-            let response = if let Ok(payload) = serde_json::from_slice::<RpcPayload>(&bytes) {
+            let response = if let Ok(payload) = serde_json::from_slice::<RpcPayload<'_>>(&bytes) {
                 http::response::ok_response(payload.result.to_string())
             } else {
                 http::response::internal_error()

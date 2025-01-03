@@ -101,9 +101,8 @@ impl<EF: ExecutorFactory> DevApiServer for DevApi<EF> {
 
     async fn account_balance(&self, address: String, unit: String) -> Result<u128, Error> {
         let account_address: ContractAddress = Felt::from_str(address.as_str()).unwrap().into();
-        let unit = Some(PriceUnit::from_str(unit.to_uppercase().as_str()))
-            .unwrap()
-            .unwrap_or(PriceUnit::Wei);
+        let unit = PriceUnit::from_str(unit.to_uppercase().as_str()).unwrap_or(PriceUnit::Wei);
+
         let erc20_address =
             get_erc20_address(&unit).map_err(|_| http::response::internal_error()).unwrap();
 
