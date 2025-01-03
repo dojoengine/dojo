@@ -511,16 +511,6 @@ impl Sql {
         self.model_cache.model(&selector).await.map_err(|e| e.into())
     }
 
-    /// Checks if an entity exists in the database by looking for it into the model's table.
-    pub async fn does_entity_exist(&self, model: String, key: Felt) -> Result<bool> {
-        let sql = format!("SELECT COUNT(*) FROM [{model}] WHERE internal_id = ?");
-
-        let count: i64 =
-            sqlx::query_scalar(&sql).bind(format!("{:#x}", key)).fetch_one(&self.pool).await?;
-
-        Ok(count > 0)
-    }
-
     pub async fn entities(&self, model: String) -> Result<Vec<Vec<Felt>>> {
         let query = sqlx::query_as::<_, (i32, String, String)>("SELECT * FROM ?").bind(model);
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;

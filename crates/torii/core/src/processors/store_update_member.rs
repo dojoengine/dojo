@@ -2,12 +2,11 @@ use anyhow::{Context, Error, Result};
 use async_trait::async_trait;
 use dojo_types::schema::{Struct, Ty};
 use dojo_world::contracts::abigen::world::Event as WorldEvent;
-use dojo_world::contracts::naming;
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::Event;
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
-use tracing::{info, warn};
+use tracing::info;
 
 use super::{EventProcessor, EventProcessorConfig};
 use crate::sql::Sql;
@@ -104,21 +103,7 @@ where
         let mut values = event.values.to_vec();
         member.ty.deserialize(&mut values)?;
 
-        let tag = naming::get_tag(&model.namespace, &model.name);
-
-        if !db.does_entity_exist(tag.clone(), entity_id).await? {
-            warn!(
-                target: LOG_TARGET,
-                tag,
-                entity_id = format!("{:#x}", entity_id),
-                "Entity not found, must be set before updating a member.",
-            );
-
-            return Ok(());
-        }
-
         let wrapped_ty = Ty::Struct(Struct { name: schema.name(), children: vec![member] });
-
         db.set_entity(wrapped_ty, event_id, block_timestamp, entity_id, model_selector, None)
             .await?;
         Ok(())
