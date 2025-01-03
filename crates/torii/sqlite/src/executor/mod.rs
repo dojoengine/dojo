@@ -20,7 +20,7 @@ use tracing::{debug, error};
 
 use crate::constants::TOKENS_TABLE;
 use crate::simple_broker::SimpleBroker;
-use crate::sql::utils::{felt_to_sql_string, I256};
+use crate::utils::{felt_to_sql_string, I256};
 use crate::types::{
     ContractCursor, ContractType, Entity as EntityUpdated, Event as EventEmitted,
     EventMessage as EventMessageUpdated, Model as ModelRegistered, OptimisticEntity,

@@ -6,7 +6,7 @@ use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{Event, Felt, Transaction};
 use starknet::providers::Provider;
 
-use crate::sql::Sql;
+use torii_sqlite::Sql;
 
 pub mod erc20_legacy_transfer;
 pub mod erc20_transfer;

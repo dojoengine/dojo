@@ -7,7 +7,7 @@ use starknet::providers::Provider;
 use tracing::debug;
 
 use super::{EventProcessor, EventProcessorConfig};
-use crate::sql::Sql;
+use torii_sqlite::Sql;
 
 pub(crate) const LOG_TARGET: &str = "torii_core::processors::erc721_transfer";
 

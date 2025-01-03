@@ -7,8 +7,8 @@ use starknet::providers::Provider;
 use tracing::{debug, info};
 
 use super::{EventProcessor, EventProcessorConfig};
-use crate::sql::utils::felts_to_sql_string;
-use crate::sql::Sql;
+use torii_sqlite::utils::felts_to_sql_string;
+use torii_sqlite::Sql;
 
 pub(crate) const LOG_TARGET: &str = "torii_core::processors::store_set_record";
 

@@ -23,8 +23,8 @@ use tokio::sync::broadcast;
 
 use crate::engine::{Engine, EngineConfig, Processors};
 use crate::executor::Executor;
-use crate::cache::ModelCache;
-use crate::Sql;
+use crate::sql::cache::ModelCache;
+use torii_sqlite::Sql;
 use crate::types::{Contract, ContractType};
 
 pub async fn bootstrap_engine<P>(

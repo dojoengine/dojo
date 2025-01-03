@@ -37,6 +37,7 @@ pub mod constants;
 pub mod executor;
 pub mod types;
 pub mod simple_broker;
+pub mod error;
 
 use cache::{LocalCache, Model, ModelCache};
 
@@ -173,7 +174,7 @@ impl Sql {
         Ok(())
     }
 
-    pub(crate) async fn cursors(&self) -> Result<Cursors> {
+    pub async fn cursors(&self) -> Result<Cursors> {
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
         let cursors = sqlx::query_as::<_, (String, String)>(
             "SELECT contract_address, last_pending_block_contract_tx FROM contracts WHERE \

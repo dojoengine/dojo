@@ -1,11 +1,18 @@
 use std::cmp::Ordering;
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 use std::str::FromStr;
+use std::time::Duration;
 
+use chrono::{DateTime, Utc};
+use futures_util::TryStreamExt;
+use ipfs_api_backend_hyper::{IpfsApi, IpfsClient, TryFromUri};
 use starknet::core::types::U256;
 use starknet_crypto::Felt;
+use tokio_util::bytes::Bytes;
+use tracing::info;
+use anyhow::Result;
 
-use crate::constants::SQL_FELT_DELIMITER;
+use crate::constants::{IPFS_CLIENT_MAX_RETRY, IPFS_CLIENT_PASSWORD, IPFS_CLIENT_URL, IPFS_CLIENT_USERNAME, SQL_FELT_DELIMITER};
 
 pub fn must_utc_datetime_from_timestamp(timestamp: u64) -> DateTime<Utc> {
     let naive_dt = DateTime::from_timestamp(timestamp as i64, 0)
@@ -41,6 +48,32 @@ pub fn sql_string_to_u256(sql_string: &str) -> U256 {
 
 pub fn sql_string_to_felts(sql_string: &str) -> Vec<Felt> {
     sql_string.split(SQL_FELT_DELIMITER).map(|felt| Felt::from_str(felt).unwrap()).collect()
+}
+
+pub async fn fetch_content_from_ipfs(cid: &str, mut retries: u8) -> Result<Bytes> {
+    let client = IpfsClient::from_str(IPFS_CLIENT_URL)?
+        .with_credentials(IPFS_CLIENT_USERNAME, IPFS_CLIENT_PASSWORD);
+    while retries > 0 {
+        let response = client.cat(cid).map_ok(|chunk| chunk.to_vec()).try_concat().await;
+        match response {
+            Ok(stream) => return Ok(Bytes::from(stream)),
+            Err(e) => {
+                retries -= 1;
+                if retries > 0 {
+                    info!(
+                        error = %e,
+                        "Fetch uri."
+                    );
+                    tokio::time::sleep(Duration::from_secs(3)).await;
+                }
+            }
+        }
+    }
+
+    Err(anyhow::anyhow!(format!(
+        "Failed to pull data from IPFS after {} attempts, cid: {}",
+        IPFS_CLIENT_MAX_RETRY, cid
+    )))
 }
 
 // type used to do calculation on inmemory balances

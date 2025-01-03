@@ -8,7 +8,7 @@ use starknet::providers::Provider;
 use tracing::info;
 
 use super::{EventProcessor, EventProcessorConfig};
-use crate::sql::Sql;
+use torii_sqlite::Sql;
 
 pub(crate) const LOG_TARGET: &str = "torii_core::processors::event_message";
 

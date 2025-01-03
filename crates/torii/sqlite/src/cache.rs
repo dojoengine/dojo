@@ -8,7 +8,7 @@ use tokio::sync::RwLock;
 
 use crate::constants::TOKEN_BALANCE_TABLE;
 use crate::error::{Error, ParseError};
-use crate::sql::utils::I256;
+use crate::utils::I256;
 use crate::types::ContractType;
 
 #[derive(Debug, Clone)]

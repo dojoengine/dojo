@@ -12,9 +12,9 @@ use starknet::providers::Provider;
 use tracing::{error, info};
 
 use super::{EventProcessor, EventProcessorConfig};
-use crate::constants::IPFS_CLIENT_MAX_RETRY;
-use crate::sql::Sql;
-use crate::utils::fetch_content_from_ipfs;
+use torii_sqlite::constants::IPFS_CLIENT_MAX_RETRY;
+use torii_sqlite::Sql;
+use torii_sqlite::utils::fetch_content_from_ipfs;
 
 pub(crate) const LOG_TARGET: &str = "torii_core::processors::metadata_update";
 
