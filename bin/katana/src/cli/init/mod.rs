@@ -11,7 +11,8 @@ use dojo_utils::TransactionWaiter;
 use inquire::{Confirm, CustomType};
 use katana_cairo::lang::starknet_classes::casm_contract_class::CasmContractClass;
 use katana_cairo::lang::starknet_classes::contract_class::ContractClass;
-use katana_node::config::chain::{ChainConfig, SettlementLayer};
+use katana_chain_spec::{SettlementLayer, DEV_UNALLOCATED};
+use katana_primitives::chain::ChainId;
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
 use katana_primitives::genesis::Genesis;
 use katana_primitives::{felt, ContractAddress, Felt};
@@ -64,21 +65,21 @@ impl InitArgs {
         let rt = tokio::runtime::Builder::new_multi_thread().enable_all().build()?;
         let input = self.prompt(&rt)?;
 
-        let output = ChainConfig {
-            id: input.id,
-            genesis: GENESIS.clone(),
-            fee_token: ContractAddress::default(),
-            settlement: SettlementLayer {
-                account: input.account,
-                id: input.settlement_id,
-                rpc_url: input.rpc_url,
-                fee_token: input.fee_token,
-                bridge_contract: ContractAddress::default(),
-                settlement_contract: input.settlement_contract,
-            },
+        let settlement = SettlementLayer {
+            account: input.account,
+            rpc_url: input.rpc_url,
+            id: input.settlement_id,
+            fee_token: input.fee_token,
+            core_contract: input.settlement_contract,
+            bridge_contract: ContractAddress::default(),
         };
 
-        output.store(input.output_path)
+        let mut chain_spec = DEV_UNALLOCATED.clone();
+        chain_spec.genesis = GENESIS.clone();
+        chain_spec.id = ChainId::parse(&input.id)?;
+        chain_spec.settlement = Some(settlement);
+
+        chain_spec.store(input.output_path)
     }
 
     fn prompt(&self, rt: &Runtime) -> Result<InitInput> {

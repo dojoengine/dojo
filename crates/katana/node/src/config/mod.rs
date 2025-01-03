@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-pub mod chain;
 pub mod db;
 pub mod dev;
 pub mod execution;
@@ -48,8 +47,6 @@ pub struct Config {
 
     /// Development options.
     pub dev: DevConfig,
-    // /// Provider url for gas price oracle
-    // pub l1_provider_url: Option<Url>,
 }
 
 /// Configurations related to block production.
