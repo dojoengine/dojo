@@ -39,7 +39,7 @@ pub struct NodeArgs {
     pub silent: bool,
 
     /// Path to the chain configuration file.
-    #[arg(long)]
+    #[arg(long, hide = true)]
     pub chain: Option<PathBuf>,
 
     /// Disable auto and interval mining, and mine on demand instead via an endpoint.
