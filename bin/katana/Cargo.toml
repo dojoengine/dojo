@@ -8,6 +8,7 @@ version.workspace = true
 
 [dependencies]
 katana-cairo.workspace = true
+katana-chain-spec.workspace = true
 katana-cli.workspace = true
 katana-db.workspace = true
 katana-node.workspace = true

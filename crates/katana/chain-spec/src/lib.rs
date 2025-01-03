@@ -40,7 +40,7 @@ pub struct ChainSpec {
     /// The protocol version.
     pub version: ProtocolVersion,
     /// The chain settlement layer configurations.
-    pub settlement: SettlementLayer,
+    pub settlement: Option<SettlementLayer>,
 }
 
 /// Tokens that can be used for transaction fee payments in the chain. As
@@ -191,7 +191,8 @@ struct ChainSpecFile {
     id: ChainId,
     fee_contracts: FeeContracts,
     version: ProtocolVersion,
-    settlement: SettlementLayer,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    settlement: Option<SettlementLayer>,
     genesis: PathBuf,
 }
 
@@ -216,20 +217,12 @@ lazy_static! {
         let genesis = Genesis::default();
         let fee_contracts = FeeContracts { eth: DEFAULT_ETH_FEE_TOKEN_ADDRESS, strk: DEFAULT_STRK_FEE_TOKEN_ADDRESS };
 
-
         ChainSpec {
             id,
             genesis,
             fee_contracts,
+            settlement: None,
             version: CURRENT_STARKNET_VERSION,
-            settlement: SettlementLayer {
-                id: "".to_string(),
-                account: ContractAddress::ZERO,
-                fee_token: ContractAddress::ZERO,
-                bridge_contract: ContractAddress::ZERO,
-                core_contract: ContractAddress::ZERO,
-                rpc_url: Url::parse("http://localhost:5050").unwrap(),
-            }
         }
     };
 }
@@ -452,14 +445,7 @@ mod tests {
                 eth: DEFAULT_ETH_FEE_TOKEN_ADDRESS,
                 strk: DEFAULT_STRK_FEE_TOKEN_ADDRESS,
             },
-            settlement: SettlementLayer {
-                id: "0x1".to_string(),
-                account: ContractAddress::ZERO,
-                fee_token: ContractAddress::ZERO,
-                bridge_contract: ContractAddress::ZERO,
-                core_contract: ContractAddress::ZERO,
-                rpc_url: Url::parse("http://localhost:8545").unwrap(),
-            },
+            settlement: None,
         };
 
         // setup expected storage values

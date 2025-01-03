@@ -9,7 +9,6 @@ use clap::Parser;
 use katana_chain_spec::ChainSpec;
 use katana_core::constants::DEFAULT_SEQUENCER_ADDRESS;
 use katana_core::service::messaging::MessagingConfig;
-use katana_node::config::chain::ChainConfig;
 use katana_node::config::db::DbConfig;
 use katana_node::config::dev::{DevConfig, FixedL1GasPriceConfig};
 use katana_node::config::execution::ExecutionConfig;
@@ -17,7 +16,6 @@ use katana_node::config::fork::ForkingConfig;
 use katana_node::config::metrics::MetricsConfig;
 use katana_node::config::rpc::{RpcConfig, RpcModuleKind, RpcModulesList};
 use katana_node::config::{Config, SequencingConfig};
-use katana_primitives::chain::ChainId;
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
 use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
 use serde::{Deserialize, Serialize};
@@ -240,16 +238,8 @@ impl NodeArgs {
 
     fn chain_spec(&self) -> Result<Arc<ChainSpec>> {
         if let Some(path) = &self.chain {
-            let cfg = ChainConfig::load(path).context("failed to read chain configuration")?;
-            let mut chain_spec = katana_chain_spec::DEV_UNALLOCATED.clone();
-
-            chain_spec.id = ChainId::parse(&cfg.id)?;
-            chain_spec.genesis = cfg.genesis;
-            chain_spec.settlement.id = cfg.settlement.id.clone();
-            chain_spec.settlement.rpc_url = cfg.settlement.rpc_url.clone();
-            chain_spec.settlement.core_contract = cfg.settlement.settlement_contract;
+            let mut chain_spec = ChainSpec::load(path).context("failed to load chain spec")?;
             chain_spec.genesis.sequencer_address = *DEFAULT_SEQUENCER_ADDRESS;
-
             Ok(Arc::new(chain_spec))
         }
         // exclusively for development mode

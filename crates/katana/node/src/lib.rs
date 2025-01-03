@@ -23,10 +23,15 @@ use katana_core::backend::Backend;
 use katana_core::env::BlockContextGenerator;
 use katana_core::service::block_producer::BlockProducer;
 use katana_db::mdbx::DbEnv;
+use katana_executor::implementation::blockifier::blockifier::test_utils::{
+    DEFAULT_ETH_L1_DATA_GAS_PRICE, DEFAULT_ETH_L1_GAS_PRICE, DEFAULT_STRK_L1_DATA_GAS_PRICE,
+    DEFAULT_STRK_L1_GAS_PRICE,
+};
 use katana_executor::implementation::blockifier::BlockifierFactory;
 use katana_executor::ExecutionFlags;
 use katana_pool::ordering::FiFo;
 use katana_pool::TxPool;
+use katana_primitives::block::GasPrices;
 use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
 use katana_rpc::cors::Cors;
 use katana_rpc::dev::DevApi;
@@ -197,8 +202,15 @@ pub async fn build(mut config: Config) -> Result<Node> {
     let gas_oracle = if let Some(fixed_prices) = &config.dev.fixed_gas_prices {
         // Use fixed gas prices if provided in the configuration
         L1GasOracle::fixed(fixed_prices.gas_price.clone(), fixed_prices.data_gas_price.clone())
+    } else if let Some(settlement) = &config.chain.settlement {
+        // Default to a sampled gas oracle using the given provider
+        L1GasOracle::sampled(settlement.rpc_url.clone())
     } else {
-        L1GasOracle::sampled(config.chain.settlement.rpc_url.clone())
+        // Use default fixed gas prices if no url and if no fixed prices are provided
+        L1GasOracle::fixed(
+            GasPrices { eth: DEFAULT_ETH_L1_GAS_PRICE, strk: DEFAULT_STRK_L1_GAS_PRICE },
+            GasPrices { eth: DEFAULT_ETH_L1_DATA_GAS_PRICE, strk: DEFAULT_STRK_L1_DATA_GAS_PRICE },
+        )
     };
 
     let block_context_generator = BlockContextGenerator::default().into();
