@@ -1,5 +1,5 @@
+use katana_chain_spec::ChainSpec;
 use katana_primitives::chain::ChainId;
-use katana_primitives::chain_spec::ChainSpec;
 use katana_primitives::contract::{ContractAddress, Nonce};
 use katana_primitives::env::CfgEnv;
 use katana_primitives::genesis::allocation::GenesisAllocation;

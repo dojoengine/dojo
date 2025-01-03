@@ -83,7 +83,7 @@ impl L1GasOracle {
                 let prices = oracle.prices.clone();
                 let l1_provider = oracle.l1_provider.clone();
 
-                task_spawner.build_task().critical().name("L1 Gas Oracle worker").spawn(
+                task_spawner.build_task().critical().name("L1 Gas Oracle Worker").spawn(
                     async move {
                         let mut worker = GasOracleWorker::new(prices, l1_provider);
                         worker

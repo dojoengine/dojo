@@ -7,6 +7,7 @@ version.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+katana-chain-spec.workspace = true
 katana-db = { workspace = true, features = [ "test-utils" ] }
 katana-primitives.workspace = true
 katana-trie.workspace = true
@@ -32,7 +33,7 @@ serde_json = { version = "1.0.133" }
 default = [ "fork", "in-memory" ]
 fork = [ "dep:futures", "dep:starknet", "dep:tokio", "in-memory" ]
 in-memory = [  ]
-test-utils = [ "dep:alloy-primitives"]
+test-utils = [ "dep:alloy-primitives" ]
 
 [dev-dependencies]
 alloy-primitives.workspace = true

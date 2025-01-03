@@ -6,6 +6,7 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
+katana-chain-spec.workspace = true
 katana-core.workspace = true
 katana-db.workspace = true
 katana-executor.workspace = true

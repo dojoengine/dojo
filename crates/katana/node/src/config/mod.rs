@@ -12,8 +12,8 @@ use db::DbConfig;
 use dev::DevConfig;
 use execution::ExecutionConfig;
 use fork::ForkingConfig;
+use katana_chain_spec::ChainSpec;
 use katana_core::service::messaging::MessagingConfig;
-use katana_primitives::chain_spec::ChainSpec;
 use metrics::MetricsConfig;
 use rpc::RpcConfig;
 
