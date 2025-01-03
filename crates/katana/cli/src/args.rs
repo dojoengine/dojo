@@ -181,18 +181,7 @@ impl NodeArgs {
         let sequencing = self.sequencer_config();
         let messaging = self.messaging.clone();
 
-        Ok(Config {
-            metrics,
-            db,
-            dev,
-            rpc,
-            chain,
-            execution,
-            sequencing,
-            messaging,
-            forking,
-            // l1_provider_url,
-        })
+        Ok(Config { metrics, db, dev, rpc, chain, execution, sequencing, messaging, forking })
     }
 
     fn sequencer_config(&self) -> SequencingConfig {
