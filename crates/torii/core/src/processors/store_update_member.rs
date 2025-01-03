@@ -25,7 +25,7 @@ where
         "StoreUpdateMember".to_string()
     }
 
-    fn validate(&self, event: &Event) -> bool {
+    fn validate(&self, _event: &Event) -> bool {
         true
     }
 
