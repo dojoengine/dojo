@@ -164,15 +164,6 @@ impl StarknetOptions {
 #[derive(Debug, Args, Clone, Serialize, Deserialize, PartialEq)]
 #[command(next_help_heading = "Environment options")]
 pub struct EnvironmentOptions {
-    // /// The chain ID.
-    // ///
-    // /// The chain ID. If a raw hex string (`0x` prefix) is provided, then it'd
-    // /// used as the actual chain ID. Otherwise, it's represented as the raw
-    // /// ASCII values. It must be a valid Cairo short string.
-    // #[arg(long)]
-    // #[arg(value_parser = ChainId::parse)]
-    // #[serde(default)]
-    // pub chain_id: Option<ChainId>,
     /// The maximum number of steps available for the account validation logic.
     #[arg(long)]
     #[arg(default_value_t = DEFAULT_VALIDATION_MAX_STEPS)]

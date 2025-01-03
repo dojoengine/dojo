@@ -29,17 +29,24 @@ use serde::{Deserialize, Serialize};
 use starknet::core::utils::cairo_short_string_to_felt;
 use url::Url;
 
+/// The rollup chain specification.
 #[derive(Debug, Clone)]
 pub struct ChainSpec {
-    /// The network chain id.
+    /// The rollup network chain id.
     pub id: ChainId,
-    /// The genesis block.
+
+    /// The chain's genesis states.
     pub genesis: Genesis,
+
     /// The chain fee token contract.
     pub fee_contracts: FeeContracts,
-    /// The protocol version.
+
+    // TODO: Maybe remove? Doesn't seem like this should belong here.
     pub version: ProtocolVersion,
-    /// The chain settlement layer configurations.
+
+    /// The chain's settlement layer configurations.
+    ///
+    /// This is optional if the chain is on development mode.
     pub settlement: Option<SettlementLayer>,
 }
 

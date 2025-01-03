@@ -180,7 +180,6 @@ impl NodeArgs {
         let execution = self.execution_config();
         let sequencing = self.sequencer_config();
         let messaging = self.messaging.clone();
-        // let l1_provider_url = self.gpo_config();
 
         Ok(Config {
             metrics,
@@ -326,10 +325,6 @@ impl NodeArgs {
         #[cfg(not(feature = "server"))]
         None
     }
-
-    // fn gpo_config(&self) -> Option<Url> {
-    //     self.l1_provider_url.clone()
-    // }
 
     /// Parse the node config from the command line arguments and the config file,
     /// and merge them together prioritizing the command line arguments.
