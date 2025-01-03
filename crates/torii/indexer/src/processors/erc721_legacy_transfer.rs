@@ -7,15 +7,15 @@ use starknet::providers::Provider;
 use tracing::debug;
 
 use super::{EventProcessor, EventProcessorConfig};
-use crate::sql::Sql;
+use torii_sqlite::Sql;
 
-pub(crate) const LOG_TARGET: &str = "torii_core::processors::erc20_legacy_transfer";
+pub(crate) const LOG_TARGET: &str = "torii_core::processors::erc721_legacy_transfer";
 
 #[derive(Default, Debug)]
-pub struct Erc20LegacyTransferProcessor;
+pub struct Erc721LegacyTransferProcessor;
 
 #[async_trait]
-impl<P> EventProcessor<P> for Erc20LegacyTransferProcessor
+impl<P> EventProcessor<P> for Erc721LegacyTransferProcessor
 where
     P: Provider + Send + Sync + std::fmt::Debug,
 {
@@ -24,9 +24,9 @@ where
     }
 
     fn validate(&self, event: &Event) -> bool {
-        // ref: https://github.com/OpenZeppelin/cairo-contracts/blob/1f9359219a92cdb1576f953db71ee993b8ef5f70/src/openzeppelin/token/erc20/library.cairo#L19-L21
+        // ref: https://github.com/OpenZeppelin/cairo-contracts/blob/1f9359219a92cdb1576f953db71ee993b8ef5f70/src/openzeppelin/token/erc721/library.cairo#L27-L29
         // key: [hash(Transfer)]
-        // data: [from, to, value.0, value.1]
+        // data: [from, to, token_id.0, token_id.1]
         if event.keys.len() == 1 && event.data.len() == 4 {
             return true;
         }
@@ -36,7 +36,7 @@ where
 
     async fn process(
         &self,
-        world: &WorldContractReader<P>,
+        _world: &WorldContractReader<P>,
         db: &mut Sql,
         block_number: u64,
         block_timestamp: u64,
@@ -48,21 +48,20 @@ where
         let from = event.data[0];
         let to = event.data[1];
 
-        let value = U256Cainome::cairo_deserialize(&event.data, 2)?;
-        let value = U256::from_words(value.low, value.high);
+        let token_id = U256Cainome::cairo_deserialize(&event.data, 2)?;
+        let token_id = U256::from_words(token_id.low, token_id.high);
 
-        db.handle_erc20_transfer(
+        db.handle_erc721_transfer(
             token_address,
             from,
             to,
-            value,
-            world.provider(),
+            token_id,
             block_timestamp,
             event_id,
             block_number,
         )
         .await?;
-        debug!(target: LOG_TARGET,from = ?from, to = ?to, value = ?value, "Legacy ERC20 Transfer");
+        debug!(target: LOG_TARGET, from = ?from, to = ?to, token_id = ?token_id, "ERC721 Transfer");
 
         Ok(())
     }

@@ -4,7 +4,7 @@ use starknet::core::types::{Felt, Transaction};
 use starknet::providers::Provider;
 
 use super::TransactionProcessor;
-use crate::sql::Sql;
+use torii_sqlite::Sql;
 
 #[derive(Default, Debug)]
 pub struct StoreTransactionProcessor;

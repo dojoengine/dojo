@@ -5,7 +5,7 @@ use starknet::core::types::Event;
 use starknet::providers::Provider;
 
 use super::{EventProcessor, EventProcessorConfig};
-use crate::sql::Sql;
+use torii_sqlite::Sql;
 
 #[derive(Default, Debug)]
 pub struct RawEventProcessor;

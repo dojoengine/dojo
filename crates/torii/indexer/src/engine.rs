@@ -44,8 +44,8 @@ use crate::processors::upgrade_model::UpgradeModelProcessor;
 use crate::processors::{
     BlockProcessor, EventProcessor, EventProcessorConfig, TransactionProcessor,
 };
-use crate::sql::{Cursors, Sql};
-use crate::types::{Contract, ContractType};
+use torii_sqlite::{Cursors, Sql};
+use torii_sqlite::types::{Contract, ContractType};
 
 type EventProcessorMap<P> = HashMap<Felt, Vec<Box<dyn EventProcessor<P>>>>;
 

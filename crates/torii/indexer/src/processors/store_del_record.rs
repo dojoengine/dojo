@@ -1,27 +1,26 @@
 use anyhow::{Error, Result};
 use async_trait::async_trait;
 use dojo_world::contracts::abigen::world::Event as WorldEvent;
-use dojo_world::contracts::naming::get_tag;
 use dojo_world::contracts::world::WorldContractReader;
-use starknet::core::types::{Event, Felt};
+use starknet::core::types::Event;
 use starknet::providers::Provider;
-use tracing::info;
+use tracing::{debug, info};
 
 use super::{EventProcessor, EventProcessorConfig};
-use crate::sql::Sql;
+use torii_sqlite::Sql;
 
-pub(crate) const LOG_TARGET: &str = "torii_core::processors::event_message";
+pub(crate) const LOG_TARGET: &str = "torii_core::processors::store_del_record";
 
 #[derive(Default, Debug)]
-pub struct EventMessageProcessor;
+pub struct StoreDelRecordProcessor;
 
 #[async_trait]
-impl<P> EventProcessor<P> for EventMessageProcessor
+impl<P> EventProcessor<P> for StoreDelRecordProcessor
 where
     P: Provider + Send + Sync + std::fmt::Debug,
 {
     fn event_key(&self) -> String {
-        "EventEmitted".to_string()
+        "StoreDelRecord".to_string()
     }
 
     fn validate(&self, _event: &Event) -> bool {
@@ -36,43 +35,50 @@ where
         block_timestamp: u64,
         event_id: &str,
         event: &Event,
-        config: &EventProcessorConfig,
+        _config: &EventProcessorConfig,
     ) -> Result<(), Error> {
         // Torii version is coupled to the world version, so we can expect the event to be well
         // formed.
         let event = match WorldEvent::try_from(event).unwrap_or_else(|_| {
             panic!(
                 "Expected {} event to be well formed.",
-                <EventMessageProcessor as EventProcessor<P>>::event_key(self)
+                <StoreDelRecordProcessor as EventProcessor<P>>::event_key(self)
             )
         }) {
-            WorldEvent::EventEmitted(e) => e,
+            WorldEvent::StoreDelRecord(e) => e,
             _ => {
                 unreachable!()
             }
         };
 
-        // silently ignore if the model is not found
+        // If the model does not exist, silently ignore it.
+        // This can happen if only specific namespaces are indexed.
         let model = match db.model(event.selector).await {
-            Ok(model) => model,
-            Err(_) => return Ok(()),
+            Ok(m) => m,
+            Err(e) if e.to_string().contains("no rows") => {
+                debug!(
+                    target: LOG_TARGET,
+                    selector = %event.selector,
+                    "Model does not exist, skipping."
+                );
+                return Ok(());
+            }
+            Err(e) => return Err(e),
         };
 
         info!(
             target: LOG_TARGET,
             namespace = %model.namespace,
             name = %model.name,
-            system = %format!("{:#x}", Felt::from(event.system_address)),
-            "Store event message."
+            entity_id = format!("{:#x}", event.entity_id),
+            "Store delete record."
         );
 
-        let mut keys_and_unpacked = [event.keys, event.values].concat();
+        let entity = model.schema;
 
-        let mut entity = model.schema.clone();
-        entity.deserialize(&mut keys_and_unpacked)?;
+        db.delete_entity(event.entity_id, event.selector, entity, event_id, block_timestamp)
+            .await?;
 
-        let historical = config.is_historical(&get_tag(&model.namespace, &model.name));
-        db.set_event_message(entity, event_id, block_timestamp, historical).await?;
         Ok(())
     }
 }
