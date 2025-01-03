@@ -25,6 +25,7 @@ mod debugger;
 mod transaction;
 mod utils;
 mod verification;
+pub mod walnut;
 
 pub use debugger::WalnutDebugger;
 

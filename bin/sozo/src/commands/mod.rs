@@ -32,6 +32,7 @@ use init::InitArgs;
 use inspect::InspectArgs;
 use migrate::MigrateArgs;
 use model::ModelArgs;
+use sozo_walnut::walnut::WalnutArgs;
 use test::TestArgs;
 
 pub(crate) const LOG_TARGET: &str = "sozo::cli";
@@ -65,6 +66,8 @@ pub enum Commands {
     Model(Box<ModelArgs>),
     #[command(about = "Inspect events emitted by the world")]
     Events(Box<EventsArgs>),
+    #[command(about = "Interact with walnut.dev - transactions debugger and simulator")]
+    Walnut(Box<WalnutArgs>),
 }
 
 impl fmt::Display for Commands {
@@ -83,6 +86,7 @@ impl fmt::Display for Commands {
             Commands::Init(_) => write!(f, "Init"),
             Commands::Model(_) => write!(f, "Model"),
             Commands::Events(_) => write!(f, "Events"),
+            Commands::Walnut(_) => write!(f, "WalnutVerify"),
         }
     }
 }
@@ -109,6 +113,7 @@ pub fn run(command: Commands, config: &Config) -> Result<()> {
         Commands::Init(args) => args.run(config),
         Commands::Model(args) => args.run(config),
         Commands::Events(args) => args.run(config),
+        Commands::Walnut(args) => args.run(config),
     }
 }
 
