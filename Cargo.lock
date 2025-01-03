@@ -15683,9 +15683,9 @@ dependencies = [
  "tokio-util",
  "toml 0.8.19",
  "torii-cli",
- "torii-engine",
  "torii-graphql",
  "torii-grpc",
+ "torii-indexer",
  "torii-relay",
  "torii-server",
  "torii-sqlite",
@@ -15709,7 +15709,7 @@ dependencies = [
  "serde",
  "starknet 0.12.0",
  "toml 0.8.19",
- "torii-engine",
+ "torii-indexer",
  "torii-sqlite",
  "url",
 ]
@@ -15740,46 +15740,6 @@ dependencies = [
  "torii-grpc",
  "torii-relay",
  "url",
-]
-
-[[package]]
-name = "torii-engine"
-version = "1.0.9"
-dependencies = [
- "anyhow",
- "async-trait",
- "base64 0.21.7",
- "bitflags 2.6.0",
- "cainome 0.4.8",
- "chrono",
- "crypto-bigint",
- "data-url",
- "dojo-test-utils",
- "dojo-types 1.0.9",
- "dojo-utils",
- "dojo-world",
- "futures-channel",
- "futures-util",
- "hashlink",
- "ipfs-api-backend-hyper",
- "katana-runner",
- "num-traits 0.2.19",
- "once_cell",
- "reqwest 0.11.27",
- "scarb",
- "serde",
- "serde_json",
- "slab",
- "sozo-scarbext",
- "sqlx",
- "starknet 0.12.0",
- "starknet-crypto 0.7.2",
- "tempfile",
- "thiserror 1.0.63",
- "tokio",
- "tokio-util",
- "torii-sqlite",
- "tracing",
 ]
 
 [[package]]
@@ -15866,6 +15826,46 @@ dependencies = [
  "torii-sqlite",
  "tower 0.4.13",
  "tower-http 0.4.4",
+ "tracing",
+]
+
+[[package]]
+name = "torii-indexer"
+version = "1.0.9"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "base64 0.21.7",
+ "bitflags 2.6.0",
+ "cainome 0.4.8",
+ "chrono",
+ "crypto-bigint",
+ "data-url",
+ "dojo-test-utils",
+ "dojo-types 1.0.9",
+ "dojo-utils",
+ "dojo-world",
+ "futures-channel",
+ "futures-util",
+ "hashlink",
+ "ipfs-api-backend-hyper",
+ "katana-runner",
+ "num-traits 0.2.19",
+ "once_cell",
+ "reqwest 0.11.27",
+ "scarb",
+ "serde",
+ "serde_json",
+ "slab",
+ "sozo-scarbext",
+ "sqlx",
+ "starknet 0.12.0",
+ "starknet-crypto 0.7.2",
+ "tempfile",
+ "thiserror 1.0.63",
+ "tokio",
+ "tokio-util",
+ "torii-sqlite",
  "tracing",
 ]
 
@@ -15974,7 +15974,7 @@ dependencies = [
  "thiserror 1.0.63",
  "tokio",
  "tokio-util",
- "torii-engine",
+ "torii-indexer",
  "tracing",
 ]
 

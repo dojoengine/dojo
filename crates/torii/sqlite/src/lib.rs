@@ -38,6 +38,7 @@ pub mod executor;
 pub mod types;
 pub mod simple_broker;
 pub mod error;
+pub mod model;
 
 use cache::{LocalCache, Model, ModelCache};
 

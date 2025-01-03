@@ -1,8 +1,8 @@
 [package]
-description = "Torii engine implementation."
+description = "Torii indexer implementation."
 edition.workspace = true
 license-file.workspace = true
-name = "torii-engine"
+name = "torii-indexer"
 repository.workspace = true
 version.workspace = true
 

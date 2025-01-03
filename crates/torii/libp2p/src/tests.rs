@@ -539,10 +539,10 @@ mod test {
         use tokio::select;
         use tokio::sync::broadcast;
         use tokio::time::sleep;
-        use torii_core::executor::Executor;
-        use torii_core::sql::cache::ModelCache;
-        use torii_core::sql::Sql;
-        use torii_core::types::{Contract, ContractType};
+        use torii_sqlite::executor::Executor;
+        use torii_sqlite::cache::ModelCache;
+        use torii_sqlite::Sql;
+        use torii_sqlite::types::{Contract, ContractType};
 
         use crate::server::Relay;
         use crate::typed_data::{Domain, Field, SimpleField, TypedData};

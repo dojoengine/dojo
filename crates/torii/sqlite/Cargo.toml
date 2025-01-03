@@ -46,4 +46,4 @@ katana-runner.workspace = true
 scarb.workspace = true
 sozo-scarbext.workspace = true
 tempfile.workspace = true
-torii-engine.workspace = true
+torii-indexer.workspace = true

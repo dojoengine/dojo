@@ -21,11 +21,11 @@ use starknet_crypto::poseidon_hash_many;
 use tempfile::NamedTempFile;
 use tokio::sync::broadcast;
 
-use crate::engine::{Engine, EngineConfig, Processors};
 use crate::executor::Executor;
 use crate::cache::ModelCache;
 use crate::Sql;
 use crate::types::{Contract, ContractType};
+use torii_indexer::engine::{Engine, EngineConfig, Processors};
 
 pub async fn bootstrap_engine<P>(
     world: WorldContractReader<P>,

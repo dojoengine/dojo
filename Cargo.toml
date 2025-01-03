@@ -119,7 +119,7 @@ katana-trie = { path = "crates/katana/trie" }
 # torii
 torii-cli = { path = "crates/torii/cli" }
 torii-client = { path = "crates/torii/client" }
-torii-engine = { path = "crates/torii/engine" }
+torii-indexer = { path = "crates/torii/indexer" }
 torii-sqlite = { path = "crates/torii/sqlite" }
 torii-graphql = { path = "crates/torii/graphql" }
 torii-grpc = { path = "crates/torii/grpc" }
