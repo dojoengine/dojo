@@ -6,15 +6,17 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
-anyhow.workspace = true
-assert_fs.workspace = true
-async-trait.workspace = true
-camino.workspace = true
+katana-chain-spec.workspace = true
 katana-core = { workspace = true }
 katana-executor = { workspace = true, features = [ "blockifier" ] }
 katana-node.workspace = true
 katana-primitives = { workspace = true }
 katana-rpc.workspace = true
+
+anyhow.workspace = true
+assert_fs.workspace = true
+async-trait.workspace = true
+camino.workspace = true
 scarb.workspace = true
 scarb-ui.workspace = true
 serde.workspace = true

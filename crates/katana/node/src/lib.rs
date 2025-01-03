@@ -136,7 +136,7 @@ impl Node {
 
         // --- start the gas oracle worker task
         self.backend.gas_oracle.run_worker(self.task_manager.task_spawner());
-        info!(url = %self.backend.chain_spec.l1_rpc_url, "Gas Price Oracle started.");
+        info!(target: "node", "Gas price oracle worker started.");
 
         Ok(LaunchedNode { node: self, rpc: rpc_handle })
     }
@@ -198,7 +198,7 @@ pub async fn build(mut config: Config) -> Result<Node> {
         // Use fixed gas prices if provided in the configuration
         L1GasOracle::fixed(fixed_prices.gas_price.clone(), fixed_prices.data_gas_price.clone())
     } else {
-        L1GasOracle::sampled(config.chain.l1_rpc_url.clone())
+        L1GasOracle::sampled(config.chain.settlement.rpc_url.clone())
     };
 
     let block_context_generator = BlockContextGenerator::default().into();

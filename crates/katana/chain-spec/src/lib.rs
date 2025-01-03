@@ -1,18 +1,17 @@
 use std::collections::BTreeMap;
+use std::fs::File;
+use std::io::BufReader;
+use std::path::{Path, PathBuf};
 
 use alloy_primitives::U256;
-use lazy_static::lazy_static;
-use starknet::core::utils::cairo_short_string_to_felt;
-use starknet::providers::Url;
-use starknet_crypto::Felt;
-
-use crate::block::{Block, Header};
-use crate::chain::ChainId;
-use crate::class::ClassHash;
-use crate::contract::ContractAddress;
-use crate::da::L1DataAvailabilityMode;
-use crate::genesis::allocation::{DevAllocationsGenerator, GenesisAllocation};
-use crate::genesis::constant::{
+use anyhow::{Context, Result};
+use katana_primitives::block::{Block, Header};
+use katana_primitives::chain::ChainId;
+use katana_primitives::class::ClassHash;
+use katana_primitives::contract::ContractAddress;
+use katana_primitives::da::L1DataAvailabilityMode;
+use katana_primitives::genesis::allocation::{DevAllocationsGenerator, GenesisAllocation};
+use katana_primitives::genesis::constant::{
     get_fee_token_balance_base_storage_address, DEFAULT_ACCOUNT_CLASS_PUBKEY_STORAGE_SLOT,
     DEFAULT_ETH_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CLASS, DEFAULT_LEGACY_ERC20_CLASS_HASH,
     DEFAULT_LEGACY_UDC_CLASS, DEFAULT_LEGACY_UDC_CLASS_HASH,
@@ -20,14 +19,16 @@ use crate::genesis::constant::{
     DEFAULT_STRK_FEE_TOKEN_ADDRESS, DEFAULT_UDC_ADDRESS, ERC20_DECIMAL_STORAGE_SLOT,
     ERC20_NAME_STORAGE_SLOT, ERC20_SYMBOL_STORAGE_SLOT, ERC20_TOTAL_SUPPLY_STORAGE_SLOT,
 };
-use crate::genesis::Genesis;
-use crate::state::StateUpdatesWithClasses;
-use crate::utils::split_u256;
-use crate::version::{ProtocolVersion, CURRENT_STARKNET_VERSION};
+use katana_primitives::genesis::Genesis;
+use katana_primitives::state::StateUpdatesWithClasses;
+use katana_primitives::utils::split_u256;
+use katana_primitives::version::{ProtocolVersion, CURRENT_STARKNET_VERSION};
+use katana_primitives::Felt;
+use lazy_static::lazy_static;
+use serde::{Deserialize, Serialize};
+use starknet::core::utils::cairo_short_string_to_felt;
+use url::Url;
 
-/// A chain specification.
-// TODO: include l1 core contract
-// TODO: create a chain spec and genesis builder to abstract inserting aux classes
 #[derive(Debug, Clone)]
 pub struct ChainSpec {
     /// The network chain id.
@@ -38,19 +39,14 @@ pub struct ChainSpec {
     pub fee_contracts: FeeContracts,
     /// The protocol version.
     pub version: ProtocolVersion,
-
-    // settlement layer confugurations
-    pub l1_id: String,
-    pub l1_rpc_url: Url,
-    pub l1_fee_token: ContractAddress,
-    pub bridge_contract: ContractAddress,
-    pub settlement_contract: ContractAddress,
+    /// The chain settlement layer configurations.
+    pub settlement: SettlementLayer,
 }
 
 /// Tokens that can be used for transaction fee payments in the chain. As
 /// supported on Starknet.
 // TODO: include both l1 and l2 addresses
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FeeContracts {
     /// L2 ETH fee token address. Used for paying pre-V3 transactions.
     pub eth: ContractAddress,
@@ -58,7 +54,71 @@ pub struct FeeContracts {
     pub strk: ContractAddress,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SettlementLayer {
+    // the account address that was used to initialized the l1 deployments
+    pub account: ContractAddress,
+
+    // The id of the settlement chain.
+    pub id: String,
+
+    pub rpc_url: Url,
+
+    // - The token that will be used to pay for tx fee in the appchain.
+    // - For now, this must be the native token that is used to pay for tx fee in the settlement
+    //   chain.
+    pub fee_token: ContractAddress,
+
+    // - The bridge contract for bridging the fee token from L1 to the appchain
+    // - This will be part of the initialization process.
+    pub bridge_contract: ContractAddress,
+
+    // - The core appchain contract used to settlement
+    // - This is deployed on the L1
+    pub core_contract: ContractAddress,
+}
+
+//////////////////////////////////////////////////////////////
+// 	ChainSpec implementations
+//////////////////////////////////////////////////////////////
+
 impl ChainSpec {
+    pub fn load<P: AsRef<Path>>(path: P) -> Result<Self> {
+        let content = std::fs::read_to_string(&path)?;
+        let cs = serde_json::from_str::<ChainSpecFile>(&content)?;
+
+        let file = File::open(&cs.genesis).context("failed to open genesis file")?;
+        let genesis: Genesis = serde_json::from_reader(BufReader::new(file))?;
+
+        Ok(Self {
+            genesis,
+            id: cs.id,
+            version: cs.version,
+            settlement: cs.settlement,
+            fee_contracts: cs.fee_contracts,
+        })
+    }
+
+    pub fn store<P: AsRef<Path>>(self, path: P) -> anyhow::Result<()> {
+        let cfg_path = path.as_ref();
+        let mut genesis_path = cfg_path.to_path_buf();
+        genesis_path.set_file_name("genesis.json");
+
+        let stored = ChainSpecFile {
+            id: self.id,
+            version: self.version,
+            genesis: genesis_path,
+            settlement: self.settlement,
+            fee_contracts: self.fee_contracts,
+        };
+
+        serde_json::to_writer_pretty(File::create(cfg_path)?, &stored)?;
+        serde_json::to_writer_pretty(File::create(stored.genesis)?, &self.genesis)?;
+
+        Ok(())
+    }
+
     pub fn block(&self) -> Block {
         let header = Header {
             state_diff_length: 0,
@@ -126,6 +186,15 @@ impl Default for ChainSpec {
     }
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+struct ChainSpecFile {
+    id: ChainId,
+    fee_contracts: FeeContracts,
+    version: ProtocolVersion,
+    settlement: SettlementLayer,
+    genesis: PathBuf,
+}
+
 lazy_static! {
     /// The default chain specification in dev mode.
     pub static ref DEV: ChainSpec = {
@@ -147,16 +216,20 @@ lazy_static! {
         let genesis = Genesis::default();
         let fee_contracts = FeeContracts { eth: DEFAULT_ETH_FEE_TOKEN_ADDRESS, strk: DEFAULT_STRK_FEE_TOKEN_ADDRESS };
 
+
         ChainSpec {
             id,
             genesis,
             fee_contracts,
             version: CURRENT_STARKNET_VERSION,
-            bridge_contract: ContractAddress::ZERO,
-            l1_fee_token: ContractAddress::ZERO,
-            l1_id: "0x1".to_string(),
-            l1_rpc_url: Url::parse("http://localhost:8545").unwrap(),
-            settlement_contract: ContractAddress::ZERO,
+            settlement: SettlementLayer {
+                id: "".to_string(),
+                account: ContractAddress::ZERO,
+                fee_token: ContractAddress::ZERO,
+                bridge_contract: ContractAddress::ZERO,
+                core_contract: ContractAddress::ZERO,
+                rpc_url: Url::parse("http://localhost:5050").unwrap(),
+            }
         }
     };
 }
@@ -267,23 +340,25 @@ mod tests {
     use std::str::FromStr;
 
     use alloy_primitives::U256;
-    use starknet::macros::felt;
-
-    use super::*;
-    use crate::address;
-    use crate::block::{Block, GasPrices, Header};
-    use crate::da::L1DataAvailabilityMode;
-    use crate::genesis::allocation::{GenesisAccount, GenesisAccountAlloc, GenesisContractAlloc};
-    #[cfg(feature = "slot")]
-    use crate::genesis::constant::{CONTROLLER_ACCOUNT_CLASS, CONTROLLER_CLASS_HASH};
-    use crate::genesis::constant::{
+    use katana_primitives::address;
+    use katana_primitives::block::{Block, GasPrices, Header};
+    use katana_primitives::da::L1DataAvailabilityMode;
+    use katana_primitives::genesis::allocation::{
+        GenesisAccount, GenesisAccountAlloc, GenesisContractAlloc,
+    };
+    #[cfg(feature = "controller")]
+    use katana_primitives::genesis::constant::{CONTROLLER_ACCOUNT_CLASS, CONTROLLER_CLASS_HASH};
+    use katana_primitives::genesis::constant::{
         DEFAULT_ACCOUNT_CLASS, DEFAULT_ACCOUNT_CLASS_HASH,
         DEFAULT_ACCOUNT_CLASS_PUBKEY_STORAGE_SLOT, DEFAULT_ACCOUNT_COMPILED_CLASS_HASH,
         DEFAULT_LEGACY_ERC20_CLASS, DEFAULT_LEGACY_ERC20_COMPILED_CLASS_HASH,
         DEFAULT_LEGACY_UDC_CLASS, DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH,
     };
-    use crate::genesis::GenesisClass;
-    use crate::version::CURRENT_STARKNET_VERSION;
+    use katana_primitives::genesis::GenesisClass;
+    use katana_primitives::version::CURRENT_STARKNET_VERSION;
+    use starknet::macros::felt;
+
+    use super::*;
 
     #[test]
     fn genesis_block_and_state_updates() {
@@ -311,7 +386,7 @@ mod tests {
                     class: DEFAULT_ACCOUNT_CLASS.clone().into(),
                 },
             ),
-            #[cfg(feature = "slot")]
+            #[cfg(feature = "controller")]
             (
                 CONTROLLER_CLASS_HASH,
                 GenesisClass {
@@ -377,12 +452,14 @@ mod tests {
                 eth: DEFAULT_ETH_FEE_TOKEN_ADDRESS,
                 strk: DEFAULT_STRK_FEE_TOKEN_ADDRESS,
             },
-
-            bridge_contract: ContractAddress::ZERO,
-            l1_fee_token: ContractAddress::ZERO,
-            l1_id: "0x1".to_string(),
-            l1_rpc_url: Url::parse("http://localhost:8545").unwrap(),
-            settlement_contract: ContractAddress::ZERO,
+            settlement: SettlementLayer {
+                id: "0x1".to_string(),
+                account: ContractAddress::ZERO,
+                fee_token: ContractAddress::ZERO,
+                bridge_contract: ContractAddress::ZERO,
+                core_contract: ContractAddress::ZERO,
+                rpc_url: Url::parse("http://localhost:8545").unwrap(),
+            },
         };
 
         // setup expected storage values
@@ -428,7 +505,7 @@ mod tests {
         assert_eq!(actual_block.header.events_count, expected_block.header.events_count);
         assert_eq!(actual_block.body, expected_block.body);
 
-        if cfg!(feature = "slot") {
+        if cfg!(feature = "controller") {
             assert!(actual_state_updates.classes.len() == 4);
         } else {
             assert!(actual_state_updates.classes.len() == 3);
@@ -502,7 +579,7 @@ mod tests {
             "The default oz account contract sierra class should be declared"
         );
 
-        #[cfg(feature = "slot")]
+        #[cfg(feature = "controller")]
         {
             assert_eq!(
                 actual_state_updates.state_updates.declared_classes.get(&CONTROLLER_CLASS_HASH),
