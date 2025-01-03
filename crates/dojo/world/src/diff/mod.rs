@@ -12,6 +12,7 @@ use starknet::core::types::contract::SierraClass;
 use starknet::core::types::{BlockId, BlockTag, StarknetError};
 use starknet::providers::{Provider, ProviderError};
 use starknet_crypto::Felt;
+use tracing::trace;
 
 use super::local::{ResourceLocal, WorldLocal};
 use super::remote::{ResourceRemote, WorldRemote};
@@ -171,7 +172,7 @@ impl WorldDiff {
         {
             Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => Ok(false),
             Ok(_) => {
-                tracing::trace!(
+                trace!(
                     contract_address = format!("{:#066x}", world_address),
                     "World already deployed."
                 );

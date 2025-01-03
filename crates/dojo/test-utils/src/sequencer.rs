@@ -1,16 +1,16 @@
-use std::collections::HashSet;
 use std::sync::Arc;
 
 use katana_core::backend::Backend;
 use katana_core::constants::DEFAULT_SEQUENCER_ADDRESS;
 use katana_executor::implementation::blockifier::BlockifierFactory;
 use katana_node::config::dev::DevConfig;
-use katana_node::config::rpc::{ApiKind, RpcConfig, DEFAULT_RPC_ADDR, DEFAULT_RPC_MAX_CONNECTIONS};
+use katana_node::config::rpc::{RpcConfig, DEFAULT_RPC_ADDR, DEFAULT_RPC_MAX_CONNECTIONS};
 pub use katana_node::config::*;
 use katana_node::LaunchedNode;
 use katana_primitives::chain::ChainId;
 use katana_primitives::chain_spec::ChainSpec;
 use katana_rpc::Error;
+use rpc::RpcModulesList;
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::chain_id;
 use starknet::core::types::{BlockId, BlockTag, Felt};
@@ -122,9 +122,10 @@ pub fn get_default_test_config(sequencing: SequencingConfig) -> Config {
         cors_origins: Vec::new(),
         port: 0,
         addr: DEFAULT_RPC_ADDR,
+        apis: RpcModulesList::all(),
         max_connections: DEFAULT_RPC_MAX_CONNECTIONS,
-        apis: HashSet::from([ApiKind::Starknet, ApiKind::Dev, ApiKind::Saya, ApiKind::Torii]),
         max_event_page_size: Some(100),
+        max_proof_keys: Some(100),
     };
 
     Config { sequencing, rpc, dev, chain: chain.into(), ..Default::default() }

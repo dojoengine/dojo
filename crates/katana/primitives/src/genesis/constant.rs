@@ -26,32 +26,27 @@ pub const DEFAULT_STRK_FEE_TOKEN_ADDRESS: ContractAddress =
     ContractAddress(felt!("0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d"));
 
 /// The standard storage address for `public key` in the default account class.
-/// Corresponds to keccak("Account_public_key") ==
-/// 0x1379ac0624b939ceb9dede92211d7db5ee174fe28be72245b0a1a2abd81c98f
+/// Corresponds to keccak("Account_public_key")
 pub const DEFAULT_ACCOUNT_CLASS_PUBKEY_STORAGE_SLOT: StorageKey =
     felt!("0x1379ac0624b939ceb9dede92211d7db5ee174fe28be72245b0a1a2abd81c98f");
 
 /// The standard storage address for `ERC20_name` in ERC20 contract.
-/// Corresponds to keccak("ERC20_name") ==
-/// 0x0341c1bdfd89f69748aa00b5742b03adbffd79b8e80cab5c50d91cd8c2a79be1
+/// Corresponds to keccak("ERC20_name")
 pub const ERC20_NAME_STORAGE_SLOT: StorageKey =
     felt!("0x0341c1bdfd89f69748aa00b5742b03adbffd79b8e80cab5c50d91cd8c2a79be1");
 
 /// The standard storage address for `ERC20_symbol` in ERC20 contract.
-/// Corresponds to keccak("ERC20_symbol") ==
-/// 0x00b6ce5410fca59d078ee9b2a4371a9d684c530d697c64fbef0ae6d5e8f0ac72
+/// Corresponds to keccak("ERC20_symbol")
 pub const ERC20_SYMBOL_STORAGE_SLOT: StorageKey =
     felt!("0x00b6ce5410fca59d078ee9b2a4371a9d684c530d697c64fbef0ae6d5e8f0ac72");
 
 /// The standard storage address for `ERC20_decimals` in ERC20 contract.
-/// Corresponds to keccak("ERC20_decimals") ==
-/// 0x01f0d4aa99431d246bac9b8e48c33e888245b15e9678f64f9bdfc8823dc8f979
+/// Corresponds to keccak("ERC20_decimals")
 pub const ERC20_DECIMAL_STORAGE_SLOT: StorageKey =
     felt!("0x01f0d4aa99431d246bac9b8e48c33e888245b15e9678f64f9bdfc8823dc8f979");
 
 /// The standard storage address for `ERC20_total_supply` in ERC20 contract.
-/// Corresponds to keccak("ERC20_total_supply") ==
-/// 0x110e2f729c9c2b988559994a3daccd838cf52faf88e18101373e67dd061455a
+/// Corresponds to keccak("ERC20_total_supply")
 pub const ERC20_TOTAL_SUPPLY_STORAGE_SLOT: StorageKey =
     felt!("0x110e2f729c9c2b988559994a3daccd838cf52faf88e18101373e67dd061455a");
 
@@ -59,16 +54,14 @@ pub const ERC20_TOTAL_SUPPLY_STORAGE_SLOT: StorageKey =
 pub const DEFAULT_PREFUNDED_ACCOUNT_BALANCE: u128 = 10 * u128::pow(10, 21);
 
 /// The class hash of DEFAULT_LEGACY_ERC20_CONTRACT_CASM.
-/// Corresponds to 0x02a8846878b6ad1f54f6ba46f5f40e11cee755c677f130b2c4b60566c9003f1f
 pub const DEFAULT_LEGACY_ERC20_CLASS_HASH: ClassHash =
-    felt!("0x02a8846878b6ad1f54f6ba46f5f40e11cee755c677f130b2c4b60566c9003f1f");
+    felt!("0xa2475bc66197c751d854ea8c39c6ad9781eb284103bcd856b58e6b500078ac");
 
 /// The compiled class hash of DEFAULT_LEGACY_ERC20_CONTRACT_CASM.
 pub const DEFAULT_LEGACY_ERC20_COMPILED_CLASS_HASH: CompiledClassHash =
     DEFAULT_LEGACY_ERC20_CLASS_HASH;
 
 /// The class hash of DEFAULT_LEGACY_UDC_CASM.
-/// Corresponds to 0x07b3e05f48f0c69e4a65ce5e076a66271a527aff2c34ce1083ec6e1526997a69
 pub const DEFAULT_LEGACY_UDC_CLASS_HASH: ClassHash =
     felt!("0x07b3e05f48f0c69e4a65ce5e076a66271a527aff2c34ce1083ec6e1526997a69");
 

@@ -116,11 +116,14 @@ impl ModelReader<Error> for ModelSQLReader {
 }
 
 /// Creates a query that fetches all models and their nested data.
+#[allow(clippy::too_many_arguments)]
 pub fn build_sql_query(
     schemas: &Vec<Ty>,
     table_name: &str,
+    model_relation_table: &str,
     entity_relation_column: &str,
     where_clause: Option<&str>,
+    having_clause: Option<&str>,
     order_by: Option<&str>,
     limit: Option<u32>,
     offset: Option<u32>,
@@ -171,6 +174,7 @@ pub fn build_sql_query(
     // Add base table columns
     selections.push(format!("{}.id", table_name));
     selections.push(format!("{}.keys", table_name));
+    selections.push(format!("group_concat({model_relation_table}.model_id) as model_ids"));
 
     // Process each model schema
     for model in schemas {
@@ -184,18 +188,36 @@ pub fn build_sql_query(
         collect_columns(&model_table, "", model, &mut selections);
     }
 
+    joins.push(format!(
+        "JOIN {model_relation_table} ON {table_name}.id = {model_relation_table}.entity_id"
+    ));
+
     let selections_clause = selections.join(", ");
     let joins_clause = joins.join(" ");
 
     let mut query = format!("SELECT {} FROM [{}] {}", selections_clause, table_name, joins_clause);
 
-    let mut count_query =
-        format!("SELECT COUNT(DISTINCT {}.id) FROM [{}] {}", table_name, table_name, joins_clause);
+    // Include model_ids in the subquery and put WHERE before GROUP BY
+    let mut count_query = format!(
+        "SELECT COUNT(*) FROM (SELECT {}.id, group_concat({}.model_id) as model_ids FROM [{}] {}",
+        table_name, model_relation_table, table_name, joins_clause
+    );
 
     if let Some(where_clause) = where_clause {
         query += &format!(" WHERE {}", where_clause);
         count_query += &format!(" WHERE {}", where_clause);
     }
+
+    query += &format!(" GROUP BY {table_name}.id");
+    count_query += &format!(" GROUP BY {table_name}.id");
+
+    if let Some(having_clause) = having_clause {
+        query += &format!(" HAVING {}", having_clause);
+        count_query += &format!(" HAVING {}", having_clause);
+    }
+
+    // Close the subquery
+    count_query += ") AS filtered_entities";
 
     // Use custom order by if provided, otherwise default to event_id DESC
     if let Some(order_clause) = order_by {
@@ -248,11 +270,10 @@ pub fn map_row_to_ty(
                     let value = row.try_get::<String, &str>(column_name)?;
                     let hex_str = value.trim_start_matches("0x");
 
-                    if !hex_str.is_empty() {
-                        primitive.set_i128(Some(
-                            i128::from_str_radix(hex_str, 16).map_err(ParseError::ParseIntError)?,
-                        ))?;
-                    }
+                    primitive.set_i128(Some(
+                        u128::from_str_radix(hex_str, 16).map_err(ParseError::ParseIntError)?
+                            as i128,
+                    ))?;
                 }
                 Primitive::U8(_) => {
                     let value = row.try_get::<u8, &str>(column_name)?;
@@ -376,6 +397,155 @@ pub fn map_row_to_ty(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
+pub async fn fetch_entities(
+    pool: &Pool<sqlx::Sqlite>,
+    schemas: &[Ty],
+    table_name: &str,
+    model_relation_table: &str,
+    entity_relation_column: &str,
+    where_clause: Option<&str>,
+    having_clause: Option<&str>,
+    order_by: Option<&str>,
+    limit: Option<u32>,
+    offset: Option<u32>,
+    bind_values: Vec<String>,
+) -> Result<(Vec<sqlx::sqlite::SqliteRow>, u32), Error> {
+    // Helper function to collect columns (existing implementation)
+    fn collect_columns(table_prefix: &str, path: &str, ty: &Ty, selections: &mut Vec<String>) {
+        match ty {
+            Ty::Struct(s) => {
+                for child in &s.children {
+                    let new_path = if path.is_empty() {
+                        child.name.clone()
+                    } else {
+                        format!("{}.{}", path, child.name)
+                    };
+                    collect_columns(table_prefix, &new_path, &child.ty, selections);
+                }
+            }
+            Ty::Tuple(t) => {
+                for (i, child) in t.iter().enumerate() {
+                    let new_path =
+                        if path.is_empty() { format!("{}", i) } else { format!("{}.{}", path, i) };
+                    collect_columns(table_prefix, &new_path, child, selections);
+                }
+            }
+            Ty::Enum(e) => {
+                // Add the enum variant column with table prefix and alias
+                selections.push(format!("[{table_prefix}].[{path}] as \"{table_prefix}.{path}\"",));
+
+                // Add columns for each variant's value (if not empty tuple)
+                for option in &e.options {
+                    if let Ty::Tuple(t) = &option.ty {
+                        if t.is_empty() {
+                            continue;
+                        }
+                    }
+                    let variant_path = format!("{}.{}", path, option.name);
+                    collect_columns(table_prefix, &variant_path, &option.ty, selections);
+                }
+            }
+            Ty::Array(_) | Ty::Primitive(_) | Ty::ByteArray(_) => {
+                selections.push(format!("[{table_prefix}].[{path}] as \"{table_prefix}.{path}\"",));
+            }
+        }
+    }
+
+    const MAX_JOINS: usize = 64;
+    let schema_chunks = schemas.chunks(MAX_JOINS);
+    let mut total_count = 0;
+    let mut all_rows = Vec::new();
+
+    for chunk in schema_chunks {
+        let mut selections = Vec::new();
+        let mut joins = Vec::new();
+
+        // Add base table columns
+        selections.push(format!("{}.id", table_name));
+        selections.push(format!("{}.keys", table_name));
+        selections.push(format!("group_concat({model_relation_table}.model_id) as model_ids"));
+
+        // Process each model schema in the chunk
+        for model in chunk {
+            let model_table = model.name();
+            joins.push(format!(
+                "LEFT JOIN [{model_table}] ON {table_name}.id = \
+                 [{model_table}].{entity_relation_column}"
+            ));
+            collect_columns(&model_table, "", model, &mut selections);
+        }
+
+        joins.push(format!(
+            "JOIN {model_relation_table} ON {table_name}.id = {model_relation_table}.entity_id"
+        ));
+
+        let selections_clause = selections.join(", ");
+        let joins_clause = joins.join(" ");
+
+        // Build count query
+        let count_query = format!(
+            "SELECT COUNT(*) FROM (SELECT {}.id, group_concat({}.model_id) as model_ids FROM [{}] \
+             {} {} GROUP BY {}.id {})",
+            table_name,
+            model_relation_table,
+            table_name,
+            joins_clause,
+            where_clause.map_or(String::new(), |w| format!(" WHERE {}", w)),
+            table_name,
+            having_clause.map_or(String::new(), |h| format!(" HAVING {}", h))
+        );
+
+        // Execute count query
+        let mut count_stmt = sqlx::query_scalar(&count_query);
+        for value in &bind_values {
+            count_stmt = count_stmt.bind(value);
+        }
+        let chunk_count: u32 = count_stmt.fetch_one(pool).await?;
+        total_count += chunk_count;
+
+        if chunk_count > 0 {
+            // Build main query
+            let mut query =
+                format!("SELECT {} FROM [{}] {}", selections_clause, table_name, joins_clause);
+
+            if let Some(where_clause) = where_clause {
+                query += &format!(" WHERE {}", where_clause);
+            }
+
+            query += &format!(" GROUP BY {table_name}.id");
+
+            if let Some(having_clause) = having_clause {
+                query += &format!(" HAVING {}", having_clause);
+            }
+
+            if let Some(order_clause) = order_by {
+                query += &format!(" ORDER BY {}", order_clause);
+            } else {
+                query += &format!(" ORDER BY {}.event_id DESC", table_name);
+            }
+
+            if let Some(limit) = limit {
+                query += &format!(" LIMIT {}", limit);
+            }
+
+            if let Some(offset) = offset {
+                query += &format!(" OFFSET {}", offset);
+            }
+
+            // Execute main query
+            let mut stmt = sqlx::query(&query);
+            for value in &bind_values {
+                stmt = stmt.bind(value);
+            }
+            let chunk_rows = stmt.fetch_all(pool).await?;
+            all_rows.extend(chunk_rows);
+        }
+    }
+
+    Ok((all_rows, total_count))
+}
+
 #[cfg(test)]
 mod tests {
     use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
@@ -489,7 +659,9 @@ mod tests {
         let query = build_sql_query(
             &vec![position, player_config],
             "entities",
+            "entity_model",
             "internal_entity_id",
+            None,
             None,
             None,
             None,
@@ -498,16 +670,17 @@ mod tests {
         .unwrap();
 
         let expected_query =
-            "SELECT entities.id, entities.keys, [Test-Position].[player] as \
-             \"Test-Position.player\", [Test-Position].[vec.x] as \"Test-Position.vec.x\", \
-             [Test-Position].[vec.y] as \"Test-Position.vec.y\", \
+            "SELECT entities.id, entities.keys, group_concat(entity_model.model_id) as model_ids, \
+             [Test-Position].[player] as \"Test-Position.player\", [Test-Position].[vec.x] as \
+             \"Test-Position.vec.x\", [Test-Position].[vec.y] as \"Test-Position.vec.y\", \
              [Test-Position].[test_everything] as \"Test-Position.test_everything\", \
              [Test-PlayerConfig].[favorite_item] as \"Test-PlayerConfig.favorite_item\", \
              [Test-PlayerConfig].[favorite_item.Some] as \
              \"Test-PlayerConfig.favorite_item.Some\", [Test-PlayerConfig].[items] as \
              \"Test-PlayerConfig.items\" FROM [entities] LEFT JOIN [Test-Position] ON entities.id \
              = [Test-Position].internal_entity_id LEFT JOIN [Test-PlayerConfig] ON entities.id = \
-             [Test-PlayerConfig].internal_entity_id ORDER BY entities.event_id DESC";
+             [Test-PlayerConfig].internal_entity_id JOIN entity_model ON entities.id = \
+             entity_model.entity_id GROUP BY entities.id ORDER BY entities.event_id DESC";
         assert_eq!(query.0, expected_query);
     }
 }

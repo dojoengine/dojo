@@ -60,7 +60,7 @@ edition = "2021"
 license = "Apache-2.0"
 license-file = "LICENSE"
 repository = "https://github.com/dojoengine/dojo/"
-version = "1.0.6"
+version = "1.0.9"
 
 [profile.performance]
 codegen-units = 1
@@ -277,3 +277,8 @@ starknet-crypto = "0.7.1"
 starknet-types-core = { version = "0.1.7", features = [ "arbitrary", "hash" ] }
 
 bitvec = "1.0.1"
+
+# macro
+proc-macro2 = "1.0"
+quote = "1.0"
+syn = { version = "2.0", default-features = false }

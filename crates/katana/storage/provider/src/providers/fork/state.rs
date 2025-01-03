@@ -7,7 +7,7 @@ use super::backend::SharedStateProvider;
 use crate::providers::in_memory::cache::CacheStateDb;
 use crate::providers::in_memory::state::StateSnapshot;
 use crate::traits::contract::ContractClassProvider;
-use crate::traits::state::StateProvider;
+use crate::traits::state::{StateProofProvider, StateProvider, StateRootProvider};
 use crate::ProviderResult;
 
 pub type ForkedStateDb = CacheStateDb<SharedStateProvider>;
@@ -76,7 +76,7 @@ impl StateProvider for ForkedStateDb {
     }
 }
 
-impl ContractClassProvider for CacheStateDb<SharedStateProvider> {
+impl ContractClassProvider for ForkedStateDb {
     fn class(&self, hash: ClassHash) -> ProviderResult<Option<ContractClass>> {
         if let class @ Some(_) = self.shared_contract_classes.classes.read().get(&hash) {
             return Ok(class.cloned());
@@ -99,6 +99,41 @@ impl ContractClassProvider for CacheStateDb<SharedStateProvider> {
             return Ok(hash.cloned());
         }
         ContractClassProvider::compiled_class_hash_of_class_hash(&self.db, hash)
+    }
+}
+
+impl StateProofProvider for ForkedStateDb {
+    fn class_multiproof(&self, _: Vec<ClassHash>) -> ProviderResult<katana_trie::MultiProof> {
+        Ok(katana_trie::MultiProof(Default::default()))
+    }
+
+    fn contract_multiproof(
+        &self,
+        _: Vec<ContractAddress>,
+    ) -> ProviderResult<katana_trie::MultiProof> {
+        Ok(katana_trie::MultiProof(Default::default()))
+    }
+
+    fn storage_multiproof(
+        &self,
+        _: ContractAddress,
+        _: Vec<StorageKey>,
+    ) -> ProviderResult<katana_trie::MultiProof> {
+        Ok(katana_trie::MultiProof(Default::default()))
+    }
+}
+
+impl StateRootProvider for ForkedStateDb {
+    fn classes_root(&self) -> ProviderResult<katana_primitives::Felt> {
+        Ok(katana_primitives::Felt::ZERO)
+    }
+
+    fn contracts_root(&self) -> ProviderResult<katana_primitives::Felt> {
+        Ok(katana_primitives::Felt::ZERO)
+    }
+
+    fn storage_root(&self, _: ContractAddress) -> ProviderResult<Option<katana_primitives::Felt>> {
+        Ok(Some(katana_primitives::Felt::ZERO))
     }
 }
 
@@ -140,6 +175,41 @@ impl ContractClassProvider for LatestStateProvider {
         hash: ClassHash,
     ) -> ProviderResult<Option<CompiledClassHash>> {
         ContractClassProvider::compiled_class_hash_of_class_hash(&self.0, hash)
+    }
+}
+
+impl StateProofProvider for LatestStateProvider {
+    fn class_multiproof(&self, _: Vec<ClassHash>) -> ProviderResult<katana_trie::MultiProof> {
+        Ok(katana_trie::MultiProof(Default::default()))
+    }
+
+    fn contract_multiproof(
+        &self,
+        _: Vec<ContractAddress>,
+    ) -> ProviderResult<katana_trie::MultiProof> {
+        Ok(katana_trie::MultiProof(Default::default()))
+    }
+
+    fn storage_multiproof(
+        &self,
+        _: ContractAddress,
+        _: Vec<StorageKey>,
+    ) -> ProviderResult<katana_trie::MultiProof> {
+        Ok(katana_trie::MultiProof(Default::default()))
+    }
+}
+
+impl StateRootProvider for LatestStateProvider {
+    fn classes_root(&self) -> ProviderResult<katana_primitives::Felt> {
+        Ok(katana_primitives::Felt::ZERO)
+    }
+
+    fn contracts_root(&self) -> ProviderResult<katana_primitives::Felt> {
+        Ok(katana_primitives::Felt::ZERO)
+    }
+
+    fn storage_root(&self, _: ContractAddress) -> ProviderResult<Option<katana_primitives::Felt>> {
+        Ok(Some(katana_primitives::Felt::ZERO))
     }
 }
 
@@ -212,6 +282,41 @@ impl ContractClassProvider for ForkedSnapshot {
             return Ok(hash);
         }
         ContractClassProvider::compiled_class_hash_of_class_hash(&self.inner.db, hash)
+    }
+}
+
+impl StateProofProvider for ForkedSnapshot {
+    fn class_multiproof(&self, _: Vec<ClassHash>) -> ProviderResult<katana_trie::MultiProof> {
+        Ok(katana_trie::MultiProof(Default::default()))
+    }
+
+    fn contract_multiproof(
+        &self,
+        _: Vec<ContractAddress>,
+    ) -> ProviderResult<katana_trie::MultiProof> {
+        Ok(katana_trie::MultiProof(Default::default()))
+    }
+
+    fn storage_multiproof(
+        &self,
+        _: ContractAddress,
+        _: Vec<StorageKey>,
+    ) -> ProviderResult<katana_trie::MultiProof> {
+        Ok(katana_trie::MultiProof(Default::default()))
+    }
+}
+
+impl StateRootProvider for ForkedSnapshot {
+    fn classes_root(&self) -> ProviderResult<katana_primitives::Felt> {
+        Ok(katana_primitives::Felt::ZERO)
+    }
+
+    fn contracts_root(&self) -> ProviderResult<katana_primitives::Felt> {
+        Ok(katana_primitives::Felt::ZERO)
+    }
+
+    fn storage_root(&self, _: ContractAddress) -> ProviderResult<Option<katana_primitives::Felt>> {
+        Ok(Some(katana_primitives::Felt::ZERO))
     }
 }
 

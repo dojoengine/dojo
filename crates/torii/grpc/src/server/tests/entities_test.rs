@@ -142,6 +142,8 @@ async fn test_entities_queries(sequencer: &RunnerCtx) {
             None,
             false,
             None,
+            vec!["ns-Moves".to_string(), "ns-Position".to_string()],
+            None,
         )
         .await
         .unwrap()

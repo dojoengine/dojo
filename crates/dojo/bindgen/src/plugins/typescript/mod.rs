@@ -3,9 +3,9 @@ use std::path::PathBuf;
 
 use async_trait::async_trait;
 use generator::r#enum::TsEnumGenerator;
-use generator::erc::TsErcGenerator;
 use generator::function::TsFunctionGenerator;
 use generator::interface::TsInterfaceGenerator;
+use generator::models::TsModelsGenerator;
 use generator::schema::TsSchemaGenerator;
 use writer::{TsFileContractWriter, TsFileWriter};
 
@@ -31,7 +31,7 @@ impl TypescriptPlugin {
                         Box::new(TsInterfaceGenerator {}),
                         Box::new(TsEnumGenerator {}),
                         Box::new(TsSchemaGenerator {}),
-                        Box::new(TsErcGenerator {}),
+                        Box::new(TsModelsGenerator {}),
                     ],
                 )),
                 Box::new(TsFileContractWriter::new(

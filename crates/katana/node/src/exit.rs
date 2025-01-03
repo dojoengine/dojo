@@ -18,7 +18,7 @@ impl<'a> NodeStoppedFuture<'a> {
     pub(crate) fn new(handle: &'a LaunchedNode) -> Self {
         let fut = Box::pin(async {
             handle.node.task_manager.wait_for_shutdown().await;
-            handle.rpc.clone().stopped().await;
+            handle.rpc.stop()?;
             Ok(())
         });
         Self { fut }

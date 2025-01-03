@@ -1,3 +1,6 @@
 [submodule "crates/katana/contracts/messaging/solidity/lib/forge-std"]
 	path = crates/katana/contracts/messaging/solidity/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
+[submodule "crates/katana/contracts/piltover"]
+	path = crates/katana/contracts/piltover
+	url = https://github.com/cartridge-gg/piltover.git

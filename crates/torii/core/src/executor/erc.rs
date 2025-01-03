@@ -15,8 +15,9 @@ use tracing::{debug, trace, warn};
 use super::{ApplyBalanceDiffQuery, Executor};
 use crate::constants::{IPFS_CLIENT_MAX_RETRY, SQL_FELT_DELIMITER, TOKEN_BALANCE_TABLE};
 use crate::executor::LOG_TARGET;
+use crate::simple_broker::SimpleBroker;
 use crate::sql::utils::{felt_to_sql_string, sql_string_to_u256, u256_to_sql_string, I256};
-use crate::types::ContractType;
+use crate::types::{ContractType, TokenBalance};
 use crate::utils::fetch_content_from_ipfs;
 
 #[derive(Debug, Clone)]
@@ -159,17 +160,20 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         }
 
         // write the new balance to the database
-        sqlx::query(&format!(
+        let token_balance: TokenBalance = sqlx::query_as(&format!(
             "INSERT OR REPLACE INTO {TOKEN_BALANCE_TABLE} (id, contract_address, account_address, \
-             token_id, balance) VALUES (?, ?, ?, ?, ?)",
+             token_id, balance) VALUES (?, ?, ?, ?, ?) RETURNING *",
         ))
         .bind(id)
         .bind(contract_address)
         .bind(account_address)
         .bind(token_id)
         .bind(u256_to_sql_string(&balance))
-        .execute(&mut **tx)
+        .fetch_one(&mut **tx)
         .await?;
+
+        debug!(target: LOG_TARGET, token_balance = ?token_balance, "Applied balance diff");
+        SimpleBroker::publish(token_balance);
 
         Ok(())
     }
