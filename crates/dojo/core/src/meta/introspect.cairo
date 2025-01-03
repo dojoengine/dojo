@@ -11,6 +11,7 @@ pub enum Ty {
     // And `Box` is not serializable. So using a Span, even if it's to have
     // one element, does the trick.
     Array: Span<Ty>,
+    FixedArray: Span<(Ty, u32)>,
     ByteArray,
 }
 
