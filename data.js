@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1735941420667,
+  "lastUpdate": 1735941642602,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -42847,6 +42847,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10218193129,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "07bb8800bcd0db431a4dacdf86f68d2cae5226fb",
+          "message": "fix(torii-core): correct parallelized task hash (#2860)",
+          "timestamp": "2025-01-03T15:40:34-06:00",
+          "tree_id": "18836d7e061a91cf7c8533797a15e97341375362",
+          "url": "https://github.com/dojoengine/dojo/commit/07bb8800bcd0db431a4dacdf86f68d2cae5226fb"
+        },
+        "date": 1735941640753,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2428806,
+            "range": "± 14612",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8501399,
+            "range": "± 428146",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3826381227,
+            "range": "± 812751568",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8254178,
+            "range": "± 335885",
             "unit": "ns/iter"
           }
         ]
