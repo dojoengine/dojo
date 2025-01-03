@@ -8,11 +8,14 @@ use anyhow::{anyhow, Context, Result};
 use cainome::rs::abigen;
 use clap::Args;
 use dojo_utils::TransactionWaiter;
-use inquire::{Confirm, CustomType, Text};
+use inquire::{Confirm, CustomType};
 use katana_cairo::lang::starknet_classes::casm_contract_class::CasmContractClass;
 use katana_cairo::lang::starknet_classes::contract_class::ContractClass;
+use katana_node::config::chain::{ChainConfig, SettlementLayer};
+use katana_primitives::genesis::allocation::DevAllocationsGenerator;
+use katana_primitives::genesis::Genesis;
 use katana_primitives::{felt, ContractAddress, Felt};
-use serde::{Deserialize, Serialize};
+use lazy_static::lazy_static;
 use starknet::accounts::{Account, ConnectedAccount, ExecutionEncoding, SingleOwnerAccount};
 use starknet::contract::ContractFactory;
 use starknet::core::types::contract::{CompiledClass, SierraClass};
@@ -46,47 +49,9 @@ struct InitInput {
     output_path: PathBuf,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub struct SettlementLayer {
-    // the account address that was used to initialized the l1 deployments
-    pub account: ContractAddress,
-
-    // The id of the settlement chain.
-    pub id: String,
-
-    pub rpc_url: Url,
-
-    // - The token that will be used to pay for tx fee in the appchain.
-    // - For now, this must be the native token that is used to pay for tx fee in the settlement
-    //   chain.
-    pub fee_token: ContractAddress,
-
-    // - The bridge contract for bridging the fee token from L1 to the appchain
-    // - This will be part of the initialization process.
-    pub bridge_contract: ContractAddress,
-
-    // - The core appchain contract used to settlement
-    // - This is deployed on the L1
-    pub settlement_contract: ContractAddress,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub struct InitConfiguration {
-    // the initialized chain id
-    pub id: String,
-
-    // the fee token contract
-    //
-    // this corresponds to the l1 token contract
-    pub fee_token: ContractAddress,
-
-    pub settlement: SettlementLayer,
-}
-
 #[derive(Debug, Args)]
 pub struct InitArgs {
+    /// The path to where the config file will be written at.
     #[arg(value_name = "PATH")]
     pub output_path: Option<PathBuf>,
 }
@@ -99,8 +64,9 @@ impl InitArgs {
         let rt = tokio::runtime::Builder::new_multi_thread().enable_all().build()?;
         let input = self.prompt(&rt)?;
 
-        let output = InitConfiguration {
+        let output = ChainConfig {
             id: input.id,
+            genesis: GENESIS.clone(),
             fee_token: ContractAddress::default(),
             settlement: SettlementLayer {
                 account: input.account,
@@ -112,14 +78,22 @@ impl InitArgs {
             },
         };
 
-        let content = toml::to_string_pretty(&output)?;
-        fs::write(input.output_path, content)?;
-
-        Ok(())
+        output.store(input.output_path)
     }
 
     fn prompt(&self, rt: &Runtime) -> Result<InitInput> {
-        let chain_id = Text::new("Id").prompt()?;
+        let chain_id = CustomType::<String>::new("Id")
+            .with_help_message("This will be the id of your rollup chain.")
+	        // checks that the input is a valid ascii string.
+            .with_parser(&|input| {
+                if input.is_ascii() {
+                    Ok(input.to_string())
+                } else {
+                    Err(())
+                }
+            })
+            .with_error_message("Must be valid ASCII characters")
+            .prompt()?;
 
         let url = CustomType::<Url>::new("Settlement RPC URL")
             .with_default(Url::parse("http://localhost:5050")?)
@@ -232,7 +206,7 @@ where
 
             Err(ProviderError::StarknetError(StarknetError::ClassHashNotFound)) => {
                 sp.update_text("Declaring contract...");
-                let res = account.declare_v2(contract.into(), compiled_class_hash).send().await?;
+                let res = account.declare_v3(contract.into(), compiled_class_hash).send().await?;
                 let _ = TransactionWaiter::new(res.transaction_hash, account.provider()).await?;
             }
 
@@ -300,9 +274,9 @@ fn get_compiled_class_hash(artifact: &str) -> Result<Felt> {
     Ok(compiled_class.class_hash()?)
 }
 
-// > CONFIG_DIR/$chain_id/config.toml
+// > CONFIG_DIR/$chain_id/config.json
 fn config_path(id: &str) -> Result<PathBuf> {
-    Ok(config_dir(id)?.join("config").with_extension("toml"))
+    Ok(config_dir(id)?.join("config").with_extension("json"))
 }
 
 fn config_dir(id: &str) -> Result<PathBuf> {
@@ -332,4 +306,14 @@ impl Display for Path {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0.display())
     }
+}
+
+lazy_static! {
+    static ref GENESIS: Genesis = {
+        // master account
+        let accounts = DevAllocationsGenerator::new(1).generate();
+        let mut genesis = Genesis::default();
+        genesis.extend_allocations(accounts.into_iter().map(|(k, v)| (k, v.into())));
+        genesis
+    };
 }

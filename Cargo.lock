@@ -8455,13 +8455,12 @@ dependencies = [
  "katana-db",
  "katana-node",
  "katana-primitives",
- "serde",
+ "lazy_static",
  "serde_json",
  "shellexpand",
  "spinoff",
  "starknet 0.12.0",
  "tokio",
- "toml 0.8.19",
 ]
 
 [[package]]
@@ -8676,6 +8675,7 @@ dependencies = [
  "strum_macros 0.25.3",
  "thiserror 1.0.63",
  "tokio",
+ "toml 0.8.19",
  "tower 0.4.13",
  "tower-http 0.4.4",
  "tracing",

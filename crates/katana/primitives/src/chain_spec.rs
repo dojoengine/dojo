@@ -3,6 +3,7 @@ use std::collections::BTreeMap;
 use alloy_primitives::U256;
 use lazy_static::lazy_static;
 use starknet::core::utils::cairo_short_string_to_felt;
+use starknet::providers::Url;
 use starknet_crypto::Felt;
 
 use crate::block::{Block, Header};
@@ -37,6 +38,13 @@ pub struct ChainSpec {
     pub fee_contracts: FeeContracts,
     /// The protocol version.
     pub version: ProtocolVersion,
+
+    // settlement layer confugurations
+    pub l1_id: String,
+    pub l1_rpc_url: Url,
+    pub l1_fee_token: ContractAddress,
+    pub bridge_contract: ContractAddress,
+    pub settlement_contract: ContractAddress,
 }
 
 /// Tokens that can be used for transaction fee payments in the chain. As
@@ -138,7 +146,18 @@ lazy_static! {
         let id = ChainId::parse("KATANA").unwrap();
         let genesis = Genesis::default();
         let fee_contracts = FeeContracts { eth: DEFAULT_ETH_FEE_TOKEN_ADDRESS, strk: DEFAULT_STRK_FEE_TOKEN_ADDRESS };
-        ChainSpec { id, genesis, fee_contracts, version: CURRENT_STARKNET_VERSION }
+
+        ChainSpec {
+            id,
+            genesis,
+            fee_contracts,
+            version: CURRENT_STARKNET_VERSION,
+            bridge_contract: ContractAddress::ZERO,
+            l1_fee_token: ContractAddress::ZERO,
+            l1_id: "0x1".to_string(),
+            l1_rpc_url: Url::parse("http://localhost:8545").unwrap(),
+            settlement_contract: ContractAddress::ZERO,
+        }
     };
 }
 
@@ -358,6 +377,12 @@ mod tests {
                 eth: DEFAULT_ETH_FEE_TOKEN_ADDRESS,
                 strk: DEFAULT_STRK_FEE_TOKEN_ADDRESS,
             },
+
+            bridge_contract: ContractAddress::ZERO,
+            l1_fee_token: ContractAddress::ZERO,
+            l1_id: "0x1".to_string(),
+            l1_rpc_url: Url::parse("http://localhost:8545").unwrap(),
+            settlement_contract: ContractAddress::ZERO,
         };
 
         // setup expected storage values

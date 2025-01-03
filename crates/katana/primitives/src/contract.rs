@@ -22,6 +22,11 @@ pub type Nonce = Felt;
 pub struct ContractAddress(pub Felt);
 
 impl ContractAddress {
+    pub const ZERO: Self = Self(Felt::ZERO);
+    pub const ONE: Self = Self(Felt::ONE);
+    pub const TWO: Self = Self(Felt::TWO);
+    pub const THREE: Self = Self(Felt::THREE);
+
     pub fn new(address: Felt) -> Self {
         ContractAddress(normalize_address(address))
     }
