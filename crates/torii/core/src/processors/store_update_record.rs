@@ -24,7 +24,16 @@ where
         "StoreUpdateRecord".to_string()
     }
 
-    fn validate(&self, _event: &Event) -> bool {
+    fn validate(&self, event: &Event) -> bool {
+        if event.keys.len() != 2 {
+            info!(
+                target: LOG_TARGET,
+                event_key = %<StoreUpdateRecordProcessor as EventProcessor<P>>::event_key(self),
+                invalid_keys = %<StoreUpdateRecordProcessor as EventProcessor<P>>::event_keys_as_string(self, event),
+                "Invalid event keys."
+            );
+            return false;
+        }
         true
     }
 
