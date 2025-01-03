@@ -26,15 +26,6 @@ where
     }
 
     fn validate(&self, event: &Event) -> bool {
-        if event.keys.len() != 3 {
-            info!(
-                target: LOG_TARGET,
-                event_key = %<StoreUpdateMemberProcessor as EventProcessor<P>>::event_key(self),
-                invalid_keys = %<StoreUpdateMemberProcessor as EventProcessor<P>>::event_keys_as_string(self, event),
-                "Invalid event keys."
-            );
-            return false;
-        }
         true
     }
 
