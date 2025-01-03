@@ -859,8 +859,10 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         let task_identifier = match processor.event_key().as_str() {
             "StoreSetRecord" | "StoreUpdateRecord" | "StoreUpdateMember" | "StoreDelRecord" => {
                 let mut hasher = DefaultHasher::new();
-                event.keys[0].hash(&mut hasher);
+                // model selector
                 event.keys[1].hash(&mut hasher);
+                // entity id
+                event.keys[2].hash(&mut hasher);
                 hasher.finish()
             }
             _ => 0,
