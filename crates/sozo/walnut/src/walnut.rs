@@ -1,7 +1,8 @@
 use anyhow::Result;
 use clap::{Args, Subcommand};
 use scarb::core::Config;
-use sozo_walnut::WalnutDebugger;
+
+use crate::WalnutDebugger;
 
 #[derive(Debug, Args)]
 pub struct WalnutArgs {
@@ -11,7 +12,9 @@ pub struct WalnutArgs {
 
 #[derive(Debug, Subcommand)]
 pub enum WalnutVerifyCommand {
-    #[command(about = "Verify contracts in walnut.dev - essential for debugging source code in Walnut")]
+    #[command(
+        about = "Verify contracts in walnut.dev - essential for debugging source code in Walnut"
+    )]
     Verify(WalnutVerifyOptions),
 }
 

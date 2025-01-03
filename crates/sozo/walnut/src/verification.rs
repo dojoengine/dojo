@@ -40,7 +40,7 @@ pub async fn walnut_verify(ws: &Workspace<'_>) -> anyhow::Result<()> {
     // its path to a file so `parent` should never return `None`
     let root_dir: &Path = ws.manifest_path().parent().unwrap().as_std_path();
 
-    let source_code = _collect_source_code(root_dir)?;
+    let source_code = collect_source_code(root_dir)?;
     let cairo_version = scarb::version::get().version;
 
     let verification_payload =
@@ -66,7 +66,7 @@ async fn verify_classes(payload: VerificationPayload, api_url: &str) -> Result<S
     }
 }
 
-fn _collect_source_code(root_dir: &Path) -> Result<Value, Error> {
+fn collect_source_code(root_dir: &Path) -> Result<Value, Error> {
     fn collect_files(
         root_dir: &Path,
         search_dir: &Path,

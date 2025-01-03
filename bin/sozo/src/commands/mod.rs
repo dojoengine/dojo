@@ -21,7 +21,6 @@ pub(crate) mod migrate;
 pub(crate) mod model;
 pub(crate) mod options;
 pub(crate) mod test;
-pub(crate) mod walnut;
 
 use build::BuildArgs;
 use call::CallArgs;
@@ -33,8 +32,8 @@ use init::InitArgs;
 use inspect::InspectArgs;
 use migrate::MigrateArgs;
 use model::ModelArgs;
+use sozo_walnut::walnut::WalnutArgs;
 use test::TestArgs;
-use walnut::WalnutArgs;
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {

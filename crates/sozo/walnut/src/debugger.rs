@@ -1,12 +1,11 @@
 use dojo_utils::TransactionResult;
 use scarb::core::Workspace;
 use scarb_ui::Ui;
-use starknet::core::types::Felt;
 use url::Url;
 
 use crate::transaction::walnut_debug_transaction;
 use crate::verification::walnut_verify;
-use crate::{utils, Error};
+use crate::Error;
 
 /// A debugger for Starknet transactions embedding the walnut configuration.
 #[derive(Debug)]
@@ -22,11 +21,7 @@ impl WalnutDebugger {
 
     /// Creates a new Walnut debugger if the `use_walnut` flag is set.
     pub fn new_from_flag(use_walnut: bool, rpc_url: Url) -> Option<Self> {
-        if use_walnut {
-            Some(Self::new(rpc_url))
-        } else {
-            None
-        }
+        if use_walnut { Some(Self::new(rpc_url)) } else { None }
     }
 
     /// Debugs a transaction with Walnut by printing a link to the Walnut debugger page.
