@@ -1,16 +1,17 @@
 //! Middleware that proxies requests at a specified URI to internal
 //! RPC method calls.
+use std::collections::HashMap;
+use std::error::Error;
+use std::future::Future;
+use std::pin::Pin;
+use std::task::{Context, Poll};
+
 use hyper::header::{ACCEPT, CONTENT_TYPE};
 use hyper::http::HeaderValue;
 use hyper::{Body, Method, Request, Response, Uri};
 use jsonrpsee_core::error::Error as RpcError;
 use jsonrpsee_core::JsonRawValue;
 use jsonrpsee_types::{Id, RequestSer};
-use std::collections::HashMap;
-use std::error::Error;
-use std::future::Future;
-use std::pin::Pin;
-use std::task::{Context, Poll};
 use tower::{Layer, Service};
 use url::form_urlencoded;
 

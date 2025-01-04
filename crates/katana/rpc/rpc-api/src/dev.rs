@@ -20,7 +20,7 @@ pub trait DevApi {
 
     #[method(name = "setStorageAt")]
     async fn set_storage_at(&self, contract_address: Felt, key: Felt, value: Felt)
-        -> RpcResult<()>;
+    -> RpcResult<()>;
 
     #[method(name = "predeployedAccounts")]
     async fn predeployed_accounts(&self) -> RpcResult<Vec<Account>>;
