@@ -4,12 +4,12 @@ use std::sync::Arc;
 use anyhow::Result;
 use clap::Args;
 use colored::Colorize;
-use dojo_world::contracts::abigen::world::{self, Event as WorldEvent};
+use dojo_world::contracts::abigen::world::{ self, Event as WorldEvent };
 use dojo_world::diff::WorldDiff;
 use scarb::core::Config;
 use sozo_ops::model;
 use sozo_scarbext::WorkspaceExt;
-use starknet::core::types::{BlockId, BlockTag, EventFilter, Felt};
+use starknet::core::types::{ BlockId, BlockTag, EventFilter, Felt };
 use starknet::core::utils::starknet_keccak;
 use starknet::providers::Provider;
 
@@ -57,23 +57,38 @@ impl EventsArgs {
             let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
             let profile_config = ws.load_profile_config()?;
 
-            let (world_diff, provider, _) =
-                utils::get_world_diff_and_provider(self.starknet, self.world, &ws).await?;
+            let (world_diff, provider, _) = utils::get_world_diff_and_provider(
+                self.starknet,
+                self.world,
+                &ws
+            ).await?;
 
             let provider = Arc::new(provider);
 
-            let from_block = if let Some(world_block) =
-                profile_config.env.as_ref().and_then(|e| e.world_block)
-            {
-                Some(BlockId::Number(world_block))
-            } else {
-                self.from_block.map(BlockId::Number)
-            };
+            // Define a maximum block range (e.g., 50,000 blocks)
+            const MAX_BLOCK_RANGE: u64 = 50_000;
 
+            // Adjust the starting block range dynamically
+            let from_block = if let Some(start_block) = self.from_block {
+                let current_block = self.get_current_block(); // Replace with actual logic to get the current block number
+                if current_block > start_block + MAX_BLOCK_RANGE {
+                    // Ensure the range does not exceed the maximum limit
+                    Some(BlockId::Number(start_block + MAX_BLOCK_RANGE))
+                } else {
+                    Some(BlockId::Number(start_block))
+                }
+            } else {
+                None
+            };
             let to_block = self.to_block.map(BlockId::Number);
-            let keys = self
-                .events
-                .map(|e| vec![e.iter().map(|event| starknet_keccak(event.as_bytes())).collect()]);
+            let keys = self.events.map(|e|
+                vec![
+                    e
+                        .iter()
+                        .map(|event| starknet_keccak(event.as_bytes()))
+                        .collect()
+                ]
+            );
 
             let event_filter = EventFilter {
                 from_block,
@@ -82,8 +97,11 @@ impl EventsArgs {
                 keys,
             };
 
-            let res =
-                provider.get_events(event_filter, self.continuation_token, self.chunk_size).await?;
+            let res = provider.get_events(
+                event_filter,
+                self.continuation_token,
+                self.chunk_size
+            ).await?;
 
             for event in &res.events {
                 match world::Event::try_from(event) {
@@ -93,10 +111,8 @@ impl EventsArgs {
                             &world_diff,
                             event.block_number,
                             event.transaction_hash,
-                            &provider,
-                        )
-                        .await
-                        .unwrap_or_else(|e| {
+                            &provider
+                        ).await.unwrap_or_else(|e| {
                             tracing::error!(?e, "Failed to process event: {:?}", ev);
                         });
                     }
@@ -125,13 +141,15 @@ async fn match_event<P: Provider + Send + Sync>(
     world_diff: &WorldDiff,
     block_number: Option<u64>,
     transaction_hash: Felt,
-    provider: P,
+    provider: P
 ) -> Result<()> {
     // Get a mapping of all the known selectors and their addresses.
     let contract_addresses_from_selector = world_diff.get_contracts_addresses();
     // Do a reverse mapping to retrieve a contract selector from it's address.
-    let contract_selectors_from_address: HashMap<Felt, Felt> =
-        contract_addresses_from_selector.into_iter().map(|(s, a)| (a, s)).collect();
+    let contract_selectors_from_address: HashMap<Felt, Felt> = contract_addresses_from_selector
+        .into_iter()
+        .map(|(s, a)| (a, s))
+        .collect();
     // Finally, cache all the known tags by creating them once for each selector.
     let mut tags = HashMap::new();
     for (s, r) in world_diff.resources.iter() {
@@ -145,47 +163,55 @@ async fn match_event<P: Provider + Send + Sync>(
     };
 
     let (name, content) = match event {
-        WorldEvent::WorldSpawned(e) => (
-            "World spawned".to_string(),
-            format!("Creator address: {:?}\nWorld class hash: {:#066x}", e.creator, e.class_hash.0),
-        ),
+        WorldEvent::WorldSpawned(e) =>
+            (
+                "World spawned".to_string(),
+                format!(
+                    "Creator address: {:?}\nWorld class hash: {:#066x}",
+                    e.creator,
+                    e.class_hash.0
+                ),
+            ),
         WorldEvent::WorldUpgraded(e) => {
             ("World upgraded".to_string(), format!("World class hash: {:#066x}", e.class_hash.0))
         }
         WorldEvent::NamespaceRegistered(e) => {
             ("Namespace registered".to_string(), format!("Namespace: {}", e.namespace.to_string()?))
         }
-        WorldEvent::ModelRegistered(e) => (
-            "Model registered".to_string(),
-            format!(
-                "Namespace: {}\nName: {}\nClass hash: {:#066x}\nAddress: {:#066x}",
-                e.namespace.to_string()?,
-                e.name.to_string()?,
-                e.class_hash.0,
-                e.address.0
+        WorldEvent::ModelRegistered(e) =>
+            (
+                "Model registered".to_string(),
+                format!(
+                    "Namespace: {}\nName: {}\nClass hash: {:#066x}\nAddress: {:#066x}",
+                    e.namespace.to_string()?,
+                    e.name.to_string()?,
+                    e.class_hash.0,
+                    e.address.0
+                ),
             ),
-        ),
-        WorldEvent::EventRegistered(e) => (
-            "Event registered".to_string(),
-            format!(
-                "Namespace: {}\nName: {}\nClass hash: {:#066x}\nAddress: {:#066x}",
-                e.namespace.to_string()?,
-                e.name.to_string()?,
-                e.class_hash.0,
-                e.address.0
+        WorldEvent::EventRegistered(e) =>
+            (
+                "Event registered".to_string(),
+                format!(
+                    "Namespace: {}\nName: {}\nClass hash: {:#066x}\nAddress: {:#066x}",
+                    e.namespace.to_string()?,
+                    e.name.to_string()?,
+                    e.class_hash.0,
+                    e.address.0
+                ),
             ),
-        ),
-        WorldEvent::ContractRegistered(e) => (
-            "Contract registered".to_string(),
-            format!(
-                "Namespace: {}\nName: {}\nClass hash: {:#066x}\nAddress: {:#066x}\nSalt: {:#066x}",
-                e.namespace.to_string()?,
-                e.name.to_string()?,
-                e.class_hash.0,
-                e.address.0,
-                e.salt
+        WorldEvent::ContractRegistered(e) =>
+            (
+                "Contract registered".to_string(),
+                format!(
+                    "Namespace: {}\nName: {}\nClass hash: {:#066x}\nAddress: {:#066x}\nSalt: {:#066x}",
+                    e.namespace.to_string()?,
+                    e.name.to_string()?,
+                    e.class_hash.0,
+                    e.address.0,
+                    e.salt
+                ),
             ),
-        ),
         WorldEvent::ModelUpgraded(e) => {
             let tag = tags.get(&e.selector).unwrap();
             (
@@ -193,7 +219,10 @@ async fn match_event<P: Provider + Send + Sync>(
                 format!(
                     "Selector: {:#066x}\nClass hash: {:#066x}\nAddress: {:#066x}\nPrev address: \
                      {:#066x}",
-                    e.selector, e.class_hash.0, e.address.0, e.prev_address.0
+                    e.selector,
+                    e.class_hash.0,
+                    e.address.0,
+                    e.prev_address.0
                 ),
             )
         }
@@ -204,7 +233,10 @@ async fn match_event<P: Provider + Send + Sync>(
                 format!(
                     "Selector: {:#066x}\nClass hash: {:#066x}\nAddress: {:#066x}\nPrev address: \
                      {:#066x}",
-                    e.selector, e.class_hash.0, e.address.0, e.prev_address.0
+                    e.selector,
+                    e.class_hash.0,
+                    e.address.0,
+                    e.prev_address.0
                 ),
             )
         }
@@ -212,7 +244,7 @@ async fn match_event<P: Provider + Send + Sync>(
             let tag = tags.get(&e.selector).unwrap();
             (
                 format!("Contract upgraded ({})", tag),
-                format!("Selector: {:#066x}\nClass hash: {:#066x}", e.selector, e.class_hash.0,),
+                format!("Selector: {:#066x}\nClass hash: {:#066x}", e.selector, e.class_hash.0),
             )
         }
         WorldEvent::ContractInitialized(e) => {
@@ -232,12 +264,13 @@ async fn match_event<P: Provider + Send + Sync>(
         }
         WorldEvent::WriterUpdated(e) => {
             let tag = tags.get(&e.resource).unwrap();
-            let grantee =
-                if let Some(selector) = contract_selectors_from_address.get(&e.contract.into()) {
-                    tags.get(selector).unwrap().to_string()
-                } else {
-                    format!("{:#066x}", e.contract.0)
-                };
+            let grantee = if
+                let Some(selector) = contract_selectors_from_address.get(&e.contract.into())
+            {
+                tags.get(selector).unwrap().to_string()
+            } else {
+                format!("{:#066x}", e.contract.0)
+            };
 
             (
                 "Writer updated".to_string(),
@@ -246,12 +279,13 @@ async fn match_event<P: Provider + Send + Sync>(
         }
         WorldEvent::OwnerUpdated(e) => {
             let tag = tags.get(&e.resource).unwrap();
-            let grantee =
-                if let Some(selector) = contract_selectors_from_address.get(&e.contract.into()) {
-                    tags.get(selector).unwrap().to_string()
-                } else {
-                    format!("{:#066x}", e.contract.0)
-                };
+            let grantee = if
+                let Some(selector) = contract_selectors_from_address.get(&e.contract.into())
+            {
+                tags.get(selector).unwrap().to_string()
+            } else {
+                format!("{:#066x}", e.contract.0)
+            };
 
             (
                 "Owner updated".to_string(),
@@ -265,9 +299,8 @@ async fn match_event<P: Provider + Send + Sync>(
                 e.keys.clone(),
                 world_diff.world_info.address,
                 provider,
-                block_id,
-            )
-            .await?;
+                block_id
+            ).await?;
 
             (
                 format!("Store set record ({})", tag),
@@ -302,7 +335,7 @@ async fn match_event<P: Provider + Send + Sync>(
                         .iter()
                         .map(|v| format!("{:#066x}", v))
                         .collect::<Vec<String>>()
-                        .join(", "),
+                        .join(", ")
                 ),
             )
         }
@@ -321,7 +354,7 @@ async fn match_event<P: Provider + Send + Sync>(
                         .iter()
                         .map(|v| format!("{:#066x}", v))
                         .collect::<Vec<String>>()
-                        .join(", "),
+                        .join(", ")
                 ),
             )
         }
@@ -329,13 +362,13 @@ async fn match_event<P: Provider + Send + Sync>(
             let tag = tags.get(&e.selector).unwrap();
             (
                 format!("Store del record ({})", tag),
-                format!("Selector: {:#066x}\nEntity ID: {:#066x}", e.selector, e.entity_id,),
+                format!("Selector: {:#066x}\nEntity ID: {:#066x}", e.selector, e.entity_id),
             )
         }
         WorldEvent::EventEmitted(e) => {
             let tag = tags.get(&e.selector).unwrap();
-            let contract_tag = if let Some(selector) =
-                contract_selectors_from_address.get(&e.system_address.into())
+            let contract_tag = if
+                let Some(selector) = contract_selectors_from_address.get(&e.system_address.into())
             {
                 tags.get(selector).unwrap().to_string()
             } else {
@@ -359,7 +392,7 @@ async fn match_event<P: Provider + Send + Sync>(
                         .iter()
                         .map(|v| format!("{:#066x}", v))
                         .collect::<Vec<String>>()
-                        .join(", "),
+                        .join(", ")
                 ),
             )
         }
