@@ -24,4 +24,10 @@ pub trait DevApi {
 
     #[method(name = "predeployedAccounts")]
     async fn predeployed_accounts(&self) -> RpcResult<Vec<Account>>;
+
+    #[method(name = "accountBalance")]
+    async fn account_balance(&self, address: String, unit: String) -> RpcResult<u128>;
+
+    #[method(name = "mint")]
+    async fn mint(&self) -> RpcResult<()>;
 }
