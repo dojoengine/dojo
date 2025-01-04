@@ -6,7 +6,6 @@ use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
-use futures::future;
 use hyper::header::{ACCEPT, CONTENT_TYPE};
 use hyper::http::HeaderValue;
 use hyper::{Body, Method, Request, Response, Uri};
@@ -94,25 +93,27 @@ where
             _ => (JsonRawValue::from_string("{}".to_string()).unwrap(), "".to_string()),
         };
 
-        if method.is_empty() {
-            return Box::pin(future::ok(http::response::ok_response("Unknown route".to_string())));
-        }
+        if !method.is_empty() {
+            // RPC methods are accessed with `POST`.
+            *req.method_mut() = Method::POST;
+            // Precautionary remove the URI.
+            *req.uri_mut() = Uri::from_static("/");
 
-        // RPC methods are accessed with `POST`.
-        *req.method_mut() = Method::POST;
-        // Precautionary remove the URI.
-        *req.uri_mut() = Uri::from_static("/");
+            // Requests must have the following headers:
+            req.headers_mut().insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
+            req.headers_mut().insert(ACCEPT, HeaderValue::from_static("application/json"));
 
-        // Requests must have the following headers:
-        req.headers_mut().insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
-        req.headers_mut().insert(ACCEPT, HeaderValue::from_static("application/json"));
-
-        // Adjust the body to reflect the method call.
-        let body = Body::from(
-            serde_json::to_string(&RequestSer::borrowed(&Id::Number(0), &method, Some(&params)))
+            // Adjust the body to reflect the method call.
+            let body = Body::from(
+                serde_json::to_string(&RequestSer::borrowed(
+                    &Id::Number(0),
+                    &method,
+                    Some(&params),
+                ))
                 .expect("Valid request; qed"),
-        );
-        req = req.map(|_| body);
+            );
+            req = req.map(|_| body);
+        }
 
         // Call the inner service and get a future that resolves to the response.
         let fut = self.inner.call(req);
@@ -120,6 +121,11 @@ where
         // Adjust the response if needed.
         let res_fut = async move {
             let res = fut.await.map_err(|err| err.into())?;
+
+            if method.is_empty() {
+                return Ok(res);
+            }
+
             let body = res.into_body();
             let bytes = hyper::body::to_bytes(body).await?;
 
