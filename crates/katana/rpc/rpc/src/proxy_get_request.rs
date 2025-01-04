@@ -6,6 +6,7 @@ use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
+use futures::future;
 use hyper::header::{ACCEPT, CONTENT_TYPE};
 use hyper::http::HeaderValue;
 use hyper::{Body, Method, Request, Response, Uri};
@@ -90,8 +91,12 @@ where
 
         let (params, method) = match path {
             "/account_balance" => get_account_balance(query),
-            _ => (JsonRawValue::from_string(String::new()).unwrap(), "".to_string()),
+            _ => (JsonRawValue::from_string("{}".to_string()).unwrap(), "".to_string()),
         };
+
+        if method.is_empty() {
+            return Box::pin(future::ok(http::response::ok_response("Unknown route".to_string())));
+        }
 
         // RPC methods are accessed with `POST`.
         *req.method_mut() = Method::POST;
