@@ -242,7 +242,8 @@ impl NodeArgs {
         if let Some(genesis) = self.starknet.genesis.clone() {
             chain_spec.genesis = genesis;
         } else {
-            chain_spec.genesis.sequencer_address = katana_primitives::ContractAddress(*DEFAULT_SEQUENCER_ADDRESS);
+            chain_spec.genesis.sequencer_address =
+                katana_primitives::ContractAddress(*DEFAULT_SEQUENCER_ADDRESS);
         }
 
         // generate dev accounts
@@ -423,7 +424,10 @@ mod test {
         assert_eq!(config.execution.validation_max_steps, DEFAULT_VALIDATION_MAX_STEPS);
         assert_eq!(config.db.dir, None);
         assert_eq!(config.chain.id, ChainId::parse("KATANA").unwrap());
-        assert_eq!(config.chain.genesis.sequencer_address, katana_primitives::ContractAddress(*DEFAULT_SEQUENCER_ADDRESS));
+        assert_eq!(
+            config.chain.genesis.sequencer_address,
+            katana_primitives::ContractAddress(*DEFAULT_SEQUENCER_ADDRESS)
+        );
     }
 
     #[test]
@@ -450,7 +454,10 @@ mod test {
         assert_eq!(config.execution.validation_max_steps, 100);
         assert_eq!(config.db.dir, Some(PathBuf::from("/path/to/db")));
         assert_eq!(config.chain.id, ChainId::GOERLI);
-        assert_eq!(config.chain.genesis.sequencer_address, katana_primitives::ContractAddress(*DEFAULT_SEQUENCER_ADDRESS));
+        assert_eq!(
+            config.chain.genesis.sequencer_address,
+            katana_primitives::ContractAddress(*DEFAULT_SEQUENCER_ADDRESS)
+        );
     }
 
     #[test]

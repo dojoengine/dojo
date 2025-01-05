@@ -6,7 +6,6 @@ use katana_executor::implementation::blockifier::BlockifierFactory;
 use katana_node::config::dev::DevConfig;
 use katana_node::config::rpc::{RpcConfig, DEFAULT_RPC_ADDR, DEFAULT_RPC_MAX_CONNECTIONS};
 pub use katana_node::config::*;
-pub use katana_node::config::*;
 use katana_node::LaunchedNode;
 use katana_primitives::chain::ChainId;
 use katana_primitives::chain_spec::ChainSpec;
