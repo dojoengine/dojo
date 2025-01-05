@@ -13,6 +13,7 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest-4-cores
+    needs: [fmt, cairofmt]
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
