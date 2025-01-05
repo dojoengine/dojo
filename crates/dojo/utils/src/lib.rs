@@ -8,12 +8,9 @@ pub use tx::deployer::*;
 pub use tx::error::TransactionError;
 pub use tx::invoker::*;
 pub use tx::waiter::*;
-pub use tx::{
-    get_predeployed_accounts, parse_block_id, TransactionExt, TransactionResult, TxnAction,
-    TxnConfig,
-};
+pub use tx::*;
 
 pub mod env;
 pub mod keystore;
-
+pub mod provider;
 pub mod signal;

@@ -96,7 +96,7 @@ impl Default for InMemoryStateDb {
             storage: Default::default(),
             contract_state: Default::default(),
             shared_contract_classes: Arc::new(SharedContractClasses {
-                sierra_classes: Default::default(),
+                classes: Default::default(),
                 compiled_classes: Default::default(),
             }),
             compiled_class_hashes: Default::default(),

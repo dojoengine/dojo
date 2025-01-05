@@ -3,8 +3,8 @@ use async_graphql::dynamic::{
 };
 use async_graphql::{Name, Result, Value};
 use tokio_stream::{Stream, StreamExt};
+use torii_core::constants::SQL_FELT_DELIMITER;
 use torii_core::simple_broker::SimpleBroker;
-use torii_core::sql::FELT_DELIMITER;
 use torii_core::types::Event;
 
 use super::inputs::keys_input::{keys_argument, parse_keys_argument};
@@ -102,7 +102,7 @@ impl EventObject {
     // if all keys match or if a wildcard is present at the respective position.
     pub fn match_keys(input_keys: &[String], event: &Event) -> bool {
         let event_keys: Vec<&str> =
-            event.keys.split(FELT_DELIMITER).filter(|s| !s.is_empty()).collect();
+            event.keys.split(SQL_FELT_DELIMITER).filter(|s| !s.is_empty()).collect();
 
         if input_keys.len() > event_keys.len() {
             return false;

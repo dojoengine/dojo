@@ -13,9 +13,9 @@ use tokio::sync::mpsc::{
     channel, unbounded_channel, Receiver, Sender, UnboundedReceiver, UnboundedSender,
 };
 use tokio::sync::RwLock;
+use torii_core::constants::SQL_FELT_DELIMITER;
 use torii_core::error::{Error, ParseError};
 use torii_core::simple_broker::SimpleBroker;
-use torii_core::sql::FELT_DELIMITER;
 use torii_core::types::OptimisticEntity;
 use tracing::{error, trace};
 
@@ -114,10 +114,11 @@ impl Service {
     ) -> Result<(), Error> {
         let mut closed_stream = Vec::new();
         let hashed = Felt::from_str(&entity.id).map_err(ParseError::FromStr)?;
+        // sometimes for some reason keys isxx empty. investigate the issue
         let keys = entity
             .keys
-            .trim_end_matches(FELT_DELIMITER)
-            .split(FELT_DELIMITER)
+            .trim_end_matches(SQL_FELT_DELIMITER)
+            .split(SQL_FELT_DELIMITER)
             .map(Felt::from_str)
             .collect::<Result<Vec<_>, _>>()
             .map_err(ParseError::FromStr)?;

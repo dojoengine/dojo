@@ -1,13 +1,15 @@
 //! Converts Scarb artifacts to local resources.
 
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 use cairo_lang_starknet_classes::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet_classes::contract_class::ContractClass;
 use serde_json;
-use starknet::core::types::contract::{AbiEntry, AbiImpl, SierraClass, StateMutability};
+use starknet::core::types::contract::{
+    AbiEntry, AbiImpl, CompiledClass, SierraClass, StateMutability,
+};
 use starknet::core::types::Felt;
 use tracing::trace;
 
@@ -31,7 +33,9 @@ impl WorldLocal {
         let mut world_class = None;
         let mut world_class_hash = None;
         let mut world_casm_class_hash = None;
+        let mut world_casm_class = None;
         let mut world_entrypoints = vec![];
+
         for entry in fs::read_dir(dir)? {
             let entry = entry?;
             let path = entry.path();
@@ -39,6 +43,20 @@ impl WorldLocal {
                 if let Ok(sierra) =
                     serde_json::from_reader::<_, SierraClass>(std::fs::File::open(&path)?)
                 {
+                    let casm_path = PathBuf::from(
+                        path.to_string_lossy()
+                            .to_string()
+                            .replace("contract_class.json", "compiled_contract_class.json"),
+                    );
+
+                    let casm_class = if casm_path.exists() {
+                        Some(serde_json::from_reader::<_, CompiledClass>(std::fs::File::open(
+                            &casm_path,
+                        )?)?)
+                    } else {
+                        None
+                    };
+
                     let abi = sierra.abi.clone();
                     let class_hash = sierra.class_hash()?;
                     let casm_class_hash = casm_class_hash_from_sierra_file(&path)?;
@@ -58,6 +76,7 @@ impl WorldLocal {
                                 world_class_hash = Some(class_hash);
                                 world_casm_class_hash = Some(casm_class_hash);
                                 world_entrypoints = systems_from_abi(&abi);
+                                world_casm_class = casm_class;
                                 break;
                             }
                             ResourceType::Contract(name) => {
@@ -77,6 +96,7 @@ impl WorldLocal {
                                             namespace: ns,
                                             name: name.clone(),
                                             class: sierra.clone(),
+                                            casm_class: casm_class.clone(),
                                             class_hash,
                                             casm_class_hash,
                                         },
@@ -102,6 +122,7 @@ impl WorldLocal {
                                             namespace: ns,
                                             name: name.clone(),
                                             class: sierra.clone(),
+                                            casm_class: casm_class.clone(),
                                             class_hash,
                                             casm_class_hash,
                                         },
@@ -127,6 +148,7 @@ impl WorldLocal {
                                             namespace: ns,
                                             name: name.clone(),
                                             class: sierra.clone(),
+                                            casm_class: casm_class.clone(),
                                             class_hash,
                                             casm_class_hash,
                                         },
@@ -162,6 +184,7 @@ impl WorldLocal {
             (Some(class), Some(class_hash), Some(casm_class_hash)) => Self {
                 class,
                 class_hash,
+                casm_class: world_casm_class,
                 casm_class_hash,
                 resources: HashMap::new(),
                 profile_config,
@@ -169,13 +192,14 @@ impl WorldLocal {
             },
             _ => {
                 return Err(anyhow::anyhow!(
-                    "World artifact is missing, and required to deploy the world. Ensure you have \
-                     added the contract to your Scarb.toml file:\n\n
+                    r#"
+World artifact is missing, and required to deploy the world. Ensure you have \
+added the contract to your Scarb.toml file:
 
-                    [[target.starknet-contract]]\n
-                    sierra = true\n
-                    build-external-contracts = [\"dojo::world::world_contract::world\"]\n
-                    "
+[[target.starknet-contract]]
+sierra = true
+build-external-contracts = ["dojo::world::world_contract::world"]
+"#
                 ));
             }
         };

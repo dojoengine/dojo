@@ -1,6 +1,4 @@
 use core::fmt;
-use std::collections::VecDeque;
-use std::path::PathBuf;
 use std::str::FromStr;
 
 use chrono::{DateTime, Utc};
@@ -109,6 +107,8 @@ pub struct Model {
     pub class_hash: String,
     pub contract_address: String,
     pub transaction_hash: String,
+    pub layout: String,
+    pub schema: String,
     pub executed_at: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
 }
@@ -124,31 +124,44 @@ pub struct Event {
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(Default, Deserialize, Debug, Clone)]
-pub struct ToriiConfig {
-    /// contract addresses to index
-    pub contracts: VecDeque<Contract>,
+#[derive(FromRow, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct Token {
+    pub id: String,
+    pub contract_address: String,
+    pub name: String,
+    pub symbol: String,
+    pub decimals: u8,
+    pub metadata: String,
 }
 
-impl ToriiConfig {
-    pub fn load_from_path(path: &PathBuf) -> Result<Self, anyhow::Error> {
-        let config = std::fs::read_to_string(path)?;
-        let config: Self = toml::from_str(&config)?;
-        Ok(config)
-    }
+#[derive(FromRow, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct TokenBalance {
+    pub id: String,
+    pub balance: String,
+    pub account_address: String,
+    pub contract_address: String,
+    pub token_id: String,
 }
 
-#[derive(Deserialize, Debug, Clone, Copy)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
 pub struct Contract {
     pub address: Felt,
     pub r#type: ContractType,
 }
 
-#[derive(Deserialize, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ContractType {
     WORLD,
     ERC20,
     ERC721,
+}
+
+impl std::fmt::Display for Contract {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}:{:#x}", self.r#type, self.address)
+    }
 }
 
 impl FromStr for ContractType {

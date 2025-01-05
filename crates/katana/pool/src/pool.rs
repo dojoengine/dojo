@@ -137,7 +137,7 @@ where
         let hash = tx.hash();
         let id = TxId::new(tx.sender(), tx.nonce());
 
-        info!(hash = format!("{hash:#x}"), "Transaction received.");
+        info!(target: "pool", hash = format!("{hash:#x}"), "Transaction received.");
 
         match self.inner.validator.validate(tx) {
             Ok(outcome) => {
@@ -157,14 +157,14 @@ where
                     // TODO: create a small cache for rejected transactions to respect the rpc spec
                     // `getTransactionStatus`
                     ValidationOutcome::Invalid { error, .. } => {
-                        warn!(hash = format!("{hash:#x}"), "Invalid transaction.");
+                        warn!(target: "pool", hash = format!("{hash:#x}"), %error, "Invalid transaction.");
                         Err(PoolError::InvalidTransaction(Box::new(error)))
                     }
 
                     // return as error for now but ideally we should kept the tx in a separate
                     // queue and revalidate it when the parent tx is added to the pool
                     ValidationOutcome::Dependent { tx, tx_nonce, current_nonce } => {
-                        info!(hash = format!("{hash:#x}"), "Dependent transaction.");
+                        info!(target: "pool", hash = format!("{hash:#x}"), %tx_nonce, %current_nonce, "Dependent transaction.");
                         let err = InvalidTransactionError::InvalidNonce {
                             address: tx.sender(),
                             current_nonce,
@@ -175,9 +175,9 @@ where
                 }
             }
 
-            Err(e @ crate::validation::Error { hash, .. }) => {
-                error!(hash = format!("{hash:#x}"), %e, "Failed to validate transaction.");
-                Err(PoolError::Internal(e.error))
+            Err(error @ crate::validation::Error { hash, .. }) => {
+                error!(target: "pool", hash = format!("{hash:#x}"), %error, "Failed to validate transaction.");
+                Err(PoolError::Internal(error.error))
             }
         }
     }

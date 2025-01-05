@@ -1,5 +1,6 @@
 use std::result::Result;
 
+use starknet::core::types::BlockId;
 use starknet::providers::Provider;
 
 pub use super::abigen::world::{
@@ -32,5 +33,14 @@ where
         name: &str,
     ) -> Result<ModelRPCReader<'_, P>, ModelError> {
         ModelRPCReader::new(namespace, name, self).await
+    }
+
+    pub async fn model_reader_with_block(
+        &self,
+        namespace: &str,
+        name: &str,
+        block_id: BlockId,
+    ) -> Result<ModelRPCReader<'_, P>, ModelError> {
+        ModelRPCReader::new_with_block(namespace, name, self, block_id).await
     }
 }

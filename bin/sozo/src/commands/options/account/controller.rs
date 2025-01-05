@@ -1,13 +1,12 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::{bail, Result};
-use dojo_world::diff::WorldDiff;
-use dojo_world::ResourceType;
+use dojo_world::contracts::contract_info::ContractInfo;
 use slot::account_sdk::account::session::hash::{Policy, ProvedPolicy};
 use slot::account_sdk::account::session::merkle::MerkleTree;
 use slot::account_sdk::account::session::SessionAccount;
 use slot::session::{FullSessionInfo, PolicyMethod};
-use starknet::core::types::contract::{AbiEntry, StateMutability};
 use starknet::core::types::Felt;
 use starknet::core::utils::get_selector_from_name;
 use starknet::macros::felt;
@@ -35,16 +34,12 @@ pub type ControllerSessionAccount<P> = SessionAccount<Arc<P>>;
 /// * Starknet mainnet
 /// * Starknet sepolia
 /// * Slot hosted networks
-#[tracing::instrument(
-    name = "create_controller",
-    skip(rpc_url, provider, world_address, world_diff)
-)]
+#[tracing::instrument(name = "create_controller", skip(rpc_url, provider, contracts))]
 pub async fn create_controller<P>(
     // Ideally we can get the url from the provider so we dont have to pass an extra url param here
     rpc_url: Url,
     provider: P,
-    world_address: Felt,
-    world_diff: &WorldDiff,
+    contracts: &HashMap<String, ContractInfo>,
 ) -> Result<ControllerSessionAccount<P>>
 where
     P: Provider,
@@ -62,7 +57,7 @@ where
         bail!("No Controller is associated with this account.");
     };
 
-    let policies = collect_policies(world_address, contract_address, world_diff)?;
+    let policies = collect_policies(contract_address, contracts)?;
 
     // Check if the session exists, if not create a new one
     let session_details = match slot::session::get(chain_id)? {
@@ -132,36 +127,27 @@ fn is_equal_to_existing(new_policies: &[PolicyMethod], session_info: &FullSessio
 /// This function collect all the contracts' methods in the current project according to the
 /// project's base manifest ( `/manifests/<profile>/base` ) and convert them into policies.
 fn collect_policies(
-    world_address: Felt,
     user_address: Felt,
-    world_diff: &WorldDiff,
+    contracts: &HashMap<String, ContractInfo>,
 ) -> Result<Vec<PolicyMethod>> {
-    let policies = collect_policies_from_local_world(world_address, user_address, world_diff)?;
+    let policies = collect_policies_from_contracts(user_address, contracts)?;
     trace!(target: "account::controller", policies_count = policies.len(), "Extracted policies from project.");
     Ok(policies)
 }
 
-fn collect_policies_from_local_world(
-    world_address: Felt,
+fn collect_policies_from_contracts(
     user_address: Felt,
-    world_diff: &WorldDiff,
+    contracts: &HashMap<String, ContractInfo>,
 ) -> Result<Vec<PolicyMethod>> {
     let mut policies: Vec<PolicyMethod> = Vec::new();
 
-    // get methods from all project contracts
-    for (selector, resource) in world_diff.resources.iter() {
-        if resource.resource_type() == ResourceType::Contract {
-            // Safe to unwrap the two methods since the selector comes from the resources registry
-            // in the local world.
-            let contract_address = world_diff.get_contract_address(*selector).unwrap();
-            let sierra_class = world_diff.get_class(*selector).unwrap();
-
-            policies_from_abis(&mut policies, &resource.tag(), contract_address, &sierra_class.abi);
+    for (tag, info) in contracts {
+        for e in &info.entrypoints {
+            let policy = PolicyMethod { target: info.address, method: e.clone() };
+            trace!(target: "account::controller", tag, target = format!("{:#x}", policy.target), method = %policy.method, "Adding policy");
+            policies.push(policy);
         }
     }
-
-    // get method from world contract
-    policies_from_abis(&mut policies, "world", world_address, &world_diff.world_info.class.abi);
 
     // special policy for sending declare tx
     // corresponds to [account_sdk::account::DECLARATION_SELECTOR]
@@ -179,39 +165,12 @@ fn collect_policies_from_local_world(
     Ok(policies)
 }
 
-/// Recursively extract methods and convert them into policies from the all the
-/// ABIs in the project.
-fn policies_from_abis(
-    policies: &mut Vec<PolicyMethod>,
-    contract_tag: &str,
-    contract_address: Felt,
-    entries: &[AbiEntry],
-) {
-    for entry in entries {
-        match entry {
-            AbiEntry::Function(f) => {
-                // we only create policies for non-view functions
-                if let StateMutability::External = f.state_mutability {
-                    let policy =
-                        PolicyMethod { target: contract_address, method: f.name.to_string() };
-                    trace!(target: "account::controller", tag = contract_tag, target = format!("{:#x}", policy.target), method = %policy.method, "Adding policy");
-                    policies.push(policy);
-                }
-            }
-
-            AbiEntry::Interface(i) => {
-                policies_from_abis(policies, contract_tag, contract_address, &i.items)
-            }
-
-            _ => {}
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use dojo_test_utils::compiler::CompilerTestSetup;
-    use dojo_world::diff::WorldDiff;
+    use dojo_world::contracts::ContractInfo;
     use scarb::compiler::Profile;
     use sozo_scarbext::WorkspaceExt;
     use starknet::macros::felt;
@@ -228,13 +187,12 @@ mod tests {
         let ws = scarb::ops::read_workspace(config.manifest_path(), &config)
             .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
 
-        let world_local = ws.load_world_local().unwrap();
-        let world_diff = WorldDiff::from_local(world_local).unwrap();
+        let manifest = ws.read_manifest_profile().expect("Failed to read manifest").unwrap();
+        let contracts: HashMap<String, ContractInfo> = (&manifest).into();
 
         let user_addr = felt!("0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba");
 
-        let policies =
-            collect_policies(world_diff.world_info.address, user_addr, &world_diff).unwrap();
+        let policies = collect_policies(user_addr, &contracts).unwrap();
 
         if std::env::var("POLICIES_FIX").is_ok() {
             let policies_json = serde_json::to_string_pretty(&policies).unwrap();

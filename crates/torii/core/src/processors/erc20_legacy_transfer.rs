@@ -6,7 +6,7 @@ use starknet::core::types::{Event, U256};
 use starknet::providers::Provider;
 use tracing::debug;
 
-use super::EventProcessor;
+use super::{EventProcessor, EventProcessorConfig};
 use crate::sql::Sql;
 
 pub(crate) const LOG_TARGET: &str = "torii_core::processors::erc20_legacy_transfer";
@@ -38,10 +38,11 @@ where
         &self,
         world: &WorldContractReader<P>,
         db: &mut Sql,
-        _block_number: u64,
+        block_number: u64,
         block_timestamp: u64,
         event_id: &str,
         event: &Event,
+        _config: &EventProcessorConfig,
     ) -> Result<(), Error> {
         let token_address = event.from_address;
         let from = event.data[0];
@@ -58,6 +59,7 @@ where
             world.provider(),
             block_timestamp,
             event_id,
+            block_number,
         )
         .await?;
         debug!(target: LOG_TARGET,from = ?from, to = ?to, value = ?value, "Legacy ERC20 Transfer");

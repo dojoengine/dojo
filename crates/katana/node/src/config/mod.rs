@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 pub mod db;
 pub mod dev;
 pub mod execution;
@@ -23,8 +25,9 @@ use katana_primitives::genesis::allocation::GenesisAllocation;
 use katana_primitives::genesis::GenesisClass;
 use katana_primitives::version::ProtocolVersion;
 use katana_primitives::{ContractAddress, Felt};
+use katana_rpc::cors::HeaderValue;
 use metrics::MetricsConfig;
-use rpc::{ApiKind, RpcConfig};
+use rpc::{RpcConfig, RpcModulesList};
 use starknet::providers::Url;
 
 /// Node configurations.
@@ -33,7 +36,7 @@ use starknet::providers::Url;
 #[derive(Debug, Clone, Default)]
 pub struct Config {
     /// The chain specification.
-    pub chain: ChainSpec,
+    pub chain: Arc<ChainSpec>,
 
     /// Database options.
     pub db: DbConfig,
@@ -58,6 +61,9 @@ pub struct Config {
 
     /// Development options.
     pub dev: DevConfig,
+
+    /// Provider url for gas price oracle
+    pub l1_provider_url: Option<Url>,
 }
 
 /// Configurations related to block production.
@@ -82,76 +88,8 @@ impl ConfigBuilder {
         ConfigBuilder::default()
     }
 
-    pub fn chain_id(&mut self, chain_id: ChainId) -> &mut Self {
-        self.config.chain.id = chain_id;
-        self
-    }
-
-    pub fn genesis_parent_hash(&mut self, parent_hash: BlockHash) -> &mut Self {
-        self.config.chain.genesis.parent_hash = parent_hash;
-        self
-    }
-
-    pub fn genesis_state_root(&mut self, state_root: Felt) -> &mut Self {
-        self.config.chain.genesis.state_root = state_root;
-        self
-    }
-
-    pub fn genesis_number(&mut self, number: BlockNumber) -> &mut Self {
-        self.config.chain.genesis.number = number;
-        self
-    }
-
-    pub fn genesis_timestamp(&mut self, timestamp: u64) -> &mut Self {
-        self.config.chain.genesis.timestamp = timestamp;
-        self
-    }
-
-    pub fn genesis_sequencer_address(&mut self, sequencer_address: ContractAddress) -> &mut Self {
-        self.config.chain.genesis.sequencer_address = sequencer_address;
-        self
-    }
-
-    pub fn genesis_gas_prices(&mut self, gas_prices: GasPrices) -> &mut Self {
-        self.config.chain.genesis.gas_prices = gas_prices;
-        self
-    }
-
-    pub fn genesis_classes(&mut self, classes: BTreeMap<ClassHash, GenesisClass>) -> &mut Self {
-        self.config.chain.genesis.classes = classes;
-        self
-    }
-
-    pub fn genesis_allocations(
-        &mut self,
-        allocations: BTreeMap<ContractAddress, GenesisAllocation>,
-    ) -> &mut Self {
-        self.config.chain.genesis.allocations = allocations;
-        self
-    }
-
-    pub fn fee_contracts_eth(&mut self, eth: ContractAddress) -> &mut Self {
-        self.config.chain.fee_contracts.eth = eth;
-        self
-    }
-
-    pub fn fee_contracts_strk(&mut self, strk: ContractAddress) -> &mut Self {
-        self.config.chain.fee_contracts.strk = strk;
-        self
-    }
-
-    pub fn chain_protocol_version(&mut self, version: ProtocolVersion) -> &mut Self {
-        self.config.chain.version = version;
-        self
-    }
-
     pub fn db_dir(&mut self, dir: Option<PathBuf>) -> &mut Self {
         self.config.db.dir = dir;
-        self
-    }
-
-    pub fn forking(&mut self, forking: Option<ForkingConfig>) -> &mut Self {
-        self.config.forking = forking;
         self
     }
 
@@ -168,13 +106,13 @@ impl ConfigBuilder {
         self
     }
 
-    pub fn rpc_port(&mut self, port: u16) -> &mut Self {
-        self.config.rpc.port = port;
+    pub fn rpc_addr(&mut self, addr: IpAddr) -> &mut Self {
+        self.config.rpc.addr = addr;
         self
     }
 
-    pub fn rpc_addr(&mut self, addr: IpAddr) -> &mut Self {
-        self.config.rpc.addr = addr;
+    pub fn rpc_port(&mut self, port: u16) -> &mut Self {
+        self.config.rpc.port = port;
         self
     }
 
@@ -183,18 +121,33 @@ impl ConfigBuilder {
         self
     }
 
-    pub fn rpc_allowed_origins(&mut self, allowed_origins: Option<Vec<String>>) -> &mut Self {
-        self.config.rpc.allowed_origins = allowed_origins;
-        self
-    }
-
-    pub fn rpc_apis(&mut self, apis: HashSet<ApiKind>) -> &mut Self {
+    pub fn rpc_apis(&mut self, apis: RpcModulesList) -> &mut Self {
         self.config.rpc.apis = apis;
         self
     }
 
-    pub fn metrics_addr(&mut self, addr: SocketAddr) -> &mut Self {
-        self.config.metrics.get_or_insert(MetricsConfig { addr }).addr = addr;
+    pub fn rpc_cors_origins(&mut self, cors_origins: Vec<HeaderValue>) -> &mut Self {
+        self.config.rpc.cors_origins = cors_origins;
+        self
+    }
+
+    pub fn rpc_max_event_page_size(&mut self, max_event_page_size: Option<u64>) -> &mut Self {
+        self.config.rpc.max_event_page_size = max_event_page_size;
+        self
+    }
+
+    pub fn rpc_max_proof_keys(&mut self, max_proof_keys: Option<u64>) -> &mut Self {
+        self.config.rpc.max_proof_keys = max_proof_keys;
+        self
+    }
+
+    pub fn metrics_addr(&mut self, addr: IpAddr) -> &mut Self {
+        self.config.metrics.get_or_insert(MetricsConfig { addr, ..Default::default() }).addr = addr;
+        self
+    }
+
+    pub fn metrics_port(&mut self, port: u16) -> &mut Self {
+        self.config.metrics.get_or_insert(MetricsConfig { port, ..Default::default() }).port = port;
         self
     }
 
@@ -294,13 +247,50 @@ impl ConfigBuilder {
         self
     }
 
+    pub fn dev_fixed_l1_gas_price_config_gas_price(&mut self, gas_price: GasPrices) -> &mut Self {
+        self.config
+            .dev
+            .fixed_gas_prices
+            .get_or_insert(FixedL1GasPriceConfig {
+                gas_price: gas_price.clone(),
+                ..Default::default()
+            })
+            .gas_price = gas_price.clone();
+        self
+    }
+
+    pub fn dev_fixed_l1_gas_price_config_data_gas_price(
+        &mut self,
+        gas_price: GasPrices,
+    ) -> &mut Self {
+        self.config
+            .dev
+            .fixed_gas_prices
+            .get_or_insert(FixedL1GasPriceConfig {
+                data_gas_price: gas_price.clone(),
+                ..Default::default()
+            })
+            .data_gas_price = gas_price.clone();
+        self
+    }
+
+    pub fn l1_provider_url(&mut self, url: Url) -> &mut Self {
+        self.config.l1_provider_url = Some(url);
+        self
+    }
+
     pub fn chain(&mut self, chain: ChainSpec) -> &mut Self {
-        self.config.chain = chain;
+        self.config.chain = Arc::new(chain);
         self
     }
 
     pub fn db(&mut self, db: DbConfig) -> &mut Self {
         self.config.db = db;
+        self
+    }
+
+    pub fn forking(&mut self, forking: Option<ForkingConfig>) -> &mut Self {
+        self.config.forking = forking;
         self
     }
 

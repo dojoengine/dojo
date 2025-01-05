@@ -6,6 +6,8 @@
 //! Events are also sequential, a resource is not expected to be upgraded before
 //! being registered. We take advantage of this fact to optimize the data gathering.
 
+use std::collections::HashSet;
+
 use anyhow::Result;
 use starknet::core::types::{BlockId, BlockTag, EventFilter, Felt, StarknetError};
 use starknet::providers::{Provider, ProviderError};
@@ -13,13 +15,18 @@ use tracing::trace;
 
 use super::permissions::PermissionsUpdateable;
 use super::{ResourceRemote, WorldRemote};
+use crate::constants::WORLD;
 use crate::contracts::abigen::world::{self, Event as WorldEvent};
 use crate::remote::{CommonRemoteInfo, ContractRemote, EventRemote, ModelRemote, NamespaceRemote};
 
 impl WorldRemote {
     /// Fetch the events from the world and convert them to remote resources.
     #[allow(clippy::field_reassign_with_default)]
-    pub async fn from_events<P: Provider>(world_address: Felt, provider: &P) -> Result<Self> {
+    pub async fn from_events<P: Provider>(
+        world_address: Felt,
+        provider: &P,
+        from_block: Option<u64>,
+    ) -> Result<Self> {
         let mut world = Self::default();
 
         world.address = world_address;
@@ -29,7 +36,7 @@ impl WorldRemote {
                 // The world contract exists, we can continue and fetch the events.
             }
             Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {
-                tracing::trace!(%world_address, "No remote world contract found.");
+                trace!(%world_address, "No remote world contract found.");
                 return Ok(world);
             }
             Err(e) => return Err(e.into()),
@@ -49,10 +56,13 @@ impl WorldRemote {
             world::ContractInitialized::event_selector(),
             world::WriterUpdated::event_selector(),
             world::OwnerUpdated::event_selector(),
+            world::MetadataUpdate::event_selector(),
         ]];
 
         let filter = EventFilter {
-            from_block: None,
+            // Most of the node providers are struggling with wide block ranges.
+            // For this reason, we must be able to accept a custom from block.
+            from_block: from_block.map(BlockId::Number),
             to_block: Some(BlockId::Tag(BlockTag::Pending)),
             address: Some(world_address),
             keys: Some(keys),
@@ -60,7 +70,7 @@ impl WorldRemote {
 
         let chunk_size = 500;
 
-        tracing::trace!(
+        trace!(
             world_address = format!("{:#066x}", world_address),
             chunk_size,
             ?filter,
@@ -87,10 +97,16 @@ impl WorldRemote {
             events.extend(page.events);
         }
 
+        trace!(
+            events_count = events.len(),
+            world_address = format!("{:#066x}", world_address),
+            "Fetched events for world."
+        );
+
         for event in &events {
             match world::Event::try_from(event) {
                 Ok(ev) => {
-                    tracing::trace!(?ev, "Processing world event.");
+                    trace!(?ev, "Processing world event.");
                     world.match_event(ev)?;
                 }
                 Err(e) => {
@@ -111,7 +127,14 @@ impl WorldRemote {
             WorldEvent::WorldSpawned(e) => {
                 self.class_hashes.push(e.class_hash.into());
 
-                trace!(class_hash = format!("{:#066x}", e.class_hash.0), "World spawned.");
+                // The creator is the world's owner, but no event emitted for that.
+                self.external_owners.insert(WORLD, HashSet::from([e.creator.into()]));
+
+                trace!(
+                    class_hash = format!("{:#066x}", e.class_hash.0),
+                    creator = format!("{:#066x}", e.creator.0),
+                    "World spawned."
+                );
             }
             WorldEvent::WorldUpgraded(e) => {
                 self.class_hashes.push(e.class_hash.into());
@@ -228,6 +251,17 @@ impl WorldRemote {
                 }
 
                 trace!(?e, "Owner updated.");
+            }
+            WorldEvent::MetadataUpdate(e) => {
+                if e.resource == WORLD {
+                    self.metadata_hash = e.hash;
+                } else {
+                    // Unwrap is safe because the resource must exist in the world.
+                    let resource = self.resources.get_mut(&e.resource).unwrap();
+                    trace!(?resource, "Metadata updated.");
+
+                    resource.set_metadata_hash(e.hash);
+                }
             }
             _ => {
                 // Ignore events filtered out by the event filter.
@@ -494,5 +528,38 @@ mod tests {
 
         let resource = world_remote.resources.get(&selector).unwrap();
         assert_eq!(resource.as_namespace_or_panic().owners, HashSet::from([]));
+    }
+
+    #[tokio::test]
+    async fn test_metadata_updated_event() {
+        let mut world_remote = WorldRemote::default();
+        let selector = naming::compute_selector_from_names("ns", "m1");
+
+        let resource = ResourceRemote::Model(ModelRemote {
+            common: CommonRemoteInfo::new(Felt::TWO, "ns", "m1", Felt::ONE),
+        });
+        world_remote.add_resource(resource);
+
+        let event = WorldEvent::MetadataUpdate(world::MetadataUpdate {
+            resource: selector,
+            uri: ByteArray::from_string("ipfs://m1").unwrap(),
+            hash: Felt::THREE,
+        });
+
+        world_remote.match_event(event).unwrap();
+
+        let resource = world_remote.resources.get(&selector).unwrap();
+        assert_eq!(resource.metadata_hash(), Felt::THREE);
+
+        let event = WorldEvent::MetadataUpdate(world::MetadataUpdate {
+            resource: selector,
+            uri: ByteArray::from_string("ipfs://m1").unwrap(),
+            hash: Felt::ONE,
+        });
+
+        world_remote.match_event(event).unwrap();
+
+        let resource = world_remote.resources.get(&selector).unwrap();
+        assert_eq!(resource.metadata_hash(), Felt::ONE);
     }
 }

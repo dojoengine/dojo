@@ -13,7 +13,7 @@ use katana_primitives::state::{compute_state_diff_hash, StateUpdates};
 use katana_primitives::transaction::{TxHash, TxWithHash};
 use katana_primitives::Felt;
 use katana_provider::traits::block::{BlockHashProvider, BlockWriter};
-use katana_provider::traits::trie::{ClassTrieWriter, ContractTrieWriter};
+use katana_provider::traits::trie::TrieWriter;
 use katana_trie::compute_merkle_root;
 use parking_lot::RwLock;
 use starknet::macros::short_string;
@@ -33,7 +33,7 @@ pub(crate) const LOG_TARGET: &str = "katana::core::backend";
 
 #[derive(Debug)]
 pub struct Backend<EF: ExecutorFactory> {
-    pub chain_spec: ChainSpec,
+    pub chain_spec: Arc<ChainSpec>,
     /// stores all block related data in memory
     pub blockchain: Blockchain,
     /// The block context generator.
@@ -158,21 +158,15 @@ impl<EF: ExecutorFactory> Backend<EF> {
 }
 
 #[derive(Debug, Clone)]
-pub struct UncommittedBlock<'a, P>
-where
-    P: ClassTrieWriter + ContractTrieWriter,
-{
+pub struct UncommittedBlock<'a, P: TrieWriter> {
     header: PartialHeader,
     transactions: Vec<TxWithHash>,
     receipts: &'a [ReceiptWithTxHash],
     state_updates: &'a StateUpdates,
-    trie_provider: P,
+    provider: P,
 }
 
-impl<'a, P> UncommittedBlock<'a, P>
-where
-    P: ClassTrieWriter + ContractTrieWriter,
-{
+impl<'a, P: TrieWriter> UncommittedBlock<'a, P> {
     pub fn new(
         header: PartialHeader,
         transactions: Vec<TxWithHash>,
@@ -180,7 +174,7 @@ where
         state_updates: &'a StateUpdates,
         trie_provider: P,
     ) -> Self {
-        Self { header, transactions, receipts, state_updates, trie_provider }
+        Self { header, transactions, receipts, state_updates, provider: trie_provider }
     }
 
     pub fn commit(self) -> SealedBlock {
@@ -258,19 +252,15 @@ where
 
     // state_commitment = hPos("STARKNET_STATE_V0", contract_trie_root, class_trie_root)
     fn compute_new_state_root(&self) -> Felt {
-        let class_trie_root = ClassTrieWriter::insert_updates(
-            &self.trie_provider,
-            self.header.number,
-            &self.state_updates.declared_classes,
-        )
-        .unwrap();
+        let class_trie_root = self
+            .provider
+            .trie_insert_declared_classes(self.header.number, &self.state_updates.declared_classes)
+            .expect("failed to update class trie");
 
-        let contract_trie_root = ContractTrieWriter::insert_updates(
-            &self.trie_provider,
-            self.header.number,
-            self.state_updates,
-        )
-        .unwrap();
+        let contract_trie_root = self
+            .provider
+            .trie_insert_contract_updates(self.header.number, self.state_updates)
+            .expect("failed to update contract trie");
 
         hash::Poseidon::hash_array(&[
             short_string!("STARKNET_STATE_V0"),

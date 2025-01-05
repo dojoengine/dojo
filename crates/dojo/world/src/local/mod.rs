@@ -11,7 +11,7 @@
 use std::collections::HashMap;
 
 use dojo_types::naming;
-use starknet::core::types::contract::SierraClass;
+use starknet::core::types::contract::{CompiledClass, SierraClass};
 use starknet::core::types::Felt;
 use starknet::core::utils::CairoShortStringToFeltError;
 
@@ -30,6 +30,8 @@ pub struct WorldLocal {
     pub class: SierraClass,
     /// The class hash of the world.
     pub class_hash: Felt,
+    /// The casm class of the world.
+    pub casm_class: Option<CompiledClass>,
     /// The casm class hash of the world.
     pub casm_class_hash: Felt,
     /// The resources of the world.
@@ -63,6 +65,7 @@ impl Default for WorldLocal {
                 },
                 abi: Vec::new(),
             },
+            casm_class: None,
             class_hash: Felt::ZERO,
             casm_class_hash: Felt::ZERO,
             resources: HashMap::new(),
@@ -156,6 +159,7 @@ mod tests {
                 name: "c1".to_string(),
                 namespace: "dojo".to_string(),
                 class: empty_sierra_class(),
+                casm_class: None,
                 class_hash: Felt::ZERO,
                 casm_class_hash: Felt::ZERO,
             },
@@ -172,6 +176,7 @@ mod tests {
                 name: "c2".to_string(),
                 namespace: "dojo".to_string(),
                 class: empty_sierra_class(),
+                casm_class: None,
                 class_hash: Felt::ZERO,
                 casm_class_hash: Felt::ZERO,
             },

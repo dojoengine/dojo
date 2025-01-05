@@ -1,14 +1,17 @@
-use std::collections::HashSet;
 use std::sync::Arc;
 
-use jsonrpsee::core::Error;
 use katana_core::backend::Backend;
 use katana_core::constants::DEFAULT_SEQUENCER_ADDRESS;
 use katana_executor::implementation::blockifier::BlockifierFactory;
-use katana_node::config::rpc::ApiKind;
+use katana_node::config::dev::DevConfig;
+use katana_node::config::rpc::{RpcConfig, DEFAULT_RPC_ADDR, DEFAULT_RPC_MAX_CONNECTIONS};
+pub use katana_node::config::*;
 pub use katana_node::config::*;
 use katana_node::LaunchedNode;
 use katana_primitives::chain::ChainId;
+use katana_primitives::chain_spec::ChainSpec;
+use katana_rpc::Error;
+use rpc::RpcModulesList;
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::chain_id;
 use starknet::core::types::{BlockId, BlockTag, Felt};
@@ -40,7 +43,8 @@ impl TestSequencer {
             .await
             .expect("Failed to launch node");
 
-        let url = Url::parse(&format!("http://{}", handle.rpc.addr)).expect("Failed to parse URL");
+        let url =
+            Url::parse(&format!("http://{}", handle.rpc.addr())).expect("Failed to parse URL");
 
         let account = handle.node.backend.chain_spec.genesis.accounts().next().unwrap();
         let account = TestAccount {
@@ -102,7 +106,7 @@ impl TestSequencer {
     }
 
     pub fn stop(self) -> Result<(), Error> {
-        self.handle.rpc.handle.stop()
+        self.handle.rpc.stop()
     }
 
     pub fn url(&self) -> Url {
@@ -111,11 +115,15 @@ impl TestSequencer {
 }
 
 pub fn get_default_test_config(sequencing: SequencingConfig) -> Config {
+    let mut chain_spec = ChainSpec { id: ChainId::SEPOLIA, ..Default::default() };
+    chain_spec.genesis.sequencer_address =
+        katana_primitives::ContractAddress(*DEFAULT_SEQUENCER_ADDRESS);
     ConfigBuilder::new()
         .dev_fee(false)
-        .chain_id(ChainId::SEPOLIA)
-        .genesis_sequencer_address(DEFAULT_SEQUENCER_ADDRESS)
-        .rpc_apis(HashSet::from([ApiKind::Starknet, ApiKind::Dev, ApiKind::Saya, ApiKind::Torii]))
+        .chain(chain_spec)
+        .rpc_apis(RpcModulesList::all())
+        .rpc_max_event_page_size(Some(100))
+        .rpc_max_proof_keys(Some(100))
         .sequencing(sequencing)
         .build()
 }

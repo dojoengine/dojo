@@ -1,14 +1,12 @@
 //! Blockchain fetched from Katana.
 
 use katana_primitives::block::{BlockHashOrNumber, BlockIdOrTag, BlockTag, SealedBlockWithStatus};
-use katana_primitives::state::StateUpdatesWithDeclaredClasses;
+use katana_primitives::state::StateUpdatesWithClasses;
 use katana_provider::providers::db::DbProvider;
 use katana_provider::traits::block::{BlockProvider, BlockWriter};
 use katana_provider::traits::contract::ContractClassWriter;
 use katana_provider::traits::env::BlockEnvProvider;
-use katana_provider::traits::state::{
-    StateFactoryProvider, StateProvider, StateRootProvider, StateWriter,
-};
+use katana_provider::traits::state::{StateFactoryProvider, StateProvider, StateWriter};
 use katana_provider::traits::state_update::StateUpdateProvider;
 use katana_provider::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionStatusProvider, TransactionsProviderExt,
@@ -25,7 +23,6 @@ pub trait Database:
     + TransactionsProviderExt
     + ReceiptProvider
     + StateUpdateProvider
-    + StateRootProvider
     + StateWriter
     + ContractClassWriter
     + StateFactoryProvider
@@ -44,7 +41,6 @@ impl<T> Database for T where
         + TransactionsProviderExt
         + ReceiptProvider
         + StateUpdateProvider
-        + StateRootProvider
         + StateWriter
         + ContractClassWriter
         + StateFactoryProvider
@@ -109,7 +105,7 @@ impl Blockchain {
     }
 
     /// Updates the [`Blockchain`] internal state adding the given [`SealedBlockWithStatus`]
-    /// and the associated [`StateUpdatesWithDeclaredClasses`].
+    /// and the associated [`StateUpdatesWithClasses`].
     ///
     /// Currently receipts are ignored.
     ///
@@ -120,7 +116,7 @@ impl Blockchain {
     pub fn update_state_with_block(
         &mut self,
         block: SealedBlockWithStatus,
-        states: StateUpdatesWithDeclaredClasses,
+        states: StateUpdatesWithClasses,
     ) -> SayaResult<()> {
         let provider = self.provider();
         // Receipts are not supported currently. We may need them if some

@@ -6,8 +6,8 @@ use sqlx::{Pool, Sqlite, SqlitePool};
 use starknet_crypto::Felt;
 use tokio::sync::RwLock;
 
-use crate::error::{Error, ParseError, QueryError};
-use crate::model::{parse_sql_model_members, SqlModelMember};
+use crate::constants::TOKEN_BALANCE_TABLE;
+use crate::error::{Error, ParseError};
 use crate::sql::utils::I256;
 use crate::types::ContractType;
 
@@ -41,6 +41,10 @@ impl ModelCache {
     }
 
     pub async fn models(&self, selectors: &[Felt]) -> Result<Vec<Model>, Error> {
+        if selectors.is_empty() {
+            return Ok(self.model_cache.read().await.values().cloned().collect());
+        }
+
         let mut schemas = Vec::with_capacity(selectors.len());
         for selector in selectors {
             schemas.push(self.model(selector).await?);
@@ -61,19 +65,18 @@ impl ModelCache {
     }
 
     async fn update_model(&self, selector: &Felt) -> Result<Model, Error> {
-        let formatted_selector = format!("{:#x}", selector);
-
-        let (namespace, name, class_hash, contract_address, packed_size, unpacked_size, layout): (
-            String,
-            String,
-            String,
-            String,
-            u32,
-            u32,
-            String,
-        ) = sqlx::query_as(
+        let (
+            namespace,
+            name,
+            class_hash,
+            contract_address,
+            packed_size,
+            unpacked_size,
+            layout,
+            schema,
+        ): (String, String, String, String, u32, u32, String, String) = sqlx::query_as(
             "SELECT namespace, name, class_hash, contract_address, packed_size, unpacked_size, \
-             layout FROM models WHERE id = ?",
+             layout, schema FROM models WHERE id = ?",
         )
         .bind(format!("{:#x}", selector))
         .fetch_one(&self.pool)
@@ -83,20 +86,8 @@ impl ModelCache {
         let contract_address = Felt::from_hex(&contract_address).map_err(ParseError::FromStr)?;
 
         let layout = serde_json::from_str(&layout).map_err(ParseError::FromJsonStr)?;
+        let schema = serde_json::from_str(&schema).map_err(ParseError::FromJsonStr)?;
 
-        let model_members: Vec<SqlModelMember> = sqlx::query_as(
-            "SELECT id, model_idx, member_idx, name, type, type_enum, enum_options, key FROM \
-             model_members WHERE model_id = ? ORDER BY model_idx ASC, member_idx ASC",
-        )
-        .bind(formatted_selector)
-        .fetch_all(&self.pool)
-        .await?;
-
-        if model_members.is_empty() {
-            return Err(QueryError::ModelNotFound(name.clone()).into());
-        }
-
-        let schema = parse_sql_model_members(&namespace, &name, &model_members);
         let mut cache = self.model_cache.write().await;
 
         let model = Model {
@@ -133,25 +124,22 @@ pub struct LocalCache {
 
 impl Clone for LocalCache {
     fn clone(&self) -> Self {
-        Self { erc_cache: HashMap::new(), token_id_registry: HashSet::new() }
+        Self { erc_cache: HashMap::new(), token_id_registry: self.token_id_registry.clone() }
     }
 }
 
 impl LocalCache {
     pub async fn new(pool: Pool<Sqlite>) -> Self {
         // read existing token_id's from balances table and cache them
-        let token_id_registry: Vec<(String,)> = sqlx::query_as("SELECT token_id FROM balances")
-            .fetch_all(&pool)
-            .await
-            .expect("Should be able to read token_id's from blances table");
+        let token_id_registry: Vec<(String,)> =
+            sqlx::query_as(&format!("SELECT token_id FROM {TOKEN_BALANCE_TABLE}"))
+                .fetch_all(&pool)
+                .await
+                .expect("Should be able to read token_id's from blances table");
 
         let token_id_registry = token_id_registry.into_iter().map(|token_id| token_id.0).collect();
 
         Self { erc_cache: HashMap::new(), token_id_registry }
-    }
-
-    pub fn empty() -> Self {
-        Self { erc_cache: HashMap::new(), token_id_registry: HashSet::new() }
     }
 
     pub fn contains_token_id(&self, token_id: &str) -> bool {

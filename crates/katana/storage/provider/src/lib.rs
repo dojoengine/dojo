@@ -1,25 +1,27 @@
 use std::collections::BTreeMap;
 use std::ops::{Range, RangeInclusive};
+use std::sync::Arc;
 
 use katana_db::models::block::StoredBlockBodyIndices;
 use katana_primitives::block::{
     Block, BlockHash, BlockHashOrNumber, BlockNumber, BlockWithTxHashes, FinalityStatus, Header,
     SealedBlockWithStatus,
 };
-use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
+use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, ContractClass};
 use katana_primitives::contract::{ContractAddress, StorageKey, StorageValue};
 use katana_primitives::env::BlockEnv;
 use katana_primitives::receipt::Receipt;
-use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
+use katana_primitives::state::{StateUpdates, StateUpdatesWithClasses};
 use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{TxHash, TxNumber, TxWithHash};
 use katana_primitives::Felt;
 use traits::block::{BlockIdReader, BlockStatusProvider, BlockWriter};
-use traits::contract::{ContractClassProvider, ContractClassWriter};
+use traits::contract::{ContractClassWriter, ContractClassWriterExt};
 use traits::env::BlockEnvProvider;
-use traits::state::{StateRootProvider, StateWriter};
+use traits::stage::StageCheckpointProvider;
+use traits::state::StateWriter;
 use traits::transaction::{TransactionStatusProvider, TransactionTraceProvider};
-use traits::trie::{ClassTrieWriter, ContractTrieWriter};
+use traits::trie::TrieWriter;
 
 pub mod error;
 pub mod providers;
@@ -42,12 +44,18 @@ pub type ProviderResult<T> = Result<T, error::ProviderError>;
 /// operation is done through this provider.
 #[derive(Debug)]
 pub struct BlockchainProvider<Db> {
-    provider: Db,
+    provider: Arc<Db>,
 }
 
 impl<Db> BlockchainProvider<Db> {
     pub fn new(provider: Db) -> Self {
-        Self { provider }
+        Self { provider: Arc::new(provider) }
+    }
+}
+
+impl<Db> Clone for BlockchainProvider<Db> {
+    fn clone(&self) -> Self {
+        Self { provider: self.provider.clone() }
     }
 }
 
@@ -131,7 +139,7 @@ where
     fn insert_block_with_states_and_receipts(
         &self,
         block: SealedBlockWithStatus,
-        states: StateUpdatesWithDeclaredClasses,
+        states: StateUpdatesWithClasses,
         receipts: Vec<Receipt>,
         executions: Vec<TxExecInfo>,
     ) -> ProviderResult<()> {
@@ -238,53 +246,6 @@ where
     }
 }
 
-impl<Db> StateProvider for BlockchainProvider<Db>
-where
-    Db: StateProvider,
-{
-    fn nonce(
-        &self,
-        address: ContractAddress,
-    ) -> ProviderResult<Option<katana_primitives::contract::Nonce>> {
-        self.provider.nonce(address)
-    }
-
-    fn storage(
-        &self,
-        address: ContractAddress,
-        storage_key: StorageKey,
-    ) -> ProviderResult<Option<StorageValue>> {
-        self.provider.storage(address, storage_key)
-    }
-
-    fn class_hash_of_contract(
-        &self,
-        address: ContractAddress,
-    ) -> ProviderResult<Option<ClassHash>> {
-        self.provider.class_hash_of_contract(address)
-    }
-}
-
-impl<Db> ContractClassProvider for BlockchainProvider<Db>
-where
-    Db: ContractClassProvider,
-{
-    fn compiled_class_hash_of_class_hash(
-        &self,
-        hash: ClassHash,
-    ) -> ProviderResult<Option<CompiledClassHash>> {
-        self.provider.compiled_class_hash_of_class_hash(hash)
-    }
-
-    fn class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
-        self.provider.class(hash)
-    }
-
-    fn sierra_class(&self, hash: ClassHash) -> ProviderResult<Option<FlattenedSierraClass>> {
-        self.provider.sierra_class(hash)
-    }
-}
-
 impl<Db> StateFactoryProvider for BlockchainProvider<Db>
 where
     Db: StateFactoryProvider,
@@ -308,14 +269,19 @@ where
     fn state_update(&self, block_id: BlockHashOrNumber) -> ProviderResult<Option<StateUpdates>> {
         self.provider.state_update(block_id)
     }
-}
 
-impl<Db> StateRootProvider for BlockchainProvider<Db>
-where
-    Db: StateRootProvider,
-{
-    fn state_root(&self, block_id: BlockHashOrNumber) -> ProviderResult<Option<Felt>> {
-        self.provider.state_root(block_id)
+    fn declared_classes(
+        &self,
+        block_id: BlockHashOrNumber,
+    ) -> ProviderResult<Option<BTreeMap<ClassHash, CompiledClassHash>>> {
+        self.provider.declared_classes(block_id)
+    }
+
+    fn deployed_contracts(
+        &self,
+        block_id: BlockHashOrNumber,
+    ) -> ProviderResult<Option<BTreeMap<ContractAddress, ClassHash>>> {
+        self.provider.deployed_contracts(block_id)
     }
 }
 
@@ -323,7 +289,7 @@ impl<Db> ContractClassWriter for BlockchainProvider<Db>
 where
     Db: ContractClassWriter,
 {
-    fn set_class(&self, hash: ClassHash, class: CompiledClass) -> ProviderResult<()> {
+    fn set_class(&self, hash: ClassHash, class: ContractClass) -> ProviderResult<()> {
         self.provider.set_class(hash, class)
     }
 
@@ -334,13 +300,14 @@ where
     ) -> ProviderResult<()> {
         self.provider.set_compiled_class_hash_of_class_hash(hash, compiled_hash)
     }
+}
 
-    fn set_sierra_class(
-        &self,
-        hash: ClassHash,
-        sierra: FlattenedSierraClass,
-    ) -> ProviderResult<()> {
-        self.provider.set_sierra_class(hash, sierra)
+impl<Db> ContractClassWriterExt for BlockchainProvider<Db>
+where
+    Db: ContractClassWriterExt,
+{
+    fn set_compiled_class(&self, hash: ClassHash, class: CompiledClass) -> ProviderResult<()> {
+        self.provider.set_compiled_class(hash, class)
     }
 }
 
@@ -383,28 +350,36 @@ where
     }
 }
 
-impl<Db> ClassTrieWriter for BlockchainProvider<Db>
+impl<Db> TrieWriter for BlockchainProvider<Db>
 where
-    Db: ClassTrieWriter,
+    Db: TrieWriter,
 {
-    fn insert_updates(
+    fn trie_insert_declared_classes(
         &self,
         block_number: BlockNumber,
         updates: &BTreeMap<ClassHash, CompiledClassHash>,
     ) -> ProviderResult<Felt> {
-        self.provider.insert_updates(block_number, updates)
+        self.provider.trie_insert_declared_classes(block_number, updates)
     }
-}
 
-impl<Db> ContractTrieWriter for BlockchainProvider<Db>
-where
-    Db: ContractTrieWriter,
-{
-    fn insert_updates(
+    fn trie_insert_contract_updates(
         &self,
         block_number: BlockNumber,
         state_updates: &StateUpdates,
     ) -> ProviderResult<Felt> {
-        self.provider.insert_updates(block_number, state_updates)
+        self.provider.trie_insert_contract_updates(block_number, state_updates)
+    }
+}
+
+impl<Db> StageCheckpointProvider for BlockchainProvider<Db>
+where
+    Db: StageCheckpointProvider,
+{
+    fn checkpoint(&self, id: &str) -> ProviderResult<Option<BlockNumber>> {
+        self.provider.checkpoint(id)
+    }
+
+    fn set_checkpoint(&self, id: &str, block_number: BlockNumber) -> ProviderResult<()> {
+        self.provider.set_checkpoint(id, block_number)
     }
 }

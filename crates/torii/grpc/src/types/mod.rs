@@ -2,9 +2,11 @@ use core::fmt;
 use std::collections::HashMap;
 use std::str::FromStr;
 
+use crypto_bigint::U256;
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::Ty;
 use dojo_world::contracts::naming;
+use schema::SchemaError;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::{
     ContractStorageDiffItem, Felt, FromStrError, StateDiff, StateUpdate, StorageEntry,
@@ -15,6 +17,48 @@ use crate::proto::types::member_value;
 use crate::proto::{self};
 
 pub mod schema;
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
+pub struct Token {
+    pub contract_address: Felt,
+    pub name: String,
+    pub symbol: String,
+    pub decimals: u8,
+    pub metadata: String,
+}
+
+impl TryFrom<proto::types::Token> for Token {
+    type Error = SchemaError;
+    fn try_from(value: proto::types::Token) -> Result<Self, Self::Error> {
+        Ok(Self {
+            contract_address: Felt::from_str(&value.contract_address)?,
+            name: value.name,
+            symbol: value.symbol,
+            decimals: value.decimals as u8,
+            metadata: value.metadata,
+        })
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
+pub struct TokenBalance {
+    pub balance: U256,
+    pub account_address: Felt,
+    pub contract_address: Felt,
+    pub token_id: String,
+}
+
+impl TryFrom<proto::types::TokenBalance> for TokenBalance {
+    type Error = SchemaError;
+    fn try_from(value: proto::types::TokenBalance) -> Result<Self, Self::Error> {
+        Ok(Self {
+            balance: U256::from_be_hex(&value.balance),
+            account_address: Felt::from_str(&value.account_address)?,
+            contract_address: Felt::from_str(&value.contract_address)?,
+            token_id: value.token_id,
+        })
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct IndexerUpdate {
@@ -36,11 +80,39 @@ impl From<proto::world::SubscribeIndexerResponse> for IndexerUpdate {
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
+pub struct OrderBy {
+    pub model: String,
+    pub member: String,
+    pub direction: OrderDirection,
+}
+
+impl From<OrderBy> for proto::types::OrderBy {
+    fn from(value: OrderBy) -> Self {
+        Self { model: value.model, member: value.member, direction: value.direction as i32 }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
+pub enum OrderDirection {
+    Asc,
+    Desc,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct Query {
     pub clause: Option<Clause>,
     pub limit: u32,
     pub offset: u32,
+    /// Whether or not to include the hashed keys (entity id) of the entities.
+    /// This is useful for large queries compressed with GZIP to reduce the size of the response.
     pub dont_include_hashed_keys: bool,
+    pub order_by: Vec<OrderBy>,
+    /// If the array is not empty, only the given models are retrieved.
+    /// All entities that don't have a model in the array are excluded.
+    pub entity_models: Vec<String>,
+    /// The internal updated at timestamp in seconds (unix timestamp) from which entities are
+    /// retrieved (inclusive). Use 0 to retrieve all entities.
+    pub entity_updated_after: u64,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
@@ -79,6 +151,7 @@ pub enum PatternMatching {
 pub enum MemberValue {
     Primitive(Primitive),
     String(String),
+    List(Vec<MemberValue>),
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
@@ -115,6 +188,8 @@ pub enum ComparisonOperator {
     Gte,
     Lt,
     Lte,
+    In,
+    NotIn,
 }
 
 impl fmt::Display for ComparisonOperator {
@@ -126,6 +201,8 @@ impl fmt::Display for ComparisonOperator {
             ComparisonOperator::Lte => write!(f, "<="),
             ComparisonOperator::Neq => write!(f, "!="),
             ComparisonOperator::Eq => write!(f, "="),
+            ComparisonOperator::In => write!(f, "IN"),
+            ComparisonOperator::NotIn => write!(f, "NOT IN"),
         }
     }
 }
@@ -139,6 +216,8 @@ impl From<proto::types::ComparisonOperator> for ComparisonOperator {
             proto::types::ComparisonOperator::Lt => ComparisonOperator::Lt,
             proto::types::ComparisonOperator::Lte => ComparisonOperator::Lte,
             proto::types::ComparisonOperator::Neq => ComparisonOperator::Neq,
+            proto::types::ComparisonOperator::In => ComparisonOperator::In,
+            proto::types::ComparisonOperator::NotIn => ComparisonOperator::NotIn,
         }
     }
 }
@@ -204,6 +283,9 @@ impl From<Query> for proto::types::Query {
             limit: value.limit,
             offset: value.offset,
             dont_include_hashed_keys: value.dont_include_hashed_keys,
+            order_by: value.order_by.into_iter().map(|o| o.into()).collect(),
+            entity_models: value.entity_models,
+            entity_updated_after: value.entity_updated_after,
         }
     }
 }
@@ -337,6 +419,14 @@ impl From<MemberValue> for member_value::ValueType {
                 member_value::ValueType::Primitive(primitive.into())
             }
             MemberValue::String(string) => member_value::ValueType::String(string),
+            MemberValue::List(list) => {
+                member_value::ValueType::List(proto::types::MemberValueList {
+                    values: list
+                        .into_iter()
+                        .map(|v| proto::types::MemberValue { value_type: Some(v.into()) })
+                        .collect(),
+                })
+            }
         }
     }
 }

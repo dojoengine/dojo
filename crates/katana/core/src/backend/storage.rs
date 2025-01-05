@@ -7,24 +7,27 @@ use katana_primitives::block::{
 };
 use katana_primitives::chain_spec::ChainSpec;
 use katana_primitives::da::L1DataAvailabilityMode;
-use katana_primitives::state::StateUpdatesWithDeclaredClasses;
+use katana_primitives::hash::{self, StarkHash};
+use katana_primitives::state::StateUpdatesWithClasses;
 use katana_primitives::version::ProtocolVersion;
 use katana_provider::providers::db::DbProvider;
 use katana_provider::providers::fork::ForkedProvider;
 use katana_provider::traits::block::{BlockProvider, BlockWriter};
-use katana_provider::traits::contract::ContractClassWriter;
+use katana_provider::traits::contract::{ContractClassWriter, ContractClassWriterExt};
 use katana_provider::traits::env::BlockEnvProvider;
-use katana_provider::traits::state::{StateFactoryProvider, StateRootProvider, StateWriter};
+use katana_provider::traits::stage::StageCheckpointProvider;
+use katana_provider::traits::state::{StateFactoryProvider, StateWriter};
 use katana_provider::traits::state_update::StateUpdateProvider;
 use katana_provider::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionStatusProvider, TransactionTraceProvider,
     TransactionsProviderExt,
 };
-use katana_provider::traits::trie::{ClassTrieWriter, ContractTrieWriter};
+use katana_provider::traits::trie::TrieWriter;
 use katana_provider::BlockchainProvider;
 use num_traits::ToPrimitive;
 use starknet::core::types::{BlockStatus, MaybePendingBlockWithTxHashes};
 use starknet::core::utils::parse_cairo_short_string;
+use starknet::macros::short_string;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
 use tracing::info;
@@ -39,13 +42,13 @@ pub trait Database:
     + TransactionsProviderExt
     + ReceiptProvider
     + StateUpdateProvider
-    + StateRootProvider
     + StateWriter
     + ContractClassWriter
+    + ContractClassWriterExt
     + StateFactoryProvider
     + BlockEnvProvider
-    + ClassTrieWriter
-    + ContractTrieWriter
+    + TrieWriter
+    + StageCheckpointProvider
     + 'static
     + Send
     + Sync
@@ -62,13 +65,13 @@ impl<T> Database for T where
         + TransactionsProviderExt
         + ReceiptProvider
         + StateUpdateProvider
-        + StateRootProvider
         + StateWriter
         + ContractClassWriter
+        + ContractClassWriterExt
         + StateFactoryProvider
         + BlockEnvProvider
-        + ClassTrieWriter
-        + ContractTrieWriter
+        + TrieWriter
+        + StageCheckpointProvider
         + 'static
         + Send
         + Sync
@@ -76,7 +79,7 @@ impl<T> Database for T where
 {
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Blockchain {
     inner: BlockchainProvider<Box<dyn Database>>,
 }
@@ -213,15 +216,28 @@ impl Blockchain {
     fn new_with_genesis_block_and_state(
         provider: impl Database,
         block: SealedBlockWithStatus,
-        states: StateUpdatesWithDeclaredClasses,
+        states: StateUpdatesWithClasses,
     ) -> Result<Self> {
-        BlockWriter::insert_block_with_states_and_receipts(
-            &provider,
-            block,
-            states,
-            vec![],
-            vec![],
-        )?;
+        let mut block = block;
+        let block_number = block.block.header.number;
+
+        let class_trie_root = provider
+            .trie_insert_declared_classes(block_number, &states.state_updates.declared_classes)
+            .context("failed to update class trie")?;
+
+        let contract_trie_root = provider
+            .trie_insert_contract_updates(block_number, &states.state_updates)
+            .context("failed to update contract trie")?;
+
+        let genesis_state_root = hash::Poseidon::hash_array(&[
+            short_string!("STARKNET_STATE_V0"),
+            contract_trie_root,
+            class_trie_root,
+        ]);
+
+        block.block.header.state_root = genesis_state_root;
+        provider.insert_block_with_states_and_receipts(block, states, vec![], vec![])?;
+
         Ok(Self::new(provider))
     }
 }
@@ -234,11 +250,11 @@ mod tests {
     use katana_primitives::da::L1DataAvailabilityMode;
     use katana_primitives::fee::{PriceUnit, TxFeeInfo};
     use katana_primitives::genesis::constant::{
-        DEFAULT_ETH_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CASM, DEFAULT_LEGACY_ERC20_CLASS_HASH,
-        DEFAULT_LEGACY_UDC_CASM, DEFAULT_LEGACY_UDC_CLASS_HASH, DEFAULT_UDC_ADDRESS,
+        DEFAULT_ETH_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CLASS, DEFAULT_LEGACY_ERC20_CLASS_HASH,
+        DEFAULT_LEGACY_UDC_CLASS, DEFAULT_LEGACY_UDC_CLASS_HASH, DEFAULT_UDC_ADDRESS,
     };
     use katana_primitives::receipt::{InvokeTxReceipt, Receipt};
-    use katana_primitives::state::StateUpdatesWithDeclaredClasses;
+    use katana_primitives::state::StateUpdatesWithClasses;
     use katana_primitives::trace::TxExecInfo;
     use katana_primitives::transaction::{InvokeTx, Tx, TxWithHash};
     use katana_primitives::{chain_spec, Felt};
@@ -305,7 +321,7 @@ mod tests {
                 .provider()
                 .insert_block_with_states_and_receipts(
                     dummy_block.clone(),
-                    StateUpdatesWithDeclaredClasses::default(),
+                    StateUpdatesWithClasses::default(),
                     vec![Receipt::Invoke(InvokeTxReceipt {
                         revert_error: None,
                         events: Vec::new(),
@@ -335,10 +351,10 @@ mod tests {
             let actual_fee_token_class = state.class(actual_fee_token_class_hash).unwrap().unwrap();
 
             assert_eq!(actual_udc_class_hash, DEFAULT_LEGACY_UDC_CLASS_HASH);
-            assert_eq!(actual_udc_class, DEFAULT_LEGACY_UDC_CASM.clone());
+            assert_eq!(actual_udc_class, DEFAULT_LEGACY_UDC_CLASS.clone());
 
             assert_eq!(actual_fee_token_class_hash, DEFAULT_LEGACY_ERC20_CLASS_HASH);
-            assert_eq!(actual_fee_token_class, DEFAULT_LEGACY_ERC20_CASM.clone());
+            assert_eq!(actual_fee_token_class, DEFAULT_LEGACY_ERC20_CLASS.clone());
         }
 
         // re open the db and assert the state is the same and not overwritten
@@ -361,10 +377,10 @@ mod tests {
             let actual_fee_token_class = state.class(actual_fee_token_class_hash).unwrap().unwrap();
 
             assert_eq!(actual_udc_class_hash, DEFAULT_LEGACY_UDC_CLASS_HASH);
-            assert_eq!(actual_udc_class, DEFAULT_LEGACY_UDC_CASM.clone());
+            assert_eq!(actual_udc_class, DEFAULT_LEGACY_UDC_CLASS.clone());
 
             assert_eq!(actual_fee_token_class_hash, DEFAULT_LEGACY_ERC20_CLASS_HASH);
-            assert_eq!(actual_fee_token_class, DEFAULT_LEGACY_ERC20_CASM.clone());
+            assert_eq!(actual_fee_token_class, DEFAULT_LEGACY_ERC20_CLASS.clone());
 
             let block_number = blockchain.provider().latest_number().unwrap();
             let block_hash = blockchain.provider().latest_hash().unwrap();

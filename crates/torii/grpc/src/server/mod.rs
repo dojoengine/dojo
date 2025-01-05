@@ -13,6 +13,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 
+use dojo_types::naming::compute_selector_from_tag;
 use dojo_types::primitive::{Primitive, PrimitiveError};
 use dojo_types::schema::Ty;
 use dojo_world::contracts::naming::compute_selector_from_names;
@@ -26,12 +27,14 @@ use proto::world::{
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use sqlx::prelude::FromRow;
 use sqlx::sqlite::SqliteRow;
+use sqlx::types::chrono::{DateTime, Utc};
 use sqlx::{Pool, Row, Sqlite};
 use starknet::core::types::Felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use subscriptions::event::EventManager;
 use subscriptions::indexer::IndexerManager;
+use subscriptions::token_balance::TokenBalanceManager;
 use tokio::net::TcpListener;
 use tokio::sync::mpsc::{channel, Receiver};
 use tokio_stream::wrappers::{ReceiverStream, TcpListenerStream};
@@ -40,9 +43,9 @@ use tonic::transport::Server;
 use tonic::{Request, Response, Status};
 use tonic_web::GrpcWebLayer;
 use torii_core::error::{Error, ParseError, QueryError};
-use torii_core::model::{build_sql_query, map_row_to_ty};
+use torii_core::model::{fetch_entities, map_row_to_ty};
 use torii_core::sql::cache::ModelCache;
-use torii_core::sql::utils::sql_string_to_felts;
+use torii_core::types::{Token, TokenBalance};
 use tower_http::cors::{AllowOrigin, CorsLayer};
 
 use self::subscriptions::entity::EntityManager;
@@ -53,10 +56,12 @@ use crate::proto::types::member_value::ValueType;
 use crate::proto::types::LogicalOperator;
 use crate::proto::world::world_server::WorldServer;
 use crate::proto::world::{
-    RetrieveEntitiesStreamingResponse, RetrieveEventMessagesRequest, SubscribeEntitiesRequest,
-    SubscribeEntityResponse, SubscribeEventMessagesRequest, SubscribeEventsResponse,
-    SubscribeIndexerRequest, SubscribeIndexerResponse, UpdateEventMessagesSubscriptionRequest,
-    WorldMetadataRequest, WorldMetadataResponse,
+    RetrieveEntitiesStreamingResponse, RetrieveEventMessagesRequest, RetrieveTokenBalancesRequest,
+    RetrieveTokenBalancesResponse, RetrieveTokensRequest, RetrieveTokensResponse,
+    SubscribeEntitiesRequest, SubscribeEntityResponse, SubscribeEventMessagesRequest,
+    SubscribeEventsResponse, SubscribeIndexerRequest, SubscribeIndexerResponse,
+    SubscribeTokenBalancesResponse, UpdateEventMessagesSubscriptionRequest,
+    UpdateTokenBalancesSubscriptionRequest, WorldMetadataRequest, WorldMetadataResponse,
 };
 use crate::proto::{self};
 use crate::types::schema::SchemaError;
@@ -64,11 +69,11 @@ use crate::types::ComparisonOperator;
 
 pub(crate) static ENTITIES_TABLE: &str = "entities";
 pub(crate) static ENTITIES_MODEL_RELATION_TABLE: &str = "entity_model";
-pub(crate) static ENTITIES_ENTITY_RELATION_COLUMN: &str = "entity_id";
+pub(crate) static ENTITIES_ENTITY_RELATION_COLUMN: &str = "internal_entity_id";
 
 pub(crate) static EVENT_MESSAGES_TABLE: &str = "event_messages";
 pub(crate) static EVENT_MESSAGES_MODEL_RELATION_TABLE: &str = "event_model";
-pub(crate) static EVENT_MESSAGES_ENTITY_RELATION_COLUMN: &str = "event_message_id";
+pub(crate) static EVENT_MESSAGES_ENTITY_RELATION_COLUMN: &str = "internal_event_message_id";
 
 pub(crate) static EVENT_MESSAGES_HISTORICAL_TABLE: &str = "event_messages_historical";
 
@@ -87,6 +92,29 @@ impl From<SchemaError> for Error {
     }
 }
 
+impl From<Token> for proto::types::Token {
+    fn from(value: Token) -> Self {
+        Self {
+            contract_address: value.contract_address,
+            name: value.name,
+            symbol: value.symbol,
+            decimals: value.decimals as u32,
+            metadata: value.metadata,
+        }
+    }
+}
+
+impl From<TokenBalance> for proto::types::TokenBalance {
+    fn from(value: TokenBalance) -> Self {
+        Self {
+            balance: value.balance,
+            account_address: value.account_address,
+            contract_address: value.contract_address,
+            token_id: value.token_id,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct DojoWorld {
     pool: Pool<Sqlite>,
@@ -97,6 +125,7 @@ pub struct DojoWorld {
     event_manager: Arc<EventManager>,
     state_diff_manager: Arc<StateDiffManager>,
     indexer_manager: Arc<IndexerManager>,
+    token_balance_manager: Arc<TokenBalanceManager>,
 }
 
 impl DojoWorld {
@@ -105,13 +134,14 @@ impl DojoWorld {
         block_rx: Receiver<u64>,
         world_address: Felt,
         provider: Arc<JsonRpcClient<HttpTransport>>,
+        model_cache: Arc<ModelCache>,
     ) -> Self {
-        let model_cache = Arc::new(ModelCache::new(pool.clone()));
         let entity_manager = Arc::new(EntityManager::default());
         let event_message_manager = Arc::new(EventMessageManager::default());
         let event_manager = Arc::new(EventManager::default());
         let state_diff_manager = Arc::new(StateDiffManager::default());
         let indexer_manager = Arc::new(IndexerManager::default());
+        let token_balance_manager = Arc::new(TokenBalanceManager::default());
 
         tokio::task::spawn(subscriptions::model_diff::Service::new_with_block_rcv(
             block_rx,
@@ -130,6 +160,10 @@ impl DojoWorld {
 
         tokio::task::spawn(subscriptions::indexer::Service::new(Arc::clone(&indexer_manager)));
 
+        tokio::task::spawn(subscriptions::token_balance::Service::new(Arc::clone(
+            &token_balance_manager,
+        )));
+
         Self {
             pool,
             world_address,
@@ -139,6 +173,7 @@ impl DojoWorld {
             event_manager,
             state_diff_manager,
             indexer_manager,
+            token_balance_manager,
         }
     }
 }
@@ -193,6 +228,7 @@ impl DojoWorld {
         Ok(proto::types::WorldMetadata { world_address, models: models_metadata })
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn entities_all(
         &self,
         table: &str,
@@ -201,6 +237,9 @@ impl DojoWorld {
         limit: u32,
         offset: u32,
         dont_include_hashed_keys: bool,
+        order_by: Option<&str>,
+        entity_models: Vec<String>,
+        entity_updated_after: Option<String>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         self.query_by_hashed_keys(
             table,
@@ -210,6 +249,9 @@ impl DojoWorld {
             Some(limit),
             Some(offset),
             dont_include_hashed_keys,
+            order_by,
+            entity_models,
+            entity_updated_after,
         )
         .await
     }
@@ -228,111 +270,19 @@ impl DojoWorld {
         row_events.iter().map(map_row_to_event).collect()
     }
 
-    async fn fetch_entities(
-        &self,
-        table: &str,
-        entity_relation_column: &str,
-        entities: Vec<(String, String)>,
-        dont_include_hashed_keys: bool,
-    ) -> Result<Vec<proto::types::Entity>, Error> {
-        // Group entities by their model combinations
-        let mut model_groups: HashMap<String, Vec<String>> = HashMap::new();
-        for (entity_id, models_str) in entities {
-            model_groups.entry(models_str).or_default().push(entity_id);
-        }
-
-        let mut all_entities = Vec::new();
-
-        let mut tx = self.pool.begin().await?;
-
-        // Create a temporary table to store entity IDs due to them potentially exceeding
-        // SQLite's parameters limit which is 999
-        sqlx::query(
-            "CREATE TEMPORARY TABLE temp_entity_ids (id TEXT PRIMARY KEY, model_group TEXT)",
-        )
-        .execute(&mut *tx)
-        .await?;
-
-        // Insert all entity IDs into the temporary table
-        for (model_ids, entity_ids) in &model_groups {
-            for chunk in entity_ids.chunks(999) {
-                let placeholders = chunk.iter().map(|_| "(?, ?)").collect::<Vec<_>>().join(",");
-                let query = format!(
-                    "INSERT INTO temp_entity_ids (id, model_group) VALUES {}",
-                    placeholders
-                );
-                let mut query = sqlx::query(&query);
-                for id in chunk {
-                    query = query.bind(id).bind(model_ids);
-                }
-                query.execute(&mut *tx).await?;
-            }
-        }
-
-        for (models_str, _) in model_groups {
-            let model_ids =
-                models_str.split(',').map(|id| Felt::from_str(id).unwrap()).collect::<Vec<_>>();
-            let schemas =
-                self.model_cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect();
-
-            let (entity_query, arrays_queries, _) = build_sql_query(
-                &schemas,
-                table,
-                entity_relation_column,
-                Some(&format!(
-                    "[{table}].id IN (SELECT id FROM temp_entity_ids WHERE model_group = ?)"
-                )),
-                Some(&format!(
-                    "[{table}].id IN (SELECT id FROM temp_entity_ids WHERE model_group = ?)"
-                )),
-                None,
-                None,
-            )?;
-
-            let rows = sqlx::query(&entity_query).bind(&models_str).fetch_all(&mut *tx).await?;
-
-            let mut arrays_rows = HashMap::new();
-            for (name, array_query) in arrays_queries {
-                let array_rows =
-                    sqlx::query(&array_query).bind(&models_str).fetch_all(&mut *tx).await?;
-                arrays_rows.insert(name, array_rows);
-            }
-
-            let arrays_rows = Arc::new(arrays_rows);
-            let schemas = Arc::new(schemas);
-
-            let group_entities: Result<Vec<_>, Error> = rows
-                .par_iter()
-                .map(|row| map_row_to_entity(row, &arrays_rows, &schemas, dont_include_hashed_keys))
-                .collect();
-
-            all_entities.extend(group_entities?);
-        }
-
-        sqlx::query("DROP TABLE temp_entity_ids").execute(&mut *tx).await?;
-
-        tx.commit().await?;
-
-        Ok(all_entities)
-    }
-
     async fn fetch_historical_event_messages(
         &self,
         query: &str,
-        keys_pattern: Option<&str>,
+        bind_values: Vec<String>,
         limit: Option<u32>,
         offset: Option<u32>,
     ) -> Result<Vec<proto::types::Entity>, Error> {
-        let db_entities: Vec<(String, String, String, String)> = if keys_pattern.is_some() {
-            sqlx::query_as(query)
-                .bind(keys_pattern.unwrap())
-                .bind(limit)
-                .bind(offset)
-                .fetch_all(&self.pool)
-                .await?
-        } else {
-            sqlx::query_as(query).bind(limit).bind(offset).fetch_all(&self.pool).await?
-        };
+        let mut query = sqlx::query_as(query);
+        for value in bind_values {
+            query = query.bind(value);
+        }
+        let db_entities: Vec<(String, String, String, String)> =
+            query.bind(limit).bind(offset).fetch_all(&self.pool).await?;
 
         let mut entities = HashMap::new();
         for (id, data, model_id, _) in db_entities {
@@ -343,7 +293,8 @@ impl DojoWorld {
                 .model(&Felt::from_str(&model_id).map_err(ParseError::FromStr)?)
                 .await?;
             let mut schema = model.schema;
-            schema.deserialize(&mut sql_string_to_felts(&data))?;
+            schema
+                .from_json_value(serde_json::from_str(&data).map_err(ParseError::FromJsonStr)?)?;
 
             let entity = entities
                 .entry(id)
@@ -364,81 +315,117 @@ impl DojoWorld {
         limit: Option<u32>,
         offset: Option<u32>,
         dont_include_hashed_keys: bool,
+        order_by: Option<&str>,
+        entity_models: Vec<String>,
+        entity_updated_after: Option<String>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
-        // TODO: use prepared statement for where clause
-        let filter_ids = match hashed_keys {
+        let where_clause = match &hashed_keys {
             Some(hashed_keys) => {
-                let ids = hashed_keys
-                    .hashed_keys
-                    .iter()
-                    .map(|id| Ok(format!("{table}.id = '{:#x}'", Felt::from_bytes_be_slice(id))))
-                    .collect::<Result<Vec<_>, Error>>()?;
-
-                format!("WHERE {}", ids.join(" OR "))
+                let ids =
+                    hashed_keys.hashed_keys.iter().map(|_| "{table}.id = ?").collect::<Vec<_>>();
+                format!(
+                    "{} {}",
+                    ids.join(" OR "),
+                    if entity_updated_after.is_some() {
+                        format!("AND {table}.updated_at >= ?")
+                    } else {
+                        String::new()
+                    }
+                )
             }
-            None => String::new(),
+            None => {
+                if entity_updated_after.is_some() {
+                    format!("{table}.updated_at >= ?")
+                } else {
+                    String::new()
+                }
+            }
         };
 
-        // count query that matches filter_ids
-        let count_query = format!(
-            r#"
-                    SELECT count(*)
-                    FROM {table}
-                    {filter_ids}
-                "#
-        );
-        // total count of rows without limit and offset
-        let total_count: u32 =
-            sqlx::query_scalar(&count_query).fetch_optional(&self.pool).await?.unwrap_or(0);
-        if total_count == 0 {
-            return Ok((Vec::new(), 0));
+        let mut bind_values = vec![];
+        if let Some(hashed_keys) = hashed_keys {
+            bind_values = hashed_keys
+                .hashed_keys
+                .iter()
+                .map(|key| format!("{:#x}", Felt::from_bytes_be_slice(key)))
+                .collect::<Vec<_>>();
+        }
+        if let Some(entity_updated_after) = entity_updated_after.clone() {
+            bind_values.push(entity_updated_after);
         }
 
-        // Query to get entity IDs and their model IDs
-        let mut query = if table == EVENT_MESSAGES_HISTORICAL_TABLE {
-            format!(
-                r#"
-            SELECT {table}.id, {table}.data, {table}.model_id, group_concat({model_relation_table}.model_id) as model_ids
-            FROM {table}
-            JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
-            {filter_ids}
-            GROUP BY {table}.event_id
-            ORDER BY {table}.event_id DESC
-         "#
-            )
-        } else {
-            format!(
-                r#"
-            SELECT {table}.id, group_concat({model_relation_table}.model_id) as model_ids
-            FROM {table}
-            JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
-            {filter_ids}
-            GROUP BY {table}.id
-            ORDER BY {table}.event_id DESC
-         "#
-            )
-        };
+        let entity_models =
+            entity_models.iter().map(|model| compute_selector_from_tag(model)).collect::<Vec<_>>();
+        let schemas = self
+            .model_cache
+            .models(&entity_models)
+            .await?
+            .iter()
+            .map(|m| m.schema.clone())
+            .collect::<Vec<_>>();
 
-        if limit.is_some() {
-            query += " LIMIT ?"
-        }
-
-        if offset.is_some() {
-            query += " OFFSET ?"
-        }
+        let having_clause = entity_models
+            .iter()
+            .map(|model| format!("INSTR(model_ids, '{:#x}') > 0", model))
+            .collect::<Vec<_>>()
+            .join(" OR ");
 
         if table == EVENT_MESSAGES_HISTORICAL_TABLE {
-            let entities =
-                self.fetch_historical_event_messages(&query, None, limit, offset).await?;
+            let count_query = format!(
+                r#"
+                SELECT COUNT(*) FROM {table}
+                JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
+                WHERE {where_clause}
+                GROUP BY {table}.event_id
+            "#
+            );
+            let mut total_count = sqlx::query_scalar(&count_query);
+            for value in &bind_values {
+                total_count = total_count.bind(value);
+            }
+            let total_count = total_count.fetch_one(&self.pool).await?;
+            if total_count == 0 {
+                return Ok((Vec::new(), 0));
+            }
+
+            let entities = self.fetch_historical_event_messages(
+                &format!(
+                    r#"
+                SELECT {table}.id, {table}.data, {table}.model_id, group_concat({model_relation_table}.model_id) as model_ids
+                FROM {table}
+                JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
+                WHERE {where_clause}
+                GROUP BY {table}.event_id
+                ORDER BY {table}.event_id DESC
+             "#
+                ),
+                bind_values,
+                limit,
+                offset
+            ).await?;
             return Ok((entities, total_count));
         }
 
-        let db_entities: Vec<(String, String)> =
-            sqlx::query_as(&query).bind(limit).bind(offset).fetch_all(&self.pool).await?;
+        let (rows, total_count) = fetch_entities(
+            &self.pool,
+            &schemas,
+            table,
+            model_relation_table,
+            entity_relation_column,
+            if !where_clause.is_empty() { Some(&where_clause) } else { None },
+            if !having_clause.is_empty() { Some(&having_clause) } else { None },
+            order_by,
+            limit,
+            offset,
+            bind_values,
+        )
+        .await?;
 
-        let entities = self
-            .fetch_entities(table, entity_relation_column, db_entities, dont_include_hashed_keys)
-            .await?;
+        let entities = rows
+            .par_iter()
+            .map(|row| map_row_to_entity(row, &schemas, dont_include_hashed_keys))
+            .collect::<Result<Vec<_>, Error>>()?;
+
         Ok((entities, total_count))
     }
 
@@ -452,129 +439,98 @@ impl DojoWorld {
         limit: Option<u32>,
         offset: Option<u32>,
         dont_include_hashed_keys: bool,
+        order_by: Option<&str>,
+        entity_models: Vec<String>,
+        entity_updated_after: Option<String>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         let keys_pattern = build_keys_pattern(keys_clause)?;
 
-        // total count of rows that matches keys_pattern without limit and offset
-        let count_query = format!(
-            r#"
-            SELECT count(*)
-            FROM {table}
-            {}
-        "#,
-            if !keys_clause.models.is_empty() {
-                // split the model names to namespace and model
-                let model_ids = keys_clause
-                    .models
-                    .iter()
-                    .map(|model| {
-                        model
-                            .split_once('-')
-                            .ok_or(QueryError::InvalidNamespacedModel(model.clone()))
-                    })
-                    .collect::<Result<Vec<_>, _>>()?;
-                // get the model selector from namespace and model and format
-                let model_ids_str = model_ids
-                    .iter()
-                    .map(|(namespace, model)| {
-                        format!("'{:#x}'", compute_selector_from_names(namespace, model))
-                    })
-                    .collect::<Vec<_>>()
-                    .join(",");
-                format!(
-                    r#"
-                JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
-                WHERE {model_relation_table}.model_id IN ({})
-                AND {table}.keys REGEXP ?
-            "#,
-                    model_ids_str
-                )
+        let where_clause = format!(
+            "{table}.keys REGEXP ? {}",
+            if entity_updated_after.is_some() {
+                format!("AND {table}.updated_at >= ?")
             } else {
-                format!(
-                    r#"
-                WHERE {table}.keys REGEXP ?
-            "#
-                )
+                String::new()
             }
         );
 
-        let total_count = sqlx::query_scalar(&count_query)
-            .bind(&keys_pattern)
-            .fetch_optional(&self.pool)
+        let mut bind_values = vec![keys_pattern];
+        if let Some(entity_updated_after) = entity_updated_after.clone() {
+            bind_values.push(entity_updated_after);
+        }
+
+        let entity_models =
+            entity_models.iter().map(|model| compute_selector_from_tag(model)).collect::<Vec<_>>();
+        let schemas = self
+            .model_cache
+            .models(&entity_models)
             .await?
-            .unwrap_or(0);
-        if total_count == 0 {
-            return Ok((Vec::new(), 0));
-        }
+            .iter()
+            .map(|m| m.schema.clone())
+            .collect::<Vec<_>>();
 
-        let mut models_query = if table == EVENT_MESSAGES_HISTORICAL_TABLE {
-            format!(
-                r#"
-                SELECT {table}.id, {table}.data, {table}.model_id, group_concat({model_relation_table}.model_id) as model_ids
-                FROM {table}
-                JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
-                WHERE {table}.keys REGEXP ?
-                GROUP BY {table}.event_id
-            "#
-            )
-        } else {
-            format!(
-                r#"
-                SELECT {table}.id, group_concat({model_relation_table}.model_id) as model_ids
-                FROM {table}
-                JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
-                WHERE {table}.keys REGEXP ?
-                GROUP BY {table}.id
-            "#
-            )
-        };
-
-        if !keys_clause.models.is_empty() {
-            // filter by models
-            models_query += &format!(
-                "HAVING {}",
-                keys_clause
-                    .models
-                    .iter()
-                    .map(|model| {
-                        let (namespace, name) = model
-                            .split_once('-')
-                            .ok_or(QueryError::InvalidNamespacedModel(model.clone()))?;
-                        let model_id = compute_selector_from_names(namespace, name);
-                        Ok(format!("INSTR(model_ids, '{:#x}') > 0", model_id))
-                    })
-                    .collect::<Result<Vec<_>, Error>>()?
-                    .join(" OR ")
-                    .as_str()
-            );
-        }
-
-        models_query += &format!(" ORDER BY {table}.event_id DESC");
-
-        if limit.is_some() {
-            models_query += " LIMIT ?";
-        }
-        if offset.is_some() {
-            models_query += " OFFSET ?";
-        }
+        let having_clause = entity_models
+            .iter()
+            .map(|model| format!("INSTR(model_ids, '{:#x}') > 0", model))
+            .collect::<Vec<_>>()
+            .join(" OR ");
 
         if table == EVENT_MESSAGES_HISTORICAL_TABLE {
-            let entities = self
-                .fetch_historical_event_messages(&models_query, Some(&keys_pattern), limit, offset)
-                .await?;
+            let count_query = format!(
+                r#"
+                SELECT COUNT(*) FROM {table}
+                JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
+                WHERE {where_clause}
+                GROUP BY {table}.event_id
+            "#
+            );
+            let mut total_count = sqlx::query_scalar(&count_query);
+            for value in &bind_values {
+                total_count = total_count.bind(value);
+            }
+            let total_count = total_count.fetch_one(&self.pool).await?;
+            if total_count == 0 {
+                return Ok((Vec::new(), 0));
+            }
+
+            let entities = self.fetch_historical_event_messages(
+                &format!(
+                    r#"
+                    SELECT {table}.id, {table}.data, {table}.model_id, group_concat({model_relation_table}.model_id) as model_ids
+                    FROM {table}
+                    JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
+                    WHERE {where_clause}
+                    GROUP BY {table}.event_id
+                    ORDER BY {table}.event_id DESC
+                 "#
+                ),
+                bind_values,
+                limit,
+                offset
+            ).await?;
             return Ok((entities, total_count));
         }
 
-        let db_entities: Vec<(String, String)> = sqlx::query_as(&models_query)
-            .bind(&keys_pattern)
-            .bind(limit)
-            .bind(offset)
-            .fetch_all(&self.pool)
-            .await?;
+        let (rows, total_count) = fetch_entities(
+            &self.pool,
+            &schemas,
+            table,
+            model_relation_table,
+            entity_relation_column,
+            Some(&where_clause),
+            if !having_clause.is_empty() { Some(&having_clause) } else { None },
+            order_by,
+            limit,
+            offset,
+            bind_values,
+        )
+        .await?;
 
-        let entities = self
-            .fetch_entities(table, entity_relation_column, db_entities, dont_include_hashed_keys)
-            .await?;
+        let entities = rows
+            .par_iter()
+            .map(|row| map_row_to_entity(row, &schemas, dont_include_hashed_keys))
+            .collect::<Result<Vec<_>, Error>>()?;
+
         Ok((entities, total_count))
     }
 
@@ -615,19 +571,41 @@ impl DojoWorld {
         limit: Option<u32>,
         offset: Option<u32>,
         dont_include_hashed_keys: bool,
+        order_by: Option<&str>,
+        entity_models: Vec<String>,
+        entity_updated_after: Option<String>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
+        let entity_models =
+            entity_models.iter().map(|model| compute_selector_from_tag(model)).collect::<Vec<_>>();
         let comparison_operator = ComparisonOperator::from_repr(member_clause.operator as usize)
             .expect("invalid comparison operator");
 
-        let comparison_value =
-            match member_clause.value.ok_or(QueryError::MissingParam("value".into()))?.value_type {
-                Some(ValueType::String(value)) => value,
-                Some(ValueType::Primitive(value)) => {
-                    let primitive: Primitive = value.try_into()?;
-                    primitive.to_sql_value()?
+        fn prepare_comparison(
+            value: &proto::types::MemberValue,
+            bind_values: &mut Vec<String>,
+        ) -> Result<String, Error> {
+            match &value.value_type {
+                Some(ValueType::String(value)) => {
+                    bind_values.push(value.to_string());
+                    Ok("?".to_string())
                 }
-                None => return Err(QueryError::MissingParam("value_type".into()).into()),
-            };
+                Some(ValueType::Primitive(value)) => {
+                    let primitive: Primitive = (value.clone()).try_into()?;
+                    bind_values.push(primitive.to_sql_value());
+                    Ok("?".to_string())
+                }
+                Some(ValueType::List(values)) => Ok(format!(
+                    "({})",
+                    values
+                        .values
+                        .iter()
+                        .map(|v| prepare_comparison(v, bind_values))
+                        .collect::<Result<Vec<String>, Error>>()?
+                        .join(", ")
+                )),
+                None => Err(QueryError::MissingParam("value_type".into()).into()),
+            }
+        }
 
         let (namespace, model) = member_clause
             .model
@@ -655,53 +633,59 @@ impl DojoWorld {
 
         let model_ids = models_str
             .split(',')
-            .map(Felt::from_str)
-            .collect::<Result<Vec<_>, _>>()
-            .map_err(ParseError::FromStr)?;
-        let schemas =
-            self.model_cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect();
-
-        let model = member_clause.model.clone();
-        let parts: Vec<&str> = member_clause.member.split('.').collect();
-        let (table_name, column_name) = if parts.len() > 1 {
-            let nested_table = parts[..parts.len() - 1].join("$");
-            (format!("{model}${nested_table}"), format!("external_{}", parts.last().unwrap()))
-        } else {
-            (model, format!("external_{}", member_clause.member))
-        };
-        let (entity_query, arrays_queries, count_query) = build_sql_query(
-            &schemas,
-            table,
-            entity_relation_column,
-            Some(&format!("[{table_name}].{column_name} {comparison_operator} ?")),
-            None,
-            limit,
-            offset,
-        )?;
-
-        let total_count = sqlx::query_scalar(&count_query)
-            .bind(comparison_value.clone())
-            .fetch_optional(&self.pool)
+            .filter_map(|id| {
+                let model_id = Felt::from_str(id).unwrap();
+                if entity_models.is_empty() || entity_models.contains(&model_id) {
+                    Some(model_id)
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+        let schemas = self
+            .model_cache
+            .models(&model_ids)
             .await?
-            .unwrap_or(0);
-        let db_entities = sqlx::query(&entity_query)
-            .bind(comparison_value.clone())
-            .bind(limit)
-            .bind(offset)
-            .fetch_all(&self.pool)
-            .await?;
-        let mut arrays_rows = HashMap::new();
-        for (name, query) in arrays_queries {
-            let rows =
-                sqlx::query(&query).bind(comparison_value.clone()).fetch_all(&self.pool).await?;
-            arrays_rows.insert(name, rows);
+            .into_iter()
+            .map(|m| m.schema)
+            .collect::<Vec<_>>();
+
+        // Use the member name directly as the column name since it's already flattened
+        let mut bind_values = Vec::new();
+        let value = prepare_comparison(
+            &member_clause.value.clone().ok_or(QueryError::MissingParam("value".into()))?,
+            &mut bind_values,
+        )?;
+        let mut where_clause = format!(
+            "[{}].[{}] {comparison_operator} {value}",
+            member_clause.model, member_clause.member
+        );
+        if entity_updated_after.is_some() {
+            where_clause += &format!(" AND {table}.updated_at >= ?");
+            bind_values.push(entity_updated_after.unwrap());
         }
 
-        let entities_collection: Result<Vec<_>, Error> = db_entities
+        let (rows, total_count) = fetch_entities(
+            &self.pool,
+            &schemas,
+            table,
+            model_relation_table,
+            entity_relation_column,
+            Some(&where_clause),
+            None,
+            order_by,
+            limit,
+            offset,
+            bind_values,
+        )
+        .await?;
+
+        let entities = rows
             .par_iter()
-            .map(|row| map_row_to_entity(row, &arrays_rows, &schemas, dont_include_hashed_keys))
-            .collect();
-        Ok((entities_collection?, total_count))
+            .map(|row| map_row_to_entity(row, &schemas, dont_include_hashed_keys))
+            .collect::<Result<Vec<_>, Error>>()?;
+
+        Ok((entities, total_count))
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -714,56 +698,49 @@ impl DojoWorld {
         limit: Option<u32>,
         offset: Option<u32>,
         dont_include_hashed_keys: bool,
+        order_by: Option<&str>,
+        entity_models: Vec<String>,
+        entity_updated_after: Option<String>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
-        let (where_clause, having_clause, join_clause, bind_values) =
-            build_composite_clause(table, model_relation_table, &composite)?;
+        let (where_clause, bind_values) =
+            build_composite_clause(table, &composite, entity_updated_after)?;
 
-        let count_query = format!(
-            r#"
-            SELECT COUNT(DISTINCT [{table}].id)
-            FROM [{table}]
-            JOIN {model_relation_table} ON [{table}].id = {model_relation_table}.entity_id
-            {join_clause}
-            {where_clause}
-            {having_clause}
-            "#
-        );
+        let entity_models =
+            entity_models.iter().map(|model| compute_selector_from_tag(model)).collect::<Vec<_>>();
+        let schemas = self
+            .model_cache
+            .models(&entity_models)
+            .await?
+            .into_iter()
+            .map(|m| m.schema)
+            .collect::<Vec<_>>();
 
-        let mut count_query = sqlx::query_scalar::<_, u32>(&count_query);
-        for value in &bind_values {
-            count_query = count_query.bind(value);
-        }
+        let having_clause = entity_models
+            .iter()
+            .map(|model| format!("INSTR(model_ids, '{:#x}') > 0", model))
+            .collect::<Vec<_>>()
+            .join(" OR ");
 
-        let total_count = count_query.fetch_optional(&self.pool).await?.unwrap_or(0);
-        if total_count == 0 {
-            return Ok((Vec::new(), 0));
-        }
+        let (rows, total_count) = fetch_entities(
+            &self.pool,
+            &schemas,
+            table,
+            model_relation_table,
+            entity_relation_column,
+            if where_clause.is_empty() { None } else { Some(&where_clause) },
+            if having_clause.is_empty() { None } else { Some(&having_clause) },
+            order_by,
+            limit,
+            offset,
+            bind_values,
+        )
+        .await?;
 
-        let query = format!(
-            r#"
-            SELECT [{table}].id, group_concat({model_relation_table}.model_id) as model_ids
-            FROM [{table}]
-            JOIN {model_relation_table} ON [{table}].id = {model_relation_table}.entity_id
-            {join_clause}
-            {where_clause}
-            GROUP BY [{table}].id
-            {having_clause}
-            ORDER BY [{table}].event_id DESC
-            LIMIT ? OFFSET ?
-            "#
-        );
+        let entities = rows
+            .par_iter()
+            .map(|row| map_row_to_entity(row, &schemas, dont_include_hashed_keys))
+            .collect::<Result<Vec<_>, Error>>()?;
 
-        let mut db_query = sqlx::query_as(&query);
-        for value in &bind_values {
-            db_query = db_query.bind(value);
-        }
-        db_query = db_query.bind(limit.unwrap_or(u32::MAX)).bind(offset.unwrap_or(0));
-
-        let db_entities: Vec<(String, String)> = db_query.fetch_all(&self.pool).await?;
-
-        let entities = self
-            .fetch_entities(table, entity_relation_column, db_entities, dont_include_hashed_keys)
-            .await?;
         Ok((entities, total_count))
     }
 
@@ -787,6 +764,75 @@ impl DojoWorld {
             layout: serde_json::to_vec(&model.layout).unwrap(),
             schema: serde_json::to_vec(&model.schema).unwrap(),
         })
+    }
+
+    async fn retrieve_tokens(
+        &self,
+        contract_addresses: Vec<Felt>,
+    ) -> Result<RetrieveTokensResponse, Status> {
+        let query = if contract_addresses.is_empty() {
+            "SELECT * FROM tokens".to_string()
+        } else {
+            let placeholders = vec!["?"; contract_addresses.len()].join(", ");
+            format!("SELECT * FROM tokens WHERE contract_address IN ({})", placeholders)
+        };
+
+        let mut query = sqlx::query_as(&query);
+        for address in &contract_addresses {
+            query = query.bind(format!("{:#x}", address));
+        }
+
+        let tokens: Vec<Token> =
+            query.fetch_all(&self.pool).await.map_err(|e| Status::internal(e.to_string()))?;
+
+        let tokens = tokens.iter().map(|token| token.clone().into()).collect();
+        Ok(RetrieveTokensResponse { tokens })
+    }
+
+    async fn retrieve_token_balances(
+        &self,
+        account_addresses: Vec<Felt>,
+        contract_addresses: Vec<Felt>,
+    ) -> Result<RetrieveTokenBalancesResponse, Status> {
+        let mut query = "SELECT * FROM token_balances".to_string();
+        let mut bind_values = Vec::new();
+        let mut conditions = Vec::new();
+
+        if !account_addresses.is_empty() {
+            let placeholders = vec!["?"; account_addresses.len()].join(", ");
+            conditions.push(format!("account_address IN ({})", placeholders));
+            bind_values.extend(account_addresses.iter().map(|addr| format!("{:#x}", addr)));
+        }
+
+        if !contract_addresses.is_empty() {
+            let placeholders = vec!["?"; contract_addresses.len()].join(", ");
+            conditions.push(format!("contract_address IN ({})", placeholders));
+            bind_values.extend(contract_addresses.iter().map(|addr| format!("{:#x}", addr)));
+        }
+
+        if !conditions.is_empty() {
+            query += &format!(" WHERE {}", conditions.join(" AND "));
+        }
+
+        let mut query = sqlx::query_as(&query);
+        for value in bind_values {
+            query = query.bind(value);
+        }
+
+        let balances: Vec<TokenBalance> =
+            query.fetch_all(&self.pool).await.map_err(|e| Status::internal(e.to_string()))?;
+
+        let balances = balances.iter().map(|balance| balance.clone().into()).collect();
+        Ok(RetrieveTokenBalancesResponse { balances })
+    }
+
+    async fn subscribe_token_balances(
+        &self,
+        contract_addresses: Vec<Felt>,
+        account_addresses: Vec<Felt>,
+    ) -> Result<Receiver<Result<proto::world::SubscribeTokenBalancesResponse, tonic::Status>>, Error>
+    {
+        self.token_balance_manager.add_subscriber(contract_addresses, account_addresses).await
     }
 
     async fn subscribe_indexer(
@@ -839,6 +885,43 @@ impl DojoWorld {
         entity_relation_column: &str,
         query: proto::types::Query,
     ) -> Result<proto::world::RetrieveEntitiesResponse, Error> {
+        let order_by = query
+            .order_by
+            .iter()
+            .map(|order_by| {
+                format!(
+                    "[{}].[{}] {}",
+                    order_by.model,
+                    order_by.member,
+                    match order_by.direction {
+                        0 => "ASC",
+                        1 => "DESC",
+                        _ => unreachable!(),
+                    }
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(", ");
+
+        let order_by = if order_by.is_empty() { None } else { Some(order_by.as_str()) };
+
+        let entity_updated_after = match query.entity_updated_after {
+            0 => None,
+            _ => Some(
+                // This conversion would include a `UTC` suffix, which is not valid for the SQL
+                // query when comparing the timestamp with equality.
+                // To have `>=` working, we need to remove the `UTC` suffix.
+                DateTime::<Utc>::from_timestamp(query.entity_updated_after as i64, 0)
+                    .ok_or_else(|| {
+                        Error::from(QueryError::InvalidTimestamp(query.entity_updated_after))
+                    })?
+                    .to_string()
+                    .replace("UTC", "")
+                    .trim()
+                    .to_string(),
+            ),
+        };
+
         let (entities, total_count) = match query.clause {
             None => {
                 self.entities_all(
@@ -848,6 +931,9 @@ impl DojoWorld {
                     query.limit,
                     query.offset,
                     query.dont_include_hashed_keys,
+                    order_by,
+                    query.entity_models,
+                    entity_updated_after,
                 )
                 .await?
             }
@@ -869,6 +955,9 @@ impl DojoWorld {
                             Some(query.limit),
                             Some(query.offset),
                             query.dont_include_hashed_keys,
+                            order_by,
+                            query.entity_models,
+                            entity_updated_after,
                         )
                         .await?
                     }
@@ -881,6 +970,9 @@ impl DojoWorld {
                             Some(query.limit),
                             Some(query.offset),
                             query.dont_include_hashed_keys,
+                            order_by,
+                            query.entity_models,
+                            entity_updated_after,
                         )
                         .await?
                     }
@@ -893,6 +985,9 @@ impl DojoWorld {
                             Some(query.limit),
                             Some(query.offset),
                             query.dont_include_hashed_keys,
+                            order_by,
+                            query.entity_models,
+                            entity_updated_after,
                         )
                         .await?
                     }
@@ -905,6 +1000,9 @@ impl DojoWorld {
                             Some(query.limit),
                             Some(query.offset),
                             query.dont_include_hashed_keys,
+                            order_by,
+                            query.entity_models,
+                            entity_updated_after,
                         )
                         .await?
                     }
@@ -965,16 +1063,22 @@ fn map_row_to_event(row: &(String, String, String)) -> Result<proto::types::Even
 
 fn map_row_to_entity(
     row: &SqliteRow,
-    arrays_rows: &HashMap<String, Vec<SqliteRow>>,
     schemas: &[Ty],
     dont_include_hashed_keys: bool,
 ) -> Result<proto::types::Entity, Error> {
     let hashed_keys = Felt::from_str(&row.get::<String, _>("id")).map_err(ParseError::FromStr)?;
+    let model_ids = row
+        .get::<String, _>("model_ids")
+        .split(',')
+        .map(|id| Felt::from_str(id).map_err(ParseError::FromStr))
+        .collect::<Result<Vec<_>, _>>()?;
+
     let models = schemas
         .iter()
+        .filter(|schema| model_ids.contains(&compute_selector_from_tag(&schema.name())))
         .map(|schema| {
             let mut ty = schema.clone();
-            map_row_to_ty("", &schema.name(), &mut ty, row, arrays_rows)?;
+            map_row_to_ty("", &schema.name(), &mut ty, row)?;
             Ok(ty.as_struct().unwrap().clone().into())
         })
         .collect::<Result<Vec<_>, Error>>()?;
@@ -1010,7 +1114,7 @@ fn build_keys_pattern(clause: &proto::types::KeysClause) -> Result<String, Error
     let mut keys_pattern = format!("^{}", keys.join("/"));
 
     if clause.pattern_matching == proto::types::PatternMatching::VariableLen as i32 {
-        keys_pattern += &format!("({})*", KEY_PATTERN);
+        keys_pattern += &format!("(/{})*", KEY_PATTERN);
     }
     keys_pattern += "/$";
 
@@ -1020,17 +1124,12 @@ fn build_keys_pattern(clause: &proto::types::KeysClause) -> Result<String, Error
 // builds a composite clause for a query
 fn build_composite_clause(
     table: &str,
-    model_relation_table: &str,
     composite: &proto::types::CompositeClause,
-) -> Result<(String, String, String, Vec<String>), Error> {
+    entity_updated_after: Option<String>,
+) -> Result<(String, Vec<String>), Error> {
     let is_or = composite.operator == LogicalOperator::Or as i32;
     let mut where_clauses = Vec::new();
-    let mut join_clauses = Vec::new();
-    let mut having_clauses = Vec::new();
     let mut bind_values = Vec::new();
-
-    // HashMap to track the number of joins per model
-    let mut model_counters: HashMap<String, usize> = HashMap::new();
 
     for clause in &composite.clauses {
         match clause.clause_type.as_ref().unwrap() {
@@ -1044,92 +1143,96 @@ fn build_composite_clause(
                     })
                     .collect::<Vec<_>>()
                     .join(", ");
-                where_clauses.push(format!("{table}.id IN ({})", ids));
+                where_clauses.push(format!("({table}.id IN ({}))", ids));
             }
             ClauseType::Keys(keys) => {
                 let keys_pattern = build_keys_pattern(keys)?;
                 bind_values.push(keys_pattern);
-                where_clauses.push(format!("{table}.keys REGEXP ?"));
+                where_clauses.push(format!("({table}.keys REGEXP ?)"));
+
+                // Add model checks for specified models
+
+                // NOTE: disabled since we are now using the top level entity models
+
+                // for model in &keys.models {
+                //     let (namespace, model_name) = model
+                //         .split_once('-')
+                //         .ok_or(QueryError::InvalidNamespacedModel(model.clone()))?;
+                //     let model_id = compute_selector_from_names(namespace, model_name);
+
+                //     having_clauses.push(format!("INSTR(model_ids, '{:#x}') > 0", model_id));
+                // }
             }
             ClauseType::Member(member) => {
                 let comparison_operator = ComparisonOperator::from_repr(member.operator as usize)
                     .expect("invalid comparison operator");
-                let value = member.value.clone();
-                let comparison_value =
-                    match value.ok_or(QueryError::MissingParam("value".into()))?.value_type {
-                        Some(ValueType::String(value)) => value,
-                        Some(ValueType::Primitive(value)) => {
-                            let primitive: Primitive = value.try_into()?;
-                            primitive.to_sql_value()?
+                let value = member.value.clone().ok_or(QueryError::MissingParam("value".into()))?;
+                fn prepare_comparison(
+                    value: &proto::types::MemberValue,
+                    bind_values: &mut Vec<String>,
+                ) -> Result<String, Error> {
+                    match &value.value_type {
+                        Some(ValueType::String(value)) => {
+                            bind_values.push(value.to_string());
+                            Ok("?".to_string())
                         }
-                        None => return Err(QueryError::MissingParam("value_type".into()).into()),
-                    };
-                bind_values.push(comparison_value);
+                        Some(ValueType::Primitive(value)) => {
+                            let primitive: Primitive = (value.clone()).try_into()?;
+                            bind_values.push(primitive.to_sql_value());
+                            Ok("?".to_string())
+                        }
+                        Some(ValueType::List(values)) => Ok(format!(
+                            "({})",
+                            values
+                                .values
+                                .iter()
+                                .map(|v| prepare_comparison(v, bind_values))
+                                .collect::<Result<Vec<String>, Error>>()?
+                                .join(", ")
+                        )),
+                        None => Err(QueryError::MissingParam("value_type".into()).into()),
+                    }
+                }
+                let value = prepare_comparison(&value, &mut bind_values)?;
 
                 let model = member.model.clone();
-                let parts: Vec<&str> = member.member.split('.').collect();
-                let (table_name, column_name) = if parts.len() > 1 {
-                    let nested_table = parts[..parts.len() - 1].join("$");
-                    (
-                        format!("[{model}${nested_table}]"),
-                        format!("external_{}", parts.last().unwrap()),
-                    )
-                } else {
-                    (format!("[{model}]"), format!("external_{}", member.member))
-                };
 
-                let (namespace, model_name) = member
-                    .model
-                    .split_once('-')
-                    .ok_or(QueryError::InvalidNamespacedModel(member.model.clone()))?;
-                let model_id = compute_selector_from_names(namespace, model_name);
-
-                // Generate a unique alias for each model
-                let counter = model_counters.entry(model.clone()).or_insert(0);
-                *counter += 1;
-                let alias =
-                    if *counter == 1 { model.clone() } else { format!("{model}_{}", *counter - 1) };
-
-                join_clauses.push(format!(
-                    "LEFT JOIN {table_name} AS [{alias}] ON [{table}].id = [{alias}].entity_id"
-                ));
-                where_clauses.push(format!("[{alias}].{column_name} {comparison_operator} ?"));
-                having_clauses.push(format!(
-                    "INSTR(group_concat({model_relation_table}.model_id), '{:#x}') > 0",
-                    model_id
-                ));
+                // Use the column name directly since it's already flattened
+                where_clauses
+                    .push(format!("([{model}].[{}] {comparison_operator} {value})", member.member));
             }
-            ClauseType::Composite(nested_composite) => {
-                let (nested_where, nested_having, nested_join, nested_values) =
-                    build_composite_clause(table, model_relation_table, nested_composite)?;
-                where_clauses.push(format!("({})", nested_where.trim_start_matches("WHERE ")));
-                if !nested_having.is_empty() {
-                    having_clauses.push(nested_having.trim_start_matches("HAVING ").to_string());
+            ClauseType::Composite(nested) => {
+                // Handle nested composite by recursively building the clause
+                let (nested_where, nested_values) =
+                    build_composite_clause(table, nested, entity_updated_after.clone())?;
+
+                if !nested_where.is_empty() {
+                    where_clauses.push(nested_where);
                 }
-                join_clauses.extend(
-                    nested_join
-                        .split_whitespace()
-                        .filter(|&s| s.starts_with("LEFT"))
-                        .map(String::from),
-                );
                 bind_values.extend(nested_values);
             }
         }
     }
 
-    let join_clause = join_clauses.join(" ");
     let where_clause = if !where_clauses.is_empty() {
-        format!("WHERE {}", where_clauses.join(if is_or { " OR " } else { " AND " }))
-    } else {
-        String::new()
-    };
-    let having_clause = if !having_clauses.is_empty() {
-        format!("HAVING {}", having_clauses.join(if is_or { " OR " } else { " AND " }))
+        format!(
+            "{} {}",
+            where_clauses.join(if is_or { " OR " } else { " AND " }),
+            if let Some(entity_updated_after) = entity_updated_after.clone() {
+                bind_values.push(entity_updated_after);
+                format!("AND {table}.updated_at >= ?")
+            } else {
+                String::new()
+            }
+        )
+    } else if let Some(entity_updated_after) = entity_updated_after.clone() {
+        bind_values.push(entity_updated_after);
+        format!("{table}.updated_at >= ?")
     } else {
         String::new()
     };
 
-    Ok((where_clause, having_clause, join_clause, bind_values))
+    Ok((where_clause, bind_values))
 }
 
 type ServiceResult<T> = Result<Response<T>, Status>;
@@ -1143,6 +1246,8 @@ type SubscribeIndexerResponseStream =
     Pin<Box<dyn Stream<Item = Result<SubscribeIndexerResponse, Status>> + Send>>;
 type RetrieveEntitiesStreamingResponseStream =
     Pin<Box<dyn Stream<Item = Result<RetrieveEntitiesStreamingResponse, Status>> + Send>>;
+type SubscribeTokenBalancesResponseStream =
+    Pin<Box<dyn Stream<Item = Result<SubscribeTokenBalancesResponse, Status>> + Send>>;
 
 #[tonic::async_trait]
 impl proto::world::world_server::World for DojoWorld {
@@ -1152,6 +1257,7 @@ impl proto::world::world_server::World for DojoWorld {
     type SubscribeEventsStream = SubscribeEventsResponseStream;
     type SubscribeIndexerStream = SubscribeIndexerResponseStream;
     type RetrieveEntitiesStreamingStream = RetrieveEntitiesStreamingResponseStream;
+    type SubscribeTokenBalancesStream = SubscribeTokenBalancesResponseStream;
 
     async fn world_metadata(
         &self,
@@ -1163,6 +1269,45 @@ impl proto::world::world_server::World for DojoWorld {
         })?);
 
         Ok(Response::new(WorldMetadataResponse { metadata }))
+    }
+
+    async fn retrieve_tokens(
+        &self,
+        request: Request<RetrieveTokensRequest>,
+    ) -> Result<Response<RetrieveTokensResponse>, Status> {
+        let RetrieveTokensRequest { contract_addresses } = request.into_inner();
+        let contract_addresses = contract_addresses
+            .iter()
+            .map(|address| Felt::from_bytes_be_slice(address))
+            .collect::<Vec<_>>();
+
+        let tokens = self
+            .retrieve_tokens(contract_addresses)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+        Ok(Response::new(tokens))
+    }
+
+    async fn retrieve_token_balances(
+        &self,
+        request: Request<RetrieveTokenBalancesRequest>,
+    ) -> Result<Response<RetrieveTokenBalancesResponse>, Status> {
+        let RetrieveTokenBalancesRequest { account_addresses, contract_addresses } =
+            request.into_inner();
+        let account_addresses = account_addresses
+            .iter()
+            .map(|address| Felt::from_bytes_be_slice(address))
+            .collect::<Vec<_>>();
+        let contract_addresses = contract_addresses
+            .iter()
+            .map(|address| Felt::from_bytes_be_slice(address))
+            .collect::<Vec<_>>();
+
+        let balances = self
+            .retrieve_token_balances(account_addresses, contract_addresses)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+        Ok(Response::new(balances))
     }
 
     async fn subscribe_indexer(
@@ -1212,6 +1357,52 @@ impl proto::world::world_server::World for DojoWorld {
             )
             .await;
 
+        Ok(Response::new(()))
+    }
+
+    async fn subscribe_token_balances(
+        &self,
+        request: Request<RetrieveTokenBalancesRequest>,
+    ) -> ServiceResult<Self::SubscribeTokenBalancesStream> {
+        let RetrieveTokenBalancesRequest { contract_addresses, account_addresses } =
+            request.into_inner();
+        let contract_addresses = contract_addresses
+            .iter()
+            .map(|address| Felt::from_bytes_be_slice(address))
+            .collect::<Vec<_>>();
+        let account_addresses = account_addresses
+            .iter()
+            .map(|address| Felt::from_bytes_be_slice(address))
+            .collect::<Vec<_>>();
+
+        let rx = self
+            .subscribe_token_balances(contract_addresses, account_addresses)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+        Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::SubscribeTokenBalancesStream))
+    }
+
+    async fn update_token_balances_subscription(
+        &self,
+        request: Request<UpdateTokenBalancesSubscriptionRequest>,
+    ) -> ServiceResult<()> {
+        let UpdateTokenBalancesSubscriptionRequest {
+            subscription_id,
+            contract_addresses,
+            account_addresses,
+        } = request.into_inner();
+        let contract_addresses = contract_addresses
+            .iter()
+            .map(|address| Felt::from_bytes_be_slice(address))
+            .collect::<Vec<_>>();
+        let account_addresses = account_addresses
+            .iter()
+            .map(|address| Felt::from_bytes_be_slice(address))
+            .collect::<Vec<_>>();
+
+        self.token_balance_manager
+            .update_subscriber(subscription_id, contract_addresses, account_addresses)
+            .await;
         Ok(Response::new(()))
     }
 
@@ -1368,6 +1559,7 @@ pub async fn new(
     block_rx: Receiver<u64>,
     world_address: Felt,
     provider: Arc<JsonRpcClient<HttpTransport>>,
+    model_cache: Arc<ModelCache>,
 ) -> Result<
     (SocketAddr, impl Future<Output = Result<(), tonic::transport::Error>> + 'static),
     std::io::Error,
@@ -1380,7 +1572,7 @@ pub async fn new(
         .build()
         .unwrap();
 
-    let world = DojoWorld::new(pool.clone(), block_rx, world_address, provider);
+    let world = DojoWorld::new(pool.clone(), block_rx, world_address, provider, model_cache);
     let server = WorldServer::new(world)
         .accept_compressed(CompressionEncoding::Gzip)
         .send_compressed(CompressionEncoding::Gzip);

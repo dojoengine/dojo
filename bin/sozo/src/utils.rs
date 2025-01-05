@@ -1,9 +1,14 @@
+use std::collections::HashMap;
+use std::io::{self, Write};
 use std::str::FromStr;
+use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Result};
 use camino::Utf8PathBuf;
 use colored::*;
+use dojo_utils::provider as provider_utils;
 use dojo_world::config::ProfileConfig;
+use dojo_world::contracts::ContractInfo;
 use dojo_world::diff::WorldDiff;
 use dojo_world::local::WorldLocal;
 use katana_rpc_api::starknet::RPC_SPEC_VERSION;
@@ -16,11 +21,12 @@ use starknet::core::types::Felt;
 use starknet::core::utils as snutils;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
-use tracing::trace;
+use tracing::{error, trace};
 
 use crate::commands::options::account::{AccountOptions, SozoAccount};
 use crate::commands::options::starknet::StarknetOptions;
 use crate::commands::options::world::WorldOptions;
+use crate::commands::LOG_TARGET;
 
 /// Computes the world address based on the provided options.
 pub fn get_world_address(
@@ -110,6 +116,12 @@ pub async fn get_world_diff_and_provider(
     let world_address = get_world_address(&profile_config, &world, &world_local)?;
 
     let (provider, rpc_url) = starknet.provider(env)?;
+    let provider = Arc::new(provider);
+    if let Err(e) = provider_utils::health_check_provider(provider.clone()).await {
+        error!(target: LOG_TARGET,"Provider health check failed during sozo inspect.");
+        return Err(e);
+    }
+    let provider = Arc::try_unwrap(provider).map_err(|_| anyhow!("Failed to unwrap Arc"))?;
     trace!(?provider, "Provider initialized.");
 
     let spec_version = provider.spec_version().await?;
@@ -128,7 +140,13 @@ pub async fn get_world_diff_and_provider(
         .with_context(|| "Cannot parse chain_id as string")?;
     trace!(chain_id);
 
-    let world_diff = WorldDiff::new_from_chain(world_address, world_local, &provider).await?;
+    let world_diff = WorldDiff::new_from_chain(
+        world_address,
+        world_local,
+        &provider,
+        env.and_then(|e| e.world_block),
+    )
+    .await?;
 
     Ok((world_diff, provider, rpc_url))
 }
@@ -155,11 +173,9 @@ pub async fn get_world_diff_and_account(
         ui.stop();
     }
 
-    let account = {
-        account
-            .account(provider, world_diff.world_info.address, &starknet, env, &world_diff)
-            .await?
-    };
+    let contracts = (&world_diff).into();
+
+    let account = { account.account(provider, env, &starknet, &contracts).await? };
 
     if let Some(ui) = ui {
         ui.restart("Verifying account...");
@@ -205,6 +221,40 @@ fn is_compatible_version(provided_version: &str, expected_version: &str) -> Resu
     })?;
 
     Ok(expected_ver_req.matches(&provided_ver))
+}
+
+/// Returns the contracts from the manifest or from the diff.
+#[allow(clippy::unnecessary_unwrap)]
+pub async fn contracts_from_manifest_or_diff(
+    account: AccountOptions,
+    starknet: StarknetOptions,
+    world: WorldOptions,
+    ws: &Workspace<'_>,
+    force_diff: bool,
+) -> Result<HashMap<String, ContractInfo>> {
+    let local_manifest = ws.read_manifest_profile()?;
+
+    let contracts: HashMap<String, ContractInfo> = if force_diff || local_manifest.is_none() {
+        let (world_diff, _, _) =
+            get_world_diff_and_account(account, starknet, world, ws, &mut None).await?;
+
+        (&world_diff).into()
+    } else {
+        (&local_manifest.unwrap()).into()
+    };
+
+    Ok(contracts)
+}
+
+/// Prompts the user to confirm an operation.
+pub fn prompt_confirm(prompt: &str) -> Result<bool> {
+    print!("{} [y/N]", prompt);
+    io::stdout().flush()?;
+
+    let mut input = String::new();
+    io::stdin().read_line(&mut input)?;
+
+    Ok(input.trim().to_lowercase() == "y")
 }
 
 #[cfg(test)]

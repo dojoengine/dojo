@@ -121,7 +121,7 @@ impl KatanaRunner {
             .port(port)
             .accounts(n_accounts)
             .json_log(true)
-            .max_connections(10000)
+            .rpc_max_connections(10000)
             .dev(config.dev)
             .fee(!config.disable_fee);
 
@@ -251,7 +251,7 @@ impl KatanaRunner {
 }
 
 /// Determines the default program path for the katana runner based on the KATANA_RUNNER_BIN
-/// environment variable. If not set, try to to use katana from the PATH.
+/// environment variable. If not set, try to use katana from the PATH.
 fn determine_default_program_path() -> String {
     if let Ok(bin) = std::env::var("KATANA_RUNNER_BIN") { bin } else { "katana".to_string() }
 }

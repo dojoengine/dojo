@@ -5,16 +5,18 @@ use katana_db::models::contract::ContractInfoChangeList;
 use katana_db::models::list::BlockList;
 use katana_db::models::storage::{ContractStorageKey, StorageEntry};
 use katana_db::tables;
+use katana_db::trie::TrieDbFactory;
 use katana_primitives::block::BlockNumber;
-use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
+use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, ContractClass};
 use katana_primitives::contract::{
     ContractAddress, GenericContractInfo, Nonce, StorageKey, StorageValue,
 };
+use katana_primitives::Felt;
 
 use super::DbProvider;
 use crate::error::ProviderError;
-use crate::traits::contract::{ContractClassProvider, ContractClassWriter};
-use crate::traits::state::{StateProvider, StateWriter};
+use crate::traits::contract::{ContractClassProvider, ContractClassWriter, ContractClassWriterExt};
+use crate::traits::state::{StateProofProvider, StateProvider, StateRootProvider, StateWriter};
 use crate::ProviderResult;
 
 impl<Db: Database> StateWriter for DbProvider<Db> {
@@ -70,9 +72,9 @@ impl<Db: Database> StateWriter for DbProvider<Db> {
 }
 
 impl ContractClassWriter for DbProvider {
-    fn set_class(&self, hash: ClassHash, class: CompiledClass) -> ProviderResult<()> {
+    fn set_class(&self, hash: ClassHash, class: ContractClass) -> ProviderResult<()> {
         self.0.update(move |db_tx| -> ProviderResult<()> {
-            db_tx.put::<tables::CompiledClasses>(hash, class)?;
+            db_tx.put::<tables::Classes>(hash, class)?;
             Ok(())
         })?
     }
@@ -87,14 +89,12 @@ impl ContractClassWriter for DbProvider {
             Ok(())
         })?
     }
+}
 
-    fn set_sierra_class(
-        &self,
-        hash: ClassHash,
-        sierra: FlattenedSierraClass,
-    ) -> ProviderResult<()> {
+impl ContractClassWriterExt for DbProvider {
+    fn set_compiled_class(&self, hash: ClassHash, class: CompiledClass) -> ProviderResult<()> {
         self.0.update(move |db_tx| -> ProviderResult<()> {
-            db_tx.put::<tables::SierraClasses>(hash, sierra)?;
+            db_tx.put::<tables::CompiledClasses>(hash, class)?;
             Ok(())
         })?
     }
@@ -114,9 +114,12 @@ impl<Tx> ContractClassProvider for LatestStateProvider<Tx>
 where
     Tx: DbTx + Send + Sync,
 {
-    fn class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
-        let class = self.0.get::<tables::CompiledClasses>(hash)?;
-        Ok(class)
+    fn class(&self, hash: ClassHash) -> ProviderResult<Option<ContractClass>> {
+        Ok(self.0.get::<tables::Classes>(hash)?)
+    }
+
+    fn compiled_class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
+        Ok(self.0.get::<tables::CompiledClasses>(hash)?)
     }
 
     fn compiled_class_hash_of_class_hash(
@@ -125,11 +128,6 @@ where
     ) -> ProviderResult<Option<CompiledClassHash>> {
         let hash = self.0.get::<tables::CompiledClassHashes>(hash)?;
         Ok(hash)
-    }
-
-    fn sierra_class(&self, hash: ClassHash) -> ProviderResult<Option<FlattenedSierraClass>> {
-        let class = self.0.get::<tables::SierraClasses>(hash)?;
-        Ok(class)
     }
 }
 
@@ -164,6 +162,56 @@ where
     }
 }
 
+impl<Tx> StateProofProvider for LatestStateProvider<Tx>
+where
+    Tx: DbTx + fmt::Debug + Send + Sync,
+{
+    fn class_multiproof(&self, classes: Vec<ClassHash>) -> ProviderResult<katana_trie::MultiProof> {
+        let mut trie = TrieDbFactory::new(&self.0).latest().classes_trie();
+        let proofs = trie.multiproof(classes);
+        Ok(proofs)
+    }
+
+    fn contract_multiproof(
+        &self,
+        addresses: Vec<ContractAddress>,
+    ) -> ProviderResult<katana_trie::MultiProof> {
+        let mut trie = TrieDbFactory::new(&self.0).latest().contracts_trie();
+        let proofs = trie.multiproof(addresses);
+        Ok(proofs)
+    }
+
+    fn storage_multiproof(
+        &self,
+        address: ContractAddress,
+        storage_keys: Vec<StorageKey>,
+    ) -> ProviderResult<katana_trie::MultiProof> {
+        let mut trie = TrieDbFactory::new(&self.0).latest().storages_trie(address);
+        let proofs = trie.multiproof(storage_keys);
+        Ok(proofs)
+    }
+}
+
+impl<Tx> StateRootProvider for LatestStateProvider<Tx>
+where
+    Tx: DbTx + fmt::Debug + Send + Sync,
+{
+    fn classes_root(&self) -> ProviderResult<Felt> {
+        let trie = TrieDbFactory::new(&self.0).latest().classes_trie();
+        Ok(trie.root())
+    }
+
+    fn contracts_root(&self) -> ProviderResult<Felt> {
+        let trie = TrieDbFactory::new(&self.0).latest().contracts_trie();
+        Ok(trie.root())
+    }
+
+    fn storage_root(&self, contract: ContractAddress) -> ProviderResult<Option<Felt>> {
+        let trie = TrieDbFactory::new(&self.0).latest().storages_trie(contract);
+        Ok(Some(trie.root()))
+    }
+}
+
 /// A historical state provider.
 #[derive(Debug)]
 pub(super) struct HistoricalStateProvider<Tx: DbTx + fmt::Debug> {
@@ -183,6 +231,22 @@ impl<Tx> ContractClassProvider for HistoricalStateProvider<Tx>
 where
     Tx: DbTx + fmt::Debug + Send + Sync,
 {
+    fn class(&self, hash: ClassHash) -> ProviderResult<Option<ContractClass>> {
+        if self.compiled_class_hash_of_class_hash(hash)?.is_some() {
+            Ok(self.tx.get::<tables::Classes>(hash)?)
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn compiled_class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
+        if self.compiled_class_hash_of_class_hash(hash)?.is_some() {
+            Ok(self.tx.get::<tables::CompiledClasses>(hash)?)
+        } else {
+            Ok(None)
+        }
+    }
+
     fn compiled_class_hash_of_class_hash(
         &self,
         hash: ClassHash,
@@ -194,23 +258,6 @@ where
             .is_some_and(|num| num <= self.block_number)
         {
             Ok(self.tx.get::<tables::CompiledClassHashes>(hash)?)
-        } else {
-            Ok(None)
-        }
-    }
-
-    fn class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
-        if self.compiled_class_hash_of_class_hash(hash)?.is_some() {
-            let contract = self.tx.get::<tables::CompiledClasses>(hash)?;
-            Ok(contract)
-        } else {
-            Ok(None)
-        }
-    }
-
-    fn sierra_class(&self, hash: ClassHash) -> ProviderResult<Option<FlattenedSierraClass>> {
-        if self.compiled_class_hash_of_class_hash(hash)?.is_some() {
-            self.tx.get::<tables::SierraClasses>(hash).map_err(|e| e.into())
         } else {
             Ok(None)
         }
@@ -298,8 +345,88 @@ where
     }
 }
 
+impl<Tx> StateProofProvider for HistoricalStateProvider<Tx>
+where
+    Tx: DbTx + fmt::Debug + Send + Sync,
+{
+    fn class_multiproof(&self, classes: Vec<ClassHash>) -> ProviderResult<katana_trie::MultiProof> {
+        let proofs = TrieDbFactory::new(&self.tx)
+            .historical(self.block_number)
+            .expect("should exist")
+            .classes_trie()
+            .multiproof(classes);
+        Ok(proofs)
+    }
+
+    fn contract_multiproof(
+        &self,
+        addresses: Vec<ContractAddress>,
+    ) -> ProviderResult<katana_trie::MultiProof> {
+        let proofs = TrieDbFactory::new(&self.tx)
+            .historical(self.block_number)
+            .expect("should exist")
+            .contracts_trie()
+            .multiproof(addresses);
+        Ok(proofs)
+    }
+
+    fn storage_multiproof(
+        &self,
+        address: ContractAddress,
+        storage_keys: Vec<StorageKey>,
+    ) -> ProviderResult<katana_trie::MultiProof> {
+        let proofs = TrieDbFactory::new(&self.tx)
+            .historical(self.block_number)
+            .expect("should exist")
+            .storages_trie(address)
+            .multiproof(storage_keys);
+        Ok(proofs)
+    }
+}
+
+impl<Tx> StateRootProvider for HistoricalStateProvider<Tx>
+where
+    Tx: DbTx + fmt::Debug + Send + Sync,
+{
+    fn classes_root(&self) -> ProviderResult<katana_primitives::Felt> {
+        let root = TrieDbFactory::new(&self.tx)
+            .historical(self.block_number)
+            .expect("should exist")
+            .classes_trie()
+            .root();
+        Ok(root)
+    }
+
+    fn contracts_root(&self) -> ProviderResult<katana_primitives::Felt> {
+        let root = TrieDbFactory::new(&self.tx)
+            .historical(self.block_number)
+            .expect("should exist")
+            .contracts_trie()
+            .root();
+        Ok(root)
+    }
+
+    fn storage_root(&self, contract: ContractAddress) -> ProviderResult<Option<Felt>> {
+        let root = TrieDbFactory::new(&self.tx)
+            .historical(self.block_number)
+            .expect("should exist")
+            .storages_trie(contract)
+            .root();
+        Ok(Some(root))
+    }
+
+    fn state_root(&self) -> ProviderResult<katana_primitives::Felt> {
+        let header = self.tx.get::<tables::Headers>(self.block_number)?.expect("should exist");
+        Ok(header.state_root)
+    }
+}
+
 /// This is a helper function for getting the block number of the most
 /// recent change that occurred relative to the given block number.
+///
+/// ## Arguments
+///
+/// * `block_list`: A list of block numbers where a change in value occur.
 fn recent_change_from_block(
     block_number: BlockNumber,
     block_list: &BlockList,

@@ -3,6 +3,7 @@ use jsonrpsee::types::error::CallError;
 use jsonrpsee::types::ErrorObject;
 use katana_pool::validation::error::InvalidTransactionError;
 use katana_pool::PoolError;
+use katana_primitives::block::BlockNumber;
 use katana_primitives::event::ContinuationTokenError;
 use katana_provider::error::ProviderError;
 use serde::Serialize;
@@ -32,7 +33,7 @@ pub enum StarknetApiError {
     #[error("Class hash not found")]
     ClassHashNotFound,
     #[error("Requested page size is too big")]
-    PageSizeTooBig,
+    PageSizeTooBig { requested: u64, max_allowed: u64 },
     #[error("There are no blocks")]
     NoBlocks,
     #[error("The supplied continuation token is invalid or unknown")]
@@ -77,12 +78,24 @@ pub enum StarknetApiError {
     UnsupportedContractClassVersion,
     #[error("An unexpected error occured")]
     UnexpectedError { reason: String },
-    #[error("Too many storage keys requested")]
-    ProofLimitExceeded,
     #[error("Too many keys provided in a filter")]
     TooManyKeysInFilter,
     #[error("Failed to fetch pending transactions")]
     FailedToFetchPendingTransactions,
+    #[error("The node doesn't support storage proofs for blocks that are too far in the past")]
+    StorageProofNotSupported {
+        /// The oldest block whose storage proof can be obtained.
+        oldest_block: BlockNumber,
+        /// The block of the storage proof that is being requested.
+        requested_block: BlockNumber,
+    },
+    #[error("Proof limit exceeded")]
+    ProofLimitExceeded {
+        /// The limit for the total number of keys that can be specified in a single request.
+        limit: u64,
+        /// The total number of keys that is being requested.
+        total: u64,
+    },
 }
 
 impl StarknetApiError {
@@ -96,13 +109,14 @@ impl StarknetApiError {
             StarknetApiError::InvalidTxnIndex => 27,
             StarknetApiError::ClassHashNotFound => 28,
             StarknetApiError::TxnHashNotFound => 29,
-            StarknetApiError::PageSizeTooBig => 31,
+            StarknetApiError::PageSizeTooBig { .. } => 31,
             StarknetApiError::NoBlocks => 32,
             StarknetApiError::InvalidContinuationToken => 33,
             StarknetApiError::TooManyKeysInFilter => 34,
             StarknetApiError::FailedToFetchPendingTransactions => 38,
             StarknetApiError::ContractError { .. } => 40,
             StarknetApiError::TransactionExecutionError { .. } => 41,
+            StarknetApiError::StorageProofNotSupported { .. } => 42,
             StarknetApiError::InvalidContractClass => 50,
             StarknetApiError::ClassAlreadyDeclared => 51,
             StarknetApiError::InvalidTransactionNonce { .. } => 52,
@@ -117,7 +131,7 @@ impl StarknetApiError {
             StarknetApiError::UnsupportedTransactionVersion => 61,
             StarknetApiError::UnsupportedContractClassVersion => 62,
             StarknetApiError::UnexpectedError { .. } => 63,
-            StarknetApiError::ProofLimitExceeded => 10000,
+            StarknetApiError::ProofLimitExceeded { .. } => 1000,
         }
     }
 
@@ -128,14 +142,16 @@ impl StarknetApiError {
     pub fn data(&self) -> Option<serde_json::Value> {
         match self {
             StarknetApiError::ContractError { .. }
+            | StarknetApiError::PageSizeTooBig { .. }
             | StarknetApiError::UnexpectedError { .. }
+            | StarknetApiError::ProofLimitExceeded { .. }
+            | StarknetApiError::StorageProofNotSupported { .. }
             | StarknetApiError::TransactionExecutionError { .. } => Some(serde_json::json!(self)),
 
             StarknetApiError::InvalidTransactionNonce { reason }
             | StarknetApiError::ValidationFailure { reason } => {
                 Some(Value::String(reason.to_string()))
             }
-
             _ => None,
         }
     }
@@ -206,7 +222,9 @@ impl From<StarknetRsError> for StarknetApiError {
             StarknetRsError::NoBlocks => Self::NoBlocks,
             StarknetRsError::NonAccount => Self::NonAccount,
             StarknetRsError::BlockNotFound => Self::BlockNotFound,
-            StarknetRsError::PageSizeTooBig => Self::PageSizeTooBig,
+            StarknetRsError::PageSizeTooBig => {
+                Self::PageSizeTooBig { requested: 0, max_allowed: 0 }
+            }
             StarknetRsError::DuplicateTx => Self::DuplicateTransaction,
             StarknetRsError::ContractNotFound => Self::ContractNotFound,
             StarknetRsError::CompilationFailed => Self::CompilationFailed,
@@ -278,12 +296,10 @@ mod tests {
     #[case(StarknetApiError::TxnHashNotFound, 29, "Transaction hash not found")]
     #[case(StarknetApiError::ClassAlreadyDeclared, 51, "Class already declared")]
     #[case(StarknetApiError::InvalidContractClass, 50, "Invalid contract class")]
-    #[case(StarknetApiError::PageSizeTooBig, 31, "Requested page size is too big")]
     #[case(StarknetApiError::FailedToReceiveTxn, 1, "Failed to write transaction")]
     #[case(StarknetApiError::InvalidMessageSelector, 21, "Invalid message selector")]
     #[case(StarknetApiError::NonAccount, 58, "Sender address in not an account contract")]
     #[case(StarknetApiError::InvalidTxnIndex, 27, "Invalid transaction index in a block")]
-    #[case(StarknetApiError::ProofLimitExceeded, 10000, "Too many storage keys requested")]
     #[case(StarknetApiError::TooManyKeysInFilter, 34, "Too many keys provided in a filter")]
     #[case(StarknetApiError::ContractClassSizeIsTooLarge, 57, "Contract class size is too large")]
     #[case(StarknetApiError::FailedToFetchPendingTransactions, 38, "Failed to fetch pending transactions")]
@@ -358,6 +374,42 @@ mod tests {
      	55,
       	"Account validation failed",
        	Value::String("Invalid signature".to_string())
+    )]
+    #[case(
+    	StarknetApiError::PageSizeTooBig {
+     		requested: 1000,
+       		max_allowed: 500
+     	},
+      	31,
+       	"Requested page size is too big",
+        json!({
+        	"requested": 1000,
+         	"max_allowed": 500
+        }),
+    )]
+    #[case(
+    	StarknetApiError::StorageProofNotSupported {
+     		oldest_block: 10,
+       		requested_block: 9
+     	},
+      	42,
+       	"The node doesn't support storage proofs for blocks that are too far in the past",
+        json!({
+        	"oldest_block": 10,
+         	"requested_block": 9
+        }),
+    )]
+    #[case(
+    	StarknetApiError::ProofLimitExceeded {
+     		limit: 5,
+       		total: 10
+     	},
+      	1000,
+       	"Proof limit exceeded",
+        json!({
+        	"limit": 5,
+         	"total": 10
+        }),
     )]
     fn test_starknet_api_error_to_error_conversion_data_some(
         #[case] starknet_error: StarknetApiError,

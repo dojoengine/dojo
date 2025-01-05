@@ -15,7 +15,7 @@ pub type BlockNumber = u64;
 /// Block hash type.
 pub type BlockHash = Felt;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum BlockHashOrNumber {
     Hash(BlockHash),
@@ -54,7 +54,6 @@ pub struct PartialHeader {
     pub protocol_version: ProtocolVersion,
 }
 
-// TODO: change names to wei and fri
 /// The L1 gas prices.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]

@@ -64,7 +64,7 @@ pub mod actions {
                 player: seed.try_into().unwrap(),
                 name: "hello",
                 items: array![],
-                favorite_item: Option::None
+                favorite_item: Option::None,
             };
 
             let mut world = self.world_default();
@@ -102,9 +102,9 @@ pub mod actions {
 
             // You can get the entity ID in different ways.
             // Using the `Model` Model::<YOUR_TYPE>::entity_id(@model).
-            // Or using `dojo::utils::entity_id_from_keys([player].span())`.
+            // Or using `dojo::utils::entity_id_from_serialized_keys([player].span())`.
             let player_felt: felt252 = player.into();
-            let move_id = dojo::utils::entity_id_from_keys([player_felt].span());
+            let move_id = dojo::utils::entity_id_from_serialized_keys([player_felt].span());
 
             let mut moves: MovesValue = world.read_value_from_id(move_id);
             moves.remaining -= 1;
@@ -127,7 +127,7 @@ pub mod actions {
                 PlayerItem { item_id: 2, quantity: 50, score: -32 }
             ];
 
-            let config = PlayerConfig { player, name, items, favorite_item: Option::Some(1), };
+            let config = PlayerConfig { player, name, items, favorite_item: Option::Some(1) };
             world.write_model(@config);
         }
 
@@ -258,7 +258,7 @@ mod tests {
 
         // Example using the entity id.
         let caller_felt: felt252 = caller.into();
-        let id = dojo::utils::entity_id_from_keys([caller_felt].span());
+        let id = dojo::utils::entity_id_from_serialized_keys([caller_felt].span());
         let mut position: PositionValue = world.read_value_from_id(id);
         assert(position.vec.x == 122, 'bad x');
 

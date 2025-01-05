@@ -1,11 +1,11 @@
 use async_graphql::connection::PageInfo;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Result, Row, SqliteConnection};
-use torii_core::sql::WORLD_CONTRACT_TYPE;
+use torii_core::constants::WORLD_CONTRACT_TYPE;
 
 use super::filter::{Filter, FilterValue};
 use super::order::{CursorDirection, Direction, Order};
-use crate::constants::{DEFAULT_LIMIT, MODEL_TABLE};
+use crate::constants::DEFAULT_LIMIT;
 use crate::object::connection::{cursor, ConnectionArguments};
 
 pub async fn count_rows(
@@ -87,10 +87,7 @@ pub async fn fetch_multiple_rows(
     // `first` or `last` param. Explicit ordering take precedence
     match order {
         Some(order) => {
-            let mut column_name = order.field.clone();
-            if table_name != MODEL_TABLE {
-                column_name = format!("external_{}", column_name);
-            }
+            let column_name = order.field.clone();
             query.push_str(&format!(
                 " ORDER BY {column_name} {}, {id_column} {} LIMIT {limit}",
                 order.direction.as_ref(),
@@ -127,9 +124,10 @@ pub async fn fetch_multiple_rows(
         Ok((data, page_info))
     } else if is_cursor_based {
         let order_field = match order {
-            Some(order) => format!("external_{}", order.field),
+            Some(order) => order.field.clone(),
             None => id_column.to_string(),
         };
+
         match cursor_param {
             Some(cursor_query) => {
                 let first_cursor = cursor::encode(
@@ -190,20 +188,17 @@ fn handle_cursor(
 ) -> Result<String> {
     match cursor::decode(cursor) {
         Ok((event_id, field_value)) => match order {
-            Some(order) => {
-                let field_name = format!("external_{}", order.field);
-                Ok(format!(
-                    "(({} {} '{}' AND {} = '{}') OR {} {} '{}')",
-                    id_column,
-                    direction.as_ref(),
-                    event_id,
-                    field_name,
-                    field_value,
-                    field_name,
-                    direction.as_ref(),
-                    field_value
-                ))
-            }
+            Some(order) => Ok(format!(
+                "(({} {} '{}' AND {} = '{}') OR {} {} '{}')",
+                id_column,
+                direction.as_ref(),
+                event_id,
+                order.field,
+                field_value,
+                order.field,
+                direction.as_ref(),
+                field_value
+            )),
             None => Ok(format!("{} {} '{}'", id_column, direction.as_ref(), event_id)),
         },
         Err(_) => Err(sqlx::Error::Decode("Invalid cursor format".into())),

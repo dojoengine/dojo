@@ -13,7 +13,7 @@ use dojo_os::piltover::{starknet_apply_piltover, PiltoverCalldata};
 use futures::future;
 use itertools::Itertools;
 use katana_primitives::block::{BlockNumber, FinalityStatus, SealedBlock, SealedBlockWithStatus};
-use katana_primitives::state::StateUpdatesWithDeclaredClasses;
+use katana_primitives::state::StateUpdatesWithClasses;
 use katana_primitives::transaction::Tx;
 use katana_rpc_types::trace::TxExecutionInfo;
 use prover::persistent::{PublishedStateDiff, StarknetOsOutput};
@@ -100,7 +100,7 @@ struct FetchedBlockInfo {
     block_number: BlockNumber,
     block: SealedBlock,
     prev_state_root: Felt,
-    state_updates: StateUpdatesWithDeclaredClasses,
+    state_updates: StateUpdatesWithClasses,
     exec_infos: Vec<TxExecutionInfo>,
 }
 

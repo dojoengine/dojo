@@ -14,7 +14,7 @@ pub trait ModelStorage<S, M> {
     fn write_models(ref self: S, models: Span<@M>);
 
     /// Retrieves a model of type `M` using the provided key of type `K`.
-    fn read_model<K, +Drop<K>, +Serde<K>>(self: @S, key: K) -> M;
+    fn read_model<K, +Drop<K>, +Serde<K>>(self: @S, keys: K) -> M;
 
     /// Retrieves multiple models of type `M` using the provided keys of type `K`.
     /// Returnes an array to ensure the user can consume the models, even if the type is not
@@ -50,7 +50,7 @@ pub trait ModelStorage<S, M> {
 /// A `ModelValueStorage` trait that abstracts where the storage is.
 pub trait ModelValueStorage<S, V> {
     /// Retrieves a model value of type `V` using the provided key of type `K`.
-    fn read_value<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(self: @S, key: K) -> V;
+    fn read_value<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(self: @S, keys: K) -> V;
 
     /// Retrieves multiple model values of type `V` using the provided keys of type `K`.
     fn read_values<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(
@@ -64,7 +64,7 @@ pub trait ModelValueStorage<S, V> {
     fn read_values_from_ids(self: @S, entity_ids: Span<felt252>) -> Array<V>;
 
     /// Updates a model value of type `V`.
-    fn write_value<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(ref self: S, key: K, value: @V);
+    fn write_value<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(ref self: S, keys: K, value: @V);
 
     /// Updates multiple model values of type `V`.
     fn write_values<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(
@@ -102,7 +102,7 @@ pub trait ModelStorageTest<S, M> {
 pub trait ModelValueStorageTest<S, V> {
     /// Updates a model value of type `V`.
     fn write_value_test<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(
-        ref self: S, key: K, value: @V
+        ref self: S, keys: K, value: @V
     );
     /// Updates multiple model values of type `V`.
     fn write_values_test<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(

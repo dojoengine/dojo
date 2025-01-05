@@ -9,7 +9,7 @@ use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
 use tracing::{info, warn};
 
-use super::EventProcessor;
+use super::{EventProcessor, EventProcessorConfig};
 use crate::processors::{ENTITY_ID_INDEX, MODEL_INDEX};
 use crate::sql::Sql;
 
@@ -50,12 +50,24 @@ where
         block_timestamp: u64,
         event_id: &str,
         event: &Event,
+        _config: &EventProcessorConfig,
     ) -> Result<(), Error> {
         let model_id = event.data[MODEL_INDEX];
         let entity_id = event.data[ENTITY_ID_INDEX];
         let member_selector = event.data[MEMBER_INDEX];
 
-        let model = db.model(model_id).await?;
+        // If the model does not exist, silently ignore it.
+        // This can happen if only specific namespaces are indexed.
+        let model = match db.model(model_id).await {
+            Ok(m) => m,
+            Err(e) => {
+                if e.to_string().contains("no rows") {
+                    return Ok(());
+                }
+                return Err(e);
+            }
+        };
+
         let schema = model.schema;
 
         let mut member = schema

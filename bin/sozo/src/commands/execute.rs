@@ -1,6 +1,5 @@
 use anyhow::{anyhow, Result};
 use clap::Args;
-use dojo_types::naming;
 use dojo_utils::{Invoker, TxnConfig};
 use dojo_world::config::calldata_decoder;
 use scarb::core::Config;
@@ -39,6 +38,11 @@ pub struct ExecuteArgs {
                   - no prefix: A cairo felt or any type that fit into one felt.")]
     pub calldata: Option<String>,
 
+    #[arg(long)]
+    #[arg(help = "If true, sozo will compute the diff of the world from the chain to translate \
+                  tags to addresses.")]
+    pub diff: bool,
+
     #[command(flatten)]
     pub starknet: StarknetOptions,
 
@@ -68,31 +72,38 @@ impl ExecuteArgs {
             self.starknet.url(profile_config.env.as_ref())?,
         );
 
-        let txn_config: TxnConfig = self.transaction.into();
+        let txn_config: TxnConfig = self.transaction.try_into()?;
 
         config.tokio_handle().block_on(async {
-            // We could save the world diff computation extracting the account directly from the
-            // options.
-            let (world_diff, account, _) = utils::get_world_diff_and_account(
-                self.account,
-                self.starknet.clone(),
-                self.world,
-                &ws,
-                &mut None,
-            )
-            .await?;
-
-            let contract_address = match &descriptor {
-                ResourceDescriptor::Address(address) => Some(*address),
+            let (contract_address, contracts) = match &descriptor {
+                ResourceDescriptor::Address(address) => (Some(*address), Default::default()),
                 ResourceDescriptor::Tag(tag) => {
-                    let selector = naming::compute_selector_from_tag(tag);
-                    world_diff.get_contract_address(selector)
+                    let contracts = utils::contracts_from_manifest_or_diff(
+                        self.account.clone(),
+                        self.starknet.clone(),
+                        self.world,
+                        &ws,
+                        self.diff,
+                    )
+                    .await?;
+
+                    (contracts.get(tag).map(|c| c.address), contracts)
                 }
                 ResourceDescriptor::Name(_) => {
                     unimplemented!("Expected to be a resolved tag with default namespace.")
                 }
-            }
-            .ok_or_else(|| anyhow!("Contract {descriptor} not found in the world diff."))?;
+            };
+
+            let contract_address = contract_address.ok_or_else(|| {
+                let mut message = format!("Contract {descriptor} not found in the manifest.");
+                if self.diff {
+                    message.push_str(
+                        " Run the command again with `--diff` to force the fetch of data from the \
+                         chain.",
+                    );
+                }
+                anyhow!(message)
+            })?;
 
             trace!(
                 contract=?descriptor,
@@ -112,6 +123,13 @@ impl ExecuteArgs {
                 to: contract_address,
                 selector: snutils::get_selector_from_name(&self.entrypoint)?,
             };
+
+            let (provider, _) = self.starknet.provider(profile_config.env.as_ref())?;
+
+            let account = self
+                .account
+                .account(provider, profile_config.env.as_ref(), &self.starknet, &contracts)
+                .await?;
 
             let invoker = Invoker::new(&account, txn_config);
             // TODO: add walnut back, perhaps at the invoker level.

@@ -1,12 +1,12 @@
 use katana_primitives::block::ExecutableBlock;
-use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
+use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, ContractClass};
 use katana_primitives::contract::{ContractAddress, Nonce, StorageKey, StorageValue};
 use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::fee::TxFeeInfo;
 use katana_primitives::transaction::{ExecutableTxWithHash, TxWithHash};
 use katana_primitives::Felt;
 use katana_provider::traits::contract::ContractClassProvider;
-use katana_provider::traits::state::StateProvider;
+use katana_provider::traits::state::{StateProofProvider, StateProvider, StateRootProvider};
 use katana_provider::ProviderResult;
 
 use crate::abstraction::{
@@ -127,7 +127,12 @@ impl<'a> BlockExecutor<'a> for NoopExecutor {
 struct NoopStateProvider;
 
 impl ContractClassProvider for NoopStateProvider {
-    fn class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
+    fn class(&self, hash: ClassHash) -> ProviderResult<Option<ContractClass>> {
+        let _ = hash;
+        Ok(None)
+    }
+
+    fn compiled_class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
         let _ = hash;
         Ok(None)
     }
@@ -136,11 +141,6 @@ impl ContractClassProvider for NoopStateProvider {
         &self,
         hash: ClassHash,
     ) -> ProviderResult<Option<CompiledClassHash>> {
-        let _ = hash;
-        Ok(None)
-    }
-
-    fn sierra_class(&self, hash: ClassHash) -> ProviderResult<Option<FlattenedSierraClass>> {
         let _ = hash;
         Ok(None)
     }
@@ -168,5 +168,44 @@ impl StateProvider for NoopStateProvider {
         let _ = address;
         let _ = storage_key;
         Ok(None)
+    }
+}
+
+impl StateProofProvider for NoopStateProvider {
+    fn class_multiproof(&self, classes: Vec<ClassHash>) -> ProviderResult<katana_trie::MultiProof> {
+        let _ = classes;
+        Ok(katana_trie::MultiProof(Default::default()))
+    }
+
+    fn contract_multiproof(
+        &self,
+        addresses: Vec<ContractAddress>,
+    ) -> ProviderResult<katana_trie::MultiProof> {
+        let _ = addresses;
+        Ok(katana_trie::MultiProof(Default::default()))
+    }
+
+    fn storage_multiproof(
+        &self,
+        address: ContractAddress,
+        key: Vec<StorageKey>,
+    ) -> ProviderResult<katana_trie::MultiProof> {
+        let _ = address;
+        let _ = key;
+        Ok(katana_trie::MultiProof(Default::default()))
+    }
+}
+
+impl StateRootProvider for NoopStateProvider {
+    fn classes_root(&self) -> ProviderResult<Felt> {
+        Ok(Felt::ZERO)
+    }
+
+    fn contracts_root(&self) -> ProviderResult<Felt> {
+        Ok(Felt::ZERO)
+    }
+
+    fn storage_root(&self, _: ContractAddress) -> ProviderResult<Option<Felt>> {
+        Ok(Some(Felt::ZERO))
     }
 }

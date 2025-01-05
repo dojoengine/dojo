@@ -51,4 +51,6 @@ pub enum QueryError {
     SqliteJoinLimit,
     #[error("Invalid namespaced model: {0}")]
     InvalidNamespacedModel(String),
+    #[error("Invalid timestamp: {0}. Expected valid number of seconds since unix epoch.")]
+    InvalidTimestamp(u64),
 }

@@ -52,6 +52,10 @@ impl DiffPermissions {
     pub fn synced(&self) -> HashSet<PermissionGrantee> {
         self.local.intersection(&self.remote).cloned().collect()
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.local.is_empty() && self.remote.is_empty()
+    }
 }
 
 impl ResourceDiff {
@@ -106,6 +110,15 @@ impl ResourceDiff {
             ResourceDiff::Created(local) => local.class_hash(),
             ResourceDiff::Updated(_, remote) => remote.current_class_hash(),
             ResourceDiff::Synced(_, remote) => remote.current_class_hash(),
+        }
+    }
+
+    /// Returns the current metadata hash of the resource.
+    pub fn metadata_hash(&self) -> Felt {
+        match self {
+            ResourceDiff::Created(_) => Felt::ZERO,
+            ResourceDiff::Updated(_, remote) => remote.metadata_hash(),
+            ResourceDiff::Synced(_, remote) => remote.metadata_hash(),
         }
     }
 

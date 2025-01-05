@@ -1,5 +1,5 @@
 use katana_primitives::block::{BlockHash, BlockNumber, FinalityStatus, Header};
-use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
+use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, ContractClass};
 use katana_primitives::contract::{ContractAddress, GenericContractInfo, StorageKey};
 use katana_primitives::receipt::Receipt;
 use katana_primitives::trace::TxExecInfo;
@@ -9,8 +9,9 @@ use crate::codecs::{Compress, Decode, Decompress, Encode};
 use crate::models::block::StoredBlockBodyIndices;
 use crate::models::contract::{ContractClassChange, ContractInfoChangeList, ContractNonceChange};
 use crate::models::list::BlockList;
+use crate::models::stage::{StageCheckpoint, StageId};
 use crate::models::storage::{ContractStorageEntry, ContractStorageKey, StorageEntry};
-use crate::models::trie::{TrieDatabaseKey, TrieDatabaseValue};
+use crate::models::trie::{TrieDatabaseKey, TrieDatabaseValue, TrieHistoryEntry};
 
 pub trait Key: Encode + Decode + Clone + std::fmt::Debug {}
 pub trait Value: Compress + Decompress + std::fmt::Debug {}
@@ -19,7 +20,7 @@ impl<T> Key for T where T: Encode + Decode + Clone + std::fmt::Debug {}
 impl<T> Value for T where T: Compress + Decompress + std::fmt::Debug {}
 
 /// An asbtraction for a table.
-pub trait Table {
+pub trait Table: 'static {
     /// The name of the table.
     const NAME: &'static str;
     /// The key type of the table.
@@ -36,7 +37,12 @@ pub trait DupSort: Table {
     type SubKey: Key;
 }
 
-pub trait Trie: Table<Key = TrieDatabaseKey, Value = TrieDatabaseValue> {}
+pub trait Trie: Table<Key = TrieDatabaseKey, Value = TrieDatabaseValue> {
+    /// Table for storing the trie entries according to the block its was committed.
+    type History: DupSort<Key = BlockNumber, SubKey = TrieDatabaseKey, Value = TrieHistoryEntry>;
+    /// Table for storing the trie change set.
+    type Changeset: Table<Key = TrieDatabaseKey, Value = BlockList>;
+}
 
 /// Enum for the types of tables present in libmdbx.
 #[derive(Debug, PartialEq, Copy, Clone)]
@@ -47,7 +53,7 @@ pub enum TableType {
     DupSort,
 }
 
-pub const NUM_TABLES: usize = 26;
+pub const NUM_TABLES: usize = 33;
 
 /// Macro to declare `libmdbx` tables.
 #[macro_export]
@@ -161,7 +167,7 @@ define_tables_enum! {[
     (Receipts, TableType::Table),
     (CompiledClassHashes, TableType::Table),
     (CompiledClasses, TableType::Table),
-    (SierraClasses, TableType::Table),
+    (Classes, TableType::Table),
     (ContractInfo, TableType::Table),
     (ContractStorage, TableType::DupSort),
     (ClassDeclarationBlock, TableType::Table),
@@ -171,12 +177,22 @@ define_tables_enum! {[
     (ClassChangeHistory, TableType::DupSort),
     (StorageChangeHistory, TableType::DupSort),
     (StorageChangeSet, TableType::Table),
-    (ClassTrie, TableType::Table),
-    (ContractTrie, TableType::Table),
-    (ContractStorageTrie, TableType::Table)
+    (StageCheckpoints, TableType::Table),
+    (ClassesTrie, TableType::Table),
+    (ContractsTrie, TableType::Table),
+    (StoragesTrie, TableType::Table),
+    (ClassesTrieHistory, TableType::DupSort),
+    (ContractsTrieHistory, TableType::DupSort),
+    (StoragesTrieHistory, TableType::DupSort),
+    (ClassesTrieChangeSet, TableType::Table),
+    (ContractsTrieChangeSet, TableType::Table),
+    (StoragesTrieChangeSet, TableType::Table)
 ]}
 
 tables! {
+    /// Pipeline stages checkpoint
+    StageCheckpoints: (StageId) => StageCheckpoint,
+
     /// Store canonical block headers
     Headers: (BlockNumber) => Header,
     /// Stores block hashes according to its block number
@@ -202,10 +218,10 @@ tables! {
     Receipts: (TxNumber) => Receipt,
     /// Store compiled classes
     CompiledClassHashes: (ClassHash) => CompiledClassHash,
-    /// Store compiled contract classes according to its compiled class hash
+    /// Store compiled contract classes according to its class hash
     CompiledClasses: (ClassHash) => CompiledClass,
-    /// Store Sierra classes according to its class hash
-    SierraClasses: (ClassHash) => FlattenedSierraClass,
+    /// Store contract classes according to its class hash
+    Classes: (ClassHash) => ContractClass,
     /// Store contract information according to its contract address
     ContractInfo: (ContractAddress) => GenericContractInfo,
     /// Store contract storage
@@ -231,16 +247,41 @@ tables! {
     StorageChangeHistory: (BlockNumber, ContractStorageKey) => ContractStorageEntry,
 
     /// Class trie
-    ClassTrie: (TrieDatabaseKey) => TrieDatabaseValue,
+    ClassesTrie: (TrieDatabaseKey) => TrieDatabaseValue,
     /// Contract trie
-    ContractTrie: (TrieDatabaseKey) => TrieDatabaseValue,
+    ContractsTrie: (TrieDatabaseKey) => TrieDatabaseValue,
     /// Contract storage trie
-    ContractStorageTrie: (TrieDatabaseKey) => TrieDatabaseValue
+    StoragesTrie: (TrieDatabaseKey) => TrieDatabaseValue,
+
+    /// Class trie history
+    ClassesTrieHistory: (BlockNumber, TrieDatabaseKey) => TrieHistoryEntry,
+    /// Contract trie history
+    ContractsTrieHistory: (BlockNumber, TrieDatabaseKey) => TrieHistoryEntry,
+    /// Contract storage trie history
+    StoragesTrieHistory: (BlockNumber, TrieDatabaseKey) => TrieHistoryEntry,
+
+    /// Class trie change set
+    ClassesTrieChangeSet: (TrieDatabaseKey) => BlockList,
+    /// contract trie change set
+    ContractsTrieChangeSet: (TrieDatabaseKey) => BlockList,
+    /// contract storage trie change set
+    StoragesTrieChangeSet: (TrieDatabaseKey) => BlockList
 }
 
-impl Trie for ClassTrie {}
-impl Trie for ContractTrie {}
-impl Trie for ContractStorageTrie {}
+impl Trie for ClassesTrie {
+    type History = ClassesTrieHistory;
+    type Changeset = ClassesTrieChangeSet;
+}
+
+impl Trie for ContractsTrie {
+    type History = ContractsTrieHistory;
+    type Changeset = ContractsTrieChangeSet;
+}
+
+impl Trie for StoragesTrie {
+    type History = StoragesTrieHistory;
+    type Changeset = StoragesTrieChangeSet;
+}
 
 #[cfg(test)]
 mod tests {
@@ -263,7 +304,7 @@ mod tests {
         assert_eq!(Tables::ALL[10].name(), Receipts::NAME);
         assert_eq!(Tables::ALL[11].name(), CompiledClassHashes::NAME);
         assert_eq!(Tables::ALL[12].name(), CompiledClasses::NAME);
-        assert_eq!(Tables::ALL[13].name(), SierraClasses::NAME);
+        assert_eq!(Tables::ALL[13].name(), Classes::NAME);
         assert_eq!(Tables::ALL[14].name(), ContractInfo::NAME);
         assert_eq!(Tables::ALL[15].name(), ContractStorage::NAME);
         assert_eq!(Tables::ALL[16].name(), ClassDeclarationBlock::NAME);
@@ -273,8 +314,16 @@ mod tests {
         assert_eq!(Tables::ALL[20].name(), ClassChangeHistory::NAME);
         assert_eq!(Tables::ALL[21].name(), StorageChangeHistory::NAME);
         assert_eq!(Tables::ALL[22].name(), StorageChangeSet::NAME);
-        assert_eq!(Tables::ALL[23].name(), ClassTrie::NAME);
-        assert_eq!(Tables::ALL[24].name(), ContractTrie::NAME);
+        assert_eq!(Tables::ALL[23].name(), StageCheckpoints::NAME);
+        assert_eq!(Tables::ALL[24].name(), ClassesTrie::NAME);
+        assert_eq!(Tables::ALL[25].name(), ContractsTrie::NAME);
+        assert_eq!(Tables::ALL[26].name(), StoragesTrie::NAME);
+        assert_eq!(Tables::ALL[27].name(), ClassesTrieHistory::NAME);
+        assert_eq!(Tables::ALL[28].name(), ContractsTrieHistory::NAME);
+        assert_eq!(Tables::ALL[29].name(), StoragesTrieHistory::NAME);
+        assert_eq!(Tables::ALL[30].name(), ClassesTrieChangeSet::NAME);
+        assert_eq!(Tables::ALL[31].name(), ContractsTrieChangeSet::NAME);
+        assert_eq!(Tables::ALL[32].name(), StoragesTrieChangeSet::NAME);
 
         assert_eq!(Tables::Headers.table_type(), TableType::Table);
         assert_eq!(Tables::BlockHashes.table_type(), TableType::Table);
@@ -289,7 +338,7 @@ mod tests {
         assert_eq!(Tables::Receipts.table_type(), TableType::Table);
         assert_eq!(Tables::CompiledClassHashes.table_type(), TableType::Table);
         assert_eq!(Tables::CompiledClasses.table_type(), TableType::Table);
-        assert_eq!(Tables::SierraClasses.table_type(), TableType::Table);
+        assert_eq!(Tables::Classes.table_type(), TableType::Table);
         assert_eq!(Tables::ContractInfo.table_type(), TableType::Table);
         assert_eq!(Tables::ContractStorage.table_type(), TableType::DupSort);
         assert_eq!(Tables::ClassDeclarationBlock.table_type(), TableType::Table);
@@ -299,8 +348,16 @@ mod tests {
         assert_eq!(Tables::ClassChangeHistory.table_type(), TableType::DupSort);
         assert_eq!(Tables::StorageChangeHistory.table_type(), TableType::DupSort);
         assert_eq!(Tables::StorageChangeSet.table_type(), TableType::Table);
-        assert_eq!(Tables::ClassTrie.table_type(), TableType::Table);
-        assert_eq!(Tables::ContractTrie.table_type(), TableType::Table);
+        assert_eq!(Tables::StageCheckpoints.table_type(), TableType::Table);
+        assert_eq!(Tables::ClassesTrie.table_type(), TableType::Table);
+        assert_eq!(Tables::ContractsTrie.table_type(), TableType::Table);
+        assert_eq!(Tables::StoragesTrie.table_type(), TableType::Table);
+        assert_eq!(Tables::ClassesTrieHistory.table_type(), TableType::DupSort);
+        assert_eq!(Tables::ContractsTrieHistory.table_type(), TableType::DupSort);
+        assert_eq!(Tables::StoragesTrieHistory.table_type(), TableType::DupSort);
+        assert_eq!(Tables::ClassesTrieChangeSet.table_type(), TableType::Table);
+        assert_eq!(Tables::ContractsTrieChangeSet.table_type(), TableType::Table);
+        assert_eq!(Tables::StoragesTrieChangeSet.table_type(), TableType::Table);
     }
 
     use katana_primitives::address;
@@ -320,6 +377,9 @@ mod tests {
     };
     use crate::models::list::BlockList;
     use crate::models::storage::{ContractStorageEntry, ContractStorageKey, StorageEntry};
+    use crate::models::trie::{
+        TrieDatabaseKey, TrieDatabaseKeyType, TrieDatabaseValue, TrieHistoryEntry,
+    };
 
     macro_rules! assert_key_encode_decode {
 	    { $( ($name:ty, $key:expr) ),* } => {
@@ -378,7 +438,7 @@ mod tests {
             (BlockNumber, 99),
             (TxExecInfo, TxExecInfo::default()),
             (CompiledClassHash, felt!("211")),
-            (CompiledClass, CompiledClass::Deprecated(Default::default())),
+            (CompiledClass, CompiledClass::Legacy(Default::default())),
             (GenericContractInfo, GenericContractInfo::default()),
             (StorageEntry, StorageEntry::default()),
             (ContractInfoChangeList, ContractInfoChangeList::default()),
@@ -387,12 +447,17 @@ mod tests {
             (BlockList, BlockList::default()),
             (ContractStorageEntry, ContractStorageEntry::default()),
             (Receipt, Receipt::Invoke(InvokeTxReceipt {
-                        revert_error: None,
-                        events: Vec::new(),
-                        messages_sent: Vec::new(),
-                        execution_resources: Default::default(),
-                        fee: TxFeeInfo { gas_consumed: 0, gas_price: 0, overall_fee: 0, unit: PriceUnit::Wei },
-                    }))
+                revert_error: None,
+                events: Vec::new(),
+                messages_sent: Vec::new(),
+                execution_resources: Default::default(),
+                fee: TxFeeInfo { gas_consumed: 0, gas_price: 0, overall_fee: 0, unit: PriceUnit::Wei },
+            })),
+            (TrieDatabaseValue, TrieDatabaseValue::default()),
+            (TrieHistoryEntry, TrieHistoryEntry {
+                value: TrieDatabaseValue::default(),
+                key: TrieDatabaseKey { key: Vec::default(), r#type: TrieDatabaseKeyType::Flat },
+            })
         }
     }
 }

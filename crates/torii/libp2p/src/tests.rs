@@ -524,7 +524,7 @@ mod test {
     #[cfg(not(target_arch = "wasm32"))]
     #[tokio::test]
     async fn test_client_messaging() -> Result<(), Box<dyn Error>> {
-        use std::collections::HashMap;
+        use std::sync::Arc;
         use std::time::Duration;
 
         use dojo_types::schema::{Member, Struct, Ty};
@@ -540,12 +540,13 @@ mod test {
         use tokio::sync::broadcast;
         use tokio::time::sleep;
         use torii_core::executor::Executor;
+        use torii_core::sql::cache::ModelCache;
         use torii_core::sql::Sql;
-        use torii_core::types::ContractType;
+        use torii_core::types::{Contract, ContractType};
 
         use crate::server::Relay;
         use crate::typed_data::{Domain, Field, SimpleField, TypedData};
-        use crate::types::{Message, Signature};
+        use crate::types::Message;
 
         let _ = tracing_subscriber::fmt()
             .with_env_filter("torii::relay::client=debug,torii::relay::server=debug")
@@ -568,25 +569,33 @@ mod test {
 
         let sequencer = KatanaRunner::new().expect("Failed to create Katana sequencer");
 
-        let provider = JsonRpcClient::new(HttpTransport::new(sequencer.url()));
+        let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
 
         let account = sequencer.account_data(0);
 
         let (shutdown_tx, _) = broadcast::channel(1);
         let (mut executor, sender) =
-            Executor::new(pool.clone(), shutdown_tx.clone()).await.unwrap();
+            Executor::new(pool.clone(), shutdown_tx.clone(), Arc::clone(&provider), 100)
+                .await
+                .unwrap();
         tokio::spawn(async move {
             executor.run().await.unwrap();
         });
-        let mut db =
-            Sql::new(pool.clone(), sender, &HashMap::from([(Felt::ZERO, ContractType::WORLD)]))
-                .await
-                .unwrap();
+
+        let model_cache = Arc::new(ModelCache::new(pool.clone()));
+        let mut db = Sql::new(
+            pool.clone(),
+            sender,
+            &[Contract { address: Felt::ZERO, r#type: ContractType::WORLD }],
+            model_cache,
+        )
+        .await
+        .unwrap();
 
         // Register the model of our Message
         db.register_model(
             "types_test",
-            Ty::Struct(Struct {
+            &Ty::Struct(Struct {
                 name: "Message".to_string(),
                 children: vec![
                     Member {
@@ -607,6 +616,7 @@ mod test {
             0,
             0,
             0,
+            None,
         )
         .await
         .unwrap();
@@ -683,10 +693,7 @@ mod test {
 
         client
             .command_sender
-            .publish(Message {
-                message: typed_data,
-                signature: Signature::Account(vec![signature.r, signature.s]),
-            })
+            .publish(Message { message: typed_data, signature: vec![signature.r, signature.s] })
             .await?;
 
         sleep(std::time::Duration::from_secs(2)).await;

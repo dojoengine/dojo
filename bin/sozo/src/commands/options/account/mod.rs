@@ -1,10 +1,11 @@
+use std::collections::HashMap;
 use std::str::FromStr;
 
 use anyhow::{anyhow, Context, Result};
 use clap::Args;
 use dojo_utils::env::DOJO_ACCOUNT_ADDRESS_ENV_VAR;
 use dojo_world::config::Environment;
-use dojo_world::diff::WorldDiff;
+use dojo_world::contracts::ContractInfo;
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::types::{BlockId, BlockTag, Felt};
 use starknet::providers::Provider;
@@ -59,25 +60,33 @@ impl AccountOptions {
         &self,
         rpc_url: Url,
         provider: P,
-        world_address: Felt,
-        world_diff: &WorldDiff,
+        contracts: &HashMap<String, ContractInfo>,
     ) -> Result<ControllerSessionAccount<P>>
     where
         P: Provider,
         P: Send + Sync,
     {
-        controller::create_controller(rpc_url, provider, world_address, world_diff)
+        controller::create_controller(rpc_url, provider, contracts)
             .await
             .context("Failed to create a Controller account")
     }
 
+    /// Creates a [`SozoAccount`] from the given parameters.
+    ///
+    /// # Arguments
+    ///
+    /// * `provider` - Starknet provider.
+    /// * `env_metadata` - Environment pulled from configuration.
+    /// * `starknet` - Starknet options.
+    /// * `contracts` - The [`ContractInfo`] mappings. This one could have been gated behind the
+    ///   controller feature. However, to keep the feature internalized to account option, it's not.
+    ///   The caller could easily provide a default value though.
     pub async fn account<P>(
         &self,
         provider: P,
-        world_address: Felt,
-        starknet: &StarknetOptions,
         env_metadata: Option<&Environment>,
-        world_diff: &WorldDiff,
+        starknet: &StarknetOptions,
+        contracts: &HashMap<String, ContractInfo>,
     ) -> Result<SozoAccount<P>>
     where
         P: Provider,
@@ -86,7 +95,7 @@ impl AccountOptions {
         #[cfg(feature = "controller")]
         if self.controller {
             let url = starknet.url(env_metadata)?;
-            let account = self.controller(url, provider, world_address, world_diff).await?;
+            let account = self.controller(url, provider, contracts).await?;
             return Ok(SozoAccount::Controller(account));
         }
 

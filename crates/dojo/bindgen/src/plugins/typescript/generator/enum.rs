@@ -1,9 +1,27 @@
 use cainome::parser::tokens::{Composite, CompositeType};
 
+use super::constants::{CAIRO_ENUM_IMPORT, CAIRO_ENUM_TOKEN, SN_IMPORT_SEARCH};
+use super::token_is_custom_enum;
 use crate::error::BindgenResult;
+use crate::plugins::typescript::generator::JsPrimitiveType;
 use crate::plugins::{BindgenModelGenerator, Buffer};
 
 pub(crate) struct TsEnumGenerator;
+
+impl TsEnumGenerator {
+    fn check_import(&self, token: &Composite, buffer: &mut Buffer) {
+        // type is Enum with type variants, need to import CairoEnum
+        // if enum has at least one inner that is a composite type
+        if token_is_custom_enum(token) {
+            if !buffer.has(SN_IMPORT_SEARCH) {
+                buffer.push(CAIRO_ENUM_IMPORT.to_owned());
+            } else if !buffer.has(CAIRO_ENUM_TOKEN) {
+                // If 'starknet' import is present, we add CairoEnum to the imported types
+                buffer.insert_after(format!(" {CAIRO_ENUM_TOKEN}"), SN_IMPORT_SEARCH, "{", 1);
+            }
+        }
+    }
+}
 
 impl BindgenModelGenerator for TsEnumGenerator {
     fn generate(&self, token: &Composite, buffer: &mut Buffer) -> BindgenResult<String> {
@@ -11,21 +29,43 @@ impl BindgenModelGenerator for TsEnumGenerator {
             return Ok(String::new());
         }
 
-        let gen = format!(
-            "// Type definition for `{path}` enum
+        let gen = if token_is_custom_enum(token) {
+            self.check_import(token, buffer);
+            format!(
+                "// Type definition for `{path}` enum
+export type {name} = {{
+{variants}
+}}
+export type {name}Enum = CairoCustomEnum;
+",
+                path = token.type_path,
+                name = token.type_name(),
+                variants = token
+                    .inners
+                    .iter()
+                    .map(|inner| {
+                        format!("\t{}: {};", inner.name, JsPrimitiveType::from(&inner.token))
+                    })
+                    .collect::<Vec<String>>()
+                    .join("\n")
+            )
+        } else {
+            format!(
+                "// Type definition for `{path}` enum
 export enum {name} {{
 {variants}
 }}
 ",
-            path = token.type_path,
-            name = token.type_name(),
-            variants = token
-                .inners
-                .iter()
-                .map(|inner| format!("\t{},", inner.name))
-                .collect::<Vec<String>>()
-                .join("\n")
-        );
+                path = token.type_path,
+                name = token.type_name(),
+                variants = token
+                    .inners
+                    .iter()
+                    .map(|inner| format!("\t{},", inner.name))
+                    .collect::<Vec<String>>()
+                    .join("\n")
+            )
+        };
 
         if buffer.has(&gen) {
             return Ok(String::new());

@@ -12,10 +12,17 @@ use hyper::service::make_service_fn;
 use hyper::{Body, Client, Request, Response, Server, StatusCode};
 use hyper_reverse_proxy::ReverseProxy;
 use serde_json::json;
+use sqlx::SqlitePool;
 use tokio::sync::RwLock;
 use tower::ServiceBuilder;
 use tower_http::cors::{AllowOrigin, CorsLayer};
-use tracing::error;
+
+use crate::handlers::graphql::GraphQLHandler;
+use crate::handlers::grpc::GrpcHandler;
+use crate::handlers::mcp::McpHandler;
+use crate::handlers::sql::SqlHandler;
+use crate::handlers::static_files::StaticHandler;
+use crate::handlers::Handler;
 
 const DEFAULT_ALLOW_HEADERS: [&str; 13] = [
     "accept",
@@ -37,14 +44,14 @@ const DEFAULT_EXPOSED_HEADERS: [&str; 4] =
 const DEFAULT_MAX_AGE: Duration = Duration::from_secs(24 * 60 * 60);
 
 lazy_static::lazy_static! {
-    static ref GRAPHQL_PROXY_CLIENT: ReverseProxy<HttpConnector<GaiResolver>> = {
+    pub(crate) static ref GRAPHQL_PROXY_CLIENT: ReverseProxy<HttpConnector<GaiResolver>> = {
         ReverseProxy::new(
             Client::builder()
              .build_http(),
         )
     };
 
-    static ref GRPC_PROXY_CLIENT: ReverseProxy<HttpConnector<GaiResolver>> = {
+    pub(crate) static ref GRPC_PROXY_CLIENT: ReverseProxy<HttpConnector<GaiResolver>> = {
         ReverseProxy::new(
             Client::builder()
              .http2_only(true)
@@ -58,7 +65,9 @@ pub struct Proxy {
     addr: SocketAddr,
     allowed_origins: Option<Vec<String>>,
     grpc_addr: Option<SocketAddr>,
+    artifacts_addr: Option<SocketAddr>,
     graphql_addr: Arc<RwLock<Option<SocketAddr>>>,
+    pool: Arc<SqlitePool>,
 }
 
 impl Proxy {
@@ -67,8 +76,17 @@ impl Proxy {
         allowed_origins: Option<Vec<String>>,
         grpc_addr: Option<SocketAddr>,
         graphql_addr: Option<SocketAddr>,
+        artifacts_addr: Option<SocketAddr>,
+        pool: Arc<SqlitePool>,
     ) -> Self {
-        Self { addr, allowed_origins, grpc_addr, graphql_addr: Arc::new(RwLock::new(graphql_addr)) }
+        Self {
+            addr,
+            allowed_origins,
+            grpc_addr,
+            graphql_addr: Arc::new(RwLock::new(graphql_addr)),
+            artifacts_addr,
+            pool,
+        }
     }
 
     pub async fn set_graphql_addr(&self, addr: SocketAddr) {
@@ -84,6 +102,8 @@ impl Proxy {
         let allowed_origins = self.allowed_origins.clone();
         let grpc_addr = self.grpc_addr;
         let graphql_addr = self.graphql_addr.clone();
+        let artifacts_addr = self.artifacts_addr;
+        let pool = self.pool.clone();
 
         let make_svc = make_service_fn(move |conn: &AddrStream| {
             let remote_addr = conn.remote_addr().ip();
@@ -120,12 +140,14 @@ impl Proxy {
                     ),
                 });
 
+            let pool_clone = pool.clone();
             let graphql_addr_clone = graphql_addr.clone();
             let service = ServiceBuilder::new().option_layer(cors).service_fn(move |req| {
+                let pool = pool_clone.clone();
                 let graphql_addr = graphql_addr_clone.clone();
                 async move {
                     let graphql_addr = graphql_addr.read().await;
-                    handle(remote_addr, grpc_addr, *graphql_addr, req).await
+                    handle(remote_addr, grpc_addr, artifacts_addr, *graphql_addr, pool, req).await
                 }
             });
 
@@ -145,62 +167,34 @@ impl Proxy {
 async fn handle(
     client_ip: IpAddr,
     grpc_addr: Option<SocketAddr>,
+    artifacts_addr: Option<SocketAddr>,
     graphql_addr: Option<SocketAddr>,
+    pool: Arc<SqlitePool>,
     req: Request<Body>,
 ) -> Result<Response<Body>, Infallible> {
-    if req.uri().path().starts_with("/graphql") {
-        if let Some(graphql_addr) = graphql_addr {
-            let graphql_addr = format!("http://{}", graphql_addr);
-            return match GRAPHQL_PROXY_CLIENT.call(client_ip, &graphql_addr, req).await {
-                Ok(response) => Ok(response),
-                Err(_error) => {
-                    error!("{:?}", _error);
-                    Ok(Response::builder()
-                        .status(StatusCode::INTERNAL_SERVER_ERROR)
-                        .body(Body::empty())
-                        .unwrap())
-                }
-            };
-        } else {
-            return Ok(Response::builder()
-                .status(StatusCode::NOT_FOUND)
-                .body(Body::empty())
-                .unwrap());
+    let handlers: Vec<Box<dyn Handler>> = vec![
+        Box::new(SqlHandler::new(pool.clone())),
+        Box::new(GraphQLHandler::new(client_ip, graphql_addr)),
+        Box::new(GrpcHandler::new(client_ip, grpc_addr)),
+        Box::new(StaticHandler::new(client_ip, artifacts_addr)),
+        Box::new(McpHandler::new(pool.clone())),
+    ];
+
+    for handler in handlers {
+        if handler.should_handle(&req) {
+            return Ok(handler.handle(req).await);
         }
     }
 
-    if let Some(content_type) = req.headers().get(CONTENT_TYPE) {
-        if content_type.to_str().unwrap().starts_with("application/grpc") {
-            if let Some(grpc_addr) = grpc_addr {
-                let grpc_addr = format!("http://{}", grpc_addr);
-                return match GRPC_PROXY_CLIENT.call(client_ip, &grpc_addr, req).await {
-                    Ok(response) => Ok(response),
-                    Err(_error) => {
-                        error!("{:?}", _error);
-                        Ok(Response::builder()
-                            .status(StatusCode::INTERNAL_SERVER_ERROR)
-                            .body(Body::empty())
-                            .unwrap())
-                    }
-                };
-            } else {
-                return Ok(Response::builder()
-                    .status(StatusCode::NOT_FOUND)
-                    .body(Body::empty())
-                    .unwrap());
-            }
-        }
-    }
-
+    // Default response if no handler matches
     let json = json!({
         "service": "torii",
         "success": true
     });
-    let body = Body::from(json.to_string());
-    let response = Response::builder()
+
+    Ok(Response::builder()
         .status(StatusCode::OK)
         .header(CONTENT_TYPE, "application/json")
-        .body(body)
-        .unwrap();
-    Ok(response)
+        .body(Body::from(json.to_string()))
+        .unwrap())
 }

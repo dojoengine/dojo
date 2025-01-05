@@ -3,10 +3,10 @@ use std::sync::Arc;
 
 use katana_db::models::block::StoredBlockBodyIndices;
 use katana_primitives::block::{BlockHash, BlockNumber, FinalityStatus, Header};
-use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
+use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, ContractClass};
 use katana_primitives::contract::{ContractAddress, GenericContractInfo, StorageKey, StorageValue};
 use katana_primitives::receipt::Receipt;
-use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
+use katana_primitives::state::{StateUpdates, StateUpdatesWithClasses};
 use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{Tx, TxHash, TxNumber};
 use parking_lot::RwLock;
@@ -14,13 +14,13 @@ use parking_lot::RwLock;
 type ContractStorageMap = HashMap<ContractAddress, HashMap<StorageKey, StorageValue>>;
 type ContractStateMap = HashMap<ContractAddress, GenericContractInfo>;
 
-type SierraClassesMap = HashMap<ClassHash, FlattenedSierraClass>;
+type ClassesMap = HashMap<ClassHash, ContractClass>;
 type CompiledClassesMap = HashMap<ClassHash, CompiledClass>;
 type CompiledClassHashesMap = HashMap<ClassHash, CompiledClassHash>;
 
 #[derive(Default, Debug)]
 pub struct SharedContractClasses {
-    pub(crate) sierra_classes: RwLock<SierraClassesMap>,
+    pub(crate) classes: RwLock<ClassesMap>,
     pub(crate) compiled_classes: RwLock<CompiledClassesMap>,
 }
 
@@ -43,11 +43,11 @@ pub struct CacheStateDb<Db> {
 
 impl<Db> CacheStateDb<Db> {
     /// Applies the given state updates to the cache.
-    pub fn insert_updates(&self, updates: StateUpdatesWithDeclaredClasses) {
+    pub fn insert_updates(&self, updates: StateUpdatesWithClasses) {
         let mut storage = self.storage.write();
         let mut contract_state = self.contract_state.write();
         let mut compiled_class_hashes = self.compiled_class_hashes.write();
-        let mut sierra_classes = self.shared_contract_classes.sierra_classes.write();
+        let mut classes = self.shared_contract_classes.classes.write();
         let mut compiled_classes = self.shared_contract_classes.compiled_classes.write();
 
         for (contract_address, nonce) in updates.state_updates.nonce_updates {
@@ -65,9 +65,13 @@ impl<Db> CacheStateDb<Db> {
             contract_storage.extend(storage_changes);
         }
 
+        for (hash, class) in updates.classes.clone() {
+            let compiled = class.compile().expect("failed to compiled class");
+            compiled_classes.insert(hash, compiled);
+        }
+
+        classes.extend(updates.classes);
         compiled_class_hashes.extend(updates.state_updates.declared_classes);
-        sierra_classes.extend(updates.declared_sierra_classes);
-        compiled_classes.extend(updates.declared_compiled_classes);
     }
 }
 

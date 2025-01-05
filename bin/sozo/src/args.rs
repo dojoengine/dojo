@@ -51,16 +51,25 @@ impl SozoArgs {
         }
     }
 
-    pub fn init_logging(&self) -> Result<(), Box<dyn std::error::Error>> {
-        const DEFAULT_LOG_FILTER: &str =
-            "info,hyper=off,scarb=off,salsa=off,sozo=info,dojo_world=info";
+    pub fn init_logging(
+        &self,
+        clap_verbosity: &clap_verbosity_flag::Verbosity,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let verbose = clap_verbosity.log_level_filter().as_trace() >= LevelFilter::DEBUG;
+
+        let default_log_filter: &str = if verbose {
+            "info,hyper=off,scarb=off,salsa=off,sozo=trace,dojo_world=trace,dojo_utils=trace,\
+             sozo_ops=trace"
+        } else {
+            "info,hyper=off,scarb=off,salsa=off,sozo=info,dojo_world=info"
+        };
 
         LogTracer::init()?;
 
         let subscriber = FmtSubscriber::builder()
             .with_env_filter(
                 tracing_subscriber::EnvFilter::try_from_default_env()
-                    .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new(DEFAULT_LOG_FILTER)),
+                    .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new(default_log_filter)),
             )
             .finish();
 

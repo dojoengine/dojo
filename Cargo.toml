@@ -16,12 +16,14 @@ members = [
 	"crates/dojo/utils",
 	"crates/dojo/world",
 	"crates/dojo/world/abigen",
+	"crates/katana/cli",
 	"crates/katana/controller",
 	"crates/katana/core",
 	"crates/katana/executor",
+	"crates/katana/feeder-gateway",
+	"crates/katana/grpc",
 	"crates/katana/node",
 	"crates/katana/node-bindings",
-	"crates/katana/pipeline",
 	"crates/katana/pool",
 	"crates/katana/primitives",
 	"crates/katana/rpc/rpc",
@@ -34,6 +36,8 @@ members = [
 	"crates/katana/storage/codecs/derive",
 	"crates/katana/storage/db",
 	"crates/katana/storage/provider",
+	"crates/katana/sync/pipeline",
+	"crates/katana/sync/stage",
 	"crates/katana/tasks",
 	"crates/katana/trie",
 	"crates/metrics",
@@ -42,6 +46,7 @@ members = [
 	"crates/sozo/scarbext",
 	"crates/sozo/signers",
 	"crates/sozo/walnut",
+	"crates/torii/cli",
 	"crates/torii/client",
 	"crates/torii/server",
 	"crates/torii/types-test",
@@ -55,7 +60,7 @@ edition = "2021"
 license = "Apache-2.0"
 license-file = "LICENSE"
 repository = "https://github.com/dojoengine/dojo/"
-version = "1.0.0-rc.1"
+version = "1.0.9"
 
 [profile.performance]
 codegen-units = 1
@@ -63,8 +68,13 @@ incremental = false
 inherits = "release"
 lto = "fat"
 
+[profile.profiling]
+debug = true
+inherits = "release"
+
 [workspace.dependencies]
-cainome = { git = "https://github.com/cartridge-gg/cainome", rev = "5c2616c273faca7700d2ba565503fcefb5b9d720", features = [ "abigen-rs" ] }
+cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.4.10", features = [ "abigen-rs" ] }
+cainome-cairo-serde = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.4.10" }
 dojo-utils = { path = "crates/dojo/utils" }
 
 # metrics
@@ -83,14 +93,16 @@ topological-sort = "0.2"
 
 # katana
 katana-cairo = { path = "crates/katana/cairo" }
+katana-cli = { path = "crates/katana/cli" }
 katana-codecs = { path = "crates/katana/storage/codecs" }
 katana-codecs-derive = { path = "crates/katana/storage/codecs/derive" }
 katana-core = { path = "crates/katana/core", default-features = false }
 katana-db = { path = "crates/katana/storage/db" }
 katana-executor = { path = "crates/katana/executor" }
+katana-feeder-gateway = { path = "crates/katana/feeder-gateway" }
 katana-node = { path = "crates/katana/node", default-features = false }
 katana-node-bindings = { path = "crates/katana/node-bindings" }
-katana-pipeline = { path = "crates/katana/pipeline" }
+katana-pipeline = { path = "crates/katana/sync/pipeline" }
 katana-pool = { path = "crates/katana/pool" }
 katana-primitives = { path = "crates/katana/primitives" }
 katana-provider = { path = "crates/katana/storage/provider" }
@@ -100,10 +112,12 @@ katana-rpc-types = { path = "crates/katana/rpc/rpc-types" }
 katana-rpc-types-builder = { path = "crates/katana/rpc/rpc-types-builder" }
 katana-runner = { path = "crates/katana/runner" }
 katana-slot-controller = { path = "crates/katana/controller" }
+katana-stage = { path = "crates/katana/sync/stage" }
 katana-tasks = { path = "crates/katana/tasks" }
 katana-trie = { path = "crates/katana/trie" }
 
 # torii
+torii-cli = { path = "crates/torii/cli" }
 torii-client = { path = "crates/torii/client" }
 torii-core = { path = "crates/torii/core" }
 torii-graphql = { path = "crates/torii/graphql" }
@@ -130,28 +144,28 @@ auto_impl = "1.2.0"
 base64 = "0.21.2"
 bigdecimal = "0.4.1"
 bytes = "1.6"
-cairo-lang-compiler = "2.8.4"
-cairo-lang-debug = "2.8.4"
-cairo-lang-defs = "2.8.4"
+cairo-lang-compiler = "=2.8.4"
+cairo-lang-debug = "=2.8.4"
+cairo-lang-defs = "=2.8.4"
 cairo-lang-diagnostics = "2.7.0"
-cairo-lang-filesystem = "2.8.4"
-cairo-lang-formatter = "2.8.4"
-cairo-lang-language-server = "2.8.4"
-cairo-lang-lowering = "2.8.4"
-cairo-lang-parser = "2.8.4"
-cairo-lang-plugins = { version = "2.8.4", features = [ "testing" ] }
-cairo-lang-project = "2.8.4"
-cairo-lang-semantic = "2.8.4"
-cairo-lang-sierra = "2.8.4"
-cairo-lang-sierra-generator = "2.8.4"
-cairo-lang-sierra-to-casm = "2.8.4"
-cairo-lang-starknet = "2.8.4"
-cairo-lang-starknet-classes = "2.8.4"
-cairo-lang-syntax = "2.8.4"
-cairo-lang-test-plugin = "2.8.4"
-cairo-lang-test-runner = "2.8.4"
-cairo-lang-test-utils = "2.8.4"
-cairo-lang-utils = "2.8.4"
+cairo-lang-filesystem = "=2.8.4"
+cairo-lang-formatter = "=2.8.4"
+cairo-lang-language-server = "=2.8.4"
+cairo-lang-lowering = "=2.8.4"
+cairo-lang-parser = "=2.8.4"
+cairo-lang-plugins = { version = "=2.8.4", features = [ "testing" ] }
+cairo-lang-project = "=2.8.4"
+cairo-lang-semantic = "=2.8.4"
+cairo-lang-sierra = "=2.8.4"
+cairo-lang-sierra-generator = "=2.8.4"
+cairo-lang-sierra-to-casm = "=2.8.4"
+cairo-lang-starknet = "=2.8.4"
+cairo-lang-starknet-classes = "=2.8.4"
+cairo-lang-syntax = "=2.8.4"
+cairo-lang-test-plugin = "=2.8.4"
+cairo-lang-test-runner = "=2.8.4"
+cairo-lang-test-utils = "=2.8.4"
+cairo-lang-utils = "=2.8.4"
 cairo-vm = "1.0.0-rc4"
 camino = { version = "1.1.2", features = [ "serde1" ] }
 chrono = { version = "0.4.24", features = [ "serde" ] }
@@ -163,14 +177,17 @@ colored_json = "3.2.0"
 console = "0.15.7"
 convert_case = "0.6.0"
 crypto-bigint = { version = "0.5.3", features = [ "serde" ] }
+data-url = "0.3"
 derive_more = "0.99.17"
 flate2 = "1.0.24"
+fluent-uri = "0.3"
 futures = "0.3.30"
 futures-util = "0.3.30"
 hashlink = "0.9.1"
 hex = "0.4.3"
 hex-literal = "0.4.1"
 http = "0.2.9"
+image = "0.25.2"
 indexmap = "2.2.5"
 indoc = "1.0.7"
 itertools = "0.12.1"
@@ -178,8 +195,8 @@ jsonrpsee = { version = "0.16.2", default-features = false }
 lazy_static = "1.4.0"
 log = "0.4.21"
 metrics = "0.23.0"
-num-traits = { version = "0.2", default-features = false }
 num-bigint = "0.4.3"
+num-traits = { version = "0.2", default-features = false }
 once_cell = "1.0"
 parking_lot = "0.12.1"
 postcard = { version = "1.0.10", features = [ "use-std" ], default-features = false }
@@ -192,12 +209,12 @@ rpassword = "7.2.0"
 rstest = "0.18.2"
 rstest_reuse = "0.6.0"
 salsa = "0.16.1"
-scarb = { git = "https://github.com/dojoengine/scarb", rev = "b9965b7e2f0d97f2a97f18ca9a75bac541de7d84" }
-scarb-ui = { git = "https://github.com/dojoengine/scarb", rev = "b9965b7e2f0d97f2a97f18ca9a75bac541de7d84" }
+scarb = { git = "https://github.com/dojoengine/scarb", rev = "7eac49b3e61236ce466e712225d9c989f9db1ef3" }
+scarb-ui = { git = "https://github.com/dojoengine/scarb", rev = "7eac49b3e61236ce466e712225d9c989f9db1ef3" }
 semver = "1.0.5"
 serde = { version = "1.0", features = [ "derive" ] }
 serde_json = { version = "1.0", features = [ "arbitrary_precision" ] }
-serde_with = "3.9.0"
+serde_with = "3.11.0"
 similar-asserts = "1.5.0"
 smol_str = { version = "0.2.0", features = [ "serde" ] }
 spinoff = "0.8.0"
@@ -218,6 +235,9 @@ tracing-log = "0.1.3"
 tracing-subscriber = { version = "0.3.16", features = [ "env-filter", "json" ] }
 url = { version = "2.4.0", features = [ "serde" ] }
 walkdir = "2.5.0"
+# TODO: see if we still need the git version
+ipfs-api-backend-hyper = { git = "https://github.com/ferristseng/rust-ipfs-api", rev = "af2c17f7b19ef5b9898f458d97a90055c3605633", features = [ "with-hyper-rustls", "with-send-sync" ] }
+mime_guess = "2.0"
 
 # server
 hyper = "0.14.27"
@@ -225,7 +245,7 @@ warp = "0.3"
 
 # gRPC
 prost = "0.12"
-tonic = { version = "0.11", features = [ "gzip", "tls", "tls-roots" ] }
+tonic = { version = "0.11", features = [ "gzip", "tls", "tls-roots", "tls-webpki-roots" ] }
 tonic-build = "0.11"
 tonic-reflection = "0.11"
 tonic-web = "0.11"
@@ -247,7 +267,7 @@ slot = { git = "https://github.com/cartridge-gg/slot", rev = "1298a30" }
 alloy-contract = { version = "0.3", default-features = false }
 alloy-json-rpc = { version = "0.3", default-features = false }
 alloy-network = { version = "0.3", default-features = false }
-alloy-provider = { version = "0.3", default-features = false, features = [ "reqwest" ] }
+alloy-provider = { version = "0.3", default-features = false }
 alloy-rpc-types-eth = { version = "0.3", default-features = false }
 alloy-signer = { version = "0.3", default-features = false }
 alloy-transport = { version = "0.3", default-features = false }
@@ -257,3 +277,8 @@ starknet-crypto = "0.7.1"
 starknet-types-core = { version = "0.1.7", features = [ "arbitrary", "hash" ] }
 
 bitvec = "1.0.1"
+
+# macro
+proc-macro2 = "1.0"
+quote = "1.0"
+syn = { version = "2.0", default-features = false }

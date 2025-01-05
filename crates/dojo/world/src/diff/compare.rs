@@ -93,6 +93,7 @@ mod tests {
                 name: "model1".to_string(),
                 namespace: "ns1".to_string(),
                 class: empty_sierra_class(),
+                casm_class: None,
                 class_hash: Felt::ZERO,
                 casm_class_hash: Felt::ZERO,
             },
@@ -107,6 +108,7 @@ mod tests {
                 address: Felt::ZERO,
                 owners: HashSet::new(),
                 writers: HashSet::new(),
+                metadata_hash: Felt::ZERO,
             },
         });
 
@@ -127,6 +129,7 @@ mod tests {
                 name: "event1".to_string(),
                 namespace: "ns1".to_string(),
                 class: empty_sierra_class(),
+                casm_class: None,
                 class_hash: Felt::ZERO,
                 casm_class_hash: Felt::ZERO,
             },
@@ -141,6 +144,7 @@ mod tests {
                 address: Felt::ZERO,
                 owners: HashSet::new(),
                 writers: HashSet::new(),
+                metadata_hash: Felt::ZERO,
             },
         });
 
@@ -175,6 +179,7 @@ mod tests {
                 name: "contract1".to_string(),
                 namespace: "ns1".to_string(),
                 class: empty_sierra_class(),
+                casm_class: None,
                 class_hash: Felt::ZERO,
                 casm_class_hash: Felt::ZERO,
             },
@@ -189,6 +194,7 @@ mod tests {
                 address: Felt::ZERO,
                 owners: HashSet::new(),
                 writers: HashSet::new(),
+                metadata_hash: Felt::ZERO,
             },
             is_initialized: true,
         });

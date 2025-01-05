@@ -1,6 +1,6 @@
 ![Dojo Feature Matrix](.github/feature_matrix.png)
 
-# Dojo: Provable Games and Applications [![discord](https://img.shields.io/badge/join-dojo-green?logo=discord&logoColor=white)](https://discord.gg/PwDa2mKhR4) [![Telegram Chat][tg-badge]][tg-url] ![Github Actions][gha-badge]
+# Dojo: Provable Games and Applications [![discord](https://img.shields.io/badge/join-dojo-green?logo=discord&logoColor=white)](https://discord.com/invite/dojoengine) [![Telegram Chat][tg-badge]][tg-url] ![Github Actions][gha-badge]
 
 [gha-badge]: https://img.shields.io/github/actions/workflow/status/dojoengine/dojo/ci.yml?branch=main
 [tg-badge]: https://img.shields.io/endpoint?color=neon&logo=telegram&label=chat&style=flat-square&url=https%3A%2F%2Ftg.sumanjay.workers.dev%2Fdojoengine
@@ -31,4 +31,5 @@ If you encounter issues or have questions, you can [submit an issue on GitHub](h
 
 Dojo core smart contracts have been audited:
 
-- Feb-24: [Nethermind Security](https://github.com/NethermindEth/PublicAuditReports/blob/main/NM0159-FINAL_DOJO.pdf)
+- Feb-24: [Nethermind Security](https://github.com/NethermindEth/PublicAuditReports/blob/main/NM0159-FINAL_DOJO.pdf).
+- Nov-24: [OpenZeppelin](https://blog.openzeppelin.com/dojo-security-review) and it's [diff-audit](https://blog.openzeppelin.com/dojo-namespace-diff-audit).

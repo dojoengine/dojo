@@ -1,12 +1,13 @@
 use anyhow::{Error, Result};
 use async_trait::async_trait;
 use dojo_world::contracts::abigen::world::Event as WorldEvent;
+use dojo_world::contracts::naming::get_tag;
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{Event, Felt};
 use starknet::providers::Provider;
 use tracing::info;
 
-use super::EventProcessor;
+use super::{EventProcessor, EventProcessorConfig};
 use crate::sql::Sql;
 
 pub(crate) const LOG_TARGET: &str = "torii_core::processors::event_message";
@@ -35,6 +36,7 @@ where
         block_timestamp: u64,
         event_id: &str,
         event: &Event,
+        config: &EventProcessorConfig,
     ) -> Result<(), Error> {
         // Torii version is coupled to the world version, so we can expect the event to be well
         // formed.
@@ -64,15 +66,12 @@ where
             "Store event message."
         );
 
-        // TODO: check historical and keep the internal counter.
-
         let mut keys_and_unpacked = [event.keys, event.values].concat();
 
         let mut entity = model.schema.clone();
         entity.deserialize(&mut keys_and_unpacked)?;
 
-        // TODO: this must come from some torii's configuration.
-        let historical = false;
+        let historical = config.is_historical(&get_tag(&model.namespace, &model.name));
         db.set_event_message(entity, event_id, block_timestamp, historical).await?;
         Ok(())
     }

@@ -10,13 +10,11 @@ anyhow.workspace = true
 assert_fs.workspace = true
 async-trait.workspace = true
 camino.workspace = true
-dojo-lang.workspace = true
-dojo-world.workspace = true
-jsonrpsee = { workspace = true, features = [ "server" ] }
 katana-core = { workspace = true }
 katana-executor = { workspace = true, features = [ "blockifier" ] }
 katana-node.workspace = true
 katana-primitives = { workspace = true }
+katana-rpc.workspace = true
 scarb.workspace = true
 scarb-ui.workspace = true
 serde.workspace = true
@@ -29,7 +27,6 @@ url.workspace = true
 [build-dependencies]
 assert_fs.workspace = true
 camino.workspace = true
-dojo-lang.workspace = true
 scarb.workspace = true
 scarb-ui.workspace = true
 

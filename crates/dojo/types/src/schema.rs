@@ -1,9 +1,13 @@
 use std::any::type_name;
+use std::str::FromStr;
 
 use cainome::cairo_serde::{ByteArray, CairoSerde};
+use crypto_bigint::{Encoding, U256};
+use indexmap::IndexMap;
 use itertools::Itertools;
 use num_traits::ToPrimitive;
 use serde::{Deserialize, Serialize};
+use serde_json::{json, Value as JsonValue};
 use starknet::core::types::Felt;
 use strum_macros::AsRefStr;
 
@@ -173,6 +177,11 @@ impl Ty {
     }
 
     pub fn deserialize(&mut self, felts: &mut Vec<Felt>) -> Result<(), PrimitiveError> {
+        if felts.is_empty() {
+            // return early if there are no felts to deserialize
+            return Ok(());
+        }
+
         match self {
             Ty::Primitive(c) => {
                 c.deserialize(felts)?;
@@ -221,6 +230,275 @@ impl Ty {
 
                 *bytes = ByteArray::to_string(&bytearray)?;
             }
+        }
+        Ok(())
+    }
+
+    /// Returns a new Ty containing only the differences between self and other
+    pub fn diff(&self, other: &Ty) -> Option<Ty> {
+        match (self, other) {
+            (Ty::Struct(s1), Ty::Struct(s2)) => {
+                // Find members that exist in s1 but not in s2, or are different
+                let diff_children: Vec<Member> = s1
+                    .children
+                    .iter()
+                    .filter(|m1| {
+                        s2.children
+                            .iter()
+                            .find(|m2| m2.name == m1.name)
+                            .map_or(true, |m2| *m1 != m2)
+                    })
+                    .cloned()
+                    .collect();
+
+                if diff_children.is_empty() {
+                    None
+                } else {
+                    Some(Ty::Struct(Struct { name: s1.name.clone(), children: diff_children }))
+                }
+            }
+            (Ty::Enum(e1), Ty::Enum(e2)) => {
+                // Find options that exist in e1 but not in e2, or are different
+                let diff_options: Vec<EnumOption> = e1
+                    .options
+                    .iter()
+                    .filter(|o1| {
+                        e2.options.iter().find(|o2| o2.name == o1.name).map_or(true, |o2| *o1 != o2)
+                    })
+                    .cloned()
+                    .collect();
+
+                if diff_options.is_empty() {
+                    None
+                } else {
+                    Some(Ty::Enum(Enum {
+                        name: e1.name.clone(),
+                        option: e1.option,
+                        options: diff_options,
+                    }))
+                }
+            }
+            (Ty::Array(a1), Ty::Array(a2)) => {
+                if a1 == a2 {
+                    None
+                } else {
+                    Some(Ty::Array(a1.clone()))
+                }
+            }
+            (Ty::Tuple(t1), Ty::Tuple(t2)) => {
+                if t1 == t2 {
+                    None
+                } else {
+                    Some(Ty::Tuple(t1.clone()))
+                }
+            }
+            (Ty::ByteArray(b1), Ty::ByteArray(b2)) => {
+                if b1 == b2 {
+                    None
+                } else {
+                    Some(Ty::ByteArray(b1.clone()))
+                }
+            }
+            (Ty::Primitive(p1), Ty::Primitive(p2)) => {
+                if p1 == p2 {
+                    None
+                } else {
+                    Some(Ty::Primitive(*p1))
+                }
+            }
+            // Different types entirely - we cannot diff them
+            _ => {
+                panic!("Type mismatch between self {:?} and other {:?}", self.name(), other.name())
+            }
+        }
+    }
+
+    /// Convert a Ty to a JSON Value
+    pub fn to_json_value(&self) -> Result<JsonValue, PrimitiveError> {
+        match self {
+            Ty::Primitive(primitive) => match primitive {
+                Primitive::Bool(Some(v)) => Ok(json!(*v)),
+                Primitive::I8(Some(v)) => Ok(json!(*v)),
+                Primitive::I16(Some(v)) => Ok(json!(*v)),
+                Primitive::I32(Some(v)) => Ok(json!(*v)),
+                Primitive::I64(Some(v)) => Ok(json!(v.to_string())),
+                Primitive::I128(Some(v)) => Ok(json!(v.to_string())),
+                Primitive::U8(Some(v)) => Ok(json!(*v)),
+                Primitive::U16(Some(v)) => Ok(json!(*v)),
+                Primitive::U32(Some(v)) => Ok(json!(*v)),
+                Primitive::U64(Some(v)) => Ok(json!(v.to_string())),
+                Primitive::U128(Some(v)) => Ok(json!(v.to_string())),
+                Primitive::USize(Some(v)) => Ok(json!(*v)),
+                Primitive::U256(Some(v)) => {
+                    let bytes = v.to_be_bytes();
+                    let high = u128::from_be_bytes(bytes[..16].try_into().unwrap());
+                    let low = u128::from_be_bytes(bytes[16..].try_into().unwrap());
+                    Ok(json!({
+                        "high": high.to_string(),
+                        "low": low.to_string()
+                    }))
+                }
+                Primitive::Felt252(Some(v)) => Ok(json!(format!("{:#x}", v))),
+                Primitive::ClassHash(Some(v)) => Ok(json!(format!("{:#x}", v))),
+                Primitive::ContractAddress(Some(v)) => Ok(json!(format!("{:#x}", v))),
+                _ => Err(PrimitiveError::MissingFieldElement),
+            },
+            Ty::Struct(s) => {
+                let mut obj = IndexMap::new();
+                for member in &s.children {
+                    obj.insert(member.name.clone(), member.ty.to_json_value()?);
+                }
+                Ok(json!(obj))
+            }
+            Ty::Enum(e) => {
+                let option = e.option().map_err(|_| PrimitiveError::MissingFieldElement)?;
+                Ok(json!({
+                    option.name.clone(): option.ty.to_json_value()?
+                }))
+            }
+            Ty::Array(items) => {
+                let values: Result<Vec<_>, _> = items.iter().map(|ty| ty.to_json_value()).collect();
+                Ok(json!(values?))
+            }
+            Ty::Tuple(items) => {
+                let values: Result<Vec<_>, _> = items.iter().map(|ty| ty.to_json_value()).collect();
+                Ok(json!(values?))
+            }
+            Ty::ByteArray(bytes) => Ok(json!(bytes.clone())),
+        }
+    }
+
+    /// Parse a JSON Value into a Ty
+    pub fn from_json_value(&mut self, value: JsonValue) -> Result<(), PrimitiveError> {
+        match (self, value) {
+            (Ty::Primitive(primitive), value) => match primitive {
+                Primitive::Bool(v) => {
+                    if let JsonValue::Bool(b) = value {
+                        *v = Some(b);
+                    }
+                }
+                Primitive::I8(v) => {
+                    if let JsonValue::Number(n) = value {
+                        *v = n.as_i64().map(|n| n as i8);
+                    }
+                }
+                Primitive::I16(v) => {
+                    if let JsonValue::Number(n) = value {
+                        *v = n.as_i64().map(|n| n as i16);
+                    }
+                }
+                Primitive::I32(v) => {
+                    if let JsonValue::Number(n) = value {
+                        *v = n.as_i64().map(|n| n as i32);
+                    }
+                }
+                Primitive::I64(v) => {
+                    if let JsonValue::String(s) = value {
+                        *v = s.parse().ok();
+                    }
+                }
+                Primitive::I128(v) => {
+                    if let JsonValue::String(s) = value {
+                        *v = s.parse().ok();
+                    }
+                }
+                Primitive::U8(v) => {
+                    if let JsonValue::Number(n) = value {
+                        *v = n.as_u64().map(|n| n as u8);
+                    }
+                }
+                Primitive::U16(v) => {
+                    if let JsonValue::Number(n) = value {
+                        *v = n.as_u64().map(|n| n as u16);
+                    }
+                }
+                Primitive::U32(v) => {
+                    if let JsonValue::Number(n) = value {
+                        *v = n.as_u64().map(|n| n as u32);
+                    }
+                }
+                Primitive::U64(v) => {
+                    if let JsonValue::String(s) = value {
+                        *v = s.parse().ok();
+                    }
+                }
+                Primitive::U128(v) => {
+                    if let JsonValue::String(s) = value {
+                        *v = s.parse().ok();
+                    }
+                }
+                Primitive::USize(v) => {
+                    if let JsonValue::Number(n) = value {
+                        *v = n.as_u64().map(|n| n as u32);
+                    }
+                }
+                Primitive::U256(v) => {
+                    if let JsonValue::Object(obj) = value {
+                        if let (Some(JsonValue::String(high)), Some(JsonValue::String(low))) =
+                            (obj.get("high"), obj.get("low"))
+                        {
+                            if let (Ok(high), Ok(low)) = (high.parse::<u128>(), low.parse::<u128>())
+                            {
+                                let mut bytes = [0u8; 32];
+                                bytes[..16].copy_from_slice(&high.to_be_bytes());
+                                bytes[16..].copy_from_slice(&low.to_be_bytes());
+                                *v = Some(U256::from_be_slice(&bytes));
+                            }
+                        }
+                    }
+                }
+                Primitive::Felt252(v) => {
+                    if let JsonValue::String(s) = value {
+                        *v = Felt::from_str(&s).ok();
+                    }
+                }
+                Primitive::ClassHash(v) => {
+                    if let JsonValue::String(s) = value {
+                        *v = Felt::from_str(&s).ok();
+                    }
+                }
+                Primitive::ContractAddress(v) => {
+                    if let JsonValue::String(s) = value {
+                        *v = Felt::from_str(&s).ok();
+                    }
+                }
+            },
+            (Ty::Struct(s), JsonValue::Object(obj)) => {
+                for member in &mut s.children {
+                    if let Some(value) = obj.get(&member.name) {
+                        member.ty.from_json_value(value.clone())?;
+                    }
+                }
+            }
+            (Ty::Enum(e), JsonValue::Object(obj)) => {
+                if let Some((name, value)) = obj.into_iter().next() {
+                    e.set_option(&name).map_err(|_| PrimitiveError::TypeMismatch)?;
+                    if let Some(option) = e.option {
+                        e.options[option as usize].ty.from_json_value(value)?;
+                    }
+                }
+            }
+            (Ty::Array(items), JsonValue::Array(values)) => {
+                let template = items[0].clone();
+                items.clear();
+                for value in values {
+                    let mut item = template.clone();
+                    item.from_json_value(value)?;
+                    items.push(item);
+                }
+            }
+            (Ty::Tuple(items), JsonValue::Array(values)) => {
+                if items.len() != values.len() {
+                    return Err(PrimitiveError::TypeMismatch);
+                }
+                for (item, value) in items.iter_mut().zip(values) {
+                    item.from_json_value(value)?;
+                }
+            }
+            (Ty::ByteArray(bytes), JsonValue::String(s)) => {
+                *bytes = s;
+            }
+            _ => return Err(PrimitiveError::TypeMismatch),
         }
         Ok(())
     }
@@ -351,8 +629,8 @@ impl Enum {
         }
     }
 
-    pub fn to_sql_value(&self) -> Result<String, EnumError> {
-        self.option().map(|option| option.name.clone())
+    pub fn to_sql_value(&self) -> String {
+        self.option().unwrap_or(&self.options[0]).name.clone()
     }
 }
 
@@ -596,5 +874,78 @@ mod tests {
         for (member, expected) in test_cases {
             assert_eq!(format_member(&member), expected);
         }
+    }
+
+    #[test]
+    fn test_ty_diff() {
+        // Test struct diff
+        let struct1 = Ty::Struct(Struct {
+            name: "TestStruct".to_string(),
+            children: vec![
+                Member {
+                    name: "field1".to_string(),
+                    ty: Ty::Primitive(Primitive::U32(None)),
+                    key: false,
+                },
+                Member {
+                    name: "field2".to_string(),
+                    ty: Ty::Primitive(Primitive::U32(None)),
+                    key: false,
+                },
+                Member {
+                    name: "field3".to_string(),
+                    ty: Ty::Primitive(Primitive::U32(None)),
+                    key: false,
+                },
+            ],
+        });
+
+        let struct2 = Ty::Struct(Struct {
+            name: "TestStruct".to_string(),
+            children: vec![Member {
+                name: "field1".to_string(),
+                ty: Ty::Primitive(Primitive::U32(None)),
+                key: false,
+            }],
+        });
+
+        // Should show only field2 and field3 as differences
+        let diff = struct1.diff(&struct2).unwrap();
+        if let Ty::Struct(s) = diff {
+            assert_eq!(s.children.len(), 2);
+            assert_eq!(s.children[0].name, "field2");
+            assert_eq!(s.children[1].name, "field3");
+        } else {
+            panic!("Expected Struct diff");
+        }
+
+        // Test enum diff
+        let enum1 = Ty::Enum(Enum {
+            name: "TestEnum".to_string(),
+            option: None,
+            options: vec![
+                EnumOption { name: "Option1".to_string(), ty: Ty::Tuple(vec![]) },
+                EnumOption { name: "Option2".to_string(), ty: Ty::Tuple(vec![]) },
+            ],
+        });
+
+        let enum2 = Ty::Enum(Enum {
+            name: "TestEnum".to_string(),
+            option: None,
+            options: vec![EnumOption { name: "Option1".to_string(), ty: Ty::Tuple(vec![]) }],
+        });
+
+        // Should show only Option2 as difference
+        let diff = enum1.diff(&enum2).unwrap();
+        if let Ty::Enum(e) = diff {
+            assert_eq!(e.options.len(), 1);
+            assert_eq!(e.options[0].name, "Option2");
+        } else {
+            panic!("Expected Enum diff");
+        }
+
+        // Test no differences
+        let same_struct = struct2.diff(&struct2);
+        assert!(same_struct.is_none());
     }
 }

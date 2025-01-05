@@ -98,12 +98,12 @@ fn test_executor_with_valid_blocks_impl<EF: ExecutorFactory>(
     // assert that the sierra class is declared
     let expected_class_hash = felt!("0x420");
 
-    let (casm, sierra) = fixtures::contract_class();
-    let actual_casm = state_provider.class(expected_class_hash).unwrap();
-    let actual_sierra = state_provider.sierra_class(expected_class_hash).unwrap();
+    let (casm, class) = fixtures::contract_class();
+    let actual_class = state_provider.class(expected_class_hash).unwrap();
+    let actual_compiled_class = state_provider.compiled_class(expected_class_hash).unwrap();
 
-    assert_eq!(actual_casm, Some(casm), "casm class should be declared");
-    assert_eq!(actual_sierra, Some(sierra), "sierra class should be declared");
+    assert_eq!(actual_class, Some(class), "casm class should be declared");
+    assert_eq!(actual_compiled_class, Some(casm), "sierra class should be declared");
 
     let expected_compiled_class_hash =
         felt!("0x016c6081eb34ad1e0c5513234ed0c025b3c7f305902d291bad534cd6474c85bc");

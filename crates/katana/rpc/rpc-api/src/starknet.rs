@@ -3,12 +3,14 @@
 use jsonrpsee::core::RpcResult;
 use jsonrpsee::proc_macros::rpc;
 use katana_primitives::block::{BlockIdOrTag, BlockNumber};
+use katana_primitives::class::ClassHash;
 use katana_primitives::transaction::TxHash;
-use katana_primitives::Felt;
+use katana_primitives::{ContractAddress, Felt};
 use katana_rpc_types::block::{
     BlockHashAndNumber, BlockTxCount, MaybePendingBlockWithReceipts, MaybePendingBlockWithTxHashes,
     MaybePendingBlockWithTxs,
 };
+use katana_rpc_types::class::RpcContractClass;
 use katana_rpc_types::event::{EventFilterWithPage, EventsPage};
 use katana_rpc_types::message::MsgFromL1;
 use katana_rpc_types::receipt::TxReceiptWithBlockInfo;
@@ -17,9 +19,10 @@ use katana_rpc_types::transaction::{
     BroadcastedDeclareTx, BroadcastedDeployAccountTx, BroadcastedInvokeTx, BroadcastedTx,
     DeclareTxResult, DeployAccountTxResult, InvokeTxResult, Tx,
 };
+use katana_rpc_types::trie::{ContractStorageKeys, GetStorageProofResponse};
 use katana_rpc_types::{
-    ContractClass, FeeEstimate, FeltAsHex, FunctionCall, SimulationFlag,
-    SimulationFlagForEstimateFee, SyncingStatus,
+    FeeEstimate, FeltAsHex, FunctionCall, SimulationFlag, SimulationFlagForEstimateFee,
+    SyncingStatus,
 };
 use starknet::core::types::{
     SimulatedTransaction, TransactionStatus, TransactionTrace, TransactionTraceWithHash,
@@ -101,8 +104,11 @@ pub trait StarknetApi {
 
     /// Get the contract class definition in the given block associated with the given hash.
     #[method(name = "getClass")]
-    async fn get_class(&self, block_id: BlockIdOrTag, class_hash: Felt)
-    -> RpcResult<ContractClass>;
+    async fn get_class(
+        &self,
+        block_id: BlockIdOrTag,
+        class_hash: Felt,
+    ) -> RpcResult<RpcContractClass>;
 
     /// Get the contract class hash in the given block for the contract deployed at the given
     /// address.
@@ -119,7 +125,7 @@ pub trait StarknetApi {
         &self,
         block_id: BlockIdOrTag,
         contract_address: Felt,
-    ) -> RpcResult<ContractClass>;
+    ) -> RpcResult<RpcContractClass>;
 
     /// Get the number of transactions in a block given a block id.
     #[method(name = "getBlockTransactionCount")]
@@ -179,6 +185,18 @@ pub trait StarknetApi {
         block_id: BlockIdOrTag,
         contract_address: Felt,
     ) -> RpcResult<FeltAsHex>;
+
+    /// Get merkle paths in one of the state tries: global state, classes, individual contract. A
+    /// single request can query for any mix of the three types of storage proofs (classes,
+    /// contracts, and storage).
+    #[method(name = "getStorageProof")]
+    async fn get_storage_proof(
+        &self,
+        block_id: BlockIdOrTag,
+        class_hashes: Option<Vec<ClassHash>>,
+        contract_addresses: Option<Vec<ContractAddress>>,
+        contracts_storage_keys: Option<Vec<ContractStorageKeys>>,
+    ) -> RpcResult<GetStorageProofResponse>;
 }
 
 /// Write API.

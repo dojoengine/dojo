@@ -6,7 +6,7 @@ use starknet::core::types::{Event, U256};
 use starknet::providers::Provider;
 use tracing::debug;
 
-use super::EventProcessor;
+use super::{EventProcessor, EventProcessorConfig};
 use crate::sql::Sql;
 
 pub(crate) const LOG_TARGET: &str = "torii_core::processors::erc721_transfer";
@@ -36,12 +36,13 @@ where
 
     async fn process(
         &self,
-        world: &WorldContractReader<P>,
+        _world: &WorldContractReader<P>,
         db: &mut Sql,
-        _block_number: u64,
+        block_number: u64,
         block_timestamp: u64,
         event_id: &str,
         event: &Event,
+        _config: &EventProcessorConfig,
     ) -> Result<(), Error> {
         let token_address = event.from_address;
         let from = event.keys[1];
@@ -55,9 +56,9 @@ where
             from,
             to,
             token_id,
-            world.provider(),
             block_timestamp,
             event_id,
+            block_number,
         )
         .await?;
         debug!(target: LOG_TARGET, from = ?from, to = ?to, token_id = ?token_id, "ERC721 Transfer");
