@@ -21,8 +21,30 @@ impl BindgenWriter for TsFileWriter {
     fn write(&self, path: &str, data: &DojoData) -> BindgenResult<(PathBuf, Vec<u8>)> {
         let models_path = Path::new(path).to_owned();
         let models = data.models.values().collect::<Vec<_>>();
+        let events = data.events.values().collect::<Vec<_>>();
+        let mut e_composites = events
+            .iter()
+            .flat_map(|e| {
+                let mut composites = Vec::new();
+                let mut enum_composites =
+                    e.tokens.enums.iter().map(|e| e.to_composite().unwrap()).collect::<Vec<_>>();
+                let mut struct_composites =
+                    e.tokens.structs.iter().map(|s| s.to_composite().unwrap()).collect::<Vec<_>>();
+                let mut func_composites = e
+                    .tokens
+                    .functions
+                    .iter()
+                    .map(|f| f.to_composite().unwrap())
+                    .collect::<Vec<_>>();
+                composites.append(&mut enum_composites);
+                composites.append(&mut struct_composites);
+                composites.append(&mut func_composites);
+                composites
+            })
+            .filter(|c| !(c.type_path.starts_with("dojo::") || c.type_path.starts_with("core::")))
+            .collect::<Vec<_>>();
 
-        let mut composites = models
+        let mut m_composites = models
             .iter()
             .flat_map(|m| {
                 let mut composites: Vec<&Composite> = Vec::new();
@@ -46,13 +68,14 @@ impl BindgenWriter for TsFileWriter {
 
         // Sort models based on their tag to ensure deterministic output.
         // models.sort_by(|a, b| a.tag.cmp(&b.tag));
-        composites.sort_by(|a, b| a.type_path.cmp(&b.type_path));
+        m_composites.sort_by(|a, b| a.type_path.cmp(&b.type_path));
+        e_composites.sort_by(|a, b| a.type_path.cmp(&b.type_path));
 
         let code = self
             .generators
             .iter()
             .fold(Buffer::new(), |mut acc, g| {
-                composites.iter().for_each(|c| {
+                [m_composites.clone(), e_composites.clone()].concat().iter().for_each(|c| {
                     match g.generate(c, &mut acc) {
                         Ok(code) => {
                             if !code.is_empty() {
@@ -90,46 +113,58 @@ impl TsFileContractWriter {
 impl BindgenWriter for TsFileContractWriter {
     fn write(&self, path: &str, data: &DojoData) -> BindgenResult<(PathBuf, Vec<u8>)> {
         let models_path = Path::new(path).to_owned();
+        let mut functions = data
+            .contracts
+            .values()
+            .collect::<Vec<_>>()
+            .into_iter()
+            .flat_map(|c| {
+                c.systems
+                    .clone()
+                    .into_iter()
+                    .filter(|s| {
+                        let name = s.to_function().unwrap().name.as_str();
+                        ![
+                            "contract_name",
+                            "namespace",
+                            "tag",
+                            "name_hash",
+                            "selector",
+                            "dojo_init",
+                            "namespace_hash",
+                            "world",
+                            "dojo_name",
+                            "upgrade",
+                            "world_dispatcher",
+                        ]
+                        .contains(&name)
+                    })
+                    .map(|s| match s.to_function() {
+                        Ok(f) => (c, f.clone()),
+                        Err(_) => {
+                            panic!("Failed to get function out of system {:?}", &s)
+                        }
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .collect::<Vec<_>>();
+        functions.sort_by(|(_, af), (_, bf)| af.name.cmp(&bf.name));
 
         let code = self
             .generators
             .iter()
             .fold(Buffer::new(), |mut acc, g| {
-                data.contracts.iter().for_each(|(_, c)| {
-                    c.systems
-                        .iter()
-                        .filter(|s| {
-                            let name = s.to_function().unwrap().name.as_str();
-                            ![
-                                "contract_name",
-                                "namespace",
-                                "tag",
-                                "name_hash",
-                                "selector",
-                                "dojo_init",
-                                "namespace_hash",
-                                "world",
-                                "dojo_name",
-                                "upgrade",
-                                "world_dispatcher",
-                            ]
-                            .contains(&name)
-                        })
-                        .for_each(|s| match s.to_function() {
-                            Ok(f) => match g.generate(c, f, &mut acc) {
-                                Ok(code) => {
-                                    if !code.is_empty() {
-                                        acc.push(code)
-                                    }
-                                }
-                                Err(_) => {
-                                    log::error!("Failed to generate code for system {:?}", s);
-                                }
-                            },
-                            Err(_) => {
-                                log::error!("Failed to get function out of system {:?}", s);
+                functions.iter().for_each(|(c, f)| {
+                    match g.generate(c, f, &mut acc) {
+                        Ok(code) => {
+                            if !code.is_empty() {
+                                acc.push(code)
                             }
-                        })
+                        }
+                        Err(_) => {
+                            log::error!("Failed to generate code for function {:?}", f.name);
+                        }
+                    };
                 });
 
                 acc

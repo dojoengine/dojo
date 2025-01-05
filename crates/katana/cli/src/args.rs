@@ -1,11 +1,10 @@
 //! Katana node CLI options and configuration.
 
-use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use alloy_primitives::U256;
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use clap::Parser;
 use katana_core::constants::DEFAULT_SEQUENCER_ADDRESS;
 use katana_core::service::messaging::MessagingConfig;
@@ -14,7 +13,7 @@ use katana_node::config::dev::{DevConfig, FixedL1GasPriceConfig};
 use katana_node::config::execution::ExecutionConfig;
 use katana_node::config::fork::ForkingConfig;
 use katana_node::config::metrics::MetricsConfig;
-use katana_node::config::rpc::{ApiKind, RpcConfig};
+use katana_node::config::rpc::{RpcConfig, RpcModuleKind, RpcModulesList};
 use katana_node::config::{Config, SequencingConfig};
 use katana_primitives::chain_spec::{self, ChainSpec};
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
@@ -169,7 +168,7 @@ impl NodeArgs {
 
     pub fn config(&self) -> Result<katana_node::config::Config> {
         let db = self.db_config();
-        let rpc = self.rpc_config();
+        let rpc = self.rpc_config()?;
         let dev = self.dev_config();
         let chain = self.chain_spec()?;
         let metrics = self.metrics_config();
@@ -197,28 +196,39 @@ impl NodeArgs {
         SequencingConfig { block_time: self.block_time, no_mining: self.no_mining }
     }
 
-    fn rpc_config(&self) -> RpcConfig {
-        let mut apis = HashSet::from([ApiKind::Starknet, ApiKind::Torii, ApiKind::Saya]);
-        // only enable `katana` API in dev mode
-        if self.development.dev {
-            apis.insert(ApiKind::Dev);
-        }
+    fn rpc_config(&self) -> Result<RpcConfig> {
+        let modules = if let Some(modules) = &self.server.http_modules {
+            // TODO: This check should be handled in the `katana-node` level. Right now if you
+            // instantiate katana programmatically, you can still add the dev module without
+            // enabling dev mode.
+            //
+            // We only allow the `dev` module in dev mode (ie `--dev` flag)
+            if !self.development.dev && modules.contains(&RpcModuleKind::Dev) {
+                bail!("The `dev` module can only be enabled in dev mode (ie `--dev` flag)")
+            }
+
+            modules.clone()
+        } else {
+            // Expose the default modules if none is specified.
+            RpcModulesList::default()
+        };
 
         #[cfg(feature = "server")]
         {
-            RpcConfig {
-                apis,
+            Ok(RpcConfig {
+                apis: modules,
                 port: self.server.http_port,
                 addr: self.server.http_addr,
                 max_connections: self.server.max_connections,
                 cors_origins: self.server.http_cors_origins.clone(),
                 max_event_page_size: Some(self.server.max_event_page_size),
-            }
+                max_proof_keys: Some(self.server.max_proof_keys),
+            })
         }
 
         #[cfg(not(feature = "server"))]
         {
-            RpcConfig { apis, ..Default::default() }
+            Ok(RpcConfig { apis, ..Default::default() })
         }
     }
 
@@ -634,5 +644,29 @@ chain_id.Named = "Mainnet"
         assert!(cors_origins.contains(&HeaderValue::from_static("*")));
         assert!(cors_origins.contains(&HeaderValue::from_static("http://localhost:3000")));
         assert!(cors_origins.contains(&HeaderValue::from_static("https://example.com")));
+    }
+
+    #[test]
+    fn http_modules() {
+        // If the `--http.api` isn't specified, only starknet module will be exposed.
+        let config = NodeArgs::parse_from(["katana"]).config().unwrap();
+        let modules = config.rpc.apis;
+        assert_eq!(modules.len(), 1);
+        assert!(modules.contains(&RpcModuleKind::Starknet));
+
+        // If the `--http.api` is specified, only the ones in the list will be exposed.
+        let config = NodeArgs::parse_from(["katana", "--http.api", "saya,torii"]).config().unwrap();
+        let modules = config.rpc.apis;
+        assert_eq!(modules.len(), 2);
+        assert!(modules.contains(&RpcModuleKind::Saya));
+        assert!(modules.contains(&RpcModuleKind::Torii));
+
+        // Specifiying the dev module without enabling dev mode is forbidden.
+        let err =
+            NodeArgs::parse_from(["katana", "--http.api", "starknet,dev"]).config().unwrap_err();
+        assert!(
+            err.to_string()
+                .contains("The `dev` module can only be enabled in dev mode (ie `--dev` flag)")
+        );
     }
 }

@@ -7,6 +7,7 @@ use katana_primitives::block::{
 };
 use katana_primitives::chain_spec::ChainSpec;
 use katana_primitives::da::L1DataAvailabilityMode;
+use katana_primitives::hash::{self, StarkHash};
 use katana_primitives::state::StateUpdatesWithClasses;
 use katana_primitives::version::ProtocolVersion;
 use katana_provider::providers::db::DbProvider;
@@ -15,17 +16,18 @@ use katana_provider::traits::block::{BlockProvider, BlockWriter};
 use katana_provider::traits::contract::{ContractClassWriter, ContractClassWriterExt};
 use katana_provider::traits::env::BlockEnvProvider;
 use katana_provider::traits::stage::StageCheckpointProvider;
-use katana_provider::traits::state::{StateFactoryProvider, StateRootProvider, StateWriter};
+use katana_provider::traits::state::{StateFactoryProvider, StateWriter};
 use katana_provider::traits::state_update::StateUpdateProvider;
 use katana_provider::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionStatusProvider, TransactionTraceProvider,
     TransactionsProviderExt,
 };
-use katana_provider::traits::trie::{ClassTrieWriter, ContractTrieWriter};
+use katana_provider::traits::trie::TrieWriter;
 use katana_provider::BlockchainProvider;
 use num_traits::ToPrimitive;
 use starknet::core::types::{BlockStatus, MaybePendingBlockWithTxHashes};
 use starknet::core::utils::parse_cairo_short_string;
+use starknet::macros::short_string;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
 use tracing::info;
@@ -40,14 +42,12 @@ pub trait Database:
     + TransactionsProviderExt
     + ReceiptProvider
     + StateUpdateProvider
-    + StateRootProvider
     + StateWriter
     + ContractClassWriter
     + ContractClassWriterExt
     + StateFactoryProvider
     + BlockEnvProvider
-    + ClassTrieWriter
-    + ContractTrieWriter
+    + TrieWriter
     + StageCheckpointProvider
     + 'static
     + Send
@@ -65,14 +65,12 @@ impl<T> Database for T where
         + TransactionsProviderExt
         + ReceiptProvider
         + StateUpdateProvider
-        + StateRootProvider
         + StateWriter
         + ContractClassWriter
         + ContractClassWriterExt
         + StateFactoryProvider
         + BlockEnvProvider
-        + ClassTrieWriter
-        + ContractTrieWriter
+        + TrieWriter
         + StageCheckpointProvider
         + 'static
         + Send
@@ -220,13 +218,26 @@ impl Blockchain {
         block: SealedBlockWithStatus,
         states: StateUpdatesWithClasses,
     ) -> Result<Self> {
-        BlockWriter::insert_block_with_states_and_receipts(
-            &provider,
-            block,
-            states,
-            vec![],
-            vec![],
-        )?;
+        let mut block = block;
+        let block_number = block.block.header.number;
+
+        let class_trie_root = provider
+            .trie_insert_declared_classes(block_number, &states.state_updates.declared_classes)
+            .context("failed to update class trie")?;
+
+        let contract_trie_root = provider
+            .trie_insert_contract_updates(block_number, &states.state_updates)
+            .context("failed to update contract trie")?;
+
+        let genesis_state_root = hash::Poseidon::hash_array(&[
+            short_string!("STARKNET_STATE_V0"),
+            contract_trie_root,
+            class_trie_root,
+        ]);
+
+        block.block.header.state_root = genesis_state_root;
+        provider.insert_block_with_states_and_receipts(block, states, vec![], vec![])?;
+
         Ok(Self::new(provider))
     }
 }

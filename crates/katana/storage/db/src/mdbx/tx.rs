@@ -33,7 +33,7 @@ pub struct Tx<K: TransactionKind> {
 impl<K: TransactionKind> Tx<K> {
     /// Creates new `Tx` object with a `RO` or `RW` transaction.
     pub fn new(inner: libmdbx::Transaction<K>) -> Self {
-        Self { inner, db_handles: Default::default() }
+        Self { inner, db_handles: RwLock::new([None; NUM_TABLES]) }
     }
 
     pub fn get_dbi<T: Table>(&self) -> Result<DBI, DatabaseError> {
