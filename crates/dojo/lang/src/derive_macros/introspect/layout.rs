@@ -7,8 +7,9 @@ use cairo_lang_syntax::node::{ids, Terminal, TypedSyntaxNode};
 use starknet::core::utils::get_selector_from_name;
 
 use super::utils::{
-    get_array_item_type, get_tuple_item_types, is_array, is_byte_array, is_tuple,
-    is_unsupported_option_type, primitive_type_introspection,
+    get_array_item_type, get_fixed_array_inner_type_and_size, get_tuple_item_types, is_array,
+    is_byte_array, is_fixed_array, is_tuple, is_unsupported_option_type,
+    primitive_type_introspection,
 };
 
 /// build the full layout for every field in the Struct.
@@ -90,6 +91,14 @@ pub fn get_layout_from_type_clause(
             let tuple_type = expr.as_syntax_node().get_text(db);
             build_tuple_layout_from_type(diagnostics, type_clause.stable_ptr().0, &tuple_type)
         }
+        Expr::FixedSizeArray(expr) => {
+            let fixed_array_type = expr.as_syntax_node().get_text(db);
+            build_fixed_array_layout_from_type(
+                diagnostics,
+                type_clause.stable_ptr().0,
+                &fixed_array_type,
+            )
+        }
         _ => {
             diagnostics.push(PluginDiagnostic {
                 stable_ptr: type_clause.stable_ptr().0,
@@ -155,6 +164,24 @@ pub fn build_tuple_layout_from_type(
     )
 }
 
+///
+pub fn build_fixed_array_layout_from_type(
+    diagnostics: &mut Vec<PluginDiagnostic>,
+    diagnostic_item: ids::SyntaxStablePtrId,
+    array_type: &str,
+) -> String {
+    let (inner_type, array_size) = get_fixed_array_inner_type_and_size(array_type);
+    let array_type_layout = build_item_layout_from_type(diagnostics, diagnostic_item, &inner_type);
+
+    format!(
+        "dojo::meta::layout::Layout::FixedArray(
+            array![
+                ({array_type_layout}, {array_size})
+            ].span()
+        )"
+    )
+}
+
 /// Build the layout describing the provided type.
 /// item_type could be any type (array, tuple, struct, ...)
 pub fn build_item_layout_from_type(
@@ -166,6 +193,8 @@ pub fn build_item_layout_from_type(
         build_array_layout_from_type(diagnostics, diagnostic_item, item_type)
     } else if is_tuple(item_type) {
         build_tuple_layout_from_type(diagnostics, diagnostic_item, item_type)
+    } else if is_fixed_array(item_type) {
+        build_fixed_array_layout_from_type(diagnostics, diagnostic_item, item_type)
     } else {
         // For Option<T>, T cannot be a tuple
         if is_unsupported_option_type(item_type) {
@@ -317,6 +346,14 @@ pub fn get_packed_field_layout_from_type_clause(
             let tuple_type = expr.as_syntax_node().get_text(db);
             get_packed_tuple_layout_from_type(diagnostics, type_clause.stable_ptr().0, &tuple_type)
         }
+        Expr::FixedSizeArray(expr) => {
+            let array_type = expr.as_syntax_node().get_text(db);
+            get_packed_fixed_array_layout_from_type(
+                diagnostics,
+                type_clause.stable_ptr().0,
+                &array_type,
+            )
+        }
         _ => {
             diagnostics.push(PluginDiagnostic {
                 stable_ptr: type_clause.stable_ptr().0,
@@ -343,6 +380,8 @@ pub fn get_packed_item_layout_from_type(
         vec!["ERROR".to_string()]
     } else if is_tuple(item_type) {
         get_packed_tuple_layout_from_type(diagnostics, diagnostic_item, item_type)
+    } else if is_fixed_array(item_type) {
+        get_packed_fixed_array_layout_from_type(diagnostics, diagnostic_item, item_type)
     } else {
         let primitives = primitive_type_introspection();
 
@@ -367,4 +406,16 @@ pub fn get_packed_tuple_layout_from_type(
         .iter()
         .flat_map(|x| get_packed_item_layout_from_type(diagnostics, diagnostic_item, x))
         .collect::<Vec<_>>()
+}
+
+pub fn get_packed_fixed_array_layout_from_type(
+    diagnostics: &mut Vec<PluginDiagnostic>,
+    diagnostic_item: ids::SyntaxStablePtrId,
+    array_type: &str,
+) -> Vec<String> {
+    let (inner_type, array_size) = get_fixed_array_inner_type_and_size(array_type);
+    let inner_type_layout =
+        get_packed_item_layout_from_type(diagnostics, diagnostic_item, &inner_type).join(",");
+
+    (0..array_size.trim().parse().unwrap()).map(|_| inner_type_layout.clone()).collect::<Vec<_>>()
 }

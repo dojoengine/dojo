@@ -4,7 +4,8 @@ use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::TypedSyntaxNode;
 
 use super::utils::{
-    get_tuple_item_types, is_array, is_byte_array, is_tuple, primitive_type_introspection,
+    get_fixed_array_inner_type_and_size, get_tuple_item_types, is_array, is_byte_array,
+    is_fixed_array, is_tuple, primitive_type_introspection,
 };
 
 pub fn compute_struct_layout_size(
@@ -149,6 +150,10 @@ pub fn get_field_size_from_type_clause(
             let tuple_type = expr.as_syntax_node().get_text(db).trim().to_string();
             compute_tuple_size_from_type(&tuple_type)
         }
+        Expr::FixedSizeArray(expr) => {
+            let array_type = expr.as_syntax_node().get_text(db).trim().to_string();
+            compute_fixed_array_size_from_type(&array_type)
+        }
         _ => {
             // field type already checked while building the layout
             vec!["ERROR".to_string()]
@@ -181,6 +186,8 @@ pub fn compute_item_size_from_type(item_type: &String) -> Vec<String> {
         vec!["Option::None".to_string()]
     } else if is_tuple(item_type) {
         compute_tuple_size_from_type(item_type)
+    } else if is_fixed_array(item_type) {
+        compute_fixed_array_size_from_type(item_type)
     } else {
         let primitives = primitive_type_introspection();
 
@@ -196,5 +203,15 @@ pub fn compute_tuple_size_from_type(tuple_type: &str) -> Vec<String> {
     get_tuple_item_types(tuple_type)
         .iter()
         .flat_map(compute_item_size_from_type)
+        .collect::<Vec<_>>()
+}
+
+pub fn compute_fixed_array_size_from_type(array_type: &str) -> Vec<String> {
+    let (inner_type, array_size) = get_fixed_array_inner_type_and_size(array_type);
+    let inner_type_size = compute_item_size_from_type(&inner_type);
+
+    (0..array_size.trim().parse().unwrap())
+        .map(|_| inner_type_size.clone())
+        .flatten()
         .collect::<Vec<_>>()
 }

@@ -39,12 +39,29 @@ pub fn is_tuple(ty: &str) -> bool {
     ty.starts_with('(')
 }
 
+pub fn is_fixed_array(ty: &str) -> bool {
+    ty.starts_with('[') && ty.ends_with(']')
+}
+
 pub fn get_array_item_type(ty: &str) -> String {
     if ty.starts_with("Array<") {
         ty.trim().strip_prefix("Array<").unwrap().strip_suffix('>').unwrap().to_string()
     } else {
         ty.trim().strip_prefix("Span<").unwrap().strip_suffix('>').unwrap().to_string()
     }
+}
+
+pub fn trim_first_and_last_chars(s: &str) -> &str {
+    let mut chars = s.trim().chars();
+    chars.next();
+    chars.next_back();
+    chars.as_str()
+}
+
+pub fn get_fixed_array_inner_type_and_size(ty: &str) -> (String, String) {
+    let ty = trim_first_and_last_chars(ty);
+    let res: Vec<&str> = ty.rsplitn(2, ';').collect();
+    (res[1].trim().to_string(), res[0].trim().to_string())
 }
 
 /// split a tuple in array of items (nested tuples are not splitted).

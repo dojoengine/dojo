@@ -111,6 +111,31 @@ struct Generic<T> {
     value: T,
 }
 
+#[derive(Drop, Introspect)]
+struct StructWithFixedArray {
+    x: [u8; 3]
+}
+
+#[derive(Drop, Introspect)]
+struct StructWithComplexFixedArray {
+    x: [[EnumWithSameData; 2]; 3]
+}
+
+#[derive(Drop, Introspect)]
+enum EnumWithFixedArray {
+    A: [u8; 3]
+}
+
+#[derive(Drop, IntrospectPacked)]
+struct StructWithFixedArrayPacked {
+    x: [u8; 3]
+}
+
+#[derive(Drop, IntrospectPacked)]
+enum EnumWithFixedArrayPacked {
+    A: [u8; 3]
+}
+
 fn field(selector: felt252, layout: Layout) -> FieldLayout {
     FieldLayout { selector, layout }
 }
@@ -121,6 +146,10 @@ fn fixed(values: Array<u8>) -> Layout {
 
 fn tuple(values: Array<Layout>) -> Layout {
     Layout::Tuple(values.span())
+}
+
+fn fixed_array(inner_layout: Layout, size: u32) -> Layout {
+    Layout::FixedArray(array![(inner_layout, size)].span())
 }
 
 fn _enum(values: Array<Option<Layout>>) -> Layout {
@@ -212,7 +241,6 @@ fn test_size_of_enum_with_same_tuple_variant_data() {
     assert!(size.unwrap() == 4);
 }
 
-
 #[test]
 fn test_size_of_struct_with_option() {
     let size = Introspect::<StructWithOption>::size();
@@ -223,6 +251,41 @@ fn test_size_of_struct_with_option() {
 fn test_size_of_enum_with_variant_data() {
     let size = Introspect::<EnumWithVariousData>::size();
     assert!(size.is_none());
+}
+
+#[test]
+fn test_size_of_struct_with_fixed_array() {
+    let size = Introspect::<StructWithFixedArray>::size();
+    assert!(size.is_some());
+    assert!(size.unwrap() == 3);
+}
+
+#[test]
+fn test_size_of_struct_with_complex_fixed_array() {
+    let size = Introspect::<StructWithComplexFixedArray>::size();
+    assert!(size.is_some());
+    assert!(size.unwrap() == 18);
+}
+
+#[test]
+fn test_size_of_packed_struct_with_fixed_array() {
+    let size = Introspect::<StructWithFixedArrayPacked>::size();
+    assert!(size.is_some());
+    assert!(size.unwrap() == 3);
+}
+
+#[test]
+fn test_size_of_enum_with_fixed_array() {
+    let size = Introspect::<EnumWithFixedArray>::size();
+    assert!(size.is_some());
+    assert!(size.unwrap() == 4);
+}
+
+#[test]
+fn test_size_of_packed_enum_with_fixed_array() {
+    let size = Introspect::<EnumWithFixedArrayPacked>::size();
+    assert!(size.is_some());
+    assert!(size.unwrap() == 4);
 }
 
 #[test]
@@ -265,6 +328,56 @@ fn test_layout_of_struct_with_option() {
 }
 
 #[test]
+fn test_layout_of_struct_with_fixed_array() {
+    let layout = Introspect::<StructWithFixedArray>::layout();
+    let expected = Layout::Struct(
+        array![field(selector!("x"), fixed_array(Introspect::<u8>::layout(), 3))].span()
+    );
+
+    assert!(layout == expected);
+}
+
+#[test]
+fn test_layout_of_struct_with_complex_fixed_array() {
+    let layout = Introspect::<StructWithComplexFixedArray>::layout();
+    let expected = Layout::Struct(
+        array![
+            field(
+                selector!("x"),
+                fixed_array(fixed_array(Introspect::<EnumWithSameData>::layout(), 2), 3)
+            )
+        ]
+            .span()
+    );
+
+    assert!(layout == expected);
+}
+
+#[test]
+fn test_layout_of_packed_struct_with_fixed_array() {
+    let layout = Introspect::<StructWithFixedArrayPacked>::layout();
+    let expected = Layout::Fixed([8, 8, 8].span());
+
+    assert!(layout == expected);
+}
+
+#[test]
+fn test_layout_of_enum_with_fixed_array() {
+    let layout = Introspect::<EnumWithFixedArray>::layout();
+    let expected = _enum(array![Option::Some(fixed_array(Introspect::<u8>::layout(), 3))]);
+
+    assert!(layout == expected);
+}
+
+#[test]
+fn test_layout_of_packed_enum_with_fixed_array() {
+    let layout = Introspect::<EnumWithFixedArrayPacked>::layout();
+    let expected = Layout::Fixed([8, 8, 8, 8].span());
+
+    assert!(layout == expected);
+}
+
+#[test]
 fn test_layout_of_packed_struct() {
     let layout = Introspect::<Vec3>::layout();
     let expected = Layout::Fixed([32, 32, 32].span());
@@ -285,7 +398,6 @@ fn test_layout_of_inner_packed_struct() {
 fn test_layout_of_not_packed_inner_struct() {
     let _ = Introspect::<StructInnerNotPacked>::layout();
 }
-
 
 #[test]
 fn test_layout_of_packed_enum() {
