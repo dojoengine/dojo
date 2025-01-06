@@ -40,7 +40,6 @@ impl core::fmt::Debug for GenesisClass {
 }
 
 /// Genesis block configuration.
-#[serde_with::serde_as]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Genesis {
     /// The genesis block parent hash.

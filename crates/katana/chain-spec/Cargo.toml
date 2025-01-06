@@ -16,5 +16,8 @@ serde_json.workspace = true
 starknet.workspace = true
 url.workspace = true
 
+[dev-dependencies]
+tempfile.workspace = true
+
 [features]
 controller = [ "katana-primitives/controller" ]

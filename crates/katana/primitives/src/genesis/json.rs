@@ -473,6 +473,86 @@ impl TryFrom<GenesisJson> for Genesis {
     }
 }
 
+impl TryFrom<Genesis> for GenesisJson {
+    type Error = GenesisJsonError;
+
+    fn try_from(value: Genesis) -> Result<Self, Self::Error> {
+        let mut contracts = BTreeMap::new();
+        let mut accounts = BTreeMap::new();
+        let mut classes = Vec::new();
+
+        for (hash, class) in value.classes {
+            // Convert the class to an artifact Value
+            let artifact = match &*class.class {
+                ContractClass::Legacy(casm) => serde_json::to_value(casm)?,
+                ContractClass::Class(sierra) => serde_json::to_value(sierra)?,
+            };
+
+            classes.push(GenesisClassJson {
+                class: PathOrFullArtifact::Artifact(artifact),
+                class_hash: Some(hash),
+                name: None,
+            });
+        }
+
+        for (address, allocation) in value.allocations {
+            match allocation {
+                GenesisAllocation::Account(account) => match account {
+                    GenesisAccountAlloc::Account(acc) => {
+                        accounts.insert(
+                            address,
+                            GenesisAccountJson {
+                                nonce: acc.nonce,
+                                private_key: None,
+                                storage: acc.storage,
+                                balance: acc.balance,
+                                public_key: acc.public_key,
+                                class: Some(ClassNameOrHash::Hash(acc.class_hash)),
+                            },
+                        );
+                    }
+                    GenesisAccountAlloc::DevAccount(dev_acc) => {
+                        accounts.insert(
+                            address,
+                            GenesisAccountJson {
+                                nonce: dev_acc.inner.nonce,
+                                balance: dev_acc.inner.balance,
+                                storage: dev_acc.inner.storage,
+                                public_key: dev_acc.inner.public_key,
+                                private_key: Some(dev_acc.private_key),
+                                class: Some(ClassNameOrHash::Hash(dev_acc.inner.class_hash)),
+                            },
+                        );
+                    }
+                },
+                GenesisAllocation::Contract(contract) => {
+                    contracts.insert(
+                        address,
+                        GenesisContractJson {
+                            nonce: contract.nonce,
+                            balance: contract.balance,
+                            storage: contract.storage,
+                            class: contract.class_hash.map(ClassNameOrHash::Hash),
+                        },
+                    );
+                }
+            }
+        }
+
+        Ok(GenesisJson {
+            parent_hash: value.parent_hash,
+            state_root: value.state_root,
+            number: value.number,
+            timestamp: value.timestamp,
+            sequencer_address: value.sequencer_address,
+            gas_prices: value.gas_prices,
+            classes,
+            accounts,
+            contracts,
+        })
+    }
+}
+
 impl FromStr for GenesisJson {
     type Err = GenesisJsonError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -856,6 +936,22 @@ mod tests {
             assert_eq!(class.1.compiled_class_hash, expected_class.compiled_class_hash);
             assert_eq!(class.1.class, expected_class.class);
         }
+    }
+
+    // We don't care what the intermediate JSON format looks like as long as the
+    // conversion back and forth between GenesisJson and Genesis results in equivalent Genesis
+    // structs
+    #[test]
+    fn genesis_conversion_rt() {
+        let path = PathBuf::from("./src/genesis/test-genesis.json");
+
+        let json = GenesisJson::load(path).unwrap();
+        let genesis = Genesis::try_from(json.clone()).unwrap();
+
+        let json_again = GenesisJson::try_from(genesis.clone()).unwrap();
+        let genesis_again = Genesis::try_from(json_again.clone()).unwrap();
+
+        similar_asserts::assert_eq!(genesis, genesis_again);
     }
 
     #[test]
