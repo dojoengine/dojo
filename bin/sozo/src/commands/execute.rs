@@ -5,6 +5,7 @@ use dojo_world::config::calldata_decoder;
 use scarb::core::Config;
 use sozo_ops::resource_descriptor::ResourceDescriptor;
 use sozo_scarbext::WorkspaceExt;
+#[cfg(feature = "walnut")]
 use sozo_walnut::WalnutDebugger;
 use starknet::core::types::Call;
 use starknet::core::utils as snutils;
