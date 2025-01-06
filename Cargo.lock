@@ -14066,14 +14066,14 @@ name = "sozo-walnut"
 version = "1.0.9"
 dependencies = [
  "anyhow",
+ "clap",
  "console",
- "dojo-world",
+ "dojo-utils",
  "reqwest 0.11.27",
  "scarb",
  "scarb-ui",
  "serde",
  "serde_json",
- "sozo-scarbext",
  "starknet 0.12.0",
  "thiserror 1.0.63",
  "url",
