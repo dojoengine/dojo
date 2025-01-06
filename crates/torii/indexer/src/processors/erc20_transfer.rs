@@ -4,10 +4,10 @@ use cainome::cairo_serde::{CairoSerde, U256 as U256Cainome};
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{Event, U256};
 use starknet::providers::Provider;
+use torii_sqlite::Sql;
 use tracing::debug;
 
 use super::{EventProcessor, EventProcessorConfig};
-use torii_sqlite::Sql;
 
 pub(crate) const LOG_TARGET: &str = "torii_core::processors::erc20_transfer";
 

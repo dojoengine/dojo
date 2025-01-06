@@ -23,6 +23,8 @@ use tokio::sync::mpsc::Sender as BoundedSender;
 use tokio::sync::Semaphore;
 use tokio::task::JoinSet;
 use tokio::time::{sleep, Instant};
+use torii_sqlite::types::{Contract, ContractType};
+use torii_sqlite::{Cursors, Sql};
 use tracing::{debug, error, info, trace, warn};
 
 use crate::constants::LOG_TARGET;
@@ -44,8 +46,6 @@ use crate::processors::upgrade_model::UpgradeModelProcessor;
 use crate::processors::{
     BlockProcessor, EventProcessor, EventProcessorConfig, TransactionProcessor,
 };
-use torii_sqlite::{Cursors, Sql};
-use torii_sqlite::types::{Contract, ContractType};
 
 type EventProcessorMap<P> = HashMap<Felt, Vec<Box<dyn EventProcessor<P>>>>;
 

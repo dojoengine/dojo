@@ -5,7 +5,6 @@ use async_trait::async_trait;
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{Event, Felt, Transaction};
 use starknet::providers::Provider;
-
 use torii_sqlite::Sql;
 
 pub mod erc20_legacy_transfer;

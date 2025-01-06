@@ -9,12 +9,12 @@ use dojo_world::contracts::world::WorldContractReader;
 use dojo_world::uri::Uri;
 use starknet::core::types::{Event, Felt};
 use starknet::providers::Provider;
+use torii_sqlite::constants::IPFS_CLIENT_MAX_RETRY;
+use torii_sqlite::utils::fetch_content_from_ipfs;
+use torii_sqlite::Sql;
 use tracing::{error, info};
 
 use super::{EventProcessor, EventProcessorConfig};
-use torii_sqlite::constants::IPFS_CLIENT_MAX_RETRY;
-use torii_sqlite::Sql;
-use torii_sqlite::utils::fetch_content_from_ipfs;
 
 pub(crate) const LOG_TARGET: &str = "torii_core::processors::metadata_update";
 

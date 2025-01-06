@@ -20,11 +20,11 @@ use starknet::providers::{JsonRpcClient, Provider};
 use starknet_crypto::poseidon_hash_many;
 use tempfile::NamedTempFile;
 use tokio::sync::broadcast;
-
-use torii_sqlite::executor::Executor;
 use torii_sqlite::cache::ModelCache;
-use torii_sqlite::Sql;
+use torii_sqlite::executor::Executor;
 use torii_sqlite::types::{Contract, ContractType};
+use torii_sqlite::Sql;
+
 use crate::engine::{Engine, EngineConfig, Processors};
 
 pub async fn bootstrap_engine<P>(

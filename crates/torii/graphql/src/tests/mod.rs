@@ -28,10 +28,10 @@ use starknet::providers::{JsonRpcClient, Provider};
 use tokio::sync::broadcast;
 use tokio_stream::StreamExt;
 use torii_indexer::engine::{Engine, EngineConfig, Processors};
-use torii_sqlite::executor::Executor;
 use torii_sqlite::cache::ModelCache;
-use torii_sqlite::Sql;
+use torii_sqlite::executor::Executor;
 use torii_sqlite::types::{Contract, ContractType};
+use torii_sqlite::Sql;
 
 mod entities_test;
 mod events_test;

@@ -23,10 +23,10 @@ use starknet_crypto::poseidon_hash_many;
 use tempfile::NamedTempFile;
 use tokio::sync::broadcast;
 use torii_indexer::engine::{Engine, EngineConfig, Processors};
-use torii_sqlite::executor::Executor;
 use torii_sqlite::cache::ModelCache;
-use torii_sqlite::Sql;
+use torii_sqlite::executor::Executor;
 use torii_sqlite::types::{Contract, ContractType};
+use torii_sqlite::Sql;
 
 use crate::proto::types::KeysClause;
 use crate::server::DojoWorld;

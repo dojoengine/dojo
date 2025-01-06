@@ -7,11 +7,11 @@ use num_traits::ToPrimitive;
 use starknet::core::types::Event;
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
+use torii_sqlite::Sql;
 use tracing::{info, warn};
 
 use super::{EventProcessor, EventProcessorConfig};
 use crate::processors::{ENTITY_ID_INDEX, MODEL_INDEX};
-use torii_sqlite::Sql;
 
 pub(crate) const LOG_TARGET: &str = "torii_core::processors::store_update_member";
 

@@ -20,12 +20,12 @@ use tracing::{debug, error};
 
 use crate::constants::TOKENS_TABLE;
 use crate::simple_broker::SimpleBroker;
-use crate::utils::{felt_to_sql_string, I256};
 use crate::types::{
     ContractCursor, ContractType, Entity as EntityUpdated, Event as EventEmitted,
     EventMessage as EventMessageUpdated, Model as ModelRegistered, OptimisticEntity,
     OptimisticEventMessage,
 };
+use crate::utils::{felt_to_sql_string, I256};
 
 pub mod erc;
 pub use erc::{RegisterErc20TokenQuery, RegisterErc721TokenMetadata, RegisterErc721TokenQuery};

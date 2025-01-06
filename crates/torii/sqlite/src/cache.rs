@@ -8,8 +8,8 @@ use tokio::sync::RwLock;
 
 use crate::constants::TOKEN_BALANCE_TABLE;
 use crate::error::{Error, ParseError};
-use crate::utils::I256;
 use crate::types::ContractType;
+use crate::utils::I256;
 
 #[derive(Debug, Clone)]
 pub struct Model {

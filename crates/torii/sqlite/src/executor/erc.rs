@@ -16,9 +16,10 @@ use super::{ApplyBalanceDiffQuery, Executor};
 use crate::constants::{IPFS_CLIENT_MAX_RETRY, SQL_FELT_DELIMITER, TOKEN_BALANCE_TABLE};
 use crate::executor::LOG_TARGET;
 use crate::simple_broker::SimpleBroker;
-use crate::utils::{felt_to_sql_string, sql_string_to_u256, u256_to_sql_string, I256};
 use crate::types::{ContractType, TokenBalance};
-use crate::utils::fetch_content_from_ipfs;
+use crate::utils::{
+    felt_to_sql_string, fetch_content_from_ipfs, sql_string_to_u256, u256_to_sql_string, I256,
+};
 
 #[derive(Debug, Clone)]
 pub struct RegisterErc721TokenQuery {

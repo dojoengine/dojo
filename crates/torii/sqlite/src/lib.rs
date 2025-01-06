@@ -28,14 +28,14 @@ type IsEventMessage = bool;
 type IsStoreUpdate = bool;
 
 pub mod cache;
-pub mod erc;
-pub mod utils;
 pub mod constants;
-pub mod executor;
-pub mod types;
-pub mod simple_broker;
+pub mod erc;
 pub mod error;
+pub mod executor;
 pub mod model;
+pub mod simple_broker;
+pub mod types;
+pub mod utils;
 
 use cache::{LocalCache, Model, ModelCache};
 

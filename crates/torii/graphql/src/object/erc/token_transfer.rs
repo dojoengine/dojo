@@ -5,8 +5,8 @@ use serde::Deserialize;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{FromRow, Pool, Row, Sqlite, SqliteConnection};
 use starknet_crypto::Felt;
-use torii_sqlite::constants::TOKEN_TRANSFER_TABLE;
 use torii_indexer::engine::get_transaction_hash_from_event_id;
+use torii_sqlite::constants::TOKEN_TRANSFER_TABLE;
 use torii_sqlite::utils::felt_to_sql_string;
 use tracing::warn;
 

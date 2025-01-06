@@ -14,9 +14,11 @@ use crate::executor::{
     ApplyBalanceDiffQuery, Argument, QueryMessage, QueryType, RegisterErc20TokenQuery,
     RegisterErc721TokenQuery,
 };
-use crate::utils::{felt_and_u256_to_sql_string, felt_to_sql_string, felts_to_sql_string};
 use crate::types::ContractType;
-use crate::utils::utc_dt_string_from_timestamp;
+use crate::utils::{
+    felt_and_u256_to_sql_string, felt_to_sql_string, felts_to_sql_string,
+    utc_dt_string_from_timestamp,
+};
 
 impl Sql {
     #[allow(clippy::too_many_arguments)]

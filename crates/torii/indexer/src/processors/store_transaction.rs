@@ -2,9 +2,9 @@ use anyhow::{Error, Ok, Result};
 use async_trait::async_trait;
 use starknet::core::types::{Felt, Transaction};
 use starknet::providers::Provider;
+use torii_sqlite::Sql;
 
 use super::TransactionProcessor;
-use torii_sqlite::Sql;
 
 #[derive(Default, Debug)]
 pub struct StoreTransactionProcessor;

@@ -17,11 +17,11 @@ mod tests {
     use starknet::providers::JsonRpcClient;
     use starknet_crypto::{poseidon_hash_many, Felt};
     use tokio::sync::{broadcast, mpsc};
-    use torii_sqlite::executor::Executor;
     use torii_sqlite::cache::ModelCache;
+    use torii_sqlite::executor::Executor;
+    use torii_sqlite::types::{Contract, ContractType};
     use torii_sqlite::utils::felts_to_sql_string;
     use torii_sqlite::Sql;
-    use torii_sqlite::types::{Contract, ContractType};
     use url::Url;
 
     use crate::tests::{model_fixtures, run_graphql_subscription};

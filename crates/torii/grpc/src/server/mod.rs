@@ -42,9 +42,9 @@ use tonic::codec::CompressionEncoding;
 use tonic::transport::Server;
 use tonic::{Request, Response, Status};
 use tonic_web::GrpcWebLayer;
+use torii_sqlite::cache::ModelCache;
 use torii_sqlite::error::{Error, ParseError, QueryError};
 use torii_sqlite::model::{fetch_entities, map_row_to_ty};
-use torii_sqlite::cache::ModelCache;
 use torii_sqlite::types::{Token, TokenBalance};
 use tower_http::cors::{AllowOrigin, CorsLayer};
 

@@ -3,9 +3,9 @@ use async_trait::async_trait;
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::Event;
 use starknet::providers::Provider;
+use torii_sqlite::Sql;
 
 use super::{EventProcessor, EventProcessorConfig};
-use torii_sqlite::Sql;
 
 #[derive(Default, Debug)]
 pub struct RawEventProcessor;
