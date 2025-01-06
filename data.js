@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1736133143094,
+  "lastUpdate": 1736137198593,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -43051,6 +43051,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8086782,
             "range": "± 162309",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1ddee9e852ea2a1b87609e516037c14e5c0d292e",
+          "message": "ci: add constraints on jobs to start based on linters (#2866)\n\n* ci: add jobs requirements to avoid consuming time with invalid lintings\r\n\r\n* add constraint for other jobs",
+          "timestamp": "2025-01-05T22:03:05-06:00",
+          "tree_id": "d88dfd53867f9a6925e188d6e777eb27ee43879f",
+          "url": "https://github.com/dojoengine/dojo/commit/1ddee9e852ea2a1b87609e516037c14e5c0d292e"
+        },
+        "date": 1736137196175,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10620805464,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
