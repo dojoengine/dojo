@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1736182876101,
+  "lastUpdate": 1736203581184,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -43207,6 +43207,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8303784,
             "range": "± 231092",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "23614ea54bdbd4c89dc4c97220ac2af9d76ffb6a",
+          "message": "fix(katana-rpc-types): proofs types serde (#2872)\n\nfix: transparent serde",
+          "timestamp": "2025-01-06T22:29:49Z",
+          "tree_id": "aa92582f4c33e2c5cd2f1a2003d197db3d8a2040",
+          "url": "https://github.com/dojoengine/dojo/commit/23614ea54bdbd4c89dc4c97220ac2af9d76ffb6a"
+        },
+        "date": 1736203579324,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10332353282,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
