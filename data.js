@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1736132976594,
+  "lastUpdate": 1736133143094,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -43003,6 +43003,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10650499324,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "radole1203@gmail.com",
+            "name": "Olexandr88",
+            "username": "Olexandr88"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3daa5435bf7097d7792764c0b59b9e6d0c873bf9",
+          "message": "docs: readme (#2861)\n\n* Update README.md\r\n\r\n* update to point to main branch CI only\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2025-01-05T20:52:36-06:00",
+          "tree_id": "334e2a710c0c293ffabd0549f0feba50f3a45642",
+          "url": "https://github.com/dojoengine/dojo/commit/3daa5435bf7097d7792764c0b59b9e6d0c873bf9"
+        },
+        "date": 1736133140757,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2435638,
+            "range": "± 27676",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8383097,
+            "range": "± 282979",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3632790156,
+            "range": "± 806911804",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8086782,
+            "range": "± 162309",
             "unit": "ns/iter"
           }
         ]
