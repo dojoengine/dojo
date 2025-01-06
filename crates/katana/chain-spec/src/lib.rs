@@ -388,12 +388,7 @@ mod tests {
         // Load the ChainSpec back from the file
         let loaded_chainspec = ChainSpec::load(temp.path()).unwrap();
 
-        // Assert that the loaded ChainSpec matches the original
-        assert_eq!(chainspec.id, loaded_chainspec.id);
-        assert_eq!(chainspec.version, loaded_chainspec.version);
-        assert_eq!(chainspec.settlement, loaded_chainspec.settlement);
-        assert_eq!(chainspec.fee_contracts, loaded_chainspec.fee_contracts);
-        assert_eq!(chainspec.genesis, loaded_chainspec.genesis);
+        similar_asserts::assert_eq!(chainspec, loaded_chainspec);
     }
 
     #[test]
@@ -505,22 +500,7 @@ mod tests {
         let actual_block = chain_spec.block();
         let actual_state_updates = chain_spec.state_updates();
 
-        // assert individual fields of the block
-
-        assert_eq!(actual_block.header.number, expected_block.header.number);
-        assert_eq!(actual_block.header.timestamp, expected_block.header.timestamp);
-        assert_eq!(actual_block.header.parent_hash, expected_block.header.parent_hash);
-        assert_eq!(actual_block.header.sequencer_address, expected_block.header.sequencer_address);
-        assert_eq!(actual_block.header.l1_gas_prices, expected_block.header.l1_gas_prices);
-        assert_eq!(
-            actual_block.header.l1_data_gas_prices,
-            expected_block.header.l1_data_gas_prices
-        );
-        assert_eq!(actual_block.header.l1_da_mode, expected_block.header.l1_da_mode);
-        assert_eq!(actual_block.header.protocol_version, expected_block.header.protocol_version);
-        assert_eq!(actual_block.header.transaction_count, expected_block.header.transaction_count);
-        assert_eq!(actual_block.header.events_count, expected_block.header.events_count);
-        assert_eq!(actual_block.body, expected_block.body);
+        similar_asserts::assert_eq!(actual_block, expected_block);
 
         if cfg!(feature = "controller") {
             assert!(actual_state_updates.classes.len() == 4);
