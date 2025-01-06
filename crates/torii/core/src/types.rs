@@ -105,6 +105,8 @@ pub struct Model {
     pub namespace: String,
     pub name: String,
     pub class_hash: String,
+    pub packed_size: u32,
+    pub unpacked_size: u32,
     pub contract_address: String,
     pub transaction_hash: String,
     pub layout: String,

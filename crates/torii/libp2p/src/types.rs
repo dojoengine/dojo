@@ -20,8 +20,7 @@ pub enum Update {
     Entity(Entity),
     // Indexed event message
     EventMessage(EventMessage),
-    // Indexed raw event 
+    // Indexed raw event
     Event(Event),
-
     // TODO: Add more types of updates here.
 }
