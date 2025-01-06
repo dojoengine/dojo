@@ -6,6 +6,7 @@ pub struct FieldLayout {
     pub layout: Layout
 }
 
+
 #[derive(Copy, Drop, Serde, Debug, PartialEq)]
 pub enum Layout {
     Fixed: Span<u8>,

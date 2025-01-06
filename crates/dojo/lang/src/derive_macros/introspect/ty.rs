@@ -6,7 +6,7 @@ use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode};
 
 use super::utils::{
-    get_array_item_type, get_fixed_array_type_and_size, get_tuple_item_types, is_array,
+    get_array_item_type, get_fixed_array_inner_type_and_size, get_tuple_item_types, is_array,
     is_byte_array, is_fixed_array, is_tuple,
 };
 
@@ -92,6 +92,10 @@ pub fn build_ty_from_type_clause(db: &dyn SyntaxGroup, type_clause: &TypeClause)
             let tuple_type = expr.as_syntax_node().get_text(db).trim().to_string();
             build_tuple_ty_from_type(&tuple_type)
         }
+        Expr::FixedSizeArray(expr) => {
+            let array_type = expr.as_syntax_node().get_text(db).trim().to_string();
+            build_fixed_array_ty_from_type(&array_type)
+        }
         _ => {
             // diagnostic message already handled in layout building
             "ERROR".to_string()
@@ -125,6 +129,8 @@ pub fn build_item_ty_from_type(item_type: &String) -> String {
         "dojo::meta::introspect::Ty::ByteArray".to_string()
     } else if is_tuple(item_type) {
         build_tuple_ty_from_type(item_type)
+    } else if is_fixed_array(item_type) {
+        build_fixed_array_ty_from_type(item_type)
     } else {
         format!("dojo::meta::introspect::Introspect::<{}>::ty()", item_type)
     }
@@ -143,5 +149,16 @@ pub fn build_tuple_ty_from_type(item_type: &str) -> String {
             ].span()
         )",
         tuple_items
+    )
+}
+
+pub fn build_fixed_array_ty_from_type(array_type: &str) -> String {
+    let (inner_type, array_size) = get_fixed_array_inner_type_and_size(array_type);
+    let inner_type_ty = build_item_ty_from_type(&inner_type);
+
+    format!(
+        "dojo::meta::introspect::Ty::FixedArray(
+            array![({inner_type_ty}, {array_size})].span()
+        )"
     )
 }

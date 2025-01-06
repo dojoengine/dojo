@@ -30,17 +30,21 @@ pub fn is_unsupported_option_type(ty: &str) -> bool {
     ty.starts_with("Option<(")
 }
 
-pub fn is_fixed_array(ty: &str) -> bool {
-    let re = Regex::new(FIXED_ARRAY_REGEX).unwrap();
-    re.is_match(ty)
-}
-
 pub fn is_byte_array(ty: &str) -> bool {
     ty.eq("ByteArray")
 }
 
 pub fn is_array(ty: &str) -> bool {
     ty.starts_with("Array<") || ty.starts_with("Span<")
+}
+
+// pub fn is_fixed_array(ty: &str) -> bool {
+//     let re = Regex::new(FIXED_ARRAY_REGEX).unwrap();
+//     re.is_match(ty)
+// }
+
+pub fn is_fixed_array(ty: &str) -> bool {
+    ty.starts_with('[') && ty.ends_with(']')
 }
 
 pub fn is_tuple(ty: &str) -> bool {
@@ -56,9 +60,22 @@ pub fn get_array_item_type(ty: &str) -> String {
 }
 
 pub fn get_fixed_array_type_and_size(ty: &str) -> (String, usize) {
-    let mut parts = ty.trim().strip_prefix('[').unwrap().strip_suffix(']').unwrap().split(';');
+    let mut parts = ty.trim().strip_prefix('[').unwrap().strip_suffix(']').unwrap().rsplit(2, ';');
     (parts.next().unwrap().trim().to_string(), parts.last().unwrap().trim().parse().unwrap())
 }
+pub fn trim_first_and_last_chars(s: &str) -> &str {
+    let mut chars = s.trim().chars();
+    chars.next();
+    chars.next_back();
+    chars.as_str()
+}
+
+pub fn get_fixed_array_inner_type_and_size(ty: &str) -> (String, String) {
+    let ty = trim_first_and_last_chars(ty);
+    let res: Vec<&str> = ty.rsplitn(2, ';').collect();
+    (res[1].trim().to_string(), res[0].trim().to_string())
+}
+
 /// split a tuple in array of items (nested tuples are not splitted).
 /// example (u8, (u16, u32), u128) -> ["u8", "(u16, u32)", "u128"]
 pub fn get_tuple_item_types(ty: &str) -> Vec<String> {
