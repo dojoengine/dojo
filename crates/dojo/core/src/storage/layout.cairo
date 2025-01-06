@@ -71,20 +71,14 @@ pub fn write_array_layout(
     // and then, write array items
     let item_layout = *item_layout.at(0);
 
-    let mut i = 0;
-    loop {
-        if i >= array_len {
-            break;
-        }
-        let key = combine_key(key, i.into());
-
-        write_layout(model, key, values, ref offset, item_layout);
-
-        i += 1;
-    };
+    for i in 0
+        ..array_len {
+            let key = combine_key(key, i.into());
+            write_layout(model, key, values, ref offset, item_layout);
+        };
 }
 
-/// Write array layout model record to the world storage.
+/// Write fixed array layout model record to the world storage.
 ///
 /// # Arguments
 /// * `model` - the model selector.
@@ -100,16 +94,10 @@ pub fn write_fixed_array_layout(
     mut item_layout: Span<(Layout, u32)>
 ) {
     let (item_layout, array_len): (Layout, u32) = *item_layout.pop_front().unwrap();
-    assert((values.len() - offset) >= array_len, 'Invalid values length');
 
-    // first, read array size which is the first felt252 from values
-    assert(array_len.into() <= database::MAX_ARRAY_LENGTH, 'invalid array length');
+    // Note: no need to write the array length as it is fixed at compile-time
+    // and stored in the layout.
 
-    // then, write the array size
-    database::set(model, key, values, offset, [packing::PACKING_MAX_BITS].span());
-    offset += 1;
-
-    // and then, write array items
     for i in 0
         ..array_len {
             write_layout(model, combine_key(key, i.into()), values, ref offset, item_layout);
@@ -155,19 +143,14 @@ pub fn write_byte_array_layout(
 pub fn write_struct_layout(
     model: felt252, key: felt252, values: Span<felt252>, ref offset: u32, layout: Span<FieldLayout>
 ) {
-    let mut i = 0;
-    loop {
-        if i >= layout.len() {
-            break;
-        }
+    for i in 0
+        ..layout
+            .len() {
+                let field_layout = *layout.at(i);
+                let field_key = combine_key(key, field_layout.selector);
 
-        let field_layout = *layout.at(i);
-        let field_key = combine_key(key, field_layout.selector);
-
-        write_layout(model, field_key, values, ref offset, field_layout.layout);
-
-        i += 1;
-    }
+                write_layout(model, field_key, values, ref offset, field_layout.layout);
+            };
 }
 
 /// Write tuple layout model record to the world storage.
@@ -181,19 +164,14 @@ pub fn write_struct_layout(
 pub fn write_tuple_layout(
     model: felt252, key: felt252, values: Span<felt252>, ref offset: u32, layout: Span<Layout>
 ) {
-    let mut i = 0;
-    loop {
-        if i >= layout.len() {
-            break;
-        }
+    for i in 0
+        ..layout
+            .len() {
+                let field_layout = *layout.at(i);
+                let key = combine_key(key, i.into());
 
-        let field_layout = *layout.at(i);
-        let key = combine_key(key, i.into());
-
-        write_layout(model, key, values, ref offset, field_layout);
-
-        i += 1;
-    };
+                write_layout(model, key, values, ref offset, field_layout);
+            };
 }
 
 pub fn write_enum_layout(
@@ -247,9 +225,14 @@ pub fn delete_array_layout(model: felt252, key: felt252) {
     database::delete(model, key, [packing::PACKING_MAX_BITS].span());
 }
 
+/// Delete a fixed array layout model record from the world storage.
+///
+/// # Arguments
+///   * `model` - the model selector.
+///   * `key` - the model record key.
+///   * `layout` - the model layout.
 pub fn delete_fixed_array_layout(model: felt252, key: felt252, mut layout: Span<(Layout, u32)>) {
     let (item_layout, array_len): (Layout, u32) = *layout.pop_front().unwrap();
-    database::delete(model, key, [packing::PACKING_MAX_BITS].span());
     for i in 0..array_len {
         delete_layout(model, combine_key(key, i.into()), item_layout);
     }
@@ -298,19 +281,14 @@ pub fn delete_layout(model: felt252, key: felt252, layout: Layout) {
 ///   * `key` - the model record key.
 ///   * `layout` - list of field layouts.
 pub fn delete_struct_layout(model: felt252, key: felt252, layout: Span<FieldLayout>) {
-    let mut i = 0;
-    loop {
-        if i >= layout.len() {
-            break;
-        }
+    for i in 0
+        ..layout
+            .len() {
+                let field_layout = *layout.at(i);
+                let key = combine_key(key, field_layout.selector);
 
-        let field_layout = *layout.at(i);
-        let key = combine_key(key, field_layout.selector);
-
-        delete_layout(model, key, field_layout.layout);
-
-        i += 1;
-    }
+                delete_layout(model, key, field_layout.layout);
+            };
 }
 
 /// Delete a tuple layout model record from the world storage.
@@ -320,19 +298,14 @@ pub fn delete_struct_layout(model: felt252, key: felt252, layout: Span<FieldLayo
 ///   * `key` - the model record key.
 ///   * `layout` - list of tuple item layouts.
 pub fn delete_tuple_layout(model: felt252, key: felt252, layout: Span<Layout>) {
-    let mut i = 0;
-    loop {
-        if i >= layout.len() {
-            break;
-        }
+    for i in 0
+        ..layout
+            .len() {
+                let field_layout = *layout.at(i);
+                let key = combine_key(key, i.into());
 
-        let field_layout = *layout.at(i);
-        let key = combine_key(key, i.into());
-
-        delete_layout(model, key, field_layout);
-
-        i += 1;
-    }
+                delete_layout(model, key, field_layout);
+            };
 }
 
 pub fn delete_enum_layout(model: felt252, key: felt252, variant_layouts: Span<FieldLayout>) {
@@ -410,31 +383,24 @@ pub fn read_array_layout(
     let item_layout = *layout.at(0);
     let array_len: u32 = array_len.try_into().unwrap();
 
-    let mut i = 0;
-    loop {
-        if i >= array_len {
-            break;
-        }
-
-        let field_key = combine_key(key, i.into());
-        read_layout(model, field_key, ref read_data, item_layout);
-
-        i += 1;
-    };
+    for i in 0
+        ..array_len {
+            let field_key = combine_key(key, i.into());
+            read_layout(model, field_key, ref read_data, item_layout);
+        };
 }
 
+/// Read a fixed array layout model record.
+///
+/// # Arguments
+///   * `model` - the model selector
+///   * `key` - model record key.
+///   * `read_data` - the read data.
+///   * `layout` - the array item layout
 pub fn read_fixed_array_layout(
     model: felt252, key: felt252, ref read_data: Array<felt252>, mut layout: Span<(Layout, u32)>
 ) {
-    // read number of array items
     let (item_layout, array_len): (Layout, u32) = *layout.pop_front().unwrap();
-    let res = database::get(model, key, [packing::PACKING_MAX_BITS].span());
-    assert(res.len() == 1, 'internal database error');
-
-    assert(array_len.into() <= database::MAX_ARRAY_LENGTH, 'invalid array length');
-
-    read_data.append(array_len.into());
-
     for i in 0
         ..array_len {
             read_layout(model, combine_key(key, i.into()), ref read_data, item_layout);
@@ -477,19 +443,14 @@ pub fn read_byte_array_layout(model: felt252, key: felt252, ref read_data: Array
 pub fn read_struct_layout(
     model: felt252, key: felt252, ref read_data: Array<felt252>, layout: Span<FieldLayout>
 ) {
-    let mut i = 0;
-    loop {
-        if i >= layout.len() {
-            break;
-        }
+    for i in 0
+        ..layout
+            .len() {
+                let field_layout = *layout.at(i);
+                let field_key = combine_key(key, field_layout.selector);
 
-        let field_layout = *layout.at(i);
-        let field_key = combine_key(key, field_layout.selector);
-
-        read_layout(model, field_key, ref read_data, field_layout.layout);
-
-        i += 1;
-    }
+                read_layout(model, field_key, ref read_data, field_layout.layout);
+            };
 }
 
 /// Read a tuple layout model record.
@@ -502,18 +463,14 @@ pub fn read_struct_layout(
 pub fn read_tuple_layout(
     model: felt252, key: felt252, ref read_data: Array<felt252>, layout: Span<Layout>
 ) {
-    let mut i = 0;
-    loop {
-        if i >= layout.len() {
-            break;
-        }
+    for i in 0
+        ..layout
+            .len() {
+                let field_layout = *layout.at(i);
+                let field_key = combine_key(key, i.into());
 
-        let field_layout = *layout.at(i);
-        let field_key = combine_key(key, i.into());
-        read_layout(model, field_key, ref read_data, field_layout);
-
-        i += 1;
-    };
+                read_layout(model, field_key, ref read_data, field_layout);
+            };
 }
 
 pub fn read_enum_layout(
