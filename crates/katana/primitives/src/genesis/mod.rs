@@ -7,7 +7,7 @@ use std::fmt::Debug;
 use std::sync::Arc;
 
 use constant::DEFAULT_ACCOUNT_CLASS;
-#[cfg(feature = "slot")]
+#[cfg(feature = "controller")]
 use constant::{CONTROLLER_ACCOUNT_CLASS, CONTROLLER_CLASS_HASH};
 use serde::{Deserialize, Serialize};
 
@@ -124,7 +124,7 @@ impl Default for Genesis {
                     class: DEFAULT_ACCOUNT_CLASS.clone().into(),
                 },
             ),
-            #[cfg(feature = "slot")]
+            #[cfg(feature = "controller")]
             (
                 CONTROLLER_CLASS_HASH,
                 GenesisClass {

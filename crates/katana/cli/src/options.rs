@@ -146,7 +146,7 @@ pub struct StarknetOptions {
 
     #[arg(long)]
     #[arg(value_parser = parse_genesis)]
-    #[arg(conflicts_with_all(["seed", "total_accounts"]))]
+    #[arg(conflicts_with_all(["seed", "total_accounts", "chain"]))]
     pub genesis: Option<Genesis>,
 }
 
@@ -170,7 +170,7 @@ pub struct EnvironmentOptions {
     /// The chain ID. If a raw hex string (`0x` prefix) is provided, then it'd
     /// used as the actual chain ID. Otherwise, it's represented as the raw
     /// ASCII values. It must be a valid Cairo short string.
-    #[arg(long)]
+    #[arg(long, conflicts_with = "chain")]
     #[arg(value_parser = ChainId::parse)]
     #[serde(default)]
     pub chain_id: Option<ChainId>,
@@ -201,10 +201,6 @@ impl Default for EnvironmentOptions {
 impl EnvironmentOptions {
     pub fn merge(&mut self, other: Option<&Self>) {
         if let Some(other) = other {
-            if self.chain_id.is_none() {
-                self.chain_id = other.chain_id;
-            }
-
             if self.validate_max_steps == DEFAULT_VALIDATION_MAX_STEPS {
                 self.validate_max_steps = other.validate_max_steps;
             }

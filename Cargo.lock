@@ -4974,6 +4974,7 @@ dependencies = [
  "assert_fs",
  "async-trait",
  "camino",
+ "katana-chain-spec",
  "katana-core",
  "katana-executor",
  "katana-node",
@@ -8451,17 +8452,17 @@ dependencies = [
  "dojo-utils",
  "inquire",
  "katana-cairo",
+ "katana-chain-spec",
  "katana-cli",
  "katana-db",
  "katana-node",
  "katana-primitives",
- "serde",
+ "lazy_static",
  "serde_json",
  "shellexpand",
  "spinoff",
  "starknet 0.12.0",
  "tokio",
- "toml 0.8.19",
 ]
 
 [[package]]
@@ -8480,6 +8481,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "katana-chain-spec"
+version = "1.0.9"
+dependencies = [
+ "alloy-primitives",
+ "anyhow",
+ "katana-primitives",
+ "lazy_static",
+ "serde",
+ "serde_json",
+ "starknet 0.12.0",
+ "url",
+]
+
+[[package]]
 name = "katana-cli"
 version = "1.0.9"
 dependencies = [
@@ -8490,6 +8505,7 @@ dependencies = [
  "clap",
  "console",
  "dojo-utils",
+ "katana-chain-spec",
  "katana-core",
  "katana-node",
  "katana-primitives",
@@ -8543,6 +8559,7 @@ dependencies = [
  "dojo-metrics",
  "futures",
  "hex",
+ "katana-chain-spec",
  "katana-db",
  "katana-executor",
  "katana-pool",
@@ -8602,6 +8619,7 @@ dependencies = [
  "blockifier",
  "criterion",
  "katana-cairo",
+ "katana-chain-spec",
  "katana-primitives",
  "katana-provider",
  "katana-rpc-types",
@@ -8657,6 +8675,7 @@ dependencies = [
  "futures",
  "hyper 0.14.30",
  "jsonrpsee 0.16.3",
+ "katana-chain-spec",
  "katana-core",
  "katana-db",
  "katana-executor",
@@ -8676,6 +8695,7 @@ dependencies = [
  "strum_macros 0.25.3",
  "thiserror 1.0.63",
  "tokio",
+ "toml 0.8.19",
  "tower 0.4.13",
  "tower-http 0.4.4",
  "tracing",
@@ -8771,6 +8791,7 @@ dependencies = [
  "auto_impl",
  "bitvec",
  "futures",
+ "katana-chain-spec",
  "katana-db",
  "katana-primitives",
  "katana-runner",

@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use katana_chain_spec::ChainSpec;
 use katana_core::backend::Backend;
 use katana_core::constants::DEFAULT_SEQUENCER_ADDRESS;
 use katana_executor::implementation::blockifier::BlockifierFactory;
@@ -8,7 +9,6 @@ use katana_node::config::rpc::{RpcConfig, DEFAULT_RPC_ADDR, DEFAULT_RPC_MAX_CONN
 pub use katana_node::config::*;
 use katana_node::LaunchedNode;
 use katana_primitives::chain::ChainId;
-use katana_primitives::chain_spec::ChainSpec;
 use katana_rpc::Error;
 use rpc::RpcModulesList;
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
