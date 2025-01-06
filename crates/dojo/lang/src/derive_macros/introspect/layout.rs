@@ -182,32 +182,6 @@ pub fn build_member_layout_from_type(
     }
 }
 
-pub fn build_fixed_array_layout_from_type(
-    diagnostics: &mut Vec<PluginDiagnostic>,
-    diagnostic_item: ids::SyntaxStablePtrId,
-    item_type: &str,
-) -> String {
-    let (array_item_type, array_size) = get_fixed_array_type_and_size(item_type);
-    match build_member_layout_from_type(diagnostics, diagnostic_item, &array_item_type) {
-        Wrapper::Introspect => {
-            format!(
-                "dojo::meta::introspect::Introspect::<[{}; {}]>::layout()",
-                array_item_type, array_size
-            )
-        }
-        Wrapper::Array(layout) => {
-            format!(
-                "dojo::meta::Layout::FixedArray(
-                    array![
-                        ({}, {})
-                    ].span(),
-                )",
-                layout, array_size
-            )
-        }
-    }
-}
-
 /// Build the tuple layout describing the provided tuple type.
 /// item_type could be something like (u8, u32, u128) for example.
 pub fn build_tuple_layout_from_type(
@@ -230,22 +204,30 @@ pub fn build_tuple_layout_from_type(
     )
 }
 
-///
 pub fn build_fixed_array_layout_from_type(
     diagnostics: &mut Vec<PluginDiagnostic>,
     diagnostic_item: ids::SyntaxStablePtrId,
-    array_type: &str,
+    item_type: &str,
 ) -> String {
-    let (inner_type, array_size) = get_fixed_array_inner_type_and_size(array_type);
-    let array_type_layout = build_item_layout_from_type(diagnostics, diagnostic_item, &inner_type);
-
-    format!(
-        "dojo::meta::layout::Layout::FixedArray(
-            array![
-                ({array_type_layout}, {array_size})
-            ].span()
-        )"
-    )
+    let (array_item_type, array_size) = get_fixed_array_inner_type_and_size(item_type);
+    match build_member_layout_from_type(diagnostics, diagnostic_item, &array_item_type) {
+        Wrapper::Introspect => {
+            format!(
+                "dojo::meta::introspect::Introspect::<[{}; {}]>::layout()",
+                array_item_type, array_size
+            )
+        }
+        Wrapper::Array(layout) => {
+            format!(
+                "dojo::meta::Layout::FixedArray(
+                    array![
+                        ({}, {})
+                    ].span(),
+                )",
+                layout, array_size
+            )
+        }
+    }
 }
 
 /// Build the layout describing the provided type.

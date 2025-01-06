@@ -115,7 +115,7 @@ pub fn build_item_ty_from_type(item_type: &String) -> String {
             build_item_ty_from_type(&array_item_type)
         )
     } else if is_fixed_array(item_type) {
-        let (array_item_type, size) = get_fixed_array_type_and_size(&item_type);
+        let (array_item_type, size) = get_fixed_array_inner_type_and_size(&item_type);
         format!(
             "dojo::meta::introspect::Ty::FixedArray(
                 array![
