@@ -10,6 +10,7 @@ use katana_primitives::chain::ChainId;
 use katana_primitives::class::ClassHash;
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::da::L1DataAvailabilityMode;
+use katana_primitives::eth::{self, Address as EthAddress};
 use katana_primitives::genesis::allocation::{DevAllocationsGenerator, GenesisAllocation};
 use katana_primitives::genesis::constant::{
     get_fee_token_balance_base_storage_address, DEFAULT_ACCOUNT_CLASS_PUBKEY_STORAGE_SLOT,
@@ -63,27 +64,35 @@ pub struct FeeContracts {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct SettlementLayer {
-    // the account address that was used to initialized the l1 deployments
-    pub account: ContractAddress,
+pub enum SettlementLayer {
+    Ethereum {
+        // The id of the settlement chain.
+        id: eth::ChainId,
 
-    // The id of the settlement chain.
-    pub id: String,
+        // url for ethereum rpc provider
+        rpc_url: Url,
 
-    pub rpc_url: Url,
+        account: EthAddress,
 
-    // - The token that will be used to pay for tx fee in the appchain.
-    // - For now, this must be the native token that is used to pay for tx fee in the settlement
-    //   chain.
-    pub fee_token: ContractAddress,
+        // - The core appchain contract used to settlement
+        // - This is deployed on the L1
+        core_contract: EthAddress,
+    },
 
-    // - The bridge contract for bridging the fee token from L1 to the appchain
-    // - This will be part of the initialization process.
-    pub bridge_contract: ContractAddress,
+    Starknet {
+        // The id of the settlement chain.
+        id: ChainId,
 
-    // - The core appchain contract used to settlement
-    // - This is deployed on the L1
-    pub core_contract: ContractAddress,
+        // url for starknet rpc provider
+        rpc_url: Url,
+
+        // the account address that was used to initialized the l1 deployments
+        account: ContractAddress,
+
+        // - The core appchain contract used to settlement
+        // - This is deployed on the L1
+        core_contract: ContractAddress,
+    },
 }
 
 //////////////////////////////////////////////////////////////

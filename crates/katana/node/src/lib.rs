@@ -17,6 +17,7 @@ use dojo_metrics::exporters::prometheus::PrometheusRecorder;
 use dojo_metrics::{Report, Server as MetricsServer};
 use hyper::Method;
 use jsonrpsee::RpcModule;
+use katana_chain_spec::SettlementLayer;
 use katana_core::backend::gas_oracle::L1GasOracle;
 use katana_core::backend::storage::Blockchain;
 use katana_core::backend::Backend;
@@ -203,8 +204,15 @@ pub async fn build(mut config: Config) -> Result<Node> {
         // Use fixed gas prices if provided in the configuration
         L1GasOracle::fixed(fixed_prices.gas_price.clone(), fixed_prices.data_gas_price.clone())
     } else if let Some(settlement) = &config.chain.settlement {
-        // Default to a sampled gas oracle using the given provider
-        L1GasOracle::sampled(settlement.rpc_url.clone())
+        match settlement {
+            SettlementLayer::Ethereum { rpc_url, .. } => {
+                // Default to a sampled gas oracle using the given provider
+                L1GasOracle::sampled(rpc_url.clone())
+            }
+            SettlementLayer::Starknet { .. } => {
+                todo!("starknet gas oracle")
+            }
+        }
     } else {
         // Use default fixed gas prices if no url and if no fixed prices are provided
         L1GasOracle::fixed(

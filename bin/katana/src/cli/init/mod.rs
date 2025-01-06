@@ -42,8 +42,6 @@ struct InitInput {
     // the rpc url for the settlement layer.
     rpc_url: Url,
 
-    fee_token: ContractAddress,
-
     settlement_contract: ContractAddress,
 
     // path at which the config file will be written at.
@@ -65,13 +63,11 @@ impl InitArgs {
         let rt = tokio::runtime::Builder::new_multi_thread().enable_all().build()?;
         let input = self.prompt(&rt)?;
 
-        let settlement = SettlementLayer {
+        let settlement = SettlementLayer::Starknet {
             account: input.account,
             rpc_url: input.rpc_url,
-            id: input.settlement_id,
-            fee_token: input.fee_token,
+            id: ChainId::parse(&input.settlement_id)?,
             core_contract: input.settlement_contract,
-            bridge_contract: ContractAddress::default(),
         };
 
         let mut chain_spec = DEV_UNALLOCATED.clone();
@@ -132,11 +128,12 @@ impl InitArgs {
             ExecutionEncoding::New,
         );
 
-        // The L1 fee token. Must be an existing token.
-        let fee_token = CustomType::<ContractAddress>::new("Fee token")
-            .with_parser(contract_exist_parser)
-            .with_error_message("Please enter a valid fee token (the token must exist on L1)")
-            .prompt()?;
+        // TODO: uncomment once we actually using the fee token.
+        // // The L1 fee token. Must be an existing token.
+        // let fee_token = CustomType::<ContractAddress>::new("Fee token")
+        //     .with_parser(contract_exist_parser)
+        //     .with_error_message("Please enter a valid fee token (the token must exist on L1)")
+        //     .prompt()?;
 
         // The core settlement contract on L1
         let settlement_contract =
@@ -167,7 +164,6 @@ impl InitArgs {
             settlement_contract,
             settlement_id: parse_cairo_short_string(&l1_chain_id)?,
             id: chain_id,
-            fee_token,
             rpc_url: url,
             output_path,
         })
