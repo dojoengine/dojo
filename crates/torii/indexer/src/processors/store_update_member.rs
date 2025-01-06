@@ -6,10 +6,10 @@ use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::Event;
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
+use torii_sqlite::Sql;
 use tracing::info;
 
 use super::{EventProcessor, EventProcessorConfig};
-use torii_sqlite::Sql;
 
 pub(crate) const LOG_TARGET: &str = "torii_core::processors::store_update_member";
 
