@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use cainome::cairo_serde::ContractAddress;
+use cainome::cairo_serde::{ByteArray, CairoSerde, ContractAddress};
 use dojo_test_utils::compiler::CompilerTestSetup;
 use dojo_test_utils::migration::copy_spawn_and_move_db;
 use dojo_utils::{TransactionExt, TransactionWaiter, TxnConfig};
@@ -388,6 +388,115 @@ async fn test_update_with_set_record(sequencer: &RunnerCtx) {
     .unwrap();
 
     let _ = bootstrap_engine(world_reader, db.clone(), Arc::clone(&provider)).await.unwrap();
+}
+
+#[ignore = "This test is being flaky and need to find why. Sometimes it fails, sometimes it passes."]
+#[tokio::test(flavor = "multi_thread")]
+#[katana_runner::test(accounts = 10, db_dir = copy_spawn_and_move_db().as_str())]
+async fn test_load_from_remote_update(sequencer: &RunnerCtx) {
+    let setup = CompilerTestSetup::from_examples("../../dojo/core", "../../../examples/");
+    let config = setup.build_test_config("spawn-and-move", Profile::DEV);
+
+    let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
+
+    let account = sequencer.account(0);
+    let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
+
+    let world_local = ws.load_world_local().unwrap();
+    let world_address = world_local.deterministic_world_address().unwrap();
+    let actions_address = world_local
+        .get_contract_address_local(compute_selector_from_names("ns", "actions"))
+        .unwrap();
+
+    let world = WorldContract::new(world_address, &account);
+
+    let res = world
+        .grant_writer(&compute_bytearray_hash("ns"), &ContractAddress(actions_address))
+        .send_with_cfg(&TxnConfig::init_wait())
+        .await
+        .unwrap();
+
+    TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
+
+    // spawn
+    let res = account
+        .execute_v1(vec![Call {
+            to: actions_address,
+            selector: get_selector_from_name("spawn").unwrap(),
+            calldata: vec![],
+        }])
+        .send_with_cfg(&TxnConfig::init_wait())
+        .await
+        .unwrap();
+
+    TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
+
+    // Set player config.
+    let res = account
+        .execute_v1(vec![Call {
+            to: actions_address,
+            selector: get_selector_from_name("set_player_config").unwrap(),
+            // Empty ByteArray.
+            calldata: vec![Felt::ZERO, Felt::ZERO, Felt::ZERO],
+        }])
+        .send_with_cfg(&TxnConfig::init_wait())
+        .await
+        .unwrap();
+
+    TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
+
+    let name = ByteArray::from_string("mimi").unwrap();
+    let res = account
+        .execute_v1(vec![Call {
+            to: actions_address,
+            selector: get_selector_from_name("update_player_config_name").unwrap(),
+            calldata: ByteArray::cairo_serialize(&name),
+        }])
+        .send_with_cfg(&TxnConfig::init_wait())
+        .await
+        .unwrap();
+
+    TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
+
+    let world_reader = WorldContractReader::new(world_address, Arc::clone(&provider));
+
+    let tempfile = NamedTempFile::new().unwrap();
+    let path = tempfile.path().to_string_lossy();
+    let options = SqliteConnectOptions::from_str(&path).unwrap().create_if_missing(true);
+    let pool = SqlitePoolOptions::new().connect_with(options).await.unwrap();
+    sqlx::migrate!("../migrations").run(&pool).await.unwrap();
+
+    let (shutdown_tx, _) = broadcast::channel(1);
+    let (mut executor, sender) =
+        Executor::new(pool.clone(), shutdown_tx.clone(), Arc::clone(&provider), 100).await.unwrap();
+    tokio::spawn(async move {
+        executor.run().await.unwrap();
+    });
+
+    let model_cache = Arc::new(ModelCache::new(pool.clone()));
+    let db = Sql::new(
+        pool.clone(),
+        sender.clone(),
+        &[Contract { address: world_reader.address, r#type: ContractType::WORLD }],
+        model_cache.clone(),
+    )
+    .await
+    .unwrap();
+
+    let _ = bootstrap_engine(world_reader, db.clone(), Arc::clone(&provider)).await.unwrap();
+
+    let name: String = sqlx::query_scalar(
+        format!(
+            "SELECT name FROM [ns-PlayerConfig] WHERE internal_id = '{:#x}'",
+            poseidon_hash_many(&[account.address()])
+        )
+        .as_str(),
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+
+    assert_eq!(name, "mimi");
 }
 
 /// Count the number of rows in a table.
