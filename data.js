@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1736137384424,
+  "lastUpdate": 1736182692177,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -43129,6 +43129,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8319048,
             "range": "± 409154",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "peerzet3@gmail.com",
+            "name": "MobyCrypt",
+            "username": "mobycrypt"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e6d82d9d6fca984a43dc8642dfdb932d9abd3640",
+          "message": "feat(sozo): introduce walnut verify command + execute \"--walnut\" flag enabled (#2734)\n\n* Introduce the verify command\r\n\r\n* Fixes after review\r\n\r\n* Fixes after review\r\n\r\n* Fixes after review\r\n\r\n* Fixes after review\r\n\r\n---------\r\n\r\nCo-authored-by: Roman <barabanov1233@gmail.com>\r\nCo-authored-by: mobycrypt <pt@mobycrypt.com>",
+          "timestamp": "2025-01-06T10:41:27-06:00",
+          "tree_id": "c31dd9c4374cec82149dd4b05149c23b1e9e906c",
+          "url": "https://github.com/dojoengine/dojo/commit/e6d82d9d6fca984a43dc8642dfdb932d9abd3640"
+        },
+        "date": 1736182689904,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10598093229,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
