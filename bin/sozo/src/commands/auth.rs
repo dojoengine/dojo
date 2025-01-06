@@ -242,7 +242,11 @@ async fn clone_permissions(
             .external_writers
             .iter()
             .filter_map(|(resource_selector, writers)| {
-                if writers.contains(&from_address) { Some(*resource_selector) } else { None }
+                if writers.contains(&from_address) {
+                    Some(*resource_selector)
+                } else {
+                    None
+                }
             })
             .collect();
 
@@ -251,7 +255,11 @@ async fn clone_permissions(
             .external_owners
             .iter()
             .filter_map(|(resource_selector, owners)| {
-                if owners.contains(&from_address) { Some(*resource_selector) } else { None }
+                if owners.contains(&from_address) {
+                    Some(*resource_selector)
+                } else {
+                    None
+                }
             })
             .collect();
 
@@ -303,16 +311,20 @@ async fn clone_permissions(
     writers_resource_selectors.extend(external_writer_of.iter().copied());
     owners_resource_selectors.extend(external_owner_of.iter().copied());
 
-    writer_of.extend(
-        external_writer_of
-            .iter()
-            .map(|r| if r != &WORLD { format!("{:#066x}", r) } else { "World".to_string() }),
-    );
-    owner_of.extend(
-        external_owner_of
-            .iter()
-            .map(|r| if r != &WORLD { format!("{:#066x}", r) } else { "World".to_string() }),
-    );
+    writer_of.extend(external_writer_of.iter().map(|r| {
+        if r != &WORLD {
+            format!("{:#066x}", r)
+        } else {
+            "World".to_string()
+        }
+    }));
+    owner_of.extend(external_owner_of.iter().map(|r| {
+        if r != &WORLD {
+            format!("{:#066x}", r)
+        } else {
+            "World".to_string()
+        }
+    }));
 
     // Sort the tags to have a deterministic output.
     let mut writer_of = writer_of.into_iter().collect::<Vec<_>>();

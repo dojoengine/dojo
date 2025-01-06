@@ -1,5 +1,6 @@
 use anyhow::Result;
 use clap::{Args, Subcommand};
+use dojo_world::config::calldata_decoder;
 use scarb::core::Config;
 use sozo_ops::model;
 use sozo_ops::resource_descriptor::ResourceDescriptor;
@@ -109,8 +110,11 @@ hashes, called 'hash' in the following documentation.
 
         #[arg(value_name = "KEYS")]
         #[arg(value_delimiter = ',')]
-        #[arg(help = "Comma seperated values e.g., 0x12345,0x69420,...")]
-        keys: Vec<Felt>,
+        #[arg(help = "Comma separated values e.g., \
+                     0x12345,0x69420,sstr:\"hello\",sstr:\"misty\". Supported prefixes:\n  \
+                     - sstr: A cairo short string\n  \
+                     - no prefix: A cairo felt")]
+        keys: String,
 
         #[command(flatten)]
         world: WorldOptions,
@@ -119,7 +123,9 @@ hashes, called 'hash' in the following documentation.
         starknet: StarknetOptions,
 
         #[arg(short, long)]
-        #[arg(help = "Block number at which to retrieve the model data (pending block by default)")]
+        #[arg(
+            help = "Block number at which to retrieve the model data (pending block by default)"
+        )]
         block: Option<u64>,
     },
 }
@@ -205,6 +211,8 @@ impl ModelArgs {
                     let (world_diff, provider, _) =
                         utils::get_world_diff_and_provider(starknet, world, &ws).await?;
 
+                    let keys = calldata_decoder::decode_calldata(&keys)?;
+
                     let (record, _, _) = model::model_get(
                         tag.to_string(),
                         keys,
@@ -220,5 +228,37 @@ impl ModelArgs {
                 }
             }
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use starknet::core::utils::cairo_short_string_to_felt;
+
+    #[test]
+    fn test_short_string_equals_felt() {
+        // Test that sstr:"misty" equals 0x6d69737479
+        let with_prefix = "sstr:\"misty\"";
+        let with_hex = "0x6d69737479";
+
+        let felt_from_string = calldata_decoder::decode_calldata(with_prefix).unwrap();
+        let felt_from_hex = calldata_decoder::decode_calldata(with_hex).unwrap();
+
+        assert_eq!(felt_from_string, felt_from_hex);
+        assert_eq!(felt_from_string[0], Felt::from_hex_str("0x6d69737479").unwrap());
+    }
+
+    #[test]
+    fn test_hex_equals_decimal() {
+        // Test that 0x6d69737479 equals 469920609401
+        let with_hex = "0x6d69737479";
+        let with_decimal = "469920609401";
+
+        let felt_from_hex = calldata_decoder::decode_calldata(with_hex).unwrap();
+        let felt_from_decimal = calldata_decoder::decode_calldata(with_decimal).unwrap();
+
+        assert_eq!(felt_from_hex, felt_from_decimal);
+        assert_eq!(felt_from_hex[0], Felt::from(469920609401u128));
     }
 }
