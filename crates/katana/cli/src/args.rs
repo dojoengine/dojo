@@ -233,10 +233,15 @@ impl NodeArgs {
         // exclusively for development mode
         else {
             let mut chain_spec = katana_chain_spec::DEV_UNALLOCATED.clone();
-            chain_spec.genesis.sequencer_address = *DEFAULT_SEQUENCER_ADDRESS;
 
             if let Some(id) = self.starknet.environment.chain_id {
                 chain_spec.id = id;
+            }
+
+            if let Some(genesis) = &self.starknet.genesis {
+                chain_spec.genesis = genesis.clone();
+            } else {
+                chain_spec.genesis.sequencer_address = *DEFAULT_SEQUENCER_ADDRESS;
             }
 
             // generate dev accounts
