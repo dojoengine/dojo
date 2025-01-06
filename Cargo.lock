@@ -2497,16 +2497,16 @@ dependencies = [
 
 [[package]]
 name = "cainome"
-version = "0.4.8"
-source = "git+https://github.com/cartridge-gg/cainome?tag=v0.4.10#6fefd8bf4370c77d8834d18a2ae3c59d3a5e8dd5"
+version = "0.4.11"
+source = "git+https://github.com/cartridge-gg/cainome?tag=v0.4.11#355b88b7b808656d729e9dfd16f81d80c5c30fbf"
 dependencies = [
  "anyhow",
  "async-trait",
- "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.10)",
- "cainome-cairo-serde-derive 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.10)",
- "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.10)",
- "cainome-rs 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.10)",
- "cainome-rs-macro 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.10)",
+ "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.11)",
+ "cainome-cairo-serde-derive 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.11)",
+ "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.11)",
+ "cainome-rs 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.11)",
+ "cainome-rs-macro 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.11)",
  "camino",
  "clap",
  "clap_complete",
@@ -2524,7 +2524,7 @@ dependencies = [
 [[package]]
 name = "cainome-cairo-serde"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/cainome?tag=v0.4.10#6fefd8bf4370c77d8834d18a2ae3c59d3a5e8dd5"
+source = "git+https://github.com/cartridge-gg/cainome?tag=v0.4.11#355b88b7b808656d729e9dfd16f81d80c5c30fbf"
 dependencies = [
  "num-bigint",
  "serde",
@@ -2556,7 +2556,7 @@ dependencies = [
 [[package]]
 name = "cainome-cairo-serde-derive"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/cainome?tag=v0.4.10#6fefd8bf4370c77d8834d18a2ae3c59d3a5e8dd5"
+source = "git+https://github.com/cartridge-gg/cainome?tag=v0.4.11#355b88b7b808656d729e9dfd16f81d80c5c30fbf"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2578,7 +2578,7 @@ dependencies = [
 [[package]]
 name = "cainome-parser"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/cainome?tag=v0.4.10#6fefd8bf4370c77d8834d18a2ae3c59d3a5e8dd5"
+source = "git+https://github.com/cartridge-gg/cainome?tag=v0.4.11#355b88b7b808656d729e9dfd16f81d80c5c30fbf"
 dependencies = [
  "convert_case 0.6.0",
  "quote",
@@ -2617,11 +2617,11 @@ dependencies = [
 [[package]]
 name = "cainome-rs"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/cainome?tag=v0.4.10#6fefd8bf4370c77d8834d18a2ae3c59d3a5e8dd5"
+source = "git+https://github.com/cartridge-gg/cainome?tag=v0.4.11#355b88b7b808656d729e9dfd16f81d80c5c30fbf"
 dependencies = [
  "anyhow",
- "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.10)",
- "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.10)",
+ "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.11)",
+ "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.11)",
  "camino",
  "prettyplease",
  "proc-macro2",
@@ -2671,12 +2671,12 @@ dependencies = [
 [[package]]
 name = "cainome-rs-macro"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/cainome?tag=v0.4.10#6fefd8bf4370c77d8834d18a2ae3c59d3a5e8dd5"
+source = "git+https://github.com/cartridge-gg/cainome?tag=v0.4.11#355b88b7b808656d729e9dfd16f81d80c5c30fbf"
 dependencies = [
  "anyhow",
- "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.10)",
- "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.10)",
- "cainome-rs 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.10)",
+ "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.11)",
+ "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.11)",
+ "cainome-rs 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.11)",
  "proc-macro-error",
  "proc-macro2",
  "quote",
@@ -4858,7 +4858,7 @@ dependencies = [
  "anyhow",
  "assert_matches",
  "async-trait",
- "cainome 0.4.8",
+ "cainome 0.4.11",
  "camino",
  "chrono",
  "convert_case 0.6.0",
@@ -5015,7 +5015,7 @@ name = "dojo-types"
 version = "1.0.9"
 dependencies = [
  "anyhow",
- "cainome 0.4.8",
+ "cainome 0.4.11",
  "crypto-bigint",
  "hex",
  "indexmap 2.5.0",
@@ -5055,7 +5055,7 @@ version = "1.0.9"
 dependencies = [
  "anyhow",
  "async-trait",
- "cainome 0.4.8",
+ "cainome 0.4.11",
  "cairo-lang-starknet-classes",
  "dojo-types 1.0.9",
  "futures",
@@ -5081,7 +5081,7 @@ name = "dojo-world-abigen"
 version = "1.0.9"
 dependencies = [
  "anyhow",
- "cainome 0.4.8",
+ "cainome 0.4.11",
  "cairo-lang-starknet",
  "cairo-lang-starknet-classes",
  "camino",
@@ -8443,7 +8443,7 @@ dependencies = [
  "anyhow",
  "assert_matches",
  "byte-unit",
- "cainome 0.4.8",
+ "cainome 0.4.11",
  "clap",
  "clap_complete",
  "comfy-table",
@@ -8486,7 +8486,7 @@ dependencies = [
  "alloy-primitives",
  "anyhow",
  "assert_matches",
- "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.10)",
+ "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.11)",
  "clap",
  "console",
  "dojo-utils",
@@ -8798,7 +8798,7 @@ dependencies = [
  "alloy-primitives",
  "anyhow",
  "assert_matches",
- "cainome 0.4.8",
+ "cainome 0.4.11",
  "dojo-metrics",
  "dojo-test-utils",
  "dojo-utils",
@@ -13963,7 +13963,7 @@ version = "1.0.9"
 dependencies = [
  "anyhow",
  "async-trait",
- "cainome 0.4.8",
+ "cainome 0.4.11",
  "cairo-lang-compiler",
  "cairo-lang-filesystem",
  "cairo-lang-project",
@@ -14015,7 +14015,7 @@ dependencies = [
  "anyhow",
  "assert_fs",
  "async-trait",
- "cainome 0.4.8",
+ "cainome 0.4.11",
  "colored",
  "colored_json",
  "dojo-test-utils",
@@ -15786,7 +15786,7 @@ dependencies = [
 name = "torii-grpc"
 version = "1.0.9"
 dependencies = [
- "cainome 0.4.8",
+ "cainome 0.4.11",
  "camino",
  "crypto-bigint",
  "dojo-test-utils",
@@ -15838,7 +15838,7 @@ dependencies = [
  "async-trait",
  "base64 0.21.7",
  "bitflags 2.6.0",
- "cainome 0.4.8",
+ "cainome 0.4.11",
  "chrono",
  "crypto-bigint",
  "data-url",
@@ -15875,7 +15875,7 @@ name = "torii-relay"
 version = "1.0.9"
 dependencies = [
  "anyhow",
- "cainome 0.4.8",
+ "cainome 0.4.11",
  "chrono",
  "crypto-bigint",
  "dojo-types 1.0.9",
@@ -15947,7 +15947,7 @@ dependencies = [
  "async-trait",
  "base64 0.21.7",
  "bitflags 2.6.0",
- "cainome 0.4.8",
+ "cainome 0.4.11",
  "chrono",
  "crypto-bigint",
  "data-url",
@@ -15960,7 +15960,6 @@ dependencies = [
  "hashlink",
  "ipfs-api-backend-hyper",
  "katana-runner",
- "num-traits 0.2.19",
  "once_cell",
  "reqwest 0.11.27",
  "scarb",

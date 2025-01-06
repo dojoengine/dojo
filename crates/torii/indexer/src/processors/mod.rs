@@ -24,9 +24,6 @@ pub mod store_update_record;
 pub mod upgrade_event;
 pub mod upgrade_model;
 
-const MODEL_INDEX: usize = 0;
-const ENTITY_ID_INDEX: usize = 1;
-
 #[derive(Clone, Debug, Default)]
 pub struct EventProcessorConfig {
     pub historical_events: HashSet<String>,
