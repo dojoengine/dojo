@@ -29,9 +29,6 @@ type IsStoreUpdate = bool;
 
 pub mod cache;
 pub mod erc;
-#[cfg(test)]
-#[path = "test.rs"]
-mod test;
 pub mod utils;
 pub mod constants;
 pub mod executor;

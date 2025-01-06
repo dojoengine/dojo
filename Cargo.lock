@@ -15709,7 +15709,6 @@ dependencies = [
  "serde",
  "starknet 0.12.0",
  "toml 0.8.19",
- "torii-indexer",
  "torii-sqlite",
  "url",
 ]
@@ -15776,6 +15775,7 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "toml 0.8.19",
+ "torii-indexer",
  "torii-sqlite",
  "tracing",
  "url",
@@ -15823,6 +15823,7 @@ dependencies = [
  "tonic-reflection",
  "tonic-web",
  "tonic-web-wasm-client",
+ "torii-indexer",
  "torii-sqlite",
  "tower 0.4.13",
  "tower-http 0.4.4",

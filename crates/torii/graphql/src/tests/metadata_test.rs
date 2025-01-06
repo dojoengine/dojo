@@ -8,10 +8,10 @@ mod tests {
     use starknet::providers::jsonrpc::HttpTransport;
     use starknet::providers::JsonRpcClient;
     use tokio::sync::broadcast;
-    use torii_core::executor::Executor;
-    use torii_core::sql::cache::ModelCache;
-    use torii_core::sql::Sql;
-    use torii_core::types::{Contract, ContractType};
+    use torii_sqlite::executor::Executor;
+    use torii_sqlite::cache::ModelCache;
+    use torii_sqlite::Sql;
+    use torii_sqlite::types::{Contract, ContractType};
     use url::Url;
 
     use crate::schema::build_schema;

@@ -7,8 +7,8 @@ use dojo_types::naming::get_tag;
 use dojo_types::schema::Ty;
 use sqlx::{Pool, Sqlite};
 use tokio_stream::StreamExt;
-use torii_core::simple_broker::SimpleBroker;
-use torii_core::types::Entity;
+use torii_sqlite::simple_broker::SimpleBroker;
+use torii_sqlite::types::Entity;
 
 use super::inputs::keys_input::keys_argument;
 use super::{BasicObject, ResolvableObject, TypeMapping, ValueMapping};
